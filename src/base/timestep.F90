@@ -42,7 +42,6 @@ module timestep
    public :: init_time_step
 #endif /* __INTEL_COMPILER || _CRAYFTN */
 
-   real :: c_all_old
 #if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
    !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
    procedure(), pointer :: cfl_manager
@@ -69,7 +68,6 @@ contains
 
       if (code_progress < PIERNIK_INIT_GLOBAL) call die("[timestep:init_time_step] globals not initialized.")
 
-      c_all_old = 0. ! safe initial value
       select case (cflcontrol)
          case ('warn')
             cfl_manager => cfl_warn
@@ -114,7 +112,7 @@ contains
       use grid_cont,            only: grid_container
       use mpisetup,             only: master, piernik_MPI_Allreduce
       use sources,              only: timestep_sources
-      use timestep_pub,         only: c_all
+      use timestep_pub,         only: c_all, c_all_old
 #ifdef COSM_RAYS
       use timestepcosmicrays,   only: timestep_crs, dt_crs
 #endif /* COSM_RAYS */
@@ -218,11 +216,9 @@ contains
       use dataio_pub,   only: msg, warn
       use global,       only: cfl, cfl_max, cfl_violated
       use mpisetup,     only: piernik_MPI_Bcast, master
-      use timestep_pub, only: c_all
+      use timestep_pub, only: c_all, c_all_old, stepcfl
 
       implicit none
-
-      real :: stepcfl
 
       stepcfl = cfl
       if (c_all_old > 0.) stepcfl = c_all/c_all_old*cfl
@@ -255,18 +251,11 @@ contains
       use dataio_pub,   only: msg, warn
       use global,       only: cfl, cfl_max, dt, dt_old
       use mpisetup,     only: master
-      use timestep_pub, only: c_all
+      use timestep_pub, only: c_all, c_all_old, cfl_c, stepcfl
 
       implicit none
 
-      real, save    :: stepcfl=zero, cfl_c=one
-      real          :: stepcfl_old
-      logical, save :: frun = .true.
-
-      if (frun) then
-         if (master) call warn("[timestep:cfl_auto] Cannot guarantee repeatability over restarts unless one adds stepcfl and cfl_c to attributes")
-         frun = .false.
-      endif
+      real :: stepcfl_old
 
       stepcfl_old = stepcfl
       stepcfl = cfl

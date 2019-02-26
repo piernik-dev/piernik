@@ -511,6 +511,7 @@ contains
       use mpisetup,           only: master, piernik_MPI_Barrier
       use read_attr,          only: read_attribute
       use set_get_attributes, only: get_attr
+      use timestep_pub,       only: c_all_old, cfl_c, stepcfl
 #ifdef RANDOMIZE
       use randomization,      only: read_current_seed_from_restart
 #endif /* RANDOMIZE */
@@ -540,13 +541,16 @@ contains
       character(len=cbuff_len), dimension(:), allocatable :: cbuf
 
       ! common attributes
-      character(len=cbuff_len), dimension(7), parameter :: real_attrs = [ "time         ", &
-           &                                                              "timestep     ", &
-           &                                                              "last_hdf_time", &
-           &                                                              "last_res_time", &
-           &                                                              "last_log_time", &
-           &                                                              "last_tsl_time", &
-           &                                                              "magic_mass   " ]
+      character(len=cbuff_len), dimension(10), parameter :: real_attrs = [ "time         ", &
+           &                                                               "timestep     ", &
+           &                                                               "last_hdf_time", &
+           &                                                               "last_res_time", &
+           &                                                               "last_log_time", &
+           &                                                               "last_tsl_time", &
+           &                                                               "c_all_old    ", &
+           &                                                               "stepcfl      ", &
+           &                                                               "cfl_c        ", &
+           &                                                               "magic_mass   " ]
       character(len=cbuff_len), dimension(4), parameter :: int_attrs  = [ "nstep             ", &
            &                                                              "nres              ", &
            &                                                              "nhdf              ", &
@@ -620,6 +624,13 @@ contains
                last_log_time = rbuf(1)
             case ("last_tsl_time")
                last_tsl_time = rbuf(1)
+            case ("c_all_old")
+               c_all_old = rbuf(1)
+               write(*,*) 'czytam c_all_old', c_all_old
+            case ("stepcfl")
+               stepcfl = rbuf(1)
+            case ("cfl_c")
+               cfl_c = rbuf(1)
             case ("magic_mass")
                if (master) magic_mass(:) = rbuf(:)
             case default
