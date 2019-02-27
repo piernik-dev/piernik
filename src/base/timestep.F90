@@ -36,7 +36,7 @@ module timestep
    implicit none
 
    private
-   public :: time_step, cfl_manager
+   public :: time_step, cfl_manager, check_cfl_violation
 #if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
    !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
    public :: init_time_step
@@ -205,6 +205,29 @@ contains
       call compare_array1D([dt])  ! just in case
 
    end subroutine time_step
+
+!>
+!! \brief Timestep prediction after fluidupdate
+!!
+!! \details This routine calls is important while step redoing due to cfl violation is activated and prevent to dump h5 and restart files until cfl-violated step is succesfully redone.
+!<
+   subroutine check_cfl_violation(dt, flind)
+
+      use fluidtypes, only: var_numbers
+      use global,     only: cflcontrol
+
+      implicit none
+
+      real,              intent(in) :: dt    !< the timestep
+      type(var_numbers), intent(in) :: flind !< the structure with all fluid indices
+      real                          :: checkdt
+
+      if (cflcontrol /= 'warn') return
+
+      checkdt = dt
+      call time_step(checkdt, flind)
+
+   end subroutine check_cfl_violation
 
 !------------------------------------------------------------------------------------------
 !>
