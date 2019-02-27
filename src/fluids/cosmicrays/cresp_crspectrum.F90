@@ -121,6 +121,9 @@ contains
    subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, p_out)
 
       use constants,      only: zero, one
+#ifdef CRESP_VERBOSED
+      use dataio_pub,     only: msg, printinfo
+#endif /* CRESP_VERBOSED */
       use diagnostics,    only: decr_vec
       use initcrspectrum, only: ncre, spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, crel, p_mid_fix, nullify_empty_bins, p_fix
 
@@ -459,7 +462,10 @@ contains
    subroutine cresp_find_prepare_spectrum(n, e, empty_cell, i_up_out) ! EXPERIMENTAL
 
       use constants,      only: I_ZERO, zero, I_ONE
-      use dataio_pub,     only: msg, warn, printinfo
+      use dataio_pub,     only: msg, warn
+#ifdef CRESP_VERBOSED
+      use dataio_pub,     only: printinfo
+#endif /* CRESP_VERBOSED */
       use diagnostics,    only: incr_vec
       use initcrspectrum, only: ncre, e_small, cresp_all_edges, cresp_all_bins, p_fix, p_mid_fix
 
@@ -775,6 +781,9 @@ contains
    subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next, dt_too_high) ! evaluates only "next" momenta and is called after finding outer cutoff momenta
 
       use constants,      only: zero, I_ZERO, one
+#ifdef CRESP_VERBOSED
+      use dataio_pub,      only: msg, printinfo
+#endif /* CRESP_VERBOSED */
       use initcrspectrum, only: ncre, p_fix, w, cresp_all_bins, cresp_all_edges
 
       implicit none
@@ -898,7 +907,7 @@ contains
       use constants, only: zero, I_ONE, fpi, three
       use cresp_NR_method, only: e_small_to_f
       use cresp_variables, only: clight ! use units, only: clight
-      use dataio_pub,      only: warn, msg, die
+      use dataio_pub,      only: warn, msg, die, printinfo
       use initcrspectrum,  only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, eps, p_fix, w,   &
                               &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, crel,      &
                               &  e_small_approx_p_up, total_init_cree, e_small, cresp_all_bins,     &
@@ -1658,6 +1667,9 @@ contains
       use constants,       only: zero, one
       use cresp_variables, only: clight ! use units, only: clight
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_up
+#ifdef CRESP_VERBOSED
+      use dataio_pub,      only: msg, printinfo
+#endif /* CRESP_VERBOSED */
       use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf_up
 
       implicit none
@@ -1729,6 +1741,9 @@ contains
       use constants,       only: zero, one
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_lo
       use cresp_variables, only: clight ! use units, only: clight
+#ifdef CRESP_VERBOSED
+      use dataio_pub,      only: msg, printinfo
+#endif /* CRESP_VERBOSED */
       use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf_lo
 
       implicit none
