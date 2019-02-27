@@ -213,19 +213,28 @@ contains
 !<
    subroutine check_cfl_violation(dt, flind)
 
-      use fluidtypes, only: var_numbers
-      use global,     only: cflcontrol
+      use fluidtypes,     only: var_numbers
+      use global,         only: cflcontrol, cfl_violated, dt_old
+      use timestep_pub,   only: c_all, c_all_old
+      use timestep_retry, only: reset_freezing_speed
 
       implicit none
 
       real,              intent(in) :: dt    !< the timestep
       type(var_numbers), intent(in) :: flind !< the structure with all fluid indices
       real                          :: checkdt
+      real, dimension(3)            :: bck   !< backup for timestep sensitive variables
 
       if (cflcontrol /= 'warn') return
 
       checkdt = dt
+
+      bck = [dt_old, c_all_old, c_all]
+
       call time_step(checkdt, flind)
+      if (cfl_violated) call reset_freezing_speed
+
+      dt_old = bck(1) ; c_all_old = bck(2) ; c_all = bck(3) !> \todo check if this backup is necessary
 
    end subroutine check_cfl_violation
 
