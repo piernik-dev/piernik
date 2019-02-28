@@ -208,8 +208,12 @@ contains
 
       user_grav     = .false.
       variable_gp   = .false.
-      restart_gp    = .true.
+      restart_gp    = .false.
+#ifdef SELF_GRAV
+      restart_gpot  = .true.
+#else /* !SELF_GRAV */
       restart_gpot  = .false.
+#endif /* !SELF_GRAV */
       restart_hgpot = .false.
       restart_sgp   = .false.
       restart_sgpm  = .false.
@@ -403,6 +407,7 @@ contains
 
 !>
 !! \brief Collect gravitational terms depending on whether they are taken from restart file or not
+!! \todo check if source_terms_grav should be called here for restarted simulation or new (non-restarted) simulation with particles.
 !<
    subroutine init_terms_grav(restarted_sim)
 
@@ -410,8 +415,12 @@ contains
 
       logical, intent(in) :: restarted_sim
 
-      if (.not.restarted_sim) call update_gp      !> \todo check if source_terms_grav should be called here
-                                                  !> \todo check if sum_potential inside this update_gp should be called here after reading restart while SELF_GRAV is activated
+      if (restarted_sim) then
+         if (.not.restart_gp) call grav_pot_3d
+         if (.not.restart_gpot) call sum_potential
+      else
+         call update_gp
+      endif
 
    end subroutine init_terms_grav
 
