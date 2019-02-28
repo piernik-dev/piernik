@@ -75,8 +75,9 @@ contains
       use resistivity,           only: init_resistivity, compute_resist
 #endif /* MAGNETIC && RESISTIVE */
 #ifdef GRAV
-      use gravity,               only: init_grav, init_grav_ext, source_terms_grav, update_gp
+      use gravity,               only: init_grav, init_terms_grav, source_terms_grav
       use hydrostatic,           only: init_hydrostatic, cleanup_hydrostatic
+      use particle_pub,          only: init_particles
 #endif /* GRAV */
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid, init_multigrid_ext, multigrid_par
@@ -174,7 +175,7 @@ contains
       call init_decomposition
 #ifdef GRAV
       call init_grav                         ! Has to be called before init_grid
-      call init_grav_ext
+      call init_particles
       call init_hydrostatic
 #endif /* GRAV */
 #ifdef MULTIGRID
@@ -210,8 +211,7 @@ contains
       ! Initial conditions are read here from a restart file if possible
 
 #ifdef GRAV
-      if (nrestart == 0) call update_gp      !> \todo check if source_terms_grav should be called here
-                                             !> \todo check if sum_potential inside this update_gp should be called here after reading restart while SELF_GRAV is activated
+      call init_terms_grav(nrestart /= 0)
 #endif /* GRAV */
 
       if (nrestart /= 0) call all_bnd

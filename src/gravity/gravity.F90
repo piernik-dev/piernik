@@ -41,7 +41,7 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_src_exec, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, update_gp
+   public :: init_grav, init_terms_grav, grav_accel, source_terms_grav, grav_src_exec, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, update_gp
    public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x, variable_gp
 
    integer, parameter         :: gp_stat_len   = 9
@@ -160,7 +160,6 @@ contains
       use dataio_pub,     only: nh    ! QA_WARN required for diff_nml
       use dataio_pub,     only: printinfo, warn, die, code_progress
       use mpisetup,       only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
-      use particle_pub,   only: init_particles
       use units,          only: newtong
 #ifdef SELF_GRAV
       use constants,      only: sgp_n, sgpm_n
@@ -314,7 +313,7 @@ contains
             call die("[gravity:init_grav] Unknown gradient operator")
       end select
 
-      call init_particles
+      call init_grav_ext
 
    end subroutine init_grav
 
@@ -366,6 +365,20 @@ contains
       !> \todo Place a call to initialize gp here, not in default_grav_pot_3d
 
    end subroutine g_cg_init
+
+!>
+!! \brief Collect gravitational terms depending on whether they are taken from restart file or not
+!<
+   subroutine init_terms_grav(restarted_sim)
+
+      implicit none
+
+      logical, intent(in) :: restarted_sim
+
+      if (.not.restarted_sim) call update_gp      !> \todo check if source_terms_grav should be called here
+                                                  !> \todo check if sum_potential inside this update_gp should be called here after reading restart while SELF_GRAV is activated
+
+   end subroutine init_terms_grav
 
    subroutine source_terms_grav
 
