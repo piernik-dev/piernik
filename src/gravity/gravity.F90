@@ -69,6 +69,7 @@ module gravity
 
    logical                    :: user_grav             !< use user defined grav_pot_3d
    logical                    :: variable_gp           !< if .true. then cg%gp is evaluated at every step
+   logical                    :: restart_gpot, restart_hgpot, restart_gp, restart_sgp, restart_sgpm !< if .true. then write this grav part to the restart files
 
    interface
 
@@ -148,6 +149,11 @@ contains
 !! <tr><td>n_gravr      </td><td>0      </td><td>real             </td><td>\copydoc gravity::n_gravr      </td></tr>
 !! <tr><td>user_grav    </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::user_grav    </td></tr>
 !! <tr><td>variable_gp  </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::variable_gp  </td></tr>
+!! <tr><td>restart_gp   </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::restart_gp   </td></tr>
+!! <tr><td>restart_gpot </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::restart_gpot </td></tr>
+!! <tr><td>restart_hgpot</td><td>.false.</td><td>logical          </td><td>\copydoc gravity::restart_hgpot</td></tr>
+!! <tr><td>restart_sgp  </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::restart_sgp  </td></tr>
+!! <tr><td>restart_sgpm </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::restart_sgpm </td></tr>
 !! <tr><td>gprofs_target</td><td>'extgp'</td><td>string of chars  </td><td>\copydoc gravity::gprofs_target</td></tr>
 !! </table>
 !! The list is active while \b "GRAV" is defined.
@@ -156,7 +162,7 @@ contains
    subroutine init_grav
 
       use cg_list_global, only: all_cg
-      use constants,      only: PIERNIK_INIT_MPI, AT_OUT_B, gp_n, gpot_n, hgpot_n, O_I2, O_I4
+      use constants,      only: PIERNIK_INIT_MPI, gp_n, gpot_n, hgpot_n, O_I2, O_I4
       use dataio_pub,     only: nh    ! QA_WARN required for diff_nml
       use dataio_pub,     only: printinfo, warn, die, code_progress
       use mpisetup,       only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
@@ -171,7 +177,8 @@ contains
       implicit none
 
       namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, ptmass2, ptm2_x, &
-                         nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, variable_gp, ord_pot2accel
+                         nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, variable_gp, ord_pot2accel, &
+                         restart_gp, restart_gpot, restart_hgpot, restart_sgp, restart_sgpm
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[gravity:init_grav] mpi not initialized.")
 
@@ -201,6 +208,11 @@ contains
 
       user_grav     = .false.
       variable_gp   = .false.
+      restart_gp    = .true.
+      restart_gpot  = .false.
+      restart_hgpot = .false.
+      restart_sgp   = .false.
+      restart_sgpm  = .false.
 
       if (master) then
 
@@ -239,6 +251,11 @@ contains
 
          lbuff(1)   = user_grav
          lbuff(2)   = variable_gp
+         lbuff(3)   = restart_gp
+         lbuff(4)   = restart_gpot
+         lbuff(5)   = restart_hgpot
+         lbuff(6)   = restart_sgp
+         lbuff(7)   = restart_sgpm
 
          cbuff(1)   = gprofs_target
          cbuff(2)   = external_gp
@@ -271,6 +288,11 @@ contains
 
          user_grav     = lbuff(1)
          variable_gp   = lbuff(2)
+         restart_gp    = lbuff(3)
+         restart_gpot  = lbuff(4)
+         restart_hgpot = lbuff(5)
+         restart_sgp   = lbuff(6)
+         restart_sgpm  = lbuff(7)
 
          gprofs_target = cbuff(1)(1:gproft_len)
          external_gp   = cbuff(2)
@@ -289,12 +311,12 @@ contains
 
       ! Declare arrays for potential and make shortcuts
       ! All gravitational potential should be recalculated after refinement changes
-      call all_cg%reg_var(gpot_n)
-      call all_cg%reg_var(hgpot_n)
-      call all_cg%reg_var(gp_n, restart_mode = AT_OUT_B) !> \todo register it if and only if it is in use, which should be achievable as long as external_gp doesn't change during simulation
+      call all_cg%reg_var(gpot_n,  restart_mode = res_at(restart_gpot))
+      call all_cg%reg_var(hgpot_n, restart_mode = res_at(restart_gpot))
+      call all_cg%reg_var(gp_n,    restart_mode = res_at(restart_gpot))
 #ifdef SELF_GRAV
-      call all_cg%reg_var(sgp_n)
-      call all_cg%reg_var(sgpm_n)
+      call all_cg%reg_var(sgp_n,   restart_mode = res_at(restart_gpot))
+      call all_cg%reg_var(sgpm_n,  restart_mode = res_at(restart_gpot))
 #endif /* SELF_GRAV */
 
       if (.not.user_grav) then
@@ -316,6 +338,19 @@ contains
       call init_grav_ext
 
    end subroutine init_grav
+
+   integer function res_at(incl_gt)
+
+      use constants, only: AT_IGNORE, AT_OUT_B
+
+      implicit none
+
+      logical, intent(in) :: incl_gt
+
+      res_at = AT_IGNORE
+      if (incl_gt) res_at = AT_OUT_B
+
+   end function res_at
 
 !> Register gravity-specific initialization of cg
 
