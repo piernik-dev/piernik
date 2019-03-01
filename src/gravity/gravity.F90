@@ -315,12 +315,12 @@ contains
 
       ! Declare arrays for potential and make shortcuts
       ! All gravitational potential should be recalculated after refinement changes
-      call all_cg%reg_var(gpot_n,  restart_mode = res_at(restart_gpot))
-      call all_cg%reg_var(hgpot_n, restart_mode = res_at(restart_gpot))
-      call all_cg%reg_var(gp_n,    restart_mode = res_at(restart_gpot))
+      call all_cg%reg_var(gpot_n,  restart_mode = res_at(restart_gpot) )
+      call all_cg%reg_var(hgpot_n, restart_mode = res_at(restart_hgpot))
+      call all_cg%reg_var(gp_n,    restart_mode = res_at(restart_gp)   )
 #ifdef SELF_GRAV
-      call all_cg%reg_var(sgp_n,   restart_mode = res_at(restart_gpot))
-      call all_cg%reg_var(sgpm_n,  restart_mode = res_at(restart_gpot))
+      call all_cg%reg_var(sgp_n,   restart_mode = res_at(restart_sgp)  )
+      call all_cg%reg_var(sgpm_n,  restart_mode = res_at(restart_sgpm) )
 #endif /* SELF_GRAV */
 
       if (.not.user_grav) then
