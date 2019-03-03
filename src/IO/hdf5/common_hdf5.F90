@@ -492,6 +492,7 @@ contains
       integer(SIZE_T)                :: maxlen
       integer(kind=4)                :: error
 
+      ! \ToDo Set up a stack of routines registered by appropriate modules
       if (associated(user_attrs_pre)) call user_attrs_pre
 
       if (master) then
@@ -543,6 +544,7 @@ contains
       call H5Tclose_f(type_id, error)
       call H5Pclose_f(prp_id, error)
 
+      ! \ToDo Set up a stack of routines registered by appropriate modules
 #ifdef COSM_RAY_ELECTRONS
       call write_cresp_to_restart(file_id)
 #endif /* COSM_RAY_ELECTRONS */
