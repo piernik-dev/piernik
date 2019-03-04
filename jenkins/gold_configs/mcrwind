@@ -1,6 +1,7 @@
 # sha1 of the gold commit
 # Note: update only when absolutely necessary
-GOLD_COMMIT=0093dc8220e96ebfe76399749c8ec80f9b990f99
+GOLD_COMMIT=fc4dd27fc3c1a55f8d917290f60a112328e46a44
+# fc4dd27fc3c1a55f8d917290f60a112328e46a44 - [snsources] r_sn should be scaled in pc while amp_(e)cr_sn is scaled in ethu
 # 0093dc8220e96ebfe76399749c8ec80f9b990f99 - timestep retry now should not have side-effects (except for self-gravity)
 # 2c29dfd2614450938c1ca8518441513fa9abcfba - changed timestep reduction when retrying a timestep
 # 799877d5cc8594a75e1452071ade3c96f46688e2 - [sources] collect changes from all sources once and limit ecr after doing sources
