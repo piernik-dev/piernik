@@ -291,7 +291,7 @@ contains
 #define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
 
       call common_shortcuts(var, fl_dni, i_xyz)
-
+      if (.not. associated(fl_dni)) tab = -huge(1.)
       ierrh = 0
       tab = 0.0
 
@@ -317,16 +317,16 @@ contains
             tab(:,:,:) = cg%u(flind%trc%beg, RNG)
 #endif /* TRACER */
          case ("dend", "deni", "denn")
-            tab(:,:,:) = cg%u(fl_dni%idn, RNG)
+            if (associated(fl_dni)) tab(:,:,:) = cg%u(fl_dni%idn, RNG)
          case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
-            tab(:,:,:) = cg%u(fl_dni%imx + i_xyz, RNG) / cg%u(fl_dni%idn, RNG)
+            if (associated(fl_dni)) tab(:,:,:) = cg%u(fl_dni%imx + i_xyz, RNG) / cg%u(fl_dni%idn, RNG)
          case ("momxd", "momxn", "momxi", "momyd", "momyn", "momyi", "momzd", "momzn", "momzi")
-            tab(:,:,:) = cg%u(fl_dni%imx + i_xyz, RNG)
+            if (associated(fl_dni)) tab(:,:,:) = cg%u(fl_dni%imx + i_xyz, RNG)
          case ("enen", "enei")
 #ifdef ISO
-            tab(:,:,:) = ekin(cg%u(fl_dni%imx, RNG), cg%u(fl_dni%imy, RNG), cg%u(fl_dni%imz, RNG), cg%u(fl_dni%idn, RNG))
+            if (associated(fl_dni)) tab(:,:,:) = ekin(cg%u(fl_dni%imx, RNG), cg%u(fl_dni%imy, RNG), cg%u(fl_dni%imz, RNG), cg%u(fl_dni%idn, RNG))
 #else /* !ISO */
-            tab(:,:,:) = cg%u(fl_dni%ien, RNG)
+            if (associated(fl_dni)) tab(:,:,:) = cg%u(fl_dni%ien, RNG)
 #endif /* !ISO */
          case ("pren")
 #ifndef ISO

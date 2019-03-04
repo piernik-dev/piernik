@@ -264,7 +264,9 @@ contains
    subroutine common_shortcuts(var, fl_dni, i_xyz)
 
       use constants,  only: dsetnamelen, singlechar, INT4
+      use dataio_pub, only: warn
       use fluidindex, only: flind
+      use fluids_pub, only: has_ion, has_dst, has_neu
       use fluidtypes, only: component_fluid
 
       implicit none
@@ -279,21 +281,49 @@ contains
       if (any([ "den", "vlx", "vly", "vlz", "ene" ] == var(1:3))) then
          select case (var(4:4))
             case ("d")
-               fl_dni => flind%dst
+               if (has_dst) then
+                  fl_dni => flind%dst
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no dust fluid")
+               endif
             case ("n")
-               fl_dni => flind%neu
+               if (has_neu) then
+                  fl_dni => flind%neu
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no neutral fluid")
+               endif
             case ("i")
-               fl_dni => flind%ion
+               if (has_ion) then
+                  fl_dni => flind%ion
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no ionized fluid")
+               endif
+            case default
+               call warn("[common_hdf5:common_shortcuts] cannot assign fluid to '" // trim(var) // "'")
          end select
       else if (any([ "momx", "momy", "momz" ] == var(1:4))) then
          select case (var(5:5))
             case ("d")
-               fl_dni => flind%dst
+               if (has_dst) then
+                  fl_dni => flind%dst
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no dust fluid")
+               endif
             case ("n")
-               fl_dni => flind%neu
+               if (has_neu) then
+                  fl_dni => flind%neu
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no neutral fluid")
+               endif
             case ("i")
-               fl_dni => flind%ion
-         end select
+               if (has_ion) then
+                  fl_dni => flind%ion
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no ionized fluid")
+               endif
+            case default
+               call warn("[common_hdf5:common_shortcuts] cannot assign fluid to '" // trim(var) // "'")
+        end select
       endif
 
       i_xyz = huge(1_INT4)
