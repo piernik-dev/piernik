@@ -120,18 +120,15 @@ contains
          dt = dtm * dt_shrink
          call reset_freezing_speed
          call downgrade_magic_mass
-#ifdef RANDOMIZE
-         call randoms_redostep(.true.)
-#endif /* RANDOMIZE */
          if (associated(user_reaction_to_redo_step)) call user_reaction_to_redo_step
       else
          tstep_attempt = I_ZERO
          nstep_saved = nstep
          t_saved = t
-#ifdef RANDOMIZE
-         call randoms_redostep(.false.)
-#endif /* RANDOMIZE */
       endif
+#ifdef RANDOMIZE
+      call randoms_redostep(cfl_violated)
+#endif /* RANDOMIZE */
 
       no_hist_count = 0
       cgl => leaves%first

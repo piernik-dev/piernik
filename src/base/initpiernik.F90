@@ -71,9 +71,9 @@ contains
       use hdc,                   only: init_psi
       use interpolations,        only: set_interpolations
 #endif /* RIEMANN */
-#if defined MAGNETIC && defined RESISTIVE
+#ifdef RESISTIVE
       use resistivity,           only: init_resistivity, compute_resist
-#endif /* MAGNETIC && RESISTIVE */
+#endif /* RESISTIVE */
 #ifdef GRAV
       use gravity,               only: init_grav, init_terms_grav, source_terms_grav
       use hydrostatic,           only: init_hydrostatic, cleanup_hydrostatic
@@ -190,7 +190,7 @@ contains
       call init_resistivity                  ! depends on grid
 #endif /* RESISTIVE */
 
-      call init_sources                      ! depends on: geomety, fluids, grid
+      call init_sources                      ! depends on: geometry, fluids, grid
 
 #ifdef MULTIGRID
       call init_multigrid                    ! depends on grid, geometry, units and arrays
