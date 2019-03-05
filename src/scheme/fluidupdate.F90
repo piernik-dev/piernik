@@ -110,7 +110,7 @@ contains
 #endif /* GRAV */
 #if defined(COSM_RAYS) && defined(MULTIGRID)
       use all_boundaries,      only: all_fluid_boundaries
-      use initcosmicrays,      only: use_split
+      use initcosmicrays,      only: use_CRsplit
       use multigrid_diffusion, only: multigrid_solve_diff
 #endif /* COSM_RAYS && MULTIGRID */
 #ifdef SHEAR
@@ -135,7 +135,7 @@ contains
 #endif /* GRAV */
 
 #if defined(COSM_RAYS) && defined(MULTIGRID)
-      if (.not. use_split) then
+      if (.not. use_CRsplit) then
          call multigrid_solve_diff
          call all_fluid_boundaries
       endif
@@ -187,27 +187,25 @@ contains
       use sweeps,         only: sweep
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff
-      use initcosmicrays, only: use_split
+      use initcosmicrays, only: use_CRsplit
 #endif /* COSM_RAYS */
+#ifdef MAGNETIC
+      use constants,      only: DIVB_CT
+      use ct,             only: magfield
+      use global,         only: divB_0_method
+#endif /* MAGNETIC */
 #ifdef DEBUG
       use piernikiodebug, only: force_dumps
 #endif /* DEBUG */
-#ifdef MAGNETIC
-      use ct,             only: magfield
-#endif /* MAGNETIC */
-#if defined(RTVD) || defined (MAGNETIC)
-      use constants,      only: DIVB_CT
-      use global,         only: divB_0_method
-#endif /* RTVD || MAGNETIC */
 
       implicit none
 
       integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
       logical,         intent(in) :: forward  !< if .false. then reverse operation order in the sweep
 
-#ifdef RTVD
+#if defined(RTVD) && defined(MAGNETIC)
       if (divB_0_method /= DIVB_CT) call die("[fluidupdate:make_sweep] only CT is implemented in RTVD")
-#endif /* RTVD */
+#endif /* RTVD && MAGNETIC */
 
       ! ToDo: check if changes of execution order here (block loop, direction loop, boundary update can change
       ! cost or allow for reduction of required guardcells
@@ -215,7 +213,7 @@ contains
       if (dom%has_dir(dir)) then
          if (.not. forward) then
 #ifdef COSM_RAYS
-            if (use_split) call cr_diff(dir)
+            if (use_CRsplit) call cr_diff(dir)
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
             if (divB_0_method == DIVB_CT) call magfield(dir)
@@ -229,7 +227,7 @@ contains
             if (divB_0_method == DIVB_CT) call magfield(dir)
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-            if (use_split) call cr_diff(dir)
+            if (use_CRsplit) call cr_diff(dir)
 #endif /* COSM_RAYS */
          endif
       else

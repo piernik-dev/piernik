@@ -53,7 +53,7 @@ contains
       use grid_cont,           only: grid_container
       use initcosmicrays,      only: cfl_cr, K_crs_paral, K_crs_perp
 #ifdef MULTIGRID
-      use initcosmicrays,      only: use_split
+      use initcosmicrays,      only: use_CRsplit
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
 #endif /* MULTIGRID */
 
@@ -76,7 +76,7 @@ contains
             dt = dt * cg%dxmn**2
 #ifdef MULTIGRID
             diff_dt_crs_orig = min(dt_crs, dt)
-            if (.not. (use_split .or. diff_explicit)) dt = dt * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
+            if (.not. (use_CRsplit .or. diff_explicit)) dt = dt * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
 #endif /* MULTIGRID */
             dt_crs = min(dt_crs, dt)
          endif
