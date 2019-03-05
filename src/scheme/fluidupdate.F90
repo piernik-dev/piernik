@@ -164,18 +164,16 @@ contains
 
       else
          if (forward) then
-#ifndef COSM_RAY_ELECTRONS
-            do icrc=1, flind%crs%all
-               do s = xdim, zdim
-                  if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
-               enddo
-            enddo
-#else /* COSM_RAY_ELECTRONS */
+#ifdef COSM_RAY_ELECTRONS
             do icrc=1, flind%crn%all
+#else /* !COSM_RAY_ELECTRONS */
+            do icrc=1, flind%crs%all
+#endif /* !COSM_RAY_ELECTRONS */
                do s = xdim, zdim
                   if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
                enddo
             enddo
+#ifdef COSM_RAY_ELECTRONS
             do icrc= flind%crn%all + 1, flind%crn%all + ncre
                do s = xdim, zdim
                   if (.not.skip_sweep(s)) then
@@ -186,18 +184,16 @@ contains
             enddo
 #endif /* COSM_RAY_ELECTRONS */
          else! not forward
-#ifndef COSM_RAY_ELECTRONS
-            do icrc=1, flind%crs%all
-               do s = zdim, xdim, -I_ONE
-                  if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
-               enddo
-            enddo
-#else /* COSM_RAY_ELECTRONS */
+#ifdef COSM_RAY_ELECTRONS
             do icrc=1, flind%crn%all
+#else /* !COSM_RAY_ELECTRONS */
+            do icrc=1, flind%crs%all
+#endif /* !COSM_RAY_ELECTRONS */
                do s = zdim, xdim, -I_ONE
                   if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
                enddo
             enddo
+#ifdef COSM_RAY_ELECTRONS
             do icrc= flind%crn%all + 1, flind%crn%all + ncre
                do s = zdim, xdim, -I_ONE
                   if (.not.skip_sweep(s)) then
