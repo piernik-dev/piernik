@@ -144,8 +144,14 @@ contains
 
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
-      integer(kind=4) :: s
+      integer(kind=4) :: s, sFRST, sLAST, sCHNG
       integer(kind=4) :: icrc      ! index of cr component in iarr_crs
+
+      if (forward) then
+         sFRST = xdim ; sLAST = zdim ; sCHNG = I_ONE
+      else
+         sFRST = zdim ; sLAST = xdim ; sCHNG = -I_ONE
+      endif
 
 #ifdef SHEAR
       call shear_3sweeps
@@ -163,47 +169,25 @@ contains
 #endif /* MULTIGRID */
 
       else
-         if (forward) then
 #ifdef COSM_RAY_ELECTRONS
-            do icrc=1, flind%crn%all
+         do icrc=1, flind%crn%all
 #else /* !COSM_RAY_ELECTRONS */
-            do icrc=1, flind%crs%all
+         do icrc=1, flind%crs%all
 #endif /* !COSM_RAY_ELECTRONS */
-               do s = xdim, zdim
-                  if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
-               enddo
+            do s = sFRST, sLAST, sCHNG
+               if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
             enddo
+         enddo
 #ifdef COSM_RAY_ELECTRONS
-            do icrc= flind%crn%all + 1, flind%crn%all + ncre
-               do s = xdim, zdim
-                  if (.not.skip_sweep(s)) then
-                     call make_diff_sweep(icrc, s)
-                     call make_diff_sweep(ncre + icrc, s)
-                  endif
-               enddo
+         do icrc= flind%crn%all + 1, flind%crn%all + ncre
+            do s = sFRST, sLAST, sCHNG
+               if (.not.skip_sweep(s)) then
+                  call make_diff_sweep(icrc, s)
+                  call make_diff_sweep(ncre + icrc, s)
+               endif
             enddo
+         enddo
 #endif /* COSM_RAY_ELECTRONS */
-         else! not forward
-#ifdef COSM_RAY_ELECTRONS
-            do icrc=1, flind%crn%all
-#else /* !COSM_RAY_ELECTRONS */
-            do icrc=1, flind%crs%all
-#endif /* !COSM_RAY_ELECTRONS */
-               do s = zdim, xdim, -I_ONE
-                  if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
-               enddo
-            enddo
-#ifdef COSM_RAY_ELECTRONS
-            do icrc= flind%crn%all + 1, flind%crn%all + ncre
-               do s = zdim, xdim, -I_ONE
-                  if (.not.skip_sweep(s)) then
-                     call make_diff_sweep(icrc, s)
-                     call make_diff_sweep(ncre + icrc, s)
-                  endif
-               enddo
-            enddo
-#endif /* COSM_RAY_ELECTRONS */
-         endif
       endif
 #endif /* COSM_RAYS */
 
@@ -217,15 +201,9 @@ contains
          if (.not.skip_sweep(xdim)) call make_adv_sweep(xdim, forward)
          if (.not.skip_sweep(ydim)) call make_fargosweep
       else
-         if (forward) then
-            do s = xdim, zdim
-               if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
-            enddo
-         else
-            do s = zdim, xdim, -I_ONE
-               if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
-            enddo
-         endif
+         do s = sFRST, sLAST, sCHNG
+            if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
+         enddo
       endif
 
 #ifdef GRAV
