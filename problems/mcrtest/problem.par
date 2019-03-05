@@ -69,7 +69,7 @@ $BASE_DOMAIN
     K_crn_perp(1)  = 10.0    ! isotropic
     K_crn_perp(2)  = 0
     K_crn_perp(3)  = 0
-    use_split   = .true.
+    use_CRsplit   = .true.
  /
 
  $COSMIC_RAY_SPECTRUM

@@ -56,7 +56,7 @@ module initcosmicrays
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
    real                                :: cr_eff       !< conversion rate of SN explosion energy to CR energy (default = 0.1)
-   logical                             :: use_split    !< apply all diffusion operators at once (.false.) or use directional splittiong (.true.)
+   logical                             :: use_CRsplit    !< apply all diffusion operators at once (.false.) or use directional splittiong (.true.)
    real, dimension(ncr_max)            :: gamma_crn    !< array containing adiabatic indexes of all CR nuclear components
    real, dimension(ncr_max)            :: K_crn_paral  !< array containing parallel diffusion coefficients of all CR nuclear components
    real, dimension(ncr_max)            :: K_crn_perp   !< array containing perpendicular diffusion coefficients of all CR nuclear components
@@ -101,7 +101,7 @@ contains
 !! <tr><td>smallecr    </td><td>0.0   </td><td>real value</td><td>\copydoc initcosmicrays::smallecr   </td></tr>
 !! <tr><td>cr_active   </td><td>1.0   </td><td>real value</td><td>\copydoc initcosmicrays::cr_active  </td></tr>
 !! <tr><td>cr_eff      </td><td>0.1   </td><td>real value</td><td>\copydoc initcosmicrays::cr_eff     </td></tr>
-!! <tr><td>use_split   </td><td>.true.</td><td>logical   </td><td>\copydoc initcosmicrays::use_split  </td></tr>
+!! <tr><td>use_CRsplit </td><td>.true.</td><td>logical   </td><td>\copydoc initcosmicrays::use_CRsplit</td></tr>
 !! <tr><td>ncrn        </td><td>0     </td><td>integer   </td><td>\copydoc initcosmicrays::ncrn       </td></tr>
 !! <tr><td>ncre        </td><td>0     </td><td>integer   </td><td>\copydoc initcosmicrays::ncre       </td></tr>
 !! <tr><td>gamma_crn   </td><td>4./3. </td><td>real array</td><td>\copydoc initcosmicrays::gamma_crn  </td></tr>
@@ -127,16 +127,18 @@ contains
 #ifdef COSM_RAYS_SOURCES
       use cr_data,         only: init_crsources
 #endif /* COSM_RAYS_SOURCES */
+
       implicit none
 
       integer(kind=4) :: nn, icr, jcr
       integer         :: ne
+
 #ifdef COSM_RAY_ELECTRONS
-      namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, use_split, &
+      namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, use_CRsplit, &
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
            &                 divv_scheme, crn_gpcr_ess
 #else /* !COSM_RAY_ELECTRONS */
-      namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, use_split, &
+      namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, use_CRsplit, &
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
            &                 ncre, gamma_cre, K_cre_paral, K_cre_perp, &
            &                 divv_scheme, crn_gpcr_ess, cre_gpcr_ess
@@ -156,7 +158,7 @@ contains
 
       cre_gpcr_ess(:) = .false.
 #endif /* !COSM_RAY_ELECTRONS */
-      use_split  = .true.
+      use_CRsplit  = .true.
 
       gamma_crn(:)   = 4./3.
       K_crn_paral(:) = 0.0
@@ -189,11 +191,11 @@ contains
       endif
 
 #ifndef MULTIGRID
-      if (.not. use_split) call warn("[initcosmicrays:init_cosmicrays] No multigrid solver compiled in: use_split reset to .true.")
-      use_split  = .true.
+      if (.not. use_CRsplit) call warn("[initcosmicrays:init_cosmicrays] No multigrid solver compiled in: use_CRsplit reset to .true.")
+      use_CRsplit   = .true.
 #endif /* !MULTIGRID */
 
-      rbuff(:)   = huge(1.)                         ! mark unused entries to allow automatic determination of nn
+      rbuff(:)      = huge(1.)                         ! mark unused entries to allow automatic determination of nn
 
       if (master) then
 
@@ -207,7 +209,7 @@ contains
          rbuff(3)   = cr_active
          rbuff(4)   = cr_eff
 
-         lbuff(1)   = use_split
+         lbuff(1)   = use_CRsplit
 
          cbuff(1)   = divv_scheme
 
@@ -245,20 +247,20 @@ contains
 
       if (slave) then
 
-         ncrn       = int(ibuff(1), kind=4)
+         ncrn        = int(ibuff(1), kind=4)
 #ifndef COSM_RAY_ELECTRONS
-         ncre       = int(ibuff(2), kind=4)
+         ncre        = int(ibuff(2), kind=4)
 #endif /* COSM_RAY_ELECTRONS */
 
-         cfl_cr     = rbuff(1)
-         smallecr   = rbuff(2)
-         cr_active  = rbuff(3)
-         cr_eff     = rbuff(4)
+         cfl_cr      = rbuff(1)
+         smallecr    = rbuff(2)
+         cr_active   = rbuff(3)
+         cr_eff      = rbuff(4)
 
-         use_split  = lbuff(1)
+         use_CRsplit = lbuff(1)
 
-         nn         = ibuff(ubound(ibuff, 1))    ! this must match the last rbuff() index above
-         ne         = nn + 3 * ncrn
+         nn          = ibuff(ubound(ibuff, 1))    ! this must match the last rbuff() index above
+         ne          = nn + 3 * ncrn
 
          divv_scheme = cbuff(1)
 
