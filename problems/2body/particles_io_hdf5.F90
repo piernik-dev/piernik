@@ -63,7 +63,7 @@ module particles_io_hdf5
 
       implicit none
 
-      integer               intent(in)  :: n
+      integer,              intent(in)  :: n
       real, dimension(n,3), intent(out) :: table
       character(len=fnamelen)           :: hdf_name = 'test_01.h5'
       integer(kind=4)                   :: error, time
