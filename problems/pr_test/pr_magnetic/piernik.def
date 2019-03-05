@@ -1,0 +1,16 @@
+#define HDF5
+#define IONIZED
+#define MAGNETIC
+#undef NEUTRAL
+#define RIEMANN
+
+#if !defined GLOBAL_FR_SPEED
+#  define LOCAL_FR_SPEED
+#endif
+
+#undef ISO
+
+#undef GRAV
+#undef MULTIGRID
+
+#define DEBUG

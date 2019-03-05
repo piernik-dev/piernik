@@ -70,13 +70,12 @@ contains
    subroutine solve_cg(cg, ddim, istep, fargo_vel)
 
       use bfc_bcc,          only: interpolate_mag_field
-      use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, uh_n, magh_n, psih_n, INVALID, GEO_XYZ, I_ZERO, I_ONE, rk_coef
+      use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, uh_n, magh_n, psih_n, INVALID, GEO_XYZ, I_ZERO, I_ONE, rk_coef, psidim
       use dataio_pub,       only: die
       use domain,           only: dom, is_refined
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp, iarr_mag_swp
       use global,           only: dt, force_cc_mag, use_fargo
       use grid_cont,        only: grid_container
-      use hlld,             only: psidim
       use named_array_list, only: wna, qna
       use sources,          only: prepare_sources, all_sources
 #ifdef COSM_RAYS

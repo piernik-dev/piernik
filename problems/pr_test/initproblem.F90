@@ -124,8 +124,7 @@ contains
    subroutine problem_initial_conditions
 
       use constants,  only: base_level_id
-      use dataio_pub, only: die
-      use mpisetup,   only: master
+      use dataio_pub, only: printinfo
 
       implicit none
 
@@ -141,7 +140,7 @@ contains
          call prepare_fld(base_level_id, int(i))
       enddo
 
-      if (master) call die("[initproblem:problem_initial_conditions] End of test")
+      call printinfo("[initproblem:problem_initial_conditions] End of test")
 
    end subroutine problem_initial_conditions
 
@@ -435,12 +434,14 @@ contains
 
    subroutine fld_reg
 
-      use cg_list_global, only: all_cg
-      use constants,      only: AT_OUT_B
+      use cg_list_global,   only: all_cg
+      use constants,        only: AT_OUT_B
+      use named_array_list, only: qna
 
       implicit none
 
-      call all_cg%reg_var(fld_n, restart_mode = AT_OUT_B, multigrid=.true., ord_prolong = ord_prolong)
+      if (.not. qna%exists(fld_n)) &
+           call all_cg%reg_var(fld_n, restart_mode = AT_OUT_B, multigrid=.true., ord_prolong = ord_prolong)
 
    end subroutine fld_reg
 
