@@ -125,7 +125,7 @@ contains
 #ifdef COSM_RAYS
       use all_boundaries,      only: all_fluid_boundaries
       use fluidindex,          only: flind
-      use initcosmicrays,      only: use_split
+      use initcosmicrays,      only: use_CRsplit
 #ifdef MULTIGRID
       use multigrid_diffusion, only: multigrid_solve_diff
 #endif /* MULTIGRID */
@@ -144,8 +144,14 @@ contains
 
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
-      integer(kind=4) :: s
+      integer(kind=4) :: s, sFRST, sLAST, sCHNG
       integer(kind=4) :: icrc      ! index of cr component in iarr_crs
+
+      if (forward) then
+         sFRST = xdim ; sLAST = zdim ; sCHNG = I_ONE
+      else
+         sFRST = zdim ; sLAST = xdim ; sCHNG = -I_ONE
+      endif
 
 #ifdef SHEAR
       call shear_3sweeps
@@ -156,58 +162,32 @@ contains
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
-      if (.not. use_split) then
+      if (.not. use_CRsplit) then
 #ifdef MULTIGRID
          call multigrid_solve_diff
          call all_fluid_boundaries
 #endif /* MULTIGRID */
 
       else
-         if (forward) then
-#ifndef COSM_RAY_ELECTRONS
-            do icrc=1, flind%crs%all
-               do s = xdim, zdim
-                  if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
-               enddo
-            enddo
-#else
-            do icrc=1, flind%crn%all
-               do s = xdim, zdim
-                  if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
-               enddo
-            enddo
-            do icrc= flind%crn%all + 1, flind%crn%all + ncre
-               do s = xdim, zdim
-                  if (.not.skip_sweep(s)) then
-                     call make_diff_sweep(icrc, s)
-                     call make_diff_sweep(ncre + icrc, s)
-                  endif
-               enddo
-            enddo
+#ifdef COSM_RAY_ELECTRONS
+         do icrc=1, flind%crn%all
+#else /* !COSM_RAY_ELECTRONS */
+         do icrc=1, flind%crs%all
 #endif /* !COSM_RAY_ELECTRONS */
-         else! not forward
-#ifndef COSM_RAY_ELECTRONS
-            do icrc=1, flind%crs%all
-               do s = zdim, xdim, -I_ONE
-                  if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
-               enddo
+            do s = sFRST, sLAST, sCHNG
+               if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
             enddo
-#else
-            do icrc=1, flind%crn%all
-               do s = zdim, xdim, -I_ONE
-                  if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
-               enddo
+         enddo
+#ifdef COSM_RAY_ELECTRONS
+         do icrc= flind%crn%all + 1, flind%crn%all + ncre
+            do s = sFRST, sLAST, sCHNG
+               if (.not.skip_sweep(s)) then
+                  call make_diff_sweep(icrc, s)
+                  call make_diff_sweep(ncre + icrc, s)
+               endif
             enddo
-            do icrc= flind%crn%all + 1, flind%crn%all + ncre
-               do s = zdim, xdim, -I_ONE
-                  if (.not.skip_sweep(s)) then
-                     call make_diff_sweep(icrc, s)
-                     call make_diff_sweep(ncre + icrc, s)
-                  endif
-               enddo
-            enddo
-#endif /* !COSM_RAY_ELECTRONS */
-         endif
+         enddo
+#endif /* COSM_RAY_ELECTRONS */
       endif
 #endif /* COSM_RAYS */
 
@@ -221,15 +201,9 @@ contains
          if (.not.skip_sweep(xdim)) call make_adv_sweep(xdim, forward)
          if (.not.skip_sweep(ydim)) call make_fargosweep
       else
-         if (forward) then
-            do s = xdim, zdim
-               if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
-            enddo
-         else
-            do s = zdim, xdim, -I_ONE
-               if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
-            enddo
-         endif
+         do s = sFRST, sLAST, sCHNG
+            if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
+         enddo
       endif
 
 #ifdef GRAV
@@ -255,25 +229,23 @@ contains
       use domain,         only: dom
       use global,         only: geometry25D
       use sweeps,         only: sweep
+#ifdef MAGNETIC
+      use constants,      only: DIVB_CT
+      use ct,             only: magfield
+      use global,         only: divB_0_method
+#endif /* MAGNETIC */
 #ifdef DEBUG
       use piernikiodebug, only: force_dumps
 #endif /* DEBUG */
-#ifdef MAGNETIC
-      use ct,             only: magfield
-#endif /* MAGNETIC */
-#if defined(RTVD) || defined (MAGNETIC)
-      use constants,      only: DIVB_CT
-      use global,         only: divB_0_method
-#endif /* RTVD || MAGNETIC */
 
       implicit none
 
       integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
       logical,         intent(in) :: forward  !< if .false. then reverse operation order in the sweep
 
-#ifdef RTVD
+#if defined(RTVD) && defined(MAGNETIC)
       if (divB_0_method /= DIVB_CT) call die("[fluidupdate:make_sweep] only CT is implemented in RTVD")
-#endif /* RTVD */
+#endif /* RTVD && MAGNETIC */
 
       ! ToDo: check if changes of execution order here (block loop, direction loop, boundary update can change
       ! cost or allow for reduction of required guardcells
