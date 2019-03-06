@@ -80,6 +80,9 @@ contains
       use particle_pub,          only: init_particles
 #endif /* GRAV */
 #ifdef NBODY
+#ifdef SELF_GRAV
+      use gravity,               only: source_terms_grav
+#endif /* SELF_GRAV */
       use initproblem,           only: problem_initial_nbody
       use particle_gravity,      only: update_particle_gravpot_and_acc
 #endif /* NBODY */
@@ -289,6 +292,9 @@ contains
       !> \todo Do an MPI_Reduce in case the master process don't have any part of the globally finest level or ensure it is empty in such case
       if (master) call printinfo(msg)
 
+#if defined(SELF_GRAV) && defined(NBODY)
+      call source_terms_grav                 ! moved from the beginning of the first make_3sweeps
+#endif /* SELF_GRAV && NBODY */
 #ifdef RESISTIVE
       call compute_resist                    ! etamax%val is required by timestep_resist
 #endif /* RESISTIVE */
