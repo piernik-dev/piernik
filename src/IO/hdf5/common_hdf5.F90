@@ -103,6 +103,7 @@ contains
       use mpisetup,   only: master
 #ifdef COSM_RAYS
       use dataio_pub, only: msg
+      use fluidindex, only: iarr_all_crs
 #endif /* COSM_RAYS */
 
       implicit none
