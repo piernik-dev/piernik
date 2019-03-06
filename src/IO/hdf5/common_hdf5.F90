@@ -96,22 +96,21 @@ contains
 
    subroutine init_hdf5(vars)
 
-      use constants,  only: dsetnamelen, singlechar
-      use dataio_pub, only: warn
-      use fluids_pub, only: has_ion, has_dst, has_neu
-      use global,     only: force_cc_mag
-      use mpisetup,   only: master
+      use constants,      only: dsetnamelen, singlechar
+      use dataio_pub,     only: warn
+      use fluids_pub,     only: has_ion, has_dst, has_neu
+      use global,         only: force_cc_mag
+      use mpisetup,       only: master
 #ifdef COSM_RAYS
-      use dataio_pub, only: msg
-#ifndef COSM_RAY_ELECTRONS
-      use fluidindex, only: iarr_all_crs
+      use dataio_pub,     only: msg
+#ifdef COSM_RAY_ELECTRONS
+      use fluidindex,     only: iarr_all_crn
+      use initcrspectrum, only: ncre
 #else /* !COSM_RAY_ELECTRONS */
-      use fluidindex, only: iarr_all_crn
+      use fluidindex,     only: iarr_all_crs
 #endif /* !COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
-#ifdef COSM_RAY_ELECTRONS
-      use initcrspectrum, only: ncre
-#endif /* COSM_RAY_ELECTRONS */
+
       implicit none
 
       character(len=dsetnamelen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
@@ -181,24 +180,17 @@ contains
                do k = 1, size(iarr_all_crn,1)
                   if (k<=99) then
                      write(aux,'(A2,I2.2)') 'cr', k
-                     call append_var(aux)
-                  else
-                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", k
-                     call warn(msg)
-                  endif
-               enddo
 #else /* !COSM_RAY_ELECTRONS */
                do k = 1, size(iarr_all_crs,1)
                   if (k<=9) then
                      write(aux,'(A2,I1)') 'cr', k
+#endif /* !COSM_RAY_ELECTRONS */
                      call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", k
                      call warn(msg)
                   endif
                enddo
-#endif /* !COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
             case ('cren') !< CRESP number density fields
                do k = 1, ncre
@@ -265,6 +257,7 @@ contains
                   endif
                enddo
 #endif /* COSM_RAY_ELECTRONS */
+#endif /* COSM_RAYS */
             case ('pres')
                if (has_neu) call append_var('pren')
                if (has_ion) call append_var('prei')
