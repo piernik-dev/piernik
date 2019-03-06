@@ -489,8 +489,11 @@ contains
       use func,             only: operator(.notequals.)
       use named_array_list, only: qna
 #ifdef SELF_GRAV
-      use constants,        only: one, half, sgp_n, sgpm_n, zero
+      use constants,        only: one, half, sgp_n, sgpm_n
+#ifndef NBODY
+      use constants,        only: zero
       use global,           only: dt, dtm
+#endif /* !NBODY */
 #endif /* SELF_GRAV */
 #ifdef NBODY_GRIDDIRECT
       use constants,        only: nbgp_n
@@ -501,11 +504,11 @@ contains
 #ifdef SELF_GRAV
       real :: h
 
-      if (dtm .notequals. zero) then
-         h = dt/dtm
-      else
-         h = 0.0
-      endif
+      h = 0.0
+#ifndef NBODY
+      if (dtm .notequals. zero) h = dt/dtm
+#endif /* !NBODY */
+
 #ifdef NBODY_GRIDDIRECT
       !> \todo correct it
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.), ind_val(qna%ind(sgp_n), one+h),      ind_val(qna%ind(sgpm_n), -h)     ], qna%ind(gpot_n))
