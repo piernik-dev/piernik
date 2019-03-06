@@ -97,108 +97,68 @@ contains
    subroutine init_hdf5(vars)
 
       use constants,  only: dsetnamelen, singlechar
-      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use dataio_pub, only: warn
       use fluids_pub, only: has_ion, has_dst, has_neu
       use global,     only: force_cc_mag
-#ifndef ISO
-      use fluidindex, only: iarr_all_en
-#endif /* !ISO */
+      use mpisetup,   only: master
 #ifdef COSM_RAYS
-      use dataio_pub, only: warn, msg
-      use fluidindex, only: iarr_all_crs
+      use dataio_pub, only: msg
 #endif /* COSM_RAYS */
 
       implicit none
 
       character(len=dsetnamelen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
 
-      integer                                              :: nvars, i, j
+      integer                                              :: i
       character(len=singlechar)                            :: fc, ord
       character(len=dsetnamelen)                           :: aux
 #if defined COSM_RAYS
       integer                                              :: k
 #endif /* COSM_RAYS */
 
-      nvars = 0
-      do i = lbound(vars, 1), ubound(vars, 1)
-         if (len_trim(vars(i)) > 0) nvars = nvars + 1
-      enddo
-
-      nhdf_vars = 0
       do i = lbound(vars, 1), ubound(vars, 1)
          select case (trim(vars(i)))
             case ('')
             case ('dens')
-               nhdf_vars = nhdf_vars + size(iarr_all_dn,1)
-            case ('velx', 'momx')
-               nhdf_vars = nhdf_vars + size(iarr_all_mx,1)
-            case ('vely', 'momy')
-               nhdf_vars = nhdf_vars + size(iarr_all_my,1)
-            case ('velz', 'momz')
-               nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
-            case ('ener', 'ethr', 'pres')
-#ifdef ISO
-               if (has_neu) nhdf_vars = nhdf_vars + 1
-               if (has_ion) nhdf_vars = nhdf_vars + 1
-#else /* !ISO */
-               nhdf_vars = nhdf_vars + size(iarr_all_en,1)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-            case ('encr')
-               nhdf_vars = nhdf_vars + size(iarr_all_crs,1)
-#endif /* COSM_RAYS */
-            case default
-               nhdf_vars = nhdf_vars + 1
-               ! all known and unknown field descriptions that add just one field
-         end select
-      enddo
-      allocate(hdf_vars_avail(nhdf_vars))
-      hdf_vars_avail = .true.
-      allocate(hdf_vars(nhdf_vars)); j = 1
-      do i = lbound(vars, 1), ubound(vars, 1)
-         select case (trim(vars(i)))
-            case ('')
-            case ('dens')
-               if (has_dst) then ; hdf_vars(j) = 'dend' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'denn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'deni' ; j = j + 1 ; endif
+               if (has_dst) call append_var('dend')
+               if (has_neu) call append_var('denn')
+               if (has_ion) call append_var('deni')
             case ('velx')
-               if (has_dst) then ; hdf_vars(j) = 'vlxd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'vlxn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'vlxi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('vlxd')
+               if (has_neu) call append_var('vlxn')
+               if (has_ion) call append_var('vlxi')
             case ('vely')
-               if (has_dst) then ; hdf_vars(j) = 'vlyd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'vlyn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'vlyi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('vlyd')
+               if (has_neu) call append_var('vlyn')
+               if (has_ion) call append_var('vlyi')
             case ('velz')
-               if (has_dst) then ; hdf_vars(j) = 'vlzd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'vlzn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'vlzi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('vlzd')
+               if (has_neu) call append_var('vlzn')
+               if (has_ion) call append_var('vlzi')
             case ('momx')
-               if (has_dst) then ; hdf_vars(j) = 'momxd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'momxn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'momxi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('momxd')
+               if (has_neu) call append_var('momxn')
+               if (has_ion) call append_var('momxi')
             case ('momy')
-               if (has_dst) then ; hdf_vars(j) = 'momyd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'momyn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'momyi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('momyd')
+               if (has_neu) call append_var('momyn')
+               if (has_ion) call append_var('momyi')
             case ('momz')
-               if (has_dst) then ; hdf_vars(j) = 'momzd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'momzn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'momzi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('momzd')
+               if (has_neu) call append_var('momzn')
+               if (has_ion) call append_var('momzi')
             case ('ener')
-               if (has_neu) then ; hdf_vars(j) = 'enen' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'enei' ; j = j + 1 ; endif
+               if (has_neu) call append_var('enen')
+               if (has_ion) call append_var('enei')
             case ('ethr')
-               if (has_neu) then ; hdf_vars(j) = 'ethn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'ethi' ; j = j + 1 ; endif
+               if (has_neu) call append_var('ethn')
+               if (has_ion) call append_var('ethi')
             case ("divb", "divB")
                if (force_cc_mag) then
-                  hdf_vars(j) = "divbc"
+                  call append_var("divbc")
                else
-                  hdf_vars(j) = "divbf"
+                  call append_var("divbf")
                endif
-               j = j + 1
             case ("divb4", "divb6", "divb8")
                if (force_cc_mag) then
                   fc = "c"
@@ -206,14 +166,14 @@ contains
                   fc = "f"
                endif
                read(vars(i), '(a4,a1)') aux, ord
-               write(hdf_vars(j), '(3a)') "divb", fc, ord
-               j = j + 1
+               write(aux, '(3a)') "divb", fc, ord
+               call append_var(aux)
 #ifdef COSM_RAYS
             case ('encr')
                do k = 1, size(iarr_all_crs,1)
                   if (k<=9) then
                      write(aux,'(A2,I1)') 'cr', k
-                     hdf_vars(j) = aux ; j = j + 1
+                     call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", k
                      call warn(msg)
@@ -221,13 +181,57 @@ contains
                enddo
 #endif /* COSM_RAYS */
             case ('pres')
-               if (has_neu) then ; hdf_vars(j) = 'pren' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'prei' ; j = j + 1 ; endif
+               if (has_neu) call append_var('pren')
+               if (has_ion) call append_var('prei')
             case default
-               hdf_vars(j) = trim(vars(i)) ; j = j + 1
-               ! all known and unknown field descriptions that add just one field
+               if (.not. has_ion .and. (any(trim(vars(i)) == ["deni", "vlxi", "vlyi", "vlzi", "enei", "ethi", "prei"]) .or. any(trim(vars(i)) == ["momxi", "momyi", "momzi"]))) then
+                  if (master) call warn("[common_hdf5:init_hdf5] Cannot safely use plot variable '" // trim(vars(i)) // "' without ionized fluid")
+               else if (.not. has_neu .and. (any(trim(vars(i)) == ["denn", "vlxn", "vlyn", "vlzn", "enen", "ethn", "pren"]) .or. any(trim(vars(i)) == ["momxn", "momyn", "momzn"]))) then
+                  if (master) call warn("[common_hdf5:init_hdf5] Cannot safely use plot variable '" // trim(vars(i)) // "' without neutral fluid")
+               else if (.not. has_dst .and. (any(trim(vars(i)) == ["dend", "vlxd", "vlyd", "vlzd"]) .or. any(trim(vars(i)) == ["momxd", "momyd", "momzd"]))) then
+                  if (master) call warn("[common_hdf5:init_hdf5] Cannot safely use plot variable '" // trim(vars(i)) // "' without dust fluid")
+               else
+                  call append_var(vars(i)) ! all other known and unknown field descriptions
+               endif
          end select
       enddo
+
+      allocate(hdf_vars_avail(size(hdf_vars)))
+      if (size(hdf_vars_avail) > 0) hdf_vars_avail = .true.
+
+   contains
+
+      subroutine append_var(n)
+
+         use dataio_pub, only: warn
+         use mpisetup,   only: master
+
+         implicit none
+
+         character(len=*), intent(in) :: n
+
+         character(len=dsetnamelen), allocatable, dimension(:) :: tmp
+
+         if (len_trim(n) <= 1) then
+            if (master) call warn("[common_hdf5:init_hdf5:append_var] empty name")
+            return
+         endif
+
+         if (.not. allocated(hdf_vars)) then
+            allocate(hdf_vars(1))
+            hdf_vars = trim(n)
+         else
+            if (.not. any(trim(n) == hdf_vars)) then
+               allocate(tmp(lbound(hdf_vars, dim=1):ubound(hdf_vars, dim=1) + 1))
+               tmp(:ubound(hdf_vars, dim=1)) = hdf_vars
+               call move_alloc(from=tmp, to=hdf_vars)
+               hdf_vars(ubound(hdf_vars, dim=1)) = trim(n)
+            else
+               if (master) call warn("[common_hdf5:init_hdf5:append_var] duplicated name: '" // trim(n) // "'")
+            endif
+         endif
+
+      end subroutine append_var
 
    end subroutine init_hdf5
 
