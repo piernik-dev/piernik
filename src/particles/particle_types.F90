@@ -36,6 +36,11 @@ module particle_types
 
    private
    public :: particle_set, particle_solver_T, pset
+#ifdef NBODY
+   public :: twodtscheme
+
+   logical :: twodtscheme
+#endif /* NBODY */
 
    !>
    !! \brief simple particle: just mass and position

@@ -65,6 +65,7 @@ contains
       use particle_func,         only: check_ord
       use particle_gravity,      only: is_setacc_cic, is_setacc_int, mask_gpot1b
       use particle_integrators,  only: leapfrog2
+      use particle_types,        only: twodtscheme
 #endif /* NBODY */
 
       implicit none
@@ -88,6 +89,7 @@ contains
       npart                = 0
       acc_interp_method    = 'cic'
       lf_c                 = 1.0
+      twodtscheme          = .false.
 #ifdef NBODY_GRIDDIRECT
       mask_gpot1b          = .true.
 #else /* !NBODY_GRIDDIRECT */
@@ -119,6 +121,7 @@ contains
          ibuff(1) = npart
          rbuff(1) = lf_c
          lbuff(1) = mask_gpot1b
+         lbuff(2) = twodtscheme
 #endif /* NBODY */
       endif
 
@@ -137,6 +140,7 @@ contains
          npart                = ibuff(1)
          lf_c                 = rbuff(1)
          mask_gpot1b          = lbuff(1)
+         twodtscheme          = lbuff(2)
 #endif /* NBODY */
       endif
 

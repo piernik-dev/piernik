@@ -320,9 +320,9 @@ contains
 #ifdef NBODY
    subroutine leapfrog2ord(pset, t_glob, dt_tot, forward)
 
-      use constants,        only: two
+      use constants,        only: half, two
       use particle_gravity, only: update_particle_gravpot_and_acc
-      use particle_types,   only: particle_set
+      use particle_types,   only: particle_set, twodtscheme
 
       implicit none
 
@@ -331,23 +331,30 @@ contains
       real,                intent(in)    :: dt_tot               !< timestep of simulation
       logical, optional,   intent(in)    :: forward
 
+      real                               :: dt_kick              !< timestep for kicks
       real                               :: total_energy         !< total energy of set of the particles
       integer                            :: n                    !< number of particles
       !integer, save                      :: counter
 
       n = size(pset%p, dim=1)
+      if (twodtscheme) then
+         dt_kick = dt_tot
+      else
+         dt_kick = dt_tot * half
+      endif
 
       !counter = 1
       !call save_particles(n, lf_t, counter)
 
-      if (forward) then
-         call kick                           (n,     dt_tot) !1. kick  (dt_hydro)
-      else
-         call drift                          (n, two*dt_tot) !2. drift (2*dt_hydro)
+      if (forward .or. .not.twodtscheme) then
+         call kick                           (n,     dt_kick) !1. kick
+      endif
+      if (.not.forward .or. .not.twodtscheme) then
+         call drift                          (n, two*dt_kick) !2. drift
 
          call update_particle_gravpot_and_acc
 
-         call kick                           (n,     dt_tot) !3. kick  (dt_hydro)
+         call kick                           (n,     dt_kick) !3. kick
 
          call update_particle_kinetic_energy (n, total_energy)
 
@@ -459,7 +466,7 @@ contains
 
             do i = 1, n
                call get_acc_model(i, 0.0, acc2)
-               write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, t_glob+dt_tot, dt_tot, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
+               write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, t_glob+dt_kick, dt_kick, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
             enddo
 
             close(lun_out)
