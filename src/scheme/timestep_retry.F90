@@ -133,7 +133,7 @@ contains
       no_hist_count = 0
       cgl => leaves%first
       do while (associated(cgl))
-         ! No need to take care of any cgl%cg%q arrays as long as graity is extrapolated from the previous timestep.
+         ! No need to take care of any cgl%cg%q arrays as long as gravity is extrapolated from the previous timestep.
 
          ! error checking should've been done in restart_arrays, called few lines earlier
          do j = lbound(na_lists, dim=1), ubound(na_lists, dim=1)

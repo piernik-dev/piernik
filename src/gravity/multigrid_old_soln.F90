@@ -122,7 +122,7 @@ contains
 !! If for some reason it is not desired to do the extrapolation (i.e. timestep varies too much) it would be good to have more control on this behavior.
 !!
 !! \details Quadratic extrapolation in time often gives better guess for smooth potentials, but is more risky for sharp-peaked potential fields (like moving self-bound clumps)
-!! Rational extrapolation (1 + a t)/(b + c t) can give 2 times better and 10 times worse guess depending on timestep.
+!! Rational extrapolation (1 + a t)/(b + c t) can give 2 times better or 10 times worse guess depending on timestep.
 !!
 !! Set history%valid to .false. to force start from scratch.
 !!
