@@ -362,8 +362,10 @@ contains
          case ("magB")
             tab(:,:,:) = sqrt(two * emag_c)
          case ("magdir")
-            tab(:,:,:) = atan2(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ), &
-                 &             cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ))
+            tab(:,:,:) =  merge(atan2(cg%b(ydim, RNG), cg%b(xdim, RNG)), &
+                 &              atan2(cg%b(ydim, RNG) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ), &
+                 &                    cg%b(xdim, RNG) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )),  &
+                 &              force_cc_mag)
             ! ToDo: magi - inclination
             ! ToDo: curlb - nabla x B
 !! ToDo: autodetect centering, add option for dumping both just in case
@@ -395,10 +397,7 @@ contains
             else if (has_dst) then
                fl_mach => flind%dst
             endif
-            tab(:,:,:) = sqrt(sq_sum3(cg%u(fl_mach%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
-                 &                    cg%u(fl_mach%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
-                 &                    cg%u(fl_mach%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))) / &
-                 &                    cg%u(fl_mach%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            tab(:,:,:) = sqrt(sq_sum3(cg%u(fl_mach%imx, RNG), cg%u(fl_mach%imy, RNG), cg%u(fl_mach%imz, RNG))) / cg%u(fl_mach%idn, RNG)
          case ("cs", "c_s")
             nullify(fl_mach)
             if (has_ion) then
