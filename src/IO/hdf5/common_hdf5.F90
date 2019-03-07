@@ -538,8 +538,6 @@ contains
 !>
 !! \brief Common attributes for v2 files
 !!
-!! \warning Do not remove redundancy between set_common_attributes_v1 and set_common_attributes_v2 until we get mature
-!! state of the v2 outputs
 !<
 
    subroutine set_common_attributes_v2(file_id)
