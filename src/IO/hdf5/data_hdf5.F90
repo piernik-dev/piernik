@@ -754,7 +754,7 @@ contains
 
       use cg_level_finest, only: finest
       use cg_list,         only: cg_list_element
-      use common_hdf5,     only: nhdf_vars, hdf_vars, hdf_vars_avail
+      use common_hdf5,     only: hdf_vars, hdf_vars_avail
       use constants,       only: ndims, LO, FP_REAL
       use dataio_pub,      only: die, h5_64bit
       use domain,          only: is_multicg !, is_uneven
@@ -803,8 +803,7 @@ contains
       ! Create the data space for the  dataset.
       !
       call h5screate_simple_f(rank, dimsf, filespace, error)
-
-      do i = 1, nhdf_vars
+      do i = 1, size(hdf_vars)
          if (.not.hdf_vars_avail(i)) cycle
 
          ! Create chunked dataset.
@@ -885,7 +884,7 @@ contains
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use common_hdf5, only: nhdf_vars, hdf_vars
+      use common_hdf5, only: hdf_vars
       use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE, tmr_hdf
       use dataio_pub,  only: msg, printio, printinfo, thdf, last_hdf_time, piernik_hdf5_version
       use grid_cont,   only: grid_container
@@ -931,7 +930,7 @@ contains
 
          if (.not.associated(data)) allocate(data(cg%n_b(xdim),cg%n_b(ydim),cg%n_b(zdim)))
          dims = cg%n_b(:)
-         do i = I_ONE, int(nhdf_vars, kind=4)
+         do i = I_ONE, size(hdf_vars, kind=4)
             call get_data_from_cg(hdf_vars(i), cg, data)
             call h5ltmake_dataset_double_f(grp_id, hdf_vars(i), rank, dims, data(:,:,:), error)
          enddo
