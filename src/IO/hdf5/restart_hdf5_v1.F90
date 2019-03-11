@@ -236,7 +236,7 @@ contains
       endif
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
-      if (area_type == AT_IGNORE) return !> \todo write a list of unsaved arrays?
+      if (area_type <= AT_IGNORE) return
       call set_area_for_restart(area_type, area)
 
       dimsf      = [dim1, area(:)] ! Dataset dimensions
@@ -379,7 +379,7 @@ contains
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
       if (present(alt_area_type)) area_type = alt_area_type
-      if (area_type == AT_IGNORE) return !! \todo write a list of unsaved arrays?
+      if (area_type <= AT_IGNORE) return
       call set_area_for_restart(area_type, area)
 
       dimsf = [dim1, area(:)]      ! Dataset dimensions

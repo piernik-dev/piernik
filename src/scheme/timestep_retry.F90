@@ -139,7 +139,7 @@ contains
          do j = lbound(na_lists, dim=1), ubound(na_lists, dim=1)
             associate (na => na_lists(j)%p)
                do i = lbound(na%lst(:), dim=1), ubound(na%lst(:), dim=1)
-                  if (na%lst(i)%restart_mode /= AT_IGNORE) then
+                  if (na%lst(i)%restart_mode > AT_IGNORE) then
                      rname = get_rname(na%lst(i)%name)
                      if (cfl_violated) then
                         if (cgl%cg%has_previous_timestep) then
@@ -188,7 +188,7 @@ contains
    subroutine restart_arrays
 
       use cg_list_global,   only: all_cg
-      use constants,        only: AT_IGNORE, dsetnamelen, INVALID
+      use constants,        only: AT_BACKUP, AT_IGNORE, dsetnamelen, INVALID
       use dataio_pub,       only: printinfo, msg
       use mpisetup,         only: master
       use named_array_list, only: qna, wna
@@ -206,7 +206,7 @@ contains
          associate (na => na_lists(j)%p)
 
             do i = lbound(na%lst(:), dim=1), ubound(na%lst(:), dim=1)
-               if (na%lst(i)%restart_mode /= AT_IGNORE) then
+               if (na%lst(i)%restart_mode > AT_IGNORE) then
                   rname = get_rname(na%lst(i)%name)
                   if (.not. na%exists(rname)) then
                      if (master) then
@@ -216,9 +216,9 @@ contains
                      allocate(pos_copy(size(na%lst(i)%position)))
                      pos_copy = na%lst(i)%position
                      if (na%lst(i)%dim4 /= INVALID) then
-                        call all_cg%reg_var(rname, dim4=na%lst(i)%dim4, position=pos_copy, multigrid=na%lst(i)%multigrid)
+                        call all_cg%reg_var(rname, dim4=na%lst(i)%dim4, position=pos_copy, multigrid=na%lst(i)%multigrid, restart_mode = AT_BACKUP)
                      else
-                        call all_cg%reg_var(rname,                      position=pos_copy, multigrid=na%lst(i)%multigrid)
+                        call all_cg%reg_var(rname,                      position=pos_copy, multigrid=na%lst(i)%multigrid, restart_mode = AT_BACKUP)
                      endif
                      deallocate(pos_copy)
                   endif
