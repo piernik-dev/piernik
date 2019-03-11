@@ -137,7 +137,7 @@ contains
       class(cg_list_global_T),                          intent(inout) :: this          !< object invoking type-bound procedure
       character(len=*),                                 intent(in)    :: name          !< Name of the variable to be registered
       logical,                                optional, intent(in)    :: vital         !< .false. for arrays that don't need to be prolonged or restricted automatically
-      integer(kind=4),                        optional, intent(in)    :: restart_mode  !< Write to the restart if not AT_IGNORE. Several write modes can be supported.
+      integer(kind=4),                        optional, intent(in)    :: restart_mode  !< Write to the restart if >= AT_IGNORE. Several write modes can be supported.
       integer(kind=4),                        optional, intent(in)    :: ord_prolong   !< Prolongation order for the variable
       integer(kind=4),                        optional, intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
       integer(kind=4), dimension(:), pointer, optional, intent(in)    :: position      !< If present then use this value instead of VAR_CENTER

@@ -167,8 +167,11 @@ module dataio_pub
 contains
 
    subroutine namelist_handler_T_init(this)
+
       implicit none
+
       class(namelist_handler_T), intent(inout) :: this
+
       character(len=cwdlen) :: tmpdir
       integer :: lchar_tmpdir
 
@@ -199,7 +202,7 @@ contains
 
       implicit none
 
-      logical :: enable
+      logical, intent(in) :: enable
 
       if (enable) then
          write(ansi_black,  '(A1,A3)') char(27),"[0m"
@@ -357,7 +360,7 @@ contains
 
       implicit none
 
-      character(len=*), intent(in) :: nm
+      character(len=*),  intent(in) :: nm
       logical, optional, intent(in) :: noadvance
 
       logical :: adv
@@ -395,7 +398,7 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)  :: nm
+      character(len=*),  intent(in) :: nm
       integer, optional, intent(in) :: allprocs
 
       call colormessage(nm, T_ERR)
@@ -523,9 +526,11 @@ contains
    end function move_file
 !-----------------------------------------------------------------------------
    subroutine close_txt_file(lfile, llun)
+
       implicit none
-      integer, intent(in)                 :: llun     !< logical unit number for txt file
-      character(len=cwdlen), intent(in)   :: lfile    !< path to txt file
+
+      integer,               intent(in) :: llun     !< logical unit number for txt file
+      character(len=cwdlen), intent(in) :: lfile    !< path to txt file
 
       logical :: lopen
 
@@ -539,11 +544,11 @@ contains
 
    subroutine close_logs
 
-      use mpi,       only: MPI_COMM_WORLD
+      use mpi, only: MPI_COMM_WORLD
 
       implicit none
 
-      integer(kind=4)               :: proc
+      integer(kind=4) :: proc
 
       call MPI_Comm_rank(MPI_COMM_WORLD, proc, mpi_err)
 
@@ -552,6 +557,7 @@ contains
          call close_txt_file(log_file, log_lun)
          call close_txt_file(tsl_file, tsl_lun)
       endif
+
    end subroutine close_logs
 !>
 !! \brief Sanitize a file name
@@ -564,10 +570,11 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)  :: str
+      character(len=*), intent(in) :: str
+
       character(len=len(str)) :: outstr
 
-      integer            :: i
+      integer :: i
 
       outstr = repeat(" ", len(str))
 

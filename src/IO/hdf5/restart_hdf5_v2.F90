@@ -153,7 +153,7 @@ contains
             else
                d_size = int(cg_n_b, kind=HSIZE_T)
             endif
-            if (qna%lst(i)%restart_mode /= AT_IGNORE) &  ! create "/data/grid_%08d/qna%lst(i)%name"
+            if (qna%lst(i)%restart_mode > AT_IGNORE) &  ! create "/data/grid_%08d/qna%lst(i)%name"
                  call create_empty_cg_dataset(cg_g_id, qna%lst(i)%name, d_size, Z_avail, O_RES)
          enddo
       endif
@@ -167,7 +167,7 @@ contains
             else
                d_size = int([ wna%lst(i)%dim4, cg_n_b ], kind=HSIZE_T)
             endif
-            if (wna%lst(i)%restart_mode /= AT_IGNORE) &  ! create "/data/grid_%08d/wna%lst(i)%name"
+            if (wna%lst(i)%restart_mode > AT_IGNORE) &  ! create "/data/grid_%08d/wna%lst(i)%name"
                  call create_empty_cg_dataset(cg_g_id, wna%lst(i)%name, d_size, Z_avail, O_RES)
          enddo
       endif
