@@ -97,7 +97,7 @@ contains
    subroutine all_mag_boundaries
 
       use cg_leaves,        only: leaves
-      use cg_list_global,   only: all_cg
+!!$      use cg_list_global,   only: all_cg
       use constants,        only: xdim, zdim, psi_n, BND_INVALID
       use domain,           only: dom
       use global,           only: psi_bnd

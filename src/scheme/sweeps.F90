@@ -63,13 +63,14 @@ contains
 
    integer function compute_nr_recv(cdim) result(nr)
 
-      use constants,        only: LO, HI, I_ONE
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use mpi,              only: MPI_DOUBLE_PRECISION
-      use mpisetup,         only: comm, mpi_err, req, inflate_req
+      use constants, only: LO, HI, I_ONE
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use mpi,       only: MPI_DOUBLE_PRECISION
+      use mpisetup,  only: comm, mpi_err, req, inflate_req
 
       implicit none
+
       integer(kind=4), intent(in)       :: cdim
 
       type(cg_list_element), pointer    :: cgl
@@ -82,6 +83,8 @@ contains
          cgl%cg%processed = .false.
          cgl%cg%finebnd(cdim, LO)%uflx(:, :, :) = 0. !> \warning overkill
          cgl%cg%finebnd(cdim, HI)%uflx(:, :, :) = 0.
+         cgl%cg%finebnd(cdim, LO)%bflx(:, :, :) = 0.
+         cgl%cg%finebnd(cdim, HI)%bflx(:, :, :) = 0.
          if (allocated(cgl%cg%rif_tgt%seg)) then
             associate ( seg => cgl%cg%rif_tgt%seg )
                do g = lbound(seg, dim=1), ubound(seg, dim=1)
@@ -104,12 +107,16 @@ contains
 !<
 
    subroutine recv_cg_finebnd(cdim, cg, all_received)
-      use constants,        only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims
-      use dataio_pub,       only: die
-      use grid_cont,        only: grid_container
-      use mpi,              only: MPI_STATUS_IGNORE
-      use mpisetup,         only: mpi_err
+
+      use constants,  only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims
+      use dataio_pub, only: die
+      use fluidindex, only: flind
+      use grid_cont,  only: grid_container
+      use mpi,        only: MPI_STATUS_IGNORE
+      use mpisetup,   only: mpi_err
+
       implicit none
+
       integer(kind=4), intent(in)                  :: cdim
       type(grid_container), pointer, intent(inout) :: cg
       logical, intent(out)                         :: all_received
@@ -141,7 +148,8 @@ contains
                   ! cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = &
                   !     cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) + seg(g)%buf(:, :, :)
                   ! for more general decompositions with odd-offset patches it might be necessary to do sum, but it need to be debugged first
-                  cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:, :, :)
+                  cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:flind%all, :, :)
+                  cg%finebnd(cdim, lh)%bflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(flind%all+1:, :, :)
                else
                   all_received = .false.
                endif
@@ -157,15 +165,17 @@ contains
 !<
 
    subroutine send_cg_coarsebnd(cdim, cg, nr)
-      use constants,        only: pdims, LO, HI, ORTHO1, ORTHO2, I_ONE, INVALID
-      use dataio_pub,       only: die
-      use domain,           only: dom
-      use grid_cont,        only: grid_container
-      use grid_helpers,     only: f2c_o
-      use mpi,              only: MPI_DOUBLE_PRECISION
-      use mpisetup,         only: comm, mpi_err, req, inflate_req
+
+      use constants,    only: pdims, LO, HI, ORTHO1, ORTHO2, I_ONE, INVALID
+      use dataio_pub,   only: die
+      use domain,       only: dom
+      use grid_cont,    only: grid_container
+      use grid_helpers, only: f2c_o
+      use mpi,          only: MPI_DOUBLE_PRECISION
+      use mpisetup,     only: comm, mpi_err, req, inflate_req
 
       implicit none
+
       integer(kind=4), intent(in)                  :: cdim
       type(grid_container), pointer, intent(inout) :: cg
       integer, intent(inout)                       :: nr
@@ -194,7 +204,7 @@ contains
                seg(g)%buf(:, :, :) = 0.
                do j = j1(LO), j1(HI)
                   do k = j2(LO), j2(HI)
-                     seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + cg%coarsebnd(cdim, lh)%uflx(:, j, k)
+                     seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + [ cg%coarsebnd(cdim, lh)%uflx(:, j, k), cg%coarsebnd(cdim, lh)%bflx(:, j, k) ]
                   enddo
                enddo
                seg(g)%buf = 1/2.**(dom%eff_dim-1) * seg(g)%buf
@@ -220,13 +230,13 @@ contains
 
    subroutine update_boundaries(cdim, istep)
 
-      use all_boundaries,   only: all_fluid_boundaries
-!      use cg_leaves,        only: leaves
-      use constants,        only: first_stage, DIVB_HDC
-      use domain,           only: dom
-      use global,           only: sweeps_mgu, integration_order, divB_0_method
+      use all_boundaries, only: all_fluid_boundaries
+!      use cg_leaves,      only: leaves
+      use constants,      only: first_stage, DIVB_HDC
+      use domain,         only: dom
+      use global,         only: sweeps_mgu, integration_order, divB_0_method
 #ifdef MAGNETIC
-      use all_boundaries,   only: all_mag_boundaries
+      use all_boundaries, only: all_mag_boundaries
 #endif /* MAGNETIC */
 
       implicit none
