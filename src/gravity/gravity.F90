@@ -209,11 +209,7 @@ contains
       user_grav     = .false.
       variable_gp   = .false.
       restart_gp    = .false.
-#ifdef SELF_GRAV
-      restart_gpot  = .true.
-#else /* !SELF_GRAV */
       restart_gpot  = .false.
-#endif /* !SELF_GRAV */
       restart_hgpot = .false.
       restart_sgp   = .false.
       restart_sgpm  = .false.
