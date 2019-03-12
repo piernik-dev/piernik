@@ -47,12 +47,15 @@ contains
 
    subroutine timestep_nbody(dt, cg)
 
-      use constants,      only: ndims, xdim, zdim, big, one, two, zero
+      use constants,      only: xdim, zdim, big, one, two, zero
       use dataio_pub,     only: msg, printinfo
       use func,           only: operator(.notequals.)
       use grid_cont,      only: grid_container
       use particle_pub,   only: lf_c
       use particle_types, only: pset
+#ifdef DUST_PARTICLES
+      use constants,      only: ndims
+#endif /* DUST_PARTICLES */
 
       implicit none
 
@@ -62,7 +65,9 @@ contains
       integer                                      :: n_part, i
       integer(kind=4)                              :: cdim
       real                                         :: acc2, max_acc, eta, eps, factor, dt_hydro
+#ifdef DUST_PARTICLES
       real, dimension(ndims)                       :: max_v
+#endif /* DUST_PARTICLES */
 
 #ifdef VERBOSE
       call printinfo('[particle_timestep:timestep_nbody] Commencing timestep_nbody')
@@ -78,7 +83,7 @@ contains
 
       do i = 1, n_part
          acc2 = zero
-         do cdim = xdim, ndims
+         do cdim = xdim, zdim
             acc2 = acc2 + pset%p(i)%acc(cdim)**2
          enddo
          max_acc = max(acc2, max_acc)
@@ -88,7 +93,7 @@ contains
       if (max_acc .notequals. zero) then
          dt_nbody = sqrt(two*eta*eps/max_acc)
 
-         !> \todo following lines are related only to dust particles
+#ifdef DUST_PARTICLES
          do cdim = xdim, zdim
             max_v(cdim)  = maxval(abs(pset%p(:)%vel(cdim)))
          enddo
@@ -101,6 +106,7 @@ contains
                endif
             enddo
          endif
+#endif /* DUST_PARTICLES */
 
          dt_nbody  = lf_c * factor * dt_nbody
 
@@ -115,6 +121,9 @@ contains
 #ifdef VERBOSE
       call printinfo('[particle_timestep:timestep_nbody] Finish timestep_nbody')
 #endif /* VERBOSE */
+
+      return
+      if (cg%dl(xdim) < zero) return ! suppress compiler warnings
 
    end subroutine timestep_nbody
 
