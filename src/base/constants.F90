@@ -211,9 +211,10 @@ module constants
    character(len=*), parameter :: tmr_mg  = "multigrid"      !< timer for gravity multigrid solver
    character(len=*), parameter :: tmr_mgd = "multigrid_diff" !< timer for gravityCR diffusion multigrid solver
 
-   ! Handling boundary cells in the output
+   ! Handling boundary cells in the output (AT stands for Area Type)
    enum, bind(C)
-      enumerator :: AT_IGNORE       !! no output
+      enumerator :: AT_BACKUP       !! backup field: no output AND no backup
+      enumerator :: AT_IGNORE       !! no output for anything less or equal AT_IGNORE
       enumerator :: AT_NO_B         !! no boundary cells
       enumerator :: AT_OUT_B        !! external boundary cells
       enumerator :: AT_USER         !! user defined area type

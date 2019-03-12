@@ -29,7 +29,7 @@
 
 !> \brief This module contains old solutions list and related methods
 
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
 
 module old_soln_list
 
@@ -66,6 +66,7 @@ module old_soln_list
    type, extends(os_list_AT) :: os_list_undef_T
    contains
       procedure :: new         !< add a fresh element anywhere
+      procedure :: pick        !< unlink an element that is matching i_hist
    end type os_list_undef_T
 
    type, extends(os_list_AT) :: os_list_T
@@ -178,6 +179,42 @@ contains
       this%latest => n
 
    end subroutine new
+
+!> \brief Unlink head and return it to the caller
+
+   function pick(this, ind) result(os)
+
+      implicit none
+
+      class(os_list_undef_T), intent(inout) :: this
+      integer(kind=4),        intent(in)    :: ind
+
+      type(old_soln), pointer :: os, ose, osl
+
+      if (.not. associated(this%latest)) then
+         os => null()
+         return
+      endif
+
+      os => this%latest
+      do while (associated(os))
+         if (ind == os%i_hist) then
+            ose => os%earlier
+            osl => os%later
+            if (associated(osl)) then
+               osl%earlier => ose
+            else
+               this%latest => ose
+            endif
+            if (associated(ose)) ose%later => osl
+            return
+         endif
+         os => os%earlier
+      enddo
+
+      os => null()
+
+   end function pick
 
 !> \brief Unlink head and return it to the caller
 
@@ -320,10 +357,11 @@ contains
 
    subroutine print(this)
 
-      use constants,  only: I_ZERO, I_ONE
-      use dataio_pub, only: msg, printinfo
-      use global,     only: t
-      use mpisetup,   only: master
+      use constants,        only: I_ZERO, I_ONE
+      use dataio_pub,       only: msg, printinfo
+      use global,           only: t
+      use mpisetup,         only: master
+      use named_array_list, only: qna
 
       implicit none
 
@@ -338,11 +376,11 @@ contains
          cnt = cnt + I_ONE
          select type(this)
             type is (os_list_undef_T)
-               write(msg, '(2(a,i3))') "(Undef) soln# ", cnt, " qna_index: ", os%i_hist
+               write(msg, '(2(a,i3),2a)') "(Undef) soln# ", cnt, " qna_index: ", os%i_hist, " qna_name: ", qna%lst(os%i_hist)%name
             type is (os_list_T)
-               write(msg, '(a,i3,a,g14.6,a,i3)') "(Old) soln# ", cnt, " time = ", os%time, " qna_index: ", os%i_hist
+               write(msg, '(a,i3,a,g14.6,a,i3,2a)') "(Old) soln# ", cnt, " time = ", os%time, " qna_index: ", os%i_hist, " qna_name: ", qna%lst(os%i_hist)%name
             class default
-               write(msg, '(a,i3,a,g14.6,a,i3)') "(Other ?) soln# ", cnt, " time = ", os%time, " qna_index: ", os%i_hist
+               write(msg, '(a,i3,a,g14.6,a,i3,2a)') "(Other ?) soln# ", cnt, " time = ", os%time, " qna_index: ", os%i_hist, " qna_name: ", qna%lst(os%i_hist)%name
          end select
          if (master) call printinfo(msg)
          os => os%earlier

@@ -124,9 +124,9 @@
 */
 
 #ifdef MULTIGRID
-#  if !defined(GRAV) && !defined(COSM_RAYS)
-#    warning MULTIGRID defined but none of { GRAV, COSM_RAYS } are used.
-#  endif /* !GRAV && !COSMIC_RAYS */
+#  if !defined(SELF_GRAV) && !defined(COSM_RAYS)
+#    warning MULTIGRID defined but none of { SELF_GRAV, COSM_RAYS } are used.
+#  endif /* !SELF_GRAV && !COSMIC_RAYS */
 #endif /* MULTIGRID */
 
 #if (defined(HLLC) || defined(RIEMANN)) && defined CORIOLIS

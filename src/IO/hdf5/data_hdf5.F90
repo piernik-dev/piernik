@@ -464,6 +464,9 @@ contains
       use mpisetup,    only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
       use mpisignals,  only: sig
       use timer,       only: set_timer
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      use multigrid_gravity, only: unmark_oldsoln
+#endif /* MULTIGRID && SELF_GRAV */
 
       implicit none
 
@@ -488,6 +491,9 @@ contains
       else
          call h5_write_to_single_file_v1(fname)
       endif
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      call unmark_oldsoln
+#endif /* MULTIGRID && SELF_GRAV */
 
       thdf = set_timer(tmr_hdf)
       if (master) then

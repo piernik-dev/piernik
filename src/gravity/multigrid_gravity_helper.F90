@@ -30,7 +30,7 @@
 !> \brief Multigrid routines and parameters useful for various variants of the solver
 
 module multigrid_gravity_helper
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
 
    implicit none
 
