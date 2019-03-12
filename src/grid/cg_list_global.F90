@@ -134,20 +134,20 @@ contains
 
       implicit none
 
-      class(cg_list_global_T),                          intent(inout) :: this          !< object invoking type-bound procedure
-      character(len=*),                                 intent(in)    :: name          !< Name of the variable to be registered
-      logical,                                optional, intent(in)    :: vital         !< .false. for arrays that don't need to be prolonged or restricted automatically
-      integer(kind=4),                        optional, intent(in)    :: restart_mode  !< Write to the restart if >= AT_IGNORE. Several write modes can be supported.
-      integer(kind=4),                        optional, intent(in)    :: ord_prolong   !< Prolongation order for the variable
-      integer(kind=4),                        optional, intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
-      integer(kind=4), dimension(:), pointer, optional, intent(in)    :: position      !< If present then use this value instead of VAR_CENTER
-      logical,                                optional, intent(in)    :: multigrid     !< If present and .true. then allocate cg%q(:)%arr and cg%w(:)%arr also below base level
+      class(cg_list_global_T),                 intent(inout) :: this          !< object invoking type-bound procedure
+      character(len=*),                        intent(in)    :: name          !< Name of the variable to be registered
+      logical,                       optional, intent(in)    :: vital         !< .false. for arrays that don't need to be prolonged or restricted automatically
+      integer(kind=4),               optional, intent(in)    :: restart_mode  !< Write to the restart if >= AT_IGNORE. Several write modes can be supported.
+      integer(kind=4),               optional, intent(in)    :: ord_prolong   !< Prolongation order for the variable
+      integer(kind=4),               optional, intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
+      integer(kind=4), dimension(:), optional, intent(in)    :: position      !< If present then use this value instead of VAR_CENTER
+      logical,                       optional, intent(in)    :: multigrid     !< If present and .true. then allocate cg%q(:)%arr and cg%w(:)%arr also below base level
 
-      type(cg_list_element), pointer                                  :: cgl
-      logical                                                         :: mg, vit
-      integer                                                         :: nvar
-      integer(kind=4)                                                 :: op, d4, rm
-      integer(kind=4), allocatable, dimension(:)                      :: pos
+      type(cg_list_element), pointer             :: cgl
+      logical                                    :: mg, vit
+      integer                                    :: nvar
+      integer(kind=4)                            :: op, d4, rm
+      integer(kind=4), allocatable, dimension(:) :: pos
 
       vit = .false.
       if (present(vital)) vit = vital
@@ -229,21 +229,21 @@ contains
       use constants,  only: wa_n, fluid_n, uh_n, mag_n, magh_n, ndims, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, VAR_CENTER, PIERNIK_INIT_FLUIDS
       use dataio_pub, only: die, code_progress
       use fluidindex, only: flind
+      use global,     only: force_cc_mag
 #ifdef ISO
       use constants,  only: cs_i2_n
 #endif /* ISO */
 #ifdef RIEMANN
       use constants,  only: psi_n, psih_n
-      use global,     only: force_cc_mag
 #endif /* RIEMANN */
 
       implicit none
 
       class(cg_list_global_T), intent(inout)          :: this          !< object invoking type-bound procedure
 
-      integer(kind=4), save, dimension(ndims), target :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
-      integer(kind=4), save, dimension(ndims), target :: xyz_center = [ VAR_CENTER, VAR_CENTER, VAR_CENTER ]
-      integer(kind=4), dimension(:), pointer :: pia  ! the pia pointer above is used as a workaround for compiler warnings about possibly uninitialized variable in reg_var
+      integer(kind=4), dimension(ndims), parameter :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
+      integer(kind=4), dimension(ndims), parameter :: xyz_center = [ VAR_CENTER, VAR_CENTER, VAR_CENTER ]
+      integer(kind=4), dimension(ndims) :: pia
       logical, parameter :: is_mag_vital = &
 #ifdef MAGNETIC
            .true.
@@ -251,8 +251,7 @@ contains
            .false.
 #endif /* MAGNETIC */
 
-      pia => xyz_face
-      if (force_cc_mag) pia => xyz_center
+      pia = merge(xyz_center, xyz_face, force_cc_mag)
 
       if (code_progress < PIERNIK_INIT_FLUIDS) call die("[cg_list_global:register_fluids] Fluids are not yet initialized")
 
