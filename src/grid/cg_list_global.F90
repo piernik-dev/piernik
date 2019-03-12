@@ -229,7 +229,7 @@ contains
       use constants,  only: wa_n, fluid_n, uh_n, mag_n, magh_n, ndims, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, VAR_CENTER, PIERNIK_INIT_FLUIDS
       use dataio_pub, only: die, code_progress
       use fluidindex, only: flind
-      use global,     only: force_cc_mag
+      use global,     only: force_cc_mag, ord_mag_prolong
 #ifdef ISO
       use constants,  only: cs_i2_n
 #endif /* ISO */
@@ -260,12 +260,12 @@ contains
       call this%reg_var(uh_n,                                             dim4 = flind%all)                !! Main array of all fluids' components (for t += dt/2)
 
 !> \todo Do not even allocate magnetic stuff if MAGNETIC is not declared
-      call this%reg_var(mag_n,  vital = is_mag_vital, dim4 = ndims, restart_mode = AT_OUT_B, position=pia)  !! Main array of magnetic field's components, "b"
+      call this%reg_var(mag_n,  vital = is_mag_vital, dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B, position=pia)  !! Main array of magnetic field's components, "b"
       call this%reg_var(magh_n, vital = .false.,      dim4 = ndims) !! Array for copy of magnetic field's components, "b" used in half-timestep in RK2
 
 #ifdef RIEMANN
       if (force_cc_mag) then
-         call this%reg_var(psi_n,  vital = .true., restart_mode = AT_OUT_B)  !! an array for div B cleaning
+         call this%reg_var(psi_n,  vital = .true., ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B)  !! an array for div B cleaning
          call this%reg_var(psih_n, vital = .false.)  !! its copy for use in RK2
       endif
 #endif /* RIEMANN */
