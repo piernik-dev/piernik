@@ -52,6 +52,9 @@ contains
       use restart_hdf5_v1, only: write_restart_hdf5_v1
       use restart_hdf5_v2, only: write_restart_hdf5_v2
       use timer,           only: set_timer
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      use multigrid_gravity, only: unmark_oldsoln
+#endif /* MULTIGRID && SELF_GRAV */
 
       implicit none
 
@@ -76,6 +79,11 @@ contains
       else
          call write_restart_hdf5_v1(filename)
       endif
+
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      call unmark_oldsoln
+#endif /* MULTIGRID && SELF_GRAV */
+
       call piernik_MPI_Barrier
 
       thdf = set_timer(tmr_hdf)
@@ -96,6 +104,9 @@ contains
       use dataio_pub,      only: use_v2_io
       use restart_hdf5_v1, only: read_restart_hdf5_v1
       use restart_hdf5_v2, only: read_restart_hdf5_v2
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      use multigrid_gravity, only: unmark_oldsoln
+#endif /* MULTIGRID && SELF_GRAV */
 
       implicit none
 
@@ -104,6 +115,10 @@ contains
       status_v2 = STAT_INV
       if (use_v2_io) call read_restart_hdf5_v2(status_v2)
       if (status_v2 /= STAT_OK .or. .not. use_v2_io) call read_restart_hdf5_v1
+
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      call unmark_oldsoln
+#endif /* MULTIGRID && SELF_GRAV */
 
    end subroutine read_restart_hdf5
 

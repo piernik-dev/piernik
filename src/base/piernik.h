@@ -20,9 +20,14 @@
 #undef RESISTIVE
 #endif /* !MAGNETIC && RESISTIVE */
 
-#if defined(MULTIGRID) && defined(GRAV)
-#define SELF_GRAV
-#endif /* MULTIGRID && GRAV */
+#ifdef SELF_GRAV
+#  ifndef GRAV
+#    define GRAV
+#  endif /* !GRAV */
+#  ifndef MULTIGRID
+#    define MULTIGRID
+#  endif /* !MULTIGRID */
+#endif /* SELF_GRAV */
 
 #if defined(VARIABLE_USER_GP) || defined(SELF_GRAV)
 #define VARIABLE_GP
