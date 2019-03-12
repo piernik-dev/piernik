@@ -479,6 +479,7 @@ contains
       use mpi,              only: MPI_INFO_NULL
       use mpisetup,         only: comm, master, piernik_MPI_Bcast, ibuff, rbuff, cbuff, slave
       use named_array_list, only: qna, wna
+      use timestep_pub,     only: c_all_old, cfl_c, stepcfl
 #ifdef RANDOMIZE
       use randomization,    only: initseed, seed_size
 #endif /* RANDOMIZE */
@@ -601,6 +602,9 @@ contains
          call h5ltget_attribute_double_f(file_id,"/","last_tsl_time", rbuf, error) ; last_tsl_time = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","last_hdf_time", rbuf, error) ; last_hdf_time = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","last_res_time", rbuf, error) ; last_res_time = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","c_all_old",     rbuf, error) ; c_all_old = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","stepcfl",       rbuf, error) ; stepcfl = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","cfl_c",         rbuf, error) ; cfl_c = rbuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nstep", ibuf, error) ; nstep = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nres",  ibuf, error) ; nres  = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nhdf",  ibuf, error) ; nhdf  = ibuf(1)

@@ -32,11 +32,13 @@
 
 module timestep_pub
 
+   use constants, only: zero, one
+
    implicit none
 
    private
-   public :: c_all
+   public :: c_all, c_all_old, stepcfl, cfl_c
 
-   real :: c_all
+   real :: c_all, c_all_old=zero, stepcfl=zero, cfl_c=one  ! safe initial values
 
 end module timestep_pub

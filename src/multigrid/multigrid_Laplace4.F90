@@ -30,7 +30,7 @@
 !> \brief Implementation of 4th order, non-compact (5 cell wide) Laplace operator
 
 module multigrid_Laplace4
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
 
    implicit none
 

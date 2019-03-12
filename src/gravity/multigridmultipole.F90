@@ -36,7 +36,7 @@
 !<
 
 module multipole
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
    ! needed for global vars in this module
    use constants,   only: ndims, xdim
 #if defined(__INTEL_COMPILER)

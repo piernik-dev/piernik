@@ -30,7 +30,7 @@
 !> \brief Implementation of 2nd order, simplest Laplace operator
 
 module multigrid_Laplace2
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
 
    implicit none
 
