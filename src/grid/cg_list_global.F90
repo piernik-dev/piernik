@@ -226,7 +226,7 @@ contains
 
    subroutine register_fluids(this)
 
-      use constants,  only: wa_n, fluid_n, uh_n, mag_n, magh_n, ndims, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, PIERNIK_INIT_FLUIDS
+      use constants,  only: wa_n, fluid_n, uh_n, mag_n, magh_n, ndims, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, VAR_CENTER, PIERNIK_INIT_FLUIDS
       use dataio_pub, only: die, code_progress
       use fluidindex, only: flind
 #ifdef ISO
@@ -242,10 +242,17 @@ contains
       class(cg_list_global_T), intent(inout)          :: this          !< object invoking type-bound procedure
 
       integer(kind=4), save, dimension(ndims), target :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
-      integer(kind=4),       dimension(:), pointer    :: pia
-      ! the pia pointer above is used as a workaround for compiler warnings about possibly uninitialized variable in reg_var
+      integer(kind=4), save, dimension(ndims), target :: xyz_center = [ VAR_CENTER, VAR_CENTER, VAR_CENTER ]
+      integer(kind=4), dimension(:), pointer :: pia  ! the pia pointer above is used as a workaround for compiler warnings about possibly uninitialized variable in reg_var
+      logical, parameter :: is_mag_vital = &
+#ifdef MAGNETIC
+           .true.
+#else /* !MAGNETIC */
+           .false.
+#endif /* MAGNETIC */
 
       pia => xyz_face
+      if (force_cc_mag) pia => xyz_center
 
       if (code_progress < PIERNIK_INIT_FLUIDS) call die("[cg_list_global:register_fluids] Fluids are not yet initialized")
 
@@ -254,19 +261,13 @@ contains
       call this%reg_var(uh_n,                                             dim4 = flind%all)                !! Main array of all fluids' components (for t += dt/2)
 
 !> \todo Do not even allocate magnetic stuff if MAGNETIC is not declared
-      call this%reg_var(mag_n,   vital = &
-#ifdef MAGNETIC
-           .true., &
-#else /* !MAGNETIC */
-           .false., &
-#endif /* MAGNETIC */
-           restart_mode = AT_OUT_B, dim4 = ndims, position=pia)  !! Main array of magnetic field's components, "b"
-      call this%reg_var(magh_n,   vital = .false., dim4 = ndims) !! Array for copy of magnetic field's components, "b" used in half-timestep in RK2
+      call this%reg_var(mag_n,  vital = is_mag_vital, dim4 = ndims, restart_mode = AT_OUT_B, position=pia)  !! Main array of magnetic field's components, "b"
+      call this%reg_var(magh_n, vital = .false.,      dim4 = ndims) !! Array for copy of magnetic field's components, "b" used in half-timestep in RK2
 
 #ifdef RIEMANN
       if (force_cc_mag) then
-         call this%reg_var(psi_n,  vital = .true., restart_mode = AT_OUT_B)  ! an array for div B cleaning
-         call this%reg_var(psih_n, vital = .false.)                          ! its copy for use in RK2
+         call this%reg_var(psi_n,  vital = .true., restart_mode = AT_OUT_B)  !! an array for div B cleaning
+         call this%reg_var(psih_n, vital = .false.)  !! its copy for use in RK2
       endif
 #endif /* RIEMANN */
 #ifdef ISO
