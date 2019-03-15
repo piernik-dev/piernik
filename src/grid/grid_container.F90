@@ -1280,7 +1280,7 @@ contains
 
       use constants,  only: refinement_factor, xdim, ydim, zdim, I_ONE
       use dataio_pub, only: die, warn
-      use domain,     only: AMR_bsize
+      use domain,     only: AMR_bsize, dom
 
       implicit none
 
@@ -1307,34 +1307,41 @@ contains
 
       if (type == NONE) return
 
-      if (any(AMR_bsize == 0)) return ! this routine works only with blocky AMR
+      if (any((AMR_bsize <= 0) .and. dom%has_dir)) return ! this routine works only with blocky AMR
 
-      do i = int(((this%is - this%l%off(xdim))*refinement_factor) / AMR_bsize(xdim)), int(((this%ie - this%l%off(xdim))*refinement_factor + I_ONE) / AMR_bsize(xdim))
-         ifs = max(int(this%is), int(this%l%off(xdim)) + (i*AMR_bsize(xdim))/refinement_factor)
-         ife = min(int(this%ie), int(this%l%off(xdim)) + ((i+I_ONE)*AMR_bsize(xdim)-I_ONE)/refinement_factor)
+      !! ToDo: precompute refinement decomposition in this%init_gc and simplify the code below.
+      !! It should also simplify decomposition management and make it more flexible in case we decide to work on uneven AMR blocks
 
-         do j = int(((this%js - this%l%off(ydim))*refinement_factor) / AMR_bsize(ydim)), int(((this%je - this%l%off(ydim))*refinement_factor + I_ONE) / AMR_bsize(ydim))
-            jfs = max(int(this%js), int(this%l%off(ydim)) + (j*AMR_bsize(ydim))/refinement_factor)
-            jfe = min(int(this%je), int(this%l%off(ydim)) + ((j+I_ONE)*AMR_bsize(ydim)-I_ONE)/refinement_factor)
+      !! beware: consider dropping this%l%off feature for simplicity. It will require handling the shift due to domain expansion (some increase CPU cost)
 
-            do k = int(((this%ks - this%l%off(zdim))*refinement_factor) / AMR_bsize(zdim)), int(((this%ke - this%l%off(zdim))*refinement_factor + I_ONE) / AMR_bsize(zdim))
-               kfs = max(int(this%ks), int(this%l%off(zdim)) + (k*AMR_bsize(zdim))/refinement_factor)
-               kfe = min(int(this%ke), int(this%l%off(zdim)) + ((k+I_ONE)*AMR_bsize(zdim)-I_ONE)/refinement_factor)
-               select case (type)
-                  case (REFINE)
-                     if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%l%id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
-                  case (LEAF)
-                     if (all(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
-                        call this%refine_flags%add(this%l%id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
-                     else if (any(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
-                        call die("[grid_container:refinemap2SFC_list] cannot refine partially leaf parf of the grid")
-                     endif
-                  case default
-                     call die("[grid_container:refinemap2SFC_list] invalid type")
-               end select
+      associate( bsize => merge(AMR_bsize, huge(I_ONE), dom%has_dir))
+         do i = int(((this%is - this%l%off(xdim))*refinement_factor) / bsize(xdim)), int(((this%ie - this%l%off(xdim))*refinement_factor + I_ONE) / bsize(xdim))
+            ifs = max(int(this%is), int(this%l%off(xdim)) + (i*bsize(xdim))/refinement_factor)
+            ife = min(int(this%ie), int(this%l%off(xdim)) + ((i+I_ONE)*bsize(xdim)-I_ONE)/refinement_factor)
+
+            do j = int(((this%js - this%l%off(ydim))*refinement_factor) / bsize(ydim)), int(((this%je - this%l%off(ydim))*refinement_factor + I_ONE) / bsize(ydim))
+               jfs = max(int(this%js), int(this%l%off(ydim)) + (j*bsize(ydim))/refinement_factor)
+               jfe = min(int(this%je), int(this%l%off(ydim)) + ((j+I_ONE)*bsize(ydim)-I_ONE)/refinement_factor)
+
+               do k = int(((this%ks - this%l%off(zdim))*refinement_factor) / bsize(zdim)), int(((this%ke - this%l%off(zdim))*refinement_factor + I_ONE) / bsize(zdim))
+                  kfs = max(int(this%ks), int(this%l%off(zdim)) + (k*bsize(zdim))/refinement_factor)
+                  kfe = min(int(this%ke), int(this%l%off(zdim)) + ((k+I_ONE)*bsize(zdim)-I_ONE)/refinement_factor)
+                  select case (type)
+                     case (REFINE)
+                        if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%l%id+I_ONE, int([i, j, k]*bsize, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
+                     case (LEAF)
+                        if (all(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
+                           call this%refine_flags%add(this%l%id+I_ONE, int([i, j, k]*bsize, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
+                        else if (any(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
+                           call die("[grid_container:refinemap2SFC_list] cannot refine partially leaf parf of the grid")
+                        endif
+                     case default
+                        call die("[grid_container:refinemap2SFC_list] invalid type")
+                  end select
+               enddo
             enddo
          enddo
-      enddo
+      end associate
       this%refinemap = .false.
 
    end subroutine refinemap2SFC_list
