@@ -1,7 +1,3 @@
-! CRASH example:
-! mpirun -np 8 ./piernik
-! works good only for 1, 2, 4, 16, 64, ... threads
-
 ! ./setup advection_test/magnetized_advection_test -d RIEMANN -o R_madv
 ! #effective call (after evaluation of .setuprc*):
 ! #./setup -c lothlorien --laconic --linkexe advection_test/magnetized_advection_test -d RIEMANN -o R_madv
@@ -66,7 +62,7 @@
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1:) = "divb", "psi", "dens", "velx", "vely", "magx", "magy"
+    vars(1:) = "divb", "psi", "dens", "velx", "vely", "magx", "magy", "level"
     gdf_strict = .false.
     h5_64bit = T
  /
