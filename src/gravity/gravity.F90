@@ -339,7 +339,7 @@ contains
 
    end subroutine init_grav
 
-   integer function res_at(incl_gt)
+   integer(kind=4) function res_at(incl_gt)
 
       use constants, only: AT_IGNORE, AT_OUT_B
 
