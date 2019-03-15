@@ -258,7 +258,7 @@ contains
             divBbZ_amp    = 0.
          endif
 #else
-         call warn("[initproblem:read_problem_par] Ignoring magnetic field amplitudes")
+         if (master) call warn("[initproblem:read_problem_par] Ignoring magnetic field amplitudes")
 #endif /* !MAGNETIC */
       endif
 
