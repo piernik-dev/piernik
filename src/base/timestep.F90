@@ -36,13 +36,12 @@ module timestep
    implicit none
 
    private
-   public :: time_step, cfl_manager
+   public :: time_step, cfl_manager, check_cfl_violation
 #if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
    !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
    public :: init_time_step
 #endif /* __INTEL_COMPILER || _CRAYFTN */
 
-   real :: c_all_old
 #if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
    !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
    procedure(), pointer :: cfl_manager
@@ -69,7 +68,6 @@ contains
 
       if (code_progress < PIERNIK_INIT_GLOBAL) call die("[timestep:init_time_step] globals not initialized.")
 
-      c_all_old = 0. ! safe initial value
       select case (cflcontrol)
          case ('warn')
             cfl_manager => cfl_warn
@@ -104,6 +102,7 @@ contains
 
       use cg_leaves,            only: leaves
       use cg_list,              only: cg_list_element
+      use cmp_1D_mpi,           only: compare_array1D
       use constants,            only: one, two, zero, half, pMIN, pMAX
       use dataio,               only: write_crashed
       use dataio_pub,           only: tend, msg, warn
@@ -113,7 +112,7 @@ contains
       use grid_cont,            only: grid_container
       use mpisetup,             only: master, piernik_MPI_Allreduce
       use sources,              only: timestep_sources
-      use timestep_pub,         only: c_all
+      use timestep_pub,         only: c_all, c_all_old
 #ifdef COSM_RAYS
       use timestepcosmicrays,   only: timestep_crs, dt_crs
 #endif /* COSM_RAYS */
@@ -203,8 +202,41 @@ contains
          call printinfo(msg)
       endif
 #endif /* DEBUG */
+      call compare_array1D([dt])  ! just in case
 
    end subroutine time_step
+
+!>
+!! \brief Timestep prediction after fluidupdate
+!!
+!! \details This routine calls is important while step redoing due to cfl violation is activated and prevent to dump h5 and restart files until cfl-violated step is succesfully redone.
+!<
+   subroutine check_cfl_violation(dt, flind)
+
+      use fluidtypes,     only: var_numbers
+      use global,         only: cflcontrol, cfl_violated, dt_old
+      use timestep_pub,   only: c_all, c_all_old
+      use timestep_retry, only: reset_freezing_speed
+
+      implicit none
+
+      real,              intent(in) :: dt    !< the timestep
+      type(var_numbers), intent(in) :: flind !< the structure with all fluid indices
+      real                          :: checkdt
+      real, dimension(3)            :: bck   !< backup for timestep sensitive variables
+
+      if (cflcontrol /= 'warn') return
+
+      checkdt = dt
+
+      bck = [dt_old, c_all_old, c_all]
+
+      call time_step(checkdt, flind)
+      if (cfl_violated) call reset_freezing_speed
+
+      dt_old = bck(1) ; c_all_old = bck(2) ; c_all = bck(3) !> \todo check if this backup is necessary
+
+   end subroutine check_cfl_violation
 
 !------------------------------------------------------------------------------------------
 !>
@@ -216,11 +248,9 @@ contains
       use dataio_pub,   only: msg, warn
       use global,       only: cfl, cfl_max, cfl_violated
       use mpisetup,     only: piernik_MPI_Bcast, master
-      use timestep_pub, only: c_all
+      use timestep_pub, only: c_all, c_all_old, stepcfl
 
       implicit none
-
-      real :: stepcfl
 
       stepcfl = cfl
       if (c_all_old > 0.) stepcfl = c_all/c_all_old*cfl
@@ -253,12 +283,11 @@ contains
       use dataio_pub,   only: msg, warn
       use global,       only: cfl, cfl_max, dt, dt_old
       use mpisetup,     only: master
-      use timestep_pub, only: c_all
+      use timestep_pub, only: c_all, c_all_old, cfl_c, stepcfl
 
       implicit none
 
-      real, save :: stepcfl=zero, cfl_c=one
-      real       :: stepcfl_old
+      real :: stepcfl_old
 
       stepcfl_old = stepcfl
       stepcfl = cfl

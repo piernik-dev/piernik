@@ -37,7 +37,7 @@ module timestep_retry
    implicit none
 
    private
-   public :: repeat_fluidstep
+   public :: repeat_fluidstep, reset_freezing_speed
 
    ! for simplicity create an array of pointers to qna and wna
    type :: na_p
