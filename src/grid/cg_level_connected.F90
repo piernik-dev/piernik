@@ -443,7 +443,7 @@ contains
 !! \details Some data can be locally copied without MPI, but this seems to have really little impact on the performance.
 !! Some tests show that purely MPI code without local copies is marginally faster.
 !!
-!! OPT Usually there ara many messages that ate sent between the same pairs of processes
+!! OPT Usually there are many messages that are sent between the same pairs of processes
 !! \todo Sort all messages according to e.g. tag and send/receive aggregated message with everything
 !!
 !! \todo implement local copies without MPI anyway
@@ -620,7 +620,7 @@ contains
 !! The prolonged data is then copied to the destination if the cg%ignore_prolongation allows it.
 !! OPT: Find a way to prolong only what is really needed.
 !!
-!! OPT Usually there ara many messages that ate sent between the same pairs of processes
+!! OPT Usually there are many messages that are sent between the same pairs of processes
 !! \todo Sort all messages according to e.g. tag and send/receive aggregated message with everything
 !! \todo implement local copies without MPI
 !<
