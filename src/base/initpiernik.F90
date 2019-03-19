@@ -75,8 +75,9 @@ contains
       use resistivity,           only: init_resistivity, compute_resist
 #endif /* RESISTIVE */
 #ifdef GRAV
-      use gravity,               only: init_grav, init_grav_ext, manage_grav_pot_3d, sum_potential
+      use gravity,               only: init_grav, init_terms_grav, source_terms_grav
       use hydrostatic,           only: init_hydrostatic, cleanup_hydrostatic
+      use particle_pub,          only: init_particles
 #endif /* GRAV */
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid, init_multigrid_ext, multigrid_par
@@ -174,7 +175,8 @@ contains
       call init_decomposition
 #ifdef GRAV
       call init_grav                         ! Has to be called before init_grid
-      call init_grav_ext
+      call init_particles
+      call init_hydrostatic
 #endif /* GRAV */
 #ifdef MULTIGRID
       call init_multigrid_ext                ! Has to be called before init_grid
@@ -187,11 +189,6 @@ contains
 #ifdef RESISTIVE
       call init_resistivity                  ! depends on grid
 #endif /* RESISTIVE */
-
-#ifdef GRAV
-      call manage_grav_pot_3d(.true.)        !> \deprecated It is only temporary solution, but grav_pot_3d must be called after problem_initial_conditions due to csim2,c_si,alpha clash!!!
-      call init_hydrostatic
-#endif /* GRAV */
 
       call init_sources                      ! depends on: geometry, fluids, grid
 
@@ -213,11 +210,10 @@ contains
       call init_dataio                       ! depends on units, fluids (through common_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
       ! Initial conditions are read here from a restart file if possible
 
-#if defined(GRAV) && !defined(SELF_GRAV)
-      call sum_potential                     ! for the proper tsl&log data gpot array has to be fill in using gp array values after restart read
-                                             !> \todo check and fulfil this requirement for SELF_GRAV defined (should source_terms_grav be called here?)
-                                             !> \deprecated this probably should be guaranteed to be done elsewhere.
-#endif /* GRAV && !SELF_GRAV */
+#ifdef GRAV
+      call init_terms_grav(nrestart /= 0)
+#endif /* GRAV */
+
       if (nrestart /= 0) call all_bnd
 
       if (master) then
@@ -257,8 +253,8 @@ contains
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
 #ifdef GRAV
-            call manage_grav_pot_3d(.false., update_gp = (nit /= 0))
             call cleanup_hydrostatic
+            call source_terms_grav
 #endif /* GRAV */
 
             call update_refinement(act_count=ac)

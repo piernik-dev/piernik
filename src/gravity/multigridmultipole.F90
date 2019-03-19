@@ -36,7 +36,7 @@
 !<
 
 module multipole
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
    ! needed for global vars in this module
    use constants,   only: ndims, xdim
 #if defined(__INTEL_COMPILER)
@@ -1229,81 +1229,5 @@ contains
       enddo
 
    end subroutine geomfac4moments
-
-!>
-!! \brief HEAVY_DEBUG marks routines that normally are never called, but at some point
-!! were useful to test correctness or something.
-!<
-
-!#define HEAVY_DEBUG
-#ifdef HEAVY_DEBUG
-
-!>
-!! \brief Quick test for correctness of the multipole solver.
-!! \details cphi should agree well with phi with largest errors at r = sqrt(sum(p(1:3)**2))
-!<
-
-#error "The test_multipoles routine is outdated and was commented out"
-
-!!$   subroutine test_multipoles
-!!$
-!!$      use dataio_pub,       only: die, printinfo, msg
-!!$      use units,            only: newtong
-!!$      use multigridhelpers, only: dirty_debug
-!!$      use debug,            only: aux_R, aux_I
-!!$
-!!$      implicit none
-!!$
-!!$      integer :: i, j, r, rr
-!!$      real :: phi, cphi
-!!$      real, dimension(0:3) :: p, x
-!!$
-!!$      ! reset the multipole data
-!!$      Q(:, :, :, :) = 0.
-!!$
-!!$      irmax = 0
-!!$      irmin = rqbin
-!!$
-!!$      p(0) = 1./newtong
-!!$      p(1:3) = aux_R(1:3)
-!!$
-!!$      call point2moments(p(0), p(1), p(2), p(3))
-!!$
-!!$      ! integrate radially and apply normalization factor (the (4 \pi)/(2 l  + 1) terms cancel out)
-!!$      irmin = 0
-!!$      irmax = rqbin-1
-!!$      rr = max(1, irmin)
-!!$
-!!$      Q(1:lmax, :, INSIDE, rr-1) = Q(1:lmax, :, INSIDE, rr-1) * ofact(1:lmax, :)
-!!$      do r = rr, irmax
-!!$         Q(0,      :, INSIDE, r) = Q(0,      :, INSIDE, r)                    + Q(0,      :, INSIDE, r-1)
-!!$         Q(1:lmax, :, INSIDE, r) = Q(1:lmax, :, INSIDE, r) * ofact(1:lmax, :) + Q(1:lmax, :, INSIDE, r-1)
-!!$      enddo
-!!$
-!!$      Q(1:lmax, :, OUTSIDE, irmax+1) = Q(1:lmax, :, OUTSIDE, irmax+1) * ofact(1:lmax, :)
-!!$      do r = irmax, rr, -1
-!!$         Q(0,      :, OUTSIDE, r) = Q(0,      :, OUTSIDE, r)                    + Q(0,      :, OUTSIDE, r+1)
-!!$         Q(1:lmax, :, OUTSIDE, r) = Q(1:lmax, :, OUTSIDE, r) * ofact(1:lmax, :) + Q(1:lmax, :, OUTSIDE, r+1)
-!!$      enddo
-!!$
-!!$      do i = -60, 60
-!!$         do j = -60, 60
-!!$            x(1) = 0.05 * i
-!!$            x(2) = 0.05 * j
-!!$            x(3) = 0.1 * aux_I(1)
-!!$
-!!$            cphi = - p(0)*newtong / sqrt(1e-290+sum((p(1:3)-x(1:3))**2))
-!!$
-!!$            call moments2pot(phi, x(1), x(2), x(3))
-!!$            write(msg,'(a,3f7.2,2(a,g15.5))')" xyz= ",x(1:3)," phi = ",phi," calc= ",cphi
-!!$            call printinfo(msg, .false.)
-!!$         enddo
-!!$      enddo
-!!$
-!!$      call die("qniec")
-!!$
-!!$   end subroutine test_multipoles
-
-#endif /* HEAVY_DEBUG */
 
 end module multipole

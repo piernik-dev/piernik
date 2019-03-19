@@ -41,14 +41,13 @@ module common_hdf5
 
    private
    public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, write_to_hdf5_v2, set_h5_properties
-   public :: nhdf_vars, hdf_vars, hdf_vars_avail, cancel_hdf_var, d_gname, base_d_gname, d_fc_aname, d_size_aname, &
+   public :: hdf_vars, hdf_vars_avail, cancel_hdf_var, d_gname, base_d_gname, d_fc_aname, d_size_aname, &
         d_edge_apname, d_bnd_apname, cg_gname, cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, &
         n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, cg_dl_aname, O_OUT, O_RES, STAT_OK, STAT_INV, &
         create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output
 
    character(len=dsetnamelen), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
    logical,                    allocatable, dimension(:), protected :: hdf_vars_avail
-   integer, protected :: nhdf_vars !< number of quantities plotted to hdf files
    character(len=*), parameter :: d_gname = "domains", base_d_gname = "base", d_fc_aname = "fine_count", &
         & d_size_aname = "n_d", d_edge_apname = "-edge_position", d_bnd_apname = "-boundary_type", &
         & cg_gname = "grid", cg_cnt_aname = "cg_count", cg_lev_aname = "level", cg_size_aname = "n_b", &
@@ -96,133 +95,75 @@ contains
 
    subroutine init_hdf5(vars)
 
-      use constants,  only: dsetnamelen, singlechar
-      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use fluids_pub, only: has_ion, has_dst, has_neu
-      use global,     only: force_cc_mag
-#ifndef ISO
-      use fluidindex, only: iarr_all_en
-#endif /* !ISO */
+      use constants,      only: dsetnamelen, singlechar
+      use dataio_pub,     only: warn
+      use fluids_pub,     only: has_ion, has_dst, has_neu
+      use global,         only: force_cc_mag
+      use mpisetup,       only: master
 #ifdef COSM_RAYS
-      use dataio_pub, only: warn, msg
-#ifndef COSM_RAY_ELECTRONS
-      use fluidindex, only: iarr_all_crs
-#else
-      use fluidindex, only: iarr_all_crn
+      use dataio_pub,     only: msg
+#ifdef COSM_RAY_ELECTRONS
+      use fluidindex,     only: iarr_all_crn
+      use initcrspectrum, only: ncre
+#else /* !COSM_RAY_ELECTRONS */
+      use fluidindex,     only: iarr_all_crs
 #endif /* !COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
-#ifdef COSM_RAY_ELECTRONS
-      use initcosmicrays, only: iarr_cre_e, iarr_cre_n
-      use initcrspectrum, only: ncre
-#endif /* COSM_RAY_ELECTRONS */
+
       implicit none
 
       character(len=dsetnamelen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
 
-      integer                                              :: nvars, i, j
+      integer                                              :: i
       character(len=singlechar)                            :: fc, ord
       character(len=dsetnamelen)                           :: aux
 #if defined COSM_RAYS
       integer                                              :: k
 #endif /* COSM_RAYS */
 
-      nvars = 0
-      do i = lbound(vars, 1), ubound(vars, 1)
-         if (len_trim(vars(i)) > 0) nvars = nvars + 1
-      enddo
-
-      nhdf_vars = 0
       do i = lbound(vars, 1), ubound(vars, 1)
          select case (trim(vars(i)))
             case ('')
             case ('dens')
-               nhdf_vars = nhdf_vars + size(iarr_all_dn,1)
-            case ('velx', 'momx')
-               nhdf_vars = nhdf_vars + size(iarr_all_mx,1)
-            case ('vely', 'momy')
-               nhdf_vars = nhdf_vars + size(iarr_all_my,1)
-            case ('velz', 'momz')
-               nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
-            case ('ener', 'ethr', 'pres')
-#ifdef ISO
-               if (has_neu) nhdf_vars = nhdf_vars + 1
-               if (has_ion) nhdf_vars = nhdf_vars + 1
-#else /* !ISO */
-               nhdf_vars = nhdf_vars + size(iarr_all_en,1)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-            case ('encr')
-#ifdef COSM_RAY_ELECTRONS
-               nhdf_vars = nhdf_vars + size(iarr_all_crn,1)
-#else
-               nhdf_vars = nhdf_vars + size(iarr_all_crs,1)
-#endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
-
-#ifdef COSM_RAY_ELECTRONS
-            case ('cren')
-                nhdf_vars = nhdf_vars + size(iarr_cre_n)
-            case ('cree')
-                nhdf_vars = nhdf_vars + size(iarr_cre_e)
-            case ('cref')                       !!!
-                nhdf_vars = nhdf_vars + size(iarr_cre_e) + 1
-            case ('crep')
-                nhdf_vars = nhdf_vars + 2       !!! only register cutoffs
-            case ('creq')                       !!!
-                nhdf_vars = nhdf_vars + size(iarr_cre_e)
-#endif /* COSM_RAY_ELECTRONS */
-            case default
-               nhdf_vars = nhdf_vars + 1
-               ! all known and unknown field descriptions that add just one field
-         end select
-      enddo
-      allocate(hdf_vars_avail(nhdf_vars))
-      hdf_vars_avail = .true.
-      allocate(hdf_vars(nhdf_vars)); j = 1
-      do i = lbound(vars, 1), ubound(vars, 1)
-         select case (trim(vars(i)))
-            case ('')
-            case ('dens')
-               if (has_dst) then ; hdf_vars(j) = 'dend' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'denn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'deni' ; j = j + 1 ; endif
+               if (has_dst) call append_var('dend')
+               if (has_neu) call append_var('denn')
+               if (has_ion) call append_var('deni')
             case ('velx')
-               if (has_dst) then ; hdf_vars(j) = 'vlxd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'vlxn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'vlxi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('vlxd')
+               if (has_neu) call append_var('vlxn')
+               if (has_ion) call append_var('vlxi')
             case ('vely')
-               if (has_dst) then ; hdf_vars(j) = 'vlyd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'vlyn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'vlyi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('vlyd')
+               if (has_neu) call append_var('vlyn')
+               if (has_ion) call append_var('vlyi')
             case ('velz')
-               if (has_dst) then ; hdf_vars(j) = 'vlzd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'vlzn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'vlzi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('vlzd')
+               if (has_neu) call append_var('vlzn')
+               if (has_ion) call append_var('vlzi')
             case ('momx')
-               if (has_dst) then ; hdf_vars(j) = 'momxd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'momxn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'momxi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('momxd')
+               if (has_neu) call append_var('momxn')
+               if (has_ion) call append_var('momxi')
             case ('momy')
-               if (has_dst) then ; hdf_vars(j) = 'momyd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'momyn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'momyi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('momyd')
+               if (has_neu) call append_var('momyn')
+               if (has_ion) call append_var('momyi')
             case ('momz')
-               if (has_dst) then ; hdf_vars(j) = 'momzd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'momzn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'momzi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('momzd')
+               if (has_neu) call append_var('momzn')
+               if (has_ion) call append_var('momzi')
             case ('ener')
-               if (has_neu) then ; hdf_vars(j) = 'enen' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'enei' ; j = j + 1 ; endif
+               if (has_neu) call append_var('enen')
+               if (has_ion) call append_var('enei')
             case ('ethr')
-               if (has_neu) then ; hdf_vars(j) = 'ethn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'ethi' ; j = j + 1 ; endif
+               if (has_neu) call append_var('ethn')
+               if (has_ion) call append_var('ethi')
             case ("divb", "divB")
                if (force_cc_mag) then
-                  hdf_vars(j) = "divbc"
+                  call append_var("divbc")
                else
-                  hdf_vars(j) = "divbf"
+                  call append_var("divbf")
                endif
-               j = j + 1
             case ("divb4", "divb6", "divb8")
                if (force_cc_mag) then
                   fc = "c"
@@ -230,46 +171,39 @@ contains
                   fc = "f"
                endif
                read(vars(i), '(a4,a1)') aux, ord
-               write(hdf_vars(j), '(3a)') "divb", fc, ord
-               j = j + 1
+               write(aux, '(3a)') "divb", fc, ord
+               call append_var(aux)
 #ifdef COSM_RAYS
             case ('encr')
 #ifdef COSM_RAY_ELECTRONS
                do k = 1, size(iarr_all_crn,1)
                   if (k<=99) then
                      write(aux,'(A2,I2.2)') 'cr', k
-                     hdf_vars(j) = aux ; j = j + 1
-                  else
-                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", k
-                     call warn(msg)
-                  endif
-               enddo
-#else
+#else /* !COSM_RAY_ELECTRONS */
                do k = 1, size(iarr_all_crs,1)
                   if (k<=9) then
                      write(aux,'(A2,I1)') 'cr', k
-                     hdf_vars(j) = aux ; j = j + 1
+#endif /* !COSM_RAY_ELECTRONS */
+                     call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", k
                      call warn(msg)
                   endif
                enddo
-#endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
             case ('cren') !< CRESP number density fields
                do k = 1, ncre
                   if (k<=99) then
                     write(aux,'(A4,I2.2)') 'cren', k
-                    hdf_vars(j) = aux ; j = j + 1
+                    call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP number density component #", k
                      call warn(msg)
                   endif
                enddo
-               do k = 1, nvars
+               do k = lbound(vars, 1), ubound(vars, 1)
                     if (vars(k) .eq. 'cree') exit
-                    if (k .eq. nvars) then
+                    if (k .eq. ubound(vars, 1)) then
                         write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cren' field created, but 'cree' not defined: reconstruction of spectrum from hdf files requires both."
                         call warn(msg)
                     endif
@@ -278,15 +212,15 @@ contains
                do k = 1, ncre
                   if (k<=99) then
                     write(aux,'(A4,I2.2)') 'cree', k
-                    hdf_vars(j) = aux ; j = j + 1
+                    call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP energy density component #", k
                      call warn(msg)
                   endif
                enddo
-               do k = 1, nvars
+               do k = lbound(vars, 1), ubound(vars, 1)
                     if (vars(k) .eq. 'cren') exit
-                    if (k .eq. nvars) then
+                    if (k .eq. ubound(vars, 1)) then
                         write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cree' field created, but 'cren' not defined: reconstruction of spectrum from hdf files requires both."
                         call warn(msg)
                     endif
@@ -295,7 +229,7 @@ contains
                do k = 1, ncre+1
                   if (k<=99) then
                     write(aux,'(A4,I2.2)') 'cref', k
-                    hdf_vars(j) = aux ; j = j + 1
+                    call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP distribution function component #", k
                      call warn(msg)
@@ -305,7 +239,7 @@ contains
                do k = 1, 2
                   if (k<=99) then
                     write(aux,'(A4,I2.2)') 'crep', k
-                    hdf_vars(j) = aux ; j = j + 1
+                    call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP cutoff momentum component #", k
                      call warn(msg)
@@ -315,21 +249,67 @@ contains
                do k = 1, ncre
                   if (k<=99) then
                     write(aux,'(A4,I2.2)') 'creq', k
-                    hdf_vars(j) = aux ; j = j + 1
+                    call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP spectrum index component #", k
                      call warn(msg)
                   endif
                enddo
 #endif /* COSM_RAY_ELECTRONS */
+#endif /* COSM_RAYS */
             case ('pres')
-               if (has_neu) then ; hdf_vars(j) = 'pren' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'prei' ; j = j + 1 ; endif
+               if (has_neu) call append_var('pren')
+               if (has_ion) call append_var('prei')
             case default
-               hdf_vars(j) = trim(vars(i)) ; j = j + 1
-               ! all known and unknown field descriptions that add just one field
+               if (.not. has_ion .and. (any(trim(vars(i)) == ["deni", "vlxi", "vlyi", "vlzi", "enei", "ethi", "prei"]) .or. any(trim(vars(i)) == ["momxi", "momyi", "momzi"]))) then
+                  if (master) call warn("[common_hdf5:init_hdf5] Cannot safely use plot variable '" // trim(vars(i)) // "' without ionized fluid")
+               else if (.not. has_neu .and. (any(trim(vars(i)) == ["denn", "vlxn", "vlyn", "vlzn", "enen", "ethn", "pren"]) .or. any(trim(vars(i)) == ["momxn", "momyn", "momzn"]))) then
+                  if (master) call warn("[common_hdf5:init_hdf5] Cannot safely use plot variable '" // trim(vars(i)) // "' without neutral fluid")
+               else if (.not. has_dst .and. (any(trim(vars(i)) == ["dend", "vlxd", "vlyd", "vlzd"]) .or. any(trim(vars(i)) == ["momxd", "momyd", "momzd"]))) then
+                  if (master) call warn("[common_hdf5:init_hdf5] Cannot safely use plot variable '" // trim(vars(i)) // "' without dust fluid")
+               else
+                  call append_var(vars(i)) ! all other known and unknown field descriptions
+               endif
          end select
       enddo
+
+      allocate(hdf_vars_avail(size(hdf_vars)))
+      if (size(hdf_vars_avail) > 0) hdf_vars_avail = .true.
+
+   contains
+
+      subroutine append_var(n)
+
+         use dataio_pub, only: warn
+         use mpisetup,   only: master
+
+         implicit none
+
+         character(len=*), intent(in) :: n
+
+         character(len=dsetnamelen), allocatable, dimension(:) :: tmp
+
+         if (len_trim(n) <= 1) then
+            if (master) call warn("[common_hdf5:init_hdf5:append_var] empty name")
+            return
+         endif
+
+         if (.not. allocated(hdf_vars)) then
+            allocate(hdf_vars(1))
+            hdf_vars = trim(n)
+         else
+            if (.not. any(trim(n) == hdf_vars)) then
+               allocate(tmp(lbound(hdf_vars, dim=1):ubound(hdf_vars, dim=1) + 1))
+               tmp(:ubound(hdf_vars, dim=1)) = hdf_vars
+               call move_alloc(from=tmp, to=hdf_vars)
+               hdf_vars(ubound(hdf_vars, dim=1)) = trim(n)
+            else
+               if (master) call warn("[common_hdf5:init_hdf5:append_var] duplicated name: '" // trim(n) // "'")
+            endif
+         endif
+
+      end subroutine append_var
+
    end subroutine init_hdf5
 
 !> \brief Procedure finalizing HDF5 module
@@ -352,7 +332,7 @@ contains
       character(len=dsetnamelen), intent(in) :: var
       integer(kind=4)                        :: i
 
-      do i = I_ONE, int(nhdf_vars, kind=4) !> \todo: introduce integer(kind=4), parameter :: first_hdf_var = 1 in constants.h and use it everywhere instead
+      do i = I_ONE, size(hdf_vars, kind=4) !> \todo: introduce integer(kind=4), parameter :: first_hdf_var = 1 in constants.h and use it everywhere instead
          if (hdf_vars(i) == var) hdf_vars_avail(i) = .false.
       enddo
 
@@ -365,7 +345,9 @@ contains
    subroutine common_shortcuts(var, fl_dni, i_xyz)
 
       use constants,  only: dsetnamelen, singlechar, INT4
+      use dataio_pub, only: warn
       use fluidindex, only: flind
+      use fluids_pub, only: has_ion, has_dst, has_neu
       use fluidtypes, only: component_fluid
 
       implicit none
@@ -380,21 +362,49 @@ contains
       if (any([ "den", "vlx", "vly", "vlz", "ene" ] == var(1:3))) then
          select case (var(4:4))
             case ("d")
-               fl_dni => flind%dst
+               if (has_dst) then
+                  fl_dni => flind%dst
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no dust fluid")
+               endif
             case ("n")
-               fl_dni => flind%neu
+               if (has_neu) then
+                  fl_dni => flind%neu
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no neutral fluid")
+               endif
             case ("i")
-               fl_dni => flind%ion
+               if (has_ion) then
+                  fl_dni => flind%ion
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no ionized fluid")
+               endif
+            case default
+               call warn("[common_hdf5:common_shortcuts] cannot assign fluid to '" // trim(var) // "'")
          end select
       else if (any([ "momx", "momy", "momz" ] == var(1:4))) then
          select case (var(5:5))
             case ("d")
-               fl_dni => flind%dst
+               if (has_dst) then
+                  fl_dni => flind%dst
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no dust fluid")
+               endif
             case ("n")
-               fl_dni => flind%neu
+               if (has_neu) then
+                  fl_dni => flind%neu
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no neutral fluid")
+               endif
             case ("i")
-               fl_dni => flind%ion
-         end select
+               if (has_ion) then
+                  fl_dni => flind%ion
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no ionized fluid")
+               endif
+            case default
+               call warn("[common_hdf5:common_shortcuts] cannot assign fluid to '" // trim(var) // "'")
+        end select
       endif
 
       i_xyz = huge(1_INT4)
@@ -428,7 +438,7 @@ contains
          & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
          & H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, &
          & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
-      use mpisetup,      only: slave
+      use mpisetup,      only: master, slave
       use version,       only: env, nenv
 #ifdef RANDOMIZE
       use randomization, only: write_current_seed_to_restart
@@ -436,6 +446,9 @@ contains
 #ifdef SN_SRC
       use snsources,     only: write_snsources_to_restart
 #endif /* SN_SRC */
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      use multigrid_gravity, only: write_oldsoln_to_restart
+#endif /* MULTIGRID && SELF_GRAV */
 
       implicit none
 
@@ -450,10 +463,16 @@ contains
 
       if (associated(user_attrs_pre)) call user_attrs_pre
 
-      if (slave) return ! This data need not be written in parallel.
+      if (master) then
+         call h5open_f(error)
+         call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
+      endif
 
-      call h5open_f(error)
-      call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      call write_oldsoln_to_restart(file_id)  ! Old solution fields have to be selectively marked for restart also on slaves
+#endif /* MULTIGRID && SELF_GRAV */
+
+      if (slave) return ! This data need not be written in parallel.
 
       if (use_v2_io) then
          call set_common_attributes_v2(file_id)
@@ -532,6 +551,7 @@ contains
       use hdf5,            only: HID_T, SIZE_T
       use h5lt,            only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
       use mass_defect,     only: magic_mass
+      use timestep_pub,    only: c_all_old, cfl_c, stepcfl
       use units,           only: cm, gram, sek, kelvin, miu0
 
       implicit none
@@ -561,13 +581,16 @@ contains
       rbuffer(12)  = last_hdf_time           ; rbuffer_name(12)  = "last_hdf_time" !rr2
       rbuffer(13)  = last_res_time           ; rbuffer_name(13)  = "last_res_time" !rr2
       rbuffer(14)  = -99999.9                ; rbuffer_name(14)  = "last_plt_time" !rr2 ! FIXME
-      rbuffer(15)  = cm                      ; rbuffer_name(15)  = "cm" !rr2
-      rbuffer(16)  = gram                    ; rbuffer_name(16)  = "gram" !rr2
-      rbuffer(17)  = sek                     ; rbuffer_name(17)  = "sek" !rr2
-      rbuffer(18)  = miu0                    ; rbuffer_name(18)  = "miu0" !rr2
-      rbuffer(19)  = kelvin                  ; rbuffer_name(19)  = "kelvin" !rr2
-      rbuffer_size(20) = flind%fluids
-      rbuffer(20:19+rbuffer_size(20)) = magic_mass ; rbuffer_name(20:19+rbuffer_size(20)) = "magic_mass" !rr2
+      rbuffer(15)  = c_all_old               ; rbuffer_name(15)  = "c_all_old" !rr2
+      rbuffer(16)  = stepcfl                 ; rbuffer_name(16)  = "stepcfl" !rr2
+      rbuffer(17)  = cfl_c                   ; rbuffer_name(17)  = "cfl_c" !rr2
+      rbuffer(18)  = cm                      ; rbuffer_name(18)  = "cm" !rr2
+      rbuffer(19)  = gram                    ; rbuffer_name(19)  = "gram" !rr2
+      rbuffer(20)  = sek                     ; rbuffer_name(20)  = "sek" !rr2
+      rbuffer(21)  = miu0                    ; rbuffer_name(21)  = "miu0" !rr2
+      rbuffer(22)  = kelvin                  ; rbuffer_name(22)  = "kelvin" !rr2
+      rbuffer_size(23) = flind%fluids
+      rbuffer(23:22+rbuffer_size(23)) = magic_mass ; rbuffer_name(23:22+rbuffer_size(23)) = "magic_mass" !rr2
 
       ibuffer(1)   = nstep                   ; ibuffer_name(1)   = "nstep" !rr2
       ibuffer(2)   = nres                    ; ibuffer_name(2)   = "nres" !rr2
@@ -605,8 +628,6 @@ contains
 !>
 !! \brief Common attributes for v2 files
 !!
-!! \warning Do not remove redundancy between set_common_attributes_v1 and set_common_attributes_v2 until we get mature
-!! state of the v2 outputs
 !<
 
    subroutine set_common_attributes_v2(file_id)
@@ -618,6 +639,7 @@ contains
       use hdf5,               only: HID_T
       use mass_defect,        only: magic_mass
       use set_get_attributes, only: set_attr
+      use timestep_pub,       only: c_all_old, cfl_c, stepcfl
 
       implicit none
 
@@ -632,6 +654,9 @@ contains
       call set_attr(file_id, "last_hdf_time", [last_hdf_time         ]) !rr2
       call set_attr(file_id, "last_res_time", [last_res_time         ]) !rr2
       call set_attr(file_id, "last_plt_time", [-99999.99999          ]) !rr2 !FIXME
+      call set_attr(file_id, "c_all_old",     [c_all_old             ]) !rr2
+      call set_attr(file_id, "stepcfl",       [stepcfl               ]) !rr2
+      call set_attr(file_id, "cfl_c",         [cfl_c                 ]) !rr2
       call set_attr(file_id, "magic_mass",     magic_mass)
 
       ! integer attributes

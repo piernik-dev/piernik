@@ -40,7 +40,7 @@
 !<
 
 module multigrid_gravity
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
 
    use constants,          only: cbuff_len
    use multigrid_vstats,   only: vcycle_stats
@@ -49,7 +49,10 @@ module multigrid_gravity
    implicit none
 
    private
-   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext
+   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, unmark_oldsoln, recover_sgpm
+#ifdef HDF5
+   public :: write_oldsoln_to_restart, read_oldsoln_from_restart
+#endif
 
    include "fftw3.f"
    ! constants from fftw3.f
@@ -110,7 +113,7 @@ contains
 !! <tr><td>grav_bnd_str          </td><td>"periodic"/"dirichlet"</td><td>string of chars</td><td>\copydoc multigrid_gravity::grav_bnd_str          </td></tr>
 !! <tr><td>preconditioner        </td><td>"HG_V-cycle"</td><td>string of chars</td><td>\copydoc multigrid_gravity::preconditioner   </td></tr>
 !! </table>
-!! The list is active while \b "GRAV" and \b "MULTIGRID" are defined.
+!! The list is active while \b "SELF_GRAV" and \b "MULTIGRID" are defined.
 !! \n \n
 !<
    subroutine multigrid_grav_par
@@ -815,6 +818,41 @@ contains
 
    end subroutine multigrid_solve_grav
 
+!> \brief
+
+   function recover_sgpm() result(initialized)
+
+      use constants,        only: sgpm_n
+      use cg_leaves,        only: leaves
+      use dataio_pub,       only: warn
+      use global,           only: nstep
+      use mpisetup,         only: master
+      use multigridvars,    only: grav_bnd, bnd_isolated
+      use named_array_list, only: qna
+
+      implicit none
+
+      logical :: initialized
+
+      initialized = .false.
+      if (associated(inner%old%latest)) then
+         call leaves%q_copy(inner%old%latest%i_hist, qna%ind(sgpm_n))
+         initialized = .true.
+         if (grav_bnd == bnd_isolated) then
+            if (associated(outer%old%latest)) then
+               call leaves%q_add(outer%old%latest%i_hist, qna%ind(sgpm_n))
+            else
+               initialized = .false.
+               call warn("[multigrid_gravity:recover_sgpm] i-history without o-history available. Ignoring.")
+            endif
+         endif
+      else
+         if (master .and. nstep > 0) call warn("[multigrid_gravity:recover_sgpm] no i-history available")
+      endif
+      call leaves%leaf_arr3d_boundaries(qna%ind(sgpm_n))
+
+   end function recover_sgpm
+
 !> \brief Chose the desired poisson solver
 
    subroutine poisson_solver(history)
@@ -901,8 +939,14 @@ contains
       integer(kind=4), dimension(4)    :: mg_fields
       type(cg_level_connected_T), pointer :: curl
 
+#ifdef DEBUG
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
       inquire(file = "_dump_result_", EXIST=dump_result)
+#else  /* !DEBUG */
+      dump_every_step = .false.
+      dump_result = .false.
+#endif /* DEBUG */
+
       write(dname,'(2a)')trim(vstat%cprefix),"mdump"
       mg_fields = [ source, solution, defect, correction ]
 
@@ -1011,5 +1055,51 @@ contains
       call leaves%check_dirty(solution, "final_solution")
 
    end subroutine vcycle_hg
+
+!>
+!! \brief Mark which old potential fields should be put into restart and dump appropriate attributes
+!<
+
+   subroutine unmark_oldsoln
+
+      use multigridvars, only: grav_bnd, bnd_isolated
+
+      implicit none
+
+      call inner%unmark
+      if (grav_bnd == bnd_isolated) call outer%unmark
+
+   end subroutine unmark_oldsoln
+
+#ifdef HDF5
+   subroutine write_oldsoln_to_restart(file_id)
+
+      use hdf5,          only: HID_T
+      use multigridvars, only: grav_bnd, bnd_isolated
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id  !< File identifier
+
+      call inner%mark_and_create_attribute(file_id)
+      if (grav_bnd == bnd_isolated) call outer%mark_and_create_attribute(file_id)
+
+   end subroutine write_oldsoln_to_restart
+
+   subroutine read_oldsoln_from_restart(file_id)
+
+      use hdf5,          only: HID_T
+      use multigridvars, only: grav_bnd, bnd_isolated
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id  !< File identifier
+
+      call inner%read_os_attribute(file_id)
+      if (grav_bnd == bnd_isolated) call outer%read_os_attribute(file_id)
+
+   end subroutine read_oldsoln_from_restart
+
+#endif
 
 end module multigrid_gravity

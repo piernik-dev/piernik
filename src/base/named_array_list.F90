@@ -51,7 +51,9 @@ module named_array_list
    type :: na_var
       character(len=dsetnamelen)                 :: name          !< a user-provided id for the array
       logical                                    :: vital         !< fields that are subject of automatic prolongation and restriction (e.g. state variables)
-      integer(kind=4)                            :: restart_mode  !< AT_IGNORE: do not write to restart, AT_NO_B write without ext. boundaries, AT_OUT_B write with ext. boundaries
+      integer(kind=4)                            :: restart_mode  !< AT_BACKUP, AT_IGNORE: do not write to restart
+                                                                  !< AT_NO_B write without ext. boundaries
+                                                                  !< AT_OUT_B write with ext. boundaries
                                                                   !< \todo position /= VAR_CENTER should automatically force AT_OUT_B if AT_IGNORE was not chosen
       integer(kind=4)                            :: ord_prolong   !< Prolongation order for the variable
       integer(kind=4), allocatable, dimension(:) :: position      !< VAR_CENTER by default, also possible VAR_CORNER and VAR_[XYZ]FACE
@@ -222,7 +224,7 @@ contains
 
       if (allocated(this%lst)) then
          do i = lbound(this%lst(:), dim=1, kind=4), ubound(this%lst(:), dim=1, kind=4)
-            if (this%lst(i)%restart_mode /= AT_IGNORE) call append_int_to_array(lst, i)
+            if (this%lst(i)%restart_mode > AT_IGNORE) call append_int_to_array(lst, i)
          enddo
       endif
       if (.not.allocated(lst)) allocate(lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values

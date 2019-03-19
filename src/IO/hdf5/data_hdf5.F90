@@ -319,7 +319,7 @@ contains
 #define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
 
       call common_shortcuts(var, fl_dni, i_xyz)
-
+      if (.not. associated(fl_dni)) tab = -huge(1.)
       ierrh = 0
       tab = 0.0
 
@@ -368,16 +368,16 @@ contains
             tab(:,:,:) = cg%u(flind%trc%beg, RNG)
 #endif /* TRACER */
          case ("dend", "deni", "denn")
-            tab(:,:,:) = cg%u(fl_dni%idn, RNG)
+            if (associated(fl_dni)) tab(:,:,:) = cg%u(fl_dni%idn, RNG)
          case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
-            tab(:,:,:) = cg%u(fl_dni%imx + i_xyz, RNG) / cg%u(fl_dni%idn, RNG)
+            if (associated(fl_dni)) tab(:,:,:) = cg%u(fl_dni%imx + i_xyz, RNG) / cg%u(fl_dni%idn, RNG)
          case ("momxd", "momxn", "momxi", "momyd", "momyn", "momyi", "momzd", "momzn", "momzi")
-            tab(:,:,:) = cg%u(fl_dni%imx + i_xyz, RNG)
+            if (associated(fl_dni)) tab(:,:,:) = cg%u(fl_dni%imx + i_xyz, RNG)
          case ("enen", "enei")
 #ifdef ISO
-            tab(:,:,:) = ekin(cg%u(fl_dni%imx, RNG), cg%u(fl_dni%imy, RNG), cg%u(fl_dni%imz, RNG), cg%u(fl_dni%idn, RNG))
+            if (associated(fl_dni)) tab(:,:,:) = ekin(cg%u(fl_dni%imx, RNG), cg%u(fl_dni%imy, RNG), cg%u(fl_dni%imz, RNG), cg%u(fl_dni%idn, RNG))
 #else /* !ISO */
-            tab(:,:,:) = cg%u(fl_dni%ien, RNG)
+            if (associated(fl_dni)) tab(:,:,:) = cg%u(fl_dni%ien, RNG)
 #endif /* !ISO */
          case ("pren")
 #ifndef ISO
@@ -413,8 +413,10 @@ contains
          case ("magB")
             tab(:,:,:) = sqrt(two * emag_c)
          case ("magdir")
-            tab(:,:,:) = atan2(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ), &
-                 &             cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ))
+            tab(:,:,:) =  merge(atan2(cg%b(ydim, RNG), cg%b(xdim, RNG)), &
+                 &              atan2(cg%b(ydim, RNG) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ), &
+                 &                    cg%b(xdim, RNG) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )),  &
+                 &              force_cc_mag)
             ! ToDo: magi - inclination
             ! ToDo: curlb - nabla x B
 !! ToDo: autodetect centering, add option for dumping both just in case
@@ -446,10 +448,7 @@ contains
             else if (has_dst) then
                fl_mach => flind%dst
             endif
-            tab(:,:,:) = sqrt(sq_sum3(cg%u(fl_mach%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
-                 &                    cg%u(fl_mach%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
-                 &                    cg%u(fl_mach%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))) / &
-                 &                    cg%u(fl_mach%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            tab(:,:,:) = sqrt(sq_sum3(cg%u(fl_mach%imx, RNG), cg%u(fl_mach%imy, RNG), cg%u(fl_mach%imz, RNG))) / cg%u(fl_mach%idn, RNG)
          case ("cs", "c_s")
             nullify(fl_mach)
             if (has_ion) then
@@ -516,6 +515,9 @@ contains
       use mpisetup,    only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
       use mpisignals,  only: sig
       use timer,       only: set_timer
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      use multigrid_gravity, only: unmark_oldsoln
+#endif /* MULTIGRID && SELF_GRAV */
 
       implicit none
 
@@ -540,6 +542,9 @@ contains
       else
          call h5_write_to_single_file_v1(fname)
       endif
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      call unmark_oldsoln
+#endif /* MULTIGRID && SELF_GRAV */
 
       thdf = set_timer(tmr_hdf)
       if (master) then
@@ -805,7 +810,7 @@ contains
 
       use cg_level_finest, only: finest
       use cg_list,         only: cg_list_element
-      use common_hdf5,     only: nhdf_vars, hdf_vars, hdf_vars_avail
+      use common_hdf5,     only: hdf_vars, hdf_vars_avail
       use constants,       only: ndims, LO, FP_REAL
       use dataio_pub,      only: die, h5_64bit
       use domain,          only: is_multicg !, is_uneven
@@ -854,8 +859,7 @@ contains
       ! Create the data space for the  dataset.
       !
       call h5screate_simple_f(rank, dimsf, filespace, error)
-
-      do i = 1, nhdf_vars
+      do i = 1, size(hdf_vars)
          if (.not.hdf_vars_avail(i)) cycle
 
          ! Create chunked dataset.
@@ -936,7 +940,7 @@ contains
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use common_hdf5, only: nhdf_vars, hdf_vars
+      use common_hdf5, only: hdf_vars
       use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE, tmr_hdf
       use dataio_pub,  only: msg, printio, printinfo, thdf, last_hdf_time, piernik_hdf5_version
       use grid_cont,   only: grid_container
@@ -982,7 +986,7 @@ contains
 
          if (.not.associated(data)) allocate(data(cg%n_b(xdim),cg%n_b(ydim),cg%n_b(zdim)))
          dims = cg%n_b(:)
-         do i = I_ONE, int(nhdf_vars, kind=4)
+         do i = I_ONE, size(hdf_vars, kind=4)
             call get_data_from_cg(hdf_vars(i), cg, data)
             call h5ltmake_dataset_double_f(grp_id, hdf_vars(i), rank, dims, data(:,:,:), error)
          enddo

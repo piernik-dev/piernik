@@ -35,7 +35,7 @@
 !<
 
 module multigrid_Laplace4M
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
 
    implicit none
 

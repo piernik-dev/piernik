@@ -85,10 +85,10 @@ contains
 #ifdef RESISTIVE
       call cleanup_resistivity;    call nextdot(.false.)
 #endif /* RESISTIVE */
+      call cleanup_grid;           call nextdot(.false.)
 #ifdef MULTIGRID
       call cleanup_multigrid;      call nextdot(.false.)
 #endif /* MULTIGRID */
-      call cleanup_grid;           call nextdot(.false.)
       call cleanup_sortable_list;  call nextdot(.false.)
       call cleanup_fluids;         call nextdot(.false.)
 #ifdef GRAV

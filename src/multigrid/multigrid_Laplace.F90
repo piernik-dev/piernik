@@ -30,7 +30,7 @@
 !> \brief Multigrid Laplace operator selector routines
 
 module multigrid_Laplace
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
 
    implicit none
 
