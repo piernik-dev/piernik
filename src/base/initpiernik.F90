@@ -159,8 +159,8 @@ contains
       call init_fluids
       code_progress = PIERNIK_INIT_FLUIDS    ! Fluid properties are set up
 
-      call all_cg%register_fluids            ! Register named fields for u, b and wa, depends on fluids and domain
       call all_cg%init
+      call all_cg%register_fluids            ! Register named fields for u, b and wa, depends on fluids and domain
 
 #ifdef COSM_RAYS
 #if defined(__INTEL_COMPILER)
