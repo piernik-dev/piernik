@@ -656,20 +656,27 @@ contains
 
       integer(kind=4), dimension(xdim:zdim) :: n_bl
       integer(kind=4)                       :: tot_bl, bx, by, bz, b
+      logical                               :: warned
 
-      if (any(AMR_bsize(xdim:zdim) <=0)) then
+      if (any((AMR_bsize <= 0) .and. dom%has_dir)) then
          if (master) call warn("[decomposition:stamp_cg] some(AMR_bsize(1:3)) <=0")
          return
       endif
 
-      if (any(mod(patch%n_d(:), int(AMR_bsize(xdim:zdim), kind=8)) /= 0 .and. dom%has_dir(:))) then
-         write(msg,'(a,3f10.3,a)')"[decomposition:stamp_cg] Fractional number of blocks: n_d(:)/AMR_bsize(1:3) = [",patch%n_d(:)/real(AMR_bsize(xdim:zdim)),"]"
-         if (master) call warn(msg)
-         return
-      endif
+      warned = .false.
+      do b = xdim, zdim
+         if (dom%has_dir(b)) then
+            if (mod(patch%n_d(b), int(AMR_bsize(b), kind=8)) /= 0) then
+               write(msg,'(a,3f10.3,a)')"[decomposition:stamp_cg] Fractional number of blocks: n_d(", b, ")/AMR_bsize(", b, ") = [",patch%n_d(b)/real(AMR_bsize(b)),"]"
+               if (master) call warn(msg)
+               warned = .true.
+            endif
+         endif
+      enddo
+      if (warned) return
 
       where (dom%has_dir(:))
-         n_bl(:) = int(patch%n_d(:) / AMR_bsize(xdim:zdim), kind=4)
+         n_bl(:) = int(patch%n_d(:) / AMR_bsize(:), kind=4)
       elsewhere
          n_bl(:) = 1
       endwhere
@@ -683,8 +690,8 @@ contains
             do bx = 0, n_bl(xdim)-I_ONE
                b = b + I_ONE !b = 1 + bx + n_bl(xdim)*(by + bz*n_bl(ydim))
                where (dom%has_dir(:))
-                  patch%pse(b)%se(:, LO) = patch%off(:) + [ bx, by, bz ] * AMR_bsize(xdim:zdim)
-                  patch%pse(b)%se(:, HI) = patch%pse(b)%se(:, LO) + AMR_bsize(xdim:zdim) - 1
+                  patch%pse(b)%se(:, LO) = patch%off(:) + [ bx, by, bz ] * AMR_bsize(:)
+                  patch%pse(b)%se(:, HI) = patch%pse(b)%se(:, LO) + AMR_bsize(:) - 1
                endwhere
             enddo
          enddo
