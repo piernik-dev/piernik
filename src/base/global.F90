@@ -96,7 +96,7 @@ module global
    real                          :: cfl_glm           !< "CFL" for chspeed in divergence cleaning
    logical                       :: ch_grid           !< When true use grid properties to estimate ch (psi wave propagation speed). Use gas properties otherwise.
    real                          :: w_epsilon         !< small number for safe evaluation of weights in WENO interpolation
-   integer                       :: ord_mag_prolong   !< prolongation order for B and psi
+   integer(kind=4)               :: ord_mag_prolong   !< prolongation order for B and psi
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
