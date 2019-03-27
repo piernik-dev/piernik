@@ -268,6 +268,7 @@ module constants
       enumerator :: DIVB_CT   ! Constrained Transport
       enumerator :: DIVB_HDC  ! Hyperbolic Divergence Cleaning (div(B) diffusion, GLM)
    end enum
+   integer(kind=4), parameter :: psidim = zdim + 1
 
    ! -1, 0, 1
    enum, bind(C)

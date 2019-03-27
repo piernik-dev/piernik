@@ -43,14 +43,10 @@
 module hlld
 ! pulled by RIEMANN
 
-   use constants, only: zdim
-
    implicit none
 
-   integer, parameter :: psidim = zdim + 1
-
    private
-   public :: riemann_wrap, psidim
+   public :: riemann_wrap
 
 contains
 !>
@@ -119,7 +115,7 @@ contains
 
     ! external procedures
 
-    use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien, DIVB_HDC
+    use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien, DIVB_HDC, psidim
     use func,       only: operator(.notequals.), operator(.equals.)
     use global,     only: divB_0_method
     use hdc,        only: chspeed

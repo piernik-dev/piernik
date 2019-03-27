@@ -1,3 +1,8 @@
+! ./setup advection_test/magnetized_advection_test -d RIEMANN -o R_madv
+! #effective call (after evaluation of .setuprc*):
+! #./setup -c lothlorien --laconic --linkexe advection_test/magnetized_advection_test -d RIEMANN -o R_madv
+! #Using compiler settings from lothlorien.in
+
 ! This test is supposed to work with advection test configured to use magnetic
 ! field such as configured in a following way:
 ! ./setup advection_test/magnetized_advection_test -o T_advection
@@ -12,7 +17,7 @@
 ! for i in `seq 6 20` ; do r=$(( 2 ** ($i / 2) * ( 2 + ($i % 2)) / 2 )) ; mpirun -np $(cat /proc/cpuinfo  | grep "cpu cores" | head -n 1 | sed 's/.*: //') ./piernik -n '&BASE_DOMAIN n_d = '$r', '$r', 1 / &OUTPUT_CONTROL run_id = "'$( printf "t%02d" $i )'"' ; done
 
  $BASE_DOMAIN
-    n_d = 64, 64, 1
+    n_d = 2*64
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
@@ -32,6 +37,7 @@
     allow_noncart = .true.
     dd_unif_quality = 1.1
     dd_rect_quality = 1.1
+  AMR_bsize =2*16
  /
 
  $UNITS
@@ -45,7 +51,7 @@
  /
 
  $END_CONTROL
-    tend   = 1.0
+    tend   = 3.0
     nend   = 10000
  /
 
@@ -56,8 +62,9 @@
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz', "magx", "magy", "magz", "magB", "magdir", "divb", "divb4", "pmag%"
+    vars(1:) = "divb", "psi", "dens", "velx", "vely", "magx", "magy", "level"
     gdf_strict = .false.
+    h5_64bit = T
  /
 
  $FLUID_NEUTRAL
@@ -73,15 +80,22 @@
  /
 
  $PROBLEM_CONTROL
-    pulse_vel = 2., -2., 2.
+    pulse_vel = 0., 0., 0. !2., -2., 2.
     pulse_size = 1., 1., 1.
+    pulse_pres = 1.e0
 
     pulse_amp = 1.0  ! 1.0 means constant density
 
-    divB0_amp = 0.01  ! non-divergent magnetic field
+!    B_const = .2, .3, .6
+
+    divB0_amp = 0.0  ! non-divergent magnetic field
     divBc_amp = 0.  ! nearly-everywhere constant div(B) (with huge jump at domain boundaries)
     divBs_amp = 0.  ! sine-wave div(B)
 
+    ! A blob of div(B)
+    divBbx_amp = 0.001  ! 0.28209479177387814 !  1/sqrt(4 * pi)
+    divBby_amp = 0.  ! 0.28209479177387814 !  1/sqrt(4 * pi)
+    divBbz_amp = 0.  ! 0.28209479177387814 !  1/sqrt(4 * pi)
  /
 
  $NONINERTIAL
@@ -91,4 +105,7 @@
  /
 
  $AMR
+    n_updAMR = 100000
+    level_max = 1
+    refine_boxes(1)  = 1, 0., -1., -1., 1., 1., 1.
  /
