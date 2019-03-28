@@ -48,7 +48,7 @@ contains
       use cg_level_connected,    only: cg_level_connected_T
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
-      use refinement,            only: auto_refine_derefine
+      use refinement_crit_list,  only: auto_refine_derefine
       use refinement_primitives, only: mark_all_primitives
       use user_hooks,            only: problem_refine_derefine
 #ifdef VERBOSED_REFINEMENTS
@@ -173,26 +173,27 @@ contains
 
    subroutine update_refinement(act_count, refinement_fixup_only)
 
-      use all_boundaries,     only: all_bnd
-      use cg_leaves,          only: leaves
-      use cg_list,            only: cg_list_element
-      use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
-      use cg_level_finest,    only: finest
-      use cg_list_global,     only: all_cg
-      use constants,          only: pLOR, pLAND, pSUM, cs_i2_n
-      use dataio_pub,         only: warn, die
-      use global,             only: nstep
-      use grid_cont,          only: grid_container
-      use list_of_cg_lists,   only: all_lists
-      use mpisetup,           only: piernik_MPI_Allreduce!, proc
-      use named_array_list,   only: qna
-      use refinement,         only: n_updAMR, emergency_fix, refines2list
+      use all_boundaries,       only: all_bnd
+      use cg_leaves,            only: leaves
+      use cg_list,              only: cg_list_element
+      use cg_level_base,        only: base
+      use cg_level_connected,   only: cg_level_connected_T
+      use cg_level_finest,      only: finest
+      use cg_list_global,       only: all_cg
+      use constants,            only: pLOR, pLAND, pSUM, cs_i2_n
+      use dataio_pub,           only: warn, die
+      use global,               only: nstep
+      use grid_cont,            only: grid_container
+      use list_of_cg_lists,     only: all_lists
+      use mpisetup,             only: piernik_MPI_Allreduce!, proc
+      use named_array_list,     only: qna
+      use refinement,           only: n_updAMR, emergency_fix
+      use refinement_crit_list, only: refines2list
 #ifdef GRAV
-      use gravity,            only: update_gp
+      use gravity,              only: update_gp
 #endif /* GRAV */
 #ifdef DEBUG_DUMPS
-      use data_hdf5,          only: write_hdf5
+      use data_hdf5,            only: write_hdf5
 #endif /* DEBUG_DUMPS */
 
       implicit none
