@@ -17,7 +17,6 @@
  /
 
  $MPI_BLOCKS
-    AMR_bsize = 16, 16, 16
  /
 
  $UNITS
@@ -124,6 +123,7 @@
  /
 
  $AMR
+    bsize = 16, 16, 16
     n_updamr = 2
     level_max = 2
 !    refine_points(1) = 1, 4.5, .001, 0.001

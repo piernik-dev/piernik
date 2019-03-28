@@ -35,7 +35,7 @@ module refinement
    implicit none
 
    private
-   public :: n_updAMR, oop_thr, refine_points, refine_vars, level_min, level_max, inactive_name, &
+   public :: n_updAMR, oop_thr, refine_points, refine_vars, level_min, level_max, inactive_name, bsize, &
         &    refine_boxes, init_refinement, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce
 
    integer(kind=4), protected :: n_updAMR            !< how often to update the refinement structure
@@ -44,6 +44,7 @@ module refinement
    logical,         protected :: prefer_n_bruteforce !< if .false. then try DFC algorithms for neighbor searches
    integer(kind=4), protected :: level_min           !< minimum allowed refinement
    integer(kind=4), protected :: level_max           !< maximum allowed refinement (don't need to be reached if not necessary)
+   integer(kind=4), dimension(ndims), protected :: bsize  !< the size of cg for multiblock decomposition
 
    ! some refinement primitives
    integer, parameter :: nshapes = 10 !< number of shapes of each kind allowed to be predefined by user in problem.par
@@ -77,19 +78,29 @@ module refinement
 
    logical :: emergency_fix                                                    !< set to .true. if you want to call update_refinement ASAP
 
-   namelist /AMR/ level_min, level_max, n_updAMR, strict_SFC_ordering, &
+   namelist /AMR/ level_min, level_max, bsize, n_updAMR, strict_SFC_ordering, &
         &         prefer_n_bruteforce, oop_thr, refine_points, refine_boxes, refine_vars
 
 contains
 
-!> \brief Initialization of parameters of refinement mechanics
-
+!>
+!! \brief Initialization of parameters of refinement mechanics
+!!
+!! @b AMR
+!! \n \n
+!! <table border="+1">
+!!   <tr><td>bsize(3)   </td><td>0      </td><td>integer</td><td>\copydoc refinement::bsize      </td></tr>
+!! </table>
+!! \n \n
+!!
+!! \ToDo: make it complete
+!<
    subroutine init_refinement
 
-      use constants,      only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ONE, LO, HI, cbuff_len
+      use constants,      only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, LO, HI, cbuff_len
       use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, code_progress, warn
-      use domain,         only: AMR_bsize, dom
+      use domain,         only: dom
       use mpisetup,       only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
@@ -101,24 +112,12 @@ contains
 
       level_min = base_level_id
       level_max = level_min
+      bsize(:)  = I_ZERO
       n_updAMR  = huge(I_ONE)
       strict_SFC_ordering = .false.
       allow_AMR = .true.
       prefer_n_bruteforce = .false.
       oop_thr = 0.1
-      do d = xdim, zdim
-         if (dom%has_dir(d))  then
-            if (AMR_bsize(d) < dom%nb) then
-               if (allow_AMR .and. master .and. AMR_bsize(d) > 1) call warn("[refinement:init_refinement] Refinements disabled (AMR_bsize too small)")
-               allow_AMR = .false.
-            else
-               if (mod(dom%n_d(d), AMR_bsize(d)) /= 0) then
-                  if (allow_AMR .and. master) call warn("[refinement:init_refinement] Refinements disabled (domain not divisible by AMR_bsize)")
-                  allow_AMR = .false.
-               endif
-            endif
-         endif
-      enddo
       refine_points(:) = ref_point(base_level_id-1, [ 0., 0., 0.] )
       refine_boxes (:) = ref_box  (base_level_id-1, reshape([ 0., 0., 0., 0., 0., 0.], [ndims, HI-LO+I_ONE] ) )
       refine_vars  (:) = ref_auto_param (inactive_name, inactive_name, 0., 0., 0.)
@@ -143,6 +142,9 @@ contains
          close(nh%lun)
          call nh%compare_namelist()
 
+
+         if (any(bsize(:) > 0 .and. bsize(:) < dom%nb .and. dom%n_d(:) > 1)) call die("[refinement:init_refinement] bsize(:) is too small.")
+
          ! sanitizing
          if (allow_AMR) then
             level_min = max(level_min, base_level_id)
@@ -160,8 +162,9 @@ contains
          ibuff(1) = level_min
          ibuff(2) = level_max
          ibuff(3) = n_updAMR
-         ibuff(4        :3+  nshapes) = refine_points(:)%level
-         ibuff(4+nshapes:3+2*nshapes) = refine_boxes (:)%level
+         ibuff(4:3+ndims) = bsize
+         ibuff(11        :10+  nshapes) = refine_points(:)%level
+         ibuff(11+nshapes:10+2*nshapes) = refine_boxes (:)%level
 
          lbuff(1) = allow_AMR
          lbuff(2) = strict_SFC_ordering
@@ -196,8 +199,9 @@ contains
          level_min = ibuff(1)
          level_max = ibuff(2)
          n_updAMR  = ibuff(3)
-         refine_points(:)%level = ibuff(4        :3+  nshapes)
-         refine_boxes (:)%level = ibuff(4+nshapes:3+2*nshapes)
+         bsize     = ibuff(4:3+ndims)
+         refine_points(:)%level = ibuff(11        :10+  nshapes)
+         refine_boxes (:)%level = ibuff(11+nshapes:10+2*nshapes)
 
          allow_AMR           = lbuff(1)
          strict_SFC_ordering = lbuff(2)
@@ -219,7 +223,21 @@ contains
 
       endif
 
-      if (.not. allow_AMR) AMR_bsize = 0
+      do d = xdim, zdim
+         if (dom%has_dir(d))  then
+            if (bsize(d) < dom%nb) then
+               if (allow_AMR .and. master .and. bsize(d) > 1) call warn("[refinement:init_refinement] Refinements disabled (bsize too small)")
+               allow_AMR = .false.
+            else
+               if (mod(dom%n_d(d), bsize(d)) /= 0) then
+                  if (allow_AMR .and. master) call warn("[refinement:init_refinement] Refinements disabled (domain not divisible by bsize)")
+                  allow_AMR = .false.
+               endif
+            endif
+         endif
+      enddo
+
+      if (.not. allow_AMR) bsize = I_ZERO
 
       ! Such large refinements may require additional work in I/O routines, visualization, computing MPI tags and so on.
       if (level_max > 40) call warn("[refinement:init_refinement] BEWARE: At such large refinements, integer overflows may happen under certain conditions.")

@@ -47,8 +47,8 @@ module cg_list_neighbors
    !! instead of checking against all grids on AMR-style 'blocky' grids or cartesian decomposition with equal-sized
    !! grids. It will result in massive speedups on cg_list_neighbors_T%find_neighbors and
    !! cg_level_connected_T%{vertical_prep,vertical_b_prep). It may also simplify the process of fixing refinement
-   !! structure in refinement_update::fix_refinement. Grids which are larger than AMR_bsize (merged grids, non-block
-   !! decompositions, both not implemented yet) may be referred by several id's that correspond with AMR_bsize-d virtual
+   !! structure in refinement_update::fix_refinement. Grids which are larger than AMR::bsize (merged grids, non-block
+   !! decompositions, both not implemented yet) may be referred by several id's that correspond with AMR::bsize-d virtual
    !! grid pieces. Non-cartesian decompositions should be handled with the bruteforce way. It is possible to optimize
    !! them slightly if we save the numbers found during decomposition, but I don't think it is really important.
    !! Unequal cartesian decompositions should be handled with the bruteforce way. It can be optimized too, but the

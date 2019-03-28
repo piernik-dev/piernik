@@ -276,7 +276,7 @@ contains
             if (curl%l%id == -level_depth .and. single_base) then
                call curl%add_patch(n_pieces=I_ONE)
             else
-               !> \todo When there is more AMR_bsize-pieces than processes, consider forcing cartesian or noncartesian decomposition
+               !> \todo When there is more AMR::bsize-pieces than processes, consider forcing cartesian or noncartesian decomposition
                call curl%add_patch
             endif
          endif

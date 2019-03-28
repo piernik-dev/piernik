@@ -30,7 +30,6 @@
  /
 
  $MPI_BLOCKS
-    AMR_bsize = 3*32
  /
 
  $UNITS
@@ -99,6 +98,7 @@
  /
 
  $AMR
+    bsize = 3*32
     level_max = 4
     n_updAMR = 3
     refine_vars(1) = "dens", "relgrad", 0.01, 0.001

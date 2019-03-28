@@ -399,7 +399,7 @@ contains
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
       use constants,          only: refinement_factor, LO, HI, ndims
-      use domain,             only: AMR_bsize
+      use refinement,         only: bsize
       use dataio_pub,         only: warn, die
       use mergebox,           only: wmap
 
@@ -422,7 +422,7 @@ contains
       if (size(cgl%cg%refine_flags%SFC_refine_list) > 0) then ! we've got detailed map!
          do b = lbound(cgl%cg%refine_flags%SFC_refine_list, dim=1), ubound(cgl%cg%refine_flags%SFC_refine_list, dim=1)
             if (cgl%cg%refine_flags%SFC_refine_list(b)%level == curl%finer%l%id) then
-               call curl%finer%add_patch(int(AMR_bsize, kind=8), cgl%cg%refine_flags%SFC_refine_list(b)%off)
+               call curl%finer%add_patch(int(bsize, kind=8), cgl%cg%refine_flags%SFC_refine_list(b)%off)
             else
                call die("[refinement_update:refine_one_grid] wrong level!")
             endif

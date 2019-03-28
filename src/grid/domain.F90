@@ -39,7 +39,7 @@ module domain
 
    private
    public :: cleanup_domain, init_domain, translate_ints_to_bnds, domain_container, dom, is_uneven, is_mpi_noncart, is_refined, is_multicg, &
-        &    psize, AMR_bsize, minsize, allow_noncart, allow_uneven, dd_unif_quality, dd_rect_quality! temporary export
+        &    psize, minsize, allow_noncart, allow_uneven, dd_unif_quality, dd_rect_quality! temporary export
 
 ! AMR: There will be at least one domain container for the base grid.
 !      It will be possible to host one or more refined domains on the base container and on the refined containers.
@@ -99,7 +99,6 @@ module domain
    ! Namelist variables
 
    integer(kind=4), dimension(ndims) :: psize     !< desired number of MPI blocks in x, y and z-dimension
-   integer(kind=4), dimension(ndims) :: AMR_bsize !< the size of cg for multiblock decomposition
    integer(kind=4), dimension(ndims) :: minsize   !< minimum size of cg, default is dom$nb
    !! \todo Implement maximum size of a cg (in cells) for use with GPGPU kernels. The minimum size id nb**dom%eff_dim
 
@@ -108,7 +107,7 @@ module domain
    real    :: dd_unif_quality         !< uniform domain decomposition may be rejected it its quality is below this threshold (e.g. very elongated local domains are found)
    real    :: dd_rect_quality         !< rectilinear domain decomposition may be rejected it its quality is below this threshold (not used yet)
 
-   namelist /MPI_BLOCKS/ psize, AMR_bsize, minsize, allow_uneven, allow_noncart, dd_unif_quality, dd_rect_quality
+   namelist /MPI_BLOCKS/ psize, minsize, allow_uneven, allow_noncart, dd_unif_quality, dd_rect_quality
 
    integer(kind=4), dimension(ndims) :: n_d               !< number of %grid cells in physical domain without boundary cells (where  == 1 then that dimension is reduced to a point with no boundary cells)
    integer(kind=4), protected        :: nb                !< number of boundary cells surrounding the physical domain, same for all directions
@@ -164,7 +163,6 @@ contains
 !! <table border="+1">
 !!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !!   <tr><td>psize(3)       </td><td>1      </td><td>integer</td><td>\copydoc domain::psize          </td></tr>
-!!   <tr><td>AMR_bsize(3)   </td><td>0      </td><td>integer</td><td>\copydoc domain::AMR_bsize      </td></tr>
 !!   <tr><td>minsize(3)     </td><td>domain::nb </td><td>integer</td><td>\copydoc domain::minsize        </td></tr>
 !!   <tr><td>allow_uneven   </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_uneven   </td></tr>
 !!   <tr><td>allow_noncart  </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_noncart  </td></tr>
@@ -190,7 +188,6 @@ contains
       ! Begin processing of namelist parameters
 
       psize(:)     = I_ONE
-      AMR_bsize(:) = I_ZERO
       minsize(:)   = INVALID
       dom_off(:)   = I_ZERO
 
@@ -246,8 +243,6 @@ contains
          close(nh%lun)
          call nh%compare_namelist()
 
-         if (any(AMR_bsize(:) > 0 .and. AMR_bsize(:) < nb .and. n_d(:) > 1)) call die("[domain:init_domain] AMR_bsize(:) is too small.")
-
          cbuff(1) = bnd_xl
          cbuff(2) = bnd_xr
          cbuff(3) = bnd_yl
@@ -258,10 +253,9 @@ contains
 
          ibuff(         xdim:zdim) = psize(:)
          ibuff(  zdim+xdim:2*zdim) = n_d(:)
-         ibuff(2*zdim+xdim:3*zdim) = AMR_bsize(:)
-         ibuff(3*zdim+xdim:4*zdim) = minsize(:)
-         ibuff(4*zdim+xdim:5*zdim) = int(dom_off(:), kind=4)
-         ibuff(5*zdim+1)           = nb
+         ibuff(2*zdim+xdim:3*zdim) = minsize(:)
+         ibuff(3*zdim+xdim:4*zdim) = int(dom_off(:), kind=4)
+         ibuff(4*zdim+1)           = nb
 
          rbuff(1) = xmin
          rbuff(2) = xmax
@@ -306,10 +300,9 @@ contains
 
          psize(:)     = int(ibuff(         xdim:zdim), kind=4)
          n_d(:)       = int(ibuff(  zdim+xdim:2*zdim), kind=4)
-         AMR_bsize(:) = int(ibuff(2*zdim+xdim:3*zdim), kind=4)
-         minsize(:)   = int(ibuff(3*zdim+xdim:4*zdim), kind=4)
-         dom_off(:)   = int(ibuff(4*zdim+xdim:5*zdim), kind=4)
-         nb           = int(ibuff(5*zdim+1),           kind=4)
+         minsize(:)   = int(ibuff(2*zdim+xdim:3*zdim), kind=4)
+         dom_off(:)   = int(ibuff(3*zdim+xdim:4*zdim), kind=4)
+         nb           = int(ibuff(4*zdim+1),           kind=4)
 
       endif
 
