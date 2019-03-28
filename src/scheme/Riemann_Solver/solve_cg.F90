@@ -70,13 +70,13 @@ contains
    subroutine solve_cg(cg, ddim, istep, fargo_vel)
 
       use bfc_bcc,          only: interpolate_mag_field
-      use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, uh_n, magh_n, psih_n, INVALID, GEO_XYZ, I_ZERO, I_ONE, rk_coef
+      use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, uh_n, magh_n, psih_n, INVALID, GEO_XYZ, I_ZERO, I_ONE, rk_coef, psidim
       use dataio_pub,       only: die
-      use domain,           only: dom, is_refined
+      use domain,           only: dom
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp, iarr_mag_swp
+      use fluxtypes,        only: ext_fluxes
       use global,           only: dt, force_cc_mag, use_fargo
       use grid_cont,        only: grid_container
-      use hlld,             only: psidim
       use named_array_list, only: wna, qna
       use sources,          only: prepare_sources, all_sources
 #ifdef COSM_RAYS
@@ -101,11 +101,11 @@ contains
       real, dimension(size(b,1),size(b,2)+1)     :: b0, b1  ! Bx, By, Bz, psi
       real, dimension(size(u,1), flind%fluids), target :: vx
       integer(kind=4)                            :: nmag, i
+      type(ext_fluxes)                           :: eflx
 
       ! is_multicg should be safe
       if (.false.) write(0,*) present(fargo_vel) ! suppress compiler warning on unused argument
       if (use_fargo) call die("[solve_cg:solve_cg] Fargo is not yet enabled for Riemann")
-      if (is_refined) call die("[solve_cg:solve_cg] This Rieman solver is not compatible with mesh refinements yet!")
       if (dom%geometry_type /= GEO_XYZ) call die("[solve_cg:solve_cg] Non-cartesian geometry is not implemented yet in this Riemann solver.")
 
       uhi = wna%ind(uh_n)
@@ -126,6 +126,7 @@ contains
 
       ppsi => psi ! suppress compiler complains on possibly uninitialized pointer
 
+      call eflx%init
       call prepare_sources(cg)
 
       do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
@@ -152,6 +153,7 @@ contains
                b(:, :) = interpolate_mag_field(ddim, cg, i1, i2, wna%bi)
             endif
 
+            call cg%set_fluxpointers(ddim, i1, i2, eflx)
             u1 = u
             b1(:, xdim:zdim) = b
             vx = u(:, iarr_all_mx) / u(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
@@ -161,10 +163,10 @@ contains
                ppsi => cg%q(psii)%get_sweep(ddim,i1,i2)
                b1(:, psidim) = ppsi(:)
 
-               call solve(u0, b0, u1, b1, rk_coef(istep) * dt/cg%dl(ddim))
+               call solve(u0, b0, u1, b1, rk_coef(istep) * dt/cg%dl(ddim), eflx)
 
             else
-               call solve(u0, b0(:, xdim:zdim), u1, b1(:, xdim:zdim), rk_coef(istep) * dt/cg%dl(ddim))
+               call solve(u0, b0(:, xdim:zdim), u1, b1(:, xdim:zdim), rk_coef(istep) * dt/cg%dl(ddim), eflx)
             endif
 
             call all_sources(size(u, 1, kind=4), u, u1, b, cg, istep, ddim, i1, i2, rk_coef(istep) * dt, vx)
@@ -174,11 +176,14 @@ contains
             if (size(u, 1) > 1) call limit_minimal_ecr(size(u, 1), u)
 #endif /* COSM_RAYS && IONIZED */
 
+            call cg%save_outfluxes(ddim, i1, i2, eflx)
             pu(:,:) = transpose(u1(:, iarr_all_swp(ddim,:)))
             if (force_cc_mag) pb(:,:) = transpose(b1(:, iarr_mag_swp(ddim,:))) ! ToDo figure out how to manage CT energy fixup without extra storage
             if (psii /= INVALID) ppsi = b1(:, psidim)
          enddo
       enddo
+
+      cg%processed = .true.
 
    end subroutine solve_cg
 
@@ -191,9 +196,10 @@ contains
 !! We don't calculate n-th interface because it is as incomplete as 0-th interface
 !<
 
-   subroutine solve(u0, b0, u1, b1, dtodx)
+   subroutine solve(u0, b0, u1, b1, dtodx, eflx)
 
       use constants,      only: DIVB_HDC, xdim, ydim, zdim
+      use fluxtypes,      only: ext_fluxes
       use global,         only: divB_0_method
       use hlld,           only: riemann_wrap
       use interpolations, only: interpol
@@ -205,6 +211,7 @@ contains
       real, dimension(:,:), intent(inout) :: u1     !< cell-centered intermediate fluid states
       real, dimension(:,:), intent(inout) :: b1     !< cell-centered intermediate magnetic fiels states (including psi field when necessary)
       real,                 intent(in)    :: dtodx  !< timestep advance: RK-factor * timestep / cell length
+      type(ext_fluxes),     intent(inout) :: eflx   !< external fluxes
 
       ! left and right states at interfaces 1 .. n-1
       real, dimension(size(u0, 1)-1, size(u0, 2)), target :: ql, qr
@@ -223,6 +230,18 @@ contains
 
          call interpol(u1, b1, ql, qr, bl, br)
          call riemann_wrap(ql, qr, bl, br, flx, mag_flx) ! Now we advance the left and right states by a timestep.
+
+         if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
+         if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx
+         if (associated(eflx%lo)) eflx%lo%uflx = flx(eflx%lo%index, :)
+         if (associated(eflx%ro)) eflx%ro%uflx = flx(eflx%ro%index, :)
+
+         if (divB_0_method == DIVB_HDC) then
+            if (associated(eflx%li)) mag_flx(eflx%li%index, :) = eflx%li%bflx
+            if (associated(eflx%ri)) mag_flx(eflx%ri%index, :) = eflx%ri%bflx
+            if (associated(eflx%lo)) eflx%lo%bflx = mag_flx(eflx%lo%index, :)
+            if (associated(eflx%ro)) eflx%ro%bflx = mag_flx(eflx%ro%index, :)
+         endif
 
          u1(2:nx-1, :) = u0(2:nx-1, :) + dtodx * (flx(:nx-2, :) - flx(2:, :))
          if (divB_0_method == DIVB_HDC) then

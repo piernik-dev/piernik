@@ -44,7 +44,7 @@ module global
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
-        &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd
+        &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong
 
    logical         :: cfl_violated             !< True when cfl condition is violated
    logical         :: dirty_debug              !< Allow initializing arrays with some insane values and checking if these values can propagate
@@ -96,10 +96,11 @@ module global
    real                          :: cfl_glm           !< "CFL" for chspeed in divergence cleaning
    logical                       :: ch_grid           !< When true use grid properties to estimate ch (psi wave propagation speed). Use gas properties otherwise.
    real                          :: w_epsilon         !< small number for safe evaluation of weights in WENO interpolation
+   integer(kind=4)               :: ord_mag_prolong   !< prolongation order for B and psi
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
-        &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str
+        &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong
 
 contains
 
@@ -141,6 +142,7 @@ contains
 !!   <tr><td>ch_grid          </td><td>false  </td><td>logical value                        </td><td>\copydoc global::ch_grid          </td></tr>
 !!   <tr><td>w_epsilon        </td><td>1e-10  </td><td>real                                 </td><td>\copydoc global::w_epsilon        </td></tr>
 !!   <tr><td>psi_bnd_str      </td><td>"default" </td><td>string                            </td><td>\copydoc global::psi_bnd_str      </td></tr>
+!!   <tr><td>ord_mag_prolong  </td><td>0      </td><td>integer                              </td><td>\copydoc global::ord_mag_prolong  </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -207,6 +209,7 @@ contains
       w_epsilon   = 1e-10
       psi_bnd_str = "default"
       integration_order  = 2
+      ord_mag_prolong = 0
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -249,6 +252,7 @@ contains
 
          ibuff(1) = integration_order
          ibuff(2) = print_divB
+         ibuff(3) = ord_mag_prolong
 
          rbuff( 1) = smalld
          rbuff( 2) = smallc
@@ -320,6 +324,7 @@ contains
 
          integration_order = ibuff(1)
          print_divB        = ibuff(2)
+         ord_mag_prolong   = ibuff(3)
 
       endif
 

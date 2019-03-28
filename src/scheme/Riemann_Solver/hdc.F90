@@ -190,36 +190,52 @@ contains
 !-----------------------------------------------------------------------------------------------------------
 
 !>
-  !! Parabolic damping to psi
+!! \brief Parabolic damping to psi
+!!
+!! dedner A. Mignone et al. / Journal of Computational Physics 229 (2010) 5896–5920, eq. 9
 !<
   subroutine glmdamping
 
      use cg_leaves,        only: leaves
      use cg_list,          only: cg_list_element
-     use constants,        only: psi_n, DIVB_HDC
+     use constants,        only: psi_n, DIVB_HDC, pMIN
      use domain,           only: dom
      use global,           only: glm_alpha, dt, divB_0_method
      use grid_cont,        only: grid_container
      use named_array_list, only: qna
+     use mpisetup,         only: piernik_MPI_Allreduce
 
      implicit none
 
      type(cg_list_element), pointer :: cgl
      type(grid_container),  pointer :: cg
 
-     if (divB_0_method /= DIVB_HDC) return ! I think it is equivalent to qna%exists(psi_n)
+     real :: fac
+
+     if (divB_0_method /= DIVB_HDC) return ! I think it is equivalent to if (.not. qna%exists(psi_n))
 
      if (qna%exists(psi_n)) then
+
+        fac = 0.
         cgl => leaves%first
         do while (associated(cgl))
            cg => cgl%cg
-           cgl%cg%q(qna%ind(psi_n))%arr =  cgl%cg%q(qna%ind(psi_n))%arr * exp(-glm_alpha*chspeed/(minval(cg%dl,mask=dom%has_dir)/dt))
+           fac = max(fac, glm_alpha*chspeed/(minval(cg%dl, mask=dom%has_dir)/dt))
+           cgl => cgl%nxt
+        enddo
+        fac = exp(-fac)
+        call piernik_MPI_Allreduce(fac, pMIN)
+
+        cgl => leaves%first
+        do while (associated(cgl))
+           cg => cgl%cg
+           cgl%cg%q(qna%ind(psi_n))%arr =  cgl%cg%q(qna%ind(psi_n))%arr * fac
            cgl => cgl%nxt
         enddo
      endif
 
 ! can be simplified to
-!    if (qna%exists(psi_n)) call leaves%q_lin_comb( [qna%ind(psi_n), exp(-glm_alpha*cfl)], qna%ind(psi_n))
+!    if (qna%exists(psi_n)) call leaves%q_lin_comb( [qna%ind(psi_n), fac], qna%ind(psi_n))
 ! but for AMR we may decide to use different factors on different levels
 
    end subroutine glmdamping
