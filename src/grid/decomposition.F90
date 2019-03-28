@@ -667,7 +667,7 @@ contains
       do b = xdim, zdim
          if (dom%has_dir(b)) then
             if (mod(patch%n_d(b), int(AMR_bsize(b), kind=8)) /= 0) then
-               write(msg,'(a,3f10.3,a)')"[decomposition:stamp_cg] Fractional number of blocks: n_d(", b, ")/AMR_bsize(", b, ") = [",patch%n_d(b)/real(AMR_bsize(b)),"]"
+               write(msg,'(2(a,i2),a,f10.3,a)')"[decomposition:stamp_cg] Fractional number of blocks: n_d(", b, ")/AMR_bsize(", b, ") = [",patch%n_d(b)/real(AMR_bsize(b)),"]"
                if (master) call warn(msg)
                warned = .true.
             endif
