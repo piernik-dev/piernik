@@ -99,13 +99,15 @@ contains
       type(cg_level_connected_T), pointer :: curl
       type(cg_list_element),      pointer :: cgl
 
-      integer :: g_cnt, g_max, sum_max
+      integer :: g_cnt, g_max, sum_max, ih
+      character(len=len(msg)), save :: prev_msg
 
       call leaves%delete
       call all_lists%register(this, "leaves")
 
       msg = "[cg_leaves:update] Grids on levels: "
       if (present(str)) msg(len_trim(msg)+1:) = str
+      ih = len_trim(msg) + 1
 
       sum_max = 0
       curl => finest%level
@@ -132,7 +134,8 @@ contains
       g_cnt = leaves%cnt
       call piernik_MPI_Allreduce(g_cnt, pSUM)
       write(msg(len_trim(msg)+1:), '(a,i7,a,f6.3)')", Sum: ",g_cnt, ". Load balance: ",g_cnt/real(sum_max)
-      if (master) call printinfo(msg)
+      if (master .and. (msg(ih:len_trim(msg)) /= prev_msg(ih:len_trim(prev_msg)))) call printinfo(msg)
+      prev_msg = msg
 
    end subroutine update
 
