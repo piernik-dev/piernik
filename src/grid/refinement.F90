@@ -97,9 +97,9 @@ contains
 !<
    subroutine init_refinement
 
-      use constants,      only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, LO, HI, cbuff_len
+      use constants,      only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, LO, HI, cbuff_len, refinement_factor
       use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,     only: die, code_progress, warn
+      use dataio_pub,     only: die, code_progress, warn, msg
       use domain,         only: dom
       use mpisetup,       only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
@@ -143,7 +143,7 @@ contains
          call nh%compare_namelist()
 
 
-         if (any(bsize(:) > 0 .and. bsize(:) < dom%nb .and. dom%n_d(:) > 1)) call die("[refinement:init_refinement] bsize(:) is too small.")
+         if (any(bsize(:) > 0 .and. bsize(:) < dom%nb .and. dom%has_dir(:))) call die("[refinement:init_refinement] bsize(:) is too small.")
 
          ! sanitizing
          if (allow_AMR) then
@@ -238,6 +238,12 @@ contains
       enddo
 
       if (.not. allow_AMR) bsize = I_ZERO
+      if (any(dom%has_dir .and. modulo(bsize, refinement_factor) /= 0)) then
+         write(msg, '(a,3i5,a,i2)')"[refinement:init_refinement] bsize = [", bsize, "] not divisible by ",refinement_factor
+         call die(msg)
+         ! Formally we can implement blocky AMR with blocks of odd sizes, it is just easier to have even sizes, especially when our refinement factor is fixed at 2"
+         ! Odd bsize would be divided into even+odd blocks and all prolongation and restriction routines should be aware of the difference.
+      endif
 
       ! Such large refinements may require additional work in I/O routines, visualization, computing MPI tags and so on.
       if (level_max > 40) call warn("[refinement:init_refinement] BEWARE: At such large refinements, integer overflows may happen under certain conditions.")
