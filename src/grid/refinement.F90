@@ -99,14 +99,14 @@ contains
 
       use constants,      only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, LO, HI, cbuff_len, refinement_factor
       use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,     only: die, code_progress, warn, msg
+      use dataio_pub,     only: die, code_progress, warn, msg, printinfo
       use domain,         only: dom
       use mpisetup,       only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
       integer :: d
-      logical :: allow_AMR
+      logical :: do_refine
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[refinement:init_refinement] Domain not initialized.")
 
@@ -115,7 +115,6 @@ contains
       bsize(:)  = I_ZERO
       n_updAMR  = huge(I_ONE)
       strict_SFC_ordering = .false.
-      allow_AMR = .true.
       prefer_n_bruteforce = .false.
       oop_thr = 0.1
       refine_points(:) = ref_point(base_level_id-1, [ 0., 0., 0.] )
@@ -145,16 +144,9 @@ contains
 
          if (any(bsize(:) > 0 .and. bsize(:) < dom%nb .and. dom%has_dir(:))) call die("[refinement:init_refinement] bsize(:) is too small.")
 
-         ! sanitizing
-         if (allow_AMR) then
-            level_min = max(level_min, base_level_id)
-            level_max = max(level_max, level_min)
-         else
-            if (level_max > base_level_id .and. n_updAMR < huge(I_ONE)) call die("[refinement:init_refinement] AMR not allowed for current parameters.")
-            level_min = base_level_id
-            level_max = base_level_id
-            n_updAMR  = huge(I_ONE)
-         endif
+         ! minimal sanitizing
+         level_min = max(level_min, base_level_id)
+         level_max = max(level_max, level_min)
 
          cbuff(1                 :  n_ref_auto_param) = refine_vars(:)%rvar
          cbuff(1+n_ref_auto_param:2*n_ref_auto_param) = refine_vars(:)%rname
@@ -166,7 +158,6 @@ contains
          ibuff(11        :10+  nshapes) = refine_points(:)%level
          ibuff(11+nshapes:10+2*nshapes) = refine_boxes (:)%level
 
-         lbuff(1) = allow_AMR
          lbuff(2) = strict_SFC_ordering
          lbuff(3) = prefer_n_bruteforce
 
@@ -203,7 +194,6 @@ contains
          refine_points(:)%level = ibuff(11        :10+  nshapes)
          refine_boxes (:)%level = ibuff(11+nshapes:10+2*nshapes)
 
-         allow_AMR           = lbuff(1)
          strict_SFC_ordering = lbuff(2)
          prefer_n_bruteforce = lbuff(3)
 
@@ -223,32 +213,61 @@ contains
 
       endif
 
+      emergency_fix = .false.
+
+      do_refine = (level_max > base_level_id)
+
+      where (.not. dom%has_dir) bsize = I_ONE
+
+      ! If bsize was set then check if it is sane and fail if it is wrong
       do d = xdim, zdim
-         if (dom%has_dir(d))  then
+         if (dom%has_dir(d)) then
             if (bsize(d) < dom%nb) then
-               if (allow_AMR .and. master .and. bsize(d) > 1) call warn("[refinement:init_refinement] Refinements disabled (bsize too small)")
-               allow_AMR = .false.
+               if (do_refine .and. master) then
+                  if (bsize(d) > 1) then
+                     call die("[refinement:init_refinement] Refinements disabled (bsize small)er than nb")
+                  else
+                     call warn("[refinement:init_refinement] any(bsize == 1) disables refinement")
+                  endif
+               endif
+               do_refine = .false.
             else
                if (mod(dom%n_d(d), bsize(d)) /= 0) then
-                  if (allow_AMR .and. master) call warn("[refinement:init_refinement] Refinements disabled (domain not divisible by bsize)")
-                  allow_AMR = .false.
+                  if (do_refine .and. master) call die("[refinement:init_refinement] Refinements disabled (domain not divisible by bsize)")
+                  do_refine = .false.
                endif
             endif
          endif
       enddo
 
-      if (.not. allow_AMR) bsize = I_ZERO
       if (any(dom%has_dir .and. modulo(bsize, refinement_factor) /= 0)) then
          write(msg, '(a,3i5,a,i2)')"[refinement:init_refinement] bsize = [", bsize, "] not divisible by ",refinement_factor
          call die(msg)
          ! Formally we can implement blocky AMR with blocks of odd sizes, it is just easier to have even sizes, especially when our refinement factor is fixed at 2"
          ! Odd bsize would be divided into even+odd blocks and all prolongation and restriction routines should be aware of the difference.
+         ! do_refine = .false. is there to make it safer to turn call die() into call warn()
+         do_refine = .false.
       endif
 
       ! Such large refinements may require additional work in I/O routines, visualization, computing MPI tags and so on.
       if (level_max > 40) call warn("[refinement:init_refinement] BEWARE: At such large refinements, integer overflows may happen under certain conditions.")
 
-      emergency_fix = .false.
+      if (.not. do_refine) bsize = I_ZERO
+
+      if (do_refine) then
+         write(msg, '(a)')"[refinement]"
+         if (level_min /= base_level_id) write(msg(len_trim(msg)+1:), '(a,i2,a)')" minimum level = ", level_min, ","
+         write(msg(len_trim(msg)+1:), '(a,i2)')" maximum allowed level = ", level_max
+         write(msg(len_trim(msg)+1:), '(a,3i5,a)')", block size = [", bsize, "]"
+      else
+         if (level_max > base_level_id .and. master) call warn("[refinement] refinements were requested but are disabled by sanity checks")
+         msg = "[refinement] No static or adaptive refinement"
+         ! switch off efinement options
+         level_min = base_level_id
+         level_max = base_level_id
+         n_updAMR  = huge(I_ONE)
+      endif
+      if (master) call printinfo(msg)
 
    end subroutine init_refinement
 
