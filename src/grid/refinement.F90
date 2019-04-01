@@ -38,13 +38,13 @@ module refinement
    public :: n_updAMR, oop_thr, refine_points, refine_vars, level_min, level_max, inactive_name, bsize, &
         &    refine_boxes, init_refinement, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce
 
-   integer(kind=4), protected :: n_updAMR            !< how often to update the refinement structure
+   integer(kind=4), protected :: n_updAMR            !< How often to update the refinement structure
    logical,         protected :: strict_SFC_ordering !< Enforce strict SFC ordering to allow optimized neighbour search
    real,            protected :: oop_thr             !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
-   logical,         protected :: prefer_n_bruteforce !< if .false. then try DFC algorithms for neighbor searches
-   integer(kind=4), protected :: level_min           !< minimum allowed refinement
-   integer(kind=4), protected :: level_max           !< maximum allowed refinement (don't need to be reached if not necessary)
-   integer(kind=4), dimension(ndims), protected :: bsize  !< the size of cg for multiblock decomposition
+   logical,         protected :: prefer_n_bruteforce !< If .false. then try SFC algorithms for neighbor searches
+   integer(kind=4), protected :: level_min           !< Minimum allowed refinement, base level by default.
+   integer(kind=4), protected :: level_max           !< Maximum allowed refinement, if set > 0 then AMR is requested (don't need to be reached if not necessary)
+   integer(kind=4), dimension(ndims), protected :: bsize  !< The size of cg for multiblock decomposition, if not set explicitly, then a heuristic values will be used, if possible.
 
    ! some refinement primitives
    integer, parameter :: nshapes = 10 !< number of shapes of each kind allowed to be predefined by user in problem.par
@@ -54,14 +54,14 @@ module refinement
       integer(kind=4)        :: level  !< desired level of refinement
       real, dimension(ndims) :: coords !< coordinates, where to refine
    end type ref_point
-   type(ref_point), dimension(nshapes), protected :: refine_points !< points of refinement to be used from problem.par
+   type(ref_point), dimension(nshapes), protected :: refine_points !< Points of refinement to be used from problem.par: level and (x-y-z)-coordinates
 
    !> \brief Refinement box
    type :: ref_box
       integer(kind=4)               :: level  !< desired level of refinement
       real, dimension(ndims, LO:HI) :: coords !< coordinates, where to refine
    end type ref_box
-   type(ref_box), dimension(nshapes), protected :: refine_boxes !< areas (boxes) of refinement to be used from problem.par
+   type(ref_box), dimension(nshapes), protected :: refine_boxes !< Areas (boxes) of refinement to be used from problem.par: level, (x-y-z)-coordinates of lower left corner and (x-y-z)-coordinates of upper right corner
 
    !> \brief Parameters of automagic refinement
    type :: ref_auto_param
@@ -72,7 +72,7 @@ module refinement
       real :: aux                       !< auxiliary parameter (can be smoother or filter strength)
    end type ref_auto_param
    integer, parameter :: n_ref_auto_param = 10                                 !< number of automatic refinement criteria available to user
-   type(ref_auto_param), dimension(n_ref_auto_param), protected :: refine_vars !< definitions of user-supplied automatic refinement criteria
+   type(ref_auto_param), dimension(n_ref_auto_param), protected :: refine_vars !< Definitions of user-supplied automatic refinement criteria: refinement vatiable, refinement algorithm, refinement threshold, derefinement threshold, auxiliary parameter
 
    character(len=cbuff_len), parameter :: inactive_name = "none"               !< placeholder for inactive refinement criterium
 
@@ -89,11 +89,18 @@ contains
 !! @b AMR
 !! \n \n
 !! <table border="+1">
-!!   <tr><td>bsize(3)   </td><td>0      </td><td>integer</td><td>\copydoc refinement::bsize      </td></tr>
+!!   <tr><td> bsize(3)            </td><td> 0       </td><td> integer          </td><td> \copydoc refinement::bsize               </td></tr>
+!!   <tr><td> level_min           </td><td> 0       </td><td> integer          </td><td> \copydoc refinement::level_min           </td></tr>
+!!   <tr><td> level_max           </td><td> 0       </td><td> integer          </td><td> \copydoc refinement::level_max           </td></tr>
+!!   <tr><td> n_updAMR            </td><td> HUGE    </td><td> integer          </td><td> \copydoc refinement::n_updAMR            </td></tr>
+!!   <tr><td> oop_thr             </td><td> 0.1     </td><td> real             </td><td> \copydoc refinement::oop_thr             </td></tr>
+!!   <tr><td> refine_points(10)   </td><td> none    </td><td> integer, 3*real  </td><td> \copydoc refinement::refine_points       </td></tr>
+!!   <tr><td> refine_boxes(10)    </td><td> none    </td><td> integer, 6*real  </td><td> \copydoc refinement::refine_boxes        </td></tr>
+!!   <tr><td> refine_vars(10)     </td><td> none    </td><td> 2*string, 3*real </td><td> \copydoc refinement::refine_vars         </td></tr>
+!!   <tr><td> prefer_n_bruteforce </td><td> .false. </td><td> logical          </td><td> \copydoc refinement::prefer_n_bruteforce </td></tr>
+!!   <tr><td> strict_SFC_ordering </td><td> .false. </td><td> logical          </td><td> \copydoc refinement::strict_SFC_ordering </td></tr>
 !! </table>
 !! \n \n
-!!
-!! \ToDo: make it complete
 !<
    subroutine init_refinement
 
