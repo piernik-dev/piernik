@@ -111,7 +111,7 @@ contains
       do d = xdim, zdim
          if (dom%has_dir(d))  then
             if (AMR_bsize(d) < dom%nb) then
-               if (allow_AMR .and. master) call warn("[refinement:init_refinement] Refinements disabled (AMR_bsize too small)")
+               if (allow_AMR .and. master .and. AMR_bsize(d) > 1) call warn("[refinement:init_refinement] Refinements disabled (AMR_bsize too small)")
                allow_AMR = .false.
             else
                if (mod(dom%n_d(d), AMR_bsize(d)) /= 0) then
@@ -155,7 +155,6 @@ contains
             level_max = base_level_id
             n_updAMR  = huge(I_ONE)
          endif
-         where (.not. dom%has_dir(:)) AMR_bsize(:) = huge(I_ONE)
 
          cbuff(1                 :  n_ref_auto_param) = refine_vars(:)%rvar
          cbuff(1+n_ref_auto_param:2*n_ref_auto_param) = refine_vars(:)%rname
@@ -222,7 +221,7 @@ contains
 
       endif
 
-      if (.not. allow_AMR) AMR_bsize=0
+      if (.not. allow_AMR) AMR_bsize = 0
 
       ! Such large refinements may require additional work in I/O routines, visualization, computing MPI tags and so on.
       if (level_max > 40) call warn("[refinement:init_refinement] BEWARE: At such large refinements, integer overflows may happen under certain conditions.")

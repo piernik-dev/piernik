@@ -43,7 +43,7 @@ module cg_level_connected
       type(cg_level_connected_T), pointer :: coarser          !< coarser level cg set or null()
       type(cg_level_connected_T), pointer :: finer            !< finer level cg set or null()
       integer(kind=4)                     :: ord_prolong_set  !< Number of boundary cells for prolongation used in last update of cg_level_connected_T%vertical_prep
-      logical                             :: need_vb_update   !< If .true. then execute vertical_b_prep
+      logical, private                    :: need_vb_update   !< If .true. then execute vertical_b_prep
 
     contains
 
@@ -62,7 +62,7 @@ module cg_level_connected
       procedure :: arr3d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
       procedure :: arr4d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays.
       procedure :: prolong_bnd_from_coarser                   !< Interpolate boundaries from coarse level at fine-coarse interfaces
-      procedure :: vertical_b_prep                            !< Initialize prolongation targets for fine-coarse boundary exchange
+      procedure, private :: vertical_b_prep                   !< Initialize prolongation targets for fine-coarse boundary exchange
       procedure, private :: vertical_bf_prep                  !< Initialize prolongation targets for fine->coarse flux exchange
       procedure :: sync_ru                                    !< Synchronize this%recently_changed and set flags for update requests
       procedure :: free_all_cg                                !< Erase all data on the level, leave it empty
@@ -443,7 +443,7 @@ contains
 !! \details Some data can be locally copied without MPI, but this seems to have really little impact on the performance.
 !! Some tests show that purely MPI code without local copies is marginally faster.
 !!
-!! OPT Usually there ara many messages that ate sent between the same pairs of processes
+!! OPT Usually there are many messages that are sent between the same pairs of processes
 !! \todo Sort all messages according to e.g. tag and send/receive aggregated message with everything
 !!
 !! \todo implement local copies without MPI anyway
@@ -620,7 +620,7 @@ contains
 !! The prolonged data is then copied to the destination if the cg%ignore_prolongation allows it.
 !! OPT: Find a way to prolong only what is really needed.
 !!
-!! OPT Usually there ara many messages that ate sent between the same pairs of processes
+!! OPT Usually there are many messages that are sent between the same pairs of processes
 !! \todo Sort all messages according to e.g. tag and send/receive aggregated message with everything
 !! \todo implement local copies without MPI
 !<
@@ -1044,7 +1044,10 @@ contains
       if (.not. this%need_vb_update) return
 
       coarse => this%coarser
-      if (.not. associated(coarse)) return ! check is some null allocations are required
+      if (.not. associated(coarse)) then
+         this%need_vb_update = .false.
+         return ! check if some null allocations are required
+      endif
 
       ! Unfortunately we can't use finest%level%l%id
       curl => this
@@ -1271,7 +1274,7 @@ contains
    subroutine vertical_bf_prep(this)
 
       use cg_list,      only: cg_list_element
-      use constants,    only: LO, HI, pdims, ORTHO1, ORTHO2, xdim, zdim
+      use constants,    only: LO, HI, pdims, ORTHO1, ORTHO2, xdim, zdim, psidim
       use fluidindex,   only: flind
       use grid_helpers, only: c2f
 
@@ -1307,8 +1310,8 @@ contains
                   seg2(d)%proc = seg(g)%proc
                   seg2(d)%tag  = seg(g)%tag
                   seg2(d)%se   = seg(g)%se2
-                  allocate(seg2(d)%buf(flind%all, seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
-                       &                          seg2(d)%se(pdims(dd, ORTHO2), LO):seg2(d)%se(pdims(dd, ORTHO2), HI)))
+                  allocate(seg2(d)%buf(flind%all + psidim, seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
+                       &                                   seg2(d)%se(pdims(dd, ORTHO2), LO):seg2(d)%se(pdims(dd, ORTHO2), HI)))
                   if (seg(g)%se(dd, LO) == seg2(d)%se(dd, LO)) then
                      lh = HI
                   else
@@ -1354,8 +1357,8 @@ contains
                      seg2(d)%proc = seg(g)%proc
                      seg2(d)%tag  = seg(g)%tag
                      seg2(d)%se   = seg(g)%se2
-                     allocate(seg2(d)%buf(flind%all, seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
-                          &                          seg2(d)%se(pdims(dd, ORTHO2), LO):seg2(d)%se(pdims(dd, ORTHO2), HI)))
+                     allocate(seg2(d)%buf(flind%all + psidim, seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
+                          &                                   seg2(d)%se(pdims(dd, ORTHO2), LO):seg2(d)%se(pdims(dd, ORTHO2), HI)))
                      if (seg(g)%se(dd, LO) == seg2(d)%se(dd, LO)) then
                         lh = HI
                      else
