@@ -217,6 +217,8 @@ contains
 
       do_refine = (level_max > base_level_id)
 
+      if (do_refine .and. all(bsize == I_ZERO)) call automagic_bsize
+
       where (.not. dom%has_dir) bsize = I_ONE
 
       ! If bsize was set then check if it is sane and fail if it is wrong
@@ -236,6 +238,10 @@ contains
                   if (do_refine .and. master) call die("[refinement:init_refinement] Refinements disabled (domain not divisible by bsize)")
                   do_refine = .false.
                endif
+            endif
+            if (mod(dom%n_d(d), refinement_factor) /= I_ZERO) then
+               if (do_refine .and. master) call warn("[refinement:init_refinement] Refinements disabled (domain not divisible by refinement factor)")
+               do_refine = .false.
             endif
          endif
       enddo
@@ -290,5 +296,71 @@ contains
       n_updAMR = nn
 
    end subroutine set_n_updAMR
+
+!> \brief Guess some safe bsize
+
+   subroutine automagic_bsize
+
+      use constants,  only: ndims, xdim, ydim, zdim, refinement_factor, I_ONE, I_TWO, INVALID
+      use dataio_pub, only: msg, die
+      use domain,     only: dom
+      use mpisetup,   only: nproc
+
+      implicit none
+
+      integer, parameter :: not_too_small = 16 ! bsize below that tends to be inefficient due to huge memory and computation overhead
+      integer :: d, i
+      integer, dimension(ndims) :: b1, b2
+      integer(kind=4) :: sq
+
+      b1 = INVALID
+      b2 = b1
+
+      ! start with size that results with roughly one block per process on highest full level, but don't go below 16 cells per dimension
+      ! also divide each dmension to at least 4 pieces even for low thread count
+      sq = max(not_too_small, int(((product(dom%n_d, mask=dom%has_dir) * refinement_factor**(dom%eff_dim * level_min))/max(nproc, (2*refinement_factor)**dom%eff_dim))**(1./dom%eff_dim), kind=4))
+      if (mod(sq, I_TWO) == I_ONE) sq = sq + I_ONE
+      ! find divisible values in each dim in the range [nb .. dom%n_d] starting from sq in both directions
+      if (all(mod(dom%n_d, sq) == 0 .or. .not. dom%has_dir)) then
+         bsize = sq
+      else
+         do d = xdim, zdim
+            if (dom%has_dir(d)) then
+               if (sq > dom%n_d(d)) then
+                  b1(d) = dom%n_d(d)
+                  b2(d) = dom%n_d(d)
+               else
+                  do i = sq, dom%nb, -2
+                     if (mod(dom%n_d(d), i) == 0) then
+                        b2(d) = i
+                        exit
+                     endif
+                  enddo
+                  do i = sq, dom%n_d(d), 2
+                     if (i == b2(d)) cycle
+                     if (mod(dom%n_d(d), i) == 0) then
+                        b1(d) = i
+                        exit
+                     endif
+                  enddo
+               endif
+            else
+               b1(d) = I_ONE
+               b2(d) = I_ONE
+            endif
+         enddo
+
+         ! pick the best one somehow: a bit longer block in x-direction usually doesn't hurt, sometimes gives good performace
+         where (b1 == INVALID) b1 = b2
+         where (b2 == INVALID) b2 = b1
+         bsize = [ b1(xdim), b2(ydim:zdim) ]
+      endif
+
+      if (any(bsize == INVALID .and. dom%has_dir)) then
+         write(msg, '(a,3i5,a)')"[refinement:automagic_bsize] somewhat invalid block size = [", bsize, "]"
+         call die(msg)
+      endif
+
+   end subroutine automagic_bsize
 
 end module refinement
