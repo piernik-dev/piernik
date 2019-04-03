@@ -86,7 +86,7 @@ contains
       use mpisetup,         only: rbuff, ibuff, cbuff, master, slave, piernik_MPI_Bcast
       use multigridvars,    only: ord_prolong
       use named_array_list, only: qna
-      use refinement,       only: user_ref2list
+      use refinement_crit_list, only: user_ref2list
 
       implicit none
 
