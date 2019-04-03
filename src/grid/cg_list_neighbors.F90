@@ -285,8 +285,8 @@ contains
       use domain,     only: dom
       use gcpa,       only: gcpa_T
       use grid_cont,  only: grid_container
-      use grid_cont_base, only: is_overlap
       use mpisetup,   only: FIRST, LAST, proc
+      use overlap,    only: is_overlap
 
       implicit none
 
