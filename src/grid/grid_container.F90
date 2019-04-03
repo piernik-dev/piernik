@@ -30,29 +30,14 @@
 
 module grid_cont
 
-   use constants,       only: xdim, zdim, LO, HI
-   use grid_cont_na,    only: grid_container_na_T
-   use fluxtypes,       only: fluxarray, fluxpoint
+   use constants,       only: LO, HI
+   use grid_cont_bnd,   only: grid_container_bnd_T, segment
    use refinement_flag, only: ref_flag
 
    implicit none
 
    private
-   public :: grid_container, pr_segment, tgt_list, segment
-
-   type(fluxpoint), target :: fpl, fpr, cpl, cpr
-
-   !> \brief Specification of segment of data for boundary exchange
-   type :: segment
-      integer :: proc                                     !< target process
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: se  !< range
-      integer(kind=4) :: tag                              !< unique tag for data exchange
-      real, allocatable, dimension(:,:,:)   :: buf        !< buffer for the 3D (scalar) data to be sent or received
-      real, allocatable, dimension(:,:,:,:) :: buf4       !< buffer for the 4D (vector) data to be sent or received
-      integer(kind=4), pointer :: req                     !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: se2 !< auxiliary range, used in cg_level_connected:vertical_bf_prep
-      type(grid_container), pointer :: local              !< set this pointer to non-null when the exchange is local
-   end type segment
+   public :: grid_container
 
    !> \brief coefficient-layer pair used for prolongation
    type :: c_layer
@@ -70,22 +55,8 @@ module grid_cont
       type(segment), dimension(:), allocatable :: seg              !< a segment of data to be received or sent
    end type tgt_list
 
-   !> \brief Array of boundary segments to exchange
-   type :: bnd_list
-      type(segment), dimension(:), allocatable :: seg !< segments
-    contains
-       procedure :: add_seg !< Add an new segment, reallocate if necessary
-   end type bnd_list
-
    !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
-   type, extends(grid_container_na_T) :: grid_container
-
-      ! External boundary conditions and internal boundaries
-
-      type(bnd_list),  dimension(:),         allocatable :: i_bnd       !< description of incoming boundary data, the shape is (xdim:zdim)
-      type(bnd_list),  dimension(:),         allocatable :: o_bnd       !< description of outgoing boundary data, the shape is (xdim:zdim)
-      type(fluxarray), dimension(xdim:zdim, LO:HI)       :: finebnd     !< indices and flux arrays for fine/coarse flux updates on coarse side
-      type(fluxarray), dimension(xdim:zdim, LO:HI)       :: coarsebnd   !< indices and flux arrays for fine/coarse flux updates on fine side
+   type, extends(grid_container_bnd_T) :: grid_container
 
       ! Prolongation and restriction
 
@@ -97,6 +68,7 @@ module grid_cont
       type(tgt_list) :: pob_tgt                                   !< description of outgoing boundary prolongation data
       type(tgt_list) :: rif_tgt                                   !< description of fluxes incoming from fine grid
       type(tgt_list) :: rof_tgt                                   !< description of fluxes outgoing to coarse grid
+
       real, allocatable, dimension(:,:,:) :: prolong_, prolong_x, prolong_xy !< auxiliary prolongation arrays for intermediate results
       real, dimension(:,:,:), pointer ::  prolong_xyz             !< auxiliary prolongation array for final result. OPT: Valgrind indicates that operations on array allocated on pointer might be slower than on ordinary arrays due to poorer L2 cache utilization
       logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .false. otherwise
@@ -115,8 +87,6 @@ module grid_cont
       procedure          :: init_gc                              !< Initialization
       procedure          :: cleanup                              !< Deallocate all internals
       procedure          :: update_leafmap                       !< Check if the grid container has any parts covered by finer grids and update appropriate map
-      procedure          :: set_fluxpointers
-      procedure          :: save_outfluxes
       procedure          :: prolong                              !< perform prolongation of the data stored in this%prolong_
       procedure          :: refinemap2SFC_list                   !< create list of SFC indices to be created from refine flags
 
@@ -148,11 +118,10 @@ contains
 
       class(grid_container), target,   intent(inout) :: this  ! intent(out) would silently clear everything, that was already set
                                                               ! (also the fields in types derived from grid_container)
-      integer(kind=8), dimension(:,:), intent(in) :: my_se    !< my segment
-      integer,                         intent(in) :: grid_id  !< ID which should be unique across level
-      class(level_T), pointer,         intent(in) :: l        !< level essential data
+      integer(kind=8), dimension(:,:), intent(in)    :: my_se    !< my segment
+      integer,                         intent(in)    :: grid_id  !< ID which should be unique across level
+      class(level_T), pointer,         intent(in)    :: l        !< level essential data
 
-      integer :: i
       integer(kind=8), dimension(ndims, LO:HI) :: rn
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init_gc] MPI not initialized.")
@@ -191,21 +160,7 @@ contains
       this%is_old = .false.
       this%has_previous_timestep = .false.
 
-      do i = LO, HI
-         call this%finebnd  (xdim, i)%fainit([ this%js, this%je ], [ this%ks, this%ke ])
-         call this%finebnd  (ydim, i)%fainit([ this%ks, this%ke ], [ this%is, this%ie ])
-         call this%finebnd  (zdim, i)%fainit([ this%is, this%ie ], [ this%js, this%je ])
-         call this%coarsebnd(xdim, i)%fainit([ this%js, this%je ], [ this%ks, this%ke ])
-         call this%coarsebnd(ydim, i)%fainit([ this%ks, this%ke ], [ this%is, this%ie ])
-         call this%coarsebnd(zdim, i)%fainit([ this%is, this%ie ], [ this%js, this%je ])
-      enddo
-      do i = xdim, zdim
-         this%finebnd  (i, LO)%index = this%lhn(i, LO) - 1
-         this%finebnd  (i, HI)%index = this%lhn(i, HI) + 1
-         this%coarsebnd(i, LO)%index = this%lhn(i, LO) - 1
-         this%coarsebnd(i, HI)%index = this%lhn(i, HI) + 1
-      enddo
-
+      call this%init_gc_bnd
       call this%add_all_na
 
    end subroutine init_gc
@@ -214,30 +169,17 @@ contains
 
    subroutine cleanup(this)
 
-      use constants, only: xdim, zdim, LO, HI
-
       implicit none
 
       class(grid_container), intent(inout) :: this !< object invoking type-bound procedure
 
-      integer :: d, g, b
+      integer :: b, g
       integer, parameter :: nseg = 4*2
       type(tgt_list), dimension(nseg) :: rpio_tgt
 
       call this%cleanup_base
-
-      if (allocated(this%i_bnd)) then
-         do d = lbound(this%i_bnd, dim=1), ubound(this%i_bnd, dim=1)
-            if (allocated(this%i_bnd(d)%seg)) deallocate(this%i_bnd(d)%seg)
-         enddo
-         deallocate(this%i_bnd)
-      endif
-      if (allocated(this%o_bnd)) then
-         do d = lbound(this%o_bnd, dim=1), ubound(this%o_bnd, dim=1)
-            if (allocated(this%o_bnd(d)%seg)) deallocate(this%o_bnd(d)%seg)
-         enddo
-         deallocate(this%o_bnd)
-      endif
+      call this%cleanup_bnd
+      call this%cleanup_na
 
       rpio_tgt(1:nseg) = [ this%ri_tgt,  this%ro_tgt,  this%pi_tgt,  this%po_tgt, &
            &               this%pib_tgt, this%pob_tgt, this%rif_tgt, this%rof_tgt ]
@@ -250,8 +192,6 @@ contains
          endif
       enddo
 
-      call this%cleanup_na
-
       ! arrays not handled through named_array feature
       if (associated(this%prolong_xyz)) deallocate(this%prolong_xyz)
       if (allocated(this%prolong_xy))   deallocate(this%prolong_xy)
@@ -259,17 +199,6 @@ contains
       if (allocated(this%prolong_))     deallocate(this%prolong_)
       if (allocated(this%leafmap))      deallocate(this%leafmap)
       if (allocated(this%refinemap))    deallocate(this%refinemap)
-      do d = xdim, zdim
-         do g = LO, HI
-            call this%finebnd  (d, g)%facleanup
-            call this%coarsebnd(d, g)%facleanup
-         enddo
-      enddo
-
-      call fpl%fpcleanup
-      call fpr%fpcleanup
-      call cpl%fpcleanup
-      call cpr%fpcleanup
 
    end subroutine cleanup
 
@@ -295,151 +224,6 @@ contains
       endif
 
    end subroutine update_leafmap
-
-!> \brief Add a new segment, reallocate if necessary
-
-   subroutine add_seg(this, proc, se, tag)
-
-      use dataio_pub, only: die
-
-      implicit none
-
-      class(bnd_list),                              intent(inout) :: this !< object invoking type-bound procedure
-      integer,                                      intent(in)    :: proc !< process to be communicated
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: se   !< segment definition
-      integer(kind=4),                              intent(in)    :: tag  !< tag for MPI calls
-
-      type(segment), dimension(:), allocatable :: tmp
-      integer :: g
-
-      if (tag <0) call die("[grid_container:add_seg] tag<0")
-
-      if (allocated(this%seg)) then
-         allocate(tmp(lbound(this%seg, dim=1):ubound(this%seg, dim=1)+1))
-         tmp(:ubound(this%seg, dim=1)) = this%seg
-         call move_alloc(from=tmp, to=this%seg)
-      else
-         allocate(this%seg(1))
-      endif
-
-      g = ubound(this%seg, dim=1)
-
-      this%seg(g)%proc = proc
-      this%seg(g)%se = se
-      this%seg(g)%tag = tag
-      nullify(this%seg(g)%local)
-
-   end subroutine add_seg
-
-   subroutine set_fluxpointers(this, cdim, i1, i2, eflx)
-
-      use constants,  only: LO, HI, ydim, zdim, GEO_RPZ
-      use domain,     only: dom
-      use fluidindex, only: iarr_all_mx, iarr_all_my
-      use fluxtypes,  only: ext_fluxes
-
-      implicit none
-
-      class(grid_container), intent(in)    :: this    !< object invoking type-bound procedure
-      integer(kind=4),       intent(in)    :: cdim    !< direction of the flux
-      integer,               intent(in)    :: i1      !< coordinate
-      integer,               intent(in)    :: i2      !< coordinate
-      type(ext_fluxes),      intent(inout) :: eflx
-
-      if (this%finebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
-         fpl = this%finebnd(cdim, LO)%fa2fp(i1, i2)
-         if (.not. allocated(fpl%uflx)) call fpl%fpinit
-         eflx%li => fpl
-         eflx%li%index = eflx%li%index - this%lhn(cdim, LO) + 1
-      else
-         nullify(eflx%li)
-      endif
-      if (this%finebnd(cdim, HI)%index(i1, i2) <= this%ijkse(cdim, HI)) then
-         fpr = this%finebnd(cdim, HI)%fa2fp(i1, i2)
-         if (.not. allocated(fpr%uflx)) call fpr%fpinit
-         eflx%ri => fpr
-         eflx%ri%index = eflx%ri%index - this%lhn(cdim, LO)
-      else
-         nullify(eflx%ri)
-      endif
-
-      if (dom%geometry_type == GEO_RPZ) then
-         if (cdim == ydim) then
-            !> BEWARE: iarr_all_mx points to the y-momentum in y-sweep
-            if (associated(eflx%li)) eflx%li%uflx(iarr_all_mx) = eflx%li%uflx(iarr_all_mx) / this%x(i2)
-            if (associated(eflx%ri)) eflx%ri%uflx(iarr_all_mx) = eflx%ri%uflx(iarr_all_mx) / this%x(i2)
-         else if (cdim == zdim) then
-            if (associated(eflx%li)) eflx%li%uflx = eflx%li%uflx / this%x(i1)
-            if (associated(eflx%li)) eflx%li%uflx(iarr_all_my) = eflx%li%uflx(iarr_all_my) / this%x(i1) ! that makes this%x(i1)**2
-            if (associated(eflx%ri)) eflx%ri%uflx = eflx%ri%uflx / this%x(i1)
-            if (associated(eflx%ri)) eflx%ri%uflx(iarr_all_my) = eflx%ri%uflx(iarr_all_my) / this%x(i1) ! that makes this%x(i1)**2
-         endif
-      endif
-
-      if (this%coarsebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
-         cpl%index = this%coarsebnd(cdim, LO)%index(i1, i2)
-         if (.not. allocated(cpl%uflx)) call cpl%fpinit
-         eflx%lo => cpl
-         eflx%lo%index = eflx%lo%index - this%lhn(cdim, LO)
-      else
-         nullify(eflx%lo)
-      endif
-      if (this%coarsebnd(cdim, HI)%index(i1, i2) <= this%ijkse(cdim, HI)) then
-         cpr%index = this%coarsebnd(cdim, HI)%index(i1, i2)
-         if (.not. allocated(cpr%uflx)) call cpr%fpinit
-         eflx%ro => cpr
-         eflx%ro%index = eflx%ro%index - this%lhn(cdim, LO) + 1
-      else
-         nullify(eflx%ro)
-      endif
-
-   end subroutine set_fluxpointers
-
-   subroutine save_outfluxes(this, cdim, i1, i2, eflx)
-
-      use constants,  only: LO, HI, ydim, zdim, GEO_RPZ
-      use domain,     only: dom
-      use fluidindex, only: iarr_all_mx, iarr_all_my
-      use fluxtypes,  only: ext_fluxes
-
-      implicit none
-
-      class(grid_container), intent(inout) :: this    !< object invoking type-bound procedure
-      integer(kind=4),       intent(in)    :: cdim
-      integer,               intent(in)    :: i1
-      integer,               intent(in)    :: i2
-      type(ext_fluxes),      intent(inout) :: eflx
-
-
-      if (associated(eflx%lo)) then
-         eflx%lo%index = eflx%lo%index + this%lhn(cdim, LO)
-         if (dom%geometry_type == GEO_RPZ) then
-            if (cdim == ydim) then
-               !> BEWARE: iarr_all_mx points to the y-momentum in y-sweep
-               eflx%lo%uflx(iarr_all_mx) = eflx%lo%uflx(iarr_all_mx) * this%x(i2)
-            else if (cdim == zdim) then
-               eflx%lo%uflx = eflx%lo%uflx * this%x(i1)
-               eflx%lo%uflx(iarr_all_my) = eflx%lo%uflx(iarr_all_my) * this%x(i1) ! that makes this%x(i1)**2
-            endif
-         endif
-         call this%coarsebnd(cdim, LO)%fp2fa(eflx%lo, i1, i2)
-      endif
-
-      if (associated(eflx%ro)) then
-         eflx%ro%index = eflx%ro%index + this%lhn(cdim, LO) - 1
-         if (dom%geometry_type == GEO_RPZ) then
-            if (cdim == ydim) then
-               !> BEWARE: iarr_all_mx points to the y-momentum in y-sweep
-               eflx%ro%uflx(iarr_all_mx) = eflx%ro%uflx(iarr_all_mx) * this%x(i2)
-            else if (cdim == zdim) then
-               eflx%ro%uflx = eflx%ro%uflx * this%x(i1)
-               eflx%ro%uflx(iarr_all_my) = eflx%ro%uflx(iarr_all_my) * this%x(i1) ! that makes this%x(i1)**2
-            endif
-         endif
-         call this%coarsebnd(cdim, HI)%fp2fa(eflx%ro, i1, i2)
-      endif
-
-   end subroutine save_outfluxes
 
 !>
 !! \brief perform high-order order prolongation interpolation of the data stored in this%prolong_
