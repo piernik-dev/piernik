@@ -756,6 +756,9 @@ contains
 
    subroutine arr3d_boundaries(this, ind, area_type, bnd_type, dir, nocorners)
 
+      use global,           only: ord_fc_eq_mag, ord_mag_prolong
+      use named_array_list, only: qna
+
       implicit none
 
       class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
@@ -766,10 +769,17 @@ contains
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
       logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
+      integer(kind=4) :: ord_saved
+
+      ord_saved = qna%lst(ind)%ord_prolong
+      if (ord_fc_eq_mag) qna%lst(ind)%ord_prolong = ord_mag_prolong
+
       call this%dirty_boundaries(ind)
       call this%prolong_bnd_from_coarser(ind, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
       call this%level_3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
       ! The correctness ot the sequence of calls above may depend on the implementation of internal boundary exchange
+
+      qna%lst(ind)%ord_prolong = ord_saved
 
    end subroutine arr3d_boundaries
 
@@ -778,6 +788,7 @@ contains
    subroutine arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
       use constants,        only: base_level_id
+      use global,           only: ord_mag_prolong, ord_fc_eq_mag
       use named_array_list, only: qna, wna
 
       implicit none
@@ -795,7 +806,11 @@ contains
       if (associated(this%coarser) .and. this%l%id > base_level_id) then
          do iw = 1, wna%lst(ind)%dim4
             ! here we can use any high order prolongation without destroying conservation
-            qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong
+            if (ord_fc_eq_mag) then
+               qna%lst(qna%wai)%ord_prolong = ord_mag_prolong
+            else
+               qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong
+            endif
             call this%coarser%wq_copy(ind, iw, qna%wai)
             call this%wq_copy(ind, iw, qna%wai) !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
             call this%prolong_bnd_from_coarser(qna%wai, dir=dir, nocorners=nocorners)
