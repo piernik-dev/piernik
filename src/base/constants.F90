@@ -228,6 +228,8 @@ module constants
       enumerator :: O_I2  = 2  !! integral quadratic
       enumerator :: O_I3  = 3  !! integral cubic
       enumerator :: O_I4  = 4  !! integral quartic
+      enumerator :: O_I5  = 5  !! integral quintic
+      enumerator :: O_I6  = 6  !! integral sextic
       enumerator :: O_D2  = -2 !! direct quadratic
       enumerator :: O_D3  = -3 !! direct cubic
       enumerator :: O_D4  = -4 !! direct quartic
