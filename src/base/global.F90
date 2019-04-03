@@ -142,14 +142,14 @@ contains
 !!   <tr><td>ch_grid          </td><td>false  </td><td>logical value                        </td><td>\copydoc global::ch_grid          </td></tr>
 !!   <tr><td>w_epsilon        </td><td>1e-10  </td><td>real                                 </td><td>\copydoc global::w_epsilon        </td></tr>
 !!   <tr><td>psi_bnd_str      </td><td>"default" </td><td>string                            </td><td>\copydoc global::psi_bnd_str      </td></tr>
-!!   <tr><td>ord_mag_prolong  </td><td>0      </td><td>integer                              </td><td>\copydoc global::ord_mag_prolong  </td></tr>
+!!   <tr><td>ord_mag_prolong  </td><td>2      </td><td>integer                              </td><td>\copydoc global::ord_mag_prolong  </td></tr>
 !! </table>
 !! \n \n
 !<
    subroutine init_global
 
       use constants,  only: big_float, PIERNIK_INIT_MPI, INVALID, DIVB_CT, DIVB_HDC, &
-           &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO
+           &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO, O_I2
       use dataio_pub, only: die, msg, warn, code_progress, printinfo
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
@@ -209,7 +209,7 @@ contains
       w_epsilon   = 1e-10
       psi_bnd_str = "default"
       integration_order  = 2
-      ord_mag_prolong = 0
+      ord_mag_prolong = O_I2           !< it looks like most f/c artifacts are gone just with cubic prolongation of magnetic guardcells
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
