@@ -26,21 +26,20 @@
 !
 #include "piernik.h"
 
-!> \brief Module containing the grid container type and its associated methods
+!> \brief Module containing the full, usable grid container type and its methods that don't fit to any abstract subtypes of grid container
 
 module grid_cont
 
-   use constants,        only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
+   use constants,        only: xdim, zdim, LO, HI
+   use grid_cont_base,   only: grid_container_base_T
    use fluxtypes,        only: fluxarray, fluxpoint
-   use level_essentials, only: level_T
    use named_array,      only: named_array4d, named_array3d
    use refinement_flag,  only: ref_flag
-   use real_vector,      only: real_vec_T
 
    implicit none
 
    private
-   public :: grid_container, pr_segment, tgt_list, is_overlap, segment
+   public :: grid_container, pr_segment, tgt_list, segment
 
    type(fluxpoint), target :: fpl, fpr, cpl, cpr
 
@@ -106,75 +105,12 @@ module grid_cont
    end type bnd_list
 
    !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
-   type :: grid_container
-
-      ! Cell properties
-
-      ! sizes
-      real, dimension(ndims) :: dl                               !< array of %grid cell sizes in all directions, [ dx, dy, dz ]
-      real :: dx                                                 !< length of the %grid cell in x-direction
-      real :: dy                                                 !< length of the %grid cell in y-direction
-      real :: dz                                                 !< length of the %grid cell in z-direction
-      real :: dvol                                               !< volume of one %grid cell
-      real :: dxy, dxz, dyz                                      !< cell surface area
-
-      ! shortcuts
-      real, dimension(ndims) :: idl                              !< array of inverted %grid cell sizes in all directions, 1./dl(:)
-      real :: idx                                                !< inverted length of the %grid cell in x-direction
-      real :: idy                                                !< inverted length of the %grid cell in y-direction
-      real :: idz                                                !< inverted length of the %grid cell in z-direction
-      real :: idx2, idy2, idz2                                   !< inverse of d{x,y,z} square
-      real, dimension(ndims) :: idl2                             !< [ idx2, idy2, idz2 ]
-
-      ! Grid properties
-
-      ! cell count and position
-      integer(kind=4), dimension(ndims) :: n_b                   !< [nxb, nyb, nzb]
-      integer(kind=4) :: nxb                                     !< number of %grid cells in one block (without boundary cells) in x-direction
-      integer(kind=4) :: nyb                                     !< number of %grid cells in one block (without boundary cells) in y-direction
-      integer(kind=4) :: nzb                                     !< number of %grid cells in one block (without boundary cells) in z-direction
-      class(level_T), pointer :: l                               !< level essential data
-
-      ! shortcuts
-      !> \todo Change kind from 4 to 8 to allow really deep refinements (effective resolution > 2**31, perhaps the other requirement will be default integer  kind = 8)
-      integer(kind=4) :: is                                      !< index of the first %grid cell of physical domain in x-direction
-      integer(kind=4) :: ie                                      !< index of the last %grid cell of physical domain in x-direction
-      integer(kind=4) :: js                                      !< index of the first %grid cell of physical domain in y-direction
-      integer(kind=4) :: je                                      !< index of the last %grid cell of physical domain in y-direction
-      integer(kind=4) :: ks                                      !< index of the first %grid cell of physical domain in z-direction
-      integer(kind=4) :: ke                                      !< index of the last %grid cell of physical domain in z-direction
-      integer(kind=4) :: isb, ieb, jsb, jeb, ksb, keb            !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
-!      integer(kind=4) :: il1, ih1, jl1, jh1, kl1, kh1            !< index of the first guardcell, adjacent to the active interior of the grid, l for low/left, h for high/right side
-!      integer(kind=4) :: iln, ihn, jln, jhn, kln, khn            !< index of the n-th guardcell, furthest from the active interior of the grid, l for low/left, h for high/right side
-      integer(kind=4), dimension(ndims, LO:HI)  :: ijkse         !< [[is,  js,  ks ], [ie,  je,  ke ]]
-      integer(kind=4), dimension(ndims, LO:HI)  :: ijkseb        !< [[isb, jsb, ksb], [ieb, jeb, keb]]
-      integer(kind=4), dimension(ndims, LO:HI)  :: lh1           !< [[il1, jl1, kl1], [ih1, jh1, kh1]]
-      integer(kind=4), dimension(ndims, LO:HI)  :: lhn           !< [[iln, jln, kln], [ihn, jhn, khn]]
-      integer(kind=4), dimension(ndims, LO:HI)  :: lh_out        !< ijkse expanded at the external boundaries to include external guardcells for contexts where AT_OUT_B is used
-      integer(kind=4), dimension(ndims)         :: n_            !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
-      integer(kind=8), dimension(ndims, LO:HI)  :: my_se         !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
-                                                                 !! my_se(:,LO) = 0; my_se(:,HI) = finest%level%n_d(:) -1 would cover entire domain on the most refined level
-                                                                 !! DEPRECATED: will be equivalent to ijkse(:,:)
-
-      ! Physical size and coordinates
-
-      real, dimension(ndims, LO:HI) :: fbnd                      !< current block boundary positions
-
-      type(real_vec_T), dimension(CENTER:INV_CENTER, ndims) :: coord !< all coordinates (CENTER, LEFT, RIGHT, INV_CENTER)
-      ! shortcuts
-      real, pointer, dimension(:) :: x                             !< array of x-positions of %grid cells centers
-      real, pointer, dimension(:) :: y                             !< array of x-positions of %grid cells centers
-      real, pointer, dimension(:) :: z                             !< array of x-positions of %grid cells centers
-      real, pointer, dimension(:) :: inv_x                         !< array of invert x-positions of %grid cells centers
-      real, pointer, dimension(:) :: inv_y                         !< array of invert y-positions of %grid cells centers
-      real, pointer, dimension(:) :: inv_z                         !< array of invert z-positions of %grid cells centers
+   type, extends(grid_container_base_T) :: grid_container
 
       ! External boundary conditions and internal boundaries
 
-      integer(kind=4), dimension(ndims, LO:HI)           :: bnd         !< type of boundary conditions coded in integers
       type(bnd_list),  dimension(:),         allocatable :: i_bnd       !< description of incoming boundary data, the shape is (xdim:zdim)
       type(bnd_list),  dimension(:),         allocatable :: o_bnd       !< description of outgoing boundary data, the shape is (xdim:zdim)
-      logical,         dimension(xdim:zdim, LO:HI)       :: ext_bnd     !< .false. for BND_PER and BND_MPI
       type(fluxarray), dimension(xdim:zdim, LO:HI)       :: finebnd     !< indices and flux arrays for fine/coarse flux updates on coarse side
       type(fluxarray), dimension(xdim:zdim, LO:HI)       :: coarsebnd   !< indices and flux arrays for fine/coarse flux updates on fine side
 
@@ -193,11 +129,6 @@ module grid_cont
       logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .false. otherwise
       logical, allocatable, dimension(:,:,:) :: refinemap         !< .true. when a cell triggers refinement criteria, .false. otherwise
 
-      ! Non-cartesian geometrical factors
-
-      real, allocatable, dimension(:,:,:) :: gc_xdim             !< array of geometrical coefficients in x-direction
-      real, allocatable, dimension(:,:,:) :: gc_ydim             !< array of geometrical coefficients in y-direction
-      real, allocatable, dimension(:,:,:) :: gc_zdim             !< array of geometrical coefficients in z-direction
 
       ! Registered variables
 
@@ -218,24 +149,17 @@ module grid_cont
       real, dimension(:,:,:,:), pointer :: b     => null()       !< Main array of magnetic field's components
 
       ! Misc
-      type(mg_arr), pointer :: mg                                !< multigrid arrays
-      real :: vol                                                !< volume of the grid; BEWARE: for cylindrical geometry it needs to be integrated over x(:) to get real volume
-      real :: dxmn                                               !< the smallest length of the %grid cell (among dx, dy, and dz)
-      integer(kind=4) :: maxxyz                                  !< maximum number of %grid cells in any direction
-      integer :: grid_id                                         !< index of own segment in own level decomposition, e.g. my_se(:,:) = base%level%dot%gse(proc)%c(grid_id)%se(:,:)
       integer(kind=8) :: SFC_id                                  !< position of the grid on space-filling curve
       type(ref_flag) :: refine_flags                             !< refine or derefine this grid container?
       integer :: membership                                      !< How many cg lists use this grid piece?
       logical :: ignore_prolongation                             !< When .true. do not upgrade interior with incoming prolonged values
       logical :: is_old                                          !< .true. if a given grid existed prior to  upgrade_refinement call
       logical :: processed                                       !< for use in sweeps.F90
-      logical :: has_previous_timestep                           !< used to prevent timestep retries on freshly created blocks
 
    contains
 
       procedure          :: init_gc                              !< Initialization
       procedure          :: cleanup                              !< Deallocate all internals
-      procedure, private :: set_coords                           !< Calculate arrays of coordinates along a given direction
       procedure, private :: add_all_na                           !< Register all known named arrays for this cg, sey up shortcuts to the crucial fields
       procedure          :: add_na                               !< Register a new 3D entry in current cg with given name.
       procedure          :: add_na_4d                            !< Register a new 4D entry in current cg with given name.
@@ -247,10 +171,6 @@ module grid_cont
       procedure          :: set_constant_b_field                 !< set constant magnetic field on whole block
 
    end type grid_container
-
-   interface is_overlap
-      module procedure is_overlap_simple, is_overlap_per
-   end interface
 
 contains
 
@@ -267,11 +187,9 @@ contains
 
    subroutine init_gc(this, my_se, grid_id, l)
 
-      use constants,        only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, &
-           &                      LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
-      use dataio_pub,       only: die, warn, code_progress
+      use constants,        only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, LO, HI
+      use dataio_pub,       only: die, code_progress
       use domain,           only: dom
-      use func,             only: operator(.equals.)
       use grid_helpers,     only: f2c
       use level_essentials, only: level_T
       use ordering,         only: SFC_order
@@ -289,171 +207,10 @@ contains
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init_gc] MPI not initialized.")
 
-      this%l          => l
+      call this%init_gc_base(my_se, grid_id, l)
       this%membership = 1
-      this%grid_id    = grid_id
-      this%my_se(:,:) = my_se(:, :)
-      this%n_b(:)     = int(this%my_se(:, HI) - this%my_se(:, LO) + I_ONE, 4) ! Block 'physical' grid sizes
       this%SFC_id     = SFC_order(this%my_se(:, LO) - l%off)
 
-      if (any(this%n_b(:) <= 0)) call die("[grid_container:init_gc] Mixed positive and non-positive grid sizes")
-
-      ! Inherit the boundaries from the domain, then set MPI or SHEAR boundaries where applicable
-      this%bnd(:,:) = dom%bnd(:,:)
-      where (my_se(:, LO)         /= l%off(:)           ) this%bnd(:, LO) = BND_MPI
-      where (my_se(:, HI) + I_ONE /= l%off(:) + l%n_d(:)) this%bnd(:, HI) = BND_MPI
-      ! For periodic boundaries do not set BND_MPI when local domain spans through the whole computational domain in given direction.
-      where (dom%periodic(:) .and. this%my_se(:, HI) + I_ONE /= l%n_d(:)) this%bnd(:, LO) = BND_MPI
-      where (dom%periodic(:) .and. this%my_se(:, LO)         /= 0       ) this%bnd(:, HI) = BND_MPI
-
-      this%ext_bnd(:, :) = .false.
-      do i = xdim, zdim
-         if (dom%has_dir(i) .and. .not. dom%periodic(i)) then
-            this%ext_bnd(i, LO) = (my_se(i, LO)         == l%off(i))
-            this%ext_bnd(i, HI) = (my_se(i, HI) + I_ONE == l%off(i) + l%n_d(i))
-         endif
-      enddo
-
-      ! For shear boundaries and some domain decompositions it is possible that a boundary can be mixed 'per' with 'mpi'
-
-!      call inflate_req
-      ! write_plot_hdf5 requires nproc entries for the status array
-
-      if (any(dom%bnd(xdim:ydim, :) == BND_COR)) call die("[grid_container:init_gc] BND_COR unimplemented")
-      if (any(dom%bnd(zdim, :) == BND_COR)) call die("[grid_container:init_gc] Corner BC not allowed for z-direction")
-
-#ifdef SHEAR_BND
-      call die("[grid_container:init_gc] Shear-pediodic boundary conditions unimplemented")
-      ! This is possible to be implemented
-#endif /* SHEAR_BND */
-
-      do i = xdim, zdim
-         if (dom%has_dir(i)) then
-            if (this%n_b(i) < 1) call die("[grid_init_gc] Too many CPUs for such a small grid.")
-            if (this%n_b(i) < dom%nb) call warn("[grid_init_gc] domain size in some directions is < nb, which may result in incomplete boundary cell update")
-         endif
-      enddo
-
-      where (dom%has_dir(:))
-         this%n_(:)        = this%n_b(:) + I_TWO * dom%nb       ! Block total grid size with guardcells
-         this%ijkse(:, LO) = int(this%my_se(:, LO), kind=4)
-         this%ijkse(:, HI) = int(this%my_se(:, HI), kind=4)
-         this%ijkseb(:,LO) = this%ijkse(:, LO) + dom%nb - I_ONE
-         this%ijkseb(:,HI) = this%ijkse(:, HI) - dom%nb + I_ONE
-         this%lh1(:,LO)    = this%ijkse(:, LO) - I_ONE
-         this%lh1(:,HI)    = this%ijkse(:, HI) + I_ONE
-         this%lhn(:,LO)    = this%ijkse(:, LO) - dom%nb
-         this%lhn(:,HI)    = this%ijkse(:, HI) + dom%nb
-         this%dl(:)        = dom%L_(:) / l%n_d(:)
-         this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, LO)         - l%off(:))
-         this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, HI) + I_ONE - l%off(:))
-      elsewhere
-         this%n_(:)        = 1
-         this%ijkse(:, LO) = 0
-         this%ijkse(:, HI) = 0
-         this%ijkseb(:,LO) = this%ijkse(:, LO)
-         this%ijkseb(:,HI) = this%ijkse(:, HI)
-         this%lh1(:,LO)    = this%ijkse(:, LO)
-         this%lh1(:,HI)    = this%ijkse(:, HI)
-         this%lhn(:,LO)    = this%ijkse(:, LO)
-         this%lhn(:,HI)    = this%ijkse(:, HI)
-         this%dl(:)        = 1.0
-         this%fbnd(:, LO)  = dom%edge(:, LO)
-         this%fbnd(:, HI)  = dom%edge(:, HI)
-      endwhere
-
-      ! Compute indices that include external boundary cells
-      ! Strangely, we ignore periodicity here, following what we had in restart_hdf5_v1::set_dims_for_restart
-
-      this%lh_out = this%ijkse
-      where (dom%has_dir(:) .and. (my_se(:, LO) == l%off(:)                   )) this%lh_out(:, LO) = this%lh_out(:, LO) - dom%nb
-      where (dom%has_dir(:) .and. (my_se(:, HI) == l%off(:) + l%n_d(:) - I_ONE)) this%lh_out(:, HI) = this%lh_out(:, HI) + dom%nb
-      !> \todo make sure the above works correctly with refinements
-
-      if (any(this%dl .equals. 0.)) call die("[grid_container:init_gc] found cell size equal to 0.")
-
-      this%isb = this%ijkseb(xdim, LO)
-      this%ieb = this%ijkseb(xdim, HI)
-      this%jsb = this%ijkseb(ydim, LO)
-      this%jeb = this%ijkseb(ydim, HI)
-      this%ksb = this%ijkseb(zdim, LO)
-      this%keb = this%ijkseb(zdim, HI)
-
-      select case (dom%geometry_type)
-         case (GEO_XYZ)
-            this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=dom%has_dir(:))
-            this%dvol = product(this%dl(:), mask=dom%has_dir(:))
-         case (GEO_RPZ)
-            if (.not. dom%has_dir(ydim)) then
-               this%dl(ydim) = dpi
-               this%fbnd(ydim, :) = [ 0., dpi ]
-            endif
-            this%vol = 1.
-            if (dom%has_dir(xdim)) this%vol = this%vol * (this%fbnd(xdim, HI)**2 - this%fbnd(xdim, LO)**2)/2.
-            this%vol = this%vol * (this%fbnd(ydim, HI) - this%fbnd(ydim, LO))
-            if (dom%has_dir(zdim)) this%vol = this%vol * (this%fbnd(zdim, HI) - this%fbnd(zdim, LO))
-            this%dvol = product(this%dl(:), mask=(dom%has_dir(:) .or. [.false., .true., .false.])) ! multiply by actual radius to get true cell volume
-      end select
-
-      this%maxxyz = maxval(this%n_(:), mask=dom%has_dir(:))
-
-      call this%set_coords
-
-      this%dxmn = minval(this%dl(:), mask=dom%has_dir(:))
-
-      ! some shortcuts for convenience
-      this%idl(:) = 1./this%dl(:)
-
-      this%dx = this%dl(xdim)
-      this%dy = this%dl(ydim)
-      this%dz = this%dl(zdim)
-
-      this%idx = 1./this%dx
-      this%idy = 1./this%dy
-      this%idz = 1./this%dz
-
-      !> \deprecated this%n[xyz]b are almost unused. \todo remove it
-      this%nxb = this%n_b(xdim)
-      this%nyb = this%n_b(ydim)
-      this%nzb = this%n_b(zdim)
-
-      this%is = this%ijkse(xdim, LO)
-      this%js = this%ijkse(ydim, LO)
-      this%ks = this%ijkse(zdim, LO)
-      this%ie = this%ijkse(xdim, HI)
-      this%je = this%ijkse(ydim, HI)
-      this%ke = this%ijkse(zdim, HI)
-
-      ! copied from multigrid
-      this%dxy = 1.
-      this%dxz = 1.
-      this%dyz = 1.
-
-      if (dom%has_dir(xdim)) then
-         this%idx2  = 1. / this%dx**2                      ! auxiliary invariants
-         this%dxy   = this%dxy * this%dx
-         this%dxz   = this%dxz * this%dx
-      else
-         this%idx2  = 0.
-      endif
-
-      if (dom%has_dir(ydim)) then
-         this%idy2  = 1. / this%dy**2
-         this%dxy   = this%dxy * this%dy
-         this%dyz   = this%dyz * this%dy
-      else
-         this%idy2  = 0.
-      endif
-
-      if (dom%has_dir(zdim)) then
-         this%idz2  = 1. / this%dz**2
-         this%dxz   = this%dxz * this%dz
-         this%dyz   = this%dyz * this%dz
-      else
-         this%idz2  = 0.
-      endif
-
-      this%idl2 = [ this%idx2, this%idy2, this%idz2 ]
       nullify(this%prolong_xyz)
       if (allocated(this%prolong_) .or. allocated(this%prolong_x) .or. allocated(this%prolong_xy)) &
            call die("[grid_container:init_gc] prolong_* arrays already allocated")
@@ -503,100 +260,21 @@ contains
 
    end subroutine init_gc
 
-!> \brief Calculate arrays of coordinates along a given direction
-
-   subroutine set_coords(this)
-
-      use constants,  only: LO, HI, half, one, zero, xdim, ydim, zdim, CENTER, LEFT, RIGHT, INV_CENTER
-      use dataio_pub, only: die, warn
-      use domain,     only: dom
-      use func,       only: operator(.notequals.), operator(.equals.)
-
-      implicit none
-
-      class(grid_container), intent(inout) :: this !< grid container, where the arrays have to be set
-
-      integer :: d, i
-      integer, parameter :: safety_warn_factor = 1000 ! warn if a cell size is smaller than this * epsilon(coordinates)
-
-      do d = xdim, zdim
-         do i = CENTER, INV_CENTER
-            if (this%coord(i, d)%associated()) call die("[grid_container:set_coords] a coordinate already allocated")
-            call this%coord(i, d)%allocate(this%lhn(d, LO), this%lhn(d, HI))
-         enddo
-
-         if (dom%has_dir(d)) then
-            this%coord(CENTER, d)%r(:) = this%fbnd(d, LO) + this%dl(d) * ([(i, i=this%lhn(d, LO), this%lhn(d, HI))] - this%ijkse(d, LO) + half)
-         else
-            this%coord(CENTER, d)%r(:) = half*(this%fbnd(d, LO) + this%fbnd(d, HI))
-         endif
-
-         this%coord(LEFT,  d)%r(:) = this%coord(CENTER, d)%r(:) - half*this%dl(d)
-         this%coord(RIGHT, d)%r(:) = this%coord(CENTER, d)%r(:) + half*this%dl(d)
-
-         where ( this%coord(CENTER, d)%r(:).notequals.zero )
-            this%coord(INV_CENTER, d)%r(:) = one/this%coord(CENTER, d)%r(:)
-         elsewhere
-            this%coord(INV_CENTER, d)%r(:) = zero
-         endwhere
-
-         ! Generally nobody should substract one cell coordinate from another in code solvers. One should use cell sizes instead.
-         ! The problem may arise when initial conditions are comparing coordinates to set something on the left or right side of some line.
-         ! When the cell size is too small compared to the coordinates, such line cannot be properly calculated
-         ! Note that since we force real kind=8, we can use a named constant instead of epsilon
-         if (dom%has_dir(d)) then
-            if ( any(this%coord(CENTER, d)%r(:) .equals. this%coord(LEFT,  d)%r(:)) .or. &
-                 any(this%coord(CENTER, d)%r(:) .equals. this%coord(RIGHT, d)%r(:)) ) call die("[grid_container:set_coords] cannot distinguish between center and face coordinates of a cell")
-            if ( any(abs(this%coord(CENTER, d)%r(:)-this%coord(LEFT,  d)%r(:)) < safety_warn_factor*epsilon(this%coord(CENTER, d)%r(:))*this%coord(CENTER, d)%r(:)) .or. &
-                 any(abs(this%coord(CENTER, d)%r(:)-this%coord(RIGHT, d)%r(:)) < safety_warn_factor*epsilon(this%coord(CENTER, d)%r(:))*this%coord(CENTER, d)%r(:))) &
-                 call warn("[grid_container:set_coords] cell sizes are much smaller than coordinates. Inaccuracies in setting the initial conditions may happen.")
-         endif
-      enddo
-
-      !--- Shortcuts --------------------
-      ! left zone boundaries:  xl, yl, zl
-      ! zone centers:          x,  y,  z
-      ! right zone boundaries: xr, yr, zr
-
-      this%x     => this%coord(CENTER,     xdim)%r
-      this%y     => this%coord(CENTER,     ydim)%r
-      this%z     => this%coord(CENTER,     zdim)%r
-
-      this%inv_x => this%coord(INV_CENTER, xdim)%r
-      this%inv_y => this%coord(INV_CENTER, ydim)%r
-      this%inv_z => this%coord(INV_CENTER, zdim)%r
-
-   end subroutine set_coords
-
 !> \brief Routines that deallocates all internals of the grid container
 
    subroutine cleanup(this)
 
-      use constants, only: xdim, zdim, CENTER, INV_CENTER, LO, HI
+      use constants, only: xdim, zdim, LO, HI
 
       implicit none
 
       class(grid_container), intent(inout) :: this !< object invoking type-bound procedure
 
-      integer :: d, g, b, cdim
+      integer :: d, g, b
       integer, parameter :: nseg = 4*2
       type(tgt_list), dimension(nseg) :: rpio_tgt
 
-      if (associated(this%x))     nullify(this%x)
-      if (associated(this%y))     nullify(this%y)
-      if (associated(this%z))     nullify(this%z)
-      if (associated(this%inv_x)) nullify(this%inv_x)
-      if (associated(this%inv_y)) nullify(this%inv_y)
-      if (associated(this%inv_z)) nullify(this%inv_z)
-      do cdim = xdim, zdim
-         do b = CENTER, INV_CENTER
-            call this%coord(b, cdim)%deallocate()
-         enddo
-      enddo
-
-      if (allocated(this%gc_xdim)) deallocate(this%gc_xdim)
-      if (allocated(this%gc_ydim)) deallocate(this%gc_ydim)
-      if (allocated(this%gc_zdim)) deallocate(this%gc_zdim)
+      call this%cleanup_base
 
       if (allocated(this%i_bnd)) then
          do d = lbound(this%i_bnd, dim=1), ubound(this%i_bnd, dim=1)
@@ -656,70 +334,6 @@ contains
       call cpr%fpcleanup
 
    end subroutine cleanup
-
-!>
-!! \brief is_overlap_per checks if two given blocks placed within a periodic domain are overlapping.
-!!
-!! \details to handle shearing box which is divided in y-direction at the edges, one has to provide another subroutine (is_overlap_per_shear) and add it to interface is_overlap
-!<
-
-   logical function is_overlap_per(this, other, periods) result(share)
-
-      use constants,  only: xdim, ydim, zdim, LO, HI
-      use domain,     only: dom
-
-      implicit none
-
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this    !< this box
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: other   !< the other box
-      integer(kind=8), dimension(xdim:zdim),        intent(in) :: periods !< where >0 then the direction is periodic with the given number of cells
-
-      integer :: i, j, k
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: oth
-
-      share = .false.
-      do i = -1, 1
-         if ((dom%has_dir(xdim) .or. periods(xdim)>0) .or. i==0) then
-            oth(xdim, :) = other(xdim, :) + i*periods(xdim)
-            do j = -1, 1
-               if ((dom%has_dir(ydim) .or. periods(ydim)>0) .or. j==0) then
-                  oth(ydim, :) = other(ydim, :) + j*periods(ydim)
-                  do k = -1, 1
-                     if ((dom%has_dir(zdim) .or. periods(zdim)>0) .or. k==0) then
-                        oth(zdim, :) = other(zdim, :) + k*periods(zdim)
-                        share = is_overlap_simple(this, oth) .or. share
-                     endif
-                  enddo
-               endif
-            enddo
-         endif
-      enddo
-
-   end function is_overlap_per
-
-!>
-!! \brief is_overlap_simple checks if two given blocks placed within a nonperiodic domain are overlapping.
-!! This routine is not supposed to take care of periodic domain - use is_overlap_per when you check overlap for boxes that cross the periodic domain boundary
-!<
-
-   logical function is_overlap_simple(this, other) result(share)
-
-      use constants,  only: xdim, zdim, LO, HI
-      use domain,     only: dom
-
-      implicit none
-
-      integer(kind=8), dimension(:, :), intent(in) :: this  !< this box
-      integer(kind=8), dimension(:, :), intent(in) :: other !< the other box
-
-      integer :: d
-
-      share = .true.
-      do d = xdim, zdim
-         if (dom%has_dir(d)) share = share .and. (other(d, LO) <= this(d, HI)) .and. (other(d, HI) >= this(d, LO))
-      enddo
-
-   end function is_overlap_simple
 
 !> \brief Register all known named arrays for this cg, sey up shortcuts to the crucial fields
 

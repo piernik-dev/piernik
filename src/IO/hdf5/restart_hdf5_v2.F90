@@ -505,7 +505,7 @@ contains
       use domain,             only: dom
       use func,               only: operator(.notequals.)
       use global,             only: t, dt, nstep
-      use grid_cont,          only: is_overlap
+      use grid_cont_base,     only: is_overlap
       use hdf5,               only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
       use mass_defect,        only: magic_mass
       use mpisetup,           only: master, piernik_MPI_Barrier
@@ -896,7 +896,8 @@ contains
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI
       use dataio_pub,       only: die
       use domain,           only: dom
-      use grid_cont,        only: grid_container, is_overlap
+      use grid_cont,        only: grid_container
+      use grid_cont_base,   only: is_overlap
       use hdf5,             only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5T_NATIVE_DOUBLE, &
            &                      h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
       use named_array_list, only: qna, wna
