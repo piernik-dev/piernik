@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 
-!> \brief Module containing the full, usable grid container type and its methods that don't fit to any abstract subtypes of grid container
+!> \brief Module providing the full, usable grid container type and its methods that don't fit to any abstract subtypes of grid container
 
 module grid_cont
 
@@ -40,17 +40,6 @@ module grid_cont
    private
    public :: grid_container
 
-   !> \brief coefficient-layer pair used for prolongation
-   type :: c_layer
-      integer :: layer                                                !< index of a layer with face-prolongation coefficient coeff
-      real    :: coeff                                                !< coefficient for face prolongation
-   end type c_layer
-
-   !> \brief segment type for prolongation and restriction
-   type, extends(segment) :: pr_segment
-      type(c_layer), dimension(:), allocatable :: f_lay               !< face layers to contribute to the prolonged face value
-   end type pr_segment
-
    !< \brief target list container for prolongations, restrictions and boundary exchanges
    type :: tgt_list
       type(segment), dimension(:), allocatable :: seg              !< a segment of data to be received or sent
@@ -61,6 +50,9 @@ module grid_cont
 
       ! Prolongation and restriction
 
+      ! these lists are initialized and maintained in cg_level_connected
+      ! perhaps parts of vertical_bf_prep can be moved here
+      ! vertical_b_prep has to stay in cg_level_connected because we don't have dot here
       type(tgt_list) :: ri_tgt                                    !< description of incoming restriction data (this should be a linked list)
       type(tgt_list) :: ro_tgt                                    !< description of outgoing restriction data
       type(tgt_list) :: pi_tgt                                    !< description of incoming prolongation data
@@ -69,6 +61,8 @@ module grid_cont
       type(tgt_list) :: pob_tgt                                   !< description of outgoing boundary prolongation data
       type(tgt_list) :: rif_tgt                                   !< description of fluxes incoming from fine grid
       type(tgt_list) :: rof_tgt                                   !< description of fluxes outgoing to coarse grid
+
+      ! Refinements
 
       logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .false. otherwise
       logical, allocatable, dimension(:,:,:) :: refinemap         !< .true. when a cell triggers refinement criteria, .false. otherwise
@@ -92,16 +86,7 @@ module grid_cont
 
 contains
 
-!>
-!! \brief Initialization of the grid container
-!!
-!! \details This method sets up the grid container variables, coordinates and allocates basic arrays.
-!! Everything related to the interior of grid container should be set here.
-!! Things that are related to communication with other grid containers or global properties are set up in cg_level::init_all_new_cg.
-!!
-!! BEWARE: things like off and n_d are replicated across level (it was a cheap workaround for circular dependencies)
-!! \todo invent something better that avoids both circular dependencies and replication of same data
-!<
+!> \brief This method sets up remaining grid container variables and arrays.
 
    subroutine init_gc(this, my_se, grid_id, l)
 
@@ -121,10 +106,13 @@ contains
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init_gc] MPI not initialized.")
 
       call this%init_gc_base(my_se, grid_id, l)
+      call this%init_gc_bnd
+      call this%add_all_na
+      call this%init_gc_prolong
+
       this%membership = 1
       this%SFC_id     = SFC_order(this%my_se(:, LO) - l%off)
 
-      call this%init_gc_prolong
       allocate(this%leafmap  (this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)), &
            &   this%refinemap(this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)))
 
@@ -134,9 +122,6 @@ contains
       this%ignore_prolongation = .false.
       this%is_old = .false.
       this%has_previous_timestep = .false.
-
-      call this%init_gc_bnd
-      call this%add_all_na
 
    end subroutine init_gc
 
@@ -153,8 +138,8 @@ contains
       type(tgt_list), dimension(nseg) :: rpio_tgt
 
       call this%cleanup_base
-      call this%cleanup_bnd
       call this%cleanup_na
+      call this%cleanup_bnd
       call this%cleanup_prolong
 
       rpio_tgt(1:nseg) = [ this%ri_tgt,  this%ro_tgt,  this%pi_tgt,  this%po_tgt, &

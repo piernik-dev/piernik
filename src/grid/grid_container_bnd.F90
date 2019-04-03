@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 
-!> \brief Module containing the full, usable grid container type and its methods that don't fit to any abstract subtypes of grid container
+!> \brief Module extending grid container type by structures required boundary exchanges (same level and f/c)
 
 module grid_cont_bnd
 
@@ -43,14 +43,14 @@ module grid_cont_bnd
 
    !> \brief Specification of segment of data for boundary exchange
    type :: segment
-      integer :: proc                                     !< target process
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: se  !< range
-      integer(kind=4) :: tag                              !< unique tag for data exchange
-      real, allocatable, dimension(:,:,:)   :: buf        !< buffer for the 3D (scalar) data to be sent or received
-      real, allocatable, dimension(:,:,:,:) :: buf4       !< buffer for the 4D (vector) data to be sent or received
-      integer(kind=4), pointer :: req                     !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: se2 !< auxiliary range, used in cg_level_connected:vertical_bf_prep
-      class(grid_container_bnd_T), pointer :: local              !< set this pointer to non-null when the exchange is local
+      integer :: proc                                      !< target process
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: se   !< range
+      integer(kind=4) :: tag                               !< unique tag for data exchange
+      real, allocatable, dimension(:,:,:)   :: buf         !< buffer for the 3D (scalar) data to be sent or received
+      real, allocatable, dimension(:,:,:,:) :: buf4        !< buffer for the 4D (vector) data to be sent or received
+      integer(kind=4), pointer :: req                      !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: se2  !< auxiliary range, used in cg_level_connected:vertical_bf_prep
+      class(grid_container_bnd_T), pointer :: local        !< set this pointer to non-null when the exchange is local
    end type segment
 
    !> \brief Array of boundary segments to exchange
@@ -65,32 +65,25 @@ module grid_cont_bnd
 
       ! External boundary conditions and internal boundaries
 
-      type(bnd_list),  dimension(:),         allocatable :: i_bnd       !< description of incoming boundary data, the shape is (xdim:zdim)
-      type(bnd_list),  dimension(:),         allocatable :: o_bnd       !< description of outgoing boundary data, the shape is (xdim:zdim)
-      type(fluxarray), dimension(xdim:zdim, LO:HI)       :: finebnd     !< indices and flux arrays for fine/coarse flux updates on coarse side
-      type(fluxarray), dimension(xdim:zdim, LO:HI)       :: coarsebnd   !< indices and flux arrays for fine/coarse flux updates on fine side
+      type(fluxarray), dimension(xdim:zdim, LO:HI) :: finebnd     !< indices and flux arrays for fine/coarse flux updates on coarse side
+      type(fluxarray), dimension(xdim:zdim, LO:HI) :: coarsebnd   !< indices and flux arrays for fine/coarse flux updates on fine side
+
+      ! initialization of i_bnd and o_bnd are done in cg_list_neighbors because we don't have access to cg_level%dot here
+      type(bnd_list),  dimension(:), allocatable   :: i_bnd       !< description of incoming boundary data
+      type(bnd_list),  dimension(:), allocatable   :: o_bnd       !< description of outgoing boundary data
 
    contains
 
-      procedure          :: init_gc_bnd                          !< Initialization
-      procedure          :: cleanup_bnd                          !< Deallocate all internals
-      procedure          :: set_fluxpointers
-      procedure          :: save_outfluxes
+      procedure          :: init_gc_bnd       !< Initialization
+      procedure          :: cleanup_bnd       !< Deallocate all internals
+      procedure          :: set_fluxpointers  !< Calculate fluxes incoming from fine grid for 1D solver
+      procedure          :: save_outfluxes    !< Collect outgoing fine fluxes, do curvilinear scaling and store in appropriate array
 
    end type grid_container_bnd_T
 
 contains
 
-!>
-!! \brief Initialization of the grid container
-!!
-!! \details This method sets up the grid container variables, coordinates and allocates basic arrays.
-!! Everything related to the interior of grid container should be set here.
-!! Things that are related to communication with other grid containers or global properties are set up in cg_level::init_all_new_cg.
-!!
-!! BEWARE: things like off and n_d are replicated across level (it was a cheap workaround for circular dependencies)
-!! \todo invent something better that avoids both circular dependencies and replication of same data
-!<
+!> \brief Initialization of f/c fluxes for the grid container
 
    subroutine init_gc_bnd(this)
 
@@ -98,8 +91,8 @@ contains
 
       implicit none
 
-      class(grid_container_bnd_T), target, intent(inout) :: this  ! intent(out) would silently clear everything, that was already set
-                                                                  ! (also the fields in types derived from grid_container)
+      class(grid_container_bnd_T), target, intent(inout) :: this  !< object invoking type-bound procedure
+
       integer :: i
 
       do i = LO, HI
@@ -127,7 +120,7 @@ contains
 
       implicit none
 
-      class(grid_container_bnd_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(grid_container_bnd_T), intent(inout) :: this  !< object invoking type-bound procedure
 
       integer :: d, g
 
@@ -193,6 +186,8 @@ contains
 
    end subroutine add_seg
 
+!> \brief Calculate fluxes incoming from fine grid for 1D solver
+
    subroutine set_fluxpointers(this, cdim, i1, i2, eflx)
 
       use constants,  only: LO, HI, ydim, zdim, GEO_RPZ
@@ -256,6 +251,8 @@ contains
       endif
 
    end subroutine set_fluxpointers
+
+!> \brief Collect outgoing fine fluxes from 1D solver, do curvilinear scaling and store in appropriate array
 
    subroutine save_outfluxes(this, cdim, i1, i2, eflx)
 

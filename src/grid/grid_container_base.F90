@@ -158,16 +158,7 @@ module grid_cont_base
 
 contains
 
-!>
-!! \brief Initialization of the grid container
-!!
-!! \details This method sets up the grid container variables, coordinates and allocates basic arrays.
-!! Everything related to the interior of grid container should be set here.
-!! Things that are related to communication with other grid containers or global properties are set up in cg_level::init_all_new_cg.
-!!
-!! BEWARE: things like off and n_d are replicated across level (it was a cheap workaround for circular dependencies)
-!! \todo invent something better that avoids both circular dependencies and replication of same data
-!<
+!> \brief This method sets up the grid container basic variables and coordinates.
 
    subroutine init_gc_base(this, my_se, grid_id, l)
 
@@ -179,8 +170,7 @@ contains
 
       implicit none
 
-      class(grid_container_base_T), target, intent(inout) :: this     ! intent(out) would silently clear everything, that was already set
-                                                                      ! (also the fields in types derived from grid_container)
+      class(grid_container_base_T), target, intent(inout) :: this     !< object invoking type-bound procedure (grid_container)
       integer(kind=8), dimension(:,:),      intent(in)    :: my_se    !< my segment
       integer,                              intent(in)    :: grid_id  !< ID which should be unique across level
       class(level_T), pointer,              intent(in)    :: l        !< level essential data
@@ -364,7 +354,7 @@ contains
 
       implicit none
 
-      class(grid_container_base_T), intent(inout) :: this !< grid container, where the arrays have to be set
+      class(grid_container_base_T), intent(inout) :: this  !< grid container, where the arrays have to be set
 
       integer :: d, i
       integer, parameter :: safety_warn_factor = 1000 ! warn if a cell size is smaller than this * epsilon(coordinates)
@@ -426,7 +416,7 @@ contains
 
       implicit none
 
-      class(grid_container_base_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(grid_container_base_T), intent(inout) :: this  !< object invoking type-bound procedure
 
       integer :: b, cdim
 

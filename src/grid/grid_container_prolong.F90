@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 
-!> \brief Module containing the full, usable grid container type and its methods that don't fit to any abstract subtypes of grid container
+!> \brief This module implements prolongation for grid container
 
 module grid_cont_prolong
 
@@ -37,11 +37,12 @@ module grid_cont_prolong
    private
    public :: grid_container_prolong_T
 
-   !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
-   type, extends(grid_container_bnd_T) :: grid_container_prolong_T
+   !> \brief This type adds auxiliary prolongation arrays to the grid_container
+   type, extends(grid_container_bnd_T), abstract :: grid_container_prolong_T
 
-      real, allocatable, dimension(:,:,:) :: prolong_, prolong_x, prolong_xy !< auxiliary prolongation arrays for intermediate results
-      real, dimension(:,:,:), pointer ::  prolong_xyz             !< auxiliary prolongation array for final result. OPT: Valgrind indicates that operations on array allocated on pointer might be slower than on ordinary arrays due to poorer L2 cache utilization
+      real, dimension(:,:,:), allocatable :: prolong_, prolong_x, prolong_xy !< auxiliary prolongation arrays for intermediate results
+      real, dimension(:,:,:), pointer     :: prolong_xyz                     !< auxiliary prolongation array for final result.
+      ! OPT: Valgrind indicates that operations on array allocated on pointer might be slower than on ordinary arrays due to poorer L2 cache utilization
 
    contains
 
@@ -53,52 +54,40 @@ module grid_cont_prolong
 
 contains
 
-!>
-!! \brief Initialization of the grid container
-!!
-!! \details This method sets up the grid container variables, coordinates and allocates basic arrays.
-!! Everything related to the interior of grid container should be set here.
-!! Things that are related to communication with other grid containers or global properties are set up in cg_level::init_all_new_cg.
-!!
-!! BEWARE: things like off and n_d are replicated across level (it was a cheap workaround for circular dependencies)
-!! \todo invent something better that avoids both circular dependencies and replication of same data
-!<
+!> \brief Initialization of auxiliary prolongation arrays in the grid container
 
    subroutine init_gc_prolong(this)
 
-      use constants,        only: xdim, ydim, zdim, ndims, big_float, LO, HI
-      use dataio_pub,       only: die
-      use domain,           only: dom
-      use grid_helpers,     only: f2c
+      use constants,    only: xdim, ydim, zdim, ndims, big_float, LO, HI
+      use dataio_pub,   only: die
+      use domain,       only: dom
+      use grid_helpers, only: f2c
 
       implicit none
 
-      class(grid_container_prolong_T), target, intent(inout) :: this  ! intent(out) would silently clear everything, that was already set
-                                                                      ! (also the fields in types derived from grid_container)
+      class(grid_container_prolong_T), target, intent(inout) :: this !< object invoking type-bound procedure
 
       integer(kind=8), dimension(ndims, LO:HI) :: rn
 
       nullify(this%prolong_xyz)
       if (allocated(this%prolong_) .or. allocated(this%prolong_x) .or. allocated(this%prolong_xy)) &
            call die("[grid_container_prolong:init_gc_prolong] prolong_* arrays already allocated")
-      ! size of coarsened grid with guardcells, additional cell is required only when even-sized grid has odd offset
 
-      rn = int(this%ijkse, kind=8)
-      rn = f2c(rn)
+      ! size of coarsened grid with guardcells
+      rn = f2c(int(this%ijkse, kind=8))
       where (dom%has_dir(:))
          rn(:, LO) = rn(:, LO) - dom%nb
          rn(:, HI) = rn(:, HI) + dom%nb
-         ! +1 is because of some simplifications in cg_level::prolong_q_1var in treating grids with odd offsets
       endwhere
       allocate(this%prolong_   (      rn(xdim, LO):      rn(xdim, HI),       rn(ydim, LO):      rn(ydim, HI),       rn(zdim, LO):      rn(zdim, HI)), &
            &   this%prolong_x  (this%lhn(xdim, LO):this%lhn(xdim, HI),       rn(ydim, LO):      rn(ydim, HI),       rn(zdim, LO):      rn(zdim, HI)), &
            &   this%prolong_xy (this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI),       rn(zdim, LO):      rn(zdim, HI)), &
            &   this%prolong_xyz(this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI), this%lhn(zdim, LO):this%lhn(zdim, HI)))
 
-      this%prolong_   (:, :, :) = big_float
-      this%prolong_x  (:, :, :) = big_float
-      this%prolong_xy (:, :, :) = big_float
-      this%prolong_xyz(:, :, :) = big_float
+      this%prolong_    = big_float
+      this%prolong_x   = big_float
+      this%prolong_xy  = big_float
+      this%prolong_xyz = big_float
 
    end subroutine init_gc_prolong
 

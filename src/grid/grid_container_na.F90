@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 
-!> \brief Module containing the full, usable grid container type and its methods that don't fit to any abstract subtypes of grid container
+!> \brief This module adds named arrays to the grid container
 
 module grid_cont_na
 
@@ -38,34 +38,36 @@ module grid_cont_na
    private
    public :: grid_container_na_T
 
-   !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
+   !> \brief This type adds named arrays and related routines to the grid container
    type, extends(grid_container_base_T), abstract :: grid_container_na_T
 
       ! Registered variables
 
-      type(named_array3d), allocatable, dimension(:) :: q        !< 3D arrays such as gravitational potential pr user-defined quantities or gravitational potential
-      type(named_array4d), allocatable, dimension(:) :: w        !< 4D arrays such as u, vector fields (b) or other vector/multi-scalar user-defined quantities
+      type(named_array3d), allocatable, dimension(:) :: q  !< 3D arrays such as gravitational potential pr user-defined quantities or gravitational potential
+      type(named_array4d), allocatable, dimension(:) :: w  !< 4D arrays such as u, vector fields (b) or other vector/multi-scalar user-defined quantities
 
       ! handy shortcuts to some entries in q(:)
-      real, dimension(:,:,:), pointer :: gpot    => null()       !< Array for sum of gravitational potential at t += dt
-      real, dimension(:,:,:), pointer :: hgpot   => null()       !< Array for sum of gravitational potential at t += 0.5*dt
-      real, dimension(:,:,:), pointer :: gp      => null()       !< Array for gravitational potential from external fields
-      real, dimension(:,:,:), pointer :: sgp     => null()       !< Array for gravitational potential from multigrid or FFT solver
-      real, dimension(:,:,:), pointer :: sgpm    => null()       !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
-      real, dimension(:,:,:), pointer :: cs_iso2 => null()       !< COMMENT ME
-      real, dimension(:,:,:), pointer :: wa      => null()       !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
+      real, dimension(:,:,:), pointer :: gpot    => null()  !< Array for sum of gravitational potential at t += dt
+      real, dimension(:,:,:), pointer :: hgpot   => null()  !< Array for sum of gravitational potential at t += 0.5*dt
+      real, dimension(:,:,:), pointer :: gp      => null()  !< Array for gravitational potential from external fields
+      real, dimension(:,:,:), pointer :: sgp     => null()  !< Array for gravitational potential from multigrid or FFT solver
+      real, dimension(:,:,:), pointer :: sgpm    => null()  !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
+      real, dimension(:,:,:), pointer :: cs_iso2 => null()  !< Array for sound speed for isothermal EOS (not associated for gamma EOS)
+      real, dimension(:,:,:), pointer :: wa      => null()  !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
 
       ! handy shortcuts to some entries in w(:)
-      real, dimension(:,:,:,:), pointer :: u     => null()       !< Main array of all fluids' components
-      real, dimension(:,:,:,:), pointer :: b     => null()       !< Main array of magnetic field's components
+      real, dimension(:,:,:,:), pointer :: u     => null()  !< Main array of all fluids' components
+      real, dimension(:,:,:,:), pointer :: b     => null()  !< Main array of magnetic field's components
 
    contains
 
-      procedure :: cleanup_na                           !< Deallocate all internals
-      procedure :: add_all_na                           !< Register all known named arrays for this cg, sey up shortcuts to the crucial fields
-      procedure :: add_na                               !< Register a new 3D entry in current cg with given name.
-      procedure :: add_na_4d                            !< Register a new 4D entry in current cg with given name.
-      procedure :: set_constant_b_field                 !< set constant magnetic field on whole block
+      procedure :: cleanup_na            !< Deallocate all internals
+      procedure :: add_all_na            !< Register all known named arrays for this cg, sey up shortcuts to the crucial fields
+      procedure :: set_constant_b_field  !< set constant magnetic field on whole block
+
+      ! These should be private procedures but we need them in cg_list_global:reg_var
+      procedure :: add_na                !< Register a new 3D entry in current cg with given name.
+      procedure :: add_na_4d             !< Register a new 4D entry in current cg with given name.
 
    end type grid_container_na_T
 
@@ -103,8 +105,8 @@ contains
 
       use named_array_list, only: qna, wna
 #ifdef ISO
-      use constants,   only: cs_i2_n
-      use fluids_pub,  only: cs2_max
+      use constants,        only: cs_i2_n
+      use fluids_pub,       only: cs2_max
 #endif /* ISO */
 
       implicit none
@@ -128,6 +130,7 @@ contains
       this%u  => this%w(wna%fi)%arr
       this%b  => this%w(wna%bi)%arr
       this%wa => this%q(qna%wai)%arr
+
 #ifdef ISO
       this%cs_iso2 => this%q(qna%ind(cs_i2_n))%arr
       if (associated(this%cs_iso2)) this%cs_iso2(:,:,:) = cs2_max   ! set cs2 with sane values on non-multigrid grid pieces
@@ -147,8 +150,8 @@ contains
 
       implicit none
 
-      class(grid_container_na_T), intent(inout) :: this          !< object invoking type-bound procedure
-      logical,                    intent(in)    :: multigrid     !< If .true. then cg%q(:)%arr and cg%w(:)%arr are allocated also below base level
+      class(grid_container_na_T), intent(inout) :: this       !< object invoking type-bound procedure
+      logical,                    intent(in)    :: multigrid  !< If .true. then cg%q(:)%arr and cg%w(:)%arr are allocated also below base level
 
       type(named_array3d), allocatable, dimension(:) :: tmp
 
@@ -168,7 +171,6 @@ contains
 !! \brief Register a new 4D entry in current cg with given name. Called from cg_list_glob::reg_var
 !!
 !! \warning This routine should not be called directly from user routines
-!! \deprecated Almost duplicated code with add_na
 !<
    subroutine add_na_4d(this, n)
 
@@ -177,8 +179,8 @@ contains
 
       implicit none
 
-      class(grid_container_na_T), intent(inout) :: this         !< object invoking type-bound procedure
-      integer(kind=4),            intent(in)    :: n            !< Length of the vector quantity to be stored (first dimension of the array)
+      class(grid_container_na_T), intent(inout) :: this  !< object invoking type-bound procedure
+      integer(kind=4),            intent(in)    :: n     !< Length of the vector quantity to be stored (first dimension of the array)
 
       type(named_array4d), allocatable, dimension(:) :: tmp
 
@@ -198,12 +200,12 @@ contains
 
    subroutine set_constant_b_field(this, b)
 
-      use constants,  only: xdim, zdim
+      use constants, only: xdim, zdim
 
       implicit none
 
-      class(grid_container_na_T),      intent(inout) :: this !< object invoking type-bound procedure
-      real, dimension(xdim:zdim),      intent(in)    :: b    !< the value of the magnetic field vector in whole block
+      class(grid_container_na_T), intent(inout) :: this !< object invoking type-bound procedure
+      real, dimension(xdim:zdim), intent(in)    :: b    !< the value of the magnetic field vector in whole block
 
       integer :: d
 
