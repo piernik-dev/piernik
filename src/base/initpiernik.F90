@@ -60,8 +60,7 @@ contains
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
       use mpisetup,              only: init_mpi, master
-      use refinement,            only: init_refinement
-      use refinement_flag,       only: level_max
+      use refinement,            only: init_refinement, level_max
       use refinement_update,     only: update_refinement
       use sources,               only: init_sources
       use timer,                 only: set_timer

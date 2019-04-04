@@ -63,14 +63,14 @@ contains
 
    subroutine read_problem_par
 
-      use constants,        only: DST
-      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,       only: msg, printinfo, die
-      use domain,           only: dom
-      use fluidindex,       only: flind
-      use mpisetup,         only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
-      use named_array_list, only: wna
-      use refinement,       only: user_ref2list
+      use constants,            only: DST
+      use dataio_pub,           only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,           only: msg, printinfo, die
+      use domain,               only: dom
+      use fluidindex,           only: flind
+      use mpisetup,             only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
+      use named_array_list,     only: wna
+      use refinement_crit_list, only: user_ref2list
 
       implicit none
 

@@ -18,7 +18,6 @@
  /
 
  $MPI_BLOCKS
-!    AMR_bsize = 3*16
  /
 
  $UNITS
@@ -74,4 +73,5 @@
  /
 
  $AMR
+!    bsize = 3*16
  /

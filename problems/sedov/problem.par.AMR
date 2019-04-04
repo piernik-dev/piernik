@@ -15,7 +15,6 @@
  /
 
  $MPI_BLOCKS
-    AMR_bsize = 3*16
  /
 
  $UNITS
@@ -85,6 +84,7 @@
  /
 
  $AMR
+    bsize = 3*16
     level_max = 3
     n_updAMR = 3
 !    refine_vars(1) = "ener", "relgrad", 0.3, 0.1 ! equivalent to the default problem criteria

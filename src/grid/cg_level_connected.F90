@@ -112,9 +112,10 @@ contains
       use constants,      only: xdim, ydim, zdim, LO, HI
       use dataio_pub,     only: die
       use domain,         only: dom
-      use grid_cont,      only: grid_container, is_overlap
+      use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c, c2f
       use mpisetup,       only: FIRST, LAST
+      use overlap,        only: is_overlap
 
       implicit none
 
@@ -322,10 +323,13 @@ contains
 
       do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
          if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%l%id >= base_level_id)) call this%prolong_q_1var(i, bnd_type = bnd_type)
+         ! Although we aren't worried too much by nonconservation of psi or multigrid fields here
+         ! but it will be worth checking if cnservative high-order prolongation can help.
       enddo
 
       do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
          if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%l%id >= base_level_id)) then
+            qna%lst(qna%wai)%ord_prolong = 0 !> \todo implement high order conservative prolongation and use wna%lst(i)%ord_prolong here
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:prolong] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, qna%wai)
@@ -628,7 +632,7 @@ contains
    subroutine prolong_q_1var(this, iv, pos, bnd_type)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, O_INJ, VAR_CENTER, ndims
+      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_ZERO, VAR_CENTER, ndims
       use dataio_pub,       only: msg, warn
       use grid_cont,        only: grid_container
       use grid_helpers,     only: f2c
@@ -674,7 +678,7 @@ contains
 
 !      call fine%set_dirty(iv) !> \todo filter this through cg%ignore_prolongation
 
-      if (this%ord_prolong_set /= O_INJ) then
+      if (this%ord_prolong_set /= I_ZERO) then
          !> \todo some variables may need special care on external boundaries
          call this%arr3d_boundaries(iv, bnd_type = bnd_type)
       endif
@@ -731,13 +735,11 @@ contains
                cse = cg%pi_tgt%seg(g)%se
                cg%prolong_(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = cg%pi_tgt%seg(g)%buf(:,:,:)
 
-               !> When this%ord_prolong_set /= O_INJ, the received cg%pi_tgt%seg(:)%buf(:,:,:) may overlap
+               !> When this%ord_prolong_set /= I_ZERO, the received cg%pi_tgt%seg(:)%buf(:,:,:) may overlap
                !! The incoming data thus must either contain valid guardcells (even if qna%lst(iv)%ord_prolong == O_INJ)
                !! or the guardcells must be zeroed before sending data and received buffer should be added to cg%prolong_(:,:,:) not just assigned
 
             enddo
-
-            !! almost all occurrences of number "2" are in fact connected to refinement_factor
 
             box_8 = int(cg%ijkse, kind=8)
             cse = f2c(box_8)
@@ -755,6 +757,9 @@ contains
 
    subroutine arr3d_boundaries(this, ind, area_type, bnd_type, dir, nocorners)
 
+      use global,           only: ord_fc_eq_mag, ord_mag_prolong
+      use named_array_list, only: qna
+
       implicit none
 
       class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
@@ -765,10 +770,17 @@ contains
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
       logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
+      integer(kind=4) :: ord_saved
+
+      ord_saved = qna%lst(ind)%ord_prolong
+      if (ord_fc_eq_mag) qna%lst(ind)%ord_prolong = ord_mag_prolong
+
       call this%dirty_boundaries(ind)
       call this%prolong_bnd_from_coarser(ind, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
       call this%level_3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
       ! The correctness ot the sequence of calls above may depend on the implementation of internal boundary exchange
+
+      qna%lst(ind)%ord_prolong = ord_saved
 
    end subroutine arr3d_boundaries
 
@@ -777,6 +789,7 @@ contains
    subroutine arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
       use constants,        only: base_level_id
+      use global,           only: ord_mag_prolong, ord_fc_eq_mag
       use named_array_list, only: qna, wna
 
       implicit none
@@ -793,6 +806,12 @@ contains
 !      call this%clear_boundaries(ind, value=10.)
       if (associated(this%coarser) .and. this%l%id > base_level_id) then
          do iw = 1, wna%lst(ind)%dim4
+            ! here we can use any high order prolongation without destroying conservation
+            if (ord_fc_eq_mag) then
+               qna%lst(qna%wai)%ord_prolong = ord_mag_prolong
+            else
+               qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong
+            endif
             call this%coarser%wq_copy(ind, iw, qna%wai)
             call this%wq_copy(ind, iw, qna%wai) !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
             call this%prolong_bnd_from_coarser(qna%wai, dir=dir, nocorners=nocorners)
@@ -946,7 +965,7 @@ contains
                   fse(:, LO) = max(fse(:, LO), int(cg%lhn(:, LO), kind=8))
                   fse(:, HI) = min(fse(:, HI), int(cg%lhn(:, HI), kind=8))
                   updatemap(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI)) = .true.
-                  !> When this%ord_prolong_set /= O_INJ, the received seg(:)%buf(:,:,:) may overlap
+                  !> When this%ord_prolong_set /= I_ZERO, the received seg(:)%buf(:,:,:) may overlap
                   !! The incoming data thus must either contain valid guardcells (even if qna%lst(iv)%ord_prolong == O_INJ)
                   !! or the guardcells must be zeroed before sending data and received buffer should be added to cg%prolong_(:,:,:) not just assigned
 
@@ -989,11 +1008,12 @@ contains
       use constants,      only: xdim, ydim, zdim, LO, HI, I_ONE, ndims, INVALID
       use dataio_pub,     only: warn, msg, die
       use domain,         only: dom
-      use grid_cont,      only: grid_container, is_overlap
+      use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c
       use mergebox,       only: wmap
       use mpi,            only: MPI_INTEGER, MPI_INTEGER8
       use mpisetup,       only: FIRST, LAST, comm, mpi_err, proc
+      use overlap,        only: is_overlap
       use tag_pool,       only: t_pool
 
       implicit none
