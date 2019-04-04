@@ -95,7 +95,8 @@ contains
       use global,           only: smalld, smallei
       use mpisetup,         only: rbuff, ibuff, lbuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
       use named_array_list, only: wna
-      use refinement,       only: set_n_updAMR, n_updAMR, user_ref2list
+      use refinement,       only: set_n_updAMR, n_updAMR
+      use refinement_crit_list, only: user_ref2list
       use user_hooks,       only: problem_refine_derefine
 #ifdef MAGNETIC
       use constants,        only: GEO_XYZ

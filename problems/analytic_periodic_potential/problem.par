@@ -15,7 +15,6 @@
  /
 
  $MPI_BLOCKS
-    AMR_bsize = 3*16
     allow_uneven = .true.
     allow_noncart = .true.
     dd_unif_quality = 1.1
@@ -77,6 +76,7 @@
  /
 
  $AMR
+    bsize = 3*16
     level_max = 6
     n_updAMR = 1
  /
