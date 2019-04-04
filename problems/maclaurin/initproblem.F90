@@ -98,7 +98,7 @@ contains
       use multigridvars,    only: ord_prolong
       use named_array_list, only: wna
       use particle_pub,     only: pset
-      use refinement,       only: user_ref2list
+      use refinement_crit_list, only: user_ref2list
 
       implicit none
 

@@ -15,7 +15,6 @@
  /
 
  $MPI_BLOCKS
-    AMR_bsize = 3*16
     allow_uneven = .true.
     allow_noncart = .true.
  /
@@ -100,4 +99,5 @@
  /
 
  $AMR
+    bsize = 3*16
  /

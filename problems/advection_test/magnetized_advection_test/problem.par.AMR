@@ -37,7 +37,6 @@
     allow_noncart = .true.
     dd_unif_quality = 1.1
     dd_rect_quality = 1.1
-  AMR_bsize =2*16
  /
 
  $UNITS
@@ -105,6 +104,7 @@
  /
 
  $AMR
+    bsize =2*16
     n_updAMR = 100000
     level_max = 1
     refine_boxes(1)  = 1, 0., -1., -1., 1., 1., 1.

@@ -153,10 +153,10 @@ contains
       use cg_list_dataop,     only: expanded_domain
       use constants,          only: xdim, zdim, LO, HI, BND_MPI, BND_FC, refinement_factor
       use dataio_pub,         only: die
-      use domain,             only: dom, AMR_bsize
+      use domain,             only: dom
       use list_of_cg_lists,   only: all_lists
       use mpisetup,           only: master
-      use refinement,         only: emergency_fix
+      use refinement,         only: emergency_fix, bsize
       use user_hooks,         only: late_initial_conditions
 
       implicit none
@@ -170,7 +170,7 @@ contains
       type(cg_level_connected_T), pointer :: curl
 
       if (.not. dom%has_dir(d)) call die("[cg_level_base:expand_side] Non-existing direction")
-      if (AMR_bsize(d) < dom%nb) call die("[cg_level_base:expand_side] Invalid AMR_bsize")
+      if (bsize(d) < dom%nb) call die("[cg_level_base:expand_side] Invalid AMR::bsize")
       if (.not. associated(late_initial_conditions)) call die("[cg_level_base:expand_side] You must provide a routine to initialize vital arrays for current time")
 
       call this%level%set_is_old
@@ -188,12 +188,12 @@ contains
       enddo
 
       e_size = this%level%l%n_d
-      e_size(d) = AMR_bsize(d)
+      e_size(d) = bsize(d)
 
       e_off = this%level%l%off
       select case (lh)
          case (LO)
-            e_off(d) = this%level%l%off(d) - AMR_bsize(d)
+            e_off(d) = this%level%l%off(d) - bsize(d)
          case (HI)
             e_off(d) = this%level%l%off(d) + this%level%l%n_d(d)
       end select
@@ -201,7 +201,7 @@ contains
       curl => this%level
       do while (associated(curl))
          new_n_d = curl%l%n_d
-         new_n_d(d) = curl%l%n_d(d) + AMR_bsize(d)*refinement_factor**(curl%l%id-this%level%l%id)
+         new_n_d(d) = curl%l%n_d(d) + bsize(d)*refinement_factor**(curl%l%id-this%level%l%id)
          new_off = curl%l%off
          new_off(d) = min(curl%l%off(d), e_off(d)*refinement_factor**(curl%l%id-this%level%l%id))
          call curl%l%update(curl%l%id, new_n_d, new_off)
@@ -210,7 +210,7 @@ contains
       enddo
       ! multigrid levels are destroyed and re-created in this%expand
 
-      call dom%modify_side(d, lh, AMR_bsize(d))
+      call dom%modify_side(d, lh, bsize(d))
       if (master) call this%level%add_patch(e_size, e_off)
       call this%level%init_all_new_cg
 
