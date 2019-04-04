@@ -1022,12 +1022,14 @@ contains
 !! </table>
 !!\n
 !!\n The term "n-th order integral interpolation" here means that the prolonged values satisfy the following condition:
-!!\n Integral over a cell of a n-th order polynomial fit to the nearest 5 points in each dimension on coarse level
+!!\n Integral over a cell of a n-th order polynomial fit to the nearest n+1 points on coarse level
 !! is equal to the sum of similar integrals over fine cells covering the coarse cell.
 !!\n
 !!\n The term "n-th order direct interpolation" here means that the prolonged values are n-th order polynomial fit
-!! to the nearest 5 points in each dimension on coarse level evaluated for fine cell centers.
+!! to the nearest n+1 points on coarse level evaluated for fine cell centers.
 !!\n
+!! For multidimensional prolongation the above is executed for each existing direction.
+!! \n
 !!\n It seems that for 3D Cartesian grid with isolated boundaries and relaxation implemented in approximate_solution
 !! direct quadratic and cubic interpolations give best norm reduction factors per V-cycle (maclaurin problem).
 !!  For other boundary types, FFT implementation of approximate_solution, specific source distribution or
@@ -1044,11 +1046,14 @@ contains
 !!\n
 !!\n For AMR or nested grid low-order prolongation schemes (injection and linear interpolation at least) are known to produce artifacts
 !! on fine-coarse boundaries. For uniform grid the simplest operators are probably the fastest and give best V-cycle convergence rates.
+!! \n
+!! \n For conservative prolongation in AMR one needs additional stencils that aren't centered on the given cell to make sure that the whole contribution from coarse grid
+!! is deposited on the fine grid and nothing is lost in fine guardcells.
 !<
 
    subroutine prolong(this, ind, cse, p_xyz)
 
-      use constants,          only: xdim, ydim, zdim, zero, LO, HI, I_ZERO, I_ONE, I_TWO, I_THREE, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_D5, O_D6, O_I2, O_I3, O_I4
+      use constants,          only: xdim, ydim, zdim, zero, LO, HI, I_ZERO, I_ONE, I_TWO, I_THREE, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_D5, O_D6, O_I2, O_I3, O_I4, O_I5, O_I6
       use dataio_pub,         only: die
       use domain,             only: dom
       use func,               only: operator(.notequals.)
@@ -1074,27 +1079,65 @@ contains
          pa3d => this%q(ind)%arr
       endif
 
+      ! Generator of coefficients for centered, direct prolongation:
+      ! for order in $( seq 0 6 ) ; do
+      !    echo $order | awk '{o=int($1/2); printf("linsolve_by_lu(matrix([1"); for (i=1;i<=$1;i++) printf(",1"); printf("]"); for (i=1; i<=$1; i++) {printf(", ["); for (j=-o; j<=$1-o; j++) {printf("(%d*4)**%d/%d!",j,i,i); if (j<$1-o) printf(", ")} printf("]");} printf("), matrix([1]"); for (i=1; i<=$1; i++) printf(",[1/%d!]", i); printf("));\n")}' | maxima
+      ! done
+      !
+      ! Generator of coefficients for centered, integral prolongation:
+      ! for order in $( seq 0 6 ) ; do
+      !    echo $order | awk '{o=int($1/2); printf("linsolve_by_lu(matrix([4"); for (i=1;i<=$1;i++) printf(",4"); printf("]"); for (i=2; i<=$1+1; i++) {printf(", ["); for (j=-o; j<=$1-o; j++) {j1=4*j-2; j2=j1+4; if (j>-o) printf(", "); printf("((%d)**%d-(%d)**%d)/%d!", j2, i, j1, i, i)} printf("]");} printf("), matrix([4]"); for (i=2; i<=$1+1; i++) printf(",[2*2**%d/%d!]", i, i); printf("));\n") }' |maxima
+      ! done
+      !
+      ! To obtain coefficients good for conservative prolongation near fine/coarse boundary add an offset for 'o' variable in awk (like o=int($1/2)+1).
+      !
+      ! The same coefficients may be obtained with a bit different generators, depending on details of cell numeration and the way how we handle the Taylor expansion.
+      ! Here we assume that:
+      ! * Coarse cell C_i has width 4 and is centered at coordinare 4*i.
+      ! * Fine cell F_i has width 2 and is centered at coordinate 2*i+1.
+      ! All taylor expansions are done wrt. coordinate = 0, which coincides with the center of C_0.
       select case (qna%lst(ind)%ord_prolong)
          case (O_D6)
             P_3 = -231./65536. ; P_2 = 2002./65536.; P_1 = -9009./65536.; P0 = 60060./65536.; P1 = 15015./65536.; P2 = -2574./65536.; P3 = 273./65536.
          case (O_D5)
             P_3 = 0.;            P_2 = 77./8192.;    P_1 = -693./8192.;   P0 = 6930./8192.;   P1 = 2310./8192.;   P2 = -495./8192.;   P3 = 63./8192.
+            !  linsolve_by_lu(matrix([1,1,1,1,1,1], [-2*4,-4, 0, 4, 4*2, 4*3], [(-2*4)**2/2!, (-4)**2/2!, 0, (4**2)/2!, (2*4)**2/2!, (3*4)**2/2!], [(-2*4)**3/3!, (-4)**3/3!, 0, 4**3/3!, (2*4)**3/3!, (3*4)**3/3!], [(-2*4)**4/4!, (-4)**4/4!, 0, (4**4)/4!, (2*4)**4/4!, (3*4)**4/4!], [(-2*4)**5/5!, (-4)**5/5!,0, 4**5/5!, (2*4)**5/5! ,(3*4)**5/5!]), matrix([1], [1], [1/2!], [1/3!], [1/4!], [1/5!]));
          case (O_D4)
             P_3 = 0.;            P_2 = 35./2048.;    P_1 = -252./2048.;   P0 = 1890./2048.;   P1 = 420./2048.;    P2 = -45./2048.;    P3 = 0.
+            !  linsolve_by_lu(matrix([1,1,1,1,1], [-2*4,-4, 0, 4, 4*2], [(-2*4)**2/2!, (-4)**2/2!, 0, (4**2)/2!, (2*4)**2/2!], [(-2*4)**3/3!, (-4)**3/3!, 0, 4**3/3!, (2*4)**3/3!], [(-2*4)**4/4!, (-4)**4/4!, 0, (4**4)/4!, (2*4)**4/4!]), matrix([1], [1], [1/2!], [1/3!], [1/4!]));
          case (O_D3)
             P_3 = 0.;            P_2 = 0.;           P_1 = -7./128.;      P0 = 105./128.;     P1 = 35./128.;      P2 = -5./128.;      P3 = 0.
+            !  linsolve_by_lu(matrix([1,1,1,1], [-4, 0, 4, 4*2], [(-4)**2/2!, 0, (4**2)/2!, (2*4)**2/2!], [(-4)**3/3!, 0, 4**3/3!, (2*4)**3/3!]), matrix([1], [1], [1/2!], [1/3!]));
          case (O_D2)
+          ! P_3 = 0.;            P_2 = 0.;           P_1 = 0.;            P0 = 21./32.;       P1 = 14./32.;       P2 = -3./32.;       P3 = 0.
+            !  linsolve_by_lu(matrix([1,1,1],[0, 4, 8], [0,8,32]), matrix([1],[1],[1/2.]));
             P_3 = 0.;            P_2 = 0.;           P_1 = -3./32.;       P0 = 30./32.;       P1 = 5./32.;        P2 = 0.;            P3 = 0.
+            !  linsolve_by_lu(matrix([1,1,1], [-4, 0, 4], [(-4)**2/2!, 0, (4**2)/2!]), matrix([1], [1], [1/2!]));
+          ! P_3 = 0.;            P_2 = 5./32.;       P_1 = -18./32.;      P0 = 45./32.;       P1 = 0.;            P2 = 0.;            P3 = 0.
+            !  linsolve_by_lu(matrix([1,1,1],[-8, -4, 0], [32, 8,0]), matrix([1],[1],[1/2.]));
          case (O_LIN)
             P_3 = 0.;            P_2 = 0.;           P_1 = 0.;            P0 = 3./4.;         P1 = 1./4.;         P2 = 0.;            P3 = 0.
+            !  linsolve_by_lu(matrix([1,1], [0, 4]), matrix([1], [1]));
+          ! P_3 = 0.;            P_2 = 0.;           P_1 = -1./4.;        P0 = 5./4.;         P1 = 0.;            P2 = 0.;            P3 = 0.
+            !  linsolve_by_lu(matrix([1,1],[-4, 0]), matrix([1],[1]));
          case (O_INJ)
             P_3 = 0.;            P_2 = 0.;           P_1 = 0.;            P0 = 1.;            P1 = 0.;            P2 = 0.;            P3 = 0.
          case (O_I2)
             P_3 = 0.;            P_2 = 0.;           P_1 = -1./8.;        P0 = 1.;            P1 = 1./8.;         P2 = 0.;            P3 = 0.
+            !  linsolve_by_lu(matrix([4,4,4], [((-2)**2-(-6)**2)/2!, ((2)**2-(-2)**2)/2!, ((6)**2-(2)**2)/2!], [((-2)**3-(-6)**3)/3!, ((2)**3-(-2)**3)/3!, ((6)**3-(2)**3)/3!]), matrix([4],[2*2**2/2!],[2*2**3/3!]));
+          ! P_3 = 0.;            P_2 = 0.;           P_1 = 0.;            P0 = 5./8.;         P1 = 4./8.;         P2 = -1./8.;        P3 = 0.
+            !  linsolve_by_lu(matrix([4,4,4],[0,16,(10**2-6**2)/2!],[8/3,104/3,(10**3-6**3)/3!]), matrix([4],[4],[8/3]));
+          ! P_3 = 0.;            P_2 = 1./8.;        P_1 = -4./8.;        P0 = 11./8.;        P1 = 0.;            P2 = 0.;            P3 = 0.
+            !  linsolve_by_lu(matrix([4,4,4],[-(10**2-6**2)/2!, -16, 0],[(10**3-6**3)/3!, 104/3, 8/3]), matrix([4],[4],[8/3]));
          case (O_I3)
             P_3 = 0.;            P_2 = 0.;           P_1 = -5./64.;       P0 = 55./64;        P1 = 17./64.;       P2 = -3./64.;       P3 = 0.
+            !  linsolve_by_lu(matrix([4,4,4,4], [((-2)**2-(-6)**2)/2!, ((2)**2-(-2)**2)/2!, ((6)**2-(2)**2)/2!, ((10)**2-(6)**2)/2!], [((-2)**3-(-6)**3)/3!, ((2)**3-(-2)**3)/3!, ((6)**3-(2)**3)/3!, ((10)**3-(6)**3)/3!], [((-2)**4-(-6)**4)/4!, ((2)**4-(-2)**4)/4!, ((6)**4-(2)**4)/4!, ((10)**4-(6)**4)/4!]), matrix([4],[2*2**2/2!],[2*2**3/3!],[2*2**4/4!]));
          case (O_I4)
             P_3 = 0.;            P_2 = 3./128.;      P_1 = -11./64.;      P0 = 1.;            P1 = 11./64.;       P2 = -3./128.;      P3 = 0.
+         case (O_I5)
+            P_3 = 0.;            P_2 = 7./512.;      P_1 = -63./512.;     P0 = 462./512.;     P1 = 138./512.;     P2 = -37./512.;     P3 = 5./512.
+         case (O_I6)
+            P_3 = -5./1024.;     P_2 = 44./1024.;    P_1 = -201./1024.;   P0 = 1.;            P1 = 201./1024.;    P2 = -44./1024.;    P3 = 5./1024.
          case default
             call die("[grid_container:prolong] Unsupported order")
             return
