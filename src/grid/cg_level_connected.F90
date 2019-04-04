@@ -112,9 +112,10 @@ contains
       use constants,      only: xdim, ydim, zdim, LO, HI
       use dataio_pub,     only: die
       use domain,         only: dom
-      use grid_cont,      only: grid_container, is_overlap
+      use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c, c2f
       use mpisetup,       only: FIRST, LAST
+      use overlap,        only: is_overlap
 
       implicit none
 
@@ -1007,11 +1008,12 @@ contains
       use constants,      only: xdim, ydim, zdim, LO, HI, I_ONE, ndims, INVALID
       use dataio_pub,     only: warn, msg, die
       use domain,         only: dom
-      use grid_cont,      only: grid_container, is_overlap
+      use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c
       use mergebox,       only: wmap
       use mpi,            only: MPI_INTEGER, MPI_INTEGER8
       use mpisetup,       only: FIRST, LAST, comm, mpi_err, proc
+      use overlap,        only: is_overlap
       use tag_pool,       only: t_pool
 
       implicit none
