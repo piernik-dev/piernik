@@ -41,10 +41,11 @@ module particle_pub
    private
    public :: psolver, init_particles, cleanup_particles
 #ifdef NBODY
-   public :: npart, lf_c
+   public :: npart, lf_c, ignore_dt_fluid
 
    integer                           :: npart              !< number of particles
    real                              :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
+   logical                           :: ignore_dt_fluid    !< option to test only nbody part of the code, never true by default
 #endif /* NBODY */
    class(particle_solver_T), pointer :: psolver
 
@@ -78,7 +79,7 @@ contains
       character(len=cbuff_len) :: acc_interp_method  !< acceleration interpolation method
       integer                  :: order              !< order of Lagrange polynomials (if acc_interp_method = 'lagrange')
 
-      namelist /PARTICLES/ npart, time_integrator, interpolation_scheme, acc_interp_method, lf_c, mask_gpot1b
+      namelist /PARTICLES/ npart, time_integrator, interpolation_scheme, acc_interp_method, lf_c, mask_gpot1b, ignore_dt_fluid
 #else /* !NBODY */
       namelist /PARTICLES/ time_integrator, interpolation_scheme
 #endif /* !NBODY */
@@ -90,6 +91,7 @@ contains
       acc_interp_method    = 'cic'
       lf_c                 = 1.0
       twodtscheme          = .false.
+      ignore_dt_fluid      = .false.
 #ifdef NBODY_GRIDDIRECT
       mask_gpot1b          = .true.
 #else /* !NBODY_GRIDDIRECT */
@@ -122,6 +124,7 @@ contains
          rbuff(1) = lf_c
          lbuff(1) = mask_gpot1b
          lbuff(2) = twodtscheme
+         lbuff(3) = ignore_dt_fluid
 #endif /* NBODY */
       endif
 
@@ -141,6 +144,7 @@ contains
          lf_c                 = rbuff(1)
          mask_gpot1b          = lbuff(1)
          twodtscheme          = lbuff(2)
+         ignore_dt_fluid      = lbuff(3)
 #endif /* NBODY */
       endif
 
@@ -187,7 +191,7 @@ contains
          case ('cic', 'CIC')
             is_setacc_cic = .true.
             call printinfo("[particle_pub:init_particles] Acceleration interpolation method: CIC")
-         case('tsc', 'TSC')
+         case ('tsc', 'TSC')
             is_setacc_tsc = .true.
             call printinfo("[particle_pub:init_particles] Acceleration interpolation method: TSC")
       end select

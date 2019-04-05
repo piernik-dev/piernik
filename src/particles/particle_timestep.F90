@@ -47,11 +47,11 @@ contains
 
    subroutine timestep_nbody(dt, cg)
 
-      use constants,      only: xdim, ydim, zdim, big, one, two, zero
+      use constants,      only: xdim, zdim, big, one, two, zero
       use dataio_pub,     only: msg, printinfo
       use func,           only: operator(.notequals.)
       use grid_cont,      only: grid_container
-      use particle_pub,   only: lf_c
+      use particle_pub,   only: lf_c, ignore_dt_fluid
       use particle_types, only: pset
 #ifdef DUST_PARTICLES
       use constants,      only: ndims
@@ -75,8 +75,7 @@ contains
 
       n_part = size(pset%p, dim=1)
 
-
-      eta      = min(cg%dl(xdim), cg%dl(ydim), cg%dl(zdim))   !scale timestep with cell size
+      eta      = minval(cg%dl)   !scale timestep with cell size
       eps      = 1.0e-1
       factor   = one
       dt_nbody = big
@@ -110,15 +109,16 @@ contains
 #endif /* DUST_PARTICLES */
 
          dt_nbody  = lf_c * factor * dt_nbody
-
       endif
 
-      !dt_hydro = dt
-      !> \todo verify this condition
-      !if (dt_nbody .notequals. 0.0) dt = min(dt, dt_nbody)
+      dt_hydro = dt
 
-      !FOR NOW REMOVE HYDRO TIMESTEP
-      dt=dt_nbody
+      if (ignore_dt_fluid) then
+         dt = dt_nbody      !IGNORE HYDRO TIMESTEP
+      else
+         !> \todo verify this condition
+         if (dt_nbody .notequals. 0.0) dt = min(dt, dt_nbody)
+      endif
 
       write(msg,'(a,3f8.5)') '[particle_timestep:timestep_nbody] dt for hydro, nbody and both: ', dt_hydro, dt_nbody, dt
       call printinfo(msg)
