@@ -82,6 +82,7 @@ contains
       call update_gravpot_from_particles(n_part, cg, zero)
       call save_pot_pset(cg)
 #endif /* NBODY_GRIDDIRECT */
+
       call source_terms_grav
 
       allocate(cells(n_part, ndims), dist(n_part, ndims))
@@ -378,8 +379,6 @@ contains
 
    subroutine update_particle_acc_tsc(cg)
 
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, gp1b_n, gpot_n
       use domain,           only: dom
       use grid_cont,        only: grid_container
@@ -390,44 +389,40 @@ contains
 
       integer(kind=4)    :: iv     !< index in cg%q array, where we want the particles to be projected
 
-      type(cg_list_element), pointer :: cgl
       type(grid_container), pointer,    intent(inout) :: cg
       integer :: p, cdim
       integer(kind=4) :: i, j, k
       integer(kind=4), dimension(ndims, IM:IP) :: ijkp
       integer(kind=4), dimension(ndims) :: cur_ind, ind1, ind2
       real(kind=8),    dimension(ndims)             :: fxyz, axyz
-      real :: weight, delta_x, a, weight_tmp
+      real :: weight, delta_x, weight_tmp
 
-      cgl => leaves%first
       if (mask_gpot1b) then
          iv = qna%ind(gp1b_n)
       else
          iv = qna%ind(gpot_n)
       endif
       axyz(:)=0.0
-      do while (associated(cgl))
 
-         do p = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
+      do p = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
             associate( &
                   part  => pset%p(p), &
-                  idl   => cgl%cg%idl &
+                  idl   => cg%idl &
                   )
 
-               if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
+               if (any(part%pos < cg%fbnd(:,LO)) .or. any(part%pos > cg%fbnd(:,HI))) cycle
 
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
-                     ijkp(cdim, I0) = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1   !!! BEWARE hardcoded magic
-                     ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cgl%cg%lhn(cdim, LO), kind=8))
-                     ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cgl%cg%lhn(cdim, HI), kind=8))
+                     ijkp(cdim, I0) = nint((part%pos(cdim) - cg%coord(CENTER, cdim)%r(1))*cg%idl(cdim)) + 1   !!! BEWARE hardcoded magic
+                     ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cg%lhn(cdim, LO), kind=8))
+                     ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cg%lhn(cdim, HI), kind=8))
                   else
-                     ijkp(cdim, IM) = cgl%cg%ijkse(cdim, LO)
-                     ijkp(cdim, I0) = cgl%cg%ijkse(cdim, LO)
-                     ijkp(cdim, IP) = cgl%cg%ijkse(cdim, HI)
+                     ijkp(cdim, IM) = cg%ijkse(cdim, LO)
+                     ijkp(cdim, I0) = cg%ijkse(cdim, LO)
+                     ijkp(cdim, IP) = cg%ijkse(cdim, HI)
                   endif
                enddo
-               a = 0.0
                do i = ijkp(xdim, IM), ijkp(xdim, IP)
                   do j = ijkp(ydim, IM), ijkp(ydim, IP)
                      do k = ijkp(zdim, IM), ijkp(zdim, IP)
@@ -437,7 +432,7 @@ contains
 
                         do cdim = xdim, zdim
                            if (.not.dom%has_dir(cdim)) cycle
-                           delta_x = ( part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * idl(cdim)
+                           delta_x = ( part%pos(cdim) - cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * idl(cdim)
                            if (cur_ind(cdim) /= ijkp(cdim, 0)) then   !!! BEWARE hardcoded magic
 
                               weight_tmp = 1.125 - 1.5 * abs(delta_x) + 0.5 * delta_x**2
@@ -463,9 +458,6 @@ contains
 
              axyz(:)=0.0
 
-          enddo
-
-         cgl => cgl%nxt
       enddo
 
    end subroutine update_particle_acc_tsc
