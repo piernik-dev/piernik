@@ -183,13 +183,13 @@ contains
             is_setacc_int = .true.
             order = 4
             call check_ord(order)
-            call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method: Lagrange polynomials")
+            call printinfo("[particle_pub:init_particles] Acceleration interpolation method: Lagrange polynomials")
          case ('cic', 'CIC')
             is_setacc_cic = .true.
-            call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method: CIC")
+            call printinfo("[particle_pub:init_particles] Acceleration interpolation method: CIC")
          case('tsc', 'TSC')
             is_setacc_tsc = .true.
-            call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method:TSC")
+            call printinfo("[particle_pub:init_particles] Acceleration interpolation method: TSC")
       end select
 #endif /* NBODY */
 
