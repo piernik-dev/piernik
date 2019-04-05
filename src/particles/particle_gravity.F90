@@ -34,9 +34,9 @@ module particle_gravity
    implicit none
 
    private
-   public :: update_particle_gravpot_and_acc, is_setacc_cic, is_setacc_int, mask_gpot1b, phi_pm_part, get_acc_model
+   public :: update_particle_gravpot_and_acc, is_setacc_cic, is_setacc_int, mask_gpot1b, phi_pm_part, get_acc_model, is_setacc_tsc
 
-   logical :: is_setacc_cic, is_setacc_int, mask_gpot1b
+   logical :: is_setacc_cic, is_setacc_int, mask_gpot1b, is_setacc_tsc
 
 
 contains
@@ -95,6 +95,8 @@ contains
          call update_particle_acc_int(n_part, cg, cells, dist)
       elseif (is_setacc_cic) then
          call update_particle_acc_cic(n_part, cg, cells)
+      elseif (is_setacc_tsc) then
+         call update_particle_acc_tsc(cg)
       endif
       deallocate(cells, dist)
 
@@ -369,11 +371,105 @@ contains
             enddo
             axyz(cdim) = sum(fxyz(cdim,:)*wijk(:))
          enddo
-
          pset%p(p)%acc(:) = half*axyz(:)*cg%idl(:)
       enddo
 
    end subroutine update_particle_acc_cic
+
+   subroutine update_particle_acc_tsc(cg)
+
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, gp1b_n, gpot_n
+      use domain,           only: dom
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna
+      use particle_types,   only: pset
+
+      implicit none
+
+      integer(kind=4)    :: iv     !< index in cg%q array, where we want the particles to be projected
+
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer,    intent(inout) :: cg
+      integer :: p, cdim
+      integer(kind=4) :: i, j, k
+      integer(kind=4), dimension(ndims, IM:IP) :: ijkp
+      integer(kind=4), dimension(ndims) :: cur_ind, ind1, ind2
+      real(kind=8),    dimension(ndims)             :: fxyz, axyz
+      real :: weight, delta_x, a, weight_tmp
+
+      cgl => leaves%first
+      if (mask_gpot1b) then
+         iv = qna%ind(gp1b_n)
+      else
+         iv = qna%ind(gpot_n)
+      endif
+      axyz(:)=0.0
+      do while (associated(cgl))
+
+         do p = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
+            associate( &
+                  part  => pset%p(p), &
+                  idl   => cgl%cg%idl &
+                  )
+
+               if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
+
+               do cdim = xdim, zdim
+                  if (dom%has_dir(cdim)) then
+                     ijkp(cdim, I0) = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1   !!! BEWARE hardcoded magic
+                     ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cgl%cg%lhn(cdim, LO), kind=8))
+                     ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cgl%cg%lhn(cdim, HI), kind=8))
+                  else
+                     ijkp(cdim, IM) = cgl%cg%ijkse(cdim, LO)
+                     ijkp(cdim, I0) = cgl%cg%ijkse(cdim, LO)
+                     ijkp(cdim, IP) = cgl%cg%ijkse(cdim, HI)
+                  endif
+               enddo
+               a = 0.0
+               do i = ijkp(xdim, IM), ijkp(xdim, IP)
+                  do j = ijkp(ydim, IM), ijkp(ydim, IP)
+                     do k = ijkp(zdim, IM), ijkp(zdim, IP)
+
+                        cur_ind(:) = [i, j, k]
+                        weight = 1.0
+
+                        do cdim = xdim, zdim
+                           if (.not.dom%has_dir(cdim)) cycle
+                           delta_x = ( part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * idl(cdim)
+                           if (cur_ind(cdim) /= ijkp(cdim, 0)) then   !!! BEWARE hardcoded magic
+
+                              weight_tmp = 1.125 - 1.5 * abs(delta_x) + 0.5 * delta_x**2
+                           else
+                              weight_tmp = 0.75 - delta_x**2
+
+                           endif
+                           weight = weight_tmp * weight
+                           ind1=cur_ind(:)
+                           ind2=cur_ind(:)
+                           ind1(cdim)=ind1(cdim)+1
+                           ind2(cdim)=ind2(cdim)-1
+                           fxyz(cdim)= -(cg%q(iv)%point(ind1(:)) - cg%q(iv)%point(ind2(:)))*idl(cdim)/2
+                        enddo
+                        axyz(:)=axyz(:)+fxyz(:)*weight
+
+                      enddo
+                   enddo
+                enddo
+             end associate
+
+             pset%p(p)%acc(:)=axyz(:)
+
+             axyz(:)=0.0
+
+          enddo
+
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine update_particle_acc_tsc
+
 
    subroutine get_acc_model(p, eps, acc2)
 

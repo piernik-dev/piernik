@@ -63,7 +63,7 @@ contains
       use dataio_pub,            only: printinfo
       use mpisetup,              only: ibuff, lbuff, rbuff
       use particle_func,         only: check_ord
-      use particle_gravity,      only: is_setacc_cic, is_setacc_int, mask_gpot1b
+      use particle_gravity,      only: is_setacc_cic, is_setacc_int, mask_gpot1b, is_setacc_int, is_setacc_tsc
       use particle_integrators,  only: leapfrog2
       use particle_types,        only: twodtscheme
 #endif /* NBODY */
@@ -177,6 +177,7 @@ contains
 #ifdef NBODY
       is_setacc_int = .false.
       is_setacc_cic = .false.
+      is_setacc_tsc = .false.
       select case (acc_interp_method)
          case ('lagrange', 'Lagrange', 'polynomials')
             is_setacc_int = .true.
@@ -186,6 +187,9 @@ contains
          case ('cic', 'CIC')
             is_setacc_cic = .true.
             call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method: CIC")
+         case('tsc', 'TSC')
+            is_setacc_tsc = .true.
+            call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method:TSC")
       end select
 #endif /* NBODY */
 
