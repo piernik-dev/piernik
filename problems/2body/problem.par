@@ -91,9 +91,9 @@
  /
 
  $PARTICLES
-   time_integrator = 'leapfrog2'
-   interpolation_scheme = 'cic'
-   acc_interp_method = 'cic'
-   !acc_interp_method = 'lagrange'
-   lf_c = 1.0
+   time_integrator      = 'leapfrog2'
+   interpolation_scheme = 'tsc'
+   acc_interp_method    = 'tsc'
+   lf_c                 = 1.0
+   ignore_dt_fluid      = .true.
  /
