@@ -379,7 +379,7 @@ contains
 
    subroutine update_particle_acc_tsc(cg)
 
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, gp1b_n, gpot_n
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, gp1b_n, gpot_n, idm, half, zero
       use domain,           only: dom
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
@@ -387,76 +387,78 @@ contains
 
       implicit none
 
-      integer(kind=4)    :: iv     !< index in cg%q array, where we want the particles to be projected
 
-      type(grid_container), pointer,    intent(inout) :: cg
-      integer :: p, cdim
-      integer(kind=4) :: i, j, k
-      integer(kind=4), dimension(ndims, IM:IP) :: ijkp
-      integer(kind=4), dimension(ndims) :: cur_ind, ind1, ind2
-      real(kind=8),    dimension(ndims)             :: fxyz, axyz
-      real :: weight, delta_x, weight_tmp
+      type(grid_container), pointer, intent(inout) :: cg
+      integer                                      :: p, cdim
+      integer(kind=4)                              :: ig, i, j, k
+      integer(kind=4), dimension(ndims, IM:IP)     :: ijkp
+      integer(kind=4), dimension(ndims)            :: cur_ind, ind1, ind2
+      real(kind=8),    dimension(ndims)            :: fxyz, axyz
+      real                                         :: weight, delta_x, weight_tmp
 
       if (mask_gpot1b) then
-         iv = qna%ind(gp1b_n)
+         ig = qna%ind(gp1b_n)
       else
-         iv = qna%ind(gpot_n)
+         ig = qna%ind(gpot_n)
       endif
-      axyz(:)=0.0
+
+      axyz(:) = 0.0
 
       do p = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
-            associate( &
-                  part  => pset%p(p), &
-                  idl   => cg%idl &
-                  )
+         associate( part  => pset%p(p), &
+                    idl   => cg%idl )
 
-               if (any(part%pos < cg%fbnd(:,LO)) .or. any(part%pos > cg%fbnd(:,HI))) cycle
+            if (any(part%pos < cg%fbnd(:,LO)) .or. any(part%pos > cg%fbnd(:,HI))) cycle
 
-               do cdim = xdim, zdim
-                  if (dom%has_dir(cdim)) then
-                     ijkp(cdim, I0) = nint((part%pos(cdim) - cg%coord(CENTER, cdim)%r(1))*cg%idl(cdim)) + 1   !!! BEWARE hardcoded magic
-                     ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cg%lhn(cdim, LO), kind=8))
-                     ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cg%lhn(cdim, HI), kind=8))
-                  else
-                     ijkp(cdim, IM) = cg%ijkse(cdim, LO)
-                     ijkp(cdim, I0) = cg%ijkse(cdim, LO)
-                     ijkp(cdim, IP) = cg%ijkse(cdim, HI)
-                  endif
+            if (mask_gpot1b) then
+               cg%gp1b = zero
+               call gravpot1b(p, cg, ig, zero)
+               cg%gp1b = -cg%gp1b + cg%gpot
+            endif
+
+            do cdim = xdim, zdim
+               if (dom%has_dir(cdim)) then
+                  ijkp(cdim, I0) = nint((part%pos(cdim) - cg%coord(CENTER, cdim)%r(1))*cg%idl(cdim)) + 1   !!! BEWARE hardcoded magic
+                  ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, cg%lhn(cdim, LO))
+                  ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, cg%lhn(cdim, HI))
+               else
+                  ijkp(cdim, IM) = cg%ijkse(cdim, LO)
+                  ijkp(cdim, I0) = cg%ijkse(cdim, LO)
+                  ijkp(cdim, IP) = cg%ijkse(cdim, HI)
+               endif
+            enddo
+            do i = ijkp(xdim, IM), ijkp(xdim, IP)
+               do j = ijkp(ydim, IM), ijkp(ydim, IP)
+                  do k = ijkp(zdim, IM), ijkp(zdim, IP)
+
+                     cur_ind(:) = [i, j, k]
+                     weight = 1.0
+
+                     do cdim = xdim, zdim
+                        if (.not.dom%has_dir(cdim)) cycle
+                        delta_x = ( part%pos(cdim) - cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * idl(cdim)
+
+                        if (cur_ind(cdim) /= ijkp(cdim, 0)) then   !!! BEWARE hardcoded magic
+                           weight_tmp = 1.125 - 1.5 * abs(delta_x) + half * delta_x**2
+                        else
+                           weight_tmp = 0.75 - delta_x**2
+                        endif
+
+                        weight = weight_tmp * weight
+                        ind1 = cur_ind(:) + idm(cdim,:)
+                        ind2 = cur_ind(:) - idm(cdim,:)
+                        fxyz(cdim) = -half*(cg%q(ig)%point(ind1(:)) - cg%q(ig)%point(ind2(:)))*idl(cdim)
+                     enddo
+                     axyz(:) = axyz(:) + fxyz(:)*weight
+
+                  enddo
                enddo
-               do i = ijkp(xdim, IM), ijkp(xdim, IP)
-                  do j = ijkp(ydim, IM), ijkp(ydim, IP)
-                     do k = ijkp(zdim, IM), ijkp(zdim, IP)
+            enddo
+         end associate
 
-                        cur_ind(:) = [i, j, k]
-                        weight = 1.0
+         pset%p(p)%acc(:) = axyz(:)
 
-                        do cdim = xdim, zdim
-                           if (.not.dom%has_dir(cdim)) cycle
-                           delta_x = ( part%pos(cdim) - cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * idl(cdim)
-                           if (cur_ind(cdim) /= ijkp(cdim, 0)) then   !!! BEWARE hardcoded magic
-
-                              weight_tmp = 1.125 - 1.5 * abs(delta_x) + 0.5 * delta_x**2
-                           else
-                              weight_tmp = 0.75 - delta_x**2
-
-                           endif
-                           weight = weight_tmp * weight
-                           ind1=cur_ind(:)
-                           ind2=cur_ind(:)
-                           ind1(cdim)=ind1(cdim)+1
-                           ind2(cdim)=ind2(cdim)-1
-                           fxyz(cdim)= -(cg%q(iv)%point(ind1(:)) - cg%q(iv)%point(ind2(:)))*idl(cdim)/2
-                        enddo
-                        axyz(:)=axyz(:)+fxyz(:)*weight
-
-                      enddo
-                   enddo
-                enddo
-             end associate
-
-             pset%p(p)%acc(:)=axyz(:)
-
-             axyz(:)=0.0
+         axyz(:) = 0.0
 
       enddo
 
