@@ -47,7 +47,7 @@ contains
 
    subroutine timestep_nbody(dt, cg)
 
-      use constants,      only: xdim, zdim, big, one, two, zero
+      use constants,      only: xdim, ydim, zdim, big, one, two, zero
       use dataio_pub,     only: msg, printinfo
       use func,           only: operator(.notequals.)
       use grid_cont,      only: grid_container
@@ -75,8 +75,9 @@ contains
 
       n_part = size(pset%p, dim=1)
 
-      eta      = one
-      eps      = 1.0e-4
+
+      eta      = min(cg%dl(xdim), cg%dl(ydim), cg%dl(zdim))   !scale timestep with cell size
+      eps      = 1.0e-1
       factor   = one
       dt_nbody = big
       max_acc  = zero
@@ -112,9 +113,13 @@ contains
 
       endif
 
-      dt_hydro = dt
+      !dt_hydro = dt
       !> \todo verify this condition
-      if (dt_nbody .notequals. 0.0) dt = min(dt, dt_nbody)
+      !if (dt_nbody .notequals. 0.0) dt = min(dt, dt_nbody)
+
+      !FOR NOW REMOVE HYDRO TIMESTEP
+      dt=dt_nbody
+
       write(msg,'(a,3f8.5)') '[particle_timestep:timestep_nbody] dt for hydro, nbody and both: ', dt_hydro, dt_nbody, dt
       call printinfo(msg)
 
