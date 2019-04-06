@@ -843,7 +843,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, zdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE, INVALID
+      use constants,        only: xdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE, INVALID
       use dataio_pub,       only: log_wr, tsl_file, tsl_lun
 #if defined(__INTEL_COMPILER)
       use dataio_pub,       only: io_blocksize, io_buffered, io_buffno
@@ -874,7 +874,7 @@ contains
       use resistivity,      only: eta1_active
 #endif /* RESISTIVE */
 #ifdef MAGNETIC
-      use constants,        only: ydim
+      use constants,        only: ydim, zdim
 #endif /* MAGNETIC */
 
       implicit none
@@ -895,7 +895,9 @@ contains
 #ifdef GRAV
          enumerator :: T_EPOT                                  !< total gravitational potential energy
 #endif /* GRAV */
+#ifdef MAGNETIC
          enumerator :: T_MFLX, T_MFLY, T_MFLZ                  !< total magnetic fluxes
+#endif /* MAGNETIC */
 #ifdef COSM_RAYS
          enumerator :: T_ENCR                                  !< total CR energy
 #endif /* COSM_RAYS */
@@ -1031,11 +1033,11 @@ contains
                        &                                               max(pu(iarr_all_dn(:), ii, :, :),smalld)), dim=1), mask=cg%leafmap(i, :, :))
 #ifdef MAGNETIC
                   tot_q(T_EMAG) = tot_q(T_EMAG) + drvol * sum(emag(pb(xdim, ii, :, :), pb(ydim, ii, :, :), pb(zdim, ii, :, :)), mask=cg%leafmap(i, :, :))
-#endif /* MAGNETIC */
                   !> \todo Figure out the meaning of tot_q(T_MFL[XY]) and how to compute it properly or remove at all
                   tot_q(T_MFLX) = 0. !tot_q(T_MFLX) + cg%dvol/dom%L_(xdim) * sum(pb(xdim, ii, :, :), mask=cg%leafmap(i, :, :)) !cg%dy*cg%dz/dom%n_d(xdim)
                   tot_q(T_MFLY) = 0. !tot_q(T_MFLY) + cg%dvol/dom%L_(ydim) * sum(pb(ydim, ii, :, :), mask=cg%leafmap(i, :, :)) !cg%dx*cg%dz/dom%n_d(ydim)
                   tot_q(T_MFLZ) = tot_q(T_MFLZ) + drvol/dom%L_(zdim) * sum(pb(zdim, ii, :, :), mask=cg%leafmap(i, :, :)) !cg%dx*cg%dy/dom%n_d(zdim)
+#endif /* MAGNETIC */
 #ifndef ISO
                   tot_q(T_ENER) = tot_q(T_ENER) + drvol * sum(sum(pu(iarr_all_en, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
 #endif /* !ISO */
