@@ -639,9 +639,7 @@ contains
 
        ! Left and right states of fast magnetosonic waves Eq. 3
 
-       c_fastm = sqrt(half*max( &
-             2.*gampr_l/ul(i, idn), &
-             2.*gampr_r/ur(i, idn)) )
+       c_fastm = sqrt(max(gampr_l/ul(i, idn), gampr_r/ur(i, idn)) )
 
        ! Estimates of speed for left and right going waves Eq. 67
 
@@ -699,8 +697,8 @@ contains
 
           ! Co-efficients
 
-          dn_l     =  ul(i, idn)*slvxl
-          dn_r     =  ur(i, idn)*srvxr
+          dn_l =  ul(i, idn)*slvxl
+          dn_r =  ur(i, idn)*srvxr
 
           ! Pressure of intermediate state Eq. (23)
 
@@ -737,21 +735,21 @@ contains
              ! Left intermediate flux Eq. 64
 
              f(i, :)  =  fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ])
-             if (present(p_ct_flx)) &
-                  p_ct_flx(i, :) = p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. ))
+             if (present(p_ct_flx)) p_ct_flx(i, :) = p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. ))
 
           else if (sm < zero) then
 
              f(i, :)  =  fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ])
-             if (present(p_ct_flx)) &
-                  p_ct_flx(i, :) = p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. ))
+             if (present(p_ct_flx)) p_ct_flx(i, :) = p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. ))
 
           else ! sm = 0
 
              ! Average left and right flux if both sm = 0 = B_x
 
              f(i, :) = half * (fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]) + &
-                  &           fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]))
+                  &            fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]))
+             if (present(p_ct_flx)) p_ct_flx(i, :) = half * (p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. )) + &
+                  &                                          p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. )) )
 
           endif
 
