@@ -65,9 +65,14 @@ contains
 
    subroutine solve_cg(cg, ddim, istep, fargo_vel)
 
-      use constants,        only: mag_n
+      use constants,        only: mag_n, GEO_XYZ
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use fluidindex,       only: flind
       use grid_cont,        only: grid_container
+      use global,           only: use_fargo
       use named_array_list, only: wna
+      use sources,          only: prepare_sources
 
       implicit none
 
@@ -76,11 +81,26 @@ contains
       integer,                       intent(in) :: istep     ! stage in the time integration scheme
       integer(kind=4), optional,     intent(in) :: fargo_vel
 
+      integer :: nmag, i
+
+      if (.false.) write(0,*) present(fargo_vel) ! suppress compiler warning on unused argument
+      if (use_fargo) call die("[solve_cg:solve_cg] Fargo is not yet enabled for Riemann")
+      if (dom%geometry_type /= GEO_XYZ) call die("[solve_cg:solve_cg_ub] Non-cartesian geometry is not implemented yet in this Riemann solver.")
+
+      call prepare_sources(cg)
+
       if (wna%exists(mag_n)) then
-         call solve_cg_ub(cg, ddim, istep, fargo_vel)
+         nmag = 0
+         do i = 1, flind%fluids
+            if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + 1
+         enddo
+         if (nmag > 1) call die("[solve_cg:solve_cg] At most one magnetized fluid is implemented")
+         call solve_cg_ub(cg, ddim, istep)
       else
-         call solve_cg_u(cg, ddim, istep, fargo_vel)
+         call solve_cg_u(cg, ddim, istep)
       endif
+
+      cg%processed = .true.
 
    end subroutine solve_cg
 
@@ -88,18 +108,16 @@ contains
 !! \brief Apply MHD update + source terms to a single grid container, rely on properly updated guardcells.
 !<
 
-   subroutine solve_cg_ub(cg, ddim, istep, fargo_vel)
+   subroutine solve_cg_ub(cg, ddim, istep)
 
       use bfc_bcc,          only: interpolate_mag_field
-      use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, uh_n, magh_n, psih_n, INVALID, GEO_XYZ, I_ZERO, I_ONE, rk_coef, psidim
-      use dataio_pub,       only: die
-      use domain,           only: dom
+      use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, uh_n, magh_n, psih_n, INVALID, rk_coef, psidim
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp, iarr_mag_swp
       use fluxtypes,        only: ext_fluxes
-      use global,           only: dt, force_cc_mag, use_fargo
+      use global,           only: dt, force_cc_mag
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
-      use sources,          only: prepare_sources, all_sources
+      use sources,          only: all_sources
 #ifdef COSM_RAYS
       use sources,          only: limit_minimal_ecr
 #endif /* COSM_RAYS */
@@ -109,7 +127,6 @@ contains
       type(grid_container), pointer, intent(in) :: cg
       integer(kind=4),               intent(in) :: ddim
       integer,                       intent(in) :: istep     ! stage in the time integration scheme
-      integer(kind=4), optional,     intent(in) :: fargo_vel
 
       real, dimension(cg%n_(ddim), size(cg%u,1)) :: u
       real, dimension(cg%n_(ddim), xdim:zdim)    :: b
@@ -121,21 +138,10 @@ contains
       real, dimension(size(u,1),size(u,2))       :: u0, u1
       real, dimension(size(b,1),size(b,2)+1)     :: b0, b1  ! Bx, By, Bz, psi
       real, dimension(size(u,1), flind%fluids), target :: vx
-      integer(kind=4)                            :: nmag, i
       type(ext_fluxes)                           :: eflx
-
-      ! is_multicg should be safe
-      if (.false.) write(0,*) present(fargo_vel) ! suppress compiler warning on unused argument
-      if (use_fargo) call die("[solve_cg:solve_cg] Fargo is not yet enabled for Riemann")
-      if (dom%geometry_type /= GEO_XYZ) call die("[solve_cg:solve_cg] Non-cartesian geometry is not implemented yet in this Riemann solver.")
 
       uhi = wna%ind(uh_n)
       bhi = wna%ind(magh_n)
-      nmag = I_ZERO
-      do i = 1, flind%fluids
-         if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + I_ONE
-      enddo
-      if (nmag > 1) call die("[solve_cg:solve_cg_ub] At most one magnetized fluid is implemented")
 
       psii  = INVALID
       psihi = INVALID
@@ -148,7 +154,6 @@ contains
       ppsi => psi ! suppress compiler complains on possibly uninitialized pointer
 
       call eflx%init
-      call prepare_sources(cg)
 
       do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
          do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)
@@ -204,21 +209,17 @@ contains
          enddo
       enddo
 
-      cg%processed = .true.
-
    end subroutine solve_cg_ub
 
-   subroutine solve_cg_u(cg, ddim, istep, fargo_vel)
+   subroutine solve_cg_u(cg, ddim, istep)
 
-      use constants,        only: pdims, ORTHO1, ORTHO2, LO, HI, uh_n, GEO_XYZ, rk_coef
-      use dataio_pub,       only: die
-      use domain,           only: dom
+      use constants,        only: pdims, ORTHO1, ORTHO2, LO, HI, uh_n, rk_coef
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp
       use fluxtypes,        only: ext_fluxes
-      use global,           only: dt, use_fargo
+      use global,           only: dt
       use grid_cont,        only: grid_container
       use named_array_list, only: wna
-      use sources,          only: prepare_sources, all_sources
+      use sources,          only: all_sources
 #ifdef COSM_RAYS
       use sources,          only: limit_minimal_ecr
 #endif /* COSM_RAYS */
@@ -228,7 +229,6 @@ contains
       type(grid_container), pointer, intent(in) :: cg
       integer(kind=4),               intent(in) :: ddim
       integer,                       intent(in) :: istep     ! stage in the time integration scheme
-      integer(kind=4), optional,     intent(in) :: fargo_vel
 
       real, dimension(cg%n_(ddim), size(cg%u,1)) :: u
       real, dimension(:,:), pointer              :: pu, pu0
@@ -240,16 +240,9 @@ contains
       real, dimension(1, 1) :: b ! ugly
 
       b = 0.
-
-      ! is_multicg should be safe
-      if (.false.) write(0,*) present(fargo_vel) ! suppress compiler warning on unused argument
-      if (use_fargo) call die("[solve_cg:solve_cg] Fargo is not yet enabled for Riemann")
-      if (dom%geometry_type /= GEO_XYZ) call die("[solve_cg:solve_cg] Non-cartesian geometry is not implemented yet in this Riemann solver.")
-
       uhi = wna%ind(uh_n)
 
       call eflx%init
-      call prepare_sources(cg)
 
       do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
          do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)
@@ -277,8 +270,6 @@ contains
             pu(:,:) = transpose(u1(:, iarr_all_swp(ddim,:)))
          enddo
       enddo
-
-      cg%processed = .true.
 
    end subroutine solve_cg_u
 
