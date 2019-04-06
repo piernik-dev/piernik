@@ -310,7 +310,8 @@ contains
       ! the beginning of the timestep, not at half-step.
       ! For RK2, when istep==2, cg%u temporalily contains the state at half timestep.
       uhi = wna%ind(uh_n)
-      bhi = wna%ind(magh_n)
+      bhi = INVALID
+      if (wna%exists(magh_n)) bhi = wna%ind(magh_n)
       psii = INVALID
       psihi = INVALID
       if (qna%exists(psi_n)) then
@@ -323,8 +324,8 @@ contains
       do while (associated(cgl))
          call prepare_sources(cgl%cg)
          cgl%cg%w(uhi)%arr = cgl%cg%u
-         cgl%cg%w(bhi)%arr = cgl%cg%b
-         if (psii /= INVALID) cgl%cg%q(psihi)%arr = cgl%cg%q(psii)%arr
+         if (bhi  > INVALID) cgl%cg%w(bhi)%arr = cgl%cg%b
+         if (psii > INVALID) cgl%cg%q(psihi)%arr = cgl%cg%q(psii)%arr
          cgl => cgl%nxt
       enddo
 

@@ -843,7 +843,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE
+      use constants,        only: xdim, zdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE, INVALID
       use dataio_pub,       only: log_wr, tsl_file, tsl_lun
 #if defined(__INTEL_COMPILER)
       use dataio_pub,       only: io_blocksize, io_buffered, io_buffno
@@ -882,7 +882,7 @@ contains
       integer, parameter                                  :: field_len=17 ! should match formats below
       character(len=field_len), dimension(:), allocatable :: tsl_names
       real,                     dimension(:), allocatable :: tsl_vars
-      real, dimension(:,:,:,:), pointer                   :: pu, pb
+      real, dimension(:,:,:,:), pointer                   :: pu, pb => null()
       type(phys_prop),          pointer                   :: sn
       type(tsl_container)                                 :: tsl
       type(grid_container),     pointer                   :: cg
@@ -980,7 +980,7 @@ contains
          cg => cgl%cg
 
          pu => cg%w(wna%fi)%span(cg%ijkse)
-         pb => cg%w(wna%bi)%span(cg%ijkse)
+         if (wna%bi > INVALID) pb => cg%w(wna%bi)%span(cg%ijkse)
 
          select case (dom%geometry_type)
 

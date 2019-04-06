@@ -46,7 +46,7 @@ module hlld
    implicit none
 
    private
-   public :: riemann_wrap
+   public :: riemann_wrap, riemann_wrap_u
 
 contains
 !>
@@ -106,6 +106,47 @@ contains
       enddo
 
    end subroutine riemann_wrap
+
+   subroutine riemann_wrap_u(ql, qr, flx)
+
+      use constants,  only: I_ONE
+      use dataio_pub, only: die
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+
+      implicit none
+
+      real, dimension(:,:), target, intent(in)  :: ql, qr  ! left and right fluid states
+      real, dimension(:,:), target, intent(out) :: flx     ! output fluxes: fluid, magnetic field and psi
+
+      integer :: i
+      class(component_fluid), pointer :: fl
+
+      real, dimension(:,:), pointer :: p_flx, p_ql, p_qr
+      real, dimension(:,:), pointer :: p_ct_flx, p_ctl, p_ctr  !< CR+tracers pointers: flux, left and right state
+
+
+      do i = 1, flind%fluids
+         fl    => flind%all_fluids(i)%fl
+         p_flx => flx(:, fl%beg:fl%end)
+         p_ql  => ql(:, fl%beg:fl%end)
+         p_qr  => qr(:, fl%beg:fl%end)
+         if (fl%is_magnetized) call die("[hlld:riemann_wrap_u] no magnetized fluids allowed here")
+
+         associate (iend => flind%all_fluids(flind%fluids)%fl%end)
+            ! If there are CR or tracers, then calculate their fluxes with first fluid (typically ionized).
+            if (i == 1 .and. iend < flind%all) then
+               p_ct_flx => flx(:, iend + I_ONE:)
+               p_ctl => ql(:, iend + I_ONE:)
+               p_ctr => qr(:, iend + I_ONE:)
+               call riemann_hlld_u(p_flx, p_ql, p_qr, fl%gam, p_ct_flx, p_ctl, p_ctr)
+            else
+               call riemann_hlld_u(p_flx, p_ql, p_qr, fl%gam)
+            endif
+         end associate
+      enddo
+
+   end subroutine riemann_wrap_u
 
 !>
 !! \brief single-fluid HLLD Riemann solver
@@ -515,6 +556,209 @@ contains
 
     enddo
 
-  end subroutine riemann_hlld
+ end subroutine riemann_hlld
+
+ subroutine riemann_hlld_u(f, ul, ur, gamma, p_ct_flx, p_ctl, p_ctr)
+
+    ! external procedures
+
+    use constants, only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien
+    use func,      only: operator(.equals.)
+
+    ! arguments
+
+    implicit none
+
+    real, dimension(:,:), pointer,           intent(out) :: f             !< demsity, momentum and energy fluxes
+    real, dimension(:,:), pointer,           intent(in)  :: ul, ur        !< left and right states of density, velocity and energy
+    real, dimension(:,:), pointer, optional, intent(out) :: p_ct_flx      !< CR and tracers flux
+    real, dimension(:,:), pointer, optional, intent(in)  :: p_ctl, p_ctr  !< left and right states of CR and tracers
+    real,                                    intent(in)  :: gamma         !< gamma of current gas type
+
+    ! Local variables
+
+    integer                                      :: i
+    real                                         :: sm, sl, sr
+    real                                         :: c_fastm, gampr_l, gampr_r
+    real                                         :: slsm, srsm, slvxl, srvxr, smvxl, smvxr, srmsl, dn_l, dn_r
+    real                                         :: prt_star, enl, enr
+    real                                         :: prl, prr
+
+    ! Local arrays
+
+    real, dimension(size(f, 2))                  :: fl, fr
+    real, dimension(size(f, 2))                  :: u_starl, u_starr
+    real, dimension(xdim:zdim)                   :: v_starl, v_starr
+    logical                                      :: has_energy
+    real                                         :: ue
+
+#ifdef ISO
+#  error Isothermal EOS is not implemented yet in this Riemann solver.
+#endif /* ISO */
+
+    ! SOLVER
+
+    has_energy = (ubound(ul, dim=2) >= ien)
+    ue = 0.
+
+    if (present(p_ct_flx)) p_ct_flx = huge(1.)
+
+    do i = 1, size(f, 1)
+
+       ! Left and right states of total pressure
+       ! From fluidupdate.F90, utoq() (1) is used in hydro regime and (2) in MHD regime. In case of vanishing magnetic fields the magnetic components do not contribute and hydro results are obtained trivially.
+
+       if (has_energy) then
+
+          prl = ul(i, ien)  ! ul(i, ien) is the left state of gas pressure
+          prr = ur(i, ien)  ! ur(i, ien) is the right state of gas pressure
+
+          ! Left and right states of energy Eq. 2.
+
+          enl = (ul(i, ien)/(gamma -one)) + half*ul(i, idn)*sum(ul(i, imx:imz)**2)
+          enr = (ur(i, ien)/(gamma -one)) + half*ur(i, idn)*sum(ur(i, imx:imz)**2)
+
+          ! Left and right states of gamma*p_gas
+
+          gampr_l = gamma*ul(i, ien)
+          gampr_r = gamma*ur(i, ien)
+
+       else ! this is for DUST (presureless fluid)
+
+          ! check if it is consistent
+          prl = 0.
+          prr = 0.
+
+          enl = half*ul(i, idn)*sum(ul(i, imx:imz)**2)
+          enr = half*ur(i, idn)*sum(ur(i, imx:imz)**2)
+
+          gampr_l = 0.
+          gampr_r = 0.
+
+       endif
+
+       ! Left and right states of fast magnetosonic waves Eq. 3
+
+       c_fastm = sqrt(half*max( &
+             2.*gampr_l/ul(i, idn), &
+             2.*gampr_r/ur(i, idn)) )
+
+       ! Estimates of speed for left and right going waves Eq. 67
+
+       sl  =  min(ul(i, imx) ,ur(i, imx)) - c_fastm
+       sr  =  max(ul(i, imx), ur(i, imx)) + c_fastm
+
+       ! Left flux
+
+       fl(idn) = ul(i, idn)*ul(i, imx)
+       fl(imx) = ul(i, idn)*ul(i, imx)**2 + prl  ! Total left state of pressure, so prl
+       fl(imy:imz) = ul(i, idn)*ul(i, imy:imz)*ul(i, imx)
+       if (has_energy) fl(ien) = (enl + prl)*ul(i, imx) ! Total left state of pressure, so prl
+
+       ! Right flux
+
+       fr(idn) = ur(i, idn)*ur(i, imx)
+       fr(imx) = ur(i, idn)*ur(i, imx)**2 + prr  ! Total right state of pressure, so prl
+       fr(imy:imz) = ur(i, idn)*ur(i, imy:imz)*ur(i, imx)
+       if (has_energy) fr(ien) = (enr + prr)*ur(i, imx)  ! Total right state of pressure, so prl
+
+       ! HLLD fluxes
+
+       if (sl .ge.  zero) then
+          f(i,:)  =  fl
+          if (present(p_ct_flx)) p_ct_flx(i, :) = p_ctl(i, :) * ul(i, imx)
+       else if (sr .le.  zero) then
+          f(i,:)  =  fr
+          if (present(p_ct_flx)) p_ct_flx(i, :) = p_ctr(i, :) * ur(i, imx)
+       else
+
+          ! Speed of contact discontinuity Eq. 38
+          ! Total left and right states of pressure, so prr and prl sm_nr/sm_dr
+
+          if ((sr - ur(i, imx))*ur(i, idn) .equals. (sl - ul(i, imx))*ul(i, idn)) then
+             sm = (sl + sr) / 2.
+          else
+             sm =   ( ((sr - ur(i, imx))*ur(i, idn)*ur(i, imx) - prr) - &
+                  &   ((sl - ul(i, imx))*ul(i, idn)*ul(i, imx) - prl) ) / &
+                  &   ((sr - ur(i, imx))*ur(i, idn) - &
+                  &    (sl - ul(i, imx))*ul(i, idn))
+          endif
+
+          ! Speed differences
+
+          slsm  =  sl - sm
+          srsm  =  sr - sm
+
+          slvxl  =  sl - ul(i, imx)
+          srvxr  =  sr - ur(i, imx)
+
+          smvxl  =  sm - ul(i, imx)
+          smvxr  =  sm - ur(i, imx)
+
+          srmsl  =  sr - sl
+
+          ! Co-efficients
+
+          dn_l     =  ul(i, idn)*slvxl
+          dn_r     =  ur(i, idn)*srvxr
+
+          ! Pressure of intermediate state Eq. (23)
+
+          prt_star  =  half*((prl+dn_l*smvxl) + (prr+dn_r*smvxr))  !< Check for 0.5. Total left and right states of pressure, so prr and prl
+
+          ! Normal components of velocity and magnetic field
+
+          v_starl(xdim)  =  sm
+          v_starr(xdim)  =  sm
+
+          ! Transversal components of velocity Eq. 42
+          v_starl(ydim:zdim) = ul(i, imy:imz)
+          v_starr(ydim:zdim) = ur(i, imy:imz)
+
+          ! Left intermediate state conservative form
+
+          u_starl(idn)  =  dn_l/slsm
+          u_starl(imx:imz)  =  u_starl(idn)*v_starl
+
+          ! Right intermediate state conservative form
+
+          u_starr(idn)  =  dn_r/srsm
+          u_starr(imx:imz)  =  u_starr(idn)*v_starr
+
+          ! Total energy of left and right intermediate states Eq. (48)
+
+          if (has_energy) then
+             u_starl(ien) = (slvxl*enl - prl*ul(i, imx) + prt_star*sm)/slsm   ! Total left state of pressure
+             u_starr(ien) = (srvxr*enr - prr*ur(i, imx) + prt_star*sm)/srsm  ! Total right state of pressure
+          endif
+
+          if (sm > zero) then
+
+             ! Left intermediate flux Eq. 64
+
+             f(i, :)  =  fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ])
+             if (present(p_ct_flx)) &
+                  p_ct_flx(i, :) = p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. ))
+
+          else if (sm < zero) then
+
+             f(i, :)  =  fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ])
+             if (present(p_ct_flx)) &
+                  p_ct_flx(i, :) = p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. ))
+
+          else ! sm = 0
+
+             ! Average left and right flux if both sm = 0 = B_x
+
+             f(i, :) = half * (fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]) + &
+                  &           fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]))
+
+          endif
+
+       endif
+
+    enddo
+
+ end subroutine riemann_hlld_u
 
 end module hlld
