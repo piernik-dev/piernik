@@ -873,6 +873,9 @@ contains
 #ifdef RESISTIVE
       use resistivity,      only: eta1_active
 #endif /* RESISTIVE */
+#ifdef MAGNETIC
+      use constants,        only: ydim
+#endif /* MAGNETIC */
 
       implicit none
 
@@ -995,10 +998,10 @@ contains
                tot_q(T_EKIN) = tot_q(T_EKIN) + cg%dvol * sum(sum(ekin(pu(iarr_all_mx(:),:,:,:), pu(iarr_all_my(:),:,:,:), pu(iarr_all_mz(:),:,:,:), max(pu(iarr_all_dn(:),:,:,:),smalld)), dim=1), mask=cg%leafmap)
 #ifdef MAGNETIC
                tot_q(T_EMAG) = tot_q(T_EMAG) + cg%dvol * sum(emag(pb(xdim,:,:,:), pb(ydim,:,:,:), pb(zdim,:,:,:)), mask=cg%leafmap)
-#endif /* MAGNETIC */
                tot_q(T_MFLX) = tot_q(T_MFLX) + cg%dvol/dom%L_(xdim) * sum(pb(xdim,:,:,:), mask=cg%leafmap) !cg%dy*cg%dz/dom%n_d(xdim)
                tot_q(T_MFLY) = tot_q(T_MFLY) + cg%dvol/dom%L_(ydim) * sum(pb(ydim,:,:,:), mask=cg%leafmap) !cg%dx*cg%dz/dom%n_d(ydim)
                tot_q(T_MFLZ) = tot_q(T_MFLZ) + cg%dvol/dom%L_(zdim) * sum(pb(zdim,:,:,:), mask=cg%leafmap) !cg%dx*cg%dy/dom%n_d(zdim)
+#endif /* MAGNETIC */
 #ifndef ISO
                tot_q(T_ENER) = tot_q(T_ENER) + cg%dvol * sum(sum(pu(iarr_all_en,:,:,:), dim=1), mask=cg%leafmap)
 #endif /* !ISO */
