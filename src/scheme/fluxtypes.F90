@@ -66,7 +66,7 @@ module fluxtypes
 
    type :: fluxarray
       real,    dimension(:,:,:), allocatable :: uflx  !< u-fluxes, shape (flind%all, n_b(dir1), n_b(dir2))
-      real,    dimension(:,:,:), allocatable :: bflx  !< u-fluxes, shape (psidim,    n_b(dir1), n_b(dir2)) (magnetic field components + psi)
+      real,    dimension(:,:,:), allocatable :: bflx  !< b-fluxes, shape (psidim,    n_b(dir1), n_b(dir2)) (magnetic field components + psi)
       integer, dimension(:,:),   allocatable :: index !< Index where the flux has to be applied, shape (n_b(dir1), n_b(dir2))
    contains
       procedure :: fainit                      !< Allocate flux array
@@ -74,6 +74,13 @@ module fluxtypes
       procedure :: fa2fp                       !< Pick a point flux
       procedure :: fp2fa                       !< Store a point flux
    end type fluxarray
+
+   logical, parameter :: has_b = &
+#ifdef MAGNETIC
+        .true.
+#else /* !MAGNETIC */
+        .false.
+#endif /* !MAGNETIC */
 
 contains
 
@@ -90,7 +97,8 @@ contains
       class(fluxpoint), intent(inout) :: this
 
       if (allocated(this%uflx)) call die("[fluxtypes:fpinit] uflx already allocated")
-      allocate(this%uflx(flind%all), this%bflx(psidim))
+      allocate(this%uflx(flind%all))
+      if (has_b) allocate(this%bflx(psidim))
 
    end subroutine fpinit
 
@@ -138,8 +146,8 @@ contains
 
       if (allocated(this%index) .or. allocated(this%uflx)) call die("[fluxtypes:fainit] already allocated")
       allocate(this%index(          i1(LO):i1(HI), i2(LO):i2(HI)), &
-           &   this%uflx(flind%all, i1(LO):i1(HI), i2(LO):i2(HI)), &
-           &   this%bflx(psidim,    i1(LO):i1(HI), i2(LO):i2(HI)))
+           &   this%uflx(flind%all, i1(LO):i1(HI), i2(LO):i2(HI)))
+      if (has_b) allocate(this%bflx(psidim,    i1(LO):i1(HI), i2(LO):i2(HI)))
 
    end subroutine fainit
 
@@ -171,7 +179,7 @@ contains
 
       fp%index = this%index(   i1, i2)
       fp%uflx  = this%uflx (:, i1, i2)
-      fp%bflx  = this%bflx (:, i1, i2)
+      if (has_b) fp%bflx  = this%bflx (:, i1, i2)
 
    end function fa2fp
 
@@ -190,7 +198,7 @@ contains
 
       if (this%index(i1, i2) /= fp%index) call die("[fluxtypes:fp2fa] inconsistent index")
       this%uflx (:, i1, i2) = fp%uflx
-      this%bflx (:, i1, i2) = fp%bflx
+      if (has_b) this%bflx (:, i1, i2) = fp%bflx
 
    end subroutine fp2fa
 

@@ -83,8 +83,8 @@ contains
          cgl%cg%processed = .false.
          cgl%cg%finebnd(cdim, LO)%uflx(:, :, :) = 0. !> \warning overkill
          cgl%cg%finebnd(cdim, HI)%uflx(:, :, :) = 0.
-         cgl%cg%finebnd(cdim, LO)%bflx(:, :, :) = 0.
-         cgl%cg%finebnd(cdim, HI)%bflx(:, :, :) = 0.
+         if (allocated(cgl%cg%finebnd(cdim, LO)%bflx)) cgl%cg%finebnd(cdim, LO)%bflx(:, :, :) = 0.
+         if (allocated(cgl%cg%finebnd(cdim, HI)%bflx)) cgl%cg%finebnd(cdim, HI)%bflx(:, :, :) = 0.
          if (allocated(cgl%cg%rif_tgt%seg)) then
             associate ( seg => cgl%cg%rif_tgt%seg )
                do g = lbound(seg, dim=1), ubound(seg, dim=1)
@@ -149,7 +149,7 @@ contains
                   !     cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) + seg(g)%buf(:, :, :)
                   ! for more general decompositions with odd-offset patches it might be necessary to do sum, but it need to be debugged first
                   cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:flind%all, :, :)
-                  cg%finebnd(cdim, lh)%bflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(flind%all+1:, :, :)
+                  if (allocated(cg%finebnd(cdim, lh)%bflx)) cg%finebnd(cdim, lh)%bflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(flind%all+1:, :, :)
                else
                   all_received = .false.
                endif
@@ -204,7 +204,11 @@ contains
                seg(g)%buf(:, :, :) = 0.
                do j = j1(LO), j1(HI)
                   do k = j2(LO), j2(HI)
-                     seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + [ cg%coarsebnd(cdim, lh)%uflx(:, j, k), cg%coarsebnd(cdim, lh)%bflx(:, j, k) ]
+                     if (allocated(cg%coarsebnd(cdim, lh)%bflx)) then
+                        seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + [ cg%coarsebnd(cdim, lh)%uflx(:, j, k), cg%coarsebnd(cdim, lh)%bflx(:, j, k) ]
+                     else
+                        seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + cg%coarsebnd(cdim, lh)%uflx(:, j, k)
+                     endif
                   enddo
                enddo
                seg(g)%buf = 1/2.**(dom%eff_dim-1) * seg(g)%buf
