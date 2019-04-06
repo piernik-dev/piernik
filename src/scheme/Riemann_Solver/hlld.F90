@@ -179,7 +179,7 @@ contains
     real, parameter                              :: four = 4.0
     real                                         :: sm, sl, sr
     real                                         :: alfven_l, alfven_r, c_fastm, gampr_l, gampr_r
-    real                                         :: slsm, srsm, slvxl, srvxr, smvxl, smvxr, srmsl, dn_l, dn_r
+    real                                         :: slsm, srsm, slvxl, srvxr, srmsl, dn_l, dn_r
     real                                         :: b_lr, b_lrgam, magprl, magprr, prt_star, b_sig, enl, enr
     real                                         :: coeff_1, dn_lsqt, dn_rsqt, add_dnsq, mul_dnsq
     real                                         :: vb_l, vb_starl, vb_r, vb_starr, vb_2star
@@ -316,9 +316,6 @@ contains
           slvxl  =  sl - ul(i, imx)
           srvxr  =  sr - ur(i, imx)
 
-          smvxl  =  sm - ul(i, imx)
-          smvxr  =  sm - ur(i, imx)
-
           srmsl  =  sr - sl
 
           ! Co-efficients
@@ -329,8 +326,8 @@ contains
           b_lrgam  =  b_lr/gamma
 
           ! Pressure of intermediate state Eq. (23)
-
-          prt_star  =  half*((prl+dn_l*smvxl) + (prr+dn_r*smvxr))  !< Check for 0.5. Total left and right states of pressure, so prr and prl
+          prt_star  =  half*((prl+dn_l*(sm - ul(i, imx))) + &
+               &             (prr+dn_r*(sm - ur(i, imx))))     !< Check for 0.5. Total left and right states of pressure, so prr and prl
 
           ! Normal components of velocity and magnetic field
 
@@ -580,7 +577,7 @@ contains
     integer                                      :: i
     real                                         :: sm, sl, sr
     real                                         :: c_fastm, gampr_l, gampr_r
-    real                                         :: slsm, srsm, slvxl, srvxr, smvxl, smvxr, srmsl, dn_l, dn_r
+    real                                         :: slsm, srsm, slvxl, srvxr, dn_l, dn_r
     real                                         :: prt_star, enl, enr
     real                                         :: prl, prr
 
@@ -600,6 +597,8 @@ contains
 
     has_energy = (ubound(ul, dim=2) >= ien)
     ue = 0.
+    slsm = 0.
+    srsm = 0.
 
     if (present(p_ct_flx)) p_ct_flx = huge(1.)
 
@@ -684,16 +683,8 @@ contains
 
           ! Speed differences
 
-          slsm  =  sl - sm
-          srsm  =  sr - sm
-
           slvxl  =  sl - ul(i, imx)
           srvxr  =  sr - ur(i, imx)
-
-          smvxl  =  sm - ul(i, imx)
-          smvxr  =  sm - ur(i, imx)
-
-          srmsl  =  sr - sl
 
           ! Co-efficients
 
@@ -702,32 +693,34 @@ contains
 
           ! Pressure of intermediate state Eq. (23)
 
-          prt_star  =  half*((prl+dn_l*smvxl) + (prr+dn_r*smvxr))  !< Check for 0.5. Total left and right states of pressure, so prr and prl
+          prt_star  =  half*((prl+dn_l*(sm - ul(i, imx))) + &
+               &             (prr+dn_r*(sm - ur(i, imx))))  !< Check for 0.5. Total left and right states of pressure, so prr and prl
 
-          ! Normal components of velocity and magnetic field
+          if (sm >= zero) then
+             slsm  =  sl - sm
+             ! Normal components of velocity and magnetic field
+             v_starl(xdim)  =  sm
+             ! Transversal components of velocity Eq. 42
+             v_starl(ydim:zdim) = ul(i, imy:imz)
 
-          v_starl(xdim)  =  sm
-          v_starr(xdim)  =  sm
+             ! Left intermediate state conservative form
+             u_starl(idn)  =  dn_l/slsm
+             u_starl(imx:imz)  =  u_starl(idn)*v_starl
 
-          ! Transversal components of velocity Eq. 42
-          v_starl(ydim:zdim) = ul(i, imy:imz)
-          v_starr(ydim:zdim) = ur(i, imy:imz)
+             ! Total energy of left and right intermediate states Eq. (48)
+             if (has_energy) u_starl(ien) = (slvxl*enl - prl*ul(i, imx) + prt_star*sm)/slsm   ! Total left state of pressure
+          endif
 
-          ! Left intermediate state conservative form
+          if (sm <= zero) then
 
-          u_starl(idn)  =  dn_l/slsm
-          u_starl(imx:imz)  =  u_starl(idn)*v_starl
+             srsm  =  sr - sm
+             v_starr(xdim)  =  sm
+             v_starr(ydim:zdim) = ur(i, imy:imz)
+             ! Right intermediate state conservative form
+             u_starr(idn)  =  dn_r/srsm
+             u_starr(imx:imz)  =  u_starr(idn)*v_starr
 
-          ! Right intermediate state conservative form
-
-          u_starr(idn)  =  dn_r/srsm
-          u_starr(imx:imz)  =  u_starr(idn)*v_starr
-
-          ! Total energy of left and right intermediate states Eq. (48)
-
-          if (has_energy) then
-             u_starl(ien) = (slvxl*enl - prl*ul(i, imx) + prt_star*sm)/slsm   ! Total left state of pressure
-             u_starr(ien) = (srvxr*enr - prr*ur(i, imx) + prt_star*sm)/srsm  ! Total right state of pressure
+             if (has_energy) u_starr(ien) = (srvxr*enr - prr*ur(i, imx) + prt_star*sm)/srsm  ! Total right state of pressure
           endif
 
           if (sm > zero) then
