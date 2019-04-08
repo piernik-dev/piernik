@@ -36,29 +36,35 @@ module particles_io_hdf5
 
    contains
 
-   subroutine write_nbody_hdf5(table, n)
+   subroutine write_nbody_hdf5
 
-      use constants, only: fnamelen
+      use constants, only: fnamelen, ndims
       use hdf5,      only: h5open_f, h5close_f, h5fclose_f, h5dcreate_f, h5dclose_f, h5dwrite_f
       use hdf5,      only: h5screate_simple_f, h5sclose_f, h5fcreate_f
       use hdf5,      only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_DOUBLE
       use h5lt,      only: h5ltset_attribute_int_f !, h5ltset_attribute_double_f
+      use particle_types, only: pset
 
       implicit none
 
-      integer,              intent(in) :: n
-      real, dimension(n,3), intent(in) :: table
-      character(len=fnamelen)          :: hdf_name
-      integer(kind=4)                  :: error, rank
-      integer(HID_T)                   :: file_id, dataspace_id, dataset_id
-      integer(SIZE_T)                  :: bufsize
-      integer(HSIZE_T), dimension(2)   :: dimm
-      integer(kind=4)                  :: time = 2
-      character(len=9)                 :: vars = 'positions'
+      integer                           :: i, n_part
+      real, dimension(:,:), allocatable :: pos_table
+      character(len=fnamelen)           :: hdf_name
+      integer(kind=4)                   :: error, rank
+      integer(HID_T)                    :: file_id, dataspace_id, dataset_id
+      integer(SIZE_T)                   :: bufsize
+      integer(HSIZE_T), dimension(2)    :: dimm
+      integer(kind=4)                   :: time = 2
+      character(len=9)                  :: vars = 'positions'
+
+      n_part = size(pset%p, dim=1)
+      allocate(pos_table(n_part,ndims))
+      do i = 1, n_part
+         pos_table(i,:) = pset%p(i)%pos(:)
+      enddo
 
       rank    = 2
-      dimm(1) = n
-      dimm(2) = 3
+      dimm    = [n_part,ndims]
       bufsize = 1
 
       write(hdf_name,'(a)') 'test_01.h5'
@@ -71,12 +77,14 @@ module particles_io_hdf5
 
       call h5screate_simple_f(rank, dimm, dataspace_id, error)
       call h5dcreate_f(file_id, vars, H5T_NATIVE_DOUBLE, dataspace_id, dataset_id, error)
-      call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, table, dimm, error)
+      call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, pos_table, dimm, error)
       call h5dclose_f(dataset_id, error)
       call h5sclose_f(dataspace_id, error)
 
       call h5fclose_f(file_id, error)
       call h5close_f(error)
+
+      deallocate(pos_table)
 
    end subroutine write_nbody_hdf5
 
