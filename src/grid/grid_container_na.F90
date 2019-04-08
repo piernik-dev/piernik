@@ -103,6 +103,7 @@ contains
 
    subroutine add_all_na(this)
 
+      use constants,        only: INVALID
       use named_array_list, only: qna, wna
 #ifdef ISO
       use constants,        only: cs_i2_n
@@ -127,9 +128,9 @@ contains
       endif
 
       ! shortcuts
-      this%u  => this%w(wna%fi)%arr
-      this%b  => this%w(wna%bi)%arr
-      this%wa => this%q(qna%wai)%arr
+      if (wna%fi > INVALID)  this%u  => this%w(wna%fi)%arr
+      if (wna%bi > INVALID)  this%b  => this%w(wna%bi)%arr
+      if (qna%wai > INVALID) this%wa => this%q(qna%wai)%arr
 
 #ifdef ISO
       this%cs_iso2 => this%q(qna%ind(cs_i2_n))%arr

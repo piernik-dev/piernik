@@ -83,8 +83,8 @@ contains
          cgl%cg%processed = .false.
          cgl%cg%finebnd(cdim, LO)%uflx(:, :, :) = 0. !> \warning overkill
          cgl%cg%finebnd(cdim, HI)%uflx(:, :, :) = 0.
-         cgl%cg%finebnd(cdim, LO)%bflx(:, :, :) = 0.
-         cgl%cg%finebnd(cdim, HI)%bflx(:, :, :) = 0.
+         if (allocated(cgl%cg%finebnd(cdim, LO)%bflx)) cgl%cg%finebnd(cdim, LO)%bflx(:, :, :) = 0.
+         if (allocated(cgl%cg%finebnd(cdim, HI)%bflx)) cgl%cg%finebnd(cdim, HI)%bflx(:, :, :) = 0.
          if (allocated(cgl%cg%rif_tgt%seg)) then
             associate ( seg => cgl%cg%rif_tgt%seg )
                do g = lbound(seg, dim=1), ubound(seg, dim=1)
@@ -149,7 +149,7 @@ contains
                   !     cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) + seg(g)%buf(:, :, :)
                   ! for more general decompositions with odd-offset patches it might be necessary to do sum, but it need to be debugged first
                   cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:flind%all, :, :)
-                  cg%finebnd(cdim, lh)%bflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(flind%all+1:, :, :)
+                  if (allocated(cg%finebnd(cdim, lh)%bflx)) cg%finebnd(cdim, lh)%bflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(flind%all+1:, :, :)
                else
                   all_received = .false.
                endif
@@ -204,7 +204,11 @@ contains
                seg(g)%buf(:, :, :) = 0.
                do j = j1(LO), j1(HI)
                   do k = j2(LO), j2(HI)
-                     seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + [ cg%coarsebnd(cdim, lh)%uflx(:, j, k), cg%coarsebnd(cdim, lh)%bflx(:, j, k) ]
+                     if (allocated(cg%coarsebnd(cdim, lh)%bflx)) then
+                        seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + [ cg%coarsebnd(cdim, lh)%uflx(:, j, k), cg%coarsebnd(cdim, lh)%bflx(:, j, k) ]
+                     else
+                        seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + cg%coarsebnd(cdim, lh)%uflx(:, j, k)
+                     endif
                   enddo
                enddo
                seg(g)%buf = 1/2.**(dom%eff_dim-1) * seg(g)%buf
@@ -310,7 +314,8 @@ contains
       ! the beginning of the timestep, not at half-step.
       ! For RK2, when istep==2, cg%u temporalily contains the state at half timestep.
       uhi = wna%ind(uh_n)
-      bhi = wna%ind(magh_n)
+      bhi = INVALID
+      if (wna%exists(magh_n)) bhi = wna%ind(magh_n)
       psii = INVALID
       psihi = INVALID
       if (qna%exists(psi_n)) then
@@ -323,8 +328,8 @@ contains
       do while (associated(cgl))
          call prepare_sources(cgl%cg)
          cgl%cg%w(uhi)%arr = cgl%cg%u
-         cgl%cg%w(bhi)%arr = cgl%cg%b
-         if (psii /= INVALID) cgl%cg%q(psihi)%arr = cgl%cg%q(psii)%arr
+         if (bhi  > INVALID) cgl%cg%w(bhi)%arr = cgl%cg%b
+         if (psii > INVALID) cgl%cg%q(psihi)%arr = cgl%cg%q(psii)%arr
          cgl => cgl%nxt
       enddo
 
