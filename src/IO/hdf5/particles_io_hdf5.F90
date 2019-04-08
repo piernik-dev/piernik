@@ -32,11 +32,11 @@ module particles_io_hdf5
    implicit none
 
    private
-   public  :: write_hdf5, read_hdf5
+   public  :: write_nbody_hdf5, read_nbody_hdf5
 
    contains
 
-   subroutine write_hdf5(table, n)
+   subroutine write_nbody_hdf5(table, n)
 
       use constants, only: fnamelen
       use hdf5,      only: h5open_f, h5close_f, h5fclose_f, h5dcreate_f, h5dclose_f, h5dwrite_f
@@ -78,9 +78,9 @@ module particles_io_hdf5
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
-   end subroutine write_hdf5
+   end subroutine write_nbody_hdf5
 
-   subroutine read_hdf5(table, n)
+   subroutine read_nbody_hdf5(table, n)
 
       use constants, only: fnamelen
       use hdf5,      only: h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5dopen_f, h5dclose_f, h5dread_f
@@ -114,6 +114,6 @@ module particles_io_hdf5
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
-   end subroutine read_hdf5
+   end subroutine read_nbody_hdf5
 
 end module particles_io_hdf5
