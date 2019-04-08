@@ -39,10 +39,11 @@ module particles_io_hdf5
    subroutine write_nbody_hdf5
 
       use constants, only: fnamelen, idlen, ndims
+      use global,    only: t
       use hdf5,      only: h5open_f, h5close_f, h5fclose_f, h5dcreate_f, h5dclose_f, h5dwrite_f
       use hdf5,      only: h5screate_simple_f, h5sclose_f, h5fcreate_f
       use hdf5,      only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_DOUBLE
-      use h5lt,      only: h5ltset_attribute_int_f !, h5ltset_attribute_double_f
+      use h5lt,      only: h5ltset_attribute_int_f, h5ltset_attribute_double_f
       use particle_types, only: pset
 
       implicit none
@@ -54,11 +55,11 @@ module particles_io_hdf5
       integer(HID_T)                    :: file_id, dataspace_id, dataset_id
       integer(SIZE_T)                   :: bufsize
       integer(HSIZE_T), dimension(2)    :: dimm
-      integer(kind=4)                   :: time = 2
       character(len=idlen)              :: pvars = 'pos', vvars = 'vel'
 
       n_part = size(pset%p, dim=1)
       allocate(pos_table(n_part,ndims))
+      allocate(vel_table(n_part,ndims))
       do i = 1, n_part
          pos_table(i,:) = pset%p(i)%pos(:)
          vel_table(i,:) = pset%p(i)%vel(:)
@@ -73,8 +74,8 @@ module particles_io_hdf5
       call h5open_f(error)
       call h5fcreate_f(hdf_name, H5F_ACC_TRUNC_F, file_id, error)
 
-      call h5ltset_attribute_int_f   (file_id, "/", "time", [time], bufsize, error)
-      !call h5ltset_attribute_double_f(file_id, "/", "time",     [t],  bufsize, error)
+      call h5ltset_attribute_int_f   (file_id, "/", "npart", [n_part], bufsize, error)
+      call h5ltset_attribute_double_f(file_id, "/", "time",  [t],      bufsize, error)
 
       call h5screate_simple_f(rank, dimm, dataspace_id, error)
       call h5dcreate_f(file_id, pvars, H5T_NATIVE_DOUBLE, dataspace_id, dataset_id, error)
