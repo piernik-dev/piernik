@@ -371,7 +371,7 @@ contains
       call printinfo('[initproblem:relax_time] Particles position computed')
 #endif /* VERBOSE */
 #ifdef HDF5
-      call write_nbody_hdf5
+      call write_nbody_hdf5('relax_time_init.h5')
 #endif /* HDF5 */
 
    end subroutine relax_time
