@@ -38,28 +38,39 @@ module particles_io_hdf5
 
    subroutine write_nbody_hdf5
 
-      use constants, only: fnamelen, idlen, ndims
-      use global,    only: t
-      use hdf5,      only: h5open_f, h5close_f, h5fclose_f, h5dcreate_f, h5dclose_f, h5dwrite_f
-      use hdf5,      only: h5screate_simple_f, h5sclose_f, h5fcreate_f
-      use hdf5,      only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_DOUBLE
-      use h5lt,      only: h5ltset_attribute_int_f, h5ltset_attribute_double_f
+      use constants,      only: cwdlen, idlen, ndims, tmr_hdf
+      use dataio_pub,     only: last_hdf_time, msg, nhdf, piernik_hdf5_version, piernik_hdf5_version2, printinfo, printio, problem_name, run_id, thdf, use_v2_io, wd_wr
+      use global,         only: t
+      use hdf5,           only: h5open_f, h5close_f, h5fclose_f, h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, h5fcreate_f
+      use hdf5,           only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_DOUBLE
+      use h5lt,           only: h5ltset_attribute_int_f, h5ltset_attribute_double_f
+      use mpisetup,       only: master, piernik_MPI_Bcast
       use particle_types, only: pset
+      use timer,          only: set_timer
 
       implicit none
 
+      character(len=cwdlen)             :: fname
+      character(len=idlen)              :: pvars = 'pos', vvars = 'vel'
       integer                           :: i, n_part
-      real, dimension(:,:), allocatable :: pos_table, vel_table
-      character(len=fnamelen)           :: hdf_name
       integer(kind=4)                   :: error, rank
       integer(HID_T)                    :: file_id, dataspace_id, dataset_id
       integer(SIZE_T)                   :: bufsize
       integer(HSIZE_T), dimension(2)    :: dimm
-      character(len=idlen)              :: pvars = 'pos', vvars = 'vel'
+      real                              :: phv
+      real, dimension(:,:), allocatable :: pos_table, vel_table
+
+      thdf = set_timer(tmr_hdf,.true.)
+      phv = piernik_hdf5_version ; if (use_v2_io) phv = piernik_hdf5_version2
+      if (master) then
+         write(fname, '(2a,a1,a3,a2,i4.4,a3)') trim(wd_wr), trim(problem_name),"_", trim(run_id),"_p", max(nhdf,0),".h5" !> \todo: merge with function restart_fname()
+         write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ',last_hdf_time,': Writing datafile v', phv, trim(fname), " ... "
+         call printio(msg, .true.)
+      endif
+      call piernik_MPI_Bcast(fname, cwdlen)
 
       n_part = size(pset%p, dim=1)
-      allocate(pos_table(n_part,ndims))
-      allocate(vel_table(n_part,ndims))
+      allocate(pos_table(n_part,ndims), vel_table(n_part,ndims))
       do i = 1, n_part
          pos_table(i,:) = pset%p(i)%pos(:)
          vel_table(i,:) = pset%p(i)%vel(:)
@@ -69,10 +80,8 @@ module particles_io_hdf5
       dimm    = [n_part,ndims]
       bufsize = 1
 
-      write(hdf_name,'(a)') 'test_01.h5'
-
       call h5open_f(error)
-      call h5fcreate_f(hdf_name, H5F_ACC_TRUNC_F, file_id, error)
+      call h5fcreate_f(fname, H5F_ACC_TRUNC_F, file_id, error)
 
       call h5ltset_attribute_int_f   (file_id, "/", "npart", [n_part], bufsize, error)
       call h5ltset_attribute_double_f(file_id, "/", "time",  [t],      bufsize, error)
@@ -93,6 +102,12 @@ module particles_io_hdf5
       call h5close_f(error)
 
       deallocate(pos_table, vel_table)
+
+      thdf = set_timer(tmr_hdf)
+      if (master) then
+         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
+         call printinfo(msg, .true.)
+      endif
 
    end subroutine write_nbody_hdf5
 
