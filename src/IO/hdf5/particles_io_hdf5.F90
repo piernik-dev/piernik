@@ -111,35 +111,41 @@ module particles_io_hdf5
 
    end subroutine write_nbody_hdf5
 
-   subroutine read_nbody_hdf5(table, n)
+   subroutine read_nbody_hdf5(fname, table, n)
 
-      use constants, only: fnamelen
+      use constants, only: cwdlen, idlen, ndims
       use hdf5,      only: h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5dopen_f, h5dclose_f, h5dread_f
       use hdf5,      only: HID_T, HSIZE_T, H5F_ACC_RDONLY_F, H5T_NATIVE_DOUBLE
-      use h5lt,      only: h5ltget_attribute_int_f
+      use h5lt,      only: h5ltget_attribute_double_f, h5ltget_attribute_int_f
 
       implicit none
 
-      integer,              intent(in)  :: n
-      real, dimension(n,3), intent(out) :: table
-      character(len=fnamelen)           :: hdf_name = 'test_01.h5'
-      integer(kind=4)                   :: error, time
-      integer(HID_T)                    :: file_id, dataset_id
-      integer(HSIZE_T), dimension(2)    :: dimm
-      character(len=9)                  :: vars='positions'
-      integer,dimension(1)              :: rbuf
-
-      dimm(1) = n
-      dimm(2) = 3
+      character(len=cwdlen),      intent(in)  :: fname
+      integer,                    intent(in)  :: n
+      real, dimension(2,n,ndims), intent(out) :: table
+      character(len=idlen)                    :: pvars = 'pos', vvars = 'vel'
+      integer                                 :: n_part
+      integer(kind=4)                         :: error
+      integer(HID_T)                          :: file_id, dataset_id
+      integer(HSIZE_T), dimension(2)          :: dimm
+      integer, dimension(1)                   :: ibuf
+      real                                    :: time
+      real, dimension(1)                      :: rbuf
 
       call h5open_f(error)
-      call h5fopen_f(hdf_name, H5F_ACC_RDONLY_F, file_id, error)
+      call h5fopen_f(trim(fname), H5F_ACC_RDONLY_F, file_id, error)
 
-      call h5ltget_attribute_int_f  (file_id,  "/", "time", rbuf, error)
-      time = rbuf(1)
+      call h5ltget_attribute_double_f(file_id, "/", "time",  rbuf, error) ; time   = rbuf(1)
+      call h5ltget_attribute_int_f   (file_id, "/", "npart", ibuf, error) ; n_part = ibuf(1)
 
-      call h5dopen_f(file_id, vars, dataset_id, error)
-      call h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, table, dimm, error)
+      dimm = [min(n_part,n), ndims]
+
+      call h5dopen_f(file_id, pvars, dataset_id, error)
+      call h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, table(1,1:dimm(1),:), dimm, error)
+      call h5dclose_f(dataset_id, error)
+
+      call h5dopen_f(file_id, vvars, dataset_id, error)
+      call h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, table(2,1:dimm(1),:), dimm, error)
       call h5dclose_f(dataset_id, error)
 
       call h5fclose_f(file_id, error)
