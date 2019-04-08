@@ -1293,10 +1293,11 @@ contains
 
    subroutine vertical_bf_prep(this)
 
-      use cg_list,      only: cg_list_element
-      use constants,    only: LO, HI, pdims, ORTHO1, ORTHO2, xdim, zdim, psidim
-      use fluidindex,   only: flind
-      use grid_helpers, only: c2f
+      use cg_list,          only: cg_list_element
+      use constants,        only: LO, HI, pdims, ORTHO1, ORTHO2, xdim, zdim, psidim, mag_n
+      use fluidindex,       only: flind
+      use grid_helpers,     only: c2f
+      use named_array_list, only: wna
 
       implicit none
 
@@ -1304,7 +1305,10 @@ contains
 
       type(cg_level_connected_T), pointer :: coarse
       type(cg_list_element), pointer :: cgl
-      integer :: g, d, dd, lh
+      integer :: g, d, dd, lh, fc_fluxes
+
+      fc_fluxes = flind%all
+      if (wna%exists(mag_n)) fc_fluxes = fc_fluxes + psidim
 
       cgl => this%first
       do while (associated(cgl))
@@ -1330,8 +1334,8 @@ contains
                   seg2(d)%proc = seg(g)%proc
                   seg2(d)%tag  = seg(g)%tag
                   seg2(d)%se   = seg(g)%se2
-                  allocate(seg2(d)%buf(flind%all + psidim, seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
-                       &                                   seg2(d)%se(pdims(dd, ORTHO2), LO):seg2(d)%se(pdims(dd, ORTHO2), HI)))
+                  allocate(seg2(d)%buf(fc_fluxes, seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
+                       &                          seg2(d)%se(pdims(dd, ORTHO2), LO):seg2(d)%se(pdims(dd, ORTHO2), HI)))
                   if (seg(g)%se(dd, LO) == seg2(d)%se(dd, LO)) then
                      lh = HI
                   else
@@ -1377,8 +1381,8 @@ contains
                      seg2(d)%proc = seg(g)%proc
                      seg2(d)%tag  = seg(g)%tag
                      seg2(d)%se   = seg(g)%se2
-                     allocate(seg2(d)%buf(flind%all + psidim, seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
-                          &                                   seg2(d)%se(pdims(dd, ORTHO2), LO):seg2(d)%se(pdims(dd, ORTHO2), HI)))
+                     allocate(seg2(d)%buf(fc_fluxes, seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
+                          &                          seg2(d)%se(pdims(dd, ORTHO2), LO):seg2(d)%se(pdims(dd, ORTHO2), HI)))
                      if (seg(g)%se(dd, LO) == seg2(d)%se(dd, LO)) then
                         lh = HI
                      else
