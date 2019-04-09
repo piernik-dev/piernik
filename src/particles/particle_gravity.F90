@@ -34,9 +34,9 @@ module particle_gravity
    implicit none
 
    private
-   public :: update_particle_gravpot_and_acc, is_setacc_cic, is_setacc_int, mask_gpot1b, phi_pm_part, get_acc_model, is_setacc_tsc
+   public :: update_particle_gravpot_and_acc, is_setacc_cic, is_setacc_int, is_setacc_tsc, mask_gpot1b, phi_pm_part, get_acc_model
 
-   logical :: is_setacc_cic, is_setacc_int, mask_gpot1b, is_setacc_tsc
+   logical :: is_setacc_cic, is_setacc_int, is_setacc_tsc, mask_gpot1b
 
 
 contains
@@ -80,7 +80,6 @@ contains
 
 #ifdef NBODY_GRIDDIRECT
       call update_gravpot_from_particles(n_part, cg, zero)
-      call save_pot_pset(cg)
 #endif /* NBODY_GRIDDIRECT */
 
       call source_terms_grav
@@ -498,56 +497,5 @@ contains
       der_xyz = ( phi_pm_part(pos(1,:)+real(idm(dir,:))*d, eps, mass) - phi_pm_part(pos(1,:)-real(idm(dir,:))*d, eps, mass) ) / (two*d)
 
    end function der_xyz
-
-#ifdef NBODY_GRIDDIRECT
-   subroutine save_pot_pset(cg)
-
-      use constants,      only: CENTER, LO, HI, xdim, ydim, zdim
-      use dataio_pub,     only: printinfo, printio
-      use grid_cont,      only: grid_container
-      use particle_types, only: pset
-
-      implicit none
-
-      type(grid_container), pointer, intent(in) :: cg
-
-      integer                                   :: numer1, numer2, i, j, p
-      logical                                   :: finish, save_potential
-
-      save_potential = .false.
-      finish         = .false.
-      numer1 = 64
-      numer2 = 20
-
-      open(unit=90, file='pset.dat', action='write', position='append')
-         do p=1, ubound(pset%p, dim=1)
-            write(90,*) p, pset%p(p)%pos
-         enddo
-      close(90)
-      if (save_potential) then
-         call printio('[particle_integrators:save_pot_pset] Writing potential to files: potencjal1.dat, potencjal2.dat')
-         open(unit=88, file='potencjal1.dat')
-         open(unit=89, file='potencjal2.dat')
-            do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-               do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
-                  !do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
-                  write(88,*) i, j, numer1, cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, ydim)%r(j), cg%coord(CENTER, zdim)%r(numer1), cg%nbgp(i,j,numer1)
-                  write(89,*) i, j, numer2, cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, ydim)%r(j), cg%coord(CENTER, zdim)%r(numer2), cg%nbgp(i,j,numer2)
-                  !enddo
-               enddo
-               write(88,*)
-               write(89,*)
-            enddo
-         close(88)
-         close(89)
-
-         if (finish) then
-            call printinfo('[particle_integrators:save_pot_pset] Condition to end - finishing.')
-            stop
-         endif
-      endif
-
-   end subroutine save_pot_pset
-#endif /* NBODY_GRIDDIRECT */
 
 end module particle_gravity
