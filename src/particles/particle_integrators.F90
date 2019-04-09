@@ -405,9 +405,9 @@ contains
 
          subroutine leapfrog2_diagnostics
 
-            use constants,        only: ndims
+            use constants,        only: ndims, zero
             use dataio_pub,       only: msg, printinfo
-            !use func,             only: operator(.equals.)
+            use func,             only: operator(.equals.)
             use particle_gravity, only: get_acc_model
 
             implicit none
@@ -416,40 +416,43 @@ contains
             real                   :: ang_momentum         !< angular momentum of set of the particles
             real                   :: total_energy         !< total energy of set of the particles
             integer                :: i, lun_out
-            !real                   :: d_energy             !< error of energy of set of the particles in succeeding timesteps
-            !real                   :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
-            !real, save             :: initial_energy       !< total initial energy of set of the particles
-            !real, save             :: init_ang_momentum    !< initial angular momentum of set of the particles
-            !logical, save          :: first_run_lf = .true.
+            real                   :: d_energy             !< error of energy of set of the particles in succeeding timesteps
+            real                   :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
+            real, save             :: initial_energy       !< total initial energy of set of the particles
+            real, save             :: init_ang_momentum    !< initial angular momentum of set of the particles
+            logical, save          :: first_run_lf = .true.
 
             call get_angmom_totener(ang_momentum, total_energy)
-            write(msg,'(a,2f8.5)') '[particle_integrators:leapfrog2_diagnostics] Energia, ANG_MOMENTUM----------: ', total_energy, ang_momentum
-            call printinfo(msg)
 
-            !if (first_run_lf) then
-            !   initial_energy = total_energy
-            !   d_energy       = 0.0
-            !   init_ang_momentum = ang_momentum
-            !   d_ang_momentum    = 0.0
-            !else
-            !   d_energy = log(abs((total_energy - initial_energy)/initial_energy))
-            !   if (init_ang_momentum .equals. zero) then
-            !      d_ang_momentum = ang_momentum
-            !   else
-            !      d_ang_momentum = (ang_momentum - init_ang_momentum)/init_ang_momentum
-            !      if (d_ang_momentum .equals. zero) then
-            !         d_ang_momentum = 0.0
-            !      else
-            !         d_ang_momentum = log(abs(d_ang_momentum))
-            !      endif
-            !   endif
-            !endif
+            if (first_run_lf) then
+               initial_energy    = total_energy
+               d_energy          = zero
+               init_ang_momentum = ang_momentum
+               d_ang_momentum    = zero
+            else
+               d_energy = log(abs((total_energy - initial_energy)/initial_energy))
+               if (init_ang_momentum .equals. zero) then
+                  d_ang_momentum = ang_momentum
+               else
+                  d_ang_momentum = (ang_momentum - init_ang_momentum)/init_ang_momentum
+                  if (d_ang_momentum .equals. zero) then
+                     d_ang_momentum = zero
+                  else
+                     d_ang_momentum = log(abs(d_ang_momentum))
+                  endif
+               endif
+            endif
+
+            write(msg,'(a,3f8.5)') '[particle_integrators:leapfrog2_diagnostics] Total energy: initial, current, error ', initial_energy, total_energy, d_energy
+            call printinfo(msg)
+            write(msg,'(a,3f8.5)') '[particle_integrators:leapfrog2_diagnostics] ang_momentum: initial, current, error ', init_ang_momentum, ang_momentum, d_ang_momentum
+            call printinfo(msg)
 
             open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
 
             do i = 1, size(pset%p, dim=1)
                call get_acc_model(i, 0.0, acc2)
-               write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, t_glob+dt_kick, dt_kick, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
+               write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, t_glob+dt_kick, dt_kick, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:), pset%p(i)%energy
             enddo
 
             close(lun_out)
