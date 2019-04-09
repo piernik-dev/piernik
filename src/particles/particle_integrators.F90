@@ -332,7 +332,6 @@ contains
       logical, optional,   intent(in)    :: forward
 
       real                               :: dt_kick              !< timestep for kicks
-      real                               :: total_energy         !< total energy of set of the particles
       integer                            :: n                    !< number of particles
 
       n = size(pset%p, dim=1)
@@ -352,9 +351,9 @@ contains
 
          call kick                           (n,     dt_kick) !3. kick
 
-         call update_particle_kinetic_energy (n, total_energy)
+         call update_particle_kinetic_energy
 
-         call leapfrog2_diagnostics          (n, total_energy)
+         call leapfrog2_diagnostics
       endif
 
       contains
@@ -387,29 +386,24 @@ contains
 
          end subroutine drift
 
-         subroutine update_particle_kinetic_energy(n, total_energy)
+         subroutine update_particle_kinetic_energy
 
-            use constants, only: half, zero
+            use constants, only: half
 
             implicit none
 
-            integer, intent(in)  :: n            !< number of particles
-            real,    intent(out) :: total_energy !< total energy of set of particles
-            integer              :: p
-            real                 :: v2           !< particle velocity squared
+            integer :: p
+            real    :: v2           !< particle velocity squared
 
-            total_energy = zero
-
-            do p = 1, n
+            do p = 1, size(pset%p, dim=1)
                v2 = sum(pset%p(p)%vel(:)**2)
                !energy       = 1/2  *      m         *  v**2 +     Ep(x,y,z)
                pset%p(p)%energy = half * pset%p(p)%mass * v2 + pset%p(p)%energy
-               total_energy = total_energy + pset%p(p)%energy
             enddo
 
          end subroutine update_particle_kinetic_energy
 
-         subroutine leapfrog2_diagnostics(n, total_energy)
+         subroutine leapfrog2_diagnostics
 
             use constants,        only: ndims
             use dataio_pub,       only: msg, printinfo
@@ -418,10 +412,9 @@ contains
 
             implicit none
 
-            integer,    intent(in) :: n
-            real,       intent(in) :: total_energy
             real, dimension(ndims) :: acc2
             real                   :: ang_momentum         !< angular momentum of set of the particles
+            real                   :: total_energy         !< total energy of set of the particles
             integer                :: i, lun_out
             !real                   :: d_energy             !< error of energy of set of the particles in succeeding timesteps
             !real                   :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
@@ -429,7 +422,7 @@ contains
             !real, save             :: init_ang_momentum    !< initial angular momentum of set of the particles
             !logical, save          :: first_run_lf = .true.
 
-            call get_ang_momentum_2(n, ang_momentum)
+            call get_angmom_totener(ang_momentum, total_energy)
             write(msg,'(a,2f8.5)') '[particle_integrators:leapfrog2_diagnostics] Energia, ANG_MOMENTUM----------: ', total_energy, ang_momentum
             call printinfo(msg)
 
@@ -454,7 +447,7 @@ contains
 
             open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
 
-            do i = 1, n
+            do i = 1, size(pset%p, dim=1)
                call get_acc_model(i, 0.0, acc2)
                write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, t_glob+dt_kick, dt_kick, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
             enddo
@@ -463,27 +456,29 @@ contains
 
          end subroutine leapfrog2_diagnostics
 
-         subroutine get_ang_momentum_2(n, ang_momentum)
+         subroutine get_angmom_totener(ang_momentum, total_energy)
 
-            use constants, only: xdim, ydim, zdim
+            use constants, only: xdim, ydim, zdim, zero
 
             implicit none
 
-            integer, intent(in)  :: n
             real,    intent(out) :: ang_momentum
+            real,    intent(out) :: total_energy !< total energy of set of particles
             integer              :: i
             real                 :: L1, L2, L3
 
-            ang_momentum = 0.0
+            ang_momentum = zero
+            total_energy = zero
 
-            do i = 1, n, 1
+            do i = 1, size(pset%p, dim=1)
                L1 = pset%p(i)%pos(ydim) * pset%p(i)%vel(zdim) - pset%p(i)%pos(zdim) * pset%p(i)%vel(ydim)
                L2 = pset%p(i)%pos(zdim) * pset%p(i)%vel(xdim) - pset%p(i)%pos(xdim) * pset%p(i)%vel(zdim)
                L3 = pset%p(i)%pos(xdim) * pset%p(i)%vel(ydim) - pset%p(i)%pos(ydim) * pset%p(i)%vel(xdim)
                ang_momentum = ang_momentum + pset%p(i)%mass * sqrt(L1**2 + L2**2 + L3**2)
+               total_energy = total_energy + pset%p(i)%energy
             enddo
 
-         end subroutine get_ang_momentum_2
+         end subroutine get_angmom_totener
 
    end subroutine leapfrog2ord
 
