@@ -165,6 +165,7 @@ contains
    subroutine twobodies
 
       use constants,      only: ndims
+      use dataio_pub,     only: msg, printinfo
       use particle_types, only: pset
 
       implicit none
@@ -178,51 +179,14 @@ contains
       init_vel_body = 0.0
 
       init_pos_body(:,2) = [2.0, 0.0, 0.0]
-      init_vel_body(:,2) = vel_2bodies(m(1), init_pos_body)
+      init_vel_body(:,2) = vel_2bodies(m(1), init_pos_body(:,1)-init_pos_body(:,2))
 
       do p = 1, 2
-         write(*,*) m(p), " @ ", init_pos_body(:,p), ", with ", init_vel_body(:,p)
+         write(msg,'(f8.5,a,3f8.5,a,3f8.5)') m(p), " @ ", init_pos_body(:,p), ", with ", init_vel_body(:,p) ; call printinfo(msg)
          call pset%add(m(p), init_pos_body(:,p), init_vel_body(:,p), [0.0, 0.0, 0.0], 0.0)
       enddo
 
    end subroutine twobodies
-
-   function vel_2bodies(mass, init_pos_body)
-
-      use constants,  only: ndims, zero, one, two, ydim
-      use dataio_pub, only: die
-      use func,       only: operator(.equals.)
-      use units,      only: newtong
-
-      implicit none
-
-      real,                     intent(in) :: mass
-      real, dimension(ndims,2), intent(in) :: init_pos_body
-      real, dimension(ndims)               :: vel_2bodies
-      real                                 :: a        !< semi-major axis of initial elliptical orbit of particle
-      real                                 :: r        !< lenght of radius vector
-      real                                 :: mu
-
-      vel_2bodies = zero
-      mu = newtong * mass
-
-      if ( (e < zero) .or. (e >= one) ) call die("[initproblem:vel_2bodies] Invalid eccentricity")
-
-      r = sqrt(sum((init_pos_body(:,1) - init_pos_body(:,2))**2))
-
-      if (e .equals. zero) then
-         vel_2bodies(2) = sqrt(mu/r)
-      else
-         a = r/(one + e)
-         vel_2bodies(ydim) = sqrt(mu*(two/r - one/a))
-         write(*,*) "velocity 1: ", vel_2bodies(2)
-         vel_2bodies(ydim) = sqrt((mu-mu*e)/r)
-         write(*,*) "velocity 2: ", vel_2bodies(2)
-
-         write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Elipsa: e=", e, " a=",a, " b=", a*sqrt(one - e**2)
-      endif
-
-   end function vel_2bodies
 
    subroutine orbits
 
@@ -238,7 +202,7 @@ contains
 
       pos_init = [2.0, 1.0, 0.0]
 
-      !vel_init = velocities(pos_init)
+      !vel_init = vel_2bodies(mass1, pos_init)
       vel_init = [-0.5, 0.0, 0.0]
 
       do p = 1, npart
@@ -267,43 +231,40 @@ contains
 !! \details compute velocity of particle with position pos_init and eccentricity e <0,1)
 !! \warning it works properly only in XY plane
 !>
-   function velocities(pos_init)
+   function vel_2bodies(mass, rel_pos)
 
-      use constants,  only: dpi, one, two, ydim, zero
-      use dataio_pub, only: die
+      use constants,  only: ndims, one, ydim, zero
+      use dataio_pub, only: die, msg, printinfo
       use func,       only: operator(.equals.)
       use units,      only: newtong
 
       implicit none
 
-      real, dimension(3) :: pos_init, velocities
-      real               :: a        !< semi-major axis of initial elliptical orbit of particle
-      real               :: r        !< lenght of radius vector
-      real               :: mu
-      real               :: lenght  !usunac
+      real,                   intent(in) :: mass
+      real, dimension(ndims), intent(in) :: rel_pos
+      real, dimension(ndims)             :: vel_2bodies
+      real                               :: a        !< semi-major axis of initial elliptical orbit of particle
+      real                               :: r        !< lenght of radius vector
+      real                               :: mu
 
-      mu = newtong*mass1
-      velocities(:) = zero
+      vel_2bodies = zero
+      mu = newtong * mass
 
-      if ( (e < zero) .or. (e >= one) ) then
-         call die("[initproblem:velocities] Invalid eccentricity")
+      if ( (e < zero) .or. (e >= one) ) call die("[initproblem:vel_2bodies] Invalid eccentricity")
+
+      r = sqrt(sum(rel_pos**2))
+
+      if (e .equals. zero) then
+         vel_2bodies(ydim) = sqrt(mu/r)
+         call printinfo("[initproblem:vel_2bodies] Circular orbit")
       else
-         r = sqrt(sum(pos_init(:)**2))
+         a = r/(one + e)
+         vel_2bodies(ydim) = sqrt((one-e)*mu/r)
 
-         if (e .equals. zero) then
-            velocities(ydim) = sqrt(mu/r)
-            write(*,*) "Circular orbit"
-         else
-            a = r/(one + e)
-            velocities(ydim) = sqrt(mu*(two/r - one/a))
-            write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Ellipse: e=", e, " a=",a, " b=", a*sqrt(one - e**2)
-
-            lenght = dpi*sqrt((a**3)/mu)  !usunac
-            write(*,*) "lenght=", lenght
-         endif
+         write(msg,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Ellipse: e=", e, " a=",a, " b=", a*sqrt(one - e**2) ; call printinfo(msg)
       endif
 
-   end function velocities
+   end function vel_2bodies
 
 !<
 !! \brief rotate vector over one of the axes by an angle theta
@@ -417,7 +378,9 @@ contains
             i = i + 1
          enddo
 #ifdef VERBOSE
-         if (modulo(i, 10000) .eq. 0) write(*,*) i, ' particles read'
+         if (modulo(i, 10000) .eq. 0) then
+            write(msg,'(i8,a)') i, ' particles read' ; call printio(msg)
+         endif
 #endif /* VERBOSE */
          call pset%add(mass(i), pos(i,:), vel(i,:),[0.0, 0.0, 0.0], 0.0)
       enddo
