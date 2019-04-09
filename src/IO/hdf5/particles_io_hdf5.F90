@@ -54,7 +54,7 @@ module particles_io_hdf5
       character(len=cwdlen)             :: filename
       character(len=idlen)              :: mvars = 'mas', pvars = 'pos', vvars = 'vel'
       integer                           :: flen, i, n_part
-      integer(kind=4)                   :: error, rank
+      integer(kind=4)                   :: error, rank1 = 1, rank2 = 2
       integer(HID_T)                    :: file_id, dataspace_id, dataset_id
       integer(SIZE_T)                   :: bufsize
       integer(HSIZE_T), dimension(1)    :: dimm
@@ -78,7 +78,6 @@ module particles_io_hdf5
          vel_h(i,:) = pset%p(i)%vel(:)
       enddo
 
-      rank    = 2
       dimm    = [n_part]
       dimv    = [n_part,ndims]
       bufsize = 1
@@ -89,19 +88,19 @@ module particles_io_hdf5
       call h5ltset_attribute_int_f   (file_id, "/", "npart", [n_part], bufsize, error)
       call h5ltset_attribute_double_f(file_id, "/", "time",  [t],      bufsize, error)
 
-      call h5screate_simple_f(rank, dimm, dataspace_id, error)
+      call h5screate_simple_f(rank1, dimm, dataspace_id, error)
       call h5dcreate_f(file_id, mvars, H5T_NATIVE_DOUBLE, dataspace_id, dataset_id, error)
       call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, mas_h, dimm, error)
       call h5dclose_f(dataset_id, error)
       call h5sclose_f(dataspace_id, error)
 
-      call h5screate_simple_f(rank, dimv, dataspace_id, error)
+      call h5screate_simple_f(rank2, dimv, dataspace_id, error)
       call h5dcreate_f(file_id, pvars, H5T_NATIVE_DOUBLE, dataspace_id, dataset_id, error)
       call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, pos_h, dimv, error)
       call h5dclose_f(dataset_id, error)
       call h5sclose_f(dataspace_id, error)
 
-      call h5screate_simple_f(rank, dimv, dataspace_id, error)
+      call h5screate_simple_f(rank2, dimv, dataspace_id, error)
       call h5dcreate_f(file_id, vvars, H5T_NATIVE_DOUBLE, dataspace_id, dataset_id, error)
       call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, vel_h, dimv, error)
       call h5dclose_f(dataset_id, error)
