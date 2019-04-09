@@ -52,13 +52,15 @@ module particles_io_hdf5
 
       character(len=*),      intent(in) :: fname
       character(len=cwdlen)             :: filename
-      character(len=idlen)              :: pvars = 'pos', vvars = 'vel'
+      character(len=idlen)              :: mvars = 'mas', pvars = 'pos', vvars = 'vel'
       integer                           :: flen, i, n_part
       integer(kind=4)                   :: error, rank
       integer(HID_T)                    :: file_id, dataspace_id, dataset_id
       integer(SIZE_T)                   :: bufsize
-      integer(HSIZE_T), dimension(2)    :: dimm
-      real, dimension(:,:), allocatable :: pos_table, vel_table
+      integer(HSIZE_T), dimension(1)    :: dimm
+      integer(HSIZE_T), dimension(2)    :: dimv
+      real, dimension(:),   allocatable :: mas_h
+      real, dimension(:,:), allocatable :: pos_h, vel_h
 
       thdf = set_timer(tmr_hdf,.true.)
       flen = len(trim(fname))
@@ -69,14 +71,16 @@ module particles_io_hdf5
       endif
 
       n_part = size(pset%p, dim=1)
-      allocate(pos_table(n_part,ndims), vel_table(n_part,ndims))
+      allocate(pos_h(n_part,ndims), vel_h(n_part,ndims), mas_h(n_part))
       do i = 1, n_part
-         pos_table(i,:) = pset%p(i)%pos(:)
-         vel_table(i,:) = pset%p(i)%vel(:)
+         mas_h(i)   = pset%p(i)%mass
+         pos_h(i,:) = pset%p(i)%pos(:)
+         vel_h(i,:) = pset%p(i)%vel(:)
       enddo
 
       rank    = 2
-      dimm    = [n_part,ndims]
+      dimm    = [n_part]
+      dimv    = [n_part,ndims]
       bufsize = 1
 
       call h5open_f(error)
@@ -86,21 +90,27 @@ module particles_io_hdf5
       call h5ltset_attribute_double_f(file_id, "/", "time",  [t],      bufsize, error)
 
       call h5screate_simple_f(rank, dimm, dataspace_id, error)
-      call h5dcreate_f(file_id, pvars, H5T_NATIVE_DOUBLE, dataspace_id, dataset_id, error)
-      call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, pos_table, dimm, error)
+      call h5dcreate_f(file_id, mvars, H5T_NATIVE_DOUBLE, dataspace_id, dataset_id, error)
+      call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, mas_h, dimm, error)
       call h5dclose_f(dataset_id, error)
       call h5sclose_f(dataspace_id, error)
 
-      call h5screate_simple_f(rank, dimm, dataspace_id, error)
+      call h5screate_simple_f(rank, dimv, dataspace_id, error)
+      call h5dcreate_f(file_id, pvars, H5T_NATIVE_DOUBLE, dataspace_id, dataset_id, error)
+      call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, pos_h, dimv, error)
+      call h5dclose_f(dataset_id, error)
+      call h5sclose_f(dataspace_id, error)
+
+      call h5screate_simple_f(rank, dimv, dataspace_id, error)
       call h5dcreate_f(file_id, vvars, H5T_NATIVE_DOUBLE, dataspace_id, dataset_id, error)
-      call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, vel_table, dimm, error)
+      call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, vel_h, dimv, error)
       call h5dclose_f(dataset_id, error)
       call h5sclose_f(dataspace_id, error)
 
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
-      deallocate(pos_table, vel_table)
+      deallocate(pos_h, vel_h, mas_h)
 
       thdf = set_timer(tmr_hdf)
       if (master) then
