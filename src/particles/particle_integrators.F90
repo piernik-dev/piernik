@@ -389,23 +389,19 @@ contains
 
          subroutine update_particle_kinetic_energy(n, total_energy)
 
-            use constants, only: half, zero, xdim, zdim
+            use constants, only: half, zero
 
             implicit none
 
             integer, intent(in)  :: n            !< number of particles
             real,    intent(out) :: total_energy !< total energy of set of particles
-            integer(kind=4)      :: cdim
             integer              :: p
             real                 :: v2           !< particle velocity squared
 
             total_energy = zero
 
             do p = 1, n
-               v2 = zero
-               do cdim = xdim, zdim
-                  v2 = v2 + pset%p(p)%vel(cdim)**2
-               enddo
+               v2 = sum(pset%p(p)%vel(:)**2)
                !energy       = 1/2  *      m         *  v**2 +     Ep(x,y,z)
                pset%p(p)%energy = half * pset%p(p)%mass * v2 + pset%p(p)%energy
                total_energy = total_energy + pset%p(p)%energy
