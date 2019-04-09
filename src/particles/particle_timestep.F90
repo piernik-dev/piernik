@@ -127,9 +127,6 @@ contains
       call printinfo('[particle_timestep:timestep_nbody] Finish timestep_nbody')
 #endif /* VERBOSE */
 
-      return
-      if (cg%dl(xdim) < zero) return ! suppress compiler warnings
-
    end subroutine timestep_nbody
 
 end module particle_timestep
