@@ -334,7 +334,6 @@ contains
       real                               :: dt_kick              !< timestep for kicks
       real                               :: total_energy         !< total energy of set of the particles
       integer                            :: n                    !< number of particles
-      !integer, save                      :: counter
 
       n = size(pset%p, dim=1)
       if (twodtscheme) then
@@ -342,9 +341,6 @@ contains
       else
          dt_kick = dt_tot * half
       endif
-
-      !counter = 1
-      !call save_particles(n, lf_t, counter)
 
       if (forward .or. .not.twodtscheme) then
          call kick                           (n,     dt_kick) !1. kick
@@ -360,8 +356,6 @@ contains
 
          call leapfrog2_diagnostics          (n, total_energy)
       endif
-
-      !call save_particles(n, lf_t, counter)
 
       contains
 
@@ -472,29 +466,6 @@ contains
             close(lun_out)
 
          end subroutine leapfrog2_diagnostics
-
-         subroutine save_particles(n, lf_t, counter)
-
-            implicit none
-
-            integer, intent(in)    :: n
-            real,    intent(in)    :: lf_t
-            integer, intent(inout) :: counter
-            integer                :: i, data_file = 757
-            character(len=17)      :: filename
-
-            write(filename,'(a10,i3.3,a4)') 'particles_',counter,'.dat'
-
-            open(unit = data_file, file=filename)
-               write(data_file, *) "#t =", lf_t
-               do i = 1, n
-                  write(data_file,*) i, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel
-               enddo
-            close(data_file)
-
-            counter = counter + 1
-
-         end subroutine save_particles
 
          subroutine get_ang_momentum_2(n, ang_momentum)
 
