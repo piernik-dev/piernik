@@ -463,7 +463,6 @@ contains
 
    end subroutine update_particle_acc_tsc
 
-
    subroutine get_acc_model(p, eps, acc2)
 
       use constants,      only: ndims, xdim, zdim
@@ -497,5 +496,47 @@ contains
       der_xyz = ( phi_pm_part(pos(1,:)+real(idm(dir,:))*d, eps, mass) - phi_pm_part(pos(1,:)-real(idm(dir,:))*d, eps, mass) ) / (two*d)
 
    end function der_xyz
+
+   subroutine direct_nbody_acc(mass, pos, acc, n, epot)
+
+      use constants, only: ndims, zero
+      use units,     only: newtong
+
+      implicit none
+
+      integer,                  intent(in)  :: n
+      real, dimension(n),       intent(in)  :: mass
+      real, dimension(n,ndims), intent(in)  :: pos
+      real, dimension(n,ndims), intent(out) :: acc
+      real,                     intent(out) :: epot
+
+      integer                               :: i, j
+      real, dimension(ndims)                :: rji, da
+      real                                  :: r   ! | rji |
+      real                                  :: r2  ! | rji |^2
+      real                                  :: r3  ! | rji |^3
+
+      acc(:,:) = zero
+      epot     = zero
+
+      do i = 1, n
+         do j = i+1, n
+            rji(:) = pos(j, :) - pos(i, :)
+
+            r2 = sum(rji**2)
+            r = sqrt(r2)
+            r3 = r * r2
+
+            ! add the {i,j} contribution to the total potential energy for the system
+            epot = epot - newtong * mass(i) * mass(j) / r
+
+            da(:) = newtong * rji(:) / r3
+
+            acc(i,:) = acc(i,:) + mass(j) * da(:)
+            acc(j,:) = acc(j,:) - mass(i) * da(:)
+         enddo
+      enddo
+
+   end subroutine direct_nbody_acc
 
 end module particle_gravity

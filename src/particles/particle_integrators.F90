@@ -484,49 +484,6 @@ contains
          end subroutine get_angmom_totener
 
    end subroutine leapfrog2ord
-
-   subroutine get_acc_pot(mass, pos, acc, n, epot)
-
-      use constants, only: ndims
-
-      implicit none
-
-      integer,                  intent(in)  :: n
-      real, dimension(n),       intent(in)  :: mass
-      real, dimension(n,ndims), intent(in)  :: pos
-      real, dimension(n,ndims), intent(out) :: acc
-      real,                     intent(out) :: epot
-
-      integer                               :: i, j
-      real, dimension(ndims)                :: rji, da
-      real                                  :: r   ! | rji |
-      real                                  :: r2  ! | rji |^2
-      real                                  :: r3  ! | rji |^3
-
-      acc(:,:) = 0.0
-      epot = 0.0
-
-      do i = 1, n
-         do j = i+1, n
-            rji(:) = pos(j, :) - pos(i, :)
-
-            r2 = sum(rji**2)
-            r = sqrt(r2)
-            r3 = r * r2
-
-            ! add the {i,j} contribution to the total potential energy for the system
-
-            epot = epot - mass(i) * mass(j)/r
-
-            da(:) = rji(:) / r3
-
-
-            acc(i,:) = acc(i,:) + mass(j) * da(:)
-            acc(j,:) = acc(j,:) - mass(i) * da(:)
-         enddo
-      enddo
-
-   end subroutine get_acc_pot
 #endif /* NBODY */
 
 end module particle_integrators
