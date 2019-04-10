@@ -39,6 +39,9 @@ module dataio
    use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, res_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, gdf_strict, h5_64bit
    use constants,  only: cwdlen, fmt_len, cbuff_len, dsetnamelen, RES, TSL
    use timer,      only: wallclock
+#ifdef NBODY
+   use particles_io_hdf5, only: pvars
+#endif /* NBODY */
 
    implicit none
 
@@ -101,6 +104,9 @@ module dataio
    namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
                               domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
                               multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
+#ifdef NBODY
+                              pvars, &
+#endif /* NBODY */
                               colormode, wdt_res, gdf_strict, h5_64bit
 
 contains
@@ -144,6 +150,7 @@ contains
 !! <tr><td>tsl_with_ptc       </td><td>if ISO .false. else .true.</td><td>logical   </td><td>\copydoc dataio::plt_with_ptc      </td></tr>
 !! <tr><td>domain_dump        </td><td>'phys_domain'      </td><td>'phys_domain' or 'full_domain'                       </td><td>\copydoc dataio_pub::domain_dump</td></tr>
 !! <tr><td>vars               </td><td>''                 </td><td>'dens', 'velx', 'vely', 'velz', 'ener' and some more </td><td>\copydoc dataio::vars  </td></tr>
+!! <tr><td>pvars              </td><td>''                 </td><td>'ppos', 'pvel', 'pacc', 'mass', 'ener' and some more </td><td>\copydoc dataio::pvars </td></tr>
 !! <tr><td>mag_center         </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio::mag_center       </td></tr>
 !! <tr><td>vizit              </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::vizit        </td></tr>
 !! <tr><td>fmin               </td><td>                   </td><td>real      </td><td>\copydoc dataio_pub::fmin         </td></tr>
@@ -257,6 +264,9 @@ contains
       use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn, h5_64bit
       use dataio_pub, only: nh, set_colors  ! QA_WARN required for diff_nml
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
+#ifdef NBODY
+      use particles_io_hdf5, only: npvarsmx
+#endif /* NBODY */
 
       implicit none
 
@@ -284,6 +294,9 @@ contains
 
       domain_dump       = 'phys_domain'
       vars(:)           = ''
+#ifdef NBODY
+      pvars(:)          = ''
+#endif /* NBODY */
       mag_center        = .false.
       write(user_message_file,'(a,"/msg")') trim(wd_rd)
       system_message_file = "/tmp/piernik_msg"
@@ -383,7 +396,7 @@ contains
          ibuff(21) = resdel
 
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
-!                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
+!                              domain_dump, vars, pvars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
 !                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
 !                              colormode, wdt_res, gdf_strict, h5_64bit
          ibuff(43) = nproc_io
@@ -415,6 +428,11 @@ contains
          do iv = 1, nvarsmx
             cbuff(40+iv) = vars(iv)
          enddo
+#ifdef NBODY
+         do iv = 1, npvarsmx
+            cbuff(40+nvarsmx+iv) = pvars(iv)
+         enddo
+#endif /* NBODY */
 
          cbuff(90) = user_message_file(1:cbuff_len)
          cbuff(91) = system_message_file(1:cbuff_len)
@@ -471,9 +489,14 @@ contains
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)
          domain_dump         = trim(cbuff(40))
-         do iv=1, nvarsmx
+         do iv = 1, nvarsmx
             vars(iv)         = trim(cbuff(40+iv))
          enddo
+#ifdef NBODY
+         do iv = 1, npvarsmx
+            pvars(iv)         = trim(cbuff(40+nvarsmx+iv))
+         enddo
+#endif /* NBODY */
 
          user_message_file   = trim(cbuff(90))
          system_message_file = trim(cbuff(91))

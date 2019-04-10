@@ -29,27 +29,30 @@
 module particles_io_hdf5
 ! pulled by NBODY && HDF5
 
+   use constants, only: dsetnamelen
+
    implicit none
 
    private
-   public  :: write_nbody_hdf5, read_nbody_hdf5
+   public  :: write_nbody_hdf5, read_nbody_hdf5, npvarsmx, pvars
+
+   integer, parameter                              :: npvarsmx = 20  !< maximum number of particle variables to dump in hdf files
+   character(len=dsetnamelen), dimension(npvarsmx) :: pvars          !< array of 4-character strings standing for variables to dump in particle hdf files
 
    contains
 
    subroutine write_nbody_hdf5(fname)
 
-      use constants,      only: cwdlen, idlen, tmr_hdf
-      use dataio_pub,     only: msg, printinfo, printio, thdf
-      use hdf5,           only: h5open_f, h5close_f, h5fcreate_f, h5fclose_f
-      use hdf5,           only: HID_T, H5F_ACC_TRUNC_F
-      use mpisetup,       only: master
-      use timer,          only: set_timer
+      use constants,  only: cwdlen, tmr_hdf
+      use dataio_pub, only: msg, printinfo, printio, thdf
+      use hdf5,       only: h5open_f, h5close_f, h5fcreate_f, h5fclose_f, HID_T, H5F_ACC_TRUNC_F
+      use mpisetup,   only: master
+      use timer,      only: set_timer
 
       implicit none
 
       character(len=*), intent(in) :: fname
       character(len=cwdlen)        :: filename
-      character(len=idlen)         :: mvars = 'mas', pvars = 'pos', vvars = 'vel'
       integer                      :: flen
       integer(kind=4)              :: error
       integer(HID_T)               :: file_id
@@ -67,9 +70,7 @@ module particles_io_hdf5
 
       call set_nbody_attributes(file_id)
 
-      call write_nbody_h5_rank1(file_id, mvars)
-      call write_nbody_h5_rank2(file_id, pvars)
-      call write_nbody_h5_rank2(file_id, vvars)
+      call nbody_datasets(file_id)
 
       call h5fclose_f(file_id, error)
       call h5close_f(error)
@@ -119,103 +120,113 @@ module particles_io_hdf5
 
    end subroutine set_nbody_attributes
 
-   subroutine write_nbody_h5_rank1(file_id, vvar)
+   subroutine nbody_datasets(file_id)
 
-      use constants,      only: idlen
+      use hdf5, only: HID_T
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id       !< File identifier
+      integer                    :: i
+
+      do i = 1, npvarsmx
+         if (len(trim(pvars(i))) > 0) call nbody_datafields(file_id, trim(pvars(i)))
+      enddo
+
+   end subroutine nbody_datasets
+
+   subroutine nbody_datafields(file_id, pvar)
+
+      use constants,      only: ndims
       use dataio_pub,     only: msg, warn
-      use hdf5,           only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f
-      use hdf5,           only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
+      use hdf5,           only: HID_T
       use particle_types, only: pset
 
       implicit none
 
-      character(len=idlen), intent(in) :: vvar
-      integer(HID_T),       intent(in) :: file_id
-      integer(HID_T)                   :: dataspace_id, dataset_id
-      integer(HSIZE_T), dimension(1)   :: dimm
-      integer(kind=4)                  :: error, rank1 = 1
-      integer                          :: n_part
-      real, dimension(:), allocatable  :: table
+      integer(HID_T),   intent(in)      :: file_id       !< File identifier
+      character(len=*), intent(in)      :: pvar
+      real, dimension(:),   allocatable :: tabr1
+      real, dimension(:,:), allocatable :: tabr2
+      integer                           :: i, n_part
+      logical                           :: rank1, rank2
 
       n_part = size(pset%p, dim=1)
+      allocate(tabr1(n_part), tabr2(n_part, ndims))
+      rank1 = .false. ; rank2 = .false.
 
-      select case (vvar)
-         case ('mas')
-            allocate(table(n_part)) ; table(:) = pset%p(:)%mass
-         case ('ene')
-            allocate(table(n_part)) ; table(:) = pset%p(:)%energy
+      select case (pvar)
+         case ('mass')
+            rank1 = .true. ; tabr1(:) = pset%p(:)%mass
+         case ('ener')
+            rank1 = .true. ; tabr1(:) = pset%p(:)%energy
+         case ('ppos')
+            rank2 = .true.
+            do i = 1, n_part
+               tabr2(i,:) = pset%p(i)%pos(:)
+            enddo
+         case ('pvel')
+            rank2 = .true.
+            do i = 1, n_part
+               tabr2(i,:) = pset%p(i)%vel(:)
+            enddo
+         case ('pacc')
+            rank2 = .true.
+            do i = 1, n_part
+               tabr2(i,:) = pset%p(i)%acc(:)
+            enddo
          case default
-            write(msg,'(2a)')'[particles_io_hdf5::write_nbody_h5_rank1]: unknown particle var: ', vvar ; call warn(msg)
+            write(msg,'(2a)')'[particles_io_hdf5::nbody_datafields]: unknown particle var: ', pvar ; call warn(msg)
             return
       end select
 
-      dimm = [n_part]
+      if (rank1) call write_nbody_h5_rank1(file_id, pvar, tabr1)
+      if (rank2) call write_nbody_h5_rank2(file_id, pvar, tabr2)
+      deallocate(tabr1, tabr2)
 
+   end subroutine nbody_datafields
+
+   subroutine write_nbody_h5_rank1(file_id, vvar, tab)
+
+      use hdf5, only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
+
+      implicit none
+
+      character(len=*),   intent(in) :: vvar
+      integer(HID_T),     intent(in) :: file_id
+      real, dimension(:), intent(in) :: tab
+      integer(HSIZE_T), dimension(1) :: dimm
+      integer(HID_T)                 :: dataspace_id, dataset_id
+      integer(kind=4)                :: error, rank1 = 1
+
+      dimm = shape(tab)
       call h5screate_simple_f(rank1, dimm, dataspace_id, error)
       call h5dcreate_f(file_id, vvar, H5T_NATIVE_DOUBLE, dataspace_id, dataset_id, error)
-      call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, table, dimm, error)
+      call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, tab, dimm, error)
       call h5dclose_f(dataset_id, error)
       call h5sclose_f(dataspace_id, error)
-
-      deallocate(table)
 
    end subroutine write_nbody_h5_rank1
 
-   subroutine write_nbody_h5_rank2(file_id, vvar)
+   subroutine write_nbody_h5_rank2(file_id, vvar, tab)
 
-      use constants,      only: idlen, ndims
-      use dataio_pub,     only: msg, warn
-      use hdf5,           only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f
-      use hdf5,           only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
-      use particle_types, only: pset
+      use hdf5, only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
 
       implicit none
 
-      character(len=idlen), intent(in)  :: vvar
-      integer(HID_T),       intent(in)  :: file_id
-      integer(HID_T)                    :: dataspace_id, dataset_id
-      integer(HSIZE_T), dimension(2)    :: dimv
-      integer(kind=4)                   :: error, rank2 = 2
-      integer                           :: i, n_part
-      real, dimension(:,:), allocatable :: table
+      character(len=*),     intent(in) :: vvar
+      integer(HID_T),       intent(in) :: file_id
+      real, dimension(:,:), intent(in) :: tab
+      integer(HSIZE_T), dimension(2)   :: dimv
+      integer(HID_T)                   :: dataspace_id, dataset_id
+      integer(kind=4)                  :: error, rank2 = 2
 
-      n_part = size(pset%p, dim=1)
-      allocate(table(n_part,ndims))
-      do i = 1, n_part
-         table(i,:) = pset%p(i)%pos(:)
-         table(i,:) = pset%p(i)%vel(:)
-      enddo
-
-      select case (vvar)
-         case ('pos')
-            allocate(table(n_part,ndims))
-            do i = 1, n_part
-               table(i,:) = pset%p(i)%pos(:)
-            enddo
-         case ('vel')
-            allocate(table(n_part,ndims))
-            do i = 1, n_part
-               table(i,:) = pset%p(i)%vel(:)
-            enddo
-         case ('acc')
-            allocate(table(n_part,ndims))
-            do i = 1, n_part
-               table(i,:) = pset%p(i)%acc(:)
-            enddo
-         case default
-            write(msg,'(2a)')'[particles_io_hdf5::write_nbody_h5_rank2]: unknown particle var: ', vvar ; call warn(msg)
-            return
-      end select
-
-      dimv = [n_part,ndims]
-
+      dimv = shape(tab)
       call h5screate_simple_f(rank2, dimv, dataspace_id, error)
       call h5dcreate_f(file_id, vvar, H5T_NATIVE_DOUBLE, dataspace_id, dataset_id, error)
-      call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, table, dimv, error)
+      call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, tab, dimv, error)
       call h5dclose_f(dataset_id, error)
       call h5sclose_f(dataspace_id, error)
-
-      deallocate(table)
 
    end subroutine write_nbody_h5_rank2
 
