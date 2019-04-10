@@ -40,12 +40,9 @@ module particles_io_hdf5
 
       use constants,      only: cwdlen, idlen, tmr_hdf
       use dataio_pub,     only: msg, printinfo, printio, thdf
-      use global,         only: t
       use hdf5,           only: h5open_f, h5close_f, h5fcreate_f, h5fclose_f
-      use hdf5,           only: HID_T, SIZE_T, H5F_ACC_TRUNC_F
-      use h5lt,           only: h5ltset_attribute_int_f, h5ltset_attribute_double_f
+      use hdf5,           only: HID_T, H5F_ACC_TRUNC_F
       use mpisetup,       only: master
-      use particle_types, only: pset
       use timer,          only: set_timer
 
       implicit none
@@ -53,10 +50,9 @@ module particles_io_hdf5
       character(len=*), intent(in) :: fname
       character(len=cwdlen)        :: filename
       character(len=idlen)         :: mvars = 'mas', pvars = 'pos', vvars = 'vel'
-      integer                      :: flen, n_part
+      integer                      :: flen
       integer(kind=4)              :: error
       integer(HID_T)               :: file_id
-      integer(SIZE_T)              :: bufsize
 
       thdf = set_timer(tmr_hdf,.true.)
       flen = len(trim(fname))
@@ -66,14 +62,10 @@ module particles_io_hdf5
          call printio(msg, .true.)
       endif
 
-      bufsize = 1
-
       call h5open_f(error)
       call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
 
-      n_part = size(pset%p, dim=1)
-      call h5ltset_attribute_int_f   (file_id, "/", "npart", [n_part], bufsize, error)
-      call h5ltset_attribute_double_f(file_id, "/", "time",  [t],      bufsize, error)
+      call set_nbody_attributes(file_id)
 
       call write_nbody_h5_rank1(file_id, mvars)
       call write_nbody_h5_rank2(file_id, pvars)
@@ -89,6 +81,43 @@ module particles_io_hdf5
       endif
 
    end subroutine write_nbody_hdf5
+
+   subroutine set_nbody_attributes(file_id)
+
+      use dataio_pub,         only: require_problem_IC, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
+         &                          last_res_time, last_log_time, last_tsl_time, nres, nhdf, domain_dump
+      use global,             only: t, dt, nstep
+      use hdf5,               only: HID_T
+      use particle_types,     only: pset
+      use set_get_attributes, only: set_attr
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id       !< File identifier
+
+      ! real attributes
+      call set_attr(file_id, "time",          [t                     ]) !rr2
+      call set_attr(file_id, "timestep",      [dt                    ]) !rr2
+      call set_attr(file_id, "piernik",       [piernik_hdf5_version2 ]) !rr1, rr2
+      call set_attr(file_id, "last_log_time", [last_log_time         ]) !rr2
+      call set_attr(file_id, "last_tsl_time", [last_tsl_time         ]) !rr2
+      call set_attr(file_id, "last_hdf_time", [last_hdf_time         ]) !rr2
+      call set_attr(file_id, "last_res_time", [last_res_time         ]) !rr2
+
+      ! integer attributes
+      call set_attr(file_id, "npart",              [size(pset%p, dim=1)   ]) !rr2
+      call set_attr(file_id, "nstep",              [nstep                 ]) !rr2
+      call set_attr(file_id, "nres",               [nres                  ]) !rr2
+      call set_attr(file_id, "nhdf",               [nhdf                  ]) !rr2
+      call set_attr(file_id, "require_problem_IC", [require_problem_IC    ]) !rr2
+      !> \todo  add number of pieces in the restart point/data dump
+
+      ! string attributes
+      call set_attr(file_id, "problem_name", [trim(problem_name)]) !rr2
+      call set_attr(file_id, "domain",       [trim(domain_dump) ]) !rr2
+      call set_attr(file_id, "run_id",       [trim(run_id)      ]) !rr2
+
+   end subroutine set_nbody_attributes
 
    subroutine write_nbody_h5_rank1(file_id, vvar)
 
