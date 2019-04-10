@@ -37,9 +37,10 @@ module particle_types
    private
    public :: particle_set, particle_solver_T, pset
 #ifdef NBODY
-   public :: twodtscheme
+   public :: twodtscheme, dump_diagnose
 
    logical :: twodtscheme
+   logical :: dump_diagnose      !< dump diagnose for each particle to a seperate log file
 #endif /* NBODY */
 
    !>

@@ -66,7 +66,7 @@ contains
       use particle_func,         only: check_ord
       use particle_gravity,      only: is_setacc_cic, is_setacc_int, mask_gpot1b, is_setacc_int, is_setacc_tsc
       use particle_integrators,  only: leapfrog2
-      use particle_types,        only: twodtscheme
+      use particle_types,        only: twodtscheme, dump_diagnose
 #endif /* NBODY */
 
       implicit none
@@ -79,7 +79,7 @@ contains
       character(len=cbuff_len) :: acc_interp_method  !< acceleration interpolation method
       integer                  :: order              !< order of Lagrange polynomials (if acc_interp_method = 'lagrange')
 
-      namelist /PARTICLES/ npart, time_integrator, interpolation_scheme, acc_interp_method, lf_c, mask_gpot1b, ignore_dt_fluid
+      namelist /PARTICLES/ npart, time_integrator, interpolation_scheme, acc_interp_method, lf_c, mask_gpot1b, ignore_dt_fluid, dump_diagnose
 #else /* !NBODY */
       namelist /PARTICLES/ time_integrator, interpolation_scheme
 #endif /* !NBODY */
@@ -92,6 +92,7 @@ contains
       lf_c                 = 1.0
       twodtscheme          = .false.
       ignore_dt_fluid      = .false.
+      dump_diagnose        = .false.
 #ifdef NBODY_GRIDDIRECT
       mask_gpot1b          = .true.
 #else /* !NBODY_GRIDDIRECT */
@@ -125,6 +126,7 @@ contains
          lbuff(1) = mask_gpot1b
          lbuff(2) = twodtscheme
          lbuff(3) = ignore_dt_fluid
+         lbuff(4) = dump_diagnose
 #endif /* NBODY */
       endif
 
@@ -145,6 +147,7 @@ contains
          mask_gpot1b          = lbuff(1)
          twodtscheme          = lbuff(2)
          ignore_dt_fluid      = lbuff(3)
+         dump_diagnose        = lbuff(4)
 #endif /* NBODY */
       endif
 

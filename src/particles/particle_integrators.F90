@@ -409,6 +409,7 @@ contains
             use dataio_pub,       only: msg, printinfo
             use func,             only: operator(.equals.)
             use particle_gravity, only: get_acc_model
+            use particle_types,   only: dump_diagnose
 
             implicit none
 
@@ -448,14 +449,14 @@ contains
             write(msg,'(a,3f8.5)') '[particle_integrators:leapfrog2_diagnostics] ang_momentum: initial, current, error ', init_ang_momentum, ang_momentum, d_ang_momentum
             call printinfo(msg)
 
-            open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
-
-            do i = 1, size(pset%p, dim=1)
-               call get_acc_model(i, 0.0, acc2)
-               write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, t_glob+dt_kick, dt_kick, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:), pset%p(i)%energy
-            enddo
-
-            close(lun_out)
+            if (dump_diagnose) then
+               open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
+                  do i = 1, size(pset%p, dim=1)
+                     call get_acc_model(i, 0.0, acc2)
+                     write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, t_glob+dt_kick, dt_kick, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:), pset%p(i)%energy
+                  enddo
+               close(lun_out)
+            endif
 
          end subroutine leapfrog2_diagnostics
 
