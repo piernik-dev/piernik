@@ -27,10 +27,9 @@
 #include "piernik.h"
 
 !>
-!! \brief Main particle module
+!! \brief Timestep particle module
 !!
-!! This module contains all particle related things that are needed by the rest
-!! of the code. No other module should directly import anything from particle_*
+!! This module contains all particle related routines to determine dt limitations.
 !<
 
 module particle_timestep
@@ -47,14 +46,15 @@ contains
 
    subroutine timestep_nbody(dt, cg)
 
-      use constants,      only: xdim, zdim, big, one, two, zero
-      use dataio_pub,     only: msg, printinfo
-      use func,           only: operator(.notequals.)
-      use grid_cont,      only: grid_container
-      use particle_pub,   only: lf_c, ignore_dt_fluid
-      use particle_types, only: pset
+      use constants,            only: big, one, two, zero
+      use dataio_pub,           only: msg, printinfo
+      use func,                 only: operator(.notequals.)
+      use grid_cont,            only: grid_container
+      use particle_diagnostics, only: max_pacc_3d
+      use particle_pub,         only: lf_c, ignore_dt_fluid
 #ifdef DUST_PARTICLES
-      use constants,      only: ndims
+      use constants,            only: ndims, xdim, zdim
+      use particle_diagnostics, only: max_pvel_1d
 #endif /* DUST_PARTICLES */
 
       implicit none
@@ -62,10 +62,9 @@ contains
       real,                          intent(inout) :: dt
       type(grid_container), pointer, intent(in)    :: cg
 
-      integer                                      :: n_part, i
-      integer(kind=4)                              :: cdim
-      real                                         :: acc2, max_acc, eta, eps, factor, dt_hydro
+      real                                         :: max_acc, eta, eps, factor, dt_hydro
 #ifdef DUST_PARTICLES
+      integer(kind=4)                              :: cdim
       real, dimension(ndims)                       :: max_v
 #endif /* DUST_PARTICLES */
 
@@ -73,31 +72,19 @@ contains
       call printinfo('[particle_timestep:timestep_nbody] Commencing timestep_nbody')
 #endif /* VERBOSE */
 
-      n_part = size(pset%p, dim=1)
-
       eta      = minval(cg%dl)   !scale timestep with cell size
       eps      = 1.0e-1
       factor   = one
       dt_nbody = big
       max_acc  = zero
 
-      do i = 1, n_part
-         acc2 = zero
-         do cdim = xdim, zdim
-            acc2 = acc2 + pset%p(i)%acc(cdim)**2
-         enddo
-         max_acc = max(acc2, max_acc)
-      enddo
-      max_acc = sqrt(max_acc)
+      call max_pacc_3d(max_acc)
 
       if (max_acc .notequals. zero) then
          dt_nbody = sqrt(two*eta*eps/max_acc)
 
 #ifdef DUST_PARTICLES
-         do cdim = xdim, zdim
-            max_v(cdim)  = maxval(abs(pset%p(:)%vel(cdim)))
-         enddo
-
+         call max_pvel_1d(max_v)
          if (any(max_v*dt_nbody > cg%dl)) then
             factor = big
             do cdim = xdim, zdim
