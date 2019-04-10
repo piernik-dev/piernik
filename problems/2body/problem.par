@@ -43,6 +43,7 @@
     dt_log  = 0.0
     dt_tsl  = 0.0
     vars(1:) = 'dens'
+    pvars(1:) = 'ppos', 'pvel', 'pacc', 'mass', 'ener'
  /
 
  $FLUID_IONIZED
