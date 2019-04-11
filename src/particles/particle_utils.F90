@@ -100,50 +100,58 @@ contains
 
    subroutine particle_diagnostics(tg,kdt)
 
-      use constants,  only: zero
       use dataio_pub, only: msg, printinfo
-      use func,       only: operator(.equals.)
 
       implicit none
 
       real, intent(in) :: tg, kdt
-      real             :: ang_momentum         !< angular momentum of set of the particles
-      real             :: total_energy         !< total energy of set of the particles
+      real             :: tot_angmom           !< angular momentum of set of the particles
+      real             :: tot_energy           !< total energy of set of the particles
       real             :: d_energy             !< error of energy of set of the particles in succeeding timesteps
-      real             :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
-      real, save       :: initial_energy       !< total initial energy of set of the particles
-      real, save       :: init_ang_momentum    !< initial angular momentum of set of the particles
+      real             :: d_angmom             !< error of angular momentum in succeeding timensteps
+      real, save       :: init_energy          !< total initial energy of set of the particles
+      real, save       :: init_angmom          !< initial angular momentum of set of the particles
       logical, save    :: first_run_lf = .true.
 
-      call get_angmom_totener(ang_momentum, total_energy)
+      call get_angmom_totener(tot_angmom, tot_energy)
 
       if (first_run_lf) then
-         initial_energy    = total_energy
-         d_energy          = zero
-         init_ang_momentum = ang_momentum
-         d_ang_momentum    = zero
-      else
-         d_energy = log(abs((total_energy - initial_energy)/initial_energy))
-         if (init_ang_momentum .equals. zero) then
-            d_ang_momentum = ang_momentum
-         else
-            d_ang_momentum = (ang_momentum - init_ang_momentum)/init_ang_momentum
-            if (d_ang_momentum .equals. zero) then
-               d_ang_momentum = zero
-            else
-               d_ang_momentum = log(abs(d_ang_momentum))
-            endif
-         endif
+         init_energy = tot_energy
+         init_angmom = tot_angmom
       endif
+      d_energy = log_error(tot_energy, init_energy)
+      d_angmom = log_error(tot_angmom, init_angmom)
 
-      write(msg,'(a,3f8.5)') '[particle_utils:particle_diagnostics] Total energy: initial, current, error ', initial_energy, total_energy, d_energy
+      write(msg,'(a,3f8.5)') '[particle_utils:particle_diagnostics] Total energy: initial, current, error ', init_energy, tot_energy, d_energy
       call printinfo(msg)
-      write(msg,'(a,3f8.5)') '[particle_utils:particle_diagnostics] ang_momentum: initial, current, error ', init_ang_momentum, ang_momentum, d_ang_momentum
+      write(msg,'(a,3f8.5)') '[particle_utils:particle_diagnostics] ang_momentum: initial, current, error ', init_angmom, tot_angmom, d_angmom
       call printinfo(msg)
 
       if (dump_diagnose) call dump_particles_to_textfile(tg,kdt)
 
    end subroutine particle_diagnostics
+
+   real function log_error(vcurr,vinit)
+
+      use constants, only: zero
+      use func,      only: operator(.equals.)
+
+      implicit none
+
+      real, intent(in) :: vcurr, vinit
+
+      if (vinit .equals. zero) then
+         log_error = vcurr
+         return
+      endif
+      log_error = (vcurr - vinit) / vinit
+      if (log_error .equals. zero) then
+         log_error = zero
+      else
+         log_error = log(abs(log_error))
+      endif
+
+   end function log_error
 
    subroutine get_angmom_totener(ang_momentum, total_energy)
 
