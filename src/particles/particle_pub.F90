@@ -35,7 +35,7 @@
 
 module particle_pub
 ! pulled by GRAV
-   use particle_types, only: particle_solver_T, pset
+   use particle_types, only: particle_solver_T
 
    implicit none
    private
@@ -60,6 +60,7 @@ contains
       use dataio_pub,            only: msg, die
       use mpisetup,              only: master, slave, cbuff, piernik_mpi_bcast
       use particle_integrators,  only: hermit4
+      use particle_types,        only: pset
 #ifdef NBODY
       use dataio_pub,            only: printinfo
       use mpisetup,              only: ibuff, lbuff, rbuff
@@ -205,6 +206,8 @@ contains
 !> \brief Deallocate pset
 
    subroutine cleanup_particles
+
+      use particle_types, only: pset
 
      implicit none
 
