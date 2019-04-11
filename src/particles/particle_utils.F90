@@ -32,7 +32,7 @@
 !! This module contains particle diagnostics related things that are needed by I/O and debug routines.
 !<
 
-module particle_diagnostics
+module particle_utils
 ! pulled by NBODY
 
    implicit none
@@ -93,4 +93,4 @@ contains
 
    end subroutine max_pacc_3d
 
-end module particle_diagnostics
+end module particle_utils

@@ -49,15 +49,15 @@ contains
 
    subroutine timestep_nbody(dt, cg)
 
-      use constants,            only: big, one, two, zero
-      use dataio_pub,           only: msg, printinfo
-      use func,                 only: operator(.notequals.)
-      use grid_cont,            only: grid_container
-      use particle_diagnostics, only: max_pacc_3d
-      use particle_pub,         only: lf_c, ignore_dt_fluid
+      use constants,      only: big, one, two, zero
+      use dataio_pub,     only: msg, printinfo
+      use func,           only: operator(.notequals.)
+      use grid_cont,      only: grid_container
+      use particle_utils, only: max_pacc_3d
+      use particle_pub,   only: lf_c, ignore_dt_fluid
 #ifdef DUST_PARTICLES
-      use constants,            only: ndims, xdim, zdim
-      use particle_diagnostics, only: max_pvel_1d
+      use constants,      only: ndims, xdim, zdim
+      use particle_utils, only: max_pvel_1d
 #endif /* DUST_PARTICLES */
 
       implicit none
