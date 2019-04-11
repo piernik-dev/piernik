@@ -323,6 +323,7 @@ contains
       use constants,        only: half, two
       use particle_gravity, only: update_particle_gravpot_and_acc
       use particle_types,   only: particle_set, twodtscheme
+      use particle_utils,   only: particle_diagnostics
 
       implicit none
 
@@ -353,7 +354,7 @@ contains
 
          call update_particle_kinetic_energy
 
-         call leapfrog2_diagnostics
+         call particle_diagnostics(t_glob, dt_kick)
       endif
 
       contains
@@ -402,87 +403,6 @@ contains
             enddo
 
          end subroutine update_particle_kinetic_energy
-
-         subroutine leapfrog2_diagnostics
-
-            use constants,        only: ndims, zero
-            use dataio_pub,       only: msg, printinfo
-            use func,             only: operator(.equals.)
-            use particle_gravity, only: get_acc_model
-            use particle_types,   only: dump_diagnose
-
-            implicit none
-
-            real, dimension(ndims) :: acc2
-            real                   :: ang_momentum         !< angular momentum of set of the particles
-            real                   :: total_energy         !< total energy of set of the particles
-            integer                :: i, lun_out
-            real                   :: d_energy             !< error of energy of set of the particles in succeeding timesteps
-            real                   :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
-            real, save             :: initial_energy       !< total initial energy of set of the particles
-            real, save             :: init_ang_momentum    !< initial angular momentum of set of the particles
-            logical, save          :: first_run_lf = .true.
-
-            call get_angmom_totener(ang_momentum, total_energy)
-
-            if (first_run_lf) then
-               initial_energy    = total_energy
-               d_energy          = zero
-               init_ang_momentum = ang_momentum
-               d_ang_momentum    = zero
-            else
-               d_energy = log(abs((total_energy - initial_energy)/initial_energy))
-               if (init_ang_momentum .equals. zero) then
-                  d_ang_momentum = ang_momentum
-               else
-                  d_ang_momentum = (ang_momentum - init_ang_momentum)/init_ang_momentum
-                  if (d_ang_momentum .equals. zero) then
-                     d_ang_momentum = zero
-                  else
-                     d_ang_momentum = log(abs(d_ang_momentum))
-                  endif
-               endif
-            endif
-
-            write(msg,'(a,3f8.5)') '[particle_integrators:leapfrog2_diagnostics] Total energy: initial, current, error ', initial_energy, total_energy, d_energy
-            call printinfo(msg)
-            write(msg,'(a,3f8.5)') '[particle_integrators:leapfrog2_diagnostics] ang_momentum: initial, current, error ', init_ang_momentum, ang_momentum, d_ang_momentum
-            call printinfo(msg)
-
-            if (dump_diagnose) then
-               open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
-                  do i = 1, size(pset%p, dim=1)
-                     call get_acc_model(i, 0.0, acc2)
-                     write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, t_glob+dt_kick, dt_kick, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:), pset%p(i)%energy
-                  enddo
-               close(lun_out)
-            endif
-
-         end subroutine leapfrog2_diagnostics
-
-         subroutine get_angmom_totener(ang_momentum, total_energy)
-
-            use constants, only: xdim, ydim, zdim, zero
-
-            implicit none
-
-            real,    intent(out) :: ang_momentum
-            real,    intent(out) :: total_energy !< total energy of set of particles
-            integer              :: i
-            real                 :: L1, L2, L3
-
-            ang_momentum = zero
-            total_energy = zero
-
-            do i = 1, size(pset%p, dim=1)
-               L1 = pset%p(i)%pos(ydim) * pset%p(i)%vel(zdim) - pset%p(i)%pos(zdim) * pset%p(i)%vel(ydim)
-               L2 = pset%p(i)%pos(zdim) * pset%p(i)%vel(xdim) - pset%p(i)%pos(xdim) * pset%p(i)%vel(zdim)
-               L3 = pset%p(i)%pos(xdim) * pset%p(i)%vel(ydim) - pset%p(i)%pos(ydim) * pset%p(i)%vel(xdim)
-               ang_momentum = ang_momentum + pset%p(i)%mass * sqrt(L1**2 + L2**2 + L3**2)
-               total_energy = total_energy + pset%p(i)%energy
-            enddo
-
-         end subroutine get_angmom_totener
 
    end subroutine leapfrog2ord
 #endif /* NBODY */
