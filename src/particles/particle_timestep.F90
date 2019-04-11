@@ -35,12 +35,15 @@
 module particle_timestep
 ! pulled by NBODY
 
+   use types, only: value
+
    implicit none
 
    private
-   public :: timestep_nbody, dt_nbody
+   public :: timestep_nbody, dt_nbody, max_pacc
 
-   real   :: dt_nbody           !< timestep depends on particles
+   real        :: dt_nbody           !< timestep depends on particles
+   type(value) :: max_pacc
 
 contains
 
@@ -62,7 +65,7 @@ contains
       real,                          intent(inout) :: dt
       type(grid_container), pointer, intent(in)    :: cg
 
-      real                                         :: max_acc, eta, eps, factor, dt_hydro
+      real                                         :: eta, eps, factor, dt_hydro
 #ifdef DUST_PARTICLES
       integer(kind=4)                              :: cdim
       real, dimension(ndims)                       :: max_v
@@ -76,12 +79,11 @@ contains
       eps      = 1.0e-1
       factor   = one
       dt_nbody = big
-      max_acc  = zero
 
-      call max_pacc_3d(max_acc)
+      call max_pacc_3d(cg, max_pacc)
 
-      if (max_acc .notequals. zero) then
-         dt_nbody = sqrt(two*eta*eps/max_acc)
+      if (max_pacc%val .notequals. zero) then
+         dt_nbody = sqrt(two*eta*eps/max_pacc%val)
 
 #ifdef DUST_PARTICLES
          call max_pvel_1d(max_v)
@@ -97,6 +99,7 @@ contains
 
          dt_nbody  = lf_c * factor * dt_nbody
       endif
+      max_pacc%assoc = dt_nbody
 
       dt_hydro = dt
 

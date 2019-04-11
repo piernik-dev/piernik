@@ -58,25 +58,38 @@ contains
 
    end subroutine max_pvel_1d
 
-   subroutine max_pacc_3d(max_acc)
+   subroutine max_pacc_3d(cg, max_pacc)
 
-      use constants,      only: zero
+      use constants,      only: big, CENTER, half, LO, xdim, zdim, zero
+      use grid_cont,      only: grid_container
       use particle_types, only: pset
+      use types,          only: value
 
       implicit none
 
-      real, intent(out) :: max_acc
-      real              :: acc2
-      integer           :: i, n_part
+      type(grid_container), pointer, intent(in)  :: cg
+      type(value),                   intent(out) :: max_pacc
+      real                                       :: acc2, max_acc
+      integer                                    :: i, n_part
+      integer(kind=4) :: cdim
+
+      max_pacc%assoc = big
 
       max_acc  = zero
       n_part = size(pset%p, dim=1)
 
       do i = 1, n_part
          acc2 = sum(pset%p(i)%acc(:)**2)
-         max_acc = max(acc2, max_acc)
+         if (acc2 > max_acc) then
+            max_acc = acc2
+            max_pacc%coords(:) = pset%p(i)%pos(:)
+            max_pacc%proc = i
+         endif
       enddo
-      max_acc = sqrt(max_acc)
+      max_pacc%val = sqrt(max_acc)
+      do cdim = xdim, zdim
+         max_pacc%loc(cdim) = int( half + (max_pacc%coords(cdim) - cg%coord(CENTER,cdim)%r(cg%ijkse(cdim, LO))) * cg%idl(cdim) )
+      enddo
 
    end subroutine max_pacc_3d
 
