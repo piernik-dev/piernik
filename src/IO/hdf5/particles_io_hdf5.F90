@@ -34,12 +34,38 @@ module particles_io_hdf5
    implicit none
 
    private
-   public  :: write_nbody_hdf5, read_nbody_hdf5, npvarsmx, pvars
+   public  :: init_nbody_hdf5, write_nbody_hdf5, read_nbody_hdf5
 
-   integer, parameter                              :: npvarsmx = 20  !< maximum number of particle variables to dump in hdf files
-   character(len=dsetnamelen), dimension(npvarsmx) :: pvars          !< array of 4-character strings standing for variables to dump in particle hdf files
+   character(len=dsetnamelen), dimension(*), parameter :: pvarn = ['mass', 'ener', 'ppos', 'pvec', 'pacc']
+   logical,                    dimension(size(pvarn))  :: pvarl = .false.
 
    contains
+
+   subroutine init_nbody_hdf5(pvars)
+
+      use dataio_pub, only: msg, warn
+
+      implicit none
+
+      character(len=dsetnamelen), dimension(:), intent(in) :: pvars  !< quantities to be plotted, see dataio::vars
+      integer                                              :: ie, il
+      logical                                              :: var_found
+
+      do il = lbound(pvars, 1), ubound(pvars, 1)
+         if (len(trim(pvars(il))) == 0) cycle
+         var_found = .false.
+         do ie = lbound(pvarn, 1), ubound(pvarn, 1)
+            if (trim(pvars(il)) == trim(pvarn(ie))) then
+               pvarl(ie) = .true.
+               var_found = .true.
+            endif
+         enddo
+         if (.not.var_found) then
+            write(msg,'(2a)')'[particles_io_hdf5::init_nbody_hdf5]: unknown particle var: ', pvars(il) ; call warn(msg)
+         endif
+      enddo
+
+   end subroutine init_nbody_hdf5
 
    subroutine write_nbody_hdf5(fname)
 
@@ -129,8 +155,8 @@ module particles_io_hdf5
       integer(HID_T), intent(in) :: file_id       !< File identifier
       integer                    :: i
 
-      do i = 1, npvarsmx
-         if (len(trim(pvars(i))) > 0) call nbody_datafields(file_id, trim(pvars(i)))
+      do i = lbound(pvarl, 1), ubound(pvarl, 1)
+         if (pvarl(i)) call nbody_datafields(file_id, trim(pvarn(i)))
       enddo
 
    end subroutine nbody_datasets
@@ -138,7 +164,6 @@ module particles_io_hdf5
    subroutine nbody_datafields(file_id, pvar)
 
       use constants,      only: ndims
-      use dataio_pub,     only: msg, warn
       use hdf5,           only: HID_T
       use particle_types, only: pset
 
@@ -176,8 +201,6 @@ module particles_io_hdf5
                tabr2(i,:) = pset%p(i)%acc(:)
             enddo
          case default
-            write(msg,'(2a)')'[particles_io_hdf5::nbody_datafields]: unknown particle var: ', pvar ; call warn(msg)
-            return
       end select
 
       if (rank1) call write_nbody_h5_rank1(file_id, pvar, tabr1)

@@ -39,9 +39,6 @@ module dataio
    use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, res_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, gdf_strict, h5_64bit
    use constants,  only: cwdlen, fmt_len, cbuff_len, dsetnamelen, RES, TSL
    use timer,      only: wallclock
-#ifdef NBODY
-   use particles_io_hdf5, only: pvars
-#endif /* NBODY */
 
    implicit none
 
@@ -61,6 +58,9 @@ module dataio
    character(len=cwdlen)    :: system_message_file   !< path to possible system (UPS) message file containing orders to dump/stop/end simulation
    integer                  :: iv                    !< work index to count successive variables to dump in hdf files
    character(len=dsetnamelen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
+#ifdef NBODY
+   character(len=dsetnamelen), dimension(nvarsmx) :: pvars !< array of 4-character strings standing for variables to dump in particle hdf files
+#endif /* NBODY */
 #ifdef HDF5
    integer                  :: nhdf_start            !< number of hdf file for the first hdf dump in simulation run
    integer                  :: nres_start            !< number of restart file for the first restart dump in simulation run
@@ -264,9 +264,6 @@ contains
       use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn, h5_64bit
       use dataio_pub, only: nh, set_colors  ! QA_WARN required for diff_nml
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
-#ifdef NBODY
-      use particles_io_hdf5, only: npvarsmx
-#endif /* NBODY */
 
       implicit none
 
@@ -429,7 +426,7 @@ contains
             cbuff(40+iv) = vars(iv)
          enddo
 #ifdef NBODY
-         do iv = 1, npvarsmx
+         do iv = 1, nvarsmx
             cbuff(40+nvarsmx+iv) = pvars(iv)
          enddo
 #endif /* NBODY */
@@ -493,7 +490,7 @@ contains
             vars(iv)         = trim(cbuff(40+iv))
          enddo
 #ifdef NBODY
-         do iv = 1, npvarsmx
+         do iv = 1, nvarsmx
             pvars(iv)         = trim(cbuff(40+nvarsmx+iv))
          enddo
 #endif /* NBODY */
@@ -525,6 +522,10 @@ contains
       use fluidindex,   only: flind
       use global,       only: t, nstep
       use restart_hdf5, only: read_restart_hdf5
+#ifdef NBODY
+      use particles_io_hdf5, only: init_nbody_hdf5
+#endif /* NBODY */
+
 #endif /* HDF5 */
 
       implicit none
@@ -549,6 +550,10 @@ contains
          gdf_strict = .false.
       endif
       call init_hdf5(vars)
+#ifdef NBODY
+      call init_nbody_hdf5(pvars)
+#endif /* NBODY */
+
       call init_data
 #endif /* HDF5 */
 
