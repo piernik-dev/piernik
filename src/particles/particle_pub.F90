@@ -66,7 +66,7 @@ contains
       use particle_func,         only: check_ord
       use particle_gravity,      only: is_setacc_cic, is_setacc_int, mask_gpot1b, is_setacc_int, is_setacc_tsc
       use particle_integrators,  only: leapfrog2
-      use particle_types,        only: twodtscheme, dump_diagnose
+      use particle_utils,        only: twodtscheme, dump_diagnose
 #endif /* NBODY */
 
       implicit none

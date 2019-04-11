@@ -38,7 +38,10 @@ module particle_utils
    implicit none
 
    private
-   public :: max_pvel_1d, max_pacc_3d, particle_diagnostics
+   public :: max_pvel_1d, max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose
+
+   logical :: twodtscheme
+   logical :: dump_diagnose      !< dump diagnose for each particle to a seperate log file
 
 contains
 
@@ -101,7 +104,7 @@ contains
       use dataio_pub,       only: msg, printinfo
       use func,             only: operator(.equals.)
       use particle_gravity, only: get_acc_model
-      use particle_types,   only: pset, dump_diagnose
+      use particle_types,   only: pset
 
       implicit none
 

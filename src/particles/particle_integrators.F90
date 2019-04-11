@@ -322,8 +322,8 @@ contains
 
       use constants,        only: half, two
       use particle_gravity, only: update_particle_gravpot_and_acc
-      use particle_types,   only: particle_set, twodtscheme
-      use particle_utils,   only: particle_diagnostics
+      use particle_types,   only: particle_set
+      use particle_utils,   only: particle_diagnostics, twodtscheme
 
       implicit none
 
