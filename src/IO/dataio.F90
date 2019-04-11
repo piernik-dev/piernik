@@ -1465,6 +1465,9 @@ contains
       use constants,          only: xdim, ydim, zdim, HI, idm, ndims
       use domain,             only: dom
 #endif /* VARIABLE_GP || MAGNETIC */
+#ifdef NBODY
+      use particle_timestep,  only: pacc_max
+#endif /* NBODY */
 
       implicit none
 
@@ -1643,6 +1646,10 @@ contains
             call cmnlog_s(fmt_loc, 'max(|gpy|)  ', id, gpymax)
             call cmnlog_s(fmt_loc, 'max(|gpz|)  ', id, gpzmax)
 #endif /* VARIABLE_GP */
+#ifdef NBODY
+            id = "PRT"
+            call cmnlog_l(fmt_dtloc, 'max(|acc|)  ', id, pacc_max)
+#endif /* NBODY */
             call printinfo('================================================================================================================', .false.)
          else
 #ifdef MAGNETIC

@@ -40,10 +40,10 @@ module particle_timestep
    implicit none
 
    private
-   public :: timestep_nbody, dt_nbody, max_pacc
+   public :: timestep_nbody, dt_nbody, pacc_max
 
    real        :: dt_nbody           !< timestep depends on particles
-   type(value) :: max_pacc
+   type(value) :: pacc_max
 
 contains
 
@@ -80,10 +80,10 @@ contains
       factor   = one
       dt_nbody = big
 
-      call max_pacc_3d(cg, max_pacc)
+      call max_pacc_3d(cg, pacc_max)
 
-      if (max_pacc%val .notequals. zero) then
-         dt_nbody = sqrt(two*eta*eps/max_pacc%val)
+      if (pacc_max%val .notequals. zero) then
+         dt_nbody = sqrt(two*eta*eps/pacc_max%val)
 
 #ifdef DUST_PARTICLES
          call max_pvel_1d(max_v)
@@ -99,7 +99,7 @@ contains
 
          dt_nbody  = lf_c * factor * dt_nbody
       endif
-      max_pacc%assoc = dt_nbody
+      pacc_max%assoc = dt_nbody
 
       dt_hydro = dt
 
