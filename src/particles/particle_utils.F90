@@ -62,6 +62,7 @@ contains
 
       use constants,      only: big, CENTER, half, LO, xdim, zdim, zero
       use grid_cont,      only: grid_container
+      use mpisetup,       only: proc
       use particle_types, only: pset
       use types,          only: value
 
@@ -83,13 +84,14 @@ contains
          if (acc2 > max_acc) then
             max_acc = acc2
             max_pacc%coords(:) = pset%p(i)%pos(:)
-            max_pacc%proc = i
+            !max_pacc%proc = i !> \todo it might be an information about extremum particle, but the scheme of log file is to print the process number
          endif
       enddo
       max_pacc%val = sqrt(max_acc)
       do cdim = xdim, zdim
          max_pacc%loc(cdim) = int( half + (max_pacc%coords(cdim) - cg%coord(CENTER,cdim)%r(cg%ijkse(cdim, LO))) * cg%idl(cdim) )
       enddo
+      max_pacc%proc = proc
 
    end subroutine max_pacc_3d
 
