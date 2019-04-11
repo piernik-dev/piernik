@@ -100,24 +100,20 @@ contains
 
    subroutine particle_diagnostics(tg,kdt)
 
-      use constants,        only: ndims, zero
-      use dataio_pub,       only: msg, printinfo
-      use func,             only: operator(.equals.)
-      use particle_gravity, only: get_acc_model
-      use particle_types,   only: pset
+      use constants,  only: zero
+      use dataio_pub, only: msg, printinfo
+      use func,       only: operator(.equals.)
 
       implicit none
 
-      real, intent(in)       :: tg, kdt
-      real, dimension(ndims) :: acc2
-      real                   :: ang_momentum         !< angular momentum of set of the particles
-      real                   :: total_energy         !< total energy of set of the particles
-      integer                :: i, lun_out
-      real                   :: d_energy             !< error of energy of set of the particles in succeeding timesteps
-      real                   :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
-      real, save             :: initial_energy       !< total initial energy of set of the particles
-      real, save             :: init_ang_momentum    !< initial angular momentum of set of the particles
-      logical, save          :: first_run_lf = .true.
+      real, intent(in) :: tg, kdt
+      real             :: ang_momentum         !< angular momentum of set of the particles
+      real             :: total_energy         !< total energy of set of the particles
+      real             :: d_energy             !< error of energy of set of the particles in succeeding timesteps
+      real             :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
+      real, save       :: initial_energy       !< total initial energy of set of the particles
+      real, save       :: init_ang_momentum    !< initial angular momentum of set of the particles
+      logical, save    :: first_run_lf = .true.
 
       call get_angmom_totener(ang_momentum, total_energy)
 
@@ -140,19 +136,12 @@ contains
          endif
       endif
 
-      write(msg,'(a,3f8.5)') '[particle_integrators:leapfrog2_diagnostics] Total energy: initial, current, error ', initial_energy, total_energy, d_energy
+      write(msg,'(a,3f8.5)') '[particle_utils:particle_diagnostics] Total energy: initial, current, error ', initial_energy, total_energy, d_energy
       call printinfo(msg)
-      write(msg,'(a,3f8.5)') '[particle_integrators:leapfrog2_diagnostics] ang_momentum: initial, current, error ', init_ang_momentum, ang_momentum, d_ang_momentum
+      write(msg,'(a,3f8.5)') '[particle_utils:particle_diagnostics] ang_momentum: initial, current, error ', init_ang_momentum, ang_momentum, d_ang_momentum
       call printinfo(msg)
 
-      if (dump_diagnose) then
-         open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
-            do i = 1, size(pset%p, dim=1)
-               call get_acc_model(i, 0.0, acc2)
-               write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, tg+kdt, kdt, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:), pset%p(i)%energy
-            enddo
-         close(lun_out)
-      endif
+      if (dump_diagnose) call dump_particles_to_textfile(tg,kdt)
 
    end subroutine particle_diagnostics
 
@@ -163,10 +152,10 @@ contains
 
       implicit none
 
-      real,    intent(out) :: ang_momentum
-      real,    intent(out) :: total_energy !< total energy of set of particles
-      integer              :: i
-      real                 :: L1, L2, L3
+      real, intent(out) :: ang_momentum
+      real, intent(out) :: total_energy !< total energy of set of particles
+      integer           :: i
+      real              :: L1, L2, L3
 
       ang_momentum = zero
       total_energy = zero
@@ -180,5 +169,26 @@ contains
       enddo
 
    end subroutine get_angmom_totener
+
+   subroutine dump_particles_to_textfile(tg,kdt)
+
+      use constants,        only: ndims
+      use particle_gravity, only: get_acc_model
+      use particle_types,   only: pset
+
+      implicit none
+
+      real, intent(in)       :: tg, kdt
+      real, dimension(ndims) :: acc2
+      integer                :: i, lun_out
+
+      open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
+         do i = 1, size(pset%p, dim=1)
+            call get_acc_model(i, 0.0, acc2)
+            write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, tg+kdt, kdt, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:), pset%p(i)%energy
+         enddo
+      close(lun_out)
+
+   end subroutine dump_particles_to_textfile
 
 end module particle_utils
