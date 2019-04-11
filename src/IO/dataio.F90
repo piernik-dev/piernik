@@ -899,6 +899,9 @@ contains
 #ifdef MAGNETIC
       use constants,        only: ydim, zdim
 #endif /* MAGNETIC */
+#ifdef NBODY
+      use particle_utils,   only: tot_energy, d_energy, tot_angmom, d_angmom
+#endif /* NBODY */
 
       implicit none
 
@@ -983,6 +986,9 @@ contains
                call pop_vector(tsl_names, field_len, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
                call pop_vector(tsl_names, field_len, ["dst_mmass_cur", "dst_mmass_cum"])
             endif
+#ifdef NBODY
+            call pop_vector(tsl_names, field_len, ["totpener", "errpener", "totpamom", "errpamom"])
+#endif /* NBODY */
 
             if (associated(user_tsl)) call user_tsl(tsl_vars, tsl_names)
 
@@ -1116,6 +1122,9 @@ contains
           & call pop_vector(tsl_vars, [sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val  ])
             call pop_vector(tsl_vars, [sn%mmass_cur, sn%mmass_cum])
          enddo
+#ifdef NBODY
+         call pop_vector(tsl_vars, [tot_energy, d_energy, tot_angmom, d_angmom])
+#endif /* NBODY */
 
       endif
 

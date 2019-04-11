@@ -38,10 +38,14 @@ module particle_utils
    implicit none
 
    private
-   public :: max_pvel_1d, max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose
+   public :: max_pvel_1d, max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom
 
+   real    :: tot_angmom           !< angular momentum of set of the particles
+   real    :: tot_energy           !< total energy of set of the particles
+   real    :: d_energy             !< error of energy of set of the particles in succeeding timesteps
+   real    :: d_angmom             !< error of angular momentum in succeeding timensteps
    logical :: twodtscheme
-   logical :: dump_diagnose      !< dump diagnose for each particle to a seperate log file
+   logical :: dump_diagnose        !< dump diagnose for each particle to a seperate log file
 
 contains
 
@@ -100,15 +104,13 @@ contains
 
    subroutine particle_diagnostics(tg,kdt)
 
+#ifdef VERBOSE
       use dataio_pub, only: msg, printinfo
+#endif /* VERBOSE */
 
       implicit none
 
       real, intent(in) :: tg, kdt
-      real             :: tot_angmom           !< angular momentum of set of the particles
-      real             :: tot_energy           !< total energy of set of the particles
-      real             :: d_energy             !< error of energy of set of the particles in succeeding timesteps
-      real             :: d_angmom             !< error of angular momentum in succeeding timensteps
       real, save       :: init_energy          !< total initial energy of set of the particles
       real, save       :: init_angmom          !< initial angular momentum of set of the particles
       logical, save    :: first_run_lf = .true.
@@ -118,14 +120,17 @@ contains
       if (first_run_lf) then
          init_energy = tot_energy
          init_angmom = tot_angmom
+         first_run_lf = .false.
       endif
       d_energy = log_error(tot_energy, init_energy)
       d_angmom = log_error(tot_angmom, init_angmom)
 
-      write(msg,'(a,3f8.5)') '[particle_utils:particle_diagnostics] Total energy: initial, current, error ', init_energy, tot_energy, d_energy
+#ifdef VERBOSE
+      write(msg,'(a,3(1x,e12.5))') '[particle_utils:particle_diagnostics] Total energy: initial, current, error ', init_energy, tot_energy, d_energy
       call printinfo(msg)
-      write(msg,'(a,3f8.5)') '[particle_utils:particle_diagnostics] ang_momentum: initial, current, error ', init_angmom, tot_angmom, d_angmom
+      write(msg,'(a,3(1x,e12.5))') '[particle_utils:particle_diagnostics] ang_momentum: initial, current, error ', init_angmom, tot_angmom, d_angmom
       call printinfo(msg)
+#endif /* VERBOSE */
 
       if (dump_diagnose) call dump_particles_to_textfile(tg,kdt)
 
