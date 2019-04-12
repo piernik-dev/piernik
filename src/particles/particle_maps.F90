@@ -26,10 +26,10 @@
 !
 #include "piernik.h"
 !>
-!! \brief Routines used to interpolate grid fields onto particle positions
+!! \brief Routines used to interpolate grid fields onto particle positions and vice versa
 !<
 
-module particle_interpolation
+module particle_maps
 ! pulled by ANY
    implicit none
 
@@ -103,4 +103,4 @@ contains
               fac(zdim, I0)*fac(xdim, IM)*( f(ijkp(xdim)-dom%D_(xdim),ijkp(ydim)+dom%D_(ydim),ijkp(zdim)             ,:)*fac(ydim, IP) + &
                                             f(ijkp(xdim)-dom%D_(xdim),ijkp(ydim)-dom%D_(ydim),ijkp(zdim)             ,:)*fac(ydim, IM) )
     end function quadratic_spline
-end module
+end module particle_maps
