@@ -34,24 +34,245 @@ module particle_maps
    implicit none
 
    private
-   public :: quadratic_spline
+   public :: set_map, map_particles, quadratic_spline
+
+   procedure(map_scheme), pointer :: map_particles => NULL()
+
+   abstract interface
+      subroutine map_scheme(iv, factor)
+         implicit none
+         integer(kind=4), intent(in) :: iv     !< index in cg%q array, where we want the particles to be projected
+         real,            intent(in) :: factor !< typically fpiG
+      end subroutine map_scheme
+   end interface
 
 contains
+
+!>
+!! \brief Set function that projects particles onto grid
+!<
+
+   subroutine set_map(ischeme)
+
+      use constants,  only: I_NGP, I_CIC, I_TSC
+      use dataio_pub, only: die
+
+      implicit none
+
+      integer(kind=4), intent(in) :: ischeme !< index of interpolation scheme
+
+      select case (ischeme)
+         case (I_NGP)
+            map_particles => map_ngp
+         case (I_CIC)
+            map_particles => map_cic
+         case (I_TSC)
+            map_particles => map_tsc
+         case default
+            call die("[particle_interpolation:set_map] Interpolation scheme selector's logic in particle_pub:init_particles is broken. Go fix it!")
+      end select
+
+   end subroutine set_map
+
+!>
+!! \brief Project the particles onto density map
+!!
+!! \details With the help of multigrid self-gravity solver the gravitational potential of the particle set can be found
+!!
+!! \warning Current implementation of the multipole solver isn't aware of particles, co if any of them exist outside of the domain, their potential will be ignored.
+!! \todo Fix the multipole solver
+!!
+!! \todo Add an option for less compact mapping that nullifies self-forces
+!!
+!! \warning Particles outside periodic domain are ignored
+!<
+
+   subroutine map_ngp(iv, factor)
+
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
+      use dataio_pub,     only: die
+      use domain,         only: dom
+      use particle_types, only: pset
+
+      implicit none
+
+      integer(kind=4), intent(in)       :: iv     !< index in cg%q array, where we want the particles to be projected
+      real,            intent(in)       :: factor !< typically fpiG
+
+      type(cg_list_element), pointer    :: cgl
+      integer                           :: p
+      integer(kind=8), dimension(ndims) :: ijkp
+
+      cgl => leaves%first
+      do while (associated(cgl))
+
+         ijkp(:) = cgl%cg%ijkse(:,LO)
+         do p = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
+            if (dom%geometry_type /= GEO_XYZ) call die("[particle_types:map_ngp] Unsupported geometry")
+            where (dom%has_dir(:)) ijkp(:) = floor((pset%p(p)%pos(:)-cgl%cg%fbnd(:, LO))/cgl%cg%dl(:)) + cgl%cg%ijkse(:, LO)
+            if (all(ijkp >= cgl%cg%ijkse(:,LO)) .and. all(ijkp <= cgl%cg%ijkse(:,HI))) &
+                 cgl%cg%q(iv)%arr(ijkp(xdim), ijkp(ydim), ijkp(zdim)) = cgl%cg%q(iv)%arr(ijkp(xdim), ijkp(ydim), ijkp(zdim)) + factor * pset%p(p)%mass / cgl%cg%dvol
+         enddo
+
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine map_ngp
+
+   subroutine map_cic(iv, factor)
+
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, CENTER
+      use domain,         only: dom
+      use particle_types, only: pset
+
+      implicit none
+
+      integer(kind=4), intent(in)              :: iv     !< index in cg%q array, where we want the particles to be projected
+      real,            intent(in)              :: factor !< typically fpiG
+
+      type(cg_list_element), pointer           :: cgl
+      integer                                  :: p, cdim
+      integer(kind=8)                          :: cn, i, j, k
+      integer(kind=8), dimension(ndims, LO:HI) :: ijkp
+      integer(kind=8), dimension(ndims)        :: cur_ind
+      real                                     :: weight
+
+      cgl => leaves%first
+      do while (associated(cgl))
+
+         do p = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
+            associate( &
+                  field => cgl%cg%q(iv)%arr, &
+                  part  => pset%p(p), &
+                  idl   => cgl%cg%idl &
+            )
+               if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
+
+               do cdim = xdim, zdim
+                  if (dom%has_dir(cdim)) then
+                     cn = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1
+                     if (cgl%cg%coord(CENTER, cdim)%r(cn) > part%pos(cdim)) then
+                        ijkp(cdim, LO) = cn - 1
+                     else
+                        ijkp(cdim, LO) = cn
+                     endif
+                     ijkp(cdim, HI) = ijkp(cdim, LO) + 1
+                  else
+                     ijkp(cdim, :) = cgl%cg%ijkse(cdim, :)
+                  endif
+               enddo
+               do i = ijkp(xdim, LO), ijkp(xdim, HI)
+                  do j = ijkp(ydim, LO), ijkp(ydim, HI)
+                     do k = ijkp(zdim, LO), ijkp(zdim, HI)
+                        weight = factor * part%mass / cgl%cg%dvol
+                        cur_ind(:) = [i, j, k]
+                        do cdim = xdim, zdim
+                           if (dom%has_dir(cdim)) &
+                              weight = weight*( 1.0 - abs(part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(cur_ind(cdim)))*idl(cdim) )
+                        enddo
+                        field(i,j,k) = field(i,j,k) +  weight
+                      enddo
+                  enddo
+               enddo
+            end associate
+         enddo
+         print *, sum(cgl%cg%q(iv)%arr)
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine map_cic
+
+   subroutine map_tsc(iv, factor)
+
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half
+      use domain,         only: dom
+      use particle_types, only: pset
+
+      implicit none
+
+      integer(kind=4), intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
+      real,            intent(in)    :: factor !< typically fpiG
+
+      type(cg_list_element), pointer           :: cgl
+      integer                                  :: p, cdim
+      integer(kind=8)                          :: i, j, k
+      integer(kind=8), dimension(ndims, IM:IP) :: ijkp
+      integer(kind=8), dimension(ndims)        :: cur_ind
+      real                                     :: weight, delta_x, a, weight_tmp
+
+      cgl => leaves%first
+      do while (associated(cgl))
+
+         do p = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
+            associate( &
+                  field => cgl%cg%q(iv)%arr, &
+                  part  => pset%p(p), &
+                  idl   => cgl%cg%idl &
+            )
+               if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
+
+               do cdim = xdim, zdim
+                  if (dom%has_dir(cdim)) then
+                     ijkp(cdim, I0) = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1   !!! BEWARE hardcoded magic
+                     ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cgl%cg%lhn(cdim, LO), kind=8))
+                     ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cgl%cg%lhn(cdim, HI), kind=8))
+                  else
+                     ijkp(cdim, IM) = cgl%cg%ijkse(cdim, LO)
+                     ijkp(cdim, I0) = cgl%cg%ijkse(cdim, LO)
+                     ijkp(cdim, IP) = cgl%cg%ijkse(cdim, HI)
+                  endif
+               enddo
+               a = 0.0
+               do i = ijkp(xdim, IM), ijkp(xdim, IP)
+                  do j = ijkp(ydim, IM), ijkp(ydim, IP)
+                     do k = ijkp(zdim, IM), ijkp(zdim, IP)
+
+                        cur_ind(:) = [i, j, k]
+                        weight = 1.0
+
+                        do cdim = xdim, zdim
+                           if (.not.dom%has_dir(cdim)) cycle
+                           delta_x = ( part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * idl(cdim)
+                           if (cur_ind(cdim) /= ijkp(cdim, 0)) then   !!! BEWARE hardcoded magic
+                              weight_tmp = 1.125 - 1.5 * abs(delta_x) + half * delta_x**2
+                           else
+                              weight_tmp = 0.75 - delta_x**2
+                           endif
+                           weight = weight_tmp * weight
+                        enddo
+
+                        field(i, j, k) = field(i, j, k) + factor * (part%mass / cgl%cg%dvol) * weight
+                      enddo
+                  enddo
+               enddo
+            end associate
+         enddo
+
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine map_tsc
 
 !>
 !! \brief Quadratic spline interpolation
 !<
     function quadratic_spline(f, dp, ijkp) result(gp)
 
-      use constants,    only: xdim, ydim, zdim, IM, I0, IP, ndims
-      use domain,       only: dom
+      use constants, only: xdim, ydim, zdim, IM, I0, IP, ndims
+      use domain,    only: dom
 
       implicit none
 
-      real, dimension (:,:,:,:), pointer, intent(in) :: f     !< field
-      real, dimension(ndims),             intent(in) :: dp    !< point position in [0,1] range
-      integer, dimension(ndims),          intent(in) :: ijkp  !< nearest grid point where dp resides
-      real, dimension(size(f,1))                     :: gp    !< interpolated value
+      real, dimension(:,:,:,:), pointer, intent(in) :: f     !< field
+      real, dimension(ndims),            intent(in) :: dp    !< point position in [0,1] range
+      integer, dimension(ndims),         intent(in) :: ijkp  !< nearest grid point where dp resides
+      real, dimension(size(f,1))                    :: gp    !< interpolated value
 
       ! locals
       real, dimension(ndims, IM:IP) :: fac
@@ -103,4 +324,5 @@ contains
               fac(zdim, I0)*fac(xdim, IM)*( f(ijkp(xdim)-dom%D_(xdim),ijkp(ydim)+dom%D_(ydim),ijkp(zdim)             ,:)*fac(ydim, IP) + &
                                             f(ijkp(xdim)-dom%D_(xdim),ijkp(ydim)-dom%D_(ydim),ijkp(zdim)             ,:)*fac(ydim, IM) )
     end function quadratic_spline
+
 end module particle_maps

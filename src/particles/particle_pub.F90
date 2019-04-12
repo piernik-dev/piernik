@@ -55,19 +55,20 @@ contains
 
    subroutine init_particles
 
-      use constants,             only: cbuff_len, I_NGP, I_CIC, I_TSC
-      use dataio_pub,            only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,            only: msg, die
-      use mpisetup,              only: master, slave, cbuff, piernik_mpi_bcast
-      use particle_integrators,  only: hermit4
-      use particle_types,        only: pset
+      use constants,            only: cbuff_len, I_NGP, I_CIC, I_TSC
+      use dataio_pub,           only: nh  ! QA_WARN required for diff_nml
+      use dataio_pub,           only: msg, die
+      use mpisetup,             only: master, slave, cbuff, piernik_mpi_bcast
+      use particle_integrators, only: hermit4
+      use particle_maps,        only: set_map
+      use particle_types,       only: pset
 #ifdef NBODY
-      use dataio_pub,            only: printinfo
-      use mpisetup,              only: ibuff, lbuff, rbuff
-      use particle_func,         only: check_ord
-      use particle_gravity,      only: is_setacc_cic, is_setacc_int, mask_gpot1b, is_setacc_int, is_setacc_tsc
-      use particle_integrators,  only: leapfrog2
-      use particle_utils,        only: twodtscheme, dump_diagnose
+      use dataio_pub,           only: printinfo
+      use mpisetup,             only: ibuff, lbuff, rbuff
+      use particle_func,        only: check_ord
+      use particle_gravity,     only: is_setacc_cic, is_setacc_int, mask_gpot1b, is_setacc_int, is_setacc_tsc
+      use particle_integrators, only: leapfrog2
+      use particle_utils,       only: twodtscheme, dump_diagnose
 #endif /* NBODY */
 
       implicit none
@@ -172,11 +173,11 @@ contains
 
       select case (trim(interpolation_scheme))
          case ('ngp', 'NGP', 'neareast grid point')
-            call pset%set_map(I_NGP)
+            call set_map(I_NGP)
          case ('cic', 'CIC', 'cloud in cell')
-            call pset%set_map(I_CIC)
+            call set_map(I_CIC)
          case ('tsc', 'TSC', 'triangular shaped cloud')
-            call pset%set_map(I_TSC)
+            call set_map(I_TSC)
          case default
             write(msg, '(3a)')"[particle_pub:init_particles] Unknown interpolation scheme '",trim(interpolation_scheme),"'"
             call die(msg)

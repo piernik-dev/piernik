@@ -664,6 +664,7 @@ contains
       use problem_pub,       only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
 #ifdef NBODY_MULTIGRID
+      use particle_maps,     only: map_particles
       use particle_types,    only: pset
 #endif /* NBODY_MULTIGRID */
 
@@ -692,7 +693,7 @@ contains
          endif
 
 #ifdef NBODY_MULTIGRID
-         if (size(pset%p, dim=1) > 0) call pset%map(source, fpiG)
+         if (size(pset%p, dim=1) > 0) call map_particles(source, fpiG)
 #endif /* NBODY_MULTIGRID */
       else
          call leaves%set_q_value(source, 0.)  ! empty domain for "outer potential" calculation

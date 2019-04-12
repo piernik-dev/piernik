@@ -111,7 +111,7 @@ contains
       use constants,        only: nbdn_n, prth_n, ndims, one, zero, xdim, ydim, zdim
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
-      use particle_types,   only: pset
+      use particle_maps,    only: map_particles
 
       implicit none
 
@@ -125,7 +125,7 @@ contains
       factor = one
       ig = qna%ind(nbdn_n)
       cg%nbdn = zero
-      call pset%map(ig,factor)
+      call map_particles(ig,factor)
 
       ig = qna%ind(prth_n)
       cg%prth = zero
