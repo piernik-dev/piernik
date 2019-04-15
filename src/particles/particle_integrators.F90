@@ -65,15 +65,15 @@ contains
    !!  http://www.ids.ias.edu/~piet/act/comp/algorithms/starter/index.html
    !<
 
-   subroutine hermit_4ord(pset, t_glob, dt_tot, forward)
+   subroutine hermit_4ord(pset, forward)
 
-      use constants, only: ndims, xdim, zdim
+      use constants,      only: ndims, xdim, zdim
+      use global,         only: t, dt
       use particle_types, only: particle_set
 
       implicit none
 
       class(particle_set), intent(inout) :: pset  !< particle list
-      real,                intent(in)    :: t_glob, dt_tot
       logical, optional,   intent(in)    :: forward
 
       real, parameter :: dt_param = 0.03        ! control parameter to determine time step size
@@ -84,14 +84,14 @@ contains
       real, dimension(:, :), allocatable :: pos, vel, acc, jerk
 
       real    :: epot, coll_time
-      real    :: t_dia, t_out, t_end, einit, dt, t
+      real    :: t_dia, t_out, t_end, einit, dth, th
       integer :: nsteps, n, ndim, lun_out, lun_err, i
 
       open(newunit=lun_out, file='nbody_out.log', status='unknown',  position='append')
       open(newunit=lun_err, file='nbody_err.log', status='unknown',  position='append')
 
       n = size(pset%p, dim=1)
-      t = t_glob
+      th = t - dt
       allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), jerk(n, ndims))
 
       mass(:) = pset%p(:)%mass
@@ -101,7 +101,7 @@ contains
       enddo
 
       write(lun_err, *) "Starting a Hermite integration for a ", n, "-body system,"
-      write(lun_err, *) "  from time t = ", t, " with time step control parameter dt_param = ", dt_param, "  until time ", t + dt_tot, " ,"
+      write(lun_err, *) "  from time t = ", th, " with time step control parameter dt_param = ", dt_param, "  until time ", th + dt, " ,"
       write(lun_err, *) "  with diagnostics output interval dt_dia = ", dt_dia, ","
       write(lun_err, *) "  and snapshot output interval dt_out = ", dt_out, "."
 
@@ -109,30 +109,30 @@ contains
 
       nsteps = 0
 
-      call write_diagnostics(mass, pos, vel, acc, jerk, n, t, epot, nsteps, einit, .True.)
+      call write_diagnostics(mass, pos, vel, acc, jerk, n, th, epot, nsteps, einit, .True.)
 
-      t_dia = t + dt_dia  ! next time for diagnostics output
-      t_out = t + dt_out  ! next time for snapshot output
-      t_end = t + dt_tot  ! final time, to finish the integration
+      t_dia = th + dt_dia  ! next time for diagnostics output
+      t_out = th + dt_out  ! next time for snapshot output
+      t_end = th + dt      ! final time, to finish the integration
 
       do
-         do while (t < t_dia .and. t < t_out .and. t < t_end)
-            dt = dt_param * coll_time
-            call evolve_step(mass, pos, vel, acc, jerk, n, t, dt, epot, coll_time)
+         do while (th < t_dia .and. th < t_out .and. th < t_end)
+            dth = dt_param * coll_time
+            call evolve_step(mass, pos, vel, acc, jerk, n, th, dth, epot, coll_time)
             nsteps = nsteps + 1
          enddo
-         if (t >= t_dia) then
-            call write_diagnostics(mass, pos, vel, acc, jerk, n, t, epot, nsteps, einit, .False.)
+         if (th >= t_dia) then
+            call write_diagnostics(mass, pos, vel, acc, jerk, n, th, epot, nsteps, einit, .False.)
             t_dia = t_dia + dt_dia
          endif
-         if (t >= t_out) then
-            write(lun_out, *) "#", t
+         if (th >= t_out) then
+            write(lun_out, *) "#", th
             do i = 1, n
                write(lun_out, '(7(E13.6,1X))') mass(i), pos(i,:), vel(i,:)
             enddo
             t_out = t_out + dt_out
          endif
-         if (t >= t_end) exit
+         if (th >= t_end) exit
       enddo
 
       do ndim = xdim, zdim
@@ -318,9 +318,10 @@ contains
    end subroutine get_acc_jerk_pot_coll
 
 #ifdef NBODY
-   subroutine leapfrog2ord(pset, t_glob, dt_tot, forward)
+   subroutine leapfrog2ord(pset, forward)
 
       use constants,        only: half, two
+      use global,           only: dt
       use particle_gravity, only: update_particle_gravpot_and_acc
       use particle_types,   only: particle_set
       use particle_utils,   only: particle_diagnostics, twodtscheme
@@ -328,8 +329,6 @@ contains
       implicit none
 
       class(particle_set), intent(inout) :: pset                 !< particle list
-      real,                intent(in)    :: t_glob               !< initial time of simulation
-      real,                intent(in)    :: dt_tot               !< timestep of simulation
       logical, optional,   intent(in)    :: forward
 
       real                               :: dt_kick              !< timestep for kicks
@@ -337,9 +336,9 @@ contains
 
       n = size(pset%p, dim=1)
       if (twodtscheme) then
-         dt_kick = dt_tot
+         dt_kick = dt
       else
-         dt_kick = dt_tot * half
+         dt_kick = dt * half
       endif
 
       if (forward .or. .not.twodtscheme) then
@@ -354,7 +353,7 @@ contains
 
          call update_particle_kinetic_energy
 
-         call particle_diagnostics(t_glob, dt_kick)
+         call particle_diagnostics
       endif
 
       contains

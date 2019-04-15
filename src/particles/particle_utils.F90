@@ -102,7 +102,7 @@ contains
 
    end subroutine max_pacc_3d
 
-   subroutine particle_diagnostics(tg,kdt)
+   subroutine particle_diagnostics
 
 #ifdef VERBOSE
       use dataio_pub, only: msg, printinfo
@@ -110,10 +110,9 @@ contains
 
       implicit none
 
-      real, intent(in) :: tg, kdt
-      real, save       :: init_energy          !< total initial energy of set of the particles
-      real, save       :: init_angmom          !< initial angular momentum of set of the particles
-      logical, save    :: first_run_lf = .true.
+      real, save    :: init_energy          !< total initial energy of set of the particles
+      real, save    :: init_angmom          !< initial angular momentum of set of the particles
+      logical, save :: first_run_lf = .true.
 
       call get_angmom_totener(tot_angmom, tot_energy)
 
@@ -132,7 +131,7 @@ contains
       call printinfo(msg)
 #endif /* VERBOSE */
 
-      if (dump_diagnose) call dump_particles_to_textfile(tg,kdt)
+      if (dump_diagnose) call dump_particles_to_textfile
 
    end subroutine particle_diagnostics
 
@@ -183,22 +182,25 @@ contains
 
    end subroutine get_angmom_totener
 
-   subroutine dump_particles_to_textfile(tg,kdt)
+   subroutine dump_particles_to_textfile
 
-      use constants,        only: ndims
+      use constants,        only: half, ndims
+      use global,           only: t, dt
       use particle_gravity, only: get_acc_model
       use particle_types,   only: pset
 
       implicit none
 
-      real, intent(in)       :: tg, kdt
+      real                   :: kdt
       real, dimension(ndims) :: acc2
       integer                :: i, lun_out
+
+      kdt = dt ; if (.not.twodtscheme) kdt = half * dt
 
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
          do i = 1, size(pset%p, dim=1)
             call get_acc_model(i, 0.0, acc2)
-            write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, tg+kdt, kdt, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:), pset%p(i)%energy
+            write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, t, kdt, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:), pset%p(i)%energy
          enddo
       close(lun_out)
 
