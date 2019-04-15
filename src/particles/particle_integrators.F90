@@ -31,32 +31,21 @@
 module particle_integrators
 ! pulled by GRAV
 
-   use particle_types, only: particle_solver_T
-
    implicit none
 
    private
-   public :: hermit4
+   public :: psolver, hermit_4ord
 #ifdef NBODY
-   public :: leapfrog2
+   public :: leapfrog_2ord
 #endif /* NBODY */
 
-   type, extends(particle_solver_T) :: hermit4_T
-   contains
-      procedure, nopass :: evolve => hermit_4ord
-   end type hermit4_T
+   procedure(particle_solver_P), pointer :: psolver => NULL()
 
-#ifdef NBODY
-   type, extends(particle_solver_T) :: leapfrog2_T
-   contains
-      procedure, nopass :: evolve => leapfrog2ord
-   end type leapfrog2_T
-#endif /* NBODY */
-
-   type(hermit4_T), target   :: hermit4
-#ifdef NBODY
-   type(leapfrog2_T), target :: leapfrog2
-#endif /* NBODY */
+   abstract interface
+      subroutine particle_solver_P(forward)
+         logical, optional, intent(in) :: forward
+      end subroutine particle_solver_P
+   end interface
 
 contains
 
@@ -65,16 +54,15 @@ contains
    !!  http://www.ids.ias.edu/~piet/act/comp/algorithms/starter/index.html
    !<
 
-   subroutine hermit_4ord(pset, forward)
+   subroutine hermit_4ord(forward)
 
       use constants,      only: ndims, xdim, zdim
       use global,         only: t, dt
-      use particle_types, only: particle_set
+      use particle_types, only: pset
 
       implicit none
 
-      class(particle_set), intent(inout) :: pset  !< particle list
-      logical, optional,   intent(in)    :: forward
+      logical, optional, intent(in) :: forward
 
       real, parameter :: dt_param = 0.03        ! control parameter to determine time step size
       real, parameter :: dt_dia = 1             ! time interval between diagnostics output
@@ -83,8 +71,7 @@ contains
       real, dimension(:),    allocatable :: mass
       real, dimension(:, :), allocatable :: pos, vel, acc, jerk
 
-      real    :: epot, coll_time
-      real    :: t_dia, t_out, t_end, einit, dth, th
+      real    :: epot, coll_time, t_dia, t_out, t_end, einit, dth, th
       integer :: nsteps, n, ndim, lun_out, lun_err, i
 
       open(newunit=lun_out, file='nbody_out.log', status='unknown',  position='append')
@@ -318,21 +305,20 @@ contains
    end subroutine get_acc_jerk_pot_coll
 
 #ifdef NBODY
-   subroutine leapfrog2ord(pset, forward)
+   subroutine leapfrog_2ord(forward)
 
       use constants,        only: half, two
       use global,           only: dt
       use particle_gravity, only: update_particle_gravpot_and_acc
-      use particle_types,   only: particle_set
+      use particle_types,   only: pset
       use particle_utils,   only: particle_diagnostics, twodtscheme
 
       implicit none
 
-      class(particle_set), intent(inout) :: pset                 !< particle list
-      logical, optional,   intent(in)    :: forward
+      logical, optional, intent(in) :: forward
 
-      real                               :: dt_kick              !< timestep for kicks
-      integer                            :: n                    !< number of particles
+      real                          :: dt_kick              !< timestep for kicks
+      integer                       :: n                    !< number of particles
 
       n = size(pset%p, dim=1)
       if (twodtscheme) then
@@ -403,7 +389,7 @@ contains
 
          end subroutine update_particle_kinetic_energy
 
-   end subroutine leapfrog2ord
+   end subroutine leapfrog_2ord
 #endif /* NBODY */
 
 end module particle_integrators

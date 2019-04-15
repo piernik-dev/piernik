@@ -35,11 +35,10 @@
 
 module particle_pub
 ! pulled by GRAV
-   use particle_types, only: particle_solver_T
 
    implicit none
    private
-   public :: psolver, init_particles, cleanup_particles
+   public :: init_particles, cleanup_particles
 #ifdef NBODY
    public :: npart, lf_c, ignore_dt_fluid
 
@@ -47,7 +46,6 @@ module particle_pub
    real                              :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
    logical                           :: ignore_dt_fluid    !< option to test only nbody part of the code, never true by default
 #endif /* NBODY */
-   class(particle_solver_T), pointer :: psolver
 
 contains
 
@@ -59,7 +57,7 @@ contains
       use dataio_pub,           only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,           only: msg, die
       use mpisetup,             only: master, slave, cbuff, piernik_mpi_bcast
-      use particle_integrators, only: hermit4
+      use particle_integrators, only: hermit_4ord, psolver
       use particle_maps,        only: set_map
       use particle_types,       only: pset
 #ifdef NBODY
@@ -67,7 +65,7 @@ contains
       use mpisetup,             only: ibuff, lbuff, rbuff
       use particle_func,        only: check_ord
       use particle_gravity,     only: is_setacc_cic, is_setacc_int, mask_gpot1b, is_setacc_int, is_setacc_tsc
-      use particle_integrators, only: leapfrog2
+      use particle_integrators, only: leapfrog_2ord
       use particle_utils,       only: twodtscheme, dump_diagnose
 #endif /* NBODY */
 
@@ -157,10 +155,10 @@ contains
       select case (trim(time_integrator))
 #ifndef _CRAYFTN
          case ('hermit4')
-            psolver => hermit4
+            psolver => hermit_4ord
 #ifdef NBODY
          case ('leapfrog2')
-            psolver => leapfrog2
+            psolver => leapfrog_2ord
 #endif /* NBODY */
          case (default_ti) ! be quiet
 #endif /* !_CRAYFTN */
