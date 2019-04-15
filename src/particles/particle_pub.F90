@@ -53,20 +53,20 @@ contains
 
    subroutine init_particles
 
-      use constants,            only: cbuff_len, I_NGP, I_CIC, I_TSC
-      use dataio_pub,           only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,           only: msg, die
-      use mpisetup,             only: master, slave, cbuff, piernik_mpi_bcast
-      use particle_integrators, only: hermit_4ord, psolver
-      use particle_maps,        only: set_map
-      use particle_types,       only: pset
+      use constants,        only: cbuff_len, I_NGP, I_CIC, I_TSC
+      use dataio_pub,       only: nh  ! QA_WARN required for diff_nml
+      use dataio_pub,       only: msg, die
+      use mpisetup,         only: master, slave, cbuff, piernik_mpi_bcast
+      use particle_solvers, only: hermit_4ord, psolver
+      use particle_maps,    only: set_map
+      use particle_types,   only: pset
 #ifdef NBODY
-      use dataio_pub,           only: printinfo
-      use mpisetup,             only: ibuff, lbuff, rbuff
-      use particle_func,        only: check_ord
-      use particle_gravity,     only: is_setacc_cic, is_setacc_int, mask_gpot1b, is_setacc_int, is_setacc_tsc
-      use particle_integrators, only: leapfrog_2ord
-      use particle_utils,       only: twodtscheme, dump_diagnose
+      use dataio_pub,       only: printinfo
+      use mpisetup,         only: ibuff, lbuff, rbuff
+      use particle_func,    only: check_ord
+      use particle_gravity, only: is_setacc_cic, is_setacc_int, mask_gpot1b, is_setacc_int, is_setacc_tsc
+      use particle_solvers, only: leapfrog_2ord
+      use particle_utils,   only: twodtscheme, dump_diagnose
 #endif /* NBODY */
 
       implicit none

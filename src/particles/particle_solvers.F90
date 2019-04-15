@@ -28,7 +28,7 @@
 
 !>  \brief Integrators for particles
 
-module particle_integrators
+module particle_solvers
 ! pulled by GRAV
 
    implicit none
@@ -392,4 +392,4 @@ contains
    end subroutine leapfrog_2ord
 #endif /* NBODY */
 
-end module particle_integrators
+end module particle_solvers

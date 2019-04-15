@@ -96,26 +96,26 @@ contains
 !<
    subroutine make_3sweeps(forward)
 
-      use cg_list_dataop,       only: expanded_domain
-      use constants,            only: xdim, ydim, zdim, I_ONE
-      use global,               only: skip_sweep, use_fargo
-      use fargo,                only: make_fargosweep
-      use sweeps,               only: sweep
-      use user_hooks,           only: problem_customize_solution
+      use cg_list_dataop,      only: expanded_domain
+      use constants,           only: xdim, ydim, zdim, I_ONE
+      use global,              only: skip_sweep, use_fargo
+      use fargo,               only: make_fargosweep
+      use sweeps,              only: sweep
+      use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
-      use gravity,              only: source_terms_grav
-      use particle_integrators, only: psolver
+      use gravity,             only: source_terms_grav
+      use particle_solvers,    only: psolver
 #endif /* GRAV */
 #if defined(COSM_RAYS) && defined(MULTIGRID)
-      use all_boundaries,       only: all_fluid_boundaries
-      use initcosmicrays,       only: use_CRsplit
-      use multigrid_diffusion,  only: multigrid_solve_diff
+      use all_boundaries,      only: all_fluid_boundaries
+      use initcosmicrays,      only: use_CRsplit
+      use multigrid_diffusion, only: multigrid_solve_diff
 #endif /* COSM_RAYS && MULTIGRID */
 #ifdef SHEAR
-      use shear,                only: shear_3sweeps
+      use shear,               only: shear_3sweeps
 #endif /* SHEAR */
 #ifdef RIEMANN
-      use hdc,                  only: glmdamping, eglm
+      use hdc,                 only: glmdamping, eglm
 #endif /* RIEMANN */
 
       implicit none
