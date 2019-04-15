@@ -85,10 +85,9 @@ module particle_types
    end type particle_solver_T
 
    abstract interface
-      subroutine particle_solver_P(pset, t_glob, dt_tot, forward)
+      subroutine particle_solver_P(pset, forward)
          import :: particle_set
          class(particle_set), intent(inout) :: pset
-         real,                intent(in)    :: t_glob, dt_tot
          logical, optional,   intent(in)    :: forward
       end subroutine particle_solver_P
 
@@ -486,17 +485,15 @@ contains
 
    end function particle_with_id_exists
 
-   subroutine particle_set_evolve(this, func, t, dt, forward)
+   subroutine particle_set_evolve(this, func, forward)
 
       implicit none
 
       class(particle_set),      intent(inout) :: this
       class(particle_solver_T), intent(inout) :: func
-      real,                     intent(in)    :: t
-      real,                     intent(in)    :: dt
       logical, optional,        intent(in)    :: forward
 
-      call func%evolve(this, t, dt, forward)
+      call func%evolve(this, forward)
 
    end subroutine particle_set_evolve
 

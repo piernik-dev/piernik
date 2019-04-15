@@ -103,7 +103,6 @@ contains
       use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
-      use global,              only: t, dt
       use gravity,             only: source_terms_grav
       use particle_pub,        only: psolver
       use particle_types,      only: pset
@@ -163,7 +162,7 @@ contains
       endif
 
 #ifdef GRAV
-      if (associated(psolver)) call pset%evolve(psolver, t-dt, dt, forward)
+      if (associated(psolver)) call pset%evolve(psolver, forward)
 #endif /* GRAV */
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
