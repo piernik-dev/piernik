@@ -34,6 +34,7 @@ module grid_cont
    use grid_cont_bnd,     only: segment
    use grid_cont_prolong, only: grid_container_prolong_T
    use refinement_flag,   only: ref_flag
+   use particle_types,    only: particle_set
 
    implicit none
 
@@ -67,20 +68,24 @@ module grid_cont
       logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .false. otherwise
       logical, allocatable, dimension(:,:,:) :: refinemap         !< .true. when a cell triggers refinement criteria, .false. otherwise
 
+      ! Particles
+
+      type(particle_set) :: pset                                  !< set of particles that belong to this grid part
+
       ! Misc
-      integer(kind=8) :: SFC_id                                  !< position of the grid on space-filling curve
-      type(ref_flag) :: refine_flags                             !< refine or derefine this grid container?
-      integer :: membership                                      !< How many cg lists use this grid piece?
-      logical :: ignore_prolongation                             !< When .true. do not upgrade interior with incoming prolonged values
-      logical :: is_old                                          !< .true. if a given grid existed prior to  upgrade_refinement call
-      logical :: processed                                       !< for use in sweeps.F90
+      integer(kind=8) :: SFC_id                                   !< position of the grid on space-filling curve
+      type(ref_flag) :: refine_flags                              !< refine or derefine this grid container?
+      integer :: membership                                       !< How many cg lists use this grid piece?
+      logical :: ignore_prolongation                              !< When .true. do not upgrade interior with incoming prolonged values
+      logical :: is_old                                           !< .true. if a given grid existed prior to  upgrade_refinement call
+      logical :: processed                                        !< for use in sweeps.F90
 
    contains
 
-      procedure          :: init_gc                              !< Initialization
-      procedure          :: cleanup                              !< Deallocate all internals
-      procedure          :: update_leafmap                       !< Check if the grid container has any parts covered by finer grids and update appropriate map
-      procedure          :: refinemap2SFC_list                   !< create list of SFC indices to be created from refine flags
+      procedure          :: init_gc                               !< Initialization
+      procedure          :: cleanup                               !< Deallocate all internals
+      procedure          :: update_leafmap                        !< Check if the grid container has any parts covered by finer grids and update appropriate map
+      procedure          :: refinemap2SFC_list                    !< create list of SFC indices to be created from refine flags
 
    end type grid_container
 
