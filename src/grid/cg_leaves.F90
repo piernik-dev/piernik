@@ -83,11 +83,13 @@ contains
 
    subroutine update(this, str)
 
+!      use cg_level_base,      only: base  ! cn't use it because of cyclic dependency
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
-      use constants,          only: pSUM, pMAX, base_level_id
+      use constants,          only: pSUM, pMAX, base_level_id, refinement_factor, base_level_id, INVALID
       use dataio_pub,         only: msg, printinfo
+      use domain,             only: dom
       use list_of_cg_lists,   only: all_lists
       use mpisetup,           only: master, piernik_MPI_Allreduce, nproc
 
@@ -99,13 +101,15 @@ contains
       type(cg_level_connected_T), pointer :: curl
       type(cg_list_element),      pointer :: cgl
 
-      integer :: g_cnt, g_max, sum_max
+      integer :: g_cnt, g_max, sum_max, ih, b_cnt
+      character(len=len(msg)), save :: prev_msg
 
       call leaves%delete
       call all_lists%register(this, "leaves")
 
       msg = "[cg_leaves:update] Grids on levels: "
       if (present(str)) msg(len_trim(msg)+1:) = str
+      ih = len_trim(msg) + 1
 
       sum_max = 0
       curl => finest%level
@@ -113,7 +117,8 @@ contains
          if (curl%l%id == base_level_id) this%coarsest_leaves => curl !> \todo Find first not fully covered level
          curl => curl%coarser
       enddo
-      curl => this%coarsest_leaves
+      b_cnt = INVALID
+      curl => this%coarsest_leaves  ! base%level
       do while (associated(curl))
          cgl => curl%first
          do while (associated(cgl))
@@ -126,13 +131,16 @@ contains
          g_cnt = curl%cnt
          call piernik_MPI_Allreduce(g_cnt, pSUM)
          write(msg(len_trim(msg)+1:),'(i6)') g_cnt
+         if (associated(curl, this%coarsest_leaves)) b_cnt = g_cnt
          call curl%vertical_prep
          curl => curl%finer
       enddo
       g_cnt = leaves%cnt
       call piernik_MPI_Allreduce(g_cnt, pSUM)
-      write(msg(len_trim(msg)+1:), '(a,i7,a,f6.3)')", Sum: ",g_cnt, ". Load balance: ",g_cnt/real(sum_max)
-      if (master) call printinfo(msg)
+      write(msg(len_trim(msg)+1:), '(a,i7,a,f6.3)')", Sum: ",g_cnt, ", load balance: ",g_cnt/real(sum_max)
+      if (finest%level%l%id > base_level_id) write(msg(len_trim(msg)+1:), '(a,f6.3)')", leaves/finest: ", g_cnt/real(b_cnt * (refinement_factor**dom%eff_dim)**finest%level%l%id)
+      if (master .and. (msg(ih:len_trim(msg)) /= prev_msg(ih:len_trim(prev_msg)))) call printinfo(msg)
+      prev_msg = msg
 
    end subroutine update
 

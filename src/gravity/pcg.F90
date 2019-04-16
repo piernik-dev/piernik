@@ -64,10 +64,10 @@ contains
       use cg_list_global,   only: all_cg
       use constants,        only: base_level_id
       use dataio_pub,       only: warn
-      use domain,           only: AMR_bsize, dom
+      use domain,           only: dom
       use mpisetup,         only: master
       use named_array_list, only: qna
-      use refinement_flag,  only: level_max
+      use refinement,       only: level_max, bsize
 
       implicit none
 
@@ -78,7 +78,7 @@ contains
             call warn("[pcg:pcg_init] Multigrid-preconditioned conjugate gradient solver is experimental!")
             if (use_CG_outer) &
                  call warn("[pcg:pcg_init] Current implementation of Multigrid-Preconditioned Conjugate Gradient Method is known to converge poorly for outer potential.")
-            if (level_max > base_level_id .and. any((AMR_bsize > 0) .and. dom%has_dir)) &
+            if (level_max > base_level_id .and. any((bsize > 0) .and. dom%has_dir)) &
                  call warn("[pcg:pcg_init] Current implementation of Multigrid-Preconditioned Conjugate Gradient Method is known to converge poorly on refined grids.")
          endif
       endif

@@ -127,7 +127,7 @@ contains
    subroutine reg_var(this, name, vital, restart_mode, ord_prolong, dim4, position, multigrid)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, I_ZERO, I_ONE, I_TWO, I_THREE, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_D3, O_D4, O_D5, O_D6
+      use constants,        only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, I_ZERO, I_ONE, I_TWO, I_THREE, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_I5, O_I6, O_D3, O_D4, O_D5, O_D6
       use dataio_pub,       only: die, warn, msg
       use domain,           only: dom
       use named_array_list, only: qna, wna, na_var
@@ -199,7 +199,7 @@ contains
             this%ord_prolong_nb = max(this%ord_prolong_nb, I_ONE)
          case (O_I3, O_I4, O_D3, O_D4)
             this%ord_prolong_nb = max(this%ord_prolong_nb, I_TWO)
-         case (O_D5, O_D6)
+         case (O_I5, O_I6, O_D5, O_D6)
             this%ord_prolong_nb = max(this%ord_prolong_nb, I_THREE)
          case default
             call die("[cg_list_global:reg_var] Unknown prolongation order")
@@ -228,32 +228,31 @@ contains
 
    subroutine register_fluids(this)
 
-      use constants,  only: wa_n, fluid_n, uh_n, mag_n, magh_n, ndims, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, VAR_CENTER, PIERNIK_INIT_FLUIDS
+      use constants,  only: wa_n, fluid_n, uh_n, AT_NO_B, PIERNIK_INIT_FLUIDS
       use dataio_pub, only: die, code_progress
       use fluidindex, only: flind
-      use global,     only: force_cc_mag, ord_mag_prolong
 #ifdef ISO
       use constants,  only: cs_i2_n
 #endif /* ISO */
+#ifdef MAGNETIC
+      use constants,  only: mag_n, magh_n, ndims, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, VAR_CENTER
+      use global,     only: force_cc_mag, ord_mag_prolong
 #ifdef RIEMANN
       use constants,  only: psi_n, psih_n
 #endif /* RIEMANN */
+#endif /* MAGNETIC */
 
       implicit none
 
       class(cg_list_global_T), intent(inout)          :: this          !< object invoking type-bound procedure
 
+#ifdef MAGNETIC
       integer(kind=4), dimension(ndims), parameter :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
       integer(kind=4), dimension(ndims), parameter :: xyz_center = [ VAR_CENTER, VAR_CENTER, VAR_CENTER ]
       integer(kind=4), dimension(ndims) :: pia
-      logical, parameter :: is_mag_vital = &
-#ifdef MAGNETIC
-           .true.
-#else /* !MAGNETIC */
-           .false.
-#endif /* MAGNETIC */
 
       pia = merge(xyz_center, xyz_face, force_cc_mag)
+#endif /* MAGNETIC */
 
       if (code_progress < PIERNIK_INIT_FLUIDS) call die("[cg_list_global:register_fluids] Fluids are not yet initialized")
 
@@ -261,9 +260,9 @@ contains
       call this%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = flind%all)                !! Main array of all fluids' components, "u"
       call this%reg_var(uh_n,                                             dim4 = flind%all)                !! Main array of all fluids' components (for t += dt/2)
 
-!> \todo Do not even allocate magnetic stuff if MAGNETIC is not declared
-      call this%reg_var(mag_n,  vital = is_mag_vital, dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B, position=pia)  !! Main array of magnetic field's components, "b"
-      call this%reg_var(magh_n, vital = .false.,      dim4 = ndims) !! Array for copy of magnetic field's components, "b" used in half-timestep in RK2
+#ifdef MAGNETIC
+      call this%reg_var(mag_n,  vital = .true.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B, position=pia)  !! Main array of magnetic field's components, "b"
+      call this%reg_var(magh_n, vital = .false., dim4 = ndims) !! Array for copy of magnetic field's components, "b" used in half-timestep in RK2
 
 #ifdef RIEMANN
       if (force_cc_mag) then
@@ -271,6 +270,8 @@ contains
          call this%reg_var(psih_n, vital = .false.)  !! its copy for use in RK2
       endif
 #endif /* RIEMANN */
+#endif /* MAGNETIC */
+
 #ifdef ISO
       call all_cg%reg_var(cs_i2_n, vital = .true., restart_mode = AT_NO_B)
 #endif /* ISO */

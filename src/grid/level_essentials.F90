@@ -65,6 +65,7 @@ contains
 
       use constants,  only: ndims, LONG, INT4
       use dataio_pub, only: msg, printinfo, die
+      use domain,     only: dom
       use mpisetup,   only: master
 
       implicit none
@@ -78,7 +79,12 @@ contains
 
       call this%write(id, n_d, off)
 
-      write(msg, '(a,i4,2(a,3i8),a)')"[level_essentials] Initializing level", this%id, ", size=[", this%n_d, "], offset=[", this%off, "]"
+      write(msg, '(a,i4,a,3i8,a)')"[level_essentials] Initializing level", this%id, ", size=[", this%n_d, "], "
+      if (any(dom%has_dir .and. (this%off /= 0))) then
+         write(msg, '(2a,3i8,a)')trim(msg)," offset=[", this%off, "]"
+      else
+         write(msg, '(2a)')trim(msg)," no offset"
+      endif
       if (master) call printinfo(msg)
 
    end subroutine init
