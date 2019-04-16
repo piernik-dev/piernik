@@ -89,12 +89,11 @@ contains
 
    subroutine map_ngp(iv, factor)
 
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
-      use dataio_pub,     only: die
-      use domain,         only: dom
-      use particle_types, only: pset
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
+      use dataio_pub, only: die
+      use domain,     only: dom
 
       implicit none
 
@@ -109,11 +108,15 @@ contains
       do while (associated(cgl))
 
          ijkp(:) = cgl%cg%ijkse(:,LO)
-         do p = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
+         do p = lbound(cgl%cg%pset%p, dim=1), ubound(cgl%cg%pset%p, dim=1)
+            associate( field => cgl%cg%q(iv)%arr, part => cgl%cg%pset%p(p), cg => cgl%cg )
+
             if (dom%geometry_type /= GEO_XYZ) call die("[particle_types:map_ngp] Unsupported geometry")
-            where (dom%has_dir(:)) ijkp(:) = floor((pset%p(p)%pos(:)-cgl%cg%fbnd(:, LO))/cgl%cg%dl(:)) + cgl%cg%ijkse(:, LO)
-            if (all(ijkp >= cgl%cg%ijkse(:,LO)) .and. all(ijkp <= cgl%cg%ijkse(:,HI))) &
-                 cgl%cg%q(iv)%arr(ijkp(xdim), ijkp(ydim), ijkp(zdim)) = cgl%cg%q(iv)%arr(ijkp(xdim), ijkp(ydim), ijkp(zdim)) + factor * pset%p(p)%mass / cgl%cg%dvol
+            where (dom%has_dir(:)) ijkp(:) = floor((part%pos(:) - cg%fbnd(:, LO)) * cg%idl(:)) + cg%ijkse(:, LO)
+            if (all(ijkp >= cg%ijkse(:,LO)) .and. all(ijkp <= cg%ijkse(:,HI))) &
+                 field(ijkp(xdim), ijkp(ydim), ijkp(zdim)) = field(ijkp(xdim), ijkp(ydim), ijkp(zdim)) + factor * part%mass / cg%dvol
+
+            end associate
          enddo
 
          cgl => cgl%nxt
@@ -123,11 +126,10 @@ contains
 
    subroutine map_cic(iv, factor)
 
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, CENTER
-      use domain,         only: dom
-      use particle_types, only: pset
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use constants, only: xdim, ydim, zdim, ndims, LO, HI, CENTER
+      use domain,    only: dom
 
       implicit none
 
@@ -144,43 +146,41 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
 
-         do p = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
-            associate( &
-                  field => cgl%cg%q(iv)%arr, &
-                  part  => pset%p(p), &
-                  idl   => cgl%cg%idl &
-            )
-               if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
+         do p = lbound(cgl%cg%pset%p, dim=1), ubound(cgl%cg%pset%p, dim=1)
+            associate( field => cgl%cg%q(iv)%arr, part => cgl%cg%pset%p(p), cg => cgl%cg )
+
+               if (any(part%pos < cg%fbnd(:,LO)) .or. any(part%pos > cg%fbnd(:,HI))) cycle
 
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
-                     cn = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1
-                     if (cgl%cg%coord(CENTER, cdim)%r(cn) > part%pos(cdim)) then
+                     cn = nint((part%pos(cdim) - cg%coord(CENTER, cdim)%r(1))*cg%idl(cdim)) + 1
+                     if (cg%coord(CENTER, cdim)%r(cn) > part%pos(cdim)) then
                         ijkp(cdim, LO) = cn - 1
                      else
                         ijkp(cdim, LO) = cn
                      endif
                      ijkp(cdim, HI) = ijkp(cdim, LO) + 1
                   else
-                     ijkp(cdim, :) = cgl%cg%ijkse(cdim, :)
+                     ijkp(cdim, :) = cg%ijkse(cdim, :)
                   endif
                enddo
                do i = ijkp(xdim, LO), ijkp(xdim, HI)
                   do j = ijkp(ydim, LO), ijkp(ydim, HI)
                      do k = ijkp(zdim, LO), ijkp(zdim, HI)
-                        weight = factor * part%mass / cgl%cg%dvol
+                        weight = factor * part%mass / cg%dvol
                         cur_ind(:) = [i, j, k]
                         do cdim = xdim, zdim
                            if (dom%has_dir(cdim)) &
-                              weight = weight*( 1.0 - abs(part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(cur_ind(cdim)))*idl(cdim) )
+                              weight = weight*( 1.0 - abs(part%pos(cdim) - cg%coord(CENTER, cdim)%r(cur_ind(cdim)))*cg%idl(cdim) )
                         enddo
                         field(i,j,k) = field(i,j,k) +  weight
                       enddo
                   enddo
                enddo
+
             end associate
          enddo
-         print *, sum(cgl%cg%q(iv)%arr)
+
          cgl => cgl%nxt
       enddo
 
@@ -188,11 +188,10 @@ contains
 
    subroutine map_tsc(iv, factor)
 
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half
-      use domain,         only: dom
-      use particle_types, only: pset
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use constants, only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half
+      use domain,    only: dom
 
       implicit none
 
@@ -204,31 +203,28 @@ contains
       integer(kind=8)                          :: i, j, k
       integer(kind=8), dimension(ndims, IM:IP) :: ijkp
       integer(kind=8), dimension(ndims)        :: cur_ind
-      real                                     :: weight, delta_x, a, weight_tmp
+      real                                     :: weight, delta_x, weight_tmp
 
       cgl => leaves%first
       do while (associated(cgl))
 
-         do p = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
-            associate( &
-                  field => cgl%cg%q(iv)%arr, &
-                  part  => pset%p(p), &
-                  idl   => cgl%cg%idl &
-            )
-               if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
+         do p = lbound(cgl%cg%pset%p, dim=1), ubound(cgl%cg%pset%p, dim=1)
+            associate( field => cgl%cg%q(iv)%arr, part => cgl%cg%pset%p(p), cg => cgl%cg )
+
+               if (any(part%pos < cg%fbnd(:,LO)) .or. any(part%pos > cg%fbnd(:,HI))) cycle
 
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
-                     ijkp(cdim, I0) = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1   !!! BEWARE hardcoded magic
-                     ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cgl%cg%lhn(cdim, LO), kind=8))
-                     ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cgl%cg%lhn(cdim, HI), kind=8))
+                     ijkp(cdim, I0) = nint((part%pos(cdim) - cg%coord(CENTER, cdim)%r(1))*cg%idl(cdim)) + 1   !!! BEWARE hardcoded magic
+                     ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cg%lhn(cdim, LO), kind=8))
+                     ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cg%lhn(cdim, HI), kind=8))
                   else
-                     ijkp(cdim, IM) = cgl%cg%ijkse(cdim, LO)
-                     ijkp(cdim, I0) = cgl%cg%ijkse(cdim, LO)
-                     ijkp(cdim, IP) = cgl%cg%ijkse(cdim, HI)
+                     ijkp(cdim, IM) = cg%ijkse(cdim, LO)
+                     ijkp(cdim, I0) = cg%ijkse(cdim, LO)
+                     ijkp(cdim, IP) = cg%ijkse(cdim, HI)
                   endif
                enddo
-               a = 0.0
+
                do i = ijkp(xdim, IM), ijkp(xdim, IP)
                   do j = ijkp(ydim, IM), ijkp(ydim, IP)
                      do k = ijkp(zdim, IM), ijkp(zdim, IP)
@@ -238,7 +234,7 @@ contains
 
                         do cdim = xdim, zdim
                            if (.not.dom%has_dir(cdim)) cycle
-                           delta_x = ( part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * idl(cdim)
+                           delta_x = ( part%pos(cdim) - cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * cg%idl(cdim)
                            if (cur_ind(cdim) /= ijkp(cdim, 0)) then   !!! BEWARE hardcoded magic
                               weight_tmp = 1.125 - 1.5 * abs(delta_x) + half * delta_x**2
                            else
@@ -247,7 +243,7 @@ contains
                            weight = weight_tmp * weight
                         enddo
 
-                        field(i, j, k) = field(i, j, k) + factor * (part%mass / cgl%cg%dvol) * weight
+                        field(i, j, k) = field(i, j, k) + factor * (part%mass / cg%dvol) * weight
                       enddo
                   enddo
                enddo
