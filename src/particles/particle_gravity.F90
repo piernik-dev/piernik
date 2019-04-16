@@ -34,10 +34,10 @@ module particle_gravity
    implicit none
 
    private
-   public :: update_particle_gravpot_and_acc, is_setacc_cic, is_setacc_int, is_setacc_tsc, mask_gpot1b, phi_pm_part, get_acc_model
+   public :: update_particle_gravpot_and_acc, is_setacc_cic, is_setacc_int, is_setacc_tsc, mask_gpot1b, phi_pm_part, get_acc_model, eps
 
    logical :: is_setacc_cic, is_setacc_int, is_setacc_tsc, mask_gpot1b
-
+   real    :: eps
 
 contains
 
@@ -131,7 +131,7 @@ contains
 
    end subroutine update_particle_density_array
 
-   function phi_pm_part(pos, eps, mass)
+   function phi_pm_part(pos, mass)
 
       use constants, only: ndims, xdim, ydim, zdim
       use units,     only: newtong
@@ -139,7 +139,7 @@ contains
       implicit none
 
       real, dimension(ndims), intent(in) :: pos
-      real,                   intent(in) :: eps, mass
+      real,                   intent(in) :: mass
       real                               :: r, phi_pm_part
 
       r = sqrt(pos(xdim)**2 + pos(ydim)**2 + pos(zdim)**2 + eps**2)
@@ -147,7 +147,7 @@ contains
 
    end function phi_pm_part
 
-   subroutine gravpot1b(p, cg, ig, eps2)
+   subroutine gravpot1b(p, cg, ig)
 
       use constants,      only: CENTER, LO, HI, xdim, ydim, zdim
       use grid_cont,      only: grid_container
@@ -158,7 +158,6 @@ contains
       integer,                       intent(in)    :: p
       type(grid_container), pointer, intent(inout) :: cg
       integer(kind=4),               intent(in)    :: ig
-      real,                          intent(in)    :: eps2
       integer                                      :: i, j, k
 
       do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
@@ -166,7 +165,7 @@ contains
             do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
                cg%q(ig)%arr(i,j,k) = cg%q(ig)%arr(i,j,k) + phi_pm_part([cg%coord(CENTER,xdim)%r(i) - pset%p(p)%pos(xdim), &
                                                                         cg%coord(CENTER,ydim)%r(j) - pset%p(p)%pos(ydim), &
-                                                                        cg%coord(CENTER,zdim)%r(k) - pset%p(p)%pos(zdim)], eps2, pset%p(p)%mass)
+                                                                        cg%coord(CENTER,zdim)%r(k) - pset%p(p)%pos(zdim)], pset%p(p)%mass)
             enddo
          enddo
       enddo
@@ -186,10 +185,8 @@ contains
 
       type(grid_container), pointer  :: cg
       type(cg_list_element), pointer :: cgl
-      real                           :: eps2
       integer                        :: p, n_part
 
-      eps2 = zero
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -198,7 +195,7 @@ contains
             cg%nbgp = zero
 
             do p = 1, n_part
-               call gravpot1b(p, cg, qna%ind(nbgp_n), eps2)
+               call gravpot1b(p, cg, qna%ind(nbgp_n))
             enddo
 
          cgl => cgl%nxt
@@ -369,7 +366,7 @@ contains
 
          if (mask_gpot1b) then
             cg%gp1b = zero
-            call gravpot1b(p, cg, ig, zero)
+            call gravpot1b(p, cg, ig)
             cg%gp1b = -cg%gp1b + cg%gpot
          endif
 
@@ -419,7 +416,7 @@ contains
 
             if (mask_gpot1b) then
                cg%gp1b = zero
-               call gravpot1b(p, cg, ig, zero)
+               call gravpot1b(p, cg, ig)
                cg%gp1b = -cg%gp1b + cg%gpot
             endif
 
@@ -471,7 +468,7 @@ contains
 
    end subroutine update_particle_acc_tsc
 
-   subroutine get_acc_model(p, eps, acc2)
+   subroutine get_acc_model(p, acc2)
 
       use constants,      only: ndims, xdim, zdim
       use particle_types, only: pset
@@ -479,29 +476,28 @@ contains
       implicit none
 
       integer,                intent(in)  :: p
-      real,                   intent(in)  :: eps
       real, dimension(ndims), intent(out) :: acc2
       integer(kind=4)                     :: dir
 
       do dir = xdim, zdim
-         acc2(dir) = -der_xyz(pset%p(p)%pos, 1.0e-8, eps, dir, pset%p(p)%mass)
+         acc2(dir) = -der_xyz(pset%p(p)%pos, 1.0e-8, dir, pset%p(p)%mass)
       enddo
 
    end subroutine get_acc_model
 
-   function der_xyz(pos, d, eps, dir, mass)
+   function der_xyz(pos, d, dir, mass)
 
       use constants, only: idm, ndims, two
 
       implicit none
 
       real(kind=8),dimension(1,ndims), intent(in) :: pos
-      real(kind=8),                    intent(in) :: d, eps
+      real(kind=8),                    intent(in) :: d
       integer(kind=4),                 intent(in) :: dir
       real,                            intent(in) :: mass
       real(kind=8)                                :: der_xyz
 
-      der_xyz = ( phi_pm_part(pos(1,:)+real(idm(dir,:))*d, eps, mass) - phi_pm_part(pos(1,:)-real(idm(dir,:))*d, eps, mass) ) / (two*d)
+      der_xyz = ( phi_pm_part(pos(1,:)+real(idm(dir,:))*d, mass) - phi_pm_part(pos(1,:)-real(idm(dir,:))*d, mass) ) / (two*d)
 
    end function der_xyz
 
