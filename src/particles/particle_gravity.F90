@@ -46,14 +46,8 @@ contains
       use constants,      only: ndims
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use dataio_pub,     only: die
-      use domain,         only: is_refined, is_multicg
       use gravity,        only: source_terms_grav
       use grid_cont,      only: grid_container
-      use particle_types, only: pset
-#ifdef NBODY_GRIDDIRECT
-      use constants,      only: zero
-#endif /* NBODY_GRIDDIRECT */
 #ifdef VERBOSE
       use dataio_pub,     only: printinfo
 #endif /* VERBOSE */
@@ -71,34 +65,36 @@ contains
       call printinfo('[particle_gravity:update_particle_gravpot_and_acc] Commencing update of particle gravpot & acceleration')
 #endif /* VERBOSE */
 
-      n_part = size(pset%p, dim=1)
-
-      if (is_refined) call die("[particle_gravity:update_particle_gravpot_and_acc] AMR not implemented for particles yet")
-      if (is_multicg) call die("[particle_gravity:update_particle_gravpot_and_acc] multi_cg not implemented for particles yet")
-      cgl => leaves%first
-      cg  => cgl%cg
-
 #ifdef NBODY_GRIDDIRECT
-      call update_gravpot_from_particles(n_part, cg, zero)
+      call update_gravpot_from_particles
 #endif /* NBODY_GRIDDIRECT */
 
       call source_terms_grav
 
-      allocate(cells(n_part, ndims), dist(n_part, ndims))
-      call locate_particles_in_cells(n_part, cg, cells, dist)
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      call update_particle_density_array(n_part, cg, cells)
+            n_part = size(cg%pset%p, dim=1)
 
-      call update_particle_potential_energy(n_part, cg, cells, dist)
+            allocate(cells(n_part, ndims), dist(n_part, ndims))
+            call locate_particles_in_cells(n_part, cg, cells, dist)
 
-      if (is_setacc_int) then
-         call update_particle_acc_int(n_part, cg, cells, dist)
-      elseif (is_setacc_cic) then
-         call update_particle_acc_cic(n_part, cg, cells)
-      elseif (is_setacc_tsc) then
-         call update_particle_acc_tsc(cg)
-      endif
-      deallocate(cells, dist)
+            call update_particle_density_array(n_part, cg, cells)
+
+            call update_particle_potential_energy(n_part, cg, cells, dist)
+
+            if (is_setacc_int) then
+               call update_particle_acc_int(n_part, cg, cells, dist)
+            elseif (is_setacc_cic) then
+               call update_particle_acc_cic(n_part, cg, cells)
+            elseif (is_setacc_tsc) then
+               call update_particle_acc_tsc(cg)
+            endif
+            deallocate(cells, dist)
+
+         cgl => cgl%nxt
+      enddo
 
 #ifdef VERBOSE
       call printinfo('[particle_gravity:update_particle_gravpot_and_acc] Finish update of particle gravpot & acceleration')
@@ -178,24 +174,36 @@ contains
    end subroutine gravpot1b
 
 #ifdef NBODY_GRIDDIRECT
-   subroutine update_gravpot_from_particles(n_part, cg, eps2)
+   subroutine update_gravpot_from_particles
 
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
       use constants,        only: nbgp_n, zero
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
 
       implicit none
 
-      integer,                       intent(in)    :: n_part
-      type(grid_container), pointer, intent(inout) :: cg
-      real,                          intent(in)    :: eps2
-      integer                                      :: p
+      type(grid_container), pointer  :: cg
+      type(cg_list_element), pointer :: cgl
+      real                           :: eps2
+      integer                        :: p, n_part
 
-      cg%nbgp = zero
+      eps2 = zero
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      do p = 1, n_part
-         call gravpot1b(p, cg, qna%ind(nbgp_n), eps2)
+            n_part = size(cg%pset%p, dim=1)
+            cg%nbgp = zero
+
+            do p = 1, n_part
+               call gravpot1b(p, cg, qna%ind(nbgp_n), eps2)
+            enddo
+
+         cgl => cgl%nxt
       enddo
+
 
    end subroutine update_gravpot_from_particles
 #endif /* NBODY_GRIDDIRECT */
