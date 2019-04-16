@@ -182,7 +182,6 @@ contains
       use dataio_pub,      only: die, warn
       use domain,          only: dom
       use mpisetup,        only: master, piernik_MPI_Allreduce
-      use particle_types,  only: pset
 
       implicit none
 
@@ -274,10 +273,11 @@ contains
                call die("[multigridmultipole:refresh_multipole] Unsupported geometry.")
          end select
 
-         do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
-            !> \warning this is not optimal, when domain is placed far away form the origin
+         do i = lbound(finest%level%first%cg%pset%p, dim=1), ubound(finest%level%first%cg%pset%p, dim=1)
+            !> \warning this is not optimal, when domain is placed far away from the origin
             !> \warning a factor of up to 2 may be required if we use CoM as the origin
-            if (pset%p(i)%outside) rqbin = max(rqbin, int(sqrt(sum(pset%p(i)%pos**2))/drq) + 1)
+            !> \todo particle list has to be reconsidered
+            if (finest%level%first%cg%pset%p(i)%outside) rqbin = max(rqbin, int(sqrt(sum(finest%level%first%cg%pset%p(i)%pos**2))/drq) + 1)
          enddo
 
          if (allocated(Q)) deallocate(Q)
@@ -439,27 +439,26 @@ contains
 
    subroutine find_img_CoM
 
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
-      use constants,      only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, pSUM, zero !, GEO_RPZ
-      use dataio_pub,     only: die
-      use domain,         only: dom
-      use func,           only: operator(.notequals.)
-      use grid_cont,      only: grid_container
-      use mpisetup,       only: piernik_MPI_Allreduce
-      use particle_types, only: pset
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, pSUM, zero !, GEO_RPZ
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use func,       only: operator(.notequals.)
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: piernik_MPI_Allreduce
 #ifdef DEBUG
-      use dataio_pub,     only: msg, printinfo
-      use mpisetup,       only: master
-      use units,          only: fpiG
+      use dataio_pub, only: msg, printinfo
+      use mpisetup,   only: master
+      use units,      only: fpiG
 #endif /* DEBUG */
 
       implicit none
 
-      real, dimension(imass:ndims) :: lsum, dsum
+      real, dimension(imass:ndims)   :: lsum, dsum
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-      integer :: lh, i, d
+      type(grid_container), pointer  :: cg
+      integer                        :: lh, i, d
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:find_img_CoM] non-cartesian geometry not implemented yet")
 
@@ -497,13 +496,14 @@ contains
                lsum(:)         = lsum(:) + dsum(:) * cg%dxy
             endif
          enddo
-         cgl => cgl%nxt
-      enddo
 
-      ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
-      !> \warning Do we need to use the fppiG factor here?
-      do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
-         if (pset%p(i)%outside) lsum(:) = lsum(:) + [ pset%p(i)%mass, pset%p(i)%mass * pset%p(i)%pos(:) ]
+         ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
+         !> \warning Do we need to use the fppiG factor here?
+         do i = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
+            if (cg%pset%p(i)%outside) lsum(:) = lsum(:) + [ cg%pset%p(i)%mass, cg%pset%p(i)%mass * cg%pset%p(i)%pos(:) ]
+         enddo
+
+         cgl => cgl%nxt
       enddo
 
       CoM(imass:ndims) = lsum(imass:ndims)
@@ -786,23 +786,22 @@ contains
 
    subroutine img_mass2moments
 
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, pSUM, pMIN, pMAX, zero
-      use dataio_pub,     only: die
-      use domain,         only: dom
-      use func,           only: operator(.notequals.)
-      use grid_cont,      only: grid_container
-      use mpisetup,       only: piernik_MPI_Allreduce
-      use particle_types, only: pset
-      use units,          only: fpiG
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, pSUM, pMIN, pMAX, zero
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use func,       only: operator(.notequals.)
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: piernik_MPI_Allreduce
+      use units,      only: fpiG
 
       implicit none
 
-      integer :: i, j, k, r, rr
-      real, dimension(LO:HI) :: geofac
+      integer                        :: i, j, k, r, rr
+      real, dimension(LO:HI)         :: geofac
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container), pointer  :: cg
 
       if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim).notequals.zero)) call die("[multigridmultipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
 
@@ -852,12 +851,13 @@ contains
                enddo
             enddo
          endif
-         cgl => cgl%nxt
-      enddo
 
-      ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
-      do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
-         if (pset%p(i)%outside) call point2moments(fpiG*pset%p(i)%mass, pset%p(i)%pos(xdim), pset%p(i)%pos(ydim), pset%p(i)%pos(zdim))
+         ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
+         do i = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
+            if (cg%pset%p(i)%outside) call point2moments(fpiG*cg%pset%p(i)%mass, cg%pset%p(i)%pos(xdim), cg%pset%p(i)%pos(ydim), cg%pset%p(i)%pos(zdim))
+         enddo
+
+         cgl => cgl%nxt
       enddo
 
       call piernik_MPI_Allreduce(irmin, pMIN)
