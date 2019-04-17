@@ -310,6 +310,7 @@ contains
    subroutine update_particle_acc_cic(n_part, cg, cells)
 
       use constants,        only: idm, ndims, CENTER, xdim, ydim, zdim, half, zero, gp1b_n, gpot_n
+      use dataio_pub,       only: warn
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
 
@@ -334,7 +335,10 @@ contains
       endif
 
       do p = 1, n_part
-         if (cg%pset%p(p)%in_area(cg%fbnd)) then
+         if (cg%pset%p(p)%outside) then
+         ! multipole expansion for particles outside domain
+            call warn('[particle_gravity:update_particle_acc_cic] particle is outside the domain - we need multipole expansion!!!')
+         else
             do cdim = xdim, ndims
                if (cg%pset%p(p)%pos(cdim) < cg%coord(CENTER, cdim)%r(cells(p,cdim))) then
                   cic_cells(cdim) = cells(p, cdim) - 1
@@ -353,7 +357,6 @@ contains
             wijk(6) = (cg%dx - dxyz(xdim))*         dxyz(ydim) *         dxyz(zdim)   !a(i  ,j+1,k+1)
             wijk(7) =          dxyz(xdim) *(cg%dy - dxyz(ydim))*         dxyz(zdim)   !a(i+1,j  ,k+1)
             wijk(8) =          dxyz(xdim) *         dxyz(ydim) *         dxyz(zdim)   !a(i+1,j+1,k+1)
-         !else multipole expansion for particles outside domain
          endif
 
          wijk = wijk/cg%dvol
@@ -378,6 +381,7 @@ contains
    subroutine update_particle_acc_tsc(cg)
 
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, gp1b_n, gpot_n, idm, half, zero
+      use dataio_pub,       only: warn
       use domain,           only: dom
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
@@ -404,7 +408,11 @@ contains
       do p = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
          associate( part  => cg%pset%p(p) )
 
-            if (.not. part%in_area(cg%fbnd)) cycle
+         if (cg%pset%p(p)%outside) then
+         ! multipole expansion for particles outside domain
+            call warn('[particle_gravity:update_particle_acc_tsc] particle is outside the domain - we need multipole expansion!!!')
+            cycle
+         endif
 
             if (mask_gpot1b) then
                cg%gp1b = zero
