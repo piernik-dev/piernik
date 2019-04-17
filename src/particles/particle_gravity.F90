@@ -149,9 +149,8 @@ contains
 
    subroutine gravpot1b(p, cg, ig)
 
-      use constants,      only: CENTER, LO, HI, xdim, ydim, zdim
-      use grid_cont,      only: grid_container
-      use particle_types, only: pset
+      use constants, only: CENTER, LO, HI, xdim, ydim, zdim
+      use grid_cont, only: grid_container
 
       implicit none
 
@@ -163,9 +162,9 @@ contains
       do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
          do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
             do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
-               cg%q(ig)%arr(i,j,k) = cg%q(ig)%arr(i,j,k) + phi_pm_part([cg%coord(CENTER,xdim)%r(i) - pset%p(p)%pos(xdim), &
-                                                                        cg%coord(CENTER,ydim)%r(j) - pset%p(p)%pos(ydim), &
-                                                                        cg%coord(CENTER,zdim)%r(k) - pset%p(p)%pos(zdim)], pset%p(p)%mass)
+               cg%q(ig)%arr(i,j,k) = cg%q(ig)%arr(i,j,k) + phi_pm_part([cg%coord(CENTER,xdim)%r(i) - cg%pset%p(p)%pos(xdim), &
+                                                                        cg%coord(CENTER,ydim)%r(j) - cg%pset%p(p)%pos(ydim), &
+                                                                        cg%coord(CENTER,zdim)%r(k) - cg%pset%p(p)%pos(zdim)], cg%pset%p(p)%mass)
             enddo
          enddo
       enddo
@@ -207,30 +206,29 @@ contains
 
    subroutine locate_particles_in_cells(n_part, cg, cells, dist)
 
-      use constants,      only: half, ndims, xdim, zdim, CENTER, LO, HI
-      use domain,         only: dom
-      use grid_cont,      only: grid_container
-      use particle_types, only: pset
+      use constants, only: half, ndims, xdim, zdim, CENTER, LO, HI
+      use domain,    only: dom
+      use grid_cont, only: grid_container
 
       implicit none
 
-      integer,                          intent(in)  :: n_part
-      type(grid_container),             intent(in)  :: cg
-      integer, dimension(n_part,ndims), intent(out) :: cells
-      real,    dimension(n_part,ndims), intent(out) :: dist
-      integer                                       :: i, cdim
+      integer,                          intent(in)    :: n_part
+      type(grid_container),             intent(inout) :: cg
+      integer, dimension(n_part,ndims), intent(out)   :: cells
+      real,    dimension(n_part,ndims), intent(out)   :: dist
+      integer                                         :: i, cdim
 
       do i = 1, n_part
          do cdim = xdim, zdim
-            if ((pset%p(i)%pos(cdim) >= dom%edge(cdim, LO)) .and. (pset%p(i)%pos(cdim) <= dom%edge(cdim, HI))) then
-               pset%p(i)%outside = .false.
+            if ((cg%pset%p(i)%pos(cdim) >= dom%edge(cdim, LO)) .and. (cg%pset%p(i)%pos(cdim) <= dom%edge(cdim, HI))) then
+               cg%pset%p(i)%outside = .false.
             else
-               pset%p(i)%outside = .true.
+               cg%pset%p(i)%outside = .true.
             endif
 
-            cells(i, cdim) = int( half + (pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(cg%ijkse(cdim, LO))) * cg%idl(cdim) )
+            cells(i, cdim) = int( half + (cg%pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(cg%ijkse(cdim, LO))) * cg%idl(cdim) )
 
-            dist(i, cdim)  = pset%p(i)%pos(cdim) - ( cg%coord(CENTER, cdim)%r(cg%ijkse(cdim, LO)) + cells(i,cdim) * cg%dl(cdim) )
+            dist(i, cdim)  = cg%pset%p(i)%pos(cdim) - ( cg%coord(CENTER, cdim)%r(cg%ijkse(cdim, LO)) + cells(i,cdim) * cg%dl(cdim) )
          enddo
       enddo
 
@@ -243,7 +241,6 @@ contains
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_func,    only: df_d_o2, d2f_d2_o2, d2f_dd_o2
-      use particle_types,   only: pset
 
       implicit none
 
@@ -266,7 +263,7 @@ contains
                     d2f_d2_o2([cells(p, :)], cg, ig, zdim) * dist(p, zdim)**2 + &
                 two*d2f_dd_o2([cells(p, :)], cg, ig, xdim, ydim) * dist(p, xdim)*dist(p, ydim) + &
                 two*d2f_dd_o2([cells(p, :)], cg, ig, xdim, zdim) * dist(p, xdim)*dist(p, zdim)
-         pset%p(p)%energy = cg%q(ig)%point(cells(p,:)) + dpot(p) + half * d2pot(p)
+         cg%pset%p(p)%energy = cg%q(ig)%point(cells(p,:)) + dpot(p) + half * d2pot(p)
       enddo
 
    end subroutine update_particle_potential_energy
@@ -277,7 +274,6 @@ contains
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_func,    only: df_d_p, d2f_d2_p, d2f_dd_p
-      use particle_types,   only: pset
 
       implicit none
 
@@ -290,18 +286,18 @@ contains
 
       ig = qna%ind(gpot_n)
       do i = 1, n_part
-         if ( (pset%p(i)%outside) .eqv. .false.) then
-            pset%p(i)%acc(xdim) = - (df_d_p([cells(i, :)], cg, ig, xdim) + &
+         if (.not. cg%pset%p(i)%outside) then
+            cg%pset%p(i)%acc(xdim) = - (df_d_p([cells(i, :)], cg, ig, xdim) + &
                                    d2f_d2_p([cells(i, :)], cg, ig, xdim)       * dist(i, xdim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, xdim, ydim) * dist(i, ydim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, xdim, zdim) * dist(i, zdim))
 
-            pset%p(i)%acc(ydim) = -( df_d_p([cells(i, :)], cg, ig, ydim) + &
+            cg%pset%p(i)%acc(ydim) = -( df_d_p([cells(i, :)], cg, ig, ydim) + &
                                    d2f_d2_p([cells(i, :)], cg, ig, ydim)       * dist(i, ydim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, xdim, ydim) * dist(i, xdim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, ydim, zdim) * dist(i, zdim))
 
-            pset%p(i)%acc(zdim) = -( df_d_p([cells(i, :)], cg, ig, zdim) + &
+            cg%pset%p(i)%acc(zdim) = -( df_d_p([cells(i, :)], cg, ig, zdim) + &
                                    d2f_d2_p([cells(i, :)], cg, ig, zdim)       * dist(i, zdim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, xdim, zdim) * dist(i, xdim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, ydim, zdim) * dist(i, ydim))
@@ -317,7 +313,6 @@ contains
       use constants,        only: idm, ndims, CENTER, xdim, ydim, zdim, half, zero, gp1b_n, gpot_n
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
-      use particle_types,   only: pset
 
       implicit none
 
@@ -340,14 +335,14 @@ contains
       endif
 
       do p = 1, n_part
-         if ((pset%p(p)%outside) .eqv. .false.) then
+         if (.not. cg%pset%p(p)%outside) then
             do cdim = xdim, ndims
-               if (pset%p(p)%pos(cdim) < cg%coord(CENTER, cdim)%r(cells(p,cdim))) then
+               if (cg%pset%p(p)%pos(cdim) < cg%coord(CENTER, cdim)%r(cells(p,cdim))) then
                   cic_cells(cdim) = cells(p, cdim) - 1
                else
                   cic_cells(cdim) = cells(p, cdim)
                endif
-               dxyz(cdim) = abs(pset%p(p)%pos(cdim) - cg%coord(CENTER, cdim)%r(cic_cells(cdim)))
+               dxyz(cdim) = abs(cg%pset%p(p)%pos(cdim) - cg%coord(CENTER, cdim)%r(cic_cells(cdim)))
 
             enddo
 
@@ -376,7 +371,7 @@ contains
             enddo
             axyz(cdim) = sum(fxyz(cdim,:)*wijk(:))
          enddo
-         pset%p(p)%acc(:) = half*axyz(:)*cg%idl(:)
+         cg%pset%p(p)%acc(:) = half*axyz(:)*cg%idl(:)
       enddo
 
    end subroutine update_particle_acc_cic
@@ -387,7 +382,6 @@ contains
       use domain,           only: dom
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
-      use particle_types,   only: pset
 
       implicit none
 
@@ -408,9 +402,8 @@ contains
 
       axyz(:) = 0.0
 
-      do p = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
-         associate( part  => pset%p(p), &
-                    idl   => cg%idl )
+      do p = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
+         associate( part  => cg%pset%p(p) )
 
             if (any(part%pos < cg%fbnd(:,LO)) .or. any(part%pos > cg%fbnd(:,HI))) cycle
 
@@ -440,7 +433,7 @@ contains
 
                      do cdim = xdim, zdim
                         if (.not.dom%has_dir(cdim)) cycle
-                        delta_x = ( part%pos(cdim) - cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * idl(cdim)
+                        delta_x = ( part%pos(cdim) - cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * cg%idl(cdim)
 
                         if (cur_ind(cdim) /= ijkp(cdim, 0)) then   !!! BEWARE hardcoded magic
                            weight_tmp = 1.125 - 1.5 * abs(delta_x) + half * delta_x**2
@@ -451,7 +444,7 @@ contains
                         weight = weight_tmp * weight
                         ind1 = cur_ind(:) + idm(cdim,:)
                         ind2 = cur_ind(:) - idm(cdim,:)
-                        fxyz(cdim) = -half*(cg%q(ig)%point(ind1(:)) - cg%q(ig)%point(ind2(:)))*idl(cdim)
+                        fxyz(cdim) = -half*(cg%q(ig)%point(ind1(:)) - cg%q(ig)%point(ind2(:))) * cg%idl(cdim)
                      enddo
                      axyz(:) = axyz(:) + fxyz(:)*weight
 
@@ -460,7 +453,7 @@ contains
             enddo
          end associate
 
-         pset%p(p)%acc(:) = axyz(:)
+         cg%pset%p(p)%acc(:) = axyz(:)
 
          axyz(:) = 0.0
 
