@@ -307,16 +307,18 @@ contains
 #ifdef NBODY
    subroutine leapfrog_2ord(forward)
 
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
       use constants,        only: half, two
       use global,           only: dt
       use particle_gravity, only: update_particle_gravpot_and_acc
-      use particle_types,   only: pset
       use particle_utils,   only: particle_diagnostics, twodtscheme
 
       implicit none
 
-      logical, optional, intent(in) :: forward
-      real                          :: dt_kick   !< timestep for kicks
+      logical, optional, intent(in)  :: forward
+      real                           :: dt_kick   !< timestep for kicks
+      type(cg_list_element), pointer :: cgl
 
       if (twodtscheme) then
          if (forward) then
@@ -347,8 +349,14 @@ contains
             real, intent(in) :: kdt
             integer          :: i
 
-            do i = 1, size(pset%p, dim=1)
-               pset%p(i)%vel = pset%p(i)%vel + pset%p(i)%acc * kdt
+            cgl => leaves%first
+            do while (associated(cgl))
+               associate( parts => cgl%cg%pset )
+               do i = 1, size(parts%p, dim=1)
+                  parts%p(i)%vel = parts%p(i)%vel + parts%p(i)%acc * kdt
+               enddo
+               end associate
+               cgl => cgl%nxt
             enddo
 
          end subroutine kick
@@ -360,8 +368,14 @@ contains
             real, intent(in) :: ddt
             integer          :: i
 
-            do i = 1, size(pset%p, dim=1)
-               pset%p(i)%pos = pset%p(i)%pos + pset%p(i)%vel * ddt
+            cgl => leaves%first
+            do while (associated(cgl))
+               associate( parts => cgl%cg%pset )
+               do i = 1, size(parts%p, dim=1)
+                  parts%p(i)%pos = parts%p(i)%pos + parts%p(i)%vel * ddt
+               enddo
+               end associate
+               cgl => cgl%nxt
             enddo
 
          end subroutine drift
@@ -373,12 +387,18 @@ contains
             implicit none
 
             integer :: p
-            real    :: v2           !< particle velocity squared
+            real    :: v2 !< particle velocity squared
 
-            do p = 1, size(pset%p, dim=1)
-               v2 = sum(pset%p(p)%vel(:)**2)
-               !energy       = 1/2  *      m         *  v**2 +     Ep(x,y,z)
-               pset%p(p)%energy = half * pset%p(p)%mass * v2 + pset%p(p)%energy
+            cgl => leaves%first
+            do while (associated(cgl))
+               associate( parts => cgl%cg%pset )
+               do p = 1, size(parts%p, dim=1)
+                  v2 = sum(parts%p(p)%vel(:)**2)
+                  !energy       = 1/2  *      m         *  v**2 +     Ep(x,y,z)
+                  parts%p(p)%energy = half * parts%p(p)%mass * v2 + parts%p(p)%energy
+               enddo
+               end associate
+               cgl => cgl%nxt
             enddo
 
          end subroutine update_particle_kinetic_energy
