@@ -209,7 +209,7 @@ contains
 
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
          do i = 1, size(pset%p, dim=1)
-            call get_acc_model(i, acc2)
+            call get_acc_model(pset%p(i)%pos, pset%p(i)%mass, acc2)
             write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, t, kdt, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:), pset%p(i)%energy
          enddo
       close(lun_out)

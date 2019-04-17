@@ -461,19 +461,19 @@ contains
 
    end subroutine update_particle_acc_tsc
 
-   subroutine get_acc_model(p, acc2)
+   subroutine get_acc_model(pos, mass, acc2)
 
-      use constants,      only: ndims, xdim, zdim
-      use particle_types, only: pset
+      use constants, only: ndims, xdim, zdim
 
       implicit none
 
-      integer,                intent(in)  :: p
+      real, dimension(ndims), intent(in)  :: pos
+      real,                   intent(in)  :: mass
       real, dimension(ndims), intent(out) :: acc2
       integer(kind=4)                     :: dir
 
       do dir = xdim, zdim
-         acc2(dir) = -der_xyz(pset%p(p)%pos, 1.0e-8, dir, pset%p(p)%mass)
+         acc2(dir) = -der_xyz(pos, 1.0e-8, dir, mass)
       enddo
 
    end subroutine get_acc_model
