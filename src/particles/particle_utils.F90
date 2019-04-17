@@ -194,24 +194,34 @@ contains
 
    subroutine dump_particles_to_textfile
 
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
       use constants,        only: half, ndims
       use global,           only: t, dt
       use particle_gravity, only: get_acc_model
-      use particle_types,   only: pset
 
       implicit none
 
-      real                   :: kdt
-      real, dimension(ndims) :: acc2
-      integer                :: i, lun_out
+      real                           :: kdt
+      real, dimension(ndims)         :: acc2
+      integer                        :: i, lun_out
+      type(cg_list_element), pointer :: cgl
 
       kdt = dt ; if (.not.twodtscheme) kdt = half * dt
 
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
-         do i = 1, size(pset%p, dim=1)
-            call get_acc_model(pset%p(i)%pos, pset%p(i)%mass, acc2)
-            write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, t, kdt, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:), pset%p(i)%energy
+      cgl => leaves%first
+      do while (associated(cgl))
+
+         do i = 1, size(cgl%cg%pset%p, dim=1)
+            associate( part => cgl%cg%pset%p(i) )
+               call get_acc_model(part%pos, part%mass, acc2)
+               write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, t, kdt, part%mass, part%pos, part%vel, part%acc, acc2(:), part%energy
+            end associate
          enddo
+
+         cgl => cgl%nxt
+      enddo
       close(lun_out)
 
    end subroutine dump_particles_to_textfile
