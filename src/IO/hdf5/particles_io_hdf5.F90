@@ -148,66 +148,124 @@ module particles_io_hdf5
 
    subroutine nbody_datasets(file_id)
 
-      use hdf5, only: HID_T
+      use hdf5,           only: HID_T
+      use particle_utils, only: count_all_particles
 
       implicit none
 
       integer(HID_T), intent(in) :: file_id       !< File identifier
-      integer                    :: i
+      integer                    :: i, n_part
 
+      n_part = count_all_particles()
       do i = lbound(pvarl, 1), ubound(pvarl, 1)
-         if (pvarl(i)) call nbody_datafields(file_id, trim(pvarn(i)))
+         if (pvarl(i)) call nbody_datafields(file_id, trim(pvarn(i)), n_part)
       enddo
 
    end subroutine nbody_datasets
 
-   subroutine nbody_datafields(file_id, pvar)
+   subroutine nbody_datafields(file_id, pvar, n_part)
 
-      use constants,      only: ndims
-      use hdf5,           only: HID_T
-      use particle_types, only: pset
+      use hdf5, only: HID_T
+
+      implicit none
+
+      integer(HID_T),   intent(in) :: file_id       !< File identifier
+      character(len=*), intent(in) :: pvar
+      integer,          intent(in) :: n_part
+
+      select case (pvar)
+         case ('mass', 'ener')
+            call collect_and_write_rank1(file_id, pvar, n_part)
+         case ('ppos', 'pvel', 'pacc')
+            call collect_and_write_rank2(file_id, pvar, n_part)
+         case default
+      end select
+
+   end subroutine nbody_datafields
+
+   subroutine collect_and_write_rank1(file_id, pvar, n_part)
+
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use hdf5,      only: HID_T
+
+      implicit none
+
+      integer(HID_T),   intent(in)    :: file_id       !< File identifier
+      character(len=*), intent(in)    :: pvar
+      integer,          intent(in)    :: n_part
+      integer                         :: cgnp, recnp
+      real, dimension(:), allocatable :: tabr1
+      type(cg_list_element), pointer  :: cgl
+
+      allocate(tabr1(n_part))
+      recnp = 0
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cgnp = size(cgl%cg%pset%p, dim=1)
+         select case (pvar)
+            case ('mass')
+               tabr1(recnp+1:recnp+cgnp) = cgl%cg%pset%p(:)%mass
+            case ('ener')
+               tabr1(recnp+1:recnp+cgnp) = cgl%cg%pset%p(:)%energy
+            case default
+         end select
+         recnp = recnp+cgnp
+         cgl => cgl%nxt
+      enddo
+
+      call write_nbody_h5_rank1(file_id, pvar, tabr1)
+      deallocate(tabr1)
+
+   end subroutine collect_and_write_rank1
+
+   subroutine collect_and_write_rank2(file_id, pvar, n_part)
+
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use constants, only: ndims
+      use hdf5,      only: HID_T
 
       implicit none
 
       integer(HID_T),   intent(in)      :: file_id       !< File identifier
       character(len=*), intent(in)      :: pvar
-      real, dimension(:),   allocatable :: tabr1
+      integer,          intent(in)      :: n_part
+      integer                           :: cgnp, recnp, i
       real, dimension(:,:), allocatable :: tabr2
-      integer                           :: i, n_part
-      logical                           :: rank1, rank2
+      type(cg_list_element), pointer    :: cgl
 
-      n_part = size(pset%p, dim=1)
-      allocate(tabr1(n_part), tabr2(n_part, ndims))
-      rank1 = .false. ; rank2 = .false.
+      allocate(tabr2(n_part, ndims))
 
-      select case (pvar)
-         case ('mass')
-            rank1 = .true. ; tabr1(:) = pset%p(:)%mass
-         case ('ener')
-            rank1 = .true. ; tabr1(:) = pset%p(:)%energy
-         case ('ppos')
-            rank2 = .true.
-            do i = 1, n_part
-               tabr2(i,:) = pset%p(i)%pos(:)
-            enddo
-         case ('pvel')
-            rank2 = .true.
-            do i = 1, n_part
-               tabr2(i,:) = pset%p(i)%vel(:)
-            enddo
-         case ('pacc')
-            rank2 = .true.
-            do i = 1, n_part
-               tabr2(i,:) = pset%p(i)%acc(:)
-            enddo
-         case default
-      end select
+      recnp = 0
 
-      if (rank1) call write_nbody_h5_rank1(file_id, pvar, tabr1)
-      if (rank2) call write_nbody_h5_rank2(file_id, pvar, tabr2)
-      deallocate(tabr1, tabr2)
+      cgl => leaves%first
+      do while (associated(cgl))
+         cgnp = size(cgl%cg%pset%p, dim=1)
+         select case (pvar)
+            case ('ppos')
+               do i = 1, cgnp
+                  tabr2(recnp+i,:) = cgl%cg%pset%p(i)%pos
+               enddo
+            case ('pvel')
+               do i = 1, cgnp
+                  tabr2(recnp+i,:) = cgl%cg%pset%p(i)%vel(:)
+               enddo
+            case ('pacc')
+               do i = 1, cgnp
+                  tabr2(recnp+i,:) = cgl%cg%pset%p(i)%acc(:)
+               enddo
+            case default
+         end select
+         cgl => cgl%nxt
+      enddo
 
-   end subroutine nbody_datafields
+      call write_nbody_h5_rank2(file_id, pvar, tabr2)
+
+      deallocate(tabr2)
+
+   end subroutine collect_and_write_rank2
 
    subroutine write_nbody_h5_rank1(file_id, vvar, tab)
 
