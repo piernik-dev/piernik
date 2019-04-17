@@ -159,25 +159,35 @@ contains
 
    subroutine get_angmom_totener(ang_momentum, total_energy)
 
-      use constants,      only: xdim, ydim, zdim, zero
-      use particle_types, only: pset
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use constants, only: xdim, ydim, zdim, zero
 
       implicit none
 
-      real, intent(out) :: ang_momentum
-      real, intent(out) :: total_energy !< total energy of set of particles
-      integer           :: i
-      real              :: L1, L2, L3
+      real, intent(out)              :: ang_momentum
+      real, intent(out)              :: total_energy !< total energy of set of particles
+      integer                        :: i
+      real                           :: L1, L2, L3
+      type(cg_list_element), pointer :: cgl
 
       ang_momentum = zero
       total_energy = zero
 
-      do i = 1, size(pset%p, dim=1)
-         L1 = pset%p(i)%pos(ydim) * pset%p(i)%vel(zdim) - pset%p(i)%pos(zdim) * pset%p(i)%vel(ydim)
-         L2 = pset%p(i)%pos(zdim) * pset%p(i)%vel(xdim) - pset%p(i)%pos(xdim) * pset%p(i)%vel(zdim)
-         L3 = pset%p(i)%pos(xdim) * pset%p(i)%vel(ydim) - pset%p(i)%pos(ydim) * pset%p(i)%vel(xdim)
-         ang_momentum = ang_momentum + pset%p(i)%mass * sqrt(L1**2 + L2**2 + L3**2)
-         total_energy = total_energy + pset%p(i)%energy
+      cgl => leaves%first
+      do while (associated(cgl))
+
+         do i = 1, size(cgl%cg%pset%p, dim=1)
+            associate( part => cgl%cg%pset%p(i) )
+               L1 = part%pos(ydim) * part%vel(zdim) - part%pos(zdim) * part%vel(ydim)
+               L2 = part%pos(zdim) * part%vel(xdim) - part%pos(xdim) * part%vel(zdim)
+               L3 = part%pos(xdim) * part%vel(ydim) - part%pos(ydim) * part%vel(xdim)
+               ang_momentum = ang_momentum + part%mass * sqrt(L1**2 + L2**2 + L3**2)
+               total_energy = total_energy + part%energy
+            end associate
+         enddo
+
+         cgl => cgl%nxt
       enddo
 
    end subroutine get_angmom_totener
