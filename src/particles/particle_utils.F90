@@ -38,7 +38,7 @@ module particle_utils
    implicit none
 
    private
-   public :: max_pvel_1d, max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom
+   public :: max_pvel_1d, max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom, add_part_in_proper_cg
 
    real    :: tot_angmom           !< angular momentum of set of the particles
    real    :: tot_energy           !< total energy of set of the particles
@@ -191,6 +191,40 @@ contains
       enddo
 
    end subroutine get_angmom_totener
+
+   subroutine add_part_in_proper_cg(mass, pos, vel, acc, ener)
+
+      use cg_leaves,     only: leaves
+      use cg_list,       only: cg_list_element
+      use constants,     only: ndims
+      use dataio_pub,    only: die, msg, printinfo
+      use domain,        only: dom
+      use particle_func, only: particle_in_area
+
+      implicit none
+
+      real, dimension(ndims), intent(in) :: pos, vel, acc
+      real,                   intent(in) :: mass, ener
+      type(cg_list_element), pointer     :: cgl
+
+      if (.not.particle_in_area(pos, dom%edge)) then
+         write(msg,'(a,3e12.8)') '[particle_utils:add_part_in_proper_cg] The particle must be outside domain: ', pos
+         call printinfo(msg)
+         return
+      endif
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         if (particle_in_area(pos, cgl%cg%fbnd)) then
+            call cgl%cg%pset%add(mass, pos, vel, acc, ener)
+            return
+         endif
+         cgl => cgl%nxt
+      enddo
+
+      call die('[particle_utils:add_part_in_proper_cg] The particle neither outside domain nor added to any cg!')
+
+   end subroutine add_part_in_proper_cg
 
    subroutine dump_particles_to_textfile
 
