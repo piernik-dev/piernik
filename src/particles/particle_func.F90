@@ -34,7 +34,7 @@ module particle_func
    implicit none
 
    private
-   public :: check_ord, df_d_p, d2f_d2_p, d2f_dd_p, df_d_o2, d2f_d2_o2, d2f_dd_o2
+   public :: particle_in_area, check_ord, df_d_p, d2f_d2_p, d2f_dd_p, df_d_o2, d2f_d2_o2, d2f_dd_o2
 
    interface
       function dxi(cell, cg, ig, dir)
@@ -74,6 +74,22 @@ module particle_func
    procedure(d2dxixj), pointer :: d2f_dd_p => NULL()
 
 contains
+
+!> \brief check if the particle locates inside given area
+
+   function particle_in_area(pos, area) result(itis)
+
+      use constants, only: ndims, LO, HI
+
+      implicit none
+
+      real, dimension(ndims),       intent(in) :: pos
+      real, dimension(ndims,LO:HI), intent(in) :: area
+      logical                                  :: itis
+
+      itis = (all(pos >= area(:,LO)) .and. all(pos <= area(:,HI)))
+
+   end function particle_in_area
 
    subroutine check_ord(order)
 

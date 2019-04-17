@@ -53,7 +53,6 @@ module particle_types
       logical                :: outside    !< this flag is true if the particle is outside the domain
    contains
       procedure :: is_outside              !< compute the outside flag
-      procedure :: in_area                 !< check if the particle locates inside given area
    end type particle
 
    !> \brief A list of particles and some associated methods
@@ -92,22 +91,6 @@ contains
       ! Inequalities above must match the rounding function used in map routine (floor() includes bottom edge, but excludes top edge)
 
    end subroutine is_outside
-
-!> \brief check if the particle locates inside given area
-
-   function in_area(this, area) result(itis)
-
-      use constants, only: LO, HI
-
-      implicit none
-
-      class(particle),              intent(inout) :: this     !< an object invoking the type-bound procedure
-      real, dimension(ndims,LO:HI), intent(in)    :: area
-      logical                                     :: itis
-
-      itis = (all(this%pos >= area(:,LO)) .and. all(this%pos <= area(:,HI)))
-
-   end function in_area
 
 !> \brief initialize the list with 0 elements
 
