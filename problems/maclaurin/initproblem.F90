@@ -47,8 +47,9 @@ module initproblem
    real :: ref_thr !< refinement threshold
    real :: deref_thr !< derefinement threshold
    integer(kind=4) :: nsub !< subsampling on the grid
+   logical :: analytical_ext_pot  !< If .true. then bypass multipole solver and use analutical potential for external boundaries (debugging/developing only)
 
-   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, ref_thr, deref_thr, nsub
+   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, ref_thr, deref_thr, nsub, analytical_ext_pot
 
    ! private data
    real :: d1 !< ambient density
@@ -68,9 +69,6 @@ contains
 #ifdef HDF5
       use dataio_user, only: user_vars_hdf5, user_attrs_wr
 #endif /* HDF5 */
-#ifdef MACLAURIN_PROBLEM
-      use user_hooks,  only: ext_bnd_potential
-#endif /* MACLAURIN_PROBLEM */
 
       implicit none
 
@@ -79,9 +77,6 @@ contains
       user_attrs_wr    => problem_initial_conditions_attrs
       user_vars_hdf5   => maclaurin_error_vars
 #endif /* HDF5 */
-#ifdef MACLAURIN_PROBLEM
-       ext_bnd_potential => maclaurin2bnd_potential
-#endif /* MACLAURIN_PROBLEM */
 
    end subroutine problem_pointers
 
@@ -97,11 +92,12 @@ contains
       use fluidindex,       only: iarr_all_dn
       use global,           only: smalld
       use func,             only: operator(.equals.)
-      use mpisetup,         only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,         only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
       use multigridvars,    only: ord_prolong
       use named_array_list, only: wna
       use particle_pub,     only: pset
       use refinement_crit_list, only: user_ref2list
+      use user_hooks,       only: ext_bnd_potential
 
       implicit none
 
@@ -121,6 +117,8 @@ contains
 
       ref_thr      = max(1e-3, 2.*smalld/d0)    !< Refine if density difference is greater than this value
       deref_thr    = max(ref_thr**2, smalld/d0) !< Derefine if density difference is smaller than this value
+
+      analytical_ext_pot = .false.
 
       if (master) then
 
@@ -151,10 +149,13 @@ contains
 
          ibuff(1) = nsub
 
+         lbuff(1) = analytical_ext_pot
+
       endif
 
       call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(rbuff)
+      call piernik_MPI_Bcast(lbuff)
 
       if (slave) then
 
@@ -169,7 +170,11 @@ contains
 
          nsub         = ibuff(1)
 
+         analytical_ext_pot = lbuff(1)
+
       endif
+
+      if (analytical_ext_pot) ext_bnd_potential => maclaurin2bnd_potential
 
       if (a1 <= 0.) then ! point-like source
          a1 = 0.
