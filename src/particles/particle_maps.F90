@@ -111,7 +111,7 @@ contains
          do p = lbound(cgl%cg%pset%p, dim=1), ubound(cgl%cg%pset%p, dim=1)
             associate( field => cgl%cg%q(iv)%arr, part => cgl%cg%pset%p(p), cg => cgl%cg )
 
-            if (dom%geometry_type /= GEO_XYZ) call die("[particle_types:map_ngp] Unsupported geometry")
+            if (dom%geometry_type /= GEO_XYZ) call die("[particle_maps:map_ngp] Unsupported geometry")
             where (dom%has_dir(:)) ijkp(:) = floor((part%pos(:) - cg%fbnd(:, LO)) * cg%idl(:)) + cg%ijkse(:, LO)
             if (all(ijkp >= cg%ijkse(:,LO)) .and. all(ijkp <= cg%ijkse(:,HI))) &
                  field(ijkp(xdim), ijkp(ydim), ijkp(zdim)) = field(ijkp(xdim), ijkp(ydim), ijkp(zdim)) + factor * part%mass / cg%dvol
