@@ -49,18 +49,19 @@ module particle_utils
 
 contains
 
-   subroutine max_pvel_1d(max_v)
+   subroutine max_pvel_1d(cg, max_v)
 
-      use constants,      only: ndims, xdim, zdim
-      use particle_types, only: pset
+      use constants, only: ndims, xdim, zdim
+      use grid_cont, only: grid_container
 
       implicit none
 
-      real, dimension(ndims), intent(out) :: max_v
-      integer(kind=4)                     :: cdim
+      type(grid_container), pointer, intent(in)  :: cg
+      real, dimension(ndims),        intent(out) :: max_v
+      integer(kind=4)                            :: cdim
 
       do cdim = xdim, zdim
-         max_v(cdim)  = maxval(abs(pset%p(:)%vel(cdim)))
+         max_v(cdim)  = maxval(abs(cg%pset%p(:)%vel(cdim)))
       enddo
 
    end subroutine max_pvel_1d
