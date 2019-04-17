@@ -38,7 +38,7 @@ module particle_utils
    implicit none
 
    private
-   public :: max_pvel_1d, max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom, add_part_in_proper_cg
+   public :: max_pvel_1d, max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom, add_part_in_proper_cg, count_all_particles
 
    real    :: tot_angmom           !< angular momentum of set of the particles
    real    :: tot_energy           !< total energy of set of the particles
@@ -225,6 +225,25 @@ contains
       call die('[particle_utils:add_part_in_proper_cg] The particle neither outside domain nor added to any cg!')
 
    end subroutine add_part_in_proper_cg
+
+   function count_all_particles() result(pcount)
+
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+
+      implicit none
+
+      integer                        :: pcount
+      type(cg_list_element), pointer :: cgl
+
+      pcount = 0
+      cgl => leaves%first
+      do while (associated(cgl))
+         pcount = pcount + size(cgl%cg%pset%p, dim=1)
+         cgl => cgl%nxt
+      enddo
+
+   end function count_all_particles
 
    subroutine dump_particles_to_textfile
 
