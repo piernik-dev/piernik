@@ -69,17 +69,18 @@ module particles_io_hdf5
 
    subroutine write_nbody_hdf5(fname)
 
-      use constants,  only: cwdlen, tmr_hdf
-      use dataio_pub, only: msg, printinfo, printio, thdf
-      use hdf5,       only: h5open_f, h5close_f, h5fcreate_f, h5fclose_f, HID_T, H5F_ACC_TRUNC_F
-      use mpisetup,   only: master
-      use timer,      only: set_timer
+      use constants,      only: cwdlen, tmr_hdf
+      use dataio_pub,     only: msg, printinfo, printio, thdf
+      use hdf5,           only: h5open_f, h5close_f, h5fcreate_f, h5fclose_f, HID_T, H5F_ACC_TRUNC_F
+      use mpisetup,       only: master
+      use particle_utils, only: count_all_particles
+      use timer,          only: set_timer
 
       implicit none
 
       character(len=*), intent(in) :: fname
       character(len=cwdlen)        :: filename
-      integer                      :: flen
+      integer                      :: flen, n_part
       integer(kind=4)              :: error
       integer(HID_T)               :: file_id
 
@@ -94,9 +95,10 @@ module particles_io_hdf5
       call h5open_f(error)
       call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
 
-      call set_nbody_attributes(file_id)
+      n_part = count_all_particles()
+      call set_nbody_attributes(file_id, n_part)
 
-      call nbody_datasets(file_id)
+      call nbody_datasets(file_id, n_part)
 
       call h5fclose_f(file_id, error)
       call h5close_f(error)
@@ -109,18 +111,18 @@ module particles_io_hdf5
 
    end subroutine write_nbody_hdf5
 
-   subroutine set_nbody_attributes(file_id)
+   subroutine set_nbody_attributes(file_id, n_part)
 
       use dataio_pub,         only: require_problem_IC, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
          &                          last_res_time, last_log_time, last_tsl_time, nres, nhdf, domain_dump
       use global,             only: t, dt, nstep
       use hdf5,               only: HID_T
-      use particle_types,     only: pset
       use set_get_attributes, only: set_attr
 
       implicit none
 
       integer(HID_T), intent(in) :: file_id       !< File identifier
+      integer,        intent(in) :: n_part
 
       ! real attributes
       call set_attr(file_id, "time",          [t                     ]) !rr2
@@ -132,11 +134,11 @@ module particles_io_hdf5
       call set_attr(file_id, "last_res_time", [last_res_time         ]) !rr2
 
       ! integer attributes
-      call set_attr(file_id, "npart",              [size(pset%p, dim=1)   ]) !rr2
-      call set_attr(file_id, "nstep",              [nstep                 ]) !rr2
-      call set_attr(file_id, "nres",               [nres                  ]) !rr2
-      call set_attr(file_id, "nhdf",               [nhdf                  ]) !rr2
-      call set_attr(file_id, "require_problem_IC", [require_problem_IC    ]) !rr2
+      call set_attr(file_id, "npart",              [n_part            ]) !rr2
+      call set_attr(file_id, "nstep",              [nstep             ]) !rr2
+      call set_attr(file_id, "nres",               [nres              ]) !rr2
+      call set_attr(file_id, "nhdf",               [nhdf              ]) !rr2
+      call set_attr(file_id, "require_problem_IC", [require_problem_IC]) !rr2
       !> \todo  add number of pieces in the restart point/data dump
 
       ! string attributes
@@ -146,17 +148,16 @@ module particles_io_hdf5
 
    end subroutine set_nbody_attributes
 
-   subroutine nbody_datasets(file_id)
+   subroutine nbody_datasets(file_id, n_part)
 
-      use hdf5,           only: HID_T
-      use particle_utils, only: count_all_particles
+      use hdf5, only: HID_T
 
       implicit none
 
       integer(HID_T), intent(in) :: file_id       !< File identifier
-      integer                    :: i, n_part
+      integer,        intent(in) :: n_part
+      integer                    :: i
 
-      n_part = count_all_particles()
       do i = lbound(pvarl, 1), ubound(pvarl, 1)
          if (pvarl(i)) call nbody_datafields(file_id, trim(pvarn(i)), n_part)
       enddo
