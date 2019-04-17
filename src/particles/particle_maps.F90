@@ -149,7 +149,7 @@ contains
          do p = lbound(cgl%cg%pset%p, dim=1), ubound(cgl%cg%pset%p, dim=1)
             associate( field => cgl%cg%q(iv)%arr, part => cgl%cg%pset%p(p), cg => cgl%cg )
 
-               if (.not. part%in_area(cg%fbnd)) cycle
+               if (part%outside) cycle
 
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
@@ -211,7 +211,7 @@ contains
          do p = lbound(cgl%cg%pset%p, dim=1), ubound(cgl%cg%pset%p, dim=1)
             associate( field => cgl%cg%q(iv)%arr, part => cgl%cg%pset%p(p), cg => cgl%cg )
 
-               if (.not. part%in_area(cg%fbnd)) cycle
+               if (part%outside) cycle
 
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
