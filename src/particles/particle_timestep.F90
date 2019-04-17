@@ -86,7 +86,7 @@ contains
          dt_nbody = sqrt(two*eta*eps/pacc_max%val)
 
 #ifdef DUST_PARTICLES
-         call max_pvel_1d(max_v)
+         call max_pvel_1d(cg, max_v)
          if (any(max_v*dt_nbody > cg%dl)) then
             factor = big
             do cdim = xdim, zdim
