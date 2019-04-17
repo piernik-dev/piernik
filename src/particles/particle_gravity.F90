@@ -463,36 +463,22 @@ contains
 
    subroutine get_acc_model(pos, mass, acc2)
 
-      use constants, only: ndims, xdim, zdim
+      use constants, only: idm, ndims, two, xdim, zdim
 
       implicit none
 
       real, dimension(ndims), intent(in)  :: pos
       real,                   intent(in)  :: mass
       real, dimension(ndims), intent(out) :: acc2
+      real                                :: d
       integer(kind=4)                     :: dir
 
+      d = 1.0e-8
       do dir = xdim, zdim
-         acc2(dir) = -der_xyz(pos, 1.0e-8, dir, mass)
+         acc2(dir) = -( phi_pm_part(pos+real(idm(dir,:))*d, mass) - phi_pm_part(pos-real(idm(dir,:))*d, mass) ) / (two*d)
       enddo
 
    end subroutine get_acc_model
-
-   function der_xyz(pos, d, dir, mass)
-
-      use constants, only: idm, ndims, two
-
-      implicit none
-
-      real(kind=8),dimension(1,ndims), intent(in) :: pos
-      real(kind=8),                    intent(in) :: d
-      integer(kind=4),                 intent(in) :: dir
-      real,                            intent(in) :: mass
-      real(kind=8)                                :: der_xyz
-
-      der_xyz = ( phi_pm_part(pos(1,:)+real(idm(dir,:))*d, mass) - phi_pm_part(pos(1,:)-real(idm(dir,:))*d, mass) ) / (two*d)
-
-   end function der_xyz
 
    subroutine direct_nbody_acc(mass, pos, acc, n, epot)
 
