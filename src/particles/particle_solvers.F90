@@ -316,57 +316,51 @@ contains
       implicit none
 
       logical, optional, intent(in) :: forward
+      real                          :: dt_kick   !< timestep for kicks
 
-      real                          :: dt_kick              !< timestep for kicks
-      integer                       :: n                    !< number of particles
-
-      n = size(pset%p, dim=1)
       if (twodtscheme) then
-         dt_kick = dt
+         if (forward) then
+            call kick(dt)                        !1. kick
+         else
+            call drift(two*dt)                   !2. drift
+            call update_particle_gravpot_and_acc
+            call kick(dt)                        !3. kick
+            call update_particle_kinetic_energy
+            call particle_diagnostics
+         endif
       else
          dt_kick = dt * half
-      endif
-
-      if (forward .or. .not.twodtscheme) then
-         call kick                           (n,     dt_kick) !1. kick
-      endif
-      if (.not.forward .or. .not.twodtscheme) then
-         call drift                          (n, two*dt_kick) !2. drift
-
+         call kick(dt_kick)                   !1. kick
+         call drift(dt)                       !2. drift
          call update_particle_gravpot_and_acc
-
-         call kick                           (n,     dt_kick) !3. kick
-
+         call kick(dt_kick)                   !3. kick
          call update_particle_kinetic_energy
-
          call particle_diagnostics
       endif
 
       contains
 
-         subroutine kick(n, kdt)
+         subroutine kick(kdt)
 
             implicit none
 
-            integer, intent(in) :: n
-            real,    intent(in) :: kdt
-            integer             :: i
+            real, intent(in) :: kdt
+            integer          :: i
 
-            do i = 1, n
+            do i = 1, size(pset%p, dim=1)
                pset%p(i)%vel = pset%p(i)%vel + pset%p(i)%acc * kdt
             enddo
 
          end subroutine kick
 
-         subroutine drift(n, ddt)
+         subroutine drift(ddt)
 
             implicit none
 
-            integer, intent(in) :: n
-            real,    intent(in) :: ddt
-            integer             :: i
+            real, intent(in) :: ddt
+            integer          :: i
 
-            do i = 1, n
+            do i = 1, size(pset%p, dim=1)
                pset%p(i)%pos = pset%p(i)%pos + pset%p(i)%vel * ddt
             enddo
 
