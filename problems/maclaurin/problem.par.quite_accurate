@@ -84,7 +84,6 @@
     ord_laplacian = 4
     L4_strength = 0.5
     grav_bnd_str  = "isolated"
-    coarsen_multipole = 0
     lmax = 96
      interp_pt2mom = .true.
 !    interp_mom2pot = .true.
