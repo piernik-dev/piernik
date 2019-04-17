@@ -142,7 +142,7 @@ contains
 
    subroutine problem_initial_nbody
 
-      use dataio_pub,       only: die, msg
+      use dataio_pub, only: die, msg
 
       implicit none
 
@@ -166,7 +166,7 @@ contains
 
       use constants,      only: ndims
       use dataio_pub,     only: msg, printinfo
-      use particle_types, only: pset
+      use particle_utils, only: add_part_in_proper_cg
 
       implicit none
 
@@ -183,7 +183,7 @@ contains
 
       do p = 1, 2
          write(msg,'(f8.5,a,3f8.5,a,3f8.5)') m(p), " @ ", init_pos_body(:,p), ", with ", init_vel_body(:,p) ; call printinfo(msg)
-         call pset%add(m(p), init_pos_body(:,p), init_vel_body(:,p), [0.0, 0.0, 0.0], 0.0)
+         call add_part_in_proper_cg(m(p), init_pos_body(:,p), init_vel_body(:,p), [0.0, 0.0, 0.0], 0.0)
       enddo
 
    end subroutine twobodies
@@ -193,7 +193,7 @@ contains
       use constants,      only: ndims !, dpi, zdim
       use dataio_pub,     only: msg, printinfo
       use particle_pub,   only: npart
-      use particle_types, only: pset
+      use particle_utils, only: add_part_in_proper_cg
 
       implicit none
 
@@ -206,18 +206,15 @@ contains
       vel_init = [-0.5, 0.0, 0.0]
 
       do p = 1, npart
-         call pset%add(mass2, pos_init, vel_init, [0.0, 0.0, 0.0], 0.0 ) !elliptical orbit
-         !call pset%add(mass2, [4.0, 2.0, 0.0],[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
-         !call pset%add(mass2, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0],  [0.0, 0.0, 0.0], 0.0)
+         call add_part_in_proper_cg(mass2, pos_init, vel_init, [0.0, 0.0, 0.0], 0.0 ) !elliptical orbit
+         !call add_part_in_proper_cg(mass2, [4.0, 2.0, 0.0],[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
+         !call add_part_in_proper_cg(mass2, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0],  [0.0, 0.0, 0.0], 0.0)
 
          !pos_init = rotate(pos_init, dpi/npart, zdim)
          !vel_init = rotate(vel_init, dpi/npart, zdim)
       enddo
 
-      !call pset%add(mass1, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
-      !call pset%add(mass2, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0) ! it "works"
-
-      write(msg,'(a,i6)') '[initproblem:orbits] Number of particles added to the domain: ', size(pset%p, dim=1)
+      write(msg,'(a,i6)') '[initproblem:orbits] Number of particles added to the domain: ', npart
       call printinfo(msg)
       write(msg,'(a,3f5.2)') '[initproblem:orbits] Initial position of the particle: ', pos_init
       call printinfo(msg)
@@ -296,7 +293,7 @@ contains
       use constants,         only: ndims, onesth, one, two
       use domain,            only: dom
       use particle_pub,      only: npart
-      use particle_types,    only: pset
+      use particle_utils,    only: add_part_in_proper_cg
 #ifdef VERBOSE
       use dataio_pub,        only: printinfo
 #endif /* VERBOSE */
@@ -306,13 +303,12 @@ contains
 
       implicit none
 
-      integer                      :: i
-      real, dimension(npart,ndims) :: pos_init
-      real, dimension(ndims)       :: nrand
-      real                         :: r_dom
-      logical                      :: outsphere
+      integer                :: i
+      real, dimension(ndims) :: pos_init, nrand
+      real                   :: r_dom
+      logical                :: outsphere
 #ifndef RANDOMIZE
-      integer                      :: seed = 86437
+      integer                :: seed = 86437
 
       call random_seed(seed)
 #endif /* !RANDOMIZE */
@@ -323,10 +319,12 @@ contains
          outsphere = .true.
          do while (outsphere)
             call random_number(nrand)
-            pos_init(i,:) = dom%C_ + (two*nrand-one)*r_dom
-            outsphere = sqrt(sum(pos_init(i,:)**2)) >= r_dom
+            pos_init(:) = dom%C_ + (two*nrand-one)*r_dom
+            outsphere = sqrt(sum(pos_init(:)**2)) >= r_dom
          enddo
-         call pset%add(mass2, pos_init(i,:), [0.0,0.0,0.0], [0.0, 0.0, 0.0], 0.0)
+
+         call add_part_in_proper_cg(mass2, pos_init(:), [0.0,0.0,0.0], [0.0, 0.0, 0.0], 0.0)
+
       enddo
 #ifdef VERBOSE
       call printinfo('[initproblem:relax_time] Particles position computed')
@@ -343,7 +341,7 @@ contains
       use dataio_pub,     only: msg, printio, warn
       use domain,         only: dom
       use particle_pub,   only: npart
-      use particle_types, only: pset
+      use particle_utils, only: add_part_in_proper_cg
 
       implicit none
 
@@ -382,7 +380,7 @@ contains
             write(msg,'(i8,a)') i, ' particles read' ; call printio(msg)
          endif
 #endif /* VERBOSE */
-         call pset%add(mass(i), pos(i,:), vel(i,:),[0.0, 0.0, 0.0], 0.0)
+         call add_part_in_proper_cg(mass(i), pos(i,:), vel(i,:),[0.0, 0.0, 0.0], 0.0)
       enddo
       deallocate(mass,pos,vel)
 
