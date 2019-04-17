@@ -665,7 +665,7 @@ contains
 #endif /* JEANS_PROBLEM */
 #ifdef NBODY_MULTIGRID
       use particle_maps,     only: map_particles
-      use particle_pub,      only: npart
+      use particle_types,    only: particles_exist
 #endif /* NBODY_MULTIGRID */
 
       implicit none
@@ -693,7 +693,7 @@ contains
          endif
 
 #ifdef NBODY_MULTIGRID
-         if (npart > 0) call map_particles(source, fpiG)
+         if (particles_exist) call map_particles(source, fpiG)
 #endif /* NBODY_MULTIGRID */
       else
          call leaves%set_q_value(source, 0.)  ! empty domain for "outer potential" calculation

@@ -35,7 +35,7 @@ module particle_types
    implicit none
 
    private
-   public :: particle_set, pset
+   public :: particle_set, pset, particles_exist
 
    !>
    !! \brief simple particle: just mass and position
@@ -72,6 +72,7 @@ module particle_types
    end type particle_set
 
    type(particle_set), target :: pset !< default particle list
+   logical                    :: particles_exist
 
 contains
 

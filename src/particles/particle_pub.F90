@@ -59,7 +59,7 @@ contains
       use mpisetup,         only: master, slave, cbuff, piernik_mpi_bcast
       use particle_solvers, only: hermit_4ord, psolver
       use particle_maps,    only: set_map
-      use particle_types,   only: pset
+      use particle_types,   only: pset, particles_exist
 #ifdef NBODY
       use dataio_pub,       only: printinfo
       use mpisetup,         only: ibuff, lbuff, rbuff
@@ -91,6 +91,7 @@ contains
       acc_interp_method    = 'cic'
       lf_c                 = 1.0
       eps                  = 0.0
+      particles_exist      = .false.
       twodtscheme          = .false.
       ignore_dt_fluid      = .false.
       dump_diagnose        = .false.
@@ -185,6 +186,8 @@ contains
       end select
 
 #ifdef NBODY
+      particles_exist = (npart > 0)
+
       is_setacc_int = .false.
       is_setacc_cic = .false.
       is_setacc_tsc = .false.
