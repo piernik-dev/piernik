@@ -200,7 +200,6 @@ contains
          cgl => cgl%nxt
       enddo
 
-
    end subroutine update_gravpot_from_particles
 #endif /* NBODY_GRIDDIRECT */
 
@@ -335,7 +334,7 @@ contains
       endif
 
       do p = 1, n_part
-         if (.not. cg%pset%p(p)%outside) then
+         if (cg%pset%p(p)%in_area(cg%fbnd)) then
             do cdim = xdim, ndims
                if (cg%pset%p(p)%pos(cdim) < cg%coord(CENTER, cdim)%r(cells(p,cdim))) then
                   cic_cells(cdim) = cells(p, cdim) - 1
@@ -405,7 +404,7 @@ contains
       do p = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
          associate( part  => cg%pset%p(p) )
 
-            if (any(part%pos < cg%fbnd(:,LO)) .or. any(part%pos > cg%fbnd(:,HI))) cycle
+            if (.not. part%in_area(cg%fbnd)) cycle
 
             if (mask_gpot1b) then
                cg%gp1b = zero
