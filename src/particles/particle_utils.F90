@@ -67,11 +67,10 @@ contains
 
    subroutine max_pacc_3d(cg, max_pacc)
 
-      use constants,      only: big, CENTER, half, LO, xdim, zdim, zero
-      use grid_cont,      only: grid_container
-      use mpisetup,       only: proc
-      use particle_types, only: pset
-      use types,          only: value
+      use constants, only: big, CENTER, half, LO, xdim, zdim, zero
+      use grid_cont, only: grid_container
+      use mpisetup,  only: proc
+      use types,     only: value
 
       implicit none
 
@@ -84,13 +83,13 @@ contains
       max_pacc%assoc = big
 
       max_acc  = zero
-      n_part = size(pset%p, dim=1)
+      n_part = size(cg%pset%p, dim=1)
 
       do i = 1, n_part
-         acc2 = sum(pset%p(i)%acc(:)**2)
+         acc2 = sum(cg%pset%p(i)%acc(:)**2)
          if (acc2 > max_acc) then
             max_acc = acc2
-            max_pacc%coords(:) = pset%p(i)%pos(:)
+            max_pacc%coords(:) = cg%pset%p(i)%pos(:)
             !max_pacc%proc = i !> \todo it might be an information about extremum particle, but the scheme of log file is to print the process number
          endif
       enddo
