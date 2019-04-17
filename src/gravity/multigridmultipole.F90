@@ -418,8 +418,7 @@ contains
          cg => cgl%cg
          do lh = LO, HI
             if (cg%ext_bnd(xdim, lh)) then
-               d = 1
-               if (lh == HI) d = cg%n_b(xdim)
+               d = cg%ijkse(xdim, lh)
                dsum(imass)     =        sum( cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, lh), mask=cg%leafmap(d, :, :) )
                dsum(xdim:zdim) = [ dsum(imass) * cg%fbnd(xdim, lh), &
                     &              sum( sum( cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, lh), mask=cg%leafmap(d, :, :), dim=2) * cg%y(cg%js:cg%je) ), &
@@ -427,8 +426,7 @@ contains
                lsum(:)         = lsum(:) + dsum(:) * cg%dyz
             endif
             if (cg%ext_bnd(ydim, lh)) then
-               d = 1
-               if (lh == HI) d = cg%n_b(ydim)
+               d = cg%ijkse(ydim, lh)
                dsum(imass)     =        sum( cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, lh), mask=cg%leafmap(:, d, :) )
                dsum(xdim:zdim) = [ sum( sum( cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, lh), mask=cg%leafmap(:, d, :), dim=2) * cg%x(cg%is:cg%ie) ), &
                     &              dsum(imass) * cg%fbnd(ydim, lh), &
@@ -436,8 +434,7 @@ contains
                lsum(:)         = lsum(:) + dsum(:) * cg%dxz
             endif
             if (cg%ext_bnd(zdim, lh)) then
-               d = 1
-               if (lh == HI) d = cg%n_b(zdim)
+               d = cg%ijkse(zdim, lh)
                dsum(imass)     =        sum( cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, lh), mask=cg%leafmap(:, :, d) )
                dsum(xdim:zdim) = [ sum( sum( cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, lh), mask=cg%leafmap(:, :, d), dim=2) * cg%x(cg%is:cg%ie) ), &
                     &              sum( sum( cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, lh), mask=cg%leafmap(:, :, d), dim=1) * cg%y(cg%js:cg%je) ), &
