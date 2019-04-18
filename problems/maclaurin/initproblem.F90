@@ -84,20 +84,20 @@ contains
 
    subroutine read_problem_par
 
-      use cg_list_global,   only: all_cg
-      use constants,        only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
-      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,       only: die, warn, msg, printinfo
-      use domain,           only: dom
-      use fluidindex,       only: iarr_all_dn
-      use global,           only: smalld
-      use func,             only: operator(.equals.)
-      use mpisetup,         only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
-      use multigridvars,    only: ord_prolong
-      use named_array_list, only: wna
-      use particle_types,   only: pset
+      use cg_list_global,       only: all_cg
+      use constants,            only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
+      use dataio_pub,           only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,           only: die, warn, msg, printinfo
+      use domain,               only: dom
+      use fluidindex,           only: iarr_all_dn
+      use func,                 only: operator(.equals.)
+      use global,               only: smalld
+      use mpisetup,             only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use multigridvars,        only: ord_prolong
+      use named_array_list,     only: wna
+      use particle_utils,       only: add_part_in_proper_cg
       use refinement_crit_list, only: user_ref2list
-      use user_hooks,       only: ext_bnd_potential
+      use user_hooks,           only: ext_bnd_potential
 
       implicit none
 
@@ -201,7 +201,7 @@ contains
 
       if (ref_thr <= deref_thr) call die("[initproblem:read_problem_par] ref_thr <= deref_thr")
 
-      if (a1 .equals. 0.) call pset%add(d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0])
+      if (a1 .equals. 0.) call add_part_in_proper_cg(d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0])
 
       if (master) then
          if (a1 > 0.) then
@@ -246,9 +246,9 @@ contains
       use fluidindex,        only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use global,            only: dirty_debug, no_dirty_checks
       use grid_cont,         only: grid_container
-      use named_array_list,  only: qna
       use mpisetup,          only: master
       use multigrid_Laplace, only: residual
+      use named_array_list,  only: qna
       use units,             only: fpiG
 
       implicit none
@@ -412,8 +412,8 @@ contains
       use constants,        only: pi, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: warn, die
       use domain,           only: dom
-      use grid_cont,        only: grid_container
       use func,             only: operator(.equals.), operator(.notequals.)
+      use grid_cont,        only: grid_container
       use mpisetup,         only: master
       use named_array_list, only: qna
       use units,            only: newtong
@@ -604,8 +604,8 @@ contains
    subroutine maclaurin_error_vars(var, tab, ierrh, cg)
 
       use dataio_pub,       only: die
-      use grid_cont,        only: grid_container
       use func,             only: operator(.notequals.)
+      use grid_cont,        only: grid_container
       use named_array_list, only: qna
 
       implicit none
