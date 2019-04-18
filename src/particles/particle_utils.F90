@@ -38,7 +38,7 @@ module particle_utils
    implicit none
 
    private
-   public :: max_pvel_1d, max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom, add_part_in_proper_cg, count_all_particles
+   public :: max_pvel_1d, max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom, add_part_in_proper_cg, count_all_particles, print_all_particles
 
    real    :: tot_angmom           !< angular momentum of set of the particles
    real    :: tot_energy           !< total energy of set of the particles
@@ -244,6 +244,23 @@ contains
       enddo
 
    end function count_all_particles
+
+   subroutine print_all_particles
+
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         call cgl%cg%pset%print
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine print_all_particles
 
    subroutine dump_particles_to_textfile
 
