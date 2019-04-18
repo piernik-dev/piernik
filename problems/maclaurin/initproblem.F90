@@ -47,8 +47,9 @@ module initproblem
    real :: ref_thr !< refinement threshold
    real :: deref_thr !< derefinement threshold
    integer(kind=4) :: nsub !< subsampling on the grid
+   logical :: analytical_ext_pot  !< If .true. then bypass multipole solver and use analutical potential for external boundaries (debugging/developing only)
 
-   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, ref_thr, deref_thr, nsub
+   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, ref_thr, deref_thr, nsub, analytical_ext_pot
 
    ! private data
    real :: d1 !< ambient density
@@ -57,9 +58,6 @@ module initproblem
    character(len=dsetnamelen), parameter :: apot_n = "apot" !< name of the analytical potential field
    character(len=dsetnamelen), parameter :: asrc_n = "asrc" !< name of the source field used for "ares" calculation (auxiliary space)
    character(len=dsetnamelen), parameter :: ares_n = "ares" !< name of the numerical residuum with respect to analytical potential field
-#ifdef MACLAURIN_PROBLEM
-   character(len=dsetnamelen), parameter :: apt_n  = "apt"  !< name of the potential as it was due to point-like source
-#endif /* MACLAURIN_PROBLEM */
 
 contains
 
@@ -94,11 +92,12 @@ contains
       use fluidindex,       only: iarr_all_dn
       use global,           only: smalld
       use func,             only: operator(.equals.)
-      use mpisetup,         only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,         only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
       use multigridvars,    only: ord_prolong
       use named_array_list, only: wna
       use particle_types,   only: pset
       use refinement_crit_list, only: user_ref2list
+      use user_hooks,       only: ext_bnd_potential
 
       implicit none
 
@@ -118,6 +117,8 @@ contains
 
       ref_thr      = max(1e-3, 2.*smalld/d0)    !< Refine if density difference is greater than this value
       deref_thr    = max(ref_thr**2, smalld/d0) !< Derefine if density difference is smaller than this value
+
+      analytical_ext_pot = .false.
 
       if (master) then
 
@@ -148,10 +149,13 @@ contains
 
          ibuff(1) = nsub
 
+         lbuff(1) = analytical_ext_pot
+
       endif
 
       call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(rbuff)
+      call piernik_MPI_Bcast(lbuff)
 
       if (slave) then
 
@@ -166,7 +170,11 @@ contains
 
          nsub         = ibuff(1)
 
+         analytical_ext_pot = lbuff(1)
+
       endif
+
+      if (analytical_ext_pot) ext_bnd_potential => maclaurin2bnd_potential
 
       if (a1 <= 0.) then ! point-like source
          a1 = 0.
@@ -217,9 +225,6 @@ contains
       call all_cg%reg_var(apot_n, ord_prolong = ord_prolong)
       call all_cg%reg_var(ares_n)
       call all_cg%reg_var(asrc_n)
-#ifdef MACLAURIN_PROBLEM
-      call all_cg%reg_var(apt_n)
-#endif /* MACLAURIN_PROBLEM */
 
       ! Set up automatic refinement criteria on densities
       do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
@@ -411,9 +416,6 @@ contains
       use func,             only: operator(.equals.), operator(.notequals.)
       use mpisetup,         only: master
       use named_array_list, only: qna
-#ifdef MACLAURIN_PROBLEM
-      use problem_pub,      only: xs, as, ap_potential
-#endif /* MACLAURIN_PROBLEM */
       use units,            only: newtong
 
       implicit none
@@ -524,27 +526,6 @@ contains
 
          cgl => cgl%nxt
       enddo
-#ifdef MACLAURIN_PROBLEM
-
-      xs = [ x0, y0, z0 ]
-      as = - 4./3. * a1**3 * pi * newtong * d0 !> \todo add correction for e /= 0
-
-      apot_i = qna%ind(apt_n)
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-                  cg%q(apot_i)%arr(i, j, k) = ap_potential(cg%x(i), cg%y(j), cg%z(k))
-               enddo
-            enddo
-         enddo
-
-         cgl => cgl%nxt
-      enddo
-#endif /* MACLAURIN_PROBLEM */
 
    end subroutine compute_maclaurin_potential
 
@@ -646,14 +627,85 @@ contains
             elsewhere
                tab(:,:,:) = 0.
             endwhere
-#ifdef MACLAURIN_PROBLEM
-         case ("a-pt")
-            tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%q(qna%ind(apt_n))%span(cg%ijkse)
-#endif /* MACLAURIN_PROBLEM */
          case default
             ierrh = -1
       end select
 
    end subroutine maclaurin_error_vars
+
+!< \brief Analytical, point-like potential outside of semi-major axis
+
+   real function ap_potential(x, y, z) result(phi)
+
+      use constants, only: pi
+      use units,     only: newtong
+
+      implicit none
+
+      real, intent(in) :: x, y, z
+
+      phi = - 4./3. * a1**3 * pi * newtong * d0 / sqrt((x-x0)**2 + (y-y0)**2 + (z-z0)**2)
+
+   end function ap_potential
+
+!>
+!! \brief Set up analytical potential at external boundaries
+!!
+!! \details This routine can be used to bypass multipole solver.
+!! It can be used for diagnosing inaccuracies that come from laplacian or multigrid without
+!! being bothered by limitations of the multipole representation and its limits.
+!<
+
+   subroutine maclaurin2bnd_potential
+
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim, LO, HI, GEO_XYZ
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use grid_cont,  only: grid_container
+      use units,      only: fpiG
+
+      implicit none
+
+      integer :: i, j, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+
+      if (dom%geometry_type /= GEO_XYZ) call die("[initproblem:maclaurin2bnd_potential] only cartesian geometry implemented")
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         if (any(cg%ext_bnd(xdim, :))) then
+            do j = cg%js, cg%je
+               do k = cg%ks, cg%ke
+                  if (cg%ext_bnd(xdim, LO)) cg%mg%bnd_x(j, k, LO) = ap_potential(cg%fbnd(xdim, LO), cg%y(j), cg%z(k)) * fpiG
+                  if (cg%ext_bnd(xdim, HI)) cg%mg%bnd_x(j, k, HI) = ap_potential(cg%fbnd(xdim, HI), cg%y(j), cg%z(k)) * fpiG
+               enddo
+            enddo
+         endif
+
+         if (any(cg%ext_bnd(ydim, :))) then
+            do i = cg%is, cg%ie
+               do k = cg%ks, cg%ke
+                  if (cg%ext_bnd(ydim, LO)) cg%mg%bnd_y(i, k, LO) = ap_potential(cg%x(i), cg%fbnd(ydim, LO), cg%z(k)) * fpiG
+                  if (cg%ext_bnd(ydim, HI)) cg%mg%bnd_y(i, k, HI) = ap_potential(cg%x(i), cg%fbnd(ydim, HI), cg%z(k)) * fpiG
+               enddo
+            enddo
+         endif
+
+         if (any(cg%ext_bnd(zdim, :))) then
+            do i = cg%is, cg%ie
+               do j = cg%js, cg%je
+                  if (cg%ext_bnd(zdim, LO)) cg%mg%bnd_z(i, j, LO) = ap_potential(cg%x(i), cg%y(j), cg%fbnd(zdim, LO)) * fpiG
+                  if (cg%ext_bnd(zdim, HI)) cg%mg%bnd_z(i, j, HI) = ap_potential(cg%x(i), cg%y(j), cg%fbnd(zdim, HI)) * fpiG
+               enddo
+            enddo
+         endif
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine maclaurin2bnd_potential
 
 end module initproblem
