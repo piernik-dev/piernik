@@ -34,7 +34,7 @@ module particle_maps
    implicit none
 
    private
-   public :: set_map, map_particles, quadratic_spline
+   public :: set_map, map_particles, map_ngp, map_cic, map_tsc, quadratic_spline
 
    procedure(map_scheme), pointer :: map_particles => NULL()
 
