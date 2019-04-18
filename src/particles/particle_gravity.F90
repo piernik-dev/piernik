@@ -390,11 +390,11 @@ contains
 
 
       type(grid_container), pointer, intent(inout) :: cg
-      integer                                      :: p, cdim
-      integer(kind=4)                              :: ig, i, j, k
-      integer(kind=4), dimension(ndims, IM:IP)     :: ijkp
-      integer(kind=4), dimension(ndims)            :: cur_ind, ind1, ind2
-      real(kind=8),    dimension(ndims)            :: fxyz, axyz
+      integer                                      :: p, i, j, k
+      integer(kind=4)                              :: ig, cdim
+      integer, dimension(ndims, IM:IP)             :: ijkp
+      integer, dimension(ndims)                    :: cur_ind, ind1, ind2
+      real,    dimension(ndims)                    :: fxyz, axyz
       real                                         :: weight, delta_x, weight_tmp
 
       if (mask_gpot1b) then
@@ -403,16 +403,15 @@ contains
          ig = qna%ind(gpot_n)
       endif
 
-      axyz(:) = 0.0
-
       do p = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
-         associate( part  => cg%pset%p(p) )
+         associate( part => cg%pset%p(p) )
+         axyz(:) = zero
 
-         if (cg%pset%p(p)%outside) then
-         ! multipole expansion for particles outside domain
-            call warn('[particle_gravity:update_particle_acc_tsc] particle is outside the domain - we need multipole expansion!!!')
-            cycle
-         endif
+            if (part%outside) then
+            ! multipole expansion for particles outside domain
+               call warn('[particle_gravity:update_particle_acc_tsc] particle is outside the domain - we need multipole expansion!!!')
+               cycle
+            endif
 
             if (mask_gpot1b) then
                cg%gp1b = zero
@@ -431,6 +430,7 @@ contains
                   ijkp(cdim, IP) = cg%ijkse(cdim, HI)
                endif
             enddo
+
             do i = ijkp(xdim, IM), ijkp(xdim, IP)
                do j = ijkp(ydim, IM), ijkp(ydim, IP)
                   do k = ijkp(zdim, IM), ijkp(zdim, IP)
@@ -458,11 +458,10 @@ contains
                   enddo
                enddo
             enddo
+
+            part%acc(:) = axyz(:)
+
          end associate
-
-         cg%pset%p(p)%acc(:) = axyz(:)
-
-         axyz(:) = 0.0
 
       enddo
 

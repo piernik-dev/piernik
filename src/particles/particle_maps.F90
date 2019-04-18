@@ -97,12 +97,12 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in)       :: iv     !< index in cg%q array, where we want the particles to be projected
-      real,            intent(in)       :: factor !< typically fpiG
+      integer(kind=4), intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
+      real,            intent(in)    :: factor !< typically fpiG
 
-      type(cg_list_element), pointer    :: cgl
-      integer                           :: p
-      integer(kind=8), dimension(ndims) :: ijkp
+      type(cg_list_element), pointer :: cgl
+      integer                        :: p
+      integer, dimension(ndims)      :: ijkp
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -133,15 +133,15 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in)              :: iv     !< index in cg%q array, where we want the particles to be projected
-      real,            intent(in)              :: factor !< typically fpiG
+      integer(kind=4), intent(in)      :: iv     !< index in cg%q array, where we want the particles to be projected
+      real,            intent(in)      :: factor !< typically fpiG
 
-      type(cg_list_element), pointer           :: cgl
-      integer                                  :: p, cdim
-      integer(kind=8)                          :: cn, i, j, k
-      integer(kind=8), dimension(ndims, LO:HI) :: ijkp
-      integer(kind=8), dimension(ndims)        :: cur_ind
-      real                                     :: weight
+      type(cg_list_element), pointer   :: cgl
+      integer(kind=4)                  :: cdim
+      integer                          :: cn, i, j, k, p
+      integer, dimension(ndims, LO:HI) :: ijkp
+      integer, dimension(ndims)        :: cur_ind
+      real                             :: weight
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -195,15 +195,15 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
-      real,            intent(in)    :: factor !< typically fpiG
+      integer(kind=4), intent(in)      :: iv     !< index in cg%q array, where we want the particles to be projected
+      real,            intent(in)      :: factor !< typically fpiG
 
-      type(cg_list_element), pointer           :: cgl
-      integer                                  :: p, cdim
-      integer(kind=8)                          :: i, j, k
-      integer(kind=8), dimension(ndims, IM:IP) :: ijkp
-      integer(kind=8), dimension(ndims)        :: cur_ind
-      real                                     :: weight, delta_x, weight_tmp
+      type(cg_list_element), pointer   :: cgl
+      integer(kind=4)                  :: cdim
+      integer                          :: i, j, k, p
+      integer, dimension(ndims, IM:IP) :: ijkp
+      integer, dimension(ndims)        :: cur_ind
+      real                             :: weight, delta_x, weight_tmp
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -216,8 +216,8 @@ contains
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
                      ijkp(cdim, I0) = nint((part%pos(cdim) - cg%coord(CENTER, cdim)%r(1))*cg%idl(cdim)) + 1   !!! BEWARE hardcoded magic
-                     ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cg%lhn(cdim, LO), kind=8))
-                     ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cg%lhn(cdim, HI), kind=8))
+                     ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, cg%lhn(cdim, LO))
+                     ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, cg%lhn(cdim, HI))
                   else
                      ijkp(cdim, IM) = cg%ijkse(cdim, LO)
                      ijkp(cdim, I0) = cg%ijkse(cdim, LO)
