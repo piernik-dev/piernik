@@ -56,9 +56,12 @@ contains
 
    subroutine hermit_4ord(forward)
 
-      use constants,      only: ndims, xdim, zdim
-      use global,         only: t, dt
-      use particle_types, only: pset
+      use cg_leaves,  only: leaves
+      use constants,  only: ndims, xdim, zdim
+      use dataio_pub, only: die
+      use domain,     only: is_refined, is_multicg
+      use global,     only: t, dt
+      use grid_cont,  only: grid_container
 
       implicit none
 
@@ -70,21 +73,26 @@ contains
 
       real, dimension(:),    allocatable :: mass
       real, dimension(:, :), allocatable :: pos, vel, acc, jerk
+      type(grid_container),  pointer     :: cg
 
       real    :: epot, coll_time, t_dia, t_out, t_end, einit, dth, th
       integer :: nsteps, n, ndim, lun_out, lun_err, i
 
+      if (is_refined) call die("[particle_solvers:hermit_4ord] AMR not implemented for hermit 4ord solver yet")
+      if (is_multicg) call die("[particle_solvers:hermit_4ord] multi_cg not implemented for hermit 4ord solver yet")
+      cg => leaves%first%cg
+
       open(newunit=lun_out, file='nbody_out.log', status='unknown',  position='append')
       open(newunit=lun_err, file='nbody_err.log', status='unknown',  position='append')
 
-      n = size(pset%p, dim=1)
+      n = size(cg%pset%p, dim=1)
       th = t - dt
       allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), jerk(n, ndims))
 
-      mass(:) = pset%p(:)%mass
+      mass(:) = cg%pset%p(:)%mass
       do ndim = xdim, zdim
-         pos(:, ndim) = pset%p(:)%pos(ndim)
-         vel(:, ndim) = pset%p(:)%vel(ndim)
+         pos(:, ndim) = cg%pset%p(:)%pos(ndim)
+         vel(:, ndim) = cg%pset%p(:)%vel(ndim)
       enddo
 
       write(lun_err, *) "Starting a Hermite integration for a ", n, "-body system,"
@@ -123,8 +131,8 @@ contains
       enddo
 
       do ndim = xdim, zdim
-         pset%p(:)%pos(ndim) = pos(:, ndim)
-         pset%p(:)%vel(ndim) = vel(:, ndim)
+         cg%pset%p(:)%pos(ndim) = pos(:, ndim)
+         cg%pset%p(:)%vel(ndim) = vel(:, ndim)
       enddo
 
       deallocate (mass, pos, vel, acc, jerk)
