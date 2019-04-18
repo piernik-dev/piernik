@@ -60,7 +60,7 @@ contains
 
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
-      use particle_types,   only: pset
+      use particle_maps,    only: map_ngp, map_cic, map_tsc
 
       implicit none
 
@@ -72,13 +72,13 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("ngp")
-            call pset%map_ngp(qna%ind(ngp_n), 1.0)
+            call map_ngp(qna%ind(ngp_n), 1.0)
             tab(:,:,:) = real(cg%q(qna%ind(ngp_n))%span(cg%ijkse), kind(tab))
          case ("cic")
-            call pset%map_cic(qna%ind(cic_n), 1.0)
+            call map_cic(qna%ind(cic_n), 1.0)
             tab(:,:,:) = real(cg%q(qna%ind(cic_n))%span(cg%ijkse), kind(tab))
          case ("tsc")
-            call pset%map_tsc(qna%ind(tsc_n), 1.0)
+            call map_tsc(qna%ind(tsc_n), 1.0)
             tab(:,:,:) = real(cg%q(qna%ind(tsc_n))%span(cg%ijkse), kind(tab))
          case default
             ierrh = -1
@@ -96,7 +96,7 @@ contains
       use constants,        only: xdim, ydim, zdim, LO, HI
       use fluidindex,       only: flind
       use named_array_list, only: qna
-      use particle_types,   only: pset
+      use particle_utils,   only: add_part_in_proper_cg
 
       implicit none
 
@@ -148,7 +148,7 @@ contains
          call all_cg%reg_var(tsc_n)
 
          do i = lbound(px, 1), ubound(px, 1)
-            call pset%add(1.0, [px(i), py(i), 0.0], [0.0, 0.0, 0.0])
+            call add_part_in_proper_cg(1.0, [px(i), py(i), 0.0], [0.0, 0.0, 0.0])
          enddo
 
          frun = .false.
