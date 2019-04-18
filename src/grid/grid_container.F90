@@ -114,6 +114,9 @@ contains
       call this%init_gc_bnd
       call this%add_all_na
       call this%init_gc_prolong
+#ifdef NBODY
+      call this%pset%init()
+#endif /* NBODY */
 
       this%membership = 1
       this%SFC_id     = SFC_order(this%my_se(:, LO) - l%off)
@@ -146,6 +149,9 @@ contains
       call this%cleanup_na
       call this%cleanup_bnd
       call this%cleanup_prolong
+#ifdef NBODY
+      call this%pset%cleanup
+#endif /* NBODY */
 
       rpio_tgt(1:nseg) = [ this%ri_tgt,  this%ro_tgt,  this%pi_tgt,  this%po_tgt, &
            &               this%pib_tgt, this%pob_tgt, this%rif_tgt, this%rof_tgt ]
