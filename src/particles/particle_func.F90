@@ -29,7 +29,7 @@
 !>  \brief Auxiliary functions used by particle integrators
 
 module particle_func
-! pulled by NBODY
+! pulled by ANY
 
    implicit none
 

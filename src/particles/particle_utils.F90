@@ -33,12 +33,14 @@
 !<
 
 module particle_utils
-! pulled by NBODY
+! pulled by ANY
 
    implicit none
 
    private
-   public :: max_pvel_1d, max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom, add_part_in_proper_cg, count_all_particles, print_all_particles
+   public :: max_pvel_1d, add_part_in_proper_cg, count_all_particles, print_all_particles
+#ifdef NBODY
+   public :: max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom
 
    real    :: tot_angmom           !< angular momentum of set of the particles
    real    :: tot_energy           !< total energy of set of the particles
@@ -46,6 +48,7 @@ module particle_utils
    real    :: d_angmom             !< error of angular momentum in succeeding timensteps
    logical :: twodtscheme
    logical :: dump_diagnose        !< dump diagnose for each particle to a seperate log file
+#endif /* NBODY */
 
 contains
 
@@ -66,6 +69,7 @@ contains
 
    end subroutine max_pvel_1d
 
+#ifdef NBODY
    subroutine max_pacc_3d(cg, max_pacc)
 
       use constants, only: big, CENTER, half, LO, xdim, zdim, zero
@@ -191,8 +195,13 @@ contains
       enddo
 
    end subroutine get_angmom_totener
+#endif /* NBODY */
 
+#ifdef NBODY
    subroutine add_part_in_proper_cg(mass, pos, vel, acc, ener)
+#else /* !NBODY */
+   subroutine add_part_in_proper_cg(mass, pos, vel)
+#endif /* !NBODY */
 
       use cg_leaves,     only: leaves
       use cg_list,       only: cg_list_element
@@ -203,8 +212,12 @@ contains
 
       implicit none
 
-      real, dimension(ndims), intent(in) :: pos, vel, acc
-      real,                   intent(in) :: mass, ener
+      real, dimension(ndims), intent(in) :: pos, vel
+#ifdef NBODY
+      real, dimension(ndims), intent(in) :: acc
+      real,                   intent(in) :: ener
+#endif /* NBODY */
+      real,                   intent(in) :: mass
       type(cg_list_element), pointer     :: cgl
 
       if (.not.particle_in_area(pos, dom%edge)) then
@@ -216,7 +229,11 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          if (particle_in_area(pos, cgl%cg%fbnd)) then
+#ifdef NBODY
             call cgl%cg%pset%add(mass, pos, vel, acc, ener)
+#else /* !NBODY */
+            call cgl%cg%pset%add(mass, pos, vel)
+#endif /* !NBODY */
             return
          endif
          cgl => cgl%nxt
@@ -262,6 +279,7 @@ contains
 
    end subroutine print_all_particles
 
+#ifdef NBODY
    subroutine dump_particles_to_textfile
 
       use cg_leaves,        only: leaves
@@ -295,5 +313,6 @@ contains
       close(lun_out)
 
    end subroutine dump_particles_to_textfile
+#endif /* NBODY */
 
 end module particle_utils
