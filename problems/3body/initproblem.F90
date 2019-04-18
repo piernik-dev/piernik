@@ -57,7 +57,7 @@ contains
       use constants,      only: xdim, ydim, zdim, LO, HI
       use dataio_pub,     only: printinfo
       use fluidindex,     only: flind
-      use particle_types, only: pset
+      use particle_utils, only: add_part_in_proper_cg
 
       implicit none
 
@@ -87,9 +87,9 @@ contains
       enddo
 
       if (first_run) then
-         call pset%add(1.0, [ 0.9700436,  -0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
-         call pset%add(1.0, [-0.9700436,   0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
-         call pset%add(1.0, [ 0.0,         0.0,         0.0], [-0.932407370, -0.86473146, 0.0])
+         call add_part_in_proper_cg(1.0, [ 0.9700436,  -0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
+         call add_part_in_proper_cg(1.0, [-0.9700436,   0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
+         call add_part_in_proper_cg(1.0, [ 0.0,         0.0,         0.0], [-0.932407370, -0.86473146, 0.0])
          call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
          first_run = .false.
       endif
