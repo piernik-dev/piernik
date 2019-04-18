@@ -42,9 +42,9 @@ module particle_pub
 #ifdef NBODY
    public :: npart, lf_c, ignore_dt_fluid
 
-   integer                           :: npart              !< number of particles
-   real                              :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
-   logical                           :: ignore_dt_fluid    !< option to test only nbody part of the code, never true by default
+   integer :: npart              !< number of particles
+   real    :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
+   logical :: ignore_dt_fluid    !< option to test only nbody part of the code, never true by default
 #endif /* NBODY */
 
 contains
@@ -59,7 +59,7 @@ contains
       use mpisetup,         only: master, slave, cbuff, piernik_mpi_bcast
       use particle_solvers, only: hermit_4ord, psolver
       use particle_maps,    only: set_map
-      use particle_types,   only: pset, particles_exist
+      use particle_types,   only: particles_exist
 #ifdef NBODY
       use dataio_pub,       only: printinfo
       use mpisetup,         only: ibuff, lbuff, rbuff
@@ -171,8 +171,6 @@ contains
             call die(msg)
       end select
 
-      call pset%init()
-
       select case (trim(interpolation_scheme))
          case ('ngp', 'NGP', 'neareast grid point')
             call set_map(I_NGP)
@@ -212,11 +210,9 @@ contains
 
    subroutine cleanup_particles
 
-      use particle_types, only: pset
-
      implicit none
 
-     call pset%cleanup
+     ! no need to do anything here
 
    end subroutine cleanup_particles
 

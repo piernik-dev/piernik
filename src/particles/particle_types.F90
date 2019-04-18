@@ -35,7 +35,7 @@ module particle_types
    implicit none
 
    private
-   public :: particle_set, pset, particles_exist
+   public :: particle_set, particles_exist
 
    !>
    !! \brief simple particle: just mass and position
@@ -71,8 +71,7 @@ module particle_types
       generic, public :: add => add_using_basic_types, add_using_derived_type
    end type particle_set
 
-   type(particle_set), target :: pset !< default particle list
-   logical                    :: particles_exist
+   logical :: particles_exist
 
 contains
 
