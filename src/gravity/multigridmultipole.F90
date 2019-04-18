@@ -50,7 +50,7 @@ module multipole
 
    private
    public :: init_multipole, cleanup_multipole, multipole_solver
-   public :: lmax, mmax, ord_prolong_mpole, coarsen_multipole, use_point_monopole, interp_pt2mom, interp_mom2pot ! initialized in multigrid_gravity
+   public :: lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot ! initialized in multigrid_gravity
 
    integer, parameter        :: INSIDE = 1                       !< index for interior multipole expansion
    integer, parameter        :: OUTSIDE = INSIDE + 1             !< index for exterior multipole expansion
@@ -59,7 +59,6 @@ module multipole
    integer(kind=4)           :: lmax                             !< Maximum l-order of multipole moments
    integer(kind=4)           :: mmax                             !< Maximum m-order of multipole moments. Equal to lmax by default.
    integer(kind=4)           :: ord_prolong_mpole                !< boundary prolongation operator order; allowed values are -2 .. 2
-   integer(kind=4)           :: coarsen_multipole                !< If > 0 then evaluate multipoles at finest%level%level_id-coarsen_multipole level
    logical                   :: use_point_monopole               !< Don't evaluate multipole moments, use point-like mass approximation (crudest possible)
    logical                   :: interp_pt2mom                    !< Distribute contribution from a cell between two adjacent radial bins (linear interpolation in radius)
    logical                   :: interp_mom2pot                   !< Compute the potential from moments from two adjacent radial bins (linear interpolation in radius)
@@ -72,7 +71,6 @@ module multipole
    integer                   :: irmax                            !< maximum Q(:, :, r) index in use
 
 !> \todo OPT derive a special set of leaves and coarsened leaves that can be safely used here
-!   type(cg_level_connected_T), pointer :: lmpole                 !< pointer to the level where multipoles are evaluated
    integer, parameter                  :: imass = xdim-1         !< index for mass in CoM(:)
    real, dimension(imass:ndims)        :: CoM                    !< Total mass and center of mass coordinates
    logical                             :: zaxis_inside           !< true when z-axis belongs to the inner radial boundary in polar coordinates
@@ -188,30 +186,6 @@ contains
 
       integer :: i !, l
 
-      ! Multipole coarsening may significantly improve performance at a cost of accuracy
-      ! It requires a lot of new code to work fully on irregularly refined grids made by AMR
-!!$      lmpole => finest
-!!$      !> \todo find finest grid at the external outer boundary (i.e. non-reflecting, not periodic, ...), which might be significantly coarser than the globally finest grid.
-!!$      do l = 1, coarsen_multipole
-!!$         call die("[multigridmultipole:refresh_multipole] multipole coarsening is temporarily disabled")
-!!$         if (associated(lmpole%coarser)) then
-!!$            lmpole => lmpole%coarser
-!!$         else
-!!$            if (master) call warn("[multigridmultipole:refresh_multipole] too deep multipole coarsening.")
-!!$         endif
-!!$      enddo
-
-      if (coarsen_multipole > 0) then
-         if (interp_pt2mom) then
-            call warn("[multigridmultipole:refresh_multipole] coarsen_multipole > 0 disables interp_pt2mom.")
-            interp_pt2mom = .false.
-         endif
-         if (interp_mom2pot) then
-            call warn("[multigridmultipole:refresh_multipole] coarsen_multipole > 0 disables interp_mom2pot.")
-            interp_mom2pot = .false.
-         endif
-      endif
-
       ! assume that Center of Mass is approximately in the center of computational domain by default
       CoM(imass) = 1.
 
@@ -231,7 +205,7 @@ contains
                CoM(ydim) = 0.
             endif
             CoM(zdim) = dom%C_(zdim)
-            zaxis_inside = dom%edge(xdim, LO) <= dom%L_(xdim)/finest%level%l%n_d(xdim) ! lmpole
+            zaxis_inside = dom%edge(xdim, LO) <= dom%L_(xdim)/finest%level%l%n_d(xdim)
             if (master) then
                if (zaxis_inside) call warn("[multigridmultipole:refresh_multipole] Setups with Z-axis at the edge of the domain may not work as expected yet.")
                if (use_point_monopole) call warn("[multigridmultipole:refresh_multipole] Point-like monopole is not implemented.")
@@ -245,7 +219,6 @@ contains
 
          if (associated(finest%level%first)) then
             select case (dom%geometry_type)
-               !> \warning With refinement lmpole might no longer be a single level
                case (GEO_XYZ)
                   drq = minval(finest%level%first%cg%dl(:), mask=dom%has_dir(:)) / 2.
                case (GEO_RPZ)
@@ -308,28 +281,23 @@ contains
 !!
 !! \todo improve multipole expansion on coarser grids
 !! (see. "A Scalable Parallel Poisson Solver in Three Dimensions with Infinite-Domain Boundary Conditions" by McCorquodale, Colella, Balls and Baden).
-!! Coarsening by one level would reduce the multipole costs by a factor of 4.
 !<
 
    subroutine multipole_solver
 
-      use cg_leaves,          only: leaves
-!!$      use cg_level_connected, only: finest !, cg_level_connected_T
-      use constants,          only: dirtyH
-!!$      use dataio_pub,         only: die
-      use global,             only: dirty_debug
-!!$      use multigridvars,      only: solution
-#ifdef MACLAURIN_PROBLEM
-      use problem_pub,        only: maclaurin2bnd_potential
-#endif /* MACLAURIN_PROBLEM */
+      use cg_leaves,  only: leaves
+      use constants,  only: dirtyH
+      use global,     only: dirty_debug
+      use user_hooks, only: ext_bnd_potential
 
       implicit none
 
-!!$      type(cg_level_connected_T), pointer :: curl
+      if (associated(ext_bnd_potential)) then
+         call ext_bnd_potential
+         return
+      endif
 
       call refresh_multipole
-
-!      if (.not. associated(lmpole, finest)) call die("[multigridmultipole:multipole_solver] lmpole /= finest requires a lot of work")
 
       if (dirty_debug) then
          call leaves%reset_boundaries(dirtyH)
@@ -337,16 +305,8 @@ contains
          call leaves%reset_boundaries
       endif
 
-!!$      if (.not. associated(lmpole, finest)) then
-!!$         curl => finest
-!!$         do while (associated(curl) .and. .not. associated(curl, lmpole)) ! do lev = finest%level%level_id, lmpole%first%cg%level_id + 1, -1
-!!$            call curl%restrict_q_1var(solution)  ! Overkill, only some layers next to external boundary are needed.
-!!$            curl => curl%coarser
-!!$         enddo                                ! An alternative: do potential2img_mass on the finest and restrict bnd_[xyz] data.
-!!$      endif
       call potential2img_mass
 
-#ifndef MACLAURIN_PROBLEM
       if (use_point_monopole) then
          call find_img_CoM
          call isolated_monopole
@@ -356,23 +316,11 @@ contains
          call img_mass2moments
          call moments2bnd_potential
       endif
-#else /* MACLAURIN_PROBLEM */
-      call maclaurin2bnd_potential
-#endif /* ! MACLAURIN_PROBLEM */
-
-      !> \todo The approach with lmpole should be reworked completely. With AMR use only current level and reinitialize some things if refinements have changed
-!!$      if (.not. associated(lmpole, finest)) then
-!!$         curl => lmpole
-!!$         do while (associated(curl) .and. .not. associated(curl, finest)) ! do lev = lmpole%first%cg%level_id, finest%level%level_id - 1
-!!$            call prolong_ext_bnd(curl)
-!!$            curl => curl%finer
-!!$         enddo
-!!$      endif
 
    end subroutine multipole_solver
 
 !>
-!! \brief Set boundary potential from monopole source. Fill lmpole%first%cg%mg%bnd_[xyz] arrays with expected values of the gravitational potential at external face of computational domain.
+!! \brief Set boundary potential from monopole source. Fill cg%mg%bnd_[xyz] arrays in leaves with expected values of the gravitational potential at external face of computational domain.
 !! \details This is a simplified approach that can be used for tests and as a fast replacement for the
 !! multipole boundary solver for nearly spherically symmetric source distributions.
 !! The isolated_monopole subroutine ignores the radial profile of the monopole
@@ -397,7 +345,7 @@ contains
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:isolated_monopole] non-cartesian geometry not implemented yet")
 
-      cgl => leaves%first ! lmpole
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          do lh = LO, HI
@@ -614,169 +562,6 @@ contains
       enddo
 
    end subroutine potential2img_mass
-
-!> \brief Prolong boundaries wrapper
-
-   subroutine prolong_ext_bnd(coarse)
-
-      use cg_level_connected, only: cg_level_connected_T
-      use constants,     only: ndims, O_INJ, O_D2, O_I2
-      use dataio_pub,    only: die
-      use domain,        only: dom
-
-      implicit none
-
-      type(cg_level_connected_T), pointer, intent(in) :: coarse !< level to prolong from
-
-
-      call die("[multigridmultipole:prolong_ext_bnd] prolong_ext_bnd is severely outdated and thus unusable at the moment")
-
-      if (dom%eff_dim<ndims) call die("[multigridmultipole:prolong_ext_bnd] 1D and 2D not finished")
-      if (abs(ord_prolong_mpole) > maxval(abs([O_D2, O_I2]))) call die("[multigridmultipole:prolong_ext_bnd] interpolation order too high")
-
-      !> \deprecated BEWARE: do we need cylindrical factors for prolongation?
-      if (ord_prolong_mpole == O_INJ) then
-         call prolong_ext_bnd0(coarse)
-      else
-         call prolong_ext_bnd2(coarse)
-      endif
-
-   end subroutine prolong_ext_bnd
-
-!> \brief Prolong boundaries by injection.
-
-   subroutine prolong_ext_bnd0(coarse)
-
-      use cg_level_connected, only: cg_level_connected_T
-      use constants,     only: HI, LO, xdim, ydim, zdim
-      use dataio_pub,    only: die
-      use domain,        only: is_multicg
-
-      implicit none
-
-      type(cg_level_connected_T), pointer, intent(in) :: coarse !< level to prolong from
-
-      type(cg_level_connected_T), pointer :: fine
-      integer :: lh
-
-      if (is_multicg) call die("[multigridmultipole:prolong_ext_bnd0] multicg not implemented yet") ! fine%first%cg%mg%bnd_[xyz]
-
-      if (.not. associated(coarse)) call die("[multigridmultipole:prolong_ext_bnd0] coarse == null()")
-      fine   => coarse%finer
-      if (.not. associated(fine)) call die("[multigridmultipole:prolong_ext_bnd0] fine == null()")
-
-      do lh = LO, HI
-         if (fine%first%cg%ext_bnd(xdim, lh)) then
-            fine%first%cg%mg%bnd_x(fine%first%cg%js  :fine%first%cg%je-1:2, fine%first%cg%ks  :fine%first%cg%ke-1:2, lh) = coarse%first%cg%mg%bnd_x(coarse%first%cg%js:coarse%first%cg%je,   coarse%first%cg%ks:coarse%first%cg%ke,   lh)
-            fine%first%cg%mg%bnd_x(fine%first%cg%js+1:fine%first%cg%je  :2, fine%first%cg%ks  :fine%first%cg%ke-1:2, lh) = fine%first%cg%mg%bnd_x(  fine%first%cg%js  :fine%first%cg%je-1:2, fine%first%cg%ks  :fine%first%cg%ke-1:2, lh)
-            fine%first%cg%mg%bnd_x(fine%first%cg%js  :fine%first%cg%je,     fine%first%cg%ks+1:fine%first%cg%ke  :2, lh) = fine%first%cg%mg%bnd_x(  fine%first%cg%js  :fine%first%cg%je,     fine%first%cg%ks  :fine%first%cg%ke-1:2, lh)
-         endif
-         if (fine%first%cg%ext_bnd(ydim, lh)) then
-            fine%first%cg%mg%bnd_y(fine%first%cg%is  :fine%first%cg%ie-1:2, fine%first%cg%ks  :fine%first%cg%ke-1:2, lh) = coarse%first%cg%mg%bnd_y(coarse%first%cg%is:coarse%first%cg%ie,   coarse%first%cg%ks:coarse%first%cg%ke,   lh)
-            fine%first%cg%mg%bnd_y(fine%first%cg%is+1:fine%first%cg%ie  :2, fine%first%cg%ks  :fine%first%cg%ke-1:2, lh) = fine%first%cg%mg%bnd_y(  fine%first%cg%is  :fine%first%cg%ie-1:2, fine%first%cg%ks  :fine%first%cg%ke-1:2, lh)
-            fine%first%cg%mg%bnd_y(fine%first%cg%is  :fine%first%cg%ie,     fine%first%cg%ks+1:fine%first%cg%ke  :2, lh) = fine%first%cg%mg%bnd_y(  fine%first%cg%is  :fine%first%cg%ie,     fine%first%cg%ks  :fine%first%cg%ke-1:2, lh)
-         endif
-         if (fine%first%cg%ext_bnd(zdim, lh)) then
-            fine%first%cg%mg%bnd_z(fine%first%cg%is  :fine%first%cg%ie-1:2, fine%first%cg%js  :fine%first%cg%je-1:2, lh) = coarse%first%cg%mg%bnd_z(coarse%first%cg%is:coarse%first%cg%ie,   coarse%first%cg%js:coarse%first%cg%je,   lh)
-            fine%first%cg%mg%bnd_z(fine%first%cg%is+1:fine%first%cg%ie  :2, fine%first%cg%js  :fine%first%cg%je-1:2, lh) = fine%first%cg%mg%bnd_z(  fine%first%cg%is  :fine%first%cg%ie-1:2, fine%first%cg%js  :fine%first%cg%je-1:2, lh)
-            fine%first%cg%mg%bnd_z(fine%first%cg%is  :fine%first%cg%ie,     fine%first%cg%js+1:fine%first%cg%je  :2, lh) = fine%first%cg%mg%bnd_z(  fine%first%cg%is  :fine%first%cg%ie,     fine%first%cg%js  :fine%first%cg%je-1:2, lh)
-         endif
-      enddo
-
-   end subroutine prolong_ext_bnd0
-
-!>
-!! \brief Prolong boundaries by linear or quadratic interpolation.
-!!
-!! \details some code is replicated from prolong_faces
-!! \todo write something more general, a routine that takes arrays or pointers and does the 2D prolongation
-!<
-
-   subroutine prolong_ext_bnd2(coarse)
-
-      use cg_level_connected, only: cg_level_connected_T
-      use constants,     only: HI, LO, xdim, ydim, zdim, O_INJ, O_LIN, O_D2, O_I2
-      use dataio_pub,    only: die
-      use domain,        only: is_multicg
-
-      implicit none
-
-      type(cg_level_connected_T), pointer, intent(in) :: coarse !< level to prolong from
-
-      type(cg_level_connected_T), pointer :: fine
-
-      integer                       :: i, j, k, lh
-      real, parameter, dimension(3) :: p0  = [ 0.,       1.,     0.     ] ! injection
-      real, parameter, dimension(3) :: p1  = [ 0.,       3./4.,  1./4.  ] ! 1D linear prolongation stencil
-      real, parameter, dimension(3) :: p2i = [ -1./8.,   1.,     1./8.  ] ! 1D integral cubic prolongation stencil
-      real, parameter, dimension(3) :: p2d = [ -3./32., 30./32., 5./32. ] ! 1D direct cubic prolongation stencil
-      real, dimension(-1:1)         :: p
-      real, dimension(-1:1,-1:1,2,2):: pp   ! 2D prolongation stencil
-
-      if (is_multicg) call die("[multigridmultipole:prolong_ext_bnd2] multicg not implemented yet") ! fine%first%cg%
-      if (.not. associated(coarse)) call die("[multigridmultipole:prolong_ext_bnd0] coarse == null()")
-      fine   => coarse%finer
-      if (.not. associated(fine)) call die("[multigridmultipole:prolong_ext_bnd0] fine == null()")
-
-      select case (ord_prolong_mpole)
-         case (O_INJ)
-            p(:) = p0(:)
-         case (O_LIN)
-            p(:) = p1(:)
-         case (O_I2)
-            p(:) = p2i(:)
-         case (O_D2)
-            p(:) = p2d(:)
-         case default
-            call die("[multigridmultipole:prolong_ext_bnd2] invalid ord_prolong_mpole")
-      end select
-
-      do i = -1, 1
-         pp(i,:,1,1) = p( i)*p(:)
-         pp(i,:,1,2) = p( i)*p(1:-1:-1)
-         pp(i,:,2,1) = p(-i)*p(:)
-         pp(i,:,2,2) = p(-i)*p(1:-1:-1)
-      enddo
-
-      !at edges and corners we can only inject
-      call prolong_ext_bnd0(coarse) ! overkill: replace this
-
-      do lh = LO, HI
-         if (fine%first%cg%ext_bnd(xdim, lh)) then
-            do j = coarse%first%cg%js+1, coarse%first%cg%je-1
-               do k = coarse%first%cg%ks+1, coarse%first%cg%ke-1
-                  fine%first%cg%mg%bnd_x(-fine%first%cg%js+2*j,  -fine%first%cg%ks+2*k,  lh) =sum(pp(:,:,1,1) * coarse%first%cg%mg%bnd_x(j-1:j+1,k-1:k+1,lh))
-                  fine%first%cg%mg%bnd_x(-fine%first%cg%js+2*j+1,-fine%first%cg%ks+2*k,  lh) =sum(pp(:,:,2,1) * coarse%first%cg%mg%bnd_x(j-1:j+1,k-1:k+1,lh))
-                  fine%first%cg%mg%bnd_x(-fine%first%cg%js+2*j,  -fine%first%cg%ks+2*k+1,lh) =sum(pp(:,:,1,2) * coarse%first%cg%mg%bnd_x(j-1:j+1,k-1:k+1,lh))
-                  fine%first%cg%mg%bnd_x(-fine%first%cg%js+2*j+1,-fine%first%cg%ks+2*k+1,lh) =sum(pp(:,:,2,2) * coarse%first%cg%mg%bnd_x(j-1:j+1,k-1:k+1,lh))
-               enddo
-            enddo
-         endif
-
-         if (fine%first%cg%ext_bnd(ydim, lh)) then
-            do i = coarse%first%cg%is+1, coarse%first%cg%ie-1
-               do k = coarse%first%cg%ks+1, coarse%first%cg%ke-1
-                  fine%first%cg%mg%bnd_y(-fine%first%cg%is+2*i,  -fine%first%cg%ks+2*k,  lh) =sum(pp(:,:,1,1) * coarse%first%cg%mg%bnd_y(i-1:i+1,k-1:k+1,lh))
-                  fine%first%cg%mg%bnd_y(-fine%first%cg%is+2*i+1,-fine%first%cg%ks+2*k,  lh) =sum(pp(:,:,2,1) * coarse%first%cg%mg%bnd_y(i-1:i+1,k-1:k+1,lh))
-                  fine%first%cg%mg%bnd_y(-fine%first%cg%is+2*i,  -fine%first%cg%ks+2*k+1,lh) =sum(pp(:,:,1,2) * coarse%first%cg%mg%bnd_y(i-1:i+1,k-1:k+1,lh))
-                  fine%first%cg%mg%bnd_y(-fine%first%cg%is+2*i+1,-fine%first%cg%ks+2*k+1,lh) =sum(pp(:,:,2,2) * coarse%first%cg%mg%bnd_y(i-1:i+1,k-1:k+1,lh))
-               enddo
-            enddo
-         endif
-
-         if (fine%first%cg%ext_bnd(zdim, lh)) then
-            do i = coarse%first%cg%is+1, coarse%first%cg%ie-1
-               do j = coarse%first%cg%js+1, coarse%first%cg%je-1
-                  fine%first%cg%mg%bnd_z(-fine%first%cg%is+2*i,  -fine%first%cg%js+2*j,  lh) =sum(pp(:,:,1,1) * coarse%first%cg%mg%bnd_z(i-1:i+1,j-1:j+1,lh))
-                  fine%first%cg%mg%bnd_z(-fine%first%cg%is+2*i+1,-fine%first%cg%js+2*j,  lh) =sum(pp(:,:,2,1) * coarse%first%cg%mg%bnd_z(i-1:i+1,j-1:j+1,lh))
-                  fine%first%cg%mg%bnd_z(-fine%first%cg%is+2*i,  -fine%first%cg%js+2*j+1,lh) =sum(pp(:,:,1,2) * coarse%first%cg%mg%bnd_z(i-1:i+1,j-1:j+1,lh))
-                  fine%first%cg%mg%bnd_z(-fine%first%cg%is+2*i+1,-fine%first%cg%js+2*j+1,lh) =sum(pp(:,:,2,2) * coarse%first%cg%mg%bnd_z(i-1:i+1,j-1:j+1,lh))
-               enddo
-            enddo
-         endif
-      enddo
-
-   end subroutine prolong_ext_bnd2
 
 !>
 !! \brief Compute multipole moments for image mass

@@ -112,9 +112,9 @@ contains
       class(vcycle_stats), intent(in) :: this
 
       real                   :: at
-      integer                :: i, lm, ftype
+      integer                :: i, lm
       character(len=fplen)   :: normred
-      character(len=fmt_len), parameter, dimension(2) :: fmt_norm = [ '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,f13.10,a)', '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,e13.6,a) ' ]
+      character(len=fmt_len) :: fmt_norm
 
       if (slave) return
 
@@ -123,9 +123,8 @@ contains
       at = 0.
       if (this%count > 0) at = sum(this%time(1:this%count))/this%count ! average V-cycle time on PE# 0
 
-      ftype = 1
-      if (this%norm_final < 1e-8) ftype = 2
-      write(msg, fmt_norm(ftype))"[multigrid] ", this%count, trim(this%cprefix), "cycles, dt_wall=", this%time(0), " +", this%count, "*", at, ", norm/rhs= ", this%norm_final, " : "
+      fmt_norm = '(a,i3,1x,2a,' // merge('f7.1', 'f7.3', this%time(0)>=1000.) // ',a,i3,a,f7.3,a,' // merge('e13.6 ', 'f13.10', this%norm_final < 1e-8) // ',a)'
+      write(msg, fmt_norm)"[multigrid] ", this%count, trim(this%cprefix), "cycles, dt_wall=", this%time(0), " +", this%count, "*", at, ", norm/rhs= ", this%norm_final, " : "
 
       do i = 0, min(this%count, ubound(this%factor, 1))
          if (this%factor(i) < 1.0e4) then
