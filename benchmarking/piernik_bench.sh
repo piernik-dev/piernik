@@ -214,7 +214,7 @@ for p in $B_PROBLEM_LIST ; do
 			    case $t in
 				weak)
 				    NX=$( echo 64 $SCALE | awk '{print int($1*$2)}')
-				    REQMEM=$( echo $NX $i | awk '{print int($1^3 * $2 * 0.00060)}' )
+				    REQMEM=$( echo $NX $i | awk '{print int($1^3 * $2 * 0.00072)}' )
 				    if [ $MEMM -gt $REQMEM ] ; then
 					mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
 				    else
