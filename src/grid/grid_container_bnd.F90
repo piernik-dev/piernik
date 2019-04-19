@@ -256,10 +256,8 @@ contains
 
    subroutine save_outfluxes(this, cdim, i1, i2, eflx)
 
-      use constants,  only: LO, HI, ydim, zdim, GEO_RPZ
-      use domain,     only: dom
-      use fluidindex, only: iarr_all_mx, iarr_all_my
-      use fluxtypes,  only: ext_fluxes
+      use constants, only: LO, HI
+      use fluxtypes, only: ext_fluxes
 
       implicit none
 
@@ -271,31 +269,40 @@ contains
 
       if (associated(eflx%lo)) then
          eflx%lo%index = eflx%lo%index + this%lhn(cdim, LO)
-         if (dom%geometry_type == GEO_RPZ) then
-            if (cdim == ydim) then
-               !> BEWARE: iarr_all_mx points to the y-momentum in y-sweep
-               eflx%lo%uflx(iarr_all_mx) = eflx%lo%uflx(iarr_all_mx) * this%x(i2)
-            else if (cdim == zdim) then
-               eflx%lo%uflx = eflx%lo%uflx * this%x(i1)
-               eflx%lo%uflx(iarr_all_my) = eflx%lo%uflx(iarr_all_my) * this%x(i1) ! that makes this%x(i1)**2
-            endif
-         endif
+         call cyl_scale(eflx%lo)
          call this%coarsebnd(cdim, LO)%fp2fa(eflx%lo, i1, i2)
       endif
 
       if (associated(eflx%ro)) then
          eflx%ro%index = eflx%ro%index + this%lhn(cdim, LO) - 1
-         if (dom%geometry_type == GEO_RPZ) then
-            if (cdim == ydim) then
-               !> BEWARE: iarr_all_mx points to the y-momentum in y-sweep
-               eflx%ro%uflx(iarr_all_mx) = eflx%ro%uflx(iarr_all_mx) * this%x(i2)
-            else if (cdim == zdim) then
-               eflx%ro%uflx = eflx%ro%uflx * this%x(i1)
-               eflx%ro%uflx(iarr_all_my) = eflx%ro%uflx(iarr_all_my) * this%x(i1) ! that makes this%x(i1)**2
-            endif
-         endif
+         call cyl_scale(eflx%ro)
          call this%coarsebnd(cdim, HI)%fp2fa(eflx%ro, i1, i2)
       endif
+
+   contains
+
+      subroutine cyl_scale(fp)
+
+         use constants,  only: ydim, zdim, GEO_RPZ
+         use domain,     only: dom
+         use fluidindex, only: iarr_all_mx, iarr_all_my
+         use fluxtypes,  only: fluxpoint
+
+         implicit none
+
+         type(fluxpoint), intent(inout) :: fp
+
+         if (dom%geometry_type == GEO_RPZ) then
+            if (cdim == ydim) then
+               !> BEWARE: iarr_all_mx points to the y-momentum in the y-sweep
+               fp%uflx(iarr_all_mx) = fp%uflx(iarr_all_mx) * this%x(i2)
+            else if (cdim == zdim) then
+               fp%uflx = fp%uflx * this%x(i1)
+               fp%uflx(iarr_all_my) = fp%uflx(iarr_all_my) * this%x(i1) ! that makes this%x(i1)**2
+            endif
+         endif
+
+      end subroutine cyl_scale
 
    end subroutine save_outfluxes
 
