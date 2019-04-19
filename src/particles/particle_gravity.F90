@@ -269,7 +269,8 @@ contains
 
    subroutine update_particle_acc_int(n_part, cg, cells, dist)
 
-      use constants,        only: gpot_n, ndims, xdim, ydim, zdim
+      use constants,        only: gpot_n, ndims, xdim, ydim, zdim, zero
+      use dataio_pub,       only: warn
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_func,    only: df_d_p, d2f_d2_p, d2f_dd_p
@@ -285,24 +286,28 @@ contains
 
       ig = qna%ind(gpot_n)
       do i = 1, n_part
-         if (.not. cg%pset%p(i)%outside) then
-            cg%pset%p(i)%acc(xdim) = - (df_d_p([cells(i, :)], cg, ig, xdim) + &
+         if (cg%pset%p(i)%outside) then
+         ! multipole expansion for particles outside domain
+            call warn('[particle_gravity:update_particle_acc_cic] particle is outside the domain - we need multipole expansion!!!')
+            cg%pset%p(i)%acc = zero
+            cycle
+         endif
+
+         cg%pset%p(i)%acc(xdim) = - (df_d_p([cells(i, :)], cg, ig, xdim) + &
                                    d2f_d2_p([cells(i, :)], cg, ig, xdim)       * dist(i, xdim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, xdim, ydim) * dist(i, ydim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, xdim, zdim) * dist(i, zdim))
 
-            cg%pset%p(i)%acc(ydim) = -( df_d_p([cells(i, :)], cg, ig, ydim) + &
+
+         cg%pset%p(i)%acc(ydim) = -( df_d_p([cells(i, :)], cg, ig, ydim) + &
                                    d2f_d2_p([cells(i, :)], cg, ig, ydim)       * dist(i, ydim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, xdim, ydim) * dist(i, xdim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, ydim, zdim) * dist(i, zdim))
 
-            cg%pset%p(i)%acc(zdim) = -( df_d_p([cells(i, :)], cg, ig, zdim) + &
+         cg%pset%p(i)%acc(zdim) = -( df_d_p([cells(i, :)], cg, ig, zdim) + &
                                    d2f_d2_p([cells(i, :)], cg, ig, zdim)       * dist(i, zdim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, xdim, zdim) * dist(i, xdim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, ydim, zdim) * dist(i, ydim))
-         !else
-         !   call !funkcja liczaca pochodne z potencjalu policzonego z rozwiniecia multipolowego
-         endif
       enddo
 
    end subroutine update_particle_acc_int
