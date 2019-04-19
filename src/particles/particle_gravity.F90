@@ -333,47 +333,51 @@ contains
       endif
 
       do p = 1, n_part
-         if (cg%pset%p(p)%outside) then
-         ! multipole expansion for particles outside domain
-            call warn('[particle_gravity:update_particle_acc_cic] particle is outside the domain - we need multipole expansion!!!')
-            cg%pset%p(p)%acc = zero
-            cycle
-         endif
+         associate( part => cg%pset%p(p) )
 
-         do cdim = xdim, ndims
-            if (cg%pset%p(p)%pos(cdim) < cg%coord(CENTER, cdim)%r(cells(p,cdim))) then
-               cic_cells(cdim) = cells(p, cdim) - 1
-            else
-               cic_cells(cdim) = cells(p, cdim)
+            if (part%outside) then
+            ! multipole expansion for particles outside domain
+               call warn('[particle_gravity:update_particle_acc_cic] particle is outside the domain - we need multipole expansion!!!')
+               part%acc = zero
+               cycle
             endif
-            dxyz(cdim) = abs(cg%pset%p(p)%pos(cdim) - cg%coord(CENTER, cdim)%r(cic_cells(cdim)))
 
-         enddo
+            if (mask_gpot1b) then
+               cg%gp1b = zero
+               call gravpot1b(p, cg, ig)
+               cg%gp1b = -cg%gp1b + cg%gpot
+            endif
 
-         wijk(1) = (cg%dx - dxyz(xdim))*(cg%dy - dxyz(ydim))*(cg%dz - dxyz(zdim))  !a(i  ,j  ,k  )
-         wijk(2) =          dxyz(xdim) *(cg%dy - dxyz(ydim))*(cg%dz - dxyz(zdim))  !a(i+1,j  ,k  )
-         wijk(3) = (cg%dx - dxyz(xdim))*         dxyz(ydim) *(cg%dz - dxyz(zdim))  !a(i  ,j+1,k  )
-         wijk(4) = (cg%dx - dxyz(xdim))*(cg%dy - dxyz(ydim))*         dxyz(zdim)   !a(i  ,j  ,k+1)
-         wijk(5) =          dxyz(xdim) *         dxyz(ydim) *(cg%dz - dxyz(zdim))  !a(i+1,j+1,k  )
-         wijk(6) = (cg%dx - dxyz(xdim))*         dxyz(ydim) *         dxyz(zdim)   !a(i  ,j+1,k+1)
-         wijk(7) =          dxyz(xdim) *(cg%dy - dxyz(ydim))*         dxyz(zdim)   !a(i+1,j  ,k+1)
-         wijk(8) =          dxyz(xdim) *         dxyz(ydim) *         dxyz(zdim)   !a(i+1,j+1,k+1)
-
-         wijk = wijk/cg%dvol
-
-         if (mask_gpot1b) then
-            cg%gp1b = zero
-            call gravpot1b(p, cg, ig)
-            cg%gp1b = -cg%gp1b + cg%gpot
-         endif
-
-         do cdim = xdim, zdim
-            do c = 1, 8
-               fxyz(cdim,c) = -(cg%q(ig)%point(cic_cells(:)+idm(cdim,:)+cijk(:,c)) - cg%q(ig)%point(cic_cells(:)-idm(cdim,:)+cijk(:,c)))
+            do cdim = xdim, zdim
+               if (part%pos(cdim) < cg%coord(CENTER, cdim)%r(cells(p,cdim))) then
+                  cic_cells(cdim) = cells(p, cdim) - 1
+               else
+                  cic_cells(cdim) = cells(p, cdim)
+               endif
+               dxyz(cdim) = abs(part%pos(cdim) - cg%coord(CENTER, cdim)%r(cic_cells(cdim)))
             enddo
-            axyz(cdim) = sum(fxyz(cdim,:)*wijk(:))
-         enddo
-         cg%pset%p(p)%acc(:) = half*axyz(:)*cg%idl(:)
+
+            wijk(1) = (cg%dx - dxyz(xdim))*(cg%dy - dxyz(ydim))*(cg%dz - dxyz(zdim))  !a(i  ,j  ,k  )
+            wijk(2) =          dxyz(xdim) *(cg%dy - dxyz(ydim))*(cg%dz - dxyz(zdim))  !a(i+1,j  ,k  )
+            wijk(3) = (cg%dx - dxyz(xdim))*         dxyz(ydim) *(cg%dz - dxyz(zdim))  !a(i  ,j+1,k  )
+            wijk(4) = (cg%dx - dxyz(xdim))*(cg%dy - dxyz(ydim))*         dxyz(zdim)   !a(i  ,j  ,k+1)
+            wijk(5) =          dxyz(xdim) *         dxyz(ydim) *(cg%dz - dxyz(zdim))  !a(i+1,j+1,k  )
+            wijk(6) = (cg%dx - dxyz(xdim))*         dxyz(ydim) *         dxyz(zdim)   !a(i  ,j+1,k+1)
+            wijk(7) =          dxyz(xdim) *(cg%dy - dxyz(ydim))*         dxyz(zdim)   !a(i+1,j  ,k+1)
+            wijk(8) =          dxyz(xdim) *         dxyz(ydim) *         dxyz(zdim)   !a(i+1,j+1,k+1)
+
+            wijk = wijk/cg%dvol
+
+            do cdim = xdim, zdim
+               do c = 1, 8
+                  fxyz(cdim,c) = -(cg%q(ig)%point(cic_cells(:)+idm(cdim,:)+cijk(:,c)) - cg%q(ig)%point(cic_cells(:)-idm(cdim,:)+cijk(:,c)))
+               enddo
+               axyz(cdim) = sum(fxyz(cdim,:)*wijk(:))
+            enddo
+
+            part%acc(:) = half * axyz(:) * cg%idl(:)
+
+         end associate
       enddo
 
    end subroutine update_particle_acc_cic
@@ -393,7 +397,7 @@ contains
       integer                                      :: p, i, j, k
       integer(kind=4)                              :: ig, cdim
       integer, dimension(ndims, IM:IP)             :: ijkp
-      integer, dimension(ndims)                    :: cur_ind, ind1, ind2
+      integer, dimension(ndims)                    :: cur_ind
       real,    dimension(ndims)                    :: fxyz, axyz
       real                                         :: weight, delta_x, weight_tmp
 
@@ -410,7 +414,7 @@ contains
             if (part%outside) then
             ! multipole expansion for particles outside domain
                call warn('[particle_gravity:update_particle_acc_tsc] particle is outside the domain - we need multipole expansion!!!')
-               part%acc(:) = zero
+               part%acc = zero
                cycle
             endif
 
@@ -450,9 +454,7 @@ contains
                         endif
 
                         weight = weight_tmp * weight
-                        ind1 = cur_ind(:) + idm(cdim,:)
-                        ind2 = cur_ind(:) - idm(cdim,:)
-                        fxyz(cdim) = -half*(cg%q(ig)%point(ind1(:)) - cg%q(ig)%point(ind2(:))) * cg%idl(cdim)
+                        fxyz(cdim) = -(cg%q(ig)%point(cur_ind(:) + idm(cdim,:)) - cg%q(ig)%point(cur_ind(:) - idm(cdim,:)))
                      enddo
                      axyz(:) = axyz(:) + fxyz(:)*weight
 
@@ -460,7 +462,7 @@ contains
                enddo
             enddo
 
-            part%acc(:) = axyz(:)
+            part%acc(:) = half * axyz(:) * cg%idl(:)
 
          end associate
 
