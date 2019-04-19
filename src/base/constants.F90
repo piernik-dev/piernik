@@ -299,7 +299,7 @@ module constants
    end enum
 
    ! misc
-   logical, parameter :: has_b = &
+   logical, parameter :: has_B = &
 #ifdef MAGNETIC
         .true.
 #else /* !MAGNETIC */

@@ -27,7 +27,11 @@
 
 #include "piernik.h"
 
-!> \brief This module contains types useful for flux enforcing and exchange in (M)HD solvers
+!>
+!! \brief This module contains types useful for flux enforcing and exchange in (M)HD solvers
+!!
+!! \todo This can be split into 3 separate modules (fluxpoint, ext_fluxes, fluxarray). Perhaps we should do it some day.
+!<
 
 module fluxtypes
 
@@ -81,7 +85,7 @@ contains
 
    subroutine fpinit(this)
 
-      use constants,  only: psidim, has_b
+      use constants,  only: psidim, has_B
       use dataio_pub, only: die
       use fluidindex, only: flind
 
@@ -91,7 +95,7 @@ contains
 
       if (allocated(this%uflx)) call die("[fluxtypes:fpinit] uflx already allocated")
       allocate(this%uflx(flind%all))
-      if (has_b) allocate(this%bflx(psidim))
+      if (has_B) allocate(this%bflx(psidim))
 
    end subroutine fpinit
 
@@ -127,7 +131,7 @@ contains
 
    subroutine fainit(this, i1, i2)
 
-      use constants,  only: LO, HI, psidim, has_b
+      use constants,  only: LO, HI, psidim, has_B
       use dataio_pub, only: die
       use fluidindex, only: flind
 
@@ -140,7 +144,7 @@ contains
       if (allocated(this%index) .or. allocated(this%uflx)) call die("[fluxtypes:fainit] already allocated")
       allocate(this%index(          i1(LO):i1(HI), i2(LO):i2(HI)), &
            &   this%uflx(flind%all, i1(LO):i1(HI), i2(LO):i2(HI)))
-      if (has_b) allocate(this%bflx(psidim,    i1(LO):i1(HI), i2(LO):i2(HI)))
+      if (has_B) allocate(this%bflx(psidim,    i1(LO):i1(HI), i2(LO):i2(HI)))
 
    end subroutine fainit
 
@@ -162,7 +166,7 @@ contains
 
    function fa2fp(this, i1, i2) result(fp)
 
-      use constants,  only: has_b
+      use constants,  only: has_B
       use dataio_pub, only: die
 
       implicit none
@@ -179,7 +183,7 @@ contains
       else
          call die("[fluxtypes:fa2fp] .not. allocated(this%uflx)")
       endif
-      if (has_b) then
+      if (has_B) then
          if (allocated(this%bflx)) then
             fp%bflx  = this%bflx (:, i1, i2)
          else
@@ -193,7 +197,7 @@ contains
 
    subroutine fp2fa(this, fp, i1, i2)
 
-      use constants,  only: has_b
+      use constants,  only: has_B
       use dataio_pub, only: die
 
       implicit none
@@ -205,7 +209,7 @@ contains
 
       if (this%index(i1, i2) /= fp%index) call die("[fluxtypes:fp2fa] inconsistent index")
       this%uflx (:, i1, i2) = fp%uflx
-      if (has_b) this%bflx (:, i1, i2) = fp%bflx
+      if (has_B) this%bflx (:, i1, i2) = fp%bflx
 
    end subroutine fp2fa
 
