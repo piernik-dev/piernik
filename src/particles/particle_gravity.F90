@@ -126,7 +126,7 @@ contains
       ig = qna%ind(prth_n)
       cg%prth = zero
       do p = 1, n_part
-         cg%q(ig)%arr(cells(p,xdim),cells(p,ydim),cells(p,zdim)) = cg%q(ig)%point(cells(p,:)) + one
+         if (.not. cg%pset%p(p)%outside) cg%q(ig)%arr(cells(p,xdim),cells(p,ydim),cells(p,zdim)) = cg%q(ig)%point(cells(p,:)) + one
       enddo
 
    end subroutine update_particle_density_array
@@ -246,16 +246,20 @@ contains
 
       ig = qna%ind(gpot_n)
       do p = 1, n_part
-         dpot(p) = df_d_o2([cells(p, :)], cg, ig, xdim) * dist(p, xdim) + &
+         if (.not. cg%pset%p(p)%outside) then
+            dpot(p) = df_d_o2([cells(p, :)], cg, ig, xdim) * dist(p, xdim) + &
                    df_d_o2([cells(p, :)], cg, ig, ydim) * dist(p, ydim) + &
                    df_d_o2([cells(p, :)], cg, ig, zdim) * dist(p, zdim)
 
-         d2pot(p) = d2f_d2_o2([cells(p, :)], cg, ig, xdim) * dist(p, xdim)**2 + &
+            d2pot(p) = d2f_d2_o2([cells(p, :)], cg, ig, xdim) * dist(p, xdim)**2 + &
                     d2f_d2_o2([cells(p, :)], cg, ig, ydim) * dist(p, ydim)**2 + &
                     d2f_d2_o2([cells(p, :)], cg, ig, zdim) * dist(p, zdim)**2 + &
                 two*d2f_dd_o2([cells(p, :)], cg, ig, xdim, ydim) * dist(p, xdim)*dist(p, ydim) + &
                 two*d2f_dd_o2([cells(p, :)], cg, ig, xdim, zdim) * dist(p, xdim)*dist(p, zdim)
-         cg%pset%p(p)%energy = cg%q(ig)%point(cells(p,:)) + dpot(p) + half * d2pot(p)
+            cg%pset%p(p)%energy = cg%q(ig)%point(cells(p,:)) + dpot(p) + half * d2pot(p)
+         else
+            cg%pset%p(p)%energy=0.
+         endif
       enddo
 
    end subroutine update_particle_potential_energy
