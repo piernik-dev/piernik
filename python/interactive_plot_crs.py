@@ -12,11 +12,10 @@ from   optparse import OptionParser
 from   re     import search
 from   sys    import argv
 try:
-    import h5py   # DEPRECATED
     import yt
     from   yt.units import dimensions
 except:
-    die("You must make yt & h5py available somehow")
+    die("You must make yt available somehow")
 
 #------- Parse arguments
 parser = OptionParser("Usage: %prog FILE [options] [args] or %prog [options] [args] -F FILENAME")
@@ -38,7 +37,7 @@ plot_var = options.var_name
 user_annot_time = options.annotate_time
 user_limits     = (options.default_range!=True)
 user_save_spec  = (options.not_save_spec!=True)
-#simple_plot = False # True ### DEPRECATED
+simple_plot = False # True ### DEPRECATED
 use_logscale = ( options.use_linscale!=True)
 plot_field   = options.fieldname
 plot_var     = options.var_name
@@ -127,7 +126,6 @@ if f_run == True:
 
     crs_pf.initialize_pf_arrays(pf_initialized)
 #---------- Open file
-    #h5File = h5py.File(filename,"r") # sorry, I'm not sure how to access timestep via yt # DEPRECATED ?
     h5ds = yt.load(filename)
 #---------- bounds on domain size
     grid_dim = h5ds.domain_dimensions
@@ -137,7 +135,6 @@ if f_run == True:
 
 #----------- Loading other data
     t = h5ds.current_time[0]
-    #dt= h5File.attrs["timestep"]      # DEPRECATED ?
     time = t.in_units('Myr')
 #----------- Checking user image limits
     try:
@@ -332,6 +329,7 @@ if f_run == True:
         else:
            prtinfo("Value of %s at point [%f, %f, %f] = %f " %(plot_field, coords[0], coords[1], coords[2], position["cree"+str(plot_field[-2:])]/position["cren"+str(plot_field[-2:])]))
            plot_max   = h5ds.find_max("cre"+plot_var+str(plot_field[-2:]))[0] # once again appended - needed as ylimit for the plot
+
         if (hdf_save_fpq != True):
            ecrs = [] ; ncrs = []
            for ind in range(1,ncre+1):

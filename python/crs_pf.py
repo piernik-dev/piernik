@@ -8,6 +8,7 @@ from math import pi
 import os
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from colored_io import die, prtinfo, prtwarn
 
 p_ratios_lo  = []
 f_ratios_lo  = []
@@ -84,7 +85,7 @@ def ind_to_flog(ind, min_in, max_in, length):
    return ind_to_flog
 
 def inverse_f_to_ind(value, min_in, max_in, length):
-   inverse_f_to_ind = (log10(value/min_in)/log10(max_in/min_in)) * (length - 1)
+   inverse_f_to_ind = (log10(value/min_in)/log10(max_in/min_in)) * (length)
    try:
       inverse_f_to_ind = int(inverse_f_to_ind)
    except:
@@ -100,7 +101,9 @@ def bl_in_tu(val_left, val_mid, val_right):
    bl_in_tu = (val_mid - val_left) / (val_right - val_left)
    return bl_in_tu
 
-def get_interpolated_ratios(bnd, alpha_val, n_val , interpolation_error):
+def get_interpolated_ratios(bnd, alpha_val, n_val , interpolation_error, **kwargs):
+   verbose = kwargs.get("verbose","False")
+
    loc1 = [1,1]
    loc2 = [2,2]
 
@@ -116,7 +119,7 @@ def get_interpolated_ratios(bnd, alpha_val, n_val , interpolation_error):
       p_a = alpha_tab_lo
       p_n = n_tab_lo
    else:
-      print "Provided bnd not supported:", bnd
+      die("Provided bnd not supported: %s" %bnd)
 
    loc1[0] = inverse_f_to_ind(n_val,     p_n[0], p_n[size-1], size-1)
    loc1[1] = inverse_f_to_ind(alpha_val, p_a[0], p_a[size-1], size-1)
@@ -124,7 +127,7 @@ def get_interpolated_ratios(bnd, alpha_val, n_val , interpolation_error):
    if min(loc1[:]) > 0 and max(loc1[:]) <= size-1  :
       loc2[0] = loc1[0] + 1 ; loc2[1] = loc1[1] + 1
    else:
-      print pf_ratio, "ERROR! Obtained indices:", loc1
+      if (verbose): prtwarn("(ERROR) Obtained indices (%s): [%i, %i] -> [%f, %f]" %(bnd, loc1[0], loc1[1], pf_ratio[0], pf_ratio[1]))
       interpolation_error = True
       return pf_ratio, interpolation_error
 
@@ -135,7 +138,7 @@ def get_interpolated_ratios(bnd, alpha_val, n_val , interpolation_error):
       p_f[loc2[0]][loc2[1]], bl_in_tu(p_a[loc1[1]], alpha_val, p_a[loc2[1]]), bl_in_tu(p_n[loc1[0]], n_val, p_n[loc2[0]]))
 
    if min(pf_ratio[:]) <= 0.0:
-      print "ERROR! got pf_ratio = ", pf_ratio
+      if (verbose): prtwarn("(ERROR) Obtained p & f (%s) ratios: [%f, %f]" %(bnd, pf_ratio[0], pf_ratio[1]))
       return pf_ratio, interpolation_error
 
    interpolation_error = False

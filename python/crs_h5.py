@@ -31,11 +31,13 @@ first_run = True
 clean_plot = True
 got_q_tabs = False
 q_explicit = True
-interpolate_cutoffs = False
+interpolate_cutoffs = True
 tightened = False
+verbosity_1 = True
+verbosity_2 = False
 
 global par_visible_gridx, par_visible_gridy, par_vis_all_borders, par_visible_title, par_simple_title, par_alpha, par_plot_legend, par_plot_init_spec,\
-       par_alpha_diff, par_plot_e_small, par_plot_color, par_plot_width, par_fixed_dims, i_plot, xkcd_colors, use_color_list, handle_list_initialized, tightened,\
+       par_alpha_diff, par_plot_e_small, par_plot_color, par_plot_width, par_fixed_dims, i_plot, xkcd_colors, use_color_list, tightened,\
        par_legend_loc
 
 xkcd_colors = [ 'xkcd:blue', 'xkcd:darkblue', 'xkcd:red', 'xkcd:crimson', 'xkcd:green']
@@ -58,8 +60,6 @@ par_plot_init_slope= True
 par_legend_loc     = (-2,-2) #(0.385,0.715+0.058), (0.385,0.715+i_plot*0.058), (0.385,0.715+0.058), (0.385,0.715) , (0.535,0.535)
 default_legend_loc = 1
 par_test_name      = "CRWa05"
-
-handle_list_initialized = False
 
 def set_plot_color(plot_color, index):
    global xkcd_colors, use_color_list
@@ -178,7 +178,7 @@ def interpolate_q(alpha):
    return q_out
 # plot data ------------------------------------
 def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
-   global first_run, e_small, i_plot, par_plot_color, handle_list_initialized, s
+   global first_run, e_small, i_plot, par_plot_color, s
    f_lo_cut = fl[0] ;      f_up_cut = fr[-1]
    p_lo_cut = pl[0] ;   p_up_cut = pr[-1]
 
@@ -213,9 +213,7 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
       plot_p_min    =  p_lo_cut
       plot_p_max    =  p_up_cut
 
-      if (not handle_list_initialized):
-         handle_list = []
-         if (not clean_plot): handle_list_initialized = True
+      handle_list = []
 
       if (not clean_plot): use_color_list = True
       if (plot_var == "e"):
@@ -296,6 +294,8 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
    if (par_plot_legend):
       handle_list.append(spectrum)
       plt.legend(handles=handle_list,  loc=default_legend_loc if par_legend_loc == (-2,-2) else par_legend_loc, edgecolor = "gray", facecolor="white", framealpha=0.45, fontsize = 14)
+
+   if (clean_plot): handle_list = []
 
    return s
 
@@ -400,9 +400,7 @@ def detect_active_bins_new(n_in, e_in):
 
    if num_active_bins == 0: return active_bins_new, i_lo_tmp, i_up_tmp
 
-
    i_lo_tmp = max(active_bins_new[0]-1,0)
-   i_lo_tmp = i_lo_tmp -2                       # temporary fix FIXME
    i_up_tmp = min(active_bins_new[-1]+1, ncre)  # temporary fix FIXME
 
    return active_bins_new, i_lo_tmp, i_up_tmp
@@ -459,14 +457,12 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     exit_code = False
     if interpolate_cutoffs:
        exit_code_lo = True
-       pf_ratio_lo = 0.0
+       pf_ratio_lo = [0., 0.]
        pf_ratio_lo, exit_code_lo = crs_pf.get_interpolated_ratios("lo", ecrs[i_lo]/(ncrs[i_lo]*c*p_fix[i_lo+1]), ncrs[i_lo], exit_code_lo)
 
        exit_code_up = True
-       pf_ratio_up = 0.0
-       if ecrs[i_up-1] == 0.0 or ncrs[i_up-1] == 0.0: i_up = i_up - 1
+       pf_ratio_up = [0., 0.]
        pf_ratio_up, exit_code_up = crs_pf.get_interpolated_ratios("up", ecrs[i_up]/(ncrs[i_up]*c*p_fix[i_up-1]), ncrs[i_up], exit_code_up)
-
 
     pln = p_fix[i_lo:i_up]
     prn = p_fix[i_lo+1:i_up+1]
@@ -477,25 +473,21 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     q_nr = [] ; fln = [] ; frn = []
     if interpolate_cutoffs:
        if exit_code_lo == True:
-         prtwarn("Failed to extract boundary p and f from e, n: pf_ratio_lo = %.6f. Assuming p_fix value." %pf_ratio_lo) # p_fix assumed
+         if (verbosity_1): prtwarn("Failed to extract boundary (lo) p and f from e, n: pf_ratio_lo = %.6f. Assuming p_fix value." %pf_ratio_lo[0]) # p_fix assumed
        else:
          pln[0]      = p_fix[i_lo+1] / pf_ratio_lo[0]
        if exit_code_up == True:
-         prtwarn("Failed to extract boundary p and f from e, n: pf_ratio_up = %.6f. Assuming p_fix value." %pf_ratio_up) # p_fix assumed
+         if (verbosity_1): prtwarn("Failed to extract boundary (up) p and f from e, n: pf_ratio_up = %.6f. Assuming p_fix value." %pf_ratio_up[0]) # p_fix assumed
        else:
          prn[-1]     = p_fix[i_up-1] * pf_ratio_up[0]
 
     if (not q_explicit):
-       prtinfo("Spectral indices q will be interpolated")
+       if (verbosity_2):  prtinfo("Spectral indices q will be interpolated")
        if (not got_q_tabs):
          prepare_q_tabs()
          got_q_tabs = True
     else:
-       prtinfo( "Spectral indices q will be obtained explicitly")
-
-
-    prtinfo("n = "+str(ncrs) )
-    prtinfo("e = "+str(ecrs) )
+       if (verbosity_2):  prtinfo( "Spectral indices q will be obtained explicitly")
 
     for i in range(0,i_up - i_lo):
          if (q_explicit == True):
@@ -506,13 +498,22 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
          q_nr.append(q_tmp)
          fln.append(nq2f(ncrs[i+i_lo], q_nr[-1], pln[i], prn[i]))
 
-    prtinfo("q = "+str(around(q_nr,3)) )
+    if (verbosity_1):
+      ncrs1e3=[];
+      for item in ncrs: ncrs1e3.append(float('%1.3e'%item))
+      prtinfo("n = "+str(ncrs1e3) )
+      ecrs1e3=[]
+      for item in ncrs: ecrs1e3.append(float('%1.3e'%item))
+      prtinfo("e = "+str(ecrs1e3) )
+      prtinfo("q = "+str(around(q_nr,3)) )
 
     q_nr = array(q_nr)
     fln  = array(fln)
     frn  = array(fln)
     frn  = frn * (prn/pln) ** (-q_nr)
     plot = False
+
+    if (verbosity_1): prtinfo("Cutoff indices obtained (lo, up): %i, %i || momenta (lo, up): %f, %f " %(i_lo, i_up, pln[0], prn[-1]) )
 
     if empty_cell==False:
          if (use_simple):
@@ -583,19 +584,24 @@ def crs_plot_main_fpq(parameter_names, parameter_values, plot_var, fcrs, qcrs, p
     q   = array(qcrs[i_lo+i_cor:i_up])
     pln = p_fix[i_lo+i_cor:i_up]
     prn = p_fix[i_lo+1+i_cor:i_up+1]
+
     pln[0]  = pcrs[0]
     prn[-1] = pcrs[-1]
     plot = False # dummy variable until plot is made
 
+    prtinfo("\033[44mTime = %6.2f |  i_lo = %2d, i_up = %2d %s"%(time, i_lo+i_cor if not empty_cell else 0, i_up if not empty_cell else 0, '(empty cell)' if empty_cell else ' '))
     if (i_lo == ncre or i_up == 0):
        empty_cell = True
        return plot, empty_cell
 
-    frn  = fln * (prn/pln) ** (-q)
 
-    prtinfo("Cutoff indices obtained (lo, up): %i, %i || momenta (lo, up): %f, %f " %(i_lo, i_up, pcrs[0], pcrs[1]) )
-    prtinfo("f = "+str(fcrs) )
-    prtinfo("q = "+str(around(qcrs,3)) )
+    frn  = fln * (prn/pln) ** (-q)
+    prtinfo("Cutoff indices obtained (lo, up): %i, %i || momenta (lo, up): %f, %f " %(i_lo+i_cor, i_up, pcrs[0], pcrs[1]) )
+    if (verbosity_1 ):
+      fcrs1e3 = []
+      for item in fcrs: fcrs1e3.append(float('%1.3e'%item)) #: print ("n = %1.3e" %item)
+      prtinfo("f = "+str(fcrs1e3) )
+      prtinfo("q = "+str(around(qcrs,3)) )
 
     if (empty_cell==False):
 
