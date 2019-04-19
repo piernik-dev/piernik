@@ -162,7 +162,8 @@ contains
 
    function fa2fp(this, i1, i2) result(fp)
 
-      use constants, only: has_b
+      use constants,  only: has_b
+      use dataio_pub, only: die
 
       implicit none
 
@@ -173,8 +174,18 @@ contains
       type(fluxpoint) :: fp
 
       fp%index = this%index(   i1, i2)
-      fp%uflx  = this%uflx (:, i1, i2)
-      if (has_b) fp%bflx  = this%bflx (:, i1, i2)
+      if (allocated(this%uflx)) then
+         fp%uflx  = this%uflx (:, i1, i2)
+      else
+         call die("[fluxtypes:fa2fp] .not. allocated(this%uflx)")
+      endif
+      if (has_b) then
+         if (allocated(this%bflx)) then
+            fp%bflx  = this%bflx (:, i1, i2)
+         else
+            call die("[fluxtypes:fa2fp] .not. allocated(this%bflx)")
+         endif
+      endif
 
    end function fa2fp
 
