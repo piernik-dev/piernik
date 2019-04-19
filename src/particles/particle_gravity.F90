@@ -84,13 +84,7 @@ contains
 
             call update_particle_potential_energy(n_part, cg, cells, dist)
 
-            if (is_setacc_int) then
-               call update_particle_acc_int(n_part, cg, cells, dist)
-            elseif (is_setacc_cic) then
-               call update_particle_acc_cic(n_part, cg, cells)
-            elseif (is_setacc_tsc) then
-               call update_particle_acc_tsc(cg)
-            endif
+            call update_particle_acc(n_part, cg, cells, dist)
             deallocate(cells, dist)
 
          cgl => cgl%nxt
@@ -259,6 +253,27 @@ contains
       enddo
 
    end subroutine update_particle_potential_energy
+
+   subroutine update_particle_acc(n_part, cg, cells, dist)
+
+      use constants, only: ndims
+      use grid_cont, only: grid_container
+      implicit none
+
+      integer,                          intent(in)    :: n_part
+      type(grid_container), pointer,    intent(inout) :: cg
+      integer, dimension(n_part,ndims), intent(in)    :: cells
+      real, dimension(n_part, ndims),   intent(in)    :: dist
+
+      if (is_setacc_int) then
+         call update_particle_acc_int(n_part, cg, cells, dist)
+      elseif (is_setacc_cic) then
+         call update_particle_acc_cic(n_part, cg, cells)
+      elseif (is_setacc_tsc) then
+         call update_particle_acc_tsc(cg)
+      endif
+
+   end subroutine update_particle_acc
 
    subroutine update_particle_acc_int(n_part, cg, cells, dist)
 
