@@ -75,20 +75,13 @@ module fluxtypes
       procedure :: fp2fa                       !< Store a point flux
    end type fluxarray
 
-   logical, parameter :: has_b = &
-#ifdef MAGNETIC
-        .true.
-#else /* !MAGNETIC */
-        .false.
-#endif /* !MAGNETIC */
-
 contains
 
 !> \brief Allocate flux vector
 
    subroutine fpinit(this)
 
-      use constants,  only: psidim
+      use constants,  only: psidim, has_b
       use dataio_pub, only: die
       use fluidindex, only: flind
 
@@ -134,7 +127,7 @@ contains
 
    subroutine fainit(this, i1, i2)
 
-      use constants,  only: LO, HI, psidim
+      use constants,  only: LO, HI, psidim, has_b
       use dataio_pub, only: die
       use fluidindex, only: flind
 
@@ -169,6 +162,8 @@ contains
 
    function fa2fp(this, i1, i2) result(fp)
 
+      use constants, only: has_b
+
       implicit none
 
       class(fluxarray), intent(in) :: this !< object invoking type bound procedure
@@ -187,6 +182,7 @@ contains
 
    subroutine fp2fa(this, fp, i1, i2)
 
+      use constants,  only: has_b
       use dataio_pub, only: die
 
       implicit none
