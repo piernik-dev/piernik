@@ -315,9 +315,9 @@ contains
 
       implicit none
 
-      integer, parameter :: not_too_small = 16 ! bsize below that tends to be inefficient due to huge memory and computation overhead
-      integer :: d, i
-      integer, dimension(ndims) :: b1, b2
+      integer(kind=4), parameter :: not_too_small = 16 ! bsize below that tends to be inefficient due to huge memory and computation overhead
+      integer(kind=4) :: d, i
+      integer(kind=4), dimension(ndims) :: b1, b2
       integer(kind=4) :: sq
 
       b1 = INVALID
@@ -325,7 +325,7 @@ contains
 
       ! start with size that results with roughly one block per process on highest full level, but don't go below 16 cells per dimension
       ! also divide each dmension to at least 4 pieces even for low thread count
-      sq = max(not_too_small, int(((product(dom%n_d, mask=dom%has_dir) * refinement_factor**(dom%eff_dim * level_min))/max(nproc, (2*refinement_factor)**dom%eff_dim))**(1./dom%eff_dim), kind=4))
+      sq = max(not_too_small, int(((product(dom%n_d, mask=dom%has_dir) * refinement_factor**(dom%eff_dim * level_min))/max(nproc, int((2*refinement_factor)**dom%eff_dim, kind=4)))**(1./dom%eff_dim), kind=4))
       if (mod(sq, I_TWO) == I_ONE) sq = sq + I_ONE
       ! find divisible values in each dim in the range [nb .. dom%n_d] starting from sq in both directions
       if (all(mod(dom%n_d, sq) == 0 .or. .not. dom%has_dir)) then
