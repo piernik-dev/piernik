@@ -205,8 +205,7 @@ contains
 
    subroutine locate_particles_in_cells(n_part, cg, cells, dist)
 
-      use constants, only: half, ndims, xdim, zdim, CENTER, LO, HI
-      use domain,    only: dom
+      use constants, only: half, ndims, xdim, zdim, CENTER, LO
       use grid_cont, only: grid_container
 
       implicit none
@@ -218,15 +217,9 @@ contains
       integer                                         :: i, cdim
 
       do i = 1, n_part
+         call cg%pset%p(i)%is_outside()
          do cdim = xdim, zdim
-            if ((cg%pset%p(i)%pos(cdim) >= dom%edge(cdim, LO)) .and. (cg%pset%p(i)%pos(cdim) <= dom%edge(cdim, HI))) then
-               cg%pset%p(i)%outside = .false.
-            else
-               cg%pset%p(i)%outside = .true.
-            endif
-
             cells(i, cdim) = int( half + (cg%pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(cg%ijkse(cdim, LO))) * cg%idl(cdim) )
-
             dist(i, cdim)  = cg%pset%p(i)%pos(cdim) - ( cg%coord(CENTER, cdim)%r(cg%ijkse(cdim, LO)) + cells(i,cdim) * cg%dl(cdim) )
          enddo
       enddo
