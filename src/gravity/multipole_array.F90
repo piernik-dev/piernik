@@ -30,6 +30,7 @@
 !> \brief This module implements an array containing radial distribution of multipole moments
 
 module multipole_array
+! pulled by MULTIGRID && SELF_GRAV
 
    implicit none
 
