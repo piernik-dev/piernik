@@ -130,7 +130,7 @@ contains
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
       use multigrid_Laplace4, only: L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
-      use multipole,          only: mpole_solver, lmax, mmax, ord_prolong_mpole, level_3D
+      use multipole,          only: mpole_solver, lmax, mmax, ord_prolong_mpole, level_3D, singlepass, init_multipole
       use multipole_array,    only: interp_pt2mom, interp_mom2pot
       use pcg,                only: use_CG, use_CG_outer, preconditioner, default_preconditioner, pcg_init
 
@@ -355,12 +355,14 @@ contains
 
       if (fft_patient) fftw_flags = FFTW_PATIENT
 
+      if (grav_bnd == bnd_isolated) call init_multipole
+
       ! solution recycling
       ord_time_extrap = min(nold_max-I_ONE, max(-I_ONE, ord_time_extrap))
       associate (nold => ord_time_extrap + 1)
       if (nold > 0) then
          call inner%init_history(nold, "i")
-         if (grav_bnd == bnd_isolated) call outer%init_history(nold, "o")
+         if (grav_bnd == bnd_isolated .and. .not. singlepass) call outer%init_history(nold, "o")
       endif
       end associate
 
@@ -383,7 +385,6 @@ contains
       use domain,              only: dom
       use mpisetup,            only: master, FIRST, LAST, piernik_MPI_Allreduce
       use multigridvars,       only: bnd_periodic, bnd_dirichlet, bnd_isolated, grav_bnd
-      use multipole,           only: init_multipole
       use named_array_list,    only: qna
 
       implicit none
@@ -461,7 +462,6 @@ contains
          enddo
       endif
 
-      if (grav_bnd == bnd_isolated .and. firstcall) call init_multipole
       firstcall = .false.
 
    end subroutine init_multigrid_grav
@@ -761,7 +761,7 @@ contains
       use constants,         only: sgp_n, tmr_mg
       use multigrid_helpers, only: all_dirty
       use multigridvars,     only: solution, tot_ts, ts, grav_bnd, bnd_dirichlet, bnd_givenval, bnd_isolated
-      use multipole,         only: multipole_solver
+      use multipole,         only: multipole_solver, singlepass
       use named_array_list,  only: qna
       use timer,             only: set_timer
 
@@ -791,11 +791,21 @@ contains
 
       call init_source(i_sg_dens)
 
+      if (grav_bnd_global == bnd_isolated .and. singlepass) then
+
+         call multipole_solver
+         grav_bnd = bnd_givenval
+         call init_source(i_sg_dens)
+         vstat%cprefix = "Gm-"
+
+      endif
+
       call poisson_solver(inner)
 
       call leaves%q_copy(solution, qna%ind(sgp_n))
 
-      if (grav_bnd_global == bnd_isolated) then
+      if (grav_bnd_global == bnd_isolated .and. .not. singlepass) then
+
          grav_bnd = bnd_givenval
 
          vstat%cprefix = "Go-"

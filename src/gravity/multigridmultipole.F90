@@ -48,7 +48,6 @@
 !! ToDo
 !! * Automatic limiting of l_max based on relative strength w.r.t monopole contribution (1e-6 seems to be reasonable threshold).
 !! * (3D solver) Automatic choice of best level to integrate on, based on "distance" between Q calculated on differet levels.
-!! * Single-pass multigrid when 3D solver is in use.
 !! * "True" given-value boundaries in multigrid, without differentiation.
 !<
 
@@ -69,7 +68,7 @@ module multipole
 
    private
    public :: init_multipole, cleanup_multipole, multipole_solver
-   public :: lmax, mmax, ord_prolong_mpole, mpole_solver, level_3D  ! initialized in multigrid_gravity
+   public :: lmax, mmax, ord_prolong_mpole, mpole_solver, level_3D, singlepass  ! initialized in multigrid_gravity
 
    type(mpole_container)        :: Q                   !< The whole moment array with dependence on radius
 
@@ -83,6 +82,7 @@ module multipole
    integer, parameter           :: imass = xdim - 1    !< index for mass in CoM(:)
    real, dimension(imass:ndims) :: CoM                 !< Total mass and center of mass coordinates
    logical                      :: zaxis_inside        !< true when z-axis belongs to the inner radial boundary in polar coordinates
+   logical                      :: singlepass          !< When .true. it allows for single-pass multigrid solve
 
    enum, bind(C)
       enumerator :: MONOPOLE, IMG_MASS, THREEDIM
@@ -93,7 +93,12 @@ module multipole
 
 contains
 
-!> \brief Initialization routine, called once, from init_multigrid
+!>
+!! \brief Initialization routine, called once, from init_multigrid
+!!
+!! Single-pass multigrid allowed only for user and 3D solvers as these doesn't depend on Dirichlet solution.
+!! BEWARE: if user solution decides to depend on Dirichlet solution, this chas to be changed.
+!<
 
    subroutine init_multipole
 
@@ -101,6 +106,7 @@ contains
       use dataio_pub, only: die, warn
       use domain,     only: dom
       use mpisetup,   only: master
+      use user_hooks, only: ext_bnd_potential
 
       implicit none
 
@@ -113,6 +119,7 @@ contains
       endif
       if (mmax < 0) mmax = lmax
 
+      singlepass = associated(ext_bnd_potential)
       solver = INVALID
       select case (mpole_solver)
          case ("monopole", "mono")
@@ -121,6 +128,7 @@ contains
             solver = IMG_MASS
          case ("3D", "3d", "volume")
             solver = THREEDIM
+            singlepass = .true.
          case default
             call die("[multigridmultipole:init_multipole] unknown solver '" // trim(mpole_solver) // "'")
       end select
