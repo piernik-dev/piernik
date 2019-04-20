@@ -213,7 +213,10 @@ contains
             call img_mass2moments
             ! OPT: switch automagically to MONOPOLE for a couple of steps if higher multipoles fall below some thershold
             call moments2bnd_potential
-!         case (THREEDIM)
+         case (THREEDIM)
+            call domain2moments
+            ! OPT: switch automagically to MONOPOLE for a couple of steps if higher multipoles fall below some thershold
+            call moments2bnd_potential
          case default
             call die("[multigridmultipole:multipole_solver] unimplemented solver")
       end select
@@ -541,6 +544,64 @@ contains
       call Q%red_int_norm
 
    end subroutine img_mass2moments
+
+!>
+!! \brief Compute multipole moments for the whole domain
+!!
+!! \todo test with CoM (implement find_CoM)
+!! \todo allow working on pure base_level or coarsened levels
+!! \todo implement Richarson extrapolation between coarsened levels
+!<
+
+   subroutine domain2moments
+
+      use cg_leaves,     only: leaves
+      use cg_list,       only: cg_list_element
+      use constants,     only: xdim, ydim, zdim, GEO_XYZ, zero
+      use dataio_pub,    only: die
+      use domain,        only: dom
+      use grid_cont,     only: grid_container
+      use func,          only: operator(.notequals.)
+      use multigridvars, only: source
+      use particle_pub,  only: pset
+      use units,         only: fpiG
+
+      implicit none
+
+      integer :: i, j, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+
+      if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim).notequals.zero)) call die("[multigridmultipole:domain2moments] CoM not allowed for non-cartesian geometry")
+      if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:domain2moments] Noncartesian geometry haven't been tested. Verify it before use.")
+
+      call Q%reset
+
+      !OPT: try to exchange loops i < j < k -> k < j < i
+      ! scan
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         do i = cg%is, cg%ie
+            ! if (dom%geometry_type == GEO_RPZ) geofac = cg%x(i)
+            do j = cg%js, cg%je
+               do k = cg%ks, cg%ke
+                  if (cg%leafmap(i, j, k)) &
+                       call Q%point2moments(cg%dvol * cg%q(source)%arr(i, j, k), cg%x(i) - CoM(xdim), cg%y(j) - CoM(ydim), cg%z(k) - CoM(zdim))  ! * geofac for GEO_RPZ
+               enddo
+            enddo
+         enddo
+         cgl => cgl%nxt
+      enddo
+
+      ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
+      do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
+         if (pset%p(i)%outside) call Q%point2moments(fpiG*pset%p(i)%mass, pset%p(i)%pos(xdim), pset%p(i)%pos(ydim), pset%p(i)%pos(zdim))
+      enddo
+
+      call Q%red_int_norm
+
+   end subroutine domain2moments
 
 !>
 !! \brief Compute infinite-boundary potential from multipole moments
