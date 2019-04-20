@@ -37,34 +37,41 @@
 
 module multipole
 ! pulled by MULTIGRID && SELF_GRAV
+
    ! needed for global vars in this module
-   use constants,   only: ndims, xdim
+   use constants,       only: ndims, xdim, cbuff_len
    use multipole_array, only: mpole_container
+
 #if defined(__INTEL_COMPILER)
-      !! \deprecated remove this clause as soon as Intel Compiler gets required
-      !! features and/or bug fixes
+   !! \deprecated remove this clause as soon as Intel Compiler gets required
+   !! features and/or bug fixes
    use cg_list_bnd,   only: cg_list_bnd_T   ! QA_WARN intel
 #endif /* __INTEL_COMPILER */
-!   use cg_level_connected, only: cg_level_connected_T
 
    implicit none
 
    private
    public :: init_multipole, cleanup_multipole, multipole_solver
-   public :: lmax, mmax, ord_prolong_mpole, use_point_monopole  ! initialized in multigrid_gravity
+   public :: lmax, mmax, ord_prolong_mpole, mpole_solver  ! initialized in multigrid_gravity
 
-   type(mpole_container)     :: Q                                !< The whole moment array with dependence on radius
+   type(mpole_container)        :: Q                   !< The whole moment array with dependence on radius
 
    ! namelist parameters for MULTIGRID_GRAVITY
-   integer(kind=4)           :: lmax                             !< Maximum l-order of multipole moments
-   integer(kind=4)           :: mmax                             !< Maximum m-order of multipole moments. Equal to lmax by default.
-   integer(kind=4)           :: ord_prolong_mpole                !< boundary prolongation operator order; allowed values are -2 .. 2
-   logical                   :: use_point_monopole               !< Don't evaluate multipole moments, use point-like mass approximation (crudest possible)
+   integer(kind=4)              :: lmax                !< Maximum l-order of multipole moments
+   integer(kind=4)              :: mmax                !< Maximum m-order of multipole moments. Equal to lmax by default.
+   integer(kind=4)              :: ord_prolong_mpole   !< boundary prolongation operator order; allowed values are -2 .. 2
+   character(len=cbuff_len)     :: mpole_solver        !< pick one of: "monopole", "img_mass" (default), "3D"
+
+   integer, parameter           :: imass = xdim - 1    !< index for mass in CoM(:)
+   real, dimension(imass:ndims) :: CoM                 !< Total mass and center of mass coordinates
+   logical                      :: zaxis_inside        !< true when z-axis belongs to the inner radial boundary in polar coordinates
+
+   enum, bind(C)
+      enumerator :: MONOPOLE, IMG_MASS, THREEDIM
+   end enum
+   integer                      :: solver              !< mpole_solver decoded into one of the above enums
 
 !> \todo OPT derive a special set of leaves and coarsened leaves that can be safely used here
-   integer, parameter                  :: imass = xdim-1         !< index for mass in CoM(:)
-   real, dimension(imass:ndims)        :: CoM                    !< Total mass and center of mass coordinates
-   logical                             :: zaxis_inside           !< true when z-axis belongs to the inner radial boundary in polar coordinates
 
 contains
 
@@ -72,7 +79,7 @@ contains
 
    subroutine init_multipole
 
-      use constants,  only: ndims
+      use constants,  only: ndims, INVALID
       use dataio_pub, only: die, warn
       use domain,     only: dom
       use mpisetup,   only: master
@@ -88,7 +95,18 @@ contains
       endif
       if (mmax < 0) mmax = lmax
 
-      if (.not. use_point_monopole) call Q%init_once(lmax, mmax)
+      solver = INVALID
+      select case (mpole_solver)
+         case ("monopole", "mono")
+            solver = MONOPOLE
+         case ("img_mass", "surface", "dOmega")
+            solver = IMG_MASS
+         case ("3D", "3d", "volume")
+            solver = THREEDIM
+         case default
+            call die("[multigridmultipole:init_multipole] unknown solver '" // trim(mpole_solver) // "'")
+      end select
+      if (solver /= MONOPOLE) call Q%init_once(lmax, mmax)
 
    end subroutine init_multipole
 
@@ -132,14 +150,14 @@ contains
             zaxis_inside = dom%edge(xdim, LO) <= dom%L_(xdim)/finest%level%l%n_d(xdim)
             if (master) then
                if (zaxis_inside) call warn("[multigridmultipole:refresh_multipole] Setups with Z-axis at the edge of the domain may not work as expected yet.")
-               if (use_point_monopole) call warn("[multigridmultipole:refresh_multipole] Point-like monopole is not implemented.")
+               if (solver == MONOPOLE) call warn("[multigridmultipole:refresh_multipole] Point-like monopole is not implemented.")
             endif
-            use_point_monopole = .false.
+            solver = IMG_MASS
          case default
             call die("[multigridmultipole:refresh_multipole] Unsupported geometry.")
       end select
 
-      if (.not. use_point_monopole) call Q%refresh
+      if (solver /= MONOPOLE) call Q%refresh
 
    end subroutine refresh_multipole
 
@@ -164,6 +182,7 @@ contains
 
       use cg_leaves,  only: leaves
       use constants,  only: dirtyH
+      use dataio_pub, only: die
       use global,     only: dirty_debug
       use user_hooks, only: ext_bnd_potential
 
@@ -184,15 +203,20 @@ contains
 
       call potential2img_mass
 
-      if (use_point_monopole) then
-         call find_img_CoM
-         call isolated_monopole
-      else
-         ! results seems to be slightly better without find_img_CoM.
-         ! With CoM or when it is known than CoM is close to the domain center one may try to save some CPU time by lowering mmax.
-         call img_mass2moments
-         call moments2bnd_potential
-      endif
+      select case (solver)
+         case (MONOPOLE)
+            call find_img_CoM
+            call isolated_monopole
+         case (IMG_MASS)
+            ! results seems to be slightly better without find_img_CoM.
+            ! With CoM or when it is known than CoM is close to the domain center one may try to save some CPU time by lowering mmax.
+            call img_mass2moments
+            ! OPT: switch automagically to MONOPOLE for a couple of steps if higher multipoles fall below some thershold
+            call moments2bnd_potential
+!         case (THREEDIM)
+         case default
+            call die("[multigridmultipole:multipole_solver] unimplemented solver")
+      end select
 
    end subroutine multipole_solver
 

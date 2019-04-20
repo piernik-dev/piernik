@@ -103,7 +103,7 @@ contains
 !! <tr><td>lmax                  </td><td>16     </td><td>integer value  </td><td>\copydoc multipole::lmax                          </td></tr>
 !! <tr><td>mmax                  </td><td>-1     </td><td>integer value  </td><td>\copydoc multipole::mmax                          </td></tr>
 !! <tr><td>ord_prolong_mpole     </td><td>-2     </td><td>integer value  </td><td>\copydoc multipole::ord_prolong_mpole             </td></tr>
-!! <tr><td>use_point_monopole    </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::use_point_monopole            </td></tr>
+!! <tr><td>mpole_solver          </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::mpole_solver                  </td></tr>
 !! <tr><td>interp_pt2mom         </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::interp_pt2mom                 </td></tr>
 !! <tr><td>interp_mom2pot        </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::interp_mom2pot                </td></tr>
 !! <tr><td>multidim_code_3D      </td><td>.false.</td><td>logical        </td><td>\copydoc multigridvars::multidim_code_3d          </td></tr>
@@ -129,7 +129,7 @@ contains
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
       use multigrid_Laplace4, only: L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
-      use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole
+      use multipole,          only: mpole_solver, lmax, mmax, ord_prolong_mpole
       use multipole_array,    only: interp_pt2mom, interp_mom2pot
       use pcg,                only: use_CG, use_CG_outer, preconditioner, default_preconditioner, pcg_init
 
@@ -141,7 +141,7 @@ contains
       namelist /MULTIGRID_GRAVITY/ norm_tol, coarsest_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
            &                       overrelax, L4_strength, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       base_no_fft, fft_patient, &
-           &                       lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
+           &                       lmax, mmax, ord_prolong_mpole, mpole_solver, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
            &                       grav_bnd_str, preconditioner
 
       if (.not.frun) call die("[multigrid_gravity:multigrid_grav_par] Called more than once.")
@@ -172,7 +172,7 @@ contains
       ord_prolong_mpole      = O_D2
       ord_time_extrap        = O_LIN
 
-      use_point_monopole     = .false.
+      mpole_solver           = "img_mass"
       base_no_fft            = .false.
       fft_patient            = .false.
       interp_pt2mom          = .false.
@@ -249,7 +249,6 @@ contains
          ibuff( 9) = ord_time_extrap
          ibuff(10) = ord_laplacian_outer
 
-         lbuff(1)  = use_point_monopole
          lbuff(2)  = base_no_fft
          lbuff(3)  = fft_patient
          lbuff(4)  = interp_pt2mom
@@ -260,6 +259,7 @@ contains
 
          cbuff(1)  = grav_bnd_str
          cbuff(2)  = preconditioner
+         cbuff(3)  = mpole_solver
       endif
 
       call piernik_MPI_Bcast(cbuff, cbuff_len)
@@ -286,7 +286,6 @@ contains
          ord_time_extrap   = ibuff( 9)
          ord_laplacian_outer = ibuff(10)
 
-         use_point_monopole = lbuff(1)
          base_no_fft        = lbuff(2)
          fft_patient        = lbuff(3)
          interp_pt2mom      = lbuff(4)
@@ -297,6 +296,8 @@ contains
 
          grav_bnd_str   = cbuff(1)(1:len(grav_bnd_str))
          preconditioner = cbuff(2)(1:len(preconditioner))
+         mpole_solver   = cbuff(3)(1:len(mpole_solver))
+
       endif
 
       ! boundaries
