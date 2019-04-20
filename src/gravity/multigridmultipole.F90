@@ -30,9 +30,26 @@
 !>
 !! \brief Multipole solver for isolated boundaries
 !!
-!! \details This solver estimates gravitational potential on external (domain) boundaries, which allows to mimic \f$\Phi(\infty) = 0\f$.
+!! \details By default this solver estimates gravitational potential on external (domain) boundaries, which allows to mimic \f$\Phi(\infty) = 0\f$.
 !! The calculated potential may then be used in second pass of the Poisson solver (this time run with an empty space) to calculate correction
 !! to be added to the first-pass solution obtained with homogeneous Dirichlet boundary conditions.
+!!
+!! One can also use purely monopole estimate of the potential at the boundaries, provide an user routine that will impose some values.
+!!
+!! There is also a 3D multipole solver that does not depend on differentiation of the gravitational potential atdomain boundaries.
+!! Note that differentiation still takes place in init_source to convert given-value potential into density - this is the biggest source of solution inaccuracy when everything else is set up to high orders.
+!!
+!! The 3D multipole solver is typically slower from the default, image mass method but is way more accurate for density distributions that doesn't have much contribution near boundaries.
+!! It is possible, however, to compure is purely on base level or even coarser levels without much loss of accuracy.
+!!
+!! Another advantage of the 3D solver is that it usually doesn't benefit much from high-order multipoles so setting l_max to 8 or even 6 usually should be sufficient.
+!! In the same situation the image mass solver tends to produce long tails for high l on both small m and m cloce to m_max.
+!!
+!! ToDo
+!! * Automatic limiting of l_max based on relative strength w.r.t monopole contribution (1e-6 seems to be reasonable threshold).
+!! * (3D solver) Automatic choice of best level to integrate on, based on "distance" between Q calculated on differet levels.
+!! * Single-pass multigrid when 3D solver is in use.
+!! * "True" given-value boundaries in multigrid, without differentiation.
 !<
 
 module multipole
@@ -52,15 +69,16 @@ module multipole
 
    private
    public :: init_multipole, cleanup_multipole, multipole_solver
-   public :: lmax, mmax, ord_prolong_mpole, mpole_solver  ! initialized in multigrid_gravity
+   public :: lmax, mmax, ord_prolong_mpole, mpole_solver, level_3D  ! initialized in multigrid_gravity
 
    type(mpole_container)        :: Q                   !< The whole moment array with dependence on radius
 
    ! namelist parameters for MULTIGRID_GRAVITY
    integer(kind=4)              :: lmax                !< Maximum l-order of multipole moments
    integer(kind=4)              :: mmax                !< Maximum m-order of multipole moments. Equal to lmax by default.
-   integer(kind=4)              :: ord_prolong_mpole   !< boundary prolongation operator order; allowed values are -2 .. 2
-   character(len=cbuff_len)     :: mpole_solver        !< pick one of: "monopole", "img_mass" (default), "3D"
+   integer(kind=4)              :: ord_prolong_mpole   !< Boundary prolongation operator order; allowed values are -2 .. 2
+   character(len=cbuff_len)     :: mpole_solver        !< Pick one of: "monopole", "img_mass" (default), "3D"
+   integer(kind=4)              :: level_3D            !< The level, at which we integrate the desnity field, to get is multipole representation. 0: base level, 1: leaves (default), <0: coarsened levels
 
    integer, parameter           :: imass = xdim - 1    !< index for mass in CoM(:)
    real, dimension(imass:ndims) :: CoM                 !< Total mass and center of mass coordinates
@@ -549,26 +567,29 @@ contains
 !! \brief Compute multipole moments for the whole domain
 !!
 !! \todo test with CoM (implement find_CoM)
-!! \todo allow working on pure base_level or coarsened levels
 !! \todo implement Richarson extrapolation between coarsened levels
 !<
 
    subroutine domain2moments
 
-      use cg_leaves,     only: leaves
-      use cg_list,       only: cg_list_element
-      use constants,     only: xdim, ydim, zdim, GEO_XYZ, zero
-      use dataio_pub,    only: die
-      use domain,        only: dom
-      use grid_cont,     only: grid_container
-      use func,          only: operator(.notequals.)
-      use multigridvars, only: source
-      use particle_pub,  only: pset
-      use units,         only: fpiG
+      use cg_leaves,          only: leaves
+      !use cg_level_base,      only: base ! cannot use it because cg_level_base depends on multigrid
+      use cg_level_finest,    only: finest
+      use cg_level_connected, only: cg_level_connected_T, base_level
+      use cg_list,            only: cg_list_element
+      use constants,          only: xdim, ydim, zdim, GEO_XYZ, zero, base_level_id
+      use dataio_pub,         only: die, msg, warn
+      use domain,             only: dom
+      use grid_cont,          only: grid_container
+      use func,               only: operator(.notequals.)
+      use multigridvars,      only: source
+      use particle_pub,       only: pset
+      use units,              only: fpiG
 
       implicit none
 
       integer :: i, j, k
+      type(cg_level_connected_T), pointer :: level
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
@@ -577,16 +598,32 @@ contains
 
       call Q%reset
 
-      !OPT: try to exchange loops i < j < k -> k < j < i
       ! scan
-      cgl => leaves%first
+      if (level_3D <= base_level_id) then
+         ! call finest%level%restrict_to_floor_q_1var(source)  ! overkill
+         level => base_level
+         call finest%level%restrict_to_base_q_1var(source)
+         do while (level%l%id > level_3D)
+            if (associated(level%coarser)) then
+               call level%restrict_q_1var(source)
+               level => level%coarser
+            else
+               write(msg, '(2(a,i3))')"[multigridmultipole:domain2moments] Coarsest level reached. Will use level ", level%l%id, " instead of ", level_3D
+               call warn(msg)
+               exit
+            endif
+         enddo
+         cgl => level%first
+      else
+         cgl => leaves%first
+      endif
       do while (associated(cgl))
          cg => cgl%cg
-         do i = cg%is, cg%ie
-            ! if (dom%geometry_type == GEO_RPZ) geofac = cg%x(i)
+         do k = cg%ks, cg%ke
             do j = cg%js, cg%je
-               do k = cg%ks, cg%ke
-                  if (cg%leafmap(i, j, k)) &
+               do i = cg%is, cg%ie
+                  ! if (dom%geometry_type == GEO_RPZ) geofac = cg%x(i)
+                  if (cg%leafmap(i, j, k) .or. level_3D <= base_level_id) &
                        call Q%point2moments(cg%dvol * cg%q(source)%arr(i, j, k), cg%x(i) - CoM(xdim), cg%y(j) - CoM(ydim), cg%z(k) - CoM(zdim))  ! * geofac for GEO_RPZ
                enddo
             enddo
