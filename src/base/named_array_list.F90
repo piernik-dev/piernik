@@ -209,21 +209,20 @@ contains
 
 !> \brief Find out which fields (cg%q and cg%w arrays) are stored in the restart file
 
-
    subroutine get_reslst(this, lst)
 
-      use constants,        only: AT_IGNORE
-      use func,             only: append_int_to_array
+      use constants, only: AT_IGNORE
+      use func,      only: append_int_to_array
 
       implicit none
 
       class(na_var_list),                 intent(in)  :: this
       integer, dimension(:), allocatable, intent(out) :: lst
 
-      integer                            :: i
+      integer :: i
 
-      if (.not.allocated(lst)) allocate(lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
-      do i = lbound(this%lst(:), dim=1, kind=4), ubound(this%lst(:), dim=1, kind=4)
+      allocate(lst(0))  ! we rely on its existence
+      do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
          if (this%lst(i)%restart_mode > AT_IGNORE) call append_int_to_array(lst, i)
       enddo
 
