@@ -169,25 +169,23 @@ contains
 #endif /* MULTIGRID */
 
       else
+         do s = sFRST, sLAST, sCHNG
+            if (.not.skip_sweep(s)) then
 #ifdef COSM_RAY_ELECTRONS
-         do icrc=1, flind%crn%all
+               do icrc = 1, flind%crn%all
 #else /* !COSM_RAY_ELECTRONS */
-         do icrc=1, flind%crs%all
+               do icrc = 1, flind%crs%all
 #endif /* !COSM_RAY_ELECTRONS */
-            do s = sFRST, sLAST, sCHNG
-               if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
-            enddo
-         enddo
+                  call make_diff_sweep(icrc, s)
+               enddo
 #ifdef COSM_RAY_ELECTRONS
-         do icrc= flind%crn%all + 1, flind%crn%all + ncre
-            do s = sFRST, sLAST, sCHNG
-               if (.not.skip_sweep(s)) then
+               do icrc = flind%crn%all + 1, flind%crn%all + ncre
                   call make_diff_sweep(icrc, s)
                   call make_diff_sweep(ncre + icrc, s)
-               endif
-            enddo
-         enddo
+               enddo
 #endif /* COSM_RAY_ELECTRONS */
+            endif
+         enddo
       endif
 #endif /* COSM_RAYS */
 
