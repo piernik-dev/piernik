@@ -300,17 +300,16 @@ contains
 
       real    :: sin_th, cos_th, del
       real    :: Ql, Ql1, Ql2
-      integer :: l, m, ir, m2c, m2s
+      integer :: l, m, ir, m2c
 
       call this%geomfac4moments(mass, x, y, z, sin_th, cos_th, ir, del)
 
       if (.not. interp_pt2mom) del = 0.
 
       ! monopole, the (0,0) moment; P_0 = 1.
-
       ! this%lm(0, 0) == 0
-      this%Q(0, INSIDE,  ir)   = this%Q(0, INSIDE,  ir)   +  this%rn(0) * (1.-del)
-      this%Q(0, OUTSIDE, ir)   = this%Q(0, OUTSIDE, ir)   + this%irn(0) * (1.-del)
+      this%Q(0, INSIDE,  ir) = this%Q(0, INSIDE,  ir) +  this%rn(0) * (1.-del)
+      this%Q(0, OUTSIDE, ir) = this%Q(0, OUTSIDE, ir) + this%irn(0) * (1.-del)
       if (del .notequals. zero) then
          this%Q(0, INSIDE,  ir+1) = this%Q(0, INSIDE,  ir+1) +  this%rn(0) * del
          this%Q(0, OUTSIDE, ir+1) = this%Q(0, OUTSIDE, ir+1) + this%irn(0) * del
@@ -323,8 +322,8 @@ contains
       do l = 1, this%lmax
          ! this%lm(l, 0) == l
          Ql = cos_th * this%k12(1, l, 0) * Ql1 - this%k12(2, l, 0) * Ql2
-         this%Q(l, INSIDE,  ir)   = this%Q(l, INSIDE,  ir)   +  this%rn(l) * Ql * (1.-del)
-         this%Q(l, OUTSIDE, ir)   = this%Q(l, OUTSIDE, ir)   + this%irn(l) * Ql * (1.-del)
+         this%Q(l, INSIDE,  ir) = this%Q(l, INSIDE,  ir) +  this%rn(l) * Ql * (1.-del)
+         this%Q(l, OUTSIDE, ir) = this%Q(l, OUTSIDE, ir) + this%irn(l) * Ql * (1.-del)
          if (del .notequals. zero) then
             this%Q(l, INSIDE,  ir+1) = this%Q(l, INSIDE,  ir+1) +  this%rn(l) * Ql * del
             this%Q(l, OUTSIDE, ir+1) = this%Q(l, OUTSIDE, ir+1) + this%irn(l) * Ql * del
@@ -336,21 +335,18 @@ contains
       ! non-axisymmetric (l,m) moments for 1 <= m <= this%mmax, m <= l <= this%lmax.
       do m = 1, this%mmax
 
-         m2c = this%lm(m, 2*m)
-         m2s = this%lm(m, 2*m-1)
          ! The (m,m) moment
          ! Associated Legendre polynomial: P_m^m = (-1)^m (2m-1)!! (1-x^2)^{m/2}
          ! The (2m-1)!! factor is integrated in ofact(:) array, where it mostly cancels out, note that (2m-1)!! \simeq m! exp(m/sqrt(2)) so it grows pretty fast with m
          Ql1 = sin_th ** m
-         this%Q(m2s, INSIDE,  ir)   = this%Q(m2s, INSIDE,  ir)   +  this%rn(m) * Ql1 * this%sfac(m) * (1.-del)
-         this%Q(m2c, INSIDE,  ir)   = this%Q(m2c, INSIDE,  ir)   +  this%rn(m) * Ql1 * this%cfac(m) * (1.-del)
-         this%Q(m2s, OUTSIDE, ir)   = this%Q(m2s, OUTSIDE, ir)   + this%irn(m) * Ql1 * this%sfac(m) * (1.-del)
-         this%Q(m2c, OUTSIDE, ir)   = this%Q(m2c, OUTSIDE, ir)   + this%irn(m) * Ql1 * this%cfac(m) * (1.-del)
+         m2c = this%lm(m, 2*m)  ! "cosine" coefficient
+         ! The "sine" coefficient has index this%lm(m, 2*m-1) in our cmapping convention.
+         ! Here we also exploit the fact that it equals m2c -1
+         this%Q(m2c-1:m2c, INSIDE,  ir) = this%Q(m2c-1:m2c, INSIDE,  ir) +  this%rn(m) * Ql1 * (1.-del) * [ this%sfac(m), this%cfac(m) ]
+         this%Q(m2c-1:m2c, OUTSIDE, ir) = this%Q(m2c-1:m2c, OUTSIDE, ir) + this%irn(m) * Ql1 * (1.-del) * [ this%sfac(m), this%cfac(m) ]
          if (del .notequals. zero) then
-            this%Q(m2s, INSIDE,  ir+1) = this%Q(m2s, INSIDE,  ir+1) +  this%rn(m) * Ql1 * this%sfac(m) * del
-            this%Q(m2c, INSIDE,  ir+1) = this%Q(m2c, INSIDE,  ir+1) +  this%rn(m) * Ql1 * this%cfac(m) * del
-            this%Q(m2s, OUTSIDE, ir+1) = this%Q(m2s, OUTSIDE, ir+1) + this%irn(m) * Ql1 * this%sfac(m) * del
-            this%Q(m2c, OUTSIDE, ir+1) = this%Q(m2c, OUTSIDE, ir+1) + this%irn(m) * Ql1 * this%cfac(m) * del
+            this%Q(m2c-1:m2c, INSIDE,  ir+1) = this%Q(m2c-1:m2c, INSIDE,  ir+1) +  this%rn(m) * Ql1 * del * [ this%sfac(m), this%cfac(m) ]
+            this%Q(m2c-1:m2c, OUTSIDE, ir+1) = this%Q(m2c-1:m2c, OUTSIDE, ir+1) + this%irn(m) * Ql1 * del * [ this%sfac(m), this%cfac(m) ]
          endif
 
          !>
@@ -362,17 +358,13 @@ contains
          Ql2 = 0.
          do l = m + 1, this%lmax
             Ql = cos_th * this%k12(1, l, m) * Ql1 - this%k12(2, l, m) * Ql2
-            m2c = this%lm(l, 2*m) !m2c  + 2
-            m2s = this%lm(l, 2*m-1)
-            this%Q(m2s, INSIDE,  ir)   = this%Q(m2s, INSIDE,  ir)   +  this%rn(l) * Ql * this%sfac(m) * (1.-del)
-            this%Q(m2c, INSIDE,  ir)   = this%Q(m2c, INSIDE,  ir)   +  this%rn(l) * Ql * this%cfac(m) * (1.-del)
-            this%Q(m2s, OUTSIDE, ir)   = this%Q(m2s, OUTSIDE, ir)   + this%irn(l) * Ql * this%sfac(m) * (1.-del)
-            this%Q(m2c, OUTSIDE, ir)   = this%Q(m2c, OUTSIDE, ir)   + this%irn(l) * Ql * this%cfac(m) * (1.-del)
+            m2c = m2c + 2  ! = this%lm(l, 2*m)
+            ! Here we exploit that this%lm(l, 2*m) + 2 == this%lm(l+1, 2*m) for current implementation
+            this%Q(m2c-1:m2c, INSIDE,  ir) = this%Q(m2c-1:m2c, INSIDE,  ir) +  this%rn(l) * Ql * (1.-del) * [ this%sfac(m), this%cfac(m) ]
+            this%Q(m2c-1:m2c, OUTSIDE, ir) = this%Q(m2c-1:m2c, OUTSIDE, ir) + this%irn(l) * Ql * (1.-del) * [ this%sfac(m), this%cfac(m) ]
             if (del .notequals. zero) then
-               this%Q(m2s, INSIDE,  ir+1) = this%Q(m2s, INSIDE,  ir+1) +  this%rn(l) * Ql * this%sfac(m) * del
-               this%Q(m2c, INSIDE,  ir+1) = this%Q(m2c, INSIDE,  ir+1) +  this%rn(l) * Ql * this%cfac(m) * del
-               this%Q(m2s, OUTSIDE, ir+1) = this%Q(m2s, OUTSIDE, ir+1) + this%irn(l) * Ql * this%sfac(m) * del
-               this%Q(m2c, OUTSIDE, ir+1) = this%Q(m2c, OUTSIDE, ir+1) + this%irn(l) * Ql * this%cfac(m) * del
+               this%Q(m2c-1:m2c, INSIDE,  ir+1) = this%Q(m2c-1:m2c, INSIDE,  ir+1) +  this%rn(l) * Ql * del * [ this%sfac(m), this%cfac(m) ]
+               this%Q(m2c-1:m2c, OUTSIDE, ir+1) = this%Q(m2c-1:m2c, OUTSIDE, ir+1) + this%irn(l) * Ql * del * [ this%sfac(m), this%cfac(m) ]
             endif
             Ql2 = Ql1
             Ql1 = Ql
@@ -403,13 +395,14 @@ contains
 
       real :: sin_th, cos_th, del
       real :: Ql, Ql1, Ql2
-      integer :: l, m, ir, m2c, m2s
+      integer :: l, m, ir, m2c
 
       call this%geomfac4moments(-newtong, x, y, z, sin_th, cos_th, ir, del)
 
       if (.not. interp_mom2pot) del = 0.
 
       ! monopole, the (0,0) moment; P_0 = 1.
+      ! this%lm(0, 0) == 0
       potential = (1.-del) * ( &
            this%Q(0, INSIDE,  ir)   * this%irn(0) + &
            this%Q(0, OUTSIDE, ir+1) *  this%rn(0) )
@@ -422,6 +415,7 @@ contains
       Ql2 = 0.
       Ql1 = 1.
       do l = 1, this%lmax
+         ! this%lm(l, 0) == l
          Ql = cos_th * this%k12(1, l, 0) * Ql1 - this%k12(2, l, 0) * Ql2
          potential = potential + Ql * (1.-del) * ( &
               &      this%Q(l, INSIDE,  ir)   * this%irn(l) + &
@@ -435,38 +429,36 @@ contains
 
       ! non-axisymmetric (l,m) moments for 1 <= m <= this%mmax, m <= l <= this%lmax.
       do m = 1, this%mmax
-         m2c = this%lm(m, 2*m)
-         m2s = this%lm(m, 2*m-1)
          ! The (m,m) moment
          Ql1 = sin_th ** m
+         m2c = this%lm(m, 2*m)  ! see comments in point2moments
          potential = potential + Ql1 * (1.-del) * ( &
-              &      (this%Q(m2c, INSIDE,  ir)   * this%irn(m) + &
-              &       this%Q(m2c, OUTSIDE, ir+1) *  this%rn(m) ) * this%cfac(m) + &
-              &      (this%Q(m2s, INSIDE,  ir)   * this%irn(m) + &
-              &       this%Q(m2s, OUTSIDE, ir+1) *  this%rn(m) ) * this%sfac(m) )
+              &       this%irn(m) * (this%Q(m2c-1, INSIDE,  ir)   * this%sfac(m)   + &
+              &                      this%Q(m2c,   INSIDE,  ir)   * this%cfac(m) ) + &
+              &        this%rn(m) * (this%Q(m2c-1, OUTSIDE, ir+1) * this%sfac(m)   + &
+              &                      this%Q(m2c,   OUTSIDE, ir+1) * this%cfac(m) ) )
          if (del .notequals. zero) potential = potential + Ql1 * del * ( &
-              &      (this%Q(m2c, INSIDE,  ir-1) * this%irn(m) + &
-              &       this%Q(m2c, OUTSIDE, ir)   *  this%rn(m) ) * this%cfac(m) + &
-              &      (this%Q(m2s, INSIDE,  ir-1) * this%irn(m) + &
-              &       this%Q(m2s, OUTSIDE, ir)   *  this%rn(m) ) * this%sfac(m) )
+              &       this%irn(m) * (this%Q(m2c-1, INSIDE,  ir-1) * this%sfac(m)   + &
+              &                      this%Q(m2c,   INSIDE,  ir-1) * this%cfac(m) ) + &
+              &        this%rn(m) * (this%Q(m2c-1, OUTSIDE, ir)   * this%sfac(m)   + &
+              &                      this%Q(m2c,   OUTSIDE, ir)   * this%cfac(m) ) )
 
          !> \deprecated BEWARE: lots of computational cost of multipoles is here
          ! from (m+1,m) to (this%lmax,m)
          Ql2 = 0.
          do l = m+1, this%lmax
-            m2c = this%lm(l, 2*m) !m2c + 2
-            m2s = this%lm(l, 2*m-1)
+            m2c = m2c + 2
             Ql = cos_th * this%k12(1, l, m) * Ql1 - this%k12(2, l, m) * Ql2
             potential = potential + Ql * (1.-del) * ( &
-                 &      (this%Q(m2c, INSIDE,  ir)   * this%irn(l) + &
-                 &       this%Q(m2c, OUTSIDE, ir+1) *  this%rn(l) ) * this%cfac(m) + &
-                 &      (this%Q(m2s, INSIDE,  ir)   * this%irn(l) + &
-                 &       this%Q(m2s, OUTSIDE, ir+1) *  this%rn(l) ) * this%sfac(m) )
+                 &       this%irn(l) * (this%Q(m2c-1, INSIDE,  ir)   * this%sfac(m)   + &
+                 &                      this%Q(m2c,   INSIDE,  ir)   * this%cfac(m) ) + &
+                 &        this%rn(l) * (this%Q(m2c-1, OUTSIDE, ir+1) * this%sfac(m)   + &
+                 &                      this%Q(m2c,   OUTSIDE, ir+1) * this%cfac(m) ) )
             if (del .notequals. zero) potential = potential + Ql * del * ( &
-                 &      (this%Q(m2c, INSIDE,  ir-1) * this%irn(l) + &
-                 &       this%Q(m2c, OUTSIDE, ir)   *  this%rn(l) ) * this%cfac(m) + &
-                 &      (this%Q(m2s, INSIDE,  ir-1) * this%irn(l) + &
-                 &       this%Q(m2s, OUTSIDE, ir)   *  this%rn(l) ) * this%sfac(m) )
+                 &       this%irn(l) * (this%Q(m2c-1, INSIDE,  ir-1) * this%sfac(m)   + &
+                 &                      this%Q(m2c,   INSIDE,  ir-1) * this%cfac(m) ) + &
+                 &        this%rn(l) * (this%Q(m2c-1, OUTSIDE, ir)   * this%sfac(m)   + &
+                 &                      this%Q(m2c,   OUTSIDE, ir)   * this%cfac(m) ) )
             Ql2 = Ql1
             Ql1 = Ql
          enddo
