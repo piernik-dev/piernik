@@ -227,9 +227,11 @@ module cresp_grid
             cg%u(iarr_cre_n,:,:,:)  = 0.0
             cg%u(iarr_cre_e,:,:,:)  = 0.0
 
-            cg%w(wna%ind(nam_cresp_f))%arr = 0.0
-            cg%w(wna%ind(nam_cresp_p))%arr = 0.0
-            cg%w(wna%ind(nam_cresp_q))%arr = 0.0
+            if (hdf_save_fpq) then
+               cg%w(wna%ind(nam_cresp_f))%arr = 0.0
+               cg%w(wna%ind(nam_cresp_p))%arr = 0.0
+               cg%w(wna%ind(nam_cresp_q))%arr = 0.0
+            endif
             not_zeroed = .false.
 
             cgl => cgl%nxt
