@@ -258,7 +258,6 @@ contains
 !<
    subroutine make_diff_sweep(dir)
 
-      use domain,         only: dom
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff
 #endif /* COSM_RAYS */
@@ -270,7 +269,6 @@ contains
 
       integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
 
-      if (.not.dom%has_dir(dir)) return
       call cr_diff(dir)
 
 #ifdef DEBUG
