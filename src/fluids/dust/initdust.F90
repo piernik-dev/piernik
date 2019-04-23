@@ -205,8 +205,8 @@ contains
       implicit none
       class(dust_fluid), intent(in)                :: this
       integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
-      real, dimension(:,:), intent(inout), pointer :: flux      !< flux of dust
-      real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for dust
+      real, dimension(:,:), intent(out),   pointer :: flux      !< flux of dust
+      real, dimension(:,:), intent(out),   pointer :: cfr       !< freezing speed for dust
       real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for dust
       real, dimension(:),   intent(in),    pointer :: vx        !< velocity of dust fluid for current sweep
       real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table

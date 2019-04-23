@@ -214,8 +214,8 @@ contains
       real, target, dimension(0,0,0,0)                      :: null_r4d
       integer(kind=4), dimension(ndims)                     :: n_b
 
-      qr_lst = qna%get_reslst()
-      wr_lst = wna%get_reslst()
+      call qna%get_reslst(qr_lst)
+      call wna%get_reslst(wr_lst)
       tot_lst_n = size(qr_lst) + size(wr_lst)
       allocate(dsets(tot_lst_n))
       ic = 1
@@ -952,8 +952,8 @@ contains
            &             cg%js+own_off_nb(ydim):cg%js+own_off_nb(ydim)+o_size_nb(ydim)-1, &
            &             cg%ks+own_off_nb(zdim):cg%ks+own_off_nb(zdim)+o_size_nb(zdim)-1))) call die("[restart_hdf5_v2:read_cg_from_restart] Trying to initialize same area twice.")
 
-      qr_lst = qna%get_reslst()
-      wr_lst = wna%get_reslst()
+      call qna%get_reslst(qr_lst)
+      call wna%get_reslst(wr_lst)
       call h5gopen_f(cgl_g_id, n_cg_name(ncg), cg_g_id, error) ! open "/data/grid_%08d, ncg"
 
       if (size(qr_lst) > 0) then

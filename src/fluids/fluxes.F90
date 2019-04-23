@@ -88,7 +88,7 @@ contains
       integer(kind=4), intent(in)                              :: n        !< size of input arrays
       real, dimension(n, flind%all),    target,  intent(out)   :: flux     !< array storing all fluxes
       real, dimension(n, flind%all),    target,  intent(out)   :: cfr      !< array storing all freezing speeds
-      real, dimension(n, flind%all),    target,  intent(out)   :: uu       !< array with current fluid state
+      real, dimension(n, flind%all),    target,  intent(in)    :: uu       !< array with current fluid state
       real, dimension(n, nmag),         target,  intent(in)    :: bb       !< array with current magnetic field state
       real, dimension(n, flind%fluids), target,  intent(in)    :: vx       !< array storing velocity in current sweep direction (reused later)
       real, dimension(:),               pointer, intent(in)    :: cs_iso2  !< array with current sound speed squared
