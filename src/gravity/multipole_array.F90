@@ -246,26 +246,29 @@ contains
 !! \details Originally there were separate indices for l and m multipole numbers in Q and ofact arrays. Since there are no Y_{l,m} harmonics for l<|m|, approximately half of the Q array
 !! was left unused. For each m there is only lmax-|m|+1 valid Y_{l,m} harmonic contributions (for l = |m| .. lmax). The function lm(l, m) converts each valid (l,m) pair into an
 !! unique index leaving no unused entries in the Q array.
-!! Assume that real Y_{l,m} harmonic was stored in this%Q(l, 2*|m|, :, :) for even (cosine, positive-m) harmonic, or in this%Q(l, 2*|m|-1, :, :) for odd (sine, negative-m) harmonic.
-!! Then consecutive entries in compressed this%Q(:, inout, r) array should be related to Y_{l,m} harmonics, starting from index 0 as follows
-!! Y_{0,0}, Y_{1,0}, ..., Y_{lmax, 0}, Y_{1,-1}, Y_{2,-1}, ..., Y_{lmax,-1}, Y_{1,1}, Y_{2,1}, ..., Y_{lmax,1}, Y_{2,-2}, Y_{3,-2}, ..., Y_{lmax,-2},
-!! Y_{2,2}, Y_{3,2}, ..., Y_{lmax,2}, ..., Y(lmax-1,-(mmax-1)), Y(lmax,-(mmax-1)), Y(lmax-1,mmax-1), Y(lmax,mmax-1), Y(lmax,-mmax), Y(lmax,mmax)
+!! Let store harmonics in the following way
+!!    Y_{l,m}  in this%Q(this%lm(l, 2*|m|  ), :, :) for even (cosine, positive-m) harmonic,
+!!    Y_{l,-m} in this%Q(this%lm(l, 2*|m|-1), :, :) for odd  (sine,   negative-m) harmonic.
+!! Then for best performance consecutive entries in compressed this%Q(:, inout, r) array should be related to Y_{l,m} harmonics in the same order as they're referenced in point2moments and moments2pot.
+!! So the ordering goes from index 0 as follows
+!! Y_{0,0}, Y_{1,0}, ..., Y_{lmax, 0}, Y_{1,-1}, Y_{1,1}, ..., Y_{lmax,-1}, Y_{lmax,1}, Y_{2,-2}, Y{2,2}, ..., Y(lmax-1,-(mmax-1)), Y(lmax-1,mmax-1), Y(lmax,-(mmax-1)), Y(lmax,mmax-1), Y(lmax,-mmax), Y(lmax,mmax)
 !! Does it looks a bit cryptic? I agree.
+!!
+!! Since this ordering does not depend on mmax we can safely truncate highest azimuthal moments and use mmax < lmax.
 !<
 
-   elemental integer function lm(this, l, m)
+   pure integer function lm(this, l, m)
 
       implicit none
 
       class(mpole_container), intent(in) :: this  !< object invoking type-bound procedure
-      integer, intent(in) :: l, m
+      integer,                intent(in) :: l, m  !< harmonic indices
 
       integer :: mu
 
       mu = this%lmax - int((m+1)/2)
 
       lm = merge(this%lmax**2 - 1 + 2*l + mod(m+1, 2) - mu*(mu + 1), l, m /= 0)
-      !lm = l + m * this%lmax - int((m-1)/2)*int(m/2)
 
    end function lm
 
@@ -283,10 +286,10 @@ contains
       implicit none
 
       class(mpole_container), intent(inout) :: this  !< object invoking type-bound procedure
-      real, intent(in) :: mass    !< mass of the contributing point
-      real, intent(in) :: x       !< x coordinate of the contributing point
-      real, intent(in) :: y       !< y coordinate of the contributing point
-      real, intent(in) :: z       !< z coordinate of the contributing point
+      real,                   intent(in)    :: mass  !< mass of the contributing point
+      real,                   intent(in)    :: x     !< x coordinate of the contributing point
+      real,                   intent(in)    :: y     !< y coordinate of the contributing point
+      real,                   intent(in)    :: z     !< z coordinate of the contributing point
 
       real    :: sin_th, cos_th, sin_ph, cos_ph, del, cfac, sfac, tmpfac
       real    :: Ql, Ql1, Ql2
@@ -388,9 +391,9 @@ contains
       implicit none
 
       class(mpole_container), intent(inout) :: this  !< object invoking type-bound procedure
-      real, intent(in)  :: x         !< x coordinate of the contributing point
-      real, intent(in)  :: y         !< y coordinate of the contributing point
-      real, intent(in)  :: z         !< z coordinate of the contributing point
+      real,                   intent(in)    :: x     !< x coordinate of the contributing point
+      real,                   intent(in)    :: y     !< y coordinate of the contributing point
+      real,                   intent(in)    :: z     !< z coordinate of the contributing point
 
       real :: sin_th, cos_th, sin_ph, cos_ph, del, cfac, sfac, tmpfac
       real :: Ql, Ql1, Ql2
@@ -452,7 +455,7 @@ contains
          ! from (m+1,m) to (this%lmax,m)
          Ql2 = 0.
          do l = m+1, this%lmax
-            m2c = m2c + 2
+            m2c = m2c + 2  ! see comments in point2moments
             Ql = cos_th * this%k12(1, l, m) * Ql1 - this%k12(2, l, m) * Ql2
             potential = potential + Ql * (1.-del) * ( &
                  &       this%irn(l) * (this%Q(m2c-1, INSIDE,  ir)   * sfac  + &
@@ -487,16 +490,16 @@ contains
       implicit none
 
       class(mpole_container), intent(inout) :: this  !< object invoking type-bound procedure
-      real,    intent(in)  :: factor         !< scaling factor (e.g. mass) of the contributing point
-      real,    intent(in)  :: x              !< x coordinate of the contributing point
-      real,    intent(in)  :: y              !< x coordinate of the contributing point
-      real,    intent(in)  :: z              !< x coordinate of the contributing point
-      real,    intent(out) :: sin_th         !< sine of the vertical angle
-      real,    intent(out) :: cos_th         !< cosine of the vertical angle
-      real,    intent(out) :: sin_ph         !< sine of the azimuthal angle
-      real,    intent(out) :: cos_ph         !< cosine of the azimuthal angle
-      integer, intent(out) :: ir             !< radial index for the this%Q(:, :, r) array
-      real,    intent(out) :: delta          !< fraction of the radial cell for interpolation between ir and ir+1
+      real,                   intent(in)  :: factor  !< scaling factor (e.g. mass) of the contributing point
+      real,                   intent(in)  :: x       !< x coordinate of the contributing point
+      real,                   intent(in)  :: y       !< x coordinate of the contributing point
+      real,                   intent(in)  :: z       !< x coordinate of the contributing point
+      real,                   intent(out) :: sin_th  !< sine of the vertical angle
+      real,                   intent(out) :: cos_th  !< cosine of the vertical angle
+      real,                   intent(out) :: sin_ph  !< sine of the azimuthal angle
+      real,                   intent(out) :: cos_ph  !< cosine of the azimuthal angle
+      integer,                intent(out) :: ir      !< radial index for the this%Q(:, :, r) array
+      real,                   intent(out) :: delta   !< fraction of the radial cell for interpolation between ir and ir+1
 
       real    :: rxy, r, rinv
       integer :: l
