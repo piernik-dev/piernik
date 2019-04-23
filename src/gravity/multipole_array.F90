@@ -50,8 +50,6 @@ module multipole_array
 
       ! auxiliary factors
       real, dimension(:,:,:), allocatable, private :: k12     !< array of Legendre recurrence factors
-      real, dimension(:),     allocatable, private :: sfac    !< 0..m_max sized array of azimuthal sine factors
-      real, dimension(:),     allocatable, private :: cfac    !< 0..m_max sized array of azimuthal cosine factors
       real, dimension(:),     allocatable, private :: ofact   !< arrays of Legendre normalization factor (compressed)
       ! radial discretization
       integer,                             private :: irmin   !< minimum Q(:, :, r) index in use
@@ -104,9 +102,6 @@ contains
       if (allocated(this%k12) .or. allocated(this%ofact)) call die("[multipole_array:init_once] k12 or ofact already allocated")
       allocate(this%k12(2, 1:lmax, 0:mmax), this%ofact(0:this%lm(int(lmax), int(2*mmax))))
 
-      if (allocated(this%sfac) .or. allocated(this%cfac)) call die("[multipole_array:init_once] sfac or cfac already allocated")
-      allocate(this%sfac(0:mmax), this%cfac(0:mmax))
-
       if (allocated(this%rn) .or. allocated(this%irn)) call die("[multipole_array:init_once] rn or irn already allocated")
       allocate(this%rn(0:lmax), this%irn(0:lmax))
 
@@ -126,9 +121,6 @@ contains
          enddo
       enddo
       this%ofact(0:this%lmax) = 1. ! this%lm(0:this%lmax,0)
-
-      this%cfac(0) = 1.e0
-      this%sfac(0) = 0.e0
 
    end subroutine init_once
 
@@ -242,8 +234,6 @@ contains
 
       if (allocated(this%rn))    deallocate(this%rn)
       if (allocated(this%irn))   deallocate(this%irn)
-      if (allocated(this%sfac))  deallocate(this%sfac)
-      if (allocated(this%cfac))  deallocate(this%cfac)
       if (allocated(this%Q))     deallocate(this%Q)
       if (allocated(this%k12))   deallocate(this%k12)
       if (allocated(this%ofact)) deallocate(this%ofact)
@@ -298,11 +288,11 @@ contains
       real, intent(in) :: y       !< y coordinate of the contributing point
       real, intent(in) :: z       !< z coordinate of the contributing point
 
-      real    :: sin_th, cos_th, del
+      real    :: sin_th, cos_th, sin_ph, cos_ph, del, cfac, sfac, tmpfac
       real    :: Ql, Ql1, Ql2
       integer :: l, m, ir, m2c
 
-      call this%geomfac4moments(mass, x, y, z, sin_th, cos_th, ir, del)
+      call this%geomfac4moments(mass, x, y, z, sin_th, cos_th, sin_ph, cos_ph, ir, del)
 
       if (.not. interp_pt2mom) del = 0.
 
@@ -332,6 +322,10 @@ contains
          Ql1 = Ql
       enddo
 
+      cfac = 1.
+      sfac = 0.
+      ! ph = atan2(y, x); cfac(m) = cos(m * ph); sfac(m) = sin(m * ph)
+
       ! non-axisymmetric (l,m) moments for 1 <= m <= this%mmax, m <= l <= this%lmax.
       do m = 1, this%mmax
 
@@ -339,14 +333,19 @@ contains
          ! Associated Legendre polynomial: P_m^m = (-1)^m (2m-1)!! (1-x^2)^{m/2}
          ! The (2m-1)!! factor is integrated in ofact(:) array, where it mostly cancels out, note that (2m-1)!! \simeq m! exp(m/sqrt(2)) so it grows pretty fast with m
          Ql1 = sin_th ** m
+
+         tmpfac = cfac
+         cfac = cos_ph * cfac - sin_ph * sfac
+         sfac = cos_ph * sfac + sin_ph * tmpfac
+
          m2c = this%lm(m, 2*m)  ! "cosine" coefficient
          ! The "sine" coefficient has index this%lm(m, 2*m-1) in our cmapping convention.
          ! Here we also exploit the fact that it equals m2c -1
-         this%Q(m2c-1:m2c, INSIDE,  ir) = this%Q(m2c-1:m2c, INSIDE,  ir) +  this%rn(m) * Ql1 * (1.-del) * [ this%sfac(m), this%cfac(m) ]
-         this%Q(m2c-1:m2c, OUTSIDE, ir) = this%Q(m2c-1:m2c, OUTSIDE, ir) + this%irn(m) * Ql1 * (1.-del) * [ this%sfac(m), this%cfac(m) ]
+         this%Q(m2c-1:m2c, INSIDE,  ir) = this%Q(m2c-1:m2c, INSIDE,  ir) +  this%rn(m) * Ql1 * (1.-del) * [ sfac, cfac ]
+         this%Q(m2c-1:m2c, OUTSIDE, ir) = this%Q(m2c-1:m2c, OUTSIDE, ir) + this%irn(m) * Ql1 * (1.-del) * [ sfac, cfac ]
          if (del .notequals. zero) then
-            this%Q(m2c-1:m2c, INSIDE,  ir+1) = this%Q(m2c-1:m2c, INSIDE,  ir+1) +  this%rn(m) * Ql1 * del * [ this%sfac(m), this%cfac(m) ]
-            this%Q(m2c-1:m2c, OUTSIDE, ir+1) = this%Q(m2c-1:m2c, OUTSIDE, ir+1) + this%irn(m) * Ql1 * del * [ this%sfac(m), this%cfac(m) ]
+            this%Q(m2c-1:m2c, INSIDE,  ir+1) = this%Q(m2c-1:m2c, INSIDE,  ir+1) +  this%rn(m) * Ql1 * del * [ sfac, cfac ]
+            this%Q(m2c-1:m2c, OUTSIDE, ir+1) = this%Q(m2c-1:m2c, OUTSIDE, ir+1) + this%irn(m) * Ql1 * del * [ sfac, cfac ]
          endif
 
          !>
@@ -360,11 +359,11 @@ contains
             Ql = cos_th * this%k12(1, l, m) * Ql1 - this%k12(2, l, m) * Ql2
             m2c = m2c + 2  ! = this%lm(l, 2*m)
             ! Here we exploit that this%lm(l, 2*m) + 2 == this%lm(l+1, 2*m) for current implementation
-            this%Q(m2c-1:m2c, INSIDE,  ir) = this%Q(m2c-1:m2c, INSIDE,  ir) +  this%rn(l) * Ql * (1.-del) * [ this%sfac(m), this%cfac(m) ]
-            this%Q(m2c-1:m2c, OUTSIDE, ir) = this%Q(m2c-1:m2c, OUTSIDE, ir) + this%irn(l) * Ql * (1.-del) * [ this%sfac(m), this%cfac(m) ]
+            this%Q(m2c-1:m2c, INSIDE,  ir) = this%Q(m2c-1:m2c, INSIDE,  ir) +  this%rn(l) * Ql * (1.-del) * [ sfac, cfac ]
+            this%Q(m2c-1:m2c, OUTSIDE, ir) = this%Q(m2c-1:m2c, OUTSIDE, ir) + this%irn(l) * Ql * (1.-del) * [ sfac, cfac ]
             if (del .notequals. zero) then
-               this%Q(m2c-1:m2c, INSIDE,  ir+1) = this%Q(m2c-1:m2c, INSIDE,  ir+1) +  this%rn(l) * Ql * del * [ this%sfac(m), this%cfac(m) ]
-               this%Q(m2c-1:m2c, OUTSIDE, ir+1) = this%Q(m2c-1:m2c, OUTSIDE, ir+1) + this%irn(l) * Ql * del * [ this%sfac(m), this%cfac(m) ]
+               this%Q(m2c-1:m2c, INSIDE,  ir+1) = this%Q(m2c-1:m2c, INSIDE,  ir+1) +  this%rn(l) * Ql * del * [ sfac, cfac ]
+               this%Q(m2c-1:m2c, OUTSIDE, ir+1) = this%Q(m2c-1:m2c, OUTSIDE, ir+1) + this%irn(l) * Ql * del * [ sfac, cfac ]
             endif
             Ql2 = Ql1
             Ql1 = Ql
@@ -393,11 +392,11 @@ contains
       real, intent(in)  :: y         !< y coordinate of the contributing point
       real, intent(in)  :: z         !< z coordinate of the contributing point
 
-      real :: sin_th, cos_th, del
+      real :: sin_th, cos_th, sin_ph, cos_ph, del, cfac, sfac, tmpfac
       real :: Ql, Ql1, Ql2
       integer :: l, m, ir, m2c
 
-      call this%geomfac4moments(-newtong, x, y, z, sin_th, cos_th, ir, del)
+      call this%geomfac4moments(-newtong, x, y, z, sin_th, cos_th, sin_ph, cos_ph, ir, del)
 
       if (.not. interp_mom2pot) del = 0.
 
@@ -427,21 +426,27 @@ contains
          Ql1 = Ql
       enddo
 
+      cfac = 1.
+      sfac = 0.
+
       ! non-axisymmetric (l,m) moments for 1 <= m <= this%mmax, m <= l <= this%lmax.
       do m = 1, this%mmax
          ! The (m,m) moment
          Ql1 = sin_th ** m
+         tmpfac = cfac
+         cfac = cos_ph * cfac - sin_ph * sfac
+         sfac = cos_ph * sfac + sin_ph * tmpfac
          m2c = this%lm(m, 2*m)  ! see comments in point2moments
          potential = potential + Ql1 * (1.-del) * ( &
-              &       this%irn(m) * (this%Q(m2c-1, INSIDE,  ir)   * this%sfac(m)   + &
-              &                      this%Q(m2c,   INSIDE,  ir)   * this%cfac(m) ) + &
-              &        this%rn(m) * (this%Q(m2c-1, OUTSIDE, ir+1) * this%sfac(m)   + &
-              &                      this%Q(m2c,   OUTSIDE, ir+1) * this%cfac(m) ) )
+              &       this%irn(m) * (this%Q(m2c-1, INSIDE,  ir)   * sfac  + &
+              &                      this%Q(m2c,   INSIDE,  ir)   * cfac) + &
+              &        this%rn(m) * (this%Q(m2c-1, OUTSIDE, ir+1) * sfac  + &
+              &                      this%Q(m2c,   OUTSIDE, ir+1) * cfac) )
          if (del .notequals. zero) potential = potential + Ql1 * del * ( &
-              &       this%irn(m) * (this%Q(m2c-1, INSIDE,  ir-1) * this%sfac(m)   + &
-              &                      this%Q(m2c,   INSIDE,  ir-1) * this%cfac(m) ) + &
-              &        this%rn(m) * (this%Q(m2c-1, OUTSIDE, ir)   * this%sfac(m)   + &
-              &                      this%Q(m2c,   OUTSIDE, ir)   * this%cfac(m) ) )
+              &       this%irn(m) * (this%Q(m2c-1, INSIDE,  ir-1) * sfac  + &
+              &                      this%Q(m2c,   INSIDE,  ir-1) * cfac) + &
+              &        this%rn(m) * (this%Q(m2c-1, OUTSIDE, ir)   * sfac  + &
+              &                      this%Q(m2c,   OUTSIDE, ir)   * cfac) )
 
          !> \deprecated BEWARE: lots of computational cost of multipoles is here
          ! from (m+1,m) to (this%lmax,m)
@@ -450,15 +455,15 @@ contains
             m2c = m2c + 2
             Ql = cos_th * this%k12(1, l, m) * Ql1 - this%k12(2, l, m) * Ql2
             potential = potential + Ql * (1.-del) * ( &
-                 &       this%irn(l) * (this%Q(m2c-1, INSIDE,  ir)   * this%sfac(m)   + &
-                 &                      this%Q(m2c,   INSIDE,  ir)   * this%cfac(m) ) + &
-                 &        this%rn(l) * (this%Q(m2c-1, OUTSIDE, ir+1) * this%sfac(m)   + &
-                 &                      this%Q(m2c,   OUTSIDE, ir+1) * this%cfac(m) ) )
+                 &       this%irn(l) * (this%Q(m2c-1, INSIDE,  ir)   * sfac  + &
+                 &                      this%Q(m2c,   INSIDE,  ir)   * cfac) + &
+                 &        this%rn(l) * (this%Q(m2c-1, OUTSIDE, ir+1) * sfac  + &
+                 &                      this%Q(m2c,   OUTSIDE, ir+1) * cfac) )
             if (del .notequals. zero) potential = potential + Ql * del * ( &
-                 &       this%irn(l) * (this%Q(m2c-1, INSIDE,  ir-1) * this%sfac(m)   + &
-                 &                      this%Q(m2c,   INSIDE,  ir-1) * this%cfac(m) ) + &
-                 &        this%rn(l) * (this%Q(m2c-1, OUTSIDE, ir)   * this%sfac(m)   + &
-                 &                      this%Q(m2c,   OUTSIDE, ir)   * this%cfac(m) ) )
+                 &       this%irn(l) * (this%Q(m2c-1, INSIDE,  ir-1) * sfac  + &
+                 &                      this%Q(m2c,   INSIDE,  ir-1) * cfac) + &
+                 &        this%rn(l) * (this%Q(m2c-1, OUTSIDE, ir)   * sfac  + &
+                 &                      this%Q(m2c,   OUTSIDE, ir)   * cfac) )
             Ql2 = Ql1
             Ql1 = Ql
          enddo
@@ -469,10 +474,10 @@ contains
 !>
 !! \brief This routine calculates various geometrical numbers required for multipole evaluation
 !!
-!! \details It modifies the this%rn(:), this%irn(:), this%cfac(:) and this%sfac(:) arrays. Scalars are passed through argument list.
+!! \details It modifies the this%rn(:) and this%irn(:) arrays. Scalars are passed through argument list.
 !<
 
-   subroutine geomfac4moments(this, factor, x, y, z, sin_th, cos_th, ir, delta)
+   subroutine geomfac4moments(this, factor, x, y, z, sin_th, cos_th, sin_ph, cos_ph, ir, delta)
 
       use constants,  only: GEO_XYZ, GEO_RPZ, zero
       use dataio_pub, only: die, msg
@@ -486,14 +491,15 @@ contains
       real,    intent(in)  :: x              !< x coordinate of the contributing point
       real,    intent(in)  :: y              !< x coordinate of the contributing point
       real,    intent(in)  :: z              !< x coordinate of the contributing point
-      real,    intent(out) :: sin_th         !< sine of the theta angle
-      real,    intent(out) :: cos_th         !< cosine of the theta angle
+      real,    intent(out) :: sin_th         !< sine of the vertical angle
+      real,    intent(out) :: cos_th         !< cosine of the vertical angle
+      real,    intent(out) :: sin_ph         !< sine of the azimuthal angle
+      real,    intent(out) :: cos_ph         !< cosine of the azimuthal angle
       integer, intent(out) :: ir             !< radial index for the this%Q(:, :, r) array
       real,    intent(out) :: delta          !< fraction of the radial cell for interpolation between ir and ir+1
 
       real    :: rxy, r, rinv
-      real    :: sin_ph, cos_ph
-      integer :: l, m
+      integer :: l
 
       ! radius and its projection onto XY plane
       select case (dom%geometry_type)
@@ -547,10 +553,6 @@ contains
          sin_ph = 0.
       endif
 !> \todo Possible optimization: number of computed elements can be doubled on each loop iteration (should give better pipelining)
-      do m = 1, this%mmax
-         this%cfac(m) = cos_ph * this%cfac(m-1) - sin_ph * this%sfac(m-1)
-         this%sfac(m) = cos_ph * this%sfac(m-1) + sin_ph * this%cfac(m-1)
-      enddo
 
       ! vertical angle
       cos_th = z   * rinv
