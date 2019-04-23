@@ -259,13 +259,8 @@ contains
    subroutine make_diff_sweep(dir)
 
       use domain,         only: dom
-      use sweeps,         only: sweep
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff
-      use fluidindex,     only: flind
-#ifdef COSM_RAY_ELECTRONS
-      use initcrspectrum, only: ncre
-#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
 #ifdef DEBUG
       use piernikiodebug, only: force_dumps
@@ -274,26 +269,9 @@ contains
       implicit none
 
       integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
-#ifdef COSM_RAYS
-      integer(kind=4)             :: icrc     !< index of cr component in iarr_crs
-#endif /* COSM_RAYS */
 
       if (.not.dom%has_dir(dir)) return
-#ifdef COSM_RAYS
-#ifdef COSM_RAY_ELECTRONS
-      do icrc = 1, flind%crn%all
-#else /* !COSM_RAY_ELECTRONS */
-      do icrc = 1, flind%crs%all
-#endif /* !COSM_RAY_ELECTRONS */
-         call cr_diff(icrc, dir)
-      enddo
-#ifdef COSM_RAY_ELECTRONS
-      do icrc = flind%crn%all + 1, flind%crn%all + ncre
-         call cr_diff(icrc, dir)
-         call cr_diff(ncre + icrc, dir)
-      enddo
-#endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
+      call cr_diff(dir)
 
 #ifdef DEBUG
       call force_dumps
