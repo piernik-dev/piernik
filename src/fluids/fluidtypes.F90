@@ -164,10 +164,10 @@ module fluidtypes
          import
          implicit none
          class(component_fluid), intent(in)           :: this
-         integer(kind=4),        intent(in)           :: n         !< number of cells in the current sweep
-         real, dimension(:,:), intent(inout), pointer :: flux      !< flux of fluid
+         integer(kind=4),      intent(in)             :: n         !< number of cells in the current sweep
+         real, dimension(:,:), intent(out),   pointer :: flux      !< flux of fluid
          real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for fluid
-         real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for fluid
+         real, dimension(:,:), intent(out),   pointer :: cfr       !< freezing speed for fluid
          real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
          real, dimension(:),   intent(in),    pointer :: vx        !< velocity of fluid for current sweep
          real, dimension(:),   intent(in),    pointer :: cs_iso2   !< isothermal sound speed squared

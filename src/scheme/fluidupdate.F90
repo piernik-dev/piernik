@@ -124,15 +124,11 @@ contains
 #endif /* GRAV */
 #ifdef COSM_RAYS
       use all_boundaries,      only: all_fluid_boundaries
-      use fluidindex,          only: flind
       use initcosmicrays,      only: use_CRsplit
 #ifdef MULTIGRID
       use multigrid_diffusion, only: multigrid_solve_diff
 #endif /* MULTIGRID */
 #endif /* COSM_RAYS */
-#ifdef COSM_RAY_ELECTRONS
-      use initcrspectrum,      only: ncre
-#endif /* COSM_RAY_ELECTRONS */
 #ifdef SHEAR
       use shear,               only: shear_3sweeps
 #endif /* SHEAR */
@@ -145,7 +141,6 @@ contains
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
       integer(kind=4) :: s, sFRST, sLAST, sCHNG
-      integer(kind=4) :: icrc      ! index of cr component in iarr_crs
 
       if (forward) then
          sFRST = xdim ; sLAST = zdim ; sCHNG = I_ONE
@@ -169,25 +164,9 @@ contains
 #endif /* MULTIGRID */
 
       else
-#ifdef COSM_RAY_ELECTRONS
-         do icrc=1, flind%crn%all
-#else /* !COSM_RAY_ELECTRONS */
-         do icrc=1, flind%crs%all
-#endif /* !COSM_RAY_ELECTRONS */
-            do s = sFRST, sLAST, sCHNG
-               if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
-            enddo
+         do s = sFRST, sLAST, sCHNG
+            if (.not.skip_sweep(s)) call make_diff_sweep(s)
          enddo
-#ifdef COSM_RAY_ELECTRONS
-         do icrc= flind%crn%all + 1, flind%crn%all + ncre
-            do s = sFRST, sLAST, sCHNG
-               if (.not.skip_sweep(s)) then
-                  call make_diff_sweep(icrc, s)
-                  call make_diff_sweep(ncre + icrc, s)
-               endif
-            enddo
-         enddo
-#endif /* COSM_RAY_ELECTRONS */
       endif
 #endif /* COSM_RAYS */
 
@@ -277,12 +256,10 @@ contains
 !>
 !! \brief Perform single diffusion sweep in forward or backward direction
 !<
-   subroutine make_diff_sweep(icrc, dir)
+   subroutine make_diff_sweep(dir)
 
-      use sweeps,         only: sweep
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff
-      use domain,         only: dom
 #endif /* COSM_RAYS */
 #ifdef DEBUG
       use piernikiodebug, only: force_dumps
@@ -290,13 +267,9 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: icrc, dir      !< direction, one of xdim, ydim, zdim
+      integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
 
-#ifdef COSM_RAYS
-      if (dom%has_dir(dir)) then
-         call cr_diff(icrc,dir)
-      endif
-#endif /* COSM_RAYS */
+      call cr_diff(dir)
 
 #ifdef DEBUG
       call force_dumps

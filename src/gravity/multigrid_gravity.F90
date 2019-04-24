@@ -100,7 +100,6 @@ contains
 !! <tr><td>ord_time_extrap       </td><td>1      </td><td>integer value  </td><td>\copydoc multigrid_gravity::ord_time_extrap       </td></tr>
 !! <tr><td>base_no_fft           </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::base_no_fft           </td></tr>
 !! <tr><td>fft_patient           </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::fft_patient           </td></tr>
-!! <tr><td>coarsen_multipole     </td><td>1      </td><td>integer value  </td><td>\copydoc multipole::coarsen_multipole             </td></tr>
 !! <tr><td>lmax                  </td><td>16     </td><td>integer value  </td><td>\copydoc multipole::lmax                          </td></tr>
 !! <tr><td>mmax                  </td><td>-1     </td><td>integer value  </td><td>\copydoc multipole::mmax                          </td></tr>
 !! <tr><td>ord_prolong_mpole     </td><td>-2     </td><td>integer value  </td><td>\copydoc multipole::ord_prolong_mpole             </td></tr>
@@ -130,7 +129,7 @@ contains
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
       use multigrid_Laplace4, only: L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
-      use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
+      use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, interp_pt2mom, interp_mom2pot
       use pcg,                only: use_CG, use_CG_outer, preconditioner, default_preconditioner, pcg_init
 
       implicit none
@@ -141,7 +140,7 @@ contains
       namelist /MULTIGRID_GRAVITY/ norm_tol, coarsest_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
            &                       overrelax, L4_strength, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       base_no_fft, fft_patient, &
-           &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
+           &                       lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
            &                       grav_bnd_str, preconditioner
 
       if (.not.frun) call die("[multigrid_gravity:multigrid_grav_par] Called more than once.")
@@ -155,8 +154,6 @@ contains
       vcycle_giveup          = 1.5
       L4_strength            = 1.0
 
-      coarsen_multipole      = 0
-!      if (is_uneven) coarsen_multipole = 0
       lmax                   = 16
       mmax                   = -1 ! will be automatically set to lmax unless explicitly limited in problem.par
       max_cycles             = 20
@@ -241,7 +238,6 @@ contains
          rbuff(5)  = L4_strength
          rbuff(6)  = coarsest_tol
 
-         ibuff( 1) = coarsen_multipole
          ibuff( 2) = lmax
          ibuff( 3) = mmax
          ibuff( 4) = max_cycles
@@ -279,7 +275,6 @@ contains
          L4_strength    = rbuff(5)
          coarsest_tol   = rbuff(6)
 
-         coarsen_multipole = ibuff( 1)
          lmax              = ibuff( 2)
          mmax              = ibuff( 3)
          max_cycles        = ibuff( 4)
@@ -382,7 +377,7 @@ contains
       use domain,              only: dom
       use mpisetup,            only: master, FIRST, LAST, piernik_MPI_Allreduce
       use multigridvars,       only: bnd_periodic, bnd_dirichlet, bnd_isolated, grav_bnd
-      use multipole,           only: init_multipole, coarsen_multipole
+      use multipole,           only: init_multipole
       use named_array_list,    only: qna
 
       implicit none
@@ -392,11 +387,6 @@ contains
       logical, save :: firstcall = .true.
       type(cg_list_element), pointer  :: cgl
       integer :: p, cnt, cnt_max
-
-      if (coarsen_multipole /= 0) then
-         coarsen_multipole = 0
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav] multipole coarsening temporarily disabled")
-      endif
 
       if (firstcall) call leaves%set_q_value(qna%ind(sgp_n), 0.) !Initialize all the guardcells, even those which does not impact the solution
 
