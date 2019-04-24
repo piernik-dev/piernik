@@ -82,7 +82,7 @@ qa: pep8 chk_err_msg
 
 pep8:
 	echo PEP8 check
-	pep8 `find . -name "*py"` --ignore=E501
+	pep8 `find bin src python problems benchmarking jenkins -name "*py"` --ignore=E501
 
 chk_err_msg:
 	echo Check filenames in error messages
@@ -90,7 +90,7 @@ chk_err_msg:
 
 shellcheck:
 	echo ShellCheck
-	shellcheck `find bin src python problems -name "*.sh"`
+	shellcheck `find bin src python problems benchmarking jenkins -name "*.sh"`
 
 doxy:
 	doxygen piernik.doxy
