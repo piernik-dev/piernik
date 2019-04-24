@@ -227,21 +227,27 @@ contains
          call leaves%reset_boundaries
       endif
 
-      call potential2img_mass
-
       select case (solver)
          case (MONOPOLE)
+            call potential2img_mass
             call find_img_CoM
             call isolated_monopole
          case (IMG_MASS)
+            call potential2img_mass
             ! results seems to be slightly better without find_img_CoM.
             ! With CoM or when it is known than CoM is close to the domain center one may try to save some CPU time by lowering mmax.
+            call Q%reset
             call img_mass2moments
-            ! OPT: switch automagically to MONOPOLE for a couple of steps if higher multipoles fall below some thershold
+            call particles2moments
+            call Q%red_int_norm
+            ! OPT: automagically reduce lmax for a couple of steps if higher multipoles fall below some thershold
             call moments2bnd_potential
          case (THREEDIM)
+            call Q%reset
             call domain2moments
-            ! OPT: switch automagically to MONOPOLE for a couple of steps if higher multipoles fall below some thershold
+            call particles2moments
+            call Q%red_int_norm
+            ! OPT: automagically reduce lmax for a couple of steps if higher multipoles fall below some thershold
             call moments2bnd_potential
          case default
             call die("[multigridmultipole:multipole_solver] unimplemented solver")
@@ -258,13 +264,15 @@ contains
 
    subroutine isolated_monopole
 
-      use cg_list,    only: cg_list_element
-      use cg_leaves,  only: leaves
-      use constants,  only: xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
-      use units,      only: newtong
+      use cg_list,      only: cg_list_element
+      use cg_leaves,    only: leaves
+      use constants,    only: xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
+      use dataio_pub,   only: die, msg, warn
+      use domain,       only: dom
+      use grid_cont,    only: grid_container
+      use mpisetup,     only: proc
+      use particle_pub, only: pset
+      use units,        only: newtong
 
       implicit none
 
@@ -305,6 +313,13 @@ contains
             endif
          enddo
          cgl => cgl%nxt
+      enddo
+
+      do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
+         if (pset%p(i)%outside) then
+            write(msg, '(a,i8,a,i5,a)')"[multigridmultipole:isolated_monopole] Particle #", i, " on process ", proc, "ignored"
+            call warn(msg)
+         endif
       enddo
 
    end subroutine isolated_monopole
@@ -505,8 +520,6 @@ contains
       use domain,       only: dom
       use grid_cont,    only: grid_container
       use func,         only: operator(.notequals.)
-      use particle_pub, only: pset
-      use units,        only: fpiG
 
       implicit none
 
@@ -517,7 +530,6 @@ contains
 
       if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim).notequals.zero)) call die("[multigridmultipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
 
-      call Q%reset
       geofac(:) = 1.
 
       !OPT: try to exchange loops i < j < k -> k < j < i
@@ -562,13 +574,6 @@ contains
          cgl => cgl%nxt
       enddo
 
-      ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
-      do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
-         if (pset%p(i)%outside) call Q%point2moments(fpiG*pset%p(i)%mass, pset%p(i)%pos(xdim), pset%p(i)%pos(ydim), pset%p(i)%pos(zdim))
-      enddo
-
-      call Q%red_int_norm
-
    end subroutine img_mass2moments
 
 !>
@@ -591,8 +596,6 @@ contains
       use grid_cont,          only: grid_container
       use func,               only: operator(.notequals.)
       use multigridvars,      only: source
-      use particle_pub,       only: pset
-      use units,              only: fpiG
 
       implicit none
 
@@ -603,8 +606,6 @@ contains
 
       if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim).notequals.zero)) call die("[multigridmultipole:domain2moments] CoM not allowed for non-cartesian geometry")
       if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:domain2moments] Noncartesian geometry haven't been tested. Verify it before use.")
-
-      call Q%reset
 
       ! scan
       if (level_3D <= base_level_id) then
@@ -639,14 +640,26 @@ contains
          cgl => cgl%nxt
       enddo
 
+   end subroutine domain2moments
+
+!> \brief Compute multipole moments for the particles
+
+   subroutine particles2moments
+
+      use constants,    only: xdim, ydim, zdim
+      use particle_pub, only: pset
+      use units,        only: fpiG
+
+      implicit none
+
+      integer :: i
+
       ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
       do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
          if (pset%p(i)%outside) call Q%point2moments(fpiG*pset%p(i)%mass, pset%p(i)%pos(xdim), pset%p(i)%pos(ydim), pset%p(i)%pos(zdim))
       enddo
 
-      call Q%red_int_norm
-
-   end subroutine domain2moments
+   end subroutine particles2moments
 
 !>
 !! \brief Compute infinite-boundary potential from multipole moments
