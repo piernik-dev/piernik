@@ -559,7 +559,7 @@ contains
                      call die("[cg_level_connected:restrict_q_1var] Unknown geometry (1)")
                end select
             else
-               ! OPT: Split the problem into the core that can be done by array arithmetic and finish the edges whetre necessary
+               ! OPT: Split the problem into the core that can be done by array arithmetic and finish the edges where necessary
                do k = fse(zdim, LO), fse(zdim, HI)
                   kc = (k-fse(zdim, LO)+off1(zdim))/refinement_factor + 1
                   do j = fse(ydim, LO), fse(ydim, HI)
