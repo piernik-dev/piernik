@@ -284,7 +284,9 @@ contains
 !>
 !! \brief Compute multipole moments for a single point
 !!
-!! \todo try to improve accuracy with linear interpolation over radius
+!! \details This routine is manually optimized by exploiting properties of lm(l, m) mapping function.
+!! The lm(l, m) function was designed in such a way, that the elements are ordered in the way they're used.
+!! Thus it is not advisable to modify this routine carelessly ;-)
 !<
 
    subroutine point2moments(this, mass, x, y, z)
@@ -388,7 +390,12 @@ contains
 !>
 !! \brief Compute potential from multipole moments at a single point
 !!
-!! \todo improve accuracy with linear interpolation over radius
+!! \details This function is manually optimized by exploiting properties of lm(l, m) mapping function
+!! in the same way as point2moments is.
+!!
+!! If, for some reasons, one would need to operate on a multipole array truncated to different lmax,
+!! the safest way, which won't degrade the performance in regular usage, is to allocate another mpole_container
+!! and copy relevant elements of this%q there.
 !<
 
    real function moments2pot(this, x, y, z) result(potential)
@@ -492,7 +499,7 @@ contains
    subroutine geomfac4moments(this, factor, x, y, z, sin_th, cos_th, sin_ph, cos_ph, ir, delta)
 
       use constants,  only: GEO_XYZ, GEO_RPZ, zero
-      use dataio_pub, only: die, msg
+      use dataio_pub, only: die
       use domain,     only: dom
       use func,       only: operator(.notequals.)
 
@@ -538,9 +545,10 @@ contains
       else
          delta = 0
       endif
-      if (ir > this%rqbin .or. ir < 0) then
-         write(msg,'(2(a,i7),a)')"[multipole_array:geomfac4moments] radial index = ", ir, " outside this%Q(:, :, ", this%rqbin, ") range"
-         call die(msg)
+      if (ir < 0) then
+         call die("[multipole_array:geomfac4moments] ir < 0")
+      else if (ir >= this%rqbin) then  ! particles that are far-far away will contribute to the furthest bin
+         ir = this%rqbin - 1
       endif
       this%irmax = max(this%irmax, ir)
       this%irmin = min(this%irmin, ir)
