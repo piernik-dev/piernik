@@ -129,7 +129,8 @@ contains
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
       use multigrid_Laplace4, only: L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
-      use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, interp_pt2mom, interp_mom2pot
+      use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole
+      use multipole_array,    only: interp_pt2mom, interp_mom2pot
       use pcg,                only: use_CG, use_CG_outer, preconditioner, default_preconditioner, pcg_init
 
       implicit none
