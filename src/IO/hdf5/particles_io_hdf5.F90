@@ -80,7 +80,8 @@ module particles_io_hdf5
 
       character(len=*), intent(in) :: fname
       character(len=cwdlen)        :: filename
-      integer                      :: flen, n_part
+      integer                      :: flen
+      integer(kind=4)              :: n_part
       integer(kind=4)              :: error
       integer(HID_T)               :: file_id
 
@@ -121,8 +122,8 @@ module particles_io_hdf5
 
       implicit none
 
-      integer(HID_T), intent(in) :: file_id       !< File identifier
-      integer,        intent(in) :: n_part
+      integer(HID_T),  intent(in) :: file_id       !< File identifier
+      integer(kind=4), intent(in) :: n_part
 
       ! real attributes
       call set_attr(file_id, "time",          [t                     ]) !rr2
@@ -154,9 +155,9 @@ module particles_io_hdf5
 
       implicit none
 
-      integer(HID_T), intent(in) :: file_id       !< File identifier
-      integer,        intent(in) :: n_part
-      integer                    :: i
+      integer(HID_T),  intent(in) :: file_id       !< File identifier
+      integer(kind=4), intent(in) :: n_part
+      integer                     :: i
 
       do i = lbound(pvarl, 1), ubound(pvarl, 1)
          if (pvarl(i)) call nbody_datafields(file_id, trim(pvarn(i)), n_part)
@@ -172,7 +173,7 @@ module particles_io_hdf5
 
       integer(HID_T),   intent(in) :: file_id       !< File identifier
       character(len=*), intent(in) :: pvar
-      integer,          intent(in) :: n_part
+      integer(kind=4),  intent(in) :: n_part
 
       select case (pvar)
          case ('mass', 'ener')
@@ -194,7 +195,7 @@ module particles_io_hdf5
 
       integer(HID_T),   intent(in)    :: file_id       !< File identifier
       character(len=*), intent(in)    :: pvar
-      integer,          intent(in)    :: n_part
+      integer(kind=4),  intent(in)    :: n_part
       integer                         :: cgnp, recnp
       real, dimension(:), allocatable :: tabr1
       type(cg_list_element), pointer  :: cgl
@@ -232,7 +233,7 @@ module particles_io_hdf5
 
       integer(HID_T),   intent(in)      :: file_id       !< File identifier
       character(len=*), intent(in)      :: pvar
-      integer,          intent(in)      :: n_part
+      integer(kind=4),  intent(in)      :: n_part
       integer                           :: cgnp, recnp, i
       real, dimension(:,:), allocatable :: tabr2
       type(cg_list_element), pointer    :: cgl
@@ -322,14 +323,14 @@ module particles_io_hdf5
       implicit none
 
       character(len=*),           intent(in)  :: fname
-      integer,                    intent(in)  :: n
+      integer(kind=4),            intent(in)  :: n
       real, dimension(2,n,ndims), intent(out) :: table
       character(len=idlen)                    :: pvars = 'pos', vvars = 'vel'
-      integer                                 :: n_part
+      integer(kind=4)                         :: n_part
       integer(kind=4)                         :: error
       integer(HID_T)                          :: file_id, dataset_id
       integer(HSIZE_T), dimension(2)          :: dimm
-      integer, dimension(1)                   :: ibuf
+      integer(kind=4), dimension(1)           :: ibuf
       real                                    :: time
       real, dimension(1)                      :: rbuf
 

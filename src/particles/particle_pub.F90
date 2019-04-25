@@ -42,9 +42,9 @@ module particle_pub
 #ifdef NBODY
    public :: npart, lf_c, ignore_dt_fluid
 
-   integer :: npart              !< number of particles
-   real    :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
-   logical :: ignore_dt_fluid    !< option to test only nbody part of the code, never true by default
+   integer(kind=4) :: npart              !< number of particles
+   real            :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
+   logical         :: ignore_dt_fluid    !< option to test only nbody part of the code, never true by default
 #endif /* NBODY */
 
 contains
@@ -59,13 +59,13 @@ contains
       use mpisetup,         only: master, slave, cbuff, piernik_mpi_bcast
       use particle_solvers, only: hermit_4ord, psolver
       use particle_maps,    only: set_map
-      use particle_types,   only: particles_exist
 #ifdef NBODY
       use dataio_pub,       only: printinfo
       use mpisetup,         only: ibuff, lbuff, rbuff
       use particle_func,    only: check_ord
       use particle_gravity, only: is_setacc_cic, is_setacc_int, mask_gpot1b, is_setacc_int, is_setacc_tsc, eps
       use particle_solvers, only: leapfrog_2ord
+      use particle_types,   only: particles_exist
       use particle_utils,   only: twodtscheme, dump_diagnose
 #endif /* NBODY */
 
@@ -123,9 +123,12 @@ contains
          cbuff(2) = interpolation_scheme
 #ifdef NBODY
          cbuff(3) = acc_interp_method
+
          ibuff(1) = npart
+
          rbuff(1) = lf_c
          rbuff(2) = eps
+
          lbuff(1) = mask_gpot1b
          lbuff(2) = twodtscheme
          lbuff(3) = ignore_dt_fluid
@@ -145,9 +148,12 @@ contains
          interpolation_scheme = cbuff(2)
 #ifdef NBODY
          acc_interp_method    = cbuff(3)
+
          npart                = ibuff(1)
+
          lf_c                 = rbuff(1)
          eps                  = rbuff(2)
+
          mask_gpot1b          = lbuff(1)
          twodtscheme          = lbuff(2)
          ignore_dt_fluid      = lbuff(3)
