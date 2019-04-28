@@ -75,6 +75,7 @@ module multigrid_gravity
 
    ! miscellaneous
    type(vcycle_stats) :: vstat                                        !< V-cycle statistics
+   logical            :: something_in_particles                       !< A flag indicating that some mass may be hidden in particles wandering outside the computational domain
 
 contains
 
@@ -674,6 +675,7 @@ contains
       logical                        :: apply_src_Mcorrection
 
       call all_cg%set_dirty(source)
+      something_in_particles = .false.
 
       if (present(i_sg_dens)) then
          if (size(i_sg_dens) > 0) then
@@ -689,6 +691,7 @@ contains
 
 #ifdef NBODY_MULTIGRID
          call map_particles(source, fpiG)
+         something_in_particles = .true.
 #endif /* NBODY_MULTIGRID */
       else
          call leaves%set_q_value(source, 0.)  ! empty domain for "outer potential" calculation
@@ -976,8 +979,10 @@ contains
 
       if (norm_rhs.equals.zero) then ! empty domain => potential == 0.
          call leaves%set_q_value(solution, 0.)
-         if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
-         norm_was_zero = .true.
+         if (.not. something_in_particles) then
+            if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
+            norm_was_zero = .true.
+         endif
          return
       else
          if (master .and. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] Spontaneous mass creation detected!")
