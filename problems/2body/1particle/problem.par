@@ -28,14 +28,14 @@
  /
 
  $END_CONTROL
-   tend   = 20.0
+   tend   = 3.0
     !nend = 4
  /
 
  $OUTPUT_CONTROL
     problem_name ='leapfrog'
-    run_id =  'tst'
-    dt_hdf  = 1.0
+    run_id =  'ts3'
+    dt_hdf  = 0.1
     dt_res  = 0.0
     dt_log  = 0.0
     dt_tsl  = 0.0
@@ -63,7 +63,7 @@
     limiter= 'vanleer'
     !cflcontrol = 'none'
     skip_sweep = .true., .true., .true.
-   dt_max = 0.75
+   dt_max = 0.2
  /
 
  $GRAVITY
@@ -73,10 +73,17 @@
 
  $MULTIGRID_GRAVITY
     grav_bnd_str  = "isolated"
+ mpole_solver = "3D"
+ level_3D = -1 ! use first coarsened level for the 3D multipole solver
+! lmax= 32
+
+ ! linear interpolation in the radial direction for multipole moments
+ interp_pt2mom = T
+ interp_mom2pot = T
 /
 
  $PROBLEM_CONTROL
-   vel = [ 1., 1., 1. ]
+   vel = 0., 1., 1.
  /
 
  $MULTIGRID_SOLVER
