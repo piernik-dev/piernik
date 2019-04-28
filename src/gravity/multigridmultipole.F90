@@ -665,6 +665,17 @@ contains
          cg => cgl%cg
          do i = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
             if (cg%pset%p(i)%outside) call Q%point2moments(fpiG*cg%pset%p(i)%mass, cg%pset%p(i)%pos(xdim), cg%pset%p(i)%pos(ydim), cg%pset%p(i)%pos(zdim))
+            ! WARNING: Particles that are too close to the outer boundary aren't fully mapped onto the grid.
+            ! This may cause huge errors in the potential, even for "3D" solver because their mass is counted
+            ! only partially in the mapping routine and the rest is ignored here.
+            !
+            ! Suggested fix: set up some buffer at the boundaries (at least one cell wide, few cells are advised)
+            ! and make a "not_mapped" flag instead of "outside". The transition between mapped and not mapped
+            ! particles may be smooth (with partial mappings allowed) but it must not allow for
+            ! particle mappings extending beyond domain boundaries.
+            !
+            ! BUG: Sometimes particles that are outside computational domain don't have the "outside" flag set up.
+            ! A "not_mapped" flag set in the mapping routine would fix this issue.
          enddo
          cgl => cgl%nxt
       enddo
