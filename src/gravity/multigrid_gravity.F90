@@ -964,6 +964,7 @@ contains
       norm_lowest = norm_rhs
 
       if (norm_rhs.equals.zero) then ! empty domain => potential == 0.
+         call leaves%set_q_value(solution, 0.)
          if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
          norm_was_zero = .true.
          return
