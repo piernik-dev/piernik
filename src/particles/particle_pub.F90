@@ -65,7 +65,6 @@ contains
       use particle_func,    only: check_ord
       use particle_gravity, only: is_setacc_cic, is_setacc_int, mask_gpot1b, is_setacc_int, is_setacc_tsc, eps
       use particle_solvers, only: leapfrog_2ord
-      use particle_types,   only: particles_exist
       use particle_utils,   only: twodtscheme, dump_diagnose
 #endif /* NBODY */
 
@@ -91,7 +90,6 @@ contains
       acc_interp_method    = 'cic'
       lf_c                 = 1.0
       eps                  = 0.0
-      particles_exist      = .false.
       twodtscheme          = .false.
       ignore_dt_fluid      = .false.
       dump_diagnose        = .false.
@@ -190,8 +188,6 @@ contains
       end select
 
 #ifdef NBODY
-      particles_exist = (npart > 0)
-
       is_setacc_int = .false.
       is_setacc_cic = .false.
       is_setacc_tsc = .false.
