@@ -42,9 +42,9 @@ module particle_pub
 #ifdef NBODY
    public :: npart, lf_c, ignore_dt_fluid
 
-   integer :: npart              !< number of particles
-   real    :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
-   logical :: ignore_dt_fluid    !< option to test only nbody part of the code, never true by default
+   integer(kind=4) :: npart              !< number of particles
+   real            :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
+   logical         :: ignore_dt_fluid    !< option to test only nbody part of the code, never true by default
 #endif /* NBODY */
 
 contains
@@ -59,7 +59,6 @@ contains
       use mpisetup,         only: master, slave, cbuff, piernik_mpi_bcast
       use particle_solvers, only: hermit_4ord, psolver
       use particle_maps,    only: set_map
-      use particle_types,   only: particles_exist
 #ifdef NBODY
       use dataio_pub,       only: printinfo
       use mpisetup,         only: ibuff, lbuff, rbuff
@@ -91,7 +90,6 @@ contains
       acc_interp_method    = 'cic'
       lf_c                 = 1.0
       eps                  = 0.0
-      particles_exist      = .false.
       twodtscheme          = .false.
       ignore_dt_fluid      = .false.
       dump_diagnose        = .false.
@@ -123,9 +121,12 @@ contains
          cbuff(2) = interpolation_scheme
 #ifdef NBODY
          cbuff(3) = acc_interp_method
+
          ibuff(1) = npart
+
          rbuff(1) = lf_c
          rbuff(2) = eps
+
          lbuff(1) = mask_gpot1b
          lbuff(2) = twodtscheme
          lbuff(3) = ignore_dt_fluid
@@ -145,9 +146,12 @@ contains
          interpolation_scheme = cbuff(2)
 #ifdef NBODY
          acc_interp_method    = cbuff(3)
+
          npart                = ibuff(1)
+
          lf_c                 = rbuff(1)
          eps                  = rbuff(2)
+
          mask_gpot1b          = lbuff(1)
          twodtscheme          = lbuff(2)
          ignore_dt_fluid      = lbuff(3)
@@ -184,8 +188,6 @@ contains
       end select
 
 #ifdef NBODY
-      particles_exist = (npart > 0)
-
       is_setacc_int = .false.
       is_setacc_cic = .false.
       is_setacc_tsc = .false.

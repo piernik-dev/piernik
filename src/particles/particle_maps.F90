@@ -69,7 +69,7 @@ contains
          case (I_TSC)
             map_particles => map_tsc
          case default
-            call die("[particle_interpolation:set_map] Interpolation scheme selector's logic in particle_pub:init_particles is broken. Go fix it!")
+            call die("[particle_maps:set_map] Interpolation scheme selector's logic in particle_pub:init_particles is broken. Go fix it!")
       end select
 
    end subroutine set_map
@@ -190,7 +190,7 @@ contains
 
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half
+      use constants, only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half, I_ONE
       use domain,    only: dom
 
       implicit none
@@ -201,7 +201,7 @@ contains
       type(cg_list_element), pointer   :: cgl
       integer(kind=4)                  :: cdim
       integer                          :: i, j, k, p
-      integer, dimension(ndims, IM:IP) :: ijkp
+      integer(kind=4), dimension(ndims, IM:IP) :: ijkp
       integer, dimension(ndims)        :: cur_ind
       real                             :: weight, delta_x, weight_tmp
 
@@ -215,9 +215,9 @@ contains
 
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
-                     ijkp(cdim, I0) = nint((part%pos(cdim) - cg%coord(CENTER, cdim)%r(1))*cg%idl(cdim)) + 1   !!! BEWARE hardcoded magic
-                     ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, cg%lhn(cdim, LO))
-                     ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, cg%lhn(cdim, HI))
+                     ijkp(cdim, I0) = nint((part%pos(cdim) - cg%coord(CENTER, cdim)%r(1))*cg%idl(cdim), kind=4) + I_ONE   !!! BEWARE hardcoded magic
+                     ijkp(cdim, IM) = max(ijkp(cdim, I0) - I_ONE, cg%lhn(cdim, LO))
+                     ijkp(cdim, IP) = min(ijkp(cdim, I0) + I_ONE, cg%lhn(cdim, HI))
                   else
                      ijkp(cdim, IM) = cg%ijkse(cdim, LO)
                      ijkp(cdim, I0) = cg%ijkse(cdim, LO)

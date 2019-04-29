@@ -345,7 +345,8 @@ contains
 
       implicit none
 
-      integer                           :: i, j, nbodies
+      integer                           :: i, j
+      integer(kind=4)                   :: nbodies
       integer                           :: galfile = 1
       real, dimension(:,:), allocatable :: pos, vel
       real, dimension(:),   allocatable :: mass

@@ -75,6 +75,7 @@ module multigrid_gravity
 
    ! miscellaneous
    type(vcycle_stats) :: vstat                                        !< V-cycle statistics
+   logical            :: something_in_particles                       !< A flag indicating that some mass may be hidden in particles wandering outside the computational domain
 
 contains
 
@@ -103,7 +104,8 @@ contains
 !! <tr><td>lmax                  </td><td>16     </td><td>integer value  </td><td>\copydoc multipole::lmax                          </td></tr>
 !! <tr><td>mmax                  </td><td>-1     </td><td>integer value  </td><td>\copydoc multipole::mmax                          </td></tr>
 !! <tr><td>ord_prolong_mpole     </td><td>-2     </td><td>integer value  </td><td>\copydoc multipole::ord_prolong_mpole             </td></tr>
-!! <tr><td>use_point_monopole    </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::use_point_monopole            </td></tr>
+!! <tr><td>mpole_solver          </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::mpole_solver                  </td></tr>
+!! <tr><td>level_3D              </td><td>1      </td><td>integer value  </td><td>\copydoc multipole::level_3D                      </td></tr>
 !! <tr><td>interp_pt2mom         </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::interp_pt2mom                 </td></tr>
 !! <tr><td>interp_mom2pot        </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::interp_mom2pot                </td></tr>
 !! <tr><td>multidim_code_3D      </td><td>.false.</td><td>logical        </td><td>\copydoc multigridvars::multidim_code_3d          </td></tr>
@@ -129,7 +131,8 @@ contains
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
       use multigrid_Laplace4, only: L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
-      use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, interp_pt2mom, interp_mom2pot
+      use multipole,          only: mpole_solver, lmax, mmax, ord_prolong_mpole, level_3D, singlepass, init_multipole
+      use multipole_array,    only: interp_pt2mom, interp_mom2pot
       use pcg,                only: use_CG, use_CG_outer, preconditioner, default_preconditioner, pcg_init
 
       implicit none
@@ -140,7 +143,7 @@ contains
       namelist /MULTIGRID_GRAVITY/ norm_tol, coarsest_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
            &                       overrelax, L4_strength, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       base_no_fft, fft_patient, &
-           &                       lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
+           &                       lmax, mmax, ord_prolong_mpole, mpole_solver, level_3D, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
            &                       grav_bnd_str, preconditioner
 
       if (.not.frun) call die("[multigrid_gravity:multigrid_grav_par] Called more than once.")
@@ -156,6 +159,7 @@ contains
 
       lmax                   = 16
       mmax                   = -1 ! will be automatically set to lmax unless explicitly limited in problem.par
+      level_3D               = 1
       max_cycles             = 20
       nsmool                 = -1  ! best to set it to dom%nb or its multiply
       nsmoob                 = 10000
@@ -171,7 +175,7 @@ contains
       ord_prolong_mpole      = O_D2
       ord_time_extrap        = O_LIN
 
-      use_point_monopole     = .false.
+      mpole_solver           = "img_mass"
       base_no_fft            = .false.
       fft_patient            = .false.
       interp_pt2mom          = .false.
@@ -238,6 +242,7 @@ contains
          rbuff(5)  = L4_strength
          rbuff(6)  = coarsest_tol
 
+         ibuff( 1) = level_3D
          ibuff( 2) = lmax
          ibuff( 3) = mmax
          ibuff( 4) = max_cycles
@@ -248,7 +253,6 @@ contains
          ibuff( 9) = ord_time_extrap
          ibuff(10) = ord_laplacian_outer
 
-         lbuff(1)  = use_point_monopole
          lbuff(2)  = base_no_fft
          lbuff(3)  = fft_patient
          lbuff(4)  = interp_pt2mom
@@ -259,6 +263,7 @@ contains
 
          cbuff(1)  = grav_bnd_str
          cbuff(2)  = preconditioner
+         cbuff(3)  = mpole_solver
       endif
 
       call piernik_MPI_Bcast(cbuff, cbuff_len)
@@ -275,6 +280,7 @@ contains
          L4_strength    = rbuff(5)
          coarsest_tol   = rbuff(6)
 
+         level_3D          = ibuff( 1)
          lmax              = ibuff( 2)
          mmax              = ibuff( 3)
          max_cycles        = ibuff( 4)
@@ -285,7 +291,6 @@ contains
          ord_time_extrap   = ibuff( 9)
          ord_laplacian_outer = ibuff(10)
 
-         use_point_monopole = lbuff(1)
          base_no_fft        = lbuff(2)
          fft_patient        = lbuff(3)
          interp_pt2mom      = lbuff(4)
@@ -296,6 +301,8 @@ contains
 
          grav_bnd_str   = cbuff(1)(1:len(grav_bnd_str))
          preconditioner = cbuff(2)(1:len(preconditioner))
+         mpole_solver   = cbuff(3)(1:len(mpole_solver))
+
       endif
 
       ! boundaries
@@ -349,12 +356,14 @@ contains
 
       if (fft_patient) fftw_flags = FFTW_PATIENT
 
+      if (grav_bnd == bnd_isolated) call init_multipole
+
       ! solution recycling
       ord_time_extrap = min(nold_max-I_ONE, max(-I_ONE, ord_time_extrap))
       associate (nold => ord_time_extrap + 1)
       if (nold > 0) then
          call inner%init_history(nold, "i")
-         if (grav_bnd == bnd_isolated) call outer%init_history(nold, "o")
+         if (grav_bnd == bnd_isolated .and. .not. singlepass) call outer%init_history(nold, "o")
       endif
       end associate
 
@@ -377,7 +386,6 @@ contains
       use domain,              only: dom
       use mpisetup,            only: master, FIRST, LAST, piernik_MPI_Allreduce
       use multigridvars,       only: bnd_periodic, bnd_dirichlet, bnd_isolated, grav_bnd
-      use multipole,           only: init_multipole
       use named_array_list,    only: qna
 
       implicit none
@@ -455,7 +463,6 @@ contains
          enddo
       endif
 
-      if (grav_bnd == bnd_isolated .and. firstcall) call init_multipole
       firstcall = .false.
 
    end subroutine init_multigrid_grav
@@ -655,7 +662,6 @@ contains
 #endif /* JEANS_PROBLEM */
 #ifdef NBODY_MULTIGRID
       use particle_maps,     only: map_particles
-      use particle_types,    only: particles_exist
 #endif /* NBODY_MULTIGRID */
 
       implicit none
@@ -669,6 +675,7 @@ contains
       logical                        :: apply_src_Mcorrection
 
       call all_cg%set_dirty(source)
+      something_in_particles = .false.
 
       if (present(i_sg_dens)) then
          if (size(i_sg_dens) > 0) then
@@ -683,7 +690,8 @@ contains
          endif
 
 #ifdef NBODY_MULTIGRID
-         if (particles_exist) call map_particles(source, fpiG)
+         call map_particles(source, fpiG)
+         something_in_particles = .true.
 #endif /* NBODY_MULTIGRID */
       else
          call leaves%set_q_value(source, 0.)  ! empty domain for "outer potential" calculation
@@ -768,7 +776,7 @@ contains
       use constants,         only: sgp_n, tmr_mg
       use multigrid_helpers, only: all_dirty
       use multigridvars,     only: solution, tot_ts, ts, grav_bnd, bnd_dirichlet, bnd_givenval, bnd_isolated
-      use multipole,         only: multipole_solver
+      use multipole,         only: multipole_solver, singlepass
       use named_array_list,  only: qna
       use timer,             only: set_timer
 
@@ -797,11 +805,21 @@ contains
 
       call init_source(i_sg_dens)
 
+      if (grav_bnd_global == bnd_isolated .and. singlepass) then
+
+         call multipole_solver
+         grav_bnd = bnd_givenval
+         call init_source(i_sg_dens)
+         vstat%cprefix = "Gm-"
+
+      endif
+
       call poisson_solver(inner)
 
       call leaves%q_copy(solution, qna%ind(sgp_n))
 
-      if (grav_bnd_global == bnd_isolated) then
+      if (grav_bnd_global == bnd_isolated .and. .not. singlepass) then
+
          grav_bnd = bnd_givenval
 
          vstat%cprefix = "Go-"
@@ -960,8 +978,11 @@ contains
       norm_lowest = norm_rhs
 
       if (norm_rhs.equals.zero) then ! empty domain => potential == 0.
-         if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
-         norm_was_zero = .true.
+         call leaves%set_q_value(solution, 0.)
+         if (.not. something_in_particles) then
+            if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
+            norm_was_zero = .true.
+         endif
          return
       else
          if (master .and. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] Spontaneous mass creation detected!")

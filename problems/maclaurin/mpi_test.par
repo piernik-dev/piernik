@@ -87,7 +87,7 @@
     max_cycles = 100
     vcycle_abort  = 100.
     lmax = 16
-!    use_point_monopole = .true.
+!    mpole_solver = "monopole"
  /
 
  $AMR

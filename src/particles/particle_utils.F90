@@ -250,13 +250,13 @@ contains
 
       implicit none
 
-      integer                        :: pcount
+      integer(kind=4)                :: pcount
       type(cg_list_element), pointer :: cgl
 
       pcount = 0
       cgl => leaves%first
       do while (associated(cgl))
-         pcount = pcount + size(cgl%cg%pset%p, dim=1)
+         pcount = pcount + size(cgl%cg%pset%p, dim=1, kind=4)
          cgl => cgl%nxt
       enddo
 

@@ -52,6 +52,7 @@ contains
       use constants,      only: big, one, two, zero
       use dataio_pub,     only: msg, printinfo
       use func,           only: operator(.notequals.)
+      use global,         only: dt_max
       use grid_cont,      only: grid_container
       use particle_utils, only: max_pacc_3d
       use particle_pub,   only: lf_c, ignore_dt_fluid
@@ -99,6 +100,8 @@ contains
 
          dt_nbody  = lf_c * factor * dt_nbody
       endif
+      dt_nbody = min(dt_nbody, dt_max)
+
       pacc_max%assoc = dt_nbody
 
       dt_hydro = dt
@@ -110,7 +113,7 @@ contains
          if (dt_nbody .notequals. 0.0) dt = min(dt, dt_nbody)
       endif
 
-      write(msg,'(a,3f8.5)') '[particle_timestep:timestep_nbody] dt for hydro, nbody and both: ', dt_hydro, dt_nbody, dt
+      write(msg,'(a,3g12.5)') '[particle_timestep:timestep_nbody] dt for hydro, nbody and both: ', dt_hydro, dt_nbody, dt
       call printinfo(msg)
 
 #ifdef VERBOSE

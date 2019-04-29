@@ -326,7 +326,7 @@ contains
 
    subroutine update_particle_acc_cic(n_part, cg, cells)
 
-      use constants,        only: idm, ndims, CENTER, xdim, ydim, zdim, half, zero, gp1b_n, gpot_n
+      use constants,        only: idm, ndims, CENTER, xdim, ydim, zdim, half, zero, gp1b_n, gpot_n, I_ZERO, I_ONE
       use dataio_pub,       only: warn
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
@@ -339,7 +339,10 @@ contains
 
       integer                                         :: p
       integer(kind=4)                                 :: c, ig, cdim
-      integer(kind=4), dimension(ndims,8), parameter  :: cijk = reshape([[0,0,0], [1,0,0], [0,1,0], [0,0,1], [1,1,0], [0,1,1], [1,0,1], [1,1,1]], [ndims,8])
+      integer(kind=4), dimension(ndims,8), parameter  :: cijk = reshape([[I_ZERO, I_ZERO, I_ZERO], &
+           &                                                             [I_ONE,  I_ZERO, I_ZERO], [I_ZERO, I_ONE, I_ZERO], [I_ZERO, I_ZERO, I_ONE], &
+           &                                                             [I_ONE,  I_ONE,  I_ZERO], [I_ZERO, I_ONE, I_ONE],  [I_ONE,  I_ZERO, I_ONE], &
+           &                                                             [I_ONE,  I_ONE,  I_ONE]], [ndims,8_4])
       integer,         dimension(ndims)               :: cic_cells
       real,            dimension(ndims)               :: dxyz, axyz
       real(kind=8),    dimension(ndims,8)             :: fxyz
@@ -426,6 +429,8 @@ contains
          ig = qna%ind(gpot_n)
       endif
 
+      fxyz = zero ! suppress -Wmaybe-uninitialized
+
       do p = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
          associate( part => cg%pset%p(p) )
          axyz(:) = zero
@@ -446,8 +451,8 @@ contains
             do cdim = xdim, zdim
                if (dom%has_dir(cdim)) then
                   ijkp(cdim, I0) = nint((part%pos(cdim) - cg%coord(CENTER, cdim)%r(1))*cg%idl(cdim)) + 1   !!! BEWARE hardcoded magic
-                  ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, cg%lhn(cdim, LO))
-                  ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, cg%lhn(cdim, HI))
+                  ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cg%lhn(cdim, LO)))
+                  ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cg%lhn(cdim, HI)))
                else
                   ijkp(cdim, IM) = cg%ijkse(cdim, LO)
                   ijkp(cdim, I0) = cg%ijkse(cdim, LO)
