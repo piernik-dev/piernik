@@ -36,7 +36,7 @@ module particles_io_hdf5
    private
    public  :: init_nbody_hdf5, write_nbody_hdf5, read_nbody_hdf5
 
-   character(len=dsetnamelen), dimension(*), parameter :: pvarn = ['mass', 'ener', 'ppos', 'pvec', 'pacc']
+   character(len=dsetnamelen), dimension(*), parameter :: pvarn = ['mass', 'ener', 'ppos', 'pvel', 'pacc']
    logical,                    dimension(size(pvarn))  :: pvarl = .false.
 
    contains
