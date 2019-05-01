@@ -197,7 +197,7 @@ for p in $B_PROBLEM_LIST ; do
 				cd $j
 				rm *log 2> /dev/null
 				if [ $MEMM -gt $REQMEM ] ; then
-				    ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &MPI_BLOCKS AMR_bsize = 3*32 /' > _stdout_ 2> /dev/null &
+				    ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &AMR bsize = 3*32 /' > _stdout_ 2> /dev/null &
 				else
 				    SKIP=1
 				fi
@@ -216,7 +216,7 @@ for p in $B_PROBLEM_LIST ; do
 				    NX=$( echo 64 $SCALE | awk '{print int($1*$2)}')
 				    REQMEM=$( echo $NX $i | awk '{print int($1**3 * $2 * 0.00060)}' )
 				    if [ $MEMM -gt $REQMEM ] ; then
-					mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
+					mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &AMR bsize = 3*32 /' 2> /dev/null | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
 				    else
 					SKIP=1
 				    fi ;;
@@ -224,7 +224,7 @@ for p in $B_PROBLEM_LIST ; do
 				    NX=$( echo 128 $SCALE | awk '{print int($1*$2)}')
 				    REQMEM=$( echo $NX | awk '{print int($1**3 * 0.00060)}' )
 				    if [ $MEMM -gt $REQMEM ] ; then
-					mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
+					mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &AMR bsize = 3*32 /' 2> /dev/null | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
 				    else
 					SKIP=1
 				    fi ;;
