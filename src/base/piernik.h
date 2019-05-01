@@ -7,17 +7,17 @@
 
 #if defined(VARIABLE_USER_GP) || defined(SELF_GRAV)
 #define VARIABLE_GP
-#endif
+#endif /* VARIABLE_USER_GP || SELF_GRAV */
 
 #define HDF5
 #if defined(I_KNOW_WHAT_I_AM_DOING)
 #undef HDF5
-#endif
+#endif /* I_KNOW_WHAT_I_AM_DOING */
 
-#if !defined(RTVD) && !defined(HLLC)
+#if !defined(RTVD) && !defined(HLLC) && !defined(RIEMANN)
 #define RTVD
-/* #  warning no hydro solver defined, possible choices { RTVD, HLLC }, defaulting to RTVD */
-#endif
+/* #  warning no hydro solver defined, possible choices { RTVD, HLLC, RIEMANN }, defaulting to RTVD */
+#endif /* !RTVD && !HLLC && !RIEMANN */
 
 /*
   Disable ISO EOS for benchmaring with Rieman solver because we don't support ISO there yet.
