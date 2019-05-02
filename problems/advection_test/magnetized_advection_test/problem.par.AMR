@@ -1,0 +1,111 @@
+! ./setup advection_test/magnetized_advection_test -d RIEMANN -o R_madv
+! #effective call (after evaluation of .setuprc*):
+! #./setup -c lothlorien --laconic --linkexe advection_test/magnetized_advection_test -d RIEMANN -o R_madv
+! #Using compiler settings from lothlorien.in
+
+! This test is supposed to work with advection test configured to use magnetic
+! field such as configured in a following way:
+! ./setup advection_test/magnetized_advection_test -o T_advection
+! or
+! ./setup advection_test/magnetized_advection_test -o R_advection -d RIEMANN
+!
+! The purpose is to both test the employed algorithms (examine the last
+! plot file) and correctness of the formulas in the data_hdf5 file (examine
+! first, initial plotfile).
+
+! An example of a resolution scan to show differences in the behavior of div(B)=0 maintaining methds
+! for i in `seq 6 20` ; do r=$(( 2 ** ($i / 2) * ( 2 + ($i % 2)) / 2 )) ; mpirun -np $(cat /proc/cpuinfo  | grep "cpu cores" | head -n 1 | sed 's/.*: //') ./piernik -n '&BASE_DOMAIN n_d = '$r', '$r', 1 / &OUTPUT_CONTROL run_id = "'$( printf "t%02d" $i )'"' ; done
+
+ $BASE_DOMAIN
+    n_d = 2*64
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = -1.
+    xmax   =  1.
+    ymin   = -1.
+    ymax   =  1.
+    zmin   = -1.
+    zmax   =  1.
+ /
+
+ $MPI_BLOCKS
+    allow_uneven = .true.
+    allow_noncart = .true.
+    dd_unif_quality = 1.1
+    dd_rect_quality = 1.1
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 3.0
+    nend   = 10000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'magnetized_flow'
+    run_id =  'ts1'
+    dt_hdf  = .1
+    dt_res  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1:) = "divb", "psi", "dens", "velx", "vely", "magx", "magy", "level"
+    gdf_strict = .false.
+    h5_64bit = T
+ /
+
+ $FLUID_NEUTRAL
+    gamma = 1.67
+    selfgrav = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-5
+    smallei= 1.e-5
+    limiter= 'vanleer'
+ /
+
+ $PROBLEM_CONTROL
+    pulse_vel = 0., 0., 0. !2., -2., 2.
+    pulse_size = 1., 1., 1.
+    pulse_pres = 1.e0
+
+    pulse_amp = 1.0  ! 1.0 means constant density
+
+!    B_const = .2, .3, .6
+
+    divB0_amp = 0.0  ! non-divergent magnetic field
+    divBc_amp = 0.  ! nearly-everywhere constant div(B) (with huge jump at domain boundaries)
+    divBs_amp = 0.  ! sine-wave div(B)
+
+    ! A blob of div(B)
+    divBbx_amp = 0.001  ! 0.28209479177387814 !  1/sqrt(4 * pi)
+    divBby_amp = 0.  ! 0.28209479177387814 !  1/sqrt(4 * pi)
+    divBbz_amp = 0.  ! 0.28209479177387814 !  1/sqrt(4 * pi)
+ /
+
+ $NONINERTIAL
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+    bsize =2*16
+    n_updAMR = 100000
+    level_max = 1
+    refine_boxes(1)  = 1, 0., -1., -1., 1., 1., 1.
+ /

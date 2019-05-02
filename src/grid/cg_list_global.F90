@@ -127,27 +127,27 @@ contains
    subroutine reg_var(this, name, vital, restart_mode, ord_prolong, dim4, position, multigrid)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, I_ZERO, I_ONE, I_TWO, I_THREE, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_D3, O_D4, O_D5, O_D6
+      use constants,        only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, I_ZERO, I_ONE, I_TWO, I_THREE, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_I5, O_I6, O_D3, O_D4, O_D5, O_D6
       use dataio_pub,       only: die, warn, msg
       use domain,           only: dom
       use named_array_list, only: qna, wna, na_var
 
       implicit none
 
-      class(cg_list_global_T),                          intent(inout) :: this          !< object invoking type-bound procedure
-      character(len=*),                                 intent(in)    :: name          !< Name of the variable to be registered
-      logical,                                optional, intent(in)    :: vital         !< .false. for arrays that don't need to be prolonged or restricted automatically
-      integer(kind=4),                        optional, intent(in)    :: restart_mode  !< Write to the restart if not AT_IGNORE. Several write modes can be supported.
-      integer(kind=4),                        optional, intent(in)    :: ord_prolong   !< Prolongation order for the variable
-      integer(kind=4),                        optional, intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
-      integer(kind=4), dimension(:), pointer, optional, intent(in)    :: position      !< If present then use this value instead of VAR_CENTER
-      logical,                                optional, intent(in)    :: multigrid     !< If present and .true. then allocate cg%q(:)%arr and cg%w(:)%arr also below base level
+      class(cg_list_global_T),                 intent(inout) :: this          !< object invoking type-bound procedure
+      character(len=*),                        intent(in)    :: name          !< Name of the variable to be registered
+      logical,                       optional, intent(in)    :: vital         !< .false. for arrays that don't need to be prolonged or restricted automatically
+      integer(kind=4),               optional, intent(in)    :: restart_mode  !< Write to the restart if >= AT_IGNORE. Several write modes can be supported.
+      integer(kind=4),               optional, intent(in)    :: ord_prolong   !< Prolongation order for the variable
+      integer(kind=4),               optional, intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
+      integer(kind=4), dimension(:), optional, intent(in)    :: position      !< If present then use this value instead of VAR_CENTER
+      logical,                       optional, intent(in)    :: multigrid     !< If present and .true. then allocate cg%q(:)%arr and cg%w(:)%arr also below base level
 
-      type(cg_list_element), pointer                                  :: cgl
-      logical                                                         :: mg, vit
-      integer                                                         :: nvar
-      integer(kind=4)                                                 :: op, d4, rm
-      integer(kind=4), allocatable, dimension(:)                      :: pos
+      type(cg_list_element), pointer             :: cgl
+      logical                                    :: mg, vit
+      integer                                    :: nvar
+      integer(kind=4)                            :: op, d4, rm
+      integer(kind=4), allocatable, dimension(:) :: pos
 
       vit = .false.
       if (present(vital)) vit = vital
@@ -199,19 +199,21 @@ contains
             this%ord_prolong_nb = max(this%ord_prolong_nb, I_ONE)
          case (O_I3, O_I4, O_D3, O_D4)
             this%ord_prolong_nb = max(this%ord_prolong_nb, I_TWO)
-         case (O_D5, O_D6)
+         case (O_I5, O_I6, O_D5, O_D6)
             this%ord_prolong_nb = max(this%ord_prolong_nb, I_THREE)
-            if (dom%nb < I_TWO*this%ord_prolong_nb) &
-                 call warn("[cg_list_global:reg_var] WARNING at least 6 guardcells are required. Expect crash in cg_level_connected::prolong_bnd_from_coarser")
          case default
             call die("[cg_list_global:reg_var] Unknown prolongation order")
       end select
-      if (this%ord_prolong_nb > dom%nb) call die("[cg_list_global:reg_var] Insufficient number of guardcells for requested prolongation stencil")
+      if (I_TWO*this%ord_prolong_nb > dom%nb) call die("[cg_list_global:reg_var] Insufficient number of guardcells for requested prolongation stencil. Expected crash in cg_level_connected::prolong_bnd_from_coarser")
+      ! I-TWO because our refinement factor is 2. and we want to fill all layers of fine guardcells
+      ! Technically it is possible to maintain high order prolongation and thin layer of guardcells,
+      ! but fine boundaries that coincide tith coarse boundaries cannot be fully reconstructed
+      ! unless we communicate the missing part from another block (do multi-parent prolongation).
 
       cgl => this%first
       do while (associated(cgl))
          if (present(dim4)) then
-            call cgl%cg%add_na_4d(dim4)
+            call cgl%cg%add_na_4d(d4)  ! Strange: passing dim4 here resulted in an access to already freed memory. Possibly a gfortran bug.
          else
             call cgl%cg%add_na(mg)
          endif
@@ -226,23 +228,31 @@ contains
 
    subroutine register_fluids(this)
 
-      use constants,  only: wa_n, fluid_n, uh_n, mag_n, u0_n, b0_n, ndims, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, PIERNIK_INIT_FLUIDS
+      use constants,  only: wa_n, fluid_n, uh_n, AT_NO_B, PIERNIK_INIT_FLUIDS
       use dataio_pub, only: die, code_progress
       use fluidindex, only: flind
-      use global,     only: repeat_step
 #ifdef ISO
       use constants,  only: cs_i2_n
 #endif /* ISO */
+#ifdef MAGNETIC
+      use constants,  only: mag_n, magh_n, ndims, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, VAR_CENTER
+      use global,     only: force_cc_mag, ord_mag_prolong
+#ifdef RIEMANN
+      use constants,  only: psi_n, psih_n
+#endif /* RIEMANN */
+#endif /* MAGNETIC */
 
       implicit none
 
       class(cg_list_global_T), intent(inout)          :: this          !< object invoking type-bound procedure
 
-      integer(kind=4), save, dimension(ndims), target :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
-      integer(kind=4),       dimension(:), pointer    :: pia
-      ! the pia pointer above is used as a workaround for compiler warnings about possibly uninitialized variable in reg_var
+#ifdef MAGNETIC
+      integer(kind=4), dimension(ndims), parameter :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
+      integer(kind=4), dimension(ndims), parameter :: xyz_center = [ VAR_CENTER, VAR_CENTER, VAR_CENTER ]
+      integer(kind=4), dimension(ndims) :: pia
 
-      pia => xyz_face
+      pia = merge(xyz_center, xyz_face, force_cc_mag)
+#endif /* MAGNETIC */
 
       if (code_progress < PIERNIK_INIT_FLUIDS) call die("[cg_list_global:register_fluids] Fluids are not yet initialized")
 
@@ -250,18 +260,18 @@ contains
       call this%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = flind%all)                !! Main array of all fluids' components, "u"
       call this%reg_var(uh_n,                                             dim4 = flind%all)                !! Main array of all fluids' components (for t += dt/2)
 
-!> \todo Do not even allocate magnetic stuff if MAGNETIC is not declared
-      call this%reg_var(mag_n,   vital = &
 #ifdef MAGNETIC
-           .true., &
-#else /* !MAGNETIC */
-           .false., &
-#endif /* MAGNETIC */
-           restart_mode = AT_OUT_B, dim4 = ndims, position=pia)                                            !! Main array of magnetic field's components, "b"
-      if (repeat_step) then
-         call this%reg_var(u0_n,                                          dim4 = flind%all)                !! Copy of main array of all fluids' components
-         call this%reg_var(b0_n,                                          dim4 = ndims, position=pia)      !! Copy of main array of magnetic field's components
+      call this%reg_var(mag_n,  vital = .true.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B, position=pia)  !! Main array of magnetic field's components, "b"
+      call this%reg_var(magh_n, vital = .false., dim4 = ndims) !! Array for copy of magnetic field's components, "b" used in half-timestep in RK2
+
+#ifdef RIEMANN
+      if (force_cc_mag) then
+         call this%reg_var(psi_n,  vital = .true., ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B)  !! an array for div B cleaning
+         call this%reg_var(psih_n, vital = .false.)  !! its copy for use in RK2
       endif
+#endif /* RIEMANN */
+#endif /* MAGNETIC */
+
 #ifdef ISO
       call all_cg%reg_var(cs_i2_n, vital = .true., restart_mode = AT_NO_B)
 #endif /* ISO */
@@ -301,7 +311,7 @@ contains
                         write(msg,'(3a,i10)')"[cg_list_global:check_na] qna%lst(",i,"_, named '",qna%lst(i)%name,"' has dim4 set to ",qna%lst(i)%dim4
                         call die(msg)
                      endif
-                     if (associated(cgl%cg%q(i)%arr) .and. cgl%cg%level_id < base_level_id .and. .not. qna%lst(i)%multigrid) then
+                     if (associated(cgl%cg%q(i)%arr) .and. cgl%cg%l%id < base_level_id .and. .not. qna%lst(i)%multigrid) then
                         write(msg,'(a,i3,3a)')"[cg_list_global:check_na] non-multigrid cgl%cg%q(",i,"), named '",qna%lst(i)%name,"' allocated on coarse level"
                         call die(msg)
                      endif
@@ -318,13 +328,13 @@ contains
                else
                   do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
                      bad = .false.
-                     if (associated(cgl%cg%w(i)%arr)) bad = wna%lst(i)%dim4 /= size(cgl%cg%w(i)%arr, dim=1) .and. cgl%cg%level_id >= base_level_id
+                     if (associated(cgl%cg%w(i)%arr)) bad = wna%lst(i)%dim4 /= size(cgl%cg%w(i)%arr, dim=1) .and. cgl%cg%l%id >= base_level_id
                      if (wna%lst(i)%dim4 <= 0 .or. bad) then
                         write(msg,'(a,i3,2a,2(a,i7))')"[cg_list_global:check_na] wna%lst(",i,"_ named '",wna%lst(i)%name,"' has inconsistent dim4: ",&
                              &         wna%lst(i)%dim4," /= ",size(cgl%cg%w(i)%arr, dim=1)
                         call die(msg)
                      endif
-                     if (associated(cgl%cg%w(i)%arr) .and. cgl%cg%level_id < base_level_id) then
+                     if (associated(cgl%cg%w(i)%arr) .and. cgl%cg%l%id < base_level_id) then
                         write(msg,'(a,i3,3a)')"[cg_list_global:check_na] cgl%cg%w(",i,"), named '",wna%lst(i)%name,"' allocated on coarse level"
                         call die(msg)
                      endif
@@ -378,7 +388,7 @@ contains
             cgl => all_lists%entries(i)%lp%first
             do while (associated(cgl))
                if (cgl%cg%membership == VERY_INVALID) then
-                  write(msg, '(a,i7,a,i3,a)')"[cg_list_global:mark_orphans] Grid #",cgl%cg%grid_id, " at level ",cgl%cg%level_id," is hidden."
+                  write(msg, '(a,i7,a,i3,a)')"[cg_list_global:mark_orphans] Grid #",cgl%cg%grid_id, " at level ",cgl%cg%l%id," is hidden."
                   call warn(msg)
                   cgl%cg%membership = 0
                endif
@@ -404,7 +414,7 @@ contains
       do while (associated(cgl))
          if (associated(cgl%cg)) then
             if (cgl%cg%membership < 1) then
-               write(msg, '(a,i7,a,i3,a)')"[cg_list_global:mark_orphans] Grid #",cgl%cg%grid_id, " at level ",cgl%cg%level_id," is orphaned."
+               write(msg, '(a,i7,a,i3,a)')"[cg_list_global:mark_orphans] Grid #",cgl%cg%grid_id, " at level ",cgl%cg%l%id," is orphaned."
                call warn(msg)
             endif
          endif

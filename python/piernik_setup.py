@@ -8,6 +8,7 @@ from DirWalk import DirectoryWalker
 import subprocess as sp
 import tempfile
 from optparse import OptionParser
+
 try:
     import multiprocessing
     mp = True
@@ -23,11 +24,11 @@ except ImportError:
 
 columns = 90
 
-is_f90 = re.compile("f90$", re.IGNORECASE)
-is_header = re.compile("h$", re.IGNORECASE)
+is_f90 = re.compile("\.f90$", re.IGNORECASE)
+is_header = re.compile("\.h$", re.IGNORECASE)
 test = re.compile(r'pulled by', re.IGNORECASE).search
 overriding = re.compile(r'overrides', re.IGNORECASE).search
-have_use = re.compile(r"^\s{0,9}use\s", re.IGNORECASE).search
+have_use = re.compile(r"^\s*use\s", re.IGNORECASE).search
 have_inc = re.compile(r"^#include\s", re.IGNORECASE).search
 have_mod = re.compile(r"^\s*module\s+(?!procedure)", re.IGNORECASE).search
 cpp_junk = re.compile("(?!#define\s_)", re.IGNORECASE)
@@ -57,8 +58,6 @@ HEALTH WARNINGS:
 * the contents of \'./obj\' and \'./runs/<problem>\' are overwritten
   each time setup <problem>\' is run, unless you specify -obj <postfix>
   in which case the contents of runs/<problem>_<postfix> will be only updated
-* the def file \'piernik.def\' is copied only for reference, to change flags
-  with which the source is compiled edit \'./problems/<problem>/piernik.def\'
 * by default PIERNIK will read the configuration file \'problem.par\' from the
 working directory, to use alternative configurations execute
 \'./piernik <directory with an alternative problem.par>\'
@@ -225,6 +224,27 @@ def get_stdout(cmd):
         return process.communicate()[0]
 
 
+def list_info(dir, indent):
+    tab = []
+    name = " " * (2 * indent) + os.path.basename(dir)
+    try:
+        file = open(dir + "/info", "r")
+        il = 0
+        for l in file:
+            tab.append([name if (il == 0) else "", l.strip()])
+            il += 1
+        if (il == 0):
+            tab.append([name, '\033[93m' + "empty info" + '\033[0m'])
+        file.close()
+    except IOError:
+        if (dir != "problems"):
+            tab.append([name, '\033[91m' + "no info" + '\033[0m'])
+    for f in sorted(os.listdir(dir)):
+        if (os.path.isdir(dir + "/" + f)):
+            tab += list_info(dir + "/" + f, indent + 1)
+    return tab
+
+
 def setup_piernik(data=None):
     options, args, all_args, sys_args = piernik_parse_args(data)
     if(options.recycle_cmd):
@@ -252,15 +272,25 @@ def setup_piernik(data=None):
         print(args)
 
     if(options.show_problems):
-        print(get_stdout("cat problems/*/info"))
-        sys.exit()
+        tp = list_info("problems", -1)
+        maxlen = 0
+        for p in tp:
+            maxlen = max(maxlen, len(p[0]))
+        for p in tp:
+            print("%-*s : %s" % (maxlen, p[0], p[1]))
 
     if(options.show_units):
-        print(get_stdout("grep uses ./src/base/constants.F90"))
+        print(get_stdout("grep uses ./src/base/units.F90"))
+
+    if(options.show_units or options.show_problems):
         sys.exit()
 
     if (len(args) < 1):
-        parser.error("incorrect number of arguments")
+        sys.stderr.write('\033[91m' + "\nNo problem_name has been provided" + '\033[0m' + "\n")
+        exit()
+
+    if (len(args) > 1):
+        sys.stderr.write('\033[93m' + "Ignored spurious arguments: " + '\033[0m' + "%s\n" % args[1:])
 
     # set problem dir
     probdir = 'problems/' + args[0] + '/'
@@ -270,10 +300,12 @@ def setup_piernik(data=None):
         sys.exit()
 
     # parse cppflags
+    cppflags = ""
     if(options.cppflags):
-        cppflags = '-D' + ' -D'.join(options.cppflags.split(","))
-    else:
-        cppflags = ""
+        for flag_grp in options.cppflags:
+            for flag in flag_grp.split(","):
+                if (len(flag) > 0):
+                    cppflags += ' -D' + flag
 
     # parse compiler
     if(not re.search('\.in$', options.compiler)):
@@ -309,31 +341,53 @@ def setup_piernik(data=None):
         if(is_header.search(f)):
             allfiles.append(f)
 
-    for f in DirectoryWalker(probdir):
+    '''Take subproblem files, ignore subdirectories,
+    append files from parent directory if their names are new'''
+
+    probfiles = {}
+    pdir = os.path.dirname(probdir)  # strip trailing '/'
+    while (os.path.basename(pdir) not in ("..", "problems")):
+        for f in os.listdir(pdir):
+            if (os.path.basename(f) not in probfiles):
+                probfiles[os.path.basename(f)] = pdir + '/' + f
+        pdir = os.path.dirname(pdir)
+    for ff in probfiles:
+        f = probfiles[ff]
         if(is_f90.search(f)):
             f90files.append(f)
-        if(is_header.search(f)):
+        if(is_header.search(f) or ff == "piernik.def" or ff == options.param):
             allfiles.append(f)
 
-    pf = probdir + "info"
+    piernikdef = ""
+    problempar = ""
+    pf = probdir + "info"  # intended lack of inheritance from parent directory
     if (not os.path.isfile(pf)):
-        print("\033[93mCannot find optional file", pf, "\033[0m")
-    req_prob = ["piernik.def", "initproblem.F90", "problem.par"]
+        print("\033[93mCannot find optional file " + pf + "\033[0m")
+    req_prob = ["piernik.def", "initproblem.F90", options.param]
     req_missing = False
     for pf in req_prob:
-        if (not os.path.isfile(probdir + pf)):
-            print("\033[91mCannot find required file", probdir + pf, "\033[0m")
+        found = False
+        for lf in allfiles + f90files:
+            if (os.path.basename(lf) == pf):
+                if (not os.path.isfile(lf)):
+                    print("\033[91mRequired file " + lf + " is not a regular file\033[0m")
+                    req_missing = True
+                else:
+                    found = True
+                    if (pf == "piernik.def"):
+                        piernikdef = lf
+                    if (pf == options.param):
+                        problempar = lf
+        if not found:
             req_missing = True
+            print("\033[91mCannot find required file " + pf + "\033[0m")
     if (req_missing):
         sys.exit()
-
-    allfiles.append(probdir + "piernik.def")
-    allfiles.append(probdir + options.param)
 
     foo_fd, foo_path = tempfile.mkstemp(suffix=".f90", dir='.')
     cmd = "echo '#include \"%spiernik.h\"' > \"%s\"" % ('src/base/', foo_path)
     cmd += " && cpp %s -dM -I%s \"%s\" && rm \"%s\"" % (
-        cppflags, probdir, foo_path, foo_path)
+        cppflags, os.path.dirname(piernikdef), foo_path, foo_path)
     defines = get_stdout(cmd).rstrip().split("\n")
     if(options.verbose):
         print(cmd)
@@ -343,10 +397,6 @@ def setup_piernik(data=None):
 
     our_defs = [f.split(" ")[1] for f in filter(cpp_junk.match, defines)]
     our_defs.append("ANY")
-    # workaround the fact that we're using cpp and some of use clauses may
-    # depend on __INTEL_COMPILER
-    if re.match("ifort", compiler):
-        cppflags += " -D__INTEL_COMPILER"
     if(options.verbose):
         print("our_defs:")
         print(our_defs)
@@ -370,17 +420,20 @@ def setup_piernik(data=None):
                     if f90files.count(w) > 0:
                         o_cnt += 1
                         if (os.path.dirname(f).split("/").count("problems") < 1):
-                            print(
-                                '\033[93m' + "Warning:" + '\033[0m' + " Only user problems should use the override feature, not " + f)
+                            print('\033[93m' + "Warning:" + '\033[0m' +
+                                  " Only user problems should use the " +
+                                  "override feature, not " + f)
                         if os.path.basename(w) == os.path.basename(f):
                             f90files.remove(w)
                             print("Overriding " + w + " by " + f)
                         else:
-                            print('\033[93m' + "Warning:" + '\033[0m' + " Refused overriding " +
-                                  w + " by " + f + " due to basename mismatch. Expect errors.")
+                            print('\033[93m' + "Warning:" + '\033[0m' +
+                                  " Refused overriding " + w + " by " + f +
+                                  " due to basename mismatch. Expect errors.")
                 if (o_cnt == 0):
                     print('\033[93m' + "Warning:" + '\033[0m' +
-                          " No overridable target found for directive '" + line.rstrip() + "'. Expect errors.")
+                          " No overridable target found for directive '" +
+                          line.rstrip() + "'. Expect errors.")
 
     for f in f90files:
         keys_logic1 = False
@@ -403,10 +456,12 @@ def setup_piernik(data=None):
             keys_logic2 = (
                 (keys[1] == "&&" and
                  (keys[0] in our_defs and keys[2] in our_defs)) or
-                (keys[1] == "||" and (keys[0] in our_defs or keys[2] in our_defs)))
+                (keys[1] == "||" and (keys[0] in our_defs or
+                                      keys[2] in our_defs)))
 
         if(keys_logic1 or keys_logic2):
-            cmd = "cpp %s -I%s -I%s %s" % (cppflags, probdir, 'src/base', f)
+            # workaround the fact that we're using cpp and some of use clauses may depend on __INTEL_COMPILER
+            cmd = "cpp %s -I%s -I%s -I%s %s" % (cppflags + " -D__INTEL_COMPILER", probdir, 'src/base', os.path.dirname(piernikdef), f)
             # Scan preprocessed files
             lines = get_stdout(cmd).split('\n')
             for line in lines:
@@ -431,9 +486,10 @@ def setup_piernik(data=None):
             # Perhaps we should check for overwriting duplicates here too
         else:
             try:
-                os.symlink('../' + f, objdir + '/' + strip_leading_path([f])[0])
+                os.symlink('../' + f,
+                           objdir + '/' + strip_leading_path([f])[0])
             except:
-                print "Possible duplicate link or a name clash :", f
+                print("Possible duplicate link or a name clash :", f)
                 raise
 
     if(options.param != 'problem.par'):
@@ -441,7 +497,7 @@ def setup_piernik(data=None):
 
     makefile_head = open('compilers/' + compiler, 'r').readlines()
     try:
-        makefile_problem = open(probdir + "Makefile.in", 'r').readlines()
+        makefile_problem = open(probdir + "Makefile.in", 'r').readlines()  # BEWARE: Makefile.in is not inherited from the parent problem yet
     except (IOError):
         makefile_problem = ""
     m = open(objdir + '/Makefile', 'w')
@@ -454,7 +510,8 @@ def setup_piernik(data=None):
     uses.append([])
     module.setdefault('version', 'version')
     known_external_modules = (
-        "hdf5", "h5lt", "mpi", "iso_c_binding", "iso_fortran_env", "fgsl")
+        "hdf5", "h5lt", "mpi", "iso_c_binding", "iso_fortran_env", "fgsl",
+        "ifposix", "ifport", "ifcore")  # Ugly trick: these modules are detected by -D__INTEL_COMPILER
 
     files_to_build = remove_suf(stripped_files)
 
@@ -500,12 +557,12 @@ def setup_piernik(data=None):
                 if module[j] + '.F90' in stripped_files:
                     d += module[j] + '.o '
                 else:
-                    print("Warning: ", module[j] + '.F90', "referenced in",
-                          stripped_files[i], "not found!")
+                    print("Warning: " + module[j] + '.F90' + "referenced in" +
+                          stripped_files[i] + " not found!")
             else:
                 if j not in known_external_modules:
-                    print("Warning: module", j, " from file ",
-                          stripped_files[i], "not found!")
+                    print("Warning: module " + j + " from file " +
+                          stripped_files[i] + " not found!")
         m.write(pretty_format(deps, d.split(), columns))
     m.close()
 
@@ -653,16 +710,11 @@ def setup_piernik(data=None):
         print('\033[91m' + "Failed to copy 'problem.par' to '%s'." %
               rundir.rstrip('/') + '\033[0m')
         fatal_problem = True
-    try:
-        shutil.copy(objdir + "/piernik.def", rundir + 'piernik.def')
-    except IOError:
-        print('\033[91m' + "Failed to copy 'piernik.def' to '%s'." %
-              rundir.rstrip('/') + '\033[0m')
 
     if (options.nocompile):
-        print('\033[93m' + "Compilation of '%s' skipped on request." % args[0] +
-              '\033[0m' +
-              " You may want to run 'make -C %s' before running the Piernik code."
+        print("\033[93mCompilation of '%s' skipped on request." % args[0] +
+              """
+\033[0mYou may want to run 'make -C %s' before running the Piernik code."""
               % objdir)
         makejobs = ""
         if (mp):
@@ -671,7 +723,7 @@ def setup_piernik(data=None):
             makejobs, objdir)
         output = sp.Popen(
             makecmd, shell=True, stderr=sp.PIPE, stdout=sp.PIPE).communicate()
-        if re.search(r"Circular", output[1]):
+        if re.search(r"Circular", output[1].decode("ascii")):
             print('\033[91m' +
                   "Circular dependencies foud in '%s'." % objdir + '\033[0m')
     else:
@@ -685,51 +737,67 @@ def setup_piernik(data=None):
 
 
 def piernik_parse_args(data=None):
-    epilog_help = "Frequently used options (like --linkexe, --laconic or \
-    -c <configuration>) can be stored in .setuprc and .setuprc.${HOSTNAME} files"
-    usage = "usage: %prog [options] FILES"
+    epilog_help = """Call 'source bin/bash_completion.sh' for some
+autocompletion. Frequently used options (like --linkexe, --laconic or
+-c <configuration>) can be stored in .setuprc and .setuprc.${HOSTNAME} files.
+"""
+    usage = "usage: %prog [problem_name|--last|--problems|--units|--help] [options ...]"
     try:
         parser = OptionParser(usage=usage, epilog=epilog_help)
     except TypeError:
         parser = OptionParser(usage=usage)
+
     parser.add_option("-v", "--verbose", action="store_true", dest="verbose",
-                      default=False, help="try to confuse the user with some \
-    diagnostics ;-)")
+                      default=False, help="""try to confuse the user with some
+diagnostics ;-)""")
+
     parser.add_option("-q", "--laconic", action="store_true", dest="laconic",
                       default=False, help="compress stdout from make process")
+
     parser.add_option("--debug", action="store_true", dest="piernik_debug",
                       default=False, help="Use debug set of compiler flags")
-    parser.add_option(
-        "-n", "--nocompile", action="store_true", dest="nocompile",
-        default=False, help='''Create object directory, check for \
-    circular dependencies, but do not compile or prepare run directory. \
-    In combination with --copy will prepare portable object directory.''')
+
+    parser.add_option("-n", "--nocompile", action="store_true",
+                      dest="nocompile", default=False, help='''Create object
+directory, check for circular dependencies, but do not compile or prepare run
+directory. In combination with --copy will prepare portable object directory.
+''')
+
     parser.add_option("--problems", dest="show_problems", action="store_true",
                       help="print available problems and exit")
+
     parser.add_option("-u", "--units", dest="show_units", action="store_true",
                       help="print available units and exit")
+
     parser.add_option("--last", dest="recycle_cmd", action="store_true",
-                      default=False, help="call setup with last used options and \
-    arguments (require Pickles)")
+                      default=False, help="""call setup with last used options
+and arguments (require Pickles)""")
+
     parser.add_option("--copy", dest="hard_copy", action="store_true",
                       help="hard-copy source files instead of linking them")
+
     parser.add_option("-l", "--linkexe", dest="link_exe", action="store_true",
-                      help="do not copy obj/piernik to runs/<problem> but link it \
-    instead")
+                      help="""do not copy obj/piernik to runs/<problem> but link
+it instead""")
+
     parser.add_option("-p", "--param", dest="param", metavar="FILE",
-                      help="use FILE instead problem.par", default="problem.par")
+                      help="use FILE instead problem.par",
+                      default="problem.par")
+
     parser.add_option("-d", "--define", dest="cppflags", metavar="CPPFLAGS",
-                      help="add precompiler directives, use comma-separated list")
+                      action="append", help="""add precompiler directives, '-d
+DEF1,DEF2' is equivalent to '-d DEF1 -d DEF2' or '--define DEF1 -d DEF2'""")
+
     parser.add_option("--f90flags", dest="f90flags", metavar="F90FLAGS",
                       help="pass additional compiler flags to F90FLAGS")
-    parser.add_option(
-        "-c", "--compiler", dest="compiler", default="default.in",
-        help="choose specified config from compilers directory",
-        metavar="FILE")
-    parser.add_option(
-        "-o", "--obj", dest="objdir", metavar="POSTFIX", default='',
-        help="use obj_POSTFIX directory instead of obj/ and \
-    runs/<problem>_POSTFIX rather than runs/<problem>")
+
+    parser.add_option("-c", "--compiler", dest="compiler",
+                      default="default.in", help="""choose specified config from
+compilers directory""", metavar="FILE")
+
+    parser.add_option("-o", "--obj", dest="objdir", metavar="POSTFIX",
+                      default='', help="""use obj_POSTFIX directory instead of obj/ and
+runs/<problem>_POSTFIX rather than runs/<problem>""")
 
     if data is None:
         all_args = []
@@ -740,11 +808,16 @@ def piernik_parse_args(data=None):
         except IOError:
             pass
         all_args += sys.argv[1:]
-        (options, args) = parser.parse_args(all_args)
-        return options, args, all_args, sys.argv
     else:
-        (options, args) = parser.parse_args(data.split())
-        return options, args, data.split(), []
+        all_args = data.split()
+
+    (options, args) = parser.parse_args(all_args)
+    if (len(args) < 1 and not (options.recycle_cmd or
+                               options.show_problems or
+                               options.show_units)):
+        parser.print_help()
+
+    return options, args, all_args, sys.argv if data is None else []
 
 
 if __name__ == "__main__":

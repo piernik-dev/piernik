@@ -36,13 +36,12 @@ module timestep
    implicit none
 
    private
-   public :: time_step, cfl_manager
+   public :: time_step, cfl_manager, check_cfl_violation
 #if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
    !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
    public :: init_time_step
 #endif /* __INTEL_COMPILER || _CRAYFTN */
 
-   real :: c_all_old
 #if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
    !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
    procedure(), pointer :: cfl_manager
@@ -103,16 +102,17 @@ contains
 
       use cg_leaves,            only: leaves
       use cg_list,              only: cg_list_element
+      use cmp_1D_mpi,           only: compare_array1D
       use constants,            only: one, two, zero, half, pMIN, pMAX
       use dataio,               only: write_crashed
       use dataio_pub,           only: tend, msg, warn
       use fargo,                only: timestep_fargo, fargo_mean_omega
       use fluidtypes,           only: var_numbers
-      use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, use_fargo
+      use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, use_fargo, cfl_violated
       use grid_cont,            only: grid_container
       use mpisetup,             only: master, piernik_MPI_Allreduce
-      use timestep_pub,         only: c_all
-      use timestepinteractions, only: timestep_interactions
+      use sources,              only: timestep_sources
+      use timestep_pub,         only: c_all, c_all_old
 #ifdef COSM_RAYS
       use timestepcosmicrays,   only: timestep_crs, dt_crs
 #endif /* COSM_RAYS */
@@ -123,7 +123,6 @@ contains
       use dataio_pub,           only: printinfo
       use piernikdebug,         only: has_const_dt, constant_dt
 #endif /* DEBUG */
-
       implicit none
 
       real,              intent(inout) :: dt    !< the timestep
@@ -147,7 +146,6 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         !> \todo make the timestep_* routines members of fluidtypes::component_fluid
          do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
             call timestep_fluid(cg, flind%all_fluids(ifl)%fl, dt_, c_)
             dt    = min(dt, dt_)
@@ -164,9 +162,7 @@ contains
          dt = min(dt, dt_resist)
 #endif /* RESISTIVE */
 
-#ifndef BALSARA
-         dt = min(dt,timestep_interactions(cg))
-#endif /* BALSARA */
+         call timestep_sources(dt, cg)
 
          if (use_fargo) dt = min(dt, timestep_fargo(cg, dt))
          cgl => cgl%nxt
@@ -176,14 +172,18 @@ contains
       call piernik_MPI_Allreduce(c_all, pMAX)
 
       ! finally apply some sanity factors
-      if (nstep <=1) then
-         if (dt_initial > zero) dt = min(dt, dt_initial)
+      if (nstep < 1) then
+         if (dt_initial > zero) then
+            dt = min(dt, dt_initial)
+         else if (dt_initial < zero) then ! extra factor for shortening first timestep
+            dt = min(dt, -dt_initial * dt)
+         endif
       else
          if (dt_old > zero) dt = min(dt, dt_old*dt_max_grow)
       endif
 
       if (associated(cfl_manager)) call cfl_manager
-      c_all_old = c_all
+      if (.not.cfl_violated) c_all_old = c_all
 
       if (dt < dt_min) then ! something nasty had happened
          if (master) then
@@ -193,7 +193,7 @@ contains
          call write_crashed("[timestep:time_step] dt < dt_min")
       endif
 
-      dt = min(dt, (half*(tend-t)) + (two*epsilon(one)*((tend-t))))
+      dt = min(min(dt, dt_max), (half*(tend-t)) + (two*epsilon(one)*((tend-t))))
 #ifdef DEBUG
       ! We still need all above for c_all
       if (has_const_dt) then
@@ -202,8 +202,41 @@ contains
          call printinfo(msg)
       endif
 #endif /* DEBUG */
+      call compare_array1D([dt])  ! just in case
 
    end subroutine time_step
+
+!>
+!! \brief Timestep prediction after fluidupdate
+!!
+!! \details This routine calls is important while step redoing due to cfl violation is activated and prevent to dump h5 and restart files until cfl-violated step is succesfully redone.
+!<
+   subroutine check_cfl_violation(dt, flind)
+
+      use fluidtypes,     only: var_numbers
+      use global,         only: cflcontrol, cfl_violated, dt_old
+      use timestep_pub,   only: c_all, c_all_old
+      use timestep_retry, only: reset_freezing_speed
+
+      implicit none
+
+      real,              intent(in) :: dt    !< the timestep
+      type(var_numbers), intent(in) :: flind !< the structure with all fluid indices
+      real                          :: checkdt
+      real, dimension(3)            :: bck   !< backup for timestep sensitive variables
+
+      if (cflcontrol /= 'warn') return
+
+      checkdt = dt
+
+      bck = [dt_old, c_all_old, c_all]
+
+      call time_step(checkdt, flind)
+      if (cfl_violated) call reset_freezing_speed
+
+      dt_old = bck(1) ; c_all_old = bck(2) ; c_all = bck(3) !> \todo check if this backup is necessary
+
+   end subroutine check_cfl_violation
 
 !------------------------------------------------------------------------------------------
 !>
@@ -215,11 +248,9 @@ contains
       use dataio_pub,   only: msg, warn
       use global,       only: cfl, cfl_max, cfl_violated
       use mpisetup,     only: piernik_MPI_Bcast, master
-      use timestep_pub, only: c_all
+      use timestep_pub, only: c_all, c_all_old, stepcfl
 
       implicit none
-
-      real :: stepcfl
 
       stepcfl = cfl
       if (c_all_old > 0.) stepcfl = c_all/c_all_old*cfl
@@ -252,12 +283,11 @@ contains
       use dataio_pub,   only: msg, warn
       use global,       only: cfl, cfl_max, dt, dt_old
       use mpisetup,     only: master
-      use timestep_pub, only: c_all
+      use timestep_pub, only: c_all, c_all_old, cfl_c, stepcfl
 
       implicit none
 
-      real, save :: stepcfl=zero, cfl_c=one
-      real       :: stepcfl_old
+      real :: stepcfl_old
 
       stepcfl_old = stepcfl
       stepcfl = cfl
@@ -333,7 +363,7 @@ contains
       integer                :: i, j, k, d
       type(cg_level_connected_T), pointer :: curl
 
-      curl => find_level(cg%level_id)
+      curl => find_level(cg%l%id)
 
       c_fl = small
       dt_proc(:) = huge(1.)

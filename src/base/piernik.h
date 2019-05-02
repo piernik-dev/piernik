@@ -1,9 +1,33 @@
 
+/* spelling workaround */
+
+#ifdef IONISED
+#  define IONIZED
+#endif /* IONISED */
+
 #include "piernik.def"
 
-#if defined(MULTIGRID) && defined(GRAV)
-#define SELF_GRAV
-#endif
+#ifdef IONIZED
+#  ifndef NONMAGNETIC
+#    ifndef MAGNETIC
+#      define MAGNETIC
+#    endif /* !MAGNETIC */
+#  endif /* !NONMAGNETIC */
+#endif /* IONIZED */
+
+#if !defined(MAGNETIC) && defined(RESISTIVE)
+#define NOMAGNETICNORESIST
+#undef RESISTIVE
+#endif /* !MAGNETIC && RESISTIVE */
+
+#ifdef SELF_GRAV
+#  ifndef GRAV
+#    define GRAV
+#  endif /* !GRAV */
+#  ifndef MULTIGRID
+#    define MULTIGRID
+#  endif /* !MULTIGRID */
+#endif /* SELF_GRAV */
 
 #if defined(VARIABLE_USER_GP) || defined(SELF_GRAV)
 #define VARIABLE_GP

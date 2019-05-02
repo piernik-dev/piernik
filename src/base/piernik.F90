@@ -37,11 +37,12 @@ program piernik
    use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP
    use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump
    use dataio_pub,        only: nend, tend, msg, printinfo, warn, die, code_progress
+   use div_B,             only: print_divB_norm
    use finalizepiernik,   only: cleanup_piernik
    use fluidindex,        only: flind
    use fluidupdate,       only: fluid_update
    use func,              only: operator(.equals.)
-   use global,            only: t, nstep, dt, dtm, cfl_violated
+   use global,            only: t, nstep, dt, dtm, cfl_violated, print_divB
    use initpiernik,       only: init_piernik
    use list_of_cg_lists,  only: all_lists
    use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast
@@ -49,7 +50,7 @@ program piernik
    use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
    use timer,             only: walltime_end
-   use timestep,          only: time_step
+   use timestep,          only: time_step, check_cfl_violation
    use user_hooks,        only: finalize_problem, problem_domain_update
 #ifdef PERFMON
    use domain,            only: dom
@@ -105,6 +106,7 @@ program piernik
    endif
 
    call print_progress(nstep)
+   if (print_divB > 0) call print_divB_norm
 
    do while (t < tend .and. nstep < nend .and. .not.(end_sim)) ! main loop
 
@@ -122,35 +124,39 @@ program piernik
       call time_step(dt, flind)
       call grace_period
 
-      if (first_step) then
-         dtm = 0.0
-      else
-         if (.not.cfl_violated) dtm = dt
-      endif
-
       if (.not.cfl_violated) then
-        call check_log
-        call check_tsl
+         dtm = dt
+
+         call check_log
+         call check_tsl
+
+         tlast = t
       endif
 
-      if (.not.cfl_violated) tlast = t
       call fluid_update
       nstep = nstep + I_ONE
       call print_progress(nstep)
+      call check_cfl_violation(dt, flind)
 
       if ((t .equals. tlast) .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
 
       call piernik_MPI_Barrier
 
-      call write_data(output=CHK)
+      if (.not.cfl_violated) then
+         call write_data(output=CHK)
 
-      call user_msg_handler(end_sim)
-      call update_refinement
-      if (try_rebalance) then
-         !> \todo try to rewrite this ugly chain of flags passed through global variables into something more fool-proof
-         call leaves%balance_and_update(" (re-balance) ")
-         call all_bnd ! For some strange reasons this call prevents MPI-deadlock
-         try_rebalance = .false.
+         call user_msg_handler(end_sim)
+         call update_refinement
+         if (try_rebalance) then
+            !> \todo try to rewrite this ugly chain of flags passed through global variables into something more fool-proof
+            call leaves%balance_and_update(" (re-balance) ")
+            call all_bnd ! For some strange reasons this call prevents MPI-deadlock
+            try_rebalance = .false.
+         endif
+
+         if (print_divB > 0) then
+            if (mod(nstep, print_divB) == 0) call print_divB_norm
+         endif
       endif
 
       if (master) tleft = walltime_end%time_left()
@@ -160,6 +166,11 @@ program piernik
 
       first_step = .false.
    enddo ! main loop
+
+   if (print_divB > 0) then
+      if (mod(nstep, print_divB) /= 0) call print_divB_norm ! print the norm at the end, if it wasn't printed inside the loop above
+   endif
+
 
    code_progress = PIERNIK_FINISHED
 

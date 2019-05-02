@@ -24,7 +24,7 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+#include "piernik.h"
 !>
 !! \brief module for HLLC scheme (SPLIT MUSCL HANCOCK)
 !!

@@ -1,0 +1,79 @@
+#!/usr/bin/python
+
+import h5py as h5
+import numpy as np
+import sys
+import scipy.misc
+
+
+def read_all_gdf_data(fname):
+    h5f = h5.File(fname, 'r')
+    n_d = h5f['domains']['base'].attrs['n_d'][:]
+    fields = h5f['/data']['grid_0000000000'].keys()
+    nb = 4  # ToDo: determine this from the file
+
+    output = {}
+
+    for field in fields:
+        rank = len(h5f['data']['grid_0000000000'][field].shape)
+        if (rank == 3):
+            output[field] = np.zeros(n_d, dtype=np.float64)
+        elif (rank == 4):
+            output[field] = np.zeros(np.append(h5f['data']['grid_0000000000'][field].shape[-1], n_d[:]), dtype=np.float64)
+        else:
+            print "wrong rank: ", rank
+            sys.exit()
+        for dname in h5f['/data'].keys():
+            li = h5f['data'][dname].attrs['off']
+            nd = np.int_(h5f['data'][dname].attrs['n_b'])
+            ri = li + nd
+
+            # ignore external boundary stripes for now (ToDo: provide full support for them)
+            lo = [0, 0, 0]
+            for i, l in enumerate(nd):
+                if (l < h5f['data'][dname][field][:].T.shape[i + rank - 3]):
+                    if (li[i] == 0):
+                        lo[i] = nb
+            ro = lo + nd
+
+            if (rank == 3):
+                output[field][li[0]:ri[0], li[1]:ri[1], li[2]:ri[2]] = h5f['data'][dname][field][lo[2]:ro[2], lo[1]:ro[1], lo[0]:ro[0]].T
+            elif (rank == 4):
+                output[field][:, li[0]:ri[0], li[1]:ri[1], li[2]:ri[2]] = h5f['data'][dname][field][lo[2]:ro[2], lo[1]:ro[1], lo[0]:ro[0], :].T
+            else:
+                print "wrong rank: ", rank
+                sys.exit()
+    return output
+
+data1 = read_all_gdf_data(sys.argv[1])
+data2 = read_all_gdf_data(sys.argv[2])
+
+for key in data1.keys():
+    if key in data2:
+        rank = len(data1[key].shape)
+        if (rank == 3):
+            print "L2 norm for field %14s = %g" % (key, np.linalg.norm(data1[key] - data2[key]))
+            if (data1[key].shape[-1] == 1):
+                scipy.misc.imsave('_diff_%s.png' %key, data1[key][:,:,0] - data2[key][:,:,0])
+        elif (rank == 4):
+            for i in range(data1[key].shape[0]):
+                print "L2 norm for field %10s[%2d] = %g" % (key, i, np.linalg.norm(data1[key][i, :, :, :] - data2[key][i, :, :, :]))
+                if (data1[key].shape[-1] == 1):
+                    scipy.misc.imsave('_diff_%s%d.png' % (key,i), data1[key][i,:,:,0] - data2[key][i,:,:,0])
+        else:
+            print "wrong rank: ", rank
+            sys.exit()
+    else:
+        print "Field %s is not present in 2nd file" % key
+
+
+# ToDo:
+#
+# * detect differences in data shapes
+# * print differences in problem.par and env arrays
+# * try to detect _important_ differences
+# * print position of few largest errors and dup data there
+# * use metric formula from gdf_distance
+# * output some png slices with error maps for 3D
+# * better support for AT_OUTB fields
+# * support for AMR files, including dumps from coarsest levels

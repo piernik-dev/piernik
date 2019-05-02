@@ -28,7 +28,7 @@
 
  $RESTART_CONTROL
     restart  = 'last'
-    new_id   = 'foo'
+    res_id   = 'foo'
     nrestart = 0
  /
 
@@ -49,6 +49,7 @@
     dt_log  = 10.0
     dt_tsl  = 10.0
     vars(1:) = 'dens', 'velx', 'vely', 'velz'
+    h5_64bit = .true.
     gdf_strict = .false.
  /
 

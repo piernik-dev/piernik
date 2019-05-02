@@ -44,13 +44,14 @@ module dataio_pub
    real, parameter             :: piernik_hdf5_version = 1.18    !< output version
 
    ! v2 specific
-   real, parameter             :: piernik_hdf5_version2 = 2.01   !< output version for multi-file, multi-domain I/O
+   real, parameter             :: piernik_hdf5_version2 = 2.02   !< output version for multi-file, multi-domain I/O
    logical                     :: use_v2_io                      !< prefer the new I/O format
    logical                     :: gdf_strict                     !< adhere more strictly to GDF standard
    integer(kind=4)             :: nproc_io                       !< how many processes do the I/O (v2 only)
    logical                     :: can_i_write                    !< .true. for processes allowed to write
    logical                     :: enable_compression             !< set to .true. to enable automatic compression (test I/O performance before use, avoid on serial I/O)
    integer(kind=4)             :: gzip_level                     !< gzip compression strength: 1 - lowest and fast, 9 - best and slow
+   logical                     :: h5_64bit                       !< single or double precision plotfiles
 
    ! Buffer lengths used only in I/O routines
    integer, parameter          :: msglen = 1024                  !< 1kB for a message ought to be enough for anybody ;-)
@@ -59,7 +60,7 @@ module dataio_pub
    ! Simulation control
    character(len=cbuff_len)    :: problem_name                   !< The problem name
    character(len=idlen)        :: run_id                         !< Auxiliary run identifier
-   character(len=idlen)        :: new_id                         !< Auxiliary new run identifier to change run_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new_id = '' then run_id is still used)
+   character(len=idlen)        :: res_id                         !< Auxiliary run to restart identifier, yet different then current run_id of restarted simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if res_id = '' then run_id is used also for reading restart file)
    real                        :: tend                           !< simulation time to end
    real                        :: wend                           !< wall clock time to end (in hours)
 
@@ -95,9 +96,9 @@ module dataio_pub
    integer                     :: code_progress                  !< rough estimate of code execution progress
 
    ! storage for the problem.par
-   integer, parameter          :: maxparfilelen   = 128          !< max length of line in problem.par file
+   integer, parameter          :: maxparfilelen   = 500          !< max length of line in problem.par file
    integer, parameter          :: maxparfilelines = 256          !< max number of lines in problem.par
-   integer(kind=4), parameter  :: bufferlines = 128              !< max number of lines in problem.par
+   integer(kind=4), parameter  :: bufferlines = 128              !< max number of lines in the log buffer
    character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
    character(len=msglen), dimension(bufferlines) :: logbuffer    !< buffer for log I/O
    integer, save               :: parfilelines = 0               !< number of lines in the parameter file
@@ -166,8 +167,11 @@ module dataio_pub
 contains
 
    subroutine namelist_handler_T_init(this)
+
       implicit none
+
       class(namelist_handler_T), intent(inout) :: this
+
       character(len=cwdlen) :: tmpdir
       integer :: lchar_tmpdir
 
@@ -198,7 +202,7 @@ contains
 
       implicit none
 
-      logical :: enable
+      logical, intent(in) :: enable
 
       if (enable) then
          write(ansi_black,  '(A1,A3)') char(27),"[0m"
@@ -322,7 +326,7 @@ contains
       implicit none
       integer :: line
 
-      do line = 1, min(cbline, size(logbuffer))
+      do line = 1, min(cbline, size(logbuffer, kind=4))
 #if defined(__INTEL_COMPILER)
          write(log_lun, '(a)') trim(logbuffer(line))
 #else /* __INTEL_COMPILER */
@@ -356,7 +360,7 @@ contains
 
       implicit none
 
-      character(len=*), intent(in) :: nm
+      character(len=*),  intent(in) :: nm
       logical, optional, intent(in) :: noadvance
 
       logical :: adv
@@ -394,7 +398,7 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)  :: nm
+      character(len=*),  intent(in) :: nm
       integer, optional, intent(in) :: allprocs
 
       call colormessage(nm, T_ERR)
@@ -522,9 +526,11 @@ contains
    end function move_file
 !-----------------------------------------------------------------------------
    subroutine close_txt_file(lfile, llun)
+
       implicit none
-      integer, intent(in)                 :: llun     !< logical unit number for txt file
-      character(len=cwdlen), intent(in)   :: lfile    !< path to txt file
+
+      integer,               intent(in) :: llun     !< logical unit number for txt file
+      character(len=cwdlen), intent(in) :: lfile    !< path to txt file
 
       logical :: lopen
 
@@ -538,11 +544,11 @@ contains
 
    subroutine close_logs
 
-      use mpi,       only: MPI_COMM_WORLD
+      use mpi, only: MPI_COMM_WORLD
 
       implicit none
 
-      integer(kind=4)               :: proc
+      integer(kind=4) :: proc
 
       call MPI_Comm_rank(MPI_COMM_WORLD, proc, mpi_err)
 
@@ -551,6 +557,7 @@ contains
          call close_txt_file(log_file, log_lun)
          call close_txt_file(tsl_file, tsl_lun)
       endif
+
    end subroutine close_logs
 !>
 !! \brief Sanitize a file name
@@ -563,10 +570,11 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)  :: str
+      character(len=*), intent(in) :: str
+
       character(len=len(str)) :: outstr
 
-      integer            :: i
+      integer :: i
 
       outstr = repeat(" ", len(str))
 

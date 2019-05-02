@@ -15,7 +15,6 @@
  /
 
  $MPI_BLOCKS
-    AMR_bsize = 3*16
  /
 
  $UNITS
@@ -24,7 +23,7 @@
 
  $RESTART_CONTROL
     restart  = 'last'
-    new_id   = ''
+    res_id   = ''
     nrestart = 0
  /
 
@@ -65,6 +64,7 @@
  /
 
  $AMR
+    bsize = 3*16
     level_max = 1
     refine_boxes(1) = 2, -.45, -.45, -.45, .45, .45, .45
  /

@@ -82,7 +82,8 @@ contains
       use global,           only: smalld
       use mpisetup,         only: rbuff, ibuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
       use named_array_list, only: wna
-      use refinement,       only: set_n_updAMR, n_updAMR, user_ref2list
+      use refinement,       only: set_n_updAMR, n_updAMR
+      use refinement_crit_list, only: user_ref2list
       use user_hooks,       only: problem_refine_derefine
 
       implicit none
@@ -260,16 +261,16 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)                    :: var
-      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-      integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in)       :: cg
+      character(len=*),              intent(in)    :: var
+      real, dimension(:,:,:),        intent(inout) :: tab
+      integer,                       intent(inout) :: ierrh
+      type(grid_container), pointer, intent(in)    :: cg
 
       call analytic_solution(t) ! cannot handle this automagically because here we modify it
 
       ierrh = 0
       if (qna%exists(var)) then
-         tab(:,:,:) = real(cg%q(qna%ind(var))%span(cg%ijkse), 4)
+         tab(:,:,:) = real(cg%q(qna%ind(var))%span(cg%ijkse), kind(tab))
       else
          ierrh = -1
       endif

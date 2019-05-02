@@ -88,16 +88,20 @@ module fluidtypes
       type(phys_prop) :: snap
 
       real :: c !< COMMENT ME (this quantity was previously a member of phys_prop, but is used in completely different way than other phys_prop% members
+      real :: c_old
 
    contains
       procedure :: set_fluid_index
       procedure :: set_cs  => update_sound_speed
       procedure :: set_gam => update_adiabatic_index
       procedure :: set_c   => update_freezing_speed
+      procedure :: res_c   => reset_freezing_speed
       procedure :: info    => printinfo_component_fluid
       procedure(tag),          nopass, deferred :: get_tag
       procedure(cs_get),         pass, deferred :: get_cs
+      procedure(cs_get),         pass, deferred :: get_mach
       procedure(flux_interface), pass, deferred :: compute_flux
+      procedure(pres_interface), pass, deferred :: compute_pres
       procedure(pass_flind),     pass, deferred :: initialize_indices
    end type component_fluid
 
@@ -152,20 +156,29 @@ module fluidtypes
          character(len=idlen)   :: tag
       end function tag
 
-      subroutine flux_interface(this, flux, cfr, uu, n, vx, ps, bb, cs_iso2, use_vx)
+      subroutine flux_interface(this, flux, cfr, uu, n, vx, bb, cs_iso2)
          import
          implicit none
          class(component_fluid), intent(in)           :: this
-         integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
-         real, dimension(:,:), intent(inout), pointer :: flux      !< flux of fluid
+         integer(kind=4),      intent(in)             :: n         !< number of cells in the current sweep
+         real, dimension(:,:), intent(out),   pointer :: flux      !< flux of fluid
          real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for fluid
-         real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for fluid
+         real, dimension(:,:), intent(out),   pointer :: cfr       !< freezing speed for fluid
          real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
-         real, dimension(:),   intent(inout), pointer :: vx        !< velocity of fluid for current sweep
-         real, dimension(:),   intent(inout), pointer :: ps        !< pressure of fluid for current sweep
+         real, dimension(:),   intent(in),    pointer :: vx        !< velocity of fluid for current sweep
          real, dimension(:),   intent(in),    pointer :: cs_iso2   !< isothermal sound speed squared
-         logical,              intent(in)             :: use_vx    !< use provided vx instead of computing it
       end subroutine flux_interface
+
+      subroutine pres_interface(this, n, uu, bb, cs_iso2, ps)
+         import
+         implicit none
+         class(component_fluid), intent(in)           :: this
+         integer(kind=4),        intent(in)           :: n         !< number of cells in the current sweep
+         real, dimension(:,:),   intent(in),  pointer :: uu        !< part of u for fluid
+         real, dimension(:,:),   intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
+         real, dimension(:),     intent(in),  pointer :: cs_iso2   !< isothermal sound speed squared
+         real, dimension(:),     intent(out), pointer :: ps        !< pressure of fluid for current sweep
+      end subroutine pres_interface
    end interface
 
 contains
@@ -189,8 +202,16 @@ contains
          class(component_fluid) :: this
          real, intent(in)       :: new_c
 
-         this%c   = new_c
+         this%c_old = this%c
+         this%c     = new_c
       end subroutine update_freezing_speed
+
+      subroutine reset_freezing_speed(this)
+         implicit none
+         class(component_fluid) :: this
+
+         this%c     = this%c_old
+      end subroutine reset_freezing_speed
 
       subroutine update_sound_speed(this,new_cs)
          implicit none
@@ -234,8 +255,11 @@ contains
 !! \deprecated repeated magic integers
 !<
       subroutine set_fluid_index(this, flind, is_magnetized, is_selfgrav, has_energy, cs_iso, gamma_, tag)
-         use constants,   only: xdim, ydim, zdim, ndims, I_ONE
+
+         use constants,   only: xdim, ydim, zdim, ndims, I_ONE, ION, NEU, DST, cbuff_len
+         use dataio_pub,  only: msg, printinfo
          use diagnostics, only: ma1d, ma2d, my_allocate
+         use mpisetup,    only: master
 
          implicit none
 
@@ -245,6 +269,7 @@ contains
          logical,                intent(in)    :: is_selfgrav, is_magnetized, has_energy
          real,                   intent(in)    :: cs_iso, gamma_
          integer(kind=4)                       :: tag
+         character(len=cbuff_len)              :: aux
 
          this%beg    = flind%all + I_ONE
 
@@ -294,6 +319,33 @@ contains
          this%has_energy    = has_energy
          this%is_selfgrav   = is_selfgrav
          this%is_magnetized = is_magnetized
+
+         msg = "Registered"
+         select case (tag)
+            case (ION)
+               msg = trim(msg) // " ionized"
+            case (NEU)
+               msg = trim(msg) // " neutral"
+            case (DST)
+               msg = trim(msg) // " dust"
+            case default
+               msg = trim(msg) // " unknown"
+         end select
+         msg = trim(msg) // " fluid:"
+         write(aux, '(A,F7.4)') " gamma = ", gamma_
+         msg = trim(msg) // aux
+         if (is_magnetized) msg = trim(msg) // ", magnetized"
+         if (is_selfgrav) msg = trim(msg) // ", selfgravitating"
+         if (has_energy) then
+            msg = trim(msg) // ", with energy"
+         else
+            msg = trim(msg) // ", isothermal with c_sound = "
+            write(aux, '(G10.2)') cs_iso
+            msg = trim(msg) // aux
+         endif
+
+         if (master) call printinfo(msg)
+
       end subroutine set_fluid_index
 
 !>

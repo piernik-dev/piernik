@@ -25,7 +25,7 @@
  $RESTART_CONTROL
     restart      = 'last'
     nrestart     = 0
-    new_id       = ''
+    res_id       = ''
  /
 
  $END_CONTROL
@@ -42,7 +42,8 @@
     dt_log       = 1. !e-6
     dt_tsl       = 1.0e-6
     vars(1:) = 'encr', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz'
- /
+    h5_64bit = .true.
+/
 
  $FLUID_IONIZED
     gamma = 1.66666667
@@ -84,9 +85,9 @@
     K_crn_paral(6) = 10000.0
     K_crn_paral(7) = 10000.0
     K_crn_perp(1)  = 0
-    ncre        = 0
-    use_split   = .false.
-    crn_gpcr_ess = .true.
+    ncre           = 0
+    use_CRsplit    = .false.
+    crn_gpcr_ess   = .true.
  /
 
  $CR_SPECIES

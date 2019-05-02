@@ -40,7 +40,7 @@
 !<
 
 module multigrid_gravity
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
 
    use constants,          only: cbuff_len
    use multigrid_vstats,   only: vcycle_stats
@@ -49,7 +49,10 @@ module multigrid_gravity
    implicit none
 
    private
-   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, invalidate_history
+   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, unmark_oldsoln, recover_sgpm
+#ifdef HDF5
+   public :: write_oldsoln_to_restart, read_oldsoln_from_restart
+#endif
 
    include "fftw3.f"
    ! constants from fftw3.f
@@ -97,11 +100,11 @@ contains
 !! <tr><td>ord_time_extrap       </td><td>1      </td><td>integer value  </td><td>\copydoc multigrid_gravity::ord_time_extrap       </td></tr>
 !! <tr><td>base_no_fft           </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::base_no_fft           </td></tr>
 !! <tr><td>fft_patient           </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::fft_patient           </td></tr>
-!! <tr><td>coarsen_multipole     </td><td>1      </td><td>integer value  </td><td>\copydoc multipole::coarsen_multipole             </td></tr>
 !! <tr><td>lmax                  </td><td>16     </td><td>integer value  </td><td>\copydoc multipole::lmax                          </td></tr>
 !! <tr><td>mmax                  </td><td>-1     </td><td>integer value  </td><td>\copydoc multipole::mmax                          </td></tr>
 !! <tr><td>ord_prolong_mpole     </td><td>-2     </td><td>integer value  </td><td>\copydoc multipole::ord_prolong_mpole             </td></tr>
-!! <tr><td>use_point_monopole    </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::use_point_monopole            </td></tr>
+!! <tr><td>mpole_solver          </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::mpole_solver                  </td></tr>
+!! <tr><td>level_3D              </td><td>1      </td><td>integer value  </td><td>\copydoc multipole::level_3D                      </td></tr>
 !! <tr><td>interp_pt2mom         </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::interp_pt2mom                 </td></tr>
 !! <tr><td>interp_mom2pot        </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::interp_mom2pot                </td></tr>
 !! <tr><td>multidim_code_3D      </td><td>.false.</td><td>logical        </td><td>\copydoc multigridvars::multidim_code_3d          </td></tr>
@@ -110,7 +113,7 @@ contains
 !! <tr><td>grav_bnd_str          </td><td>"periodic"/"dirichlet"</td><td>string of chars</td><td>\copydoc multigrid_gravity::grav_bnd_str          </td></tr>
 !! <tr><td>preconditioner        </td><td>"HG_V-cycle"</td><td>string of chars</td><td>\copydoc multigrid_gravity::preconditioner   </td></tr>
 !! </table>
-!! The list is active while \b "GRAV" and \b "MULTIGRID" are defined.
+!! The list is active while \b "SELF_GRAV" and \b "MULTIGRID" are defined.
 !! \n \n
 !<
    subroutine multigrid_grav_par
@@ -127,7 +130,8 @@ contains
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
       use multigrid_Laplace4, only: L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
-      use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
+      use multipole,          only: mpole_solver, lmax, mmax, ord_prolong_mpole, level_3D, singlepass, init_multipole
+      use multipole_array,    only: interp_pt2mom, interp_mom2pot
       use pcg,                only: use_CG, use_CG_outer, preconditioner, default_preconditioner, pcg_init
 
       implicit none
@@ -138,7 +142,7 @@ contains
       namelist /MULTIGRID_GRAVITY/ norm_tol, coarsest_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
            &                       overrelax, L4_strength, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       base_no_fft, fft_patient, &
-           &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
+           &                       lmax, mmax, ord_prolong_mpole, mpole_solver, level_3D, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
            &                       grav_bnd_str, preconditioner
 
       if (.not.frun) call die("[multigrid_gravity:multigrid_grav_par] Called more than once.")
@@ -152,10 +156,9 @@ contains
       vcycle_giveup          = 1.5
       L4_strength            = 1.0
 
-      coarsen_multipole      = 0
-!      if (is_uneven) coarsen_multipole = 0
       lmax                   = 16
       mmax                   = -1 ! will be automatically set to lmax unless explicitly limited in problem.par
+      level_3D               = 1
       max_cycles             = 20
       nsmool                 = -1  ! best to set it to dom%nb or its multiply
       nsmoob                 = 10000
@@ -171,7 +174,7 @@ contains
       ord_prolong_mpole      = O_D2
       ord_time_extrap        = O_LIN
 
-      use_point_monopole     = .false.
+      mpole_solver           = "img_mass"
       base_no_fft            = .false.
       fft_patient            = .false.
       interp_pt2mom          = .false.
@@ -238,7 +241,7 @@ contains
          rbuff(5)  = L4_strength
          rbuff(6)  = coarsest_tol
 
-         ibuff( 1) = coarsen_multipole
+         ibuff( 1) = level_3D
          ibuff( 2) = lmax
          ibuff( 3) = mmax
          ibuff( 4) = max_cycles
@@ -249,7 +252,6 @@ contains
          ibuff( 9) = ord_time_extrap
          ibuff(10) = ord_laplacian_outer
 
-         lbuff(1)  = use_point_monopole
          lbuff(2)  = base_no_fft
          lbuff(3)  = fft_patient
          lbuff(4)  = interp_pt2mom
@@ -260,6 +262,7 @@ contains
 
          cbuff(1)  = grav_bnd_str
          cbuff(2)  = preconditioner
+         cbuff(3)  = mpole_solver
       endif
 
       call piernik_MPI_Bcast(cbuff, cbuff_len)
@@ -276,7 +279,7 @@ contains
          L4_strength    = rbuff(5)
          coarsest_tol   = rbuff(6)
 
-         coarsen_multipole = ibuff( 1)
+         level_3D          = ibuff( 1)
          lmax              = ibuff( 2)
          mmax              = ibuff( 3)
          max_cycles        = ibuff( 4)
@@ -287,7 +290,6 @@ contains
          ord_time_extrap   = ibuff( 9)
          ord_laplacian_outer = ibuff(10)
 
-         use_point_monopole = lbuff(1)
          base_no_fft        = lbuff(2)
          fft_patient        = lbuff(3)
          interp_pt2mom      = lbuff(4)
@@ -298,6 +300,8 @@ contains
 
          grav_bnd_str   = cbuff(1)(1:len(grav_bnd_str))
          preconditioner = cbuff(2)(1:len(preconditioner))
+         mpole_solver   = cbuff(3)(1:len(mpole_solver))
+
       endif
 
       ! boundaries
@@ -351,12 +355,14 @@ contains
 
       if (fft_patient) fftw_flags = FFTW_PATIENT
 
+      if (grav_bnd == bnd_isolated) call init_multipole
+
       ! solution recycling
       ord_time_extrap = min(nold_max-I_ONE, max(-I_ONE, ord_time_extrap))
       associate (nold => ord_time_extrap + 1)
       if (nold > 0) then
          call inner%init_history(nold, "i")
-         if (grav_bnd == bnd_isolated) call outer%init_history(nold, "o")
+         if (grav_bnd == bnd_isolated .and. .not. singlepass) call outer%init_history(nold, "o")
       endif
       end associate
 
@@ -379,7 +385,6 @@ contains
       use domain,              only: dom
       use mpisetup,            only: master, FIRST, LAST, piernik_MPI_Allreduce
       use multigridvars,       only: bnd_periodic, bnd_dirichlet, bnd_isolated, grav_bnd
-      use multipole,           only: init_multipole, coarsen_multipole
       use named_array_list,    only: qna
 
       implicit none
@@ -389,11 +394,6 @@ contains
       logical, save :: firstcall = .true.
       type(cg_list_element), pointer  :: cgl
       integer :: p, cnt, cnt_max
-
-      if (coarsen_multipole /= 0) then
-         coarsen_multipole = 0
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav] multipole coarsening temporarily disabled")
-      endif
 
       if (firstcall) call leaves%set_q_value(qna%ind(sgp_n), 0.) !Initialize all the guardcells, even those which does not impact the solution
 
@@ -427,12 +427,12 @@ contains
                if (master) call warn("[multigrid_gravity:init_multigrid_grav] base_no_fft unset but no suitable boundary conditions found. Reverting to relaxation.")
          end select
          if (trim(FFTn) /= "none" .and. master) then
-            write(msg,'(a,i3,2a)')"[multigrid_gravity:init_multigrid_grav] Coarsest level (",coarsest%level%level_id,"), FFT solver: ", trim(FFTn)
+            write(msg,'(a,i3,2a)')"[multigrid_gravity:init_multigrid_grav] Coarsest level (",coarsest%level%l%id,"), FFT solver: ", trim(FFTn)
             call printinfo(msg)
          endif
       endif
       if (coarsest%level%fft_type == fft_none .and. master) then
-         write(msg,'(a,i3,a)')"[multigrid_gravity:init_multigrid_grav] Coarsest level (",coarsest%level%level_id,"), relaxation solver"
+         write(msg,'(a,i3,a)')"[multigrid_gravity:init_multigrid_grav] Coarsest level (",coarsest%level%l%id,"), relaxation solver"
          call printinfo(msg)
       endif
 
@@ -462,10 +462,7 @@ contains
          enddo
       endif
 
-      if (grav_bnd == bnd_isolated .and. firstcall) call init_multipole
       firstcall = .false.
-
-      call invalidate_history
 
    end subroutine init_multigrid_grav
 
@@ -534,10 +531,10 @@ contains
       cg%mg%r  = cg%mg%r * cg%dvol**2
 
       ! FFT solver storage and data
-      curl => find_level(cg%level_id)
+      curl => find_level(cg%l%id)
 
       if (.not. associated(curl)) call die("[multigrid_gravity:mgg_cg_init] level not found")
-      if (cg%level_id /= curl%level_id) call die("[multigrid_gravity:mgg_cg_init] wrong level found")
+      if (cg%l%id /= curl%l%id) call die("[multigrid_gravity:mgg_cg_init] wrong level found")
 
       cg%mg%planf = 0
       cg%mg%plani = 0
@@ -636,17 +633,6 @@ contains
 #endif /* !BENCHMARKING_HACK */
 
    end subroutine mgg_cg_cleanup
-
-!> \brief Mark the historical solutions as invalid
-
-   subroutine invalidate_history
-
-      implicit none
-
-      inner%valid = .false.
-      outer%valid = .false.
-
-   end subroutine invalidate_history
 
 !>
 !! \brief Make a local copy of source (density) and multiply by 4 pi G
@@ -777,7 +763,7 @@ contains
       use constants,         only: sgp_n, tmr_mg
       use multigrid_helpers, only: all_dirty
       use multigridvars,     only: solution, tot_ts, ts, grav_bnd, bnd_dirichlet, bnd_givenval, bnd_isolated
-      use multipole,         only: multipole_solver
+      use multipole,         only: multipole_solver, singlepass
       use named_array_list,  only: qna
       use timer,             only: set_timer
 
@@ -807,11 +793,21 @@ contains
 
       call init_source(i_sg_dens)
 
+      if (grav_bnd_global == bnd_isolated .and. singlepass) then
+
+         call multipole_solver
+         grav_bnd = bnd_givenval
+         call init_source(i_sg_dens)
+         vstat%cprefix = "Gm-"
+
+      endif
+
       call poisson_solver(inner)
 
       call leaves%q_copy(solution, qna%ind(sgp_n))
 
-      if (grav_bnd_global == bnd_isolated) then
+      if (grav_bnd_global == bnd_isolated .and. .not. singlepass) then
+
          grav_bnd = bnd_givenval
 
          vstat%cprefix = "Go-"
@@ -829,6 +825,41 @@ contains
       tot_ts = tot_ts + ts
 
    end subroutine multigrid_solve_grav
+
+!> \brief
+
+   function recover_sgpm() result(initialized)
+
+      use constants,        only: sgpm_n
+      use cg_leaves,        only: leaves
+      use dataio_pub,       only: warn
+      use global,           only: nstep
+      use mpisetup,         only: master
+      use multigridvars,    only: grav_bnd, bnd_isolated
+      use named_array_list, only: qna
+
+      implicit none
+
+      logical :: initialized
+
+      initialized = .false.
+      if (associated(inner%old%latest)) then
+         call leaves%q_copy(inner%old%latest%i_hist, qna%ind(sgpm_n))
+         initialized = .true.
+         if (grav_bnd == bnd_isolated) then
+            if (associated(outer%old%latest)) then
+               call leaves%q_add(outer%old%latest%i_hist, qna%ind(sgpm_n))
+            else
+               initialized = .false.
+               call warn("[multigrid_gravity:recover_sgpm] i-history without o-history available. Ignoring.")
+            endif
+         endif
+      else
+         if (master .and. nstep > 0) call warn("[multigrid_gravity:recover_sgpm] no i-history available")
+      endif
+      call leaves%leaf_arr3d_boundaries(qna%ind(sgpm_n))
+
+   end function recover_sgpm
 
 !> \brief Chose the desired poisson solver
 
@@ -916,8 +947,14 @@ contains
       integer(kind=4), dimension(4)    :: mg_fields
       type(cg_level_connected_T), pointer :: curl
 
+#ifdef DEBUG
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
       inquire(file = "_dump_result_", EXIST=dump_result)
+#else  /* !DEBUG */
+      dump_every_step = .false.
+      dump_result = .false.
+#endif /* DEBUG */
+
       write(dname,'(2a)')trim(vstat%cprefix),"mdump"
       mg_fields = [ source, solution, defect, correction ]
 
@@ -929,6 +966,7 @@ contains
       norm_lowest = norm_rhs
 
       if (norm_rhs.equals.zero) then ! empty domain => potential == 0.
+         call leaves%set_q_value(solution, 0.)
          if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
          norm_was_zero = .true.
          return
@@ -1026,5 +1064,51 @@ contains
       call leaves%check_dirty(solution, "final_solution")
 
    end subroutine vcycle_hg
+
+!>
+!! \brief Mark which old potential fields should be put into restart and dump appropriate attributes
+!<
+
+   subroutine unmark_oldsoln
+
+      use multigridvars, only: grav_bnd, bnd_isolated
+
+      implicit none
+
+      call inner%unmark
+      if (grav_bnd == bnd_isolated) call outer%unmark
+
+   end subroutine unmark_oldsoln
+
+#ifdef HDF5
+   subroutine write_oldsoln_to_restart(file_id)
+
+      use hdf5,          only: HID_T
+      use multigridvars, only: grav_bnd, bnd_isolated
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id  !< File identifier
+
+      call inner%mark_and_create_attribute(file_id)
+      if (grav_bnd == bnd_isolated) call outer%mark_and_create_attribute(file_id)
+
+   end subroutine write_oldsoln_to_restart
+
+   subroutine read_oldsoln_from_restart(file_id)
+
+      use hdf5,          only: HID_T
+      use multigridvars, only: grav_bnd, bnd_isolated
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id  !< File identifier
+
+      call inner%read_os_attribute(file_id)
+      if (grav_bnd == bnd_isolated) call outer%read_os_attribute(file_id)
+
+   end subroutine read_oldsoln_from_restart
+
+#endif
 
 end module multigrid_gravity

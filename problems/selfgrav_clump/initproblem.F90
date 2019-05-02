@@ -49,16 +49,20 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_vars_hdf5, user_attrs_wr, user_attrs_rd
       use user_hooks,  only: late_initial_conditions, problem_domain_update
+#ifdef HDF5
+      use dataio_user, only: user_vars_hdf5, user_attrs_wr, user_attrs_rd
+#endif /* HDF5 */
 
       implicit none
 
       late_initial_conditions => sg_late_init
       problem_domain_update => sg_dist_to_edge
+#ifdef HDF5
       user_attrs_wr => sg_attrs_wr
       user_attrs_rd => sg_attrs_rd
       user_vars_hdf5 => sg_vars
+#endif /* HDF5 */
 
    end subroutine problem_pointers
 
@@ -299,7 +303,7 @@ contains
       call piernik_MPI_Allreduce (iC,   pSUM)
       call piernik_MPI_Allreduce (Msph, pSUM)
       if (master .and. verbose) then
-         write(msg,'(a,es13.7,a,i7,a)')"[initproblem:problem_initial_conditions] Starting with uniform sphere with M = ", Msph, " (", iC, " cells)"
+         write(msg,'(a,es14.7,a,i7,a)')"[initproblem:problem_initial_conditions] Starting with uniform sphere with M = ", Msph, " (", iC, " cells)"
          call printinfo(msg, .true.)
       endif
 
@@ -502,9 +506,9 @@ contains
       call piernik_MPI_Allreduce(dmax, pMAX)
 
       if (master) then
-         write(msg, '(a,g13.7)')"[initproblem:problem_initial_conditions] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (minval(dom%L_(:))/2.)**3/(newtong * clump_mass) )
+         write(msg, '(a,g14.7)')"[initproblem:problem_initial_conditions] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (minval(dom%L_(:))/2.)**3/(newtong * clump_mass) )
          call printinfo(msg, .true.)
-         write(msg, '(a,g13.7)')"[initproblem:problem_initial_conditions] Peak density ", dmax
+         write(msg, '(a,g14.7)')"[initproblem:problem_initial_conditions] Peak density ", dmax
          call printinfo(msg)
       endif
 
@@ -918,7 +922,7 @@ contains
       implicit none
 
       character(len=*),               intent(in)    :: var
-      real(kind=4), dimension(:,:,:), intent(inout) :: tab
+      real, dimension(:,:,:),         intent(inout) :: tab
       integer,                        intent(inout) :: ierrh
       type(grid_container), pointer,  intent(in)    :: cg
 
@@ -936,7 +940,7 @@ contains
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
-                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = real(sqrt(pi/newtong/cg%u(flind%ion%idn, i, j, k)) * flind%ion%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2)/delx, kind=4)
+                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = sqrt(pi/newtong/cg%u(flind%ion%idn, i, j, k)) * flind%ion%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2)/delx
                   enddo
                enddo
             enddo
@@ -944,7 +948,7 @@ contains
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
-                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = real(flind%ion%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2), kind=4)
+                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = flind%ion%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2)
                   enddo
                enddo
             enddo
@@ -952,7 +956,7 @@ contains
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
-                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = real(sqrt(2*ekin(cg%u(flind%ion%imx, i, j, k), cg%u(flind%ion%imy, i, j, k), cg%u(flind%ion%imz, i, j, k), cg%u(flind%ion%idn, i, j, k)**2)) / flind%ion%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2), kind=4)
+                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = sqrt(2*ekin(cg%u(flind%ion%imx, i, j, k), cg%u(flind%ion%imy, i, j, k), cg%u(flind%ion%imz, i, j, k), cg%u(flind%ion%idn, i, j, k)**2)) / flind%ion%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2)
                   enddo
                enddo
             enddo

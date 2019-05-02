@@ -177,7 +177,7 @@ contains
       endif
 
       curl => base%level
-      do while (associated(curl) .and. curl%level_id /= lev)
+      do while (associated(curl) .and. curl%l%id /= lev)
          call clear_lev(curl)
          curl => curl%coarser
       enddo
@@ -196,7 +196,7 @@ contains
          call curl%restrict_q_1var(qna%ind(fld_n))
          call clear_lev(curl)
          if (point) then
-            write(msg,*)"ip:pf restricted ^",curl%level_id
+            write(msg,*)"ip:pf restricted ^",curl%l%id
             call printinfo(msg)
             call find_non_0_or_write_hdf5
          endif
@@ -208,7 +208,7 @@ contains
             call curl%prolong_q_1var(qna%ind(fld_n))
             call clear_lev(curl)
             if (point) then
-               write(msg,*)"ip:pf prolonged ^",curl%level_id, " @", proc
+               write(msg,*)"ip:pf prolonged ^",curl%l%id, " @", proc
                call printinfo(msg)
                call find_non_0_or_write_hdf5
             endif
@@ -251,7 +251,7 @@ contains
 
       glev => base%level
       do while (associated(glev))
-         if (glev%level_id == lev) exit
+         if (glev%l%id == lev) exit
          glev => glev%coarser
       enddo
 
@@ -317,7 +317,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
          cg%q(i_fld)%arr(:,:,:) = 0.
-         if (cg%level_id == lev) then
+         if (cg%l%id == lev) then
             do i = cg%is, cg%ie
                do j = cg%js, cg%je
                   do k = cg%ks, cg%ke
@@ -374,7 +374,7 @@ contains
                do j = cg%js, cg%je
                   do k = cg%ks, cg%ke
                      if (cg%q(i_fld)%arr(i, j, k) .notequals. 0.) then
-                        write(msg,'(a,i5.5,2(a,i5),a,3f10.5,a,i3,a,g15.7)')"fn",n," @",proc," #",cg%grid_id," [",cg%x(i),cg%y(j),cg%z(k),"]^",cg%level_id," =",cg%q(i_fld)%arr(i, j, k)
+                        write(msg,'(a,i5.5,2(a,i5),a,3f10.5,a,i3,a,g15.7)')"fn",n," @",proc," #",cg%grid_id," [",cg%x(i),cg%y(j),cg%z(k),"]^",cg%l%id," =",cg%q(i_fld)%arr(i, j, k)
                         call printinfo(msg)
                      endif
                   enddo

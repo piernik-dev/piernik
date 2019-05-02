@@ -3,9 +3,9 @@
 import sys
 import numpy as np
 import matplotlib
-matplotlib.use('cairo')
 from yt.mods import load as yt_load
 from pylab import *
+matplotlib.use('cairo')
 
 THRESHOLD = 1e-9
 FIELD = "cr1"

@@ -236,7 +236,8 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, cor_dim, INVALID
       use dataio_pub,       only: die
-      use grid_cont,        only: grid_container, segment
+      use grid_cont,        only: grid_container
+      use grid_cont_bnd,    only: segment
 
       implicit none
 
@@ -463,7 +464,8 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, cor_dim, LO, HI, I_ONE, I_TWO
       use dataio_pub,       only: die, warn
-      use grid_cont,        only: grid_container, segment
+      use grid_cont,        only: grid_container
+      use grid_cont_bnd,    only: segment
       use mpi,              only: MPI_DOUBLE_PRECISION, MPI_STATUS_SIZE
       use mpisetup,         only: comm, mpi_err, req, inflate_req
       use named_array_list, only: wna
@@ -994,6 +996,7 @@ contains
       use dataio_pub,            only: msg, warn, die
       use domain,                only: dom
       use fluidboundaries_funcs, only: user_fluidbnd
+      use global,                only: force_cc_mag
       use grid_cont,             only: grid_container
       use mpisetup,              only: master
       use named_array_list,      only: wna
@@ -1032,7 +1035,8 @@ contains
                case (BND_USER)
                   call user_fluidbnd(dir, side, cg, wn=wna%bi)
                case (BND_FC, BND_MPI_FC)
-                  call die("[cg_list_bnd:bnd_b] fine-coarse interfaces not implemented yet")
+                  if (.not. force_cc_mag) &
+                       call die("[cg_list_bnd:bnd_b] fine-coarse interfaces not implemented yet for face-centered B field.")
                case (BND_COR)
                   if (dir == zdim) then
                      write(msg,'(2(a,i3))') "[cg_list_bnd:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
@@ -1057,8 +1061,12 @@ contains
       contains
 
          subroutine outflow_b(cg, dir, side)
+
+            ! use global,                only: force_cc_mag
             use grid_cont,             only: grid_container
+
             implicit none
+
             type(grid_container), pointer    :: cg
             integer(kind=4),      intent(in) :: dir
             integer(kind=4),      intent(in) :: side
@@ -1069,6 +1077,19 @@ contains
 
             pm_one = I_THREE - I_TWO * side
             pm_two = 2 * pm_one
+
+            ! Apparently this is already written for cell-centered magnetic field.
+
+            ! Simulations with Constrained Transport may exhibit slight assymetries because
+            ! rightmost face is reset here while leftmost is not. Use expressions like
+            !
+            !   it = cg%ijkse(dir, side) - pm_one * i + (side - LO)
+            !
+            ! when force_cc_mag is .false. in evaluation of dir-component of magnetic field
+            ! for more strict external boundary treatment.
+
+            ! BEWARE: this kind of boundaries does not guarantee div(B) == 0 .
+            ! Expect div(B) growing proportionally to the distance from the domain boundary.
 
             select case (dir)
                case (xdim)
@@ -1093,6 +1114,7 @@ contains
                      cg%b(ydim, :, :, it) = cg%b(ydim, :, :, it + pm_one)
                   enddo
             end select
+
          end subroutine outflow_b
 
    end subroutine bnd_b

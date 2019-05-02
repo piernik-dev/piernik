@@ -87,7 +87,7 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>norm_tol      </td><td>1.e-2  </td><td>real value     </td><td>\copydoc multigrid_diffusion::norm_tol      </td></tr>
+!! <tr><td>norm_tol      </td><td>1.e-5  </td><td>real value     </td><td>\copydoc multigrid_diffusion::norm_tol      </td></tr>
 !! <tr><td>vcycle_abort  </td><td>2.0    </td><td>real value     </td><td>\copydoc multigrid_diffusion::vcycle_abort  </td></tr>
 !! <tr><td>max_cycles    </td><td>20     </td><td>integer value  </td><td>\copydoc multigrid_diffusion::max_cycles    </td></tr>
 !! <tr><td>nsmool        </td><td>4      </td><td>integer value  </td><td>\copydoc multigrid_diffusion::nsmool        </td></tr>
@@ -120,6 +120,7 @@ contains
       logical, save :: frun = .true.          !< First run flag
       integer(kind=4), dimension(I_ONE), target :: pos
       integer(kind=4), dimension(:), pointer :: pia      ! the pia pointer is used as a workaround for compiler warnings about possibly uninitialized variable in reg_var
+      real, parameter :: warn_norm_tol = 1e-3
 
       namelist /MULTIGRID_DIFFUSION/ norm_tol, vcycle_abort, max_cycles, nsmool, nsmoob, overrelax, &
            &                         diff_theta, diff_tstep_fac, diff_explicit, allow_explicit, diff_bnd_str
@@ -129,7 +130,7 @@ contains
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_gravdiffusion:multigrid_diff_par] non-cartesian geometry not implemented yet.")
 
       ! Default values for namelist variables
-      norm_tol       = 1.e-2
+      norm_tol       = 1.e-5
       vcycle_abort   = 2.    ! unused as yet
       diff_theta     = 1.
       diff_tstep_fac = 1.
@@ -198,6 +199,16 @@ contains
 
          diff_bnd_str   = cbuff(1)(1:len(diff_bnd_str))
 
+      endif
+
+      if (master) then
+         if (norm_tol < 100.*epsilon(1.)) then
+            write(msg,'(a,g12.4,a)')"[multigrid_diffusion:multigrid_diff_par] such small norm_tol may result in problems with convergence (",norm_tol,")"
+            call warn(msg)
+         else if (norm_tol > warn_norm_tol) then
+            write(msg,'(a,g12.4,a)')"[multigrid_diffusion:multigrid_diff_par] such big norm_tol may result in problems with accuracy (",norm_tol,")"
+            call warn(msg)
+         endif
       endif
 
       ! boundaries
@@ -370,7 +381,7 @@ contains
 
       integer, intent(in) :: cr_id !< CR component index
 
-      if (finest%level%level_id /= base_level_id) call die("[multigrid_diffusion:init_source] refinements not implemented yet")
+      if (finest%level%l%id /= base_level_id) call die("[multigrid_diffusion:init_source] refinements not implemented yet")
 
       call all_cg%set_dirty(source)
       call all_cg%set_dirty(correction)
@@ -515,14 +526,18 @@ contains
       write(vstat%cprefix,'("C",i1,"-")') cr_id !> \deprecated BEWARE: this is another place with 0 <= cr_id <= 9 limit
       write(dirty_label, '("md_",i1,"_dump")')  cr_id
 
+#ifdef DEBUG
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
+#else  /* !DEBUG */
+      dump_every_step = .false.
+#endif /* DEBUG */
       do_ascii_dump = do_ascii_dump .or. dump_every_step
 
       norm_lhs = 0.
       norm_rhs = leaves%norm_sq(solution)
       norm_old = norm_rhs
 
-      if (finest%level%level_id /= base_level_id) call die("[multigrid_diffusion:vcycle_hg] refinements not implemented yet")
+      if (finest%level%l%id /= base_level_id) call die("[multigrid_diffusion:vcycle_hg] refinements not implemented yet")
 
       do v = 0, max_cycles
 

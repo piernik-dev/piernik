@@ -23,7 +23,7 @@
 
  $RESTART_CONTROL
     restart  = 'last'
-    new_id   = ''
+    res_id   = ''
     nrestart = 0
  /
 
@@ -67,8 +67,8 @@
     K_crn_perp(1)  = 0     ! isotropic
     K_crn_perp(2)  = 0
     K_crn_perp(3)  = 0
-    ncre        = 0
-    use_split   = .false.
+    ncre           = 0
+    use_CRsplit    = .false.
  /
 
  $CR_SPECIES
@@ -82,7 +82,7 @@
 !    diff_explicit = .true.
     diff_theta     = 0.5
     diff_tstep_fac = 91.0222223 !45.511112
-    norm_tol = 1e-3
+    norm_tol = 1e-5
     nsmoob = 4
     max_cycles = 50
  /

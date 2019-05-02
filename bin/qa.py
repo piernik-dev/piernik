@@ -12,8 +12,8 @@ typ1 = np.dtype([('name', 'a50'), ('beg', 'i'), ('end', 'i'), ('type', 'a4')])
 # starts with spaces or spaces and one of { 'end', 'pure', ... }
 # if function it can have a type next goes subroutine or function or type
 test_for_routines = re.compile('''
-      ^\s{0,12}(|end|pure|elemental|recursive|real|logical|integer)\s
-      (|pure|elemental|recursive|real|logical|integer)(|\s)
+      ^\s{0,12}(|end|pure|elemental|recursive|((type|real|logical|integer)(|\([^(]*\))))(|\s)
+      (|pure|elemental|recursive|((type|real|logical|integer)(|\([^(]*\))))(|\s)
       (subroutine|function|type(,|\s))
    ''', re.VERBOSE)
 # starts with spaces or spaces and one of { 'end', 'pure', ... }
@@ -58,15 +58,15 @@ implicit_save = re.compile('''
 not_param_nor_save = re.compile("(?!.*(parameter|save))", re.IGNORECASE)
 
 nasty_spaces = [
-    re.compile("end\s{1,}do", re.IGNORECASE), "enddo",
-    re.compile("end\s{1,}if", re.IGNORECASE), "endif",
-    re.compile("end\s{1,}while", re.IGNORECASE), "endwhile",
-    re.compile("end\s{1,}where", re.IGNORECASE), "endwhere",
+    re.compile("^([\s0-9]*)end\s{1,}do", re.IGNORECASE), r"\1enddo",
+    re.compile("^([\s0-9]*)end\s{1,}if", re.IGNORECASE), r"\1endif",
+    re.compile("^([\s0-9]*)end\s{1,}while", re.IGNORECASE), r"\1endwhile",
+    re.compile("^([\s0-9]*)end\s{1,}where", re.IGNORECASE), r"\1endwhere",
     re.compile("only\s{1,}:", re.IGNORECASE), "only:",
-    re.compile("if(|\s{2,})\(", re.IGNORECASE), "if (",
-    re.compile("where(|\s{2,})\(", re.IGNORECASE), "where (",
-    re.compile("while(|\s{2,})\(", re.IGNORECASE), "while (",
-    re.compile("forall(|\s{2,})\(", re.IGNORECASE), "forall (",
+    re.compile("\sif(|\s{2,})\(", re.IGNORECASE), " if (",
+    re.compile("\swhere(|\s{2,})\(", re.IGNORECASE), " where (",
+    re.compile("\swhile(|\s{2,})\(", re.IGNORECASE), " while (",
+    re.compile("\sforall(|\s{2,})\(", re.IGNORECASE), " forall (",
     re.compile("\scase(|\s{2,})\(", re.IGNORECASE), " case ("
 ]
 
@@ -145,7 +145,11 @@ def parse_f90file(lines, fname, store):
         if (just_end.match(f)):
             word = f.strip().split(' ')
             subs_types.insert(0, word[1])
-            subs_names.append(word[2])
+            if (len(word) >= 3):
+                subs_names.append(word[2])
+            else:
+                store.append(give_warn("QA:  ") + '[%s] "%s" without %s name' %
+                             (fname, f.strip(), word[1] if (len(word) > 1) else "any"))
     for f in subs_names:
         cur_sub = filter(re.compile(f).search, subs)
         if (len(cur_sub) > 2):
@@ -201,11 +205,20 @@ def qa_checks(files, options):
             # things done in "in-place"
             line = line.rstrip()    # that removes trailing spaces
             for i in range(0, len(nasty_spaces), 2):
-                line = re.sub(nasty_spaces[i], nasty_spaces[
-                              i + 1], line)   # remove nasty spaces
+                line = re.sub(nasty_spaces[i], nasty_spaces[i + 1], line)
+                # remove nasty spaces
             pfile.append(line)
 
         if lines != [line + '\n' for line in pfile]:
+            diff_cnt = 1 if (len(lines) != len(pfile)) else 0
+            if diff_cnt:
+                print give_warn("Line count changed") + " in file '%s'" % f
+            for i in range(min(len(lines), len(pfile))):
+                if (lines[i] != pfile[i] + '\n'):
+                    diff_cnt += 1
+            if diff_cnt:
+                print give_warn("QA:  ") + \
+                    "Whitespace changes found in file '%s' (%d lines changed)" % (f, diff_cnt)
             fp = open(f, 'w')
             for line in pfile:
                 fp.write(line + '\n')

@@ -21,7 +21,7 @@ In columns 1-3, you will get x, y and z coordinates. further columns will
 contain "density", "pressure" and so on, in the order as above.
 Now plot something:
 
-plot "< ../../python/yt_ray.py file.h5 -1 -.5 0 -1 -.5 0" u 1:4
+plot "< ../../python/yt_ray.py file.h5 -1 -.5 0 1 -.5 0" u 1:4
 
 The profile will be density at y=-0.5 coordinate of that 2D data'''
 

@@ -1,0 +1,98 @@
+! This test is supposed to work with advection test configured to use magnetic
+! field such as configured in a following way:
+! ./setup advection_test/magnetized_advection_test -o T_advection
+! or
+! ./setup advection_test/magnetized_advection_test -o R_advection -d RIEMANN
+!
+! The purpose is to both test the employed algorithms (examine the last
+! plot file) and correctness of the formulas in the data_hdf5 file (examine
+! first, initial plotfile).
+
+! An example of a resolution scan to show differences in the behavior of div(B)=0 maintaining methds
+! for i in `seq 6 20` ; do r=$(( 2 ** ($i / 2) * ( 2 + ($i % 2)) / 2 )) ; mpirun -np $(cat /proc/cpuinfo  | grep "cpu cores" | head -n 1 | sed 's/.*: //') ./piernik -n '&BASE_DOMAIN n_d = '$r', '$r', 1 / &OUTPUT_CONTROL run_id = "'$( printf "t%02d" $i )'"' ; done
+
+ $BASE_DOMAIN
+    n_d = 2*128
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = -0.5
+    xmax   =  1.5
+    ymin   = -0.5
+    ymax   =  1.5
+    zmin   = -0.5
+    zmax   =  1.5
+ /
+
+ $MPI_BLOCKS
+    allow_uneven = .true.
+    allow_noncart = .true.
+    dd_unif_quality = 1.1
+    dd_rect_quality = 1.1
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 1.0
+    nend   = 10000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'magnetized_flow'
+    run_id =  'am0'
+    dt_hdf  = .0833333333333333
+    dt_res  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1:) = "divb", "psi", "dens", "velx", "vely", "magx", "magy", "magz", "pres", "ener", "level"
+    gdf_strict = .false.
+    h5_64bit = T
+ /
+
+ $FLUID_IONIZED
+    gamma = 1.67
+    selfgrav = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-5
+    smallei= 1.e-5
+    limiter= 'vanleer'
+!    ord_mag_prolong = 3
+!  glm_alpha=0.05  ! seems to be the best in this test
+ /
+
+ $PROBLEM_CONTROL
+    pulse_vel = 0., 0., 0. ! set 2., -2., 2. to add uniform advection
+    pulse_pres = 6.e0
+    pulse_amp = 1.0  ! means constant density
+    B_const = 0., 0., 0.28209479177387814  !  B_z = 1/sqrt(4 * pi)
+    ! A blob of div(B)
+    divBb_amp = 0.28209479177387814, 0., 0.   ! 0.28209479177387814 !  1/sqrt(4 * pi)
+ /
+
+ $NONINERTIAL
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+    bsize =2*32
+    n_updAMR = 100000
+    level_max = 1
+    refine_boxes(1)  = 1, 0., 0., 0., 1., 1., 1.
+ /
