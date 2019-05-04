@@ -67,8 +67,13 @@ module multipole
    implicit none
 
    private
-   public :: init_multipole, cleanup_multipole, multipole_solver
+   public :: init_multipole, cleanup_multipole, multipole_solver, moments2pot
    public :: lmax, mmax, ord_prolong_mpole, mpole_solver, level_3D, singlepass  ! initialized in multigrid_gravity
+
+   interface moments2pot
+      module procedure moments2pot_xyz
+      module procedure moments2pot_r
+   end interface moments2pot
 
    type(mpole_container)        :: Q                   !< The whole moment array with dependence on radius
 
@@ -719,5 +724,36 @@ contains
       enddo
 
    end subroutine moments2bnd_potential
+
+!> \brief Wrapper for Q%moments2pot with proper normalisation for (x, y, z) argument
+
+   real function moments2pot_xyz(x, y, z) result(pot)
+
+      use units, only: fpiG
+
+      implicit none
+
+      real, intent(in) :: x !< x coordinate of the point
+      real, intent(in) :: y !< y coordinate of the point
+      real, intent(in) :: z !< z coordinate of the point
+
+      pot = Q%moments2pot(x, y, z)/fpiG
+
+   end function moments2pot_xyz
+
+!> \brief Wrapper for Q%moments2pot with proper normalisation for [x, y, z] argument
+
+   real function moments2pot_r(r) result(pot)
+
+      use constants, only: xdim, ydim, zdim, ndims
+      use units,     only: fpiG
+
+      implicit none
+
+      real, dimension(ndims), intent(in) :: r !< [x, y, z] coordinate of the point
+
+      pot = Q%moments2pot(r(xdim), r(ydim), r(zdim))/fpiG
+
+   end function moments2pot_r
 
 end module multipole
