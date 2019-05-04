@@ -176,7 +176,7 @@ contains
       enddo
 
       if (allocated(this%Q)) deallocate(this%Q)
-      allocate(this%Q(0:this%lm(int(this%lmax), int(2*this%mmax)), INSIDE:OUTSIDE, 0:this%rqbin))
+      allocate(this%Q(0:this%lm(int(this%lmax), int(2*this%mmax)), INSIDE:OUTSIDE, -1:this%rqbin))
 
    end subroutine refresh
 
@@ -211,14 +211,14 @@ contains
       call piernik_MPI_Allreduce(this%irmax, pMAX)
 
       ! integrate radially and apply normalization factor (the (4 \pi)/(2 l  + 1) terms cancel out)
-      rr = max(1, this%irmin)
+      rr = max(0, this%irmin)
       this%Q(:, INSIDE, rr-1) = this%Q(:, INSIDE, rr-1) * this%ofact(:)
       do r = rr, this%irmax
          this%Q(:, INSIDE, r) = this%Q(:, INSIDE, r) * this%ofact(:) + this%Q(:, INSIDE, r-1)
       enddo
 
       this%Q(:, OUTSIDE, this%irmax+1) = this%Q(:, OUTSIDE, this%irmax+1) * this%ofact(:)
-      do r = this%irmax, rr, -1
+      do r = this%irmax, rr-1, -1
          this%Q(:, OUTSIDE, r) = this%Q(:, OUTSIDE, r) * this%ofact(:) + this%Q(:, OUTSIDE, r+1)
       enddo
 
@@ -534,7 +534,7 @@ contains
          call die(msg)
       endif
       this%irmax = max(this%irmax, ir)
-      this%irmin = min(this%irmin, ir)
+      this%irmin = min(this%irmin, ir-1)
 
       ! azimuthal angle sine and cosine tables
       ! ph = atan2(y, x); this%cfac(m) = cos(m * ph); this%sfac(m) = sin(m * ph)
