@@ -146,6 +146,12 @@ contains
 !!
 !! \details This routine reinitializes everything that may need reinitialization due to AMR activity
 !!
+!! Since the worst quality of multipole expansion occurs at the radius of the contributing source,
+!! typically it is safest choice to use center of domain as the origin of radial distribution of multipoles.
+!!
+!! At the sphere around the origin that contains the source, the multipole expansion reduces to
+!! spherical harmonics and there are no factors containing powers of r to help with convergence.
+!!
 !! \todo OPT: Detect only changes in highest required level
 !<
 
@@ -159,25 +165,22 @@ contains
 
       implicit none
 
-      ! assume that Center of Mass is approximately in the center of computational domain by default
-      CoM(imass) = 1.
-
       select case (dom%geometry_type)
          case (GEO_XYZ)
-            CoM(xdim:zdim) = dom%C_(xdim:zdim)
+            Q%center(xdim:zdim) = dom%C_(xdim:zdim)
             zaxis_inside = .false.
          case (GEO_RPZ)
             if (dom%L_(ydim) >= (2.-small)*pi) then
-               CoM(xdim) = 0.
-               CoM(ydim) = 0.
+               Q%center(xdim) = 0.
+               Q%center(ydim) = 0.
             else
-!!$               CoM(xdim) = 2./3. * (dom%edge(xdim, HI)**3-dom%edge(xdim, LO)**3)/(dom%edge(xdim, HI)**2-dom%edge(xdim, LO)**2)
-!!$               if (dom%L_(ydim).notequals.zero) CoM(xdim) = CoM(xdim) * sin(dom%L_(ydim)/2.)/(dom%L_(ydim)/2.)
-!!$               CoM(ydim) = dom%C_(ydim)
-               CoM(xdim) = 0.
-               CoM(ydim) = 0.
+!!$               Q%center(xdim) = 2./3. * (dom%edge(xdim, HI)**3-dom%edge(xdim, LO)**3)/(dom%edge(xdim, HI)**2-dom%edge(xdim, LO)**2)
+!!$               if (dom%L_(ydim).notequals.zero) Q%center(xdim) = Q%center(xdim) * sin(dom%L_(ydim)/2.)/(dom%L_(ydim)/2.)
+!!$               Q%center(ydim) = dom%C_(ydim)
+               Q%center(xdim) = 0.
+               Q%center(ydim) = 0.
             endif
-            CoM(zdim) = dom%C_(zdim)
+            Q%center(zdim) = dom%C_(zdim)
             zaxis_inside = dom%edge(xdim, LO) <= dom%L_(xdim)/finest%level%l%n_d(xdim)
             if (master) then
                if (zaxis_inside) call warn("[multigridmultipole:refresh_multipole] Setups with Z-axis at the edge of the domain may not work as expected yet.")
@@ -533,7 +536,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim).notequals.zero)) call die("[multigridmultipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
+      if (dom%geometry_type /= GEO_XYZ .and. any(Q%center(xdim:zdim).notequals.zero)) call die("[multigridmultipole:img_mass2moments] Q%center /= 0. not implemented for non-cartesian geometry")
 
       geofac(:) = 1.
 
@@ -547,9 +550,9 @@ contains
             do j = cg%js, cg%je
                do k = cg%ks, cg%ke
                   if (cg%leafmap(cg%is, j, k) .and. cg%ext_bnd(xdim, LO) .and. (dom%geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
-                       call Q%point2moments(cg%mg%bnd_x(j, k, LO)*cg%dyz*geofac(LO), cg%fbnd(xdim, LO)-CoM(xdim), cg%y(j)-CoM(ydim), cg%z(k)-CoM(zdim))
+                       call Q%point2moments(cg%mg%bnd_x(j, k, LO)*cg%dyz*geofac(LO), cg%fbnd(xdim, LO), cg%y(j), cg%z(k))
                   if (cg%leafmap(cg%ie, j, k) .and. cg%ext_bnd(xdim, HI)) &
-                       call Q%point2moments(cg%mg%bnd_x(j, k, HI)*cg%dyz*geofac(HI), cg%fbnd(xdim, HI)-CoM(xdim), cg%y(j)-CoM(ydim), cg%z(k)-CoM(zdim))
+                       call Q%point2moments(cg%mg%bnd_x(j, k, HI)*cg%dyz*geofac(HI), cg%fbnd(xdim, HI), cg%y(j), cg%z(k))
                enddo
             enddo
          endif
@@ -558,9 +561,9 @@ contains
             do i = cg%is, cg%ie
                do k = cg%ks, cg%ke
                   if (cg%leafmap(i, cg%js, k) .and. cg%ext_bnd(ydim, LO)) &
-                       call Q%point2moments(cg%mg%bnd_y(i, k, LO)*cg%dxz, cg%x(i)-CoM(xdim), cg%fbnd(ydim, LO)-CoM(ydim), cg%z(k)-CoM(zdim))
+                       call Q%point2moments(cg%mg%bnd_y(i, k, LO)*cg%dxz, cg%x(i), cg%fbnd(ydim, LO), cg%z(k))
                   if (cg%leafmap(i, cg%je, k) .and. cg%ext_bnd(ydim, HI)) &
-                       call Q%point2moments(cg%mg%bnd_y(i, k, HI)*cg%dxz, cg%x(i)-CoM(xdim), cg%fbnd(ydim, HI)-CoM(ydim), cg%z(k)-CoM(zdim))
+                       call Q%point2moments(cg%mg%bnd_y(i, k, HI)*cg%dxz, cg%x(i), cg%fbnd(ydim, HI), cg%z(k))
                enddo
             enddo
          endif
@@ -570,9 +573,9 @@ contains
                if (dom%geometry_type == GEO_RPZ) geofac(LO) = cg%x(i)
                do j = cg%js, cg%je
                   if (cg%leafmap(i, j, cg%ks) .and. cg%ext_bnd(zdim, LO)) &
-                       call Q%point2moments(cg%mg%bnd_z(i, j, LO)*cg%dxy*geofac(LO), cg%x(i)-CoM(xdim), cg%y(j)-CoM(ydim), cg%fbnd(zdim, LO)-CoM(zdim))
+                       call Q%point2moments(cg%mg%bnd_z(i, j, LO)*cg%dxy*geofac(LO), cg%x(i), cg%y(j), cg%fbnd(zdim, LO))
                   if (cg%leafmap(i, j, cg%ke) .and. cg%ext_bnd(zdim, HI)) &
-                       call Q%point2moments(cg%mg%bnd_z(i, j, HI)*cg%dxy*geofac(LO), cg%x(i)-CoM(xdim), cg%y(j)-CoM(ydim), cg%fbnd(zdim, HI)-CoM(zdim))
+                       call Q%point2moments(cg%mg%bnd_z(i, j, HI)*cg%dxy*geofac(LO), cg%x(i), cg%y(j), cg%fbnd(zdim, HI))
                enddo
             enddo
          endif
@@ -595,7 +598,7 @@ contains
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_T, base_level
       use cg_list,            only: cg_list_element
-      use constants,          only: xdim, ydim, zdim, GEO_XYZ, zero, base_level_id
+      use constants,          only: xdim, zdim, GEO_XYZ, zero, base_level_id
       use dataio_pub,         only: die, msg, warn
       use domain,             only: dom
       use grid_cont,          only: grid_container
@@ -609,7 +612,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim).notequals.zero)) call die("[multigridmultipole:domain2moments] CoM not allowed for non-cartesian geometry")
+      if (dom%geometry_type /= GEO_XYZ .and. any(Q%center(xdim:zdim).notequals.zero)) call die("[multigridmultipole:domain2moments] Q%center /= 0. not implemented for non-cartesian geometry")
       if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:domain2moments] Noncartesian geometry haven't been tested. Verify it before use.")
 
       ! scan
@@ -638,7 +641,7 @@ contains
                do i = cg%is, cg%ie
                   ! if (dom%geometry_type == GEO_RPZ) geofac = cg%x(i)
                   if (cg%leafmap(i, j, k) .or. level_3D <= base_level_id) &
-                       call Q%point2moments(cg%dvol * cg%q(source)%arr(i, j, k), cg%x(i) - CoM(xdim), cg%y(j) - CoM(ydim), cg%z(k) - CoM(zdim))  ! * geofac for GEO_RPZ
+                       call Q%point2moments(cg%dvol * cg%q(source)%arr(i, j, k), cg%x(i) , cg%y(j) , cg%z(k) )  ! * geofac for GEO_RPZ
                enddo
             enddo
          enddo
@@ -688,7 +691,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim).notequals.zero)) call die("[multigridmultipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
+      if (dom%geometry_type /= GEO_XYZ .and. any(Q%center(xdim:zdim).notequals.zero)) call die("[multigridmultipole:img_mass2moments] Q%center /= 0. not implemented for non-cartesian geometry")
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -697,8 +700,8 @@ contains
             do j = cg%js, cg%je
                do k = cg%ks, cg%ke
                   if (cg%ext_bnd(xdim, LO) .and. (dom%geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
-                       &                    cg%mg%bnd_x(j, k, LO) = Q%moments2pot(cg%fbnd(xdim, LO)-CoM(xdim), cg%y(j)-CoM(ydim), cg%z(k)-CoM(zdim))
-                  if (cg%ext_bnd(xdim, HI)) cg%mg%bnd_x(j, k, HI) = Q%moments2pot(cg%fbnd(xdim, HI)-CoM(xdim), cg%y(j)-CoM(ydim), cg%z(k)-CoM(zdim))
+                       &                    cg%mg%bnd_x(j, k, LO) = Q%moments2pot(cg%fbnd(xdim, LO), cg%y(j), cg%z(k))
+                  if (cg%ext_bnd(xdim, HI)) cg%mg%bnd_x(j, k, HI) = Q%moments2pot(cg%fbnd(xdim, HI), cg%y(j), cg%z(k))
                enddo
             enddo
          endif
@@ -706,8 +709,8 @@ contains
          if (any(cg%ext_bnd(ydim, :))) then
             do i = cg%is, cg%ie
                do k = cg%ks, cg%ke
-                  if (cg%ext_bnd(ydim, LO)) cg%mg%bnd_y(i, k, LO) = Q%moments2pot(cg%x(i)-CoM(xdim), cg%fbnd(ydim, LO)-CoM(ydim), cg%z(k)-CoM(zdim))
-                  if (cg%ext_bnd(ydim, HI)) cg%mg%bnd_y(i, k, HI) = Q%moments2pot(cg%x(i)-CoM(xdim), cg%fbnd(ydim, HI)-CoM(ydim), cg%z(k)-CoM(zdim))
+                  if (cg%ext_bnd(ydim, LO)) cg%mg%bnd_y(i, k, LO) = Q%moments2pot(cg%x(i), cg%fbnd(ydim, LO), cg%z(k))
+                  if (cg%ext_bnd(ydim, HI)) cg%mg%bnd_y(i, k, HI) = Q%moments2pot(cg%x(i), cg%fbnd(ydim, HI), cg%z(k))
                enddo
             enddo
          endif
@@ -715,8 +718,8 @@ contains
          if (any(cg%ext_bnd(zdim, :))) then
             do i = cg%is, cg%ie
                do j = cg%js, cg%je
-                  if (cg%ext_bnd(zdim, LO)) cg%mg%bnd_z(i, j, LO) = Q%moments2pot(cg%x(i)-CoM(xdim), cg%y(j)-CoM(ydim), cg%fbnd(zdim, LO)-CoM(zdim))
-                  if (cg%ext_bnd(zdim, HI)) cg%mg%bnd_z(i, j, HI) = Q%moments2pot(cg%x(i)-CoM(xdim), cg%y(j)-CoM(ydim), cg%fbnd(zdim, HI)-CoM(zdim))
+                  if (cg%ext_bnd(zdim, LO)) cg%mg%bnd_z(i, j, LO) = Q%moments2pot(cg%x(i), cg%y(j), cg%fbnd(zdim, LO))
+                  if (cg%ext_bnd(zdim, HI)) cg%mg%bnd_z(i, j, HI) = Q%moments2pot(cg%x(i), cg%y(j), cg%fbnd(zdim, HI))
                enddo
             enddo
          endif
@@ -733,9 +736,9 @@ contains
 
       implicit none
 
-      real, intent(in) :: x !< x coordinate of the point
-      real, intent(in) :: y !< y coordinate of the point
-      real, intent(in) :: z !< z coordinate of the point
+      real, intent(in) :: x !< absolute x-coordinate of the point
+      real, intent(in) :: y !< absolute y-coordinate of the point
+      real, intent(in) :: z !< absolute z-coordinate of the point
 
       pot = Q%moments2pot(x, y, z)/fpiG
 
