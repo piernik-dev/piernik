@@ -55,7 +55,7 @@ module multipole
 ! pulled by MULTIGRID && SELF_GRAV
 
    ! needed for global vars in this module
-   use constants,       only: ndims, xdim, cbuff_len
+   use constants,       only: cbuff_len
    use multipole_array, only: mpole_container
 
 #if defined(__INTEL_COMPILER)
@@ -84,8 +84,6 @@ module multipole
    character(len=cbuff_len)     :: mpole_solver        !< Pick one of: "monopole", "img_mass" (default), "3D"
    integer(kind=4)              :: level_3D            !< The level, at which we integrate the desnity field, to get is multipole representation. 0: base level, 1: leaves (default), <0: coarsened levels
 
-   integer, parameter           :: imass = xdim - 1    !< index for mass in CoM(:)
-   real, dimension(imass:ndims) :: CoM                 !< Total mass and center of mass coordinates
    logical                      :: zaxis_inside        !< true when z-axis belongs to the inner radial boundary in polar coordinates
    logical                      :: singlepass          !< When .true. it allows for single-pass multigrid solve
 
@@ -218,6 +216,7 @@ contains
       use constants,  only: dirtyH
       use dataio_pub, only: die
       use global,     only: dirty_debug
+      use monopole,   only: isolated_monopole, find_img_CoM
       use user_hooks, only: ext_bnd_potential
 
       implicit none
@@ -262,164 +261,6 @@ contains
       end select
 
    end subroutine multipole_solver
-
-!>
-!! \brief Set boundary potential from monopole source. Fill cg%mg%bnd_[xyz] arrays in leaves with expected values of the gravitational potential at external face of computational domain.
-!! \details This is a simplified approach that can be used for tests and as a fast replacement for the
-!! multipole boundary solver for nearly spherically symmetric source distributions.
-!! The isolated_monopole subroutine ignores the radial profile of the monopole
-!<
-
-   subroutine isolated_monopole
-
-      use cg_list,      only: cg_list_element
-      use cg_leaves,    only: leaves
-      use constants,    only: xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
-      use dataio_pub,   only: die, msg, warn
-      use domain,       only: dom
-      use grid_cont,    only: grid_container
-      use mpisetup,     only: proc
-      use particle_pub, only: pset
-      use units,        only: newtong
-
-      implicit none
-
-      integer :: i, j, k, lh
-      real    :: r2
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-
-      if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:isolated_monopole] non-cartesian geometry not implemented yet")
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         do lh = LO, HI
-            if (cg%ext_bnd(xdim, lh)) then
-               do j = cg%js, cg%je
-                  do k = cg%ks, cg%ke
-                     r2 = (cg%y(j)-CoM(ydim))**2 + (cg%z(k) - CoM(zdim))**2
-                     cg%mg%bnd_x(j, k, lh) = - newtong * CoM(imass) / sqrt(r2 + (cg%fbnd(xdim, lh)-CoM(xdim))**2)
-                  enddo
-               enddo
-            endif
-            if (cg%ext_bnd(ydim, lh)) then
-               do i = cg%is, cg%ie
-                  do k = cg%ks, cg%ke
-                     r2 = (cg%x(i)-CoM(xdim))**2 + (cg%z(k) - CoM(zdim))**2
-                     cg%mg%bnd_y(i, k, lh) = - newtong * CoM(imass) / sqrt(r2 + (cg%fbnd(ydim, lh)-CoM(ydim))**2)
-                  enddo
-               enddo
-            endif
-            if (cg%ext_bnd(zdim, lh)) then
-               do i = cg%is, cg%ie
-                  do j = cg%js, cg%je
-                     r2 = (cg%x(i)-CoM(xdim))**2 + (cg%y(j) - CoM(ydim))**2
-                     cg%mg%bnd_z(i, j, lh) = - newtong * CoM(imass) / sqrt(r2 + (cg%fbnd(zdim, lh)-CoM(zdim))**2)
-                  enddo
-               enddo
-            endif
-         enddo
-         cgl => cgl%nxt
-      enddo
-
-      do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
-         if (pset%p(i)%outside) then
-            write(msg, '(a,i8,a,i5,a)')"[multigridmultipole:isolated_monopole] Particle #", i, " on process ", proc, "ignored"
-            call warn(msg)
-         endif
-      enddo
-
-   end subroutine isolated_monopole
-
-!>
-!! \brief Find total mass and its center
-!!
-!! \details This routine does the summation only on external boundaries
-!<
-
-   subroutine find_img_CoM
-
-      use cg_leaves,    only: leaves
-      use cg_list,      only: cg_list_element
-      use constants,    only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, pSUM, zero !, GEO_RPZ
-      use dataio_pub,   only: die
-      use domain,       only: dom
-      use grid_cont,    only: grid_container
-      use func,         only: operator(.notequals.)
-      use mpisetup,     only: piernik_MPI_Allreduce
-      use particle_pub, only: pset
-#ifdef DEBUG
-      use dataio_pub,   only: msg, printinfo
-      use mpisetup,     only: master
-      use units,        only: fpiG
-#endif /* DEBUG */
-
-      implicit none
-
-      real, dimension(imass:ndims) :: lsum, dsum
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-      integer :: lh, i, d
-
-      if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:find_img_CoM] non-cartesian geometry not implemented yet")
-
-      lsum(:) = 0.
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         do lh = LO, HI
-            if (cg%ext_bnd(xdim, lh)) then
-               d = cg%ijkse(xdim, lh)
-               dsum(imass)     =        sum( cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, lh), mask=cg%leafmap(d, :, :) )
-               dsum(xdim:zdim) = [ dsum(imass) * cg%fbnd(xdim, lh), &
-                    &              sum( sum( cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, lh), mask=cg%leafmap(d, :, :), dim=2) * cg%y(cg%js:cg%je) ), &
-                    &              sum( sum( cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, lh), mask=cg%leafmap(d, :, :), dim=1) * cg%z(cg%ks:cg%ke) ) ]
-               lsum(:)         = lsum(:) + dsum(:) * cg%dyz
-            endif
-            if (cg%ext_bnd(ydim, lh)) then
-               d = cg%ijkse(ydim, lh)
-               dsum(imass)     =        sum( cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, lh), mask=cg%leafmap(:, d, :) )
-               dsum(xdim:zdim) = [ sum( sum( cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, lh), mask=cg%leafmap(:, d, :), dim=2) * cg%x(cg%is:cg%ie) ), &
-                    &              dsum(imass) * cg%fbnd(ydim, lh), &
-                    &              sum( sum( cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, lh), mask=cg%leafmap(:, d, :), dim=1) * cg%z(cg%ks:cg%ke) ) ]
-               lsum(:)         = lsum(:) + dsum(:) * cg%dxz
-            endif
-            if (cg%ext_bnd(zdim, lh)) then
-               d = cg%ijkse(zdim, lh)
-               dsum(imass)     =        sum( cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, lh), mask=cg%leafmap(:, :, d) )
-               dsum(xdim:zdim) = [ sum( sum( cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, lh), mask=cg%leafmap(:, :, d), dim=2) * cg%x(cg%is:cg%ie) ), &
-                    &              sum( sum( cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, lh), mask=cg%leafmap(:, :, d), dim=1) * cg%y(cg%js:cg%je) ), &
-                    &              dsum(imass) * cg%fbnd(zdim, lh) ]
-               lsum(:)         = lsum(:) + dsum(:) * cg%dxy
-            endif
-         enddo
-         cgl => cgl%nxt
-      enddo
-
-      ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
-      !> \warning Do we need to use the fppiG factor here?
-      do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
-         if (pset%p(i)%outside) lsum(:) = lsum(:) + [ pset%p(i)%mass, pset%p(i)%mass * pset%p(i)%pos(:) ]
-      enddo
-
-      CoM(imass:ndims) = lsum(imass:ndims)
-      call piernik_MPI_Allreduce(CoM(imass:ndims), pSUM)
-
-      if (CoM(imass).notequals.zero) then
-         CoM(xdim:zdim) = CoM(xdim:zdim) / CoM(imass)
-      else
-         call die("[multigridmultipole:find_img_CoM] Total mass == 0")
-      endif
-#ifdef DEBUG
-      if (master) then
-         write(msg, '(a,g14.6,a,3g14.6,a)')"[multigridmultipole:find_img_CoM] Total mass = ", CoM(imass)/fpiG," at (",CoM(xdim:zdim),")"
-         call printinfo(msg)
-      endif
-#endif /* DEBUG */
-
-   end subroutine find_img_CoM
 
 !>
 !! \brief Convert potential into image mass. This way we reduce a 3D problem to a 2D one.
