@@ -10,13 +10,18 @@ from   numpy  import array as np_array, log, log10
 import os
 from   optparse import OptionParser
 from   re     import search
-from   sys    import argv
+from   sys    import argv, version
 try:
     import yt
     from   yt.units import dimensions
 except:
     die("You must make yt available somehow")
-
+if (version[0:3] != "2.7"):
+    prtwarn("Using python version higher than 2.7!")
+    raw_input = input
+    not_py27  = True
+else:
+    not_py27  = False
 #------- Parse arguments
 parser = OptionParser("Usage: %prog FILE [options] [args] or %prog [options] [args] -F FILENAME")
 parser.add_option("-F", "--file",  dest="filename",     default="None",       help=u"File to use", type="str")
@@ -118,11 +123,9 @@ if f_run == True:
 
     if type(hdf_save_fpq) != type(False): hdf_save_fpq = False # if parameter not in problem.par - makes sure it's type is bool and set to False
 
-    print ""
-    prtinfo("*** Values read from problem.par@hdf5 file: *** ")
+    prtinfo("\n*** Values read from problem.par@hdf5 file: *** \n")
     for i in range(len(var_names)):
         prtinfo ( " %20s =  %8s ( %15s  ) " %(var_names[i], var_array[i], type(var_array[i])))
-    print ""
 
     crs_pf.initialize_pf_arrays(pf_initialized)
 #---------- Open file
@@ -254,8 +257,14 @@ if f_run == True:
        plot_min = plot_user_min
        plot_max = plot_user_max
 
-    plt.xlabel("Domain cooridnates "+dim_map.keys()[dim_map.values().index(avail_dim[0])]+" ("+length_unit+")" )
-    plt.ylabel("Domain cooridnates "+dim_map.keys()[dim_map.values().index(avail_dim[1])]+" ("+length_unit+")" )
+    if (not_py27):
+      plt.xlabel("Domain cooridnates "+list(dim_map.keys())[list(dim_map.values()).index(avail_dim[0])]+" ("+length_unit+")" )
+      plt.ylabel("Domain cooridnates "+list(dim_map.keys())[list(dim_map.values()).index(avail_dim[1])]+" ("+length_unit+")" )
+    else:
+      plt.xlabel("Domain cooridnates "+dim_map.keys()[dim_map.values().index(avail_dim[0])]+" ("+length_unit+")" )
+      plt.ylabel("Domain cooridnates "+dim_map.keys()[dim_map.values().index(avail_dim[1])]+" ("+length_unit+")" )
+    print(frb)
+
     plt.colormap="plasma"
 
     encountered_nans = False
