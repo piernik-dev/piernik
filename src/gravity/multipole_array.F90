@@ -32,6 +32,8 @@
 module multipole_array
 ! pulled by MULTIGRID && SELF_GRAV
 
+   use constants, only: ndims
+
    implicit none
 
    private
@@ -45,6 +47,7 @@ module multipole_array
    type :: mpole_container
 
       real, dimension(:,:,:), allocatable          :: Q       !< The whole moment array with dependence on radius
+      real, dimension(ndims)                       :: center  !< reference point for multipole expansion (such as domain center, CoM, centroid of particle subset, etc.)
       integer(kind=4),                     private :: lmax    !< Maximum l-order of multipole moments
       integer(kind=4),                     private :: mmax    !< Maximum m-order of multipole moments. Equal to lmax by default.
 
@@ -185,7 +188,7 @@ contains
       ! Another solution is to expand base level when too many particles go outside but still remain bound.
 
       if (allocated(this%Q)) deallocate(this%Q)
-      allocate(this%Q(0:this%lm(int(this%lmax), int(2*this%mmax)), INSIDE:OUTSIDE, 0:this%rqbin))
+      allocate(this%Q(0:this%lm(int(this%lmax), int(2*this%mmax)), INSIDE:OUTSIDE, -1:this%rqbin))
 
    end subroutine refresh
 
@@ -220,14 +223,14 @@ contains
       call piernik_MPI_Allreduce(this%irmax, pMAX)
 
       ! integrate radially and apply normalization factor (the (4 \pi)/(2 l  + 1) terms cancel out)
-      rr = max(1, this%irmin)
+      rr = max(0, this%irmin)
       this%Q(:, INSIDE, rr-1) = this%Q(:, INSIDE, rr-1) * this%ofact(:)
       do r = rr, this%irmax
          this%Q(:, INSIDE, r) = this%Q(:, INSIDE, r) * this%ofact(:) + this%Q(:, INSIDE, r-1)
       enddo
 
       this%Q(:, OUTSIDE, this%irmax+1) = this%Q(:, OUTSIDE, this%irmax+1) * this%ofact(:)
-      do r = this%irmax, rr, -1
+      do r = this%irmax, rr-1, -1
          this%Q(:, OUTSIDE, r) = this%Q(:, OUTSIDE, r) * this%ofact(:) + this%Q(:, OUTSIDE, r+1)
       enddo
 
@@ -298,9 +301,9 @@ contains
 
       class(mpole_container), intent(inout) :: this  !< object invoking type-bound procedure
       real,                   intent(in)    :: mass  !< mass of the contributing point
-      real,                   intent(in)    :: x     !< x coordinate of the contributing point
-      real,                   intent(in)    :: y     !< y coordinate of the contributing point
-      real,                   intent(in)    :: z     !< z coordinate of the contributing point
+      real,                   intent(in)    :: x     !< absolute x-coordinate of the contributing point
+      real,                   intent(in)    :: y     !< absolute y-coordinate of the contributing point
+      real,                   intent(in)    :: z     !< absolute z-coordinate of the contributing point
 
       real    :: sin_th, cos_th, sin_ph, cos_ph, del, cfac, sfac, tmpfac
       real    :: Ql, Ql1, Ql2
@@ -407,9 +410,9 @@ contains
       implicit none
 
       class(mpole_container), intent(inout) :: this  !< object invoking type-bound procedure
-      real,                   intent(in)    :: x     !< x coordinate of the contributing point
-      real,                   intent(in)    :: y     !< y coordinate of the contributing point
-      real,                   intent(in)    :: z     !< z coordinate of the contributing point
+      real,                   intent(in)    :: x     !< absolute x-coordinate of the contributing point
+      real,                   intent(in)    :: y     !< absolute y-coordinate of the contributing point
+      real,                   intent(in)    :: z     !< absolute z-coordinate of the contributing point
 
       real :: sin_th, cos_th, sin_ph, cos_ph, del, cfac, sfac, tmpfac
       real :: Ql, Ql1, Ql2
@@ -496,9 +499,9 @@ contains
 !! \details It modifies the this%rn(:) and this%irn(:) arrays. Scalars are passed through argument list.
 !<
 
-   subroutine geomfac4moments(this, factor, x, y, z, sin_th, cos_th, sin_ph, cos_ph, ir, delta)
+   subroutine geomfac4moments(this, factor, xx, yy, zz, sin_th, cos_th, sin_ph, cos_ph, ir, delta)
 
-      use constants,  only: GEO_XYZ, GEO_RPZ, zero
+      use constants,  only: GEO_XYZ, GEO_RPZ, zero, xdim, ydim, zdim
       use dataio_pub, only: die
       use domain,     only: dom
       use func,       only: operator(.notequals.)
@@ -507,9 +510,9 @@ contains
 
       class(mpole_container), intent(inout) :: this  !< object invoking type-bound procedure
       real,                   intent(in)  :: factor  !< scaling factor (e.g. mass) of the contributing point
-      real,                   intent(in)  :: x       !< x coordinate of the contributing point
-      real,                   intent(in)  :: y       !< x coordinate of the contributing point
-      real,                   intent(in)  :: z       !< x coordinate of the contributing point
+      real,                   intent(in)  :: xx      !< absolute x-coordinate of the contributing point
+      real,                   intent(in)  :: yy      !< absolute y-coordinate of the contributing point
+      real,                   intent(in)  :: zz      !< absolute z-coordinate of the contributing point
       real,                   intent(out) :: sin_th  !< sine of the vertical angle
       real,                   intent(out) :: cos_th  !< cosine of the vertical angle
       real,                   intent(out) :: sin_ph  !< sine of the azimuthal angle
@@ -517,8 +520,13 @@ contains
       integer,                intent(out) :: ir      !< radial index for the this%Q(:, :, r) array
       real,                   intent(out) :: delta   !< fraction of the radial cell for interpolation between ir and ir+1
 
+      real    :: x, y, z
       real    :: rxy, r, rinv
       integer :: l
+
+      x = xx - this%center(xdim)
+      y = yy - this%center(ydim)
+      z = zz - this%center(zdim)
 
       ! radius and its projection onto XY plane
       select case (dom%geometry_type)
@@ -551,7 +559,7 @@ contains
          ir = this%rqbin - 1
       endif
       this%irmax = max(this%irmax, ir)
-      this%irmin = min(this%irmin, ir)
+      this%irmin = min(this%irmin, ir-1)
 
       ! azimuthal angle sine and cosine tables
       ! ph = atan2(y, x); this%cfac(m) = cos(m * ph); this%sfac(m) = sin(m * ph)
