@@ -410,6 +410,7 @@ contains
       use dataio_pub,       only: warn
       use domain,           only: dom
       use grid_cont,        only: grid_container
+      use multipole,        only: moments2pot
       use named_array_list, only: qna
 
       implicit none
@@ -421,6 +422,7 @@ contains
       integer, dimension(ndims, IM:IP)             :: ijkp
       integer, dimension(ndims)                    :: cur_ind
       real,    dimension(ndims)                    :: fxyz, axyz
+      real,    dimension(5)                        :: tmp
       real                                         :: weight, delta_x, weight_tmp
 
       if (mask_gpot1b) then
@@ -437,8 +439,20 @@ contains
 
             if (part%outside) then
             ! multipole expansion for particles outside domain
-               call warn('[particle_gravity:update_particle_acc_tsc] particle is outside the domain - we need multipole expansion!!!')
-               part%acc = zero
+               tmp=[0,0,1,0,0]
+               do cdim = xdim, zdim
+                  fxyz(cdim) =   - ( moments2pot( part%pos(xdim) + cg%dl(xdim) * tmp(cdim+2), &
+                                 part%pos(ydim) + cg%dl(ydim) * tmp(cdim+1), part%pos(zdim) + cg%dl(zdim) * tmp(cdim) ) - &
+                                 moments2pot( part%pos(xdim) - cg%dl(xdim) * tmp(cdim+2), &
+                                 part%pos(ydim) - cg%dl(ydim) * tmp(cdim+1), part%pos(zdim) - cg%dl(zdim) * tmp(cdim) ) )
+               end do
+               axyz(:) = fxyz(:)
+
+               print *, 'particule', p, 'outside domain'
+               print *, 'part pos', part%pos(:)
+               print *, 'part vel', part%vel(:)
+               print *, 'part acc', axyz(:)
+               
                cycle
             endif
 
