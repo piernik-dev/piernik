@@ -55,7 +55,6 @@ module multipole_array
       real, dimension(:,:,:), allocatable, private :: k12     !< array of Legendre recurrence factors
       real, dimension(:),     allocatable, private :: ofact   !< arrays of Legendre normalization factor (compressed)
       ! radial discretization
-      integer,                             private :: irmin   !< minimum Q(:, :, r) index in use
       integer,                             private :: irmax   !< maximum Q(:, :, r) index in use
       integer,                             private :: rqbin   !< number of radial samples of multipoles
       real,                                private :: drq     !< radial resolution of multipoles
@@ -193,7 +192,6 @@ contains
 
       this%Q = 0.
       this%irmax = 0
-      this%irmin = this%rqbin
 
    end subroutine reset
 
@@ -201,7 +199,7 @@ contains
 
    subroutine red_int_norm(this)
 
-      use constants, only: pSUM, pMIN, pMAX
+      use constants, only: pSUM, pMAX
       use mpisetup,  only: piernik_MPI_Allreduce
 
       implicit none
@@ -210,13 +208,10 @@ contains
 
       integer :: r, rr
 
-      call piernik_MPI_Allreduce(this%irmin, pMIN)
       call piernik_MPI_Allreduce(this%irmax, pMAX)
 
-      this%irmin = 0
-
       ! integrate radially and apply normalization factor (the (4 \pi)/(2 l  + 1) terms cancel out)
-      rr = max(0, this%irmin)
+      rr = 0
       this%Q(:, INSIDE, rr-1) = this%Q(:, INSIDE, rr-1) * this%ofact(:)
       do r = rr, this%irmax
          this%Q(:, INSIDE, r) = this%Q(:, INSIDE, r) * this%ofact(:) + this%Q(:, INSIDE, r-1)
@@ -227,7 +222,7 @@ contains
          this%Q(:, OUTSIDE, r) = this%Q(:, OUTSIDE, r) * this%ofact(:) + this%Q(:, OUTSIDE, r+1)
       enddo
 
-      call piernik_MPI_Allreduce(this%Q(:, :, this%irmin:this%irmax), pSUM)
+      call piernik_MPI_Allreduce(this%Q(:, :, :this%irmax), pSUM)
 
    end subroutine red_int_norm
 
@@ -545,7 +540,6 @@ contains
          call die(msg)
       endif
       this%irmax = max(this%irmax, ir)
-      this%irmin = min(this%irmin, ir-1)
 
       ! azimuthal angle sine and cosine tables
       ! ph = atan2(y, x); this%cfac(m) = cos(m * ph); this%sfac(m) = sin(m * ph)
