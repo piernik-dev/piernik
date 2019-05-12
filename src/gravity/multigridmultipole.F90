@@ -68,7 +68,7 @@ module multipole
 
    private
    public :: init_multipole, cleanup_multipole, multipole_solver, moments2pot, compute_mpole_potential
-   public :: lmax, mmax, ord_prolong_mpole, mpole_solver, level_3D, singlepass  ! initialized in multigrid_gravity
+   public :: lmax, mmax, mpole_solver, level_3D, singlepass  ! initialized in multigrid_gravity
 
    interface moments2pot
       module procedure moments2pot_xyz
@@ -80,7 +80,6 @@ module multipole
    ! namelist parameters for MULTIGRID_GRAVITY
    integer(kind=4)              :: lmax                !< Maximum l-order of multipole moments
    integer(kind=4)              :: mmax                !< Maximum m-order of multipole moments. Equal to lmax by default.
-   integer(kind=4)              :: ord_prolong_mpole   !< Boundary prolongation operator order; allowed values are -2 .. 2
    character(len=cbuff_len)     :: mpole_solver        !< Pick one of: "monopole", "img_mass" (default), "3D"
    integer(kind=4)              :: level_3D            !< The level, at which we integrate the desnity field, to get is multipole representation. 0: base level, 1: leaves (default), <0: coarsened levels
 

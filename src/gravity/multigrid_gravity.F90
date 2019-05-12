@@ -102,7 +102,6 @@ contains
 !! <tr><td>fft_patient           </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::fft_patient           </td></tr>
 !! <tr><td>lmax                  </td><td>16     </td><td>integer value  </td><td>\copydoc multipole::lmax                          </td></tr>
 !! <tr><td>mmax                  </td><td>-1     </td><td>integer value  </td><td>\copydoc multipole::mmax                          </td></tr>
-!! <tr><td>ord_prolong_mpole     </td><td>-2     </td><td>integer value  </td><td>\copydoc multipole::ord_prolong_mpole             </td></tr>
 !! <tr><td>mpole_solver          </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::mpole_solver                  </td></tr>
 !! <tr><td>level_3D              </td><td>1      </td><td>integer value  </td><td>\copydoc multipole::level_3D                      </td></tr>
 !! <tr><td>interp_pt2mom         </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::interp_pt2mom                 </td></tr>
@@ -118,7 +117,7 @@ contains
 !<
    subroutine multigrid_grav_par
 
-      use constants,          only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_D2, O_I2, O_D4, I_ONE, INVALID
+      use constants,          only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_I2, O_D4, I_ONE, INVALID
       use dataio_pub,         only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,         only: msg, die, warn
       use domain,             only: dom, is_multicg !, is_uneven
@@ -130,7 +129,7 @@ contains
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
       use multigrid_Laplace4, only: L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
-      use multipole,          only: mpole_solver, lmax, mmax, ord_prolong_mpole, level_3D, singlepass, init_multipole
+      use multipole,          only: mpole_solver, lmax, mmax, level_3D, singlepass, init_multipole
       use multipole_array,    only: interp_pt2mom, interp_mom2pot
       use pcg,                only: use_CG, use_CG_outer, preconditioner, default_preconditioner, pcg_init
 
@@ -142,7 +141,7 @@ contains
       namelist /MULTIGRID_GRAVITY/ norm_tol, coarsest_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
            &                       overrelax, L4_strength, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       base_no_fft, fft_patient, &
-           &                       lmax, mmax, ord_prolong_mpole, mpole_solver, level_3D, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
+           &                       lmax, mmax, mpole_solver, level_3D, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
            &                       grav_bnd_str, preconditioner
 
       if (.not.frun) call die("[multigrid_gravity:multigrid_grav_par] Called more than once.")
@@ -171,7 +170,6 @@ contains
             ord_laplacian    = INVALID
       end select
       ord_laplacian_outer    = ord_laplacian
-      ord_prolong_mpole      = O_D2
       ord_time_extrap        = O_LIN
 
       mpole_solver           = "img_mass"
@@ -222,7 +220,6 @@ contains
                ord_laplacian = O_I2
                ord_laplacian_outer = ord_laplacian
                L4_strength = 0.
-               ! ord_prolong_mpole = O_INJ
             case default
                call die("[multigrid_gravity:multigrid_grav_par] Unsupported geometry.")
          end select
@@ -248,7 +245,6 @@ contains
          ibuff( 5) = nsmool
          ibuff( 6) = nsmoob
          ibuff( 7) = ord_laplacian
-         ibuff( 8) = ord_prolong_mpole
          ibuff( 9) = ord_time_extrap
          ibuff(10) = ord_laplacian_outer
 
@@ -286,7 +282,6 @@ contains
          nsmool            = ibuff( 5)
          nsmoob            = ibuff( 6)
          ord_laplacian     = ibuff( 7)
-         ord_prolong_mpole = ibuff( 8)
          ord_time_extrap   = ibuff( 9)
          ord_laplacian_outer = ibuff(10)
 
