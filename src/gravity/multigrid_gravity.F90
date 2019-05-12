@@ -130,7 +130,7 @@ contains
       use multigrid_Laplace4, only: L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
       use multipole,          only: mpole_solver, lmax, mmax, level_3D, singlepass, init_multipole
-      use multipole_array,    only: interp_pt2mom, interp_mom2pot
+      use multipole_array,    only: interp_pt2mom, interp_mom2pot, res_factor, size_factor
       use pcg,                only: use_CG, use_CG_outer, preconditioner, default_preconditioner, pcg_init
 
       implicit none
@@ -141,8 +141,8 @@ contains
       namelist /MULTIGRID_GRAVITY/ norm_tol, coarsest_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
            &                       overrelax, L4_strength, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       base_no_fft, fft_patient, &
-           &                       lmax, mmax, mpole_solver, level_3D, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
-           &                       grav_bnd_str, preconditioner
+           &                       lmax, mmax, mpole_solver, level_3D, interp_pt2mom, interp_mom2pot, res_factor, size_factor, &
+           &                       multidim_code_3D, grav_bnd_str, preconditioner
 
       if (.not.frun) call die("[multigrid_gravity:multigrid_grav_par] Called more than once.")
       frun = .false.
@@ -154,6 +154,8 @@ contains
       vcycle_abort           = 2.
       vcycle_giveup          = 1.5
       L4_strength            = 1.0
+      res_factor             = 0.5
+      size_factor            = 1.
 
       lmax                   = 16
       mmax                   = -1 ! will be automatically set to lmax unless explicitly limited in problem.par
@@ -237,6 +239,8 @@ contains
          rbuff(4)  = vcycle_giveup
          rbuff(5)  = L4_strength
          rbuff(6)  = coarsest_tol
+         rbuff(7)  = res_factor
+         rbuff(8)  = size_factor
 
          ibuff( 1) = level_3D
          ibuff( 2) = lmax
@@ -274,6 +278,8 @@ contains
          vcycle_giveup  = rbuff(4)
          L4_strength    = rbuff(5)
          coarsest_tol   = rbuff(6)
+         res_factor     = rbuff(7)
+         size_factor    = rbuff(8)
 
          level_3D          = ibuff( 1)
          lmax              = ibuff( 2)

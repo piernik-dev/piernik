@@ -38,11 +38,13 @@ module multipole_array
 
    private
    public :: mpole_container
-   public :: interp_pt2mom, interp_mom2pot  ! initialized in multigrid_gravity
+   public :: interp_pt2mom, interp_mom2pot, res_factor, size_factor  ! initialized in multigrid_gravity
 
    ! namelist parameters for MULTIGRID_GRAVITY
    logical :: interp_pt2mom  !< Distribute contribution from a cell between two adjacent radial bins (linear interpolation in radius)
    logical :: interp_mom2pot !< Compute the potential from moments from two adjacent radial bins (linear interpolation in radius)
+   real :: res_factor        !< resolution of radial distribution of moments (in cells)
+   real :: size_factor       !< enlargement of radial distribution (w.r.t. diagonal)
 
    type :: mpole_container
 
@@ -143,9 +145,9 @@ contains
       if (associated(finest%level%first)) then
          select case (dom%geometry_type)
             case (GEO_XYZ)
-               this%drq = minval(finest%level%first%cg%dl(:), mask=dom%has_dir(:)) / 2.
+               this%drq = minval(finest%level%first%cg%dl(:), mask=dom%has_dir(:)) * res_factor
             case (GEO_RPZ)
-               this%drq = min(finest%level%first%cg%dx, dom%C_(xdim)*finest%level%first%cg%dy, finest%level%first%cg%dz) / 2.
+               this%drq = min(finest%level%first%cg%dx, dom%C_(xdim)*finest%level%first%cg%dy, finest%level%first%cg%dz) * res_factor
             case default
                call die("[multipole_array:refresh] Unsupported geometry.")
          end select
@@ -156,7 +158,7 @@ contains
 
       select case (dom%geometry_type)
          case (GEO_XYZ)
-            this%rqbin = int(sqrt(sum(dom%L_(:)**2))/this%drq) + 1
+            this%rqbin = int(sqrt(sum(dom%L_(:)**2))/this%drq * size_factor) + 1
             ! arithmetic average of the closest and farthest points of computational domain with respect to its center
             !>
             !!\todo check what happens if there are points that are really close to the domain center (maybe we should use a harmonic average?)
@@ -164,7 +166,7 @@ contains
             !<
             this%rscale = ( minval(dom%L_(:)) + sqrt(sum(dom%L_(:)**2)) )/4.
          case (GEO_RPZ)
-            this%rqbin = int(sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2)/this%drq) + 1
+            this%rqbin = int(sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2)/this%drq * size_factor) + 1
             this%rscale = ( min(2.*dom%edge(xdim, HI), dom%L_(zdim)) + sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2) )/4.
          case default
             call die("[multipole_array:refresh] Unsupported geometry.")
