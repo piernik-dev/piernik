@@ -383,6 +383,7 @@ contains
 !! \brief Compute potential from multipole moments at a single point
 !!
 !! \todo improve accuracy with linear interpolation over radius
+!! \todo implement this routine as elemental
 !<
 
    real function moments2pot(this, x, y, z) result(potential)
