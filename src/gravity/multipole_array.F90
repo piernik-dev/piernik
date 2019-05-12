@@ -213,6 +213,8 @@ contains
       call piernik_MPI_Allreduce(this%irmin, pMIN)
       call piernik_MPI_Allreduce(this%irmax, pMAX)
 
+      this%irmin = 0
+
       ! integrate radially and apply normalization factor (the (4 \pi)/(2 l  + 1) terms cancel out)
       rr = max(0, this%irmin)
       this%Q(:, INSIDE, rr-1) = this%Q(:, INSIDE, rr-1) * this%ofact(:)
