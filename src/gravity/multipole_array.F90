@@ -55,7 +55,6 @@ module multipole_array
       real, dimension(:,:,:), allocatable, private :: k12     !< array of Legendre recurrence factors
       real, dimension(:),     allocatable, private :: ofact   !< arrays of Legendre normalization factor (compressed)
       ! radial discretization
-      integer,                             private :: irmax   !< maximum Q(:, :, r) index in use
       integer,                             private :: rqbin   !< number of radial samples of multipoles
       real,                                private :: drq     !< radial resolution of multipoles
       real,                                private :: rscale  !< scaling factor that limits risk of floating poin
@@ -191,7 +190,6 @@ contains
       class(mpole_container), intent(inout) :: this  !< object invoking type-bound procedure
 
       this%Q = 0.
-      this%irmax = 0
 
    end subroutine reset
 
@@ -199,7 +197,7 @@ contains
 
    subroutine red_int_norm(this)
 
-      use constants, only: pSUM, pMAX
+      use constants, only: pSUM
       use mpisetup,  only: piernik_MPI_Allreduce
 
       implicit none
@@ -208,21 +206,19 @@ contains
 
       integer :: r, rr
 
-      call piernik_MPI_Allreduce(this%irmax, pMAX)
-
       ! integrate radially and apply normalization factor (the (4 \pi)/(2 l  + 1) terms cancel out)
       rr = 0
       this%Q(:, INSIDE, rr-1) = this%Q(:, INSIDE, rr-1) * this%ofact(:)
-      do r = rr, this%irmax
+      do r = rr, ubound(this%Q, dim=3)
          this%Q(:, INSIDE, r) = this%Q(:, INSIDE, r) * this%ofact(:) + this%Q(:, INSIDE, r-1)
       enddo
 
-      this%Q(:, OUTSIDE, this%irmax+1) = this%Q(:, OUTSIDE, this%irmax+1) * this%ofact(:)
-      do r = this%irmax, rr-1, -1
+      this%Q(:, OUTSIDE, ubound(this%Q, dim=3)) = this%Q(:, OUTSIDE, ubound(this%Q, dim=3)) * this%ofact(:)
+      do r = ubound(this%Q, dim=3)-1, rr-1, -1
          this%Q(:, OUTSIDE, r) = this%Q(:, OUTSIDE, r) * this%ofact(:) + this%Q(:, OUTSIDE, r+1)
       enddo
 
-      call piernik_MPI_Allreduce(this%Q(:, :, :this%irmax), pSUM)
+      call piernik_MPI_Allreduce(this%Q, pSUM)
 
    end subroutine red_int_norm
 
@@ -548,7 +544,6 @@ contains
       else if (ir >= this%rqbin) then  ! particles that are far-far away will contribute to the furthest bin
          ir = this%rqbin - 1
       endif
-      this%irmax = max(this%irmax, ir)
 
       ! azimuthal angle sine and cosine tables
       ! ph = atan2(y, x); this%cfac(m) = cos(m * ph); this%sfac(m) = sin(m * ph)
