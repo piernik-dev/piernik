@@ -59,9 +59,11 @@ module multipole_array
       ! radial discretization
       integer,                             private :: rqbin   !< number of radial samples of multipoles
       real,                                private :: drq     !< radial resolution of multipoles
-      real,                                private :: rscale  !< scaling factor that limits risk of floating poin
+      real,                                private :: a_scale !< factor for computing index in nonlinear scale
+      real,                                private :: rscale  !< scaling factor that limits risk of floating point overflow
       real, dimension(:),     allocatable, private :: rn      !< 0..l_max sized array of positive powers of r
       real, dimension(:),     allocatable, private :: irn     !< 0..l_max sized array of negative powers of r
+      real, dimension(:),     allocatable, private :: i_r     !< rqbin sized array of radial bins
 
    contains
 
@@ -134,7 +136,6 @@ contains
       use dataio_pub,      only: die
       use domain,          only: dom
       use mpisetup,        only: piernik_MPI_Allreduce
-      use particle_pub,    only: pset
 
       implicit none
 
@@ -158,7 +159,7 @@ contains
 
       select case (dom%geometry_type)
          case (GEO_XYZ)
-            this%rqbin = int(sqrt(sum(dom%L_(:)**2))/this%drq * size_factor) + 1
+            this%a_scale = sqrt(sum(dom%L_(:)**2, mask=dom%has_dir)) * size_factor
             ! arithmetic average of the closest and farthest points of computational domain with respect to its center
             !>
             !!\todo check what happens if there are points that are really close to the domain center (maybe we should use a harmonic average?)
@@ -166,20 +167,34 @@ contains
             !<
             this%rscale = ( minval(dom%L_(:)) + sqrt(sum(dom%L_(:)**2)) )/4.
          case (GEO_RPZ)
-            this%rqbin = int(sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2)/this%drq * size_factor) + 1
+            this%a_scale = sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2) * size_factor
             this%rscale = ( min(2.*dom%edge(xdim, HI), dom%L_(zdim)) + sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2) )/4.
          case default
             call die("[multipole_array:refresh] Unsupported geometry.")
       end select
-
-      do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
-         !> \warning this is not optimal, when domain is placed far away form the origin
-         !> \warning a factor of up to 2 may be required if we use CoM as the origin
-         if (pset%p(i)%outside) this%rqbin = max(this%rqbin, int(sqrt(sum(pset%p(i)%pos**2))/this%drq) + 1)
-      enddo
+      this%rqbin = int(this%a_scale/this%drq) + 1
 
       if (allocated(this%Q)) deallocate(this%Q)
       allocate(this%Q(0:this%lm(int(this%lmax), int(2*this%mmax)), INSIDE:OUTSIDE, -1:this%rqbin))
+      if (allocated(this%i_r)) deallocate(this%i_r)
+      allocate(this%i_r(0:this%rqbin-1))
+      do i = lbound(this%i_r, dim=1), ubound(this%i_r, dim=1)
+         this%i_r(i) = i2r(i)
+      enddo
+
+   contains
+
+      !> \brief this function has to match geomfac4moments::r2i(): r2i(i2r(j)) == j
+
+      pure real function i2r(i) result(r)
+
+         implicit none
+
+         integer, intent(in) :: i     !< index
+
+         r = merge(0., this%a_scale / (this%rqbin/real(i) - 1), i==0)
+
+      end function i2r
 
    end subroutine refresh
 
@@ -535,17 +550,14 @@ contains
       endif
 
       !radial index for the this%Q(:, :, r) array
-      ir = int(r / this%drq)
-      if (ir < this%rqbin) then
-         delta = r/this%drq - ir
+      ir = r2i(r)
+      if (ir < this%rqbin-1) then
+         delta = (this%i_r(ir+1) - r)/(this%i_r(ir+1) - this%i_r(ir))
       else
-         delta = 0
+         delta = 1.
+         ir = this%rqbin-1
       endif
-      if (ir < 0) then
-         call die("[multipole_array:geomfac4moments] ir < 0")
-      else if (ir >= this%rqbin) then  ! particles that are far-far away will contribute to the furthest bin
-         ir = this%rqbin - 1
-      endif
+      if (ir < 0) call die("[multipole_array:geomfac4moments] ir < 0")
 
       ! azimuthal angle sine and cosine tables
       ! ph = atan2(y, x); this%cfac(m) = cos(m * ph); this%sfac(m) = sin(m * ph)
@@ -584,6 +596,18 @@ contains
          this%rn(l)  =  this%rn(l-1) * r
          this%irn(l) = this%irn(l-1) * rinv
       enddo
+
+   contains
+
+      pure integer function r2i(r) result(i)
+
+         implicit none
+
+         real, intent(in) :: r     !< radius
+
+         i = merge(0, floor(this%rqbin / (this%a_scale/r + 1)), r <= 0.)
+
+      end function r2i
 
    end subroutine geomfac4moments
 
