@@ -38,11 +38,9 @@ module multipole_array
 
    private
    public :: mpole_container
-   public :: interp_pt2mom, interp_mom2pot, res_factor, size_factor  ! initialized in multigrid_gravity
+   public :: res_factor, size_factor  ! initialized in multigrid_gravity
 
    ! namelist parameters for MULTIGRID_GRAVITY
-   logical :: interp_pt2mom  !< Distribute contribution from a cell between two adjacent radial bins (linear interpolation in radius)
-   logical :: interp_mom2pot !< Compute the potential from moments from two adjacent radial bins (linear interpolation in radius)
    real :: res_factor        !< resolution of radial distribution of moments (in cells)
    real :: size_factor       !< enlargement of radial distribution (w.r.t. diagonal)
 
@@ -312,8 +310,6 @@ contains
 
       call this%geomfac4moments(mass, x, y, z, sin_th, cos_th, sin_ph, cos_ph, ir, del)
 
-      if (.not. interp_pt2mom) del = 0.
-
       ! monopole, the (0,0) moment; P_0 = 1.
       ! this%lm(0, 0) == 0
       this%Q(0, INSIDE,  ir) = this%Q(0, INSIDE,  ir) +  this%rn(0) * (1.-del)
@@ -422,8 +418,6 @@ contains
       integer :: l, m, ir, m2c
 
       call this%geomfac4moments(-newtong, x, y, z, sin_th, cos_th, sin_ph, cos_ph, ir, del)
-
-      if (.not. interp_mom2pot) del = 0.
 
       ! monopole, the (0,0) moment; P_0 = 1.
       ! this%lm(0, 0) == 0

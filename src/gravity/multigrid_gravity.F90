@@ -104,8 +104,6 @@ contains
 !! <tr><td>mmax                  </td><td>-1     </td><td>integer value  </td><td>\copydoc multipole::mmax                          </td></tr>
 !! <tr><td>mpole_solver          </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::mpole_solver                  </td></tr>
 !! <tr><td>level_3D              </td><td>1      </td><td>integer value  </td><td>\copydoc multipole::level_3D                      </td></tr>
-!! <tr><td>interp_pt2mom         </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::interp_pt2mom                 </td></tr>
-!! <tr><td>interp_mom2pot        </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::interp_mom2pot                </td></tr>
 !! <tr><td>multidim_code_3D      </td><td>.false.</td><td>logical        </td><td>\copydoc multigridvars::multidim_code_3d          </td></tr>
 !! <tr><td>use_CG                </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::use_CG                </td></tr>
 !! <tr><td>use_CG_outer          </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::use_CG_outer          </td></tr>
@@ -130,7 +128,7 @@ contains
       use multigrid_Laplace4, only: L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
       use multipole,          only: mpole_solver, lmax, mmax, level_3D, singlepass, init_multipole
-      use multipole_array,    only: interp_pt2mom, interp_mom2pot, res_factor, size_factor
+      use multipole_array,    only: res_factor, size_factor
       use pcg,                only: use_CG, use_CG_outer, preconditioner, default_preconditioner, pcg_init
 
       implicit none
@@ -141,7 +139,7 @@ contains
       namelist /MULTIGRID_GRAVITY/ norm_tol, coarsest_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
            &                       overrelax, L4_strength, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       base_no_fft, fft_patient, &
-           &                       lmax, mmax, mpole_solver, level_3D, interp_pt2mom, interp_mom2pot, res_factor, size_factor, &
+           &                       lmax, mmax, mpole_solver, level_3D, res_factor, size_factor, &
            &                       multidim_code_3D, grav_bnd_str, preconditioner
 
       if (.not.frun) call die("[multigrid_gravity:multigrid_grav_par] Called more than once.")
@@ -177,8 +175,6 @@ contains
       mpole_solver           = "img_mass"
       base_no_fft            = .false.
       fft_patient            = .false.
-      interp_pt2mom          = .false.
-      interp_mom2pot         = .false.
       multidim_code_3D       = .false.
       use_CG                 = .false.
       use_CG_outer           = .false.
@@ -254,8 +250,6 @@ contains
 
          lbuff(2)  = base_no_fft
          lbuff(3)  = fft_patient
-         lbuff(4)  = interp_pt2mom
-         lbuff(5)  = interp_mom2pot
          lbuff(6)  = multidim_code_3D
          lbuff(7)  = use_CG
          lbuff(8)  = use_CG_outer
@@ -293,8 +287,6 @@ contains
 
          base_no_fft        = lbuff(2)
          fft_patient        = lbuff(3)
-         interp_pt2mom      = lbuff(4)
-         interp_mom2pot     = lbuff(5)
          multidim_code_3D   = lbuff(6)
          use_CG             = lbuff(7)
          use_CG_outer       = lbuff(8)
