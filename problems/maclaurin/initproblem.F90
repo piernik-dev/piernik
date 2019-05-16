@@ -244,6 +244,7 @@ contains
       use dataio_pub,        only: die, msg, printinfo
       use domain,            only: dom
       use fluidindex,        only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use func,              only: operator(.notequals.)
       use global,            only: dirty_debug, no_dirty_checks
       use grid_cont,         only: grid_container
       use mpisetup,          only: master
@@ -368,8 +369,14 @@ contains
          cgl => cgl%nxt
       enddo
 
-      write(msg,'(a,f13.10)')"[initproblem:problem_initial_conditions] Analytical norm residual/source= ",leaves%norm_sq(qna%ind(ares_n))/leaves%norm_sq(qna%ind(asrc_n))
-      if (master) call printinfo(msg)
+      dm = leaves%norm_sq(qna%ind(asrc_n))
+      if (dm .notequals. 0.) then
+         write(msg,'(a,f13.10)')"[initproblem:problem_initial_conditions] Analytical norm residual/source= ",leaves%norm_sq(qna%ind(ares_n))/dm
+         if (master) call printinfo(msg)
+      else
+         write(msg,'(2(a,f13.10))')"[initproblem:problem_initial_conditions] Analytical norm residual= ",leaves%norm_sq(qna%ind(ares_n)), " point mass= ", d0
+         if (master) call printinfo(msg)
+      endif
 
    end subroutine problem_initial_conditions
 
@@ -644,7 +651,14 @@ contains
 
       real, intent(in) :: x, y, z
 
-      phi = - 4./3. * a1**3 * pi * newtong * d0 / sqrt((x-x0)**2 + (y-y0)**2 + (z-z0)**2)
+      real :: f
+
+      if (a1 > 0.) then
+         f = 4./3. * a1**3 * pi
+      else
+         f = 1.
+      endif
+      phi = - f * newtong * d0 / sqrt((x-x0)**2 + (y-y0)**2 + (z-z0)**2)
 
    end function ap_potential
 
