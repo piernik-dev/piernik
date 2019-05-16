@@ -250,7 +250,8 @@ contains
                     d2f_d2_o2([cells(p, :)], cg, ig, zdim) * dist(p, zdim)**2 + &
                 two*d2f_dd_o2([cells(p, :)], cg, ig, xdim, ydim) * dist(p, xdim)*dist(p, ydim) + &
                 two*d2f_dd_o2([cells(p, :)], cg, ig, xdim, zdim) * dist(p, xdim)*dist(p, zdim)
-            cg%pset%p(p)%energy = cg%q(ig)%point(cells(p,:)) + dpot(p) + half * d2pot(p)
+            cg%pset%p(p)%energy = cg%pset%p(p)%mass * &
+                 ( cg%q(ig)%point(cells(p,:)) + dpot(p) + half * d2pot(p) )
          else
             cg%pset%p(p)%energy=0.
          endif
