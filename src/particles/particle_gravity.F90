@@ -57,9 +57,10 @@ contains
       type(grid_container),  pointer       :: cg
       type(cg_list_element), pointer       :: cgl
 
-      integer                              :: n_part
+      integer                              :: n_part, p, k
       real,    dimension(:,:), allocatable :: dist
       integer, dimension(:,:), allocatable :: cells
+      integer, dimension(:), allocatable   :: pdel
 
 #ifdef VERBOSE
       call printinfo('[particle_gravity:update_particle_gravpot_and_acc] Commencing update of particle gravpot & acceleration')
@@ -82,9 +83,21 @@ contains
 
             call update_particle_density_array(n_part, cg, cells)
 
-            call update_particle_potential_energy(n_part, cg, cells, dist)
+            allocate(pdel(n_part))
+            call update_particle_potential_energy(n_part, cg, cells, dist, pdel)
 
             call update_particle_acc(n_part, cg, cells, dist)
+
+            k=1
+            do p=1, n_part
+               if (pdel(p)==1) then
+                  call cg%pset%remove(k)
+                  print *, 'particle ', p, 'removed'
+               else
+                  k=k+1
+               endif
+            enddo
+
             deallocate(cells, dist)
 
          cgl => cgl%nxt
@@ -221,12 +234,13 @@ contains
    end subroutine locate_particles_in_cells
 
 !> \brief Determine potential energy in particle positions
-    subroutine update_particle_potential_energy(n_part, cg, cells, dist)
+    subroutine update_particle_potential_energy(n_part, cg, cells, dist, pdel)
 
       use constants,        only: gpot_n, ndims, half, two, xdim, ydim, zdim
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_func,    only: df_d_o2, d2f_d2_o2, d2f_dd_o2
+      use units,            only: newtong
 
       implicit none
 
@@ -235,11 +249,20 @@ contains
       integer, dimension(n_part,ndims), intent(in) :: cells
       real,    dimension(n_part,ndims), intent(in) :: dist
       integer                                      :: p
+      integer, dimension(n_part),       intent(out):: pdel
       integer(kind=4)                              :: ig
       real, dimension(n_part)                      :: dpot, d2pot
+      real                                         :: Mtot
 
       ig = qna%ind(gpot_n)
+
+      Mtot=0
       do p = 1, n_part
+         if (.not. cg%pset%p(p)%outside) Mtot = Mtot + cg%pset%p(p)%mass
+      enddo
+
+      do p = 1, n_part
+         pdel(p)=0
          if (.not. cg%pset%p(p)%outside) then
             dpot(p) = df_d_o2([cells(p, :)], cg, ig, xdim) * dist(p, xdim) + &
                    df_d_o2([cells(p, :)], cg, ig, ydim) * dist(p, ydim) + &
@@ -252,7 +275,12 @@ contains
                 two*d2f_dd_o2([cells(p, :)], cg, ig, xdim, zdim) * dist(p, xdim)*dist(p, zdim)
             cg%pset%p(p)%energy = cg%q(ig)%point(cells(p,:)) + dpot(p) + half * d2pot(p)
          else
-            cg%pset%p(p)%energy=0.
+            cg%pset%p(p)%energy = - newtong * cg%pset%p(p)%mass * Mtot / norm2(cg%pset%p(p)%pos(:))
+            if ((abs(cg%pset%p(p)%energy) .lt.  half * cg%pset%p(p)%mass * norm2(cg%pset%p(p)%vel(:)) **2)) then
+               pdel(p)=1
+               cg%pset%p(p)%energy=0.
+            endif
+
          endif
       enddo
 
@@ -433,6 +461,7 @@ contains
 
       fxyz = zero ! suppress -Wmaybe-uninitialized
 
+
       do p = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
          associate( part => cg%pset%p(p) )
          axyz(:) = zero
@@ -445,14 +474,11 @@ contains
                                  part%pos(ydim) + cg%dl(ydim) * tmp(cdim+1), part%pos(zdim) + cg%dl(zdim) * tmp(cdim) ) - &
                                  moments2pot( part%pos(xdim) - cg%dl(xdim) * tmp(cdim+2), &
                                  part%pos(ydim) - cg%dl(ydim) * tmp(cdim+1), part%pos(zdim) - cg%dl(zdim) * tmp(cdim) ) )
-               end do
+               enddo
                axyz(:) = fxyz(:)
 
                print *, 'particule', p, 'outside domain'
-               print *, 'part pos', part%pos(:)
-               print *, 'part vel', part%vel(:)
-               print *, 'part acc', axyz(:)
-               
+
                cycle
             endif
 
