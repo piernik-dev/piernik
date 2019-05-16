@@ -36,7 +36,7 @@ module particle_solvers
    private
    public :: psolver, hermit_4ord
 #ifdef NBODY
-   public :: leapfrog_2ord
+   public :: leapfrog_2ord, update_particle_kinetic_energy
 #endif /* NBODY */
 
    procedure(particle_solver_P), pointer :: psolver => NULL()
@@ -388,30 +388,33 @@ contains
 
          end subroutine drift
 
-         subroutine update_particle_kinetic_energy
-
-            use constants, only: half
-
-            implicit none
-
-            integer :: p
-            real    :: v2 !< particle velocity squared
-
-            cgl => leaves%first
-            do while (associated(cgl))
-               associate( parts => cgl%cg%pset )
-               do p = 1, size(parts%p, dim=1)
-                  v2 = sum(parts%p(p)%vel(:)**2)
-                  !energy       = 1/2  *      m         *  v**2 +     Ep(x,y,z)
-                  parts%p(p)%energy = half * parts%p(p)%mass * v2 + parts%p(p)%energy
-               enddo
-               end associate
-               cgl => cgl%nxt
-            enddo
-
-         end subroutine update_particle_kinetic_energy
-
    end subroutine leapfrog_2ord
+
+   subroutine update_particle_kinetic_energy
+
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use constants, only: half
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+      integer :: p
+      real    :: v2 !< particle velocity squared
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         associate( parts => cgl%cg%pset )
+         do p = 1, size(parts%p, dim=1)
+            v2 = sum(parts%p(p)%vel(:)**2)
+            !energy       = 1/2  *      m         *  v**2 +     Ep(x,y,z)
+            parts%p(p)%energy = half * parts%p(p)%mass * v2 + parts%p(p)%energy
+         enddo
+         end associate
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine update_particle_kinetic_energy
 #endif /* NBODY */
 
 end module particle_solvers

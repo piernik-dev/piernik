@@ -84,6 +84,7 @@ contains
 #endif /* SELF_GRAV */
       use initproblem,           only: problem_initial_nbody
       use particle_gravity,      only: update_particle_gravpot_and_acc
+      use particle_solvers,      only: update_particle_kinetic_energy
 #endif /* NBODY */
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid, init_multigrid_ext, multigrid_par
@@ -219,6 +220,7 @@ contains
 #ifdef NBODY
       if (nrestart == 0) call problem_initial_nbody
       call update_particle_gravpot_and_acc
+      call update_particle_kinetic_energy
 #endif /* NBODY */
 
 #ifdef GRAV
