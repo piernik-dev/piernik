@@ -615,7 +615,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: qvar  !< index in cg%q to store the results
+      integer(kind=4), intent(in) :: qvar  !< index in cg%q to store the results
 
       integer :: i, j, k
       type(cg_list_element), pointer :: cgl
