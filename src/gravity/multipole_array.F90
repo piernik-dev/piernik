@@ -62,6 +62,7 @@ module multipole_array
       real, dimension(:),     allocatable, private :: rn      !< 0..l_max sized array of positive powers of r
       real, dimension(:),     allocatable, private :: irn     !< 0..l_max sized array of negative powers of r
       real, dimension(:),     allocatable, private :: i_r     !< rqbin sized array of radial bins
+      logical,                             private :: pr_log  !< when .true. then print radial discretisation to the log file
 
    contains
 
@@ -125,13 +126,15 @@ contains
       enddo
       this%ofact(0:this%lmax) = 1. ! this%lm(0:this%lmax,0)
 
+      this%pr_log = .true.
+
    end subroutine init_once
 
    subroutine refresh(this)
 
       use cg_level_finest, only: finest
       use constants,       only: xdim, zdim, GEO_XYZ, GEO_RPZ, HI, pMIN
-      use dataio_pub,      only: die
+      use dataio_pub,      only: die, msg, printinfo
       use domain,          only: dom
       use mpisetup,        only: piernik_MPI_Allreduce
 
@@ -139,7 +142,9 @@ contains
 
       class(mpole_container), intent(inout) :: this  !< object invoking type-bound procedure
 
-      integer :: i
+      integer :: i, prev
+      integer, parameter :: skip_pr = 125
+      character(len=*), parameter :: dots = "    ..."
 
       if (associated(finest%level%first)) then
          select case (dom%geometry_type)
@@ -174,11 +179,34 @@ contains
 
       if (allocated(this%Q)) deallocate(this%Q)
       allocate(this%Q(0:this%lm(int(this%lmax), int(2*this%mmax)), INSIDE:OUTSIDE, -1:this%rqbin))
+
       if (allocated(this%i_r)) deallocate(this%i_r)
       allocate(this%i_r(0:this%rqbin-1))
+
+      if (this%pr_log) then
+         write(msg, '(a,3g13.5,a)')"[multipole_array:refresh] multipoles centered at ( ", this%center, " ) low edges of bins are at:"
+         call printinfo(msg, .false.)
+      endif
+      prev = 0
       do i = lbound(this%i_r, dim=1), ubound(this%i_r, dim=1)
          this%i_r(i) = i2r(i)
+         if (this%pr_log) then
+            if (i <= skip_pr) then
+               call print_ri(i)
+               prev = i
+            else if (i >= ubound(this%i_r, dim=1) - skip_pr) then
+               call print_ri(i)
+               prev = i
+            else if (div2n(i) <= 3) then  ! if the array is long then print only for some values
+               if (prev < i-2 .and. prev == skip_pr) call printinfo(dots, .false.)
+               if (prev < i-1) call print_ri(i-1)
+               call print_ri(i)
+               if (i+1 /= ubound(this%i_r, dim=1) - skip_pr) call printinfo(dots, .false.)
+               prev = i
+            endif
+         endif
       enddo
+      this%pr_log = .false.
 
    contains
 
@@ -188,11 +216,47 @@ contains
 
          implicit none
 
-         integer, intent(in) :: i     !< index
+         integer, intent(in) :: i !< index
 
          r = merge(0., this%a_scale / (this%rqbin/real(i) - 1), i==0)
 
       end function i2r
+
+      !> \brief divide given integer by maximum possible power of 2 and return the remainder
+
+      pure integer function div2n(i) result(d)
+
+         implicit none
+
+         integer, intent(in) :: i !< input integer
+
+         d = abs(i)
+         do while (mod(d, 2) == 0)
+            d = d / 2
+         enddo
+
+      end function div2n
+
+      subroutine print_ri(i)
+
+         use constants,  only: fmt_len
+         use dataio_pub, only: msg, printinfo
+
+         implicit none
+
+         integer, intent(in) :: i  !< input integers
+
+         character(len=fmt_len) :: fmt
+
+         if (i >= 1000000000) then ! really big number, this should never happen here, in multipole_array
+            fmt = '(a,i20,a,g13.5)'  !i20 should be enough for any 64-bit integer, signed or not
+         else
+            write(fmt, '(a,i1,a)')'(a,i',1 + int(log10(real(max(1,i)))),',a,g13.5)'
+         endif
+         write(msg, fmt)"  r( ",i," ) = ", this%i_r(i)
+         call printinfo(msg, .false.)
+
+      end subroutine print_ri
 
    end subroutine refresh
 
