@@ -198,9 +198,9 @@ contains
 #endif /* NBODY */
 
 #ifdef NBODY
-   subroutine add_part_in_proper_cg(mass, pos, vel, acc, ener)
+   subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener)
 #else /* !NBODY */
-   subroutine add_part_in_proper_cg(mass, pos, vel)
+   subroutine add_part_in_proper_cg(pid, mass, pos, vel)
 #endif /* !NBODY */
 
       use cg_leaves,     only: leaves
@@ -212,6 +212,7 @@ contains
 
       implicit none
 
+      integer,                intent(in) :: pid
       real, dimension(ndims), intent(in) :: pos, vel
 #ifdef NBODY
       real, dimension(ndims), intent(in) :: acc
@@ -230,9 +231,9 @@ contains
       do while (associated(cgl))
          if (particle_in_area(pos, cgl%cg%fbnd)) then
 #ifdef NBODY
-            call cgl%cg%pset%add(mass, pos, vel, acc, ener)
+            call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener)
 #else /* !NBODY */
-            call cgl%cg%pset%add(mass, pos, vel)
+            call cgl%cg%pset%add(pid, mass, pos, vel)
 #endif /* !NBODY */
             return
          endif

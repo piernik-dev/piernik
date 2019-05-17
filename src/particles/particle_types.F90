@@ -43,6 +43,7 @@ module particle_types
    !! \todo Extend it a bit
    !<
    type :: particle
+      integer                :: pid        !< particle ID
       real                   :: mass       !< mass of the particle
       real, dimension(ndims) :: pos        !< physical position
       real, dimension(ndims) :: vel        !< particle velocity
@@ -162,14 +163,15 @@ contains
 !> \brief Add a particle to the list
 
 #ifdef NBODY
-   subroutine add_using_basic_types(this, mass, pos, vel, acc, energy)
+   subroutine add_using_basic_types(this, pid, mass, pos, vel, acc, energy)
 #else /* !NBODY */
-   subroutine add_using_basic_types(this, mass, pos, vel)
+   subroutine add_using_basic_types(this, pid, mass, pos, vel)
 #endif /* !NBODY */
 
       implicit none
 
       class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
+      integer,             intent(in)    :: pid      !< particle ID
       real,                intent(in)    :: mass     !< mass of the particle (negative values are allowed just in case someone wants to calculate electric potential)
       real, dimension(:),  intent(in)    :: pos      !< physical position
       real, dimension(:),  intent(in)    :: vel      !< particle velocity
@@ -177,10 +179,10 @@ contains
       real, dimension(:),  intent(in)    :: acc      !< particle acceleration
       real,                intent(in)    :: energy   !< total energy of particle
 
-      call this%add(particle(mass, pos, vel, acc, energy, .false.))
+      call this%add(particle(pid, mass, pos, vel, acc, energy, .false.))
 #else /* !NBODY */
 
-      call this%add(particle(mass, pos, vel, .false.))
+      call this%add(particle(pid, mass, pos, vel, .false.))
 #endif /* !NBODY */
 
    end subroutine add_using_basic_types

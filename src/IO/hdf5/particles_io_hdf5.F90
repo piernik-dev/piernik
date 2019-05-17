@@ -36,7 +36,7 @@ module particles_io_hdf5
    private
    public  :: init_nbody_hdf5, write_nbody_hdf5, read_nbody_hdf5
 
-   character(len=dsetnamelen), dimension(*), parameter :: pvarn = ['mass', 'ener', 'ppos', 'pvel', 'pacc']
+   character(len=dsetnamelen), dimension(*), parameter :: pvarn = ['ppid', 'mass', 'ener', 'ppos', 'pvel', 'pacc']
    logical,                    dimension(size(pvarn))  :: pvarl = .false.
 
    contains
@@ -176,6 +176,8 @@ module particles_io_hdf5
       integer(kind=4),  intent(in) :: n_part
 
       select case (pvar)
+         case ('ppid')
+            call collect_and_write_intr1(file_id, pvar, n_part)
          case ('mass', 'ener')
             call collect_and_write_rank1(file_id, pvar, n_part)
          case ('ppos', 'pvel', 'pacc')
@@ -184,6 +186,41 @@ module particles_io_hdf5
       end select
 
    end subroutine nbody_datafields
+
+   subroutine collect_and_write_intr1(file_id, pvar, n_part)
+
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use hdf5,      only: HID_T
+
+      implicit none
+
+      integer(HID_T),   intent(in)       :: file_id       !< File identifier
+      character(len=*), intent(in)       :: pvar
+      integer(kind=4),  intent(in)       :: n_part
+      integer                            :: cgnp, recnp
+      integer, dimension(:), allocatable :: tabi1
+      type(cg_list_element), pointer     :: cgl
+
+      allocate(tabi1(n_part))
+      recnp = 0
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cgnp = size(cgl%cg%pset%p, dim=1)
+         select case (pvar)
+            case ('ppid')
+               tabi1(recnp+1:recnp+cgnp) = cgl%cg%pset%p(:)%pid
+            case default
+         end select
+         recnp = recnp+cgnp
+         cgl => cgl%nxt
+      enddo
+
+      call write_nbody_h5_int_rank1(file_id, pvar, tabi1)
+      deallocate(tabi1)
+
+   end subroutine collect_and_write_intr1
 
    subroutine collect_and_write_rank1(file_id, pvar, n_part)
 
@@ -268,6 +305,28 @@ module particles_io_hdf5
       deallocate(tabr2)
 
    end subroutine collect_and_write_rank2
+
+   subroutine write_nbody_h5_int_rank1(file_id, vvar, tab)
+
+      use hdf5, only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_INTEGER
+
+      implicit none
+
+      character(len=*),      intent(in) :: vvar
+      integer(HID_T),        intent(in) :: file_id
+      integer, dimension(:), intent(in) :: tab
+      integer(HSIZE_T), dimension(1)    :: dimm
+      integer(HID_T)                    :: dataspace_id, dataset_id
+      integer(kind=4)                   :: error, rank1 = 1
+
+      dimm = shape(tab)
+      call h5screate_simple_f(rank1, dimm, dataspace_id, error)
+      call h5dcreate_f(file_id, vvar, H5T_NATIVE_INTEGER, dataspace_id, dataset_id, error)
+      call h5dwrite_f(dataset_id, H5T_NATIVE_INTEGER, tab, dimm, error)
+      call h5dclose_f(dataset_id, error)
+      call h5sclose_f(dataspace_id, error)
+
+   end subroutine write_nbody_h5_int_rank1
 
    subroutine write_nbody_h5_rank1(file_id, vvar, tab)
 
