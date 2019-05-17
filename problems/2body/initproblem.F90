@@ -183,7 +183,7 @@ contains
 
       do p = 1, 2
          write(msg,'(f8.5,a,3f8.5,a,3f8.5)') m(p), " @ ", init_pos_body(:,p), ", with ", init_vel_body(:,p) ; call printinfo(msg)
-         call add_part_in_proper_cg(m(p), init_pos_body(:,p), init_vel_body(:,p), [0.0, 0.0, 0.0], 0.0)
+         call add_part_in_proper_cg(p, m(p), init_pos_body(:,p), init_vel_body(:,p), [0.0, 0.0, 0.0], 0.0)
       enddo
 
    end subroutine twobodies
@@ -206,7 +206,7 @@ contains
       vel_init = [-0.5, 0.0, 0.0]
 
       do p = 1, npart
-         call add_part_in_proper_cg(mass2, pos_init, vel_init, [0.0, 0.0, 0.0], 0.0 ) !elliptical orbit
+         call add_part_in_proper_cg(p, mass2, pos_init, vel_init, [0.0, 0.0, 0.0], 0.0 ) !elliptical orbit
          !call add_part_in_proper_cg(mass2, [4.0, 2.0, 0.0],[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
          !call add_part_in_proper_cg(mass2, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0],  [0.0, 0.0, 0.0], 0.0)
 
@@ -323,7 +323,7 @@ contains
             outsphere = sqrt(sum(pos_init(:)**2)) >= r_dom
          enddo
 
-         call add_part_in_proper_cg(mass2, pos_init(:), [0.0,0.0,0.0], [0.0, 0.0, 0.0], 0.0)
+         call add_part_in_proper_cg(i, mass2, pos_init(:), [0.0,0.0,0.0], [0.0, 0.0, 0.0], 0.0)
 
       enddo
 #ifdef VERBOSE
@@ -381,7 +381,7 @@ contains
             write(msg,'(i8,a)') i, ' particles read' ; call printio(msg)
          endif
 #endif /* VERBOSE */
-         call add_part_in_proper_cg(mass(i), pos(i,:), vel(i,:),[0.0, 0.0, 0.0], 0.0)
+         call add_part_in_proper_cg(i, mass(i), pos(i,:), vel(i,:),[0.0, 0.0, 0.0], 0.0)
       enddo
       deallocate(mass,pos,vel)
 
