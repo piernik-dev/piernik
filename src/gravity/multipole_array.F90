@@ -134,7 +134,7 @@ contains
 
       use cg_level_finest, only: finest
       use constants,       only: xdim, zdim, GEO_XYZ, GEO_RPZ, HI, pMIN
-      use dataio_pub,      only: die, msg, printinfo
+      use dataio_pub,      only: die, warn, msg, printinfo
       use domain,          only: dom
       use mpisetup,        only: piernik_MPI_Allreduce
 
@@ -145,6 +145,11 @@ contains
       integer :: i, prev
       integer, parameter :: skip_pr = 125
       character(len=*), parameter :: dots = "    ..."
+
+      if (res_factor <= 0.) then
+         call warn("[multipole_array:refresh] res_factor <= 0. : restoring the default value 0.5")
+         res_factor = 0.5
+      endif
 
       if (associated(finest%level%first)) then
          select case (dom%geometry_type)
@@ -159,6 +164,11 @@ contains
          this%drq = maxval(dom%L_(:))
       endif
       call piernik_MPI_Allreduce(this%drq, pMIN)
+
+      if (size_factor <= 0.) then
+         call warn("[multipole_array:refresh] size_factor <= 0. : restoring the default value 1.0")
+         size_factor = 1.0
+      endif
 
       select case (dom%geometry_type)
          case (GEO_XYZ)
@@ -206,6 +216,11 @@ contains
             endif
          endif
       enddo
+      if (this%pr_log .and. ubound(this%i_r, dim=1) > 1) then
+         write(msg, '(a,3g13.5,2(a,g13.5))')"[multipole_array:refresh] multipoles centered at ( ", this%center, " ) first bin width = ", this%i_r(1), " last bin starts at = ", this%i_r(ubound(this%i_r, dim=1) - 1)
+         ! Expect inaccurate potential for sources that fall into last few bins due to large dr/r ratio.
+         call printinfo(msg)
+      endif
       this%pr_log = .false.
 
    contains
