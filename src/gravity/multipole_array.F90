@@ -372,9 +372,6 @@ contains
 
    subroutine point2moments(this, mass, x, y, z)
 
-      use constants, only: zero
-      use func,      only: operator(.notequals.)
-
       implicit none
 
       class(mpole_container), intent(inout) :: this  !< object invoking type-bound procedure
@@ -383,20 +380,16 @@ contains
       real,                   intent(in)    :: y     !< absolute y-coordinate of the contributing point
       real,                   intent(in)    :: z     !< absolute z-coordinate of the contributing point
 
-      real    :: sin_th, cos_th, sin_ph, cos_ph, del, cfac, sfac, tmpfac
+      real    :: sin_th, cos_th, sin_ph, cos_ph, cfac, sfac, tmpfac
       real    :: Ql, Ql1, Ql2
       integer :: l, m, ir, m2c
 
-      call this%geomfac4moments(mass, x, y, z, sin_th, cos_th, sin_ph, cos_ph, ir, del)
+      call this%geomfac4moments(mass, x, y, z, sin_th, cos_th, sin_ph, cos_ph, ir)
 
       ! monopole, the (0,0) moment; P_0 = 1.
       ! this%lm(0, 0) == 0
-      this%Q(0, INSIDE,  ir) = this%Q(0, INSIDE,  ir) +  this%rn(0) * (1.-del)
-      this%Q(0, OUTSIDE, ir) = this%Q(0, OUTSIDE, ir) + this%irn(0) * (1.-del)
-      if (del .notequals. zero) then
-         this%Q(0, INSIDE,  ir+1) = this%Q(0, INSIDE,  ir+1) +  this%rn(0) * del
-         this%Q(0, OUTSIDE, ir+1) = this%Q(0, OUTSIDE, ir+1) + this%irn(0) * del
-      endif
+      this%Q(0, INSIDE,  ir) = this%Q(0, INSIDE,  ir) +  this%rn(0)
+      this%Q(0, OUTSIDE, ir) = this%Q(0, OUTSIDE, ir) + this%irn(0)
 
       ! axisymmetric (l,0) moments
       ! Legendre polynomial recurrence: l P_l = x (2l-1) P_{l-1} - (l-1) P_{l-2}, x \eqiv \cos(\theta)
@@ -405,12 +398,8 @@ contains
       do l = 1, this%lmax
          ! this%lm(l, 0) == l
          Ql = cos_th * this%k12(1, l, 0) * Ql1 - this%k12(2, l, 0) * Ql2
-         this%Q(l, INSIDE,  ir) = this%Q(l, INSIDE,  ir) +  this%rn(l) * Ql * (1.-del)
-         this%Q(l, OUTSIDE, ir) = this%Q(l, OUTSIDE, ir) + this%irn(l) * Ql * (1.-del)
-         if (del .notequals. zero) then
-            this%Q(l, INSIDE,  ir+1) = this%Q(l, INSIDE,  ir+1) +  this%rn(l) * Ql * del
-            this%Q(l, OUTSIDE, ir+1) = this%Q(l, OUTSIDE, ir+1) + this%irn(l) * Ql * del
-         endif
+         this%Q(l, INSIDE,  ir) = this%Q(l, INSIDE,  ir) +  this%rn(l) * Ql
+         this%Q(l, OUTSIDE, ir) = this%Q(l, OUTSIDE, ir) + this%irn(l) * Ql
          Ql2 = Ql1
          Ql1 = Ql
       enddo
@@ -434,12 +423,8 @@ contains
          m2c = this%lm(m, 2*m)  ! "cosine" coefficient
          ! The "sine" coefficient has index this%lm(m, 2*m-1) in our cmapping convention.
          ! Here we also exploit the fact that it equals m2c -1
-         this%Q(m2c-1:m2c, INSIDE,  ir) = this%Q(m2c-1:m2c, INSIDE,  ir) +  this%rn(m) * Ql1 * (1.-del) * [ sfac, cfac ]
-         this%Q(m2c-1:m2c, OUTSIDE, ir) = this%Q(m2c-1:m2c, OUTSIDE, ir) + this%irn(m) * Ql1 * (1.-del) * [ sfac, cfac ]
-         if (del .notequals. zero) then
-            this%Q(m2c-1:m2c, INSIDE,  ir+1) = this%Q(m2c-1:m2c, INSIDE,  ir+1) +  this%rn(m) * Ql1 * del * [ sfac, cfac ]
-            this%Q(m2c-1:m2c, OUTSIDE, ir+1) = this%Q(m2c-1:m2c, OUTSIDE, ir+1) + this%irn(m) * Ql1 * del * [ sfac, cfac ]
-         endif
+         this%Q(m2c-1:m2c, INSIDE,  ir) = this%Q(m2c-1:m2c, INSIDE,  ir) +  this%rn(m) * Ql1 * [ sfac, cfac ]
+         this%Q(m2c-1:m2c, OUTSIDE, ir) = this%Q(m2c-1:m2c, OUTSIDE, ir) + this%irn(m) * Ql1 * [ sfac, cfac ]
 
          !>
          !! \deprecated BEWARE: most of computational cost of multipoles is here
@@ -452,12 +437,8 @@ contains
             Ql = cos_th * this%k12(1, l, m) * Ql1 - this%k12(2, l, m) * Ql2
             m2c = m2c + 2  ! = this%lm(l, 2*m)
             ! Here we exploit that this%lm(l, 2*m) + 2 == this%lm(l+1, 2*m) for current implementation
-            this%Q(m2c-1:m2c, INSIDE,  ir) = this%Q(m2c-1:m2c, INSIDE,  ir) +  this%rn(l) * Ql * (1.-del) * [ sfac, cfac ]
-            this%Q(m2c-1:m2c, OUTSIDE, ir) = this%Q(m2c-1:m2c, OUTSIDE, ir) + this%irn(l) * Ql * (1.-del) * [ sfac, cfac ]
-            if (del .notequals. zero) then
-               this%Q(m2c-1:m2c, INSIDE,  ir+1) = this%Q(m2c-1:m2c, INSIDE,  ir+1) +  this%rn(l) * Ql * del * [ sfac, cfac ]
-               this%Q(m2c-1:m2c, OUTSIDE, ir+1) = this%Q(m2c-1:m2c, OUTSIDE, ir+1) + this%irn(l) * Ql * del * [ sfac, cfac ]
-            endif
+            this%Q(m2c-1:m2c, INSIDE,  ir) = this%Q(m2c-1:m2c, INSIDE,  ir) +  this%rn(l) * Ql * [ sfac, cfac ]
+            this%Q(m2c-1:m2c, OUTSIDE, ir) = this%Q(m2c-1:m2c, OUTSIDE, ir) + this%irn(l) * Ql * [ sfac, cfac ]
             Ql2 = Ql1
             Ql1 = Ql
          enddo
@@ -481,8 +462,6 @@ contains
 
    real function moments2pot(this, x, y, z) result(potential)
 
-      use constants, only: zero
-      use func,      only: operator(.notequals.)
       use units,     only: newtong
 
       implicit none
@@ -492,20 +471,16 @@ contains
       real,                   intent(in)    :: y     !< absolute y-coordinate of the contributing point
       real,                   intent(in)    :: z     !< absolute z-coordinate of the contributing point
 
-      real :: sin_th, cos_th, sin_ph, cos_ph, del, cfac, sfac, tmpfac
+      real :: sin_th, cos_th, sin_ph, cos_ph, cfac, sfac, tmpfac
       real :: Ql, Ql1, Ql2
       integer :: l, m, ir, m2c
 
-      call this%geomfac4moments(-newtong, x, y, z, sin_th, cos_th, sin_ph, cos_ph, ir, del)
+      call this%geomfac4moments(-newtong, x, y, z, sin_th, cos_th, sin_ph, cos_ph, ir)
 
       ! monopole, the (0,0) moment; P_0 = 1.
       ! this%lm(0, 0) == 0
-      potential = (1.-del) * ( &
-           this%Q(0, INSIDE,  ir)   * this%irn(0) + &
-           this%Q(0, OUTSIDE, ir+1) *  this%rn(0) )
-      if (del .notequals. zero) potential = potential + del * ( &
-           this%Q(0, INSIDE,  ir-1) * this%irn(0) + &
-           this%Q(0, OUTSIDE, ir)   *  this%rn(0) )
+      potential = this%Q(0, INSIDE,  ir)   * this%irn(0) + &
+           &      this%Q(0, OUTSIDE, ir+1) *  this%rn(0)
       ! ir+1 to prevent duplicate accounting contributions from ir bin; alternatively one can modify radial integration
 
       ! axisymmetric (l,0) moments
@@ -514,12 +489,9 @@ contains
       do l = 1, this%lmax
          ! this%lm(l, 0) == l
          Ql = cos_th * this%k12(1, l, 0) * Ql1 - this%k12(2, l, 0) * Ql2
-         potential = potential + Ql * (1.-del) * ( &
+         potential = potential + Ql * ( &
               &      this%Q(l, INSIDE,  ir)   * this%irn(l) + &
               &      this%Q(l, OUTSIDE, ir+1) *  this%rn(l) )
-         if (del .notequals. zero) potential = potential + Ql  * del * ( &
-              &      this%Q(l, INSIDE,  ir-1) * this%irn(l) + &
-              &      this%Q(l, OUTSIDE, ir)   *  this%rn(l) )
          Ql2 = Ql1
          Ql1 = Ql
       enddo
@@ -535,16 +507,11 @@ contains
          cfac = cos_ph * cfac - sin_ph * sfac
          sfac = cos_ph * sfac + sin_ph * tmpfac
          m2c = this%lm(m, 2*m)  ! see comments in point2moments
-         potential = potential + Ql1 * (1.-del) * ( &
+         potential = potential + Ql1 * ( &
               &       this%irn(m) * (this%Q(m2c-1, INSIDE,  ir)   * sfac  + &
               &                      this%Q(m2c,   INSIDE,  ir)   * cfac) + &
               &        this%rn(m) * (this%Q(m2c-1, OUTSIDE, ir+1) * sfac  + &
               &                      this%Q(m2c,   OUTSIDE, ir+1) * cfac) )
-         if (del .notequals. zero) potential = potential + Ql1 * del * ( &
-              &       this%irn(m) * (this%Q(m2c-1, INSIDE,  ir-1) * sfac  + &
-              &                      this%Q(m2c,   INSIDE,  ir-1) * cfac) + &
-              &        this%rn(m) * (this%Q(m2c-1, OUTSIDE, ir)   * sfac  + &
-              &                      this%Q(m2c,   OUTSIDE, ir)   * cfac) )
 
          !> \deprecated BEWARE: lots of computational cost of multipoles is here
          ! from (m+1,m) to (this%lmax,m)
@@ -552,16 +519,11 @@ contains
          do l = m+1, this%lmax
             m2c = m2c + 2  ! see comments in point2moments
             Ql = cos_th * this%k12(1, l, m) * Ql1 - this%k12(2, l, m) * Ql2
-            potential = potential + Ql * (1.-del) * ( &
+            potential = potential + Ql * ( &
                  &       this%irn(l) * (this%Q(m2c-1, INSIDE,  ir)   * sfac  + &
                  &                      this%Q(m2c,   INSIDE,  ir)   * cfac) + &
                  &        this%rn(l) * (this%Q(m2c-1, OUTSIDE, ir+1) * sfac  + &
                  &                      this%Q(m2c,   OUTSIDE, ir+1) * cfac) )
-            if (del .notequals. zero) potential = potential + Ql * del * ( &
-                 &       this%irn(l) * (this%Q(m2c-1, INSIDE,  ir-1) * sfac  + &
-                 &                      this%Q(m2c,   INSIDE,  ir-1) * cfac) + &
-                 &        this%rn(l) * (this%Q(m2c-1, OUTSIDE, ir)   * sfac  + &
-                 &                      this%Q(m2c,   OUTSIDE, ir)   * cfac) )
             Ql2 = Ql1
             Ql1 = Ql
          enddo
@@ -575,7 +537,7 @@ contains
 !! \details It modifies the this%rn(:) and this%irn(:) arrays. Scalars are passed through argument list.
 !<
 
-   subroutine geomfac4moments(this, factor, xx, yy, zz, sin_th, cos_th, sin_ph, cos_ph, ir, delta)
+   subroutine geomfac4moments(this, factor, xx, yy, zz, sin_th, cos_th, sin_ph, cos_ph, ir)
 
       use constants,  only: GEO_XYZ, GEO_RPZ, zero, xdim, ydim, zdim
       use dataio_pub, only: die
@@ -594,7 +556,6 @@ contains
       real,                   intent(out) :: sin_ph  !< sine of the azimuthal angle
       real,                   intent(out) :: cos_ph  !< cosine of the azimuthal angle
       integer,                intent(out) :: ir      !< radial index for the this%Q(:, :, r) array
-      real,                   intent(out) :: delta   !< fraction of the radial cell for interpolation between ir and ir+1
 
       real    :: x, y, z
       real    :: rxy, r, rinv
@@ -623,13 +584,11 @@ contains
       endif
 
       !radial index for the this%Q(:, :, r) array
-      ir = r2i(r)
-      if (ir < this%rqbin-1) then
-         delta = (this%i_r(ir+1) - r)/(this%i_r(ir+1) - this%i_r(ir))
-      else
-         delta = 1.
-         ir = this%rqbin-1
-      endif
+      ir = min(r2i(r), this%rqbin-1)
+      ! We had linear interpolation between bins previously but apparently it is easier and safer
+      ! to just increase resolution by lowering res_factor.
+      ! Linear interpolation between bins would be justified if it provides substantially better
+      ! estimate on our unevenly spaced bins
       if (ir < 0) call die("[multipole_array:geomfac4moments] ir < 0")
 
       ! azimuthal angle sine and cosine tables
