@@ -67,8 +67,8 @@ module multipole
    implicit none
 
    private
-   public :: init_multipole, cleanup_multipole, multipole_solver, moments2pot
-   public :: lmax, mmax, ord_prolong_mpole, mpole_solver, level_3D, singlepass  ! initialized in multigrid_gravity
+   public :: init_multipole, cleanup_multipole, multipole_solver, moments2pot, compute_mpole_potential
+   public :: lmax, mmax, mpole_solver, level_3D, singlepass  ! initialized in multigrid_gravity
 
    interface moments2pot
       module procedure moments2pot_xyz
@@ -80,7 +80,6 @@ module multipole
    ! namelist parameters for MULTIGRID_GRAVITY
    integer(kind=4)              :: lmax                !< Maximum l-order of multipole moments
    integer(kind=4)              :: mmax                !< Maximum m-order of multipole moments. Equal to lmax by default.
-   integer(kind=4)              :: ord_prolong_mpole   !< Boundary prolongation operator order; allowed values are -2 .. 2
    character(len=cbuff_len)     :: mpole_solver        !< Pick one of: "monopole", "img_mass" (default), "3D"
    integer(kind=4)              :: level_3D            !< The level, at which we integrate the desnity field, to get is multipole representation. 0: base level, 1: leaves (default), <0: coarsened levels
 
@@ -599,5 +598,46 @@ contains
       pot = Q%moments2pot(r(xdim), r(ydim), r(zdim))/fpiG
 
    end function moments2pot_r
+
+!>
+!! \brief Compute multipole potential in whocle computational domain
+!!
+!! \details This routine is not intended for regular use because of huge
+!! computational cost per cell (O(lmax**2)). It is useful for understanding
+!! and debugging the multipole solver and for showing properties of multipole
+!! estimate of gravitational potential.
+!<
+
+   subroutine compute_mpole_potential(qvar)
+
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+
+      implicit none
+
+      integer(kind=4), intent(in) :: qvar  !< index in cg%q to store the results
+
+      integer :: i, j, k
+      type(cg_list_element), pointer :: cgl
+
+      call leaves%set_q_value(qvar, 0.)
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         ! an ELEMENTAL implementation of moments2pot would allow simplifications of this routine.
+         ! At least the loop over i may be worth stripping.
+         associate (cg => cgl%cg)
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     cg%q(qvar)%arr(i, j, k) = moments2pot([cg%x(i), cg%y(j), cg%z(k)])
+                  enddo
+               enddo
+            enddo
+         end associate
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine compute_mpole_potential
 
 end module multipole
