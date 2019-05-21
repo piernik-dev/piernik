@@ -822,6 +822,7 @@ contains
 #endif /* COSM_RAYS */
 #ifdef GRAV
       use constants,             only: BND_OUTH, BND_OUTHD, I_ZERO
+      use fluidboundaries_funcs, only: outh_fluidbnd
 #endif /* GRAV */
 
       implicit none
@@ -890,9 +891,9 @@ contains
                   endif
 #ifdef GRAV
                case (BND_OUTH)
-                  call user_fluidbnd(dir, side, cg, wn=I_ZERO)
+                  call outh_fluidbnd(dir, side, cg, wn=I_ZERO)
                case (BND_OUTHD)
-                  call user_fluidbnd(dir, side, cg, wn=I_ONE)
+                  call outh_fluidbnd(dir, side, cg, wn=I_ONE)
 #endif /* GRAV */
                case default
                   write(msg,'("[cg_list_bnd:bnd_u]: Unrecognized ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
