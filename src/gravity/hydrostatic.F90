@@ -160,14 +160,14 @@ contains
 !<
    subroutine init_hydrostatic
 
-      use fluidboundaries_funcs, only: user_fluidbnd
+      use fluidboundaries_funcs, only: outh_fluidbnd
 
       implicit none
 
       ! BEWARE: This is a sweet little hack that allows to drop hydrostatic
       ! dependency from fluidboundaries module. It's bad due to several reasons,
       ! which I'll gracefully omit in this comment. It should be fixed asap...
-      user_fluidbnd => outh_bnd
+      outh_fluidbnd => outh_bnd
 
    end subroutine init_hydrostatic
 
