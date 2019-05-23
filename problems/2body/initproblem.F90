@@ -363,7 +363,7 @@ contains
       close(galfile)
 
       if (nbodies /= npart) then
-         write(msg,'(a,i8,3a,i8,a)') 'Different number of particles declared in problem.par file (',npart,') then stored in ', trim(bgfile), ' (',nbodies,')'
+         write(msg,'(a,i8,3a,i8,a)') 'Different number of particles declared in problem.par file (',npart,') than stored in ', trim(bgfile), ' (',nbodies,')'
          call warn(msg)
          nbodies = min(nbodies,npart)
          write(msg,'(a,i8,a)') 'Reading ', nbodies, ' particles'
@@ -373,9 +373,13 @@ contains
       i = 0
       do j = 1, nbodies
          i = i + 1
+         if (i > nbodies) exit
          do while (any(pos(i,:) < dom%edge(:,LO)) .or. any(pos(i,:) > dom%edge(:,HI)))
+            print *, 'OOOOOPS'
             i = i + 1
+            if (i > nbodies) exit
          enddo
+         if (i > nbodies) exit
 #ifdef VERBOSE
          if (modulo(i, 10000) .eq. 0) then
             write(msg,'(i8,a)') i, ' particles read' ; call printio(msg)
