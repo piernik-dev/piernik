@@ -38,7 +38,7 @@ module initcosmicrays
 ! pulled by COSM_RAYS
    use constants, only: cbuff_len
 #ifdef COSM_RAY_ELECTRONS
-   use initcrspectrum, only: ncre, K_cre_paral_1, K_cre_perp_1, K_cre_pow, p_mid_fix, cre_gpcr_ess
+   use initcrspectrum, only: ncre, cre_gpcr_ess
 #endif /* COSM_RAY_ELECTRONS */
    implicit none
 
@@ -127,6 +127,9 @@ contains
 #ifdef COSM_RAYS_SOURCES
       use cr_data,         only: init_crsources
 #endif /* COSM_RAYS_SOURCES */
+#ifdef COSM_RAY_ELECTRONS
+   use initcrspectrum,     only: K_cre_paral_1, K_cre_perp_1, K_cre_pow, p_mid_fix
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
