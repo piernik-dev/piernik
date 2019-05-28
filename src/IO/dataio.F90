@@ -1723,7 +1723,7 @@ contains
             call cmnlog_s(fmt_loc,   'min(cren)    ', id, cren_min)
             call cmnlog_s(fmt_loc,   'max(cren)    ', id, cren_max)
             call cmnlog_s(fmt_loc,   'min(cree)    ', id, cree_min)
-            call cmnlog_s(fmt_dtloc, 'max(cree)    ', id, cree_max)
+            call cmnlog_l(fmt_dtloc, 'max(cree)    ', id, cree_max)
             call cmnlog_s(fmt_loc,   'min(div_v)   ', id, divv_min)
             call cmnlog_l(fmt_dtloc, 'max(div_v)   ', id, divv_max)
 #endif /* COSM_RAY_ELECTRONS */
