@@ -39,11 +39,11 @@ module cresp_grid
    implicit none
 
    private
-   public :: dt_cre, cresp_update_grid, cresp_init_grid, grid_cresp_timestep, cfl_cresp_violation, cresp_clean_grid
+   public :: dt_cre, dt_cre_K, cresp_update_grid, cresp_init_grid, grid_cresp_timestep, cfl_cresp_violation, cresp_clean_grid
 
-   real(kind=8)          :: bb_to_ub, dt_cre
-   logical               :: cfl_cresp_violation, register_p, register_q, register_f
-   integer(kind=4), save :: i_up_max_prev
+   real(kind=8)    :: bb_to_ub, dt_cre, dt_cre_K
+   logical         :: cfl_cresp_violation, register_p, register_q, register_f
+   integer(kind=4) :: i_up_max_prev
 
    contains
 
@@ -54,15 +54,15 @@ module cresp_grid
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, onet
       use cresp_crspectrum, only: cresp_update_cell
-#ifdef DEBUG
-      use cresp_crspectrum, only: cresp_detect_negative_content
-#endif /* DEBUG */
       use crhelpers,        only: divv_n
       use func,             only: emag
       use grid_cont,        only: grid_container
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, hdf_save_fpq, crel, nam_cresp_f, nam_cresp_p, nam_cresp_q
       use named_array,      only: p4
       use named_array_list, only: qna, wna
+#ifdef DEBUG
+      use cresp_crspectrum, only: cresp_detect_negative_content
+#endif /* DEBUG */
 
       implicit none
 
@@ -274,7 +274,6 @@ module cresp_grid
       type(grid_container),  pointer :: cg
       type(cg_list_element), pointer :: cgl
       real(kind=8)                   :: dt_cre_tmp, K_cre_max_sum
-      real(kind=8), save             :: dt_cre_K
       type(spec_mod_trms)            :: sptab
 
       i_up_max     = 1
