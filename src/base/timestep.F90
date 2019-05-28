@@ -154,10 +154,6 @@ contains
             dt    = min(dt, dt_)
             c_all = max(c_all, c_)
          enddo
-#ifdef COSM_RAY_ELECTRONS
-         call grid_cresp_timestep
-         dt = min(dt, dt_cre)
-#endif /* COSM_RAY_ELECTRONS */
 
 #ifdef COSM_RAYS
          call timestep_crs(cg)
@@ -174,6 +170,11 @@ contains
          if (use_fargo) dt = min(dt, timestep_fargo(cg, dt))
          cgl => cgl%nxt
       enddo
+
+#ifdef COSM_RAY_ELECTRONS
+         call grid_cresp_timestep
+         dt = min(dt, dt_cre)
+#endif /* COSM_RAY_ELECTRONS */
 
       call piernik_MPI_Allreduce(dt,    pMIN)
       call piernik_MPI_Allreduce(c_all, pMAX)
