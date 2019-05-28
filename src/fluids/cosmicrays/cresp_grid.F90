@@ -33,18 +33,17 @@
 module cresp_grid
 ! pulled by COSM_RAY_ELECTRONS
 
-   use global,          only: dt, t
-   use initcosmicrays,  only: iarr_cre_e, iarr_cre_n
+   use global,         only: dt, t
+   use initcosmicrays, only: iarr_cre_e, iarr_cre_n
 
    implicit none
 
    private
-   public   :: dt_cre, cresp_update_grid, cresp_init_grid, grid_cresp_timestep, cfl_cresp_violation, cresp_clean_grid
+   public :: dt_cre, cresp_update_grid, cresp_init_grid, grid_cresp_timestep, cfl_cresp_violation, cresp_clean_grid
 
-   real(kind=8)                    :: dt_cre
-   real(kind=8)                    :: bb_to_ub
-   logical                         :: cfl_cresp_violation, register_p, register_q, register_f
-   integer(kind=4), save           :: i_up_max_prev
+   real(kind=8)          :: bb_to_ub, dt_cre
+   logical               :: cfl_cresp_violation, register_p, register_q, register_f
+   integer(kind=4), save :: i_up_max_prev
 
    contains
 
@@ -61,17 +60,16 @@ module cresp_grid
       use crhelpers,        only: divv_n
       use func,             only: emag
       use grid_cont,        only: grid_container
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, hdf_save_fpq, crel, &
-                                  nam_cresp_f, nam_cresp_p, nam_cresp_q
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, hdf_save_fpq, crel, nam_cresp_f, nam_cresp_p, nam_cresp_q
       use named_array,      only: p4
       use named_array_list, only: qna, wna
 
       implicit none
 
-      integer                             :: i, j, k
-      type(cg_list_element), pointer      :: cgl
-      type(grid_container), pointer       :: cg
-      type(spec_mod_trms)                 :: sptab
+      integer                        :: i, j, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer  :: cg
+      type(spec_mod_trms)            :: sptab
 
       i = 0; j = 0;  k = 0
       cgl => leaves%first
@@ -112,7 +110,9 @@ module cresp_grid
       enddo
 
    end subroutine cresp_update_grid
+
 !----------------------------------------------------------------------------------------------------
+
    subroutine cresp_clean_grid
 
       use cg_leaves,        only: leaves
@@ -157,7 +157,9 @@ module cresp_grid
       endif
 
    end subroutine cresp_clean_grid
+
 !----------------------------------------------------------------------------------------------------
+
    subroutine cresp_init_grid
 
       use cg_leaves,          only: leaves
@@ -249,29 +251,31 @@ module cresp_grid
       endif
 
    end subroutine cresp_init_grid
+
 !----------------------------------------------------------------------------------------------------
+
    subroutine grid_cresp_timestep
 
-      use cg_leaves,          only: leaves
-      use cg_list,            only: cg_list_element
-      use constants,          only: xdim, ydim, zdim, one, half, onet
-      use crhelpers,          only: div_v, divv_n
-      use fluidindex,         only: flind
-      use func,               only: emag
-      use grid_cont,          only: grid_container
-      use initcosmicrays,     only: K_cre_paral, K_cre_perp
-      use initcrspectrum,     only: spec_mod_trms, cfl_cre, synch_active, adiab_active, use_cresp
-      use named_array_list,   only: qna
-      use timestep_cresp,     only: cresp_timestep, dt_cre_min_ub, dt_cre_min_ud
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim, one, half, onet
+      use crhelpers,        only: div_v, divv_n
+      use fluidindex,       only: flind
+      use func,             only: emag
+      use grid_cont,        only: grid_container
+      use initcosmicrays,   only: K_cre_paral, K_cre_perp
+      use initcrspectrum,   only: spec_mod_trms, cfl_cre, synch_active, adiab_active, use_cresp
+      use named_array_list, only: qna
+      use timestep_cresp,   only: cresp_timestep, dt_cre_min_ub, dt_cre_min_ud
 
       implicit none
 
-      integer(kind=4)                 :: i, j, k, i_up_max, i_up_max_tmp
-      type(grid_container), pointer   :: cg
-      type(cg_list_element), pointer  :: cgl
-      real(kind=8)                    :: dt_cre_tmp, K_cre_max_sum
-      real(kind=8),save               :: dt_cre_K
-      type(spec_mod_trms)             :: sptab
+      integer(kind=4)                :: i, j, k, i_up_max, i_up_max_tmp
+      type(grid_container),  pointer :: cg
+      type(cg_list_element), pointer :: cgl
+      real(kind=8)                   :: dt_cre_tmp, K_cre_max_sum
+      real(kind=8), save             :: dt_cre_K
+      type(spec_mod_trms)            :: sptab
 
       i_up_max     = 1
       i_up_max_tmp = 1
@@ -309,16 +313,17 @@ module cresp_grid
                dt_cre_K = huge(one)
             else
                dt_cre_K = cfl_cre * half / K_cre_max_sum
-               if (cg%dxmn < sqrt(huge(one))/dt_cre_K) then
-                     dt_cre_K = dt_cre_K * cg%dxmn**2
-               endif
+               if (cg%dxmn < sqrt(huge(one))/dt_cre_K) dt_cre_K = dt_cre_K * cg%dxmn**2
             endif
          endif
          dt_cre = min(dt_cre, dt_cre_K)
          dt_cre = half * dt_cre ! dt comes in to cresp_crspectrum with factor * 2
       endif
+
    end subroutine grid_cresp_timestep
+
 !----------------------------------------------------------------------------------------------------
+
    subroutine append_dissipative_terms(i,j,k) ! To be fixed
 
       use cg_leaves,        only: leaves

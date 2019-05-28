@@ -33,8 +33,8 @@
 module timestep_cresp
 ! pulled by COSM_RAY_ELECTRONS
 
-   use initcrspectrum, only: ncre, cfl_cre
    use constants,      only: one, zero
+   use initcrspectrum, only: ncre, cfl_cre
 
    implicit none
 
@@ -43,26 +43,22 @@ module timestep_cresp
 
    real(kind=8) :: dt_cre, dt_cre_min_ub, dt_cre_min_ud
 
-!----------------------------------------------------------------------------------------------------
-!
  contains
-!
-!----------------------------------------------------------------------------------------------------
 
    function assume_p_up(cell_i_up)
+
       use initcrspectrum, only: p_fix, p_mid_fix, ncre
+
       implicit none
 
-      integer(kind=4), intent(in)            :: cell_i_up
-      real(kind=8)                           :: assume_p_up
+      integer(kind=4), intent(in) :: cell_i_up
+      real(kind=8)                :: assume_p_up
 
       assume_p_up = p_fix(ncre-1)
       if (cell_i_up .eq. ncre) then
          assume_p_up = p_mid_fix(ncre) ! for i = 0 & ncre p_fix(i) = 0.0
-         return
       else
          assume_p_up = p_fix(cell_i_up)
-         return
       endif
 
    end function assume_p_up
@@ -70,15 +66,15 @@ module timestep_cresp
 
    function evaluate_i_up(e_cell, n_cell) ! obtain i_up index from energy densities in cell
 
+      use constants,      only: zero
       use initcrspectrum, only: ncre, e_small
-      use constants, only: zero
 
       implicit none
 
       real(kind=8), dimension(:), intent(in) :: e_cell, n_cell
-      integer :: evaluate_i_up, i
+      integer                                :: evaluate_i_up, i
 
-      do i=ncre, 1, -1  ! we start counting from ncre since upper cutoff is rather expected at higher index numbers. Might change it though.
+      do i = ncre, 1, -1  ! we start counting from ncre since upper cutoff is rather expected at higher index numbers. Might change it though.
          if (e_cell(i) .gt. e_small .and. n_cell(i) .gt. zero) then ! better compare to zero or to eps?
             evaluate_i_up = i
             return ! if cell is empty, evaluate_i_up returns 0, which is handled by cresp_timestep
@@ -94,20 +90,19 @@ module timestep_cresp
 
    subroutine cresp_timestep(dt_comp, sptab, n_cell, e_cell, i_up_cell)
 
-      use initcrspectrum,   only: spec_mod_trms, ncre, w, eps
+      use constants,        only: zero, I_ZERO
       use cresp_crspectrum, only: cresp_find_prepare_spectrum
-      use constants, only: zero, I_ZERO
+      use initcrspectrum,   only: spec_mod_trms, ncre, w, eps
 
       implicit none
 
-      real(kind=8), intent(out)  :: dt_comp
-      real(kind=8)               :: dt_cre_ud, dt_cre_ub
-      real(kind=8) :: p_u
-      real(kind=8), dimension(:), intent(in) :: n_cell, e_cell
-      real(kind=8), dimension(ncre)          :: n_inout, e_inout
-      integer(kind=4), intent(inout) :: i_up_cell
-      type(spec_mod_trms) sptab
-      logical      :: empty_cell
+      real(kind=8),               intent(out)   :: dt_comp
+      type(spec_mod_trms)                       :: sptab
+      real(kind=8), dimension(:), intent(in)    :: n_cell, e_cell
+      integer(kind=4),            intent(inout) :: i_up_cell
+      real(kind=8)                              :: dt_cre_ud, dt_cre_ub, p_u
+      real(kind=8), dimension(ncre)             :: n_inout, e_inout
+      logical                                   :: empty_cell
 
       empty_cell = .true.
       n_inout = n_cell
