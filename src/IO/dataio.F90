@@ -1458,8 +1458,11 @@ contains
       use types,              only: value
 #ifdef COSM_RAYS
 #ifdef COSM_RAY_ELECTRONS
+      use constants,          only: pMIN
+      use cresp_grid,         only: dt_cre_K
       use fluidindex,         only: iarr_all_crn
       use initcosmicrays,     only: iarr_cre_e, iarr_cre_n
+      use mpisetup,           only: piernik_MPI_Allreduce
       use timestep_cresp,     only: dt_cre_min_ud, dt_cre_min_ub
 #else /* !COSM_RAY_ELECTRONS */
       use fluidindex,         only: iarr_all_crs
@@ -1539,6 +1542,7 @@ contains
          call leaves%get_extremum(qna%wai, MINL, b_min)
 #ifdef COSM_RAY_ELECTRONS
          b_max%assoc = dt_cre_min_ub
+         call piernik_MPI_Allreduce(b_max%assoc, pMIN)
 #endif /* COSM_RAY_ELECTRONS */
          cgl => leaves%first
          do while (associated(cgl))
@@ -1622,23 +1626,25 @@ contains
       call leaves%get_extremum(qna%wai, MAXL, encr_max)
       call leaves%get_extremum(qna%wai, MINL, encr_min)
       encr_max%assoc = dt_crs
+      call piernik_MPI_Allreduce(encr_max%assoc, pMIN)
 #ifdef COSM_RAY_ELECTRONS
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%wa        = sum(cgl%cg%u(iarr_cre_n,:,:,:),1)
+         cgl%cg%wa = sum(cgl%cg%u(iarr_cre_n,:,:,:),1)
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, cren_max)
       call leaves%get_extremum(qna%wai, MINL, cren_min)
-      cgl => leaves%first
 
+      cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%wa        = sum(cgl%cg%u(iarr_cre_e,:,:,:),1)
+         cgl%cg%wa = sum(cgl%cg%u(iarr_cre_e,:,:,:),1)
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, cree_max)
       call leaves%get_extremum(qna%wai, MINL, cree_min)
-      cgl => leaves%first
+      cree_max%assoc = dt_cre_K
+      call piernik_MPI_Allreduce(cree_max%assoc, pMIN)
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -1664,6 +1670,7 @@ contains
       call leaves%get_extremum(qna%wai, MINL, divv_min)
       call leaves%get_extremum(qna%wai, MAXL, divv_max)
       divv_max%assoc = dt_cre_min_ud
+      call piernik_MPI_Allreduce(divv_max%assoc, pMIN)
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
 
@@ -1716,7 +1723,7 @@ contains
             call cmnlog_s(fmt_loc,   'min(cren)    ', id, cren_min)
             call cmnlog_s(fmt_loc,   'max(cren)    ', id, cren_max)
             call cmnlog_s(fmt_loc,   'min(cree)    ', id, cree_min)
-            call cmnlog_s(fmt_loc,   'max(cree)    ', id, cree_max)
+            call cmnlog_s(fmt_dtloc, 'max(cree)    ', id, cree_max)
             call cmnlog_s(fmt_loc,   'min(div_v)   ', id, divv_min)
             call cmnlog_l(fmt_dtloc, 'max(div_v)   ', id, divv_max)
 #endif /* COSM_RAY_ELECTRONS */

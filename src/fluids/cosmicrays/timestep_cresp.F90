@@ -96,13 +96,13 @@ module timestep_cresp
 
       implicit none
 
-      real(kind=8),               intent(out)   :: dt_comp
-      type(spec_mod_trms)                       :: sptab
-      real(kind=8), dimension(:), intent(in)    :: n_cell, e_cell
-      integer(kind=4),            intent(inout) :: i_up_cell
-      real(kind=8)                              :: dt_cre_ud, dt_cre_ub, p_u
-      real(kind=8), dimension(ncre)             :: n_inout, e_inout
-      logical                                   :: empty_cell
+      real(kind=8),               intent(out) :: dt_comp
+      type(spec_mod_trms)                     :: sptab
+      real(kind=8), dimension(:), intent(in)  :: n_cell, e_cell
+      integer(kind=4),            intent(out) :: i_up_cell
+      real(kind=8)                            :: dt_cre_ud, dt_cre_ub, p_u
+      real(kind=8), dimension(ncre)           :: n_inout, e_inout
+      logical                                 :: empty_cell
 
       empty_cell = .true.
       n_inout = n_cell
