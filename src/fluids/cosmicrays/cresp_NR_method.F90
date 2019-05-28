@@ -427,14 +427,14 @@ contains
 
       print *,"Running refine for:", bound_case, " boundary"
 
-      call refine_ij(p_p, p_f,1,-1)
-      call refine_ji(p_p, p_f,1, -1)
-      call refine_ij(p_p, p_f,-1,-1)
-      call refine_ji(p_p, p_f,-1, -1)
-      call refine_ij(p_p, p_f,1,1)
-      call refine_ji(p_p, p_f, 1, 1)
-      call refine_ij(p_p, p_f,-1,1)
-      call refine_ji(p_p, p_f,-1, 1)
+      call refine_ij(p_p, p_f,  1, -1)
+      call refine_ji(p_p, p_f,  1, -1)
+      call refine_ij(p_p, p_f, -1, -1)
+      call refine_ji(p_p, p_f, -1, -1)
+      call refine_ij(p_p, p_f,  1,  1)
+      call refine_ji(p_p, p_f,  1,  1)
+      call refine_ij(p_p, p_f, -1,  1)
+      call refine_ji(p_p, p_f, -1,  1)
 
    end subroutine refine_all_directions
 
