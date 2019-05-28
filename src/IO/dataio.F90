@@ -84,6 +84,11 @@ module dataio
       logical :: dummy
 #ifdef COSM_RAYS
       real :: encr_min, encr_max
+#ifdef COSM_RAY_ELECTRONS
+      real :: cren_min, cren_max                     !< values of cre number density
+      real :: cree_min, cree_max                     !< values of cre energy density
+      real :: divv_min, divv_max                     !< vel. divergence values
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
       real :: etamax
@@ -94,11 +99,6 @@ module dataio
 #ifdef VARIABLE_GP
       real :: gpxmax, gpymax, gpzmax
 #endif /* VARIABLE_GP */
-#ifdef COSM_RAY_ELECTRONS
-      real :: cren_min, cren_max                     !< values of cre number density
-      real :: cree_min, cree_max                     !< values of cre energy density
-      real :: divv_min, divv_max                     !< vel. divergence values
-#endif /* COSM_RAY_ELECTRONS */
    end type tsl_container
 
    namelist /END_CONTROL/     nend, tend, wend
@@ -876,9 +876,9 @@ contains
 #ifdef COSM_RAY_ELECTRONS
       use fluidindex,       only: iarr_all_crn
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
-#else
+#else /* !COSM_RAY_ELECTRONS */
       use fluidindex,       only: iarr_all_crs
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* !COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
       use resistivity,      only: eta1_active
@@ -910,11 +910,11 @@ contains
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
          enumerator :: T_ENCR                                  !< total CR energy
-#endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
          enumerator :: T_CREE                                  !< total CRE (electron component) energy
          enumerator :: T_CREN                                  !< total CRE (electron component) density
 #endif /* COSM_RAY_ELECTRONS */
+#endif /* COSM_RAYS */
          enumerator :: T_LAST                                  !< DO NOT place any index behind this one
       end enum
       real, dimension(T_MASS:T_LAST-1), save :: tot_q          !< array of total quantities
@@ -956,12 +956,12 @@ contains
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
             call pop_vector(tsl_names, field_len, ["encr_tot", "encr_min", "encr_max"])
-#endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
             call pop_vector(tsl_names, field_len, ["cren_tot", "cren_min", "cren_max" ])
             call pop_vector(tsl_names, field_len, ["cree_tot", "cree_min", "cree_max"])
             call pop_vector(tsl_names, field_len, ["divv_min", "divv_max" ])
 #endif /* COSM_RAY_ELECTRONS */
+#endif /* COSM_RAYS */
             ! \todo: replicated code, simplify me
             if (has_ion) then
                call pop_vector(tsl_names, field_len, ["deni_min", "deni_max", "vxi_max ", "vyi_max ", "vzi_max "])
@@ -1079,7 +1079,6 @@ contains
 #endif /* COSM_RAY_ELECTRONS */
                   tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
 #endif /* COSM_RAYS */
-
                enddo
 
          end select
@@ -1458,17 +1457,14 @@ contains
       use named_array_list,   only: qna
       use types,              only: value
 #ifdef COSM_RAYS
-      use timestepcosmicrays, only: dt_crs
-#if defined(COSM_RAYS) && defined(COSM_RAY_ELECTRONS)
-      use fluidindex,        only: iarr_all_crn
-#endif /* COSM_RAYS && COSM_RAY_ELECTRONS */
-#if defined(COSM_RAYS) && !defined(COSM_RAY_ELECTRONS)
-      use fluidindex,         only: iarr_all_crs
-#endif /* COSM_RAYS && COSM_RAY_ELECTRONS */
 #ifdef COSM_RAY_ELECTRONS
+      use fluidindex,         only: iarr_all_crn
       use initcosmicrays,     only: iarr_cre_e, iarr_cre_n
       use timestep_cresp,     only: dt_cre_min_ud, dt_cre_min_ub
-#endif /* COSM_RAY_ELECTRONS */
+#else /* !COSM_RAY_ELECTRONS */
+      use fluidindex,         only: iarr_all_crs
+#endif /* !COSM_RAY_ELECTRONS */
+      use timestepcosmicrays, only: dt_crs
 #endif /* COSM_RAYS */
 #if defined COSM_RAYS || defined MAGNETIC
       use constants,          only: MINL
@@ -1613,21 +1609,19 @@ contains
       call leaves%get_extremum(qna%wai, MAXL, divb_max)
 #endif /* MAGNETIC */
 
-#if defined(COSM_RAYS)
+#ifdef COSM_RAYS
       cgl => leaves%first
       do while (associated(cgl))
-#if defined(COSM_RAYS) && defined(COSM_RAY_ELECTRONS)
+#ifdef COSM_RAY_ELECTRONS
          cgl%cg%wa        = sum(cgl%cg%u(iarr_all_crn,:,:,:),1)
-#endif /* COSM_RAYS && COSM_RAY_ELECTRONS */
-#if defined(COSM_RAYS) && !defined(COSM_RAY_ELECTRONS)
+#else /* !COSM_RAY_ELECTRONS */
          cgl%cg%wa        = sum(cgl%cg%u(iarr_all_crs,:,:,:),1)
-#endif /* COSM_RAYS && !COSM_RAY_ELECTRONS */
+#endif /* !COSM_RAY_ELECTRONS */
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, encr_max)
       call leaves%get_extremum(qna%wai, MINL, encr_min)
       encr_max%assoc = dt_crs
-#endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
       cgl => leaves%first
       do while (associated(cgl))
@@ -1671,6 +1665,7 @@ contains
       call leaves%get_extremum(qna%wai, MAXL, divv_max)
       divv_max%assoc = dt_cre_min_ud
 #endif /* COSM_RAY_ELECTRONS */
+#endif /* COSM_RAYS */
 
       if (has_interactions) then
          cgl => leaves%first
@@ -1708,10 +1703,13 @@ contains
             if (has_dst) call common_shout(flind%dst%snap,'DST',.false.,.false.,.false.)
             if (has_interactions) call cmnlog_l(fmt_dtloc, 'max(drag)   ', "INT", drag)
 #ifdef COSM_RAYS
+#ifdef COSM_RAY_ELECTRONS
+            id = "CRN"
+#else /* !COSM_RAY_ELECTRONS */
             id = "CRS"
+#endif /* COSM_RAY_ELECTRONS */
             call cmnlog_s(fmt_loc,   'min(encr)   ', id, encr_min)
             call cmnlog_l(fmt_dtloc, 'max(encr)   ', id, encr_max)
-#endif /* COSM_RAYS */
 
 #ifdef COSM_RAY_ELECTRONS
             id = "CRE"
@@ -1722,6 +1720,7 @@ contains
             call cmnlog_s(fmt_loc,   'min(div_v)   ', id, divv_min)
             call cmnlog_l(fmt_dtloc, 'max(div_v)   ', id, divv_max)
 #endif /* COSM_RAY_ELECTRONS */
+#endif /* COSM_RAYS */
 
 #ifdef RESISTIVE
             if (eta1_active) then

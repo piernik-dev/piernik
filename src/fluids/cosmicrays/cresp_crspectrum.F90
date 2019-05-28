@@ -462,9 +462,8 @@ contains
    subroutine cresp_find_prepare_spectrum(n, e, empty_cell, i_up_out) ! EXPERIMENTAL
 
       use constants,      only: I_ZERO, zero, I_ONE
-      use dataio_pub,     only: msg, warn
 #ifdef CRESP_VERBOSED
-      use dataio_pub,     only: printinfo
+      use dataio_pub,     only: msg, printinfo, warn
 #endif /* CRESP_VERBOSED */
       use diagnostics,    only: incr_vec
       use initcrspectrum, only: ncre, e_small, cresp_all_edges, cresp_all_bins, p_fix, p_mid_fix
@@ -507,10 +506,12 @@ contains
          pre_i_up = int(nonempty_bins(num_has_gt_zero),kind=4) !ubound(nonempty_bins,dim=1)
       endif
 
+#ifdef CRESP_VERBOSED
       if (pre_i_lo .eq. (ncre - I_ONE)) then
          write(msg,*) "[cresp_crspectrum:cresp_find_prepare_spectrum] Whole spectrum moved beyond upper p_fix. Consider increasing p_up_init and restarting test."
          call warn(msg)
       endif
+#endif /* CRESP_VERBOSED */
 
 ! Prepare p array
       p = zero
@@ -764,8 +765,7 @@ contains
 
       if (e_bin .lt. zero .or. n_bin .lt. zero) then
 #ifdef CRESP_VERBOSED
-         write(msg,'(A66,A5,E18.9,A6,E18.9,I4)')   '[cresp_crspectrum:cresp_detect_negative_content] Negative values:', &
-                                             &     ' n = ', n_bin, ', e = ', e_bin, i_bin
+         write(msg,'(A66,A5,E18.9,A6,E18.9,I4)')   '[cresp_crspectrum:check_cutoff_ne] Negative values:', ' n = ', n_bin, ', e = ', e_bin, i_bin
          call warn(msg)
 #endif /* CRESP_VERBOSED */
          cfl_cresp_violated = .true.
