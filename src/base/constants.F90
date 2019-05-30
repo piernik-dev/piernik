@@ -56,11 +56,11 @@ module constants
    real, parameter :: zero       = 0.0                   !< zero
    real, parameter :: one        = 1.0                   !< one
    real, parameter :: two        = 2.0                   !< two
-   real(kind=8), parameter :: three      = 3.0                   !< three
+   real, parameter :: three      = 3.0                   !< three
    real, parameter :: four       = 4.0                   !< four
-   real(kind=8), parameter :: five       = 5.0
+   real, parameter :: five       = 5.0
    real, parameter :: eight      = 8.0                   !< eight
-   real(kind=8), parameter :: ten        = 10.0
+   real, parameter :: ten        = 10.0
    real, parameter :: half       = 0.5                   !< a half
    real, parameter :: onet       = 1./3.                 !< one third
    real, parameter :: twot       = 2./3.                 !< two thirds
