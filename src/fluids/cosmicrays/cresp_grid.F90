@@ -41,7 +41,7 @@ module cresp_grid
    private
    public :: dt_cre, dt_cre_K, cresp_update_grid, cresp_init_grid, grid_cresp_timestep, cfl_cresp_violation, cresp_clean_grid
 
-   real(kind=8)    :: bb_to_ub, dt_cre, dt_cre_K
+   real(kind=8)    :: fsynchr, dt_cre, dt_cre_K
    logical         :: cfl_cresp_violation, register_p, register_q, register_f
    integer(kind=4) :: i_up_max_prev
 
@@ -84,7 +84,7 @@ module cresp_grid
                   sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
                   cresp%n    = p4(iarr_cre_n, i, j, k)
                   cresp%e    = p4(iarr_cre_e, i, j, k)
-                  if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * bb_to_ub    !< WARNING assusmes that b is in mGs
+                  if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr    !< WARNING assusmes that b is in mGs
                   if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k]) * onet
 #ifdef CRESP_VERBOSED
                   print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
@@ -165,7 +165,6 @@ module cresp_grid
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
       use cg_list_global,     only: all_cg
-      use constants,          only: pi
       use cresp_crspectrum,   only: cresp_allocate_all, e_threshold_lo, e_threshold_up, fail_count_interpol, &
                               &     fail_count_NR_2dim, fail_count_comp_q, cresp_init_state, p_rch_init
       use cresp_NR_method,    only: cresp_initialize_guess_grids
@@ -176,14 +175,13 @@ module cresp_grid
                                     ncre, hdf_save_fpq, nam_cresp_f, nam_cresp_p, nam_cresp_q
       use mpisetup,           only: master
       use named_array_list,   only: wna
-      use units,              only: units_set
+      use units,              only: clight, me, sigma_T
 
       implicit none
 
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       logical, save                   :: first_run = .true., not_zeroed = .true.
-      real(kind=8)                    :: sigma_T_cgs, me_cgs, myr_cgs, mGs_cgs, c_cgs, B_code_cgs_conversion
 
       if (first_run .eqv. .true.) then
          register_f = .false.
@@ -200,20 +198,8 @@ module cresp_grid
          e_threshold_lo = e_small * e_small_approx_p_lo
          e_threshold_up = e_small * e_small_approx_p_up
 
-         sigma_T_cgs = 6.65245871571e-25 ! (cm ** 2)  ! < TODO: put this in the units module?
-         me_cgs      = 9.1093835611e-28  ! g          ! TODO: "unitize" these quantities
-         myr_cgs     = 3.1556952e+13     ! s          ! TODO: "unitize" these quantities
-         mGs_cgs     = 1.0e-6            ! Gs         ! TODO: "unitize" these quantities
-         c_cgs       = 29979245800.      ! cm/s       ! TODO: "unitize" these quantities
-         B_code_cgs_conversion = 2.84
-
-         if ( .not. ((trim(units_set) == "psm" ) .or. (trim(units_set) == "PSM")) ) then
-            write(msg, *) "[cresp_grid:cresp_init_grid] units_set is not PSM. CRESP only works with PSM, other unit sets might cause crash."
-            if (master) call warn(msg)
-         endif
-
-         bb_to_ub =  (4. / 3. ) * sigma_T_cgs / (me_cgs * c_cgs * 8. * pi) * (mGs_cgs)**2 * myr_cgs * B_code_cgs_conversion ** 2
-         write (msg, *) "[cresp_grid:cresp_init_grid] 4/3 * sigma_T_cgs / ( me_cgs * c * 8 *  pi) * (mGs_cgs)**2  * myr_cgs = ", bb_to_ub         ! TODO: "unitize" these quantities
+         fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
+         write (msg, *) "[cresp_grid:cresp_init_grid] 4/3 * sigma_T / ( me * c ) = ", fsynchr
          if (master) call printinfo(msg)
 
          if (hdf_save_fpq) then
@@ -293,7 +279,7 @@ module cresp_grid
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
                      sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
-                     if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * bb_to_ub         !< WARNING assusmes that b is in mGs
+                     if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr
                      if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k]) * onet
 
                      call cresp_timestep(dt_cre_tmp, sptab, cg%u(iarr_cre_n, i, j, k), cg%u(iarr_cre_e, i, j, k), i_up_max_tmp) ! gives dt_cre for the whole domain, but is unefficient

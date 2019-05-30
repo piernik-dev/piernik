@@ -312,10 +312,6 @@ module initcrspectrum
       call piernik_MPI_Bcast(lbuff)
       call piernik_MPI_Bcast(cbuff, cbuff_len)
 
-!!\deprecated
-      open(10, file='crs.dat',status='replace',position='rewind')     ! diagnostic files
-      open(11, file='crs_ne.dat',status='replace',position='rewind')  ! diagnostic files
-
       if (slave) then
          ncre                        = int(ibuff(1),kind=4)
          expan_order                 = int(ibuff(2),kind=4)
