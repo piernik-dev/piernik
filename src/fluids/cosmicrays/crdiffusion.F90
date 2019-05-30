@@ -150,7 +150,7 @@ contains
       integer(kind=4), intent(in)          :: crdim
       integer                              :: i, j, k, il, ih, jl, jh, kl, kh, ild, jld, kld
       integer, dimension(ndims)            :: idm, ndm, hdm, ldm
-      real                                 :: bb
+      real                                 :: bb, f1, f2
       real, dimension(ndims)               :: bcomp
       real, dimension(flind%crs%all)       :: fcrdif
       real, dimension(ndims,flind%crs%all) :: decr
@@ -177,6 +177,9 @@ contains
 
          wcr => cg%w(wcri)%arr
          if (.not. associated(wcr)) call die("[crdiffusion:cr_diff] cannot get wcr")
+
+         f1 =    eight * cg%idl(crdim)
+         f2 = - oneeig * cg%idl(crdim) * dt
                                                                                                ! in case of integration with boundaries:
          ldm        = cg%ijkse(:,LO) ;      ldm(crdim) = cg%lhn(crdim,LO) + dom%D_(crdim)      ! ldm =           1 + D_
          hdm        = cg%ijkse(:,HI) ;      hdm(crdim) = cg%lhn(crdim,HI)                      ! hdm = cg%n_ + idm - D_
@@ -185,7 +188,7 @@ contains
             do j = ldm(ydim), hdm(ydim)    ; jl = j-1 ; jh = j+1 ; jld = j-idm(ydim)
                do i = ldm(xdim), hdm(xdim) ; il = i-1 ; ih = i+1 ; ild = i-idm(xdim)
 
-                  decr(crdim,:) = (cg%u(iarr_crs,i,j,k) - cg%u(iarr_crs,ild,jld,kld)) * cg%idl(crdim) * eight
+                  decr(crdim,:) = (cg%u(iarr_crs,i,j,k) - cg%u(iarr_crs,ild,jld,kld)) * f1
                   fcrdif = K_crs_perp * decr(crdim,:)
 
                   bcomp(crdim) =  cg%b(crdim,i,j,k) * four
@@ -214,7 +217,7 @@ contains
                   bb = sum(bcomp**2)
                   if (bb > epsilon(0.d0)) fcrdif = fcrdif + K_crs_paral * bcomp(crdim) * (bcomp(xdim) * decr(xdim,:) + bcomp(ydim) * decr(ydim,:) + bcomp(zdim) * decr(zdim,:)) / bb
 
-                  wcr(:,i,j,k) = - oneeig * fcrdif * dt * cg%idl(crdim)
+                  wcr(:,i,j,k) = fcrdif * f2
 
                enddo
             enddo
