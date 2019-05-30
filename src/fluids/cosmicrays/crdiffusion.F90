@@ -135,7 +135,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneq, oneeig, four, eight, wcr_n, GEO_XYZ
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, four, eight, wcr_n, GEO_XYZ
       use dataio_pub,       only: die
       use domain,           only: dom
       use fluidindex,       only: flind
@@ -212,7 +212,7 @@ contains
                   endif
 
                   bb = sum(bcomp**2)
-                  if (bb*oneq**2 > epsilon(0.d0)) fcrdif = fcrdif + K_crs_paral * bcomp(crdim) * (bcomp(xdim) * decr(xdim,:) + bcomp(ydim) * decr(ydim,:) + bcomp(zdim) * decr(zdim,:)) / bb
+                  if (bb > epsilon(0.d0)) fcrdif = fcrdif + K_crs_paral * bcomp(crdim) * (bcomp(xdim) * decr(xdim,:) + bcomp(ydim) * decr(ydim,:) + bcomp(zdim) * decr(zdim,:)) / bb
 
                   wcr(:,i,j,k) = - oneeig * fcrdif * dt * cg%idl(crdim)
 
