@@ -135,7 +135,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, half, wcr_n, oneq, GEO_XYZ
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, four, eight, wcr_n, GEO_XYZ
       use dataio_pub,       only: die
       use domain,           only: dom
       use fluidindex,       only: flind
@@ -150,7 +150,7 @@ contains
       integer(kind=4), intent(in)          :: crdim
       integer                              :: i, j, k, il, ih, jl, jh, kl, kh, ild, jld, kld
       integer, dimension(ndims)            :: idm, ndm, hdm, ldm
-      real                                 :: bb
+      real                                 :: bb, f1, f2
       real, dimension(ndims)               :: bcomp
       real, dimension(flind%crs%all)       :: fcrdif
       real, dimension(ndims,flind%crs%all) :: decr
@@ -177,6 +177,9 @@ contains
 
          wcr => cg%w(wcri)%arr
          if (.not. associated(wcr)) call die("[crdiffusion:cr_diff] cannot get wcr")
+
+         f1 =    eight * cg%idl(crdim)
+         f2 = - oneeig * cg%idl(crdim) * dt
                                                                                                ! in case of integration with boundaries:
          ldm        = cg%ijkse(:,LO) ;      ldm(crdim) = cg%lhn(crdim,LO) + dom%D_(crdim)      ! ldm =           1 + D_
          hdm        = cg%ijkse(:,HI) ;      hdm(crdim) = cg%lhn(crdim,HI)                      ! hdm = cg%n_ + idm - D_
@@ -185,36 +188,36 @@ contains
             do j = ldm(ydim), hdm(ydim)    ; jl = j-1 ; jh = j+1 ; jld = j-idm(ydim)
                do i = ldm(xdim), hdm(xdim) ; il = i-1 ; ih = i+1 ; ild = i-idm(xdim)
 
-                  decr(crdim,:) = (cg%u(iarr_crs,i,j,k) - cg%u(iarr_crs,ild,jld,kld)) * cg%idl(crdim)
+                  decr(crdim,:) = (cg%u(iarr_crs,i,j,k) - cg%u(iarr_crs,ild,jld,kld)) * f1
                   fcrdif = K_crs_perp * decr(crdim,:)
 
-                  bcomp(crdim) =  cg%b(crdim,i,j,k)
+                  bcomp(crdim) =  cg%b(crdim,i,j,k) * four
 
                   if (present_not_crdim(xdim)) then
-                     dqm = half*((cg%u(iarr_crs,i ,jld,kld) + cg%u(iarr_crs,i ,j,k)) - (cg%u(iarr_crs,il,jld,kld) + cg%u(iarr_crs,il,j,k))) * cg%idx
-                     dqp = half*((cg%u(iarr_crs,ih,jld,kld) + cg%u(iarr_crs,ih,j,k)) - (cg%u(iarr_crs,i ,jld,kld) + cg%u(iarr_crs,i ,j,k))) * cg%idx
-                     decr(xdim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*oneq
-                     bcomp(xdim)   = sum(cg%b(xdim,i:ih, jld:j, kld:k))*oneq
+                     dqm = (cg%u(iarr_crs,i ,jld,kld) + cg%u(iarr_crs,i ,j,k)) - (cg%u(iarr_crs,il,jld,kld) + cg%u(iarr_crs,il,j,k))
+                     dqp = (cg%u(iarr_crs,ih,jld,kld) + cg%u(iarr_crs,ih,j,k)) - (cg%u(iarr_crs,i ,jld,kld) + cg%u(iarr_crs,i ,j,k))
+                     decr(xdim,:) = (dqp+dqm) * (1.0 + sign(1.0, dqm*dqp)) * cg%idx
+                     bcomp(xdim)  = sum(cg%b(xdim,i:ih, jld:j, kld:k))
                   endif
 
                   if (present_not_crdim(ydim)) then
-                     dqm = half*((cg%u(iarr_crs,ild,j ,kld) + cg%u(iarr_crs,i,j ,k)) - (cg%u(iarr_crs,ild,jl,kld) + cg%u(iarr_crs,i,jl,k))) * cg%idy
-                     dqp = half*((cg%u(iarr_crs,ild,jh,kld) + cg%u(iarr_crs,i,jh,k)) - (cg%u(iarr_crs,ild,j ,kld) + cg%u(iarr_crs,i,j ,k))) * cg%idy
-                     decr(ydim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*oneq
-                     bcomp(ydim)   = sum(cg%b(ydim,ild:i, j:jh, kld:k))*oneq
+                     dqm = (cg%u(iarr_crs,ild,j ,kld) + cg%u(iarr_crs,i,j ,k)) - (cg%u(iarr_crs,ild,jl,kld) + cg%u(iarr_crs,i,jl,k))
+                     dqp = (cg%u(iarr_crs,ild,jh,kld) + cg%u(iarr_crs,i,jh,k)) - (cg%u(iarr_crs,ild,j ,kld) + cg%u(iarr_crs,i,j ,k))
+                     decr(ydim,:) = (dqp+dqm) * (1.0 + sign(1.0, dqm*dqp)) * cg%idy
+                     bcomp(ydim)  = sum(cg%b(ydim,ild:i, j:jh, kld:k))
                   endif
 
                   if (present_not_crdim(zdim)) then
-                     dqm = half*((cg%u(iarr_crs,ild,jld,k ) + cg%u(iarr_crs,i,j,k )) - (cg%u(iarr_crs,ild,jld,kl) + cg%u(iarr_crs,i,j,kl))) * cg%idz
-                     dqp = half*((cg%u(iarr_crs,ild,jld,kh) + cg%u(iarr_crs,i,j,kh)) - (cg%u(iarr_crs,ild,jld,k ) + cg%u(iarr_crs,i,j,k ))) * cg%idz
-                     decr(zdim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*oneq
-                     bcomp(zdim)   = sum(cg%b(zdim,ild:i, jld:j, k:kh))*oneq
+                     dqm = (cg%u(iarr_crs,ild,jld,k ) + cg%u(iarr_crs,i,j,k )) - (cg%u(iarr_crs,ild,jld,kl) + cg%u(iarr_crs,i,j,kl))
+                     dqp = (cg%u(iarr_crs,ild,jld,kh) + cg%u(iarr_crs,i,j,kh)) - (cg%u(iarr_crs,ild,jld,k ) + cg%u(iarr_crs,i,j,k ))
+                     decr(zdim,:) = (dqp+dqm) * (1.0 + sign(1.0, dqm*dqp)) * cg%idz
+                     bcomp(zdim)  = sum(cg%b(zdim,ild:i, jld:j, k:kh))
                   endif
 
                   bb = sum(bcomp**2)
-                  if (bb > epsilon(0.d0)) fcrdif = fcrdif + K_crs_paral * bcomp(crdim) * (bcomp(xdim)*decr(xdim,:) + bcomp(ydim)*decr(ydim,:) + bcomp(zdim)*decr(zdim,:)) / bb
+                  if (bb > epsilon(0.d0)) fcrdif = fcrdif + K_crs_paral * bcomp(crdim) * (bcomp(xdim) * decr(xdim,:) + bcomp(ydim) * decr(ydim,:) + bcomp(zdim) * decr(zdim,:)) / bb
 
-                  wcr(:,i,j,k) = - fcrdif * dt * cg%idl(crdim)
+                  wcr(:,i,j,k) = fcrdif * f2
 
                enddo
             enddo
