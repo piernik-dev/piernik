@@ -135,7 +135,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, half, wcr_n, oneq, GEO_XYZ, four
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneq, oneeig, four, eight, wcr_n, GEO_XYZ
       use dataio_pub,       only: die
       use domain,           only: dom
       use fluidindex,       only: flind
@@ -185,7 +185,7 @@ contains
             do j = ldm(ydim), hdm(ydim)    ; jl = j-1 ; jh = j+1 ; jld = j-idm(ydim)
                do i = ldm(xdim), hdm(xdim) ; il = i-1 ; ih = i+1 ; ild = i-idm(xdim)
 
-                  decr(crdim,:) = (cg%u(iarr_crs,i,j,k) - cg%u(iarr_crs,ild,jld,kld)) * cg%idl(crdim) * 8.0
+                  decr(crdim,:) = (cg%u(iarr_crs,i,j,k) - cg%u(iarr_crs,ild,jld,kld)) * cg%idl(crdim) * eight
                   fcrdif = K_crs_perp * decr(crdim,:)
 
                   bcomp(crdim) =  cg%b(crdim,i,j,k) * four
@@ -214,7 +214,7 @@ contains
                   bb = sum(bcomp**2)
                   if (bb*oneq**2 > epsilon(0.d0)) fcrdif = fcrdif + K_crs_paral * bcomp(crdim) * (bcomp(xdim) * decr(xdim,:) + bcomp(ydim) * decr(ydim,:) + bcomp(zdim) * decr(zdim,:)) / bb
 
-                  wcr(:,i,j,k) = - oneq * half * fcrdif * dt * cg%idl(crdim)
+                  wcr(:,i,j,k) = - oneeig * fcrdif * dt * cg%idl(crdim)
 
                enddo
             enddo
