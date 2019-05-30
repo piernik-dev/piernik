@@ -135,6 +135,7 @@ module units
    real, protected :: gasRconst                             !< gas constant R =  8.314472e7*erg/kelvin/mol
    real, protected :: N_A                                   !< Avogadro constant
    real, protected :: clight                                !< speed of light in vacuum
+   real, protected :: sigma_T                               !< Thomson cross section
    real, protected :: Gs                                    !< 1 Gs (cgs magnetic induction unit)
    real, protected :: mGs                                   !< 1 microgauss
    real, protected :: Tesla                                 !< 1 T (SI magnetic induction unit)
@@ -377,6 +378,7 @@ contains
       gasRconst  = 8.314472e7*erg/kelvin    !< gas constant R =  8.314472e7*erg/kelvin/mol = k_B * N_A
       N_A        = gasRconst / kboltz       !< Avogadro constant
       clight     = 2.99792458e10*cm/sek     !< speed of light in vacuum (IAU 2009)
+      sigma_T    = 6.6524587321e-25*cm**2   !< Thomson cross section
       Gs         = sqrt(miu0*gram/cm)/sek   !< 1 Gs (cgs magnetic induction unit)
       mGs        = Gs*1.e-6                 !< 1 microgauss
       Tesla      = 1.e4*Gs                  !< 1 T (SI magnetic induction unit)
