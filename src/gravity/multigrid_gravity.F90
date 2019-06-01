@@ -817,7 +817,7 @@ contains
 
    end subroutine multigrid_solve_grav
 
-!> \brief
+!> \brief Recover sgpm field from history
 
    function recover_sgpm() result(initialized)
 
