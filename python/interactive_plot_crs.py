@@ -156,7 +156,7 @@ if f_run == True:
         slice_coord  = float(options.slice_info[1])
         while slice_ax not in dim_map.keys():
             slice_ax    = read_var("Choose slice ax (x, y, z)      : ")
-        while (slice_coord < dom_l[dim_map[slice_ax]]) or (slice_coord > dom_r[dim_map[slice_ax]]): # or slice_coord < -10000:
+        while (slice_coord < dom_l[dim_map[slice_ax]]) or (slice_coord > dom_r[dim_map[slice_ax]] or isnan(slice_coord) == True ): # or slice_coord < -10000:
             try:
                 slice_coord = float(read_var("Choose slice coordinate (%d:%d %s ) (if empty, middle is assumed): \033[0m" % (dom_l[dim_map[slice_ax]],dom_r[dim_map[slice_ax]], length_unit) ))
             except:

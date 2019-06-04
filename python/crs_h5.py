@@ -503,7 +503,7 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
       for item in ncrs: ncrs1e3.append(float('%1.3e'%item))
       prtinfo("n = "+str(ncrs1e3) )
       ecrs1e3=[]
-      for item in ncrs: ecrs1e3.append(float('%1.3e'%item))
+      for item in ecrs: ecrs1e3.append(float('%1.3e'%item))
       prtinfo("e = "+str(ecrs1e3) )
       prtinfo("q = "+str(around(q_nr,3)) )
 

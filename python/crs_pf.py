@@ -25,26 +25,53 @@ size = 0
 
 def read_dat_table(table_name):
 
-   sFile = open("../src/fluids/cosmicrays/"+table_name+".dat","r")
-   sFile.readline(200)
-   sFile.readline(22)
-   size = int(sFile.readline(3))
+   try:
+      sFile = open("../src/fluids/cosmicrays/"+table_name+".dat","r")
+      sFile.readline(200)
+      sFile.readline(22)
+      size = int(sFile.readline(3))
+   except(IOError):
+      try:
+         sFile = open("./"+table_name+".dat","r")
+         sFile.readline(200)
+         sFile.readline(22)
+         size = int(sFile.readline(3))
+      except:
+         print("FAILED")
 
    dataArray =[]
    data_to_plot = [[0.0 for i in range(size)]for j in range(size)]
    i = 0
-   with open("../src/fluids/cosmicrays/"+table_name+".dat","r") as sFile:
-      next(sFile)
-      next(sFile)
-      next(sFile)
-      for line in sFile:
-         data = []
-         for item in line.split(' '):
-            if item != '': data.append(float(item))
-            data_to_plot[i][:] = data
-         i = i+1
-   table = data_to_plot
-   return table
+   try:
+      with open("../src/fluids/cosmicrays/"+table_name+".dat","r") as sFile:
+         next(sFile)
+         next(sFile)
+         next(sFile)
+         for line in sFile:
+            data = []
+            for item in line.split(' '):
+               if item != '': data.append(float(item))
+               data_to_plot[i][:] = data
+            i = i+1
+      table = data_to_plot
+      return table
+   except(IOError):
+      try:
+         print ("Patch ../src/fluids/cosmicrays/"+table_name+".dat not found, trying to open ratio files via symlink")
+         with open("./"+table_name+".dat","r") as sFile:
+            next(sFile)
+            next(sFile)
+            next(sFile)
+            for line in sFile:
+               data = []
+               for item in line.split(' '):
+                  if item != '': data.append(float(item))
+                  data_to_plot[i][:] = data
+               i = i+1
+         table = data_to_plot
+         return table
+      except:
+         print("FAILED")
 
 def initialize_pf_arrays(pf_initialized = False):
    global p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, alpha_tab_lo, n_tab_lo, alpha_tab_up, n_tab_up, size
