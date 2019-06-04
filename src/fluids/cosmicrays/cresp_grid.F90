@@ -249,7 +249,7 @@ module cresp_grid
       use fluidindex,       only: flind
       use func,             only: emag
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: K_cre_paral, K_cre_perp
+      use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr
       use initcrspectrum,   only: spec_mod_trms, cfl_cre, synch_active, adiab_active, use_cresp
       use named_array_list, only: qna
       use timestep_cresp,   only: cresp_timestep, dt_cre_min_ub, dt_cre_min_ud
@@ -296,8 +296,8 @@ module cresp_grid
             K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
             if ( K_cre_max_sum <= 0) then                                ! K_cre dependent on momentum - maximal for highest bin number
                dt_cre_K = huge(one)
-            else
-               dt_cre_K = cfl_cre * half / K_cre_max_sum
+            else                                                         ! We use cfl_cr here (CFL number for diffusive CR transport)
+               dt_cre_K = cfl_cr * half / K_cre_max_sum                  ! cfl_cre used only for spectrum evolution
                if (cg%dxmn < sqrt(huge(one))/dt_cre_K) dt_cre_K = dt_cre_K * cg%dxmn**2
             endif
          endif
