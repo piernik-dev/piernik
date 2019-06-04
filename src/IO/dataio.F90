@@ -1457,16 +1457,16 @@ contains
       use named_array_list,   only: qna
       use types,              only: value
 #ifdef COSM_RAYS
-#ifdef COSM_RAY_ELECTRONS
       use constants,          only: pMIN
+#ifdef COSM_RAY_ELECTRONS
       use cresp_grid,         only: dt_cre_K
       use fluidindex,         only: iarr_all_crn
       use initcosmicrays,     only: iarr_cre_e, iarr_cre_n
-      use mpisetup,           only: piernik_MPI_Allreduce
       use timestep_cresp,     only: dt_cre_min_ud, dt_cre_min_ub
 #else /* !COSM_RAY_ELECTRONS */
       use fluidindex,         only: iarr_all_crs
 #endif /* !COSM_RAY_ELECTRONS */
+      use mpisetup,           only: piernik_MPI_Allreduce
       use timestepcosmicrays, only: dt_crs
 #endif /* COSM_RAYS */
 #if defined COSM_RAYS || defined MAGNETIC
