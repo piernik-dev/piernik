@@ -462,6 +462,7 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
 
        exit_code_up = True
        pf_ratio_up = [0., 0.]
+       if (i_up == ncre): i_up = i_up-1
        pf_ratio_up, exit_code_up = crs_pf.get_interpolated_ratios("up", ecrs[i_up]/(ncrs[i_up]*c*p_fix[i_up-1]), ncrs[i_up], exit_code_up)
 
     pln = p_fix[i_lo:i_up]
