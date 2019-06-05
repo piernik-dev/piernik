@@ -394,7 +394,7 @@ def detect_active_bins_new(n_in, e_in):
       e_ampl_r.append(4*pi * c**2 * f_gt_zero[-1] * ((prn[i] / pln[i])**(q_tmp)) **3)
 
       if (e_ampl_l[-1] > e_small or e_ampl_r[-1] > e_small):
-         #if not (abs(q_gt_zero[-1]) >= q_big ) : #
+         if not (abs(q_gt_zero[-1]) >= q_big ) :      # outermost bins usually exceed q_big if inactive
             active_bins_new.append(ne_gt_zero[i]+1)
             num_active_bins = num_active_bins +1
 

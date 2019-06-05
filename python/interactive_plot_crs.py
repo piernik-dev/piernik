@@ -94,8 +94,10 @@ if (options.filename != "None"):
    filename = options.filename
 else:
    filename=argv[1]
-filename_ext= filename.split('.')[-1]
-filename_nam  = filename.split('.')[0].split('/')[-1]
+
+filename_trimmed = filename.split("/")[-1]
+filename_ext = filename_trimmed.split('.')[-1]
+filename_nam = filename_trimmed.split('.')[0].split('/')[-1]
 if filename_ext[0:2] != 'h5':
     die("Script requires a (list of) hdf5 file(s) on input")
 
