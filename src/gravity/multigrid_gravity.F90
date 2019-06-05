@@ -915,10 +915,9 @@ contains
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
       use cg_level_finest,    only: finest
-      use constants,          only: cbuff_len, zero, tmr_mg
+      use constants,          only: cbuff_len, tmr_mg
       use dataio_pub,         only: msg, die, warn, printinfo
       use global,             only: do_ascii_dump
-      use func,               only: operator(.equals.), operator(.notequals.)
       use mpisetup,           only: master
       use multigridvars,      only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts, grav_bnd, bnd_periodic
       use multigrid_gravity_helper, only: approximate_solution
@@ -956,14 +955,14 @@ contains
       norm_old = norm_rhs
       norm_lowest = norm_rhs
 
-      if (norm_rhs.equals.zero) then ! empty domain => potential == 0.
+      if (abs(norm_rhs) > 0.) then ! empty domain => potential == 0.
+         if (master .and. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] Spontaneous mass creation detected!")
+         norm_was_zero = .false.
+      else
          call leaves%set_q_value(solution, 0.)
          if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
          norm_was_zero = .true.
          return
-      else
-         if (master .and. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] Spontaneous mass creation detected!")
-         norm_was_zero = .false.
       endif
 
       ! iterations
@@ -988,7 +987,7 @@ contains
          endif
 
          vstat%count = v
-         if (norm_lhs.notequals.zero) then
+         if (abs(norm_lhs) > 0.) then
             vstat%factor(vstat%count) = norm_old/norm_lhs
          else
             vstat%factor(vstat%count) = huge(1.0)
