@@ -1016,7 +1016,7 @@ contains
 
          if (v>0 .and. norm_old/norm_lhs <= vcycle_giveup) then
             if (master) then
-               write(msg, '(a,f6.1)')"[multigrid_gravity:vcycle_hg] Poor convergence detected. Giving up. norm_tol missed by a factor of ",norm_lhs/norm_rhs/norm_tol
+               write(msg, '(a,g8.1)')"[multigrid_gravity:vcycle_hg] Poor convergence detected. Giving up. norm_tol missed by a factor of ",norm_lhs/norm_rhs/merge(norm_tol, tiny(1.), norm_tol > 0.)
                call warn(msg)
             endif
             exit
