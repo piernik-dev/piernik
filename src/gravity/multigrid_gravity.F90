@@ -1036,6 +1036,8 @@ contains
          enddo
          call leaves%q_add(correction, solution)
 
+         call finest%level%restrict_to_base_q_1var(solution)
+
          if (dump_every_step) call all_cg%numbered_ascii_dump(mg_fields, dname, v)
 
       enddo
