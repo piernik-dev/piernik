@@ -714,7 +714,7 @@ contains
       integer(kind=4), optional, intent(in)    :: subfield  !< when present use it to check cg%w array
       logical, optional,         intent(in)    :: warn_only !< do not die when dirty value has been spotted
 
-      integer                                  :: i, j, k, ng, cnt
+      integer                                  :: i, j, k, ng, cnt, cnt_tot
       type(cg_list_element), pointer           :: cgl
 
       if (.not. dirty_debug .or. no_dirty_checks) return
@@ -729,6 +729,7 @@ contains
       ng = 0
       if (present(expand)) ng = min(dom%nb, expand)
 
+      cnt_tot = 0
       cnt = 0
       cgl => this%first
       do while (associated(cgl))
@@ -736,6 +737,7 @@ contains
             do j = cgl%cg%js-ng*dom%D_y, cgl%cg%je+ng*dom%D_y
                do i = cgl%cg%is-ng*dom%D_x, cgl%cg%ie+ng*dom%D_x
                   ! if (count([i<cgl%cg%is .or. i>cgl%cg%ie, j<cgl%cg%js .or. j>cgl%cg%je, k<cgl%cg%ks .or. k>cgl%cg%ke]) <=1) then ! excludes corners
+                  cnt_tot = cnt_tot + 1
                   if (present(subfield)) then
                      if (associated(cgl%cg%w(iv)%arr)) then
                         if (abs(cgl%cg%w(iv)%arr(subfield, i, j, k)) > dirtyL) then
@@ -774,7 +776,7 @@ contains
 
       call piernik_MPI_Allreduce(cnt, pSUM)
       if (cnt /= 0 .and. master) then
-         write(msg,'(3a,i8,a)')"[cg_list_dataop:check_dirty] @'",trim(label),"' Found ", cnt, " dirty value(s) in '"
+         write(msg,'(3a,2(i8,a))')"[cg_list_dataop:check_dirty] @'",trim(label),"' Found ", cnt, " dirty value(s) out of ", cnt_tot, " cells in '"
          if (present(subfield)) then
             write(msg(len_trim(msg)+1:), '(2a,i3,a)') trim(wna%lst(iv)%name),"(",subfield,")'"
          else
