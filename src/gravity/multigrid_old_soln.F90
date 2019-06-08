@@ -136,7 +136,7 @@ contains
       use cg_list_dataop, only: ind_val
       use cg_leaves,      only: leaves
       use cg_list_global, only: all_cg
-      use constants,      only: INVALID, O_INJ, O_LIN, O_I2, I_ONE
+      use constants,      only: INVALID, O_INJ, O_LIN, O_I2, I_ONE, dirtyH1
       use dataio_pub,     only: msg, die, printinfo
       use global,         only: t
       use mpisetup,       only: master
@@ -152,7 +152,7 @@ contains
 
       ! BEWARE selfgrav_clump/initproblem.F90 requires monotonic time sequence t > this%old(p0)%time > this%old(p1)%time > this%old(p2)%time
 
-      call all_cg%set_dirty(solution)
+      call all_cg%set_dirty(solution, 0.98*dirtyH1)
 
       call this%sanitize
 

@@ -212,7 +212,7 @@ contains
    subroutine multipole_solver
 
       use cg_leaves,  only: leaves
-      use constants,  only: dirtyH
+      use constants,  only: dirtyH1
       use dataio_pub, only: die
       use global,     only: dirty_debug
       use monopole,   only: isolated_monopole, find_img_CoM
@@ -228,7 +228,7 @@ contains
       call refresh_multipole
 
       if (dirty_debug) then
-         call leaves%reset_boundaries(dirtyH)
+         call leaves%reset_boundaries(0.959*dirtyH1)
       else
          call leaves%reset_boundaries
       endif

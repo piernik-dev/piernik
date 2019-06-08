@@ -632,7 +632,7 @@ contains
    subroutine prolong_q_1var(this, iv, pos, bnd_type)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_ZERO, VAR_CENTER, ndims
+      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_ZERO, VAR_CENTER, ndims  !, dirtyH1
       use dataio_pub,       only: msg, warn
       use grid_cont,        only: grid_container
       use grid_helpers,     only: f2c
@@ -676,7 +676,7 @@ contains
       call this%vertical_prep
       call fine%vertical_prep
 
-!      call fine%set_dirty(iv) !> \todo filter this through cg%ignore_prolongation
+!      call fine%set_dirty(iv, (0.895+0.0001*fine%l%id)*dirtyH1) !> \todo filter this through cg%ignore_prolongation
 
       if (this%ord_prolong_set /= I_ZERO) then
          !> \todo some variables may need special care on external boundaries
@@ -839,7 +839,7 @@ contains
 
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
-      use constants,      only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims, O_INJ, base_level_id
+      use constants,      only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims, O_INJ, base_level_id  !, dirtyH1
       use dataio_pub,     only: warn
       use domain,         only: dom
       use grid_cont,      only: grid_container
@@ -885,7 +885,7 @@ contains
       call this%vertical_b_prep
       call coarse%vertical_b_prep
 
-      !call this%clear_boundaries(ind, dirtyH) ! not implemented yet
+      !call this%clear_boundaries(ind, (0.885+0.0001*this%l%id)*dirtyH1) ! not implemented yet
       ext_buf = dom%D_ * all_cg%ord_prolong_nb ! extension of the buffers due to stencil range
       if (all_cg%ord_prolong_nb /= O_INJ) call coarse%level_3d_boundaries(ind, bnd_type = bnd_type) ! it is really hard to determine which exchanges can be omitted
       ! bnd_type = BND_NEGREF above is critical for convergence of multigrid with isolated boundaries.

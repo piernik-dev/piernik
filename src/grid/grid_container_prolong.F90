@@ -58,7 +58,7 @@ contains
 
    subroutine init_gc_prolong(this)
 
-      use constants,    only: xdim, ydim, zdim, ndims, big_float, LO, HI
+      use constants,    only: xdim, ydim, zdim, ndims, dirtyH1, LO, HI
       use dataio_pub,   only: die
       use domain,       only: dom
       use grid_helpers, only: f2c
@@ -84,10 +84,10 @@ contains
            &   this%prolong_xy (this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI),       rn(zdim, LO):      rn(zdim, HI)), &
            &   this%prolong_xyz(this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI), this%lhn(zdim, LO):this%lhn(zdim, HI)))
 
-      this%prolong_    = big_float
-      this%prolong_x   = big_float
-      this%prolong_xy  = big_float
-      this%prolong_xyz = big_float
+      this%prolong_    = 0.799*dirtyH1
+      this%prolong_x   = 0.798*dirtyH1
+      this%prolong_xy  = 0.797*dirtyH1
+      this%prolong_xyz = 0.796*dirtyH1
 
    end subroutine init_gc_prolong
 

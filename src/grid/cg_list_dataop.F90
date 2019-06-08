@@ -644,19 +644,25 @@ contains
 !! the insane value should pollute the solution in an easily visible way.
 !<
 
-   subroutine set_dirty(this, iv)
+   subroutine set_dirty(this, iv, val)
 
-      use constants, only: dirtyH
+      use constants, only: dirtyH1
       use global,    only: dirty_debug
 
       implicit none
 
-      class(cg_list_dataop_T), intent(inout) :: this !< list for which we want to apply pollution
-      integer(kind=4),         intent(in)    :: iv   !< index of variable in cg%q(:) which we want to pollute
+      class(cg_list_dataop_T), intent(inout) :: this  !< list for which we want to apply pollution
+      integer(kind=4),         intent(in)    :: iv    !< index of variable in cg%q(:) which we want to pollute
+      real, optional,          intent(in)    :: val   !< use alue to pollute the data, if provided, or dirtyH otherwise
+
+      real :: v
 
       if (.not. dirty_debug) return
 
-      call this%set_q_value(iv, dirtyH)
+      v = 1.11111111111111*dirtyH1
+      if (present(val)) v = val
+
+      call this%set_q_value(iv, v)
 
    end subroutine set_dirty
 
@@ -792,7 +798,7 @@ contains
    subroutine check_for_dirt(this)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: big_float
+      use constants,        only: dirtyH1c
       use dataio_pub,       only: warn, msg
       use named_array_list, only: qna, wna
 
@@ -808,14 +814,14 @@ contains
          do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
             if (cgl%cg%q(i)%check()) then
                write(msg,'(3a,I12,a)') "[cg_list_dataop:check_for_dirt] Array ", trim(qna%lst(i)%name), " has ", &
-                  & count(cgl%cg%q(i)%arr >= big_float), " wrong values."
+                  & count(cgl%cg%q(i)%arr >= dirtyH1c), " wrong values."
                call warn(msg)
             endif
          enddo
          do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
             if (cgl%cg%w(i)%check()) then
                write(msg,'(3a,I12,a)') "[cg_list_dataop:check_for_dirt] Array ", trim(wna%lst(i)%name), " has ", &
-                  & count(cgl%cg%w(i)%arr >= big_float), " wrong values."
+                  & count(cgl%cg%w(i)%arr >= dirtyH1c), " wrong values."
                call warn(msg)
             endif
          enddo

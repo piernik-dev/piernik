@@ -636,7 +636,7 @@ contains
    subroutine init_source(i_sg_dens)
 
       use cg_list_global, only: all_cg
-      use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4, zero
+      use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4, zero, dirtyH1
       use dataio_pub,     only: die
       use domain,         only: dom
       use cg_list,        only: cg_list_element
@@ -661,7 +661,7 @@ contains
       type(grid_container),  pointer :: cg
       logical                        :: apply_src_Mcorrection
 
-      call all_cg%set_dirty(source)
+      call all_cg%set_dirty(source, 0.979*dirtyH1)
 
       if (size(i_sg_dens) > 0) then
          cgl => leaves%first
@@ -858,7 +858,7 @@ contains
 
       use cg_level_finest,    only: finest
       use cg_list_global,     only: all_cg
-      use constants,          only: fft_none
+      use constants,          only: fft_none, dirtyH1
       use dataio_pub,         only: printinfo
       use mpisetup,           only: nproc
       use multigrid_gravity_helper, only: fft_solve_level
@@ -875,7 +875,7 @@ contains
       fft_solved = .false.
       ! On single CPU use FFT if possible because it is faster.
       if (nproc == 1 .and. finest%level%fft_type /= fft_none) then
-         call all_cg%set_dirty(solution)
+         call all_cg%set_dirty(solution, 0.978*dirtyH1)
          call fft_solve_level(finest%level, source, solution)
          call printinfo("[multigrid_gravity:poisson_solver] FFT solve on finest level, Skipping V-cycles.", stdout)
          fft_solved = .true.
@@ -915,7 +915,7 @@ contains
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
       use cg_level_finest,    only: finest
-      use constants,          only: cbuff_len, tmr_mg
+      use constants,          only: cbuff_len, tmr_mg, dirtyH1
       use dataio_pub,         only: msg, die, warn, printinfo
       use global,             only: do_ascii_dump
       use mpisetup,           only: master
@@ -968,7 +968,7 @@ contains
       ! iterations
       do v = 0, max_cycles
 
-         call all_cg%set_dirty(defect)
+         call all_cg%set_dirty(defect, 0.977*dirtyH1)
          call residual(leaves, source, solution, defect)
          call leaves%check_dirty(defect, "residual")
          if (grav_bnd == bnd_periodic) call leaves%subtract_average(defect)
@@ -1026,7 +1026,7 @@ contains
          ! the Huang-Greengard V-cycle
          call finest%level%restrict_to_floor_q_1var(defect)
 
-         call all_cg%set_dirty(correction)
+         call all_cg%set_dirty(correction, 0.976*dirtyH1)
 
          curl => coarsest%level
          do while (associated(curl))
