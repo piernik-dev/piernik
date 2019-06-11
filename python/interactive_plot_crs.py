@@ -265,7 +265,6 @@ if f_run == True:
     else:
       plt.xlabel("Domain cooridnates "+dim_map.keys()[dim_map.values().index(avail_dim[0])]+" ("+length_unit+")" )
       plt.ylabel("Domain cooridnates "+dim_map.keys()[dim_map.values().index(avail_dim[1])]+" ("+length_unit+")" )
-    print(frb)
 
     plt.colormap="plasma"
 
