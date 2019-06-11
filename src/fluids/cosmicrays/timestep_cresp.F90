@@ -107,7 +107,6 @@ module timestep_cresp
       empty_cell = .true.
       n_inout = n_cell
       e_inout = e_cell
-      i_up_cell = I_ZERO
       dt_cre_ud = huge(one)
       dt_cre_ub = huge(one)
       call cresp_find_prepare_spectrum(n_inout, e_inout, empty_cell, i_up_cell)
@@ -115,20 +114,10 @@ module timestep_cresp
 ! cell is assumed empty if evaluate_i_up over whole ncre range returns 0 -> nothing to do here
       if (i_up_cell .gt. 0) then
 ! Adiabatic cooling timestep:
-
-         if ( abs(sptab%ud) .gt. eps) then
-            dt_cre_ud = cfl_cre * w / sptab%ud
-            dt_cre_ud = abs(dt_cre_ud)
-            dt_cre_min_ud = min(dt_cre_ud, dt_cre_min_ud)
-         endif
+         call cresp_timestep_adiabatic(dt_cre_ud, sptab%ud)
 
 ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
-         if (sptab%ub .gt. zero) then
-!           i_up_cell = evaluate_i_up(e_cell, n_cell)
-            p_u = assume_p_up(i_up_cell) ! TODO: fix problems with negative p_u
-            dt_cre_ub = cfl_cre * w / (p_u * sptab%ub)
-            dt_cre_min_ub = min(dt_cre_ub, dt_cre_min_ub)
-         endif
+         call cresp_timestep_synchrotron(dt_cre_ub, sptab%ub, i_up_cell)
       endif
 
 ! Here shortest among calculated timesteps is chosen.
@@ -138,5 +127,46 @@ module timestep_cresp
       dt_cre = min(dt_cre, dt_comp) ! Assures that minimal timestep among computed for current cell and previous ones us chosen
 
    end subroutine cresp_timestep
+
+   subroutine cresp_timestep_adiabatic(dt_cre_ud, u_d)
+      use constants,          only: zero
+      use initcrspectrum,     only: w, eps
+
+      implicit none
+
+      real(kind=8), intent(out)               :: dt_cre_ud
+      real(kind=8)                            :: u_d_abs
+      real(kind=8), intent(in)                :: u_d
+
+      u_d_abs = abs(u_d)
+      if ( u_d_abs .gt. eps) then
+         dt_cre_ud = cfl_cre * w / u_d_abs
+         dt_cre_min_ud = min(dt_cre_ud, dt_cre_min_ud)      ! remember to max dt_cre_min_ud at beginning of the search!
+      endif
+
+   end subroutine cresp_timestep_adiabatic
+
+!----------------------------------------------------------------------------------------------------
+
+   subroutine cresp_timestep_synchrotron(dt_cre_ub, u_b, i_up_cell)
+      use constants,          only: zero
+      use initcrspectrum,     only: w, eps
+
+      implicit none
+
+      real(kind=8), intent(out)               :: dt_cre_ub
+      integer(kind=4), intent(in)             :: i_up_cell
+      real(kind=8), intent(in)                :: u_b
+      real(kind=8)                            :: p_u
+
+ ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
+      if (u_b .gt. zero) then
+         p_u = assume_p_up(i_up_cell) ! TODO: fix problems with negative p_u
+         dt_cre_ub = cfl_cre * w / (p_u * u_b)
+         dt_cre_min_ub = min(dt_cre_ub, dt_cre_min_ub)    ! remember to max dt_cre_min_ub at the beginning of the search
+      endif
+
+
+   end subroutine cresp_timestep_synchrotron
 
 end module timestep_cresp
