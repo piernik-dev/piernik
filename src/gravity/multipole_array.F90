@@ -136,7 +136,7 @@ contains
       use constants,       only: xdim, zdim, GEO_XYZ, GEO_RPZ, HI, pMIN
       use dataio_pub,      only: die, warn, msg, printinfo
       use domain,          only: dom
-      use mpisetup,        only: piernik_MPI_Allreduce
+      use mpisetup,        only: piernik_MPI_Allreduce, master
 
       implicit none
 
@@ -166,7 +166,7 @@ contains
       call piernik_MPI_Allreduce(this%drq, pMIN)
 
       if (size_factor <= 0.) then
-         call warn("[multipole_array:refresh] size_factor <= 0. : restoring the default value 1.0")
+         if (master) call warn("[multipole_array:refresh] size_factor <= 0. : restoring the default value 1.0")
          size_factor = 1.0
       endif
 
@@ -195,7 +195,7 @@ contains
 
       if (this%pr_log) then
          write(msg, '(a,3g13.5,a)')"[multipole_array:refresh] multipoles centered at ( ", this%center, " ) low edges of bins are at:"
-         call printinfo(msg, .false.)
+         if (master) call printinfo(msg, .false.)
       endif
       prev = 0
       do i = lbound(this%i_r, dim=1), ubound(this%i_r, dim=1)
@@ -208,15 +208,15 @@ contains
                call print_ri(i)
                prev = i
             else if (div2n(i) <= 3) then  ! if the array is long then print only for some values
-               if (prev < i-2 .and. prev == skip_pr) call printinfo(dots, .false.)
+               if (prev < i-2 .and. prev == skip_pr .and. master) call printinfo(dots, .false.)
                if (prev < i-1) call print_ri(i-1)
                call print_ri(i)
-               if (i+1 /= ubound(this%i_r, dim=1) - skip_pr) call printinfo(dots, .false.)
+               if (i+1 /= ubound(this%i_r, dim=1) - skip_pr .and. master) call printinfo(dots, .false.)
                prev = i
             endif
          endif
       enddo
-      if (this%pr_log .and. ubound(this%i_r, dim=1) > 1) then
+      if (this%pr_log .and. ubound(this%i_r, dim=1) > 1 .and. master) then
          write(msg, '(a,3g13.5,2(a,g13.5))')"[multipole_array:refresh] multipoles centered at ( ", this%center, " ) first bin width = ", this%i_r(1), " last bin starts at = ", this%i_r(ubound(this%i_r, dim=1) - 1)
          ! Expect inaccurate potential for sources that fall into last few bins due to large dr/r ratio.
          call printinfo(msg)
@@ -269,7 +269,7 @@ contains
             write(fmt, '(a,i1,a)')'(a,i',1 + int(log10(real(max(1,i)))),',a,g13.5)'
          endif
          write(msg, fmt)"  r( ",i," ) = ", this%i_r(i)
-         call printinfo(msg, .false.)
+         if (master) call printinfo(msg, .false.)
 
       end subroutine print_ri
 
