@@ -636,7 +636,7 @@ contains
    subroutine init_source(i_sg_dens)
 
       use cg_list_global, only: all_cg
-      use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4, zero
+      use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4, zero, dirtyH1
       use dataio_pub,     only: die
       use domain,         only: dom
       use cg_list,        only: cg_list_element
@@ -661,7 +661,7 @@ contains
       type(grid_container),  pointer :: cg
       logical                        :: apply_src_Mcorrection
 
-      call all_cg%set_dirty(source)
+      call all_cg%set_dirty(source, 0.979*dirtyH1)
 
       if (size(i_sg_dens) > 0) then
          cgl => leaves%first
@@ -817,7 +817,7 @@ contains
 
    end subroutine multigrid_solve_grav
 
-!> \brief
+!> \brief Recover sgpm field from history
 
    function recover_sgpm() result(initialized)
 
@@ -858,7 +858,7 @@ contains
 
       use cg_level_finest,    only: finest
       use cg_list_global,     only: all_cg
-      use constants,          only: fft_none
+      use constants,          only: fft_none, dirtyH1
       use dataio_pub,         only: printinfo
       use mpisetup,           only: nproc
       use multigrid_gravity_helper, only: fft_solve_level
@@ -875,7 +875,7 @@ contains
       fft_solved = .false.
       ! On single CPU use FFT if possible because it is faster.
       if (nproc == 1 .and. finest%level%fft_type /= fft_none) then
-         call all_cg%set_dirty(solution)
+         call all_cg%set_dirty(solution, 0.978*dirtyH1)
          call fft_solve_level(finest%level, source, solution)
          call printinfo("[multigrid_gravity:poisson_solver] FFT solve on finest level, Skipping V-cycles.", stdout)
          fft_solved = .true.
@@ -915,10 +915,9 @@ contains
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
       use cg_level_finest,    only: finest
-      use constants,          only: cbuff_len, zero, tmr_mg
+      use constants,          only: cbuff_len, tmr_mg, dirtyH1
       use dataio_pub,         only: msg, die, warn, printinfo
       use global,             only: do_ascii_dump
-      use func,               only: operator(.equals.), operator(.notequals.)
       use mpisetup,           only: master
       use multigridvars,      only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts, grav_bnd, bnd_periodic
       use multigrid_gravity_helper, only: approximate_solution
@@ -956,20 +955,20 @@ contains
       norm_old = norm_rhs
       norm_lowest = norm_rhs
 
-      if (norm_rhs.equals.zero) then ! empty domain => potential == 0.
+      if (abs(norm_rhs) > 0.) then ! empty domain => potential == 0.
+         if (master .and. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] Spontaneous mass creation detected!")
+         norm_was_zero = .false.
+      else
          call leaves%set_q_value(solution, 0.)
          if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
          norm_was_zero = .true.
          return
-      else
-         if (master .and. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] Spontaneous mass creation detected!")
-         norm_was_zero = .false.
       endif
 
       ! iterations
       do v = 0, max_cycles
 
-         call all_cg%set_dirty(defect)
+         call all_cg%set_dirty(defect, 0.977*dirtyH1)
          call residual(leaves, source, solution, defect)
          call leaves%check_dirty(defect, "residual")
          if (grav_bnd == bnd_periodic) call leaves%subtract_average(defect)
@@ -988,7 +987,7 @@ contains
          endif
 
          vstat%count = v
-         if (norm_lhs.notequals.zero) then
+         if (abs(norm_lhs) > 0.) then
             vstat%factor(vstat%count) = norm_old/norm_lhs
          else
             vstat%factor(vstat%count) = huge(1.0)
@@ -1017,7 +1016,7 @@ contains
 
          if (v>0 .and. norm_old/norm_lhs <= vcycle_giveup) then
             if (master) then
-               write(msg, '(a,f6.1)')"[multigrid_gravity:vcycle_hg] Poor convergence detected. Giving up. norm_tol missed by a factor of ",norm_lhs/norm_rhs/norm_tol
+               write(msg, '(a,g8.1)')"[multigrid_gravity:vcycle_hg] Poor convergence detected. Giving up. norm_tol missed by a factor of ",norm_lhs/norm_rhs/merge(norm_tol, tiny(1.), norm_tol > 0.)
                call warn(msg)
             endif
             exit
@@ -1027,7 +1026,7 @@ contains
          ! the Huang-Greengard V-cycle
          call finest%level%restrict_to_floor_q_1var(defect)
 
-         call all_cg%set_dirty(correction)
+         call all_cg%set_dirty(correction, 0.976*dirtyH1)
 
          curl => coarsest%level
          do while (associated(curl))
@@ -1036,6 +1035,8 @@ contains
             curl => curl%finer
          enddo
          call leaves%q_add(correction, solution)
+
+         call finest%level%restrict_to_base_q_1var(solution)
 
          if (dump_every_step) call all_cg%numbered_ascii_dump(mg_fields, dname, v)
 

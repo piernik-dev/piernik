@@ -92,6 +92,8 @@ module constants
    real, parameter :: big        = huge(real(1.0,4))     !< a constant used as the upper limit number
    real, parameter :: big_float  = huge(real(1.0,4))     !< replicated temporarily 'big' for compatibility \todo choose one and convert occurrences of the other one
    real, parameter :: dirtyH     = big                   !< If dirty_debug then pollute arrays with this insane value
+   real, parameter :: dirtyH1    = 10.**int(log10(big))  !< this "round" dirty value makes it easier to detect which call contaminated the data
+   real, parameter :: dirtyH1c   = 0.1 * dirtyH1         !< lowest value of marked dirty pollutions
    real, parameter :: dirtyL     = sqrt(dirtyH)          !< If dirty_debug then assume that the array got contaminated by dirtyH by checking against this value
    real, parameter :: small      = tiny(real(1.0,4))     !< a constant used as the lower limit number
    integer, parameter :: big_int = huge(int(1,4))
