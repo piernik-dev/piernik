@@ -1459,10 +1459,9 @@ contains
 #ifdef COSM_RAYS
       use constants,          only: pMIN
 #ifdef COSM_RAY_ELECTRONS
-      use cresp_grid,         only: dt_cre_K
       use fluidindex,         only: iarr_all_crn
       use initcosmicrays,     only: iarr_cre_e, iarr_cre_n
-      use timestep_cresp,     only: dt_cre_min_ud, dt_cre_min_ub
+      use timestep_cresp,     only: dt_cre_min_ud, dt_cre_min_ub, dt_cre_K
 #else /* !COSM_RAY_ELECTRONS */
       use fluidindex,         only: iarr_all_crs
 #endif /* !COSM_RAY_ELECTRONS */
