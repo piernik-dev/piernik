@@ -644,19 +644,25 @@ contains
 !! the insane value should pollute the solution in an easily visible way.
 !<
 
-   subroutine set_dirty(this, iv)
+   subroutine set_dirty(this, iv, val)
 
-      use constants, only: dirtyH
+      use constants, only: dirtyH1
       use global,    only: dirty_debug
 
       implicit none
 
-      class(cg_list_dataop_T), intent(inout) :: this !< list for which we want to apply pollution
-      integer(kind=4),         intent(in)    :: iv   !< index of variable in cg%q(:) which we want to pollute
+      class(cg_list_dataop_T), intent(inout) :: this  !< list for which we want to apply pollution
+      integer(kind=4),         intent(in)    :: iv    !< index of variable in cg%q(:) which we want to pollute
+      real, optional,          intent(in)    :: val   !< use alue to pollute the data, if provided, or dirtyH otherwise
+
+      real :: v
 
       if (.not. dirty_debug) return
 
-      call this%set_q_value(iv, dirtyH)
+      v = 1.11111111111111*dirtyH1
+      if (present(val)) v = val
+
+      call this%set_q_value(iv, v)
 
    end subroutine set_dirty
 
@@ -708,7 +714,7 @@ contains
       integer(kind=4), optional, intent(in)    :: subfield  !< when present use it to check cg%w array
       logical, optional,         intent(in)    :: warn_only !< do not die when dirty value has been spotted
 
-      integer                                  :: i, j, k, ng, cnt
+      integer                                  :: i, j, k, ng, cnt, cnt_tot
       type(cg_list_element), pointer           :: cgl
 
       if (.not. dirty_debug .or. no_dirty_checks) return
@@ -723,6 +729,7 @@ contains
       ng = 0
       if (present(expand)) ng = min(dom%nb, expand)
 
+      cnt_tot = 0
       cnt = 0
       cgl => this%first
       do while (associated(cgl))
@@ -730,6 +737,7 @@ contains
             do j = cgl%cg%js-ng*dom%D_y, cgl%cg%je+ng*dom%D_y
                do i = cgl%cg%is-ng*dom%D_x, cgl%cg%ie+ng*dom%D_x
                   ! if (count([i<cgl%cg%is .or. i>cgl%cg%ie, j<cgl%cg%js .or. j>cgl%cg%je, k<cgl%cg%ks .or. k>cgl%cg%ke]) <=1) then ! excludes corners
+                  cnt_tot = cnt_tot + 1
                   if (present(subfield)) then
                      if (associated(cgl%cg%w(iv)%arr)) then
                         if (abs(cgl%cg%w(iv)%arr(subfield, i, j, k)) > dirtyL) then
@@ -768,7 +776,7 @@ contains
 
       call piernik_MPI_Allreduce(cnt, pSUM)
       if (cnt /= 0 .and. master) then
-         write(msg,'(3a,i8,a)')"[cg_list_dataop:check_dirty] @'",trim(label),"' Found ", cnt, " dirty value(s) in '"
+         write(msg,'(3a,2(i8,a))')"[cg_list_dataop:check_dirty] @'",trim(label),"' Found ", cnt, " dirty value(s) out of ", cnt_tot, " cells in '"
          if (present(subfield)) then
             write(msg(len_trim(msg)+1:), '(2a,i3,a)') trim(wna%lst(iv)%name),"(",subfield,")'"
          else
@@ -792,7 +800,7 @@ contains
    subroutine check_for_dirt(this)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: big_float
+      use constants,        only: dirtyH1c
       use dataio_pub,       only: warn, msg
       use named_array_list, only: qna, wna
 
@@ -808,14 +816,14 @@ contains
          do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
             if (cgl%cg%q(i)%check()) then
                write(msg,'(3a,I12,a)') "[cg_list_dataop:check_for_dirt] Array ", trim(qna%lst(i)%name), " has ", &
-                  & count(cgl%cg%q(i)%arr >= big_float), " wrong values."
+                  & count(cgl%cg%q(i)%arr >= dirtyH1c), " wrong values."
                call warn(msg)
             endif
          enddo
          do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
             if (cgl%cg%w(i)%check()) then
                write(msg,'(3a,I12,a)') "[cg_list_dataop:check_for_dirt] Array ", trim(wna%lst(i)%name), " has ", &
-                  & count(cgl%cg%w(i)%arr >= big_float), " wrong values."
+                  & count(cgl%cg%w(i)%arr >= dirtyH1c), " wrong values."
                call warn(msg)
             endif
          enddo

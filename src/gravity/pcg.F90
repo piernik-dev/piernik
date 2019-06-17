@@ -215,6 +215,7 @@ contains
       use cg_level_connected,       only: cg_level_connected_T
       use cg_level_finest,          only: finest
       use cg_list_global,           only: all_cg
+      use constants,                only: dirtyH1
       use multigrid_gravity_helper, only: approximate_solution
 
       implicit none
@@ -227,7 +228,7 @@ contains
       ! the Huang-Greengard V-cycle
       call finest%level%restrict_to_floor_q_1var(def)
 
-      call all_cg%set_dirty(corr)
+      call all_cg%set_dirty(corr, 0.89*dirtyH1)
 
       curl => coarsest%level
       do while (associated(curl))

@@ -460,7 +460,7 @@ module initcrspectrum
                   e_small_approx_p_lo      = 0 ; e_small_approx_p_up = 0 ! e_small_approx_init_cond stays default, unless user changes.
                   write (msg,'(A)') "[initcrspectrum:init_cresp] approx_cutoffs = .false. -- will not use e_small approximated cutoffs, but still approximate initial state. To turn it off use e_small_approx_init_cond = 0."
                endif
-               call printinfo(msg)
+               if (master) call printinfo(msg)
 
                if ( (e_small_approx_p_lo+e_small_approx_p_up) .gt. 0 .and. e_small_approx_init_cond .lt. 1) then
                   e_small_approx_init_cond = 1  !
@@ -469,7 +469,7 @@ module initcrspectrum
                   call sleep(1)
                endif
 
-               if (hdf_save_fpq) then
+               if (master .and. hdf_save_fpq) then
                   write(msg, '(A)') "[initcrspectrum:init_cresp] hdf_save_fpq is set. Adding 'cref', 'crep', 'creq' to hdf_vars must follow."
                   call warn(msg)
                endif
