@@ -3,6 +3,11 @@
 import h5py
 import os
 import sys
+if (sys.version[0:3] != "2.7"):
+    raw_input = input
+    not_py27 = True
+else:
+    not_py27 = False
 
 # For use with PIERNIK.
 # Script recognizes integers, floats, logical and string variables.
@@ -12,13 +17,15 @@ import sys
 
 # searches for variable name, if found splits and appends the value ----------
 def append_split_var(line, variable_name, var_array_to_append, param_found):
-    for word in line.split(' '):
+    for word in str(line).split(" "):
         if word == variable_name:
+            if (not_py27): line = str(line)[2:] # strip leading "b'" -- in python3 lines of file are byte type and converted to str have leading b.
             line_fragment = line.split('=')
-            if str(line_fragment[0].strip(' ')) == str(variable_name):
+            if str(line_fragment[0]).strip(' ') == str(variable_name):
                 tmp_str = str(line_fragment[1])
                 tmp_str = tmp_str.split('!')
                 var_value = tmp_str[0]
+                if (not_py27): var_value = var_value.strip("'")
                 var_value = determine_type_append(var_value)
                 var_array_to_append.append(var_value)
                 param_found = True
@@ -80,7 +87,7 @@ def determine_type_append(var):
         except:
             pass
     except:
-        print "Type for provided variable %s not recognized - "
+        print ("Type for provided variable %s not recognized - ")
         return var
 # read names if nothing provided
 def input_names_array():
