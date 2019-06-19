@@ -56,12 +56,15 @@ module constants
    real, parameter :: zero       = 0.0                   !< zero
    real, parameter :: one        = 1.0                   !< one
    real, parameter :: two        = 2.0                   !< two
+   real, parameter :: four       = 4.0                   !< four
+   real, parameter :: eight      = 8.0                   !< eight
    real, parameter :: half       = 0.5                   !< a half
    real, parameter :: onet       = 1./3.                 !< one third
    real, parameter :: twot       = 2./3.                 !< two thirds
    real, parameter :: oneq       = 1./4.                 !< one fourth
    real, parameter :: thrq       = 3./4.                 !< three fourths
    real, parameter :: onesth     = 1./6.                 !< one sixth
+   real, parameter :: oneeig     = 1./8.                 !< one eighth
 
    enum, bind(C)
       enumerator :: idn = 1, imx, imy, imz, ien
@@ -86,6 +89,8 @@ module constants
    real, parameter :: big        = huge(real(1.0,4))     !< a constant used as the upper limit number
    real, parameter :: big_float  = huge(real(1.0,4))     !< replicated temporarily 'big' for compatibility \todo choose one and convert occurrences of the other one
    real, parameter :: dirtyH     = big                   !< If dirty_debug then pollute arrays with this insane value
+   real, parameter :: dirtyH1    = 10.**int(log10(big))  !< this "round" dirty value makes it easier to detect which call contaminated the data
+   real, parameter :: dirtyH1c   = 0.1 * dirtyH1         !< lowest value of marked dirty pollutions
    real, parameter :: dirtyL     = sqrt(dirtyH)          !< If dirty_debug then assume that the array got contaminated by dirtyH by checking against this value
    real, parameter :: small      = tiny(real(1.0,4))     !< a constant used as the lower limit number
    integer, parameter :: big_int = huge(int(1,4))
