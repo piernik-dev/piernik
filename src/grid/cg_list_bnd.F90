@@ -103,7 +103,7 @@ contains
 
       logical :: do_permpi
 
-      !> \todo fill corners with big_float ?
+      !> \todo fill corners with sth*dirtyH1 ?
 
       do_permpi = .true.
       if (present(area_type)) then
@@ -136,7 +136,7 @@ contains
 
       logical :: do_permpi
 
-      !> \todo fill corners with big_float ?
+      !> \todo fill corners with sth*dirtyH1 ?
 
       do_permpi = .true.
       if (present(area_type)) then
@@ -660,7 +660,7 @@ contains
       real, dimension(:,:,:), pointer         :: pa3d
       real :: v
 
-      !> \todo fill corners with big_float ?
+      !> \todo fill corners with sth*dirtyH1 ?
 
       v = 0.
       if (present(value)) v=value
@@ -690,14 +690,14 @@ contains
 
    subroutine dirty_boundaries(this, ind)
 
-      use constants, only: dirtyH
+      use constants, only: dirtyH1
 
       implicit none
 
       class(cg_list_bnd_T), intent(in) :: this  !< the list on which to perform the action
       integer(kind=4),      intent(in) :: ind   !< Negative value: index of cg%q(:) 3d array
 
-      call this%clear_boundaries(ind, value=dirtyH)
+      call this%clear_boundaries(ind, value=0.87*dirtyH1)
 
    end subroutine dirty_boundaries
 
@@ -822,6 +822,7 @@ contains
 #endif /* COSM_RAYS */
 #ifdef GRAV
       use constants,             only: BND_OUTH, BND_OUTHD, I_ZERO
+      use fluidboundaries_funcs, only: outh_fluidbnd
 #endif /* GRAV */
 
       implicit none
@@ -890,9 +891,9 @@ contains
                   endif
 #ifdef GRAV
                case (BND_OUTH)
-                  call user_fluidbnd(dir, side, cg, wn=I_ZERO)
+                  call outh_fluidbnd(dir, side, cg, wn=I_ZERO)
                case (BND_OUTHD)
-                  call user_fluidbnd(dir, side, cg, wn=I_ONE)
+                  call outh_fluidbnd(dir, side, cg, wn=I_ONE)
 #endif /* GRAV */
                case default
                   write(msg,'("[cg_list_bnd:bnd_u]: Unrecognized ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
