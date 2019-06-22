@@ -11,8 +11,8 @@ fi
 
 SCALE=${BIG:=1}
 
-MEMG=$( free -m | awk '/Mem/ {print $2/1024.}' )
-MEMM=$( free -m | awk '/Mem/ {print $2}' )
+MEMG=$( LC_ALL=C free -m | awk '/Mem/ {print $2/1024.}' )
+MEMM=$( LC_ALL=C free -m | awk '/Mem/ {print $2}' )
 # alternatively (should give value closer to the amount of physical RAM installed):
 #MEMG=0
 #for mem in /sys/devices/system/memory/memory*; do
