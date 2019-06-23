@@ -5,12 +5,15 @@ For Ubuntu try:
 You may use libhdf5-openmpi-dev if you prefer to.
 
 For Fedora try:
-    sudo dnf install hdf5-mpich-devel fftw-devel python environment-modules
-    sed -i 's/specs=[^ ]*//' $( which h5pfc )
+    sudo dnf install make hdf5-mpich-devel fftw-devel python environment-modules
+    sudo sed -i 's/-specs=[^ ]*//g' /usr/lib64/mpich/bin/h5pfc
     module load mpi
+The line "module load mpi" is worth putting in your .profile so you won't have to remember it.
 You may use hdf5-openmpi-devel if you prefer to.
 The "specs=..." settings are problematic because they're not installed via dependencies
-and they may degrade the peformance of the code.
+and they may degrade the peformance of the code. If you don't like such hack or you
+prefer to work with "hardening" and "fortyfying" features, then do:
+    sudo dnf install redhat-rpm-config
 
 Then make sure that you've forked Piernik project on GitHub and in a directory of your choice do:
     git clone https://github.com/<your_github_username>/piernik
