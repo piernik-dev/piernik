@@ -1,0 +1,9 @@
+For typical desktop installation you may need to add few packages to be able to compile and run Piernik.
+
+For Ubuntu try:
+    sudo apt install git make libhdf5-mpich-dev libfftw3-dev pkg-config
+You may use libhdf5-openmpi-dev if you prefer to.
+
+Then make sure that you've forked Piernik project on GitHub and in a directory of your choice do:
+    git clone https://github.com/<your_github_username>/piernik
+
