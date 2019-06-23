@@ -4,6 +4,13 @@ For Ubuntu try:
     sudo apt install git make libhdf5-mpich-dev libfftw3-dev pkg-config
 You may use libhdf5-openmpi-dev if you prefer to.
 
+For Fedora try:
+    sudo dnf install hdf5-mpich-devel fftw-devel python environment-modules
+    sed -i 's/specs=[^ ]*//' $( which h5pfc )
+    module load mpi
+You may use hdf5-openmpi-devel if you prefer to.
+The "specs=..." settings are problematic because they're not installed via dependencies
+and they may degrade the peformance of the code.
+
 Then make sure that you've forked Piernik project on GitHub and in a directory of your choice do:
     git clone https://github.com/<your_github_username>/piernik
-

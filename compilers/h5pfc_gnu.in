@@ -14,6 +14,8 @@ ifeq ($(PIERNIK_DEBUG), 1)
    F90FLAGS += -Wall -W -Wextra -pedantic-errors -Wno-unused-function
 endif
 
+F90FLAGS += -Wno-unused-function
+
 # safe optimization choice
 F90FLAGS += -O2 -fno-stack-arrays
 
