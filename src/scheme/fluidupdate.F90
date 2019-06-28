@@ -253,14 +253,13 @@ contains
 
    end subroutine make_adv_sweep
 
+#ifdef COSM_RAYS
 !>
 !! \brief Perform single diffusion sweep in forward or backward direction
 !<
    subroutine make_diff_sweep(dir)
 
-#ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff
-#endif /* COSM_RAYS */
 #ifdef DEBUG
       use piernikiodebug, only: force_dumps
 #endif /* DEBUG */
@@ -276,5 +275,6 @@ contains
 #endif /* DEBUG */
 
    end subroutine make_diff_sweep
+#endif /* COSM_RAYS */
 
 end module fluidupdate
