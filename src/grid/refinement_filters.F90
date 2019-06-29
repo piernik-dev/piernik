@@ -33,7 +33,7 @@ module refinement_filters
    implicit none
 
    private
-   public :: refine_on_gradient, refine_on_relative_gradient, ref_crit
+   public :: refine_on_gradient, refine_on_relative_gradient, refine_on_second_derivative, ref_crit
 
    type :: ref_crit
       integer              :: iv                      !< field index in cg%q or cg%w array
@@ -60,6 +60,24 @@ module refinement_filters
    end interface
 
 contains
+
+!>
+!! \brief R. Loechner criterion
+!! Original paper: https://www.researchgate.net/publication/222452974_An_adaptive_finite_element_scheme_for_transient_problems_in_CFD
+!! Cartesian grid implementation: http://flash.uchicago.edu/~jbgallag/2012/flash4_ug/node14.html#SECTION05163100000000000000 (note that some indices in the left part of denominator seem to be slightly messed up)
+!<
+
+   subroutine refine_on_second_derivative(this, cg, p3d)
+
+      use grid_cont, only: grid_container
+
+      implicit none
+
+      class(ref_crit),                 intent(in)    :: this !< this contains refinement parameters
+      type(grid_container), pointer,   intent(inout) :: cg   !< current grid piece
+      real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least one layer of updated guardcells)
+
+   end subroutine refine_on_second_derivative
 
 !>
 !! \brief Refine/derefine based on ||grad u||

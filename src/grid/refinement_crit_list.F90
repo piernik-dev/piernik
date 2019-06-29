@@ -89,7 +89,7 @@ contains
 
       use constants,          only: INVALID
       use dataio_pub,         only: warn, die
-      use refinement_filters, only: refine_on_gradient, refine_on_relative_gradient
+      use refinement_filters, only: refine_on_gradient, refine_on_relative_gradient, refine_on_second_derivative
       use refinement,         only: inactive_name
 
       implicit none
@@ -112,14 +112,11 @@ contains
             ref_crit_list(ubound(ref_crit_list, dim=1))%refine => refine_on_gradient
          case ("relgrad")
             ref_crit_list(ubound(ref_crit_list, dim=1))%refine => refine_on_relative_gradient
+         case ("Loechner", "second_order", "d2")
+            ref_crit_list(ubound(ref_crit_list, dim=1))%refine => refine_on_second_derivative
 
 !> \todo Implement Richardson extrapolation method, as described in M. Berger papers
 
-!>
-!! \todo Implement Loechner criteria
-!! Original paper: https://www.researchgate.net/publication/222452974_An_adaptive_finite_element_scheme_for_transient_problems_in_CFD
-!! Cartesian grid implementation: http://flash.uchicago.edu/~jbgallag/2012/flash4_ug/node14.html#SECTION05163100000000000000 (note that some indices in the left part of denominator are slightly messed up)
-!<
          case (trim(inactive_name)) ! do nothing
          case default
             call die("[refinement_crit_list:user_ref2list] unknown refinement detection routine")
