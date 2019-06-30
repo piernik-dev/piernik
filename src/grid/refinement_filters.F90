@@ -65,17 +65,135 @@ contains
 !! \brief R. Loechner criterion
 !! Original paper: https://www.researchgate.net/publication/222452974_An_adaptive_finite_element_scheme_for_transient_problems_in_CFD
 !! Cartesian grid implementation: http://flash.uchicago.edu/~jbgallag/2012/flash4_ug/node14.html#SECTION05163100000000000000 (note that some indices in the left part of denominator seem to be slightly messed up)
+!!
+!! this%aux is the noise filter (epsilon in Loechner's paper)
 !<
 
    subroutine refine_on_second_derivative(this, cg, p3d)
 
-      use grid_cont, only: grid_container
+      use constants,  only: xdim, ydim, zdim, GEO_XYZ
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use grid_cont,  only: grid_container
 
       implicit none
 
       class(ref_crit),                 intent(in)    :: this !< this contains refinement parameters
       type(grid_container), pointer,   intent(inout) :: cg   !< current grid piece
-      real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least one layer of updated guardcells)
+      real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least two layers of updated guardcells)
+
+      integer :: i, j, k
+      real :: sn, sd, r, max_r
+
+      if (dom%geometry_type /= GEO_XYZ) call die("[refinement_filters:refine_on_second_derivative] noncartesian geometry not supported yet")
+      if (dom%nb < 2) call die("[refinement_filters:refine_on_second_derivative] at east 2 guardcells are required")
+
+      ! Perhaps it will be a bit faster with arrays for storing first-order differences
+      ! but let's see if it works first and then how expensive it is.
+
+      max_r = 0.
+      do k = cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
+
+               sn = 0.
+               sd = 0.
+
+               if (dom%has_dir(xdim)) then
+                  ! d/dx d/dx
+                  sn = sn + ((dux(i+1, j, k) - dux(i-1, j, k)) * cg%idx)**2
+                  sd = sd + ((abs(dux(i+1, j, k)) + abs(dux(i-1, j, k)) + this%aux * (daux(i+1, j, k) + daux(i-1, j, k))) * cg%idx)**2
+                  if (dom%has_dir(ydim)) then
+                     ! d/dy d/dx
+                     sn = sn + 2 * ((dux(i, j+1, k) - dux(i, j-1, k)) * cg%idy)**2  ! == d/dx d/dy
+                     sd = sd + ((abs(dux(i, j+1, k)) + abs(dux(i, j-1, k)) + this%aux * (daux(i, j+1, k) + daux(i, j-1, k))) * cg%idy)**2 + &
+                          &    ((abs(duy(i+1, j, k)) + abs(duy(i-1, j, k)) + this%aux * (dauy(i+1, j, k) + dauy(i-1, j, k))) * cg%idx)**2     ! d/dx d/dy
+                     ! to be exploited: (dauy(i+1, j, k) + dauy(i-1, j, k)) * cg%idx == (daux(i, j+1, k) + daux(i, j-1, k)) * cg%idy
+                  endif
+                  if (dom%has_dir(zdim)) then
+                     ! d/dz d/dx
+                     sn = sn + 2 * ((dux(i, j, k+1) - dux(i, j, k-1)) * cg%idz)**2  ! == d/dx d/dz
+                     sd = sd + ((abs(dux(i, j, k+1)) + abs(dux(i, j, k-1)) + this%aux * (daux(i, j, k+1) + daux(i, j, k-1))) * cg%idz)**2 + &
+                          &    ((abs(duz(i+1, j, k)) + abs(duz(i-1, j, k)) + this%aux * (dauz(i+1, j, k) + dauz(i-1, j, k))) * cg%idx)**2     ! d/dx d/dz
+                     ! to be exploited: dauz(i+1, j, k) + dauz(i-1, j, k)) * cg%idx == (daux(i, j, k+1) + daux(i, j, k-1)) * cg%idz
+                  endif
+               endif
+
+               if (dom%has_dir(ydim)) then
+                  ! d/dy d/dy
+                  sn = sn + ((duy(i, j+1, k) - duy(i, j-1, k)) * cg%idy)**2
+                  sd = sd + ((abs(duy(i, j+1, k)) + abs(duy(i, j-1, k)) + this%aux * (dauy(i, j+1, k) + dauy(i, j-1, k))) * cg%idy)**2
+                  if (dom%has_dir(zdim)) then
+                     ! d/dz d/dy
+                     sn = sn + 2 * ((duy(i, j, k+1) - duy(i, j, k-1)) * cg%idz)**2  ! == d/dy d/dz
+                     sd = sd + ((abs(duy(i, j, k+1)) + abs(duy(i, j, k-1)) + this%aux * (dauy(i, j, k+1) + dauy(i, j, k-1))) * cg%idz)**2 + &
+                          &    ((abs(duz(i, j+1, k)) + abs(duz(i, j-1, k)) + this%aux * (dauz(i, j+1, k) + dauz(i, j-1, k))) * cg%idy)**2     ! d/dy d/dz
+                     ! to be exploited: (dauz(i, j+1, k) + dauz(i, j-1, k)) * cg%idy == (dauy(i, j, k+1) + dauy(i, j, k-1)) * cg%idz
+                  endif
+               endif
+
+               if (dom%has_dir(zdim)) then
+                  ! d/dz d/dz
+                  sn = sn + ((duz(i, j, k+1) - duz(i, j, k-1)) * cg%idz)**2
+                  sd = sd + ((abs(duz(i, j, k+1)) + abs(duz(i, j, k-1)) + this%aux * (dauz(i, j, k+1) + dauz(i, j, k-1))) * cg%idz)**2
+               endif
+
+               if (sd > 0.) then
+                  r = sn / sd
+               else  ! sd == 0 because it should never be < 0.
+                  if (sn > 0.) then
+                     r = 1.  ! strange case
+                  else
+                     r = 0.  ! most likely constant field == 0.
+                  endif
+               endif
+               max_r = max(max_r, r)
+
+               cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr)
+
+            enddo
+         enddo
+      enddo
+
+      cg%refine_flags%derefine = cg%refine_flags%derefine .or. (max_r < this%deref_thr)
+
+   contains
+
+      elemental real function dux(i, j, k)
+         implicit none
+         integer, intent(in) :: i, j, k !< (x, y, z)-indices
+         dux = (p3d(i+1, j, k) - p3d(i-1, j, k)) * cg%idx
+      end function dux
+
+      elemental real function daux(i, j, k)
+         implicit none
+         integer, intent(in) :: i, j, k !< (x, y, z)-indices
+         daux = (abs(p3d(i+1, j, k)) + abs(p3d(i-1, j, k))) * cg%idx
+      end function daux
+
+      elemental real function duy(i, j, k)
+         implicit none
+         integer, intent(in) :: i, j, k !< (x, y, z)-indices
+         duy = (p3d(i, j+1, k) - p3d(i, j-1, k)) * cg%idy
+      end function duy
+
+      elemental real function dauy(i, j, k)
+         implicit none
+         integer, intent(in) :: i, j, k !< (x, y, z)-indices
+         dauy = (abs(p3d(i, j+1, k)) + abs(p3d(i, j-1, k))) * cg%idy
+      end function dauy
+
+      elemental real function duz(i, j, k)
+         implicit none
+         integer, intent(in) :: i, j, k !< (x, y, z)-indices
+         duz = (p3d(i, j, k+1) - p3d(i, j, k-1)) * cg%idz
+      end function duz
+
+      elemental real function dauz(i, j, k)
+         implicit none
+         integer, intent(in) :: i, j, k !< (x, y, z)-indices
+         dauz = (abs(p3d(i, j, k+1)) + abs(p3d(i, j, k-1))) * cg%idz
+      end function dauz
 
    end subroutine refine_on_second_derivative
 
