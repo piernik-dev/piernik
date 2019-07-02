@@ -215,7 +215,7 @@ contains
 
       use dataio_pub,     only: warn
       use fluidtypes,     only: var_numbers
-      use global,         only: cflcontrol, cfl_violated, dt_old, dn_negative, ei_negative
+      use global,         only: cflcontrol, cfl_violated, dt_old, dn_negative, ei_negative, disallow_negatives
       use mpisetup,       only: piernik_MPI_Bcast, master
       use timestep_pub,   only: c_all, c_all_old
       use timestep_retry, only: reset_freezing_speed
@@ -243,18 +243,18 @@ contains
       call piernik_MPI_Bcast(cr_negative)
       if (cr_negative) then
          if (master) call warn('[timestep:check_cfl_violation] Possible violation of CFL: negatives in CRS')
-         cfl_violated = .true.
+         if (disallow_negatives) cfl_violated = .true.
          cr_negative  = .false.
       endif
 #endif /* COSM_RAYS */
       if (dn_negative) then
          if (master) call warn('[timestep:check_cfl_violation] Possible violation of CFL: negative density')
-         cfl_violated = .true.
+         if (disallow_negatives) cfl_violated = .true.
          dn_negative  = .false.
       endif
       if (ei_negative) then
          if (master) call warn('[timestep:check_cfl_violation] Possible violation of CFL: negative internal energy')
-         cfl_violated = .true.
+         if (disallow_negatives) cfl_violated = .true.
          ei_negative  = .false.
       endif
       if (cfl_violated) call reset_freezing_speed
