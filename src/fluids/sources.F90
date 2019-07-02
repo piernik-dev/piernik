@@ -34,9 +34,6 @@ module sources
 
    private
    public :: all_sources, care_for_positives, init_sources, prepare_sources, timestep_sources
-#if defined COSM_RAYS && defined IONIZED
-   public :: limit_minimal_ecr
-#endif /* COSM_RAYS && IONIZED */
 
 contains
 
@@ -233,9 +230,9 @@ contains
 !*/
    subroutine get_updates_from_acc(n, u, usrc, acc)
 
-      use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind
+      use fluidindex, only: iarr_all_dn, iarr_all_mx, flind
 #ifndef ISO
-      use fluidindex,       only: iarr_all_en
+      use fluidindex, only: iarr_all_en
 #endif /* !ISO */
 
       implicit none
