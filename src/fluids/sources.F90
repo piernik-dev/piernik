@@ -317,13 +317,13 @@ contains
 !==========================================================================================
    subroutine limit_minimal_density(n, u1, cg, sweep, i1, i2)
 
-      use constants,        only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim
-      use dataio_pub,       only: msg, die
-      use domain,           only: dom
-      use fluidindex,       only: flind, iarr_all_dn
-      use global,           only: smalld, use_smalld
-      use grid_cont,        only: grid_container
-      use mass_defect,      only: local_magic_mass
+      use constants,   only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim, zero
+      use dataio_pub,  only: msg, die
+      use domain,      only: dom
+      use fluidindex,  only: flind, iarr_all_dn
+      use global,      only: smalld, use_smalld, dn_negative
+      use grid_cont,   only: grid_container
+      use mass_defect, only: local_magic_mass
 
       implicit none
 
@@ -338,6 +338,7 @@ contains
 
       integer :: ifl
 
+      dn_negative = dn_negative .or. (any(u1(:, iarr_all_dn) < zero))
       if (use_smalld) then
          ! This is needed e.g. for outflow boundaries in presence of perp. gravity
          select case (dom%geometry_type)
@@ -368,7 +369,7 @@ contains
                call die("[sources:limit_minimal_density] Unsupported geometry")
          end select
       else
-         if (any(u1(:, iarr_all_dn) < 0.0)) then
+         if (dn_negative) then
             write(msg,'(3A,I4,1X,I4,A)') "[sources:limit_minimal_density] negative density in sweep ",sweep,"( ", i1, i2, " )"
             call die(msg)
          endif
@@ -379,11 +380,11 @@ contains
 !==========================================================================================
    subroutine limit_minimal_intener(n, bb, u1)
 
-      use constants,  only: xdim, ydim, zdim
+      use constants,  only: xdim, ydim, zdim, zero
       use fluidindex, only: flind, nmag
       use fluidtypes, only: component_fluid
       use func,       only: emag, ekin
-      use global,     only: smallei, use_smallei
+      use global,     only: smallei, use_smallei, ei_negative
 
       implicit none
 
@@ -408,6 +409,7 @@ contains
                int_ener = u1(:, pfl%ien) - kin_ener
             endif
 
+            ei_negative = ei_negative .or. (any(int_ener < zero))
             if (use_smallei) int_ener = max(int_ener, smallei)
 
             u1(:, pfl%ien) = int_ener + kin_ener
@@ -420,7 +422,9 @@ contains
 #ifdef COSM_RAYS
    subroutine limit_minimal_ecr(n, u1)
 
+      use constants,      only: zero
       use fluidindex,     only: flind
+      use global,         only: cr_negative
       use initcosmicrays, only: iarr_crs, smallecr, use_smallecr
 
       implicit none
@@ -428,6 +432,7 @@ contains
       integer(kind=4),               intent(in)    :: n                  !< array size
       real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
 
+      ecr_negative = ecr_negative .or. (any(u1(:, iarr_crs(:)) < zero))
       if (use_smallecr) u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
 
    end subroutine limit_minimal_ecr

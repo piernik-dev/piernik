@@ -39,7 +39,7 @@ module global
 
    private
    public :: cleanup_global, init_global, &
-        &    cfl, cfl_max, cflcontrol, cfl_violated, tstep_attempt, &
+        &    cfl, cfl_max, cflcontrol, cfl_violated, dn_negative, ei_negative, cr_negative, tstep_attempt, &
         &    dt, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
@@ -47,6 +47,9 @@ module global
         &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fc_eq_mag
 
    logical         :: cfl_violated             !< True when cfl condition is violated
+   logical         :: dn_negative = .false.
+   logical         :: ei_negative = .false.
+   logical         :: cr_negative = .false.
    logical         :: dirty_debug              !< Allow initializing arrays with some insane values and checking if these values can propagate
    integer(kind=4) :: show_n_dirtys            !< use to limit the amount of printed messages on dirty values found
    logical         :: do_ascii_dump            !< to dump, or not to dump: that is a question (ascii)
