@@ -420,15 +420,15 @@ contains
 #if defined COSM_RAYS && defined IONIZED
    subroutine limit_minimal_ecr(n, u1)
 
-      use fluidindex,       only: flind
-      use initcosmicrays,   only: iarr_crs, smallecr
+      use fluidindex,     only: flind
+      use initcosmicrays, only: iarr_crs, smallecr, use_smallecr
 
       implicit none
 
       integer(kind=4),               intent(in)    :: n                  !< array size
       real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
 
-      u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
+      if (use_smallecr) u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
 
    end subroutine limit_minimal_ecr
 #endif /* COSM_RAYS && IONIZED */
