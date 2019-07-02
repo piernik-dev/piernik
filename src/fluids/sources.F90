@@ -429,7 +429,7 @@ contains
       integer(kind=4),               intent(in)    :: n                  !< array size
       real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
 
-      ecr_negative = ecr_negative .or. (any(u1(:, iarr_crs(:)) < zero))
+      cr_negative = cr_negative .or. (any(u1(:, iarr_crs(:)) < zero))
       if (use_smallecr) u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
 
    end subroutine limit_minimal_ecr
