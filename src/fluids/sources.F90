@@ -289,8 +289,8 @@ contains
 !==========================================================================================
    subroutine care_for_positives(n, u1, bb, cg, sweep, i1, i2)
 
-      use fluidindex,       only: flind, nmag
-      use grid_cont,        only: grid_container
+      use fluidindex, only: flind, nmag
+      use grid_cont,  only: grid_container
 
       implicit none
 
@@ -308,9 +308,9 @@ contains
 
       call limit_minimal_density(n, u1, cg, sweep, i1, i2)
       call limit_minimal_intener(n, bb, u1)
-#if defined COSM_RAYS && defined IONIZED
+#ifdef COSM_RAYS
       if (full_dim) call limit_minimal_ecr(n, u1)
-#endif /* COSM_RAYS && IONIZED */
+#endif /* COSM_RAYS */
 
    end subroutine care_for_positives
 
@@ -417,7 +417,7 @@ contains
 
    end subroutine limit_minimal_intener
 
-#if defined COSM_RAYS && defined IONIZED
+#ifdef COSM_RAYS
    subroutine limit_minimal_ecr(n, u1)
 
       use fluidindex,     only: flind
@@ -431,7 +431,7 @@ contains
       if (use_smallecr) u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
 
    end subroutine limit_minimal_ecr
-#endif /* COSM_RAYS && IONIZED */
+#endif /* COSM_RAYS */
 
 !==========================================================================================
 end module sources
