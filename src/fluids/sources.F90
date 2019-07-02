@@ -379,11 +379,11 @@ contains
 !==========================================================================================
    subroutine limit_minimal_intener(n, bb, u1)
 
-      use constants,        only: xdim, ydim, zdim
-      use fluidindex,       only: flind, nmag
-      use fluidtypes,       only: component_fluid
-      use func,             only: emag, ekin
-      use global,           only: smallei
+      use constants,  only: xdim, ydim, zdim
+      use fluidindex, only: flind, nmag
+      use fluidtypes, only: component_fluid
+      use func,       only: emag, ekin
+      use global,     only: smallei, use_smallei
 
       implicit none
 
@@ -394,9 +394,8 @@ contains
 !locals
 
       real, dimension(n)              :: kin_ener, int_ener, mag_ener
-
       class(component_fluid), pointer :: pfl
-      integer :: ifl
+      integer                         :: ifl
 
       do ifl = 1, flind%fluids
          pfl => flind%all_fluids(ifl)%fl
@@ -409,7 +408,7 @@ contains
                int_ener = u1(:, pfl%ien) - kin_ener
             endif
 
-            int_ener = max(int_ener, smallei)
+            if (use_smallei) int_ener = max(int_ener, smallei)
 
             u1(:, pfl%ien) = int_ener + kin_ener
             if (pfl%is_magnetized) u1(:, pfl%ien) = u1(:, pfl%ien) + mag_ener

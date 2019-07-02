@@ -41,7 +41,7 @@ module global
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, tstep_attempt, &
         &    dt, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
-        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, interpol_str, &
+        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
         &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fc_eq_mag
@@ -68,6 +68,7 @@ module global
    real    :: cfl                      !< desired Courant–Friedrichs–Lewy number
    real    :: cfl_max                  !< warning threshold for the effective CFL number achieved
    logical :: use_smalld               !< correct density when it gets lower than smalld
+   logical :: use_smallei              !< correct internal energy density when it gets lower then smallei
    logical :: geometry25D              !< include source terms in reduced dimension for 2D simulations
    real    :: smallp                   !< artificial infimum for pressure
    real    :: smalld                   !< artificial infimum for density
@@ -99,7 +100,7 @@ module global
    integer(kind=4)               :: ord_mag_prolong   !< prolongation order for B and psi
    logical                       :: ord_fc_eq_mag     !< when .true. enforce ord_mag_prolong order of prolongation of f/c guardcells for fluid and everything (EXPERIMENTAL)
 
-   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
+   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, use_smallei, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
         &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong, ord_fc_eq_mag
 
@@ -194,6 +195,7 @@ contains
       smallp      = big_float
       smalld      = big_float
       use_smalld  = .true.
+      use_smallei = .true.
       smallc      = 1.e-10
       smallei     = 1.e-10
       dt_initial  = -1.              !< -1. indicates automatic choice of initial timestep, -0.5 would give half of that
@@ -275,14 +277,15 @@ contains
          rbuff(16) = dt_shrink
 
          lbuff(1)   = use_smalld
-         lbuff(2)   = repeat_step
-         lbuff(3:5) = skip_sweep
-         lbuff(6)   = geometry25D
-         lbuff(7)   = sweeps_mgu
-         lbuff(8)   = use_fargo
-         lbuff(9)   = use_eglm
-         lbuff(10)  = ch_grid
-         lbuff(11)  = ord_fc_eq_mag
+         lbuff(2)   = use_smallei
+         lbuff(3)   = repeat_step
+         lbuff(4:6) = skip_sweep
+         lbuff(7)   = geometry25D
+         lbuff(8)   = sweeps_mgu
+         lbuff(9)   = use_fargo
+         lbuff(10)  = use_eglm
+         lbuff(11)  = ch_grid
+         lbuff(12)  = ord_fc_eq_mag
 
       endif
 
@@ -294,14 +297,15 @@ contains
       if (slave) then
 
          use_smalld    = lbuff(1)
-         repeat_step   = lbuff(2)
-         skip_sweep    = lbuff(3:5)
-         geometry25D   = lbuff(6)
-         sweeps_mgu    = lbuff(7)
-         use_fargo     = lbuff(8)
-         use_eglm      = lbuff(9)
-         ch_grid       = lbuff(10)
-         ord_fc_eq_mag = lbuff(11)
+         use_smallei   = lbuff(2)
+         repeat_step   = lbuff(3)
+         skip_sweep    = lbuff(4:6)
+         geometry25D   = lbuff(7)
+         sweeps_mgu    = lbuff(8)
+         use_fargo     = lbuff(9)
+         use_eglm      = lbuff(10)
+         ch_grid       = lbuff(11)
+         ord_fc_eq_mag = lbuff(12)
 
          smalld      = rbuff( 1)
          smallc      = rbuff( 2)
