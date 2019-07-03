@@ -117,10 +117,7 @@ contains
       use global,           only: dt, force_cc_mag
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
-      use sources,          only: all_sources
-#ifdef COSM_RAYS
-      use sources,          only: limit_minimal_ecr
-#endif /* COSM_RAYS */
+      use sources,          only: all_sources, care_for_positives
 
       implicit none
 
@@ -198,9 +195,7 @@ contains
             call all_sources(size(u, 1, kind=4), u, u1, b, cg, istep, ddim, i1, i2, rk_coef(istep) * dt, vx)
             ! See the results of Jeans test with RTVD and RIEMANN for estimate of accuracy.
 
-#if defined COSM_RAYS && defined IONIZED
-            if (size(u, 1) > 1) call limit_minimal_ecr(size(u, 1), u)
-#endif /* COSM_RAYS && IONIZED */
+            call care_for_positives(size(u, 1, kind=4), u1, b, cg, ddim, i1, i2)
 
             call cg%save_outfluxes(ddim, i1, i2, eflx)
             pu(:,:) = transpose(u1(:, iarr_all_swp(ddim,:)))
@@ -219,10 +214,7 @@ contains
       use global,           only: dt
       use grid_cont,        only: grid_container
       use named_array_list, only: wna
-      use sources,          only: all_sources
-#ifdef COSM_RAYS
-      use sources,          only: limit_minimal_ecr
-#endif /* COSM_RAYS */
+      use sources,          only: all_sources, care_for_positives
 
       implicit none
 
@@ -262,9 +254,7 @@ contains
             call all_sources(size(u, 1, kind=4), u, u1, b, cg, istep, ddim, i1, i2, rk_coef(istep) * dt, vx)
             ! See the results of Jeans test with RTVD and RIEMANN for estimate of accuracy.
 
-#if defined COSM_RAYS && defined IONIZED
-            if (size(u, 1) > 1) call limit_minimal_ecr(size(u, 1), u)
-#endif /* COSM_RAYS && IONIZED */
+            call care_for_positives(size(u, 1, kind=4), u1, b, cg, ddim, i1, i2)
 
             call cg%save_outfluxes(ddim, i1, i2, eflx)
             pu(:,:) = transpose(u1(:, iarr_all_swp(ddim,:)))
