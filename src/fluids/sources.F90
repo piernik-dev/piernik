@@ -434,7 +434,7 @@ contains
       use initcosmicrays,   only: iarr_crs
 #else
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n, iarr_crn
-      use initcrspectrum,   only: smallecre, smallecrn
+      use initcrspectrum,   only: smallcree, smallcren
 #endif /* ! COSM_RAY_ELECTRONS */
       implicit none
 
@@ -445,8 +445,8 @@ contains
       u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
 #else
       u1(:, iarr_crn(:)) = max(smallecr, u1(:, iarr_crn(:)))
-      u1(:, iarr_cre_n(:)) = max(smallecrn, u1(:, iarr_cre_n(:)))        !< \deprecated BEWARE - this line refers to CRESP number density component
-      u1(:, iarr_cre_e(:)) = max(smallecre, u1(:, iarr_cre_e(:)))
+      u1(:, iarr_cre_n(:)) = max(smallcren, u1(:, iarr_cre_n(:)))        !< \deprecated BEWARE - this line refers to CRESP number density component
+      u1(:, iarr_cre_e(:)) = max(smallcree, u1(:, iarr_cre_e(:)))
 #endif /* ! COSM_RAY_ELECTRONS */
 
    end subroutine limit_minimal_ecr

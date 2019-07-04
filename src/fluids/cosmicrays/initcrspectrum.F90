@@ -63,8 +63,8 @@ module initcrspectrum
    integer(kind=1)    :: e_small_approx_p_lo         !< 0,1 - turns off/on energy (e_small) approximated lower cutoff momentum in isolated case
    integer(kind=1)    :: e_small_approx_p_up         !< 0,1 - turns off/on energy (e_small) approximated upper cutoff momentum in isolated case
    integer(kind=1)    :: e_small_approx_init_cond    !< 0,1 - turns off/on energy (e_small) approximated momenta at initialization
-   real(kind=8)       :: smallecrn                   !< floor value for CRESP number density
-   real(kind=8)       :: smallecre                   !< floor value for CRESP energy density
+   real(kind=8)       :: smallcren                   !< floor value for CRESP number density
+   real(kind=8)       :: smallcree                   !< floor value for CRESP energy density
    real(kind=8)       :: Gamma_min_fix               ! < min of Lorentzs' Gamma factor, lower range of CRESP fixed grid
    real(kind=8)       :: Gamma_max_fix               ! < max of Lorentzs' Gamma factor, upper range of CRESP fixed grid
    real(kind=8)       :: Gamma_lo_init               ! < min of Lorentzs' Gamma factor, lower range of initial spectrum
@@ -165,7 +165,8 @@ module initcrspectrum
       &                         e_small_approx_p_lo, e_small_approx_p_up, force_init_NR, NR_iter_limit, max_p_ratio,&
       &                         synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init, Gamma_min_fix,           &
       &                         Gamma_max_fix, Gamma_lo_init, Gamma_up_init, nullify_empty_bins, approx_cutoffs,    &
-      &                         NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, hdf_save_fpq
+      &                         NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree,&
+      &                         smallcren, hdf_save_fpq
 
 ! Default values
       use_cresp         = .true.
@@ -206,8 +207,8 @@ module initcrspectrum
       NR_refine_pf_lo   = .false.
       NR_refine_pf_up   = .false.
       nullify_empty_bins     = .false.
-      smallecrn              = 0.0
-      smallecre              = 0.0
+      smallcren              = 0.0
+      smallcree              = 0.0
       allow_source_spectrum_break  = .false.
       synch_active = .true.
       adiab_active = .true.
@@ -274,8 +275,8 @@ module initcrspectrum
 
          rbuff(1)  = cfl_cre
          rbuff(2)  = cre_eff
-         rbuff(3)  = smallecrn
-         rbuff(4)  = smallecre
+         rbuff(3)  = smallcren
+         rbuff(4)  = smallcree
          rbuff(5)  = cre_active
          rbuff(6)  = p_lo_init
          rbuff(7)  = p_up_init
@@ -342,8 +343,8 @@ module initcrspectrum
 
          cfl_cre                     = rbuff(1)
          cre_eff                     = rbuff(2)
-         smallecrn                   = rbuff(3)
-         smallecre                   = rbuff(4)
+         smallcren                   = rbuff(3)
+         smallcree                   = rbuff(4)
          cre_active                  = rbuff(5)
          p_lo_init                   = rbuff(6)
          p_up_init                   = rbuff(7)
@@ -436,9 +437,9 @@ module initcrspectrum
                call printinfo(msg)
                write (msg,'(A, L1)')        '[initcrspectrum:init_cresp] nullify_empty_bins =', nullify_empty_bins
                call printinfo(msg)
-               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] smallecrn        = ', smallecrn
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] smallcren        = ', smallcren
                call printinfo(msg)
-               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] smallecre        = ', smallecre
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] smallcree        = ', smallcree
                call printinfo(msg)
                write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] allow_source_spectrum_break =', allow_source_spectrum_break
                call printinfo(msg)

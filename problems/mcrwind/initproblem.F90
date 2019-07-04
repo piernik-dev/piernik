@@ -176,7 +176,7 @@ contains
       use snsources,      only: r_sn
 #ifdef COSM_RAY_ELECTRONS
       use cresp_crspectrum,   only: cresp_get_scaled_init_spectrum
-      use initcrspectrum,     only: cresp
+      use initcrspectrum,     only: cresp, smallcree
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* SN_GALAXY */
 #ifdef CR_SN
@@ -252,7 +252,7 @@ contains
                   if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k)= cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + 0.1*decr
 #ifdef COSM_RAY_ELECTRONS
                   cresp%n = 0.0 ;  cresp%e = 0.0
-                  if (decr * cre_eff .gt. smallecre) then
+                  if (decr * cre_eff .gt. smallcree) then
                         call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn * cre_eff)
                   endif                                                                                ! distribution function amplitude computed from total explosion energy multiplied by factor cre_eff
                   cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n

@@ -171,7 +171,7 @@ contains
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
-     use initcrspectrum,   only: expan_order, smallecre, cresp, cre_eff
+     use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff
      use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
 #endif /* COSM_RAY_ELECTRONS */
 
@@ -279,7 +279,7 @@ contains
                      enddo
                   enddo
                   cresp%n = 0.0 ;  cresp%e = 0.0 ; e_tot = e_tot * cre_eff
-                  if (e_tot .gt. smallecre) then
+                  if (e_tot .gt. smallcree) then
                     call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot)
                     cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
                     cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
