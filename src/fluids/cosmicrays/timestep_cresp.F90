@@ -171,13 +171,13 @@ module timestep_cresp
 !----------------------------------------------------------------------------------------------------
 
    subroutine cresp_timestep_adiabatic(dt_cre_ud, u_d_abs)
-      use constants,          only: zero
-      use initcrspectrum,     only: w, eps
+
+      use initcrspectrum, only: w, eps
 
       implicit none
 
-      real(kind=8), intent(out)               :: dt_cre_ud
-      real(kind=8), intent(in)                :: u_d_abs    ! assumes that u_d > 0 always
+      real(kind=8), intent(out) :: dt_cre_ud
+      real(kind=8), intent(in)  :: u_d_abs    ! assumes that u_d > 0 always
 
       if ( u_d_abs .gt. eps) then
          dt_cre_ud = cfl_cre * w / u_d_abs
@@ -189,14 +189,15 @@ module timestep_cresp
 !----------------------------------------------------------------------------------------------------
 
    subroutine cresp_timestep_synchrotron(dt_cre_ub, u_b, i_up_cell)
-      use constants,          only: zero
-      use initcrspectrum,     only: w, eps
+
+      use constants,      only: zero
+      use initcrspectrum, only: w
 
       implicit none
 
-      real(kind=8), intent(out)               :: dt_cre_ub
-      integer(kind=4), intent(in)             :: i_up_cell
-      real(kind=8), intent(in)                :: u_b
+      real(kind=8),    intent(out) :: dt_cre_ub
+      real(kind=8),    intent(in)  :: u_b
+      integer(kind=4), intent(in)  :: i_up_cell
 
  ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
       if (u_b .gt. zero) then

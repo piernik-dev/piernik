@@ -221,10 +221,15 @@ contains
 !<
    subroutine check_cfl_violation(dt, flind)
 
+      use dataio_pub,     only: warn
       use fluidtypes,     only: var_numbers
-      use global,         only: cflcontrol, cfl_violated, dt_old
+      use global,         only: cflcontrol, cfl_violated, dt_old, dn_negative, ei_negative, disallow_negatives
+      use mpisetup,       only: piernik_MPI_Bcast, master
       use timestep_pub,   only: c_all, c_all_old
       use timestep_retry, only: reset_freezing_speed
+#ifdef COSM_RAYS
+      use global,         only: cr_negative
+#endif /* COSM_RAYS */
 
       implicit none
 
@@ -240,6 +245,26 @@ contains
       bck = [dt_old, c_all_old, c_all]
 
       call time_step(checkdt, flind)
+      call piernik_MPI_Bcast(dn_negative)
+      call piernik_MPI_Bcast(ei_negative)
+#ifdef COSM_RAYS
+      call piernik_MPI_Bcast(cr_negative)
+      if (cr_negative) then
+         if (master) call warn('[timestep:check_cfl_violation] Possible violation of CFL: negatives in CRS')
+         if (disallow_negatives) cfl_violated = .true.
+         cr_negative  = .false.
+      endif
+#endif /* COSM_RAYS */
+      if (dn_negative) then
+         if (master) call warn('[timestep:check_cfl_violation] Possible violation of CFL: negative density')
+         if (disallow_negatives) cfl_violated = .true.
+         dn_negative  = .false.
+      endif
+      if (ei_negative) then
+         if (master) call warn('[timestep:check_cfl_violation] Possible violation of CFL: negative internal energy')
+         if (disallow_negatives) cfl_violated = .true.
+         ei_negative  = .false.
+      endif
       if (cfl_violated) call reset_freezing_speed
 
       dt_old = bck(1) ; c_all_old = bck(2) ; c_all = bck(3) !> \todo check if this backup is necessary

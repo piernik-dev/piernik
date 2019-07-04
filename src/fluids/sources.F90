@@ -34,9 +34,6 @@ module sources
 
    private
    public :: all_sources, care_for_positives, init_sources, prepare_sources, timestep_sources
-#if defined COSM_RAYS && defined IONIZED
-   public :: limit_minimal_ecr
-#endif /* COSM_RAYS && IONIZED */
 
 contains
 
@@ -240,9 +237,9 @@ contains
 !*/
    subroutine get_updates_from_acc(n, u, usrc, acc)
 
-      use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind
+      use fluidindex, only: iarr_all_dn, iarr_all_mx, flind
 #ifndef ISO
-      use fluidindex,       only: iarr_all_en
+      use fluidindex, only: iarr_all_en
 #endif /* !ISO */
 
       implicit none
@@ -296,8 +293,8 @@ contains
 !==========================================================================================
    subroutine care_for_positives(n, u1, bb, cg, sweep, i1, i2)
 
-      use fluidindex,       only: flind, nmag
-      use grid_cont,        only: grid_container
+      use fluidindex, only: flind, nmag
+      use grid_cont,  only: grid_container
 
       implicit none
 
@@ -315,22 +312,22 @@ contains
 
       call limit_minimal_density(n, u1, cg, sweep, i1, i2)
       call limit_minimal_intener(n, bb, u1)
-#if defined COSM_RAYS && defined IONIZED
+#ifdef COSM_RAYS
       if (full_dim) call limit_minimal_ecr(n, u1)
-#endif /* COSM_RAYS && IONIZED */
+#endif /* COSM_RAYS */
 
    end subroutine care_for_positives
 
 !==========================================================================================
    subroutine limit_minimal_density(n, u1, cg, sweep, i1, i2)
 
-      use constants,        only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim
-      use dataio_pub,       only: msg, die
-      use domain,           only: dom
-      use fluidindex,       only: flind, iarr_all_dn
-      use global,           only: smalld, use_smalld
-      use grid_cont,        only: grid_container
-      use mass_defect,      only: local_magic_mass
+      use constants,   only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim, zero
+      use dataio_pub,  only: msg, die
+      use domain,      only: dom
+      use fluidindex,  only: flind, iarr_all_dn
+      use global,      only: smalld, use_smalld, dn_negative
+      use grid_cont,   only: grid_container
+      use mass_defect, only: local_magic_mass
 
       implicit none
 
@@ -345,6 +342,7 @@ contains
 
       integer :: ifl
 
+      dn_negative = dn_negative .or. (any(u1(:, iarr_all_dn) < zero))
       if (use_smalld) then
          ! This is needed e.g. for outflow boundaries in presence of perp. gravity
          select case (dom%geometry_type)
@@ -375,7 +373,7 @@ contains
                call die("[sources:limit_minimal_density] Unsupported geometry")
          end select
       else
-         if (any(u1(:, iarr_all_dn) < 0.0)) then
+         if (dn_negative) then
             write(msg,'(3A,I4,1X,I4,A)') "[sources:limit_minimal_density] negative density in sweep ",sweep,"( ", i1, i2, " )"
             call die(msg)
          endif
@@ -386,11 +384,11 @@ contains
 !==========================================================================================
    subroutine limit_minimal_intener(n, bb, u1)
 
-      use constants,        only: xdim, ydim, zdim
-      use fluidindex,       only: flind, nmag
-      use fluidtypes,       only: component_fluid
-      use func,             only: emag, ekin
-      use global,           only: smallei
+      use constants,  only: xdim, ydim, zdim, zero
+      use fluidindex, only: flind, nmag
+      use fluidtypes, only: component_fluid
+      use func,       only: emag, ekin
+      use global,     only: smallei, use_smallei, ei_negative
 
       implicit none
 
@@ -401,9 +399,8 @@ contains
 !locals
 
       real, dimension(n)              :: kin_ener, int_ener, mag_ener
-
       class(component_fluid), pointer :: pfl
-      integer :: ifl
+      integer                         :: ifl
 
       do ifl = 1, flind%fluids
          pfl => flind%all_fluids(ifl)%fl
@@ -416,7 +413,8 @@ contains
                int_ener = u1(:, pfl%ien) - kin_ener
             endif
 
-            int_ener = max(int_ener, smallei)
+            ei_negative = ei_negative .or. (any(int_ener < zero))
+            if (use_smallei) int_ener = max(int_ener, smallei)
 
             u1(:, pfl%ien) = int_ener + kin_ener
             if (pfl%is_magnetized) u1(:, pfl%ien) = u1(:, pfl%ien) + mag_ener
@@ -425,32 +423,36 @@ contains
 
    end subroutine limit_minimal_intener
 
-#if defined COSM_RAYS && defined IONIZED
+#ifdef COSM_RAYS
    subroutine limit_minimal_ecr(n, u1)
 
-      use fluidindex,       only: flind
-      use initcosmicrays,   only: smallecr
-#ifndef COSM_RAY_ELECTRONS
-      use initcosmicrays,   only: iarr_crs
-#else
-      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n, iarr_crn
+      use constants,      only: zero
+      use fluidindex,     only: flind
+      use global,         only: cr_negative
+      use initcosmicrays, only: iarr_crs, smallecr, use_smallecr
+#ifdef COSM_RAY_ELECTRONS
+      use initcosmicrays, only: iarr_cre_e, iarr_cre_n, iarr_crn
       use initcrspectrum,   only: smallcree, smallcren
-#endif /* ! COSM_RAY_ELECTRONS */
+#endif /* COSM_RAY_ELECTRONS */
+
       implicit none
 
       integer(kind=4),               intent(in)    :: n                  !< array size
       real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
 
+      cr_negative = cr_negative .or. (any(u1(:, iarr_crs(:)) < zero))
+      if (use_smallecr) then
 #ifndef COSM_RAY_ELECTRONS
-      u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
-#else
-      u1(:, iarr_crn(:)) = max(smallecr, u1(:, iarr_crn(:)))
-      u1(:, iarr_cre_n(:)) = max(smallcren, u1(:, iarr_cre_n(:)))        !< \deprecated BEWARE - this line refers to CRESP number density component
-      u1(:, iarr_cre_e(:)) = max(smallcree, u1(:, iarr_cre_e(:)))
-#endif /* ! COSM_RAY_ELECTRONS */
+         u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
+#else /* !COSM_RAY_ELECTRONS */
+         u1(:, iarr_crn(:)) = max(smallecr, u1(:, iarr_crn(:)))
+         u1(:, iarr_cre_n(:)) = max(smallcren, u1(:, iarr_cre_n(:)))        !< \deprecated BEWARE - this line refers to CRESP number density component
+         u1(:, iarr_cre_e(:)) = max(smallcree, u1(:, iarr_cre_e(:)))
+#endif /* !COSM_RAY_ELECTRONS */
+      endif
 
    end subroutine limit_minimal_ecr
-#endif /* COSM_RAYS && IONIZED */
+#endif /* COSM_RAYS */
 
 !==========================================================================================
 end module sources
