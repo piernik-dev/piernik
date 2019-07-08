@@ -43,8 +43,7 @@ contains
 
    subroutine scan_for_refinements
 
-      use all_boundaries,   only: all_bnd
-      use cg_leaves,             only: leaves
+      use all_boundaries,        only: all_bnd
       use cg_level_connected,    only: cg_level_connected_T
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
@@ -89,7 +88,7 @@ contains
       call piernik_MPI_Allreduce(cnt(PROBLEM), pSUM)
 #endif /* VERBOSED_REFINEMENTS */
 
-      call auto_refine_derefine(leaves)
+      call auto_refine_derefine
 #ifdef VERBOSED_REFINEMENTS
       call sanitize_all_ref_flags
       cnt(AUTO) = all_cg%count_ref_flags()
