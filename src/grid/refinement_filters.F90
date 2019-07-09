@@ -38,6 +38,7 @@ module refinement_filters
    type :: ref_crit
       integer              :: iv                      !< field index in cg%q or cg%w array
       integer              :: ic                      !< component index (cg%w(iv)%arr(ic,:,:,:)) or INVALID for 3D arrays
+      integer              :: iplot                   !< field index for storing the refinement criterion or INVALID
       real                 :: ref_thr                 !< refinement threshold
       real                 :: deref_thr               !< derefinement threshold
       real                 :: aux                     !< auxiliary parameter (can be smoother or filter strength)
@@ -71,7 +72,7 @@ contains
 
    subroutine refine_on_second_derivative(this, cg, p3d)
 
-      use constants,  only: xdim, ydim, zdim, GEO_XYZ
+      use constants,  only: xdim, ydim, zdim, GEO_XYZ, INVALID
       use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container
@@ -147,6 +148,7 @@ contains
                      r = 0.  ! most likely constant field == 0.
                   endif
                endif
+               if (this%iplot /= INVALID) cg%q(this%iplot)%arr(i, j, k) = r
                max_r = max(max_r, r)
 
                cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr)
@@ -204,6 +206,7 @@ contains
 
    subroutine refine_on_gradient(this, cg, p3d)
 
+      use constants, only: INVALID
       use domain,    only: dom
       use grid_cont, only: grid_container
 
@@ -224,6 +227,7 @@ contains
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
                r = grad2(i, j, k)
+               if (this%iplot /= INVALID) cg%q(this%iplot)%arr(i, j, k) = r
                max_r = max(max_r, r)
                cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr**2)
                ! we can avoid calculating square root here
@@ -297,6 +301,7 @@ contains
 
    subroutine refine_on_relative_gradient(this, cg, p3d)
 
+      use constants, only: INVALID
       use domain,    only: dom
       use grid_cont, only: grid_container
 
@@ -317,6 +322,7 @@ contains
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
                r = rel_grad2(i, j, k)
+               if (this%iplot /= INVALID) cg%q(this%iplot)%arr(i, j, k) = r
                max_r = max(max_r, r)
                cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr**2)
                ! we can avoid calculating square root here

@@ -187,7 +187,7 @@ contains
       use mpisetup,             only: piernik_MPI_Allreduce!, proc
       use named_array_list,     only: qna
       use refinement,           only: n_updAMR, emergency_fix
-      use refinement_crit_list, only: refines2list
+      use refinement_crit_list, only: refines2list, auto_refine_derefine
 #ifdef GRAV
       use gravity,              only: update_gp
 #endif /* GRAV */
@@ -370,6 +370,7 @@ contains
       ! Check refinement topology and crash if anything got broken
       call fix_refinement(correct)
       if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
+      call auto_refine_derefine(plots_only = .true.)  ! refresh refinement criterion fields, if any
 
       call all_bnd
       !> \todo call the update of cs_i2 if and only if something has changed

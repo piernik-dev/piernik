@@ -166,7 +166,7 @@ contains
       enddo
 
       do id = 1, flind%energ
-         call user_ref2list(wna%fi, flind%all_fluids(id)%fl%ien, ref_thr, deref_thr, 0., "relgrad")
+         call user_ref2list(wna%fi, flind%all_fluids(id)%fl%ien, ref_thr, deref_thr, 0., "relgrad", .true.)
       enddo
 
 

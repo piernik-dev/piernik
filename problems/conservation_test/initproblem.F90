@@ -184,7 +184,7 @@ contains
          call set_n_updAMR(nflip)
       else
          do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
-            call user_ref2list(wna%fi, id, ref_thr*pulse_low_density, deref_thr*pulse_low_density, 0., "grad")
+            call user_ref2list(wna%fi, id, ref_thr*pulse_low_density, deref_thr*pulse_low_density, 0., "grad", .true.)
          enddo
       endif
 
