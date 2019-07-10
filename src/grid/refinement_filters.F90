@@ -85,17 +85,18 @@ contains
 
       integer :: i, j, k
       real :: sn, sd, r, max_r
+      integer, parameter :: how_far = 2
 
       if (dom%geometry_type /= GEO_XYZ) call die("[refinement_filters:refine_on_second_derivative] noncartesian geometry not supported yet")
-      if (dom%nb < 2) call die("[refinement_filters:refine_on_second_derivative] at east 2 guardcells are required")
+      if (dom%nb < how_far+1) call die("[refinement_filters:refine_on_second_derivative] at east 2 guardcells are required")
 
       ! Perhaps it will be a bit faster with arrays for storing first-order differences
       ! but let's see if it works first and then how expensive it is.
 
       max_r = 0.
-      do k = cg%ks, cg%ke
-         do j = cg%js, cg%je
-            do i = cg%is, cg%ie
+      do k = cg%ks - how_far*dom%D_z, cg%ke + how_far*dom%D_z
+         do j = cg%js - how_far*dom%D_y, cg%je + how_far*dom%D_y
+            do i = cg%is - how_far*dom%D_x, cg%ie + how_far*dom%D_x
 
                sn = 0.
                sd = 0.
@@ -151,7 +152,8 @@ contains
                if (this%iplot /= INVALID) cg%q(this%iplot)%arr(i, j, k) = r
                max_r = max(max_r, r)
 
-               cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr)
+               if (i >= cg%is .and. i <= cg%ie .and. j >= cg%js .and. j <= cg%je .and. k >= cg%ks .and. k <= cg%ke) &
+                    cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr)
 
             enddo
          enddo

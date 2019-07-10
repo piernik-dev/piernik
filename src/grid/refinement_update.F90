@@ -370,9 +370,9 @@ contains
       ! Check refinement topology and crash if anything got broken
       call fix_refinement(correct)
       if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
-      call auto_refine_derefine(plots_only = .true.)  ! refresh refinement criterion fields, if any
 
       call all_bnd
+      call auto_refine_derefine(plots_only = .true.)  ! refresh refinement criterion fields, if any
       !> \todo call the update of cs_i2 if and only if something has changed
       !> \todo add another flag to named_array_list::na_var so the user can also specify fields that need boundary updates on fine/coarse boundaries
       if (qna%exists(cs_i2_n)) call leaves%leaf_arr3d_boundaries(qna%ind(cs_i2_n))
