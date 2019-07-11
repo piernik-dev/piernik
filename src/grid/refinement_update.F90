@@ -319,7 +319,8 @@ contains
 
          ! sync structure before trying to fix it
          call leaves%update(" (correcting) ")
-         call all_cg%clear_ref_flags
+         !call all_cg%clear_ref_flags  ! this was preventing proper derefinement in sedov
+         ! \todo implement 1-pass correcting
          call fix_refinement(correct)
          call piernik_MPI_Allreduce(correct, pLAND)
          if (.not. correct) nciter = nciter + 1
