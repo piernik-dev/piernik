@@ -37,10 +37,11 @@ module initproblem
 
    integer(kind=4) :: n_sn
    real            :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, smooth, dt_sn, r, t_sn, dtrig
-   real :: ref_thr !< refinement threshold
+   real :: ref_thr   !< refinement threshold
    real :: deref_thr !< derefinement threshold
+   real :: ref_eps   !< smoother filter
 
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, smooth, n_sn, dt_sn, ref_thr, deref_thr, dtrig
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, smooth, n_sn, dt_sn, ref_thr, deref_thr, ref_eps, dtrig
 
 contains
 
@@ -92,8 +93,9 @@ contains
       smooth  = 0.0 ! smoothing relative to r0, smooth == 1 => profile like cos(r)**2, without uniform core
       n_sn    = 1
       dt_sn   = 0.0
-      ref_thr      = 0.3 ! Lower these values if you want to track the shock wave as it gets weaker
-      deref_thr    = 0.1
+      ref_thr   = 0.5 ! Lower this value if you want to track the shock wave as it gets weaker
+      deref_thr = 0.1
+      ref_eps   = 0.01
 
       if (master) then
 
@@ -128,6 +130,7 @@ contains
          rbuff(13)= deref_thr
          rbuff(14)= dtrig
          rbuff(15)= smooth
+         rbuff(16)= ref_eps
 
          ibuff(1) = n_sn
 
@@ -153,6 +156,7 @@ contains
          deref_thr    = rbuff(13)
          dtrig        = rbuff(14)
          smooth       = rbuff(15)
+         ref_eps      = rbuff(16)
 
          n_sn         = ibuff(1)
 
@@ -166,7 +170,7 @@ contains
       enddo
 
       do id = 1, flind%energ
-         call user_ref2list(wna%fi, flind%all_fluids(id)%fl%ien, ref_thr, deref_thr, 0., "relgrad")
+         call user_ref2list(wna%fi, flind%all_fluids(id)%fl%ien, ref_thr, deref_thr, ref_eps, "Loechner", .true.)
       enddo
 
 

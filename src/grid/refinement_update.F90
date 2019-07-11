@@ -43,8 +43,7 @@ contains
 
    subroutine scan_for_refinements
 
-      use all_boundaries,   only: all_bnd
-      use cg_leaves,             only: leaves
+      use all_boundaries,        only: all_bnd
       use cg_level_connected,    only: cg_level_connected_T
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
@@ -89,7 +88,7 @@ contains
       call piernik_MPI_Allreduce(cnt(PROBLEM), pSUM)
 #endif /* VERBOSED_REFINEMENTS */
 
-      call auto_refine_derefine(leaves)
+      call auto_refine_derefine
 #ifdef VERBOSED_REFINEMENTS
       call sanitize_all_ref_flags
       cnt(AUTO) = all_cg%count_ref_flags()
@@ -188,7 +187,7 @@ contains
       use mpisetup,             only: piernik_MPI_Allreduce!, proc
       use named_array_list,     only: qna
       use refinement,           only: n_updAMR, emergency_fix
-      use refinement_crit_list, only: refines2list
+      use refinement_crit_list, only: refines2list, auto_refine_derefine
 #ifdef GRAV
       use gravity,              only: update_gp
 #endif /* GRAV */
@@ -320,7 +319,8 @@ contains
 
          ! sync structure before trying to fix it
          call leaves%update(" (correcting) ")
-         call all_cg%clear_ref_flags
+         !call all_cg%clear_ref_flags  ! this was preventing proper derefinement in sedov
+         ! \todo implement 1-pass correcting
          call fix_refinement(correct)
          call piernik_MPI_Allreduce(correct, pLAND)
          if (.not. correct) nciter = nciter + 1
@@ -373,6 +373,7 @@ contains
       if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
 
       call all_bnd
+      call auto_refine_derefine(plots_only = .true.)  ! refresh refinement criterion fields, if any
       !> \todo call the update of cs_i2 if and only if something has changed
       !> \todo add another flag to named_array_list::na_var so the user can also specify fields that need boundary updates on fine/coarse boundaries
       if (qna%exists(cs_i2_n)) call leaves%leaf_arr3d_boundaries(qna%ind(cs_i2_n))

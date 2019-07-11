@@ -74,7 +74,7 @@ contains
                call die(msg)
             else
                do c = lbound(ic, dim=1), ubound(ic, dim=1)
-                  call user_ref2list(iv, ic(c), refine_vars(i)%ref_thr, refine_vars(i)%deref_thr, refine_vars(i)%aux, refine_vars(i)%rname)
+                  call user_ref2list(iv, ic(c), refine_vars(i)%ref_thr, refine_vars(i)%deref_thr, refine_vars(i)%aux, refine_vars(i)%rname, refine_vars(i)%plotfield)
                enddo
             endif
          endif
@@ -85,11 +85,14 @@ contains
 
 !> \brief Add a user-defined criteria to the list
 
-   subroutine user_ref2list(iv, ic, ref_thr, deref_thr, aux, rname)
+   subroutine user_ref2list(iv, ic, ref_thr, deref_thr, aux, rname, plotfield)
 
-      use constants,          only: INVALID
-      use dataio_pub,         only: warn, die
-      use refinement_filters, only: refine_on_gradient, refine_on_relative_gradient
+      use cg_list_global,     only: all_cg
+      use constants,          only: INVALID, dsetnamelen
+      use dataio_pub,         only: warn, die, printinfo, msg
+      use mpisetup,           only: master
+      use named_array_list,   only: qna, wna
+      use refinement_filters, only: refine_on_gradient, refine_on_relative_gradient, refine_on_second_derivative
       use refinement,         only: inactive_name
 
       implicit none
@@ -100,30 +103,49 @@ contains
       real,             intent(in) :: deref_thr !< derefinement threshold
       real,             intent(in) :: aux       !< auxiliary parameter
       character(len=*), intent(in) :: rname     !< name of the refinement routine
+      logical,          intent(in) :: plotfield !< create an array to keep the value of refinement criterion
+
+      character(len=dsetnamelen) :: ref_n
+      integer :: i
 
       if (iv == INVALID) then
          call warn("[refinement_crit_list:user_ref2list] invalid field. Ignored.")
          return
       endif
       if (.not. allocated(ref_crit_list)) allocate(ref_crit_list(0))
-      ref_crit_list = [ ref_crit_list, ref_crit(iv, ic, ref_thr, deref_thr, aux, null()) ]
+      ref_crit_list = [ ref_crit_list, ref_crit(iv, ic, INVALID, ref_thr, deref_thr, aux, null()) ]
       select case (trim(rname))
          case ("grad")
             ref_crit_list(ubound(ref_crit_list, dim=1))%refine => refine_on_gradient
          case ("relgrad")
             ref_crit_list(ubound(ref_crit_list, dim=1))%refine => refine_on_relative_gradient
+         case ("Loechner", "second_order", "d2")
+            ref_crit_list(ubound(ref_crit_list, dim=1))%refine => refine_on_second_derivative
 
 !> \todo Implement Richardson extrapolation method, as described in M. Berger papers
 
-!>
-!! \todo Implement Loechner criteria
-!! Original paper: https://www.researchgate.net/publication/222452974_An_adaptive_finite_element_scheme_for_transient_problems_in_CFD
-!! Cartesian grid implementation: http://flash.uchicago.edu/~jbgallag/2012/flash4_ug/node14.html#SECTION05163100000000000000 (note that some indices in the left part of denominator are slightly messed up)
-!<
          case (trim(inactive_name)) ! do nothing
          case default
             call die("[refinement_crit_list:user_ref2list] unknown refinement detection routine")
       end select
+
+      if (plotfield) then
+         do i = 1, ubound(ref_crit_list, dim=1)  ! Beware: O(n^2)
+            write(ref_n, '(a,i2.2)') "ref_", i
+            if (.not. qna%exists(ref_n)) exit
+         enddo
+         call all_cg%reg_var(ref_n)
+         ref_crit_list(ubound(ref_crit_list, dim=1))%iplot = qna%ind(ref_n)
+         write(msg, '(3a)') "[refinement_crit_list:user_ref2list] refinement criterion of type '", trim(rname), "' for '"
+         if (ic /= INVALID) then
+            write(msg, '(3a,i3,a)') trim(msg), trim(wna%lst(iv)%name), "(", ic, ")"
+         else
+            write(msg, '(2a)') trim(msg), trim(qna%lst(iv)%name)
+         endif
+         write(msg, '(4a)') trim(msg), "' is stored in array '", trim(ref_n), "'"
+         if (master) call printinfo(msg)
+      endif
+
       !> \todo try to detect doubled criteria
 
    end subroutine user_ref2list
@@ -136,24 +158,32 @@ contains
 !! The rest of the domain will stay unaffected or be corrected for refinement defects.
 !<
 
-   subroutine auto_refine_derefine(leaves)
+   subroutine auto_refine_derefine(plots_only)
 
-      use cg_list,          only: cg_list_element, cg_list_T
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
       use constants,        only: INVALID
       use dataio_pub,       only: die
       use named_array_list, only: qna, wna
 
       implicit none
 
-      class(cg_list_T), intent(inout) :: leaves
+      logical, optional, intent(in) :: plots_only
 
       integer :: i
-      logical :: var3d
+      logical :: var3d, skip
       type(cg_list_element), pointer :: cgl
       real, dimension(:,:,:), pointer :: p3d
 
       if (.not. allocated(ref_crit_list)) return
       do i = lbound(ref_crit_list, dim=1), ubound(ref_crit_list, dim=1)
+
+         skip = .false.
+         if (present(plots_only)) then
+            if (plots_only) skip = (ref_crit_list(i)%iplot == INVALID)
+         endif
+         if (skip) cycle
+
          var3d = (ref_crit_list(i)%ic == INVALID)
 
          if (var3d) then
