@@ -105,18 +105,19 @@ contains
 !<
    subroutine init_refinement
 
-      use constants,      only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, LO, HI, cbuff_len, refinement_factor
-      use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,     only: die, code_progress, warn, msg, printinfo
-      use domain,         only: dom
-      use mpisetup,       only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
+      use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GLOBAL, xdim, ydim, zdim, I_ZERO, I_ONE, LO, HI, cbuff_len, refinement_factor
+      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub, only: die, code_progress, warn, msg, printinfo
+      use domain,     only: dom
+      use global,     only: do_external_corners
+      use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
       integer :: d
       logical :: do_refine
 
-      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[refinement:init_refinement] Domain not initialized.")
+      if (code_progress < max(PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GLOBAL)) call die("[refinement:init_refinement] Domain or global not initialized.")
 
       level_min = base_level_id
       level_max = level_min
@@ -284,6 +285,11 @@ contains
          n_updAMR  = huge(I_ONE)
       endif
       if (master) call printinfo(msg)
+
+      if (do_external_corners .and. (.not. prefer_n_bruteforce)) then
+         prefer_n_bruteforce = .true.
+         if (master) call warn("[refinement] prefer_n_bruteforce implied by global::do_external_corners")
+      endif
 
    end subroutine init_refinement
 
