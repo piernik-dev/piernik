@@ -106,18 +106,18 @@ contains
    subroutine prepare_sources(cg)
 
       use grid_cont,  only: grid_container
-#ifdef COSM_RAYS
+#if defined(COSM_RAYS) && defined(IONIZED)
       use crhelpers,  only: div_v
       use fluidindex, only: flind
-#endif /* COSM_RAYS */
+#endif /* COSM_RAYS && IONIZED */
 
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg                 !< current grid piece
 
-#ifdef COSM_RAYS
+#if defined(COSM_RAYS) && defined(IONIZED)
       call div_v(flind%ion%pos, cg)
-#endif /* COSM_RAYS */
+#endif /* COSM_RAYS && IONIZED */
       if (.false. .and. cg%is_old) return ! to supress compiler warnings
 
    end subroutine prepare_sources
