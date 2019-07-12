@@ -70,6 +70,7 @@ module refinement
       real :: ref_thr                   !< refinement threshold
       real :: deref_thr                 !< derefinement threshold
       real :: aux                       !< auxiliary parameter (can be smoother or filter strength)
+      logical :: plotfield              !< create a 3D array to keep the value of refinement criterion when set to .true.
    end type ref_auto_param
    integer, parameter :: n_ref_auto_param = 10                                 !< number of automatic refinement criteria available to user
    type(ref_auto_param), dimension(n_ref_auto_param), protected :: refine_vars !< Definitions of user-supplied automatic refinement criteria: refinement vatiable, refinement algorithm, refinement threshold, derefinement threshold, auxiliary parameter
@@ -126,7 +127,7 @@ contains
       oop_thr = 0.1
       refine_points(:) = ref_point(base_level_id-1, [ 0., 0., 0.] )
       refine_boxes (:) = ref_box  (base_level_id-1, reshape([ 0., 0., 0., 0., 0., 0.], [ndims, HI-LO+I_ONE] ) )
-      refine_vars  (:) = ref_auto_param (inactive_name, inactive_name, 0., 0., 0.)
+      refine_vars  (:) = ref_auto_param (inactive_name, inactive_name, 0., 0., 0., .false.)
 
       if (1 + 9*nshapes +3*n_ref_auto_param > ubound(rbuff, dim=1)) call die("[refinement:init_refinement] increase rbuff size") ! should be detected at compile time but it is only a warning
       if (2*n_ref_auto_param > ubound(cbuff, dim=1)) call die("[refinement:init_refinement] increase cbuff size")
@@ -167,6 +168,7 @@ contains
 
          lbuff(2) = strict_SFC_ordering
          lbuff(3) = prefer_n_bruteforce
+         lbuff(4:3+n_ref_auto_param) = refine_vars(:)%plotfield
 
          rbuff(1) = oop_thr
          rbuff(2          :1+  nshapes) = refine_points(:)%coords(xdim)
@@ -201,8 +203,9 @@ contains
          refine_points(:)%level = ibuff(11        :10+  nshapes)
          refine_boxes (:)%level = ibuff(11+nshapes:10+2*nshapes)
 
-         strict_SFC_ordering = lbuff(2)
-         prefer_n_bruteforce = lbuff(3)
+         strict_SFC_ordering      = lbuff(2)
+         prefer_n_bruteforce      = lbuff(3)
+         refine_vars(:)%plotfield = lbuff(4:3+n_ref_auto_param)
 
          oop_thr = rbuff(1)
          refine_points(:)%coords(xdim)     = rbuff(2          :1+  nshapes)
