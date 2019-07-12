@@ -118,20 +118,20 @@ contains
       enddo
 
 #ifdef COSM_RAYS
-      puu   => uu(:, flind%crs%beg:flind%crs%end)
+      puu   =>   uu(:, flind%crs%beg:flind%crs%end)
       pflux => flux(:, flind%crs%beg:flind%crs%end)
-      pvx   => vx(:, flind%ion%pos)
+      pvx   =>   vx(:, flind%all_fluids(1)%fl%pos)    ! this should be ionized gas if it is defined
 
       call flux_crs(pflux,pvx,puu,n)
 
-      cfr(:, flind%crs%beg:flind%crs%end)  = spread(cfr(:, flind%ion%iarr(1)), 2, flind%crs%all)
+      cfr (:, flind%crs%beg:flind%crs%end) = spread(cfr(:, flind%all_fluids(1)%fl%iarr(1)), 2, flind%crs%all)
 #endif /* COSM_RAYS */
 
 #ifdef TRACER
       do p = 1, size(trace_fluid)
-         pu1d  => uu(:, flind%trc%beg + p - 1)
+         pu1d  =>   uu(:, flind%trc%beg + p - 1)
          pfl1d => flux(:, flind%trc%beg + p - 1)
-         pvx   => vx(:, flind%all_fluids(trace_fluid(p))%fl%pos)
+         pvx   =>   vx(:, flind%all_fluids(trace_fluid(p))%fl%pos)
          call flux_tracer(pfl1d, pu1d, pvx)
          cfr(:, flind%trc%beg + p - 1)  = cfr(:, flind%all_fluids(trace_fluid(p))%fl%iarr(1))
       enddo

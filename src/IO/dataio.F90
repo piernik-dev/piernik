@@ -1230,7 +1230,10 @@ contains
       use named_array_list, only: qna
       use units,            only: mH, kboltz
 #ifndef ISO
-      use constants,        only: ION, DST, half, I_ZERO
+#ifdef MAGNETIC
+      use constants,        only: ION, half
+#endif /* MAGNETIC */
+      use constants,        only: DST, I_ZERO
       use global,           only: smallp
 #endif /* !ISO */
 
@@ -1392,7 +1395,9 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             cgl%cg%wa(:,:,:) = cgl%cg%u(fl%ien,:,:,:) - ekin(cgl%cg%u(fl%imx,:,:,:), cgl%cg%u(fl%imy,:,:,:), cgl%cg%u(fl%imz,:,:,:), cgl%cg%u(fl%idn,:,:,:)) ! eint
+#ifdef MAGNETIC
             if (fl%tag == ION) cgl%cg%wa(:,:,:) = cgl%cg%wa(:,:,:) - half*(sum(cgl%cg%b(:,:,:,:)**2,dim=1))
+#endif /* MAGNETIC */
             cgl%cg%wa(:,:,:) = max(fl%gam_1*cgl%cg%wa(:,:,:),smallp)  ! pres
             cgl => cgl%nxt
          enddo

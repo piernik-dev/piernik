@@ -50,7 +50,7 @@
     dt_res  = 1e-1
     dt_log  = 1.0e-4
     dt_tsl  = 1.0e-4
-    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'velx', 'vely', 'ethr', 'magB', "pres", "divb", "divb4", "psi", "level"
+    vars(1:) = 'ener', 'dens', 'ethr', 'magB', "pres", "divb", "divb4", "psi", "level", "ref_01"
  /
 
  $FLUID_IONIZED
@@ -83,8 +83,6 @@
     z0     = -0.0
     r0     = 0.1
     smooth = 0.
-    ref_thr = 0.01
-    deref_thr = 0.001
  /
 
  $MULTIGRID_SOLVER
@@ -101,5 +99,5 @@
     bsize = 3*32
     level_max = 4
     n_updAMR = 3
-    refine_vars(1) = "dens", "relgrad", 0.01, 0.001
+!    refine_vars(1) = "dens", "Loechner", 0.5, 0.1, 0.01, .true.
  /
