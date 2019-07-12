@@ -1664,9 +1664,9 @@ contains
 !---------------------------------------------------------------------------------------------------
    subroutine get_fqp_up(exit_code)
 
-      use constants,       only: zero, one
+      use constants,       only: zero, one, HI
       use cresp_variables, only: clight ! use units, only: clight
-      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_up
+      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers
 #ifdef CRESP_VERBOSED
       use dataio_pub,      only: msg, printinfo
 #endif /* CRESP_VERBOSED */
@@ -1681,7 +1681,7 @@ contains
       alpha = (e(i_up)/(n(i_up)*clight*p_fix(i_up-1)))
       n_in  = n(i_up)
 
-      call assoc_pointers_up
+      call assoc_pointers(HI)
 
       x_NR = intpol_pf_from_NR_grids(alpha, n_in, interpolated)
       if (interpolated .eqv. .false.) then
@@ -1738,8 +1738,8 @@ contains
 !--------------------------------------------------------------------------------------------------
    subroutine get_fqp_lo(exit_code)
 
-      use constants,       only: zero, one
-      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_lo
+      use constants,       only: zero, one, LO
+      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers
       use cresp_variables, only: clight ! use units, only: clight
 #ifdef CRESP_VERBOSED
       use dataio_pub,      only: msg, printinfo
@@ -1755,7 +1755,7 @@ contains
       alpha = (e(i_lo+1)/(n(i_lo+1)*clight*p_fix(i_lo+1)))
       n_in  = n(i_lo+1)
 
-      call assoc_pointers_lo
+      call assoc_pointers(LO)
 
       x_NR = intpol_pf_from_NR_grids(alpha, n_in, interpolated)
       if (interpolated .eqv. .false.) then

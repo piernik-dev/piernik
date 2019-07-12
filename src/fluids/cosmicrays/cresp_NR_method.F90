@@ -42,7 +42,7 @@ module cresp_NR_method
    private
    public :: alpha, n_in, NR_algorithm, NR_algorithm_1D, compute_q, intpol_pf_from_NR_grids, selected_function_1D, &
            &    selected_function_2D, selected_value_check_1D, initialize_arrays, e_small_to_f, q_ratios, fvec_lo, &
-           &    fvec_up, fvec_test, cresp_initialize_guess_grids, assoc_pointers_lo, assoc_pointers_up
+           &    fvec_up, fvec_test, cresp_initialize_guess_grids, assoc_pointers
    public :: e_in, nr_test, nr_test_1D, p_ip1, n_tab_up, alpha_tab_up, n_tab_lo, alpha_tab_lo, alpha_tab_q, q_control, & ! list for NR driver
            &    p_a, p_n, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, q_grid, lin_interpol_1D, alpha_to_q,   &   ! can be commented out for CRESP and PIERNIK
            &    lin_extrapol_1D, lin_interpolation_1D, nearest_solution
@@ -358,7 +358,7 @@ contains
             endif
 
             if ( NR_run_refine_pf .eqv. .true.) then
-               call assoc_pointers_up
+               call assoc_pointers(HI)
                call refine_all_directions(HI)
             endif
 
@@ -379,7 +379,7 @@ contains
             endif
 
             if (NR_run_refine_pf .eqv. .true.) then
-               call assoc_pointers_lo
+               call assoc_pointers(LO)
                call refine_all_directions(LO)
             endif
 
@@ -454,37 +454,32 @@ contains
    end function ln_eval_array_val
 
 !----------------------------------------------------------------------------------------------------
-   subroutine assoc_pointers_lo
+   subroutine assoc_pointers(bound_case)
 
       implicit none
 
-      p_a => alpha_tab_lo
-      p_n => n_tab_lo
-      p_p => p_ratios_lo
-      p_f => f_ratios_lo
-      selected_function_2D => fvec_lo
+      integer(kind=4), intent(in) :: bound_case
+
+      if (bound_case == LO) then
+         p_a => alpha_tab_lo
+         p_n => n_tab_lo
+         p_p => p_ratios_lo
+         p_f => f_ratios_lo
+         selected_function_2D => fvec_lo
+      endif
+      if (bound_case == HI) then
+         p_a => alpha_tab_up
+         p_n => n_tab_up
+         p_p => p_ratios_up
+         p_f => f_ratios_up
+         selected_function_2D => fvec_up
+      endif
 
 #ifdef CRESP_VERBOSED
-      current_bound = LO
+      current_bound = bound_case
 #endif /* CRESP_VERBOSED */
 
-   end subroutine assoc_pointers_lo
-!----------------------------------------------------------------------------------------------------s
-   subroutine assoc_pointers_up
-
-      implicit none
-
-      p_a => alpha_tab_up
-      p_n => n_tab_up
-      p_p => p_ratios_up
-      p_f => f_ratios_up
-      selected_function_2D => fvec_up
-
-#ifdef CRESP_VERBOSED
-      current_bound = HI
-#endif /* CRESP_VERBOSED */
-
-   end subroutine assoc_pointers_up
+   end subroutine assoc_pointers
 
 !----------------------------------------------------------------------------------------------------
    subroutine fill_boundary_grid(bound_case, fill_p, fill_f) ! to be paralelized
@@ -508,8 +503,7 @@ contains
       prev_solution(2) = p_space(1)**q_space(1)
       prev_solution_1 = prev_solution
 
-      if (bound_case == LO) call assoc_pointers_lo
-      if (bound_case == HI) call assoc_pointers_up
+      call assoc_pointers(bound_case)
 
       call sleep(1)
 
