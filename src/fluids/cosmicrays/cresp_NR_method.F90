@@ -33,6 +33,7 @@
 module cresp_NR_method
 ! pulled by COSM_RAY_ELECTRONS
 
+   use constants,      only: LO, HI
    use initcrspectrum, only: eps
 
    implicit none
@@ -56,7 +57,9 @@ module cresp_NR_method
    real(kind=8), pointer, dimension(:)              :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
    real(kind=8), pointer, dimension(:,:)            :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
 #ifdef CRESP_VERBOSED
-   character(len=2)                                 :: current_bound
+   integer(kind=4)                                  :: current_bound
+   integer, parameter                               :: blen = 2
+   character(len=blen), dimension(LO:HI), parameter :: bound_name = ['lo', 'up']
 #endif /* CRESP_VERBOSED */
 
    abstract interface
@@ -106,7 +109,6 @@ contains
 !         write(*,"(A33,2E22.15)")"Convergence (f) at initialization", x
          return
       endif
-
 
          do i = 1, NR_iter_limit
             if (maxval(abs(fun_vec_value)) < err_f ) then    ! For convergence via value of f
@@ -195,8 +197,8 @@ contains
 
    function derivative_1D(x) ! via finite difference method
 
-      use constants,       only: half
-      use initcrspectrum,  only: eps
+      use constants,      only: half
+      use initcrspectrum, only: eps
 
       implicit none
 
@@ -229,8 +231,8 @@ contains
       if ((master) .and. (first_run .eqv. .true. )) then
          helper_arr_dim = int(arr_dim/I_FOUR,kind=4)
 
-         if (.not. allocated(p_space))     allocate(p_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
-         if (.not. allocated(q_space))     allocate(q_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
+         if (.not. allocated(p_space)) allocate(p_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
+         if (.not. allocated(q_space)) allocate(q_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
 
          call date_and_time(date,time)
          call date_and_time(DATE=date)
@@ -350,14 +352,14 @@ contains
 
             if ( int_logical_f + int_logical_p .gt. 0 .or. force_init_NR .eqv. .true.) then
    ! Setting up the "guess grid" for p_up case
-               call fill_boundary_grid("up", p_ratios_up, f_ratios_up)
+               call fill_boundary_grid(HI, p_ratios_up, f_ratios_up)
             else
                print *," >> Will not solve ratios table (up), reading data from file instead."
             endif
 
             if ( NR_run_refine_pf .eqv. .true.) then
                call assoc_pointers_up
-               call refine_all_directions("up")
+               call refine_all_directions(HI)
             endif
 
             call save_NR_guess_grid(p_ratios_up,"p_ratios_up")
@@ -371,14 +373,14 @@ contains
 
             if ( int_logical_f + int_logical_p .gt. 0 .or. force_init_NR .eqv. .true.) then
    ! Setting up the "guess grid" for p_lo case
-               call fill_boundary_grid("lo", p_ratios_lo, f_ratios_lo)
+               call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo)
             else
                print *," >> Will not solve ratios table (lo), reading data from file instead."
             endif
 
             if (NR_run_refine_pf .eqv. .true.) then
                call assoc_pointers_lo
-               call refine_all_directions("lo")
+               call refine_all_directions(LO)
             endif
 
             call save_NR_guess_grid(p_ratios_lo,"p_ratios_lo")
@@ -423,9 +425,9 @@ contains
 
       implicit none
 
-      character(len=2) :: bound_case
+      integer(kind=4), intent(in) :: bound_case
 
-      print *,"Running refine for:", bound_case, " boundary"
+      print *,"Running refine for:", bound_name(bound_case), " boundary"
 
       call refine_ij(p_p, p_f,  1, -1)
       call refine_ji(p_p, p_f,  1, -1)
@@ -463,7 +465,7 @@ contains
       selected_function_2D => fvec_lo
 
 #ifdef CRESP_VERBOSED
-      current_bound = "lo"
+      current_bound = LO
 #endif /* CRESP_VERBOSED */
 
    end subroutine assoc_pointers_lo
@@ -479,7 +481,7 @@ contains
       selected_function_2D => fvec_up
 
 #ifdef CRESP_VERBOSED
-      current_bound = "up"
+      current_bound = HI
 #endif /* CRESP_VERBOSED */
 
    end subroutine assoc_pointers_up
@@ -492,6 +494,7 @@ contains
 
       implicit none
 
+      integer(kind=4), intent(in)  :: bound_case ! HI or LO
       real(kind=8), dimension(1:2) :: x_vec, prev_solution, prev_solution_1, x_step
 #ifdef CRESP_VERBOSED
       real(kind=8), dimension(1:2) :: x_in
@@ -499,15 +502,14 @@ contains
       real(kind=8), dimension(:,:) :: fill_p, fill_f
       integer(kind=4) :: i, j, is, js
       logical         :: exit_code, new_line
-      character(len=2) :: bound_case ! "up" or "lo"
       character(len=6) :: nam = "Solve "
 
       prev_solution(1) = p_space(1)
       prev_solution(2) = p_space(1)**q_space(1)
       prev_solution_1 = prev_solution
 
-      if (bound_case == "lo") call assoc_pointers_lo
-      if (bound_case == "up") call assoc_pointers_up
+      if (bound_case == LO) call assoc_pointers_lo
+      if (bound_case == HI) call assoc_pointers_up
 
       call sleep(1)
 
@@ -522,7 +524,7 @@ contains
             alpha = p_a(i)
             n_in  = p_n(j)
 #ifdef CRESP_VERBOSED
-            write(*,"(A14,A2,A2,2I4,A9,I4,A1)",advance="no") "Now solving (",bound_case,") ",i,j,", sized ",arr_dim," "
+            write(*,"(A14,A2,A2,2I4,A9,I4,A1)",advance="no") "Now solving (",bound_name(bound_case),") ",i,j,", sized ",arr_dim," "
 #endif /* CRESP_VERBOSED */
 
             call seek_solution_prev(fill_p(i,j), fill_f(i,j), prev_solution, nam, exit_code)
@@ -809,10 +811,10 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(1:), intent(in)  :: x_in
+      real(kind=8), dimension(1:), intent(in) :: x_in
       real(kind=8), dimension(1:), intent(in) :: x_out
-      character(len=4), intent(in) :: met_name
-      character(len=6), intent(in) :: sought_by
+      character(len=4),            intent(in) :: met_name
+      character(len=6),            intent(in) :: sought_by
 
       write (*, "(A6,A13,2E16.9)",advance="no") sought_by," (alpha, n): ",alpha,n_in
       write (*, "(A5,A4,A42, 2E19.10e3)",advance="no") " -> (",met_name,") solution obtained, (p_ratio, f_ratio) = ", x_out
@@ -1412,7 +1414,7 @@ contains
       exit_code = .false.
 
 #ifdef CRESP_VERBOSED
-      write (*,"(A30,A2,A4)",advance="no") "Determining indices for case: ", current_bound, "... "
+      write (*,"(A30,A2,A4)",advance="no") "Determining indices for case: ", bound_name(current_bound), "... "
 #endif /* CRESP_VERBOSED */
       call determine_loc(a_val, n_val, loc1, loc2, loc_no_ip, exit_code)
 
@@ -1598,20 +1600,21 @@ contains
 
    end subroutine save_NR_guess_grid
 !----------------------------------------------------------------------------------------------------
+#ifdef CRESP_VERBOSED
    subroutine save_loc(bound_case, loc1, loc2)
 
       implicit none
 
-      integer(kind=4) :: loc1, loc2
-      character(len=2):: bound_case
-      character(len=10):: f_name
+      integer(kind=4), intent(in) :: bound_case, loc1, loc2
+      character(len=10)           :: f_name
 
-      f_name = "loc_"//bound_case//".dat"
+      f_name = "loc_"//bound_name(bound_case)//".dat"
       open(32, file=f_name, status="unknown", position="append")
       write (32,"(2I5)") loc1, loc2
       close(32)
 
    end subroutine save_loc
+#endif /* CRESP_VERBOSED */
 !----------------------------------------------------------------------------------------------------
    subroutine read_NR_guess_grid(NR_guess_grid, var_name, exit_code) ! must be improved, especially for cases when files do not exist
 
@@ -1690,6 +1693,7 @@ contains
    end function ind_to_flog
 !----------------------------------------------------------------------------------------------------
    function inverse_f_to_ind(value, min_in, max_in, length) ! returns lower index for a given value, will need limiter
+
       use constants, only: I_ONE
 
       implicit none
@@ -1697,7 +1701,7 @@ contains
       integer(kind=4) :: inverse_f_to_ind, length
       real(kind=8)    :: value, min_in, max_in
 
-         inverse_f_to_ind = int((log10(value/min_in)/log10(max_in/min_in)) * (length - I_ONE )) + I_ONE
+      inverse_f_to_ind = int((log10(value/min_in)/log10(max_in/min_in)) * (length - I_ONE )) + I_ONE
 
    end function inverse_f_to_ind
 !----------------------------------------------------------------------------------------------------
