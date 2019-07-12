@@ -36,7 +36,7 @@
 
 module dot
 
-   use decomposition,   only: cuboid
+   use decomposition, only: cuboid
 
    implicit none
 
@@ -46,7 +46,7 @@ module dot
    !> \brief cuboid with SFC_id
    type, extends(cuboid) :: c_id
       integer(kind=8) :: SFCid
-   end type C_id
+   end type c_id
 
    !> \brief A list of grid pieces (typically used as a list of all grids residing on a given process)
    type :: cuboids
