@@ -274,13 +274,13 @@ contains
       edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
 
       if ((del_i_up .eq. 0) .and. (approx_p_up .gt. 0)) then
-         if (assert_active_bin_via_nei(ndt(i_up_next), edt(i_up_next), i_up_next) .eqv. .false.) then
+         if (.not. assert_active_bin_via_nei(ndt(i_up_next), edt(i_up_next), i_up_next)) then
             call transfer_quantities(ndt(i_up_next-1),ndt(i_up_next))
             call transfer_quantities(edt(i_up_next-1),edt(i_up_next))
          endif
       endif
       if ((del_i_lo .eq. 0) .and. (approx_p_lo .gt. 0)) then
-         if (assert_active_bin_via_nei(ndt(i_lo_next+1), edt(i_lo_next+1), i_lo_next) .eqv. .false.) then
+         if (.not. assert_active_bin_via_nei(ndt(i_lo_next+1), edt(i_lo_next+1), i_lo_next)) then
             call transfer_quantities(ndt(i_lo_next+2),ndt(i_lo_next+1))
             call transfer_quantities(edt(i_lo_next+2),edt(i_lo_next+1))
          endif
@@ -447,7 +447,7 @@ contains
         endif
      enddo
 
-     if ( empty_cell .eqv. .true.) return   ! empty cell - nothing to do here!
+     if (empty_cell) return   ! empty cell - nothing to do here!
 
      i_up = ncre
      do i = ncre, 1,-1
@@ -1550,7 +1550,7 @@ contains
          else
             q(i) = zero
         endif
-        if ( exit_code .eqv. .true. ) fail_count_comp_q(i) = fail_count_comp_q(i) + 1
+        if (exit_code) fail_count_comp_q(i) = fail_count_comp_q(i) + 1
       enddo
 
    end subroutine ne_to_q
@@ -1684,7 +1684,7 @@ contains
       call assoc_pointers(HI)
 
       x_NR = intpol_pf_from_NR_grids(alpha, n_in, interpolated)
-      if (interpolated .eqv. .false.) then
+      if (.not. interpolated) then
          exit_code = .true.
          fail_count_interpol(2) = fail_count_interpol(2) +1
          return
@@ -1697,10 +1697,10 @@ contains
       write(msg,"(A31,2E22.15)") "Input ratios(p, f) for NR (up):", x_NR      ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
-      if ( (NR_refine_pf_up .eqv. .true.) .or. (interpolated .eqv. .false.)) then
+      if (NR_refine_pf_up .or. .not. interpolated) then
          call NR_algorithm(x_NR, exit_code)
-         if (exit_code .eqv. .true.) then ! some failures still take place
-            if (interpolated .eqv. .false.) then
+         if (exit_code) then ! some failures still take place
+            if (.not. interpolated) then
                exit_code = .true.
 #ifdef CRESP_VERBOSED
                write(msg,"(A,4E18.9)") " Interpolation AND NR failure (up)", alpha, n_in, x_NR_init      ; call printinfo(msg)
@@ -1758,7 +1758,7 @@ contains
       call assoc_pointers(LO)
 
       x_NR = intpol_pf_from_NR_grids(alpha, n_in, interpolated)
-      if (interpolated .eqv. .false.) then
+      if (.not. interpolated) then
          exit_code = .true.
          fail_count_interpol(1) = fail_count_interpol(1) +1
          return
@@ -1770,10 +1770,10 @@ contains
 #ifdef CRESP_VERBOSED
       write (msg, "(A31,2E22.15)") "Input ratios(p, f) for NR (lo):", x_NR    ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
-      if ( (NR_refine_pf_lo .eqv. .true.) .or. (interpolated .eqv. .false.)) then
+      if (NR_refine_pf_lo .or. .not.interpolated) then
          call NR_algorithm(x_NR, exit_code)
-         if (exit_code .eqv. .true.) then ! some failures still take place
-            if (interpolated .eqv. .false.) then
+         if (exit_code) then ! some failures still take place
+            if (.not. interpolated) then
                exit_code = .true.
 #ifdef CRESP_VERBOSED
                write (msg, "(A,3E18.9)") " Interpolation AND NR failure (lo)", alpha, n_in     ; call printinfo(msg)

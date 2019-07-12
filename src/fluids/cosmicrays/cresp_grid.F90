@@ -182,7 +182,7 @@ module cresp_grid
       type(grid_container),   pointer :: cg
       logical, save                   :: first_run = .true., not_zeroed = .true.
 
-      if (first_run .eqv. .true.) then
+      if (first_run) then
          register_f = .false.
          register_p = .false.
          register_q = .false.

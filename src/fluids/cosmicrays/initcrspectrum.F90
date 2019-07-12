@@ -376,7 +376,7 @@ module initcrspectrum
          initial_condition           = trim(cbuff(1))
 
       endif
-      if (first_run .eqv. .true.) then
+      if (first_run) then
          if (ncre .ne. I_ZERO)  then
 #ifdef VERBOSE
                write (msg,'(A)')            '[initcrspectrum:init_cresp] Initial CRESP parameters read:'
