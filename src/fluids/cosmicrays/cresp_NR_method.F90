@@ -59,7 +59,7 @@ module cresp_NR_method
 #ifdef CRESP_VERBOSED
    integer(kind=4)                                  :: current_bound
 #endif /* CRESP_VERBOSED */
-   integer, parameter                               :: blen = 2, extlen = 4
+   integer, parameter                               :: blen = 2, extlen = 4, flen = 15
    character(len=blen), dimension(LO:HI), parameter :: bound_name = ['lo', 'up']
    integer(kind=4), parameter                       :: SLV = 1, RFN = 2
    character(len=extlen), parameter                 :: extension =  ".dat"
@@ -349,8 +349,8 @@ contains
       if (e_small_approx_init_cond .eq. 1) then
          write (*, "(A36)", advance="no") "Reading (up) boundary ratio files..."
          do j = 1,2
-            call read_NR_guess_grid(p_ratios_up, "p_ratios_up", exit_code) ;  int_logical_p = logical_2_int(exit_code)
-            call read_NR_guess_grid(f_ratios_up, "f_ratios_up", exit_code) ;  int_logical_f = logical_2_int(exit_code)
+            call read_NR_guess_grid(p_ratios_up, "p_ratios_", HI, exit_code) ;  int_logical_p = logical_2_int(exit_code)
+            call read_NR_guess_grid(f_ratios_up, "f_ratios_", HI, exit_code) ;  int_logical_f = logical_2_int(exit_code)
 
             if ( int_logical_f + int_logical_p .gt. 0 .or. force_init_NR) then
    ! Setting up the "guess grid" for p_up case
@@ -364,14 +364,14 @@ contains
                call refine_all_directions(HI)
             endif
 
-            call save_NR_guess_grid(p_ratios_up,"p_ratios_up")
-            call save_NR_guess_grid(f_ratios_up,"f_ratios_up")
+            call save_NR_guess_grid(p_ratios_up, "p_ratios_", HI)
+            call save_NR_guess_grid(f_ratios_up, "f_ratios_", HI)
          enddo
 
          write (*, "(A36)", advance="no") "Reading (lo) boundary ratio files"
          do j = 1,2
-            call read_NR_guess_grid(p_ratios_lo, "p_ratios_lo", exit_code) ;   int_logical_p = logical_2_int(exit_code)
-            call read_NR_guess_grid(f_ratios_lo, "f_ratios_lo", exit_code) ;   int_logical_f = logical_2_int(exit_code)
+            call read_NR_guess_grid(p_ratios_lo, "p_ratios_", LO, exit_code) ;   int_logical_p = logical_2_int(exit_code)
+            call read_NR_guess_grid(f_ratios_lo, "f_ratios_", LO, exit_code) ;   int_logical_f = logical_2_int(exit_code)
 
             if ( int_logical_f + int_logical_p .gt. 0 .or. force_init_NR) then
    ! Setting up the "guess grid" for p_lo case
@@ -385,8 +385,8 @@ contains
                call refine_all_directions(LO)
             endif
 
-            call save_NR_guess_grid(p_ratios_lo,"p_ratios_lo")
-            call save_NR_guess_grid(f_ratios_lo,"f_ratios_lo")
+            call save_NR_guess_grid(p_ratios_lo, "p_ratios_", LO)
+            call save_NR_guess_grid(f_ratios_lo, "f_ratios_", LO)
          enddo
       endif
 
@@ -1567,23 +1567,23 @@ contains
 
    end function compute_q
 !----------------------------------------------------------------------------------------------------
-   subroutine save_NR_guess_grid(NR_guess_grid, var_name)
+   subroutine save_NR_guess_grid(NR_guess_grid, var_name, bc)
 
       use cresp_variables, only: clight ! use units, only: clight
       use initcrspectrum,  only: e_small, q_big, max_p_ratio
 
       implicit none
 
-      real(kind=8),dimension(:,:) :: NR_guess_grid
-      integer(kind=4) :: j
-      character(len=11) :: var_name
-      character(len=15) :: f_name
+      real(kind=8), dimension(:,:), intent(in) :: NR_guess_grid
+      character(len=*),             intent(in) :: var_name
+      integer(kind=4),              intent(in) :: bc
+      integer(kind=4)                          :: j
+      character(len=flen)                      :: f_name
 
       f_name = var_name // extension
       open(31, file=f_name, status="unknown", position="rewind")
-         write(31,"(A57,A3,A105)") "This is a storage file for NR init grid, boundary case: ", var_name(9:), &
-            &     "Saved below: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2), max_p_ratio, q_big,  clight. &
-            &      Do not remove content from this file"
+         write(31,"(A56,A2,A104)") "This is a storage file for NR init grid, boundary case: ", bc, &
+            &    " Saved below: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2), max_p_ratio, q_big, clight. Do not remove content from this file"
          write(31, "(1E15.8, 2I10,10E22.15)") e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2), &
             &     max_p_ratio, q_big, clight              ! TODO: remove max_p_ratio, swap cols, rows with just arr_dim
          write(31, "(A1)") " "                            ! Blank line for
@@ -1601,18 +1601,18 @@ contains
       implicit none
 
       integer(kind=4), intent(in) :: bound_case, loc1, loc2
-      integer(kind=4), parameter  :: fnlen = 10
+      integer(kind=4), parameter  :: fnlen = 10, flun = 32
       character(len=fnlen)        :: f_name
 
       f_name = "loc_"//bound_name(bound_case)//extension
-      open(32, file=f_name, status="unknown", position="append")
-      write (32,"(2I5)") loc1, loc2
-      close(32)
+      open(flun, file=f_name, status="unknown", position="append")
+      write (flun,"(2I5)") loc1, loc2
+      close(flun)
 
    end subroutine save_loc
 #endif /* CRESP_VERBOSED */
 !----------------------------------------------------------------------------------------------------
-   subroutine read_NR_guess_grid(NR_guess_grid, var_name, exit_code) ! must be improved, especially for cases when files do not exist
+   subroutine read_NR_guess_grid(NR_guess_grid, var_name, bc, exit_code) ! must be improved, especially for cases when files do not exist
 
       use cresp_variables, only: clight ! use units, only: clight
       use func,            only: operator(.equals.)
@@ -1620,15 +1620,16 @@ contains
 
       implicit none
 
-      real(kind=8),dimension(:,:) :: NR_guess_grid
-      real(kind=8)                :: svd_e_sm, svd_max_p_r, svd_q_big, svd_clight
-      integer(kind=4) :: j, svd_cols, svd_rows, file_status = 0
-      character(len=11) :: var_name
-      character(len=15) :: f_name
-      logical           :: exit_code
+      real(kind=8), dimension(:,:), intent(inout) :: NR_guess_grid
+      character(len=*),             intent(in)    :: var_name
+      integer(kind=4),              intent(in)    :: bc
+      logical,                      intent(out)   :: exit_code
+      real(kind=8)                                :: svd_e_sm, svd_max_p_r, svd_q_big, svd_clight
+      integer(kind=4)                             :: j, svd_cols, svd_rows, file_status = 0
+      character(len=flen)                         :: f_name
 
       f_name = var_name // extension
-      open(31, file=f_name, status="old", position="rewind",IOSTAT=file_status)
+      open(31, file=f_name, status="old", position="rewind", IOSTAT=file_status)
       if (file_status .gt. 0) then
          write(*,"(A8,I4,A8,2A20)") "IOSTAT:", file_status, ": file ", var_name//extension," does not exist!"
          exit_code = .true.
@@ -1646,7 +1647,7 @@ contains
             enddo
             exit_code = .false.
          else
-            write(*,"(A61,A4,A6)") "Different initial parameters: will resolve ratio tables for ",var_name(10:)," case."
+            write(*,"(A61,A4,A6)") "Different initial parameters: will resolve ratio tables for ", bc," case."
             write(*,"(2I10,10E22.15)") svd_cols, svd_rows, svd_e_sm, svd_max_p_r, svd_q_big, svd_clight
             write(*,"(2I10,10E22.15)") size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2),e_small,max_p_ratio,q_big,clight
             exit_code = .true.
