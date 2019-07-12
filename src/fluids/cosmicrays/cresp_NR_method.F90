@@ -61,6 +61,7 @@ module cresp_NR_method
    integer, parameter                               :: blen = 2
    character(len=blen), dimension(LO:HI), parameter :: bound_name = ['lo', 'up']
 #endif /* CRESP_VERBOSED */
+   integer(kind=4), parameter                       :: SLV = 1, RFN = 2
 
    abstract interface
       function function_pointer_1D(z)
@@ -497,7 +498,7 @@ contains
       real(kind=8), dimension(:,:) :: fill_p, fill_f
       integer(kind=4) :: i, j, is, js
       logical         :: exit_code, new_line
-      character(len=6) :: nam = "Solve "
+      integer(kind=4) :: nam = SLV
 
       prev_solution(1) = p_space(1)
       prev_solution(2) = p_space(1)**q_space(1)
@@ -621,7 +622,7 @@ contains
       real(kind=8), dimension(:,:), intent(inout) :: ref_p, ref_f
       integer(kind=4)                             :: i, j, i_beg, i_end, j_beg, j_end
       real(kind=8), dimension(1:2)                :: prev_solution
-      character(len=6)                            :: nam = "Refine"
+      integer(kind=4)                             :: nam = RFN
       logical                                     :: exit_code, new_line
 
       if (allocated(p_space) .and. allocated(q_space)) then
@@ -673,7 +674,7 @@ contains
       real(kind=8), dimension(:,:), intent(inout) :: ref_p, ref_f
       integer(kind=4)                             :: i, j, i_beg, i_end, j_beg, j_end
       real(kind=8), dimension(1:2)                :: prev_solution
-      character(len=6)                            :: nam = "Refine"
+      integer(kind=4)                             :: nam = RFN
       logical                                     :: exit_code, new_line, i_primary
 
       if (allocated(p_space) .and. allocated(q_space)) then
@@ -722,7 +723,7 @@ contains
 
       real(kind=8), dimension(1:3),intent(inout) :: f3, p3
       real(kind=8), dimension(1:3),intent(in)    :: arg
-      character(len=6),            intent(inout) :: sought_by
+      integer(kind=4),             intent(in)    :: sought_by
       logical,                     intent(inout) :: exit_code
       real(kind=8), dimension(1:2)               :: x_vec_0, x_vec, delta, x_in
       integer(kind=4)                            :: nstep = 100, k
@@ -740,7 +741,7 @@ contains
             if (exit_code .eqv. .false.) then
                x_vec = abs(x_vec)
 #ifdef CRESP_VERBOSED
-               call msg_success("extr", sought_by,x_in,x_vec)
+               call msg_success("extr", sought_by, x_in, x_vec)
 #endif /* CRESP_VERBOSED */
                p3(3) = x_vec(1)
                f3(3) = x_vec(2)
@@ -750,7 +751,7 @@ contains
       endif
 
       return
-      if (.false.) k = len(sought_by) ! suppress compiler warnings
+      if (.false.) k = sought_by ! suppress compiler warnings
 
    end subroutine step_extr
 
@@ -764,7 +765,7 @@ contains
       real(kind=8), dimension(1:3), intent(inout) :: p3, f3
       integer(kind=4),              intent(in)    :: incr
       real(kind=8), dimension(1:3), intent(in)    :: args
-      character(len=6),             intent(in)    :: sought_by
+      integer(kind=4),              intent(in)    :: sought_by
       logical,                      intent(inout) :: exit_code
       real(kind=8), dimension(1:2)                :: x_vec, x_vec_0, delta, x_in
       integer(kind=4)                             :: k, nstep = 100
@@ -796,7 +797,7 @@ contains
       endif
 
       return
-      if (.false.) k = len(sought_by) ! suppress compiler warnings
+      if (.false.) k = sought_by ! suppress compiler warnings
 
    end subroutine step_inpl
 !----------------------------------------------------------------------------------------------------
@@ -807,10 +808,12 @@ contains
 
       real(kind=8), dimension(1:), intent(in) :: x_in
       real(kind=8), dimension(1:), intent(in) :: x_out
-      character(len=4),            intent(in) :: met_name
-      character(len=6),            intent(in) :: sought_by
+      character(len=*),            intent(in) :: met_name
+      integer(kind=4),             intent(in) :: sought_by
+      integer, parameter                      :: slen = 6
+      character(len=slen), dimension(SLV:RFN) :: sought = ['Solve ', 'Refine']
 
-      write (*, "(A6,A13,2E16.9)",advance="no") sought_by," (alpha, n): ",alpha,n_in
+      write (*, "(A6,A13,2E16.9)",advance="no") sought(sought_by)," (alpha, n): ",alpha,n_in
       write (*, "(A5,A4,A42, 2E19.10e3)",advance="no") " -> (",met_name,") solution obtained, (p_ratio, f_ratio) = ", x_out
       write (*, "(A21, 2E17.10)",advance="no") ", provided input:", x_in ; print *,""
 
@@ -837,7 +840,7 @@ contains
 
       real(kind=8),                 intent(inout) :: p2ref, f2ref
       real(kind=8), dimension(1:2), intent(inout) :: prev_solution
-      character(len=6),             intent(in)    :: sought_by
+      integer(kind=4),              intent(in)    :: sought_by
       logical,                      intent(inout) :: exit_code
       real(kind=8), dimension(1:2)                :: x_vec
 
@@ -857,7 +860,7 @@ contains
       endif
 
       return
-      if (.false.) x_vec(1) = float(len(sought_by)) ! suppress compiler warnings
+      if (.false.) x_vec(1) = float(sought_by) ! suppress compiler warnings
 
    end subroutine seek_solution_prev
 !----------------------------------------------------------------------------------------------------
@@ -867,8 +870,7 @@ contains
 
       real(kind=8),                 intent(out)   :: p2ref, f2ref
       real(kind=8), dimension(1:2), intent(inout) :: prev_solution
-      integer(kind=4),              intent(in)    :: i_obt, j_obt
-      character(len=6),             intent(in)    :: sought_by
+      integer(kind=4),              intent(in)    :: i_obt, j_obt, sought_by
       logical,                      intent(inout) :: exit_code
       real(kind=8), dimension(1:2)                :: x_vec, x_step
       integer(kind=4)                             :: ii, jj, nstep = 3
@@ -894,7 +896,7 @@ contains
       endif
 
       return
-      if (.false.) ii = len(sought_by) ! suppress compiler warnings
+      if (.false.) ii = sought_by ! suppress compiler warnings
 
    end subroutine seek_solution_step
 !----------------------------------------------------------------------------------------------------
