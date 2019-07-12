@@ -58,9 +58,9 @@ module cresp_NR_method
    real(kind=8), pointer, dimension(:,:)            :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
 #ifdef CRESP_VERBOSED
    integer(kind=4)                                  :: current_bound
+#endif /* CRESP_VERBOSED */
    integer, parameter                               :: blen = 2
    character(len=blen), dimension(LO:HI), parameter :: bound_name = ['lo', 'up']
-#endif /* CRESP_VERBOSED */
    integer(kind=4), parameter                       :: SLV = 1, RFN = 2
 
    abstract interface
