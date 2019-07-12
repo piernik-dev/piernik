@@ -59,9 +59,10 @@ module cresp_NR_method
 #ifdef CRESP_VERBOSED
    integer(kind=4)                                  :: current_bound
 #endif /* CRESP_VERBOSED */
-   integer, parameter                               :: blen = 2
+   integer, parameter                               :: blen = 2, extlen = 4
    character(len=blen), dimension(LO:HI), parameter :: bound_name = ['lo', 'up']
    integer(kind=4), parameter                       :: SLV = 1, RFN = 2
+   character(len=extlen), parameter                 :: extension =  ".dat"
 
    abstract interface
       function function_pointer_1D(z)
@@ -1576,10 +1577,8 @@ contains
       real(kind=8),dimension(:,:) :: NR_guess_grid
       integer(kind=4) :: j
       character(len=11) :: var_name
-      character(len=4)  :: extension
       character(len=15) :: f_name
 
-      extension =  ".dat"
       f_name = var_name // extension
       open(31, file=f_name, status="unknown", position="rewind")
          write(31,"(A57,A3,A105)") "This is a storage file for NR init grid, boundary case: ", var_name(9:), &
@@ -1602,9 +1601,10 @@ contains
       implicit none
 
       integer(kind=4), intent(in) :: bound_case, loc1, loc2
-      character(len=10)           :: f_name
+      integer(kind=4), parameter  :: fnlen = 10
+      character(len=fnlen)        :: f_name
 
-      f_name = "loc_"//bound_name(bound_case)//".dat"
+      f_name = "loc_"//bound_name(bound_case)//extension
       open(32, file=f_name, status="unknown", position="append")
       write (32,"(2I5)") loc1, loc2
       close(32)
@@ -1624,15 +1624,13 @@ contains
       real(kind=8)                :: svd_e_sm, svd_max_p_r, svd_q_big, svd_clight
       integer(kind=4) :: j, svd_cols, svd_rows, file_status = 0
       character(len=11) :: var_name
-      character(len=4)  :: extension
       character(len=15) :: f_name
       logical           :: exit_code
 
-      extension =  ".dat"
       f_name = var_name // extension
       open(31, file=f_name, status="old", position="rewind",IOSTAT=file_status)
       if (file_status .gt. 0) then
-         write(*,"(A8,I4,A8,2A20)") "IOSTAT:", file_status, ": file ", var_name//".dat"," does not exist!"
+         write(*,"(A8,I4,A8,2A20)") "IOSTAT:", file_status, ": file ", var_name//extension," does not exist!"
          exit_code = .true.
          return
       else
