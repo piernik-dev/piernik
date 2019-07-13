@@ -226,7 +226,7 @@ contains
 
       emergency_fix = .false.
 
-      do_refine = (level_max > base_level_id)
+      do_refine = (level_max > base_level_id) .or. all((bsize /= I_ZERO) .or. .not. dom%has_dir)
 
       if (do_refine .and. all(bsize == I_ZERO)) call automagic_bsize
 
