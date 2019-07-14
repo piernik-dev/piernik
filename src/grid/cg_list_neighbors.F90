@@ -175,7 +175,7 @@ contains
             do d = lbound(i_bnd, dim=1), ubound(i_bnd, dim=1)
                if (allocated(i_bnd(d)%seg) .neqv. allocated(o_bnd(d)%seg)) call die("[cg_list_neighbors:print_bnd_list] allocated(i_bnd(d)%seg) .neqv. allocated(o_bnd(d)%seg)")
                if (allocated(i_bnd(d)%seg)) then
-                  if (size(i_bnd(d)%seg) /= size(o_bnd(d)%seg)) call warn("[cg_list_neighbors:find_neighbors] size(i_bnd(d)%seg) /= size(o_bnd(d)%seg)")
+                  if (size(i_bnd(d)%seg) /= size(o_bnd(d)%seg)) call warn("[cg_list_neighbors:print_bnd_list] size(i_bnd(d)%seg) /= size(o_bnd(d)%seg)")
                   do i = lbound(i_bnd(d)%seg, dim=1), ubound(i_bnd(d)%seg, dim=1)
                      write(msg,'(a,i5,a,i2,a,i4,a,i2,a,i4,2(a,3i6,a,3i6,a,i4,a,i8,l2,a,i8))') "cln:fn+ @", proc, " ^", this%l%id, " gid#", cgl%cg%grid_id, " dir=", d, " #i=", i, " [", i_bnd(d)%seg(i)%se(:, LO), " ]x[ ", i_bnd(d)%seg(i)%se(:, HI), " ] -> @", i_bnd(d)%seg(i)%proc, " %",i_bnd(d)%seg(i)%tag, associated(i_bnd(d)%seg(i)%local), " cnt=", product(o_bnd(d)%seg(i)%se(:, HI) - o_bnd(d)%seg(i)%se(:, LO) + 1), " [ ", o_bnd(d)%seg(i)%se(:, LO), " ]x[ ", o_bnd(d)%seg(i)%se(:, HI), " ] -> @", o_bnd(d)%seg(i)%proc, " %",o_bnd(d)%seg(i)%tag, associated(o_bnd(d)%seg(i)%local), " cnt=", product(o_bnd(d)%seg(i)%se(:, HI) - o_bnd(d)%seg(i)%se(:, LO) + 1)
                      call printinfo(msg, .true.)
@@ -292,14 +292,14 @@ contains
                            if (n_dd >=xdim .and. n_dd <=zdim) cg%bnd(n_dd, lh) = BND_FC
                         else
                            ! incoming part:
-                           tag = uniq_tag([-ix, -iy, -iz], n_grid_id)
+                           tag = cart_uniq_tag([-ix, -iy, -iz], n_grid_id)
                            overlap(:, LO) = max(cg%lhn(:, LO), cg%ijkse(:, LO) + [ ix, iy, iz ] * cg%n_b)
                            overlap(:, HI) = min(cg%lhn(:, HI), cg%ijkse(:, HI) + [ ix, iy, iz ] * cg%n_b)
                            call cg%i_bnd(n_dd)%add_seg(n_p, overlap, tag)
                            if (n_p == proc) cg%i_bnd(n_dd)%seg(ubound(cg%i_bnd(n_dd)%seg, dim=1))%local => l_pse%l_pse(n_grid_id)%p
 
                            ! outgoing part:
-                           tag = uniq_tag([ix, iy, iz], cg%grid_id)
+                           tag = cart_uniq_tag([ix, iy, iz], cg%grid_id)
                            overlap(:, LO) = max(cg%ijkse(:, LO), cg%lhn(:, LO) + [ ix, iy, iz ] * cg%n_b)
                            overlap(:, HI) = min(cg%ijkse(:, HI), cg%lhn(:, HI) + [ ix, iy, iz ] * cg%n_b)
                            call cg%o_bnd(n_dd)%add_seg(n_p, overlap, tag)
@@ -328,8 +328,11 @@ contains
       !! position as one of three cases:
       !! * LEFT, RIGHT - corner neighbours
       !! * FACE        - face neighbour
+      !!
+      !! This is a lighter version than the global variant. It can be used with
+      !! cartesian or purely blocky decomposition.
       !<
-      pure function uniq_tag(ixyz, grid_id)
+      pure function cart_uniq_tag(ixyz, grid_id)
 
          use constants, only: xdim, ydim, zdim, I_ONE
 
@@ -338,14 +341,14 @@ contains
          integer(kind=4), dimension(xdim:zdim), intent(in) :: ixyz    ! offset in whole grid blocks
          integer,                               intent(in) :: grid_id ! grid piece id
 
-         integer(kind=4) :: uniq_tag
+         integer(kind=4) :: cart_uniq_tag
          integer(kind=4), dimension(xdim:zdim) :: r
          integer(kind=4), parameter :: N_POS=3 ! -1, 0, +1
 
          r = ixyz + I_ONE ! -1 => LEFT, 0 => FACE, +1 => RIGHT
-         uniq_tag = int(((grid_id*N_POS+r(zdim))*N_POS+r(ydim))*N_POS+r(xdim), kind=4)
+         cart_uniq_tag = int(((grid_id*N_POS+r(zdim))*N_POS+r(ydim))*N_POS+r(xdim), kind=4)
 
-      end function uniq_tag
+      end function cart_uniq_tag
 
    end subroutine find_neighbors_SFC
 
@@ -582,60 +585,6 @@ contains
 
       call l_pse%cleanup
 
-   contains
-
-      !>
-      !! \brief Create unique tag for cg - cg exchange
-      !!
-      !! \details If we put a constraint that a grid piece can not be smaller
-      !! than dom%nb, then total number of neighbours that affect local
-      !! guardcells is
-      !! * 3      for cartesian decomposition (including AMR "blocks")
-      !! * 2 to 4 for noncartesian decomposition
-      !! * more   for AMR with consolidated blocks (unimplemented yet, not
-      !!          compatible with current approach)
-      !! Thus, in each direction we can describe realtive position as one of
-      !! four cases, or a bit easier one of five cases:
-      !! * FAR_LEFT, FAR_RIGHT - corner neighbours, either touching corner or
-      !!                         a bit further away
-      !! * LEFT, RIGHT         - partially face, partially corner neighbours
-      !! * FACE                - face neighbour (may cover also some corners)
-      !<
-      pure function uniq_tag(se, nb_se, grid_id)
-
-         use constants, only: LO, HI, xdim, ydim, zdim, INVALID
-
-         implicit none
-
-         integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: se       ! a grid piece
-         integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: nb_se    ! neighboring grid piece
-         integer,                                      intent(in) :: grid_id  ! grid piece id
-
-         integer(kind=4) :: uniq_tag
-         integer, dimension(xdim:zdim) :: r
-         integer :: d
-         enum, bind(C)
-            enumerator :: FAR_LEFT=0, LEFT, FACE, RIGHT, FAR_RIGHT, N_POS
-         end enum
-
-         r = INVALID
-         do d = xdim, zdim
-            if (nb_se(d, LO) > se(d, HI)) then
-               r(d) = FAR_RIGHT
-            else if (nb_se(d, HI) < se(d, LO)) then
-               r(d) = FAR_LEFT
-            else if ((nb_se(d, LO) < se(d, LO)) .and. (nb_se(d, HI) < se(d, HI)) .and. (nb_se(d, HI) >= se(d, LO))) then
-               r(d) = LEFT
-            else if ((nb_se(d, HI) > se(d, HI)) .and. (nb_se(d, LO) > se(d, LO)) .and. (nb_se(d, LO) <= se(d, HI))) then
-               r(d) = RIGHT
-            else
-               r(d) = FACE
-            endif
-         enddo
-         uniq_tag = int(((grid_id*N_POS+r(zdim))*N_POS+r(ydim))*N_POS+r(xdim), kind=4)
-
-      end function uniq_tag
-
    end subroutine find_neighbors_bruteforce
 
 !>
@@ -660,5 +609,62 @@ contains
       class(cg_list_neighbors_T), intent(inout) :: this !< object invoking type bound procedure
 
    end subroutine find_ext_neighbors_bruteforce
+
+   !>
+   !! \brief Create unique tag for cg - cg exchange
+   !!
+   !! \details If we put a constraint that a grid piece can not be smaller
+   !! than dom%nb, then total number of neighbours that affect local
+   !! guardcells is
+   !! * 3      for cartesian decomposition (including AMR "blocks")
+   !! * 2 to 4 for noncartesian decomposition
+   !! * more   for AMR with consolidated blocks (unimplemented yet, not
+   !!          compatible with current approach)
+   !!
+   !! Thus, in each direction we can describe realtive position as one of
+   !! four cases, or a bit easier one of five cases:
+   !! * FAR_LEFT, FAR_RIGHT - corner neighbours, either touching corner or
+   !!                         a bit further away
+   !! * LEFT, RIGHT         - partially face, partially corner neighbours
+   !! * FACE                - face neighbour (may cover also some corners)
+   !!
+   !! This version can correctly handle noncartesian decompositions and should
+   !! also be correct on cartesia and blocy decompositions.
+   !<
+
+   pure function uniq_tag(se, nb_se, grid_id)
+
+      use constants, only: LO, HI, xdim, ydim, zdim, INVALID
+
+      implicit none
+
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: se       ! a grid piece
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: nb_se    ! neighboring grid piece
+      integer,                                      intent(in) :: grid_id  ! grid piece id
+
+      integer(kind=4) :: uniq_tag
+      integer, dimension(xdim:zdim) :: r
+      integer :: d
+      enum, bind(C)
+         enumerator :: FAR_LEFT=0, LEFT, FACE, RIGHT, FAR_RIGHT, N_POS
+      end enum
+
+      r = INVALID
+      do d = xdim, zdim
+         if (nb_se(d, LO) > se(d, HI)) then
+            r(d) = FAR_RIGHT
+         else if (nb_se(d, HI) < se(d, LO)) then
+            r(d) = FAR_LEFT
+         else if ((nb_se(d, LO) < se(d, LO)) .and. (nb_se(d, HI) < se(d, HI)) .and. (nb_se(d, HI) >= se(d, LO))) then
+            r(d) = LEFT
+         else if ((nb_se(d, HI) > se(d, HI)) .and. (nb_se(d, LO) > se(d, LO)) .and. (nb_se(d, LO) <= se(d, HI))) then
+            r(d) = RIGHT
+         else
+            r(d) = FACE
+         endif
+      enddo
+      uniq_tag = int(((grid_id*N_POS+r(zdim))*N_POS+r(ydim))*N_POS+r(xdim), kind=4)
+
+   end function uniq_tag
 
 end module cg_list_neighbors
