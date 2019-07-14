@@ -41,21 +41,28 @@ module cg_list_neighbors
    !>
    !! \brief An abstract type created to take out neighbor finding code from cg_level
    !!
-   !! \details
-   !! OPT: Searching through this%dot%gse for neighbours, prolongation/restriction overlaps etc is quite costly.
-   !! The cost is O(this%cnt^2). Provide a list, sorted according to Morton/Hilbert id's and do a bisection search
-   !! instead of checking against all grids on AMR-style 'blocky' grids or cartesian decomposition with equal-sized
-   !! grids. It will result in massive speedups on cg_list_neighbors_T%find_neighbors and
-   !! cg_level_connected_T%{vertical_prep,vertical_b_prep). It may also simplify the process of fixing refinement
-   !! structure in refinement_update::fix_refinement. Grids which are larger than AMR::bsize (merged grids, non-block
-   !! decompositions, both not implemented yet) may be referred by several id's that correspond with AMR::bsize-d virtual
-   !! grid pieces. Non-cartesian decompositions should be handled with the bruteforce way. It is possible to optimize
-   !! them slightly if we save the numbers found during decomposition, but I don't think it is really important.
-   !! Unequal cartesian decompositions should be handled with the bruteforce way. It can be optimized too, but the
-   !! impact of optimization would be similar to optimization of non-cartesian decompositions.
-   !! Alternatively, construct a searchable binary tree or oct-tree and provide fast routines for searching grid
-   !! pieces covering specified position.
+   !! \details Brute-force searching through this%dot%gse for all neighbours,
+   !! prolongation/restriction overlaps etc can be quite costly -
+   !! like O(this%cnt^2). When we have a list sorted according to Morton/Hilbert
+   !! id's we can do a bisection search instead. It will result in massive
+   !! speedups on cg_list_neighbors_T%find_neighbors and
+   !! cg_level_connected_T%{vertical_prep,vertical_b_prep). It may also simplify
+   !! the process of fixing refinement structure in refinement_update::fix_refinement.
+   !!
+   !! * Non-cartesian decompositions should be handled with the bruteforce way.
+   !!   It is possible to optimize  them slightly if we save the numbers found
+   !!   during decomposition, but I don't think it is really important.
+   !! * Unequal cartesian decompositions should be handled with the bruteforce way.
+   !!   It can be optimized too, but the impact of optimization would be similar to
+   !!   optimization of non-cartesian decompositions.
+   !! * Grids which are larger than AMR::bsize (merged grids, non-block
+   !!   decompositions, both not implemented yet) may be referred by several id's
+   !!   that correspond with AMR::bsize-d virtual grid pieces.
+   !!
+   !! Alternatively, construct a searchable oct-tree and provide fast routines for
+   !! searching grid pieces covering specified position.
    !<
+
    type, extends(cg_list_rebalance_T), abstract :: cg_list_neighbors_T
    contains
       procedure          :: find_neighbors                 !< Choose between more general and fast routine for neighbor searching.
@@ -70,22 +77,48 @@ contains
 !>
 !! \brief Choose between more general and fast routine for neighbor searching
 !!
-!! \details
+!! \details All cg%i_bnd and cg%o_bnd are freshly constructed on a given grid level.
+!! * As a result cg%[io]_bnd([xyz]dim) should contain full intra-domain set of
+!!   exchanges necessary to update face boundaries. These intra-domain
+!!   exchanges may update some corners (when non-cartesian decomposition is in use).
+!! * Corner data (cg%[io]_bnd(cor_dim) should cover all remaining intra-domain
+!!   corners and edges. It has been separated from face boundaries after a27c945a
+!!   because in AMR it is not always possible to update all corners together with
+!!   faces by doing a sequence of x-, y- and z-sweeps.
+!! * Corner data will cover also external faces and corners when
+!!   do_external_corners is true. This may be useful for setups with magnetic
+!!   fields that cannot be reconstructed from the data contained in the
+!!   computational domain.
 !!
 !! Possible improvements of performance
 !! * merge smaller blocks into larger ones,
 !!
-!! \todo Write variant of find_neighbors_* routine to achieve previous (pre-a27c945a) performance and maintain
-!! correctness on corners on complicated topologies:
-!! * Divide the descriptions of communicated regions into 4 categories: X-faces, Y-faces + XY-corners, Z-faces +
-!!   [XY]Z-corners, other corners. The other corners would be non-empty only for some refinement local topologies,
+!! \todo Write variant of find_neighbors_* routine to achieve previous
+!! (pre-a27c945a) performance and maintain correctness on corners on complicated
+!! topologies:
+!! * Divide the descriptions of communicated regions into 4 categories: X-faces,
+!!   Y-faces + XY-corners, Z-faces + [XY]Z-corners, other corners. The other
+!!   corners would be non-empty only for some refinement local topologies,
 !!   it would certainly be empty on an uniform grid.
-!! * When no corners are required, perform simultaneous exchange described by the three directional categories.
-!!   Some corners might be set up correctly by a chance, some might not.
-!! * When corners are required, perform sequential exchange described by the three directional categories and
-!!   supplement it with communication of "other corners". The sequence of Isend/Irecv should be as follows: Isend
-!!   X-faces, Irecv X-faces, Waitall, Isend Y-faces, Irecv Y-faces, Waitall, Isend Z-faces, Irecv Z-faces, Waitall
-!!   "Other corners" can be Isend at any time and must be Irecv after Z-faces are copied to the right place.
+!! * When no corners are required, perform simultaneous exchange described by
+!!   the three directional categories. Some corners might be set up correctly
+!!   by a chance, some might not.
+!! * When corners are required, perform sequential exchange described by the
+!!   three directional categories and supplement it with communication of
+!!   "other corners". The sequence of Isend/Irecv should be as follows:
+!!   Isend X-faces, Irecv X-faces, Isend Other_corners, Waitall,
+!!   Isend Y-faces, Irecv Y-faces, Waitall,
+!!   Isend Z-faces, Irecv Z-faces, Irecv Other_corners, Waitall.
+!!
+!! Any upgrades of these procedures must correctly cover the following cases
+!! * single block on single process with partial or full periodic boundaaries
+!! * noncartesian base-level decomposition
+!! * cartesian decompositions (both equal and non-equal sizes)
+!! * AMR "blocky" decompositions with complex patterns of refinement, including
+!!     * concave fine/coarse boundary,
+!!     * fine blocks touching each othes only at the corner or edge
+!!     * the above cases happening through any periodic boundary
+!! Non-convex domains aren't perhaps difficult but we never needed or tested them.
 !<
 
    subroutine find_neighbors(this)
@@ -156,27 +189,35 @@ contains
    end subroutine print_bnd_list
 
 !>
-!! \brief Make full description of intra-level communication with neighbors. Approach exploiting strict SFC
-!! distribution.
+!! \brief Make full description of intra-level communication with neighbors.
+!! Approach exploiting strict SFC distribution.
 !!
-!! \details Assume that cuboids don't collide (no overlapping grid pieces on same refinement level are allowed)
-!! Should produce the same set of blocks to be communicated as find_neighbors_bruteforce, but should be way faster,
-!! especially in massively parallel runs.
+!! \details
+!! * Assume that cuboids don't collide (no overlapping grid pieces on same
+!!   refinement level are allowed).
+!! * Should produce the same (or at least equivalent) set of blocks to be
+!!   communicated as find_neighbors_bruteforce, but should be way faster,
+!!   especially in massively parallel runs.
 !!
-!! This approach works best if the grid containers are distributing strictly according to the SFC curve and are sorted.
-!! If each of p processes has g grid containers on current level (giving n = p * g grids on the level),
-!! the cost should be proportional to (log_2(p)+log_2(g))*g, assuming that we have already sorted array
-!! containing most critical information from this%dot%gse
+!! This approach works best if the grid containers are distributed strictly
+!! according to the SFC curve and are sorted. If each of p processes has g
+!! grid containers on current level (giving n = p * g grids on the level),
+!! the cost should be proportional to (log_2(p)+log_2(g))*g, assuming that we
+!! have already sorted array containing most critical information from
+!! this%dot%gse
 !!
-!! OPT: there is an easy way to determine here if the corner updates can be performed by face updates done in a
-!! sequence of "sweeps" or not. It is possible even to isolate only those corners that can't be updated with face
-!! communication. The question is: will it really matter for AMR communication, when we manage to aggregate separate
-!! messages for pairs of processes to a single message? IMO not that much.
+!! OPT: there is an easy way to determine here if the corner updates can be
+!! performed by face updates done in a sequence of "sweeps" or not. It is
+!! possible even to isolate only those corners that can't be updated with face
+!! communication. The question is: will it really matter for AMR communication,
+!! when we manage to aggregate separate messages for pairs of processes to a
+!! single message? IMO not that much.
 !!
-!! OPT: To achieve pre-a27c945a performance in uniform-grid simulations we may also implement another variant of
-!! find_neighbors_* that looks only for face neighbors (typically 6, in worst case 12, still far less than 26) for
-!! levels that are fully covered (or even for levels that are covered by strictly convect, well separated groups of
-!! grids).
+!! OPT: To achieve pre-a27c945a performance in uniform-grid simulations we may
+!! also implement another variant of find_neighbors_* that looks only for face
+!! neighbors (typically 6, in worst case 12, still far less than 26) for levels
+!! that are fully covered (or even for levels that are covered by strictly
+!! convect, well separated groups of grids).
 !<
 
    subroutine find_neighbors_SFC(this)
@@ -280,12 +321,13 @@ contains
       !>
       !! \brief Create unique tag for cg - cg exchange
       !!
-      !! \details If we put a constraint that a grid piece can not be smaller than dom%nb, then total number of
-      !! neighbours that affect local guardcells is exactly 3 for AMR, cartesian decomposition with equal-size
-      !! blocks
-      !! Thus, in each direction we can describe realtive position as one of three cases:
+      !! \details If we put a constraint that a grid piece can not be smaller
+      !! than dom%nb, then total number of neighbours that affect local
+      !! guardcells is exactly 3 for AMR, cartesian decomposition with
+      !! equal-size blocks. Thus, in each direction we can describe realtive
+      !! position as one of three cases:
       !! * LEFT, RIGHT - corner neighbours
-      !! * FACE - face neighbour
+      !! * FACE        - face neighbour
       !<
       pure function uniq_tag(ixyz, grid_id)
 
@@ -308,23 +350,31 @@ contains
    end subroutine find_neighbors_SFC
 
 !>
-!! \brief Make full description of intra-level communication with neighbors. Brute-force approach.
+!! \brief Make full description of intra-level communication with neighbors.
+!! Brute-force approach.
 !!
-!! \details Assume that cuboids don't collide (no overlapping grid pieces on same refinement level are allowed)
+!! \details
+!! * Assume that cuboids don't collide (no overlapping grid pieces on same
+!!   refinement level are allowed)
 !!
-!! This is very general but also quite slow approach. If each of p processes has g grid containers on current level
-!! (giving n = p * g grids on the level), the cost is proportional to p*p*g or n*n/p.
+!! This is very general but also quite slow approach. If each of p processes
+!! has g grid containers on current level (giving n = p * g grids on the level),
+!! the cost is proportional to p*p*g or n*n/p.
 !!
-!! Current implementation (commit a27c945a) implies correct update of all corners, even on complicated refinement
-!! topologies (concave fine region - convect coarse region or fine regions touching each other only by corners).
-!! Previous implementation could correctly fill the corners only on an uniform grid and when boundary exchange was
-!! called for x, y and z directions separately. Warning: that change introduces measurable performance degradation!
-!! This is caused by the fact that in 3D it is required to make 26 separate exchanges to fill all guardcells (in
-!! cg_list_bnd::internal_boundaries), while in previous approach only 6 exchanges were required. Unfortunately
-!! the previous approach did not work properly for complicated refinements.
+!! Current implementation (commit a27c945a) implies correct update of all
+!! corners, even on complicated refinement topologies (concave fine region -
+!! convect coarse region or fine regions touching each other only by corners).
+!! Previous implementation could correctly fill the corners only on an uniform
+!! grid and when boundary exchange was called for x, y and z directions
+!! separately. Warning: that change introduces measurable performance degradation!
+!! This is caused by the fact that in 3D it is required to make 26 separate
+!! exchanges to fill all guardcells (in cg_list_bnd::internal_boundaries), while
+!! in previous approach only 6 exchanges were required. Unfortunately the
+!! previous approach did not work properly for complicated refinements.
 !!
-!! \todo consider going back to sweeped boundary exchanges (only 6 neighbours to communicate with) as soon as
-!! find_neighbors_SFC is tested enough to be chosen as the only option for AMR 'blocky' grids.
+!! \todo consider going back to sweeped boundary exchanges (only 6 neighbours to
+!! communicate with) as soon as find_neighbors_SFC is tested enough to be chosen
+!! as the only option for AMR 'blocky' grids.
 !<
 
    subroutine find_neighbors_bruteforce(this)
@@ -511,7 +561,9 @@ contains
             enddo
          enddo
 
-         ! Detect fine-coarse boundaries and update boundary types. When not all mapped cells are facing neighbours, then we may deal with fine/coarse boundary (full or partial)
+         ! Detect fine-coarse boundaries and update boundary types. When not all
+         ! mapped cells are facing neighbours, then we may deal with fine/coarse
+         ! boundary (full or partial)
          do d = xdim, zdim
             if (dom%has_dir(d)) then
                do lh = LO, HI
@@ -535,14 +587,19 @@ contains
       !>
       !! \brief Create unique tag for cg - cg exchange
       !!
-      !! \details If we put a constraint that a grid piece can not be smaller than dom%nb, then total number of neighbours that affect local guardcells is
-      !! * 3 for cartesian decomposition (including AMR with equal-size blocks)
+      !! \details If we put a constraint that a grid piece can not be smaller
+      !! than dom%nb, then total number of neighbours that affect local
+      !! guardcells is
+      !! * 3      for cartesian decomposition (including AMR "blocks")
       !! * 2 to 4 for noncartesian decomposition
-      !! * more for AMR with consolidated blocks (unimplemented yet, not compatible with current approach)
-      !! Thus, in each direction we can describe realtive position as one of four cases, or a bit easier one of five cases:
-      !! * FAR_LEFT, FAR_RIGHT - corner neighbours, either touching corner or a bit further away
-      !! * LEFT, RIGHT - partially face, partially corner neighbours
-      !! * FACE - face neighbour (may cover also some corners)
+      !! * more   for AMR with consolidated blocks (unimplemented yet, not
+      !!          compatible with current approach)
+      !! Thus, in each direction we can describe realtive position as one of
+      !! four cases, or a bit easier one of five cases:
+      !! * FAR_LEFT, FAR_RIGHT - corner neighbours, either touching corner or
+      !!                         a bit further away
+      !! * LEFT, RIGHT         - partially face, partially corner neighbours
+      !! * FACE                - face neighbour (may cover also some corners)
       !<
       pure function uniq_tag(se, nb_se, grid_id)
 
