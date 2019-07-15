@@ -39,6 +39,7 @@ module initproblem
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, vxd0, vyd0, vzd0, expansion_cnst
 
    namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, vxd0, vyd0, vzd0, beta_cr, amp_cr, norm_step, expansion_cnst
+
 contains
 
 !-----------------------------------------------------------------------------
@@ -76,13 +77,12 @@ contains
       vxd0         = 0.0       !< initial velocity_x, refers to whole domain
       vyd0         = 0.0       !< initial velocity_y, refers to whole domain
       vzd0         = 0.0       !< initial velocity_z, refers to whole domain
+      expansion_cnst = 0.0
 
       beta_cr      = 0.0       !< ambient level
       amp_cr       = 1.0       !< amplitude of the blob
 
       norm_step    = I_TEN     !< how often to compute the norm (in steps)
-
-      expansion_cnst = 0.0
 
       if (master) then
 
@@ -170,9 +170,9 @@ contains
       use cr_data,        only: icr_H1, icr_C12, cr_table
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
+     use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
      use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff
-     use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -182,15 +182,16 @@ contains
       real                            :: cs_iso, xsn, ysn, zsn, r2, maxv
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-      logical        :: first_run = .true.
 #ifndef COSM_RAYS_SOURCES
       integer, parameter              :: icr_H1 = 1, icr_C12 = 2
 #endif /* !COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
       real                            :: e_tot
+      logical                         :: first_run = .true.
+
+      if (.not. first_run) return
 #endif /* COSM_RAY_ELECTRONS */
 
-     if (first_run .eqv. .true.) then
       fl => flind%ion
 
       ! BEWARE: temporary fix
@@ -220,6 +221,27 @@ contains
          call cg%set_constant_b_field([bx0, by0, bz0])
          cg%u(fl%idn, :, :, :) = d0
          cg%u(fl%imx:fl%imz, :, :, :) = 0.0
+#ifdef IONIZED
+! Velocity field
+         if (expansion_cnst .notequals. 0.0 ) then ! adiabatic expansion / compression
+            write(msg,*) '[initproblem:problem_initial_conditions] setting up expansion/compression, expansion_cnst = ',expansion_cnst
+            call printinfo(msg)
+
+            do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+               do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+                  do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+                     cg%u(flind%ion%imx,i,j,k) = cg%u(flind%ion%idn,i,j,k) * (cg%x(i)-x0) * expansion_cnst  !< vxd0 * rho
+                     cg%u(flind%ion%imy,i,j,k) = cg%u(flind%ion%idn,i,j,k) * (cg%y(j)-y0) * expansion_cnst  !< vyd0 * rho
+                     cg%u(flind%ion%imz,i,j,k) = cg%u(flind%ion%idn,i,j,k) * (cg%z(k)-z0) * expansion_cnst  !< vzd0 * rho
+                  enddo
+               enddo
+            enddo
+         else
+            cg%u(flind%ion%imx,:,:,:) = vxd0 * cg%u(flind%ion%idn,:,:,:)
+            cg%u(flind%ion%imy,:,:,:) = vyd0 * cg%u(flind%ion%idn,:,:,:)
+            cg%u(flind%ion%imz,:,:,:) = vzd0 * cg%u(flind%ion%idn,:,:,:)
+         endif
+#endif /* IONIZED */
 
 #ifndef ISO
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
@@ -247,6 +269,7 @@ contains
                      do ipm=-1,1
                         do jpm=-1,1
                            do kpm=-1,1
+
                               r2 = (cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-ysn+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-zsn+real(kpm)*dom%L_(zdim))**2
                               if (icr == cr_table(icr_H1)) then
                                  cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
@@ -255,10 +278,10 @@ contains
                               else
                                  cg%u(iarr_crn(icr), i, j, k) = 0.0
                               endif
+
                            enddo
                         enddo
                      enddo
-
                   enddo
                enddo
             enddo
@@ -270,9 +293,9 @@ contains
                do i = cg%is, cg%ie
 
                   e_tot = 0.0
-                  do ipm=-1,1
-                     do jpm=-1,1
-                        do kpm=-1,1
+                  do ipm = -1, 1
+                     do jpm = -1, 1
+                        do kpm = -1, 1
                            r2 = (cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-ysn+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-zsn+real(kpm)*dom%L_(zdim))**2
                            e_tot = e_tot + amp_cr*exp(-r2/r0**2)
                         enddo
@@ -310,52 +333,20 @@ contains
             else
                write(msg,*) '[initproblem:problem_initial_conditions] icr(cre_e)=',icr,' maxecr(cre) =',maxv
             endif
-#else
+#else /* !COSM_RAY_ELECTRONS */
             write(msg,*) '[initproblem:problem_initial_conditions] icr=',icr,' maxecr =',maxv
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* !COSM_RAY_ELECTRONS */
             call printinfo(msg)
          endif
 
       enddo
-
-#endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
       write(msg,*) '[initproblem:problem_initial_conditions]: Taylor_exp._ord. (cresp)    = ', expan_order
       call printinfo(msg)
-#endif /* COSM_RAY_ELECTRONS */
-
-! Velocity field
-      cgl => leaves%first
-      do while (associated(cgl))
-        cg => cgl%cg
-        if (expansion_cnst .notequals. 0.0 ) then ! adiabatic expansion / compression
-         write(msg,*) '[initproblem:problem_initial_conditions] setting up expansion/compression, expansion_cnst=',expansion_cnst
-#ifdef IONIZED
-! Ionized
-         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-                    cg%u(flind%ion%imx,i,j,k) = cg%u(flind%ion%idn,i,j,k) * (cg%x(i)-x0) * expansion_cnst  !< vxd0 * rho
-                    cg%u(flind%ion%imy,i,j,k) = cg%u(flind%ion%idn,i,j,k) * (cg%y(j)-y0) * expansion_cnst  !< vyd0 * rho
-                    cg%u(flind%ion%imz,i,j,k) = cg%u(flind%ion%idn,i,j,k) * (cg%z(k)-z0) * expansion_cnst  !< vzd0 * rho
-                  enddo
-                enddo
-            enddo
-#endif /* IONIZED */
-        else
-
-#ifdef IONIZED
-! Ionized
-            cg%u(flind%ion%imx,:,:,:) = vxd0 * cg%u(flind%ion%idn,:,:,:)
-            cg%u(flind%ion%imy,:,:,:) = vyd0 * cg%u(flind%ion%idn,:,:,:)
-            cg%u(flind%ion%imz,:,:,:) = vzd0 * cg%u(flind%ion%idn,:,:,:)
-#endif /* IONIZED */
-
-        endif
-        cgl => cgl%nxt
-      enddo
-
       first_run = .false.
-    endif
+#endif /* COSM_RAY_ELECTRONS */
+#endif /* COSM_RAYS */
+
    end subroutine problem_initial_conditions
+
 end module initproblem
