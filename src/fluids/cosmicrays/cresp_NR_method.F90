@@ -1580,7 +1580,7 @@ contains
       integer(kind=4)                          :: j
       character(len=flen)                      :: f_name
 
-      f_name = var_name // extension
+      f_name = var_name // bound_name(bc) // extension
       open(31, file=f_name, status="unknown", position="rewind")
          write(31,"(A56,A2,A104)") "This is a storage file for NR init grid, boundary case: ", bc, &
             &    " Saved below: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2), max_p_ratio, q_big, clight. Do not remove content from this file"
@@ -1628,10 +1628,10 @@ contains
       integer(kind=4)                             :: j, svd_cols, svd_rows, file_status = 0
       character(len=flen)                         :: f_name
 
-      f_name = var_name // extension
+      f_name = var_name // bound_name(bc) // extension
       open(31, file=f_name, status="old", position="rewind", IOSTAT=file_status)
       if (file_status .gt. 0) then
-         write(*,"(A8,I4,A8,2A20)") "IOSTAT:", file_status, ": file ", var_name//extension," does not exist!"
+         write(*,"(A8,I4,A8,2A20)") "IOSTAT:", file_status, ": file ", var_name//bound_name(bc)//extension," does not exist!"
          exit_code = .true.
          return
       else
