@@ -608,6 +608,47 @@ contains
 
       class(cg_list_neighbors_T), intent(inout) :: this !< object invoking type bound procedure
 
+   contains
+
+      !> \brief find maximum value of all tags to safely start tagging with possibly different algorithm
+
+      integer(kind=4) function max_tag(this)
+
+         use cg_list,   only: cg_list_element
+         use constants, only: pMAX, I_ZERO
+         use mpisetup,  only: piernik_MPI_Allreduce
+
+         implicit none
+
+         class(cg_list_neighbors_T), intent(inout) :: this !< object invoking type bound procedure
+
+         type(cg_list_element), pointer :: cgl
+         integer :: i, d
+
+         max_tag = I_ZERO
+         cgl => this%first
+         do while (associated(cgl))
+            associate (i_bnd => cgl%cg%i_bnd, o_bnd => cgl%cg%o_bnd)
+               do d = lbound(i_bnd, dim=1), ubound(i_bnd, dim=1)
+                  if (allocated(i_bnd(d)%seg)) then
+                     do i = lbound(i_bnd(d)%seg, dim=1), ubound(i_bnd(d)%seg, dim=1)
+                        max_tag = max(max_tag, i_bnd(d)%seg(i)%tag)
+                     enddo
+                  endif
+                  if (allocated(o_bnd(d)%seg)) then
+                     do i = lbound(o_bnd(d)%seg, dim=1), ubound(o_bnd(d)%seg, dim=1)
+                        max_tag = max(max_tag, o_bnd(d)%seg(i)%tag)
+                     enddo
+                  endif
+               enddo
+            end associate
+            cgl => cgl%nxt
+         enddo
+
+         call piernik_MPI_Allreduce(max_tag, pMAX)
+
+      end function max_tag
+
    end subroutine find_ext_neighbors_bruteforce
 
    !>
