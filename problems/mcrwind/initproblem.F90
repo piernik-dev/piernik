@@ -168,15 +168,15 @@ contains
 #ifdef COSM_RAYS
       use initcosmicrays, only: gamma_crn, iarr_crn
 #ifdef COSM_RAY_ELECTRONS
-      use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
+      use initcosmicrays, only: iarr_cre_n, iarr_cre_e
 #endif /* COSM_RAY_ELECTRONS */
 #ifdef SN_GALAXY
       use cr_data,        only: eCRSP, cr_table, icr_H1, icr_C12
       use domain,         only: dom
       use snsources,      only: r_sn
 #ifdef COSM_RAY_ELECTRONS
-      use cresp_crspectrum,   only: cresp_get_scaled_init_spectrum
-      use initcrspectrum,     only: cresp, smallcree
+      use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
+      use initcrspectrum,   only: cresp, smallcree
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* SN_GALAXY */
 #ifdef CR_SN
@@ -253,7 +253,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS
                   cresp%n = 0.0 ;  cresp%e = 0.0
                   if (decr * cre_eff .gt. smallcree) then
-                        call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn * cre_eff)
+                     call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn * cre_eff)
                   endif                                                                                ! distribution function amplitude computed from total explosion energy multiplied by factor cre_eff
                   cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
                   cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
@@ -447,5 +447,4 @@ contains
 
    end subroutine galactic_grav_pot
 #endif /* GRAV */
-
 end module initproblem
