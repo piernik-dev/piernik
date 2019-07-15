@@ -129,7 +129,7 @@
  $PROBLEM_CONTROL
     d0           =  5.0     ! density in galactic plane
     bxn          =  0.0     !
-    byn          =  10.0     ! __direction__ of B field
+    byn          =  1.0     ! __direction__ of B field
     bzn          =  0.0     !
     x0           =  0.0     ! coordinates of single expl with amplitude
     y0           =  0.0     ! that is set in problem_initial_conditions (testing purpose)
