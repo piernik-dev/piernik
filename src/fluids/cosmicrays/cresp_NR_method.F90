@@ -1582,7 +1582,7 @@ contains
 
       f_name = var_name // bound_name(bc) // extension
       open(31, file=f_name, status="unknown", position="rewind")
-         write(31,"(A56,A2,A104)") "This is a storage file for NR init grid, boundary case: ", bc, &
+         write(31,"(A56,A2,A104)") "This is a storage file for NR init grid, boundary case: ", bound_name(bc), &
             &    " Saved below: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2), max_p_ratio, q_big, clight. Do not remove content from this file"
          write(31, "(1E15.8, 2I10,10E22.15)") e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2), &
             &     max_p_ratio, q_big, clight              ! TODO: remove max_p_ratio, swap cols, rows with just arr_dim
@@ -1647,7 +1647,7 @@ contains
             enddo
             exit_code = .false.
          else
-            write(*,"(A61,A4,A6)") "Different initial parameters: will resolve ratio tables for ", bc," case."
+            write(*,"(A61,A4,A6)") "Different initial parameters: will resolve ratio tables for ", bound_name(bc)," case."
             write(*,"(2I10,10E22.15)") svd_cols, svd_rows, svd_e_sm, svd_max_p_r, svd_q_big, svd_clight
             write(*,"(2I10,10E22.15)") size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2),e_small,max_p_ratio,q_big,clight
             exit_code = .true.
