@@ -55,6 +55,7 @@ module level_essentials
       procedure          :: update !< update data (e.g. after resizing the domain)
       procedure, private :: write  !< do the actual saving of the data
       procedure          :: check  !< check against shadows if nothing has changed
+      procedure          :: has_ext_bnd  !< tell whether a given block has any external boundary or not
    end type level_T
 
 contains
@@ -170,5 +171,28 @@ contains
       endif
 
    end subroutine check
+
+!> \brief tell whether a given block has any external boundary or not
+
+   logical pure function has_ext_bnd(this, se)
+
+      use constants, only: xdim, zdim, LO, HI, I_ONE
+      use domain,    only: dom
+
+      implicit none
+
+      class(level_T),                               intent(in) :: this !< object invoking type bound procedure
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: se
+
+      integer :: d
+
+      has_ext_bnd = .false.
+      do d = xdim, zdim
+         if (dom%has_dir(d) .and. .not. dom%periodic(d)) has_ext_bnd = has_ext_bnd .or. &
+              (se(d, LO)         == this%off(d)) .or. &
+              (se(d, HI) + I_ONE == this%off(d) + this%n_d(d))
+      enddo
+
+   end function has_ext_bnd
 
 end module level_essentials
