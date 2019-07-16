@@ -56,6 +56,7 @@ module level_essentials
       procedure, private :: write  !< do the actual saving of the data
       procedure          :: check  !< check against shadows if nothing has changed
       procedure          :: has_ext_bnd  !< tell whether a given block has any external boundary or not
+      procedure          :: is_ext_bnd  !< tell whether a given boundary of a given block is an external boundary or not
    end type level_T
 
 contains
@@ -182,7 +183,7 @@ contains
       implicit none
 
       class(level_T),                               intent(in) :: this !< object invoking type bound procedure
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: se
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: se   !< cuboid
 
       integer :: d
 
@@ -194,5 +195,38 @@ contains
       enddo
 
    end function has_ext_bnd
+
+!< \brief tell whether a given boundary of a given block is an external boundary or not
+
+   logical function is_ext_bnd(this, se, d, lh)
+
+      use constants,  only: xdim, zdim, LO, HI, I_ONE
+      use dataio_pub, only: die, warn
+      use domain,     only: dom
+
+      implicit none
+
+      class(level_T),                               intent(in) :: this !< object invoking type bound procedure
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: se   !< cuboid
+
+      integer,                                      intent(in) :: d    !< direction
+      integer,                                      intent(in) :: lh   !< LO or HI
+
+      if (dom%has_dir(d)) then
+         select case (lh)
+            case (LO)
+               is_ext_bnd = (se(d, LO) == this%off(d))
+            case (HI)
+               is_ext_bnd = (se(d, HI) == this%off(d) + this%n_d(d) - I_ONE)
+            case default
+               call die("[level_essentials:is_ext_bnd] lh is neither LO or HI")
+               is_ext_bnd = .false.  ! suppress complains
+         end select
+      else
+         call warn("[level_essentials:is_ext_bnd] direction d does not exist")
+         is_ext_bnd = .false.
+      endif
+
+   end function is_ext_bnd
 
 end module level_essentials

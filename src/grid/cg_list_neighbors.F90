@@ -141,7 +141,7 @@ contains
       if (this%dot%is_blocky .and. .not. prefer_n_bruteforce) then
          call this%find_neighbors_SFC
          call this%find_ext_neighbors_bruteforce
-         call this%ms%merge(this)
+!         call this%ms%merge(this)  ! temporarily incompatible with find_ext_neighbors_bruteforce
       else
          call this%find_neighbors_bruteforce
          call this%find_ext_neighbors_bruteforce
@@ -149,7 +149,9 @@ contains
          ! covers the domain in at least one direction.
       endif
 
+#ifdef DEBUG
       call this%print_bnd_list
+#endif
 
    end subroutine find_neighbors
 
@@ -177,7 +179,7 @@ contains
                if (allocated(i_bnd(d)%seg)) then
                   if (size(i_bnd(d)%seg) /= size(o_bnd(d)%seg)) call warn("[cg_list_neighbors:print_bnd_list] size(i_bnd(d)%seg) /= size(o_bnd(d)%seg)")
                   do i = lbound(i_bnd(d)%seg, dim=1), ubound(i_bnd(d)%seg, dim=1)
-                     write(msg,'(a,i5,a,i2,a,i4,a,i2,a,i4,2(a,3i6,a,3i6,a,i4,a,i8,l2,a,i8))') "cln:fn+ @", proc, " ^", this%l%id, " gid#", cgl%cg%grid_id, " dir=", d, " #i=", i, " [", i_bnd(d)%seg(i)%se(:, LO), " ]x[ ", i_bnd(d)%seg(i)%se(:, HI), " ] -> @", i_bnd(d)%seg(i)%proc, " %",i_bnd(d)%seg(i)%tag, associated(i_bnd(d)%seg(i)%local), " cnt=", product(o_bnd(d)%seg(i)%se(:, HI) - o_bnd(d)%seg(i)%se(:, LO) + 1), " [ ", o_bnd(d)%seg(i)%se(:, LO), " ]x[ ", o_bnd(d)%seg(i)%se(:, HI), " ] -> @", o_bnd(d)%seg(i)%proc, " %",o_bnd(d)%seg(i)%tag, associated(o_bnd(d)%seg(i)%local), " cnt=", product(o_bnd(d)%seg(i)%se(:, HI) - o_bnd(d)%seg(i)%se(:, LO) + 1)
+                     write(msg,'(a,i5,a,i2,a,i4,a,i2,a,i4,2(a,3i6,a,3i6,a,i4,a,i8,l2,a,i8))') "cln:fn+ @", proc, " ^", this%l%id, " gid#", cgl%cg%grid_id, " dir=", d, " #i=", i, " [", i_bnd(d)%seg(i)%se(:, LO), " ]x[ ", i_bnd(d)%seg(i)%se(:, HI), " ] -> @", i_bnd(d)%seg(i)%proc, " %",i_bnd(d)%seg(i)%tag, associated(i_bnd(d)%seg(i)%local), " cnt=", product(i_bnd(d)%seg(i)%se(:, HI) - i_bnd(d)%seg(i)%se(:, LO) + 1), " [ ", o_bnd(d)%seg(i)%se(:, LO), " ]x[ ", o_bnd(d)%seg(i)%se(:, HI), " ] -> @", o_bnd(d)%seg(i)%proc, " %",o_bnd(d)%seg(i)%tag, associated(o_bnd(d)%seg(i)%local), " cnt=", product(o_bnd(d)%seg(i)%se(:, HI) - o_bnd(d)%seg(i)%se(:, LO) + 1)
                      call printinfo(msg, .true.)
                   enddo
                endif
@@ -604,9 +606,125 @@ contains
 
    subroutine find_ext_neighbors_bruteforce(this)
 
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim, cor_dim, ndims, LO, HI, I_ONE
+      use domain,     only: dom
+      use dataio_pub, only: die
+      use global,     only: do_external_corners
+      use mpisetup,   only: FIRST, LAST
+      use overlap,    only: is_overlap
+
       implicit none
 
       class(cg_list_neighbors_T), intent(inout) :: this !< object invoking type bound procedure
+
+      type(cg_list_element), pointer                  :: cgl
+      integer(kind=8), dimension(xdim:zdim)           :: per
+      integer                                         :: j, b, ix, iy, iz
+      integer(kind=8), dimension(ndims, LO:HI)        :: box, box_narrow, e_guard, e_guard_wide, whole_level, poff, aux
+      integer(kind=4)                                 :: d, hl, lh, m_tag
+
+      if (.not. do_external_corners) return
+
+      ! Identifying local (intra-thread) communication is not critically
+      ! important here (see the use of type(gcpa_T) :: l_pse above for details).
+      ! \todo move that part outside of find_neighbors_*
+
+      m_tag = max_tag(this)
+
+      whole_level(:, LO) = this%l%off
+      whole_level(:, HI) = this%l%off + this%l%n_d - I_ONE
+
+      cgl => this%first
+      do while (associated(cgl))
+
+         if (any(cgl%cg%ext_bnd)) then
+
+            if (.not. allocated(cgl%cg%i_bnd) .or. .not. allocated(cgl%cg%o_bnd)) call die("[cg_list_neighbors:find_ext_neighbors_bruteforce] not allocated i_bnd or o_bnd")
+            if (any([ubound(cgl%cg%i_bnd), ubound(cgl%cg%o_bnd)] < cor_dim)) call die("[cg_list_neighbors:find_ext_neighbors_bruteforce] no cor_dim allocated")
+
+            ! Beware: a lot of replicated code from find_neighbors_bruteforce
+
+            per(:) = 0
+            where (dom%periodic(:)) per(:) = this%l%n_d(:)
+
+            do j = FIRST, LAST
+               do b = lbound(this%dot%gse(j)%c(:), dim=1), ubound(this%dot%gse(j)%c(:), dim=1)
+                  if (this%l%has_ext_bnd(this%dot%gse(j)%c(b)%se) .and. .not. all(this%dot%gse(j)%c(b)%se == cgl%cg%ijkse)) then
+
+                     ! box: remote cg with all possible guardcells
+                     box = this%dot%gse(j)%c(b)%se
+                     where (dom%has_dir(:)) box(:, LO) = box(:, LO) - dom%nb
+                     where (dom%has_dir(:)) box(:, HI) = box(:, HI) + dom%nb
+
+                     if (is_overlap(int(cgl%cg%lh_out, kind=8), box, per(:))) then  ! there is an overlap between remote block with guardcells and local block expanded by its exclusive external guardcells
+
+                        ! box_narrow: remote cg with (d, lh)-face only guardcells, with corners
+                        box_narrow = this%dot%gse(j)%c(b)%se
+                        do d = xdim, zdim
+                           if (dom%has_dir(d)) then
+                              if (this%l%is_ext_bnd(this%dot%gse(j)%c(b)%se, d, LO)) box_narrow(d, LO) = box_narrow(d, LO) - dom%nb
+                              if (this%l%is_ext_bnd(this%dot%gse(j)%c(b)%se, d, HI)) box_narrow(d, HI) = box_narrow(d, HI) + dom%nb
+                           endif
+                        enddo
+
+                        do d = xdim, zdim
+                           if (dom%has_dir(d)) then
+                              do lh = LO, HI
+                                 if (cgl%cg%ext_bnd(d, lh)) then
+                                    hl = LO+HI-lh  ! HI for LO, LO for HI
+
+                                    ! e_guard: external guardcells, (d, lh)-face only, with corners
+                                    e_guard = cgl%cg%lh_out
+                                    e_guard(d, hl) = whole_level(d, lh) + (2*lh-3)  ! 2*lh-3 = [-1, 1] for [LO, HI]
+
+                                    ! e-guard_wide: external guardcells, all at (d, lh), including edges and corners
+                                    e_guard_wide = cgl%cg%lhn
+                                    e_guard_wide(d, hl) = whole_level(d, lh) + (2*lh-3)
+
+                                    do iz = -1, 1 ! scan through all periodic possibilities
+                                       if (iz == 0 .or. per(zdim)>0) then
+                                          do iy = -1, 1
+                                             if (iy == 0 .or. per(ydim)>0) then
+                                                do ix = -1, 1
+                                                   if (ix == 0 .or. per(xdim)>0) then
+
+                                                      ! poff: all periodic images of remote cg  with all possible guardcells
+                                                      poff(:, LO) = box(:, LO) + [ ix, iy, iz ] * per(:)
+                                                      poff(:, HI) = box(:, HI) + [ ix, iy, iz ] * per(:)
+                                                      if (is_overlap(e_guard, poff)) then
+                                                         aux(:, LO) = max(e_guard(:, LO), poff(:, LO))
+                                                         aux(:, HI) = min(e_guard(:, HI), poff(:, HI))
+                                                         call cgl%cg%o_bnd(cor_dim)%add_seg(j, aux, m_tag + uniq_tag(this%dot%gse(j)%c(b)%se, aux, cgl%cg%grid_id))
+                                                      endif
+
+                                                      poff(:, LO) = box_narrow(:, LO) + [ ix, iy, iz ] * per(:)
+                                                      poff(:, HI) = box_narrow(:, HI) + [ ix, iy, iz ] * per(:)
+                                                      if (is_overlap(e_guard_wide, poff)) then
+                                                         aux(:, LO) = max(e_guard_wide(:, LO), poff(:, LO))
+                                                         aux(:, HI) = min(e_guard_wide(:, HI), poff(:, HI))
+                                                         call cgl%cg%i_bnd(cor_dim)%add_seg(j, aux, m_tag + uniq_tag(cgl%cg%my_se, aux, b))
+                                                      endif
+                                                   endif
+                                                enddo
+                                             endif
+                                          enddo
+                                       endif
+                                    enddo
+
+                                 endif
+                              enddo
+                           endif
+                        enddo
+
+                     endif
+                  endif
+               enddo
+            enddo
+         endif
+
+         cgl => cgl%nxt
+      enddo
 
    contains
 
