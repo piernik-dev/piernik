@@ -54,9 +54,9 @@ contains
       use grid_cont,      only: grid_container
       use initcosmicrays, only: cr_active, gpcr_essential
 #ifdef COSM_RAY_ELECTRONS
-      use initcosmicrays, only: iarr_crs, gamma_crn
+      use initcosmicrays, only: iarr_crn, gamma_crn
 #else /* !COSM_RAY_ELECTRONS */
-      use initcosmicrays, only: iarr_crn, gamma_crs
+      use initcosmicrays, only: iarr_crs, gamma_crs
 #endif /* !COSM_RAY_ELECTRONS */
 
       implicit none
