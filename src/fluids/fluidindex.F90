@@ -203,15 +203,6 @@ contains
 
 #ifdef COSM_RAYS
 ! Compute index arrays for the CR components
-      iarr_all_swp(xdim,flind%crn%beg:flind%crn%end) = iarr_crn
-      iarr_all_swp(ydim,flind%crn%beg:flind%crn%end) = iarr_crn
-      iarr_all_swp(zdim,flind%crn%beg:flind%crn%end) = iarr_crn
-
-!      cre variables ought not be swapped anymore - these are handled via cresp_crs_update only
-      iarr_all_swp(xdim,flind%cre%beg:flind%cre%end) = iarr_cre
-      iarr_all_swp(ydim,flind%cre%beg:flind%cre%end) = iarr_cre
-      iarr_all_swp(zdim,flind%cre%beg:flind%cre%end) = iarr_cre
-
       iarr_all_swp(xdim,flind%crs%beg:flind%crs%end) = iarr_crs
       iarr_all_swp(ydim,flind%crs%beg:flind%crs%end) = iarr_crs
       iarr_all_swp(zdim,flind%crs%beg:flind%crs%end) = iarr_crs
