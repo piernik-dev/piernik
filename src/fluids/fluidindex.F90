@@ -120,7 +120,7 @@ contains
       use initionized,    only: ion_fluid
       use initneutral,    only: neutral_fluid
 #ifdef COSM_RAYS
-      use initcosmicrays, only: iarr_crn, iarr_cre, cosmicray_index, iarr_crs, iarr_crs_diff
+      use initcosmicrays, only: iarr_crn, iarr_cre, iarr_crs, cosmicray_index, iarr_crs_diff
 #endif /* COSM_RAYS */
 #ifdef TRACER
       use inittracer,     only: tracer_index, iarr_trc
@@ -171,10 +171,9 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-      allocate(iarr_all_crs(flind%crs%all))
       allocate(iarr_all_crn(flind%crn%all))
       allocate(iarr_all_cre(flind%cre%all))
-
+      allocate(iarr_all_crs(flind%crs%all))
 #else /* !COSM_RAYS */
       allocate(iarr_all_crn(0))
       allocate(iarr_all_cre(0))
@@ -187,13 +186,12 @@ contains
       allocate(iarr_all_trc(0))
 #endif /* !TRACER */
 
-      if (has_ion) then
-         ! Compute index arrays for magnetic field
-         iarr_mag_swp(xdim,:) = [xdim,ydim,zdim]
-         iarr_mag_swp(ydim,:) = [ydim,xdim,zdim]
-         iarr_mag_swp(zdim,:) = [zdim,ydim,xdim]
-         iarr_all_mag(:)      = [xdim,ydim,zdim]
-      endif
+      ! Compute index arrays for magnetic field
+      iarr_mag_swp(xdim,:) = [xdim,ydim,zdim]
+      iarr_mag_swp(ydim,:) = [ydim,xdim,zdim]
+      iarr_mag_swp(zdim,:) = [zdim,ydim,xdim]
+      iarr_all_mag(:)      = [xdim,ydim,zdim]
+
       ! Compute index arrays for the ionized fluid
       if (has_ion) call set_fluidindex_arrays(flind%ion,.true.)
 

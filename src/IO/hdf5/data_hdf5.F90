@@ -112,8 +112,12 @@ contains
 #ifdef COSM_RAYS
 #ifdef COSM_RAY_ELECTRONS
          case ("cr01" : "cr99")
+#else /* !COSM_RAY_ELECTRONS */
+         case ("cr1" : "cr9")
+#endif /* !COSM_RAY_ELECTRONS */
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
+#ifdef COSM_RAY_ELECTRONS
          case ("cren01" : "cren99")
             f%fu = "1/\rm{cm}^3"
             f%f2cgs = 1.0 / (1.0/cm**3) ! number density
@@ -129,10 +133,6 @@ contains
          case ("creq01" : "creq99")
             f%fu = ""                   ! dimensionless q
             f%f2cgs = 1.0
-#else /* !COSM_RAY_ELECTRONS */
-         case ("cr1" : "cr9")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3)
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
          case ("gpot", "sgpt")
@@ -296,8 +296,8 @@ contains
       use global,      only: force_cc_mag
 #endif /* MAGNETIC */
 #ifdef COSM_RAY_ELECTRONS
-      use initcrspectrum,     only: nam_cresp_f, nam_cresp_p, nam_cresp_q
-      use named_array_list,   only: wna
+      use initcrspectrum,   only: nam_cresp_f, nam_cresp_p, nam_cresp_q
+      use named_array_list, only: wna
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -315,7 +315,6 @@ contains
       integer, parameter                          :: auxlen = dsetnamelen - 1
       character(len=auxlen)                       :: aux
 #endif /* COSM_RAYS */
-
 #define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
 
       call common_shortcuts(var, fl_dni, i_xyz)
@@ -344,8 +343,7 @@ contains
          case ("cr1" : "cr9")
             read(var,'(A2,I1)') aux, i !> \deprecated BEWARE 0 <= i<= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = cg%u(flind%crs%beg+i-1, RNG)
-#endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
+#endif /* !COSM_RAY_ELECTRONS */
 #ifdef COSM_RAY_ELECTRONS
          case ("cren01" : "cren99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
@@ -363,6 +361,7 @@ contains
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = cg%w(wna%ind(nam_cresp_q))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
 #endif /* COSM_RAY_ELECTRONS */
+#endif /* COSM_RAYS */
 #ifdef TRACER
          case ("trcr")
             tab(:,:,:) = cg%u(flind%trc%beg, RNG)
