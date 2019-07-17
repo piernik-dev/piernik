@@ -984,9 +984,9 @@ contains
       real(kind=8)  :: x, alpha_to_q
 
       if (abs(x - three) .lt. eps) then
-         alpha_to_q = -alpha + (-one + p_ratio_4_q)/log(p_ratio_4_q)
+         alpha_to_q = -alpha + (-one + p_ratio_4_q**(four-x))/log(p_ratio_4_q)
       else if (abs(x - four) .lt. eps) then
-         alpha_to_q = -alpha + p_ratio_4_q*log(p_ratio_4_q)/(p_ratio_4_q - one)
+         alpha_to_q = -alpha + (three-x) *log(p_ratio_4_q)/(p_ratio_4_q**(three-x) - one)
       else
          alpha_to_q = -alpha + ((three-x)/(four-x))*((p_ratio_4_q**(four-x)-one)/(p_ratio_4_q**(three-x)-one))
       endif
@@ -1167,7 +1167,7 @@ contains
 !----------------------------------------------------------------------------------------------------
    function n_func_2_zero_up(p_ratio, f_ratio, n_cnst, q_in) ! from eqn. 9
 
-      use constants,       only: one, two, three
+      use constants,       only: one, three
       use cresp_variables, only: clight ! use units, only: clight
       use initcrspectrum,  only: e_small
 
@@ -1177,9 +1177,9 @@ contains
       real(kind=8) :: n_func_2_zero_up
 
       if (abs(q_in - three) .lt. eps) then
-         n_func_2_zero_up = - n_cnst + e_small / ((clight **two) * f_ratio * (p_ratio **three))* log(p_ratio)
+         n_func_2_zero_up = - n_cnst + e_small / ((clight) * f_ratio * (p_ratio **three))* log(p_ratio)
       else
-         n_func_2_zero_up = - n_cnst + e_small / ((clight **two) * f_ratio * (p_ratio **three)) &
+         n_func_2_zero_up = - n_cnst + e_small / ((clight) * f_ratio * (p_ratio **three)) &
                           & * ((p_ratio **(three-q_in) - one)/(three - q_in))
       endif
 
@@ -1187,7 +1187,7 @@ contains
 !----------------------------------------------------------------------------------------------------
    function n_func_2_zero_lo(p_ratio, n_cnst,q_in) ! from eqn. 9
 
-      use constants,       only: one, two, three
+      use constants,       only: one, three
       use cresp_variables, only: clight ! use units, only: clight
       use initcrspectrum,  only: e_small
 
@@ -1197,14 +1197,14 @@ contains
       real(kind=8) :: n_func_2_zero_lo
 
       if (abs(q_in - three) .lt. eps) then
-         n_func_2_zero_lo = - n_cnst + (e_small / (clight **two)) * log(p_ratio)
+         n_func_2_zero_lo = - n_cnst + (e_small / (clight)) * log(p_ratio)
       else
-         n_func_2_zero_lo = - n_cnst + (e_small / (clight **two)) * ((p_ratio **(three-q_in) - one)/(three - q_in))
+         n_func_2_zero_lo = - n_cnst + (e_small / (clight)) * ((p_ratio **(three-q_in) - one)/(three - q_in))
       endif
 
    end function n_func_2_zero_lo
 !----------------------------------------------------------------------------------------------------
-   function func_val_vec_up_bnd(x) ! called by cresp_crspectrum
+   function func_val_vec_up_bnd(x) ! DEPRECATED
 
       implicit none
 
@@ -1217,7 +1217,7 @@ contains
    end function func_val_vec_up_bnd
 
 !----------------------------------------------------------------------------------------------------
-   function func_val_vec_lo_bnd(x) ! called by cresp_crspectrum module via NR_get_solution_lo
+   function func_val_vec_lo_bnd(x) ! DEPRECATED
 
       implicit none
 
@@ -1337,7 +1337,7 @@ contains
 !----------------------------------------------------------------------------------------------------
    function e_small_to_f(p_outer) ! used by variety of procedures and functions
 
-      use constants,       only: zero, three, two, fpi
+      use constants,       only: zero, three, fpi
       use cresp_variables, only: clight ! use units, only: clight
       use initcrspectrum,  only: e_small
 
@@ -1346,7 +1346,7 @@ contains
       real (kind=8) :: e_small_to_f, p_outer
 
       e_small_to_f = zero
-      e_small_to_f = e_small / (fpi * (clight **two)  * p_outer **three)
+      e_small_to_f = e_small / (fpi * (clight)  * p_outer **three)
 
    end function e_small_to_f
 !----------------------------------------------------------------------------------------------------
