@@ -77,7 +77,6 @@ module initcosmicrays
    integer(kind=4), allocatable, dimension(:) :: iarr_cre_e !< array of indexes pointing to all CR electron energy components
    integer(kind=4), allocatable, dimension(:) :: iarr_cre_n !< array of indexes pointing to all CR electron number density components
 #endif /* COSM_RAY_ELECTRONS */
-   integer(kind=4), allocatable, dimension(:) :: iarr_crs_diff !< array of indexes pointing to all conventionally diffusing CR components
 
    real,    allocatable, dimension(:)  :: gamma_crs    !< array containing adiabatic indexes of all CR components
    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
@@ -320,9 +319,6 @@ contains
       ma1d = [ncrs]
       call my_allocate(iarr_crs, ma1d)
 
-      ma1d = [ncrs]
-      call my_allocate(iarr_crs_diff, ma1d)
-
 #ifdef COSM_RAYS_SOURCES
       call init_crsources(ncrn, crn_gpcr_ess)
 #endif /* COSM_RAYS_SOURCES */
@@ -409,7 +405,6 @@ contains
          iarr_cre_e(icr) = flind%cre%ebeg - I_ONE + icr
       enddo
 #endif /* COSM_RAY_ELECTRONS */
-      iarr_crs_diff = iarr_crs
 
    end subroutine cosmicray_index
 
