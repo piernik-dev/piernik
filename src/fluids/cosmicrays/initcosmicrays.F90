@@ -358,22 +358,18 @@ contains
       implicit none
 
       type(var_numbers), intent(inout) :: flind
-      integer(kind=4) :: icr, ncr
+      integer(kind=4) :: icr
 
       flind%crn%beg    = flind%all + I_ONE
       flind%crs%beg    = flind%crn%beg
 
       flind%crn%all  = ncrn
 
-      if (ncre .le. 0) then
-         flind%cre%all  = 0
-      else
 #ifdef COSM_RAY_ELECTRONS
-         flind%cre%all  = 2*ncre
+      flind%cre%all  = 2*ncre
 #else /* !COSM_RAY_ELECTRONS */
-         flind%cre%all  = ncre
+      flind%cre%all  = ncre
 #endif /* !COSM_RAY_ELECTRONS */
-      endif
 
       flind%crs%all  = flind%crn%all + flind%cre%all
       do icr = 1, ncrn
@@ -382,20 +378,17 @@ contains
       enddo
       flind%all = flind%all + flind%crn%all
 
-      if (ncre.gt.0) then
-         ncr = 0
 #ifdef COSM_RAY_ELECTRONS
-         ncr = 2 * ncre
+      do icr = 1, 2 * ncre
 #else /* !COSM_RAY_ELECTRONS */
-         ncr = ncre
+      do icr = 1, ncre
 #endif /* !COSM_RAY_ELECTRONS */
-         do icr = 1, ncr
-            iarr_cre(icr)        = flind%all + icr
-            iarr_crs(ncrn + icr) = flind%all + icr
-         enddo
-      endif
+         iarr_cre(icr)        = flind%all + icr
+         iarr_crs(ncrn + icr) = flind%all + icr
+      enddo
 
       flind%all = flind%all + flind%cre%all
+
       flind%crn%end = flind%crn%beg + flind%crn%all - I_ONE
       flind%cre%beg = flind%crn%end + I_ONE
       flind%cre%end = flind%all
@@ -416,9 +409,8 @@ contains
          iarr_cre_e(icr) = flind%cre%ebeg - I_ONE + icr
       enddo
 #endif /* COSM_RAY_ELECTRONS */
-!      if ( ncre.eq.0) then
       iarr_crs_diff = iarr_crs
-!      endif
+
    end subroutine cosmicray_index
 
    subroutine cleanup_cosmicrays
