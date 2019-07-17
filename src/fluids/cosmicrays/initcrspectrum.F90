@@ -600,15 +600,13 @@ module initcrspectrum
       endif
 
       if (ncre > 0) then
-         K_crs_paral(ncrn+1     :ncrn+  ncre) = K_cre_paral_1 * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP number density K
-         K_crs_paral(ncrn+1+ncre:ncrn+2*ncre) = K_cre_paral_1 * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP energy density K
-         K_crs_perp(ncrn+1      :ncrn+  ncre) = K_cre_perp_1  * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP number density K
-         K_crs_perp(ncrn+ncre+1 :ncrn+2*ncre) = K_cre_perp_1  * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP energy density K
+         K_cre_paral(1:ncre)        = K_cre_paral_1 * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP number density K
+         K_cre_perp (1:ncre)        = K_cre_perp_1  * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP number density K
+         K_cre_paral(ncre+1:2*ncre) = K_cre_paral(1:ncre)
+         K_cre_perp (ncre+1:2*ncre) = K_cre_perp(1:ncre)
 
-         K_cre_paral(1:ncre)        =  K_crs_paral(ncrn+1     :ncrn+  ncre)        !< CRESP number density K
-         K_cre_paral(ncre+1:2*ncre) =  K_crs_paral(ncrn+1+ncre:ncrn+2*ncre)        !< CRESP energy density K
-         K_cre_perp(1:ncre)         =  K_crs_perp(ncrn+1      :ncrn+  ncre)        !< CRESP number density K
-         K_cre_perp(ncre+1:2*ncre)  =  K_crs_perp(ncrn+1+ncre :ncrn+2*ncre)        !< CRESP energy density K
+         K_crs_paral(ncrn+1:ncrn+2*ncre) = K_cre_paral(1:2*ncre)
+         K_crs_perp (ncrn+1:ncrn+2*ncre) = K_cre_perp (1:2*ncre)
       endif
 
    end subroutine init_cresp
