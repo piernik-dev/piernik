@@ -41,7 +41,6 @@ module initcrspectrum
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
    logical            :: use_cresp                   !< determines whether CRESP update is called by fluidupdate
-   integer(kind=4)    :: ncre                        !< number of bins
    real(kind=8)       :: p_min_fix                   !< fixed momentum grid lower cutoff
    real(kind=8)       :: p_max_fix                   !< fixed momentum grid upper cutoff
    real(kind=8)       :: p_lo_init                   !< initial lower cutoff momentum
@@ -81,7 +80,6 @@ module initcrspectrum
    logical            :: allow_source_spectrum_break !< allow extension of spectrum to adjacent bins if momenta found exceed set p_fix
    logical            :: synch_active                !< TEST feature - turns on / off synchrotron cooling @ CRESP
    logical            :: adiab_active                !< TEST feature - turns on / off adiabatic   cooling @ CRESP
-   logical            :: cre_gpcr_ess                !< electron essentiality for gpcr computation
    real(kind=8)       :: cre_active                  !< electron contribution to Pcr
 
 ! NR parameters
@@ -150,6 +148,7 @@ module initcrspectrum
       use cresp_variables, only: clight ! use units,   only: clight
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index
+      use initcosmicrays,  only: ncrn, ncre, cre_gpcr_ess, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use units,           only: me
 
@@ -159,9 +158,9 @@ module initcrspectrum
       integer                  :: i       ! enumerator
       real(kind=8)             :: p_br_def, q_br_def
 
-      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, ncre, initial_condition, &
+      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_condition, &
       &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, p_br_init,  &
-      &                         K_cre_pow, expan_order, e_small, cre_gpcr_ess, use_cresp, e_small_approx_init_cond, &
+      &                         K_cre_pow, expan_order, e_small, use_cresp, e_small_approx_init_cond,               &
       &                         e_small_approx_p_lo, e_small_approx_p_up, force_init_NR, NR_iter_limit, max_p_ratio,&
       &                         synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init, Gamma_min_fix,           &
       &                         Gamma_max_fix, Gamma_lo_init, Gamma_up_init, nullify_empty_bins, approx_cutoffs,    &
@@ -170,7 +169,6 @@ module initcrspectrum
 
 ! Default values
       use_cresp         = .true.
-      ncre              = 0
       p_min_fix         = 1.5e1
       p_max_fix         = 1.65e4
       p_lo_init         = 1.5e1
@@ -212,7 +210,6 @@ module initcrspectrum
       allow_source_spectrum_break  = .false.
       synch_active = .true.
       adiab_active = .true.
-      cre_gpcr_ess = .false.
       cre_active   = 0.0
 
 ! NR parameters
@@ -246,32 +243,30 @@ module initcrspectrum
       rbuff(:)   = huge(1.)                         ! mark unused entries to allow automatic determination of nn
 
       if (master) then
-         ibuff(1)  = ncre
-         ibuff(2)  = expan_order
+         ibuff(1)  = expan_order
 
-         ibuff(3)  = e_small_approx_p_lo
-         ibuff(4)  = e_small_approx_p_up
-         ibuff(5)  = e_small_approx_init_cond
+         ibuff(2)  = e_small_approx_p_lo
+         ibuff(3)  = e_small_approx_p_up
+         ibuff(4)  = e_small_approx_init_cond
 
-         ibuff(6)  =  NR_iter_limit
-         ibuff(7)  =  arr_dim
-         ibuff(8)  =  arr_dim_q
+         ibuff(5)  =  NR_iter_limit
+         ibuff(6)  =  arr_dim
+         ibuff(7)  =  arr_dim_q
 
          lbuff(1)  =  use_cresp
-         lbuff(2)  =  cre_gpcr_ess
-         lbuff(3)  =  allow_source_spectrum_break
-         lbuff(4)  =  synch_active
-         lbuff(5)  =  adiab_active
+         lbuff(2)  =  allow_source_spectrum_break
+         lbuff(3)  =  synch_active
+         lbuff(4)  =  adiab_active
 
-         lbuff(6)  =  force_init_NR
-         lbuff(7)  =  NR_run_refine_pf
-         lbuff(8)  =  NR_refine_solution_q
-         lbuff(9)  =  NR_refine_pf_lo
-         lbuff(10) =  NR_refine_pf_up
-         lbuff(11) =  nullify_empty_bins
-         lbuff(12) =  approx_cutoffs
+         lbuff(5)  =  force_init_NR
+         lbuff(6)  =  NR_run_refine_pf
+         lbuff(7)  =  NR_refine_solution_q
+         lbuff(8)  =  NR_refine_pf_lo
+         lbuff(9)  =  NR_refine_pf_up
+         lbuff(10) =  nullify_empty_bins
+         lbuff(11) =  approx_cutoffs
 
-         lbuff(13) = hdf_save_fpq
+         lbuff(12) = hdf_save_fpq
 
          rbuff(1)  = cfl_cre
          rbuff(2)  = cre_eff
@@ -314,32 +309,30 @@ module initcrspectrum
       call piernik_MPI_Bcast(cbuff, cbuff_len)
 
       if (slave) then
-         ncre                        = int(ibuff(1),kind=4)
-         expan_order                 = int(ibuff(2),kind=4)
+         expan_order                 = int(ibuff(1),kind=4)
 
-         e_small_approx_p_lo         = int(ibuff(3),kind=1)
-         e_small_approx_p_up         = int(ibuff(4),kind=1)
-         e_small_approx_init_cond    = int(ibuff(5),kind=1)
+         e_small_approx_p_lo         = int(ibuff(2),kind=1)
+         e_small_approx_p_up         = int(ibuff(3),kind=1)
+         e_small_approx_init_cond    = int(ibuff(4),kind=1)
 
-         NR_iter_limit               = int(ibuff(6),kind=2)
-         arr_dim                     = int(ibuff(7),kind=4)
-         arr_dim_q                   = int(ibuff(8),kind=4)
+         NR_iter_limit               = int(ibuff(5),kind=2)
+         arr_dim                     = int(ibuff(6),kind=4)
+         arr_dim_q                   = int(ibuff(7),kind=4)
 
          use_cresp                   = lbuff(1)
-         cre_gpcr_ess                = lbuff(2)
-         allow_source_spectrum_break = lbuff(3)
-         synch_active                = lbuff(4)
-         adiab_active                = lbuff(5)
+         allow_source_spectrum_break = lbuff(2)
+         synch_active                = lbuff(3)
+         adiab_active                = lbuff(4)
 
-         force_init_NR               = lbuff(6)
-         NR_run_refine_pf            = lbuff(7)
-         NR_refine_solution_q        = lbuff(8)
-         NR_refine_pf_lo             = lbuff(9)
-         NR_refine_pf_up             = lbuff(10)
-         nullify_empty_bins          = lbuff(11)
-         approx_cutoffs              = lbuff(12)
+         force_init_NR               = lbuff(5)
+         NR_run_refine_pf            = lbuff(6)
+         NR_refine_solution_q        = lbuff(7)
+         NR_refine_pf_lo             = lbuff(8)
+         NR_refine_pf_up             = lbuff(9)
+         nullify_empty_bins          = lbuff(10)
+         approx_cutoffs              = lbuff(11)
 
-         hdf_save_fpq                = lbuff(13)
+         hdf_save_fpq                = lbuff(12)
 
          cfl_cre                     = rbuff(1)
          cre_eff                     = rbuff(2)
@@ -605,14 +598,28 @@ module initcrspectrum
 
          call init_cresp_types
       endif
+
+      if (ncre > 0) then
+         K_crs_paral(ncrn+1     :ncrn+  ncre) = K_cre_paral_1 * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP number density K
+         K_crs_paral(ncrn+1+ncre:ncrn+2*ncre) = K_cre_paral_1 * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP energy density K
+         K_crs_perp(ncrn+1      :ncrn+  ncre) = K_cre_perp_1  * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP number density K
+         K_crs_perp(ncrn+ncre+1 :ncrn+2*ncre) = K_cre_perp_1  * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP energy density K
+
+         K_cre_paral(1:ncre)        =  K_crs_paral(ncrn+1     :ncrn+  ncre)        !< CRESP number density K
+         K_cre_paral(ncre+1:2*ncre) =  K_crs_paral(ncrn+1+ncre:ncrn+2*ncre)        !< CRESP energy density K
+         K_cre_perp(1:ncre)         =  K_crs_perp(ncrn+1      :ncrn+  ncre)        !< CRESP number density K
+         K_cre_perp(ncre+1:2*ncre)  =  K_crs_perp(ncrn+1+ncre :ncrn+2*ncre)        !< CRESP energy density K
+      endif
+
    end subroutine init_cresp
 
 !----------------------------------------------------------------------------------------------------
 
    subroutine init_cresp_types
 
-      use constants,   only: zero, I_ZERO
-      use diagnostics, only: my_allocate_with_index
+      use constants,      only: zero, I_ZERO
+      use diagnostics,    only: my_allocate_with_index
+      use initcosmicrays, only: ncre
 
       implicit none
 

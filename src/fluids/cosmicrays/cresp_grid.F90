@@ -169,9 +169,9 @@ module cresp_grid
       use cresp_NR_method,    only: cresp_initialize_guess_grids
       use dataio_pub,         only: warn, printinfo, msg
       use grid_cont,          only: grid_container
-      use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
+      use initcosmicrays,     only: iarr_cre_n, iarr_cre_e, ncre
       use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, f_init, &
-                                    ncre, hdf_save_fpq, nam_cresp_f, nam_cresp_p, nam_cresp_q
+                                    hdf_save_fpq, nam_cresp_f, nam_cresp_p, nam_cresp_q
       use mpisetup,           only: master
       use named_array_list,   only: wna
       use units,              only: clight, me, sigma_T

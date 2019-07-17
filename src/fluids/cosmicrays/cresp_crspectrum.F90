@@ -125,7 +125,8 @@ contains
       use dataio_pub,     only: msg, printinfo
 #endif /* CRESP_VERBOSED */
       use diagnostics,    only: decr_vec
-      use initcrspectrum, only: ncre, spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, crel, p_mid_fix, nullify_empty_bins, p_fix
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, crel, p_mid_fix, nullify_empty_bins, p_fix
 
       implicit none
 
@@ -368,7 +369,8 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine detect_clean_spectrum(ext_n, ext_e, empty_cell) ! DEPRECATED
 
-      use initcrspectrum,      only: ncre, nullify_empty_bins
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: nullify_empty_bins
 
       implicit none
 
@@ -393,7 +395,7 @@ contains
    subroutine nullify_inactive_bins(ext_n, ext_e)
 
       use constants,      only: zero
-      use initcrspectrum, only: ncre
+      use initcosmicrays, only: ncre
 
       implicit none
 
@@ -409,7 +411,7 @@ contains
    subroutine nullify_all_bins(ext_n, ext_e)
 
       use constants,      only: zero
-      use initcrspectrum, only: ncre
+      use initcosmicrays, only: ncre
 
       implicit none
 
@@ -426,7 +428,7 @@ contains
    subroutine find_i_bound(ext_n, ext_e, empty_cell) ! DEPRECATED
 
       use constants,      only: zero
-      use initcrspectrum, only: ncre
+      use initcosmicrays, only: ncre
 
       implicit none
 
@@ -466,7 +468,8 @@ contains
       use dataio_pub,     only: msg, printinfo, warn
 #endif /* CRESP_VERBOSED */
       use diagnostics,    only: incr_vec
-      use initcrspectrum, only: ncre, e_small, cresp_all_edges, cresp_all_bins, p_fix, p_mid_fix
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: e_small, cresp_all_edges, cresp_all_bins, p_fix, p_mid_fix
 
       implicit none
 
@@ -666,7 +669,8 @@ contains
       use constants,       only: zero, fpi, one, three
       use cresp_variables, only: clight ! use units,     only: clight
       use cresp_NR_method, only: compute_q
-      use initcrspectrum,  only: p_fix, ncre, e_small, eps
+      use initcosmicrays,  only: ncre
+      use initcrspectrum,  only: p_fix, e_small, eps
 #ifdef CRESP_VERBOSED
       use dataio_pub,      only: printinfo, msg
 #endif /* CRESP_VERBOSED */
@@ -728,7 +732,7 @@ contains
 
       use constants,      only: zero, ndims
       use dataio_pub,     only: warn, msg
-      use initcrspectrum, only: ncre
+      use initcosmicrays, only: ncre
 
       implicit none                       ! if they do, there's something wrong with last code modifications
 
@@ -782,9 +786,10 @@ contains
 
       use constants,      only: zero, I_ZERO, one
 #ifdef CRESP_VERBOSED
-      use dataio_pub,      only: msg, printinfo
+      use dataio_pub,     only: msg, printinfo
 #endif /* CRESP_VERBOSED */
-      use initcrspectrum, only: ncre, p_fix, w, cresp_all_bins, cresp_all_edges
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: p_fix, w, cresp_all_bins, cresp_all_edges
 
       implicit none
 
@@ -908,10 +913,10 @@ contains
       use cresp_NR_method, only: e_small_to_f
       use cresp_variables, only: clight ! use units, only: clight
       use dataio_pub,      only: warn, msg, die, printinfo
-      use initcrspectrum,  only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, eps, p_fix, w,   &
+      use initcosmicrays,  only: ncre
+      use initcrspectrum,  only: spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, eps, p_fix, w,   &
                               &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, crel,      &
-                              &  e_small_approx_p_up, total_init_cree, e_small, cresp_all_bins,     &
-                              &  q_br_init, p_br_init
+                              &  e_small_approx_p_up, total_init_cree, e_small, cresp_all_bins, q_br_init, p_br_init
       use mpisetup,        only: master
 
       implicit none
@@ -1182,7 +1187,8 @@ contains
 
       use constants,      only: zero
       use diagnostics,    only: my_deallocate
-      use initcrspectrum, only: ncre, p_fix, w, cresp_all_bins, cresp_all_edges
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: p_fix, w, cresp_all_bins, cresp_all_edges
 
       implicit none
 
@@ -1227,7 +1233,8 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_get_scaled_init_spectrum(n_inout, e_inout, e_in_total) !< Using n,e spectrum obtained at initialization, obtain injected spectrum at given cell
 
-      use initcrspectrum, only: norm_init_spectrum, total_init_cree, ncre
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: norm_init_spectrum, total_init_cree
 
       implicit none
 
@@ -1249,7 +1256,8 @@ contains
 
       use constants,       only: zero, one, four, fpi
       use cresp_variables, only: clight ! use units, only: clight
-      use initcrspectrum,  only: ncre, eps
+      use initcosmicrays,  only: ncre
+      use initcrspectrum,  only: eps
 
       implicit none
 
@@ -1298,7 +1306,8 @@ contains
    function fq_to_n(p_l, p_r, f_l, q, bins)
 
       use constants,      only: zero, one, three, fpi
-      use initcrspectrum, only: ncre, eps
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: eps
 
       implicit none
 
@@ -1394,7 +1403,8 @@ contains
 
       use constants,       only: zero, one, three, four, fpi
       use cresp_variables, only: clight ! use units, only: clight
-      use initcrspectrum,  only: ncre, eps, cresp_all_bins
+      use initcosmicrays,  only: ncre
+      use initcrspectrum,  only: eps, cresp_all_bins
 
       implicit none
 
@@ -1485,7 +1495,8 @@ contains
    subroutine cresp_compute_r(p, bins)
 
       use constants,      only: zero, four, five
-      use initcrspectrum, only: ncre, eps
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: eps
 
       implicit none
 
@@ -1524,7 +1535,8 @@ contains
       use constants,       only: zero
       use cresp_NR_method, only: compute_q
       use cresp_variables, only: clight ! use units, only: clight
-      use initcrspectrum,  only: ncre, e_small
+      use initcosmicrays,  only: ncre
+      use initcrspectrum,  only: e_small
 
       implicit none
 
@@ -1577,7 +1589,8 @@ contains
    function nq_to_f(p_l, p_r, n, q, bins)
 
       use constants,      only: zero, one, three, fpi
-      use initcrspectrum, only: ncre, eps
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: eps
 
       implicit none
 
@@ -1639,7 +1652,8 @@ contains
    subroutine src_gpcresp(u, n, dx, grad_pcresp)
 
       use constants,      only: onet
-      use initcrspectrum, only: ncre, cre_active, cre_gpcr_ess
+      use initcosmicrays, only: ncre, cre_gpcr_ess
+      use initcrspectrum, only: cre_active
 
       implicit none
 
@@ -1894,7 +1908,7 @@ contains
    subroutine cresp_allocate_all
 
       use diagnostics,    only: my_allocate_with_index
-      use initcrspectrum, only: ncre
+      use initcosmicrays, only: ncre
 
       implicit none
 
@@ -2006,7 +2020,8 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine printer(t)
 
-      use initcrspectrum, only: ncre, crel
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: crel
 
       implicit none
 

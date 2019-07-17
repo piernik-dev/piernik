@@ -45,7 +45,8 @@ contains
 
    function assume_p_up(cell_i_up)
 
-      use initcrspectrum, only: p_fix, p_mid_fix, ncre
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: p_fix, p_mid_fix
 
       implicit none
 
@@ -65,7 +66,8 @@ contains
    function evaluate_i_up(e_cell, n_cell) ! obtain i_up index from energy densities in cell
 
       use constants,      only: zero
-      use initcrspectrum, only: ncre, e_small
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: e_small
 
       implicit none
 

@@ -104,7 +104,7 @@ contains
       use dataio_pub,     only: msg
 #ifdef COSM_RAY_ELECTRONS
       use fluidindex,     only: iarr_all_crn
-      use initcrspectrum, only: ncre
+      use initcosmicrays, only: ncre
 #else /* !COSM_RAY_ELECTRONS */
       use fluidindex,     only: iarr_all_crs
 #endif /* !COSM_RAY_ELECTRONS */
