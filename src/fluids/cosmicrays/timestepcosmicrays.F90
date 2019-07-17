@@ -43,7 +43,7 @@ module timestepcosmicrays
 contains
 
 !>
-!! \details On a static grid with simple domain decompositions the Following subroutine evaluates some constants, there is no need to run it
+!! \details On a static grid with simple domain decompositions the following subroutine evaluates some constants, there is no need to run it
 !! more than once, apart from wasting CPU cycles.
 !<
    subroutine timestep_crs(cg)
@@ -51,7 +51,12 @@ contains
       use constants,           only: one, half
       use domain,              only: is_multicg
       use grid_cont,           only: grid_container
-      use initcosmicrays,      only: cfl_cr, K_crn_paral, K_crn_perp
+      use initcosmicrays,      only: cfl_cr
+#ifdef COSM_RAY_ELECTRONS
+      use initcosmicrays,      only: K_crn_paral, K_crn_perp
+#else /* !COSM_RAY_ELECTRONS */
+      use initcosmicrays,      only: K_crs_paral, K_crs_perp
+#endif /* !COSM_RAY_ELECTRONS */
 #ifdef MULTIGRID
       use initcosmicrays,      only: use_CRsplit
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
@@ -67,10 +72,19 @@ contains
      if (.not. (is_multicg .or. frun)) return
       ! with multiple cg% there are few cg%dxmn to be checked
       ! with AMR minval(cg%dxmn) may change with time
-      if (maxval(K_crn_paral+K_crn_perp) <= 0) then !!!
+
+#ifdef COSM_RAY_ELECTRONS
+      if (maxval(K_crn_paral+K_crn_perp) <= 0) then
+#else /* !COSM_RAY_ELECTRONS */
+      if (maxval(K_crs_paral+K_crs_perp) <= 0) then
+#endif /* !COSM_RAY_ELECTRONS */
          dt_crs = huge(one)
       else
+#ifdef COSM_RAY_ELECTRONS
          dt = cfl_cr * half/maxval(K_crn_paral+K_crn_perp) !!! dt(K_cre) done in cresp_timestep & cresp_grid
+#else /* !COSM_RAY_ELECTRONS */
+         dt = cfl_cr * half/maxval(K_crs_paral+K_crs_perp)
+#endif /* !COSM_RAY_ELECTRONS */
          if (cg%dxmn < sqrt(huge(one))/dt) then
             dt = dt * cg%dxmn**2
 #ifdef MULTIGRID
@@ -80,6 +94,7 @@ contains
            dt_crs = min(dt_crs, dt)
          endif
       endif
+
       frun = .false.
 
    end subroutine timestep_crs
