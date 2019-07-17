@@ -172,7 +172,8 @@ module timestep_cresp
 
    subroutine cresp_timestep_adiabatic(dt_cre_ud, u_d_abs)
 
-      use initcrspectrum, only: w, eps
+      use constants,       only: logten
+      use initcrspectrum,  only: w, eps
 
       implicit none
 
@@ -180,7 +181,7 @@ module timestep_cresp
       real(kind=8), intent(in)  :: u_d_abs    ! assumes that u_d > 0 always
 
       if ( u_d_abs .gt. eps) then
-         dt_cre_ud = cfl_cre * w / u_d_abs
+         dt_cre_ud = cfl_cre * logten * w / u_d_abs
          dt_cre_min_ud = min(dt_cre_ud, dt_cre_min_ud)      ! remember to max dt_cre_min_ud at beginning of the search!
       endif
 

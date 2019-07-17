@@ -68,6 +68,7 @@ module constants
    real, parameter :: thrq       = 3./4.                 !< three fourths
    real, parameter :: onesth     = 1./6.                 !< one sixth
    real, parameter :: oneeig     = 1./8.                 !< one eighth
+   real, parameter :: logten     = log(ten)              !< natural logarithm of ten
 
    enum, bind(C)
       enumerator :: idn = 1, imx, imy, imz, ien
