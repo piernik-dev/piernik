@@ -126,22 +126,25 @@ contains
       use dataio_pub, only: warn, msg
       use global,     only: do_external_corners
       use refinement, only: prefer_n_bruteforce
-      use mpisetup,   only: proc, master
+      use mpisetup,   only: master
 
       implicit none
 
       class(cg_list_neighbors_T), intent(inout) :: this !< object invoking type bound procedure
 
+      logical, save :: firstcall = .true.
+
       if (do_external_corners) then
-         write(msg, '(a,i5,a,i2,3a)') "[cg_list_neighbors:find_neighbors] @", proc, " ^", this%l%id, " do_external_corners implemented experimentally (", trim(merge("SFC       ", "bruteforce", this%dot%is_blocky .and. .not. prefer_n_bruteforce)), ")"
-         if (master) call warn(msg)
+         write(msg, '(3a)') "[cg_list_neighbors:find_neighbors] do_external_corners implemented experimentally (", trim(merge("SFC       ", "bruteforce", this%dot%is_blocky .and. .not. prefer_n_bruteforce)), ")"
+         if (master .and. firstcall) call warn(msg)
+         firstcall = .false.
       endif
 
       this%ms%valid = .false.
       if (this%dot%is_blocky .and. .not. prefer_n_bruteforce) then
          call this%find_neighbors_SFC
          call this%find_ext_neighbors_bruteforce
-!         call this%ms%merge(this)  ! temporarily incompatible with find_ext_neighbors_bruteforce
+         call this%ms%merge(this)  ! temporarily incompatible with find_ext_neighbors_bruteforce
       else
          call this%find_neighbors_bruteforce
          call this%find_ext_neighbors_bruteforce
@@ -610,25 +613,25 @@ contains
       use constants,  only: xdim, ydim, zdim, cor_dim, ndims, LO, HI, I_ONE
       use domain,     only: dom
       use dataio_pub, only: die
+      use gcpa,       only: gcpa_T
       use global,     only: do_external_corners
-      use mpisetup,   only: FIRST, LAST
+      use mpisetup,   only: FIRST, LAST, proc
       use overlap,    only: is_overlap
 
       implicit none
 
       class(cg_list_neighbors_T), intent(inout) :: this !< object invoking type bound procedure
 
-      type(cg_list_element), pointer                  :: cgl
-      integer(kind=8), dimension(xdim:zdim)           :: per
-      integer                                         :: j, b, ix, iy, iz
-      integer(kind=8), dimension(ndims, LO:HI)        :: box, box_narrow, e_guard, e_guard_wide, whole_level, poff, aux
-      integer(kind=4)                                 :: d, hl, lh, m_tag
+      type(cg_list_element), pointer           :: cgl
+      integer(kind=8), dimension(xdim:zdim)    :: per
+      integer                                  :: j, b, ix, iy, iz
+      integer(kind=8), dimension(ndims, LO:HI) :: box, box_narrow, e_guard, e_guard_wide, whole_level, poff, aux
+      integer(kind=4)                          :: d, hl, lh, m_tag
+      type(gcpa_T)                             :: l_pse
 
       if (.not. do_external_corners) return
 
-      ! Identifying local (intra-thread) communication is not critically
-      ! important here (see the use of type(gcpa_T) :: l_pse above for details).
-      ! \todo move that part outside of find_neighbors_*
+      call l_pse%init(this)
 
       m_tag = max_tag(this)
 
@@ -704,6 +707,7 @@ contains
                                                          aux(:, LO) = max(e_guard_wide(:, LO), poff(:, LO))
                                                          aux(:, HI) = min(e_guard_wide(:, HI), poff(:, HI))
                                                          call cgl%cg%i_bnd(cor_dim)%add_seg(j, aux, m_tag + uniq_tag(cgl%cg%my_se, aux, b))
+                                                         if (j == proc) cgl%cg%i_bnd(cor_dim)%seg(ubound(cgl%cg%i_bnd(cor_dim)%seg, dim=1))%local => l_pse%l_pse(b)%p
                                                       endif
                                                    endif
                                                 enddo
@@ -725,6 +729,8 @@ contains
 
          cgl => cgl%nxt
       enddo
+
+      call l_pse%cleanup
 
    contains
 
