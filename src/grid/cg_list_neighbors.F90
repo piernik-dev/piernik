@@ -133,7 +133,7 @@ contains
       class(cg_list_neighbors_T), intent(inout) :: this !< object invoking type bound procedure
 
       if (do_external_corners) then
-         write(msg, '(a,i5,a,i2,a)') "[cg_list_neighbors:find_neighbors] @", proc, " ^", this%l%id, " do_external_corners implemented experimentally"
+         write(msg, '(a,i5,a,i2,3a)') "[cg_list_neighbors:find_neighbors] @", proc, " ^", this%l%id, " do_external_corners implemented experimentally (", trim(merge("SFC       ", "bruteforce", this%dot%is_blocky .and. .not. prefer_n_bruteforce)), ")"
          if (master) call warn(msg)
       endif
 
