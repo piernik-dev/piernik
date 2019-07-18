@@ -209,8 +209,8 @@ contains
       class(level_T),                               intent(in) :: this !< object invoking type bound procedure
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: se   !< cuboid
 
-      integer,                                      intent(in) :: d    !< direction
-      integer,                                      intent(in) :: lh   !< LO or HI
+      integer(kind=4),                              intent(in) :: d    !< direction
+      integer(kind=4),                              intent(in) :: lh   !< LO or HI
 
       if (dom%has_dir(d)) then
          select case (lh)
