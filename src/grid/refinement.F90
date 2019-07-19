@@ -39,7 +39,7 @@ module refinement
         &    refine_boxes, init_refinement, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce
 
    integer(kind=4), protected :: n_updAMR            !< How often to update the refinement structure
-   logical,         protected :: strict_SFC_ordering !< Enforce strict SFC ordering to allow optimized neighbour search
+   logical,         protected :: strict_SFC_ordering !< Enforce strict SFC ordering to allow for optimized neighbour search
    real,            protected :: oop_thr             !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
    logical,         protected :: prefer_n_bruteforce !< If .false. then try SFC algorithms for neighbor searches
    integer(kind=4), protected :: level_min           !< Minimum allowed refinement, base level by default.
@@ -105,11 +105,11 @@ contains
 !<
    subroutine init_refinement
 
-      use constants,      only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, LO, HI, cbuff_len, refinement_factor
-      use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,     only: die, code_progress, warn, msg, printinfo
-      use domain,         only: dom
-      use mpisetup,       only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
+      use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, LO, HI, cbuff_len, refinement_factor
+      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub, only: die, code_progress, warn, msg, printinfo
+      use domain,     only: dom
+      use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -225,7 +225,7 @@ contains
 
       emergency_fix = .false.
 
-      do_refine = (level_max > base_level_id)
+      do_refine = (level_max > base_level_id) .or. all((bsize /= I_ZERO) .or. .not. dom%has_dir)
 
       if (do_refine .and. all(bsize == I_ZERO)) call automagic_bsize
 

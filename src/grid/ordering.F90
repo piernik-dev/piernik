@@ -106,6 +106,7 @@ contains
 
    function Morton_id(off) result(id)
 
+      use constants,  only: ndims
       use dataio_pub, only: die
 
       implicit none
@@ -113,27 +114,25 @@ contains
       integer(kind=8), dimension(:), intent(in) :: off
 
       integer(kind=8) :: id
-      integer(kind=8), allocatable, dimension(:) :: o
+      integer(kind=8), dimension(ndims) :: o
       integer :: i
       integer(kind=8) :: mask
 
       if (any(off < 0)) call die("[ordering:Morton_id] only non-negative offsets are allowed")
 
-      allocate(o(size(off)))
-      o = off
+      o(:size(off)) = off
       id = 0
       mask = 1
-      do while (any(o /= 0))
-         do i = lbound(o, dim=1), ubound(o, dim=1)
+      do while (any(o(:size(off)) /= 0))
+         do i = lbound(off, dim=1), ubound(off, dim=1)
             if (btest(o(i), 0)) then
                id = ior(id, mask)
                if (mask <= 0) call die("[ordering:Morton_id] mask overflow")
             endif
             mask = ishft(mask, 1)
          enddo
-         o(:) = ishft(o, -1)
+         o(:size(off)) = ishft(o(:size(off)), -1)
       enddo
-      deallocate(o)
 
       !id = ieor(id, ishft(id, -1)) Gray code
 

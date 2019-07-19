@@ -47,7 +47,7 @@ contains
 !! \details to handle shearing box which is divided in y-direction at the edges, one has to provide another subroutine (is_overlap_per_shear) and add it to interface is_overlap
 !<
 
-   logical function is_overlap_per(this, other, periods) result(share)
+   pure logical function is_overlap_per(this, other, periods) result(share)
 
       use constants,  only: xdim, ydim, zdim, LO, HI
       use domain,     only: dom
@@ -86,7 +86,7 @@ contains
 !! This routine is not supposed to take care of periodic domain - use is_overlap_per when you check overlap for boxes that cross the periodic domain boundary
 !<
 
-   logical function is_overlap_simple(this, other) result(share)
+   pure logical function is_overlap_simple(this, other) result(share)
 
       use constants,  only: xdim, zdim, LO, HI
       use domain,     only: dom
