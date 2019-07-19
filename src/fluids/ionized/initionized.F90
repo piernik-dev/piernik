@@ -279,13 +279,16 @@ contains
 #define RNG 2:nm
    subroutine flux_ion(this, flux, cfr, uu, n, vx, bb, cs_iso2)
 
-      use constants,    only: xdim, ydim, zdim, idn, imx, imy, imz
+      use constants, only: idn, imx, imy, imz
 #ifndef ISO
-      use constants,    only: ien
+      use constants, only: ien
 #endif /* !ISO */
+#ifdef MAGNETIC
+      use constants, only: xdim, ydim, zdim
+#endif /* MAGNETIC */
 #ifdef LOCAL_FR_SPEED
-      use constants,    only: small, half
-      use global,       only: cfr_smooth
+      use constants, only: small, half
+      use global,    only: cfr_smooth
 #endif /* LOCAL_FR_SPEED */
 
       implicit none
@@ -317,6 +320,7 @@ contains
       call all_pres_ion(uu, n, bb, cs_iso2, this%gam, this%gam_1, pmag, p, pps)
 
       flux(RNG, idn)=uu(RNG, idn)*vx(RNG)
+#ifdef MAGNETIC
       flux(RNG, imx)=uu(RNG, imx)*vx(RNG)+ps(RNG) - bb(RNG, xdim)**2
       flux(RNG, imy)=uu(RNG, imy)*vx(RNG)-bb(RNG, ydim)*bb(RNG, xdim)
       flux(RNG, imz)=uu(RNG, imz)*vx(RNG)-bb(RNG, zdim)*bb(RNG, xdim)
@@ -324,6 +328,14 @@ contains
       flux(RNG, ien)=(uu(RNG, ien)+ps(RNG))*vx(RNG)-bb(RNG, xdim)*(bb(RNG, xdim)*uu(RNG, imx) &
                 +bb(RNG, ydim)*uu(RNG, imy)+bb(RNG, zdim)*uu(RNG, imz))/uu(RNG, idn)
 #endif /* !ISO */
+#else /* !MAGNETIC */
+      flux(RNG, imx)=uu(RNG, imx)*vx(RNG)+ps(RNG)
+      flux(RNG, imy)=uu(RNG, imy)*vx(RNG)
+      flux(RNG, imz)=uu(RNG, imz)*vx(RNG)
+#ifndef ISO
+      flux(RNG, ien)=(uu(RNG, ien)+ps(RNG))*vx(RNG)
+#endif /* !ISO */
+#endif /* !MAGNETIC */
       flux(1, :) = flux(2, :) ; flux(n, :) = flux(nm, :)
 
 #ifdef LOCAL_FR_SPEED
@@ -365,15 +377,15 @@ contains
 
    subroutine all_pres_ion(uu, n, bb, cs_iso2, gam, gam1, pmag, p, ps)
 
-      use constants,    only: idn
+      use constants,  only: idn
 #ifdef MAGNETIC
-      use constants,    only: xdim, ydim, zdim
-      use func,         only: emag
+      use constants,  only: xdim, ydim, zdim
+      use func,       only: emag
 #endif /* MAGNETIC */
 #ifndef ISO
-      use constants,    only: imx, imy, imz, ien
-      use dataio_pub,   only: die
-      use func,         only: ekin
+      use constants,  only: imx, imy, imz, ien
+      use dataio_pub, only: die
+      use func,       only: ekin
 #endif /* !ISO */
 
       implicit none

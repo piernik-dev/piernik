@@ -39,7 +39,7 @@ module refinement
         &    refine_boxes, init_refinement, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce
 
    integer(kind=4), protected :: n_updAMR            !< How often to update the refinement structure
-   logical,         protected :: strict_SFC_ordering !< Enforce strict SFC ordering to allow optimized neighbour search
+   logical,         protected :: strict_SFC_ordering !< Enforce strict SFC ordering to allow for optimized neighbour search
    real,            protected :: oop_thr             !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
    logical,         protected :: prefer_n_bruteforce !< If .false. then try SFC algorithms for neighbor searches
    integer(kind=4), protected :: level_min           !< Minimum allowed refinement, base level by default.
@@ -70,6 +70,7 @@ module refinement
       real :: ref_thr                   !< refinement threshold
       real :: deref_thr                 !< derefinement threshold
       real :: aux                       !< auxiliary parameter (can be smoother or filter strength)
+      logical :: plotfield              !< create a 3D array to keep the value of refinement criterion when set to .true.
    end type ref_auto_param
    integer, parameter :: n_ref_auto_param = 10                                 !< number of automatic refinement criteria available to user
    type(ref_auto_param), dimension(n_ref_auto_param), protected :: refine_vars !< Definitions of user-supplied automatic refinement criteria: refinement vatiable, refinement algorithm, refinement threshold, derefinement threshold, auxiliary parameter
@@ -104,11 +105,11 @@ contains
 !<
    subroutine init_refinement
 
-      use constants,      only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, LO, HI, cbuff_len, refinement_factor
-      use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,     only: die, code_progress, warn, msg, printinfo
-      use domain,         only: dom
-      use mpisetup,       only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
+      use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, LO, HI, cbuff_len, refinement_factor
+      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub, only: die, code_progress, warn, msg, printinfo
+      use domain,     only: dom
+      use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -126,7 +127,7 @@ contains
       oop_thr = 0.1
       refine_points(:) = ref_point(base_level_id-1, [ 0., 0., 0.] )
       refine_boxes (:) = ref_box  (base_level_id-1, reshape([ 0., 0., 0., 0., 0., 0.], [ndims, HI-LO+I_ONE] ) )
-      refine_vars  (:) = ref_auto_param (inactive_name, inactive_name, 0., 0., 0.)
+      refine_vars  (:) = ref_auto_param (inactive_name, inactive_name, 0., 0., 0., .false.)
 
       if (1 + 9*nshapes +3*n_ref_auto_param > ubound(rbuff, dim=1)) call die("[refinement:init_refinement] increase rbuff size") ! should be detected at compile time but it is only a warning
       if (2*n_ref_auto_param > ubound(cbuff, dim=1)) call die("[refinement:init_refinement] increase cbuff size")
@@ -167,6 +168,7 @@ contains
 
          lbuff(2) = strict_SFC_ordering
          lbuff(3) = prefer_n_bruteforce
+         lbuff(4:3+n_ref_auto_param) = refine_vars(:)%plotfield
 
          rbuff(1) = oop_thr
          rbuff(2          :1+  nshapes) = refine_points(:)%coords(xdim)
@@ -201,8 +203,9 @@ contains
          refine_points(:)%level = ibuff(11        :10+  nshapes)
          refine_boxes (:)%level = ibuff(11+nshapes:10+2*nshapes)
 
-         strict_SFC_ordering = lbuff(2)
-         prefer_n_bruteforce = lbuff(3)
+         strict_SFC_ordering      = lbuff(2)
+         prefer_n_bruteforce      = lbuff(3)
+         refine_vars(:)%plotfield = lbuff(4:3+n_ref_auto_param)
 
          oop_thr = rbuff(1)
          refine_points(:)%coords(xdim)     = rbuff(2          :1+  nshapes)
@@ -222,7 +225,7 @@ contains
 
       emergency_fix = .false.
 
-      do_refine = (level_max > base_level_id)
+      do_refine = (level_max > base_level_id) .or. all((bsize /= I_ZERO) .or. .not. dom%has_dir)
 
       if (do_refine .and. all(bsize == I_ZERO)) call automagic_bsize
 

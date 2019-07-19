@@ -213,8 +213,11 @@ contains
       use mpisetup,         only: piernik_MPI_Bcast, piernik_MPI_Allreduce
       use named_array_list, only: qna
 #ifndef ISO
-      use constants,        only: small, MINL
+      use constants,        only: MINL
+#ifdef IONIZED
+      use constants,        only: small
       use fluidindex,       only: flind
+#endif /* IONIZED */
 #endif /* !ISO */
 
       implicit none
@@ -313,6 +316,7 @@ contains
 
 #ifndef ISO
       dt_eint = huge(1.)
+#ifdef IONIZED
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -324,7 +328,7 @@ contains
          cgl => cgl%nxt
       enddo
       call piernik_MPI_Allreduce(dt_eint, pMIN)
-
+#endif /* IONIZED */
       call leaves%get_extremum(qna%ind(wb_n), MINL, deimin)
       deimin%assoc = dt_eint
 #endif /* !ISO */

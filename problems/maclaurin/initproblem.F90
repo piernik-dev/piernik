@@ -44,12 +44,13 @@ module initproblem
    real :: d0     !< density of the spheroid
    real :: a1     !< equatorial radius of the spheroid
    real :: e      !< polar eccentricity of the spheroid; e>0 gives oblate object, e<0 gives prolate object
-   real :: ref_thr !< refinement threshold
+   real :: ref_thr   !< refinement threshold
    real :: deref_thr !< derefinement threshold
+   real :: ref_eps   !< smoother filter
    integer(kind=4) :: nsub !< subsampling on the grid
    logical :: analytical_ext_pot  !< If .true. then bypass multipole solver and use analutical potential for external boundaries (debugging/developing only)
 
-   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, ref_thr, deref_thr, nsub, analytical_ext_pot
+   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, ref_thr, deref_thr, ref_eps, nsub, analytical_ext_pot
 
    ! private data
    real :: d1 !< ambient density
@@ -117,8 +118,9 @@ contains
       e            = 0.0                 !< Eccentricity; e>0 for flattened spheroids, e<0 for elongated spheroids
       nsub         = 3                   !< Subsampling factor
 
-      ref_thr      = max(1e-3, 2.*smalld/d0)    !< Refine if density difference is greater than this value
-      deref_thr    = max(ref_thr**2, smalld/d0) !< Derefine if density difference is smaller than this value
+      ref_thr      = 0.3    !< Refine if density difference is greater than this value
+      deref_thr    = 0.01   !< Derefine if density difference is smaller than this value
+      ref_eps      = 0.01   !< refinement smoothing factor
 
       analytical_ext_pot = .false.
 
@@ -148,6 +150,7 @@ contains
          rbuff(6) = e
          rbuff(7) = ref_thr
          rbuff(8) = deref_thr
+         rbuff(9) = ref_eps
 
          ibuff(1) = nsub
 
@@ -169,6 +172,7 @@ contains
          e            = rbuff(6)
          ref_thr      = rbuff(7)
          deref_thr    = rbuff(8)
+         ref_eps      = rbuff(9)
 
          nsub         = ibuff(1)
 
@@ -232,7 +236,8 @@ contains
       ! Set up automatic refinement criteria on densities
       do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
          !> \warning only selfgravitating fluids should be added
-         call user_ref2list(wna%fi, id, ref_thr*d0, deref_thr*d0, 0., "grad")
+!         call user_ref2list(wna%fi, id, ref_thr*d0, deref_thr*d0, 0., "grad", .true.)
+         call user_ref2list(wna%fi, id, ref_thr, deref_thr, ref_eps, "Loechner", .true.)
       enddo
 
    end subroutine read_problem_par
