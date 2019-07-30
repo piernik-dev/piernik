@@ -197,9 +197,9 @@ contains
       use initcosmicrays, only: iarr_crn
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
-      use cresp_crspectrum,   only: cresp_get_scaled_init_spectrum
-      use initcrspectrum,     only: cresp, cre_eff, smallcree
-      use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
+      use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
+      use initcrspectrum,   only: cresp, cre_eff, smallcree
+      use initcosmicrays,   only: iarr_cre_n, iarr_cre_e
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -269,6 +269,7 @@ contains
 
          cgl => cgl%nxt
       enddo
+
    end subroutine cr_sn
 #endif /* COSM_RAYS */
 !--------------------------------------------------------------------------

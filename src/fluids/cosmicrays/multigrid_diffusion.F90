@@ -632,7 +632,11 @@ contains
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use func,           only: operator(.notequals.)
-      use initcosmicrays, only: K_crn_perp, K_crn_paral !K_crs_perp, K_crs_paral \deprecated !!!
+#ifdef COSM_RAY_ELECTRONS
+      use initcosmicrays, only: K_crn_perp, K_crn_paral
+#else /* !COSM_RAY_ELECTRONS */
+      use initcosmicrays, only: K_crs_perp, K_crs_paral
+#endif /* !COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -657,10 +661,17 @@ contains
       ! Assumes dom%has_dir(crdim)
       !> \warning *cg%idl(crdim) makes a difference
       d_par = (cg%q(soln)%point(im) - cg%q(soln)%point(ilm)) * cg%idl(crdim)
-      fcrdif = K_crn_perp(cr_id) * d_par !!!
-      if (present(Keff)) Keff = K_crn_perp(cr_id) !!!
+#ifdef COSM_RAY_ELECTRONS
+      fcrdif = K_crn_perp(cr_id) * d_par
+      if (present(Keff)) Keff = K_crn_perp(cr_id)
 
-      if (K_crn_paral(cr_id) .notequals. zero) then !!!
+      if (K_crn_paral(cr_id) .notequals. zero) then
+#else /* !COSM_RAY_ELECTRONS */
+      fcrdif = K_crs_perp(cr_id) * d_par
+      if (present(Keff)) Keff = K_crs_perp(cr_id)
+
+      if (K_crs_paral(cr_id) .notequals. zero) then
+#endif /* !COSM_RAY_ELECTRONS */
 
          b_perp = 0.
          b_par = cg%q(idiffb(crdim))%point(im)
@@ -679,7 +690,11 @@ contains
          enddo
 
          if (magb .notequals. zero) then
-            kbm = K_crn_paral(cr_id) * b_par / magb !!!
+#ifdef COSM_RAY_ELECTRONS
+            kbm = K_crn_paral(cr_id) * b_par / magb
+#else /* !COSM_RAY_ELECTRONS */
+            kbm = K_crs_paral(cr_id) * b_par / magb
+#endif /* !COSM_RAY_ELECTRONS */
             fcrdif = fcrdif + kbm * db
             if (present(Keff)) Keff = Keff + kbm * b_par
          endif

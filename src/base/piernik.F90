@@ -147,6 +147,10 @@ program piernik
 
          call user_msg_handler(end_sim)
          call update_refinement
+         ! A second call update_refinement here can be used to detect if there are refinement oscillations:
+         ! * new "refine" or "correcting" events should not occur
+         ! * some "derefine" events are allowed
+         ! It can be used for diagnostic purposes. In production runs it may cost too much.
          if (try_rebalance) then
             !> \todo try to rewrite this ugly chain of flags passed through global variables into something more fool-proof
             call leaves%balance_and_update(" (re-balance) ")

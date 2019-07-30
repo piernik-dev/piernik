@@ -112,8 +112,12 @@ contains
 #ifdef COSM_RAYS
 #ifdef COSM_RAY_ELECTRONS
          case ("cr01" : "cr99")
+#else /* !COSM_RAY_ELECTRONS */
+         case ("cr1" : "cr9")
+#endif /* !COSM_RAY_ELECTRONS */
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
+#ifdef COSM_RAY_ELECTRONS
          case ("cren01" : "cren99")
             f%fu = "1/\rm{cm}^3"
             f%f2cgs = 1.0 / (1.0/cm**3) ! number density
@@ -129,10 +133,6 @@ contains
          case ("creq01" : "creq99")
             f%fu = ""                   ! dimensionless q
             f%f2cgs = 1.0
-#else /* !COSM_RAY_ELECTRONS */
-         case ("cr1" : "cr9")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3)
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
          case ("gpot", "sgpt")
@@ -296,8 +296,8 @@ contains
       use global,      only: force_cc_mag
 #endif /* MAGNETIC */
 #ifdef COSM_RAY_ELECTRONS
-      use initcrspectrum,     only: nam_cresp_f, nam_cresp_p, nam_cresp_q
-      use named_array_list,   only: wna
+      use initcrspectrum,   only: nam_cresp_f, nam_cresp_p, nam_cresp_q
+      use named_array_list, only: wna
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -315,7 +315,6 @@ contains
       integer, parameter                          :: auxlen = dsetnamelen - 1
       character(len=auxlen)                       :: aux
 #endif /* COSM_RAYS */
-
 #define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
 
       call common_shortcuts(var, fl_dni, i_xyz)
@@ -344,8 +343,7 @@ contains
          case ("cr1" : "cr9")
             read(var,'(A2,I1)') aux, i !> \deprecated BEWARE 0 <= i<= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = cg%u(flind%crs%beg+i-1, RNG)
-#endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
+#endif /* !COSM_RAY_ELECTRONS */
 #ifdef COSM_RAY_ELECTRONS
          case ("cren01" : "cren99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
@@ -363,6 +361,7 @@ contains
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = cg%w(wna%ind(nam_cresp_q))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
 #endif /* COSM_RAY_ELECTRONS */
+#endif /* COSM_RAYS */
 #ifdef TRACER
          case ("trcr")
             tab(:,:,:) = cg%u(flind%trc%beg, RNG)
@@ -581,7 +580,7 @@ contains
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars
+      use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars, hdf_vars_avail, enable_all_hdf_var
       use constants,   only: xdim, ydim, zdim, ndims, FP_REAL
       use dataio_pub,  only: die, nproc_io, can_i_write, h5_64bit
       use grid_cont,   only: grid_container
@@ -606,6 +605,8 @@ contains
       real, dimension(:,:,:),          pointer             :: data_dbl ! double precision buffer (internal default, single precision buffer is the plotfile output default, overridable by h5_64bit)
       type(cg_output)                                      :: cg_desc
 
+      call enable_all_hdf_var  ! just in case things have changed meanwhile
+
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(hdf_vars))
 
       if (cg_desc%tot_cg_n < 1) call die("[data_hdf5:write_cg_to_output] no cg available!")
@@ -627,7 +628,7 @@ contains
                do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
                   if (cg_desc%cg_src_p(ncg) == proc) then
                      cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-                     call get_data_from_cg(hdf_vars(i), cg, data_dbl)
+                     if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                   else
                      call MPI_Recv(data_dbl(1,1,1), size(data_dbl), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
                   endif
@@ -642,7 +643,7 @@ contains
                if (cg_desc%cg_src_p(ncg) == proc) then
                   cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                   do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-                     call get_data_from_cg(hdf_vars(i), cg, data_dbl)
+                     if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                      call MPI_Send(data_dbl(1,1,1), size(data_dbl), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, mpi_err)
                   enddo
                endif
@@ -663,7 +664,7 @@ contains
                cg => cgl%cg
 
                do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-                  call get_data_from_cg(hdf_vars(i), cg, data_dbl)
+                  if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                   if (h5_64bit) then
                      call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_DOUBLE, data_dbl, dims, error, xfer_prp = cg_desc%xfer_prp)
                   else
@@ -746,7 +747,7 @@ contains
    subroutine get_data_from_cg(hdf_var, cg, tab)
 
       use common_hdf5,      only: cancel_hdf_var
-      use dataio_pub,       only: warn, msg
+      use dataio_pub,       only: warn, msg, printinfo
       use dataio_user,      only: user_vars_hdf5
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
@@ -777,8 +778,11 @@ contains
       endif
 
       if (ierrh /= 0) then
-         write(msg,'(3a)') "[data_hdf5:get_data_from_cg]: ", hdf_var," is not recognized as a name of defined variables/fields, not defined in datafields_hdf5 and not found in user_vars_hdf5."
-         if (master) call warn(msg)
+         write(msg,'(3a)') "[data_hdf5:get_data_from_cg]: '", trim(hdf_var), "' is not recognized as a name of defined variables/fields, not defined in datafields_hdf5 and not found in user_vars_hdf5."
+         if (master) then
+            call printinfo("", .true.)
+            call warn(msg)
+         endif
          call cancel_hdf_var(hdf_var)
       endif
 

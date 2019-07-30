@@ -1029,13 +1029,13 @@ contains
 
 #ifdef COSM_RAYS
 #ifdef COSM_RAY_ELECTRONS
-               tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * (sum(sum(pu(iarr_all_crn,:,:,:), dim=1), mask=cg%leafmap))
-               tot_q(T_CREN) = tot_q(T_CREN) + cg%dvol * (sum(sum(pu(iarr_cre_n,:,:,:), dim=1), mask=cg%leafmap))
-               tot_q(T_CREE) = tot_q(T_CREE) + cg%dvol * (sum(sum(pu(iarr_cre_e,:,:,:), dim=1), mask=cg%leafmap))
+               tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * sum(sum(pu(iarr_all_crn,:,:,:), dim=1), mask=cg%leafmap)
+               tot_q(T_CREN) = tot_q(T_CREN) + cg%dvol * sum(sum(pu(iarr_cre_n,  :,:,:), dim=1), mask=cg%leafmap)
+               tot_q(T_CREE) = tot_q(T_CREE) + cg%dvol * sum(sum(pu(iarr_cre_e,  :,:,:), dim=1), mask=cg%leafmap)
                tot_q(T_ENCR) = tot_q(T_ENCR) + tot_q(T_CREE)
 #else /* !COSM_RAY_ELECTRONS */
-               tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * (sum(sum(pu(iarr_all_crs,:,:,:), dim=1), mask=cg%leafmap))
-#endif /* COSM_RAY_ELECTRONS */
+               tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * sum(sum(pu(iarr_all_crs,:,:,:), dim=1), mask=cg%leafmap)
+#endif /* !COSM_RAY_ELECTRONS */
                tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
 #endif /* COSM_RAYS */
 
@@ -1070,13 +1070,13 @@ contains
 
 #ifdef COSM_RAYS
 #ifdef COSM_RAY_ELECTRONS
-                  tot_q(T_ENCR) = tot_q(T_ENCR) + drvol * (sum(sum(pu(iarr_all_crn, ii, :, :), dim=1), mask=cg%leafmap(i, :, :)))
-                  tot_q(T_CREN) = tot_q(T_CREN) + drvol * (sum(sum(pu(iarr_cre_n,ii,:,:), dim=1), mask=cg%leafmap(i, :, :)))
-                  tot_q(T_CREE) = tot_q(T_CREE) + drvol * (sum(sum(pu(iarr_cre_e,ii,:,:), dim=1), mask=cg%leafmap(i, :, :)))
+                  tot_q(T_ENCR) = tot_q(T_ENCR) + drvol * sum(sum(pu(iarr_all_crn, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
+                  tot_q(T_CREN) = tot_q(T_CREN) + drvol * sum(sum(pu(iarr_cre_n,   ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
+                  tot_q(T_CREE) = tot_q(T_CREE) + drvol * sum(sum(pu(iarr_cre_e,   ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
                   tot_q(T_ENCR) = tot_q(T_ENCR) + tot_q(T_CREE)
 #else /* !COSM_RAY_ELECTRONS */
                   tot_q(T_ENCR) = tot_q(T_ENCR) + drvol * sum(sum(pu(iarr_all_crs, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* !COSM_RAY_ELECTRONS */
                   tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
 #endif /* COSM_RAYS */
                enddo
@@ -1232,7 +1232,10 @@ contains
       use named_array_list, only: qna
       use units,            only: mH, kboltz
 #ifndef ISO
-      use constants,        only: ION, DST, half, I_ZERO
+#ifdef MAGNETIC
+      use constants,        only: ION, half
+#endif /* MAGNETIC */
+      use constants,        only: DST, I_ZERO
       use global,           only: smallp
 #endif /* !ISO */
 
@@ -1394,7 +1397,9 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             cgl%cg%wa(:,:,:) = cgl%cg%u(fl%ien,:,:,:) - ekin(cgl%cg%u(fl%imx,:,:,:), cgl%cg%u(fl%imy,:,:,:), cgl%cg%u(fl%imz,:,:,:), cgl%cg%u(fl%idn,:,:,:)) ! eint
+#ifdef MAGNETIC
             if (fl%tag == ION) cgl%cg%wa(:,:,:) = cgl%cg%wa(:,:,:) - half*(sum(cgl%cg%b(:,:,:,:)**2,dim=1))
+#endif /* MAGNETIC */
             cgl%cg%wa(:,:,:) = max(fl%gam_1*cgl%cg%wa(:,:,:),smallp)  ! pres
             cgl => cgl%nxt
          enddo
@@ -1543,6 +1548,7 @@ contains
          b_max%assoc = dt_cre_min_ub
          call piernik_MPI_Allreduce(b_max%assoc, pMIN)
 #endif /* COSM_RAY_ELECTRONS */
+
          cgl => leaves%first
          do while (associated(cgl))
             cgl%cg%wa(:,:,:)  = cgl%cg%wa(:,:,:) / sqrt(cgl%cg%u(flind%ion%idn,:,:,:))
@@ -1716,7 +1722,6 @@ contains
 #endif /* COSM_RAY_ELECTRONS */
             call cmnlog_s(fmt_loc,   'min(encr)   ', id, encr_min)
             call cmnlog_l(fmt_dtloc, 'max(encr)   ', id, encr_max)
-
 #ifdef COSM_RAY_ELECTRONS
             id = "CRE"
             call cmnlog_s(fmt_loc,   'min(cren)    ', id, cren_min)
@@ -1727,7 +1732,6 @@ contains
             call cmnlog_l(fmt_dtloc, 'max(div_v)   ', id, divv_max)
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
-
 #ifdef RESISTIVE
             if (eta1_active) then
                id = "RES"

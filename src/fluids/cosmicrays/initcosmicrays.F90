@@ -37,9 +37,6 @@
 module initcosmicrays
 ! pulled by COSM_RAYS
    use constants, only: cbuff_len
-#ifdef COSM_RAY_ELECTRONS
-   use initcrspectrum, only: ncre, cre_gpcr_ess
-#endif /* COSM_RAY_ELECTRONS */
    implicit none
 
    public ! QA_WARN no secrets are kept here
@@ -48,9 +45,7 @@ module initcosmicrays
    integer, parameter                  :: ncr_max = 102  !< maximum number of CR nuclear and electron components (\warning higher ncr_max limit would require changes in names of components in common_hdf5)
    ! namelist parameters
    integer(kind=4)                     :: ncrn         !< number of CR nuclear  components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
-#ifndef COSM_RAY_ELECTRONS
-   integer(kind=4)                     :: ncre         !< number of CR electron components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
-#endif /* !COSM_RAY_ELECTRONS */
+   integer(kind=4)                     :: ncre         !< number of CR electron components or number of bins for COSM_RAY_ELECTRONS
    integer(kind=4)                     :: ncrs         !< number of all CR components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
    real                                :: smallecr     !< floor value for CR energy density
@@ -68,7 +63,9 @@ module initcosmicrays
    real, dimension(ncr_max)            :: K_cre_perp   !< array containing perpendicular diffusion coefficients of all CR electron components (number density and energy density)
    character(len=cbuff_len)            :: divv_scheme  !< scheme used to calculate div(v), see crhelpers for more details
    logical, dimension(ncr_max)         :: crn_gpcr_ess !< if CRn species/energy-bin is essential for grad_pcr calculation
-#ifndef COSM_RAY_ELECTRONS
+#ifdef COSM_RAY_ELECTRONS
+   logical                             :: cre_gpcr_ess !< if CRe species/energy-bin is essential for grad_pcr calculation
+#else /* !COSM_RAY_ELECTRONS */
    logical, dimension(ncr_max)         :: cre_gpcr_ess !< if CRe species/energy-bin is essential for grad_pcr calculation
 #endif /* !COSM_RAY_ELECTRONS */
    integer(kind=4), allocatable, dimension(:) :: gpcr_essential !< crs indexes of essentials for grad_pcr calculation
@@ -80,10 +77,8 @@ module initcosmicrays
    integer(kind=4), allocatable, dimension(:) :: iarr_cre_e !< array of indexes pointing to all CR electron energy components
    integer(kind=4), allocatable, dimension(:) :: iarr_cre_n !< array of indexes pointing to all CR electron number density components
 #endif /* COSM_RAY_ELECTRONS */
-   integer(kind=4), allocatable, dimension(:) :: iarr_crs_diff !< array of indexes pointing to all conventionally diffusing CR components
 
-   real,    allocatable, dimension(:)  :: gamma_crs    ! < array containing adiabatic indexes of all CR components
-
+   real,    allocatable, dimension(:)  :: gamma_crs    !< array containing adiabatic indexes of all CR components
    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
    real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
    !> \deprecated BEWARE Possible confusion: *_perp coefficients are not "perpendicular" but rather isotropic
@@ -128,9 +123,6 @@ contains
 #ifdef COSM_RAYS_SOURCES
       use cr_data,         only: init_crsources
 #endif /* COSM_RAYS_SOURCES */
-#ifdef COSM_RAY_ELECTRONS
-   use initcrspectrum,     only: K_cre_paral_1, K_cre_perp_1, K_cre_pow, p_mid_fix
-#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -139,9 +131,11 @@ contains
 
       namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRsplit, &
 #ifndef COSM_RAY_ELECTRONS
-           &                 ncre, gamma_cre, K_cre_paral, K_cre_perp, cre_gpcr_ess, &
+           &                 gamma_cre, K_cre_paral, K_cre_perp, &
 #endif /* !COSM_RAY_ELECTRONS */
-           &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, divv_scheme, crn_gpcr_ess
+           &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
+           &                 ncre, &
+           &                 divv_scheme, crn_gpcr_ess, cre_gpcr_ess
 
       cfl_cr     = 0.9
       smallecr   = 0.0
@@ -149,25 +143,23 @@ contains
       cr_eff     = 0.1       !  canonical conversion rate of SN en.-> CR
       !  we fix E_SN=10**51 erg
       ncrn       = 0
-#ifndef COSM_RAY_ELECTRONS
       ncre       = 0
-      gamma_cre(:)   = 4./3.
-      K_cre_paral(:) = 0.0
-      K_cre_perp(:)  = 0.0
 
-      cre_gpcr_ess(:) = .false.
-#endif /* !COSM_RAY_ELECTRONS */
       use_CRsplit    = .true.
       use_smallecr   = .true.
 
       gamma_crn(:)   = 4./3.
       K_crn_paral(:) = 0.0
       K_crn_perp(:)  = 0.0
+#ifndef COSM_RAY_ELECTRONS
+      gamma_cre(:)   = 4./3.
+#endif /* !COSM_RAY_ELECTRONS */
       K_cre_paral(:) = 0.0
       K_cre_perp(:)  = 0.0
 
       crn_gpcr_ess(:) = .false.
       crn_gpcr_ess(1) = .true.       ! in most cases protons are the first ingredient of CRs and they are essential
+      cre_gpcr_ess    = .false.
 
       divv_scheme = ''
 
@@ -200,9 +192,7 @@ contains
       if (master) then
 
          ibuff(1) = ncrn
-#ifndef COSM_RAY_ELECTRONS
          ibuff(2) = ncre
-#endif /* COSM_RAY_ELECTRONS */
 
          rbuff(1) = cfl_cr
          rbuff(2) = smallecr
@@ -228,15 +218,14 @@ contains
          endif
 
          if (ncre > 0) then
-#ifndef COSM_RAY_ELECTRONS
+#ifdef COSM_RAY_ELECTRONS
+            lbuff(ncrn+2)                = cre_gpcr_ess
+#else /* !COSM_RAY_ELECTRONS */
             rbuff(ne+1       :ne+ncre) = K_cre_paral(1:ncre)  !< K_cre_paral explicitly defined & broadcasted if CRESP not in use
             rbuff(ne+1+ncre:ne+2*ncre) = K_cre_perp (1:ncre)  !< K_cre_perp explicitly defined & broadcasted if CRESP not in use
             rbuff(ne+2*ncre+1:ne+3*ncre) = gamma_cre(1:ncre)  ! gamma_cre used only if CRESP module not used
-            lbuff(ncrn+2:ncrn+1+ncre)    = cre_gpcr_ess(1:ncre)
-#else
-            lbuff(ncrn+2)                = cre_gpcr_ess
+            lbuff(ncrn+2:ncrn+ncre+1)    = cre_gpcr_ess(1:ncre)
 #endif /* !COSM_RAY_ELECTRONS */
-
          endif
 
       endif
@@ -249,9 +238,7 @@ contains
       if (slave) then
 
          ncrn         = int(ibuff(1), kind=4)
-#ifndef COSM_RAY_ELECTRONS
          ncre         = int(ibuff(2), kind=4)
-#endif /* COSM_RAY_ELECTRONS */
 
          cfl_cr       = rbuff(1)
          smallecr     = rbuff(2)
@@ -270,23 +257,24 @@ contains
             gamma_crn  (1:ncrn) = rbuff(nn+1       :nn+  ncrn)
             K_crn_paral(1:ncrn) = rbuff(nn+1+  ncrn:nn+2*ncrn)
             K_crn_perp (1:ncrn) = rbuff(nn+1+2*ncrn:nn+3*ncrn)
+
             crn_gpcr_ess(1:ncrn) = lbuff(2:ncrn+1)
          endif
 
          if (ncre > 0) then
-#ifndef COSM_RAY_ELECTRONS
+#ifdef COSM_RAY_ELECTRONS
+            cre_gpcr_ess         = lbuff(ncrn+2)
+#else /* !COSM_RAY_ELECTRONS */
             K_cre_paral(1:ncre) = rbuff(ne+1       :ne+ncre)    !< K_cre_paral explicitly defined & broadcasted if CRESP not in use
             K_cre_perp (1:ncre) = rbuff(ne+1+ncre:ne+2*ncre)    !< K_cre_perp explicitly defined & broadcasted if CRESP not in use
             gamma_cre(1:ncre)    = rbuff(ne+2*ncre+1:ne+3*ncre) ! gamma_cre used only if CRESP module not used
-            cre_gpcr_ess(1:ncre) = lbuff(ncrn+2:ncrn+2+ncre)
-#else
-            cre_gpcr_ess         = lbuff(ncrn+2)
+            cre_gpcr_ess(1:ncre) = lbuff(ncrn+2:ncrn+ncre+1)
 #endif /* !COSM_RAY_ELECTRONS */
          endif
 
       endif
 
-      ncrs = ncrn + ncre
+      ncrs = ncre + ncrn
 #ifdef COSM_RAY_ELECTRONS
       ncrs = ncrs + ncre ! ncrn + 2 * ncre overall
 #endif /* COSM_RAY_ELECTRONS */
@@ -309,19 +297,6 @@ contains
         K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
       endif
 
-#ifdef COSM_RAY_ELECTRONS
-      if (ncre > 0) then
-         K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_paral_1  * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)          !< CRESP number density K
-         K_crs_paral(ncrn+1+ncre:ncrn+2*ncre) = K_cre_paral_1 * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP energy density K
-         K_crs_perp(ncrn+1:ncrn+ncre)  = K_cre_perp_1 * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)             !< CRESP number density K
-         K_crs_perp(ncrn+ncre+1:ncrn+2*ncre) = K_cre_perp_1 * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)      !< CRESP energy density K
-
-         K_cre_paral(1:ncre)        =  K_crs_paral(ncrn+1:ncrn+ncre)               !< CRESP number density K
-         K_cre_paral(ncre+1:2*ncre) =  K_crs_paral(ncrn+1+ncre:ncrn+2*ncre)        !< CRESP energy density K
-         K_cre_perp(1:ncre)         =  K_crs_perp(ncrn+1:ncrn+ncre)                !< CRESP number density K
-         K_cre_perp(ncre+1:2*ncre)  =  K_crs_perp(ncrn+1+ncre:ncrn+2*ncre)         !< CRESP energy density K
-      endif
-#endif /* COSM_RAY_ELECTRONS */
       ma1d = [ncrn]
       call my_allocate(iarr_crn, ma1d)
 
@@ -330,9 +305,9 @@ contains
       else
 #ifdef COSM_RAY_ELECTRONS
          ma1d = [2*ncre]
-#else
+#else /* !COSM_RAY_ELECTRONS */
          ma1d = ncre
-#endif /*COSM_RAY_ELECTRONS */
+#endif /* !COSM_RAY_ELECTRONS */
       endif
       call my_allocate(iarr_cre, ma1d) ! < iarr_cre will point: (1:ncre) - cre number per bin, (ncre+1:2*ncre) - cre energy per bin
 
@@ -343,9 +318,6 @@ contains
 #endif /* COSM_RAY_ELECTRONS */
       ma1d = [ncrs]
       call my_allocate(iarr_crs, ma1d)
-
-      ma1d = [ncrs]
-      call my_allocate(iarr_crs_diff, ma1d)
 
 #ifdef COSM_RAYS_SOURCES
       call init_crsources(ncrn, crn_gpcr_ess)
@@ -382,22 +354,18 @@ contains
       implicit none
 
       type(var_numbers), intent(inout) :: flind
-      integer(kind=4) :: icr, ncr
+      integer(kind=4) :: icr
 
       flind%crn%beg    = flind%all + I_ONE
       flind%crs%beg    = flind%crn%beg
 
       flind%crn%all  = ncrn
 
-      if (ncre .le. 0) then
-            flind%cre%all  = 0
-      else
 #ifdef COSM_RAY_ELECTRONS
-            flind%cre%all  = 2*ncre
-#else
-            flind%cre%all  = ncre
-#endif /* COSM_RAY_ELECTRONS */
-      endif
+      flind%cre%all  = 2*ncre
+#else /* !COSM_RAY_ELECTRONS */
+      flind%cre%all  = ncre
+#endif /* !COSM_RAY_ELECTRONS */
 
       flind%crs%all  = flind%crn%all + flind%cre%all
       do icr = 1, ncrn
@@ -406,20 +374,17 @@ contains
       enddo
       flind%all = flind%all + flind%crn%all
 
-      if (ncre.gt.0) then
-       ncr = 0
 #ifdef COSM_RAY_ELECTRONS
-       ncr = 2 * ncre
-#else
-       ncr = ncre
-#endif /* COSM_RAY_ELECTRONS */
-        do icr = 1, ncr
-          iarr_cre(icr)        = flind%all + icr
-          iarr_crs(ncrn + icr) = flind%all + icr
-       enddo
-      endif
+      do icr = 1, 2 * ncre
+#else /* !COSM_RAY_ELECTRONS */
+      do icr = 1, ncre
+#endif /* !COSM_RAY_ELECTRONS */
+         iarr_cre(icr)        = flind%all + icr
+         iarr_crs(ncrn + icr) = flind%all + icr
+      enddo
 
       flind%all = flind%all + flind%cre%all
+
       flind%crn%end = flind%crn%beg + flind%crn%all - I_ONE
       flind%cre%beg = flind%crn%end + I_ONE
       flind%cre%end = flind%all
@@ -430,23 +395,23 @@ contains
       flind%cre%pos = flind%components
 
 #ifdef COSM_RAY_ELECTRONS
-     flind%cre%nbeg = flind%crn%end + I_ONE
-     flind%cre%nend = flind%crn%end + ncre
-     flind%cre%ebeg = flind%cre%nend + I_ONE
-     flind%cre%eend = flind%cre%nend + ncre
+      flind%cre%nbeg = flind%crn%end + I_ONE
+      flind%cre%nend = flind%crn%end + ncre
+      flind%cre%ebeg = flind%cre%nend + I_ONE
+      flind%cre%eend = flind%cre%nend + ncre
 
-     do icr = 1, ncre
-        iarr_cre_n(icr) = flind%cre%nbeg - I_ONE + icr
-        iarr_cre_e(icr) = flind%cre%ebeg - I_ONE + icr
-     enddo
+      do icr = 1, ncre
+         iarr_cre_n(icr) = flind%cre%nbeg - I_ONE + icr
+         iarr_cre_e(icr) = flind%cre%ebeg - I_ONE + icr
+      enddo
 #endif /* COSM_RAY_ELECTRONS */
-!      if ( ncre.eq.0) then
-         iarr_crs_diff = iarr_crs
-!      endif
+
    end subroutine cosmicray_index
 
    subroutine cleanup_cosmicrays
+
       use diagnostics, only: my_deallocate
+
       implicit none
 
       call my_deallocate(iarr_crn)

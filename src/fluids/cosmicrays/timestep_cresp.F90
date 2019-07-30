@@ -33,9 +33,6 @@
 module timestep_cresp
 ! pulled by COSM_RAY_ELECTRONS
 
-   use constants,      only: one, zero
-   use initcrspectrum, only: ncre, cfl_cre
-
    implicit none
 
    private
@@ -44,11 +41,12 @@ module timestep_cresp
    real(kind=8), save    :: dt_cre, dt_cre_min_ub, dt_cre_min_ud, dt_cre_K
    integer(kind=4), save :: i_up_max_prev, i_up_max
 
- contains
+contains
 
    function assume_p_up(cell_i_up)
 
-      use initcrspectrum, only: p_fix, p_mid_fix, ncre
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: p_fix, p_mid_fix
 
       implicit none
 
@@ -68,7 +66,8 @@ module timestep_cresp
    function evaluate_i_up(e_cell, n_cell) ! obtain i_up index from energy densities in cell
 
       use constants,      only: zero
-      use initcrspectrum, only: ncre, e_small
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: e_small
 
       implicit none
 
@@ -99,7 +98,7 @@ module timestep_cresp
       use func,             only: emag
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: spec_mod_trms, cfl_cre, synch_active, adiab_active, use_cresp, cresp
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp, cresp
       use named_array_list, only: qna
 
       implicit none
@@ -173,7 +172,7 @@ module timestep_cresp
    subroutine cresp_timestep_adiabatic(dt_cre_ud, u_d_abs)
 
       use constants,       only: logten
-      use initcrspectrum,  only: w, eps
+      use initcrspectrum,  only: w, eps, cfl_cre
 
       implicit none
 
@@ -192,7 +191,7 @@ module timestep_cresp
    subroutine cresp_timestep_synchrotron(dt_cre_ub, u_b, i_up_cell)
 
       use constants,      only: zero
-      use initcrspectrum, only: w
+      use initcrspectrum, only: w, cfl_cre
 
       implicit none
 
@@ -205,7 +204,6 @@ module timestep_cresp
          dt_cre_ub = cfl_cre * w / (assume_p_up(i_up_cell) * u_b)
          dt_cre_min_ub = min(dt_cre_ub, dt_cre_min_ub)    ! remember to max dt_cre_min_ub at the beginning of the search
       endif
-
 
    end subroutine cresp_timestep_synchrotron
 

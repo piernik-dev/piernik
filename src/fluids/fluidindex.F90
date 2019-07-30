@@ -120,7 +120,7 @@ contains
       use initionized,    only: ion_fluid
       use initneutral,    only: neutral_fluid
 #ifdef COSM_RAYS
-      use initcosmicrays, only: iarr_crn, iarr_cre, cosmicray_index, iarr_crs, iarr_crs_diff
+      use initcosmicrays, only: iarr_crn, iarr_cre, iarr_crs, cosmicray_index
 #endif /* COSM_RAYS */
 #ifdef TRACER
       use inittracer,     only: tracer_index, iarr_trc
@@ -171,10 +171,9 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-      allocate(iarr_all_crs(flind%crs%all))
       allocate(iarr_all_crn(flind%crn%all))
       allocate(iarr_all_cre(flind%cre%all))
-
+      allocate(iarr_all_crs(flind%crs%all))
 #else /* !COSM_RAYS */
       allocate(iarr_all_crn(0))
       allocate(iarr_all_cre(0))
@@ -187,13 +186,12 @@ contains
       allocate(iarr_all_trc(0))
 #endif /* !TRACER */
 
-      if (has_ion) then
-         ! Compute index arrays for magnetic field
-         iarr_mag_swp(xdim,:) = [xdim,ydim,zdim]
-         iarr_mag_swp(ydim,:) = [ydim,xdim,zdim]
-         iarr_mag_swp(zdim,:) = [zdim,ydim,xdim]
-         iarr_all_mag(:)      = [xdim,ydim,zdim]
-      endif
+      ! Compute index arrays for magnetic field
+      iarr_mag_swp(xdim,:) = [xdim,ydim,zdim]
+      iarr_mag_swp(ydim,:) = [ydim,xdim,zdim]
+      iarr_mag_swp(zdim,:) = [zdim,ydim,xdim]
+      iarr_all_mag(:)      = [xdim,ydim,zdim]
+
       ! Compute index arrays for the ionized fluid
       if (has_ion) call set_fluidindex_arrays(flind%ion,.true.)
 
@@ -205,23 +203,11 @@ contains
 
 #ifdef COSM_RAYS
 ! Compute index arrays for the CR components
-      iarr_all_swp(xdim,flind%crn%beg:flind%crn%end) = iarr_crn
-      iarr_all_swp(ydim,flind%crn%beg:flind%crn%end) = iarr_crn
-      iarr_all_swp(zdim,flind%crn%beg:flind%crn%end) = iarr_crn
-
-!      cre variables ought not be swapped anymore - these are handled via cresp_crs_update only
-      iarr_all_swp(xdim,flind%cre%beg:flind%cre%end) = iarr_cre
-      iarr_all_swp(ydim,flind%cre%beg:flind%cre%end) = iarr_cre
-      iarr_all_swp(zdim,flind%cre%beg:flind%cre%end) = iarr_cre
-
       iarr_all_swp(xdim,flind%crs%beg:flind%crs%end) = iarr_crs
       iarr_all_swp(ydim,flind%crs%beg:flind%crs%end) = iarr_crs
       iarr_all_swp(zdim,flind%crs%beg:flind%crs%end) = iarr_crs
 
       iarr_all_crn(1:flind%crn%all) = iarr_crn
-
-      iarr_all_crs(1:size(iarr_crs_diff)) = iarr_crs_diff
-
       iarr_all_cre(1:flind%cre%all) = iarr_cre
       iarr_all_crs(1:flind%crs%all) = iarr_crs
 #endif /* COSM_RAYS */

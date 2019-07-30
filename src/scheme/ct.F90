@@ -207,15 +207,20 @@ contains
 
       do dstep = 0, 1
          bdir  = I_ONE + mod(dir+dstep,ndims)
+#ifdef IONIZED
          call advectb(bdir, dir)
+#endif /* IONIZED */
 #ifdef RESISTIVE
          call diffuseb(bdir, dir)
 #endif /* RESISTIVE */
+#if defined(IONIZED) || defined(RESISTIVE)
          call mag_add(dir, bdir)
+#endif /* IONIZED || RESISTIVE */
       enddo
 
    end subroutine magfield
 
+#ifdef IONIZED
 !------------------------------------------------------------------------------------------
 
 !>
@@ -315,9 +320,11 @@ contains
       NULLIFY(i1, i1m, i2, i2m)
 
    end subroutine advectb
+#endif /* IONIZED */
 
 !-------------------------------------------------------------------------------------------------------------------
 
+#if defined(IONIZED) || defined(RESISTIVE)
    subroutine mag_add(dim1, dim2)
 
       use cg_leaves,        only: leaves
@@ -359,6 +366,7 @@ contains
          cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) +              wcu*cg%idl(dim2)
          cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) - pshift(wcu,dim2)*cg%idl(dim2)
 #endif /* RESISTIVE */
+#ifdef IONIZED
 ! ADVECTION FULL STEP
          if (associated(custom_emf_bnd)) call custom_emf_bnd(cg%wa)
          cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) - cg%wa*cg%idl(dim1)
@@ -367,12 +375,14 @@ contains
          cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) - cg%wa*cg%idl(dim2)
          cg%wa = pshift(cg%wa,dim2)
          cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) + cg%wa*cg%idl(dim2)
+#endif /* IONIZED */
          cgl => cgl%nxt
       enddo
 
       call all_mag_boundaries
 
    end subroutine mag_add
+#endif /* IONIZED || RESISTIVE */
 
 !-------------------------------------------------------------------------------------------------------------------
 

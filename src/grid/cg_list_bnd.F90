@@ -818,7 +818,7 @@ contains
       use named_array_list,      only: wna
 #ifdef COSM_RAYS
       use initcosmicrays,        only: smallecr
-      use fluidindex,            only: iarr_all_crn, iarr_all_cre !!!
+      use fluidindex,            only: iarr_all_crs
 #endif /* COSM_RAYS */
 #ifdef GRAV
       use constants,             only: BND_OUTH, BND_OUTHD, I_ZERO
@@ -869,8 +869,7 @@ contains
                      l(dir,:) = cg%ijkse(dir,side)+ssign*ib
                      cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
 #ifdef COSM_RAYS
-                     cg%u(iarr_all_crn,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr !!!
-                     cg%u(iarr_all_cre,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr !!!
+                     cg%u(iarr_all_crs,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
 #endif /* COSM_RAYS */
                   enddo
                case (BND_OUTD)
@@ -881,8 +880,7 @@ contains
                      cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                      !> \deprecated BEWARE: use of uninitialized value on first call (a side effect of r1726)
 #ifdef COSM_RAYS
-                     cg%u(iarr_all_crn,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr !!!
-                     cg%u(iarr_all_cre,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr !!!
+                     cg%u(iarr_all_crs,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
 #endif /* COSM_RAYS */
                   enddo
                   l(dir,:) = cg%ijkse(dir,side) - [dom%nb, 1_INT4] +(dom%nb+1_INT4)*(side-LO)

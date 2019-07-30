@@ -72,6 +72,7 @@
 
   $COSMIC_RAYS
     ncrn        =   1
+    ncre        =   15    ! number of cr electron spectrum bins (including cutoff bins)
     cfl_cr      =   0.9
     cr_active   =   1.0
     gamma_crn(1)   =  1.333333
@@ -84,13 +85,13 @@
     K_crn_paral(7) = 1000.0
     K_crn_perp(1)  = 100.0 ! 10% of paral
     smallecr       = 0.e-2
-    use_split   = .false.
+    cre_gpcr_ess   = .true.
+    use_CRsplit    = .false.
  /
 
  $COSMIC_RAY_SPECTRUM
     cfl_cre = 0.5
     cre_eff = 0.01
-    ncre        = 15    ! number of cr electron spectrum bins (including cutoff bins)
     p_min_fix = 0.4e-3   ! momentum fixed grid
     p_max_fix = 1.65e1  ! momentum fixed grid
     p_lo_init = 1.5e-1   ! initial lower cut momentum
@@ -102,7 +103,6 @@
     e_small = 1.0e-5    ! lower energy cutoff for energy-approximated cutoff momenta
     initial_condition = 'powl' ! 'powl', 'brpl', 'bump', 'symf', 'syme'
     NR_iter_limit = 50
-    cre_gpcr_ess  = .true.
     synch_active  = .true.
     adiab_active =  .true.
     cre_active = 1.0
