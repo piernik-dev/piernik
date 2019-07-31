@@ -43,7 +43,7 @@ module timestepcosmicrays
 contains
 
 !>
-!! \details On a static grid with simple domain decompositions the fFollowing subroutine evaluates some constants, there is no need to run it
+!! \details On a static grid with simple domain decompositions the following subroutine evaluates some constants, there is no need to run it
 !! more than once, apart from wasting CPU cycles.
 !<
    subroutine timestep_crs(cg)
