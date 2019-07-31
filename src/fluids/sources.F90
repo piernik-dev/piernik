@@ -383,7 +383,7 @@ contains
       use fluidindex, only: flind, nmag
       use fluidtypes, only: component_fluid
       use func,       only: emag, ekin
-      use global,     only: smallei, use_smallei, ei_negative
+      use global,     only: smallei, use_smallei, ei_negative, disallow_negatives
 
       implicit none
 
@@ -408,7 +408,7 @@ contains
                int_ener = u1(:, pfl%ien) - kin_ener
             endif
 
-            ei_negative = ei_negative .or. (any(int_ener < zero))
+            if (disallow_negatives) ei_negative = ei_negative .or. (any(int_ener < zero))
             if (use_smallei) int_ener = max(int_ener, smallei)
 
             u1(:, pfl%ien) = int_ener + kin_ener
