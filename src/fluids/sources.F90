@@ -315,10 +315,10 @@ contains
    subroutine limit_minimal_density(n, u1, cg, sweep, i1, i2)
 
       use constants,   only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim, zero
-      use dataio_pub,  only: msg, die
+      use dataio_pub,  only: msg, die, warn
       use domain,      only: dom
       use fluidindex,  only: flind, iarr_all_dn
-      use global,      only: smalld, use_smalld, dn_negative
+      use global,      only: smalld, use_smalld, dn_negative, disallow_negatives
       use grid_cont,   only: grid_container
       use mass_defect, only: local_magic_mass
 
@@ -370,7 +370,11 @@ contains
       else
          if (dnneg) then
             write(msg,'(3A,I4,1X,I4,A)') "[sources:limit_minimal_density] negative density in sweep ",sweep,"( ", i1, i2, " )"
-            call die(msg)
+            if (disallow_negatives) then
+               call warn(msg)
+            else
+               call die(msg)
+            endif
          endif
       endif
 
