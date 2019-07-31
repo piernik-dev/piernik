@@ -330,12 +330,14 @@ contains
       integer(kind=4),               intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
       integer,                       intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
       integer,                       intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction
+      logical                                      :: dnneg
 
 !locals
 
       integer :: ifl
 
-      dn_negative = dn_negative .or. (any(u1(:, iarr_all_dn) < zero))
+      dnneg = any(u1(:, iarr_all_dn) < zero)
+      dn_negative = dn_negative .or. dnneg
       if (use_smalld) then
          ! This is needed e.g. for outflow boundaries in presence of perp. gravity
          select case (dom%geometry_type)
@@ -366,7 +368,7 @@ contains
                call die("[sources:limit_minimal_density] Unsupported geometry")
          end select
       else
-         if (dn_negative) then
+         if (dnneg) then
             write(msg,'(3A,I4,1X,I4,A)') "[sources:limit_minimal_density] negative density in sweep ",sweep,"( ", i1, i2, " )"
             call die(msg)
          endif
