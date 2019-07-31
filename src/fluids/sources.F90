@@ -423,7 +423,7 @@ contains
 
       use constants,      only: zero
       use fluidindex,     only: flind
-      use global,         only: cr_negative
+      use global,         only: cr_negative, disallow_CRnegatives
       use initcosmicrays, only: iarr_crs, smallecr, use_smallecr
 
       implicit none
@@ -431,7 +431,7 @@ contains
       integer(kind=4),               intent(in)    :: n                  !< array size
       real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
 
-      cr_negative = cr_negative .or. (any(u1(:, iarr_crs(:)) < zero))
+      if (disallow_CRnegatives) cr_negative = cr_negative .or. (any(u1(:, iarr_crs(:)) < zero))
       if (use_smallecr) u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
 
    end subroutine limit_minimal_ecr

@@ -220,7 +220,7 @@ contains
       use timestep_pub,   only: c_all, c_all_old
       use timestep_retry, only: reset_freezing_speed
 #ifdef COSM_RAYS
-      use global,         only: cr_negative
+      use global,         only: cr_negative, disallow_CRnegatives
 #endif /* COSM_RAYS */
 
       implicit none
@@ -241,11 +241,11 @@ contains
       call piernik_MPI_Bcast(ei_negative)
 #ifdef COSM_RAYS
       call piernik_MPI_Bcast(cr_negative)
-      if (cr_negative) then
+      if (cr_negative .and. disallow_CRnegatives) then
          if (master) call warn('[timestep:check_cfl_violation] Possible violation of CFL: negatives in CRS')
          if (disallow_negatives) cfl_violated = .true.
-         cr_negative  = .false.
       endif
+      cr_negative  = .false.
 #endif /* COSM_RAYS */
       if (dn_negative) then
          if (master) call warn('[timestep:check_cfl_violation] Possible violation of CFL: negative density')
