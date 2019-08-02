@@ -116,12 +116,15 @@ contains
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use constants,   only: pi, xdim, ydim, zdim, LO, HI, half
+      use constants,   only: pi, xdim, ydim, zdim, LO, HI
       use domain,      only: dom
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
       use grid_cont,   only: grid_container
+#ifndef ISO
+      use constants,   only: half
+#endif /* !ISO */
 
       implicit none
 
