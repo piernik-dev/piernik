@@ -108,7 +108,7 @@ program piernik
    call print_progress(nstep)
    if (print_divB > 0) call print_divB_norm
 
-   do while (t < tend .and. nstep < nend .and. .not.(end_sim)) ! main loop
+   do while (t < tend .and. nstep < nend .and. .not.(end_sim) .or. cfl_violated) ! main loop
 
       dump(:) = .false.
       if (associated(problem_domain_update)) then

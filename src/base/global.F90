@@ -39,7 +39,7 @@ module global
 
    private
    public :: cleanup_global, init_global, &
-        &    cfl, cfl_max, cflcontrol, cfl_violated, disallow_negatives, dn_negative, ei_negative, cr_negative, tstep_attempt, &
+        &    cfl, cfl_max, cflcontrol, cfl_violated, disallow_negatives, disallow_CRnegatives, unwanted_negatives, dn_negative, ei_negative, cr_negative, tstep_attempt, &
         &    dt, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
@@ -50,7 +50,7 @@ module global
    logical         :: dn_negative = .false.
    logical         :: ei_negative = .false.
    logical         :: cr_negative = .false.
-   logical         :: disallow_negatives
+   logical         :: disallow_negatives, disallow_CRnegatives, unwanted_negatives = .false.
    logical         :: dirty_debug              !< Allow initializing arrays with some insane values and checking if these values can propagate
    integer(kind=4) :: show_n_dirtys            !< use to limit the amount of printed messages on dirty values found
    logical         :: do_ascii_dump            !< to dump, or not to dump: that is a question (ascii)
@@ -105,7 +105,7 @@ module global
    logical                       :: ord_fc_eq_mag     !< when .true. enforce ord_mag_prolong order of prolongation of f/c guardcells for fluid and everything (EXPERIMENTAL)
    logical                       :: do_external_corners  !< when .true. then perform boundary exchanges inside external guardcells
 
-   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, disallow_negatives, cfl_max, use_smalld, use_smallei, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
+   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, disallow_negatives, disallow_CRnegatives, cfl_max, use_smalld, use_smallei, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
         &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong, ord_fc_eq_mag, do_external_corners
 
@@ -201,6 +201,7 @@ contains
       smallp      = big_float
       smalld      = big_float
       disallow_negatives = .true.
+      disallow_CRnegatives = .false.
       use_smalld  = .true.
       use_smallei = .true.
       smallc      = 1.e-10
@@ -294,8 +295,9 @@ contains
          lbuff(10)  = use_eglm
          lbuff(11)  = ch_grid
          lbuff(12)  = ord_fc_eq_mag
-         lbuff(13)  = disallow_negatives
-         lbuff(14)  = do_external_corners
+         lbuff(13)  = do_external_corners
+         lbuff(14)  = disallow_negatives
+         lbuff(15)  = disallow_CRnegatives
 
       endif
 
@@ -306,46 +308,47 @@ contains
 
       if (slave) then
 
-         use_smalld         = lbuff(1)
-         use_smallei        = lbuff(2)
-         repeat_step        = lbuff(3)
-         skip_sweep         = lbuff(4:6)
-         geometry25D        = lbuff(7)
-         sweeps_mgu         = lbuff(8)
-         use_fargo          = lbuff(9)
-         use_eglm           = lbuff(10)
-         ch_grid            = lbuff(11)
-         ord_fc_eq_mag      = lbuff(12)
-         disallow_negatives = lbuff(13)
-         do_external_corners = lbuff(14)
+         use_smalld           = lbuff(1)
+         use_smallei          = lbuff(2)
+         repeat_step          = lbuff(3)
+         skip_sweep           = lbuff(4:6)
+         geometry25D          = lbuff(7)
+         sweeps_mgu           = lbuff(8)
+         use_fargo            = lbuff(9)
+         use_eglm             = lbuff(10)
+         ch_grid              = lbuff(11)
+         ord_fc_eq_mag        = lbuff(12)
+         do_external_corners  = lbuff(13)
+         disallow_negatives   = lbuff(14)
+         disallow_CRnegatives = lbuff(15)
 
-         smalld             = rbuff( 1)
-         smallc             = rbuff( 2)
-         smallp             = rbuff( 3)
-         smallei            = rbuff( 4)
-         cfl                = rbuff( 5)
-         cfr_smooth         = rbuff( 6)
-         dt_initial         = rbuff( 7)
-         dt_max_grow        = rbuff( 8)
-         dt_min             = rbuff( 9)
-         dt_max             = rbuff(10)
-         cfl_max            = rbuff(11)
-         relax_time         = rbuff(12)
-         glm_alpha          = rbuff(13)
-         cfl_glm            = rbuff(14)
-         w_epsilon          = rbuff(15)
-         dt_shrink          = rbuff(16)
+         smalld               = rbuff( 1)
+         smallc               = rbuff( 2)
+         smallp               = rbuff( 3)
+         smallei              = rbuff( 4)
+         cfl                  = rbuff( 5)
+         cfr_smooth           = rbuff( 6)
+         dt_initial           = rbuff( 7)
+         dt_max_grow          = rbuff( 8)
+         dt_min               = rbuff( 9)
+         dt_max               = rbuff(10)
+         cfl_max              = rbuff(11)
+         relax_time           = rbuff(12)
+         glm_alpha            = rbuff(13)
+         cfl_glm              = rbuff(14)
+         w_epsilon            = rbuff(15)
+         dt_shrink            = rbuff(16)
 
-         limiter            = cbuff(1)
-         limiter_b          = cbuff(2)
-         cflcontrol         = cbuff(3)
-         divB_0             = cbuff(5)
-         interpol_str       = cbuff(6)
-         psi_bnd_str        = cbuff(7)
+         limiter              = cbuff(1)
+         limiter_b            = cbuff(2)
+         cflcontrol           = cbuff(3)
+         divB_0               = cbuff(5)
+         interpol_str         = cbuff(6)
+         psi_bnd_str          = cbuff(7)
 
-         integration_order  = ibuff(1)
-         print_divB         = ibuff(2)
-         ord_mag_prolong    = ibuff(3)
+         integration_order    = ibuff(1)
+         print_divB           = ibuff(2)
+         ord_mag_prolong      = ibuff(3)
 
       endif
 
