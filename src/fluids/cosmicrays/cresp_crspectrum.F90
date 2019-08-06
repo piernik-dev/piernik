@@ -909,20 +909,20 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_init_state(init_n, init_e, f_amplitude, sptab)
 
-      use constants, only: zero, I_ONE, fpi, three
+      use constants, only: zero, I_ONE, fpi, one, two, three
       use cresp_NR_method, only: e_small_to_f
       use cresp_variables, only: clight ! use units, only: clight
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
       use initcrspectrum,  only: spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, eps, p_fix, w,   &
-                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, crel,      &
-                              &  e_small_approx_p_up, total_init_cree, e_small, cresp_all_bins, q_br_init, p_br_init
+                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, crel, p_br_init_up, &
+                              &  e_small_approx_p_up, total_init_cree, e_small, cresp_all_bins, q_br_init, p_br_init_lo
       use mpisetup,        only: master
 
       implicit none
 
       integer                          :: i, k, i_lo_ch, i_up_ch, i_br
-      real(kind=8)                     :: c
+      real(kind=8)                     :: c, c_1, c_2, c_3, lpl, lpu, lpb, a, b
       real(kind=8), dimension(I_ONE:ncre)    :: init_n, init_e
       type (spec_mod_trms), intent(in), optional :: sptab
       real(kind=8), intent(in)         :: f_amplitude
@@ -1013,11 +1013,11 @@ contains
 
       if (initial_condition == 'brpg') then
 !>
-!!/brief Power-law like spectrum with break at p_br_init
+!!/brief Power-law like spectrum with break at p_br_init_lo
 !! In this case initial spectrum with a break at p_min_fix is assumed, the initial slope
 !! on the left side of the break is gaussian. q_br_init scales FWHM.
 !<
-         i_br = minloc(abs(p_fix - p_br_init),dim=1)-1
+         i_br = minloc(abs(p_fix - p_br_init_lo),dim=1)-1
          f(i_lo:i_br-1) = f(i_br-1) * exp(-(q_br_init*log(2.0) * log(p(i_lo:i_br-1)/sqrt(p_lo_init * p(i_br)))**2))
          do i = 1, i_br
             q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
@@ -1027,14 +1027,60 @@ contains
          call sleep(1)
       endif
 
+      if (initial_condition == 'plpc') then
+!>
+!!/brief Power-law like spectrum parabolic (in log-log) cutoffs
+!! In this case initial spectrum with a break at p_min_fix is assumed, the initial slope is parabolic
+!! in ranges (p_lo_init; p_br_init_lo) and (p_br_init_up; p_up_init) and reaches e_small imposed value at cutoffs.
+!<
+! LOW ENERGY CUTOFF
+         i_br = minloc(abs(p_fix - p_br_init_lo),dim=1)-1
+
+         lpl = log10(p_lo_init)
+         lpb = log10(p_br_init_lo)
+
+         a = -q_init
+         b = log10(f_amplitude * (p_lo_init)**(q_init))
+
+         c_3 =  ( (-three * lpl + log10(e_small / (fpi * clight))) + b * (lpl/lpb) - a * lpl - two * b * (lpl/lpb) ) / ( (lpl/lpb)**two - two * (lpl/lpb) + one)
+         c_1 =  (c_3 - b) / lpb**two
+         c_2 =  (a - two * c_1 * lpb)
+
+         f(i_lo:i_br-1) = 10.**(c_1 * log10(p(i_lo:i_br-1))**two + c_2 * log10(p(i_lo:i_br-1)) + c_3)
+! HIGH ENERGY CUTOFF
+         i_br = minloc(abs(p_fix - p_br_init_up),dim=1)
+
+         lpu = log10(p_up_init)
+         lpb = log10(p_br_init_up)
+! a and b remain unchanged
+
+         c_3 =  ( (-three * lpu + log10(e_small / (fpi * clight))) + b * (lpu/lpb) - a * lpu - two * b * (lpu/lpb) ) / ( (lpu/lpb)**two - two * (lpu/lpb) + one)
+         c_1 =  (c_3 - b) / lpb**two
+         c_2 =  (a - two * c_1 * lpb)
+
+         f(i_br:i_up) = 10.**(c_1 * log10(p(i_br:i_up))**two + c_2 * log10(p(i_br:i_up)) + c_3)
+
+         do i = i_br, i_up
+            q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
+         enddo
+         do i = 1, i_br
+            q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
+         enddo
+
+         e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+         n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+         call sleep(1)
+
+      endif
+
       if (initial_condition == 'brpl') then
 !>
-!!/brief Power-law like spectrum with break at p_br_init
+!!/brief Power-law like spectrum with break at p_br_init_lo
 !! In this case initial spectrum with a break at p_min_fix is assumed, the initial slope
 !! on the left side of the break is q_br_init. If initial_condition = "brpl", but parameters
 !! are not defined in problem.par, "powl" spectrum is initialized with a warning issued.
 !<
-         i_br = minloc(abs(p_fix - p_br_init),dim=1)-1
+         i_br = minloc(abs(p_fix - p_br_init_lo),dim=1)-1
          q(:i_br) = q_br_init ; q(i_br+1:) = q_init
          f(i_lo:i_br-1) = f(i_br) * (p(i_lo:i_br-1) / p(i_br)) ** (-q_br_init)
          e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)

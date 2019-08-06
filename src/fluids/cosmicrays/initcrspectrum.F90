@@ -46,7 +46,7 @@ module initcrspectrum
    real(kind=8)       :: p_lo_init                   !< initial lower cutoff momentum
    real(kind=8)       :: p_up_init                   !< initial upper cutoff momentum
    character(len=cbuff_len) :: initial_condition     !< available types: bump, powl, brpl, symf, syme. Description below.
-   real(kind=8)       :: p_br_init                   !< initial low energy break
+   real(kind=8)       :: p_br_init_lo, p_br_init_up  !< initial low energy break
    real(kind=8)       :: f_init                      !< initial value of distr. func. for isolated case
    real(kind=8)       :: q_init                      !< initial value of power law-like spectrum exponent
    real(kind=8)       :: q_br_init                   !< initial q for low energy break
@@ -158,15 +158,36 @@ module initcrspectrum
       real(kind=8) :: p_br_def, q_br_def
 
       namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_condition, &
-      &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, p_br_init,  &
-      &                         K_cre_pow, expan_order, e_small, use_cresp, e_small_approx_init_cond,               &
+      &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active,             &
+      &                         K_cre_pow, expan_order, e_small, use_cresp, e_small_approx_init_cond, p_br_init_lo, &
       &                         e_small_approx_p_lo, e_small_approx_p_up, force_init_NR, NR_iter_limit, max_p_ratio,&
       &                         synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init, Gamma_min_fix,           &
       &                         Gamma_max_fix, Gamma_lo_init, Gamma_up_init, nullify_empty_bins, approx_cutoffs,    &
       &                         NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree,&
-      &                         smallcren, hdf_save_fpq
+      &                         smallcren, hdf_save_fpq, p_br_init_up
 
 ! Default values
+         if (initial_condition .eq. "plpc" ) then ! FIXME TODO
+            if (abs(p_br_init_lo - p_br_def) .le. eps .or. abs(p_br_init_up - p_br_def) .le. eps) then
+               write (msg,"(A)") "[initcrspectrum:init_cresp] Parameters for 'plpc' spectrum: p_br_init_lo or p_br_init_up has default value (probably unitialized). Check spectrum parameters."
+               if (master) call die(msg)
+            else
+!>
+!! \brief p_br_init_lo should be equal to one of p_fix values
+!<
+               i = minloc(abs(p_fix - p_br_init_lo),dim=1)-1
+               write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_lo was set, but should be equal to one of p_fix. Assuming p_br_init_lo =", p_fix(i),"."
+               p_br_init_lo = p_fix(i)
+               if (master) call warn(msg)
+!>
+!! \brief p_br_init_up should also be equal to one of p_fix values
+!<
+               i = minloc(abs(p_fix - p_br_init_up),dim=1)-1
+               write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_up was set, but should be equal to one of p_fix. Assuming p_br_init_up =", p_fix(i),"."
+               p_br_init_up = p_fix(i)
+               if (master) call warn(msg)
+            endif
+         endif
       use_cresp         = .true.
       p_min_fix         = 1.5e1
       p_max_fix         = 1.65e4
@@ -178,8 +199,9 @@ module initcrspectrum
       q_init            = 4.1
       q_br_def          = q_init
       q_big             = 30.0d0
-      p_br_init         = p_br_def ! < in case it was not provided "powl" is assumed
-      q_br_init         = q_br_def ! < in case it was not provided "powl" is assumed
+      p_br_init_lo      = p_br_def ! < in case it was not provided "powl" can be assumed
+      p_br_init_up      = p_br_def ! < in case it was not provided "powl" can be assumed
+      q_br_init         = q_br_def ! < in case it was not provided "powl" can be assumed
       cfl_cre           = 0.1
       cre_eff           = 0.01
       K_cre_paral_1     = 0.
@@ -296,8 +318,9 @@ module initcrspectrum
          rbuff(24) = Gamma_lo_init
          rbuff(25) = Gamma_up_init
 
-         rbuff(26) = p_br_init
-         rbuff(27) = q_br_init
+         rbuff(26) = p_br_init_lo
+         rbuff(27) = p_br_init_up
+         rbuff(28) = q_br_init
 
          cbuff(1)  = initial_condition
       endif
@@ -362,8 +385,9 @@ module initcrspectrum
          Gamma_lo_init               = rbuff(24)
          Gamma_up_init               = rbuff(25)
 
-         p_br_init                   = rbuff(26)
-         q_br_init                   = rbuff(27)
+         p_br_init_lo                = rbuff(26)
+         p_br_init_up                = rbuff(27)
+         q_br_init                   = rbuff(28)
 
          initial_condition           = trim(cbuff(1))
 
@@ -487,7 +511,7 @@ module initcrspectrum
 !! \deprecated syme - symmetric energy distribution relative to the middle of the initial spectrum,
 !! \deprecated symf - similar, but symmetric in distribution function.
 !<
-      if (initial_condition .ne. 'powl' .and. initial_condition .ne. 'bump' .and. initial_condition .ne. 'brpl' &
+      if (initial_condition .ne. 'powl' .and. initial_condition .ne. 'bump' .and. initial_condition .ne. 'brpl' .and. initial_condition .ne. 'plpc' &
                            .and. initial_condition .ne. 'symf' .and. initial_condition .ne. 'syme'  .and. initial_condition .ne. 'brpg' ) then
          write(msg,"(A,A,A)") "[initcrspectrum:init_cresp] Provided unrecognized initial_condition (",initial_condition,"). Make sure that value is correctly provided."
          call die(msg)
@@ -499,21 +523,43 @@ module initcrspectrum
          endif
       endif
 
-      if (initial_condition .eq. "brpl" ) then ! FIXME TODO
-         if (abs(p_br_init - p_br_def) .le. eps) then
-            write (msg,"(A)") "[initcrspectrum:init_cresp] Parameter for 'brpl' spectrum: p_br_init has default value (probably unitialized). Assuming p_lo_init value ('powl' spectrum)."
+      if (initial_condition .eq. "brpl" ) then
+         if (abs(p_br_init_lo - p_br_def) .le. eps) then
+            write (msg,"(A)") "[initcrspectrum:init_cresp] Parameter for 'brpl' spectrum: p_br_init_lo has default value (probably unitialized). Assuming p_lo_init value ('powl' spectrum)."
             if (master) call warn(msg)
          else
 !>
-!! \brief p_br_init should be equal to one of p_fix values
+!! \brief p_br_init_lo should be equal to one of p_fix values
 !<
-            i = minloc(abs(p_fix - p_br_init),dim=1)-1
-            write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init was set, but should be equal to one of p_fix. Assuming p_br_init =", p_fix(i),"."
-            p_br_init = p_fix(i)
+            i = minloc(abs(p_fix - p_br_init_lo),dim=1)-1
+            write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_lo was set, but should be equal to one of p_fix. Assuming p_br_init_lo =", p_fix(i),"."
+            p_br_init_lo = p_fix(i)
             if (master) call warn(msg)
          endif
          if (abs(q_br_init - q_br_def) .le. eps) then
             write (msg,"(A)") "[initcrspectrum:init_cresp] Parameter for 'brpl' spectrum: q_br_init has default value (probably unitialized). Assuming q_init value    ('powl' spectrum)."
+            if (master) call warn(msg)
+         endif
+      endif
+
+      if (initial_condition .eq. "plpc" ) then
+         if (abs(p_br_init_lo - p_br_def) .le. eps .or. abs(p_br_init_up - p_br_def) .le. eps) then
+            write (msg,"(A)") "[initcrspectrum:init_cresp] Parameters for 'plpc' spectrum: p_br_init_lo or p_br_init_up has default value (probably unitialized). Check spectrum parameters."
+            if (master) call die(msg)
+         else
+!>
+!! \brief p_br_init_lo should be equal to one of p_fix values
+!<
+            i = minloc(abs(p_fix - p_br_init_lo),dim=1)-1
+            write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_lo was set, but should be equal to one of p_fix. Assuming p_br_init_lo =", p_fix(i),"."
+            p_br_init_lo = p_fix(i)
+            if (master) call warn(msg)
+!>
+!! \brief p_br_init_up should also be equal to one of p_fix values
+!<
+            i = minloc(abs(p_fix - p_br_init_up),dim=1)-1
+            write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_up was set, but should be equal to one of p_fix. Assuming p_br_init_up =", p_fix(i),"."
+            p_br_init_up = p_fix(i)
             if (master) call warn(msg)
          endif
       endif
