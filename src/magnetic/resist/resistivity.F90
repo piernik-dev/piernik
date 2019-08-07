@@ -336,7 +336,7 @@ contains
    real                               :: dt_eta
 #ifndef ISO
 #ifdef IONIZED
-      real, dimension(:,:,:), pointer :: eta, wb
+      real, dimension(:,:,:), pointer :: eta, wb, eh
 #endif /* IONIZED */
    real                               :: dt_eint
 
@@ -353,8 +353,9 @@ contains
 #ifdef IONIZED
             eta => cg%q(qna%ind(eta_n))%arr
             wb => cg%q(qna%ind(wb_n))%arr
-            wb = (cg%u(flind%ion%ien,:,:,:) - ekin(cg%u(flind%ion%imx,:,:,:), cg%u(flind%ion%imy,:,:,:), cg%u(flind%ion%imz,:,:,:), cg%u(flind%ion%idn,:,:,:)) - &
-                  emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)))/ (eta(:,:,:) * wb+small)
+            eh => cg%q(qna%ind(eh_n))%arr
+            eh = (cg%u(flind%ion%ien,:,:,:) - ekin(cg%u(flind%ion%imx,:,:,:), cg%u(flind%ion%imy,:,:,:), cg%u(flind%ion%imz,:,:,:), cg%u(flind%ion%idn,:,:,:)) - &
+                  emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)))/ (eta(:,:,:) * wb + small)
             dt_eint = min(dt_eint, deint_max * abs(minval(cg%q(qna%ind(wb_n))%span(cg%ijkse))))
 #endif /* IONIZED */
             dt_resist = min(dt_eta, dt_eint)
@@ -368,7 +369,7 @@ contains
 #ifdef IONIZED
       call piernik_MPI_Allreduce(dt_eint, pMIN)
 #endif /* IONIZED */
-      call leaves%get_extremum(qna%ind(wb_n), MINL, deimin)
+      call leaves%get_extremum(qna%ind(eh_n), MINL, deimin)
       deimin%assoc = dt_eint
 #endif /* !ISO */
       etamax%assoc = dt_eta ; cu2max%assoc = min(dt_eta, dt_eint)
