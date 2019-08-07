@@ -54,9 +54,6 @@ module resistivity
    type(value)                           :: etamax, cu2max, deimin
    logical, save                         :: eta1_active = .true.           !< resistivity off-switcher while eta_1 == 0.0
    character(len=dsetnamelen), parameter :: eta_n = "eta", wb_n = "wb", eh_n = "eh", dbx_n = "dbx", dby_n = "dby", dbz_n = "dbz"
-#ifndef ISO
-   real                                  :: dt_eint
-#endif /* !ISO */
 
 contains
 
@@ -336,20 +333,22 @@ contains
 
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
+   real                               :: dt_eta
 #ifndef ISO
 #ifdef IONIZED
       real, dimension(:,:,:), pointer :: eta, wb
 #endif /* IONIZED */
+   real                               :: dt_eint
 
       dt_eint = big
 #endif /* !ISO */
-      dt_resist = big
+      dt_eta = big
 
       if (etamax%val .notequals. zero) then
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-            dt_resist = min(dt_resist, cfl_resist * cg%dxmn**2 / (2. * etamax%val))
+            dt_eta = min(dt_eta, cfl_resist * cg%dxmn**2 / (2. * etamax%val))
 #ifndef ISO
 #ifdef IONIZED
             eta => cg%q(qna%ind(eta_n))%arr
@@ -358,13 +357,13 @@ contains
                   emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)))/ (eta(:,:,:) * wb+small)
             dt_eint = min(dt_eint, deint_max * abs(minval(cg%q(qna%ind(wb_n))%span(cg%ijkse))))
 #endif /* IONIZED */
-            dt_resist = min(dt_resist,dt_eint)
+            dt_resist = min(dt_eta, dt_eint)
 #endif /* !ISO */
             cgl => cgl%nxt
          enddo
       endif
 
-      call piernik_MPI_Allreduce(dt_resist, pMIN)
+      call piernik_MPI_Allreduce(dt_eta, pMIN)
 #ifndef ISO
 #ifdef IONIZED
       call piernik_MPI_Allreduce(dt_eint, pMIN)
@@ -372,7 +371,7 @@ contains
       call leaves%get_extremum(qna%ind(wb_n), MINL, deimin)
       deimin%assoc = dt_eint
 #endif /* !ISO */
-      etamax%assoc = dt_resist ; cu2max%assoc = dt_resist
+      etamax%assoc = dt_eta ; cu2max%assoc = min(dt_eta, dt_eint)
 
    end subroutine timestep_resist
 
