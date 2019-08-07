@@ -202,11 +202,10 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, MAXL, oneq, LO, HI, GEO_XYZ
+      use constants,        only: xdim, ydim, zdim, oneq, LO, HI, GEO_XYZ
       use dataio_pub,       only: die
       use domain,           only: dom, is_multicg
       use grid_cont,        only: grid_container
-      use mpisetup,         only: piernik_MPI_Bcast, piernik_MPI_Allreduce
       use named_array_list, only: qna
 
       implicit none
@@ -299,10 +298,6 @@ contains
       cg => leaves%first%cg
       if (is_multicg) call die("[resistivity:compute_resist] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum, wb, eta
 
-      call leaves%get_extremum(qna%ind(eta_n), MAXL, etamax)
-      call piernik_MPI_Bcast(etamax%val)
-      call leaves%get_extremum(qna%ind(wb_n), MAXL, cu2max)
-
       NULLIFY(p)
 
       call timestep_resist
@@ -315,17 +310,18 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: big, zero, pMIN
+      use constants,        only: big, zero, pMIN, MAXL
       use grid_cont,        only: grid_container
       use func,             only: operator(.notequals.)
-      use mpisetup,         only: piernik_MPI_Allreduce
+      use mpisetup,         only: piernik_MPI_Allreduce, piernik_MPI_Bcast
+      use named_array_list, only: qna
 #ifndef ISO
       use constants,        only: MINL
 #ifdef IONIZED
       use constants,        only: small, xdim, ydim, zdim
       use fluidindex,       only: flind
       use func,             only: ekin, emag
-      use named_array_list, only: qna, wna
+      use named_array_list, only: wna
 #endif /* IONIZED */
 #endif /* !ISO */
 
@@ -344,6 +340,10 @@ contains
       dt_eint = big
 #endif /* !ISO */
       dt_eta = big
+      call leaves%get_extremum(qna%ind(eta_n), MAXL, etamax)
+      call piernik_MPI_Bcast(etamax%val)
+      call leaves%get_extremum(qna%ind(wb_n), MAXL, cu2max)
+      call piernik_MPI_Bcast(cu2max%val)
 
       if (etamax%val .notequals. zero) then
          cgl => leaves%first
