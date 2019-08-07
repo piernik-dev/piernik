@@ -71,7 +71,7 @@ contains
       use interpolations,        only: set_interpolations
 #endif /* RIEMANN */
 #ifdef RESISTIVE
-      use resistivity,           only: init_resistivity, compute_resist
+      use resistivity,           only: init_resistivity
 #endif /* RESISTIVE */
 #ifdef GRAV
       use gravity,               only: init_grav, init_terms_grav, source_terms_grav
@@ -273,9 +273,6 @@ contains
       !> \todo Do an MPI_Reduce in case the master process don't have any part of the globally finest level or ensure it is empty in such case
       if (master) call printinfo(msg)
 
-#ifdef RESISTIVE
-      call compute_resist                    ! etamax%val is required by timestep_resist
-#endif /* RESISTIVE */
 #ifdef VERBOSE
       call diagnose_arrays                   ! may depend on everything
 #endif /* VERBOSE */

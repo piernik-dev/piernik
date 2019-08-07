@@ -39,8 +39,7 @@ module resistivity
    implicit none
 
    private
-   public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, etamax,   &
-        &     diffuseb,cu2max, deimin, eta1_active, compute_resist
+   public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, etamax, diffuseb, cu2max, deimin, eta1_active
 
    real                                  :: cfl_resist                     !< CFL factor for resistivity effect
    real                                  :: eta_0                          !< uniform resistivity
@@ -300,8 +299,6 @@ contains
 
       NULLIFY(p)
 
-      call timestep_resist
-
    end subroutine compute_resist
 
 !-----------------------------------------------------------------------
@@ -340,6 +337,7 @@ contains
       dt_eint = big
 #endif /* !ISO */
       dt_eta = big
+      call compute_resist
       call leaves%get_extremum(qna%ind(eta_n), MAXL, etamax)
       call piernik_MPI_Bcast(etamax%val)
       call leaves%get_extremum(qna%ind(wb_n), MAXL, cu2max)
