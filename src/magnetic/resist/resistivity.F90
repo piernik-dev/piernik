@@ -201,15 +201,14 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, oneq, LO, HI, GEO_XYZ
+      use constants,        only: xdim, ydim, zdim, zero, oneq, LO, HI, GEO_XYZ
       use dataio_pub,       only: die
-      use domain,           only: dom, is_multicg
+      use domain,           only: dom
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
 
       implicit none
 
-      real, dimension(:,:,:), pointer :: p
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       real, dimension(:,:,:), pointer :: eta, dbx, dby, dbz, wb, eh
@@ -221,6 +220,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+
          eta => cg%q(qna%ind(eta_n))%arr
          dbx => cg%q(qna%ind(dbx_n))%arr
          dby => cg%q(qna%ind(dby_n))%arr
@@ -268,13 +268,13 @@ contains
 
 !        eta(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,wb(:,:,:)- jc2 ))
 !        the above may cause FPE because compiler may transform it to max(0.0, sqrt(wb(:,:,:)- jc2 ))
-         where (wb(:,:,:)- jc2 > 0.)
+         where (wb(:,:,:) - jc2 > zero)
             eta(:,:,:) = eta_0 + eta_1 * sqrt(wb(:,:,:)- jc2)
          elsewhere
             eta(:,:,:) = eta_0
          endwhere
 
-         eh = 0.0
+         eh = zero
          if (dom%has_dir(xdim)) then
             eh(cg%lhn(xdim,LO)+1:cg%lhn(xdim,HI)-1,:,:) = eh(cg%lhn(xdim,LO)+1:cg%lhn(xdim,HI)-1,:,:) + eta(cg%lhn(xdim,LO):cg%lhn(xdim,HI)-2,:,:) + eta(cg%lhn(xdim,LO)+2:cg%lhn(xdim,HI),:,:)
             eh(cg%lhn(xdim,LO),:,:) = eh(cg%lhn(xdim,LO)+1,:,:) ; eh(cg%lhn(xdim,HI),:,:) = eh(cg%lhn(xdim,HI)-1,:,:)
@@ -293,11 +293,6 @@ contains
 
          cgl => cgl%nxt
       enddo
-
-      cg => leaves%first%cg
-      if (is_multicg) call die("[resistivity:compute_resist] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum, wb, eta
-
-      NULLIFY(p)
 
    end subroutine compute_resist
 
