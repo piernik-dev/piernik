@@ -205,20 +205,12 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, MAXL, oneq, LO, HI, GEO_XYZ, pMIN
+      use constants,        only: xdim, ydim, zdim, MAXL, oneq, LO, HI, GEO_XYZ
       use dataio_pub,       only: die
       use domain,           only: dom, is_multicg
-      use func,             only: ekin, emag
       use grid_cont,        only: grid_container
       use mpisetup,         only: piernik_MPI_Bcast, piernik_MPI_Allreduce
       use named_array_list, only: qna
-#ifndef ISO
-      use constants,        only: MINL
-#ifdef IONIZED
-      use constants,        only: small
-      use fluidindex,       only: flind
-#endif /* IONIZED */
-#endif /* !ISO */
 
       implicit none
 
@@ -314,24 +306,6 @@ contains
       call piernik_MPI_Bcast(etamax%val)
       call leaves%get_extremum(qna%ind(wb_n), MAXL, cu2max)
 
-#ifndef ISO
-      dt_eint = huge(1.)
-#ifdef IONIZED
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         eta => cg%q(qna%ind(eta_n))%arr
-         wb => cg%q(qna%ind(wb_n))%arr
-         wb = (cg%u(flind%ion%ien,:,:,:) - ekin(cg%u(flind%ion%imx,:,:,:), cg%u(flind%ion%imy,:,:,:), cg%u(flind%ion%imz,:,:,:), cg%u(flind%ion%idn,:,:,:)) - &
-              emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)))/ (eta(:,:,:) * wb+small)
-         dt_eint = min(dt_eint, deint_max * abs(minval(cg%q(qna%ind(wb_n))%span(cg%ijkse))))
-         cgl => cgl%nxt
-      enddo
-      call piernik_MPI_Allreduce(dt_eint, pMIN)
-#endif /* IONIZED */
-      call leaves%get_extremum(qna%ind(wb_n), MINL, deimin)
-      deimin%assoc = dt_eint
-#endif /* !ISO */
       NULLIFY(p)
 
       call timestep_resist
@@ -342,18 +316,33 @@ contains
 
    subroutine timestep_resist
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use constants, only: big, zero, pMIN
-      use grid_cont, only: grid_container
-      use func,      only: operator(.notequals.)
-      use mpisetup,  only: piernik_MPI_Allreduce
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: big, zero, pMIN
+      use grid_cont,        only: grid_container
+      use func,             only: operator(.notequals.)
+      use mpisetup,         only: piernik_MPI_Allreduce
+#ifndef ISO
+      use constants,        only: MINL
+#ifdef IONIZED
+      use constants,        only: small, xdim, ydim, zdim
+      use fluidindex,       only: flind
+      use func,             only: ekin, emag
+      use named_array_list, only: qna
+#endif /* IONIZED */
+#endif /* !ISO */
 
       implicit none
 
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
+#ifndef ISO
+#ifdef IONIZED
+      real, dimension(:,:,:), pointer :: eta, wb
+#endif /* IONIZED */
 
+      dt_eint = big
+#endif /* !ISO */
       dt_resist = big
 
       if (etamax%val .notequals. zero) then
@@ -362,6 +351,13 @@ contains
             cg => cgl%cg
             dt_resist = min(dt_resist, cfl_resist * cg%dxmn**2 / (2. * etamax%val))
 #ifndef ISO
+#ifdef IONIZED
+            eta => cg%q(qna%ind(eta_n))%arr
+            wb => cg%q(qna%ind(wb_n))%arr
+            wb = (cg%u(flind%ion%ien,:,:,:) - ekin(cg%u(flind%ion%imx,:,:,:), cg%u(flind%ion%imy,:,:,:), cg%u(flind%ion%imz,:,:,:), cg%u(flind%ion%idn,:,:,:)) - &
+                  emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)))/ (eta(:,:,:) * wb+small)
+            dt_eint = min(dt_eint, deint_max * abs(minval(cg%q(qna%ind(wb_n))%span(cg%ijkse))))
+#endif /* IONIZED */
             dt_resist = min(dt_resist,dt_eint)
 #endif /* !ISO */
             cgl => cgl%nxt
@@ -369,6 +365,13 @@ contains
       endif
 
       call piernik_MPI_Allreduce(dt_resist, pMIN)
+#ifndef ISO
+#ifdef IONIZED
+      call piernik_MPI_Allreduce(dt_eint, pMIN)
+#endif /* IONIZED */
+      call leaves%get_extremum(qna%ind(wb_n), MINL, deimin)
+      deimin%assoc = dt_eint
+#endif /* !ISO */
       etamax%assoc = dt_resist ; cu2max%assoc = dt_resist
 
    end subroutine timestep_resist
