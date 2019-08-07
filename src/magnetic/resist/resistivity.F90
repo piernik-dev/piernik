@@ -325,20 +325,21 @@ contains
       use constants,        only: small, xdim, ydim, zdim
       use fluidindex,       only: flind
       use func,             only: ekin, emag
-      use named_array_list, only: qna
+      use named_array_list, only: qna, wna
 #endif /* IONIZED */
 #endif /* !ISO */
 
       implicit none
 
-      type(cg_list_element),  pointer :: cgl
-      type(grid_container),   pointer :: cg
-   real                               :: dt_eta
+      type(cg_list_element),  pointer   :: cgl
+      type(grid_container),   pointer   :: cg
+   real                                 :: dt_eta
 #ifndef ISO
 #ifdef IONIZED
-      real, dimension(:,:,:), pointer :: eta, wb, eh
+      real, dimension(:,:,:),   pointer :: eta, wb, eh
+      real, dimension(:,:,:,:), pointer :: uu, bb
 #endif /* IONIZED */
-   real                               :: dt_eint
+   real                                 :: dt_eint
 
       dt_eint = big
 #endif /* !ISO */
@@ -351,12 +352,14 @@ contains
             dt_eta = min(dt_eta, cfl_resist * cg%dxmn**2 / (2. * etamax%val))
 #ifndef ISO
 #ifdef IONIZED
-            eta => cg%q(qna%ind(eta_n))%arr
-            wb => cg%q(qna%ind(wb_n))%arr
-            eh => cg%q(qna%ind(eh_n))%arr
-            eh = (cg%u(flind%ion%ien,:,:,:) - ekin(cg%u(flind%ion%imx,:,:,:), cg%u(flind%ion%imy,:,:,:), cg%u(flind%ion%imz,:,:,:), cg%u(flind%ion%idn,:,:,:)) - &
-                  emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)))/ (eta(:,:,:) * wb + small)
-            dt_eint = min(dt_eint, deint_max * abs(minval(cg%q(qna%ind(wb_n))%span(cg%ijkse))))
+            eta => cg%q(qna%ind(eta_n))%span(cg%ijkse)
+            wb => cg%q(qna%ind(wb_n))%span(cg%ijkse)
+            eh => cg%q(qna%ind(eh_n))%span(cg%ijkse)
+            uu => cg%w(wna%fi)%span(cg%ijkse)
+            bb => cg%W(wna%bi)%span(cg%ijkse)
+            eh = (uu(flind%ion%ien,:,:,:) - ekin(uu(flind%ion%imx,:,:,:), uu(flind%ion%imy,:,:,:), uu(flind%ion%imz,:,:,:), uu(flind%ion%idn,:,:,:)) - &
+                  emag(bb(xdim,:,:,:), bb(ydim,:,:,:), bb(zdim,:,:,:)))/ (eta(:,:,:) * wb + small)
+            dt_eint = min(dt_eint, deint_max * abs(minval(eh)))
 #endif /* IONIZED */
             dt_resist = min(dt_eta, dt_eint)
 #endif /* !ISO */
