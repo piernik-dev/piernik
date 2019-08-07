@@ -335,11 +335,7 @@ contains
       NULLIFY(p)
 
       dt_resist = huge(1.)
-      cgl => leaves%first
-      do while (associated(cgl))
-         call timestep_resist(cgl%cg)
-         cgl => cgl%nxt
-      enddo
+      call timestep_resist
       call piernik_MPI_Allreduce(dt_resist, pMIN)
 
       etamax%assoc = dt_resist ; cu2max%assoc = dt_resist
@@ -348,21 +344,29 @@ contains
 
 !-----------------------------------------------------------------------
 
-   subroutine timestep_resist(cg)
+   subroutine timestep_resist
 
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
       use constants, only: big, zero
       use grid_cont, only: grid_container
       use func,      only: operator(.notequals.)
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
       if (etamax%val .notequals. zero) then
-         dt_resist = min(dt_resist, cfl_resist * cg%dxmn**2 / (2. * etamax%val))
+         cgl => leaves%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            dt_resist = min(dt_resist, cfl_resist * cg%dxmn**2 / (2. * etamax%val))
 #ifndef ISO
-         dt_resist = min(dt_resist,dt_eint)
+            dt_resist = min(dt_resist,dt_eint)
 #endif /* !ISO */
+            cgl => cgl%nxt
+         enddo
       else
          dt_resist = big
       endif
