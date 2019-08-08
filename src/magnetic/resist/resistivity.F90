@@ -321,17 +321,13 @@ contains
 
       type(cg_list_element),  pointer   :: cgl
       type(grid_container),   pointer   :: cg
-   real                                 :: dt_eta
-#ifndef ISO
-#ifdef IONIZED
+      real                              :: dt_eta, dt_eint
+#if !defined(ISO) && defined(IONIZED)
       real, dimension(:,:,:),   pointer :: eta, wb, eh
       real, dimension(:,:,:,:), pointer :: uu, bb
-#endif /* IONIZED */
-   real                                 :: dt_eint
+#endif /* !ISO && IONIZED */
 
-      dt_eint = big
-#endif /* !ISO */
-      dt_eta = big
+      dt_eta = big ; dt_eint = big
       call compute_resist
       call leaves%get_extremum(qna%ind(eta_n), MAXL, etamax)
       call piernik_MPI_Bcast(etamax%val)
