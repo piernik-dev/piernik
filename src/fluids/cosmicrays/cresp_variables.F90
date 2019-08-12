@@ -7,9 +7,9 @@ module cresp_variables ! & constants
 
 !   integer,      parameter :: order   = 1
 
-   real(kind=8), parameter :: div_v   = 0.0
-   real(kind=8), parameter :: omega_d = 0.0
-   real(kind=8), parameter :: clight  = 1.0
+   real(kind=8), parameter :: div_v        = 0.0
+   real(kind=8), parameter :: omega_d      = 0.0
+   real(kind=8), parameter :: clight_cresp = 1.0
 
   ! these will most probably be in types and will be modified by the driver (piernik)
 !

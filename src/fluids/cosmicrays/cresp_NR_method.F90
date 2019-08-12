@@ -219,7 +219,7 @@ contains
    subroutine cresp_initialize_guess_grids
 
       use constants,       only: zero, I_FOUR
-      use cresp_variables, only: clight ! use units, only: clight
+      use cresp_variables, only: clight_cresp
       use initcrspectrum,  only: e_small, q_big, max_p_ratio, arr_dim, arr_dim_q
       use mpisetup,        only: master
 
@@ -258,19 +258,13 @@ contains
             open(15, file="log_NR_solve",position="append")
             write (15,*) "------------------------------------------"
             write (15,"(A,2x,A,2x)") "Run on: ", date, "at: ", time
-            write (15,*) "For set of parameters: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2),", &
-                                             "max_p_ratio, q_big, clight"
-            write (15, "(1E15.8, 2I10,10E22.15)") e_small, size(p_space), size(q_space), &
-                                             max_p_ratio, q_big, clight
+            write (15,*) "For set of parameters: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2), max_p_ratio, q_big, clight_cresp"
+            write (15, "(1E15.8, 2I10,10E22.15)") e_small, size(p_space), size(q_space), max_p_ratio, q_big, clight_cresp
             write (15,*) "Are there zeros? (q_ratios)",    count(abs(q_space).le.zero)
-            write (15,*) "Are there zeros? (p_ratios_up)", count(p_ratios_up.le.zero), &
-                              real(count(p_ratios_up.le.zero))/real(size(p_ratios_up)) * 100.0,"%"
-            write (15,*) "Are there zeros? (f_ratios_up)", count(f_ratios_up.le.zero), &
-                              real(count(f_ratios_up.le.zero))/real(size(f_ratios_up)) * 100.0,"%"
-            write (15,*) "Are there zeros? (p_ratios_lo)", count(p_ratios_lo.le.zero), &
-                              real(count(p_ratios_lo.le.zero))/real(size(p_ratios_lo)) * 100.0,"%"
-            write (15,*) "Are there zeros? (f_ratios_lo)", count(f_ratios_lo.le.zero), &
-                              real(count(f_ratios_lo.le.zero))/real(size(f_ratios_lo)) * 100.0,"%"
+            write (15,*) "Are there zeros? (p_ratios_up)", count(p_ratios_up.le.zero), real(count(p_ratios_up.le.zero))/real(size(p_ratios_up)) * 100.0,"%"
+            write (15,*) "Are there zeros? (f_ratios_up)", count(f_ratios_up.le.zero), real(count(f_ratios_up.le.zero))/real(size(f_ratios_up)) * 100.0,"%"
+            write (15,*) "Are there zeros? (p_ratios_lo)", count(p_ratios_lo.le.zero), real(count(p_ratios_lo.le.zero))/real(size(p_ratios_lo)) * 100.0,"%"
+            write (15,*) "Are there zeros? (f_ratios_lo)", count(f_ratios_lo.le.zero), real(count(f_ratios_lo.le.zero))/real(size(f_ratios_lo)) * 100.0,"%"
             write (15,*) "Count of array elements:", size(p_ratios_lo)
             write (15,*) "----------"
             close(15)
@@ -1168,7 +1162,7 @@ contains
    function n_func_2_zero_up(p_ratio, f_ratio, n_cnst, q_in) ! from eqn. 9
 
       use constants,       only: one, three
-      use cresp_variables, only: clight ! use units, only: clight
+      use cresp_variables, only: clight_cresp
       use initcrspectrum,  only: e_small
 
       implicit none
@@ -1177,9 +1171,9 @@ contains
       real(kind=8) :: n_func_2_zero_up
 
       if (abs(q_in - three) .lt. eps) then
-         n_func_2_zero_up = - n_cnst + e_small / ((clight) * f_ratio * (p_ratio **three))* log(p_ratio)
+         n_func_2_zero_up = - n_cnst + e_small / (clight_cresp * f_ratio * (p_ratio **three))* log(p_ratio)
       else
-         n_func_2_zero_up = - n_cnst + e_small / ((clight) * f_ratio * (p_ratio **three)) &
+         n_func_2_zero_up = - n_cnst + e_small / (clight_cresp * f_ratio * (p_ratio **three)) &
                           & * ((p_ratio **(three-q_in) - one)/(three - q_in))
       endif
 
@@ -1188,7 +1182,7 @@ contains
    function n_func_2_zero_lo(p_ratio, n_cnst,q_in) ! from eqn. 9
 
       use constants,       only: one, three
-      use cresp_variables, only: clight ! use units, only: clight
+      use cresp_variables, only: clight_cresp
       use initcrspectrum,  only: e_small
 
       implicit none
@@ -1197,9 +1191,9 @@ contains
       real(kind=8) :: n_func_2_zero_lo
 
       if (abs(q_in - three) .lt. eps) then
-         n_func_2_zero_lo = - n_cnst + (e_small / (clight)) * log(p_ratio)
+         n_func_2_zero_lo = - n_cnst + (e_small / clight_cresp) * log(p_ratio)
       else
-         n_func_2_zero_lo = - n_cnst + (e_small / (clight)) * ((p_ratio **(three-q_in) - one)/(three - q_in))
+         n_func_2_zero_lo = - n_cnst + (e_small / clight_cresp) * ((p_ratio **(three-q_in) - one)/(three - q_in))
       endif
 
    end function n_func_2_zero_lo
@@ -1338,7 +1332,7 @@ contains
    function e_small_to_f(p_outer) ! used by variety of procedures and functions
 
       use constants,       only: zero, three, fpi
-      use cresp_variables, only: clight ! use units, only: clight
+      use cresp_variables, only: clight_cresp
       use initcrspectrum,  only: e_small
 
       implicit none
@@ -1346,7 +1340,7 @@ contains
       real (kind=8) :: e_small_to_f, p_outer
 
       e_small_to_f = zero
-      e_small_to_f = e_small / (fpi * (clight)  * p_outer **three)
+      e_small_to_f = e_small / (fpi * clight_cresp * p_outer **three)
 
    end function e_small_to_f
 !----------------------------------------------------------------------------------------------------
@@ -1569,7 +1563,7 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine save_NR_guess_grid(NR_guess_grid, var_name, bc)
 
-      use cresp_variables, only: clight ! use units, only: clight
+      use cresp_variables, only: clight_cresp
       use initcrspectrum,  only: e_small, q_big, max_p_ratio
 
       implicit none
@@ -1582,10 +1576,9 @@ contains
 
       f_name = var_name // bound_name(bc) // extension
       open(31, file=f_name, status="unknown", position="rewind")
-         write(31,"(A56,A2,A104)") "This is a storage file for NR init grid, boundary case: ", bound_name(bc), &
-            &    " Saved below: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2), max_p_ratio, q_big, clight. Do not remove content from this file"
-         write(31, "(1E15.8, 2I10,10E22.15)") e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2), &
-            &     max_p_ratio, q_big, clight              ! TODO: remove max_p_ratio, swap cols, rows with just arr_dim
+         write(31,"(A56,A2,A110)") "This is a storage file for NR init grid, boundary case: ", bound_name(bc), &
+            &    " Saved below: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2), max_p_ratio, q_big, clight_cresp. Do not remove content from this file"
+         write(31, "(1E15.8, 2I10,10E22.15)") e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2), max_p_ratio, q_big, clight_cresp ! TODO: remove max_p_ratio, swap cols, rows with just arr_dim
          write(31, "(A1)") " "                            ! Blank line for
 
          do j=1, size(NR_guess_grid,dim=2)
@@ -1614,7 +1607,7 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine read_NR_guess_grid(NR_guess_grid, var_name, bc, exit_code) ! must be improved, especially for cases when files do not exist
 
-      use cresp_variables, only: clight ! use units, only: clight
+      use cresp_variables, only: clight_cresp
       use func,            only: operator(.equals.)
       use initcrspectrum,  only: e_small, q_big, max_p_ratio
 
@@ -1639,7 +1632,7 @@ contains
          read(31,"(1E15.8,2I10,10E22.15)") svd_e_sm, svd_rows, svd_cols, svd_max_p_r, svd_q_big, svd_clight
          if ( (svd_e_sm .equals. e_small) .and. (svd_rows .eq. size(NR_guess_grid, dim=1)) .and. &
            &  (svd_cols .eq. size(NR_guess_grid, dim=2)) .and. &       ! TODO: swap rows and cols with just arr_dim, drop max_p_ratio
-           &  (svd_max_p_r .equals. max_p_ratio) .and. (svd_q_big .equals. q_big) .and. (svd_clight .equals. clight) ) then ! This saves a lot of time
+           &  (svd_max_p_r .equals. max_p_ratio) .and. (svd_q_big .equals. q_big) .and. (svd_clight .equals. clight_cresp) ) then ! This saves a lot of time
             read(31, *)
 
             do j=1, size(NR_guess_grid,dim=2)
@@ -1649,7 +1642,7 @@ contains
          else
             write(*,"(A61,A4,A6)") "Different initial parameters: will resolve ratio tables for ", bound_name(bc)," case."
             write(*,"(2I10,10E22.15)") svd_cols, svd_rows, svd_e_sm, svd_max_p_r, svd_q_big, svd_clight
-            write(*,"(2I10,10E22.15)") size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2),e_small,max_p_ratio,q_big,clight
+            write(*,"(2I10,10E22.15)") size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2), e_small, max_p_ratio, q_big, clight_cresp
             exit_code = .true.
          endif
       endif

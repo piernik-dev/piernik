@@ -145,7 +145,7 @@ module initcrspectrum
    subroutine init_cresp
 
       use constants,       only: cbuff_len, I_ZERO, zero, one, ten
-      use cresp_variables, only: clight ! use units,   only: clight
+      use cresp_variables, only: clight_cresp
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index
       use initcosmicrays,  only: ncrn, ncre, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp
@@ -474,7 +474,7 @@ module initcrspectrum
 
          gamma_beta_c_fix = mom_cre_fix / me
 
-         n_small_bin(:) = e_small / (p_mid_fix(:) * clight)
+         n_small_bin(:) = e_small / (p_mid_fix(:) * clight_cresp)
 
 #ifdef VERBOSE
          write (msg,'(A, 50I3)')    '[initcrspectrum:init_cresp] fixed all edges: ', cresp_all_edges

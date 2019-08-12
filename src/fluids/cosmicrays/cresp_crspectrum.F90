@@ -667,7 +667,7 @@ contains
    function assert_active_bin_via_nei(n_in, e_in, i_cutoff)
 
       use constants,       only: zero, fpi, one, three
-      use cresp_variables, only: clight ! use units,     only: clight
+      use cresp_variables, only: clight_cresp
       use cresp_NR_method, only: compute_q
       use initcosmicrays,  only: ncre
       use initcrspectrum,  only: p_fix, e_small, eps
@@ -688,7 +688,7 @@ contains
          exit_code = .true.
 
          if (i_cutoff .gt. 0 .and. i_cutoff .lt. ncre) then
-            alpha = e_in/(n_in * clight * p_fix(i_cutoff-1))
+            alpha = e_in/(n_in * clight_cresp * p_fix(i_cutoff-1))
             q_one = compute_q(alpha, exit_code)
          else
             return            ! WARN: returns .true. if bin of choice is the extreme one -- FIX_ME
@@ -910,7 +910,7 @@ contains
 
       use constants, only: zero, I_ONE, fpi, one, two, three
       use cresp_NR_method, only: e_small_to_f
-      use cresp_variables, only: clight ! use units, only: clight
+      use cresp_variables, only: clight_cresp
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
       use initcrspectrum,  only: spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, eps, p_fix, w,   &
@@ -1041,7 +1041,7 @@ contains
          a = -q_init
          b = log10(f_amplitude * (p_lo_init)**(q_init))
 
-         c_3 =  ( (-three * lpl + log10(e_small / (fpi * clight))) + b * (lpl/lpb) - a * lpl - two * b * (lpl/lpb) ) / ( (lpl/lpb)**two - two * (lpl/lpb) + one)
+         c_3 =  ( (-three * lpl + log10(e_small / (fpi * clight_cresp))) + b * (lpl/lpb) - a * lpl - two * b * (lpl/lpb) ) / ( (lpl/lpb)**two - two * (lpl/lpb) + one)
          c_1 =  (c_3 - b) / lpb**two
          c_2 =  (a - two * c_1 * lpb)
 
@@ -1053,7 +1053,7 @@ contains
          lpb = log10(p_br_init_up)
 ! a and b remain unchanged
 
-         c_3 =  ( (-three * lpu + log10(e_small / (fpi * clight))) + b * (lpu/lpb) - a * lpu - two * b * (lpu/lpb) ) / ( (lpu/lpb)**two - two * (lpu/lpb) + one)
+         c_3 =  ( (-three * lpu + log10(e_small / (fpi * clight_cresp))) + b * (lpu/lpb) - a * lpu - two * b * (lpu/lpb) ) / ( (lpu/lpb)**two - two * (lpu/lpb) + one)
          c_1 =  (c_3 - b) / lpb**two
          c_2 =  (a - two * c_1 * lpb)
 
@@ -1116,7 +1116,7 @@ contains
      if (initial_condition == 'bump') then  ! TODO - @cresp_grid energy normalization and integral to scale cosmic ray electrons with nucleon energy density!
 ! Gaussian bump-type initial condition for energy distribution
          f = f_amplitude * exp(-(4*log(2.0)*log(p/sqrt(p_lo_init*p_up_init/1.))**2)) ! FWHM
-         f(0:ncre-1) = f(0:ncre-1) / (fpi * clight * p(0:ncre-1)**(3.0)) ! without this spectrum is gaussian for distribution function
+         f(0:ncre-1) = f(0:ncre-1) / (fpi * clight_cresp * p(0:ncre-1)**3) ! without this spectrum is gaussian for distribution function
          do i=1, ncre
             q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i)) !-log(f(i)/f(i-1))/log(p(i)/p(i-1))
          enddo
@@ -1300,7 +1300,7 @@ contains
    function fq_to_e(p_l, p_r, f_l, q, bins)
 
       use constants,       only: zero, one, four, fpi
-      use cresp_variables, only: clight ! use units, only: clight
+      use cresp_variables, only: clight_cresp
       use initcosmicrays,  only: ncre
       use initcrspectrum,  only: eps
 
@@ -1312,7 +1312,7 @@ contains
       real(kind=8), dimension(1:ncre)        :: fq_to_e
 
       fq_to_e = zero
-      e_bins = fpi*clight*f_l(bins)*p_l(bins)**4
+      e_bins = fpi*clight_cresp*f_l(bins)*p_l(bins)**4
       where (abs(q(bins) - four) .gt. eps)
          e_bins = e_bins*((p_r(bins)/p_l(bins))**(four-q(bins)) - one)/(four - q(bins))
       elsewhere
@@ -1331,14 +1331,14 @@ contains
    function fp_to_e_ampl(p_1, f_1)
 
       use constants,       only: fpi
-      use cresp_variables, only: clight
+      use cresp_variables, only: clight_cresp
 
       implicit none
 
       real(kind=8), intent(in) :: p_1, f_1
       real(kind=8)             :: fp_to_e_ampl
 
-      fp_to_e_ampl = fpi * clight**2 * f_1 * p_1**3
+      fp_to_e_ampl = fpi * clight_cresp**2 * f_1 * p_1**3
 
    end function fp_to_e_ampl
 
@@ -1447,7 +1447,7 @@ contains
    subroutine cresp_compute_fluxes(ce,he)
 
       use constants,       only: zero, one, three, four, fpi
-      use cresp_variables, only: clight ! use units, only: clight
+      use cresp_variables, only: clight_cresp
       use initcosmicrays,  only: ncre
       use initcrspectrum,  only: eps, cresp_all_bins
 
@@ -1479,7 +1479,7 @@ contains
       endwhere
       nflux(ce) = - dn_upw(ce)
 
-      de_upw(ce) = fpi*clight*fimh(ce)*pimh(ce)**4
+      de_upw(ce) = fpi*clight_cresp*fimh(ce)*pimh(ce)**4
       where (abs(qi(ce) - four) .gt. eps)
          de_upw(ce) = de_upw(ce)*((p_upw(ce)/pimh(ce))**(four-qi(ce)) - one)/(four - qi(ce))
       elsewhere
@@ -1515,7 +1515,7 @@ contains
       endwhere
       nflux(he) = dn_upw(he)
 
-      de_upw(he) = fpi*clight*fimth(he)*p_upw(he)**4*(pimth(he)/p_upw(he))**qim1(he)
+      de_upw(he) = fpi*clight_cresp*fimth(he)*p_upw(he)**4*(pimth(he)/p_upw(he))**qim1(he)
       where (abs(qi(he) - four) .gt. eps)
          de_upw(he) = de_upw(he)*((pimh(he)/p_upw(he))**(four-qim1(he)) - one)/(four - qim1(he))
       elsewhere
@@ -1579,7 +1579,7 @@ contains
 
       use constants,       only: zero
       use cresp_NR_method, only: compute_q
-      use cresp_variables, only: clight ! use units, only: clight
+      use cresp_variables, only: clight_cresp
       use initcosmicrays,  only: ncre
       use initcrspectrum,  only: e_small
 
@@ -1598,7 +1598,7 @@ contains
          i = bins(i_active)
          if (e(i) .gt. e_small .and. p(i-1) .gt. zero) then
             exit_code = .true.
-            alpha_in = e(i)/(n(i)*p(i-1)*clight)
+            alpha_in = e(i)/(n(i)*p(i-1)*clight_cresp)
             if ((i .eq. i_lo+1) .or. (i .eq. i_up)) then ! for boudary case, when momenta are not approximated
                q(i) = compute_q(alpha_in, exit_code, p(i)/p(i-1))
             else
@@ -1669,7 +1669,7 @@ contains
    function get_pcresp(p_l, p_r, f_l, q, bins) ! computes cre pressure, not used currently
 
       use constants,       only: zero, one, three, four, fpi
-      use cresp_variables, only: clight ! use units, only: clight
+      use cresp_variables, only: clight_cresp
       use initcrspectrum,  only: eps
 
       implicit none
@@ -1680,7 +1680,7 @@ contains
       real(kind=8)                           :: get_pcresp
 
       get_pcresp = zero
-      p_cresp = (fpi/three) * clight*f_l(bins)*p_l(bins)**4
+      p_cresp = (fpi/three) * clight_cresp*f_l(bins)*p_l(bins)**4
 
       where (abs(q(bins) - four) .gt. eps)
          p_cresp = p_cresp*((p_r(bins)/p_l(bins))**(four-q(bins)) - one)/(four - q(bins))
@@ -1724,7 +1724,7 @@ contains
    subroutine get_fqp_up(exit_code)
 
       use constants,       only: zero, one, HI
-      use cresp_variables, only: clight ! use units, only: clight
+      use cresp_variables, only: clight_cresp
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers
 #ifdef CRESP_VERBOSED
       use dataio_pub,      only: msg, printinfo
@@ -1737,7 +1737,7 @@ contains
       logical                      :: exit_code, interpolated
 
       x_NR = zero
-      alpha = (e(i_up)/(n(i_up)*clight*p_fix(i_up-1)))
+      alpha = (e(i_up)/(n(i_up)*clight_cresp*p_fix(i_up-1)))
       n_in  = n(i_up)
 
       call assoc_pointers(HI)
@@ -1799,7 +1799,7 @@ contains
 
       use constants,       only: zero, one, LO
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers
-      use cresp_variables, only: clight ! use units, only: clight
+      use cresp_variables, only: clight_cresp
 #ifdef CRESP_VERBOSED
       use dataio_pub,      only: msg, printinfo
 #endif /* CRESP_VERBOSED */
@@ -1811,7 +1811,7 @@ contains
       logical                      :: exit_code, interpolated
 
       x_NR = zero
-      alpha = (e(i_lo+1)/(n(i_lo+1)*clight*p_fix(i_lo+1)))
+      alpha = (e(i_lo+1)/(n(i_lo+1)*clight_cresp*p_fix(i_lo+1)))
       n_in  = n(i_lo+1)
 
       call assoc_pointers(LO)
