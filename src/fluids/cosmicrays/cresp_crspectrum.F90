@@ -71,34 +71,34 @@ module cresp_crspectrum
    real(kind=8), allocatable, dimension(:) :: q  ! power-law exponent array
 
 ! power-law
-   real(kind=8)                       :: p_lo_next, p_up_next, p_lo, p_up !, p_lo_bef, p_up_bef
-   integer                            :: i_lo, i_up, i_lo_next, i_up_next
-   real(kind=8), dimension(:), allocatable   :: p ! momentum table for piecewise power-law spectru intervals
-   real(kind=8), dimension(:), allocatable   :: f ! distribution function for piecewise power-law spectrum
+   real(kind=8)                            :: p_lo_next, p_up_next, p_lo, p_up !, p_lo_bef, p_up_bef
+   integer                                 :: i_lo, i_up, i_lo_next, i_up_next
+   real(kind=8), dimension(:), allocatable :: p ! momentum table for piecewise power-law spectru intervals
+   real(kind=8), dimension(:), allocatable :: f ! distribution function for piecewise power-law spectrum
 
 ! predicted and upwind momenta, number density / energy density fluxes
-   real(kind=8), dimension(:),allocatable   :: p_next, p_upw , nflux, eflux ! , p_fix
+   real(kind=8), dimension(:), allocatable :: p_next, p_upw , nflux, eflux ! , p_fix
 
 ! precision control for energy / number density transport and dissipation of energy
-   real(kind=8)                             :: n_tot, n_tot0, e_tot, e_tot0
+   real(kind=8)                            :: n_tot, n_tot0, e_tot, e_tot0
 
 ! terms for energy dissipation tests
-   real(kind=8)                 :: u_d_0
-   real(kind=8)                 :: u_b_0
+   real(kind=8)                            :: u_d_0
+   real(kind=8)                            :: u_b_0
 
 ! in-algorithm energy dissipation terms
-   real(kind=8)              :: u_b, u_d
+   real(kind=8)                            :: u_b, u_d
 
 ! work array of number density and energy during algorithm execution
-   real(kind=8),allocatable, dimension(:)    :: ndt, edt
+   real(kind=8),allocatable, dimension(:)  :: ndt, edt
 
 ! in-algorithm energy & number density
-   real(kind=8), allocatable, dimension(:)  :: n, e ! dimension(1:ncre)
-   real(kind=8), allocatable, dimension(:)  :: e_amplitudes_l, e_amplitudes_r
+   real(kind=8), allocatable, dimension(:) :: n, e ! dimension(1:ncre)
+   real(kind=8), allocatable, dimension(:) :: e_amplitudes_l, e_amplitudes_r
 ! lower / upper energy needed for bin activation
-   real(kind=8), save :: e_threshold_lo, e_threshold_up
+   real(kind=8), save                      :: e_threshold_lo, e_threshold_up
 ! if one bin, switch off cutoff p approximation
-   integer  :: approx_p_lo, approx_p_up
+   integer                                 :: approx_p_lo, approx_p_up
 
 
    abstract interface
@@ -679,34 +679,33 @@ contains
 
       real(kind=8),    intent(in) :: n_in, e_in
       integer(kind=4), intent(in) :: i_cutoff
-      real(kind=8), dimension(1)  :: e_one, n_one, f_one, q_one, p_l, p_r
-      real(kind=8)                :: e_amplitude_l, e_amplitude_r, alpha
+      real(kind=8)                :: f_one, q_one, p_l, p_r, e_amplitude_l, e_amplitude_r, alpha
       logical                     :: exit_code, assert_active_bin_via_nei
 
       if (e_in .gt. zero .and. n_in .gt. zero .and. p_fix(max(i_cutoff-1,0)) .gt. zero ) then
          assert_active_bin_via_nei = .true.
 
-         e_one(1) = e_in   ;   n_one(1) = n_in
          exit_code = .true.
 
          if (i_cutoff .gt. 0 .and. i_cutoff .lt. ncre) then
-            alpha =  e_one(1)/(n_one(1) * clight * p_fix(i_cutoff-1))
-            q_one(1) =  compute_q(alpha, exit_code)
+            alpha = e_in/(n_in * clight * p_fix(i_cutoff-1))
+            q_one = compute_q(alpha, exit_code)
          else
             return            ! WARN: returns .true. if bin of choice is the extreme one -- FIX_ME
          endif
 
-         p_l(1) = p_fix(i_cutoff-1)  ;   p_r(1) = p_fix(i_cutoff)
-         f_one(1) = n_one(1) / (fpi*p_l(1)**3)
+         p_l = p_fix(i_cutoff-1)
+         p_r = p_fix(i_cutoff)
+         f_one = n_in / (fpi*p_l**3)
 
-         if (abs(q_one(1)-three) .gt. eps) then
-            f_one(1) = f_one(1)*(three - q_one(1)) /(( p_r(1)/p_l(1))**(three - q_one(1)) - one)
+         if (abs(q_one-three) .gt. eps) then
+            f_one = f_one*(three - q_one) /(( p_r/p_l)**(three - q_one) - one)
          else
-            f_one(1) = f_one(1)/log(p_r(1)/p_l(1))
+            f_one = f_one/log(p_r/p_l)
          endif
 
-         e_amplitude_l = fp_to_e_ampl(p_l(1), f_one(1))
-         e_amplitude_r = fp_to_e_ampl(p_r(1), f_one(1))
+         e_amplitude_l = fp_to_e_ampl(p_l, f_one)
+         e_amplitude_r = fp_to_e_ampl(p_r, f_one)
 
          if ( (e_amplitude_l .gt. e_small) .and.  (e_amplitude_r .gt. e_small) ) then
 #ifdef CRESP_VERBOSED
@@ -889,7 +888,7 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
 
-   subroutine p_update(dt, p_old,  p_new)
+   subroutine p_update(dt, p_old, p_new)
 
       use constants, only: one
 
@@ -921,12 +920,12 @@ contains
 
       implicit none
 
-      integer                          :: i, k, i_lo_ch, i_up_ch, i_br
-      real(kind=8)                     :: c, c_1, c_2, c_3, lpl, lpu, lpb, a, b
-      real(kind=8), dimension(I_ONE:ncre)    :: init_n, init_e
-      type (spec_mod_trms), intent(in), optional :: sptab
-      real(kind=8), intent(in)         :: f_amplitude
-      logical :: exit_code
+      real(kind=8), dimension(I_ONE:ncre)        :: init_n, init_e
+      real(kind=8),                   intent(in) :: f_amplitude
+      type (spec_mod_trms), optional, intent(in) :: sptab
+      integer                                    :: i, k, i_lo_ch, i_up_ch, i_br
+      real(kind=8)                               :: c, c_1, c_2, c_3, lpl, lpu, lpb, a, b
+      logical                                    :: exit_code
 
       u_b = zero ; u_d = zero
 
@@ -1239,11 +1238,11 @@ contains
       implicit none
 
       real(kind=8), dimension(1:ncre), intent(inout) :: n_inout, e_inout
-      real(kind=8), intent(in) ::     f_in, q_in, p_dist_lo, p_dist_up
-      real(kind=8), dimension(1:ncre) :: n_add, e_add, q_add
-      real(kind=8), dimension(0:ncre) :: p_range_add , f_add
-      integer(kind=4), allocatable, dimension(:) :: act_bins, act_edges
-      integer(kind=4) :: i_l, i_u !, n_bins
+      real(kind=8),                    intent(in)    :: f_in, q_in, p_dist_lo, p_dist_up
+      real(kind=8), dimension(1:ncre)                :: n_add, e_add, q_add
+      real(kind=8), dimension(0:ncre)                :: p_range_add , f_add
+      integer(kind=4), allocatable, dimension(:)     :: act_bins, act_edges
+      integer(kind=4)                                :: i_l, i_u
 
       n_add = zero  ; e_add = zero  ; q_add = zero  ; f_add = zero  ; p_range_add = zero
 
@@ -1285,7 +1284,7 @@ contains
       implicit none
 
       real(kind=8), dimension(1:ncre), intent(inout) :: n_inout, e_inout
-      real(kind=8), intent(in)                       :: e_in_total
+      real(kind=8),                    intent(in)    :: e_in_total
 
       n_inout = norm_init_spectrum%n * e_in_total / total_init_cree
       e_inout = norm_init_spectrum%e * e_in_total / total_init_cree
@@ -1307,10 +1306,10 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(:), intent (in)  :: p_l, p_r, f_l, q
-      integer, dimension(:), intent(in)        :: bins
-      real(kind=8), dimension(size(bins))  :: e_bins
-      real(kind=8), dimension(1:ncre)      :: fq_to_e
+      real(kind=8), dimension(:), intent(in) :: p_l, p_r, f_l, q
+      integer,      dimension(:), intent(in) :: bins
+      real(kind=8), dimension(size(bins))    :: e_bins
+      real(kind=8), dimension(1:ncre)        :: fq_to_e
 
       fq_to_e = zero
       e_bins = fpi*clight*f_l(bins)*p_l(bins)**4
@@ -1336,8 +1335,8 @@ contains
 
       implicit none
 
-      real(kind=8), intent(in)    :: p_1, f_1
-      real(kind=8)                :: fp_to_e_ampl
+      real(kind=8), intent(in) :: p_1, f_1
+      real(kind=8)             :: fp_to_e_ampl
 
       fp_to_e_ampl = fpi * clight**2 * f_1 * p_1**3
 
@@ -1357,10 +1356,10 @@ contains
 
       implicit none
 
-      integer, dimension(:), intent(in)      :: bins
+      integer,      dimension(:), intent(in) :: bins
       real(kind=8), dimension(:), intent(in) :: p_l, p_r, f_l, q
-      real(kind=8), dimension(size(bins))   :: n_bins
-      real(kind=8), dimension(1:ncre)       :: fq_to_n
+      real(kind=8), dimension(size(bins))    :: n_bins
+      real(kind=8), dimension(1:ncre)        :: fq_to_n
 
       n_bins = zero
 
@@ -1546,9 +1545,9 @@ contains
 
       implicit none
 
-      integer, dimension(:), intent(in)            :: bins
-      real(kind=8), dimension(0:ncre), intent(in)  :: p
-      real(kind=8), dimension(size(bins))          :: r_num, r_den
+      integer,      dimension(:),      intent(in) :: bins
+      real(kind=8), dimension(0:ncre), intent(in) :: p
+      real(kind=8), dimension(size(bins))         :: r_num, r_den
 
       r = zero
 
@@ -1586,12 +1585,12 @@ contains
 
       implicit none
 
-      integer(kind=4), dimension(:), intent(in)    :: bins
-      integer          :: i, i_active
-      real(kind=8)     :: alpha_in
-      real(kind=8), dimension(1:ncre), intent(in)  :: n, e !
+      real(kind=8), dimension(1:ncre), intent(in)  :: n, e
       real(kind=8), dimension(1:ncre), intent(out) :: q
-      logical :: exit_code
+      integer(kind=4), dimension(:),   intent(in)  :: bins
+      integer                                      :: i, i_active
+      real(kind=8)                                 :: alpha_in
+      logical                                      :: exit_code
 
       q = zero
 
@@ -1619,8 +1618,8 @@ contains
    function pf_to_q(p_l, p_r, f_l, f_r)
 
       implicit none
-      real(kind=8), intent(in)   :: p_l, p_r, f_l, f_r
-      real(kind=8)               :: pf_to_q
+      real(kind=8), intent(in) :: p_l, p_r, f_l, f_r
+      real(kind=8)             :: pf_to_q
 
       pf_to_q = 0.0
       pf_to_q = -log(f_r/f_l)/log(p_r/p_l) ! append value of q for given p_up
@@ -1640,11 +1639,11 @@ contains
 
       implicit none
 
-      integer, dimension(:)                 :: bins
-      real(kind=8), dimension(1:ncre)       :: p_l, p_r, n, q
-      real(kind=8), dimension(size(bins))   :: f_bins
-      real(kind=8), dimension(0:ncre)       :: nq_to_f
-      real(kind=8), dimension(0:ncre)   :: pr_by_pl   ! the array of values of p_r/p_l to avoid FPEs
+      integer,      dimension(:)          :: bins
+      real(kind=8), dimension(1:ncre)     :: p_l, p_r, n, q
+      real(kind=8), dimension(size(bins)) :: f_bins
+      real(kind=8), dimension(0:ncre)     :: nq_to_f
+      real(kind=8), dimension(0:ncre)     :: pr_by_pl   ! the array of values of p_r/p_l to avoid FPEs
 
       nq_to_f= zero
       f_bins = zero
@@ -1675,10 +1674,10 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(:), intent (in)  :: p_l, p_r, f_l, q
-      integer, dimension(:), intent(in)        :: bins
-      real(kind=8), dimension(size(bins))  :: p_cresp
-      real(kind=8)              :: get_pcresp
+      real(kind=8), dimension(:), intent(in) :: p_l, p_r, f_l, q
+      integer,      dimension(:), intent(in) :: bins
+      real(kind=8), dimension(size(bins))    :: p_cresp
+      real(kind=8)                           :: get_pcresp
 
       get_pcresp = zero
       p_cresp = (fpi/three) * clight*f_l(bins)*p_l(bins)**4
@@ -1703,11 +1702,11 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: n
-      real(kind=8), intent(in)                       :: dx
-      real(kind=8), dimension(n, 1:ncre), intent(in) :: u
-      real(kind=8), dimension(n), intent(out)        :: grad_pcresp
-      real(kind=8), dimension(n)                     :: P_cresp_r, P_cresp_l
+      integer(kind=4),                    intent(in)  :: n
+      real(kind=8),                       intent(in)  :: dx
+      real(kind=8), dimension(n, 1:ncre), intent(in)  :: u
+      real(kind=8), dimension(n),         intent(out) :: grad_pcresp
+      real(kind=8), dimension(n)                      :: P_cresp_r, P_cresp_l
 
       grad_pcresp = 0.0 ;  P_cresp_l = 0.0 ;  P_cresp_r = 0.0
 
@@ -1735,7 +1734,7 @@ contains
       implicit none
 
       real(kind=8), dimension(1:2) :: x_NR, x_NR_init
-      logical :: exit_code, interpolated
+      logical                      :: exit_code, interpolated
 
       x_NR = zero
       alpha = (e(i_up)/(n(i_up)*clight*p_fix(i_up-1)))
@@ -1809,7 +1808,7 @@ contains
       implicit none
 
       real(kind=8), dimension(1:2) :: x_NR, x_NR_init
-      logical :: exit_code, interpolated
+      logical                      :: exit_code, interpolated
 
       x_NR = zero
       alpha = (e(i_lo+1)/(n(i_lo+1)*clight*p_fix(i_lo+1)))
@@ -1871,7 +1870,7 @@ contains
       implicit none
 
       real(kind=8), dimension(:), intent(in)  :: p
-      real(kind=8), dimension(size(p)) :: b_losses
+      real(kind=8), dimension(size(p))        :: b_losses
 
       b_losses = u_b*p**2  !!! b_sync_ic = 8.94e-25*(u_b+u_cmb)*gamma_l**2 ! erg/cm
 
@@ -1885,8 +1884,8 @@ contains
 
       implicit none
 
-      real(kind=8), intent(in)  :: dt, p
-      real(kind=8)              :: p_rch_ord_1
+      real(kind=8), intent(in) :: dt, p
+      real(kind=8)             :: p_rch_ord_1
 
       p_rch_ord_1 = -( u_d + p * u_b ) *  dt
 
@@ -1898,8 +1897,8 @@ contains
 
       implicit none
 
-      real(kind=8), intent(in)  :: dt, p
-      real(kind=8)              :: p_rch_ord_2_1
+      real(kind=8), intent(in) :: dt, p
+      real(kind=8)             :: p_rch_ord_2_1
 
       p_rch_ord_2_1 = p_rch_ord_1(dt, p)  + ( half*(u_d*dt)**2 + (u_b * p * dt)**2)
 
@@ -1911,8 +1910,8 @@ contains
 
       implicit none
 
-      real(kind=8), intent(in)  :: dt, p
-      real(kind=8)              :: p_rch_ord_3_2_1
+      real(kind=8), intent(in) :: dt, p
+      real(kind=8)             :: p_rch_ord_3_2_1
 
       p_rch_ord_3_2_1 = p_rch_ord_2_1(dt, p) - onesth * (u_d * dt)**3 - (u_b * p * dt)**3
 
@@ -1958,7 +1957,7 @@ contains
 
       implicit none
 
-      integer(kind = 4)          :: ma1d
+      integer(kind=4) :: ma1d
 
       ma1d = ncre
       call my_allocate_with_index(fail_count_comp_q,ma1d,1)
@@ -2071,7 +2070,7 @@ contains
 
       implicit none
 
-      real(kind = 8)   :: t
+      real(kind=8) :: t
 
       open(10, file="crs.dat", position='append')
       write(10, '(2e16.9, 3(1x,i8), 600(1x,ES18.9E3))') t, crel%dt, ncre, crel%i_lo, crel%i_up, crel%p, crel%f, crel%q

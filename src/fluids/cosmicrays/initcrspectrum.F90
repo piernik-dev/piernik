@@ -148,7 +148,7 @@ module initcrspectrum
       use cresp_variables, only: clight ! use units,   only: clight
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index
-      use initcosmicrays,  only: ncrn, ncre, cre_gpcr_ess, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp
+      use initcosmicrays,  only: ncrn, ncre, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use units,           only: me
 
