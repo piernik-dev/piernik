@@ -1189,77 +1189,55 @@ contains
       endif
 
    end function n_func_2_zero_lo
+
 !----------------------------------------------------------------------------------------------------
-   function func_val_vec_up_bnd(x) ! DEPRECATED
+
+   function func_val_vec_bnd(x, op) ! DEPRECATED
 
       use constants, only: one, three, four, ten, fpi, LO, HI
 
       implicit none
 
       real(kind=8), dimension(ndim), intent(in) :: x
-      real(kind=8), dimension(ndim)             :: func_val_vec_up_bnd
-      real(kind=8)                              :: f_l, f_r, q_bin, p_r, pratio, lpratio ! sought values will be x for single N-R and x, f_l_iup in NR-2dim
-      real(kind=8) :: fun3_up ! Alternative function introduced to find p_up using integrals of n, e and p_fix value.
-      real(kind=8) :: fun5_up ! Function similar to nq_to_f subroutine, used by compute_fp_NR_2dim to estimate value of p_up and f_l_iup
+      integer(kind=4),               intent(in) :: op
+      real(kind=8), dimension(ndim)             :: func_val_vec_bnd
+      real(kind=8)                              :: apl, f_l, f_r, q_bin, p_l, p_r, pratio, lpratio ! sought values will be x for single N-R and x, f_l_iup in NR-2dim
+      real(kind=8) :: fun3 ! Alternative function introduced to find p_up using integrals of n, e and p_fix value.
+      real(kind=8) :: fun5 ! Function similar to nq_to_f subroutine, used by compute_fp_NR_2dim to estimate value of p_lo and f_r_lo
 
-      p_r = ten**x(LO)
-      f_l = ten**x(HI)
-      f_r = e_small_to_f(p_r)
-      pratio  = p_r/p_im1
+      if (op == LO) then
+         p_l = ten**x(LO)
+         p_r = p_ip1
+         f_r = ten**x(HI)
+         f_l = e_small_to_f(p_l)
+         apl = -alpha/p_l
+      endif
+
+      if (op == HI) then
+         p_l = p_im1
+         p_r = ten**x(LO)
+         f_l = ten**x(HI)
+         f_r = e_small_to_f(p_r)
+         apl = -alpha
+      endif
+      pratio  = p_r/p_l
       lpratio = log(pratio)
       q_bin   = q_ratios(f_r/f_l, pratio)
 
       if (abs(q_bin - three) .lt. eps) then
-         fun3_up = -alpha + (-one + pratio)/lpratio
-         fun5_up = - f_l + n_in/((fpi * p_im1 **three) * lpratio)
+         fun3 = apl + (-one + pratio)/lpratio
+         fun5 = - f_l + n_in/((fpi * p_l**three) * lpratio)
       else
-         fun5_up = - f_l + ( n_in / (fpi * p_im1**three) ) * ((three - q_bin) / (pratio**(three - q_bin) - one) )
+         fun5 = - f_l + ( n_in / (fpi * p_l**three) ) * ((three - q_bin) / (pratio**(three - q_bin) - one) )
          if (abs(q_bin - four) .lt. eps) then
-            fun3_up = -alpha + pratio*lpratio/(pratio - one)
+            fun3 = apl + pratio*lpratio/(pratio - one)
          else
-            fun3_up = -alpha + ((three - q_bin) / (four - q_bin)) * ((pratio**((four - q_bin)) - one ) / (pratio**((three - q_bin)) - one ))
+            fun3 = apl + ((three - q_bin) / (four - q_bin)) * ((pratio**((four - q_bin)) - one ) / (pratio**((three - q_bin)) - one ))
          endif
       endif
+      func_val_vec_bnd = [fun3, fun5]
 
-      func_val_vec_up_bnd = [fun3_up, fun5_up]
-
-   end function func_val_vec_up_bnd
-
-!----------------------------------------------------------------------------------------------------
-   function func_val_vec_lo_bnd(x) ! DEPRECATED
-
-      use constants, only: one, three, four, ten, fpi, LO, HI
-
-      implicit none
-
-      real(kind=8), dimension(ndim), intent(in) :: x
-      real(kind=8), dimension(ndim)             :: func_val_vec_lo_bnd
-      real(kind=8)                              :: f_l, f_r, q_bin, p_l, pratio, lpratio ! sought values will be x for single N-R and x, f_l_iup in NR-2dim
-      real(kind=8) :: fun3_lo ! Alternative function introduced to find p_up using integrals of n, e and p_fix value.
-      real(kind=8) :: fun5_lo ! Function similar to nq_to_f subroutine, used by compute_fp_NR_2dim to estimate value of p_lo and f_r_lo
-
-      p_l = ten**x(LO)
-      f_r = ten**x(HI)
-      f_l = e_small_to_f(p_l)
-      pratio  = p_ip1/p_l
-      lpratio = log(pratio)
-      q_bin   = q_ratios(f_r/f_l, pratio)
-
-      if (abs(q_bin - three) .lt. eps) then
-         fun3_lo = -alpha/p_l + (-one + pratio)/lpratio
-         fun5_lo = - f_l + n_in/((fpi * p_l **three) * lpratio)
-      else
-         fun5_lo = - f_l + ( n_in / (fpi * p_l **three) ) * ( (three - q_bin) / (pratio**(three - q_bin) - one) )
-         if (abs(q_bin - four) .lt. eps) then
-            fun3_lo = -alpha/p_l + pratio*lpratio/(pratio - one)
-         else
-            fun3_lo = -alpha/p_l + ((three - q_bin) / (four - q_bin)) * ((pratio**((four - q_bin)) - one ) / (pratio**((three - q_bin)) - one ))
-         endif
-      endif
-
-      func_val_vec_lo_bnd = [fun3_lo, fun5_lo]
-
-   end function func_val_vec_lo_bnd
+   end function func_val_vec_bnd
 
 !----------------------------------------------------------------------------------------------------
 ! Here - relaying e_small to f via its relation with momentum
