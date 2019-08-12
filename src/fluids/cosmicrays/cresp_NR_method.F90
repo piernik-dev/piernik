@@ -1398,7 +1398,7 @@ contains
 
       real(kind=8),     intent(inout) :: a_val, n_val  ! ratios arrays (p,f: lo and up), for which solutions have been obtained. loc_no_ip - in case when interpolation is not possible,
       logical,          intent(out)   :: interpolation_successful
-      real(kind=8), dimension(2)      :: intpol_pf_from_NR_grids ! indexes with best match and having solutions are chosen.
+      real(kind=8),    dimension(2)   :: intpol_pf_from_NR_grids ! indexes with best match and having solutions are chosen.
       integer(kind=4), dimension(1:2) :: loc1, loc2, loc_no_ip ! loc1, loc2 - indexes that points where alpha_tab_ and up nad n_tab_ and up are closest in value to a_val and n_val - indexes point to
       logical                         :: exit_code
 
@@ -1410,8 +1410,7 @@ contains
       call determine_loc(a_val, n_val, loc1, loc2, loc_no_ip, exit_code)
 
 #ifdef CRESP_VERBOSED
-      call save_loc(current_bound, loc1(1), loc1(2))
-      call save_loc(current_bound, loc2(1), loc2(2))
+      call save_loc(current_bound, loc1, loc2)
 #endif /* CRESP_VERBOSED */
 
       if (exit_code) then ! interpolation won't work in this case, choosing closest values that have solutions.
@@ -1593,13 +1592,15 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: bound_case, loc1, loc2
-      integer(kind=4), parameter  :: fnlen = 10, flun = 32
-      character(len=fnlen)        :: f_name
+      integer(kind=4),                 intent(in) :: bound_case
+      integer(kind=4), dimension(1:2), intent(in) :: loc1, loc2
+      integer(kind=4), parameter                  :: fnlen = 10, flun = 32
+      character(len=fnlen)                        :: f_name
 
       f_name = "loc_"//bound_name(bound_case)//extension
       open(flun, file=f_name, status="unknown", position="append")
-      write (flun,"(2I5)") loc1, loc2
+      write (flun,"(2I5)") loc1(1), loc1(2)
+      write (flun,"(2I5)") loc2(1), loc2(2)
       close(flun)
 
    end subroutine save_loc
