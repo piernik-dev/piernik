@@ -1006,14 +1006,11 @@ contains
  !----------------------------------------------------------------------------------------------------
    function q_ratios(f_ratio, p_ratio)
 
-      use constants, only: zero
-
       implicit none
 
       real(kind=8), intent(in) :: f_ratio, p_ratio
       real(kind=8)             :: q_ratios
 
-      q_ratios = zero
       q_ratios = -log10(f_ratio) / log10(p_ratio)
 
    end function q_ratios
@@ -1109,7 +1106,7 @@ contains
       real(kind=8)                                 :: q_in
 
       x = abs(x)
-      q_in     = q_ratios(x(2),x(1))
+      q_in     = q_ratios(x(2), x(1))
       fvec_lo(1) = encp_func_2_zero_lo(x(1), alpha, q_in)
       fvec_lo(2) = n_func_2_zero_lo(x(1), n_in, q_in)
 
@@ -1221,26 +1218,27 @@ contains
 !---------------------------------------------------------------------------------------------------
 ! fun3_up - Alternative function introduced to find p_up using integrals of n, e and p_fix value.
 !---------------------------------------------------------------------------------------------------
-   function fun3_up(log10_p_r, log10_f_l, p_l, alpha ) ! used by func_val_vec_up_bnd to compute upper boundary p and f.                                 ! DEPRECATED ?
+   function fun3_up(log10_p_r, log10_f_l, p_l, alpha) ! used by func_val_vec_up_bnd to compute upper boundary p and f.                                 ! DEPRECATED ?
 
-      use constants, only: three, four, one, ten
+      use constants, only: one, three, four, ten
 
       implicit none
 
       real(kind=8), intent(in) :: log10_p_r, log10_f_l, p_l, alpha
-      real(kind=8)             :: f_l, f_r, fun3_up, q_bin, p_r ! sought values will be x for single N-R and x, f_l_iup in NR-2dim
+      real(kind=8)             :: f_l, f_r, fun3_up, q_bin, p_r, pratio ! sought values will be x for single N-R and x, f_l_iup in NR-2dim
 
-      p_r = ten **log10_p_r
-      f_l = ten **log10_f_l
+      p_r = ten**log10_p_r
+      f_l = ten**log10_f_l
       f_r = e_small_to_f(p_r)
-      q_bin = q_ratios(f_r/f_l,p_r/p_l)
+      pratio = p_r/p_l
+      q_bin  = q_ratios(f_r/f_l, pratio)
 
       if ( abs(q_bin - three) .lt. eps) then
-         fun3_up = -alpha + (-one + p_r/p_l)/log(p_r/p_l)
+         fun3_up = -alpha + (-one + pratio)/log(pratio)
       else if ( abs(q_bin - four) .lt. eps) then
-         fun3_up = -alpha + (p_r/p_l)*log(p_r/p_l)/(p_r/p_l - one)
+         fun3_up = -alpha + (pratio)*log(pratio)/(pratio - one)
       else
-         fun3_up = -alpha + ((three - q_bin) / (four - q_bin)) * (((p_r/p_l)**((four - q_bin)) - one ) / ((p_r/p_l)**((three - q_bin)) - one ))
+         fun3_up = -alpha + ((three - q_bin) / (four - q_bin)) * ((pratio**((four - q_bin)) - one ) / (pratio**((three - q_bin)) - one ))
       endif
 
    end function fun3_up
@@ -1249,22 +1247,23 @@ contains
 !---------------------------------------------------------------------------------------------------
    function fun5_up(log10_p_r, log10_f_l, p_l, n_in) ! used by func_val_vec_up_bnd to compute upper boundary p and f.                                 ! DEPRECATED ?
 
-      use constants, only: three, ten, one, fpi
+      use constants, only: one, three, ten, fpi
 
       implicit none
 
       real(kind=8), intent(in) :: log10_p_r, log10_f_l, p_l, n_in
-      real(kind=8)             :: f_l, f_r, q_bin, fun5_up, p_r
+      real(kind=8)             :: f_l, f_r, q_bin, fun5_up, p_r, pratio
 
       p_r = ten **log10_p_r
       f_l = ten **log10_f_l
       f_r = e_small_to_f(p_r)
-      q_bin = q_ratios(f_r/f_l,p_r/p_l)
+      pratio = p_r/p_l
+      q_bin  = q_ratios(f_r/f_l, pratio)
 
       if (abs(q_bin - three) .lt. eps) then
-         fun5_up = - f_l + n_in/((fpi * p_l **three) * log(p_r/p_l))
+         fun5_up = - f_l + n_in/((fpi * p_l **three) * log(pratio))
       else
-         fun5_up = - f_l + ( n_in / (fpi * p_l **three) ) * ((three - q_bin) / ((p_r/p_l)**(three - q_bin) - one) )
+         fun5_up = - f_l + ( n_in / (fpi * p_l **three) ) * ((three - q_bin) / (pratio**(three - q_bin) - one) )
       endif
 
    end function fun5_up
@@ -1274,24 +1273,25 @@ contains
 !---------------------------------------------------------------------------------------------------
    function fun3_lo(log10_p_l, log10_f_r, p_r, alpha ) ! used by func_val_vec_lo_bnd to compute low boundary p and f.                                 ! DEPRECATED ?
 
-      use constants, only: three, four, one, ten
+      use constants, only: one, three, four, ten
 
       implicit none
 
       real(kind=8), intent(in) :: log10_p_l, log10_f_r, p_r, alpha
-      real(kind=8)             :: f_l, f_r, fun3_lo, q_bin, p_l ! sought values will be x for single N-R and x, f_l_iup in NR-2dim
+      real(kind=8)             :: f_l, f_r, fun3_lo, q_bin, p_l, pratio ! sought values will be x for single N-R and x, f_l_iup in NR-2dim
 
       p_l = ten **log10_p_l
       f_r = ten **log10_f_r
       f_l = e_small_to_f(p_l)
-      q_bin = q_ratios(f_r/f_l,p_r/p_l)
+      pratio = p_r/p_l
+      q_bin = q_ratios(f_r/f_l, pratio)
 
       if ( abs(q_bin - three) .lt. eps) then
-         fun3_lo = -alpha/p_l + (-one + p_r/p_l)/log(p_r/p_l)
+         fun3_lo = -alpha/p_l + (-one + pratio)/log(pratio)
       else if ( abs(q_bin - four) .lt. eps) then
-         fun3_lo = -alpha/p_l + (p_r/p_l)*log(p_r/p_l)/(p_r/p_l - one)
+         fun3_lo = -alpha/p_l + (pratio)*log(pratio)/(pratio - one)
       else
-         fun3_lo = -alpha/p_l + ((three - q_bin) / (four - q_bin)) * (((p_r/p_l)**((four - q_bin)) -one ) / ((p_r/p_l)**((three - q_bin)) -one ))
+         fun3_lo = -alpha/p_l + ((three - q_bin) / (four - q_bin)) * ((pratio**((four - q_bin)) -one ) / (pratio**((three - q_bin)) -one ))
       endif
 
   end function fun3_lo
@@ -1300,22 +1300,23 @@ contains
 !---------------------------------------------------------------------------------------------------
    function fun5_lo(log10_p_l, log10_f_r, p_r, n_in) ! used by func_val_vec_lo_bnd to compute low boundary p and f.                                 ! DEPRECATED ?
 
-      use constants, only: three, one, fpi, ten
+      use constants, only: one, three, ten, fpi
 
       implicit none
 
       real(kind=8), intent(in) :: log10_p_l, log10_f_r, p_r, n_in
-      real(kind=8)             :: f_l, f_r, q_bin, fun5_lo, p_l
+      real(kind=8)             :: f_l, f_r, q_bin, fun5_lo, p_l, pratio
 
       p_l = ten **log10_p_l
       f_r = ten **log10_f_r
       f_l = e_small_to_f(p_l)
-      q_bin = q_ratios(f_r/f_l,p_r/p_l)
+      pratio = p_r/p_l
+      q_bin = q_ratios(f_r/f_l, pratio)
 
       if (abs(q_bin - three) .lt. eps) then
-         fun5_lo = - f_l + n_in/((fpi * p_l **three) * log(p_r/p_l))
+         fun5_lo = - f_l + n_in/((fpi * p_l **three) * log(pratio))
       else
-         fun5_lo = - f_l + ( n_in / (fpi * p_l **three) ) * ( (three - q_bin) / ((p_r/p_l)**(three - q_bin) - one) )
+         fun5_lo = - f_l + ( n_in / (fpi * p_l **three) ) * ( (three - q_bin) / (pratio**(three - q_bin) - one) )
       endif
 
    end function fun5_lo
