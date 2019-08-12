@@ -50,7 +50,7 @@ module cresp_NR_method
    integer, parameter                               :: ndim = 2
    real(kind=8), allocatable, dimension(:)          :: p_space, q_space
    real(kind=8)                                     :: alpha, p_ratio_4_q, n_in, e_in, p_im1, p_ip1
-   real(kind=8), allocatable, dimension(:), target  :: alpha_tab_lo, alpha_tab_up, n_tab_lo, n_tab_up, alpha_tab_q, q_grid
+   real(kind=8), allocatable, dimension(:),  target :: alpha_tab_lo, alpha_tab_up, n_tab_lo, n_tab_up, alpha_tab_q, q_grid
    real(kind=8), allocatable, dimension(:,:),target :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
    integer(kind=4)                                  :: helper_arr_dim
    real(kind=8)                                     :: eps_det = eps * 1.0e-15
@@ -66,20 +66,20 @@ module cresp_NR_method
 
    abstract interface
       function function_pointer_1D(z)
-         real(kind=8) :: function_pointer_1D
-         real(kind=8) :: z
+         real(kind=8), intent(in) :: z
+         real(kind=8)             :: function_pointer_1D
       end function function_pointer_1D
       subroutine value_control_1D(z, exit_code)
-         logical      :: exit_code
-         real(kind=8) :: z
+         real(kind=8), intent(inout) :: z
+         logical,      intent(out)   :: exit_code
       end subroutine value_control_1D
       function function_pointer_2D(z)
-         real(kind=8),dimension(2) :: function_pointer_2D
-         real(kind=8),dimension(2) :: z
+         real(kind=8), dimension(2), intent(inout) :: z
+         real(kind=8), dimension(2)                :: function_pointer_2D
       end function function_pointer_2D
    end interface
 
-   procedure (value_control_1D), pointer    :: selected_value_check_1D => null()
+   procedure (value_control_1D),    pointer :: selected_value_check_1D => null()
    procedure (function_pointer_1D), pointer :: selected_function_1D => null()
    procedure (function_pointer_2D), pointer :: selected_function_2D => null()
 
@@ -87,7 +87,7 @@ module cresp_NR_method
 
 contains
 
-   subroutine NR_algorithm(x,exit_code)
+   subroutine NR_algorithm(x, exit_code)
 
       use initcrspectrum, only: NR_iter_limit, tol_f, tol_x
 
@@ -291,18 +291,18 @@ contains
 
       implicit none
 
-      integer(kind=4)   :: i, j, int_logical_p, int_logical_f
-      logical           :: exit_code
-      real(kind=8) :: a_min_lo=huge(one), a_max_lo=tiny(one), a_min_up=huge(one), a_max_up=tiny(one),&
-                    & n_min_lo=huge(one), n_max_lo=tiny(one), n_min_up=huge(one), n_max_up=tiny(one),&
-                    & a_min_q=tiny(one),  a_max_q=tiny(one)
+      integer(kind=4) :: i, j, int_logical_p, int_logical_f
+      logical         :: exit_code
+      real(kind=8)    :: a_min_lo=huge(one), a_max_lo=tiny(one), a_min_up=huge(one), a_max_up=tiny(one),&
+                       & n_min_lo=huge(one), n_max_lo=tiny(one), n_min_up=huge(one), n_max_up=tiny(one),&
+                       & a_min_q=tiny(one),  a_max_q=tiny(one)
 
       q_space = zero
-      do i=1, int(half*helper_arr_dim)
+      do i = 1, int(half*helper_arr_dim)
          q_space(i) = ln_eval_array_val(i, q_big, real(0.05,kind=8), int(1,kind=4), int(half*helper_arr_dim,kind=4)) ! BEWARE: magic number
       enddo
 
-      do i= 1, int(half*helper_arr_dim)!, arr_dim
+      do i = 1, int(half*helper_arr_dim)!, arr_dim
          q_space(int(half*helper_arr_dim,kind=4)+i) = -q_space(int(half*helper_arr_dim,kind=4)+1-i)
       enddo
 
@@ -333,7 +333,7 @@ contains
       n_min_up = 1.0e-12
       n_max_up = 1000.0
 
-      do i=1, arr_dim
+      do i = 1, arr_dim
          alpha_tab_lo(i) = ind_to_flog(i, a_min_lo, a_max_lo, arr_dim) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
          alpha_tab_up(i) = ind_to_flog(i, a_min_up, a_max_up, arr_dim) ! a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
          n_tab_lo(i)     = ind_to_flog(i, n_min_lo, n_max_lo, arr_dim) ! n_min_lo * ten**((log10(n_max_lo/n_min_lo))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
@@ -342,7 +342,7 @@ contains
 
       if (e_small_approx_init_cond .eq. 1) then
          write (*, "(A36)", advance="no") "Reading (up) boundary ratio files..."
-         do j = 1,2
+         do j = 1, 2
             call read_NR_guess_grid(p_ratios_up, "p_ratios_", HI, exit_code) ;  int_logical_p = logical_2_int(exit_code)
             call read_NR_guess_grid(f_ratios_up, "f_ratios_", HI, exit_code) ;  int_logical_f = logical_2_int(exit_code)
 
@@ -363,7 +363,7 @@ contains
          enddo
 
          write (*, "(A36)", advance="no") "Reading (lo) boundary ratio files"
-         do j = 1,2
+         do j = 1, 2
             call read_NR_guess_grid(p_ratios_lo, "p_ratios_", LO, exit_code) ;   int_logical_p = logical_2_int(exit_code)
             call read_NR_guess_grid(f_ratios_lo, "f_ratios_", LO, exit_code) ;   int_logical_f = logical_2_int(exit_code)
 
@@ -486,14 +486,13 @@ contains
       implicit none
 
       integer(kind=4), intent(in)  :: bound_case ! HI or LO
+      real(kind=8), dimension(:,:) :: fill_p, fill_f
       real(kind=8), dimension(1:2) :: x_vec, prev_solution, prev_solution_1, x_step
 #ifdef CRESP_VERBOSED
       real(kind=8), dimension(1:2) :: x_in
 #endif /* CRESP_VERBOSED */
-      real(kind=8), dimension(:,:) :: fill_p, fill_f
-      integer(kind=4) :: i, j, is, js
+      integer(kind=4) :: i, j, is, js, nam = SLV
       logical         :: exit_code, new_line
-      integer(kind=4) :: nam = SLV
 
       prev_solution(1) = p_space(1)
       prev_solution(2) = p_space(1)**q_space(1)
@@ -506,7 +505,7 @@ contains
       fill_p = zero ; fill_f = zero
       x_step = zero
 
-      do i =1, arr_dim
+      do i = 1, arr_dim
          new_line = .true.
          prev_solution = prev_solution_1 ! easier to find when not searching from the top
          do j = 1, arr_dim ! j_incr = 1
@@ -533,7 +532,7 @@ contains
                endif
             endif
             if (exit_code) then !still...
-               do is =1, helper_arr_dim
+               do is = 1, helper_arr_dim
                   do js = 1, helper_arr_dim
                      x_vec(1) = p_space(is)
                      x_vec(2) = p_space(is)**(-q_space(js))
@@ -613,11 +612,10 @@ contains
 
       implicit none
 
-      integer(kind=4),              intent(in)    :: i_incr, j_incr
       real(kind=8), dimension(:,:), intent(inout) :: ref_p, ref_f
-      integer(kind=4)                             :: i, j, i_beg, i_end, j_beg, j_end
+      integer(kind=4),              intent(in)    :: i_incr, j_incr
+      integer(kind=4)                             :: i, j, i_beg, i_end, j_beg, j_end, nam = RFN
       real(kind=8), dimension(1:2)                :: prev_solution
-      integer(kind=4)                             :: nam = RFN
       logical                                     :: exit_code, new_line
 
       if (allocated(p_space) .and. allocated(q_space)) then
@@ -665,11 +663,10 @@ contains
 
       implicit none
 
-      integer(kind=4),              intent(in)    :: i_incr, j_incr
       real(kind=8), dimension(:,:), intent(inout) :: ref_p, ref_f
-      integer(kind=4)                             :: i, j, i_beg, i_end, j_beg, j_end
+      integer(kind=4),              intent(in)    :: i_incr, j_incr
+      integer(kind=4)                             :: i, j, i_beg, i_end, j_beg, j_end, nam = RFN
       real(kind=8), dimension(1:2)                :: prev_solution
-      integer(kind=4)                             :: nam = RFN
       logical                                     :: exit_code, new_line, i_primary
 
       if (allocated(p_space) .and. allocated(q_space)) then
@@ -716,7 +713,7 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(1:3),intent(inout) :: f3, p3
+      real(kind=8), dimension(1:3),intent(inout) :: p3, f3
       real(kind=8), dimension(1:3),intent(in)    :: arg
       integer(kind=4),             intent(in)    :: sought_by
       logical,                     intent(inout) :: exit_code
@@ -821,8 +818,9 @@ contains
 
       implicit none
 
-      real(kind=8) :: weight, arg_mid, lin_interpolation_1D
-      real(kind=8), dimension(1:2), intent(in):: arg, fun
+      real(kind=8), dimension(1:2), intent(in) :: arg, fun
+      real(kind=8),                 intent(in) :: arg_mid
+      real(kind=8) :: weight, lin_interpolation_1D
 
       weight   = (arg_mid - arg(1)) / (arg(2) - arg(1))
       lin_interpolation_1D =  fun(1) * (one - weight) + fun(2) * (one - weight)
@@ -901,11 +899,12 @@ contains
 
       implicit none
 
-      integer(kind=4) :: i,j, i_beg, i_end, i_incr
-      real(kind=8)    :: x, prev_solution
-      logical         :: exit_code
+      integer(kind=4), intent(in) :: i_incr
+      integer(kind=4)             :: i, j, i_beg, i_end
+      real(kind=8)                :: x, prev_solution
+      logical                     :: exit_code
 
-      selected_function_1D => alpha_to_q
+      selected_function_1D     => alpha_to_q
       selected_value_check_1D  => q_control
 
       i_beg = 1
@@ -957,8 +956,8 @@ contains
 
       implicit none
 
-      real(kind=8) :: x
-      logical      :: exit_code
+      real(kind=8), intent(inout) :: x
+      logical,      intent(out)   :: exit_code
 
       if ( abs(x) .ge. q_big ) then
          x = sign(one, x) * q_big
@@ -975,7 +974,8 @@ contains
 
       implicit none
 
-      real(kind=8)  :: x, alpha_to_q
+      real(kind=8), intent(in) :: x
+      real(kind=8)             :: alpha_to_q
 
       if (abs(x - three) .lt. eps) then
          alpha_to_q = -alpha + (-one + p_ratio_4_q**(four-x))/log(p_ratio_4_q)
@@ -993,8 +993,8 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(out) :: ind_beg, ind_end
       integer(kind=4), intent(in)  :: ind_incr
+      integer(kind=4), intent(out) :: ind_beg, ind_end
 
       if (ind_incr .eq. 1 ) then
          ind_beg = 1 ; ind_end = arr_dim
@@ -1032,7 +1032,7 @@ contains
       real(kind=8), parameter                  :: dx_par = 1.0e-3, dx_min = epsilon(dx_par)
       integer(kind=2)                          :: j
 
-      do j = 1,size(x)
+      do j = 1, ndim
          dx(j) = max(x(j), dx_min )          ! assure dx > zero
          dx(j) = min(dx(j)*dx_par, dx_par)   ! the value of dx is scaled not to go over value of x
          if (x(j) .eq. dx(j)) dx(j) = half * dx(j)
@@ -1058,29 +1058,27 @@ contains
 
       implicit none
 
-      integer(kind=1),parameter            :: m_dim = 2
-      real(kind=8), dimension(m_dim,m_dim) :: matrix_2d_real
-      real(kind=8), dimension(m_dim,m_dim) :: get_cofactor_matrix_2d_real
-      integer(kind=1)                      :: i,j
+      real(kind=8), dimension(ndim,ndim) :: matrix_2d_real
+      real(kind=8), dimension(ndim,ndim) :: get_cofactor_matrix_2d_real
+      integer(kind=1)                    :: i, j
 
-      do i = 1,m_dim
-         do j = 1,m_dim
-            get_cofactor_matrix_2d_real(i,j) = ( (-1)**(i+j) * matrix_2d_real(m_dim+1-i, m_dim+1-j))
+      do i = 1, ndim
+         do j = 1, ndim
+            get_cofactor_matrix_2d_real(i,j) = ( (-1)**(i+j) * matrix_2d_real(ndim+1-i, ndim+1-j))
          enddo
       enddo
 
    end function get_cofactor_matrix_2d_real
 !----------------------------------------------------------------------------------------------------
-   function invert_2d_matrix(matrix,determinant)
+   function invert_2d_matrix(matrix, determinant)
 
       use constants, only: one
 
       implicit none
 
-      integer(kind=1),parameter :: m_dim = 2
-      real(kind=8), dimension(m_dim,m_dim), intent(in) :: matrix
-      real(kind=8), dimension(m_dim,m_dim) :: invert_2d_matrix
-      real(kind=8) :: determinant
+      real(kind=8), dimension(ndim,ndim), intent(in) :: matrix
+      real(kind=8)                                   :: determinant
+      real(kind=8), dimension(ndim,ndim)             :: invert_2d_matrix
 
       invert_2d_matrix = (one / determinant) * transpose( get_cofactor_matrix_2d_real(matrix) )
 
@@ -1090,12 +1088,12 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(ndim) :: x
-      real(kind=8), dimension(ndim) :: fvec_up
-      real(kind=8) :: q_in
+      real(kind=8), dimension(ndim), intent(inout) :: x
+      real(kind=8), dimension(ndim)                :: fvec_up
+      real(kind=8)                                 :: q_in
 
       x = abs(x)
-      q_in     = q_ratios(x(2),x(1))
+      q_in     = q_ratios(x(2), x(1))
       fvec_up(1) = encp_func_2_zero_up(x(1), alpha, q_in)
       fvec_up(2) = n_func_2_zero_up(x(1), x(2), n_in, q_in)
 
@@ -1106,9 +1104,9 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(ndim) :: x
-      real(kind=8), dimension(ndim) :: fvec_lo
-      real(kind=8) :: q_in
+      real(kind=8), dimension(ndim), intent(inout) :: x
+      real(kind=8), dimension(ndim)                :: fvec_lo
+      real(kind=8)                                 :: q_in
 
       x = abs(x)
       q_in     = q_ratios(x(2),x(1))
@@ -1123,16 +1121,15 @@ contains
 
       implicit none
 
-      real(kind=8) :: p_ratio, q_in, alpha_cnst
-      real(kind=8) :: encp_func_2_zero_up
+      real(kind=8), intent(in) :: p_ratio, alpha_cnst, q_in
+      real(kind=8)             :: encp_func_2_zero_up
 
       if (abs(q_in - three) .lt. eps) then
          encp_func_2_zero_up = -alpha_cnst + (- one + p_ratio)/log(p_ratio)
       else if (abs(q_in - four) .lt. eps) then
          encp_func_2_zero_up = -alpha_cnst + p_ratio*log(p_ratio)/(p_ratio - one)
       else
-         encp_func_2_zero_up = -alpha_cnst + ((three - q_in)/(four - q_in))*((p_ratio **(four - q_in)- one)/ &
-                            &  (p_ratio **(three - q_in)- one))
+         encp_func_2_zero_up = -alpha_cnst + ((three - q_in)/(four - q_in))*((p_ratio **(four - q_in)- one) / (p_ratio **(three - q_in)- one))
       endif
 
    end function encp_func_2_zero_up
@@ -1144,16 +1141,15 @@ contains
 
       implicit none
 
-      real(kind=8) :: p_ratio, q_in, alpha_cnst
-      real(kind=8) :: encp_func_2_zero_lo
+      real(kind=8), intent(in) :: p_ratio, alpha_cnst, q_in
+      real(kind=8)             :: encp_func_2_zero_lo
 
       if (abs(q_in - three) .lt. eps) then
          encp_func_2_zero_lo = -alpha_cnst + ((one - p_ratio)/log(p_ratio)) / p_ratio
       else if (abs(q_in - four) .lt. eps) then
          encp_func_2_zero_lo = -alpha_cnst + log(p_ratio)/(p_ratio - one)
       else
-         encp_func_2_zero_lo = -alpha_cnst + ((three - q_in)/(four - q_in))*((p_ratio **(four - q_in) - one)/ &
-                           &   (p_ratio **(three - q_in) - one)) / p_ratio
+         encp_func_2_zero_lo = -alpha_cnst + ((three - q_in)/(four - q_in))*((p_ratio **(four - q_in) - one) / (p_ratio **(three - q_in) - one)) / p_ratio
       endif
 
    end function encp_func_2_zero_lo
@@ -1167,19 +1163,18 @@ contains
 
       implicit none
 
-      real(kind=8) :: p_ratio, f_ratio, q_in, n_cnst
-      real(kind=8) :: n_func_2_zero_up
+      real(kind=8), intent(in) :: p_ratio, f_ratio, n_cnst, q_in
+      real(kind=8)             :: n_func_2_zero_up
 
       if (abs(q_in - three) .lt. eps) then
-         n_func_2_zero_up = - n_cnst + e_small / (clight_cresp * f_ratio * (p_ratio **three))* log(p_ratio)
+         n_func_2_zero_up = - n_cnst + e_small / (clight_cresp * f_ratio * (p_ratio **three)) * log(p_ratio)
       else
-         n_func_2_zero_up = - n_cnst + e_small / (clight_cresp * f_ratio * (p_ratio **three)) &
-                          & * ((p_ratio **(three-q_in) - one)/(three - q_in))
+         n_func_2_zero_up = - n_cnst + e_small / (clight_cresp * f_ratio * (p_ratio **three)) * ((p_ratio **(three-q_in) - one)/(three - q_in))
       endif
 
    end function n_func_2_zero_up
 !----------------------------------------------------------------------------------------------------
-   function n_func_2_zero_lo(p_ratio, n_cnst,q_in) ! from eqn. 9
+   function n_func_2_zero_lo(p_ratio, n_cnst, q_in) ! from eqn. 9
 
       use constants,       only: one, three
       use cresp_variables, only: clight_cresp
@@ -1187,8 +1182,8 @@ contains
 
       implicit none
 
-      real(kind=8) :: p_ratio,  n_cnst, q_in
-      real(kind=8) :: n_func_2_zero_lo
+      real(kind=8), intent(in) :: p_ratio, n_cnst, q_in
+      real(kind=8)             :: n_func_2_zero_lo
 
       if (abs(q_in - three) .lt. eps) then
          n_func_2_zero_lo = - n_cnst + (e_small / clight_cresp) * log(p_ratio)
@@ -1232,8 +1227,8 @@ contains
 
       implicit none
 
-      real(kind=8),intent(in)   :: log10_p_r, log10_f_l
-      real(kind=8) :: f_l, f_r, alpha, fun3_up, q_bin, p_l, p_r ! sought values will be x for single N-R and x, f_l_iup in NR-2dim
+      real(kind=8), intent(in) :: log10_p_r, log10_f_l, p_l, alpha
+      real(kind=8)             :: f_l, f_r, fun3_up, q_bin, p_r ! sought values will be x for single N-R and x, f_l_iup in NR-2dim
 
       p_r = ten **log10_p_r
       f_l = ten **log10_f_l
@@ -1245,8 +1240,7 @@ contains
       else if ( abs(q_bin - four) .lt. eps) then
          fun3_up = -alpha + (p_r/p_l)*log(p_r/p_l)/(p_r/p_l - one)
       else
-         fun3_up = -alpha + ((three - q_bin) / (four - q_bin)) * &
-            & (((p_r/p_l)**((four - q_bin)) - one ) / ((p_r/p_l)**((three - q_bin)) - one ))
+         fun3_up = -alpha + ((three - q_bin) / (four - q_bin)) * (((p_r/p_l)**((four - q_bin)) - one ) / ((p_r/p_l)**((three - q_bin)) - one ))
       endif
 
    end function fun3_up
@@ -1259,8 +1253,8 @@ contains
 
       implicit none
 
-      real(kind=8),intent(in) :: log10_p_r, log10_f_l
-      real(kind=8) :: f_l, f_r, n_in, q_bin, fun5_up, p_l, p_r
+      real(kind=8), intent(in) :: log10_p_r, log10_f_l, p_l, n_in
+      real(kind=8)             :: f_l, f_r, q_bin, fun5_up, p_r
 
       p_r = ten **log10_p_r
       f_l = ten **log10_f_l
@@ -1284,8 +1278,8 @@ contains
 
       implicit none
 
-      real(kind=8),intent(in)   :: log10_p_l, log10_f_r
-      real(kind=8) :: f_l, f_r, alpha, fun3_lo, q_bin, p_r, p_l ! sought values will be x for single N-R and x, f_l_iup in NR-2dim
+      real(kind=8), intent(in) :: log10_p_l, log10_f_r, p_r, alpha
+      real(kind=8)             :: f_l, f_r, fun3_lo, q_bin, p_l ! sought values will be x for single N-R and x, f_l_iup in NR-2dim
 
       p_l = ten **log10_p_l
       f_r = ten **log10_f_r
@@ -1297,8 +1291,7 @@ contains
       else if ( abs(q_bin - four) .lt. eps) then
          fun3_lo = -alpha/p_l + (p_r/p_l)*log(p_r/p_l)/(p_r/p_l - one)
       else
-         fun3_lo = -alpha/p_l + ((three - q_bin) / (four - q_bin)) * &
-            &      (((p_r/p_l)**((four - q_bin)) -one ) / ((p_r/p_l)**((three - q_bin)) -one ))
+         fun3_lo = -alpha/p_l + ((three - q_bin) / (four - q_bin)) * (((p_r/p_l)**((four - q_bin)) -one ) / ((p_r/p_l)**((three - q_bin)) -one ))
       endif
 
   end function fun3_lo
@@ -1311,8 +1304,8 @@ contains
 
       implicit none
 
-      real(kind=8),intent(in) :: log10_p_l, log10_f_r
-      real(kind=8) :: f_l, f_r, n_in, q_bin, fun5_lo, p_l, p_r
+      real(kind=8), intent(in) :: log10_p_l, log10_f_r, p_r, n_in
+      real(kind=8)             :: f_l, f_r, q_bin, fun5_lo, p_l
 
       p_l = ten **log10_p_l
       f_r = ten **log10_f_r
@@ -1337,21 +1330,22 @@ contains
 
       implicit none
 
-      real (kind=8) :: e_small_to_f, p_outer
+      real(kind=8), intent(in) :: p_outer
+      real(kind=8)             :: e_small_to_f
 
       e_small_to_f = zero
       e_small_to_f = e_small / (fpi * clight_cresp * p_outer **three)
 
    end function e_small_to_f
 !----------------------------------------------------------------------------------------------------
-   function bl_interpol(y11,y12,y21,y22,t,u) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.5
+   function bl_interpol(y11, y12, y21, y22, t, u) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.5
 
       use constants, only: one
 
       implicit none
 
-      real(kind=8)  :: y11, y12, y21, y22, t, u ! y** - tabularized values of interpolated function, t, u - coefficients
-      real(kind=8)  :: bl_interpol
+      real(kind=8), intent(in) :: y11, y12, y21, y22, t, u ! y** - tabularized values of interpolated function, t, u - coefficients
+      real(kind=8)             :: bl_interpol
 
       bl_interpol = (one - t)*(one - u) * y11 + t*(one - u)*y12 + (one - t)*u*y21 + t*u*y22
 
@@ -1361,22 +1355,22 @@ contains
 
       implicit none
 
-      real(kind=8)  :: val_left, val_right, val_mid
-      real(kind=8)  :: bl_in_tu
+      real(kind=8), intent(in) :: val_left, val_mid, val_right
+      real(kind=8)             :: bl_in_tu
 
       bl_in_tu = (val_mid - val_left) / (val_right - val_left)
 
    end function bl_in_tu
 !----------------------------------------------------------------------------------------------------
-   function lin_interpol_1D(loc_1, loc_2, value)
+   function lin_interpol_1D(loc_1, loc_2, val)
 
       implicit none
 
       integer(kind=4), intent(in) :: loc_1, loc_2
-      real(kind=8),    intent(in) :: value
+      real(kind=8),    intent(in) :: val
       real(kind=8)                :: lin_interpol_1D
 
-      lin_interpol_1D = p_n(loc_1) + (value - p_a(loc_1)) * ( p_n(loc_1) - p_n(loc_2) ) / (p_a(loc_1) - p_a(loc_2)) ! WARNING - uses p_a and p_n, that are usually used to point alpha and n arrays.
+      lin_interpol_1D = p_n(loc_1) + (val - p_a(loc_1)) * ( p_n(loc_1) - p_n(loc_2) ) / (p_a(loc_1) - p_a(loc_2)) ! WARNING - uses p_a and p_n, that are usually used to point alpha and n arrays.
 
    end function lin_interpol_1D
 !----------------------------------------------------------------------------------------------------
@@ -1448,7 +1442,7 @@ contains
       loc1(2) = inverse_f_to_ind(n_val, p_n(1), p_n(arr_dim), arr_dim)
 
       if ( (minval(loc1) .ge. 1 .and. maxval(loc1) .le. arr_dim-1)) then ! only need to test loc1
-         if (p_p(loc1(1),loc1(2)) .gt. zero ) then
+         if (p_p(loc1(1), loc1(2)) .gt. zero ) then
             loc2 = loc1+1
 #ifdef CRESP_VERBOSED
             write(*,"(A19, 2I8, A3, 2I8)") "Obtained indices:", loc1, " | ", loc2
@@ -1463,8 +1457,8 @@ contains
       endif
 
       if ( exit_code ) then ! namely if ((minval(loc1) .le. 0 .or. maxval(loc1) .ge. arr_dim))
-         loc1(1) = max(1,min(loc1(1),arr_dim))   ! Here we either give algorithm closest nonzero value relative to a row
-         loc1(2) = max(1,min(loc1(2),arr_dim))   ! that was in the proper range or we just feed the algorithm ANY nonzero
+         loc1(1) = max(1, min(loc1(1), arr_dim))   ! Here we either give algorithm closest nonzero value relative to a row
+         loc1(2) = max(1, min(loc1(2), arr_dim))   ! that was in the proper range or we just feed the algorithm ANY nonzero
          exit_code = .true.                      ! initial vector that will prevent it from crashing.
          loc2 = loc1
 
@@ -1494,9 +1488,11 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(:) :: arr_lin
-      integer(kind=4) :: i, i_beg, i_end, i_incr, i_solution
-      logical, intent(inout) :: hit_zero
+      real(kind=8), dimension(:), intent(in)    :: arr_lin
+      integer(kind=4),            intent(in)    :: i_beg, i_end
+      integer(kind=4),            intent(out)   :: i_solution
+      logical,                    intent(inout) :: hit_zero
+      integer(kind=4)                           :: i, i_incr
 
       i_solution = i_beg
       i_incr = sign(1, i_end - i_beg)
@@ -1518,11 +1514,11 @@ contains
 
       implicit none
 
-      real(kind=8) :: compute_q
-      real(kind=8), optional :: outer_p_ratio
-      real(kind=8), intent(inout) :: alpha_in
-      integer(kind=4) :: loc_1, loc_2
-      logical, intent(inout) :: exit_code ! value should be .true. at input
+      real(kind=8),           intent(inout) :: alpha_in
+      logical,                intent(inout) :: exit_code ! value should be .true. at input
+      real(kind=8), optional, intent(in)    :: outer_p_ratio
+      real(kind=8)                          :: compute_q
+      integer(kind=4)                       :: loc_1, loc_2
 
       p_a => alpha_tab_q
       p_n => q_grid
@@ -1655,7 +1651,7 @@ contains
 
       implicit none
 
-      logical :: boolean_arg
+      logical         :: boolean_arg
       integer(kind=2) :: logical_2_int
 
       if (boolean_arg) then
@@ -1667,30 +1663,31 @@ contains
    end function logical_2_int
 
 !----------------------------------------------------------------------------------------------------
-   function ind_to_flog(ind,min_in, max_in, length)
+   function ind_to_flog(ind, min_in, max_in, length)
 
       use constants, only: I_ONE, ten
 
       implicit none
 
-      real(kind=8) :: min_in, max_in
-      integer(kind=4) :: ind, length
-      real(kind=8) :: ind_to_flog
+      real(kind=8),    intent(in) :: min_in, max_in
+      integer(kind=4), intent(in) :: ind, length
+      real(kind=8)                :: ind_to_flog
 
       ind_to_flog = min_in * ten**(((log10(max_in/min_in))/real(length-I_ONE,kind=8))*real((ind-I_ONE),kind=8))
 
    end function ind_to_flog
 !----------------------------------------------------------------------------------------------------
-   function inverse_f_to_ind(value, min_in, max_in, length) ! returns lower index for a given value, will need limiter
+   function inverse_f_to_ind(val, min_in, max_in, length) ! returns lower index for a given value, will need limiter
 
       use constants, only: I_ONE
 
       implicit none
 
-      integer(kind=4) :: inverse_f_to_ind, length
-      real(kind=8)    :: value, min_in, max_in
+      real(kind=8),    intent(in) :: val, min_in, max_in
+      integer(kind=4), intent(in) :: length
+      integer(kind=4)             :: inverse_f_to_ind
 
-      inverse_f_to_ind = int((log10(value/min_in)/log10(max_in/min_in)) * (length - I_ONE )) + I_ONE
+      inverse_f_to_ind = int((log10(val/min_in)/log10(max_in/min_in)) * (length - I_ONE )) + I_ONE
 
    end function inverse_f_to_ind
 !----------------------------------------------------------------------------------------------------
@@ -1720,7 +1717,7 @@ contains
       implicit none
 
       real(kind=8), dimension(ndim) :: x
-      logical :: exit_code
+      logical                       :: exit_code
 
       print *, "NR algorithm test, provided test functions are:"
       print *, "f1(x(:)) =  x(1)**2+x(2)**2+4.0d0"
@@ -1744,8 +1741,8 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(ndim) :: x
-      real(kind=8), dimension(ndim) :: fvec_test
+      real(kind=8), dimension(ndim), intent(inout) :: x
+      real(kind=8), dimension(ndim)                :: fvec_test
 ! expected solution is sqrt(2), sqrt(2)
 
       fvec_test(1) = x(1)**2+x(2)**2 - four
@@ -1778,8 +1775,8 @@ contains
 
       implicit none
 
-      real(kind=8) :: f_test_1D
-      real(kind=8) :: x
+      real(kind=8), intent(in) :: x
+      real(kind=8)             :: f_test_1D
 
       f_test_1D = 1.1*x + sin(x)
 
@@ -1789,11 +1786,12 @@ contains
 
       implicit none
 
-      real(kind=8) :: x
-      logical      :: exit_code
+      real(kind=8), intent(inout) :: x
+      logical,      intent(out)   :: exit_code
 
-      x = x ! to turn off unused argument warnings
       exit_code = .false.
+      return
+      if (.false.) exit_code = (x > x) ! to turn off unused argument warnings
 
    end subroutine dummy_check_1D
  !----------------------------------------------------------------------------------------------------
