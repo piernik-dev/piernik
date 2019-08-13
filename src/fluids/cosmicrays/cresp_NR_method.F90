@@ -705,7 +705,7 @@ contains
 !         alpha and n are set !
 
       if ( minval(p3(1:2)) .gt. tiny(zero) .and. p3(3) .le. zero ) then ! sometimes NaNs and numbers of order e-317 appear; must be looked into
-         x_vec_0 = (/ p3(2), f3(2) /)
+         x_vec_0 = [p3(2), f3(2)]
          delta(1) = lin_extrapol_1D(p3(1:2), arg(1:2), arg(3)) - p3(2) ! direction is not relevant in this case
          delta(2) = lin_extrapol_1D(f3(1:2), arg(1:2), arg(3)) - f3(2)
          delta = delta/nstep
@@ -748,9 +748,9 @@ contains
 
       if (exit_code) then
          if ( min(p3(1),p3(3)) .gt. tiny(zero) .and. p3(2) .le. zero ) then ! sometimes NaNs and numbers of order e-317 appear; must be looked into
-            x_vec_0 = (/ p3(1), f3(1) /)
-            delta(1) = lin_interpolation_1D( (/ p3(2-incr), p3(2+incr) /), (/ args(2-incr), args(2+incr) /), args(2) ) - p3(1)
-            delta(2) = lin_interpolation_1D( (/ f3(2-incr), f3(2+incr) /), (/ args(2-incr), args(2+incr) /), args(2) ) - f3(1)
+            x_vec_0 = [p3(1), f3(1)]
+            delta(1) = lin_interpolation_1D( [p3(2-incr), p3(2+incr)], [args(2-incr), args(2+incr)], args(2) ) - p3(1)
+            delta(2) = lin_interpolation_1D( [f3(2-incr), f3(2+incr)], [args(2-incr), args(2+incr)], args(2) ) - f3(1)
             x_in = x_vec_0 + delta ! gives the interpolated value as starting one
             delta = delta/nstep
             do k = 0, nstep
