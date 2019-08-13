@@ -313,7 +313,7 @@ contains
       do i = 1, helper_arr_dim
          do j = 1, helper_arr_dim
             q_in3 = three - q_space(j)
-            pq_cmplx = p_space(i)**(-q_space(j)) * p_space(i)**three
+            pq_cmplx = p_space(i)**q_in3
             a_min_lo = min(a_min_lo, abs(encp_func_2_zero(LO, p_space(i),           zero, q_in3)))
             n_min_lo = min(n_min_lo, abs(   n_func_2_zero(    p_space(i), one,      zero, q_in3)))
             a_min_up = min(a_min_up, abs(encp_func_2_zero(HI, p_space(i),           zero ,q_in3)))
