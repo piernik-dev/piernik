@@ -614,7 +614,7 @@ contains
 
       real(kind=8), dimension(:,:), intent(inout) :: ref_p, ref_f
       integer(kind=4),              intent(in)    :: i_incr, j_incr
-      integer(kind=4)                             :: i, j, i_beg, i_end, j_beg, j_end, nam = RFN
+      integer(kind=4)                             :: i, j, i_beg, i_end, j_beg, j_end, i1m, i2m, i1p, nam = RFN
       real(kind=8), dimension(1:2)                :: prev_solution
       logical                                     :: exit_code, new_line
 
@@ -629,21 +629,16 @@ contains
                alpha = p_a(i)
                n_in  = p_n(j)
                exit_code = .true.
-               if (ref_p(i,j) .gt. zero .and. ref_f(i,j) .gt. zero) then
+               if (ref_p(i,j) > zero .and. ref_f(i,j) > zero) then
                   prev_solution(1) = ref_p(i,j)
                   prev_solution(2) = ref_f(i,j)
                   new_line = .false.
                else
                   call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, nam, exit_code) ! works for most cases
                   if (exit_code) then
-                     if (i-2*i_incr .ge. 1 .and. i-2*i_incr .le. arr_dim) then
-                        call step_extr(ref_p(i-2*i_incr:i:i_incr,j),ref_f(i-2*i_incr:i:i_incr,j),&
-                                    &  p_a(i-2*i_incr:i:i_incr),nam,exit_code)
-                     endif
-                     if (i-i_incr .ge. 1 .and. i+i_incr .ge. 1 .and. i-i_incr .le. arr_dim .and. i+i_incr .le. arr_dim) then
-                        call step_inpl(ref_p(i-i_incr:i+i_incr:i_incr,j),ref_f(i-i_incr:i+i_incr:i_incr,j),&
-                                    &  i_incr,p_a(i-i_incr:i+i_incr:i_incr),nam,exit_code)
-                     endif
+                     i1m = i-i_incr ; i2m = i-2*i_incr ; i1p = i+i_incr
+                     if (i2m >= 1 .and.                i2m <= arr_dim                     ) call step_extr(ref_p(i2m:i  :i_incr,j), ref_f(i2m:i  :i_incr,j),         p_a(i2m:i  :i_incr), nam, exit_code)
+                     if (i1m >= 1 .and. i1p >= 1 .and. i1m <= arr_dim .and. i1p <= arr_dim) call step_inpl(ref_p(i1m:i1p:i_incr,j), ref_f(i1m:i1p:i_incr,j), i_incr, p_a(i1m:i1p:i_incr), nam, exit_code)
                   endif
                endif
             enddo
@@ -665,7 +660,7 @@ contains
 
       real(kind=8), dimension(:,:), intent(inout) :: ref_p, ref_f
       integer(kind=4),              intent(in)    :: i_incr, j_incr
-      integer(kind=4)                             :: i, j, i_beg, i_end, j_beg, j_end, nam = RFN
+      integer(kind=4)                             :: i, j, i_beg, i_end, j_beg, j_end, j1m, j2m, j1p, nam = RFN
       real(kind=8), dimension(1:2)                :: prev_solution
       logical                                     :: exit_code, new_line, i_primary
 
@@ -688,15 +683,9 @@ contains
                else
                   call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, nam, exit_code) ! works for the most cases
                   if (exit_code) then
-                     if (j-2*j_incr .ge. 1 .and. j-2*j_incr .le. arr_dim) then
-                        call step_extr(ref_p(i,j-2*j_incr:j:j_incr), &
-                                    &  ref_f(i,j-2*j_incr:j:j_incr),p_n(j-2*j_incr:j),nam,exit_code)
-                     endif
-                     if (j-j_incr .ge. 1 .and. j+j_incr .ge. 1 .and. j-j_incr .le. arr_dim &
-                                    &  .and. j+j_incr .le. arr_dim) then
-                        call step_inpl(ref_p(i,j-j_incr:j+j_incr:j_incr),ref_f(i,j-j_incr:j+j_incr:j_incr), &
-                                          &  j_incr,p_n(j-j_incr:j+j_incr:j_incr),nam,exit_code)
-                     endif
+                     j1m = j-j_incr ; j2m = j-2*j_incr ; j1p = j+j_incr
+                     if (j2m >= 1 .and.                j2m <= arr_dim                     ) call step_extr(ref_p(i,j2m:j  :j_incr), ref_f(i,j2m:j  :j_incr),         p_n(j2m:j         ),nam,exit_code)
+                     if (j1m >= 1 .and. j1p >= 1 .and. j1m <= arr_dim .and. j1p <= arr_dim) call step_inpl(ref_p(i,j1m:j1p:j_incr), ref_f(i,j1m:j1p:j_incr), j_incr, p_n(j1m:j1p:j_incr),nam,exit_code)
                   endif
                endif
             enddo
