@@ -1285,6 +1285,7 @@ contains
       real(kind=8),     intent(inout) :: a_val, n_val  ! ratios arrays (p,f: lo and up), for which solutions have been obtained. loc_no_ip - in case when interpolation is not possible,
       logical,          intent(out)   :: interpolation_successful
       real(kind=8),    dimension(2)   :: intpol_pf_from_NR_grids ! indexes with best match and having solutions are chosen.
+      real(kind=8)                    :: blin_a, blin_n
       integer(kind=4), dimension(1:2) :: l1, l2, loc_no_ip ! l1, l2 - indexes that points where alpha_tab_ and up nad n_tab_ and up are closest in value to a_val and n_val - indexes point to
       logical                         :: exit_code
 
@@ -1305,8 +1306,10 @@ contains
          interpolation_successful = .false.
          return
       else
-         intpol_pf_from_NR_grids(1) = bl_interpol(p_p(l1(1),l1(2)),p_p(l1(1),l2(2)), p_p(l2(1),l1(2)),p_p(l2(1),l2(2)), bl_in_tu(p_a(l1(1)), a_val, p_a(l2(1))), bl_in_tu(p_n(l1(2)), n_val, p_n(l2(2))) )
-         intpol_pf_from_NR_grids(2) = bl_interpol(p_f(l1(1),l1(2)),p_f(l1(1),l2(2)), p_f(l2(1),l1(2)),p_f(l2(1),l2(2)), bl_in_tu(p_a(l1(1)), a_val, p_a(l2(1))), bl_in_tu(p_n(l1(2)), n_val, p_n(l2(2))) )
+         blin_a = bl_in_tu(p_a(l1(1)), a_val, p_a(l2(1)))
+         blin_n = bl_in_tu(p_n(l1(2)), n_val, p_n(l2(2)))
+         intpol_pf_from_NR_grids(1) = bl_interpol(p_p(l1(1),l1(2)), p_p(l1(1),l2(2)), p_p(l2(1),l1(2)), p_p(l2(1),l2(2)), blin_a, blin_n)
+         intpol_pf_from_NR_grids(2) = bl_interpol(p_f(l1(1),l1(2)), p_f(l1(1),l2(2)), p_f(l2(1),l1(2)), p_f(l2(1),l2(2)), blin_a, blin_n)
          interpolation_successful = .true.
          return
       endif
