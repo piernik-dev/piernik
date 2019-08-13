@@ -616,7 +616,7 @@ contains
       integer(kind=4),              intent(in)    :: i_incr, j_incr
       integer(kind=4)                             :: i, j, i_beg, i_end, j_beg, j_end, i1m, i2m, i1p, nam = RFN
       real(kind=8), dimension(1:2)                :: prev_solution
-      logical                                     :: exit_code, new_line
+      logical                                     :: exit_code
 
       if (allocated(p_space) .and. allocated(q_space)) then
          prev_solution(1) = p_space(1)              ! refine must be called before these are deallocated
@@ -624,7 +624,6 @@ contains
          call prepare_indices(i_incr, i_beg, i_end)
          call prepare_indices(j_incr, j_beg, j_end)
          do j = j_beg, j_end, j_incr
-            new_line = .true.
             do i = i_beg, i_end, i_incr
                alpha = p_a(i)
                n_in  = p_n(j)
@@ -632,7 +631,6 @@ contains
                if (ref_p(i,j) > zero .and. ref_f(i,j) > zero) then
                   prev_solution(1) = ref_p(i,j)
                   prev_solution(2) = ref_f(i,j)
-                  new_line = .false.
                else
                   call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, nam, exit_code) ! works for most cases
                   if (exit_code) then
@@ -662,16 +660,14 @@ contains
       integer(kind=4),              intent(in)    :: i_incr, j_incr
       integer(kind=4)                             :: i, j, i_beg, i_end, j_beg, j_end, j1m, j2m, j1p, nam = RFN
       real(kind=8), dimension(1:2)                :: prev_solution
-      logical                                     :: exit_code, new_line, i_primary
+      logical                                     :: exit_code
 
       if (allocated(p_space) .and. allocated(q_space)) then
          prev_solution(1) = p_space(1)              ! refine must be called before these are deallocated
          prev_solution(2) = p_space(1)**q_space(1)
-         i_primary = .true.
          call prepare_indices(i_incr, i_beg, i_end)
          call prepare_indices(j_incr, j_beg, j_end)
          do i = i_beg, i_end, i_incr
-            new_line = .true.
             do j = j_beg, j_end, j_incr
                alpha = p_a(i)
                n_in  = p_n(j)
@@ -679,13 +675,12 @@ contains
                if (ref_p(i,j) .gt. zero .and. ref_f(i,j) .gt. zero) then
                   prev_solution(1) = ref_p(i,j)
                   prev_solution(2) = ref_f(i,j)
-                  new_line = .false.
                else
                   call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, nam, exit_code) ! works for the most cases
                   if (exit_code) then
                      j1m = j-j_incr ; j2m = j-2*j_incr ; j1p = j+j_incr
-                     if (j2m >= 1 .and.                j2m <= arr_dim                     ) call step_extr(ref_p(i,j2m:j  :j_incr), ref_f(i,j2m:j  :j_incr),         p_n(j2m:j         ),nam,exit_code)
-                     if (j1m >= 1 .and. j1p >= 1 .and. j1m <= arr_dim .and. j1p <= arr_dim) call step_inpl(ref_p(i,j1m:j1p:j_incr), ref_f(i,j1m:j1p:j_incr), j_incr, p_n(j1m:j1p:j_incr),nam,exit_code)
+                     if (j2m >= 1 .and.                j2m <= arr_dim                     ) call step_extr(ref_p(i,j2m:j  :j_incr), ref_f(i,j2m:j  :j_incr),         p_n(j2m:j         ), nam, exit_code)
+                     if (j1m >= 1 .and. j1p >= 1 .and. j1m <= arr_dim .and. j1p <= arr_dim) call step_inpl(ref_p(i,j1m:j1p:j_incr), ref_f(i,j1m:j1p:j_incr), j_incr, p_n(j1m:j1p:j_incr), nam, exit_code)
                   endif
                endif
             enddo
