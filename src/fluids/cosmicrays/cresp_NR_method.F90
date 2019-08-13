@@ -1132,10 +1132,9 @@ contains
       real(kind=8)                :: encp_func_2_zero
 
       if (abs(q_in3) .lt. eps) then
-         encp_func_2_zero = (- one + p_ratio)/log(p_ratio)
-         if (side == LO) encp_func_2_zero = -encp_func_2_zero
+         encp_func_2_zero = (p_ratio**(one + q_in3 ))/(( one + q_in3 )*log(p_ratio))  ! if q = 3
       else if (abs(one + q_in3) .lt. eps) then
-         encp_func_2_zero = p_ratio*log(p_ratio)/(p_ratio - one)
+         encp_func_2_zero =  q_in3*log(p_ratio)/(p_ratio**q_in3 - one)
       else
          encp_func_2_zero = q_in3/(one + q_in3)*(p_ratio**(one + q_in3) - one) / (p_ratio**q_in3 - one)
       endif
