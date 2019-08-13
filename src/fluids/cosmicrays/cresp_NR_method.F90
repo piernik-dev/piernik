@@ -286,7 +286,7 @@ contains
 
    subroutine fill_guess_grids
 
-      use constants,      only: zero, half, one, three, I_ONE, LO, HI, big
+      use constants,      only: zero, half, one, three, I_ONE, LO, HI
       use initcrspectrum, only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio
 
       implicit none
@@ -295,7 +295,7 @@ contains
       logical         :: exit_code
       real(kind=8)    :: a_min_lo=huge(one), a_max_lo=tiny(one), a_min_up=huge(one), a_max_up=tiny(one),&
                        & n_min_lo=huge(one), n_max_lo=tiny(one), n_min_up=huge(one), n_max_up=tiny(one),&
-                       & a_min_q=tiny(one),  a_max_q=tiny(one), q_in3
+                       & a_min_q=tiny(one),  a_max_q=tiny(one), q_in3, pq_cmplx
 
       q_space = zero
       do i = 1, int(half*helper_arr_dim)
@@ -313,15 +313,16 @@ contains
       do i = 1, helper_arr_dim
          do j = 1, helper_arr_dim
             q_in3 = three - q_space(j)
-            a_min_lo = min(a_min_lo, abs(encp_func_2_zero(LO, p_space(i),                            zero, q_in3)))
-            n_min_lo = min(n_min_lo, abs(   n_func_2_zero(LO, p_space(i), big,                       zero, q_in3)))
-            a_min_up = min(a_min_up, abs(encp_func_2_zero(HI, p_space(i),                            zero ,q_in3)))
-            n_min_up = min(n_min_up, abs(   n_func_2_zero(HI, p_space(i), p_space(i)**(-q_space(j)), zero ,q_in3)))
+            pq_cmplx = p_space(i)**(-q_space(j)) * p_space(i)**three
+            a_min_lo = min(a_min_lo, abs(encp_func_2_zero(LO, p_space(i),           zero, q_in3)))
+            n_min_lo = min(n_min_lo, abs(   n_func_2_zero(    p_space(i), one,      zero, q_in3)))
+            a_min_up = min(a_min_up, abs(encp_func_2_zero(HI, p_space(i),           zero ,q_in3)))
+            n_min_up = min(n_min_up, abs(   n_func_2_zero(    p_space(i), pq_cmplx, zero ,q_in3)))
 
-            a_max_lo = max(a_max_lo, abs(encp_func_2_zero(LO, p_space(i),                            zero, q_in3)))
-            n_max_lo = max(n_max_lo, abs(   n_func_2_zero(LO, p_space(i), big,                       zero, q_in3)))
-            a_max_up = max(a_max_up, abs(encp_func_2_zero(HI, p_space(i),                            zero ,q_in3)))
-            n_max_up = max(n_max_up, abs(   n_func_2_zero(HI, p_space(i), p_space(i)**(-q_space(j)), zero ,q_in3)))
+            a_max_lo = max(a_max_lo, abs(encp_func_2_zero(LO, p_space(i),           zero, q_in3)))
+            n_max_lo = max(n_max_lo, abs(   n_func_2_zero(    p_space(i), one,      zero, q_in3)))
+            a_max_up = max(a_max_up, abs(encp_func_2_zero(HI, p_space(i),           zero ,q_in3)))
+            n_max_up = max(n_max_up, abs(   n_func_2_zero(    p_space(i), pq_cmplx, zero ,q_in3)))
          enddo
       enddo
 
@@ -1094,15 +1095,15 @@ contains
 
       x = abs(x)
       q_in3      = three - q_ratios(x(2), x(1))
-      fvec_up(1) = encp_func_2_zero(HI, x(1),      alpha, q_in3)
-      fvec_up(2) =    n_func_2_zero(HI, x(1), x(2), n_in, q_in3)
+      fvec_up(1) = encp_func_2_zero(HI, x(1),                  alpha, q_in3)
+      fvec_up(2) =    n_func_2_zero(    x(1), x(2)*x(1)**three, n_in, q_in3)
 
    end function fvec_up
 
 !----------------------------------------------------------------------------------------------------
    function fvec_lo(x)
 
-      use constants, only: LO, big, three
+      use constants, only: LO, one, three
 
       implicit none
 
@@ -1113,7 +1114,7 @@ contains
       x = abs(x)
       q_in3      = three - q_ratios(x(2), x(1))
       fvec_lo(1) = encp_func_2_zero(LO, x(1),     alpha, q_in3)
-      fvec_lo(2) =    n_func_2_zero(LO, x(1), big, n_in, q_in3)
+      fvec_lo(2) =    n_func_2_zero(    x(1), one, n_in, q_in3)
 
    end function fvec_lo
 
@@ -1134,7 +1135,7 @@ contains
       else if (abs(one + q_in3) .lt. eps) then
          encp_func_2_zero = p_ratio*log(p_ratio)/(p_ratio - one)
       else
-         encp_func_2_zero = q_in3/(one + q_in3)*(p_ratio **(one + q_in3) - one) / (p_ratio **q_in3 - one)
+         encp_func_2_zero = q_in3/(one + q_in3)*(p_ratio**(one + q_in3) - one) / (p_ratio**q_in3 - one)
       endif
       if (side == LO) encp_func_2_zero = encp_func_2_zero / p_ratio
       encp_func_2_zero = encp_func_2_zero - alpha_cnst
@@ -1142,20 +1143,18 @@ contains
    end function encp_func_2_zero
 
 !----------------------------------------------------------------------------------------------------
-   function n_func_2_zero(side, p_ratio, f_ratio, n_cnst, q_in3) ! from eqn. 9
+   function n_func_2_zero(p_ratio, fp_cmplx, n_cnst, q_in3) ! from eqn. 9
 
-      use constants,       only: one, three, LO, HI
+      use constants,       only: one
       use cresp_variables, only: clight_cresp
       use initcrspectrum,  only: e_small
 
       implicit none
 
-      integer(kind=4), intent(in) :: side
-      real(kind=8),    intent(in) :: p_ratio, f_ratio, n_cnst, q_in3
-      real(kind=8)                :: n_func_2_zero
+      real(kind=8), intent(in) :: p_ratio, fp_cmplx, n_cnst, q_in3
+      real(kind=8)             :: n_func_2_zero
 
-      if (side == LO) n_func_2_zero = e_small / clight_cresp
-      if (side == HI) n_func_2_zero = e_small / (clight_cresp * f_ratio * p_ratio**three)
+      n_func_2_zero = e_small / (clight_cresp * fp_cmplx)
       if (abs(q_in3) .lt. eps) then
          n_func_2_zero = n_func_2_zero * log(p_ratio)
       else
