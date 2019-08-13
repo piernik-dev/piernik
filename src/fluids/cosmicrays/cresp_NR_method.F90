@@ -312,14 +312,14 @@ contains
       enddo
       do i = 1, helper_arr_dim
          do j = 1, helper_arr_dim
-            a_min_lo = min(a_min_lo, abs(encp_func_2_zero_lo(p_space(i),zero, q_space(j))))
+            a_min_lo = min(a_min_lo, abs(encp_func_2_zero(LO, p_space(i),zero, q_space(j))))
             n_min_lo = min(n_min_lo, abs(n_func_2_zero(LO, p_space(i), big, zero, q_space(j))))
-            a_min_up = min(a_min_up, abs(encp_func_2_zero_up(p_space(i), zero ,q_space(j))))
+            a_min_up = min(a_min_up, abs(encp_func_2_zero(HI, p_space(i), zero ,q_space(j))))
             n_min_up = min(n_min_up, abs(n_func_2_zero(HI, p_space(i),p_space(i)**(-q_space(j)), zero ,q_space(j))))
 
-            a_max_lo = max(a_max_lo, abs(encp_func_2_zero_lo(p_space(i), zero, q_space(j))))
+            a_max_lo = max(a_max_lo, abs(encp_func_2_zero(LO, p_space(i), zero, q_space(j))))
             n_max_lo = max(n_max_lo, abs(n_func_2_zero(LO, p_space(i), big, zero, q_space(j))))
-            a_max_up = max(a_max_up, abs(encp_func_2_zero_up(p_space(i), zero ,q_space(j))))
+            a_max_up = max(a_max_up, abs(encp_func_2_zero(HI, p_space(i), zero ,q_space(j))))
             n_max_up = max(n_max_up, abs(n_func_2_zero(HI, p_space(i),p_space(i)**(-q_space(j)), zero ,q_space(j))))
          enddo
       enddo
@@ -1093,7 +1093,7 @@ contains
 
       x = abs(x)
       q_in     = q_ratios(x(2), x(1))
-      fvec_up(1) = encp_func_2_zero_up(x(1), alpha, q_in)
+      fvec_up(1) = encp_func_2_zero(HI, x(1), alpha, q_in)
       fvec_up(2) = n_func_2_zero(HI, x(1), x(2), n_in, q_in)
 
    end function fvec_up
@@ -1111,49 +1111,34 @@ contains
 
       x = abs(x)
       q_in     = q_ratios(x(2), x(1))
-      fvec_lo(1) = encp_func_2_zero_lo(x(1), alpha, q_in)
+      fvec_lo(1) = encp_func_2_zero(LO, x(1), alpha, q_in)
       fvec_lo(2) = n_func_2_zero(LO, x(1), big, n_in, q_in)
 
    end function fvec_lo
-!----------------------------------------------------------------------------------------------------
-   function encp_func_2_zero_up(p_ratio, alpha_cnst, q_in) ! from eqn. 29
-
-      use constants,     only: one, three, four
-
-      implicit none
-
-      real(kind=8), intent(in) :: p_ratio, alpha_cnst, q_in
-      real(kind=8)             :: encp_func_2_zero_up
-
-      if (abs(q_in - three) .lt. eps) then
-         encp_func_2_zero_up = -alpha_cnst + (- one + p_ratio)/log(p_ratio)
-      else if (abs(q_in - four) .lt. eps) then
-         encp_func_2_zero_up = -alpha_cnst + p_ratio*log(p_ratio)/(p_ratio - one)
-      else
-         encp_func_2_zero_up = -alpha_cnst + ((three - q_in)/(four - q_in))*((p_ratio **(four - q_in)- one) / (p_ratio **(three - q_in)- one))
-      endif
-
-   end function encp_func_2_zero_up
 
 !---------------------------------------------------------------------------------------------------
-   function encp_func_2_zero_lo(p_ratio, alpha_cnst, q_in) ! from eqn. 29
+   function encp_func_2_zero(side, p_ratio, alpha_cnst, q_in) ! from eqn. 29
 
       use constants,     only: one, three, four
 
       implicit none
 
-      real(kind=8), intent(in) :: p_ratio, alpha_cnst, q_in
-      real(kind=8)             :: encp_func_2_zero_lo
+      integer(kind=4), intent(in) :: side
+      real(kind=8),    intent(in) :: p_ratio, alpha_cnst, q_in
+      real(kind=8)                :: encp_func_2_zero
 
       if (abs(q_in - three) .lt. eps) then
-         encp_func_2_zero_lo = -alpha_cnst + ((one - p_ratio)/log(p_ratio)) / p_ratio
+         encp_func_2_zero = (- one + p_ratio)/log(p_ratio)
+         if (side == LO) encp_func_2_zero = -encp_func_2_zero
       else if (abs(q_in - four) .lt. eps) then
-         encp_func_2_zero_lo = -alpha_cnst + log(p_ratio)/(p_ratio - one)
+         encp_func_2_zero = p_ratio*log(p_ratio)/(p_ratio - one)
       else
-         encp_func_2_zero_lo = -alpha_cnst + ((three - q_in)/(four - q_in))*((p_ratio **(four - q_in) - one) / (p_ratio **(three - q_in) - one)) / p_ratio
+         encp_func_2_zero = (three - q_in)/(four - q_in)*((p_ratio **(four - q_in) - one) / (p_ratio **(three - q_in) - one))
       endif
+      if (side == LO) encp_func_2_zero = encp_func_2_zero / p_ratio
+      encp_func_2_zero = encp_func_2_zero - alpha_cnst
 
-   end function encp_func_2_zero_lo
+   end function encp_func_2_zero
 
 !----------------------------------------------------------------------------------------------------
    function n_func_2_zero(side, p_ratio, f_ratio, n_cnst, q_in) ! from eqn. 9
