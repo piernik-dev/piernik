@@ -1209,7 +1209,7 @@ contains
          endif
       endif
 
-      call check_init_spectrum(p_lo_init, p_up_init, f(i_lo), f(i_up-1))
+      if (master) call check_init_spectrum(p_lo_init, p_up_init, f(i_lo), f(i_up-1))
 
       n_tot0 = sum(n)
       e_tot0 = sum(e)
@@ -1401,7 +1401,6 @@ contains
             call printinfo(msg)
          else
             call warn(msg)
-            call sleep(1)
          endif
       endif
 
