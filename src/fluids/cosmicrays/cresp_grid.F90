@@ -41,11 +41,10 @@ module cresp_grid
    private
    public :: cresp_update_grid, cresp_init_grid, cfl_cresp_violation, cresp_clean_grid, fsynchr
 
-   real(kind=8)    :: fsynchr
-   logical         :: cfl_cresp_violation, register_p, register_q, register_f
+   real(kind=8) :: fsynchr
+   logical      :: cfl_cresp_violation, register_p, register_q, register_f
 
    contains
-
 
    subroutine cresp_update_grid
 

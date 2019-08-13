@@ -38,8 +38,8 @@ module timestep_cresp
    private
    public :: dt_cre, cresp_timestep, dt_cre_min_ub, dt_cre_min_ud, dt_cre_K
 
-   real(kind=8), save    :: dt_cre, dt_cre_min_ub, dt_cre_min_ud, dt_cre_K
-   integer(kind=4), save :: i_up_max_prev, i_up_max
+   real(kind=8)    :: dt_cre, dt_cre_min_ub, dt_cre_min_ud, dt_cre_K
+   integer(kind=4) :: i_up_max_prev, i_up_max
 
 contains
 

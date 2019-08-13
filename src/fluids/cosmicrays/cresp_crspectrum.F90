@@ -39,8 +39,8 @@ module cresp_crspectrum
       &      cleanup_cresp, cresp_allocate_all, e_threshold_lo, e_threshold_up, fail_count_comp_q, src_gpcresp, p_rch_init, &
       &      detect_clean_spectrum, cresp_find_prepare_spectrum, cresp_detect_negative_content
 
-   integer, dimension(1:2), save      :: fail_count_NR_2dim, fail_count_interpol
-   integer, allocatable, save         :: fail_count_comp_q(:)
+   integer, dimension(1:2)            :: fail_count_NR_2dim, fail_count_interpol
+   integer, allocatable               :: fail_count_comp_q(:)
 
 ! variables informing about change of bins
    integer                            :: del_i_lo, del_i_up
@@ -95,10 +95,9 @@ module cresp_crspectrum
    real(kind=8), allocatable, dimension(:) :: n, e ! dimension(1:ncre)
    real(kind=8), allocatable, dimension(:) :: e_amplitudes_l, e_amplitudes_r
 ! lower / upper energy needed for bin activation
-   real(kind=8), save                      :: e_threshold_lo, e_threshold_up
+   real(kind=8)                            :: e_threshold_lo, e_threshold_up
 ! if one bin, switch off cutoff p approximation
    integer                                 :: approx_p_lo, approx_p_up
-
 
    abstract interface
       function function_pointer_1D(x,y)
