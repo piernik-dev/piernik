@@ -583,7 +583,7 @@ contains
 
    end subroutine fill_boundary_grid
 !----------------------------------------------------------------------------------------------------
-   subroutine step_seek(x_step, prev_sol, ii, jj, i_sol, j_sol, exit_code, nstep)
+   subroutine step_seek(x_step, prev_sol, ii, jj, i_sol, j_sol, exit_code, nssstep)
 
       use constants, only: I_ONE
 
@@ -591,15 +591,15 @@ contains
 
       real(kind=8), dimension(1:2), intent(in)    :: prev_sol
       real(kind=8), dimension(1:2), intent(out)   :: x_step
-      integer(kind=4),              intent(in)    :: ii, jj, i_sol, j_sol, nstep
+      integer(kind=4),              intent(in)    :: ii, jj, i_sol, j_sol, nssstep
       logical,                      intent(inout) :: exit_code
       integer(kind=4)                             :: i, j
 
       do i = -1, 1
          do j = -1, 1
             if (exit_code) then
-               x_step(1) = prev_sol(1) + (p_space(max(min(i_sol+i,helper_arr_dim),I_ONE)) - prev_sol(1)) / real(nstep - ii + 0.1)
-               x_step(2) = prev_sol(2) + (p_space(max(min(i_sol+i,helper_arr_dim),I_ONE))**(-q_space(max(min(j_sol+j, helper_arr_dim), 1))) - prev_sol(2)) / real(nstep - jj + 0.1)
+               x_step(1) = prev_sol(1) + (p_space(max(min(i_sol+i,helper_arr_dim),I_ONE)) - prev_sol(1)) / real(nssstep - ii + 0.1)
+               x_step(2) = prev_sol(2) + (p_space(max(min(i_sol+i,helper_arr_dim),I_ONE))**(-q_space(max(min(j_sol+j, helper_arr_dim), 1))) - prev_sol(2)) / real(nssstep - jj + 0.1)
                call NR_algorithm(x_step, exit_code)
                if (.not. exit_code) return
             endif
@@ -701,15 +701,15 @@ contains
       integer(kind=4),             intent(in)    :: sought_by
       logical,                     intent(inout) :: exit_code
       real(kind=8), dimension(1:2)               :: x_vec_0, x_vec, delta, x_in
-      integer(kind=4)                            :: nstep = 100, k
+      integer(kind=4)                            :: nsubstep = 100, k
 !         alpha and n are set !
 
       if ( minval(p3(1:2)) .gt. tiny(zero) .and. p3(3) .le. zero ) then ! sometimes NaNs and numbers of order e-317 appear; must be looked into
          x_vec_0 = [p3(2), f3(2)]
          delta(1) = lin_extrapol_1D(p3(1:2), arg(1:2), arg(3)) - p3(2) ! direction is not relevant in this case
          delta(2) = lin_extrapol_1D(f3(1:2), arg(1:2), arg(3)) - f3(2)
-         delta = delta/nstep
-         do k = 0, nstep
+         delta = delta/nsubstep
+         do k = 0, nsubstep
             x_vec = x_vec_0 + delta * k ! first iteration is a simple extrapolation
             x_in = x_vec
             call NR_algorithm(x_vec, exit_code)
@@ -743,7 +743,7 @@ contains
       integer(kind=4),              intent(in)    :: sought_by
       logical,                      intent(inout) :: exit_code
       real(kind=8), dimension(1:2)                :: x_vec, x_vec_0, delta, x_in
-      integer(kind=4)                             :: k, nstep = 100
+      integer(kind=4)                             :: k, nsubstep = 100
 !         alpha and n are set !
 
       if (exit_code) then
@@ -752,8 +752,8 @@ contains
             delta(1) = lin_interpolation_1D( [p3(2-incr), p3(2+incr)], [args(2-incr), args(2+incr)], args(2) ) - p3(1)
             delta(2) = lin_interpolation_1D( [f3(2-incr), f3(2+incr)], [args(2-incr), args(2+incr)], args(2) ) - f3(1)
             x_in = x_vec_0 + delta ! gives the interpolated value as starting one
-            delta = delta/nstep
-            do k = 0, nstep
+            delta = delta/nsubstep
+            do k = 0, nsubstep
                x_vec = x_vec_0 + delta * k
                x_in = x_vec
                call NR_algorithm(x_vec, exit_code)
@@ -849,13 +849,13 @@ contains
       integer(kind=4),              intent(in)    :: i_obt, j_obt, sought_by
       logical,                      intent(inout) :: exit_code
       real(kind=8), dimension(1:2)                :: x_vec, x_step
-      integer(kind=4)                             :: ii, jj, nstep = 3
+      integer(kind=4)                             :: ii, jj, nssstep = 3
 !    alpha and n are set !
 
       if (exit_code) then
-         do ii = 0, nstep
-            do jj = 0,nstep
-               call step_seek(x_step, prev_solution, ii, jj, i_obt, j_obt, exit_code, nstep)
+         do ii = 0, nssstep
+            do jj = 0,nssstep
+               call step_seek(x_step, prev_solution, ii, jj, i_obt, j_obt, exit_code, nssstep)
                x_vec = x_step
                if (.not. exit_code) then
                   x_step = abs(x_step)
