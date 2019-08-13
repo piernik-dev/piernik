@@ -107,14 +107,14 @@ contains
 
       fun_vec_value = selected_function_2D(x)
       if (maxval(abs(fun_vec_value)) < 0.01 * err_f) then ! in case when f converges at initialization
-         exit_code=.false.
+         exit_code = .false.
 !         write(*,"(A33,2E22.15)")"Convergence (f) at initialization", x
          return
       endif
 
          do i = 1, NR_iter_limit
             if (maxval(abs(fun_vec_value)) < err_f ) then    ! For convergence via value of f
-               exit_code=.false.
+               exit_code = .false.
 #ifdef CRESP_VERBOSED
                write(*,"(A47,I4,A12)",advance="no") "Convergence via value of fun_vec_value after ",i, " iterations."!, x, fun_vec_value
 #endif /* CRESP_VERBOSED */
@@ -132,10 +132,10 @@ contains
          endif
          fun_vec_inv_jac = invert_2d_matrix(fun_vec_jac,det)
 
-         cor(1) = fun_vec_inv_jac(1,1) *fun_vec_value(1) + fun_vec_inv_jac(1,2) * fun_vec_value(2)
-         cor(2) = fun_vec_inv_jac(2,1) *fun_vec_value(1) + fun_vec_inv_jac(2,2) * fun_vec_value(2)
+         cor(1) = fun_vec_inv_jac(1,1) * fun_vec_value(1) + fun_vec_inv_jac(1,2) * fun_vec_value(2)
+         cor(2) = fun_vec_inv_jac(2,1) * fun_vec_value(1) + fun_vec_inv_jac(2,2) * fun_vec_value(2)
          x = x+cor
-!          write(*,'(A20, 2E35.25, A5, 2E22.14)') "Obtained values (x): " , x,' | ', sum(abs(cor)), sum(abs(fun_vec_value))! ,maxval(abs(fun_vec_value)), maxval(abs(cor)),
+!          write(*,'(A20, 2E35.25, A5, 2E22.14)') "Obtained values (x): ", x,' | ', sum(abs(cor)), sum(abs(fun_vec_value))!, maxval(abs(fun_vec_value)), maxval(abs(cor)),
          if (maxval(abs(cor)) < err_x) then                 ! For convergence via value of correction (cor) table.
 #ifdef CRESP_VERBOSED
             write(*,"(A47,I4,A12)",advance="no") "Convergence via value of cor array     after ",i," iterations."
@@ -153,7 +153,7 @@ contains
 
    subroutine NR_algorithm_1D(x, exit_code)
 
-      use constants,      only: zero
+      use constants,      only: zero, big
       use func,           only: operator(.equals.)
       use initcrspectrum, only: NR_iter_limit, tol_f_1D, tol_x_1D
 
@@ -163,7 +163,7 @@ contains
       real(kind=8) :: x, delta, dfun_1D, fun1D_val
       logical      :: exit_code, func_check
 
-      delta = huge(1.0)
+      delta = big
       func_check = .false.
 
       do i = 1, NR_iter_limit
@@ -180,7 +180,7 @@ contains
             return
          endif
 
-         delta   = fun1D_val / derivative_1D(x)
+         delta = fun1D_val / derivative_1D(x)
 
          x = x - delta
          if (abs(delta) .lt. tol_x_1D) then
@@ -204,9 +204,9 @@ contains
 
       implicit none
 
-      real(kind=8),intent(in) :: x
-      real(kind=8)            :: dx, derivative_1D
-      real(kind=8)            :: dx_par = 1.0e-4
+      real(kind=8), intent(in) :: x
+      real(kind=8)             :: dx, derivative_1D
+      real(kind=8)             :: dx_par = 1.0e-4
 
       dx = sign(1.0, x) * min(abs(x*dx_par), dx_par)
       dx = sign(1.0, x) * max(abs(dx), eps) ! dx = 0.0 must not be allowed
@@ -225,9 +225,9 @@ contains
 
       implicit none
 
-      logical        :: first_run = .true. , save_to_log = .false.
-      character(8)   :: date
-      character(9)   :: time
+      logical      :: first_run = .true., save_to_log = .false.
+      character(8) :: date
+      character(9) :: time
 
       call initialize_arrays
       if (master .and. first_run) then
@@ -286,16 +286,15 @@ contains
 
    subroutine fill_guess_grids
 
-      use constants,      only: zero, half, one, three, I_ONE, LO, HI
+      use constants,      only: zero, half, one, three, I_ONE, LO, HI, big, small
       use initcrspectrum, only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio
 
       implicit none
 
       integer(kind=4) :: i, j, int_logical_p, int_logical_f
       logical         :: exit_code
-      real(kind=8)    :: a_min_lo=huge(one), a_max_lo=tiny(one), a_min_up=huge(one), a_max_up=tiny(one),&
-                       & n_min_lo=huge(one), n_max_lo=tiny(one), n_min_up=huge(one), n_max_up=tiny(one),&
-                       & a_min_q=tiny(one),  a_max_q=tiny(one), q_in3, pq_cmplx
+      real(kind=8)    :: a_min_lo = big, a_max_lo = small, a_min_up = big, a_max_up = small, n_min_lo = big, n_max_lo = small, n_min_up = big, n_max_up = small, &
+                       & a_min_q = small, a_max_q = small, q_in3, pq_cmplx
 
       q_space = zero
       do i = 1, int(half*helper_arr_dim)
@@ -308,7 +307,7 @@ contains
 
 ! setting up a grids of ratios to be used as phase space for NR tabs, obtained later
       do i = 1, helper_arr_dim
-         p_space(i) = max_p_ratio**(real(i)/real(helper_arr_dim)) ! ind_to_flog(i,1.000001 , max_p_ratio) ! max_p_ratio**(real(i)/real(arr_dim))
+         p_space(i) = max_p_ratio**(real(i)/real(helper_arr_dim)) ! ind_to_flog(i, 1.000001, max_p_ratio) ! max_p_ratio**(real(i)/real(arr_dim))
       enddo
       do i = 1, helper_arr_dim
          do j = 1, helper_arr_dim
@@ -316,13 +315,13 @@ contains
             pq_cmplx = p_space(i)**q_in3
             a_min_lo = min(a_min_lo, abs(encp_func_2_zero(LO, p_space(i),           zero, q_in3)))
             n_min_lo = min(n_min_lo, abs(   n_func_2_zero(    p_space(i), one,      zero, q_in3)))
-            a_min_up = min(a_min_up, abs(encp_func_2_zero(HI, p_space(i),           zero ,q_in3)))
-            n_min_up = min(n_min_up, abs(   n_func_2_zero(    p_space(i), pq_cmplx, zero ,q_in3)))
+            a_min_up = min(a_min_up, abs(encp_func_2_zero(HI, p_space(i),           zero, q_in3)))
+            n_min_up = min(n_min_up, abs(   n_func_2_zero(    p_space(i), pq_cmplx, zero, q_in3)))
 
             a_max_lo = max(a_max_lo, abs(encp_func_2_zero(LO, p_space(i),           zero, q_in3)))
             n_max_lo = max(n_max_lo, abs(   n_func_2_zero(    p_space(i), one,      zero, q_in3)))
-            a_max_up = max(a_max_up, abs(encp_func_2_zero(HI, p_space(i),           zero ,q_in3)))
-            n_max_up = max(n_max_up, abs(   n_func_2_zero(    p_space(i), pq_cmplx, zero ,q_in3)))
+            a_max_up = max(a_max_up, abs(encp_func_2_zero(HI, p_space(i),           zero, q_in3)))
+            n_max_up = max(n_max_up, abs(   n_func_2_zero(    p_space(i), pq_cmplx, zero, q_in3)))
          enddo
       enddo
 
@@ -388,7 +387,7 @@ contains
 
       a_min_q = one  + epsilon(one)
       a_max_q = (one + epsilon(one)) * p_fix_ratio
-      j = min(arr_dim_q - int(arr_dim_q/100 ,kind=4), arr_dim_q - I_ONE)               ! BEWARE: magic number
+      j = min(arr_dim_q - int(arr_dim_q/100, kind=4), arr_dim_q - I_ONE)               ! BEWARE: magic number
 
       do while (q_grid(j) .le. (-q_big) .and. (q_grid(arr_dim_q) .le. (-q_big)) )
          a_max_q = a_max_q - a_max_q*0.005                                             ! BEWARE: magic number
@@ -592,12 +591,11 @@ contains
       logical,                      intent(inout) :: exit_code
       integer(kind=4)                             :: i, j
 
-      do i = -1,1
-         do j = -1,1
+      do i = -1, 1
+         do j = -1, 1
             if (exit_code) then
                x_step(1) = prev_sol(1) + (p_space(max(min(i_sol+i,helper_arr_dim),I_ONE)) - prev_sol(1)) / real(nstep - ii + 0.1)
-               x_step(2) = prev_sol(2) + (p_space(max(min(i_sol+i,helper_arr_dim),I_ONE))**(-q_space(max(min(j_sol+j,  &
-                        &  helper_arr_dim),1))) - prev_sol(2)) / real(nstep - jj + 0.1)
+               x_step(2) = prev_sol(2) + (p_space(max(min(i_sol+i,helper_arr_dim),I_ONE))**(-q_space(max(min(j_sol+j, helper_arr_dim), 1))) - prev_sol(2)) / real(nstep - jj + 0.1)
                call NR_algorithm(x_step, exit_code)
                if (.not. exit_code) return
             endif
@@ -724,7 +722,7 @@ contains
 !         alpha and n are set !
 
       if ( minval(p3(1:2)) .gt. tiny(zero) .and. p3(3) .le. zero ) then ! sometimes NaNs and numbers of order e-317 appear; must be looked into
-         x_vec_0 = (/ p3(2) , f3(2) /)
+         x_vec_0 = (/ p3(2), f3(2) /)
          delta(1) = lin_extrapol_1D(p3(1:2), arg(1:2), arg(3)) - p3(2) ! direction is not relevant in this case
          delta(2) = lin_extrapol_1D(f3(1:2), arg(1:2), arg(3)) - f3(2)
          delta = delta/nstep
@@ -767,7 +765,7 @@ contains
 
       if (exit_code) then
          if ( min(p3(1),p3(3)) .gt. tiny(zero) .and. p3(2) .le. zero ) then ! sometimes NaNs and numbers of order e-317 appear; must be looked into
-            x_vec_0 = (/ p3(1) , f3(1) /)
+            x_vec_0 = (/ p3(1), f3(1) /)
             delta(1) = lin_interpolation_1D( (/ p3(2-incr), p3(2+incr) /), (/ args(2-incr), args(2+incr) /), args(2) ) - p3(1)
             delta(2) = lin_interpolation_1D( (/ f3(2-incr), f3(2+incr) /), (/ args(2-incr), args(2+incr) /), args(2) ) - f3(1)
             x_in = x_vec_0 + delta ! gives the interpolated value as starting one
@@ -920,7 +918,7 @@ contains
          exit_code = .true.
          alpha = alpha_tab_q(i)
 #ifdef CRESP_VERBOSED
-         write(*,"(A25,1I4,A9,I4,A10,1E16.9)",advance="no") "Now solving (q_grid) no.",i,", sized ",arr_dim_q ,", (alpha): ",alpha
+         write(*,"(A25,1I4,A9,I4,A10,1E16.9)",advance="no") "Now solving (q_grid) no.",i,", sized ",arr_dim_q, ", (alpha): ",alpha
 #endif /* CRESP_VERBOSED */
          x = prev_solution
          call NR_algorithm_1D(x, exit_code)
