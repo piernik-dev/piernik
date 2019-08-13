@@ -1332,7 +1332,7 @@ contains
       loc1(1) = inverse_f_to_ind(a_val, p_a(1), p_a(arr_dim), arr_dim)
       loc1(2) = inverse_f_to_ind(n_val, p_n(1), p_n(arr_dim), arr_dim)
 
-      if ( (minval(loc1) .ge. 1 .and. maxval(loc1) .le. arr_dim-1)) then ! only need to test loc1
+      if ((minval(loc1) .ge. 1 .and. maxval(loc1) .le. arr_dim-1)) then ! only need to test loc1
          if (p_p(loc1(1), loc1(2)) .gt. zero ) then
             loc2 = loc1+1
 #ifdef CRESP_VERBOSED
@@ -1347,24 +1347,16 @@ contains
          exit_code = .true.
       endif
 
-      if ( exit_code ) then ! namely if ((minval(loc1) .le. 0 .or. maxval(loc1) .ge. arr_dim))
+      if (exit_code) then ! namely if ((minval(loc1) .le. 0 .or. maxval(loc1) .ge. arr_dim))
          loc1(1) = max(1, min(loc1(1), arr_dim))   ! Here we either give algorithm closest nonzero value relative to a row
          loc1(2) = max(1, min(loc1(2), arr_dim))   ! that was in the proper range or we just feed the algorithm ANY nonzero
          exit_code = .true.                      ! initial vector that will prevent it from crashing.
          loc2 = loc1
 
-         if (loc1(1) .eq. arr_dim .or. hit_zero) then
-            call nearest_solution(p_p(:,loc1(2)), loc1(1), 1, loc1(1), hit_zero)
-         endif
-         if (loc1(1) .le. 1 .or. hit_zero) then
-            call nearest_solution(p_p(:,loc1(2)), max(1,loc1(1)), arr_dim, loc1(1), hit_zero)
-         endif
-         if (loc1(2) .eq. arr_dim.or. hit_zero) then
-            call nearest_solution(p_p(loc1(1),:), loc1(2), 1, loc1(2), hit_zero)
-         endif
-         if (loc1(2) .le. 1 .or. hit_zero) then
-            call nearest_solution(p_p(loc1(1),:), max(1,loc1(2)), arr_dim, loc1(2), hit_zero)
-         endif
+         if (loc1(1) .eq. arr_dim .or. hit_zero) call nearest_solution(p_p(:,loc1(2)), loc1(1),        1,       loc1(1), hit_zero)
+         if (loc1(1) .le. 1       .or. hit_zero) call nearest_solution(p_p(:,loc1(2)), max(1,loc1(1)), arr_dim, loc1(1), hit_zero)
+         if (loc1(2) .eq. arr_dim .or. hit_zero) call nearest_solution(p_p(loc1(1),:), loc1(2),        1,       loc1(2), hit_zero)
+         if (loc1(2) .le. 1       .or. hit_zero) call nearest_solution(p_p(loc1(1),:), max(1,loc1(2)), arr_dim, loc1(2), hit_zero)
 
          loc_panic = loc1
       endif
