@@ -38,31 +38,25 @@ module cresp_NR_method
 
    implicit none
 
-
    private
-   public :: alpha, n_in, NR_algorithm, NR_algorithm_1D, compute_q, intpol_pf_from_NR_grids, selected_function_1D, &
-           &    selected_function_2D, selected_value_check_1D, initialize_arrays, e_small_to_f, q_ratios, fvec_lo, &
-           &    fvec_up, fvec_test, cresp_initialize_guess_grids, assoc_pointers
-   public :: e_in, nr_test, nr_test_1D, p_ip1, n_tab_up, alpha_tab_up, n_tab_lo, alpha_tab_lo, alpha_tab_q, q_control, & ! list for NR driver
-           &    p_a, p_n, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, q_grid, lin_interpol_1D, alpha_to_q,   &   ! can be commented out for CRESP and PIERNIK
-           &    lin_extrapol_1D, lin_interpolation_1D, nearest_solution
+   public :: alpha, assoc_pointers, cresp_initialize_guess_grids, compute_q, e_small_to_f, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios
 
-   integer, parameter                               :: ndim = 2
-   real(kind=8), allocatable, dimension(:)          :: p_space, q_space
-   real(kind=8)                                     :: alpha, p_ratio_4_q, n_in, e_in, p_im1, p_ip1
-   real(kind=8), allocatable, dimension(:),  target :: alpha_tab_lo, alpha_tab_up, n_tab_lo, n_tab_up, alpha_tab_q, q_grid
-   real(kind=8), allocatable, dimension(:,:),target :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
-   integer(kind=4)                                  :: helper_arr_dim
-   real(kind=8)                                     :: eps_det = eps * 1.0e-15
-   real(kind=8), pointer, dimension(:)              :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
-   real(kind=8), pointer, dimension(:,:)            :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
+   integer, parameter                                :: ndim = 2
+   real(kind=8), allocatable, dimension(:)           :: p_space, q_space
+   real(kind=8)                                      :: alpha, p_ratio_4_q, n_in
+   real(kind=8), allocatable, dimension(:),   target :: alpha_tab_lo, alpha_tab_up, n_tab_lo, n_tab_up, alpha_tab_q, q_grid
+   real(kind=8), allocatable, dimension(:,:), target :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
+   integer(kind=4)                                   :: helper_arr_dim
+   real(kind=8)                                      :: eps_det = eps * 1.0e-15
+   real(kind=8), pointer, dimension(:)               :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
+   real(kind=8), pointer, dimension(:,:)             :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
 #ifdef CRESP_VERBOSED
-   integer(kind=4)                                  :: current_bound
+   integer(kind=4)                                   :: current_bound
 #endif /* CRESP_VERBOSED */
-   integer, parameter                               :: blen = 2, extlen = 4, flen = 15
-   character(len=blen), dimension(LO:HI), parameter :: bound_name = ['lo', 'up']
-   integer(kind=4), parameter                       :: SLV = 1, RFN = 2
-   character(len=extlen), parameter                 :: extension =  ".dat"
+   integer, parameter                                :: blen = 2, extlen = 4, flen = 15
+   character(len=blen), dimension(LO:HI), parameter  :: bound_name = ['lo', 'up']
+   integer(kind=4), parameter                        :: SLV = 1, RFN = 2
+   character(len=extlen), parameter                  :: extension =  ".dat"
 
    abstract interface
       function function_pointer_1D(z)
@@ -1148,55 +1142,6 @@ contains
       n_func_2_zero = n_func_2_zero - n_cnst
 
    end function n_func_2_zero
-
-!----------------------------------------------------------------------------------------------------
-
-   function func_val_vec_bnd(x, op) ! DEPRECATED
-
-      use constants, only: one, three, four, ten, fpi, LO, HI
-
-      implicit none
-
-      real(kind=8), dimension(ndim), intent(in) :: x
-      integer(kind=4),               intent(in) :: op
-      real(kind=8), dimension(ndim)             :: func_val_vec_bnd
-      real(kind=8)                              :: apl, f_l, f_r, q_bin, p_l, p_r, pratio, lpratio ! sought values will be x for single N-R and x, f_l_iup in NR-2dim
-      real(kind=8) :: fun3 ! Alternative function introduced to find p_up using integrals of n, e and p_fix value.
-      real(kind=8) :: fun5 ! Function similar to nq_to_f subroutine, used by compute_fp_NR_2dim to estimate value of p_lo and f_r_lo
-
-      if (op == LO) then
-         p_l = ten**x(LO)
-         p_r = p_ip1
-         f_r = ten**x(HI)
-         f_l = e_small_to_f(p_l)
-         apl = -alpha/p_l
-      endif
-
-      if (op == HI) then
-         p_l = p_im1
-         p_r = ten**x(LO)
-         f_l = ten**x(HI)
-         f_r = e_small_to_f(p_r)
-         apl = -alpha
-      endif
-      pratio  = p_r/p_l
-      lpratio = log(pratio)
-      q_bin   = q_ratios(f_r/f_l, pratio)
-
-      if (abs(q_bin - three) .lt. eps) then
-         fun3 = apl + (-one + pratio)/lpratio
-         fun5 = - f_l + n_in/((fpi * p_l**three) * lpratio)
-      else
-         fun5 = - f_l + ( n_in / (fpi * p_l**three) ) * ((three - q_bin) / (pratio**(three - q_bin) - one) )
-         if (abs(q_bin - four) .lt. eps) then
-            fun3 = apl + pratio*lpratio/(pratio - one)
-         else
-            fun3 = apl + ((three - q_bin) / (four - q_bin)) * ((pratio**((four - q_bin)) - one ) / (pratio**((three - q_bin)) - one ))
-         endif
-      endif
-      func_val_vec_bnd = [fun3, fun5]
-
-   end function func_val_vec_bnd
 
 !----------------------------------------------------------------------------------------------------
 ! Here - relaying e_small to f via its relation with momentum
