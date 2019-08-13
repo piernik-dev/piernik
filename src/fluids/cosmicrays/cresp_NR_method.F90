@@ -605,9 +605,11 @@ contains
    end subroutine step_seek
 
 !----------------------------------------------------------------------------------------------------
+
    subroutine refine_ji(ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
 
       use constants,      only: zero
+      use dataio_pub,     only: die
       use initcrspectrum, only: arr_dim
 
       implicit none
@@ -618,40 +620,39 @@ contains
       real(kind=8), dimension(1:2)                :: prev_solution
       logical                                     :: exit_code
 
-      if (allocated(p_space) .and. allocated(q_space)) then
-         prev_solution(1) = p_space(1)              ! refine must be called before these are deallocated
-         prev_solution(2) = p_space(1)**q_space(1)
-         call prepare_indices(i_incr, i_beg, i_end)
-         call prepare_indices(j_incr, j_beg, j_end)
-         do j = j_beg, j_end, j_incr
-            do i = i_beg, i_end, i_incr
-               alpha = p_a(i)
-               n_in  = p_n(j)
-               exit_code = .true.
-               if (ref_p(i,j) > zero .and. ref_f(i,j) > zero) then
-                  prev_solution(1) = ref_p(i,j)
-                  prev_solution(2) = ref_f(i,j)
-               else
-                  call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, nam, exit_code) ! works for most cases
-                  if (exit_code) then
-                     i1m = i-i_incr ; i2m = i-2*i_incr ; i1p = i+i_incr
-                     if (i2m >= 1 .and.                i2m <= arr_dim                     ) call step_extr(ref_p(i2m:i  :i_incr,j), ref_f(i2m:i  :i_incr,j),         p_a(i2m:i  :i_incr), nam, exit_code)
-                     if (i1m >= 1 .and. i1p >= 1 .and. i1m <= arr_dim .and. i1p <= arr_dim) call step_inpl(ref_p(i1m:i1p:i_incr,j), ref_f(i1m:i1p:i_incr,j), i_incr, p_a(i1m:i1p:i_incr), nam, exit_code)
-                  endif
+      if (.not. allocated(p_space) .or. .not. allocated(q_space)) call die("@cresp_NR_method: refine_grids called after array deallocation, stopping")
+
+      prev_solution(1) = p_space(1)              ! refine must be called before these are deallocated
+      prev_solution(2) = p_space(1)**q_space(1)
+      call prepare_indices(i_incr, i_beg, i_end)
+      call prepare_indices(j_incr, j_beg, j_end)
+      do j = j_beg, j_end, j_incr
+         do i = i_beg, i_end, i_incr
+            alpha = p_a(i)
+            n_in  = p_n(j)
+            exit_code = .true.
+            if (ref_p(i,j) > zero .and. ref_f(i,j) > zero) then
+               prev_solution(1) = ref_p(i,j)
+               prev_solution(2) = ref_f(i,j)
+            else
+               call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, nam, exit_code) ! works for most cases
+               if (exit_code) then
+                  i1m = i-i_incr ; i2m = i-2*i_incr ; i1p = i+i_incr
+                  if (i2m >= 1 .and.                i2m <= arr_dim                     ) call step_extr(ref_p(i2m:i  :i_incr,j), ref_f(i2m:i  :i_incr,j),         p_a(i2m:i  :i_incr), nam, exit_code)
+                  if (i1m >= 1 .and. i1p >= 1 .and. i1m <= arr_dim .and. i1p <= arr_dim) call step_inpl(ref_p(i1m:i1p:i_incr,j), ref_f(i1m:i1p:i_incr,j), i_incr, p_a(i1m:i1p:i_incr), nam, exit_code)
                endif
-            enddo
+            endif
          enddo
-      else
-         print *, "@cresp_NR_method: refine_grids called after array deallocation, stopping"
-         stop
-      endif
+      enddo
 
    end subroutine refine_ji
 
 !----------------------------------------------------------------------------------------------------
+
    subroutine refine_ij(ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
 
       use constants,      only: zero
+      use dataio_pub,     only: die
       use initcrspectrum, only: arr_dim
 
       implicit none
@@ -662,35 +663,35 @@ contains
       real(kind=8), dimension(1:2)                :: prev_solution
       logical                                     :: exit_code
 
-      if (allocated(p_space) .and. allocated(q_space)) then
-         prev_solution(1) = p_space(1)              ! refine must be called before these are deallocated
-         prev_solution(2) = p_space(1)**q_space(1)
-         call prepare_indices(i_incr, i_beg, i_end)
-         call prepare_indices(j_incr, j_beg, j_end)
-         do i = i_beg, i_end, i_incr
-            do j = j_beg, j_end, j_incr
-               alpha = p_a(i)
-               n_in  = p_n(j)
-               exit_code = .true.
-               if (ref_p(i,j) .gt. zero .and. ref_f(i,j) .gt. zero) then
-                  prev_solution(1) = ref_p(i,j)
-                  prev_solution(2) = ref_f(i,j)
-               else
-                  call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, nam, exit_code) ! works for the most cases
-                  if (exit_code) then
-                     j1m = j-j_incr ; j2m = j-2*j_incr ; j1p = j+j_incr
-                     if (j2m >= 1 .and.                j2m <= arr_dim                     ) call step_extr(ref_p(i,j2m:j  :j_incr), ref_f(i,j2m:j  :j_incr),         p_n(j2m:j         ), nam, exit_code)
-                     if (j1m >= 1 .and. j1p >= 1 .and. j1m <= arr_dim .and. j1p <= arr_dim) call step_inpl(ref_p(i,j1m:j1p:j_incr), ref_f(i,j1m:j1p:j_incr), j_incr, p_n(j1m:j1p:j_incr), nam, exit_code)
-                  endif
+      if (.not. allocated(p_space) .or. .not. allocated(q_space)) call die("@cresp_NR_method: refine_grids called after array deallocation, stopping")
+
+      prev_solution(1) = p_space(1)              ! refine must be called before these are deallocated
+      prev_solution(2) = p_space(1)**q_space(1)
+      call prepare_indices(i_incr, i_beg, i_end)
+      call prepare_indices(j_incr, j_beg, j_end)
+      do i = i_beg, i_end, i_incr
+         do j = j_beg, j_end, j_incr
+            alpha = p_a(i)
+            n_in  = p_n(j)
+            exit_code = .true.
+            if (ref_p(i,j) > zero .and. ref_f(i,j) > zero) then
+               prev_solution(1) = ref_p(i,j)
+               prev_solution(2) = ref_f(i,j)
+            else
+               call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, nam, exit_code) ! works for most cases
+               if (exit_code) then
+                  j1m = j-j_incr ; j2m = j-2*j_incr ; j1p = j+j_incr
+                  if (j2m >= 1 .and.                j2m <= arr_dim                     ) call step_extr(ref_p(i,j2m:j  :j_incr), ref_f(i,j2m:j  :j_incr),         p_n(j2m:j         ), nam, exit_code)
+                  if (j1m >= 1 .and. j1p >= 1 .and. j1m <= arr_dim .and. j1p <= arr_dim) call step_inpl(ref_p(i,j1m:j1p:j_incr), ref_f(i,j1m:j1p:j_incr), j_incr, p_n(j1m:j1p:j_incr), nam, exit_code)
                endif
-            enddo
+            endif
          enddo
-      else
-         print *, "@cresp_NR_method: refine_grids called after array deallocation, stopping"
-         stop
-      endif
+      enddo
+
    end subroutine refine_ij
+
  !----------------------------------------------------------------------------------------------------
+
    subroutine step_extr(p3, f3, arg, sought_by, exit_code) ! checked
 
       use constants, only: zero
