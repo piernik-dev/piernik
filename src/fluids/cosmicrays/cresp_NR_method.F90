@@ -420,11 +420,15 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine refine_all_directions(bound_case)
 
+      use dataio_pub, only: die, msg, printinfo
+
       implicit none
 
       integer(kind=4), intent(in) :: bound_case
 
-      print *,"Running refine for:", bound_name(bound_case), " boundary"
+      write(msg,'(3a)') "Running refine for:", bound_name(bound_case), " boundary"
+      call printinfo(msg)
+      if (.not. allocated(p_space) .or. .not. allocated(q_space)) call die("[cresp_NR_method:refine_all_directions] refine_grids called after array deallocation, stopping")
 
       call refine_ij(p_p, p_f,  1, -1)
       call refine_ji(p_p, p_f,  1, -1)
@@ -609,7 +613,6 @@ contains
    subroutine refine_ji(ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
 
       use constants,      only: zero
-      use dataio_pub,     only: die
       use initcrspectrum, only: arr_dim
 
       implicit none
@@ -619,8 +622,6 @@ contains
       integer(kind=4)                             :: i, j, i_beg, i_end, j_beg, j_end, i1m, i2m, i1p, nam = RFN
       real(kind=8), dimension(1:2)                :: prev_solution
       logical                                     :: exit_code
-
-      if (.not. allocated(p_space) .or. .not. allocated(q_space)) call die("@cresp_NR_method: refine_grids called after array deallocation, stopping")
 
       prev_solution(1) = p_space(1)              ! refine must be called before these are deallocated
       prev_solution(2) = p_space(1)**q_space(1)
@@ -652,7 +653,6 @@ contains
    subroutine refine_ij(ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
 
       use constants,      only: zero
-      use dataio_pub,     only: die
       use initcrspectrum, only: arr_dim
 
       implicit none
@@ -662,8 +662,6 @@ contains
       integer(kind=4)                             :: i, j, i_beg, i_end, j_beg, j_end, j1m, j2m, j1p, nam = RFN
       real(kind=8), dimension(1:2)                :: prev_solution
       logical                                     :: exit_code
-
-      if (.not. allocated(p_space) .or. .not. allocated(q_space)) call die("@cresp_NR_method: refine_grids called after array deallocation, stopping")
 
       prev_solution(1) = p_space(1)              ! refine must be called before these are deallocated
       prev_solution(2) = p_space(1)**q_space(1)
