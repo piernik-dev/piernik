@@ -969,21 +969,25 @@ contains
  !----------------------------------------------------------------------------------------------------
    function alpha_to_q(x) ! this one (as of now) is only usable with fixed p_ratio_4_q bins (middle ones)
 
-      use constants,      only: one, three, four
+      use constants,      only: one, three
       use initcrspectrum, only: eps
 
       implicit none
 
       real(kind=8), intent(in) :: x
       real(kind=8)             :: alpha_to_q
+      real(kind=8)             :: q_in3, q_in4
 
-      if (abs(x - three) .lt. eps) then
-         alpha_to_q = -alpha + (-one + p_ratio_4_q**(four-x))/log(p_ratio_4_q)
-      else if (abs(x - four) .lt. eps) then
-         alpha_to_q = -alpha + (three-x) *log(p_ratio_4_q)/(p_ratio_4_q**(three-x) - one)
+      q_in3 = three - x
+      q_in4 = one + q_in3
+      if (abs(q_in3) .lt. eps) then
+         alpha_to_q = (p_ratio_4_q**q_in4 - one)/log(p_ratio_4_q)
+      else if (abs(q_in4) .lt. eps) then
+         alpha_to_q = q_in3 * log(p_ratio_4_q)/(p_ratio_4_q**q_in3 - one)
       else
-         alpha_to_q = -alpha + ((three-x)/(four-x))*((p_ratio_4_q**(four-x)-one)/(p_ratio_4_q**(three-x)-one))
+         alpha_to_q = (q_in3/q_in4) * (p_ratio_4_q**q_in4 - one)/(p_ratio_4_q**q_in3 - one)
       endif
+      alpha_to_q = alpha_to_q - alpha
 
    end function alpha_to_q
 !----------------------------------------------------------------------------------------------------
