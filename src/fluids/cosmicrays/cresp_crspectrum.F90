@@ -35,9 +35,8 @@ module cresp_crspectrum
    implicit none
 
    private ! most of it
-   public :: cresp_update_cell, cresp_init_state, printer, fail_count_interpol, fail_count_NR_2dim, cresp_get_scaled_init_spectrum, &
-      &      cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all, e_threshold_lo, e_threshold_up, &
-      &      fail_count_comp_q, src_gpcresp, cresp_init_powl_spectrum, p_rch_init,  &
+   public :: cresp_update_cell, cresp_init_state, fail_count_interpol, fail_count_NR_2dim, cresp_get_scaled_init_spectrum,  &
+      &      cleanup_cresp, cresp_allocate_all, e_threshold_lo, e_threshold_up, fail_count_comp_q, src_gpcresp, p_rch_init, &
       &      detect_clean_spectrum, cresp_find_prepare_spectrum, cresp_detect_negative_content
 
    integer, dimension(1:2), save      :: fail_count_NR_2dim, fail_count_interpol
@@ -2029,27 +2028,8 @@ contains
 
    end subroutine cresp_deallocate_all
 
-!---------------------------------------------------------------------------------------------
-   subroutine cresp_accuracy_test(t) ! Not for use with PIERNIK
-
-      implicit none
-
-      real(kind=8), intent(in) :: t
-
-      print*, 'Accuracy test for adabatic compression/expansion:'
-      print*, 'n_tot = ', n_tot, 'n_tot0 = ', n_tot0, 'rel error = ', (n_tot - n_tot0)/n_tot0
-      print*, 'e_tot = ', e_tot, 'e_anal = ', e_tot0*exp(-u_d_0*t), 'rel error = ',(e_tot-e_tot0*exp(-u_d_0*t))/(e_tot0*exp(-u_d_0*t))
-      print*, 'e_tot0= ', e_tot0
-      print *, '=================================='
-      print*,  '! End of iteration               !'
-      print *, '=================================='
-      print*
-      print*
-      print*,'--------------------'
-      print *,''
-
-   end subroutine cresp_accuracy_test
 !----------------------------------------------------------------------------------------------------
+
    subroutine cleanup_cresp
 
       use dataio_pub, only: msg, printinfo
@@ -2062,26 +2042,5 @@ contains
       call cresp_deallocate_all
 
    end subroutine cleanup_cresp
-!----------------------------------------------------------------------------------------------------
-   subroutine printer(t)
-
-      use initcosmicrays, only: ncre
-      use initcrspectrum, only: crel
-
-      implicit none
-
-      real(kind=8) :: t
-
-      open(10, file="crs.dat", position='append')
-      write(10, '(2e16.9, 3(1x,i8), 600(1x,ES18.9E3))') t, crel%dt, ncre, crel%i_lo, crel%i_up, crel%p, crel%f, crel%q
-      close(10)
-
-      open(11, file="crs_ne.dat", position='append')
-      write(11, '(2I5,4x, e16.9, 600(1x,ES18.9E3))') del_i_lo, del_i_up, t, crel%dt, crel%p(i_lo), crel%p(i_up), crel%n, crel%e
-      close(11)
-
-   end subroutine printer
-
-!----------------------------------------------------------------------------------------------------
 
 end module cresp_crspectrum
