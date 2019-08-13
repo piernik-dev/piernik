@@ -962,7 +962,7 @@ contains
       else if (abs(q_in4) .lt. eps) then
          alpha_to_q = q_in3 * log(p_ratio_4_q)/(p_ratio_4_q**q_in3 - one)
       else
-         alpha_to_q = (q_in3/q_in4) * (p_ratio_4_q**q_in4 - one)/(p_ratio_4_q**q_in3 - one)
+         alpha_to_q = q_in3/q_in4 * (p_ratio_4_q**q_in4 - one)/(p_ratio_4_q**q_in3 - one)
       endif
       alpha_to_q = alpha_to_q - alpha
 
@@ -1107,13 +1107,15 @@ contains
       integer(kind=4), intent(in) :: side
       real(kind=8),    intent(in) :: p_ratio, alpha_cnst, q_in3
       real(kind=8)                :: encp_func_2_zero
+      real(kind=8)                :: q_in4
 
+      q_in4 = one + q_in3
       if (abs(q_in3) .lt. eps) then
-         encp_func_2_zero = (p_ratio**(one + q_in3 ))/(( one + q_in3 )*log(p_ratio))  ! if q = 3
-      else if (abs(one + q_in3) .lt. eps) then
-         encp_func_2_zero =  q_in3*log(p_ratio)/(p_ratio**q_in3 - one)
+         encp_func_2_zero = (p_ratio**q_in4)/(q_in4*log(p_ratio))  ! if q = 3
+      else if (abs(q_in4) .lt. eps) then
+         encp_func_2_zero = q_in3 * log(p_ratio)/(p_ratio**q_in3 - one)
       else
-         encp_func_2_zero = q_in3/(one + q_in3)*(p_ratio**(one + q_in3) - one) / (p_ratio**q_in3 - one)
+         encp_func_2_zero = q_in3/q_in4*(p_ratio**q_in4 - one) / (p_ratio**q_in3 - one)
       endif
       if (side == LO) encp_func_2_zero = encp_func_2_zero / p_ratio
       encp_func_2_zero = encp_func_2_zero - alpha_cnst
