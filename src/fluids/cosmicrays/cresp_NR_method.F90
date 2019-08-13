@@ -247,24 +247,24 @@ contains
 
          call fill_guess_grids
 
-         print *, "Are there zeros? (q_ratios)",    count(abs(q_space).le.zero)
-         print *, "Are there zeros? (p_ratios_up)", count(p_ratios_up.le.zero)
-         print *, "Are there zeros? (f_ratios_up)", count(f_ratios_up.le.zero)
-         print *, "Are there zeros? (p_ratios_lo)", count(p_ratios_lo.le.zero)
-         print *, "Are there zeros? (f_ratios_lo)", count(f_ratios_lo.le.zero)
+         print *, "Are there zeros? (q_ratios)",    count(abs(q_space) .le. zero)
+         print *, "Are there zeros? (p_ratios_up)", count(p_ratios_up  .le. zero)
+         print *, "Are there zeros? (f_ratios_up)", count(f_ratios_up  .le. zero)
+         print *, "Are there zeros? (p_ratios_lo)", count(p_ratios_lo  .le. zero)
+         print *, "Are there zeros? (f_ratios_lo)", count(f_ratios_lo  .le. zero)
          print *, "Count of array elements:", size(p_ratios_lo)
          print *,"----------"
          if (save_to_log) then
-            open(15, file="log_NR_solve",position="append")
+            open(15, file="log_NR_solve", position = "append")
             write (15,*) "------------------------------------------"
             write (15,"(A,2x,A,2x)") "Run on: ", date, "at: ", time
             write (15,*) "For set of parameters: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2), max_p_ratio, q_big, clight_cresp"
             write (15, "(1E15.8, 2I10,10E22.15)") e_small, size(p_space), size(q_space), max_p_ratio, q_big, clight_cresp
-            write (15,*) "Are there zeros? (q_ratios)",    count(abs(q_space).le.zero)
-            write (15,*) "Are there zeros? (p_ratios_up)", count(p_ratios_up.le.zero), real(count(p_ratios_up.le.zero))/real(size(p_ratios_up)) * 100.0,"%"
-            write (15,*) "Are there zeros? (f_ratios_up)", count(f_ratios_up.le.zero), real(count(f_ratios_up.le.zero))/real(size(f_ratios_up)) * 100.0,"%"
-            write (15,*) "Are there zeros? (p_ratios_lo)", count(p_ratios_lo.le.zero), real(count(p_ratios_lo.le.zero))/real(size(p_ratios_lo)) * 100.0,"%"
-            write (15,*) "Are there zeros? (f_ratios_lo)", count(f_ratios_lo.le.zero), real(count(f_ratios_lo.le.zero))/real(size(f_ratios_lo)) * 100.0,"%"
+            write (15,*) "Are there zeros? (q_ratios)",    count(abs(q_space) .le. zero)
+            write (15,*) "Are there zeros? (p_ratios_up)", count(p_ratios_up  .le. zero), real(count(p_ratios_up.le.zero))/real(size(p_ratios_up)) * 100.0,"%"
+            write (15,*) "Are there zeros? (f_ratios_up)", count(f_ratios_up  .le. zero), real(count(f_ratios_up.le.zero))/real(size(f_ratios_up)) * 100.0,"%"
+            write (15,*) "Are there zeros? (p_ratios_lo)", count(p_ratios_lo  .le. zero), real(count(p_ratios_lo.le.zero))/real(size(p_ratios_lo)) * 100.0,"%"
+            write (15,*) "Are there zeros? (f_ratios_lo)", count(f_ratios_lo  .le. zero), real(count(f_ratios_lo.le.zero))/real(size(f_ratios_lo)) * 100.0,"%"
             write (15,*) "Count of array elements:", size(p_ratios_lo)
             write (15,*) "----------"
             close(15)
@@ -1285,7 +1285,7 @@ contains
       real(kind=8),     intent(inout) :: a_val, n_val  ! ratios arrays (p,f: lo and up), for which solutions have been obtained. loc_no_ip - in case when interpolation is not possible,
       logical,          intent(out)   :: interpolation_successful
       real(kind=8),    dimension(2)   :: intpol_pf_from_NR_grids ! indexes with best match and having solutions are chosen.
-      integer(kind=4), dimension(1:2) :: loc1, loc2, loc_no_ip ! loc1, loc2 - indexes that points where alpha_tab_ and up nad n_tab_ and up are closest in value to a_val and n_val - indexes point to
+      integer(kind=4), dimension(1:2) :: l1, l2, loc_no_ip ! l1, l2 - indexes that points where alpha_tab_ and up nad n_tab_ and up are closest in value to a_val and n_val - indexes point to
       logical                         :: exit_code
 
       exit_code = .false.
@@ -1293,10 +1293,10 @@ contains
 #ifdef CRESP_VERBOSED
       write (*,"(A30,A2,A4)",advance="no") "Determining indices for case: ", bound_name(current_bound), "... "
 #endif /* CRESP_VERBOSED */
-      call determine_loc(a_val, n_val, loc1, loc2, loc_no_ip, exit_code)
+      call determine_loc(a_val, n_val, l1, l2, loc_no_ip, exit_code)
 
 #ifdef CRESP_VERBOSED
-      call save_loc(current_bound, loc1, loc2)
+      call save_loc(current_bound, l1, l2)
 #endif /* CRESP_VERBOSED */
 
       if (exit_code) then ! interpolation won't work in this case, choosing closest values that have solutions.
@@ -1305,12 +1305,8 @@ contains
          interpolation_successful = .false.
          return
       else
-         intpol_pf_from_NR_grids(1) = bl_interpol(p_p(loc1(1),loc1(2)),p_p(loc1(1),loc2(2)), &
-               &  p_p(loc2(1),loc1(2)),p_p(loc2(1),loc2(2)), bl_in_tu(p_a(loc1(1)), a_val, p_a(loc2(1))), &
-               &  bl_in_tu(p_n(loc1(2)), n_val, p_n(loc2(2))) )
-         intpol_pf_from_NR_grids(2) = bl_interpol(p_f(loc1(1),loc1(2)),p_f(loc1(1),loc2(2)), &
-               &  p_f(loc2(1),loc1(2)),p_f(loc2(1),loc2(2)), bl_in_tu(p_a(loc1(1)), a_val, p_a(loc2(1))), &
-               &  bl_in_tu(p_n(loc1(2)), n_val, p_n(loc2(2))) )
+         intpol_pf_from_NR_grids(1) = bl_interpol(p_p(l1(1),l1(2)),p_p(l1(1),l2(2)), p_p(l2(1),l1(2)),p_p(l2(1),l2(2)), bl_in_tu(p_a(l1(1)), a_val, p_a(l2(1))), bl_in_tu(p_n(l1(2)), n_val, p_n(l2(2))) )
+         intpol_pf_from_NR_grids(2) = bl_interpol(p_f(l1(1),l1(2)),p_f(l1(1),l2(2)), p_f(l2(1),l1(2)),p_f(l2(1),l2(2)), bl_in_tu(p_a(l1(1)), a_val, p_a(l2(1))), bl_in_tu(p_n(l1(2)), n_val, p_n(l2(2))) )
          interpolation_successful = .true.
          return
       endif
