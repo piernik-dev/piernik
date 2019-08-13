@@ -679,7 +679,7 @@ contains
                call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, nam, exit_code) ! works for most cases
                if (exit_code) then
                   j1m = j-j_incr ; j2m = j-2*j_incr ; j1p = j+j_incr
-                  if (j2m >= 1 .and.                j2m <= arr_dim                     ) call step_extr(ref_p(i,j2m:j  :j_incr), ref_f(i,j2m:j  :j_incr),         p_n(j2m:j         ), nam, exit_code)
+                  if (j2m >= 1 .and.                j2m <= arr_dim                     ) call step_extr(ref_p(i,j2m:j  :j_incr), ref_f(i,j2m:j  :j_incr),         p_n(j2m:j  :j_incr), nam, exit_code)
                   if (j1m >= 1 .and. j1p >= 1 .and. j1m <= arr_dim .and. j1p <= arr_dim) call step_inpl(ref_p(i,j1m:j1p:j_incr), ref_f(i,j1m:j1p:j_incr), j_incr, p_n(j1m:j1p:j_incr), nam, exit_code)
                endif
             endif
