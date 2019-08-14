@@ -106,12 +106,12 @@ contains
       integer(kind=4), save          :: i_up_max_prev = I_ZERO
       type(grid_container),  pointer :: cg
       type(cg_list_element), pointer :: cgl
-      real(kind=8)                   :: dt_cre_tmp, K_cre_max_sum, abs_max_ud
+      real(kind=8)                   :: K_cre_max_sum, abs_max_ud
       type(spec_mod_trms)            :: sptab
       logical                        :: empty_cell
 
       dt_cre       = big
-      dt_cre_tmp   = big
+      dt_cre_K     = big
       dt_cre_synch = big
       dt_cre_adiab = big
 
@@ -141,8 +141,7 @@ contains
                   i_up_max = max(i_up_max, i_up_max_tmp)
 
                   if (.not. empty_cell .and. synch_active) then
-                     call cresp_timestep_synchrotron(dt_cre_tmp, sptab%ub, i_up_max_tmp)
-                     dt_cre = min(dt_cre, dt_cre_tmp)
+                     call cresp_timestep_synchrotron(sptab%ub, i_up_max_tmp)
                   endif
                enddo
             enddo
@@ -151,8 +150,7 @@ contains
          cgl=>cgl%nxt
       enddo
 
-      if (adiab_active) call cresp_timestep_adiabatic(dt_cre_tmp, abs_max_ud)
-      dt_cre = min(dt_cre, dt_cre_tmp)
+      if (adiab_active) call cresp_timestep_adiabatic(abs_max_ud)
 
       if (i_up_max_prev .ne. i_up_max) then ! dt_cre_K saved, computed again only if in the whole domain highest i_up changes.
          i_up_max_prev = i_up_max
@@ -165,22 +163,21 @@ contains
          endif
       endif
 
-      dt_cre = min(dt_cre, dt_cre_K)
-      dt_cre = half * dt_cre                  ! dt comes in to cresp_crspectrum with factor * 2
+      dt_cre = half * min(dt_cre_adiab, dt_cre_synch, dt_cre_K)       ! dt comes in to cresp_crspectrum with factor * 2
 
    end subroutine cresp_timestep
 
 !----------------------------------------------------------------------------------------------------
 
-   subroutine cresp_timestep_adiabatic(dt_cre_ud, u_d_abs)
+   subroutine cresp_timestep_adiabatic(u_d_abs)
 
       use constants,       only: logten, three
       use initcrspectrum,  only: w, eps, cfl_cre
 
       implicit none
 
-      real(kind=8), intent(out) :: dt_cre_ud
-      real(kind=8), intent(in)  :: u_d_abs    ! assumes that u_d > 0 always
+      real(kind=8), intent(in) :: u_d_abs    ! assumes that u_d > 0 always
+      real(kind=8)             :: dt_cre_ud
 
       if (u_d_abs .gt. eps) then
          dt_cre_ud = cfl_cre * three * logten * w / u_d_abs
@@ -191,16 +188,16 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   subroutine cresp_timestep_synchrotron(dt_cre_ub, u_b, i_up_cell)
+   subroutine cresp_timestep_synchrotron(u_b, i_up_cell)
 
       use constants,      only: zero
       use initcrspectrum, only: w, cfl_cre
 
       implicit none
 
-      real(kind=8),    intent(out) :: dt_cre_ub
-      real(kind=8),    intent(in)  :: u_b
-      integer(kind=4), intent(in)  :: i_up_cell
+      real(kind=8),    intent(in) :: u_b
+      integer(kind=4), intent(in) :: i_up_cell
+      real(kind=8)                :: dt_cre_ub
 
  ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
       if (u_b .gt. zero) then
