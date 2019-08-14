@@ -90,7 +90,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, one, half, onet, zero
+      use constants,        only: xdim, ydim, zdim, half, onet, zero, big
       use cresp_grid,       only: fsynchr
       use cresp_crspectrum, only: cresp_find_prepare_spectrum
       use crhelpers,        only: div_v, divv_n
@@ -110,60 +110,60 @@ contains
       type(spec_mod_trms)            :: sptab
       logical                        :: empty_cell
 
-      abs_max_ud      = zero
+      dt_cre = big
+      dt_cre_tmp = big
+      dt_cre_min_ub = big
+      dt_cre_min_ud = big
+
+      if (.not. use_cresp) return
+
+      abs_max_ud   = zero
       i_up_max     = 1
       i_up_max_tmp = 1
 
-      dt_cre = huge(one)
-      dt_cre_tmp = huge(one)
-      dt_cre_min_ub = huge(one)
-      dt_cre_min_ud = huge(one)
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         if (adiab_active) call div_v(flind%ion%pos, cg)
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
+                  sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0; empty_cell = .false.
+                  if (synch_active) then
+                     sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr
+                     cresp%n = cg%u(iarr_cre_n, i, j, k)
+                     cresp%e = cg%u(iarr_cre_e, i, j, k)
+                     call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_max_tmp) ! needed for synchrotron timestep
 
-      if (use_cresp) then
-         cgl => leaves%first
-         do while (associated(cgl))
-            cg => cgl%cg
-            if (adiab_active) call div_v(flind%ion%pos, cg)
-            do k = cg%ks, cg%ke
-               do j = cg%js, cg%je
-                  do i = cg%is, cg%ie
-                     sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0; empty_cell = .false.
-                     if (synch_active) then
-                        sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr
-                        cresp%n = cg%u(iarr_cre_n, i, j, k)
-                        cresp%e = cg%u(iarr_cre_e, i, j, k)
-                        call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_max_tmp) ! needed for synchrotron timestep
+                     if (empty_cell) cycle         ! then nothing to do in this iteration
 
-                        if (empty_cell) cycle         ! then nothing to do in this iteration
-
-                        call cresp_timestep_synchrotron(dt_cre_tmp, sptab%ub, i_up_max_tmp)
-                        dt_cre = min(dt_cre, dt_cre_tmp)
-                        i_up_max = max(i_up_max, i_up_max_tmp)
-                     endif
-                     if (adiab_active) abs_max_ud = max(abs_max_ud, abs(cg%q(qna%ind(divv_n))%point([i,j,k]) * onet))
-                  enddo
+                     call cresp_timestep_synchrotron(dt_cre_tmp, sptab%ub, i_up_max_tmp)
+                     dt_cre = min(dt_cre, dt_cre_tmp)
+                     i_up_max = max(i_up_max, i_up_max_tmp)
+                  endif
+                  if (adiab_active) abs_max_ud = max(abs_max_ud, abs(cg%q(qna%ind(divv_n))%point([i,j,k]) * onet))
                enddo
             enddo
-            cgl=>cgl%nxt
          enddo
+         cgl=>cgl%nxt
+      enddo
 
-         if (adiab_active) call cresp_timestep_adiabatic(dt_cre_tmp, abs_max_ud)
+      if (adiab_active) call cresp_timestep_adiabatic(dt_cre_tmp, abs_max_ud)
 
-         dt_cre = min(dt_cre, dt_cre_tmp)
-         if ( i_up_max_prev .ne. i_up_max ) then ! dt_cre_K saved, computed again only if in the whole domain highest i_up changes.
-            i_up_max_prev = i_up_max
-            K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
-            if ( K_cre_max_sum <= 0) then                                ! K_cre dependent on momentum - maximal for highest bin number
-               dt_cre_K = huge(one)
-            else                                                         ! We use cfl_cr here (CFL number for diffusive CR transport)
-               dt_cre_K = cfl_cr * half / K_cre_max_sum                  ! cfl_cre used only for spectrum evolution
-               if (cg%dxmn < sqrt(huge(one))/dt_cre_K) dt_cre_K = dt_cre_K * cg%dxmn**2
-            endif
+      dt_cre = min(dt_cre, dt_cre_tmp)
+      if (i_up_max_prev .ne. i_up_max) then ! dt_cre_K saved, computed again only if in the whole domain highest i_up changes.
+         i_up_max_prev = i_up_max
+         K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
+         if ( K_cre_max_sum <= 0) then                                ! K_cre dependent on momentum - maximal for highest bin number
+            dt_cre_K = big
+         else                                                         ! We use cfl_cr here (CFL number for diffusive CR transport)
+            dt_cre_K = cfl_cr * half / K_cre_max_sum                  ! cfl_cre used only for spectrum evolution
+            if (cg%dxmn < sqrt(big)/dt_cre_K) dt_cre_K = dt_cre_K * cg%dxmn**2
          endif
-
-         dt_cre = min(dt_cre, dt_cre_K)
-         dt_cre = half * dt_cre                  ! dt comes in to cresp_crspectrum with factor * 2
       endif
+
+      dt_cre = min(dt_cre, dt_cre_K)
+      dt_cre = half * dt_cre                  ! dt comes in to cresp_crspectrum with factor * 2
 
    end subroutine cresp_timestep
 
@@ -179,7 +179,7 @@ contains
       real(kind=8), intent(out) :: dt_cre_ud
       real(kind=8), intent(in)  :: u_d_abs    ! assumes that u_d > 0 always
 
-      if ( u_d_abs .gt. eps) then
+      if (u_d_abs .gt. eps) then
          dt_cre_ud = cfl_cre * logten * w / u_d_abs
          dt_cre_min_ud = min(dt_cre_ud, dt_cre_min_ud)      ! remember to max dt_cre_min_ud at beginning of the search!
       endif
