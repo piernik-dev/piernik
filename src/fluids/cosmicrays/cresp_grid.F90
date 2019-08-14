@@ -89,14 +89,14 @@ module cresp_grid
 #endif /* CRESP_VERBOSED */
                   call cresp_update_cell(2 * dt, cresp%n, cresp%e, sptab, cfl_cresp_violation)
 #ifdef DEBUG
-                  call cresp_detect_negative_content( (/ i, j, k /))
+                  call cresp_detect_negative_content([i, j, k])
 #endif /* DEBUG */
                   if ( cfl_cresp_violation ) return ! nothing to do here!
                   p4(iarr_cre_n, i, j, k) = cresp%n
                   p4(iarr_cre_e, i, j, k) = cresp%e
                   if (hdf_save_fpq) then
                      cg%w(wna%ind(nam_cresp_f))%arr(:, i, j, k) = crel%f
-                     cg%w(wna%ind(nam_cresp_p))%arr(:, i, j, k) = (/ crel%p(crel%i_lo), crel%p(crel%i_up) /)
+                     cg%w(wna%ind(nam_cresp_p))%arr(:, i, j, k) = [crel%p(crel%i_lo), crel%p(crel%i_up)]
                      cg%w(wna%ind(nam_cresp_q))%arr(:, i, j, k) = crel%q
                   endif
                enddo

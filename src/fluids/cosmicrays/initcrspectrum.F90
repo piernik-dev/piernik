@@ -442,8 +442,8 @@ module initcrspectrum
          call my_allocate_with_index(mom_mid_cre_fix,ncre,1)
          call my_allocate_with_index(gamma_beta_c_fix,ncre,0)
 
-         cresp_all_edges = (/ (i,i=0,ncre) /)
-         cresp_all_bins  = (/ (i,i=1,ncre) /)
+         cresp_all_edges = [(i, i = 0, ncre)]
+         cresp_all_bins  = [(i, i = 1, ncre)]
 
 !!\brief for now algorithm requires at least 3 bins
          p_fix = zero
@@ -469,8 +469,8 @@ module initcrspectrum
          Gamma_mid_fix(1)        = sqrt( Gamma_mid_fix(1)      * Gamma_mid_fix(2))
          Gamma_mid_fix(ncre)     = sqrt( Gamma_mid_fix(ncre-1) * Gamma_mid_fix(ncre-1) * Gamma_fix_ratio )
 ! compute physical momenta of particles in given unit set
-         mom_cre_fix      = (/ (cresp_get_mom(Gamma_fix(i),me),     i=0,ncre ) /)
-         mom_mid_cre_fix  = (/ (cresp_get_mom(Gamma_mid_fix(i),me), i=1,ncre ) /)
+         mom_cre_fix      = [(cresp_get_mom(Gamma_fix(i),me),     i = 0, ncre )]
+         mom_mid_cre_fix  = [(cresp_get_mom(Gamma_mid_fix(i),me), i = 1, ncre )]
 
          gamma_beta_c_fix = mom_cre_fix / me
 

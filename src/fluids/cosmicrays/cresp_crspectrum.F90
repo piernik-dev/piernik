@@ -847,7 +847,7 @@ contains
 
 ! Compute upwind momentum p_upw for all fixed edges
       p_upw = zero
-      p_upw(1:ncre) = (/( p_fix(i)*(one - p_rch(dt,p_fix(i))), i=1,ncre )/) !< p_upw is computed with minus sign
+      p_upw(1:ncre) = [( p_fix(i)*(one - p_rch(dt,p_fix(i))), i=1,ncre )] !< p_upw is computed with minus sign
 
 #ifdef CRESP_VERBOSED
       write (msg, "(A, 2I3)") 'Change of  cut index lo,up:', del_i_lo, del_i_up    ; call printinfo(msg)
