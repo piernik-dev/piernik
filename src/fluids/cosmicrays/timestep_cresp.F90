@@ -87,6 +87,7 @@ contains
 
    subroutine cresp_timestep
 
+      use all_boundaries,   only: all_fluid_boundaries
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, half, zero, big
@@ -119,6 +120,7 @@ contains
       abs_max_ud   = zero
       i_up_max     = 1
       i_up_max_tmp = 1
+      if (adiab_active) call all_fluid_boundaries()
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -126,7 +128,7 @@ contains
 
          if (adiab_active) then
             call div_v(flind%ion%pos, cg)
-            abs_max_ud = max(abs_max_ud, maxval(abs(cg%q(qna%ind(divv_n))%arr)))
+            abs_max_ud = max(abs_max_ud, maxval(abs(cg%q(qna%ind(divv_n))%span(cg%ijkse))))
          endif
 
          do k = cg%ks, cg%ke
