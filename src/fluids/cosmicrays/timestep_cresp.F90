@@ -124,7 +124,12 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         if (adiab_active) call div_v(flind%ion%pos, cg)
+
+         if (adiab_active) then
+            call div_v(flind%ion%pos, cg)
+            abs_max_ud = max(abs_max_ud, maxval(abs(cg%q(qna%ind(divv_n))%arr)))
+         endif
+
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
@@ -139,16 +144,16 @@ contains
                      call cresp_timestep_synchrotron(dt_cre_tmp, sptab%ub, i_up_max_tmp)
                      dt_cre = min(dt_cre, dt_cre_tmp)
                   endif
-                  if (adiab_active) abs_max_ud = max(abs_max_ud, abs(cg%q(qna%ind(divv_n))%point([i,j,k])))
                enddo
             enddo
          enddo
+
          cgl=>cgl%nxt
       enddo
 
       if (adiab_active) call cresp_timestep_adiabatic(dt_cre_tmp, abs_max_ud)
-
       dt_cre = min(dt_cre, dt_cre_tmp)
+
       if (i_up_max_prev .ne. i_up_max) then ! dt_cre_K saved, computed again only if in the whole domain highest i_up changes.
          i_up_max_prev = i_up_max
          K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
