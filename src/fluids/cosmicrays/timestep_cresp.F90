@@ -89,7 +89,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, half, zero, big, I_ZERO
+      use constants,        only: xdim, ydim, zdim, half, zero, big
       use cresp_grid,       only: fsynchr
       use cresp_crspectrum, only: cresp_find_prepare_spectrum
       use crhelpers,        only: div_v, divv_n
@@ -103,7 +103,6 @@ contains
       implicit none
 
       integer(kind=4)                :: i, j, k, i_up_max_tmp, i_up_max
-      integer(kind=4), save          :: i_up_max_prev = I_ZERO
       type(grid_container),  pointer :: cg
       type(cg_list_element), pointer :: cgl
       real(kind=8)                   :: K_cre_max_sum, abs_max_ud
@@ -140,9 +139,7 @@ contains
                   call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_max_tmp) ! needed for synchrotron timestep
                   i_up_max = max(i_up_max, i_up_max_tmp)
 
-                  if (.not. empty_cell .and. synch_active) then
-                     call cresp_timestep_synchrotron(sptab%ub, i_up_max_tmp)
-                  endif
+                  if (.not. empty_cell .and. synch_active) call cresp_timestep_synchrotron(sptab%ub, i_up_max_tmp)
                enddo
             enddo
          enddo
@@ -152,15 +149,10 @@ contains
 
       if (adiab_active) call cresp_timestep_adiabatic(abs_max_ud)
 
-      if (i_up_max_prev .ne. i_up_max) then ! dt_cre_K saved, computed again only if in the whole domain highest i_up changes.
-         i_up_max_prev = i_up_max
-         K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
-         if (K_cre_max_sum <= 0) then                                ! K_cre dependent on momentum - maximal for highest bin number
-            dt_cre_K = big
-         else                                                         ! We use cfl_cr here (CFL number for diffusive CR transport)
-            dt_cre_K = cfl_cr * half / K_cre_max_sum                  ! cfl_cre used only for spectrum evolution
-            if (cg%dxmn < sqrt(big)/dt_cre_K) dt_cre_K = dt_cre_K * cg%dxmn**2
-         endif
+      K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
+      if (K_cre_max_sum > 0) then                                  ! K_cre dependent on momentum - maximal for highest bin number
+         dt_cre_K = cfl_cr * half / K_cre_max_sum                  ! We use cfl_cr here (CFL number for diffusive CR transport), cfl_cre used only for spectrum evolution
+         if (cg%dxmn < sqrt(big)/dt_cre_K) dt_cre_K = dt_cre_K * cg%dxmn**2
       endif
 
       dt_cre = half * min(dt_cre_adiab, dt_cre_synch, dt_cre_K)       ! dt comes in to cresp_crspectrum with factor * 2
@@ -171,18 +163,14 @@ contains
 
    subroutine cresp_timestep_adiabatic(u_d_abs)
 
-      use constants,       only: logten, three
-      use initcrspectrum,  only: w, eps, cfl_cre
+      use constants,      only: logten, three
+      use initcrspectrum, only: w, eps, cfl_cre
 
       implicit none
 
       real(kind=8), intent(in) :: u_d_abs    ! assumes that u_d > 0 always
-      real(kind=8)             :: dt_cre_ud
 
-      if (u_d_abs .gt. eps) then
-         dt_cre_ud = cfl_cre * three * logten * w / u_d_abs
-         dt_cre_adiab = min(dt_cre_ud, dt_cre_adiab)      ! remember to max dt_cre_adiab at beginning of the search!
-      endif
+      if (u_d_abs .gt. eps) dt_cre_adiab = cfl_cre * three * logten * w / u_d_abs
 
    end subroutine cresp_timestep_adiabatic
 
