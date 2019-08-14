@@ -90,7 +90,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, half, onet, zero, big
+      use constants,        only: xdim, ydim, zdim, half, zero, big
       use cresp_grid,       only: fsynchr
       use cresp_crspectrum, only: cresp_find_prepare_spectrum
       use crhelpers,        only: div_v, divv_n
@@ -110,8 +110,8 @@ contains
       type(spec_mod_trms)            :: sptab
       logical                        :: empty_cell
 
-      dt_cre = big
-      dt_cre_tmp = big
+      dt_cre        = big
+      dt_cre_tmp    = big
       dt_cre_min_ub = big
       dt_cre_min_ud = big
 
@@ -128,7 +128,7 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0; empty_cell = .false.
+                  sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0 ; empty_cell = .false.
                   if (synch_active) then
                      sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr
                      cresp%n = cg%u(iarr_cre_n, i, j, k)
@@ -141,7 +141,7 @@ contains
                      dt_cre = min(dt_cre, dt_cre_tmp)
                      i_up_max = max(i_up_max, i_up_max_tmp)
                   endif
-                  if (adiab_active) abs_max_ud = max(abs_max_ud, abs(cg%q(qna%ind(divv_n))%point([i,j,k]) * onet))
+                  if (adiab_active) abs_max_ud = max(abs_max_ud, abs(cg%q(qna%ind(divv_n))%point([i,j,k])))
                enddo
             enddo
          enddo
@@ -171,7 +171,7 @@ contains
 
    subroutine cresp_timestep_adiabatic(dt_cre_ud, u_d_abs)
 
-      use constants,       only: logten
+      use constants,       only: logten, three
       use initcrspectrum,  only: w, eps, cfl_cre
 
       implicit none
@@ -180,7 +180,7 @@ contains
       real(kind=8), intent(in)  :: u_d_abs    ! assumes that u_d > 0 always
 
       if (u_d_abs .gt. eps) then
-         dt_cre_ud = cfl_cre * logten * w / u_d_abs
+         dt_cre_ud = cfl_cre * three * logten * w / u_d_abs
          dt_cre_min_ud = min(dt_cre_ud, dt_cre_min_ud)      ! remember to max dt_cre_min_ud at beginning of the search!
       endif
 
