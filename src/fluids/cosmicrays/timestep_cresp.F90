@@ -90,7 +90,7 @@ contains
       use all_boundaries,   only: all_fluid_boundaries
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, half, zero, big
+      use constants,        only: xdim, ydim, zdim, half, zero, big, pMIN
       use cresp_grid,       only: fsynchr
       use cresp_crspectrum, only: cresp_find_prepare_spectrum
       use crhelpers,        only: div_v, divv_n
@@ -99,6 +99,7 @@ contains
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp, cresp
+      use mpisetup,         only: piernik_MPI_Allreduce
       use named_array_list, only: qna
 
       implicit none
@@ -157,6 +158,9 @@ contains
          if (cg%dxmn < sqrt(big)/dt_cre_K) dt_cre_K = dt_cre_K * cg%dxmn**2
       endif
 
+      call piernik_MPI_Allreduce(dt_cre_adiab, pMIN)
+      call piernik_MPI_Allreduce(dt_cre_synch, pMIN)
+      call piernik_MPI_Allreduce(dt_cre_K,     pMIN)
       dt_cre = half * min(dt_cre_adiab, dt_cre_synch, dt_cre_K)       ! dt comes in to cresp_crspectrum with factor * 2
 
    end subroutine cresp_timestep
