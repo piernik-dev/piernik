@@ -523,11 +523,9 @@ contains
             endif
 
             if (exit_code) then
-               if (j-2 .ge. 1 .and. j-2 .le. arr_dim) then
-                  call step_extr(fill_p(i,j-2:j),fill_f(i,j-2:j),p_n(j-2:j),nam,exit_code)
-               endif
-               if ((j-1) .ge. 1 ) then
-                  if (fill_p(i,j-1).gt.zero) call seek_solution_step(fill_p(i,j),fill_f(i,j),prev_solution,i,j-1,nam,exit_code)
+               if (j-2 .ge. 1 .and. j-2 .le. arr_dim) call step_extr(fill_p(i,j-2:j), fill_f(i,j-2:j), p_n(j-2:j), nam, exit_code)
+               if (j-1 .ge. 1) then
+                  if (fill_p(i,j-1) .gt. zero) call seek_solution_step(fill_p(i,j), fill_f(i,j), prev_solution, i, j-1, nam, exit_code)
                endif
             endif
             if (exit_code) then !still...
@@ -545,7 +543,7 @@ contains
                            fill_f(i,j) = x_vec(2)
                            prev_solution = x_vec
 #ifdef CRESP_VERBOSED
-                           call msg_success("    ",nam,x_in, x_vec)
+                           call msg_success("    ", nam, x_in, x_vec)
 #endif /* CRESP_VERBOSED */
                            exit
                         endif
