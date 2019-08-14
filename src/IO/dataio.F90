@@ -1466,7 +1466,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS
       use fluidindex,         only: iarr_all_crn
       use initcosmicrays,     only: iarr_cre_e, iarr_cre_n
-      use timestep_cresp,     only: dt_cre_min_ud, dt_cre_min_ub, dt_cre_K
+      use timestep_cresp,     only: dt_cre_adiab, dt_cre_synch, dt_cre_K
 #else /* !COSM_RAY_ELECTRONS */
       use fluidindex,         only: iarr_all_crs
 #endif /* !COSM_RAY_ELECTRONS */
@@ -1545,7 +1545,7 @@ contains
          call leaves%get_extremum(qna%wai, MAXL, b_max)
          call leaves%get_extremum(qna%wai, MINL, b_min)
 #ifdef COSM_RAY_ELECTRONS
-         b_max%assoc = dt_cre_min_ub
+         b_max%assoc = dt_cre_synch
          call piernik_MPI_Allreduce(b_max%assoc, pMIN)
 #endif /* COSM_RAY_ELECTRONS */
 
@@ -1674,7 +1674,7 @@ contains
       enddo
       call leaves%get_extremum(qna%wai, MINL, divv_min)
       call leaves%get_extremum(qna%wai, MAXL, divv_max)
-      divv_max%assoc = dt_cre_min_ud
+      divv_max%assoc = dt_cre_adiab
       call piernik_MPI_Allreduce(divv_max%assoc, pMIN)
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */

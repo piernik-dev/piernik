@@ -36,9 +36,9 @@ module timestep_cresp
    implicit none
 
    private
-   public :: dt_cre, cresp_timestep, dt_cre_min_ub, dt_cre_min_ud, dt_cre_K
+   public :: dt_cre, cresp_timestep, dt_cre_synch, dt_cre_adiab, dt_cre_K
 
-   real(kind=8) :: dt_cre, dt_cre_min_ub, dt_cre_min_ud, dt_cre_K
+   real(kind=8) :: dt_cre, dt_cre_synch, dt_cre_adiab, dt_cre_K
 
 contains
 
@@ -110,10 +110,10 @@ contains
       type(spec_mod_trms)            :: sptab
       logical                        :: empty_cell
 
-      dt_cre        = big
-      dt_cre_tmp    = big
-      dt_cre_min_ub = big
-      dt_cre_min_ud = big
+      dt_cre       = big
+      dt_cre_tmp   = big
+      dt_cre_synch = big
+      dt_cre_adiab = big
 
       if (.not. use_cresp) return
 
@@ -179,7 +179,7 @@ contains
 
       if (u_d_abs .gt. eps) then
          dt_cre_ud = cfl_cre * three * logten * w / u_d_abs
-         dt_cre_min_ud = min(dt_cre_ud, dt_cre_min_ud)      ! remember to max dt_cre_min_ud at beginning of the search!
+         dt_cre_adiab = min(dt_cre_ud, dt_cre_adiab)      ! remember to max dt_cre_adiab at beginning of the search!
       endif
 
    end subroutine cresp_timestep_adiabatic
@@ -200,7 +200,7 @@ contains
  ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
       if (u_b .gt. zero) then
          dt_cre_ub = cfl_cre * w / (assume_p_up(i_up_cell) * u_b)
-         dt_cre_min_ub = min(dt_cre_ub, dt_cre_min_ub)    ! remember to max dt_cre_min_ub at the beginning of the search
+         dt_cre_synch = min(dt_cre_ub, dt_cre_synch)    ! remember to max dt_cre_synch at the beginning of the search
       endif
 
    end subroutine cresp_timestep_synchrotron
