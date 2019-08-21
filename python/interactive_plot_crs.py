@@ -39,7 +39,7 @@ parser.add_option("", "--nosave",  dest="not_save_spec",default="False",      he
 (options, args) = parser.parse_args(argv[1:]) #argv[1] is filename
 
 plot_var = options.var_name
-user_annot_time = options.annotate_time
+user_draw_timebox = options.annotate_time
 user_limits     = (options.default_range!=True)
 user_save_spec  = (options.not_save_spec!=True)
 simple_plot = False # True ### DEPRECATED
@@ -239,7 +239,11 @@ if f_run == True:
     click_coords = [0, 0]
     image_number = 0
 
-    field_max  = float(h5ds.find_max("cr01")[0]) # WARNING - this makes field_max unitless
+    try:
+      field_max  = float(h5ds.find_max("cr01")[0]) # WARNING - this makes field_max unitless
+    except:
+      field_max  = float(h5ds.find_max("cr1")[0]) # WARNING - this makes field_max unitless
+
 
     w = dom_r[avail_dim[0]] + abs(dom_l[avail_dim[0]])
     h = dom_r[avail_dim[1]] + abs(dom_l[avail_dim[1]])
@@ -304,7 +308,7 @@ if f_run == True:
 
 
     if (plot_vel): yt_data_plot.annotate_velocity(factor=48)
-    if (plot_mag): yt_data_plot.annotate_magnetic_field(factor=48)
+    if (plot_mag): yt_data_plot.annotate_magnetic_field(factor=24)
     yt_data_plot.set_zlim(plot_field,plot_min,plot_max)
     marker_l   = ["x", "+", "*", "X", ".","^", "v","<",">","1"]
     m_size_l   = [500, 500, 400, 400, 500, 350, 350, 350, 350, 500]
@@ -389,10 +393,11 @@ if f_run == True:
     text_coords = [0., 0., 0.]; text_coords[dim_map.get(slice_ax)] = slice_coord; text_coords[avail_dim[0]] = dom_l[avail_dim[0]]; text_coords[avail_dim[1]] = dom_l[avail_dim[1]]
     text_coords = [ item * 0.9 for item in text_coords]
 
-    if (user_annot_time == True):
+    if (user_draw_timebox == True):
       yt_data_plot.annotate_text(text_coords , 'T = {:0.2f} Myr'.format(float(t.in_units('Myr'))), text_args={'fontsize':30,'color':'white','alpha':'0.0'},inset_box_args={'boxstyle':'round','pad':0.2,'alpha':0.8})
     else:
-      prtinfo("Not marking line on yt.plot (user_annot_time = %s)" %(user_annot_time))
+      prtinfo("Not marking line on yt.plot (user_draw_timebox = %s)" %(user_draw_timebox))
+      yt_data_plot.annotate_title('T = {:0.2f} Myr'.format(float(t.in_units('Myr'))))
 
     yt_data_plot.save('results/'+filename_nam+'_'+plot_field+'_sliceplot.pdf')  # save image when "q" pressed
     s.canvas.mpl_disconnect(cid)

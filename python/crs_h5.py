@@ -57,7 +57,7 @@ par_plot_legend    = True
 par_plot_e3        = False
 par_plotted_src    = False
 par_plot_init_slope= True
-par_legend_loc     = (-2,-2) #(0.385,0.715+0.058), (0.385,0.715+i_plot*0.058), (0.385,0.715+0.058), (0.385,0.715) , (0.535,0.535)
+par_legend_loc     = (-2,-2) #(0.515,0.780) #(0.385,0.715+0.058), (0.385,0.715+i_plot*0.058)
 default_legend_loc = 1
 par_test_name      = "CRWa05"
 
@@ -204,8 +204,8 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
    s.set_xscale('log')
    s.set_yscale('log')
 
-   plt.xlabel('$p/m_e c$',fontsize = 20, labelpad = 0.2)
-   plt.ylabel('d$'+plot_var+' / $d$p$',fontsize = 20, labelpad=-3.)
+   plt.xlabel('$p/m_e c$',labelpad = 0.2, fontsize = 20,)
+   plt.ylabel('d$'+plot_var+' / $d$p$',fontsize = 20, labelpad=-0.)
    plt.tick_params(axis='both', which='major', labelsize=16)
 
    global plot_p_min, plot_p_max, plot_var_min, plot_var_max, use_color_list, i_plot, handle_list, tightened
@@ -233,7 +233,7 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
          plt.ylim(e_small,1.e-2)
          plt.xlim(p_fix[1], p_fix[-2])
    plt.ylim (10. * plot_var_min , 5.e-1)
-   plt.xlim(1., 1.e6)
+   plt.xlim(1., 5.e6)
    if (par_plot_e3): plt.ylim (10. * plot_var_min , 10.*max(plot_var_r)*max(pr)**3) # override
 
    if (par_vis_all_borders):
@@ -259,7 +259,8 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
       plt.plot(p_range, e_small/(c*p_range), color="xkcd:azure", label="$n_{small}$")
 
    par_plot_color = set_plot_color(par_plot_color, i_plot)
-   spectrum_label  = ("d$%s$/d$p$, [%3.1f, %3.1f, %3.1f] kpc " % (plot_var, location[0]/1000.,location[1]/1000.,location[2]/1000.) )
+   spectrum_label  = ("d$%s$(p)/d$p$, \n[%3.1f, %3.1f, %3.1f] kpc " % (plot_var, location[0]/1000.,location[1]/1000.,location[2]/1000.) )
+   #spectrum_label  = ("d$%s$(p,t=0)/d$p$, \n[%3.1f, %3.1f, %3.1f] kpc " % (plot_var, location[0]/1000.,location[1]/1000.,location[2]/1000.) )
    #spectrum_label  = ("(  ) d$%s$/d$p$, %s " % (plot_var, par_test_name) ) #
 
    for i in range(0, size(fr)) :
@@ -280,7 +281,7 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
       if (plot_var == 'n'):
          init_spec = plt.plot(p_range, (1.0+2.e-1)* f_init*4*pi* p_range**(-(q_init - 2 )), color = 'blue',linestyle=":", alpha = 0.75, label=r"d$n(p,t)$/d$p$, $E<1/bt$", lw=3 )     # initial spectrum
       if (plot_var == 'e'):
-         init_spec = plt.plot(p_range, (1.0+2.e-1)* f_init*4*pi* p_range**(-(q_init - 3)), color = 'blue',linestyle=":", alpha = 0.75, label=r"d$n(p,t)$/d$p$, $E<1/bt$", lw=3 )     # initial spectrum
+         init_spec = plt.plot(p_range, (1.0+2.e-1)* f_init*4*pi* p_range**(-(q_init - 3)), color = 'blue',linestyle=":", alpha = 0.75, label=r"d$e(p,t)$/d$p$, $E<1/bt$", lw=3 )     # initial spectrum
 
    if (par_visible_title):
       if (par_simple_title):
