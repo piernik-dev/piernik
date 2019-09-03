@@ -1433,6 +1433,7 @@ contains
       use dataio_pub,         only: msg
       use func,               only: sq_sum3
       use global,             only: cfl
+      use named_array_list,   only: wna
 #endif /* MAGNETIC */
 #ifdef RESISTIVE
       use resistivity,        only: etamax, cu2max, eta1_active
@@ -1450,25 +1451,25 @@ contains
 
       implicit none
 
-      type(tsl_container), optional      :: tsl
-      type(cg_list_element), pointer     :: cgl
-      type(value)                        :: drag
+      type(tsl_container), optional              :: tsl
+      type(cg_list_element), pointer             :: cgl
+      type(value)                                :: drag
 #ifdef MAGNETIC
-      type(value)                        :: b_min, b_max, divb_max, vai_max, cfi_max
-      real                               :: dxmn_safe
+      type(value)                                :: b_min, b_max, divb_max, vai_max, cfi_max
+      real                                       :: dxmn_safe
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-      type(value)                        :: encr_min, encr_max
+      type(value)                                :: encr_min, encr_max
 #endif /* COSM_RAYS */
 #ifdef VARIABLE_GP
-      type(value)                        :: gpxmax, gpymax, gpzmax
-      integer                            :: var_i
+      type(value)                                :: gpxmax, gpymax, gpzmax
+      integer                                    :: var_i
 #endif /* VARIABLE_GP */
 #if defined VARIABLE_GP || defined MAGNETIC
       integer(kind=4), dimension(ndims,ndims,HI) :: D
-      real, dimension(:,:,:), pointer    :: p
+      real, dimension(:,:,:), pointer            :: p
 #endif /* VARIABLE_GP || MAGNETIC */
-      character(len=idlen)               :: id
+      character(len=idlen)                       :: id
 
       id = '' ! suppress compiler warnings if none of the modules requiring the id variable are switched on.
 
@@ -1535,15 +1536,9 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
-         p =   (cgl%cg%b(xdim, cgl%cg%is+dom%D_x:cgl%cg%ie+dom%D_x, cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ) - &
-              & cgl%cg%b(xdim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%dy*cgl%cg%dz &
-              +(cgl%cg%b(ydim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js+dom%D_y:cgl%cg%je+dom%D_y, cgl%cg%ks        :cgl%cg%ke        ) - &
-              & cgl%cg%b(ydim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%dx*cgl%cg%dz &
-              +(cgl%cg%b(zdim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks+dom%D_z:cgl%cg%ke+dom%D_z) - &
-              & cgl%cg%b(zdim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%dx*cgl%cg%dy
-!         p = (cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse+D(xdim,:,:)) - cgl%cg%w(all_cg%bi)%span(xdim,cgl%cg%ijkse))*cgl%cg%dy*cgl%cg%dz &
-!            +(cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse+D(ydim,:,:)) - cgl%cg%w(all_cg%bi)%span(ydim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dz &
-!            +(cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse+D(zdim,:,:)) - cgl%cg%w(all_cg%bi)%span(zdim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dy
+         p = (cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse+D(xdim,:,:)) - cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse))*cgl%cg%dy*cgl%cg%dz &
+            +(cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse+D(ydim,:,:)) - cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dz &
+            +(cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse+D(zdim,:,:)) - cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dy
          cgl%cg%wa = abs(cgl%cg%wa)
 
          cgl%cg%wa(cgl%cg%ie,:,:) = cgl%cg%wa(cgl%cg%ie-dom%D_x,:,:)
