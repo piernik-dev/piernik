@@ -193,10 +193,6 @@ contains
 
    end subroutine init_resistivity
 
-!>
-!! \deprecated BEWARE: uninitialized values are poisoning the wb(:,:,:) array - should change  with rev. 3893
-!! \deprecated BEWARE: significant differences between single-CPU run and multi-CPU run (due to uninits?)
-!<
    subroutine compute_resist
 
       use cg_leaves,        only: leaves
