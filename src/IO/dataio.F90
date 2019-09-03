@@ -1451,11 +1451,11 @@ contains
       implicit none
 
       type(tsl_container), optional      :: tsl
-      real                               :: dxmn_safe
       type(cg_list_element), pointer     :: cgl
       type(value)                        :: drag
 #ifdef MAGNETIC
       type(value)                        :: b_min, b_max, divb_max, vai_max, cfi_max
+      real                               :: dxmn_safe
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
       type(value)                        :: encr_min, encr_max
@@ -1471,28 +1471,24 @@ contains
       character(len=idlen)               :: id
 
       id = '' ! suppress compiler warnings if none of the modules requiring the id variable are switched on.
+
+   ! Timestep diagnostics
+      if (has_ion) call get_common_vars(flind%ion)
+      if (has_neu) call get_common_vars(flind%neu)
+      if (has_dst) call get_common_vars(flind%dst)
+
+#ifdef MAGNETIC
       dxmn_safe = sqrt(huge(1.0))
       cgl => leaves%first
       do while (associated(cgl))
          dxmn_safe = min(dxmn_safe, cgl%cg%dxmn)
+         cgl%cg%wa(:,:,:) = sqrt(sq_sum3(cgl%cg%b(xdim,:,:,:), cgl%cg%b(ydim,:,:,:), cgl%cg%b(zdim,:,:,:)))
          cgl => cgl%nxt
       enddo
-
-   ! Timestep diagnostics
-      if (has_neu) call get_common_vars(flind%neu)
+      call leaves%get_extremum(qna%wai, MAXL, b_max)
+      call leaves%get_extremum(qna%wai, MINL, b_min)
 
       if (has_ion) then
-         call get_common_vars(flind%ion)
-
-#ifdef MAGNETIC
-         cgl => leaves%first
-         do while (associated(cgl))
-            cgl%cg%wa(:,:,:) = sqrt(sq_sum3(cgl%cg%b(xdim,:,:,:), cgl%cg%b(ydim,:,:,:), cgl%cg%b(zdim,:,:,:)))
-            cgl => cgl%nxt
-         enddo
-         call leaves%get_extremum(qna%wai, MAXL, b_max)
-         call leaves%get_extremum(qna%wai, MINL, b_min)
-
          cgl => leaves%first
          do while (associated(cgl))
             cgl%cg%wa(:,:,:)  = cgl%cg%wa(:,:,:) / sqrt(cgl%cg%u(flind%ion%idn,:,:,:))
@@ -1502,11 +1498,8 @@ contains
          vai_max%assoc = cfl*dxmn_safe/(vai_max%val+small)
          cfi_max%val   = sqrt(flind%ion%snap%cs_max%val**2+vai_max%val**2)
          cfi_max%assoc = cfl*dxmn_safe/sqrt(cfi_max%val**2+small)
-#endif /* MAGNETIC */
-
       endif
-
-      if (has_dst) call get_common_vars(flind%dst)
+#endif /* MAGNETIC */
 
 #if defined VARIABLE_GP || defined MAGNETIC
       D = spread(reshape([dom%D_*idm(xdim,:),dom%D_*idm(ydim,:),dom%D_*idm(zdim,:)],[ndims,ndims]),ndims,HI)
@@ -1592,15 +1585,14 @@ contains
                id = "ION"
                write(msg, fmt_dtloc) 'max(c_f)    ', id, cfi_max%val, cfi_max%assoc ; call printinfo(msg, .false.)
                call cmnlog_l(fmt_dtloc, 'max(v_a)    ', id, vai_max)
-               id = "MAG"
-               call cmnlog_s(fmt_loc, 'min(|b|)    ', id, b_min)
-               call cmnlog_s(fmt_loc, 'max(|b|)    ', id, b_max)
-               call cmnlog_s(fmt_loc, 'max(|divb|) ', id, divb_max)
-#else /* !MAGNETIC */
-!               if (csi_max%val > 0.) write(msg, fmtff8) 'max(c_s )   ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2)
-!               call printinfo(msg, .false.)
-#endif /* !MAGNETIC */
+#endif /* MAGNETIC */
             endif
+#ifdef MAGNETIC
+            id = "MAG"
+            call cmnlog_s(fmt_loc, 'min(|b|)    ', id, b_min)
+            call cmnlog_s(fmt_loc, 'max(|b|)    ', id, b_max)
+            call cmnlog_s(fmt_loc, 'max(|divb|) ', id, divb_max)
+#endif /* MAGNETIC */
             if (has_neu) call common_shout(flind%neu%snap,'NEU',.true.,.true.,.true.)
             if (has_dst) call common_shout(flind%dst%snap,'DST',.false.,.false.,.false.)
             if (has_interactions) call cmnlog_l(fmt_dtloc, 'max(drag)   ', "INT", drag)
