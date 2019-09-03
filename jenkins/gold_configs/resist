@@ -1,6 +1,7 @@
 # sha1 of the gold commit
 # Note: update only when absolutely necessary
-GOLD_COMMIT=2d84935c0665426247309775c20d722fd5db5f95
+GOLD_COMMIT=f92656c192ef24606a7b5a939fd085229fe208a1
+# f92656c192ef24606a7b5a939fd085229fe208a1 - compute current eta to determine dt_eta; from now timestep_resist calls compute_resist
 # 2d84935c0665426247309775c20d722fd5db5f95 - 64-bit plotfiles for gold configs
 # 8fcf05bbd76c9162eb1999d620b59dd0966e0f8e - several fixups needed for Jenkins on Fedora 24
 # b39c890f49f76f59d8115b255581d5e04c7e4645 - Merge pull request #173 from gawrysz/IO_naming_fix: removed adding "final" to the output filename
