@@ -129,12 +129,14 @@ contains
       implicit none
 
       class(component_fluid), pointer :: fl
-      integer                         :: i, j, k
+      integer                         :: i, j
       real                            :: vzab, b0
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
 
       fl => flind%ion
+      b0 = sqrt(2.*alpha*d0*fl%cs2)
+
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -145,22 +147,17 @@ contains
 
          call cg%set_constant_b_field([0., 0., 0.]) ! slight overkill at ydim for simplicity
 
-         b0 = sqrt(2.*alpha*d0*fl%cs2)
+         do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+            vzab = v0*cos(2.*pi*cg%y(j)/dom%L_(ydim))
+            cg%u(fl%imx,:,j,:) = cg%u(fl%idn,:,j,:)*vzab
+         enddo
 
-         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-
-                  vzab = v0*cos(2.*pi*cg%y(j)/dom%L_(ydim))
-                  cg%u(fl%imx,i,j,k) = cg%u(fl%idn,i,j,k)*vzab
-
-                  if (abs(cg%x(i)-dom%C_(xdim)) <= 0.25*dom%L_(xdim)) then
-                     cg%b(ydim,i,j,k) = -b0
-                  else
-                     cg%b(ydim,i,j,k) =  b0
-                  endif
-               enddo
-            enddo
+         do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+            if (abs(cg%x(i)-dom%C_(xdim)) <= 0.25*dom%L_(xdim)) then
+               cg%b(ydim,i,:,:) = -b0
+            else
+               cg%b(ydim,i,:,:) =  b0
+            endif
          enddo
 
 #ifndef ISO
