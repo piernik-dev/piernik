@@ -179,60 +179,52 @@ module cresp_grid
 
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-      logical, save                   :: first_run = .true., not_zeroed = .true.
 
-      if (first_run) then
-         register_f = .false.
-         register_p = .false.
-         register_q = .false.
+      register_f = .false.
+      register_p = .false.
+      register_q = .false.
 
-         call cresp_initialize_guess_grids
-         call cresp_allocate_all
+      call cresp_initialize_guess_grids
+      call cresp_allocate_all
 
-         fail_count_interpol = 0
-         fail_count_NR_2dim  = 0
-         fail_count_comp_q   = 0
+      fail_count_interpol = 0
+      fail_count_NR_2dim  = 0
+      fail_count_comp_q   = 0
 
-         e_threshold_lo = e_small * e_small_approx_p_lo
-         e_threshold_up = e_small * e_small_approx_p_up
+      e_threshold_lo = e_small * e_small_approx_p_lo
+      e_threshold_up = e_small * e_small_approx_p_up
 
-         fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
-         write (msg, *) "[cresp_grid:cresp_init_grid] 4/3 * sigma_T / ( me * c ) = ", fsynchr
-         if (master) call printinfo(msg)
+      fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
+      write (msg, *) "[cresp_grid:cresp_init_grid] 4/3 * sigma_T / ( me * c ) = ", fsynchr
+      if (master) call printinfo(msg)
+
+      if (hdf_save_fpq) then
+         call all_cg%reg_var(nam_cresp_f, dim4=ncre+1)
+         call all_cg%reg_var(nam_cresp_p, dim4=2)
+         call all_cg%reg_var(nam_cresp_q, dim4=ncre)
+      endif
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         cg%u(iarr_cre_n,:,:,:)  = 0.0
+         cg%u(iarr_cre_e,:,:,:)  = 0.0
 
          if (hdf_save_fpq) then
-            call all_cg%reg_var(nam_cresp_f, dim4=ncre+1)
-            call all_cg%reg_var(nam_cresp_p, dim4=2)
-            call all_cg%reg_var(nam_cresp_q, dim4=ncre)
+            cg%w(wna%ind(nam_cresp_f))%arr = 0.0
+            cg%w(wna%ind(nam_cresp_p))%arr = 0.0
+            cg%w(wna%ind(nam_cresp_q))%arr = 0.0
          endif
 
-         cgl => leaves%first
-         do while (associated(cgl))
-            cg => cgl%cg
+         cgl => cgl%nxt
+      enddo
 
-            cg%u(iarr_cre_n,:,:,:)  = 0.0
-            cg%u(iarr_cre_e,:,:,:)  = 0.0
+      call p_rch_init               !< sets the right pointer for p_rch function, based on used Taylor expansion coefficient
 
-            if (hdf_save_fpq) then
-               cg%w(wna%ind(nam_cresp_f))%arr = 0.0
-               cg%w(wna%ind(nam_cresp_p))%arr = 0.0
-               cg%w(wna%ind(nam_cresp_q))%arr = 0.0
-            endif
-            not_zeroed = .false.
+      call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e, f_init)   !< initialize spectrum here, f_init should be 1.0
 
-            cgl => cgl%nxt
-         enddo
-
-         call p_rch_init               !< sets the right pointer for p_rch function, based on used Taylor expansion coefficient
-
-         call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e, f_init)   !< initialize spectrum here, f_init should be 1.0
-
-         if (master) call printinfo(" [cresp_grid:cresp_init_grid] CRESP initialized")
-         first_run = .false.
-      endif
-      if (master) then
-         if (first_run)  call warn("[cresp_grid:cresp_init_grid] CRESP might not be initialized!")
-      endif
+      if (master) call printinfo(" [cresp_grid:cresp_init_grid] CRESP initialized")
 
    end subroutine cresp_init_grid
 
