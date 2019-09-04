@@ -145,8 +145,6 @@ contains
 
          call cg%set_constant_b_field([0., 0., 0.]) ! slight overkill at ydim for simplicity
 
-         call read_problem_par
-
          b0 = sqrt(2.*alpha*d0*fl%cs2)
 
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
