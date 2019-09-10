@@ -1,8 +1,8 @@
 For typical desktop installation you may need to add few packages to be able to compile and run Piernik.
 
 For Ubuntu try:
-    sudo apt install git make libhdf5-mpich-dev libfftw3-dev pkg-config
-You may use libhdf5-openmpi-dev if you prefer to.
+    sudo apt install git make mpich libhdf5-mpich-dev libfftw3-dev pkg-config
+You may use libhdf5-openmpi-dev and openmpi-bin if you prefer to.
 
 For Fedora try:
     sudo dnf install make hdf5-mpich-devel fftw-devel python environment-modules
