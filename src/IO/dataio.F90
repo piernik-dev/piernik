@@ -66,7 +66,7 @@ module dataio
    logical                  :: tsl_firstcall         !< logical value to start a new timeslice file
    logical                  :: tsl_with_mom          !< place momentum integrals in timeslice file
    logical                  :: tsl_with_ptc          !< place pressure, temperature and sound speed extrema in timeslice file (even if ISO while they are constant or only density dependent)
-   logical                  :: initial_hdf_dump      !< force initial hdf dump
+   logical                  :: init_hdf_dump, init_res_dump      !< force initial hdf/res dump
    logical, dimension(RES:TSL) :: dump = .false.     !< logical values for all dump types to restrict to only one dump of each type a step
 
 !   integer                  :: nchar                 !< number of characters in a user/system message
@@ -98,10 +98,9 @@ module dataio
 
    namelist /END_CONTROL/     nend, tend, wend
    namelist /RESTART_CONTROL/ restart, res_id, nrestart, resdel
-   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
-                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
-                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
-                              colormode, wdt_res, gdf_strict, h5_64bit
+   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
+                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
+                              use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict, h5_64bit
 
 contains
 
@@ -260,31 +259,32 @@ contains
 
       implicit none
 
-      problem_name = "nameless"
-      run_id       = "___"
-      restart      = 'last'   ! 'last': automatic choice of the last restart file regardless of "nrestart" value;
+      problem_name  = "nameless"
+      run_id        = "___"
+      restart       = 'last'   ! 'last': automatic choice of the last restart file regardless of "nrestart" value;
                               ! if something else is set: "nrestart" value is fixing
-      res_id       = ''
-      nrestart     = 3
-      resdel       = 0
+      res_id        = ''
+      nrestart      = 3
+      resdel        = 0
 
-      dt_hdf       = 0.0
-      dt_res       = 0.0
-      dt_tsl       = 0.0
-      dt_log       = 0.0
-      wdt_res      = 0.0
+      dt_hdf        = 0.0
+      dt_res        = 0.0
+      dt_tsl        = 0.0
+      dt_log        = 0.0
+      wdt_res       = 0.0
 
-      tsl_with_mom     = .true.
+      tsl_with_mom  = .true.
 #ifdef ISO
-      tsl_with_ptc     = .false.
+      tsl_with_ptc  = .false.
 #else /* !ISO */
-      tsl_with_ptc     = .true.
+      tsl_with_ptc  = .true.
 #endif /* !ISO */
-      initial_hdf_dump = .false.
+      init_hdf_dump = .false.
+      init_res_dump = .false.
 
-      domain_dump       = 'phys_domain'
-      vars(:)           = ''
-      mag_center        = .false.
+      domain_dump   = 'phys_domain'
+      vars(:)       = ''
+      mag_center    = .false.
       write(user_message_file,'(a,"/msg")') trim(wd_rd)
       system_message_file = "/tmp/piernik_msg"
 
@@ -303,7 +303,7 @@ contains
       wend = huge(1.0)
 
       colormode = .true.
-      h5_64bit = .false.
+      h5_64bit  = .false.
 
       if (master) then
 
@@ -382,10 +382,9 @@ contains
          ibuff(20) = nrestart
          ibuff(21) = resdel
 
-!   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
-!                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
-!                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
-!                              colormode, wdt_res, gdf_strict, h5_64bit
+!   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
+!                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
+!                              use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict, h5_64bit
          ibuff(43) = nproc_io
          ibuff(44) = gzip_level
 
@@ -401,12 +400,13 @@ contains
          lbuff(2)  = multiple_h5files
          lbuff(3)  = use_v2_io
          lbuff(4)  = mag_center
-         lbuff(5)  = initial_hdf_dump
-         lbuff(6)  = tsl_with_mom
-         lbuff(7)  = tsl_with_ptc
-         lbuff(8)  = colormode
-         lbuff(9)  = gdf_strict
-         lbuff(10) = h5_64bit
+         lbuff(5)  = init_hdf_dump
+         lbuff(6)  = init_res_dump
+         lbuff(7)  = tsl_with_mom
+         lbuff(8)  = tsl_with_ptc
+         lbuff(9)  = colormode
+         lbuff(10) = gdf_strict
+         lbuff(11) = h5_64bit
 
          cbuff(31) = problem_name
          cbuff(32) = run_id
@@ -441,10 +441,9 @@ contains
          nrestart            = int(ibuff(20), kind=4)
          resdel              = ibuff(21)
 
-!   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
-!                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
-!                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
-!                              colormode, wdt_res, gdf_strict
+!   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
+!                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
+!                              use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict
 
          nproc_io            = int(ibuff(43), kind=4)
          gzip_level          = int(ibuff(44), kind=4)
@@ -461,12 +460,13 @@ contains
          multiple_h5files    = lbuff(2)
          use_v2_io           = lbuff(3)
          mag_center          = lbuff(4)
-         initial_hdf_dump    = lbuff(5)
-         tsl_with_mom        = lbuff(6)
-         tsl_with_ptc        = lbuff(7)
-         colormode           = lbuff(8)
-         gdf_strict          = lbuff(9)
-         h5_64bit            = lbuff(10)
+         init_hdf_dump       = lbuff(5)
+         init_res_dump       = lbuff(6)
+         tsl_with_mom        = lbuff(7)
+         tsl_with_ptc        = lbuff(8)
+         colormode           = lbuff(9)
+         gdf_strict          = lbuff(10)
+         h5_64bit            = lbuff(11)
 
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)
@@ -489,7 +489,7 @@ contains
    subroutine init_dataio
 
       use constants,    only: PIERNIK_INIT_IO_IC
-      use dataio_pub,   only: code_progress, die, nres, nrestart, printinfo, warn
+      use dataio_pub,   only: code_progress, die, nres, nrestart, printinfo, restarted_sim, warn
       use domain,       only: dom
       use mpisetup,     only: master
       use timer,        only: walltime_end
@@ -532,7 +532,7 @@ contains
       call init_version
       if (master) then
          call printinfo("###############     Source configuration     ###############", .false.)
-         do i=1,nenv
+         do i = 1, nenv
             call printinfo(env(i), .false.)
          enddo
       endif
@@ -541,7 +541,7 @@ contains
 
       nres = nrestart
 
-      if (nrestart /= 0) then
+      if (restarted_sim) then
 #ifdef HDF5
          if (master) call printinfo("###############     Reading restart     ###############", .false.)
          call read_restart_hdf5
@@ -565,7 +565,7 @@ contains
 
    subroutine cleanup_dataio
 #ifdef HDF5
-      use common_hdf5,     only: cleanup_hdf5
+      use common_hdf5, only: cleanup_hdf5
 #endif /* HDF5 */
       implicit none
 
@@ -719,6 +719,7 @@ contains
       dump(TSL)  = (output == TSL  .or. output == FINAL_DUMP) ; if (dump(TSL))  call write_timeslice
 #ifdef HDF5
       call determine_dump(dump(RES), last_res_time, dt_res, output, RES)
+      call manage_hdf_dump(RES, dump(RES), output)
       if (dump(RES)) call write_restart_hdf5
 
       if (wdt_res > 0.0) then
@@ -731,7 +732,7 @@ contains
       endif
 
       call determine_dump(dump(HDF), last_hdf_time, dt_hdf, output, HDF)
-      call manage_hdf_dump(dump(HDF), output)
+      call manage_hdf_dump(HDF, dump(HDF), output)
       if (dump(HDF)) call write_hdf5
 #endif /* HDF5 */
       if (associated(user_post_write_data)) call user_post_write_data(output, dump)
@@ -758,16 +759,23 @@ contains
 
    end subroutine determine_dump
 
-   subroutine manage_hdf_dump(dmp, output)
+   subroutine manage_hdf_dump(dumptype, dmp, output)
 
-      use constants,    only: INCEPTIVE
+      use constants,  only: INCEPTIVE, HDF, RES
+      use dataio_pub, only: nres
 
       implicit none
 
-      integer(kind=4), intent(in)    :: output  !< type of output
-      logical,         intent(inout) :: dmp     !< perform I/O if True
+      integer(kind=4), intent(in)    :: dumptype !< type of dump
+      integer(kind=4), intent(in)    :: output   !< type of output call
+      logical,         intent(inout) :: dmp      !< perform I/O if True
 
-      if ((output == INCEPTIVE) .and. initial_hdf_dump) dmp = .true.  !< \todo problem_name may be enhanced by '_initial', but this and nhdf should be reverted just after write_hdf5 is called
+      if (output /= INCEPTIVE) return
+      if ((dumptype == HDF) .and. init_hdf_dump) dmp = .true.  !< \todo problem_name may be enhanced by '_initial', but this and nhdf should be reverted just after write_hdf5 is called
+      if ((dumptype == RES) .and. init_res_dump .and. nres == 0) then
+         dmp = .true.
+         nres = -1
+      endif
 
    end subroutine manage_hdf_dump
 
@@ -785,10 +793,10 @@ contains
 
    subroutine check_tsl
 
-      use mpisetup,   only: report_to_master
-      use mpisignals, only: sig
       use constants,  only: CHK
       use dataio_pub, only: last_tsl_time
+      use mpisetup,   only: report_to_master
+      use mpisignals, only: sig
 
       implicit none
 
@@ -809,8 +817,9 @@ contains
 #ifdef HDF5
    subroutine find_last_restart(restart_number)
 
-      use common_hdf5,   only: output_fname
-      use constants,     only: RD
+      use common_hdf5, only: output_fname
+      use constants,   only: RD
+      use dataio_pub,  only: restarted_sim
 
       implicit none
 
@@ -829,6 +838,7 @@ contains
          inquire(file = trim(output_fname(RD,'.res', nres)), exist = exist)
          if (exist) then
             restart_number = nres
+            restarted_sim = .true.
             return
          endif
       enddo
@@ -1108,9 +1118,9 @@ contains
 
    subroutine common_shout(pr, fluid, pres_tn, temp_tn, cs_tn)
 
-      use domain,      only: is_multicg
-      use fluidtypes,  only: phys_prop
-      use global,      only: use_fargo
+      use domain,     only: is_multicg
+      use fluidtypes, only: phys_prop
+      use global,     only: use_fargo
 
       implicit none
 
@@ -1649,11 +1659,11 @@ contains
 !-------------------------------------------------------------------------
 
 !> \todo process multiple commands at once
-      use constants,     only: cwdlen
-      use dataio_pub,    only: msg, printinfo, warn
-      use mpisetup,      only: master
+      use constants,  only: cwdlen
+      use dataio_pub, only: msg, printinfo, warn
+      use mpisetup,   only: master
 #if defined(__INTEL_COMPILER)
-      use ifposix,       only: pxfstat, pxfstructcreate, pxfintget, pxfstructfree
+      use ifposix,    only: pxfstat, pxfstructcreate, pxfintget, pxfstructfree
 #endif /* __INTEL_COMPILER */
 
       implicit none

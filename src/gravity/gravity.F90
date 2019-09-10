@@ -372,11 +372,11 @@ contains
 
    subroutine g_cg_init(cg)
 
-      use constants,          only: gp_n, gpot_n, hgpot_n, base_level_id
-      use grid_cont,          only: grid_container
-      use named_array_list,   only: qna
+      use constants,        only: gp_n, gpot_n, hgpot_n, base_level_id
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna
 #ifdef SELF_GRAV
-      use constants,          only: sgp_n, sgpm_n
+      use constants,        only: sgp_n, sgpm_n
 #endif /* SELF_GRAV */
 
       implicit none
@@ -405,11 +405,11 @@ contains
 !! \brief Collect gravitational terms depending on whether they are taken from restart file or not
 !! \todo check if source_terms_grav should be called here for restarted simulation or new (non-restarted) simulation with particles.
 !<
-   subroutine init_terms_grav(restarted_sim)
+   subroutine init_terms_grav
+
+      use dataio_pub, only: restarted_sim
 
       implicit none
-
-      logical, intent(in) :: restarted_sim
 
       if (restarted_sim) then
          if (.not.restart_gp) call grav_pot_3d
