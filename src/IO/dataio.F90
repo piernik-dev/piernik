@@ -164,7 +164,7 @@ contains
 
       use constants,  only: cwdlen, PIERNIK_INIT_MPI, INVALID
       use dataio_pub, only: nrestart, last_hdf_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
-           &                tmp_log_file, printinfo, printio, warn, msg, die, code_progress, log_wr, &
+           &                tmp_log_file, printinfo, printio, warn, msg, die, code_progress, log_wr, restarted_sim, &
            &                move_file, parfile, parfilelines, log_file, maxparfilelines, can_i_write, ierrh, par_file
       use mpisetup,   only: master, nproc, proc, piernik_MPI_Bcast, piernik_MPI_Barrier, FIRST, LAST
 
@@ -232,6 +232,7 @@ contains
 #endif /* HDF5 */
       call piernik_MPI_Barrier
       call piernik_MPI_Bcast(nrestart)
+      call piernik_MPI_Bcast(restarted_sim)
 
       if (master) then
          write(log_file,'(6a,i3.3,a)') trim(log_wr),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
