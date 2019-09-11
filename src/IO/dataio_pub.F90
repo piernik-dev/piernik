@@ -106,7 +106,8 @@ module dataio_pub
    logical, save               :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
    logical, save               :: log_file_initialized = .false. !< logical to mark initialization of logfile
    logical, save               :: log_file_opened = .false.      !< logical to mark opening of logfile
-   integer(kind=4), save       :: require_problem_IC = 0          !< 1 will call initproblem::problem_initial_conditions on restart
+   logical, save               :: restarted_sim = .false.        !< logical to distinguish between new and restarted simulation
+   integer(kind=4), save       :: require_problem_IC = 0         !< 1 will call initproblem::problem_initial_conditions on restart
 
    logical                     :: vizit = .false.                !< perform "live" visualization using pgplot
    logical                     :: multiple_h5files = .false.     !< write one HDF5 file per proc
