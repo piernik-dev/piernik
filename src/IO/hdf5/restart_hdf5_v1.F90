@@ -502,6 +502,9 @@ contains
       real,            dimension(1)            :: rbuf
       real,            dimension(flind%fluids) :: rbufm
       integer(kind=4), dimension(1)            :: ibuf
+#ifdef RANDOMIZE
+      integer,         dimension(seed_size)    :: ibufs
+#endif /* RANDOMIZE */
 
       real                                     :: restart_hdf5_version
 
@@ -609,7 +612,7 @@ contains
          call h5ltget_attribute_int_f(file_id,"/","nres",  ibuf, error) ; nres  = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nhdf",  ibuf, error) ; nhdf  = ibuf(1)
 #ifdef RANDOMIZE
-         call h5ltget_attribute_int_f(file_id,"/","current_seed", ibuf, error) ; initseed = ibuf(:seed_size)
+         call h5ltget_attribute_int_f(file_id,"/","current_seed", ibufs, error) ; initseed = ibufs(:)
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
          call h5ltget_attribute_int_f(file_id,"/","nsn", ibuf, error) ; nsn = ibuf(1)

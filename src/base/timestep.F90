@@ -160,11 +160,6 @@ contains
          dt = min(dt, dt_crs)
 #endif /* COSM_RAYS */
 
-#ifdef RESISTIVE
-         call timestep_resist(cg)
-         dt = min(dt, dt_resist)
-#endif /* RESISTIVE */
-
          call timestep_sources(dt, cg)
 
          if (use_fargo) dt = min(dt, timestep_fargo(cg, dt))
@@ -175,6 +170,10 @@ contains
          call cresp_timestep
          dt = min(dt, dt_cre)
 #endif /* COSM_RAY_ELECTRONS */
+#ifdef RESISTIVE
+         call timestep_resist
+         dt = min(dt, dt_resist)
+#endif /* RESISTIVE */
 
       call piernik_MPI_Allreduce(dt,    pMIN)
       call piernik_MPI_Allreduce(c_all, pMAX)

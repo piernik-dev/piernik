@@ -123,8 +123,6 @@ contains
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
 
-      call read_problem_par
-
 !   Secondary parameters
       fl => flind%ion
 
