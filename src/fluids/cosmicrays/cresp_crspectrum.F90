@@ -278,7 +278,7 @@ contains
             call transfer_quantities(edt(i_up_next-1),edt(i_up_next))
          endif
       endif
-      if ((del_i_lo .eq. 0) .and. (approx_p_lo .gt. 0)) then
+      if ((del_i_lo .eq. 0) .and. (approx_p_lo .gt. 0) .and. (i_lo_next+2 .le. ncre)) then
          if (.not. assert_active_bin_via_nei(ndt(i_lo_next+1), edt(i_lo_next+1), i_lo_next)) then
             call transfer_quantities(ndt(i_lo_next+2),ndt(i_lo_next+1))
             call transfer_quantities(edt(i_lo_next+2),edt(i_lo_next+1))
