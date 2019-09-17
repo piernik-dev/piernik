@@ -120,7 +120,7 @@ contains
 #endif /* CRESP_VERBOSED */
       use diagnostics,    only: decr_vec
       use initcosmicrays, only: ncre
-      use initcrspectrum, only: spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, crel, p_mid_fix, nullify_empty_bins, p_fix
+      use initcrspectrum, only: spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, hdf_save_fpq, crel, p_mid_fix, nullify_empty_bins, p_fix
 
       implicit none
 
@@ -156,13 +156,15 @@ contains
       else
          p_lo = zero
          p_up = zero
-         crel%p = zero
-         crel%f = zero
-         crel%q = zero
-         crel%e = zero
-         crel%n = zero
-         crel%i_lo = 0
-         crel%i_up = ncre
+         if (hdf_save_fpq) then
+            crel%p = zero
+            crel%f = zero
+            crel%q = zero
+            crel%e = zero
+            crel%n = zero
+            crel%i_lo = 0
+            crel%i_up = ncre
+         endif
       endif
 
       call cresp_find_prepare_spectrum(n_inout, e_inout, empty_cell)
@@ -337,14 +339,17 @@ contains
       n_tot = sum(n)
       e_tot = sum(e)
 
-      crel%p = p
-      crel%f = f
-      crel%q = q
-      crel%e = e
-      crel%n = n
-      crel%i_lo = i_lo
-      crel%i_up = i_up
 ! --- saving the data to output arrays
+      if (hdf_save_fpq) then
+         crel%p = p
+         crel%f = f
+         crel%q = q
+         crel%e = e
+         crel%n = n
+         crel%i_lo = i_lo
+         crel%i_up = i_up
+      endif
+
       n_inout  = n  ! number density of electrons per bin passed back to the external module
       e_inout  = e  ! energy density of electrons per bin passed back to the external module
 
@@ -908,7 +913,7 @@ contains
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
       use initcrspectrum,  only: spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, eps, p_fix, w,   &
-                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, crel, p_br_init_up, &
+                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, hdf_save_fpq, crel, p_br_init_up, &
                               &  e_small_approx_p_up, total_init_cree, e_small, cresp_all_bins, q_br_init, p_br_init_lo
       use mpisetup,        only: master
 
@@ -1113,13 +1118,15 @@ contains
          n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
       endif
 
-      crel%p = p
-      crel%f = f
-      crel%q = q
-      crel%e = e
-      crel%n = n
-      crel%i_lo = i_lo
-      crel%i_up = i_up
+      if (hdf_save_fpq) then
+         crel%p = p
+         crel%f = f
+         crel%q = q
+         crel%e = e
+         crel%n = n
+         crel%i_lo = i_lo
+         crel%i_up = i_up
+      endif
 
       if ( e_small_approx_init_cond .gt. 0) then
          call get_fqp_lo(exit_code)
@@ -1186,13 +1193,15 @@ contains
             e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins) ! once again we must count n and e
             n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
 
-            crel%p = p
-            crel%f = f
-            crel%q = q
-            crel%e = e
-            crel%n = n
-            crel%i_lo = i_lo
-            crel%i_up = i_up
+            if (hdf_save_fpq) then
+               crel%p = p
+               crel%f = f
+               crel%q = q
+               crel%e = e
+               crel%n = n
+               crel%i_lo = i_lo
+               crel%i_up = i_up
+            endif
          endif
       endif
 

@@ -587,30 +587,32 @@ module initcrspectrum
 
       implicit none
 
-      if (.not. allocated(crel%p)) call my_allocate_with_index(crel%p,ncre,0)
-      if (.not. allocated(crel%f)) call my_allocate_with_index(crel%f,ncre,0)
-      if (.not. allocated(crel%q)) call my_allocate_with_index(crel%q,ncre,1)
-      if (.not. allocated(crel%n)) call my_allocate_with_index(crel%n,ncre,1)
-      if (.not. allocated(crel%e)) call my_allocate_with_index(crel%e,ncre,1)
-
       if (.not. allocated(cresp%n)) call my_allocate_with_index(cresp%n,ncre,1)
       if (.not. allocated(cresp%e)) call my_allocate_with_index(cresp%e,ncre,1)
       if (.not. allocated(norm_init_spectrum%n)) call my_allocate_with_index(norm_init_spectrum%n,ncre,1)
       if (.not. allocated(norm_init_spectrum%e)) call my_allocate_with_index(norm_init_spectrum%e,ncre,1)
-
-      crel%p = zero
-      crel%q = zero
-      crel%f = zero
-      crel%e = zero
-      crel%n = zero
-      crel%i_lo = I_ZERO
-      crel%i_up = I_ZERO
 
       cresp%e = zero
       cresp%n = zero
 
       norm_init_spectrum%n = zero
       norm_init_spectrum%e = zero
+
+      if (hdf_save_fpq) then
+         if (.not. allocated(crel%p)) call my_allocate_with_index(crel%p,ncre,0)
+         if (.not. allocated(crel%f)) call my_allocate_with_index(crel%f,ncre,0)
+         if (.not. allocated(crel%q)) call my_allocate_with_index(crel%q,ncre,1)
+         if (.not. allocated(crel%n)) call my_allocate_with_index(crel%n,ncre,1)
+         if (.not. allocated(crel%e)) call my_allocate_with_index(crel%e,ncre,1)
+
+         crel%p = zero
+         crel%q = zero
+         crel%f = zero
+         crel%e = zero
+         crel%n = zero
+         crel%i_lo = I_ZERO
+         crel%i_up = I_ZERO
+      endif
 
    end subroutine init_cresp_types
 
@@ -651,11 +653,14 @@ module initcrspectrum
       if (allocated(p_mid_fix)) call my_deallocate(p_mid_fix)
       if (allocated(cresp_all_edges)) call my_deallocate(cresp_all_edges)
       if (allocated(cresp_all_bins )) call my_deallocate(cresp_all_bins)
-      if (allocated(crel%p))  call my_deallocate(crel%p)
-      if (allocated(crel%f)) call my_deallocate(crel%f)
-      if (allocated(crel%q)) call my_deallocate(crel%q)
-      if (allocated(crel%e)) call my_deallocate(crel%e)
-      if (allocated(crel%n)) call my_deallocate(crel%n)
+
+      if (hdf_save_fpq) then
+         if (allocated(crel%p)) call my_deallocate(crel%p)
+         if (allocated(crel%f)) call my_deallocate(crel%f)
+         if (allocated(crel%q)) call my_deallocate(crel%q)
+         if (allocated(crel%e)) call my_deallocate(crel%e)
+         if (allocated(crel%n)) call my_deallocate(crel%n)
+      endif
 
    end subroutine cleanup_cresp_work_arrays
 
