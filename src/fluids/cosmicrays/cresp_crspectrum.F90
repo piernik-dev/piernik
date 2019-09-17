@@ -1021,7 +1021,6 @@ contains
          enddo
          e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
          n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-         call sleep(1)
       endif
 
       if (initial_condition == 'plpc') then
@@ -1066,7 +1065,6 @@ contains
 
          e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
          n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-         call sleep(1)
 
       endif
 
@@ -1410,7 +1408,6 @@ contains
             call printinfo(msg)
          else
             call warn(msg)
-            call sleep(1)
          endif
       endif
 

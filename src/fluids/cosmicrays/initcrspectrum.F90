@@ -412,7 +412,6 @@ module initcrspectrum
             e_small_approx_init_cond = 1  !
             write (msg,'(A)') "[initcrspectrum:init_cresp] Approximation of boundary momenta is active -> modifying e_small_approx_init_cond to 1."
             if (master) call warn(msg)
-            call sleep(1)
          endif
 
          if (master .and. hdf_save_fpq) then

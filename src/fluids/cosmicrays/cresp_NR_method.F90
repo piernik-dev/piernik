@@ -499,8 +499,6 @@ contains
 
       call assoc_pointers(bound_case)
 
-      call sleep(1)
-
       fill_p = zero ; fill_f = zero
       x_step = zero
 
