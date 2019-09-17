@@ -1131,20 +1131,16 @@ contains
       crel%i_up = i_up
 
       if ( e_small_approx_init_cond .gt. 0) then
-         if ( (approx_p_lo + e_small_approx_init_cond) .gt. 0 ) then
-            call get_fqp_lo(exit_code)
-            if (exit_code) then
-               write(msg,*) "[cresp_crspectrum:cresp_init_state] approx_p_lo = 1, but solution for initial spectrum lower cutoff not found, exiting! "
-               call die(msg)
-            endif
+         call get_fqp_lo(exit_code)
+         if (exit_code) then
+            write(msg,*) "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but solution for initial spectrum lower cutoff not found, exiting! "
+            call die(msg)
          endif
 
-         if ( (approx_p_up + e_small_approx_init_cond) .gt. 0 ) then
-            call get_fqp_up(exit_code)
-            if (exit_code) then
-               write(msg,*) "[cresp_crspectrum:cresp_init_state] approx_p_up = 1, but solution for initial spectrum upper cutoff not found, exiting! "
-               call die(msg)
-            endif
+         call get_fqp_up(exit_code)
+         if (exit_code) then
+            write(msg,*) "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but solution for initial spectrum upper cutoff not found, exiting! "
+            call die(msg)
          endif
 
          if (allow_source_spectrum_break) then
