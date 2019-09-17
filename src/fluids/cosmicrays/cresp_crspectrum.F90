@@ -81,10 +81,6 @@ module cresp_crspectrum
 ! precision control for energy / number density transport and dissipation of energy
    real(kind=8)                            :: n_tot, n_tot0, e_tot, e_tot0
 
-! terms for energy dissipation tests
-   real(kind=8)                            :: u_d_0
-   real(kind=8)                            :: u_b_0
-
 ! in-algorithm energy dissipation terms
    real(kind=8)                            :: u_b, u_d
 
@@ -935,9 +931,6 @@ contains
 
       init_e = zero
       init_n = zero
-
-      if (present(sptab)) u_b_0 = u_b
-      if (present(sptab)) u_d_0 = u_d
 
       f = zero ; q = zero ; p = zero ; n = zero ; e = zero
 
