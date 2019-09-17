@@ -46,6 +46,78 @@ module cresp_grid
 
    contains
 
+!----------------------------------------------------------------------------------------------------
+
+   subroutine cresp_init_grid
+
+      use cg_leaves,          only: leaves
+      use cg_list,            only: cg_list_element
+      use cg_list_global,     only: all_cg
+      use cresp_crspectrum,   only: cresp_allocate_all, e_threshold_lo, e_threshold_up, fail_count_interpol, &
+                              &     fail_count_NR_2dim, fail_count_comp_q, cresp_init_state, p_rch_init
+      use cresp_NR_method,    only: cresp_initialize_guess_grids
+      use dataio_pub,         only: warn, printinfo, msg
+      use grid_cont,          only: grid_container
+      use initcosmicrays,     only: iarr_cre_n, iarr_cre_e, ncre
+      use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, f_init, &
+                                    hdf_save_fpq, nam_cresp_f, nam_cresp_p, nam_cresp_q
+      use mpisetup,           only: master
+      use named_array_list,   only: wna
+      use units,              only: clight, me, sigma_T
+
+      implicit none
+
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
+
+      register_f = .false.
+      register_p = .false.
+      register_q = .false.
+
+      call cresp_initialize_guess_grids
+      call cresp_allocate_all
+
+      fail_count_interpol = 0
+      fail_count_NR_2dim  = 0
+      fail_count_comp_q   = 0
+
+      e_threshold_lo = e_small * e_small_approx_p_lo
+      e_threshold_up = e_small * e_small_approx_p_up
+
+      fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
+      write (msg, *) "[cresp_grid:cresp_init_grid] 4/3 * sigma_T / ( me * c ) = ", fsynchr
+      if (master) call printinfo(msg)
+
+      if (hdf_save_fpq) then
+         call all_cg%reg_var(nam_cresp_f, dim4=ncre+1)
+         call all_cg%reg_var(nam_cresp_p, dim4=2)
+         call all_cg%reg_var(nam_cresp_q, dim4=ncre)
+      endif
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         cg%u(iarr_cre_n,:,:,:)  = 0.0
+         cg%u(iarr_cre_e,:,:,:)  = 0.0
+
+         if (hdf_save_fpq) then
+            cg%w(wna%ind(nam_cresp_f))%arr = 0.0
+            cg%w(wna%ind(nam_cresp_p))%arr = 0.0
+            cg%w(wna%ind(nam_cresp_q))%arr = 0.0
+         endif
+
+         cgl => cgl%nxt
+      enddo
+
+      call p_rch_init               !< sets the right pointer for p_rch function, based on used Taylor expansion coefficient
+
+      call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e, f_init)   !< initialize spectrum here, f_init should be 1.0
+
+      if (master) call printinfo(" [cresp_grid:cresp_init_grid] CRESP initialized")
+
+   end subroutine cresp_init_grid
+
    subroutine cresp_update_grid
 
       use cg_leaves,        only: leaves
@@ -155,109 +227,5 @@ module cresp_grid
       endif
 
    end subroutine cresp_clean_grid
-
-!----------------------------------------------------------------------------------------------------
-
-   subroutine cresp_init_grid
-
-      use cg_leaves,          only: leaves
-      use cg_list,            only: cg_list_element
-      use cg_list_global,     only: all_cg
-      use cresp_crspectrum,   only: cresp_allocate_all, e_threshold_lo, e_threshold_up, fail_count_interpol, &
-                              &     fail_count_NR_2dim, fail_count_comp_q, cresp_init_state, p_rch_init
-      use cresp_NR_method,    only: cresp_initialize_guess_grids
-      use dataio_pub,         only: warn, printinfo, msg
-      use grid_cont,          only: grid_container
-      use initcosmicrays,     only: iarr_cre_n, iarr_cre_e, ncre
-      use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, f_init, &
-                                    hdf_save_fpq, nam_cresp_f, nam_cresp_p, nam_cresp_q
-      use mpisetup,           only: master
-      use named_array_list,   only: wna
-      use units,              only: clight, me, sigma_T
-
-      implicit none
-
-      type(cg_list_element),  pointer :: cgl
-      type(grid_container),   pointer :: cg
-
-      register_f = .false.
-      register_p = .false.
-      register_q = .false.
-
-      call cresp_initialize_guess_grids
-      call cresp_allocate_all
-
-      fail_count_interpol = 0
-      fail_count_NR_2dim  = 0
-      fail_count_comp_q   = 0
-
-      e_threshold_lo = e_small * e_small_approx_p_lo
-      e_threshold_up = e_small * e_small_approx_p_up
-
-      fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
-      write (msg, *) "[cresp_grid:cresp_init_grid] 4/3 * sigma_T / ( me * c ) = ", fsynchr
-      if (master) call printinfo(msg)
-
-      if (hdf_save_fpq) then
-         call all_cg%reg_var(nam_cresp_f, dim4=ncre+1)
-         call all_cg%reg_var(nam_cresp_p, dim4=2)
-         call all_cg%reg_var(nam_cresp_q, dim4=ncre)
-      endif
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-
-         cg%u(iarr_cre_n,:,:,:)  = 0.0
-         cg%u(iarr_cre_e,:,:,:)  = 0.0
-
-         if (hdf_save_fpq) then
-            cg%w(wna%ind(nam_cresp_f))%arr = 0.0
-            cg%w(wna%ind(nam_cresp_p))%arr = 0.0
-            cg%w(wna%ind(nam_cresp_q))%arr = 0.0
-         endif
-
-         cgl => cgl%nxt
-      enddo
-
-      call p_rch_init               !< sets the right pointer for p_rch function, based on used Taylor expansion coefficient
-
-      call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e, f_init)   !< initialize spectrum here, f_init should be 1.0
-
-      if (master) call printinfo(" [cresp_grid:cresp_init_grid] CRESP initialized")
-
-   end subroutine cresp_init_grid
-
-!----------------------------------------------------------------------------------------------------
-
-   subroutine append_dissipative_terms(i,j,k) ! To be fixed
-
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim
-      use crhelpers,        only: divv_n
-      use func,             only: emag
-      use grid_cont,        only: grid_container
-      use initcrspectrum,   only: spec_mod_trms
-      use named_array_list, only: qna
-
-      implicit none
-
-      type(spec_mod_trms)            :: sptab
-      type(grid_container),  pointer :: cg
-      type(cg_list_element), pointer :: cgl
-      integer                        :: i,j,k
-!Below - magnetic energy density and velocity divergence values are passed to sptab
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
-         sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
-         sptab%ucmb = 0.0 ! Not included yet
-         cgl =>cgl%nxt
-      enddo
-
-   end subroutine append_dissipative_terms
 
 end module cresp_grid
