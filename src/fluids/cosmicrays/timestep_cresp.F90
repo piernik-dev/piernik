@@ -42,25 +42,6 @@ module timestep_cresp
 
 contains
 
-   real function assume_p_up(cell_i_up)
-
-      use initcosmicrays, only: ncre
-      use initcrspectrum, only: p_fix, p_mid_fix
-
-      implicit none
-
-      integer(kind=4), intent(in) :: cell_i_up
-
-      if (cell_i_up .eq. ncre) then
-         assume_p_up = p_mid_fix(ncre) ! for i = 0 & ncre p_fix(i) = 0.0
-      else
-         assume_p_up = p_fix(cell_i_up)
-      endif
-
-   end function assume_p_up
-
-!----------------------------------------------------------------------------------------------------
-
    subroutine cresp_timestep
 
       use all_boundaries,   only: all_fluid_boundaries
@@ -110,7 +91,7 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0 ; empty_cell = .false.
+                  sptab%ud = zero ; sptab%ub = zero ; sptab%ucmb = zero ; empty_cell = .false.
                   sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr
                   cresp%n = cg%u(iarr_cre_n, i, j, k)
                   cresp%e = cg%u(iarr_cre_e, i, j, k)
@@ -128,7 +109,7 @@ contains
       if (adiab_active) call cresp_timestep_adiabatic(abs_max_ud)
 
       K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
-      if (K_cre_max_sum > 0) then                                  ! K_cre dependent on momentum - maximal for highest bin number
+      if (K_cre_max_sum > zero) then                               ! K_cre dependent on momentum - maximal for highest bin number
          dt_cre_K = cfl_cr * half / K_cre_max_sum                  ! We use cfl_cr here (CFL number for diffusive CR transport), cfl_cre used only for spectrum evolution
          if (cg%dxmn < sqrt(big)/dt_cre_K) dt_cre_K = dt_cre_K * cg%dxmn**2
       endif
@@ -151,7 +132,7 @@ contains
 
       real, intent(in) :: u_d_abs    ! assumes that u_d > 0 always
 
-      if (u_d_abs .gt. eps) dt_cre_adiab = cfl_cre * three * logten * w / u_d_abs
+      if (u_d_abs > eps) dt_cre_adiab = cfl_cre * three * logten * w / u_d_abs
 
    end subroutine cresp_timestep_adiabatic
 
@@ -169,11 +150,30 @@ contains
       real                        :: dt_cre_ub
 
  ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
-      if (u_b .gt. zero) then
+      if (u_b > zero) then
          dt_cre_ub = cfl_cre * w / (assume_p_up(i_up_cell) * u_b)
          dt_cre_synch = min(dt_cre_ub, dt_cre_synch)    ! remember to max dt_cre_synch at the beginning of the search
       endif
 
    end subroutine cresp_timestep_synchrotron
+
+!----------------------------------------------------------------------------------------------------
+
+   real function assume_p_up(cell_i_up)
+
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: p_fix, p_mid_fix
+
+      implicit none
+
+      integer(kind=4), intent(in) :: cell_i_up
+
+      if (cell_i_up == ncre) then
+         assume_p_up = p_mid_fix(ncre) ! for i = 0 & ncre p_fix(i) = 0.0
+      else
+         assume_p_up = p_fix(cell_i_up)
+      endif
+
+   end function assume_p_up
 
 end module timestep_cresp
