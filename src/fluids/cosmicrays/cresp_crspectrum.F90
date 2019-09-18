@@ -1003,7 +1003,7 @@ contains
       f = zero
       f = f_amplitude * (p/p_lo_init)**(-q_init)
 
-      if (initial_condition == "powl") call cresp_init_powl_spectrum(n, e, f_amplitude, q_init, p_lo_init, p_up_init)
+      if (initial_condition == "powl") call cresp_init_powl_spectrum(f_amplitude)
 
       if (initial_condition == 'brpg') call cresp_init_brpg_spectrum
 
@@ -1120,48 +1120,44 @@ contains
 !>
 !! \brief Assumes power-law spectrum, without breaks. In principle the same thing is done in cresp_init_state, but init_state cannot be called from "outside".
 !<
-   subroutine cresp_init_powl_spectrum(n_inout, e_inout, f_in, q_in, p_dist_lo, p_dist_up)
+   subroutine cresp_init_powl_spectrum(f_in)
 
       use constants,      only: zero
       use diagnostics,    only: my_deallocate
       use initcosmicrays, only: ncre
-      use initcrspectrum, only: p_fix, w, cresp_all_bins, cresp_all_edges
+      use initcrspectrum, only: p_fix, w, cresp_all_bins, cresp_all_edges, q_init, p_lo_init, p_up_init
 
       implicit none
 
-      real(kind=8), dimension(1:ncre), intent(inout) :: n_inout, e_inout
-      real(kind=8),                    intent(in)    :: f_in, q_in, p_dist_lo, p_dist_up
-      real(kind=8), dimension(1:ncre)                :: n_add, e_add, q_add
-      real(kind=8), dimension(0:ncre)                :: p_range_add , f_add
-      integer(kind=4), allocatable, dimension(:)     :: act_bins, act_edges
-      integer(kind=4)                                :: i_l, i_u
+      real(kind=8),                   intent(in) :: f_in
+      real(kind=8), dimension(1:ncre)            :: q_add
+      real(kind=8), dimension(0:ncre)            :: p_range_add , f_add
+      integer(kind=4), allocatable, dimension(:) :: act_bins, act_edges
+      integer(kind=4)                            :: i_l, i_u
 
-      n_add = zero  ; e_add = zero  ; q_add = zero  ; f_add = zero  ; p_range_add = zero
+      q_add = zero  ; f_add = zero  ; p_range_add = zero
 
-      i_l = int(floor(log10(p_dist_lo/p_fix(1))/w)) + 1
+      i_l = int(floor(log10(p_lo_init/p_fix(1))/w)) + 1
       i_l = max(0, i_l)
       i_l = min(i_l, ncre - 1)
 
-      i_u = int(floor(log10(p_dist_up/p_fix(1))/w)) + 2
+      i_u = int(floor(log10(p_up_init/p_fix(1))/w)) + 2
       i_u = max(1,i_u)
       i_u = min(i_u,ncre)
 
       p_range_add(i_l:i_u) = p_fix(i_l:i_u)
-      p_range_add(i_l) = p_dist_lo
-      p_range_add(i_u) = p_dist_up
+      p_range_add(i_l) = p_lo_init
+      p_range_add(i_u) = p_up_init
       if (.not.allocated(act_edges)) allocate(act_edges(i_u - i_l  ))
       if (.not.allocated(act_bins )) allocate( act_bins(i_u - i_l+1))
       act_edges =  cresp_all_edges(i_l  :i_u)
       act_bins  =   cresp_all_bins(i_l+1:i_u)
-      q_add(act_bins) = q_in
+      q_add(act_bins) = q_init
 
-      f_add(act_edges) = f_in * (p_range_add(act_edges)/p_dist_lo)**(-q_in)
+      f_add(act_edges) = f_in * (p_range_add(act_edges)/p_lo_init)**(-q_init)
 
-      n_add = fq_to_n(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
-      e_add = fq_to_e(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
-
-      n_inout = n_inout + n_add
-      e_inout = e_inout + e_add
+      n = n + fq_to_n(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
+      e = e + fq_to_e(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
 
       call my_deallocate(act_bins)
       call my_deallocate(act_edges)
