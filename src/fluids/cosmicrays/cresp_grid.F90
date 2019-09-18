@@ -33,15 +33,12 @@
 module cresp_grid
 ! pulled by COSM_RAY_ELECTRONS
 
-   use global,         only: dt, t
-   use initcosmicrays, only: iarr_cre_e, iarr_cre_n
-
    implicit none
 
    private
    public :: cresp_update_grid, cresp_init_grid, cfl_cresp_violation, cresp_clean_grid
 
-   logical      :: cfl_cresp_violation, register_p, register_q, register_f
+   logical :: cfl_cresp_violation
 
    contains
 
@@ -49,29 +46,25 @@ module cresp_grid
 
    subroutine cresp_init_grid
 
-      use cg_leaves,          only: leaves
-      use cg_list,            only: cg_list_element
-      use cg_list_global,     only: all_cg
-      use cresp_crspectrum,   only: cresp_allocate_all, e_threshold_lo, e_threshold_up, fail_count_interpol, &
-                              &     fail_count_NR_2dim, fail_count_comp_q, cresp_init_state, p_rch_init
-      use cresp_NR_method,    only: cresp_initialize_guess_grids
-      use dataio,             only: vars
-      use dataio_pub,         only: printinfo
-      use grid_cont,          only: grid_container
-      use initcosmicrays,     only: iarr_cre_n, iarr_cre_e, ncre
-      use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, f_init, &
-                                    dump_fpq, nam_cresp_f, nam_cresp_p, nam_cresp_q, check_if_dump_fpq, dump_f, dump_p, dump_q
-      use mpisetup,           only: master
-      use named_array_list,   only: wna
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use cg_list_global,   only: all_cg
+      use cresp_crspectrum, only: cresp_allocate_all, e_threshold_lo, e_threshold_up, fail_count_interpol, &
+                              &   fail_count_NR_2dim, fail_count_comp_q, cresp_init_state, p_rch_init
+      use cresp_NR_method,  only: cresp_initialize_guess_grids
+      use dataio,           only: vars
+      use dataio_pub,       only: printinfo
+      use grid_cont,        only: grid_container
+      use initcosmicrays,   only: iarr_cre_n, iarr_cre_e, ncre
+      use initcrspectrum,   only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, f_init, &
+                              &   dump_fpq, nam_cresp_f, nam_cresp_p, nam_cresp_q, check_if_dump_fpq, dump_f, dump_p, dump_q
+      use mpisetup,         only: master
+      use named_array_list, only: wna
 
       implicit none
 
-      type(cg_list_element),  pointer :: cgl
-      type(grid_container),   pointer :: cg
-
-      register_f = .false.
-      register_p = .false.
-      register_q = .false.
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg
 
       call cresp_initialize_guess_grids
       call cresp_allocate_all
@@ -123,7 +116,9 @@ module cresp_grid
       use cresp_crspectrum, only: cresp_update_cell
       use crhelpers,        only: divv_n
       use func,             only: emag
+      use global,           only: dt
       use grid_cont,        only: grid_container
+      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, nam_cresp_f, nam_cresp_p, nam_cresp_q, dump_fpq, dump_f, dump_p, dump_q, fsynchr
       use named_array,      only: p4
       use named_array_list, only: qna, wna
@@ -138,7 +133,6 @@ module cresp_grid
       type(grid_container), pointer  :: cg
       type(spec_mod_trms)            :: sptab
 
-      i = 0; j = 0;  k = 0
       cgl => leaves%first
       cfl_cresp_violation = .false.
 
@@ -160,7 +154,7 @@ module cresp_grid
 #ifdef DEBUG
                   call cresp_detect_negative_content([i, j, k])
 #endif /* DEBUG */
-                  if ( cfl_cresp_violation ) return ! nothing to do here!
+                  if (cfl_cresp_violation) return ! nothing to do here!
                   p4(iarr_cre_n, i, j, k) = cresp%n
                   p4(iarr_cre_e, i, j, k) = cresp%e
                   if (dump_fpq) then
@@ -186,42 +180,42 @@ module cresp_grid
       use cg_list,          only: cg_list_element
       use cresp_crspectrum, only: detect_clean_spectrum
       use grid_cont,        only: grid_container
+      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: cresp, nullify_empty_bins
       use named_array,      only: p4
       use named_array_list, only: wna
 
       implicit none
 
-      integer                         :: i, j, k
-      type(cg_list_element),  pointer :: cgl
-      type(grid_container),   pointer :: cg
-      logical                         :: empty_cell
+      integer                        :: i, j, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg
+      logical                        :: empty_cell
 
-      if (nullify_empty_bins) then ! else nothing is done here
-         i = 0; j = 0;  k = 0
-         cgl => leaves%first
-         do while (associated(cgl))
-            cg => cgl%cg
-            p4 => cg%w(wna%fi)%arr
-            do k = cg%ks, cg%ke
-               do j = cg%js, cg%je
-                  do i = cg%is, cg%ie
-                     cresp%n    = p4(iarr_cre_n, i, j, k)
-                     cresp%e    = p4(iarr_cre_e, i, j, k)
-                     empty_cell = .true.
+      if (.not.nullify_empty_bins) return
 
-                     call detect_clean_spectrum(cresp%n, cresp%e, empty_cell)
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         p4 => cg%w(wna%fi)%arr
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
+                  cresp%n    = p4(iarr_cre_n, i, j, k)
+                  cresp%e    = p4(iarr_cre_e, i, j, k)
+                  empty_cell = .true.
 
-                     p4(iarr_cre_n, i, j, k) = cresp%n
-                     p4(iarr_cre_e, i, j, k) = cresp%e
-                  enddo
+                  call detect_clean_spectrum(cresp%n, cresp%e, empty_cell)
+
+                  p4(iarr_cre_n, i, j, k) = cresp%n
+                  p4(iarr_cre_e, i, j, k) = cresp%e
                enddo
             enddo
-            cg%u(iarr_cre_n, :,:,:) = p4(iarr_cre_n, :,:,:)
-            cg%u(iarr_cre_e, :,:,:) = p4(iarr_cre_e, :,:,:)
-            cgl=>cgl%nxt
          enddo
-      endif
+         cg%u(iarr_cre_n, :,:,:) = p4(iarr_cre_n, :,:,:)
+         cg%u(iarr_cre_e, :,:,:) = p4(iarr_cre_e, :,:,:)
+         cgl=>cgl%nxt
+      enddo
 
    end subroutine cresp_clean_grid
 
