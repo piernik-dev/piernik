@@ -907,9 +907,8 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_init_state(init_n, init_e, f_amplitude, sptab)
 
-      use constants, only: zero, I_ONE, fpi, three
+      use constants, only: zero, I_ONE, three
       use cresp_NR_method, only: e_small_to_f
-      use cresp_variables, only: clight_cresp
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
       use initcrspectrum,  only: spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, eps, p_fix, w,   &
@@ -1014,18 +1013,9 @@ contains
 
       if (initial_condition == 'symf') call cresp_init_symf_spectrum
 
-     if (initial_condition == 'syme' ) call cresp_init_syme_spectrum
+      if (initial_condition == 'syme') call cresp_init_syme_spectrum
 
-     if (initial_condition == 'bump') then  ! TODO - @cresp_grid energy normalization and integral to scale cosmic ray electrons with nucleon energy density!
-! Gaussian bump-type initial condition for energy distribution
-         f = f_amplitude * exp(-(4*log(2.0)*log(p/sqrt(p_lo_init*p_up_init/1.))**2)) ! FWHM
-         f(0:ncre-1) = f(0:ncre-1) / (fpi * clight_cresp * p(0:ncre-1)**3) ! without this spectrum is gaussian for distribution function
-         do i=1, ncre
-            q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i)) !-log(f(i)/f(i-1))/log(p(i)/p(i-1))
-         enddo
-         e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-         n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-      endif
+      if (initial_condition == 'bump') call cresp_init_bump_spectrum(f_amplitude)
 
       if (dump_fpq) then
          crel%p = p
@@ -1356,6 +1346,32 @@ contains
       n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
 
    end subroutine cresp_init_syme_spectrum
+
+!>
+!! \brief Gaussian bump-type initial condition for energy distribution
+!! \todo @cresp_grid energy normalization and integral to scale cosmic ray electrons with nucleon energy density!
+!<
+   subroutine cresp_init_bump_spectrum(f_in)
+
+      use constants,       only: fpi
+      use cresp_variables, only: clight_cresp
+      use initcosmicrays,  only: ncre
+      use initcrspectrum,  only: p_lo_init, p_up_init
+
+      implicit none
+
+      real, intent(in) :: f_in
+      integer(kind=4) :: i
+
+      f = f_in * exp(-(4*log(2.0)*log(p/sqrt(p_lo_init*p_up_init/1.))**2)) ! FWHM
+      f(0:ncre-1) = f(0:ncre-1) / (fpi * clight_cresp * p(0:ncre-1)**3) ! without this spectrum is gaussian for distribution function
+      do i = 1, ncre
+         q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i)) !-log(f(i)/f(i-1))/log(p(i)/p(i-1))
+      enddo
+      e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+      n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+
+   end subroutine cresp_init_bump_spectrum
 
 !-------------------------------------------------------------------------------------------------
 
