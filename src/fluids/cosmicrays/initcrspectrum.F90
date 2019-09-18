@@ -32,7 +32,7 @@
 
 module initcrspectrum
 ! pulled by COSM_RAY_ELECTRONS
-   use constants,       only: cbuff_len
+   use constants, only: cbuff_len
 
    implicit none
 
@@ -40,54 +40,54 @@ module initcrspectrum
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
-   logical            :: use_cresp                   !< determines whether CRESP update is called by fluidupdate
-   real(kind=8)       :: p_min_fix                   !< fixed momentum grid lower cutoff
-   real(kind=8)       :: p_max_fix                   !< fixed momentum grid upper cutoff
-   real(kind=8)       :: p_lo_init                   !< initial lower cutoff momentum
-   real(kind=8)       :: p_up_init                   !< initial upper cutoff momentum
+   logical         :: use_cresp                   !< determines whether CRESP update is called by fluidupdate
+   real(kind=8)    :: p_min_fix                   !< fixed momentum grid lower cutoff
+   real(kind=8)    :: p_max_fix                   !< fixed momentum grid upper cutoff
+   real(kind=8)    :: p_lo_init                   !< initial lower cutoff momentum
+   real(kind=8)    :: p_up_init                   !< initial upper cutoff momentum
    character(len=cbuff_len) :: initial_condition     !< available types: bump, powl, brpl, symf, syme. Description below.
-   real(kind=8)       :: p_br_init_lo, p_br_init_up  !< initial low energy break
-   real(kind=8)       :: f_init                      !< initial value of distr. func. for isolated case
-   real(kind=8)       :: q_init                      !< initial value of power law-like spectrum exponent
-   real(kind=8)       :: q_br_init                   !< initial q for low energy break
-   real(kind=8)       :: q_big                       !< maximal amplitude of q
-   real(kind=8)       :: cfl_cre                     !< CFL parameter  for cr electrons
-   real(kind=8)       :: cre_eff                     !< fraction of energy passed to cr-electrons by nucleons (mainly protons)
-   real(kind=8)       :: K_cre_paral_1               !< maximal parallell diffusion coefficient value
-   real(kind=8)       :: K_cre_perp_1                !< maximal perpendicular diffusion coefficient value
-   real(kind=8)       :: K_cre_pow                   !< exponent for power law-like diffusion-energy dependance
-   integer(kind=4)    :: expan_order                 !< 1,2,3 order of Taylor expansion for p_update (cresp_crspectrum)
-   real(kind=8)       :: e_small                     !< lower energy cutoff for energy-approximated cutoff momenta
-   logical            :: approx_cutoffs              !< T,F - turns off/on all approximating terms
-   integer(kind=1)    :: e_small_approx_p_lo         !< 0,1 - turns off/on energy (e_small) approximated lower cutoff momentum in isolated case
-   integer(kind=1)    :: e_small_approx_p_up         !< 0,1 - turns off/on energy (e_small) approximated upper cutoff momentum in isolated case
-   integer(kind=1)    :: e_small_approx_init_cond    !< 0,1 - turns off/on energy (e_small) approximated momenta at initialization
-   real(kind=8)       :: smallcren                   !< floor value for CRESP number density
-   real(kind=8)       :: smallcree                   !< floor value for CRESP energy density
-   real(kind=8)       :: Gamma_min_fix               ! < min of Lorentzs' Gamma factor, lower range of CRESP fixed grid
-   real(kind=8)       :: Gamma_max_fix               ! < max of Lorentzs' Gamma factor, upper range of CRESP fixed grid
-   real(kind=8)       :: Gamma_lo_init               ! < min of Lorentzs' Gamma factor, lower range of initial spectrum
-   real(kind=8)       :: Gamma_up_init               ! < max of Lorentzs' Gamma factor, upper range of initial spectrum
-   real(kind=8)       :: max_p_ratio                 !< maximal ratio of momenta for solution grids resolved at initialization via cresp_NR_method
-   integer(kind=2)    :: NR_iter_limit               !< maximal number of iterations for NR algorithm
-   logical            :: force_init_NR               !< forces resolving new ratio solution grids at initialization
-   logical            :: NR_run_refine_pf            !< enables "refine_grids" subroutines that fill empty spaces on the solution grid
-   logical            :: NR_refine_solution_q        !< enables NR_1D refinement for value of interpolated "q" value
-   logical            :: NR_refine_pf_lo             !< enables NR_2D refinement for interpolated values of "p" and "f" for lower cutoff. Note - algorithm tries to refine values if interpolation was unsuccessful.
-   logical            :: NR_refine_pf_up             !< enables NR_2D refinement for interpolated values of "p" and "f" for upper cutoff. Note - algorithm tries to refine values if interpolation was unsuccessful.
+   real(kind=8)    :: p_br_init_lo, p_br_init_up  !< initial low energy break
+   real(kind=8)    :: f_init                      !< initial value of distr. func. for isolated case
+   real(kind=8)    :: q_init                      !< initial value of power law-like spectrum exponent
+   real(kind=8)    :: q_br_init                   !< initial q for low energy break
+   real(kind=8)    :: q_big                       !< maximal amplitude of q
+   real(kind=8)    :: cfl_cre                     !< CFL parameter  for cr electrons
+   real(kind=8)    :: cre_eff                     !< fraction of energy passed to cr-electrons by nucleons (mainly protons)
+   real(kind=8)    :: K_cre_paral_1               !< maximal parallell diffusion coefficient value
+   real(kind=8)    :: K_cre_perp_1                !< maximal perpendicular diffusion coefficient value
+   real(kind=8)    :: K_cre_pow                   !< exponent for power law-like diffusion-energy dependance
+   integer(kind=4) :: expan_order                 !< 1,2,3 order of Taylor expansion for p_update (cresp_crspectrum)
+   real(kind=8)    :: e_small                     !< lower energy cutoff for energy-approximated cutoff momenta
+   logical         :: approx_cutoffs              !< T,F - turns off/on all approximating terms
+   integer(kind=1) :: e_small_approx_p_lo         !< 0,1 - turns off/on energy (e_small) approximated lower cutoff momentum in isolated case
+   integer(kind=1) :: e_small_approx_p_up         !< 0,1 - turns off/on energy (e_small) approximated upper cutoff momentum in isolated case
+   integer(kind=1) :: e_small_approx_init_cond    !< 0,1 - turns off/on energy (e_small) approximated momenta at initialization
+   real(kind=8)    :: smallcren                   !< floor value for CRESP number density
+   real(kind=8)    :: smallcree                   !< floor value for CRESP energy density
+   real(kind=8)    :: Gamma_min_fix               ! < min of Lorentzs' Gamma factor, lower range of CRESP fixed grid
+   real(kind=8)    :: Gamma_max_fix               ! < max of Lorentzs' Gamma factor, upper range of CRESP fixed grid
+   real(kind=8)    :: Gamma_lo_init               ! < min of Lorentzs' Gamma factor, lower range of initial spectrum
+   real(kind=8)    :: Gamma_up_init               ! < max of Lorentzs' Gamma factor, upper range of initial spectrum
+   real(kind=8)    :: max_p_ratio                 !< maximal ratio of momenta for solution grids resolved at initialization via cresp_NR_method
+   integer(kind=2) :: NR_iter_limit               !< maximal number of iterations for NR algorithm
+   logical         :: force_init_NR               !< forces resolving new ratio solution grids at initialization
+   logical         :: NR_run_refine_pf            !< enables "refine_grids" subroutines that fill empty spaces on the solution grid
+   logical         :: NR_refine_solution_q        !< enables NR_1D refinement for value of interpolated "q" value
+   logical         :: NR_refine_pf_lo             !< enables NR_2D refinement for interpolated values of "p" and "f" for lower cutoff. Note - algorithm tries to refine values if interpolation was unsuccessful.
+   logical         :: NR_refine_pf_up             !< enables NR_2D refinement for interpolated values of "p" and "f" for upper cutoff. Note - algorithm tries to refine values if interpolation was unsuccessful.
 
-   logical            :: nullify_empty_bins          !< nullifies empty bins when entering CRESP module / exiting empty cell.
-   logical            :: allow_source_spectrum_break !< allow extension of spectrum to adjacent bins if momenta found exceed set p_fix
-   logical            :: synch_active                !< TEST feature - turns on / off synchrotron cooling @ CRESP
-   logical            :: adiab_active                !< TEST feature - turns on / off adiabatic   cooling @ CRESP
-   real(kind=8)       :: cre_active                  !< electron contribution to Pcr
+   logical         :: nullify_empty_bins          !< nullifies empty bins when entering CRESP module / exiting empty cell.
+   logical         :: allow_source_spectrum_break !< allow extension of spectrum to adjacent bins if momenta found exceed set p_fix
+   logical         :: synch_active                !< TEST feature - turns on / off synchrotron cooling @ CRESP
+   logical         :: adiab_active                !< TEST feature - turns on / off adiabatic   cooling @ CRESP
+   real(kind=8)    :: cre_active                  !< electron contribution to Pcr
 
 ! NR parameters
-   real(kind=8)       :: tol_f                       !< tolerance for f abs. error in NR algorithm
-   real(kind=8)       :: tol_x                       !< tolerance for x abs. error in NR algorithm
-   real(kind=8)       :: tol_f_1D                    !< tolerance for f abs. error in NR algorithm (1D)
-   real(kind=8)       :: tol_x_1D                    !< tolerance for x abs. error in NR algorithm (1D)
-   integer(kind=4)    :: arr_dim, arr_dim_q
+   real(kind=8)    :: tol_f                       !< tolerance for f abs. error in NR algorithm
+   real(kind=8)    :: tol_x                       !< tolerance for x abs. error in NR algorithm
+   real(kind=8)    :: tol_f_1D                    !< tolerance for f abs. error in NR algorithm (1D)
+   real(kind=8)    :: tol_x_1D                    !< tolerance for x abs. error in NR algorithm (1D)
+   integer(kind=4) :: arr_dim, arr_dim_q
 
    real(kind=8), parameter  :: eps = 1.0e-15          !< epsilon parameter for real number comparisons
 !----------------------------------
@@ -126,8 +126,8 @@ module initcrspectrum
       real(kind=8) :: ucmb
    end type spec_mod_trms
 
-   real(kind=8)     :: total_init_cree
-   real(kind=8)     :: p_fix_ratio
+   real(kind=8)    :: total_init_cree
+   real(kind=8)    :: p_fix_ratio
    integer, allocatable, dimension(:) :: cresp_all_edges, cresp_all_bins
 
 ! CRESP names
@@ -135,7 +135,7 @@ module initcrspectrum
    character(len=*), parameter :: nam_cresp_p = "crep" !< helping array for CRESP energy density
    character(len=*), parameter :: nam_cresp_q = "creq" !< helping array for CRESP energy density
 
-   logical          :: hdf_save_fpq                    ! diagnostic, if true - adding 'cref', 'crep', 'creq' to hdf_vars must follow
+   logical         :: hdf_save_fpq, dump_f, dump_p, dump_q  ! diagnostic, if true - adding 'cref', 'crep', 'creq' to hdf_vars must follow
 
 !====================================================================================================
 !
@@ -164,30 +164,31 @@ module initcrspectrum
       &                         synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init, Gamma_min_fix,           &
       &                         Gamma_max_fix, Gamma_lo_init, Gamma_up_init, nullify_empty_bins, approx_cutoffs,    &
       &                         NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree,&
-      &                         smallcren, hdf_save_fpq, p_br_init_up
+      &                         smallcren, p_br_init_up
 
 ! Default values
-         if (initial_condition .eq. "plpc" ) then ! FIXME TODO
-            if (abs(p_br_init_lo - p_br_def) .le. eps .or. abs(p_br_init_up - p_br_def) .le. eps) then
-               write (msg,"(A)") "[initcrspectrum:init_cresp] Parameters for 'plpc' spectrum: p_br_init_lo or p_br_init_up has default value (probably unitialized). Check spectrum parameters."
-               if (master) call die(msg)
-            else
+      if (initial_condition .eq. "plpc" ) then ! FIXME TODO
+         if (abs(p_br_init_lo - p_br_def) .le. eps .or. abs(p_br_init_up - p_br_def) .le. eps) then
+            write (msg,"(A)") "[initcrspectrum:init_cresp] Parameters for 'plpc' spectrum: p_br_init_lo or p_br_init_up has default value (probably unitialized). Check spectrum parameters."
+            if (master) call die(msg)
+         else
 !>
 !! \brief p_br_init_lo should be equal to one of p_fix values
 !<
-               i = minloc(abs(p_fix - p_br_init_lo),dim=1)-1
-               write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_lo was set, but should be equal to one of p_fix. Assuming p_br_init_lo =", p_fix(i),"."
-               p_br_init_lo = p_fix(i)
-               if (master) call warn(msg)
+            i = minloc(abs(p_fix - p_br_init_lo),dim=1)-1
+            write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_lo was set, but should be equal to one of p_fix. Assuming p_br_init_lo =", p_fix(i),"."
+            p_br_init_lo = p_fix(i)
+            if (master) call warn(msg)
 !>
 !! \brief p_br_init_up should also be equal to one of p_fix values
 !<
-               i = minloc(abs(p_fix - p_br_init_up),dim=1)-1
-               write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_up was set, but should be equal to one of p_fix. Assuming p_br_init_up =", p_fix(i),"."
-               p_br_init_up = p_fix(i)
-               if (master) call warn(msg)
-            endif
+            i = minloc(abs(p_fix - p_br_init_up),dim=1)-1
+            write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_up was set, but should be equal to one of p_fix. Assuming p_br_init_up =", p_fix(i),"."
+            p_br_init_up = p_fix(i)
+            if (master) call warn(msg)
          endif
+      endif
+
       use_cresp         = .true.
       p_min_fix         = 1.5e1
       p_max_fix         = 1.65e4
@@ -241,8 +242,6 @@ module initcrspectrum
       arr_dim  = 200
       arr_dim_q = 500
 
-      hdf_save_fpq = .false.
-
       if (master) then
          if (.not.nh%initialized) call nh%init()
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
@@ -286,8 +285,6 @@ module initcrspectrum
          lbuff(9)  =  NR_refine_pf_up
          lbuff(10) =  nullify_empty_bins
          lbuff(11) =  approx_cutoffs
-
-         lbuff(12) = hdf_save_fpq
 
          rbuff(1)  = cfl_cre
          rbuff(2)  = cre_eff
@@ -354,8 +351,6 @@ module initcrspectrum
          nullify_empty_bins          = lbuff(10)
          approx_cutoffs              = lbuff(11)
 
-         hdf_save_fpq                = lbuff(12)
-
          cfl_cre                     = rbuff(1)
          cre_eff                     = rbuff(2)
          smallcren                   = rbuff(3)
@@ -414,10 +409,6 @@ module initcrspectrum
             if (master) call warn(msg)
          endif
 
-         if (master .and. hdf_save_fpq) then
-            write(msg, '(A)') "[initcrspectrum:init_cresp] hdf_save_fpq is set. Adding 'cref', 'crep', 'creq' to hdf_vars must follow."
-            call warn(msg)
-         endif
 ! countermeasure - in case unrecognized or invalid parameters are provided
 
          if ( e_small_approx_p_lo .gt. 0 ) then ; e_small_approx_p_lo = 1 ; else ; e_small_approx_p_lo = 0 ; endif
@@ -581,7 +572,7 @@ module initcrspectrum
 
    subroutine init_cresp_types
 
-      use constants,      only: zero, I_ZERO
+      use constants,      only: zero
       use diagnostics,    only: my_allocate_with_index
       use initcosmicrays, only: ncre
 
@@ -598,24 +589,33 @@ module initcrspectrum
       norm_init_spectrum%n = zero
       norm_init_spectrum%e = zero
 
-      if (hdf_save_fpq) then
-         if (.not. allocated(crel%p)) call my_allocate_with_index(crel%p,ncre,0)
-         if (.not. allocated(crel%f)) call my_allocate_with_index(crel%f,ncre,0)
-         if (.not. allocated(crel%q)) call my_allocate_with_index(crel%q,ncre,1)
-         if (.not. allocated(crel%n)) call my_allocate_with_index(crel%n,ncre,1)
-         if (.not. allocated(crel%e)) call my_allocate_with_index(crel%e,ncre,1)
-
-         crel%p = zero
-         crel%q = zero
-         crel%f = zero
-         crel%e = zero
-         crel%n = zero
-         crel%i_lo = I_ZERO
-         crel%i_up = I_ZERO
-      endif
-
    end subroutine init_cresp_types
 
+!----------------------------------------------------------------------------------------------------
+
+   subroutine init_crel
+
+      use constants,      only: zero, I_ZERO
+      use diagnostics,    only: my_allocate_with_index
+      use initcosmicrays, only: ncre
+
+      implicit none
+
+      if (.not. allocated(crel%p)) call my_allocate_with_index(crel%p,ncre,0)
+      if (.not. allocated(crel%f)) call my_allocate_with_index(crel%f,ncre,0)
+      if (.not. allocated(crel%q)) call my_allocate_with_index(crel%q,ncre,1)
+      if (.not. allocated(crel%n)) call my_allocate_with_index(crel%n,ncre,1)
+      if (.not. allocated(crel%e)) call my_allocate_with_index(crel%e,ncre,1)
+
+      crel%p = zero
+      crel%q = zero
+      crel%f = zero
+      crel%e = zero
+      crel%n = zero
+      crel%i_lo = I_ZERO
+      crel%i_up = I_ZERO
+
+   end subroutine init_crel
 !----------------------------------------------------------------------------------------------------
 
    real function cresp_get_mom(gamma, particle_mass)
@@ -631,6 +631,37 @@ module initcrspectrum
       if (gamma > one) cresp_get_mom = particle_mass * sqrt(gamma**2 - one) * clight
 
    end function cresp_get_mom
+
+!----------------------------------------------------------------------------------------------------
+!>
+!! \todo try to merge this to common_hdf5:init_hdf5
+!<
+   subroutine check_if_dump_fpq(vars)
+
+      use constants, only: dsetnamelen
+
+      implicit none
+
+      character(len=dsetnamelen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
+      integer :: i
+
+      do i = lbound(vars, 1), ubound(vars, 1)
+         select case (trim(vars(i)))
+            case ('cref') !< CRESP distribution function
+               dump_f = .true.
+               hdf_save_fpq = .true.
+            case ('crep') !< CRESP cutoff momenta
+               dump_p = .true.
+               hdf_save_fpq = .true.
+            case ('creq') !< CRESP spectrum index
+               dump_q = .true.
+               hdf_save_fpq = .true.
+         end select
+      enddo
+
+      if (hdf_save_fpq) call init_crel
+
+   end subroutine check_if_dump_fpq
 
 !----------------------------------------------------------------------------------------------------
 

@@ -56,11 +56,12 @@ module cresp_grid
       use cresp_crspectrum,   only: cresp_allocate_all, e_threshold_lo, e_threshold_up, fail_count_interpol, &
                               &     fail_count_NR_2dim, fail_count_comp_q, cresp_init_state, p_rch_init
       use cresp_NR_method,    only: cresp_initialize_guess_grids
+      use dataio,             only: vars
       use dataio_pub,         only: warn, printinfo, msg
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: iarr_cre_n, iarr_cre_e, ncre
       use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, f_init, &
-                                    hdf_save_fpq, nam_cresp_f, nam_cresp_p, nam_cresp_q
+                                    hdf_save_fpq, nam_cresp_f, nam_cresp_p, nam_cresp_q, check_if_dump_fpq, dump_f, dump_p, dump_q
       use mpisetup,           only: master
       use named_array_list,   only: wna
       use units,              only: clight, me, sigma_T
@@ -88,10 +89,12 @@ module cresp_grid
       write (msg, *) "[cresp_grid:cresp_init_grid] 4/3 * sigma_T / ( me * c ) = ", fsynchr
       if (master) call printinfo(msg)
 
+      call check_if_dump_fpq(vars)
+
       if (hdf_save_fpq) then
-         call all_cg%reg_var(nam_cresp_f, dim4=ncre+1)
-         call all_cg%reg_var(nam_cresp_p, dim4=2)
-         call all_cg%reg_var(nam_cresp_q, dim4=ncre)
+         if (dump_f) call all_cg%reg_var(nam_cresp_f, dim4=ncre+1)
+         if (dump_p) call all_cg%reg_var(nam_cresp_p, dim4=2)
+         if (dump_q) call all_cg%reg_var(nam_cresp_q, dim4=ncre)
       endif
 
       cgl => leaves%first
@@ -102,9 +105,9 @@ module cresp_grid
          cg%u(iarr_cre_e,:,:,:)  = 0.0
 
          if (hdf_save_fpq) then
-            cg%w(wna%ind(nam_cresp_f))%arr = 0.0
-            cg%w(wna%ind(nam_cresp_p))%arr = 0.0
-            cg%w(wna%ind(nam_cresp_q))%arr = 0.0
+            if (dump_f) cg%w(wna%ind(nam_cresp_f))%arr = 0.0
+            if (dump_p) cg%w(wna%ind(nam_cresp_p))%arr = 0.0
+            if (dump_q) cg%w(wna%ind(nam_cresp_q))%arr = 0.0
          endif
 
          cgl => cgl%nxt
@@ -127,7 +130,7 @@ module cresp_grid
       use crhelpers,        only: divv_n
       use func,             only: emag
       use grid_cont,        only: grid_container
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, hdf_save_fpq, crel, nam_cresp_f, nam_cresp_p, nam_cresp_q
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, hdf_save_fpq, crel, nam_cresp_f, nam_cresp_p, nam_cresp_q, dump_f, dump_p, dump_q
       use named_array,      only: p4
       use named_array_list, only: qna, wna
 #ifdef DEBUG
@@ -167,9 +170,9 @@ module cresp_grid
                   p4(iarr_cre_n, i, j, k) = cresp%n
                   p4(iarr_cre_e, i, j, k) = cresp%e
                   if (hdf_save_fpq) then
-                     cg%w(wna%ind(nam_cresp_f))%arr(:, i, j, k) = crel%f
-                     cg%w(wna%ind(nam_cresp_p))%arr(:, i, j, k) = [crel%p(crel%i_lo), crel%p(crel%i_up)]
-                     cg%w(wna%ind(nam_cresp_q))%arr(:, i, j, k) = crel%q
+                     if (dump_f) cg%w(wna%ind(nam_cresp_f))%arr(:, i, j, k) = crel%f
+                     if (dump_p) cg%w(wna%ind(nam_cresp_p))%arr(:, i, j, k) = [crel%p(crel%i_lo), crel%p(crel%i_up)]
+                     if (dump_q) cg%w(wna%ind(nam_cresp_q))%arr(:, i, j, k) = crel%q
                   endif
                enddo
             enddo
