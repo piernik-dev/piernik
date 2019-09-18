@@ -1006,34 +1006,14 @@ contains
 
       if (initial_condition == "powl") call cresp_init_powl_spectrum(n, e, f_amplitude, q_init, p_lo_init, p_up_init)
 
-      if (initial_condition == 'brpg') then
-!>
-!!/brief Power-law like spectrum with break at p_br_init_lo
-!! In this case initial spectrum with a break at p_min_fix is assumed, the initial slope
-!! on the left side of the break is gaussian. q_br_init scales FWHM.
-!<
-         i_br = minloc(abs(p_fix - p_br_init_lo),dim=1)-1
-         f(i_lo:i_br-1) = f(i_br-1) * exp(-(q_br_init*log(2.0) * log(p(i_lo:i_br-1)/sqrt(p_lo_init * p(i_br)))**2))
-         do i = 1, i_br
-            q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
-         enddo
-         e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-         n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-      endif
+      if (initial_condition == 'brpg') call cresp_init_brpg_spectrum
 
-!>
-!!/brief "plpc": Power-law like spectrum parabolic (in log-log) cutoffs
-!! In this case initial spectrum with a break at p_min_fix is assumed, the initial slope is parabolic
-!! in ranges (p_lo_init; p_br_init_lo) and (p_br_init_up; p_up_init) and reaches e_small imposed value at cutoffs.
-!<
       if (initial_condition == 'plpc') call cresp_init_plpc_spectrum(n, e, f_amplitude, q_init, p_lo_init, p_up_init, p_br_init_lo, p_br_init_up)
 
       if (initial_condition == 'brpl') then
 !>
-!!/brief Power-law like spectrum with break at p_br_init_lo
-!! In this case initial spectrum with a break at p_min_fix is assumed, the initial slope
-!! on the left side of the break is q_br_init. If initial_condition = "brpl", but parameters
-!! are not defined in problem.par, "powl" spectrum is initialized with a warning issued.
+!! \brief Power-law like spectrum with break at p_br_init_lo
+!! \details In this case initial spectrum with a break at p_min_fix is assumed, the initial slope on the left side of the break is q_br_init.
 !<
          i_br = minloc(abs(p_fix - p_br_init_lo),dim=1)-1
          q(:i_br) = q_br_init ; q(i_br+1:) = q_init
@@ -1180,10 +1160,9 @@ contains
 
    end subroutine cresp_init_state
 
-!-------------------------------------------------------------------------------------------------
-! Assumes power-law spectrum, without breaks. In principle the same thing is done in cresp_init_state, but
-! init_state cannot be called from "outside".
-!-------------------------------------------------------------------------------------------------
+!>
+!! \brief Assumes power-law spectrum, without breaks. In principle the same thing is done in cresp_init_state, but init_state cannot be called from "outside".
+!<
    subroutine cresp_init_powl_spectrum(n_inout, e_inout, f_in, q_in, p_dist_lo, p_dist_up)
 
       use constants,      only: zero
@@ -1231,17 +1210,22 @@ contains
       call my_deallocate(act_edges)
 
    end subroutine cresp_init_powl_spectrum
-!-------------------------------------------------------------------------------------------------
-! Assumes power-law spectrum with parabolic cutoffs, sets returns values of n_inout and e_inout increased by
-! n_add and e_add according to this spectrum setup. Can be called from "outside"
-!-------------------------------------------------------------------------------------------------
+
+!>
+!! \brief "plpc": Power-law like spectrum parabolic (in log-log) cutoffs
+!! \details In this case initial spectrum with a break at p_min_fix is assumed, the initial slope is parabolic
+!! in ranges (p_lo_init; p_br_init_lo) and (p_br_init_up; p_up_init) and reaches e_small imposed value at cutoffs.
+!!
+!! Assumes power-law spectrum with parabolic cutoffs, sets returns values of n_inout and e_inout increased by
+!! n_add and e_add according to this spectrum setup. Can be called from "outside"
+!<
    subroutine cresp_init_plpc_spectrum(n_inout, e_inout, f_in, q_in, p_dist_lo, p_dist_up, p_br_lo, p_br_up)
 
-      use constants,      only: zero, one, two, three, ten, fpi
-      use cresp_variables,only: clight_cresp
-      use diagnostics,    only: my_deallocate
-      use initcosmicrays, only: ncre
-      use initcrspectrum, only: p_fix, w, cresp_all_bins, e_small
+      use constants,       only: zero, one, two, three, ten, fpi
+      use cresp_variables, only: clight_cresp
+      use diagnostics,     only: my_deallocate
+      use initcosmicrays,  only: ncre
+      use initcrspectrum,  only: p_fix, w, cresp_all_bins, e_small
 
       implicit none
 
@@ -1316,7 +1300,35 @@ contains
       call my_deallocate(act_bins)
 
    end subroutine cresp_init_plpc_spectrum
+
+!>
+!! \brief Power-law like spectrum with break at p_br_init_lo
+!! \details In this case initial spectrum with a break at p_min_fix is assumed, the initial slope on the left side of the break is gaussian. q_br_init scales FWHM.
+!<
+   subroutine cresp_init_brpg_spectrum
+
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: p_fix, p_br_init_lo, p_lo_init, q_br_init
+
+      implicit none
+
+      integer(kind=4) :: i, i_br
+
+      i_br = minloc(abs(p_fix - p_br_init_lo), dim=1) - 1
+      f(i_lo:i_br-1) = f(i_br-1) * exp(-(q_br_init*log(2.0) * log(p(i_lo:i_br-1)/sqrt(p_lo_init * p(i_br)))**2))
+      do i = 1, i_br
+         q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
+      enddo
+      e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+      n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+
+   end subroutine cresp_init_brpg_spectrum
+
 !-------------------------------------------------------------------------------------------------
+
+
+!-------------------------------------------------------------------------------------------------
+
    subroutine cresp_get_scaled_init_spectrum(n_inout, e_inout, e_in_total) !< Using n,e spectrum obtained at initialization, obtain injected spectrum at given cell
 
       use initcosmicrays, only: ncre
