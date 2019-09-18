@@ -56,7 +56,7 @@ module cresp_grid
       use dataio_pub,       only: printinfo
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_n, iarr_cre_e, ncre
-      use initcrspectrum,   only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, f_init, &
+      use initcrspectrum,   only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, &
                               &   dump_fpq, nam_cresp_f, nam_cresp_p, nam_cresp_q, check_if_dump_fpq, dump_f, dump_p, dump_q
       use mpisetup,         only: master
       use named_array_list, only: wna
@@ -102,7 +102,7 @@ module cresp_grid
 
       call p_rch_init               !< sets the right pointer for p_rch function, based on used Taylor expansion coefficient
 
-      call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e, f_init)   !< initialize spectrum here, f_init should be 1.0
+      call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e)   !< initialize spectrum here, f_init should be 1.0
 
       if (master) call printinfo(" [cresp_grid:cresp_init_grid] CRESP initialized")
 

@@ -905,25 +905,24 @@ contains
 ! arrays initialization | TODO: reorganize cresp_init_state
 !
 !-------------------------------------------------------------------------------------------------
-   subroutine cresp_init_state(init_n, init_e, f_amplitude, sptab)
+   subroutine cresp_init_state(init_n, init_e, sptab)
 
       use constants, only: zero, I_ONE, three
       use cresp_NR_method, only: e_small_to_f
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
-      use initcrspectrum,  only: spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, eps, p_fix, w,   &
+      use initcrspectrum,  only: spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, eps, p_fix, w, f_init,   &
                               &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, dump_fpq, crel, &
                               &  e_small_approx_p_up, total_init_cree, e_small, cresp_all_bins
       use mpisetup,        only: master
 
       implicit none
 
-      real(kind=8), dimension(I_ONE:ncre)        :: init_n, init_e
-      real(kind=8),                   intent(in) :: f_amplitude
-      type (spec_mod_trms), optional, intent(in) :: sptab
-      integer                                    :: i, k, i_lo_ch, i_up_ch
-      real(kind=8)                               :: c
-      logical                                    :: exit_code
+      real(kind=8), dimension(I_ONE:ncre)       :: init_n, init_e
+      type(spec_mod_trms), optional, intent(in) :: sptab
+      integer                                   :: i, k, i_lo_ch, i_up_ch
+      real(kind=8)                              :: c
+      logical                                   :: exit_code
 
       u_b = zero ; u_d = zero
 
@@ -1001,13 +1000,13 @@ contains
 ! Pure power law spectrum initial condition (default case)
       q = q_init
       f = zero
-      f = f_amplitude * (p/p_lo_init)**(-q_init)
+      f = f_init * (p/p_lo_init)**(-q_init)
 
-      if (initial_condition == "powl") call cresp_init_powl_spectrum(f_amplitude)
+      if (initial_condition == "powl") call cresp_init_powl_spectrum
 
       if (initial_condition == 'brpg') call cresp_init_brpg_spectrum
 
-      if (initial_condition == 'plpc') call cresp_init_plpc_spectrum(f_amplitude)
+      if (initial_condition == 'plpc') call cresp_init_plpc_spectrum
 
       if (initial_condition == 'brpl') call cresp_init_brpl_spectrum
 
@@ -1015,7 +1014,7 @@ contains
 
       if (initial_condition == 'syme') call cresp_init_syme_spectrum
 
-      if (initial_condition == 'bump') call cresp_init_bump_spectrum(f_amplitude)
+      if (initial_condition == 'bump') call cresp_init_bump_spectrum
 
       if (dump_fpq) then
          crel%p = p
@@ -1120,16 +1119,15 @@ contains
 !>
 !! \brief Assumes power-law spectrum, without breaks. In principle the same thing is done in cresp_init_state, but init_state cannot be called from "outside".
 !<
-   subroutine cresp_init_powl_spectrum(f_in)
+   subroutine cresp_init_powl_spectrum
 
       use constants,      only: zero
       use diagnostics,    only: my_deallocate
       use initcosmicrays, only: ncre
-      use initcrspectrum, only: cresp_all_bins, cresp_all_edges, p_fix, p_lo_init, p_up_init, q_init, w
+      use initcrspectrum, only: cresp_all_bins, cresp_all_edges, f_init, p_fix, p_lo_init, p_up_init, q_init, w
 
       implicit none
 
-      real(kind=8),                   intent(in) :: f_in
       real(kind=8), dimension(1:ncre)            :: q_add
       real(kind=8), dimension(0:ncre)            :: p_range_add , f_add
       integer(kind=4), allocatable, dimension(:) :: act_bins, act_edges
@@ -1154,7 +1152,7 @@ contains
       act_bins  =   cresp_all_bins(i_l+1:i_u)
       q_add(act_bins) = q_init
 
-      f_add(act_edges) = f_in * (p_range_add(act_edges)/p_lo_init)**(-q_init)
+      f_add(act_edges) = f_init * (p_range_add(act_edges)/p_lo_init)**(-q_init)
 
       n = n + fq_to_n(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
       e = e + fq_to_e(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
@@ -1169,17 +1167,16 @@ contains
 !! \details In this case initial spectrum with a break at p_min_fix is assumed, the initial slope is parabolic
 !! in ranges (p_lo_init; p_br_init_lo) and (p_br_init_up; p_up_init) and reaches e_small imposed value at cutoffs.
 !<
-   subroutine cresp_init_plpc_spectrum(f_in)
+   subroutine cresp_init_plpc_spectrum
 
       use constants,       only: zero, one, two, three, ten, fpi
       use cresp_variables, only: clight_cresp
       use diagnostics,     only: my_deallocate
       use initcosmicrays,  only: ncre
-      use initcrspectrum,  only: cresp_all_bins, e_small, p_br_init_lo, p_br_init_up, p_fix, p_lo_init, p_up_init, q_init, w
+      use initcrspectrum,  only: cresp_all_bins, e_small, f_init, p_br_init_lo, p_br_init_up, p_fix, p_lo_init, p_up_init, q_init, w
 
       implicit none
 
-      real(kind=8),                   intent(in) :: f_in
       real(kind=8)                               :: c_1, c_2, c_3, lpb, lpu, lpl, a, b
       real(kind=8), dimension(1:ncre)            :: q_add
       real(kind=8), dimension(0:ncre)            :: p_range_add, f_add
@@ -1202,7 +1199,7 @@ contains
       p_range_add(i_l) = p_lo_init
       p_range_add(i_u) = p_up_init
 
-      f_add(i_l:i_u) = f_in * (p_range_add(i_l:i_u)/p_lo_init)**(-q_init)
+      f_add(i_l:i_u) = f_init * (p_range_add(i_l:i_u)/p_lo_init)**(-q_init)
       q_add(i_l:i_u) = q_init
 
       if (.not.allocated(act_bins )) allocate( act_bins(i_u - i_l+1))
@@ -1212,7 +1209,7 @@ contains
       lpb = log10(p_br_init_lo)
 
       a = -q_init
-      b = log10(f_in * (p_lo_init)**(q_init))
+      b = log10(f_init * (p_lo_init)**(q_init))
 
       c_3 =  ( (-three * lpl + log10(e_small / (fpi * clight_cresp))) + b * (lpl/lpb) - a * lpl - two * b * (lpl/lpb) ) / ( (lpl/lpb)**two - two * (lpl/lpb) + one)
       c_1 =  (c_3 - b) / lpb**two
@@ -1340,19 +1337,18 @@ contains
 !! \brief Gaussian bump-type initial condition for energy distribution
 !! \todo @cresp_grid energy normalization and integral to scale cosmic ray electrons with nucleon energy density!
 !<
-   subroutine cresp_init_bump_spectrum(f_in)
+   subroutine cresp_init_bump_spectrum
 
       use constants,       only: fpi
       use cresp_variables, only: clight_cresp
       use initcosmicrays,  only: ncre
-      use initcrspectrum,  only: p_lo_init, p_up_init
+      use initcrspectrum,  only: f_init, p_lo_init, p_up_init
 
       implicit none
 
-      real, intent(in) :: f_in
       integer(kind=4) :: i
 
-      f = f_in * exp(-(4*log(2.0)*log(p/sqrt(p_lo_init*p_up_init/1.))**2)) ! FWHM
+      f = f_init * exp(-(4*log(2.0)*log(p/sqrt(p_lo_init*p_up_init/1.))**2)) ! FWHM
       f(0:ncre-1) = f(0:ncre-1) / (fpi * clight_cresp * p(0:ncre-1)**3) ! without this spectrum is gaussian for distribution function
       do i = 1, ncre
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i)) !-log(f(i)/f(i-1))/log(p(i)/p(i-1))
