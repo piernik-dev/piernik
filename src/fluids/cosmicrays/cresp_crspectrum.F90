@@ -1012,20 +1012,7 @@ contains
 
       if (initial_condition == 'brpl') call cresp_init_brpl_spectrum
 
-      if (initial_condition == 'symf') then
-         i_br = int((i_lo+i_up)/2)
-         q(i_lo+1:i_br) = -q_init
-         f(i_br) = f(i_br+1)*(p(i_br+1)/p(i_br))**(-q(i_br))
-
-         do i=1,i_br-i_lo
-            f(i_br-i) = f(i_br+i)
-         enddo
-
-         if ((i_up - i_br .ne. i_br - i_lo))  p_up = p_up - (p_up - p_fix(i_up-1))
-         p(i_up) = p_up ; i_up = i_up -1
-         e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-         n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-     endif
+      if (initial_condition == 'symf') call cresp_init_symf_spectrum
 
      if (initial_condition == 'syme' ) then
          i_br = int((i_lo+i_up)/2)
@@ -1334,6 +1321,30 @@ contains
       n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
 
    end subroutine cresp_init_brpl_spectrum
+
+   subroutine cresp_init_symf_spectrum
+
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: p_fix, q_init
+
+      implicit none
+
+      integer(kind=4) :: i, i_br
+
+      i_br = int((i_lo+i_up)/2)
+      q(i_lo+1:i_br) = -q_init
+      f(i_br) = f(i_br+1)*(p(i_br+1)/p(i_br))**(-q(i_br))
+
+      do i = 1, i_br-i_lo
+         f(i_br-i) = f(i_br+i)
+      enddo
+
+      if ((i_up - i_br .ne. i_br - i_lo))  p_up = p_up - (p_up - p_fix(i_up-1))
+      p(i_up) = p_up ; i_up = i_up -1
+      e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+      n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+
+   end subroutine cresp_init_symf_spectrum
 
 !-------------------------------------------------------------------------------------------------
 
