@@ -38,11 +38,11 @@ module timestep_cresp
    private
    public :: dt_cre, cresp_timestep, dt_cre_synch, dt_cre_adiab, dt_cre_K
 
-   real(kind=8) :: dt_cre, dt_cre_synch, dt_cre_adiab, dt_cre_K
+   real :: dt_cre, dt_cre_synch, dt_cre_adiab, dt_cre_K
 
 contains
 
-   function assume_p_up(cell_i_up)
+   real function assume_p_up(cell_i_up)
 
       use initcosmicrays, only: ncre
       use initcrspectrum, only: p_fix, p_mid_fix
@@ -50,9 +50,7 @@ contains
       implicit none
 
       integer(kind=4), intent(in) :: cell_i_up
-      real(kind=8)                :: assume_p_up
 
-      assume_p_up = p_fix(ncre-1)
       if (cell_i_up .eq. ncre) then
          assume_p_up = p_mid_fix(ncre) ! for i = 0 & ncre p_fix(i) = 0.0
       else
@@ -60,28 +58,6 @@ contains
       endif
 
    end function assume_p_up
-!----------------------------------------------------------------------------------------------------
-
-   function evaluate_i_up(e_cell, n_cell) ! obtain i_up index from energy densities in cell
-
-      use constants,      only: zero
-      use initcosmicrays, only: ncre
-      use initcrspectrum, only: e_small
-
-      implicit none
-
-      real(kind=8), dimension(:), intent(in) :: e_cell, n_cell
-      integer                                :: evaluate_i_up, i
-
-      do i = ncre, 1, -1  ! we start counting from ncre since upper cutoff is rather expected at higher index numbers. Might change it though.
-         if (e_cell(i) .gt. e_small .and. n_cell(i) .gt. zero) then ! better compare to zero or to eps?
-            evaluate_i_up = i
-            return ! if cell is empty, evaluate_i_up returns 0, which is handled by cresp_timestep
-         endif
-      enddo
-      evaluate_i_up = 0
-
-   end function evaluate_i_up
 
 !----------------------------------------------------------------------------------------------------
 
@@ -106,8 +82,8 @@ contains
       integer(kind=4)                :: i, j, k, i_up_max_tmp, i_up_max
       type(grid_container),  pointer :: cg
       type(cg_list_element), pointer :: cgl
-      real(kind=8)                   :: K_cre_max_sum, abs_max_ud
       type(spec_mod_trms)            :: sptab
+      real                           :: K_cre_max_sum, abs_max_ud
       logical                        :: empty_cell
 
       dt_cre       = big
@@ -173,7 +149,7 @@ contains
 
       implicit none
 
-      real(kind=8), intent(in) :: u_d_abs    ! assumes that u_d > 0 always
+      real, intent(in) :: u_d_abs    ! assumes that u_d > 0 always
 
       if (u_d_abs .gt. eps) dt_cre_adiab = cfl_cre * three * logten * w / u_d_abs
 
@@ -188,9 +164,9 @@ contains
 
       implicit none
 
-      real(kind=8),    intent(in) :: u_b
+      real,            intent(in) :: u_b
       integer(kind=4), intent(in) :: i_up_cell
-      real(kind=8)                :: dt_cre_ub
+      real                        :: dt_cre_ub
 
  ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
       if (u_b .gt. zero) then
