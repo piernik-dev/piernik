@@ -1010,17 +1010,7 @@ contains
 
       if (initial_condition == 'plpc') call cresp_init_plpc_spectrum(n, e, f_amplitude, q_init, p_lo_init, p_up_init, p_br_init_lo, p_br_init_up)
 
-      if (initial_condition == 'brpl') then
-!>
-!! \brief Power-law like spectrum with break at p_br_init_lo
-!! \details In this case initial spectrum with a break at p_min_fix is assumed, the initial slope on the left side of the break is q_br_init.
-!<
-         i_br = minloc(abs(p_fix - p_br_init_lo),dim=1)-1
-         q(:i_br) = q_br_init ; q(i_br+1:) = q_init
-         f(i_lo:i_br-1) = f(i_br) * (p(i_lo:i_br-1) / p(i_br)) ** (-q_br_init)
-         e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-         n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-      endif
+      if (initial_condition == 'brpl') call cresp_init_brpl_spectrum
 
       if (initial_condition == 'symf') then
          i_br = int((i_lo+i_up)/2)
@@ -1324,8 +1314,26 @@ contains
 
    end subroutine cresp_init_brpg_spectrum
 
-!-------------------------------------------------------------------------------------------------
+!>
+!! \brief Power-law like spectrum with break at p_br_init_lo
+!! \details In this case initial spectrum with a break at p_min_fix is assumed, the initial slope on the left side of the break is q_br_init.
+!<
+   subroutine cresp_init_brpl_spectrum
 
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: p_fix, p_br_init_lo, q_br_init, q_init
+
+      implicit none
+
+      integer(kind=4) :: i_br
+
+      i_br = minloc(abs(p_fix - p_br_init_lo), dim=1) - 1
+      q(:i_br) = q_br_init ; q(i_br+1:) = q_init
+      f(i_lo:i_br-1) = f(i_br) * (p(i_lo:i_br-1) / p(i_br))**(-q_br_init)
+      e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+      n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+
+   end subroutine cresp_init_brpl_spectrum
 
 !-------------------------------------------------------------------------------------------------
 
