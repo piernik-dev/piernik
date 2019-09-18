@@ -502,11 +502,6 @@ module initcrspectrum
 !! \deprecated syme - symmetric energy distribution relative to the middle of the initial spectrum,
 !! \deprecated symf - similar, but symmetric in distribution function.
 !<
-      if (initial_condition .ne. 'powl' .and. initial_condition .ne. 'bump' .and. initial_condition .ne. 'brpl' .and. initial_condition .ne. 'plpc' &
-                           .and. initial_condition .ne. 'symf' .and. initial_condition .ne. 'syme'  .and. initial_condition .ne. 'brpg' ) then
-         write(msg,"(A,A,A)") "[initcrspectrum:init_cresp] Provided unrecognized initial_condition (",initial_condition,"). Make sure that value is correctly provided."
-         call die(msg)
-      endif
       if ( f_init .lt. eps) then
          if (initial_condition == 'powl' .or. initial_condition == 'brpl') then
             write (msg,"(A,A,A)") "[initcrspectrum:init_cresp] Provided power law type spectrum (",initial_condition,") with initial amplitude f_init ~ zero. Check your parameters."

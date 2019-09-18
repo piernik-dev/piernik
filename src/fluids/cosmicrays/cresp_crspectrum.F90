@@ -1002,19 +1002,25 @@ contains
       f = zero
       f = f_init * (p/p_lo_init)**(-q_init)
 
-      if (initial_condition == "powl") call cresp_init_powl_spectrum
-
-      if (initial_condition == 'brpg') call cresp_init_brpg_spectrum
-
-      if (initial_condition == 'plpc') call cresp_init_plpc_spectrum
-
-      if (initial_condition == 'brpl') call cresp_init_brpl_spectrum
-
-      if (initial_condition == 'symf') call cresp_init_symf_spectrum
-
-      if (initial_condition == 'syme') call cresp_init_syme_spectrum
-
-      if (initial_condition == 'bump') call cresp_init_bump_spectrum
+      select case (initial_condition)
+         case ('powl')
+            call cresp_init_powl_spectrum
+         case ('brpg')
+            call cresp_init_brpg_spectrum
+         case ('plpc')
+            call cresp_init_plpc_spectrum
+         case ('brpl')
+            call cresp_init_brpl_spectrum
+         case ('symf')
+            call cresp_init_symf_spectrum
+         case ('syme')
+            call cresp_init_syme_spectrum
+         case ('bump')
+            call cresp_init_bump_spectrum
+         case default
+            write(msg,"(A,A,A)") "[cresp_crspectrum:cresp_init_state] Provided unrecognized initial_condition (",initial_condition,"). Make sure that value is correctly provided."
+            call die(msg)
+      end select
 
       if (dump_fpq) then
          crel%p = p
