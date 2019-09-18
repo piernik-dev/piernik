@@ -618,21 +618,17 @@ module initcrspectrum
 
 !----------------------------------------------------------------------------------------------------
 
-   function cresp_get_mom(gamma, particle_mass)
+   real function cresp_get_mom(gamma, particle_mass)
 
       use constants, only: zero, one
       use units,     only: clight
 
       implicit none
 
-      real(kind=8)           :: gamma
-      real(kind=8), optional :: particle_mass
-      real(kind=8)           :: cresp_get_mom
+      real(kind=8), intent(in) :: gamma, particle_mass
 
       cresp_get_mom = zero
-      if ( (gamma - one) .gt. eps ) then
-         cresp_get_mom = gamma * particle_mass * sqrt(one - one/(gamma**2)) * clight
-      endif
+      if (gamma > one) cresp_get_mom = particle_mass * sqrt(gamma**2 - one) * clight
 
    end function cresp_get_mom
 
