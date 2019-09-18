@@ -922,7 +922,7 @@ contains
       real(kind=8), dimension(I_ONE:ncre)        :: init_n, init_e
       real(kind=8),                   intent(in) :: f_amplitude
       type (spec_mod_trms), optional, intent(in) :: sptab
-      integer                                    :: i, k, i_lo_ch, i_up_ch, i_br
+      integer                                    :: i, k, i_lo_ch, i_up_ch
       real(kind=8)                               :: c
       logical                                    :: exit_code
 
@@ -1014,17 +1014,7 @@ contains
 
       if (initial_condition == 'symf') call cresp_init_symf_spectrum
 
-     if (initial_condition == 'syme' ) then
-         i_br = int((i_lo+i_up)/2)
-         q(i_lo+1:i_br) = q_init-2.2
-         do i=1,i_br-i_lo
-             f(i_br-i) = f(i_br)*(p(i_br)/p(i_br-i))**(q(i_br-i+1))
-         enddo
-         if ((i_up - i_br .ne. i_br - i_lo))  p_up = p_up - (p_up - p_fix(i_up-1))
-         p(i_up) = p_up ; i_up = i_up -1
-         e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-         n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-     endif
+     if (initial_condition == 'syme' ) call cresp_init_syme_spectrum
 
      if (initial_condition == 'bump') then  ! TODO - @cresp_grid energy normalization and integral to scale cosmic ray electrons with nucleon energy density!
 ! Gaussian bump-type initial condition for energy distribution
@@ -1339,12 +1329,33 @@ contains
          f(i_br-i) = f(i_br+i)
       enddo
 
-      if ((i_up - i_br .ne. i_br - i_lo))  p_up = p_up - (p_up - p_fix(i_up-1))
+      if ((i_up - i_br .ne. i_br - i_lo)) p_up = p_up - (p_up - p_fix(i_up-1))
       p(i_up) = p_up ; i_up = i_up -1
       e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
       n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
 
    end subroutine cresp_init_symf_spectrum
+
+   subroutine cresp_init_syme_spectrum
+
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: p_fix, q_init
+
+      implicit none
+
+      integer(kind=4) :: i, i_br
+
+      i_br = int((i_lo+i_up)/2)
+      q(i_lo+1:i_br) = q_init-2.2
+      do i = 1, i_br-i_lo
+         f(i_br-i) = f(i_br)*(p(i_br)/p(i_br-i))**(q(i_br-i+1))
+      enddo
+      if ((i_up - i_br .ne. i_br - i_lo)) p_up = p_up - (p_up - p_fix(i_up-1))
+      p(i_up) = p_up ; i_up = i_up -1
+      e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+      n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+
+   end subroutine cresp_init_syme_spectrum
 
 !-------------------------------------------------------------------------------------------------
 
