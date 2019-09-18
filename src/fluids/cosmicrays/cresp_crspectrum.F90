@@ -907,7 +907,7 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_init_state(init_n, init_e, f_amplitude, sptab)
 
-      use constants, only: zero, I_ONE, fpi, one, two, three
+      use constants, only: zero, I_ONE, fpi, three
       use cresp_NR_method, only: e_small_to_f
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: warn, msg, die, printinfo
@@ -923,7 +923,7 @@ contains
       real(kind=8),                   intent(in) :: f_amplitude
       type (spec_mod_trms), optional, intent(in) :: sptab
       integer                                    :: i, k, i_lo_ch, i_up_ch, i_br
-      real(kind=8)                               :: c, c_1, c_2, c_3, lpl, lpu, lpb, a, b
+      real(kind=8)                               :: c
       logical                                    :: exit_code
 
       u_b = zero ; u_d = zero
@@ -1021,50 +1021,12 @@ contains
          n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
       endif
 
-      if (initial_condition == 'plpc') then
 !>
-!!/brief Power-law like spectrum parabolic (in log-log) cutoffs
+!!/brief "plpc": Power-law like spectrum parabolic (in log-log) cutoffs
 !! In this case initial spectrum with a break at p_min_fix is assumed, the initial slope is parabolic
 !! in ranges (p_lo_init; p_br_init_lo) and (p_br_init_up; p_up_init) and reaches e_small imposed value at cutoffs.
 !<
-! LOW ENERGY CUTOFF
-         i_br = minloc(abs(p_fix - p_br_init_lo),dim=1)-1
-
-         lpl = log10(p_lo_init)
-         lpb = log10(p_br_init_lo)
-
-         a = -q_init
-         b = log10(f_amplitude * (p_lo_init)**(q_init))
-
-         c_3 =  ( (-three * lpl + log10(e_small / (fpi * clight_cresp))) + b * (lpl/lpb) - a * lpl - two * b * (lpl/lpb) ) / ( (lpl/lpb)**two - two * (lpl/lpb) + one)
-         c_1 =  (c_3 - b) / lpb**two
-         c_2 =  (a - two * c_1 * lpb)
-
-         f(i_lo:i_br-1) = 10.**(c_1 * log10(p(i_lo:i_br-1))**two + c_2 * log10(p(i_lo:i_br-1)) + c_3)
-! HIGH ENERGY CUTOFF
-         i_br = minloc(abs(p_fix - p_br_init_up),dim=1)
-
-         lpu = log10(p_up_init)
-         lpb = log10(p_br_init_up)
-! a and b remain unchanged
-
-         c_3 =  ( (-three * lpu + log10(e_small / (fpi * clight_cresp))) + b * (lpu/lpb) - a * lpu - two * b * (lpu/lpb) ) / ( (lpu/lpb)**two - two * (lpu/lpb) + one)
-         c_1 =  (c_3 - b) / lpb**two
-         c_2 =  (a - two * c_1 * lpb)
-
-         f(i_br:i_up) = 10.**(c_1 * log10(p(i_br:i_up))**two + c_2 * log10(p(i_br:i_up)) + c_3)
-
-         do i = i_br, i_up
-            q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
-         enddo
-         do i = 1, i_br
-            q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
-         enddo
-
-         e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-         n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-
-      endif
+      if (initial_condition == 'plpc') call cresp_init_plpc_spectrum(n, e, f_amplitude, q_init, p_lo_init, p_up_init, p_br_init_lo, p_br_init_up)
 
       if (initial_condition == 'brpl') then
 !>
@@ -1269,6 +1231,91 @@ contains
       call my_deallocate(act_edges)
 
    end subroutine cresp_init_powl_spectrum
+!-------------------------------------------------------------------------------------------------
+! Assumes power-law spectrum with parabolic cutoffs, sets returns values of n_inout and e_inout increased by
+! n_add and e_add according to this spectrum setup. Can be called from "outside"
+!-------------------------------------------------------------------------------------------------
+   subroutine cresp_init_plpc_spectrum(n_inout, e_inout, f_in, q_in, p_dist_lo, p_dist_up, p_br_lo, p_br_up)
+
+      use constants,      only: zero, one, two, three, ten, fpi
+      use cresp_variables,only: clight_cresp
+      use diagnostics,    only: my_deallocate
+      use initcosmicrays, only: ncre
+      use initcrspectrum, only: p_fix, w, cresp_all_bins, e_small
+
+      implicit none
+
+      real(kind=8), dimension(1:ncre), intent(inout) :: n_inout, e_inout
+      real(kind=8),                    intent(in)    :: f_in, q_in, p_dist_lo, p_dist_up, p_br_lo, p_br_up
+      real(kind=8)                                   :: c_1, c_2, c_3, lpb, lpu, lpl, a, b
+      real(kind=8), dimension(1:ncre)                :: n_add, e_add, q_add
+      real(kind=8), dimension(0:ncre)                :: p_range_add , f_add
+      integer(kind=4), allocatable, dimension(:)     :: act_bins
+      integer(kind=4)                                :: i_l, i_u, i_br, i
+
+      n_add(:) = zero  ; e_add(:) = zero  ; q_add(:) = zero  ; f_add(:) = zero  ; p_range_add(:) = zero
+
+      i_br = minloc(abs(p_fix - p_br_lo),dim=1)-1
+
+      i_l = int(floor(log10(p_dist_lo/p_fix(1))/w)) + 1
+      i_l = max(0, i_l)
+      i_l = min(i_l, ncre - 1)
+
+      i_u = int(floor(log10(p_dist_up/p_fix(1))/w)) + 2
+      i_u = max(1,i_u)
+      i_u = min(i_u,ncre)
+
+      p_range_add(i_l:i_u) = p_fix(i_l:i_u)
+      p_range_add(i_l) = p_dist_lo
+      p_range_add(i_u) = p_dist_up
+
+      f_add(i_l:i_u) = f_in * (p_range_add(i_l:i_u)/p_dist_lo)**(-q_in)
+      q_add(i_l:i_u) = q_in
+
+      if (.not.allocated(act_bins )) allocate( act_bins(i_u - i_l+1))
+      act_bins  =   cresp_all_bins(i_l+1:i_u)
+
+      lpl = log10(p_dist_lo)
+      lpb = log10(p_br_lo)
+
+      a = -q_in
+      b = log10(f_in * (p_dist_lo)**(q_in))
+
+      c_3 =  ( (-three * lpl + log10(e_small / (fpi * clight_cresp))) + b * (lpl/lpb) - a * lpl - two * b * (lpl/lpb) ) / ( (lpl/lpb)**two - two * (lpl/lpb) + one)
+      c_1 =  (c_3 - b) / lpb**two
+      c_2 =  (a - two * c_1 * lpb)
+
+      f_add(i_l:i_br-1) = ten**(c_1 * log10(p_range_add(i_l:i_br-1))**two + c_2 * log10(p_range_add(i_l:i_br-1)) + c_3)
+
+      do i = i_l+1, i_br
+         q_add(i) = pf_to_q(p_range_add(i-1), p_range_add(i), f_add(i-1), f_add(i))
+      enddo
+
+! HIGH ENERGY CUTOFF; a and b remain unchanged
+      i_br = minloc(abs(p_fix - p_br_up),dim=1)
+
+      lpu = log10(p_dist_up)
+      lpb = log10(p_br_up)
+
+      c_3 =  ( (-three * lpu + log10(e_small / (fpi * clight_cresp))) + b * (lpu/lpb) - a * lpu - two * b * (lpu/lpb) ) / ( (lpu/lpb)**two - two * (lpu/lpb) + one)
+      c_1 =  (c_3 - b) / lpb**two
+      c_2 =  (a - two * c_1 * lpb)
+
+      f_add(i_br:i_u) = ten**(c_1 * log10(p_range_add(i_br:i_u))**two + c_2 * log10(p_range_add(i_br:i_u)) + c_3)
+
+      do i = i_br, i_u
+         q_add(i) = pf_to_q(p_range_add(i-1), p_range_add(i), f_add(i-1), f_add(i))
+      enddo
+
+      e_add = fq_to_e(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
+      n_add = fq_to_n(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
+
+      n_inout = n_inout + n_add
+      e_inout = e_inout + e_add
+
+      call my_deallocate(act_bins)
+
+   end subroutine cresp_init_plpc_spectrum
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_get_scaled_init_spectrum(n_inout, e_inout, e_in_total) !< Using n,e spectrum obtained at initialization, obtain injected spectrum at given cell
 
