@@ -135,7 +135,7 @@ module initcrspectrum
    character(len=*), parameter :: nam_cresp_p = "crep" !< helping array for CRESP energy density
    character(len=*), parameter :: nam_cresp_q = "creq" !< helping array for CRESP energy density
 
-   logical         :: hdf_save_fpq, dump_f, dump_p, dump_q  ! diagnostic, if true - adding 'cref', 'crep', 'creq' to hdf_vars must follow
+   logical         :: dump_fpq, dump_f, dump_p, dump_q  ! diagnostic, if true - adding 'cref', 'crep', 'creq' to hdf_vars must follow
 
 !====================================================================================================
 !
@@ -648,18 +648,18 @@ module initcrspectrum
       do i = lbound(vars, 1), ubound(vars, 1)
          select case (trim(vars(i)))
             case ('cref') !< CRESP distribution function
-               dump_f = .true.
-               hdf_save_fpq = .true.
+               dump_f   = .true.
+               dump_fpq = .true.
             case ('crep') !< CRESP cutoff momenta
-               dump_p = .true.
-               hdf_save_fpq = .true.
+               dump_p   = .true.
+               dump_fpq = .true.
             case ('creq') !< CRESP spectrum index
-               dump_q = .true.
-               hdf_save_fpq = .true.
+               dump_q   = .true.
+               dump_fpq = .true.
          end select
       enddo
 
-      if (hdf_save_fpq) call init_crel
+      if (dump_fpq) call init_crel
 
    end subroutine check_if_dump_fpq
 
@@ -681,7 +681,7 @@ module initcrspectrum
       if (allocated(cresp_all_edges)) call my_deallocate(cresp_all_edges)
       if (allocated(cresp_all_bins )) call my_deallocate(cresp_all_bins)
 
-      if (hdf_save_fpq) then
+      if (dump_fpq) then
          if (allocated(crel%p)) call my_deallocate(crel%p)
          if (allocated(crel%f)) call my_deallocate(crel%f)
          if (allocated(crel%q)) call my_deallocate(crel%q)

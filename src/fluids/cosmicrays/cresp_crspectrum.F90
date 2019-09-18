@@ -120,7 +120,7 @@ contains
 #endif /* CRESP_VERBOSED */
       use diagnostics,    only: decr_vec
       use initcosmicrays, only: ncre
-      use initcrspectrum, only: spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, hdf_save_fpq, crel, p_mid_fix, nullify_empty_bins, p_fix
+      use initcrspectrum, only: spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, dump_fpq, crel, p_mid_fix, nullify_empty_bins, p_fix
 
       implicit none
 
@@ -156,7 +156,7 @@ contains
       else
          p_lo = zero
          p_up = zero
-         if (hdf_save_fpq) then
+         if (dump_fpq) then
             crel%p = zero
             crel%f = zero
             crel%q = zero
@@ -340,7 +340,7 @@ contains
       e_tot = sum(e)
 
 ! --- saving the data to output arrays
-      if (hdf_save_fpq) then
+      if (dump_fpq) then
          crel%p = p
          crel%f = f
          crel%q = q
@@ -913,7 +913,7 @@ contains
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
       use initcrspectrum,  only: spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, eps, p_fix, w,   &
-                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, hdf_save_fpq, crel, p_br_init_up, &
+                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, dump_fpq, crel, p_br_init_up, &
                               &  e_small_approx_p_up, total_init_cree, e_small, cresp_all_bins, q_br_init, p_br_init_lo
       use mpisetup,        only: master
 
@@ -1118,7 +1118,7 @@ contains
          n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
       endif
 
-      if (hdf_save_fpq) then
+      if (dump_fpq) then
          crel%p = p
          crel%f = f
          crel%q = q
@@ -1193,7 +1193,7 @@ contains
             e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins) ! once again we must count n and e
             n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
 
-            if (hdf_save_fpq) then
+            if (dump_fpq) then
                crel%p = p
                crel%f = f
                crel%q = q
