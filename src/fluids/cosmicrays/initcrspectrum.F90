@@ -136,6 +136,7 @@ module initcrspectrum
    character(len=*), parameter :: nam_cresp_q = "creq" !< helping array for CRESP energy density
 
    logical         :: dump_fpq, dump_f, dump_p, dump_q  ! diagnostic, if true - adding 'cref', 'crep', 'creq' to hdf_vars must follow
+   real(kind=8) :: fsynchr
 
 !====================================================================================================
 !
@@ -150,7 +151,7 @@ module initcrspectrum
       use diagnostics,     only: my_allocate_with_index
       use initcosmicrays,  only: ncrn, ncre, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
-      use units,           only: me
+      use units,           only: clight, me, sigma_T
 
       implicit none
 
@@ -565,6 +566,10 @@ module initcrspectrum
          K_crs_paral(ncrn+1:ncrn+2*ncre) = K_cre_paral(1:2*ncre)
          K_crs_perp (ncrn+1:ncrn+2*ncre) = K_cre_perp (1:2*ncre)
       endif
+
+      fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
+      write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr
+      if (master) call printinfo(msg)
 
    end subroutine init_cresp
 

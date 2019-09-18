@@ -39,9 +39,8 @@ module cresp_grid
    implicit none
 
    private
-   public :: cresp_update_grid, cresp_init_grid, cfl_cresp_violation, cresp_clean_grid, fsynchr
+   public :: cresp_update_grid, cresp_init_grid, cfl_cresp_violation, cresp_clean_grid
 
-   real(kind=8) :: fsynchr
    logical      :: cfl_cresp_violation, register_p, register_q, register_f
 
    contains
@@ -57,14 +56,13 @@ module cresp_grid
                               &     fail_count_NR_2dim, fail_count_comp_q, cresp_init_state, p_rch_init
       use cresp_NR_method,    only: cresp_initialize_guess_grids
       use dataio,             only: vars
-      use dataio_pub,         only: warn, printinfo, msg
+      use dataio_pub,         only: printinfo
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: iarr_cre_n, iarr_cre_e, ncre
       use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, f_init, &
                                     dump_fpq, nam_cresp_f, nam_cresp_p, nam_cresp_q, check_if_dump_fpq, dump_f, dump_p, dump_q
       use mpisetup,           only: master
       use named_array_list,   only: wna
-      use units,              only: clight, me, sigma_T
 
       implicit none
 
@@ -84,10 +82,6 @@ module cresp_grid
 
       e_threshold_lo = e_small * e_small_approx_p_lo
       e_threshold_up = e_small * e_small_approx_p_up
-
-      fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
-      write (msg, *) "[cresp_grid:cresp_init_grid] 4/3 * sigma_T / ( me * c ) = ", fsynchr
-      if (master) call printinfo(msg)
 
       call check_if_dump_fpq(vars)
 
@@ -130,7 +124,7 @@ module cresp_grid
       use crhelpers,        only: divv_n
       use func,             only: emag
       use grid_cont,        only: grid_container
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, nam_cresp_f, nam_cresp_p, nam_cresp_q, dump_fpq, dump_f, dump_p, dump_q
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, nam_cresp_f, nam_cresp_p, nam_cresp_q, dump_fpq, dump_f, dump_p, dump_q, fsynchr
       use named_array,      only: p4
       use named_array_list, only: qna, wna
 #ifdef DEBUG
