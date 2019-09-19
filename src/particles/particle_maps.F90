@@ -210,12 +210,10 @@ contains
 
          do p = lbound(cgl%cg%pset%p, dim=1), ubound(cgl%cg%pset%p, dim=1)
             associate( field => cgl%cg%q(iv)%arr, part => cgl%cg%pset%p(p), cg => cgl%cg )
-
                if (part%outside) cycle
-
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
-                     ijkp(cdim, I0) = nint((part%pos(cdim) - cg%coord(CENTER, cdim)%r(1))*cg%idl(cdim), kind=4) + I_ONE   !!! BEWARE hardcoded magic
+                     ijkp(cdim, I0) = nint((part%pos(cdim) - cg%fbnd(cdim,LO)-cg%dl(cdim)/2.)*cg%idl(cdim) + int(cg%lhn(cdim, LO)) + dom%nb, kind=4)
                      ijkp(cdim, IM) = max(ijkp(cdim, I0) - I_ONE, cg%lhn(cdim, LO))
                      ijkp(cdim, IP) = min(ijkp(cdim, I0) + I_ONE, cg%lhn(cdim, HI))
                   else
@@ -228,7 +226,6 @@ contains
                do i = ijkp(xdim, IM), ijkp(xdim, IP)
                   do j = ijkp(ydim, IM), ijkp(ydim, IP)
                      do k = ijkp(zdim, IM), ijkp(zdim, IP)
-
                         cur_ind(:) = [i, j, k]
                         weight = 1.0
 
@@ -242,16 +239,17 @@ contains
                            endif
                            weight = weight_tmp * weight
                         enddo
-
                         field(i, j, k) = field(i, j, k) + factor * (part%mass / cg%dvol) * weight
                       enddo
                   enddo
                enddo
-            end associate
-         enddo
-
+             end associate
+          enddo
          cgl => cgl%nxt
       enddo
+
+      call leaves%leaf_arr3d_boundaries(iv)
+
 
    end subroutine map_tsc
 

@@ -69,14 +69,11 @@ contains
 #ifdef NBODY_GRIDDIRECT
       call update_gravpot_from_particles
 #endif /* NBODY_GRIDDIRECT */
-
       call source_terms_grav
-
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-
-            n_part = size(cg%pset%p, dim=1)
+         n_part = size(cg%pset%p, dim=1)
 
             allocate(cells(n_part, ndims), dist(n_part, ndims))
             call locate_particles_in_cells(n_part, cg, cells, dist)
@@ -85,14 +82,11 @@ contains
 
             allocate(pdel(n_part))
             call update_particle_potential_energy(n_part, cg, cells, dist, pdel)
-
             call update_particle_acc(n_part, cg, cells, dist)
-
             k=1
             do p=1, n_part
                if (pdel(p)==1) then
                   call cg%pset%remove(k)
-                  print *, 'particle ', p, 'removed'
                else
                   k=k+1
                endif
@@ -255,7 +249,6 @@ contains
       real                                         :: Mtot
 
       ig = qna%ind(gpot_n)
-
       Mtot=0
       do p = 1, n_part
          if (.not. cg%pset%p(p)%outside) Mtot = Mtot + cg%pset%p(p)%mass
@@ -436,7 +429,6 @@ contains
    subroutine update_particle_acc_tsc(cg)
 
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, gp1b_n, gpot_n, idm, half, zero
-      use dataio_pub,       only: warn
       use domain,           only: dom
       use grid_cont,        only: grid_container
       use multipole,        only: moments2pot
@@ -462,10 +454,9 @@ contains
 
       fxyz = zero ! suppress -Wmaybe-uninitialized
 
-
       do p = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
          associate( part => cg%pset%p(p) )
-         axyz(:) = zero
+            axyz(:) = zero
 
             if (part%outside) then
             ! multipole expansion for particles outside domain
@@ -477,9 +468,6 @@ contains
                                  part%pos(ydim) - cg%dl(ydim) * tmp(cdim+1), part%pos(zdim) - cg%dl(zdim) * tmp(cdim) ) )
                enddo
                axyz(:) = fxyz(:)
-
-               print *, 'particule', p, 'outside domain'
-
                cycle
             endif
 
@@ -491,7 +479,7 @@ contains
 
             do cdim = xdim, zdim
                if (dom%has_dir(cdim)) then
-                  ijkp(cdim, I0) = nint((part%pos(cdim) - cg%coord(CENTER, cdim)%r(1))*cg%idl(cdim)) + 1   !!! BEWARE hardcoded magic
+                  ijkp(cdim, I0) = nint((part%pos(cdim) - cg%fbnd(cdim,LO)-cg%dl(cdim)/2.) *cg%idl(cdim) + int(cg%lhn(cdim, LO)) + 4, kind=4)
                   ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cg%lhn(cdim, LO)))
                   ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cg%lhn(cdim, HI)))
                else
@@ -520,15 +508,14 @@ contains
 
                         weight = weight_tmp * weight
                         fxyz(cdim) = -(cg%q(ig)%point(cur_ind(:) + idm(cdim,:)) - cg%q(ig)%point(cur_ind(:) - idm(cdim,:)))
+
                      enddo
                      axyz(:) = axyz(:) + fxyz(:)*weight
-
                   enddo
                enddo
             enddo
 
             part%acc(:) = half * axyz(:) * cg%idl(:)
-
          end associate
 
       enddo
