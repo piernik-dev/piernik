@@ -52,8 +52,9 @@ module particle_types
       real                   :: energy     !< total energy of particle
 #endif /* NBODY */
       logical                :: outside    !< this flag is true if the particle is outside the domain
+      logical                :: in, phy, out !< Flags to locate particle in the inner part of the domain or the outer part
    contains
-      procedure :: is_outside              !< compute the outside flag
+     procedure :: is_outside              !< compute the outside flag
    end type particle
 
    !> \brief A list of particles and some associated methods
@@ -179,10 +180,10 @@ contains
       real, dimension(:),  intent(in)    :: acc      !< particle acceleration
       real,                intent(in)    :: energy   !< total energy of particle
 
-      call this%add(particle(pid, mass, pos, vel, acc, energy, .false.))
+      call this%add(particle(pid, mass, pos, vel, acc, energy, .false., .true., .true., .true.))
 #else /* !NBODY */
 
-      call this%add(particle(pid, mass, pos, vel, .false.))
+      call this%add(particle(pid, mass, pos, vel, .false., .true., .true., .true.))
 #endif /* !NBODY */
 
    end subroutine add_using_basic_types
