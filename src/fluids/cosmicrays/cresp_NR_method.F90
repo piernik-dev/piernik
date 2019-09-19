@@ -291,7 +291,7 @@ contains
 
       q_space = zero
       do i = 1, int(half*helper_arr_dim)
-         q_space(i) = ln_eval_array_val(i, q_big, real(0.05,kind=8), int(1,kind=4), int(half*helper_arr_dim,kind=4)) ! BEWARE: magic number
+         q_space(i) = ln_eval_array_val(i, q_big, real(0.05), int(1,kind=4), int(half*helper_arr_dim,kind=4)) ! BEWARE: magic number
       enddo
 
       do i = 1, int(half*helper_arr_dim)!, arr_dim
@@ -328,10 +328,10 @@ contains
       n_max_up = 1000.0
 
       do i = 1, arr_dim
-         alpha_tab_lo(i) = ind_to_flog(i, a_min_lo, a_max_lo, arr_dim) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
-         alpha_tab_up(i) = ind_to_flog(i, a_min_up, a_max_up, arr_dim) ! a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
-         n_tab_lo(i)     = ind_to_flog(i, n_min_lo, n_max_lo, arr_dim) ! n_min_lo * ten**((log10(n_max_lo/n_min_lo))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
-         n_tab_up(i)     = ind_to_flog(i, n_min_up, n_max_up, arr_dim) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
+         alpha_tab_lo(i) = ind_to_flog(i, a_min_lo, a_max_lo, arr_dim) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim-1)*real(i-1))
+         alpha_tab_up(i) = ind_to_flog(i, a_min_up, a_max_up, arr_dim) ! a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim-1)*real(i-1))
+         n_tab_lo(i)     = ind_to_flog(i, n_min_lo, n_max_lo, arr_dim) ! n_min_lo * ten**((log10(n_max_lo/n_min_lo))/real(arr_dim-1)*real(i-1))
+         n_tab_up(i)     = ind_to_flog(i, n_min_up, n_max_up, arr_dim) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1)*real(i-1))
       enddo
 
       if (e_small_approx_init_cond .eq. 1) then
@@ -1474,7 +1474,7 @@ contains
       real,            intent(in) :: min_in, max_in
       integer(kind=4), intent(in) :: ind, length
 
-      ind_to_flog = min_in * ten**(((log10(max_in/min_in))/real(length-I_ONE,kind=8))*real((ind-I_ONE),kind=8))
+      ind_to_flog = min_in * ten**(((log10(max_in/min_in))/real(length-I_ONE))*real(ind-I_ONE))
 
    end function ind_to_flog
 !----------------------------------------------------------------------------------------------------
