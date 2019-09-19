@@ -101,7 +101,7 @@
     K_cre_perp_1  = 1.0e2
     K_cre_pow     = 0.5 ! 0.5
     e_small = 1.0e-5    ! lower energy cutoff for energy-approximated cutoff momenta
-    initial_condition = 'powl' ! 'powl', 'brpl', 'bump', 'symf', 'syme'
+    initial_spectrum = 'powl' ! 'powl', 'brpl', 'bump', 'symf', 'syme'
     NR_iter_limit = 50
     synch_active  = .false.
     adiab_active =  .false.

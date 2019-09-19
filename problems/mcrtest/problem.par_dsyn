@@ -89,7 +89,7 @@
     K_cre_perp_1  = 5.0e1 ! 1.e1
     K_cre_pow     = 0.5 ! 0.5
     e_small       = 1.0e-5 ! 8.5e-3 ! 2.0e-4! 12.0e0
-    initial_condition = 'powl' ! 'powl', 'brpl', 'bump', 'symf', 'syme'  !   powl - power-law, brpl - broken power-law, bump - bump-type spectrum, symf - symmetric distr. function spectrum, syme - symmetric energy distr. spectrum
+    initial_spectrum = 'powl' ! 'powl', 'brpl', 'bump', 'symf', 'syme'  !   powl - power-law, brpl - broken power-law, bump - bump-type spectrum, symf - symmetric distr. function spectrum, syme - symmetric energy distr. spectrum
     bump_amp    = 0.5d0  ! amplitude of bump-type spectrum
     e_small_approx_init_cond = 1  ! 0  ! 1 ! tells algoritm to approximate both boundary momenta at initialization
     e_small_approx_p_lo = 1 ! 0 ! 1  ! tells algorithm to appriximate lower boundary momentum

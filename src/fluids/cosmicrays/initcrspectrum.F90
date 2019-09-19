@@ -45,7 +45,7 @@ module initcrspectrum
    real(kind=8)    :: p_max_fix                   !< fixed momentum grid upper cutoff
    real(kind=8)    :: p_lo_init                   !< initial lower cutoff momentum
    real(kind=8)    :: p_up_init                   !< initial upper cutoff momentum
-   character(len=cbuff_len) :: initial_condition     !< available types: bump, powl, brpl, symf, syme. Description below.
+   character(len=cbuff_len) :: initial_spectrum     !< available types: bump, powl, brpl, symf, syme. Description below.
    real(kind=8)    :: p_br_init_lo, p_br_init_up  !< initial low energy break
    real(kind=8)    :: f_init                      !< initial value of distr. func. for isolated case
    real(kind=8)    :: q_init                      !< initial value of power law-like spectrum exponent
@@ -158,7 +158,7 @@ module initcrspectrum
       integer      :: i
       real(kind=8) :: p_br_def, q_br_def
 
-      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_condition, &
+      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum, &
       &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active,             &
       &                         K_cre_pow, expan_order, e_small, use_cresp, e_small_approx_init_cond, p_br_init_lo, &
       &                         e_small_approx_p_lo, e_small_approx_p_up, force_init_NR, NR_iter_limit, max_p_ratio,&
@@ -168,7 +168,7 @@ module initcrspectrum
       &                         smallcren, p_br_init_up
 
 ! Default values
-      if (initial_condition .eq. "plpc" ) then ! FIXME TODO
+      if (initial_spectrum .eq. "plpc" ) then ! FIXME TODO
          if (abs(p_br_init_lo - p_br_def) .le. eps .or. abs(p_br_init_up - p_br_def) .le. eps) then
             write (msg,"(A)") "[initcrspectrum:init_cresp] Parameters for 'plpc' spectrum: p_br_init_lo or p_br_init_up has default value (probably unitialized). Check spectrum parameters."
             if (master) call die(msg)
@@ -196,7 +196,7 @@ module initcrspectrum
       p_lo_init         = 1.5e1
       p_up_init         = 7.5e2
       p_br_def          = p_lo_init
-      initial_condition = "powl"
+      initial_spectrum  = "powl"
       f_init            = 1.0
       q_init            = 4.1
       q_br_def          = q_init
@@ -320,7 +320,7 @@ module initcrspectrum
          rbuff(27) = p_br_init_up
          rbuff(28) = q_br_init
 
-         cbuff(1)  = initial_condition
+         cbuff(1)  = initial_spectrum
       endif
 
       call piernik_MPI_Bcast(ibuff)
@@ -385,7 +385,7 @@ module initcrspectrum
          p_br_init_up                = rbuff(27)
          q_br_init                   = rbuff(28)
 
-         initial_condition           = trim(cbuff(1))
+         initial_spectrum            = trim(cbuff(1))
 
       endif
 
@@ -494,22 +494,22 @@ module initcrspectrum
          call die(msg)
       endif
 !>
-!!\brief Correctness of "initial_condition" is checked here
+!!\brief Correctness of "initial_spectrum" is checked here
 !!
-!! Description of initial_condition keywords: powl - pure power-law like distribution function,
+!! Description of initial_spectrum keywords: powl - pure power-law like distribution function,
 !! brpl - broken power-law like (with break in the first bin, making it easier for NR algorithm
 !! to find solution of lower cutoff momentum), bump - gaussian-like spectrum,
 !! \deprecated syme - symmetric energy distribution relative to the middle of the initial spectrum,
 !! \deprecated symf - similar, but symmetric in distribution function.
 !<
-      if ( f_init .lt. eps) then
-         if (initial_condition == 'powl' .or. initial_condition == 'brpl') then
-            write (msg,"(A,A,A)") "[initcrspectrum:init_cresp] Provided power law type spectrum (",initial_condition,") with initial amplitude f_init ~ zero. Check your parameters."
+      if (f_init .lt. eps) then
+         if (initial_spectrum == 'powl' .or. initial_spectrum == 'brpl') then
+            write (msg,"(A,A,A)") "[initcrspectrum:init_cresp] Provided power law type spectrum (",initial_spectrum,") with initial amplitude f_init ~ zero. Check your parameters."
             call die(msg)
          endif
       endif
 
-      if (initial_condition .eq. "brpl" ) then
+      if (initial_spectrum == "brpl" ) then
          if (abs(p_br_init_lo - p_br_def) .le. eps) then
             write (msg,"(A)") "[initcrspectrum:init_cresp] Parameter for 'brpl' spectrum: p_br_init_lo has default value (probably unitialized). Assuming p_lo_init value ('powl' spectrum)."
             if (master) call warn(msg)
@@ -528,7 +528,7 @@ module initcrspectrum
          endif
       endif
 
-      if (initial_condition .eq. "plpc" ) then
+      if (initial_spectrum == "plpc" ) then
          if (abs(p_br_init_lo - p_br_def) .le. eps .or. abs(p_br_init_up - p_br_def) .le. eps) then
             write (msg,"(A)") "[initcrspectrum:init_cresp] Parameters for 'plpc' spectrum: p_br_init_lo or p_br_init_up has default value (probably unitialized). Check spectrum parameters."
             if (master) call die(msg)

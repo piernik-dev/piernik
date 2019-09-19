@@ -911,7 +911,7 @@ contains
       use cresp_NR_method, only: e_small_to_f
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
-      use initcrspectrum,  only: spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, eps, p_fix, w, f_init,   &
+      use initcrspectrum,  only: spec_mod_trms, q_init, p_lo_init, p_up_init, initial_spectrum, eps, p_fix, w, f_init,   &
                               &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, dump_fpq, crel, &
                               &  e_small_approx_p_up, total_init_cree, e_small, cresp_all_bins
       use mpisetup,        only: master
@@ -942,14 +942,14 @@ contains
       p_lo = p_lo_init
       p_up = p_up_init
 
-      p        = p_fix       ! actual array of p including free edges, p_fix shared via initcrspectrum
-      p(0)     = p_lo
-      p(ncre)  = p_up
+      p       = p_fix       ! actual array of p including free edges, p_fix shared via initcrspectrum
+      p(0)    = p_lo
+      p(ncre) = p_up
 
 ! Sorting bin edges - arbitrary chosen p_lo and p_up may need to be sorted to appear in growing order
       do k = ncre, 1, -1
          do i = 0, k-1
-            if (p(i)>p(i+1)) then
+            if (p(i) > p(i+1)) then
                c = p(i)
                p(i) = p(i+1)
                p(i+1) = c
@@ -970,20 +970,20 @@ contains
       i_up = max(1,i_up)
       i_up = min(i_up,ncre)
 
-      if (abs(p_lo_init - p_fix(i_lo)) .le. eps ) then
+      if (abs(p_lo_init - p_fix(i_lo)) <= eps ) then
          write(msg, *) "[cresp_crspectrum:cresp_init_state] p_lo_init = p_fix(i_lo):  incrementing i_lo index to avoid FPE"
          if (master) call warn(msg)
          i_lo = i_lo+1
       endif
 
-      if (abs(p_up_init - p_fix(i_up-1)) .le. eps ) then
+      if (abs(p_up_init - p_fix(i_up-1)) <= eps ) then
          write(msg, *) "[cresp_crspectrum:cresp_init_state] p_up_init = p_fix(i_up-1): decrementing i_up index to avoid FPE"
          if (master) call warn(msg)
          i_up = i_up-1
       endif
 
-      if (q_init .lt. three) then
-         if (approx_p_lo .eq. I_ONE .or. approx_p_up .eq. I_ONE) then
+      if (q_init < three) then
+         if (approx_p_lo == I_ONE .or. approx_p_up == I_ONE) then
             write(msg,*) "[cresp_crspectrum:cresp_init_state] Initial parameters: q_init < 3.0 and approximation of outer momenta is on,"
             call warn(msg)
             write(msg,*) "[cresp_crspectrum:cresp_init_state] approximation of outer momenta with hard energy spectrum might not work. You have been warned."
@@ -1002,7 +1002,7 @@ contains
       f = zero
       f = f_init * (p/p_lo_init)**(-q_init)
 
-      select case (initial_condition)
+      select case (initial_spectrum)
          case ('powl')
             call cresp_init_powl_spectrum
          case ('brpg')
@@ -1018,7 +1018,7 @@ contains
          case ('bump')
             call cresp_init_bump_spectrum
          case default
-            write(msg,"(A,A,A)") "[cresp_crspectrum:cresp_init_state] Provided unrecognized initial_condition (",initial_condition,"). Make sure that value is correctly provided."
+            write(msg,"(A,A,A)") "[cresp_crspectrum:cresp_init_state] Provided unrecognized initial_spectrum (",initial_spectrum,"). Make sure that value is correctly provided."
             call die(msg)
       end select
 
@@ -1032,7 +1032,7 @@ contains
          crel%i_up = i_up
       endif
 
-      if ( e_small_approx_init_cond .gt. 0) then
+      if (e_small_approx_init_cond > 0) then
          call get_fqp_lo(exit_code)
          if (exit_code) then
             write(msg,*) "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but solution for initial spectrum lower cutoff not found, exiting! "
