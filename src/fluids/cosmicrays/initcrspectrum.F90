@@ -513,23 +513,20 @@ module initcrspectrum
 
       call init_cresp_types
 
-      if (ncre > 0) then
-         K_cre_paral(1:ncre)        = K_cre_paral_1 * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP number density K
-         K_cre_perp (1:ncre)        = K_cre_perp_1  * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP number density K
-         K_cre_paral(ncre+1:2*ncre) = K_cre_paral(1:ncre)
-         K_cre_perp (ncre+1:2*ncre) = K_cre_perp(1:ncre)
+      K_cre_paral(1:ncre) = K_cre_paral_1 * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP number density K
+      K_cre_perp (1:ncre) = K_cre_perp_1  * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP number density K
 
-         K_crs_paral(ncrn+1:ncrn+2*ncre) = K_cre_paral(1:2*ncre)
-         K_crs_perp (ncrn+1:ncrn+2*ncre) = K_cre_perp (1:2*ncre)
-      endif
+      K_cre_paral(ncre+1:2*ncre)      = K_cre_paral(1:ncre)
+      K_cre_perp (ncre+1:2*ncre)      = K_cre_perp (1:ncre)
+      K_crs_paral(ncrn+1:ncrn+2*ncre) = K_cre_paral(1:2*ncre)
+      K_crs_perp (ncrn+1:ncrn+2*ncre) = K_cre_perp (1:2*ncre)
 
       fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
       write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr
       if (master) call printinfo(msg)
 
       if ((q_init < three) .and. (e_small_approx_p_lo == I_ONE .or. e_small_approx_p_up == I_ONE)) then
-         write(msg,*) "[cresp_crspectrum:cresp_init_state] Initial parameters: q_init < 3.0 and approximation of outer momenta is on, approximation of outer momenta with hard energy spectrum might not work."
-         call warn(msg)
+         call warn("[cresp_crspectrum:cresp_init_state] Initial parameters: q_init < 3.0 and approximation of outer momenta is on, approximation of outer momenta with hard energy spectrum might not work.")
       endif
 
    end subroutine init_cresp
