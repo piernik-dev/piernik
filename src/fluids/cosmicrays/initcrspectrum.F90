@@ -145,7 +145,7 @@ module initcrspectrum
 !====================================================================================================
    subroutine init_cresp
 
-      use constants,       only: cbuff_len, I_ZERO, zero, one, ten
+      use constants,       only: cbuff_len, I_ZERO, I_ONE, zero, one, three, ten
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index
@@ -158,7 +158,7 @@ module initcrspectrum
       integer      :: i
       real(kind=8) :: p_br_def, q_br_def
 
-      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum, &
+      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum,        &
       &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active,             &
       &                         K_cre_pow, expan_order, e_small, use_cresp, e_small_approx_init_cond, p_br_init_lo, &
       &                         e_small_approx_p_lo, e_small_approx_p_up, force_init_NR, NR_iter_limit, max_p_ratio,&
@@ -168,28 +168,6 @@ module initcrspectrum
       &                         smallcren, p_br_init_up
 
 ! Default values
-      if (initial_spectrum .eq. "plpc" ) then ! FIXME TODO
-         if (abs(p_br_init_lo - p_br_def) .le. eps .or. abs(p_br_init_up - p_br_def) .le. eps) then
-            write (msg,"(A)") "[initcrspectrum:init_cresp] Parameters for 'plpc' spectrum: p_br_init_lo or p_br_init_up has default value (probably unitialized). Check spectrum parameters."
-            if (master) call die(msg)
-         else
-!>
-!! \brief p_br_init_lo should be equal to one of p_fix values
-!<
-            i = minloc(abs(p_fix - p_br_init_lo),dim=1)-1
-            write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_lo was set, but should be equal to one of p_fix. Assuming p_br_init_lo =", p_fix(i),"."
-            p_br_init_lo = p_fix(i)
-            if (master) call warn(msg)
-!>
-!! \brief p_br_init_up should also be equal to one of p_fix values
-!<
-            i = minloc(abs(p_fix - p_br_init_up),dim=1)-1
-            write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_up was set, but should be equal to one of p_fix. Assuming p_br_init_up =", p_fix(i),"."
-            p_br_init_up = p_fix(i)
-            if (master) call warn(msg)
-         endif
-      endif
-
       use_cresp         = .true.
       p_min_fix         = 1.5e1
       p_max_fix         = 1.65e4
@@ -389,83 +367,87 @@ module initcrspectrum
 
       endif
 
-      if (ncre .ne. I_ZERO)  then
-         if (ncre .lt. 3) then
-            write (msg,'(A)') "[initcrspectrum:init_cresp] CRESP algorithm currently requires at least 3 bins (ncre) in order to work properly, check your parameters."
+! Input parameters check
+      if (ncre < 3) then
+         if (ncre <= I_ZERO)  then
+            write (msg,"(A,I4,A)") '[initcrspectrum:init_cresp] ncre   = ', ncre, '; cr-electrons NOT initnialized. If COSM_RAY_ELECTRONS flag is on, please check your parameters.'
             call die(msg)
          endif
+         write (msg,'(A)') "[initcrspectrum:init_cresp] CRESP algorithm currently requires at least 3 bins (ncre) in order to work properly, check your parameters."
+         call die(msg)
+      endif
 
-         if (approx_cutoffs) then
-            e_small_approx_p_lo = 1; e_small_approx_p_up = 1
-            write (msg,'(A)') "[initcrspectrum:init_cresp] approx_cutoffs = .true. -- will use e_small to approximate spectrum cutoffs and initial state spectrum."
-         else
-            e_small_approx_p_lo      = 0 ; e_small_approx_p_up = 0 ! e_small_approx_init_cond stays default, unless user changes.
-            write (msg,'(A)') "[initcrspectrum:init_cresp] approx_cutoffs = .false. -- will not use e_small approximated cutoffs, but still approximate initial state. To turn it off use e_small_approx_init_cond = 0."
-         endif
-         if (master) call printinfo(msg)
+      if (approx_cutoffs) then
+         e_small_approx_p_lo = 1; e_small_approx_p_up = 1
+         write (msg,'(A)') "[initcrspectrum:init_cresp] approx_cutoffs = .true. -- will use e_small to approximate spectrum cutoffs and initial state spectrum."
+      else
+         e_small_approx_p_lo = 0 ; e_small_approx_p_up = 0 ! e_small_approx_init_cond stays default, unless user changes.
+         write (msg,'(A)') "[initcrspectrum:init_cresp] approx_cutoffs = .false. -- will not use e_small approximated cutoffs, but still approximate initial state. To turn it off use e_small_approx_init_cond = 0."
+      endif
+      if (master) call printinfo(msg)
 
-         if ( (e_small_approx_p_lo+e_small_approx_p_up) .gt. 0 .and. e_small_approx_init_cond .lt. 1) then
-            e_small_approx_init_cond = 1  !
-            write (msg,'(A)') "[initcrspectrum:init_cresp] Approximation of boundary momenta is active -> modifying e_small_approx_init_cond to 1."
-            if (master) call warn(msg)
-         endif
+      if ( (e_small_approx_p_lo+e_small_approx_p_up) > 0 .and. e_small_approx_init_cond < 1) then
+         e_small_approx_init_cond = 1  !
+         write (msg,'(A)') "[initcrspectrum:init_cresp] Approximation of boundary momenta is active -> modifying e_small_approx_init_cond to 1."
+         if (master) call warn(msg)
+      endif
 
 ! countermeasure - in case unrecognized or invalid parameters are provided
 
-         if ( e_small_approx_p_lo .gt. 0 ) then ; e_small_approx_p_lo = 1 ; else ; e_small_approx_p_lo = 0 ; endif
-         if ( e_small_approx_p_up .gt. 0 ) then ; e_small_approx_p_up = 1 ; else ; e_small_approx_p_up = 0 ; endif
-         if ( e_small_approx_init_cond .gt. 0 ) then ; e_small_approx_init_cond = 1 ; else ; e_small_approx_init_cond = 0 ; endif
+      if (e_small_approx_p_lo > 0) then ; e_small_approx_p_lo = 1 ; else ; e_small_approx_p_lo = 0 ; endif
+      if (e_small_approx_p_up > 0) then ; e_small_approx_p_up = 1 ; else ; e_small_approx_p_up = 0 ; endif
+      if (e_small_approx_init_cond > 0) then ; e_small_approx_init_cond = 1 ; else ; e_small_approx_init_cond = 0 ; endif
 
-         if (e_small_approx_p_lo+e_small_approx_p_up .eq. 0) NR_refine_solution_q = .true. !< for testing we leave precise solutions of q (especially for outer momenta)
+      if (e_small_approx_p_lo+e_small_approx_p_up == 0) NR_refine_solution_q = .true. !< for testing we leave precise solutions of q (especially for outer momenta)
 
-         if (e_small_approx_init_cond + e_small_approx_p_lo + e_small_approx_p_up .eq. 0) e_small = zero                !< no threshold energy for bin activation necessary
+      if (e_small_approx_init_cond + e_small_approx_p_lo + e_small_approx_p_up == 0) e_small = zero                !< no threshold energy for bin activation necessary
 
 ! arrays initialization
-         call my_allocate_with_index(p_fix,ncre,0)
-         call my_allocate_with_index(p_mid_fix,ncre,1)
-         call my_allocate_with_index(cresp_all_edges,ncre,0)
-         call my_allocate_with_index(cresp_all_bins, ncre,1)
-         call my_allocate_with_index(n_small_bin,ncre,1)
+      call my_allocate_with_index(p_fix,ncre,0)
+      call my_allocate_with_index(p_mid_fix,ncre,1)
+      call my_allocate_with_index(cresp_all_edges,ncre,0)
+      call my_allocate_with_index(cresp_all_bins, ncre,1)
+      call my_allocate_with_index(n_small_bin,ncre,1)
 
-         call my_allocate_with_index(Gamma_fix,ncre,0)
-         call my_allocate_with_index(Gamma_mid_fix,ncre,1)
-         call my_allocate_with_index(mom_cre_fix,ncre,0)
-         call my_allocate_with_index(mom_mid_cre_fix,ncre,1)
-         call my_allocate_with_index(gamma_beta_c_fix,ncre,0)
+      call my_allocate_with_index(Gamma_fix,ncre,0)
+      call my_allocate_with_index(Gamma_mid_fix,ncre,1)
+      call my_allocate_with_index(mom_cre_fix,ncre,0)
+      call my_allocate_with_index(mom_mid_cre_fix,ncre,1)
+      call my_allocate_with_index(gamma_beta_c_fix,ncre,0)
 
-         cresp_all_edges = [(i, i = 0, ncre)]
-         cresp_all_bins  = [(i, i = 1, ncre)]
+      cresp_all_edges = [(i, i = 0, ncre)]
+      cresp_all_bins  = [(i, i = 1, ncre)]
 
 !!\brief for now algorithm requires at least 3 bins
-         p_fix = zero
-         w  = (log10(p_max_fix/p_min_fix))/real(ncre-2,kind=8)
-         p_fix(1:ncre-1)  =  p_min_fix*ten**(w* real((cresp_all_edges(1:ncre-1)-1),kind=8) )
-         p_fix(0)    = zero
-         p_fix(ncre) = zero
-         p_fix_ratio = ten**w
+      p_fix = zero
+      w  = (log10(p_max_fix/p_min_fix))/real(ncre-2,kind=8)
+      p_fix(1:ncre-1)  =  p_min_fix*ten**(w* real((cresp_all_edges(1:ncre-1)-1),kind=8) )
+      p_fix(0)    = zero
+      p_fix(ncre) = zero
+      p_fix_ratio = ten**w
 
-         p_mid_fix = 0.0
-         p_mid_fix(2:ncre-1) = sqrt(p_fix(1:ncre-2)*p_fix(2:ncre-1))
-         p_mid_fix(1)    = p_mid_fix(2) / p_fix_ratio
-         p_mid_fix(ncre) = p_mid_fix(ncre-1) * p_fix_ratio
+      p_mid_fix = 0.0
+      p_mid_fix(2:ncre-1) = sqrt(p_fix(1:ncre-2)*p_fix(2:ncre-1))
+      p_mid_fix(1)    = p_mid_fix(2) / p_fix_ratio
+      p_mid_fix(ncre) = p_mid_fix(ncre-1) * p_fix_ratio
 
 !> set Gamma arrays, analogically to p_fix arrays, that will be constructed using Gamma arrays
-         Gamma_fix            = one             !< Gamma factor obviously cannot be lower than 1
-         G_w                  = (log10(Gamma_max_fix/Gamma_min_fix))/real(ncre-2,kind=8)
-         Gamma_fix(1:ncre-1)  = Gamma_min_fix * ten**(G_w * real((cresp_all_edges(1:ncre-1)-1),kind=8))
-         Gamma_fix_ratio      = ten**w
+      Gamma_fix            = one             !< Gamma factor obviously cannot be lower than 1
+      G_w                  = (log10(Gamma_max_fix/Gamma_min_fix))/real(ncre-2,kind=8)
+      Gamma_fix(1:ncre-1)  = Gamma_min_fix * ten**(G_w * real((cresp_all_edges(1:ncre-1)-1),kind=8))
+      Gamma_fix_ratio      = ten**w
 
-         Gamma_mid_fix = one
-         Gamma_mid_fix(2:ncre-1) = sqrt( Gamma_fix(1:ncre-2)   * Gamma_fix(2:ncre-1) )
-         Gamma_mid_fix(1)        = sqrt( Gamma_mid_fix(1)      * Gamma_mid_fix(2))
-         Gamma_mid_fix(ncre)     = sqrt( Gamma_mid_fix(ncre-1) * Gamma_mid_fix(ncre-1) * Gamma_fix_ratio )
+      Gamma_mid_fix = one
+      Gamma_mid_fix(2:ncre-1) = sqrt( Gamma_fix(1:ncre-2)   * Gamma_fix(2:ncre-1) )
+      Gamma_mid_fix(1)        = sqrt( Gamma_mid_fix(1)      * Gamma_mid_fix(2))
+      Gamma_mid_fix(ncre)     = sqrt( Gamma_mid_fix(ncre-1) * Gamma_mid_fix(ncre-1) * Gamma_fix_ratio )
 ! compute physical momenta of particles in given unit set
-         mom_cre_fix      = [(cresp_get_mom(Gamma_fix(i),me),     i = 0, ncre )]
-         mom_mid_cre_fix  = [(cresp_get_mom(Gamma_mid_fix(i),me), i = 1, ncre )]
+      mom_cre_fix      = [(cresp_get_mom(Gamma_fix(i),me),     i = 0, ncre )]
+      mom_mid_cre_fix  = [(cresp_get_mom(Gamma_mid_fix(i),me), i = 1, ncre )]
 
-         gamma_beta_c_fix = mom_cre_fix / me
+      gamma_beta_c_fix = mom_cre_fix / me
 
-         n_small_bin(:) = e_small / (p_mid_fix(:) * clight_cresp)
+      n_small_bin(:) = e_small / (p_mid_fix(:) * clight_cresp)
 
 #ifdef VERBOSE
          write (msg,'(A, 50I3)')    '[initcrspectrum:init_cresp] fixed all edges: ', cresp_all_edges
@@ -488,11 +470,6 @@ module initcrspectrum
          call printinfo(msg)
 #endif /* VERBOSE */
 
-! Input parameters check
-      else
-         write (msg,"(A,I4,A)") '[initcrspectrum:init_cresp] ncre   = ', ncre, '; cr-electrons NOT initnialized. If COSM_RAY_ELECTRONS flag is on, please check your parameters.'
-         call die(msg)
-      endif
 !>
 !!\brief Correctness of "initial_spectrum" is checked here
 !!
@@ -523,12 +500,12 @@ module initcrspectrum
             if (master) call warn(msg)
          endif
          if (abs(q_br_init - q_br_def) .le. eps) then
-            write (msg,"(A)") "[initcrspectrum:init_cresp] Parameter for 'brpl' spectrum: q_br_init has default value (probably unitialized). Assuming q_init value    ('powl' spectrum)."
+            write (msg,"(A)") "[initcrspectrum:init_cresp] Parameter for 'brpl' spectrum: q_br_init has default value (probably unitialized). Assuming q_init value ('powl' spectrum)."
             if (master) call warn(msg)
          endif
       endif
 
-      if (initial_spectrum == "plpc" ) then
+      if (initial_spectrum == "plpc") then
          if (abs(p_br_init_lo - p_br_def) .le. eps .or. abs(p_br_init_up - p_br_def) .le. eps) then
             write (msg,"(A)") "[initcrspectrum:init_cresp] Parameters for 'plpc' spectrum: p_br_init_lo or p_br_init_up has default value (probably unitialized). Check spectrum parameters."
             if (master) call die(msg)
@@ -565,6 +542,11 @@ module initcrspectrum
       fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
       write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr
       if (master) call printinfo(msg)
+
+      if ((q_init < three) .and.(e_small_approx_p_lo == I_ONE .or. e_small_approx_p_up == I_ONE)) then
+         write(msg,*) "[cresp_crspectrum:cresp_init_state] Initial parameters: q_init < 3.0 and approximation of outer momenta is on, approximation of outer momenta with hard energy spectrum might not work."
+         call warn(msg)
+      endif
 
    end subroutine init_cresp
 

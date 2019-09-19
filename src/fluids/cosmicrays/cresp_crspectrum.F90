@@ -907,7 +907,7 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_init_state(init_n, init_e, sptab)
 
-      use constants, only: zero, I_ONE, three
+      use constants, only: zero, I_ONE
       use cresp_NR_method, only: e_small_to_f
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
@@ -973,22 +973,13 @@ contains
       if (abs(p_lo_init - p_fix(i_lo)) <= eps ) then
          write(msg, *) "[cresp_crspectrum:cresp_init_state] p_lo_init = p_fix(i_lo):  incrementing i_lo index to avoid FPE"
          if (master) call warn(msg)
-         i_lo = i_lo+1
+         i_lo = i_lo + 1
       endif
 
       if (abs(p_up_init - p_fix(i_up-1)) <= eps ) then
          write(msg, *) "[cresp_crspectrum:cresp_init_state] p_up_init = p_fix(i_up-1): decrementing i_up index to avoid FPE"
          if (master) call warn(msg)
-         i_up = i_up-1
-      endif
-
-      if (q_init < three) then
-         if (approx_p_lo == I_ONE .or. approx_p_up == I_ONE) then
-            write(msg,*) "[cresp_crspectrum:cresp_init_state] Initial parameters: q_init < 3.0 and approximation of outer momenta is on,"
-            call warn(msg)
-            write(msg,*) "[cresp_crspectrum:cresp_init_state] approximation of outer momenta with hard energy spectrum might not work. You have been warned."
-            call warn(msg)
-         endif
+         i_up = i_up - 1
       endif
 
       is_active_bin = .false.
