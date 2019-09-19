@@ -664,7 +664,7 @@ contains
    end subroutine cresp_find_prepare_spectrum
 !----------------------------------------------------------------------------------------------------
 
-   function assert_active_bin_via_nei(n_in, e_in, i_cutoff)
+   logical function assert_active_bin_via_nei(n_in, e_in, i_cutoff)
 
       use constants,       only: zero, fpi, one, three
       use cresp_variables, only: clight_cresp
@@ -680,7 +680,7 @@ contains
       real,            intent(in) :: n_in, e_in
       integer(kind=4), intent(in) :: i_cutoff
       real                        :: f_one, q_one, p_l, p_r, e_amplitude_l, e_amplitude_r, alpha
-      logical                     :: exit_code, assert_active_bin_via_nei
+      logical                     :: exit_code
 
       if (e_in .gt. zero .and. n_in .gt. zero .and. p_fix(max(i_cutoff-1,0)) .gt. zero ) then
          assert_active_bin_via_nei = .true.
@@ -1401,7 +1401,7 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
 
-   function fp_to_e_ampl(p_1, f_1)
+   real function fp_to_e_ampl(p_1, f_1)
 
       use constants,       only: fpi
       use cresp_variables, only: clight_cresp
@@ -1409,7 +1409,6 @@ contains
       implicit none
 
       real, intent(in) :: p_1, f_1
-      real             :: fp_to_e_ampl
 
       fp_to_e_ampl = fpi * clight_cresp**2 * f_1 * p_1**3
 
@@ -1686,11 +1685,11 @@ contains
 !-------------------------------------------------------------------------------------------------
 ! Function used to obtain q for one cell out of f and p values - used to compute q after finding p_up
 !-------------------------------------------------------------------------------------------------
-   function pf_to_q(p_l, p_r, f_l, f_r)
+   real function pf_to_q(p_l, p_r, f_l, f_r)
 
       implicit none
+
       real, intent(in) :: p_l, p_r, f_l, f_r
-      real             :: pf_to_q
 
       pf_to_q = 0.0
       pf_to_q = -log(f_r/f_l)/log(p_r/p_l) ! append value of q for given p_up
@@ -1737,7 +1736,7 @@ contains
 !---------------------------------------------------------------------------------------------------
 ! Computing cosmic ray pressure (eq. 44)
 !---------------------------------------------------------------------------------------------------
-   function get_pcresp(p_l, p_r, f_l, q, bins) ! computes cre pressure, not used currently
+   real function get_pcresp(p_l, p_r, f_l, q, bins) ! computes cre pressure, not used currently
 
       use constants,       only: zero, one, three, four, fpi
       use cresp_variables, only: clight_cresp
@@ -1748,7 +1747,6 @@ contains
       real,    dimension(:), intent(in) :: p_l, p_r, f_l, q
       integer, dimension(:), intent(in) :: bins
       real,    dimension(size(bins))    :: p_cresp
-      real                              :: get_pcresp
 
       get_pcresp = zero
       p_cresp = (fpi/three) * clight_cresp*f_l(bins)*p_l(bins)**4

@@ -190,7 +190,7 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   function derivative_1D(x) ! via finite difference method
+   real function derivative_1D(x) ! via finite difference method
 
       use constants,      only: half
       use initcrspectrum, only: eps
@@ -198,8 +198,7 @@ contains
       implicit none
 
       real, intent(in) :: x
-      real             :: dx, derivative_1D
-      real             :: dx_par = 1.0e-4
+      real             :: dx, dx_par = 1.0e-4
 
       dx = sign(1.0, x) * min(abs(x*dx_par), dx_par)
       dx = sign(1.0, x) * max(abs(dx), eps) ! dx = 0.0 must not be allowed
@@ -1090,7 +1089,7 @@ contains
    end function fvec_lo
 
 !---------------------------------------------------------------------------------------------------
-   function encp_func_2_zero(side, p_ratio, alpha_cnst, q_in3) ! from eqn. 29
+   real function encp_func_2_zero(side, p_ratio, alpha_cnst, q_in3) ! from eqn. 29
 
       use constants, only: one
 
@@ -1098,7 +1097,6 @@ contains
 
       integer(kind=4), intent(in) :: side
       real,            intent(in) :: p_ratio, alpha_cnst, q_in3
-      real                        :: encp_func_2_zero
       real                        :: q_in4
 
       q_in4 = one + q_in3
@@ -1115,7 +1113,7 @@ contains
    end function encp_func_2_zero
 
 !----------------------------------------------------------------------------------------------------
-   function n_func_2_zero(p_ratio, fp_cmplx, n_cnst, q_in3) ! from eqn. 9
+   real function n_func_2_zero(p_ratio, fp_cmplx, n_cnst, q_in3) ! from eqn. 9
 
       use constants,       only: one
       use cresp_variables, only: clight_cresp
@@ -1124,7 +1122,6 @@ contains
       implicit none
 
       real, intent(in) :: p_ratio, fp_cmplx, n_cnst, q_in3
-      real             :: n_func_2_zero
 
       n_func_2_zero = e_small / (clight_cresp * fp_cmplx)
       if (abs(q_in3) .lt. eps) then
@@ -1202,10 +1199,10 @@ contains
 
       implicit none                                              ! should return exit code as well
 
-      real,     intent(inout) :: a_val, n_val  ! ratios arrays (p,f: lo and up), for which solutions have been obtained. loc_no_ip - in case when interpolation is not possible,
-      logical,  intent(out)   :: interpolation_successful
-      real,    dimension(2)   :: intpol_pf_from_NR_grids ! indexes with best match and having solutions are chosen.
-      real                    :: blin_a, blin_n
+      real,    intent(inout) :: a_val, n_val  ! ratios arrays (p,f: lo and up), for which solutions have been obtained. loc_no_ip - in case when interpolation is not possible,
+      logical, intent(out)   :: interpolation_successful
+      real,    dimension(2)  :: intpol_pf_from_NR_grids ! indexes with best match and having solutions are chosen.
+      real                   :: blin_a, blin_n
       integer(kind=4), dimension(1:2) :: l1, l2, loc_no_ip ! l1, l2 - indexes that points where alpha_tab_ and up nad n_tab_ and up are closest in value to a_val and n_val - indexes point to
       logical                         :: exit_code
 
@@ -1310,7 +1307,7 @@ contains
 
    end subroutine nearest_solution
 !----------------------------------------------------------------------------------------------------
-   function compute_q(alpha_in, exit_code, outer_p_ratio)
+   real function compute_q(alpha_in, exit_code, outer_p_ratio)
 
       use constants,      only: zero, one, I_ZERO, I_ONE
       use initcrspectrum, only: NR_refine_solution_q, q_big, p_fix_ratio, arr_dim_q
@@ -1320,7 +1317,6 @@ contains
       real,           intent(inout) :: alpha_in
       logical,        intent(inout) :: exit_code ! value should be .true. at input
       real, optional, intent(in)    :: outer_p_ratio
-      real                          :: compute_q
       integer(kind=4)               :: loc_1, loc_2
 
       p_a => alpha_tab_q
@@ -1454,7 +1450,7 @@ contains
 
       implicit none
 
-      logical         :: boolean_arg
+      logical :: boolean_arg
 
       if (boolean_arg) then
          logical_2_int = 1
@@ -1571,12 +1567,11 @@ contains
 
    end subroutine nr_test_1D
 !----------------------------------------------------------------------------------------------------
-   function f_test_1D(x)
+   real function f_test_1D(x)
 
       implicit none
 
       real, intent(in) :: x
-      real             :: f_test_1D
 
       f_test_1D = 1.1*x + sin(x)
 
