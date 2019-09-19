@@ -41,34 +41,34 @@ module initcrspectrum
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
    logical         :: use_cresp                   !< determines whether CRESP update is called by fluidupdate
-   real(kind=8)    :: p_min_fix                   !< fixed momentum grid lower cutoff
-   real(kind=8)    :: p_max_fix                   !< fixed momentum grid upper cutoff
-   real(kind=8)    :: p_lo_init                   !< initial lower cutoff momentum
-   real(kind=8)    :: p_up_init                   !< initial upper cutoff momentum
-   character(len=cbuff_len) :: initial_spectrum     !< available types: bump, powl, brpl, symf, syme. Description below.
-   real(kind=8)    :: p_br_init_lo, p_br_init_up  !< initial low energy break
-   real(kind=8)    :: f_init                      !< initial value of distr. func. for isolated case
-   real(kind=8)    :: q_init                      !< initial value of power law-like spectrum exponent
-   real(kind=8)    :: q_br_init                   !< initial q for low energy break
-   real(kind=8)    :: q_big                       !< maximal amplitude of q
-   real(kind=8)    :: cfl_cre                     !< CFL parameter  for cr electrons
-   real(kind=8)    :: cre_eff                     !< fraction of energy passed to cr-electrons by nucleons (mainly protons)
-   real(kind=8)    :: K_cre_paral_1               !< maximal parallell diffusion coefficient value
-   real(kind=8)    :: K_cre_perp_1                !< maximal perpendicular diffusion coefficient value
-   real(kind=8)    :: K_cre_pow                   !< exponent for power law-like diffusion-energy dependance
+   real            :: p_min_fix                   !< fixed momentum grid lower cutoff
+   real            :: p_max_fix                   !< fixed momentum grid upper cutoff
+   real            :: p_lo_init                   !< initial lower cutoff momentum
+   real            :: p_up_init                   !< initial upper cutoff momentum
+   character(len=cbuff_len) :: initial_spectrum   !< available types: bump, powl, brpl, symf, syme. Description below.
+   real            :: p_br_init_lo, p_br_init_up  !< initial low energy break
+   real            :: f_init                      !< initial value of distr. func. for isolated case
+   real            :: q_init                      !< initial value of power law-like spectrum exponent
+   real            :: q_br_init                   !< initial q for low energy break
+   real            :: q_big                       !< maximal amplitude of q
+   real            :: cfl_cre                     !< CFL parameter  for cr electrons
+   real            :: cre_eff                     !< fraction of energy passed to cr-electrons by nucleons (mainly protons)
+   real            :: K_cre_paral_1               !< maximal parallell diffusion coefficient value
+   real            :: K_cre_perp_1                !< maximal perpendicular diffusion coefficient value
+   real            :: K_cre_pow                   !< exponent for power law-like diffusion-energy dependance
    integer(kind=4) :: expan_order                 !< 1,2,3 order of Taylor expansion for p_update (cresp_crspectrum)
-   real(kind=8)    :: e_small                     !< lower energy cutoff for energy-approximated cutoff momenta
+   real            :: e_small                     !< lower energy cutoff for energy-approximated cutoff momenta
    logical         :: approx_cutoffs              !< T,F - turns off/on all approximating terms
    integer(kind=1) :: e_small_approx_p_lo         !< 0,1 - turns off/on energy (e_small) approximated lower cutoff momentum in isolated case
    integer(kind=1) :: e_small_approx_p_up         !< 0,1 - turns off/on energy (e_small) approximated upper cutoff momentum in isolated case
    integer(kind=1) :: e_small_approx_init_cond    !< 0,1 - turns off/on energy (e_small) approximated momenta at initialization
-   real(kind=8)    :: smallcren                   !< floor value for CRESP number density
-   real(kind=8)    :: smallcree                   !< floor value for CRESP energy density
-   real(kind=8)    :: Gamma_min_fix               ! < min of Lorentzs' Gamma factor, lower range of CRESP fixed grid
-   real(kind=8)    :: Gamma_max_fix               ! < max of Lorentzs' Gamma factor, upper range of CRESP fixed grid
-   real(kind=8)    :: Gamma_lo_init               ! < min of Lorentzs' Gamma factor, lower range of initial spectrum
-   real(kind=8)    :: Gamma_up_init               ! < max of Lorentzs' Gamma factor, upper range of initial spectrum
-   real(kind=8)    :: max_p_ratio                 !< maximal ratio of momenta for solution grids resolved at initialization via cresp_NR_method
+   real            :: smallcren                   !< floor value for CRESP number density
+   real            :: smallcree                   !< floor value for CRESP energy density
+   real            :: Gamma_min_fix               ! < min of Lorentzs' Gamma factor, lower range of CRESP fixed grid
+   real            :: Gamma_max_fix               ! < max of Lorentzs' Gamma factor, upper range of CRESP fixed grid
+   real            :: Gamma_lo_init               ! < min of Lorentzs' Gamma factor, lower range of initial spectrum
+   real            :: Gamma_up_init               ! < max of Lorentzs' Gamma factor, upper range of initial spectrum
+   real            :: max_p_ratio                 !< maximal ratio of momenta for solution grids resolved at initialization via cresp_NR_method
    integer(kind=2) :: NR_iter_limit               !< maximal number of iterations for NR algorithm
    logical         :: force_init_NR               !< forces resolving new ratio solution grids at initialization
    logical         :: NR_run_refine_pf            !< enables "refine_grids" subroutines that fill empty spaces on the solution grid
@@ -80,39 +80,39 @@ module initcrspectrum
    logical         :: allow_source_spectrum_break !< allow extension of spectrum to adjacent bins if momenta found exceed set p_fix
    logical         :: synch_active                !< TEST feature - turns on / off synchrotron cooling @ CRESP
    logical         :: adiab_active                !< TEST feature - turns on / off adiabatic   cooling @ CRESP
-   real(kind=8)    :: cre_active                  !< electron contribution to Pcr
+   real            :: cre_active                  !< electron contribution to Pcr
 
 ! NR parameters
-   real(kind=8)    :: tol_f                       !< tolerance for f abs. error in NR algorithm
-   real(kind=8)    :: tol_x                       !< tolerance for x abs. error in NR algorithm
-   real(kind=8)    :: tol_f_1D                    !< tolerance for f abs. error in NR algorithm (1D)
-   real(kind=8)    :: tol_x_1D                    !< tolerance for x abs. error in NR algorithm (1D)
+   real            :: tol_f                       !< tolerance for f abs. error in NR algorithm
+   real            :: tol_x                       !< tolerance for x abs. error in NR algorithm
+   real            :: tol_f_1D                    !< tolerance for f abs. error in NR algorithm (1D)
+   real            :: tol_x_1D                    !< tolerance for x abs. error in NR algorithm (1D)
    integer(kind=4) :: arr_dim, arr_dim_q
 
-   real(kind=8), parameter  :: eps = 1.0e-15          !< epsilon parameter for real number comparisons
+   real, parameter :: eps = 1.0e-15          !< epsilon parameter for real number comparisons
 !----------------------------------
-   real(kind=8), allocatable, dimension(:) :: p_fix, p_mid_fix, n_small_bin
-   real(kind=8)                            :: w
+   real, allocatable, dimension(:) :: p_fix, p_mid_fix, n_small_bin
+   real                            :: w
 
-   real(kind=8), allocatable, dimension(:) :: mom_cre_fix, mom_mid_cre_fix, Gamma_fix, Gamma_mid_fix, gamma_beta_c_fix
-   real(kind=8)                            :: Gamma_fix_ratio
-   real(kind=8)                            :: G_w
+   real, allocatable, dimension(:) :: mom_cre_fix, mom_mid_cre_fix, Gamma_fix, Gamma_mid_fix, gamma_beta_c_fix
+   real                            :: Gamma_fix_ratio
+   real                            :: G_w
 
 ! Types used in module:
    type bin_old
-      integer                                :: i_lo
-      integer                                :: i_up
-      real(kind=8), allocatable,dimension(:) :: p
-      real(kind=8), allocatable,dimension(:) :: f
-      real(kind=8), allocatable,dimension(:) :: q
-      real(kind=8), allocatable,dimension(:) :: e
-      real(kind=8), allocatable,dimension(:) :: n
-      real(kind=8)                           :: dt
+      integer                        :: i_lo
+      integer                        :: i_up
+      real, allocatable,dimension(:) :: p
+      real, allocatable,dimension(:) :: f
+      real, allocatable,dimension(:) :: q
+      real, allocatable,dimension(:) :: e
+      real, allocatable,dimension(:) :: n
+      real                           :: dt
    end type bin_old
 
    type cr_spectrum
-      real(kind=8), allocatable,dimension(:) :: e
-      real(kind=8), allocatable,dimension(:) :: n
+      real, allocatable,dimension(:) :: e
+      real, allocatable,dimension(:) :: n
    end type cr_spectrum
 
    type(cr_spectrum) cresp
@@ -121,13 +121,13 @@ module initcrspectrum
 ! For passing terms to compute energy sources / sinks
 
    type spec_mod_trms
-      real(kind=8) :: ub
-      real(kind=8) :: ud
-      real(kind=8) :: ucmb
+      real :: ub
+      real :: ud
+      real :: ucmb
    end type spec_mod_trms
 
-   real(kind=8)    :: total_init_cree
-   real(kind=8)    :: p_fix_ratio
+   real :: total_init_cree
+   real :: p_fix_ratio
    integer, allocatable, dimension(:) :: cresp_all_edges, cresp_all_bins
 
 ! CRESP names
@@ -135,8 +135,8 @@ module initcrspectrum
    character(len=*), parameter :: nam_cresp_p = "crep" !< helping array for CRESP energy density
    character(len=*), parameter :: nam_cresp_q = "creq" !< helping array for CRESP energy density
 
-   logical         :: dump_fpq, dump_f, dump_p, dump_q  ! diagnostic, if true - adding 'cref', 'crep', 'creq' to hdf_vars must follow
-   real(kind=8) :: fsynchr
+   logical :: dump_fpq, dump_f, dump_p, dump_q  ! diagnostic, if true - adding 'cref', 'crep', 'creq' to hdf_vars must follow
+   real    :: fsynchr
 
 !====================================================================================================
 !
@@ -155,8 +155,8 @@ module initcrspectrum
 
       implicit none
 
-      integer      :: i
-      real(kind=8) :: p_br_def, q_br_def
+      integer :: i
+      real    :: p_br_def, q_br_def
 
       namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum,        &
       &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active,             &
@@ -193,25 +193,25 @@ module initcrspectrum
       Gamma_lo_init     = 10.0
       Gamma_up_init     = 200.0
 
-      approx_cutoffs    = .true.
-      e_small           = 1.0e-5
-      e_small_approx_p_lo = 1
-      e_small_approx_p_up = 1
+      approx_cutoffs       = .true.
+      e_small              = 1.0e-5
+      e_small_approx_p_lo  = 1
+      e_small_approx_p_up  = 1
       e_small_approx_init_cond = 1
-      max_p_ratio       = 2.5
-      NR_iter_limit     = 100
-      force_init_NR     = .false.
-      NR_run_refine_pf  = .false.
-      NR_refine_solution_q   = .false.
-      NR_refine_pf_lo   = .false.
-      NR_refine_pf_up   = .false.
-      nullify_empty_bins     = .false.
-      smallcren              = 0.0
-      smallcree              = 0.0
+      max_p_ratio          = 2.5
+      NR_iter_limit        = 100
+      force_init_NR        = .false.
+      NR_run_refine_pf     = .false.
+      NR_refine_solution_q = .false.
+      NR_refine_pf_lo      = .false.
+      NR_refine_pf_up      = .false.
+      nullify_empty_bins   = .false.
+      smallcren            = 0.0
+      smallcree            = 0.0
       allow_source_spectrum_break  = .false.
-      synch_active = .true.
-      adiab_active = .true.
-      cre_active   = 0.0
+      synch_active         = .true.
+      adiab_active         = .true.
+      cre_active           = 0.0
 
 ! NR parameters
       tol_f    = 1.0e-11
@@ -401,25 +401,25 @@ module initcrspectrum
       if (e_small_approx_init_cond + e_small_approx_p_lo + e_small_approx_p_up == 0) e_small = zero                !< no threshold energy for bin activation necessary
 
 ! arrays initialization
-      call my_allocate_with_index(p_fix,ncre,0)
-      call my_allocate_with_index(p_mid_fix,ncre,1)
-      call my_allocate_with_index(cresp_all_edges,ncre,0)
-      call my_allocate_with_index(cresp_all_bins, ncre,1)
-      call my_allocate_with_index(n_small_bin,ncre,1)
+      call my_allocate_with_index(p_fix,           ncre, 0)
+      call my_allocate_with_index(p_mid_fix,       ncre, 1)
+      call my_allocate_with_index(cresp_all_edges, ncre, 0)
+      call my_allocate_with_index(cresp_all_bins,  ncre, 1)
+      call my_allocate_with_index(n_small_bin,     ncre, 1)
 
-      call my_allocate_with_index(Gamma_fix,ncre,0)
-      call my_allocate_with_index(Gamma_mid_fix,ncre,1)
-      call my_allocate_with_index(mom_cre_fix,ncre,0)
-      call my_allocate_with_index(mom_mid_cre_fix,ncre,1)
-      call my_allocate_with_index(gamma_beta_c_fix,ncre,0)
+      call my_allocate_with_index(Gamma_fix,        ncre, 0)
+      call my_allocate_with_index(Gamma_mid_fix,    ncre, 1)
+      call my_allocate_with_index(mom_cre_fix,      ncre, 0)
+      call my_allocate_with_index(mom_mid_cre_fix,  ncre, 1)
+      call my_allocate_with_index(gamma_beta_c_fix, ncre, 0)
 
       cresp_all_edges = [(i, i = 0, ncre)]
       cresp_all_bins  = [(i, i = 1, ncre)]
 
 !!\brief for now algorithm requires at least 3 bins
       p_fix = zero
-      w  = (log10(p_max_fix/p_min_fix))/real(ncre-2,kind=8)
-      p_fix(1:ncre-1)  =  p_min_fix*ten**(w* real((cresp_all_edges(1:ncre-1)-1),kind=8) )
+      w  = log10(p_max_fix/p_min_fix) / real(ncre-2)
+      p_fix(1:ncre-1) = p_min_fix*ten**(w*real(cresp_all_edges(1:ncre-1)-1))
       p_fix(0)    = zero
       p_fix(ncre) = zero
       p_fix_ratio = ten**w
@@ -431,8 +431,8 @@ module initcrspectrum
 
 !> set Gamma arrays, analogically to p_fix arrays, that will be constructed using Gamma arrays
       Gamma_fix            = one             !< Gamma factor obviously cannot be lower than 1
-      G_w                  = (log10(Gamma_max_fix/Gamma_min_fix))/real(ncre-2,kind=8)
-      Gamma_fix(1:ncre-1)  = Gamma_min_fix * ten**(G_w * real((cresp_all_edges(1:ncre-1)-1),kind=8))
+      G_w                  = log10(Gamma_max_fix/Gamma_min_fix) / real(ncre-2)
+      Gamma_fix(1:ncre-1)  = Gamma_min_fix * ten**(G_w * real(cresp_all_edges(1:ncre-1)-1))
       Gamma_fix_ratio      = ten**w
 
       Gamma_mid_fix = one
@@ -588,7 +588,7 @@ module initcrspectrum
 
       implicit none
 
-      real(kind=8), intent(in) :: gamma, particle_mass
+      real, intent(in) :: gamma, particle_mass
 
       cresp_get_mom = zero
       if (gamma > one) cresp_get_mom = particle_mass * sqrt(gamma**2 - one) * clight
