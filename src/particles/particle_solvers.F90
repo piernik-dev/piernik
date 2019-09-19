@@ -328,6 +328,7 @@ contains
       real                           :: dt_kick   !< timestep for kicks
       type(cg_list_element), pointer :: cgl
 
+
       if (twodtscheme) then
          if (forward) then
             call kick(dt)                        !1. kick
@@ -371,20 +372,58 @@ contains
 
          subroutine drift(ddt)
 
+            use particle_utils,  only: part_leave_cg, reattrib_part_cg, is_part_in_cg
+            use mpisetup,        only: piernik_MPI_Allreduce, proc, nproc
+            use constants,       only: pSUM
+
             implicit none
 
             real, intent(in) :: ddt
-            integer          :: i
+            integer          :: i,j
+            integer :: ind
+            logical in, phy,out
+            integer, dimension(nproc) :: nmoves
+            real, allocatable, dimension(:,:) :: part_info
 
+
+            nmoves=0
             cgl => leaves%first
             do while (associated(cgl))
                associate( parts => cgl%cg%pset )
-               do i = 1, size(parts%p, dim=1)
-                  parts%p(i)%pos = parts%p(i)%pos + parts%p(i)%vel * ddt
-               enddo
+                 do i = 1, size(parts%p, dim=1)
+                    parts%p(i)%pos = parts%p(i)%pos + parts%p(i)%vel * ddt
+                    call is_part_in_cg(parts%p(i)%pos, parts%p(i)%in, parts%p(i)%phy, parts%p(i)%out)
+                    if (.not. in) nmoves(proc+1) = nmoves(proc+1)+1
+                 enddo
                end associate
                cgl => cgl%nxt
             enddo
+
+            call piernik_MPI_Allreduce(nmoves, pSUM)
+
+            allocate(part_info(sum(nmoves),12))
+            part_info=0
+
+            cgl => leaves%first
+            do while (associated(cgl))
+               ind=1
+               do j=1,proc
+                  ind=ind+nmoves(j)
+               enddo
+               call part_leave_cg(cgl%cg,part_info,ind)
+               cgl => cgl%nxt
+            enddo
+
+            call piernik_MPI_Allreduce(part_info, pSUM)
+
+            cgl => leaves%first
+            do while (associated(cgl))
+               call reattrib_part_cg(cgl%cg,part_info,sum(nmoves))
+               cgl => cgl%nxt
+            enddo
+
+            deallocate(part_info)
+
 
          end subroutine drift
 
