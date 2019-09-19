@@ -66,39 +66,38 @@ module cresp_crspectrum
    integer, allocatable               :: cooling_edges_next(:)
    integer, allocatable               :: heating_edges_next(:)
 
-   real(kind=8), allocatable, dimension(:) :: r  ! r term for energy losses (Miniati 2001, eqn. 25)
-   real(kind=8), allocatable, dimension(:) :: q  ! power-law exponent array
+   real, allocatable, dimension(:) :: r  ! r term for energy losses (Miniati 2001, eqn. 25)
+   real, allocatable, dimension(:) :: q  ! power-law exponent array
 
 ! power-law
-   real(kind=8)                            :: p_lo_next, p_up_next, p_lo, p_up !, p_lo_bef, p_up_bef
-   integer                                 :: i_lo, i_up, i_lo_next, i_up_next
-   real(kind=8), dimension(:), allocatable :: p ! momentum table for piecewise power-law spectru intervals
-   real(kind=8), dimension(:), allocatable :: f ! distribution function for piecewise power-law spectrum
+   real                            :: p_lo_next, p_up_next, p_lo, p_up !, p_lo_bef, p_up_bef
+   integer                         :: i_lo, i_up, i_lo_next, i_up_next
+   real, dimension(:), allocatable :: p ! momentum table for piecewise power-law spectru intervals
+   real, dimension(:), allocatable :: f ! distribution function for piecewise power-law spectrum
 
 ! predicted and upwind momenta, number density / energy density fluxes
-   real(kind=8), dimension(:), allocatable :: p_next, p_upw , nflux, eflux ! , p_fix
+   real, dimension(:), allocatable :: p_next, p_upw , nflux, eflux ! , p_fix
 
 ! precision control for energy / number density transport and dissipation of energy
-   real(kind=8)                            :: n_tot, n_tot0, e_tot, e_tot0
+   real                            :: n_tot, n_tot0, e_tot, e_tot0
 
 ! in-algorithm energy dissipation terms
-   real(kind=8)                            :: u_b, u_d
+   real                            :: u_b, u_d
 
 ! work array of number density and energy during algorithm execution
-   real(kind=8),allocatable, dimension(:)  :: ndt, edt
+   real,allocatable, dimension(:)  :: ndt, edt
 
 ! in-algorithm energy & number density
-   real(kind=8), allocatable, dimension(:) :: n, e ! dimension(1:ncre)
-   real(kind=8), allocatable, dimension(:) :: e_amplitudes_l, e_amplitudes_r
+   real, allocatable, dimension(:) :: n, e ! dimension(1:ncre)
+   real, allocatable, dimension(:) :: e_amplitudes_l, e_amplitudes_r
 ! lower / upper energy needed for bin activation
-   real(kind=8)                            :: e_threshold_lo, e_threshold_up
+   real                            :: e_threshold_lo, e_threshold_up
 ! if one bin, switch off cutoff p approximation
-   integer                                 :: approx_p_lo, approx_p_up
+   integer                         :: approx_p_lo, approx_p_up
 
    abstract interface
-      function function_pointer_1D(x,y)
-         real(kind=8)            :: function_pointer_1D
-         real(kind=8),intent(in) :: x, y
+      real function function_pointer_1D(x,y)
+         real, intent(in) :: x, y
       end function function_pointer_1D
    end interface
 
@@ -124,12 +123,12 @@ contains
 
       implicit none
 
-      real(kind=8),                           intent(in)    :: dt
-      real(kind=8), dimension(1:ncre),        intent(inout) :: n_inout, e_inout
-      type(spec_mod_trms),                    intent(in)    :: sptab
-      logical,                                intent(inout) :: cfl_cresp_violation
-      real(kind=8), dimension(1:2), optional, intent(inout) :: p_out
-      logical                                               :: solve_fail_lo, solve_fail_up, empty_cell
+      real,                           intent(in)    :: dt
+      real, dimension(1:ncre),        intent(inout) :: n_inout, e_inout
+      type(spec_mod_trms),            intent(in)    :: sptab
+      logical,                        intent(inout) :: cfl_cresp_violation
+      real, dimension(1:2), optional, intent(inout) :: p_out
+      logical                                       :: solve_fail_lo, solve_fail_up, empty_cell
 
       e = zero; n = zero; edt = zero; ndt = zero
       solve_fail_lo = .false.
@@ -375,8 +374,8 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
-      logical,                       intent(inout) :: empty_cell
+      real, dimension(ncre), intent(inout) :: ext_n, ext_e
+      logical,               intent(inout) :: empty_cell
 
       call find_i_bound(ext_n, ext_e, empty_cell)
 
@@ -400,7 +399,7 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
+      real, dimension(ncre), intent(inout) :: ext_n, ext_e
 
       ext_e(:i_lo)   = zero
       ext_n(:i_lo)   = zero
@@ -416,7 +415,7 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
+      real, dimension(ncre), intent(inout) :: ext_n, ext_e
 
       ext_e(:) = zero
       ext_n(:) = zero
@@ -433,9 +432,9 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
-      logical,                       intent(out)   :: empty_cell
-      integer(kind=4)                              :: i
+      real, dimension(ncre), intent(inout) :: ext_n, ext_e
+      logical,               intent(out)   :: empty_cell
+      integer(kind=4)                      :: i
 
       empty_cell = .true.
 
@@ -474,12 +473,12 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(ncre), intent(inout) :: n, e
-      logical,                       intent(out)   :: empty_cell
-      integer(kind=4), optional,     intent(out)   :: i_up_out
-      integer(kind=8), dimension(:), allocatable   :: nonempty_bins
-      logical, dimension(ncre)                     :: has_n_gt_zero, has_e_gt_zero
-      integer(kind=4)                              :: i, pre_i_lo, pre_i_up, num_has_gt_zero, approx_p_lo_tmp, approx_p_up_tmp
+      real, dimension(ncre),     intent(inout)   :: n, e
+      logical,                   intent(out)     :: empty_cell
+      integer(kind=4), optional, intent(out)     :: i_up_out
+      integer(kind=8), dimension(:), allocatable :: nonempty_bins
+      logical, dimension(ncre)                   :: has_n_gt_zero, has_e_gt_zero
+      integer(kind=4)                            :: i, pre_i_lo, pre_i_up, num_has_gt_zero, approx_p_lo_tmp, approx_p_up_tmp
 
       has_n_gt_zero(:) = .false. ; has_e_gt_zero(:)  = .false.
       is_active_bin(:) = .false. ; is_active_edge(:) = .false.
@@ -678,9 +677,9 @@ contains
 
       implicit none
 
-      real(kind=8),    intent(in) :: n_in, e_in
+      real,            intent(in) :: n_in, e_in
       integer(kind=4), intent(in) :: i_cutoff
-      real(kind=8)                :: f_one, q_one, p_l, p_r, e_amplitude_l, e_amplitude_r, alpha
+      real                        :: f_one, q_one, p_l, p_r, e_amplitude_l, e_amplitude_r, alpha
       logical                     :: exit_code, assert_active_bin_via_nei
 
       if (e_in .gt. zero .and. n_in .gt. zero .and. p_fix(max(i_cutoff-1,0)) .gt. zero ) then
@@ -763,7 +762,7 @@ contains
 
       implicit none
 
-      real(kind=8),    intent(in)  :: n_bin, e_bin
+      real,            intent(in)  :: n_bin, e_bin
       integer(kind=4), intent(in)  :: i_bin
       logical,         intent(out) :: cfl_cresp_violated
 
@@ -793,11 +792,11 @@ contains
 
       implicit none
 
-      real(kind=8), intent(in)  :: dt
-      real(kind=8), intent(in)  :: p_lo, p_up
-      real(kind=8), intent(out) :: p_lo_next, p_up_next
-      logical,      intent(out) :: dt_too_high
-      integer                   :: i
+      real,    intent(in)  :: dt
+      real,    intent(in)  :: p_lo, p_up
+      real,    intent(out) :: p_lo_next, p_up_next
+      logical, intent(out) :: dt_too_high
+      integer              :: i
 
       dt_too_high = .false.
 ! Compute p_lo and p_up at [t+dt]
@@ -895,9 +894,9 @@ contains
 
       implicit none
 
-      real(kind=8), intent(in)  :: dt
-      real(kind=8), intent(in)  :: p_old
-      real(kind=8), intent(out) :: p_new
+      real, intent(in)  :: dt
+      real, intent(in)  :: p_old
+      real, intent(out) :: p_new
 
       p_new = p_old*(one + p_rch(dt, p_old)) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
 
@@ -920,10 +919,10 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(I_ONE:ncre)       :: init_n, init_e
+      real, dimension(I_ONE:ncre)               :: init_n, init_e
       type(spec_mod_trms), optional, intent(in) :: sptab
       integer                                   :: i, k, i_lo_ch, i_up_ch
-      real(kind=8)                              :: c
+      real                                      :: c
       logical                                   :: exit_code
 
       u_b = zero ; u_d = zero
@@ -1112,8 +1111,8 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(1:ncre)            :: q_add
-      real(kind=8), dimension(0:ncre)            :: p_range_add , f_add
+      real, dimension(1:ncre)                    :: q_add
+      real, dimension(0:ncre)                    :: p_range_add , f_add
       integer(kind=4), allocatable, dimension(:) :: act_bins, act_edges
       integer(kind=4)                            :: i_l, i_u
 
@@ -1161,9 +1160,9 @@ contains
 
       implicit none
 
-      real(kind=8)                               :: c_1, c_2, c_3, lpb, lpu, lpl, a, b
-      real(kind=8), dimension(1:ncre)            :: q_add
-      real(kind=8), dimension(0:ncre)            :: p_range_add, f_add
+      real                                       :: c_1, c_2, c_3, lpb, lpu, lpl, a, b
+      real, dimension(1:ncre)                    :: q_add
+      real, dimension(0:ncre)                    :: p_range_add, f_add
       integer(kind=4), allocatable, dimension(:) :: act_bins
       integer(kind=4)                            :: i_l, i_u, i_br, i
 
@@ -1357,8 +1356,8 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(1:ncre), intent(inout) :: n_inout, e_inout
-      real(kind=8),                    intent(in)    :: e_in_total
+      real, dimension(1:ncre), intent(inout) :: n_inout, e_inout
+      real,                    intent(in)    :: e_in_total
 
       n_inout = norm_init_spectrum%n * e_in_total / total_init_cree
       e_inout = norm_init_spectrum%e * e_in_total / total_init_cree
@@ -1380,10 +1379,10 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(:), intent(in) :: p_l, p_r, f_l, q
-      integer,      dimension(:), intent(in) :: bins
-      real(kind=8), dimension(size(bins))    :: e_bins
-      real(kind=8), dimension(1:ncre)        :: fq_to_e
+      real,    dimension(:), intent(in) :: p_l, p_r, f_l, q
+      integer, dimension(:), intent(in) :: bins
+      real,    dimension(size(bins))    :: e_bins
+      real,    dimension(1:ncre)        :: fq_to_e
 
       fq_to_e = zero
       e_bins = fpi*clight_cresp*f_l(bins)*p_l(bins)**4
@@ -1409,8 +1408,8 @@ contains
 
       implicit none
 
-      real(kind=8), intent(in) :: p_1, f_1
-      real(kind=8)             :: fp_to_e_ampl
+      real, intent(in) :: p_1, f_1
+      real             :: fp_to_e_ampl
 
       fp_to_e_ampl = fpi * clight_cresp**2 * f_1 * p_1**3
 
@@ -1430,10 +1429,10 @@ contains
 
       implicit none
 
-      integer,      dimension(:), intent(in) :: bins
-      real(kind=8), dimension(:), intent(in) :: p_l, p_r, f_l, q
-      real(kind=8), dimension(size(bins))    :: n_bins
-      real(kind=8), dimension(1:ncre)        :: fq_to_n
+      integer, dimension(:), intent(in) :: bins
+      real,    dimension(:), intent(in) :: p_l, p_r, f_l, q
+      real,    dimension(size(bins))    :: n_bins
+      real,    dimension(1:ncre)        :: fq_to_n
 
       n_bins = zero
 
@@ -1459,8 +1458,8 @@ contains
 
    implicit none
 
-   real(kind=8),intent(in) :: p_l, p_u, f_l, f_u
-   real(kind=8)            :: e_lo, e_up, e_small_safe, rel_lo, rel_up
+   real,intent(in) :: p_l, p_u, f_l, f_u
+   real            :: e_lo, e_up, e_small_safe, rel_lo, rel_up
 
       e_small_safe = max(e_small, epsilon(e_small))
 
@@ -1526,8 +1525,8 @@ contains
       implicit none
 
       integer, dimension(:), intent(in) :: ce, he    ! cooling edges, heating edges
-      real(kind=8), dimension(1:ncre-1) :: pimh, pimth, fimh,fimth  ! *imh = i_minus_half, *imth = i_minus_third
-      real(kind=8), dimension(1:ncre-1) :: dn_upw, de_upw, qi,qim1  ! *im1 = i_minus_one
+      real,    dimension(1:ncre-1)      :: pimh, pimth, fimh,fimth  ! *imh = i_minus_half, *imth = i_minus_third
+      real,    dimension(1:ncre-1)      :: dn_upw, de_upw, qi,qim1  ! *im1 = i_minus_one
 
       pimh(1:ncre-1) = p(1:ncre-1)
       pimth(1:ncre-1) = p(0:ncre-2)
@@ -1617,9 +1616,9 @@ contains
 
       implicit none
 
-      integer,      dimension(:),      intent(in) :: bins
-      real(kind=8), dimension(0:ncre), intent(in) :: p
-      real(kind=8), dimension(size(bins))         :: r_num, r_den
+      integer, dimension(:),   intent(in) :: bins
+      real, dimension(0:ncre), intent(in) :: p
+      real, dimension(size(bins))         :: r_num, r_den
 
       r = zero
 
@@ -1657,12 +1656,12 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(1:ncre), intent(in)  :: n, e
-      real(kind=8), dimension(1:ncre), intent(out) :: q
-      integer(kind=4), dimension(:),   intent(in)  :: bins
-      integer                                      :: i, i_active
-      real(kind=8)                                 :: alpha_in
-      logical                                      :: exit_code
+      real, dimension(1:ncre),       intent(in)  :: n, e
+      real, dimension(1:ncre),       intent(out) :: q
+      integer(kind=4), dimension(:), intent(in)  :: bins
+      integer                                    :: i, i_active
+      real                                       :: alpha_in
+      logical                                    :: exit_code
 
       q = zero
 
@@ -1690,8 +1689,8 @@ contains
    function pf_to_q(p_l, p_r, f_l, f_r)
 
       implicit none
-      real(kind=8), intent(in) :: p_l, p_r, f_l, f_r
-      real(kind=8)             :: pf_to_q
+      real, intent(in) :: p_l, p_r, f_l, f_r
+      real             :: pf_to_q
 
       pf_to_q = 0.0
       pf_to_q = -log(f_r/f_l)/log(p_r/p_l) ! append value of q for given p_up
@@ -1711,11 +1710,11 @@ contains
 
       implicit none
 
-      integer,      dimension(:)          :: bins
-      real(kind=8), dimension(1:ncre)     :: p_l, p_r, n, q
-      real(kind=8), dimension(size(bins)) :: f_bins
-      real(kind=8), dimension(0:ncre)     :: nq_to_f
-      real(kind=8), dimension(0:ncre)     :: pr_by_pl   ! the array of values of p_r/p_l to avoid FPEs
+      integer, dimension(:)       :: bins
+      real, dimension(1:ncre)     :: p_l, p_r, n, q
+      real, dimension(size(bins)) :: f_bins
+      real, dimension(0:ncre)     :: nq_to_f
+      real, dimension(0:ncre)     :: pr_by_pl   ! the array of values of p_r/p_l to avoid FPEs
 
       nq_to_f= zero
       f_bins = zero
@@ -1746,10 +1745,10 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(:), intent(in) :: p_l, p_r, f_l, q
-      integer,      dimension(:), intent(in) :: bins
-      real(kind=8), dimension(size(bins))    :: p_cresp
-      real(kind=8)                           :: get_pcresp
+      real,    dimension(:), intent(in) :: p_l, p_r, f_l, q
+      integer, dimension(:), intent(in) :: bins
+      real,    dimension(size(bins))    :: p_cresp
+      real                              :: get_pcresp
 
       get_pcresp = zero
       p_cresp = (fpi/three) * clight_cresp*f_l(bins)*p_l(bins)**4
@@ -1774,11 +1773,11 @@ contains
 
       implicit none
 
-      integer(kind=4),                    intent(in)  :: n
-      real(kind=8),                       intent(in)  :: dx
-      real(kind=8), dimension(n, 1:ncre), intent(in)  :: u
-      real(kind=8), dimension(n),         intent(out) :: grad_pcresp
-      real(kind=8), dimension(n)                      :: P_cresp_r, P_cresp_l
+      integer(kind=4),            intent(in)  :: n
+      real,                       intent(in)  :: dx
+      real, dimension(n, 1:ncre), intent(in)  :: u
+      real, dimension(n),         intent(out) :: grad_pcresp
+      real, dimension(n)                      :: P_cresp_r, P_cresp_l
 
       grad_pcresp = 0.0 ;  P_cresp_l = 0.0 ;  P_cresp_r = 0.0
 
@@ -1805,8 +1804,8 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(1:2) :: x_NR, x_NR_init
-      logical                      :: exit_code, interpolated
+      real, dimension(1:2) :: x_NR, x_NR_init
+      logical              :: exit_code, interpolated
 
       x_NR = zero
       alpha = (e(i_up)/(n(i_up)*clight_cresp*p_fix(i_up-1)))
@@ -1879,8 +1878,8 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(1:2) :: x_NR, x_NR_init
-      logical                      :: exit_code, interpolated
+      real, dimension(1:2) :: x_NR, x_NR_init
+      logical              :: exit_code, interpolated
 
       x_NR = zero
       alpha = (e(i_lo+1)/(n(i_lo+1)*clight_cresp*p_fix(i_lo+1)))
@@ -1941,8 +1940,8 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(:), intent(in)  :: p
-      real(kind=8), dimension(size(p))        :: b_losses
+      real, dimension(:), intent(in)  :: p
+      real, dimension(size(p))        :: b_losses
 
       b_losses = u_b*p**2  !!! b_sync_ic = 8.94e-25*(u_b+u_cmb)*gamma_l**2 ! erg/cm
 
@@ -1952,38 +1951,35 @@ contains
 !! \brief Relative change of momentum due to losses (u_b*p*dt) and compression u_d*dt (Taylor expansion up to 3rd order)
 !<
 !====================================================================================================
-   function p_rch_ord_1(dt, p)
+   real function p_rch_ord_1(dt, p)
 
       implicit none
 
-      real(kind=8), intent(in) :: dt, p
-      real(kind=8)             :: p_rch_ord_1
+      real, intent(in) :: dt, p
 
       p_rch_ord_1 = -( u_d + p * u_b ) *  dt
 
    end function p_rch_ord_1
 !-------------------------------------------------------------------------------------------------
-   function p_rch_ord_2_1(dt, p)     !< adds 2nd term and calls 1st order
+   real function p_rch_ord_2_1(dt, p)     !< adds 2nd term and calls 1st order
 
       use constants, only: half
 
       implicit none
 
-      real(kind=8), intent(in) :: dt, p
-      real(kind=8)             :: p_rch_ord_2_1
+      real, intent(in) :: dt, p
 
       p_rch_ord_2_1 = p_rch_ord_1(dt, p)  + ( half*(u_d*dt)**2 + (u_b * p * dt)**2)
 
    end function p_rch_ord_2_1
 !-------------------------------------------------------------------------------------------------
-   function p_rch_ord_3_2_1(dt, p)     !< adds 3rd term and calls 2nd and 1st order
+   real function p_rch_ord_3_2_1(dt, p)     !< adds 3rd term and calls 2nd and 1st order
 
       use constants, only: onesth
 
       implicit none
 
-      real(kind=8), intent(in) :: dt, p
-      real(kind=8)             :: p_rch_ord_3_2_1
+      real, intent(in) :: dt, p
 
       p_rch_ord_3_2_1 = p_rch_ord_2_1(dt, p) - onesth * (u_d * dt)**3 - (u_b * p * dt)**3
 
@@ -2015,7 +2011,7 @@ contains
 
       implicit none
 
-      real(kind=8), intent(inout) :: give_to, take_from
+      real, intent(inout) :: give_to, take_from
 
       give_to = give_to + take_from
       take_from = zero
