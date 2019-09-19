@@ -81,7 +81,7 @@ module particles_io_hdf5
 
       character(len=*), intent(in) :: fname
       character(len=cwdlen)        :: filename
-      character(len=idlen          :: proc_c
+      character(len=idlen)         :: proc_c
       integer                      :: flen
       integer(kind=4)              :: n_part
       integer(kind=4)              :: error
