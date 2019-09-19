@@ -1272,6 +1272,9 @@ contains
 
    end subroutine cresp_init_brpl_spectrum
 
+!>
+!!\brief symf - similar to syme, but symmetric in distribution function
+!<
    subroutine cresp_init_symf_spectrum
 
       use initcosmicrays, only: ncre
@@ -1296,6 +1299,9 @@ contains
 
    end subroutine cresp_init_symf_spectrum
 
+!>
+!!\brief syme - symmetric energy distribution relative to the middle of the initial spectrum
+!<
    subroutine cresp_init_syme_spectrum
 
       use initcosmicrays, only: ncre

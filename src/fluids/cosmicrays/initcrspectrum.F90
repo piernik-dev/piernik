@@ -373,12 +373,11 @@ module initcrspectrum
             write (msg,"(A,I4,A)") '[initcrspectrum:init_cresp] ncre   = ', ncre, '; cr-electrons NOT initnialized. If COSM_RAY_ELECTRONS flag is on, please check your parameters.'
             call die(msg)
          endif
-         write (msg,'(A)') "[initcrspectrum:init_cresp] CRESP algorithm currently requires at least 3 bins (ncre) in order to work properly, check your parameters."
-         call die(msg)
+         call die("[initcrspectrum:init_cresp] CRESP algorithm currently requires at least 3 bins (ncre) in order to work properly, check your parameters.")
       endif
 
       if (approx_cutoffs) then
-         e_small_approx_p_lo = 1; e_small_approx_p_up = 1
+         e_small_approx_p_lo = 1 ; e_small_approx_p_up = 1
          write (msg,'(A)') "[initcrspectrum:init_cresp] approx_cutoffs = .true. -- will use e_small to approximate spectrum cutoffs and initial state spectrum."
       else
          e_small_approx_p_lo = 0 ; e_small_approx_p_up = 0 ! e_small_approx_init_cond stays default, unless user changes.
@@ -387,9 +386,8 @@ module initcrspectrum
       if (master) call printinfo(msg)
 
       if ( (e_small_approx_p_lo+e_small_approx_p_up) > 0 .and. e_small_approx_init_cond < 1) then
-         e_small_approx_init_cond = 1  !
-         write (msg,'(A)') "[initcrspectrum:init_cresp] Approximation of boundary momenta is active -> modifying e_small_approx_init_cond to 1."
-         if (master) call warn(msg)
+         e_small_approx_init_cond = 1
+         if (master) call warn("[initcrspectrum:init_cresp] Approximation of boundary momenta is active -> modifying e_small_approx_init_cond to 1.")
       endif
 
 ! countermeasure - in case unrecognized or invalid parameters are provided
@@ -470,15 +468,7 @@ module initcrspectrum
          call printinfo(msg)
 #endif /* VERBOSE */
 
-!>
-!!\brief Correctness of "initial_spectrum" is checked here
-!!
-!! Description of initial_spectrum keywords: powl - pure power-law like distribution function,
-!! brpl - broken power-law like (with break in the first bin, making it easier for NR algorithm
-!! to find solution of lower cutoff momentum), bump - gaussian-like spectrum,
-!! \deprecated syme - symmetric energy distribution relative to the middle of the initial spectrum,
-!! \deprecated symf - similar, but symmetric in distribution function.
-!<
+      !> check correctness of "initial_spectrum" is checked here
       if (f_init .lt. eps) then
          if (initial_spectrum == 'powl' .or. initial_spectrum == 'brpl') then
             write (msg,"(A,A,A)") "[initcrspectrum:init_cresp] Provided power law type spectrum (",initial_spectrum,") with initial amplitude f_init ~ zero. Check your parameters."
@@ -491,9 +481,7 @@ module initcrspectrum
             write (msg,"(A)") "[initcrspectrum:init_cresp] Parameter for 'brpl' spectrum: p_br_init_lo has default value (probably unitialized). Assuming p_lo_init value ('powl' spectrum)."
             if (master) call warn(msg)
          else
-!>
-!! \brief p_br_init_lo should be equal to one of p_fix values
-!<
+            !> p_br_init_lo should be equal to one of p_fix values
             i = minloc(abs(p_fix - p_br_init_lo),dim=1)-1
             write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_lo was set, but should be equal to one of p_fix. Assuming p_br_init_lo =", p_fix(i),"."
             p_br_init_lo = p_fix(i)
@@ -510,16 +498,12 @@ module initcrspectrum
             write (msg,"(A)") "[initcrspectrum:init_cresp] Parameters for 'plpc' spectrum: p_br_init_lo or p_br_init_up has default value (probably unitialized). Check spectrum parameters."
             if (master) call die(msg)
          else
-!>
-!! \brief p_br_init_lo should be equal to one of p_fix values
-!<
+            !> p_br_init_lo should be equal to one of p_fix values
             i = minloc(abs(p_fix - p_br_init_lo),dim=1)-1
             write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_lo was set, but should be equal to one of p_fix. Assuming p_br_init_lo =", p_fix(i),"."
             p_br_init_lo = p_fix(i)
             if (master) call warn(msg)
-!>
-!! \brief p_br_init_up should also be equal to one of p_fix values
-!<
+            !> p_br_init_up should also be equal to one of p_fix values
             i = minloc(abs(p_fix - p_br_init_up),dim=1)-1
             write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_up was set, but should be equal to one of p_fix. Assuming p_br_init_up =", p_fix(i),"."
             p_br_init_up = p_fix(i)
@@ -543,7 +527,7 @@ module initcrspectrum
       write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr
       if (master) call printinfo(msg)
 
-      if ((q_init < three) .and.(e_small_approx_p_lo == I_ONE .or. e_small_approx_p_up == I_ONE)) then
+      if ((q_init < three) .and. (e_small_approx_p_lo == I_ONE .or. e_small_approx_p_up == I_ONE)) then
          write(msg,*) "[cresp_crspectrum:cresp_init_state] Initial parameters: q_init < 3.0 and approximation of outer momenta is on, approximation of outer momenta with hard energy spectrum might not work."
          call warn(msg)
       endif
