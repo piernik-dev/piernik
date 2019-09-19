@@ -67,8 +67,8 @@ module multipole
    implicit none
 
    private
-   public :: init_multipole, cleanup_multipole, multipole_solver, moments2pot
-   public :: lmax, mmax, ord_prolong_mpole, mpole_solver, level_3D, singlepass  ! initialized in multigrid_gravity
+   public :: init_multipole, cleanup_multipole, multipole_solver, moments2pot, compute_mpole_potential
+   public :: lmax, mmax, mpole_solver, level_3D, singlepass  ! initialized in multigrid_gravity
 
    interface moments2pot
       module procedure moments2pot_xyz
@@ -80,7 +80,6 @@ module multipole
    ! namelist parameters for MULTIGRID_GRAVITY
    integer(kind=4)              :: lmax                !< Maximum l-order of multipole moments
    integer(kind=4)              :: mmax                !< Maximum m-order of multipole moments. Equal to lmax by default.
-   integer(kind=4)              :: ord_prolong_mpole   !< Boundary prolongation operator order; allowed values are -2 .. 2
    character(len=cbuff_len)     :: mpole_solver        !< Pick one of: "monopole", "img_mass" (default), "3D"
    integer(kind=4)              :: level_3D            !< The level, at which we integrate the desnity field, to get is multipole representation. 0: base level, 1: leaves (default), <0: coarsened levels
 
@@ -213,7 +212,7 @@ contains
    subroutine multipole_solver
 
       use cg_leaves,  only: leaves
-      use constants,  only: dirtyH
+      use constants,  only: dirtyH1
       use dataio_pub, only: die
       use global,     only: dirty_debug
       use monopole,   only: isolated_monopole, find_img_CoM
@@ -229,7 +228,7 @@ contains
       call refresh_multipole
 
       if (dirty_debug) then
-         call leaves%reset_boundaries(dirtyH)
+         call leaves%reset_boundaries(0.959*dirtyH1)
       else
          call leaves%reset_boundaries
       endif
@@ -512,20 +511,22 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         do i = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
-            if (cg%pset%p(i)%outside) call Q%point2moments(fpiG*cg%pset%p(i)%mass, cg%pset%p(i)%pos(xdim), cg%pset%p(i)%pos(ydim), cg%pset%p(i)%pos(zdim))
-            ! WARNING: Particles that are too close to the outer boundary aren't fully mapped onto the grid.
-            ! This may cause huge errors in the potential, even for "3D" solver because their mass is counted
-            ! only partially in the mapping routine and the rest is ignored here.
-            !
-            ! Suggested fix: set up some buffer at the boundaries (at least one cell wide, few cells are advised)
-            ! and make a "not_mapped" flag instead of "outside". The transition between mapped and not mapped
-            ! particles may be smooth (with partial mappings allowed) but it must not allow for
-            ! particle mappings extending beyond domain boundaries.
-            !
-            ! BUG: Sometimes particles that are outside computational domain don't have the "outside" flag set up.
-            ! A "not_mapped" flag set in the mapping routine would fix this issue.
-         enddo
+         if (allocated(cg%pset%p)) then
+            do i = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
+               if (cg%pset%p(i)%outside) call Q%point2moments(fpiG*cg%pset%p(i)%mass, cg%pset%p(i)%pos(xdim), cg%pset%p(i)%pos(ydim), cg%pset%p(i)%pos(zdim))
+               ! WARNING: Particles that are too close to the outer boundary aren't fully mapped onto the grid.
+               ! This may cause huge errors in the potential, even for "3D" solver because their mass is counted
+               ! only partially in the mapping routine and the rest is ignored here.
+               !
+               ! Suggested fix: set up some buffer at the boundaries (at least one cell wide, few cells are advised)
+               ! and make a "not_mapped" flag instead of "outside". The transition between mapped and not mapped
+               ! particles may be smooth (with partial mappings allowed) but it must not allow for
+               ! particle mappings extending beyond domain boundaries.
+               !
+               ! BUG: Sometimes particles that are outside computational domain don't have the "outside" flag set up.
+               ! A "not_mapped" flag set in the mapping routine would fix this issue.
+            enddo
+         endif
          cgl => cgl%nxt
       enddo
 
@@ -620,5 +621,46 @@ contains
       pot = Q%moments2pot(r(xdim), r(ydim), r(zdim))/fpiG
 
    end function moments2pot_r
+
+!>
+!! \brief Compute multipole potential in whocle computational domain
+!!
+!! \details This routine is not intended for regular use because of huge
+!! computational cost per cell (O(lmax**2)). It is useful for understanding
+!! and debugging the multipole solver and for showing properties of multipole
+!! estimate of gravitational potential.
+!<
+
+   subroutine compute_mpole_potential(qvar)
+
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+
+      implicit none
+
+      integer(kind=4), intent(in) :: qvar  !< index in cg%q to store the results
+
+      integer :: i, j, k
+      type(cg_list_element), pointer :: cgl
+
+      call leaves%set_q_value(qvar, 0.)
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         ! an ELEMENTAL implementation of moments2pot would allow simplifications of this routine.
+         ! At least the loop over i may be worth stripping.
+         associate (cg => cgl%cg)
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     cg%q(qvar)%arr(i, j, k) = moments2pot([cg%x(i), cg%y(j), cg%z(k)])
+                  enddo
+               enddo
+            enddo
+         end associate
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine compute_mpole_potential
 
 end module multipole

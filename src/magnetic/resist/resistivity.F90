@@ -39,8 +39,7 @@ module resistivity
    implicit none
 
    private
-   public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, etamax,   &
-        &     diffuseb,cu2max, deimin, eta1_active, compute_resist
+   public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, etamax, diffuseb, cu2max, deimin, eta1_active
 
    real                                  :: cfl_resist                     !< CFL factor for resistivity effect
    real                                  :: eta_0                          !< uniform resistivity
@@ -54,9 +53,6 @@ module resistivity
    type(value)                           :: etamax, cu2max, deimin
    logical, save                         :: eta1_active = .true.           !< resistivity off-switcher while eta_1 == 0.0
    character(len=dsetnamelen), parameter :: eta_n = "eta", wb_n = "wb", eh_n = "eh", dbx_n = "dbx", dby_n = "dby", dbz_n = "dbz"
-#ifndef ISO
-   real                                  :: dt_eint
-#endif /* !ISO */
 
 contains
 
@@ -197,29 +193,18 @@ contains
 
    end subroutine init_resistivity
 
-!>
-!! \deprecated BEWARE: uninitialized values are poisoning the wb(:,:,:) array - should change  with rev. 3893
-!! \deprecated BEWARE: significant differences between single-CPU run and multi-CPU run (due to uninits?)
-!<
    subroutine compute_resist
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, MAXL, oneq, LO, HI, GEO_XYZ, pMIN
+      use constants,        only: xdim, ydim, zdim, zero, oneq, LO, HI, GEO_XYZ
       use dataio_pub,       only: die
-      use domain,           only: dom, is_multicg
-      use func,             only: ekin, emag
+      use domain,           only: dom
       use grid_cont,        only: grid_container
-      use mpisetup,         only: piernik_MPI_Bcast, piernik_MPI_Allreduce
       use named_array_list, only: qna
-#ifndef ISO
-      use constants,        only: small, MINL
-      use fluidindex,       only: flind
-#endif /* !ISO */
 
       implicit none
 
-      real, dimension(:,:,:), pointer :: p
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       real, dimension(:,:,:), pointer :: eta, dbx, dby, dbz, wb, eh
@@ -231,6 +216,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+
          eta => cg%q(qna%ind(eta_n))%arr
          dbx => cg%q(qna%ind(dbx_n))%arr
          dby => cg%q(qna%ind(dby_n))%arr
@@ -278,13 +264,13 @@ contains
 
 !        eta(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,wb(:,:,:)- jc2 ))
 !        the above may cause FPE because compiler may transform it to max(0.0, sqrt(wb(:,:,:)- jc2 ))
-         where (wb(:,:,:)- jc2 > 0.)
+         where (wb(:,:,:) - jc2 > zero)
             eta(:,:,:) = eta_0 + eta_1 * sqrt(wb(:,:,:)- jc2)
          elsewhere
             eta(:,:,:) = eta_0
          endwhere
 
-         eh = 0.0
+         eh = zero
          if (dom%has_dir(xdim)) then
             eh(cg%lhn(xdim,LO)+1:cg%lhn(xdim,HI)-1,:,:) = eh(cg%lhn(xdim,LO)+1:cg%lhn(xdim,HI)-1,:,:) + eta(cg%lhn(xdim,LO):cg%lhn(xdim,HI)-2,:,:) + eta(cg%lhn(xdim,LO)+2:cg%lhn(xdim,HI),:,:)
             eh(cg%lhn(xdim,LO),:,:) = eh(cg%lhn(xdim,LO)+1,:,:) ; eh(cg%lhn(xdim,HI),:,:) = eh(cg%lhn(xdim,HI)-1,:,:)
@@ -304,64 +290,77 @@ contains
          cgl => cgl%nxt
       enddo
 
-      cg => leaves%first%cg
-      if (is_multicg) call die("[resistivity:compute_resist] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum, wb, eta
-
-      call leaves%get_extremum(qna%ind(eta_n), MAXL, etamax)
-      call piernik_MPI_Bcast(etamax%val)
-      call leaves%get_extremum(qna%ind(wb_n), MAXL, cu2max)
-
-#ifndef ISO
-      dt_eint = huge(1.)
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         eta => cg%q(qna%ind(eta_n))%arr
-         wb => cg%q(qna%ind(wb_n))%arr
-         wb = (cg%u(flind%ion%ien,:,:,:) - ekin(cg%u(flind%ion%imx,:,:,:), cg%u(flind%ion%imy,:,:,:), cg%u(flind%ion%imz,:,:,:), cg%u(flind%ion%idn,:,:,:)) - &
-              emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)))/ (eta(:,:,:) * wb+small)
-         dt_eint = min(dt_eint, deint_max * abs(minval(cg%q(qna%ind(wb_n))%span(cg%ijkse))))
-         cgl => cgl%nxt
-      enddo
-      call piernik_MPI_Allreduce(dt_eint, pMIN)
-
-      call leaves%get_extremum(qna%ind(wb_n), MINL, deimin)
-      deimin%assoc = dt_eint
-#endif /* !ISO */
-      NULLIFY(p)
-
-      dt_resist = huge(1.)
-      cgl => leaves%first
-      do while (associated(cgl))
-         call timestep_resist(cgl%cg)
-         cgl => cgl%nxt
-      enddo
-      call piernik_MPI_Allreduce(dt_resist, pMIN)
-
-      etamax%assoc = dt_resist ; cu2max%assoc = dt_resist
-
    end subroutine compute_resist
 
 !-----------------------------------------------------------------------
 
-   subroutine timestep_resist(cg)
+   subroutine timestep_resist
 
-      use constants, only: big, zero
-      use grid_cont, only: grid_container
-      use func,      only: operator(.notequals.)
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: big, zero, pMIN, MAXL
+      use grid_cont,        only: grid_container
+      use func,             only: operator(.notequals.)
+      use mpisetup,         only: piernik_MPI_Allreduce, piernik_MPI_Bcast
+      use named_array_list, only: qna
+#ifndef ISO
+      use constants,        only: MINL
+#ifdef IONIZED
+      use constants,        only: small, xdim, ydim, zdim
+      use fluidindex,       only: flind
+      use func,             only: ekin, emag
+      use named_array_list, only: wna
+#endif /* IONIZED */
+#endif /* !ISO */
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(cg_list_element),  pointer   :: cgl
+      type(grid_container),   pointer   :: cg
+      real                              :: dt_eta, dt_eint
+#if !defined(ISO) && defined(IONIZED)
+      real, dimension(:,:,:),   pointer :: eta, wb, eh
+      real, dimension(:,:,:,:), pointer :: uu, bb
+#endif /* !ISO && IONIZED */
+
+      dt_eta = big ; dt_eint = big
+      call compute_resist
+      call leaves%get_extremum(qna%ind(eta_n), MAXL, etamax)
+      call piernik_MPI_Bcast(etamax%val)
+      call leaves%get_extremum(qna%ind(wb_n), MAXL, cu2max)
+      call piernik_MPI_Bcast(cu2max%val)
 
       if (etamax%val .notequals. zero) then
-         dt_resist = min(dt_resist, cfl_resist * cg%dxmn**2 / (2. * etamax%val))
+         cgl => leaves%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            dt_eta = min(dt_eta, cfl_resist * cg%dxmn**2 / (2. * etamax%val))
 #ifndef ISO
-         dt_resist = min(dt_resist,dt_eint)
+#ifdef IONIZED
+            eta => cg%q(qna%ind(eta_n))%span(cg%ijkse)
+            wb => cg%q(qna%ind(wb_n))%span(cg%ijkse)
+            eh => cg%q(qna%ind(eh_n))%span(cg%ijkse)
+            uu => cg%w(wna%fi)%span(cg%ijkse)
+            bb => cg%W(wna%bi)%span(cg%ijkse)
+            eh = (uu(flind%ion%ien,:,:,:) - ekin(uu(flind%ion%imx,:,:,:), uu(flind%ion%imy,:,:,:), uu(flind%ion%imz,:,:,:), uu(flind%ion%idn,:,:,:)) - &
+                  emag(bb(xdim,:,:,:), bb(ydim,:,:,:), bb(zdim,:,:,:)))/ (eta(:,:,:) * wb + small)
+            dt_eint = min(dt_eint, deint_max * abs(minval(eh)))
+#endif /* IONIZED */
+            dt_resist = min(dt_eta, dt_eint)
 #endif /* !ISO */
-      else
-         dt_resist = big
+            cgl => cgl%nxt
+         enddo
       endif
+
+      call piernik_MPI_Allreduce(dt_eta, pMIN)
+#ifndef ISO
+#ifdef IONIZED
+      call piernik_MPI_Allreduce(dt_eint, pMIN)
+#endif /* IONIZED */
+      call leaves%get_extremum(qna%ind(eh_n), MINL, deimin)
+      deimin%assoc = dt_eint
+#endif /* !ISO */
+      etamax%assoc = dt_eta ; cu2max%assoc = min(dt_eta, dt_eint)
 
    end subroutine timestep_resist
 

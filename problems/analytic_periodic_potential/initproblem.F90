@@ -164,7 +164,7 @@ contains
       call all_cg%reg_var(ares_n)
       call all_cg%reg_var(asrc_n)
 
-      call user_ref2list(qna%ind(apot_n), INVALID, ref_thr, deref_thr, 0., "grad")
+      call user_ref2list(qna%ind(apot_n), INVALID, ref_thr, deref_thr, 0., "grad", .true.)
 
    end subroutine read_problem_par
 

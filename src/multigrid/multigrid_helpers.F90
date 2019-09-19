@@ -53,18 +53,18 @@ contains
       use cg_list_bnd,    only: cg_list_bnd_T  ! QA_WARN intel
 #endif /* __INTEL_COMPILER */
       use cg_list_global, only: all_cg
-      use constants,      only: dirtyH
+      use constants,      only: dirtyH1
       use global,         only: dirty_debug
       use multigridvars,  only: source, solution, defect, correction
 
       implicit none
 
-      call all_cg%set_dirty(source)
-      call all_cg%set_dirty(solution)
-      call all_cg%set_dirty(defect)
-      call all_cg%set_dirty(correction)
+      call all_cg%set_dirty(source, 0.999*dirtyH1)
+      call all_cg%set_dirty(solution, 0.998*dirtyH1)
+      call all_cg%set_dirty(defect, 0.997*dirtyH1)
+      call all_cg%set_dirty(correction, 0.996*dirtyH1)
 
-      if (dirty_debug) call all_cg%reset_boundaries(dirtyH)
+      if (dirty_debug) call all_cg%reset_boundaries(0.995*dirtyH1)
 
    end subroutine all_dirty
 

@@ -52,11 +52,12 @@ module initcosmicrays
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
    real                                :: cr_eff       !< conversion rate of SN explosion energy to CR energy (default = 0.1)
-   logical                             :: use_CRsplit    !< apply all diffusion operators at once (.false.) or use directional splittiong (.true.)
+   logical                             :: use_CRsplit  !< apply all diffusion operators at once (.false.) or use directional splittiong (.true.)
+   logical                             :: use_smallecr !< correct CR energy density when it gets lower than smallecr
    real, dimension(ncr_max)            :: gamma_crn    !< array containing adiabatic indexes of all CR nuclear components
    real, dimension(ncr_max)            :: K_crn_paral  !< array containing parallel diffusion coefficients of all CR nuclear components
    real, dimension(ncr_max)            :: K_crn_perp   !< array containing perpendicular diffusion coefficients of all CR nuclear components
-   real, dimension(ncr_max)            :: gamma_cre    !< array containing adiabatic indexes of all CR nuclear components
+   real, dimension(ncr_max)            :: gamma_cre    !< array containing adiabatic indexes of all CR electron components
    real, dimension(ncr_max)            :: K_cre_paral  !< array containing parallel diffusion coefficients of all CR electron components
    real, dimension(ncr_max)            :: K_cre_perp   !< array containing perpendicular diffusion coefficients of all CR electron components
    character(len=cbuff_len)            :: divv_scheme  !< scheme used to calculate div(v), see crhelpers for more details
@@ -120,7 +121,7 @@ contains
       integer(kind=4) :: nn, icr, jcr
       integer         :: ne
 
-      namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, use_CRsplit, &
+      namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRsplit, &
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
            &                 ncre, gamma_cre, K_cre_paral, K_cre_perp, &
            &                 divv_scheme, crn_gpcr_ess, cre_gpcr_ess
@@ -134,6 +135,7 @@ contains
       ncre       = 0
 
       use_CRsplit    = .true.
+      use_smallecr   = .true.
 
       gamma_crn(:)   = 4./3.
       K_crn_paral(:) = 0.0
@@ -170,28 +172,29 @@ contains
 
 #ifndef MULTIGRID
       if (.not. use_CRsplit) call warn("[initcosmicrays:init_cosmicrays] No multigrid solver compiled in: use_CRsplit reset to .true.")
-      use_CRsplit   = .true.
+      use_CRsplit = .true.
 #endif /* !MULTIGRID */
 
-      rbuff(:)      = huge(1.)                         ! mark unused entries to allow automatic determination of nn
+      rbuff(:) = huge(1.)                         ! mark unused entries to allow automatic determination of nn
 
       if (master) then
 
-         ibuff(1)   = ncrn
-         ibuff(2)   = ncre
+         ibuff(1) = ncrn
+         ibuff(2) = ncre
 
-         rbuff(1)   = cfl_cr
-         rbuff(2)   = smallecr
-         rbuff(3)   = cr_active
-         rbuff(4)   = cr_eff
+         rbuff(1) = cfl_cr
+         rbuff(2) = smallecr
+         rbuff(3) = cr_active
+         rbuff(4) = cr_eff
 
-         lbuff(1)   = use_CRsplit
+         lbuff(1) = use_CRsplit
+         lbuff(2) = use_smallecr
 
-         cbuff(1)   = divv_scheme
+         cbuff(1) = divv_scheme
 
-         nn         = count(rbuff(:) < huge(1.), kind=4)    ! this must match the last rbuff() index above
+         nn       = count(rbuff(:) < huge(1.), kind=4)    ! this must match the last rbuff() index above
          ibuff(ubound(ibuff, 1)) = nn
-         ne         = nn + 3 * ncrn
+         ne       = nn + 3 * ncrn
          if (ne + 3 * ncre > ubound(rbuff, 1)) call die("[initcosmicrays:init_cosmicrays] rbuff size exceeded.")
 
          if (ncrn > 0) then
@@ -219,20 +222,21 @@ contains
 
       if (slave) then
 
-         ncrn        = int(ibuff(1), kind=4)
-         ncre        = int(ibuff(2), kind=4)
+         ncrn         = int(ibuff(1), kind=4)
+         ncre         = int(ibuff(2), kind=4)
 
-         cfl_cr      = rbuff(1)
-         smallecr    = rbuff(2)
-         cr_active   = rbuff(3)
-         cr_eff      = rbuff(4)
+         cfl_cr       = rbuff(1)
+         smallecr     = rbuff(2)
+         cr_active    = rbuff(3)
+         cr_eff       = rbuff(4)
 
-         use_CRsplit = lbuff(1)
+         use_CRsplit  = lbuff(1)
+         use_smallecr = lbuff(2)
 
-         nn          = ibuff(ubound(ibuff, 1))    ! this must match the last rbuff() index above
-         ne          = nn + 3 * ncrn
+         nn           = ibuff(ubound(ibuff, 1))    ! this must match the last rbuff() index above
+         ne           = nn + 3 * ncrn
 
-         divv_scheme = cbuff(1)
+         divv_scheme  = cbuff(1)
 
          if (ncrn > 0) then
             gamma_crn  (1:ncrn) = rbuff(nn+1       :nn+  ncrn)

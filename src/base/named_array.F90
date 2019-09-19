@@ -101,7 +101,7 @@ contains
 !<
    subroutine named_array_init(this, n1, n2)
 
-      use constants,  only: big_float, ndims, xdim, ydim, zdim, I_ONE
+      use constants,  only: dirtyH1, ndims, xdim, ydim, zdim, I_ONE
       use dataio_pub, only: die
 
       implicit none
@@ -115,11 +115,11 @@ contains
          type is (named_array3d)
             if (size(n1) /= ndims) call die("[named_array:array_init] expected 3d shape")
             if (.not.associated(this%arr)) allocate(this%arr(n1(xdim):n2(xdim), n1(ydim):n2(ydim), n1(zdim):n2(zdim)))
-            this%arr = big_float
+            this%arr = 0.789*dirtyH1
          type is (named_array4d)
             if (size(n1) /= I_ONE + ndims) call die("[named_array:array_init] expected 4d shape")
             if (.not.associated(this%arr)) allocate(this%arr(n1(I_ONE):n2(I_ONE), n1(I_ONE+xdim):n2(I_ONE+xdim), n1(I_ONE+ydim):n2(I_ONE+ydim), n1(I_ONE+zdim):n2(I_ONE+zdim)))
-            this%arr = big_float
+            this%arr = 0.788*dirtyH1
          class default
             call die("[named_array:named_array_init] No initialization for generic named array")
       end select
@@ -150,7 +150,7 @@ contains
 
    logical function check(this)
 
-      use constants,  only: big_float
+      use constants,  only: dirtyH1c
       use dataio_pub, only: warn, die
 
       implicit none
@@ -161,13 +161,13 @@ contains
       select type(this)
          type is (named_array3d)
             if (associated(this%arr)) then
-               check = any( this%arr >= big_float )
+               check = any( this%arr >= dirtyH1c )
             else
                call warn("[named_array:check] Array not allocated!")
             endif
          type is (named_array4d)
             if (associated(this%arr)) then
-               check = any( this%arr >= big_float )
+               check = any( this%arr >= dirtyH1c )
             else
                call warn("[named_array:check] Array not allocated!")
             endif

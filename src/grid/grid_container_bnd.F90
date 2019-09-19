@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 
-!> \brief Module extending grid container type by structures required boundary exchanges (same level and f/c)
+!> \brief Module extending grid container type by structures required for boundary exchanges (same level and f/c)
 
 module grid_cont_bnd
 
