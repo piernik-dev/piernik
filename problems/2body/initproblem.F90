@@ -337,9 +337,8 @@ contains
 
    subroutine read_buildgal
 
-      use constants,      only: ndims, LO, HI
+      use constants,      only: ndims
       use dataio_pub,     only: msg, printio, warn
-      use domain,         only: dom
       use particle_pub,   only: npart
       use particle_utils, only: add_part_in_proper_cg
 
@@ -373,12 +372,6 @@ contains
       i = 0
       do j = 1, nbodies
          i = i + 1
-         if (i > nbodies) exit
-         do while (any(pos(i,:) < dom%edge(:,LO)) .or. any(pos(i,:) > dom%edge(:,HI)))
-            print *, 'OOOOOPS'
-            i = i + 1
-            if (i > nbodies) exit
-         enddo
          if (i > nbodies) exit
 #ifdef VERBOSE
          if (modulo(i, 10000) .eq. 0) then
