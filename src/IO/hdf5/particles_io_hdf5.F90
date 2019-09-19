@@ -69,10 +69,11 @@ module particles_io_hdf5
 
    subroutine write_nbody_hdf5(fname)
 
-      use constants,      only: cwdlen, tmr_hdf
+      use common_hdf5, only: set_common_attributes
+      use constants,      only: cwdlen, tmr_hdf, idlen
       use dataio_pub,     only: msg, printinfo, printio, thdf
       use hdf5,           only: h5open_f, h5close_f, h5fcreate_f, h5fclose_f, HID_T, H5F_ACC_TRUNC_F
-      use mpisetup,       only: master
+      use mpisetup,       only: master, proc
       use particle_utils, only: count_all_particles
       use timer,          only: set_timer
 
@@ -80,6 +81,7 @@ module particles_io_hdf5
 
       character(len=*), intent(in) :: fname
       character(len=cwdlen)        :: filename
+      character(len=idlen          :: proc_c
       integer                      :: flen
       integer(kind=4)              :: n_part
       integer(kind=4)              :: error
@@ -87,12 +89,11 @@ module particles_io_hdf5
 
       thdf = set_timer(tmr_hdf,.true.)
       flen = len(trim(fname))
-      write(filename,'(3a)') fname(1:flen-7), 'p', fname(flen-6:flen)
-      if (master) then
-         write(msg,'(a,1x,2a)') 'Writing datafile ', trim(filename), " ... "
-         call printio(msg, .true.)
-      endif
-
+      write(proc_c,'(i3.3)') proc
+      write(filename,'(6a)') fname(1:flen-7), 'p', fname(flen-6:flen-3),'_',proc_c,'.h5'
+      write(msg,'(a,1x,2a)') 'Writing datafile ', trim(filename), " ... "
+      call printio(msg, .true.)
+      call set_common_attributes(filename)
       call h5open_f(error)
       call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
 
