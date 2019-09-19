@@ -189,8 +189,8 @@ contains
          if (i_up .gt. 1) then
             call get_fqp_up(solve_fail_up)
          else                                                  !< spectrum cutoff beyond the fixed momentum grid
-            p_up = p_fix(i_up)
-            p(i_up) = p_fix(i_up)
+            p_up          = p_fix(i_up)
+            p(i_up)       = p_fix(i_up)
             solve_fail_up = .false.
          endif
 
@@ -203,11 +203,12 @@ contains
                is_active_bin(i_up) = .false.
                is_active_edge(i_up) = .false.
                num_active_bins = num_active_bins - 1
-               i_up         = i_up - 1
-               p_up         = p_fix(i_up) ; p(i_up)     = p_up
+               i_up = i_up - 1
+               p_up = p_fix(i_up)
             else
-               p_up         = p_mid_fix(i_up);  p(i_up)     = p_up
+               p_up = p_mid_fix(i_up)
             endif
+            p(i_up) = p_up
          endif
       endif
 
@@ -215,9 +216,9 @@ contains
          if ((i_lo+1) .ne. ncre) then
             call get_fqp_lo(solve_fail_lo)
          else                                                  !< spectrum cutoff beyond the fixed momentum grid
-            p_lo           = p_fix(i_lo)
-            p(i_lo)        = p_lo
-            solve_fail_lo  = .false.
+            p_lo          = p_fix(i_lo)
+            p(i_lo)       = p_lo
+            solve_fail_lo = .false.
          endif
 
          if (solve_fail_lo) then                               !< exit_code support
@@ -229,11 +230,12 @@ contains
                is_active_bin(i_lo+1) = .false.
                is_active_edge(i_lo) = .false.
                num_active_bins = num_active_bins - 1
-               i_lo         = i_lo + 1
-               p_lo         = p_fix(i_lo) ;     p(i_lo)     = p_lo
+               i_lo = i_lo + 1
+               p_lo = p_fix(i_lo)
             else
-               p_lo         = p_mid_fix(1);     p(i_lo)     = p_lo
+               p_lo = p_mid_fix(1)
             endif
+            p(i_lo) = p_lo
          endif
       endif
 
@@ -1013,16 +1015,6 @@ contains
             call die(msg)
       end select
 
-      if (dump_fpq) then
-         crel%p = p
-         crel%f = f
-         crel%q = q
-         crel%e = e
-         crel%n = n
-         crel%i_lo = i_lo
-         crel%i_up = i_up
-      endif
-
       if (e_small_approx_init_cond > 0) then
          call get_fqp_lo(exit_code)
          if (exit_code) then
@@ -1054,29 +1046,24 @@ contains
             f(i_lo_ch) = e_small_to_f(p_lo)
             q(i_lo_ch+1) = q(i_lo+1)
 
-            do i=i_lo_ch+1, i_lo
+            do i = i_lo_ch+1, i_lo
                p(i) = p_fix(i)
                f(i) = f(i_lo_ch) * (p_fix(i)/p(i_lo_ch))**(-q(i_lo_ch+1))
                q(i+1) = q(i_lo_ch+1)
-#ifdef CRESP_VERBOSED
-               write (msg, "(A)") 'Extending the range of lower boundary bin after NR_2dim momentum search'   ; call printinfo(msg)
-#endif /* CRESP_VERBOSED */
             enddo
 
-            do i=i_up, i_up_ch-1
+            do i = i_up, i_up_ch-1
                p(i) = p_fix(i)
                f(i) = f(i_up-1)* (p_fix(i)/p_fix(i_up-1))**(-q(i_up))
                q(i) = q(i_up)
-#ifdef CRESP_VERBOSED
-               write (msg, "(A)") 'Extending the range of upper boundary bin after NR_2dim momentum search'   ; call printinfo(msg)
-#endif /* CRESP_VERBOSED */
             enddo
 #ifdef CRESP_VERBOSED
             write (msg,"(A,2I3,A,2I3)") "Boundary bins now (i_lo_new i_lo | i_up_new i_up)",  i_lo_ch, i_lo, ' |', i_up_ch, i_up     ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
+
             i_lo = i_lo_ch   ;   i_up = i_up_ch
             q(i_up_ch) = q(i_up)
-            p(i_up) = p_fix(i_up);  p(i_up) = p_up
+            p(i_up) = p_up
 
             is_active_bin = .false.
             is_active_bin(i_lo+1:i_up) = .true.
@@ -1087,17 +1074,17 @@ contains
 
             e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins) ! once again we must count n and e
             n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-
-            if (dump_fpq) then
-               crel%p = p
-               crel%f = f
-               crel%q = q
-               crel%e = e
-               crel%n = n
-               crel%i_lo = i_lo
-               crel%i_up = i_up
-            endif
          endif
+      endif
+
+      if (dump_fpq) then
+         crel%p = p
+         crel%f = f
+         crel%q = q
+         crel%e = e
+         crel%n = n
+         crel%i_lo = i_lo
+         crel%i_up = i_up
       endif
 
       if (master) call check_init_spectrum(p_lo_init, p_up_init, f(i_lo), f(i_up-1))
@@ -1145,8 +1132,8 @@ contains
       p_range_add(i_u) = p_up_init
       if (.not.allocated(act_edges)) allocate(act_edges(i_u - i_l  ))
       if (.not.allocated(act_bins )) allocate( act_bins(i_u - i_l+1))
-      act_edges =  cresp_all_edges(i_l  :i_u)
-      act_bins  =   cresp_all_bins(i_l+1:i_u)
+      act_edges = cresp_all_edges(i_l  :i_u)
+      act_bins  = cresp_all_bins (i_l+1:i_u)
       q_add(act_bins) = q_init
 
       f_add(act_edges) = f_init * (p_range_add(act_edges)/p_lo_init)**(-q_init)
