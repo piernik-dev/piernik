@@ -69,8 +69,6 @@ module initcrspectrum
    real            :: smallcree                   !< floor value for CRESP energy density
    real            :: Gamma_min_fix               ! < min of Lorentzs' Gamma factor, lower range of CRESP fixed grid
    real            :: Gamma_max_fix               ! < max of Lorentzs' Gamma factor, upper range of CRESP fixed grid
-   real            :: Gamma_lo_init               ! < min of Lorentzs' Gamma factor, lower range of initial spectrum
-   real            :: Gamma_up_init               ! < max of Lorentzs' Gamma factor, upper range of initial spectrum
    real            :: max_p_ratio                 !< maximal ratio of momenta for solution grids resolved at initialization via cresp_NR_method
    integer(kind=2) :: NR_iter_limit               !< maximal number of iterations for NR algorithm
    logical         :: force_init_NR               !< forces resolving new ratio solution grids at initialization
@@ -161,14 +159,12 @@ module initcrspectrum
       integer :: i
       real    :: p_br_def, q_br_def
 
-      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum,        &
-      &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active,             &
-      &                         K_cre_pow, expan_order, e_small, use_cresp, e_small_approx_init_cond, p_br_init_lo, &
-      &                         e_small_approx_p_lo, e_small_approx_p_up, force_init_NR, NR_iter_limit, max_p_ratio,&
-      &                         synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init, Gamma_min_fix,           &
-      &                         Gamma_max_fix, Gamma_lo_init, Gamma_up_init, nullify_empty_bins, approx_cutoffs,    &
-      &                         NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree,&
-      &                         smallcren, p_br_init_up
+      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum, p_min_fix, p_max_fix, &
+      &                         cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, K_cre_pow, expan_order, e_small, use_cresp,      &
+      &                         e_small_approx_init_cond, p_br_init_lo, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,   &
+      &                         NR_iter_limit, max_p_ratio, synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init,             &
+      &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf,                &
+      &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up
 
 ! Default values
       use_cresp         = .true.
@@ -193,8 +189,6 @@ module initcrspectrum
       expan_order       = 1
       Gamma_min_fix     = 2.5
       Gamma_max_fix     = 1000.0
-      Gamma_lo_init     = 10.0
-      Gamma_up_init     = 200.0
 
       approx_cutoffs       = .true.
       e_small              = 1.0e-5
@@ -294,12 +288,10 @@ module initcrspectrum
 
          rbuff(22) = Gamma_min_fix
          rbuff(23) = Gamma_max_fix
-         rbuff(24) = Gamma_lo_init
-         rbuff(25) = Gamma_up_init
 
-         rbuff(26) = p_br_init_lo
-         rbuff(27) = p_br_init_up
-         rbuff(28) = q_br_init
+         rbuff(24) = p_br_init_lo
+         rbuff(25) = p_br_init_up
+         rbuff(26) = q_br_init
 
          cbuff(1)  = initial_spectrum
       endif
@@ -359,12 +351,10 @@ module initcrspectrum
 
          Gamma_min_fix               = rbuff(22)
          Gamma_max_fix               = rbuff(23)
-         Gamma_lo_init               = rbuff(24)
-         Gamma_up_init               = rbuff(25)
 
-         p_br_init_lo                = rbuff(26)
-         p_br_init_up                = rbuff(27)
-         q_br_init                   = rbuff(28)
+         p_br_init_lo                = rbuff(24)
+         p_br_init_up                = rbuff(25)
+         q_br_init                   = rbuff(26)
 
          initial_spectrum            = trim(cbuff(1))
 
