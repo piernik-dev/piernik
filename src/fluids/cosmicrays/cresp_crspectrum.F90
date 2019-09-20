@@ -32,11 +32,13 @@
 module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
 
+   use constants, only: LO, HI
+
    implicit none
 
    private ! most of it
    public :: cresp_update_cell, cresp_init_state, fail_count_interpol, fail_count_NR_2dim, cresp_get_scaled_init_spectrum,  &
-      &      cleanup_cresp, cresp_allocate_all, e_threshold_lo, e_threshold_up, fail_count_comp_q, src_gpcresp, p_rch_init, &
+      &      cleanup_cresp, cresp_allocate_all, e_threshold, fail_count_comp_q, src_gpcresp, p_rch_init, &
       &      detect_clean_spectrum, cresp_find_prepare_spectrum, cresp_detect_negative_content
 
    integer, dimension(1:2)            :: fail_count_NR_2dim, fail_count_interpol
@@ -91,7 +93,7 @@ module cresp_crspectrum
    real, allocatable, dimension(:) :: n, e ! dimension(1:ncre)
    real, allocatable, dimension(:) :: e_amplitudes_l, e_amplitudes_r
 ! lower / upper energy needed for bin activation
-   real                            :: e_threshold_lo, e_threshold_up
+   real, dimension(LO:HI)          :: e_threshold
 ! if one bin, switch off cutoff p approximation
    integer                         :: approx_p_lo, approx_p_up
 
@@ -119,7 +121,7 @@ contains
 #endif /* CRESP_VERBOSED */
       use diagnostics,    only: decr_vec
       use initcosmicrays, only: ncre
-      use initcrspectrum, only: spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, dump_fpq, crel, p_mid_fix, nullify_empty_bins, p_fix
+      use initcrspectrum, only: spec_mod_trms, e_small_approx_p, dump_fpq, crel, p_mid_fix, nullify_empty_bins, p_fix
 
       implicit none
 
@@ -136,8 +138,8 @@ contains
       empty_cell    = .false.
       cfl_cresp_violation = .false.
 
-      approx_p_lo = e_small_approx_p_lo
-      approx_p_up = e_small_approx_p_up
+      approx_p_lo = e_small_approx_p(LO)
+      approx_p_up = e_small_approx_p(HI)
 
       p_lo_next = zero
       p_up_next = zero
@@ -168,9 +170,9 @@ contains
 
       call cresp_find_prepare_spectrum(n_inout, e_inout, empty_cell)
 
-      if ( empty_cell ) then
-         approx_p_lo = e_small_approx_p_lo         !< restore approximation before leaving
-         approx_p_up = e_small_approx_p_up         !< restore approximation before leaving
+      if (empty_cell) then
+         approx_p_lo = e_small_approx_p(LO)         !< restore approximation before leaving
+         approx_p_up = e_small_approx_p(HI)         !< restore approximation before leaving
          if (nullify_empty_bins) then
             call nullify_all_bins(n_inout, e_inout)
          endif
@@ -238,17 +240,17 @@ contains
          endif
       endif
 
-      if (num_active_bins .lt. 1 ) then                        !< if 2 active_bins and solution fails in both, return empty_cell
-         approx_p_lo = e_small_approx_p_lo         !< restore approximation after momenta computed
-         approx_p_up = e_small_approx_p_up         !< restore approximation after momenta computed
+      if (num_active_bins < 1) then                        !< if 2 active_bins and solution fails in both, return empty_cell
+         approx_p_lo = e_small_approx_p(LO)         !< restore approximation after momenta computed
+         approx_p_up = e_small_approx_p(HI)         !< restore approximation after momenta computed
          empty_cell = .true.
          return
       endif
 
       call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next, cfl_cresp_violation)
-      if ( cfl_cresp_violation ) then
-         approx_p_lo = e_small_approx_p_lo         !< restore approximation after momenta computed
-         approx_p_up = e_small_approx_p_up         !< restore approximation after momenta computed
+      if (cfl_cresp_violation) then
+         approx_p_lo = e_small_approx_p(LO)         !< restore approximation after momenta computed
+         approx_p_up = e_small_approx_p(HI)         !< restore approximation after momenta computed
          call deallocate_active_arrays
 #ifdef CRESP_VERBOSED
          write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
@@ -285,8 +287,8 @@ contains
       endif
 
 
-      approx_p_lo = e_small_approx_p_lo         !< restore approximation after momenta computed
-      approx_p_up = e_small_approx_p_up         !< restore approximation after momenta computed
+      approx_p_lo = e_small_approx_p(LO)         !< restore approximation after momenta computed
+      approx_p_up = e_small_approx_p(HI)         !< restore approximation after momenta computed
 
       p_lo = p_lo_next
       p_up = p_up_next
@@ -312,9 +314,9 @@ contains
       write (msg, '(A5, 50E18.9)') "    q", q          ; call printinfo(msg)
       write (msg, '(A5, 50E18.9)') "    f", f          ; call printinfo(msg)
 
-      if ( (approx_p_lo+approx_p_up) .gt. 0 ) then
-         write (msg, '(A36,I5,A6,I3)') "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)      ; call printinfo(msg)
-         write (msg, '(A36,I5,A6,I3)') "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2)    ; call printinfo(msg)
+      if ((approx_p_lo+approx_p_up) > 0) then
+         write (msg, '(A36,I5,A6,I3)') "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(LO),  ", p_up", fail_count_NR_2dim(HI)   ; call printinfo(msg)
+         write (msg, '(A36,I5,A6,I3)') "NR_2dim:interpolation failure: p_lo", fail_count_interpol(LO), ", p_up", fail_count_interpol(HI)  ; call printinfo(msg)
          write (msg, '(A36,   100I5)') "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q                                           ; call printinfo(msg)
       endif
       call cresp_detect_negative_content
@@ -441,8 +443,8 @@ contains
       i_lo = 0
       do i = 1, ncre                        ! if energy density is nonzero, so should be the number density
          i_lo = i-1
-         if ( ext_e(i) .gt. e_threshold_lo) then
-           if (ext_n(i) .gt. zero) then
+         if (ext_e(i) > e_threshold(LO)) then
+           if (ext_n(i) > zero) then
               empty_cell = .false.
               exit
            endif
@@ -454,8 +456,8 @@ contains
      i_up = ncre
      do i = ncre, 1,-1
         i_up = i
-        if (ext_e(i) .gt. e_threshold_up ) then   ! if energy density is nonzero, so should be the number density
-           if ( ext_n(i) .gt. zero ) exit
+        if (ext_e(i) > e_threshold(HI)) then   ! if energy density is nonzero, so should be the number density
+           if (ext_n(i) > zero) exit
         endif
      enddo
 
@@ -912,9 +914,8 @@ contains
       use cresp_NR_method, only: e_small_to_f
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
-      use initcrspectrum,  only: spec_mod_trms, q_init, p_lo_init, p_up_init, initial_spectrum, eps, p_fix, w, f_init,   &
-                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, dump_fpq, crel, &
-                              &  e_small_approx_p_up, total_init_cree, e_small, cresp_all_bins
+      use initcrspectrum,  only: spec_mod_trms, q_init, p_lo_init, p_up_init, initial_spectrum, eps, p_fix, w, f_init, dump_fpq, crel,   &
+                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins
       use mpisetup,        only: master
 
       implicit none
@@ -930,8 +931,8 @@ contains
       if (present(sptab)) u_b = sptab%ub
       if (present(sptab)) u_d = sptab%ud
 
-      approx_p_lo = e_small_approx_p_lo
-      approx_p_up = e_small_approx_p_up
+      approx_p_lo = e_small_approx_p(LO)
+      approx_p_up = e_small_approx_p(HI)
 
       init_e = zero
       init_n = zero
@@ -1451,9 +1452,9 @@ contains
 
    subroutine check_init_spectrum(p_l, p_u, f_l, f_u)
 
-   use constants,      only: one, I_ONE
+   use constants,      only: one, I_ONE, LO
    use dataio_pub,     only: msg, warn, printinfo
-   use initcrspectrum, only: e_small, e_small_approx_p_up
+   use initcrspectrum, only: e_small, e_small_approx_p
 
    implicit none
 
@@ -1468,10 +1469,10 @@ contains
       write(msg,*) "[cresp_crspectrum:check_init_spectrum] Amplitude of low  energy spectrum cutoff:", e_lo
       call printinfo(msg)
 
-      if (e_small_approx_p_up .eq. I_ONE) then
+      if (e_small_approx_p(LO) == I_ONE) then
          rel_lo   = (e_lo - e_small_safe) / e_small_safe
          write(msg,*) "[cresp_crspectrum:check_init_spectrum] Relative to e_small(", e_small_safe ,"):", rel_lo
-         if (abs(rel_lo) .lt. one) then
+         if (abs(rel_lo) < one) then
             call printinfo(msg)
          else
             call warn(msg)
@@ -1481,10 +1482,10 @@ contains
       write(msg,*) "[cresp_crspectrum:check_init_spectrum] Amplitude of high energy spectrum cutoff:", e_up
       call printinfo(msg)
 
-      if (e_small_approx_p_up .eq. I_ONE) then
+      if (e_small_approx_p(HI) == I_ONE) then
          rel_up   = (e_small_safe - e_up) / e_up
          write(msg,*) "[cresp_crspectrum:check_init_spectrum] Relative to e_small(", e_small_safe ,"): ", rel_up
-         if (abs(rel_up) .lt. one) then
+         if (abs(rel_up) < one) then
             call printinfo(msg)
          else
             call warn(msg)
@@ -1792,7 +1793,7 @@ contains
 !---------------------------------------------------------------------------------------------------
    subroutine get_fqp_up(exit_code)
 
-      use constants,       only: zero, one, HI
+      use constants,       only: zero, one
       use cresp_variables, only: clight_cresp
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers
 #ifdef CRESP_VERBOSED
@@ -1814,7 +1815,7 @@ contains
       x_NR = intpol_pf_from_NR_grids(alpha, n_in, interpolated)
       if (.not. interpolated) then
          exit_code = .true.
-         fail_count_interpol(2) = fail_count_interpol(2) +1
+         fail_count_interpol(HI) = fail_count_interpol(HI) +1
          return
       else
          x_NR_init = x_NR
@@ -1866,7 +1867,7 @@ contains
 !--------------------------------------------------------------------------------------------------
    subroutine get_fqp_lo(exit_code)
 
-      use constants,       only: zero, one, LO
+      use constants,       only: zero, one
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers
       use cresp_variables, only: clight_cresp
 #ifdef CRESP_VERBOSED
@@ -1888,7 +1889,7 @@ contains
       x_NR = intpol_pf_from_NR_grids(alpha, n_in, interpolated)
       if (.not. interpolated) then
          exit_code = .true.
-         fail_count_interpol(1) = fail_count_interpol(1) +1
+         fail_count_interpol(LO) = fail_count_interpol(LO) +1
          return
       else
          x_NR_init = x_NR
@@ -2103,8 +2104,8 @@ contains
 
       implicit none
 
-      write (msg, '(A36,I6,A6,I6)') "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)   ; call printinfo(msg)
-      write (msg, '(A36,I6,A6,I6)') "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2) ; call printinfo(msg)
+      write (msg, '(A36,I6,A6,I6)') "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(LO),  ", p_up", fail_count_NR_2dim(HI)  ; call printinfo(msg)
+      write (msg, '(A36,I6,A6,I6)') "NR_2dim:interpolation failure: p_lo", fail_count_interpol(LO), ", p_up", fail_count_interpol(HI) ; call printinfo(msg)
       write (msg, '(A36,   100I5)') "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q    ; call printinfo(msg)
       call cresp_deallocate_all
 

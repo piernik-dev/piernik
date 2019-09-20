@@ -59,8 +59,9 @@ module initcrspectrum
    integer(kind=4) :: expan_order                 !< 1,2,3 order of Taylor expansion for p_update (cresp_crspectrum)
    real            :: e_small                     !< lower energy cutoff for energy-approximated cutoff momenta
    logical         :: approx_cutoffs              !< T,F - turns off/on all approximating terms
-   integer(kind=1) :: e_small_approx_p_lo         !< 0,1 - turns off/on energy (e_small) approximated lower cutoff momentum in isolated case
-   integer(kind=1) :: e_small_approx_p_up         !< 0,1 - turns off/on energy (e_small) approximated upper cutoff momentum in isolated case
+   integer(kind=4), dimension(2) :: e_small_approx_p !< array to store e_small_approx_p_lo and e_approx_p_up
+   integer(kind=4) :: e_small_approx_p_lo         !< 0,1 - turns off/on energy (e_small) approximated lower cutoff momentum in isolated case
+   integer(kind=4) :: e_small_approx_p_up         !< 0,1 - turns off/on energy (e_small) approximated upper cutoff momentum in isolated case
    integer(kind=1) :: e_small_approx_init_cond    !< 0,1 - turns off/on energy (e_small) approximated momenta at initialization
    real            :: smallcren                   !< floor value for CRESP number density
    real            :: smallcree                   !< floor value for CRESP energy density
@@ -367,6 +368,8 @@ module initcrspectrum
 
       endif
 
+      e_small_approx_p = [e_small_approx_p_lo, e_small_approx_p_up] ! since now use only e_small_approx_p
+
 ! Input parameters check
       if (ncre < 3) then
          if (ncre <= I_ZERO)  then
@@ -377,28 +380,27 @@ module initcrspectrum
       endif
 
       if (approx_cutoffs) then
-         e_small_approx_p_lo = 1 ; e_small_approx_p_up = 1
+         e_small_approx_p = 1
          write (msg,'(A)') "[initcrspectrum:init_cresp] approx_cutoffs = .true. -- will use e_small to approximate spectrum cutoffs and initial state spectrum."
       else
-         e_small_approx_p_lo = 0 ; e_small_approx_p_up = 0 ! e_small_approx_init_cond stays default, unless user changes.
+         e_small_approx_p = 0 ! e_small_approx_init_cond stays default, unless user changes.
          write (msg,'(A)') "[initcrspectrum:init_cresp] approx_cutoffs = .false. -- will not use e_small approximated cutoffs, but still approximate initial state. To turn it off use e_small_approx_init_cond = 0."
       endif
       if (master) call printinfo(msg)
 
-      if ( (e_small_approx_p_lo+e_small_approx_p_up) > 0 .and. e_small_approx_init_cond < 1) then
+      if (sum(e_small_approx_p) > 0 .and. e_small_approx_init_cond < 1) then
          e_small_approx_init_cond = 1
          if (master) call warn("[initcrspectrum:init_cresp] Approximation of boundary momenta is active -> modifying e_small_approx_init_cond to 1.")
       endif
 
 ! countermeasure - in case unrecognized or invalid parameters are provided
 
-      if (e_small_approx_p_lo > 0) then ; e_small_approx_p_lo = 1 ; else ; e_small_approx_p_lo = 0 ; endif
-      if (e_small_approx_p_up > 0) then ; e_small_approx_p_up = 1 ; else ; e_small_approx_p_up = 0 ; endif
+      where (e_small_approx_p > 0) ;           e_small_approx_p = 1 ;    elsewhere ; e_small_approx_p = 0 ;      endwhere
       if (e_small_approx_init_cond > 0) then ; e_small_approx_init_cond = 1 ; else ; e_small_approx_init_cond = 0 ; endif
 
-      if (e_small_approx_p_lo+e_small_approx_p_up == 0) NR_refine_solution_q = .true. !< for testing we leave precise solutions of q (especially for outer momenta)
+      if (sum(e_small_approx_p) == 0) NR_refine_solution_q = .true. !< for testing we leave precise solutions of q (especially for outer momenta)
 
-      if (e_small_approx_init_cond + e_small_approx_p_lo + e_small_approx_p_up == 0) e_small = zero                !< no threshold energy for bin activation necessary
+      if (e_small_approx_init_cond + sum(e_small_approx_p) == 0) e_small = zero                !< no threshold energy for bin activation necessary
 
 ! arrays initialization
       call my_allocate_with_index(p_fix,           ncre, 0)
@@ -525,7 +527,7 @@ module initcrspectrum
       write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr
       if (master) call printinfo(msg)
 
-      if ((q_init < three) .and. (e_small_approx_p_lo == I_ONE .or. e_small_approx_p_up == I_ONE)) then
+      if ((q_init < three) .and. any(e_small_approx_p == I_ONE)) then
          call warn("[cresp_crspectrum:cresp_init_state] Initial parameters: q_init < 3.0 and approximation of outer momenta is on, approximation of outer momenta with hard energy spectrum might not work.")
       endif
 
