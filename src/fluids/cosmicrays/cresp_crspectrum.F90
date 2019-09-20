@@ -906,7 +906,7 @@ contains
       use cresp_NR_method, only: e_small_to_f
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
-      use initcrspectrum,  only: spec_mod_trms, q_init, p_lo_init, p_up_init, initial_spectrum, eps, p_fix, w, f_init, dump_fpq, crel,   &
+      use initcrspectrum,  only: spec_mod_trms, q_init, p_init, initial_spectrum, eps, p_fix, w, f_init, dump_fpq, crel,   &
                               &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins
       use mpisetup,        only: master
 
@@ -932,8 +932,8 @@ contains
 
       q = q_init
 ! reading initial values of p_lo and p_up
-      p_lo = p_lo_init
-      p_up = p_up_init
+      p_lo = p_init(LO)
+      p_up = p_init(HI)
 
       p       = p_fix       ! actual array of p including free edges, p_fix shared via initcrspectrum
       p(0)    = p_lo
@@ -963,13 +963,13 @@ contains
       i_up = max(1,i_up)
       i_up = min(i_up,ncre)
 
-      if (abs(p_lo_init - p_fix(i_lo)) <= eps ) then
+      if (abs(p_init(LO) - p_fix(i_lo)) <= eps ) then
          write(msg, *) "[cresp_crspectrum:cresp_init_state] p_lo_init = p_fix(i_lo):  incrementing i_lo index to avoid FPE"
          if (master) call warn(msg)
          i_lo = i_lo + 1
       endif
 
-      if (abs(p_up_init - p_fix(i_up-1)) <= eps ) then
+      if (abs(p_init(HI) - p_fix(i_up-1)) <= eps ) then
          write(msg, *) "[cresp_crspectrum:cresp_init_state] p_up_init = p_fix(i_up-1): decrementing i_up index to avoid FPE"
          if (master) call warn(msg)
          i_up = i_up - 1
@@ -984,7 +984,7 @@ contains
 ! Pure power law spectrum initial condition (default case)
       q = q_init
       f = zero
-      f = f_init * (p/p_lo_init)**(-q_init)
+      f = f_init * (p/p_init(LO))**(-q_init)
 
       select case (initial_spectrum)
          case ('powl')
@@ -1078,7 +1078,7 @@ contains
          crel%i_up = i_up
       endif
 
-      if (master) call check_init_spectrum(p_lo_init, p_up_init, f(i_lo), f(i_up-1))
+      if (master) call check_init_spectrum(f(i_lo), f(i_up-1))
 
       n_tot0 = sum(n)
       e_tot0 = sum(e)
@@ -1099,7 +1099,7 @@ contains
       use constants,      only: zero
       use diagnostics,    only: my_deallocate
       use initcosmicrays, only: ncre
-      use initcrspectrum, only: cresp_all_bins, cresp_all_edges, f_init, p_fix, p_lo_init, p_up_init, q_init, w
+      use initcrspectrum, only: cresp_all_bins, cresp_all_edges, f_init, p_fix, p_init, q_init, w
 
       implicit none
 
@@ -1110,24 +1110,24 @@ contains
 
       q_add = zero  ; f_add = zero  ; p_range_add = zero
 
-      i_l = int(floor(log10(p_lo_init/p_fix(1))/w)) + 1
+      i_l = int(floor(log10(p_init(LO)/p_fix(1))/w)) + 1
       i_l = max(0, i_l)
       i_l = min(i_l, ncre - 1)
 
-      i_u = int(floor(log10(p_up_init/p_fix(1))/w)) + 2
+      i_u = int(floor(log10(p_init(HI)/p_fix(1))/w)) + 2
       i_u = max(1,i_u)
       i_u = min(i_u,ncre)
 
       p_range_add(i_l:i_u) = p_fix(i_l:i_u)
-      p_range_add(i_l) = p_lo_init
-      p_range_add(i_u) = p_up_init
+      p_range_add(i_l) = p_init(LO)
+      p_range_add(i_u) = p_init(HI)
       if (.not.allocated(act_edges)) allocate(act_edges(i_u - i_l  ))
       if (.not.allocated(act_bins )) allocate( act_bins(i_u - i_l+1))
       act_edges = cresp_all_edges(i_l  :i_u)
       act_bins  = cresp_all_bins (i_l+1:i_u)
       q_add(act_bins) = q_init
 
-      f_add(act_edges) = f_init * (p_range_add(act_edges)/p_lo_init)**(-q_init)
+      f_add(act_edges) = f_init * (p_range_add(act_edges)/p_init(LO))**(-q_init)
 
       n = n + fq_to_n(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
       e = e + fq_to_e(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
@@ -1148,7 +1148,7 @@ contains
       use cresp_variables, only: clight_cresp
       use diagnostics,     only: my_deallocate
       use initcosmicrays,  only: ncre
-      use initcrspectrum,  only: cresp_all_bins, e_small, f_init, p_br_init_lo, p_br_init_up, p_fix, p_lo_init, p_up_init, q_init, w
+      use initcrspectrum,  only: cresp_all_bins, e_small, f_init, p_br_init, p_fix, p_init, q_init, w
 
       implicit none
 
@@ -1160,31 +1160,31 @@ contains
 
       q_add(:) = zero  ; f_add(:) = zero  ; p_range_add(:) = zero
 
-      i_br = minloc(abs(p_fix - p_br_init_lo),dim=1)-1
+      i_br = minloc(abs(p_fix - p_br_init(LO)),dim=1)-1
 
-      i_l = int(floor(log10(p_lo_init/p_fix(1))/w)) + 1
+      i_l = int(floor(log10(p_init(LO)/p_fix(1))/w)) + 1
       i_l = max(0, i_l)
       i_l = min(i_l, ncre - 1)
 
-      i_u = int(floor(log10(p_up_init/p_fix(1))/w)) + 2
+      i_u = int(floor(log10(p_init(HI)/p_fix(1))/w)) + 2
       i_u = max(1,i_u)
       i_u = min(i_u,ncre)
 
       p_range_add(i_l:i_u) = p_fix(i_l:i_u)
-      p_range_add(i_l) = p_lo_init
-      p_range_add(i_u) = p_up_init
+      p_range_add(i_l) = p_init(LO)
+      p_range_add(i_u) = p_init(HI)
 
-      f_add(i_l:i_u) = f_init * (p_range_add(i_l:i_u)/p_lo_init)**(-q_init)
+      f_add(i_l:i_u) = f_init * (p_range_add(i_l:i_u)/p_init(LO))**(-q_init)
       q_add(i_l:i_u) = q_init
 
       if (.not.allocated(act_bins )) allocate( act_bins(i_u - i_l+1))
       act_bins  =   cresp_all_bins(i_l+1:i_u)
 
-      lpl = log10(p_lo_init)
-      lpb = log10(p_br_init_lo)
+      lpl = log10(p_init(LO))
+      lpb = log10(p_br_init(LO))
 
       a = -q_init
-      b = log10(f_init * (p_lo_init)**(q_init))
+      b = log10(f_init * (p_init(LO))**(q_init))
 
       c_3 =  ( (-three * lpl + log10(e_small / (fpi * clight_cresp))) + b * (lpl/lpb) - a * lpl - two * b * (lpl/lpb) ) / ( (lpl/lpb)**two - two * (lpl/lpb) + one)
       c_1 =  (c_3 - b) / lpb**two
@@ -1197,10 +1197,10 @@ contains
       enddo
 
 ! HIGH ENERGY CUTOFF; a and b remain unchanged
-      i_br = minloc(abs(p_fix - p_br_init_up),dim=1)
+      i_br = minloc(abs(p_fix - p_br_init(HI)),dim=1)
 
-      lpu = log10(p_up_init)
-      lpb = log10(p_br_init_up)
+      lpu = log10(p_init(HI))
+      lpb = log10(p_br_init(HI))
 
       c_3 =  ( (-three * lpu + log10(e_small / (fpi * clight_cresp))) + b * (lpu/lpb) - a * lpu - two * b * (lpu/lpb) ) / ( (lpu/lpb)**two - two * (lpu/lpb) + one)
       c_1 =  (c_3 - b) / lpb**two
@@ -1226,14 +1226,14 @@ contains
    subroutine cresp_init_brpg_spectrum
 
       use initcosmicrays, only: ncre
-      use initcrspectrum, only: p_fix, p_br_init_lo, p_lo_init, q_br_init
+      use initcrspectrum, only: p_fix, p_br_init, p_init, q_br_init
 
       implicit none
 
       integer(kind=4) :: i, i_br
 
-      i_br = minloc(abs(p_fix - p_br_init_lo), dim=1) - 1
-      f(i_lo:i_br-1) = f(i_br-1) * exp(-(q_br_init*log(2.0) * log(p(i_lo:i_br-1)/sqrt(p_lo_init * p(i_br)))**2))
+      i_br = minloc(abs(p_fix - p_br_init(LO)), dim=1) - 1
+      f(i_lo:i_br-1) = f(i_br-1) * exp(-(q_br_init*log(2.0) * log(p(i_lo:i_br-1)/sqrt(p_init(LO) * p(i_br)))**2))
       do i = 1, i_br
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
       enddo
@@ -1249,13 +1249,13 @@ contains
    subroutine cresp_init_brpl_spectrum
 
       use initcosmicrays, only: ncre
-      use initcrspectrum, only: p_fix, p_br_init_lo, q_br_init, q_init
+      use initcrspectrum, only: p_fix, p_br_init, q_br_init, q_init
 
       implicit none
 
       integer(kind=4) :: i_br
 
-      i_br = minloc(abs(p_fix - p_br_init_lo), dim=1) - 1
+      i_br = minloc(abs(p_fix - p_br_init(LO)), dim=1) - 1
       q(:i_br) = q_br_init ; q(i_br+1:) = q_init
       f(i_lo:i_br-1) = f(i_br) * (p(i_lo:i_br-1) / p(i_br))**(-q_br_init)
       e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
@@ -1323,13 +1323,13 @@ contains
       use constants,       only: fpi
       use cresp_variables, only: clight_cresp
       use initcosmicrays,  only: ncre
-      use initcrspectrum,  only: f_init, p_lo_init, p_up_init
+      use initcrspectrum,  only: f_init, p_init
 
       implicit none
 
       integer(kind=4) :: i
 
-      f = f_init * exp(-(4*log(2.0)*log(p/sqrt(p_lo_init*p_up_init/1.))**2)) ! FWHM
+      f = f_init * exp(-(4*log(2.0)*log(p/sqrt(p_init(LO)*p_init(HI)/1.))**2)) ! FWHM
       f(0:ncre-1) = f(0:ncre-1) / (fpi * clight_cresp * p(0:ncre-1)**3) ! without this spectrum is gaussian for distribution function
       do i = 1, ncre
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i)) !-log(f(i)/f(i-1))/log(p(i)/p(i-1))
@@ -1441,21 +1441,21 @@ contains
 
 !---------------------------------------------------------------------------------------------------
 
-   subroutine check_init_spectrum(p_l, p_u, f_l, f_u)
+   subroutine check_init_spectrum(f_l, f_u)
 
-   use constants,      only: one, I_ONE, LO
+   use constants,      only: one, I_ONE
    use dataio_pub,     only: msg, warn, printinfo
-   use initcrspectrum, only: e_small, e_small_approx_p
+   use initcrspectrum, only: e_small, e_small_approx_p, p_init
 
    implicit none
 
-   real,intent(in) :: p_l, p_u, f_l, f_u
-   real            :: e_lo, e_up, e_small_safe, rel_lo, rel_up
+   real, intent(in) :: f_l, f_u
+   real             :: e_lo, e_up, e_small_safe, rel_lo, rel_up
 
       e_small_safe = max(e_small, epsilon(e_small))
 
-      e_lo = fp_to_e_ampl(p_l, f_l)
-      e_up = fp_to_e_ampl(p_u, f_u)
+      e_lo = fp_to_e_ampl(p_init(LO), f_l)
+      e_up = fp_to_e_ampl(p_init(HI), f_u)
 
       write(msg,*) "[cresp_crspectrum:check_init_spectrum] Amplitude of low  energy spectrum cutoff:", e_lo
       call printinfo(msg)
