@@ -197,8 +197,7 @@ contains
 
          if (solve_fail_up) then                               !< exit_code support
             if (i_up .lt. ncre) then
-               call transfer_quantities(n(i_up-1),n(i_up))
-               call transfer_quantities(e(i_up-1),e(i_up))
+               call manually_deactivate_bin_via_transfer(i_up, -1, n, e)
                call decr_vec(active_bins, num_active_bins)
                call decr_vec(active_edges, num_active_edges)
                is_active_bin(i_up) = .false.
@@ -224,8 +223,7 @@ contains
 
          if (solve_fail_lo) then                               !< exit_code support
             if (i_lo .gt. 0) then
-               call transfer_quantities(n(i_lo+2),n(i_lo+1))
-               call transfer_quantities(e(i_lo+2),e(i_lo+1))
+               call manually_deactivate_bin_via_transfer(i_lo+1, 1, n, e)
                call decr_vec(active_bins, 1)
                call decr_vec(active_edges, 1)
                is_active_bin(i_lo+1) = .false.
@@ -275,14 +273,12 @@ contains
 
       if ((del_i_up .eq. 0) .and. (approx_p_up .gt. 0)) then
          if (.not. assert_active_bin_via_nei(ndt(i_up_next), edt(i_up_next), i_up_next)) then
-            call transfer_quantities(ndt(i_up_next-1),ndt(i_up_next))
-            call transfer_quantities(edt(i_up_next-1),edt(i_up_next))
+            call manually_deactivate_bin_via_transfer(i_up_next, -1, ndt, edt)
          endif
       endif
       if ((del_i_lo .eq. 0) .and. (approx_p_lo .gt. 0) .and. (i_lo_next+2 .le. ncre)) then
          if (.not. assert_active_bin_via_nei(ndt(i_lo_next+1), edt(i_lo_next+1), i_lo_next)) then
-            call transfer_quantities(ndt(i_lo_next+2),ndt(i_lo_next+1))
-            call transfer_quantities(edt(i_lo_next+2),edt(i_lo_next+1))
+            call manually_deactivate_bin_via_transfer(i_lo_next+1, 1, ndt, edt)
          endif
       endif
 
@@ -367,6 +363,22 @@ contains
       call deallocate_active_arrays
 
    end subroutine cresp_update_cell
+
+!----------------------------------------------------------------------------------------------------
+   subroutine manually_deactivate_bin_via_transfer(ind_transfer_from, increment_transfer_to, n_array, e_array)
+
+      use constants,       only: I_ONE
+      use initcosmicrays,  only: ncre
+
+      implicit none
+
+      real, dimension(I_ONE:ncre), intent(inout) :: n_array, e_array
+      integer(kind=4), intent(in)                :: ind_transfer_from, increment_transfer_to
+
+      call transfer_quantities(n_array(ind_transfer_from), n_array(ind_transfer_from+increment_transfer_to))
+      call transfer_quantities(e_array(ind_transfer_from), e_array(ind_transfer_from+increment_transfer_to))
+
+   end subroutine manually_deactivate_bin_via_transfer
 
 !----------------------------------------------------------------------------------------------------
    subroutine detect_clean_spectrum(ext_n, ext_e, empty_cell) ! DEPRECATED
@@ -2004,7 +2016,7 @@ contains
       end select
    end subroutine p_rch_init
 !====================================================================================================
-   subroutine transfer_quantities(give_to, take_from)
+   subroutine transfer_quantities(take_from, give_to)
 
       use constants, only: zero
 
