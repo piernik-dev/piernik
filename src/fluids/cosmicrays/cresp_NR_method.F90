@@ -168,7 +168,7 @@ contains
 
          dfun_1D = derivative_1D(x)
 
-         if ( abs(dfun_1D) .equals. zero ) then
+         if (abs(dfun_1D) .equals. zero) then
             exit_code = .true.
             return
          endif
@@ -278,13 +278,13 @@ contains
 
    subroutine fill_guess_grids
 
-      use constants,      only: zero, half, one, three, I_ONE, LO, HI, big, small
+      use constants,      only: zero, half, one, three, I_ONE, big, small
       use initcrspectrum, only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio
 
       implicit none
 
-      integer(kind=4) :: i, j, int_logical_p, int_logical_f
-      logical         :: exit_code
+      integer(kind=4) :: i, j
+      logical         :: exit_code_p, exit_code_f
       real            :: a_min_lo = big, a_max_lo = small, a_min_up = big, a_max_up = small, n_min_lo = big, n_max_lo = small, n_min_up = big, n_max_up = small, &
                        & a_min_q = small, a_max_q = small, q_in3, pq_cmplx
 
@@ -336,10 +336,10 @@ contains
       if (e_small_approx_init_cond == 1) then
          write (*, "(A36)", advance="no") "Reading (up) boundary ratio files..."
          do j = 1, 2
-            call read_NR_guess_grid(p_ratios_up, "p_ratios_", HI, exit_code) ;  int_logical_p = logical_2_int(exit_code)
-            call read_NR_guess_grid(f_ratios_up, "f_ratios_", HI, exit_code) ;  int_logical_f = logical_2_int(exit_code)
+            call read_NR_guess_grid(p_ratios_up, "p_ratios_", HI, exit_code_p)
+            call read_NR_guess_grid(f_ratios_up, "f_ratios_", HI, exit_code_f)
 
-            if (int_logical_f + int_logical_p > 0 .or. force_init_NR) then
+            if (exit_code_f .or. exit_code_p .or. force_init_NR) then
    ! Setting up the "guess grid" for p_up case
                call fill_boundary_grid(HI, p_ratios_up, f_ratios_up)
             else
@@ -357,10 +357,10 @@ contains
 
          write (*, "(A36)", advance="no") "Reading (lo) boundary ratio files"
          do j = 1, 2
-            call read_NR_guess_grid(p_ratios_lo, "p_ratios_", LO, exit_code) ;   int_logical_p = logical_2_int(exit_code)
-            call read_NR_guess_grid(f_ratios_lo, "f_ratios_", LO, exit_code) ;   int_logical_f = logical_2_int(exit_code)
+            call read_NR_guess_grid(p_ratios_lo, "p_ratios_", LO, exit_code_p)
+            call read_NR_guess_grid(f_ratios_lo, "f_ratios_", LO, exit_code_f)
 
-            if (int_logical_f + int_logical_p > 0 .or. force_init_NR) then
+            if (exit_code_f .or. exit_code_p .or. force_init_NR) then
    ! Setting up the "guess grid" for p_lo case
                call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo)
             else
@@ -1055,7 +1055,7 @@ contains
 !----------------------------------------------------------------------------------------------------
    function fvec_up(x)
 
-      use constants, only: HI, three
+      use constants, only: three
 
       implicit none
 
@@ -1073,7 +1073,7 @@ contains
 !----------------------------------------------------------------------------------------------------
    function fvec_lo(x)
 
-      use constants, only: LO, one, three
+      use constants, only: one, three
 
       implicit none
 
@@ -1445,21 +1445,6 @@ contains
       close(31)
 
    end subroutine read_NR_guess_grid
-!----------------------------------------------------------------------------------------------------
-   integer(kind=2) function logical_2_int(boolean_arg)
-
-      implicit none
-
-      logical :: boolean_arg
-
-      if (boolean_arg) then
-         logical_2_int = 1
-      else
-         logical_2_int = 0
-      endif
-
-   end function logical_2_int
-
 !----------------------------------------------------------------------------------------------------
    real function ind_to_flog(ind, min_in, max_in, length)
 
