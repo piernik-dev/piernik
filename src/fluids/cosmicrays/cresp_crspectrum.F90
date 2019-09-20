@@ -95,7 +95,7 @@ module cresp_crspectrum
 ! lower / upper energy needed for bin activation
    real, dimension(LO:HI)          :: e_threshold
 ! if one bin, switch off cutoff p approximation
-   integer                         :: approx_p_lo, approx_p_up
+   integer, dimension(LO:HI)       :: approx_p
 
    abstract interface
       real function function_pointer_1D(x,y)
@@ -138,8 +138,7 @@ contains
       empty_cell    = .false.
       cfl_cresp_violation = .false.
 
-      approx_p_lo = e_small_approx_p(LO)
-      approx_p_up = e_small_approx_p(HI)
+      approx_p = e_small_approx_p
 
       p_lo_next = zero
       p_up_next = zero
@@ -171,8 +170,7 @@ contains
       call cresp_find_prepare_spectrum(n_inout, e_inout, empty_cell)
 
       if (empty_cell) then
-         approx_p_lo = e_small_approx_p(LO)         !< restore approximation before leaving
-         approx_p_up = e_small_approx_p(HI)         !< restore approximation before leaving
+         approx_p = e_small_approx_p         !< restore approximation before leaving
          if (nullify_empty_bins) then
             call nullify_all_bins(n_inout, e_inout)
          endif
@@ -186,7 +184,7 @@ contains
       n = n_inout     ! number density of electrons passed to cresp module by the external module / grid
       e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
 
-      if (approx_p_up > 0) then
+      if (approx_p(HI) > 0) then
          if (i_up > 1) then
             call get_fqp_up(solve_fail_up)
          else                                                  !< spectrum cutoff beyond the fixed momentum grid
@@ -213,7 +211,7 @@ contains
          endif
       endif
 
-      if (approx_p_lo > 0) then
+      if (approx_p(LO) > 0) then
          if (i_lo + 1 /= ncre) then
             call get_fqp_lo(solve_fail_lo)
          else                                                  !< spectrum cutoff beyond the fixed momentum grid
@@ -240,17 +238,15 @@ contains
          endif
       endif
 
-      if (num_active_bins < 1) then                        !< if 2 active_bins and solution fails in both, return empty_cell
-         approx_p_lo = e_small_approx_p(LO)         !< restore approximation after momenta computed
-         approx_p_up = e_small_approx_p(HI)         !< restore approximation after momenta computed
+      if (num_active_bins < 1) then          !< if 2 active_bins and solution fails in both, return empty_cell
+         approx_p = e_small_approx_p         !< restore approximation after momenta computed
          empty_cell = .true.
          return
       endif
 
       call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next, cfl_cresp_violation)
       if (cfl_cresp_violation) then
-         approx_p_lo = e_small_approx_p(LO)         !< restore approximation after momenta computed
-         approx_p_up = e_small_approx_p(HI)         !< restore approximation after momenta computed
+         approx_p = e_small_approx_p         !< restore approximation after momenta computed
          call deallocate_active_arrays
 #ifdef CRESP_VERBOSED
          write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
@@ -273,13 +269,13 @@ contains
 
       edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
 
-      if ((del_i_up == 0) .and. (approx_p_up > 0)) then
+      if ((del_i_up == 0) .and. (approx_p(HI) > 0)) then
          if (.not. assert_active_bin_via_nei(ndt(i_up_next), edt(i_up_next), i_up_next)) then
             call transfer_quantities(ndt(i_up_next-1),ndt(i_up_next))
             call transfer_quantities(edt(i_up_next-1),edt(i_up_next))
          endif
       endif
-      if ((del_i_lo == 0) .and. (approx_p_lo > 0) .and. (i_lo_next+2 <= ncre)) then
+      if ((del_i_lo == 0) .and. (approx_p(LO) > 0) .and. (i_lo_next+2 <= ncre)) then
          if (.not. assert_active_bin_via_nei(ndt(i_lo_next+1), edt(i_lo_next+1), i_lo_next)) then
             call transfer_quantities(ndt(i_lo_next+2),ndt(i_lo_next+1))
             call transfer_quantities(edt(i_lo_next+2),edt(i_lo_next+1))
@@ -287,8 +283,7 @@ contains
       endif
 
 
-      approx_p_lo = e_small_approx_p(LO)         !< restore approximation after momenta computed
-      approx_p_up = e_small_approx_p(HI)         !< restore approximation after momenta computed
+      approx_p = e_small_approx_p         !< restore approximation after momenta computed
 
       p_lo = p_lo_next
       p_up = p_up_next
@@ -314,7 +309,7 @@ contains
       write (msg, '(A5, 50E18.9)') "    q", q          ; call printinfo(msg)
       write (msg, '(A5, 50E18.9)') "    f", f          ; call printinfo(msg)
 
-      if ((approx_p_lo+approx_p_up) > 0) then
+      if (sum(approx_p) > 0) then
          write (msg, '(A36,I5,A6,I3)') "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(LO),  ", p_up", fail_count_NR_2dim(HI)   ; call printinfo(msg)
          write (msg, '(A36,I5,A6,I3)') "NR_2dim:interpolation failure: p_lo", fail_count_interpol(LO), ", p_up", fail_count_interpol(HI)  ; call printinfo(msg)
          write (msg, '(A36,   100I5)') "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q                                           ; call printinfo(msg)
@@ -480,7 +475,8 @@ contains
       integer(kind=4), optional, intent(out)     :: i_up_out
       integer(kind=8), dimension(:), allocatable :: nonempty_bins
       logical, dimension(ncre)                   :: has_n_gt_zero, has_e_gt_zero
-      integer(kind=4)                            :: i, pre_i_lo, pre_i_up, num_has_gt_zero, approx_p_lo_tmp, approx_p_up_tmp
+      integer(kind=4)                            :: i, pre_i_lo, pre_i_up, num_has_gt_zero
+      integer(kind=4), dimension(LO:HI)          :: approx_p_tmp
 
       has_n_gt_zero(:) = .false. ; has_e_gt_zero(:)  = .false.
       is_active_bin(:) = .false. ; is_active_edge(:) = .false.
@@ -521,32 +517,29 @@ contains
 ! Prepare p array
       p = zero
       p(pre_i_lo+I_ONE:pre_i_up-I_ONE) = p_fix(pre_i_lo+I_ONE:pre_i_up-I_ONE)
-      p(pre_i_lo) = (I_ONE-approx_p_lo)*p_lo + approx_p_lo * max(p_fix(pre_i_lo), p_mid_fix(I_ONE))  ! do not want to have zero here + p_out considered
+      p(pre_i_lo) = (I_ONE-approx_p(LO))*p_lo + approx_p(LO) * max(p_fix(pre_i_lo), p_mid_fix(I_ONE))  ! do not want to have zero here + p_out considered
 
       if (pre_i_up < ncre) then
-         p(pre_i_up) = (I_ONE-approx_p_up)*p_up + approx_p_up * p_fix(pre_i_up)                  ! do not want to have zero here + p_out considered
+         p(pre_i_up) = (I_ONE-approx_p(HI))*p_up + approx_p(HI) * p_fix(pre_i_up)                  ! do not want to have zero here + p_out considered
       else
-         p(pre_i_up) = (I_ONE-approx_p_up)*p_up + approx_p_up * p_mid_fix(pre_i_up)              ! do not want to have zero here + p_out considered
+         p(pre_i_up) = (I_ONE-approx_p(HI))*p_up + approx_p(HI) * p_mid_fix(pre_i_up)              ! do not want to have zero here + p_out considered
       endif
 
 ! preliminary allocation of active_bins
       allocate(active_bins(num_has_gt_zero))
       active_bins = int(nonempty_bins(:), kind=4)
 
-      approx_p_lo_tmp = approx_p_lo                   !< Before computation of q and f for all bins approximation of cutoffs is disabled
-      approx_p_up_tmp = approx_p_up
-      approx_p_lo = I_ZERO
-      approx_p_up = I_ZERO
+      approx_p_tmp = approx_p                   !< Before computation of q and f for all bins approximation of cutoffs is disabled
+      approx_p = I_ZERO
       i_lo = pre_i_lo      ;  i_up = pre_i_up         !< make ne_to_q happy, FIXME - add cutoff indices to argument list
 
       call ne_to_q(n,e,q,active_bins)                                         !< Compute power indexes for each bin at [t] and f on left bin faces at [t]
 
       f = nq_to_f(p(I_ZERO:ncre-I_ONE), p(I_ONE:ncre), n(I_ONE:ncre), q(I_ONE:ncre), active_bins)  !< Compute values of distribution function f for active left edges at [t]
 
-      approx_p_lo = approx_p_lo_tmp
-      approx_p_up = approx_p_up_tmp                   !< After computation of q and f for all bins approximation of cutoffs is reenabled (if was active)
+      approx_p = approx_p_tmp                   !< After computation of q and f for all bins approximation of cutoffs is reenabled (if was active)
 
-      if (approx_p_lo == I_ONE .and. approx_p_up == I_ONE) then
+      if (all(approx_p == I_ONE)) then
 ! compute energy density amplitudes
          e_amplitudes_l = zero   ;  e_amplitudes_r = zero
          do i = active_bins(I_ONE), active_bins(num_has_gt_zero)
@@ -595,12 +588,12 @@ contains
          if (i_lo > I_ZERO) then
             i_up = active_bins(num_active_bins)
             i_lo = i_up -I_ONE
-            p_lo        = (I_ONE-approx_p_lo)*p_lo + approx_p_lo * p_fix(i_lo);  p(i_lo) = p_lo
-            approx_p_lo = I_ZERO
+            p_lo        = (I_ONE-approx_p(LO))*p_lo + approx_p(LO) * p_fix(i_lo);  p(i_lo) = p_lo
+            approx_p(LO) = I_ZERO
          else
             i_up        = active_bins(num_active_bins)
-            p_up        = (I_ONE-approx_p_up)*p_up + approx_p_up * p_fix(i_up);  p(i_up) = p_up
-            approx_p_up = I_ZERO
+            p_up        = (I_ONE-approx_p(HI))*p_up + approx_p(HI) * p_fix(i_up);  p(i_up) = p_up
+            approx_p(HI) = I_ZERO
          endif
       else
          empty_cell = .true.
@@ -613,8 +606,7 @@ contains
       num_active_bins = count(is_active_bin)
 
       if (present(i_up_out)) then
-         approx_p_lo = approx_p_lo_tmp          !< restore approximation before leaving
-         approx_p_up = approx_p_up_tmp          !< restore approximation before leaving
+         approx_p = approx_p_tmp          !< restore approximation before leaving
          i_up_out = i_up
          return
       endif
@@ -651,7 +643,7 @@ contains
          write (msg, "(2(A9,i3))") "i_lo =", i_lo, ", i_up = ", i_up    ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
-         if (approx_p_lo == I_ONE .and. approx_p_up == I_ONE) then
+         if (all(approx_p == I_ONE)) then
             p(:)   = p_fix(:)
             p(i_lo) = max(p_fix(i_lo), p_mid_fix(I_ONE))      ! do not want to have zero here
             p(i_up) = max(p_fix(i_up), p_fix(I_ONE))
@@ -931,8 +923,7 @@ contains
       if (present(sptab)) u_b = sptab%ub
       if (present(sptab)) u_d = sptab%ud
 
-      approx_p_lo = e_small_approx_p(LO)
-      approx_p_up = e_small_approx_p(HI)
+      approx_p = e_small_approx_p
 
       init_e = zero
       init_n = zero
@@ -1665,7 +1656,7 @@ contains
 
       q = zero
 
-      do i_active = 1 + approx_p_lo, size(bins) - approx_p_up
+      do i_active = 1 + approx_p(LO), size(bins) - approx_p(HI)
          i = bins(i_active)
          if (e(i) > e_small .and. p(i-1) > zero) then
             exit_code = .true.
