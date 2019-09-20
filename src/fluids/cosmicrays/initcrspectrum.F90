@@ -471,7 +471,7 @@ module initcrspectrum
 #endif /* VERBOSE */
 
       !> check correctness of "initial_spectrum" is checked here
-      if (f_init .lt. eps) then
+      if (f_init < eps) then
          if (initial_spectrum == 'powl' .or. initial_spectrum == 'brpl') then
             write (msg,"(A,A,A)") "[initcrspectrum:init_cresp] Provided power law type spectrum (",initial_spectrum,") with initial amplitude f_init ~ zero. Check your parameters."
             call die(msg)
@@ -479,7 +479,7 @@ module initcrspectrum
       endif
 
       if (initial_spectrum == "brpl" ) then
-         if (abs(p_br_init_lo - p_br_def) .le. eps) then
+         if (abs(p_br_init_lo - p_br_def) <= eps) then
             write (msg,"(A)") "[initcrspectrum:init_cresp] Parameter for 'brpl' spectrum: p_br_init_lo has default value (probably unitialized). Assuming p_lo_init value ('powl' spectrum)."
             if (master) call warn(msg)
          else
@@ -489,14 +489,14 @@ module initcrspectrum
             p_br_init_lo = p_fix(i)
             if (master) call warn(msg)
          endif
-         if (abs(q_br_init - q_br_def) .le. eps) then
+         if (abs(q_br_init - q_br_def) <= eps) then
             write (msg,"(A)") "[initcrspectrum:init_cresp] Parameter for 'brpl' spectrum: q_br_init has default value (probably unitialized). Assuming q_init value ('powl' spectrum)."
             if (master) call warn(msg)
          endif
       endif
 
       if (initial_spectrum == "plpc") then
-         if (abs(p_br_init_lo - p_br_def) .le. eps .or. abs(p_br_init_up - p_br_def) .le. eps) then
+         if (abs(p_br_init_lo - p_br_def) <= eps .or. abs(p_br_init_up - p_br_def) <= eps) then
             write (msg,"(A)") "[initcrspectrum:init_cresp] Parameters for 'plpc' spectrum: p_br_init_lo or p_br_init_up has default value (probably unitialized). Check spectrum parameters."
             if (master) call die(msg)
          else

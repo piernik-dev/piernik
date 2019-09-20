@@ -118,7 +118,7 @@ contains
          fun_vec_jac = jac_fin_diff(x)                    ! function vector already explicitly provided to jac_fin_diff (finite difference method)
 
          det = determinant_2d_real(fun_vec_jac)           ! WARNING - algorithm is used for ndim = 2. For more dimensions LU or other methods should be implemented.
-         if (abs(det) .lt. eps_det) then              ! Countermeasure against determinant = zero
+         if (abs(det) < eps_det) then              ! Countermeasure against determinant = zero
 !      write (*,"(A20)") "WARNING: det ~ 0.0"
             exit_code = .true.
             return
@@ -161,7 +161,7 @@ contains
 
       do i = 1, NR_iter_limit
          fun1D_val = selected_function_1D(x)
-         if ((abs(fun1D_val) .le. tol_f_1D) .and. (abs(delta) .le. tol_f_1D)) then ! delta .le. tol_f acceptable as in case of f convergence we must only check if the algorithm hasn't wandered astray
+         if ((abs(fun1D_val) <= tol_f_1D) .and. (abs(delta) <= tol_f_1D)) then ! delta <= tol_f acceptable as in case of f convergence we must only check if the algorithm hasn't wandered astray
             exit_code = .false.
             return
          endif
@@ -176,7 +176,7 @@ contains
          delta = fun1D_val / derivative_1D(x)
 
          x = x - delta
-         if (abs(delta) .lt. tol_x_1D) then
+         if (abs(delta) < tol_x_1D) then
             exit_code = .false.
             return
          endif
@@ -239,11 +239,11 @@ contains
 
          call fill_guess_grids
 
-         print *, "Are there zeros? (q_ratios)",    count(abs(q_space) .le. zero)
-         print *, "Are there zeros? (p_ratios_up)", count(p_ratios_up  .le. zero)
-         print *, "Are there zeros? (f_ratios_up)", count(f_ratios_up  .le. zero)
-         print *, "Are there zeros? (p_ratios_lo)", count(p_ratios_lo  .le. zero)
-         print *, "Are there zeros? (f_ratios_lo)", count(f_ratios_lo  .le. zero)
+         print *, "Are there zeros? (q_ratios)",    count(abs(q_space) <= zero)
+         print *, "Are there zeros? (p_ratios_up)", count(p_ratios_up  <= zero)
+         print *, "Are there zeros? (f_ratios_up)", count(f_ratios_up  <= zero)
+         print *, "Are there zeros? (p_ratios_lo)", count(p_ratios_lo  <= zero)
+         print *, "Are there zeros? (f_ratios_lo)", count(f_ratios_lo  <= zero)
          print *, "Count of array elements:", size(p_ratios_lo)
          print *,"----------"
          if (save_to_log) then
@@ -252,11 +252,11 @@ contains
             write (15,"(A,2x,A,2x)") "Run on: ", date, "at: ", time
             write (15,*) "For set of parameters: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2), max_p_ratio, q_big, clight_cresp"
             write (15, "(1E15.8, 2I10,10E22.15)") e_small, size(p_space), size(q_space), max_p_ratio, q_big, clight_cresp
-            write (15,*) "Are there zeros? (q_ratios)",    count(abs(q_space) .le. zero)
-            write (15,*) "Are there zeros? (p_ratios_up)", count(p_ratios_up  .le. zero), real(count(p_ratios_up.le.zero))/real(size(p_ratios_up)) * 100.0,"%"
-            write (15,*) "Are there zeros? (f_ratios_up)", count(f_ratios_up  .le. zero), real(count(f_ratios_up.le.zero))/real(size(f_ratios_up)) * 100.0,"%"
-            write (15,*) "Are there zeros? (p_ratios_lo)", count(p_ratios_lo  .le. zero), real(count(p_ratios_lo.le.zero))/real(size(p_ratios_lo)) * 100.0,"%"
-            write (15,*) "Are there zeros? (f_ratios_lo)", count(f_ratios_lo  .le. zero), real(count(f_ratios_lo.le.zero))/real(size(f_ratios_lo)) * 100.0,"%"
+            write (15,*) "Are there zeros? (q_ratios)",    count(abs(q_space) <= zero)
+            write (15,*) "Are there zeros? (p_ratios_up)", count(p_ratios_up  <= zero), real(count(p_ratios_up <= zero))/real(size(p_ratios_up)) * 100.0,"%"
+            write (15,*) "Are there zeros? (f_ratios_up)", count(f_ratios_up  <= zero), real(count(f_ratios_up <= zero))/real(size(f_ratios_up)) * 100.0,"%"
+            write (15,*) "Are there zeros? (p_ratios_lo)", count(p_ratios_lo  <= zero), real(count(p_ratios_lo <= zero))/real(size(p_ratios_lo)) * 100.0,"%"
+            write (15,*) "Are there zeros? (f_ratios_lo)", count(f_ratios_lo  <= zero), real(count(f_ratios_lo <= zero))/real(size(f_ratios_lo)) * 100.0,"%"
             write (15,*) "Count of array elements:", size(p_ratios_lo)
             write (15,*) "----------"
             close(15)
@@ -333,13 +333,13 @@ contains
          n_tab_up(i)     = ind_to_flog(i, n_min_up, n_max_up, arr_dim) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1)*real(i-1))
       enddo
 
-      if (e_small_approx_init_cond .eq. 1) then
+      if (e_small_approx_init_cond == 1) then
          write (*, "(A36)", advance="no") "Reading (up) boundary ratio files..."
          do j = 1, 2
             call read_NR_guess_grid(p_ratios_up, "p_ratios_", HI, exit_code) ;  int_logical_p = logical_2_int(exit_code)
             call read_NR_guess_grid(f_ratios_up, "f_ratios_", HI, exit_code) ;  int_logical_f = logical_2_int(exit_code)
 
-            if ( int_logical_f + int_logical_p .gt. 0 .or. force_init_NR) then
+            if (int_logical_f + int_logical_p > 0 .or. force_init_NR) then
    ! Setting up the "guess grid" for p_up case
                call fill_boundary_grid(HI, p_ratios_up, f_ratios_up)
             else
@@ -360,7 +360,7 @@ contains
             call read_NR_guess_grid(p_ratios_lo, "p_ratios_", LO, exit_code) ;   int_logical_p = logical_2_int(exit_code)
             call read_NR_guess_grid(f_ratios_lo, "f_ratios_", LO, exit_code) ;   int_logical_f = logical_2_int(exit_code)
 
-            if ( int_logical_f + int_logical_p .gt. 0 .or. force_init_NR) then
+            if (int_logical_f + int_logical_p > 0 .or. force_init_NR) then
    ! Setting up the "guess grid" for p_lo case
                call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo)
             else
@@ -381,7 +381,7 @@ contains
       a_max_q = (one + epsilon(one)) * p_fix_ratio
       j = min(arr_dim_q - int(arr_dim_q/100, kind=4), arr_dim_q - I_ONE)               ! BEWARE: magic number
 
-      do while (q_grid(j) .le. (-q_big) .and. (q_grid(arr_dim_q) .le. (-q_big)) )
+      do while (q_grid(j) <= (-q_big) .and. (q_grid(arr_dim_q) <= (-q_big)))
          a_max_q = a_max_q - a_max_q*0.005                                             ! BEWARE: magic number
          do i = 1, arr_dim_q
             alpha_tab_q(i)  = ind_to_flog(i, a_min_q, a_max_q, arr_dim_q)
@@ -396,7 +396,7 @@ contains
 
       print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i)  |       p_space(i),     q_space(i)"
       do i = 1, arr_dim
-         if (i .le. helper_arr_dim) then
+         if (i <= helper_arr_dim) then
             print *,i,"|",  alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i), "| i = ", &
                           min(i,helper_arr_dim), p_space(min(i,helper_arr_dim)), q_space(min(i,helper_arr_dim)), &
                           p_space(min(i,helper_arr_dim))**(-q_space(min(i,helper_arr_dim)))
@@ -519,9 +519,9 @@ contains
             endif
 
             if (exit_code) then
-               if (j-2 .ge. 1 .and. j-2 .le. arr_dim) call step_extr(fill_p(i,j-2:j), fill_f(i,j-2:j), p_n(j-2:j), nam, exit_code)
-               if (j-1 .ge. 1) then
-                  if (fill_p(i,j-1) .gt. zero) call seek_solution_step(fill_p(i,j), fill_f(i,j), prev_solution, i, j-1, nam, exit_code)
+               if (j-2 >= 1 .and. j-2 <= arr_dim) call step_extr(fill_p(i,j-2:j), fill_f(i,j-2:j), p_n(j-2:j), nam, exit_code)
+               if (j-1 >= 1) then
+                  if (fill_p(i,j-1) > zero) call seek_solution_step(fill_p(i,j), fill_f(i,j), prev_solution, i, j-1, nam, exit_code)
                endif
             endif
             if (exit_code) then !still...
@@ -547,9 +547,9 @@ contains
                   enddo
                enddo
             else
-               if (prev_solution(1) .le. eps ) then
+               if (prev_solution(1) <= eps) then
                   prev_solution(1) = prev_solution_1(1)
-               else if (prev_solution(2) .le. eps) then
+               else if (prev_solution(2) <= eps) then
                   prev_solution(2) = prev_solution_1(2)
                else
                   prev_solution(1) = fill_p(i,j)
@@ -692,7 +692,7 @@ contains
       integer(kind=4)                     :: nsubstep = 100, k
 !         alpha and n are set !
 
-      if ( minval(p3(1:2)) .gt. tiny(zero) .and. p3(3) .le. zero ) then ! sometimes NaNs and numbers of order e-317 appear; must be looked into
+      if (minval(p3(1:2)) > tiny(zero) .and. p3(3) <= zero) then ! sometimes NaNs and numbers of order e-317 appear; must be looked into
          x_vec_0 = [p3(2), f3(2)]
          delta(1) = lin_extrapol_1D(p3(1:2), arg(1:2), arg(3)) - p3(2) ! direction is not relevant in this case
          delta(2) = lin_extrapol_1D(f3(1:2), arg(1:2), arg(3)) - f3(2)
@@ -735,7 +735,7 @@ contains
 !         alpha and n are set !
 
       if (exit_code) then
-         if ( min(p3(1),p3(3)) .gt. tiny(zero) .and. p3(2) .le. zero ) then ! sometimes NaNs and numbers of order e-317 appear; must be looked into
+         if (min(p3(1),p3(3)) > tiny(zero) .and. p3(2) <= zero) then ! sometimes NaNs and numbers of order e-317 appear; must be looked into
             x_vec_0 = [p3(1), f3(1)]
             delta(1) = lin_interpolation_1D( [p3(2-incr), p3(2+incr)], [args(2-incr), args(2+incr)], args(2) ) - p3(1)
             delta(2) = lin_interpolation_1D( [f3(2-incr), f3(2+incr)], [args(2-incr), args(2+incr)], args(2) ) - f3(1)
@@ -930,7 +930,7 @@ contains
       real,    intent(inout) :: x
       logical, intent(out)   :: exit_code
 
-      if ( abs(x) .ge. q_big ) then
+      if (abs(x) >= q_big) then
          x = sign(one, x) * q_big
          exit_code = .true.
          return
@@ -950,9 +950,9 @@ contains
 
       q_in3 = three - x
       q_in4 = one + q_in3
-      if (abs(q_in3) .lt. eps) then
+      if (abs(q_in3) < eps) then
          alpha_to_q = (p_ratio_4_q**q_in4 - one)/log(p_ratio_4_q)
-      else if (abs(q_in4) .lt. eps) then
+      else if (abs(q_in4) < eps) then
          alpha_to_q = q_in3 * log(p_ratio_4_q)/(p_ratio_4_q**q_in3 - one)
       else
          alpha_to_q = q_in3/q_in4 * (p_ratio_4_q**q_in4 - one)/(p_ratio_4_q**q_in3 - one)
@@ -970,9 +970,9 @@ contains
       integer(kind=4), intent(in)  :: ind_incr
       integer(kind=4), intent(out) :: ind_beg, ind_end
 
-      if (ind_incr .eq. 1 ) then
+      if (ind_incr == 1) then
          ind_beg = 1 ; ind_end = arr_dim
-      else if (ind_incr .eq. -1) then
+      else if (ind_incr == -1) then
          ind_beg = arr_dim ; ind_end = 1
       endif
 
@@ -1005,7 +1005,7 @@ contains
       do j = 1, ndim
          dx(j) = max(x(j), dx_min )          ! assure dx > zero
          dx(j) = min(dx(j)*dx_par, dx_par)   ! the value of dx is scaled not to go over value of x
-         if (x(j) .eq. dx(j)) dx(j) = half * dx(j)
+         if (x(j) == dx(j)) dx(j) = half * dx(j)
          xp = x ; xm = x
          xp(j) = x(j) - dx(j) ;  xm(j) = x(j) + dx(j)
          jac_fin_diff(:,j)  = half*( selected_function_2D(xp) - selected_function_2D(xm)) / dx(j)
@@ -1100,9 +1100,9 @@ contains
       real                        :: q_in4
 
       q_in4 = one + q_in3
-      if (abs(q_in3) .lt. eps) then
+      if (abs(q_in3) < eps) then
          encp_func_2_zero = (p_ratio**q_in4)/(q_in4*log(p_ratio))  ! if q = 3
-      else if (abs(q_in4) .lt. eps) then
+      else if (abs(q_in4) < eps) then
          encp_func_2_zero = q_in3 * log(p_ratio)/(p_ratio**q_in3 - one)
       else
          encp_func_2_zero = q_in3/q_in4*(p_ratio**q_in4 - one) / (p_ratio**q_in3 - one)
@@ -1124,7 +1124,7 @@ contains
       real, intent(in) :: p_ratio, fp_cmplx, n_cnst, q_in3
 
       n_func_2_zero = e_small / (clight_cresp * fp_cmplx)
-      if (abs(q_in3) .lt. eps) then
+      if (abs(q_in3) < eps) then
          n_func_2_zero = n_func_2_zero * log(p_ratio)
       else
          n_func_2_zero = n_func_2_zero * (p_ratio**q_in3 - one)/q_in3
@@ -1249,8 +1249,8 @@ contains
       loc1(1) = inverse_f_to_ind(a_val, p_a(1), p_a(arr_dim), arr_dim)
       loc1(2) = inverse_f_to_ind(n_val, p_n(1), p_n(arr_dim), arr_dim)
 
-      if ((minval(loc1) .ge. 1 .and. maxval(loc1) .le. arr_dim-1)) then ! only need to test loc1
-         if (p_p(loc1(1), loc1(2)) .gt. zero ) then
+      if ((minval(loc1) >= 1 .and. maxval(loc1) <= arr_dim-1)) then ! only need to test loc1
+         if (p_p(loc1(1), loc1(2)) > zero) then
             loc2 = loc1+1
 #ifdef CRESP_VERBOSED
             write(*,"(A19, 2I8, A3, 2I8)") "Obtained indices:", loc1, " | ", loc2
@@ -1264,16 +1264,16 @@ contains
          exit_code = .true.
       endif
 
-      if (exit_code) then ! namely if ((minval(loc1) .le. 0 .or. maxval(loc1) .ge. arr_dim))
+      if (exit_code) then ! namely if ((minval(loc1) <= 0 .or. maxval(loc1) >= arr_dim))
          loc1(1) = max(1, min(loc1(1), arr_dim))   ! Here we either give algorithm closest nonzero value relative to a row
          loc1(2) = max(1, min(loc1(2), arr_dim))   ! that was in the proper range or we just feed the algorithm ANY nonzero
          exit_code = .true.                      ! initial vector that will prevent it from crashing.
          loc2 = loc1
 
-         if (loc1(1) .eq. arr_dim .or. hit_zero) call nearest_solution(p_p(:,loc1(2)), loc1(1),        1,       loc1(1), hit_zero)
-         if (loc1(1) .le. 1       .or. hit_zero) call nearest_solution(p_p(:,loc1(2)), max(1,loc1(1)), arr_dim, loc1(1), hit_zero)
-         if (loc1(2) .eq. arr_dim .or. hit_zero) call nearest_solution(p_p(loc1(1),:), loc1(2),        1,       loc1(2), hit_zero)
-         if (loc1(2) .le. 1       .or. hit_zero) call nearest_solution(p_p(loc1(1),:), max(1,loc1(2)), arr_dim, loc1(2), hit_zero)
+         if (loc1(1) == arr_dim .or. hit_zero) call nearest_solution(p_p(:,loc1(2)), loc1(1),        1,       loc1(1), hit_zero)
+         if (loc1(1) <= 1       .or. hit_zero) call nearest_solution(p_p(:,loc1(2)), max(1,loc1(1)), arr_dim, loc1(1), hit_zero)
+         if (loc1(2) == arr_dim .or. hit_zero) call nearest_solution(p_p(loc1(1),:), loc1(2),        1,       loc1(2), hit_zero)
+         if (loc1(2) <= 1       .or. hit_zero) call nearest_solution(p_p(loc1(1),:), max(1,loc1(2)), arr_dim, loc1(2), hit_zero)
 
          loc_panic = loc1
       endif
@@ -1298,7 +1298,7 @@ contains
       i_incr = sign(1, i_end - i_beg)
 
       do  i = i_beg, i_end, i_incr
-         if (arr_lin(i) .gt. zero) then
+         if (arr_lin(i) > zero) then
             i_solution = i ! next one is i_solution + i_incr
             hit_zero = .false.
             return
@@ -1333,8 +1333,8 @@ contains
 
       loc_1 = inverse_f_to_ind(alpha_in, alpha_tab_q(1), alpha_tab_q(arr_dim_q), arr_dim_q)
 
-      if ((loc_1 .le. I_ZERO) .or. (loc_1 .ge. arr_dim_q)) then
-         if (loc_1 .le. I_ZERO) then
+      if ((loc_1 <= I_ZERO) .or. (loc_1 >= arr_dim_q)) then
+         if (loc_1 <= I_ZERO) then
             compute_q = q_big          !< should be consistent with q_grid(1)
          else
             compute_q = -q_big         !< should be consistent with q_grid(arr_dim_q)
@@ -1351,7 +1351,7 @@ contains
          call NR_algorithm_1D(compute_q, exit_code)
       endif
 
-      if (abs(compute_q) .gt. q_big) compute_q = sign(one, compute_q) * q_big
+      if (abs(compute_q) > q_big) compute_q = sign(one, compute_q) * q_big
 
    end function compute_q
 !----------------------------------------------------------------------------------------------------
@@ -1419,15 +1419,15 @@ contains
 
       f_name = var_name // bound_name(bc) // extension
       open(31, file=f_name, status="old", position="rewind", IOSTAT=file_status)
-      if (file_status .gt. 0) then
+      if (file_status > 0) then
          write(*,"(A8,I4,A8,2A20)") "IOSTAT:", file_status, ": file ", var_name//bound_name(bc)//extension," does not exist!"
          exit_code = .true.
          return
       else
          read(31,*) ! Skipping comment line
          read(31,"(1E15.8,2I10,10E22.15)") svd_e_sm, svd_rows, svd_cols, svd_max_p_r, svd_q_big, svd_clight
-         if ( (svd_e_sm .equals. e_small) .and. (svd_rows .eq. size(NR_guess_grid, dim=1)) .and. &
-           &  (svd_cols .eq. size(NR_guess_grid, dim=2)) .and. &       ! TODO: swap rows and cols with just arr_dim, drop max_p_ratio
+         if ((svd_e_sm .equals. e_small) .and. (svd_rows == size(NR_guess_grid, dim=1)) .and. &
+           &  (svd_cols == size(NR_guess_grid, dim=2)) .and. &       ! TODO: swap rows and cols with just arr_dim, drop max_p_ratio
            &  (svd_max_p_r .equals. max_p_ratio) .and. (svd_q_big .equals. q_big) .and. (svd_clight .equals. clight_cresp) ) then ! This saves a lot of time
             read(31, *)
 

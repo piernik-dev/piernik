@@ -186,8 +186,8 @@ contains
       n = n_inout     ! number density of electrons passed to cresp module by the external module / grid
       e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
 
-      if (approx_p_up .gt. 0) then
-         if (i_up .gt. 1) then
+      if (approx_p_up > 0) then
+         if (i_up > 1) then
             call get_fqp_up(solve_fail_up)
          else                                                  !< spectrum cutoff beyond the fixed momentum grid
             p_up          = p_fix(i_up)
@@ -196,7 +196,7 @@ contains
          endif
 
          if (solve_fail_up) then                               !< exit_code support
-            if (i_up .lt. ncre) then
+            if (i_up < ncre) then
                call transfer_quantities(n(i_up-1),n(i_up))
                call transfer_quantities(e(i_up-1),e(i_up))
                call decr_vec(active_bins, num_active_bins)
@@ -213,8 +213,8 @@ contains
          endif
       endif
 
-      if (approx_p_lo .gt. 0) then
-         if ((i_lo+1) .ne. ncre) then
+      if (approx_p_lo > 0) then
+         if (i_lo + 1 /= ncre) then
             call get_fqp_lo(solve_fail_lo)
          else                                                  !< spectrum cutoff beyond the fixed momentum grid
             p_lo          = p_fix(i_lo)
@@ -223,7 +223,7 @@ contains
          endif
 
          if (solve_fail_lo) then                               !< exit_code support
-            if (i_lo .gt. 0) then
+            if (i_lo > 0) then
                call transfer_quantities(n(i_lo+2),n(i_lo+1))
                call transfer_quantities(e(i_lo+2),e(i_lo+1))
                call decr_vec(active_bins, 1)
@@ -273,13 +273,13 @@ contains
 
       edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
 
-      if ((del_i_up .eq. 0) .and. (approx_p_up .gt. 0)) then
+      if ((del_i_up == 0) .and. (approx_p_up > 0)) then
          if (.not. assert_active_bin_via_nei(ndt(i_up_next), edt(i_up_next), i_up_next)) then
             call transfer_quantities(ndt(i_up_next-1),ndt(i_up_next))
             call transfer_quantities(edt(i_up_next-1),edt(i_up_next))
          endif
       endif
-      if ((del_i_lo .eq. 0) .and. (approx_p_lo .gt. 0) .and. (i_lo_next+2 .le. ncre)) then
+      if ((del_i_lo == 0) .and. (approx_p_lo > 0) .and. (i_lo_next+2 <= ncre)) then
          if (.not. assert_active_bin_via_nei(ndt(i_lo_next+1), edt(i_lo_next+1), i_lo_next)) then
             call transfer_quantities(ndt(i_lo_next+2),ndt(i_lo_next+1))
             call transfer_quantities(edt(i_lo_next+2),edt(i_lo_next+1))
@@ -494,8 +494,8 @@ contains
 ! Detect where bins have nonzero values for both n and e; num_has_gt_zero stores preliminary active bins
       allocate(nonempty_bins(I_ZERO))
       do i = 1, ncre
-         has_n_gt_zero(i) = (n(i) .gt. zero)
-         has_e_gt_zero(i) = (e(i) .gt. zero)
+         has_n_gt_zero(i) = (n(i) > zero)
+         has_e_gt_zero(i) = (e(i) > zero)
          if (has_n_gt_zero(i) .and. has_e_gt_zero(i)) then
             num_has_gt_zero = num_has_gt_zero + I_ONE
             call incr_vec(nonempty_bins, I_ONE)
@@ -503,7 +503,7 @@ contains
          endif
       enddo
 ! If cell is not empty, assume preliminary i_lo and i_up
-      if (num_has_gt_zero .eq. I_ZERO) then
+      if (num_has_gt_zero == I_ZERO) then
          empty_cell = .true.
          return
       else
@@ -512,7 +512,7 @@ contains
       endif
 
 #ifdef CRESP_VERBOSED
-      if (pre_i_lo .eq. (ncre - I_ONE)) then
+      if (pre_i_lo == ncre - I_ONE) then
          write(msg,*) "[cresp_crspectrum:cresp_find_prepare_spectrum] Whole spectrum moved beyond upper p_fix. Consider increasing p_up_init and restarting test."
          call warn(msg)
       endif
@@ -523,7 +523,7 @@ contains
       p(pre_i_lo+I_ONE:pre_i_up-I_ONE) = p_fix(pre_i_lo+I_ONE:pre_i_up-I_ONE)
       p(pre_i_lo) = (I_ONE-approx_p_lo)*p_lo + approx_p_lo * max(p_fix(pre_i_lo), p_mid_fix(I_ONE))  ! do not want to have zero here + p_out considered
 
-      if (pre_i_up .lt. ncre) then
+      if (pre_i_up < ncre) then
          p(pre_i_up) = (I_ONE-approx_p_up)*p_up + approx_p_up * p_fix(pre_i_up)                  ! do not want to have zero here + p_out considered
       else
          p(pre_i_up) = (I_ONE-approx_p_up)*p_up + approx_p_up * p_mid_fix(pre_i_up)              ! do not want to have zero here + p_out considered
@@ -546,7 +546,7 @@ contains
       approx_p_lo = approx_p_lo_tmp
       approx_p_up = approx_p_up_tmp                   !< After computation of q and f for all bins approximation of cutoffs is reenabled (if was active)
 
-      if (approx_p_lo .eq. I_ONE .and. approx_p_up .eq. I_ONE) then
+      if (approx_p_lo == I_ONE .and. approx_p_up == I_ONE) then
 ! compute energy density amplitudes
          e_amplitudes_l = zero   ;  e_amplitudes_r = zero
          do i = active_bins(I_ONE), active_bins(num_has_gt_zero)
@@ -564,7 +564,7 @@ contains
          is_active_bin = .false.
 
          do i = I_ONE, ncre
-            is_active_bin(i) = ( (e_amplitudes_r(i) .gt. e_small .or. e_amplitudes_l(i) .gt. e_small ) .and. (e(i) > zero .and. n(i) > zero) )
+            is_active_bin(i) = ((e_amplitudes_r(i) > e_small .or. e_amplitudes_l(i) > e_small ) .and. (e(i) > zero .and. n(i) > zero))
          enddo
          pre_i_lo = I_ZERO ; pre_i_up = ncre
 
@@ -572,7 +572,7 @@ contains
             pre_i_lo = i
             if (is_active_bin(i)) exit
          enddo
-         if (pre_i_lo .eq. ncre) then
+         if (pre_i_lo == ncre) then
             empty_cell = .true.
             return
          endif
@@ -589,10 +589,10 @@ contains
 
       num_active_bins = count(is_active_bin)
 
-      if (num_active_bins .gt. I_ONE) then
+      if (num_active_bins > I_ONE) then
          i_lo = pre_i_lo;   i_up = pre_i_up
-      else if (num_active_bins .eq. I_ONE) then
-         if (i_lo .gt. I_ZERO) then
+      else if (num_active_bins == I_ONE) then
+         if (i_lo > I_ZERO) then
             i_up = active_bins(num_active_bins)
             i_lo = i_up -I_ONE
             p_lo        = (I_ONE-approx_p_lo)*p_lo + approx_p_lo * p_fix(i_lo);  p(i_lo) = p_lo
@@ -628,7 +628,7 @@ contains
       if (allocated(fixed_edges))  deallocate(fixed_edges)
 
 ! allocate and prepare active bins for spectrum evolution
-      if (num_active_bins .gt. I_ZERO) then
+      if (num_active_bins > I_ZERO) then
          allocate(active_bins(num_active_bins))
          active_bins = I_ZERO
          active_bins = pack(cresp_all_bins, is_active_bin)
@@ -651,7 +651,7 @@ contains
          write (msg, "(2(A9,i3))") "i_lo =", i_lo, ", i_up = ", i_up    ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
-         if (approx_p_lo .eq. I_ONE .and. approx_p_up .eq. I_ONE) then
+         if (approx_p_lo == I_ONE .and. approx_p_up == I_ONE) then
             p(:)   = p_fix(:)
             p(i_lo) = max(p_fix(i_lo), p_mid_fix(I_ONE))      ! do not want to have zero here
             p(i_up) = max(p_fix(i_up), p_fix(I_ONE))
@@ -684,12 +684,12 @@ contains
       real                        :: f_one, q_one, p_l, p_r, e_amplitude_l, e_amplitude_r, alpha
       logical                     :: exit_code
 
-      if (e_in .gt. zero .and. n_in .gt. zero .and. p_fix(max(i_cutoff-1,0)) .gt. zero ) then
+      if (e_in > zero .and. n_in > zero .and. p_fix(max(i_cutoff-1,0)) > zero ) then
          assert_active_bin_via_nei = .true.
 
          exit_code = .true.
 
-         if (i_cutoff .gt. 0 .and. i_cutoff .lt. ncre) then
+         if (i_cutoff > 0 .and. i_cutoff < ncre) then
             alpha = e_in/(n_in * clight_cresp * p_fix(i_cutoff-1))
             q_one = compute_q(alpha, exit_code)
          else
@@ -700,7 +700,7 @@ contains
          p_r = p_fix(i_cutoff)
          f_one = n_in / (fpi*p_l**3)
 
-         if (abs(q_one-three) .gt. eps) then
+         if (abs(q_one-three) > eps) then
             f_one = f_one*(three - q_one) /(( p_r/p_l)**(three - q_one) - one)
          else
             f_one = f_one/log(p_r/p_l)
@@ -709,7 +709,7 @@ contains
          e_amplitude_l = fp_to_e_ampl(p_l, f_one)
          e_amplitude_r = fp_to_e_ampl(p_r, f_one)
 
-         if ( (e_amplitude_l .gt. e_small) .and.  (e_amplitude_r .gt. e_small) ) then
+         if ((e_amplitude_l > e_small) .and. (e_amplitude_r > e_small)) then
 #ifdef CRESP_VERBOSED
             write(msg,*) "[cresp_crspectrum:verify_cutoff_i_next] No change to ", i_cutoff ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
@@ -741,7 +741,7 @@ contains
       integer                            :: i
 
       do i = 1, ncre
-         if (e(i) .lt. zero .or. n(i) .lt. zero .or. edt(i) .lt. zero .or. ndt(i) .lt. zero) then
+         if (e(i) < zero .or. n(i) < zero .or. edt(i) < zero .or. ndt(i) < zero) then
             if (present(location)) then
                write(msg,'(A81,3I3,A7,I4,A9,E18.9,A9,E18.9)') '[cresp_crspectrum:cresp_detect_negative_content] Negative values @ (i j k ) = (', &
                            location, '): i=', i,': n(i)=', n(i), ', e(i)=',e(i)
@@ -768,7 +768,7 @@ contains
       integer(kind=4), intent(in)  :: i_bin
       logical,         intent(out) :: cfl_cresp_violated
 
-      if (e_bin .lt. zero .or. n_bin .lt. zero) then
+      if (e_bin < zero .or. n_bin < zero) then
 #ifdef CRESP_VERBOSED
          write(msg,'(A66,A5,E18.9,A6,E18.9,I4)')   '[cresp_crspectrum:check_cutoff_ne] Negative values:', ' n = ', n_bin, ', e = ', e_bin, i_bin
          call warn(msg)
@@ -815,7 +815,7 @@ contains
       i_up_next = max(1,i_up_next, i_up-1)
       i_up_next = min(i_up_next,ncre,i_up+1)
 
-      if ( p_up_next .lt. p_fix(i_up_next-1) ) then ! if no solution is found at the first try, approximation usually causes p_up to jump
+      if (p_up_next < p_fix(i_up_next-1)) then ! if no solution is found at the first try, approximation usually causes p_up to jump
          dt_too_high = .true.                 ! towards higher values, which for sufficiently high dt can cause p_up_next to even
          return                               ! become negative. As p_up would propagate more than one bin this is clearly cfl violation.
       endif
@@ -1292,7 +1292,7 @@ contains
          f(i_br-i) = f(i_br+i)
       enddo
 
-      if ((i_up - i_br .ne. i_br - i_lo)) p_up = p_up - (p_up - p_fix(i_up-1))
+      if ((i_up - i_br /= i_br - i_lo)) p_up = p_up - (p_up - p_fix(i_up-1))
       p(i_up) = p_up ; i_up = i_up -1
       e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
       n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
@@ -1316,7 +1316,7 @@ contains
       do i = 1, i_br-i_lo
          f(i_br-i) = f(i_br)*(p(i_br)/p(i_br-i))**(q(i_br-i+1))
       enddo
-      if ((i_up - i_br .ne. i_br - i_lo)) p_up = p_up - (p_up - p_fix(i_up-1))
+      if ((i_up - i_br /= i_br - i_lo)) p_up = p_up - (p_up - p_fix(i_up-1))
       p(i_up) = p_up ; i_up = i_up -1
       e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
       n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
@@ -1387,7 +1387,7 @@ contains
 
       fq_to_e = zero
       e_bins = fpi*clight_cresp*f_l(bins)*p_l(bins)**4
-      where (abs(q(bins) - four) .gt. eps)
+      where (abs(q(bins) - four) > eps)
          e_bins = e_bins*((p_r(bins)/p_l(bins))**(four-q(bins)) - one)/(four - q(bins))
       elsewhere
          e_bins = e_bins*log(p_r(bins)/p_l(bins))
@@ -1437,7 +1437,7 @@ contains
       n_bins = zero
 
       n_bins = fpi*f_l(bins)*p_l(bins)**3
-      where (abs(q(bins) - three) .gt. eps)
+      where (abs(q(bins) - three) > eps)
          n_bins = n_bins*((p_r(bins)/p_l(bins))**(three-q(bins)) - one)/(three - q(bins))
       elsewhere
          n_bins = n_bins*log((p_r(bins)/p_l(bins)))
@@ -1483,7 +1483,7 @@ contains
       call printinfo(msg)
 
       if (e_small_approx_p(HI) == I_ONE) then
-         rel_up   = (e_small_safe - e_up) / e_up
+         rel_up = (e_small_safe - e_up) / e_up
          write(msg,*) "[cresp_crspectrum:check_init_spectrum] Relative to e_small(", e_small_safe ,"): ", rel_up
          if (abs(rel_up) < one) then
             call printinfo(msg)
@@ -1543,7 +1543,7 @@ contains
       eflux  = zero
 
       dn_upw(ce) = fpi*fimh(ce)*pimh(ce)**3
-      where (abs( qi(ce) - three ) .gt. eps)
+      where (abs( qi(ce) - three ) > eps)
          dn_upw(ce) = dn_upw(ce)*((p_upw(ce)/pimh(ce))**(three-qi(ce)) - one)/(three - qi(ce))
       elsewhere
          dn_upw(ce) = dn_upw(ce)*log((p_upw(ce)/pimh(ce)))
@@ -1551,7 +1551,7 @@ contains
       nflux(ce) = - dn_upw(ce)
 
       de_upw(ce) = fpi*clight_cresp*fimh(ce)*pimh(ce)**4
-      where (abs(qi(ce) - four) .gt. eps)
+      where (abs(qi(ce) - four) > eps)
          de_upw(ce) = de_upw(ce)*((p_upw(ce)/pimh(ce))**(four-qi(ce)) - one)/(four - qi(ce))
       elsewhere
          de_upw(ce) = de_upw(ce)*log(p_upw(ce)/pimh(ce))
@@ -1564,22 +1564,22 @@ contains
       endif
 
 ! filling empty empty bin - switch of upper boundary, condition is checked only once per flux computation and is very rarely satisfied.
-      if (nflux(i_up) .gt. zero) then             ! If flux is greater than zero it will go through right edge, activating next bin in the next timestep.
-         if ( cresp_all_bins(i_up+1) .eq. i_up+1 ) then  ! But it shuld only happen if there is bin with index i_up+1
+      if (nflux(i_up) > zero) then             ! If flux is greater than zero it will go through right edge, activating next bin in the next timestep.
+         if (cresp_all_bins(i_up+1) == i_up+1) then  ! But it shuld only happen if there is bin with index i_up+1
             ndt(i_up+1) = nflux(i_up)
             edt(i_up+1) = eflux(i_up)
             del_i_up = +1
          endif
       endif
 
-      if ( nflux(i_up-1)+n(i_up) .le. zero) then ! If flux is equal or greater than energy / density in a given bin,  these both shall migrate
+      if (nflux(i_up-1)+n(i_up) <= zero) then ! If flux is equal or greater than energy / density in a given bin,  these both shall migrate
          nflux(i_up-1) =  -n(i_up)                   ! to an adjacent bin, thus making given bin detected as inactive (empty) in the next timestep
          eflux(i_up-1) =  -e(i_up)
          del_i_up = -1
       endif
 
       dn_upw(he) = fpi*fimth(he)*p_upw(he)**3*(pimth(he)/p_upw(he))**qim1(he)
-      where (abs(qim1(he) - three) .gt. eps )
+      where (abs(qim1(he) - three) > eps)
          dn_upw(he) = dn_upw(he)*((pimh(he)/p_upw(he))**(three-qim1(he)) - one)/(three - qim1(he))
       elsewhere
          dn_upw(he) = dn_upw(he)*log((pimh(he)/p_upw(he)))
@@ -1587,14 +1587,14 @@ contains
       nflux(he) = dn_upw(he)
 
       de_upw(he) = fpi*clight_cresp*fimth(he)*p_upw(he)**4*(pimth(he)/p_upw(he))**qim1(he)
-      where (abs(qi(he) - four) .gt. eps)
+      where (abs(qi(he) - four) > eps)
          de_upw(he) = de_upw(he)*((pimh(he)/p_upw(he))**(four-qim1(he)) - one)/(four - qim1(he))
       elsewhere
          de_upw(he) = de_upw(he)*log(pimh(he)/p_upw(he))
       endwhere
       eflux(he) = de_upw(he)
 
-      if (del_i_lo == 1 .or. nflux(i_lo+1) .ge. n(i_lo+1) ) then
+      if (del_i_lo == 1 .or. nflux(i_lo+1) >= n(i_lo+1)) then
          nflux(i_lo+1) = n(i_lo+1)
          eflux(i_lo+1) = e(i_lo+1)
 ! emptying lower boundary bins - in cases when flux gets greater than energy or number density
@@ -1622,19 +1622,19 @@ contains
 
       r = zero
 
-      where (abs(q(bins) - five) .gt. eps)
+      where (abs(q(bins) - five) > eps)
          r_num = (p(bins)**(five-q(bins)) - p(bins-1)**(five-q(bins)))/(five - q(bins))
       elsewhere
          r_num = log(p(bins)/p(bins-1))
       endwhere
 
-      where (abs(q(bins) - four) .gt. eps)
+      where (abs(q(bins) - four) > eps)
          r_den = (p(bins)**(four-q(bins)) - p(bins-1)**(four-q(bins)))/(four - q(bins))
       else where
          r_den = log(p(bins)/p(bins-1))
       endwhere
 
-      where ( abs(r_num) .gt. zero .and. abs(r_den) .gt. zero )                  !< BEWARE - regression: comparisons against
+      where (abs(r_num) > zero .and. abs(r_den) > zero)                  !< BEWARE - regression: comparisons against
          r(bins) = u_d + u_b * r_num/r_den !all cooling effects will come here   !< eps and epsilon result in bad results;
       endwhere                                                                  !< range of values ofr_num and r_den is very wide
 
@@ -1667,10 +1667,10 @@ contains
 
       do i_active = 1 + approx_p_lo, size(bins) - approx_p_up
          i = bins(i_active)
-         if (e(i) .gt. e_small .and. p(i-1) .gt. zero) then
+         if (e(i) > e_small .and. p(i-1) > zero) then
             exit_code = .true.
             alpha_in = e(i)/(n(i)*p(i-1)*clight_cresp)
-            if ((i .eq. i_lo+1) .or. (i .eq. i_up)) then ! for boudary case, when momenta are not approximated
+            if ((i == i_lo+1) .or. (i == i_up)) then ! for boudary case, when momenta are not approximated
                q(i) = compute_q(alpha_in, exit_code, p(i)/p(i-1))
             else
                q(i) = compute_q(alpha_in, exit_code)
@@ -1720,10 +1720,10 @@ contains
       f_bins = zero
       pr_by_pl = one
 
-      where (p_r(bins).gt. zero .and. p_l(bins) .gt. zero ) ! p(i) = 0 in inactive bins. This condition should be met by providing proper "bins" range - FIXME
+      where (p_r(bins) > zero .and. p_l(bins) > zero ) ! p(i) = 0 in inactive bins. This condition should be met by providing proper "bins" range - FIXME
          pr_by_pl(bins) = p_r(bins) / p_l(bins)                     ! + comparing reals with zero is still risky
          f_bins = n(bins) / (fpi*p_l(bins)**3)
-         where (abs(q(bins)-three) .gt. eps)
+         where (abs(q(bins)-three) > eps)
             f_bins = f_bins*(three - q(bins)) /((pr_by_pl(bins))**(three-q(bins)) - one)
          elsewhere
             f_bins = f_bins/log((p_r(bins)/p_l(bins)))
@@ -1752,7 +1752,7 @@ contains
       get_pcresp = zero
       p_cresp = (fpi/three) * clight_cresp*f_l(bins)*p_l(bins)**4
 
-      where (abs(q(bins) - four) .gt. eps)
+      where (abs(q(bins) - four) > eps)
          p_cresp = p_cresp*((p_r(bins)/p_l(bins))**(four-q(bins)) - one)/(four - q(bins))
       elsewhere
          p_cresp = p_cresp*log(p_r(bins)/p_l(bins))
@@ -1843,7 +1843,7 @@ contains
 
       x_NR = abs(x_NR) ! negative values cannot be allowed
 
-      if (x_NR(1) .lt. 1.0) then
+      if (x_NR(1) < 1.0) then
          exit_code = .true.
          return
       endif
@@ -1853,7 +1853,7 @@ contains
       f(i_up-1) = e_small_to_f(p_up)/x_NR(2)
       q(i_up)   = q_ratios(x_NR(2), x_NR(1))
 
-      if (abs(q(i_up)) .gt. q_big ) q(i_up) = sign(one, q(i_up)) * q_big
+      if (abs(q(i_up)) > q_big ) q(i_up) = sign(one, q(i_up)) * q_big
 #ifdef CRESP_VERBOSED
       write(msg, "(A26,2E22.15)") " >>> Obtained (p_up, f_l):", p_up, f(i_up-1)     ; call printinfo(msg)
       write(msg, "(A26,2E22.15)") "     Corresponding ratios:", x_NR(1), x_NR(2)    ; call printinfo(msg)
@@ -1915,7 +1915,7 @@ contains
       endif
 
       x_NR = abs(x_NR) ! negative values cannot be allowed
-      if (x_NR(1) .lt. 1.0) then
+      if (x_NR(1) < 1.0) then
          exit_code = .true.
          return
       endif
@@ -1925,7 +1925,7 @@ contains
       f(i_lo)   = e_small_to_f(p_lo)
       q(i_lo+1) = q_ratios(x_NR(2), x_NR(1))
 
-      if (abs(q(i_lo+1)) .gt. q_big ) q(i_lo+1) = sign(one, q(i_lo+1)) * q_big
+      if (abs(q(i_lo+1)) > q_big ) q(i_lo+1) = sign(one, q(i_lo+1)) * q_big
 #ifdef CRESP_VERBOSED
       write (msg, "(A26,2E22.15)") " >>> Obtained (p_lo, f_r):", p_lo, x_NR(2)*f(i_lo)    ; call printinfo(msg)
       write (msg, "(A26,2E22.15)") "     Corresponding ratios:", x_NR(1), x_NR(2)         ; call printinfo(msg)
