@@ -393,7 +393,7 @@ contains
                  do i = 1, size(parts%p, dim=1)
                     parts%p(i)%pos = parts%p(i)%pos + parts%p(i)%vel * ddt
                     call is_part_in_cg(parts%p(i)%pos, parts%p(i)%in, parts%p(i)%phy, parts%p(i)%out)
-                    if (.not. in) nmoves(proc+1) = nmoves(proc+1)+1
+                    if (.not. parts%p(i)%in) nmoves(proc+1) = nmoves(proc+1)+1
                  enddo
                end associate
                cgl => cgl%nxt
@@ -413,6 +413,7 @@ contains
                call part_leave_cg(cgl%cg,part_info,ind)
                cgl => cgl%nxt
             enddo
+
 
             call piernik_MPI_Allreduce(part_info, pSUM)
 
