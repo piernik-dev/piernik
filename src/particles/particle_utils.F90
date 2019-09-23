@@ -375,8 +375,8 @@ contains
            enddo
            if (.not. cg%pset%p(i)%out) then
               pdel(i)=1
-              ind=ind+1
            endif
+           ind=ind+1
         endif
      enddo
 
