@@ -99,9 +99,7 @@ module particles_io_hdf5
 
       n_part = count_all_particles()
       call set_nbody_attributes(file_id, n_part)
-
       call nbody_datasets(file_id, n_part)
-
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
@@ -152,7 +150,7 @@ module particles_io_hdf5
 
    subroutine nbody_datasets(file_id, n_part)
 
-      use hdf5, only: HID_T
+     use hdf5, only: HID_T
 
       implicit none
 
@@ -168,7 +166,7 @@ module particles_io_hdf5
 
    subroutine nbody_datafields(file_id, pvar, n_part)
 
-      use hdf5, only: HID_T
+     use hdf5, only: HID_T
 
       implicit none
 
@@ -199,7 +197,7 @@ module particles_io_hdf5
       integer(HID_T),   intent(in)       :: file_id       !< File identifier
       character(len=*), intent(in)       :: pvar
       integer(kind=4),  intent(in)       :: n_part
-      integer                            :: cgnp, recnp
+      integer                            :: cgnp, recnp, i
       integer, dimension(:), allocatable :: tabi1
       type(cg_list_element), pointer     :: cgl
 
@@ -208,10 +206,16 @@ module particles_io_hdf5
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgnp = size(cgl%cg%pset%p, dim=1)
+         cgnp=0
          select case (pvar)
-            case ('ppid')
-               tabi1(recnp+1:recnp+cgnp) = cgl%cg%pset%p(:)%pid
+         case ('ppid')
+            do i=1, size(cgl%cg%pset%p, dim=1)
+               if (cgl%cg%pset%p(i)%phy) then
+                  cgnp = cgnp + 1
+                  tabi1(recnp+cgnp) = cgl%cg%pset%p(i)%pid
+               endif
+            enddo
+               !tabi1(recnp+1:recnp+cgnp) = cgl%cg%pset%p(:)%pid
             case default
          end select
          recnp = recnp+cgnp
@@ -234,7 +238,7 @@ module particles_io_hdf5
       integer(HID_T),   intent(in)    :: file_id       !< File identifier
       character(len=*), intent(in)    :: pvar
       integer(kind=4),  intent(in)    :: n_part
-      integer                         :: cgnp, recnp
+      integer                         :: cgnp, recnp,i
       real, dimension(:), allocatable :: tabr1
       type(cg_list_element), pointer  :: cgl
 
@@ -243,14 +247,20 @@ module particles_io_hdf5
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgnp = size(cgl%cg%pset%p, dim=1)
-         select case (pvar)
-            case ('mass')
-               tabr1(recnp+1:recnp+cgnp) = cgl%cg%pset%p(:)%mass
-            case ('ener')
-               tabr1(recnp+1:recnp+cgnp) = cgl%cg%pset%p(:)%energy
-            case default
-         end select
+         !cgnp = size(cgl%cg%pset%p, dim=1)
+         cgnp=0
+         do i=1, size(cgl%cg%pset%p, dim=1)
+            if (cgl%cg%pset%p(i)%phy) then
+               cgnp = cgnp + 1
+               select case (pvar)
+               case ('mass')
+                  tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%mass
+               case ('ener')
+                  tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%energy
+               case default
+               end select
+            endif
+         enddo
          recnp = recnp+cgnp
          cgl => cgl%nxt
       enddo
@@ -272,7 +282,7 @@ module particles_io_hdf5
       integer(HID_T),   intent(in)      :: file_id       !< File identifier
       character(len=*), intent(in)      :: pvar
       integer(kind=4),  intent(in)      :: n_part
-      integer                           :: cgnp, recnp, i
+      integer                           :: cgnp, recnp, i, j
       real, dimension(:,:), allocatable :: tabr2
       type(cg_list_element), pointer    :: cgl
 
@@ -283,18 +293,28 @@ module particles_io_hdf5
       cgl => leaves%first
       do while (associated(cgl))
          cgnp = size(cgl%cg%pset%p, dim=1)
+         j=1
          select case (pvar)
             case ('ppos')
                do i = 1, cgnp
-                  tabr2(recnp+i,:) = cgl%cg%pset%p(i)%pos
+                  if (cgl%cg%pset%p(i)%phy) then
+                     tabr2(recnp+j,:) = cgl%cg%pset%p(i)%pos(:)
+                     j=j+1
+                  endif
                enddo
             case ('pvel')
                do i = 1, cgnp
-                  tabr2(recnp+i,:) = cgl%cg%pset%p(i)%vel(:)
+                  if (cgl%cg%pset%p(i)%phy) then
+                     tabr2(recnp+j,:) = cgl%cg%pset%p(i)%vel(:)
+                     j=j+1
+                  endif
                enddo
             case ('pacc')
                do i = 1, cgnp
-                  tabr2(recnp+i,:) = cgl%cg%pset%p(i)%acc(:)
+                  if (cgl%cg%pset%p(i)%phy) then
+                     tabr2(recnp+j,:) = cgl%cg%pset%p(i)%acc(:)
+                     j=j+1
+                  endif
                enddo
             case default
          end select
