@@ -332,7 +332,7 @@ contains
          if ((phy) .or. (out)) then
             call printinfo(msg)
 #ifdef NBODY
-            call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener)
+            call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out)
 #else /* !NBODY */
             call cgl%cg%pset%add(pid, mass, pos, vel)
 #endif /* !NBODY */
@@ -426,7 +426,7 @@ contains
                  vel=part_info(i,6:8)
                  acc=part_info(i,9:11)
                  ener=part_info(i,12)
-                 call cg%pset%add(pid, mass, pos, vel, acc, ener)
+                 call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out)
               endif
            endif
         endif
@@ -440,16 +440,17 @@ contains
 
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
-
       implicit none
 
-      integer(kind=4)                :: pcount
+      integer(kind=4)                :: pcount,i
       type(cg_list_element), pointer :: cgl
 
       pcount = 0
       cgl => leaves%first
       do while (associated(cgl))
-         pcount = pcount + size(cgl%cg%pset%p, dim=1, kind=4)
+         do i=1,size(cgl%cg%pset%p, dim=1, kind=4)
+            if (cgl%cg%pset%p(i)%phy) pcount = pcount + 1
+         enddo
          cgl => cgl%nxt
       enddo
 

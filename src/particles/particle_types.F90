@@ -164,7 +164,7 @@ contains
 !> \brief Add a particle to the list
 
 #ifdef NBODY
-   subroutine add_using_basic_types(this, pid, mass, pos, vel, acc, energy)
+   subroutine add_using_basic_types(this, pid, mass, pos, vel, acc, energy, in, phy, out)
 #else /* !NBODY */
    subroutine add_using_basic_types(this, pid, mass, pos, vel)
 #endif /* !NBODY */
@@ -179,16 +179,17 @@ contains
 #ifdef NBODY
       real, dimension(:),  intent(in)    :: acc      !< particle acceleration
       real,                intent(in)    :: energy   !< total energy of particle
+      logical                            :: in,phy,out
 
-      call this%add(particle(pid, mass, pos, vel, acc, energy, .false., .true., .true., .true.))
+      call this%add(particle(pid, mass, pos, vel, acc, energy, .false., in, phy, out))
 #else /* !NBODY */
 
-      call this%add(particle(pid, mass, pos, vel, .false., .true., .true., .true.))
+      call this%add(particle(pid, mass, pos, vel, .false.))
 #endif /* !NBODY */
 
    end subroutine add_using_basic_types
 
-!> \brief Remove a partilce number id from the list
+!> \brief Remove a particle number id from the list
 
    subroutine remove(this, id)
 
