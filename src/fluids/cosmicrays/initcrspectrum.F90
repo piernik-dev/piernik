@@ -45,10 +45,10 @@ module initcrspectrum
    real            :: p_max_fix                   !< fixed momentum grid upper cutoff
    real            :: p_lo_init                   !< initial lower cutoff momentum
    real            :: p_up_init                   !< initial upper cutoff momentum
-   real, dimension(2) :: p_init                   !< array to store p_lo_init and p_up_init
+   real, dimension(2) :: p_init                   !< vector to store p_lo_init and p_up_init
    character(len=cbuff_len) :: initial_spectrum   !< available types: bump, powl, brpl, symf, syme. Description below.
    real            :: p_br_init_lo, p_br_init_up  !< initial low energy break
-   real, dimension(2) :: p_br_init                !< array to store p_br_init_lo and p_br_init_up
+   real, dimension(2) :: p_br_init                !< vector to store p_br_init_lo and p_br_init_up
    real            :: f_init                      !< initial value of distr. func. for isolated case
    real            :: q_init                      !< initial value of power law-like spectrum exponent
    real            :: q_br_init                   !< initial q for low energy break
@@ -61,7 +61,7 @@ module initcrspectrum
    integer(kind=4) :: expan_order                 !< 1,2,3 order of Taylor expansion for p_update (cresp_crspectrum)
    real            :: e_small                     !< lower energy cutoff for energy-approximated cutoff momenta
    logical         :: approx_cutoffs              !< T,F - turns off/on all approximating terms
-   integer(kind=4), dimension(2) :: e_small_approx_p !< array to store e_small_approx_p_lo and e_approx_p_up
+   integer(kind=4), dimension(2) :: e_small_approx_p !< vector to store e_small_approx_p_lo and e_approx_p_up
    integer(kind=4) :: e_small_approx_p_lo         !< 0,1 - turns off/on energy (e_small) approximated lower cutoff momentum in isolated case
    integer(kind=4) :: e_small_approx_p_up         !< 0,1 - turns off/on energy (e_small) approximated upper cutoff momentum in isolated case
    integer(kind=1) :: e_small_approx_init_cond    !< 0,1 - turns off/on energy (e_small) approximated momenta at initialization
@@ -76,6 +76,7 @@ module initcrspectrum
    logical         :: NR_refine_solution_q        !< enables NR_1D refinement for value of interpolated "q" value
    logical         :: NR_refine_pf_lo             !< enables NR_2D refinement for interpolated values of "p" and "f" for lower cutoff. Note - algorithm tries to refine values if interpolation was unsuccessful.
    logical         :: NR_refine_pf_up             !< enables NR_2D refinement for interpolated values of "p" and "f" for upper cutoff. Note - algorithm tries to refine values if interpolation was unsuccessful.
+   logical, dimension(2) :: NR_refine_pf          !< vector to store NR_refine_pf_lo and NR_refine_pf_up
 
    logical         :: nullify_empty_bins          !< nullifies empty bins when entering CRESP module / exiting empty cell.
    logical         :: allow_source_spectrum_break !< allow extension of spectrum to adjacent bins if momenta found exceed set p_fix
@@ -364,6 +365,7 @@ module initcrspectrum
       e_small_approx_p = [e_small_approx_p_lo, e_small_approx_p_up]
       p_init           = [p_lo_init, p_up_init]
       p_br_init        = [p_br_init_lo, p_br_init_up]
+      NR_refine_pf     = [NR_refine_pf_lo, NR_refine_pf_up]
 
 ! Input parameters check
       if (ncre < 3) then
