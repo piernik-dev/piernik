@@ -72,8 +72,8 @@ module cresp_crspectrum
    real, allocatable, dimension(:) :: q  ! power-law exponent array
 
 ! power-law
-   real, dimension(LO:HI)          :: p_cut_next, p_cut
-   integer                         :: i_lo, i_up, i_lo_next, i_up_next
+   real,    dimension(LO:HI)       :: p_cut_next, p_cut
+   integer, dimension(LO:HI)       :: i_cut, i_cut_next
    real, dimension(:), allocatable :: p ! momentum table for piecewise power-law spectru intervals
    real, dimension(:), allocatable :: f ! distribution function for piecewise power-law spectrum
 
@@ -150,9 +150,8 @@ contains
       u_d = sptab%ud
 
       if (present(p_out)) then
-         p_cut = p_out
-         p(i_lo) = p_cut(LO)
-         p(i_up) = p_cut(HI)
+         p_cut    = p_out
+         p(i_cut) = p_cut
       else
          p_cut = zero
          if (dump_fpq) then
@@ -184,54 +183,54 @@ contains
       e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
 
       if (approx_p(HI) > 0) then
-         if (i_up > 1) then
-            call get_fqp_cutoff(HI, i_up, p_cut(HI), f(i_up-1), q(i_up), (e(i_up)/(n(i_up)*p_fix(i_up-1))), n(i_up), solve_fail_up)
+         if (i_cut(HI) > 1) then
+            call get_fqp_cutoff(HI, i_cut(HI), p_cut(HI), f(i_cut(HI)-1), q(i_cut(HI)), (e(i_cut(HI))/(n(i_cut(HI))*p_fix(i_cut(HI)-1))), n(i_cut(HI)), solve_fail_up)
          else                                                  !< spectrum cutoff beyond the fixed momentum grid
-            p_cut(HI)     = p_fix(i_up)
-            p(i_up)       = p_fix(i_up)
+            p_cut(HI)     = p_fix(i_cut(HI))
+            p(i_cut(HI))  = p_fix(i_cut(HI))
             solve_fail_up = .false.
          endif
 
          if (solve_fail_up) then                               !< exit_code support
-            if (i_up < ncre) then
-               call manually_deactivate_bin_via_transfer(i_up, -1, n, e)
+            if (i_cut(HI) < ncre) then
+               call manually_deactivate_bin_via_transfer(i_cut(HI), -1, n, e)
                call decr_vec(active_bins, num_active_bins)
                call decr_vec(active_edges, num_active_edges)
-               is_active_bin(i_up) = .false.
-               is_active_edge(i_up) = .false.
+               is_active_bin(i_cut(HI))  = .false.
+               is_active_edge(i_cut(HI)) = .false.
                num_active_bins = num_active_bins - 1
-               i_up      = i_up - 1
-               p_cut(HI) = p_fix(i_up)
+               i_cut(HI) = i_cut(HI) - 1
+               p_cut(HI) = p_fix(i_cut(HI))
             else
-               p_cut(HI) = p_mid_fix(i_up)
+               p_cut(HI) = p_mid_fix(i_cut(HI))
             endif
-            p(i_up) = p_cut(HI)
+            p(i_cut(HI)) = p_cut(HI)
          endif
       endif
 
       if (approx_p(LO) > 0) then
-         if (i_lo + 1 /= ncre) then
-            call get_fqp_cutoff(LO, i_lo, p_cut(LO), f(i_lo), q(i_lo+1), (e(i_lo+1)/(n(i_lo+1)*p_fix(i_lo+1))), n(i_lo+1), solve_fail_lo)
+         if (i_cut(LO) + 1 /= ncre) then
+            call get_fqp_cutoff(LO, i_cut(LO), p_cut(LO), f(i_cut(LO)), q(i_cut(LO)+1), (e(i_cut(LO)+1)/(n(i_cut(LO)+1)*p_fix(i_cut(LO)+1))), n(i_cut(LO)+1), solve_fail_lo)
          else                                                  !< spectrum cutoff beyond the fixed momentum grid
-            p_cut(LO) = p_fix(i_lo)
-            p(i_lo)   = p_cut(LO)
+            p_cut(LO)     = p_fix(i_cut(LO))
+            p(i_cut(LO))  = p_cut(LO)
             solve_fail_lo = .false.
          endif
 
          if (solve_fail_lo) then                               !< exit_code support
-            if (i_lo > 0) then
-               call manually_deactivate_bin_via_transfer(i_lo+1, 1, n, e)
+            if (i_cut(LO) > 0) then
+               call manually_deactivate_bin_via_transfer(i_cut(LO)+1, 1, n, e)
                call decr_vec(active_bins, 1)
                call decr_vec(active_edges, 1)
-               is_active_bin(i_lo+1) = .false.
-               is_active_edge(i_lo) = .false.
+               is_active_bin(i_cut(LO)+1) = .false.
+               is_active_edge(i_cut(LO))  = .false.
                num_active_bins = num_active_bins - 1
-               i_lo      = i_lo + 1
-               p_cut(LO) = p_fix(i_lo)
+               i_cut(LO) = i_cut(LO) + 1
+               p_cut(LO) = p_fix(i_cut(LO))
             else
                p_cut(LO) = p_mid_fix(1)
             endif
-            p(i_lo) = p_cut(LO)
+            p(i_cut(LO)) = p_cut(LO)
          endif
       endif
 
@@ -267,13 +266,13 @@ contains
       edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
 
       if ((del_i(HI) == 0) .and. (approx_p(HI) > 0)) then
-         if (.not. assert_active_bin_via_nei(ndt(i_up_next), edt(i_up_next), i_up_next)) then
-            call manually_deactivate_bin_via_transfer(i_up_next, -1, ndt, edt)
+         if (.not. assert_active_bin_via_nei(ndt(i_cut_next(HI)), edt(i_cut_next(HI)), i_cut_next(HI))) then
+            call manually_deactivate_bin_via_transfer(i_cut_next(HI), -1, ndt, edt)
          endif
       endif
-      if ((del_i(LO) == 0) .and. (approx_p(LO) > 0) .and. (i_lo_next+2 <= ncre)) then
-         if (.not. assert_active_bin_via_nei(ndt(i_lo_next+1), edt(i_lo_next+1), i_lo_next)) then
-            call manually_deactivate_bin_via_transfer(i_lo_next+1, 1, ndt, edt)
+      if ((del_i(LO) == 0) .and. (approx_p(LO) > 0) .and. (i_cut_next(LO)+2 <= ncre)) then
+         if (.not. assert_active_bin_via_nei(ndt(i_cut_next(LO)+1), edt(i_cut_next(LO)+1), i_cut_next(LO))) then
+            call manually_deactivate_bin_via_transfer(i_cut_next(LO)+1, 1, ndt, edt)
          endif
       endif
 
@@ -311,10 +310,10 @@ contains
       call cresp_detect_negative_content
 #endif /* CRESP_VERBOSED */
 
-      call check_cutoff_ne(ndt(i_lo_next+1), edt(i_lo_next+1), i_lo_next+1, cfl_cresp_violation)
-      call check_cutoff_ne(ndt(i_up_next),   edt(i_up_next), i_up_next, cfl_cresp_violation)
+      call check_cutoff_ne(ndt(i_cut_next(LO)+1), edt(i_cut_next(LO)+1), i_cut_next(LO)+1, cfl_cresp_violation)
+      call check_cutoff_ne(ndt(i_cut_next(HI)),   edt(i_cut_next(HI)),   i_cut_next(HI),   cfl_cresp_violation)
 
-      if ( cfl_cresp_violation ) then
+      if (cfl_cresp_violation) then
          call deallocate_active_arrays
 #ifdef CRESP_VERBOSED
          write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
@@ -338,12 +337,12 @@ contains
          crel%q = q
          crel%e = e
          crel%n = n
-         crel%i_lo = i_lo
-         crel%i_up = i_up
+         crel%i_lo = i_cut(LO)
+         crel%i_up = i_cut(HI)
       endif
 
-      n_inout  = n  ! number density of electrons per bin passed back to the external module
-      e_inout  = e  ! energy density of electrons per bin passed back to the external module
+      n_inout = n  ! number density of electrons per bin passed back to the external module
+      e_inout = e  ! energy density of electrons per bin passed back to the external module
 
       if (present(p_out)) then
          p_out = p_cut
@@ -406,10 +405,10 @@ contains
 
       real, dimension(ncre), intent(inout) :: ext_n, ext_e
 
-      ext_e(:i_lo)   = zero
-      ext_n(:i_lo)   = zero
-      ext_e(i_up+1:) = zero
-      ext_n(i_up+1:) = zero
+      ext_e(:i_cut(LO))   = zero
+      ext_n(:i_cut(LO))   = zero
+      ext_e(i_cut(HI)+1:) = zero
+      ext_n(i_cut(HI)+1:) = zero
 
    end subroutine nullify_inactive_bins
 !----------------------------------------------------------------------------------------------------
@@ -443,9 +442,9 @@ contains
 
       empty_cell = .true.
 
-      i_lo = 0
+      i_cut(LO) = 0
       do i = 1, ncre                        ! if energy density is nonzero, so should be the number density
-         i_lo = i-1
+         i_cut(LO) = i-1
          if (ext_e(i) > e_threshold(LO)) then
            if (ext_n(i) > zero) then
               empty_cell = .false.
@@ -456,9 +455,9 @@ contains
 
      if (empty_cell) return   ! empty cell - nothing to do here!
 
-     i_up = ncre
+     i_cut(HI) = ncre
      do i = ncre, 1,-1
-        i_up = i
+        i_cut(HI) = i
         if (ext_e(i) > e_threshold(HI)) then   ! if energy density is nonzero, so should be the number density
            if (ext_n(i) > zero) exit
         endif
@@ -490,7 +489,7 @@ contains
       is_active_bin(:) = .false. ; is_active_edge(:) = .false.
       num_has_gt_zero  = I_ZERO  ; num_active_bins   = I_ZERO
       pre_i_lo         = I_ZERO  ; pre_i_up          = ncre
-      i_lo             = I_ZERO  ; i_up              = ncre
+      i_cut(LO)        = I_ZERO  ; i_cut(HI)         = ncre
       if (allocated(nonempty_bins)) deallocate(nonempty_bins)
       if (allocated(active_bins))   deallocate(active_bins)
       if (allocated(active_edges))  deallocate(active_edges)
@@ -506,7 +505,7 @@ contains
             nonempty_bins(num_has_gt_zero) = i
          endif
       enddo
-! If cell is not empty, assume preliminary i_lo and i_up
+! If cell is not empty, assume preliminary i_cut
       if (num_has_gt_zero == I_ZERO) then
          empty_cell = .true.
          return
@@ -539,7 +538,7 @@ contains
 
       approx_p_tmp = approx_p                   !< Before computation of q and f for all bins approximation of cutoffs is disabled
       approx_p = I_ZERO
-      i_lo = pre_i_lo      ;  i_up = pre_i_up         !< make ne_to_q happy, FIXME - add cutoff indices to argument list
+      i_cut(LO) = pre_i_lo      ;  i_cut(HI) = pre_i_up         !< make ne_to_q happy, FIXME - add cutoff indices to argument list
 
       call ne_to_q(n,e,q,active_bins)                                         !< Compute power indexes for each bin at [t] and f on left bin faces at [t]
 
@@ -591,16 +590,16 @@ contains
       num_active_bins = count(is_active_bin)
 
       if (num_active_bins > I_ONE) then
-         i_lo = pre_i_lo;   i_up = pre_i_up
+         i_cut(LO) = pre_i_lo;   i_cut(HI) = pre_i_up
       else if (num_active_bins == I_ONE) then
-         if (i_lo > I_ZERO) then
-            i_up = active_bins(num_active_bins)
-            i_lo         = i_up -I_ONE
-            p_cut(LO)    = (I_ONE-approx_p(LO))*p_cut(LO) + approx_p(LO) * p_fix(i_lo);  p(i_lo) = p_cut(LO)
+         if (i_cut(LO) > I_ZERO) then
+            i_cut(HI) = active_bins(num_active_bins)
+            i_cut(LO)    = i_cut(HI) -I_ONE
+            p_cut(LO)    = (I_ONE-approx_p(LO))*p_cut(LO) + approx_p(LO) * p_fix(i_cut(LO));  p(i_cut(LO)) = p_cut(LO)
             approx_p(LO) = I_ZERO
          else
-            i_up         = active_bins(num_active_bins)
-            p_cut(HI)    = (I_ONE-approx_p(HI))*p_cut(HI) + approx_p(HI) * p_fix(i_up);  p(i_up) = p_cut(HI)
+            i_cut(HI)    = active_bins(num_active_bins)
+            p_cut(HI)    = (I_ONE-approx_p(HI))*p_cut(HI) + approx_p(HI) * p_fix(i_cut(HI));  p(i_cut(HI)) = p_cut(HI)
             approx_p(HI) = I_ZERO
          endif
       else
@@ -608,20 +607,20 @@ contains
          return
       endif
 
-      is_active_bin(:i_lo)       = .false.
-      is_active_bin(i_up+I_ONE:) = .false.
+      is_active_bin(:i_cut(LO))       = .false.
+      is_active_bin(i_cut(HI)+I_ONE:) = .false.
 
       num_active_bins = count(is_active_bin)
 
       if (present(i_up_out)) then
          approx_p = approx_p_tmp          !< restore approximation before leaving
-         i_up_out = i_up
+         i_up_out = i_cut(HI)
          return
       endif
 
 #ifdef CRESP_VERBOSED
       write (msg, *) "[cresp_crspectrum:cresp_find_prepare_spectrum] is_active_bin: ", is_active_bin, "|", count(is_active_bin), num_has_gt_zero      ; call printinfo(msg)
-      write (msg, *) "[cresp_crspectrum:cresp_find_prepare_spectrum] i_lo, i_up:    ", i_lo, i_up
+      write (msg, *) "[cresp_crspectrum:cresp_find_prepare_spectrum] i_cut:         ", i_cut
 #endif /* CRESP_VERBOSED */
       if (allocated(active_bins))  deallocate(active_bins)
       if (allocated(active_edges)) deallocate(active_edges)
@@ -636,28 +635,28 @@ contains
 ! Construct index arrays for fixed edges betwen p_cut(LO) and p_cut(HI), active edges
 ! before timestep
          is_fixed_edge = .false.
-         is_fixed_edge(i_lo+I_ONE:i_up-I_ONE) = .true.
+         is_fixed_edge(i_cut(LO)+I_ONE:i_cut(HI)-I_ONE) = .true.
          num_fixed_edges = count(is_fixed_edge)
          allocate(fixed_edges(num_fixed_edges))
          fixed_edges = pack(cresp_all_edges, is_fixed_edge)
 
          is_active_edge = .false.
-         is_active_edge(i_lo:i_up) = .true.
+         is_active_edge(i_cut(LO):i_cut(HI)) = .true.
          num_active_edges = count(is_active_edge)
-         allocate(active_edges(i_lo:i_up))
+         allocate(active_edges(i_cut(LO):i_cut(HI)))
          active_edges = pack(cresp_all_edges, is_active_edge)
 
 #ifdef CRESP_VERBOSED
-         write (msg, "(2(A9,i3))") "i_lo =", i_lo, ", i_up = ", i_up    ; call printinfo(msg)
+         write (msg, "(2(A9,i3))") "i_lo =", i_cut(LO), ", i_up = ", i_cut(HI)    ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
          if (all(approx_p == I_ONE)) then
             p(:)   = p_fix(:)
-            p(i_lo) = max(p_fix(i_lo), p_mid_fix(I_ONE))      ! do not want to have zero here
-            p(i_up) = max(p_fix(i_up), p_fix(I_ONE))
+            p(i_cut(LO)) = max(p_fix(i_cut(LO)), p_mid_fix(I_ONE))      ! do not want to have zero here
+            p(i_cut(HI)) = max(p_fix(i_cut(HI)), p_fix(I_ONE))
 
-            f(:i_lo)  = zero
-            f(i_up:)  = zero
+            f(:i_cut(LO))  = zero
+            f(i_cut(HI):)  = zero
          else
             return
          endif
@@ -806,46 +805,44 @@ contains
       call p_update(dt, p_cut(HI), p_cut_next(HI))
       p_cut_next = abs(p_cut_next)
 ! Compute likely cut-off indices after current timestep
-      i_lo_next = int(floor(log10(p_cut_next(LO)/p_fix(1))/w)) + 1
-      i_lo_next = max(0, i_lo_next, i_lo-1)
-      i_lo_next = min(i_lo_next, ncre - 1, i_lo+1)
+      i_cut_next(LO) = int(floor(log10(p_cut_next(LO)/p_fix(1))/w)) + 1
+      i_cut_next(LO) = max(0, i_cut_next(LO), i_cut(LO)-1)
+      i_cut_next(LO) = min(i_cut_next(LO), ncre - 1, i_cut(LO)+1)
 
-      i_up_next = int(floor(log10(p_cut_next(HI)/p_fix(1))/w)) + 2
-      i_up_next = max(1,i_up_next, i_up-1)
-      i_up_next = min(i_up_next,ncre,i_up+1)
+      i_cut_next(HI) = int(floor(log10(p_cut_next(HI)/p_fix(1))/w)) + 2
+      i_cut_next(HI) = max(1,i_cut_next(HI), i_cut(HI)-1)
+      i_cut_next(HI) = min(i_cut_next(HI), ncre, i_cut(HI)+1)
 
-      if (p_cut_next(HI) < p_fix(i_up_next-1)) then ! if no solution is found at the first try, approximation usually causes p_cut(HI) to jump
+      if (p_cut_next(HI) < p_fix(i_cut_next(HI)-1)) then ! if no solution is found at the first try, approximation usually causes p_cut(HI) to jump
          dt_too_high = .true.                 ! towards higher values, which for sufficiently high dt can cause p_cut_next(HI) to even
          return                               ! become negative. As p_cut(HI) would propagate more than one bin this is clearly cfl violation.
       endif
 ! Detect changes in positions of lower an upper cut-ofs
-      del_i(LO) = i_lo_next - i_lo
-      del_i(HI) = i_up_next - i_up
+      del_i = i_cut_next - i_cut
 
 ! Construct index arrays for fixed edges betwen p_cut(LO) and p_cut(HI), active edges after timestep
       is_fixed_edge_next = .false.
-      is_fixed_edge_next(i_lo_next+1:i_up_next-1) = .true.
+      is_fixed_edge_next(i_cut_next(LO)+1:i_cut_next(HI)-1) = .true.
       num_fixed_edges_next = count(is_fixed_edge_next)
       allocate(fixed_edges_next(num_fixed_edges_next))
       fixed_edges_next = pack(cresp_all_edges, is_fixed_edge_next)
 
       is_active_edge_next = .false.
-      is_active_edge_next(i_lo_next:i_up_next) = .true.
+      is_active_edge_next(i_cut_next(LO):i_cut_next(HI)) = .true.
       num_active_edges_next = count(is_active_edge_next)
       allocate(active_edges_next(num_active_edges_next))
       active_edges_next = pack(cresp_all_edges, is_active_edge_next)
 
 ! Active bins after timestep
       is_active_bin_next = .false.
-      is_active_bin_next(i_lo_next+1:i_up_next) = .true.
+      is_active_bin_next(i_cut_next(LO)+1:i_cut_next(HI)) = .true.
       num_active_bins_next = count(is_active_bin_next)
       allocate(active_bins_next(num_active_bins_next))
       active_bins_next = pack(cresp_all_bins, is_active_bin_next)
 
       p_next = zero
       p_next(fixed_edges_next) = p_fix(fixed_edges_next)
-      p_next(i_lo_next) = p_cut_next(LO)
-      p_next(i_up_next) = p_cut_next(HI)
+      p_next(i_cut_next) = p_cut_next
 
 ! Compute upwind momentum p_upw for all fixed edges
       p_upw = zero
@@ -955,33 +952,32 @@ contains
          enddo
       enddo
 
-      i_lo = 0
-      i_up = ncre
+      i_cut = [0, ncre]
 
-! we only need cresp_init_state to derive (n, e) from initial (f, p_cut). For this purpose only 'active bins', i_lo & i_up are needed.
+! we only need cresp_init_state to derive (n, e) from initial (f, p_cut). For this purpose only 'active bins', i_cut are needed.
 
-      i_lo = int(floor(log10(p_cut(LO)/p_fix(1))/w)) + 1
-      i_lo = max(0, i_lo)
-      i_lo = min(i_lo, ncre - 1)
+      i_cut(LO) = int(floor(log10(p_cut(LO)/p_fix(1))/w)) + 1
+      i_cut(LO) = max(0, i_cut(LO))
+      i_cut(LO) = min(i_cut(LO), ncre - 1)
 
-      i_up = int(floor(log10(p_cut(HI)/p_fix(1))/w)) + 2
-      i_up = max(1,i_up)
-      i_up = min(i_up,ncre)
+      i_cut(HI) = int(floor(log10(p_cut(HI)/p_fix(1))/w)) + 2
+      i_cut(HI) = max(1, i_cut(HI))
+      i_cut(HI) = min(i_cut(HI), ncre)
 
-      if (abs(p_init(LO) - p_fix(i_lo)) <= eps ) then
-         write(msg, *) "[cresp_crspectrum:cresp_init_state] p_init(LO) = p_fix(i_lo):  incrementing i_lo index to avoid FPE"
+      if (abs(p_init(LO) - p_fix(i_cut(LO))) <= eps ) then
+         write(msg, *) "[cresp_crspectrum:cresp_init_state] p_init(LO) = p_fix(i_cut(LO)):  incrementing i_cut(LO) index to avoid FPE"
          if (master) call warn(msg)
-         i_lo = i_lo + 1
+         i_cut(LO) = i_cut(LO) + 1
       endif
 
-      if (abs(p_init(HI) - p_fix(i_up-1)) <= eps ) then
-         write(msg, *) "[cresp_crspectrum:cresp_init_state] p_init(HI) = p_fix(i_up-1): decrementing i_up index to avoid FPE"
+      if (abs(p_init(HI) - p_fix(i_cut(HI)-1)) <= eps ) then
+         write(msg, *) "[cresp_crspectrum:cresp_init_state] p_init(HI) = p_fix(i_cut(HI)-1): decrementing i_cut(HI) index to avoid FPE"
          if (master) call warn(msg)
-         i_up = i_up - 1
+         i_cut(HI) = i_cut(HI) - 1
       endif
 
       is_active_bin = .false.
-      is_active_bin(i_lo+1:i_up) = .true.
+      is_active_bin(i_cut(LO)+1:i_cut(HI)) = .true.
       num_active_bins = count(is_active_bin)
       allocate(active_bins(num_active_bins))
       active_bins = pack(cresp_all_bins, is_active_bin)
@@ -1012,13 +1008,13 @@ contains
       end select
 
       if (e_small_approx_init_cond > 0) then
-         call get_fqp_cutoff(LO, i_lo, p_cut(LO), f(i_lo), q(i_lo+1), (e(i_lo+1)/(n(i_lo+1)*p_fix(i_lo+1))), n(i_lo+1), exit_code)
+         call get_fqp_cutoff(LO, i_cut(LO), p_cut(LO), f(i_cut(LO)), q(i_cut(LO)+1), (e(i_cut(LO)+1)/(n(i_cut(LO)+1)*p_fix(i_cut(LO)+1))), n(i_cut(LO)+1), exit_code)
          if (exit_code) then
             write(msg,*) "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but solution for initial spectrum lower cutoff not found, exiting! "
             call die(msg)
          endif
 
-         call get_fqp_cutoff(HI, i_up, p_cut(HI), f(i_up-1), q(i_up), (e(i_up)/(n(i_up)*p_fix(i_up-1))), n(i_up), exit_code)
+         call get_fqp_cutoff(HI, i_cut(HI), p_cut(HI), f(i_cut(HI)-1), q(i_cut(HI)), (e(i_cut(HI))/(n(i_cut(HI))*p_fix(i_cut(HI)-1))), n(i_cut(HI)), exit_code)
          if (exit_code) then
             write(msg,*) "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but solution for initial spectrum upper cutoff not found, exiting! "
             call die(msg)
@@ -1035,34 +1031,34 @@ contains
             i_up_ch = min(i_up_ch,ncre)
 
             f(i_up_ch) = e_small_to_f(p_cut(HI))
-            q(i_up_ch) = q(i_up)
+            q(i_up_ch) = q(i_cut(HI))
             p(i_up_ch) = p_cut(HI)
 
             p(i_lo_ch) = p_cut(LO)
             f(i_lo_ch) = e_small_to_f(p_cut(LO))
-            q(i_lo_ch+1) = q(i_lo+1)
+            q(i_lo_ch+1) = q(i_cut(LO)+1)
 
-            do i = i_lo_ch+1, i_lo
+            do i = i_lo_ch+1, i_cut(LO)
                p(i) = p_fix(i)
                f(i) = f(i_lo_ch) * (p_fix(i)/p(i_lo_ch))**(-q(i_lo_ch+1))
                q(i+1) = q(i_lo_ch+1)
             enddo
 
-            do i = i_up, i_up_ch-1
+            do i = i_cut(HI), i_up_ch-1
                p(i) = p_fix(i)
-               f(i) = f(i_up-1)* (p_fix(i)/p_fix(i_up-1))**(-q(i_up))
-               q(i) = q(i_up)
+               f(i) = f(i_cut(HI)-1)* (p_fix(i)/p_fix(i_cut(HI)-1))**(-q(i_cut(HI)))
+               q(i) = q(i_cut(HI))
             enddo
 #ifdef CRESP_VERBOSED
-            write (msg,"(A,2I3,A,2I3)") "Boundary bins now (i_lo_new i_lo | i_up_new i_up)",  i_lo_ch, i_lo, ' |', i_up_ch, i_up     ; call printinfo(msg)
+            write (msg,"(A,2I3,A,2I3)") "Boundary bins now (i_lo_new i_lo | i_up_new i_up)",  i_lo_ch, i_cut(LO), ' |', i_up_ch, i_cut(HI)     ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
-            i_lo = i_lo_ch   ;   i_up = i_up_ch
-            q(i_up_ch) = q(i_up)
-            p(i_up) = p_cut(HI)
+            i_cut(LO) = i_lo_ch   ;   i_cut(HI) = i_up_ch
+            q(i_up_ch) = q(i_cut(HI))
+            p(i_cut(HI)) = p_cut(HI)
 
             is_active_bin = .false.
-            is_active_bin(i_lo+1:i_up) = .true.
+            is_active_bin(i_cut(LO)+1:i_cut(HI)) = .true.
             num_active_bins = count(is_active_bin) ! active arrays must be reevaluated - number of active bins and edges might have changed
             if (allocated(active_bins)) deallocate(active_bins)
             allocate(active_bins(num_active_bins)) ! active arrays must be reevaluated - number of active bins and edges might have changed
@@ -1079,11 +1075,11 @@ contains
          crel%q = q
          crel%e = e
          crel%n = n
-         crel%i_lo = i_lo
-         crel%i_up = i_up
+         crel%i_lo = i_cut(LO)
+         crel%i_up = i_cut(HI)
       endif
 
-      if (master) call check_init_spectrum(f(i_lo), f(i_up-1))
+      if (master) call check_init_spectrum(f(i_cut(LO)), f(i_cut(HI)-1))
 
       n_tot0 = sum(n)
       e_tot0 = sum(e)
@@ -1238,7 +1234,7 @@ contains
       integer(kind=4) :: i, i_br
 
       i_br = minloc(abs(p_fix - p_br_init(LO)), dim=1) - 1
-      f(i_lo:i_br-1) = f(i_br-1) * exp(-(q_br_init*log(2.0) * log(p(i_lo:i_br-1)/sqrt(p_init(LO) * p(i_br)))**2))
+      f(i_cut(LO):i_br-1) = f(i_br-1) * exp(-(q_br_init*log(2.0) * log(p(i_cut(LO):i_br-1)/sqrt(p_init(LO) * p(i_br)))**2))
       do i = 1, i_br
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
       enddo
@@ -1262,7 +1258,7 @@ contains
 
       i_br = minloc(abs(p_fix - p_br_init(LO)), dim=1) - 1
       q(:i_br) = q_br_init ; q(i_br+1:) = q_init
-      f(i_lo:i_br-1) = f(i_br) * (p(i_lo:i_br-1) / p(i_br))**(-q_br_init)
+      f(i_cut(LO):i_br-1) = f(i_br) * (p(i_cut(LO):i_br-1) / p(i_br))**(-q_br_init)
       e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
       n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
 
@@ -1280,16 +1276,16 @@ contains
 
       integer(kind=4) :: i, i_br
 
-      i_br = int((i_lo+i_up)/2)
-      q(i_lo+1:i_br) = -q_init
+      i_br = int(sum(i_cut)/2)
+      q(i_cut(LO)+1:i_br) = -q_init
       f(i_br) = f(i_br+1)*(p(i_br+1)/p(i_br))**(-q(i_br))
 
-      do i = 1, i_br-i_lo
+      do i = 1, i_br-i_cut(LO)
          f(i_br-i) = f(i_br+i)
       enddo
 
-      if ((i_up - i_br /= i_br - i_lo)) p_cut(HI) = p_cut(HI) - (p_cut(HI) - p_fix(i_up-1))
-      p(i_up) = p_cut(HI) ; i_up = i_up -1
+      if ((i_cut(HI) - i_br /= i_br - i_cut(LO))) p_cut(HI) = p_cut(HI) - (p_cut(HI) - p_fix(i_cut(HI)-1))
+      p(i_cut(HI)) = p_cut(HI) ; i_cut(HI) = i_cut(HI) -1
       e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
       n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
 
@@ -1307,13 +1303,13 @@ contains
 
       integer(kind=4) :: i, i_br
 
-      i_br = int((i_lo+i_up)/2)
-      q(i_lo+1:i_br) = q_init-2.2
-      do i = 1, i_br-i_lo
+      i_br = int(sum(i_cut)/2)
+      q(i_cut(LO)+1:i_br) = q_init-2.2
+      do i = 1, i_br-i_cut(LO)
          f(i_br-i) = f(i_br)*(p(i_br)/p(i_br-i))**(q(i_br-i+1))
       enddo
-      if ((i_up - i_br /= i_br - i_lo)) p_cut(HI) = p_cut(HI) - (p_cut(HI) - p_fix(i_up-1))
-      p(i_up) = p_cut(HI) ; i_up = i_up -1
+      if ((i_cut(HI) - i_br /= i_br - i_cut(LO))) p_cut(HI) = p_cut(HI) - (p_cut(HI) - p_fix(i_cut(HI)-1))
+      p(i_cut(HI)) = p_cut(HI) ; i_cut(HI) = i_cut(HI) -1
       e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
       n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
 
@@ -1555,22 +1551,22 @@ contains
       eflux(ce) =  - de_upw(ce)
 
       if (del_i(HI) == -1) then
-         nflux(i_up-1) = -n(i_up)
-         eflux(i_up-1) = -e(i_up)
+         nflux(i_cut(HI)-1) = -n(i_cut(HI))
+         eflux(i_cut(HI)-1) = -e(i_cut(HI))
       endif
 
 ! filling empty empty bin - switch of upper boundary, condition is checked only once per flux computation and is very rarely satisfied.
-      if (nflux(i_up) > zero) then             ! If flux is greater than zero it will go through right edge, activating next bin in the next timestep.
-         if (cresp_all_bins(i_up+1) == i_up+1) then  ! But it shuld only happen if there is bin with index i_up+1
-            ndt(i_up+1) = nflux(i_up)
-            edt(i_up+1) = eflux(i_up)
+      if (nflux(i_cut(HI)) > zero) then             ! If flux is greater than zero it will go through right edge, activating next bin in the next timestep.
+         if (cresp_all_bins(i_cut(HI)+1) == i_cut(HI)+1) then  ! But it shuld only happen if there is bin with index i_up+1
+            ndt(i_cut(HI)+1) = nflux(i_cut(HI))
+            edt(i_cut(HI)+1) = eflux(i_cut(HI))
             del_i(HI) = +1
          endif
       endif
 
-      if (nflux(i_up-1)+n(i_up) <= zero) then ! If flux is equal or greater than energy / density in a given bin,  these both shall migrate
-         nflux(i_up-1) =  -n(i_up)                   ! to an adjacent bin, thus making given bin detected as inactive (empty) in the next timestep
-         eflux(i_up-1) =  -e(i_up)
+      if (nflux(i_cut(HI)-1)+n(i_cut(HI)) <= zero) then ! If flux is equal or greater than energy / density in a given bin,  these both shall migrate
+         nflux(i_cut(HI)-1) =  -n(i_cut(HI))                   ! to an adjacent bin, thus making given bin detected as inactive (empty) in the next timestep
+         eflux(i_cut(HI)-1) =  -e(i_cut(HI))
          del_i(HI) = -1
       endif
 
@@ -1590,9 +1586,9 @@ contains
       endwhere
       eflux(he) = de_upw(he)
 
-      if (del_i(LO) == 1 .or. nflux(i_lo+1) >= n(i_lo+1)) then
-         nflux(i_lo+1) = n(i_lo+1)
-         eflux(i_lo+1) = e(i_lo+1)
+      if (del_i(LO) == 1 .or. nflux(i_cut(LO)+1) >= n(i_cut(LO)+1)) then
+         nflux(i_cut(LO)+1) = n(i_cut(LO)+1)
+         eflux(i_cut(LO)+1) = e(i_cut(LO)+1)
 ! emptying lower boundary bins - in cases when flux gets greater than energy or number density
          del_i(LO) = 1   ! in case it hasn't yet been modified
       endif
@@ -1666,7 +1662,7 @@ contains
          if (e(i) > e_small .and. p(i-1) > zero) then
             exit_code = .true.
             alpha_in = e(i)/(n(i)*p(i-1)*clight_cresp)
-            if ((i == i_lo+1) .or. (i == i_up)) then ! for boudary case, when momenta are not approximated
+            if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boudary case, when momenta are not approximated
                q(i) = compute_q(alpha_in, exit_code, p(i)/p(i-1))
             else
                q(i) = compute_q(alpha_in, exit_code)
