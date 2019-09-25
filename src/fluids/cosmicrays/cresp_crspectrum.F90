@@ -482,14 +482,14 @@ contains
       integer(kind=4), optional, intent(out)     :: i_up_out
       integer(kind=8), dimension(:), allocatable :: nonempty_bins
       logical, dimension(ncre)                   :: has_n_gt_zero, has_e_gt_zero
-      integer(kind=4)                            :: i, pre_i_lo, pre_i_up, num_has_gt_zero
-      integer(kind=4), dimension(LO:HI)          :: approx_p_tmp
+      integer(kind=4)                            :: i, num_has_gt_zero
+      integer(kind=4), dimension(LO:HI)          :: approx_p_tmp, pre_i_cut
 
       has_n_gt_zero(:) = .false. ; has_e_gt_zero(:)  = .false.
       is_active_bin(:) = .false. ; is_active_edge(:) = .false.
       num_has_gt_zero  = I_ZERO  ; num_active_bins   = I_ZERO
-      pre_i_lo         = I_ZERO  ; pre_i_up          = ncre
-      i_cut(LO)        = I_ZERO  ; i_cut(HI)         = ncre
+      pre_i_cut = [I_ZERO, ncre]
+      i_cut     = [I_ZERO, ncre]
       if (allocated(nonempty_bins)) deallocate(nonempty_bins)
       if (allocated(active_bins))   deallocate(active_bins)
       if (allocated(active_edges))  deallocate(active_edges)
@@ -510,12 +510,12 @@ contains
          empty_cell = .true.
          return
       else
-         pre_i_lo = max(int(nonempty_bins(I_ONE) - I_ONE,kind=4), I_ZERO)
-         pre_i_up = int(nonempty_bins(num_has_gt_zero),kind=4) !ubound(nonempty_bins,dim=1)
+         pre_i_cut(LO) = max(int(nonempty_bins(I_ONE) - I_ONE, kind=4), I_ZERO)
+         pre_i_cut(HI) = int(nonempty_bins(num_has_gt_zero), kind=4) !ubound(nonempty_bins,dim=1)
       endif
 
 #ifdef CRESP_VERBOSED
-      if (pre_i_lo == ncre - I_ONE) then
+      if (pre_i_cut(LO) == ncre - I_ONE) then
          write(msg,*) "[cresp_crspectrum:cresp_find_prepare_spectrum] Whole spectrum moved beyond upper p_fix. Consider increasing p_up_init and restarting test."
          call warn(msg)
       endif
@@ -523,13 +523,13 @@ contains
 
 ! Prepare p array
       p = zero
-      p(pre_i_lo+I_ONE:pre_i_up-I_ONE) = p_fix(pre_i_lo+I_ONE:pre_i_up-I_ONE)
-      p(pre_i_lo) = (I_ONE-approx_p(LO))*p_cut(LO) + approx_p(LO) * max(p_fix(pre_i_lo), p_mid_fix(I_ONE))  ! do not want to have zero here + p_out considered
+      p(pre_i_cut(LO)+I_ONE:pre_i_cut(HI)-I_ONE) = p_fix(pre_i_cut(LO)+I_ONE:pre_i_cut(HI)-I_ONE)
+      p(pre_i_cut(LO)) = (I_ONE-approx_p(LO))*p_cut(LO) + approx_p(LO) * max(p_fix(pre_i_cut(LO)), p_mid_fix(I_ONE))  ! do not want to have zero here + p_out considered
 
-      if (pre_i_up < ncre) then
-         p(pre_i_up) = (I_ONE-approx_p(HI))*p_cut(HI) + approx_p(HI) * p_fix(pre_i_up)                  ! do not want to have zero here + p_out considered
+      if (pre_i_cut(HI) < ncre) then
+         p(pre_i_cut(HI)) = (I_ONE-approx_p(HI))*p_cut(HI) + approx_p(HI) * p_fix(pre_i_cut(HI))                  ! do not want to have zero here + p_out considered
       else
-         p(pre_i_up) = (I_ONE-approx_p(HI))*p_cut(HI) + approx_p(HI) * p_mid_fix(pre_i_up)              ! do not want to have zero here + p_out considered
+         p(pre_i_cut(HI)) = (I_ONE-approx_p(HI))*p_cut(HI) + approx_p(HI) * p_mid_fix(pre_i_cut(HI))              ! do not want to have zero here + p_out considered
       endif
 
 ! preliminary allocation of active_bins
@@ -538,9 +538,9 @@ contains
 
       approx_p_tmp = approx_p                   !< Before computation of q and f for all bins approximation of cutoffs is disabled
       approx_p = I_ZERO
-      i_cut(LO) = pre_i_lo      ;  i_cut(HI) = pre_i_up         !< make ne_to_q happy, FIXME - add cutoff indices to argument list
+      i_cut = pre_i_cut                         !< make ne_to_q happy, FIXME - add cutoff indices to argument list
 
-      call ne_to_q(n,e,q,active_bins)                                         !< Compute power indexes for each bin at [t] and f on left bin faces at [t]
+      call ne_to_q(n, e, q, active_bins)        !< Compute power indexes for each bin at [t] and f on left bin faces at [t]
 
       f = nq_to_f(p(I_ZERO:ncre-I_ONE), p(I_ONE:ncre), n(I_ONE:ncre), q(I_ONE:ncre), active_bins)  !< Compute values of distribution function f for active left edges at [t]
 
@@ -566,31 +566,31 @@ contains
          do i = I_ONE, ncre
             is_active_bin(i) = ((e_amplitudes_r(i) > e_small .or. e_amplitudes_l(i) > e_small ) .and. (e(i) > zero .and. n(i) > zero))
          enddo
-         pre_i_lo = I_ZERO ; pre_i_up = ncre
+         pre_i_cut = [I_ZERO, ncre]
 
          do i = I_ONE, ncre
-            pre_i_lo = i
+            pre_i_cut(LO) = i
             if (is_active_bin(i)) exit
          enddo
-         if (pre_i_lo == ncre) then
+         if (pre_i_cut(LO) == ncre) then
             empty_cell = .true.
             return
          endif
-         pre_i_lo = pre_i_lo - I_ONE
+         pre_i_cut(LO) = pre_i_cut(LO) - I_ONE
 
-         do i = ncre,I_ONE,-I_ONE
-            pre_i_up = i
+         do i = ncre, I_ONE, -I_ONE
+            pre_i_cut(HI) = i
             if (is_active_bin(i)) exit
          enddo
 
       else
-         is_active_bin(pre_i_lo+I_ONE:pre_i_up) = .true.
+         is_active_bin(pre_i_cut(LO)+I_ONE:pre_i_cut(HI)) = .true.
       endif
 
       num_active_bins = count(is_active_bin)
 
       if (num_active_bins > I_ONE) then
-         i_cut(LO) = pre_i_lo;   i_cut(HI) = pre_i_up
+         i_cut = pre_i_cut
       else if (num_active_bins == I_ONE) then
          if (i_cut(LO) > I_ZERO) then
             i_cut(HI) = active_bins(num_active_bins)
