@@ -45,7 +45,7 @@ module cresp_crspectrum
    integer, allocatable               :: fail_count_comp_q(:)
 
 ! variables informing about change of bins
-   integer                            :: del_i_lo, del_i_up
+   integer, dimension(LO:HI)          :: del_i
 
 ! logical arrays / arrays determining use of p/n/e in some lines
    logical, allocatable, dimension(:) :: is_fixed_edge,   is_fixed_edge_next
@@ -266,12 +266,12 @@ contains
 
       edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
 
-      if ((del_i_up == 0) .and. (approx_p(HI) > 0)) then
+      if ((del_i(HI) == 0) .and. (approx_p(HI) > 0)) then
          if (.not. assert_active_bin_via_nei(ndt(i_up_next), edt(i_up_next), i_up_next)) then
             call manually_deactivate_bin_via_transfer(i_up_next, -1, ndt, edt)
          endif
       endif
-      if ((del_i_lo == 0) .and. (approx_p(LO) > 0) .and. (i_lo_next+2 <= ncre)) then
+      if ((del_i(LO) == 0) .and. (approx_p(LO) > 0) .and. (i_lo_next+2 <= ncre)) then
          if (.not. assert_active_bin_via_nei(ndt(i_lo_next+1), edt(i_lo_next+1), i_lo_next)) then
             call manually_deactivate_bin_via_transfer(i_lo_next+1, 1, ndt, edt)
          endif
@@ -819,8 +819,8 @@ contains
          return                               ! become negative. As p_cut(HI) would propagate more than one bin this is clearly cfl violation.
       endif
 ! Detect changes in positions of lower an upper cut-ofs
-      del_i_lo = i_lo_next - i_lo
-      del_i_up = i_up_next - i_up
+      del_i(LO) = i_lo_next - i_lo
+      del_i(HI) = i_up_next - i_up
 
 ! Construct index arrays for fixed edges betwen p_cut(LO) and p_cut(HI), active edges after timestep
       is_fixed_edge_next = .false.
@@ -852,7 +852,7 @@ contains
       p_upw(1:ncre) = [( p_fix(i)*(one - p_rch(dt,p_fix(i))), i=1,ncre )] !< p_upw is computed with minus sign
 
 #ifdef CRESP_VERBOSED
-      write (msg, "(A, 2I3)") 'Change of  cut index lo,up:', del_i_lo, del_i_up    ; call printinfo(msg)
+      write (msg, "(A, 2I3)") 'Change of  cut index lo,up:', del_i    ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
 ! Detect cooling edges and heating edges
@@ -1554,7 +1554,7 @@ contains
       endwhere
       eflux(ce) =  - de_upw(ce)
 
-      if (del_i_up == -1) then
+      if (del_i(HI) == -1) then
          nflux(i_up-1) = -n(i_up)
          eflux(i_up-1) = -e(i_up)
       endif
@@ -1564,14 +1564,14 @@ contains
          if (cresp_all_bins(i_up+1) == i_up+1) then  ! But it shuld only happen if there is bin with index i_up+1
             ndt(i_up+1) = nflux(i_up)
             edt(i_up+1) = eflux(i_up)
-            del_i_up = +1
+            del_i(HI) = +1
          endif
       endif
 
       if (nflux(i_up-1)+n(i_up) <= zero) then ! If flux is equal or greater than energy / density in a given bin,  these both shall migrate
          nflux(i_up-1) =  -n(i_up)                   ! to an adjacent bin, thus making given bin detected as inactive (empty) in the next timestep
          eflux(i_up-1) =  -e(i_up)
-         del_i_up = -1
+         del_i(HI) = -1
       endif
 
       dn_upw(he) = fpi*fimth(he)*p_upw(he)**3*(pimth(he)/p_upw(he))**qim1(he)
@@ -1590,11 +1590,11 @@ contains
       endwhere
       eflux(he) = de_upw(he)
 
-      if (del_i_lo == 1 .or. nflux(i_lo+1) >= n(i_lo+1)) then
+      if (del_i(LO) == 1 .or. nflux(i_lo+1) >= n(i_lo+1)) then
          nflux(i_lo+1) = n(i_lo+1)
          eflux(i_lo+1) = e(i_lo+1)
 ! emptying lower boundary bins - in cases when flux gets greater than energy or number density
-         del_i_lo = 1   ! in case it hasn't yet been modified
+         del_i(LO) = 1   ! in case it hasn't yet been modified
       endif
 
    end subroutine cresp_compute_fluxes
