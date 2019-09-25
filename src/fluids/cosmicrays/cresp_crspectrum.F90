@@ -1154,7 +1154,7 @@ contains
 
       implicit none
 
-      real                                       :: c_1, c_2, c_3, lpb, lpu, lpl, a, b
+      real                                       :: c_1, c_2, c_3, lpb, lpu, lpl, a, b, lp_lpb
       real, dimension(1:ncre)                    :: q_add
       real, dimension(0:ncre)                    :: p_range_add, f_add
       integer(kind=4), allocatable, dimension(:) :: act_bins
@@ -1184,11 +1184,12 @@ contains
 
       lpl = log10(p_init(LO))
       lpb = log10(p_br_init(LO))
+      lp_lpb = lpl / lpb
 
       a = -q_init
       b = log10(f_init * (p_init(LO))**(q_init))
 
-      c_3 =  ( (-three * lpl + log10(e_small / fpcc)) + b * (lpl/lpb) - a * lpl - two * b * (lpl/lpb) ) / ( (lpl/lpb)**two - two * (lpl/lpb) + one)
+      c_3 =  (-three * lpl + log10(e_small / fpcc) + b * lp_lpb - a * lpl - two * b * lp_lpb ) / (lp_lpb - one)**two
       c_1 =  (c_3 - b) / lpb**two
       c_2 =  (a - two * c_1 * lpb)
 
@@ -1203,8 +1204,9 @@ contains
 
       lpu = log10(p_init(HI))
       lpb = log10(p_br_init(HI))
+      lp_lpb = lpu / lpb
 
-      c_3 =  ( (-three * lpu + log10(e_small / fpcc)) + b * (lpu/lpb) - a * lpu - two * b * (lpu/lpb) ) / ( (lpu/lpb)**two - two * (lpu/lpb) + one)
+      c_3 =  (-three * lpu + log10(e_small / fpcc) + b * lp_lpb - a * lpu - two * b * lp_lpb) / (lp_lpb - one)**two
       c_1 =  (c_3 - b) / lpb**two
       c_2 =  (a - two * c_1 * lpb)
 
@@ -1811,7 +1813,7 @@ contains
       end select
       call assoc_pointers(cutoff)
 
-      alpha = (e(qi)/(n(qi)*p_fix(ipfix))) / clight_cresp
+      alpha = e(qi)/(n(qi) * p_fix(ipfix) * clight_cresp)
       n_in  = n(qi)
       x_NR = intpol_pf_from_NR_grids(alpha, n_in, interpolated)
       if (.not. interpolated) then
