@@ -105,11 +105,11 @@ contains
          return
       endif
 
-         do i = 1, NR_iter_limit
-            if (maxval(abs(fun_vec_value)) < err_f ) then    ! For convergence via value of f
-               exit_code = .false.
+      do i = 1, NR_iter_limit
+         if (maxval(abs(fun_vec_value)) < err_f) then    ! For convergence via value of f
+            exit_code = .false.
 #ifdef CRESP_VERBOSED
-               write(*,"(A47,I4,A12)",advance="no") "Convergence via value of fun_vec_value after ",i, " iterations."!, x, fun_vec_value
+            write(*,"(A47,I4,A12)",advance="no") "Convergence via value of fun_vec_value after ",i, " iterations."!, x, fun_vec_value
 #endif /* CRESP_VERBOSED */
             return
          endif
@@ -1138,8 +1138,8 @@ contains
 !----------------------------------------------------------------------------------------------------
    real function e_small_to_f(p_outer) ! used by variety of procedures and functions
 
-      use constants,       only: zero, three, fpi
-      use cresp_variables, only: clight_cresp
+      use constants,       only: zero, three
+      use cresp_variables, only: fpcc
       use initcrspectrum,  only: e_small
 
       implicit none
@@ -1147,7 +1147,7 @@ contains
       real, intent(in) :: p_outer
 
       e_small_to_f = zero
-      e_small_to_f = e_small / (fpi * clight_cresp * p_outer**three)
+      e_small_to_f = e_small / (fpcc * p_outer**three)
 
    end function e_small_to_f
 !----------------------------------------------------------------------------------------------------

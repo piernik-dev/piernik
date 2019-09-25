@@ -1,6 +1,8 @@
 module cresp_variables ! & constants
 ! pulled by COSM_RAY_ELECTRONS
 
+   use constants, only: fpi, three
+
    implicit none
 
    public                                                ! QA_WARN no secrets are kept here
@@ -8,6 +10,10 @@ module cresp_variables ! & constants
    real, parameter :: div_v        = 0.0
    real, parameter :: omega_d      = 0.0
    real, parameter :: clight_cresp = 1.0
+
+   real, parameter :: fpcc         = fpi * clight_cresp
+   real, parameter :: fpcc2        = fpi * clight_cresp**2
+   real, parameter :: fp3cc        = fpi / three * clight_cresp
 
 ! these will most probably be in types and will be modified by the driver (piernik)
 !

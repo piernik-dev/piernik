@@ -1146,8 +1146,8 @@ contains
 !<
    subroutine cresp_init_plpc_spectrum
 
-      use constants,       only: zero, one, two, three, ten, fpi
-      use cresp_variables, only: clight_cresp
+      use constants,       only: zero, one, two, three, ten
+      use cresp_variables, only: fpcc
       use diagnostics,     only: my_deallocate
       use initcosmicrays,  only: ncre
       use initcrspectrum,  only: cresp_all_bins, e_small, f_init, p_br_init, p_fix, p_init, q_init, w
@@ -1188,7 +1188,7 @@ contains
       a = -q_init
       b = log10(f_init * (p_init(LO))**(q_init))
 
-      c_3 =  ( (-three * lpl + log10(e_small / (fpi * clight_cresp))) + b * (lpl/lpb) - a * lpl - two * b * (lpl/lpb) ) / ( (lpl/lpb)**two - two * (lpl/lpb) + one)
+      c_3 =  ( (-three * lpl + log10(e_small / fpcc)) + b * (lpl/lpb) - a * lpl - two * b * (lpl/lpb) ) / ( (lpl/lpb)**two - two * (lpl/lpb) + one)
       c_1 =  (c_3 - b) / lpb**two
       c_2 =  (a - two * c_1 * lpb)
 
@@ -1204,7 +1204,7 @@ contains
       lpu = log10(p_init(HI))
       lpb = log10(p_br_init(HI))
 
-      c_3 =  ( (-three * lpu + log10(e_small / (fpi * clight_cresp))) + b * (lpu/lpb) - a * lpu - two * b * (lpu/lpb) ) / ( (lpu/lpb)**two - two * (lpu/lpb) + one)
+      c_3 =  ( (-three * lpu + log10(e_small / fpcc)) + b * (lpu/lpb) - a * lpu - two * b * (lpu/lpb) ) / ( (lpu/lpb)**two - two * (lpu/lpb) + one)
       c_1 =  (c_3 - b) / lpb**two
       c_2 =  (a - two * c_1 * lpb)
 
@@ -1322,8 +1322,7 @@ contains
 !<
    subroutine cresp_init_bump_spectrum
 
-      use constants,       only: fpi
-      use cresp_variables, only: clight_cresp
+      use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncre
       use initcrspectrum,  only: f_init, p_init
 
@@ -1332,7 +1331,7 @@ contains
       integer(kind=4) :: i
 
       f = f_init * exp(-(4*log(2.0)*log(p/sqrt(p_init(LO)*p_init(HI)/1.))**2)) ! FWHM
-      f(0:ncre-1) = f(0:ncre-1) / (fpi * clight_cresp * p(0:ncre-1)**3) ! without this spectrum is gaussian for distribution function
+      f(0:ncre-1) = f(0:ncre-1) / (fpcc * p(0:ncre-1)**3) ! without this spectrum is gaussian for distribution function
       do i = 1, ncre
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i)) !-log(f(i)/f(i-1))/log(p(i)/p(i-1))
       enddo
@@ -1366,8 +1365,8 @@ contains
 
    function fq_to_e(p_l, p_r, f_l, q, bins)
 
-      use constants,       only: zero, one, four, fpi
-      use cresp_variables, only: clight_cresp
+      use constants,       only: zero, one, four
+      use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncre
       use initcrspectrum,  only: eps
 
@@ -1379,11 +1378,11 @@ contains
       real,    dimension(1:ncre)        :: fq_to_e
 
       fq_to_e = zero
-      e_bins = fpi*clight_cresp*f_l(bins)*p_l(bins)**4
+      e_bins = fpcc * f_l(bins) * p_l(bins)**4
       where (abs(q(bins) - four) > eps)
-         e_bins = e_bins*((p_r(bins)/p_l(bins))**(four-q(bins)) - one)/(four - q(bins))
+         e_bins = e_bins * ((p_r(bins)/p_l(bins))**(four-q(bins)) - one)/(four - q(bins))
       elsewhere
-         e_bins = e_bins*log(p_r(bins)/p_l(bins))
+         e_bins = e_bins * log(p_r(bins)/p_l(bins))
       endwhere
 
       fq_to_e(bins) = e_bins
@@ -1397,14 +1396,13 @@ contains
 
    real function fp_to_e_ampl(p_1, f_1)
 
-      use constants,       only: fpi
-      use cresp_variables, only: clight_cresp
+      use cresp_variables, only: fpcc2
 
       implicit none
 
       real, intent(in) :: p_1, f_1
 
-      fp_to_e_ampl = fpi * clight_cresp**2 * f_1 * p_1**3
+      fp_to_e_ampl = fpcc2 * f_1 * p_1**3
 
    end function fp_to_e_ampl
 
@@ -1511,7 +1509,7 @@ contains
    subroutine cresp_compute_fluxes(ce,he)
 
       use constants,       only: zero, one, three, four, fpi
-      use cresp_variables, only: clight_cresp
+      use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncre
       use initcrspectrum,  only: eps, cresp_all_bins
 
@@ -1543,7 +1541,7 @@ contains
       endwhere
       nflux(ce) = - dn_upw(ce)
 
-      de_upw(ce) = fpi*clight_cresp*fimh(ce)*pimh(ce)**4
+      de_upw(ce) = fpcc * fimh(ce) * pimh(ce)**4
       where (abs(qi(ce) - four) > eps)
          de_upw(ce) = de_upw(ce)*((p_upw(ce)/pimh(ce))**(four-qi(ce)) - one)/(four - qi(ce))
       elsewhere
@@ -1579,7 +1577,7 @@ contains
       endwhere
       nflux(he) = dn_upw(he)
 
-      de_upw(he) = fpi*clight_cresp*fimth(he)*p_upw(he)**4*(pimth(he)/p_upw(he))**qim1(he)
+      de_upw(he) = fpcc * fimth(he) * p_upw(he)**4*(pimth(he)/p_upw(he))**qim1(he)
       where (abs(qi(he) - four) > eps)
          de_upw(he) = de_upw(he)*((pimh(he)/p_upw(he))**(four-qim1(he)) - one)/(four - qim1(he))
       elsewhere
@@ -1732,8 +1730,8 @@ contains
 !---------------------------------------------------------------------------------------------------
    real function get_pcresp(p_l, p_r, f_l, q, bins) ! computes cre pressure, not used currently
 
-      use constants,       only: zero, one, three, four, fpi
-      use cresp_variables, only: clight_cresp
+      use constants,       only: zero, one, four
+      use cresp_variables, only: fp3cc
       use initcrspectrum,  only: eps
 
       implicit none
@@ -1743,7 +1741,7 @@ contains
       real,    dimension(size(bins))    :: p_cresp
 
       get_pcresp = zero
-      p_cresp = (fpi/three) * clight_cresp*f_l(bins)*p_l(bins)**4
+      p_cresp = fp3cc * f_l(bins)*p_l(bins)**4
 
       where (abs(q(bins) - four) > eps)
          p_cresp = p_cresp*((p_r(bins)/p_l(bins))**(four-q(bins)) - one)/(four - q(bins))
