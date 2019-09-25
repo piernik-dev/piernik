@@ -72,7 +72,8 @@ module cresp_crspectrum
    real, allocatable, dimension(:) :: q  ! power-law exponent array
 
 ! power-law
-   real                            :: p_lo_next, p_up_next, p_lo, p_up !, p_lo_bef, p_up_bef
+   real                            :: p_lo, p_up
+   real, dimension(LO:HI)          :: p_cut_next
    integer                         :: i_lo, i_up, i_lo_next, i_up_next
    real, dimension(:), allocatable :: p ! momentum table for piecewise power-law spectru intervals
    real, dimension(:), allocatable :: f ! distribution function for piecewise power-law spectrum
@@ -140,8 +141,7 @@ contains
 
       approx_p = e_small_approx_p
 
-      p_lo_next = zero
-      p_up_next = zero
+      p_cut_next = zero
 
       r = zero
       f = zero
@@ -242,7 +242,7 @@ contains
          return
       endif
 
-      call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next, cfl_cresp_violation)
+      call cresp_update_bin_index(dt, p_lo, p_up, p_cut_next, cfl_cresp_violation)
       if (cfl_cresp_violation) then
          approx_p = e_small_approx_p         !< restore approximation after momenta computed
          call deallocate_active_arrays
@@ -281,8 +281,8 @@ contains
 
       approx_p = e_small_approx_p         !< restore approximation after momenta computed
 
-      p_lo = p_lo_next
-      p_up = p_up_next
+      p_lo = p_cut_next(LO)
+      p_up = p_cut_next(HI)
 
 #ifdef CRESP_VERBOSED
       write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] :"               ; call printinfo(msg)
@@ -787,7 +787,7 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next, dt_too_high) ! evaluates only "next" momenta and is called after finding outer cutoff momenta
+   subroutine cresp_update_bin_index(dt, p_lo, p_up, p_cut_next, dt_too_high) ! evaluates only "next" momenta and is called after finding outer cutoff momenta
 
       use constants,      only: zero, I_ZERO, one
 #ifdef CRESP_VERBOSED
@@ -798,29 +798,28 @@ contains
 
       implicit none
 
-      real,    intent(in)  :: dt
-      real,    intent(in)  :: p_lo, p_up
-      real,    intent(out) :: p_lo_next, p_up_next
-      logical, intent(out) :: dt_too_high
-      integer              :: i
+      real,                   intent(in)  :: dt
+      real,                   intent(in)  :: p_lo, p_up
+      real, dimension(LO:HI), intent(out) :: p_cut_next
+      logical,                intent(out) :: dt_too_high
+      integer                             :: i
 
       dt_too_high = .false.
 ! Compute p_lo and p_up at [t+dt]
-      call p_update(dt, p_lo, p_lo_next)
-      call p_update(dt, p_up, p_up_next)
-      p_lo_next = abs(p_lo_next)
-      p_up_next = abs(p_up_next)
+      call p_update(dt, p_lo, p_cut_next(LO))
+      call p_update(dt, p_up, p_cut_next(HI))
+      p_cut_next = abs(p_cut_next)
 ! Compute likely cut-off indices after current timestep
-      i_lo_next = int(floor(log10(p_lo_next/p_fix(1))/w)) + 1
+      i_lo_next = int(floor(log10(p_cut_next(LO)/p_fix(1))/w)) + 1
       i_lo_next = max(0, i_lo_next, i_lo-1)
       i_lo_next = min(i_lo_next, ncre - 1, i_lo+1)
 
-      i_up_next = int(floor(log10(p_up_next/p_fix(1))/w)) + 2
+      i_up_next = int(floor(log10(p_cut_next(HI)/p_fix(1))/w)) + 2
       i_up_next = max(1,i_up_next, i_up-1)
       i_up_next = min(i_up_next,ncre,i_up+1)
 
-      if (p_up_next < p_fix(i_up_next-1)) then ! if no solution is found at the first try, approximation usually causes p_up to jump
-         dt_too_high = .true.                 ! towards higher values, which for sufficiently high dt can cause p_up_next to even
+      if (p_cut_next(HI) < p_fix(i_up_next-1)) then ! if no solution is found at the first try, approximation usually causes p_up to jump
+         dt_too_high = .true.                 ! towards higher values, which for sufficiently high dt can cause p_cut_next(HI) to even
          return                               ! become negative. As p_up would propagate more than one bin this is clearly cfl violation.
       endif
 ! Detect changes in positions of lower an upper cut-ofs
@@ -850,8 +849,8 @@ contains
 
       p_next = zero
       p_next(fixed_edges_next) = p_fix(fixed_edges_next)
-      p_next(i_lo_next) = p_lo_next
-      p_next(i_up_next) = p_up_next
+      p_next(i_lo_next) = p_cut_next(LO)
+      p_next(i_up_next) = p_cut_next(HI)
 
 ! Compute upwind momentum p_upw for all fixed edges
       p_upw = zero
