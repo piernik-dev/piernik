@@ -1798,9 +1798,10 @@ contains
       implicit none
 
       integer(kind=4), intent(in)  :: cutoff
+      logical,         intent(out) :: exit_code
       integer(kind=4)              :: ipfix, qi
-      real,         dimension(1:2) :: x_NR, x_NR_init
-      logical                      :: exit_code, interpolated
+      real, dimension(1:2)         :: x_NR, x_NR_init
+      logical                      :: interpolated
 
       select case(cutoff)
          case(LO)
@@ -1823,20 +1824,13 @@ contains
          x_NR_init = x_NR
       endif
 
-      exit_code = .not.interpolated !
 #ifdef CRESP_VERBOSED
       write (msg, "(A27,A2,A2,2E22.15)") "Input ratios(p, f) for NR (", bound_name(cutoff)"):", x_NR  ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
-      if (NR_refine_pf(cutoff) .or. .not.interpolated) then
+      exit_code = .false.
+      if (NR_refine_pf(cutoff)) then
          call NR_algorithm(x_NR, exit_code)
          if (exit_code) then ! some failures still take place
-            if (.not. interpolated) then
-               exit_code = .true.
-#ifdef CRESP_VERBOSED
-               write (msg, "(A30,A2,A2,3E18.9)") "Interpolation AND NR failure (",bound_name(cutoff),")", alpha, n_in ; call printinfo(msg)
-#endif /* CRESP_VERBOSED */
-               return
-            endif
             fail_count_NR_2dim(cutoff) = fail_count_NR_2dim(cutoff) + I_ONE
             x_NR = x_NR_init
          endif
