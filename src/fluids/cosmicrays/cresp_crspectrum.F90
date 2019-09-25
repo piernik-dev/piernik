@@ -184,7 +184,7 @@ contains
 
       if (approx_p(HI) > 0) then
          if (i_cut(HI) > 1) then
-            call get_fqp_cutoff(HI, i_cut(HI), p_cut(HI), f(i_cut(HI)-1), q(i_cut(HI)), (e(i_cut(HI))/(n(i_cut(HI))*p_fix(i_cut(HI)-1))), n(i_cut(HI)), solve_fail_up)
+            call get_fqp_cutoff(HI, solve_fail_up)
          else                                                  !< spectrum cutoff beyond the fixed momentum grid
             p_cut(HI)     = p_fix(i_cut(HI))
             p(i_cut(HI))  = p_fix(i_cut(HI))
@@ -210,7 +210,7 @@ contains
 
       if (approx_p(LO) > 0) then
          if (i_cut(LO) + 1 /= ncre) then
-            call get_fqp_cutoff(LO, i_cut(LO), p_cut(LO), f(i_cut(LO)), q(i_cut(LO)+1), (e(i_cut(LO)+1)/(n(i_cut(LO)+1)*p_fix(i_cut(LO)+1))), n(i_cut(LO)+1), solve_fail_lo)
+            call get_fqp_cutoff(LO, solve_fail_lo)
          else                                                  !< spectrum cutoff beyond the fixed momentum grid
             p_cut(LO)     = p_fix(i_cut(LO))
             p(i_cut(LO))  = p_cut(LO)
@@ -1009,13 +1009,13 @@ contains
       end select
 
       if (e_small_approx_init_cond > 0) then
-         call get_fqp_cutoff(LO, i_cut(LO), p_cut(LO), f(i_cut(LO)), q(i_cut(LO)+1), (e(i_cut(LO)+1)/(n(i_cut(LO)+1)*p_fix(i_cut(LO)+1))), n(i_cut(LO)+1), exit_code)
+         call get_fqp_cutoff(LO, exit_code)
          if (exit_code) then
             write(msg,*) "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but solution for initial spectrum lower cutoff not found, exiting! "
             call die(msg)
          endif
 
-         call get_fqp_cutoff(HI, i_cut(HI), p_cut(HI), f(i_cut(HI)-1), q(i_cut(HI)), (e(i_cut(HI))/(n(i_cut(HI))*p_fix(i_cut(HI)-1))), n(i_cut(HI)), exit_code)
+         call get_fqp_cutoff(HI, exit_code)
          if (exit_code) then
             write(msg,*) "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but solution for initial spectrum upper cutoff not found, exiting! "
             call die(msg)
@@ -1784,7 +1784,7 @@ contains
 ! Preparation and computatuon of boundary momenta and and boundary
 ! distribution function amplitudes value on left bin edge, computing q for indicated cutoff bin (returns f, p, q)
 !---------------------------------------------------------------------------------------------------
-   subroutine get_fqp_cutoff(cutoff, cutoff_index, p_cutoff, f_cutoff, q_cutoff, inp_alpha, inp_n, exit_code)
+   subroutine get_fqp_cutoff(cutoff, exit_code)
 
       use constants,       only: zero, one, I_ONE, I_TWO, LO, HI
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers
@@ -1793,35 +1793,31 @@ contains
       use cresp_NR_method, only: bound_name
       use dataio_pub,      only: msg, printinfo
 #endif /* CRESP_VERBOSED */
-      use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf_lo, NR_refine_pf_up
+      use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf
 
       implicit none
 
+      integer(kind=4), intent(in)  :: cutoff
+      integer(kind=4)              :: ipfix, qi
       real,         dimension(1:2) :: x_NR, x_NR_init
-      real,            intent(in)  :: inp_alpha, inp_n
-      real,            intent(out) :: p_cutoff, f_cutoff, q_cutoff
-      logical                      :: exit_code, interpolated, NR_refine_cutoff
-      integer(kind=4), intent(in)  :: cutoff, cutoff_index
-      integer(kind=4)              :: helper_ind
+      logical                      :: exit_code, interpolated
 
-      x_NR = zero
-      alpha = inp_alpha / clight_cresp
-      n_in  = inp_n
       select case(cutoff)
          case(LO)
-            NR_refine_cutoff = NR_refine_pf_lo
-            call assoc_pointers(LO)
-            helper_ind = I_ONE
+            ipfix = i_cut(cutoff) + 1
+            qi    = i_cut(cutoff) + 1
          case(HI)
-            NR_refine_cutoff = NR_refine_pf_up
-            call assoc_pointers(HI)
-            helper_ind = -I_ONE
+            ipfix = i_cut(cutoff) - 1
+            qi    = i_cut(cutoff)
       end select
+      call assoc_pointers(cutoff)
 
+      alpha = (e(qi)/(n(qi)*p_fix(ipfix))) / clight_cresp
+      n_in  = n(qi)
       x_NR = intpol_pf_from_NR_grids(alpha, n_in, interpolated)
       if (.not. interpolated) then
          exit_code = .true.
-         fail_count_interpol(cutoff) = fail_count_interpol(cutoff) +1
+         fail_count_interpol(cutoff) = fail_count_interpol(cutoff) + 1
          return
       else
          x_NR_init = x_NR
@@ -1831,7 +1827,7 @@ contains
 #ifdef CRESP_VERBOSED
       write (msg, "(A27,A2,A2,2E22.15)") "Input ratios(p, f) for NR (", bound_name(cutoff)"):", x_NR  ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
-      if (NR_refine_cutoff .or. .not.interpolated) then
+      if (NR_refine_pf(cutoff) .or. .not.interpolated) then
          call NR_algorithm(x_NR, exit_code)
          if (exit_code) then ! some failures still take place
             if (.not. interpolated) then
@@ -1854,25 +1850,24 @@ contains
 
       select case(cutoff)
          case(LO)
-            p_cutoff    = p_fix(cutoff_index + helper_ind) / x_NR(I_ONE)
-            f_cutoff    = e_small_to_f(p_cutoff)
+            p_cut(cutoff) = p_fix(ipfix) / x_NR(I_ONE)
+            f(qi-1)       = e_small_to_f(p_cut(cutoff))
          case(HI)
-            p_cutoff    = p_fix(cutoff_index + helper_ind) * x_NR(I_ONE)
-            f_cutoff    = e_small_to_f(p_cutoff) / x_NR(I_TWO)
+            p_cut(cutoff) = p_fix(ipfix) * x_NR(I_ONE)
+            f(qi-1)       = e_small_to_f(p_cut(cutoff)) / x_NR(I_TWO)
       end select
-      p(cutoff_index) = p_cutoff
-      q_cutoff        = q_ratios(x_NR(I_TWO), x_NR(I_ONE))
+      p(i_cut(cutoff)) = p_cut(cutoff)
+      q(qi)            = q_ratios(x_NR(I_TWO), x_NR(I_ONE))
 
-      if (abs(q_cutoff) > q_big) q_cutoff = sign(one, q_cutoff) * q_big
+      if (abs(q(qi)) > q_big) q(qi) = sign(one, q(qi)) * q_big
 #ifdef CRESP_VERBOSED
-      write (msg, "(A26,2E22.15)") " >>> Obtained (p, f):", p_cutoff, f_cutoff            ; call printinfo(msg)
-      write (msg, "(A26,2E22.15)") "     Corresponding ratios:", x_NR(I_ONE), x_NR(I_TWO) ; call printinfo(msg)
+      write (msg, "(A26,2E22.15)") " >>> Obtained (p, f):", p_cut(cutoff), f(qi-1) ; call printinfo(msg)
+      write (msg, "(A26,2E22.15)") "     Corresponding ratios:", x_NR              ; call printinfo(msg)
       call printinfo(msg)
 #endif /* CRESP_VERBOSED */
       alpha = zero ;  n_in = zero
 
    end subroutine get_fqp_cutoff
-!----------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------
    function b_losses(p)
 
@@ -1895,7 +1890,7 @@ contains
 
       real, intent(in) :: dt, p
 
-      p_rch_ord_1 = -( u_d + p * u_b ) *  dt
+      p_rch_ord_1 = -( u_d + p * u_b ) * dt
 
    end function p_rch_ord_1
 !-------------------------------------------------------------------------------------------------
@@ -1907,7 +1902,7 @@ contains
 
       real, intent(in) :: dt, p
 
-      p_rch_ord_2_1 = p_rch_ord_1(dt, p)  + ( half*(u_d*dt)**2 + (u_b * p * dt)**2)
+      p_rch_ord_2_1 = p_rch_ord_1(dt, p) + ( half*(u_d*dt)**2 + (u_b * p * dt)**2)
 
    end function p_rch_ord_2_1
 !-------------------------------------------------------------------------------------------------
