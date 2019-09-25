@@ -917,7 +917,8 @@ contains
 
       real, dimension(I_ONE:ncre)               :: init_n, init_e
       type(spec_mod_trms), optional, intent(in) :: sptab
-      integer                                   :: i, k, i_lo_ch, i_up_ch
+      integer                                   :: i, k
+      integer, dimension(LO:HI)                 :: i_ch
       real                                      :: c
       logical                                   :: exit_code
 
@@ -1022,39 +1023,39 @@ contains
 
          if (allow_source_spectrum_break) then
 
-            i_lo_ch = int(floor(log10(p_cut(LO)/p_fix(1))/w)) + 1
-            i_lo_ch = max(0, i_lo_ch)
-            i_lo_ch = min(i_lo_ch, ncre - 1)
+            i_ch(LO) = int(floor(log10(p_cut(LO)/p_fix(1))/w)) + 1
+            i_ch(LO) = max(0, i_ch(LO))
+            i_ch(LO) = min(i_ch(LO), ncre - 1)
 
-            i_up_ch = int(floor(log10(p_cut(HI)/p_fix(1))/w)) + 2
-            i_up_ch = max(1,i_up_ch)
-            i_up_ch = min(i_up_ch,ncre)
+            i_ch(HI) = int(floor(log10(p_cut(HI)/p_fix(1))/w)) + 2
+            i_ch(HI) = max(1, i_ch(HI))
+            i_ch(HI) = min(i_ch(HI), ncre)
 
-            f(i_up_ch) = e_small_to_f(p_cut(HI))
-            q(i_up_ch) = q(i_cut(HI))
-            p(i_up_ch) = p_cut(HI)
+            f(i_ch(HI)) = e_small_to_f(p_cut(HI))
+            q(i_ch(HI)) = q(i_cut(HI))
+            p(i_ch(HI)) = p_cut(HI)
 
-            p(i_lo_ch) = p_cut(LO)
-            f(i_lo_ch) = e_small_to_f(p_cut(LO))
-            q(i_lo_ch+1) = q(i_cut(LO)+1)
+            p(i_ch(LO)) = p_cut(LO)
+            f(i_ch(LO)) = e_small_to_f(p_cut(LO))
+            q(i_ch(LO)+1) = q(i_cut(LO)+1)
 
-            do i = i_lo_ch+1, i_cut(LO)
+            do i = i_ch(LO)+1, i_cut(LO)
                p(i) = p_fix(i)
-               f(i) = f(i_lo_ch) * (p_fix(i)/p(i_lo_ch))**(-q(i_lo_ch+1))
-               q(i+1) = q(i_lo_ch+1)
+               f(i) = f(i_ch(LO)) * (p_fix(i)/p(i_ch(LO)))**(-q(i_ch(LO)+1))
+               q(i+1) = q(i_ch(LO)+1)
             enddo
 
-            do i = i_cut(HI), i_up_ch-1
+            do i = i_cut(HI), i_ch(HI)-1
                p(i) = p_fix(i)
                f(i) = f(i_cut(HI)-1)* (p_fix(i)/p_fix(i_cut(HI)-1))**(-q(i_cut(HI)))
                q(i) = q(i_cut(HI))
             enddo
 #ifdef CRESP_VERBOSED
-            write (msg,"(A,2I3,A,2I3)") "Boundary bins now (i_lo_new i_lo | i_up_new i_up)",  i_lo_ch, i_cut(LO), ' |', i_up_ch, i_cut(HI)     ; call printinfo(msg)
+            write (msg,"(A,2I3,A,2I3)") "Boundary bins now (i_lo_new i_lo | i_up_new i_up)",  i_ch(LO), i_cut(LO), ' |', i_ch(HI), i_cut(HI)     ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
-            i_cut(LO) = i_lo_ch   ;   i_cut(HI) = i_up_ch
-            q(i_up_ch) = q(i_cut(HI))
+            i_cut = i_ch
+            q(i_ch(HI))  = q(i_cut(HI)) !> \note is this proper or important?
             p(i_cut(HI)) = p_cut(HI)
 
             is_active_bin = .false.
