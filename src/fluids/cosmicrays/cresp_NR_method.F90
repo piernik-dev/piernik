@@ -673,7 +673,7 @@ contains
       real, dimension(1:3), intent(inout) :: p3, f3
       real, dimension(1:3), intent(in)    :: arg
       integer(kind=4),      intent(in)    :: sought_by
-      logical,              intent(inout) :: exit_code
+      logical,              intent(out)   :: exit_code
       real, dimension(1:2)                :: x_vec_0, x_vec, delta, x_in
       integer(kind=4)                     :: nsubstep = 100, k
 !         alpha and n are set !
