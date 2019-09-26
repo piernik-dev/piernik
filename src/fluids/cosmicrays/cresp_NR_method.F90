@@ -493,7 +493,6 @@ contains
          new_line = .true.
          prev_solution = prev_solution_1 ! easier to find when not searching from the top
          do j = 1, arr_dim ! j_incr = 1
-            exit_code = .true.
             alpha = p_a(i)
             n_in  = p_n(j)
 #ifdef CRESP_VERBOSED
@@ -608,7 +607,6 @@ contains
          do i = i_beg, i_end, i_incr
             alpha = p_a(i)
             n_in  = p_n(j)
-            exit_code = .true.
             if (ref_p(i,j) > zero .and. ref_f(i,j) > zero) then
                prev_solution(1) = ref_p(i,j)
                prev_solution(2) = ref_f(i,j)
@@ -648,7 +646,6 @@ contains
          do j = j_beg, j_end, j_incr
             alpha = p_a(i)
             n_in  = p_n(j)
-            exit_code = .true.
             if (ref_p(i,j) > zero .and. ref_f(i,j) > zero) then
                prev_solution(1) = ref_p(i,j)
                prev_solution(2) = ref_f(i,j)
@@ -794,22 +791,20 @@ contains
       real,                 intent(inout) :: p2ref, f2ref
       real, dimension(1:2), intent(inout) :: prev_solution
       integer(kind=4),      intent(in)    :: sought_by
-      logical,              intent(inout) :: exit_code
+      logical,              intent(out)   :: exit_code
       real, dimension(1:2)                :: x_vec
 
-      if (exit_code) then
-         x_vec = prev_solution
-         call NR_algorithm(x_vec, exit_code)
-         if (.not. exit_code) then
-            x_vec = abs(x_vec)
-            p2ref = x_vec(1)
-            f2ref = x_vec(2)
+      x_vec = prev_solution
+      call NR_algorithm(x_vec, exit_code)
+      if (.not. exit_code) then
+         x_vec = abs(x_vec)
+         p2ref = x_vec(1)
+         f2ref = x_vec(2)
 #ifdef CRESP_VERBOSED
-            call msg_success("prev", sought_by, prev_solution, x_vec)
+         call msg_success("prev", sought_by, prev_solution, x_vec)
 #endif /* CRESP_VERBOSED */
-            prev_solution = x_vec
-            return
-         endif
+         prev_solution = x_vec
+         return
       endif
 
       return
