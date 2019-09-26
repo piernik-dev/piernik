@@ -38,7 +38,7 @@ module cresp_NR_method
    implicit none
 
    private
-   public :: alpha, assoc_pointers, cresp_initialize_guess_grids, compute_q, e_small_to_f, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios
+   public :: alpha, assoc_pointers, bound_name, cresp_initialize_guess_grids, compute_q, e_small_to_f, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios
 
    integer, parameter                        :: ndim = 2
    real, allocatable, dimension(:)           :: p_space, q_space
@@ -49,11 +49,11 @@ module cresp_NR_method
    real, pointer, dimension(:)               :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
    real, pointer, dimension(:,:)             :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
 #ifdef CRESP_VERBOSED
-   integer(kind=4)                           :: current_bound
+   integer(kind=4)                           :: current_bound, sought_by
+   integer(kind=4), parameter                :: SLV = 1, RFN = 2
 #endif /* CRESP_VERBOSED */
    integer, parameter                               :: blen = 2, extlen = 4, flen = 15
    character(len=blen), dimension(LO:HI), parameter :: bound_name = ['lo', 'up']
-   integer(kind=4), parameter                       :: SLV = 1, RFN = 2
    character(len=extlen), parameter                 :: extension =  ".dat"
 
    abstract interface
@@ -407,6 +407,10 @@ contains
 
       integer(kind=4), intent(in) :: bound_case
 
+#ifdef CRESP_VERBOSED
+      sought_by = RFN
+#endif /* CRESP_VERBOSED */
+
       write(msg,'(3a)') "Running refine for:", bound_name(bound_case), " boundary"
       call printinfo(msg)
       if (.not. allocated(p_space) .or. .not. allocated(q_space)) call die("[cresp_NR_method:refine_all_directions] refine_grids called after array deallocation, stopping")
@@ -474,11 +478,13 @@ contains
       integer(kind=4), intent(in) :: bound_case ! HI or LO
       real, dimension(:,:)        :: fill_p, fill_f
       real, dimension(1:2)        :: x_vec, prev_solution, prev_solution_1, x_step
+      integer(kind=4)             :: i, j, is, js
+      logical                     :: exit_code, new_line
 #ifdef CRESP_VERBOSED
       real, dimension(1:2)        :: x_in
+
+      sought_by = SLV
 #endif /* CRESP_VERBOSED */
-      integer(kind=4) :: i, j, is, js, nam = SLV
-      logical         :: exit_code, new_line
 
       prev_solution(1) = p_space(1)
       prev_solution(2) = p_space(1)**q_space(1)
@@ -499,7 +505,7 @@ contains
             write(*,"(A14,A2,A2,2I4,A9,I4,A1)",advance="no") "Now solving (",bound_name(bound_case),") ",i,j,", sized ",arr_dim," "
 #endif /* CRESP_VERBOSED */
 
-            call seek_solution_prev(fill_p(i,j), fill_f(i,j), prev_solution, nam, exit_code)
+            call seek_solution_prev(fill_p(i,j), fill_f(i,j), prev_solution, exit_code)
 
             if (.not. exit_code .and. new_line) then
                prev_solution_1 = prev_solution
@@ -507,9 +513,9 @@ contains
             endif
 
             if (exit_code) then
-               if (j-2 >= 1 .and. j-2 <= arr_dim) call step_extr(fill_p(i,j-2:j), fill_f(i,j-2:j), p_n(j-2:j), nam, exit_code)
+               if (j-2 >= 1 .and. j-2 <= arr_dim) call step_extr(fill_p(i,j-2:j), fill_f(i,j-2:j), p_n(j-2:j), exit_code)
                if (j-1 >= 1) then
-                  if (fill_p(i,j-1) > zero) call seek_solution_step(fill_p(i,j), fill_f(i,j), prev_solution, i, j-1, nam, exit_code)
+                  if (fill_p(i,j-1) > zero) call seek_solution_step(fill_p(i,j), fill_f(i,j), prev_solution, i, j-1, exit_code)
                endif
             endif
             if (exit_code) then !still...
@@ -527,7 +533,7 @@ contains
                            fill_f(i,j) = x_vec(2)
                            prev_solution = x_vec
 #ifdef CRESP_VERBOSED
-                           call msg_success("    ", nam, x_in, x_vec)
+                           call msg_success("    ", x_in, x_vec)
 #endif /* CRESP_VERBOSED */
                            exit
                         endif
@@ -595,7 +601,7 @@ contains
 
       real, dimension(:,:), intent(inout) :: ref_p, ref_f
       integer(kind=4),      intent(in)    :: i_incr, j_incr
-      integer(kind=4)                     :: i, j, i_beg, i_end, j_beg, j_end, i1m, i2m, i1p, nam = RFN
+      integer(kind=4)                     :: i, j, i_beg, i_end, j_beg, j_end, i1m, i2m, i1p
       real, dimension(1:2)                :: prev_solution
       logical                             :: exit_code
 
@@ -611,11 +617,11 @@ contains
                prev_solution(1) = ref_p(i,j)
                prev_solution(2) = ref_f(i,j)
             else
-               call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, nam, exit_code) ! works for most cases
+               call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, exit_code) ! works for most cases
                if (exit_code) then
                   i1m = i-i_incr ; i2m = i-2*i_incr ; i1p = i+i_incr
-                  if (i2m >= 1 .and.                i2m <= arr_dim                     ) call step_extr(ref_p(i2m:i  :i_incr,j), ref_f(i2m:i  :i_incr,j),         p_a(i2m:i  :i_incr), nam, exit_code)
-                  if (i1m >= 1 .and. i1p >= 1 .and. i1m <= arr_dim .and. i1p <= arr_dim) call step_inpl(ref_p(i1m:i1p:i_incr,j), ref_f(i1m:i1p:i_incr,j), i_incr, p_a(i1m:i1p:i_incr), nam, exit_code)
+                  if (i2m >= 1 .and.                i2m <= arr_dim                     ) call step_extr(ref_p(i2m:i  :i_incr,j), ref_f(i2m:i  :i_incr,j),         p_a(i2m:i  :i_incr), exit_code)
+                  if (i1m >= 1 .and. i1p >= 1 .and. i1m <= arr_dim .and. i1p <= arr_dim) call step_inpl(ref_p(i1m:i1p:i_incr,j), ref_f(i1m:i1p:i_incr,j), i_incr, p_a(i1m:i1p:i_incr), exit_code)
                endif
             endif
          enddo
@@ -634,7 +640,7 @@ contains
 
       real, dimension(:,:), intent(inout) :: ref_p, ref_f
       integer(kind=4),      intent(in)    :: i_incr, j_incr
-      integer(kind=4)                     :: i, j, i_beg, i_end, j_beg, j_end, j1m, j2m, j1p, nam = RFN
+      integer(kind=4)                     :: i, j, i_beg, i_end, j_beg, j_end, j1m, j2m, j1p
       real, dimension(1:2)                :: prev_solution
       logical                             :: exit_code
 
@@ -650,11 +656,11 @@ contains
                prev_solution(1) = ref_p(i,j)
                prev_solution(2) = ref_f(i,j)
             else
-               call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, nam, exit_code) ! works for most cases
+               call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, exit_code) ! works for most cases
                if (exit_code) then
                   j1m = j-j_incr ; j2m = j-2*j_incr ; j1p = j+j_incr
-                  if (j2m >= 1 .and.                j2m <= arr_dim                     ) call step_extr(ref_p(i,j2m:j  :j_incr), ref_f(i,j2m:j  :j_incr),         p_n(j2m:j  :j_incr), nam, exit_code)
-                  if (j1m >= 1 .and. j1p >= 1 .and. j1m <= arr_dim .and. j1p <= arr_dim) call step_inpl(ref_p(i,j1m:j1p:j_incr), ref_f(i,j1m:j1p:j_incr), j_incr, p_n(j1m:j1p:j_incr), nam, exit_code)
+                  if (j2m >= 1 .and.                j2m <= arr_dim                     ) call step_extr(ref_p(i,j2m:j  :j_incr), ref_f(i,j2m:j  :j_incr),         p_n(j2m:j  :j_incr), exit_code)
+                  if (j1m >= 1 .and. j1p >= 1 .and. j1m <= arr_dim .and. j1p <= arr_dim) call step_inpl(ref_p(i,j1m:j1p:j_incr), ref_f(i,j1m:j1p:j_incr), j_incr, p_n(j1m:j1p:j_incr), exit_code)
                endif
             endif
          enddo
@@ -664,7 +670,7 @@ contains
 
  !----------------------------------------------------------------------------------------------------
 
-   subroutine step_extr(p3, f3, arg, sought_by, exit_code) ! checked
+   subroutine step_extr(p3, f3, arg, exit_code)
 
       use constants, only: zero
 
@@ -672,7 +678,6 @@ contains
 
       real, dimension(1:3), intent(inout) :: p3, f3
       real, dimension(1:3), intent(in)    :: arg
-      integer(kind=4),      intent(in)    :: sought_by
       logical,              intent(out)   :: exit_code
       real, dimension(1:2)                :: x_vec_0, x_vec, delta, x_in
       integer(kind=4)                     :: nsubstep = 100, k
@@ -690,7 +695,7 @@ contains
             if (.not. exit_code) then
                x_vec = abs(x_vec)
 #ifdef CRESP_VERBOSED
-               call msg_success("extr", sought_by, x_in, x_vec)
+               call msg_success("extr", x_in, x_vec)
 #endif /* CRESP_VERBOSED */
                p3(3) = x_vec(1)
                f3(3) = x_vec(2)
@@ -699,22 +704,19 @@ contains
          enddo
       endif
 
-      return
-      if (.false.) k = sought_by ! suppress compiler warnings
-
    end subroutine step_extr
 
 !----------------------------------------------------------------------------------------------------
-   subroutine step_inpl(p3, f3, incr, args, sought_by, exit_code) ! checked
 
-   use constants, only: zero
+   subroutine step_inpl(p3, f3, incr, args, exit_code)
+
+      use constants, only: zero
 
       implicit none
 
       real, dimension(1:3), intent(inout) :: p3, f3
       integer(kind=4),      intent(in)    :: incr
       real, dimension(1:3), intent(in)    :: args
-      integer(kind=4),      intent(in)    :: sought_by
       logical,              intent(inout) :: exit_code
       real, dimension(1:2)                :: x_vec, x_vec_0, delta, x_in
       integer(kind=4)                     :: k, nsubstep = 100
@@ -734,7 +736,7 @@ contains
                if (.not. exit_code) then ! first iteration is a simple extrapolation
                   x_vec = abs(x_vec)
 #ifdef CRESP_VERBOSED
-                  call msg_success("inpl", sought_by, x_in, x_vec)
+                  call msg_success("inpl", x_in, x_vec)
 #endif /* CRESP_VERBOSED */
                   p3(2) = x_vec(1)
                   f3(2) = x_vec(2)
@@ -745,20 +747,16 @@ contains
          endif
       endif
 
-      return
-      if (.false.) k = sought_by ! suppress compiler warnings
-
    end subroutine step_inpl
 !----------------------------------------------------------------------------------------------------
 #ifdef CRESP_VERBOSED
-   subroutine msg_success(met_name, sought_by, x_in, x_out)
+   subroutine msg_success(met_name, x_in, x_out)
 
       implicit none
 
       real, dimension(1:), intent(in) :: x_in
       real, dimension(1:), intent(in) :: x_out
       character(len=*),    intent(in) :: met_name
-      integer(kind=4),     intent(in) :: sought_by
       integer, parameter                      :: slen = 6
       character(len=slen), dimension(SLV:RFN) :: sought = ['Solve ', 'Refine']
 
@@ -784,13 +782,12 @@ contains
 
    end function lin_interpolation_1D
 !----------------------------------------------------------------------------------------------------
-   subroutine seek_solution_prev(p2ref, f2ref, prev_solution, sought_by, exit_code)
+   subroutine seek_solution_prev(p2ref, f2ref, prev_solution, exit_code)
 
       implicit none
 
       real,                 intent(inout) :: p2ref, f2ref
       real, dimension(1:2), intent(inout) :: prev_solution
-      integer(kind=4),      intent(in)    :: sought_by
       logical,              intent(out)   :: exit_code
       real, dimension(1:2)                :: x_vec
 
@@ -801,24 +798,21 @@ contains
          p2ref = x_vec(1)
          f2ref = x_vec(2)
 #ifdef CRESP_VERBOSED
-         call msg_success("prev", sought_by, prev_solution, x_vec)
+         call msg_success("prev", prev_solution, x_vec)
 #endif /* CRESP_VERBOSED */
          prev_solution = x_vec
          return
       endif
 
-      return
-      if (.false.) x_vec(1) = float(sought_by) ! suppress compiler warnings
-
    end subroutine seek_solution_prev
 !----------------------------------------------------------------------------------------------------
-   subroutine seek_solution_step(p2ref, f2ref, prev_solution, i_obt, j_obt, sought_by, exit_code)
+   subroutine seek_solution_step(p2ref, f2ref, prev_solution, i_obt, j_obt, exit_code)
 
       implicit none
 
       real,                 intent(out)   :: p2ref, f2ref
       real, dimension(1:2), intent(inout) :: prev_solution
-      integer(kind=4),      intent(in)    :: i_obt, j_obt, sought_by
+      integer(kind=4),      intent(in)    :: i_obt, j_obt
       logical,              intent(inout) :: exit_code
       real, dimension(1:2)                :: x_vec, x_step
       integer(kind=4)                             :: ii, jj, nssstep = 3
@@ -835,16 +829,13 @@ contains
                   f2ref = x_step(2)
                   prev_solution = x_step
 #ifdef CRESP_VERBOSED
-                  call msg_success("step", sought_by, x_step, x_vec)
+                  call msg_success("step", x_step, x_vec)
 #endif /* CRESP_VERBOSED */
                   return
                endif
             enddo
          enddo
       endif
-
-      return
-      if (.false.) ii = sought_by ! suppress compiler warnings
 
    end subroutine seek_solution_step
 !----------------------------------------------------------------------------------------------------

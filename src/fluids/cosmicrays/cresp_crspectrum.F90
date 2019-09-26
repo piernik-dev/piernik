@@ -1805,11 +1805,11 @@ contains
       real, dimension(1:2)         :: x_NR, x_NR_init
       logical                      :: interpolated
 
-      select case(cutoff)
-         case(LO)
+      select case (cutoff)
+         case (LO)
             ipfix = i_cut(cutoff) + 1
             qi    = i_cut(cutoff) + 1
-         case(HI)
+         case (HI)
             ipfix = i_cut(cutoff) - 1
             qi    = i_cut(cutoff)
       end select
@@ -1827,7 +1827,7 @@ contains
       endif
 
 #ifdef CRESP_VERBOSED
-      write (msg, "(A27,A2,A2,2E22.15)") "Input ratios(p, f) for NR (", bound_name(cutoff)"):", x_NR  ; call printinfo(msg)
+      write (msg, "(A27,A2,A2,2E22.15)") "Input ratios(p, f) for NR (", bound_name(cutoff), "):", x_NR  ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
       exit_code = .false.
       if (NR_refine_pf(cutoff)) then
@@ -1844,11 +1844,11 @@ contains
          return
       endif
 
-      select case(cutoff)
-         case(LO)
+      select case (cutoff)
+         case (LO)
             p_cut(cutoff) = p_fix(ipfix) / x_NR(I_ONE)
             f(qi-1)       = e_small_to_f(p_cut(cutoff))
-         case(HI)
+         case (HI)
             p_cut(cutoff) = p_fix(ipfix) * x_NR(I_ONE)
             f(qi-1)       = e_small_to_f(p_cut(cutoff)) / x_NR(I_TWO)
       end select
