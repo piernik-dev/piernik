@@ -38,7 +38,7 @@ module cresp_crspectrum
 
    private ! most of it
    public :: cresp_update_cell, cresp_init_state, cresp_get_scaled_init_spectrum, cleanup_cresp, cresp_allocate_all, &
-      &      e_threshold, src_gpcresp, p_rch_init, detect_clean_spectrum, cresp_find_prepare_spectrum, cresp_detect_negative_content
+      &      src_gpcresp, p_rch_init, detect_clean_spectrum, cresp_find_prepare_spectrum, cresp_detect_negative_content
 
    integer, dimension(1:2)            :: fail_count_NR_2dim, fail_count_interpol
    integer, allocatable, dimension(:) :: fail_count_comp_q
@@ -930,7 +930,8 @@ contains
       if (present(sptab)) u_b = sptab%ub
       if (present(sptab)) u_d = sptab%ud
 
-      approx_p = e_small_approx_p
+      approx_p    = e_small_approx_p
+      e_threshold = e_small_approx_p * e_small
 
       init_e = zero
       init_n = zero

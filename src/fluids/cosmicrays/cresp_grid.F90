@@ -49,13 +49,13 @@ module cresp_grid
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
-      use cresp_crspectrum, only: cresp_allocate_all, e_threshold, cresp_init_state, p_rch_init
+      use cresp_crspectrum, only: cresp_allocate_all, cresp_init_state, p_rch_init
       use cresp_NR_method,  only: cresp_initialize_guess_grids
       use dataio,           only: vars
       use dataio_pub,       only: printinfo
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_n, iarr_cre_e, ncre
-      use initcrspectrum,   only: e_small, e_small_approx_p, norm_init_spectrum, dump_fpq, nam_cresp_f, nam_cresp_p, nam_cresp_q, check_if_dump_fpq, dump_f, dump_p, dump_q
+      use initcrspectrum,   only: norm_init_spectrum, dump_fpq, nam_cresp_f, nam_cresp_p, nam_cresp_q, check_if_dump_fpq, dump_f, dump_p, dump_q
       use mpisetup,         only: master
       use named_array_list, only: wna
 
@@ -66,8 +66,6 @@ module cresp_grid
 
       call cresp_initialize_guess_grids
       call cresp_allocate_all
-
-      e_threshold = e_small * e_small_approx_p
 
       call check_if_dump_fpq(vars)
 
