@@ -164,7 +164,7 @@ contains
             return
          endif
 
-         delta = fun1D_val / derivative_1D(x)
+         delta = fun1D_val / dfun_1D
 
          x = x - delta
          if (abs(delta) < tol_x_1D) then
