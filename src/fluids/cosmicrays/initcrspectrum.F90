@@ -92,6 +92,7 @@ module initcrspectrum
    integer(kind=4) :: arr_dim, arr_dim_q
 
    real, parameter :: eps = 1.0e-15          !< epsilon parameter for real number comparisons
+   real, parameter :: eps_det = eps * 1.0e-15
 !----------------------------------
    real, allocatable, dimension(:) :: p_fix, p_mid_fix, n_small_bin
    real                            :: w

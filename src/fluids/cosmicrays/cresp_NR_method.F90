@@ -33,8 +33,7 @@
 module cresp_NR_method
 ! pulled by COSM_RAY_ELECTRONS
 
-   use constants,      only: LO, HI
-   use initcrspectrum, only: eps
+   use constants, only: LO, HI
 
    implicit none
 
@@ -47,7 +46,6 @@ module cresp_NR_method
    real, allocatable, dimension(:),   target :: alpha_tab_lo, alpha_tab_up, n_tab_lo, n_tab_up, alpha_tab_q, q_grid
    real, allocatable, dimension(:,:), target :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
    integer(kind=4)                           :: helper_arr_dim
-   real                                      :: eps_det = eps * 1.0e-15
    real, pointer, dimension(:)               :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
    real, pointer, dimension(:,:)             :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
 #ifdef CRESP_VERBOSED
@@ -73,7 +71,7 @@ contains
 
    subroutine NR_algorithm(x, exit_code)
 
-      use initcrspectrum, only: NR_iter_limit, tol_f, tol_x
+      use initcrspectrum, only: NR_iter_limit, tol_f, tol_x, eps_det
 
       implicit none
 
@@ -469,7 +467,7 @@ contains
    subroutine fill_boundary_grid(bound_case, fill_p, fill_f) ! to be paralelized
 
       use constants,      only: zero
-      use initcrspectrum, only: arr_dim
+      use initcrspectrum, only: arr_dim, eps
 
       implicit none
 
@@ -1079,7 +1077,8 @@ contains
 !---------------------------------------------------------------------------------------------------
    real function encp_func_2_zero(side, p_ratio, alpha_cnst, q_in3) ! from eqn. 29
 
-      use constants, only: one
+      use constants,      only: one
+      use initcrspectrum, only: eps
 
       implicit none
 
@@ -1105,7 +1104,7 @@ contains
 
       use constants,       only: one
       use cresp_variables, only: clight_cresp
-      use initcrspectrum,  only: e_small
+      use initcrspectrum,  only: e_small, eps
 
       implicit none
 
