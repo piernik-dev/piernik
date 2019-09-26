@@ -526,7 +526,7 @@ module initcrspectrum
       if (master) call printinfo(msg)
 
       if ((q_init < three) .and. any(e_small_approx_p == I_ONE)) then
-         call warn("[cresp_crspectrum:cresp_init_state] Initial parameters: q_init < 3.0 and approximation of outer momenta is on, approximation of outer momenta with hard energy spectrum might not work.")
+         call warn("[initcrspectrum:init_cresp] Initial parameters: q_init < 3.0 and approximation of outer momenta is on, approximation of outer momenta with hard energy spectrum might not work.")
       endif
 
    end subroutine init_cresp
