@@ -120,7 +120,7 @@ contains
 #endif /* CRESP_VERBOSED */
       use diagnostics,    only: decr_vec
       use initcosmicrays, only: ncre
-      use initcrspectrum, only: spec_mod_trms, e_small_approx_p, dump_fpq, crel, p_mid_fix, nullify_empty_bins, p_fix
+      use initcrspectrum, only: spec_mod_trms, e_small_approx_p, dfpq, crel, p_mid_fix, nullify_empty_bins, p_fix
 
       implicit none
 
@@ -153,7 +153,7 @@ contains
          p(i_cut) = p_cut
       else
          p_cut = zero
-         if (dump_fpq) then
+         if (dfpq%any_dump) then
             crel%p = zero
             crel%f = zero
             crel%q = zero
@@ -330,7 +330,7 @@ contains
       e_tot = sum(e)
 
 ! --- saving the data to output arrays
-      if (dump_fpq) then
+      if (dfpq%any_dump) then
          crel%p = p
          crel%f = f
          crel%q = q
@@ -908,7 +908,7 @@ contains
       use cresp_NR_method, only: e_small_to_f
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
-      use initcrspectrum,  only: spec_mod_trms, q_init, p_init, initial_spectrum, eps, p_fix, w, f_init, dump_fpq, crel,   &
+      use initcrspectrum,  only: spec_mod_trms, q_init, p_init, initial_spectrum, eps, p_fix, w, f_init, dfpq, crel,   &
                               &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins
       use mpisetup,        only: master
 
@@ -1074,7 +1074,7 @@ contains
          endif
       endif
 
-      if (dump_fpq) then
+      if (dfpq%any_dump) then
          crel%p = p
          crel%f = f
          crel%q = q

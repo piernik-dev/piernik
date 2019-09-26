@@ -296,7 +296,7 @@ contains
       use global,      only: force_cc_mag
 #endif /* MAGNETIC */
 #ifdef COSM_RAY_ELECTRONS
-      use initcrspectrum,   only: nam_cresp_f, nam_cresp_p, nam_cresp_q
+      use initcrspectrum,   only: dfpq
       use named_array_list, only: wna
 #endif /* COSM_RAY_ELECTRONS */
 
@@ -353,13 +353,13 @@ contains
             tab(:,:,:) = cg%u(flind%cre%ebeg+i-1, RNG)
          case ("cref01" : "cref99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = cg%w(wna%ind(nam_cresp_f))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
+            tab(:,:,:) = cg%w(wna%ind(dfpq%f_nam))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
          case ("crep01" : "crep02")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = cg%w(wna%ind(nam_cresp_p))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
+            tab(:,:,:) = cg%w(wna%ind(dfpq%p_nam))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
          case ("creq01" : "creq99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = cg%w(wna%ind(nam_cresp_q))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
+            tab(:,:,:) = cg%w(wna%ind(dfpq%q_nam))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
 #ifdef TRACER

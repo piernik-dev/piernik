@@ -55,7 +55,7 @@ module cresp_grid
       use dataio_pub,       only: printinfo
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_n, iarr_cre_e, ncre
-      use initcrspectrum,   only: norm_init_spectrum, dump_fpq, nam_cresp_f, nam_cresp_p, nam_cresp_q, check_if_dump_fpq, dump_f, dump_p, dump_q
+      use initcrspectrum,   only: norm_init_spectrum, dfpq, check_if_dump_fpq
       use mpisetup,         only: master
       use named_array_list, only: wna
 
@@ -69,10 +69,10 @@ module cresp_grid
 
       call check_if_dump_fpq(vars)
 
-      if (dump_fpq) then
-         if (dump_f) call all_cg%reg_var(nam_cresp_f, dim4=ncre+1)
-         if (dump_p) call all_cg%reg_var(nam_cresp_p, dim4=2)
-         if (dump_q) call all_cg%reg_var(nam_cresp_q, dim4=ncre)
+      if (dfpq%any_dump) then
+         if (dfpq%dump_f) call all_cg%reg_var(dfpq%f_nam, dim4=ncre+1)
+         if (dfpq%dump_p) call all_cg%reg_var(dfpq%p_nam, dim4=2)
+         if (dfpq%dump_q) call all_cg%reg_var(dfpq%q_nam, dim4=ncre)
       endif
 
       cgl => leaves%first
@@ -82,10 +82,10 @@ module cresp_grid
          cg%u(iarr_cre_n,:,:,:)  = 0.0
          cg%u(iarr_cre_e,:,:,:)  = 0.0
 
-         if (dump_fpq) then
-            if (dump_f) cg%w(wna%ind(nam_cresp_f))%arr = 0.0
-            if (dump_p) cg%w(wna%ind(nam_cresp_p))%arr = 0.0
-            if (dump_q) cg%w(wna%ind(nam_cresp_q))%arr = 0.0
+         if (dfpq%any_dump) then
+            if (dfpq%dump_f) cg%w(wna%ind(dfpq%f_nam))%arr = 0.0
+            if (dfpq%dump_p) cg%w(wna%ind(dfpq%p_nam))%arr = 0.0
+            if (dfpq%dump_q) cg%w(wna%ind(dfpq%q_nam))%arr = 0.0
          endif
 
          cgl => cgl%nxt
@@ -110,7 +110,7 @@ module cresp_grid
       use global,           only: dt
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, nam_cresp_f, nam_cresp_p, nam_cresp_q, dump_fpq, dump_f, dump_p, dump_q, fsynchr
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr
       use named_array,      only: p4
       use named_array_list, only: qna, wna
 #ifdef DEBUG
@@ -148,10 +148,10 @@ module cresp_grid
                   if (cfl_cresp_violation) return ! nothing to do here!
                   p4(iarr_cre_n, i, j, k) = cresp%n
                   p4(iarr_cre_e, i, j, k) = cresp%e
-                  if (dump_fpq) then
-                     if (dump_f) cg%w(wna%ind(nam_cresp_f))%arr(:, i, j, k) = crel%f
-                     if (dump_p) cg%w(wna%ind(nam_cresp_p))%arr(:, i, j, k) = [crel%p(crel%i_lo), crel%p(crel%i_up)]
-                     if (dump_q) cg%w(wna%ind(nam_cresp_q))%arr(:, i, j, k) = crel%q
+                  if (dfpq%any_dump) then
+                     if (dfpq%dump_f) cg%w(wna%ind(dfpq%f_nam))%arr(:, i, j, k) = crel%f
+                     if (dfpq%dump_p) cg%w(wna%ind(dfpq%p_nam))%arr(:, i, j, k) = [crel%p(crel%i_lo), crel%p(crel%i_up)]
+                     if (dfpq%dump_q) cg%w(wna%ind(dfpq%q_nam))%arr(:, i, j, k) = crel%q
                   endif
                enddo
             enddo
