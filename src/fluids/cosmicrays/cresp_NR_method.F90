@@ -59,21 +59,12 @@ module cresp_NR_method
    character(len=extlen), parameter                 :: extension =  ".dat"
 
    abstract interface
-      real function function_pointer_1D(z)
-         real, intent(in) :: z
-      end function function_pointer_1D
-      subroutine value_control_1D(z, exit_code)
-         real,    intent(inout) :: z
-         logical, intent(out)   :: exit_code
-      end subroutine value_control_1D
       function function_pointer_2D(z)
          real, dimension(2), intent(inout) :: z
          real, dimension(2)                :: function_pointer_2D
       end function function_pointer_2D
    end interface
 
-   procedure (value_control_1D),    pointer :: selected_value_check_1D => null()
-   procedure (function_pointer_1D), pointer :: selected_function_1D => null()
    procedure (function_pointer_2D), pointer :: selected_function_2D => null()
 
 !----------------------------------------------------------------------------------------------------
@@ -160,7 +151,7 @@ contains
       func_check = .false.
 
       do i = 1, NR_iter_limit
-         fun1D_val = selected_function_1D(x)
+         fun1D_val = alpha_to_q(x)
          if ((abs(fun1D_val) <= tol_f_1D) .and. (abs(delta) <= tol_f_1D)) then ! delta <= tol_f acceptable as in case of f convergence we must only check if the algorithm hasn't wandered astray
             exit_code = .false.
             return
@@ -180,7 +171,7 @@ contains
             exit_code = .false.
             return
          endif
-         call selected_value_check_1D(x, func_check)  ! necessary in some cases, when maximal value x can take is defined, for other cases dummy_check_1D function defined
+         call q_control(x, func_check)  ! necessary in some cases, when maximal value x can take is defined, for other cases dummy_check_1D function defined
          if (func_check) return
       enddo
 
@@ -202,7 +193,7 @@ contains
 
       dx = sign(1.0, x) * min(abs(x*dx_par), dx_par)
       dx = sign(1.0, x) * max(abs(dx), eps) ! dx = 0.0 must not be allowed
-      derivative_1D = half * (selected_function_1D(x+dx) - selected_function_1D(x-dx))/dx
+      derivative_1D = half * (alpha_to_q(x+dx) - alpha_to_q(x-dx))/dx
 
    end function derivative_1D
 
@@ -875,9 +866,6 @@ contains
       real                        :: x, prev_solution
       logical                     :: exit_code
 
-      selected_function_1D     => alpha_to_q
-      selected_value_check_1D  => q_control
-
       i_beg = 1
       i_end = arr_dim_q
 
@@ -1321,8 +1309,6 @@ contains
 
       p_a => alpha_tab_q
       p_n => q_grid
-      selected_function_1D => alpha_to_q
-      selected_value_check_1D => q_control
 
       compute_q = zero
       if (present(outer_p_ratio)) then
