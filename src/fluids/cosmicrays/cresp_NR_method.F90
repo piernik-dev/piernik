@@ -513,7 +513,7 @@ contains
             endif
 
             if (exit_code) then
-               if (j-2 >= 1 .and. j-2 <= arr_dim) call step_extr(fill_p(i,j-2:j), fill_f(i,j-2:j), p_n(j-2:j), exit_code)
+               if (check_dimm(j-2)) call step_extr(fill_p(i,j-2:j), fill_f(i,j-2:j), p_n(j-2:j), exit_code)
                if (j-1 >= 1) then
                   if (fill_p(i,j-1) > zero) call seek_solution_step(fill_p(i,j), fill_f(i,j), prev_solution, i, j-1, exit_code)
                endif
@@ -595,7 +595,6 @@ contains
    subroutine refine_ji(ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
 
       use constants,      only: zero
-      use initcrspectrum, only: arr_dim
 
       implicit none
 
@@ -620,8 +619,8 @@ contains
                call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, exit_code) ! works for most cases
                if (exit_code) then
                   i1m = i-i_incr ; i2m = i-2*i_incr ; i1p = i+i_incr
-                  if (i2m >= 1 .and.                i2m <= arr_dim                     ) call step_extr(ref_p(i2m:i  :i_incr,j), ref_f(i2m:i  :i_incr,j),         p_a(i2m:i  :i_incr), exit_code)
-                  if (i1m >= 1 .and. i1p >= 1 .and. i1m <= arr_dim .and. i1p <= arr_dim) call step_inpl(ref_p(i1m:i1p:i_incr,j), ref_f(i1m:i1p:i_incr,j), i_incr, p_a(i1m:i1p:i_incr), exit_code)
+                  if (check_dimm(i2m)                      ) call step_extr(ref_p(i2m:i  :i_incr,j), ref_f(i2m:i  :i_incr,j),         p_a(i2m:i  :i_incr), exit_code)
+                  if (check_dimm(i1m) .and. check_dimm(i1p)) call step_inpl(ref_p(i1m:i1p:i_incr,j), ref_f(i1m:i1p:i_incr,j), i_incr, p_a(i1m:i1p:i_incr), exit_code)
                endif
             endif
          enddo
@@ -634,7 +633,6 @@ contains
    subroutine refine_ij(ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
 
       use constants,      only: zero
-      use initcrspectrum, only: arr_dim
 
       implicit none
 
@@ -659,14 +657,28 @@ contains
                call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, exit_code) ! works for most cases
                if (exit_code) then
                   j1m = j-j_incr ; j2m = j-2*j_incr ; j1p = j+j_incr
-                  if (j2m >= 1 .and.                j2m <= arr_dim                     ) call step_extr(ref_p(i,j2m:j  :j_incr), ref_f(i,j2m:j  :j_incr),         p_n(j2m:j  :j_incr), exit_code)
-                  if (j1m >= 1 .and. j1p >= 1 .and. j1m <= arr_dim .and. j1p <= arr_dim) call step_inpl(ref_p(i,j1m:j1p:j_incr), ref_f(i,j1m:j1p:j_incr), j_incr, p_n(j1m:j1p:j_incr), exit_code)
+                  if (check_dimm(j2m)                      ) call step_extr(ref_p(i,j2m:j  :j_incr), ref_f(i,j2m:j  :j_incr),         p_n(j2m:j  :j_incr), exit_code)
+                  if (check_dimm(j1m) .and. check_dimm(j1p)) call step_inpl(ref_p(i,j1m:j1p:j_incr), ref_f(i,j1m:j1p:j_incr), j_incr, p_n(j1m:j1p:j_incr), exit_code)
                endif
             endif
          enddo
       enddo
 
    end subroutine refine_ij
+
+ !----------------------------------------------------------------------------------------------------
+
+   logical function check_dimm(ind)
+
+      use initcrspectrum, only: arr_dim
+
+      implicit none
+
+      integer(kind=4), intent(in) :: ind
+
+      check_dimm = (ind >= 1 .and. ind <= arr_dim)
+
+   end function check_dimm
 
  !----------------------------------------------------------------------------------------------------
 
