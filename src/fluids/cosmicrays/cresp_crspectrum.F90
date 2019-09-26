@@ -1105,12 +1105,11 @@ contains
 
       implicit none
 
-      real, dimension(1:ncre)                    :: q_add
-      real, dimension(0:ncre)                    :: p_range_add , f_add
+      real, dimension(0:ncre)                    :: p_range_add
       integer(kind=4), allocatable, dimension(:) :: act_bins, act_edges
       integer(kind=4)                            :: i_l, i_u
 
-      q_add = zero  ; f_add = zero  ; p_range_add = zero
+      p_range_add = zero
 
       i_l = int(floor(log10(p_init(LO)/p_fix(1))/w)) + 1
       i_l = max(0, i_l)
@@ -1127,12 +1126,12 @@ contains
       if (.not.allocated(act_bins )) allocate( act_bins(i_u - i_l+1))
       act_edges = cresp_all_edges(i_l  :i_u)
       act_bins  = cresp_all_bins (i_l+1:i_u)
-      q_add(act_bins) = q_init
+      q(act_bins) = q_init
 
-      f_add(act_edges) = f_init * (p_range_add(act_edges)/p_init(LO))**(-q_init)
+      f(act_edges) = f_init * (p_range_add(act_edges)/p_init(LO))**(-q_init)
 
-      n = n + fq_to_n(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
-      e = e + fq_to_e(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
+      n = n + fq_to_n(p_range_add(0:ncre-1), p_range_add(1:ncre), f(0:ncre-1), q(1:ncre), act_bins)
+      e = e + fq_to_e(p_range_add(0:ncre-1), p_range_add(1:ncre), f(0:ncre-1), q(1:ncre), act_bins)
 
       call my_deallocate(act_bins)
       call my_deallocate(act_edges)
@@ -1155,12 +1154,11 @@ contains
       implicit none
 
       real                                       :: c_1, c_2, c_3, lpb, lpu, lpl, a, b
-      real, dimension(1:ncre)                    :: q_add
-      real, dimension(0:ncre)                    :: p_range_add, f_add
+      real, dimension(0:ncre)                    :: p_range_add
       integer(kind=4), allocatable, dimension(:) :: act_bins
       integer(kind=4)                            :: i_l, i_u, i_br, i
 
-      q_add(:) = zero  ; f_add(:) = zero  ; p_range_add(:) = zero
+      p_range_add(:) = zero
 
       i_br = minloc(abs(p_fix - p_br_init(LO)),dim=1)-1
 
@@ -1176,8 +1174,8 @@ contains
       p_range_add(i_l) = p_init(LO)
       p_range_add(i_u) = p_init(HI)
 
-      f_add(i_l:i_u) = f_init * (p_range_add(i_l:i_u)/p_init(LO))**(-q_init)
-      q_add(i_l:i_u) = q_init
+      f(i_l:i_u) = f_init * (p_range_add(i_l:i_u)/p_init(LO))**(-q_init)
+      q(i_l:i_u) = q_init
 
       if (.not.allocated(act_bins )) allocate( act_bins(i_u - i_l+1))
       act_bins  =   cresp_all_bins(i_l+1:i_u)
@@ -1192,10 +1190,10 @@ contains
       c_1 =  (c_3 - b) / lpb**two
       c_2 =  (a - two * c_1 * lpb)
 
-      f_add(i_l:i_br-1) = ten**(c_1 * log10(p_range_add(i_l:i_br-1))**two + c_2 * log10(p_range_add(i_l:i_br-1)) + c_3)
+      f(i_l:i_br-1) = ten**(c_1 * log10(p_range_add(i_l:i_br-1))**two + c_2 * log10(p_range_add(i_l:i_br-1)) + c_3)
 
       do i = i_l+1, i_br
-         q_add(i) = pf_to_q(p_range_add(i-1), p_range_add(i), f_add(i-1), f_add(i))
+         q(i) = pf_to_q(p_range_add(i-1), p_range_add(i), f(i-1), f(i))
       enddo
 
 ! HIGH ENERGY CUTOFF; a and b remain unchanged
@@ -1208,14 +1206,14 @@ contains
       c_1 =  (c_3 - b) / lpb**two
       c_2 =  (a - two * c_1 * lpb)
 
-      f_add(i_br:i_u) = ten**(c_1 * log10(p_range_add(i_br:i_u))**two + c_2 * log10(p_range_add(i_br:i_u)) + c_3)
+      f(i_br:i_u) = ten**(c_1 * log10(p_range_add(i_br:i_u))**two + c_2 * log10(p_range_add(i_br:i_u)) + c_3)
 
       do i = i_br, i_u
-         q_add(i) = pf_to_q(p_range_add(i-1), p_range_add(i), f_add(i-1), f_add(i))
+         q(i) = pf_to_q(p_range_add(i-1), p_range_add(i), f(i-1), f(i))
       enddo
 
-      n = n + fq_to_n(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
-      e = e + fq_to_e(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
+      n = n + fq_to_n(p_range_add(0:ncre-1), p_range_add(1:ncre), f(0:ncre-1), q(1:ncre), act_bins)
+      e = e + fq_to_e(p_range_add(0:ncre-1), p_range_add(1:ncre), f(0:ncre-1), q(1:ncre), act_bins)
 
       call my_deallocate(act_bins)
 
