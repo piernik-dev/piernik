@@ -1182,51 +1182,50 @@ contains
 
    end function lin_extrapol_1D
 !----------------------------------------------------------------------------------------------------
-  function intpol_pf_from_NR_grids(a_val, n_val, interpolation_successful) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.4
+  function intpol_pf_from_NR_grids(a_val, n_val, successful) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.4
 
-      implicit none                                              ! should return exit code as well
+      implicit none
 
-      real,    intent(inout) :: a_val, n_val  ! ratios arrays (p,f: lo and up), for which solutions have been obtained. loc_no_ip (changed to l1) - in case when interpolation is not possible,
-      logical, intent(out)   :: interpolation_successful
-      real,    dimension(2)  :: intpol_pf_from_NR_grids ! indexes with best match and having solutions are chosen.
-      real                   :: blin_a, blin_n
+      real,    intent(in)             :: a_val, n_val  ! ratios arrays (p,f: lo and up), for which solutions have been obtained. loc_no_ip (changed to l1) - in case when interpolation is not possible,
+      logical, intent(out)            :: successful
+      real, dimension(2)              :: intpol_pf_from_NR_grids ! indexes with best match and having solutions are chosen.
+      real                            :: blin_a, blin_n
       integer(kind=4), dimension(1:2) :: l1, l2 ! indexes that points where alpha_tab_ and up nad n_tab_ and up are closest in value to a_val and n_val - indexes point to
-      logical                         :: exit_code
 
 #ifdef CRESP_VERBOSED
       write (*,"(A30,A2,A4)",advance="no") "Determining indices for case: ", bound_name(current_bound), "... "
 #endif /* CRESP_VERBOSED */
-      call determine_loc(a_val, n_val, l1, l2, exit_code)
+      call determine_loc(a_val, n_val, l1, successful)
+      l2 = l1 + 1
 
 #ifdef CRESP_VERBOSED
+      if (successful) write(*,"(A19, 2I8, A3, 2I8)") "Obtained indices:", l1, " | ", l2
       call save_loc(current_bound, l1, l2)
 #endif /* CRESP_VERBOSED */
 
-      if (exit_code) then ! interpolation won't work in this case, choosing closest values that have solutions.
-         intpol_pf_from_NR_grids(1) = p_p(l1(1), l1(2))
-         intpol_pf_from_NR_grids(2) = p_f(l1(1), l1(2))
-         interpolation_successful = .false.
-      else
+      if (successful) then
          blin_a = bl_in_tu(p_a(l1(1)), a_val, p_a(l2(1)))
          blin_n = bl_in_tu(p_n(l1(2)), n_val, p_n(l2(2)))
          intpol_pf_from_NR_grids(1) = bl_interpol(p_p(l1(1),l1(2)), p_p(l1(1),l2(2)), p_p(l2(1),l1(2)), p_p(l2(1),l2(2)), blin_a, blin_n)
          intpol_pf_from_NR_grids(2) = bl_interpol(p_f(l1(1),l1(2)), p_f(l1(1),l2(2)), p_f(l2(1),l1(2)), p_f(l2(1),l2(2)), blin_a, blin_n)
-         interpolation_successful = .true.
+      else ! interpolation won't work in this case, choosing closest values that have solutions.
+         intpol_pf_from_NR_grids(1) = p_p(l1(1), l1(2))
+         intpol_pf_from_NR_grids(2) = p_f(l1(1), l1(2))
       endif
 
    end function intpol_pf_from_NR_grids
 !----------------------------------------------------------------------------------------------------
-   subroutine determine_loc(a_val, n_val, loc1, loc2, exit_code)
+   subroutine determine_loc(a_val, n_val, loc1, successful)
 
       use constants,      only: zero
       use initcrspectrum, only: arr_dim
 
       implicit none
 
-      real,                            intent(inout) :: a_val, n_val
-      integer(kind=4), dimension(1:2), intent(inout) :: loc1, loc2
-      logical,                         intent(out)   :: exit_code
-      logical                                        :: hit_zero
+      real,                            intent(in)  :: a_val, n_val
+      integer(kind=4), dimension(1:2), intent(out) :: loc1
+      logical,                         intent(out) :: successful
+      logical                                      :: hit_zero
 
       hit_zero  = .false.
       loc1(1) = inverse_f_to_ind(a_val, p_a(1), p_a(arr_dim), arr_dim)
@@ -1234,17 +1233,13 @@ contains
 
       if ((minval(loc1) >= 1 .and. maxval(loc1) <= arr_dim-1)) then ! only need to test loc1
          if (p_p(loc1(1), loc1(2)) > zero) then
-            loc2 = loc1+1
-            exit_code = .false.
-#ifdef CRESP_VERBOSED
-            write(*,"(A19, 2I8, A3, 2I8)") "Obtained indices:", loc1, " | ", loc2
-#endif /* CRESP_VERBOSED */
+            successful = .true.
             return        ! normal exit
          else
             hit_zero  = .true.
          endif
       endif
-      exit_code = .true.  ! namely if ((minval(loc1) <= 0 .or. maxval(loc1) >= arr_dim))
+      successful = .false.  ! namely if ((minval(loc1) <= 0 .or. maxval(loc1) >= arr_dim))
 
       loc1(1) = max(1, min(loc1(1), arr_dim))   ! Here we either give algorithm closest nonzero value relative to a row that was in the proper range
       loc1(2) = max(1, min(loc1(2), arr_dim))   ! or we just feed the algorithm ANY nonzero initial vector that will prevent it from crashing.
@@ -1253,8 +1248,6 @@ contains
       if (loc1(1) <= 1       .or. hit_zero) call nearest_solution(p_p(:,loc1(2)), max(1,loc1(1)), arr_dim, loc1(1), hit_zero)
       if (loc1(2) == arr_dim .or. hit_zero) call nearest_solution(p_p(loc1(1),:), loc1(2),        1,       loc1(2), hit_zero)
       if (loc1(2) <= 1       .or. hit_zero) call nearest_solution(p_p(loc1(1),:), max(1,loc1(2)), arr_dim, loc1(2), hit_zero)
-
-      loc2 = loc1 + 1
 
    end subroutine determine_loc
 !----------------------------------------------------------------------------------------------------
