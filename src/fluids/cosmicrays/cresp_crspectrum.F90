@@ -37,12 +37,11 @@ module cresp_crspectrum
    implicit none
 
    private ! most of it
-   public :: cresp_update_cell, cresp_init_state, fail_count_interpol, fail_count_NR_2dim, cresp_get_scaled_init_spectrum,  &
-      &      cleanup_cresp, cresp_allocate_all, e_threshold, fail_count_comp_q, src_gpcresp, p_rch_init, &
-      &      detect_clean_spectrum, cresp_find_prepare_spectrum, cresp_detect_negative_content
+   public :: cresp_update_cell, cresp_init_state, cresp_get_scaled_init_spectrum, cleanup_cresp, cresp_allocate_all, &
+      &      e_threshold, src_gpcresp, p_rch_init, detect_clean_spectrum, cresp_find_prepare_spectrum, cresp_detect_negative_content
 
    integer, dimension(1:2)            :: fail_count_NR_2dim, fail_count_interpol
-   integer, allocatable               :: fail_count_comp_q(:)
+   integer, allocatable, dimension(:) :: fail_count_comp_q
 
 ! variables informing about change of bins
    integer, dimension(LO:HI)          :: del_i
@@ -62,11 +61,11 @@ module cresp_crspectrum
    integer                            :: num_heating_edges_next
 
 ! dynamic arrays
-   integer, allocatable               :: fixed_edges(:),   fixed_edges_next(:)
-   integer, allocatable               :: active_edges(:),  active_edges_next(:)
-   integer, allocatable               :: active_bins(:),   active_bins_next(:)
-   integer, allocatable               :: cooling_edges_next(:)
-   integer, allocatable               :: heating_edges_next(:)
+   integer, allocatable, dimension(:) :: fixed_edges,   fixed_edges_next
+   integer, allocatable, dimension(:) :: active_edges,  active_edges_next
+   integer, allocatable, dimension(:) :: active_bins,   active_bins_next
+   integer, allocatable, dimension(:) :: cooling_edges_next
+   integer, allocatable, dimension(:) :: heating_edges_next
 
    real, allocatable, dimension(:) :: r  ! r term for energy losses (Miniati 2001, eqn. 25)
    real, allocatable, dimension(:) :: q  ! power-law exponent array
@@ -74,11 +73,11 @@ module cresp_crspectrum
 ! power-law
    real,    dimension(LO:HI)       :: p_cut_next, p_cut
    integer, dimension(LO:HI)       :: i_cut, i_cut_next
-   real, dimension(:), allocatable :: p ! momentum table for piecewise power-law spectru intervals
-   real, dimension(:), allocatable :: f ! distribution function for piecewise power-law spectrum
+   real, allocatable, dimension(:) :: p ! momentum table for piecewise power-law spectru intervals
+   real, allocatable, dimension(:) :: f ! distribution function for piecewise power-law spectrum
 
 ! predicted and upwind momenta, number density / energy density fluxes
-   real, dimension(:), allocatable :: p_next, p_upw , nflux, eflux ! , p_fix
+   real, allocatable, dimension(:) :: p_next, p_upw , nflux, eflux ! , p_fix
 
 ! precision control for energy / number density transport and dissipation of energy
    real                            :: n_tot, n_tot0, e_tot, e_tot0
@@ -921,6 +920,10 @@ contains
       integer, dimension(LO:HI)                 :: i_ch
       real                                      :: c
       logical                                   :: exit_code
+
+      fail_count_interpol = 0
+      fail_count_NR_2dim  = 0
+      fail_count_comp_q   = 0
 
       u_b = zero ; u_d = zero
 

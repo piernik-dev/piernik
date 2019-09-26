@@ -49,7 +49,7 @@ module cresp_grid
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
-      use cresp_crspectrum, only: cresp_allocate_all, e_threshold, fail_count_interpol, fail_count_NR_2dim, fail_count_comp_q, cresp_init_state, p_rch_init
+      use cresp_crspectrum, only: cresp_allocate_all, e_threshold, cresp_init_state, p_rch_init
       use cresp_NR_method,  only: cresp_initialize_guess_grids
       use dataio,           only: vars
       use dataio_pub,       only: printinfo
@@ -66,10 +66,6 @@ module cresp_grid
 
       call cresp_initialize_guess_grids
       call cresp_allocate_all
-
-      fail_count_interpol = 0
-      fail_count_NR_2dim  = 0
-      fail_count_comp_q   = 0
 
       e_threshold = e_small * e_small_approx_p
 
