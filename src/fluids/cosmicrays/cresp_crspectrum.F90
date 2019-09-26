@@ -472,7 +472,7 @@ contains
 #endif /* CRESP_VERBOSED */
       use diagnostics,    only: incr_vec
       use initcosmicrays, only: ncre
-      use initcrspectrum, only: e_small, cresp_all_edges, cresp_all_bins, p_fix, p_mid_fix
+      use initcrspectrum, only: e_small, cresp_all_bins, p_fix, p_mid_fix
 
       implicit none
 
@@ -633,17 +633,9 @@ contains
 
 ! Construct index arrays for fixed edges betwen p_cut(LO) and p_cut(HI), active edges
 ! before timestep
-         is_fixed_edge = .false.
-         is_fixed_edge(i_cut(LO)+I_ONE:i_cut(HI)-I_ONE) = .true.
-         num_fixed_edges = count(is_fixed_edge)
-         allocate(fixed_edges(num_fixed_edges))
-         fixed_edges = pack(cresp_all_edges, is_fixed_edge)
 
-         is_active_edge = .false.
-         is_active_edge(i_cut(LO):i_cut(HI)) = .true.
-         num_active_edges = count(is_active_edge)
-         allocate(active_edges(i_cut(LO):i_cut(HI)))
-         active_edges = pack(cresp_all_edges, is_active_edge)
+         call arrange_assoc_active_edge_arrays(fixed_edges,  is_fixed_edge,  num_fixed_edges,  [i_cut(LO)+I_ONE, i_cut(HI)-I_ONE])
+         call arrange_assoc_active_edge_arrays(active_edges, is_active_edge, num_active_edges, [i_cut(LO),       i_cut(HI)])
 
 #ifdef CRESP_VERBOSED
          write (msg, "(2(A9,i3))") "i_lo =", i_cut(LO), ", i_up = ", i_cut(HI)    ; call printinfo(msg)
@@ -820,17 +812,8 @@ contains
       del_i = i_cut_next - i_cut
 
 ! Construct index arrays for fixed edges betwen p_cut(LO) and p_cut(HI), active edges after timestep
-      is_fixed_edge_next = .false.
-      is_fixed_edge_next(i_cut_next(LO)+1:i_cut_next(HI)-1) = .true.
-      num_fixed_edges_next = count(is_fixed_edge_next)
-      allocate(fixed_edges_next(num_fixed_edges_next))
-      fixed_edges_next = pack(cresp_all_edges, is_fixed_edge_next)
-
-      is_active_edge_next = .false.
-      is_active_edge_next(i_cut_next(LO):i_cut_next(HI)) = .true.
-      num_active_edges_next = count(is_active_edge_next)
-      allocate(active_edges_next(num_active_edges_next))
-      active_edges_next = pack(cresp_all_edges, is_active_edge_next)
+      call arrange_assoc_active_edge_arrays(fixed_edges_next,  is_fixed_edge_next,  num_fixed_edges_next,  [i_cut_next(LO)+1, i_cut_next(HI)-1])
+      call arrange_assoc_active_edge_arrays(active_edges_next, is_active_edge_next, num_active_edges_next, [i_cut_next(LO),   i_cut_next(HI)])
 
 ! Active bins after timestep
       is_active_bin_next = .false.
@@ -901,6 +884,28 @@ contains
 !
 ! arrays initialization | TODO: reorganize cresp_init_state
 !
+!-------------------------------------------------------------------------------------------------
+   subroutine arrange_assoc_active_edge_arrays(index_array, where_true_array, count_is_true, range_in)
+
+      use constants,          only: LO, HI, I_TWO
+      use initcosmicrays,     only: ncre
+      use initcrspectrum,     only: cresp_all_edges
+
+      implicit none
+
+      integer,          dimension(I_TWO), intent(in)   :: range_in
+      integer,                            intent(out)  :: count_is_true
+      integer, allocatable, dimension(:), intent(out)  :: index_array
+      logical,         dimension(0:ncre), intent(out)  :: where_true_array
+
+      where_true_array  = .false.
+      where_true_array(range_in(LO):range_in(HI)) = .true.
+      count_is_true  =  count(where_true_array)
+      if (allocated(index_array)) deallocate(index_array)
+      allocate(index_array(count_is_true))
+      index_array    =  pack(cresp_all_edges, where_true_array)
+
+   end subroutine arrange_assoc_active_edge_arrays
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_init_state(init_n, init_e, sptab)
 
