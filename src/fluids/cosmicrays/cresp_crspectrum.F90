@@ -1140,7 +1140,7 @@ contains
       p_range_add(ic(LO):ic(HI)) = p_fix(ic(LO):ic(HI))
       p_range_add(ic)            = p_init
 
-      f(ic(LO):ic(HI)) = f_init * (p_range_add(ic(LO):ic(HI))/p_init(LO))**(-q_init)
+      f(ic(LO):ic(HI)) = f_init * (p_range_add(ic(LO):ic(HI))/p_br_init(LO))**(-q_init)
       q(ic(LO):ic(HI)) = q_init
 
       if (.not.allocated(act_bins )) allocate( act_bins(ic(HI) - ic(LO)+1))
@@ -1151,7 +1151,7 @@ contains
       lp_lpb = lpl / lpb
 
       a = -q_init
-      b = log10(f_init * p_init(LO)**q_init)
+      b = log10(f_init * p_br_init(LO)**q_init)
 
       c_3 =  (-three * lpl + log10(e_small / fpcc) + b * lp_lpb - a * lpl - two * b * lp_lpb ) / (lp_lpb - one)**two
       c_1 =  (c_3 - b) / lpb**two
