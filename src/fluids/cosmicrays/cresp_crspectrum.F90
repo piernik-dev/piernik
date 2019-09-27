@@ -67,34 +67,23 @@ module cresp_crspectrum
    integer, allocatable, dimension(:) :: cooling_edges_next
    integer, allocatable, dimension(:) :: heating_edges_next
 
-   real, allocatable, dimension(:) :: r  ! r term for energy losses (Miniati 2001, eqn. 25)
-   real, allocatable, dimension(:) :: q  ! power-law exponent array
+   real, allocatable, dimension(:) :: r                                   !> r term for energy losses (Miniati 2001, eqn. 25)
+   real, allocatable, dimension(:) :: q                                   !> power-law exponent array
 
 ! power-law
    real,    dimension(LO:HI)       :: p_cut_next, p_cut
    integer, dimension(LO:HI)       :: i_cut, i_cut_next
-   real, allocatable, dimension(:) :: p ! momentum table for piecewise power-law spectru intervals
-   real, allocatable, dimension(:) :: f ! distribution function for piecewise power-law spectrum
-
-! predicted and upwind momenta, number density / energy density fluxes
-   real, allocatable, dimension(:) :: p_next, p_upw , nflux, eflux ! , p_fix
-
-! precision control for energy / number density transport and dissipation of energy
-   real                            :: n_tot, n_tot0, e_tot, e_tot0
-
-! in-algorithm energy dissipation terms
-   real                            :: u_b, u_d
-
-! work array of number density and energy during algorithm execution
-   real,allocatable, dimension(:)  :: ndt, edt
-
-! in-algorithm energy & number density
-   real, allocatable, dimension(:) :: n, e ! dimension(1:ncre)
+   real, allocatable, dimension(:) :: p                                   !> momentum table for piecewise power-law spectru intervals
+   real, allocatable, dimension(:) :: f                                   !> distribution function for piecewise power-law spectrum
+   real, allocatable, dimension(:) :: p_next, p_upw , nflux, eflux        !> predicted and upwind momenta, number density / energy density fluxes
+   real                            :: n_tot, n_tot0, e_tot, e_tot0        !> precision control for energy / number density transport and dissipation of energy
+   real                            :: u_b, u_d                            !> in-algorithm energy dissipation terms
+   real, allocatable, dimension(:) :: ndt, edt                            !> work array of number density and energy during algorithm execution
+   real, allocatable, dimension(:) :: n, e                                !> in-algorithm energy & number density
    real, allocatable, dimension(:) :: e_amplitudes_l, e_amplitudes_r
-! lower / upper energy needed for bin activation
-   real, dimension(LO:HI)          :: e_threshold
-! if one bin, switch off cutoff p approximation
-   integer, dimension(LO:HI)       :: approx_p
+   real,    dimension(LO:HI)       :: e_threshold                         !> lower / upper energy needed for bin activation
+   integer, dimension(LO:HI)       :: approx_p                            !> if one bin, switch off cutoff p approximation
+   integer, dimension(LO:HI)       :: max_ic                              !> maximum i_cut
 
    integer(kind=4), dimension(LO:HI), parameter:: oz = [1,0], pm = [1,-1] !> auxiliary vectors /todo to be renamed
 
@@ -486,8 +475,8 @@ contains
       has_n_gt_zero(:) = .false. ; has_e_gt_zero(:)  = .false.
       is_active_bin(:) = .false. ; is_active_edge(:) = .false.
       num_has_gt_zero  = I_ZERO  ; num_active_bins   = I_ZERO
-      pre_i_cut = [I_ZERO, ncre]
-      i_cut     = [I_ZERO, ncre]
+      pre_i_cut = max_ic
+      i_cut     = max_ic
       if (allocated(nonempty_bins)) deallocate(nonempty_bins)
       if (allocated(active_bins))   deallocate(active_bins)
       if (allocated(active_edges))  deallocate(active_edges)
@@ -564,7 +553,7 @@ contains
          do i = I_ONE, ncre
             is_active_bin(i) = ((e_amplitudes_r(i) > e_small .or. e_amplitudes_l(i) > e_small ) .and. (e(i) > zero .and. n(i) > zero))
          enddo
-         pre_i_cut = [I_ZERO, ncre]
+         pre_i_cut = max_ic
 
          do i = I_ONE, ncre
             pre_i_cut(LO) = i
@@ -907,7 +896,7 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_init_state(init_n, init_e, sptab)
 
-      use constants, only: zero, I_ONE
+      use constants, only: zero, I_ZERO, I_ONE
       use cresp_NR_method, only: e_small_to_f
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
@@ -924,6 +913,7 @@ contains
       real                                      :: c
       logical                                   :: exit_code
 
+      max_ic = [I_ZERO, ncre]
       fail_count_interpol = 0
       fail_count_NR_2dim  = 0
       fail_count_comp_q   = 0
@@ -960,7 +950,7 @@ contains
          enddo
       enddo
 
-      i_cut = [0, ncre]
+      i_cut = max_ic
 
 ! we only need cresp_init_state to derive (n, e) from initial (f, p_cut). For this purpose only 'active bins', i_cut are needed.
 
