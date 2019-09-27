@@ -107,14 +107,12 @@ module initcrspectrum
 
 ! Types used in module:
    type bin_old
-      integer                        :: i_lo
-      integer                        :: i_up
-      real, allocatable,dimension(:) :: p
-      real, allocatable,dimension(:) :: f
-      real, allocatable,dimension(:) :: q
-      real, allocatable,dimension(:) :: e
-      real, allocatable,dimension(:) :: n
-      real                           :: dt
+      integer,           dimension(2) :: i_cut
+      real, allocatable, dimension(:) :: p
+      real, allocatable, dimension(:) :: f
+      real, allocatable, dimension(:) :: q
+      real, allocatable, dimension(:) :: e
+      real, allocatable, dimension(:) :: n
    end type bin_old
 
    type cr_spectrum
@@ -582,8 +580,7 @@ module initcrspectrum
       crel%f = zero
       crel%e = zero
       crel%n = zero
-      crel%i_lo = I_ZERO
-      crel%i_up = I_ZERO
+      crel%i_cut = I_ZERO
 
    end subroutine init_crel
 !----------------------------------------------------------------------------------------------------

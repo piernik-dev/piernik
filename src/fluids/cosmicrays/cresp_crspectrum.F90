@@ -150,8 +150,7 @@ contains
             crel%q = zero
             crel%e = zero
             crel%n = zero
-            crel%i_lo = 0
-            crel%i_up = ncre
+            crel%i_cut = max_ic
          endif
       endif
 
@@ -324,8 +323,7 @@ contains
          crel%q = q
          crel%e = e
          crel%n = n
-         crel%i_lo = i_cut(LO)
-         crel%i_up = i_cut(HI)
+         crel%i_cut = i_cut
       endif
 
       n_inout = n  ! number density of electrons per bin passed back to the external module
@@ -935,9 +933,8 @@ contains
 ! reading initial values of p_cut
       p_cut = p_init
 
-      p       = p_fix       ! actual array of p including free edges, p_fix shared via initcrspectrum
-      p(0)    = p_cut(LO)
-      p(ncre) = p_cut(HI)
+      p         = p_fix       ! actual array of p including free edges, p_fix shared via initcrspectrum
+      p(max_ic) = p_cut
 
 ! Sorting bin edges - arbitrary chosen p_cut may need to be sorted to appear in growing order
       do k = ncre, 1, -1
@@ -1061,8 +1058,7 @@ contains
          crel%q = q
          crel%e = e
          crel%n = n
-         crel%i_lo = i_cut(LO)
-         crel%i_up = i_cut(HI)
+         crel%i_cut = i_cut
       endif
 
       if (master) call check_init_spectrum(f(i_cut(LO)), f(i_cut(HI)-1))
@@ -1142,21 +1138,20 @@ contains
       ic = get_i_cut(p_init)
 
       p_range_add(ic(LO):ic(HI)) = p_fix(ic(LO):ic(HI))
-      p_range_add(ic(LO)) = p_init(LO)
-      p_range_add(ic(HI)) = p_init(HI)
+      p_range_add(ic)            = p_init
 
       f(ic(LO):ic(HI)) = f_init * (p_range_add(ic(LO):ic(HI))/p_init(LO))**(-q_init)
       q(ic(LO):ic(HI)) = q_init
 
       if (.not.allocated(act_bins )) allocate( act_bins(ic(HI) - ic(LO)+1))
-      act_bins  =   cresp_all_bins(ic(LO)+1:ic(HI))
+      act_bins = cresp_all_bins(ic(LO)+1:ic(HI))
 
       lpl = log10(p_init(LO))
       lpb = log10(p_br_init(LO))
       lp_lpb = lpl / lpb
 
       a = -q_init
-      b = log10(f_init * (p_init(LO))**(q_init))
+      b = log10(f_init * p_init(LO)**q_init)
 
       c_3 =  (-three * lpl + log10(e_small / fpcc) + b * lp_lpb - a * lpl - two * b * lp_lpb ) / (lp_lpb - one)**two
       c_1 =  (c_3 - b) / lpb**two

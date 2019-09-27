@@ -150,7 +150,7 @@ module cresp_grid
                   p4(iarr_cre_e, i, j, k) = cresp%e
                   if (dfpq%any_dump) then
                      if (dfpq%dump_f) cg%w(wna%ind(dfpq%f_nam))%arr(:, i, j, k) = crel%f
-                     if (dfpq%dump_p) cg%w(wna%ind(dfpq%p_nam))%arr(:, i, j, k) = [crel%p(crel%i_lo), crel%p(crel%i_up)]
+                     if (dfpq%dump_p) cg%w(wna%ind(dfpq%p_nam))%arr(:, i, j, k) = crel%p(crel%i_cut)
                      if (dfpq%dump_q) cg%w(wna%ind(dfpq%q_nam))%arr(:, i, j, k) = crel%q
                   endif
                enddo
