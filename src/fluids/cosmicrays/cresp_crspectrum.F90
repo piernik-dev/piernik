@@ -356,25 +356,20 @@ contains
    end subroutine manually_deactivate_bin_via_transfer
 
 !----------------------------------------------------------------------------------------------------
-   subroutine detect_clean_spectrum(ext_n, ext_e, empty_cell) ! DEPRECATED
+   subroutine detect_clean_spectrum ! DEPRECATED
 
-      use initcosmicrays, only: ncre
-      use initcrspectrum, only: nullify_empty_bins
+      use initcrspectrum, only: cresp
 
       implicit none
 
-      real, dimension(ncre), intent(inout) :: ext_n, ext_e
-      logical,               intent(inout) :: empty_cell
+      logical :: empty_cell
 
-      call find_i_bound(ext_n, ext_e, empty_cell)
+      call find_i_bound(empty_cell)
 
       if (empty_cell) then
-         if (nullify_empty_bins) then
-            call nullify_all_bins(ext_n, ext_e)
-         endif
-      endif
-      if (nullify_empty_bins) then
-         call nullify_inactive_bins(ext_n, ext_e)
+         call nullify_all_bins(cresp%n, cresp%e)
+      else
+         call nullify_inactive_bins(cresp%n, cresp%e)
       endif
 
    end subroutine detect_clean_spectrum
@@ -414,24 +409,24 @@ contains
 !-------------------------------------------------------------------------------------------------
 ! all the procedures below are called by cresp_update_cell subroutine or the driver
 !-------------------------------------------------------------------------------------------------
-   subroutine find_i_bound(ext_n, ext_e, empty_cell) ! DEPRECATED
+   subroutine find_i_bound(empty_cell) ! DEPRECATED
 
       use constants,      only: zero
       use initcosmicrays, only: ncre
+      use initcrspectrum, only: cresp
 
       implicit none
 
-      real, dimension(ncre), intent(inout) :: ext_n, ext_e
-      logical,               intent(out)   :: empty_cell
-      integer(kind=4)                      :: i
+      logical, intent(out) :: empty_cell
+      integer(kind=4)      :: i
 
       empty_cell = .true.
 
       i_cut(LO) = 0
       do i = 1, ncre                        ! if energy density is nonzero, so should be the number density
          i_cut(LO) = i-1
-         if (ext_e(i) > e_threshold(LO)) then
-           if (ext_n(i) > zero) then
+         if (cresp%e(i) > e_threshold(LO)) then
+           if (cresp%n(i) > zero) then
               empty_cell = .false.
               exit
            endif
@@ -443,8 +438,8 @@ contains
      i_cut(HI) = ncre
      do i = ncre, 1,-1
         i_cut(HI) = i
-        if (ext_e(i) > e_threshold(HI)) then   ! if energy density is nonzero, so should be the number density
-           if (ext_n(i) > zero) exit
+        if (cresp%e(i) > e_threshold(HI)) then   ! if energy density is nonzero, so should be the number density
+           if (cresp%n(i) > zero) exit
         endif
      enddo
 

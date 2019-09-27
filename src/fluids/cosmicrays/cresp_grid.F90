@@ -111,7 +111,6 @@ module cresp_grid
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr
-      use named_array,      only: p4
       use named_array_list, only: qna, wna
 #ifdef DEBUG
       use cresp_crspectrum, only: cresp_detect_negative_content
@@ -129,13 +128,12 @@ module cresp_grid
 
       do while (associated(cgl))
          cg => cgl%cg
-         p4 => cg%w(wna%fi)%arr
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
                   sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
-                  cresp%n    = p4(iarr_cre_n, i, j, k)
-                  cresp%e    = p4(iarr_cre_e, i, j, k)
+                  cresp%n = cg%u(iarr_cre_n, i, j, k)
+                  cresp%e = cg%u(iarr_cre_e, i, j, k)
                   if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr    !< WARNING assusmes that b is in mGs
                   if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k]) * onet
 #ifdef CRESP_VERBOSED
@@ -146,8 +144,8 @@ module cresp_grid
                   call cresp_detect_negative_content([i, j, k])
 #endif /* DEBUG */
                   if (cfl_cresp_violation) return ! nothing to do here!
-                  p4(iarr_cre_n, i, j, k) = cresp%n
-                  p4(iarr_cre_e, i, j, k) = cresp%e
+                  cg%u(iarr_cre_n, i, j, k) = cresp%n
+                  cg%u(iarr_cre_e, i, j, k) = cresp%e
                   if (dfpq%any_dump) then
                      if (dfpq%dump_f) cg%w(wna%ind(dfpq%f_nam))%arr(:, i, j, k) = crel%f
                      if (dfpq%dump_p) cg%w(wna%ind(dfpq%p_nam))%arr(:, i, j, k) = crel%p(crel%i_cut)
@@ -156,8 +154,6 @@ module cresp_grid
                enddo
             enddo
          enddo
-         cg%u(iarr_cre_n, :,:,:) = p4(iarr_cre_n, :,:,:)
-         cg%u(iarr_cre_e, :,:,:) = p4(iarr_cre_e, :,:,:)
          cgl=>cgl%nxt
       enddo
 
@@ -173,38 +169,31 @@ module cresp_grid
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: cresp, nullify_empty_bins
-      use named_array,      only: p4
-      use named_array_list, only: wna
 
       implicit none
 
       integer                        :: i, j, k
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      logical                        :: empty_cell
 
       if (.not.nullify_empty_bins) return
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         p4 => cg%w(wna%fi)%arr
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  cresp%n    = p4(iarr_cre_n, i, j, k)
-                  cresp%e    = p4(iarr_cre_e, i, j, k)
-                  empty_cell = .true.
+                  cresp%n = cg%u(iarr_cre_n, i, j, k)
+                  cresp%e = cg%U(iarr_cre_e, i, j, k)
 
-                  call detect_clean_spectrum(cresp%n, cresp%e, empty_cell)
+                  call detect_clean_spectrum
 
-                  p4(iarr_cre_n, i, j, k) = cresp%n
-                  p4(iarr_cre_e, i, j, k) = cresp%e
+                  cg%u(iarr_cre_n, i, j, k) = cresp%n
+                  cg%u(iarr_cre_e, i, j, k) = cresp%e
                enddo
             enddo
          enddo
-         cg%u(iarr_cre_n, :,:,:) = p4(iarr_cre_n, :,:,:)
-         cg%u(iarr_cre_e, :,:,:) = p4(iarr_cre_e, :,:,:)
          cgl=>cgl%nxt
       enddo
 

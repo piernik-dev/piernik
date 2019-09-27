@@ -116,8 +116,8 @@ module initcrspectrum
    end type bin_old
 
    type cr_spectrum
-      real, allocatable,dimension(:) :: e
-      real, allocatable,dimension(:) :: n
+      real, allocatable, dimension(:) :: e
+      real, allocatable, dimension(:) :: n
    end type cr_spectrum
 
    type(cr_spectrum) :: cresp
