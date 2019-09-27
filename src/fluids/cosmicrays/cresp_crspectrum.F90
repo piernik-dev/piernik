@@ -96,6 +96,8 @@ module cresp_crspectrum
 ! if one bin, switch off cutoff p approximation
    integer, dimension(LO:HI)       :: approx_p
 
+   integer(kind=4), dimension(LO:HI), parameter:: oz = [1,0], pm = [1,-1] !> auxiliary vectors /todo to be renamed
+
    abstract interface
       real function function_pointer_1D(x,y)
          real, intent(in) :: x, y
@@ -631,8 +633,8 @@ contains
 ! Construct index arrays for fixed edges betwen p_cut(LO) and p_cut(HI), active edges
 ! before timestep
 
-         call arrange_assoc_active_edge_arrays(fixed_edges,  is_fixed_edge,  num_fixed_edges,  [i_cut(LO)+I_ONE, i_cut(HI)-I_ONE])
-         call arrange_assoc_active_edge_arrays(active_edges, is_active_edge, num_active_edges, [i_cut(LO),       i_cut(HI)])
+         call arrange_assoc_active_edge_arrays(fixed_edges,  is_fixed_edge,  num_fixed_edges,  i_cut+pm)
+         call arrange_assoc_active_edge_arrays(active_edges, is_active_edge, num_active_edges, i_cut   )
 
 #ifdef CRESP_VERBOSED
          write (msg, "(2(A9,i3))") "i_lo =", i_cut(LO), ", i_up = ", i_cut(HI)    ; call printinfo(msg)
@@ -1807,14 +1809,8 @@ contains
       real, dimension(1:2)         :: x_NR, x_NR_init
       logical                      :: interpolated
 
-      select case (cutoff)
-         case (LO)
-            ipfix = i_cut(cutoff) + 1
-            qi    = i_cut(cutoff) + 1
-         case (HI)
-            ipfix = i_cut(cutoff) - 1
-            qi    = i_cut(cutoff)
-      end select
+      ipfix = i_cut(cutoff) + pm(cutoff)
+      qi    = i_cut(cutoff) + oz(cutoff)
       call assoc_pointers(cutoff)
 
       alpha = e(qi)/(n(qi) * p_fix(ipfix) * clight_cresp)
