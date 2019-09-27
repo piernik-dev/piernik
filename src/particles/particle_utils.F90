@@ -207,89 +207,82 @@ contains
 
       implicit none
 
-      integer                            :: cdim, k, count, count2, count3, d
-      integer,          dimension(ndims) :: tmp
-      real, dimension(ndims,2)           :: bnd1,bnd2
-      real, dimension(ndims), intent(in) :: pos
-      type(cg_list_element), pointer     :: cgl
-      logical                            :: in, phy, out
+      real, dimension(ndims), intent(in)  :: pos
+      logical,                intent(out) :: in, phy, out
+      integer                             :: cdim, k, count, count2, count3
+      integer, dimension(ndims)           :: tmp
+      real, dimension(ndims,2)            :: bnd1, bnd2
+      type(cg_list_element), pointer      :: cgl
 
-      in=.false.
-      phy=.false.
-      out=.false.
+      in  = .false.
+      phy = .false.
+      out = .false.
       !ghost=.false.
       cgl => leaves%first
       do while (associated(cgl))
 
          !There is probably a better way to write this
-         bnd1(:,1)=[cgl%cg%coord(LEFT,xdim)%r(cgl%cg%lh1(xdim,LO)), cgl%cg%coord(LEFT,ydim)%r(cgl%cg%lh1(ydim,LO)), cgl%cg%coord(LEFT,zdim)%r(cgl%cg%lh1(zdim,LO))]
-         bnd1(:,2)=[cgl%cg%coord(RIGHT,xdim)%r(cgl%cg%lh1(xdim,HI)), cgl%cg%coord(RIGHT,ydim)%r(cgl%cg%lh1(ydim,HI)), cgl%cg%coord(RIGHT,zdim)%r(cgl%cg%lh1(zdim,HI))]
+         bnd1(:,1) = [cgl%cg%coord(LEFT, xdim)%r(cgl%cg%lh1(xdim,LO)), cgl%cg%coord(LEFT, ydim)%r(cgl%cg%lh1(ydim,LO)), cgl%cg%coord(LEFT, zdim)%r(cgl%cg%lh1(zdim,LO))]
+         bnd1(:,2) = [cgl%cg%coord(RIGHT,xdim)%r(cgl%cg%lh1(xdim,HI)), cgl%cg%coord(RIGHT,ydim)%r(cgl%cg%lh1(ydim,HI)), cgl%cg%coord(RIGHT,zdim)%r(cgl%cg%lh1(zdim,HI))]
 
-         bnd2(:,1)=[cgl%cg%coord(LEFT,xdim)%r(cgl%cg%ijkse(xdim,LO)+I_ONE), cgl%cg%coord(LEFT,ydim)%r(cgl%cg%ijkse(ydim,LO)+I_ONE), cgl%cg%coord(LEFT,zdim)%r(cgl%cg%ijkse(zdim,LO)+I_ONE)]
-         bnd2(:,2)=[cgl%cg%coord(RIGHT,xdim)%r(cgl%cg%ijkse(xdim,HI)-I_ONE), cgl%cg%coord(RIGHT,ydim)%r(cgl%cg%ijkse(ydim,HI)-I_ONE), cgl%cg%coord(RIGHT,zdim)%r(cgl%cg%ijkse(zdim,HI)-I_ONE)]
+         bnd2(:,1) = [cgl%cg%coord(LEFT, xdim)%r(cgl%cg%ijkse(xdim,LO)+I_ONE), cgl%cg%coord(LEFT, ydim)%r(cgl%cg%ijkse(ydim,LO)+I_ONE), cgl%cg%coord(LEFT, zdim)%r(cgl%cg%ijkse(zdim,LO)+I_ONE)]
+         bnd2(:,2) = [cgl%cg%coord(RIGHT,xdim)%r(cgl%cg%ijkse(xdim,HI)-I_ONE), cgl%cg%coord(RIGHT,ydim)%r(cgl%cg%ijkse(ydim,HI)-I_ONE), cgl%cg%coord(RIGHT,zdim)%r(cgl%cg%ijkse(zdim,HI)-I_ONE)]
 
 
-         if (particle_in_area(pos, bnd2)) then
-            in=.true.
-         endif
-         if (particle_in_area(pos, cgl%cg%fbnd)) then
-            phy=.true.
-         endif
+         if (particle_in_area(pos, bnd2))        in  = .true.
+         if (particle_in_area(pos, cgl%cg%fbnd)) phy = .true.
          !Ghost particle
-         if (particle_in_area(pos,bnd1)) then
-            out=.true.
-         endif
+         if (particle_in_area(pos,bnd1))         out=.true.
+
          if (.not. particle_in_area(pos, dom%edge)) then
-            count2=0
-            do cdim=xdim, zdim
-               if (pos(cdim) < dom%edge(cdim,LO))   then
+            count2 = 0
+            do cdim = xdim, zdim
+               if (pos(cdim) < dom%edge(cdim,LO)) then
                   count2 = count2 + 1
-                  tmp(cdim)=LO
+                  tmp(cdim) = LO
                else if (pos(cdim) > dom%edge(cdim,HI)) then
                   count2 = count2 + 1
-                  tmp(cdim)=HI
+                  tmp(cdim) = HI
                else
-                  tmp(cdim)=0
+                  tmp(cdim) = 0
                endif
             enddo
 
             !CORNER
-            if (count2==3) then
-               count3=0
-               do cdim=xdim, zdim
+            if (count2 == 3) then
+               count3 = 0
+               do cdim = xdim, zdim
                   if (cgl%cg%fbnd(cdim,tmp(cdim)) == dom%edge(cdim,tmp(cdim))) count3 = count3 + 1
                enddo
-               if (count3==3) then
-                  phy=.true.
-               endif
+               if (count3 == 3) phy = .true.
                return
 
             !EDGE
-            else if (count2==2) then
-               do cdim=xdim, zdim
-                  if (tmp(cdim)/=0) then
+            else if (count2 == 2) then
+               do cdim = xdim, zdim
+                  if (tmp(cdim) /= 0) then
                      if (cgl%cg%fbnd(cdim,tmp(cdim)) /= dom%edge(cdim,tmp(cdim))) return
                   else
                      if ( (pos(cdim) < cgl%cg%fbnd(cdim,LO)) .or. (pos(cdim) > cgl%cg%fbnd(cdim,HI)) ) return
                   endif
                enddo
-               phy=.true.
+               phy = .true.
                return
 
             !FACE
             else
-               do cdim=xdim,zdim
+               do cdim = xdim, zdim
                   if ( ((pos(cdim) < dom%edge(cdim,LO)) .and. (cgl%cg%fbnd(cdim,LO) == dom%edge(cdim,LO))) .or. (((pos(cdim) > dom%edge(cdim,HI)) .and. (cgl%cg%fbnd(cdim,HI) == dom%edge(cdim,HI)))) ) then
-                     count=0
-                     do k=xdim, zdim
+                     count = 0
+                     do k = xdim, zdim
                         if (k /= cdim) then
                            if ( (pos(k) > cgl%cg%fbnd(k,LO)) .and. (pos(k) < cgl%cg%fbnd(k,HI)) ) then
                               count = count + 1
                            endif
                         endif
                      enddo
-                     if ( count == 2 ) then
-                        phy=.true.
+                     if (count == 2) then
+                        phy =.true.
                         return
                      endif
                   endif
@@ -328,8 +321,8 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         call is_part_in_cg(pos,in,phy,out)
-         if ((phy) .or. (out)) then
+         call is_part_in_cg(pos, in, phy, out)
+         if (phy .or. out) then
             call printinfo(msg)
 #ifdef NBODY
             call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out)
@@ -345,87 +338,82 @@ contains
 
    end subroutine add_part_in_proper_cg
 
-   subroutine part_leave_cg(cg,part_info,ind)
+   subroutine part_leave_cg(cg, part_info, ind)
 
-     use constants,      only: xdim, zdim, ndims
-     use grid_cont,      only: grid_container
+     use constants, only: xdim, zdim
+     use grid_cont, only: grid_container
 
      implicit none
 
-     type(grid_container),    intent(inout) :: cg
-     real,             intent(inout)        :: part_info(:,:)
-     integer                                :: i,j,cdim, pid, ind,npart,k
-     real,                 dimension(ndims) :: pos, vel, acc
-     real                                   :: mass,ener
-     integer, dimension(:), allocatable   :: pdel
+     type(grid_container), intent(inout) :: cg
+     real, dimension(:,:), intent(inout) :: part_info
+     integer,              intent(inout) :: ind
+     integer                             :: i, k, cdim, npart
+     integer, dimension(:), allocatable  :: pdel
 
-
-     npart=size(cg%pset%p,dim=1)
+     npart = size(cg%pset%p,dim=1)
      allocate(pdel(npart))
-     pdel=0
-     do i=1,npart
+     pdel = 0
+     do i = 1, npart
         if (.not. cg%pset%p(i)%in) then
-           part_info(ind,1)=cg%pset%p(i)%pid
-           part_info(ind,2)=cg%pset%p(i)%mass
-           do cdim=xdim,zdim
-              part_info(ind,2+cdim)=cg%pset%p(i)%pos(cdim)
-              part_info(ind,5+cdim)=cg%pset%p(i)%vel(cdim)
-              part_info(ind,8+cdim)=cg%pset%p(i)%acc(cdim)
-              part_info(ind,12)=cg%pset%p(i)%energy
+           part_info(ind,1) = cg%pset%p(i)%pid
+           part_info(ind,2) = cg%pset%p(i)%mass
+           do cdim = xdim, zdim
+              part_info(ind,2+cdim) = cg%pset%p(i)%pos(cdim)
+              part_info(ind,5+cdim) = cg%pset%p(i)%vel(cdim)
+              part_info(ind,8+cdim) = cg%pset%p(i)%acc(cdim)
+              part_info(ind,12)     = cg%pset%p(i)%energy
            enddo
-           if (.not. cg%pset%p(i)%out) then
-              pdel(i)=1
-           endif
-           ind=ind+1
+           if (.not. cg%pset%p(i)%out) pdel(i) = 1
+           ind = ind + 1
         endif
      enddo
 
-     k=1
-     do i=1, npart
+     k = 1
+     do i = 1, npart
         if (pdel(i)==1) then
            call cg%pset%remove(k)
         else
-           k=k+1
+           k = k + 1
         endif
      enddo
      deallocate(pdel)
 
-
    end subroutine part_leave_cg
 
+   subroutine reattrib_part_cg(cg, part_info, nmove)
 
-   subroutine reattrib_part_cg(cg,part_info,nmove)
-
-     use constants,      only: ndims
-     use grid_cont,      only: grid_container
+     use constants, only: ndims
+     use grid_cont, only: grid_container
 
      implicit none
 
-     type(grid_container),    intent(inout) :: cg
-     logical                                :: in, phy,out,already
-     real,            intent(inout)         :: part_info(:,:)
-     integer                                :: i,cdim, pid, nmove,j
-     real,                 dimension(ndims) :: pos, vel, acc
-     real                                   :: mass,ener
+     type(grid_container), intent(inout) :: cg
+     real, dimension(:,:), intent(inout) :: part_info
+     integer,              intent(in)    :: nmove
+     logical                             :: in, phy, out, already
+     integer                             :: i, j, pid
+     real, dimension(ndims)              :: pos, vel, acc
+     real                                :: mass, ener
 
-     do i=1,nmove
-        if (part_info(i,1)/=0.) then
-           pos=part_info(i,3:5)
+     do i = 1, nmove
+        if (part_info(i,1) /= 0.) then
+           pos = part_info(i,3:5)
            call is_part_in_cg(pos, in, phy, out)
            if (out) then
-              pid=part_info(i,1)
-              already=.false.
-              do j=1,size(cg%pset%p,dim=1)
-                 if (pid==cg%pset%p(j)%pid) then
-                    already=.true.
+              pid = part_info(i,1)
+              already = .false.
+              do j = 1, size(cg%pset%p,dim=1)
+                 if (pid == cg%pset%p(j)%pid) then
+                    already = .true.
                     exit
                  endif
               enddo
               if (.not. already) then
-                 mass=part_info(i,2)
-                 vel=part_info(i,6:8)
-                 acc=part_info(i,9:11)
-                 ener=part_info(i,12)
+                 mass = part_info(i,2)
+                 vel  = part_info(i,6:8)
+                 acc  = part_info(i,9:11)
+                 ener = part_info(i,12)
                  call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out)
               endif
            endif
@@ -434,21 +422,20 @@ contains
 
    end subroutine reattrib_part_cg
 
-
-
-   function count_all_particles() result(pcount)
+   integer(kind=4) function count_all_particles() result(pcount)
 
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
+
       implicit none
 
-      integer(kind=4)                :: pcount,i
+      integer(kind=4)                :: i
       type(cg_list_element), pointer :: cgl
 
       pcount = 0
       cgl => leaves%first
       do while (associated(cgl))
-         do i=1,size(cgl%cg%pset%p, dim=1, kind=4)
+         do i = 1, size(cgl%cg%pset%p, dim=1, kind=4)
             if (cgl%cg%pset%p(i)%phy) pcount = pcount + 1
          enddo
          cgl => cgl%nxt

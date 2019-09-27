@@ -179,7 +179,7 @@ contains
 #ifdef NBODY
       real, dimension(:),  intent(in)    :: acc      !< particle acceleration
       real,                intent(in)    :: energy   !< total energy of particle
-      logical                            :: in,phy,out
+      logical                            :: in, phy, out
 
       call this%add(particle(pid, mass, pos, vel, acc, energy, .false., in, phy, out))
 #else /* !NBODY */

@@ -69,7 +69,7 @@ module particles_io_hdf5
 
    subroutine write_nbody_hdf5(fname)
 
-      use common_hdf5, only: set_common_attributes
+      use common_hdf5,    only: set_common_attributes
       use constants,      only: cwdlen, tmr_hdf, idlen
       use dataio_pub,     only: msg, printinfo, printio, thdf
       use hdf5,           only: h5open_f, h5close_f, h5fcreate_f, h5fclose_f, HID_T, H5F_ACC_TRUNC_F
@@ -206,15 +206,15 @@ module particles_io_hdf5
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgnp=0
+         cgnp = 0
          select case (pvar)
-         case ('ppid')
-            do i=1, size(cgl%cg%pset%p, dim=1)
-               if (cgl%cg%pset%p(i)%phy) then
-                  cgnp = cgnp + 1
-                  tabi1(recnp+cgnp) = cgl%cg%pset%p(i)%pid
-               endif
-            enddo
+            case ('ppid')
+               do i = 1, size(cgl%cg%pset%p, dim=1)
+                  if (cgl%cg%pset%p(i)%phy) then
+                     cgnp = cgnp + 1
+                     tabi1(recnp+cgnp) = cgl%cg%pset%p(i)%pid
+                  endif
+               enddo
                !tabi1(recnp+1:recnp+cgnp) = cgl%cg%pset%p(:)%pid
             case default
          end select
@@ -238,7 +238,7 @@ module particles_io_hdf5
       integer(HID_T),   intent(in)    :: file_id       !< File identifier
       character(len=*), intent(in)    :: pvar
       integer(kind=4),  intent(in)    :: n_part
-      integer                         :: cgnp, recnp,i
+      integer                         :: cgnp, recnp, i
       real, dimension(:), allocatable :: tabr1
       type(cg_list_element), pointer  :: cgl
 
@@ -248,16 +248,16 @@ module particles_io_hdf5
       cgl => leaves%first
       do while (associated(cgl))
          !cgnp = size(cgl%cg%pset%p, dim=1)
-         cgnp=0
-         do i=1, size(cgl%cg%pset%p, dim=1)
+         cgnp = 0
+         do i = 1, size(cgl%cg%pset%p, dim=1)
             if (cgl%cg%pset%p(i)%phy) then
                cgnp = cgnp + 1
                select case (pvar)
-               case ('mass')
-                  tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%mass
-               case ('ener')
-                  tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%energy
-               case default
+                  case ('mass')
+                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%mass
+                  case ('ener')
+                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%energy
+                  case default
                end select
             endif
          enddo
@@ -299,21 +299,21 @@ module particles_io_hdf5
                do i = 1, cgnp
                   if (cgl%cg%pset%p(i)%phy) then
                      tabr2(recnp+j,:) = cgl%cg%pset%p(i)%pos(:)
-                     j=j+1
+                     j = j + 1
                   endif
                enddo
             case ('pvel')
                do i = 1, cgnp
                   if (cgl%cg%pset%p(i)%phy) then
                      tabr2(recnp+j,:) = cgl%cg%pset%p(i)%vel(:)
-                     j=j+1
+                     j = j + 1
                   endif
                enddo
             case ('pacc')
                do i = 1, cgnp
                   if (cgl%cg%pset%p(i)%phy) then
                      tabr2(recnp+j,:) = cgl%cg%pset%p(i)%acc(:)
-                     j=j+1
+                     j = j + 1
                   endif
                enddo
             case default

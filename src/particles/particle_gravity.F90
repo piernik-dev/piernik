@@ -60,7 +60,7 @@ contains
       integer                              :: n_part, p, k
       real,    dimension(:,:), allocatable :: dist
       integer, dimension(:,:), allocatable :: cells
-      integer, dimension(:), allocatable   :: pdel
+      integer, dimension(:),   allocatable :: pdel
 
 #ifdef VERBOSE
       call printinfo('[particle_gravity:update_particle_gravpot_and_acc] Commencing update of particle gravpot & acceleration')
@@ -249,30 +249,29 @@ contains
       real                                         :: Mtot
 
       ig = qna%ind(gpot_n)
-      Mtot=0
+      Mtot = 0
       do p = 1, n_part
          if (.not. cg%pset%p(p)%outside) Mtot = Mtot + cg%pset%p(p)%mass
       enddo
 
       do p = 1, n_part
-         pdel(p)=0
+         pdel(p) = 0
          if (.not. cg%pset%p(p)%outside) then
             dpot(p) = df_d_o2([cells(p, :)], cg, ig, xdim) * dist(p, xdim) + &
-                   df_d_o2([cells(p, :)], cg, ig, ydim) * dist(p, ydim) + &
-                   df_d_o2([cells(p, :)], cg, ig, zdim) * dist(p, zdim)
+                      df_d_o2([cells(p, :)], cg, ig, ydim) * dist(p, ydim) + &
+                      df_d_o2([cells(p, :)], cg, ig, zdim) * dist(p, zdim)
 
             d2pot(p) = d2f_d2_o2([cells(p, :)], cg, ig, xdim) * dist(p, xdim)**2 + &
-                    d2f_d2_o2([cells(p, :)], cg, ig, ydim) * dist(p, ydim)**2 + &
-                    d2f_d2_o2([cells(p, :)], cg, ig, zdim) * dist(p, zdim)**2 + &
-                two*d2f_dd_o2([cells(p, :)], cg, ig, xdim, ydim) * dist(p, xdim)*dist(p, ydim) + &
-                two*d2f_dd_o2([cells(p, :)], cg, ig, xdim, zdim) * dist(p, xdim)*dist(p, zdim)
-            cg%pset%p(p)%energy = cg%pset%p(p)%mass * &
-                 ( cg%q(ig)%point(cells(p,:)) + dpot(p) + half * d2pot(p) )
+                       d2f_d2_o2([cells(p, :)], cg, ig, ydim) * dist(p, ydim)**2 + &
+                       d2f_d2_o2([cells(p, :)], cg, ig, zdim) * dist(p, zdim)**2 + &
+                 two * d2f_dd_o2([cells(p, :)], cg, ig, xdim, ydim) * dist(p, xdim)*dist(p, ydim) + &
+                 two * d2f_dd_o2([cells(p, :)], cg, ig, xdim, zdim) * dist(p, xdim)*dist(p, zdim)
+            cg%pset%p(p)%energy = cg%pset%p(p)%mass * (cg%q(ig)%point(cells(p,:)) + dpot(p) + half * d2pot(p))
          else
-            cg%pset%p(p)%energy = - newtong * cg%pset%p(p)%mass * Mtot / norm2(cg%pset%p(p)%pos(:))
-            if ((abs(cg%pset%p(p)%energy) .lt.  half * cg%pset%p(p)%mass * norm2(cg%pset%p(p)%vel(:)) **2)) then
-               pdel(p)=1
-               cg%pset%p(p)%energy=0.
+            cg%pset%p(p)%energy = -newtong * cg%pset%p(p)%mass * Mtot / norm2(cg%pset%p(p)%pos(:))
+            if ((abs(cg%pset%p(p)%energy) < half * cg%pset%p(p)%mass * norm2(cg%pset%p(p)%vel(:)) **2)) then
+               pdel(p) = 1
+               cg%pset%p(p)%energy = 0.
             endif
 
          endif
@@ -460,7 +459,7 @@ contains
 
             if (part%outside) then
             ! multipole expansion for particles outside domain
-               tmp=[0,0,1,0,0]
+               tmp = [0, 0, 1, 0, 0]
                do cdim = xdim, zdim
                   fxyz(cdim) =   - ( moments2pot( part%pos(xdim) + cg%dl(xdim) * tmp(cdim+2), &
                                  part%pos(ydim) + cg%dl(ydim) * tmp(cdim+1), part%pos(zdim) + cg%dl(zdim) * tmp(cdim) ) - &
@@ -479,7 +478,7 @@ contains
 
             do cdim = xdim, zdim
                if (dom%has_dir(cdim)) then
-                  ijkp(cdim, I0) = nint((part%pos(cdim) - cg%fbnd(cdim,LO)-cg%dl(cdim)/2.) *cg%idl(cdim) + int(cg%lhn(cdim, LO)) + 4, kind=4)
+                  ijkp(cdim, I0) = nint((part%pos(cdim) - cg%fbnd(cdim,LO)-cg%dl(cdim)/2.) * cg%idl(cdim) + int(cg%lhn(cdim, LO)) + 4, kind=4)
                   ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cg%lhn(cdim, LO)))
                   ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cg%lhn(cdim, HI)))
                else
