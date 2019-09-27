@@ -38,7 +38,7 @@ module cresp_NR_method
    implicit none
 
    private
-   public :: alpha, assoc_pointers, bound_name, cresp_initialize_guess_grids, compute_q, e_small_to_f, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios
+   public :: alpha, assoc_pointers, bound_name, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios
 
    integer, parameter                        :: ndim = 2
    real, allocatable, dimension(:)           :: p_space, q_space
@@ -1118,23 +1118,6 @@ contains
 
    end function n_func_2_zero
 
-!----------------------------------------------------------------------------------------------------
-! Here - relaying e_small to f via its relation with momentum
-!----------------------------------------------------------------------------------------------------
-   real function e_small_to_f(p_outer) ! used by variety of procedures and functions
-
-      use constants,       only: zero, three
-      use cresp_variables, only: fpcc
-      use initcrspectrum,  only: e_small
-
-      implicit none
-
-      real, intent(in) :: p_outer
-
-      e_small_to_f = zero
-      e_small_to_f = e_small / (fpcc * p_outer**three)
-
-   end function e_small_to_f
 !----------------------------------------------------------------------------------------------------
    real function bl_interpol(y11, y12, y21, y22, t, u) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.5
 

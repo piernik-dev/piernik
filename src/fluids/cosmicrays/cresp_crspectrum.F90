@@ -894,8 +894,8 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_init_state(init_n, init_e, sptab)
 
-      use constants, only: zero, I_ZERO, I_ONE
-      use cresp_NR_method, only: e_small_to_f
+      use constants,       only: zero, I_ZERO, I_ONE
+      use cresp_NR_method, only: bound_name
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
       use initcrspectrum,  only: spec_mod_trms, q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel,   &
@@ -906,7 +906,7 @@ contains
 
       real, dimension(I_ONE:ncre)               :: init_n, init_e
       type(spec_mod_trms), optional, intent(in) :: sptab
-      integer                                   :: i, k
+      integer                                   :: i, k, co
       integer, dimension(LO:HI)                 :: i_ch
       real                                      :: c
       logical                                   :: exit_code
@@ -953,17 +953,13 @@ contains
 
       i_cut = get_i_cut(p_cut)
 
-      if (abs(p_init(LO) - p_fix(i_cut(LO))) <= eps ) then
-         write(msg, *) "[cresp_crspectrum:cresp_init_state] p_init(LO) = p_fix(i_cut(LO)):  incrementing i_cut(LO) index to avoid FPE"
-         if (master) call warn(msg)
-         i_cut(LO) = i_cut(LO) + 1
-      endif
-
-      if (abs(p_init(HI) - p_fix(i_cut(HI)-1)) <= eps ) then
-         write(msg, *) "[cresp_crspectrum:cresp_init_state] p_init(HI) = p_fix(i_cut(HI)-1): decrementing i_cut(HI) index to avoid FPE"
-         if (master) call warn(msg)
-         i_cut(HI) = i_cut(HI) - 1
-      endif
+      do co = LO, HI
+         if (abs(p_init(co) - p_fix(i_cut(co)+oz(co)-1)) <= eps ) then
+            write(msg, *) "[cresp_crspectrum:cresp_init_state] p_init(",bound_name(co),") = p_fix(i_cut(",bound_name(co),"): (in/dec)crementing i_cut(",bound_name(co),") index to avoid FPE"
+            if (master) call warn(msg)
+            i_cut(co) = i_cut(co) + pm(co)
+         endif
+      enddo
 
       is_active_bin = .false.
       is_active_bin(i_cut(LO)+1:i_cut(HI)) = .true.
@@ -997,29 +993,22 @@ contains
       end select
 
       if (e_small_approx_init_cond > 0) then
-         call get_fqp_cutoff(LO, exit_code)
-         if (exit_code) then
-            write(msg,*) "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but solution for initial spectrum lower cutoff not found, exiting! "
-            call die(msg)
-         endif
-
-         call get_fqp_cutoff(HI, exit_code)
-         if (exit_code) then
-            write(msg,*) "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but solution for initial spectrum upper cutoff not found, exiting! "
-            call die(msg)
-         endif
+         do co = LO, HI
+            call get_fqp_cutoff(co, exit_code)
+            if (exit_code) then
+               write(msg,*) "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but solution for initial spectrum ",bound_name(co)," cutoff not found, exiting! "
+               call die(msg)
+            endif
+         enddo
 
          if (allow_source_spectrum_break) then
 
             i_ch = get_i_cut(p_cut)
 
-            f(i_ch(HI)) = e_small_to_f(p_cut(HI))
-            q(i_ch(HI)) = q(i_cut(HI))
-            p(i_ch(HI)) = p_cut(HI)
-
-            p(i_ch(LO)) = p_cut(LO)
+            p(i_ch)     = p_cut
+            q(i_ch+oz)  = q(i_cut+oz)
             f(i_ch(LO)) = e_small_to_f(p_cut(LO))
-            q(i_ch(LO)+1) = q(i_cut(LO)+1)
+            f(i_ch(HI)) = e_small_to_f(p_cut(HI))
 
             do i = i_ch(LO)+1, i_cut(LO)
                p(i) = p_fix(i)
@@ -1037,7 +1026,6 @@ contains
 #endif /* CRESP_VERBOSED */
 
             i_cut = i_ch
-            q(i_ch(HI))  = q(i_cut(HI)) !> \note is this proper or important?
             p(i_cut(HI)) = p_cut(HI)
 
             is_active_bin = .false.
@@ -1073,6 +1061,23 @@ contains
       call deallocate_active_arrays
 
    end subroutine cresp_init_state
+
+!>
+!! \brief relaying e_small to f via its relation with momentum
+!<
+   real function e_small_to_f(p_outer)
+
+      use constants,       only: three
+      use cresp_variables, only: fpcc
+      use initcrspectrum,  only: e_small
+
+      implicit none
+
+      real, intent(in) :: p_outer
+
+      e_small_to_f = e_small / (fpcc * p_outer**three)
+
+   end function e_small_to_f
 
 !>
 !! \brief Assumes power-law spectrum, without breaks. In principle the same thing is done in cresp_init_state, but init_state cannot be called from "outside".
@@ -1770,7 +1775,7 @@ contains
    subroutine get_fqp_cutoff(cutoff, exit_code)
 
       use constants,       only: zero, one, I_ONE, I_TWO, LO, HI
-      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers
+      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, q_ratios, assoc_pointers
       use cresp_variables, only: clight_cresp
 #ifdef CRESP_VERBOSED
       use cresp_NR_method, only: bound_name
