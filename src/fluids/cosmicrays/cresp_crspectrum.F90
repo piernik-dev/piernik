@@ -1350,7 +1350,7 @@ contains
       integer(kind=4)                    :: side
 
       do side = LO, HI
-         gic(side) = int(floor(log10(pc(side)/(w*p_fix(1))))) + side
+         gic(side) = int(floor(log10(pc(side)/p_fix(1))/w)) + side
          gic(side) = max(gic(side), side-1       )
          gic(side) = min(gic(side), ncre-oz(side))
       enddo
