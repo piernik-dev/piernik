@@ -690,7 +690,7 @@ contains
          f_one = n_in / (fpi*p_l**3)
 
          if (abs(q_one-three) > eps) then
-            f_one = f_one*(three - q_one) /(( p_r/p_l)**(three - q_one) - one)
+            f_one = f_one*(three - q_one) /((p_r/p_l)**(three - q_one) - one)
          else
             f_one = f_one/log(p_r/p_l)
          endif
@@ -779,7 +779,7 @@ contains
       use dataio_pub,     only: msg, printinfo
 #endif /* CRESP_VERBOSED */
       use initcosmicrays, only: ncre
-      use initcrspectrum, only: p_fix, w, cresp_all_bins, cresp_all_edges
+      use initcrspectrum, only: p_fix, cresp_all_bins, cresp_all_edges
 
       implicit none
 
@@ -795,13 +795,12 @@ contains
       call p_update(dt, p_cut(HI), p_cut_next(HI))
       p_cut_next = abs(p_cut_next)
 ! Compute likely cut-off indices after current timestep
-      i_cut_next(LO) = int(floor(log10(p_cut_next(LO)/p_fix(1))/w)) + 1
-      i_cut_next(LO) = max(0, i_cut_next(LO), i_cut(LO)-1)
-      i_cut_next(LO) = min(i_cut_next(LO), ncre - 1, i_cut(LO)+1)
+      i_cut_next = get_i_cut(p_cut_next)
+      i_cut_next(LO) = max(i_cut_next(LO), i_cut(LO)-1)
+      i_cut_next(LO) = min(i_cut_next(LO), i_cut(LO)+1)
 
-      i_cut_next(HI) = int(floor(log10(p_cut_next(HI)/p_fix(1))/w)) + 2
-      i_cut_next(HI) = max(1,i_cut_next(HI), i_cut(HI)-1)
-      i_cut_next(HI) = min(i_cut_next(HI), ncre, i_cut(HI)+1)
+      i_cut_next(HI) = max(i_cut_next(HI), i_cut(HI)-1)
+      i_cut_next(HI) = min(i_cut_next(HI), i_cut(HI)+1)
 
       if (p_cut_next(HI) < p_fix(i_cut_next(HI)-1)) then ! if no solution is found at the first try, approximation usually causes p_cut(HI) to jump
          dt_too_high = .true.                 ! towards higher values, which for sufficiently high dt can cause p_cut_next(HI) to even
@@ -912,7 +911,7 @@ contains
       use cresp_NR_method, only: e_small_to_f
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
-      use initcrspectrum,  only: spec_mod_trms, q_init, p_init, initial_spectrum, eps, p_fix, w, f_init, dfpq, crel,   &
+      use initcrspectrum,  only: spec_mod_trms, q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel,   &
                               &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins
       use mpisetup,        only: master
 
@@ -965,13 +964,7 @@ contains
 
 ! we only need cresp_init_state to derive (n, e) from initial (f, p_cut). For this purpose only 'active bins', i_cut are needed.
 
-      i_cut(LO) = int(floor(log10(p_cut(LO)/p_fix(1))/w)) + 1
-      i_cut(LO) = max(0, i_cut(LO))
-      i_cut(LO) = min(i_cut(LO), ncre - 1)
-
-      i_cut(HI) = int(floor(log10(p_cut(HI)/p_fix(1))/w)) + 2
-      i_cut(HI) = max(1, i_cut(HI))
-      i_cut(HI) = min(i_cut(HI), ncre)
+      i_cut = get_i_cut(p_cut)
 
       if (abs(p_init(LO) - p_fix(i_cut(LO))) <= eps ) then
          write(msg, *) "[cresp_crspectrum:cresp_init_state] p_init(LO) = p_fix(i_cut(LO)):  incrementing i_cut(LO) index to avoid FPE"
@@ -1031,13 +1024,7 @@ contains
 
          if (allow_source_spectrum_break) then
 
-            i_ch(LO) = int(floor(log10(p_cut(LO)/p_fix(1))/w)) + 1
-            i_ch(LO) = max(0, i_ch(LO))
-            i_ch(LO) = min(i_ch(LO), ncre - 1)
-
-            i_ch(HI) = int(floor(log10(p_cut(HI)/p_fix(1))/w)) + 2
-            i_ch(HI) = max(1, i_ch(HI))
-            i_ch(HI) = min(i_ch(HI), ncre)
+            i_ch = get_i_cut(p_cut)
 
             f(i_ch(HI)) = e_small_to_f(p_cut(HI))
             q(i_ch(HI)) = q(i_cut(HI))
@@ -1109,31 +1096,24 @@ contains
       use constants,      only: zero
       use diagnostics,    only: my_deallocate
       use initcosmicrays, only: ncre
-      use initcrspectrum, only: cresp_all_bins, cresp_all_edges, f_init, p_fix, p_init, q_init, w
+      use initcrspectrum, only: cresp_all_bins, cresp_all_edges, f_init, p_fix, p_init, q_init
 
       implicit none
 
       real, dimension(0:ncre)                    :: p_range_add
       integer(kind=4), allocatable, dimension(:) :: act_bins, act_edges
-      integer(kind=4)                            :: i_l, i_u
+      integer(kind=4), dimension(LO:HI)          :: ic
 
       p_range_add = zero
+      ic = get_i_cut(p_init)
 
-      i_l = int(floor(log10(p_init(LO)/p_fix(1))/w)) + 1
-      i_l = max(0, i_l)
-      i_l = min(i_l, ncre - 1)
-
-      i_u = int(floor(log10(p_init(HI)/p_fix(1))/w)) + 2
-      i_u = max(1,i_u)
-      i_u = min(i_u,ncre)
-
-      p_range_add(i_l:i_u) = p_fix(i_l:i_u)
-      p_range_add(i_l) = p_init(LO)
-      p_range_add(i_u) = p_init(HI)
-      if (.not.allocated(act_edges)) allocate(act_edges(i_u - i_l  ))
-      if (.not.allocated(act_bins )) allocate( act_bins(i_u - i_l+1))
-      act_edges = cresp_all_edges(i_l  :i_u)
-      act_bins  = cresp_all_bins (i_l+1:i_u)
+      p_range_add(ic(LO):ic(HI)) = p_fix(ic(LO):ic(HI))
+      p_range_add(ic(LO)) = p_init(LO)
+      p_range_add(ic(HI)) = p_init(HI)
+      if (.not.allocated(act_edges)) allocate(act_edges(ic(HI) - ic(LO)  ))
+      if (.not.allocated(act_bins )) allocate( act_bins(ic(HI) - ic(LO)+1))
+      act_edges = cresp_all_edges(ic(LO)  :ic(HI))
+      act_bins  = cresp_all_bins (ic(LO)+1:ic(HI))
       q(act_bins) = q_init
 
       f(act_edges) = f_init * (p_range_add(act_edges)/p_init(LO))**(-q_init)
@@ -1157,36 +1137,29 @@ contains
       use cresp_variables, only: fpcc
       use diagnostics,     only: my_deallocate
       use initcosmicrays,  only: ncre
-      use initcrspectrum,  only: cresp_all_bins, e_small, f_init, p_br_init, p_fix, p_init, q_init, w
+      use initcrspectrum,  only: cresp_all_bins, e_small, f_init, p_br_init, p_fix, p_init, q_init
 
       implicit none
 
       real                                       :: c_1, c_2, c_3, lpb, lpu, lpl, a, b, lp_lpb
       real, dimension(0:ncre)                    :: p_range_add
       integer(kind=4), allocatable, dimension(:) :: act_bins
-      integer(kind=4)                            :: i_l, i_u, i_br, i
+      integer(kind=4), dimension(LO:HI)          :: ic
+      integer(kind=4)                            :: i_br, i
 
       p_range_add(:) = zero
-
       i_br = minloc(abs(p_fix - p_br_init(LO)),dim=1)-1
+      ic = get_i_cut(p_init)
 
-      i_l = int(floor(log10(p_init(LO)/p_fix(1))/w)) + 1
-      i_l = max(0, i_l)
-      i_l = min(i_l, ncre - 1)
+      p_range_add(ic(LO):ic(HI)) = p_fix(ic(LO):ic(HI))
+      p_range_add(ic(LO)) = p_init(LO)
+      p_range_add(ic(HI)) = p_init(HI)
 
-      i_u = int(floor(log10(p_init(HI)/p_fix(1))/w)) + 2
-      i_u = max(1,i_u)
-      i_u = min(i_u,ncre)
+      f(ic(LO):ic(HI)) = f_init * (p_range_add(ic(LO):ic(HI))/p_init(LO))**(-q_init)
+      q(ic(LO):ic(HI)) = q_init
 
-      p_range_add(i_l:i_u) = p_fix(i_l:i_u)
-      p_range_add(i_l) = p_init(LO)
-      p_range_add(i_u) = p_init(HI)
-
-      f(i_l:i_u) = f_init * (p_range_add(i_l:i_u)/p_init(LO))**(-q_init)
-      q(i_l:i_u) = q_init
-
-      if (.not.allocated(act_bins )) allocate( act_bins(i_u - i_l+1))
-      act_bins  =   cresp_all_bins(i_l+1:i_u)
+      if (.not.allocated(act_bins )) allocate( act_bins(ic(HI) - ic(LO)+1))
+      act_bins  =   cresp_all_bins(ic(LO)+1:ic(HI))
 
       lpl = log10(p_init(LO))
       lpb = log10(p_br_init(LO))
@@ -1199,9 +1172,9 @@ contains
       c_1 =  (c_3 - b) / lpb**two
       c_2 =  (a - two * c_1 * lpb)
 
-      f(i_l:i_br-1) = ten**(c_1 * log10(p_range_add(i_l:i_br-1))**two + c_2 * log10(p_range_add(i_l:i_br-1)) + c_3)
+      f(ic(LO):i_br-1) = ten**(c_1 * log10(p_range_add(ic(LO):i_br-1))**two + c_2 * log10(p_range_add(ic(LO):i_br-1)) + c_3)
 
-      do i = i_l+1, i_br
+      do i = ic(LO)+1, i_br
          q(i) = pf_to_q(p_range_add(i-1), p_range_add(i), f(i-1), f(i))
       enddo
 
@@ -1216,9 +1189,9 @@ contains
       c_1 =  (c_3 - b) / lpb**two
       c_2 =  (a - two * c_1 * lpb)
 
-      f(i_br:i_u) = ten**(c_1 * log10(p_range_add(i_br:i_u))**two + c_2 * log10(p_range_add(i_br:i_u)) + c_3)
+      f(i_br:ic(HI)) = ten**(c_1 * log10(p_range_add(i_br:ic(HI)))**two + c_2 * log10(p_range_add(i_br:ic(HI))) + c_3)
 
-      do i = i_br, i_u
+      do i = i_br, ic(HI)
          q(i) = pf_to_q(p_range_add(i-1), p_range_add(i), f(i-1), f(i))
       enddo
 
@@ -1364,6 +1337,25 @@ contains
       e_inout = norm_init_spectrum%e * e_in_total / total_init_cree
 
    end subroutine cresp_get_scaled_init_spectrum
+
+   function get_i_cut(pc) result(gic)
+
+      use initcosmicrays,  only: ncre
+      use initcrspectrum,  only: p_fix, w
+
+      implicit none
+
+      real, dimension(LO:HI), intent(in) :: pc
+      integer(kind=4), dimension(LO:HI)  :: gic
+      integer(kind=4)                    :: side
+
+      do side = LO, HI
+         gic(side) = int(floor(log10(pc(side)/(w*p_fix(1))))) + side
+         gic(side) = max(gic(side), side-1       )
+         gic(side) = min(gic(side), ncre-oz(side))
+      enddo
+
+   end function get_i_cut
 
 !-------------------------------------------------------------------------------------------------
 !
