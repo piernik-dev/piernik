@@ -894,8 +894,7 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_init_state(init_n, init_e, sptab)
 
-      use constants, only: zero, I_ZERO, I_ONE
-      use cresp_NR_method, only: e_small_to_f
+      use constants,       only: zero, I_ZERO, I_ONE
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
       use initcrspectrum,  only: spec_mod_trms, q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel,   &
@@ -1073,6 +1072,23 @@ contains
       call deallocate_active_arrays
 
    end subroutine cresp_init_state
+
+!>
+!! \brief relaying e_small to f via its relation with momentum
+!<
+   real function e_small_to_f(p_outer)
+
+      use constants,       only: three
+      use cresp_variables, only: fpcc
+      use initcrspectrum,  only: e_small
+
+      implicit none
+
+      real, intent(in) :: p_outer
+
+      e_small_to_f = e_small / (fpcc * p_outer**three)
+
+   end function e_small_to_f
 
 !>
 !! \brief Assumes power-law spectrum, without breaks. In principle the same thing is done in cresp_init_state, but init_state cannot be called from "outside".
@@ -1770,7 +1786,7 @@ contains
    subroutine get_fqp_cutoff(cutoff, exit_code)
 
       use constants,       only: zero, one, I_ONE, I_TWO, LO, HI
-      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers
+      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, q_ratios, assoc_pointers
       use cresp_variables, only: clight_cresp
 #ifdef CRESP_VERBOSED
       use cresp_NR_method, only: bound_name
