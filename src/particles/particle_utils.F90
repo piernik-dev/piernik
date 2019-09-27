@@ -351,7 +351,7 @@ contains
      integer                             :: i, k, cdim, npart
      integer, dimension(:), allocatable  :: pdel
 
-     npart = size(cg%pset%p,dim=1)
+     npart = size(cg%pset%p, dim=1)
      allocate(pdel(npart))
      pdel = 0
      do i = 1, npart
@@ -397,13 +397,13 @@ contains
      real                                :: mass, ener
 
      do i = 1, nmove
-        if (part_info(i,1) /= 0.) then
+        if (nint(part_info(i,1)) /= 0) then
            pos = part_info(i,3:5)
            call is_part_in_cg(pos, in, phy, out)
            if (out) then
-              pid = part_info(i,1)
+              pid = nint(part_info(i,1))
               already = .false.
-              do j = 1, size(cg%pset%p,dim=1)
+              do j = 1, size(cg%pset%p, dim=1)
                  if (pid == cg%pset%p(j)%pid) then
                     already = .true.
                     exit

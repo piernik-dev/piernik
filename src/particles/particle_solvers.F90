@@ -407,7 +407,7 @@ contains
                do j = 1, proc
                   ind=ind+nmoves(j)
                enddo
-               call part_leave_cg(cgl%cg,part_info,ind)
+               call part_leave_cg(cgl%cg, part_info, ind)
                cgl => cgl%nxt
             enddo
 
@@ -416,7 +416,7 @@ contains
 
             cgl => leaves%first
             do while (associated(cgl))
-               call reattrib_part_cg(cgl%cg,part_info,sum(nmoves))
+               call reattrib_part_cg(cgl%cg, part_info, sum(nmoves))
                cgl => cgl%nxt
             enddo
 
