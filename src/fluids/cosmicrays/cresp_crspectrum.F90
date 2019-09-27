@@ -301,11 +301,8 @@ contains
       write (msg, '(A5, 50E18.9)') "    q", q          ; call printinfo(msg)
       write (msg, '(A5, 50E18.9)') "    f", f          ; call printinfo(msg)
 
-      if (sum(approx_p) > 0) then
-         write (msg, '(A36,I5,A6,I3)') "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(LO),  ", p_up", fail_count_NR_2dim(HI)   ; call printinfo(msg)
-         write (msg, '(A36,I5,A6,I3)') "NR_2dim:interpolation failure: p_lo", fail_count_interpol(LO), ", p_up", fail_count_interpol(HI)  ; call printinfo(msg)
-         write (msg, '(A36,   100I5)') "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q                                           ; call printinfo(msg)
-      endif
+      if (sum(approx_p) > 0) call print_failcounts
+
       call cresp_detect_negative_content
 #endif /* CRESP_VERBOSED */
 
@@ -2035,15 +2032,25 @@ contains
 
    subroutine cleanup_cresp
 
+      implicit none
+
+      call print_failcounts
+      call cresp_deallocate_all
+
+   end subroutine cleanup_cresp
+
+!----------------------------------------------------------------------------------------------------
+
+   subroutine print_failcounts
+
       use dataio_pub, only: msg, printinfo
 
       implicit none
 
-      write (msg, '(A36,I6,A6,I6)') "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(LO),  ", p_up", fail_count_NR_2dim(HI)  ; call printinfo(msg)
-      write (msg, '(A36,I6,A6,I6)') "NR_2dim:interpolation failure: p_lo", fail_count_interpol(LO), ", p_up", fail_count_interpol(HI) ; call printinfo(msg)
-      write (msg, '(A36,   100I5)') "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q    ; call printinfo(msg)
-      call cresp_deallocate_all
+      write(msg, '(A36,I6,A6,I6)') "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(LO),  ", p_up", fail_count_NR_2dim(HI)  ; call printinfo(msg)
+      write(msg, '(A36,I6,A6,I6)') "NR_2dim:interpolation failure: p_lo", fail_count_interpol(LO), ", p_up", fail_count_interpol(HI) ; call printinfo(msg)
+      write(msg, '(A36,   100I5)') "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q                                          ; call printinfo(msg)
 
-   end subroutine cleanup_cresp
+   end subroutine print_failcounts
 
 end module cresp_crspectrum
