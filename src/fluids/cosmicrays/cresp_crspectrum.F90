@@ -1049,7 +1049,7 @@ contains
          crel%i_cut = i_cut
       endif
 
-      if (master) call check_init_spectrum(f(i_cut(LO)), f(i_cut(HI)-1))
+      if (master) call check_init_spectrum
 
       n_tot0 = sum(n)
       e_tot0 = sum(e)
@@ -1431,47 +1431,38 @@ contains
 
 !---------------------------------------------------------------------------------------------------
 
-   subroutine check_init_spectrum(f_l, f_u)
+   subroutine check_init_spectrum
 
-   use constants,      only: one, I_ONE
-   use dataio_pub,     only: msg, warn, printinfo
-   use initcrspectrum, only: e_small, e_small_approx_p, p_init
+      use constants,       only: one, I_ONE
+      use cresp_NR_method, only: bound_name
+      use dataio_pub,      only: msg, warn, printinfo
+      use initcrspectrum,  only: e_small, e_small_approx_p, p_init
 
-   implicit none
+      implicit none
 
-   real, intent(in) :: f_l, f_u
-   real             :: e_lo, e_up, e_small_safe, rel_lo, rel_up
+      real                   :: e_small_safe, rel_cut
+      real, dimension(LO:HI) :: ec
+      integer                :: co
 
       e_small_safe = max(e_small, epsilon(e_small))
 
-      e_lo = fp_to_e_ampl(p_init(LO), f_l)
-      e_up = fp_to_e_ampl(p_init(HI), f_u)
+      do co = LO, HI
+         ec = e_small_safe
+         ec(co) = fp_to_e_ampl(p_init(co), f(i_cut(co)-1+oz(co)))
 
-      write(msg,*) "[cresp_crspectrum:check_init_spectrum] Amplitude of low  energy spectrum cutoff:", e_lo
-      call printinfo(msg)
+         write(msg,*) "[cresp_crspectrum:check_init_spectrum] Amplitude of ", bound_name(co), " energy spectrum cutoff:", ec(co)
+         call printinfo(msg)
 
-      if (e_small_approx_p(LO) == I_ONE) then
-         rel_lo   = (e_lo - e_small_safe) / e_small_safe
-         write(msg,*) "[cresp_crspectrum:check_init_spectrum] Relative to e_small(", e_small_safe ,"):", rel_lo
-         if (abs(rel_lo) < one) then
-            call printinfo(msg)
-         else
-            call warn(msg)
+         if (e_small_approx_p(co) == I_ONE) then
+            rel_cut = (ec(LO) - ec(HI)) / ec(HI)
+            write(msg,*) "[cresp_crspectrum:check_init_spectrum] Relative to e_small(", e_small_safe ,"): ", rel_cut
+            if (abs(rel_cut) < one) then
+               call printinfo(msg)
+            else
+               call warn(msg)
+            endif
          endif
-      endif
-
-      write(msg,*) "[cresp_crspectrum:check_init_spectrum] Amplitude of high energy spectrum cutoff:", e_up
-      call printinfo(msg)
-
-      if (e_small_approx_p(HI) == I_ONE) then
-         rel_up = (e_small_safe - e_up) / e_up
-         write(msg,*) "[cresp_crspectrum:check_init_spectrum] Relative to e_small(", e_small_safe ,"): ", rel_up
-         if (abs(rel_up) < one) then
-            call printinfo(msg)
-         else
-            call warn(msg)
-         endif
-      endif
+      enddo
 
    end subroutine check_init_spectrum
 
@@ -1673,7 +1664,6 @@ contains
 
       real, intent(in) :: p_l, p_r, f_l, f_r
 
-      pf_to_q = 0.0
       pf_to_q = -log(f_r/f_l)/log(p_r/p_l) ! append value of q for given p_cut(HI)
 
    end function pf_to_q
@@ -1697,8 +1687,8 @@ contains
       real, dimension(0:ncre)     :: nq_to_f
       real, dimension(0:ncre)     :: pr_by_pl   ! the array of values of p_r/p_l to avoid FPEs
 
-      nq_to_f= zero
-      f_bins = zero
+      nq_to_f  = zero
+      f_bins   = zero
       pr_by_pl = one
 
       where (p_r(bins) > zero .and. p_l(bins) > zero ) ! p(i) = 0 in inactive bins. This condition should be met by providing proper "bins" range - FIXME
@@ -1720,7 +1710,7 @@ contains
 !---------------------------------------------------------------------------------------------------
    real function get_pcresp(p_l, p_r, f_l, q, bins) ! computes cre pressure, not used currently
 
-      use constants,       only: zero, one, four
+      use constants,       only: one, four
       use cresp_variables, only: fp3cc
       use initcrspectrum,  only: eps
 
@@ -1730,7 +1720,6 @@ contains
       integer, dimension(:), intent(in) :: bins
       real,    dimension(size(bins))    :: p_cresp
 
-      get_pcresp = zero
       p_cresp = fp3cc * f_l(bins)*p_l(bins)**4
 
       where (abs(q(bins) - four) > eps)
@@ -1759,14 +1748,16 @@ contains
       real, dimension(n),         intent(out) :: grad_pcresp
       real, dimension(n)                      :: P_cresp_r, P_cresp_l
 
-      grad_pcresp = 0.0 ;  P_cresp_l = 0.0 ;  P_cresp_r = 0.0
+      grad_pcresp = 0.0
+      if (.not.cre_gpcr_ess) return
 
-      if (cre_gpcr_ess) then
-!        (ultrarelativistic)
-         P_cresp_l(1:n-2) = onet * sum(u(1:n-2, :),dim=2)
-         P_cresp_r(3:n)   = onet * sum(u(3:n,   :),dim=2)
-         grad_pcresp(2:n-1) = cre_active * (P_cresp_l(1:n-2) - P_cresp_r(3:n) )/(2.*dx)
-      endif
+      P_cresp_l = 0.0 ;  P_cresp_r = 0.0
+
+!     (ultrarelativistic)
+      P_cresp_l(1:n-2) = onet * sum(u(1:n-2, :),dim=2)
+      P_cresp_r(3:n)   = onet * sum(u(3:n,   :),dim=2)
+      grad_pcresp(2:n-1) = cre_active * (P_cresp_l(1:n-2) - P_cresp_r(3:n) )/(2.*dx)
+
    end subroutine src_gpcresp
 !---------------------------------------------------------------------------------------------------
 ! Preparation and computatuon of boundary momenta and and boundary
