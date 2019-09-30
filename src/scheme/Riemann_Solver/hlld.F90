@@ -409,7 +409,11 @@ contains
 
                 ! Left intermediate flux Eq. 64
 
-                f(i, :) = fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ] )
+                if (has_energy) then
+                   f(i, :) = fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ] )
+                else
+                   f(i, :) = fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz) ] )
+                endif
                 b_cc(i, ydim:zdim) = b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(i, ydim:zdim))
                 if (present(p_ct_flx)) &
                      p_ct_flx(i, :) = p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. ))
@@ -418,7 +422,11 @@ contains
 
                 ! Right intermediate flux Eq. 64
 
-                f(i, :) = fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ] )
+                if (has_energy) then
+                   f(i, :) = fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ] )
+                else
+                   f(i, :) = fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz) ] )
+                endif
                 b_cc(i, ydim:zdim) = b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(i, ydim:zdim))
                 if (present(p_ct_flx)) &
                      p_ct_flx(i, :) = p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. ))
@@ -479,7 +487,11 @@ contains
 
                 if (sm > zero) then
                    ! Left Alfven intermediate flux Eq. 65
-                   f(i, :) = fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]
+                   if (has_energy) then
+                      f(i, :) = fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]
+                   else
+                      f(i, :) = fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(i, idn), ul(i, idn)*ul(i, imx:imz) ]
+                   endif
                    b_cc(i, ydim:zdim) = b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(i, ydim:zdim)
                    if (present(p_ct_flx)) &
                         p_ct_flx(i, :) = p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. ))
@@ -487,7 +499,11 @@ contains
 
                 else if (sm < zero) then
                    ! Right Alfven intermediate flux Eq. 65
-                   f(i, :) = fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]
+                   if (has_energy) then
+                      f(i, :) = fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]
+                   else
+                      f(i, :) = fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(i, idn), ur(i, idn)*ur(i, imx:imz) ]
+                   endif
                    b_cc(i, ydim:zdim) = b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(i, ydim:zdim)
                    if (present(p_ct_flx)) &
                         p_ct_flx(i, :) = p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. ))
@@ -496,9 +512,15 @@ contains
                 else ! sm = 0
 
                    ! Left and right Alfven intermediate flux Eq. 65
-                   f(i, :) = half*( &
-                        (fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]) + &
-                        (fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]))
+                   if (has_energy) then
+                      f(i, :) = half*( &
+                           (fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]) + &
+                           (fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]))
+                   else
+                      f(i, :) = half*( &
+                           (fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(i, idn), ul(i, idn)*ul(i, imx:imz) ]) + &
+                           (fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(i, idn), ur(i, idn)*ur(i, imx:imz) ]))
+                   endif
 
                    b_cc(i, ydim:zdim) = half*( &
                         (b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(i, ydim:zdim)) + &
@@ -521,7 +543,11 @@ contains
 
                 ! Left intermediate flux Eq. 64
 
-                f(i, :)  =  fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ])
+                if (has_energy) then
+                   f(i, :)  =  fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ])
+                else
+                   f(i, :)  =  fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz) ])
+                endif
                 b_cc(i, ydim:zdim) = b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(i, ydim:zdim))
                 if (present(p_ct_flx)) &
                      p_ct_flx(i, :) = p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. ))
@@ -529,7 +555,11 @@ contains
 
              else if (sm < zero) then
 
-                f(i, :)  =  fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ])
+                if (has_energy) then
+                   f(i, :)  =  fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ])
+                else
+                   f(i, :)  =  fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz) ])
+                endif
                 b_cc(i, ydim:zdim) = b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(i, ydim:zdim))
                 if (present(p_ct_flx)) &
                      p_ct_flx(i, :) = p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. ))
@@ -539,8 +569,13 @@ contains
 
                 ! Average left and right flux if both sm = 0 = B_x
 
-                f(i, :) = half * (fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]) + &
-                     &           fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]))
+                if (has_energy) then
+                   f(i, :) = half * (fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]) + &
+                        &            fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]))
+                else
+                   f(i, :) = half * (fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz) ]) + &
+                        &            fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz) ]))
+                endif
                 b_cc(i, ydim:zdim) = half*(b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(i, ydim:zdim)) + &
                      &                    b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(i, ydim:zdim)))
                 if (present(p_ct_flx)) &
@@ -751,21 +786,33 @@ contains
           if (sm > zero) then
 
              ! Left intermediate flux Eq. 64
-
-             f(i, :)  =  fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ])
+             if (has_energy) then
+                f(i, :)  =  fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ])
+             else
+                f(i, :)  =  fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz) ])
+             endif
              if (present(p_ct_flx)) p_ct_flx(i, :) = p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. ))
 
           else if (sm < zero) then
 
-             f(i, :)  =  fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ])
+             if (has_energy) then
+                f(i, :)  =  fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ])
+             else
+                f(i, :)  =  fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz) ])
+             endif
              if (present(p_ct_flx)) p_ct_flx(i, :) = p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. ))
 
           else ! sm = 0
 
              ! Average left and right flux if both sm = 0 = B_x
 
-             f(i, :) = half * (fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]) + &
-                  &            fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]))
+             if (has_energy) then
+                f(i, :) = half * (fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]) + &
+                     &            fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]))
+             else
+                f(i, :) = half * (fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz) ]) + &
+                     &            fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz) ]))
+             endif
              if (present(p_ct_flx)) p_ct_flx(i, :) = half * (p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. )) + &
                   &                                          p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. )) )
 
