@@ -208,12 +208,12 @@ contains
 
    subroutine solve_cg_u(cg, ddim, istep)
 
-      use constants,        only: pdims, ORTHO1, ORTHO2, LO, HI, uh_n, rk_coef
+      use constants,        only: pdims, ORTHO1, ORTHO2, LO, HI, uh_n, rk_coef, cs_i2_n
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp
       use fluxtypes,        only: ext_fluxes
       use global,           only: dt
       use grid_cont,        only: grid_container
-      use named_array_list, only: wna
+      use named_array_list, only: wna, qna
       use sources,          only: all_sources, care_for_positives
 
       implicit none
@@ -224,15 +224,23 @@ contains
 
       real, dimension(cg%n_(ddim), size(cg%u,1)) :: u
       real, dimension(:,:), pointer              :: pu, pu0
+      real, dimension(:),   pointer              :: cs2
       integer                                    :: i1, i2
       integer(kind=4)                            :: uhi
       real, dimension(size(u,1),size(u,2))       :: u0, u1
       real, dimension(size(u,1), flind%fluids), target :: vx
       type(ext_fluxes)                           :: eflx
       real, dimension(1, 1) :: b ! ugly
+      integer                                    :: i_cs_iso2
 
       b = 0.
       uhi = wna%ind(uh_n)
+      if (qna%exists(cs_i2_n)) then
+         i_cs_iso2 = qna%ind(cs_i2_n)
+      else
+         i_cs_iso2 = -1
+      endif
+      cs2 => null()
 
       call eflx%init
 
@@ -244,12 +252,13 @@ contains
             u0(:, iarr_all_swp(ddim,:)) = transpose(pu0(:,:))
             pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
             u(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
+            if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(ddim,i1,i2)
 
             call cg%set_fluxpointers(ddim, i1, i2, eflx)
             u1 = u
             vx = u(:, iarr_all_mx) / u(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
 
-            call solve_u(u0, u1, rk_coef(istep) * dt/cg%dl(ddim), eflx)
+            call solve_u(u0, u1, cs2, rk_coef(istep) * dt/cg%dl(ddim), eflx)
 
             call all_sources(size(u, 1, kind=4), u, u1, b, cg, istep, ddim, i1, i2, rk_coef(istep) * dt, vx)
             ! See the results of Jeans test with RTVD and RIEMANN for estimate of accuracy.
@@ -260,6 +269,8 @@ contains
             pu(:,:) = transpose(u1(:, iarr_all_swp(ddim,:)))
          enddo
       enddo
+
+      nullify(cs2)
 
    end subroutine solve_cg_u
 
@@ -331,7 +342,7 @@ contains
 
    end subroutine solve
 
-   subroutine solve_u(u0, u1, dtodx, eflx)
+   subroutine solve_u(u0, u1, cs2, dtodx, eflx)
 
       use fluxtypes,      only: ext_fluxes
       use hlld,           only: riemann_wrap_u
@@ -339,10 +350,11 @@ contains
 
       implicit none
 
-      real, dimension(:,:), intent(in)    :: u0     !< cell-centered initial fluid states
-      real, dimension(:,:), intent(inout) :: u1     !< cell-centered intermediate fluid states
-      real,                 intent(in)    :: dtodx  !< timestep advance: RK-factor * timestep / cell length
-      type(ext_fluxes),     intent(inout) :: eflx   !< external fluxes
+      real, dimension(:,:),        intent(in)    :: u0     !< cell-centered initial fluid states
+      real, dimension(:,:),        intent(inout) :: u1     !< cell-centered intermediate fluid states
+      real, dimension(:), pointer, intent(in)    :: cs2    !< square of local isothermal sound speed
+      real,                        intent(in)    :: dtodx  !< timestep advance: RK-factor * timestep / cell length
+      type(ext_fluxes),            intent(inout) :: eflx   !< external fluxes
 
       ! left and right states at interfaces 1 .. n-1
       real, dimension(size(u0, 1)-1, size(u0, 2)), target :: ql, qr
@@ -355,7 +367,7 @@ contains
       integer, parameter :: in = 1  ! index for cells
 
       call interpol(u1, ql, qr)
-      call riemann_wrap_u(ql, qr, flx) ! Now we advance the left and right states by a timestep.
+      call riemann_wrap_u(ql, qr, cs2, flx) ! Now we advance the left and right states by a timestep.
 
       if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
       if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx

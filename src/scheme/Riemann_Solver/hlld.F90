@@ -107,7 +107,7 @@ contains
 
    end subroutine riemann_wrap
 
-   subroutine riemann_wrap_u(ql, qr, flx)
+   subroutine riemann_wrap_u(ql, qr, cs2, flx)
 
       use constants,  only: I_ONE
       use dataio_pub, only: die
@@ -116,8 +116,9 @@ contains
 
       implicit none
 
-      real, dimension(:,:), target, intent(in)  :: ql, qr  ! left and right fluid states
-      real, dimension(:,:), target, intent(out) :: flx     ! output fluxes: fluid, magnetic field and psi
+      real, dimension(:,:), target,  intent(in)  :: ql, qr  ! left and right fluid states
+      real, dimension(:),   pointer, intent(in)  :: cs2     !< square of local isothermal sound speed
+      real, dimension(:,:), target,  intent(out) :: flx     ! output fluxes: fluid, magnetic field and psi
 
       integer :: i
       class(component_fluid), pointer :: fl
@@ -139,9 +140,9 @@ contains
                p_ct_flx => flx(:, iend + I_ONE:)
                p_ctl => ql(:, iend + I_ONE:)
                p_ctr => qr(:, iend + I_ONE:)
-               call riemann_hlld_u(p_flx, p_ql, p_qr, fl%gam, p_ct_flx, p_ctl, p_ctr)
+               call riemann_hlld_u(p_flx, p_ql, p_qr, cs2, fl%gam, p_ct_flx, p_ctl, p_ctr)
             else
-               call riemann_hlld_u(p_flx, p_ql, p_qr, fl%gam)
+               call riemann_hlld_u(p_flx, p_ql, p_qr, cs2, fl%gam)
             endif
          end associate
       enddo
@@ -160,6 +161,9 @@ contains
     use func,       only: operator(.notequals.), operator(.equals.)
     use global,     only: divB_0_method
     use hdc,        only: chspeed
+#ifdef ISO
+    use dataio_pub, only: die
+#endif /* ISO */
 
     ! arguments
 
@@ -196,7 +200,7 @@ contains
     real                                         :: ue
 
 #ifdef ISO
-#  error Isothermal EOS is not implemented yet in this Riemann solver.
+    call die("[hlld:riemann_hlld] Isothermal EOS is not implemented yet in this Riemann solver.")
 #endif /* ISO */
 
     ! SOLVER
@@ -555,12 +559,20 @@ contains
 
  end subroutine riemann_hlld
 
- subroutine riemann_hlld_u(f, ul, ur, gamma, p_ct_flx, p_ctl, p_ctr)
+! This is riemann_hlld stripped of magnetic field
+! It should perhaps be renamed to HLLC
+! Unlike HLLD it has support for isothermal EOS
+
+ subroutine riemann_hlld_u(f, ul, ur, cs2, gamma, p_ct_flx, p_ctl, p_ctr)
 
     ! external procedures
 
-    use constants, only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien
-    use func,      only: operator(.equals.)
+    use constants,  only: half, zero, xdim, ydim, zdim, idn, imx, imy, imz, ien
+    use dataio_pub, only: die
+    use func,       only: operator(.equals.)
+#ifndef ISO
+    use constants,  only: one
+#endif /* ISO */
 
     ! arguments
 
@@ -568,6 +580,7 @@ contains
 
     real, dimension(:,:), pointer,           intent(out) :: f             !< demsity, momentum and energy fluxes
     real, dimension(:,:), pointer,           intent(in)  :: ul, ur        !< left and right states of density, velocity and energy
+    real, dimension(:),   pointer,           intent(in)  :: cs2           !< square of local isothermal sound speed
     real, dimension(:,:), pointer, optional, intent(out) :: p_ct_flx      !< CR and tracers flux
     real, dimension(:,:), pointer, optional, intent(in)  :: p_ctl, p_ctr  !< left and right states of CR and tracers
     real,                                    intent(in)  :: gamma         !< gamma of current gas type
@@ -589,13 +602,19 @@ contains
     logical                                      :: has_energy
     real                                         :: ue
 
-#ifdef ISO
-#  error Isothermal EOS is not implemented yet in this Riemann solver.
-#endif /* ISO */
-
     ! SOLVER
 
     has_energy = (ubound(ul, dim=2) >= ien)
+#ifdef ISO
+    if (has_energy) call die("[hlld:riemann_hlld_u] ISO .and. has_energy")
+    enl = huge(1.)
+    enr = huge(1.)
+    gampr_l = huge(1.)
+    gampr_r = huge(1.)
+#else /* ISO */
+    if (.not. associated(cs2)) call die("[hlld:riemann_hlld_u] ISO .and. .not. associated(cs2)")
+#endif /* ISO */
+
     ue = 0.
     slsm = 0.
     srsm = 0.
@@ -607,6 +626,11 @@ contains
        ! Left and right states of total pressure
        ! From fluidupdate.F90, utoq() (1) is used in hydro regime and (2) in MHD regime. In case of vanishing magnetic fields the magnetic components do not contribute and hydro results are obtained trivially.
 
+#ifdef ISO
+       prl = cs2(i) * ul(i, idn)
+       prr = cs2(i) * ur(i, idn)
+       c_fastm = sqrt(cs2(i))
+#else /* ISO */
        if (has_energy) then
 
           prl = ul(i, ien)  ! ul(i, ien) is the left state of gas pressure
@@ -614,8 +638,8 @@ contains
 
           ! Left and right states of energy Eq. 2.
 
-          enl = (ul(i, ien)/(gamma -one)) + half*ul(i, idn)*sum(ul(i, imx:imz)**2)
-          enr = (ur(i, ien)/(gamma -one)) + half*ur(i, idn)*sum(ur(i, imx:imz)**2)
+          enl = (ul(i, ien)/(gamma - one)) + half*ul(i, idn)*sum(ul(i, imx:imz)**2)
+          enr = (ur(i, ien)/(gamma - one)) + half*ur(i, idn)*sum(ur(i, imx:imz)**2)
 
           ! Left and right states of gamma*p_gas
 
@@ -639,6 +663,7 @@ contains
        ! Left and right states of fast magnetosonic waves Eq. 3
 
        c_fastm = sqrt(max(gampr_l/ul(i, idn), gampr_r/ur(i, idn)) )
+#endif /* ISO */
 
        ! Estimates of speed for left and right going waves Eq. 67
 
@@ -749,6 +774,12 @@ contains
        endif
 
     enddo
+
+#ifndef ISO
+      if (.false.) write(0,*) cs2
+#else /* !ISO */
+      if (.false.) write(0,*) gamma
+#endif /* ISO */
 
  end subroutine riemann_hlld_u
 

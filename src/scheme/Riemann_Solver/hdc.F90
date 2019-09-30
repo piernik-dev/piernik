@@ -90,22 +90,29 @@ contains
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ, pMAX, small, xdim, ydim, zdim, half, DIVB_HDC
+      use constants,  only: GEO_XYZ, pMAX, small, DIVB_HDC
       use dataio_pub, only: die
       use domain,     only: dom
-      use fluidindex, only: flind
-      use fluids_pub, only: has_ion, has_neu, has_dst
-      use fluidtypes, only: component_fluid
       use func,       only: emag, ekin
       use global,     only: use_fargo, cfl_glm, ch_grid, dt, divB_0_method
       use mpisetup,   only: piernik_MPI_Allreduce
+#ifndef ISO
+      use constants,  only: xdim, ydim, zdim, half
+      use fluidindex, only: flind
+      use fluids_pub, only: has_ion, has_neu, has_dst
+      use fluidtypes, only: component_fluid
+#endif /* !ISO */
+
 
       implicit none
 
       type(cg_list_element), pointer  :: cgl
-      class(component_fluid), pointer :: fl
-      integer                         :: i, j, k, d
+      integer                         :: i, j, k
+#ifndef ISO
+      integer                         :: d
       real                            :: pmag, pgam
+      class(component_fluid), pointer :: fl
+#endif /* !ISO */
 
       if (divB_0_method /= DIVB_HDC) return
 
@@ -125,6 +132,9 @@ contains
             do k = cgl%cg%ks, cgl%cg%ke
                do j = cgl%cg%js, cgl%cg%je
                   do i = cgl%cg%is, cgl%cg%ie
+#ifdef ISO
+                     chspeed = max(chspeed, cfl_glm * cgl%cg%cs_iso2(i, j, k))
+#else /* !ISO */
                      if (has_ion) then
                         fl => flind%ion
                         pmag = emag(cgl%cg%b(xdim, i, j, k), cgl%cg%b(ydim, i, j, k), cgl%cg%b(zdim, i, j, k))  ! 1/2 |B|**2
@@ -166,6 +176,7 @@ contains
                      else
                         call die("[hdc:update_chspeed] Don't know what to do with chspeed without ION, NEU and DST")
                      endif
+#endif /* ISO */
                   enddo
                enddo
             enddo
