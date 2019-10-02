@@ -59,9 +59,10 @@ module initproblem
    logical                  :: fake_ic                        !< Skip reading the IC file (useful only for debugging, or running under valgrind)
    real                     :: T_disk                         !< temperature of the disk
    real                     :: mean_mol_weight                !< mean molecular weight
+   real                     :: jeansref                       !< minimum resolution in cells per Jeans wavelengths
 
    namelist /PROBLEM_CONTROL/  input_file, gamma_loc, mass_mul, ambient_density, cs_mul, damp_factor, divine_intervention_type, mincs2, maxcs2, &
-      &                        r_in, r_out, f_in, f_out, alfasupp, fake_ic, T_disk, mean_mol_weight
+      &                        r_in, r_out, f_in, f_out, alfasupp, fake_ic, T_disk, mean_mol_weight, jeansref
 
    ! private data
    integer, parameter :: ic_nx = 512, ic_ny = 512, ic_nz = 52 !< initial conditions size
@@ -74,6 +75,7 @@ module initproblem
       enumerator :: D0, VX0, VY0
    end enum
    character(len=dsetnamelen), dimension(D0:VY0), parameter :: q_n = [ "den0", "vlx0", "vly0" ] !< Names of initial condition (t=0.) arrays used for divine_intervention_type = 3
+   character(len=dsetnamelen), parameter :: nJ_n = "nJ"
 
 contains
 
@@ -82,13 +84,14 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_attrs_wr
-      use user_hooks,  only: problem_customize_solution, cleanup_problem
+      use user_hooks,  only: problem_customize_solution, cleanup_problem, problem_refine_derefine
 
       implicit none
 
       problem_customize_solution => problem_customize_solution_wt4
       user_attrs_wr              => problem_initial_conditions_attrs
       cleanup_problem            => cleanup_wt4
+      problem_refine_derefine    => Jeans_refine
 
    end subroutine problem_pointers
 
@@ -123,6 +126,7 @@ contains
       alfasupp        = 1.0
       T_disk          = 20.0
       mean_mol_weight = 2.0
+      jeansref        = 4.0  ! as Truelove et al. have suggested
 
       divine_intervention_type = 2
 
@@ -165,6 +169,7 @@ contains
          rbuff(12) = alfasupp
          rbuff(13) = T_disk
          rbuff(14) = mean_mol_weight
+         rbuff(15) = jeansref
 
          ibuff(1) = divine_intervention_type
 
@@ -195,6 +200,7 @@ contains
          alfasupp        = rbuff(12)
          T_disk          = rbuff(13)
          mean_mol_weight = rbuff(14)
+         jeansref        = rbuff(15)
 
          divine_intervention_type = ibuff(1)
 
@@ -207,6 +213,8 @@ contains
       do i = D0, VY0
          call all_cg%reg_var(q_n(i), restart_mode = AT_NO_B)
       enddo
+
+      call all_cg%reg_var(nJ_n)
 
    end subroutine read_problem_par
 
@@ -304,7 +312,7 @@ contains
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
       use constants,        only: small, GEO_XYZ, GEO_RPZ
-      use dataio_pub,       only: warn, printinfo, msg, die
+      use dataio_pub,       only: warn, msg, die  !, printinfo
       use domain,           only: dom
       use global,           only: smalld
       use grid_cont,        only: grid_container
@@ -512,6 +520,8 @@ contains
       class(component_fluid), pointer   :: fl
       real, dimension(:,:,:), pointer   :: den0, vlx0, vly0
 
+      call compute_lambdaJ
+
       fl => flind%neu
       cgl => leaves%first
       do while (associated(cgl))
@@ -605,5 +615,81 @@ contains
       if (.false. .and. forward) i = j ! suppress compiler warnings on unused arguments
 
    end subroutine problem_customize_solution_wt4
+
+!> \brief compute Jeans resolution
+
+   subroutine compute_lambdaJ
+
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: pi, GEO_XYZ
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use fluidindex,       only: flind
+      use fluidtypes,       only: component_fluid
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna
+      use units,            only: newtong
+
+      implicit none
+
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
+      class(component_fluid), pointer :: fl
+      integer :: nJ_i
+      real :: factor
+
+      if (dom%geometry_type /= GEO_XYZ) call die("[initproblem:compute_lambdaJ] unsupported (non-cartesian) geometry")
+
+      nJ_i = qna%ind(nJ_n)
+      fl => flind%neu
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         factor = sqrt(pi/newtong) / maxval(cg%dl)
+         cg%q(nJ_i)%arr(        cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = factor * &
+              sqrt(cg%cs_iso2(  cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) / &
+              cg%u(fl%idn,      cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine compute_lambdaJ
+
+   subroutine Jeans_refine
+
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna
+
+      implicit none
+
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
+      integer :: nJ_i
+      integer :: i, j, k
+      integer, parameter :: D = 2
+
+      nJ_i = qna%ind(nJ_n)
+
+      call compute_lambdaJ
+      call leaves%leaf_arr3d_boundaries(nJ_i)
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
+                  cg%refinemap(i, j, k) = (minval(cg%q(nJ_i)%arr(i-D:i+D, j-D:j+D, k-D:k+D)) <= jeansref)
+               enddo
+            enddo
+         enddo
+         !cg%refine_flags%refine   = (minval(cg%q(nJ_i)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) <= jeansref)
+         cg%refine_flags%derefine = (minval(cg%q(nJ_i)%arr) > 4*jeansref)
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine Jeans_refine
 
 end module initproblem
