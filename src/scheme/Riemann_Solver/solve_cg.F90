@@ -111,7 +111,7 @@ contains
    subroutine solve_cg_ub(cg, ddim, istep)
 
       use bfc_bcc,          only: interpolate_mag_field
-      use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, uh_n, magh_n, psih_n, INVALID, rk_coef, psidim
+      use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, uh_n, magh_n, psih_n, INVALID, rk_coef, psidim, cs_i2_n
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp, iarr_mag_swp
       use fluxtypes,        only: ext_fluxes
       use global,           only: dt, force_cc_mag
@@ -129,6 +129,7 @@ contains
       real, dimension(cg%n_(ddim), xdim:zdim)    :: b
       real, dimension(cg%n_(ddim)), target       :: psi
       real, dimension(:,:), pointer              :: pu, pu0, pb, pb0
+      real, dimension(:),   pointer              :: cs2
       integer                                    :: i1, i2
       real, dimension(:), pointer                :: ppsi, ppsi0
       integer(kind=4)                            :: psii, uhi, bhi, psihi
@@ -136,6 +137,7 @@ contains
       real, dimension(size(b,1),size(b,2)+1)     :: b0, b1  ! Bx, By, Bz, psi
       real, dimension(size(u,1), flind%fluids), target :: vx
       type(ext_fluxes)                           :: eflx
+      integer                                    :: i_cs_iso2
 
       uhi = wna%ind(uh_n)
       bhi = wna%ind(magh_n)
@@ -149,6 +151,13 @@ contains
       psi = 0.
 
       ppsi => psi ! suppress compiler complains on possibly uninitialized pointer
+
+      if (qna%exists(cs_i2_n)) then
+         i_cs_iso2 = qna%ind(cs_i2_n)
+      else
+         i_cs_iso2 = -1
+      endif
+      cs2 => null()
 
       call eflx%init
 
@@ -176,6 +185,8 @@ contains
                b(:, :) = interpolate_mag_field(ddim, cg, i1, i2, wna%bi)
             endif
 
+            if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(ddim,i1,i2)
+
             call cg%set_fluxpointers(ddim, i1, i2, eflx)
             u1 = u
             b1(:, xdim:zdim) = b
@@ -186,10 +197,10 @@ contains
                ppsi => cg%q(psii)%get_sweep(ddim,i1,i2)
                b1(:, psidim) = ppsi(:)
 
-               call solve(u0, b0, u1, b1, rk_coef(istep) * dt/cg%dl(ddim), eflx)
+               call solve(u0, b0, u1, b1, cs2, rk_coef(istep) * dt/cg%dl(ddim), eflx)
 
             else
-               call solve(u0, b0(:, xdim:zdim), u1, b1(:, xdim:zdim), rk_coef(istep) * dt/cg%dl(ddim), eflx)
+               call solve(u0, b0(:, xdim:zdim), u1, b1(:, xdim:zdim), cs2, rk_coef(istep) * dt/cg%dl(ddim), eflx)
             endif
 
             call all_sources(size(u, 1, kind=4), u, u1, b, cg, istep, ddim, i1, i2, rk_coef(istep) * dt, vx)
@@ -203,6 +214,8 @@ contains
             if (psii /= INVALID) ppsi = b1(:, psidim)
          enddo
       enddo
+
+      nullify(cs2)
 
    end subroutine solve_cg_ub
 
@@ -283,7 +296,7 @@ contains
 !! We don't calculate n-th interface because it is as incomplete as 0-th interface
 !<
 
-   subroutine solve(u0, b0, u1, b1, dtodx, eflx)
+   subroutine solve(u0, b0, u1, b1, cs2, dtodx, eflx)
 
       use constants,      only: DIVB_HDC, xdim, ydim, zdim
       use fluxtypes,      only: ext_fluxes
@@ -293,12 +306,13 @@ contains
 
       implicit none
 
-      real, dimension(:,:), intent(in)    :: u0     !< cell-centered initial fluid states
-      real, dimension(:,:), intent(in)    :: b0     !< cell-centered initial magnetic fiels states (including psi field when necessary)
-      real, dimension(:,:), intent(inout) :: u1     !< cell-centered intermediate fluid states
-      real, dimension(:,:), intent(inout) :: b1     !< cell-centered intermediate magnetic fiels states (including psi field when necessary)
-      real,                 intent(in)    :: dtodx  !< timestep advance: RK-factor * timestep / cell length
-      type(ext_fluxes),     intent(inout) :: eflx   !< external fluxes
+      real, dimension(:,:),        intent(in)    :: u0     !< cell-centered initial fluid states
+      real, dimension(:,:),        intent(in)    :: b0     !< cell-centered initial magnetic fiels states (including psi field when necessary)
+      real, dimension(:,:),        intent(inout) :: u1     !< cell-centered intermediate fluid states
+      real, dimension(:,:),        intent(inout) :: b1     !< cell-centered intermediate magnetic fiels states (including psi field when necessary)
+      real, dimension(:), pointer, intent(in)    :: cs2    !< square of local isothermal sound speed
+      real,                        intent(in)    :: dtodx  !< timestep advance: RK-factor * timestep / cell length
+      type(ext_fluxes),            intent(inout) :: eflx   !< external fluxes
 
       ! left and right states at interfaces 1 .. n-1
       real, dimension(size(u0, 1)-1, size(u0, 2)), target :: ql, qr
@@ -315,7 +329,7 @@ contains
       mag_flx = huge(1.)
 
       call interpol(u1, ql, qr, b1, bl, br)
-      call riemann_wrap(ql, qr, bl, br, flx, mag_flx) ! Now we advance the left and right states by a timestep.
+      call riemann_wrap(ql, qr, bl, br, cs2, flx, mag_flx) ! Now we advance the left and right states by a timestep.
 
       if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
       if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx

@@ -55,7 +55,7 @@ contains
 !! OPT: check if passing pointers here will improve performance
 !<
 
-   subroutine riemann_wrap(ql, qr, b_cc_l, b_cc_r, flx, mag_cc)
+   subroutine riemann_wrap(ql, qr, b_cc_l, b_cc_r, cs2, flx, mag_cc)
 
       use constants,  only: I_ONE
       use fluidindex, only: flind
@@ -63,9 +63,10 @@ contains
 
       implicit none
 
-      real, dimension(:,:), target, intent(in)  :: ql, qr          ! left and right fluid states
-      real, dimension(:,:), target, intent(in)  :: b_cc_l, b_cc_r  ! left and right magnetic field states (relevant only for IONIZED fluid)
-      real, dimension(:,:), target, intent(out) :: flx, mag_cc     ! output fluxes: fluid, magnetic field and psi
+      real, dimension(:,:), target,  intent(in)  :: ql, qr          ! left and right fluid states
+      real, dimension(:,:), target,  intent(in)  :: b_cc_l, b_cc_r  ! left and right magnetic field states (relevant only for IONIZED fluid)
+      real, dimension(:),   pointer, intent(in)  :: cs2             !< square of local isothermal sound speed
+      real, dimension(:,:), target,  intent(out) :: flx, mag_cc     ! output fluxes: fluid, magnetic field and psi
 
       integer :: i
       class(component_fluid), pointer :: fl
@@ -98,9 +99,9 @@ contains
                p_ct_flx => flx(:, iend + I_ONE:)
                p_ctl => ql(:, iend + I_ONE:)
                p_ctr => qr(:, iend + I_ONE:)
-               call riemann_hlld(p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam, p_ct_flx, p_ctl, p_ctr)
+               call riemann_hlld(p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, cs2, fl%gam, p_ct_flx, p_ctl, p_ctr)
             else
-               call riemann_hlld(p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
+               call riemann_hlld(p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, cs2, fl%gam)
             endif
          end associate
       enddo
@@ -153,17 +154,15 @@ contains
 !! \brief single-fluid HLLD Riemann solver
 !<
 
-   subroutine riemann_hlld(f, ul, ur, b_cc, b_ccl, b_ccr, gamma, p_ct_flx, p_ctl, p_ctr)
+   subroutine riemann_hlld(f, ul, ur, b_cc, b_ccl, b_ccr, cs2, gamma, p_ct_flx, p_ctl, p_ctr)
 
     ! external procedures
 
     use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien, DIVB_HDC, psidim
+    use dataio_pub, only: die
     use func,       only: operator(.notequals.), operator(.equals.)
     use global,     only: divB_0_method
     use hdc,        only: chspeed
-#ifdef ISO
-    use dataio_pub, only: die
-#endif /* ISO */
 
     ! arguments
 
@@ -173,6 +172,7 @@ contains
     real, dimension(:,:), pointer,           intent(in)  :: ul, ur        !< left and right states of density, velocity and energy
     real, dimension(:,:), pointer,           intent(out) :: b_cc          !< cell-centered magnetic field flux (including psi field when necessary)
     real, dimension(:,:), pointer,           intent(in)  :: b_ccl, b_ccr  !< left and right states of magnetic field (including psi field when necessary)
+    real, dimension(:),   pointer,           intent(in)  :: cs2           !< square of local isothermal sound speed
     real, dimension(:,:), pointer, optional, intent(out) :: p_ct_flx      !< CR and tracers flux
     real, dimension(:,:), pointer, optional, intent(in)  :: p_ctl, p_ctr  !< left and right states of CR and tracers
     real,                                    intent(in)  :: gamma         !< gamma of current gas type
@@ -180,7 +180,9 @@ contains
     ! Local variables
 
     integer                                      :: i
+#ifndef ISO
     real, parameter                              :: four = 4.0
+#endif /* !ISO */
     real                                         :: sm, sl, sr
     real                                         :: alfven_l, alfven_r, c_fastm, gampr_l, gampr_r
     real                                         :: slsm, srsm, slvxl, srvxr, srmsl, dn_l, dn_r
@@ -199,10 +201,6 @@ contains
     logical                                      :: has_energy
     real                                         :: ue
 
-#ifdef ISO
-    call die("[hlld:riemann_hlld] Isothermal EOS is not implemented yet in this Riemann solver.")
-#endif /* ISO */
-
     ! SOLVER
 
     ! suppress complains caused by -Wmaybe-uninitialized
@@ -210,6 +208,16 @@ contains
     b_ccrf = 0.
     !if (divB_0_method /= DIVB_HDC) b_cc(xdim,:) = 0.
     has_energy = (ubound(ul, dim=2) >= ien)
+#ifdef ISO
+    if (has_energy) call die("[hlld:riemann_hlld] ISO .and. has_energy")
+    enl = huge(1.)
+    enr = huge(1.)
+    gampr_l = huge(1.)
+    gampr_r = huge(1.)
+#else /* ISO */
+    if (.not. associated(cs2)) call die("[hlld:riemann_hlld] ISO .and. .not. associated(cs2)")
+#endif /* ISO */
+
     ue = 0.
 
     if (present(p_ct_flx)) p_ct_flx = huge(1.)
@@ -232,6 +240,11 @@ contains
        ! Left and right states of total pressure
        ! From fluidupdate.F90, utoq() (1) is used in hydro regime and (2) in MHD regime. In case of vanishing magnetic fields the magnetic components do not contribute and hydro results are obtained trivially.
 
+#ifdef ISO
+       prl = cs2(i) * ul(i, idn) + magprl
+       prr = cs2(i) * ur(i, idn) + magprr
+       c_fastm = sqrt(max(cs2(i)+2*magprl/ul(i, idn), cs2(i)+2*magprr/ur(i, idn)))
+#else /* ISO */
        if (has_energy) then
 
           prl = ul(i, ien) + magprl ! ul(i, ien) is the left state of gas pressure
@@ -266,6 +279,7 @@ contains
        c_fastm = sqrt(half*max( &
              ((gampr_l+sum(b_ccl(i, xdim:zdim)**2)) + sqrt((gampr_l+sum(b_ccl(i, xdim:zdim)**2))**2-(four*gampr_l*b_ccl(i, xdim)**2)))/ul(i, idn), &
              ((gampr_r+sum(b_ccr(i, xdim:zdim)**2)) + sqrt((gampr_r+sum(b_ccr(i, xdim:zdim)**2))**2-(four*gampr_r*b_ccr(i, xdim)**2)))/ur(i, idn)) )
+#endif /* ISO */
 
        ! Estimates of speed for left and right going waves Eq. 67
 
