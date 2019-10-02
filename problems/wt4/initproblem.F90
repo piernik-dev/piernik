@@ -331,7 +331,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (master) then
+         if (master .and. .false.) then
             if (maxval(cg%dl(:), mask=dom%has_dir(:)) > ic_dx) then
                write(msg,'(a)')     "[initproblem:problem_initial_conditions] Too low resolution"
                call warn(msg)
@@ -402,12 +402,12 @@ contains
             cg%cs_iso2(:,:,cg%ks-i) = cg%cs_iso2(:,:, cg%ks)
             cg%cs_iso2(:,:,cg%ke+i) = cg%cs_iso2(:,:, cg%ke)
          enddo
-         if (master ) then
-            write(msg,'(2(a,g15.7))') '[initproblem:problem_initial_conditionslem]: minval(dens)    = ', minval(cg%u(fl%idn,:,:,:)),      ' maxval(dens)    = ', maxval(cg%u(fl%idn,:,:,:))
-            call printinfo(msg, .true.)
-            write(msg,'(2(a,g15.7))') '[initproblem:problem_initial_conditionslem]: minval(cs_iso2) = ', minval(cg%cs_iso2(:,:,:)), ' maxval(cs_iso2) = ', maxval(cg%cs_iso2(:,:,:))
-            call printinfo(msg, .true.)
-         endif
+!!$         if (master ) then
+!!$            write(msg,'(2(a,g15.7))') '[initproblem:problem_initial_conditionslem]: minval(dens)    = ', minval(cg%u(fl%idn,:,:,:)),      ' maxval(dens)    = ', maxval(cg%u(fl%idn,:,:,:))
+!!$            call printinfo(msg, .true.)
+!!$            write(msg,'(2(a,g15.7))') '[initproblem:problem_initial_conditionslem]: minval(cs_iso2) = ', minval(cg%cs_iso2(:,:,:)), ' maxval(cs_iso2) = ', maxval(cg%cs_iso2(:,:,:))
+!!$            call printinfo(msg, .true.)
+!!$         endif
 
          call cg%set_constant_b_field([0., 0., 0.])
 
@@ -429,9 +429,13 @@ contains
          cgl => cgl%nxt
       enddo
 
-#ifndef UMUSCL
-      if (master ) call warn("[initproblem:problem_initial_conditionslem]: Without UMUSCL you'll likely get Monet-like density maps.")
-#endif /* !UMUSCL */
+#ifdef RTVD
+      if (master ) call warn("[initproblem:problem_initial_conditionslem]: With RTVD you'll likely get Monet-like density maps.")
+#else /* RTVD */
+#  if !(defined(RIEMANN) || defined(HLLC))
+      if (master ) call warn("[initproblem:problem_initial_conditionslem]: No idea what kind of solver you use. Good luck!")
+#  endif
+#endif /* RTVD */
 
    contains
 
