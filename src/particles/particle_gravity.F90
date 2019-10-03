@@ -206,24 +206,25 @@ contains
 
    subroutine locate_particles_in_cells(n_part, cg, cells, dist)
 
-      use constants, only: half, ndims, xdim, zdim, CENTER, LO
-      use grid_cont, only: grid_container
+     use constants, only: half, ndims, xdim, zdim, CENTER, LO
+     use domain,    only: dom
+     use grid_cont, only: grid_container
 
-      implicit none
+     implicit none
 
-      integer,                          intent(in)    :: n_part
-      type(grid_container),             intent(inout) :: cg
-      integer, dimension(n_part,ndims), intent(out)   :: cells
-      real,    dimension(n_part,ndims), intent(out)   :: dist
-      integer                                         :: i, cdim
+     integer,                          intent(in)    :: n_part
+     type(grid_container),             intent(inout) :: cg
+     integer, dimension(n_part,ndims), intent(out)   :: cells
+     real,    dimension(n_part,ndims), intent(out)   :: dist
+     integer                                         :: i, cdim
 
-      do i = 1, n_part
-         call cg%pset%p(i)%is_outside()
-         do cdim = xdim, zdim
-            cells(i, cdim) = int( half + (cg%pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(cg%ijkse(cdim, LO))) * cg%idl(cdim) )
-            dist(i, cdim)  = cg%pset%p(i)%pos(cdim) - ( cg%coord(CENTER, cdim)%r(cg%ijkse(cdim, LO)) + cells(i,cdim) * cg%dl(cdim) )
-         enddo
-      enddo
+     do i = 1, n_part
+        call cg%pset%p(i)%is_outside()
+        do cdim = xdim, zdim
+           cells(i, cdim) = floor((cg%pset%p(i)%pos(cdim) - dom%edge(cdim,LO)) * cg%idl(cdim), kind=4)
+           dist(i, cdim)  = cg%pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(cells(i,cdim))
+        enddo
+     enddo
 
    end subroutine locate_particles_in_cells
 

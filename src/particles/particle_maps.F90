@@ -213,7 +213,7 @@ contains
                if (part%outside) cycle
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
-                     ijkp(cdim, I0) = nint((part%pos(cdim) - cg%fbnd(cdim,LO)-cg%dl(cdim)/2.)*cg%idl(cdim) + int(cg%lhn(cdim, LO)) + dom%nb, kind=4)
+                     ijkp(cdim, I0) = floor((part%pos(cdim) - dom%edge(cdim,LO)) *cg%idl(cdim), kind=4)
                      ijkp(cdim, IM) = max(ijkp(cdim, I0) - I_ONE, cg%lhn(cdim, LO))
                      ijkp(cdim, IP) = min(ijkp(cdim, I0) + I_ONE, cg%lhn(cdim, HI))
                   else
