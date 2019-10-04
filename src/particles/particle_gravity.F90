@@ -206,7 +206,7 @@ contains
 
    subroutine locate_particles_in_cells(n_part, cg, cells, dist)
 
-     use constants, only: half, ndims, xdim, zdim, CENTER, LO
+     use constants, only: ndims, xdim, zdim, LO
      use domain,    only: dom
      use grid_cont, only: grid_container
 
