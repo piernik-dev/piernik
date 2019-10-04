@@ -38,7 +38,7 @@ module particle_utils
    implicit none
 
    private
-   public :: max_pvel_1d, add_part_in_proper_cg, count_all_particles, print_all_particles, is_part_in_cg, part_leave_cg, reattrib_part_cg
+   public :: max_pvel_1d, add_part_in_proper_cg, count_all_particles, print_all_particles, is_part_in_cg, part_leave_cg
 #ifdef NBODY
    public :: max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom
 
@@ -197,10 +197,9 @@ contains
    end subroutine get_angmom_totener
 #endif /* NBODY */
 
-   subroutine is_part_in_cg(pos, in, phy, out)
+   subroutine is_part_in_cg(cg, pos, in, phy, out)
 
-      use cg_leaves,     only: leaves
-      use cg_list,       only: cg_list_element
+      use grid_cont,      only: grid_container
       use constants,     only: LO, HI, ndims, xdim, ydim, zdim, I_ONE, LEFT, RIGHT
       use domain,        only: dom
       use particle_func, only: particle_in_area
@@ -212,86 +211,81 @@ contains
       integer                             :: cdim, k, count, count2, count3
       integer, dimension(ndims)           :: tmp
       real, dimension(ndims,2)            :: bnd1, bnd2
-      type(cg_list_element), pointer      :: cgl
+      type(grid_container), pointer, intent(in)      :: cg
 
       in  = .false.
       phy = .false.
       out = .false.
-      !ghost=.false.
-      cgl => leaves%first
-      do while (associated(cgl))
 
-         !There is probably a better way to write this
-         bnd1(:,1) = [cgl%cg%coord(LEFT, xdim)%r(cgl%cg%lh1(xdim,LO)), cgl%cg%coord(LEFT, ydim)%r(cgl%cg%lh1(ydim,LO)), cgl%cg%coord(LEFT, zdim)%r(cgl%cg%lh1(zdim,LO))]
-         bnd1(:,2) = [cgl%cg%coord(RIGHT,xdim)%r(cgl%cg%lh1(xdim,HI)), cgl%cg%coord(RIGHT,ydim)%r(cgl%cg%lh1(ydim,HI)), cgl%cg%coord(RIGHT,zdim)%r(cgl%cg%lh1(zdim,HI))]
+      !There is probably a better way to write this
+      bnd1(:,1) = [cg%coord(LEFT, xdim)%r(cg%lh1(xdim,LO)), cg%coord(LEFT, ydim)%r(cg%lh1(ydim,LO)), cg%coord(LEFT, zdim)%r(cg%lh1(zdim,LO))]
+      bnd1(:,2) = [cg%coord(RIGHT,xdim)%r(cg%lh1(xdim,HI)), cg%coord(RIGHT,ydim)%r(cg%lh1(ydim,HI)), cg%coord(RIGHT,zdim)%r(cg%lh1(zdim,HI))]
 
-         bnd2(:,1) = [cgl%cg%coord(LEFT, xdim)%r(cgl%cg%ijkse(xdim,LO)+I_ONE), cgl%cg%coord(LEFT, ydim)%r(cgl%cg%ijkse(ydim,LO)+I_ONE), cgl%cg%coord(LEFT, zdim)%r(cgl%cg%ijkse(zdim,LO)+I_ONE)]
-         bnd2(:,2) = [cgl%cg%coord(RIGHT,xdim)%r(cgl%cg%ijkse(xdim,HI)-I_ONE), cgl%cg%coord(RIGHT,ydim)%r(cgl%cg%ijkse(ydim,HI)-I_ONE), cgl%cg%coord(RIGHT,zdim)%r(cgl%cg%ijkse(zdim,HI)-I_ONE)]
+      bnd2(:,1) = [cg%coord(LEFT, xdim)%r(cg%ijkse(xdim,LO)+I_ONE), cg%coord(LEFT, ydim)%r(cg%ijkse(ydim,LO)+I_ONE), cg%coord(LEFT, zdim)%r(cg%ijkse(zdim,LO)+I_ONE)]
+      bnd2(:,2) = [cg%coord(RIGHT,xdim)%r(cg%ijkse(xdim,HI)-I_ONE), cg%coord(RIGHT,ydim)%r(cg%ijkse(ydim,HI)-I_ONE), cg%coord(RIGHT,zdim)%r(cg%ijkse(zdim,HI)-I_ONE)]
 
 
-         if (particle_in_area(pos, bnd2))        in  = .true.
-         if (particle_in_area(pos, cgl%cg%fbnd)) phy = .true.
-         !Ghost particle
-         if (particle_in_area(pos,bnd1))         out=.true.
+      if (particle_in_area(pos, bnd2))        in  = .true.
+      if (particle_in_area(pos, cg%fbnd)) phy = .true.
+      !Ghost particle
+      if (particle_in_area(pos,bnd1))         out=.true.
 
-         if (.not. particle_in_area(pos, dom%edge)) then
-            count2 = 0
+      if (.not. particle_in_area(pos, dom%edge)) then
+         count2 = 0
+         do cdim = xdim, zdim
+            if (pos(cdim) < dom%edge(cdim,LO)) then
+               count2 = count2 + 1
+               tmp(cdim) = LO
+            else if (pos(cdim) > dom%edge(cdim,HI)) then
+               count2 = count2 + 1
+               tmp(cdim) = HI
+            else
+               tmp(cdim) = 0
+            endif
+         enddo
+
+         !CORNER
+         if (count2 == 3) then
+            count3 = 0
             do cdim = xdim, zdim
-               if (pos(cdim) < dom%edge(cdim,LO)) then
-                  count2 = count2 + 1
-                  tmp(cdim) = LO
-               else if (pos(cdim) > dom%edge(cdim,HI)) then
-                  count2 = count2 + 1
-                  tmp(cdim) = HI
-               else
-                  tmp(cdim) = 0
-               endif
+               if (cg%fbnd(cdim,tmp(cdim)) == dom%edge(cdim,tmp(cdim))) count3 = count3 + 1
             enddo
-
-            !CORNER
-            if (count2 == 3) then
-               count3 = 0
-               do cdim = xdim, zdim
-                  if (cgl%cg%fbnd(cdim,tmp(cdim)) == dom%edge(cdim,tmp(cdim))) count3 = count3 + 1
-               enddo
-               if (count3 == 3) phy = .true.
-               return
+            if (count3 == 3) phy = .true.
+            return
 
             !EDGE
-            else if (count2 == 2) then
-               do cdim = xdim, zdim
-                  if (tmp(cdim) /= 0) then
-                     if (cgl%cg%fbnd(cdim,tmp(cdim)) /= dom%edge(cdim,tmp(cdim))) return
-                  else
-                     if ( (pos(cdim) < cgl%cg%fbnd(cdim,LO)) .or. (pos(cdim) > cgl%cg%fbnd(cdim,HI)) ) return
-                  endif
-               enddo
-               phy = .true.
-               return
+         else if (count2 == 2) then
+            do cdim = xdim, zdim
+               if (tmp(cdim) /= 0) then
+                  if (cg%fbnd(cdim,tmp(cdim)) /= dom%edge(cdim,tmp(cdim))) return
+               else
+                  if ( (pos(cdim) < cg%fbnd(cdim,LO)) .or. (pos(cdim) > cg%fbnd(cdim,HI)) ) return
+               endif
+            enddo
+            phy = .true.
+            return
 
             !FACE
-            else
-               do cdim = xdim, zdim
-                  if ( ((pos(cdim) < dom%edge(cdim,LO)) .and. (cgl%cg%fbnd(cdim,LO) == dom%edge(cdim,LO))) .or. (((pos(cdim) > dom%edge(cdim,HI)) .and. (cgl%cg%fbnd(cdim,HI) == dom%edge(cdim,HI)))) ) then
-                     count = 0
-                     do k = xdim, zdim
-                        if (k /= cdim) then
-                           if ( (pos(k) > cgl%cg%fbnd(k,LO)) .and. (pos(k) < cgl%cg%fbnd(k,HI)) ) then
-                              count = count + 1
-                           endif
+         else
+            do cdim = xdim, zdim
+               if ( ((pos(cdim) < dom%edge(cdim,LO)) .and. (cg%fbnd(cdim,LO) == dom%edge(cdim,LO))) .or. (((pos(cdim) > dom%edge(cdim,HI)) .and. (cg%fbnd(cdim,HI) == dom%edge(cdim,HI)))) ) then
+                  count = 0
+                  do k = xdim, zdim
+                     if (k /= cdim) then
+                        if ( (pos(k) > cg%fbnd(k,LO)) .and. (pos(k) < cg%fbnd(k,HI)) ) then
+                           count = count + 1
                         endif
-                     enddo
-                     if (count == 2) then
-                        phy =.true.
-                        return
                      endif
+                  enddo
+                  if (count == 2) then
+                     phy =.true.
+                     return
                   endif
+               endif
 
-               enddo
-            endif
+            enddo
          endif
-         cgl => cgl%nxt
-      enddo
+      endif
 
    end subroutine is_part_in_cg
 
@@ -321,7 +315,7 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         call is_part_in_cg(pos, in, phy, out)
+         call is_part_in_cg(cgl%cg, pos, in, phy, out)
          if (phy .or. out) then
             call printinfo(msg)
 #ifdef NBODY
@@ -338,89 +332,157 @@ contains
 
    end subroutine add_part_in_proper_cg
 
-   subroutine part_leave_cg(cg, part_info, ind)
 
-     use constants, only: xdim, zdim
-     use grid_cont, only: grid_container
+   ! Sends leaving particles between processors, and creates ghosts
+   subroutine part_leave_cg()
+
+     use constants,      only: ndims, I_ONE, LO, HI
+     use grid_cont,      only: grid_container
+     use mpisetup,       only: proc, comm, mpi_err, FIRST, LAST
+     use mpi,            only: MPI_REAL, MPI_INTEGER
+     use cg_level_base,  only: base
+     use domain,         only: dom
+     use particle_func,  only: particle_in_area
+     use cg_leaves,      only: leaves
+     use cg_list,        only: cg_list_element
 
      implicit none
 
-     type(grid_container), intent(inout) :: cg
-     real, dimension(:,:), intent(inout) :: part_info
-     integer,              intent(inout) :: ind
-     integer                             :: i, k, cdim, npart
-     integer, dimension(:), allocatable  :: pdel
+     integer                                  :: i,j, pid, npart,k, b
+     real,                 dimension(ndims)   :: pos, vel, acc
+     real                                     :: mass,ener
+     integer, dimension(:), allocatable       :: pdel
+     real(kind=4), dimension(:), allocatable  :: part_info, part_info2
+     integer,   dimension(FIRST:LAST)         :: nsend, nrecv, counts, countr, disps, dispr
+     integer                                  :: ind
+     type(cg_list_element), pointer           :: cgl
+     type(grid_container),  pointer           :: cg
+     logical                                  :: already, in, phy, out
 
-     npart = size(cg%pset%p, dim=1)
-     allocate(pdel(npart))
-     pdel = 0
-     do i = 1, npart
-        if (.not. cg%pset%p(i)%in) then
-           part_info(ind,1) = cg%pset%p(i)%pid
-           part_info(ind,2) = cg%pset%p(i)%mass
-           do cdim = xdim, zdim
-              part_info(ind,2+cdim) = cg%pset%p(i)%pos(cdim)
-              part_info(ind,5+cdim) = cg%pset%p(i)%vel(cdim)
-              part_info(ind,8+cdim) = cg%pset%p(i)%acc(cdim)
-              part_info(ind,12)     = cg%pset%p(i)%energy
-           enddo
-           if (.not. cg%pset%p(i)%out) pdel(i) = 1
-           ind = ind + 1
-        endif
-     enddo
+     nsend=0
+     nrecv=0
 
-     k = 1
-     do i = 1, npart
-        if (pdel(i)==1) then
-           call cg%pset%remove(k)
-        else
-           k = k + 1
-        endif
-     enddo
-     deallocate(pdel)
+     !Count number of particles to be sent
+     cgl => leaves%first
+     do while (associated(cgl))
+        cg => cgl%cg
+          npart=size(cg%pset%p,dim=1)
+          do i=1,npart
+             if (.not. cg%pset%p(i)%in) then
+                do j=FIRST, LAST
+                   if (j==proc) cycle
+                   ! TO DO: ADD CONDITION FOR PARTICLES CHANGING CG OUTSIDE DOMAIN
+                   do b = lbound(base%level%dot%gse(j)%c(:), dim=1), ubound(base%level%dot%gse(j)%c(:), dim=1)
+                      if ( particle_in_area( cg%pset%p(i)%pos, [ (base%level%dot%gse(j)%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (base%level%dot%gse(j)%c(b)%se(:,HI) - dom%n_d(:)/2.+I_ONE)*cg%dl(:)])) nsend(j) = nsend(j) + 1 ! WON'T WORK in AMR!!!
+                   enddo
+                enddo
+             endif
+          enddo
+          cgl => cgl%nxt
+       enddo
+
+       !Exchange information about particles numbers to be sent / received
+       call MPI_Alltoall(nsend, I_ONE, MPI_INTEGER, nrecv, I_ONE, MPI_INTEGER, comm, mpi_err)
+
+       !Store data of particles to be sent
+       allocate(part_info(sum(nsend(:))*12))
+       ind=1
+       cgl => leaves%first
+       do while (associated(cgl))
+          associate(cg => cgl%cg)
+            npart=size(cg%pset%p,dim=1)
+            allocate(pdel(npart))
+            pdel=0
+            do j=FIRST, LAST
+               do i=1,npart
+                  if (.not. cg%pset%p(i)%out) pdel(i)=1
+                  if (j==proc) cycle ! TO DO IN AMR: ADD PARTICLES CHANGING CG INSIDE PROCESSOR
+                  if (.not. cg%pset%p(i)%in) then
+                     do b = lbound(base%level%dot%gse(j)%c(:), dim=1), ubound(base%level%dot%gse(j)%c(:), dim=1)
+                        if ( particle_in_area( cg%pset%p(i)%pos, [(base%level%dot%gse(j)%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (base%level%dot%gse(j)%c(b)%se(:,HI) - dom%n_d(:)/2. + I_ONE)*cg%dl(:)])) then
+                           part_info(ind)=cg%pset%p(i)%pid
+                           part_info(ind+1)=cg%pset%p(i)%mass
+                           part_info(ind+2:ind+4)=cg%pset%p(i)%pos
+                           part_info(ind+5:ind+7)=cg%pset%p(i)%vel
+                           part_info(ind+8:ind+10)=cg%pset%p(i)%acc
+                           part_info(ind+11)=cg%pset%p(i)%energy
+                           ind=ind+12
+                        endif
+                     enddo
+                  endif
+               enddo
+            enddo
+
+            !Remove particles out of cg
+            k = 1
+            do i = 1, npart
+               if (pdel(i)==1) then
+                  call cg%pset%remove(k)
+               else
+                  k = k + 1
+               endif
+            enddo
+            deallocate(pdel)
+
+          end associate
+          cgl => cgl%nxt
+       enddo
+
+       !Send / receive particle data
+       counts=12*nsend
+       allocate(part_info2(sum(nrecv)*12))
+       countr=12*nrecv
+       disps(FIRST) = 0
+       dispr(FIRST) = 0
+       do j=FIRST+I_ONE,LAST
+          disps(j) = disps(j-1) + counts(j-1)
+          dispr(j) = dispr(j-1) + countr(j-1)
+       enddo
+
+       call MPI_Alltoallv(part_info, counts, disps, MPI_REAL, part_info2, countr, dispr, MPI_REAL, comm, mpi_err)
+
+       !Add particles in cgs
+       cgl => leaves%first
+       do while (associated(cgl))
+          associate(cg => cgl%cg)
+            ind=1
+            do j=FIRST, LAST
+               if (nrecv(j) /= 0) then
+                  do i=1, nrecv(j)
+                     pos=part_info2(ind+2:ind+4)
+                     call is_part_in_cg(cg, pos, in, phy, out) ! TO DO IN AMR USE GRID_ID TO CUT THE SEARCH SHORT
+                     if (.not. out) print *, 'error, particle', part_info2(ind), 'cannot be attributed!' ! NON-AMR ONLY
+                     if (out) then
+                        pid=nint(part_info2(ind))
+                        already = .false.
+                        do k = 1, size(cg%pset%p, dim=1)
+                           if (pid == cg%pset%p(k)%pid) then
+                              already = .true.
+                              exit
+                           endif
+                        enddo
+                        if (.not. already) then
+                           mass=part_info2(ind+1)
+                           vel=part_info2(ind+5:ind+7)
+                           acc=part_info2(ind+8:ind+10)
+                           ener=part_info2(ind+11)
+                           call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out)
+                        endif
+                     endif
+                     ind=ind+12
+                  enddo
+               endif
+            enddo
+          end associate
+          cgl => cgl%nxt
+       enddo
+
+       deallocate(part_info2)
+       deallocate(part_info)
+
 
    end subroutine part_leave_cg
 
-   subroutine reattrib_part_cg(cg, part_info, nmove)
-
-     use constants, only: ndims
-     use grid_cont, only: grid_container
-
-     implicit none
-
-     type(grid_container), intent(inout) :: cg
-     real, dimension(:,:), intent(inout) :: part_info
-     integer,              intent(in)    :: nmove
-     logical                             :: in, phy, out, already
-     integer                             :: i, j, pid
-     real, dimension(ndims)              :: pos, vel, acc
-     real                                :: mass, ener
-
-     do i = 1, nmove
-        if (nint(part_info(i,1)) /= 0) then
-           pos = part_info(i,3:5)
-           call is_part_in_cg(pos, in, phy, out)
-           if (out) then
-              pid = nint(part_info(i,1))
-              already = .false.
-              do j = 1, size(cg%pset%p, dim=1)
-                 if (pid == cg%pset%p(j)%pid) then
-                    already = .true.
-                    exit
-                 endif
-              enddo
-              if (.not. already) then
-                 mass = part_info(i,2)
-                 vel  = part_info(i,6:8)
-                 acc  = part_info(i,9:11)
-                 ener = part_info(i,12)
-                 call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out)
-              endif
-           endif
-        endif
-     enddo
-
-   end subroutine reattrib_part_cg
 
    integer(kind=4) function count_all_particles() result(pcount)
 

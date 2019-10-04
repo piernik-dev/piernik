@@ -371,57 +371,25 @@ contains
 
          subroutine drift(ddt)
 
-            use constants,      only: pSUM
-            use mpisetup,       only: piernik_MPI_Allreduce, proc, nproc
-            use particle_utils, only: part_leave_cg, reattrib_part_cg, is_part_in_cg
+            use particle_utils, only: part_leave_cg, is_part_in_cg
 
             implicit none
 
             real, intent(in)                  :: ddt
-            integer                           :: i, j, ind
-            integer, dimension(nproc)         :: nmoves
-            real, allocatable, dimension(:,:) :: part_info
+            integer                           :: i
 
-
-            nmoves = 0
             cgl => leaves%first
             do while (associated(cgl))
                associate( parts => cgl%cg%pset )
                  do i = 1, size(parts%p, dim=1)
                     parts%p(i)%pos = parts%p(i)%pos + parts%p(i)%vel * ddt
-                    call is_part_in_cg(parts%p(i)%pos, parts%p(i)%in, parts%p(i)%phy, parts%p(i)%out)
-                    if (.not. parts%p(i)%in) nmoves(proc+1) = nmoves(proc+1)+1
+                    call is_part_in_cg(cgl%cg, parts%p(i)%pos, parts%p(i)%in, parts%p(i)%phy, parts%p(i)%out)
                  enddo
                end associate
                cgl => cgl%nxt
             enddo
 
-            call piernik_MPI_Allreduce(nmoves, pSUM)
-
-            allocate(part_info(sum(nmoves),12))
-            part_info = 0
-
-            cgl => leaves%first
-            do while (associated(cgl))
-               ind = 1
-               do j = 1, proc
-                  ind=ind+nmoves(j)
-               enddo
-               call part_leave_cg(cgl%cg, part_info, ind)
-               cgl => cgl%nxt
-            enddo
-
-
-            call piernik_MPI_Allreduce(part_info, pSUM)
-
-            cgl => leaves%first
-            do while (associated(cgl))
-               call reattrib_part_cg(cgl%cg, part_info, sum(nmoves))
-               cgl => cgl%nxt
-            enddo
-
-            deallocate(part_info)
-
+            call part_leave_cg()
 
          end subroutine drift
 
