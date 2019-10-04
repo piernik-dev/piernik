@@ -222,7 +222,7 @@ contains
         call cg%pset%p(i)%is_outside()
         do cdim = xdim, zdim
            cells(i, cdim) = floor((cg%pset%p(i)%pos(cdim) - dom%edge(cdim,LO)) * cg%idl(cdim), kind=4)
-           dist(i, cdim)  = cg%pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(cells(i,cdim))
+           dist(i, cdim)  = cg%pset%p(i)%pos(cdim) - ( dom%edge(cdim,LO) + cells(i,cdim) * cg%dl(cdim) )
         enddo
      enddo
 
