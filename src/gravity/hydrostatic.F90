@@ -70,6 +70,22 @@ module hydrostatic
 contains
 
 !>
+!! \brief Initialize hydrostatic module
+!<
+   subroutine init_hydrostatic
+
+      use fluidboundaries_funcs, only: outh_fluidbnd
+
+      implicit none
+
+      ! BEWARE: This is a sweet little hack that allows to drop hydrostatic
+      ! dependency from fluidboundaries module. It's bad due to several reasons,
+      ! which I'll gracefully omit in this comment. It should be fixed asap...
+      outh_fluidbnd => outh_bnd
+
+   end subroutine init_hydrostatic
+
+!>
 !! \brief Routine that establishes hydrostatic equilibrium for fixed column density
 !! \details Routine calls the routine of the case of fixed plane density value and use the correction for column density.
 !! To properly use this routine it is important to make sure that get_gprofs pointer has been associated. See details of start_hydrostatic routine.
@@ -121,6 +137,46 @@ contains
    end subroutine hydrostatic_zeq_densmid
 
 !>
+!! \brief Routine that prepares data for constructing hydrostatic equilibrium by hydrostatic_main routine
+!! \details It is important to have get_gprofs pointer associated to a proper routine that gives back the column of nsub*nzt elements of gravitational acceleration in z direction. In the most common cases the gprofs_target parameter from GRAVITY namelist may be used. When it is set to 'accel' or 'extgp' the pointer is associated to get_gprofs_accel or get_gprofs_extgp routines, respectively.
+!! \note After calling this routine gprofs is multiplied by dzs/csim2 which are assumed to be constant. This is done for optimizing the hydrostatic_main routine.
+!! \param iia x-coordinate of z-column
+!! \param jja y-coordinate of z-column
+!! \param csim2 sqare of sound velocity
+!! \param sd optional variable to give a sum of dprofs array from hydrostatic_main routine
+!<
+   subroutine start_hydrostatic(iia, jja, csim2, sd)
+
+      use constants, only: half
+      use gravity,   only: get_gprofs
+
+      implicit none
+
+      integer,        intent(in)    :: iia, jja
+      real,           intent(in)    :: csim2
+      real, optional, intent(inout) :: sd
+      integer                       :: ksub
+
+      allocate(zs(nstot), gprofs(nstot))
+      do ksub = 1, nstot
+         zs(ksub) = hsmin + (real(ksub)-half) * dzs
+      enddo
+      call get_gprofs(iia, jja)
+      gprofs(:) = gprofs(:) / csim2 * dzs
+      call hydrostatic_main(sd)
+
+   end subroutine start_hydrostatic
+
+   subroutine finish_hydrostatic
+
+      implicit none
+
+      if (allocated(zs))     deallocate(zs)
+      if (allocated(gprofs)) deallocate(gprofs)
+
+   end subroutine finish_hydrostatic
+
+!>
 !! \brief Routine to set up sizes of arrays used in hydrostatic module. Settings depend on cg structure.
 !! \details Routine has to be called before the firs usage of hydrostatic_zeq_coldens/densmid if there is no other equivalent user settings.
 !<
@@ -128,8 +184,9 @@ contains
 
       use constants,   only: zdim, LO, HI, I_ONE, LEFT, RIGHT
       use diagnostics, only: my_deallocate !, my_allocate
+      use dataio_pub,  only: die
       use domain,      only: dom
-      use gravity,     only: nsub
+      use gravity,     only: get_gprofs, gprofs_target, nsub
       use grid_cont,   only: grid_container
 
       implicit none
@@ -152,38 +209,18 @@ contains
       hsl(hsbn(LO):hsbn(HI)) = cg%coord(LEFT,  zdim)%r(hsbn(LO):hsbn(HI))
       hsl(hsbn(HI)+I_ONE)    = cg%coord(RIGHT, zdim)%r(hsbn(HI))
 
+      if (.not.associated(get_gprofs)) then
+         select case (gprofs_target)
+            case ('accel')
+               get_gprofs => get_gprofs_accel
+            case ('extgp')
+               get_gprofs => get_gprofs_extgp
+            case default
+               call die("[hydrostatic:set_default_hsparams] get_gprofs target has not been specified")
+         end select
+      endif
+
    end subroutine set_default_hsparams
-
-!>
-!! \brief Initialize hydrostatic module
-!<
-   subroutine init_hydrostatic
-
-      use fluidboundaries_funcs, only: outh_fluidbnd
-
-      implicit none
-
-      ! BEWARE: This is a sweet little hack that allows to drop hydrostatic
-      ! dependency from fluidboundaries module. It's bad due to several reasons,
-      ! which I'll gracefully omit in this comment. It should be fixed asap...
-      outh_fluidbnd => outh_bnd
-
-   end subroutine init_hydrostatic
-
-!>
-!! \brief Routine to clean up after the last usage of hydrostatic routines
-!<
-   subroutine cleanup_hydrostatic
-
-      use diagnostics, only: my_deallocate
-
-      implicit none
-
-      if (allocated(dprof)) call my_deallocate(dprof)
-      if (allocated(hsl))   call my_deallocate(hsl)
-      if (associated(hscg)) nullify(hscg)
-
-   end subroutine cleanup_hydrostatic
 
 !>
 !! \brief Routine that arranges %hydrostatic equilibrium in the vertical (z) direction
@@ -325,57 +362,6 @@ contains
       if (associated(gpots)) deallocate(gpots)
    end subroutine get_gprofs_extgp
 
-!>
-!! \brief Routine that prepares data for constructing hydrostatic equilibrium by hydrostatic_main routine
-!! \details It is important to have get_gprofs pointer associated to a proper routine that gives back the column of nsub*nzt elements of gravitational acceleration in z direction. In the most common cases the gprofs_target parameter from GRAVITY namelist may be used. When it is set to 'accel' or 'extgp' the pointer is associated to get_gprofs_accel or get_gprofs_extgp routines, respectively.
-!! \note After calling this routine gprofs is multiplied by dzs/csim2 which are assumed to be constant. This is done for optimizing the hydrostatic_main routine.
-!! \param iia x-coordinate of z-column
-!! \param jja y-coordinate of z-column
-!! \param csim2 sqare of sound velocity
-!! \param sd optional variable to give a sum of dprofs array from hydrostatic_main routine
-!<
-   subroutine start_hydrostatic(iia, jja, csim2, sd)
-
-      use constants,  only: half
-      use dataio_pub, only: die
-      use gravity,    only: get_gprofs, gprofs_target
-
-      implicit none
-
-      integer,        intent(in)    :: iia, jja
-      real,           intent(in)    :: csim2
-      real, optional, intent(inout) :: sd
-      integer                       :: ksub
-
-      if (.not.associated(get_gprofs)) then
-         select case (gprofs_target)
-            case ('accel')
-               get_gprofs => get_gprofs_accel
-            case ('extgp')
-               get_gprofs => get_gprofs_extgp
-            case default
-               call die("[hydrostatic:start_hydrostatic] get_gprofs'' target has not been specified")
-         end select
-      endif
-      allocate(zs(nstot), gprofs(nstot))
-      do ksub = 1, nstot
-         zs(ksub) = hsmin + (real(ksub)-half) * dzs
-      enddo
-      call get_gprofs(iia, jja)
-      gprofs(:) = gprofs(:) / csim2 *dzs
-      call hydrostatic_main(sd)
-
-   end subroutine start_hydrostatic
-
-   subroutine finish_hydrostatic
-
-      implicit none
-
-      if (allocated(zs))     deallocate(zs)
-      if (allocated(gprofs)) deallocate(gprofs)
-
-   end subroutine finish_hydrostatic
-
    !>
    !! \todo this procedure is incompatible with cg%cs_iso2
    !<
@@ -505,5 +491,20 @@ contains
       endif
 
    end subroutine outh_bnd
+
+!>
+!! \brief Routine to clean up after the last usage of hydrostatic routines
+!<
+   subroutine cleanup_hydrostatic
+
+      use diagnostics, only: my_deallocate
+
+      implicit none
+
+      if (allocated(dprof)) call my_deallocate(dprof)
+      if (allocated(hsl))   call my_deallocate(hsl)
+      if (associated(hscg)) nullify(hscg)
+
+   end subroutine cleanup_hydrostatic
 
 end module hydrostatic
