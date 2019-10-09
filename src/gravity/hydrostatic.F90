@@ -57,12 +57,11 @@ module hydrostatic
    type(grid_container), pointer,   save :: hscg
 
    interface
-      subroutine hzeqscheme(ksub, up, factor)
+      real function hzeqscheme(ksub, up)
          implicit none
          integer, intent(in)  :: ksub
          real,    intent(in)  :: up
-         real,    intent(out) :: factor
-      end subroutine hzeqscheme
+      end function hzeqscheme
    end interface
 
    procedure(hzeqscheme), pointer :: hzeq_scheme => NULL()
@@ -239,7 +238,6 @@ contains
       real, optional, intent(out)     :: sd
       real, allocatable, dimension(:) :: dprofs
       integer                         :: ksub, ksmid, k
-      real                            :: factor
 
       allocate(dprofs(nstot))
 
@@ -262,16 +260,14 @@ contains
       if (ksmid < nstot) then
          dprofs(ksmid+1) = dmid
          do ksub = ksmid+1, nstot-1
-            call hzeq_scheme(ksub,  1.0, factor)
-            dprofs(ksub+1) = factor * dprofs(ksub)
+            dprofs(ksub+1) = dprofs(ksub) * hzeq_scheme(ksub, 1.0)
          enddo
       endif
 
       if (ksmid > 1) then
          dprofs(ksmid) = dmid
          do ksub = ksmid, 2, -1
-            call hzeq_scheme(ksub, -1.0, factor)
-            dprofs(ksub-1) = factor * dprofs(ksub)
+            dprofs(ksub-1) = dprofs(ksub) * hzeq_scheme(ksub, -1.0)
          enddo
       endif
 
@@ -295,22 +291,20 @@ contains
 
    end subroutine hydrostatic_main
 
-   subroutine hzeq_scheme_v1(ksub, up, factor)
+   real function hzeq_scheme_v1(ksub, up) result(factor)
       implicit none
       integer, intent(in)  :: ksub
       real,    intent(in)  :: up
-      real,    intent(out) :: factor
       factor = (2.0 + up*gprofs(ksub))/(2.0 - up*gprofs(ksub))
-   end subroutine hzeq_scheme_v1
+   end function hzeq_scheme_v1
 
-   subroutine hzeq_scheme_v2(ksub, up, factor)
+   real function hzeq_scheme_v2(ksub, up) result(factor)
       implicit none
       integer, intent(in)  :: ksub
       real,    intent(in)  :: up
-      real,    intent(out) :: factor
       factor = gprofs(ksub)+gprofs(ksub+nint(up))
       factor = (4.0 + up*factor)/(4.0 - up*factor)
-   end subroutine hzeq_scheme_v2
+   end function hzeq_scheme_v2
 
    subroutine get_gprofs_accel(iia, jja)
 
