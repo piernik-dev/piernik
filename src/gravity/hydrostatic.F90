@@ -40,10 +40,9 @@ module hydrostatic
    implicit none
 
    private
-#ifdef GRAV
+
    public :: set_default_hsparams, hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, cleanup_hydrostatic, outh_bnd, init_hydrostatic
    public :: dprof, gprofs, nstot, zs, dzs, hsmin, hsbn, hsl, sdlim, hscg
-#endif /* GRAV */
 
    real, allocatable, dimension(:), save :: zs        !< array of z-positions of subgrid cells centers
    real, allocatable, dimension(:), save :: gprofs    !< array of gravitational acceleration in a column of subgrid
@@ -69,7 +68,7 @@ module hydrostatic
    procedure(hzeqscheme), pointer :: hzeq_scheme => NULL()
 
 contains
-#ifdef GRAV
+
 !>
 !! \brief Routine that establishes hydrostatic equilibrium for fixed column density
 !! \details Routine calls the routine of the case of fixed plane density value and use the correction for column density.
@@ -225,7 +224,7 @@ contains
 
       if (ksmid < nstot) then
          dprofs(ksmid+1) = dmid
-         do ksub=ksmid+1, nstot-1
+         do ksub = ksmid+1, nstot-1
             call hzeq_scheme(ksub,  1.0, factor)
             dprofs(ksub+1) = factor * dprofs(ksub)
          enddo
@@ -233,7 +232,7 @@ contains
 
       if (ksmid > 1) then
          dprofs(ksmid) = dmid
-         do ksub=ksmid, 2, -1
+         do ksub = ksmid, 2, -1
             call hzeq_scheme(ksub, -1.0, factor)
             dprofs(ksub-1) = factor * dprofs(ksub)
          enddo
@@ -241,7 +240,7 @@ contains
 
       dprof(:) = 0.0
       do k=hsbn(LO), hsbn(HI)
-         do ksub=1, nstot
+         do ksub = 1, nstot
             if (zs(ksub) > hsl(k) .and. zs(ksub) < hsl(k+1)) then
                dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
             endif
@@ -250,7 +249,7 @@ contains
 
       if (present(sd)) then
          sd = 0.0
-         do ksub=1, nstot
+         do ksub = 1, nstot
             if (zs(ksub) > sdlim(LO) .and. zs(ksub) < sdlim(HI)) sd = sd + dprofs(ksub)*dzs
          enddo
       endif
@@ -359,8 +358,8 @@ contains
          end select
       endif
       allocate(zs(nstot), gprofs(nstot))
-      do ksub=1, nstot
-         zs(ksub) = hsmin + (real(ksub)-half)*dzs
+      do ksub = 1, nstot
+         zs(ksub) = hsmin + (real(ksub)-half) * dzs
       enddo
       call get_gprofs(iia, jja)
       gprofs(:) = gprofs(:) / csim2 *dzs
@@ -507,5 +506,4 @@ contains
 
    end subroutine outh_bnd
 
-#endif /* GRAV */
 end module hydrostatic
