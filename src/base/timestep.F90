@@ -106,9 +106,9 @@ contains
       use constants,          only: one, two, zero, half, pMIN, pMAX
       use dataio,             only: write_crashed
       use dataio_pub,         only: tend, msg, warn
-      use fargo,              only: timestep_fargo, fargo_mean_omega
+      use fargo,              only: timestep_fargo
       use fluidtypes,         only: var_numbers
-      use global,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, use_fargo, cfl_violated
+      use global,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, cfl_violated
       use grid_cont,          only: grid_container
       use mpisetup,           only: master, piernik_MPI_Allreduce
       use sources,            only: timestep_sources
@@ -140,8 +140,6 @@ contains
       c_all = zero
       dt = huge(1.)
 
-      if (use_fargo) call fargo_mean_omega
-
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -157,7 +155,6 @@ contains
          dt = min(dt, dt_crs)
 #endif /* COSM_RAYS */
 
-         if (use_fargo) dt = min(dt, timestep_fargo(cg, dt))
          cgl => cgl%nxt
       enddo
 
@@ -167,6 +164,7 @@ contains
 #endif /* RESISTIVE */
 
       call timestep_sources(dt)
+      call timestep_fargo(dt)
 
       call piernik_MPI_Allreduce(dt,    pMIN)
       call piernik_MPI_Allreduce(c_all, pMAX)

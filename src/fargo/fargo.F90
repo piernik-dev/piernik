@@ -243,45 +243,53 @@ contains
 !!    the shift should not disconnect two neighbouring grid cells in radial and
 !!    in the vertical direction" -- Kley et al. 2009
 !<
-   real function timestep_fargo(cg, dt_min) result(dt)
+   subroutine timestep_fargo(dt)
 
-      use fluidindex,   only: flind
-      use grid_cont,    only: grid_container
-      use global,       only: cfl
-      use constants,    only: ydim, big, small, half
-      use fluidtypes,   only: component_fluid
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: ydim, big, small, half
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use global,     only: cfl, use_fargo
+      use grid_cont,  only: grid_container
 
       implicit none
-      type(grid_container), pointer, intent(in) :: cg
-      real, intent(in) :: dt_min
 
-      real :: dt_shear!, dt_res
-      !real :: v_mean, v_cr, nshft, c_fl
-      real :: omega!, omegap, dphi
-      integer :: i, j, k, ifl
+      real, intent(inout)             :: dt
+
+      real                            :: dt_shear, omega !, dt_res, omegap, dphi, v_mean, v_cr, nshft, c_fl
+      integer                         :: i, j, k, ifl
       class(component_fluid), pointer :: pfl
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
+      if (.not.use_fargo) return
+
+      call fargo_mean_omega
 
       dt_shear = big
-      do ifl = lbound(flind%all_fluids, 1), ubound(flind%all_fluids, 1)
-         pfl   => flind%all_fluids(ifl)%fl
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-                  if (cg%leafmap(i, j, k)) then
-                     omega  = cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) / cg%x(i) - cg%u(pfl%imy, i-1, j, k) / cg%u(pfl%idn, i-1, j, k) / cg%x(i-1)
-                     omega  = max(abs(omega), small)
-                     !omegap = (cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) - cg%u(pfl%imy, i, j-1, K) / cg%u(pfl%idn, i, j-1, k)) / cg%x(i)
-                     !omegap = max(abs(omegap), small)
-                     !dphi = cg%dl(ydim)
-                     !dt_shear = min(dt_shear, half*min(dphi / abs(omega), dphi / abs(omegap)))
-                     dt_shear = min(dt_shear, half * cg%dl(ydim) / omega)
-                  endif
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         do ifl = lbound(flind%all_fluids, 1), ubound(flind%all_fluids, 1)
+            pfl   => flind%all_fluids(ifl)%fl
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     if (cg%leafmap(i, j, k)) then
+                        omega = cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) / cg%x(i) - cg%u(pfl%imy, i-1, j, k) / cg%u(pfl%idn, i-1, j, k) / cg%x(i-1)
+                        omega = max(abs(omega), small)
+                        !omegap = (cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) - cg%u(pfl%imy, i, j-1, K) / cg%u(pfl%idn, i, j-1, k)) / cg%x(i)
+                        !omegap = max(abs(omegap), small)
+                        !dphi = cg%dl(ydim)
+                        !dt_shear = min(dt_shear, half*min(dphi / abs(omega), dphi / abs(omegap)))
+                        dt_shear = min(dt_shear, half * cg%dl(ydim) / omega)
+                     endif
+                  enddo
                enddo
             enddo
          enddo
-      enddo
-      dt = cfl * dt_shear
 
 !     dt_res = huge(real(1.0,4))
 !     c_fl = 0.0
@@ -298,9 +306,13 @@ contains
 !     enddo
 !
 !     dt = min(dt, cfl * dt_res)
-      if (.false.) print *, dt_min
 
-   end function timestep_fargo
+         cgl => cgl%nxt
+      enddo
+
+      dt = min(dt, cfl * dt_shear)
+
+   end subroutine timestep_fargo
 
 !>
 !! \brief Perform integer part of azimuthal transport step
