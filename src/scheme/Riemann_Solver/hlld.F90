@@ -208,10 +208,10 @@ contains
     b_ccrf = 0.
     !if (divB_0_method /= DIVB_HDC) b_cc(xdim,:) = 0.
     has_energy = (ubound(ul, dim=2) >= ien)
-#ifdef ISO
-    if (has_energy) call die("[hlld:riemann_hlld] ISO .and. has_energy")
     enl = huge(1.)
     enr = huge(1.)
+#ifdef ISO
+    if (has_energy) call die("[hlld:riemann_hlld] ISO .and. has_energy")
     gampr_l = huge(1.)
     gampr_r = huge(1.)
 #else /* ISO */
@@ -240,46 +240,49 @@ contains
        ! Left and right states of total pressure
        ! From fluidupdate.F90, utoq() (1) is used in hydro regime and (2) in MHD regime. In case of vanishing magnetic fields the magnetic components do not contribute and hydro results are obtained trivially.
 
+       if (gamma < 0.) then  ! DUST
+          ! Beware: tricky detection, may take revenge on use some day
+          prl = 0.
+          prr = 0.
+          c_fastm = 0.
+       else
 #ifdef ISO
-       prl = cs2(i) * ul(i, idn) + magprl
-       prr = cs2(i) * ur(i, idn) + magprr
-       c_fastm = sqrt(max(cs2(i)+2*magprl/ul(i, idn), cs2(i)+2*magprr/ur(i, idn)))
+          prl = cs2(i) * ul(i, idn) + magprl
+          prr = cs2(i) * ur(i, idn) + magprr
+          c_fastm = sqrt(max(cs2(i)+2*magprl/ul(i, idn), cs2(i)+2*magprr/ur(i, idn)))
 #else /* ISO */
-       if (has_energy) then
+          if (has_energy) then
 
-          prl = ul(i, ien) + magprl ! ul(i, ien) is the left state of gas pressure
-          prr = ur(i, ien) + magprr ! ur(i, ien) is the right state of gas pressure
+             prl = ul(i, ien) + magprl ! ul(i, ien) is the left state of gas pressure
+             prr = ur(i, ien) + magprr ! ur(i, ien) is the right state of gas pressure
 
-          ! Left and right states of energy Eq. 2.
+             ! Left and right states of energy Eq. 2.
 
-          enl = (ul(i, ien)/(gamma -one)) + half*ul(i, idn)*sum(ul(i, imx:imz)**2) + half*sum(b_ccl(i, xdim:zdim)**2)
-          enr = (ur(i, ien)/(gamma -one)) + half*ur(i, idn)*sum(ur(i, imx:imz)**2) + half*sum(b_ccr(i, xdim:zdim)**2)
+             enl = (ul(i, ien)/(gamma -one)) + half*ul(i, idn)*sum(ul(i, imx:imz)**2) + half*sum(b_ccl(i, xdim:zdim)**2)
+             enr = (ur(i, ien)/(gamma -one)) + half*ur(i, idn)*sum(ur(i, imx:imz)**2) + half*sum(b_ccr(i, xdim:zdim)**2)
 
-          ! Left and right states of gamma*p_gas
+             ! Left and right states of gamma*p_gas
 
-          gampr_l = gamma*ul(i, ien)
-          gampr_r = gamma*ur(i, ien)
+             gampr_l = gamma*ul(i, ien)
+             gampr_r = gamma*ur(i, ien)
 
-       else ! this is for DUST (presureless fluid)
+             ! Left and right states of fast magnetosonic waves Eq. 3
+             c_fastm = sqrt(half*max( &
+                  ((gampr_l+sum(b_ccl(i, xdim:zdim)**2)) + sqrt((gampr_l+sum(b_ccl(i, xdim:zdim)**2))**2-(four*gampr_l*b_ccl(i, xdim)**2)))/ul(i, idn), &
+                  ((gampr_r+sum(b_ccr(i, xdim:zdim)**2)) + sqrt((gampr_r+sum(b_ccr(i, xdim:zdim)**2))**2-(four*gampr_r*b_ccr(i, xdim)**2)))/ur(i, idn)) )
 
-          ! check if it is consistent
-          prl = magprl
-          prr = magprr
+          else
 
-          enl = half*ul(i, idn)*sum(ul(i, imx:imz)**2) + half*sum(b_ccl(i, xdim:zdim)**2)
-          enr = half*ur(i, idn)*sum(ur(i, imx:imz)**2) + half*sum(b_ccr(i, xdim:zdim)**2)
+             call die("[hlld:riemann_hlld] non-ISO and non-dust and does not have energy?")
 
-          gampr_l = 0.
-          gampr_r = 0.
+             c_fastm = 0.
+             prl = 0.
+             prr = 0.
 
-       endif
+          endif
 
-       ! Left and right states of fast magnetosonic waves Eq. 3
-
-       c_fastm = sqrt(half*max( &
-             ((gampr_l+sum(b_ccl(i, xdim:zdim)**2)) + sqrt((gampr_l+sum(b_ccl(i, xdim:zdim)**2))**2-(four*gampr_l*b_ccl(i, xdim)**2)))/ul(i, idn), &
-             ((gampr_r+sum(b_ccr(i, xdim:zdim)**2)) + sqrt((gampr_r+sum(b_ccr(i, xdim:zdim)**2))**2-(four*gampr_r*b_ccr(i, xdim)**2)))/ur(i, idn)) )
 #endif /* ISO */
+       endif
 
        ! Estimates of speed for left and right going waves Eq. 67
 
@@ -654,10 +657,10 @@ contains
     ! SOLVER
 
     has_energy = (ubound(ul, dim=2) >= ien)
-#ifdef ISO
-    if (has_energy) call die("[hlld:riemann_hlld_u] ISO .and. has_energy")
     enl = huge(1.)
     enr = huge(1.)
+#ifdef ISO
+    if (has_energy) call die("[hlld:riemann_hlld_u] ISO .and. has_energy")
     gampr_l = huge(1.)
     gampr_r = huge(1.)
 #else /* ISO */
@@ -675,44 +678,47 @@ contains
        ! Left and right states of total pressure
        ! From fluidupdate.F90, utoq() (1) is used in hydro regime and (2) in MHD regime. In case of vanishing magnetic fields the magnetic components do not contribute and hydro results are obtained trivially.
 
-#ifdef ISO
-       prl = cs2(i) * ul(i, idn)
-       prr = cs2(i) * ur(i, idn)
-       c_fastm = sqrt(cs2(i))
-#else /* ISO */
-       if (has_energy) then
-
-          prl = ul(i, ien)  ! ul(i, ien) is the left state of gas pressure
-          prr = ur(i, ien)  ! ur(i, ien) is the right state of gas pressure
-
-          ! Left and right states of energy Eq. 2.
-
-          enl = (ul(i, ien)/(gamma - one)) + half*ul(i, idn)*sum(ul(i, imx:imz)**2)
-          enr = (ur(i, ien)/(gamma - one)) + half*ur(i, idn)*sum(ur(i, imx:imz)**2)
-
-          ! Left and right states of gamma*p_gas
-
-          gampr_l = gamma*ul(i, ien)
-          gampr_r = gamma*ur(i, ien)
-
-       else ! this is for DUST (presureless fluid)
-
-          ! check if it is consistent
+       if (gamma < 0.) then  ! DUST
+          ! Beware: tricky detection, may take revenge on use some day
           prl = 0.
           prr = 0.
+          c_fastm = 0.
+       else
+#ifdef ISO
+          prl = cs2(i) * ul(i, idn)
+          prr = cs2(i) * ur(i, idn)
+          c_fastm = sqrt(cs2(i))
+#else /* ISO */
+          if (has_energy) then
 
-          enl = half*ul(i, idn)*sum(ul(i, imx:imz)**2)
-          enr = half*ur(i, idn)*sum(ur(i, imx:imz)**2)
+             prl = ul(i, ien)  ! ul(i, ien) is the left state of gas pressure
+             prr = ur(i, ien)  ! ur(i, ien) is the right state of gas pressure
 
-          gampr_l = 0.
-          gampr_r = 0.
+             ! Left and right states of energy Eq. 2.
 
-       endif
+             enl = (ul(i, ien)/(gamma - one)) + half*ul(i, idn)*sum(ul(i, imx:imz)**2)
+             enr = (ur(i, ien)/(gamma - one)) + half*ur(i, idn)*sum(ur(i, imx:imz)**2)
 
-       ! Left and right states of fast magnetosonic waves Eq. 3
+             ! Left and right states of gamma*p_gas
 
-       c_fastm = sqrt(max(gampr_l/ul(i, idn), gampr_r/ur(i, idn)) )
+             gampr_l = gamma*ul(i, ien)
+             gampr_r = gamma*ur(i, ien)
+
+             ! Left and right states of fast magnetosonic waves Eq. 3
+             c_fastm = sqrt(max(gampr_l/ul(i, idn), gampr_r/ur(i, idn)) )
+
+          else
+
+             call die("[hlld:riemann_hlld_u] non-ISO and non-dust and does not have energy?")
+
+             c_fastm = 0.
+             prl = 0.
+             prr = 0.
+
+          endif
+
 #endif /* ISO */
+       endif
 
        ! Estimates of speed for left and right going waves Eq. 67
 
@@ -837,9 +843,7 @@ contains
     enddo
 
 #ifndef ISO
-      if (.false.) write(0,*) cs2
-#else /* !ISO */
-      if (.false.) write(0,*) gamma
+    if (.false.) write(0,*) cs2
 #endif /* ISO */
 
  end subroutine riemann_hlld_u

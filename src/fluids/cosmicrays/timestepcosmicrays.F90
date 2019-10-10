@@ -38,7 +38,7 @@ module timestepcosmicrays
    private
    public :: dt_crs, timestep_crs
 
-   real, save :: dt_crs = huge(1.)
+   real :: dt_crs = huge(1.)
 
 contains
 
@@ -46,12 +46,15 @@ contains
 !! \details On a static grid with simple domain decompositions the following subroutine evaluates some constants, there is no need to run it
 !! more than once, apart from wasting CPU cycles.
 !<
-   subroutine timestep_crs(cg)
+   subroutine timestep_crs(dt)
 
-      use constants,           only: one, half
+      use cg_leaves,           only: leaves
+      use cg_list,             only: cg_list_element
+      use constants,           only: big, pMIN
       use domain,              only: is_multicg
       use grid_cont,           only: grid_container
-      use initcosmicrays,      only: cfl_cr, K_crs_paral, K_crs_perp
+      use initcosmicrays,      only: def_dtcrs, K_crs_valid
+      use mpisetup,            only: piernik_MPI_Allreduce
 #ifdef MULTIGRID
       use initcosmicrays,      only: use_CRsplit
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
@@ -59,30 +62,40 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      real, intent(inout)            :: dt
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg
 
-      logical, save :: frun = .true.
-      real :: dt
+      logical, save                  :: frun = .true.
+      real                           :: dt_thiscg
 
-      if (.not. (is_multicg .or. frun)) return
+      if (.not.K_crs_valid) return
+
+      if ((is_multicg .or. frun)) then
       ! with multiple cg% there are few cg%dxmn to be checked
       ! with AMR minval(cg%dxmn) may change with time
 
-      if (maxval(K_crs_paral+K_crs_perp) <= 0) then
-         dt_crs = huge(one)
-      else
-         dt = cfl_cr * half/maxval(K_crs_paral+K_crs_perp)
-         if (cg%dxmn < sqrt(huge(one))/dt) then
-            dt = dt * cg%dxmn**2
+         dt_crs = big
+         cgl => leaves%first
+         do while (associated(cgl))
+            cg => cgl%cg
+
+            dt_thiscg = def_dtcrs
+            if (cg%dxmn * def_dtcrs < sqrt(big)) dt_thiscg = def_dtcrs * cg%dxmn**2
+            dt_crs = min(dt_crs, dt_thiscg)
+
+            cgl => cgl%nxt
+         enddo
+
 #ifdef MULTIGRID
-            diff_dt_crs_orig = min(dt_crs, dt)
-            if (.not. (use_CRsplit .or. diff_explicit)) dt = dt * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
+         diff_dt_crs_orig = dt_crs
+         if (.not. (use_CRsplit .or. diff_explicit)) dt_crs = dt_crs * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
 #endif /* MULTIGRID */
-            dt_crs = min(dt_crs, dt)
-         endif
+         call piernik_MPI_Allreduce(dt_crs, pMIN)
+         frun = .false.
       endif
 
-      frun = .false.
+      dt = min(dt, dt_crs)
 
    end subroutine timestep_crs
 

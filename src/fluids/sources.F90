@@ -256,9 +256,8 @@ contains
 !! \brief Subroutine collects dt limits estimations from sources
 !<
 !*/
-   subroutine timestep_sources(dt, cg)
+   subroutine timestep_sources(dt)
 
-      use grid_cont,            only: grid_container
 #ifndef BALSARA
       use timestepinteractions, only: timestep_interactions
 #endif /* !BALSARA */
@@ -268,18 +267,17 @@ contains
 
       implicit none
 
-      real,                          intent(inout) :: dt
-      type(grid_container), pointer, intent(in)    :: cg
+      real, intent(inout) :: dt
 
 #ifndef BALSARA
-         dt = min(dt,timestep_interactions(cg))
+         dt = min(dt, timestep_interactions())
 #endif /* !BALSARA */
 #ifdef THERM
-         dt = min(dt,timestep_thermal(cg))
+         dt = min(dt, timestep_thermal())
 #endif /* THERM */
 
       return
-      if (.false.) write(0,*) dt, cg%inv_x(1)
+      if (.false. .and. dt < 0) return
 
    end subroutine timestep_sources
 
