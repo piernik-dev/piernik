@@ -109,7 +109,7 @@ contains
 !<
    subroutine init_cosmicrays
 
-      use constants,       only: cbuff_len, I_ONE, big, half
+      use constants,       only: cbuff_len, I_ONE, half
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: nh   ! QA_WARN required for diff_nml
       use dataio_pub,      only: die, warn
