@@ -154,10 +154,7 @@ contains
             c_all = max(c_all, c_)
          enddo
 
-#ifdef NBODY
-         call timestep_nbody(dt, cg)
-#endif /* NBODY */
-
+         cgl => cgl%nxt
       enddo
 
 #ifdef COSM_RAYS
@@ -172,6 +169,10 @@ contains
 
       call piernik_MPI_Allreduce(dt,    pMIN)
       call piernik_MPI_Allreduce(c_all, pMAX)
+
+#ifdef NBODY
+      call timestep_nbody(dt, cg)
+#endif /* NBODY */
 
       ! finally apply some sanity factors
       if (nstep < 1) then
