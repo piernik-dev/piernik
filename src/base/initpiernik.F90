@@ -266,7 +266,6 @@ contains
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
 #ifdef GRAV
-            call cleanup_hydrostatic
             call source_terms_grav
 #endif /* GRAV */
 
@@ -278,6 +277,9 @@ contains
             write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%l%id,", time elapsed: ",set_timer(tmr_fu)
             if (master) call printinfo(msg)
          enddo
+#ifdef GRAV
+         call cleanup_hydrostatic
+#endif /* GRAV */
 
          if (ac /= 0 .and. master) call warn("[initpiernik:init_piernik] The refinement structure does not seem to converge. Your refinement criteria may lead to oscillations of refinement structure. Bailing out.")
          if (associated(problem_post_IC)) call problem_post_IC
