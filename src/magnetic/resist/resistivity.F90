@@ -39,7 +39,7 @@ module resistivity
    implicit none
 
    private
-   public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, etamax, diffuseb, cu2max, deimin, eta1_active
+   public  :: init_resistivity, timestep_resist, cleanup_resistivity, etamax, diffuseb, cu2max, deimin, eta1_active
 
    real                                  :: cfl_resist                     !< CFL factor for resistivity effect
    real                                  :: eta_0                          !< uniform resistivity
@@ -48,7 +48,6 @@ module resistivity
    real                                  :: jc2                            !< squared critical value of current density
    real                                  :: deint_max                      !< COMMENT ME
    integer(kind=4)                       :: eta_scale                      !< COMMENT ME
-   real                                  :: dt_resist
    real(kind=8)                          :: d_eta_factor
    type(value)                           :: etamax, cu2max, deimin
    logical, save                         :: eta1_active = .true.           !< resistivity off-switcher while eta_1 == 0.0
@@ -189,8 +188,6 @@ contains
          d_eta_factor = 1./(dims_twice+real(eta_scale, kind=8))
       endif
 
-      dt_resist = huge(1.)
-
    end subroutine init_resistivity
 
    subroutine compute_resist
@@ -294,7 +291,7 @@ contains
 
 !-----------------------------------------------------------------------
 
-   subroutine timestep_resist
+   subroutine timestep_resist(dt)
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
@@ -315,6 +312,7 @@ contains
 
       implicit none
 
+      real, intent(inout)               :: dt
       type(cg_list_element),  pointer   :: cgl
       type(grid_container),   pointer   :: cg
       real                              :: dt_eta, dt_eint
@@ -346,7 +344,6 @@ contains
                   emag(bb(xdim,:,:,:), bb(ydim,:,:,:), bb(zdim,:,:,:)))/ (eta(:,:,:) * wb + small)
             dt_eint = min(dt_eint, deint_max * abs(minval(eh)))
 #endif /* IONIZED */
-            dt_resist = min(dt_eta, dt_eint)
 #endif /* !ISO */
             cgl => cgl%nxt
          enddo
@@ -361,6 +358,8 @@ contains
       deimin%assoc = dt_eint
 #endif /* !ISO */
       etamax%assoc = dt_eta ; cu2max%assoc = min(dt_eta, dt_eint)
+
+      dt = min(dt, dt_eta, dt_eint)
 
    end subroutine timestep_resist
 
