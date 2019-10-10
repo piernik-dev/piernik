@@ -117,7 +117,7 @@ contains
       use timestepcosmicrays, only: timestep_crs, dt_crs
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-      use resistivity,        only: dt_resist, timestep_resist
+      use resistivity,        only: timestep_resist
 #endif /* RESISTIVE */
 #ifdef DEBUG
       use dataio_pub,         only: printinfo
@@ -159,8 +159,7 @@ contains
       enddo
 
 #ifdef RESISTIVE
-         call timestep_resist
-         dt = min(dt, dt_resist)
+         call timestep_resist(dt)
 #endif /* RESISTIVE */
 
       call timestep_sources(dt)
