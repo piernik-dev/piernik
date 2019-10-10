@@ -114,7 +114,7 @@ contains
       use sources,            only: timestep_sources
       use timestep_pub,       only: c_all, c_all_old
 #ifdef COSM_RAYS
-      use timestepcosmicrays, only: timestep_crs, dt_crs
+      use timestepcosmicrays, only: timestep_crs
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
       use resistivity,        only: timestep_resist
@@ -150,16 +150,14 @@ contains
             c_all = max(c_all, c_)
          enddo
 
-#ifdef COSM_RAYS
-         call timestep_crs(cg)
-         dt = min(dt, dt_crs)
-#endif /* COSM_RAYS */
-
          cgl => cgl%nxt
       enddo
 
+#ifdef COSM_RAYS
+      call timestep_crs(dt)
+#endif /* COSM_RAYS */
 #ifdef RESISTIVE
-         call timestep_resist(dt)
+      call timestep_resist(dt)
 #endif /* RESISTIVE */
 
       call timestep_sources(dt)
