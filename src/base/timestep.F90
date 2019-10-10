@@ -100,28 +100,28 @@ contains
 !<
    subroutine time_step(dt, flind)
 
-      use cg_leaves,            only: leaves
-      use cg_list,              only: cg_list_element
-      use cmp_1D_mpi,           only: compare_array1D
-      use constants,            only: one, two, zero, half, pMIN, pMAX
-      use dataio,               only: write_crashed
-      use dataio_pub,           only: tend, msg, warn
-      use fargo,                only: timestep_fargo, fargo_mean_omega
-      use fluidtypes,           only: var_numbers
-      use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, use_fargo, cfl_violated
-      use grid_cont,            only: grid_container
-      use mpisetup,             only: master, piernik_MPI_Allreduce
-      use sources,              only: timestep_sources
-      use timestep_pub,         only: c_all, c_all_old
+      use cg_leaves,          only: leaves
+      use cg_list,            only: cg_list_element
+      use cmp_1D_mpi,         only: compare_array1D
+      use constants,          only: one, two, zero, half, pMIN, pMAX
+      use dataio,             only: write_crashed
+      use dataio_pub,         only: tend, msg, warn
+      use fargo,              only: timestep_fargo, fargo_mean_omega
+      use fluidtypes,         only: var_numbers
+      use global,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, use_fargo, cfl_violated
+      use grid_cont,          only: grid_container
+      use mpisetup,           only: master, piernik_MPI_Allreduce
+      use sources,            only: timestep_sources
+      use timestep_pub,       only: c_all, c_all_old
 #ifdef COSM_RAYS
-      use timestepcosmicrays,   only: timestep_crs, dt_crs
+      use timestepcosmicrays, only: timestep_crs, dt_crs
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-      use resistivity,          only: dt_resist, timestep_resist
+      use resistivity,        only: dt_resist, timestep_resist
 #endif /* RESISTIVE */
 #ifdef DEBUG
-      use dataio_pub,           only: printinfo
-      use piernikdebug,         only: has_const_dt, constant_dt
+      use dataio_pub,         only: printinfo
+      use piernikdebug,       only: has_const_dt, constant_dt
 #endif /* DEBUG */
       implicit none
 
@@ -157,8 +157,6 @@ contains
          dt = min(dt, dt_crs)
 #endif /* COSM_RAYS */
 
-         call timestep_sources(dt, cg)
-
          if (use_fargo) dt = min(dt, timestep_fargo(cg, dt))
          cgl => cgl%nxt
       enddo
@@ -167,6 +165,8 @@ contains
          call timestep_resist
          dt = min(dt, dt_resist)
 #endif /* RESISTIVE */
+
+      call timestep_sources(dt)
 
       call piernik_MPI_Allreduce(dt,    pMIN)
       call piernik_MPI_Allreduce(c_all, pMAX)
