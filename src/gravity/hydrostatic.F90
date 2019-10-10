@@ -42,10 +42,11 @@ module hydrostatic
    private
 
    public :: set_default_hsparams, hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, cleanup_hydrostatic, outh_bnd, init_hydrostatic
-   public :: dprof, gprofs, nstot, zs, dzs, hsmin, hsbn, hsl, sdlim, hscg
+   public :: dprof, gprofs, nstot, zs, dzs, hsmin, hsbn, hsl, hscg
 
    real, allocatable, dimension(:), save :: zs        !< array of z-positions of subgrid cells centers
    real, allocatable, dimension(:), save :: gprofs    !< array of gravitational acceleration in a column of subgrid
+   real, allocatable, dimension(:)       :: dprofs
    real, allocatable, dimension(:), save :: dprof     !< Array used for storing density during calculation of hydrostatic equilibrium
    real,                            save :: dzs       !< length of the subgrid cell in z-direction
    integer(kind=4),                 save :: nstot     !< total number of subgrid cells in a column through all z-blocks
@@ -53,7 +54,6 @@ module hydrostatic
    real,                            save :: hsmin     !< lower position limit
    integer(kind=4),   dimension(2), save :: hsbn      !< first and last cell indices in proceeded block
    real, allocatable, dimension(:), save :: hsl       !< lower borders of cells of proceeded block
-   real,              dimension(2), save :: sdlim     !< edges for sd sum
    type(grid_container), pointer,   save :: hscg
 
    interface
@@ -74,6 +74,7 @@ contains
    subroutine init_hydrostatic
 
       use fluidboundaries_funcs, only: outh_fluidbnd
+      use gravity,               only: get_gprofs, gprofs_target
 
       implicit none
 
@@ -81,6 +82,17 @@ contains
       ! dependency from fluidboundaries module. It's bad due to several reasons,
       ! which I'll gracefully omit in this comment. It should be fixed asap...
       outh_fluidbnd => outh_bnd
+
+      if (.not.associated(get_gprofs)) then
+         select case (gprofs_target)
+            case ('accel')
+               get_gprofs => get_gprofs_accel
+            case ('extgp')
+               get_gprofs => get_gprofs_extgp
+            case default
+               call die("[hydrostatic:set_default_hsparams] get_gprofs target has not been specified")
+         end select
+      endif
 
    end subroutine init_hydrostatic
 
@@ -123,9 +135,9 @@ contains
 
       implicit none
 
-      integer,        intent(in)    :: iia, jja
-      real,           intent(in)    :: d0, csim2
-      real, optional, intent(inout) :: sd
+      integer,        intent(in)  :: iia, jja
+      real,           intent(in)  :: d0, csim2
+      real, optional, intent(out) :: sd
 
       if (d0 <= small) call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
       dmid = d0
@@ -151,12 +163,13 @@ contains
 
       implicit none
 
-      integer,        intent(in)    :: iia, jja
-      real,           intent(in)    :: csim2
-      real, optional, intent(inout) :: sd
-      integer                       :: ksub
+      integer,        intent(in)  :: iia, jja
+      real,           intent(in)  :: csim2
+      real, optional, intent(out) :: sd
+      integer                     :: ksub
 
-      allocate(zs(nstot), gprofs(nstot))
+      allocate(zs(nstot), gprofs(nstot), dprofs(nstot))
+
       do ksub = 1, nstot
          zs(ksub) = hsmin + (real(ksub)-half) * dzs
       enddo
@@ -172,6 +185,7 @@ contains
 
       if (allocated(zs))     deallocate(zs)
       if (allocated(gprofs)) deallocate(gprofs)
+      if (allocated(dprofs)) deallocate(dprofs)
 
    end subroutine finish_hydrostatic
 
@@ -185,7 +199,7 @@ contains
       use diagnostics, only: my_deallocate !, my_allocate
       use dataio_pub,  only: die
       use domain,      only: dom
-      use gravity,     only: get_gprofs, gprofs_target, nsub
+      use gravity,     only: nsub
       use grid_cont,   only: grid_container
 
       implicit none
@@ -198,7 +212,6 @@ contains
       dzs   = (dom%edge(zdim, HI)-dom%edge(zdim, LO))/real(nstot-2*dom%nb*nsub)
       hsmin = dom%edge(zdim, LO)-dom%nb*cg%dl(zdim)
       hsbn  = cg%lhn(zdim,:)
-      sdlim = dom%edge(zdim,:)
       if (allocated(dprof)) call my_deallocate(dprof)
 !      call my_allocate(dprof, [cg%n_(zdim)], "dprof")
       allocate(dprof(hsbn(LO):hsbn(HI)))
@@ -208,17 +221,6 @@ contains
       hsl(hsbn(LO):hsbn(HI)) = cg%coord(LEFT,  zdim)%r(hsbn(LO):hsbn(HI))
       hsl(hsbn(HI)+I_ONE)    = cg%coord(RIGHT, zdim)%r(hsbn(HI))
 
-      if (.not.associated(get_gprofs)) then
-         select case (gprofs_target)
-            case ('accel')
-               get_gprofs => get_gprofs_accel
-            case ('extgp')
-               get_gprofs => get_gprofs_extgp
-            case default
-               call die("[hydrostatic:set_default_hsparams] get_gprofs target has not been specified")
-         end select
-      endif
-
    end subroutine set_default_hsparams
 
 !>
@@ -226,8 +228,9 @@ contains
 !<
    subroutine hydrostatic_main(sd)
 
-      use constants,  only: LO, HI
+      use constants,  only: LO, HI, zdim
       use dataio_pub, only: die
+      use domain,     only: dom
       use gravity,    only: nsub
 #ifdef HYDROSTATIC_V2
       use constants,  only: big_float
@@ -235,11 +238,8 @@ contains
 
       implicit none
 
-      real, optional, intent(out)     :: sd
-      real, allocatable, dimension(:) :: dprofs
-      integer                         :: ksub, ksmid, k
-
-      allocate(dprofs(nstot))
+      real, optional, intent(out) :: sd
+      integer                     :: ksub, ksmid, k
 
       ksmid = 0
 #ifdef HYDROSTATIC_V2
@@ -272,38 +272,42 @@ contains
       endif
 
       dprof(:) = 0.0
-      do k=hsbn(LO), hsbn(HI)
+      do k = hsbn(LO), hsbn(HI)
          do ksub = 1, nstot
-            if (zs(ksub) > hsl(k) .and. zs(ksub) < hsl(k+1)) then
-               dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
-            endif
+            if (zs(ksub) > hsl(k) .and. zs(ksub) < hsl(k+1)) dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
          enddo
       enddo
 
       if (present(sd)) then
          sd = 0.0
          do ksub = 1, nstot
-            if (zs(ksub) > sdlim(LO) .and. zs(ksub) < sdlim(HI)) sd = sd + dprofs(ksub)*dzs
+            if (zs(ksub) > dom%edge(zdim,LO) .and. zs(ksub) < dom%edge(zdim,HI)) sd = sd + dprofs(ksub)*dzs
          enddo
       endif
-
-      if (allocated(dprofs)) deallocate(dprofs)
 
    end subroutine hydrostatic_main
 
    real function hzeq_scheme_v1(ksub, up) result(factor)
+
       implicit none
-      integer, intent(in)  :: ksub
-      real,    intent(in)  :: up
+
+      integer, intent(in) :: ksub
+      real,    intent(in) :: up
+
       factor = (2.0 + up*gprofs(ksub))/(2.0 - up*gprofs(ksub))
+
    end function hzeq_scheme_v1
 
    real function hzeq_scheme_v2(ksub, up) result(factor)
+
       implicit none
-      integer, intent(in)  :: ksub
-      real,    intent(in)  :: up
+
+      integer, intent(in) :: ksub
+      real,    intent(in) :: up
+
       factor = gprofs(ksub)+gprofs(ksub+nint(up))
       factor = (4.0 + up*factor)/(4.0 - up*factor)
+
    end function hzeq_scheme_v2
 
    subroutine get_gprofs_accel(iia, jja)
@@ -398,7 +402,7 @@ contains
       if (.not.associated(get_gprofs)) call die("[hydrostatic:outh_bnd] get_gprofs not associated")
 
       hscg => cg
-      nstot = int(3*nsub/2+1,kind=4)
+      nstot = int(3*nsub/2+1, kind=4)
       allocate(zs(nstot), gprofs(nstot), dprofs(flind%fluids,nstot))
 
       ssign = 2_INT4*side - 3_INT4
@@ -420,7 +424,7 @@ contains
                   csi2b(:) = max(csi2b(:), flind%all_fluids(ifl)%fl%cs2)
                enddo
 #else /* !ISO */
-               eib(:) = cg%u(iarr_all_en,i,j,kb) - ekin(cg%u(iarr_all_mx,i,j,kb),cg%u(iarr_all_my,i,j,kb),cg%u(iarr_all_mz,i,j,kb),db(:))
+               eib(:) = cg%u(iarr_all_en,i,j,kb) - ekin(cg%u(iarr_all_mx,i,j,kb), cg%u(iarr_all_my,i,j,kb), cg%u(iarr_all_mz,i,j,kb),db(:))
                eib(:) = max(eib(:), smallei)
                do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
                   csi2b(ifl) = (flind%all_fluids(ifl)%fl%gam_1)*eib(ifl)/db(ifl)
@@ -461,9 +465,9 @@ contains
                   cg%u(iarr_all_mz,i,j,kk) = cg%u(iarr_all_mz,i,j,kb)
                   if (wn == I_ONE) then
                      if (side == HI) then
-                        cg%u(iarr_all_mz,i,j,kk) = max(cg%u(iarr_all_mz,i,j,kk),0.0)
+                        cg%u(iarr_all_mz,i,j,kk) = max(cg%u(iarr_all_mz,i,j,kk), 0.0)
                      else
-                        cg%u(iarr_all_mz,i,j,kk) = min(cg%u(iarr_all_mz,i,j,kk),0.0)
+                        cg%u(iarr_all_mz,i,j,kk) = min(cg%u(iarr_all_mz,i,j,kk), 0.0)
                      endif
                   endif
 #ifndef ISO
@@ -477,7 +481,7 @@ contains
          enddo
       enddo
 
-      deallocate(zs,gprofs)
+      deallocate(zs, gprofs, dprofs)
 
       if (.false.) then ! suppress compiler warnings on unused arguments
          if (present(qn)) i = qn
