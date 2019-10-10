@@ -82,6 +82,8 @@ module initcosmicrays
    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
    real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
    !> \deprecated BEWARE Possible confusion: *_perp coefficients are not "perpendicular" but rather isotropic
+   real                                :: def_dtcrs    !< default dt limitation due to diffusion
+   logical                             :: K_crs_valid  !< condition to use dt_crs
 
 contains
 
@@ -115,7 +117,7 @@ contains
 !<
    subroutine init_cosmicrays
 
-      use constants,       only: cbuff_len, I_ONE
+      use constants,       only: cbuff_len, I_ONE, half
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: nh   ! QA_WARN required for diff_nml
       use dataio_pub,      only: die, warn
@@ -344,6 +346,15 @@ contains
         endif
       enddo
 #endif /* !COSM_RAY_ELECTRONS */
+
+#ifdef COSM_RAY_ELECTRONS
+      K_crs_valid = (maxval(K_crn_paral+K_crn_perp) > 0)
+      def_dtcrs = cfl_cr * half/maxval(K_crn_paral+K_crn_perp)
+#else /* !COSM_RAY_ELECTRONS */
+      K_crs_valid = (maxval(K_crs_paral+K_crs_perp) > 0)
+      def_dtcrs = cfl_cr * half/maxval(K_crs_paral+K_crs_perp)
+#endif /* !COSM_RAY_ELECTRONS */
+
    end subroutine init_cosmicrays
 
    subroutine cosmicray_index(flind)
