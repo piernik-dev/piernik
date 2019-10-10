@@ -73,6 +73,7 @@ contains
 !<
    subroutine init_hydrostatic
 
+      use dataio_pub,            only: die
       use fluidboundaries_funcs, only: outh_fluidbnd
       use gravity,               only: get_gprofs, gprofs_target
 
@@ -90,7 +91,7 @@ contains
             case ('extgp')
                get_gprofs => get_gprofs_extgp
             case default
-               call die("[hydrostatic:set_default_hsparams] get_gprofs target has not been specified")
+               call die("[hydrostatic:init_hydrostatic] get_gprofs target has not been specified")
          end select
       endif
 
@@ -197,7 +198,6 @@ contains
 
       use constants,   only: zdim, LO, HI, I_ONE, LEFT, RIGHT
       use diagnostics, only: my_deallocate !, my_allocate
-      use dataio_pub,  only: die
       use domain,      only: dom
       use gravity,     only: nsub
       use grid_cont,   only: grid_container
