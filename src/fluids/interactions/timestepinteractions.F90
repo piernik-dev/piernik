@@ -43,18 +43,14 @@ contains
 !<
    real function timestep_interactions(cg) result(dt)
 
-      use constants,    only: small, I_ONE
+      use constants,    only: small
       use fluidindex,   only: flind
       use func,         only: L2norm
       use grid_cont,    only: grid_container
       use interactions, only: collfaq, cfl_interact, has_interactions
-      use mpi,          only: MPI_MIN, MPI_DOUBLE_PRECISION
-      use mpisetup,     only: comm, mpi_err, FIRST, piernik_MPI_Bcast
 
       implicit none
 
-      real :: dt_interact_proc        !< timestep due to %interactions for the current process (MPI block) only
-      real :: dt_interact_all         !< timestep due to %interactions for all MPI blocks
       real :: val                     !< variable used to store the maximum value of relative momentum
 
       type(grid_container), pointer, intent(in) :: cg
@@ -66,11 +62,7 @@ contains
          !                             (cg%u(flind%dst%imz,:,:,:)-cg%u(flind%neu%imz,:,:,:))**2   ) * cg%u(flind%dst%idn,:,:,:) )
          val = maxval ( L2norm(cg%u(flind%dst%imx,:,:,:),cg%u(flind%dst%imy,:,:,:),cg%u(flind%dst%imz,:,:,:), &
                             &  cg%u(flind%neu%imx,:,:,:),cg%u(flind%neu%imy,:,:,:),cg%u(flind%neu%imz,:,:,:) ) * cg%u(flind%dst%idn,:,:,:) )
-         dt_interact_proc = flind%neu%cs / (maxval(collfaq) * val + small)
-
-         call MPI_Reduce(dt_interact_proc, dt_interact_all, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, FIRST, comm, mpi_err)
-         call piernik_MPI_Bcast(dt_interact_all)
-         dt = cfl_interact*dt_interact_all
+         dt = cfl_interact * flind%neu%cs / (maxval(collfaq) * val + small)  !< timestep due to %interactions for the current process (MPI block) only
       else
          dt = huge(1.)
       endif

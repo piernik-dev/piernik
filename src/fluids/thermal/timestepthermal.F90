@@ -45,9 +45,8 @@ contains
 !<
    real function timestep_thermal(cg) result(dt_coolheat)
 
-      use constants, only: pMIN, small
+      use constants, only: small
       use grid_cont, only: grid_container
-      use mpisetup,  only: piernik_MPI_Allreduce
       use thermal,   only: maxdeint, cfl_coolheat, thermal_active
 
       implicit none
@@ -59,7 +58,6 @@ contains
       if (thermal_active) then
          call maxdeint(cg, mxdeint)
          dt_coolheat = cfl_coolheat*abs(1./(mxdeint+small))
-         call piernik_MPI_Allreduce(dt_coolheat, pMIN)
       else
          dt_coolheat = huge(1.)
       endif
