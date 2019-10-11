@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 64, 64, 64
+    n_d = 3*32
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
@@ -35,11 +35,11 @@
  $OUTPUT_CONTROL
     problem_name ='sg_clump_moving'
     run_id =  'ts1'
-    dt_hdf  = 1.0
+    dt_hdf  = 0.25
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1:) = 'ener', 'dens', 'gpot', 'velx', 'vely', 'velz'
+    vars(1:) = 'ener', 'dens', 'gpot', 'velx', 'vely', 'velz', 'ref_01', 'level'
  /
 
  $FLUID_IONIZED
@@ -93,4 +93,10 @@
  /
 
  $AMR
+   level_max = 3
+   bsize = 3*8
+   n_updAMR = 3
+   refine_vars(1) = "dens", "Loechner", 0.15, 0.03, 0.01, .true.
+   ! the refinement criterion here refines also minima and saddles
+   ! ToDo: replace it by Jeans length or something
  /
