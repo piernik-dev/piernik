@@ -395,6 +395,7 @@ contains
             pdel=0
             do j=FIRST, LAST
                do i=1,npart
+                  if ((cg%pset%p(i)%phy) .and. (cg%pset%p(i)%outside)) cycle
                   if (.not. cg%pset%p(i)%out) pdel(i)=1
                   if (j==proc) cycle ! TO DO IN AMR: ADD PARTICLES CHANGING CG INSIDE PROCESSOR
                   if (.not. cg%pset%p(i)%in) then
