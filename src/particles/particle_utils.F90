@@ -243,6 +243,7 @@ contains
 
       use constants,     only: LO, HI, ndims, xdim, zdim
       use domain,        only: dom
+      use func,          only: operator(.equals.), operator(.notequals.)
 
       implicit none
 
@@ -270,7 +271,7 @@ contains
       if (count2 == 3) then
          count3 = 0
          do cdim = xdim, zdim
-            if (fbnd(cdim,tmp(cdim)) == dom%edge(cdim,tmp(cdim))) count3 = count3 + 1
+            if (fbnd(cdim,tmp(cdim)) .equals. dom%edge(cdim,tmp(cdim))) count3 = count3 + 1
          enddo
          if (count3 == 3) phy = .true.
          return
@@ -279,7 +280,7 @@ contains
       else if (count2 == 2) then
          do cdim = xdim, zdim
             if (tmp(cdim) /= 0) then
-               if (fbnd(cdim,tmp(cdim)) /= dom%edge(cdim,tmp(cdim))) return
+               if (fbnd(cdim,tmp(cdim)) .notequals. dom%edge(cdim,tmp(cdim))) return
             else
                if ( (pos(cdim) < fbnd(cdim,LO)) .or. (pos(cdim) > fbnd(cdim,HI)) ) return
             endif
@@ -290,7 +291,7 @@ contains
       !FACE
       else
          do cdim = xdim, zdim
-            if ( ((pos(cdim) < dom%edge(cdim,LO)) .and. (fbnd(cdim,LO) == dom%edge(cdim,LO))) .or. (((pos(cdim) > dom%edge(cdim,HI)) .and. (fbnd(cdim,HI) == dom%edge(cdim,HI)))) ) then
+            if ( ((pos(cdim) < dom%edge(cdim,LO)) .and. (fbnd(cdim,LO) .equals. dom%edge(cdim,LO))) .or. (((pos(cdim) > dom%edge(cdim,HI)) .and. (fbnd(cdim,HI) .equals. dom%edge(cdim,HI)))) ) then
                count = 0
                do k = xdim, zdim
                   if (k /= cdim) then
@@ -361,7 +362,7 @@ contains
      use constants,      only: ndims, I_ONE, LO, HI
      use grid_cont,      only: grid_container
      use mpisetup,       only: proc, comm, mpi_err, FIRST, LAST
-     use mpi,            only: MPI_REAL, MPI_INTEGER
+     use mpi,            only: MPI_DOUBLE_PRECISION, MPI_INTEGER
      use cg_level_base,  only: base
      use domain,         only: dom
      use particle_func,  only: particle_in_area
@@ -374,7 +375,7 @@ contains
      real,                 dimension(ndims)   :: pos, vel, acc
      real                                     :: mass,ener
      integer, dimension(:), allocatable       :: pdel
-     real(kind=4), dimension(:), allocatable  :: part_info, part_info2
+     real(kind=8), dimension(:), allocatable  :: part_info, part_info2
      integer,   dimension(FIRST:LAST)         :: nsend, nrecv, counts, countr, disps, dispr
      integer                                  :: ind
      type(cg_list_element), pointer           :: cgl
@@ -399,7 +400,7 @@ contains
                       if (cg%pset%p(i)%outside) then
                          call cg_outside_dom(cg%pset%p(i)%pos, [(base%level%dot%gse(j)%c(b)%se(:,LO) - dom%n_d(:)/2.) * cg%dl(:), (base%level%dot%gse(j)%c(b)%se(:,HI) - dom%n_d(:)/2. + I_ONE ) * cg%dl(:)], phy_out)
                          if (phy_out) nsend(j) = nsend(j) + 1
-                      end if
+                      endif
                    enddo
                 enddo
              endif
@@ -443,7 +444,7 @@ contains
                               part_info(ind+8:ind+10)=cg%pset%p(i)%acc
                               part_info(ind+11)=cg%pset%p(i)%energy
                               ind=ind+12
-                           end if
+                           endif
                         endif
                      enddo
                   endif
@@ -476,7 +477,7 @@ contains
           dispr(j) = dispr(j-1) + countr(j-1)
        enddo
 
-       call MPI_Alltoallv(part_info, counts, disps, MPI_REAL, part_info2, countr, dispr, MPI_REAL, comm, mpi_err)
+       call MPI_Alltoallv(part_info, counts, disps, MPI_DOUBLE_PRECISION, part_info2, countr, dispr, MPI_DOUBLE_PRECISION, comm, mpi_err)
 
        !Add particles in cgs
        cgl => leaves%first
