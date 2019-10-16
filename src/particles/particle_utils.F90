@@ -208,8 +208,6 @@ contains
 
       real, dimension(ndims), intent(in)  :: pos
       logical,                intent(out) :: in, phy, out
-      integer                             :: cdim, k, count, count2, count3
-      integer, dimension(ndims)           :: tmp
       real, dimension(ndims,2)            :: bnd1, bnd2
       type(grid_container), pointer, intent(in)      :: cg
 
@@ -225,69 +223,93 @@ contains
       bnd2(:,2) = [cg%coord(RIGHT,xdim)%r(cg%ijkse(xdim,HI)-I_ONE), cg%coord(RIGHT,ydim)%r(cg%ijkse(ydim,HI)-I_ONE), cg%coord(RIGHT,zdim)%r(cg%ijkse(zdim,HI)-I_ONE)]
 
 
-      if (particle_in_area(pos, bnd2))        in  = .true.
+      if (particle_in_area(pos, bnd2))  in  = .true.
       if (particle_in_area(pos, cg%fbnd)) phy = .true.
       !Ghost particle
-      if (particle_in_area(pos,bnd1))         out=.true.
+      if (particle_in_area(pos,bnd1)) out=.true.
 
       if (.not. particle_in_area(pos, dom%edge)) then
-         count2 = 0
-         do cdim = xdim, zdim
-            if (pos(cdim) < dom%edge(cdim,LO)) then
-               count2 = count2 + 1
-               tmp(cdim) = LO
-            else if (pos(cdim) > dom%edge(cdim,HI)) then
-               count2 = count2 + 1
-               tmp(cdim) = HI
-            else
-               tmp(cdim) = 0
-            endif
-         enddo
-
-         !CORNER
-         if (count2 == 3) then
-            count3 = 0
-            do cdim = xdim, zdim
-               if (cg%fbnd(cdim,tmp(cdim)) == dom%edge(cdim,tmp(cdim))) count3 = count3 + 1
-            enddo
-            if (count3 == 3) phy = .true.
-            return
-
-            !EDGE
-         else if (count2 == 2) then
-            do cdim = xdim, zdim
-               if (tmp(cdim) /= 0) then
-                  if (cg%fbnd(cdim,tmp(cdim)) /= dom%edge(cdim,tmp(cdim))) return
-               else
-                  if ( (pos(cdim) < cg%fbnd(cdim,LO)) .or. (pos(cdim) > cg%fbnd(cdim,HI)) ) return
-               endif
-            enddo
-            phy = .true.
-            return
-
-            !FACE
-         else
-            do cdim = xdim, zdim
-               if ( ((pos(cdim) < dom%edge(cdim,LO)) .and. (cg%fbnd(cdim,LO) == dom%edge(cdim,LO))) .or. (((pos(cdim) > dom%edge(cdim,HI)) .and. (cg%fbnd(cdim,HI) == dom%edge(cdim,HI)))) ) then
-                  count = 0
-                  do k = xdim, zdim
-                     if (k /= cdim) then
-                        if ( (pos(k) > cg%fbnd(k,LO)) .and. (pos(k) < cg%fbnd(k,HI)) ) then
-                           count = count + 1
-                        endif
-                     endif
-                  enddo
-                  if (count == 2) then
-                     phy =.true.
-                     return
-                  endif
-               endif
-
-            enddo
+         call cg_outside_dom(pos, cg%fbnd, phy)
+         if (phy) then
+            in= .true.
+            out= .true.
          endif
       endif
 
-   end subroutine is_part_in_cg
+    end subroutine is_part_in_cg
+
+
+   subroutine cg_outside_dom(pos, fbnd, phy)
+
+      use constants,     only: LO, HI, ndims, xdim, zdim
+      use domain,        only: dom
+
+      implicit none
+
+      real, dimension(ndims), intent(in)       :: pos
+      real, dimension(ndims,LO:HI), intent(in) :: fbnd
+      logical,                intent(out)      :: phy
+      integer                                  :: cdim, k, count, count2, count3
+      integer, dimension(ndims)                :: tmp
+
+      phy=.false.
+      count2 = 0
+      do cdim = xdim, zdim
+         if (pos(cdim) < dom%edge(cdim,LO)) then
+            count2 = count2 + 1
+            tmp(cdim) = LO
+         else if (pos(cdim) > dom%edge(cdim,HI)) then
+            count2 = count2 + 1
+            tmp(cdim) = HI
+         else
+            tmp(cdim) = 0
+         endif
+      enddo
+
+      !CORNER
+      if (count2 == 3) then
+         count3 = 0
+         do cdim = xdim, zdim
+            if (fbnd(cdim,tmp(cdim)) == dom%edge(cdim,tmp(cdim))) count3 = count3 + 1
+         enddo
+         if (count3 == 3) phy = .true.
+         return
+
+      !EDGE
+      else if (count2 == 2) then
+         do cdim = xdim, zdim
+            if (tmp(cdim) /= 0) then
+               if (fbnd(cdim,tmp(cdim)) /= dom%edge(cdim,tmp(cdim))) return
+            else
+               if ( (pos(cdim) < fbnd(cdim,LO)) .or. (pos(cdim) > fbnd(cdim,HI)) ) return
+            endif
+         enddo
+         phy = .true.
+         return
+
+      !FACE
+      else
+         do cdim = xdim, zdim
+            if ( ((pos(cdim) < dom%edge(cdim,LO)) .and. (fbnd(cdim,LO) == dom%edge(cdim,LO))) .or. (((pos(cdim) > dom%edge(cdim,HI)) .and. (fbnd(cdim,HI) == dom%edge(cdim,HI)))) ) then
+               count = 0
+               do k = xdim, zdim
+                  if (k /= cdim) then
+                     if ( (pos(k) > fbnd(k,LO)) .and. (pos(k) < fbnd(k,HI)) ) then
+                        count = count + 1
+                     endif
+                  endif
+               enddo
+               if (count == 2) then
+                  phy =.true.
+                  return
+               endif
+            endif
+
+         enddo
+      endif
+
+    end subroutine cg_outside_dom
+
 
 #ifdef NBODY
    subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener)
@@ -357,7 +379,7 @@ contains
      integer                                  :: ind
      type(cg_list_element), pointer           :: cgl
      type(grid_container),  pointer           :: cg
-     logical                                  :: already, in, phy, out
+     logical                                  :: already, in, phy, out, phy_out
 
      nsend=0
      nrecv=0
@@ -374,6 +396,10 @@ contains
                    ! TO DO: ADD CONDITION FOR PARTICLES CHANGING CG OUTSIDE DOMAIN
                    do b = lbound(base%level%dot%gse(j)%c(:), dim=1), ubound(base%level%dot%gse(j)%c(:), dim=1)
                       if ( particle_in_area( cg%pset%p(i)%pos, [ (base%level%dot%gse(j)%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (base%level%dot%gse(j)%c(b)%se(:,HI) - dom%n_d(:)/2.+I_ONE)*cg%dl(:)])) nsend(j) = nsend(j) + 1 ! WON'T WORK in AMR!!!
+                      if (cg%pset%p(i)%outside) then
+                         call cg_outside_dom(cg%pset%p(i)%pos, [(base%level%dot%gse(j)%c(b)%se(:,LO) - dom%n_d(:)/2.) * cg%dl(:), (base%level%dot%gse(j)%c(b)%se(:,HI) - dom%n_d(:)/2. + I_ONE ) * cg%dl(:)], phy_out)
+                         if (phy_out) nsend(j) = nsend(j) + 1
+                      end if
                    enddo
                 enddo
              endif
@@ -395,12 +421,11 @@ contains
             pdel=0
             do j=FIRST, LAST
                do i=1,npart
-                  if ((cg%pset%p(i)%phy) .and. (cg%pset%p(i)%outside)) cycle
                   if (.not. cg%pset%p(i)%out) pdel(i)=1
                   if (j==proc) cycle ! TO DO IN AMR: ADD PARTICLES CHANGING CG INSIDE PROCESSOR
                   if (.not. cg%pset%p(i)%in) then
                      do b = lbound(base%level%dot%gse(j)%c(:), dim=1), ubound(base%level%dot%gse(j)%c(:), dim=1)
-                        if ( particle_in_area( cg%pset%p(i)%pos, [(base%level%dot%gse(j)%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (base%level%dot%gse(j)%c(b)%se(:,HI) - dom%n_d(:)/2. + I_ONE)*cg%dl(:)])) then
+                        if (particle_in_area( cg%pset%p(i)%pos, [(base%level%dot%gse(j)%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (base%level%dot%gse(j)%c(b)%se(:,HI) - dom%n_d(:)/2. + I_ONE)*cg%dl(:)])) then
                            part_info(ind)=cg%pset%p(i)%pid
                            part_info(ind+1)=cg%pset%p(i)%mass
                            part_info(ind+2:ind+4)=cg%pset%p(i)%pos
@@ -408,6 +433,17 @@ contains
                            part_info(ind+8:ind+10)=cg%pset%p(i)%acc
                            part_info(ind+11)=cg%pset%p(i)%energy
                            ind=ind+12
+                        else if (cg%pset%p(i)%outside) then
+                           call cg_outside_dom(cg%pset%p(i)%pos, [(base%level%dot%gse(j)%c(b)%se(:,LO) - dom%n_d(:)/2.) * cg%dl(:), (base%level%dot%gse(j)%c(b)%se(:,HI) - dom%n_d(:)/2. + I_ONE ) * cg%dl(:)], phy_out)
+                           if (phy_out) then
+                              part_info(ind)=cg%pset%p(i)%pid
+                              part_info(ind+1)=cg%pset%p(i)%mass
+                              part_info(ind+2:ind+4)=cg%pset%p(i)%pos
+                              part_info(ind+5:ind+7)=cg%pset%p(i)%vel
+                              part_info(ind+8:ind+10)=cg%pset%p(i)%acc
+                              part_info(ind+11)=cg%pset%p(i)%energy
+                              ind=ind+12
+                           end if
                         endif
                      enddo
                   endif
