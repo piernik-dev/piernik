@@ -200,7 +200,8 @@ contains
       integer, optional, intent(out) :: act_count             !< counts number of blocks refined or deleted
       logical, optional, intent(in)  :: refinement_fixup_only !< When present and .true. then do not check refinement criteria, do only correction, if necessary.
 
-      integer :: nciter, iq
+      integer :: nciter
+      integer(kind=4) :: iq
       integer, parameter :: nciter_max = 100 ! should be more than refinement levels
       logical :: some_refined, derefined
       type(cg_list_element), pointer :: cgl, aux
@@ -377,7 +378,7 @@ contains
 
       !> \todo call the update of cs_i2 and other vital variables if and only if something has changed
       !> \todo add another flag to named_array_list::na_var so the user can also specify fields that need boundary updates on fine/coarse boundaries
-      do iq = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
+      do iq = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
          if (qna%lst(iq)%vital) call leaves%leaf_arr3d_boundaries(iq)
       enddo
 #ifdef GRAV
