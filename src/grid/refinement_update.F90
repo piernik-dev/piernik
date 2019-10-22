@@ -172,7 +172,7 @@ contains
 
    subroutine update_refinement(act_count, refinement_fixup_only)
 
-      use all_boundaries,       only: all_bnd
+      use all_boundaries,       only: all_bnd, all_bnd_vital_q
       use cg_leaves,            only: leaves
       use cg_list,              only: cg_list_element
       use cg_level_base,        only: base
@@ -185,7 +185,6 @@ contains
       use grid_cont,            only: grid_container
       use list_of_cg_lists,     only: all_lists
       use mpisetup,             only: piernik_MPI_Allreduce!, proc
-      use named_array_list,     only: qna
       use refinement,           only: n_updAMR, emergency_fix
       use refinement_crit_list, only: refines2list, auto_refine_derefine
 #ifdef GRAV
@@ -200,7 +199,7 @@ contains
       integer, optional, intent(out) :: act_count             !< counts number of blocks refined or deleted
       logical, optional, intent(in)  :: refinement_fixup_only !< When present and .true. then do not check refinement criteria, do only correction, if necessary.
 
-      integer :: nciter, iq
+      integer :: nciter
       integer, parameter :: nciter_max = 100 ! should be more than refinement levels
       logical :: some_refined, derefined
       type(cg_list_element), pointer :: cgl, aux
@@ -377,9 +376,7 @@ contains
 
       !> \todo call the update of cs_i2 and other vital variables if and only if something has changed
       !> \todo add another flag to named_array_list::na_var so the user can also specify fields that need boundary updates on fine/coarse boundaries
-      do iq = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
-         if (qna%lst(iq)%vital) call leaves%leaf_arr3d_boundaries(iq)
-      enddo
+      call all_bnd_vital_q
 #ifdef GRAV
       call update_gp
 #endif /* GRAV */
