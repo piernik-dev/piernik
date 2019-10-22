@@ -211,7 +211,7 @@ contains
       if (mass_mul < 0.) mass_mul = 1.
 
       do i = D0, VY0
-         call all_cg%reg_var(q_n(i), restart_mode = AT_NO_B)
+         call all_cg%reg_var(q_n(i), restart_mode = AT_NO_B, vital = .true.)
       enddo
 
       call all_cg%reg_var(nJ_n)

@@ -179,7 +179,7 @@ contains
       use cg_level_connected,   only: cg_level_connected_T
       use cg_level_finest,      only: finest
       use cg_list_global,       only: all_cg
-      use constants,            only: pLOR, pLAND, pSUM, cs_i2_n
+      use constants,            only: pLOR, pLAND, pSUM
       use dataio_pub,           only: warn, die
       use global,               only: nstep
       use grid_cont,            only: grid_container
@@ -200,7 +200,7 @@ contains
       integer, optional, intent(out) :: act_count             !< counts number of blocks refined or deleted
       logical, optional, intent(in)  :: refinement_fixup_only !< When present and .true. then do not check refinement criteria, do only correction, if necessary.
 
-      integer :: nciter
+      integer :: nciter, iq
       integer, parameter :: nciter_max = 100 ! should be more than refinement levels
       logical :: some_refined, derefined
       type(cg_list_element), pointer :: cgl, aux
@@ -374,9 +374,12 @@ contains
 
       call all_bnd
       call auto_refine_derefine(plots_only = .true.)  ! refresh refinement criterion fields, if any
-      !> \todo call the update of cs_i2 if and only if something has changed
+
+      !> \todo call the update of cs_i2 and other vital variables if and only if something has changed
       !> \todo add another flag to named_array_list::na_var so the user can also specify fields that need boundary updates on fine/coarse boundaries
-      if (qna%exists(cs_i2_n)) call leaves%leaf_arr3d_boundaries(qna%ind(cs_i2_n))
+      do iq = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
+         if (qna%lst(iq)%vital) call leaves%leaf_arr3d_boundaries(iq)
+      enddo
 #ifdef GRAV
       call update_gp
 #endif /* GRAV */
