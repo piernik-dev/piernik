@@ -83,8 +83,8 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_attrs_wr, user_post_rd_restart
-      use user_hooks,  only: problem_customize_solution, cleanup_problem, problem_refine_derefine
+      use dataio_user, only: user_attrs_wr
+      use user_hooks,  only: problem_customize_solution, cleanup_problem, problem_refine_derefine, problem_post_restart
 
       implicit none
 
@@ -92,7 +92,7 @@ contains
       user_attrs_wr              => problem_initial_conditions_attrs
       cleanup_problem            => cleanup_wt4
       problem_refine_derefine    => Jeans_refine
-      user_post_rd_restart       => IC_bnd_update
+      problem_post_restart       => IC_bnd_update
 
    end subroutine problem_pointers
 
@@ -706,7 +706,7 @@ contains
             enddo
          enddo
          !cg%refine_flags%refine   = (minval(cg%q(nJ_i)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) <= jeansref)
-         cg%refine_flags%derefine = (minval(cg%q(nJ_i)%arr) > 4*jeansref)
+         cg%refine_flags%derefine = (minval(cg%q(nJ_i)%arr) > 2.5 * jeansref)
          cgl => cgl%nxt
       enddo
 
