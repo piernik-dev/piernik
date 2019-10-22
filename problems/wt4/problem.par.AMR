@@ -85,7 +85,7 @@
     alfasupp     = 1.0
     fake_ic      = .false.
     divine_intervention_type = 3
-    jeansref     = 8.
+    jeansref     = 12.  ! Require really good Jeans-length refinement
  /
 
  $MULTIGRID_SOLVER
@@ -94,6 +94,12 @@
 
  $MULTIGRID_GRAVITY
     grav_bnd_str = "isolated"
+
+! seemingly a bit faster way:
+!    ord_laplacian = 2
+!    ord_laplacian_outer = 2
+!    mpole_solver = "3D"
+!    level_3D = 0
  /
 
  $INTERACTIONS

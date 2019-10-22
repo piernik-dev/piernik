@@ -74,7 +74,7 @@ module initproblem
    enum, bind(C)
       enumerator :: D0, VX0, VY0
    end enum
-   character(len=dsetnamelen), dimension(D0:VY0), parameter :: q_n = [ "den0", "vlx0", "vly0" ] !< Names of initial condition (t=0.) arrays used for divine_intervention_type = 3
+   character(len=dsetnamelen), dimension(D0:VY0), parameter :: q_n = [ "i_den0", "i_vlx0", "i_vly0" ] !< Names of initial condition (t=0.) arrays used for divine_intervention_type = 3
    character(len=dsetnamelen), parameter :: nJ_n = "nJ"
 
 contains
@@ -506,6 +506,7 @@ contains
       use fluidtypes,       only: component_fluid
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
+      use mpisetup,         only: master
 
       implicit none
 
@@ -530,6 +531,7 @@ contains
          allocate(mod_str(cg%is:cg%ie))
 
          select case (divine_intervention_type)
+            case (0)                                                                                ! skip modifications (for testing only)
             case (1)                                                                                ! crude
                if (dom%geometry_type /= GEO_XYZ) call die("[initproblem:problem_customize_solution_wt4] Non-cartesian geometry not supported (divine_intervention_type=1).")! remapping required
                where (cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) < ambient_density)
@@ -603,7 +605,7 @@ contains
                enddo
                deallocate(alf)
             case default
-               call warn("[initproblem:problem_customize_solution_wt4] Unknown divine_intervention_type")
+               if (master) call warn("[initproblem:problem_customize_solution_wt4] Unknown divine_intervention_type")
          end select
 
          deallocate(mod_str)
