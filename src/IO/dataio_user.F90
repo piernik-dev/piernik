@@ -116,5 +116,6 @@ module dataio_user
    procedure(tsl_out),   pointer :: user_tsl              => Null()
    procedure(add_data),  pointer :: user_reg_var_restart  => Null() !< A hook to have user-defined fields in the restart files
    procedure(postout),   pointer :: user_post_write_data  => Null()
+   procedure(add_data),  pointer :: user_post_rd_restart  => Null() !< A hook to be executed after a restart file was read
 
 end module dataio_user
