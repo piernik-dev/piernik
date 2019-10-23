@@ -172,6 +172,7 @@ contains
       implicit none
 
       if (allocated(epstein_factor)) deallocate(epstein_factor)
+      if (allocated(collfaq)) deallocate(collfaq)
 
    end subroutine cleanup_interactions
 

@@ -172,20 +172,19 @@ contains
 
    subroutine update_refinement(act_count, refinement_fixup_only)
 
-      use all_boundaries,       only: all_bnd
+      use all_boundaries,       only: all_bnd, all_bnd_vital_q
       use cg_leaves,            only: leaves
       use cg_list,              only: cg_list_element
       use cg_level_base,        only: base
       use cg_level_connected,   only: cg_level_connected_T
       use cg_level_finest,      only: finest
       use cg_list_global,       only: all_cg
-      use constants,            only: pLOR, pLAND, pSUM, cs_i2_n
+      use constants,            only: pLOR, pLAND, pSUM
       use dataio_pub,           only: warn, die
       use global,               only: nstep
       use grid_cont,            only: grid_container
       use list_of_cg_lists,     only: all_lists
       use mpisetup,             only: piernik_MPI_Allreduce!, proc
-      use named_array_list,     only: qna
       use refinement,           only: n_updAMR, emergency_fix
       use refinement_crit_list, only: refines2list, auto_refine_derefine
 #ifdef GRAV
@@ -374,9 +373,10 @@ contains
 
       call all_bnd
       call auto_refine_derefine(plots_only = .true.)  ! refresh refinement criterion fields, if any
-      !> \todo call the update of cs_i2 if and only if something has changed
+
+      !> \todo call the update of cs_i2 and other vital variables if and only if something has changed
       !> \todo add another flag to named_array_list::na_var so the user can also specify fields that need boundary updates on fine/coarse boundaries
-      if (qna%exists(cs_i2_n)) call leaves%leaf_arr3d_boundaries(qna%ind(cs_i2_n))
+      call all_bnd_vital_q
 #ifdef GRAV
       call update_gp
 #endif /* GRAV */
