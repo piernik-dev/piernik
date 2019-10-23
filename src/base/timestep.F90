@@ -171,7 +171,7 @@ contains
       call piernik_MPI_Allreduce(c_all, pMAX)
 
 #ifdef NBODY
-      call timestep_nbody(dt, cg)
+      call timestep_nbody(dt)
 #endif /* NBODY */
 
       ! finally apply some sanity factors
