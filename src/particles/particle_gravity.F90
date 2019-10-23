@@ -231,11 +231,12 @@ contains
 !> \brief Determine potential energy in particle positions
     subroutine update_particle_potential_energy(n_part, cg, cells, dist, pdel)
 
-      use constants,        only: gpot_n, ndims, half, two, xdim, ydim, zdim
+      use constants,        only: gpot_n, ndims, half, two, xdim, ydim, zdim, pSUM
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_func,    only: df_d_o2, d2f_d2_o2, d2f_dd_o2
       use units,            only: newtong
+      use mpisetup,         only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -252,8 +253,9 @@ contains
       ig = qna%ind(gpot_n)
       Mtot = 0
       do p = 1, n_part
-         if (.not. cg%pset%p(p)%outside) Mtot = Mtot + cg%pset%p(p)%mass
+         if ((.not. cg%pset%p(p)%outside) .and. (cg%pset%p(p)%phy)) Mtot = Mtot + cg%pset%p(p)%mass   !TO DO: include gas
       enddo
+      call piernik_MPI_Allreduce(Mtot, pSUM)
 
       do p = 1, n_part
          pdel(p) = 0
@@ -459,7 +461,7 @@ contains
             axyz(:) = zero
 
             if (part%outside) then
-            ! multipole expansion for particles outside domain
+               ! multipole expansion for particles outside domain
                tmp = [0, 0, 1, 0, 0]
                do cdim = xdim, zdim
                   fxyz(cdim) =   - ( moments2pot( part%pos(xdim) + cg%dl(xdim) * tmp(cdim+2), &
@@ -468,6 +470,7 @@ contains
                                  part%pos(ydim) - cg%dl(ydim) * tmp(cdim+1), part%pos(zdim) - cg%dl(zdim) * tmp(cdim) ) )
                enddo
                axyz(:) = fxyz(:)
+               part%acc(:) = half * axyz(:) * cg%idl(:)
                cycle
             endif
 
@@ -517,7 +520,6 @@ contains
 
             part%acc(:) = half * axyz(:) * cg%idl(:)
          end associate
-
       enddo
 
    end subroutine update_particle_acc_tsc
