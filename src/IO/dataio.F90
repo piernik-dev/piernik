@@ -1203,13 +1203,16 @@ contains
       use mpisetup,         only: master
       use named_array_list, only: qna
       use units,            only: mH, kboltz
-#ifndef ISO
+#ifdef ISO
+      use constants,        only: pMIN, pMAX
+      use mpisetup,         only: piernik_MPI_Allreduce
+#else
 #ifdef MAGNETIC
       use constants,        only: ION, half
 #endif /* MAGNETIC */
       use constants,        only: DST, I_ZERO
       use global,           only: smallp
-#endif /* !ISO */
+#endif /* ISO */
 
       implicit none
 
@@ -1346,9 +1349,9 @@ contains
 
 #ifdef ISO
       pr%pres_min        = pr%dens_min
-      pr%pres_min%val    = fl%cs2*pr%dens_min%val
+      pr%pres_min%val    = fl%cs2*pr%dens_min%val  ! Beware: for locally isothermal it might be incorrect
       pr%pres_max        = pr%dens_max
-      pr%pres_max%val    = fl%cs2*pr%dens_max%val
+      pr%pres_max%val    = fl%cs2*pr%dens_max%val  ! Beware: for locally isothermal it might be incorrect
       pr%cs_max%val      = fl%cs
       pr%cs_max%loc      = 0
       pr%cs_max%coords   = 0.0
@@ -1359,11 +1362,28 @@ contains
          pr%cs_max%assoc = 0.
          ! if there are no blocks on master we should communicate something here
       endif
-      pr%temp_min%val    = (mH * fl%cs2)/ (kboltz * fl%gam)
+      pr%temp_min%val    = (mH * fl%cs2)/ (kboltz * fl%gam)  ! Beware: for locally isothermal it might be incorrect
       pr%temp_min%loc    = 0
       pr%temp_min%coords = 0.0
       pr%temp_min%proc   = 0
-      pr%temp_max        = pr%temp_min
+      pr%temp_max        = pr%temp_min  ! Beware: for locally isothermal it might be incorrect
+
+      pr%dtcs_min%assoc  = 0.
+      pr%dtcs_min%val    = huge(1.)
+      cgl => leaves%first
+      do while (associated(cgl))
+         pr%dtcs_min%val   = min(pr%dtcs_min%val,   (cfl * cgl%cg%dxmn) / (max(fl%cs, maxval(cgl%cg%cs_iso2(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap)) + small))
+         pr%dtcs_min%assoc = max(pr%dtcs_min%assoc, max(fl%cs, maxval(cgl%cg%cs_iso2(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap)))
+         cgl => cgl%nxt
+      enddo
+      call piernik_MPI_Allreduce(pr%dtcs_min%val,   pMIN)
+      call piernik_MPI_Allreduce(pr%dtcs_min%assoc, pMAX)
+
+      ! Beware: for locally isothermal it actually makes sense to look for the extreme point
+      pr%dtcs_min%loc    = 0
+      pr%dtcs_min%coords = 0.0
+      pr%dtcs_min%proc   = 0
+
 #else /* !ISO */
       if (fl%tag /= DST) then
          cgl => leaves%first

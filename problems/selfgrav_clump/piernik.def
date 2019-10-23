@@ -1,4 +1,7 @@
-#define IONIZED
+#ifndef IONIZED
+#  define NEUTRAL
+#endif /* !IONIZED */
+
 #undef  MAGNETIC
 
 #undef ISO

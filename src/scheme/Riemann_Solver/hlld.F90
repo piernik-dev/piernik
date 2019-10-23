@@ -214,7 +214,6 @@ contains
     if (has_energy) call die("[hlld:riemann_hlld] ISO .and. has_energy")
     gampr_l = huge(1.)
     gampr_r = huge(1.)
-#else /* ISO */
     if (.not. associated(cs2)) call die("[hlld:riemann_hlld] ISO .and. .not. associated(cs2)")
 #endif /* ISO */
 
@@ -609,6 +608,10 @@ contains
 
     enddo
 
+#ifndef ISO
+    if (.false.) write(0,*) cs2
+#endif /* ISO */
+
  end subroutine riemann_hlld
 
 ! This is riemann_hlld stripped of magnetic field
@@ -663,7 +666,6 @@ contains
     if (has_energy) call die("[hlld:riemann_hlld_u] ISO .and. has_energy")
     gampr_l = huge(1.)
     gampr_r = huge(1.)
-#else /* ISO */
     if (.not. associated(cs2)) call die("[hlld:riemann_hlld_u] ISO .and. .not. associated(cs2)")
 #endif /* ISO */
 

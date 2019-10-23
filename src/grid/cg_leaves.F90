@@ -103,6 +103,7 @@ contains
 
       integer :: g_cnt, g_max, sum_max, ih, b_cnt
       character(len=len(msg)), save :: prev_msg
+      real :: lf
 
       call leaves%delete
       call all_lists%register(this, "leaves")
@@ -138,7 +139,15 @@ contains
       g_cnt = leaves%cnt
       call piernik_MPI_Allreduce(g_cnt, pSUM)
       write(msg(len_trim(msg)+1:), '(a,i7,a,f6.3)')", Sum: ",g_cnt, ", load balance: ",g_cnt/real(sum_max)
-      if (finest%level%l%id > base_level_id) write(msg(len_trim(msg)+1:), '(a,f6.3)')", leaves/finest: ", g_cnt/real(b_cnt * (refinement_factor**dom%eff_dim)**finest%level%l%id)
+      if (finest%level%l%id > base_level_id) then
+         write(msg(len_trim(msg)+1:), '(a)')", leaves/finest: "
+         lf = g_cnt/real(b_cnt * (refinement_factor**dom%eff_dim)**finest%level%l%id)
+         if (lf >= 0.01) then
+            write(msg(len_trim(msg)+1:), '(" ",f6.3)') lf
+         else
+            write(msg(len_trim(msg)+1:), '(" ",e8.2)') lf
+         endif
+      endif
       if (master .and. (msg(ih:len_trim(msg)) /= prev_msg(ih:len_trim(prev_msg)))) call printinfo(msg)
       prev_msg = msg
 
