@@ -42,7 +42,7 @@ contains
 !<
    subroutine init_piernik
 
-      use all_boundaries,        only: all_bnd
+      use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, INCEPTIVE, tmr_fu
@@ -213,7 +213,10 @@ contains
       call init_terms_grav
 #endif /* GRAV */
 
-      if (restarted_sim) call all_bnd
+      if (restarted_sim) then
+         call all_bnd
+         call all_bnd_vital_q
+      endif
 
       if (master) then
          call printinfo("###############     Initial Conditions     ###############", .false.)
