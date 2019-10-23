@@ -49,6 +49,7 @@ module particle_utils
    logical :: twodtscheme
    logical :: dump_diagnose        !< dump diagnose for each particle to a seperate log file
 #endif /* NBODY */
+   integer, parameter :: npf = 12 !> number of single particle fields
 
 contains
 
@@ -375,7 +376,6 @@ contains
       type(cg_list_element), pointer     :: cgl
       type(grid_container),  pointer     :: cg
       logical                            :: already, in, phy, out, phy_out
-      integer, parameter                 :: npf = 12 !> number of single particle fields
 
       nsend = 0
       nrecv = 0
@@ -425,24 +425,10 @@ contains
                      associate ( gsej => base%level%dot%gse(j) )
                         do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
                            if (particle_in_area(cg%pset%p(i)%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_ONE)*cg%dl(:)])) then
-                              part_info(ind)          = cg%pset%p(i)%pid
-                              part_info(ind+1)        = cg%pset%p(i)%mass
-                              part_info(ind+2:ind+4)  = cg%pset%p(i)%pos
-                              part_info(ind+5:ind+7)  = cg%pset%p(i)%vel
-                              part_info(ind+8:ind+10) = cg%pset%p(i)%acc
-                              part_info(ind+11)       = cg%pset%p(i)%energy
-                              ind = ind + npf
+                              part_info(ind:ind+npf-1) = collect_single_part_fields(ind, cg%pset%p(i))
                            else if (cg%pset%p(i)%outside) then
                               call cg_outside_dom(cg%pset%p(i)%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2.) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_ONE) * cg%dl(:)], phy_out)
-                              if (phy_out) then
-                                 part_info(ind)          = cg%pset%p(i)%pid
-                                 part_info(ind+1)        = cg%pset%p(i)%mass
-                                 part_info(ind+2:ind+4)  = cg%pset%p(i)%pos
-                                 part_info(ind+5:ind+7)  = cg%pset%p(i)%vel
-                                 part_info(ind+8:ind+10) = cg%pset%p(i)%acc
-                                 part_info(ind+11)       = cg%pset%p(i)%energy
-                                 ind = ind + npf
-                              endif
+                              if (phy_out) part_info(ind:ind+npf-1) = collect_single_part_fields(ind, cg%pset%p(i))
                            endif
                         enddo
                      end associate
@@ -518,6 +504,27 @@ contains
       deallocate(part_info)
 
    end subroutine part_leave_cg
+
+   function collect_single_part_fields(ind, p) result(pinfo)
+
+      use particle_types, only: particle
+
+      implicit none
+
+      real, dimension(npf)          :: pinfo
+      integer,        intent(inout) :: ind
+      type(particle), intent(in)    :: p
+
+      pinfo(1)    = p%pid
+      pinfo(2)    = p%mass
+      pinfo(3:5)  = p%pos
+      pinfo(6:8)  = p%vel
+      pinfo(9:11) = p%acc
+      pinfo(12)   = p%energy
+
+      ind = ind + npf
+
+   end function collect_single_part_fields
 
    integer(kind=4) function count_all_particles() result(pcount)
 
