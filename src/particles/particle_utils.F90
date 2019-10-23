@@ -375,6 +375,7 @@ contains
       type(cg_list_element), pointer     :: cgl
       type(grid_container),  pointer     :: cg
       logical                            :: already, in, phy, out, phy_out
+      integer, parameter                 :: npf = 12 !> number of single particle fields
 
       nsend = 0
       nrecv = 0
@@ -383,7 +384,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         npart = size(cg%pset%p,dim=1)
+         npart = size(cg%pset%p, dim=1)
          do i = 1, npart
             if (.not. cg%pset%p(i)%in) then
                do j = FIRST, LAST
@@ -408,7 +409,7 @@ contains
       call MPI_Alltoall(nsend, I_ONE, MPI_INTEGER, nrecv, I_ONE, MPI_INTEGER, comm, mpi_err)
 
       !Store data of particles to be sent
-      allocate(part_info(sum(nsend(:))*12))
+      allocate(part_info(sum(nsend(:))*npf))
       ind = 1
       cgl => leaves%first
       do while (associated(cgl))
@@ -430,7 +431,7 @@ contains
                               part_info(ind+5:ind+7)  = cg%pset%p(i)%vel
                               part_info(ind+8:ind+10) = cg%pset%p(i)%acc
                               part_info(ind+11)       = cg%pset%p(i)%energy
-                              ind = ind + 12
+                              ind = ind + npf
                            else if (cg%pset%p(i)%outside) then
                               call cg_outside_dom(cg%pset%p(i)%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2.) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_ONE) * cg%dl(:)], phy_out)
                               if (phy_out) then
@@ -440,7 +441,7 @@ contains
                                  part_info(ind+5:ind+7)  = cg%pset%p(i)%vel
                                  part_info(ind+8:ind+10) = cg%pset%p(i)%acc
                                  part_info(ind+11)       = cg%pset%p(i)%energy
-                                 ind = ind + 12
+                                 ind = ind + npf
                               endif
                            endif
                         enddo
@@ -465,9 +466,9 @@ contains
       enddo
 
       !Send / receive particle data
-      counts = 12*nsend
-      allocate(part_info2(sum(nrecv)*12))
-      countr = 12*nrecv
+      counts = npf*nsend
+      allocate(part_info2(sum(nrecv)*npf))
+      countr = npf*nrecv
       disps(FIRST) = 0
       dispr(FIRST) = 0
       do j = FIRST+I_ONE,LAST
@@ -505,7 +506,7 @@ contains
                            call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out)
                         endif
                      endif
-                     ind = ind + 12
+                     ind = ind + npf
                   enddo
                endif
             enddo
