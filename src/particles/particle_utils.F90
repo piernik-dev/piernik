@@ -368,7 +368,6 @@ contains
       implicit none
 
       integer, dimension(FIRST:LAST)     :: nsend, nrecv, counts, countr, disps, dispr
-      integer, dimension(:), allocatable :: pdel
       integer                            :: i, j, ind, pid, npart, k, b
       real, dimension(ndims)             :: pos, vel, acc
       real, dimension(:), allocatable    :: part_info, part_info2
@@ -415,11 +414,8 @@ contains
       do while (associated(cgl))
          associate( cg => cgl%cg )
             npart = size(cg%pset%p, dim=1)
-            allocate(pdel(npart))
-            pdel = 0
             do j = FIRST, LAST
                do i = 1, npart
-                  if (.not. cg%pset%p(i)%out) pdel(i)=1
                   if (j == proc) cycle ! TO DO IN AMR: ADD PARTICLES CHANGING CG INSIDE PROCESSOR
                   if (.not. cg%pset%p(i)%in) then
                      associate ( gsej => base%level%dot%gse(j) )
@@ -439,13 +435,12 @@ contains
             !Remove particles out of cg
             k = 1
             do i = 1, npart
-               if (pdel(i) == 1) then
+               if (.not. cg%pset%p(k)%out) then
                   call cg%pset%remove(k)
                else
                   k = k + 1
                endif
             enddo
-            deallocate(pdel)
 
          end associate
          cgl => cgl%nxt
