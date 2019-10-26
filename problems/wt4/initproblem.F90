@@ -686,7 +686,7 @@ contains
 
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-      integer :: nJ_i
+      integer(kind=4) :: nJ_i
       integer :: i, j, k
       integer, parameter :: D = 2
 
