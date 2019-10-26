@@ -87,13 +87,15 @@ contains
    subroutine init(this)
 
       use constants,                          only: base_level_id, INVALID
-      use refinement,                         only: refine_points
+      use refinement,                         only: refine_points, refine_boxes
+      use unified_ref_crit_geometrical_box,   only: urc_box
       use unified_ref_crit_geometrical_point, only: urc_point
 
       implicit none
 
       class(urc_list_t), intent(inout) :: this  !< an object invoking the type-bound procedure
 
+      type(urc_box), pointer :: urcb
       type(urc_point), pointer :: urcp
       integer :: ip
 
@@ -109,6 +111,14 @@ contains
             allocate(urcp)
             urcp = urc_point(INVALID,  null(), refine_points(ip)%level, refine_points(ip)%coords)
             call this%add(urcp)
+         endif
+      enddo
+
+      do ip = lbound(refine_boxes, dim=1), ubound(refine_boxes, dim=1)
+         if (refine_boxes(ip)%level > base_level_id) then
+            allocate(urcb)
+            urcb = urc_box(INVALID,  null(), refine_boxes(ip)%level, refine_boxes(ip)%coords)
+            call this%add(urcb)
          endif
       enddo
 

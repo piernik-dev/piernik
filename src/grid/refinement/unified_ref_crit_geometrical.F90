@@ -30,9 +30,9 @@
 !>
 !! \brief Unified refinement criteria for geometrical primitives
 !!
-!! \details Currently only single point is implemented
+!! \details Currently only points and boxes are implemented
 !!
-!! \todo Add box, sphere, shell, cylinder, etc.
+!! \todo Add sphere, shell, cylinder, etc.
 !<
 
 module unified_ref_crit_geometrical
@@ -49,11 +49,5 @@ module unified_ref_crit_geometrical
    type, abstract, extends(urc) :: urc_geom
       integer :: level  !< desired level of refinement
    end type urc_geom
-
-!!$   type, extends(urc_geom) :: urc_box
-!!$      real, dimension(ndims, LO:HI) :: coords  !< coordinates, where to refine
-!!$   contains
-!!$      procedure :: pr => aqq_b
-!!$   end type urc_box
 
 end module unified_ref_crit_geometrical

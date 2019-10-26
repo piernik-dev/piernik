@@ -73,7 +73,7 @@ contains
       if (cg%l%id >= this%level) return
 
       if (.not. allocated(this%ijk)) call this%init
-      if (any(this%ijk(cg%l%id, :) == uninit)) call this%init  ! new levels of refinement have appeares in the meantime
+      if (any(this%ijk(cg%l%id, :) == uninit)) call this%init  ! new levels of refinement have appears in the meantime
 
       if (all(this%ijk(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk(cg%l%id, :) <= cg%ijkse(:, HI))) then
          cg%refinemap(this%ijk(cg%l%id, xdim), this%ijk(cg%l%id, ydim), this%ijk(cg%l%id, zdim)) = .true.
