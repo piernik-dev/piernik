@@ -120,7 +120,10 @@ contains
          if (l%l%id < this%level) then
             if (any(this%ijk(l%l%id, :) == uninit)) then
                where (dom%has_dir)
-                  this%ijk(l%l%id, :) = l%l%off + floor((this%coords - dom%edge(:, LO))/dom%L_*l%l%n_d)
+                  this%ijk(l%l%id, :) = l%l%off + floor((this%coords - dom%edge(:, LO))/dom%L_*l%l%n_d, kind=8)
+                  ! Excessively large this%coords will result in FPE exception.
+                  ! If not trapped then huge() value will be assigned (checked on gfortran 7.3.1), which is safe.
+                  ! A wrapped value coming from integer overflow may be unsafe.
                elsewhere
                   this%ijk(l%l%id, :) = l%l%off
                endwhere
