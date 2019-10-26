@@ -178,50 +178,42 @@ contains
       type(cg_list_element), pointer :: cgl
       real, dimension(:,:,:), pointer :: p3d
 
-      ! \todo mark everything for derefinement by default
-!!$      cgl => leaves%first
-!!$      do while (associated(cgl))
-!!$         cgl%cg%refine_flags%derefine = .true.
-!!$         cgl => cgl%nxt
-!!$      enddo
+      if (.not. allocated(ref_crit_list)) return
+      do i = lbound(ref_crit_list, dim=1), ubound(ref_crit_list, dim=1)
 
-      if (allocated(ref_crit_list)) then
-         do i = lbound(ref_crit_list, dim=1), ubound(ref_crit_list, dim=1)
+         skip = .false.
+         if (present(plots_only)) then
+            if (plots_only) skip = (ref_crit_list(i)%iplot == INVALID)
+         endif
+         if (skip) cycle
 
-            skip = .false.
-            if (present(plots_only)) then
-               if (plots_only) skip = (ref_crit_list(i)%iplot == INVALID)
-            endif
-            if (skip) cycle
+         var3d = (ref_crit_list(i)%ic == INVALID)
 
-            var3d = (ref_crit_list(i)%ic == INVALID)
+         if (var3d) then
+            if (ref_crit_list(i)%iv<lbound(qna%lst, dim=1) .or. ref_crit_list(i)%iv>ubound(qna%lst, dim=1)) &
+                 call die("[refinement_crit_list:auto_refine_derefine] 3D index out of range")
+         else
+            if (ref_crit_list(i)%iv<lbound(wna%lst, dim=1) .or. ref_crit_list(i)%iv>ubound(wna%lst, dim=1)) &
+                 call die("[refinement_crit_list:auto_refine_derefine] 4D index out of range")
+            if (ref_crit_list(i)%ic <= 0 .or. ref_crit_list(i)%ic > wna%lst(ref_crit_list(i)%iv)%dim4) &
+                 call die("[refinement_crit_list:auto_refine_derefine] component out of range")
+         endif
 
-            if (var3d) then
-               if (ref_crit_list(i)%iv<lbound(qna%lst, dim=1) .or. ref_crit_list(i)%iv>ubound(qna%lst, dim=1)) &
-                    call die("[refinement_crit_list:auto_refine_derefine] 3D index out of range")
-            else
-               if (ref_crit_list(i)%iv<lbound(wna%lst, dim=1) .or. ref_crit_list(i)%iv>ubound(wna%lst, dim=1)) &
-                    call die("[refinement_crit_list:auto_refine_derefine] 4D index out of range")
-               if (ref_crit_list(i)%ic <= 0 .or. ref_crit_list(i)%ic > wna%lst(ref_crit_list(i)%iv)%dim4) &
-                    call die("[refinement_crit_list:auto_refine_derefine] component out of range")
-            endif
-
-            cgl => leaves%first
-            do while (associated(cgl))
-               if (any(cgl%cg%leafmap)) then
-                  if (var3d) then
-                     p3d => cgl%cg%q(ref_crit_list(i)%iv)%arr
-                  else
-                     associate (a=>cgl%cg%w(ref_crit_list(i)%iv)%arr)
-                        p3d(lbound(a, dim=2):, lbound(a, dim=3):, lbound(a, dim=4):) => cgl%cg%w(ref_crit_list(i)%iv)%arr(ref_crit_list(i)%ic, :, :, :)
-                     end associate
-                  endif
-                  call ref_crit_list(i)%refine(cgl%cg, p3d)
+         cgl => leaves%first
+         do while (associated(cgl))
+            if (any(cgl%cg%leafmap)) then
+               if (var3d) then
+                  p3d => cgl%cg%q(ref_crit_list(i)%iv)%arr
+               else
+                  associate (a=>cgl%cg%w(ref_crit_list(i)%iv)%arr)
+                     p3d(lbound(a, dim=2):, lbound(a, dim=3):, lbound(a, dim=4):) => cgl%cg%w(ref_crit_list(i)%iv)%arr(ref_crit_list(i)%ic, :, :, :)
+                  end associate
                endif
-               cgl => cgl%nxt
-            enddo
+               call ref_crit_list(i)%refine(cgl%cg, p3d)
+            endif
+            cgl => cgl%nxt
          enddo
-      endif
+      enddo
 
    end subroutine auto_refine_derefine
 
