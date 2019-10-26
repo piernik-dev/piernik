@@ -54,24 +54,39 @@ module unified_ref_crit
       integer                    :: iplot  !< field index for storing the refinement criterion value or INVALID
       class(urc), pointer        :: next   !< next refinement ctiterion or null() (for unidirectional list)
    contains
-      procedure(p_urc), deferred :: mark   !< a routine that takes a cg and leaves suggestions on refining and derefining
+      procedure(mark_urc),    deferred :: mark     !< a routine that takes a cg and leaves suggestions on refining and derefining
+      procedure(cleanup_urc), deferred :: cleanup  !< a routine for deallocating things
    end type urc
 
-!> \brief Mark refinements and derefinements on given grid container
+!>
+!! \brief Mark refinements and derefinements on given grid container
+!!
+!! intent(inout) :: this allows for altering private variables (implicit initialisation)
+!<
 
    interface
 
-      subroutine p_urc(this, cg)
+      subroutine mark_urc(this, cg)
 
          use grid_cont, only: grid_container
          import urc
 
          implicit none
 
-         class(urc),                    intent(in)    :: this  !< an object invoking the type-bound procedure
+         class(urc),                    intent(inout) :: this  !< an object invoking the type-bound procedure
          type(grid_container), pointer, intent(inout) :: cg    !< current grid piece
 
-      end subroutine p_urc
+      end subroutine mark_urc
+
+      subroutine cleanup_urc(this)
+
+         import urc
+
+         implicit none
+
+         class(urc), intent(inout) :: this  !< an object invoking the type-bound procedure
+
+      end subroutine cleanup_urc
 
    end interface
 
