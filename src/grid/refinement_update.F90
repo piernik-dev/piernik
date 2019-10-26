@@ -49,8 +49,8 @@ contains
       use cg_level_finest,       only: finest
       use cg_list,               only: cg_list_element
       use cg_list_global,        only: all_cg
+      use constants,             only: I_ONE
       use refinement_crit_list,  only: auto_refine_derefine
-      use refinement_primitives, only: mark_all_primitives
       use unified_ref_crit_list, only: urc_list
       use user_hooks,            only: problem_refine_derefine
 #ifdef VERBOSED_REFINEMENTS
@@ -66,7 +66,6 @@ contains
       enum, bind(C)
          enumerator :: PROBLEM
          enumerator :: AUTO
-         enumerator :: PRIMITIVES
          enumerator :: URC
       end enum
       integer, dimension(PROBLEM:URC) :: cnt
@@ -102,13 +101,6 @@ contains
       call piernik_MPI_Allreduce(cnt(AUTO), pSUM)
 #endif /* VERBOSED_REFINEMENTS */
 
-      call mark_all_primitives
-      call sanitize_all_ref_flags
-#ifdef VERBOSED_REFINEMENTS
-      cnt(PRIMITIVES) = all_cg%count_ref_flags()
-      call piernik_MPI_Allreduce(cnt(PRIMITIVES), pSUM)
-#endif /* VERBOSED_REFINEMENTS */
-
       cgl => leaves%first
       do while (associated(cgl))
          call urc_list%mark(cgl%cg)
@@ -122,8 +114,8 @@ contains
 
 #ifdef VERBOSED_REFINEMENTS
      if (cnt(ubound(cnt, dim=1)) > 0) then
-         write(msg,'(a,4i6,a)')"[refinement_update:scan_for_refinements] User routine, automatic criteria, primitives and URC marked ", &
-              &                cnt(PROBLEM), cnt(AUTO:URC)-cnt(PROBLEM:PRIMITIVES), " block(s) for refinement, respectively."
+         write(msg,'(a,3i6,a)')"[refinement_update:scan_for_refinements] User routine, automatic criteria, primitives and URC marked ", &
+              &                cnt(PROBLEM), cnt(PROBLEM+I_ONE:URC)-cnt(PROBLEM:URC-I_ONE), " block(s) for refinement, respectively."
          if (master) call printinfo(msg)
       endif
 #endif /* VERBOSED_REFINEMENTS */
