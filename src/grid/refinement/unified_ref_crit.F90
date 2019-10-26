@@ -38,7 +38,7 @@ module unified_ref_crit
    implicit none
 
    private
-   public :: urc, first_ref_crit
+   public :: urc
 
 !>
 !! \brief Things that should be common for all refinement criteria.
@@ -47,7 +47,7 @@ module unified_ref_crit
 !! For each grid container the routines for marking refinements and derefinements are called in the same order.
 !! It is assumed that all vital fields will have valid boundaries for the routine mark.
 !! Each criterion should be applicable on any cg and no global communication should take place in this routine.
-!! Refinement criteria that require some global operations should be implemented separately and used with care.
+!! Refinement criteria that require some global operations (like Toomre length in disks) should be implemented separately and used with care.
 !<
 
    type, abstract :: urc
@@ -58,13 +58,13 @@ module unified_ref_crit
       procedure(cleanup_urc), deferred :: cleanup  !< a routine for deallocating things
    end type urc
 
+   interface
+
 !>
 !! \brief Mark refinements and derefinements on given grid container
 !!
 !! intent(inout) :: this allows for altering private variables (implicit initialisation)
 !<
-
-   interface
 
       subroutine mark_urc(this, cg)
 
@@ -78,6 +78,8 @@ module unified_ref_crit
 
       end subroutine mark_urc
 
+!> \brief do a clean-up on private memory of an urc
+
       subroutine cleanup_urc(this)
 
          import urc
@@ -89,8 +91,5 @@ module unified_ref_crit
       end subroutine cleanup_urc
 
    end interface
-
-   class(urc), pointer :: first_ref_crit => null()  !< here the list should start
-   ! A pointer to last refinement criterion would be of some use only during initialisation.
 
 end module unified_ref_crit

@@ -37,7 +37,7 @@ module unified_ref_crit_geometrical_point
    implicit none
 
    private
-   public ::urc_point
+   public :: urc_point
 
 !> \brief A type for point refinement
 
@@ -75,7 +75,6 @@ contains
       if (.not. allocated(this%ijk)) call this%init
       if (any(this%ijk(cg%l%id, :) == uninit)) call this%init  ! new levels of refinement have appeares in the meantime
 
-      cg%refine_flags%derefine = .true.  ! this call should go one level up
       if (all(this%ijk(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk(cg%l%id, :) <= cg%ijkse(:, HI))) then
          cg%refinemap(this%ijk(cg%l%id, xdim), this%ijk(cg%l%id, ydim), this%ijk(cg%l%id, zdim)) = .true.
          cg%refine_flags%derefine = .false.  ! this should go one level up (sanitizing)
@@ -103,30 +102,32 @@ contains
       class(urc_point), intent(inout)  :: this  !< an object invoking the type-bound procedure
 
       type(cg_level_connected_T), pointer :: l
+      logical, parameter :: verbose = .false.
 
       if (allocated(this%ijk)) then
-         call printinfo("[unified_ref_crit_geometrical_point:init_point] Re-initializing")
+         if (verbose .and. master) call printinfo("[unified_ref_crit_geometrical_point:init_point] Re-initializing")
       else
          allocate(this%ijk(base_level_id:this%level-1, ndims))
          this%ijk = uninit
-      endif
-
-      if (master) then
-         write(msg, '(a,3g13.5,a)')"Initializing refinement at point: [ ", this%coords, " ]"
-         call printinfo(msg)
+         if (master) then
+            write(msg, '(a,3g13.5,a)')"[URC point] Initializing refinement at point: [ ", this%coords, " ]"
+            call printinfo(msg)
+         endif
       endif
 
       l => base%level
-      do while (l%l%id < this%level)
-         if (any(this%ijk(l%l%id, :) == uninit)) then
-            where (dom%has_dir)
-               this%ijk(l%l%id, :) = l%l%off + floor((this%coords - dom%edge(:, LO))/dom%L_*l%l%n_d)
-            elsewhere
-               this%ijk(l%l%id, :) = l%l%off
-            endwhere
-            if (master) then
-               write(msg, '(a,i3,a,3i8,a)')"  point coordinates at level ", l%l%id, " are: [ ", this%ijk(l%l%id, :), " ]"
-               call printinfo(msg)
+      do while (associated(l))
+         if (l%l%id < this%level) then
+            if (any(this%ijk(l%l%id, :) == uninit)) then
+               where (dom%has_dir)
+                  this%ijk(l%l%id, :) = l%l%off + floor((this%coords - dom%edge(:, LO))/dom%L_*l%l%n_d)
+               elsewhere
+                  this%ijk(l%l%id, :) = l%l%off
+               endwhere
+               if (verbose .and. master) then
+                  write(msg, '(a,i3,a,3i8,a)')"[URC point]   point coordinates at level ", l%l%id, " are: [ ", this%ijk(l%l%id, :), " ]"
+                  call printinfo(msg)
+               endif
             endif
          endif
          l => l%finer

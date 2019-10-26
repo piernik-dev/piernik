@@ -48,7 +48,7 @@ contains
 
       implicit none
 
-      call mark_points
+!      call mark_points
       call mark_boxes
 
    end subroutine mark_all_primitives

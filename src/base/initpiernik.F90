@@ -64,6 +64,7 @@ contains
       use refinement_update,     only: update_refinement
       use sources,               only: init_sources
       use timer,                 only: set_timer
+      use unified_ref_crit_list, only: urc_list
       use units,                 only: init_units
       use user_hooks,            only: problem_post_restart, problem_post_IC
 #ifdef RIEMANN
@@ -170,6 +171,7 @@ contains
 #endif /* COSM_RAYS */
 
       call init_refinement
+      call urc_list%init                     ! initialize unified refinement criteria
 
       call init_decomposition
 #ifdef GRAV
