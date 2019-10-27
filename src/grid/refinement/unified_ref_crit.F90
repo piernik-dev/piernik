@@ -35,6 +35,8 @@
 
 module unified_ref_crit
 
+   use constants, only: INVALID
+
    implicit none
 
    private
@@ -51,10 +53,10 @@ module unified_ref_crit
 !<
 
    type, abstract :: urc
-      integer                    :: iplot  !< field index for storing the refinement criterion value or INVALID
-      class(urc), pointer        :: next   !< next refinement ctiterion or null() (for unidirectional list)
+      integer             :: iplot = INVALID  !< field index for storing the refinement criterion value
+      class(urc), pointer :: next  => null()  !< next refinement ctiterion or null() (for unidirectional list)
    contains
-      procedure(mark_urc), deferred :: mark     !< a routine that takes a cg and leaves suggestions on refining and derefining
+      procedure(mark_urc), deferred :: mark   !< a routine that takes a cg and leaves suggestions on refining and derefining
    end type urc
 
    interface

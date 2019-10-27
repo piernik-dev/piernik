@@ -27,7 +27,7 @@
 
 #include "piernik.h"
 
-!> \brief Unified refinement criterium for a single point
+!> \brief Unified refinement criterion for a single point
 
 module unified_ref_crit_geometrical_box
 
@@ -46,13 +46,45 @@ module unified_ref_crit_geometrical_box
       integer(kind=8), allocatable, dimension(:, :), private :: ijk_lo  !< integer coordinates of "bottom left corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
       integer(kind=8), allocatable, dimension(:, :), private :: ijk_hi  !< integer coordinates ot "top right corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
    contains
-      procedure :: mark => mark_box
-      procedure :: init => init_box
+      procedure          :: mark => mark_box
+      procedure, private :: init_lev
    end type urc_box
+
+   interface urc_box
+      procedure :: init
+   end interface urc_box
 
    integer(kind=8), parameter :: uninit = huge(1_8)
 
 contains
+
+!> \brief A simple constructor fed by parameters read from problem.par
+
+   function init(rp) result(this)
+
+      use constants,  only: base_level_id, ndims, LO, HI
+      use dataio_pub, only: printinfo, msg
+      use mpisetup,   only: master
+      use refinement, only: ref_box
+
+      implicit none
+
+      type(ref_box), intent(in) :: rp  !< the data read from problem.par
+
+      type(urc_box) :: this  !< an object to be constructed
+
+      this%level  = rp%level
+      this%coords = rp%coords
+
+      allocate(this%ijk_lo(base_level_id:this%level-1, ndims), this%ijk_hi(base_level_id:this%level-1, ndims))
+      this%ijk_lo = uninit
+      this%ijk_hi = uninit
+      if (master) then
+         write(msg, '(a,3g13.5,a,3g13.5,a)')"[URC box] Initializing refinement at box: [ ", this%coords(:, LO), " ]..[ ", this%coords(:, HI), " ]"
+         call printinfo(msg)
+      endif
+
+   end function init
 
 !>
 !! \brief Mark a single box in the domain for refinement
@@ -77,8 +109,8 @@ contains
 
       if (allocated(this%ijk_lo) .neqv. allocated(this%ijk_hi)) call die("[unified_ref_crit_geometrical_box:mark_box] inconsistent alloc")
 
-      if (.not. allocated(this%ijk_lo)) call this%init
-      if (any(this%ijk_lo(cg%l%id, :) == uninit) .or. any(this%ijk_hi(cg%l%id, :) == uninit)) call this%init  ! new levels of refinement have appears in the meantime
+      if (.not. allocated(this%ijk_lo)) call die("[unified_ref_crit_geometrical_box:mark_box] ijk_{lo,hi} not allocated")
+      if (any(this%ijk_lo(cg%l%id, :) == uninit) .or. any(this%ijk_hi(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appears in the meantime
 
       if (all(this%ijk_hi(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk_lo(cg%l%id, :) <= cg%ijkse(:, HI))) then
          ijk_l = min(max(int(this%ijk_lo(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
@@ -98,12 +130,12 @@ contains
 !! \details Initialize uning available levels. If more refinements appear then call this again to reinitialize.
 !>
 
-   subroutine init_box(this)
+   subroutine init_lev(this)
 
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_T
-      use constants,          only: base_level_id, ndims, LO, HI
-      use dataio_pub,         only: printinfo, msg, die
+      use constants,          only: LO, HI
+      use dataio_pub,         only: printinfo, msg
       use domain,             only: dom
       use mpisetup,           only: master
 
@@ -112,21 +144,7 @@ contains
       class(urc_box), intent(inout)  :: this  !< an object invoking the type-bound procedure
 
       type(cg_level_connected_T), pointer :: l
-      logical, parameter :: verbose = .false.
-
-      if (allocated(this%ijk_lo) .neqv. allocated(this%ijk_hi)) call die("[unified_ref_crit_geometrical_box:init_box] inconsistent alloc")
-
-      if (allocated(this%ijk_lo)) then
-         if (verbose .and. master) call printinfo("[unified_ref_crit_geometrical_box:init_box] Re-initializing")
-      else
-         allocate(this%ijk_lo(base_level_id:this%level-1, ndims), this%ijk_hi(base_level_id:this%level-1, ndims))
-         this%ijk_lo = uninit
-         this%ijk_hi = uninit
-         if (master) then
-            write(msg, '(a,3g13.5,a,3g13.5,a)')"[URC box] Initializing refinement at box: [ ", this%coords(:, LO), " ]..[ ", this%coords(:, HI), " ]"
-            call printinfo(msg)
-         endif
-      endif
+      logical, parameter :: verbose = .false.  ! for debugging only
 
       l => base%level
       do while (associated(l))
@@ -151,6 +169,6 @@ contains
          l => l%finer
       enddo
 
-   end subroutine init_box
+   end subroutine init_lev
 
 end module unified_ref_crit_geometrical_box

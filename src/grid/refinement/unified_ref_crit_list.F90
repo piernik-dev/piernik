@@ -86,7 +86,7 @@ contains
 
    subroutine init(this)
 
-      use constants,                          only: base_level_id, INVALID
+      use constants,                          only: base_level_id
       use refinement,                         only: refine_points, refine_boxes
       use unified_ref_crit_geometrical_box,   only: urc_box
       use unified_ref_crit_geometrical_point, only: urc_point
@@ -109,7 +109,7 @@ contains
       do ip = lbound(refine_points, dim=1), ubound(refine_points, dim=1)
          if (refine_points(ip)%level > base_level_id) then
             allocate(urcp)
-            urcp = urc_point(INVALID,  null(), refine_points(ip)%level, refine_points(ip)%coords)
+            urcp = urc_point(refine_points(ip))
             call this%add(urcp)
          endif
       enddo
@@ -117,7 +117,7 @@ contains
       do ip = lbound(refine_boxes, dim=1), ubound(refine_boxes, dim=1)
          if (refine_boxes(ip)%level > base_level_id) then
             allocate(urcb)
-            urcb = urc_box(INVALID,  null(), refine_boxes(ip)%level, refine_boxes(ip)%coords)
+            urcb = urc_box(refine_boxes(ip))
             call this%add(urcb)
          endif
       enddo

@@ -27,7 +27,7 @@
 
 #include "piernik.h"
 
-!> \brief Unified refinement criterium for a single point
+!> \brief Unified refinement criterion for a single point
 
 module unified_ref_crit_geometrical_point
 
@@ -45,13 +45,44 @@ module unified_ref_crit_geometrical_point
       real, dimension(ndims) :: coords  !< coordinates, where to refine
       integer(kind=8), allocatable, dimension(:, :), private :: ijk  !< integer coordinates at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
    contains
-      procedure :: mark => mark_point
-      procedure :: init => init_point
+      procedure          :: mark => mark_point
+      procedure, private :: init_lev
    end type urc_point
+
+   interface urc_point
+      procedure :: init
+   end interface urc_point
 
    integer(kind=8), parameter :: uninit = huge(1_8)
 
 contains
+
+!> \brief A simple constructor fed by parameters read from problem.par
+
+   function init(rp) result(this)
+
+      use constants,  only: base_level_id, ndims
+      use dataio_pub, only: printinfo, msg
+      use mpisetup,   only: master
+      use refinement, only: ref_point
+
+      implicit none
+
+      type(ref_point), intent(in) :: rp  !< the data read from problem.par
+
+      type(urc_point) :: this  !< an object to be constructed
+
+      this%level  = rp%level
+      this%coords = rp%coords
+
+      allocate(this%ijk(base_level_id:this%level-1, ndims))
+      this%ijk = uninit
+      if (master) then
+         write(msg, '(a,3g13.5,a)')"[URC point] Initializing refinement at point: [ ", this%coords, " ]"
+         call printinfo(msg)
+      endif
+
+   end function init
 
 !>
 !! \brief Mark a single point in the domain for refinement
@@ -61,8 +92,9 @@ contains
 
    subroutine mark_point(this, cg)
 
-      use constants, only: xdim, ydim, zdim, LO, HI
-      use grid_cont, only: grid_container
+      use constants,  only: xdim, ydim, zdim, LO, HI
+      use dataio_pub, only: die
+      use grid_cont,  only: grid_container
 
       implicit none
 
@@ -71,8 +103,8 @@ contains
 
       if (cg%l%id >= this%level) return
 
-      if (.not. allocated(this%ijk)) call this%init
-      if (any(this%ijk(cg%l%id, :) == uninit)) call this%init  ! new levels of refinement have appears in the meantime
+      if (.not. allocated(this%ijk)) call die("[unified_ref_crit_geometrical_point:mark_point] ijk not allocated")
+      if (any(this%ijk(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appears in the meantime
 
       if (all(this%ijk(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk(cg%l%id, :) <= cg%ijkse(:, HI))) then
          cg%refinemap(this%ijk(cg%l%id, xdim), this%ijk(cg%l%id, ydim), this%ijk(cg%l%id, zdim)) = .true.
@@ -87,11 +119,11 @@ contains
 !! \details Initialize uning available levels. If more refinements appear then call this again to reinitialize.
 !>
 
-   subroutine init_point(this)
+   subroutine init_lev(this)
 
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_T
-      use constants,          only: base_level_id, ndims, LO
+      use constants,          only: LO
       use dataio_pub,         only: printinfo, msg
       use domain,             only: dom
       use mpisetup,           only: master
@@ -101,18 +133,7 @@ contains
       class(urc_point), intent(inout)  :: this  !< an object invoking the type-bound procedure
 
       type(cg_level_connected_T), pointer :: l
-      logical, parameter :: verbose = .false.
-
-      if (allocated(this%ijk)) then
-         if (verbose .and. master) call printinfo("[unified_ref_crit_geometrical_point:init_point] Re-initializing")
-      else
-         allocate(this%ijk(base_level_id:this%level-1, ndims))
-         this%ijk = uninit
-         if (master) then
-            write(msg, '(a,3g13.5,a)')"[URC point] Initializing refinement at point: [ ", this%coords, " ]"
-            call printinfo(msg)
-         endif
-      endif
+      logical, parameter :: verbose = .false.  ! for debugging only
 
       l => base%level
       do while (associated(l))
@@ -135,6 +156,6 @@ contains
          l => l%finer
       enddo
 
-   end subroutine init_point
+   end subroutine init_lev
 
 end module unified_ref_crit_geometrical_point
