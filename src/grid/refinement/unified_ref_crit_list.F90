@@ -136,9 +136,8 @@ contains
 
       p => this%first
       do while (associated(p))
-         call p%cleanup
          pn => p%next
-         deallocate(p)
+         deallocate(p)  ! this should also deallocate private data of p
          p => pn
          this%first => p
       enddo

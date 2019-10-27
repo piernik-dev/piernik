@@ -45,9 +45,8 @@ module unified_ref_crit_geometrical_point
       real, dimension(ndims) :: coords  !< coordinates, where to refine
       integer(kind=8), allocatable, dimension(:, :), private :: ijk  !< integer coordinates at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
    contains
-      procedure :: mark    => mark_point
-      procedure :: cleanup => cleanup_point
-      procedure :: init    => init_point
+      procedure :: mark => mark_point
+      procedure :: init => init_point
    end type urc_point
 
    integer(kind=8), parameter :: uninit = huge(1_8)
@@ -137,17 +136,5 @@ contains
       enddo
 
    end subroutine init_point
-
-!> \brief Deallocate integer coordinates of the point
-
-   subroutine cleanup_point(this)
-
-      implicit none
-
-      class(urc_point), intent(inout)  :: this  !< an object invoking the type-bound procedure
-
-      if (allocated(this%ijk)) deallocate(this%ijk)
-
-   end subroutine cleanup_point
 
 end module unified_ref_crit_geometrical_point

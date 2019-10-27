@@ -46,9 +46,8 @@ module unified_ref_crit_geometrical_box
       integer(kind=8), allocatable, dimension(:, :), private :: ijk_lo  !< integer coordinates of "bottom left corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
       integer(kind=8), allocatable, dimension(:, :), private :: ijk_hi  !< integer coordinates ot "top right corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
    contains
-      procedure :: mark    => mark_box
-      procedure :: cleanup => cleanup_box
-      procedure :: init    => init_box
+      procedure :: mark => mark_box
+      procedure :: init => init_box
    end type urc_box
 
    integer(kind=8), parameter :: uninit = huge(1_8)
@@ -153,18 +152,5 @@ contains
       enddo
 
    end subroutine init_box
-
-!> \brief Deallocate integer coordinates of the box
-
-   subroutine cleanup_box(this)
-
-      implicit none
-
-      class(urc_box), intent(inout)  :: this  !< an object invoking the type-bound procedure
-
-      if (allocated(this%ijk_lo)) deallocate(this%ijk_lo)
-      if (allocated(this%ijk_hi)) deallocate(this%ijk_hi)
-
-   end subroutine cleanup_box
 
 end module unified_ref_crit_geometrical_box
