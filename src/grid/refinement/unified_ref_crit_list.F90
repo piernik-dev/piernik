@@ -42,7 +42,7 @@ module unified_ref_crit_list
       class(urc), pointer :: first => null()  !< here the list should start
       ! A pointer to last refinement criterion would be of some use only during initialisation.
    contains
-      procedure :: add      !< add a single criterion to the list
+      procedure :: add      !< append a single criterion to the list, or a chain of these
       procedure :: init     !< initialize the list of refinement criteria with everything that is known at the beginning
       procedure :: cleanup  !< do a cleanup of all refinement criteria and deallocate them
       procedure :: mark     !< put all refinement marks or derefinement unmarks
@@ -52,9 +52,12 @@ module unified_ref_crit_list
 
 contains
 
-!> \brief Add a single criterion to the list.
+!> \brief Append a single criterion to the list. A chain should get correctly appended as well.
 
    subroutine add(this, urc_p)
+
+      use dataio_pub, only: warn
+      use mpisetup,   only: master
 
       implicit none
 
@@ -62,6 +65,11 @@ contains
       class(urc), pointer, intent(in)    :: urc_p  !< refinement criterion to be appended to the end of list
 
       class(urc), pointer :: p
+
+      if (.not. associated(urc_p)) then
+         if (master) call warn("[unified_ref_crit_list:add] .not. associated(urc_p)")
+         return
+      endif
 
       p => this%first
       if (associated(p)) then
@@ -87,21 +95,28 @@ contains
    subroutine init(this)
 
       use constants,                          only: base_level_id
-      use refinement,                         only: refine_points, refine_boxes
+      use refinement,                         only: refine_points, refine_boxes, refine_vars, inactive_name
       use unified_ref_crit_geometrical_box,   only: urc_box
       use unified_ref_crit_geometrical_point, only: urc_point
+      use unified_ref_crit_var,               only: decode_urcv
 
       implicit none
 
       class(urc_list_t), intent(inout) :: this  !< an object invoking the type-bound procedure
 
-      type(urc_box), pointer :: urcb
+      type(urc_box),   pointer :: urcb
       type(urc_point), pointer :: urcp
       integer :: ip
 
       ! add user hook from initproblem
 
       ! add automatic criteria detecting shock waves
+
+      do ip = lbound(refine_vars, 1), ubound(refine_vars, 1)
+         if (trim(refine_vars(ip)%rname) /= trim(inactive_name)) then
+            call this%add(decode_urcv(refine_vars(ip)))
+         endif
+      enddo
 
       ! add Jeans-length criterion
 

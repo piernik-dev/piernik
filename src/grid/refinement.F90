@@ -35,7 +35,7 @@ module refinement
    implicit none
 
    private
-   public :: n_updAMR, oop_thr, ref_point, refine_points, refine_vars, level_min, level_max, inactive_name, bsize, &
+   public :: n_updAMR, oop_thr, ref_point, refine_points, ref_auto_param, refine_vars, level_min, level_max, inactive_name, bsize, &
         &    ref_box, refine_boxes, init_refinement, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce
 
    integer(kind=4), protected :: n_updAMR            !< How often to update the refinement structure

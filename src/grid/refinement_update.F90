@@ -50,7 +50,7 @@ contains
       use cg_list,               only: cg_list_element
       use cg_list_global,        only: all_cg
       use constants,             only: I_ONE
-      use refinement_crit_list,  only: auto_refine_derefine
+!      use refinement_crit_list,  only: auto_refine_derefine
       use unified_ref_crit_list, only: urc_list
       use user_hooks,            only: problem_refine_derefine
 #ifdef VERBOSED_REFINEMENTS
@@ -101,7 +101,7 @@ contains
       call piernik_MPI_Allreduce(cnt(PROBLEM), pSUM)
 #endif /* VERBOSED_REFINEMENTS */
 
-      call auto_refine_derefine
+!      call auto_refine_derefine
 #ifdef VERBOSED_REFINEMENTS
       call sanitize_all_ref_flags
       cnt(AUTO) = all_cg%count_ref_flags()
@@ -150,7 +150,7 @@ contains
          cgl => curl%first
          do while (associated(cgl))
             cgl%cg%refine_flags%refine = cgl%cg%refine_flags%refine .or. &
-                 &                       any(cgl%cg%refinemap .and. cgl%cg%leafmap)
+                 any(cgl%cg%refinemap(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) .and. cgl%cg%leafmap)
             call cgl%cg%refine_flags%sanitize(cgl%cg%l%id)
             cgl => cgl%nxt
          enddo
