@@ -75,7 +75,7 @@ contains
       this%level  = rp%level
       this%coords = rp%coords
 
-      allocate(this%ijk(base_level_id:this%level-1, ndims))
+      allocate(this%ijk(base_level_id:this%level, ndims))
       this%ijk = uninit
       if (master) then
          write(msg, '(a,3g13.5,a)')"[URC point] Initializing refinement at point: [ ", this%coords, " ]"
@@ -101,13 +101,13 @@ contains
       class(urc_point),              intent(inout) :: this  !< an object invoking the type-bound procedure
       type(grid_container), pointer, intent(inout) :: cg    !< current grid piece
 
-      if (cg%l%id >= this%level) return
+      if (cg%l%id > this%level) return
 
       if (.not. allocated(this%ijk)) call die("[unified_ref_crit_geometrical_point:mark_point] ijk not allocated")
       if (any(this%ijk(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appears in the meantime
 
       if (all(this%ijk(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk(cg%l%id, :) <= cg%ijkse(:, HI))) then
-         cg%refinemap(this%ijk(cg%l%id, xdim), this%ijk(cg%l%id, ydim), this%ijk(cg%l%id, zdim)) = .true.
+         if (cg%l%id < this%level) cg%refinemap(this%ijk(cg%l%id, xdim), this%ijk(cg%l%id, ydim), this%ijk(cg%l%id, zdim)) = .true.
          cg%refine_flags%derefine = .false.  ! this should go one level up (sanitizing)
       endif
 
@@ -137,7 +137,7 @@ contains
 
       l => base%level
       do while (associated(l))
-         if (l%l%id < this%level) then
+         if (l%l%id <= ubound(this%ijk, dim=1)) then
             if (any(this%ijk(l%l%id, :) == uninit)) then
                where (dom%has_dir)
                   this%ijk(l%l%id, :) = l%l%off + floor((this%coords - dom%edge(:, LO))/dom%L_*l%l%n_d, kind=8)

@@ -82,12 +82,12 @@ contains
       call all_bnd ! \todo find a way to minimize calling this - perhaps manage a flag that says whether the boundaries are up to date or not
       call all_bnd_vital_q
 
-      ! \todo mark everything for derefinement by default
-!!$      cgl => leaves%first
-!!$      do while (associated(cgl))
-!!$         cgl%cg%refine_flags%derefine = .true.
-!!$         cgl => cgl%nxt
-!!$      enddo
+      ! mark everything for derefinement by default
+      cgl => leaves%first
+      do while (associated(cgl))
+         cgl%cg%refine_flags%derefine = .true.
+         cgl => cgl%nxt
+      enddo
 
       if (associated(problem_refine_derefine)) then
          call problem_refine_derefine ! call user routine first, so it cannot alter flags set by automatic routines

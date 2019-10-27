@@ -76,7 +76,7 @@ contains
       this%level  = rp%level
       this%coords = rp%coords
 
-      allocate(this%ijk_lo(base_level_id:this%level-1, ndims), this%ijk_hi(base_level_id:this%level-1, ndims))
+      allocate(this%ijk_lo(base_level_id:this%level, ndims), this%ijk_hi(base_level_id:this%level, ndims))
       this%ijk_lo = uninit
       this%ijk_hi = uninit
       if (master) then
@@ -105,7 +105,7 @@ contains
 
       integer(kind=8), dimension(ndims) :: ijk_l, ijk_h
 
-      if (cg%l%id >= this%level) return
+      if (cg%l%id > this%level) return
 
       if (allocated(this%ijk_lo) .neqv. allocated(this%ijk_hi)) call die("[unified_ref_crit_geometrical_box:mark_box] inconsistent alloc")
 
@@ -116,9 +116,9 @@ contains
          ijk_l = min(max(int(this%ijk_lo(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
          ijk_h = min(max(int(this%ijk_hi(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
 
-         cg%refinemap(ijk_l(xdim):ijk_h(xdim), &
-              &       ijk_l(ydim):ijk_h(ydim), &
-              &       ijk_l(zdim):ijk_h(zdim)) = .true.
+         if (cg%l%id < this%level) cg%refinemap(ijk_l(xdim):ijk_h(xdim), &
+              &                                 ijk_l(ydim):ijk_h(ydim), &
+              &                                 ijk_l(zdim):ijk_h(zdim)) = .true.
          cg%refine_flags%derefine = .false.  ! this should go one level up (sanitizing)
       endif
 
@@ -148,7 +148,7 @@ contains
 
       l => base%level
       do while (associated(l))
-         if (l%l%id < this%level) then
+         if (l%l%id <= ubound(this%ijk_lo, dim=1)) then
             if (any(this%ijk_lo(l%l%id, :) == uninit) .or. any(this%ijk_hi(l%l%id, :) == uninit)) then
                where (dom%has_dir)
                   this%ijk_lo(l%l%id, :) = l%l%off + floor((this%coords(:, LO) - dom%edge(:, LO))/dom%L_*l%l%n_d, kind=8)
