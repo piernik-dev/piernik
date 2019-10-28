@@ -6,7 +6,7 @@ from   crs_pf import initialize_pf_arrays
 from   math   import isnan, pi
 import matplotlib.pyplot as plt
 from   matplotlib.colors import LogNorm
-from   numpy  import array as np_array, log, log10
+from   numpy  import array as np_array, log, log10, mean
 import os
 from   optparse import OptionParser
 from   re     import search
@@ -34,28 +34,35 @@ parser.add_option("-l", "--lin",   dest="use_linscale", default="False",      he
 parser.add_option("-V", "--vel" ,  dest="plot_vel",     default="False",      help=u"Plot velocity field vectors ",  action="store_true")
 parser.add_option("-m", "--mag",   dest="plot_mag",     default="False",      help=u"Plot magnetic field vectors ",  action="store_true")
 parser.add_option("-t", "--time",  dest="annotate_time",default="False",      help=u"Annotate time on resulting DS plot", action="store_true")
-parser.add_option("", "--nosave",  dest="not_save_spec",default="False",      help=u"Do not save output spectrum ",  action="store_true")
+parser.add_option("",  "--nosave", dest="not_save_spec",default="False",      help=u"Do not save output spectrum ",  action="store_true")
+parser.add_option("-a","--average",dest="avg_layer",    default="False",      help=u"Plot mean spectrum at pointed layer at ordinate axis",  action="store_true")
+parser.add_option("-O","--overlap",dest="overlap_layer",default="False",      help=u"Overlap all spectra at pointed layer at ordinate ax",   action="store_true")
+parser.add_option("", "--verbose", dest="yt_verbose",   default=40,           help=u"Append yt verbosity (value from 10 [high] to 50 [low])")
 
-(options, args) = parser.parse_args(argv[1:]) #argv[1] is filename
+(options, args) = parser.parse_args(argv[1:]) # argv[1] is filename
+yt.mylog.setLevel(int(options.yt_verbose))    # Reduces the output to desired level, 50 - least output
 
-plot_var = options.var_name
+plot_var          = options.var_name
 user_draw_timebox = options.annotate_time
-user_limits     = (options.default_range!=True)
-user_save_spec  = (options.not_save_spec!=True)
-simple_plot = False # True ### DEPRECATED
-use_logscale = ( options.use_linscale!=True)
-plot_field   = options.fieldname
-plot_var     = options.var_name
-plot_vel = bool(options.plot_vel)         ;  plot_mag = bool(options.plot_mag)
+user_limits       = (options.default_range!=True)
+user_save_spec    = (options.not_save_spec!=True)
+simple_plot       = False # True ### DEPRECATED
+use_logscale      = ( options.use_linscale!=True)
+plot_field        = options.fieldname
+plot_var          = options.var_name
+plot_vel          = bool(options.plot_vel)
+plot_mag          = bool(options.plot_mag)
 if (plot_vel == True): plot_mag = False
 if (plot_mag == True): plot_vel = False
-user_annot_line = False
+user_annot_line   = False
+user_annot_time   = True
+plot_layer        = options.avg_layer
+plot_ovlp         = options.overlap_layer
 
 #####################################
 #------- Parameters ----------------
-par_epsilon   = 1.0e-15
-hdf_save_fpq  = False
-f_run = True
+par_epsilon    = 1.0e-15
+f_run          = True
 pf_initialized = False
 
 #------- Local functions -----------
@@ -94,6 +101,31 @@ def copy_field(field,data):
    copied_field = data[field_name_to_copy]
    return copied_field
 
+def add_cren_tot_to(h5_dataset):
+   try:
+      if (h5ds.all_data()["cren01"].units is "dimensionless"):
+         h5ds.add_field(("gdf","cren_tot"), units="",function=_total_cren, display_name="Total cr electron number density", sampling_type="cell")
+      else:
+         h5ds.add_field(("gdf","cren_tot"), units="1/(pc**3)",function=_total_cren, display_name="Total cr electron number density", dimensions=dimensions.energy/dimensions.volume, sampling_type="cell", take_log=True)
+   except:
+      die("Failed to construct field 'cren_tot'")
+   return h5_dataset
+
+def add_cree_tot_to(h5_dataset):
+   try:
+      if (h5ds.all_data()["cree01"].units is "dimensionless"):
+         h5ds.add_field(("gdf","cree_tot"), units="",function=_total_cree, display_name="Total cr electron energy density", sampling_type="cell")
+      else:
+         h5ds.add_field(("gdf","cree_tot"), units="Msun/(Myr**2*pc)",function=_total_cree, display_name="Total cr electron energy density", dimensions=dimensions.energy/dimensions.volume, sampling_type="cell")
+   except:
+      die("Failed to construct field 'cree_tot'")
+   return h5_dataset
+
+def add_tot_fields(h5_dataset):
+   h5_dataset = add_cree_tot_to(h5_dataset)
+   h5_dataset = add_cren_tot_to(h5_dataset)
+   return h5_dataset
+
 #---------- reading parameters
 if (options.filename != "None"):
    filename = options.filename
@@ -114,20 +146,19 @@ if f_run :
 var_array = []
 if f_run == True:
     var_names = []
-    var_names = [ "ncre", "p_min_fix", "p_max_fix", "e_small", "cre_eff", "q_big", "hdf_save_fpq"]
+    var_names = [ "ncre", "p_min_fix", "p_max_fix", "e_small", "cre_eff", "q_big", "r0"]
+    var_def   = [ 20,      10.,         1.e5,        1.e-6,     0.01,      30.,     64.]
     if len(var_names) == 0:
         prtwarn("Empty list of parameter names provided: enter names of parameters to read")
         var_names = read_h5.input_names_array()
 
-    var_array = read_h5.read_par(filename, var_names)
+    var_array = read_h5.read_par(filename, var_names, var_def)
     for i in range(len(var_names)):
         exec( "%s=%s" %(var_names[i], var_array[i]))
 
-    if type(hdf_save_fpq) != type(False): hdf_save_fpq = False # if parameter not in problem.par - makes sure it's type is bool and set to False
-
     prtinfo("\n*** Values read from problem.par@hdf5 file: *** \n")
     for i in range(len(var_names)):
-        prtinfo ( " %20s =  %8s ( %15s  ) " %(var_names[i], var_array[i], type(var_array[i])))
+        prtinfo ( " %15s =  %10s ( %15s  ) " %(var_names[i], var_array[i], type(var_array[i])))
 
     crs_pf.initialize_pf_arrays(pf_initialized)
 #---------- Open file
@@ -139,12 +170,12 @@ if f_run == True:
     dom_r = np_array(h5ds.domain_right_edge[0:3])
 
 #----------- Loading other data
-    t = h5ds.current_time[0]
+    t    = h5ds.current_time[0]
     time = t.in_units('Myr')
 #----------- Checking user image limits
     try:
       plot_user_min = float(options.plot_range[0])
-      plot_user_max = float(options.plot_range[1]) # min: 1.0e-3 #1.0e-3 #1.0e-5, max: 0.47#1.78#0.15#0.37#0.47#0.034 #0.86#9.93 # 1.6e-3 #9.93
+      plot_user_max = float(options.plot_range[1])
     except:
       prtwarn("No provided ZLIM or failed to convert it into float -- using default (min/max of ds(field) )")
       user_limits   = False
@@ -184,42 +215,19 @@ if f_run == True:
     s1 = plt.subplot(121)
     dsSlice = h5ds.slice(slice_ax, slice_coord)
 
-    if (plot_field == "cree_tot" ):
-      if str(dsSlice["cree01"].units) is "dimensionless":      #  DEPRECATED
-         try:
-            h5ds.add_field(("gdf","cree_tot"), units="",function=_total_cree, display_name="Total cr electron energy density", sampling_type="cell")
-         except:
-            die("Failed to construct field %s" % plot_field)
-      else:
-         try:
-            h5ds.add_field(("gdf","cree_tot"), units="Msun/(Myr**2*pc)",function=_total_cree, display_name="Total cr electron energy density", dimensions=dimensions.energy/dimensions.volume, sampling_type="cell")
-         except:
-            die("Failed to construct field %s" % plot_field)
-
-    if (plot_field == "cren_tot" ):
-      if str(dsSlice["cren01"].units) is "dimensionless":      #  DEPRECATED
-         try:
-            h5ds.add_field(("gdf","cren_tot"), units="",function=_total_cren, display_name="Total cr electron number density", sampling_type="cell")
-         except:
-            die("Failed to construct field %s" % plot_field)
-
-      else: # dimensions defined
-         try:
-            h5ds.add_field(("gdf","cren_tot"), units="1/(pc**3)",function=_total_cren, display_name="Total cr electron number density", dimensions=dimensions.energy/dimensions.volume, sampling_type="cell")
-         except:
-            die("Failed to construct field %s" % plot_field)
+    click_coords = [0, 0]
+    image_number = 0
 
     if ( plot_field[0:-2] == "en_ratio"):
-      if str(dsSlice["cren01"].units) is "dimensionless":      #  DEPRECATED
-         try:
+      try:
+         if str(dsSlice["cren01"].units) is "dimensionless":      #  DEPRECATED
             h5ds.add_field(("gdf",plot_field), units="", function=en_ratio, display_name="Ratio e/n in %i-th bin" %int(plot_field[-2:]), sampling_type="cell")
-         except:
+         else:
+            h5ds.add_field(("gdf",plot_field), units="Msun*pc**2/Myr**2", function=en_ratio, display_name="Ratio e/n in %i-th bin" %int(plot_field[-2:]),dimensions=dimensions.energy, sampling_type="cell", take_log=True)
+      except:
             die("Failed to construct field %s" % plot_field)
-      else:
-         try:
-            h5ds.add_field(("gdf",plot_field), units="Msun*pc**2/Myr**2", function=en_ratio, display_name="Ratio e/n in %i-th bin" %int(plot_field[-2:]),dimensions=dimensions.energy, sampling_type="cell")
-         except:
-            die("Failed to construct field %s" % plot_field)
+
+    dsSlice = add_tot_fields(dsSlice)
 
 # For elegant labels when plot_field is cree?? or cren??
     if (plot_field[-3:] != "tot" and plot_field[0:3] == "cre" and plot_field[3:-2] != "ratio"):
@@ -236,14 +244,10 @@ if f_run == True:
        h5ds.add_field(("gdf", new_field), units=new_field_units, function=copy_field, display_name=disp_name, dimensions=new_field_dimensions, sampling_type="cell")
        plot_field = new_field
 
-    click_coords = [0, 0]
-    image_number = 0
-
     try:
-      field_max  = float(h5ds.find_max("cr01")[0]) # WARNING - this makes field_max unitless
+      field_max  = h5ds.find_max("cr01")[0].v # WARNING - this makes field_max unitless
     except:
-      field_max  = float(h5ds.find_max("cr1")[0]) # WARNING - this makes field_max unitless
-
+      field_max  = h5ds.find_max("cr1")[0].v  # WARNING - this makes field_max unitless
 
     w = dom_r[avail_dim[0]] + abs(dom_l[avail_dim[0]])
     h = dom_r[avail_dim[1]] + abs(dom_l[avail_dim[1]])
@@ -278,15 +282,10 @@ if f_run == True:
     if (isnan(plot_min)==True or isnan(plot_max)==True): encountered_nans = True; prtwarn("Invalid data encountered (NaN), ZLIM will be adjusted")
 
     if (use_logscale):
-        if not encountered_nans:
-            plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower" ,norm=LogNorm(vmin=plot_min, vmax=plot_max))
-        else:
-            plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower" ,norm=LogNorm())
+      plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower" ,norm = LogNorm(vmin = plot_min, vmax = plot_max) if (encountered_nans == False) else LogNorm())
     else:
-        if not encountered_nans:
-            plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower", vmin=plot_min, vmax=plot_max)
-        else:
-            plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower")
+      plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower", vmin = plot_min if (encountered_nans == False) else None, vmax = plot_max if (encountered_nans == False) else None)
+
     plt.title("Component: "+plot_field+" | t = %9.3f Myr"  %time)
 
     try:
@@ -297,18 +296,16 @@ if f_run == True:
     yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field)
 
     colormap_my  = plt.cm.viridis
-    colormap_my.set_bad(color=colormap_my(par_epsilon)) # masks bad values
+    colormap_my.set_bad(color=colormap_my(par_epsilon))     # masks bad values
     yt_data_plot.set_cmap(field=plot_field, cmap = colormap_my)
 
     if (user_annot_line == True):
        prtinfo("Marking line on yt.plot at (0 0 0) : (500 500 0)")
        yt_data_plot.annotate_line((0., 0., 0.), (500., 500.0, 0), plot_args={'color':'white',"lw":2.0} )
-    else:
-       prtinfo("Not marking line on yt.plot (user_annot_line = %s)" %(user_annot_line))
 
 
-    if (plot_vel): yt_data_plot.annotate_velocity(factor=48)
-    if (plot_mag): yt_data_plot.annotate_magnetic_field(factor=24)
+    if (plot_vel): yt_data_plot.annotate_velocity(factor=20)
+    if (plot_mag): yt_data_plot.annotate_magnetic_field(factor=20)
     yt_data_plot.set_zlim(plot_field,plot_min,plot_max)
     marker_l   = ["x", "+", "*", "X", ".","^", "v","<",">","1"]
     m_size_l   = [500, 500, 400, 400, 500, 350, 350, 350, 350, 500]
@@ -318,7 +315,7 @@ if f_run == True:
     plt.subplots_adjust(left=0.075,right=0.975, hspace=0.12)
 
     print ("")
-    prtinfo("\033[44mClick on the colormap to display spectrum")
+    prtinfo("\033[44mClick LMB on the colormap to display spectrum ('q' to exit)")
 #---------
     def read_click_and_plot(event):
         global click_coords, image_number, f_run, marker_index
@@ -344,14 +341,32 @@ if f_run == True:
            prtinfo("Value of %s at point [%f, %f, %f] = %f " %(plot_field, coords[0], coords[1], coords[2], position["cree"+str(plot_field[-2:])]/position["cren"+str(plot_field[-2:])]))
            plot_max   = h5ds.find_max("cre"+plot_var+str(plot_field[-2:]))[0] # once again appended - needed as ylimit for the plot
 
-        if (hdf_save_fpq != True):
+        if (True):   # TODO DEPRECATED save_fqp
            ecrs = [] ; ncrs = []
-           for ind in range(1,ncre+1):
-               ecrs.append(float(position['cree'+str(ind).zfill(2)][0].v))
-               ncrs.append(float(position['cren'+str(ind).zfill(2)][0].v))
+           if (plot_layer and (not plot_ovlp)): #overwrites position
+               if (plot_layer):
+                  prtinfo("Plotting layer with overlap...")
+                  position = h5ds.r[ [coords[0],dom_l[avail_dim[0]],coords[2] ]: [coords[0],dom_r[avail_dim[0]],coords[2]] ]
+               for ind in range(1,ncre+1):
+                  ecrs.append(float(position['cree'+str(ind).zfill(2)][0].v))
+                  ncrs.append(float(position['cren'+str(ind).zfill(2)][0].v))
 
-           fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords, simple_plot, marker=marker_l[marker_index])
-        else:
+               fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords, simple_plot, marker=marker_l[marker_index])
+
+           if (plot_ovlp):    #for overlap_layer
+               prtinfo("Plotting layer with overlap...")
+               dnum  = int(h5ds.domain_dimensions[avail_dim[0]])
+               dl    = (dom_r[avail_dim[0]] -  dom_l[avail_dim[0]])/float(dnum)
+               print dl, dom_r[avail_dim[0]] -  dom_l[avail_dim[0]], float(dnum)
+               for j in range(dnum):
+                  position = position = h5ds.r[ [coords[0], dom_l[avail_dim[0]]+dl*j, coords[2] ]: [coords[0], dom_l[avail_dim[0]]+dl*j, coords[2]] ]
+                  for ind in range(1,ncre+1):
+                     ecrs.append( position['cree'+str(ind).zfill(2)][0].v )
+                     ncrs.append( position['cren'+str(ind).zfill(2)][0].v )
+                  fig2,exit_code_tmp = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords, simple_plot, marker=marker_l[marker_index],i_plot=image_number)
+                  if (exit_code_tmp == False): exit_code = exit_code_tmp # Just one plot is allright
+                  ecrs = [] ; ncrs = []
+        else:     # for fqp, DEPRECATED probably
            fcrs = [] ; qcrs = [] ; pcut = [ 0., 0.]
            ecrs = [] ; ncrs = []
 
@@ -375,11 +390,11 @@ if f_run == True:
             yt_data_plot.annotate_marker(coords, marker=marker_l[marker_index],  plot_args={'color':'red','s':m_size_l[marker_index],"lw":4.5}) # cumulatively annotate all clicked coordinates
             marker_index = marker_index + 1
 
-            image_number=image_number+1
+            image_number = image_number + 1
 #------------- saving just the spectrum
             if (user_save_spec):
                extent = fig2.get_window_extent().transformed(s.dpi_scale_trans.inverted())
-               s.savefig('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.pdf' % image_number, transparent ='True', bbox_inches=extent.expanded(1.4, 1.195),quality=95,dpi=150)
+               s.savefig('results/'+filename_nam+'_'+plot_var+'_spectrum_%03d.pdf' % image_number, transparent ='True', bbox_inches=extent.expanded(1.4, 1.195),quality=95,dpi=150)
                prtinfo("  --->  Saved plot to: %s.\n\033[44mPress 'q' to quit and save yt.SlicePlot with marked coordinates." %str('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.pdf' %image_number))
         else:
             prtwarn("Empty cell - not saving.")
@@ -393,11 +408,12 @@ if f_run == True:
     text_coords = [0., 0., 0.]; text_coords[dim_map.get(slice_ax)] = slice_coord; text_coords[avail_dim[0]] = dom_l[avail_dim[0]]; text_coords[avail_dim[1]] = dom_l[avail_dim[1]]
     text_coords = [ item * 0.9 for item in text_coords]
 
-    if (user_draw_timebox == True):
-      yt_data_plot.annotate_text(text_coords , 'T = {:0.2f} Myr'.format(float(t.in_units('Myr'))), text_args={'fontsize':30,'color':'white','alpha':'0.0'},inset_box_args={'boxstyle':'round','pad':0.2,'alpha':0.8})
-    else:
-      prtinfo("Not marking line on yt.plot (user_draw_timebox = %s)" %(user_draw_timebox))
-      yt_data_plot.annotate_title('T = {:0.2f} Myr'.format(float(t.in_units('Myr'))))
+    if (user_annot_time):
+      if (user_draw_timebox == True):
+         yt_data_plot.annotate_text(text_coords , 'T = {:0.2f} Myr'.format(float(t.in_units('Myr'))), text_args={'fontsize':30,'color':'white','alpha':'0.0'},inset_box_args={'boxstyle':'round','pad':0.2,'alpha':0.8})
+      else:
+         prtinfo("Not marking line on yt.plot (user_draw_timebox = %s)" %(user_draw_timebox))
+         yt_data_plot.annotate_title('T = {:0.2f} Myr'.format(float(t.in_units('Myr'))))
 
     yt_data_plot.save('results/'+filename_nam+'_'+plot_field+'_sliceplot.pdf')  # save image when "q" pressed
     s.canvas.mpl_disconnect(cid)
