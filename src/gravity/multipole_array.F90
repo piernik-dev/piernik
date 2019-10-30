@@ -327,6 +327,7 @@ contains
       if (allocated(this%Q))     deallocate(this%Q)
       if (allocated(this%k12))   deallocate(this%k12)
       if (allocated(this%ofact)) deallocate(this%ofact)
+      if (allocated(this%i_r))   deallocate(this%i_r)
 
    end subroutine cleanup
 

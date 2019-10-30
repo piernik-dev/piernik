@@ -42,7 +42,7 @@ contains
 !<
    subroutine init_piernik
 
-      use all_boundaries,        only: all_bnd
+      use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, INCEPTIVE, tmr_fu
@@ -213,7 +213,10 @@ contains
       call init_terms_grav
 #endif /* GRAV */
 
-      if (restarted_sim) call all_bnd
+      if (restarted_sim) then
+         call all_bnd
+         call all_bnd_vital_q
+      endif
 
       if (master) then
          call printinfo("###############     Initial Conditions     ###############", .false.)
@@ -252,7 +255,6 @@ contains
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
 #ifdef GRAV
-            call cleanup_hydrostatic
             call source_terms_grav
 #endif /* GRAV */
 
@@ -264,6 +266,9 @@ contains
             write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%l%id,", time elapsed: ",set_timer(tmr_fu)
             if (master) call printinfo(msg)
          enddo
+#ifdef GRAV
+         call cleanup_hydrostatic
+#endif /* GRAV */
 
          if (ac /= 0 .and. master) call warn("[initpiernik:init_piernik] The refinement structure does not seem to converge. Your refinement criteria may lead to oscillations of refinement structure. Bailing out.")
          if (associated(problem_post_IC)) call problem_post_IC

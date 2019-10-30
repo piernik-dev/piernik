@@ -827,6 +827,7 @@ contains
       use global,           only: nstep
       use mpisetup,         only: master
       use multigridvars,    only: grav_bnd, bnd_isolated
+      use multipole,        only: singlepass
       use named_array_list, only: qna
 
       implicit none
@@ -837,12 +838,12 @@ contains
       if (associated(inner%old%latest)) then
          call leaves%q_copy(inner%old%latest%i_hist, qna%ind(sgpm_n))
          initialized = .true.
-         if (grav_bnd == bnd_isolated) then
+         if (grav_bnd == bnd_isolated .and. .not. singlepass) then
             if (associated(outer%old%latest)) then
                call leaves%q_add(outer%old%latest%i_hist, qna%ind(sgpm_n))
             else
                initialized = .false.
-               call warn("[multigrid_gravity:recover_sgpm] i-history without o-history available. Ignoring.")
+               if (master) call warn("[multigrid_gravity:recover_sgpm] i-history without o-history available. Ignoring.")
             endif
          endif
       else
@@ -1091,13 +1092,14 @@ contains
 
       use hdf5,          only: HID_T
       use multigridvars, only: grav_bnd, bnd_isolated
+      use multipole,     only: singlepass
 
       implicit none
 
       integer(HID_T), intent(in) :: file_id  !< File identifier
 
       call inner%read_os_attribute(file_id)
-      if (grav_bnd == bnd_isolated) call outer%read_os_attribute(file_id)
+      if (grav_bnd == bnd_isolated .and. .not. singlepass) call outer%read_os_attribute(file_id)
 
    end subroutine read_oldsoln_from_restart
 
