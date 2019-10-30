@@ -272,7 +272,12 @@ contains
          call cleanup_hydrostatic
 #endif /* GRAV */
 
-         if (ac /= 0 .and. master) call warn("[initpiernik:init_piernik] The refinement structure does not seem to converge. Your refinement criteria may lead to oscillations of refinement structure. Bailing out.")
+         if (ac /= 0) then
+            if (master) call warn("[initpiernik:init_piernik] The refinement structure does not seem to converge. Your refinement criteria may lead to oscillations of refinement structure. Bailing out.")
+#ifdef GRAV
+            call source_terms_grav  ! fix up gravitational potential when refiements did not converge
+#endif /* GRAV */
+         endif
          if (associated(problem_post_IC)) call problem_post_IC
       endif
 
