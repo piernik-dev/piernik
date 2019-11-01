@@ -157,7 +157,13 @@ contains
 
    end subroutine unregister
 
-!> \brief Erase given cg from all known lists
+!>
+!! \brief Erase given cg from all known lists
+!!
+!! \warning This routine becomes very expensive when there are thousands of cg on one process.
+!! It is called mostly from cleanup_piernik -> cleanup_grid -> delete_all .
+!! Consider implicit freeing or add a list of pointers to entries in lists for faster processing
+!<
 
    subroutine forget(this, cg)
 
