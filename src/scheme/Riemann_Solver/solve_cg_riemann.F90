@@ -108,6 +108,11 @@ contains
 
 !>
 !! \brief Apply MHD update + source terms to a single grid container, rely on properly updated guardcells.
+!!
+!! \warning:
+!! * exceptionally slow when blocks are 120^3 (sometimes an order of magnitude)
+!! * significantly slower on 2520^2 when compared to 1260^2
+!! * optimal vector length could be around 180 cells (from 90 to 360 are also good)
 !<
 
    subroutine solve_cg_ub(cg, ddim, istep)
@@ -228,6 +233,12 @@ contains
       nullify(cs2)
 
    end subroutine solve_cg_ub
+
+!! \warning:
+!! * exceptionally slow when blocks are 120^3 (sometimes an order of magnitude)
+!! * kinda slow when blocks are 20^2 and 504^2
+!! * significantly slower on 2520^2 when compared to 1260^2
+!! * optimal vector length could be around 180 cells (from 90 to 630 are also good)
 
    subroutine solve_cg_u(cg, ddim, istep)
 
