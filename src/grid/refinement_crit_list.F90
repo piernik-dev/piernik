@@ -134,7 +134,7 @@ contains
 
       if (plotfield) then
          do i = 1, ubound(ref_crit_list, dim=1)  ! Beware: O(n^2)
-            write(ref_n, '(a,i2.2)') "ref_", i
+            write(ref_n, '(a,i2.2)') "ref_old_", i
             if (.not. qna%exists(ref_n)) exit
          enddo
          call all_cg%reg_var(ref_n)

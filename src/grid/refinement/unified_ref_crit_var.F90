@@ -42,7 +42,7 @@ module unified_ref_crit_var
 !> \brief Things that should be common for all refinement criteria based on filters that look for shockwaves or do other checks based on selected fields
 
    type, extends(urc_filter) :: urc_var
-      private
+!      private  !unified_ref_crit_list:create_plotfields needs some of these
       character(len=cbuff_len) :: rvar   !< name of the refinement variable
       character(len=cbuff_len) :: rname  !< name of the refinement routine
       real                     :: aux    !< auxiliary parameter (can be smoother or filter strength)

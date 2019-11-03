@@ -108,11 +108,7 @@ contains
       call piernik_MPI_Allreduce(cnt(AUTO), pSUM)
 #endif /* VERBOSED_REFINEMENTS */
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         call urc_list%mark(cgl%cg)
-         cgl => cgl%nxt
-      enddo
+      call urc_list%all_mark(leaves%first)
       call sanitize_all_ref_flags
 #ifdef VERBOSED_REFINEMENTS
       cnt(URC) = all_cg%count_ref_flags()
@@ -192,21 +188,22 @@ contains
 
    subroutine update_refinement(act_count, refinement_fixup_only)
 
-      use all_boundaries,       only: all_bnd, all_bnd_vital_q
-      use cg_leaves,            only: leaves
-      use cg_list,              only: cg_list_element
-      use cg_level_base,        only: base
-      use cg_level_connected,   only: cg_level_connected_T
-      use cg_level_finest,      only: finest
-      use cg_list_global,       only: all_cg
-      use constants,            only: pLOR, pLAND, pSUM
-      use dataio_pub,           only: warn, die
-      use global,               only: nstep
-      use grid_cont,            only: grid_container
-      use list_of_cg_lists,     only: all_lists
-      use mpisetup,             only: piernik_MPI_Allreduce!, proc
-      use refinement,           only: n_updAMR, emergency_fix
-      use refinement_crit_list, only: refines2list, auto_refine_derefine
+      use all_boundaries,        only: all_bnd, all_bnd_vital_q
+      use cg_leaves,             only: leaves
+      use cg_list,               only: cg_list_element
+      use cg_level_base,         only: base
+      use cg_level_connected,    only: cg_level_connected_T
+      use cg_level_finest,       only: finest
+      use cg_list_global,        only: all_cg
+      use constants,             only: pLOR, pLAND, pSUM
+      use dataio_pub,            only: warn, die
+      use global,                only: nstep
+      use grid_cont,             only: grid_container
+      use list_of_cg_lists,      only: all_lists
+      use mpisetup,              only: piernik_MPI_Allreduce!, proc
+      use refinement,            only: n_updAMR, emergency_fix
+      use refinement_crit_list,  only: refines2list!, auto_refine_derefine
+      use unified_ref_crit_list, only: urc_list
 #ifdef GRAV
       use gravity,              only: update_gp
 #endif /* GRAV */
@@ -392,7 +389,9 @@ contains
       if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
 
       call all_bnd
-      call auto_refine_derefine(plots_only = .true.)  ! refresh refinement criterion fields, if any
+
+      ! call auto_refine_derefine(plots_only = .true.)  ! refresh refinement criterion fields, if any
+      call urc_list%plot_mark(leaves%first)
 
       !> \todo call the update of cs_i2 and other vital variables if and only if something has changed
       !> \todo add another flag to named_array_list::na_var so the user can also specify fields that need boundary updates on fine/coarse boundaries
