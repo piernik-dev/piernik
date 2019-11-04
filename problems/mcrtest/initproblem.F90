@@ -162,16 +162,11 @@ contains
 
       class(component_fluid), pointer :: fl
       integer                         :: i, j, k, icr, ipm, jpm, kpm
-      real                            :: cs_iso, xsn, ysn, zsn, r2, maxv
+      real                            :: cs_iso, r2, maxv
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
 
       fl => flind%ion
-
-      ! BEWARE: temporary fix
-      xsn = x0
-      ysn = y0
-      zsn = z0
 
 ! Uniform equilibrium state
 
@@ -227,7 +222,7 @@ contains
                      do jpm = -1, 1
                         do kpm = -1, 1
 
-                           r2 = (cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-ysn+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-zsn+real(kpm)*dom%L_(zdim))**2
+                           r2 = (cg%x(i)-x0+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-y0+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-z0+real(kpm)*dom%L_(zdim))**2
 #ifdef COSM_RAYS_SOURCES
                            if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_table(icr_H1 )), i, j, k) +     amp_cr*exp(-r2/r0**2)
                            if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_table(icr_C12)), i, j, k) + 0.1*amp_cr*exp(-r2/r0**2)
