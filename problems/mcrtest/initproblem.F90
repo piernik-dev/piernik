@@ -27,6 +27,9 @@
 
 #include "piernik.h"
 
+#ifndef COSM_RAYS
+#error COSM_RAYS is required for mcrtest
+#endif /* COSM_RAYS */
 module initproblem
 
    implicit none
@@ -182,7 +185,6 @@ contains
          K_crn_perp(:)  = 0.
       endif
 
-
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -203,7 +205,6 @@ contains
          enddo
 #endif /* !ISO */
 
-#ifdef COSM_RAYS
          cg%u(iarr_crn,:,:,:) = 0.0
 #ifdef COSM_RAYS_SOURCES
          if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(cr_table(icr_H1 ))-1.0)
@@ -255,7 +256,6 @@ contains
          endif
 
       enddo
-#endif /* COSM_RAYS */
 
    end subroutine problem_initial_conditions
 
