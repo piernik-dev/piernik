@@ -131,6 +131,7 @@ contains
       use constants,        only: INVALID, cbuff_len
       use dataio_pub,       only: msg, warn
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, iarr_all_en
+      use mpisetup,         only: master
       use named_array_list, only: qna, wna
       use refinement,       only: inactive_name
 
@@ -179,7 +180,7 @@ contains
       !> \todo introduce possibility to operate on pressure or other indirect fields
 
       write(msg,'(3a)')"[unified_ref_crit_var:identify_field] Unidentified refinement variable: '",trim(vname),"'"
-      call warn(msg)
+      if (master) call warn(msg)
 
    end subroutine identify_field
 
@@ -187,10 +188,11 @@ contains
 
    function init(rf, iv, ic) result(this)
 
-      use dataio_pub, only: printinfo, msg, die
-      use func,       only: operator(.notequals.)
-      use mpisetup,   only: master
-      use refinement, only: ref_auto_param, inactive_name
+      use dataio_pub,       only: printinfo, msg, die, warn
+      use func,             only: operator(.notequals.)
+      use mpisetup,         only: master
+      use named_array_list, only: qna, wna
+      use refinement,       only: ref_auto_param, inactive_name
 
       implicit none
 
@@ -203,13 +205,18 @@ contains
       if (master) then
          write(msg, '(5a,2g13.5,a)')"[URC var]   Initializing refinement on variable '", trim(rf%rvar), "', method: '", trim(rf%rname), "', thresholds = [ ", rf%ref_thr, rf%deref_thr, " ]"
          if (rf%aux .notequals. 0.) write(msg(len_trim(msg)+1:), '(a,g13.5)') ", with parameter = ", rf%aux
-         if (rf%plotfield)  write(msg(len_trim(msg)+1:), '(a)') ", with plotfield ???"
+         if (rf%plotfield)  write(msg(len_trim(msg)+1:), '(a)') ", with plotfield"
          if (present(ic)) then
             write(msg(len_trim(msg)+1:), '(a, i3,a,i3,a)') ", wna index: ", iv,"(", ic, ")"
          else
             write(msg(len_trim(msg)+1:), '(a, i3)') ", qna index: ", iv
          endif
          call printinfo(msg)
+         if (present(ic)) then
+            if (.not. wna%lst(iv)%vital) call warn("[unified_ref_crit_var:init] 4D field '" // trim(wna%lst(iv)%name) // "' is not vital")
+         else
+            if (.not. qna%lst(iv)%vital) call warn("[unified_ref_crit_var:init] 3D field '" // trim(qna%lst(iv)%name) // "' is not vital")
+         endif
       endif
 
       ! urc_filter

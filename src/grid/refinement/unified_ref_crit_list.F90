@@ -49,6 +49,8 @@ module unified_ref_crit_list
       procedure :: all_mark           !< check refinement criteria on a given list of cg
       procedure :: plot_mark          !< check refinement criteria on a given list of cg only for iplot set
       procedure :: create_plotfields  !< set up qna fields for refinement criteria
+      procedure :: add_user_urcv      !< add field-based refinement criteria from initproblem
+      procedure :: summary            !< print summary of refinement criteria in use
       procedure, private :: mark      !< put all refinement marks or derefinement unmarks
    end type urc_list_t
 
@@ -99,8 +101,6 @@ contains
    subroutine init(this)
 
       use constants,                          only: base_level_id
-      use dataio_pub,                         only: msg, printinfo
-      use mpisetup,                           only: master
       use refinement,                         only: refine_points, refine_boxes, refine_vars, inactive_name
       use unified_ref_crit_geometrical_box,   only: urc_box
       use unified_ref_crit_geometrical_point, only: urc_point
@@ -145,10 +145,63 @@ contains
 
       call this%create_plotfields
 
-      write(msg, '(a,i3,a)') "[unified_ref_crit_list:init] ", this%cnt(), " criteria defined."
-      if (master) call printinfo(msg)
+      call this%summary
 
    end subroutine init
+
+!> \brief print summary of refinement criteria in use
+
+   subroutine summary(this)
+
+      use dataio_pub, only: msg, printinfo
+      use mpisetup,   only: master
+
+      implicit none
+
+      class(urc_list_t), intent(inout) :: this   !< an object invoking the type-bound procedure
+
+      logical, save :: first_run = .true.
+
+      write(msg, '(a,i3,a)') "[unified_ref_crit_list:init] ", this%cnt(), " criteria defined."
+      if (master) then
+         if (first_run) then
+            call printinfo(msg)
+         else
+            call printinfo(trim(msg) // " (update)")
+         endif
+      endif
+      first_run = .false.
+
+   end subroutine summary
+
+!< \brief Add field-based refinement criteria from initproblem
+
+   subroutine add_user_urcv(this, iv, ic, ref_thr, deref_thr, aux, rname, plotfield)
+
+      use refinement,            only: ref_auto_param
+      use unified_ref_crit_var,  only: urc_var
+
+      implicit none
+
+      class(urc_list_t), intent(inout) :: this      !< an object invoking the type-bound procedure
+      integer(kind=4),   intent(in)    :: iv        !< field index in cg%q or cg%w array
+      integer(kind=4),   intent(in)    :: ic        !< component index of 4D array or INVALID for 3D arrays
+      real,              intent(in)    :: ref_thr   !< refinement threshold
+      real,              intent(in)    :: deref_thr !< derefinement threshold
+      real,              intent(in)    :: aux       !< auxiliary parameter
+      character(len=*),  intent(in)    :: rname     !< name of the refinement routine
+      logical,           intent(in)    :: plotfield !< create an array to keep the value of refinement criterion
+
+      type(urc_var), pointer :: urcv
+
+      allocate(urcv)
+      urcv = urc_var(ref_auto_param("user", rname, ref_thr, deref_thr, aux, plotfield), iv, ic)
+      call this%add(urcv)
+
+      call this%create_plotfields
+      call this%summary
+
+   end subroutine add_user_urcv
 
 !< \brief Set up qna fields for refinement criteria where needed
 

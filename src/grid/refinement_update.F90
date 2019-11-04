@@ -50,7 +50,6 @@ contains
       use cg_list,               only: cg_list_element
       use cg_list_global,        only: all_cg
       use constants,             only: I_ONE
-!      use refinement_crit_list,  only: auto_refine_derefine
       use unified_ref_crit_list, only: urc_list
       use user_hooks,            only: problem_refine_derefine
 #ifdef VERBOSED_REFINEMENTS
@@ -65,7 +64,6 @@ contains
       type(cg_list_element),      pointer :: cgl
       enum, bind(C)
          enumerator :: PROBLEM
-         enumerator :: AUTO
          enumerator :: URC
       end enum
       integer, dimension(PROBLEM:URC) :: cnt
@@ -101,13 +99,6 @@ contains
       call piernik_MPI_Allreduce(cnt(PROBLEM), pSUM)
 #endif /* VERBOSED_REFINEMENTS */
 
-!      call auto_refine_derefine
-#ifdef VERBOSED_REFINEMENTS
-      call sanitize_all_ref_flags
-      cnt(AUTO) = all_cg%count_ref_flags()
-      call piernik_MPI_Allreduce(cnt(AUTO), pSUM)
-#endif /* VERBOSED_REFINEMENTS */
-
       call urc_list%all_mark(leaves%first)
       call sanitize_all_ref_flags
 #ifdef VERBOSED_REFINEMENTS
@@ -117,7 +108,7 @@ contains
 
 #ifdef VERBOSED_REFINEMENTS
      if (cnt(ubound(cnt, dim=1)) > 0) then
-         write(msg,'(a,3i6,a)')"[refinement_update:scan_for_refinements] User routine, automatic criteria, primitives and URC marked ", &
+         write(msg,'(a,2i6,a)')"[refinement_update:scan_for_refinements] User routine and URC marked ", &
               &                cnt(PROBLEM), cnt(PROBLEM+I_ONE:URC)-cnt(PROBLEM:URC-I_ONE), " block(s) for refinement, respectively."
          if (master) call printinfo(msg)
       endif
@@ -202,7 +193,6 @@ contains
       use list_of_cg_lists,      only: all_lists
       use mpisetup,              only: piernik_MPI_Allreduce!, proc
       use refinement,            only: n_updAMR, emergency_fix
-      use refinement_crit_list,  only: refines2list!, auto_refine_derefine
       use unified_ref_crit_list, only: urc_list
 #ifdef GRAV
       use gravity,              only: update_gp
@@ -223,12 +213,6 @@ contains
       type(cg_level_connected_T), pointer :: curl
       type(grid_container),  pointer :: cg
       logical :: correct, full_update
-      logical, save :: first_run = .true.
-
-      if (first_run) then
-         first_run = .false.
-         call refines2list
-      endif
 
       if (present(act_count)) act_count = 0
 
@@ -390,7 +374,6 @@ contains
 
       call all_bnd
 
-      ! call auto_refine_derefine(plots_only = .true.)  ! refresh refinement criterion fields, if any
       call urc_list%plot_mark(leaves%first)
 
       !> \todo call the update of cs_i2 and other vital variables if and only if something has changed
