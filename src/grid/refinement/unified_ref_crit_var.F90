@@ -213,9 +213,9 @@ contains
          endif
          call printinfo(msg)
          if (present(ic)) then
-            if (.not. wna%lst(iv)%vital) call warn("[unified_ref_crit_var:init] 4D field '" // trim(wna%lst(iv)%name) // "' is not vital")
+            if (.not. wna%lst(iv)%vital) call warn("[unified_ref_crit_var:init] 4D field '" // trim(wna%lst(iv)%name) // "' is not vital. Please make sure that the guardcells are properly updater for refinement update.")
          else
-            if (.not. qna%lst(iv)%vital) call warn("[unified_ref_crit_var:init] 3D field '" // trim(qna%lst(iv)%name) // "' is not vital")
+            if (.not. qna%lst(iv)%vital) call warn("[unified_ref_crit_var:init] 3D field '" // trim(qna%lst(iv)%name) // "' is not vital. Please make sure that the guardcells are properly updater for refinement update.")
          endif
       endif
 
@@ -295,7 +295,7 @@ contains
 
       class(urc_var),                  intent(in)    :: this !< this contains refinement parameters
       type(grid_container), pointer,   intent(inout) :: cg   !< current grid piece
-      real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least two layers of updated guardcells)
+      real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least two layers of up-to-date guardcells)
 
       integer :: i, j, k
       real :: sn, sd, r, max_r

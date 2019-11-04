@@ -75,7 +75,6 @@ module initproblem
       enumerator :: D0, VX0, VY0
    end enum
    character(len=dsetnamelen), dimension(D0:VY0), parameter :: q_n = [ "i_den0", "i_vlx0", "i_vly0" ] !< Names of initial condition (t=0.) arrays used for divine_intervention_type = 3
-   character(len=dsetnamelen), parameter :: nJ_n = "nJ"
 
 contains
 
@@ -84,14 +83,13 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_attrs_wr
-      use user_hooks,  only: problem_customize_solution, cleanup_problem, problem_refine_derefine, problem_post_restart
+      use user_hooks,  only: problem_customize_solution, cleanup_problem, problem_post_restart
 
       implicit none
 
       problem_customize_solution => problem_customize_solution_wt4
       user_attrs_wr              => problem_initial_conditions_attrs
       cleanup_problem            => cleanup_wt4
-      problem_refine_derefine    => Jeans_refine
       problem_post_restart       => IC_bnd_update
 
    end subroutine problem_pointers
@@ -100,10 +98,11 @@ contains
 
    subroutine read_problem_par
 
-      use cg_list_global, only: all_cg
-      use constants,      only: AT_NO_B
-      use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
-      use mpisetup,       only: rbuff, cbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use cg_list_global,        only: all_cg
+      use constants,             only: AT_NO_B
+      use dataio_pub,            only: nh      ! QA_WARN required for diff_nml
+      use mpisetup,              only: rbuff, cbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use unified_ref_crit_list, only: urc_list
 
       implicit none
 
@@ -215,7 +214,7 @@ contains
          call all_cg%reg_var(q_n(i), restart_mode = AT_NO_B, vital = .true.)
       enddo
 
-      call all_cg%reg_var(nJ_n)
+      call urc_list%add_user_urc(mark_Jeans, .true.)  ! Add the refinemet criterion and demand it to be available for plotfiles
 
    end subroutine read_problem_par
 
@@ -539,8 +538,6 @@ contains
       class(component_fluid), pointer   :: fl
       real, dimension(:,:,:), pointer   :: den0, vlx0, vly0
 
-      call compute_lambdaJ
-
       fl => flind%neu
       cgl => leaves%first
       do while (associated(cgl))
@@ -636,80 +633,45 @@ contains
 
    end subroutine problem_customize_solution_wt4
 
-!> \brief compute Jeans resolution
+!>
+!! \brief implementation of user-provided Jeans length refinement criterion
+!!
+!! This routine has to conform to unified_ref_crit_user::mark_urc_user
+!<
 
-   subroutine compute_lambdaJ
+   subroutine mark_Jeans(u_r_c, cg)
 
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use constants,        only: pi, GEO_XYZ
-      use dataio_pub,       only: die
-      use domain,           only: dom
-      use fluidindex,       only: flind
-      use fluidtypes,       only: component_fluid
-      use grid_cont,        only: grid_container
-      use named_array_list, only: qna
-      use units,            only: newtong
-
-      implicit none
-
-      type(cg_list_element),  pointer :: cgl
-      type(grid_container),   pointer :: cg
-      class(component_fluid), pointer :: fl
-      integer :: nJ_i
-      real :: factor
-
-      if (dom%geometry_type /= GEO_XYZ) call die("[initproblem:compute_lambdaJ] unsupported (non-cartesian) geometry")
-
-      nJ_i = qna%ind(nJ_n)
-      fl => flind%neu
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         factor = sqrt(pi/newtong) / maxval(cg%dl)
-         cg%q(nJ_i)%arr(        cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = factor * &
-              sqrt(cg%cs_iso2(  cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) / &
-              cg%u(fl%idn,      cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine compute_lambdaJ
-
-   subroutine Jeans_refine
-
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use grid_cont,        only: grid_container
-      use named_array_list, only: qna
+      use constants,             only: pi, GEO_XYZ, INVALID
+      use dataio_pub,            only: die
+      use domain,                only: dom
+      use fluidindex,            only: iarr_all_sg
+      use grid_cont,             only: grid_container
+      use unified_ref_crit_user, only: urc_user
+      use units,                 only: newtong
 
       implicit none
 
-      type(cg_list_element),  pointer :: cgl
-      type(grid_container),   pointer :: cg
-      integer(kind=4) :: nJ_i
-      integer :: i, j, k
-      integer, parameter :: D = 2
+      class(urc_user),               intent(inout) :: u_r_c !< an object invoking the type-bound procedure
+      type(grid_container), pointer, intent(inout) :: cg    !< current grid piece
 
-      nJ_i = qna%ind(nJ_n)
+      real, dimension(:,:,:), pointer :: p3d
 
-      call compute_lambdaJ
-      call leaves%leaf_arr3d_boundaries(nJ_i)
+      if (dom%geometry_type /= GEO_XYZ) call die("[initproblem:mark_Jeans] unsupported (non-cartesian) geometry")
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-                  cg%refinemap(i, j, k) = (minval(cg%q(nJ_i)%arr(i-D:i+D, j-D:j+D, k-D:k+D)) <= jeansref)
-               enddo
-            enddo
-         enddo
-         !cg%refine_flags%refine   = (minval(cg%q(nJ_i)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) <= jeansref)
-         cg%refine_flags%derefine = (minval(cg%q(nJ_i)%arr) > 2.5 * jeansref)
-         cgl => cgl%nxt
-      enddo
+      if (u_r_c%iplot /= INVALID) then
+         p3d => cg%q(u_r_c%iplot)%arr
+      else
+         p3d => cg%wa
+      endif
 
-   end subroutine Jeans_refine
+      p3d(:,:,:) = sqrt(pi/newtong) / maxval(cg%dl) * &  ! assumes that fluid and cs2 have updated boundaries
+           sqrt(cg%cs_iso2(:,:,:) / sum(cg%u(iarr_all_sg, :, :, :), dim=1))
+
+      where (p3d < jeansref)
+         cg%refinemap = .true.
+      endwhere
+      if (any(p3d < 2.5 * jeansref)) cg%refine_flags%derefine = .false.
+
+   end subroutine mark_Jeans
 
 end module initproblem

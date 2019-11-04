@@ -50,6 +50,7 @@ module unified_ref_crit_list
       procedure :: plot_mark          !< check refinement criteria on a given list of cg only for iplot set
       procedure :: create_plotfields  !< set up qna fields for refinement criteria
       procedure :: add_user_urcv      !< add field-based refinement criteria from initproblem
+      procedure :: add_user_urc       !< add user-provided routine with refinement criteria from initproblem
       procedure :: summary            !< print summary of refinement criteria in use
       procedure, private :: mark      !< put all refinement marks or derefinement unmarks
    end type urc_list_t
@@ -96,6 +97,10 @@ contains
 !>
 !! \brief Initialize the list of refinement criteria with everything that is known at the beginning.
 !! The list can be expanded later, if necessary.
+!!
+!! User criteria in initproblem are supposed to be added from read_problem_par this way:
+!!     call urc_list%add_user_urc(mark_user, do_plotfield)
+!! Multiple routines can be added, if necessary.
 !<
 
    subroutine init(this)
@@ -114,10 +119,7 @@ contains
       type(urc_point), pointer :: urcp
       integer :: ip
 
-      ! add user hook from initproblem
-
       ! add automatic criteria detecting shock waves
-
       do ip = lbound(refine_vars, 1), ubound(refine_vars, 1)
          if (trim(refine_vars(ip)%rname) /= trim(inactive_name)) then
             call this%add(decode_urcv(refine_vars(ip)))
@@ -145,8 +147,6 @@ contains
 
       call this%create_plotfields
 
-      call this%summary
-
    end subroutine init
 
 !> \brief print summary of refinement criteria in use
@@ -162,8 +162,8 @@ contains
 
       logical, save :: first_run = .true.
 
-      write(msg, '(a,i3,a)') "[unified_ref_crit_list:init] ", this%cnt(), " criteria defined."
-      if (master) then
+      write(msg, '(a,i3,a)') "[unified_ref_crit_list:summary] ", this%cnt(), " criteria defined."
+      if (master .and. this%cnt() /= 0) then
          if (first_run) then
             call printinfo(msg)
          else
@@ -199,27 +199,48 @@ contains
       call this%add(urcv)
 
       call this%create_plotfields
-      call this%summary
 
    end subroutine add_user_urcv
+
+!< \brief Add user-provided routine with refinement criteria from initproblem
+
+   subroutine add_user_urc(this, user_mark, plotfield)
+
+      use unified_ref_crit_user, only: urc_user, mark_urc_user
+
+      implicit none
+
+      class(urc_list_t), intent(inout) :: this       !< an object invoking the type-bound procedure
+      logical,           intent(in)    :: plotfield  !< create an array to keep the value of refinement criterion
+      procedure(mark_urc_user)         :: user_mark  !< user-provided routine
+
+      type(urc_user),   pointer :: urcu
+
+      allocate(urcu)
+      urcu = urc_user(user_mark, plotfield)
+      call this%add(urcu)
+
+      call this%create_plotfields
+
+   end subroutine add_user_urc
 
 !< \brief Set up qna fields for refinement criteria where needed
 
    subroutine create_plotfields(this)
 
-      use cg_list_global,   only: all_cg
-      use constants,        only: INVALID, dsetnamelen
-      use dataio_pub,       only: printinfo, msg, warn
-      use named_array_list, only: qna, wna
-      use mpisetup,         only: master
-      use unified_ref_crit_var, only: urc_var
+      use constants,             only: INVALID, dsetnamelen
+      use dataio_pub,            only: printinfo, msg, warn
+      use named_array_list,      only: qna, wna
+      use mpisetup,              only: master
+      use unified_ref_crit_var,  only: urc_var
+      use unified_ref_crit_user, only: urc_user
 
       implicit none
 
       class(urc_list_t), intent(inout) :: this  !< an object invoking the type-bound procedure
 
       class(urc), pointer :: p
-      integer :: max, i
+      integer :: max
       character(len=dsetnamelen) :: ref_n
 
       max = this%cnt()
@@ -229,12 +250,7 @@ contains
          select type (p)
             class is (urc_var)
                if (p%plotfield .and. p%iplot == INVALID) then
-                  do i = 1, max  ! Beware: O(n^2)
-                     write(ref_n, '(a,i2.2)') "ref_", i
-                     if (.not. qna%exists(ref_n)) exit
-                  enddo
-                  call all_cg%reg_var(ref_n)
-                  p%iplot = qna%ind(ref_n)
+                  p%iplot = new_ref_field()
                   write(msg, '(3a)') "[unified_ref_crit_list:create_plotfields] refinement criterion of type '", trim(p%rname), "' for '"
                   if (p%ic /= INVALID) then
                      write(msg, '(3a,i3,a)') trim(msg), trim(wna%lst(p%iv)%name), "(", p%ic, ")"
@@ -242,6 +258,12 @@ contains
                      write(msg, '(2a)') trim(msg), trim(qna%lst(p%iv)%name)
                   endif
                   write(msg, '(4a)') trim(msg), "' is stored in array '", trim(ref_n), "'"
+                  if (master) call printinfo(msg)
+               endif
+            class is (urc_user)
+               if (p%plotfield .and. p%iplot == INVALID) then
+                  p%iplot = new_ref_field()
+                  write(msg, '(3a)') "[unified_ref_crit_list:create_plotfields] user-provided refinement criterion is stored in array '", trim(ref_n), "'"
                   if (master) call printinfo(msg)
                endif
             class default
@@ -252,6 +274,29 @@ contains
          end select
          p => p%next
       enddo
+
+      call this%summary
+
+   contains
+
+      integer function new_ref_field()
+
+         use cg_list_global,   only: all_cg
+         use named_array_list, only: qna
+
+         implicit none
+
+         integer :: i
+
+         do i = 1, max  ! Beware: O(n^2)
+            write(ref_n, '(a,i2.2)') "ref_", i
+            if (.not. qna%exists(ref_n)) exit
+         enddo
+         call all_cg%reg_var(ref_n)
+
+         new_ref_field = qna%ind(ref_n)
+
+      end function new_ref_field
 
    end subroutine create_plotfields
 
