@@ -166,17 +166,14 @@ contains
       use shear,          only: qshear, omega
 #endif /* SHEAR */
 #ifdef COSM_RAYS
-      use initcosmicrays, only: gamma_crn, iarr_crn
-#ifdef COSM_RAY_ELECTRONS
-      use initcosmicrays, only: iarr_cre_n, iarr_cre_e
-#endif /* COSM_RAY_ELECTRONS */
+      use initcosmicrays, only: gamma_crn, iarr_crn, iarr_crs
 #ifdef SN_GALAXY
       use cr_data,        only: eCRSP, cr_table, icr_H1, icr_C12
       use domain,         only: dom
       use snsources,      only: r_sn
 #ifdef COSM_RAY_ELECTRONS
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
-      use initcrspectrum,   only: cresp, smallcree
+      use initcrspectrum,   only: cresp, smallcree, iarr_cre_n, iarr_cre_e
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* SN_GALAXY */
 #ifdef CR_SN
@@ -234,12 +231,8 @@ contains
                   cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1) * cg%u(fl%idn,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                  cg%u(iarr_crn,i,j,k)  = 0.0
+                  cg%u(iarr_crs,i,j,k)  = 0.0
                   cg%u(iarr_crn(1),i,j,k) = beta_cr*fl%cs2 * cg%u(fl%idn,i,j,k)/( gamma_crn(1) - 1.0 )
-#ifdef COSM_RAY_ELECTRONS
-                  cg%u(iarr_cre_n,i,j,k) = 0.0
-                  cg%u(iarr_cre_e,i,j,k) = 0.0
-#endif /* COSM_RAY_ELECTRONS */
 #ifdef SN_GALAXY
 ! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
                   if (any([eCRSP(icr_H1), eCRSP(icr_C12)])) then
@@ -251,12 +244,12 @@ contains
                   if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k)= cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) +     decr
                   if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k)= cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + 0.1*decr
 #ifdef COSM_RAY_ELECTRONS
-                  cresp%n = 0.0 ;  cresp%e = 0.0
                   if (decr * cre_eff .gt. smallcree) then
+                     cresp%n = 0.0 ;  cresp%e = 0.0
                      call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn * cre_eff)
+                     cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
+                     cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
                   endif                                                                                ! distribution function amplitude computed from total explosion energy multiplied by factor cre_eff
-                  cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
-                  cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* SN_GALAXY */
 #endif /* COSM_RAYS */
