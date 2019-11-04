@@ -148,7 +148,7 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, LO, HI, pMAX
+      use constants,      only: ndims, xdim, ydim, zdim, LO, HI, pMAX, BND_PER
       use dataio_pub,     only: msg, warn, printinfo
       use domain,         only: dom
       use fluidindex,     only: flind
@@ -165,7 +165,8 @@ contains
 
       class(component_fluid), pointer :: fl
       integer                         :: i, j, k, icr, ipm, jpm, kpm
-      real                            :: cs_iso, r2, maxv
+      integer, dimension(ndims,LO:HI) :: mantle
+      real                            :: cs_iso, decr, r2, maxv
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
 
@@ -185,13 +186,18 @@ contains
          K_crn_perp(:)  = 0.
       endif
 
+      mantle = 0
+      do i = xdim, ydim
+         if(any(dom%bnd(i,:) == BND_PER)) mantle(i,:) = [-1,1] !> for periodic boundary conditions
+      enddo
+
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
          call cg%set_constant_b_field([bx0, by0, bz0])
-         cg%u(fl%idn, :, :, :) = d0
-         cg%u(fl%imx:fl%imz, :, :, :) = 0.0
+         cg%u(fl%idn,:,:,:) = d0
+         cg%u(fl%imx:fl%imz,:,:,:) = 0.0
 
 #ifndef ISO
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
@@ -219,20 +225,21 @@ contains
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
 
-                  do ipm = -1, 1
-                     do jpm = -1, 1
-                        do kpm = -1, 1
-
+                  decr = 0.0
+                  do ipm = mantle(xdim,LO), mantle(xdim,HI)
+                     do jpm = mantle(xdim,LO), mantle(xdim,HI)
+                        do kpm = mantle(xdim,LO), mantle(xdim,HI)
                            r2 = (cg%x(i)-x0+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-y0+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-z0+real(kpm)*dom%L_(zdim))**2
-#ifdef COSM_RAYS_SOURCES
-                           if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_table(icr_H1 )), i, j, k) +     amp_cr*exp(-r2/r0**2)
-                           if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_table(icr_C12)), i, j, k) + 0.1*amp_cr*exp(-r2/r0**2)
-#else /* !COSM_RAYS_SOURCES */
-                           cg%u(iarr_crn(1:2), i, j, k) = cg%u(iarr_crn(1:2), i, j, k) + amp_cr*exp(-r2/r0**2)
-#endif /* !COSM_RAYS_SOURCES */
+                           decr = decr + exp(-r2/r0**2)
                         enddo
                      enddo
                   enddo
+#ifdef COSM_RAYS_SOURCES
+                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_table(icr_H1 )), i, j, k) +     amp_cr*decr
+                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_table(icr_C12)), i, j, k) + 0.1*amp_cr*decr
+#else /* !COSM_RAYS_SOURCES */
+                  cg%u(iarr_crn(1:2), i, j, k) = cg%u(iarr_crn(1:2), i, j, k) + amp_cr*decr
+#endif /* !COSM_RAYS_SOURCES */
                enddo
             enddo
          enddo
@@ -251,7 +258,7 @@ contains
 
          call piernik_MPI_Allreduce(maxv, pMAX)
          if (master) then
-            write(msg,*) '[initproblem:problem_initial_conditions] icr=',icr,' maxecr =',maxv
+            write(msg,*) '[initproblem:problem_initial_conditions] icr=', icr, ' maxecr =', maxv
             call printinfo(msg)
          endif
 
