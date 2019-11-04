@@ -209,7 +209,7 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-         cg%u(iarr_crn, i, j, k) = 0.0
+         cg%u(iarr_crn,:,:,:) = 0.0
 #ifdef COSM_RAYS_SOURCES
          if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(cr_table(icr_H1 ))-1.0)
          if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(cr_table(icr_C12))-1.0)
