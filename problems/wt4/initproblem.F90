@@ -59,10 +59,9 @@ module initproblem
    logical                  :: fake_ic                        !< Skip reading the IC file (useful only for debugging, or running under valgrind)
    real                     :: T_disk                         !< temperature of the disk
    real                     :: mean_mol_weight                !< mean molecular weight
-   real                     :: jeansref                       !< minimum resolution in cells per Jeans wavelengths
 
    namelist /PROBLEM_CONTROL/  input_file, gamma_loc, mass_mul, ambient_density, cs_mul, damp_factor, divine_intervention_type, mincs2, maxcs2, &
-      &                        r_in, r_out, f_in, f_out, alfasupp, fake_ic, T_disk, mean_mol_weight, jeansref
+      &                        r_in, r_out, f_in, f_out, alfasupp, fake_ic, T_disk, mean_mol_weight
 
    ! private data
    integer, parameter :: ic_nx = 512, ic_ny = 512, ic_nz = 52 !< initial conditions size
@@ -98,11 +97,10 @@ contains
 
    subroutine read_problem_par
 
-      use cg_list_global,        only: all_cg
-      use constants,             only: AT_NO_B
-      use dataio_pub,            only: nh      ! QA_WARN required for diff_nml
-      use mpisetup,              only: rbuff, cbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
-      use unified_ref_crit_list, only: urc_list
+      use cg_list_global, only: all_cg
+      use constants,      only: AT_NO_B
+      use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
+      use mpisetup,       only: rbuff, cbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -126,7 +124,6 @@ contains
       alfasupp        = 1.0
       T_disk          = 20.0
       mean_mol_weight = 2.0
-      jeansref        = 4.0  ! as Truelove et al. have suggested
 
       divine_intervention_type = 2
 
@@ -169,7 +166,6 @@ contains
          rbuff(12) = alfasupp
          rbuff(13) = T_disk
          rbuff(14) = mean_mol_weight
-         rbuff(15) = jeansref
 
          ibuff(1) = divine_intervention_type
 
@@ -200,7 +196,6 @@ contains
          alfasupp        = rbuff(12)
          T_disk          = rbuff(13)
          mean_mol_weight = rbuff(14)
-         jeansref        = rbuff(15)
 
          divine_intervention_type = ibuff(1)
 
@@ -213,8 +208,6 @@ contains
       do i = D0, VY0
          call all_cg%reg_var(q_n(i), restart_mode = AT_NO_B, vital = .true.)
       enddo
-
-      call urc_list%add_user_urc(mark_Jeans, .true.)  ! Add the refinemet criterion and demand it to be available for plotfiles
 
    end subroutine read_problem_par
 
@@ -632,46 +625,5 @@ contains
       if (.false. .and. forward) i = j ! suppress compiler warnings on unused arguments
 
    end subroutine problem_customize_solution_wt4
-
-!>
-!! \brief implementation of user-provided Jeans length refinement criterion
-!!
-!! This routine has to conform to unified_ref_crit_user::mark_urc_user
-!<
-
-   subroutine mark_Jeans(u_r_c, cg)
-
-      use constants,             only: pi, GEO_XYZ, INVALID
-      use dataio_pub,            only: die
-      use domain,                only: dom
-      use fluidindex,            only: iarr_all_sg
-      use grid_cont,             only: grid_container
-      use unified_ref_crit_user, only: urc_user
-      use units,                 only: newtong
-
-      implicit none
-
-      class(urc_user),               intent(inout) :: u_r_c !< an object invoking the type-bound procedure
-      type(grid_container), pointer, intent(inout) :: cg    !< current grid piece
-
-      real, dimension(:,:,:), pointer :: p3d
-
-      if (dom%geometry_type /= GEO_XYZ) call die("[initproblem:mark_Jeans] unsupported (non-cartesian) geometry")
-
-      if (u_r_c%iplot /= INVALID) then
-         p3d => cg%q(u_r_c%iplot)%arr
-      else
-         p3d => cg%wa
-      endif
-
-      p3d(:,:,:) = sqrt(pi/newtong) / maxval(cg%dl) * &  ! assumes that fluid and cs2 have updated boundaries
-           sqrt(cg%cs_iso2(:,:,:) / sum(cg%u(iarr_all_sg, :, :, :), dim=1))
-
-      where (p3d < jeansref)
-         cg%refinemap = .true.
-      endwhere
-      if (any(p3d < 2.5 * jeansref)) cg%refine_flags%derefine = .false.
-
-   end subroutine mark_Jeans
 
 end module initproblem

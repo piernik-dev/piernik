@@ -50,9 +50,7 @@ module unified_ref_crit_var
       integer                  :: ic = INVALID  !< component index (cg%w(iv)%arr(ic,:,:,:)) or INVALID for 3D arrays
       procedure(refine_crit), pass, pointer :: refine !< refinement routine
    contains
-      procedure :: mark    => mark_var
-!      procedure :: cleanup => cleanup_var
-!      procedure :: init    => init_var
+      procedure :: mark => mark_var
    end type urc_var
 
    interface urc_var

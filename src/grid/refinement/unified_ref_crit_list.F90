@@ -106,9 +106,10 @@ contains
    subroutine init(this)
 
       use constants,                          only: base_level_id
-      use refinement,                         only: refine_points, refine_boxes, refine_vars, inactive_name
+      use refinement,                         only: refine_points, refine_boxes, refine_vars, inactive_name, jeans_ref, jeans_plot
       use unified_ref_crit_geometrical_box,   only: urc_box
       use unified_ref_crit_geometrical_point, only: urc_point
+      use unified_ref_crit_Jeans,             only: urc_Jeans
       use unified_ref_crit_var,               only: decode_urcv
 
       implicit none
@@ -117,6 +118,7 @@ contains
 
       type(urc_box),   pointer :: urcb
       type(urc_point), pointer :: urcp
+      type(urc_Jeans), pointer :: urcj
       integer :: ip
 
       ! add automatic criteria detecting shock waves
@@ -127,6 +129,11 @@ contains
       enddo
 
       ! add Jeans-length criterion
+      if (jeans_ref > 0.) then
+         allocate(urcj)
+         urcj = urc_Jeans(jeans_ref, jeans_plot)
+         call this%add(urcj)
+      endif
 
       ! add geometric primitives specified in problem.par
       do ip = lbound(refine_points, dim=1), ubound(refine_points, dim=1)
@@ -228,12 +235,13 @@ contains
 
    subroutine create_plotfields(this)
 
-      use constants,             only: INVALID, dsetnamelen
-      use dataio_pub,            only: printinfo, msg, warn
-      use named_array_list,      only: qna, wna
-      use mpisetup,              only: master
-      use unified_ref_crit_var,  only: urc_var
-      use unified_ref_crit_user, only: urc_user
+      use constants,              only: INVALID, dsetnamelen
+      use dataio_pub,             only: printinfo, msg, warn
+      use named_array_list,       only: qna, wna
+      use mpisetup,               only: master
+      use unified_ref_crit_Jeans, only: urc_Jeans
+      use unified_ref_crit_user,  only: urc_user
+      use unified_ref_crit_var,   only: urc_var
 
       implicit none
 
@@ -260,6 +268,12 @@ contains
                   write(msg, '(4a)') trim(msg), "' is stored in array '", trim(ref_n), "'"
                   if (master) call printinfo(msg)
                endif
+            class is (urc_Jeans)
+               if (p%plotfield .and. p%iplot == INVALID) then
+                  p%iplot = new_ref_field("nJ")
+                  write(msg, '(3a)') "[unified_ref_crit_list:create_plotfields] Jeans refinement criterion is stored in array '", trim(ref_n), "'"
+                  if (master) call printinfo(msg)
+               endif
             class is (urc_user)
                if (p%plotfield .and. p%iplot == INVALID) then
                   p%iplot = new_ref_field()
@@ -279,20 +293,36 @@ contains
 
    contains
 
-      integer function new_ref_field()
+      integer function new_ref_field(suggested)
 
          use cg_list_global,   only: all_cg
+         use dataio_pub,       only: warn
          use named_array_list, only: qna
 
          implicit none
 
+         character(len=*), optional :: suggested
+
          integer :: i
 
-         do i = 1, max  ! Beware: O(n^2)
-            write(ref_n, '(a,i2.2)') "ref_", i
-            if (.not. qna%exists(ref_n)) exit
-         enddo
-         call all_cg%reg_var(ref_n)
+         ref_n = ""
+
+         if (present(suggested)) then
+            if (.not. qna%exists(suggested)) then
+               ref_n = suggested
+               call all_cg%reg_var(ref_n)
+            else
+               call warn("[unified_ref_crit_list:create_plotfields:new_ref_field] suggested name '" // trim(suggested) // "' is already occupied")
+            endif
+         endif
+
+         if (len_trim(ref_n) <= 0) then
+            do i = 1, max  ! Beware: O(n^2)
+               write(ref_n, '(a,i2.2)') "ref_", i
+               if (.not. qna%exists(ref_n)) exit
+            enddo
+            call all_cg%reg_var(ref_n)
+         endif
 
          new_ref_field = qna%ind(ref_n)
 
