@@ -155,7 +155,7 @@ contains
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use mpisetup,       only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: icr_H1, icr_C12, cr_table
+      use cr_data,        only: eCRSP, icr_H1, icr_C12, cr_table
 #endif /* COSM_RAYS_SOURCES */
 
       implicit none
@@ -165,9 +165,6 @@ contains
       real                            :: cs_iso, xsn, ysn, zsn, r2, maxv
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-#ifndef COSM_RAYS_SOURCES
-      integer, parameter              :: icr_H1 = 1, icr_C12 = 2
-#endif /* !COSM_RAYS_SOURCES */
 
       fl => flind%ion
 
@@ -212,30 +209,31 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-         do icr = 1, flind%crs%all
-            cg%u(iarr_crs(icr), :, :, :) =  beta_cr*fl%cs2 * cg%u(fl%idn, :, :, :)/(gamma_crn(icr)-1.0)
-         enddo
+         cg%u(iarr_crn, i, j, k) = 0.0
+#ifdef COSM_RAYS_SOURCES
+         if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(cr_table(icr_H1 ))-1.0)
+         if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(cr_table(icr_C12))-1.0)
+#else /* !COSM_RAYS_SOURCES */
+         cg%u(iarr_crn(1),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(1)-1.0)
+         cg%u(iarr_crn(2),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(2)-1.0)
+#endif /* !COSM_RAYS_SOURCES */
 
 ! Explosions
-         do icr = 1, flind%crn%all
-            do k = cg%ks, cg%ke
-               do j = cg%js, cg%je
-                  do i = cg%is, cg%ie
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
 
-                     do ipm=-1,1
-                        do jpm=-1,1
-                           do kpm=-1,1
+                  do ipm = -1, 1
+                     do jpm = -1, 1
+                        do kpm = -1, 1
 
-                              r2 = (cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-ysn+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-zsn+real(kpm)*dom%L_(zdim))**2
-                              if (icr == cr_table(icr_H1)) then
-                                 cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
-                              elseif (icr == cr_table(icr_C12)) then
-                                 cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
-                              else
-                                 cg%u(iarr_crn(icr), i, j, k) = 0.0
-                              endif
-
-                           enddo
+                           r2 = (cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-ysn+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-zsn+real(kpm)*dom%L_(zdim))**2
+#ifdef COSM_RAYS_SOURCES
+                           if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_table(icr_H1 )), i, j, k) + amp_cr*exp(-r2/r0**2)
+                           if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_table(icr_C12)), i, j, k) + amp_cr*exp(-r2/r0**2)
+#else /* !COSM_RAYS_SOURCES */
+                           cg%u(iarr_crn(1:2), i, j, k) = cg%u(iarr_crn(1:2), i, j, k) + amp_cr*exp(-r2/r0**2)
+#endif /* !COSM_RAYS_SOURCES */
                         enddo
                      enddo
                   enddo
