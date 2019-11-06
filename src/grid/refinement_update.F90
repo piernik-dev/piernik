@@ -47,7 +47,7 @@ contains
       use cg_leaves,             only: leaves
       use cg_level_connected,    only: cg_level_connected_T
       use cg_level_finest,       only: finest
-      use cg_list,               only: cg_list_element
+!      use cg_list,               only: cg_list_element
       use cg_list_global,        only: all_cg
       use constants,             only: I_ONE
       use unified_ref_crit_list, only: urc_list
@@ -61,7 +61,7 @@ contains
       implicit none
 
       type(cg_level_connected_T), pointer :: curl
-      type(cg_list_element),      pointer :: cgl
+!      type(cg_list_element),      pointer :: cgl
       enum, bind(C)
          enumerator :: PROBLEM
          enumerator :: URC
@@ -80,12 +80,13 @@ contains
       call all_bnd ! \todo find a way to minimize calling this - perhaps manage a flag that says whether the boundaries are up to date or not
       call all_bnd_vital_q
 
-      ! mark everything for derefinement by default
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgl%cg%refine_flags%derefine = .true.
-         cgl => cgl%nxt
-      enddo
+      !> \todo mark everything for derefinement by default
+      ! it requires to propagate refinement requests from coverel levels as derefinement inhibitions
+!!$      cgl => leaves%first
+!!$      do while (associated(cgl))
+!!$         cgl%cg%refine_flags%derefine = .true.
+!!$         cgl => cgl%nxt
+!!$      enddo
 
       if (associated(problem_refine_derefine)) then
          call problem_refine_derefine ! call user routine first, so it cannot alter flags set by automatic routines
