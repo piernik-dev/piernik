@@ -99,8 +99,8 @@ contains
       use multigridvars,    only: ord_prolong
       use named_array_list, only: wna
       use particle_pub,     only: pset
-      use refinement_crit_list, only: user_ref2list
       use user_hooks,       only: ext_bnd_potential
+      use unified_ref_crit_list, only: urc_list
 
       implicit none
 
@@ -236,8 +236,9 @@ contains
       ! Set up automatic refinement criteria on densities
       do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
          !> \warning only selfgravitating fluids should be added
-!         call user_ref2list(wna%fi, id, ref_thr*d0, deref_thr*d0, 0., "grad", .true.)
-         call user_ref2list(wna%fi, id, ref_thr, deref_thr, ref_eps, "Loechner", .true.)
+!         call urc_list%add_user_urcv(wna%fi, id, ref_thr*d0, deref_thr*d0, 0., "grad", .true.)
+         call urc_list%add_user_urcv(wna%fi, id, ref_thr, deref_thr, ref_eps, "Loechner", .true.)
+
       enddo
 
    end subroutine read_problem_par
