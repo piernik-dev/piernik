@@ -605,7 +605,6 @@ contains
             ! write own
             n = 0
             cgl => leaves%first
-
             do while (associated(cgl))
                n = n + 1
                ncg = cg_desc%offsets(proc) + n
@@ -628,7 +627,7 @@ contains
             ! Behold the MAGIC in its purest form!
             ! Following block of code does exactly *nothing*, yet it's necessary for collective calls of PHDF5
             !>
-            !! \deprecated BEWARE, we assume that at least 1 cg exist on a given proc
+            !! \deprecated BEWARE, we assume that at least 1 cg exist on a given proc (or at leas we fake it)
             !! \todo there should be something like H5S_NONE as a contradiction to H5S_ALL, yet I cannot find it...
             !<
 
@@ -645,7 +644,18 @@ contains
             call recycle_data(dims, cg_all_n_b, 1, data_dbl)
             do ncg = 1, maxval(cg_n)-n
                do i = lbound(hdf_vars, 1), ubound(hdf_vars, 1)
-                  if (h5_64bit) then
+                  ! It is crashing due to FPE when there are more processes than blocks
+                  ! because data_dbl contains too large values for single precision.
+                  ! If a process doesn't have a block, data_dbl serves justa as
+                  ! a placeholder to complete colective HDF5 calls.
+                  !
+                  ! Yes, something stinks here.
+                  !
+                  ! On uniform grid a process without a cg means that the user made an error and assigned too many processes for too little task.
+                  ! In AMR such situation may occur when in a large sumulation a massive derefinement happens.
+                  ! Usually it will mean that there is something wrong with refinement criteria but still the user
+                  ! deserves to get the files, not a FPE crash.
+                  if (h5_64bit .or. n < 1) then
                      call h5dwrite_f(cg_desc%dset_id(1, i), H5T_NATIVE_DOUBLE, data_dbl, dims, error, &
                           &          xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                   else
