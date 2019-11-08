@@ -192,7 +192,7 @@ contains
       where (dom%periodic(:) .and. this%my_se(:, HI) + I_ONE /= l%n_d(:)) this%bnd(:, LO) = BND_MPI
       where (dom%periodic(:) .and. this%my_se(:, LO)         /= 0       ) this%bnd(:, HI) = BND_MPI
 
-      this%ext_bnd(:, :) = .false.
+      this%ext_bnd(:, :) = .false.  ! slightly modified variant of l%has_ext_bnd would do the work
       do i = xdim, zdim
          if (dom%has_dir(i) .and. .not. dom%periodic(i)) then
             this%ext_bnd(i, LO) = (my_se(i, LO)         == l%off(i))

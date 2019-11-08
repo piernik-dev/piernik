@@ -43,26 +43,34 @@ contains
 !>
 !! \brief Routine that computes upper limit of %timestep due to cooling or heating processes.
 !<
-   real function timestep_thermal(cg) result(dt_coolheat)
+   real function timestep_thermal() result(dt_coolheat)
 
-      use constants, only: pMIN, small
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use constants, only: big, pMIN, small
       use grid_cont, only: grid_container
       use mpisetup,  only: piernik_MPI_Allreduce
       use thermal,   only: maxdeint, cfl_coolheat, thermal_active
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg
+      real                           :: mxdeint
 
-      real :: mxdeint
+      dt_coolheat = big
+      if (.not.thermal_active) return
 
-      if (thermal_active) then
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
          call maxdeint(cg, mxdeint)
-         dt_coolheat = cfl_coolheat*abs(1./(mxdeint+small))
-         call piernik_MPI_Allreduce(dt_coolheat, pMIN)
-      else
-         dt_coolheat = huge(1.)
-      endif
+         dt_coolheat = min(dt_coolheat, cfl_coolheat*abs(1./(mxdeint+small)))
+
+         cgl => cgl%nxt
+      enddo
+      call piernik_MPI_Allreduce(dt_coolheat, pMIN)
 
    end function timestep_thermal
 

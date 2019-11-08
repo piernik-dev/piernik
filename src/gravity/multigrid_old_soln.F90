@@ -404,6 +404,7 @@ contains
       use hdf5,               only: HID_T, HSIZE_T, SIZE_T, &
            &                        h5aexists_f, h5gopen_f, h5gclose_f
       use h5lt,               only: h5ltget_attribute_ndims_f, h5ltget_attribute_info_f
+      use mpisetup,           only: master
       use named_array_list,   only: qna
       use set_get_attributes, only: get_attr
 
@@ -428,7 +429,7 @@ contains
       do i = lbound(nt, 1), ubound(nt, 1)
          call h5aexists_f(g_id, trim(this%old%label) // nt(i), a_exists, error)
          if (.not. a_exists) then
-            call printio("[multigrid_old_soln:read_os_attribute] " // trim(this%old%label) // nt(i) // " does not exist. Coldboot")
+            if (master) call printio("[multigrid_old_soln:read_os_attribute] " // trim(this%old%label) // nt(i) // " does not exist. Coldboot")
             return
          endif
       enddo
@@ -446,7 +447,7 @@ contains
       endif
       call h5ltget_attribute_info_f(file_id, "/", trim(this%old%label) // "_names", dims, tclass, tsize, error)
       if (dims(1) <= 0) then
-         call printio("[multigrid_old_soln:read_os_attribute] No " // trim(this%old%label) // "_names to read. Coldboot.")
+         if (master) call printio("[multigrid_old_soln:read_os_attribute] No " // trim(this%old%label) // "_names to read. Coldboot.")
          return
       endif
       allocate(namelist(dims(1)))

@@ -39,14 +39,18 @@ module global
 
    private
    public :: cleanup_global, init_global, &
-        &    cfl, cfl_max, cflcontrol, cfl_violated, tstep_attempt, &
+        &    cfl, cfl_max, cflcontrol, cfl_violated, disallow_negatives, disallow_CRnegatives, unwanted_negatives, dn_negative, ei_negative, cr_negative, tstep_attempt, &
         &    dt, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
-        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, interpol_str, &
+        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
-        &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
+        &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, do_external_corners, &
         &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fc_eq_mag
 
    logical         :: cfl_violated             !< True when cfl condition is violated
+   logical         :: dn_negative = .false.
+   logical         :: ei_negative = .false.
+   logical         :: cr_negative = .false.
+   logical         :: disallow_negatives, disallow_CRnegatives, unwanted_negatives = .false.
    logical         :: dirty_debug              !< Allow initializing arrays with some insane values and checking if these values can propagate
    integer(kind=4) :: show_n_dirtys            !< use to limit the amount of printed messages on dirty values found
    logical         :: do_ascii_dump            !< to dump, or not to dump: that is a question (ascii)
@@ -68,6 +72,7 @@ module global
    real    :: cfl                      !< desired Courant–Friedrichs–Lewy number
    real    :: cfl_max                  !< warning threshold for the effective CFL number achieved
    logical :: use_smalld               !< correct density when it gets lower than smalld
+   logical :: use_smallei              !< correct internal energy density when it gets lower then smallei
    logical :: geometry25D              !< include source terms in reduced dimension for 2D simulations
    real    :: smallp                   !< artificial infimum for pressure
    real    :: smalld                   !< artificial infimum for density
@@ -98,10 +103,11 @@ module global
    real                          :: w_epsilon         !< small number for safe evaluation of weights in WENO interpolation
    integer(kind=4)               :: ord_mag_prolong   !< prolongation order for B and psi
    logical                       :: ord_fc_eq_mag     !< when .true. enforce ord_mag_prolong order of prolongation of f/c guardcells for fluid and everything (EXPERIMENTAL)
+   logical                       :: do_external_corners  !< when .true. then perform boundary exchanges inside external guardcells
 
-   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
+   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, disallow_negatives, disallow_CRnegatives, cfl_max, use_smalld, use_smallei, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
-        &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong, ord_fc_eq_mag
+        &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong, ord_fc_eq_mag, do_external_corners
 
 contains
 
@@ -145,6 +151,7 @@ contains
 !!   <tr><td>psi_bnd_str      </td><td>"default" </td><td>string                            </td><td>\copydoc global::psi_bnd_str      </td></tr>
 !!   <tr><td>ord_mag_prolong  </td><td>2      </td><td>integer                              </td><td>\copydoc global::ord_mag_prolong  </td></tr>
 !!   <tr><td>ord_fc_eq_mag    </td><td>.false.</td><td>logical                              </td><td>\copydoc global::ord_fc_eq_mag    </td></tr>
+!!   <tr><td>do_external_corners </td><td>.false.</td><td>logical                           </td><td>\copydoc global::do_external_corners </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -193,7 +200,10 @@ contains
       cfr_smooth  = 0.0
       smallp      = big_float
       smalld      = big_float
+      disallow_negatives = .true.
+      disallow_CRnegatives = .false.
       use_smalld  = .true.
+      use_smallei = .true.
       smallc      = 1.e-10
       smallei     = 1.e-10
       dt_initial  = -1.              !< -1. indicates automatic choice of initial timestep, -0.5 would give half of that
@@ -213,6 +223,7 @@ contains
       integration_order  = 2
       ord_mag_prolong = O_I2           !< it looks like most f/c artifacts are gone just with cubic prolongation of magnetic guardcells
       ord_fc_eq_mag = .false.          !< Conservative choice, perhaps O_LIN will be safer. Higher orders may result in negative density or energy in f/c guardcells
+      do_external_corners =.false.
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -275,14 +286,18 @@ contains
          rbuff(16) = dt_shrink
 
          lbuff(1)   = use_smalld
-         lbuff(2)   = repeat_step
-         lbuff(3:5) = skip_sweep
-         lbuff(6)   = geometry25D
-         lbuff(7)   = sweeps_mgu
-         lbuff(8)   = use_fargo
-         lbuff(9)   = use_eglm
-         lbuff(10)  = ch_grid
-         lbuff(11)  = ord_fc_eq_mag
+         lbuff(2)   = use_smallei
+         lbuff(3)   = repeat_step
+         lbuff(4:6) = skip_sweep
+         lbuff(7)   = geometry25D
+         lbuff(8)   = sweeps_mgu
+         lbuff(9)   = use_fargo
+         lbuff(10)  = use_eglm
+         lbuff(11)  = ch_grid
+         lbuff(12)  = ord_fc_eq_mag
+         lbuff(13)  = do_external_corners
+         lbuff(14)  = disallow_negatives
+         lbuff(15)  = disallow_CRnegatives
 
       endif
 
@@ -293,43 +308,47 @@ contains
 
       if (slave) then
 
-         use_smalld    = lbuff(1)
-         repeat_step   = lbuff(2)
-         skip_sweep    = lbuff(3:5)
-         geometry25D   = lbuff(6)
-         sweeps_mgu    = lbuff(7)
-         use_fargo     = lbuff(8)
-         use_eglm      = lbuff(9)
-         ch_grid       = lbuff(10)
-         ord_fc_eq_mag = lbuff(11)
+         use_smalld           = lbuff(1)
+         use_smallei          = lbuff(2)
+         repeat_step          = lbuff(3)
+         skip_sweep           = lbuff(4:6)
+         geometry25D          = lbuff(7)
+         sweeps_mgu           = lbuff(8)
+         use_fargo            = lbuff(9)
+         use_eglm             = lbuff(10)
+         ch_grid              = lbuff(11)
+         ord_fc_eq_mag        = lbuff(12)
+         do_external_corners  = lbuff(13)
+         disallow_negatives   = lbuff(14)
+         disallow_CRnegatives = lbuff(15)
 
-         smalld      = rbuff( 1)
-         smallc      = rbuff( 2)
-         smallp      = rbuff( 3)
-         smallei     = rbuff( 4)
-         cfl         = rbuff( 5)
-         cfr_smooth  = rbuff( 6)
-         dt_initial  = rbuff( 7)
-         dt_max_grow = rbuff( 8)
-         dt_min      = rbuff( 9)
-         dt_max      = rbuff(10)
-         cfl_max     = rbuff(11)
-         relax_time  = rbuff(12)
-         glm_alpha   = rbuff(13)
-         cfl_glm     = rbuff(14)
-         w_epsilon   = rbuff(15)
-         dt_shrink   = rbuff(16)
+         smalld               = rbuff( 1)
+         smallc               = rbuff( 2)
+         smallp               = rbuff( 3)
+         smallei              = rbuff( 4)
+         cfl                  = rbuff( 5)
+         cfr_smooth           = rbuff( 6)
+         dt_initial           = rbuff( 7)
+         dt_max_grow          = rbuff( 8)
+         dt_min               = rbuff( 9)
+         dt_max               = rbuff(10)
+         cfl_max              = rbuff(11)
+         relax_time           = rbuff(12)
+         glm_alpha            = rbuff(13)
+         cfl_glm              = rbuff(14)
+         w_epsilon            = rbuff(15)
+         dt_shrink            = rbuff(16)
 
-         limiter    = cbuff(1)
-         limiter_b  = cbuff(2)
-         cflcontrol = cbuff(3)
-         divB_0     = cbuff(5)
-         interpol_str = cbuff(6)
-         psi_bnd_str = cbuff(7)
+         limiter              = cbuff(1)
+         limiter_b            = cbuff(2)
+         cflcontrol           = cbuff(3)
+         divB_0               = cbuff(5)
+         interpol_str         = cbuff(6)
+         psi_bnd_str          = cbuff(7)
 
-         integration_order = ibuff(1)
-         print_divB        = ibuff(2)
-         ord_mag_prolong   = ibuff(3)
+         integration_order    = ibuff(1)
+         print_divB           = ibuff(2)
+         ord_mag_prolong      = ibuff(3)
 
       endif
 

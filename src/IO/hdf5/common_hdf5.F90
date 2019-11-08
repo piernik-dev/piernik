@@ -44,7 +44,7 @@ module common_hdf5
    public :: hdf_vars, hdf_vars_avail, cancel_hdf_var, d_gname, base_d_gname, d_fc_aname, d_size_aname, &
         d_edge_apname, d_bnd_apname, cg_gname, cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, &
         n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, cg_dl_aname, O_OUT, O_RES, STAT_OK, STAT_INV, &
-        create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output
+        create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output, enable_all_hdf_var
 
    character(len=dsetnamelen), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
    logical,                    allocatable, dimension(:), protected :: hdf_vars_avail
@@ -197,7 +197,7 @@ contains
       enddo
 
       allocate(hdf_vars_avail(size(hdf_vars)))
-      if (size(hdf_vars_avail) > 0) hdf_vars_avail = .true.
+      call enable_all_hdf_var
 
    contains
 
@@ -246,6 +246,8 @@ contains
 
    end subroutine cleanup_hdf5
 
+!> \brief Mark a plot variable as faulty (don't spam warnings unnecessarily)
+
    subroutine cancel_hdf_var(var)
 
       use constants, only: I_ONE
@@ -260,6 +262,16 @@ contains
       enddo
 
    end subroutine cancel_hdf_var
+
+!> \brief Mark all plot variables as good
+
+   subroutine enable_all_hdf_var
+
+      implicit none
+
+      if (size(hdf_vars_avail) > 0) hdf_vars_avail = .true.
+
+   end subroutine enable_all_hdf_var
 
 !-----------------------------------------------------------------------------
 !>

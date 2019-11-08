@@ -108,7 +108,7 @@ program piernik
    call print_progress(nstep)
    if (print_divB > 0) call print_divB_norm
 
-   do while (t < tend .and. nstep < nend .and. .not.(end_sim)) ! main loop
+   do while (t < tend .and. nstep < nend .and. .not.(end_sim) .or. cfl_violated) ! main loop
 
       dump(:) = .false.
       if (associated(problem_domain_update)) then
@@ -147,6 +147,10 @@ program piernik
 
          call user_msg_handler(end_sim)
          call update_refinement
+         ! A second call update_refinement here can be used to detect if there are refinement oscillations:
+         ! * new "refine" or "correcting" events should not occur
+         ! * some "derefine" events are allowed
+         ! It can be used for diagnostic purposes. In production runs it may cost too much.
          if (try_rebalance) then
             !> \todo try to rewrite this ugly chain of flags passed through global variables into something more fool-proof
             call leaves%balance_and_update(" (re-balance) ")
