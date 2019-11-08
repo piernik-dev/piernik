@@ -7,9 +7,13 @@ For typical desktop Linux installation you may need to add few packages to be ab
 For Ubuntu try:
 
     sudo apt install git make mpich libhdf5-mpich-dev libfftw3-dev\
-    pkg-config
+    pkg-config python pep8 python-numpy
 
-You may use `libhdf5-openmpi-dev` and `openmpi-bin` if you prefer OpenMPI over MPICH.
+If the above complains that `E: Unable to locate package mpich` then do:
+
+    sudo add-apt-repository universe
+
+and try again to install the pacages mentioned above. You may use `libhdf5-openmpi-dev` and `openmpi-bin` if you prefer OpenMPI over MPICH.
 
 ## Fedora
 
@@ -42,13 +46,15 @@ If you see warnings saying that `-Werror=format-security` is not valid for Fortr
 
 Remember that doing so is a sort of hack, which may take revenge on you in a distant future.
 
+If you installed OpenMPI libraries, remember to replace `mpich` with `openmpi` in the `sed` calls above.
+
 ## Piernik
 
 Now make sure that you've forked Piernik project on GitHub and in a directory of your choice do:
 
     git clone https://github.com/<your_github_username>/piernik
 
-You can test whether everything compiles well by calling:
+Now you can `cd piernik` and test whether everything compiles well by calling:
 
     ./setup maclaurin
 
@@ -58,3 +64,4 @@ which should finish with a message:
 
 The `./setup` command without any arguments will give you a list of recognized options. You can put some them in `.setuprc` file if you want to use them always.
 Also look at the top of `Makefile` to find some useful tricks.
+The file `bin/bash_completion.sh` may also make your life with Piernik a little bit easier by allowing to complete some setup options and problem names.
