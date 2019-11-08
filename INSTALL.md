@@ -7,7 +7,7 @@ For typical desktop Linux installation you may need to add few packages to be ab
 For Ubuntu try:
 
     sudo apt install git make mpich libhdf5-mpich-dev libfftw3-dev\
-    pkg-config python pep8 python-numpy
+    pkg-config python pep8 python-numpy gfortran
 
 If the above complains that `E: Unable to locate package mpich` then do:
 
