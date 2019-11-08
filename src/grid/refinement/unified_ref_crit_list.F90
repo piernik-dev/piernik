@@ -170,11 +170,13 @@ contains
       logical, save :: first_run = .true.
 
       write(msg, '(a,i3,a)') "[unified_ref_crit_list:summary] ", this%cnt(), " criteria defined."
-      if (master .and. this%cnt() /= 0) then
-         if (first_run) then
-            call printinfo(msg)
-         else
-            call printinfo(trim(msg) // " (update)")
+      if (master) then
+         if (this%cnt() /= 0) then  ! unfortunately this%cnt() can not be pure due to pointer assignment
+            if (first_run) then
+               call printinfo(msg)
+            else
+               call printinfo(trim(msg) // " (update)")
+            endif
          endif
       endif
       first_run = .false.
