@@ -39,9 +39,9 @@ module initproblem
 
    integer(kind=4)    :: norm_step
    real               :: t_sn
-   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
+   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr1, amp_cr2
 
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, norm_step
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr1, amp_cr2, norm_step
 
 contains
 
@@ -68,20 +68,21 @@ contains
 
       t_sn = 0.0
 
-      d0           = 1.0e5     !< density
-      p0           = 1.0       !< pressure
-      bx0          =   0.      !< Magnetic field component x
-      by0          =   0.      !< Magnetic field component y
-      bz0          =   0.      !< Magnetic field component z
-      x0           = 0.0       !< x-position of the blob
-      y0           = 0.0       !< y-position of the blob
-      z0           = 0.0       !< z-position of the blob
-      r0           = 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))  !< radius of the blob
+      d0             = 1.0e5       !< density
+      p0             = 1.0         !< pressure
+      bx0            =   0.        !< Magnetic field component x
+      by0            =   0.        !< Magnetic field component y
+      bz0            =   0.        !< Magnetic field component z
+      x0             = 0.0         !< x-position of the blob
+      y0             = 0.0         !< y-position of the blob
+      z0             = 0.0         !< z-position of the blob
+      r0             = 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))  !< radius of the blob
 
-      beta_cr      = 0.0       !< ambient level
-      amp_cr       = 1.0       !< amplitude of the blob
+      beta_cr        = 0.0         !< ambient level
+      amp_cr1        = 1.0         !< amplitude of the blob
+      amp_cr2        = 0.1*amp_cr1 !< amplitude for the second species
 
-      norm_step    = I_TEN     !< how often to compute the norm (in steps)
+      norm_step      = I_TEN       !< how often to compute the norm (in steps)
 
       if (master) then
 
@@ -111,7 +112,8 @@ contains
          rbuff(8)  = z0
          rbuff(9)  = r0
          rbuff(10) = beta_cr
-         rbuff(11) = amp_cr
+         rbuff(11) = amp_cr1
+         rbuff(12) = amp_cr2
 
          ibuff(1)  = norm_step
 
@@ -132,7 +134,8 @@ contains
          z0        = rbuff(8)
          r0        = rbuff(9)
          beta_cr   = rbuff(10)
-         amp_cr    = rbuff(11)
+         amp_cr1   = rbuff(11)
+         amp_cr2   = rbuff(12)
 
          norm_step = int(ibuff(1), kind=4)
 
@@ -235,10 +238,10 @@ contains
                      enddo
                   enddo
 #ifdef COSM_RAYS_SOURCES
-                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_table(icr_H1 )), i, j, k) +     amp_cr*decr
-                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_table(icr_C12)), i, j, k) + 0.1*amp_cr*decr
+                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_table(icr_H1 )), i, j, k) + amp_cr1*decr
+                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_table(icr_C12)), i, j, k) + amp_cr2*decr
 #else /* !COSM_RAYS_SOURCES */
-                  cg%u(iarr_crn(1:2), i, j, k) = cg%u(iarr_crn(1:2), i, j, k) + amp_cr*decr
+                  cg%u(iarr_crn(1:2), i, j, k) = cg%u(iarr_crn(1:2), i, j, k) + [amp_cr1, amp_cr2]*decr
 #endif /* !COSM_RAYS_SOURCES */
                enddo
             enddo
