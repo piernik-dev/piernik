@@ -191,9 +191,6 @@ contains
       type(grid_container),   pointer :: cg
 #ifdef COSM_RAY_ELECTRONS
       real                            :: e_tot
-      logical                         :: first_run = .true.
-
-      if (.not. first_run) return
 #endif /* COSM_RAY_ELECTRONS */
 
       fl => flind%ion
@@ -258,7 +255,7 @@ contains
          enddo
 #endif /* !ISO */
 
-         cg%u(iarr_crn,:,:,:) = 0.0
+         cg%u(iarr_crs,:,:,:) = 0.0
 #ifdef COSM_RAYS_SOURCES
          if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(cr_table(icr_H1 ))-1.0)
          if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(cr_table(icr_C12))-1.0)
@@ -289,11 +286,12 @@ contains
 #endif /* !COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
 ! Explosions @CRESP independent of cr nucleons
-                  cresp%n = 0.0 ;  cresp%e = 0.0 ; e_tot = amp_cr1 * cre_eff * decr
+                  e_tot = amp_cr1 * cre_eff * decr
                   if (e_tot > smallcree) then
-                    call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot)
-                    cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
-                    cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
+                     cresp%n = 0.0 ;  cresp%e = 0.0
+                     call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot)
+                     cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
+                     cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
                   endif
 #endif /* COSM_RAY_ELECTRONS */
                enddo
@@ -332,7 +330,6 @@ contains
 #ifdef COSM_RAY_ELECTRONS
       write(msg,*) '[initproblem:problem_initial_conditions]: Taylor_exp._ord. (cresp)    = ', expan_order
       call printinfo(msg)
-      first_run = .false.
 #endif /* COSM_RAY_ELECTRONS */
 
    end subroutine problem_initial_conditions
