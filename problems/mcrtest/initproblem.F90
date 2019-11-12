@@ -187,7 +187,7 @@ contains
       endif
 
       mantle = 0
-      do i = xdim, ydim
+      do i = xdim, zdim
          if(any(dom%bnd(i,:) == BND_PER)) mantle(i,:) = [-1,1] !> for periodic boundary conditions
       enddo
 
