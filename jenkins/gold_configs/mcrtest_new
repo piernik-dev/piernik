@@ -1,6 +1,7 @@
 # sha1 of the gold commit
 # Note: update only when absolutely necessary
-GOLD_COMMIT=799877d5cc8594a75e1452071ade3c96f46688e2
+GOLD_COMMIT=0e1c88fdff6404f6bc1bedbfea6a5a37c52db64d
+# 0e1c88fdff6404f6bc1bedbfea6a5a37c52db64d - [mcrtest] fix loop for the periodic bnds mantle (+ # 077b21642c59bc4346f8ccea33aa008103b475c6 - stop treating explosions as in periodic domain for other bnds)
 # 799877d5cc8594a75e1452071ade3c96f46688e2 - [sources] collect changes from all sources once and limit ecr after doing sources
 # 2d84935c0665426247309775c20d722fd5db5f95 - 64-bit plotfiles for gold configs
 # a814eac4c121262092a72a53b7378e00a1ac95e4 - more restrictive norm_tol for CR diffusion
