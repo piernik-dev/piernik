@@ -125,6 +125,9 @@ contains
 
    end function resample_gauss
 
+#if 0
+! this function is not used anywhere
+
 !>
 !! \brief Calculate first 4 terms of taylor expansion of cosh
 !!
@@ -152,6 +155,7 @@ contains
          x2 = x2**2
       enddo
    end function crude_cosh
+#endif
 
 !>
 !! \brief Returns the file descriptor associated with a specified unit.

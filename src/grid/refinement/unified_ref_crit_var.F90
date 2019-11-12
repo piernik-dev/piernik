@@ -14,7 +14,7 @@
 !    GNU General Public License for more details.
 !
 !    You should have received a copy of the GNU General Public License
-!    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
+!    along with PIERNIK.  If not, see http://www.gnu.org/licenses/.
 !
 !    Initial implementation of PIERNIK code was based on TVD split MHD code by
 !    Ue-Li Pen
@@ -24,43 +24,255 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
+
 #include "piernik.h"
 
-!> \brief This module contains standard routines for finding where to refine and where to derefine
+!> \brief Unified refinement criteria for filters that provide scalar indicator of the need for refinement based on selected fields
 
-module refinement_filters
+module unified_ref_crit_var
+
+   use constants,               only: INVALID, cbuff_len
+   use unified_ref_crit_filter, only: urc_filter
 
    implicit none
 
    private
-   public :: refine_on_gradient, refine_on_relative_gradient, refine_on_second_derivative, ref_crit
+   public :: urc_var, decode_urcv
 
-   type :: ref_crit
-      integer              :: iv                      !< field index in cg%q or cg%w array
-      integer              :: ic                      !< component index (cg%w(iv)%arr(ic,:,:,:)) or INVALID for 3D arrays
-      integer              :: iplot                   !< field index for storing the refinement criterion or INVALID
-      real                 :: ref_thr                 !< refinement threshold
-      real                 :: deref_thr               !< derefinement threshold
-      real                 :: aux                     !< auxiliary parameter (can be smoother or filter strength)
+!> \brief Things that should be common for all refinement criteria based on filters that look for shockwaves or do other checks based on selected fields
+
+   type, extends(urc_filter) :: urc_var
+!      private  !unified_ref_crit_list:create_plotfields needs some of these
+      character(len=cbuff_len) :: rvar   !< name of the refinement variable
+      character(len=cbuff_len) :: rname  !< name of the refinement routine
+      real                     :: aux    !< auxiliary parameter (can be smoother or filter strength)
+      integer                  :: iv = INVALID  !< field index in cg%q or cg%w array
+      integer                  :: ic = INVALID  !< component index (cg%w(iv)%arr(ic,:,:,:)) or INVALID for 3D arrays
       procedure(refine_crit), pass, pointer :: refine !< refinement routine
-   end type ref_crit
+   contains
+      procedure :: mark => mark_var
+   end type urc_var
 
-   ! all routines that are public in this module should confotm to this interface
+   interface urc_var
+      procedure :: init
+   end interface urc_var
+
    interface
+
       subroutine refine_crit(this, cg, p3d)
 
          use grid_cont, only: grid_container
-         import ref_crit
+         import urc_var
 
          implicit none
 
-         class(ref_crit),                 intent(in)    :: this !< this contains refinement parameters
-         type(grid_container), pointer,   intent(inout) :: cg   !< current grid piece
-         real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement
+         class(urc_var),                  intent(in)    :: this  !<  an object invoking the type-bound procedure
+         type(grid_container), pointer,   intent(inout) :: cg    !< current grid piece
+         real, dimension(:,:,:), pointer, intent(in)    :: p3d   !< pointer to array to be examined for (de)refinement
+
       end subroutine refine_crit
+
    end interface
 
 contains
+
+!>
+!! \brief Decode field-based refinement criteria from problem.par.
+!! Return a pointer or chain of pointers if necessary
+!<
+
+   function decode_urcv(rf) result(this)
+
+      use constants,  only: INVALID
+      use dataio_pub, only: warn
+      use mpisetup,   only: master
+      use refinement, only: ref_auto_param
+
+      implicit none
+
+      type(ref_auto_param), intent(in) :: rf  !< the data read from problem.par
+
+      type(urc_var), pointer :: this  !< a pointer to first of the constructed objects
+
+      type(urc_var), pointer :: link
+      integer(kind=4) :: iv
+      integer(kind=4), dimension(:), allocatable :: ic
+      integer :: i
+
+      this => null()
+      call identify_field(rf%rvar, iv, ic)
+
+      if (iv == INVALID) then
+         if (master) call warn("[unified_ref_crit_var:decode_urcv] ignoring '" // trim(rf%rvar) // "'")
+         return
+      endif
+
+      if (allocated(ic)) then
+         link => null()
+         do i = lbound(ic, dim=1), ubound(ic, dim=1)
+            allocate(this)
+            this = init(rf, iv, ic(i))
+            if (associated(link)) this%next => link
+            link => this
+         enddo
+      else
+         allocate(this)
+         this = init(rf, iv)
+      endif
+
+   end function decode_urcv
+
+!> \brief Identify field name and return indices to cg%q or cg%w arrays
+
+   subroutine identify_field(vname, iv, ic)
+
+      use constants,        only: INVALID, cbuff_len
+      use dataio_pub,       only: msg, warn
+      use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, iarr_all_en
+      use mpisetup,         only: master
+      use named_array_list, only: qna, wna
+      use refinement,       only: inactive_name
+
+      implicit none
+
+      character(len=cbuff_len),                   intent(in)  :: vname !< string specifying the field on
+      integer(kind=4),                            intent(out) :: iv    !< field index in cg%q or cg%w array
+      integer(kind=4), dimension(:), allocatable, intent(out) :: ic    !< component index array (cg%w(iv)%arr(ic,:,:,:)) or INVALID for 3D arrays
+
+      iv = INVALID
+
+      if (trim(vname) == trim(inactive_name)) return ! ignore this
+
+      if (qna%exists(trim(vname))) then
+         iv = qna%ind(trim(vname))
+         return ! this is a 3d array name
+      endif
+
+      if (trim(vname) == "dens") then
+         allocate(ic, source = iarr_all_dn)
+         iv = wna%fi
+         ic = iarr_all_dn
+         return
+      else if (trim(vname) == "velx") then
+         allocate(ic, source = iarr_all_mx)
+         iv = wna%fi
+         ic = iarr_all_mx
+         return
+      else if (trim(vname) == "vely") then
+         allocate(ic, source = iarr_all_my)
+         iv = wna%fi
+         ic = iarr_all_my
+         return
+      else if (trim(vname) == "velz") then
+         allocate(ic, source = iarr_all_mz)
+         iv = wna%fi
+         ic = iarr_all_mz
+         return
+      else if (trim(vname) == "ener") then
+         allocate(ic, source = iarr_all_en)
+         iv = wna%fi
+         ic = iarr_all_en
+         return
+      endif
+      !> \todo identify here all {den,vl[xyz],ene}{d,n,i}
+      !> \todo introduce possibility to operate on pressure or other indirect fields
+
+      write(msg,'(3a)')"[unified_ref_crit_var:identify_field] Unidentified refinement variable: '",trim(vname),"'"
+      if (master) call warn(msg)
+
+   end subroutine identify_field
+
+!> \brief A simple constructor for single scalar fields
+
+   function init(rf, iv, ic) result(this)
+
+      use dataio_pub,       only: printinfo, msg, die, warn
+      use func,             only: operator(.notequals.)
+      use mpisetup,         only: master
+      use named_array_list, only: qna, wna
+      use refinement,       only: ref_auto_param, inactive_name
+
+      implicit none
+
+      type(ref_auto_param),      intent(in) :: rf  !< the data read from problem.par
+      integer(kind=4),           intent(in) :: iv  !< index in qna or wna
+      integer(kind=4), optional, intent(in) :: ic  !< sub index in wna
+
+      type(urc_var) :: this  !< an object to be constructed
+
+      if (master) then
+         write(msg, '(5a,2g13.5,a)')"[URC var]   Initializing refinement on variable '", trim(rf%rvar), "', method: '", trim(rf%rname), "', thresholds = [ ", rf%ref_thr, rf%deref_thr, " ]"
+         if (rf%aux .notequals. 0.) write(msg(len_trim(msg)+1:), '(a,g13.5)') ", with parameter = ", rf%aux
+         if (rf%plotfield)  write(msg(len_trim(msg)+1:), '(a)') ", with plotfield"
+         if (present(ic)) then
+            write(msg(len_trim(msg)+1:), '(a, i3,a,i3,a)') ", wna index: ", iv,"(", ic, ")"
+         else
+            write(msg(len_trim(msg)+1:), '(a, i3)') ", qna index: ", iv
+         endif
+         call printinfo(msg)
+         if (present(ic)) then
+            if (.not. wna%lst(iv)%vital) call warn("[unified_ref_crit_var:init] 4D field '" // trim(wna%lst(iv)%name) // "' is not vital. Please make sure that the guardcells are properly updater for refinement update.")
+         else
+            if (.not. qna%lst(iv)%vital) call warn("[unified_ref_crit_var:init] 3D field '" // trim(qna%lst(iv)%name) // "' is not vital. Please make sure that the guardcells are properly updater for refinement update.")
+         endif
+      endif
+
+      ! urc_filter
+      this%ref_thr   = rf%ref_thr
+      this%deref_thr = rf%deref_thr
+      this%plotfield = rf%plotfield
+
+      ! own components
+      this%iv = iv
+      if (present(ic)) this%ic = ic
+      this%rvar  = rf%rvar
+      this%rname = rf%rname
+      this%aux   = rf%aux
+
+!> \todo Implement Richardson extrapolation method, as described in M. Berger papers
+
+      select case (trim(this%rname))
+         case ("grad")
+            this%refine => refine_on_gradient
+         case ("relgrad")
+            this%refine => refine_on_relative_gradient
+         case ("Loechner", "second_order", "d2")
+            this%refine => refine_on_second_derivative
+         case (trim(inactive_name)) ! do nothing
+         case default
+            call die("[unified_ref_crit_var:init] unknown refinement detection routine")
+      end select
+
+   end function init
+
+!> \brief Mark regions for refinement and derefinement
+
+   subroutine mark_var(this, cg)
+
+      use constants, only: INVALID
+      use grid_cont, only: grid_container
+
+      implicit none
+
+      class(urc_var),                intent(inout) :: this  !< an object invoking the type-bound procedure
+      type(grid_container), pointer, intent(inout) :: cg    !< current grid piece
+
+      real, dimension(:,:,:), pointer :: p3d
+
+      if (any(cg%leafmap)) then
+         if (this%ic == INVALID) then
+            p3d => cg%q(this%iv)%arr
+         else
+            associate (a => cg%w(this%iv)%arr)
+               p3d(lbound(a, dim=2):, lbound(a, dim=3):, lbound(a, dim=4):) => cg%w(this%iv)%arr(this%ic, :, :, :)
+            end associate
+         endif
+         call this%refine(cg, p3d)
+      endif
+
+      return
+
+   end subroutine mark_var
 
 !>
 !! \brief R. Loechner criterion
@@ -79,16 +291,16 @@ contains
 
       implicit none
 
-      class(ref_crit),                 intent(in)    :: this !< this contains refinement parameters
+      class(urc_var),                  intent(in)    :: this !< this contains refinement parameters
       type(grid_container), pointer,   intent(inout) :: cg   !< current grid piece
-      real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least two layers of updated guardcells)
+      real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least two layers of up-to-date guardcells)
 
       integer :: i, j, k
       real :: sn, sd, r, max_r
       integer, parameter :: how_far = 2
 
-      if (dom%geometry_type /= GEO_XYZ) call die("[refinement_filters:refine_on_second_derivative] noncartesian geometry not supported yet")
-      if (dom%nb < how_far+1) call die("[refinement_filters:refine_on_second_derivative] at east 2 guardcells are required")
+      if (dom%geometry_type /= GEO_XYZ) call die("[unified_ref_crit_var:refine_on_second_derivative] noncartesian geometry not supported yet")
+      if (dom%nb < how_far+1) call die("[unified_ref_crit_var:refine_on_second_derivative] at east 2 guardcells are required")
 
       ! Perhaps it will be a bit faster with arrays for storing first-order differences
       ! but let's see if it works first and then how expensive it is.
@@ -152,8 +364,7 @@ contains
                if (this%iplot /= INVALID) cg%q(this%iplot)%arr(i, j, k) = r
                max_r = max(max_r, r)
 
-               if (i >= cg%is .and. i <= cg%ie .and. j >= cg%js .and. j <= cg%je .and. k >= cg%ks .and. k <= cg%ke) &
-                    cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr)
+               cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr)
 
             enddo
          enddo
@@ -214,7 +425,7 @@ contains
 
       implicit none
 
-      class(ref_crit),                 intent(in)    :: this !< this contains refinement parameters
+      class(urc_var),                  intent(in)    :: this !< this contains refinement parameters
       type(grid_container), pointer,   intent(inout) :: cg   !< current grid piece
       real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least one layer of updated guardcells)
 
@@ -309,7 +520,7 @@ contains
 
       implicit none
 
-      class(ref_crit),                 intent(in)    :: this !< this contains refinement parameters
+      class(urc_var),                  intent(in)    :: this !< this contains refinement parameters
       type(grid_container), pointer,   intent(inout) :: cg   !< current grid piece
       real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least one layer of updated guardcells)
 
@@ -405,7 +616,7 @@ contains
       !!
       !! \details This routine should return value between 0 and 1.
       !! rel_grad_1pair == 0 when a == b, also when a == b == 0
-      !! rel_grad_1pair == 1 when one argument ==0 and the other /= 0
+      !! rel_grad_1pair == 1 when one argument == 0 and the other /= 0
       !! rel_grad_1pair == 1 when a*b < 0
       !<
 
@@ -452,4 +663,4 @@ contains
 
    end subroutine refine_on_relative_gradient
 
-end module refinement_filters
+end module unified_ref_crit_var

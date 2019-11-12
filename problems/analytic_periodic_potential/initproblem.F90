@@ -86,7 +86,7 @@ contains
       use mpisetup,         only: rbuff, ibuff, cbuff, master, slave, piernik_MPI_Bcast
       use multigridvars,    only: ord_prolong
       use named_array_list, only: qna
-      use refinement_crit_list, only: user_ref2list
+      use unified_ref_crit_list, only: urc_list
 
       implicit none
 
@@ -164,7 +164,7 @@ contains
       call all_cg%reg_var(ares_n)
       call all_cg%reg_var(asrc_n)
 
-      call user_ref2list(qna%ind(apot_n), INVALID, ref_thr, deref_thr, 0., "grad", .true.)
+      call urc_list%add_user_urcv(qna%ind(apot_n), INVALID, ref_thr, deref_thr, 0., "grad", .true.)
 
    end subroutine read_problem_par
 
