@@ -287,34 +287,19 @@ contains
 #else /* !COSM_RAYS_SOURCES */
                   cg%u(iarr_crn(1:2), i, j, k) = cg%u(iarr_crn(1:2), i, j, k) + [amp_cr1, amp_cr2]*decr
 #endif /* !COSM_RAYS_SOURCES */
-               enddo
-            enddo
-         enddo
 #ifdef COSM_RAY_ELECTRONS
 ! Explosions @CRESP independent of cr nucleons
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-
-                  e_tot = 0.0
-                  do ipm = -1, 1
-                     do jpm = -1, 1
-                        do kpm = -1, 1
-                           r2 = (cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-ysn+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-zsn+real(kpm)*dom%L_(zdim))**2
-                           e_tot = e_tot + amp_cr*exp(-r2/r0**2)
-                        enddo
-                     enddo
-                  enddo
-                  cresp%n = 0.0 ;  cresp%e = 0.0 ; e_tot = e_tot * cre_eff
-                  if (e_tot .gt. smallcree) then
+                  cresp%n = 0.0 ;  cresp%e = 0.0 ; e_tot = amp_cr1 * cre_eff * decr
+                  if (e_tot > smallcree) then
                     call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot)
                     cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
                     cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
                   endif
+#endif /* COSM_RAY_ELECTRONS */
                enddo
             enddo
          enddo
-#endif /* COSM_RAY_ELECTRONS */
+
          cgl => cgl%nxt
       enddo
 
