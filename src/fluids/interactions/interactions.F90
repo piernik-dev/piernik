@@ -360,6 +360,9 @@ contains
       return
    end subroutine balsara_implicit_interactions
 
+#if 0
+! this function is not used anywhere
+
 !>
 !! \brief balsara_implicit_interactions rewritten to function
 !! \details
@@ -433,6 +436,8 @@ contains
       ! usrc should be used to update u1 in all_sources procedure: u1 = u1 + rk2factror*usrc*dt
       return
    end function balsara_based_interactions_function
+
+#endif /* 0 */
 
    subroutine update_grain_size(new_size)
       use fluidindex, only: flind

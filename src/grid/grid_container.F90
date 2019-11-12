@@ -122,7 +122,7 @@ contains
       this%SFC_id     = SFC_order(this%my_se(:, LO) - l%off)
 
       allocate(this%leafmap  (this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)), &
-           &   this%refinemap(this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)))
+           &   this%refinemap(this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI), this%lhn(zdim, LO):this%lhn(zdim, HI)))
 
       this%leafmap    (:, :, :) = .true.
       this%refinemap  (:, :, :) = .false.
@@ -165,8 +165,8 @@ contains
       enddo
 
       ! arrays not handled through named_array feature
-      if (allocated(this%leafmap))      deallocate(this%leafmap)
-      if (allocated(this%refinemap))    deallocate(this%refinemap)
+      if (allocated(this%leafmap))   deallocate(this%leafmap)
+      if (allocated(this%refinemap)) deallocate(this%refinemap)
 
    end subroutine cleanup
 
@@ -213,7 +213,8 @@ contains
       integer :: type
       logical, save :: warned = .false.
 
-      this%refinemap = this%refinemap .and. this%leafmap
+      this%refinemap(this%is:this%ie, this%js:this%je, this%ks:this%ke) = &
+           this%refinemap(this%is:this%ie, this%js:this%je, this%ks:this%ke) .and. this%leafmap
       type = NONE
       if (any(this%refinemap)) then
          type = REFINE
