@@ -33,7 +33,7 @@
 !<
 
 module particle_utils
-! pulled by ANY
+! pulled by GRAV
 
    implicit none
 
