@@ -207,7 +207,7 @@ contains
 
       if (ref_thr <= deref_thr) call die("[initproblem:read_problem_par] ref_thr <= deref_thr")
 
-      if (a1 .equals. 0.) call add_part_in_proper_cg(d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0])
+      if (a1 .equals. 0.) call add_part_in_proper_cg(1, d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0])
 
       if (master) then
          if (a1 > 0.) then

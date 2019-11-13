@@ -148,7 +148,7 @@ contains
          call all_cg%reg_var(tsc_n)
 
          do i = lbound(px, 1), ubound(px, 1)
-            call add_part_in_proper_cg(1.0, [px(i), py(i), 0.0], [0.0, 0.0, 0.0])
+            call add_part_in_proper_cg(i, 1.0, [px(i), py(i), 0.0], [0.0, 0.0, 0.0])
          enddo
 
          frun = .false.
