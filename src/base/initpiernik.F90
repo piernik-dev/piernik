@@ -302,9 +302,6 @@ contains
 #if defined(SELF_GRAV) && defined(NBODY)
       call source_terms_grav                 ! moved from the beginning of the first make_3sweeps
 #endif /* SELF_GRAV && NBODY */
-#ifdef RESISTIVE
-      call compute_resist                    ! etamax%val is required by timestep_resist
-#endif /* RESISTIVE */
 #ifdef VERBOSE
       call diagnose_arrays                   ! may depend on everything
 #endif /* VERBOSE */
