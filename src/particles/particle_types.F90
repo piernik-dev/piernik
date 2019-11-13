@@ -50,9 +50,9 @@ module particle_types
 #ifdef NBODY
       real, dimension(ndims) :: acc        !< acceleration of the particle
       real                   :: energy     !< total energy of particle
+      logical                :: in, phy, out !< Flags to locate particle in the inner part of the domain or the outer part
 #endif /* NBODY */
       logical                :: outside    !< this flag is true if the particle is outside the domain
-      logical                :: in, phy, out !< Flags to locate particle in the inner part of the domain or the outer part
    contains
      procedure :: is_outside              !< compute the outside flag
    end type particle

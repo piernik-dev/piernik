@@ -38,9 +38,9 @@ module particle_utils
    implicit none
 
    private
-   public :: max_pvel_1d, add_part_in_proper_cg, count_all_particles, print_all_particles, is_part_in_cg, part_leave_cg
+   public :: max_pvel_1d, add_part_in_proper_cg, print_all_particles, is_part_in_cg
 #ifdef NBODY
-   public :: max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom
+   public :: max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom, count_all_particles, part_leave_cg
 
    real    :: tot_angmom           !< angular momentum of set of the particles
    real    :: tot_energy           !< total energy of set of the particles
@@ -48,10 +48,27 @@ module particle_utils
    real    :: d_angmom             !< error of angular momentum in succeeding timensteps
    logical :: twodtscheme
    logical :: dump_diagnose        !< dump diagnose for each particle to a seperate log file
+   integer, parameter :: npf = 12  !< number of single particle fields
 #endif /* NBODY */
-   integer, parameter :: npf = 12 !> number of single particle fields
 
 contains
+
+   subroutine print_all_particles
+
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         call cgl%cg%pset%print
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine print_all_particles
 
    subroutine max_pvel_1d(cg, max_v)
 
@@ -352,6 +369,7 @@ contains
 
    end subroutine add_part_in_proper_cg
 
+#ifdef NBODY
    ! Sends leaving particles between processors, and creates ghosts
    subroutine part_leave_cg()
 
@@ -542,24 +560,6 @@ contains
 
    end function count_all_particles
 
-   subroutine print_all_particles
-
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         call cgl%cg%pset%print
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine print_all_particles
-
-#ifdef NBODY
    subroutine dump_particles_to_textfile
 
       use cg_leaves,        only: leaves
