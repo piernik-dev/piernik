@@ -85,7 +85,6 @@
     alfasupp     = 1.0
     fake_ic      = .false.
     divine_intervention_type = 3
-    jeansref     = 12.  ! Require really good Jeans-length refinement
  /
 
  $MULTIGRID_SOLVER
@@ -109,4 +108,6 @@
    bsize     = 32, 32, 16
    level_max = 6
    n_updamr  = 5
+   jeans_ref     = 12.  ! Require really good Jeans-length refinement
+   jeans_plot = .true.  ! because we asked for "nJ" in plot vars(:)
  /

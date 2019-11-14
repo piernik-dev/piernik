@@ -90,14 +90,14 @@ contains
 !! When the position equals temp_index, use temporary storage.
 !<
 
-   logical function compare_elements(this, a, b)
+   pure logical function compare_elements(this, a, b)
 
       use sortable_list, only: temp_index
 
       implicit none
 
-      class(sort_cg_list_T), intent(inout) :: this
-      integer,               intent(in)    :: a, b
+      class(sort_cg_list_T), intent(in) :: this
+      integer,               intent(in) :: a, b
 
       if (a == b) then
          compare_elements = .false.

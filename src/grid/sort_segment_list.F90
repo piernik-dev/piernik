@@ -165,14 +165,14 @@ contains
 !! When the position equals temp_index, use temporary storage.
 !<
 
-   logical function compare_elements(this, a, b)
+   pure logical function compare_elements(this, a, b)
 
       use sortable_list, only: temp_index
 
       implicit none
 
-      class(sort_segment_list_T), intent(inout) :: this !< object invoking type-bound procedure
-      integer,                    intent(in)    :: a, b
+      class(sort_segment_list_T), intent(in) :: this !< object invoking type-bound procedure
+      integer,                    intent(in) :: a, b
 
       if (a == b) then
          compare_elements = .false.

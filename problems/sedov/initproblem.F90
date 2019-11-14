@@ -71,7 +71,7 @@ contains
       use fluidindex,           only: flind
       use mpisetup,             only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
       use named_array_list,     only: wna
-      use refinement_crit_list, only: user_ref2list
+      use unified_ref_crit_list, only: urc_list
 
       implicit none
 
@@ -170,7 +170,7 @@ contains
       enddo
 
       do id = 1, flind%energ
-         call user_ref2list(wna%fi, flind%all_fluids(id)%fl%ien, ref_thr, deref_thr, ref_eps, "Loechner", .true.)
+         call urc_list%add_user_urcv(wna%fi, flind%all_fluids(id)%fl%ien, ref_thr, deref_thr, ref_eps, "Loechner", .true.)
       enddo
 
 

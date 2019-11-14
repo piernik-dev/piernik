@@ -127,21 +127,21 @@
  /
 
  $PROBLEM_CONTROL
-    d0     = 1.0 ! when COSM_RAYS_SOURCES are defined, the density somehow scales the result of sourcecosmicrays.F90 and values like 1e5 quickly lead to FP overflow. This must be a bug.
-    p0     = 1.0
-    bx0    = 1.0e-1
-    by0    = 1.0e-1
-    bz0    = 0.0
-    x0     = 0.0
-    y0     = 0.0
-    z0     = 0.0
-    r0     = 64.0
-    vxd0   = 0.0
-    vyd0   = 0.0
-    vzd0   = 0.0
+    d0        = 1.0 ! when COSM_RAYS_SOURCES are defined, the density somehow scales the result of sourcecosmicrays.F90 and values like 1e5 quickly lead to FP overflow. This must be a bug.
+    p0        = 1.0
+    bx0       = 1.0e-1
+    by0       = 1.0e-1
+    bz0       = 0.0
+    x0        = 0.0
+    y0        = 0.0
+    z0        = 0.0
+    r0        = 64.0
+    vxd0      = 0.0
+    vyd0      = 0.0
+    vzd0      = 0.0
     expansion_cnst = 0.0e-1
-    beta_cr= 0.0e-3
-    amp_cr = 1000.0
+    beta_cr   = 0.0e-3
+    amp_cr1   = 1000.0
     norm_step = 1
  /
 
