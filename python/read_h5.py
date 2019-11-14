@@ -3,6 +3,7 @@
 import h5py
 import os
 import sys
+from colored_io import prtinfo, prtwarn, read_var, die
 if (sys.version[0:3] != "2.7"):
     raw_input = input
     not_py27 = True
@@ -32,7 +33,7 @@ def append_split_var(line, variable_name, var_array_to_append, param_found):
     return var_array_to_append, param_found
 
 # reads problem.par file embedded in PIERNIK h5 file --------------------------
-def read_par(hdf5_filename, var_nam): #, var_array):
+def read_par(hdf5_filename, var_nam, default_values): #, var_array):
         if len(hdf5_filename)   <= 1:
             sys.exit("Exiting: no filename provided")
         if len(str(var_nam[0])) <= 1 and len(var_nam) <= 1:
@@ -49,9 +50,12 @@ def read_par(hdf5_filename, var_nam): #, var_array):
                     value, found_parameter[i] = append_split_var(line, var_nam[i], var_array, found_parameter[i])
         for i in range(len(var_nam)):
             if found_parameter[i] == False:
-                print("Warning: some parameters were not included in problem.par, i.e: %s . Please provide it:" %var_nam[i])
+                prtwarn("Warning: some parameters were not included in problem.par, i.e: %s (default value: %s) . Please provide it:" %(var_nam[i], str(default_values[i])) )
                 value = input_names_array()
-                var_array.append(value)
+                if (len(value) > 1):
+                  var_array.append(value)
+                else:
+                   var_array.append(default_values[i])
         return var_array
 # for given string value it determines the type of value and returns it -------
 # Value types supported: integer, float, boolean and string.
@@ -91,6 +95,6 @@ def determine_type_append(var):
         return var
 # read names if nothing provided
 def input_names_array():
-    var_names = raw_input("Give variables to be read from problem.par file (separated by space): ")
+    var_names = read_var("Give variables to be read from problem.par file (separated by space): ")
     var_names = var_names.split(' ')
     return var_names
