@@ -298,6 +298,7 @@ contains
 
    end function hzeq_scheme_v1
 
+#ifdef HYDROSTATIC_V2
    real function hzeq_scheme_v2(ksub, up) result(factor)
 
       implicit none
@@ -309,6 +310,7 @@ contains
       factor = (4.0 + up*factor)/(4.0 - up*factor)
 
    end function hzeq_scheme_v2
+#endif
 
    subroutine get_gprofs_accel(iia, jja)
 

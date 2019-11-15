@@ -87,20 +87,20 @@ contains
 
    subroutine read_problem_par
 
-      use cg_list_global,       only: all_cg
-      use constants,            only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
-      use dataio_pub,           only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,           only: die, warn, msg, printinfo
-      use domain,               only: dom
-      use fluidindex,           only: iarr_all_dn
-      use func,                 only: operator(.equals.)
-      use global,               only: smalld
-      use mpisetup,             only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
-      use multigridvars,        only: ord_prolong
-      use named_array_list,     only: wna
-      use particle_utils,       only: add_part_in_proper_cg
-      use refinement_crit_list, only: user_ref2list
-      use user_hooks,           only: ext_bnd_potential
+      use cg_list_global,        only: all_cg
+      use constants,             only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
+      use dataio_pub,            only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,            only: die, warn, msg, printinfo
+      use domain,                only: dom
+      use fluidindex,            only: iarr_all_dn
+      use func,                  only: operator(.equals.)
+      use global,                only: smalld
+      use mpisetup,              only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use multigridvars,         only: ord_prolong
+      use named_array_list,      only: wna
+      use particle_utils,        only: add_part_in_proper_cg
+      use unified_ref_crit_list, only: urc_list
+      use user_hooks,            only: ext_bnd_potential
 
       implicit none
 
@@ -207,7 +207,7 @@ contains
 
       if (ref_thr <= deref_thr) call die("[initproblem:read_problem_par] ref_thr <= deref_thr")
 
-      if (a1 .equals. 0.) call add_part_in_proper_cg(d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0])
+      if (a1 .equals. 0.) call add_part_in_proper_cg(1, d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0])
 
       if (master) then
          if (a1 > 0.) then
@@ -236,8 +236,9 @@ contains
       ! Set up automatic refinement criteria on densities
       do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
          !> \warning only selfgravitating fluids should be added
-!         call user_ref2list(wna%fi, id, ref_thr*d0, deref_thr*d0, 0., "grad", .true.)
-         call user_ref2list(wna%fi, id, ref_thr, deref_thr, ref_eps, "Loechner", .true.)
+!         call urc_list%add_user_urcv(wna%fi, id, ref_thr*d0, deref_thr*d0, 0., "grad", .true.)
+         call urc_list%add_user_urcv(wna%fi, id, ref_thr, deref_thr, ref_eps, "Loechner", .true.)
+
       enddo
 
    end subroutine read_problem_par

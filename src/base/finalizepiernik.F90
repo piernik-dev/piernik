@@ -41,43 +41,43 @@ contains
 !<
    subroutine cleanup_piernik
 
-      use dataio,               only: cleanup_dataio
-      use decomposition,        only: cleanup_decomposition
-      use diagnostics,          only: cleanup_diagnostics
-      use domain,               only: cleanup_domain
-      use fargo,                only: cleanup_fargo
-      use fluidindex,           only: cleanup_fluidindex
-      use global,               only: cleanup_global
-      use grid,                 only: cleanup_grid
-      use grid_container_ext,   only: cg_extptrs
-      use initfluids,           only: cleanup_fluids
-      use interactions,         only: cleanup_interactions
-      use mpisetup,             only: cleanup_mpi
-      use refinement_crit_list, only: cleanup_refinement
-      use sortable_list,        only: cleanup_sortable_list
-      use tag_pool,             only: t_pool
-      use timer,                only: cleanup_timers
-      use user_hooks,           only: cleanup_problem
+      use dataio,                only: cleanup_dataio
+      use decomposition,         only: cleanup_decomposition
+      use diagnostics,           only: cleanup_diagnostics
+      use domain,                only: cleanup_domain
+      use fargo,                 only: cleanup_fargo
+      use fluidindex,            only: cleanup_fluidindex
+      use global,                only: cleanup_global
+      use grid,                  only: cleanup_grid
+      use grid_container_ext,    only: cg_extptrs
+      use initfluids,            only: cleanup_fluids
+      use interactions,          only: cleanup_interactions
+      use mpisetup,              only: cleanup_mpi
+      use sortable_list,         only: cleanup_sortable_list
+      use tag_pool,              only: t_pool
+      use timer,                 only: cleanup_timers
+      use unified_ref_crit_list, only: urc_list
+      use user_hooks,            only: cleanup_problem
 #ifdef RANDOMIZE
-      use randomization,        only: cleanup_randomization
+      use randomization,         only: cleanup_randomization
 #endif /* RANDOMIZE */
 #ifdef MULTIGRID
-      use multigrid,            only: cleanup_multigrid
+      use multigrid,             only: cleanup_multigrid
 #endif /* MULTIGRID */
 #ifdef GRAV
-      use particle_pub,         only: cleanup_particles
+      use particle_pub,          only: cleanup_particles
 #endif /* GRAV */
 #ifdef PIERNIK_OPENCL
-      use piernikcl,            only: cleanup_opencl
+      use piernikcl,             only: cleanup_opencl
 #endif /* PIERNIK_OPENCL */
 #ifdef RESISTIVE
-      use resistivity,          only: cleanup_resistivity
+      use resistivity,           only: cleanup_resistivity
 #endif /* RESISTIVE */
 
       implicit none
 
       if (associated(cleanup_problem)) call cleanup_problem; call nextdot(.false.)
-      call cleanup_refinement;     call nextdot(.false.)
+      call urc_list%cleanup;       call nextdot(.false.)
       call t_pool%cleanup;         call nextdot(.false.)
       call cleanup_interactions;   call nextdot(.false.)
       call cleanup_dataio;         call nextdot(.false.)

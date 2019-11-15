@@ -69,7 +69,7 @@ contains
 
       integer(kind=4) :: iq
 
-      do iq = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
+      do iq = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
          if (qna%lst(iq)%vital) call leaves%leaf_arr3d_boundaries(iq)
       enddo
 

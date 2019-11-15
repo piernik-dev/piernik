@@ -64,6 +64,7 @@ contains
       use refinement_update,     only: update_refinement
       use sources,               only: init_sources
       use timer,                 only: set_timer
+      use unified_ref_crit_list, only: urc_list
       use units,                 only: init_units
       use user_hooks,            only: problem_post_restart, problem_post_IC
 #ifdef RIEMANN
@@ -178,6 +179,7 @@ contains
 #endif /* COSM_RAYS */
 
       call init_refinement
+      call urc_list%init                     ! initialize unified refinement criteria
 
       call init_decomposition
 #ifdef GRAV
@@ -284,7 +286,12 @@ contains
          call cleanup_hydrostatic
 #endif /* GRAV */
 
-         if (ac /= 0 .and. master) call warn("[initpiernik:init_piernik] The refinement structure does not seem to converge. Your refinement criteria may lead to oscillations of refinement structure. Bailing out.")
+         if (ac /= 0) then
+            if (master) call warn("[initpiernik:init_piernik] The refinement structure does not seem to converge. Your refinement criteria may lead to oscillations of refinement structure. Bailing out.")
+#ifdef GRAV
+            call source_terms_grav  ! fix up gravitational potential when refiements did not converge
+#endif /* GRAV */
+         endif
          if (associated(problem_post_IC)) call problem_post_IC
       endif
 
@@ -295,9 +302,6 @@ contains
 #if defined(SELF_GRAV) && defined(NBODY)
       call source_terms_grav                 ! moved from the beginning of the first make_3sweeps
 #endif /* SELF_GRAV && NBODY */
-#ifdef RESISTIVE
-      call compute_resist                    ! etamax%val is required by timestep_resist
-#endif /* RESISTIVE */
 #ifdef VERBOSE
       call diagnose_arrays                   ! may depend on everything
 #endif /* VERBOSE */
