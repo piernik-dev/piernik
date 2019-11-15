@@ -77,6 +77,7 @@ module common_hdf5
    type :: cg_output
       integer(HID_T), dimension(:), allocatable   :: cg_g_id
       integer(HID_T), dimension(:,:), allocatable :: dset_id
+      integer(HID_T), dimension(:,:), allocatable :: pdset_id
       integer(HID_T)                              :: xfer_prp
       integer, allocatable, dimension(:)          :: offsets
       integer, allocatable, dimension(:)          :: cg_src_p
@@ -239,10 +240,17 @@ contains
 
    subroutine cleanup_hdf5
 
-      implicit none
+#ifdef NBODY_1FILE
+     use cg_particles_io, only: pdsets
+#endif /* NBODY_1FILE */
+     implicit none
+
 
       if (allocated(hdf_vars))       deallocate(hdf_vars)
       if (allocated(hdf_vars_avail)) deallocate(hdf_vars_avail)
+#ifdef NBODY_1FILE
+      if (allocated(pdsets))          deallocate(pdsets)
+#endif /* NBODY_1FILE */
 
    end subroutine cleanup_hdf5
 
@@ -724,7 +732,7 @@ contains
    subroutine write_to_hdf5_v2(filename, otype, create_empty_cg_datasets, write_cg_to_hdf5)
 
       use cg_leaves,    only: leaves
-      use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, I_FOUR, INT4, LO, HI, &
+      use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, I_FOUR, I_FIVE, INT4, LO, HI, &
          &                    GEO_XYZ, GEO_RPZ
       use dataio_pub,   only: die, nproc_io, can_i_write, domain_dump, msg
       use domain,       only: dom
@@ -737,6 +745,9 @@ contains
       use helpers_hdf5, only: create_attribute!, create_corefile
       use mpi,          only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
       use mpisetup,     only: comm, FIRST, LAST, master, mpi_err, piernik_MPI_Bcast
+#ifdef NBODY_1FILE
+      use particle_utils, only: count_all_particles
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -746,13 +757,20 @@ contains
          !>
          !! Function responsible for creating empty datasets, called by master
          !<
+#ifdef NBODY_1FILE
+         subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, cg_n_o, Z_avail, n_part)
+#else
          subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, cg_n_o, Z_avail)
+#endif /* NBODY_1FILE */
             use hdf5, only: HID_T
             implicit none
             integer(HID_T),                intent(in) :: cgl_g_id
             integer(kind=4), dimension(:), intent(in) :: cg_n_b
             integer(kind=4), dimension(:), intent(in) :: cg_n_o
             logical(kind=4),               intent(in) :: Z_avail
+#ifdef NBODY_1FILE
+      integer(kind=8)                                 :: n_part
+#endif /* NBODY_1FILE */
          end subroutine create_empty_cg_datasets
 
          !>
@@ -797,7 +815,9 @@ contains
 
       type(gdf_root_datasets_T)                     :: rd
       type(gdf_parameters_T)                        :: gdf_sp
-
+#ifdef NBODY_1FILE
+      integer(kind=8)                               :: n_part
+#endif /* NBODY_1FILE */
       ! Create a new file and initialize it
 
       ! Prepare groups and datasets for grid containers on the master
@@ -869,6 +889,9 @@ contains
             if (otype == O_RES) allocate(cg_n_o(cg_n(p), ndims))
             if (p == FIRST) then
                call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
+#ifdef NBODY_1FILE
+               n_part = count_all_particles()
+#endif /* NBODY_1FILE */
             else
                call MPI_Recv(cg_rl,  size(cg_rl),  MPI_INTEGER,  p, tag,         comm, MPI_STATUS_IGNORE, mpi_err)
                call MPI_Recv(cg_n_b, size(cg_n_b), MPI_INTEGER,  p, tag+I_ONE,   comm, MPI_STATUS_IGNORE, mpi_err)
@@ -876,9 +899,11 @@ contains
                if (otype == O_OUT) &
                   & call MPI_Recv(dbuf,   size(dbuf),   MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, mpi_err)
                if (otype == O_RES) &
-                  & call MPI_Recv(cg_n_o, size(cg_n_o), MPI_INTEGER,  p, tag+I_FOUR,  comm, MPI_STATUS_IGNORE, mpi_err)
+                    & call MPI_Recv(cg_n_o, size(cg_n_o), MPI_INTEGER,  p, tag+I_FOUR,  comm, MPI_STATUS_IGNORE, mpi_err)
+#ifdef NBODY_1FILE
+               call MPI_Recv(n_part, 1, MPI_INTEGER, p, tag+I_FIVE, comm, MPI_STATUS_IGNORE, mpi_err)
+#endif /* NBODY_1FILE */
             endif
-
             do g = 1, cg_n(p)
                call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error) ! create "/data/grid_%08d"
 
@@ -886,6 +911,7 @@ contains
                temp = cg_n_b(g, :)
                call create_attribute(cg_g_id, cg_size_aname, temp)                        ! create "/data/grid_%08d/n_b"
                call create_attribute(cg_g_id, cg_offset_aname, int(cg_off(g, :), kind=4)) ! create "/data/grid_%08d/off"
+
                if (otype == O_OUT) then
                   temp(:) = dbuf(cg_le, g, :)
                   call create_attribute(cg_g_id, cg_ledge_aname, temp)  ! create "/data/grid_%08d/left_edge"
@@ -907,9 +933,11 @@ contains
 
                if (any(cg_off(g, :) > 2.**31)) &
                   & call die("[common_hdf5:write_to_hdf5_v2] large offsets require better treatment")
-
+#ifdef NBODY_1FILE
+               call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail, n_part) !!!!!
+#else
                call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail) !!!!!
-
+#endif /* NBODY_1FILE */
                call h5gclose_f(cg_g_id, error)
             enddo
 
@@ -965,6 +993,10 @@ contains
          call MPI_Send(cg_off, size(cg_off), MPI_INTEGER8, FIRST, tag+I_TWO,   comm, mpi_err)
          if (otype == O_OUT) call MPI_Send(dbuf,   size(dbuf),   MPI_REAL8,    FIRST, tag+I_THREE, comm, mpi_err)
          if (otype == O_RES) call MPI_Send(cg_n_o, size(cg_n_o), MPI_INTEGER,  FIRST, tag+I_FOUR,  comm, mpi_err)
+#ifdef NBODY_1FILE
+         n_part = count_all_particles()
+         call MPI_Send(n_part, 1, MPI_INTEGER, FIRST, tag+I_FIVE, comm, mpi_err)
+#endif /* NBODY_1FILE */
          deallocate(cg_rl, cg_n_b, cg_off)
          if (associated(dbuf)) deallocate(dbuf)
          if (associated(cg_n_o)) deallocate(cg_n_o)
@@ -994,7 +1026,7 @@ contains
 
       deallocate(cg_n, cg_all_n_b, cg_all_n_o)
 
-   end subroutine write_to_hdf5_v2
+    end subroutine write_to_hdf5_v2
 
    subroutine collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
 
@@ -1069,7 +1101,6 @@ contains
       use mpisetup,   only: master, piernik_MPI_Bcast
 
       implicit none
-
       integer(kind=4),       intent(in)           :: wr_rd, no
       character(len=I_FOUR), intent(in)           :: ext
       logical,               intent(in), optional :: bcast
@@ -1126,6 +1157,9 @@ contains
       use hdf5,       only: HID_T, H5P_GROUP_ACCESS_F, H5P_DATASET_ACCESS_F, H5P_DATASET_XFER_F, &
           &                 h5gopen_f, h5pclose_f, h5dopen_f
       use mpisetup,   only: FIRST, LAST
+#ifdef NBODY_1FILE
+      use cg_particles_io, only: pdsets
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -1172,10 +1206,19 @@ contains
 
          plist_id = set_h5_properties(H5P_DATASET_ACCESS_F, nproc_io)
          allocate(this%dset_id(1:this%tot_cg_n, lbound(dsets, dim=1):ubound(dsets, dim=1)))
+#ifdef NBODY_1FILE
+         allocate(this%pdset_id(1:this%tot_cg_n, lbound(pdsets, dim=1):ubound(pdsets, dim=1)))
+#endif /* NBODY_1FILE */
          do ncg = 1, this%tot_cg_n
             do i = lbound(dsets, dim=1), ubound(dsets, dim=1)
                call h5dopen_f(this%cg_g_id(ncg), dsets(i), this%dset_id(ncg,i), error, dapl_id = plist_id)
             enddo
+
+#ifdef NBODY_1FILE
+            do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
+               call h5dopen_f(this%cg_g_id(ncg), pdsets(i), this%pdset_id(ncg,i), error, dapl_id = plist_id)
+            enddo
+#endif /* NBODY_1FILE */
          enddo
          call h5pclose_f(plist_id, error)
       endif
@@ -1201,11 +1244,19 @@ contains
             do i = lbound(this%dset_id, 2), ubound(this%dset_id, 2)
                call h5dclose_f(this%dset_id(ncg, i), error)
             enddo
+#ifdef NBODY_1FILE
+            do i = lbound(this%pdset_id, 2), ubound(this%pdset_id, 2)
+               call h5dclose_f(this%pdset_id(ncg, i), error)
+            enddo
+#endif /* NBODY_1FILE */
             call h5gclose_f(this%cg_g_id(ncg), error)
          enddo
       endif
       call h5pclose_f(this%xfer_prp, error)
       if (allocated(this%dset_id)) deallocate(this%dset_id)
+#ifdef NBODY_1FILE
+      if (allocated(this%pdset_id)) deallocate(this%pdset_id)
+#endif /* NBODY_1FILE */
       if (allocated(this%cg_g_id)) deallocate(this%cg_g_id)
       if (allocated(this%cg_src_p)) deallocate(this%cg_src_p)
       if (allocated(this%cg_src_n)) deallocate(this%cg_src_n)

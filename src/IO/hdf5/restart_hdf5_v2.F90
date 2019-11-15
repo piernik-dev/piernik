@@ -124,8 +124,11 @@ contains
    end subroutine write_restart_hdf5_v2
 
 !> \brief create empty datasets for each cg to store restart data
-
+#ifdef NBODY_1FILE
+   subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, cg_n_o, Z_avail, n_part)
+#else
    subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, cg_n_o, Z_avail)
+#endif /* NBODY_1FILE */
 
       use common_hdf5,      only: create_empty_cg_dataset, O_RES
       use constants,        only: AT_IGNORE, AT_OUT_B, I_ONE
@@ -142,6 +145,9 @@ contains
 
       integer :: i
       integer(HSIZE_T), dimension(:), allocatable :: d_size
+#ifdef NBODY_1FILE
+      integer(kind=8)                           :: n_part
+#endif /* NBODY_1FILE */
 
       if (size(cg_n_b) /= size(cg_n_o)) call die("[restart_hdf5_v2:create_empty_cg_datasets_in_restart] size(cg_n_b) /= size(cg_n_o)")
 

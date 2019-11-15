@@ -467,9 +467,9 @@ contains
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: unmark_oldsoln
 #endif /* MULTIGRID && SELF_GRAV */
-#ifdef NBODY
+#ifndef NBODY_1FILE
       use particles_io_hdf5, only: write_nbody_hdf5
-#endif /* NBODY */
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -505,9 +505,9 @@ contains
       endif
       call report_to_master(sig%hdf_written, only_master=.True.)
       call report_string_to_master(fname, only_master=.True.)
-#ifdef NBODY
+#ifndef NBODY_1FILE
       call write_nbody_hdf5(fname)
-#endif /* NBODY */
+#endif /* NBODY_1FILE */
 
    end subroutine h5_write_to_single_file
 
@@ -543,6 +543,10 @@ contains
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
       use mpisetup,    only: master, FIRST, proc, comm, mpi_err
+#ifdef NBODY_1FILE
+      use cg_particles_io, only: pdsets, nbody_datafields
+      use particle_utils,  only: count_all_particles
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -560,6 +564,9 @@ contains
       type(cg_list_element),           pointer             :: cgl
       real, dimension(:,:,:),          pointer             :: data_dbl ! double precision buffer (internal default, single precision buffer is the plotfile output default, overridable by h5_64bit)
       type(cg_output)                                      :: cg_desc
+#ifdef NBODY_1FILE
+      integer(kind=4)                                      :: n_part
+#endif /* NBODY_1FILE */
 
       call enable_all_hdf_var  ! just in case things have changed meanwhile
 
@@ -594,6 +601,12 @@ contains
                      call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, xfer_prp = cg_desc%xfer_prp)
                   endif
                enddo
+#ifdef NBODY_1FILE
+               n_part = count_all_particles()
+               do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
+                  call nbody_datafields(cg_desc%pdset_id(ncg, i), trim(pdsets(i)), n_part)
+               enddo
+#endif /* NBODY_1FILE */
             else
                if (can_i_write) call die("[data_hdf5:write_cg_to_output] Slave can write")
                if (cg_desc%cg_src_p(ncg) == proc) then
@@ -618,7 +631,6 @@ contains
                dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
                call recycle_data(dims, cg_all_n_b, ncg, data_dbl)
                cg => cgl%cg
-
                do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
                   if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                   if (h5_64bit) then
@@ -627,6 +639,15 @@ contains
                      call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, xfer_prp = cg_desc%xfer_prp)
                   endif
                enddo
+
+#ifdef NBODY_1FILE
+               n_part = count_all_particles()
+               if (n_part .gt. 0) then
+                  do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
+                     call nbody_datafields(cg_desc%pdset_id(ncg, i), trim(pdsets(i)), n_part)
+                  enddo
+               endif
+#endif /* NBODY_1FILE */
 
                cgl => cgl%nxt
             enddo
@@ -742,12 +763,20 @@ contains
          call cancel_hdf_var(hdf_var)
       endif
 
-   end subroutine get_data_from_cg
+    end subroutine get_data_from_cg
 
+#ifdef NBODY_1FILE
+   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail, n_part)
+#else
    subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail)
+#endif /* NBODY_1FILE */
 
       use common_hdf5, only: create_empty_cg_dataset, hdf_vars, O_OUT
       use hdf5,        only: HID_T, HSIZE_T
+#ifdef NBODY_1FILE
+      use cg_particles_io, only: pdsets
+      use constants,       only: I_ONE, I_THREE
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -757,12 +786,24 @@ contains
       logical(kind=4),               intent(in) :: Z_avail
 
       integer :: i
+#ifdef NBODY_1FILE
+      integer(kind=8)                           :: n_part
+      integer(kind=8)                           :: n
+#endif /* NBODY_1FILE */
 
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
          call create_empty_cg_dataset(cg_g_id, gdf_translate(hdf_vars(i)), int(cg_n_b, kind=HSIZE_T), Z_avail, O_OUT)
       enddo
 
       if (.false.) i = size(cg_n_o) ! suppress compiler warning
+
+#ifdef NBODY_1FILE
+      do i = lbound(pdsets,1), ubound(pdsets,1)
+         n=I_THREE
+         if ((pdsets(i) == 'ppid') .or. (pdsets(i) == 'ener') .or. (pdsets(i) == 'mass')) n=I_ONE
+         call create_empty_cg_dataset(cg_g_id, gdf_translate(pdsets(i)), (/n_part, n/), Z_avail, O_OUT)
+      enddo
+#endif /* NBODY_1FILE */
 
    end subroutine create_empty_cg_datasets_in_output
 
