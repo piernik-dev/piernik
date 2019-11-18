@@ -237,9 +237,9 @@ contains
 #ifdef MAGNETIC
       use constants,  only: mag_n, magh_n, ndims, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, VAR_CENTER
       use global,     only: force_cc_mag, ord_mag_prolong
-#ifdef RIEMANN
+#if defined(RIEMANN) || defined(RTVD)
       use constants,  only: psi_n, psih_n
-#endif /* RIEMANN */
+#endif /* RIEMANN || RTVD */
 #endif /* MAGNETIC */
 
       implicit none
@@ -264,12 +264,12 @@ contains
       call this%reg_var(mag_n,  vital = .true.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B, position=pia)  !! Main array of magnetic field's components, "b"
       call this%reg_var(magh_n, vital = .false., dim4 = ndims) !! Array for copy of magnetic field's components, "b" used in half-timestep in RK2
 
-#ifdef RIEMANN
+#if defined(RIEMANN) || defined(RTVD)
       if (force_cc_mag) then
          call this%reg_var(psi_n,  vital = .true., ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B)  !! an array for div B cleaning
          call this%reg_var(psih_n, vital = .false.)  !! its copy for use in RK2
       endif
-#endif /* RIEMANN */
+#endif /* RIEMANN || RTVD */
 #endif /* MAGNETIC */
 
 #ifdef ISO

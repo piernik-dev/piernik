@@ -40,6 +40,7 @@ contains
 !! \todo add checks against PIERNIK_INIT_IO_IC to all initproblem::read_problem_par
 !! \todo split init_dataio
 !<
+
    subroutine init_piernik
 
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
@@ -67,10 +68,10 @@ contains
       use unified_ref_crit_list, only: urc_list
       use units,                 only: init_units
       use user_hooks,            only: problem_post_restart, problem_post_IC
-#ifdef RIEMANN
+#if defined(RIEMANN) || defined(RTVD)
       use hdc,                   only: init_psi
       use interpolations,        only: set_interpolations
-#endif /* RIEMANN */
+#endif /* RIEMANN || RTVD */
 #ifdef RESISTIVE
       use resistivity,           only: init_resistivity
 #endif /* RESISTIVE */
@@ -148,9 +149,9 @@ contains
       call problem_pointers                  ! set up problem-specific pointers as early as possible to allow implementation of problem-specific hacks also during the initialization
       call init_global
       code_progress = PIERNIK_INIT_GLOBAL    ! Global parameters are set up
-#ifdef RIEMANN
+#if defined(RIEMANN) || defined(RTVD)
       call set_interpolations
-#endif /* RIEMANN */
+#endif /* RIEMANN || RTVD */
 
       call init_domain
       code_progress = PIERNIK_INIT_DOMAIN    ! Base domain is known and initial domain decomposition is known
@@ -246,9 +247,9 @@ contains
          nit = 0
          finished = .false.
          call problem_initial_conditions ! may depend on anything
-#ifdef RIEMANN
+#if defined(RIEMANN) || defined(RTVD)
          call init_psi ! initialize the auxiliary field for divergence cleaning when needed
-#endif /* RIEMANN */
+#endif /* RIEMANN  || RTVD*/
 
          write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
          if (master) call printinfo(msg)

@@ -65,17 +65,17 @@ contains
       use global,         only: dt, dtm, t
       use mass_defect,    only: update_magic_mass
       use timestep_retry, only: repeat_fluidstep
-#ifdef RIEMANN
+#if defined(RIEMANN) || defined(RTVD)
       use hdc,            only: update_chspeed
-#endif /* RIEMANN */
+#endif /* RIEMANN || RTVD */
 
       implicit none
 
       call repeat_fluidstep
 
-#ifdef RIEMANN
+#if defined(RIEMANN) || defined(RTVD)
       call update_chspeed
-#endif /* RIEMANN */
+#endif /* RIEMANN || RTVD */
 
       halfstep = .false.
       t = t + dt
@@ -115,9 +115,9 @@ contains
 #ifdef SHEAR
       use shear,               only: shear_3sweeps
 #endif /* SHEAR */
-#ifdef RIEMANN
+#if defined(RIEMANN) || defined(RTVD)
       use hdc,                 only: glmdamping, eglm
-#endif /* RIEMANN */
+#endif /* RIEMANN || RTVD */
 
       implicit none
 
@@ -166,10 +166,10 @@ contains
 #endif /* GRAV */
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
-#ifdef RIEMANN
+#if defined(RIEMANN) || defined(RTVD)
       call eglm
       call glmdamping
-#endif /* RIEMANN */
+#endif /* RIEMANN || RTVD */
 
    end subroutine make_3sweeps
 
@@ -180,9 +180,10 @@ contains
 !<
    subroutine make_sweep(dir, forward)
 
+      use constants,      only: RTVD_SPLIT
       use dataio_pub,     only: die
       use domain,         only: dom
-      use global,         only: geometry25D
+      use global,         only: geometry25D, which_solver
       use sweeps,         only: sweep
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff
@@ -202,9 +203,9 @@ contains
       integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
       logical,         intent(in) :: forward  !< if .false. then reverse operation order in the sweep
 
-#if defined(RTVD) && defined(MAGNETIC)
-      if (divB_0_method /= DIVB_CT) call die("[fluidupdate:make_sweep] only CT is implemented in RTVD")
-#endif /* RTVD && MAGNETIC */
+#if defined(MAGNETIC)
+      if ((which_solver == RTVD_SPLIT) .and. (divB_0_method /= DIVB_CT)) call die("[fluidupdate:make_sweep] only CT is implemented in RTVD")
+#endif /* MAGNETIC */
 
       ! ToDo: check if changes of execution order here (block loop, direction loop, boundary update can change
       ! cost or allow for reduction of required guardcells

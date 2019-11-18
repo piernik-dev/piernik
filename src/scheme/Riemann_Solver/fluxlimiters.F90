@@ -35,7 +35,8 @@
 #include "piernik.h"
 
 module fluxlimiters
-! pulled by RIEMANN
+
+! pulled by RIEMANN || RTVD
 
    implicit none
    private

@@ -30,22 +30,24 @@
 !! \brief Module that implements 1D hydro calls for a single cg for RTVD
 !<
 
-module solvecg
+module solvecg_rtvd
 
-! pulled by RTVD
+! pulled by RTVD || RIEMANN
 
    implicit none
 
    private
-   public  :: solve_cg
+   public  :: solve_cg_rtvd
 
 contains
 
 !>
 !! \brief Apply MHD update + source terms to a single grid container, rely on properly updated guardcells, handle local fine-coarse fluxes.
+!!
+!! This routine has to conform to the interface defined in sweeps::sweep
 !<
 
-   subroutine solve_cg(cg, cdim, istep, fargo_vel)
+   subroutine solve_cg_rtvd(cg, cdim, istep, fargo_vel)
 
       use bfc_bcc,            only: interpolate_mag_field
       use cg_level_connected, only: cg_level_connected_T, find_level
@@ -167,6 +169,6 @@ contains
 
       cg%processed = .true.
 
-   end subroutine solve_cg
+   end subroutine solve_cg_rtvd
 
-end module solvecg
+end module solvecg_rtvd

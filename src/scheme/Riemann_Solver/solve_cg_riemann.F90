@@ -52,18 +52,20 @@
 !! The algorithm is simply present for experimental purposes.
 !<
 
-module solvecg
+module solvecg_riemann
 
-! pulled by RIEMANN
+! pulled by RIEMANN || RTVD
 
    implicit none
 
    private
-   public  :: solve_cg
+   public  :: solve_cg_riemann
 
 contains
 
-   subroutine solve_cg(cg, ddim, istep, fargo_vel)
+! This routine has to conform to the interface defined in sweeps::sweep
+
+   subroutine solve_cg_riemann(cg, ddim, istep, fargo_vel)
 
       use constants,        only: mag_n, GEO_XYZ
       use dataio_pub,       only: die
@@ -102,7 +104,7 @@ contains
 
       cg%processed = .true.
 
-   end subroutine solve_cg
+   end subroutine solve_cg_riemann
 
 !>
 !! \brief Apply MHD update + source terms to a single grid container, rely on properly updated guardcells.
@@ -394,4 +396,4 @@ contains
 
    end subroutine solve_u
 
-end module solvecg
+end module solvecg_riemann

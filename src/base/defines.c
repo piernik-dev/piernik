@@ -89,7 +89,7 @@
 #  if defined(HYDRO_SOLVER)
 #    define HS2
 #  else /* !HYDRO_SOLVER */
-#  define HYDRO_SOLVER
+#    define HYDRO_SOLVER
 #  endif /* !HYDRO_SOLVER */
 #endif /* RTVD */
 

@@ -32,7 +32,8 @@
 #include "piernik.h"
 
 module hdc
-! pulled by RIEMANN
+
+! pulled by RIEMANN || RTVD
 
    use constants, only: dsetnamelen, INVALID
 
