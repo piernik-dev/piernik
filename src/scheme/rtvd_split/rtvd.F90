@@ -32,7 +32,7 @@
 !<
 module rtvd ! split orig
 
-! pulled by RTVD || RIEMANN
+! pulled by ANY
 
    implicit none
 

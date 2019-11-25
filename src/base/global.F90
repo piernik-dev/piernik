@@ -175,16 +175,16 @@ contains
 
       ! Begin processing of namelist parameters
 
-#ifdef RIEMANN
-      ! 'moncen' and 'vanleer' seem to be best for emag conservation with GLM for b_limiter
-      limiter_b   = 'moncen'
-      limiter     = limiter_b
-      divB_0      = "HDC"
-#else /* ! RIEMANN */
+      which_solver = RTVD_SPLIT  ! \todo: change the default to RIEMANN_SPLIT
+      divB_0       = "HDC"  ! This is the default for the Riemann solver, for RTVD it will be changed to "CT" anyway
+
+      ! For RIEMANN_SPLIT 'moncen' and 'vanleer' seem to be best for emag conservation with GLM for b_limiter
+      ! Leave RTVD defaults as they were before the implementation of the Riemann HLLD solver
+      ! limiter_b   = 'moncen'
+      ! limiter     = limiter_b
       limiter     = 'vanleer'
       limiter_b   = limiter
-      divB_0      = "CT"
-#endif /* RIEMANN */
+
       cflcontrol  = 'warn'
       interpol_str = 'linear'
       repeat_step = .true.
@@ -228,19 +228,6 @@ contains
       ord_fc_eq_mag = .false.          !< Conservative choice, perhaps O_LIN will be safer. Higher orders may result in negative density or energy in f/c guardcells
       do_external_corners =.false.
       solver_str = ""
-
-      which_solver = INVALID
-#ifdef RTVD
-      which_solver = RTVD_SPLIT
-#endif /* RTVD */
-#ifdef HLLC
-      if (which_solver /= INVALID) call die("[global:init_global] multiple solvers #defined (HLLC + RTVD)")
-      which_solver = HLLC_SPLIT
-#endif /* HLLC */
-#ifdef RIEMANN
-      if (which_solver /= INVALID) call die("[global:init_global] multiple solvers #defined (RIEMANN + (HLLC || RTVD))")
-      which_solver = RIEMANN_SPLIT
-#endif
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -372,21 +359,32 @@ contains
       endif
 
       select case (solver_str)
+         case ("")  ! leave the default
          case ("rtvd", "RTVD")
-            if (which_solver /= RTVD_SPLIT .and. master) call warn("[global:init_global] switching solver to RTVD")
             which_solver = RTVD_SPLIT
          case ("hllc", "HLLC")
-            if (which_solver /= HLLC_SPLIT) call die("[global:init_global] switching solver to HLLC not allowed yet")
             which_solver = HLLC_SPLIT  ! dead code at this point
          case ("riemann", "Riemann", "RIEMANN")
-            if (which_solver /= RIEMANN_SPLIT .and. master) call warn("[global:init_global] switching solver to RIEMANN")
             which_solver = RIEMANN_SPLIT
+         case default
+            call die("[global:init_global] unrecognized solver: '" // trim(solver_str) // "'")
       end select
-#ifdef HLLC
-      if (which_solver /= HLLC_SPLIT) call die("[global:init_global] switching solver from HLLC not allowed yet")
-#endif /* HLLC */
 
-      if (which_solver == INVALID) call die("[global:init_global] no solvers #defined")
+      select case (which_solver)
+         case (RTVD_SPLIT)
+            divB_0 = "CT"  ! no other option
+         case (RIEMANN_SPLIT)
+         case (HLLC_SPLIT)
+#ifdef MAGNETIC
+            call die("[global:init_global] MAGNETIC not compatible with HLLC")
+#endif /* MAGNETIC */
+         case default
+            call die("[global:init_global] no solvers defined")
+      end select
+
+#ifdef CORIOLIS
+      if (which_solver /= RTVD_SPLIT) call die("[global:init_global] CORIOLIS has been implemented only for RTVD so far.")
+#endif /* CORIOLIS */
 
       divB_0_method = INVALID
       select case (divB_0)
@@ -396,6 +394,9 @@ contains
             divB_0_method = DIVB_HDC
             if (master .and. .false.) call warn("[global:init_global] In case of problems with stability connected with checkerboard pattern in the psi field consider reducing CFL parameter (or just CFL_GLM). This solver also doesn't like sudden changes of timestep length.")
             ! ToDo: create a way to add this to the crash message.
+#ifdef RESISTIVE
+            call die("[global:init_global] RESISTIVE not implemented for DIVB_HDC")
+#endif /* RESISTIVE */
          case default
             call die("[global:init_global] unrecognized divergence cleaning description.")
       end select

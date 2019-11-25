@@ -175,6 +175,9 @@ module constants
       enumerator :: HLLC_SPLIT    !! non-magnetic (pure HD) HLLC as first attempt of something more precise than RTVD, lacks many features an ma be removed at some point
       enumerator :: RIEMANN_SPLIT !! MHD Riemann, implementations by Varadarajan Parthasarathy; HD variant is slower than HLLC_SPLIT
    end enum
+   ! Perhaps it may make sense to create compatibility matrix for solvers.
+   ! AMR, magnetic, FARGO, resistivity, ...
+
 
    ! enumerate stages of Runge-Kutta method in an unique way, so istep will contain information both about stage and method
    enum, bind(C)

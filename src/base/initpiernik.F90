@@ -58,8 +58,10 @@ contains
       use grid,                  only: init_grid
       use grid_container_ext,    only: cg_extptrs
       use gridgeometry,          only: init_geometry
+      use hdc,                   only: init_psi
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
+      use interpolations,        only: set_interpolations
       use mpisetup,              only: init_mpi, master
       use refinement,            only: init_refinement, level_max
       use refinement_update,     only: update_refinement
@@ -68,10 +70,6 @@ contains
       use unified_ref_crit_list, only: urc_list
       use units,                 only: init_units
       use user_hooks,            only: problem_post_restart, problem_post_IC
-#if defined(RIEMANN) || defined(RTVD)
-      use hdc,                   only: init_psi
-      use interpolations,        only: set_interpolations
-#endif /* RIEMANN || RTVD */
 #ifdef RESISTIVE
       use resistivity,           only: init_resistivity
 #endif /* RESISTIVE */
@@ -149,9 +147,8 @@ contains
       call problem_pointers                  ! set up problem-specific pointers as early as possible to allow implementation of problem-specific hacks also during the initialization
       call init_global
       code_progress = PIERNIK_INIT_GLOBAL    ! Global parameters are set up
-#if defined(RIEMANN) || defined(RTVD)
+
       call set_interpolations
-#endif /* RIEMANN || RTVD */
 
       call init_domain
       code_progress = PIERNIK_INIT_DOMAIN    ! Base domain is known and initial domain decomposition is known
@@ -247,9 +244,7 @@ contains
          nit = 0
          finished = .false.
          call problem_initial_conditions ! may depend on anything
-#if defined(RIEMANN) || defined(RTVD)
          call init_psi ! initialize the auxiliary field for divergence cleaning when needed
-#endif /* RIEMANN  || RTVD*/
 
          write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
          if (master) call printinfo(msg)

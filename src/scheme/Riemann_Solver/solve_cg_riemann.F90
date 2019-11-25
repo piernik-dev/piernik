@@ -54,7 +54,7 @@
 
 module solvecg_riemann
 
-! pulled by RIEMANN || RTVD
+! pulled by ANY
 
    implicit none
 
@@ -86,8 +86,8 @@ contains
       integer :: nmag, i
 
       if (.false.) write(0,*) present(fargo_vel) ! suppress compiler warning on unused argument
-      if (use_fargo) call die("[solve_cg:solve_cg] Fargo is not yet enabled for Riemann")
-      if (dom%geometry_type /= GEO_XYZ) call die("[solve_cg:solve_cg_ub] Non-cartesian geometry is not implemented yet in this Riemann solver.")
+      if (use_fargo) call die("[solve_cg_riemann:solve_cg_riemann] Fargo is not yet enabled for Riemann")
+      if (dom%geometry_type /= GEO_XYZ) call die("[solve_cg_riemann:solve_cg_riemann] Non-cartesian geometry is not implemented yet in this Riemann solver.")
 
       call prepare_sources(cg)
 
@@ -96,7 +96,7 @@ contains
          do i = 1, flind%fluids
             if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + 1
          enddo
-         if (nmag > 1) call die("[solve_cg:solve_cg] At most one magnetized fluid is implemented")
+         if (nmag > 1) call die("[solve_cg_riemann:solve_cg_riemann] At most one magnetized fluid is implemented")
          call solve_cg_ub(cg, ddim, istep)
       else
          call solve_cg_u(cg, ddim, istep)

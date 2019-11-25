@@ -33,7 +33,7 @@
 
 module hdc
 
-! pulled by RIEMANN || RTVD
+! pulled by ANY
 
    use constants, only: dsetnamelen, INVALID
 
@@ -91,11 +91,11 @@ contains
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ, pMAX, small, DIVB_HDC
+      use constants,  only: GEO_XYZ, pMAX, small, DIVB_HDC, RIEMANN_SPLIT
       use dataio_pub, only: die
       use domain,     only: dom
       use func,       only: emag, ekin
-      use global,     only: use_fargo, cfl_glm, ch_grid, dt, divB_0_method
+      use global,     only: use_fargo, cfl_glm, ch_grid, dt, divB_0_method, which_solver
       use mpisetup,   only: piernik_MPI_Allreduce
 #ifndef ISO
       use constants,  only: xdim, ydim, zdim, half
@@ -116,6 +116,7 @@ contains
 #endif /* !ISO */
 
       if (divB_0_method /= DIVB_HDC) return
+      if (which_solver /= RIEMANN_SPLIT) call die("[hdc:update_chspeed] Only Riemann solver has DIVB_HDC implemented")
 
       chspeed = huge(1.)
       if (use_fargo) call die("[hdc:update_chspeed] FARGO is not implemented here yet.")
@@ -210,9 +211,10 @@ contains
 
      use cg_leaves,        only: leaves
      use cg_list,          only: cg_list_element
-     use constants,        only: psi_n, DIVB_HDC, pMIN
+     use constants,        only: psi_n, DIVB_HDC, pMIN, RIEMANN_SPLIT
+     use dataio_pub,       only: die
      use domain,           only: dom
-     use global,           only: glm_alpha, dt, divB_0_method
+     use global,           only: glm_alpha, dt, divB_0_method, which_solver
      use grid_cont,        only: grid_container
      use named_array_list, only: qna
      use mpisetup,         only: piernik_MPI_Allreduce
@@ -225,6 +227,7 @@ contains
      real :: fac
 
      if (divB_0_method /= DIVB_HDC) return ! I think it is equivalent to if (.not. qna%exists(psi_n))
+     if (which_solver /= RIEMANN_SPLIT) call die("[hdc:glmdamping] Only Riemann solver has DIVB_HDC implemented")
 
      if (qna%exists(psi_n)) then
 
@@ -264,14 +267,14 @@ contains
 #endif /* MAGNETIC */
      use cg_leaves,  only: leaves
      use cg_list,    only: cg_list_element
-     use constants,  only: xdim, zdim, psi_n, GEO_XYZ, half
+     use constants,  only: xdim, zdim, psi_n, GEO_XYZ, half, RIEMANN_SPLIT
      use dataio_pub, only: die
      use div_B,      only: divB, idivB
      use domain,     only: dom
      use fluidindex, only: flind
      use fluids_pub, only: has_ion
      use fluidtypes, only: component_fluid
-     use global,     only: use_eglm, dt
+     use global,     only: use_eglm, dt, which_solver
      use grid_cont,  only: grid_container
      use named_array_list, only: qna
 
@@ -284,6 +287,7 @@ contains
      integer(kind=4)                  :: ipsi
 
      if (.not. use_eglm) return
+     if (which_solver /= RIEMANN_SPLIT) call die("[hdc:eglm] Only Riemann solver has DIVB_HDC implemented")
 
      if (igp == INVALID) call aux_var
      ipsi = qna%ind(psi_n)

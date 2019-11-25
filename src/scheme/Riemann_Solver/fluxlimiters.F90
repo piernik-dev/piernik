@@ -36,7 +36,7 @@
 
 module fluxlimiters
 
-! pulled by RIEMANN || RTVD
+! pulled by ANY
 
    implicit none
    private

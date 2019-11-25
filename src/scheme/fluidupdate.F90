@@ -46,7 +46,7 @@
 !<
 
 module fluidupdate   ! SPLIT
-! pulled by RTVD || RIEMANN
+! pulled by ANY
 
    implicit none
 
@@ -55,27 +55,44 @@ module fluidupdate   ! SPLIT
 
 contains
 
+!> \brief choose between fully equipped solver and the simplified HLLC one
+
+   subroutine fluid_update
+
+      use constants,        only: RTVD_SPLIT, RIEMANN_SPLIT, HLLC_SPLIT
+      use dataio_pub,       only: die
+      use global,           only: which_solver
+      use fluidupdate_hllc, only: fluid_update_simple
+
+      implicit none
+
+      select case (which_solver)
+         case (HLLC_SPLIT)
+            call fluid_update_simple
+         case (RTVD_SPLIT, RIEMANN_SPLIT)
+            call fluid_update_full
+         case default
+            call die("[fluidupdate:fluid_update] unknown solver")
+      end select
+
+   end subroutine fluid_update
+
 !>
 !! \brief Advance the solution by two timesteps using directional splitting
 !<
 
-   subroutine fluid_update
+   subroutine fluid_update_full
 
       use dataio_pub,     only: halfstep
       use global,         only: dt, dtm, t
+      use hdc,            only: update_chspeed
       use mass_defect,    only: update_magic_mass
       use timestep_retry, only: repeat_fluidstep
-#if defined(RIEMANN) || defined(RTVD)
-      use hdc,            only: update_chspeed
-#endif /* RIEMANN || RTVD */
 
       implicit none
 
       call repeat_fluidstep
-
-#if defined(RIEMANN) || defined(RTVD)
       call update_chspeed
-#endif /* RIEMANN || RTVD */
 
       halfstep = .false.
       t = t + dt
@@ -89,7 +106,7 @@ contains
       call make_3sweeps(.false.) ! Z -> Y -> X
       call update_magic_mass
 
-   end subroutine fluid_update
+   end subroutine fluid_update_full
 
 !>
 !! \brief Perform sweeps in all three directions plus sources that are calculated every timestep
@@ -98,8 +115,9 @@ contains
 
       use cg_list_dataop,      only: expanded_domain
       use constants,           only: xdim, ydim, zdim, I_ONE
-      use global,              only: skip_sweep, use_fargo
       use fargo,               only: make_fargosweep
+      use global,              only: skip_sweep, use_fargo
+      use hdc,                 only: glmdamping, eglm
       use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
@@ -115,9 +133,6 @@ contains
 #ifdef SHEAR
       use shear,               only: shear_3sweeps
 #endif /* SHEAR */
-#if defined(RIEMANN) || defined(RTVD)
-      use hdc,                 only: glmdamping, eglm
-#endif /* RIEMANN || RTVD */
 
       implicit none
 
@@ -166,10 +181,8 @@ contains
 #endif /* GRAV */
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
-#if defined(RIEMANN) || defined(RTVD)
       call eglm
       call glmdamping
-#endif /* RIEMANN || RTVD */
 
    end subroutine make_3sweeps
 
@@ -180,19 +193,18 @@ contains
 !<
    subroutine make_sweep(dir, forward)
 
-      use constants,      only: RTVD_SPLIT
       use dataio_pub,     only: die
       use domain,         only: dom
-      use global,         only: geometry25D, which_solver
+      use global,         only: geometry25D
       use sweeps,         only: sweep
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff
       use initcosmicrays, only: use_CRsplit
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
-      use constants,      only: DIVB_CT
+      use constants,      only: DIVB_CT, RTVD_SPLIT
       use ct,             only: magfield
-      use global,         only: divB_0_method
+      use global,         only: divB_0_method, which_solver
 #endif /* MAGNETIC */
 #ifdef DEBUG
       use piernikiodebug, only: force_dumps

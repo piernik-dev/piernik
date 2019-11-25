@@ -32,7 +32,7 @@
 
 module solvecg_rtvd
 
-! pulled by RTVD || RIEMANN
+! pulled by ANY
 
    implicit none
 
@@ -134,7 +134,7 @@ contains
                   enddo
                   apply_sources = .false.
                else
-                  call die("[solve_cg:solve_cg] Unknown FARGO_VEL")
+                  call die("[solve_cg_rtvd:solve_cg_rtvd] Unknown FARGO_VEL")
                   apply_sources = .false.
                endif
             else
