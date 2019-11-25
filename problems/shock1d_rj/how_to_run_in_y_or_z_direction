@@ -1,9 +1,9 @@
-# for RIEMANN solver you can run each test with:
-./piernik -n '&BASE_DOMAIN n_d = 512, 1, 1/'
+# for Riemann solver you can run each test with:
+./piernik -n '&BASE_DOMAIN n_d = 512, 1, 1/ &NUMERICAL_SETUP solver_str = "Riemann"/'
 
 # For standatd x-direction shocktube I recommend:
-./piernik -n '&BASE_DOMAIN n_d = 512, 1, 1/ &OUTPUT_CONTROL problem_name = "shock1d_x"/'
+./piernik -n '&BASE_DOMAIN n_d = 512, 1, 1/ &NUMERICAL_SETUP solver_str = "Riemann"/ &OUTPUT_CONTROL problem_name = "shock1d_x"/'
 
 # Then for y- and z-direction shocktubes:
-./piernik -n '&BASE_DOMAIN n_d = 1, 512, 1 bnd_xl = "per" bnd_xr = "per" bnd_yl = "out" bnd_yr = "out"/ &OUTPUT_CONTROL problem_name = "shock1d_y"/ &PROBLEM_CONTROL dir="y"/'
-./piernik -n '&BASE_DOMAIN n_d = 1, 1, 512 bnd_xl = "per" bnd_xr = "per" bnd_zl = "out" bnd_zr = "out"/ &OUTPUT_CONTROL problem_name = "shock1d_z"/ &PROBLEM_CONTROL dir="z"/'
+./piernik -n '&BASE_DOMAIN n_d = 1, 512, 1 bnd_xl = "per" bnd_xr = "per" bnd_yl = "out" bnd_yr = "out"/ &NUMERICAL_SETUP solver_str = "Riemann"/ &OUTPUT_CONTROL problem_name = "shock1d_y"/ &PROBLEM_CONTROL dir="y"/'
+./piernik -n '&BASE_DOMAIN n_d = 1, 1, 512 bnd_xl = "per" bnd_xr = "per" bnd_zl = "out" bnd_zr = "out"/ &NUMERICAL_SETUP solver_str = "Riemann"/ &OUTPUT_CONTROL problem_name = "shock1d_z"/ &PROBLEM_CONTROL dir="z"/'

@@ -1,8 +1,6 @@
 ! This test is supposed to work with advection test configured to use magnetic
 ! field such as configured in a following way:
 ! ./setup advection_test/magnetized_advection_test -o T_advection
-! or
-! ./setup advection_test/magnetized_advection_test -o R_advection -d RIEMANN
 !
 ! The purpose is to both test the employed algorithms (examine the last
 ! plot file) and correctness of the formulas in the data_hdf5 file (examine
@@ -73,6 +71,7 @@
     limiter= 'vanleer'
 !    ord_mag_prolong = 3
 !  glm_alpha=0.05  ! seems to be the best in this test
+!   solver_str = "Riemann"
  /
 
  $PROBLEM_CONTROL

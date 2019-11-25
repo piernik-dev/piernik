@@ -161,9 +161,10 @@ contains
 
       use constants,  only: big_float, PIERNIK_INIT_MPI, INVALID, DIVB_CT, DIVB_HDC, &
            &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO, O_I2, INVALID, &
-           &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT
+           &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT  !, GEO_XYZ
       use dataio_pub, only: die, msg, warn, code_progress, printinfo
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
+!      use domain,     only: dom
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
@@ -374,6 +375,8 @@ contains
          case (RTVD_SPLIT)
             divB_0 = "CT"  ! no other option
          case (RIEMANN_SPLIT)
+!            if (dom%geometry_type /= GEO_XYZ) call die("[global:init_global] Riemann solver is implemented only for cartesian geometry")
+            ! can't use this because domain is not yet initialized
          case (HLLC_SPLIT)
 #ifdef MAGNETIC
             call die("[global:init_global] MAGNETIC not compatible with HLLC")

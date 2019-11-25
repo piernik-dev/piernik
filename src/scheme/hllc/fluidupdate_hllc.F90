@@ -333,8 +333,11 @@ contains
 !<
    subroutine riemann_hllc(qleft,qright,qgdnv,fgdnv, n, gamma, cs2)
 
-      use constants,  only: zero, one, half, idn, imx, imy, imz, ien
+      use constants,  only: zero, half, idn, imx, imy, imz, ien
       use global,     only: smalld
+#ifndef ISO
+      use constants,  only: one
+#endif /* !ISO */
 
       implicit none
 
