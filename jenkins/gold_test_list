@@ -1,5 +1,6 @@
-RUN_COMMAND="mpirun -np 1" ./jenkins/gold_test.sh ./jenkins/gold_configs/mcrtest_new ; mv gold_log mcrtest_new.gold_log
-RUN_COMMAND="mpirun -np 4" ./jenkins/gold_test.sh ./jenkins/gold_configs/mcrwind ; mv gold_log mcrwind.gold_log
-RUN_COMMAND="mpirun -np 1" ./jenkins/gold_test.sh ./jenkins/gold_configs/resist ; mv gold_log resist.gold_log
-RUN_COMMAND="mpirun -np 4" ./jenkins/gold_test.sh ./jenkins/gold_configs/streaming_instability ; mv gold_log streaming_instability.gold_log
-tail -n 1 *.gold_log
+RUN_COMMAND="mpirun -np 1" ./jenkins/gold_test.sh ./jenkins/gold_configs/mcrtest_new
+RUN_COMMAND="mpirun -np 4" ./jenkins/gold_test.sh ./jenkins/gold_configs/mcrwind
+RUN_COMMAND="mpirun -np 1" ./jenkins/gold_test.sh ./jenkins/gold_configs/resist
+RUN_COMMAND="mpirun -np 4" ./jenkins/gold_test.sh ./jenkins/gold_configs/streaming_instability
+tail -n 1 *_gold_log
+tail -n 1 *_riem_log

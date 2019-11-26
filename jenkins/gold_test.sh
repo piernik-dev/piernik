@@ -2,7 +2,7 @@
 
 if [ $# -lt 1 ]; then
     echo "Usage: $0 config_file"
-    echo "or somethink like: RUN_COMMAND=\"mpirun -np 2\" $0 config_file"
+    echo "or something like: RUN_COMMAND=\"mpirun -np 2\" $0 config_file"
     exit 1
 fi
 
@@ -42,9 +42,9 @@ GOLD_DIR=gold_dir
 OBJ_PREFIX=obj_
 GOLD_OBJ=${PROBLEM_NAME}_gold
 TEST_OBJ=${PROBLEM_NAME}_test
-GOLD_LOG=gold_log
-RIEM_LOG=riem_log
-RIEM_CSV=riem.csv
+GOLD_LOG=${PROBLEM_NAME}_gold_log
+RIEM_LOG=${PROBLEM_NAME}_riem_log
+RIEM_CSV=${PROBLEM_NAME}_riem.csv
 TMP_DIR=/tmp/jenkins_gold/
 RUNS_DIR=$TMP_DIR
 GOLD_SHA_FILE=__sha__
