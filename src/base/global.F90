@@ -364,7 +364,7 @@ contains
          case ("rtvd", "RTVD")
             which_solver = RTVD_SPLIT
          case ("hllc", "HLLC")
-            which_solver = HLLC_SPLIT  ! dead code at this point
+            which_solver = HLLC_SPLIT
          case ("riemann", "Riemann", "RIEMANN")
             which_solver = RIEMANN_SPLIT
          case default
@@ -376,7 +376,6 @@ contains
             divB_0 = "CT"  ! no other option
          case (RIEMANN_SPLIT)
             if (dom%geometry_type /= GEO_XYZ) call die("[global:init_global] Riemann solver is implemented only for cartesian geometry")
-            ! can't use this because domain is not yet initialized
          case (HLLC_SPLIT)
 #ifdef MAGNETIC
             call die("[global:init_global] MAGNETIC not compatible with HLLC")
@@ -398,7 +397,7 @@ contains
             if (master .and. .false.) call warn("[global:init_global] In case of problems with stability connected with checkerboard pattern in the psi field consider reducing CFL parameter (or just CFL_GLM). This solver also doesn't like sudden changes of timestep length.")
             ! ToDo: create a way to add this to the crash message.
 #ifdef RESISTIVE
-            call die("[global:init_global] RESISTIVE not implemented for DIVB_HDC")
+            call die("[global:init_global] RESISTIVE not yet implemented for DIVB_HDC")
 #endif /* RESISTIVE */
          case default
             call die("[global:init_global] unrecognized divergence cleaning description.")
