@@ -35,7 +35,7 @@ module cg_particles_io
   private
   public :: dump_cg_particles, init_nbody_hdf5, pdsets, nbody_datafields
 
-   character(len=dsetnamelen), dimension(*), parameter  :: pvarn = ['ppid', 'mass', 'ener', 'ppos', 'pvel', 'pacc']
+   character(len=dsetnamelen), dimension(*), parameter  :: pvarn = ['ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz']
    logical,                    dimension(size(pvarn))   :: pvarl = .false.
    character(len=dsetnamelen), allocatable, dimension(:) ::pdsets
 
@@ -123,13 +123,10 @@ module cg_particles_io
       integer(kind=4),  intent(in) :: n_part
 
       select case (pvar)
-         case ('ppid')
+         case ('id')
             call collect_and_write_intr1(group_id, pvar, n_part)
-         case ('mass', 'ener')
-            call collect_and_write_rank1(group_id, pvar, n_part)
-         case ('ppos', 'pvel', 'pacc')
-            call collect_and_write_rank2(group_id, pvar, n_part)
          case default
+            call collect_and_write_rank1(group_id, pvar, n_part)
       end select
 
    end subroutine nbody_datafields
@@ -156,7 +153,7 @@ module cg_particles_io
       do while (associated(cgl))
          cgnp = 0
          select case (pvar)
-            case ('ppid')
+            case ('id')
                do i = 1, size(cgl%cg%pset%p, dim=1)
                   if (cgl%cg%pset%p(i)%phy) then
                      cgnp = cgnp + 1
@@ -179,6 +176,7 @@ module cg_particles_io
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
       use hdf5,      only: HID_T
+      use constants, only: xdim, ydim, zdim
 
       implicit none
 
@@ -202,8 +200,26 @@ module cg_particles_io
                select case (pvar)
                   case ('mass')
                      tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%mass
-                  case ('ener')
+                  case ('energy')
                      tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%energy
+                  case ('position_x')
+                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%pos(xdim)
+                  case ('position_y')
+                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%pos(ydim)
+                  case ('position_z')
+                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%pos(zdim)
+                  case ('velocity_x')
+                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%vel(xdim)
+                  case ('velocity_y')
+                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%vel(ydim)
+                  case ('velocity_z')
+                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%vel(zdim)
+                  case ('acceleration_x')
+                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%acc(xdim)
+                  case ('acceleration_y')
+                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%acc(ydim)
+                  case ('acceleration_z')
+                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%acc(zdim)
                   case default
                end select
             endif
@@ -216,63 +232,6 @@ module cg_particles_io
       deallocate(tabr1)
 
    end subroutine collect_and_write_rank1
-
-   subroutine collect_and_write_rank2(group_id, pvar, n_part)
-
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use constants, only: ndims
-      use hdf5,      only: HID_T
-
-      implicit none
-
-      integer(HID_T),   intent(in)      :: group_id       !< File identifier
-      character(len=*), intent(in)      :: pvar
-      integer(kind=4),  intent(in)      :: n_part
-      integer                           :: cgnp, recnp, i, j
-      real, dimension(:,:), allocatable :: tabr2
-      type(cg_list_element), pointer    :: cgl
-
-      allocate(tabr2(n_part, ndims))
-
-      recnp = 0
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgnp = size(cgl%cg%pset%p, dim=1)
-         j=1
-         select case (pvar)
-            case ('ppos')
-               do i = 1, cgnp
-                  if (cgl%cg%pset%p(i)%phy) then
-                     tabr2(recnp+j,:) = cgl%cg%pset%p(i)%pos(:)
-                     j = j + 1
-                  endif
-               enddo
-            case ('pvel')
-               do i = 1, cgnp
-                  if (cgl%cg%pset%p(i)%phy) then
-                     tabr2(recnp+j,:) = cgl%cg%pset%p(i)%vel(:)
-                     j = j + 1
-                  endif
-               enddo
-            case ('pacc')
-               do i = 1, cgnp
-                  if (cgl%cg%pset%p(i)%phy) then
-                     tabr2(recnp+j,:) = cgl%cg%pset%p(i)%acc(:)
-                     j = j + 1
-                  endif
-               enddo
-            case default
-         end select
-         cgl => cgl%nxt
-      enddo
-
-      call write_nbody_h5_rank2(group_id, pvar, tabr2)
-
-      deallocate(tabr2)
-
-   end subroutine collect_and_write_rank2
 
    subroutine write_nbody_h5_int_rank1(group_id, vvar, tab)
 
@@ -328,32 +287,6 @@ module cg_particles_io
 
    end subroutine write_nbody_h5_rank1
 
-   subroutine write_nbody_h5_rank2(group_id, vvar, tab)
-
-      use hdf5, only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
-
-      implicit none
-
-      character(len=*),     intent(in) :: vvar
-      integer(HID_T),       intent(in) :: group_id
-      real, dimension(:,:), intent(in) :: tab
-      integer(HSIZE_T), dimension(2)   :: dimv
-      integer(HID_T)                   :: dataspace_id, dataset_id
-      integer(kind=4)                  :: error, rank2 = 2
-
-      dimv = shape(tab)
-      dataset_id = group_id
-#ifndef NBODY_1FILE
-      call h5screate_simple_f(rank2, dimv, dataspace_id, error)
-      call h5dcreate_f(group_id, vvar, H5T_NATIVE_DOUBLE, dataspace_id, dataset_id, error)
-#endif /* NBODY_1FILE */
-      call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, tab, dimv, error)
-#ifndef NBODY_1FILE
-      call h5dclose_f(dataset_id, error)
-      call h5sclose_f(dataspace_id, error)
-#endif /* NBODY_1FILE */
-
-    end subroutine write_nbody_h5_rank2
 
 end module cg_particles_io
 

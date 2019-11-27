@@ -173,6 +173,30 @@ contains
 #else /* !MAGNETIC */
                newname = "Mach_number"
 #endif /* MAGNETIC */
+#ifdef NBODY
+            case ("ppid")
+               newname="id"
+            case ("ener")
+               newname="energy"
+            case ("posx")
+               newname="position_x"
+            case ("posy")
+               newname="position_y"
+            case ("posz")
+               newname="position_z"
+            case ("velx")
+               newname="velocity_x"
+            case ("vely")
+               newname="velocity_y"
+            case ("velz")
+               newname="velocity_z"
+            case ("accx")
+               newname="acceleration_x"
+            case ("accy")
+               newname="acceleration_y"
+            case ("accz")
+               newname="acceleration_z"
+#endif /* NBODY */
             case default
                write(newname, '(A)') trim(var)
          end select
@@ -570,7 +594,11 @@ contains
 
       call enable_all_hdf_var  ! just in case things have changed meanwhile
 
+#ifdef NBODY_1FILE
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(hdf_vars), gdf_translate(pdsets))
+#else
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(hdf_vars))
+#endif /* NBODY_1FILE */
 
       if (cg_desc%tot_cg_n < 1) call die("[data_hdf5:write_cg_to_output] no cg available!")
 
@@ -604,7 +632,7 @@ contains
 #ifdef NBODY_1FILE
                n_part = count_all_particles()
                do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
-                  call nbody_datafields(cg_desc%pdset_id(ncg, i), trim(pdsets(i)), n_part)
+                  call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), n_part)
                enddo
 #endif /* NBODY_1FILE */
             else
@@ -643,7 +671,7 @@ contains
                n_part = count_all_particles()
                if (n_part .gt. 0) then
                   do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
-                     call nbody_datafields(cg_desc%pdset_id(ncg, i), trim(pdsets(i)), n_part)
+                     call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), n_part)
                   enddo
                endif
 #endif /* NBODY_1FILE */
@@ -776,7 +804,7 @@ contains
     end subroutine get_data_from_cg
 
 #ifdef NBODY_1FILE
-   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail, n_part)
+   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)
 #else
    subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail)
 #endif /* NBODY_1FILE */
@@ -785,12 +813,12 @@ contains
       use hdf5,        only: HID_T, HSIZE_T
 #ifdef NBODY_1FILE
       use cg_particles_io, only: pdsets
-      use constants,       only: I_ONE, I_THREE
 #endif /* NBODY_1FILE */
 
       implicit none
 
       integer(HID_T),                intent(in) :: cg_g_id
+      integer(HID_T),                intent(in) :: st_g_id
       integer(kind=4), dimension(:), intent(in) :: cg_n_b
       integer(kind=4), dimension(:), intent(in) :: cg_n_o
       logical(kind=4),               intent(in) :: Z_avail
@@ -798,7 +826,6 @@ contains
       integer :: i
 #ifdef NBODY_1FILE
       integer(kind=8)                           :: n_part
-      integer(kind=8)                           :: n
 #endif /* NBODY_1FILE */
 
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
@@ -809,9 +836,7 @@ contains
 
 #ifdef NBODY_1FILE
       do i = lbound(pdsets,1), ubound(pdsets,1)
-         n=I_THREE
-         if ((pdsets(i) == 'ppid') .or. (pdsets(i) == 'ener') .or. (pdsets(i) == 'mass')) n=I_ONE
-         call create_empty_cg_dataset(cg_g_id, gdf_translate(pdsets(i)), (/n_part, n/), Z_avail, O_OUT)
+         call create_empty_cg_dataset(st_g_id, gdf_translate(pdsets(i)), (/n_part/), Z_avail, O_OUT)
       enddo
 #endif /* NBODY_1FILE */
 

@@ -125,7 +125,7 @@ contains
 
 !> \brief create empty datasets for each cg to store restart data
 #ifdef NBODY_1FILE
-   subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, cg_n_o, Z_avail, n_part)
+   subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)
 #else
    subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, cg_n_o, Z_avail)
 #endif /* NBODY_1FILE */
@@ -139,6 +139,7 @@ contains
       implicit none
 
       integer(HID_T),                intent(in) :: cg_g_id
+      integer(HID_T),                intent(in) :: st_g_id
       integer(kind=4), dimension(:), intent(in) :: cg_n_b
       integer(kind=4), dimension(:), intent(in) :: cg_n_o
       logical(kind=4),               intent(in) :: Z_avail
@@ -195,6 +196,9 @@ contains
       use mpi,              only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
       use mpisetup,         only: master, FIRST, proc, comm, mpi_err
       use named_array_list, only: qna, wna
+#ifdef NBODY_1FILE
+      use cg_particles_io, only: pdsets
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -237,8 +241,11 @@ contains
             ic = ic + 1
          enddo
       endif
+#ifdef NBODY_1FILE
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets, pdsets)
+#else
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets)
-
+#endif /* NBODY_1FILE */
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
          do ncg = 1, cg_desc%tot_cg_n

@@ -44,7 +44,7 @@ module common_hdf5
    public :: hdf_vars, hdf_vars_avail, cancel_hdf_var, d_gname, base_d_gname, d_fc_aname, d_size_aname, &
         d_edge_apname, d_bnd_apname, cg_gname, cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, &
         n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, cg_dl_aname, O_OUT, O_RES, STAT_OK, STAT_INV, &
-        create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output, enable_all_hdf_var
+        create_empty_cg_dataset, get_nth_cg, data_gname, part_types_gname, part_gname, st_gname, output_fname, cg_output, enable_all_hdf_var
 
    character(len=dsetnamelen), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
    logical,                    allocatable, dimension(:), protected :: hdf_vars_avail
@@ -52,7 +52,7 @@ module common_hdf5
         & d_size_aname = "n_d", d_edge_apname = "-edge_position", d_bnd_apname = "-boundary_type", &
         & cg_gname = "grid", cg_cnt_aname = "cg_count", cg_lev_aname = "level", cg_size_aname = "n_b", &
         & cg_offset_aname = "off", cg_ledge_aname = "left_edge", cg_redge_aname = "right_edge", &
-        & cg_dl_aname = "dl", data_gname = "data"
+        & cg_dl_aname = "dl", data_gname = "data", part_types_gname="particle_types", part_gname="particles", st_gname="stars"
    character(len=singlechar), dimension(ndims), parameter :: dir_pref = [ "x", "y", "z" ]
 
    ! enumerator for 'otype' used in various functions to distinguish different
@@ -76,6 +76,8 @@ module common_hdf5
 
    type :: cg_output
       integer(HID_T), dimension(:), allocatable   :: cg_g_id
+      integer(HID_T), dimension(:), allocatable   :: part_g_id
+      integer(HID_T), dimension(:), allocatable   :: st_g_id
       integer(HID_T), dimension(:,:), allocatable :: dset_id
       integer(HID_T), dimension(:,:), allocatable :: pdset_id
       integer(HID_T)                              :: xfer_prp
@@ -758,7 +760,7 @@ contains
          !! Function responsible for creating empty datasets, called by master
          !<
 #ifdef NBODY_1FILE
-         subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, cg_n_o, Z_avail, n_part)
+         subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)
 #else
          subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, cg_n_o, Z_avail)
 #endif /* NBODY_1FILE */
@@ -769,7 +771,8 @@ contains
             integer(kind=4), dimension(:), intent(in) :: cg_n_o
             logical(kind=4),               intent(in) :: Z_avail
 #ifdef NBODY_1FILE
-      integer(kind=8)                                 :: n_part
+            integer(kind=8)                           :: n_part
+            integer(HID_T),                intent(in) :: st_g_id
 #endif /* NBODY_1FILE */
          end subroutine create_empty_cg_datasets
 
@@ -790,6 +793,10 @@ contains
       integer(HID_T)                                :: plist_id         !< Property list identifier
       integer(HID_T)                                :: cgl_g_id         !< cg list identifiers
       integer(HID_T)                                :: cg_g_id          !< cg group identifiers
+      integer(HID_T)                                :: pt_g_id          !< particle_types identifiers
+      integer(HID_T)                                :: ptst_g_id        !< particle_types stars identifiers
+      integer(HID_T)                                :: part_g_id        !< particles identifiers
+      integer(HID_T)                                :: st_g_id          !< stars identifiers
       integer(HID_T)                                :: doml_g_id        !< domain list identifier
       integer(HID_T)                                :: dom_g_id         !< domain group identifier
       integer(kind=4)                               :: error, cg_cnt
@@ -872,7 +879,10 @@ contains
             call gdf_sp%cleanup()
          endif
          call h5gcreate_f(file_id, data_gname, cgl_g_id, error)     ! create "/data"
-
+#ifdef NBODY_1FILE
+         call h5gcreate_f(file_id, part_types_gname, pt_g_id, error)     ! create "/particle_types"
+         call h5gcreate_f(pt_g_id, st_gname, ptst_g_id, error)     ! create "/particle_types/stars"
+#endif /* NBODY_1FILE */
          call create_attribute(cgl_g_id, cg_cnt_aname, [ cg_cnt ])  ! create "/data/cg_count"
 
          Z_avail = .false.
@@ -906,7 +916,10 @@ contains
             endif
             do g = 1, cg_n(p)
                call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error) ! create "/data/grid_%08d"
-
+#ifdef NBODY_1FILE
+               call h5gcreate_f(cg_g_id, part_gname, part_g_id, error) ! create "/data/grid_%08d/particles
+               call h5gcreate_f(part_g_id, st_gname, st_g_id, error) ! create "/data/grid_%08d/particles/stars"
+#endif /* NBODY_1FILE */
                call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                ! create "/data/grid_%08d/level"
                temp = cg_n_b(g, :)
                call create_attribute(cg_g_id, cg_size_aname, temp)                        ! create "/data/grid_%08d/n_b"
@@ -928,17 +941,20 @@ contains
                   rd%grid_level(indx) = cg_rl(g)
                   rd%grid_left_index(:,indx) = cg_off(g,:)
                   rd%grid_parent_id(indx)     = -1
-                  rd%grid_particle_count(1,indx) = 0
+                  rd%grid_particle_count(1,indx) = n_part
                endif
 
                if (any(cg_off(g, :) > 2.**31)) &
                   & call die("[common_hdf5:write_to_hdf5_v2] large offsets require better treatment")
 #ifdef NBODY_1FILE
-               call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail, n_part) !!!!!
+               call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail, n_part, st_g_id) !!!!!
+               call h5gclose_f(st_g_id, error)
+               call h5gclose_f(part_g_id, error)
 #else
                call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail) !!!!!
 #endif /* NBODY_1FILE */
                call h5gclose_f(cg_g_id, error)
+
             enddo
 
             deallocate(cg_rl, cg_n_b, cg_off)
@@ -946,6 +962,11 @@ contains
             if (associated(cg_n_o)) deallocate(cg_n_o)
          enddo
          rd%grid_dimensions = cg_all_n_b
+
+#ifdef NBODY_1FILE
+         call h5gclose_f(pt_g_id, error)
+         call h5gclose_f(ptst_g_id, error)
+#endif /* NBODY_1FILE */
 
          call h5gclose_f(cgl_g_id, error)
 
@@ -1150,16 +1171,17 @@ contains
 
    end function output_fname
 
+#ifdef NBODY_1FILE
+   subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets, pdsets)
+#else
    subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets)
+#endif /* NBODY_1FILE */
 
       use constants,  only: dsetnamelen
       use dataio_pub, only: can_i_write
       use hdf5,       only: HID_T, H5P_GROUP_ACCESS_F, H5P_DATASET_ACCESS_F, H5P_DATASET_XFER_F, &
           &                 h5gopen_f, h5pclose_f, h5dopen_f
       use mpisetup,   only: FIRST, LAST
-#ifdef NBODY_1FILE
-      use cg_particles_io, only: pdsets
-#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -1167,7 +1189,7 @@ contains
       integer(HID_T),                           intent(in)    :: cgl_g_id
       integer(kind=4),   pointer, dimension(:), intent(in)    :: cg_n
       integer(kind=4),                          intent(in)    :: nproc_io
-      character(len=dsetnamelen), dimension(:), intent(in)    :: dsets
+      character(len=dsetnamelen), dimension(:), intent(in)    :: dsets, pdsets
 
       integer                                                 :: i, ncg
       integer(HID_T)                                          :: plist_id
@@ -1177,6 +1199,10 @@ contains
       allocate(this%cg_src_p(1:this%tot_cg_n))
       allocate(this%cg_src_n(1:this%tot_cg_n))
       allocate(this%cg_g_id(1:this%tot_cg_n))
+#ifdef NBODY_1FILE
+      allocate(this%part_g_id(1:this%tot_cg_n))
+      allocate(this%st_g_id(1:this%tot_cg_n))
+#endif /* NBODY_1FILE */
       allocate(this%offsets(0:nproc_io-1))
 
       ! construct source addresses of the cg to be written
@@ -1201,10 +1227,15 @@ contains
          plist_id = set_h5_properties(H5P_GROUP_ACCESS_F, nproc_io)
          do ncg = 1, this%tot_cg_n
             call h5gopen_f(cgl_g_id, n_cg_name(ncg), this%cg_g_id(ncg), error, gapl_id = plist_id)
+#ifdef NBODY_1FILE
+            call h5gopen_f(this%cg_g_id(ncg), part_gname, this%part_g_id(ncg), error, gapl_id = plist_id)
+            call h5gopen_f(this%part_g_id(ncg), "stars", this%st_g_id(ncg), error, gapl_id = plist_id)
+#endif /* NBODY_1FILE */
          enddo
          call h5pclose_f(plist_id, error)
 
          plist_id = set_h5_properties(H5P_DATASET_ACCESS_F, nproc_io)
+
          allocate(this%dset_id(1:this%tot_cg_n, lbound(dsets, dim=1):ubound(dsets, dim=1)))
 #ifdef NBODY_1FILE
          allocate(this%pdset_id(1:this%tot_cg_n, lbound(pdsets, dim=1):ubound(pdsets, dim=1)))
@@ -1216,7 +1247,7 @@ contains
 
 #ifdef NBODY_1FILE
             do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
-               call h5dopen_f(this%cg_g_id(ncg), pdsets(i), this%pdset_id(ncg,i), error, dapl_id = plist_id)
+               call h5dopen_f(this%st_g_id(ncg), pdsets(i), this%pdset_id(ncg,i), error, dapl_id = plist_id)
             enddo
 #endif /* NBODY_1FILE */
          enddo
@@ -1248,6 +1279,8 @@ contains
             do i = lbound(this%pdset_id, 2), ubound(this%pdset_id, 2)
                call h5dclose_f(this%pdset_id(ncg, i), error)
             enddo
+            call h5gclose_f(this%st_g_id(ncg), error)
+            call h5gclose_f(this%part_g_id(ncg), error)
 #endif /* NBODY_1FILE */
             call h5gclose_f(this%cg_g_id(ncg), error)
          enddo
@@ -1256,6 +1289,8 @@ contains
       if (allocated(this%dset_id)) deallocate(this%dset_id)
 #ifdef NBODY_1FILE
       if (allocated(this%pdset_id)) deallocate(this%pdset_id)
+      if (allocated(this%st_g_id)) deallocate(this%st_g_id)
+      if (allocated(this%part_g_id)) deallocate(this%part_g_id)
 #endif /* NBODY_1FILE */
       if (allocated(this%cg_g_id)) deallocate(this%cg_g_id)
       if (allocated(this%cg_src_p)) deallocate(this%cg_src_p)
