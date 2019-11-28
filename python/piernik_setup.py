@@ -532,6 +532,7 @@ def setup_piernik(data=None):
     if("SHEAR" in our_defs or "MULTIGRID" in our_defs):
         if ("NO_FFT" not in our_defs):
             m.write("LIBS += $(shell pkg-config --libs fftw3)\n")
+        m.write("CPPFLAGS += $(shell pkg-config --libs fftw3 2> /dev/null || echo '-DNO_FFT')\n")
     if("PIERNIK_OPENCL" in our_defs):
         m.write("LIBS += $(shell pkg-config --libs fortrancl)\n")
         m.write("F90FLAGS += $(shell pkg-config --cflags fortrancl)\n")
