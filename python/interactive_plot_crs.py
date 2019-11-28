@@ -41,6 +41,7 @@ parser.add_option("-O","--overlap",dest="overlap_layer",default="False",      he
 parser.add_option("", "--verbose", dest="yt_verbose",   default=40,           help=u"Append yt verbosity (value from 10 [high] to 50 [low])")
 parser.add_option("-q", "--quiet", dest="py_quiet",     default="False",      help=u"Suppress ALL python warnings (not advised)",  action="store_true")
 parser.add_option("-c", "--coords",dest="coords_dflt",  default=("x","y","z"),help=u"Provides coordinates for the first plot (non-clickable)", nargs=3, metavar="xc yc zc")
+parser.add_option("-k", "--keep",  dest="clean_plot",   default="True",       help=u"Keep spectrum plot (do not clean spectrum field)", action="store_false")
 
 (options, args) = parser.parse_args(argv[1:]) # argv[1] is filename
 yt.mylog.setLevel(int(options.yt_verbose))    # Reduces the output to desired level, 50 - least output
@@ -351,7 +352,6 @@ if f_run == True:
 
         btot = (position["mag_field_x"].v**2 + position["mag_field_y"].v**2 + position["mag_field_z"].v**2 )**0.5 ; btot_uG = 2.85 * btot
         prtinfo("B_tot = %f = %f (uG)" %(btot, btot_uG) )
-
         if (True):   # TODO DEPRECATED save_fqp
            ecrs = [] ; ncrs = []
            if (plot_ovlp != True): #overwrites position
@@ -361,7 +361,7 @@ if f_run == True:
                for ind in range(1,ncre+1):
                   ecrs.append(float(mean(position['cree'+str(ind).zfill(2)][0].v)))
                   ncrs.append(float(mean(position['cren'+str(ind).zfill(2)][0].v)))
-               fig2,exit_code = crs_h5.crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index])
+               fig2,exit_code = crs_h5.crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot)
 
            elif (plot_ovlp == True):    #for overlap_layer
                prtinfo("Plotting layer with overlap...")
@@ -372,7 +372,7 @@ if f_run == True:
                   for ind in range(1,ncre+1):
                      ecrs.append( position['cree'+str(ind).zfill(2)][0].v )
                      ncrs.append( position['cren'+str(ind).zfill(2)][0].v )
-                  fig2,exit_code_tmp = crs_h5.crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index],i_plot=image_number)
+                  fig2,exit_code_tmp = crs_h5.crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index],i_plot=image_number, clean_plot=options.clean_plot)
                   if (exit_code_tmp == False): exit_code = exit_code_tmp # Just one plot is allright
                   ecrs = [] ; ncrs = []
         else:     # for fqp, DEPRECATED probably
@@ -389,7 +389,7 @@ if f_run == True:
                qcrs.append(float(position['creq'+str(ind).zfill(2)][0].v))
            pcut[:] = [ position['crep01'][0].v , position['crep02'][0].v ]
 
-           fig2,exit_code = crs_h5.crs_plot_main_fpq(var_names, var_array, plot_var, fcrs, qcrs, pcut, field_max, time, coords, marker=marker_l[marker_index])
+           fig2,exit_code = crs_h5.crs_plot_main_fpq(var_names, var_array, plot_var, fcrs, qcrs, pcut, field_max, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot)
 
         if (exit_code != True):
             point = s1.plot(event.xdata,event.ydata, marker=marker_l[marker_index], color="red")         # plot point only if cell is not empty

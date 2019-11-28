@@ -28,7 +28,6 @@ helper_arr_dim = int(arr_dim / 4)
 c = 1.0 # PSM -> 0.3066067E+06, SI -> 0.2997925E+09
 
 first_run = True
-clean_plot = True
 got_q_tabs = False
 q_explicit = True
 interpolate_cutoffs = True
@@ -181,7 +180,7 @@ def interpolate_q(alpha):
    return q_out
 # plot data ------------------------------------
 def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
-   global first_run, e_small, i_plot, par_plot_color, s
+   global first_run, e_small, i_plot, par_plot_color, s, clean_plot
    f_lo_cut = fl[0] ;      f_up_cut = fr[-1]
    p_lo_cut = pl[0] ;   p_up_cut = pr[-1]
 
@@ -202,10 +201,13 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
       plot_var_up_cut = 4*pi*c**2*f_up_cut*p_up_cut**3
    if (first_run):
       s = plt.subplot(122)
-   else:
-      if clean_plot: plt.cla()
+
+   if clean_plot:
+      s.cla()
+
    s.set_xscale('log')
    s.set_yscale('log')
+
 
    plt.xlabel('$p/m_e c$',labelpad = 0.2, fontsize = 20,)
    plt.ylabel('d$'+plot_var+' / $d$p$',fontsize = 20, labelpad=-0.)
@@ -393,12 +395,14 @@ def crs_initialize(parameter_names, parameter_values):
 
     p_fix      = tuple(p_fix)
     p_mid_fix  = tuple(p_mid_fix)
-
+    global clean_plot
+    clean_plot = True
 
 def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
-    global first_run, got_q_tabs, e_small, p_min_fix, p_max_fix, ncre, cre_eff, i_plot, marker
+    global first_run, got_q_tabs, e_small, p_min_fix, p_max_fix, ncre, cre_eff, i_plot, marker, clean_plot
 
-    marker = kwargs.get("marker","x")
+    marker     = kwargs.get("marker","x")
+    clean_plot = kwargs.get("clean_plot","True")
 
     i_lo = 0;      i_up = ncre
     active_bins = []
