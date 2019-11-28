@@ -37,11 +37,14 @@
 
 
 #include "piernik.h"
+
 !>
 !!  \brief This module implements HLLD Riemann solver following the work of Miyoshi & Kusano (2005)
 !<
+
 module hlld
-! pulled by RIEMANN
+
+! pulled by ANY
 
    implicit none
 

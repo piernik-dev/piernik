@@ -304,10 +304,10 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: small, GEO_XYZ, GEO_RPZ
+      use constants,        only: small, GEO_XYZ, GEO_RPZ, RTVD_SPLIT
       use dataio_pub,       only: warn, msg, die  !, printinfo
       use domain,           only: dom
-      use global,           only: smalld
+      use global,           only: smalld, which_solver
       use grid_cont,        only: grid_container
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
@@ -430,13 +430,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-#ifdef RTVD
-      if (master ) call warn("[initproblem:problem_initial_conditionslem]: With RTVD you'll likely get Monet-like density maps.")
-#else /* RTVD */
-#  if !(defined(RIEMANN) || defined(HLLC))
-      if (master ) call warn("[initproblem:problem_initial_conditionslem]: No idea what kind of solver you use. Good luck!")
-#  endif
-#endif /* RTVD */
+      if (master .and. which_solver == RTVD_SPLIT) call warn("[initproblem:problem_initial_conditionslem]: With RTVD you'll likely get Monet-like density maps.")
 
    contains
 

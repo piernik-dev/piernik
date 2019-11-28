@@ -30,16 +30,16 @@
 !!
 !! \deprecated BEWARE: this module only care about neutral fluid
 !<
-module fluidupdate   ! SPLIT MUSCL HANCOCK
-! pulled by HLLC
+module fluidupdate_hllc   ! SPLIT MUSCL HANCOCK
+! pulled by ANY
 
   implicit none
   private
-  public :: fluid_update
+  public :: fluid_update_simple
 
 contains
 
-   subroutine fluid_update
+   subroutine fluid_update_simple
 
       use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
@@ -56,7 +56,10 @@ contains
       integer(kind=4)                :: ddim
 
       !> \todo figure out what the problem is and enable multicg and AMR as well
-      if (is_multicg) call die("[fluid_update] something here is not compatible with multiple blocks per process yet")
+      if (is_multicg) call die("[fluidupdate_hllc:fluid_update_simple] something here is not compatible with multiple blocks per process yet")
+#ifdef MAGNETIC
+      call die("[fluidupdate_hllc:fluid_update_simple] Magnetic field is not compatible with HLLC")
+#endif
 
       halfstep = .false.
       if (first_run) then
@@ -91,7 +94,7 @@ contains
 
       if (first_run) first_run = .false.
 
-   end subroutine fluid_update
+   end subroutine fluid_update_simple
 !---------------------------------------------------------------------------
    subroutine sweep(cg,dt,ddim)
 
@@ -123,7 +126,7 @@ contains
       endif
 
       b1d=0.
-      if (firstcall) call warn("[fluidupdate:sweep] magnetic field unimplemented yet. Forcing to be 0")
+      if (firstcall) call warn("[fluidupdate_hllc:sweep] magnetic field unimplemented yet. Forcing to be 0")
       firstcall = .false.
 
       do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim, ORTHO2), HI)
@@ -330,8 +333,11 @@ contains
 !<
    subroutine riemann_hllc(qleft,qright,qgdnv,fgdnv, n, gamma, cs2)
 
-      use constants,  only: zero, one, half, idn, imx, imy, imz, ien
+      use constants,  only: zero, half, idn, imx, imy, imz, ien
       use global,     only: smalld
+#ifndef ISO
+      use constants,  only: one
+#endif /* !ISO */
 
       implicit none
 
@@ -503,4 +509,4 @@ contains
 #endif /* !ISO */
    end subroutine riemann_hllc
 !---------------------------------------------------------------------------
-end module fluidupdate
+end module fluidupdate_hllc
