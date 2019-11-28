@@ -398,6 +398,12 @@ contains
 
       if (base_no_fft .and. (cnt /= 1) .and. master) call warn("[multigrid_gravity:init_multigrid_grav] Cannot use FFT solver on coarsest level")
       base_no_fft = base_no_fft .or. (cnt /= 1)
+#ifdef NO_FFT
+      if (.not. base_no_fft) then
+         call warn("[multigrid_gravity:init_multigrid_grav] Forced base_no_fft due to NO_FFT")
+         base_no_fft = .true.
+      endif
+#endif /* NO_FFT */
 
       cnt_max = cnt
       call piernik_MPI_Allreduce(cnt_max, pMAX)
@@ -444,6 +450,9 @@ contains
       enddo
 
       if (require_FFT) then
+#ifdef NO_FFT
+         call die("[multigrid_gravity:init_multigrid_grav] require_FFT conflicts with NO_FFT")
+#endif /* NO_FFT */
          curl => coarsest%level
          do while (associated(curl))
             cgl => curl%first
