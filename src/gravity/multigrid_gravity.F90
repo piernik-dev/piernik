@@ -54,7 +54,10 @@ module multigrid_gravity
    public :: write_oldsoln_to_restart, read_oldsoln_from_restart
 #endif
 
+#ifndef NO_FFT
    include "fftw3.f"
+#endif /* !NO_FFT */
+
    ! constants from fftw3.f
    !   integer, parameter :: FFTW_MEASURE=0, FFTW_PATIENT=32, FFTW_ESTIMATE=64
    !   integer, parameter :: FFTW_RODFT01=8, FFTW_RODFT10=9
@@ -68,7 +71,9 @@ module multigrid_gravity
    logical            :: fft_patient                                  !< Spend more time in init_multigrid to find faster fft plan
    character(len=cbuff_len) :: grav_bnd_str                           !< Type of gravitational boundary conditions.
    logical            :: require_FFT                                  !< .true. if we use FFT solver anywhere (and need face prolongation)
+#ifndef NO_FFT
    integer            :: fftw_flags = FFTW_MEASURE                    !< or FFTW_PATIENT on request
+#endif /* !NO_FFT */
 
    ! solution recycling
    type(soln_history), target :: inner, outer                         !< storage for recycling the inner and outer potentials
@@ -346,7 +351,9 @@ contains
          if (any([ord_laplacian, ord_laplacian_outer] /= O_I2)) call warn("[multigrid_gravity:multigrid_grav_par] Overrelaxation is implemented only for RBGS relaxation")
       endif
 
+#ifndef NO_FFT
       if (fft_patient) fftw_flags = FFTW_PATIENT
+#endif /* !NO_FFT */
 
       if (grav_bnd == bnd_isolated) call init_multipole
 
