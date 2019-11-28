@@ -80,6 +80,8 @@
 !!
 !! \b \#define \b "PGPLOT"
 !!
+!! \b \#define \b "NO_FFT" - don't use FFTW libraries at all (may be useful on some restricted environments)
+!!
 !! \b \#define \b "JEANS_PROBLEM" - switch on jeans problem-specific quirks
 !!
 !! \b \#define \b "INDEPENDENT_ATOUTB" - switch to independent (instead of collective) write to files (restart files) for arrays with outer boundary area type

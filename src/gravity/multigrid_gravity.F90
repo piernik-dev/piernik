@@ -467,9 +467,12 @@ contains
 
       implicit none
 
+#ifndef NO_FFT
+      call dfftw_cleanup
+#endif /* !NO_FFT */
+
       call cleanup_multipole
       call vstat%cleanup
-      call dfftw_cleanup
       call inner%cleanup_history
       call outer%cleanup_history
 
@@ -498,19 +501,24 @@ contains
    subroutine mgg_cg_init(cg)
 
       use cg_level_connected, only: cg_level_connected_T, find_level
-      use constants,          only: fft_rcr, fft_dst, fft_none, pi, dpi, zero, half, one
+      use constants,          only: fft_none
       use dataio_pub,         only: die
-      use domain,             only: dom
       use grid_cont,          only: grid_container
       use func,               only: operator(.notequals.)
       use multigridvars,      only: overrelax
+#ifndef NO_FFT
+      use constants,          only: fft_rcr, fft_dst, pi, dpi, zero, half, one
+      use domain,             only: dom
+#endif /* !NO_FFT */
 
       implicit none
 
       type(grid_container), pointer,  intent(inout) :: cg
       type(cg_level_connected_T), pointer :: curl
+#ifndef NO_FFT
       real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
       integer :: i, j
+#endif /* !NO_FFT */
 
       ! this should work correctly also when dom%eff_dim < 3
       cg%mg%r  = overrelax / 2.
@@ -533,6 +541,10 @@ contains
       cg%mg%plani = 0
 
       if (curl%fft_type /= fft_none) then
+
+#ifdef NO_FFT
+         call die("[multigrid_gravity:mgg_cg_init] NO_FFT")
+#else /* !NO_FFT */
 
          select case (curl%fft_type)
             case (fft_rcr)
@@ -600,6 +612,7 @@ contains
                endwhere
             enddo
          enddo
+#endif /* !NO_FFT */
 
       endif
 
@@ -620,8 +633,10 @@ contains
       if (allocated(cg%mg%src))     deallocate(cg%mg%src)
       if (allocated(cg%mg%Green3D)) deallocate(cg%mg%Green3D)
 
+#ifndef NO_FFT
       if (cg%mg%planf /= 0) call dfftw_destroy_plan(cg%mg%planf)
       if (cg%mg%plani /= 0) call dfftw_destroy_plan(cg%mg%plani)
+#endif /* !NO_FFT */
 
    end subroutine mgg_cg_cleanup
 
