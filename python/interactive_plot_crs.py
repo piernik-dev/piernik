@@ -309,7 +309,6 @@ if f_run == True:
        prtinfo("Marking line on yt.plot at (0 0 0) : (500 500 0)")
        yt_data_plot.annotate_line((0., 0., 0.), (500., 500.0, 0), plot_args={'color':'white',"lw":2.0} )
 
-
     if (plot_vel): yt_data_plot.annotate_velocity(factor=20)
     if (plot_mag): yt_data_plot.annotate_magnetic_field(factor=20)
     yt_data_plot.set_zlim(plot_field,plot_min,plot_max)
@@ -396,7 +395,10 @@ if f_run == True:
             s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='True')
             #prtinfo("  --->  Saved plot to: %s " %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
 
-            yt_data_plot.annotate_marker(coords, marker=marker_l[marker_index],  plot_args={'color':'red','s':m_size_l[marker_index],"lw":4.5}) # cumulatively annotate all clicked coordinates
+            if (plot_layer == True):   #Mark averaged level
+               yt_data_plot.annotate_line([coords[0],dom_l[avail_dim[0]],coords[2] ], [coords[0],dom_r[avail_dim[0]],coords[2]], plot_args={'color':'white',"lw":2.0} )
+            else:
+               yt_data_plot.annotate_marker(coords, marker=marker_l[marker_index],  plot_args={'color':'red','s':m_size_l[marker_index],"lw":4.5}) # cumulatively annotate all clicked coordinates
             marker_index = marker_index + 1
 
             image_number = image_number + 1
@@ -409,6 +411,7 @@ if f_run == True:
             prtwarn("Empty cell - not saving.")
 
         if (f_run): f_run = False
+
     cid = s.canvas.mpl_connect('button_press_event',read_click_and_plot)
 
     plt.show()
