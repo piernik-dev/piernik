@@ -24,7 +24,7 @@
 
  $RESTART_CONTROL
     restart  = 'last'
-    new_id   = ''
+    res_id   = ''
     nrestart = 0
  /
 
@@ -85,7 +85,6 @@
  $MULTIGRID_GRAVITY
     grav_bnd_str  = "dirichlet"
     gb_no_fft = .true.
-    coarsen_multipole = 0 ! ToDo: fix multigridmultipole:prolong_ext_bnd0
  /
 
  $INTERACTIONS

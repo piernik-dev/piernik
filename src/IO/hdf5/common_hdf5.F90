@@ -41,14 +41,13 @@ module common_hdf5
 
    private
    public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, write_to_hdf5_v2, set_h5_properties
-   public :: nhdf_vars, hdf_vars, hdf_vars_avail, cancel_hdf_var, d_gname, base_d_gname, d_fc_aname, d_size_aname, &
+   public :: hdf_vars, hdf_vars_avail, cancel_hdf_var, d_gname, base_d_gname, d_fc_aname, d_size_aname, &
         d_edge_apname, d_bnd_apname, cg_gname, cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, &
         n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, cg_dl_aname, O_OUT, O_RES, STAT_OK, STAT_INV, &
-        create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output
+        create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output, enable_all_hdf_var
 
    character(len=dsetnamelen), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
    logical,                    allocatable, dimension(:), protected :: hdf_vars_avail
-   integer, protected :: nhdf_vars !< number of quantities plotted to hdf files
    character(len=*), parameter :: d_gname = "domains", base_d_gname = "base", d_fc_aname = "fine_count", &
         & d_size_aname = "n_d", d_edge_apname = "-edge_position", d_bnd_apname = "-boundary_type", &
         & cg_gname = "grid", cg_cnt_aname = "cg_count", cg_lev_aname = "level", cg_size_aname = "n_b", &
@@ -96,11 +95,13 @@ contains
 
    subroutine init_hdf5(vars)
 
-      use constants,  only: dsetnamelen
-      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use constants,  only: dsetnamelen, singlechar
+      use dataio_pub, only: warn
       use fluids_pub, only: has_ion, has_dst, has_neu
+      use global,     only: force_cc_mag
+      use mpisetup,   only: master
 #ifdef COSM_RAYS
-      use dataio_pub, only: warn, msg
+      use dataio_pub, only: msg
       use fluidindex, only: iarr_all_crs
 #endif /* COSM_RAYS */
 
@@ -108,127 +109,129 @@ contains
 
       character(len=dsetnamelen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
 
-      integer                                              :: nvars, i, j
+      integer                                              :: i
+      character(len=singlechar)                            :: fc, ord
+      character(len=dsetnamelen)                           :: aux
 #if defined COSM_RAYS
       integer                                              :: k
-      character(len=dsetnamelen)                           :: aux
 #endif /* COSM_RAYS */
 
-      nvars = 0
-      do i = lbound(vars, 1), ubound(vars, 1)
-         if (len_trim(vars(i)) > 0) nvars = nvars + 1
-      enddo
-
-      nhdf_vars = 0
       do i = lbound(vars, 1), ubound(vars, 1)
          select case (trim(vars(i)))
             case ('')
             case ('dens')
-               nhdf_vars = nhdf_vars + size(iarr_all_dn,1)
-            case ('velx', 'momx')
-               nhdf_vars = nhdf_vars + size(iarr_all_mx,1)
-            case ('vely', 'momy')
-               nhdf_vars = nhdf_vars + size(iarr_all_my,1)
-            case ('velz', 'momz')
-               nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
-            case ('ener')
-               nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
-               if (has_dst) nhdf_vars = nhdf_vars - 1
-#ifdef GRAV
-            case ('gpot')
-               nhdf_vars = nhdf_vars + 1
-#ifdef MULTIGRID
-            case ('sgpt')
-               nhdf_vars = nhdf_vars + 1
-#endif /* MULTIGRID */
-#endif /* GRAV */
-            case ('magx', 'magy', 'magz', 'pres')
-               nhdf_vars = nhdf_vars + 1
-#ifdef COSM_RAYS
-            case ('encr')
-               nhdf_vars = nhdf_vars + size(iarr_all_crs,1)
-#endif /* COSM_RAYS */
-#ifdef TRACER
-            case ('trcr')
-               nhdf_vars = nhdf_vars + 1
-#endif /* TRACER */
-            case default
-               nhdf_vars = nhdf_vars + 1
-         end select
-      enddo
-      allocate(hdf_vars_avail(nhdf_vars))
-      hdf_vars_avail = .true.
-      allocate(hdf_vars(nhdf_vars)); j = 1
-      do i = lbound(vars, 1), ubound(vars, 1)
-         select case (trim(vars(i)))
-            case ('')
-            case ('dens')
-               if (has_dst) then ; hdf_vars(j) = 'dend' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'denn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'deni' ; j = j + 1 ; endif
+               if (has_dst) call append_var('dend')
+               if (has_neu) call append_var('denn')
+               if (has_ion) call append_var('deni')
             case ('velx')
-               if (has_dst) then ; hdf_vars(j) = 'vlxd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'vlxn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'vlxi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('vlxd')
+               if (has_neu) call append_var('vlxn')
+               if (has_ion) call append_var('vlxi')
             case ('vely')
-               if (has_dst) then ; hdf_vars(j) = 'vlyd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'vlyn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'vlyi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('vlyd')
+               if (has_neu) call append_var('vlyn')
+               if (has_ion) call append_var('vlyi')
             case ('velz')
-               if (has_dst) then ; hdf_vars(j) = 'vlzd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'vlzn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'vlzi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('vlzd')
+               if (has_neu) call append_var('vlzn')
+               if (has_ion) call append_var('vlzi')
             case ('momx')
-               if (has_dst) then ; hdf_vars(j) = 'momxd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'momxn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'momxi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('momxd')
+               if (has_neu) call append_var('momxn')
+               if (has_ion) call append_var('momxi')
             case ('momy')
-               if (has_dst) then ; hdf_vars(j) = 'momyd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'momyn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'momyi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('momyd')
+               if (has_neu) call append_var('momyn')
+               if (has_ion) call append_var('momyi')
             case ('momz')
-               if (has_dst) then ; hdf_vars(j) = 'momzd' ; j = j + 1 ; endif
-               if (has_neu) then ; hdf_vars(j) = 'momzn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'momzi' ; j = j + 1 ; endif
+               if (has_dst) call append_var('momzd')
+               if (has_neu) call append_var('momzn')
+               if (has_ion) call append_var('momzi')
             case ('ener')
-               if (has_neu) then ; hdf_vars(j) = 'enen' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'enei' ; j = j + 1 ; endif
+               if (has_neu) call append_var('enen')
+               if (has_ion) call append_var('enei')
             case ('ethr')
-               if (has_neu) then ; hdf_vars(j) = 'ethn' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'ethi' ; j = j + 1 ; endif
-            case ("magx", "magy", "magz")
-               hdf_vars(j) = vars(i) ; j = j + 1
+               if (has_neu) call append_var('ethn')
+               if (has_ion) call append_var('ethi')
+            case ("divb", "divB")
+               if (force_cc_mag) then
+                  call append_var("divbc")
+               else
+                  call append_var("divbf")
+               endif
+            case ("divb4", "divb6", "divb8")
+               if (force_cc_mag) then
+                  fc = "c"
+               else
+                  fc = "f"
+               endif
+               read(vars(i), '(a4,a1)') aux, ord
+               write(aux, '(3a)') "divb", fc, ord
+               call append_var(aux)
 #ifdef COSM_RAYS
             case ('encr')
                do k = 1, size(iarr_all_crs,1)
                   if (k<=9) then
                      write(aux,'(A2,I1)') 'cr', k
-                     hdf_vars(j) = aux ; j = j + 1
+                     call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", k
                      call warn(msg)
                   endif
                enddo
 #endif /* COSM_RAYS */
-#ifdef GRAV
-            case ('gpot')
-               hdf_vars(j) = 'gpot' ; j = j + 1
-#ifdef MULTIGRID
-            case ('sgpt')
-               hdf_vars(j) = 'sgpt' ; j = j + 1
-#endif /* MULTIGRID */
-#endif /* GRAV */
-#ifdef TRACER
-            case ('trcr')
-               hdf_vars(j) = 'trcr' ; j = j + 1
-#endif /* TRACER */
             case ('pres')
-               if (has_neu) then ; hdf_vars(j) = 'pren' ; j = j + 1 ; endif
-               if (has_ion) then ; hdf_vars(j) = 'prei' ; j = j + 1 ; endif
+               if (has_neu) call append_var('pren')
+               if (has_ion) call append_var('prei')
             case default
-               hdf_vars(j) = trim(vars(i)) ; j = j + 1
+               if (.not. has_ion .and. (any(trim(vars(i)) == ["deni", "vlxi", "vlyi", "vlzi", "enei", "ethi", "prei"]) .or. any(trim(vars(i)) == ["momxi", "momyi", "momzi"]))) then
+                  if (master) call warn("[common_hdf5:init_hdf5] Cannot safely use plot variable '" // trim(vars(i)) // "' without ionized fluid")
+               else if (.not. has_neu .and. (any(trim(vars(i)) == ["denn", "vlxn", "vlyn", "vlzn", "enen", "ethn", "pren"]) .or. any(trim(vars(i)) == ["momxn", "momyn", "momzn"]))) then
+                  if (master) call warn("[common_hdf5:init_hdf5] Cannot safely use plot variable '" // trim(vars(i)) // "' without neutral fluid")
+               else if (.not. has_dst .and. (any(trim(vars(i)) == ["dend", "vlxd", "vlyd", "vlzd"]) .or. any(trim(vars(i)) == ["momxd", "momyd", "momzd"]))) then
+                  if (master) call warn("[common_hdf5:init_hdf5] Cannot safely use plot variable '" // trim(vars(i)) // "' without dust fluid")
+               else
+                  call append_var(vars(i)) ! all other known and unknown field descriptions
+               endif
          end select
       enddo
+
+      allocate(hdf_vars_avail(size(hdf_vars)))
+      call enable_all_hdf_var
+
+   contains
+
+      subroutine append_var(n)
+
+         use dataio_pub, only: warn
+         use mpisetup,   only: master
+
+         implicit none
+
+         character(len=*), intent(in) :: n
+
+         character(len=dsetnamelen), allocatable, dimension(:) :: tmp
+
+         if (len_trim(n) <= 1) then
+            if (master) call warn("[common_hdf5:init_hdf5:append_var] empty name")
+            return
+         endif
+
+         if (.not. allocated(hdf_vars)) then
+            allocate(hdf_vars(1))
+            hdf_vars = trim(n)
+         else
+            if (.not. any(trim(n) == hdf_vars)) then
+               allocate(tmp(lbound(hdf_vars, dim=1):ubound(hdf_vars, dim=1) + 1))
+               tmp(:ubound(hdf_vars, dim=1)) = hdf_vars
+               call move_alloc(from=tmp, to=hdf_vars)
+               hdf_vars(ubound(hdf_vars, dim=1)) = trim(n)
+            else
+               if (master) call warn("[common_hdf5:init_hdf5:append_var] duplicated name: '" // trim(n) // "'")
+            endif
+         endif
+
+      end subroutine append_var
 
    end subroutine init_hdf5
 
@@ -243,6 +246,8 @@ contains
 
    end subroutine cleanup_hdf5
 
+!> \brief Mark a plot variable as faulty (don't spam warnings unnecessarily)
+
    subroutine cancel_hdf_var(var)
 
       use constants, only: I_ONE
@@ -252,11 +257,21 @@ contains
       character(len=dsetnamelen), intent(in) :: var
       integer(kind=4)                        :: i
 
-      do i = I_ONE, int(nhdf_vars, kind=4) !> \todo: introduce integer(kind=4), parameter :: first_hdf_var = 1 in constants.h and use it everywhere instead
+      do i = I_ONE, size(hdf_vars, kind=4) !> \todo: introduce integer(kind=4), parameter :: first_hdf_var = 1 in constants.h and use it everywhere instead
          if (hdf_vars(i) == var) hdf_vars_avail(i) = .false.
       enddo
 
    end subroutine cancel_hdf_var
+
+!> \brief Mark all plot variables as good
+
+   subroutine enable_all_hdf_var
+
+      implicit none
+
+      if (size(hdf_vars_avail) > 0) hdf_vars_avail = .true.
+
+   end subroutine enable_all_hdf_var
 
 !-----------------------------------------------------------------------------
 !>
@@ -265,7 +280,9 @@ contains
    subroutine common_shortcuts(var, fl_dni, i_xyz)
 
       use constants,  only: dsetnamelen, singlechar, INT4
+      use dataio_pub, only: warn
       use fluidindex, only: flind
+      use fluids_pub, only: has_ion, has_dst, has_neu
       use fluidtypes, only: component_fluid
 
       implicit none
@@ -280,21 +297,49 @@ contains
       if (any([ "den", "vlx", "vly", "vlz", "ene" ] == var(1:3))) then
          select case (var(4:4))
             case ("d")
-               fl_dni => flind%dst
+               if (has_dst) then
+                  fl_dni => flind%dst
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no dust fluid")
+               endif
             case ("n")
-               fl_dni => flind%neu
+               if (has_neu) then
+                  fl_dni => flind%neu
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no neutral fluid")
+               endif
             case ("i")
-               fl_dni => flind%ion
+               if (has_ion) then
+                  fl_dni => flind%ion
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no ionized fluid")
+               endif
+            case default
+               call warn("[common_hdf5:common_shortcuts] cannot assign fluid to '" // trim(var) // "'")
          end select
       else if (any([ "momx", "momy", "momz" ] == var(1:4))) then
          select case (var(5:5))
             case ("d")
-               fl_dni => flind%dst
+               if (has_dst) then
+                  fl_dni => flind%dst
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no dust fluid")
+               endif
             case ("n")
-               fl_dni => flind%neu
+               if (has_neu) then
+                  fl_dni => flind%neu
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no neutral fluid")
+               endif
             case ("i")
-               fl_dni => flind%ion
-         end select
+               if (has_ion) then
+                  fl_dni => flind%ion
+               else
+                  call warn("[common_hdf5:common_shortcuts] cannot assign fluid to " // trim(var) // "' because we have no ionized fluid")
+               endif
+            case default
+               call warn("[common_hdf5:common_shortcuts] cannot assign fluid to '" // trim(var) // "'")
+        end select
       endif
 
       i_xyz = huge(1_INT4)
@@ -321,15 +366,24 @@ contains
 !<
    subroutine set_common_attributes(filename)
 
-      use constants,   only: I_ONE
-      use dataio_pub,  only: use_v2_io, parfile, parfilelines, gzip_level
-      use dataio_user, only: user_attrs_wr, user_attrs_pre
-      use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, &
+      use constants,     only: I_ONE
+      use dataio_pub,    only: use_v2_io, parfile, parfilelines, gzip_level
+      use dataio_user,   only: user_attrs_wr, user_attrs_pre
+      use hdf5,          only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, &
          & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
          & H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, &
          & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
-      use mpisetup,    only: slave
-      use version,     only: env, nenv
+      use mpisetup,      only: master, slave
+      use version,       only: env, nenv
+#ifdef RANDOMIZE
+      use randomization, only: write_current_seed_to_restart
+#endif /* RANDOMIZE */
+#ifdef SN_SRC
+      use snsources,     only: write_snsources_to_restart
+#endif /* SN_SRC */
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      use multigrid_gravity, only: write_oldsoln_to_restart
+#endif /* MULTIGRID && SELF_GRAV */
 
       implicit none
 
@@ -344,10 +398,16 @@ contains
 
       if (associated(user_attrs_pre)) call user_attrs_pre
 
-      if (slave) return ! This data need not be written in parallel.
+      if (master) then
+         call h5open_f(error)
+         call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
+      endif
 
-      call h5open_f(error)
-      call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      call write_oldsoln_to_restart(file_id)  ! Old solution fields have to be selectively marked for restart also on slaves
+#endif /* MULTIGRID && SELF_GRAV */
+
+      if (slave) return ! This data need not be written in parallel.
 
       if (use_v2_io) then
          call set_common_attributes_v2(file_id)
@@ -387,6 +447,12 @@ contains
       call H5Tclose_f(type_id, error)
       call H5Pclose_f(prp_id, error)
 
+#ifdef RANDOMIZE
+      call write_current_seed_to_restart(file_id)
+#endif /* RANDOMIZE */
+#ifdef SN_SRC
+      call write_snsources_to_restart(file_id)
+#endif /* SN_SRC */
       if (associated(user_attrs_wr)) call user_attrs_wr(file_id)
 
       call h5fclose_f(file_id, error)
@@ -405,6 +471,7 @@ contains
 !> \todo Set up an universal table(s) of attribute names for use by both set_common_attributes and read_restart_hdf5.
 !! Provide indices for critical attributes (rr1) and for runtime attributes (rr2).
 !!
+!! \ToDo convert to use "call set_attr", like in set_common_attributes_v2, then despaghettify.
 !<
 
    subroutine set_common_attributes_v1(file_id)
@@ -419,6 +486,7 @@ contains
       use hdf5,            only: HID_T, SIZE_T
       use h5lt,            only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
       use mass_defect,     only: magic_mass
+      use timestep_pub,    only: c_all_old, cfl_c, stepcfl
       use units,           only: cm, gram, sek, kelvin, miu0
 
       implicit none
@@ -448,13 +516,16 @@ contains
       rbuffer(12)  = last_hdf_time           ; rbuffer_name(12)  = "last_hdf_time" !rr2
       rbuffer(13)  = last_res_time           ; rbuffer_name(13)  = "last_res_time" !rr2
       rbuffer(14)  = -99999.9                ; rbuffer_name(14)  = "last_plt_time" !rr2 ! FIXME
-      rbuffer(15)  = cm                      ; rbuffer_name(15)  = "cm" !rr2
-      rbuffer(16)  = gram                    ; rbuffer_name(16)  = "gram" !rr2
-      rbuffer(17)  = sek                     ; rbuffer_name(17)  = "sek" !rr2
-      rbuffer(18)  = miu0                    ; rbuffer_name(18)  = "miu0" !rr2
-      rbuffer(19)  = kelvin                  ; rbuffer_name(19)  = "kelvin" !rr2
-      rbuffer_size(20) = flind%fluids
-      rbuffer(20:19+rbuffer_size(20)) = magic_mass ; rbuffer_name(20:19+rbuffer_size(20)) = "magic_mass" !rr2
+      rbuffer(15)  = c_all_old               ; rbuffer_name(15)  = "c_all_old" !rr2
+      rbuffer(16)  = stepcfl                 ; rbuffer_name(16)  = "stepcfl" !rr2
+      rbuffer(17)  = cfl_c                   ; rbuffer_name(17)  = "cfl_c" !rr2
+      rbuffer(18)  = cm                      ; rbuffer_name(18)  = "cm" !rr2
+      rbuffer(19)  = gram                    ; rbuffer_name(19)  = "gram" !rr2
+      rbuffer(20)  = sek                     ; rbuffer_name(20)  = "sek" !rr2
+      rbuffer(21)  = miu0                    ; rbuffer_name(21)  = "miu0" !rr2
+      rbuffer(22)  = kelvin                  ; rbuffer_name(22)  = "kelvin" !rr2
+      rbuffer_size(23) = flind%fluids
+      rbuffer(23:22+rbuffer_size(23)) = magic_mass ; rbuffer_name(23:22+rbuffer_size(23)) = "magic_mass" !rr2
 
       ibuffer(1)   = nstep                   ; ibuffer_name(1)   = "nstep" !rr2
       ibuffer(2)   = nres                    ; ibuffer_name(2)   = "nres" !rr2
@@ -492,82 +563,49 @@ contains
 !>
 !! \brief Common attributes for v2 files
 !!
-!! \warning Do not remove redundancy between set_common_attributes_v1 and set_common_attributes_v2 until we get mature
-!! state of the v2 outputs
 !<
 
    subroutine set_common_attributes_v2(file_id)
 
-      use constants,   only: cbuff_len, I_ONE
-      use dataio_pub,  only: require_problem_IC, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
-         &                   last_res_time, last_log_time, last_tsl_time, nres, nhdf, domain_dump
-      use fluidindex,  only: flind
-      use global,      only: t, dt, nstep
-      use hdf5,        only: HID_T, SIZE_T
-      use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
-      use mass_defect, only: magic_mass
+      use constants,          only: I_ONE
+      use dataio_pub,         only: require_problem_IC, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
+         &                          last_res_time, last_log_time, last_tsl_time, nres, nhdf, domain_dump
+      use global,             only: t, dt, nstep
+      use hdf5,               only: HID_T
+      use mass_defect,        only: magic_mass
+      use set_get_attributes, only: set_attr
+      use timestep_pub,       only: c_all_old, cfl_c, stepcfl
 
       implicit none
 
       integer(HID_T), intent(in)                   :: file_id       !< File identifier
 
-      integer(kind=4)                              :: fe
-      integer(SIZE_T)                              :: i
-      integer(SIZE_T), parameter                   :: bufsize = I_ONE
-      integer(kind=4)                              :: error
-      integer, parameter                           :: buf_len = 50
-      integer(SIZE_T),          dimension(buf_len) :: rbuffer_size
-      integer(kind=4),          dimension(buf_len) :: ibuffer
-      real,                     dimension(buf_len) :: rbuffer
-      character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
-      character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
+      ! real attributes
+      call set_attr(file_id, "time",          [t                     ]) !rr2
+      call set_attr(file_id, "timestep",      [dt                    ]) !rr2
+      call set_attr(file_id, "piernik",       [piernik_hdf5_version2 ]) !rr1, rr2
+      call set_attr(file_id, "last_log_time", [last_log_time         ]) !rr2
+      call set_attr(file_id, "last_tsl_time", [last_tsl_time         ]) !rr2
+      call set_attr(file_id, "last_hdf_time", [last_hdf_time         ]) !rr2
+      call set_attr(file_id, "last_res_time", [last_res_time         ]) !rr2
+      call set_attr(file_id, "last_plt_time", [-99999.99999          ]) !rr2 !FIXME
+      call set_attr(file_id, "c_all_old",     [c_all_old             ]) !rr2
+      call set_attr(file_id, "stepcfl",       [stepcfl               ]) !rr2
+      call set_attr(file_id, "cfl_c",         [cfl_c                 ]) !rr2
+      call set_attr(file_id, "magic_mass",     magic_mass)
 
-      rbuffer_size = bufsize
-      rbuffer(1) = t                     ; rbuffer_name(1) = "time" !rr2
-      rbuffer(2) = dt                    ; rbuffer_name(2) = "timestep" !rr2
-      rbuffer(3) = piernik_hdf5_version2 ; rbuffer_name(3) = "piernik" !rr1, rr2
-      rbuffer(4) = last_log_time         ; rbuffer_name(4) = "last_log_time" !rr2
-      rbuffer(5) = last_tsl_time         ; rbuffer_name(5) = "last_tsl_time" !rr2
-      rbuffer(6) = last_hdf_time         ; rbuffer_name(6) = "last_hdf_time" !rr2
-      rbuffer(7) = last_res_time         ; rbuffer_name(7) = "last_res_time" !rr2
-      rbuffer(8) = -99999.99999          ; rbuffer_name(8) = "last_plt_time" !rr2 !FIXME
-      rbuffer_size(9) = flind%fluids
-      rbuffer(9:8+rbuffer_size(9)) = magic_mass ; rbuffer_name(9:8+rbuffer_size(9)) = "magic_mass" !rr2
-
-      ibuffer(1) = nstep                 ; ibuffer_name(1) = "nstep" !rr2
-      ibuffer(2) = nres                  ; ibuffer_name(2) = "nres" !rr2
-      ibuffer(3) = nhdf                  ; ibuffer_name(3) = "nhdf" !rr2
-      ibuffer(4) = -1                    ; ibuffer_name(4) = "nimg" !rr2 !FIXME
-      ibuffer(5) = require_problem_IC     ; ibuffer_name(5) = "require_problem_IC" !rr2
-
+      ! integer attributes
+      call set_attr(file_id, "nstep",              [nstep                 ]) !rr2
+      call set_attr(file_id, "nres",               [nres                  ]) !rr2
+      call set_attr(file_id, "nhdf",               [nhdf                  ]) !rr2
+      call set_attr(file_id, "nimg",               [-I_ONE                ]) !rr2 !FIXME
+      call set_attr(file_id, "require_problem_IC", [require_problem_IC    ]) !rr2
       !> \todo  add number of pieces in the restart point/data dump
 
-      i = 1
-      do while (rbuffer_name(i) /= "")
-         call h5ltset_attribute_double_f(file_id, "/", rbuffer_name(i), rbuffer(i:i-I_ONE+rbuffer_size(i)), rbuffer_size(i), error)
-         i = i + rbuffer_size(i)
-      enddo
-
-      i = 1
-      do while (ibuffer_name(i) /= "")
-         call h5ltset_attribute_int_f(file_id, "/", ibuffer_name(i), ibuffer(i), bufsize, error)
-         i = i + bufsize
-      enddo
-
-      fe = len_trim(problem_name, kind=4)
-      call h5ltset_attribute_string_f(file_id, "/", "problem_name", problem_name(1:fe), error) !rr2
-      fe = len_trim(domain_dump, kind=4)
-      call h5ltset_attribute_string_f(file_id, "/", "domain", domain_dump(1:fe), error) !rr2
-      fe = len_trim(run_id, kind=4)
-      call h5ltset_attribute_string_f(file_id, "/", "run_id", run_id(1:fe), error) !rr2
-
-      ! these values will go do  base domain description
-!!$      rbuffer(4:5) = dom%edge(xdim, :)       ; rbuffer_name(4:5) = [ "xmin", "xmax" ] !rr1
-!!$      rbuffer(6:7) = dom%edge(ydim, :)       ; rbuffer_name(6:7) = [ "ymin", "ymax" ] !rr1
-!!$      rbuffer(8:9) = dom%edge(zdim, :)       ; rbuffer_name(8:9) = [ "zmin", "zmax" ] !rr1
-!!$      ibuffer(6:8) = dom%n_d(:)              ; ibuffer_name(6:8) = [ "nxd", "nyd", "nzd" ] !rr1
-!!$      ibuffer(9)   = dom%nb                  ; ibuffer_name(9)   = "nb"
-!!$      external boundary types
+      ! string attributes
+      call set_attr(file_id, "problem_name", [trim(problem_name)]) !rr2
+      call set_attr(file_id, "domain",       [trim(domain_dump) ]) !rr2
+      call set_attr(file_id, "run_id",       [trim(run_id)      ]) !rr2
 
    end subroutine set_common_attributes_v2
 
@@ -1026,8 +1064,8 @@ contains
 
    function output_fname(wr_rd, ext, no, bcast, prefix) result(filename)
 
-      use constants,  only: cwdlen, RD, WR, I_FOUR, fnamelen
-      use dataio_pub, only: problem_name, run_id, wd_wr, wd_rd, warn, die, msg
+      use constants,  only: cwdlen, idlen, RD, WR, I_FOUR, fnamelen
+      use dataio_pub, only: problem_name, run_id, res_id, wd_wr, wd_rd, warn, die, msg
       use mpisetup,   only: master, piernik_MPI_Bcast
 
       implicit none
@@ -1037,6 +1075,7 @@ contains
       logical,               intent(in), optional :: bcast
       character(len=*),      intent(in), optional :: prefix
       character(len=cwdlen)                       :: filename, temp  ! File name
+      character(len=idlen)                        :: file_id
 
 
       ! Sanity checks go here
@@ -1052,11 +1091,17 @@ contains
          endif
       endif
 
+      if ((wr_rd == RD) .and. (res_id /= '')) then
+         file_id = res_id
+      else
+         file_id = run_id
+      endif
+
       if (master) then
          if (present(prefix)) then
-            write(temp,'(2(a,"_"),a3,"_",i4.4,a4)') trim(prefix), trim(problem_name), run_id, no, ext
+            write(temp,'(2(a,"_"),a3,"_",i4.4,a4)') trim(prefix), trim(problem_name), file_id, no, ext
          else
-            write(temp,'(a,"_",a3,"_",i4.4,a4)') trim(problem_name), run_id, no, ext
+            write(temp,'(a,"_",a3,"_",i4.4,a4)') trim(problem_name), file_id, no, ext
          endif
          select case (wr_rd)
             case (RD)

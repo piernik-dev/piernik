@@ -21,6 +21,7 @@
 #   'make qa'              # run qa.py on all F90 files in src and problems
 #                            directories
 #   'make pep8'            # run pep8 on all Python scripts, ignore long lines
+#   'make chk_err_msg'     # check filenames in error messages
 #   'make doxy'            # generate/updare Doxygen documentation
 #
 # Resetup will also call make for the object directories, unless you've
@@ -35,7 +36,7 @@ ALLOBJ = $(wildcard obj*)
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check dep qa pep8 doxy
+.PHONY: $(ALLOBJ) check dep qa pep8 doxy chk_err_msg
 
 all: $(ALLOBJ)
 
@@ -64,7 +65,7 @@ clean:
 	@CL=1 $(MAKE) -k all
 
 allsetup:
-	for i in problems/* ; do \
+	for i in $$( find problems/* -type d ) ; do \
 		if [ ! -e $$i/OBSOLETE ] ; then \
 			if [ $$( dirname $$( dirname $$i ) ) == "." ] ; then \
 				nm=$$( basename $$i ); \
@@ -75,12 +76,16 @@ allsetup:
 		fi; \
 	done
 
-qa: pep8
+qa: pep8 chk_err_msg
 	./bin/qa.py $$( find src problems -name "*.F90" )
 
 pep8:
 	echo PEP8 check
 	pep8 `find . -name "*py"` --ignore=E501
+
+chk_err_msg:
+	echo Check filenames in error messages
+	./bin/checkmessages.sh
 
 doxy:
 	doxygen piernik.doxy

@@ -125,6 +125,9 @@ contains
 
    end function resample_gauss
 
+#if 0
+! this function is not used anywhere
+
 !>
 !! \brief Calculate first 4 terms of taylor expansion of cosh
 !!
@@ -152,6 +155,7 @@ contains
          x2 = x2**2
       enddo
    end function crude_cosh
+#endif
 
 !>
 !! \brief Returns the file descriptor associated with a specified unit.
@@ -161,11 +165,11 @@ contains
       use ifposix, only: pxffileno
 #endif /* __INTEL_COMPILER */
       implicit none
-      integer, intent(in) :: lunit  !< Fortran logical unit
+      integer(kind=4), intent(in) :: lunit  !< Fortran logical unit
       integer(kind=4) :: piernik_fnum
 
 #if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
-      integer :: fd, ierror
+      integer(kind=4) :: fd, ierror
       call pxffileno(lunit, fd, ierror)
       piernik_fnum = fd
 #else /* __INTEL_COMPILER || _CRAYFTN */

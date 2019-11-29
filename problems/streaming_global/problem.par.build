@@ -28,7 +28,7 @@
 
  $RESTART_CONTROL
     restart  = 'last'
-    new_id   = 'foo'
+    res_id   = 'foo'
     nrestart = 0
  /
 
@@ -71,6 +71,7 @@
     limiter= 'vanleer'
     cfr_smooth = 0.01
     geometry25D = .true.
+    divB_0 = "CT" ! because we have GEO_RPZ and GLM is implemented only for GEO_XYZ
  /
 
  $GRAVITY

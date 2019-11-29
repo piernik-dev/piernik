@@ -56,11 +56,15 @@ module constants
    real, parameter :: zero       = 0.0                   !< zero
    real, parameter :: one        = 1.0                   !< one
    real, parameter :: two        = 2.0                   !< two
+   real, parameter :: four       = 4.0                   !< four
+   real, parameter :: eight      = 8.0                   !< eight
    real, parameter :: half       = 0.5                   !< a half
    real, parameter :: onet       = 1./3.                 !< one third
    real, parameter :: twot       = 2./3.                 !< two thirds
    real, parameter :: oneq       = 1./4.                 !< one fourth
    real, parameter :: thrq       = 3./4.                 !< three fourths
+   real, parameter :: onesth     = 1./6.                 !< one sixth
+   real, parameter :: oneeig     = 1./8.                 !< one eighth
 
    enum, bind(C)
       enumerator :: idn = 1, imx, imy, imz, ien
@@ -85,6 +89,8 @@ module constants
    real, parameter :: big        = huge(real(1.0,4))     !< a constant used as the upper limit number
    real, parameter :: big_float  = huge(real(1.0,4))     !< replicated temporarily 'big' for compatibility \todo choose one and convert occurrences of the other one
    real, parameter :: dirtyH     = big                   !< If dirty_debug then pollute arrays with this insane value
+   real, parameter :: dirtyH1    = 10.**int(log10(big))  !< this "round" dirty value makes it easier to detect which call contaminated the data
+   real, parameter :: dirtyH1c   = 0.1 * dirtyH1         !< lowest value of marked dirty pollutions
    real, parameter :: dirtyL     = sqrt(dirtyH)          !< If dirty_debug then assume that the array got contaminated by dirtyH by checking against this value
    real, parameter :: small      = tiny(real(1.0,4))     !< a constant used as the lower limit number
    integer, parameter :: big_int = huge(int(1,4))
@@ -126,8 +132,8 @@ module constants
    enum, bind(C)
       enumerator :: PIERNIK_START                        ! before initialization
       enumerator :: PIERNIK_INIT_MPI                     ! initialized MPI
-      enumerator :: PIERNIK_INIT_GLOBAL                  ! initialized global parameters
       enumerator :: PIERNIK_INIT_DOMAIN                  ! initialized domain
+      enumerator :: PIERNIK_INIT_GLOBAL                  ! initialized global parameters
       enumerator :: PIERNIK_INIT_FLUIDS                  ! initialized fluid properties
       enumerator :: PIERNIK_INIT_GRID                    ! initialized grids
       enumerator :: PIERNIK_INIT_IO_IC                   ! initialized all physics
@@ -163,13 +169,35 @@ module constants
       enumerator :: BND_INVALID = BND_MPI - 1 !! non-recognized boundary
    end enum
 
+   ! solver type
+   enum, bind(C)
+      enumerator :: RTVD_SPLIT    !! MHD RTVD, as it was implemented from the beginning of Piernik
+      enumerator :: HLLC_SPLIT    !! non-magnetic (pure HD) HLLC as first attempt of something more precise than RTVD, lacks many features an ma be removed at some point
+      enumerator :: RIEMANN_SPLIT !! MHD Riemann, implementations by Varadarajan Parthasarathy; HD variant is slower than HLLC_SPLIT
+   end enum
+   ! Perhaps it may make sense to create compatibility matrix for solvers.
+   ! AMR, magnetic, FARGO, resistivity, ...
+
+
+   ! enumerate stages of Runge-Kutta method in an unique way, so istep will contain information both about stage and method
+   enum, bind(C)
+      enumerator :: EULER = 10000  !! integration_order == 1
+      enumerator :: RK2_1          !! halfstep RK2
+      enumerator :: RK2_2          !! fullstep RK2
+   end enum
+   integer, parameter :: n_schemes = 2
+   integer, dimension(n_schemes), parameter :: first_stage = [ EULER, RK2_1 ], &
+        &                                      last_stage  = [ EULER, RK2_2 ]
+   real, dimension(EULER:RK2_2), parameter :: rk_coef = [ one, &      !! EULER
+        &                                                 half, one ] !! RK2
+
    ! 3D and 4D array names
    ! fluids
-   character(len=dsetnamelen), parameter :: fluid_n = "fluid"   !< main array
+   character(len=dsetnamelen), parameter :: fluid_n = "fluid"   !< main fluid array
    character(len=dsetnamelen), parameter :: uh_n    = "uh"      !< auxiliary array for half-step values
    ! magnetic field
-   character(len=dsetnamelen), parameter :: mag_n   = "mag"     !< main array
-   character(len=dsetnamelen), parameter :: mag_cc_n = "magcc"  !< cell-centered magnetic field for temporarystorage
+   character(len=dsetnamelen), parameter :: mag_n   = "mag"     !< main magnetic field array
+   character(len=dsetnamelen), parameter :: magh_n  = "magh"    !< auxiliary array for half-step values
    ! gravitational potential
    character(len=dsetnamelen), parameter :: gp_n    = "gp"      !< static, external field, must be explicitly set to 0. if no external fields are applied
    character(len=dsetnamelen), parameter :: sgp_n   = "sgp"     !< current field from self-gravity
@@ -181,6 +209,8 @@ module constants
    character(len=dsetnamelen), parameter :: cs_i2_n = "cs_iso2" !< map of imposed isothermal sound speed
    character(len=dsetnamelen), parameter :: wcr_n   = "wcr"     !< auxiliary array for CR diffusion
    character(len=dsetnamelen), parameter :: wa_n    = "wa"      !< general-purpose auxiliary 3D array
+   character(len=dsetnamelen), parameter :: psi_n   = "psi"     !< auxiliary 3D array for divergence cleaning
+   character(len=dsetnamelen), parameter :: psih_n  = "psih"    !< auxiliary 3D array for divergence cleaning for half-step values
 
    ! timer names
    character(len=*), parameter :: tmr_fu  = "fluid_update"   !< main timer used to measure fluid_update step
@@ -188,9 +218,10 @@ module constants
    character(len=*), parameter :: tmr_mg  = "multigrid"      !< timer for gravity multigrid solver
    character(len=*), parameter :: tmr_mgd = "multigrid_diff" !< timer for gravityCR diffusion multigrid solver
 
-   ! Handling boundary cells in the output
+   ! Handling boundary cells in the output (AT stands for Area Type)
    enum, bind(C)
-      enumerator :: AT_IGNORE       !! no output
+      enumerator :: AT_BACKUP       !! backup field: no output AND no backup
+      enumerator :: AT_IGNORE       !! no output for anything less or equal AT_IGNORE
       enumerator :: AT_NO_B         !! no boundary cells
       enumerator :: AT_OUT_B        !! external boundary cells
       enumerator :: AT_USER         !! user defined area type
@@ -212,6 +243,8 @@ module constants
       enumerator :: O_I2  = 2  !! integral quadratic
       enumerator :: O_I3  = 3  !! integral cubic
       enumerator :: O_I4  = 4  !! integral quartic
+      enumerator :: O_I5  = 5  !! integral quintic
+      enumerator :: O_I6  = 6  !! integral sextic
       enumerator :: O_D2  = -2 !! direct quadratic
       enumerator :: O_D3  = -3 !! direct cubic
       enumerator :: O_D4  = -4 !! direct quartic
@@ -247,6 +280,13 @@ module constants
       enumerator :: I_TSC   ! Triangular shaped cloud
    end enum
 
+   ! divB=0 constraining method
+   enum, bind(C)
+      enumerator :: DIVB_CT   ! Constrained Transport
+      enumerator :: DIVB_HDC  ! Hyperbolic Divergence Cleaning (div(B) diffusion, GLM)
+   end enum
+   integer(kind=4), parameter :: psidim = zdim + 1
+
    ! -1, 0, 1
    enum, bind(C)
       enumerator :: IM = -1
@@ -274,6 +314,12 @@ module constants
    end enum
 
    ! misc
+   logical, parameter :: has_B = &
+#ifdef MAGNETIC
+        .true.
+#else /* !MAGNETIC */
+        .false.
+#endif /* !MAGNETIC */
    enum, bind(C)
       enumerator :: MINL, MAXL                           !< constants for func::get_extremum
       enumerator :: RD, WR                               !< constants for wd_{rd,wr} selection

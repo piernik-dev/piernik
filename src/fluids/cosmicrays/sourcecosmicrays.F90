@@ -25,7 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#define RNG 2:n-1
 
 !>
 !! \brief Computation of Cosmic Ray sources and pcr gradient pcr
@@ -37,9 +36,9 @@ module sourcecosmicrays
    implicit none
 
    private
-   public :: src_gpcr
+   public :: src_gpcr_exec
 #ifdef COSM_RAYS_SOURCES
-   public :: src_crn
+   public :: src_crn_exec
 #endif /* COSM_RAYS_SOURCES */
 
 contains
@@ -47,22 +46,28 @@ contains
 !>
 !! \brief Computation of Cosmic ray pressure gradient and pcr div v
 !<
-   subroutine src_gpcr(uu, nn, dx, divv, decr, grad_pcr)
+   subroutine src_gpcr(uu, nn, decr, grad_pcr, sweep, i1, i2, cg)
 
+      use crhelpers,      only: set_div_v1d
       use domain,         only: dom
       use fluidindex,     only: flind
+      use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, gamma_crs, cr_active, gpcr_essential
 
       implicit none
 
       integer(kind=4),                    intent(in)  :: nn                 !< array size
       real, dimension(nn, flind%all),     intent(in)  :: uu                 !< vector of conservative variables
-      real, dimension(:), pointer,        intent(in)  :: divv               !< vector of velocity divergence used in cosmic ray advection
-      real,                               intent(in)  :: dx                 !< cell length
       real, dimension(nn),                intent(out) :: grad_pcr
       real, dimension(nn, flind%crs%all), intent(out) :: decr
+      integer(kind=4),                    intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                            intent(in)  :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                            intent(in)  :: i2                 !< coordinate of sweep in the 2nd remaining direction
+      type(grid_container), pointer,      intent(in)  :: cg                 !< current grid piece
+      real, dimension(:), pointer                     :: divv               !< vector of velocity divergence used in cosmic ray advection
       integer                                         :: icr, jcr
 
+      call set_div_v1d(divv, sweep, i1, i2, cg)
       do icr = 1, flind%crs%all
          ! 1/eff_dim is because we compute the p_cr*dv in every sweep (3 times in 3D, twice in 2D and once in 1D experiments)
          decr(:, icr)      = -1. / real(dom%eff_dim) * (gamma_crs(icr)-1.0) * uu(:, iarr_crs(icr))*divv(:)
@@ -70,11 +75,50 @@ contains
       grad_pcr(:) = 0.0
       do icr = 1, size(gpcr_essential)
          jcr = gpcr_essential(icr)
-         grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crs(jcr)-1.)*(uu(1:nn-2, iarr_crs(jcr)) - uu(3:nn, iarr_crs(jcr)))/(2.*dx)
+         grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crs(jcr)-1.)*(uu(1:nn-2, iarr_crs(jcr)) - uu(3:nn, iarr_crs(jcr)))/(2.*cg%dl(sweep))
       enddo
       grad_pcr(1:2) = 0.0 ; grad_pcr(nn-1:nn) = 0.0
 
    end subroutine src_gpcr
+
+!>
+!! \brief Computation of Cosmic ray pressure gradient and pcr div v
+!<
+   subroutine src_gpcr_exec(uu, nn, usrc, sweep, i1, i2, cg, vx)
+
+      use fluidindex,     only: flind, iarr_all_mx, iarr_all_en
+      use grid_cont,      only: grid_container
+      use initcosmicrays, only: iarr_crs
+
+      implicit none
+
+      integer(kind=4),                intent(in)  :: nn                 !< array size
+      real, dimension(nn, flind%all), intent(in)  :: uu                 !< vector of conservative variables
+      integer(kind=4),                intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                        intent(in)  :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                        intent(in)  :: i2                 !< coordinate of sweep in the 2nd remaining direction
+      type(grid_container), pointer,  intent(in)  :: cg                 !< current grid piece
+      real, dimension(:,:), pointer,  intent(in)  :: vx
+      real, dimension(nn, flind%all), intent(out) :: usrc               !< u array update component for sources
+!locals
+      real, dimension(nn)                         :: grad_pcr
+      real, dimension(nn, flind%crs%all)          :: decr
+      logical                                     :: full_dim
+
+      full_dim = nn > 1
+
+      usrc = 0.0
+      if (.not.full_dim) return
+
+      call src_gpcr(uu, nn, decr, grad_pcr, sweep, i1, i2, cg)
+      usrc(:, iarr_crs(:)) = decr(:,:)
+      usrc(:, iarr_all_mx(flind%ion%pos)) = grad_pcr
+#ifdef ISO
+      return
+#endif /* ISO */
+      usrc(:, iarr_all_en(flind%ion%pos)) = vx(:, flind%ion%pos) * grad_pcr
+
+   end subroutine src_gpcr_exec
 
 !==========================================================================================
 
@@ -140,5 +184,28 @@ contains
       enddo
 
    end subroutine src_crn
+
+!>
+!! \brief Execution of src_crn procedure designed for sources module
+!<
+   subroutine src_crn_exec(uu, n, usrc, rk_coeff)
+
+      use fluidindex,     only: flind
+      use initcosmicrays, only: iarr_crn
+
+      implicit none
+
+      integer(kind=4),               intent(in)  :: n
+      real, dimension(n, flind%all), intent(in)  :: uu
+      real,                          intent(in)  :: rk_coeff   !< coeffecient used in RK step, while computing source term
+      real, dimension(n, flind%all), intent(out) :: usrc       !< u array update component for sources
+!locals
+      real, dimension(n, flind%crn%all)          :: srccrn
+
+      usrc = 0.0
+      call src_crn(uu, n, srccrn, rk_coeff) ! n safe
+      usrc(:, iarr_crn) = srccrn(:,:)
+
+   end subroutine src_crn_exec
 #endif /* COSM_RAYS_SOURCES */
 end module sourcecosmicrays

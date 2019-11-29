@@ -23,7 +23,7 @@
 
  $RESTART_CONTROL
     restart  = 'last'
-    new_id   = ''
+    res_id   = ''
     nrestart = 0
  /
 
@@ -49,7 +49,7 @@
 
  $FLUID_NEUTRAL
     gamma = 1.67
-    selfgrav = .false.
+    selfgrav = .true.
  /
 
  $NUMERICAL_SETUP

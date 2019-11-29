@@ -30,7 +30,7 @@
 !> \brief Implementation of 2nd order, simplest Laplace operator
 
 module multigrid_Laplace2
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
 
    implicit none
 
@@ -83,7 +83,7 @@ contains
          type is (cg_level_connected_T)
             call cg_llst%arr3d_boundaries(soln, bnd_type=BND_NEGREF, nocorners=.true.)
          class default
-             call die("[multigrid_Laplace2:residual2] Unknown type")
+            call die("[multigrid_Laplace2:residual2] Unknown type")
       end select
 
       ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)

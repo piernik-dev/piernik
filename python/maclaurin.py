@@ -9,9 +9,9 @@ def Maclaurin_test(file):
 
     missing = []
     try:
-        import tables as h5
+        import h5py as h5
     except ImportError:
-        missing.append("PyTables")
+        missing.append("h5py")
     try:
         import numpy as np
     except ImportError:
@@ -37,60 +37,62 @@ def Maclaurin_test(file):
         return
 
     try:
-        h5f = h5.openFile(file, "r")
+        h5f = h5.File(file, "r")
     except:
         print "Cannot open '" + file + "' as HDF5"
         return
 
-    xmin = h5f.root._v_attrs.xmin[0]
-    xmax = h5f.root._v_attrs.xmax[0]
-    ymin = h5f.root._v_attrs.ymin[0]
-    ymax = h5f.root._v_attrs.ymax[0]
-    zmin = h5f.root._v_attrs.zmin[0]
-    zmax = h5f.root._v_attrs.zmax[0]
-    fpiG = h5f.root._v_attrs.fpiG[0]
-    a = h5f.root._v_attrs.a1[0]
-    x0 = h5f.root._v_attrs.x0[0]
-    y0 = h5f.root._v_attrs.y0[0]
-    z0 = h5f.root._v_attrs.z0[0]
+    xmin, xmax = h5f['domains/base'].attrs['x-edge_position']
+    ymin, ymax = h5f['domains/base'].attrs['y-edge_position']
+    zmin, zmax = h5f['domains/base'].attrs['z-edge_position']
 
-    try:
-        soln = h5f.root.gpot[:, :, :]
-        phi0_3D = h5f.root.apot[:, :, :]
-    except:
-        print "Cannot find apot or gpot arrays"
-        return
-    h5f.close()
+    fpiG = h5f.attrs['fpiG']
+    a = h5f.attrs['a1']
+    x0 = h5f.attrs['x0']
+    y0 = h5f.attrs['y0']
+    z0 = h5f.attrs['z0']
 
-    nz, ny, nx = soln.shape
+    n = 0
+    for dname in h5f['data'].keys():
+        lev_max = max(0, h5f['data'][dname].attrs['level'])
+        n += int(np.product(h5f['data'][dname].attrs['n_b']))
+
+    nz, ny, nx = h5f['domains/base'].attrs['n_d'] * 2**lev_max
     dx, dy, dz = (xmax - xmin) / nx, (ymax - ymin) / ny, (zmax - zmin) / nz
-
-    xl, xr = xmin + dx * 0.5, xmax - dx * 0.5
-    yl, yr = ymin + dy * 0.5, ymax - dy * 0.5
-    zl, zr = zmin + dz * 0.5, zmax - dz * 0.5
-
-    x2 = (np.arange(xl, xr, dx) - x0) ** 2
-    y2 = (np.arange(yl, yr, dy) - y0) ** 2
-    z2 = (np.arange(zl, zr, dz) - z0) ** 2
-
-    n = nx * ny * nz
 
     r = np.zeros(n)
     phi = np.zeros(n)
     phi0 = np.zeros(n)
 
     # *********************************************************************
+
     ind = 0
-    ind_i = range(0, nx - 1)
-    ind_j = range(0, ny - 1)
-    ind_k = range(0, nz - 1)
-    for i in ind_i:
-        for j in ind_j:
-            for k in ind_k:
-                r[ind] = np.sqrt(x2[i] + y2[j] + z2[k])
-                phi[ind] = soln[k, j, i]
-                phi0[ind] = phi0_3D[k, j, i]
-                ind = ind + 1
+    for dname in h5f['/data'].keys():
+        try:
+            soln = h5f['data'][dname]['gpot'][:, :, :]
+            phi0_3D = h5f['data'][dname]['apot'][:, :, :]
+        except:
+            print "Cannot find apot or gpot arrays"
+            return
+
+        off = h5f['data'][dname].attrs['off']
+        lev = h5f['data'][dname].attrs['level']
+
+        for i in range(0, int(h5f['data'][dname].attrs['n_b'][0])):
+            x2 = (xmin + (off[0] + i + 0.5) * 2**(lev_max - lev) * dx - x0)**2
+
+            for j in range(0, int(h5f['data'][dname].attrs['n_b'][1])):
+                y2 = (ymin + (off[1] + j + 0.5) * 2 ** (lev_max - lev) * dy - y0)**2
+
+                for k in range(0, int(h5f['data'][dname].attrs['n_b'][2])):
+                    z2 = (zmin + (off[2] + k + 0.5) * 2 ** (lev_max - lev) * dz - z0)**2
+
+                    r[ind] = np.sqrt(x2 + y2 + z2)
+                    phi[ind] = soln[k, j, i]
+                    phi0[ind] = phi0_3D[k, j, i]
+                    ind += 1
+
+    h5f.close()
 
     new_r = np.unique(r)
     mean = np.zeros_like(new_r)

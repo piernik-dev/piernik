@@ -1,8 +1,6 @@
 ! This test is supposed to work with advection test configured to use magnetic
 ! field such as configured in a following way:
 ! ./setup advection_test/magnetized_advection_test -o T_advection
-! or
-! ./setup advection_test/magnetized_advection_test -o R_advection -d RIEMANN
 !
 ! The purpose is to both test the employed algorithms (examine the last
 ! plot file) and correctness of the formulas in the data_hdf5 file (examine
@@ -40,7 +38,7 @@
 
  $RESTART_CONTROL
     restart  = 'last'
-    new_id   = ''
+    res_id   = ''
     nrestart = 0
  /
 
@@ -56,7 +54,7 @@
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz', "magx", "magy", "magz", "magB", "magdir", "divbc", "divbf", "divbf4", "divbc4", "pmag%"
+    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz', "magx", "magy", "magz", "magB", "magdir", "divb", "divb4", "pmag%"
     gdf_strict = .false.
  /
 
@@ -70,6 +68,7 @@
     smalld = 1.e-5
     smallei= 1.e-5
     limiter= 'vanleer'
+!   solver_str = "Riemann"
  /
 
  $PROBLEM_CONTROL
@@ -82,10 +81,6 @@
     divBc_amp = 0.  ! nearly-everywhere constant div(B) (with huge jump at domain boundaries)
     divBs_amp = 0.  ! sine-wave div(B)
 
-    ! A blob of div(B)
-    divBbx_amp = 0.  ! 0.28209479177387814 !  1/sqrt(4 * pi)
-    divBby_amp = 0.  ! 0.28209479177387814 !  1/sqrt(4 * pi)
-    divBby_amp = 0.  ! 0.28209479177387814 !  1/sqrt(4 * pi)
  /
 
  $NONINERTIAL

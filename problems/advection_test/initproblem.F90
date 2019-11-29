@@ -48,17 +48,16 @@ module initproblem
    real                   :: ref_thr     !< refinement threshold
    real                   :: deref_thr   !< derefinement threshold
    logical                :: usedust     !< If .false. then do not set velocity for dust
+   real, dimension(ndims) :: B_const     !<  constant-B component strength
    real                   :: divB0_amp   !< Amplitude of the non-divergent component of the magnetic field
    real                   :: divBc_amp   !< Amplitude of constant-divergence component of the magnetic field (has artifacts on periodic domains due to nondifferentiability)
    real                   :: divBs_amp   !< Amplitude of sine-wave divergence component of the magnetic field (should behave well on periodic domains)
-   real                   :: divBbX_amp  !< Amplitude of x-component blob of divergence (should behave well on periodic domains)
-   real                   :: divBbY_amp  !< Amplitude of y-component blob of divergence (should behave well on periodic domains)
-   real                   :: divBbZ_amp  !< Amplitude of z-component blob of divergence (should behave well on periodic domains)
-   integer, dimension(ndims) :: divB_k      !< wave numbers for creating initial field
-   logical                :: ccB         !< true for cell-cntered initial magnetic field
+   real, dimension(ndims) :: divBb_amp   !< Amplitude of [x, y, z]-magnetic field components for  blob of divergence (should behave well on periodic domains)
+   real                   :: divBb_r0    !< divergence defect spatial scaling factor
+   integer(kind=4), dimension(ndims) :: divB_k   !< wave numbers for creating initial field
 
    namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, pulse_pres, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, &
-        &                      divB0_amp, divBc_amp, divBs_amp, divBbX_amp, divBbY_amp, divBbZ_amp, divB_k, ccB
+        &                      divB0_amp, divBc_amp, divBs_amp, divBb_amp, divB_k, B_const, divBb_r0
 
    ! other private data
    real, dimension(ndims, LO:HI) :: pulse_edge
@@ -96,7 +95,8 @@ contains
       use global,           only: smalld, smallei
       use mpisetup,         only: rbuff, ibuff, lbuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
       use named_array_list, only: wna
-      use refinement,       only: set_n_updAMR, n_updAMR, user_ref2list
+      use refinement,       only: set_n_updAMR, n_updAMR
+      use unified_ref_crit_list, only: urc_list
       use user_hooks,       only: problem_refine_derefine
 #ifdef MAGNETIC
       use constants,        only: GEO_XYZ
@@ -121,11 +121,10 @@ contains
       divB0_amp     = 0.                   !< should be safe to set non-0
       divBc_amp     = 0.                   !< unphysical, only for testing
       divBs_amp     = 0.                   !< unphysical, only for testing
-      divBbX_amp    = 0.                   !< unphysical, only for testing
-      divBbY_amp    = 0.                   !< unphysical, only for testing
-      divBbZ_amp    = 0.                   !< unphysical, only for testing
-      divB_k(:)     = [ 1, 1, 1 ]
-      ccB           = .false.              !< defaulting to face-centered initial field
+      divBb_amp     = 0.                   !< unphysical, only for testing
+      divB_k(:)     = [ I_ONE, I_ONE, I_ONE ]
+      B_const       = 0.
+      divBb_r0      = 1./sqrt(8.)  ! this should match the blob size of Tricco, Price & Bate when domain size is 2
 
       if (master) then
 
@@ -152,20 +151,19 @@ contains
          rbuff(5)   = divB0_amp
          rbuff(6)   = divBc_amp
          rbuff(7)   = divBs_amp
-         rbuff(8)   = divBbX_amp
-         rbuff(9)   = divBbY_amp
-         rbuff(10)  = divBbZ_amp
+         rbuff(8:10)= divBb_amp
+         rbuff(11)  = divBb_r0
          rbuff(20+xdim:20+zdim) = pulse_size(:)
          rbuff(23+xdim:23+zdim) = pulse_vel(:)
          rbuff(26+xdim:26+zdim) = pulse_off(:)
          rbuff(29)              = pulse_pres
+         rbuff(30+xdim:30+zdim) = B_const(:)
 
          ibuff(1)   = norm_step
          ibuff(2)   = nflip
          ibuff(10+xdim:10+zdim) = divB_k(:)
 
          lbuff(1)   = usedust
-         lbuff(2)   = ccB
 
       endif
 
@@ -182,20 +180,19 @@ contains
          divB0_amp  = rbuff(5)
          divBc_amp  = rbuff(6)
          divBs_amp  = rbuff(7)
-         divBbX_amp = rbuff(8)
-         divBbY_amp = rbuff(9)
-         divBbZ_amp = rbuff(10)
+         divBb_amp  = rbuff(8:10)
+         divBb_r0   = rbuff(11)
          pulse_size = rbuff(20+xdim:20+zdim)
          pulse_vel  = rbuff(23+xdim:23+zdim)
          pulse_off  = rbuff(26+xdim:26+zdim)
          pulse_pres = rbuff(29)
+         B_const    = rbuff(30+xdim:30+zdim)
 
          norm_step  = int(ibuff(1), kind=4)
          nflip      = ibuff(2)
          divB_k(:)  = ibuff(10+xdim:10+zdim)
 
          usedust    = lbuff(1)
-         ccB        = lbuff(2)
 
       endif
 
@@ -242,25 +239,24 @@ contains
       else
          ! Automatic refinement criteria
          do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
-            call user_ref2list(wna%fi, id, ref_thr*pulse_amp, deref_thr*pulse_amp, 0., "grad")
+            call urc_list%add_user_urcv(wna%fi, id, ref_thr*pulse_amp, deref_thr*pulse_amp, 0., "grad", .true.)
          enddo
       endif
 
-      if (any([divB0_amp, divBc_amp, divBs_amp, divBbX_amp, divBbY_amp, divBbZ_amp] .notequals. 0.)) then
+      if (any([divB0_amp, divBc_amp, divBs_amp, divBb_amp] .notequals. 0.)) then
 #ifdef MAGNETIC
          if (dom%geometry_type /= GEO_XYZ) then
             call warn("[initproblem:read_problem_par] Only cartesian formulas for magnetic field is implemented. Forcing all amplitudes to 0.")
-            divB0_amp     = 0.
-            divBc_amp     = 0.
-            divBs_amp     = 0.
-            divBbX_amp    = 0.
-            divBbY_amp    = 0.
-            divBbZ_amp    = 0.
+            divB0_amp = 0.
+            divBc_amp = 0.
+            divBs_amp = 0.
+            divBb_amp = 0.
          endif
 #else
-         call warn("[initproblem:read_problem_par] Ignoring magnetic field amplitudes")
+         if (master) call warn("[initproblem:read_problem_par] Ignoring magnetic field amplitudes")
 #endif /* !MAGNETIC */
       endif
+
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
@@ -279,8 +275,14 @@ contains
       use named_array_list, only: qna
       use non_inertial,     only: get_omega
 #ifdef MAGNETIC
-      use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi, half
+#ifdef IONIZED
+      use constants,        only: half
+#endif /* IONIZED */
+      use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi
+      use dataio_pub,       only: warn
       use div_B,            only: print_divB_norm
+      use global,           only: force_cc_mag
+      use mpisetup,         only: master
 #endif /* MAGNETIC */
 
       implicit none
@@ -300,17 +302,8 @@ contains
       kk = 0.
       where (dom%D_ > 0) kk = divB_k * dpi / dom%L_
       right_face = 1
-      if (ccB) right_face = 0
-      r02 = huge(1.)
-      if (dom%D_x == 1) then
-         r02 = dom%L_(xdim)**2
-      else if (dom%D_y == 1) then
-         r02 = dom%L_(ydim)**2
-      else
-         r02 = dom%L_(zdim)**2
-      endif
-      r02 = r02 / 32. ! this should match the blob size of Tricco, Price & Bate when domain size is 2
-
+      if (force_cc_mag) right_face = 0
+      r02 = divBb_r0**2
 #endif /* MAGNETIC */
 
       om = get_omega()
@@ -324,6 +317,7 @@ contains
 #ifdef MAGNETIC
          if (dom%geometry_type /= GEO_XYZ) then
             call cg%set_constant_b_field([0., 0., 0.])
+            if (master) call warn("[initproblem:problem_initial_conditions] noncartesian coordinates not implemented for magnetic field.")
          else
             do k = cg%ks, cg%ke + right_face * dom%D_z
                sz = sin(kk(zdim) * cg%z(k))
@@ -341,19 +335,18 @@ contains
                      sfx = sin(kk(xdim) * (cg%x(i) - cg%dx/2.))
                      cfx = cos(kk(xdim) * (cg%x(i) - cg%dx/2.))
 
-                     cg%b(:, i, j, k) = divBc_amp * [cg%x(i), cg%y(j), cg%z(k)] ! slight offset between cell- and face-centered is unimportant here
+                     cg%b(:, i, j, k) = B_const(:) + divBc_amp * [cg%x(i), cg%y(j), cg%z(k)] ! slight offset between cell- and face-centered is unimportant here
 
                      ! div B pulse, as described in Tricco, Price & Bate, https://arxiv.org/abs/1607.02394
-                     rr02 = sum(([cg%x(i), cg%y(j), cg%z(k)] - dom%C_)**2, mask=dom%has_dir)/r02
-                     if (rr02 > 1.) rr02 = 1.
+                     rr02 = sum(([cg%x(i), cg%y(j), cg%z(k)])**2, mask=dom%has_dir)/r02
+                     if (rr02 < 1.) then
+                        where (dom%has_dir)  cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBb_amp * (rr02**4 - 2 *rr02**2 + 1)
+                     endif
 
-                     if (dom%has_dir(xdim)) cg%b(xdim, i, j, k) = cg%b(xdim, i, j, k) + divBbX_amp * (rr02**4 - 2 *rr02**2 + 1)
-                     if (dom%has_dir(ydim)) cg%b(ydim, i, j, k) = cg%b(ydim, i, j, k) + divBbY_amp * (rr02**4 - 2 *rr02**2 + 1)
-                     if (dom%has_dir(zdim)) cg%b(zdim, i, j, k) = cg%b(zdim, i, j, k) + divBbZ_amp * (rr02**4 - 2 *rr02**2 + 1)
                      select case (dom%eff_dim)
                         case (I_ONE) ! can't do anything fancy, just set up something non-zero
                            cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp
-                           if (ccB) then
+                           if (force_cc_mag) then
                               if (dom%D_x == 1) then
                                  cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ kk(xdim)*cx, 1., 1. ]
                               else if (dom%D_y == 1) then
@@ -374,7 +367,7 @@ contains
                            ! [sin(x)*sin(y), cos(x)*cos(y), 0] should produce divB == 0. for XY case (curl([0, 0, -sin(x)*cos(y)]))
                            ! The div(B) is really close to numerical noise around 0 only in the case of exactly the same resolution per sine wave in all directions.
                            ! If the resolutions of sine waves don't match, then numerical estimates of mixed derivatives of the vector potential don't cancel out and only high-order estimates of div(b) are close to 0.
-                           if (ccB) then
+                           if (force_cc_mag) then
                               if (dom%D_z == 0) then
                                  cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
                                       divB0_amp * [ kk(ydim)*sx*sy, kk(xdim)*cx*cy, 1. ] + &
@@ -404,9 +397,9 @@ contains
                               endif
                            endif
                         case (I_THREE)
-                           ! curl([sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z)]) shoudl produce div(B) == 0, but see the notes for 2D case.
+                           ! curl([sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z)]) should produce div(B) == 0, but see the notes for 2D case.
                            ! setting up a div(B)-free field in flattened domain requires careful choice of kk(:)
-                           if (ccB) then
+                           if (force_cc_mag) then
                               cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ &
                                    kk(ydim)*cx*sy*cz - kk(zdim)*cx*cy*sz, &
                                    kk(zdim)*cx*cy*sz - kk(xdim)*sx*cy*cz, &
@@ -466,16 +459,16 @@ contains
          ! Set up the internal energy
          cg%u(fl%ien,:,:,:) = max(smallei, pulse_pres / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,:,:,:)**2,1) / cg%u(fl%idn,:,:,:))
 
-#ifdef MAGNETIC
-         if (ccB) then
-            cg%u(fl%ien,:,:,:) = cg%u(fl%ien,:,:,:) + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))  ! beware: this is for cell-centered B
+#if defined MAGNETIC && defined IONIZED
+         if (force_cc_mag) then
+            cg%u(fl%ien,:,:,:) = cg%u(fl%ien,:,:,:) + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))
          else
             cg%u(fl%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%u(fl%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + &
                  emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
                  &    half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
                  &    half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z)))
          endif
-#endif  /* !MAGNETIC */
+#endif  /* MAGNETIC && IONIZED */
 
          if (associated(flind%dst)) then
             cg%u(flind%dst%idn, :, :, :) = cg%u(fl%idn, :, :, :)
@@ -493,7 +486,7 @@ contains
 
 #ifdef MAGNETIC
       call print_divB_norm
-#endif
+#endif /* MAGNETIC */
 
    end subroutine problem_initial_conditions
 
@@ -642,7 +635,7 @@ contains
 
 #ifdef MAGNETIC
       call print_divB_norm
-#endif
+#endif /* MAGNETIC */
 
    end subroutine calculate_error_norm
 

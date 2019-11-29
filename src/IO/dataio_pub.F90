@@ -44,7 +44,7 @@ module dataio_pub
    real, parameter             :: piernik_hdf5_version = 1.18    !< output version
 
    ! v2 specific
-   real, parameter             :: piernik_hdf5_version2 = 2.01   !< output version for multi-file, multi-domain I/O
+   real, parameter             :: piernik_hdf5_version2 = 2.02   !< output version for multi-file, multi-domain I/O
    logical                     :: use_v2_io                      !< prefer the new I/O format
    logical                     :: gdf_strict                     !< adhere more strictly to GDF standard
    integer(kind=4)             :: nproc_io                       !< how many processes do the I/O (v2 only)
@@ -60,7 +60,7 @@ module dataio_pub
    ! Simulation control
    character(len=cbuff_len)    :: problem_name                   !< The problem name
    character(len=idlen)        :: run_id                         !< Auxiliary run identifier
-   character(len=idlen)        :: new_id                         !< Auxiliary new run identifier to change run_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new_id = '' then run_id is still used)
+   character(len=idlen)        :: res_id                         !< Auxiliary run to restart identifier, yet different then current run_id of restarted simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if res_id = '' then run_id is used also for reading restart file)
    real                        :: tend                           !< simulation time to end
    real                        :: wend                           !< wall clock time to end (in hours)
 
@@ -106,7 +106,8 @@ module dataio_pub
    logical, save               :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
    logical, save               :: log_file_initialized = .false. !< logical to mark initialization of logfile
    logical, save               :: log_file_opened = .false.      !< logical to mark opening of logfile
-   integer(kind=4), save       :: require_problem_IC = 0          !< 1 will call initproblem::problem_initial_conditions on restart
+   logical, save               :: restarted_sim = .false.        !< logical to distinguish between new and restarted simulation
+   integer(kind=4), save       :: require_problem_IC = 0         !< 1 will call initproblem::problem_initial_conditions on restart
 
    logical                     :: vizit = .false.                !< perform "live" visualization using pgplot
    logical                     :: multiple_h5files = .false.     !< write one HDF5 file per proc
@@ -128,10 +129,12 @@ module dataio_pub
 
    ! Per suggestion of ZEUS sysops:
    ! http://www.fz-juelich.de/ias/jsc/EN/Expertise/Supercomputers/JUROPA/UserInfo/IO_Tuning.htm
+#if defined(__INTEL_COMPILER)
    integer, parameter               :: io_par = 4
    character(len=io_par), parameter :: io_buffered = "yes"
    integer, parameter               :: io_blocksize = 1048576
    integer, parameter               :: io_buffno = 1
+#endif /* __INTEL_COMPILER */
 
    interface
       subroutine namelist_errh_P(ierrh, nm, skip_eof)
@@ -167,8 +170,11 @@ module dataio_pub
 contains
 
    subroutine namelist_handler_T_init(this)
+
       implicit none
+
       class(namelist_handler_T), intent(inout) :: this
+
       character(len=cwdlen) :: tmpdir
       integer :: lchar_tmpdir
 
@@ -199,7 +205,7 @@ contains
 
       implicit none
 
-      logical :: enable
+      logical, intent(in) :: enable
 
       if (enable) then
          write(ansi_black,  '(A1,A3)') char(27),"[0m"
@@ -285,20 +291,18 @@ contains
          if (log_file_initialized) then
             if (.not.log_file_opened) then
 #if defined(__INTEL_COMPILER)
-               open(newunit=log_lun, file=log_file, position='append', &
-                 &  blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
+               open(newunit=log_lun, file=log_file, position='append', blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
 #else /* __INTEL_COMPILER */
-               open(newunit=log_lun, file=log_file, position='append', asynchronous='yes')
+               open(newunit=log_lun, file=log_file, position='append') !> \todo reconstruct asynchronous writing to log files
 #endif /* !__INTEL_COMPILER */
                log_file_opened = .true.
             endif
          else
             ! BEWARE: possible race condition
 #if defined(__INTEL_COMPILER)
-            open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', &
-              &  blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
+            open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
 #else /* __INTEL_COMPILER */
-            open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', asynchronous='yes')
+            open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append')
 #endif /* !__INTEL_COMPILER */
          endif
          if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
@@ -324,13 +328,8 @@ contains
       integer :: line
 
       do line = 1, min(cbline, size(logbuffer, kind=4))
-#if defined(__INTEL_COMPILER)
-         write(log_lun, '(a)') trim(logbuffer(line))
-#else /* __INTEL_COMPILER */
-         write(log_lun, '(a)', asynchronous='yes') trim(logbuffer(line))
-#endif /* !__INTEL_COMPILER */
+         write(log_lun, '(a)') trim(logbuffer(line)) !> \todo reconstruct asynchronous writing to log files
       enddo
-      wait(log_lun)
 
    end subroutine flush_to_log
 !-----------------------------------------------------------------------------
@@ -357,7 +356,7 @@ contains
 
       implicit none
 
-      character(len=*), intent(in) :: nm
+      character(len=*),  intent(in) :: nm
       logical, optional, intent(in) :: noadvance
 
       logical :: adv
@@ -395,7 +394,7 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)  :: nm
+      character(len=*),  intent(in) :: nm
       integer, optional, intent(in) :: allprocs
 
       call colormessage(nm, T_ERR)
@@ -523,9 +522,11 @@ contains
    end function move_file
 !-----------------------------------------------------------------------------
    subroutine close_txt_file(lfile, llun)
+
       implicit none
-      integer, intent(in)                 :: llun     !< logical unit number for txt file
-      character(len=cwdlen), intent(in)   :: lfile    !< path to txt file
+
+      integer,               intent(in) :: llun     !< logical unit number for txt file
+      character(len=cwdlen), intent(in) :: lfile    !< path to txt file
 
       logical :: lopen
 
@@ -539,11 +540,11 @@ contains
 
    subroutine close_logs
 
-      use mpi,       only: MPI_COMM_WORLD
+      use mpi, only: MPI_COMM_WORLD
 
       implicit none
 
-      integer(kind=4)               :: proc
+      integer(kind=4) :: proc
 
       call MPI_Comm_rank(MPI_COMM_WORLD, proc, mpi_err)
 
@@ -552,6 +553,7 @@ contains
          call close_txt_file(log_file, log_lun)
          call close_txt_file(tsl_file, tsl_lun)
       endif
+
    end subroutine close_logs
 !>
 !! \brief Sanitize a file name
@@ -564,10 +566,11 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)  :: str
+      character(len=*), intent(in) :: str
+
       character(len=len(str)) :: outstr
 
-      integer            :: i
+      integer :: i
 
       outstr = repeat(" ", len(str))
 

@@ -61,10 +61,10 @@ module sortable_list
          integer,                intent(in)    :: a, b
       end subroutine assign_list
 
-      logical function compare_list(this, a, b)
+      pure logical function compare_list(this, a, b)
          import sortable_list_T
-         class(sortable_list_T), intent(inout) :: this
-         integer,                intent(in)    :: a, b
+         class(sortable_list_T), intent(in) :: this
+         integer,                intent(in) :: a, b
       end function compare_list
 
       integer function lubound_list(this)

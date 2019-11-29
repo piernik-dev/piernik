@@ -26,7 +26,7 @@
 
  $RESTART_CONTROL
     restart  = 'last'
-    new_id   = ''
+    res_id   = ''
     nrestart = 0
  /
 
@@ -42,7 +42,7 @@
     dt_res  = 0.1
     dt_log  = 0.00001
     dt_tsl  = 0.001
-    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz'
+    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz'
  /
 
  $FLUID_IONIZED

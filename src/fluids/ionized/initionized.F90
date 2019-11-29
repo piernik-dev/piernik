@@ -52,7 +52,9 @@ module initionized
       contains
          procedure, nopass :: get_tag
          procedure, pass   :: get_cs => ion_cs
+         procedure, pass   :: get_mach => ion_mach
          procedure, pass   :: compute_flux => flux_ion
+         procedure, pass   :: compute_pres => pres_ion
          procedure, pass   :: initialize_indices => initialize_ion_indices
    end type ion_fluid
 
@@ -90,6 +92,7 @@ contains
       use constants, only: xdim, ydim, zdim, half
       use domain,    only: dom
       use func,      only: emag
+      use global,    only: force_cc_mag
 #else /* !MAGNETIC */
       use constants, only: zero
 #endif /* !MAGNETIC */
@@ -107,11 +110,15 @@ contains
       real :: pmag, p, ps
 
 #ifdef MAGNETIC
-      bx = half*(b(xdim,i,j,k) + b(xdim, i+dom%D_x, j,         k        ))
-      by = half*(b(ydim,i,j,k) + b(ydim, i,         j+dom%D_y, k        ))
-      bz = half*(b(zdim,i,j,k) + b(zdim, i,         j,         k+dom%D_z))
+      if (force_cc_mag) then
+         pmag = emag(b(xdim,i,j,k), b(ydim,i,j,k), b(zdim,i,j,k))
+      else
+         bx = half*(b(xdim,i,j,k) + b(xdim, i+dom%D_x, j,         k        ))
+         by = half*(b(ydim,i,j,k) + b(ydim, i,         j+dom%D_y, k        ))
+         bz = half*(b(zdim,i,j,k) + b(zdim, i,         j,         k+dom%D_z))
 
-      pmag = emag(bx, by, bz)
+         pmag = emag(bx, by, bz)
+      endif
 #else /* !MAGNETIC */
       ! all_mag_boundaries has not been called so we cannot trust b(xdim, ie+dom%D_x:), b(ydim,:je+dom%D_y and b(zdim,:,:, ke+dom%D_z
       pmag = zero
@@ -130,6 +137,25 @@ contains
 #endif /* !ISO */
       if (.false.) print *, u(:, i, j, k), b(:, i, j, k), cs_iso2(i, j, k), this%cs
    end function ion_cs
+
+!>
+!! \brief An estimate of (fast) Mach number based on upper estimate of fast magnetosonic speed
+!! This is a bit complicated topic as fast magnetosonic speed depends locally on magnitude and orientation of magnetic field.
+!! There are other characteristic speeds as well and each can be associated with respective Mach number.
+!!
+!! As this is the simplest approach, we use the same code for neutral fluid too.
+!<
+
+   real function ion_mach(this, i, j, k, u, b, cs_iso2)
+      use func, only: sq_sum3
+      implicit none
+      class(ion_fluid),                  intent(in) :: this
+      integer,                           intent(in) :: i, j, k
+      real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
+      real, dimension(:,:,:,:), pointer, intent(in) :: b       !< pointer to array of magnetic fields (used for ionized fluid with MAGNETIC #defined)
+      real, dimension(:,:,:),   pointer, intent(in) :: cs_iso2 !< pointer to array of isothermal sound speeds (used when ISO was #defined)
+      ion_mach = sqrt(sq_sum3(u(this%imx, i, j, k), u(this%imy, i, j, k), u(this%imz, i, j, k)))/u(this%idn, i, j, k) / this%get_cs(i, j, k, u, b, cs_iso2)
+   end function ion_mach
 
    function get_tag() result(tag)
       use constants, only: idlen
@@ -251,32 +277,34 @@ contains
 !<
 !*/
 #define RNG 2:nm
-   subroutine flux_ion(this, flux, cfr, uu, n, vx, ps, bb, cs_iso2, use_vx)
+   subroutine flux_ion(this, flux, cfr, uu, n, vx, bb, cs_iso2)
 
-      use constants,    only: xdim, ydim, zdim, idn, imx, imy, imz
+      use constants, only: idn, imx, imy, imz
 #ifndef ISO
-      use constants,    only: ien
+      use constants, only: ien
 #endif /* !ISO */
-      use dataio_pub,   only: die
-      use func,         only: ekin, emag
+#ifdef MAGNETIC
+      use constants, only: xdim, ydim, zdim
+#endif /* MAGNETIC */
 #ifdef LOCAL_FR_SPEED
-      use constants,    only: small, half
-      use global,       only: cfr_smooth
+      use constants, only: small, half
+      use global,    only: cfr_smooth
 #endif /* LOCAL_FR_SPEED */
 
       implicit none
+
       class(ion_fluid),     intent(in)             :: this
       integer(kind=4),      intent(in)             :: n         !< number of cells in the current sweep
-      real, dimension(:,:), intent(inout), pointer :: flux      !< flux of ionized fluid
-      real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for ionized fluid
+      real, dimension(:,:), intent(out),   pointer :: flux      !< flux of ionized fluid
+      real, dimension(:,:), intent(out),   pointer :: cfr       !< freezing speed for ionized fluid
       real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for ionized fluid
-      real, dimension(:),   intent(inout), pointer :: vx        !< velocity of ionized fluid for current sweep
-      real, dimension(:),   intent(inout), pointer :: ps        !< pressure of ionized fluid for current sweep
+      real, dimension(:),   intent(in),    pointer :: vx        !< velocity of ionized fluid for current sweep
       real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
       real, dimension(:),   intent(in),    pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
-      logical,              intent(in)             :: use_vx    !< use provided vx instead of computing it
 
       ! locals
+      real, dimension(n), target  :: ps        !< pressure of ionized fluid for current sweep
+      real, dimension(:), pointer :: pps
       real, dimension(n) :: p           !< thermal pressure of ionized fluid
       real, dimension(n) :: pmag        !< pressure of magnetic field
       integer            :: nm
@@ -288,32 +316,11 @@ contains
 #endif /* LOCAL_FR_SPEED */
 
       nm = n-1
-#ifdef MAGNETIC
-      pmag(RNG)= emag(bb(RNG, xdim), bb(RNG, ydim), bb(RNG, zdim));  pmag(1) = pmag(2); pmag(n) = pmag(nm)
-#else /* !MAGNETIC */
-      pmag(:) = 0.0
-#endif /* !MAGNETIC */
-      if (.not. use_vx) then
-         vx(RNG) = uu(RNG, imx) / uu(RNG, idn)
-         vx(1) = vx(2)
-         vx(n) = vx(nm)
-      endif
-
-#ifndef ISO
-      if (associated(cs_iso2)) call die("[initionized:flux_ion] cs_iso2 should not be present")
-#endif /* !ISO */
-
-#ifdef ISO
-      p(RNG)  = cs_iso2(RNG) * uu(RNG, idn)
-      ps(RNG) = p(RNG) + pmag(RNG)
-#else /* !ISO */
-      ps(RNG) = (uu(RNG, ien) - ekin(uu(RNG, imx),uu(RNG, imy),uu(RNG, imz),uu(RNG, idn)) )*(this%gam_1) &
-           & + (2.0 - this%gam)*pmag(RNG)
-      p(RNG) = ps(RNG)- pmag(RNG);  p(1) = p(2); p(n) = p(nm)
-#endif /* !ISO */
-      ps(1) = ps(2); ps(n) = ps(nm)
+      pps => ps
+      call all_pres_ion(uu, n, bb, cs_iso2, this%gam, this%gam_1, pmag, p, pps)
 
       flux(RNG, idn)=uu(RNG, idn)*vx(RNG)
+#ifdef MAGNETIC
       flux(RNG, imx)=uu(RNG, imx)*vx(RNG)+ps(RNG) - bb(RNG, xdim)**2
       flux(RNG, imy)=uu(RNG, imy)*vx(RNG)-bb(RNG, ydim)*bb(RNG, xdim)
       flux(RNG, imz)=uu(RNG, imz)*vx(RNG)-bb(RNG, zdim)*bb(RNG, xdim)
@@ -321,6 +328,14 @@ contains
       flux(RNG, ien)=(uu(RNG, ien)+ps(RNG))*vx(RNG)-bb(RNG, xdim)*(bb(RNG, xdim)*uu(RNG, imx) &
                 +bb(RNG, ydim)*uu(RNG, imy)+bb(RNG, zdim)*uu(RNG, imz))/uu(RNG, idn)
 #endif /* !ISO */
+#else /* !MAGNETIC */
+      flux(RNG, imx)=uu(RNG, imx)*vx(RNG)+ps(RNG)
+      flux(RNG, imy)=uu(RNG, imy)*vx(RNG)
+      flux(RNG, imz)=uu(RNG, imz)*vx(RNG)
+#ifndef ISO
+      flux(RNG, ien)=(uu(RNG, ien)+ps(RNG))*vx(RNG)
+#endif /* !ISO */
+#endif /* !MAGNETIC */
       flux(1, :) = flux(2, :) ; flux(n, :) = flux(nm, :)
 
 #ifdef LOCAL_FR_SPEED
@@ -359,5 +374,79 @@ contains
 #endif /* GLOBAL_FR_SPEED */
 
    end subroutine flux_ion
+
+   subroutine all_pres_ion(uu, n, bb, cs_iso2, gam, gam1, pmag, p, ps)
+
+      use constants,  only: idn
+#ifdef MAGNETIC
+      use constants,  only: xdim, ydim, zdim
+      use func,       only: emag
+#endif /* MAGNETIC */
+#ifndef ISO
+      use constants,  only: imx, imy, imz, ien
+      use dataio_pub, only: die
+      use func,       only: ekin
+#endif /* !ISO */
+
+      implicit none
+
+      integer(kind=4),      intent(in)           :: n         !< number of cells in the current sweep
+      real, dimension(:,:), intent(in),  pointer :: uu        !< part of u for ionized fluid
+      real, dimension(:,:), intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),  pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
+      real, dimension(:),   intent(out), pointer :: ps        !< pressure of ionized fluid for current sweep
+      real, dimension(:),   intent(out)          :: p         !< thermal pressure of ionized fluid
+      real, dimension(:),   intent(out)          :: pmag      !< pressure of magnetic field
+      real,                 intent(in)           :: gam, gam1
+
+      ! locals
+      integer :: nm
+
+      nm = n-1
+#ifdef MAGNETIC
+      pmag(RNG)= emag(bb(RNG, xdim), bb(RNG, ydim), bb(RNG, zdim));  pmag(1) = pmag(2); pmag(n) = pmag(nm)
+#else /* !MAGNETIC */
+      pmag(:) = 0.0
+#endif /* !MAGNETIC */
+
+#ifdef ISO
+      p(RNG)  = cs_iso2(RNG) * uu(RNG, idn)
+      ps(RNG) = p(RNG) + pmag(RNG)
+#else /* !ISO */
+      if (associated(cs_iso2)) call die("[initionized:all_pres_ion] cs_iso2 should not be associated")
+      ps(RNG) = (uu(RNG, ien) - ekin(uu(RNG, imx),uu(RNG, imy),uu(RNG, imz),uu(RNG, idn)) )*(gam1) &
+           & + (2.0 - gam)*pmag(RNG)
+      p(RNG) = ps(RNG)- pmag(RNG);  p(1) = p(2); p(n) = p(nm)
+#endif /* !ISO */
+      ps(1) = ps(2); ps(n) = ps(nm)
+
+#ifndef MAGNETIC
+      return
+      if (.false.) write(0,*) bb
+#endif /* !MAGNETIC */
+#ifdef ISO
+      if (.false.) write(0,*) gam, gam1
+#endif /* ISO */
+
+   end subroutine all_pres_ion
+
+   subroutine pres_ion(this, n, uu, bb, cs_iso2, ps)
+
+      implicit none
+
+      class(ion_fluid),     intent(in)           :: this
+      integer(kind=4),      intent(in)           :: n         !< number of cells in the current sweep
+      real, dimension(:,:), intent(in),  pointer :: uu        !< part of u for ionized fluid
+      real, dimension(:,:), intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),  pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
+      real, dimension(:),   intent(out), pointer :: ps        !< pressure of ionized fluid for current sweep
+
+      ! locals
+      real, dimension(n) :: p           !< thermal pressure of ionized fluid
+      real, dimension(n) :: pmag        !< pressure of magnetic field
+
+      call all_pres_ion(uu, n, bb, cs_iso2, this%gam, this%gam_1, pmag, p, ps)
+
+   end subroutine pres_ion
 
 end module initionized

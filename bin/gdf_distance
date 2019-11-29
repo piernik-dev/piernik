@@ -190,6 +190,19 @@ def compare_dlists(h5f1, h5f2):
     return 1. - len(fc) / float(len(f1) + len(f2) - len(fc)), fc
 
 
+def compare_time(h5f1, h5f2):
+    time_key = "time"
+    t1 = h5f1.attrs[time_key][0]
+    t2 = h5f2.attrs[time_key][0]
+    if (t1 > 0. and t2 > 0.):
+        return abs(t1 - t2) / (t1 + t2)
+    else:
+        if (t1 == 0.):
+            return 0.
+        else:
+            return 1.
+
+
 def compare_data(ds1, ds2, f):
     import numpy
 
@@ -217,6 +230,9 @@ def piernik_gdf_compare(fname1, fname2):
     h5f2 = h5py.File(fname2, "r")
     # No error checking here, fail in ugly way when is_comparable does not
     # prevent attempt to open these files.
+
+    # compate time
+    norms["time"] = compare_time(h5f1, h5f2)
 
     # compare domains
     norms["domains"], dlo, dro = compare_domains(h5f1, h5f2)
@@ -262,7 +278,7 @@ def piernik_gdf_compare(fname1, fname2):
                 tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
             print("All datafield difference: %g" % tot_datanorm)
         else:
-            print("Comparing domains of different size or resolution is not implementsd yet")
+            print("Comparing domains of different size or resolution is not implemented yet")
             exit(31)
 
     return norms
@@ -272,30 +288,78 @@ if __name__ == "__main__":
     import sys
     if (len(sys.argv) < 3):
         sys.stderr.write("Error: too few arguments.\nUsage: " +
-              sys.argv[0] + " piernik_data_hdf_file1 piernik_data_hdf_file2\n")
+                         sys.argv[0] + " piernik_data_hdf_file1 piernik_data_hdf_file2 [piernik_data_hdf_file3]\n")
         exit(1)
 
-    if (is_comparable(sys.argv[1], sys.argv[2])):
-        norms = piernik_gdf_compare(sys.argv[1], sys.argv[2])
-        tot_norm = 0.
-        failed = False
-        longestkey = len(max(norms, key=len))
-        for i in norms.keys():
-            if (norms[i] >= 0. and norms[i] <= 1.):
-                print("Difference of %-*s: %g" % (longestkey + 1, i, norms[i]))
-                tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
+    if (len(sys.argv) == 3):
+        if (is_comparable(sys.argv[1], sys.argv[2])):
+            norms = piernik_gdf_compare(sys.argv[1], sys.argv[2])
+            tot_norm = 0.
+            failed = False
+            longestkey = len(max(norms, key=len))
+            for i in sorted(norms.keys()):
+                if (norms[i] >= 0. and norms[i] <= 1.):
+                    print("Difference of %-*s: %g" % (longestkey + 1, i, norms[i]))
+                    tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
+                else:
+                    print("Difference measure `%s` out of [0,1] range: %g" %
+                          (i, norms[i]))
+                    failed = True
+            if (failed):
+                print("Comparison of `%s' and `%s' failed" %
+                      (sys.argv[1], sys.argv[2]))
+                exit(3)
             else:
-                print("Difference measure `%s` out of [0,1] range: %g" %
-                      (i, norms[i]))
-                failed = True
-        if (failed):
-            print("Comparison of `%s' and `%s' failed" %
-                  (sys.argv[1], sys.argv[2]))
-            exit(3)
+                print("Total difference between `%s' and `%s': %g" %
+                      (sys.argv[1], sys.argv[2], tot_norm))
         else:
-            print("Total difference between `%s' and `%s': %g" %
-                  (sys.argv[1], sys.argv[2], tot_norm))
+            print("Cannot compare files `%s' and `%s'" %
+                  (sys.argv[1], sys.argv[2]))
+            exit(2)
+    elif (len(sys.argv) == 4):
+        if (is_comparable(sys.argv[1], sys.argv[2]) and is_comparable(sys.argv[1], sys.argv[3])):
+            norms12 = piernik_gdf_compare(sys.argv[1], sys.argv[2])
+            norms13 = piernik_gdf_compare(sys.argv[1], sys.argv[3])
+            norms23 = piernik_gdf_compare(sys.argv[2], sys.argv[3])
+            norms = dict(norms12)
+            norms.update(norms13)
+            norms.update(norms23)
+            longestkey = len(max(norms, key=len))
+            print("\nFiles:")
+            for i in (1, 2, 3):
+                print("  %d - %s" % (i, sys.argv[i]))
+            print("%-*s: %-14s %-14s %-14s" % (longestkey + len("Difference of ") + 1, "distance type", " 1-2", " 1-3", " 2-3"))
+            c_red = '\033[91m'
+            c_green = '\033[92m'
+            c_reset = '\033[0m'
+            c_gray = '\033[90m'
+            for i in sorted(norms.keys()):
+                line = "Difference of %-*s: " % (longestkey + 1, i)
+                comment = ""
+                curnorm = []
+                for nn in (norms12, norms13, norms23):
+                    if (i in nn):
+                        curnorm.append(nn[i])
+                lmin = min(curnorm)
+                lmax = max(curnorm)
+                for nn in (norms12, norms13, norms23):
+                    try:
+                        color = ""
+                        if (lmax > lmin):
+                            if (nn[i] == lmax):
+                                color = c_red
+                            elif (nn[i] == lmin):
+                                color = c_green
+                        line += (" %s%-14g" % (color, nn[i])) + c_reset
+                        if (nn[i] < 0. or nn[i] > 1.):
+                            comment += " Value %g out of [0,1] range!" % nn[i]
+                    except (KeyError):
+                        line += c_gray + (" %14s" % "N/A") + c_reset
+                print(line + comment)
+        else:
+            print("Cannot compare files `%s', `%s' and `%s'" %
+                  (sys.argv[1], sys.argv[2], sys.argv[3]))
+            exit(3)
     else:
-        print("Cannot compare files `%s' and `%s'" %
-              (sys.argv[1], sys.argv[2]))
-        exit(2)
+        print("Too many arguments:", sys.argv)
+        exit(4)

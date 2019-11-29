@@ -129,7 +129,7 @@ contains
       endif
 
 #if !(defined(SELF_GRAV))
-      call die("You must define MULTIGRID for this problem")
+      call die("You must define SELF_GRAV for this problem")
 #endif /* !SELF_GRAV */
 
       if (mode < 0 .or. mode > 1)     call die("[initproblem:read_problem_par] Invalid mode.")
@@ -225,7 +225,7 @@ contains
          write(g_lun,'(a)') "set output 'jeans-fft.png'"
          write(g_lun,'(a)') 'set title "Jeans oscillations (FFT)"'
 #endif /* !MULTIGRID */
-         write(g_lun,'(3(a,/),a)') 'set ylabel "E_int"', 'set xtics 1', 'set mxtics 2', 'set mytics 2'
+         write(g_lun,'(3(a,/),a)') 'set ylabel "E_{int}"', 'set xtics 1', 'set mxtics 2', 'set mytics 2'
          if ((Tamp_rounded .notequals. zero) .and. (Tamp > zero)) then
             write(g_lun,'(a,g11.3)')'set ytics ',Tamp_rounded/2.
             write(g_lun,'(2(a,g11.3),a)')'set yrange [ ',Tamp_rounded/(-4.),':',Tamp_rounded,']'

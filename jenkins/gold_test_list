@@ -1,4 +1,4 @@
-
 parallel --load 70% --delay 5 eval "./jenkins/gold_test.sh {} > {/.}'_gold_stdout'" ::: ./jenkins/gold_configs/*.config
 
-tail -n 1 *.gold_log
+tail -n 1 *_gold_log
+tail -n 1 *_riem_log

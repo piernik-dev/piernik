@@ -28,20 +28,27 @@
 
 module initproblem
 
-   use constants, only: ndims
+   use constants,  only: ndims
+   use fluidtypes, only: component_fluid
 
    implicit none
 
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real                   :: clump_mass, clump_K, clump_r, epsC, epsM, dtrig, dmax
-   real, dimension(ndims) :: clump_pos, clump_vel, clump_pos_xyz
+   ! namelist variables
+   real                   :: clump_mass, clump_K, clump_r, epsC, epsM, dtrig
+   real, dimension(ndims) :: clump_pos, clump_vel
    logical                :: crashNotConv, exp_speedup, verbose
    integer(kind=4)        :: maxitC, maxitM
-   integer, parameter     :: REL_CALC = 1, REL_SET = REL_CALC + 1
 
    namelist /PROBLEM_CONTROL/  clump_mass, clump_pos, clump_vel, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, exp_speedup, verbose, dtrig
+
+   ! private variables
+   real                            :: dmax
+   real, dimension(ndims)          :: clump_pos_xyz
+   class(component_fluid), pointer :: fl => null()
+   integer, parameter              :: REL_CALC = 1, REL_SET = REL_CALC + 1
 
 contains
 
@@ -49,16 +56,20 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_vars_hdf5, user_attrs_wr, user_attrs_rd
       use user_hooks,  only: late_initial_conditions, problem_domain_update
+#ifdef HDF5
+      use dataio_user, only: user_vars_hdf5, user_attrs_wr, user_attrs_rd
+#endif /* HDF5 */
 
       implicit none
 
       late_initial_conditions => sg_late_init
       problem_domain_update => sg_dist_to_edge
+#ifdef HDF5
       user_attrs_wr => sg_attrs_wr
       user_attrs_rd => sg_attrs_rd
       user_vars_hdf5 => sg_vars
+#endif /* HDF5 */
 
    end subroutine problem_pointers
 
@@ -189,8 +200,6 @@ contains
       use constants,         only: pi, xdim, ydim, zdim, pSUM, pMIN, pMAX, GEO_XYZ, GEO_RPZ
       use dataio_pub,        only: msg, die, warn, printinfo
       use domain,            only: dom
-      use fluidindex,        only: flind
-      use fluidtypes,        only: component_fluid
       use func,              only: ekin, emag, operator(.equals.), operator(.notequals.)
       use global,            only: smalld, smallei, t
       use mpisetup,          only: master, piernik_MPI_Allreduce
@@ -199,7 +208,6 @@ contains
 
       implicit none
 
-      class(component_fluid), pointer :: fl
       real, parameter                 :: virial_tol = 0.02
       integer, parameter              :: LOW=1, HIGH=LOW+1, TRY=3, NLIM=3
       integer                         :: i, j, k, tt,tmax, iC, iC_cg, iM, il, ih, jl, jh, kl, kh
@@ -216,7 +224,7 @@ contains
       real                            :: Msph
       type(cg_list_element),  pointer :: cgl
 
-      fl => flind%ion
+      call pick_fluid
 
       t_save = t
       Cint_old = huge(1.)
@@ -299,7 +307,7 @@ contains
       call piernik_MPI_Allreduce (iC,   pSUM)
       call piernik_MPI_Allreduce (Msph, pSUM)
       if (master .and. verbose) then
-         write(msg,'(a,es13.7,a,i7,a)')"[initproblem:problem_initial_conditions] Starting with uniform sphere with M = ", Msph, " (", iC, " cells)"
+         write(msg,'(a,es14.7,a,i7,a)')"[initproblem:problem_initial_conditions] Starting with uniform sphere with M = ", Msph, " (", iC, " cells)"
          call printinfo(msg, .true.)
       endif
 
@@ -487,9 +495,11 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  cg%u(fl%ien,i,j,k) = max(smallei, presrho(cg%u(fl%idn, i, j, k)) / fl%gam_1                              + &
-                       &              ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
-                       &              emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)))
+                  cg%u(fl%ien,i,j,k) = presrho(cg%u(fl%idn, i, j, k)) / fl%gam_1                              + &
+                       &              ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
+                  if (associated(cg%b)) cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + &
+                       &              emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+                  cg%u(fl%ien,i,j,k) = max(smallei, cg%u(fl%ien,i,j,k))
                enddo
             enddo
          enddo
@@ -502,13 +512,31 @@ contains
       call piernik_MPI_Allreduce(dmax, pMAX)
 
       if (master) then
-         write(msg, '(a,g13.7)')"[initproblem:problem_initial_conditions] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (minval(dom%L_(:))/2.)**3/(newtong * clump_mass) )
+         write(msg, '(a,g14.7)')"[initproblem:problem_initial_conditions] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (minval(dom%L_(:))/2.)**3/(newtong * clump_mass) )
          call printinfo(msg, .true.)
-         write(msg, '(a,g13.7)')"[initproblem:problem_initial_conditions] Peak density ", dmax
+         write(msg, '(a,g14.7)')"[initproblem:problem_initial_conditions] Peak density ", dmax
          call printinfo(msg)
       endif
 
    end subroutine problem_initial_conditions
+
+!> \brief set fl to ion or neu, whichever is available
+
+   subroutine pick_fluid
+
+      use dataio_pub, only: die
+      use fluidindex, only: flind
+      use fluids_pub, only: has_ion, has_neu
+
+      implicit none
+
+      if (associated(fl)) return
+
+      if (has_ion) fl => flind%ion
+      if (has_neu) fl => flind%neu
+      if ((has_ion .and. has_neu) .or. .not. associated(fl)) call die("[initproblem:problem_initial_conditions] Either ionized or neutral fluid is supported.")
+
+   end subroutine pick_fluid
 
 !-------------------------------------------------------------------------------
 ! check the value of | 2T + W + 3P | / | W |. Should be small
@@ -520,7 +548,6 @@ contains
       use constants,     only: pSUM, GEO_XYZ, GEO_RPZ
       use dataio_pub,    only: msg, die, warn, printinfo
       use domain,        only: dom
-      use fluidindex,    only: flind
       use grid_cont,     only: grid_container
       use mpisetup,      only: master, piernik_MPI_Allreduce
       use multigridvars, only: grav_bnd, bnd_isolated
@@ -536,6 +563,8 @@ contains
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
 
+      call pick_fluid
+
       TWP(:) = 0.
 
       cgl => leaves%first
@@ -549,13 +578,13 @@ contains
                   if (cg%leafmap(i, j, k)) then
                      select case (dom%geometry_type)
                         case (GEO_XYZ)
-                           ! TWPcg(1) = TWPcg(1) + cg%u(flind%ion%idn, i, j, k) * 0.                !T, will be /= 0. for rotating clump
-                           TWPcg(2) = TWPcg(2) + cg%u(flind%ion%idn, i, j, k) * cg%sgp(i, j, k) * 0.5 !W
-                           TWPcg(3) = TWPcg(3) + presrho(cg%u(flind%ion%idn, i, j, k))             !P
+                           ! TWPcg(1) = TWPcg(1) + cg%u(fl%idn, i, j, k) * 0.                !T, will be /= 0. for rotating clump
+                           TWPcg(2) = TWPcg(2) + cg%u(fl%idn, i, j, k) * cg%sgp(i, j, k) * 0.5 !W
+                           TWPcg(3) = TWPcg(3) + presrho(cg%u(fl%idn, i, j, k))             !P
                         case (GEO_RPZ)
-                           ! TWPcg(1) = TWPcg(1) + cg%u(flind%ion%idn, i, j, k) * 0. *cg%x(i)                 !T, will be /= 0. for rotating clump
-                           TWPcg(2) = TWPcg(2) + cg%u(flind%ion%idn, i, j, k) * cg%sgp(i, j, k) * 0.5 *cg%x(i) !W
-                           TWPcg(3) = TWPcg(3) + presrho(cg%u(flind%ion%idn, i, j, k)) *cg%x(i)              !P
+                           ! TWPcg(1) = TWPcg(1) + cg%u(fl%idn, i, j, k) * 0. *cg%x(i)                 !T, will be /= 0. for rotating clump
+                           TWPcg(2) = TWPcg(2) + cg%u(fl%idn, i, j, k) * cg%sgp(i, j, k) * 0.5 *cg%x(i) !W
+                           TWPcg(3) = TWPcg(3) + presrho(cg%u(fl%idn, i, j, k)) *cg%x(i)              !P
                         case default
                            call die("[initproblem:virialCheck] Unsupported geometry")
                      end select
@@ -599,7 +628,6 @@ contains
       use constants,   only: pSUM, GEO_XYZ, GEO_RPZ
       use dataio_pub,  only: die
       use domain,      only: dom
-      use fluidindex,  only: flind
       use grid_cont,   only: grid_container
       use mpisetup,    only: piernik_MPI_Allreduce
 
@@ -613,6 +641,8 @@ contains
       real                           :: rho, totMEcg
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+
+      call pick_fluid
 
       totME = 0.
 
@@ -632,7 +662,7 @@ contains
                                  totMEcg = totMEcg + rhoH(h(C, cg%sgp(i,j,k)))
                               case (REL_SET)
                                  rho = rhoH(h(C, cg%sgp(i,j,k)))
-                                 cg%u(flind%ion%idn, i, j, k) = rho
+                                 cg%u(fl%idn, i, j, k) = rho
                                  totMEcg = totMEcg + rho
                            end select
                         case (GEO_RPZ)
@@ -641,7 +671,7 @@ contains
                                  totMEcg = totMEcg + rhoH(h(C, cg%sgp(i,j,k))) *cg%x(i)
                               case (REL_SET)
                                  rho = rhoH(h(C, cg%sgp(i,j,k)))
-                                 cg%u(flind%ion%idn, i, j, k) = rho
+                                 cg%u(fl%idn, i, j, k) = rho
                                  totMEcg = totMEcg + rho *cg%x(i)
                            end select
                         case default
@@ -679,13 +709,11 @@ contains
 
    real function presrho(rho)
 
-      use fluidindex, only: flind
-
       implicit none
 
       real, intent(in) :: rho
 
-      presrho = clump_K *  rho ** flind%ion%gam
+      presrho = clump_K *  rho ** fl%gam
 
    end function presrho
 
@@ -694,8 +722,7 @@ contains
 
    real function rhoH(H)
 
-      use fluidindex, only: flind
-      use global,     only: smalld
+      use global, only: smalld
 
       implicit none
 
@@ -703,7 +730,7 @@ contains
 
       rhoH = smalld
 
-      if (H > 0.) rhoH = ( (1. - 1./flind%ion%gam) * H / clump_K)**(1./flind%ion%gam_1)
+      if (H > 0.) rhoH = ( (1. - 1./fl%gam) * H / clump_K)**(1./fl%gam_1)
 
       rhoH = max(smalld, rhoH)
 
@@ -714,13 +741,11 @@ contains
 
    real function hRho(rho)
 
-      use fluidindex, only: flind
-
       implicit none
 
       real, intent(in) :: rho
 
-      hRho = clump_K * flind%ion%gam / flind%ion%gam_1 * rho ** flind%ion%gam_1
+      hRho = clump_K * fl%gam / fl%gam_1 * rho ** fl%gam_1
 
    end function hRho
 
@@ -732,7 +757,6 @@ contains
       use cg_list_dataop, only: expanded_domain
       use constants,      only: xdim, ydim, zdim
       use dataio_pub,     only: die
-      use fluidindex,     only: flind
       use func,           only: ekin, emag
       use global,         only: smalld, smallei
 
@@ -740,29 +764,29 @@ contains
 
       type(cg_list_element),  pointer :: cgl
 
-      integer :: p, i, j, k
+      integer :: i, j, k
+
+      call pick_fluid
 
       cgl => expanded_domain%first
       do while (associated(cgl))
          if (cgl%cg%is_old) call die("[initproblem:sg_late_init] Old piece on a new list")
-         do p = 1, flind%energ
-            associate ( fl => flind%ion )
-            cgl%cg%u(fl%idn, :, :, :) = smalld
-            cgl%cg%u(fl%imx, :, :, :) = clump_vel(xdim) * cgl%cg%u(fl%idn,:,:,:)
-            cgl%cg%u(fl%imy, :, :, :) = clump_vel(ydim) * cgl%cg%u(fl%idn,:,:,:)
-            cgl%cg%u(fl%imz, :, :, :) = clump_vel(zdim) * cgl%cg%u(fl%idn,:,:,:)
-            cgl%cg%b(:,    :, :, :) = 0.
-            ! cgl%cg%sgp ?
-            do k = cgl%cg%ks, cgl%cg%ke
-               do j = cgl%cg%js, cgl%cg%je
-                  do i = cgl%cg%is, cgl%cg%ie
-                     cgl%cg%u(fl%ien, i, j, k) = max(smallei, presrho(cgl%cg%u(fl%idn, i, j, k)) / fl%gam_1                              + &
-                          &                     ekin(cgl%cg%u(fl%imx,i,j,k), cgl%cg%u(fl%imy,i,j,k), cgl%cg%u(fl%imz,i,j,k), cgl%cg%u(fl%idn,i,j,k)) + &
-                          &                     emag(cgl%cg%b(xdim,i,j,k), cgl%cg%b(ydim,i,j,k), cgl%cg%b(zdim,i,j,k)))
-                  enddo
+         cgl%cg%u(fl%idn, :, :, :) = smalld
+         cgl%cg%u(fl%imx, :, :, :) = clump_vel(xdim) * cgl%cg%u(fl%idn,:,:,:)
+         cgl%cg%u(fl%imy, :, :, :) = clump_vel(ydim) * cgl%cg%u(fl%idn,:,:,:)
+         cgl%cg%u(fl%imz, :, :, :) = clump_vel(zdim) * cgl%cg%u(fl%idn,:,:,:)
+         if (associated(cgl%cg%b)) cgl%cg%b = 0.
+         ! cgl%cg%sgp ?
+         do k = cgl%cg%ks, cgl%cg%ke
+            do j = cgl%cg%js, cgl%cg%je
+               do i = cgl%cg%is, cgl%cg%ie
+                  cgl%cg%u(fl%ien, i, j, k) = presrho(cgl%cg%u(fl%idn, i, j, k)) / fl%gam_1 + &
+                       &                      ekin(cgl%cg%u(fl%imx,i,j,k), cgl%cg%u(fl%imy,i,j,k), cgl%cg%u(fl%imz,i,j,k), cgl%cg%u(fl%idn,i,j,k))
+                  if (associated(cgl%cg%b)) cgl%cg%u(fl%ien, i, j, k) = cgl%cg%u(fl%ien, i, j, k) + &
+                       &                      emag(cgl%cg%b(xdim,i,j,k), cgl%cg%b(ydim,i,j,k), cgl%cg%b(zdim,i,j,k))
+                  cgl%cg%u(fl%ien, i, j, k) = max(smallei, cgl%cg%u(fl%ien, i, j, k))
                enddo
             enddo
-            end associate
          enddo
          cgl => cgl%nxt
       enddo
@@ -910,7 +934,6 @@ contains
 
       use constants,  only: pi, xdim, zdim
       use domain,     only: dom
-      use fluidindex, only: flind
       use func,       only: ekin
       use grid_cont,  only: grid_container
       use units,      only: newtong
@@ -925,6 +948,8 @@ contains
       real :: delx
       integer :: d, i, j, k
 
+      call pick_fluid
+
       ierrh = 0
       select case (trim(var))
          case ("nJ")
@@ -936,7 +961,7 @@ contains
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
-                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = sqrt(pi/newtong/cg%u(flind%ion%idn, i, j, k)) * flind%ion%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2)/delx
+                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = sqrt(pi/newtong/cg%u(fl%idn, i, j, k)) * fl%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2)/delx
                   enddo
                enddo
             enddo
@@ -944,7 +969,7 @@ contains
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
-                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = flind%ion%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2)
+                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = fl%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2)
                   enddo
                enddo
             enddo
@@ -952,7 +977,7 @@ contains
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
-                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = sqrt(2*ekin(cg%u(flind%ion%imx, i, j, k), cg%u(flind%ion%imy, i, j, k), cg%u(flind%ion%imz, i, j, k), cg%u(flind%ion%idn, i, j, k)**2)) / flind%ion%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2)
+                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = sqrt(2*ekin(cg%u(fl%imx, i, j, k), cg%u(fl%imy, i, j, k), cg%u(fl%imz, i, j, k), cg%u(fl%idn, i, j, k)**2)) / fl%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2)
                   enddo
                enddo
             enddo

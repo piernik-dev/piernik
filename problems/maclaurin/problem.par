@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 3*64
+    n_d = 3*16
     bnd_xl = 'out'
     bnd_xr = 'out'
     bnd_yl = 'out'
@@ -27,7 +27,7 @@
 
  $RESTART_CONTROL
     restart  = 'none'
-    new_id   = ''
+    res_id   = ''
     nrestart = 0
  /
 
@@ -43,7 +43,7 @@
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1:) = 'dens', 'gpot', 'apot', 'errp'
+    vars(1:) = 'dens', 'gpot', 'apot', 'errp', 'relerr', 'level'
  /
 
  $FLUID_DUST
@@ -64,11 +64,11 @@
  /
 
  $PROBLEM_CONTROL
-    x0     = 1.
-    y0     = 1.
+    x0     = 0.
+    y0     = 0.5
     z0     = 1.
     d0     = 1.
-    a1     = 0.75
+    a1     = 0.7
     e      = 0.
     nsub   = 3
  /
@@ -80,10 +80,14 @@
 
  $MULTIGRID_GRAVITY
     grav_bnd_str  = "isolated"
+    mpole_solver  = "3d"
+    level_3D      = 0   ! base level evaluation of multipole moments seems to be good enough for maclaurin, even -2 would be sufficient
  /
 
  $INTERACTIONS
  /
 
  $AMR
+    bsize = 3*8
+    level_max = 3
  /

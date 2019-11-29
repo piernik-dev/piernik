@@ -455,6 +455,7 @@ contains
       cgl => this%first
       do while (associated(cgl))
          call cgl%cg%refine_flags%init
+         cgl%cg%refinemap = .false.
          cgl => cgl%nxt
       enddo
 

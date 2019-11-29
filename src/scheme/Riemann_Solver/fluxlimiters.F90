@@ -32,14 +32,15 @@
 !    The algorithm is simply present for experimental purposes.
 !--------------------------------------------------------------------------------------------------------------
 
-#include "piernik.def"
+#include "piernik.h"
 
 module fluxlimiters
-! pulled by RIEMANN
+
+! pulled by ANY
 
    implicit none
    private
-   public :: set_limiters, flimiter, blimiter, calculate_slope_vanleer, slope_limiter_minmod, slope_limiter_moncen, slope_limiter_superbee
+   public :: set_limiters, limiter, flimiter, blimiter
 
    interface
       function limiter(q) result(dq)
@@ -68,24 +69,23 @@ contains
       character(len=*), intent(in) :: flim_str, blim_str
 
       if (associated(flimiter)) call die("[fluxlimiters:set_limiters] flimiter already associated")
-      flimiter => set_limiter(flim_str)
+      call set_limiter(flim_str, flimiter)
 
       if (associated(blimiter)) call die("[fluxlimiters:set_limiters] blimiter already associated")
-      blimiter => set_limiter(blim_str)
+      call set_limiter(blim_str, blimiter)
 
    end subroutine set_limiters
 
 !!!-------------------------------------------------------------------------------
 
-   function set_limiter(lim_str) result(lim)
+   subroutine set_limiter(lim_str, lim)
 
       use dataio_pub, only: msg, die
 
       implicit none
 
-      character(len=*), intent(in) :: lim_str
-
-      procedure(limiter), pointer :: lim
+      character(len=*),            intent(in)  :: lim_str
+      procedure(limiter), pointer, intent(out) :: lim
 
       select case (lim_str)
          case ('vanleer', 'VANLEER')
@@ -102,7 +102,7 @@ contains
             lim => null()
       end select
 
-   end function set_limiter
+   end subroutine set_limiter
 
 !!!-------------------------------------------------------------------------------
 
@@ -112,21 +112,22 @@ contains
 
       real, dimension(:,:), intent(in)     :: u
 
-      real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dcen, dq
-      integer :: n
+      real, dimension(size(u,1),size(u,2)) :: dq
+      real :: dlft, drgt, dcen
+      integer :: i, v
 
-      n = size(u,2)
+      dq(lbound(u,1),:) = 0. ! sanitizing endpoints
+      dq(ubound(u,1),:) = 0.
 
-      dlft(:,2:n)   = (u(:,2:n) - u(:,1:n-1)) ; dlft(:,1) = dlft(:,2)    ! (14.38)
-      drgt(:,1:n-1) = dlft(:,2:n) ;             drgt(:,n) = drgt(:,n-1)
-
-      dcen = dlft*drgt
-
-      where (dcen>0.0)
-         dq = 2.0*dcen / (dlft+drgt)       ! (14.54)
-      elsewhere
-         dq = 0.0
-      endwhere
+      do v = lbound(u,2), ubound(u,2)
+         dlft = u(lbound(u,1)+1, v) - u(lbound(u,1), v)
+         do i = lbound(u,1)+1, ubound(u,1)-1
+            drgt = u(i+1, v) - u(i, v)     ! (14.38)
+            dcen = dlft*drgt
+            dq(i, v) = merge(2.0*dcen / (dlft+drgt), 0., dcen>0.0) ! variable = merge(value if true, value if false, condition)
+            dlft = drgt
+         enddo
+      enddo
 
    end function calculate_slope_vanleer
 
@@ -142,15 +143,17 @@ contains
 
       real, dimension(:,:), intent(in)     :: u
 
-      real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dq
-      integer :: n
+      real, dimension(size(u,1),size(u,2)) :: dq
+      real, dimension(size(u,1)) :: dlft, drgt
+      integer :: n, v
 
-      n = size(u,2)
+      n = size(u,1)
 
-      dlft(:,2:n)   = (u(:,2:n) - u(:,1:n-1)) ; dlft(:,1) = dlft(:,2)
-      drgt(:,1:n-1) = dlft(:,2:n) ;             drgt(:,n) = drgt(:,n-1)
-
-      dq = (sign(one, dlft) + sign(one, drgt))*min(abs(dlft),abs(drgt))*half
+      do v = lbound(u,2), ubound(u,2)
+         dlft(2:n)   = (u(2:n, v) - u(1:n-1, v)) ; dlft(1) = dlft(2)
+         drgt(1:n-1) = dlft(2:n) ;                 drgt(n) = drgt(n-1)
+         dq(:, v) = (sign(one, dlft) + sign(one, drgt))*min(abs(dlft),abs(drgt))*half
+      enddo
 
    end function slope_limiter_minmod
 
@@ -166,15 +169,17 @@ contains
 
       real, dimension(:,:), intent(in)     :: u
 
-      real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dq
-      integer :: n
+      real, dimension(size(u,1),size(u,2)) :: dq
+      real, dimension(size(u,1)) :: dlft, drgt
+      integer :: n, v
 
-      n = size(u,2)
+      n = size(u,1)
 
-      dlft(:,2:n)   = (u(:,2:n) - u(:,1:n-1)) ; dlft(:,1) = dlft(:,2)
-      drgt(:,1:n-1) = dlft(:,2:n) ;             drgt(:,n) = drgt(:,n-1)
-
-      dq = (sign(one,dlft)+sign(one,drgt))*min(two*abs(dlft),two*abs(drgt),half*abs(dlft+drgt))*half
+      do v = lbound(u,2), ubound(u,2)
+         dlft(2:n)   = (u(2:n, v) - u(1:n-1, v)) ; dlft(1) = dlft(2)
+         drgt(1:n-1) = dlft(2:n) ;                 drgt(n) = drgt(n-1)
+         dq(:, v) = (sign(one,dlft)+sign(one,drgt))*min(two*abs(dlft),two*abs(drgt),half*abs(dlft+drgt))*half
+      enddo
 
    end function slope_limiter_moncen
 !-----------------------------------------------------------------------------------------------------------------------
@@ -189,19 +194,19 @@ contains
 
       real, dimension(:,:), intent(in)     :: u
 
-      real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dq
-      integer :: n
+      real, dimension(size(u,1),size(u,2)) :: dq
+      real, dimension(size(u,1)) :: dlft, drgt
+      integer :: n, v
 
-      n = size(u,2)
+      n = size(u,1)
 
-      dlft(:,2:n)   = (u(:,2:n) - u(:,1:n-1)) ; dlft(:,1) = dlft(:,2)
-      drgt(:,1:n-1) = dlft(:,2:n) ;             drgt(:,n) = drgt(:,n-1)
+      do v = lbound(u,2), ubound(u,2)
+         dlft(2:n)   = (u(2:n, v) - u(1:n-1, v)) ; dlft(1) = dlft(2)
+         drgt(1:n-1) = dlft(2:n) ;                 drgt(n) = drgt(n-1)
 
-      where (abs(dlft) > abs(drgt))
-         dq = (sign(one,dlft)+sign(one,drgt))*min(abs(dlft), abs(two*drgt))*half
-      elsewhere
-         dq = (sign(one,dlft)+sign(one,drgt))*min(abs(two*dlft), abs(drgt))*half
-      endwhere
+         dq(:, v) = (sign(one,dlft)+sign(one,drgt))*half * &
+              merge(min(abs(dlft), abs(two*drgt)), min(abs(two*dlft), abs(drgt)), abs(dlft) > abs(drgt))
+      enddo
 
     end function slope_limiter_superbee
 

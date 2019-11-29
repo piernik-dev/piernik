@@ -1,0 +1,98 @@
+ $BASE_DOMAIN
+    n_d = 3*64 ! 3*128
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+    xmin   = -2.
+    xmax   =  2.
+    ymin   = -2.
+    ymax   =  2.
+    zmin   = -2.
+    zmax   =  2.
+ /
+
+ $MPI_BLOCKS
+    allow_uneven = .true.
+    allow_noncart = .true.
+    dd_unif_quality = 1.1
+    dd_rect_quality = 1.1
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'none'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 0.0
+    nend   = 1 ! we can set here 0 as well, but this would issue a warning
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='maclaurin'
+    run_id =  'sph'
+    dt_hdf  = 10.0
+    dt_res  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1:) = 'dens', 'gpot', 'apot', 'errp', "relerr", "mpole", "errm", "relerrm"
+    h5_64bit = .true.
+ /
+
+ $FLUID_DUST
+    selfgrav = .true.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-20
+    smallei= 1.e-20
+    limiter= 'vanleer'
+ /
+
+ $GRAVITY
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    x0     = 0.03125  !  0.015625 ! for resolution 3*128
+    y0     = 1.03125  !  1.015625
+    z0     = 0.28125  !  0.265625
+    d0     = 1.
+    a1     = 0.25  ! Use a1 = 0 to set up a particle instead of gas sphere
+    e      = 0.
+    nsub   = 3
+!    analytical_ext_pot = .true.  ! Skip the multipole solver and use analytical potential on the boundaries
+ /
+
+ $MULTIGRID_SOLVER
+    stdout    = .true.
+    dirty_debug = .true.
+ /
+
+ $MULTIGRID_GRAVITY
+    grav_bnd_str  = "isolated"
+    mpole_solver = "3D"  ! this is necessary to get 3D potental estimate from multipoles in "mpole" field
+                         ! "errm" and "rellerr" depend on "mpole"
+!    level_3D = -1       ! coarsening for the "3D" multipole integrator
+    res_factor = 0.3    ! radial resolution of the multipole distribution near the origin
+!    size_factor = 1.    ! enlargement factor to improve the accuaracy of multipoles at large distances
+!    lmax = 64
+!    norm_tol = 1e-10
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+ /

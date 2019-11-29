@@ -397,10 +397,6 @@ def setup_piernik(data=None):
 
     our_defs = [f.split(" ")[1] for f in filter(cpp_junk.match, defines)]
     our_defs.append("ANY")
-    # workaround the fact that we're using cpp and some of use clauses may
-    # depend on __INTEL_COMPILER
-    if re.match("ifort", compiler):
-        cppflags += " -D__INTEL_COMPILER"
     if(options.verbose):
         print("our_defs:")
         print(our_defs)
@@ -464,7 +460,8 @@ def setup_piernik(data=None):
                                       keys[2] in our_defs)))
 
         if(keys_logic1 or keys_logic2):
-            cmd = "cpp %s -I%s -I%s -I%s %s" % (cppflags, probdir, 'src/base', os.path.dirname(piernikdef), f)
+            # workaround the fact that we're using cpp and some of use clauses may depend on __INTEL_COMPILER
+            cmd = "cpp %s -I%s -I%s -I%s %s" % (cppflags + " -D__INTEL_COMPILER", probdir, 'src/base', os.path.dirname(piernikdef), f)
             # Scan preprocessed files
             lines = get_stdout(cmd).split('\n')
             for line in lines:
@@ -513,7 +510,8 @@ def setup_piernik(data=None):
     uses.append([])
     module.setdefault('version', 'version')
     known_external_modules = (
-        "hdf5", "h5lt", "mpi", "iso_c_binding", "iso_fortran_env", "fgsl")
+        "hdf5", "h5lt", "mpi", "iso_c_binding", "iso_fortran_env", "fgsl",
+        "ifposix", "ifport", "ifcore")  # Ugly trick: these modules are detected by -D__INTEL_COMPILER
 
     files_to_build = remove_suf(stripped_files)
 
@@ -559,12 +557,12 @@ def setup_piernik(data=None):
                 if module[j] + '.F90' in stripped_files:
                     d += module[j] + '.o '
                 else:
-                    print("Warning: ", module[j] + '.F90', "referenced in",
-                          stripped_files[i], "not found!")
+                    print("Warning: " + module[j] + '.F90' + "referenced in" +
+                          stripped_files[i] + " not found!")
             else:
                 if j not in known_external_modules:
-                    print("Warning: module", j, " from file ",
-                          stripped_files[i], "not found!")
+                    print("Warning: module " + j + " from file " +
+                          stripped_files[i] + " not found!")
         m.write(pretty_format(deps, d.split(), columns))
     m.close()
 
@@ -661,15 +659,20 @@ def setup_piernik(data=None):
     try:
         os.makedirs(rundir)
     except OSError:
-        print('\033[93m' + "Found old run." + '\033[0m' +
-              " Making copy of old 'problem.par'.")
-        try:
-            if(os.path.isfile(rundir + 'problem.par')):
-                shutil.move(rundir + 'problem.par', rundir + 'problem.par.old')
-        except (IOError, OSError):
-            print('\033[91m' +
-                  "Problem with copying 'problem.par' to 'problem.par.old'." +
-                  '\033[0m')
+        if (not options.keep_par):
+            print('\033[93m' + "Found old run." + '\033[0m' +
+                  " Making copy of old 'problem.par'.")
+            try:
+                if(os.path.isfile(rundir + 'problem.par')):
+                    shutil.move(rundir + 'problem.par', rundir + 'problem.par.old')
+            except (IOError, OSError):
+                print('\033[91m' +
+                      "Problem with copying 'problem.par' to 'problem.par.old'." +
+                      '\033[0m')
+        else:
+            if (os.path.isfile(rundir + 'problem.par')):
+                print('\033[93m' + "Found old run." + '\033[0m' +
+                      " Preserving copy of old 'problem.par'.")
         try:
             if(os.path.isfile(rundir + 'piernik')):
                 os.remove(rundir + 'piernik')
@@ -707,7 +710,8 @@ def setup_piernik(data=None):
                 fatal_problem = True
 
     try:
-        shutil.copy(objdir + "/" + options.param, rundir + 'problem.par')
+        if (not (options.keep_par and os.path.isfile(rundir + 'problem.par'))):
+            shutil.copy(objdir + "/" + options.param, rundir + 'problem.par')
     except IOError:
         print('\033[91m' + "Failed to copy 'problem.par' to '%s'." %
               rundir.rstrip('/') + '\033[0m')
@@ -800,6 +804,9 @@ compilers directory""", metavar="FILE")
     parser.add_option("-o", "--obj", dest="objdir", metavar="POSTFIX",
                       default='', help="""use obj_POSTFIX directory instead of obj/ and
 runs/<problem>_POSTFIX rather than runs/<problem>""")
+
+    parser.add_option("-k", "--keeppar", action="store_true", dest="keep_par",
+                      help="do not override existing problem.par file with the default")
 
     if data is None:
         all_args = []

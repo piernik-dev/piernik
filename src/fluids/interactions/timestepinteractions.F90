@@ -41,39 +41,40 @@ contains
 !! \deprecated BEWARE: works only with neu+dust!!!!
 !! \todo check if subtraction of momenta is really the case and rewrite for all fluids
 !<
-   real function timestep_interactions(cg) result(dt)
+   real function timestep_interactions() result(dt_interact)
 
-      use constants,    only: small, I_ONE
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use constants,    only: big, pMIN, small
       use fluidindex,   only: flind
       use func,         only: L2norm
       use grid_cont,    only: grid_container
       use interactions, only: collfaq, cfl_interact, has_interactions
-      use mpi,          only: MPI_MIN, MPI_DOUBLE_PRECISION
-      use mpisetup,     only: comm, mpi_err, FIRST, piernik_MPI_Bcast
+      use mpisetup,     only: piernik_MPI_Allreduce
 
       implicit none
 
-      real :: dt_interact_proc        !< timestep due to %interactions for the current process (MPI block) only
-      real :: dt_interact_all         !< timestep due to %interactions for all MPI blocks
-      real :: val                     !< variable used to store the maximum value of relative momentum
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg
+      real                           :: val        !< variable used to store the maximum value of relative momentum
 
-      type(grid_container), pointer, intent(in) :: cg
-
+      dt_interact = big
+      if (.not.has_interactions) return
       !    dt_interact_proc = 1.0 / (maxval(collfaq)+small) / maxval(cg%u(iarr_all_dn,:,:,:))
 
-      if (has_interactions) then
-         !       val = maxval (  sqrt( (cg%u(flind%dst%imx,:,:,:)-cg%u(flind%neu%imx,:,:,:))**2 + (cg%u(flind%dst%imy,:,:,:)-cg%u(flind%neu%imy,:,:,:))**2 + &
-         !                             (cg%u(flind%dst%imz,:,:,:)-cg%u(flind%neu%imz,:,:,:))**2   ) * cg%u(flind%dst%idn,:,:,:) )
-         val = maxval ( L2norm(cg%u(flind%dst%imx,:,:,:),cg%u(flind%dst%imy,:,:,:),cg%u(flind%dst%imz,:,:,:), &
-                            &  cg%u(flind%neu%imx,:,:,:),cg%u(flind%neu%imy,:,:,:),cg%u(flind%neu%imz,:,:,:) ) * cg%u(flind%dst%idn,:,:,:) )
-         dt_interact_proc = flind%neu%cs / (maxval(collfaq) * val + small)
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
 
-         call MPI_Reduce(dt_interact_proc, dt_interact_all, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, FIRST, comm, mpi_err)
-         call piernik_MPI_Bcast(dt_interact_all)
-         dt = cfl_interact*dt_interact_all
-      else
-         dt = huge(1.)
-      endif
+         val = maxval( L2norm(cg%u(flind%dst%imx,:,:,:),cg%u(flind%dst%imy,:,:,:),cg%u(flind%dst%imz,:,:,:), &
+                            &  cg%u(flind%neu%imx,:,:,:),cg%u(flind%neu%imy,:,:,:),cg%u(flind%neu%imz,:,:,:) ) * cg%u(flind%dst%idn,:,:,:) )
+         dt_interact = cfl_interact * flind%neu%cs / (maxval(collfaq) * val + small)
+
+
+         cgl => cgl%nxt
+      enddo
+
+      call piernik_MPI_Allreduce(dt_interact, pMIN)
 
    end function timestep_interactions
 !-------------------------------------------------------------------------------

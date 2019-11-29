@@ -38,7 +38,7 @@
 !<
 
 module pcg
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
 
    use constants, only: cbuff_len, dsetnamelen
 
@@ -64,10 +64,10 @@ contains
       use cg_list_global,   only: all_cg
       use constants,        only: base_level_id
       use dataio_pub,       only: warn
-      use domain,           only: AMR_bsize
+      use domain,           only: dom
       use mpisetup,         only: master
       use named_array_list, only: qna
-      use refinement_flag,  only: level_max
+      use refinement,       only: level_max, bsize
 
       implicit none
 
@@ -78,7 +78,7 @@ contains
             call warn("[pcg:pcg_init] Multigrid-preconditioned conjugate gradient solver is experimental!")
             if (use_CG_outer) &
                  call warn("[pcg:pcg_init] Current implementation of Multigrid-Preconditioned Conjugate Gradient Method is known to converge poorly for outer potential.")
-            if (level_max > base_level_id .and. any(AMR_bsize > 0)) &
+            if (level_max > base_level_id .and. any((bsize > 0) .and. dom%has_dir)) &
                  call warn("[pcg:pcg_init] Current implementation of Multigrid-Preconditioned Conjugate Gradient Method is known to converge poorly on refined grids.")
          endif
       endif
@@ -150,10 +150,10 @@ contains
          tot_ts = tot_ts + ts
          loc_ts = loc_ts + ts
          if (norm_old/norm_lhs < 1e6) then
-            write(msg,'(a,i3,a,f12.8,a,f9.2,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
+            write(msg,'(a,i3,a,f12.8,a,f10.2,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
                  &                                                 " a,b= ", alpha, beta, " time=", ts
          else
-            write(msg,'(a,i3,a,f12.8,a,es9.3,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
+            write(msg,'(a,i3,a,f12.8,a,es10.3,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
                  &                                                 " a,b= ", alpha, beta, " time=", ts
          endif
          if (master) call printinfo(msg)
@@ -215,6 +215,7 @@ contains
       use cg_level_connected,       only: cg_level_connected_T
       use cg_level_finest,          only: finest
       use cg_list_global,           only: all_cg
+      use constants,                only: dirtyH1
       use multigrid_gravity_helper, only: approximate_solution
 
       implicit none
@@ -227,7 +228,7 @@ contains
       ! the Huang-Greengard V-cycle
       call finest%level%restrict_to_floor_q_1var(def)
 
-      call all_cg%set_dirty(corr)
+      call all_cg%set_dirty(corr, 0.89*dirtyH1)
 
       curl => coarsest%level
       do while (associated(curl))

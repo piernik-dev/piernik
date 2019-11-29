@@ -23,7 +23,7 @@
 
  $RESTART_CONTROL
     restart  = 'none'
-    new_id   = ''
+    res_id   = ''
     nrestart = 0
  /
 
@@ -68,9 +68,9 @@
     K_crn_perp(1)  = 0.0     ! isotropic
     K_crn_perp(2)  = 0.0
     K_crn_perp(3)  = 0.0
-    ncre        = 0
-    use_split   = .true.
-    divv_scheme = "6lp"
+    ncre           = 0
+    use_CRsplit    = .true.
+    divv_scheme    = "6lp"
  /
 
  $CR_SPECIES

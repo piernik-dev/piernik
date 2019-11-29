@@ -41,8 +41,8 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, manage_grav_pot_3d, update_gp
-   public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x
+   public :: init_grav, init_terms_grav, grav_accel, source_terms_grav, grav_src_exec, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, update_gp
+   public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x, variable_gp
 
    integer, parameter         :: gp_stat_len   = 9
    integer, parameter         :: gproft_len    = 5
@@ -67,9 +67,9 @@ module gravity
    real                       :: cmass_x               !< center of mass for Roche potential
    real                       :: Omega                 !< corotational angular velocity for Roche potential
 
-   logical                    :: grav_pot_3d_called = .false.
    logical                    :: user_grav             !< use user defined grav_pot_3d
    logical                    :: variable_gp           !< if .true. then cg%gp is evaluated at every step
+   logical                    :: restart_gpot, restart_hgpot, restart_gp, restart_sgp, restart_sgpm !< if .true. then write this grav part to the restart files
 
    interface
 
@@ -112,7 +112,7 @@ module gravity
          integer,                       intent(in)  :: i2         !< number of column in the second direction after one pointed out by sweep
          integer(kind=4),               intent(in)  :: n          !< number of elements of returned array grav \todo OPT: would size(grav) be faster a bit?
          real, dimension(n),            intent(out) :: grav       !< 1D array of gravitational acceleration values computed for positions from %xsw and returned by the routine
-         integer,                       intent(in)  :: istep      !< istep=1 for halfstep, istep=2 for fullstep
+         integer,                       intent(in)  :: istep      !< istep=RK2_1 for halfstep, istep=RK2_2 for fullstep in 2nd order Runge-Kutta method
          type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
       end subroutine grav_pot2accel_T
 
@@ -149,6 +149,11 @@ contains
 !! <tr><td>n_gravr      </td><td>0      </td><td>real             </td><td>\copydoc gravity::n_gravr      </td></tr>
 !! <tr><td>user_grav    </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::user_grav    </td></tr>
 !! <tr><td>variable_gp  </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::variable_gp  </td></tr>
+!! <tr><td>restart_gp   </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::restart_gp   </td></tr>
+!! <tr><td>restart_gpot </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::restart_gpot </td></tr>
+!! <tr><td>restart_hgpot</td><td>.false.</td><td>logical          </td><td>\copydoc gravity::restart_hgpot</td></tr>
+!! <tr><td>restart_sgp  </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::restart_sgp  </td></tr>
+!! <tr><td>restart_sgpm </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::restart_sgpm </td></tr>
 !! <tr><td>gprofs_target</td><td>'extgp'</td><td>string of chars  </td><td>\copydoc gravity::gprofs_target</td></tr>
 !! </table>
 !! The list is active while \b "GRAV" is defined.
@@ -157,11 +162,10 @@ contains
    subroutine init_grav
 
       use cg_list_global, only: all_cg
-      use constants,      only: PIERNIK_INIT_MPI, AT_OUT_B, gp_n, gpot_n, hgpot_n, O_I2, O_I4
+      use constants,      only: PIERNIK_INIT_MPI, gp_n, gpot_n, hgpot_n, O_I2, O_I4
       use dataio_pub,     only: nh    ! QA_WARN required for diff_nml
       use dataio_pub,     only: printinfo, warn, die, code_progress
       use mpisetup,       only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
-      use particle_pub,   only: init_particles
       use units,          only: newtong
 #ifdef SELF_GRAV
       use constants,      only: sgp_n, sgpm_n
@@ -173,7 +177,8 @@ contains
       implicit none
 
       namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, ptmass2, ptm2_x, &
-                         nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, variable_gp, ord_pot2accel
+                         nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, variable_gp, ord_pot2accel, &
+                         restart_gp, restart_gpot, restart_hgpot, restart_sgp, restart_sgpm
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[gravity:init_grav] mpi not initialized.")
 
@@ -203,6 +208,11 @@ contains
 
       user_grav     = .false.
       variable_gp   = .false.
+      restart_gp    = .false.
+      restart_gpot  = .false.
+      restart_hgpot = .false.
+      restart_sgp   = .false.
+      restart_sgpm  = .false.
 
       if (master) then
 
@@ -241,6 +251,11 @@ contains
 
          lbuff(1)   = user_grav
          lbuff(2)   = variable_gp
+         lbuff(3)   = restart_gp
+         lbuff(4)   = restart_gpot
+         lbuff(5)   = restart_hgpot
+         lbuff(6)   = restart_sgp
+         lbuff(7)   = restart_sgpm
 
          cbuff(1)   = gprofs_target
          cbuff(2)   = external_gp
@@ -273,6 +288,11 @@ contains
 
          user_grav     = lbuff(1)
          variable_gp   = lbuff(2)
+         restart_gp    = lbuff(3)
+         restart_gpot  = lbuff(4)
+         restart_hgpot = lbuff(5)
+         restart_sgp   = lbuff(6)
+         restart_sgpm  = lbuff(7)
 
          gprofs_target = cbuff(1)(1:gproft_len)
          external_gp   = cbuff(2)
@@ -291,12 +311,12 @@ contains
 
       ! Declare arrays for potential and make shortcuts
       ! All gravitational potential should be recalculated after refinement changes
-      call all_cg%reg_var(gpot_n)
-      call all_cg%reg_var(hgpot_n)
-      call all_cg%reg_var(gp_n, restart_mode = AT_OUT_B) !> \todo register it if and only if it is in use, which should be achievable as long as external_gp doesn't change during simulation
+      call all_cg%reg_var(gpot_n,  restart_mode = res_at(restart_gpot) )
+      call all_cg%reg_var(hgpot_n, restart_mode = res_at(restart_hgpot))
+      call all_cg%reg_var(gp_n,    restart_mode = res_at(restart_gp)   )
 #ifdef SELF_GRAV
-      call all_cg%reg_var(sgp_n)
-      call all_cg%reg_var(sgpm_n)
+      call all_cg%reg_var(sgp_n,   restart_mode = res_at(restart_sgp)  )
+      call all_cg%reg_var(sgpm_n,  restart_mode = res_at(restart_sgpm) )
 #endif /* SELF_GRAV */
 
       if (.not.user_grav) then
@@ -315,9 +335,22 @@ contains
             call die("[gravity:init_grav] Unknown gradient operator")
       end select
 
-      call init_particles
+      call init_grav_ext
 
    end subroutine init_grav
+
+   integer(kind=4) function res_at(incl_gt)
+
+      use constants, only: AT_IGNORE, AT_OUT_B
+
+      implicit none
+
+      logical, intent(in) :: incl_gt
+
+      res_at = AT_IGNORE
+      if (incl_gt) res_at = AT_OUT_B
+
+   end function res_at
 
 !> Register gravity-specific initialization of cg
 
@@ -339,11 +372,11 @@ contains
 
    subroutine g_cg_init(cg)
 
-      use constants,          only: gp_n, gpot_n, hgpot_n, base_level_id
-      use grid_cont,          only: grid_container
-      use named_array_list,   only: qna
+      use constants,        only: gp_n, gpot_n, hgpot_n, base_level_id
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna
 #ifdef SELF_GRAV
-      use constants,          only: sgp_n, sgpm_n
+      use constants,        only: sgp_n, sgpm_n
 #endif /* SELF_GRAV */
 
       implicit none
@@ -368,34 +401,24 @@ contains
 
    end subroutine g_cg_init
 
-   subroutine manage_grav_pot_3d(first_approach, update_gp)
+!>
+!! \brief Collect gravitational terms depending on whether they are taken from restart file or not
+!! \todo check if source_terms_grav should be called here for restarted simulation or new (non-restarted) simulation with particles.
+!<
+   subroutine init_terms_grav
 
-      use dataio_pub, only: die
-#ifdef VERBOSE
-      use dataio_pub, only: warn
-#endif /* VERBOSE */
+      use dataio_pub, only: restarted_sim
 
       implicit none
 
-      logical, intent(in)           :: first_approach
-      logical, optional, intent(in) :: update_gp
-
-      if (associated(grav_pot_3d)) then
-         if (first_approach .or. .not. grav_pot_3d_called .or. update_gp) then
-            call grav_pot_3d
-            grav_pot_3d_called = .true.
-         endif
+      if (restarted_sim) then
+         if (.not.restart_gp) call grav_pot_3d
+         if (.not.restart_gpot) call sum_potential
       else
-#ifdef VERBOSE
-         if (first_approach) call warn("[gravity:manage_grav_pot_3d] grav_pot_3d is not associated! Will try to call it once more after problem_initial_conditions.")
-#endif /* VERBOSE */
-         if (.not.(first_approach .or. grav_pot_3d_called)) call die("[gravity:manage_grav_pot_3d] grav_pot_3d failed for the 2nd time!")
+         call update_gp
       endif
 
-      if (.not.first_approach) call source_terms_grav ! make sure that all contributions to the gravitational potential are computed before first dump
-         ! Possible side-effects: if variable_gp then grav_pot_3d may be called twice (second call from source_terms_grav)
-
-   end subroutine manage_grav_pot_3d
+   end subroutine init_terms_grav
 
    subroutine source_terms_grav
 
@@ -403,36 +426,42 @@ contains
       use cg_leaves,         only: leaves
       use cg_list_dataop,    only: expanded_domain
       use constants,         only: sgp_n, sgpm_n
+      use dataio_pub,        only: warn
       use fluidindex,        only: iarr_all_sg
+      use mpisetup,          only: master
+      use multigrid_gravity, only: multigrid_solve_grav, recover_sgpm
       use named_array_list,  only: qna
-#ifdef MULTIGRID
-      use multigrid_gravity, only: multigrid_solve_grav
-#endif /* MULTIGRID */
 #endif /* SELF_GRAV */
 
       implicit none
 
 #ifdef SELF_GRAV
       logical, save :: frun = .true.
+      logical :: initialized
 
-      call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
+      initialized = .true.
+      if (frun) then
+         ! try to recover sgpm from old soln
+         initialized = recover_sgpm()
+         frun = .false.
+      else
+         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
+      endif
 
-#ifdef MULTIGRID
       call multigrid_solve_grav(iarr_all_sg)
-#else /* !MULTIGRID */
-#error [gravity:source_terms_grav] SELF_GRAV without MULTIGRID gives uninitialized gravitational potential
-#endif /* MULTIGRID */
 
       !> \todo Perhaps it should be called after call sum_potential but that may depend on grav_pot_3d and its potential dependency on selfgravity results
       call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n)) !, nocorners=.true.)
       ! No solvers should requires corner values for the potential. Unfortunately some problems may relay on it indirectly (e.g. streaming_instability).
       !> \todo OPT: identify what relies on corner values of the potential and change it to work without corners. Then enable nocorners in the above call for some speedup.
 
-      if (frun) then
+      if (.not. initialized) then
          call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n)) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain was created
-         !> \deprecated: restarted rund wil be slightly affected as the previous selfgravitating potential was forgotten
-         !> \todo find a way to properly restore previous potential from scratch
-         frun = .false.
+         !> Restarted runs will be slightly affected as the previous selfgravitating potential was forgotten
+         !> First step in highly dynamical setups will behave as the potential was frozen before first timestep
+         !> Solution? Take one step backwards just for calculating old potential? Sounds complicated.
+         !> Another solution: don't use extrapolation, exploit rich history instead and call multigrid more often.
+         if (master) call warn("[gravity:source_terms_grav] assigned sgpm = sgp")
       endif
 
       call expanded_domain%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n)) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain expanded
@@ -459,12 +488,12 @@ contains
    subroutine sum_potential
 
       use cg_leaves,        only: leaves
-      use cg_list_dataop,   only: ind_val
       use constants,        only: gp_n, gpot_n, hgpot_n
-      use func,             only: operator(.notequals.)
       use named_array_list, only: qna
 #ifdef SELF_GRAV
+      use cg_list_dataop,   only: ind_val
       use constants,        only: one, half, sgp_n, sgpm_n, zero
+      use func,             only: operator(.notequals.)
       use global,           only: dt, dtm
 #endif /* SELF_GRAV */
 
@@ -896,10 +925,11 @@ contains
 !<
    subroutine grav_pot2accel_ord2(sweep, i1, i2, n, grav, istep, cg)
 
-      use constants,  only: xdim, ydim, zdim, half, LO, HI, GEO_XYZ, GEO_RPZ
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
+      use constants,        only: idm2, ndims, pdims, ydim, half, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER, gpot_n, hgpot_n, NORMAL, ORTHO1, ORTHO2, INVALID
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna
 
       implicit none
 
@@ -908,50 +938,49 @@ contains
       integer,                       intent(in)  :: i2         !< number of column in the second direction after one pointed out by sweep
       integer(kind=4),               intent(in)  :: n          !< number of elements of returned array grav \todo OPT: would size(grav) be faster a bit?
       real, dimension(n),            intent(out) :: grav       !< 1D array of gravitational acceleration values computed for positions from %xsw and returned by the routine
-      integer,                       intent(in)  :: istep      !< istep=1 for halfstep, istep=2 for fullstep
+      integer,                       intent(in)  :: istep      !< istep=RK2_1 for halfstep, istep=RK2_2 for fullstep in 2nd order Runge-Kutta method
       type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
+
+      integer, dimension(ndims,LO:HI)            :: ispan
+      integer(kind=4)                            :: ig
 
       ! Gravitational acceleration is computed on right cell boundaries
 
-      if (istep==1) then
-         select case (sweep)
-            case (xdim)
-               grav(2:n-1) = half*(cg%hgpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-2, i1, i2) - cg%hgpot(cg%lhn(xdim, LO)+2:cg%lhn(xdim, HI), i1, i2))/cg%dl(xdim)
-            case (ydim)
-               grav(2:n-1) = half*(cg%hgpot(i2, cg%lhn(ydim, LO):cg%lhn(ydim, HI)-2, i1) - cg%hgpot(i2, cg%lhn(ydim, LO)+2:cg%lhn(ydim, HI), i1))/cg%dl(ydim)
-            case (zdim)
-               grav(2:n-1) = half*(cg%hgpot(i1, i2, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-2) - cg%hgpot(i1, i2, cg%lhn(zdim, LO)+2:cg%lhn(zdim, HI)))/cg%dl(zdim)
-         end select
+      ! For more general schemes (higher order than RK2, non-canonical choices of RK2) we will need timestep fraction provided by the solver, not istep
+      select case (istep)
+      case (RK2_1)
+         ig = qna%ind(hgpot_n)
+      case (RK2_2, EULER)
+         ig = qna%ind(gpot_n)
+      case default
+         call die("[gravity:grav_pot2accel_ord2] Unsupported substep")
+         ig = INVALID  ! suppress compiler warning
+      end select
 
-      else
-         select case (sweep)
-            case (xdim)
-               grav(2:n-1) = half*(cg%gpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-2, i1, i2) - cg%gpot(cg%lhn(xdim, LO)+2:cg%lhn(xdim, HI), i1, i2))/cg%dl(xdim)
-            case (ydim)
-               grav(2:n-1) = half*(cg%gpot(i2, cg%lhn(ydim, LO):cg%lhn(ydim, HI)-2, i1) - cg%gpot(i2, cg%lhn(ydim, LO)+2:cg%lhn(ydim, HI), i1))/cg%dl(ydim)
-            case (zdim)
-               grav(2:n-1) = half*(cg%gpot(i1, i2, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-2) - cg%gpot(i1, i2, cg%lhn(zdim, LO)+2:cg%lhn(zdim, HI)))/cg%dl(zdim)
-         end select
-      endif
+      ispan(pdims(sweep,ORTHO1),:) = i1
+      ispan(pdims(sweep,ORTHO2),:) = i2
+      ispan(pdims(sweep,NORMAL),LO:HI) = cg%lhn(sweep,LO:HI) + [2,0]
 
+      grav(2:n-1) = half*reshape(cg%q(ig)%span(ispan-2*idm2(sweep,:,:)) - cg%q(ig)%span(ispan),[n-2]) / cg%dl(sweep)
       grav(1) = grav(2); grav(n) = grav(n-1)
 
       select case (dom%geometry_type)
          case (GEO_XYZ) ! Do nothing
          case (GEO_RPZ)
-            if (sweep == ydim) grav = grav / cg%x(i2)
+            if (sweep == ydim) grav = grav * cg%inv_x(i2)
          case default
-            call die("[gravity:grav_pot2accel] Unsupported geometry")
+            call die("[gravity:grav_pot2accel_ord2] Unsupported geometry")
       end select
 
    end subroutine grav_pot2accel_ord2
 
    subroutine grav_pot2accel_ord4(sweep, i1, i2, n, grav, istep, cg)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, GEO_XYZ, GEO_RPZ
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
+      use constants,        only: idm2, ndims, pdims, ydim, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER, gpot_n, hgpot_n, NORMAL, ORTHO1, ORTHO2, INVALID
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna
 
       implicit none
 
@@ -960,50 +989,80 @@ contains
       integer,                       intent(in)  :: i2         !< number of column in the second direction after one pointed out by sweep
       integer(kind=4),               intent(in)  :: n          !< number of elements of returned array grav \todo OPT: would size(grav) be faster a bit?
       real, dimension(n),            intent(out) :: grav       !< 1D array of gravitational acceleration values computed for positions from %xsw and returned by the routine
-      integer,                       intent(in)  :: istep      !< istep=1 for halfstep, istep=2 for fullstep
+      integer,                       intent(in)  :: istep      !< istep=RK2_1 for halfstep, istep=RK2_2 for fullstep in 2nd order Runge-Kutta method
       type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
 
-      real, parameter :: onetw = 1./12.
+      integer, dimension(ndims,LO:HI)            :: ispan
+      integer(kind=4)                            :: ig
+      real, parameter                            :: onetw = 1./12.
 
       ! Gravitational acceleration is computed on right cell boundaries
 
-      if (istep==1) then
-         select case (sweep)
-            case (xdim)
-               grav(3:n-2) = onetw*(cg%hgpot(cg%lhn(xdim, LO)+4:cg%lhn(xdim, HI),i1,i2) - 8.*cg%hgpot(cg%lhn(xdim, LO)+3:cg%lhn(xdim, HI)-1,i1,i2) + &
-                                    8.*cg%hgpot(cg%lhn(xdim, LO)+1:cg%lhn(xdim, HI)-3,i1,i2) - cg%hgpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-4,i1,i2)) / cg%dl(xdim)
-            case (ydim)
-               grav(3:n-2) = onetw*(cg%hgpot(i2,cg%lhn(ydim, LO)+4:cg%lhn(ydim, HI),i1) - 8.*cg%hgpot(i2,cg%lhn(ydim, LO)+3:cg%lhn(ydim, HI)-1,i1) + &
-                                    8.*cg%hgpot(i2,cg%lhn(ydim, LO)+1:cg%lhn(ydim, HI)-3,i1) - cg%hgpot(i2,cg%lhn(ydim, LO):cg%lhn(ydim, HI)-4,i1)) / cg%dl(ydim)
-            case (zdim)
-               grav(3:n-2) = onetw*(cg%hgpot(i1,i2,cg%lhn(zdim, LO)+4:cg%lhn(zdim, HI)) - 8.*cg%hgpot(i1,i2,cg%lhn(zdim, LO)+3:cg%lhn(zdim, HI)-1) + &
-                                    8.*cg%hgpot(i1,i2,cg%lhn(zdim, LO)+1:cg%lhn(zdim, HI)-3) - cg%hgpot(i1,i2,cg%lhn(zdim, LO):cg%lhn(zdim, HI)-4)) / cg%dl(zdim)
-         end select
-      else
-         select case (sweep)
-            case (xdim)
-               grav(3:n-2) = onetw*(cg%gpot(cg%lhn(xdim, LO)+4:cg%lhn(xdim, HI),i1,i2) - 8.*cg%gpot(cg%lhn(xdim, LO)+3:cg%lhn(xdim, HI)-1,i1,i2) + &
-                                    8.*cg%gpot(cg%lhn(xdim, LO)+1:cg%lhn(xdim, HI)-3,i1,i2) - cg%gpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-4,i1,i2)) / cg%dl(xdim)
-            case (ydim)
-               grav(3:n-2) = onetw*(cg%gpot(i2,cg%lhn(ydim, LO)+4:cg%lhn(ydim, HI),i1) - 8.*cg%gpot(i2,cg%lhn(ydim, LO)+3:cg%lhn(ydim, HI)-1,i1) + &
-                                    8.*cg%gpot(i2,cg%lhn(ydim, LO)+1:cg%lhn(ydim, HI)-3,i1) - cg%gpot(i2,cg%lhn(ydim, LO):cg%lhn(ydim, HI)-4,i1)) / cg%dl(ydim)
-            case (zdim)
-               grav(3:n-2) = onetw*(cg%gpot(i1,i2,cg%lhn(zdim, LO)+4:cg%lhn(zdim, HI)) - 8.*cg%gpot(i1,i2,cg%lhn(zdim, LO)+3:cg%lhn(zdim, HI)-1) + &
-                                    8.*cg%gpot(i1,i2,cg%lhn(zdim, LO)+1:cg%lhn(zdim, HI)-3) - cg%gpot(i1,i2,cg%lhn(zdim, LO):cg%lhn(zdim, HI)-4)) / cg%dl(zdim)
-         end select
-      endif
+      select case (istep)
+      case (RK2_1)
+         ig = qna%ind(hgpot_n)
+      case (RK2_2, EULER)
+         ig = qna%ind(gpot_n)
+      case default
+         call die("[gravity:grav_pot2accel_ord4] Unsupported substep")
+         ig = INVALID  ! suppress compiler warning
+      end select
+
+      ispan(pdims(sweep,ORTHO1),:) = i1
+      ispan(pdims(sweep,ORTHO2),:) = i2
+      ispan(pdims(sweep,NORMAL),LO:HI) = cg%lhn(sweep,LO:HI) + [2,-2]
+
+      grav(3:n-2) = onetw*reshape(cg%q(ig)%span(ispan+2*idm2(sweep,:,:)) - 8.*cg%q(ig)%span(ispan+  idm2(sweep,:,:)) + &
+                               8.*cg%q(ig)%span(ispan-  idm2(sweep,:,:)) -    cg%q(ig)%span(ispan-2*idm2(sweep,:,:)),[n-4]) / cg%dl(sweep)
       grav(2) = grav(3); grav(n-1) = grav(n-2)
       grav(1) = grav(2); grav(n) = grav(n-1)
 
       select case (dom%geometry_type)
          case (GEO_XYZ) ! Do nothing
          case (GEO_RPZ)
-            if (sweep == ydim) grav = grav / cg%x(i2)
+            if (sweep == ydim) grav = grav * cg%inv_x(i2)
          case default
-            call die("[gravity:grav_pot2accel] Unsupported geometry")
+            call die("[gravity:grav_pot2accel_ord4] Unsupported geometry")
       end select
 
    end subroutine grav_pot2accel_ord4
+
+!--------------------------------------------------------------------------
+!>
+!! \brief Routine that is an interface between grav_pot2accel and all_sources
+!<
+   subroutine grav_src_exec(n, u, cg, sweep, i1, i2, istep, gravsrc)
+
+      use fluidindex, only: flind, iarr_all_dn, iarr_all_mx
+#ifndef ISO
+      use fluidindex, only: iarr_all_en
+#endif /* !ISO */
+      use grid_cont,  only: grid_container
+
+      implicit none
+
+      integer(kind=4),               intent(in)  :: n          !< array size
+      real, dimension(n, flind%all), intent(in)  :: u          !< vector of conservative variables
+      type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
+      integer(kind=4),               intent(in)  :: sweep      !< string of characters that points out the current sweep direction
+      integer,                       intent(in)  :: i1         !< number of column in the first direction after one pointed out by sweep
+      integer,                       intent(in)  :: i2         !< number of column in the second direction after one pointed out by sweep
+      integer,                       intent(in)  :: istep      !< istep=RK2_1 for halfstep, istep=RK2_2 for fullstep in 2nd order Runge-Kutta method
+      real, dimension(n, flind%all), intent(out) :: gravsrc    !< u array update from sources
+      real, dimension(n)                         :: gravacc    !< acceleration caused by gravitation
+      logical                                    :: full_dim
+
+      full_dim = n > 1
+      gravsrc = 0.0
+      if (.not.full_dim) return
+
+      call grav_pot2accel(sweep, i1, i2, n, gravacc, istep, cg)
+      gravsrc(:, iarr_all_mx) = spread(gravacc,2,flind%fluids) * u(:, iarr_all_dn)
+#ifndef ISO
+      gravsrc(:, iarr_all_en) = spread(gravacc,2,flind%fluids) * u(:, iarr_all_mx)
+#endif /* !ISO */
+
+   end subroutine grav_src_exec
 
 !--------------------------------------------------------------------------
 !>

@@ -15,7 +15,6 @@
  /
 
  $MPI_BLOCKS
-    AMR_bsize = 3*16
     allow_uneven = .true.
     allow_noncart = .true.
  /
@@ -25,7 +24,7 @@
 
  $RESTART_CONTROL
     restart  = 'last'
-    new_id   = ''
+    res_id   = ''
     nrestart = 0
  /
 
@@ -61,8 +60,8 @@
     cr_active   = 1.0
     ncrn        = 1
     K_crn_paral = 200.0   ! anisotropic
-!    K_crn_perp  = 200.0 ! isotropic
-    use_split   = .false.
+!    K_crn_perp = 200.0 ! isotropic
+    use_CRsplit = .false.
  /
 
  $MULTIGRID_SOLVER
@@ -100,4 +99,5 @@
  /
 
  $AMR
+    bsize = 3*16
  /

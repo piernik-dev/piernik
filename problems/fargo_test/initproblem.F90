@@ -68,22 +68,21 @@ contains
 !-----------------------------------------------------------------------------------------------------------------------
    subroutine problem_pointers
 
-      use dataio_user,           only: user_attrs_wr, user_attrs_rd
       use user_hooks,            only: problem_customize_solution, problem_grace_passed, problem_post_restart
       use gravity,               only: grav_pot_3d
 #ifdef HDF5
-      use dataio_user,           only: user_vars_hdf5
+      use dataio_user,           only: user_attrs_wr, user_attrs_rd, user_vars_hdf5
 #endif /* HDF5 */
 
       implicit none
 
-      user_attrs_wr => my_attrs_wr
-      user_attrs_rd => my_attrs_rd
       problem_customize_solution => problem_customize_solution_kepler
       problem_grace_passed => si_grace_passed
       problem_post_restart => kepler_problem_post_restart
       grav_pot_3d => my_grav_pot_3d
 #ifdef HDF5
+      user_attrs_wr => my_attrs_wr
+      user_attrs_rd => my_attrs_rd
       user_vars_hdf5 => prob_vars_hdf5
 #endif /* HDF5 */
 

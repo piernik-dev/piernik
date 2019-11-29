@@ -88,7 +88,7 @@ contains
          case ("dend", "deni", "denn")
             f%fu = "\rm{g}/\rm{cm}^3"
             f%f2cgs = 1.0 / (gram/cm**3)
-         case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
+         case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi", "v", "c_s", "cs")
             f%fu = "\rm{cm}/\rm{s}"
             f%f2cgs = 1.0 / (cm/sek)
          case ("enen", "enei")
@@ -159,6 +159,20 @@ contains
                newname = "magnetic_field_magnitude"
             case ("magdir")
                newname = "magnetic_field_direction"
+            case ("v")
+               newname = "total_velocity"
+            case ("cs", "c_s")
+#ifdef MAGNETIC
+               newname = "fast_magnetosonic_speed"
+#else /* !MAGNETIC */
+               newname = "sound_speed"
+#endif /* MAGNETIC */
+            case ("Mach", "mach")
+#ifdef MAGNETIC
+               newname = "Mach_number_(fast)"
+#else /* !MAGNETIC */
+               newname = "Mach_number"
+#endif /* MAGNETIC */
             case default
                write(newname, '(A)') trim(var)
          end select
@@ -245,18 +259,18 @@ contains
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
       use common_hdf5, only: common_shortcuts
-      use constants,   only: dsetnamelen
+      use constants,   only: dsetnamelen, I_ONE
+      use fluids_pub,  only: has_ion, has_neu, has_dst
+      use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
-      use func,        only: ekin, emag
+      use func,        only: ekin, emag, sq_sum3
       use grid_cont,   only: grid_container
       use mpisetup,    only: proc
-#if defined(COSM_RAYS) || defined(TRACER) || !defined(ISO)
-      use fluidindex,  only: flind
-#endif /* COSM_RAYS || TRACER || !ISO */
 #ifdef MAGNETIC
       use div_B,       only: divB_c_IO
       use domain,      only: dom
       use constants,   only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX, I_EIGHT
+      use global,      only: force_cc_mag
 #endif /* MAGNETIC */
 
       implicit none
@@ -266,8 +280,9 @@ contains
       integer,                        intent(out) :: ierrh
       type(grid_container),  pointer, intent(in)  :: cg
 
-      class(component_fluid), pointer             :: fl_dni
+      class(component_fluid), pointer             :: fl_dni, fl_mach
       integer(kind=4)                             :: i_xyz
+      integer                                     :: ii, jj, kk
 #ifdef COSM_RAYS
       integer                                     :: i
       integer, parameter                          :: auxlen = dsetnamelen - 1
@@ -276,16 +291,20 @@ contains
 #define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
 
       call common_shortcuts(var, fl_dni, i_xyz)
-
+      if (.not. associated(fl_dni)) tab = -huge(1.)
       ierrh = 0
       tab = 0.0
 
 #ifdef MAGNETIC
-      associate(emag_f_c => emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
-           &                     half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
-           &                     half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))) )
+      associate(emag_c => merge(emag(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
+           &                         cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
+           &                         cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)), &
+           &                    emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
+           &                         half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
+           &                         half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))), &
+           &                    force_cc_mag))  ! fortran way of constructing ternary operators
 #else /* !MAGNETIC */
-      associate(emag_f_c => 0.)
+      associate(emag_c => 0.)
 #endif /* !MAGNETIC */
       select case (var)
 #ifdef COSM_RAYS
@@ -298,16 +317,16 @@ contains
             tab(:,:,:) = cg%u(flind%trc%beg, RNG)
 #endif /* TRACER */
          case ("dend", "deni", "denn")
-            tab(:,:,:) = cg%u(fl_dni%idn, RNG)
+            if (associated(fl_dni)) tab(:,:,:) = cg%u(fl_dni%idn, RNG)
          case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
-            tab(:,:,:) = cg%u(fl_dni%imx + i_xyz, RNG) / cg%u(fl_dni%idn, RNG)
+            if (associated(fl_dni)) tab(:,:,:) = cg%u(fl_dni%imx + i_xyz, RNG) / cg%u(fl_dni%idn, RNG)
          case ("momxd", "momxn", "momxi", "momyd", "momyn", "momyi", "momzd", "momzn", "momzi")
-            tab(:,:,:) = cg%u(fl_dni%imx + i_xyz, RNG)
+            if (associated(fl_dni)) tab(:,:,:) = cg%u(fl_dni%imx + i_xyz, RNG)
          case ("enen", "enei")
 #ifdef ISO
-            tab(:,:,:) = ekin(cg%u(fl_dni%imx, RNG), cg%u(fl_dni%imy, RNG), cg%u(fl_dni%imz, RNG), cg%u(fl_dni%idn, RNG))
+            if (associated(fl_dni)) tab(:,:,:) = ekin(cg%u(fl_dni%imx, RNG), cg%u(fl_dni%imy, RNG), cg%u(fl_dni%imz, RNG), cg%u(fl_dni%idn, RNG))
 #else /* !ISO */
-            tab(:,:,:) = cg%u(fl_dni%ien, RNG)
+            if (associated(fl_dni)) tab(:,:,:) = cg%u(fl_dni%ien, RNG)
 #endif /* !ISO */
          case ("pren")
 #ifndef ISO
@@ -315,14 +334,14 @@ contains
 #endif /* !ISO */
          case ("prei")
 #ifndef ISO
-            tab(:,:,:) = flind%ion%gam_1 * (cg%u(flind%ion%ien, RNG) - ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG))) - emag_f_c
+            tab(:,:,:) = flind%ion%gam_1 * (cg%u(flind%ion%ien, RNG) - ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) - emag_c)
 #endif /* !ISO */
          case ("pmag%")
 #ifndef ISO
 #ifdef IONIZED
-            tab(:,:,:) = emag_f_c / &
-                 &      (flind%ion%gam_1 * ( cg%u(flind%ion%ien, RNG) - ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) - emag_f_c) + &
-                 &       emag_f_c)
+            tab(:,:,:) = emag_c / &
+                 &      (flind%ion%gam_1 * (cg%u(flind%ion%ien, RNG) - ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) - emag_c) + &
+                 &       emag_c)
 #endif /* IONIZED */
 #endif /* !ISO */
         case ("ethn")
@@ -335,16 +354,20 @@ contains
 #ifndef ISO
             tab(:,:,:) = (cg%u(flind%ion%ien, RNG) - &
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) -          &
-                 &       emag_f_c) / cg%u(flind%ion%idn, RNG)
+                 &       emag_c) / cg%u(flind%ion%idn, RNG)
 #endif /* !ISO */
 #ifdef MAGNETIC
          case ("magx", "magy", "magz")
             tab(:,:,:) = cg%b(xdim + i_xyz, RNG) ! beware: these are "raw", face-centered. Use them with care when you process plotfiles
          case ("magB")
-            tab(:,:,:) = sqrt(two * emag_f_c)
+            tab(:,:,:) = sqrt(two * emag_c)
          case ("magdir")
-            tab(:,:,:) = atan2(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ), &
-                 &             cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ))
+            tab(:,:,:) =  merge(atan2(cg%b(ydim, RNG), cg%b(xdim, RNG)), &
+                 &              atan2(cg%b(ydim, RNG) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ), &
+                 &                    cg%b(xdim, RNG) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )),  &
+                 &              force_cc_mag)
+            ! ToDo: magi - inclination
+            ! ToDo: curlb - nabla x B
 !! ToDo: autodetect centering, add option for dumping both just in case
 !! face-centered div(B): RTVD and RIEMANN, both with constrained transport
          case ("divbf")
@@ -365,6 +388,52 @@ contains
          case ("divbc8")
             tab(:,:,:) = divB_c_IO(cg, I_EIGHT,.true.)
 #endif /* MAGNETIC */
+         case ("v") ! perhaps this should be expanded to vi, vd or vd, depending on fluids present
+            nullify(fl_mach)
+            if (has_ion) then
+               fl_mach => flind%ion
+            else if (has_neu) then
+               fl_mach => flind%neu
+            else if (has_dst) then
+               fl_mach => flind%dst
+            endif
+            tab(:,:,:) = sqrt(sq_sum3(cg%u(fl_mach%imx, RNG), cg%u(fl_mach%imy, RNG), cg%u(fl_mach%imz, RNG))) / cg%u(fl_mach%idn, RNG)
+         case ("cs", "c_s")
+            nullify(fl_mach)
+            if (has_ion) then
+               fl_mach => flind%ion
+            else if (has_neu) then
+               fl_mach => flind%neu
+            endif
+            if (associated(fl_mach)) then
+               do kk = cg%ks, cg%ke
+                  do jj = cg%js, cg%je
+                     do ii = cg%is, cg%ie
+                        tab(ii - cg%is + I_ONE, jj - cg%js + I_ONE, kk - cg%ks + I_ONE) = fl_mach%get_cs(ii, jj, kk, cg%u, cg%b, cg%cs_iso2)
+                     enddo
+                  enddo
+               enddo
+            else
+               tab(:,:,:) = 0.
+            endif
+         case ("mach", "Mach")
+            nullify(fl_mach)
+            if (has_ion) then
+               fl_mach => flind%ion
+            else if (has_neu) then
+               fl_mach => flind%neu
+            endif
+            if (associated(fl_mach)) then
+               do kk = cg%ks, cg%ke
+                  do jj = cg%js, cg%je
+                     do ii = cg%is, cg%ie
+                        tab(ii - cg%is + I_ONE, jj - cg%js + I_ONE, kk - cg%ks + I_ONE) = fl_mach%get_mach(ii, jj, kk, cg%u, cg%b, cg%cs_iso2)
+                     enddo
+                  enddo
+               enddo
+            else
+               tab(:,:,:) = 0.
+            endif
          case ("gpot")
             if (associated(cg%gpot)) tab(:,:,:) = cg%gpot(RNG)
          case ("sgpt")
@@ -395,6 +464,9 @@ contains
       use mpisetup,    only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
       use mpisignals,  only: sig
       use timer,       only: set_timer
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      use multigrid_gravity, only: unmark_oldsoln
+#endif /* MULTIGRID && SELF_GRAV */
 
       implicit none
 
@@ -419,6 +491,9 @@ contains
       else
          call h5_write_to_single_file_v1(fname)
       endif
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      call unmark_oldsoln
+#endif /* MULTIGRID && SELF_GRAV */
 
       thdf = set_timer(tmr_hdf)
       if (master) then
@@ -455,7 +530,7 @@ contains
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars
+      use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars, hdf_vars_avail, enable_all_hdf_var
       use constants,   only: xdim, ydim, zdim, ndims, FP_REAL
       use dataio_pub,  only: die, nproc_io, can_i_write, h5_64bit
       use grid_cont,   only: grid_container
@@ -480,6 +555,8 @@ contains
       real, dimension(:,:,:),          pointer             :: data_dbl ! double precision buffer (internal default, single precision buffer is the plotfile output default, overridable by h5_64bit)
       type(cg_output)                                      :: cg_desc
 
+      call enable_all_hdf_var  ! just in case things have changed meanwhile
+
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(hdf_vars))
 
       if (cg_desc%tot_cg_n < 1) call die("[data_hdf5:write_cg_to_output] no cg available!")
@@ -501,7 +578,7 @@ contains
                do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
                   if (cg_desc%cg_src_p(ncg) == proc) then
                      cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-                     call get_data_from_cg(hdf_vars(i), cg, data_dbl)
+                     if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                   else
                      call MPI_Recv(data_dbl(1,1,1), size(data_dbl), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
                   endif
@@ -516,7 +593,7 @@ contains
                if (cg_desc%cg_src_p(ncg) == proc) then
                   cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                   do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-                     call get_data_from_cg(hdf_vars(i), cg, data_dbl)
+                     if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                      call MPI_Send(data_dbl(1,1,1), size(data_dbl), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, mpi_err)
                   enddo
                endif
@@ -528,7 +605,6 @@ contains
             ! write own
             n = 0
             cgl => leaves%first
-
             do while (associated(cgl))
                n = n + 1
                ncg = cg_desc%offsets(proc) + n
@@ -537,7 +613,7 @@ contains
                cg => cgl%cg
 
                do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-                  call get_data_from_cg(hdf_vars(i), cg, data_dbl)
+                  if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                   if (h5_64bit) then
                      call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_DOUBLE, data_dbl, dims, error, xfer_prp = cg_desc%xfer_prp)
                   else
@@ -551,7 +627,7 @@ contains
             ! Behold the MAGIC in its purest form!
             ! Following block of code does exactly *nothing*, yet it's necessary for collective calls of PHDF5
             !>
-            !! \deprecated BEWARE, we assume that at least 1 cg exist on a given proc
+            !! \deprecated BEWARE, we assume that at least 1 cg exist on a given proc (or at leas we fake it)
             !! \todo there should be something like H5S_NONE as a contradiction to H5S_ALL, yet I cannot find it...
             !<
 
@@ -568,7 +644,18 @@ contains
             call recycle_data(dims, cg_all_n_b, 1, data_dbl)
             do ncg = 1, maxval(cg_n)-n
                do i = lbound(hdf_vars, 1), ubound(hdf_vars, 1)
-                  if (h5_64bit) then
+                  ! It is crashing due to FPE when there are more processes than blocks
+                  ! because data_dbl contains too large values for single precision.
+                  ! If a process doesn't have a block, data_dbl serves justa as
+                  ! a placeholder to complete colective HDF5 calls.
+                  !
+                  ! Yes, something stinks here.
+                  !
+                  ! On uniform grid a process without a cg means that the user made an error and assigned too many processes for too little task.
+                  ! In AMR such situation may occur when in a large sumulation a massive derefinement happens.
+                  ! Usually it will mean that there is something wrong with refinement criteria but still the user
+                  ! deserves to get the files, not a FPE crash.
+                  if (h5_64bit .or. n < 1) then
                      call h5dwrite_f(cg_desc%dset_id(1, i), H5T_NATIVE_DOUBLE, data_dbl, dims, error, &
                           &          xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                   else
@@ -620,10 +707,11 @@ contains
    subroutine get_data_from_cg(hdf_var, cg, tab)
 
       use common_hdf5,      only: cancel_hdf_var
-      use dataio_pub,       only: warn, msg
+      use dataio_pub,       only: warn, msg, printinfo
       use dataio_user,      only: user_vars_hdf5
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
+      use mpisetup,         only: master
 
       implicit none
 
@@ -632,10 +720,8 @@ contains
       real, dimension(:,:,:), pointer, intent(inout) :: tab
 
       integer :: ierrh
-      logical :: ok_var
 
       ierrh = 0
-      ok_var = .false.
 
       ! Try some default names first
       call datafields_hdf5(hdf_var, tab, ierrh, cg)
@@ -648,15 +734,15 @@ contains
          if (qna%exists(hdf_var)) then
             tab(:,:,:) = real(cg%q(qna%ind(hdf_var))%span(cg%ijkse), kind(tab))
             ierrh = 0
-         else
-            ierrh = -1
          endif
       endif
 
-      if (ierrh>=0) ok_var = .true.
-      if (.not.ok_var) then
-         write(msg,'(3a)') "[data_hdf5:get_data_from_cg]: ", hdf_var," is not recognized as a name of defined variables/fields, not defined in datafields_hdf5 and not found in user_vars_hdf5."
-         call warn(msg)
+      if (ierrh /= 0) then
+         write(msg,'(3a)') "[data_hdf5:get_data_from_cg]: '", trim(hdf_var), "' is not recognized as a name of defined variables/fields, not defined in datafields_hdf5 and not found in user_vars_hdf5."
+         if (master) then
+            call printinfo("", .true.)
+            call warn(msg)
+         endif
          call cancel_hdf_var(hdf_var)
       endif
 
@@ -688,7 +774,7 @@ contains
 
       use cg_level_finest, only: finest
       use cg_list,         only: cg_list_element
-      use common_hdf5,     only: nhdf_vars, hdf_vars, hdf_vars_avail
+      use common_hdf5,     only: hdf_vars, hdf_vars_avail
       use constants,       only: ndims, LO, FP_REAL
       use dataio_pub,      only: die, h5_64bit
       use domain,          only: is_multicg !, is_uneven
@@ -737,8 +823,7 @@ contains
       ! Create the data space for the  dataset.
       !
       call h5screate_simple_f(rank, dimsf, filespace, error)
-
-      do i = 1, nhdf_vars
+      do i = 1, size(hdf_vars)
          if (.not.hdf_vars_avail(i)) cycle
 
          ! Create chunked dataset.
@@ -819,7 +904,7 @@ contains
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use common_hdf5, only: nhdf_vars, hdf_vars
+      use common_hdf5, only: hdf_vars
       use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE, tmr_hdf
       use dataio_pub,  only: msg, printio, printinfo, thdf, last_hdf_time, piernik_hdf5_version
       use grid_cont,   only: grid_container
@@ -865,7 +950,7 @@ contains
 
          if (.not.associated(data)) allocate(data(cg%n_b(xdim),cg%n_b(ydim),cg%n_b(zdim)))
          dims = cg%n_b(:)
-         do i = I_ONE, int(nhdf_vars, kind=4)
+         do i = I_ONE, size(hdf_vars, kind=4)
             call get_data_from_cg(hdf_vars(i), cg, data)
             call h5ltmake_dataset_double_f(grp_id, hdf_vars(i), rank, dims, data(:,:,:), error)
          enddo
