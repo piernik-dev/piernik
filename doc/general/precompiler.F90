@@ -61,8 +61,6 @@
 !!
 !! \b \#define \b "MULTIGRID" - to include self–gravity (multigrid solver, uses FFT when possible, recommended)
 !!
-!! \b \#define \b "POISSON_FFT" - to include self–gravity (pure FFT solver)
-!!
 !! \b \#define \b "FFTW"
 !!
 !! \b \#define \b "SHEAR" - to include Coriolis and tidal forces in gas equation of motion and use  <a href="http://cdsads.u-strasbg.fr/abs/1995ApJ...440..742H">Hawley, Gammie and Balbus (1995)</a> type approach for shearing BCS
@@ -81,6 +79,8 @@
 !! \b \#define \b "VERBOSE" - print additional diagnostic information on stdout
 !!
 !! \b \#define \b "PGPLOT"
+!!
+!! \b \#define \b "NO_FFT" - don't use FFTW libraries at all (may be useful on some restricted environments)
 !!
 !! \b \#define \b "JEANS_PROBLEM" - switch on jeans problem-specific quirks
 !!
