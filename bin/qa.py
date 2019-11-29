@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 import re
 import sys
 import hashlib
@@ -95,9 +95,8 @@ def remove_binaries(files):
     for file in files:
         checkFile = sp.Popen('file -bi ' + file, stdout=sp.PIPE, shell=True,
                              executable="/bin/bash")
-        if not checkFile.communicate()[0].startswith('text'):
-            print b.WARNING + "QA:  " + b.ENDC + file + \
-                " is not a text file. I will not test it."
+        if not checkFile.communicate()[0].startswith(b'text'):
+            print(b.WARNING + "QA:  " + b.ENDC + file + " is not a text file. I will not test it.")
         else:
             list.append(file)
     return list
@@ -135,7 +134,7 @@ def give_err(s):
 
 def parse_f90file(lines, fname, store):
     if (debug):
-        print "[parse_f90file] fname = ", fname
+        print("[parse_f90file] fname = ", fname)
     subs_array = np.zeros((0,), dtype=typ1)
 
     subs = filter(test_for_routines.search, lines)
@@ -154,7 +153,7 @@ def parse_f90file(lines, fname, store):
         cur_sub = filter(re.compile(f).search, subs)
         if (len(cur_sub) > 2):
             if (debug):
-                print "[parse_f90file] f, cur_sub = ", f, cur_sub
+                print("[parse_f90file] f, cur_sub = ", f, cur_sub)
             for index in range(0, len(cur_sub)):
                 if just_end.match(cur_sub[index]):
                     if cur_sub[index].split()[1] == subs_types[-1] and \
@@ -167,8 +166,8 @@ def parse_f90file(lines, fname, store):
         subs_array = np.append(subs_array, np.array([obj], dtype=typ1))
 
     if (debug):
-        print "[parse_f90file] subs = ", subs
-        print "[parse_f90file] subs_names = ", subs_names
+        print("[parse_f90file] subs = ", subs)
+        print("[parse_f90file] subs_names = ", subs_names)
 
     mod = filter(module_body.match, lines)
     if (len(mod) <= 0):
@@ -189,9 +188,7 @@ def parse_f90file(lines, fname, store):
 
 
 def qa_checks(files, options):
-    print b.OKBLUE + \
-        '"I am the purifier, the light that clears all shadows."' + \
-        ' - seal of cleansing inscription' + b.ENDC
+    print(b.OKBLUE + '"I am the purifier, the light that clears all shadows."' + ' - seal of cleansing inscription' + b.ENDC)
     runpath = sys.argv[0].split("qa.py")[0]
     files = remove_binaries(files)
     # ToDo: check files other than F90
@@ -212,13 +209,12 @@ def qa_checks(files, options):
         if lines != [line + '\n' for line in pfile]:
             diff_cnt = 1 if (len(lines) != len(pfile)) else 0
             if diff_cnt:
-                print give_warn("Line count changed") + " in file '%s'" % f
+                print(give_warn("Line count changed") + " in file '%s'" % f)
             for i in range(min(len(lines), len(pfile))):
                 if (lines[i] != pfile[i] + '\n'):
                     diff_cnt += 1
             if diff_cnt:
-                print give_warn("QA:  ") + \
-                    "Whitespace changes found in file '%s' (%d lines changed)" % (f, diff_cnt)
+                print(give_warn("QA:  ") + "Whitespace changes found in file '%s' (%d lines changed)" % (f, diff_cnt))
             fp = open(f, 'w')
             for line in pfile:
                 fp.write(line + '\n')
@@ -238,14 +234,14 @@ def qa_checks(files, options):
             pfile, i) for i in filter(test_for_interfaces.search, pfile)]
         while len(interfaces) > 0:
             if (debug):
-                print "Removed interface"
+                print("Removed interface")
             pfile = np.delete(pfile, np.s_[interfaces[0]:interfaces[1] + 1], 0)
             interfaces = [line_num(
                 pfile, i) for i in filter(test_for_interfaces.search, pfile)]
 
         for obj in parse_f90file(pfile, f, warns):
             if (debug):
-                print '[qa_checks] obj =', obj
+                print('[qa_checks] obj =', obj)
             part = pfile[obj['beg']:obj['end']]
             #         if (debug):
             #            for f in part: print f
@@ -265,20 +261,19 @@ def qa_checks(files, options):
                 qa_implicit_saves(part, obj['name'], errors, f)
 
     if (len(warns)):
-        print b.WARNING + "%i warning(s) detected. " % len(warns) + b.ENDC
+        print(b.WARNING + "%i warning(s) detected. " % len(warns) + b.ENDC)
         for warning in warns:
-            print warning
+            print(warning)
 
     if (len(errors)):
-        print b.FAIL + "%i error(s) detected! " % len(errors) + b.ENDC
+        print(b.FAIL + "%i error(s) detected! " % len(errors) + b.ENDC)
         for error in errors:
-            print error
+            print(error)
     else:
-        print b.OKGREEN + "Yay! No errors!!! " + b.ENDC
+        print(b.OKGREEN + "Yay! No errors!!! " + b.ENDC)
 
     if (len(errors) == 0 and len(warns) == 0):
-        print b.OKGREEN + "No warnings detected. " + b.ENDC + \
-            "If everyone were like you, I'd be out of business!"
+        print(b.OKGREEN + "No warnings detected. " + b.ENDC + "If everyone were like you, I'd be out of business!")
 
 
 def qa_have_priv_pub(lines, name, warns, fname):
