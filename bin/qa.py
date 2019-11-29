@@ -35,26 +35,18 @@ have_pub = re.compile('''^\s{0,9}public''', re.VERBOSE)
 have_priv = re.compile('''^\s{0,9}private\s::''', re.VERBOSE)
 remove_warn = re.compile('''(?!.*QA_WARN .+)''', re.VERBOSE)
 have_global_public = re.compile('''^\s{0,9}public(?!.*::)''', re.VERBOSE)
-depr_syntax_1 = re.compile('''
-        ^\s{1,12}(?i)(?:real(?:\s|,)|integer(?:\s|,)|logical
-        (?:\s|,|\()|character(?:\s|,))(?!.*::)
-    ''', re.IGNORECASE)
-depr_syntax_2 = re.compile(
-    '''^\s{1,12}(?i)use[\s](?!.*only)''', re.IGNORECASE)
-depr_syntax_3 = re.compile(
-    '''^\s{1,12}(?i)character(?![(])''', re.IGNORECASE)
+depr_syntax_1 = re.compile('''^\s{1,12}(?:real(?:\s|,)|integer(?:\s|,)|logical(?:\s|,|\()|character(?:\s|,))(?!.*::)''', re.IGNORECASE)
+depr_syntax_2 = re.compile('''^\s{1,12}use[\s](?!.*only)''', re.IGNORECASE)
+depr_syntax_3 = re.compile('''^\s{1,12}character(?![(])''', re.IGNORECASE)
 is_function = re.compile('''(?i)\sfunction\s''', re.IGNORECASE)
 not_function = re.compile('''(?!.*function)''', re.IGNORECASE)
 tab_char = re.compile('\t')
-has_use = re.compile("^\s{1,12}(?i)use\s")
+has_use = re.compile("^\s{1,12}use\s", re.IGNORECASE)
 have_label = re.compile('^[0-9]', re.VERBOSE)
 crude_write = re.compile("write *\( *\*", re.IGNORECASE)
 magic_integer = re.compile("\(len=[1-9]", re.IGNORECASE)
 continuation = re.compile('&$', re.VERBOSE)
-implicit_save = re.compile('''
-    (?i)(?:real(?:\s|,)|integer(?:\s|,)|logical(?:\s|,|\()|character(?:\s|,)).*
-    ::.*=(|\s)[0-9]
-''', re.IGNORECASE)
+implicit_save = re.compile('''(?:real(?:\s|,)|integer(?:\s|,)|logical(?:\s|,|\()|character(?:\s|,)).*::.*=(|\s|)[0-9]''', re.IGNORECASE)
 not_param_nor_save = re.compile("(?!.*(parameter|save))", re.IGNORECASE)
 
 nasty_spaces = [
