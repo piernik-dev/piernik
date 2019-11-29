@@ -239,7 +239,7 @@ def qa_checks(files, options):
             #            for f in part: print f
             # False refs need to be done before removal of types in module body
             qa_false_refs(part, obj['name'], warns, f)
-            if(obj['type'] == 'mod'):
+            if(obj['type'] == b'mod'):
                 # module body is always last, remove lines that've been
                 # already checked
                 part = np.delete(part, np.array(clean_ind) - obj['beg'])
@@ -248,7 +248,7 @@ def qa_checks(files, options):
                 clean_ind += range(obj['beg'], obj['end'] + 1)
 
             qa_depreciated_syntax(part, obj['name'], warns, f)
-            if(obj['type'] != 'type'):
+            if(obj['type'] != b'type'):
                 qa_have_implicit(part, obj['name'], errors, f)
                 qa_implicit_saves(part, obj['name'], errors, f)
 
@@ -278,8 +278,7 @@ def qa_have_priv_pub(lines, name, warns, fname):
             warns.append(give_warn("QA:  ") +
                          "module [%s:%s] have selective private." %
                          (fname, name))
-        if (list(filter(remove_warn.match,
-                  filter(have_global_public.search, lines)))):
+        if (list(filter(remove_warn.match, filter(have_global_public.search, lines)))):
             warns.append(give_warn("QA:  ") +
                          "module [%s:%s] is completely public." %
                          (fname, name))
@@ -288,8 +287,7 @@ def qa_have_priv_pub(lines, name, warns, fname):
 def qa_crude_write(lines, rname, store, fname):
     warning = 0
     for f in filter(remove_warn.match, filter(crude_write.search, lines)):
-        store.append(
-            give_warn("crude write  ") + wtf(lines, f, rname, fname))
+        store.append(give_warn("crude write  ") + wtf(lines, f, rname, fname))
 
 
 def qa_magic_integers(lines, rname, store, fname):
@@ -380,8 +378,9 @@ def qa_false_refs(lines, name, store, fname):
 
 def qa_implicit_saves(lines, name, store, fname):
     #   print b.OKGREEN + "QA: " + b.ENDC + "Checking for implicit saves"
-    impl = list(filter(not_param_nor_save.match, filter(implicit_save.search,
-                  remove_amp(filter(remove_warn.match, lines), True))))
+    impl = list(filter(not_param_nor_save.match,
+                       filter(implicit_save.search,
+                              remove_amp(filter(remove_warn.match, lines), True))))
     if(len(impl)):
         store.append(give_err("implicit saves detected in   ") +
                      "[%s:%s]" % (fname, name))
