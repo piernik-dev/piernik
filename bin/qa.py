@@ -96,7 +96,7 @@ def remove_binaries(files):
 
 def select_sources(files):
     test = re.compile("F90$", re.IGNORECASE)
-    return filter(test.search, files)
+    return list(filter(test.search, files))
 
 
 def wtf(lines, line, rname, fname):
@@ -129,7 +129,7 @@ def parse_f90file(lines, fname, store):
         print("[parse_f90file] fname = ", fname)
     subs_array = np.zeros((0,), dtype=typ1)
 
-    subs = filter(test_for_routines.search, lines)
+    subs = list(filter(test_for_routines.search, lines))
     subs_names = []
     subs_types = []
     for f in subs:
@@ -142,7 +142,7 @@ def parse_f90file(lines, fname, store):
                 store.append(give_warn("QA:  ") + '[%s] "%s" without %s name' %
                              (fname, f.strip(), word[1] if (len(word) > 1) else "any"))
     for f in subs_names:
-        cur_sub = filter(re.compile(f).search, subs)
+        cur_sub = list(filter(re.compile(f).search, subs))
         if (len(cur_sub) > 2):
             if (debug):
                 print("[parse_f90file] f, cur_sub = ", f, cur_sub)
@@ -161,7 +161,7 @@ def parse_f90file(lines, fname, store):
         print("[parse_f90file] subs = ", subs)
         print("[parse_f90file] subs_names = ", subs_names)
 
-    mod = filter(module_body.match, lines)
+    mod = list(filter(module_body.match, lines))
     if (len(mod) <= 0):
         store.append(
             give_warn("QA:  ") + "[%s] => module body not found!" % fname)
@@ -274,12 +274,12 @@ def qa_have_priv_pub(lines, name, warns, fname):
                      "module [%s:%s] lacks public/private keywords." %
                      (fname, name))
     else:
-        if(filter(remove_warn.match, filter(have_priv.search, lines))):
+        if (list(filter(remove_warn.match, filter(have_priv.search, lines)))):
             warns.append(give_warn("QA:  ") +
                          "module [%s:%s] have selective private." %
                          (fname, name))
-        if(filter(remove_warn.match,
-                  filter(have_global_public.search, lines))):
+        if (list(filter(remove_warn.match,
+                  filter(have_global_public.search, lines)))):
             warns.append(give_warn("QA:  ") +
                          "module [%s:%s] is completely public." %
                          (fname, name))
@@ -356,7 +356,7 @@ def remove_amp(lines, strip):
 
 def qa_false_refs(lines, name, store, fname):
     temp = remove_amp(filter(remove_warn.match, lines), True)
-    uses = filter(has_use.search, temp)
+    uses = list(filter(has_use.search, temp))
 
     for item in uses:
         to_check = [f.strip() for f in item.split("only:")[1].split(',')]
@@ -372,7 +372,7 @@ def qa_false_refs(lines, name, store, fname):
         for func in to_check:
             pattern = re.compile(func, re.IGNORECASE)
             # stupid but seems to work
-            if(len(filter(pattern.search, temp)) < 2):
+            if(len(list(filter(pattern.search, temp))) < 2):
                 store.append(give_warn("QA:  ") + "'" + func +
                              "' grabbed but not used in [%s:%s]" %
                              (fname, name))
@@ -380,8 +380,8 @@ def qa_false_refs(lines, name, store, fname):
 
 def qa_implicit_saves(lines, name, store, fname):
     #   print b.OKGREEN + "QA: " + b.ENDC + "Checking for implicit saves"
-    impl = filter(not_param_nor_save.match, filter(implicit_save.search,
-                  remove_amp(filter(remove_warn.match, lines), True)))
+    impl = list(filter(not_param_nor_save.match, filter(implicit_save.search,
+                  remove_amp(filter(remove_warn.match, lines), True))))
     if(len(impl)):
         store.append(give_err("implicit saves detected in   ") +
                      "[%s:%s]" % (fname, name))
