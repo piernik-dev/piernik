@@ -87,9 +87,9 @@ RIEM=Riemann
     cp ../problem.par .
     eval TMPDIR="." $RUN_COMMAND ./${PIERNIK} "-n '&NUMERICAL_SETUP solver_str = \"Riemann\" /'"  > ${PROBLEM_NAME}.test_Riemann_stdout &
 )
-cd -> /dev/null
+cd - > /dev/null
 
-(
+#(
     cd ${RUNS_DIR}/${PROBLEM_NAME}_$GOLD_OBJ
     # skip recalculating gold outpuf if and only if we know for sure that $GOLD_COMMIT did not change
     if [ ! -e $GOLD_SHA_FILE ] ; then
@@ -103,7 +103,8 @@ cd -> /dev/null
        eval TMPDIR="." $RUN_COMMAND ./${PIERNIK} $GOLD_PARAMS > ${PROBLEM_NAME}.gold_stdout &
        echo $GOLD_COMMIT > $GOLD_SHA_FILE
     fi
-)
+    cd - > /dev/null
+#)
 
 wait
 
