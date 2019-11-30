@@ -40,7 +40,8 @@ cp Makefile $TMP_DIR
 rm -rf $GOLD_DIR ${OBJ_PREFIX}$GOLD_OBJ ${OBJ_PREFIX}$TEST_OBJ ${RUNS_DIR}/${PROBLEM_NAME}_$TEST_OBJ $GOLD_LOG
 
 for i in $GOLD_OBJ $TEST_OBJ ; do
-    mkdir ${RUNS_DIR}/${PROBLEM_NAME}_$i
+    d=${RUNS_DIR}/${PROBLEM_NAME}_$i
+    [ ! -d $d ] && mkdir $d
 done
 
 python setup $PROBLEM_NAME $SETUP_PARAMS -o $TEST_OBJ
@@ -49,14 +50,15 @@ rsync -Icvxaq --no-t ${OBJ_PREFIX}${TEST_OBJ} $TMP_DIR
 git clone -q $PIERNIK_REPO $GOLD_DIR
 [ -e .setuprc ] && cp .setuprc $GOLD_DIR
 sed -i 's/--keeppar//' ${GOLD_DIR}/.setuprc
-cp python/piernik_setup.py ${GOLD_DIR}/python
+cp python/piernik_setup.py ${GOLD_DIR}/python/piernik_setup_today.py
 (
     cd $GOLD_DIR
     git fetch -q $PIERNIK_REPO +refs/pull/*:refs/remotes/origin/pr/*
     git checkout -q $GOLD_COMMIT
     rsync -avxq --delete ../compilers/ ./compilers
-    python setup $PROBLEM_NAME $SETUP_PARAMS -o $GOLD_OBJ
+    python python/piernik_setup_today.py $PROBLEM_NAME $SETUP_PARAMS -o $GOLD_OBJ
 )
+
 rsync -Icvxaq --no-t ${GOLD_DIR}/${OBJ_PREFIX}$GOLD_OBJ $TMP_DIR
 
 cp ${GOLD_DIR}/runs/${PROBLEM_NAME}_${GOLD_OBJ}/problem.par ${RUNS_DIR}/${PROBLEM_NAME}_${GOLD_OBJ}/
@@ -64,7 +66,7 @@ cp runs/${PROBLEM_NAME}_${TEST_OBJ}/problem.par ${RUNS_DIR}/${PROBLEM_NAME}_${TE
 
 (
     cd $TMP_DIR
-    rm ${OBJ_PREFIX}{$GOLD_OBJ,$TEST_OBJ}/piernik
+    rm ${OBJ_PREFIX}{$GOLD_OBJ,$TEST_OBJ}/piernik 2> /dev/null
     sed -i 's/-fcheck=all/& -fcheck=no-array-temps/' ${OBJ_PREFIX}{$GOLD_OBJ,$TEST_OBJ}"/Makefile"
     make -j ${OBJ_PREFIX}{$GOLD_OBJ,$TEST_OBJ} > ${PROBLEM_NAME}.make_stdout 2>&1
 )
@@ -73,7 +75,6 @@ for i in $GOLD_OBJ $TEST_OBJ ; do
     rm ${RUNS_DIR}/${PROBLEM_NAME}_${i}/${PIERNIK} 2> /dev/null || echo "${PROBLEM_NAME}: rundir clean"
     cp ${TMP_DIR}/${OBJ_PREFIX}${i}/${PIERNIK} ${RUNS_DIR}/${PROBLEM_NAME}_$i
 done
-
 
 cd ${RUNS_DIR}/${PROBLEM_NAME}_${TEST_OBJ}
 rm *.h5 2> /dev/null
@@ -85,9 +86,8 @@ RIEM=Riemann
     ln -s ../piernik
     cp ../problem.par .
     eval TMPDIR="." $RUN_COMMAND ./${PIERNIK} "-n '&NUMERICAL_SETUP solver_str = \"Riemann\" /'"  > ${PROBLEM_NAME}.test_Riemann_stdout &
-    cd -
 )
-cd -
+cd -> /dev/null
 
 (
     cd ${RUNS_DIR}/${PROBLEM_NAME}_$GOLD_OBJ
