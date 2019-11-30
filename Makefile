@@ -23,6 +23,8 @@
 #   'make pep8'            # run pep8 on all Python scripts, ignore long lines
 #   'make chk_err_msg'     # check filenames in error messages
 #   'make doxy'            # generate/updare Doxygen documentation
+#   'make gold'            # run the gold tests from ./jenkins directory
+#   'make gold-clean'      # remove files after gold test
 #
 # Resetup will also call make for the object directories, unless you've
 # specified --nocompile either in your .setuprc* files or it was stored in
@@ -36,7 +38,7 @@ ALLOBJ = $(wildcard obj*)
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check dep qa pep8 doxy chk_err_msg
+.PHONY: $(ALLOBJ) check dep qa pep8 doxy chk_err_msg gold gold-clean
 
 all: $(ALLOBJ)
 
@@ -86,6 +88,15 @@ pep8:
 chk_err_msg:
 	echo Check filenames in error messages
 	./bin/checkmessages.sh
+
+gold:
+	. ./jenkins/gold_test_list
+
+gold-clean:
+	for i in jenkins/gold_configs/*config ; do \
+		j=$$( sed -n '/PROBLEM_NAME/s/PROBLEM_NAME=//p' $$i ) ; \
+		\rm -rf $${j}{_riem{_log,.csv},_gold_{log,dir,stdout}} obj_$${j}_test $$( basename $${i/.config/_gold_stdout} ) ; \
+	done
 
 doxy:
 	doxygen piernik.doxy

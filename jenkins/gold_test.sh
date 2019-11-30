@@ -81,11 +81,15 @@ rm *.h5 2> /dev/null
 eval TMPDIR="." $RUN_COMMAND ./${PIERNIK} "-n '&NUMERICAL_SETUP solver_str = \"RTVD\" /'"  > ${PROBLEM_NAME}.test_RTVD_stdout &
 RIEM=Riemann
 (
+    RIEM_ERR=test_Riemann_stderr
     mkdir $RIEM
     cd $RIEM
     ln -s ../piernik
     cp ../problem.par .
-    eval TMPDIR="." $RUN_COMMAND ./${PIERNIK} "-n '&NUMERICAL_SETUP solver_str = \"Riemann\" /'"  > ${PROBLEM_NAME}.test_Riemann_stdout &
+    (
+	eval TMPDIR="." $RUN_COMMAND ./${PIERNIK} "-n '&NUMERICAL_SETUP solver_str = \"Riemann\" /'"  > ${PROBLEM_NAME}.test_Riemann_stdout 2> $RIEM_ERR
+	[ -s $RIEM_ERR ] && ( echo ${PROBLEM_NAME}": Riemann failed " ; grep "Error"  $RIEM_ERR | sort | grep -vE '(meaningful|Following)' ) 1>&2
+    ) &
 )
 cd - > /dev/null
 

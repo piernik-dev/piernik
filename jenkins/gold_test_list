@@ -1,4 +1,8 @@
 parallel --load 70% --delay 5 eval "./jenkins/gold_test.sh {} > {/.}'_gold_stdout'" ::: ./jenkins/gold_configs/*.config
 
-tail -n 1 *_gold_log
-tail -n 1 *_riem_log
+for i in *_gold_log ; do
+     printf "%-50s = %s\n" "[GOLD] Total difference for ${i/_gold_log/}" $( tail -n 1 $i | awk '{print $NF}' )
+done
+for i in *_riem_log ; do
+     printf "%-50s = %s\n" "[Riemann] Total difference for ${i/_riem_log/}" $( tail -n 1 $i | awk '{print $NF}' )
+done
