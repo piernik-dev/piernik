@@ -110,17 +110,19 @@ wait
 [ ! -z $YT ] && source $YT
 ./bin/gdf_distance ${RUNS_DIR}/${PROBLEM_NAME}_{${TEST_OBJ},${GOLD_OBJ}}/${OUTPUT} 2> /dev/null | tee $GOLD_LOG
 
+# The tool gdf_distance distance is supposed to return values in [0..1] range
+# Map log10(0.) to 1. and failed Riemann to 2. (both impossible as a results of log10(gdf_distance)
 if [ -e ${RUNS_DIR}/${PROBLEM_NAME}_${TEST_OBJ}/${RIEM}/${OUTPUT} ] ; then
    ./bin/gdf_distance ${RUNS_DIR}/${PROBLEM_NAME}_${TEST_OBJ}{,/${RIEM}}/${OUTPUT} 2> /dev/null | tee $RIEM_LOG
 
    grep 'Difference of datafield `' $RIEM_LOG |\
        sed 's/.*`\([^ ]*\)[^ ] *: \(.*\)/\1 \2/' |\
-       awk '{a[$1]=$2} END {for (i in a) printf("%s,", i); print ""; for (i in a) printf("%s,", a[i]) ; print ""}' |\
+       awk '{a[$1]=$2} END {for (i in a) printf("log10(%s),", i); print ""; for (i in a) printf("%s,", (a[i]>0.)?(log(a[i])/log(10.)):1.) ; print ""}' |\
        sed 's/,$//' |\
        tee $RIEM_CSV
 else
     (
 	echo "Riemann failed"
-	echo 0
+	echo 2.
     ) | tee $RIEM_CSV
 fi
