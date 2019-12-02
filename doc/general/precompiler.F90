@@ -55,19 +55,11 @@
 !!
 !! \b NUMERICAL \b SCHEMES \b AND \b SOLUTIONS:
 !!
-!! \b \#define \b "RTVD"  - to choose Relaxing TVD scheme (then HLLC or RIEMANN must be undefined)
-!!
-!! \b \#define \b "HLLC" - to choose HLLC scheme (without magnetic fields; RTVD or RIEMANN must be undefined)
-!!
-!! \b \#define \b "RIEMANN" - to choose RIEMANN scheme (then HLLC or RTVD must be undefined)
-!!
 !! \b \#define \b "LOCAL_FR_SPEED" - choose locally computed freezing speed (i.e. in each cell)
 !!
 !! \b \#define \b "GLOBAL_FR_SPEED" - choose globally computed freezing speed (i.e. constant for the whole domain)
 !!
 !! \b \#define \b "MULTIGRID" - to include self–gravity (multigrid solver, uses FFT when possible, recommended)
-!!
-!! \b \#define \b "POISSON_FFT" - to include self–gravity (pure FFT solver)
 !!
 !! \b \#define \b "FFTW"
 !!
@@ -87,6 +79,8 @@
 !! \b \#define \b "VERBOSE" - print additional diagnostic information on stdout
 !!
 !! \b \#define \b "PGPLOT"
+!!
+!! \b \#define \b "NO_FFT" - don't use FFTW libraries at all (may be useful on some restricted environments)
 !!
 !! \b \#define \b "JEANS_PROBLEM" - switch on jeans problem-specific quirks
 !!

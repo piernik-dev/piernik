@@ -22,7 +22,7 @@ def Maclaurin_test(file):
         missing.append("matplotlib")
 
     if (len(missing) > 0):
-        print "You must install the package(s) ", missing
+        print("You must install the package(s) ", missing)
         return
 
     matplotlib.use('cairo')      # choose output format
@@ -33,13 +33,13 @@ def Maclaurin_test(file):
     # rc('text',usetex=True)
 
     if (not os.path.isfile(file)):
-        print "Cannot find ", file
+        print("Cannot find ", file)
         return
 
     try:
         h5f = h5.File(file, "r")
     except:
-        print "Cannot open '" + file + "' as HDF5"
+        print("Cannot open '" + file + "' as HDF5")
         return
 
     xmin, xmax = h5f['domains/base'].attrs['x-edge_position']
@@ -72,7 +72,7 @@ def Maclaurin_test(file):
             soln = h5f['data'][dname]['gpot'][:, :, :]
             phi0_3D = h5f['data'][dname]['apot'][:, :, :]
         except:
-            print "Cannot find apot or gpot arrays"
+            print("Cannot find apot or gpot arrays")
             return
 
         off = h5f['data'][dname].attrs['off']
@@ -148,8 +148,8 @@ def Maclaurin_test(file):
 if __name__ == "__main__":
     import sys
     if (len(sys.argv) <= 1):
-        print "Usage : ", sys.argv[0], " maclaurin_test_hdf_file"
+        print("Usage : ", sys.argv[0], " maclaurin_test_hdf_file")
     else:
         Maclaurin_test(sys.argv[1])
         if (len(sys.argv) > 2):
-            print "Ignored arguments: ", sys.argv[2:len(sys.argv)]
+            print("Ignored arguments: ", sys.argv[2:len(sys.argv)])

@@ -112,14 +112,16 @@ contains
 !<
    subroutine make_fargosweep
 
-      use constants,   only: VEL_RES, VEL_CR, ydim
-      use global,      only: dt, skip_sweep
+      use constants,   only: VEL_RES, VEL_CR, ydim, HLLC_SPLIT
+      use dataio_pub,  only: die
+      use global,      only: dt, skip_sweep, which_solver
       use sweeps,      only: sweep
 
       implicit none
 
       ! TODO we are omitting B and cr update, but FARGO does not work with them yet...
       if (.not.skip_sweep(ydim)) then
+         if (which_solver == HLLC_SPLIT) call die("[fargo:make_fargosweep] Fargo is not yet enabled for HLLC")
          call get_fargo_vels(dt)
          call sweep(ydim, VEL_RES)  ! 1.
          call sweep(ydim, VEL_CR)   ! 2.

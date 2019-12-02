@@ -52,18 +52,20 @@
 !! The algorithm is simply present for experimental purposes.
 !<
 
-module solvecg
+module solvecg_riemann
 
-! pulled by RIEMANN
+! pulled by ANY
 
    implicit none
 
    private
-   public  :: solve_cg
+   public  :: solve_cg_riemann
 
 contains
 
-   subroutine solve_cg(cg, ddim, istep, fargo_vel)
+! This routine has to conform to the interface defined in sweeps::sweep
+
+   subroutine solve_cg_riemann(cg, ddim, istep, fargo_vel)
 
       use constants,        only: mag_n, GEO_XYZ
       use dataio_pub,       only: die
@@ -84,8 +86,8 @@ contains
       integer :: nmag, i
 
       if (.false.) write(0,*) present(fargo_vel) ! suppress compiler warning on unused argument
-      if (use_fargo) call die("[solve_cg:solve_cg] Fargo is not yet enabled for Riemann")
-      if (dom%geometry_type /= GEO_XYZ) call die("[solve_cg:solve_cg_ub] Non-cartesian geometry is not implemented yet in this Riemann solver.")
+      if (use_fargo) call die("[solve_cg_riemann:solve_cg_riemann] Fargo is not yet enabled for Riemann")
+      if (dom%geometry_type /= GEO_XYZ) call die("[solve_cg_riemann:solve_cg_riemann] Non-cartesian geometry is not implemented yet in this Riemann solver.")
 
       call prepare_sources(cg)
 
@@ -94,7 +96,7 @@ contains
          do i = 1, flind%fluids
             if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + 1
          enddo
-         if (nmag > 1) call die("[solve_cg:solve_cg] At most one magnetized fluid is implemented")
+         if (nmag > 1) call die("[solve_cg_riemann:solve_cg_riemann] At most one magnetized fluid is implemented")
          call solve_cg_ub(cg, ddim, istep)
       else
          call solve_cg_u(cg, ddim, istep)
@@ -102,7 +104,7 @@ contains
 
       cg%processed = .true.
 
-   end subroutine solve_cg
+   end subroutine solve_cg_riemann
 
 !>
 !! \brief Apply MHD update + source terms to a single grid container, rely on properly updated guardcells.
@@ -394,4 +396,4 @@ contains
 
    end subroutine solve_u
 
-end module solvecg
+end module solvecg_riemann

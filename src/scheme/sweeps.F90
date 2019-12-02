@@ -48,7 +48,7 @@
 
 module sweeps
 
-! pulled by RTVD || RIEMANN
+! pulled by ANY
 
    implicit none
 
@@ -281,16 +281,35 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: ydim, first_stage, last_stage, uh_n, magh_n, psih_n, psi_n, INVALID
+      use constants,        only: ydim, first_stage, last_stage, uh_n, magh_n, psih_n, psi_n, INVALID, &
+           &                      RTVD_SPLIT, RIEMANN_SPLIT
       use dataio_pub,       only: die
-      use global,           only: integration_order, use_fargo
+      use global,           only: integration_order, use_fargo, which_solver
       use grid_cont,        only: grid_container
       use mpisetup,         only: mpi_err, req, status
       use named_array_list, only: qna, wna
-      use solvecg,          only: solve_cg
+      use solvecg_rtvd,     only: solve_cg_rtvd
+      use solvecg_riemann,  only: solve_cg_riemann
       use sources,          only: prepare_sources
 
       implicit none
+
+      interface
+
+         subroutine solve_cg_sub(cg, ddim, istep, fargo_vel)
+
+            use grid_cont, only: grid_container
+
+            implicit none
+
+            type(grid_container), pointer, intent(in) :: cg
+            integer(kind=4),               intent(in) :: ddim
+            integer,                       intent(in) :: istep     ! stage in the time integration scheme
+            integer(kind=4), optional,     intent(in) :: fargo_vel
+
+         end subroutine solve_cg_sub
+
+      end interface
 
       integer(kind=4),           intent(in) :: cdim
       integer(kind=4), optional, intent(in) :: fargo_vel
@@ -303,6 +322,16 @@ contains
       integer                        :: g, nr, nr_recv
       integer                        :: uhi, bhi, psii, psihi
       integer(kind=4), dimension(:,:), pointer :: mpistatus
+      procedure(solve_cg_sub), pointer :: solve_cg => null()
+
+      select case (which_solver)
+         case (RTVD_SPLIT)
+            solve_cg => solve_cg_rtvd
+         case (RIEMANN_SPLIT)
+            solve_cg => solve_cg_riemann
+         case default
+            call die("[sweeps:sweep] unsupported solver")
+      end select
 
       if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) &
            call die("[sweeps:sweep] FARGO velocity keyword not present in y sweep")
