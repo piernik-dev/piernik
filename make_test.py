@@ -3,7 +3,6 @@ import sys
 import getopt
 import os
 import subprocess as sp
-import xmlrpclib
 
 
 class MakeTest(object):
@@ -40,11 +39,11 @@ class MakeTest(object):
         self.put_png()
 
     def testSedov(self):
-        print "test not implemented"
+        print("test not implemented")
 
     def output(self):
-        print self.initpath
-        print self.runpath
+        print(self.initpath)
+        print(self.runpath)
 
     def runtest(self, test):
         tests = {"jeans": self.testJeans,
@@ -54,7 +53,7 @@ class MakeTest(object):
 
 
 def usage():
-    print __doc__
+    print(__doc__)
 
 
 def main(argv):
