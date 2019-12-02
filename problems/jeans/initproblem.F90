@@ -39,7 +39,7 @@ module initproblem
    ! Private variables
    real :: kx, ky, kz
    character(len=*), parameter :: plot_fname = "jeans.gnuplot"
-   real :: kn, cs0, omg2, kJ, Tamp_rounded, Tamp_aux, Tamp, omg
+   real :: kn, cs0, omg2, kJ, Tamp, omg
    class(component_fluid), pointer :: fl
 
    ! Namelist variables
@@ -176,12 +176,6 @@ contains
          if (master) call warn("[initproblem:problem_initial_conditions] No waves (kn == 0)")
       endif
       if (mode == 1) Tamp = Tamp / 4.
-      if (Tamp > 0) then
-         Tamp_aux = 10**int(log(Tamp)/log(10.))
-         Tamp_rounded = (int(1.05*Tamp/Tamp_aux)+1)*Tamp_aux
-      else
-         Tamp_rounded = 0.
-      endif
 
    end subroutine read_problem_par
 
