@@ -34,9 +34,8 @@ interpolate_cutoffs = True
 verbosity_1 = True
 verbosity_2 = False
 
-global par_visible_gridx, par_visible_gridy, par_vis_all_borders, par_visible_title, par_simple_title, par_alpha, par_plot_legend, par_plot_init_spec,\
-       par_alpha_diff, par_plot_e_small, par_plot_color, par_plot_width, par_fixed_dims, i_plot, xkcd_colors, use_color_list, tightened,\
-       par_legend_loc
+global par_visible_gridx, par_visible_gridy, par_vis_all_borders, par_visible_title, par_simple_title, par_alpha, par_plot_legend, \
+       par_plot_e_small,  par_plot_color, par_plot_width, par_fixed_dims, i_plot, xkcd_colors, use_color_list, tightened, par_legend_loc
 
 xkcd_colors = [ 'xkcd:blue', 'xkcd:darkblue', 'xkcd:red', 'xkcd:crimson', 'xkcd:green']
 xkcd_colorsh= [ 'xkcd:azure', 'xkcd:blue', 'xkcd:coral', 'xkcd:orangered', 'xkcd:yellowgreen']
@@ -49,7 +48,6 @@ par_vis_all_borders= False
 par_visible_title  = False
 par_simple_title   = True
 par_alpha          = 0.55
-par_alpha_diff     = 0.25
 par_plot_width     = 2.0
 par_fixed_dims     = True
 par_plot_legend    = True
@@ -59,7 +57,7 @@ par_plot_init_slope= False
 par_legend_loc     = (0.490,0.925)# 0.867 (0.490,0.925 )#+0.058)(-2,-2) #(0.515,0.780) #(0.385,0.715+0.058), (0.385,0.715+i_plot*0.058)
 default_legend_loc = 1
 par_test_name      = "CRWa05"
-highlight_bins     = [8,14]
+highlight_bins     = [10,16]
 par_highlight_bins_rect = False
 tightened          = False
 
@@ -227,8 +225,6 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
       elif (plot_var == "n" ):
         plot_var_min = 0.1 * e_small / ( c * p_max_fix )
 
-      first_run = False
-
    if par_fixed_dims: #overwrite
       if (plot_var != "e"):
          plt.ylim(9.5e-13,1.e-3)
@@ -277,14 +273,16 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
       spectrum = mlines.Line2D([],[], color=par_plot_color, solid_capstyle='round', lw=par_plot_width, alpha = par_alpha, label = spectrum_label )
 
    if (len(highlight_bins) > 0):
+      par_plot_color = set_plot_color(par_plot_color, i_plot, xkcd_colorsh)
       for ind in highlight_bins:
-         par_plot_color = set_plot_color(par_plot_color, i_plot, xkcd_colorsh)
          i  = ind; i1 = i+1
-         if (par_highlight_bins_rect):
+         imil = i-i_lo_cut
+         if ( (first_run == True and clean_plot == False) or (first_run == False and clean_plot == True)  ): # Trick - highlight only in first iteration if not clean_plot
             plt.fill([p_fix[i],  p_fix[i1], p_fix[i1], p_fix[i]], [e_small,e_small, 10., 10.], color="xkcd:red", alpha = 0.20)
-            plt.plot([p_fix[i], p_fix[i1]], [plot_var_l[i], plot_var_r[i]],lw=par_plot_width*2.5, solid_capstyle='round', color=par_plot_color, alpha = 0.5)
-            plt.plot([p_fix[i], p_fix[i]], [plot_var_min, plot_var_l[i]], lw=par_plot_width*2.5, solid_capstyle='round', color=par_plot_color, alpha = 0.55)
-            plt.plot([p_fix[i1], p_fix[i1]], [plot_var_min, plot_var_r[i]], lw=par_plot_width*2.5, solid_capstyle='round', color=par_plot_color, alpha = 0.55)
+         if (par_highlight_bins_rect):
+            plt.plot([p_fix[i],  p_fix[i1]], [plot_var_l[imil], plot_var_r[imil]],  lw=par_plot_width*2.5, solid_capstyle='round', color=par_plot_color, alpha = 0.5)
+            plt.plot([p_fix[i],  p_fix[i]],  [plot_var_min, plot_var_l[imil]],      lw=par_plot_width*2.5, solid_capstyle='round', color=par_plot_color, alpha = 0.55)
+            plt.plot([p_fix[i1], p_fix[i1]], [plot_var_min, plot_var_r[imil]],      lw=par_plot_width*2.5, solid_capstyle='round', color=par_plot_color, alpha = 0.55)
 
    if (par_plot_init_slope):
       if (plot_var == 'n'):
@@ -306,6 +304,9 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
       plt.legend(handles=handle_list,  loc=default_legend_loc if par_legend_loc == (-2,-2) else par_legend_loc, edgecolor = "gray", facecolor="white", framealpha=0.45, fontsize = 14)
 
    if (clean_plot): handle_list = []
+
+   if (first_run == True):
+      first_run = False
 
    return s
 

@@ -391,7 +391,10 @@ if f_run == True:
            fig2,exit_code = crs_h5.crs_plot_main_fpq(var_names, var_array, plot_var, fcrs, qcrs, pcut, field_max, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot)
 
         if (exit_code != True):
-            point = s1.plot(event.xdata,event.ydata, marker=marker_l[marker_index], color="red")         # plot point only if cell is not empty
+            if ((plot_layer == True) or (plot_ovlp == True) ):
+               line  = s1.plot([dom_l[avail_dim[0]],dom_r[avail_dim[0]] ], [coords[2],coords[2]], color = "white")
+            else:
+               point = s1.plot(event.xdata,event.ydata, marker=marker_l[marker_index], color="red")         # plot point only if cell is not empty
             s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='True')
             #prtinfo("  --->  Saved plot to: %s " %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
 
