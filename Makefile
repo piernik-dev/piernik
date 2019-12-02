@@ -90,7 +90,7 @@ chk_err_msg:
 	./bin/checkmessages.sh
 
 gold:
-	. ./jenkins/gold_test_list
+	bash ./jenkins/gold_test_list
 
 gold-clean:
 	for i in jenkins/gold_configs/*config ; do \
