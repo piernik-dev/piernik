@@ -62,6 +62,7 @@ module initcrspectrum
    real            :: K_cre_paral_1               !< maximal parallell diffusion coefficient value
    real            :: K_cre_perp_1                !< maximal perpendicular diffusion coefficient value
    real            :: K_cre_pow                   !< exponent for power law-like diffusion-energy dependance
+   real            :: p_diff                      !< momentum to which diffusion coefficients refer to
    integer(kind=4) :: expan_order                 !< 1,2,3 order of Taylor expansion for p_update (cresp_crspectrum)
    real            :: e_small                     !< lower energy cutoff for energy-approximated cutoff momenta
    logical         :: approx_cutoffs              !< T,F - turns off/on all approximating terms
@@ -171,7 +172,7 @@ module initcrspectrum
       &                         e_small_approx_init_cond, p_br_init_lo, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,   &
       &                         NR_iter_limit, max_p_ratio, synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init,             &
       &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf,                &
-      &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up
+      &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up, p_diff
 
 ! Default values
       use_cresp         = .true.
@@ -188,6 +189,7 @@ module initcrspectrum
       p_br_init_lo      = p_br_def ! < in case it was not provided "powl" can be assumed
       p_br_init_up      = p_br_def ! < in case it was not provided "powl" can be assumed
       q_br_init         = q_br_def ! < in case it was not provided "powl" can be assumed
+      p_diff            = 10000.0
       cfl_cre           = 0.1
       cre_eff           = 0.01
       K_cre_paral_1     = 0.
@@ -299,6 +301,7 @@ module initcrspectrum
          rbuff(24) = p_br_init_lo
          rbuff(25) = p_br_init_up
          rbuff(26) = q_br_init
+         rbuff(27) = p_diff
 
          cbuff(1)  = initial_spectrum
       endif
@@ -362,6 +365,7 @@ module initcrspectrum
          p_br_init_lo                = rbuff(24)
          p_br_init_up                = rbuff(25)
          q_br_init                   = rbuff(26)
+         p_diff                      = rbuff(27)
 
          initial_spectrum            = trim(cbuff(1))
 
@@ -518,8 +522,15 @@ module initcrspectrum
 
       call init_cresp_types
 
-      K_cre_paral(1:ncre) = K_cre_paral_1 * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP number density K
-      K_cre_perp (1:ncre) = K_cre_perp_1  * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP number density K
+      K_cre_paral(1:ncre) = K_cre_paral_1 * (p_fix(0:ncre-1) / p_diff)**K_cre_pow
+      K_cre_paral(1)      = K_cre_paral_1 * (p_fix(1) / p_fix_ratio / p_diff)**K_cre_pow
+
+      K_cre_perp(1:ncre)  = K_cre_perp_1  * (p_fix(0:ncre-1) / p_diff)**K_cre_pow
+      K_cre_perp(1)       = K_cre_perp_1  * (p_fix(1) / p_fix_ratio / p_diff)**K_cre_pow
+#ifdef VERBOSE
+      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_paral = ", K_cre_paral(1:ncre) ; call printinfo(msg)
+      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_perp = ", K_cre_perp(1:ncre) ; call printinfo(msg)
+#endif /* VERBOSE */
 
       K_cre_paral(ncre+1:2*ncre)      = K_cre_paral(1:ncre)
       K_cre_perp (ncre+1:2*ncre)      = K_cre_perp (1:ncre)

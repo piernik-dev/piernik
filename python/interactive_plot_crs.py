@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from   colored_io import die, prtinfo, prtwarn, read_var
-import crs_pf, crs_h5, read_h5
+import crs_h5, read_h5
 from   crs_pf import initialize_pf_arrays
 from   math   import isnan, pi
 import matplotlib.pyplot as plt
@@ -11,6 +11,7 @@ import os
 from   optparse import OptionParser
 from   re     import search
 from   sys    import argv, version
+import warnings
 try:
     import yt
     from   yt.units import dimensions
@@ -38,15 +39,21 @@ parser.add_option("",  "--nosave", dest="not_save_spec",default="False",      he
 parser.add_option("-a","--average",dest="avg_layer",    default="False",      help=u"Plot mean spectrum at pointed layer at ordinate axis",  action="store_true")
 parser.add_option("-O","--overlap",dest="overlap_layer",default="False",      help=u"Overlap all spectra at pointed layer at ordinate ax",   action="store_true")
 parser.add_option("", "--verbose", dest="yt_verbose",   default=40,           help=u"Append yt verbosity (value from 10 [high] to 50 [low])")
+parser.add_option("-q", "--quiet", dest="py_quiet",     default="False",      help=u"Suppress ALL python warnings (not advised)",  action="store_true")
+parser.add_option("-c", "--coords",dest="coords_dflt",  default=("x","y","z"),help=u"Provides coordinates for the first plot (non-clickable)", nargs=3, metavar="xc yc zc")
+parser.add_option("-k", "--keep",  dest="clean_plot",   default="True",       help=u"Keep spectrum plot (do not clean spectrum field)", action="store_false")
 
 (options, args) = parser.parse_args(argv[1:]) # argv[1] is filename
 yt.mylog.setLevel(int(options.yt_verbose))    # Reduces the output to desired level, 50 - least output
-
+if (options.py_quiet==True):
+   warnings.simplefilter(action='ignore', category=FutureWarning)
+   warnings.simplefilter(action='ignore', category=Warning)
+   #warnings.filterwarnings("ignore")
+   prtwarn("Python warnings are turned off from here (-q, --quiet switch)")
 plot_var          = options.var_name
 user_draw_timebox = options.annotate_time
 user_limits       = (options.default_range!=True)
-user_save_spec    = (options.not_save_spec!=True)
-simple_plot       = False # True ### DEPRECATED
+save_spectrum     = (options.not_save_spec!=True)
 use_logscale      = ( options.use_linscale!=True)
 plot_field        = options.fieldname
 plot_var          = options.var_name
@@ -58,7 +65,6 @@ user_annot_line   = False
 user_annot_time   = True
 plot_layer        = options.avg_layer
 plot_ovlp         = options.overlap_layer
-
 #####################################
 #------- Parameters ----------------
 par_epsilon    = 1.0e-15
@@ -146,8 +152,8 @@ if f_run :
 var_array = []
 if f_run == True:
     var_names = []
-    var_names = [ "ncre", "p_min_fix", "p_max_fix", "e_small", "cre_eff", "q_big", "r0"]
-    var_def   = [ 20,      10.,         1.e5,        1.e-6,     0.01,      30.,     64.]
+    var_names = [ "ncre", "p_min_fix", "p_max_fix", "e_small", "cre_eff", "q_big"]
+    var_def   = [ 20,      10.,         1.e5,        1.e-6,     0.01,      30.,  ]
     if len(var_names) == 0:
         prtwarn("Empty list of parameter names provided: enter names of parameters to read")
         var_names = read_h5.input_names_array()
@@ -160,7 +166,7 @@ if f_run == True:
     for i in range(len(var_names)):
         prtinfo ( " %15s =  %10s ( %15s  ) " %(var_names[i], var_array[i], type(var_array[i])))
 
-    crs_pf.initialize_pf_arrays(pf_initialized)
+    initialize_pf_arrays(pf_initialized)
 #---------- Open file
     h5ds = yt.load(filename)
 #---------- bounds on domain size
@@ -303,7 +309,6 @@ if f_run == True:
        prtinfo("Marking line on yt.plot at (0 0 0) : (500 500 0)")
        yt_data_plot.annotate_line((0., 0., 0.), (500., 500.0, 0), plot_args={'color':'white',"lw":2.0} )
 
-
     if (plot_vel): yt_data_plot.annotate_velocity(factor=20)
     if (plot_mag): yt_data_plot.annotate_magnetic_field(factor=20)
     yt_data_plot.set_zlim(plot_field,plot_min,plot_max)
@@ -313,9 +318,12 @@ if f_run == True:
     marker_index = 0
 
     plt.subplots_adjust(left=0.075,right=0.975, hspace=0.12)
+    plt.tight_layout()
 
     print ("")
     prtinfo("\033[44mClick LMB on the colormap to display spectrum ('q' to exit)")
+
+    crs_h5.crs_initialize(var_names, var_array)
 #---------
     def read_click_and_plot(event):
         global click_coords, image_number, f_run, marker_index
@@ -336,34 +344,34 @@ if f_run == True:
 # ------------ preparing data and passing -------------------------
         position = h5ds.r[coords:coords]
         if ( plot_field[0:-2] != "en_ratio"):
-           prtinfo ("Value of %s at point [%f, %f, %f] = %f " %(plot_field, coords[0], coords[1], coords[2], position[plot_field]))
+           prtinfo (">>>>>>>>>>>>>>>>>>> Value of %s at point [%f, %f, %f] = %f " %(plot_field, coords[0], coords[1], coords[2], position[plot_field]))
         else:
            prtinfo("Value of %s at point [%f, %f, %f] = %f " %(plot_field, coords[0], coords[1], coords[2], position["cree"+str(plot_field[-2:])]/position["cren"+str(plot_field[-2:])]))
            plot_max   = h5ds.find_max("cre"+plot_var+str(plot_field[-2:]))[0] # once again appended - needed as ylimit for the plot
 
+        btot = (position["mag_field_x"].v**2 + position["mag_field_y"].v**2 + position["mag_field_z"].v**2 )**0.5 ; btot_uG = 2.85 * btot
+        prtinfo("B_tot = %f = %f (uG)" %(btot, btot_uG) )
         if (True):   # TODO DEPRECATED save_fqp
            ecrs = [] ; ncrs = []
-           if (plot_layer and (not plot_ovlp)): #overwrites position
-               if (plot_layer):
-                  prtinfo("Plotting layer with overlap...")
+           if (plot_ovlp != True): #overwrites position
+               if (plot_layer is True):
+                  prtinfo("Plotting layer...")
                   position = h5ds.r[ [coords[0],dom_l[avail_dim[0]],coords[2] ]: [coords[0],dom_r[avail_dim[0]],coords[2]] ]
                for ind in range(1,ncre+1):
-                  ecrs.append(float(position['cree'+str(ind).zfill(2)][0].v))
-                  ncrs.append(float(position['cren'+str(ind).zfill(2)][0].v))
+                  ecrs.append(float(mean(position['cree'+str(ind).zfill(2)][0].v)))
+                  ncrs.append(float(mean(position['cren'+str(ind).zfill(2)][0].v)))
+               fig2,exit_code = crs_h5.crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot)
 
-               fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords, simple_plot, marker=marker_l[marker_index])
-
-           if (plot_ovlp):    #for overlap_layer
+           elif (plot_ovlp == True):    #for overlap_layer
                prtinfo("Plotting layer with overlap...")
                dnum  = int(h5ds.domain_dimensions[avail_dim[0]])
                dl    = (dom_r[avail_dim[0]] -  dom_l[avail_dim[0]])/float(dnum)
-               print dl, dom_r[avail_dim[0]] -  dom_l[avail_dim[0]], float(dnum)
                for j in range(dnum):
                   position = position = h5ds.r[ [coords[0], dom_l[avail_dim[0]]+dl*j, coords[2] ]: [coords[0], dom_l[avail_dim[0]]+dl*j, coords[2]] ]
                   for ind in range(1,ncre+1):
                      ecrs.append( position['cree'+str(ind).zfill(2)][0].v )
                      ncrs.append( position['cren'+str(ind).zfill(2)][0].v )
-                  fig2,exit_code_tmp = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords, simple_plot, marker=marker_l[marker_index],i_plot=image_number)
+                  fig2,exit_code_tmp = crs_h5.crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index],i_plot=image_number, clean_plot=options.clean_plot)
                   if (exit_code_tmp == False): exit_code = exit_code_tmp # Just one plot is allright
                   ecrs = [] ; ncrs = []
         else:     # for fqp, DEPRECATED probably
@@ -380,26 +388,30 @@ if f_run == True:
                qcrs.append(float(position['creq'+str(ind).zfill(2)][0].v))
            pcut[:] = [ position['crep01'][0].v , position['crep02'][0].v ]
 
-           fig2,exit_code = crs_h5.crs_plot_main_fpq(var_names, var_array, plot_var, fcrs, qcrs, pcut, field_max, time, coords, marker=marker_l[marker_index])
+           fig2,exit_code = crs_h5.crs_plot_main_fpq(var_names, var_array, plot_var, fcrs, qcrs, pcut, field_max, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot)
 
         if (exit_code != True):
             point = s1.plot(event.xdata,event.ydata, marker=marker_l[marker_index], color="red")         # plot point only if cell is not empty
             s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='True')
-            prtinfo("  --->  Saved plot to: %s " %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
+            #prtinfo("  --->  Saved plot to: %s " %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
 
-            yt_data_plot.annotate_marker(coords, marker=marker_l[marker_index],  plot_args={'color':'red','s':m_size_l[marker_index],"lw":4.5}) # cumulatively annotate all clicked coordinates
+            if (plot_layer == True):   #Mark averaged level
+               yt_data_plot.annotate_line([coords[0],dom_l[avail_dim[0]],coords[2] ], [coords[0],dom_r[avail_dim[0]],coords[2]], plot_args={'color':'white',"lw":2.0} )
+            else:
+               yt_data_plot.annotate_marker(coords, marker=marker_l[marker_index],  plot_args={'color':'red','s':m_size_l[marker_index],"lw":4.5}) # cumulatively annotate all clicked coordinates
             marker_index = marker_index + 1
 
             image_number = image_number + 1
 #------------- saving just the spectrum
-            if (user_save_spec):
+            if (save_spectrum):
                extent = fig2.get_window_extent().transformed(s.dpi_scale_trans.inverted())
                s.savefig('results/'+filename_nam+'_'+plot_var+'_spectrum_%03d.pdf' % image_number, transparent ='True', bbox_inches=extent.expanded(1.4, 1.195),quality=95,dpi=150)
-               prtinfo("  --->  Saved plot to: %s.\n\033[44mPress 'q' to quit and save yt.SlicePlot with marked coordinates." %str('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.pdf' %image_number))
+               #prtinfo("  --->  Saved plot to: %s.\n\033[44mPress 'q' to quit and save yt.SlicePlot with marked coordinates." %str('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.pdf' %image_number))
         else:
             prtwarn("Empty cell - not saving.")
 
         if (f_run): f_run = False
+
     cid = s.canvas.mpl_connect('button_press_event',read_click_and_plot)
 
     plt.show()

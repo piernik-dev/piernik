@@ -25,14 +25,12 @@ q_init  = 4.1
 arr_dim = 200
 helper_arr_dim = int(arr_dim / 4)
 
-c = 1.0 # 0.3066067E+06  # PSM -> 0.3066067E+06, SI -> 0.2997925E+09
+c = 1.0 # PSM -> 0.3066067E+06, SI -> 0.2997925E+09
 
 first_run = True
-clean_plot = True
 got_q_tabs = False
 q_explicit = True
 interpolate_cutoffs = True
-tightened = False
 verbosity_1 = True
 verbosity_2 = False
 
@@ -41,30 +39,34 @@ global par_visible_gridx, par_visible_gridy, par_vis_all_borders, par_visible_ti
        par_legend_loc
 
 xkcd_colors = [ 'xkcd:blue', 'xkcd:darkblue', 'xkcd:red', 'xkcd:crimson', 'xkcd:green']
-use_color_list     = False
-par_plot_color     = "xkcd:darkblue"
+xkcd_colorsh= [ 'xkcd:azure', 'xkcd:blue', 'xkcd:coral', 'xkcd:orangered', 'xkcd:yellowgreen']
+par_plot_color     = xkcd_colors[1]
 i_plot = 0
+use_color_list     = False
 par_visible_gridx  = False
 par_visible_gridy  = True
 par_vis_all_borders= False
 par_visible_title  = False
 par_simple_title   = True
-par_alpha          = 0.85
+par_alpha          = 0.55
 par_alpha_diff     = 0.25
-par_plot_width     = 2.5
+par_plot_width     = 2.0
 par_fixed_dims     = True
 par_plot_legend    = True
 par_plot_e3        = False
 par_plotted_src    = False
-par_plot_init_slope= True
-par_legend_loc     = (-2,-2) #(0.515,0.780) #(0.385,0.715+0.058), (0.385,0.715+i_plot*0.058)
+par_plot_init_slope= False
+par_legend_loc     = (0.490,0.925)# 0.867 (0.490,0.925 )#+0.058)(-2,-2) #(0.515,0.780) #(0.385,0.715+0.058), (0.385,0.715+i_plot*0.058)
 default_legend_loc = 1
 par_test_name      = "CRWa05"
+highlight_bins     = [8,14]
+par_highlight_bins_rect = False
+tightened          = False
 
-def set_plot_color(plot_color, index):
+def set_plot_color(plot_color, index, color_list):
    global xkcd_colors, use_color_list
    if use_color_list:
-      plot_color = xkcd_colors[index%len(xkcd_colors)]
+      plot_color = color_list[index%len(color_list)]
    else:
       plot_color = par_plot_color
    return plot_color
@@ -178,7 +180,7 @@ def interpolate_q(alpha):
    return q_out
 # plot data ------------------------------------
 def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
-   global first_run, e_small, i_plot, par_plot_color, s
+   global first_run, e_small, i_plot, par_plot_color, s, clean_plot
    f_lo_cut = fl[0] ;      f_up_cut = fr[-1]
    p_lo_cut = pl[0] ;   p_up_cut = pr[-1]
 
@@ -199,10 +201,13 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
       plot_var_up_cut = 4*pi*c**2*f_up_cut*p_up_cut**3
    if (first_run):
       s = plt.subplot(122)
-   else:
-      if clean_plot: plt.cla()
+
+   if clean_plot:
+      s.cla()
+
    s.set_xscale('log')
    s.set_yscale('log')
+
 
    plt.xlabel('$p/m_e c$',labelpad = 0.2, fontsize = 20,)
    plt.ylabel('d$'+plot_var+' / $d$p$',fontsize = 20, labelpad=-0.)
@@ -215,7 +220,6 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
 
       handle_list = []
 
-      if (not clean_plot): use_color_list = True
       if (plot_var == "e"):
         plot_var_min = 0.1 * e_small
       elif (plot_var == "f" ):
@@ -227,13 +231,12 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
 
    if par_fixed_dims: #overwrite
       if (plot_var != "e"):
-         plt.ylim(9.5e-13,1.e-4)
-         plt.xlim(p_fix[1], p_fix[-2])
+         plt.ylim(9.5e-13,1.e-3)
+         plt.xlim(p_fix[1], p_fix[-2]*0.5)
       else:
-         plt.ylim(e_small,1.e-2)
-         plt.xlim(p_fix[1], p_fix[-2])
-   plt.ylim (10. * plot_var_min , 5.e-1)
-   plt.xlim(1., 5.e6)
+         plt.ylim(e_small,1.e-1)
+         plt.xlim(p_fix[1], p_fix[-2]*0.5)
+
    if (par_plot_e3): plt.ylim (10. * plot_var_min , 10.*max(plot_var_r)*max(pr)**3) # override
 
    if (par_vis_all_borders):
@@ -258,10 +261,9 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
    elif(plot_var == "n"):
       plt.plot(p_range, e_small/(c*p_range), color="xkcd:azure", label="$n_{small}$")
 
-   par_plot_color = set_plot_color(par_plot_color, i_plot)
+   par_plot_color = set_plot_color(par_plot_color, i_plot, xkcd_colors)
    spectrum_label  = ("d$%s$(p)/d$p$, \n[%3.1f, %3.1f, %3.1f] kpc " % (plot_var, location[0]/1000.,location[1]/1000.,location[2]/1000.) )
-   #spectrum_label  = ("d$%s$(p,t=0)/d$p$, \n[%3.1f, %3.1f, %3.1f] kpc " % (plot_var, location[0]/1000.,location[1]/1000.,location[2]/1000.) )
-   #spectrum_label  = ("(  ) d$%s$/d$p$, %s " % (plot_var, par_test_name) ) #
+   #spectrum_label  = ("d$%s$/d$p$, %s (  )" % (plot_var, par_test_name) ) #
 
    for i in range(0, size(fr)) :
       if (par_plot_e3): # multiply times gamma**3
@@ -269,13 +271,20 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
          plt.plot([pl[i],pl[i]], [plot_var_min, (pl[i]**3)*plot_var_l[i]], lw=par_plot_width, color=par_plot_color, alpha = par_alpha)
          plt.plot([pr[i],pr[i]], [plot_var_min, (pr[i]**3)*plot_var_r[i]], lw=par_plot_width, color=par_plot_color, alpha = par_alpha)
       else:
-         plt.plot([pl[i],pr[i]], [plot_var_l[i], plot_var_r[i]],lw=par_plot_width, color=par_plot_color, alpha = par_alpha)      #linestyle="--",
-         plt.plot([pl[i],pl[i]], [plot_var_min, plot_var_l[i]], lw=par_plot_width, color=par_plot_color, alpha = par_alpha*0.75)  #linestyle="--",
-         plt.plot([pr[i],pr[i]], [plot_var_min, plot_var_r[i]], lw=par_plot_width, color=par_plot_color, alpha = par_alpha*0.75)  #linestyle="--",
+         plt.plot([pl[i],pr[i]], [plot_var_l[i], plot_var_r[i]], lw=par_plot_width, solid_capstyle='round', color=par_plot_color, alpha = par_alpha)
+         plt.plot([pl[i],pl[i]], [plot_var_min,  plot_var_l[i]], lw=par_plot_width, solid_capstyle='round', color=par_plot_color, alpha = par_alpha*0.75)
+         plt.plot([pr[i],pr[i]], [plot_var_min,  plot_var_r[i]], lw=par_plot_width, solid_capstyle='round', color=par_plot_color, alpha = par_alpha*0.75)
       spectrum = mlines.Line2D([],[], color=par_plot_color, solid_capstyle='round', lw=par_plot_width, alpha = par_alpha, label = spectrum_label )
 
-      #plt.plot(1550,0.0175+0.02, marker=marker, markersize = 7, lw=50, color = 'xkcd:red', alpha=1.)
-      #plt.plot(1550,0.0175, marker=marker, markersize = 7, lw=50, color = 'xkcd:red', alpha=1.)
+   if (len(highlight_bins) > 0):
+      for ind in highlight_bins:
+         par_plot_color = set_plot_color(par_plot_color, i_plot, xkcd_colorsh)
+         i  = ind; i1 = i+1
+         if (par_highlight_bins_rect):
+            plt.fill([p_fix[i],  p_fix[i1], p_fix[i1], p_fix[i]], [e_small,e_small, 10., 10.], color="xkcd:red", alpha = 0.20)
+            plt.plot([p_fix[i], p_fix[i1]], [plot_var_l[i], plot_var_r[i]],lw=par_plot_width*2.5, solid_capstyle='round', color=par_plot_color, alpha = 0.5)
+            plt.plot([p_fix[i], p_fix[i]], [plot_var_min, plot_var_l[i]], lw=par_plot_width*2.5, solid_capstyle='round', color=par_plot_color, alpha = 0.55)
+            plt.plot([p_fix[i1], p_fix[i1]], [plot_var_min, plot_var_r[i]], lw=par_plot_width*2.5, solid_capstyle='round', color=par_plot_color, alpha = 0.55)
 
    if (par_plot_init_slope):
       if (plot_var == 'n'):
@@ -300,58 +309,8 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
 
    return s
 
-def simple_plot_data(plot_var, p, var_array, time, location, i_lo_cut, i_up_cut):      # DEPRECATED
-   global first_run, plot_p_min, plot_p_max
-   p_lo_cut = p[0] ;   p_up_cut = p[-1]
-   var_array = var_array / p # does this do the trick with correct q?
-   s = plt.subplot(122)
-   plt.cla()
-   s.set_xscale('log')
-   s.set_yscale('log')
-   plt.xlabel('p')
-   plt.ylabel(plot_var)
-
-   if first_run :
-      plot_p_min    =  p_lo_cut
-      plot_p_max    =  p_up_cut
-      plot_var_min = 0.1*e_small
-      first_run = False
-      if (plot_var == "e"):
-        plot_var_min = e_small
-      elif (plot_var == "f" ):
-        plot_var_min = e_small / (4*pi * (c ** 2)  * p_max_fix **3) /10.
-      elif (plot_var == "n" ):
-        plot_var_min = 0.1 / (4*pi * p_max_fix ** 2)
-      handle_list = []
-
-   if par_fixed_dims == True:
-      plt.xlim (0.25 * plot_p_min   ,  5.*plot_p_max )
-
-   plt.ylim (plot_var_min , plot_ymax)
-   plt.grid()
-
-   plt.plot(p,var_array,color='r')
-   for i in range(i_lo_cut,i_up_cut):
-       plt.plot([p[i],p[i]],[plot_var_min, var_array[i]],color=par_plot_color)
-
-   if (par_visible_gridy):
-      plt.grid(True, 'major', 'y', ls='--', lw=.5, c='k', alpha=.3)
-   if (par_visible_gridx):
-      plt.grid(True, 'major', 'x', ls='--', lw=.5, c='k', alpha=.3)
-
-
-#plot floor values
-   p_range = linspace(s.get_xlim()[0],s.get_xlim()[1])
-   e_smalls = zeros(len(p_range))
-   e_smalls[:] = e_small
-
-   s.set_facecolor('white')
-   plt.title(" %s(p) \n Time = %7.3f | location: %7.2f %7.2f %7.2f " % (plot_var, time, location[0],location[1],location[2]) )
-
-   return s
 #-----------------------------------------------------------------
 def detect_active_bins_new(n_in, e_in):
-   global e_small, c, q_big, p_fix, ncre
    global num_active_bins
 
    num_active_bins = 0
@@ -362,32 +321,29 @@ def detect_active_bins_new(n_in, e_in):
    e_ampl_l  = []
    e_ampl_r  = []
    active_bins_new = []
+   pln = [] ; prn = []
    i_lo_tmp = 0 ; i_up_tmp = ncre
 
    for i in range(0,ncre):
       if ( n_in[i] > 0.0 and e_in[i] > 0.0 ):
          ne_gt_zero.append(i)
          num_active_bins = num_active_bins + 1
-
    if num_active_bins == 0: return active_bins_new, i_lo_tmp, i_up_tmp
 
    i_lo_tmp = max(ne_gt_zero[0]-1,0)
    i_up_tmp = ne_gt_zero[num_active_bins-1]
-
    pln = p_fix[i_lo_tmp:i_up_tmp]
    prn = p_fix[i_lo_tmp+1:i_up_tmp+1]
-
-   n_act = []
-   e_act = []
-
-   for i in range(0, num_active_bins):
-      n_act.append(n_in[ne_gt_zero[i]])
-      e_act.append(e_in[ne_gt_zero[i]])
 
    num_active_bins = 0
 
    for i in range(0,i_up_tmp - i_lo_tmp):
       q_tmp = 3.5 ; exit_code = False
+      if (q_explicit == True):
+         q_tmp, exit_code = nr_get_q(q_tmp, e_in[i+i_lo_tmp]/(n_in[i+i_lo_tmp]*c*pln[i]), prn[i]/pln[i], exit_code)
+      else:
+         q_tmp = interpolate_q(e_in[i+i_lo_tmp]/(n_in[i+i_lo_tmp]*c*pln[i])) # this instruction is duplicated, TODO return it via detect_active_bins_new()
+
       q_tmp, exit_code = nr_get_q(q_tmp, e_in[i+i_lo_tmp]/(n_in[i+i_lo_tmp]*c*pln[i]), prn[i]/pln[i], exit_code)
       q_gt_zero.append(q_tmp)
       f_gt_zero.append(nq2f(n_in[i+i_lo_tmp], q_gt_zero[-1], pln[i], prn[i]))
@@ -401,15 +357,15 @@ def detect_active_bins_new(n_in, e_in):
 
    if num_active_bins == 0: return active_bins_new, i_lo_tmp, i_up_tmp
 
-   i_lo_tmp = max(active_bins_new[0]-1,0)
+   i_lo_tmp = max(active_bins_new[0]-2,0)
    i_up_tmp = min(active_bins_new[-1]+1, ncre)  # temporary fix FIXME
 
+   prtinfo("Active_bins: "+str(active_bins_new))
    return active_bins_new, i_lo_tmp, i_up_tmp
 
 #------------------------------------------
 
-def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field_max, time, location, use_simple, **kwargs):
-    global first_run, got_q_tabs, e_small, p_min_fix, p_max_fix, ncre, cre_eff, i_plot, marker
+def crs_initialize(parameter_names, parameter_values):
 
     try:
         for i in range(len(parameter_names)):
@@ -417,40 +373,46 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     except:
         die("Exiting: len(names) not equal len(values)")
 
-    marker = kwargs.get("marker","x")
-# -------------------
-    global plot_ymax, p_fix_ratio, p_fix
-    plot_ymax = field_max * cre_eff
+    global p_fix_ratio, p_fix
 
-# TODO: do it in the first run / calling script TODO
-    if first_run:
-        edges = []
-        p_fix = []
-        edges[0:ncre] = range(0,ncre+1, 1)
-        p_fix[0:ncre] = zeros(ncre+1)
-        log_width   = (log10(p_max_fix/p_min_fix))/(ncre-2.0)
-        for i in range(0,ncre-1):
-            p_fix[i+1]  = p_min_fix * 10.0**( log_width * edges[i])
-            p_fix_ratio = 10.0 ** log_width
-            p_fix[0]    = ( sqrt(p_fix[1] * p_fix[2]) ) / p_fix_ratio
-            p_fix[ncre]    = ( sqrt(p_fix[ncre-2]* p_fix[ncre-1]) ) * p_fix_ratio
-            p_fix = asfarray(p_fix)
+    edges = []
+    p_fix = []
+    edges[0:ncre] = range(0,ncre+1, 1)
+    p_fix[0:ncre] = zeros(ncre+1)
+    log_width   = (log10(p_max_fix/p_min_fix))/(ncre-2.0)
+    for i in range(0,ncre-1):
+        p_fix[i+1]  = p_min_fix * 10.0**( log_width * edges[i])
+        p_fix_ratio = 10.0 ** log_width
+        p_fix[0]    = ( sqrt(p_fix[1] * p_fix[2]) ) / p_fix_ratio
+        p_fix[ncre]    = ( sqrt(p_fix[ncre-2]* p_fix[ncre-1]) ) * p_fix_ratio
+        p_fix = asfarray(p_fix)
 
-        p_mid_fix = zeros(ncre)
-        p_mid_fix[1:ncre-1] = sqrt(p_fix[1:ncre-1]*p_fix[2:ncre])
-        p_mid_fix[0]        = p_mid_fix[1] / p_fix_ratio
-        p_mid_fix[ncre-1]   = p_mid_fix[ncre-2] * p_fix_ratio
-        p_mid_fix = asfarray(p_mid_fix)
+    p_mid_fix = zeros(ncre)
+    p_mid_fix[1:ncre-1] = sqrt(p_fix[1:ncre-1]*p_fix[2:ncre])
+    p_mid_fix[0]        = p_mid_fix[1] / p_fix_ratio
+    p_mid_fix[ncre-1]   = p_mid_fix[ncre-2] * p_fix_ratio
+    p_mid_fix = asfarray(p_mid_fix)
 
-    i_lo = 0
-    i_up = ncre
+    p_fix      = tuple(p_fix)
+    p_mid_fix  = tuple(p_mid_fix)
+    global clean_plot
+    clean_plot = True
+
+def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
+    global first_run, got_q_tabs, e_small, p_min_fix, p_max_fix, ncre, cre_eff, i_plot, marker, clean_plot
+
+    marker     = kwargs.get("marker","x")
+    clean_plot = kwargs.get("clean_plot","True")
+
+    i_lo = 0;      i_up = ncre
+    active_bins = []
     empty_cell = True
 
     active_bins, i_lo, i_up = detect_active_bins_new(ncrs, ecrs)
-    if num_active_bins > 1:
+    if (num_active_bins > 1):
        empty_cell = False
 
-    i_lo = max(i_lo,1) # temporarily do not display the leftmost bin # FIXME
+    #i_lo = max(i_lo,1) # temporarily do not display the leftmost bin # FIXME
 
     prtinfo("\033[44mTime = %6.2f |  i_lo = %2d, i_up = %2d %s"%(time, i_lo if not empty_cell else 0, i_up if not empty_cell else 0, '(empty cell)' if empty_cell else ' '))
     if (empty_cell): return plt.subplot(122), empty_cell
@@ -492,21 +454,21 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
        if (verbosity_2):  prtinfo( "Spectral indices q will be obtained explicitly")
 
     for i in range(0,i_up - i_lo):
-         if (q_explicit == True):
-            q_tmp = 3.5 ; exit_code = False
-            q_tmp, exit_code = nr_get_q(q_tmp, ecrs[i+i_lo]/(ncrs[i+i_lo]*c*pln[i]), prn[i]/pln[i], exit_code) # this instruction is duplicated, TODO return it via detect_active_bins_new()
-         else:
-            q_tmp = interpolate_q(ecrs[i+i_lo]/(ncrs[i+i_lo]*c*pln[i])) # this instruction is duplicated, TODO return it via detect_active_bins_new()
-         q_nr.append(q_tmp)
-         fln.append(nq2f(ncrs[i+i_lo], q_nr[-1], pln[i], prn[i]))
+      if (q_explicit == True):
+         q_tmp = 3.5 ; exit_code = False
+         q_tmp, exit_code = nr_get_q(q_tmp, ecrs[i+i_lo]/(ncrs[i+i_lo]*c*pln[i]), prn[i]/pln[i], exit_code) # this instruction is duplicated, TODO return it via detect_active_bins_new()
+      else:
+         q_tmp = interpolate_q(ecrs[i+i_lo]/(ncrs[i+i_lo]*c*pln[i])) # this instruction is duplicated, TODO return it via detect_active_bins_new()
+      q_nr.append(q_tmp)
+      fln.append(nq2f(ncrs[i+i_lo], q_nr[-1], pln[i], prn[i]))
 
     if (verbosity_1):
       ncrs1e3=[];
       for item in ncrs: ncrs1e3.append(float('%1.3e'%item))
-      prtinfo("n = "+str(ncrs1e3) )
+      prtinfo("n = "+str(ncrs1e3))
       ecrs1e3=[]
       for item in ecrs: ecrs1e3.append(float('%1.3e'%item))
-      prtinfo("e = "+str(ecrs1e3) )
+      prtinfo("e = "+str(ecrs1e3))
       prtinfo("q = "+str(around(q_nr,3)) )
 
     q_nr = array(q_nr)
@@ -517,20 +479,21 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
 
     if (verbosity_1): prtinfo("Cutoff indices obtained (lo, up): %i, %i || momenta (lo, up): %f, %f " %(i_lo, i_up, pln[0], prn[-1]) )
 
-    if empty_cell==False:
-         if (use_simple):
-            var_array = zeros(ncre)
-            if (plot_var == "e"):
-               var_array = array(ecrs)
-            elif (plot_var == "n"):
-               var_array = array(ncrs)
-            else: # plotvar == "f"
-               var_array = array(fln) # TODO not fully prepared
-            plot = simple_plot_data(plot_var, p_mid_fix, var_array, time, location, i_lo, i_up)
-         else:
-            plot = plot_data(plot_var, pln, prn, fln, frn, q_nr, time, location, i_lo, i_up)
+    if (verbosity_1):
+       dummyCRSfile = open("crs.dat","a")
+       p_all = list(p_fix)    # fixes list binding problem - appending p_fix
+       p_all[i_lo] = pln[0];  p_all[i_up]       = prn[-1]
+       q_all = zeros(ncre);   q_all[i_lo:i_up]  = q_nr
+       f_all = zeros(ncre+1); f_all[i_lo:i_up]  = fln
+       string = "%15.3e %4.2f %2d %2d %2d" %(time, 0.0, ncre, i_lo, i_up)
+       string = string+" "+str(p_all).strip("[").strip("]")+" "+str(f_all).strip("[").strip("]")+" "+str(q_all).strip("[").strip("]")
+       #prtinfo(string.replace("\n", ""))
+       dummyCRSfile.write("%s " %string.replace("\n", "").replace("nan", "0.0")+"\n" )
+       dummyCRSfile.close()
 
-         i_plot = i_plot + 1
+    if empty_cell != True:
+       plot = plot_data(plot_var, pln, prn, fln, frn, q_nr, time, location, i_lo, i_up)
+       i_plot = i_plot + 1
 
     return plot, empty_cell
 
@@ -539,6 +502,7 @@ def crs_plot_main_fpq(parameter_names, parameter_values, plot_var, fcrs, qcrs, p
     global first_run, got_q_tabs, e_small, p_min_fix, p_max_fix, ncre, cre_eff, i_plot, marker, par_plotted_src
 
     marker = kwargs.get("marker","x")
+    i_plot = kwargs.get("i_plot",0)
 
     try:
         for i in range(len(parameter_names)):
@@ -553,6 +517,8 @@ def crs_plot_main_fpq(parameter_names, parameter_values, plot_var, fcrs, qcrs, p
     plot_ymax = field_max * cre_eff
 
     if first_run:
+        dummyCRSfile = open("crs.dat", "w+")
+        dummyCRSfile.close()
         p_fix = []
         edges = []
         edges[0:ncre] = range(0,ncre+1, 1)
@@ -565,14 +531,13 @@ def crs_plot_main_fpq(parameter_names, parameter_values, plot_var, fcrs, qcrs, p
             p_fix[ncre]    = ( sqrt(p_fix[ncre-2]* p_fix[ncre-1]) ) * p_fix_ratio
             p_fix = asfarray(p_fix)
 
-#   use_simple cut out
     i_lo = 0
     i_up = ncre
     empty_cell = True
 
     for i in range(ncre):
        if fcrs[i] > 0.0:
-          i_lo = i-1
+          i_lo = i-2
           empty_cell = False
           break
     for i in range(ncre, 1, -1):
