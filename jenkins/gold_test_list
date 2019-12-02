@@ -1,32 +1,31 @@
 parallel --load 70% --delay 5 eval "./jenkins/gold_test.sh {} > {/.}'_gold_stdout'" ::: ./jenkins/gold_configs/*.config
 
-for i in ./jenkins/gold_configs/*.config ; do
-    eval $( grep PROBLEM_NAME $i )
+for j in gold riem ; do
+    case $j in
+    	 ("gold") jj="gold" ;;
+	 ("riem") jj="Riemann" ;;
+	 (*) jj="___" ;;
+    esac
+    for i in ./jenkins/gold_configs/*.config ; do
+    	eval $( grep PROBLEM_NAME $i )
 
-    GOLD_LOG=${PROBLEM_NAME}_gold_log
-    if [ -e $GOLD_LOG ] ; then
-        echo ${PROBLEM_NAME}_gold" "$( tail -n 1 $GOLD_LOG | awk '{print $NF}' )
-    else
-	echo ${PROBLEM_NAME}_gold" "-0.1
-    fi
-
-    RIEM_LOG=${PROBLEM_NAME}_riem_log
-    if [ -e $RIEM_LOG ] ; then
-        echo ${PROBLEM_NAME}_Riemann" "$( tail -n 1 $RIEM_LOG | awk '{print $NF}' )
-    else
-	echo ${PROBLEM_NAME}_Riemann" "-0.1
-    fi
-
-done |\
-     awk '{\
-		a[$1]=$2;\
-	} END {\
-		for (i in a) printf("%s,",i);\
-		print "";\
-		for (i in a) printf("%s,",a[i]);\
-		print "";\
-	}' |\
-     sed 's/,$//' > all_gold.csv
+    	LOG=${PROBLEM_NAME}_${j}_log
+	if [ -e $LOG ] ; then
+           echo ${PROBLEM_NAME}_${jj}" "$( tail -n 1 $LOG | awk '{print $NF}' )
+    	else
+	   echo ${PROBLEM_NAME}_${jj}" "-0.1
+        fi
+    done |\
+    	 awk '{\
+		    a[$1]=$2;\
+		} END {\
+		    for (i in a) printf("%s,",i);\
+		    print "";\
+		    for (i in a) printf("%s,",a[i]);\
+		    print "";\
+		}' |\
+     	sed 's/,$//' > all_${jj}.csv
+done
 
 for i in *_gold_log ; do
      printf "%-50s = %s\n" "[GOLD] Total difference for ${i/_gold_log/}" $( tail -n 1 $i | awk '{print $NF}' )

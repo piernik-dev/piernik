@@ -49,7 +49,7 @@ rsync -Icvxaq --no-t ${OBJ_PREFIX}${TEST_OBJ} $TMP_DIR
 
 git clone -q $PIERNIK_REPO $GOLD_DIR
 [ -e .setuprc ] && cp .setuprc $GOLD_DIR
-sed -i 's/--keeppar//' ${GOLD_DIR}/.setuprc
+[ -e ${GOLD_DIR}/.setuprc ] && sed -i 's/--keeppar//' ${GOLD_DIR}/.setuprc
 cp python/piernik_setup.py ${GOLD_DIR}/python/piernik_setup_today.py
 (
     cd $GOLD_DIR
