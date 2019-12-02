@@ -198,7 +198,7 @@ contains
 
       implicit none
 
-      integer,            intent(in)  :: n
+      integer(kind=4),    intent(in)  :: n
       real,               intent(in)  :: gamma
       real, dimension(n), intent(in)  :: dens, eint
       real, dimension(n), intent(out) :: esrc
@@ -266,7 +266,7 @@ contains
 
       implicit none
 
-      integer,            intent(in)  :: n
+      integer(kind=4),    intent(in)  :: n
       real, dimension(n), intent(in)  :: temp
       real, dimension(n), intent(out) :: coolf
 
@@ -290,7 +290,7 @@ contains
 
       implicit none
 
-      integer,            intent(in)  :: n
+      integer(kind=4),    intent(in)  :: n
       real, dimension(n), intent(in)  :: dens
       real, dimension(n), intent(out) :: heatf
 

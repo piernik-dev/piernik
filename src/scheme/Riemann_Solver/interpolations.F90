@@ -33,7 +33,8 @@
 !<
 
 module interpolations
-! pulled by RIEMANN
+
+! pulled by ANY
 
   implicit none
 
@@ -66,7 +67,7 @@ contains
 
    function utoq(u, b_cc) result(q)
 
-     use constants,  only: half, xdim, zdim
+     use constants,  only: half, xdim, zdim, I_ONE
      use fluidindex, only: flind
      use fluidtypes, only: component_fluid
      use func,       only: ekin
@@ -96,13 +97,17 @@ contains
 
      enddo
 
+     associate (iend => flind%all_fluids(flind%fluids)%fl%end)
+        if (iend < flind%all) q(:, iend + I_ONE:) = u(:, iend + I_ONE:)
+     end associate
+
    end function utoq
 
 !<
 !! \brief Apply chosen interpolation scheme to obtain estimates of left and right state for the Riemann solver.
 !>
 
-  subroutine interpol(u, bcc, psi, ql, qr, bccl, bccr, psil, psir)
+  subroutine interpol(u, ql, qr, bcc, bccl, bccr)
 
     use fluxlimiters, only: flimiter, blimiter
 
@@ -112,20 +117,15 @@ contains
     real, dimension(:,:), intent(out)    :: ql
     real, dimension(:,:), intent(out)    :: qr
 
-    real, dimension(:,:), intent(in)     :: bcc
-    real, dimension(:,:), intent(out)    :: bccl
-    real, dimension(:,:), intent(out)    :: bccr
-
-    real, dimension(:,:), intent(in)     :: psi
-    real, dimension(:,:), intent(out)    :: psil
-    real, dimension(:,:), intent(out)    :: psir
+    real, dimension(:,:), intent(in), optional     :: bcc
+    real, dimension(:,:), intent(out), optional    :: bccl
+    real, dimension(:,:), intent(out), optional    :: bccr
 
     real, dimension(size(u, 1), size(u, 2)) :: q
 
     q = utoq(u, bcc)
     call interp(q,   ql,   qr,   flimiter)
-    call interp(bcc, bccl, bccr, blimiter)
-    call interp(psi, psil, psir, blimiter)
+    if (present(bcc)) call interp(bcc, bccl, bccr, blimiter)
 
   end subroutine interpol
 

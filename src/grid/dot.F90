@@ -36,7 +36,7 @@
 
 module dot
 
-   use decomposition,   only: cuboid
+   use decomposition, only: cuboid
 
    implicit none
 
@@ -46,7 +46,7 @@ module dot
    !> \brief cuboid with SFC_id
    type, extends(cuboid) :: c_id
       integer(kind=8) :: SFCid
-   end type C_id
+   end type c_id
 
    !> \brief A list of grid pieces (typically used as a list of all grids residing on a given process)
    type :: cuboids
@@ -74,6 +74,7 @@ module dot
    end type dot_T
 
    integer(kind=8), parameter :: huge_SFC = huge(1_8)
+   integer, dimension(:), allocatable :: pp  ! an array used in find_grid
 
 contains
 
@@ -87,6 +88,7 @@ contains
 
       if (allocated(this%gse)) deallocate(this%gse) ! this%gse(:)%c should be deallocated automagically
       if (allocated(this%SFC_id_range)) deallocate(this%SFC_id_range)
+      if (allocated(pp)) deallocate(pp)
 
    end subroutine cleanup
 
@@ -375,15 +377,18 @@ contains
       integer,         intent(out)   :: p
       integer,         intent(out)   :: grid_id
 
-      integer, dimension(:), allocatable :: pp
-      integer :: ip, il, iu, j
+      integer :: ip, il, iu, j, pp_lb, pp_ub
+      integer, parameter :: bin2seq = 3  ! when to switch from bisection to sequential search? 3 seemed to be most optimal value to switch to sequential in one experiment.
+
+      if (.not. allocated(pp)) allocate(pp(FIRST:LAST))
 
       ! search for p
       p = INVALID
       if (this%is_strict_SFC) then
          ! binary search
-         allocate(pp(1))
-         pp = INVALID
+         pp_lb = FIRST
+         pp_ub = pp_lb
+         pp(pp_lb) = INVALID
          il = lbound(this%SFC_id_range, dim=1)
          iu = ubound(this%SFC_id_range, dim=1)
          do while (iu-il > 1)
@@ -397,14 +402,15 @@ contains
             endif
          enddo
          do j = il, iu
-            if (this%SFC_id_range(j, LO) <= SFC_id .and. this%SFC_id_range(j, HI) >= SFC_id) pp(1) = j
+            if (this%SFC_id_range(j, LO) <= SFC_id .and. this%SFC_id_range(j, HI) >= SFC_id) pp(pp_lb) = j
          enddo
       else
          ! sequential search, return many possible p's
-         allocate(pp(FIRST:LAST))
-         pp = INVALID
-         il = lbound(pp, dim=1)
-         do ip = lbound(pp, dim=1), ubound(pp, dim=1)
+         pp_lb = FIRST
+         pp_ub = LAST
+         pp(pp_lb:pp_ub) = INVALID
+         il = pp_lb
+         do ip = pp_lb, pp_ub
             if (this%SFC_id_range(ip, LO) <= SFC_id .and. this%SFC_id_range(ip, HI) >= SFC_id) then
                pp(il) = ip
                il = il + 1
@@ -414,13 +420,13 @@ contains
 
       ! search for grid_id
       grid_id = INVALID
-      do ip = lbound(pp, dim=1), ubound(pp, dim=1)
+      do ip = pp_lb, pp_ub
          if (pp(ip) /= INVALID) then
             if (this%gse(pp(ip))%sorted) then
                ! binary search
                il = lbound(this%gse(pp(ip))%c, dim=1)
                iu = ubound(this%gse(pp(ip))%c, dim=1)
-               do while (iu-il > 1)
+               do while (iu-il > bin2seq)
                   j = (il+iu)/2
                   if (this%gse(pp(ip))%c(j)%SFCid <= SFC_id) then
                      il = j
@@ -440,7 +446,6 @@ contains
       enddo
 
       if (grid_id == INVALID) p = INVALID
-      deallocate(pp)
 
    contains
 

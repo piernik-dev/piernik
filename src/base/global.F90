@@ -39,15 +39,18 @@ module global
 
    private
    public :: cleanup_global, init_global, &
-        &    cfl, cfl_max, cflcontrol, cfl_violated, &
-        &    dt, dt_initial, dt_max_grow, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
-        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, interpol_str, &
+        &    cfl, cfl_max, cflcontrol, cfl_violated, disallow_negatives, disallow_CRnegatives, unwanted_negatives, dn_negative, ei_negative, cr_negative, tstep_attempt, &
+        &    dt, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
+        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
-        &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
-        &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd
+        &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, do_external_corners, &
+        &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fc_eq_mag, which_solver
 
-   real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
+   logical         :: dn_negative = .false.
+   logical         :: ei_negative = .false.
+   logical         :: cr_negative = .false.
+   logical         :: disallow_negatives, disallow_CRnegatives, unwanted_negatives = .false.
    logical         :: dirty_debug              !< Allow initializing arrays with some insane values and checking if these values can propagate
    integer(kind=4) :: show_n_dirtys            !< use to limit the amount of printed messages on dirty values found
    logical         :: do_ascii_dump            !< to dump, or not to dump: that is a question (ascii)
@@ -57,16 +60,20 @@ module global
    integer         :: divB_0_method            !< encoded method of making div(B) = 0 (currently DIVB_CT or DIVB_HDC)
    logical         :: force_cc_mag             !< treat magnetic field as cell-centered in the Riemann solver (temporary hack)
    integer(kind=4) :: psi_bnd                  !< BND_INVALID or enforce some other psi boundary
+   integer         :: tstep_attempt            !< /= 0 when we retry timesteps
+   integer         :: which_solver             !< one of RTVD_SPLIT, HLLC_SPLIT or RIEMANN_SPLIT
 
    ! Namelist variables
 
-   real    :: dt_initial               !< initial timestep
+   real    :: dt_initial               !< if >0. : initial timestep; if 0. or < -1. : automatic timestep; reduced automatic timestep otherwise
    real    :: dt_max_grow              !< maximum timestep growth rate
+   real    :: dt_shrink                !< dt shrink rate when timestep retry is used
    real    :: dt_min                   !< minimum allowed timestep
    real    :: dt_max                   !< maximum allowed timestep
    real    :: cfl                      !< desired Courant–Friedrichs–Lewy number
    real    :: cfl_max                  !< warning threshold for the effective CFL number achieved
    logical :: use_smalld               !< correct density when it gets lower than smalld
+   logical :: use_smallei              !< correct internal energy density when it gets lower then smallei
    logical :: geometry25D              !< include source terms in reduced dimension for 2D simulations
    real    :: smallp                   !< artificial infimum for pressure
    real    :: smalld                   !< artificial infimum for density
@@ -78,11 +85,10 @@ module global
    !<
    real    :: cfr_smooth
    real    :: relax_time                              !< relaxation/grace time, additional physics will be turned off until global::t >= global::relax_time
-   integer(kind=4), protected    :: integration_order !< Runge-Kutta time integration order (1 - 1st order, 2 - 2nd order)
+   integer(kind=4), protected    :: integration_order !< Runge-Kutta time integration order (1 - 1st order (Euler), 2 - 2nd order (RK2))
    character(len=cbuff_len)      :: limiter           !< type of flux limiter
    character(len=cbuff_len)      :: limiter_b         !< type of flux limiter for magnetic field in the Riemann solver
    character(len=cbuff_len)      :: cflcontrol        !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
-   character(len=cbuff_len)      :: h_solver          !< type of hydro solver
    character(len=cbuff_len)      :: interpol_str      !< type of interpolation
    character(len=cbuff_len)      :: divB_0            !< human-readable method of making div(B) = 0 (currently CT or HDC)
    character(len=cbuff_len)      :: psi_bnd_str       !< "default" for general boundaries or override ith something special
@@ -96,10 +102,14 @@ module global
    real                          :: cfl_glm           !< "CFL" for chspeed in divergence cleaning
    logical                       :: ch_grid           !< When true use grid properties to estimate ch (psi wave propagation speed). Use gas properties otherwise.
    real                          :: w_epsilon         !< small number for safe evaluation of weights in WENO interpolation
+   integer(kind=4)               :: ord_mag_prolong   !< prolongation order for B and psi
+   logical                       :: ord_fc_eq_mag     !< when .true. enforce ord_mag_prolong order of prolongation of f/c guardcells for fluid and everything (EXPERIMENTAL)
+   logical                       :: do_external_corners  !< when .true. then perform boundary exchanges inside external guardcells
+   character(len=cbuff_len)      :: solver_str        !< allow to switch between RIEMANN and RTVD without recompilation
 
-   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, dt_max, &
+   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, disallow_negatives, disallow_CRnegatives, cfl_max, use_smalld, use_smallei, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
-        &                     use_fargo, h_solver, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str
+        &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong, ord_fc_eq_mag, do_external_corners, solver_str
 
 contains
 
@@ -123,8 +133,9 @@ contains
 !!   <tr><td>smallc           </td><td>1.e-10 </td><td>real value                           </td><td>\copydoc global::smallc           </td></tr>
 !!   <tr><td>integration_order</td><td>2      </td><td>1 or 2 (or 3 - currently unavailable)</td><td>\copydoc global::integration_order</td></tr>
 !!   <tr><td>cfr_smooth       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::cfr_smooth       </td></tr>
-!!   <tr><td>dt_initial       </td><td>-1.    </td><td>positive real value or -1.           </td><td>\copydoc global::dt_initial       </td></tr>
-!!   <tr><td>dt_max_grow      </td><td>2.     </td><td>real value > 1.1                     </td><td>\copydoc global::dt_max_grow      </td></tr>
+!!   <tr><td>dt_initial       </td><td>-1.    </td><td>positive real value or -1. .. 0.     </td><td>\copydoc global::dt_initial       </td></tr>
+!!   <tr><td>dt_max_grow      </td><td>2.     </td><td>real value, should be > 1.           </td><td>\copydoc global::dt_max_grow      </td></tr>
+!!   <tr><td>dt_shrink        </td><td>0.5    </td><td>real value, should be < 1.           </td><td>\copydoc global::dt_shrink        </td></tr>
 !!   <tr><td>dt_min           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_min           </td></tr>
 !!   <tr><td>dt_max           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_max           </td></tr>
 !!   <tr><td>limiter          </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter          </td></tr>
@@ -133,7 +144,6 @@ contains
 !!   <tr><td>skip_sweep       </td><td>F, F, F</td><td>logical array                        </td><td>\copydoc global::skip_sweep       </td></tr>
 !!   <tr><td>geometry25D      </td><td>F      </td><td>logical value                        </td><td>\copydoc global::geometry25d      </td></tr>
 !!   <tr><td>sweeps_mgu       </td><td>F      </td><td>logical value                        </td><td>\copydoc global::sweeps_mgu       </td></tr>
-!!   <tr><td>h_solver         </td><td>"rk2"  </td><td>string                               </td><td>\copydoc global::h_solver         </td></tr>
 !!   <tr><td>divB_0           </td><td>CT     </td><td>string                               </td><td>\copydoc global::divB_0           </td></tr>
 !!   <tr><td>glm_alpha        </td><td>0.1    </td><td>real value                           </td><td>\copydoc global::glm_alpha        </td></tr>
 !!   <tr><td>use_eglm         </td><td>false  </td><td>logical value                        </td><td>\copydoc global::use_eglm         </td></tr>
@@ -141,40 +151,42 @@ contains
 !!   <tr><td>ch_grid          </td><td>false  </td><td>logical value                        </td><td>\copydoc global::ch_grid          </td></tr>
 !!   <tr><td>w_epsilon        </td><td>1e-10  </td><td>real                                 </td><td>\copydoc global::w_epsilon        </td></tr>
 !!   <tr><td>psi_bnd_str      </td><td>"default" </td><td>string                            </td><td>\copydoc global::psi_bnd_str      </td></tr>
+!!   <tr><td>ord_mag_prolong  </td><td>2      </td><td>integer                              </td><td>\copydoc global::ord_mag_prolong  </td></tr>
+!!   <tr><td>ord_fc_eq_mag    </td><td>.false.</td><td>logical                              </td><td>\copydoc global::ord_fc_eq_mag    </td></tr>
+!!   <tr><td>do_external_corners </td><td>.false.</td><td>logical                           </td><td>\copydoc global::do_external_corners </td></tr>
 !! </table>
 !! \n \n
 !<
    subroutine init_global
 
-      use constants,  only: big_float, PIERNIK_INIT_MPI, INVALID, DIVB_CT, DIVB_HDC, &
-           &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT
+      use constants,  only: big_float, PIERNIK_INIT_DOMAIN, INVALID, DIVB_CT, DIVB_HDC, &
+           &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO, O_I2, INVALID, &
+           &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, GEO_XYZ
       use dataio_pub, only: die, msg, warn, code_progress, printinfo
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
+      use domain,     only: dom
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
-      if (code_progress < PIERNIK_INIT_MPI) call die("[global:init_global] MPI not initialized.")
+      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[global:init_global] MPI not initialized.")
 
       dt_old = -1.
       t = 0.
 
       ! Begin processing of namelist parameters
 
-#ifdef RIEMANN
-      ! 'moncen' and 'vanleer' seem to be best for emag conservation with GLM for b_limiter
-      limiter_b   = 'moncen'
-      limiter     = limiter_b
-      divB_0      = "HDC"
-      integration_order  = 1  ! temporary hack
-#else /* ! RIEMANN */
+      which_solver = RTVD_SPLIT  ! \todo: change the default to RIEMANN_SPLIT
+      divB_0       = "HDC"  ! This is the default for the Riemann solver, for RTVD it will be changed to "CT" anyway
+
+      ! For RIEMANN_SPLIT 'moncen' and 'vanleer' seem to be best for emag conservation with GLM for b_limiter
+      ! Leave RTVD defaults as they were before the implementation of the Riemann HLLD solver
+      ! limiter_b   = 'moncen'
+      ! limiter     = limiter_b
       limiter     = 'vanleer'
       limiter_b   = limiter
-      divB_0      = "CT"
-      integration_order  = 2
-#endif /* RIEMANN */
+
       cflcontrol  = 'warn'
-      h_solver    = 'rk2'
       interpol_str = 'linear'
       repeat_step = .true.
       geometry25D = .false.
@@ -192,11 +204,15 @@ contains
       cfr_smooth  = 0.0
       smallp      = big_float
       smalld      = big_float
+      disallow_negatives = .true.
+      disallow_CRnegatives = .false.
       use_smalld  = .true.
+      use_smallei = .true.
       smallc      = 1.e-10
       smallei     = 1.e-10
-      dt_initial  = -1.              !< negative value indicates automatic choice of initial timestep
-      dt_max_grow = dt_default_grow  !< for sensitive setups consider setting this as low as 1.1
+      dt_initial  = -1.              !< -1. indicates automatic choice of initial timestep, -0.5 would give half of that
+      dt_max_grow = 2.               !< for sensitive setups consider setting this as low as 1.1
+      dt_shrink   = 0.5
       dt_min      = tiny(1.)
       dt_max      = huge(1.)
       relax_time  = 0.
@@ -208,6 +224,11 @@ contains
       ch_grid     = .false.
       w_epsilon   = 1e-10
       psi_bnd_str = "default"
+      integration_order  = 2
+      ord_mag_prolong = O_I2           !< it looks like most f/c artifacts are gone just with cubic prolongation of magnetic guardcells
+      ord_fc_eq_mag = .false.          !< Conservative choice, perhaps O_LIN will be safer. Higher orders may result in negative density or energy in f/c guardcells
+      do_external_corners =.false.
+      solver_str = ""
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -231,27 +252,27 @@ contains
          cfl_max = min(max(cfl_max, min(cfl*1.1, cfl+0.05, (1.+cfl)/2.) ), 1.0) ! automatically sanitize cfl_max
          if (integration_order > 2) call die ('[global:init_global]: "ORIG" scheme integration_order must be 1 or 2')
 
-         if (dt_max_grow < 1.01) then
-            write(msg,'(2(a,g10.3))')"[global:init_global] dt_max_grow = ",dt_max_grow," is way too low. Resetting to ",dt_default_grow
+         if (dt_max_grow <= 1.01) then
+            write(msg,'(2(a,g10.3))')"[global:init_global] dt_max_grow = ", dt_max_grow, " is low. Recommended values are in 1.1 .. 2.0 range."
             call warn(msg)
-            dt_max_grow = dt_default_grow
          endif
 
-         if (h_solver /= "muscl" .and. h_solver /= "rk2" .and. h_solver /= "rk3" ) then
-            write(msg, *)"[fluidupdate:sweep_dsplit:warn_experimental] The scheme '", trim(h_solver), "' is experimental. Use 'muscl' or 'rk(n)' for production runs."
+         if (dt_shrink > 0.99 .or. dt_shrink < 0.1) then
+            write(msg,'(2(a,g10.3))')"[global:init_global] dt_shrink = ", dt_shrink, " is strange. Recommended values are in 0.1 .. 0.9 range."
             call warn(msg)
          endif
 
          cbuff(1) = limiter
          cbuff(2) = limiter_b
          cbuff(3) = cflcontrol
-         cbuff(4) = h_solver
          cbuff(5) = divB_0
          cbuff(6) = interpol_str
          cbuff(7) = psi_bnd_str
+         cbuff(8) = solver_str
 
          ibuff(1) = integration_order
          ibuff(2) = print_divB
+         ibuff(3) = ord_mag_prolong
 
          rbuff( 1) = smalld
          rbuff( 2) = smallc
@@ -268,15 +289,21 @@ contains
          rbuff(13) = glm_alpha
          rbuff(14) = cfl_glm
          rbuff(15) = w_epsilon
+         rbuff(16) = dt_shrink
 
          lbuff(1)   = use_smalld
-         lbuff(2)   = repeat_step
-         lbuff(3:5) = skip_sweep
-         lbuff(6)   = geometry25D
-         lbuff(7)   = sweeps_mgu
-         lbuff(8)   = use_fargo
-         lbuff(9)   = use_eglm
-         lbuff(10)  = ch_grid
+         lbuff(2)   = use_smallei
+         lbuff(3)   = repeat_step
+         lbuff(4:6) = skip_sweep
+         lbuff(7)   = geometry25D
+         lbuff(8)   = sweeps_mgu
+         lbuff(9)   = use_fargo
+         lbuff(10)  = use_eglm
+         lbuff(11)  = ch_grid
+         lbuff(12)  = ord_fc_eq_mag
+         lbuff(13)  = do_external_corners
+         lbuff(14)  = disallow_negatives
+         lbuff(15)  = disallow_CRnegatives
 
       endif
 
@@ -287,43 +314,79 @@ contains
 
       if (slave) then
 
-         use_smalld    = lbuff(1)
-         repeat_step   = lbuff(2)
-         skip_sweep    = lbuff(3:5)
-         geometry25D   = lbuff(6)
-         sweeps_mgu    = lbuff(7)
-         use_fargo     = lbuff(8)
-         use_eglm      = lbuff(9)
-         ch_grid       = lbuff(10)
+         use_smalld           = lbuff(1)
+         use_smallei          = lbuff(2)
+         repeat_step          = lbuff(3)
+         skip_sweep           = lbuff(4:6)
+         geometry25D          = lbuff(7)
+         sweeps_mgu           = lbuff(8)
+         use_fargo            = lbuff(9)
+         use_eglm             = lbuff(10)
+         ch_grid              = lbuff(11)
+         ord_fc_eq_mag        = lbuff(12)
+         do_external_corners  = lbuff(13)
+         disallow_negatives   = lbuff(14)
+         disallow_CRnegatives = lbuff(15)
 
-         smalld      = rbuff( 1)
-         smallc      = rbuff( 2)
-         smallp      = rbuff( 3)
-         smallei     = rbuff( 4)
-         cfl         = rbuff( 5)
-         cfr_smooth  = rbuff( 6)
-         dt_initial  = rbuff( 7)
-         dt_max_grow = rbuff( 8)
-         dt_min      = rbuff( 9)
-         dt_max      = rbuff(10)
-         cfl_max     = rbuff(11)
-         relax_time  = rbuff(12)
-         glm_alpha   = rbuff(13)
-         cfl_glm     = rbuff(14)
-         w_epsilon   = rbuff(15)
+         smalld               = rbuff( 1)
+         smallc               = rbuff( 2)
+         smallp               = rbuff( 3)
+         smallei              = rbuff( 4)
+         cfl                  = rbuff( 5)
+         cfr_smooth           = rbuff( 6)
+         dt_initial           = rbuff( 7)
+         dt_max_grow          = rbuff( 8)
+         dt_min               = rbuff( 9)
+         dt_max               = rbuff(10)
+         cfl_max              = rbuff(11)
+         relax_time           = rbuff(12)
+         glm_alpha            = rbuff(13)
+         cfl_glm              = rbuff(14)
+         w_epsilon            = rbuff(15)
+         dt_shrink            = rbuff(16)
 
-         limiter    = cbuff(1)
-         limiter_b  = cbuff(2)
-         cflcontrol = cbuff(3)
-         h_solver   = cbuff(4)
-         divB_0     = cbuff(5)
-         interpol_str = cbuff(6)
-         psi_bnd_str = cbuff(7)
+         limiter              = cbuff(1)
+         limiter_b            = cbuff(2)
+         cflcontrol           = cbuff(3)
+         divB_0               = cbuff(5)
+         interpol_str         = cbuff(6)
+         psi_bnd_str          = cbuff(7)
+         solver_str           = cbuff(8)
 
-         integration_order = ibuff(1)
-         print_divB        = ibuff(2)
+         integration_order    = ibuff(1)
+         print_divB           = ibuff(2)
+         ord_mag_prolong      = ibuff(3)
 
       endif
+
+      select case (solver_str)
+         case ("")  ! leave the default
+         case ("rtvd", "RTVD")
+            which_solver = RTVD_SPLIT
+         case ("hllc", "HLLC")
+            which_solver = HLLC_SPLIT
+         case ("riemann", "Riemann", "RIEMANN")
+            which_solver = RIEMANN_SPLIT
+         case default
+            call die("[global:init_global] unrecognized solver: '" // trim(solver_str) // "'")
+      end select
+
+      select case (which_solver)
+         case (RTVD_SPLIT)
+            divB_0 = "CT"  ! no other option
+         case (RIEMANN_SPLIT)
+            if (dom%geometry_type /= GEO_XYZ) call die("[global:init_global] Riemann solver is implemented only for cartesian geometry")
+         case (HLLC_SPLIT)
+#ifdef MAGNETIC
+            call die("[global:init_global] MAGNETIC not compatible with HLLC")
+#endif /* MAGNETIC */
+         case default
+            call die("[global:init_global] no solvers defined")
+      end select
+
+#ifdef CORIOLIS
+      if (which_solver /= RTVD_SPLIT) call die("[global:init_global] CORIOLIS has been implemented only for RTVD so far.")
+#endif /* CORIOLIS */
 
       divB_0_method = INVALID
       select case (divB_0)
@@ -331,11 +394,19 @@ contains
             divB_0_method = DIVB_CT
          case ("HDC", "hdc", "GLM", "glm", "divergence cleaning", "divergence diffusion")
             divB_0_method = DIVB_HDC
-            if (master .and. .false.) call warn("[global] In case of problems with stability connected with checkerboard pattern in the psi field consider reducing CFL parameter (or just CFL_GLM). This solver also doesn't like sudden changes of timestep length.")
+            if (master .and. .false.) call warn("[global:init_global] In case of problems with stability connected with checkerboard pattern in the psi field consider reducing CFL parameter (or just CFL_GLM). This solver also doesn't like sudden changes of timestep length.")
             ! ToDo: create a way to add this to the crash message.
+#ifdef RESISTIVE
+            call die("[global:init_global] RESISTIVE not yet implemented for DIVB_HDC")
+#endif /* RESISTIVE */
          case default
             call die("[global:init_global] unrecognized divergence cleaning description.")
       end select
+
+      if ((which_solver == RTVD_SPLIT) .and. (divB_0_method /= DIVB_CT)) then
+         if (master) call warn("[global:init_global] RTVD works only with Constrained Transport. Enforcing.")
+         divB_0_method = DIVB_CT
+      endif
 
       !> reshape_b should carefully check things here
       force_cc_mag = .false.
@@ -362,15 +433,18 @@ contains
             call die("[global:init_global] unrecognized psi boundaries")
       end select
 
-#ifdef RTVD
-      if (master) call printinfo("    (M)HD solver: RTVD.")
-#endif /* RTVD */
-#ifdef HLLC
-      if (master) call printinfo("    HD solver: HLLC.")
-#endif /*HLLC */
-#ifdef RIEMANN
-      if (master) call printinfo("    (M)HD solver: Riemann.")
-#endif /* RIEMANN */
+      if (master) then
+         select case (which_solver)
+            case (RTVD_SPLIT)
+               call printinfo("    (M)HD solver: RTVD.")
+            case (HLLC_SPLIT)
+               call printinfo("    HD solver: HLLC.")
+            case (RIEMANN_SPLIT)
+               call printinfo("    (M)HD solver: Riemann.")
+            case default
+               call die("[global:init_global] unrecognized hydro solver")
+         end select
+      endif
 
 #ifdef MAGNETIC
       if (master) then
@@ -390,6 +464,8 @@ contains
          endif
       endif
 #endif /* MAGNETIC */
+
+      tstep_attempt = I_ZERO
 
    end subroutine init_global
 

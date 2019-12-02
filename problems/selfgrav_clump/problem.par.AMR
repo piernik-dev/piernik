@@ -1,0 +1,102 @@
+ $BASE_DOMAIN
+    n_d = 3*32
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = -1.e5
+    xmax   =  1.e5
+    ymin   = -1.e5
+    ymax   =  1.e5
+    zmin   = -1.e5
+    zmax   =  1.e5
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 1.0
+    nend   = 1000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='sg_clump_moving'
+    run_id =  'ts1'
+    dt_hdf  = 0.25
+    dt_res  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1:) = 'ener', 'dens', 'gpot', 'velx', 'vely', 'velz', 'ref_01', 'level'
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.67
+    selfgrav = .true.
+ /
+
+ $FLUID_NEUTRAL
+    gamma = 1.67
+    selfgrav = .true.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e3
+    smallei= 1.e10
+    limiter= 'vanleer'
+    cflcontrol = 'auto'
+    dt_initial = 1e-3
+ /
+
+ $GRAVITY
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    clump_mass = 1e23
+    clump_K = 1.11e5
+!    crashNotConv = .false.
+    clump_vel(1) = 2e5
+    clump_r = 1.0e5
+    maxitC = 1000
+!    verbose = .true.
+!    exp_speedup = .true.
+ /
+
+ $MULTIGRID_SOLVER
+!    stdout    = .true.
+    dirty_debug = .true.
+ /
+
+ $MULTIGRID_GRAVITY
+    ord_time_extrap = 2
+!    grav_bnd_str  = "isolated"
+    grav_bnd_str = "periodic"
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+   level_max = 3
+   bsize = 3*8
+   n_updAMR = 3
+   refine_vars(1) = "dens", "Loechner", 0.15, 0.03, 0.01, .true.
+   ! the refinement criterion here refines also minima and saddles
+   ! ToDo: replace it by Jeans length or something
+ /

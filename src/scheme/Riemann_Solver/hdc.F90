@@ -32,7 +32,8 @@
 #include "piernik.h"
 
 module hdc
-! pulled by RIEMANN
+
+! pulled by ANY
 
    use constants, only: dsetnamelen, INVALID
 
@@ -90,24 +91,32 @@ contains
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ, pMAX, small, xdim, ydim, zdim, half, DIVB_HDC
+      use constants,  only: GEO_XYZ, pMAX, small, DIVB_HDC, RIEMANN_SPLIT
       use dataio_pub, only: die
       use domain,     only: dom
+      use func,       only: emag, ekin
+      use global,     only: use_fargo, cfl_glm, ch_grid, dt, divB_0_method, which_solver
+      use mpisetup,   only: piernik_MPI_Allreduce
+#ifndef ISO
+      use constants,  only: xdim, ydim, zdim, half
       use fluidindex, only: flind
       use fluids_pub, only: has_ion, has_neu, has_dst
       use fluidtypes, only: component_fluid
-      use func,       only: emag, ekin
-      use global,     only: use_fargo, cfl_glm, ch_grid, dt, divB_0_method
-      use mpisetup,   only: piernik_MPI_Allreduce
+#endif /* !ISO */
+
 
       implicit none
 
       type(cg_list_element), pointer  :: cgl
-      class(component_fluid), pointer :: fl
-      integer                         :: i, j, k, d
+      integer                         :: i, j, k
+#ifndef ISO
+      integer                         :: d
       real                            :: pmag, pgam
+      class(component_fluid), pointer :: fl
+#endif /* !ISO */
 
       if (divB_0_method /= DIVB_HDC) return
+      if (which_solver /= RIEMANN_SPLIT) call die("[hdc:update_chspeed] Only Riemann solver has DIVB_HDC implemented")
 
       chspeed = huge(1.)
       if (use_fargo) call die("[hdc:update_chspeed] FARGO is not implemented here yet.")
@@ -125,6 +134,9 @@ contains
             do k = cgl%cg%ks, cgl%cg%ke
                do j = cgl%cg%js, cgl%cg%je
                   do i = cgl%cg%is, cgl%cg%ie
+#ifdef ISO
+                     chspeed = max(chspeed, cfl_glm * cgl%cg%cs_iso2(i, j, k))
+#else /* !ISO */
                      if (has_ion) then
                         fl => flind%ion
                         pmag = emag(cgl%cg%b(xdim, i, j, k), cgl%cg%b(ydim, i, j, k), cgl%cg%b(zdim, i, j, k))  ! 1/2 |B|**2
@@ -166,6 +178,7 @@ contains
                      else
                         call die("[hdc:update_chspeed] Don't know what to do with chspeed without ION, NEU and DST")
                      endif
+#endif /* ISO */
                   enddo
                enddo
             enddo
@@ -190,36 +203,54 @@ contains
 !-----------------------------------------------------------------------------------------------------------
 
 !>
-  !! Parabolic damping to psi
+!! \brief Parabolic damping to psi
+!!
+!! dedner A. Mignone et al. / Journal of Computational Physics 229 (2010) 5896–5920, eq. 9
 !<
   subroutine glmdamping
 
      use cg_leaves,        only: leaves
      use cg_list,          only: cg_list_element
-     use constants,        only: psi_n, DIVB_HDC
+     use constants,        only: psi_n, DIVB_HDC, pMIN, RIEMANN_SPLIT
+     use dataio_pub,       only: die
      use domain,           only: dom
-     use global,           only: glm_alpha, dt, divB_0_method
+     use global,           only: glm_alpha, dt, divB_0_method, which_solver
      use grid_cont,        only: grid_container
      use named_array_list, only: qna
+     use mpisetup,         only: piernik_MPI_Allreduce
 
      implicit none
 
      type(cg_list_element), pointer :: cgl
      type(grid_container),  pointer :: cg
 
-     if (divB_0_method /= DIVB_HDC) return ! I think it is equivalent to qna%exists(psi_n)
+     real :: fac
+
+     if (divB_0_method /= DIVB_HDC) return ! I think it is equivalent to if (.not. qna%exists(psi_n))
+     if (which_solver /= RIEMANN_SPLIT) call die("[hdc:glmdamping] Only Riemann solver has DIVB_HDC implemented")
 
      if (qna%exists(psi_n)) then
+
+        fac = 0.
         cgl => leaves%first
         do while (associated(cgl))
            cg => cgl%cg
-           cgl%cg%q(qna%ind(psi_n))%arr =  cgl%cg%q(qna%ind(psi_n))%arr * exp(-glm_alpha*chspeed/(minval(cg%dl,mask=dom%has_dir)/dt))
+           fac = max(fac, glm_alpha*chspeed/(minval(cg%dl, mask=dom%has_dir)/dt))
+           cgl => cgl%nxt
+        enddo
+        fac = exp(-fac)
+        call piernik_MPI_Allreduce(fac, pMIN)
+
+        cgl => leaves%first
+        do while (associated(cgl))
+           cg => cgl%cg
+           cgl%cg%q(qna%ind(psi_n))%arr =  cgl%cg%q(qna%ind(psi_n))%arr * fac
            cgl => cgl%nxt
         enddo
      endif
 
 ! can be simplified to
-!    if (qna%exists(psi_n)) call leaves%q_lin_comb( [qna%ind(psi_n), exp(-glm_alpha*cfl)], qna%ind(psi_n))
+!    if (qna%exists(psi_n)) call leaves%q_lin_comb( [qna%ind(psi_n), fac], qna%ind(psi_n))
 ! but for AMR we may decide to use different factors on different levels
 
    end subroutine glmdamping
@@ -236,14 +267,14 @@ contains
 #endif /* MAGNETIC */
      use cg_leaves,  only: leaves
      use cg_list,    only: cg_list_element
-     use constants,  only: xdim, zdim, psi_n, GEO_XYZ, half
+     use constants,  only: xdim, zdim, psi_n, GEO_XYZ, half, RIEMANN_SPLIT
      use dataio_pub, only: die
      use div_B,      only: divB, idivB
      use domain,     only: dom
      use fluidindex, only: flind
      use fluids_pub, only: has_ion
      use fluidtypes, only: component_fluid
-     use global,     only: use_eglm, dt
+     use global,     only: use_eglm, dt, which_solver
      use grid_cont,  only: grid_container
      use named_array_list, only: qna
 
@@ -256,6 +287,7 @@ contains
      integer(kind=4)                  :: ipsi
 
      if (.not. use_eglm) return
+     if (which_solver /= RIEMANN_SPLIT) call die("[hdc:eglm] Only Riemann solver has DIVB_HDC implemented")
 
      if (igp == INVALID) call aux_var
      ipsi = qna%ind(psi_n)

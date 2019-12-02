@@ -35,7 +35,7 @@ module refinement_flag
    implicit none
 
    private
-   public :: ref_flag, level_min, level_max
+   public :: ref_flag
 
    ! A candidate for refinement
    type :: SFC_candidate
@@ -53,9 +53,6 @@ module refinement_flag
       procedure :: add       !> Appends one element to SFC_refine_list
       procedure :: sanitize  !> Sanitize the refinement flags
    end type ref_flag
-
-   integer(kind=4) :: level_min !< minimum allowed refinement
-   integer(kind=4) :: level_max !< maximum allowed refinement (don't need to be reached if not necessary)
 
 contains
 
@@ -77,6 +74,8 @@ contains
 !> \brief Sanitize the refinement flags
 
    subroutine sanitize(this, my_level)
+
+      use refinement, only: level_min, level_max
 
       implicit none
 

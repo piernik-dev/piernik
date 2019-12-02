@@ -530,9 +530,9 @@ def setup_piernik(data=None):
     if("PGPLOT" in our_defs):
         m.write("LIBS += -lpgplot\n")
     if("SHEAR" in our_defs or "MULTIGRID" in our_defs):
-        m.write("LIBS += $(shell pkg-config --libs fftw3)\n")
-    if("POISSON_FFT" in our_defs):
-        m.write("LIBS += $(shell pkg-config --libs fftw3 lapack)\n")
+        if ("NO_FFT" not in our_defs):
+            m.write("LIBS += $(shell pkg-config --libs fftw3)\n")
+        m.write("CPPFLAGS += $(shell pkg-config --libs fftw3 2> /dev/null || echo '-DNO_FFT')\n")
     if("PIERNIK_OPENCL" in our_defs):
         m.write("LIBS += $(shell pkg-config --libs fortrancl)\n")
         m.write("F90FLAGS += $(shell pkg-config --cflags fortrancl)\n")
@@ -659,15 +659,20 @@ def setup_piernik(data=None):
     try:
         os.makedirs(rundir)
     except OSError:
-        print('\033[93m' + "Found old run." + '\033[0m' +
-              " Making copy of old 'problem.par'.")
-        try:
-            if(os.path.isfile(rundir + 'problem.par')):
-                shutil.move(rundir + 'problem.par', rundir + 'problem.par.old')
-        except (IOError, OSError):
-            print('\033[91m' +
-                  "Problem with copying 'problem.par' to 'problem.par.old'." +
-                  '\033[0m')
+        if (not options.keep_par):
+            print('\033[93m' + "Found old run." + '\033[0m' +
+                  " Making copy of old 'problem.par'.")
+            try:
+                if(os.path.isfile(rundir + 'problem.par')):
+                    shutil.move(rundir + 'problem.par', rundir + 'problem.par.old')
+            except (IOError, OSError):
+                print('\033[91m' +
+                      "Problem with copying 'problem.par' to 'problem.par.old'." +
+                      '\033[0m')
+        else:
+            if (os.path.isfile(rundir + 'problem.par')):
+                print('\033[93m' + "Found old run." + '\033[0m' +
+                      " Preserving copy of old 'problem.par'.")
         try:
             if(os.path.isfile(rundir + 'piernik')):
                 os.remove(rundir + 'piernik')
@@ -705,7 +710,8 @@ def setup_piernik(data=None):
                 fatal_problem = True
 
     try:
-        shutil.copy(objdir + "/" + options.param, rundir + 'problem.par')
+        if (not (options.keep_par and os.path.isfile(rundir + 'problem.par'))):
+            shutil.copy(objdir + "/" + options.param, rundir + 'problem.par')
     except IOError:
         print('\033[91m' + "Failed to copy 'problem.par' to '%s'." %
               rundir.rstrip('/') + '\033[0m')
@@ -798,6 +804,9 @@ compilers directory""", metavar="FILE")
     parser.add_option("-o", "--obj", dest="objdir", metavar="POSTFIX",
                       default='', help="""use obj_POSTFIX directory instead of obj/ and
 runs/<problem>_POSTFIX rather than runs/<problem>""")
+
+    parser.add_option("-k", "--keeppar", action="store_true", dest="keep_par",
+                      help="do not override existing problem.par file with the default")
 
     if data is None:
         all_args = []

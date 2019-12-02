@@ -43,13 +43,14 @@ contains
 
    subroutine scan_for_refinements
 
-      use all_boundaries,   only: all_bnd
+      use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_leaves,             only: leaves
       use cg_level_connected,    only: cg_level_connected_T
       use cg_level_finest,       only: finest
+!      use cg_list,               only: cg_list_element
       use cg_list_global,        only: all_cg
-      use refinement,            only: auto_refine_derefine
-      use refinement_primitives, only: mark_all_primitives
+      use constants,             only: I_ONE
+      use unified_ref_crit_list, only: urc_list
       use user_hooks,            only: problem_refine_derefine
 #ifdef VERBOSED_REFINEMENTS
       use constants,             only: pSUM
@@ -60,12 +61,12 @@ contains
       implicit none
 
       type(cg_level_connected_T), pointer :: curl
+!      type(cg_list_element),      pointer :: cgl
       enum, bind(C)
          enumerator :: PROBLEM
-         enumerator :: AUTO
-         enumerator :: PRIMITIVES
+         enumerator :: URC
       end enum
-      integer, dimension(PROBLEM:PRIMITIVES) :: cnt
+      integer, dimension(PROBLEM:URC) :: cnt
 
       curl => finest%level
       do while (associated(curl))
@@ -75,7 +76,17 @@ contains
       call all_cg%clear_ref_flags
       cnt = 0
 
+      ! We have to guarantee up-to-date guardcells on all vital fields
       call all_bnd ! \todo find a way to minimize calling this - perhaps manage a flag that says whether the boundaries are up to date or not
+      call all_bnd_vital_q
+
+      !> \todo mark everything for derefinement by default
+      ! it requires to propagate refinement requests from coverel levels as derefinement inhibitions
+!!$      cgl => leaves%first
+!!$      do while (associated(cgl))
+!!$         cgl%cg%refine_flags%derefine = .true.
+!!$         cgl => cgl%nxt
+!!$      enddo
 
       if (associated(problem_refine_derefine)) then
          call problem_refine_derefine ! call user routine first, so it cannot alter flags set by automatic routines
@@ -89,21 +100,17 @@ contains
       call piernik_MPI_Allreduce(cnt(PROBLEM), pSUM)
 #endif /* VERBOSED_REFINEMENTS */
 
-      call auto_refine_derefine(leaves)
-#ifdef VERBOSED_REFINEMENTS
+      call urc_list%all_mark(leaves%first)
       call sanitize_all_ref_flags
-      cnt(AUTO) = all_cg%count_ref_flags()
-      call piernik_MPI_Allreduce(cnt(AUTO), pSUM)
+#ifdef VERBOSED_REFINEMENTS
+      cnt(URC) = all_cg%count_ref_flags()
+      call piernik_MPI_Allreduce(cnt(URC), pSUM)
 #endif /* VERBOSED_REFINEMENTS */
 
-      call mark_all_primitives
-      call sanitize_all_ref_flags
 #ifdef VERBOSED_REFINEMENTS
-      cnt(PRIMITIVES) = all_cg%count_ref_flags()
-      call piernik_MPI_Allreduce(cnt(PRIMITIVES), pSUM)
-      if (cnt(ubound(cnt, dim=1)) > 0) then
-         write(msg,'(a,3i6,a)')"[refinement_update:scan_for_refinements] User routine, automatic criteria and primitives marked ", &
-              &                cnt(PROBLEM), cnt(AUTO)-cnt(PROBLEM), cnt(PRIMITIVES)-cnt(AUTO)," block(s) for refinement, respectively."
+     if (cnt(ubound(cnt, dim=1)) > 0) then
+         write(msg,'(a,2i6,a)')"[refinement_update:scan_for_refinements] User routine and URC marked ", &
+              &                cnt(PROBLEM), cnt(PROBLEM+I_ONE:URC)-cnt(PROBLEM:URC-I_ONE), " block(s) for refinement, respectively."
          if (master) call printinfo(msg)
       endif
 #endif /* VERBOSED_REFINEMENTS */
@@ -131,7 +138,7 @@ contains
          cgl => curl%first
          do while (associated(cgl))
             cgl%cg%refine_flags%refine = cgl%cg%refine_flags%refine .or. &
-                 &                       any(cgl%cg%refinemap .and. cgl%cg%leafmap)
+                 any(cgl%cg%refinemap(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) .and. cgl%cg%leafmap)
             call cgl%cg%refine_flags%sanitize(cgl%cg%l%id)
             cgl => cgl%nxt
          enddo
@@ -173,26 +180,26 @@ contains
 
    subroutine update_refinement(act_count, refinement_fixup_only)
 
-      use all_boundaries,     only: all_bnd
-      use cg_leaves,          only: leaves
-      use cg_list,            only: cg_list_element
-      use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
-      use cg_level_finest,    only: finest
-      use cg_list_global,     only: all_cg
-      use constants,          only: pLOR, pLAND, pSUM, cs_i2_n
-      use dataio_pub,         only: warn, die
-      use global,             only: nstep
-      use grid_cont,          only: grid_container
-      use list_of_cg_lists,   only: all_lists
-      use mpisetup,           only: piernik_MPI_Allreduce!, proc
-      use named_array_list,   only: qna
-      use refinement,         only: n_updAMR, emergency_fix, refines2list
+      use all_boundaries,        only: all_bnd, all_bnd_vital_q
+      use cg_leaves,             only: leaves
+      use cg_list,               only: cg_list_element
+      use cg_level_base,         only: base
+      use cg_level_connected,    only: cg_level_connected_T
+      use cg_level_finest,       only: finest
+      use cg_list_global,        only: all_cg
+      use constants,             only: pLOR, pLAND, pSUM
+      use dataio_pub,            only: warn, die
+      use global,                only: nstep
+      use grid_cont,             only: grid_container
+      use list_of_cg_lists,      only: all_lists
+      use mpisetup,              only: piernik_MPI_Allreduce!, proc
+      use refinement,            only: n_updAMR, emergency_fix
+      use unified_ref_crit_list, only: urc_list
 #ifdef GRAV
-      use gravity,            only: update_gp
+      use gravity,              only: update_gp
 #endif /* GRAV */
 #ifdef DEBUG_DUMPS
-      use data_hdf5,          only: write_hdf5
+      use data_hdf5,            only: write_hdf5
 #endif /* DEBUG_DUMPS */
 
       implicit none
@@ -207,12 +214,6 @@ contains
       type(cg_level_connected_T), pointer :: curl
       type(grid_container),  pointer :: cg
       logical :: correct, full_update
-      logical, save :: first_run = .true.
-
-      if (first_run) then
-         first_run = .false.
-         call refines2list
-      endif
 
       if (present(act_count)) act_count = 0
 
@@ -319,7 +320,8 @@ contains
 
          ! sync structure before trying to fix it
          call leaves%update(" (correcting) ")
-         call all_cg%clear_ref_flags
+         !call all_cg%clear_ref_flags  ! this was preventing proper derefinement in sedov
+         ! \todo implement 1-pass correcting
          call fix_refinement(correct)
          call piernik_MPI_Allreduce(correct, pLAND)
          if (.not. correct) nciter = nciter + 1
@@ -372,9 +374,12 @@ contains
       if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
 
       call all_bnd
-      !> \todo call the update of cs_i2 if and only if something has changed
+
+      call urc_list%plot_mark(leaves%first)
+
+      !> \todo call the update of cs_i2 and other vital variables if and only if something has changed
       !> \todo add another flag to named_array_list::na_var so the user can also specify fields that need boundary updates on fine/coarse boundaries
-      if (qna%exists(cs_i2_n)) call leaves%leaf_arr3d_boundaries(qna%ind(cs_i2_n))
+      call all_bnd_vital_q
 #ifdef GRAV
       call update_gp
 #endif /* GRAV */
@@ -398,7 +403,7 @@ contains
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
       use constants,          only: refinement_factor, LO, HI, ndims
-      use domain,             only: AMR_bsize
+      use refinement,         only: bsize
       use dataio_pub,         only: warn, die
       use mergebox,           only: wmap
 
@@ -421,7 +426,7 @@ contains
       if (size(cgl%cg%refine_flags%SFC_refine_list) > 0) then ! we've got detailed map!
          do b = lbound(cgl%cg%refine_flags%SFC_refine_list, dim=1), ubound(cgl%cg%refine_flags%SFC_refine_list, dim=1)
             if (cgl%cg%refine_flags%SFC_refine_list(b)%level == curl%finer%l%id) then
-               call curl%finer%add_patch(int(AMR_bsize, kind=8), cgl%cg%refine_flags%SFC_refine_list(b)%off)
+               call curl%finer%add_patch(int(bsize, kind=8), cgl%cg%refine_flags%SFC_refine_list(b)%off)
             else
                call die("[refinement_update:refine_one_grid] wrong level!")
             endif

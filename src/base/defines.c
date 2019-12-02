@@ -19,38 +19,38 @@
 
 #ifdef LOCAL_FR_SPEED
 #  define FR_SPEED
-#endif
+#endif /* LOCAL_FR_SPEED */
 
 #ifdef GLOBAL_FR_SPEED
 #  ifdef FR_SPEED
 #    define FR_SPEED2
-#  else
+#  else /* !FR_SPEED */
 #    define FR_SPEED
-#  endif
-#endif
+#  endif /* !FR_SPEED */
+#endif /* GLOBAL_FR_SPEED */
 
 #ifdef FR_SPEED2
 #  error Both freezing speeds defined
-#endif
+#endif /* FR_SPEED2 */
 
 #ifndef FR_SPEED
 #  error No freezing speed defined.
-#endif
+#endif /* !FR_SPEED */
 
 #if defined(PSM) || defined(PLN) || defined(KSG) || defined(KSM) || defined(PGM) || defined(SSY) || defined(SI) || defined(CGS) || defined(WT4)
 #  error Use run-time parameter constants_set from CONSTANTS namelist instead of { PGM SSY SI CGS WT4 PSM PLN KSG KSM } preprocessor symbols.
-#endif
+#endif /* PSM || PLN || KSG || KSM || PGM || SSY || SI || CGS || WT4 */
 
 /* basic sanity check for isothermal fluid */
 
 #ifdef ISO_LOCAL
 #  ifndef ISO
 #     error ISO must be defined with ISO_LOCAL
-#  endif
+#  endif /* !ISO */
 #  ifndef IONIZED
 #     error ISO_LOCAL currently works only with ionized fluid
-#  endif
-#endif
+#  endif /* !IONIZED */
+#endif /* ISO_LOCAL */
 
 /* at least one of { ionized, neutral, dust } must be defined */
 
@@ -58,60 +58,26 @@
 
 #ifdef IONIZED
 #  define FLUID
-#endif
+#endif /* IONIZED */
 
 #ifdef DUST
 #  define FLUID
-#endif
+#endif /* DUST */
 
 #ifdef NEUTRAL
 #  define FLUID
 #  ifdef IONIZED
 #    error Currently there are no solvers that can manage a mixture of neutral and ionized fluid
-#  endif
-#endif
+#  endif /* IONIZED */
+#endif /* NEUTRAL */
 
 #ifndef FLUID
 #  error None of { IONIZED DUST NEUTRAL } were defined.
-#endif
+#endif /* !FLUID */
 
-/*
- * Hydro solvers
- *
- * Exclusive: RTVD, HLLC, RIEMANN
- * Default: RTVD
- */
-
-#undef HYDRO_SOLVER
-#undef HS2
-
-#ifdef RTVD
-#  if defined(HYDRO_SOLVER)
-#    define HS2
-#  else
-#  define HYDRO_SOLVER
-#  endif
-#endif
-
-#ifdef HLLC
-#  if defined(HYDRO_SOLVER)
-#    define HS2
-#  else
-#    define HYDRO_SOLVER
-#  endif
-#endif
-
-#ifdef RIEMANN
-#  if defined(HYDRO_SOLVER)
-#    define HS2
-#  else
-#    define HYDRO_SOLVER
-#  endif
-#endif
-
-#if defined(HS2)
-#  error Choose only one of { RTVD, HLLC, RIEMANN }.
-#endif
+#ifdef NOMAGNETICNORESIST
+# warning MAGNETIC is not defined, then RESISTIVE is also cancelled
+#endif /* NOMAGNETICNORESIST */
 
 /*
   Multigrid solver
@@ -120,15 +86,11 @@
 */
 
 #ifdef MULTIGRID
-#  if !defined(GRAV) && !defined(COSM_RAYS)
-#    warning MULTIGRID defined but none of { GRAV, COSM_RAYS } are used.
-#  endif
-#endif
-
-#if (defined(HLLC) || defined(RIEMANN)) && defined CORIOLIS
-#  error CORIOLIS has been implemented only for RTVD so far.
-#endif
+#  if !defined(SELF_GRAV) && !defined(COSM_RAYS)
+#    warning MULTIGRID defined but none of { SELF_GRAV, COSM_RAYS } are used.
+#  endif /* !SELF_GRAV && !COSMIC_RAYS */
+#endif /* MULTIGRID */
 
 #ifdef USER_RULES
 #  include "user_rules.h"
-#endif
+#endif /* USER_RULES */

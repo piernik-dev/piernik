@@ -153,7 +153,7 @@ contains
             else
                d_size = int(cg_n_b, kind=HSIZE_T)
             endif
-            if (qna%lst(i)%restart_mode /= AT_IGNORE) &  ! create "/data/grid_%08d/qna%lst(i)%name"
+            if (qna%lst(i)%restart_mode > AT_IGNORE) &  ! create "/data/grid_%08d/qna%lst(i)%name"
                  call create_empty_cg_dataset(cg_g_id, qna%lst(i)%name, d_size, Z_avail, O_RES)
          enddo
       endif
@@ -167,7 +167,7 @@ contains
             else
                d_size = int([ wna%lst(i)%dim4, cg_n_b ], kind=HSIZE_T)
             endif
-            if (wna%lst(i)%restart_mode /= AT_IGNORE) &  ! create "/data/grid_%08d/wna%lst(i)%name"
+            if (wna%lst(i)%restart_mode > AT_IGNORE) &  ! create "/data/grid_%08d/wna%lst(i)%name"
                  call create_empty_cg_dataset(cg_g_id, wna%lst(i)%name, d_size, Z_avail, O_RES)
          enddo
       endif
@@ -214,8 +214,8 @@ contains
       real, target, dimension(0,0,0,0)                      :: null_r4d
       integer(kind=4), dimension(ndims)                     :: n_b
 
-      qr_lst = qna%get_reslst()
-      wr_lst = wna%get_reslst()
+      call qna%get_reslst(qr_lst)
+      call wna%get_reslst(wr_lst)
       tot_lst_n = size(qr_lst) + size(wr_lst)
       allocate(dsets(tot_lst_n))
       ic = 1
@@ -503,21 +503,24 @@ contains
            &                        require_problem_IC, piernik_hdf5_version2, nres, nhdf, fix_string
       use dataio_user,        only: user_reg_var_restart, user_attrs_rd
       use domain,             only: dom
-      use fluidindex,         only: flind
       use func,               only: operator(.notequals.)
       use global,             only: t, dt, nstep
-      use grid_cont,          only: is_overlap
       use hdf5,               only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
-      use h5lt,               only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use mass_defect,        only: magic_mass
       use mpisetup,           only: master, piernik_MPI_Barrier
+      use overlap,            only: is_overlap
       use read_attr,          only: read_attribute
+      use set_get_attributes, only: get_attr
+      use timestep_pub,       only: c_all_old, cfl_c, stepcfl
 #ifdef RANDOMIZE
       use randomization,      only: read_current_seed_from_restart
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
       use snsources,          only: read_snsources_from_restart
 #endif /* SN_SRC */
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      use multigrid_gravity,  only: read_oldsoln_from_restart
+#endif /* MULTIGRID && SELF_GRAV */
 
       implicit none
 
@@ -531,14 +534,32 @@ contains
       integer(kind=8)                                   :: tot_cells
       integer(kind=8), dimension(xdim:zdim, LO:HI)      :: my_box, other_box
       integer(kind=4)                                   :: error, nres_old
-      integer(kind=4), dimension(:), allocatable        :: ibuf
-      real,            dimension(:), allocatable        :: rbuf
-      character(len=cbuff_len)                          :: cbuf
-      character(len=cbuff_len), dimension(7), parameter :: real_attrs = [ "time         ", "timestep     ", "last_hdf_time", "last_res_time", &
-           &                                                              "last_log_time", "last_tsl_time", "magic_mass   " ]
-      character(len=cbuff_len), dimension(4), parameter :: int_attrs = [ "nstep             ", "nres              ", "nhdf              ", "require_problem_IC" ]
-      character(len=cbuff_len), dimension(3), parameter :: str_attrs = [ "problem_name", "domain      ", "run_id      " ]
-      !> \deprecated same strings are used independently in set_common_attributes*
+
+      ! buffers for reading attributes
+      integer(kind=4),          dimension(:), allocatable :: ibuf
+      real,                     dimension(:), allocatable :: rbuf
+      character(len=cbuff_len), dimension(:), allocatable :: cbuf
+
+      ! common attributes
+      character(len=cbuff_len), dimension(10), parameter :: real_attrs = [ "time         ", &
+           &                                                               "timestep     ", &
+           &                                                               "last_hdf_time", &
+           &                                                               "last_res_time", &
+           &                                                               "last_log_time", &
+           &                                                               "last_tsl_time", &
+           &                                                               "c_all_old    ", &
+           &                                                               "stepcfl      ", &
+           &                                                               "cfl_c        ", &
+           &                                                               "magic_mass   " ]
+      character(len=cbuff_len), dimension(4), parameter :: int_attrs  = [ "nstep             ", &
+           &                                                              "nres              ", &
+           &                                                              "nhdf              ", &
+           &                                                              "require_problem_IC" ]
+      character(len=cbuff_len), dimension(3), parameter :: str_attrs  = [ "problem_name", &
+           &                                                              "domain      ", &
+           &                                                              "run_id      " ]
+      !> \warning same strings are used independently in set_common_attributes*
+
       character(len=cwdlen)                             :: filename
       character(len=dsetnamelen)                        :: d_label
       type(cg_essentials), dimension(:), allocatable    :: cg_res
@@ -566,10 +587,10 @@ contains
       call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
 
       ! Check file format version first
-      allocate(rbuf(1))
 
-      call h5ltget_attribute_double_f(file_id, "/", "piernik", rbuf, error) !> \deprecated: magic string across multiple files
-      if (error /= 0) call die("[restart_hdf5_v2:read_restart_hdf5_v2] Cannot read 'piernik' attribute from the restart file. The file may be either damaged or incompatible")
+      call get_attr(file_id, "piernik", rbuf)
+
+      if (size(rbuf) /= 1) call die("[restart_hdf5_v2:read_restart_hdf5_v2] Cannot read 'piernik' attribute from the restart file. The file may be either damaged or incompatible")
       if (rbuf(1) > piernik_hdf5_version2) then
          write(msg,'(2(a,f5.2))')"[restart_hdf5_v2:read_restart_hdf5_v2] Cannot read future versions of the restart file: ", rbuf(1)," > ", piernik_hdf5_version2
          call die(msg)
@@ -584,15 +605,12 @@ contains
          call warn(msg)
       endif
       call compare_array1D(rbuf(:))
+      deallocate(rbuf)
 
       ! Compare attributes in the root of the restart point file with values read from problem.par
       !> \todo merge this code somehow with set_common_attributes_v2
       do ia = lbound(real_attrs, dim=1), ubound(real_attrs, dim=1)
-         if (real_attrs(ia) == "magic_mass") then
-            deallocate(rbuf) ; allocate(rbuf(flind%fluids))
-         endif
-         call h5ltget_attribute_double_f(file_id, "/", trim(real_attrs(ia)), rbuf, error)
-         call compare_array1D(rbuf(:))
+         call get_attr(file_id, trim(real_attrs(ia)), rbuf)
          select case (real_attrs(ia))
             case ("time")
                t = rbuf(1)
@@ -606,21 +624,24 @@ contains
                last_log_time = rbuf(1)
             case ("last_tsl_time")
                last_tsl_time = rbuf(1)
+            case ("c_all_old")
+               c_all_old = rbuf(1)
+            case ("stepcfl")
+               stepcfl = rbuf(1)
+            case ("cfl_c")
+               cfl_c = rbuf(1)
             case ("magic_mass")
                if (master) magic_mass(:) = rbuf(:)
-!               deallocate(rbuf) ; allocate(rbuf(1)) ! not necessary while magic_mass is the last issue in real_attrs
             case default
                write(msg,'(3a,g15.5,a)')"[restart_hdf5_v2:read_restart_hdf5_v2] Real attribute '",trim(real_attrs(ia)),"' with value = ",rbuf(1)," was ignored"
                call warn(msg)
          end select
+         deallocate(rbuf)
       enddo
-      deallocate(rbuf)
 
       nres_old = nres
-      allocate(ibuf(1))
       do ia = lbound(int_attrs, dim=1), ubound(int_attrs, dim=1)
-         call h5ltget_attribute_int_f(file_id, "/", trim(int_attrs(ia)), ibuf, error)
-         call compare_array1D(ibuf(:))
+         call get_attr(file_id, trim(int_attrs(ia)), ibuf)
          select case (int_attrs(ia))
             case ("nstep")
                nstep = ibuf(1)
@@ -633,32 +654,37 @@ contains
             case default
                write(msg,'(3a,i14,a)')"[restart_hdf5_v2:read_restart_hdf5_v2] Integer attribute '",trim(real_attrs(ia)),"' with value = ",ibuf(1)," was ignored"
                call warn(msg)
-            end select
+         end select
+         deallocate(ibuf)
       enddo
-      deallocate(ibuf)
+
 #ifdef RANDOMIZE
       call read_current_seed_from_restart(file_id)
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
       call read_snsources_from_restart(file_id)
 #endif /* SN_SRC */
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      call read_oldsoln_from_restart(file_id)
+#endif /* MULTIGRID && SELF_GRAV */
 
       do ia = lbound(str_attrs, dim=1), ubound(str_attrs, dim=1)
-         cbuf=''
-         call h5ltget_attribute_string_f(file_id, "/", trim(str_attrs(ia)), cbuf, error)
-         call compare_array1D(str_attrs(ia))
+         call get_attr(file_id, trim(str_attrs(ia)), cbuf)
          select case (str_attrs(ia))
             case ("problem_name")
-               problem_name = fix_string(trim(cbuf))
+               problem_name = fix_string(trim(cbuf(1)))
             case ("domain")
-               domain_dump = fix_string(trim(cbuf(:len(domain_dump))))
+               domain_dump = fix_string(trim(cbuf(1)(:len(domain_dump))))
             case ("run_id")
-               res_id = fix_string(trim(cbuf(:len(res_id))))
+               res_id = fix_string(trim(cbuf(1)(:len(res_id))))
             case default
                write(msg,'(3a,i14,a)')"[restart_hdf5_v2:read_restart_hdf5_v2] String attribute '",trim(real_attrs(ia)),"' with value = ",cbuf," was ignored"
                call warn(msg)
          end select
+         deallocate(cbuf)
       enddo
+
+      !> \ToDo: try to simplify the code below and use get_attr in place of read_attribute
 
       ! Read domain description
       call h5gopen_f(file_id, d_gname, doml_g_id, error)       ! open "/domains"
@@ -870,10 +896,11 @@ contains
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI
       use dataio_pub,       only: die
       use domain,           only: dom
-      use grid_cont,        only: grid_container, is_overlap
+      use grid_cont,        only: grid_container
       use hdf5,             only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5T_NATIVE_DOUBLE, &
            &                      h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
       use named_array_list, only: qna, wna
+      use overlap,          only: is_overlap
 
       implicit none
 
@@ -925,8 +952,8 @@ contains
            &             cg%js+own_off_nb(ydim):cg%js+own_off_nb(ydim)+o_size_nb(ydim)-1, &
            &             cg%ks+own_off_nb(zdim):cg%ks+own_off_nb(zdim)+o_size_nb(zdim)-1))) call die("[restart_hdf5_v2:read_cg_from_restart] Trying to initialize same area twice.")
 
-      qr_lst = qna%get_reslst()
-      wr_lst = wna%get_reslst()
+      call qna%get_reslst(qr_lst)
+      call wna%get_reslst(wr_lst)
       call h5gopen_f(cgl_g_id, n_cg_name(ncg), cg_g_id, error) ! open "/data/grid_%08d, ncg"
 
       if (size(qr_lst) > 0) then

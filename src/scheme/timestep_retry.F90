@@ -37,7 +37,7 @@ module timestep_retry
    implicit none
 
    private
-   public :: repeat_fluidstep
+   public :: repeat_fluidstep, reset_freezing_speed
 
    ! for simplicity create an array of pointers to qna and wna
    type :: na_p
@@ -84,9 +84,9 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pSUM, I_ONE, dsetnamelen, AT_IGNORE
+      use constants,        only: pSUM, I_ZERO, I_ONE, dsetnamelen, AT_IGNORE
       use dataio_pub,       only: warn, msg, die
-      use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_max_grow, repeat_step
+      use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_shrink, repeat_step, tstep_attempt
       use mass_defect,      only: downgrade_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna, wna, na_var_list_q, na_var_list_w
@@ -101,39 +101,45 @@ contains
       integer(kind=4)                :: no_hist_count
       integer                        :: i, j
       character(len=dsetnamelen)     :: rname
+      integer, parameter             :: max_attempts = 10  !< Something is terribly wrong if a single step requires too many reductions
 
       if (.not.repeat_step) return
 
       call restart_arrays
 
       if (cfl_violated) then
-         if (master) call warn("[timestep_retry:repeat_fluidstep] Redoing previous step...")
+         tstep_attempt = tstep_attempt + I_ONE
+         if (tstep_attempt > max_attempts) then
+            write(msg, '(a,i2,a)')"[timestep_retry:repeat_fluidstep] tstep_attempt > ", max_attempts, " (hardcoded limit)"
+            call die(msg)
+         endif
+         write(msg, '(a,i2,a)') "[timestep_retry:repeat_fluidstep] Redoing previous step (", tstep_attempt, ")"
+         if (master) call warn(msg)
          t = t_saved
          nstep = nstep_saved
-         dt = dtm/dt_max_grow**2
+         dt = dtm * dt_shrink
+         call reset_freezing_speed
          call downgrade_magic_mass
-#ifdef RANDOMIZE
-         call randoms_redostep(.true.)
-#endif /* RANDOMIZE */
          if (associated(user_reaction_to_redo_step)) call user_reaction_to_redo_step
       else
+         tstep_attempt = I_ZERO
          nstep_saved = nstep
          t_saved = t
-#ifdef RANDOMIZE
-         call randoms_redostep(.false.)
-#endif /* RANDOMIZE */
       endif
+#ifdef RANDOMIZE
+      call randoms_redostep(cfl_violated)
+#endif /* RANDOMIZE */
 
       no_hist_count = 0
       cgl => leaves%first
       do while (associated(cgl))
-         ! No need to take care of any cgl%cg%q arrays as long as graity is extrapolated from the prefious timestep.
+         ! No need to take care of any cgl%cg%q arrays as long as gravity is extrapolated from the previous timestep.
 
          ! error checking should've been done in restart_arrays, called few lines earlier
          do j = lbound(na_lists, dim=1), ubound(na_lists, dim=1)
             associate (na => na_lists(j)%p)
                do i = lbound(na%lst(:), dim=1), ubound(na%lst(:), dim=1)
-                  if (na%lst(i)%restart_mode /= AT_IGNORE) then
+                  if (na%lst(i)%restart_mode > AT_IGNORE) then
                      rname = get_rname(na%lst(i)%name)
                      if (cfl_violated) then
                         if (cgl%cg%has_previous_timestep) then
@@ -167,7 +173,7 @@ contains
       enddo
       call piernik_MPI_Allreduce(no_hist_count, pSUM)
       if (master .and. no_hist_count/=0) then
-         write(msg, '(a,i6,a)')"[timestep_retry:repeat_fluidstep] Warning: not reverted: ", no_hist_count, " grid pieces."
+         write(msg, '(a,i6,a)')"[timestep_retry:repeat_fluidstep] Error: not reverted: ", no_hist_count, " grid pieces."
          call die(msg)
          ! AMR domains require careful treatment of timestep retries.
          ! Going back past rebalancing or refinement change would require updating whole AMR structure, not just field values.
@@ -182,7 +188,7 @@ contains
    subroutine restart_arrays
 
       use cg_list_global,   only: all_cg
-      use constants,        only: AT_IGNORE, dsetnamelen, INVALID
+      use constants,        only: AT_BACKUP, AT_IGNORE, dsetnamelen, INVALID
       use dataio_pub,       only: printinfo, msg
       use mpisetup,         only: master
       use named_array_list, only: qna, wna
@@ -200,7 +206,7 @@ contains
          associate (na => na_lists(j)%p)
 
             do i = lbound(na%lst(:), dim=1), ubound(na%lst(:), dim=1)
-               if (na%lst(i)%restart_mode /= AT_IGNORE) then
+               if (na%lst(i)%restart_mode > AT_IGNORE) then
                   rname = get_rname(na%lst(i)%name)
                   if (.not. na%exists(rname)) then
                      if (master) then
@@ -210,9 +216,9 @@ contains
                      allocate(pos_copy(size(na%lst(i)%position)))
                      pos_copy = na%lst(i)%position
                      if (na%lst(i)%dim4 /= INVALID) then
-                        call all_cg%reg_var(rname, dim4=na%lst(i)%dim4, position=pos_copy, multigrid=na%lst(i)%multigrid)
+                        call all_cg%reg_var(rname, dim4=na%lst(i)%dim4, position=pos_copy, multigrid=na%lst(i)%multigrid, restart_mode = AT_BACKUP)
                      else
-                        call all_cg%reg_var(rname,                      position=pos_copy, multigrid=na%lst(i)%multigrid)
+                        call all_cg%reg_var(rname,                      position=pos_copy, multigrid=na%lst(i)%multigrid, restart_mode = AT_BACKUP)
                      endif
                      deallocate(pos_copy)
                   endif
@@ -222,5 +228,19 @@ contains
       enddo
 
    end subroutine restart_arrays
+
+   subroutine reset_freezing_speed
+
+      use fluidindex, only: flind
+
+      implicit none
+
+      integer :: ifl
+
+      do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
+         call flind%all_fluids(ifl)%fl%res_c
+      enddo
+
+   end subroutine reset_freezing_speed
 
 end module timestep_retry

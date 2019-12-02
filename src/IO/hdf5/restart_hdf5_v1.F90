@@ -236,7 +236,7 @@ contains
       endif
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
-      if (area_type == AT_IGNORE) return !> \todo write a list of unsaved arrays?
+      if (area_type <= AT_IGNORE) return
       call set_area_for_restart(area_type, area)
 
       dimsf      = [dim1, area(:)] ! Dataset dimensions
@@ -379,7 +379,7 @@ contains
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
       if (present(alt_area_type)) area_type = alt_area_type
-      if (area_type == AT_IGNORE) return !! \todo write a list of unsaved arrays?
+      if (area_type <= AT_IGNORE) return
       call set_area_for_restart(area_type, area)
 
       dimsf = [dim1, area(:)]      ! Dataset dimensions
@@ -479,11 +479,12 @@ contains
       use mpi,              only: MPI_INFO_NULL
       use mpisetup,         only: comm, master, piernik_MPI_Bcast, ibuff, rbuff, cbuff, slave
       use named_array_list, only: qna, wna
+      use timestep_pub,     only: c_all_old, cfl_c, stepcfl
 #ifdef RANDOMIZE
       use randomization,    only: initseed, seed_size
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
-      use snsources,        only: nsn_last
+      use snsources,        only: nsn
 #endif /* SN_SRC */
 
       implicit none
@@ -501,6 +502,9 @@ contains
       real,            dimension(1)            :: rbuf
       real,            dimension(flind%fluids) :: rbufm
       integer(kind=4), dimension(1)            :: ibuf
+#ifdef RANDOMIZE
+      integer,         dimension(seed_size)    :: ibufs
+#endif /* RANDOMIZE */
 
       real                                     :: restart_hdf5_version
 
@@ -601,14 +605,17 @@ contains
          call h5ltget_attribute_double_f(file_id,"/","last_tsl_time", rbuf, error) ; last_tsl_time = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","last_hdf_time", rbuf, error) ; last_hdf_time = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","last_res_time", rbuf, error) ; last_res_time = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","c_all_old",     rbuf, error) ; c_all_old = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","stepcfl",       rbuf, error) ; stepcfl = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","cfl_c",         rbuf, error) ; cfl_c = rbuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nstep", ibuf, error) ; nstep = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nres",  ibuf, error) ; nres  = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nhdf",  ibuf, error) ; nhdf  = ibuf(1)
 #ifdef RANDOMIZE
-         call h5ltget_attribute_int_f(file_id,"/","current_seed", ibuf, error) ; initseed = ibuf(:seed_size)
+         call h5ltget_attribute_int_f(file_id,"/","current_seed", ibufs, error) ; initseed = ibufs(:)
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
-         call h5ltget_attribute_int_f(file_id,"/","nsn_last", ibuf, error) ; nsn_last = ibuf(1)
+         call h5ltget_attribute_int_f(file_id,"/","nsn", ibuf, error) ; nsn = ibuf(1)
 #endif /* SN_SRC */
 
          call h5ltget_attribute_string_f(file_id,"/","problem_name", problem_name, error)
@@ -639,7 +646,7 @@ contains
          ibuff(3) = nhdf
          if (restart_hdf5_version > 1.11) ibuff(5) = require_problem_IC
 #ifdef SN_SRC
-         ibuff(6) = nsn_last
+         ibuff(6) = nsn
 #endif /* SN_SRC */
 #ifdef RANDOMIZE
          ibuff(7:seed_size+6) = initseed
@@ -667,7 +674,7 @@ contains
          nhdf  = ibuff(3)
          if (restart_hdf5_version > 1.11) require_problem_IC = ibuff(5)
 #ifdef SN_SRC
-         nsn_last = ibuff(6)
+         nsn   = ibuff(6)
 #endif /* SN_SRC */
 #ifdef RANDOMIZE
          initseed = ibuff(7:seed_size+6)

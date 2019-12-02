@@ -126,8 +126,9 @@ contains
 
       use constants,  only: ndims, I_ONE
       use dataio_pub, only: warn, printinfo, msg
-      use domain,     only: dom, psize, AMR_bsize, allow_noncart, allow_uneven, dd_rect_quality, dd_unif_quality, minsize
+      use domain,     only: dom, psize, allow_noncart, allow_uneven, dd_rect_quality, dd_unif_quality, minsize
       use mpisetup,   only: nproc, master, have_mpi
+      use refinement, only: bsize
 
       implicit none
 
@@ -148,7 +149,7 @@ contains
       patch_divided = .false.
 
       ! Try the decomposition into same-size blocks
-      if (all(AMR_bsize(:) > 0 .or. .not. dom%has_dir(:)) .and. .not. present(n_pieces)) then
+      if (all(bsize(:) > 0 .or. .not. dom%has_dir(:)) .and. .not. present(n_pieces)) then
          call patch%stamp_cg
          patch_divided = allocated(patch%pse)
          if (patch_divided) patch_divided = patch%is_not_too_small("stamp_cg")
@@ -647,8 +648,9 @@ contains
 
       use constants,  only: xdim, ydim, zdim, LO, HI, I_ONE
       use dataio_pub, only: warn, msg
-      use domain,     only: dom, AMR_bsize
+      use domain,     only: dom
       use mpisetup,   only: master
+      use refinement, only: bsize
 
       implicit none
 
@@ -656,20 +658,27 @@ contains
 
       integer(kind=4), dimension(xdim:zdim) :: n_bl
       integer(kind=4)                       :: tot_bl, bx, by, bz, b
+      logical                               :: warned
 
-      if (any(AMR_bsize(xdim:zdim) <=0)) then
-         if (master) call warn("[decomposition:stamp_cg] some(AMR_bsize(1:3)) <=0")
+      if (any((bsize <= 0) .and. dom%has_dir)) then
+         if (master) call warn("[decomposition:stamp_cg] some(AMR::bsize(1:3)) <=0")
          return
       endif
 
-      if (any(mod(patch%n_d(:), int(AMR_bsize(xdim:zdim), kind=8)) /= 0 .and. dom%has_dir(:))) then
-         write(msg,'(a,3f10.3,a)')"[decomposition:stamp_cg] Fractional number of blocks: n_d(:)/AMR_bsize(1:3) = [",patch%n_d(:)/real(AMR_bsize(xdim:zdim)),"]"
-         if (master) call warn(msg)
-         return
-      endif
+      warned = .false.
+      do b = xdim, zdim
+         if (dom%has_dir(b)) then
+            if (mod(patch%n_d(b), int(bsize(b), kind=8)) /= 0) then
+               write(msg,'(2(a,i2),a,f10.3,a)')"[decomposition:stamp_cg] Fractional number of blocks: n_d(", b, ")/AMR::bsize(", b, ") = [",patch%n_d(b)/real(bsize(b)),"]"
+               if (master) call warn(msg)
+               warned = .true.
+            endif
+         endif
+      enddo
+      if (warned) return
 
       where (dom%has_dir(:))
-         n_bl(:) = int(patch%n_d(:) / AMR_bsize(xdim:zdim), kind=4)
+         n_bl(:) = int(patch%n_d(:) / bsize(:), kind=4)
       elsewhere
          n_bl(:) = 1
       endwhere
@@ -683,8 +692,8 @@ contains
             do bx = 0, n_bl(xdim)-I_ONE
                b = b + I_ONE !b = 1 + bx + n_bl(xdim)*(by + bz*n_bl(ydim))
                where (dom%has_dir(:))
-                  patch%pse(b)%se(:, LO) = patch%off(:) + [ bx, by, bz ] * AMR_bsize(xdim:zdim)
-                  patch%pse(b)%se(:, HI) = patch%pse(b)%se(:, LO) + AMR_bsize(xdim:zdim) - 1
+                  patch%pse(b)%se(:, LO) = patch%off(:) + [ bx, by, bz ] * bsize(:)
+                  patch%pse(b)%se(:, HI) = patch%pse(b)%se(:, LO) + bsize(:) - 1
                endwhere
             enddo
          enddo

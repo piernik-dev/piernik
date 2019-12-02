@@ -132,7 +132,7 @@ contains
       endif
 
 #if !(defined(SELF_GRAV))
-      call die("You must define MULTIGRID for this problem")
+      call die("You must define SELF_GRAV for this problem")
 #endif /* !SELF_GRAV */
 
       if (mode < 0 .or. mode > 1)     call die("[initproblem:read_problem_par] Invalid mode.")
