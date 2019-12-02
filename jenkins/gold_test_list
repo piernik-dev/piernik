@@ -7,14 +7,14 @@ for i in ./jenkins/gold_configs/*.config ; do
     if [ -e $GOLD_LOG ] ; then
         echo ${PROBLEM_NAME}_gold" "$( tail -n 1 $GOLD_LOG | awk '{print $NF}' )
     else
-	echo ${PROBLEM_NAME}_gold" "-1
+	echo ${PROBLEM_NAME}_gold" "-0.1
     fi
 
     RIEM_LOG=${PROBLEM_NAME}_riem_log
     if [ -e $RIEM_LOG ] ; then
         echo ${PROBLEM_NAME}_Riemann" "$( tail -n 1 $RIEM_LOG | awk '{print $NF}' )
     else
-	echo ${PROBLEM_NAME}_Riemann" "-1
+	echo ${PROBLEM_NAME}_Riemann" "-0.1
     fi
 
 done |\
