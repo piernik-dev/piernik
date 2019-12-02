@@ -44,7 +44,7 @@ module global
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, do_external_corners, &
-        &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fc_eq_mag
+        &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fc_eq_mag, which_solver
 
    logical         :: cfl_violated             !< True when cfl condition is violated
    logical         :: dn_negative = .false.
@@ -61,6 +61,7 @@ module global
    logical         :: force_cc_mag             !< treat magnetic field as cell-centered in the Riemann solver (temporary hack)
    integer(kind=4) :: psi_bnd                  !< BND_INVALID or enforce some other psi boundary
    integer         :: tstep_attempt            !< /= 0 when we retry timesteps
+   integer         :: which_solver             !< one of RTVD_SPLIT, HLLC_SPLIT or RIEMANN_SPLIT
 
    ! Namelist variables
 
@@ -104,10 +105,11 @@ module global
    integer(kind=4)               :: ord_mag_prolong   !< prolongation order for B and psi
    logical                       :: ord_fc_eq_mag     !< when .true. enforce ord_mag_prolong order of prolongation of f/c guardcells for fluid and everything (EXPERIMENTAL)
    logical                       :: do_external_corners  !< when .true. then perform boundary exchanges inside external guardcells
+   character(len=cbuff_len)      :: solver_str        !< allow to switch between RIEMANN and RTVD without recompilation
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, disallow_negatives, disallow_CRnegatives, cfl_max, use_smalld, use_smallei, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
-        &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong, ord_fc_eq_mag, do_external_corners
+        &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong, ord_fc_eq_mag, do_external_corners, solver_str
 
 contains
 
@@ -157,31 +159,33 @@ contains
 !<
    subroutine init_global
 
-      use constants,  only: big_float, PIERNIK_INIT_MPI, INVALID, DIVB_CT, DIVB_HDC, &
-           &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO, O_I2
+      use constants,  only: big_float, PIERNIK_INIT_DOMAIN, INVALID, DIVB_CT, DIVB_HDC, &
+           &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO, O_I2, INVALID, &
+           &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, GEO_XYZ
       use dataio_pub, only: die, msg, warn, code_progress, printinfo
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
+      use domain,     only: dom
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
-      if (code_progress < PIERNIK_INIT_MPI) call die("[global:init_global] MPI not initialized.")
+      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[global:init_global] MPI not initialized.")
 
       dt_old = -1.
       t = 0.
 
       ! Begin processing of namelist parameters
 
-#ifdef RIEMANN
-      ! 'moncen' and 'vanleer' seem to be best for emag conservation with GLM for b_limiter
-      limiter_b   = 'moncen'
-      limiter     = limiter_b
-      divB_0      = "HDC"
-#else /* ! RIEMANN */
+      which_solver = RTVD_SPLIT  ! \todo: change the default to RIEMANN_SPLIT
+      divB_0       = "HDC"  ! This is the default for the Riemann solver, for RTVD it will be changed to "CT" anyway
+
+      ! For RIEMANN_SPLIT 'moncen' and 'vanleer' seem to be best for emag conservation with GLM for b_limiter
+      ! Leave RTVD defaults as they were before the implementation of the Riemann HLLD solver
+      ! limiter_b   = 'moncen'
+      ! limiter     = limiter_b
       limiter     = 'vanleer'
       limiter_b   = limiter
-      divB_0      = "CT"
-#endif /* RIEMANN */
+
       cflcontrol  = 'warn'
       interpol_str = 'linear'
       repeat_step = .true.
@@ -224,6 +228,7 @@ contains
       ord_mag_prolong = O_I2           !< it looks like most f/c artifacts are gone just with cubic prolongation of magnetic guardcells
       ord_fc_eq_mag = .false.          !< Conservative choice, perhaps O_LIN will be safer. Higher orders may result in negative density or energy in f/c guardcells
       do_external_corners =.false.
+      solver_str = ""
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -263,6 +268,7 @@ contains
          cbuff(5) = divB_0
          cbuff(6) = interpol_str
          cbuff(7) = psi_bnd_str
+         cbuff(8) = solver_str
 
          ibuff(1) = integration_order
          ibuff(2) = print_divB
@@ -345,6 +351,7 @@ contains
          divB_0               = cbuff(5)
          interpol_str         = cbuff(6)
          psi_bnd_str          = cbuff(7)
+         solver_str           = cbuff(8)
 
          integration_order    = ibuff(1)
          print_divB           = ibuff(2)
@@ -352,17 +359,54 @@ contains
 
       endif
 
+      select case (solver_str)
+         case ("")  ! leave the default
+         case ("rtvd", "RTVD")
+            which_solver = RTVD_SPLIT
+         case ("hllc", "HLLC")
+            which_solver = HLLC_SPLIT
+         case ("riemann", "Riemann", "RIEMANN")
+            which_solver = RIEMANN_SPLIT
+         case default
+            call die("[global:init_global] unrecognized solver: '" // trim(solver_str) // "'")
+      end select
+
+      select case (which_solver)
+         case (RTVD_SPLIT)
+            divB_0 = "CT"  ! no other option
+         case (RIEMANN_SPLIT)
+            if (dom%geometry_type /= GEO_XYZ) call die("[global:init_global] Riemann solver is implemented only for cartesian geometry")
+         case (HLLC_SPLIT)
+#ifdef MAGNETIC
+            call die("[global:init_global] MAGNETIC not compatible with HLLC")
+#endif /* MAGNETIC */
+         case default
+            call die("[global:init_global] no solvers defined")
+      end select
+
+#ifdef CORIOLIS
+      if (which_solver /= RTVD_SPLIT) call die("[global:init_global] CORIOLIS has been implemented only for RTVD so far.")
+#endif /* CORIOLIS */
+
       divB_0_method = INVALID
       select case (divB_0)
          case ("CT", "ct", "constrained transport", "Constrained Transport")
             divB_0_method = DIVB_CT
          case ("HDC", "hdc", "GLM", "glm", "divergence cleaning", "divergence diffusion")
             divB_0_method = DIVB_HDC
-            if (master .and. .false.) call warn("[global] In case of problems with stability connected with checkerboard pattern in the psi field consider reducing CFL parameter (or just CFL_GLM). This solver also doesn't like sudden changes of timestep length.")
+            if (master .and. .false.) call warn("[global:init_global] In case of problems with stability connected with checkerboard pattern in the psi field consider reducing CFL parameter (or just CFL_GLM). This solver also doesn't like sudden changes of timestep length.")
             ! ToDo: create a way to add this to the crash message.
+#ifdef RESISTIVE
+            call die("[global:init_global] RESISTIVE not yet implemented for DIVB_HDC")
+#endif /* RESISTIVE */
          case default
             call die("[global:init_global] unrecognized divergence cleaning description.")
       end select
+
+      if ((which_solver == RTVD_SPLIT) .and. (divB_0_method /= DIVB_CT)) then
+         if (master) call warn("[global:init_global] RTVD works only with Constrained Transport. Enforcing.")
+         divB_0_method = DIVB_CT
+      endif
 
       !> reshape_b should carefully check things here
       force_cc_mag = .false.
@@ -389,15 +433,18 @@ contains
             call die("[global:init_global] unrecognized psi boundaries")
       end select
 
-#ifdef RTVD
-      if (master) call printinfo("    (M)HD solver: RTVD.")
-#endif /* RTVD */
-#ifdef HLLC
-      if (master) call printinfo("    HD solver: HLLC.")
-#endif /*HLLC */
-#ifdef RIEMANN
-      if (master) call printinfo("    (M)HD solver: Riemann.")
-#endif /* RIEMANN */
+      if (master) then
+         select case (which_solver)
+            case (RTVD_SPLIT)
+               call printinfo("    (M)HD solver: RTVD.")
+            case (HLLC_SPLIT)
+               call printinfo("    HD solver: HLLC.")
+            case (RIEMANN_SPLIT)
+               call printinfo("    (M)HD solver: Riemann.")
+            case default
+               call die("[global:init_global] unrecognized hydro solver")
+         end select
+      endif
 
 #ifdef MAGNETIC
       if (master) then
