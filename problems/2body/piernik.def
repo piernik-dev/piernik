@@ -8,3 +8,4 @@
 #define NBODY
 #define NBODY_MULTIGRID
 #undef NBODY_GRIDDIRECT
+#define NBODY_1FILE

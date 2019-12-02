@@ -29,52 +29,23 @@
 module particles_io_hdf5
 ! pulled by NBODY && HDF5
 
-   use constants, only: dsetnamelen
 
    implicit none
 
    private
-   public  :: init_nbody_hdf5, write_nbody_hdf5, read_nbody_hdf5
-
-   character(len=dsetnamelen), dimension(*), parameter :: pvarn = ['ppid', 'mass', 'ener', 'ppos', 'pvel', 'pacc']
-   logical,                    dimension(size(pvarn))  :: pvarl = .false.
+   public  :: write_nbody_hdf5, read_nbody_hdf5
 
    contains
 
-   subroutine init_nbody_hdf5(pvars)
-
-      use dataio_pub, only: msg, warn
-
-      implicit none
-
-      character(len=dsetnamelen), dimension(:), intent(in) :: pvars  !< quantities to be plotted, see dataio::vars
-      integer                                              :: ie, il
-      logical                                              :: var_found
-
-      do il = lbound(pvars, 1), ubound(pvars, 1)
-         if (len(trim(pvars(il))) == 0) cycle
-         var_found = .false.
-         do ie = lbound(pvarn, 1), ubound(pvarn, 1)
-            if (trim(pvars(il)) == trim(pvarn(ie))) then
-               pvarl(ie) = .true.
-               var_found = .true.
-            endif
-         enddo
-         if (.not.var_found) then
-            write(msg,'(2a)')'[particles_io_hdf5::init_nbody_hdf5]: unknown particle var: ', pvars(il) ; call warn(msg)
-         endif
-      enddo
-
-   end subroutine init_nbody_hdf5
 
    subroutine write_nbody_hdf5(fname)
 
       use common_hdf5,    only: set_common_attributes
       use constants,      only: cwdlen, tmr_hdf, idlen
+      use cg_particles_io,only: dump_cg_particles
       use dataio_pub,     only: msg, printinfo, printio, thdf
       use hdf5,           only: h5open_f, h5close_f, h5fcreate_f, h5fclose_f, HID_T, H5F_ACC_TRUNC_F
       use mpisetup,       only: master, proc
-      use particle_utils, only: count_all_particles
       use timer,          only: set_timer
 
       implicit none
@@ -83,7 +54,6 @@ module particles_io_hdf5
       character(len=cwdlen)        :: filename
       character(len=idlen)         :: proc_c
       integer                      :: flen
-      integer(kind=4)              :: n_part
       integer(kind=4)              :: error
       integer(HID_T)               :: file_id
 
@@ -97,9 +67,9 @@ module particles_io_hdf5
       call h5open_f(error)
       call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
 
-      n_part = count_all_particles()
-      call set_nbody_attributes(file_id, n_part)
-      call nbody_datasets(file_id, n_part)
+      call set_nbody_attributes(file_id)
+      call dump_cg_particles(file_id)
+
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
@@ -109,21 +79,24 @@ module particles_io_hdf5
          call printinfo(msg, .true.)
       endif
 
-   end subroutine write_nbody_hdf5
+    end subroutine write_nbody_hdf5
 
-   subroutine set_nbody_attributes(file_id, n_part)
+
+    subroutine set_nbody_attributes(file_id)
 
       use dataio_pub,         only: require_problem_IC, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
          &                          last_res_time, last_log_time, last_tsl_time, nres, nhdf, domain_dump
       use global,             only: t, dt, nstep
       use hdf5,               only: HID_T
+      use particle_utils,     only: count_all_particles
       use set_get_attributes, only: set_attr
 
       implicit none
 
       integer(HID_T),  intent(in) :: file_id       !< File identifier
-      integer(kind=4), intent(in) :: n_part
+      integer(kind=4)             :: n_part
 
+      n_part = count_all_particles()
       ! real attributes
       call set_attr(file_id, "time",          [t                     ]) !rr2
       call set_attr(file_id, "timestep",      [dt                    ]) !rr2
@@ -146,252 +119,7 @@ module particles_io_hdf5
       call set_attr(file_id, "domain",       [trim(domain_dump) ]) !rr2
       call set_attr(file_id, "run_id",       [trim(run_id)      ]) !rr2
 
-   end subroutine set_nbody_attributes
-
-   subroutine nbody_datasets(file_id, n_part)
-
-     use hdf5, only: HID_T
-
-      implicit none
-
-      integer(HID_T),  intent(in) :: file_id       !< File identifier
-      integer(kind=4), intent(in) :: n_part
-      integer                     :: i
-
-      do i = lbound(pvarl, 1), ubound(pvarl, 1)
-         if (pvarl(i)) call nbody_datafields(file_id, trim(pvarn(i)), n_part)
-      enddo
-
-   end subroutine nbody_datasets
-
-   subroutine nbody_datafields(file_id, pvar, n_part)
-
-     use hdf5, only: HID_T
-
-      implicit none
-
-      integer(HID_T),   intent(in) :: file_id       !< File identifier
-      character(len=*), intent(in) :: pvar
-      integer(kind=4),  intent(in) :: n_part
-
-      select case (pvar)
-         case ('ppid')
-            call collect_and_write_intr1(file_id, pvar, n_part)
-         case ('mass', 'ener')
-            call collect_and_write_rank1(file_id, pvar, n_part)
-         case ('ppos', 'pvel', 'pacc')
-            call collect_and_write_rank2(file_id, pvar, n_part)
-         case default
-      end select
-
-   end subroutine nbody_datafields
-
-   subroutine collect_and_write_intr1(file_id, pvar, n_part)
-
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use hdf5,      only: HID_T
-
-      implicit none
-
-      integer(HID_T),   intent(in)       :: file_id       !< File identifier
-      character(len=*), intent(in)       :: pvar
-      integer(kind=4),  intent(in)       :: n_part
-      integer                            :: cgnp, recnp, i
-      integer, dimension(:), allocatable :: tabi1
-      type(cg_list_element), pointer     :: cgl
-
-      allocate(tabi1(n_part))
-      recnp = 0
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgnp = 0
-         select case (pvar)
-            case ('ppid')
-               do i = 1, size(cgl%cg%pset%p, dim=1)
-                  if (cgl%cg%pset%p(i)%phy) then
-                     cgnp = cgnp + 1
-                     tabi1(recnp+cgnp) = cgl%cg%pset%p(i)%pid
-                  endif
-               enddo
-               !tabi1(recnp+1:recnp+cgnp) = cgl%cg%pset%p(:)%pid
-            case default
-         end select
-         recnp = recnp+cgnp
-         cgl => cgl%nxt
-      enddo
-
-      call write_nbody_h5_int_rank1(file_id, pvar, tabi1)
-      deallocate(tabi1)
-
-   end subroutine collect_and_write_intr1
-
-   subroutine collect_and_write_rank1(file_id, pvar, n_part)
-
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use hdf5,      only: HID_T
-
-      implicit none
-
-      integer(HID_T),   intent(in)    :: file_id       !< File identifier
-      character(len=*), intent(in)    :: pvar
-      integer(kind=4),  intent(in)    :: n_part
-      integer                         :: cgnp, recnp, i
-      real, dimension(:), allocatable :: tabr1
-      type(cg_list_element), pointer  :: cgl
-
-      allocate(tabr1(n_part))
-      recnp = 0
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         !cgnp = size(cgl%cg%pset%p, dim=1)
-         cgnp = 0
-         do i = 1, size(cgl%cg%pset%p, dim=1)
-            if (cgl%cg%pset%p(i)%phy) then
-               cgnp = cgnp + 1
-               select case (pvar)
-                  case ('mass')
-                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%mass
-                  case ('ener')
-                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%energy
-                  case default
-               end select
-            endif
-         enddo
-         recnp = recnp+cgnp
-         cgl => cgl%nxt
-      enddo
-
-      call write_nbody_h5_rank1(file_id, pvar, tabr1)
-      deallocate(tabr1)
-
-   end subroutine collect_and_write_rank1
-
-   subroutine collect_and_write_rank2(file_id, pvar, n_part)
-
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use constants, only: ndims
-      use hdf5,      only: HID_T
-
-      implicit none
-
-      integer(HID_T),   intent(in)      :: file_id       !< File identifier
-      character(len=*), intent(in)      :: pvar
-      integer(kind=4),  intent(in)      :: n_part
-      integer                           :: cgnp, recnp, i, j
-      real, dimension(:,:), allocatable :: tabr2
-      type(cg_list_element), pointer    :: cgl
-
-      allocate(tabr2(n_part, ndims))
-
-      recnp = 0
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgnp = size(cgl%cg%pset%p, dim=1)
-         j=1
-         select case (pvar)
-            case ('ppos')
-               do i = 1, cgnp
-                  if (cgl%cg%pset%p(i)%phy) then
-                     tabr2(recnp+j,:) = cgl%cg%pset%p(i)%pos(:)
-                     j = j + 1
-                  endif
-               enddo
-            case ('pvel')
-               do i = 1, cgnp
-                  if (cgl%cg%pset%p(i)%phy) then
-                     tabr2(recnp+j,:) = cgl%cg%pset%p(i)%vel(:)
-                     j = j + 1
-                  endif
-               enddo
-            case ('pacc')
-               do i = 1, cgnp
-                  if (cgl%cg%pset%p(i)%phy) then
-                     tabr2(recnp+j,:) = cgl%cg%pset%p(i)%acc(:)
-                     j = j + 1
-                  endif
-               enddo
-            case default
-         end select
-         cgl => cgl%nxt
-      enddo
-
-      call write_nbody_h5_rank2(file_id, pvar, tabr2)
-
-      deallocate(tabr2)
-
-   end subroutine collect_and_write_rank2
-
-   subroutine write_nbody_h5_int_rank1(file_id, vvar, tab)
-
-      use hdf5, only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_INTEGER
-
-      implicit none
-
-      character(len=*),      intent(in) :: vvar
-      integer(HID_T),        intent(in) :: file_id
-      integer, dimension(:), intent(in) :: tab
-      integer(HSIZE_T), dimension(1)    :: dimm
-      integer(HID_T)                    :: dataspace_id, dataset_id
-      integer(kind=4)                   :: error, rank1 = 1
-
-      dimm = shape(tab)
-      call h5screate_simple_f(rank1, dimm, dataspace_id, error)
-      call h5dcreate_f(file_id, vvar, H5T_NATIVE_INTEGER, dataspace_id, dataset_id, error)
-      call h5dwrite_f(dataset_id, H5T_NATIVE_INTEGER, tab, dimm, error)
-      call h5dclose_f(dataset_id, error)
-      call h5sclose_f(dataspace_id, error)
-
-   end subroutine write_nbody_h5_int_rank1
-
-   subroutine write_nbody_h5_rank1(file_id, vvar, tab)
-
-      use hdf5, only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
-
-      implicit none
-
-      character(len=*),   intent(in) :: vvar
-      integer(HID_T),     intent(in) :: file_id
-      real, dimension(:), intent(in) :: tab
-      integer(HSIZE_T), dimension(1) :: dimm
-      integer(HID_T)                 :: dataspace_id, dataset_id
-      integer(kind=4)                :: error, rank1 = 1
-
-      dimm = shape(tab)
-      call h5screate_simple_f(rank1, dimm, dataspace_id, error)
-      call h5dcreate_f(file_id, vvar, H5T_NATIVE_DOUBLE, dataspace_id, dataset_id, error)
-      call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, tab, dimm, error)
-      call h5dclose_f(dataset_id, error)
-      call h5sclose_f(dataspace_id, error)
-
-   end subroutine write_nbody_h5_rank1
-
-   subroutine write_nbody_h5_rank2(file_id, vvar, tab)
-
-      use hdf5, only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
-
-      implicit none
-
-      character(len=*),     intent(in) :: vvar
-      integer(HID_T),       intent(in) :: file_id
-      real, dimension(:,:), intent(in) :: tab
-      integer(HSIZE_T), dimension(2)   :: dimv
-      integer(HID_T)                   :: dataspace_id, dataset_id
-      integer(kind=4)                  :: error, rank2 = 2
-
-      dimv = shape(tab)
-      call h5screate_simple_f(rank2, dimv, dataspace_id, error)
-      call h5dcreate_f(file_id, vvar, H5T_NATIVE_DOUBLE, dataspace_id, dataset_id, error)
-      call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, tab, dimv, error)
-      call h5dclose_f(dataset_id, error)
-      call h5sclose_f(dataspace_id, error)
-
-   end subroutine write_nbody_h5_rank2
+end subroutine set_nbody_attributes
 
    subroutine read_nbody_hdf5(fname, table, n)
 

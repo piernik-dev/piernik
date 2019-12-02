@@ -181,7 +181,7 @@ contains
       real,                intent(in)    :: energy   !< total energy of particle
       logical                            :: in, phy, out
 
-      call this%add(particle(pid, mass, pos, vel, acc, energy, .false., in, phy, out))
+      call this%add(particle(pid, mass, pos, vel, acc, energy, in, phy, out, .false.))
 #else /* !NBODY */
 
       call this%add(particle(pid, mass, pos, vel, .false.))
