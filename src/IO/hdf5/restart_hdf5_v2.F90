@@ -945,6 +945,7 @@ contains
       use data_hdf5,        only: gdf_translate
       use read_attr,        only: read_attribute
       use particle_utils,   only: is_part_in_cg
+      use mpisetup, only: proc
 #endif /* NBODY_1FILE */
 
       implicit none
@@ -1106,13 +1107,13 @@ contains
          call h5dclose_f(pdset_id, error)
       enddo
       do j=1, n_part(1)
-         call is_part_in_cg(cg, pos, in, phy, out)
          pid1=pid(j)
          mass1=mass(j)
          ener1=ener(j)
          pos1=pos(j,:)
          vel1=vel(j,:)
          acc1=acc(j,:)
+         call is_part_in_cg(cg, pos1, in, phy, out)
          call cg%pset%add(pid1, mass1, pos1, vel1, acc1, ener1, in, phy, out)
       enddo
 
