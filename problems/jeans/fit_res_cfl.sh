@@ -9,13 +9,13 @@ SCAN=$( mktemp scan_XXXXXX )
 echo "#res cfl aa bb a b c maxval maxres maxdiff" >> $SCAN
 
 for cfl in 0.1 0.2 0.3 0.5 0.7; do
-    for i in `seq 14 20` ; do
-        r=$(( 2 ** ($i / 2) * ( 2 + ($i % 2)) / 2 ))
+    for i in `seq 12 18` ; do
+        r=$(( 2 ** ($i / 2) * ( 2 + ($i % 2)) / 2 ))  # resolution: 64 96 128 192 256 384 512
         ryz=8
         xmax=$( grep xmax problem.par | awk '{print $3}'  )
         yzmax=$( awk 'BEGIN {print '$xmax' * '$ryz'/'$r'}' )
-        mpirun -np $(cat /proc/cpuinfo | grep "cpu cores" | head -n 1 | sed 's/.*: //') ./piernik \
-            -n '&BASE_DOMAIN n_d = '$r', '$ryz', '$ryz' ymax = '$yzmax' zmax = '$yzmax' / &OUTPUT_CONTROL run_id = "'$( printf "t%02d" $i )'"/ &NUMERICAL_SETUP cfl = '$cfl'/ &AMR bsize = 64, '$ryz', '$ryz' /'
+        mpirun -np $( cat /proc/cpuinfo | grep "cpu cores" | head -n 1 | sed 's/.*: //') ./piernik \
+            -n '&BASE_DOMAIN n_d = '$r', '$ryz', '$ryz' ymax = '$yzmax' zmax = '$yzmax' / &OUTPUT_CONTROL run_id = "'$( printf "t%02d" $i )'"/ &NUMERICAL_SETUP cfl = '$cfl'/ &AMR bsize = 32, '$ryz', '$ryz' /'
         gnuplot jeans.gnuplot 2>&1 | awk 'BEGIN {printf("%5s %-5s ", '$r','$cfl')} /#/ {for (i=3;i<=NF;i++) printf("%s ",$i)} END {print ""}' | tee -a $SCAN
         mv jeans.png jeans_${r}_${cfl}.png
     done
@@ -71,4 +71,61 @@ column -t $FIT
 echo "Fit logged to $FIT"
 
 # Try to find which are the leading terms
-# awk 'BEGIN {x=1/64.; y=.8} {if (NF==16) if ($0 ~ "column") print; else print $1, $2, $3*x, $4*y, $5*x**2, $6*x*y, $7*y**2, $8*x**3, $9*x**2*y, $10*x*y**2, $11*y**3, $12*x**4, $13*x**3*y, $14*x**2*y**2, $15*x*y**3, $16*y**4}' $FIT | column -t
+awk 'BEGIN {\
+    x = 1/64.;\
+    y = .8;\
+    white = "\033[97m";\
+    gray = "\033[90m";\
+    normal = "\033[0m";\
+    high = 0.9;\
+    low = 0.01;\
+    printf("# Relative importance of coefficients (y = CFL = %s, x = Δx = %s = 1/%d)\n", y, x, int(1/x+.1));\
+    val[5] = "5:amplitude";\
+    val[6] = "6:period";\
+    val[7] = "7:damping";\
+} function abs(x) {\
+  return (x > 0) ? x : -x;\
+} {\
+  if (NF == 16)\
+     if ($0 ~ "column") {\
+     	printf("%-11s ", $1);
+	for (i=2; i<=NF; i++)\
+	    printf("%13s ", $i);\
+     	printf("\n");\
+     }\
+     else {\
+     	  a[0] = $1;\
+	  a[1] = $2;\
+	  a[2] = $3*x;\
+	  a[3] = $4*y;\
+	  a[4] = $5*x**2;\
+	  a[5] = $6*x*y;\
+	  a[6] = $7*y**2;\
+	  a[7] = $8*x**3;\
+	  a[8] = $9*x**2*y;\
+	  a[9] = $10*x*y**2;\
+	  a[10] = $11*y**3;\
+	  a[11] = $12*x**4;\
+	  a[12] = $13*x**3*y;\
+	  a[13] = $14*x**2*y**2;\
+	  a[14] = $15*x*y**3;\
+	  a[15] = $16*y**4;\
+	  max = 0.;
+	  second = 0.;\
+	  for (i=1 ;i<=15; i++)\
+	      if (abs(a[i]) > max)\
+	      	 max = a[i];\
+	      else if (abs(a[i]) > second)\
+	      	 second = a[i];\
+          printf("%-11s ", val[a[0]]);\
+	  for (i=1 ;i<=15; i++) {\
+	      color = normal;\
+	      if (abs(a[i]) >= high * max)\
+	      	 color = white;\
+	      if (abs(a[i]) < low * max && abs(a[i]) < high * second)\
+	      	 color = gray;\
+	      printf("%s%13s%s ", color, a[i], normal);\
+ 	  }\
+	  printf("\n");\
+      }\
+ }' $FIT
