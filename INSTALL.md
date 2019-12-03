@@ -65,3 +65,16 @@ which should finish with a message:
 The `./setup` command without any arguments will give you a list of recognized options. You can put some them in `.setuprc` file if you want to use them always.
 Also look at the top of `Makefile` to find some useful tricks.
 The file `bin/bash_completion.sh` may also make your life with Piernik a little bit easier by allowing to complete some setup options and problem names.
+
+## Advanced features of Piernik
+
+If you want to run so called `gold tests`, you will need:
+
+* An installation of [YT](https://yt-project.org/) package.
+* Gnu Parallel and h5py:
+
+        sudo dnf install parallel python-h5py
+    or
+
+        apt install parallel python-h5py
+    (on Fedora or Ubuntu, respectively).
