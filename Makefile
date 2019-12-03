@@ -95,8 +95,9 @@ gold:
 gold-clean:
 	for i in jenkins/gold_configs/*config ; do \
 		j=$$( sed -n '/PROBLEM_NAME/s/PROBLEM_NAME=//p' $$i ) ; \
-		\rm -rf $${j}{_riem{_log,.csv},_gold_{log,dir,stdout}} obj_$${j}_test $$( basename $${i/.config/_gold_stdout} ) all_{gold,Riemann}.csv ; \
+		\rm -rf obj_$${j}_test ; \
 	done
+	\rm -rf jenkins/goldexec/*
 
 doxy:
 	doxygen piernik.doxy

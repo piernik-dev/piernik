@@ -1,4 +1,8 @@
-parallel --load 70% --delay 5 eval "./jenkins/gold_test.sh {} > {/.}'_gold_stdout'" ::: ./jenkins/gold_configs/*.config
+OUT_DIR=jenkins/goldexec/
+
+parallel --load 70% --delay 5 eval "./jenkins/gold_test.sh {} > ${OUT_DIR}{/.}'_gold_stdout'" ::: ./jenkins/gold_configs/*.config
+
+OUT_DIR=jenkins/goldexec/
 
 for j in gold riem ; do
     case $j in
@@ -9,7 +13,7 @@ for j in gold riem ; do
     for i in ./jenkins/gold_configs/*.config ; do
     	eval $( grep PROBLEM_NAME $i )
 
-    	LOG=${PROBLEM_NAME}_${j}_log
+    	LOG=${OUT_DIR}${PROBLEM_NAME}_${j}_log
 	if [ -e $LOG ] ; then
            echo ${PROBLEM_NAME}_${jj}" "$( tail -n 1 $LOG | awk '{print $NF}' )
     	else
@@ -24,12 +28,12 @@ for j in gold riem ; do
 		    for (i in a) printf("%s,",a[i]);\
 		    print "";\
 		}' |\
-     	sed 's/,$//' > all_${jj}.csv
+     	sed 's/,$//' > ${OUT_DIR}all_${jj}.csv
 done
 
-for i in *_gold_log ; do
+for i in ${OUT_DIR}*_gold_log ; do
      printf "%-50s = %s\n" "[GOLD] Total difference for ${i/_gold_log/}" $( tail -n 1 $i | awk '{print $NF}' )
 done
-for i in *_riem_log ; do
+for i in ${OUT_DIR}*_riem_log ; do
      printf "%-50s = %s\n" "[Riemann] Total difference for ${i/_riem_log/}" $( tail -n 1 $i | awk '{print $NF}' )
 done

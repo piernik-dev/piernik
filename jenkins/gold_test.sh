@@ -23,16 +23,21 @@ SETUP_PARAMS=$SETUP_PARAMS" -n --copy"
 
 PIERNIK_REPO="http://github.com/piernik-dev/piernik"
 PIERNIK=piernik
-GOLD_DIR=${PROBLEM_NAME}_gold_dir
+BASE_DIR=$( pwd )
+OUT_DIR=jenkins/goldexec/
+GOLD_DIR=${OUT_DIR}${PROBLEM_NAME}_gold_dir
 OBJ_PREFIX=obj_
 GOLD_OBJ=${PROBLEM_NAME}_gold
 TEST_OBJ=${PROBLEM_NAME}_test
-GOLD_LOG=${PROBLEM_NAME}_gold_log
-RIEM_LOG=${PROBLEM_NAME}_riem_log
-RIEM_CSV=${PROBLEM_NAME}_riem.csv
+GOLD_LOG=${OUT_DIR}${PROBLEM_NAME}_gold_log
+RIEM_LOG=${OUT_DIR}${PROBLEM_NAME}_riem_log
+RIEM_CSV=${OUT_DIR}${PROBLEM_NAME}_riem.csv
 TMP_DIR=/tmp/jenkins_gold/
 RUNS_DIR=$TMP_DIR
 GOLD_SHA_FILE=__sha__
+
+[ ! -d $OUT_DIR ] && mkdir -p $OUT_DIR
+[ ! -d $OUT_DIR ] && exit 1
 
 [ ! -d $TMP_DIR ] && mkdir -p $TMP_DIR
 cp Makefile $TMP_DIR
@@ -55,7 +60,7 @@ cp python/piernik_setup.py ${GOLD_DIR}/python/piernik_setup_today.py
     cd $GOLD_DIR
     git fetch -q $PIERNIK_REPO +refs/pull/*:refs/remotes/origin/pr/*
     git checkout -q $GOLD_COMMIT
-    rsync -avxq --delete ../compilers/ ./compilers
+    rsync -avxq --delete ${BASE_DIR}/compilers/ ./compilers
     python python/piernik_setup_today.py $PROBLEM_NAME $SETUP_PARAMS -o $GOLD_OBJ
 )
 
