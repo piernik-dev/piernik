@@ -35,13 +35,13 @@ done
 
 # print the results
 for i in ${OUT_DIR}*_gold_log ; do
-     printf "%-50s = %s\n" "[GOLD] Total difference for ${i/_gold_log/}" $( tail -n 1 $i | awk '{print $NF}' )
+     grep "You must make yt available somehow" $i || printf "%-50s = %s\n" "[GOLD] Total difference for ${i/_gold_log/}" $( tail -n 1 $i | awk '{print $NF}' )
 done
 for i in ${OUT_DIR}*_riem_log ; do
-     printf "%-50s = %s\n" "[Riemann] Total difference for ${i/_riem_log/}" $( tail -n 1 $i | awk '{print $NF}' )
+     grep "You must make yt available somehow" $i || printf "%-50s = %s\n" "[Riemann] Total difference for ${i/_riem_log/}" $( tail -n 1 $i | awk '{print $NF}' )
 done
 
 # fail if any gold dstance is not 0.
 for i in ${OUT_DIR}*_gold_log ; do
-    [ $( grep "^Total difference between" $i | awk '{print $NF}' ) == 0 ] || exit 1
+    [ $( ( grep "^Total difference between" $i || echo 1 ) | awk '{print $NF}' ) == 0 ] || exit 1
 done
