@@ -135,6 +135,10 @@ contains
       use dataio_pub,       only: die
       use hdf5,             only: HID_T, HSIZE_T
       use named_array_list, only: qna, wna
+#ifdef NBODY_1FILE
+      use cg_particles_io,  only: pdsets
+      use data_hdf5,        only: gdf_translate
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -180,6 +184,13 @@ contains
       endif
       deallocate(d_size)
 
+
+#ifdef NBODY_1FILE
+      do i = lbound(pdsets,1), ubound(pdsets,1)
+         call create_empty_cg_dataset(st_g_id, gdf_translate(pdsets(i)), (/n_part/), Z_avail, O_RES)
+      enddo
+#endif /* NBODY_1FILE */
+
    end subroutine create_empty_cg_datasets_in_restart
 
 !> \brief Write all grid containers to the file
@@ -197,7 +208,9 @@ contains
       use mpisetup,         only: master, FIRST, proc, comm, mpi_err
       use named_array_list, only: qna, wna
 #ifdef NBODY_1FILE
-      use cg_particles_io, only: pdsets
+      use cg_particles_io, only: pdsets, nbody_datafields
+      use particle_utils,  only: count_all_particles
+      use data_hdf5,        only: gdf_translate
 #endif /* NBODY_1FILE */
 
       implicit none
@@ -223,6 +236,9 @@ contains
       real, target, dimension(0,0,0)                        :: null_r3d
       real, target, dimension(0,0,0,0)                      :: null_r4d
       integer(kind=4), dimension(ndims)                     :: n_b
+#ifdef NBODY_1FILE
+      integer(kind=4)                                      :: n_part
+#endif /* NBODY_1FILE */
 
       call qna%get_reslst(qr_lst)
       call wna%get_reslst(wr_lst)
@@ -242,7 +258,7 @@ contains
          enddo
       endif
 #ifdef NBODY_1FILE
-      call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets, pdsets)
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets, gdf_translate(pdsets))
 #else
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets)
 #endif /* NBODY_1FILE */
@@ -341,6 +357,16 @@ contains
                   enddo
                   deallocate(dims)
                endif
+
+#ifdef NBODY_1FILE
+               n_part = count_all_particles()
+               if (n_part .gt. 0) then
+                  do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
+                     call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), n_part)
+                  enddo
+               endif
+#endif /* NBODY_1FILE */
+
                cgl => cgl%nxt
             enddo
 
@@ -914,6 +940,12 @@ contains
            &                      h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
       use named_array_list, only: qna, wna
       use overlap,          only: is_overlap
+#ifdef NBODY_1FILE
+      use cg_particles_io,  only: pdsets
+      use data_hdf5,        only: gdf_translate
+      use read_attr,        only: read_attribute
+      use particle_utils,   only: is_part_in_cg
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -923,7 +955,10 @@ contains
       type(cg_essentials),               intent(in)    :: cg_r      !< cg attributes that do not need to be reread
 
       integer(HID_T)                               :: cg_g_id !< cg group identifier
+      integer(HID_T)                               :: part_g_id !< particles group identifier
+      integer(HID_T)                               :: st_g_id !< stars group identifier
       integer(HID_T)                               :: dset_id
+      integer(HID_T)                               :: pdset_id
       integer(HID_T)                               :: filespace, memspace
       integer(HSIZE_T), dimension(:), allocatable  :: dims, off, cnt
       integer(kind=4)                              :: error
@@ -936,6 +971,18 @@ contains
       integer                                      :: i
       real, dimension(:,:,:),   allocatable        :: a3d
       real, dimension(:,:,:,:), allocatable        :: a4d
+#ifdef NBODY_1FILE
+      integer                                      :: j, pid1
+      real, dimension(:), allocatable              :: a1d
+      integer(HSIZE_T), dimension(1)               :: n_part
+      integer(kind=4),   dimension(:), allocatable :: ibuf
+      integer, allocatable, dimension(:)           :: pid
+      real, allocatable, dimension(:)              :: mass, ener
+      real, allocatable, dimension(:, :)           :: pos, vel, acc
+      real, dimension(ndims)                       :: pos1, vel1, acc1
+      real                                         :: mass1, ener1
+      logical                                      :: in, phy, out
+#endif /* NBODY_1FILE */
 
       ! Find overlap between own cg and restart cg
       own_box_nb(:, :) = cg%my_se(:, :)
@@ -1012,6 +1059,68 @@ contains
          enddo
          deallocate(dims, off, cnt)
       endif
+
+#ifdef NBODY_1FILE
+      call h5gopen_f(cg_g_id, "particles", part_g_id, error)
+      call h5gopen_f(part_g_id, "stars", st_g_id, error)
+      allocate(ibuf(1))
+      call read_attribute(st_g_id, "n_part", ibuf)
+      n_part = ibuf(:)
+      deallocate(ibuf)
+      allocate(pid(n_part(1)), mass(n_part(1)), ener(n_part(1)))
+      allocate(pos(n_part(1), ndims), vel(n_part(1), ndims), acc(n_part(1), ndims))
+      do i = lbound(pdsets, dim=1), ubound(pdsets, dim=1)
+         call h5dopen_f(st_g_id, gdf_translate(pdsets(i)), pdset_id, error)
+         allocate(a1d(n_part(1)))
+         call h5dread_f(pdset_id, H5T_NATIVE_DOUBLE, a1d, n_part, error)
+         do j = 1, n_part(1)
+            select case (pdsets(i))
+               case ('ppid')
+                  pid(j) = int(a1d(j))
+               case ('mass')
+                  mass(j) = a1d(j)
+               case ('ener')
+                  ener(j) = a1d(j)
+               case ('posx')
+                  pos(j, xdim) = a1d(j)
+               case ('posy')
+                  pos(j, ydim) = a1d(j)
+               case ('posz')
+                  pos(j, zdim) = a1d(j)
+               case ('velx')
+                  vel(j, xdim) = a1d(j)
+               case ('vely')
+                  vel(j, ydim) = a1d(j)
+               case ('velz')
+                  vel(j, zdim) = a1d(j)
+               case ('accx')
+                  acc(j, xdim) = a1d(j)
+               case ('accy')
+                  acc(j, ydim) = a1d(j)
+               case ('accz')
+                  acc(j, zdim) = a1d(j)
+               case default
+            end select
+         enddo
+         deallocate(a1d)
+         call h5dclose_f(pdset_id, error)
+      enddo
+      do j=1, n_part(1)
+         call is_part_in_cg(cg, pos, in, phy, out)
+         pid1=pid(j)
+         mass1=mass(j)
+         ener1=ener(j)
+         pos1=pos(j,:)
+         vel1=vel(j,:)
+         acc1=acc(j,:)
+         call cg%pset%add(pid1, mass1, pos1, vel1, acc1, ener1, in, phy, out)
+      enddo
+
+      deallocate(pid, mass, ener)
+      deallocate(pos, vel, acc)
+      call h5gclose_f(st_g_id, error)
+      call h5gclose_f(part_g_id, error)
+#endif /* NBODY_1FILE */
 
       call h5gclose_f(cg_g_id, error)
       deallocate(qr_lst, wr_lst)

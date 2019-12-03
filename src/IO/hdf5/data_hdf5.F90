@@ -37,7 +37,7 @@ module data_hdf5
    implicit none
 
    private
-   public :: init_data, write_hdf5
+   public :: init_data, write_hdf5, gdf_translate
 
    interface
       subroutine h5_write
