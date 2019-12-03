@@ -90,6 +90,7 @@ chk_err_msg:
 	./bin/checkmessages.sh
 
 gold:
+	which parallel > /dev/null 2>&1 || ( echo "You need to install parallel package to run gold tests"; exit 1 )
 	bash ./jenkins/gold_test_list
 
 gold-clean:
