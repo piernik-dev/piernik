@@ -65,6 +65,14 @@ user_annot_line   = False
 user_annot_time   = True
 plot_layer        = options.avg_layer
 plot_ovlp         = options.overlap_layer
+
+user_coords_provided = ( (options.coords_dflt[0] != "x") and (options.coords_dflt[1] != "y") and (options.coords_dflt[2] != "z") )
+if user_coords_provided:
+   try:
+      user_coords          = [float(options.coords_dflt[0]), float(options.coords_dflt[1]), float(options.coords_dflt[2])]
+   except:
+      die("Got spectrum coordinates %s, but failed to convert it to float." %str(options.coords_dflt))
+
 #####################################
 #------- Parameters ----------------
 par_epsilon    = 1.0e-15
@@ -321,9 +329,9 @@ if f_run == True:
     plt.tight_layout()
 
     print ("")
-    prtinfo("\033[44mClick LMB on the colormap to display spectrum ('q' to exit)")
 
     crs_h5.crs_initialize(var_names, var_array)
+
 #---------
     def read_click_and_plot(event):
         global click_coords, image_number, f_run, marker_index
@@ -340,7 +348,10 @@ if f_run == True:
         else: # slice_ax = "z"
             coords[0] = click_coords[0]
             coords[1] = click_coords[1]
+        mark_plot_save(coords)
 
+    def mark_plot_save(coords):
+        global click_coords, image_number, f_run, marker_index
 # ------------ preparing data and passing -------------------------
         position = h5ds.r[coords:coords]
         if ( plot_field[0:-2] != "en_ratio"):
@@ -392,9 +403,9 @@ if f_run == True:
 
         if (exit_code != True):
             if ((plot_layer == True) or (plot_ovlp == True) ):
-               line  = s1.plot([dom_l[avail_dim[0]],dom_r[avail_dim[0]] ], [coords[2],coords[2]], color = "white")
+               line  = s1.plot([dom_l[avail_dim[0]],dom_r[avail_dim[0]] ], [coords[2],coords[2]], color = "white")    # plot line (layer) if cell not empty WARNING - for now only works with mcrwind
             else:
-               point = s1.plot(event.xdata,event.ydata, marker=marker_l[marker_index], color="red")         # plot point only if cell is not empty
+               point = s1.plot(coords[avail_dim[0]],coords[avail_dim[1]], marker=marker_l[marker_index], color="red") # plot point if cell not empty
             s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='True')
             #prtinfo("  --->  Saved plot to: %s " %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
 
@@ -415,9 +426,18 @@ if f_run == True:
 
         if (f_run): f_run = False
 
-    cid = s.canvas.mpl_connect('button_press_event',read_click_and_plot)
+    def plot_with_coords_provided(coords_in):
+       mark_plot_save(coords_in)
 
-    plt.show()
+
+    if (user_coords_provided):
+       prtinfo("Provided coordintates %s (clickable map will not be shown) , processing image." %str(user_coords))
+       plot_with_coords_provided(user_coords)
+    else:
+       prtinfo("\033[44mClick LMB on the colormap to display spectrum ('q' to exit)")
+       cid = s.canvas.mpl_connect('button_press_event',read_click_and_plot)
+       plt.show()
+
     yt_data_plot.set_font({'size':30})
 
     text_coords = [0., 0., 0.]; text_coords[dim_map.get(slice_ax)] = slice_coord; text_coords[avail_dim[0]] = dom_l[avail_dim[0]]; text_coords[avail_dim[1]] = dom_l[avail_dim[1]]
@@ -430,5 +450,6 @@ if f_run == True:
          prtinfo("Not marking line on yt.plot (user_draw_timebox = %s)" %(user_draw_timebox))
          yt_data_plot.annotate_title('T = {:0.2f} Myr'.format(float(t.in_units('Myr'))))
 
-    yt_data_plot.save('results/'+filename_nam+'_'+plot_field+'_sliceplot.pdf')  # save image when "q" pressed
-    s.canvas.mpl_disconnect(cid)
+    yt_data_plot.save('results/'+filename_nam+'_'+plot_field+'_sliceplot.pdf') # save image (spectrum already saved) when finished.
+
+    if (not user_coords_provided): s.canvas.mpl_disconnect(cid)
