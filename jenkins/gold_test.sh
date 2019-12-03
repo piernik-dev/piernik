@@ -36,7 +36,6 @@ TMP_DIR=/tmp/jenkins_gold/
 RUNS_DIR=$TMP_DIR
 GOLD_SHA_FILE=__sha__
 
-[ ! -d $OUT_DIR ] && mkdir -p $OUT_DIR
 [ ! -d $OUT_DIR ] && exit 1
 
 [ ! -d $TMP_DIR ] && mkdir -p $TMP_DIR

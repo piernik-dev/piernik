@@ -1,4 +1,6 @@
 OUT_DIR=jenkins/goldexec/
+[ ! -d $OUT_DIR ] && mkdir -p $OUT_DIR
+[ ! -d $OUT_DIR ] && exit 1
 
 parallel --load 70% --delay 5 eval "./jenkins/gold_test.sh {} > ${OUT_DIR}{/.}'_gold_stdout'" ::: ./jenkins/gold_configs/*.config
 
@@ -31,9 +33,15 @@ for j in gold riem ; do
      	sed 's/,$//' > ${OUT_DIR}all_${jj}.csv
 done
 
+# print the results
 for i in ${OUT_DIR}*_gold_log ; do
      printf "%-50s = %s\n" "[GOLD] Total difference for ${i/_gold_log/}" $( tail -n 1 $i | awk '{print $NF}' )
 done
 for i in ${OUT_DIR}*_riem_log ; do
      printf "%-50s = %s\n" "[Riemann] Total difference for ${i/_riem_log/}" $( tail -n 1 $i | awk '{print $NF}' )
+done
+
+# fail if any gold dstance is not 0.
+for i in ${OUT_DIR}*_gold_log ; do
+    [ $( grep "^Total difference between" $i | awk '{print $NF}' ) == 0 ] || exit 1
 done
