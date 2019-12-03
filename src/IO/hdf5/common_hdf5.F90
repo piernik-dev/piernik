@@ -809,6 +809,7 @@ contains
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_b           !< list of n_b from all cgs/procs
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_o           !< list of grid dimnsions with external guardcells from all cgs/procs
       integer(kind=8),  dimension(:,:), pointer     :: cg_off           !< list of offsets from all cgs/procs
+      integer(kind=4),  pointer                      :: cg_npart
 
       !>
       !! auxiliary array for communication of {cg_le, cg_re, cg_dl} lists
@@ -919,6 +920,10 @@ contains
 #ifdef NBODY_1FILE
                call h5gcreate_f(cg_g_id, part_gname, part_g_id, error) ! create "/data/grid_%08d/particles
                call h5gcreate_f(part_g_id, st_gname, st_g_id, error) ! create "/data/grid_%08d/particles/stars"
+               allocate(cg_npart)
+               cg_npart = n_part
+               call create_attribute(st_g_id, "n_part", [ cg_npart ])  ! create "/data/grid_%08d/particles/stars/stars/n_part"
+               deallocate(cg_npart)
 #endif /* NBODY_1FILE */
                call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                ! create "/data/grid_%08d/level"
                temp = cg_n_b(g, :)
