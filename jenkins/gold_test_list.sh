@@ -1,8 +1,10 @@
+#!/bin/bash
+
 OUT_DIR=jenkins/goldexec/
 [ ! -d $OUT_DIR ] && mkdir -p $OUT_DIR
 [ ! -d $OUT_DIR ] && exit 1
 
-parallel --load 70% --delay 5 eval "./jenkins/gold_test.sh {} > ${OUT_DIR}{/.}'_gold_stdout'" ::: ./jenkins/gold_configs/*.config
+parallel --load 70% --delay 10 eval "./jenkins/gold_test.sh {} > ${OUT_DIR}{/.}'_gold_stdout'" ::: ./jenkins/gold_configs/*.config
 
 OUT_DIR=jenkins/goldexec/
 

@@ -91,7 +91,7 @@ chk_err_msg:
 
 gold:
 	which parallel > /dev/null 2>&1 || ( echo "You need to install parallel package to run gold tests"; exit 1 )
-	bash ./jenkins/gold_test_list
+	./jenkins/gold_test_list.sh
 
 gold-clean:
 	\rm -rf jenkins/goldexec/* /tmp/jenkins_gold/*
