@@ -41,7 +41,7 @@ GOLD_SHA_FILE=__sha__
 [ ! -d $TMP_DIR ] && mkdir -p $TMP_DIR
 cp Makefile $TMP_DIR
 
-rm -rf $GOLD_DIR ${OBJ_PREFIX}$GOLD_OBJ ${OBJ_PREFIX}$TEST_OBJ ${RUNS_DIR}/${PROBLEM_NAME}_$TEST_OBJ $GOLD_LOG
+rm -rf $GOLD_DIR ${OBJ_PREFIX}$GOLD_OBJ ${OBJ_PREFIX}$TEST_OBJ ${RUNS_DIR}/${PROBLEM_NAME}_$TEST_OBJ $GOLD_LOG ${OUT_DIR}${OBJ_PREFIX}${TEST_OBJ}
 
 for i in $GOLD_OBJ $TEST_OBJ ; do
     d=${RUNS_DIR}/${PROBLEM_NAME}_$i
@@ -50,6 +50,7 @@ done
 
 python setup $PROBLEM_NAME $SETUP_PARAMS -o $TEST_OBJ
 rsync -Icvxaq --no-t ${OBJ_PREFIX}${TEST_OBJ} $TMP_DIR
+mv ${OBJ_PREFIX}${TEST_OBJ} ${OUT_DIR}
 
 git clone -q $PIERNIK_REPO $GOLD_DIR
 [ -e .setuprc ] && cp .setuprc $GOLD_DIR
