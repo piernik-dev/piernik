@@ -98,22 +98,20 @@ RIEM=Riemann
 )
 cd - > /dev/null
 
-#(
-    cd ${RUNS_DIR}/${PROBLEM_NAME}_$GOLD_OBJ
-    # skip recalculating gold outpuf if and only if we know for sure that $GOLD_COMMIT did not change
-    if [ ! -e $GOLD_SHA_FILE ] ; then
+cd ${RUNS_DIR}/${PROBLEM_NAME}_$GOLD_OBJ
+# skip recalculating gold outpuf if and only if we know for sure that $GOLD_COMMIT did not change
+if [ ! -e $GOLD_SHA_FILE ] ; then
+    [ -e ${OUTPUT} ] && rm ${OUTPUT}
+else
+    if [ $( cat $GOLD_SHA_FILE  ) != $GOLD_COMMIT ] ; then
 	[ -e ${OUTPUT} ] && rm ${OUTPUT}
-    else
-	if [ $( cat $GOLD_SHA_FILE  ) != $GOLD_COMMIT ] ; then
-	   [ -e ${OUTPUT} ] && rm ${OUTPUT}
-	fi
     fi
-    if [ ! -e ${OUTPUT} ] ; then
-       eval TMPDIR="." $RUN_COMMAND ./${PIERNIK} $GOLD_PARAMS > ${PROBLEM_NAME}.gold_stdout &
-       echo $GOLD_COMMIT > $GOLD_SHA_FILE
-    fi
-    cd - > /dev/null
-#)
+fi
+if [ ! -e ${OUTPUT} ] ; then
+    eval TMPDIR="." $RUN_COMMAND ./${PIERNIK} $GOLD_PARAMS > ${PROBLEM_NAME}.gold_stdout &
+    echo $GOLD_COMMIT > $GOLD_SHA_FILE
+fi
+cd - > /dev/null
 
 wait
 
