@@ -94,11 +94,7 @@ gold:
 	bash ./jenkins/gold_test_list
 
 gold-clean:
-	for i in jenkins/gold_configs/*config ; do \
-		j=$$( sed -n '/PROBLEM_NAME/s/PROBLEM_NAME=//p' $$i ) ; \
-		\rm -rf obj_$${j}_test ; \
-	done
-	\rm -rf jenkins/goldexec/*
+	\rm -rf jenkins/goldexec/* /tmp/jenkins_gold/*
 
 doxy:
 	doxygen piernik.doxy
