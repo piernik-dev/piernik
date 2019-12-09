@@ -25,23 +25,23 @@ else:
     not_py27  = False
 #------- Parse arguments
 parser = OptionParser("Usage: %prog FILE [options] [args] or %prog [options] [args] -F FILENAME")
-parser.add_option("-F", "--file",  dest="filename",     default="None",       help=u"File to use", type="str")
-parser.add_option("-v", "--var",   dest="var_name",     default= "e",         help=u"Variable to plot the spectrum (default: e)")
-parser.add_option("-f", "--field", dest="fieldname",    default="cree_tot",   help=u"DS fieldname to image (default:cree_tot)")
-parser.add_option("-z", "--zlim",  dest="plot_range",   default=("x","y"),    help=u"Plot image with this range", nargs=2, metavar="ZMIN ZMAX")
-parser.add_option("-s", "--slice", dest="slice_info",   default=("a","Nan"),  help=u"DS slice coords to image (default:cree_tot)", metavar="AX COORDINATE", nargs=2)
-parser.add_option("-d", "--def",   dest="default_range",default="False",      help=u"Use min/max on yt.ds(fieldname) for clickable image",   action="store_true")
-parser.add_option("-l", "--lin",   dest="use_linscale", default="False",      help=u"Use linear scale for clickable plot (default: log)",    action="store_true")
-parser.add_option("-V", "--vel" ,  dest="plot_vel",     default="False",      help=u"Plot velocity field vectors ",  action="store_true")
-parser.add_option("-m", "--mag",   dest="plot_mag",     default="False",      help=u"Plot magnetic field vectors ",  action="store_true")
-parser.add_option("-t", "--time",  dest="annotate_time",default="False",      help=u"Annotate time on resulting DS plot", action="store_true")
-parser.add_option("",  "--nosave", dest="not_save_spec",default="False",      help=u"Do not save output spectrum ",  action="store_true")
-parser.add_option("-a","--average",dest="avg_layer",    default="False",      help=u"Plot mean spectrum at pointed layer at ordinate axis",  action="store_true")
-parser.add_option("-O","--overlap",dest="overlap_layer",default="False",      help=u"Overlap all spectra at pointed layer at ordinate ax",   action="store_true")
-parser.add_option("", "--verbose", dest="yt_verbose",   default=40,           help=u"Append yt verbosity (value from 10 [high] to 50 [low])")
-parser.add_option("-q", "--quiet", dest="py_quiet",     default="False",      help=u"Suppress ALL python warnings (not advised)",  action="store_true")
-parser.add_option("-c", "--coords",dest="coords_dflt",  default=("x","y","z"),help=u"Provides coordinates for the first plot (non-clickable)", nargs=3, metavar="xc yc zc")
-parser.add_option("-k", "--keep",  dest="clean_plot",   default="True",       help=u"Keep spectrum plot (do not clean spectrum field)", action="store_false")
+parser.add_option("-F", "--file",   dest="filename",     default="None",       help=u"File to use", type="str")
+parser.add_option("-v", "--var",    dest="var_name",     default= "e",         help=u"Variable to plot the spectrum (default: e)")
+parser.add_option("-f", "--field",  dest="fieldname",    default="cree_tot",   help=u"DS fieldname to image (default:cree_tot)")
+parser.add_option("-z", "--zlim",   dest="plot_range",   default=("x","y"),    help=u"Plot image with this range", nargs=2, metavar="ZMIN ZMAX")
+parser.add_option("-s", "--slice",  dest="slice_info",   default=("a","Nan"),  help=u"DS slice coords to image (default:cree_tot)", metavar="AX COORDINATE", nargs=2)
+parser.add_option("-d", "--def",    dest="default_range",default=False,        help=u"Use min/max on yt.ds(fieldname) for clickable image",   action="store_true")
+parser.add_option("-l", "--lin",    dest="use_linscale", default=False,        help=u"Use linear scale for clickable plot (default: log)",    action="store_true")
+parser.add_option("-V", "--vel" ,   dest="plot_vel",     default=False,        help=u"Plot velocity field vectors ",  action="store_true")
+parser.add_option("-m", "--mag",    dest="plot_mag",     default=False,        help=u"Plot magnetic field vectors ",  action="store_true")
+parser.add_option("-t", "--time",   dest="annotate_time",default=False,        help=u"Annotate time on resulting DS plot", action="store_true")
+parser.add_option("",   "--nosave", dest="not_save_spec",default=False,        help=u"Do not save output spectrum ",  action="store_true")
+parser.add_option("-a", "--average",dest="avg_layer",    default=False,        help=u"Plot mean spectrum at pointed layer at ordinate axis",  action="store_true")
+parser.add_option("-O", "--overlap",dest="overlap_layer",default=False,        help=u"Overlap all spectra at pointed layer at ordinate ax",   action="store_true")
+parser.add_option("",   "--verbose",dest="yt_verbose",   default=40,           help=u"Append yt verbosity (value from 10 [high] to 50 [low])")
+parser.add_option("-q", "--quiet",  dest="py_quiet",     default=False,        help=u"Suppress ALL python warnings (not advised)",  action="store_true")
+parser.add_option("-c", "--coords", dest="coords_dflt",  default=("x","y","z"),help=u"Provides coordinates for the first plot (non-clickable)", nargs=3, metavar="xc yc zc")
+parser.add_option("-k", "--keep",   dest="clean_plot",   default=True,         help=u"Keep spectrum plot (do not clean spectrum field)", action="store_false")
 
 (options, args) = parser.parse_args(argv[1:]) # argv[1] is filename
 yt.mylog.setLevel(int(options.yt_verbose))    # Reduces the output to desired level, 50 - least output
@@ -57,8 +57,8 @@ save_spectrum     = (options.not_save_spec!=True)
 use_logscale      = ( options.use_linscale!=True)
 plot_field        = options.fieldname
 plot_var          = options.var_name
-plot_vel          = bool(options.plot_vel)
-plot_mag          = bool(options.plot_mag)
+plot_vel          = options.plot_vel
+plot_mag          = options.plot_mag
 if (plot_vel == True): plot_mag = False
 if (plot_mag == True): plot_vel = False
 user_annot_line   = False
@@ -267,16 +267,15 @@ if f_run == True:
     h = dom_r[avail_dim[1]] + abs(dom_l[avail_dim[1]])
 
     if (plot_field[0:-2] != "en_ratio"):
-      frb = np_array(dsSlice.to_frb(w, resolution, height=h)[plot_field])
+      frb = np_array(dsSlice.to_frb(width=w, resolution=resolution, height=h)[plot_field])
       if (not user_limits): plot_max = h5ds.find_max(plot_field)[0]
       if (not user_limits): plot_min = h5ds.find_min(plot_field)[0]
       plot_units = str(h5ds.all_data()[plot_field].units)
     else:               #== "en_ratio"
-      frb = np_array(dsSlice.to_frb(w, resolution, height=h)[plot_field])
+      frb = np_array(dsSlice.to_frb(width=w, resolution=resolution, height=h)[plot_field])
       if (not user_limits): plot_min = h5ds.find_min(plot_field)[0]
       if (not user_limits): plot_max = h5ds.find_max(plot_field)[0]
       plot_units = str(h5ds.all_data()[plot_field].units)
-
     if (user_limits == True): # Overwrites previously found values
        plot_min = plot_user_min
        plot_max = plot_user_max
@@ -297,7 +296,7 @@ if f_run == True:
 
     if (use_logscale):
       plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower" ,norm = LogNorm(vmin = plot_min, vmax = plot_max) if (encountered_nans == False) else LogNorm())
-    else:
+    elif (use_linscale):
       plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower", vmin = plot_min if (encountered_nans == False) else None, vmax = plot_max if (encountered_nans == False) else None)
 
     plt.title("Component: "+plot_field+" | t = %9.3f Myr"  %time)
