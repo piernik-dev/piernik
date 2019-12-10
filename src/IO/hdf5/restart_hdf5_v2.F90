@@ -306,6 +306,14 @@ contains
                   enddo
                   deallocate(dims)
                endif
+#ifdef NBODY_1FILE
+               n_part = count_all_particles()
+               if (n_part .gt. 0) then
+                  do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
+                     call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), n_part)
+                  enddo
+               endif
+#endif /* NBODY_1FILE */
             else
                if (can_i_write) call die("[restart_hdf5_v2:write_cg_to_restart] Slave can write")
                if (cg_desc%cg_src_p(ncg) == proc) then
@@ -944,7 +952,7 @@ contains
       use cg_particles_io,  only: pdsets
       use data_hdf5,        only: gdf_translate
       use read_attr,        only: read_attribute
-      use particle_utils,   only: is_part_in_cg
+      use particle_utils,   only: add_part_in_proper_cg, part_leave_cg
       use mpisetup, only: proc
 #endif /* NBODY_1FILE */
 
@@ -982,7 +990,6 @@ contains
       real, allocatable, dimension(:, :)           :: pos, vel, acc
       real, dimension(ndims)                       :: pos1, vel1, acc1
       real                                         :: mass1, ener1
-      logical                                      :: in, phy, out
 #endif /* NBODY_1FILE */
 
       ! Find overlap between own cg and restart cg
@@ -1096,6 +1103,7 @@ contains
                   vel(j, zdim) = a1d(j)
                case ('accx')
                   acc(j, xdim) = a1d(j)
+                  print *, 'acc', acc(j,xdim)
                case ('accy')
                   acc(j, ydim) = a1d(j)
                case ('accz')
@@ -1113,9 +1121,9 @@ contains
          pos1=pos(j,:)
          vel1=vel(j,:)
          acc1=acc(j,:)
-         call is_part_in_cg(cg, pos1, in, phy, out)
-         call cg%pset%add(pid1, mass1, pos1, vel1, acc1, ener1, in, phy, out)
+         call add_part_in_proper_cg(pid1, mass1, pos1, vel1, acc1, ener1)
       enddo
+      call part_leave_cg()
 
       deallocate(pid, mass, ener)
       deallocate(pos, vel, acc)
