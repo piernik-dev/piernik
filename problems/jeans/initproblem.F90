@@ -343,12 +343,21 @@ contains
             write(g_lun,'(a)') 'set xtics T'
             write(g_lun,'(a)') 'set title sprintf("Jeans oscillations, period=%g\nanalytical: %.5g * sin(%.5g * t)^2\nfit: %s\nrelative errors: amplitude = %.2g, period = %.2g", T, aa, bb, f_str, (1. - aa/a), (1- bb/b))'
          else ! unstable
-            write(g_lun,'(a,g13.5)') "a = ", amp**2 * omg**2 * 800000. !BEWARE: stronger dependence on omg, magic number 800000
+            write(g_lun,'(a)') 'set term dumb'
+            write(g_lun,'(a)') 'set output "/dev/null"'
             write(g_lun,'(a,g13.5)') "b = ", 2.0*omg
+            ! find values from first few data points
+            write(g_lun,'(a)') 'splot [1:4] file u ($1):($2):($10/$4) t ""'
+            write(g_lun,'(a)') 't1 = GPVAL_Y_MAX'
+            write(g_lun,'(a)') 'e1 = GPVAL_Z_MAX'
+            write(g_lun,'(a)') "a = e1 / exp(b * t1)"
             write(g_lun,'(a)') "T = 2*pi/b"
+            write(g_lun,'(a)') 'plot file u ($2):($10/$4) t ""'
+            write(g_lun,'(a)') 'maxval = GPVAL_DATA_Y_MAX'
+            write(g_lun,'(a,g11.3,a)')'set yrange [ * : 10**ceil(log10(maxval)) ]'
             write(g_lun,'(a)') "y(x) = a * exp(b*x)"
-            write(g_lun,'(3(a,/),a)') 'set key left Left reverse top', 'set log y', 'set xlabel "time"', 'set xrange [ * : * ]'
-            write(g_lun,'(a)') 'set title "Jeans instability"'
+            write(g_lun,'(3(a,/),a)') 'set key right bottom', 'set log y', 'set xlabel "time"', 'set xrange [ * : * ]'
+            write(g_lun,'(a)') 'set title sprintf("Jeans instability\nrough fit: %.5g * exp(%.5g * t)", a, b)'
          endif
 
          write(g_lun,'(a)') "set term png enhanced size 800, 600"
@@ -356,15 +365,17 @@ contains
          if (Tamp >0) then
             write(g_lun,'(a)') 'plot file using 2:($10/$4) w p t "simulation", "" u 2:($10/$4) smoo cspl t "" w l lt 1, y(x) t "analytical", "" u 2:(difffactor*(y($2)-$10/$4)) t sprintf("%d",difffactor)." * analytical difference" w lp, "" u 2:(resfactor*(f($2)-$10/$4)) t sprintf("%d", resfactor)." * residuals (simulation - fit)" w lp, 0 t "" w l lt 0'
          else
-            write(g_lun,'(a)') 'plot "jeans_ts1_000.tsl" u ($2):($10/$4) w p t "calculated", y(x) t "exp(2 om T)"'
+            write(g_lun,'(a)') 'plot file u ($2):($10/$4) w p t "calculated", y(x) t "a * exp(2 om T)"'
          endif
          write(g_lun,'(a)') 'set output'
 
-         write(g_lun,'(a,2g13.5)') 'print "#analytical = ", aa, bb'
-         write(g_lun,'(a,2g13.5)') 'print "#fit = ", a, b, c'
-         write(g_lun,'(a,2g13.5)') 'print "#maxval = ", maxval'
-         write(g_lun,'(a,2g13.5)') 'print "#maxres = ", maxres'
-         write(g_lun,'(a,2g13.5)') 'print "#maxdiff = ", maxdiff'
+         if (Tamp >0) then
+            write(g_lun,'(a,2g13.5)') 'print "#analytical = ", aa, bb'
+            write(g_lun,'(a,2g13.5)') 'print "#fit = ", a, b, c'
+            write(g_lun,'(a,2g13.5)') 'print "#maxval = ", maxval'
+            write(g_lun,'(a,2g13.5)') 'print "#maxres = ", maxres'
+            write(g_lun,'(a,2g13.5)') 'print "#maxdiff = ", maxdiff'
+         endif
          close(g_lun)
       endif
 
