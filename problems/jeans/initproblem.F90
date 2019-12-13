@@ -351,7 +351,7 @@ contains
             write(g_lun,'(a)') 'set title "Jeans instability"'
          endif
 
-         write(g_lun,'(a)') "set term png enhanced size 1280, 1024"
+         write(g_lun,'(a)') "set term png enhanced size 800, 600"
          write(g_lun,'(a)') "set output 'jeans.png'"
          if (Tamp >0) then
             write(g_lun,'(a)') 'plot file using 2:($10/$4) w p t "simulation", "" u 2:($10/$4) smoo cspl t "" w l lt 1, y(x) t "analytical", "" u 2:(difffactor*(y($2)-$10/$4)) t sprintf("%d",difffactor)." * analytical difference" w lp, "" u 2:(resfactor*(f($2)-$10/$4)) t sprintf("%d", resfactor)." * residuals (simulation - fit)" w lp, 0 t "" w l lt 0'
