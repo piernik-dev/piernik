@@ -84,6 +84,10 @@ contains
 !! \brief implementation of user-provided Jeans length refinement criterion
 !!
 !! This routine has to conform to unified_ref_crit_user::mark_urc_user
+!!
+!! \todo implement predictive marks based on velocity, something like:
+!! where (cg%refinemap) cg%refinemap(x + v*2*n_updAMR) = .true.
+!! count cases where internal refine flag goes beyond guardcells and suggest reducing n_updAMR
 !<
 
    subroutine mark_Jeans(this, cg)
