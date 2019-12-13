@@ -205,6 +205,9 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+#ifdef MAGNETIC
+         call cg%set_constant_b_field([0., 0., 0.])
+#endif /* MAGNETIC */
          do k = cg%ks, cg%ke
             zk = cg%z(k)-dom%edge(zdim, LO)
             do j = cg%js, cg%je
@@ -226,9 +229,7 @@ contains
                   cg%u(fl%imx:fl%imz,i,j,k) = 0.0
 #ifndef ISO
                   cg%u(fl%ien,i,j,k)        = pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
-
 #ifdef MAGNETIC
-                  call cg%set_constant_b_field([0., 0., 0.])
                   cg%u(fl%ien,i,j,k)        = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 #endif /* MAGNETIC */
 #endif /* !ISO */
