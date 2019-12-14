@@ -56,6 +56,8 @@ module hydrostatic
    integer(kind=4),   dimension(2) :: hsbn      !< first and last cell indices in proceeded block
    real, allocatable, dimension(:) :: hsl       !< lower borders of cells of proceeded block
    type(grid_container), pointer   :: hscg
+   logical                         :: unresolved = .false. !< check if grid subdivision is sufficient
+   real                            :: urslvd               !< factor of grid subdivision insufficiency
 
    interface
       real function hzeqscheme(ksub, up)
@@ -160,7 +162,7 @@ contains
 !<
    subroutine start_hydrostatic(iia, jja, csim2, sd)
 
-      use constants, only: half
+      use constants, only: half, two
       use gravity,   only: get_gprofs
 
       implicit none
@@ -177,6 +179,12 @@ contains
       enddo
       call get_gprofs(iia, jja)
       gprofs(:) = gprofs(:) / csim2 * dzs
+
+      if (any(abs(gprofs) >= two)) then
+         unresolved = .true.
+         urslvd = max(urslvd, maxval(abs(gprofs))/two)
+      endif
+
       call hydrostatic_main(sd)
 
    end subroutine start_hydrostatic
@@ -497,9 +505,15 @@ contains
 !<
    subroutine cleanup_hydrostatic
 
+      use dataio_pub,  only: msg, warn
       use diagnostics, only: my_deallocate
 
       implicit none
+
+      if (unresolved) then
+         write(msg,*) '[hydrostatic:cleanup_hydrostatic] nsub is too small! Make it larger about ', urslvd, ' times'
+         call warn(msg)
+      endif
 
       if (allocated(dprof)) call my_deallocate(dprof)
       if (allocated(hsl))   call my_deallocate(hsl)
