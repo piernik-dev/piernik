@@ -125,7 +125,9 @@ contains
 
 !>
 !! \brief Routine that establishes hydrostatic equilibrium for fixed plane density value
-!! \details To properly use this routine it is important to make sure that get_gprofs pointer has been associated. See details of start_hydrostatic routine.
+!! \details It is important to have get_gprofs pointer associated to a proper routine that gives back the column of nsub*nzt elements of gravitational acceleration in z direction.
+!! In the most common cases the gprofs_target parameter from GRAVITY namelist may be used. When it is set to 'accel' or 'extgp' the pointer is associated to get_gprofs_accel or get_gprofs_extgp routines, respectively.
+!! \note In this routine gprofs is multiplied by dzs/csim2 which are assumed to be constant. This is done for optimizing the hydrostatic_main routine.
 !! \param iia x-coordinate of z-column
 !! \param jja y-coordinate of z-column
 !! \param d0 plane density value for given x and y coordinates
@@ -134,43 +136,19 @@ contains
 !<
    subroutine hydrostatic_zeq_densmid(iia, jja, d0, csim2, sd)
 
-      use constants,  only: small
+      use constants,  only: half, small, two
       use dataio_pub, only: die
+      use gravity,    only: get_gprofs
 
       implicit none
 
       integer,        intent(in)  :: iia, jja
       real,           intent(in)  :: d0, csim2
       real, optional, intent(out) :: sd
+      integer                     :: ksub
 
       if (d0 <= small) call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
       dmid = d0
-
-      call start_hydrostatic(iia, jja, csim2, sd)
-      call finish_hydrostatic
-
-   end subroutine hydrostatic_zeq_densmid
-
-!>
-!! \brief Routine that prepares data for constructing hydrostatic equilibrium by hydrostatic_main routine
-!! \details It is important to have get_gprofs pointer associated to a proper routine that gives back the column of nsub*nzt elements of gravitational acceleration in z direction. In the most common cases the gprofs_target parameter from GRAVITY namelist may be used. When it is set to 'accel' or 'extgp' the pointer is associated to get_gprofs_accel or get_gprofs_extgp routines, respectively.
-!! \note After calling this routine gprofs is multiplied by dzs/csim2 which are assumed to be constant. This is done for optimizing the hydrostatic_main routine.
-!! \param iia x-coordinate of z-column
-!! \param jja y-coordinate of z-column
-!! \param csim2 sqare of sound velocity
-!! \param sd optional variable to give a sum of dprofs array from hydrostatic_main routine
-!<
-   subroutine start_hydrostatic(iia, jja, csim2, sd)
-
-      use constants, only: half, two
-      use gravity,   only: get_gprofs
-
-      implicit none
-
-      integer,        intent(in)  :: iia, jja
-      real,           intent(in)  :: csim2
-      real, optional, intent(out) :: sd
-      integer                     :: ksub
 
       allocate(zs(nstot), gprofs(nstot), dprofs(nstot))
 
@@ -187,17 +165,11 @@ contains
 
       call hydrostatic_main(sd)
 
-   end subroutine start_hydrostatic
-
-   subroutine finish_hydrostatic
-
-      implicit none
-
       if (allocated(zs))     deallocate(zs)
       if (allocated(gprofs)) deallocate(gprofs)
       if (allocated(dprofs)) deallocate(dprofs)
 
-   end subroutine finish_hydrostatic
+   end subroutine hydrostatic_zeq_densmid
 
 !>
 !! \brief Routine to set up sizes of arrays used in hydrostatic module. Settings depend on cg structure.
