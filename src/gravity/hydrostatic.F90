@@ -44,17 +44,17 @@ module hydrostatic
    public :: set_default_hsparams, hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, cleanup_hydrostatic, outh_bnd, init_hydrostatic
    public :: dprof, gprofs, nstot, zs, dzs, hsmin, hsbn, hsl, hscg
 
-   real, allocatable, dimension(:), save :: zs        !< array of z-positions of subgrid cells centers
-   real, allocatable, dimension(:), save :: gprofs    !< array of gravitational acceleration in a column of subgrid
-   real, allocatable, dimension(:)       :: dprofs
-   real, allocatable, dimension(:), save :: dprof     !< Array used for storing density during calculation of hydrostatic equilibrium
-   real,                            save :: dzs       !< length of the subgrid cell in z-direction
-   integer(kind=4),                 save :: nstot     !< total number of subgrid cells in a column through all z-blocks
-   real,                            save :: dmid      !< density value in a midplane (fixed for hydrostatic_zeq_densmid, overwritten by hydrostatic_zeq_coldens)
-   real,                            save :: hsmin     !< lower position limit
-   integer(kind=4),   dimension(2), save :: hsbn      !< first and last cell indices in proceeded block
-   real, allocatable, dimension(:), save :: hsl       !< lower borders of cells of proceeded block
-   type(grid_container), pointer,   save :: hscg
+   real, allocatable, dimension(:) :: zs        !< array of z-positions of subgrid cells centers
+   real, allocatable, dimension(:) :: gprofs    !< array of gravitational acceleration in a column of subgrid
+   real, allocatable, dimension(:) :: dprofs
+   real, allocatable, dimension(:) :: dprof     !< Array used for storing density during calculation of hydrostatic equilibrium
+   real                            :: dzs       !< length of the subgrid cell in z-direction
+   integer                         :: nstot     !< total number of subgrid cells in a column through all z-blocks
+   real                            :: dmid      !< density value in a midplane (fixed for hydrostatic_zeq_densmid, overwritten by hydrostatic_zeq_coldens)
+   real                            :: hsmin     !< lower position limit
+   integer(kind=4),   dimension(2) :: hsbn      !< first and last cell indices in proceeded block
+   real, allocatable, dimension(:) :: hsl       !< lower borders of cells of proceeded block
+   type(grid_container), pointer   :: hscg
 
    interface
       real function hzeqscheme(ksub, up)
@@ -310,7 +310,7 @@ contains
       factor = (4.0 + up*factor)/(4.0 - up*factor)
 
    end function hzeq_scheme_v2
-#endif
+#endif /* HYDROSTATIC_V2 */
 
    subroutine get_gprofs_accel(iia, jja)
 
@@ -360,6 +360,7 @@ contains
       gprofs(1:nstot) = (gpots(1,1,1:nstot) - gpots(1,1,2:nstot1))/dzs
       gprofs(:) = tune_zeq*gprofs(:)
       if (associated(gpots)) deallocate(gpots)
+
    end subroutine get_gprofs_extgp
 
    !>
