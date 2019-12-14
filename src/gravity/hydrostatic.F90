@@ -50,6 +50,7 @@ module hydrostatic
    real, allocatable, dimension(:) :: dprof     !< Array used for storing density during calculation of hydrostatic equilibrium
    real                            :: dzs       !< length of the subgrid cell in z-direction
    integer                         :: nstot     !< total number of subgrid cells in a column through all z-blocks
+   integer                         :: rnsub     !< effective nsub relative to the refinement
    real                            :: dmid      !< density value in a midplane (fixed for hydrostatic_zeq_densmid, overwritten by hydrostatic_zeq_coldens)
    real                            :: hsmin     !< lower position limit
    integer(kind=4),   dimension(2) :: hsbn      !< first and last cell indices in proceeded block
@@ -196,27 +197,29 @@ contains
 !<
    subroutine set_default_hsparams(cg)
 
-      use constants,   only: zdim, LO, HI, I_ONE, LEFT, RIGHT
-      use diagnostics, only: my_deallocate !, my_allocate
-      use domain,      only: dom
-      use gravity,     only: nsub
-      use grid_cont,   only: grid_container
+      use cg_level_finest, only: finest
+      use constants,       only: zdim, LO, HI, I_ONE, LEFT, RIGHT
+      use domain,          only: dom, is_refined
+      use gravity,         only: nsub
+      use grid_cont,       only: grid_container
 
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
+      real                                      :: mindz     !< cell size in z direction of the finest grid
 
       hscg => cg
+      mindz = cg%dl(zdim)
+      if (is_refined) mindz = dom%L_(zdim)/finest%level%l%n_d(zdim)
 
-      nstot = nsub * dom%n_t(zdim)
-      dzs   = (dom%edge(zdim, HI)-dom%edge(zdim, LO))/real(nstot-2*dom%nb*nsub)
-      hsmin = dom%edge(zdim, LO)-dom%nb*cg%dl(zdim)
+      nstot = nsub * (finest%level%l%n_d(zdim) + 2*dom%nb)
+      dzs   = mindz / nsub
+      rnsub = nint(cg%dl(zdim) / dzs)
+      hsmin = dom%edge(zdim, LO) - dom%nb * mindz
       hsbn  = cg%lhn(zdim,:)
-      if (allocated(dprof)) call my_deallocate(dprof)
-!      call my_allocate(dprof, [cg%n_(zdim)], "dprof")
+      if (allocated(dprof)) deallocate(dprof)
       allocate(dprof(hsbn(LO):hsbn(HI)))
-      if (allocated(hsl)) call my_deallocate(hsl)
-!      call my_allocate(hsl, [hsbn+I_ONE], "hsl")
+      if (allocated(hsl)) deallocate(hsl)
       allocate(hsl(hsbn(LO):hsbn(HI)+I_ONE))
       hsl(hsbn(LO):hsbn(HI)) = cg%coord(LEFT,  zdim)%r(hsbn(LO):hsbn(HI))
       hsl(hsbn(HI)+I_ONE)    = cg%coord(RIGHT, zdim)%r(hsbn(HI))
@@ -231,7 +234,6 @@ contains
       use constants,  only: LO, HI, zdim
       use dataio_pub, only: die
       use domain,     only: dom
-      use gravity,    only: nsub
 #ifdef HYDROSTATIC_V2
       use constants,  only: big_float
 #endif /* !HYDROSTATIC_V2 */
@@ -274,7 +276,7 @@ contains
       dprof(:) = 0.0
       do k = hsbn(LO), hsbn(HI)
          do ksub = 1, nstot
-            if (zs(ksub) > hsl(k) .and. zs(ksub) < hsl(k+1)) dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
+            if (zs(ksub) > hsl(k) .and. zs(ksub) < hsl(k+1)) dprof(k) = dprof(k) + dprofs(ksub)/real(rnsub)
          enddo
       enddo
 
