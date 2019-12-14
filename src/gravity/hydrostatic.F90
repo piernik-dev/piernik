@@ -314,17 +314,14 @@ contains
 
    subroutine get_gprofs_accel(iia, jja)
 
-      use constants, only: xdim, ydim, zdim
+      use constants, only: zdim
       use gravity,   only: tune_zeq, grav_accel
 
       implicit none
 
       integer, intent(in) :: iia, jja
-      integer             :: ia, ja
 
-      ia = min(hscg%n_(xdim), int(max(1, iia), kind=4))
-      ja = min(hscg%n_(ydim), int(max(1, jja), kind=4))
-      call grav_accel(zdim, ia, ja, zs, nstot, gprofs)
+      call grav_accel(zdim, iia, jja, zs, nstot, gprofs)
       gprofs(:) = tune_zeq*gprofs(:)
 
    end subroutine get_gprofs_accel
