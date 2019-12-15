@@ -132,7 +132,7 @@ contains
       call die("You must define MULTIGRID for this problem")
 #endif /* !SELF_GRAV */
 
-      if (mode < 0 .or. mode > 1)     call die("[initproblem:read_problem_par] Invalid mode.")
+      if (mode < 0 .or. mode > 2)     call die("[initproblem:read_problem_par] Invalid mode.")
       if (d0 < 0. .or. abs(amp) > 1.) call die("[initproblem:read_problem_par] Negative average density or amplitude too high.")
       if (p0 < 0.)                    call die("[initproblem:read_problem_par] Negative average pressure.")
       if (ix<0 .or. iy<0 .or. iz<0 .or. amp<0) then
@@ -225,7 +225,7 @@ contains
          write(g_lun,'(a)') "set output 'jeans-fft.png'"
          write(g_lun,'(a)') 'set title "Jeans oscillations (FFT)"'
 #endif /* !MULTIGRID */
-         write(g_lun,'(3(a,/),a)') 'set ylabel "E_{int}"', 'set xtics 1', 'set mxtics 2', 'set mytics 2'
+         write(g_lun,'(3(a,/),a)') 'set ylabel "E_int"', 'set xtics 1', 'set mxtics 2', 'set mytics 2'
          if ((Tamp_rounded .notequals. zero) .and. (Tamp > zero)) then
             write(g_lun,'(a,g11.3)')'set ytics ',Tamp_rounded/2.
             write(g_lun,'(2(a,g11.3),a)')'set yrange [ ',Tamp_rounded/(-4.),':',Tamp_rounded,']'
@@ -271,6 +271,7 @@ contains
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
       use grid_cont,   only: grid_container
+      use mpisetup,    only: proc
 
       implicit none
 
@@ -279,6 +280,10 @@ contains
       real                            :: xi, yj, zk, pres
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
+      integer                         :: seed
+
+       seed = proc
+       call srand(seed)
 
 ! Uniform equilibrium state
       fl => flind%ion
@@ -296,8 +301,11 @@ contains
                         cg%u(fl%idn,i,j,k)  = d0 * (1. +          amp * sin(kx*xi + ky*yj + kz*zk))
                         pres                = p0 * (1. + fl%gam * amp * sin(kx*xi + ky*yj + kz*zk))
                      case (1)
-                        cg%u(fl%idn,i,j,k)  = d0 * (1. +          amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
-                        pres                = p0 * (1. + fl%gam * amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
+                        cg%u(fl%idn,i,j,k)  = d0 * (1. +          amp * sin(kx*xi) * sin(ky*yj) * cos(kz*zk))
+                        pres                = p0 * (1. + fl%gam * amp * sin(kx*xi) * sin(ky*yj) * cos(kz*zk))
+                     case (2)
+                        cg%u(fl%idn,i,j,k)  = d0 * (1. +          amp * (1. - 2.*rand()))
+                        pres                = p0 * (1. + fl%gam * amp * (1. - 2.*rand()))
                      case default ! should not happen
                         cg%u(fl%idn,i,j,k)  = d0
                         pres                = p0
