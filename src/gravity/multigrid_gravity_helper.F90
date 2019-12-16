@@ -30,7 +30,7 @@
 !> \brief Multigrid routines and parameters useful for various variants of the solver
 
 module multigrid_gravity_helper
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
 
    implicit none
 
@@ -97,11 +97,13 @@ contains
    subroutine fft_solve_level(curl, src, soln)
 
       use cg_level_connected,  only: cg_level_connected_T
+      use dataio_pub,          only: die
+#ifndef NO_FFT
       use cg_list,             only: cg_list_element
       use constants,           only: fft_none, fft_rcr, fft_dst
-      use dataio_pub,          only: die
       use grid_cont,           only: grid_container
       use named_array,         only: p3
+#endif /* !NO_FFT */
 
       implicit none
 
@@ -109,15 +111,19 @@ contains
       integer(kind=4),                     intent(in)    :: src  !< index of source in cg%q(:)
       integer(kind=4),                     intent(in)    :: soln !< index of solution in cg%q(:)
 
+#ifdef NO_FFT
+      call die("[multigrid_gravity_helper:fft_solve_level] NO_FFT")
+      if (.false.) curl%fft_type = src + soln  ! suppress compiler warning
+#else /* !NO_FFT */
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
+      !> Check if there is one and only one cg on app processes, die if not
       if (associated(curl%first)) then
          if (associated(curl%first%nxt)) call die("[multigrid_gravity_helper:fft_solve_level] multicg not possible")
       else
          return
       endif
-      !> \todo Check if there is one and only one cg on app processes, die if not
 
       if (curl%fft_type == fft_none) call die("[multigrid_gravity_helper:fft_solve_level] FFT type not set")
 
@@ -128,7 +134,7 @@ contains
          p3 => cg%q(src)%span(cg%ijkse)
          cg%mg%src(:, :, :) = p3
 
-         ! do the convolution in Fourier space; cg%mg%src(:,:,:) -> cg%mg%fft{r}(:,:,:)
+         ! do the convolution in Fourier space; cg%mg%src(:,:,:) -> cg%mg%fft{,r}(:,:,:)
          call dfftw_execute(cg%mg%planf)
 
          select case (curl%fft_type)
@@ -140,13 +146,14 @@ contains
                call die("[multigrid_gravity_helper:fft_solve_level] Unknown FFT type.")
          end select
 
-         call dfftw_execute(cg%mg%plani) ! cg%mg%fft{r}(:,:,:) -> cg%mg%src(:,:,:)
+         call dfftw_execute(cg%mg%plani) ! cg%mg%fft{,r}(:,:,:) -> cg%mg%src(:,:,:)
 
          p3 => cg%q(soln)%span(cg%ijkse)
          p3 = cg%mg%src(:, :, :)
 
          cgl => cgl%nxt
       enddo
+#endif /* !NO_FFT */
 
    end subroutine fft_solve_level
 

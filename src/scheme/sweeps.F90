@@ -48,7 +48,7 @@
 
 module sweeps
 
-! pulled by RTVD || RIEMANN
+! pulled by ANY
 
    implicit none
 
@@ -63,13 +63,14 @@ contains
 
    integer function compute_nr_recv(cdim) result(nr)
 
-      use constants,        only: LO, HI, I_ONE
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use mpi,              only: MPI_DOUBLE_PRECISION
-      use mpisetup,         only: comm, mpi_err, req, inflate_req
+      use constants, only: LO, HI, I_ONE
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use mpi,       only: MPI_DOUBLE_PRECISION
+      use mpisetup,  only: comm, mpi_err, req, inflate_req
 
       implicit none
+
       integer(kind=4), intent(in)       :: cdim
 
       type(cg_list_element), pointer    :: cgl
@@ -82,6 +83,8 @@ contains
          cgl%cg%processed = .false.
          cgl%cg%finebnd(cdim, LO)%uflx(:, :, :) = 0. !> \warning overkill
          cgl%cg%finebnd(cdim, HI)%uflx(:, :, :) = 0.
+         if (allocated(cgl%cg%finebnd(cdim, LO)%bflx)) cgl%cg%finebnd(cdim, LO)%bflx(:, :, :) = 0.
+         if (allocated(cgl%cg%finebnd(cdim, HI)%bflx)) cgl%cg%finebnd(cdim, HI)%bflx(:, :, :) = 0.
          if (allocated(cgl%cg%rif_tgt%seg)) then
             associate ( seg => cgl%cg%rif_tgt%seg )
                do g = lbound(seg, dim=1), ubound(seg, dim=1)
@@ -104,12 +107,16 @@ contains
 !<
 
    subroutine recv_cg_finebnd(cdim, cg, all_received)
-      use constants,        only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims
-      use dataio_pub,       only: die
-      use grid_cont,        only: grid_container
-      use mpi,              only: MPI_STATUS_IGNORE
-      use mpisetup,         only: mpi_err
+
+      use constants,  only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims
+      use dataio_pub, only: die
+      use fluidindex, only: flind
+      use grid_cont,  only: grid_container
+      use mpi,        only: MPI_STATUS_IGNORE
+      use mpisetup,   only: mpi_err
+
       implicit none
+
       integer(kind=4), intent(in)                  :: cdim
       type(grid_container), pointer, intent(inout) :: cg
       logical, intent(out)                         :: all_received
@@ -141,7 +148,8 @@ contains
                   ! cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = &
                   !     cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) + seg(g)%buf(:, :, :)
                   ! for more general decompositions with odd-offset patches it might be necessary to do sum, but it need to be debugged first
-                  cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:, :, :)
+                  cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:flind%all, :, :)
+                  if (allocated(cg%finebnd(cdim, lh)%bflx)) cg%finebnd(cdim, lh)%bflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(flind%all+1:, :, :)
                else
                   all_received = .false.
                endif
@@ -157,15 +165,17 @@ contains
 !<
 
    subroutine send_cg_coarsebnd(cdim, cg, nr)
-      use constants,        only: pdims, LO, HI, ORTHO1, ORTHO2, I_ONE, INVALID
-      use dataio_pub,       only: die
-      use domain,           only: dom
-      use grid_cont,        only: grid_container
-      use grid_helpers,     only: f2c_o
-      use mpi,              only: MPI_DOUBLE_PRECISION
-      use mpisetup,         only: comm, mpi_err, req, inflate_req
+
+      use constants,    only: pdims, LO, HI, ORTHO1, ORTHO2, I_ONE, INVALID
+      use dataio_pub,   only: die
+      use domain,       only: dom
+      use grid_cont,    only: grid_container
+      use grid_helpers, only: f2c_o
+      use mpi,          only: MPI_DOUBLE_PRECISION
+      use mpisetup,     only: comm, mpi_err, req, inflate_req
 
       implicit none
+
       integer(kind=4), intent(in)                  :: cdim
       type(grid_container), pointer, intent(inout) :: cg
       integer, intent(inout)                       :: nr
@@ -194,7 +204,11 @@ contains
                seg(g)%buf(:, :, :) = 0.
                do j = j1(LO), j1(HI)
                   do k = j2(LO), j2(HI)
-                     seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + cg%coarsebnd(cdim, lh)%uflx(:, j, k)
+                     if (allocated(cg%coarsebnd(cdim, lh)%bflx)) then
+                        seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + [ cg%coarsebnd(cdim, lh)%uflx(:, j, k), cg%coarsebnd(cdim, lh)%bflx(:, j, k) ]
+                     else
+                        seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + cg%coarsebnd(cdim, lh)%uflx(:, j, k)
+                     endif
                   enddo
                enddo
                seg(g)%buf = 1/2.**(dom%eff_dim-1) * seg(g)%buf
@@ -220,14 +234,13 @@ contains
 
    subroutine update_boundaries(cdim, istep)
 
-      use all_boundaries,   only: all_fluid_boundaries
-      use cg_leaves,        only: leaves
-      use constants,        only: first_stage, DIVB_HDC, psi_n
-      use domain,           only: dom
-      use global,           only: sweeps_mgu, integration_order, divB_0_method
-      use named_array_list, only: qna
+      use all_boundaries, only: all_fluid_boundaries
+!      use cg_leaves,      only: leaves
+      use constants,      only: first_stage, DIVB_HDC
+      use domain,         only: dom
+      use global,         only: sweeps_mgu, integration_order, divB_0_method
 #ifdef MAGNETIC
-      use all_boundaries,   only: all_mag_boundaries
+      use all_boundaries, only: all_mag_boundaries
 #endif /* MAGNETIC */
 
       implicit none
@@ -236,9 +249,8 @@ contains
       integer,         intent(in) :: istep
 
       if (divB_0_method == DIVB_HDC) then
-         if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
 #ifdef MAGNETIC
-         call all_mag_boundaries
+         call all_mag_boundaries ! ToDo: take care of psi boundaries
 #endif /* MAGNETIC */
       endif
 
@@ -269,16 +281,35 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: ydim, first_stage, last_stage, uh_n, magh_n, psih_n, psi_n, INVALID
+      use constants,        only: ydim, first_stage, last_stage, uh_n, magh_n, psih_n, psi_n, INVALID, &
+           &                      RTVD_SPLIT, RIEMANN_SPLIT
       use dataio_pub,       only: die
-      use global,           only: integration_order, use_fargo
+      use global,           only: integration_order, use_fargo, which_solver
       use grid_cont,        only: grid_container
       use mpisetup,         only: mpi_err, req, status
       use named_array_list, only: qna, wna
-      use solvecg,          only: solve_cg
+      use solvecg_rtvd,     only: solve_cg_rtvd
+      use solvecg_riemann,  only: solve_cg_riemann
       use sources,          only: prepare_sources
 
       implicit none
+
+      interface
+
+         subroutine solve_cg_sub(cg, ddim, istep, fargo_vel)
+
+            use grid_cont, only: grid_container
+
+            implicit none
+
+            type(grid_container), pointer, intent(in) :: cg
+            integer(kind=4),               intent(in) :: ddim
+            integer,                       intent(in) :: istep     ! stage in the time integration scheme
+            integer(kind=4), optional,     intent(in) :: fargo_vel
+
+         end subroutine solve_cg_sub
+
+      end interface
 
       integer(kind=4),           intent(in) :: cdim
       integer(kind=4), optional, intent(in) :: fargo_vel
@@ -291,6 +322,16 @@ contains
       integer                        :: g, nr, nr_recv
       integer                        :: uhi, bhi, psii, psihi
       integer(kind=4), dimension(:,:), pointer :: mpistatus
+      procedure(solve_cg_sub), pointer :: solve_cg => null()
+
+      select case (which_solver)
+         case (RTVD_SPLIT)
+            solve_cg => solve_cg_rtvd
+         case (RIEMANN_SPLIT)
+            solve_cg => solve_cg_riemann
+         case default
+            call die("[sweeps:sweep] unsupported solver")
+      end select
 
       if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) &
            call die("[sweeps:sweep] FARGO velocity keyword not present in y sweep")
@@ -302,7 +343,8 @@ contains
       ! the beginning of the timestep, not at half-step.
       ! For RK2, when istep==2, cg%u temporalily contains the state at half timestep.
       uhi = wna%ind(uh_n)
-      bhi = wna%ind(magh_n)
+      bhi = INVALID
+      if (wna%exists(magh_n)) bhi = wna%ind(magh_n)
       psii = INVALID
       psihi = INVALID
       if (qna%exists(psi_n)) then
@@ -315,8 +357,8 @@ contains
       do while (associated(cgl))
          call prepare_sources(cgl%cg)
          cgl%cg%w(uhi)%arr = cgl%cg%u
-         cgl%cg%w(bhi)%arr = cgl%cg%b
-         if (psii /= INVALID) cgl%cg%q(psihi)%arr = cgl%cg%q(psii)%arr
+         if (bhi  > INVALID) cgl%cg%w(bhi)%arr = cgl%cg%b
+         if (psii > INVALID) cgl%cg%q(psihi)%arr = cgl%cg%q(psii)%arr
          cgl => cgl%nxt
       enddo
 
@@ -329,6 +371,7 @@ contains
          do while (.not. all_processed)
             all_processed = .true.
             blocks_done = 0
+            ! OPT this loop should probably go from finest to coarsest for better compute-communicate overlap.
             cgl => leaves%first
             do while (associated(cgl))
                cg => cgl%cg

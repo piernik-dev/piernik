@@ -85,9 +85,9 @@ contains
       use multigridvars,       only: single_base, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, &
            &                         source_n, solution_n, defect_n, correction_n, source, solution, defect, correction
       use named_array_list,    only: qna
-#ifdef GRAV
+#ifdef SELF_GRAV
       use multigrid_gravity,   only: multigrid_grav_par
-#endif /* GRAV */
+#endif /* SELF_GRAV */
 #ifdef COSM_RAYS
       use multigrid_diffusion, only: multigrid_diff_par
 #endif /* COSM_RAYS */
@@ -173,9 +173,9 @@ contains
       if (dom%eff_dim < 1 .or. dom%eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
 
 !! \todo Make an array of subroutine pointers
-#ifdef GRAV
+#ifdef SELF_GRAV
       call multigrid_grav_par
-#endif /* GRAV */
+#endif /* SELF_GRAV */
 #ifdef COSM_RAYS
       call multigrid_diff_par
 #endif /* COSM_RAYS */
@@ -213,9 +213,9 @@ contains
       use grid_cont,          only: grid_container
       use mpisetup,           only: master
       use multigridvars,      only: single_base
-#ifdef GRAV
+#ifdef SELF_GRAV
       use multigrid_gravity,  only: init_multigrid_grav
-#endif /* GRAV */
+#endif /* SELF_GRAV */
 
       implicit none
 
@@ -276,7 +276,7 @@ contains
             if (curl%l%id == -level_depth .and. single_base) then
                call curl%add_patch(n_pieces=I_ONE)
             else
-               !> \todo When there is more AMR_bsize-pieces than processes, consider forcing cartesian or noncartesian decomposition
+               !> \todo When there is more AMR::bsize-pieces than processes, consider forcing cartesian or noncartesian decomposition
                call curl%add_patch
             endif
          endif
@@ -285,9 +285,9 @@ contains
          curl => curl%coarser
       enddo
 
-#ifdef GRAV
+#ifdef SELF_GRAV
       call init_multigrid_grav
-#endif /* GRAV */
+#endif /* SELF_GRAV */
 
       ! summary
       if (master) then
@@ -304,9 +304,9 @@ contains
 
       use constants,          only: dsetnamelen
       use grid_container_ext, only: cg_ext, cg_extptrs
-#ifdef GRAV
+#ifdef SELF_GRAV
       use multigrid_gravity,  only: init_multigrid_grav_ext
-#endif /* GRAV */
+#endif /* SELF_GRAV */
 
       implicit none
 
@@ -317,9 +317,9 @@ contains
       mg_cg_cleanup_p => mg_cg_cleanup
       call cg_extptrs%extend(mg_cg_init_p, mg_cg_cleanup_p, mg_ext_name)
 
-#ifdef GRAV
+#ifdef SELF_GRAV
       call init_multigrid_grav_ext(mg_ext_name)
-#endif /* GRAV */
+#endif /* SELF_GRAV */
 !!$#ifdef COSM_RAYS
 !!$      call init_multigrid_cr_ext(mg_ext_name)
 !!$#endif /* COSM_RAYS */
@@ -371,9 +371,9 @@ contains
       use mpi,                 only: MPI_DOUBLE_PRECISION
       use mpisetup,            only: master, nproc, FIRST, LAST, comm, mpi_err
       use multigridvars,       only: tot_ts
-#ifdef GRAV
+#ifdef SELF_GRAV
       use multigrid_gravity,   only: cleanup_multigrid_grav
-#endif /* GRAV */
+#endif /* SELF_GRAV */
 #ifdef COSM_RAYS
       use multigrid_diffusion, only: cleanup_multigrid_diff
 #endif /* COSM_RAYS */
@@ -382,9 +382,9 @@ contains
 
       real, allocatable, dimension(:) :: all_ts
 
-#ifdef GRAV
+#ifdef SELF_GRAV
       call cleanup_multigrid_grav
-#endif /* GRAV */
+#endif /* SELF_GRAV */
 #ifdef COSM_RAYS
       call cleanup_multigrid_diff
 #endif /* COSM_RAYS */

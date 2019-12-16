@@ -40,7 +40,7 @@
 
 module named_array_list
 
-   use constants, only: dsetnamelen
+   use constants, only: dsetnamelen, INVALID
 
    implicit none
 
@@ -77,13 +77,13 @@ module named_array_list
 
    !> \brief the most commonly used 3D named array is wa, thus we add a shortcut here
    type, extends(na_var_list) :: na_var_list_q
-      integer(kind=4) :: wai                                   !< auxiliary array : cg%q(qna%wai)
+      integer(kind=4) :: wai = INVALID                           !< auxiliary array : cg%q(qna%wai)
    end type na_var_list_q
 
    !> \brief the most commonly used 4D named arraya are u and b, thus we add shortcuts here
    type, extends(na_var_list) :: na_var_list_w
-      integer(kind=4) :: fi                                    !< fluid           : cg%w(wna%fi)
-      integer(kind=4) :: bi                                    !< magnetic field  : cg%w(wna%bi)
+      integer(kind=4) :: fi = INVALID                            !< fluid           : cg%w(wna%fi)
+      integer(kind=4) :: bi = INVALID                            !< magnetic field  : cg%w(wna%bi)
    end type na_var_list_w
 
    type(na_var_list_q), target :: qna !< list of registered 3D named arrays
@@ -209,28 +209,24 @@ contains
 
 !> \brief Find out which fields (cg%q and cg%w arrays) are stored in the restart file
 
+   subroutine get_reslst(this, lst)
 
-   function get_reslst(this) result (lst)
-
-      use constants,        only: AT_IGNORE
-      use func,             only: append_int_to_array
+      use constants, only: AT_IGNORE
+      use func,      only: append_int_to_array
 
       implicit none
 
-      class(na_var_list), intent(in) :: this
+      class(na_var_list),                 intent(in)  :: this
+      integer, dimension(:), allocatable, intent(out) :: lst
 
-      integer, dimension(:), allocatable :: lst
-      integer                            :: i
+      integer :: i
 
-      if (allocated(this%lst)) then
-         do i = lbound(this%lst(:), dim=1, kind=4), ubound(this%lst(:), dim=1, kind=4)
-            if (this%lst(i)%restart_mode > AT_IGNORE) call append_int_to_array(lst, i)
-         enddo
-      endif
-      if (.not.allocated(lst)) allocate(lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
+      allocate(lst(0))  ! we rely on its existence
+      do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
+         if (this%lst(i)%restart_mode > AT_IGNORE) call append_int_to_array(lst, i)
+      enddo
 
-   end function get_reslst
-
+   end subroutine get_reslst
 
 !> \brief Summarize all registered fields and their properties
 

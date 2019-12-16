@@ -56,12 +56,15 @@ module constants
    real, parameter :: zero       = 0.0                   !< zero
    real, parameter :: one        = 1.0                   !< one
    real, parameter :: two        = 2.0                   !< two
+   real, parameter :: four       = 4.0                   !< four
+   real, parameter :: eight      = 8.0                   !< eight
    real, parameter :: half       = 0.5                   !< a half
    real, parameter :: onet       = 1./3.                 !< one third
    real, parameter :: twot       = 2./3.                 !< two thirds
    real, parameter :: oneq       = 1./4.                 !< one fourth
    real, parameter :: thrq       = 3./4.                 !< three fourths
    real, parameter :: onesth     = 1./6.                 !< one sixth
+   real, parameter :: oneeig     = 1./8.                 !< one eighth
 
    enum, bind(C)
       enumerator :: idn = 1, imx, imy, imz, ien
@@ -86,6 +89,8 @@ module constants
    real, parameter :: big        = huge(real(1.0,4))     !< a constant used as the upper limit number
    real, parameter :: big_float  = huge(real(1.0,4))     !< replicated temporarily 'big' for compatibility \todo choose one and convert occurrences of the other one
    real, parameter :: dirtyH     = big                   !< If dirty_debug then pollute arrays with this insane value
+   real, parameter :: dirtyH1    = 10.**int(log10(big))  !< this "round" dirty value makes it easier to detect which call contaminated the data
+   real, parameter :: dirtyH1c   = 0.1 * dirtyH1         !< lowest value of marked dirty pollutions
    real, parameter :: dirtyL     = sqrt(dirtyH)          !< If dirty_debug then assume that the array got contaminated by dirtyH by checking against this value
    real, parameter :: small      = tiny(real(1.0,4))     !< a constant used as the lower limit number
    integer, parameter :: big_int = huge(int(1,4))
@@ -127,8 +132,8 @@ module constants
    enum, bind(C)
       enumerator :: PIERNIK_START                        ! before initialization
       enumerator :: PIERNIK_INIT_MPI                     ! initialized MPI
-      enumerator :: PIERNIK_INIT_GLOBAL                  ! initialized global parameters
       enumerator :: PIERNIK_INIT_DOMAIN                  ! initialized domain
+      enumerator :: PIERNIK_INIT_GLOBAL                  ! initialized global parameters
       enumerator :: PIERNIK_INIT_FLUIDS                  ! initialized fluid properties
       enumerator :: PIERNIK_INIT_GRID                    ! initialized grids
       enumerator :: PIERNIK_INIT_IO_IC                   ! initialized all physics
@@ -163,6 +168,16 @@ module constants
       enumerator :: BND_USER                  !! user boundaries (provided in read_problem_par)
       enumerator :: BND_INVALID = BND_MPI - 1 !! non-recognized boundary
    end enum
+
+   ! solver type
+   enum, bind(C)
+      enumerator :: RTVD_SPLIT    !! MHD RTVD, as it was implemented from the beginning of Piernik
+      enumerator :: HLLC_SPLIT    !! non-magnetic (pure HD) HLLC as first attempt of something more precise than RTVD, lacks many features an ma be removed at some point
+      enumerator :: RIEMANN_SPLIT !! MHD Riemann, implementations by Varadarajan Parthasarathy; HD variant is slower than HLLC_SPLIT
+   end enum
+   ! Perhaps it may make sense to create compatibility matrix for solvers.
+   ! AMR, magnetic, FARGO, resistivity, ...
+
 
    ! enumerate stages of Runge-Kutta method in an unique way, so istep will contain information both about stage and method
    enum, bind(C)
@@ -228,6 +243,8 @@ module constants
       enumerator :: O_I2  = 2  !! integral quadratic
       enumerator :: O_I3  = 3  !! integral cubic
       enumerator :: O_I4  = 4  !! integral quartic
+      enumerator :: O_I5  = 5  !! integral quintic
+      enumerator :: O_I6  = 6  !! integral sextic
       enumerator :: O_D2  = -2 !! direct quadratic
       enumerator :: O_D3  = -3 !! direct cubic
       enumerator :: O_D4  = -4 !! direct quartic
@@ -268,6 +285,7 @@ module constants
       enumerator :: DIVB_CT   ! Constrained Transport
       enumerator :: DIVB_HDC  ! Hyperbolic Divergence Cleaning (div(B) diffusion, GLM)
    end enum
+   integer(kind=4), parameter :: psidim = zdim + 1
 
    ! -1, 0, 1
    enum, bind(C)
@@ -296,6 +314,12 @@ module constants
    end enum
 
    ! misc
+   logical, parameter :: has_B = &
+#ifdef MAGNETIC
+        .true.
+#else /* !MAGNETIC */
+        .false.
+#endif /* !MAGNETIC */
    enum, bind(C)
       enumerator :: MINL, MAXL                           !< constants for func::get_extremum
       enumerator :: RD, WR                               !< constants for wd_{rd,wr} selection

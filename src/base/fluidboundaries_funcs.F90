@@ -35,7 +35,7 @@ module fluidboundaries_funcs
    implicit none
 
    private
-   public :: default_bnd, user_fluidbnd, init_default_fluidboundaries
+   public :: default_bnd, outh_fluidbnd, user_fluidbnd, init_default_fluidboundaries
 
    interface
 
@@ -53,7 +53,7 @@ module fluidboundaries_funcs
 
    end interface
 
-   procedure(user_bnd), pointer :: user_fluidbnd
+   procedure(user_bnd), pointer :: user_fluidbnd, outh_fluidbnd
 
 contains
 
@@ -69,7 +69,7 @@ contains
       type(grid_container), pointer, intent(inout) :: cg
       integer(kind=4),     optional, intent(in)    :: wn, qn, emfdir
 
-      call die("User boundaries are not defined")
+      call die("[fluidboundaries_funcs:default_bnd] User or outh boundaries are not defined")
 
       if (.true. .or. cg%grid_id*dir*side >=0) return ! suppress compiler warnings
       if (present(wn) .or. present(qn) .or. present(emfdir)) return ! suppress compiler warning
@@ -92,6 +92,7 @@ contains
       call printinfo("[fluidboundaries_funcs:init_default_fluidboundaries]: commencing...")
 #endif /* VERBOSE */
 
+      outh_fluidbnd => default_bnd
       user_fluidbnd => default_bnd
 
 #ifdef VERBOSE

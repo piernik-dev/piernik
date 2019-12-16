@@ -106,7 +106,8 @@ module dataio_pub
    logical, save               :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
    logical, save               :: log_file_initialized = .false. !< logical to mark initialization of logfile
    logical, save               :: log_file_opened = .false.      !< logical to mark opening of logfile
-   integer(kind=4), save       :: require_problem_IC = 0          !< 1 will call initproblem::problem_initial_conditions on restart
+   logical, save               :: restarted_sim = .false.        !< logical to distinguish between new and restarted simulation
+   integer(kind=4), save       :: require_problem_IC = 0         !< 1 will call initproblem::problem_initial_conditions on restart
 
    logical                     :: vizit = .false.                !< perform "live" visualization using pgplot
    logical                     :: multiple_h5files = .false.     !< write one HDF5 file per proc
@@ -128,10 +129,12 @@ module dataio_pub
 
    ! Per suggestion of ZEUS sysops:
    ! http://www.fz-juelich.de/ias/jsc/EN/Expertise/Supercomputers/JUROPA/UserInfo/IO_Tuning.htm
+#if defined(__INTEL_COMPILER)
    integer, parameter               :: io_par = 4
    character(len=io_par), parameter :: io_buffered = "yes"
    integer, parameter               :: io_blocksize = 1048576
    integer, parameter               :: io_buffno = 1
+#endif /* __INTEL_COMPILER */
 
    interface
       subroutine namelist_errh_P(ierrh, nm, skip_eof)
@@ -288,20 +291,18 @@ contains
          if (log_file_initialized) then
             if (.not.log_file_opened) then
 #if defined(__INTEL_COMPILER)
-               open(newunit=log_lun, file=log_file, position='append', &
-                 &  blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
+               open(newunit=log_lun, file=log_file, position='append', blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
 #else /* __INTEL_COMPILER */
-               open(newunit=log_lun, file=log_file, position='append', asynchronous='yes')
+               open(newunit=log_lun, file=log_file, position='append') !> \todo reconstruct asynchronous writing to log files
 #endif /* !__INTEL_COMPILER */
                log_file_opened = .true.
             endif
          else
             ! BEWARE: possible race condition
 #if defined(__INTEL_COMPILER)
-            open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', &
-              &  blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
+            open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
 #else /* __INTEL_COMPILER */
-            open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', asynchronous='yes')
+            open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append')
 #endif /* !__INTEL_COMPILER */
          endif
          if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
@@ -327,13 +328,8 @@ contains
       integer :: line
 
       do line = 1, min(cbline, size(logbuffer, kind=4))
-#if defined(__INTEL_COMPILER)
-         write(log_lun, '(a)') trim(logbuffer(line))
-#else /* __INTEL_COMPILER */
-         write(log_lun, '(a)', asynchronous='yes') trim(logbuffer(line))
-#endif /* !__INTEL_COMPILER */
+         write(log_lun, '(a)') trim(logbuffer(line)) !> \todo reconstruct asynchronous writing to log files
       enddo
-      wait(log_lun)
 
    end subroutine flush_to_log
 !-----------------------------------------------------------------------------

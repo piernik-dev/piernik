@@ -75,44 +75,6 @@
 #  error None of { IONIZED DUST NEUTRAL } were defined.
 #endif /* !FLUID */
 
-/*
- * Hydro solvers
- *
- * Exclusive: RTVD, HLLC, RIEMANN
- * Default: RTVD
- */
-
-#undef HYDRO_SOLVER
-#undef HS2
-
-#ifdef RTVD
-#  if defined(HYDRO_SOLVER)
-#    define HS2
-#  else /* !HYDRO_SOLVER */
-#  define HYDRO_SOLVER
-#  endif /* !HYDRO_SOLVER */
-#endif /* RTVD */
-
-#ifdef HLLC
-#  if defined(HYDRO_SOLVER)
-#    define HS2
-#  else /* !HYDRO_SOLVER */
-#    define HYDRO_SOLVER
-#  endif /* !HYDRO_SOLVER */
-#endif /* HLLC */
-
-#ifdef RIEMANN
-#  if defined(HYDRO_SOLVER)
-#    define HS2
-#  else /* !HYDRO_SOLVER */
-#    define HYDRO_SOLVER
-#  endif /* !HYDRO_SOLVER */
-#endif /* RIEMANN */
-
-#if defined(HS2)
-#  error Choose only one of { RTVD, HLLC, RIEMANN }.
-#endif /* HS2 */
-
 #ifdef NOMAGNETICNORESIST
 # warning MAGNETIC is not defined, then RESISTIVE is also cancelled
 #endif /* NOMAGNETICNORESIST */
@@ -124,14 +86,10 @@
 */
 
 #ifdef MULTIGRID
-#  if !defined(GRAV) && !defined(COSM_RAYS)
-#    warning MULTIGRID defined but none of { GRAV, COSM_RAYS } are used.
-#  endif /* !GRAV && !COSMIC_RAYS */
+#  if !defined(SELF_GRAV) && !defined(COSM_RAYS)
+#    warning MULTIGRID defined but none of { SELF_GRAV, COSM_RAYS } are used.
+#  endif /* !SELF_GRAV && !COSMIC_RAYS */
 #endif /* MULTIGRID */
-
-#if (defined(HLLC) || defined(RIEMANN)) && defined CORIOLIS
-#  error CORIOLIS has been implemented only for RTVD so far.
-#endif /* (HLLC || RIEMANN) && CORIOLIS */
 
 #ifdef USER_RULES
 #  include "user_rules.h"

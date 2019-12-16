@@ -14,7 +14,7 @@
 !    GNU General Public License for more details.
 !
 !    You should have received a copy of the GNU General Public License
-!    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
+!    along with PIERNIK.  If not, see http://www.gnu.org/licenses/.
 !
 !    Initial implementation of PIERNIK code was based on TVD split MHD code by
 !    Ue-Li Pen
@@ -24,38 +24,30 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
+
 #include "piernik.h"
 
 !>
-!! \brief Module that implements compatibility with fargo calls for RTVD
+!! \brief Unified refinement criteria for geometrical primitives
 !!
-!! \todo Integrate this solver as much as possible with RTVD and no such tricks will be necessary
+!! \details Currently only points and boxes are implemented
+!!
+!! \todo Add sphere, shell, cylinder, etc.
 !<
 
-module sweeps
+module unified_ref_crit_geometrical
 
-! pulled by HLLC
+   use unified_ref_crit, only: urc
 
    implicit none
 
    private
-   public  :: sweep
+   public :: urc_geom
 
-contains
+!> \brief Things that should be common for all refinement criteria based on geometrical primitives.
 
-   subroutine sweep(cdim, fargo_vel)
+   type, abstract, extends(urc) :: urc_geom
+      integer :: level  !< desired level of refinement
+   end type urc_geom
 
-      use dataio_pub,         only: die
-
-      implicit none
-
-      integer(kind=4), intent(in)           :: cdim
-      integer(kind=4), intent(in), optional :: fargo_vel
-
-      call die("[sweep] Fargo is not yet enabled for HLLC")
-
-      if (.false.) write(0,*) cdim, present(fargo_vel) ! suppress compiler warning on unused argument
-
-   end subroutine sweep
-
-end module sweeps
+end module unified_ref_crit_geometrical

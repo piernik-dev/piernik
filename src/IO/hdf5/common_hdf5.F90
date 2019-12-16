@@ -44,7 +44,7 @@ module common_hdf5
    public :: hdf_vars, hdf_vars_avail, cancel_hdf_var, d_gname, base_d_gname, d_fc_aname, d_size_aname, &
         d_edge_apname, d_bnd_apname, cg_gname, cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, &
         n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, cg_dl_aname, O_OUT, O_RES, STAT_OK, STAT_INV, &
-        create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output
+        create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output, enable_all_hdf_var
 
    character(len=dsetnamelen), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
    logical,                    allocatable, dimension(:), protected :: hdf_vars_avail
@@ -197,7 +197,7 @@ contains
       enddo
 
       allocate(hdf_vars_avail(size(hdf_vars)))
-      if (size(hdf_vars_avail) > 0) hdf_vars_avail = .true.
+      call enable_all_hdf_var
 
    contains
 
@@ -246,6 +246,8 @@ contains
 
    end subroutine cleanup_hdf5
 
+!> \brief Mark a plot variable as faulty (don't spam warnings unnecessarily)
+
    subroutine cancel_hdf_var(var)
 
       use constants, only: I_ONE
@@ -260,6 +262,16 @@ contains
       enddo
 
    end subroutine cancel_hdf_var
+
+!> \brief Mark all plot variables as good
+
+   subroutine enable_all_hdf_var
+
+      implicit none
+
+      if (size(hdf_vars_avail) > 0) hdf_vars_avail = .true.
+
+   end subroutine enable_all_hdf_var
 
 !-----------------------------------------------------------------------------
 !>
@@ -361,7 +373,7 @@ contains
          & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
          & H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, &
          & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
-      use mpisetup,      only: slave
+      use mpisetup,      only: master, slave
       use version,       only: env, nenv
 #ifdef RANDOMIZE
       use randomization, only: write_current_seed_to_restart
@@ -369,6 +381,9 @@ contains
 #ifdef SN_SRC
       use snsources,     only: write_snsources_to_restart
 #endif /* SN_SRC */
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      use multigrid_gravity, only: write_oldsoln_to_restart
+#endif /* MULTIGRID && SELF_GRAV */
 
       implicit none
 
@@ -383,10 +398,16 @@ contains
 
       if (associated(user_attrs_pre)) call user_attrs_pre
 
-      if (slave) return ! This data need not be written in parallel.
+      if (master) then
+         call h5open_f(error)
+         call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
+      endif
 
-      call h5open_f(error)
-      call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      call write_oldsoln_to_restart(file_id)  ! Old solution fields have to be selectively marked for restart also on slaves
+#endif /* MULTIGRID && SELF_GRAV */
+
+      if (slave) return ! This data need not be written in parallel.
 
       if (use_v2_io) then
          call set_common_attributes_v2(file_id)
@@ -465,6 +486,7 @@ contains
       use hdf5,            only: HID_T, SIZE_T
       use h5lt,            only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
       use mass_defect,     only: magic_mass
+      use timestep_pub,    only: c_all_old, cfl_c, stepcfl
       use units,           only: cm, gram, sek, kelvin, miu0
 
       implicit none
@@ -494,13 +516,16 @@ contains
       rbuffer(12)  = last_hdf_time           ; rbuffer_name(12)  = "last_hdf_time" !rr2
       rbuffer(13)  = last_res_time           ; rbuffer_name(13)  = "last_res_time" !rr2
       rbuffer(14)  = -99999.9                ; rbuffer_name(14)  = "last_plt_time" !rr2 ! FIXME
-      rbuffer(15)  = cm                      ; rbuffer_name(15)  = "cm" !rr2
-      rbuffer(16)  = gram                    ; rbuffer_name(16)  = "gram" !rr2
-      rbuffer(17)  = sek                     ; rbuffer_name(17)  = "sek" !rr2
-      rbuffer(18)  = miu0                    ; rbuffer_name(18)  = "miu0" !rr2
-      rbuffer(19)  = kelvin                  ; rbuffer_name(19)  = "kelvin" !rr2
-      rbuffer_size(20) = flind%fluids
-      rbuffer(20:19+rbuffer_size(20)) = magic_mass ; rbuffer_name(20:19+rbuffer_size(20)) = "magic_mass" !rr2
+      rbuffer(15)  = c_all_old               ; rbuffer_name(15)  = "c_all_old" !rr2
+      rbuffer(16)  = stepcfl                 ; rbuffer_name(16)  = "stepcfl" !rr2
+      rbuffer(17)  = cfl_c                   ; rbuffer_name(17)  = "cfl_c" !rr2
+      rbuffer(18)  = cm                      ; rbuffer_name(18)  = "cm" !rr2
+      rbuffer(19)  = gram                    ; rbuffer_name(19)  = "gram" !rr2
+      rbuffer(20)  = sek                     ; rbuffer_name(20)  = "sek" !rr2
+      rbuffer(21)  = miu0                    ; rbuffer_name(21)  = "miu0" !rr2
+      rbuffer(22)  = kelvin                  ; rbuffer_name(22)  = "kelvin" !rr2
+      rbuffer_size(23) = flind%fluids
+      rbuffer(23:22+rbuffer_size(23)) = magic_mass ; rbuffer_name(23:22+rbuffer_size(23)) = "magic_mass" !rr2
 
       ibuffer(1)   = nstep                   ; ibuffer_name(1)   = "nstep" !rr2
       ibuffer(2)   = nres                    ; ibuffer_name(2)   = "nres" !rr2
@@ -549,6 +574,7 @@ contains
       use hdf5,               only: HID_T
       use mass_defect,        only: magic_mass
       use set_get_attributes, only: set_attr
+      use timestep_pub,       only: c_all_old, cfl_c, stepcfl
 
       implicit none
 
@@ -563,6 +589,9 @@ contains
       call set_attr(file_id, "last_hdf_time", [last_hdf_time         ]) !rr2
       call set_attr(file_id, "last_res_time", [last_res_time         ]) !rr2
       call set_attr(file_id, "last_plt_time", [-99999.99999          ]) !rr2 !FIXME
+      call set_attr(file_id, "c_all_old",     [c_all_old             ]) !rr2
+      call set_attr(file_id, "stepcfl",       [stepcfl               ]) !rr2
+      call set_attr(file_id, "cfl_c",         [cfl_c                 ]) !rr2
       call set_attr(file_id, "magic_mass",     magic_mass)
 
       ! integer attributes

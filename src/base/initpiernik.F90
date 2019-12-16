@@ -40,14 +40,15 @@ contains
 !! \todo add checks against PIERNIK_INIT_IO_IC to all initproblem::read_problem_par
 !! \todo split init_dataio
 !<
+
    subroutine init_piernik
 
-      use all_boundaries,        only: all_bnd
+      use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, INCEPTIVE, tmr_fu
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
-      use dataio_pub,            only: nrestart, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
+      use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
       use decomposition,         only: init_decomposition
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment
@@ -57,26 +58,25 @@ contains
       use grid,                  only: init_grid
       use grid_container_ext,    only: cg_extptrs
       use gridgeometry,          only: init_geometry
+      use hdc,                   only: init_psi
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
+      use interpolations,        only: set_interpolations
       use mpisetup,              only: init_mpi, master
-      use refinement,            only: init_refinement
-      use refinement_flag,       only: level_max
+      use refinement,            only: init_refinement, level_max
       use refinement_update,     only: update_refinement
       use sources,               only: init_sources
       use timer,                 only: set_timer
+      use unified_ref_crit_list, only: urc_list
       use units,                 only: init_units
       use user_hooks,            only: problem_post_restart, problem_post_IC
-#ifdef RIEMANN
-      use hdc,                   only: init_psi
-      use interpolations,        only: set_interpolations
-#endif /* RIEMANN */
 #ifdef RESISTIVE
-      use resistivity,           only: init_resistivity, compute_resist
+      use resistivity,           only: init_resistivity
 #endif /* RESISTIVE */
 #ifdef GRAV
-      use gravity,               only: init_grav, init_grav_ext, manage_grav_pot_3d, sum_potential
+      use gravity,               only: init_grav, init_terms_grav, source_terms_grav
       use hydrostatic,           only: init_hydrostatic, cleanup_hydrostatic
+      use particle_pub,          only: init_particles
 #endif /* GRAV */
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid, init_multigrid_ext, multigrid_par
@@ -145,21 +145,20 @@ contains
       call init_default_fluidboundaries
 
       call problem_pointers                  ! set up problem-specific pointers as early as possible to allow implementation of problem-specific hacks also during the initialization
-      call init_global
-      code_progress = PIERNIK_INIT_GLOBAL    ! Global parameters are set up
-#ifdef RIEMANN
-      call set_interpolations
-#endif /* RIEMANN */
-
       call init_domain
       code_progress = PIERNIK_INIT_DOMAIN    ! Base domain is known and initial domain decomposition is known
       call init_geometry                     ! depends on domain
 
+      call init_global
+      code_progress = PIERNIK_INIT_GLOBAL    ! Global parameters are set up
+
+      call set_interpolations
+
       call init_fluids
       code_progress = PIERNIK_INIT_FLUIDS    ! Fluid properties are set up
 
-      call all_cg%register_fluids            ! Register named fields for u, b and wa, depends on fluids and domain
       call all_cg%init
+      call all_cg%register_fluids            ! Register named fields for u, b and wa, depends on fluids and domain
 
 #ifdef COSM_RAYS
 #if defined(__INTEL_COMPILER)
@@ -170,11 +169,13 @@ contains
 #endif /* COSM_RAYS */
 
       call init_refinement
+      call urc_list%init                     ! initialize unified refinement criteria
 
       call init_decomposition
 #ifdef GRAV
       call init_grav                         ! Has to be called before init_grid
-      call init_grav_ext
+      call init_particles
+      call init_hydrostatic
 #endif /* GRAV */
 #ifdef MULTIGRID
       call init_multigrid_ext                ! Has to be called before init_grid
@@ -187,11 +188,6 @@ contains
 #ifdef RESISTIVE
       call init_resistivity                  ! depends on grid
 #endif /* RESISTIVE */
-
-#ifdef GRAV
-      call manage_grav_pot_3d(.true.)        !> \deprecated It is only temporary solution, but grav_pot_3d must be called after problem_initial_conditions due to csim2,c_si,alpha clash!!!
-      call init_hydrostatic
-#endif /* GRAV */
 
       call init_sources                      ! depends on: geometry, fluids, grid
 
@@ -213,12 +209,14 @@ contains
       call init_dataio                       ! depends on units, fluids (through common_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
       ! Initial conditions are read here from a restart file if possible
 
-#if defined(GRAV) && !defined(SELF_GRAV)
-      call sum_potential                     ! for the proper tsl&log data gpot array has to be fill in using gp array values after restart read
-                                             !> \todo check and fulfil this requirement for SELF_GRAV defined (should source_terms_grav be called here?)
-                                             !> \deprecated this probably should be guaranteed to be done elsewhere.
-#endif /* GRAV && !SELF_GRAV */
-      if (nrestart /= 0) call all_bnd
+#ifdef GRAV
+      call init_terms_grav
+#endif /* GRAV */
+
+      if (restarted_sim) then
+         call all_bnd
+         call all_bnd_vital_q
+      endif
 
       if (master) then
          call printinfo("###############     Initial Conditions     ###############", .false.)
@@ -232,7 +230,7 @@ contains
       !! Move everything that is not regenerated by restart file to read_problem_par or create separate post-restart initialization
       !<
       !> \warning Set initial conditions by hand when starting from scratch or read them from a restart file. Do not use both unless you REALLY need to do so.
-      if (nrestart > 0 .and. require_problem_IC /= 1) then
+      if (restarted_sim .and. require_problem_IC /= 1) then
          if (master) then
             write(msg,'(a,i4,a)') "[initpiernik:init_piernik] Restart file #",nrestart," read. Skipping problem_initial_conditions."
             call printio(msg)
@@ -246,9 +244,7 @@ contains
          nit = 0
          finished = .false.
          call problem_initial_conditions ! may depend on anything
-#ifdef RIEMANN
          call init_psi ! initialize the auxiliary field for divergence cleaning when needed
-#endif /* RIEMANN */
 
          write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
          if (master) call printinfo(msg)
@@ -257,8 +253,7 @@ contains
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
 #ifdef GRAV
-            call manage_grav_pot_3d(.false., update_gp = (nit /= 0))
-            call cleanup_hydrostatic
+            call source_terms_grav
 #endif /* GRAV */
 
             call update_refinement(act_count=ac)
@@ -269,8 +264,16 @@ contains
             write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%l%id,", time elapsed: ",set_timer(tmr_fu)
             if (master) call printinfo(msg)
          enddo
+#ifdef GRAV
+         call cleanup_hydrostatic
+#endif /* GRAV */
 
-         if (ac /= 0 .and. master) call warn("[initpiernik:init_piernik] The refinement structure does not seem to converge. Your refinement criteria may lead to oscillations of refinement structure. Bailing out.")
+         if (ac /= 0) then
+            if (master) call warn("[initpiernik:init_piernik] The refinement structure does not seem to converge. Your refinement criteria may lead to oscillations of refinement structure. Bailing out.")
+#ifdef GRAV
+            call source_terms_grav  ! fix up gravitational potential when refiements did not converge
+#endif /* GRAV */
+         endif
          if (associated(problem_post_IC)) call problem_post_IC
       endif
 
@@ -278,9 +281,6 @@ contains
       !> \todo Do an MPI_Reduce in case the master process don't have any part of the globally finest level or ensure it is empty in such case
       if (master) call printinfo(msg)
 
-#ifdef RESISTIVE
-      call compute_resist                    ! etamax%val is required by timestep_resist
-#endif /* RESISTIVE */
 #ifdef VERBOSE
       call diagnose_arrays                   ! may depend on everything
 #endif /* VERBOSE */
@@ -365,7 +365,7 @@ contains
 
       function get_next_arg(n, arg) result(param)
 
-         use constants,  only: stderr
+         use constants, only: stderr
 
          implicit none
 

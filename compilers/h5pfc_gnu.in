@@ -1,0 +1,22 @@
+# This is currently the default compiler configuration.
+# It requires HDF5 package to be installed with full support for parralel Fortran 90.
+# This file should work for at least Fedora and Ubuntu installations if one
+# followed the instructions in the INSTALL file.
+
+PROG      = piernik
+
+F90       = h5pfc
+F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -g -I/usr/include
+LDFLAGS   = -Wl,--as-needed -Wl,-O1
+
+ifeq ($(PIERNIK_DEBUG), 1)
+   F90FLAGS += -ggdb -O0 -ffpe-trap=zero,overflow,invalid -fcheck=all -fno-omit-frame-pointer -fbacktrace
+   F90FLAGS += -Wall -W -Wextra -pedantic-errors -Wno-unused-function
+endif
+
+# safe optimization choice
+F90FLAGS += -O2 -fno-stack-arrays
+
+# The option -fstack-arrays may offer a bit better performance but also may require to set
+#    ulimit -s unlimited
+# in order to prevent SIGSEGV crashes when data blocks overflow default stack size.

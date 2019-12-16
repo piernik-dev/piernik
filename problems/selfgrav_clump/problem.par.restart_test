@@ -1,0 +1,107 @@
+! This parameter file is intended for testing reproducibility of restarts
+! with selfgravity. Suggested setup call is:
+!
+! ./setup selfgrav_clump -o G_sgc -d DEBUG -p problem.par.restart_test
+
+ $BASE_DOMAIN
+    n_d = 64, 64, 64
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+    xmin   = -1.e5
+    xmax   =  1.e5
+    ymin   = -1.e5
+    ymax   =  1.e5
+    zmin   = -1.e5
+    zmax   =  1.e5
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 1.0
+    nend   = 2
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='sg_clump_moving'
+    run_id =  'ts1'
+    dt_hdf  = 0.1
+    dt_res  = 1.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1:) = 'ener', 'dens', 'gpot', 'velx', 'vely', 'velz', 'momx',  'momy', 'momz'
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.67
+    selfgrav = .true.
+ /
+
+ $FLUID_NEUTRAL
+    gamma = 1.67
+    selfgrav = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e3
+    smallei= 1.e10
+    limiter= 'vanleer'
+    cflcontrol = 'auto'
+    dt_initial = 1e-3
+    dt_max_grow = 1.5
+ /
+
+ $GRAVITY
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    clump_mass = 1e24
+    clump_K = 1.11e5
+!    crashNotConv = .false.
+!    clump_vel(1) = 2e5
+    clump_r = 1.0e5
+    maxitC = 1000
+!    verbose = .true.
+!    exp_speedup = .true.
+ /
+
+ $MULTIGRID_SOLVER
+    stdout    = .true.
+    dirty_debug = .true.
+ /
+
+ $MULTIGRID_GRAVITY
+    ord_time_extrap = 2
+    grav_bnd_str  = "isolated"
+!    grav_bnd_str = "periodic"
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+ /
+
+ $PIERNIK_IO_DEBUG
+    force_hdf5_dump = .true.
+    force_res_dump  = .true.
+ /

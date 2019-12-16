@@ -214,8 +214,8 @@ contains
       real, target, dimension(0,0,0,0)                      :: null_r4d
       integer(kind=4), dimension(ndims)                     :: n_b
 
-      qr_lst = qna%get_reslst()
-      wr_lst = wna%get_reslst()
+      call qna%get_reslst(qr_lst)
+      call wna%get_reslst(wr_lst)
       tot_lst_n = size(qr_lst) + size(wr_lst)
       allocate(dsets(tot_lst_n))
       ic = 1
@@ -505,18 +505,22 @@ contains
       use domain,             only: dom
       use func,               only: operator(.notequals.)
       use global,             only: t, dt, nstep
-      use grid_cont,          only: is_overlap
       use hdf5,               only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
       use mass_defect,        only: magic_mass
       use mpisetup,           only: master, piernik_MPI_Barrier
+      use overlap,            only: is_overlap
       use read_attr,          only: read_attribute
       use set_get_attributes, only: get_attr
+      use timestep_pub,       only: c_all_old, cfl_c, stepcfl
 #ifdef RANDOMIZE
       use randomization,      only: read_current_seed_from_restart
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
       use snsources,          only: read_snsources_from_restart
 #endif /* SN_SRC */
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      use multigrid_gravity,  only: read_oldsoln_from_restart
+#endif /* MULTIGRID && SELF_GRAV */
 
       implicit none
 
@@ -537,13 +541,16 @@ contains
       character(len=cbuff_len), dimension(:), allocatable :: cbuf
 
       ! common attributes
-      character(len=cbuff_len), dimension(7), parameter :: real_attrs = [ "time         ", &
-           &                                                              "timestep     ", &
-           &                                                              "last_hdf_time", &
-           &                                                              "last_res_time", &
-           &                                                              "last_log_time", &
-           &                                                              "last_tsl_time", &
-           &                                                              "magic_mass   " ]
+      character(len=cbuff_len), dimension(10), parameter :: real_attrs = [ "time         ", &
+           &                                                               "timestep     ", &
+           &                                                               "last_hdf_time", &
+           &                                                               "last_res_time", &
+           &                                                               "last_log_time", &
+           &                                                               "last_tsl_time", &
+           &                                                               "c_all_old    ", &
+           &                                                               "stepcfl      ", &
+           &                                                               "cfl_c        ", &
+           &                                                               "magic_mass   " ]
       character(len=cbuff_len), dimension(4), parameter :: int_attrs  = [ "nstep             ", &
            &                                                              "nres              ", &
            &                                                              "nhdf              ", &
@@ -617,6 +624,12 @@ contains
                last_log_time = rbuf(1)
             case ("last_tsl_time")
                last_tsl_time = rbuf(1)
+            case ("c_all_old")
+               c_all_old = rbuf(1)
+            case ("stepcfl")
+               stepcfl = rbuf(1)
+            case ("cfl_c")
+               cfl_c = rbuf(1)
             case ("magic_mass")
                if (master) magic_mass(:) = rbuf(:)
             case default
@@ -651,6 +664,9 @@ contains
 #ifdef SN_SRC
       call read_snsources_from_restart(file_id)
 #endif /* SN_SRC */
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      call read_oldsoln_from_restart(file_id)
+#endif /* MULTIGRID && SELF_GRAV */
 
       do ia = lbound(str_attrs, dim=1), ubound(str_attrs, dim=1)
          call get_attr(file_id, trim(str_attrs(ia)), cbuf)
@@ -880,10 +896,11 @@ contains
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI
       use dataio_pub,       only: die
       use domain,           only: dom
-      use grid_cont,        only: grid_container, is_overlap
+      use grid_cont,        only: grid_container
       use hdf5,             only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5T_NATIVE_DOUBLE, &
            &                      h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
       use named_array_list, only: qna, wna
+      use overlap,          only: is_overlap
 
       implicit none
 
@@ -935,8 +952,8 @@ contains
            &             cg%js+own_off_nb(ydim):cg%js+own_off_nb(ydim)+o_size_nb(ydim)-1, &
            &             cg%ks+own_off_nb(zdim):cg%ks+own_off_nb(zdim)+o_size_nb(zdim)-1))) call die("[restart_hdf5_v2:read_cg_from_restart] Trying to initialize same area twice.")
 
-      qr_lst = qna%get_reslst()
-      wr_lst = wna%get_reslst()
+      call qna%get_reslst(qr_lst)
+      call wna%get_reslst(wr_lst)
       call h5gopen_f(cgl_g_id, n_cg_name(ncg), cg_g_id, error) ! open "/data/grid_%08d, ncg"
 
       if (size(qr_lst) > 0) then
