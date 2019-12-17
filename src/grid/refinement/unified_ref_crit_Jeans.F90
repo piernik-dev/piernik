@@ -84,6 +84,10 @@ contains
 !! \brief implementation of user-provided Jeans length refinement criterion
 !!
 !! This routine has to conform to unified_ref_crit_user::mark_urc_user
+!!
+!! \todo implement predictive marks based on velocity, something like:
+!! where (cg%refinemap) cg%refinemap(x + v*2*n_updAMR) = .true.
+!! count cases where internal refine flag goes beyond guardcells and suggest reducing n_updAMR
 !<
 
    subroutine mark_Jeans(this, cg)
@@ -91,9 +95,13 @@ contains
       use constants,  only: pi, GEO_XYZ, INVALID
       use dataio_pub, only: die
       use domain,     only: dom
-      use fluidindex, only: iarr_all_sg
+      use fluidindex, only: iarr_all_sg, flind
+      use func,       only: ekin !, emag
       use grid_cont,  only: grid_container
       use units,      only: newtong
+#ifdef MAGNETIC
+      use dataio_pub, only: warn
+#endif /* MAGNETIC */
 
       implicit none
 
@@ -101,6 +109,13 @@ contains
       type(grid_container), pointer, intent(inout) :: cg    !< current grid piece
 
       real, dimension(:,:,:), pointer :: p3d
+      logical, save :: warned = .false.
+      integer :: f
+
+#ifdef MAGNETIC
+      if (.not. warned) call warn("[unified_ref_crit_Jeans:mark_Jeans] magnetic pressure is ignored (unimplemented yet)")
+      warned = .true.
+#endif /* MAGNETIC */
 
       if (dom%geometry_type /= GEO_XYZ) call die("[unified_ref_crit_Jeans:mark_Jeans] unsupported (non-cartesian) geometry")
 
@@ -110,8 +125,22 @@ contains
          p3d => cg%wa
       endif
 
-      p3d(:,:,:) = sqrt(pi/newtong) / maxval(cg%dl) * &  ! assumes that fluid and cs2 have updated boundaries
-           sqrt(cg%cs_iso2(:,:,:) / sum(cg%u(iarr_all_sg, :, :, :), dim=1))
+      ! assume that fluid and cs2 have updated boundaries
+      if (associated(cg%cs_iso2)) then
+         p3d(:,:,:) = sqrt(pi/newtong) / maxval(cg%dl) * &
+              sqrt(cg%cs_iso2(:,:,:) / sum(cg%u(iarr_all_sg, :, :, :), dim=1))
+      else
+         ! l_J = sqrt( pi gam (gam - 1) (e_i - e_k + e_mag) / G ) / rho
+         ! find the effective pressure of all components (non-selfgravitation as well)
+         p3d(:,:,:) = 0.
+         do f = 1, flind%fluids
+            associate (fl => flind%all_fluids(f)%fl)
+               if (fl%has_energy) p3d = p3d + fl%gam * fl%gam_1 * (cg%u(fl%ien, :, :, :) - ekin(cg%u(fl%imx, :,:,:), cg%u(fl%imy, :,:,:), cg%u(fl%imz, :,:,:), cg%u(fl%idn, :,:,:)))
+            end associate
+         enddo
+         ! sum of ion/neu/dst
+         p3d(:,:,:) = sqrt(pi/newtong) / maxval(cg%dl) * sqrt(p3d)/ sum(cg%u(iarr_all_sg, :, :, :), dim=1)
+      endif
 
       where (p3d < this%ref_thr)
          cg%refinemap = .true.

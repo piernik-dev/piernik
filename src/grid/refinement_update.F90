@@ -81,7 +81,7 @@ contains
       call all_bnd_vital_q
 
       !> \todo mark everything for derefinement by default
-      ! it requires to propagate refinement requests from coverel levels as derefinement inhibitions
+      ! it requires to propagate refinement requests from covered levels as derefinement inhibitions
 !!$      cgl => leaves%first
 !!$      do while (associated(cgl))
 !!$         cgl%cg%refine_flags%derefine = .true.
