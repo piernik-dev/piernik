@@ -42,6 +42,7 @@ parser.add_option("",   "--verbose",dest="yt_verbose",   default=40,           h
 parser.add_option("-q", "--quiet",  dest="py_quiet",     default=False,        help=u"Suppress ALL python warnings (not advised)",  action="store_true")
 parser.add_option("-c", "--coords", dest="coords_dflt",  default=("x","y","z"),help=u"Provides coordinates for the first plot (non-clickable)", nargs=3, metavar="xc yc zc")
 parser.add_option("-k", "--keep",   dest="clean_plot",   default=True,         help=u"Keep spectrum plot (do not clean spectrum field)", action="store_false")
+parser.add_option("",  "--fontsize",dest="fontsize",     default=18,           help=u"Set fontsize for SlicePlot (default is 18)")
 
 (options, args) = parser.parse_args(argv[1:]) # argv[1] is filename
 yt.mylog.setLevel(int(options.yt_verbose))    # Reduces the output to desired level, 50 - least output
@@ -65,6 +66,7 @@ user_annot_line   = False
 user_annot_time   = True
 plot_layer        = options.avg_layer
 plot_ovlp         = options.overlap_layer
+options.fontsize  = int(options.fontsize)
 
 user_coords_provided = ( (options.coords_dflt[0] != "x") and (options.coords_dflt[1] != "y") and (options.coords_dflt[2] != "z") )
 if user_coords_provided:
@@ -288,7 +290,6 @@ if f_run == True:
       plt.ylabel("Domain cooridnates "+dim_map.keys()[dim_map.values().index(avail_dim[1])]+" ("+length_unit+")" )
 
     plt.colormap="plasma"
-
     encountered_nans = False
     plot_max   = float(plot_max)
     plot_min   = max(float(plot_min), par_epsilon)
@@ -307,6 +308,7 @@ if f_run == True:
        die("An empty field might have been picked.")
 
     yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field)
+    yt_data_plot.set_font({'size':options.fontsize})
 
     colormap_my  = plt.cm.viridis
     colormap_my.set_bad(color=colormap_my(par_epsilon))     # masks bad values
@@ -317,7 +319,7 @@ if f_run == True:
        yt_data_plot.annotate_line((0., 0., 0.), (500., 500.0, 0), plot_args={'color':'white',"lw":2.0} )
 
     if (plot_vel): yt_data_plot.annotate_velocity(factor=20)
-    if (plot_mag): yt_data_plot.annotate_magnetic_field(factor=20)
+    if (plot_mag): yt_data_plot.annotate_magnetic_field(factor=32,scale=50)
     yt_data_plot.set_zlim(plot_field,plot_min,plot_max)
     marker_l   = ["x", "+", "*", "X", ".","^", "v","<",">","1"]
     m_size_l   = [500, 500, 400, 400, 500, 350, 350, 350, 350, 500]
@@ -437,14 +439,12 @@ if f_run == True:
        cid = s.canvas.mpl_connect('button_press_event',read_click_and_plot)
        plt.show()
 
-    yt_data_plot.set_font({'size':30})
-
     text_coords = [0., 0., 0.]; text_coords[dim_map.get(slice_ax)] = slice_coord; text_coords[avail_dim[0]] = dom_l[avail_dim[0]]; text_coords[avail_dim[1]] = dom_l[avail_dim[1]]
     text_coords = [ item * 0.9 for item in text_coords]
 
     if (user_annot_time):
       if (user_draw_timebox == True):
-         yt_data_plot.annotate_text(text_coords , 'T = {:0.2f} Myr'.format(float(t.in_units('Myr'))), text_args={'fontsize':30,'color':'white','alpha':'0.0'},inset_box_args={'boxstyle':'round','pad':0.2,'alpha':0.8})
+         yt_data_plot.annotate_text(text_coords , 'T = {:0.2f} Myr'.format(float(t.in_units('Myr'))), text_args={'fontsize':options.fontsize,'color':'white','alpha':'0.0'},inset_box_args={'boxstyle':'round','pad':0.2,'alpha':0.8})
       else:
          prtinfo("Not marking line on yt.plot (user_draw_timebox = %s)" %(user_draw_timebox))
          yt_data_plot.annotate_title('T = {:0.2f} Myr'.format(float(t.in_units('Myr'))))
