@@ -491,8 +491,8 @@ contains
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: unmark_oldsoln
 #endif /* MULTIGRID && SELF_GRAV */
-#ifndef NBODY_1FILE
-      use particles_io_hdf5, only: write_nbody_hdf5
+#ifdef NBODY_1FILE
+!      use particles_io_hdf5, only: write_nbody_hdf5
 #endif /* NBODY_1FILE */
 
       implicit none
@@ -529,8 +529,8 @@ contains
       endif
       call report_to_master(sig%hdf_written, only_master=.True.)
       call report_string_to_master(fname, only_master=.True.)
-#ifndef NBODY_1FILE
-      call write_nbody_hdf5(fname)
+#ifdef NBODY_1FILE
+!      call write_nbody_hdf5(fname)
 #endif /* NBODY_1FILE */
 
    end subroutine h5_write_to_single_file
