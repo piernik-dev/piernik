@@ -734,7 +734,7 @@ contains
    subroutine write_to_hdf5_v2(filename, otype, create_empty_cg_datasets, write_cg_to_hdf5)
 
       use cg_leaves,    only: leaves
-      use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, I_FOUR, I_FIVE, INT4, LO, HI, &
+      use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, I_FOUR, INT4, LO, HI, &
          &                    GEO_XYZ, GEO_RPZ
       use dataio_pub,   only: die, nproc_io, can_i_write, domain_dump, msg
       use domain,       only: dom
@@ -748,6 +748,7 @@ contains
       use mpi,          only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
       use mpisetup,     only: comm, FIRST, LAST, master, mpi_err, piernik_MPI_Bcast
 #ifdef NBODY_1FILE
+      use constants,    only: I_FIVE
       use particle_utils, only: count_all_particles
 #endif /* NBODY_1FILE */
 
@@ -793,10 +794,12 @@ contains
       integer(HID_T)                                :: plist_id         !< Property list identifier
       integer(HID_T)                                :: cgl_g_id         !< cg list identifiers
       integer(HID_T)                                :: cg_g_id          !< cg group identifiers
+#ifdef NBODY_1FILE
       integer(HID_T)                                :: pt_g_id          !< particle_types identifiers
       integer(HID_T)                                :: ptst_g_id        !< particle_types stars identifiers
       integer(HID_T)                                :: part_g_id        !< particles identifiers
       integer(HID_T)                                :: st_g_id          !< stars identifiers
+#endif /* NBODY_1FILE */
       integer(HID_T)                                :: doml_g_id        !< domain list identifier
       integer(HID_T)                                :: dom_g_id         !< domain group identifier
       integer(kind=4)                               :: error, cg_cnt
@@ -809,7 +812,9 @@ contains
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_b           !< list of n_b from all cgs/procs
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_o           !< list of grid dimnsions with external guardcells from all cgs/procs
       integer(kind=8),  dimension(:,:), pointer     :: cg_off           !< list of offsets from all cgs/procs
+#ifdef NBODY_1FILE
       integer(kind=4),  pointer                      :: cg_npart
+#endif /* NBODY_1FILE */
 
       !>
       !! auxiliary array for communication of {cg_le, cg_re, cg_dl} lists
@@ -946,7 +951,9 @@ contains
                   rd%grid_level(indx) = cg_rl(g)
                   rd%grid_left_index(:,indx) = cg_off(g,:)
                   rd%grid_parent_id(indx)     = -1
+#ifdef NBODY_1FILE
                   rd%grid_particle_count(1,indx) = n_part
+#endif /* NBODY_1FILE */
                endif
 
                if (any(cg_off(g, :) > 2.**31)) &
@@ -1194,7 +1201,10 @@ contains
       integer(HID_T),                           intent(in)    :: cgl_g_id
       integer(kind=4),   pointer, dimension(:), intent(in)    :: cg_n
       integer(kind=4),                          intent(in)    :: nproc_io
-      character(len=dsetnamelen), dimension(:), intent(in)    :: dsets, pdsets
+      character(len=dsetnamelen), dimension(:), intent(in)    :: dsets
+#ifdef NBODY_1FILE
+      character(len=dsetnamelen), dimension(:), intent(in)    :: pdsets
+#endif /* NBODY_1FILE */
 
       integer                                                 :: i, ncg
       integer(HID_T)                                          :: plist_id

@@ -818,7 +818,6 @@ contains
       implicit none
 
       integer(HID_T),                intent(in) :: cg_g_id
-      integer(HID_T),                intent(in) :: st_g_id
       integer(kind=4), dimension(:), intent(in) :: cg_n_b
       integer(kind=4), dimension(:), intent(in) :: cg_n_o
       logical(kind=4),               intent(in) :: Z_avail
@@ -826,6 +825,7 @@ contains
       integer :: i
 #ifdef NBODY_1FILE
       integer(kind=8)                           :: n_part
+      integer(HID_T),                intent(in) :: st_g_id
 #endif /* NBODY_1FILE */
 
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)

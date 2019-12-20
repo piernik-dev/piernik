@@ -143,7 +143,6 @@ contains
       implicit none
 
       integer(HID_T),                intent(in) :: cg_g_id
-      integer(HID_T),                intent(in) :: st_g_id
       integer(kind=4), dimension(:), intent(in) :: cg_n_b
       integer(kind=4), dimension(:), intent(in) :: cg_n_o
       logical(kind=4),               intent(in) :: Z_avail
@@ -152,6 +151,7 @@ contains
       integer(HSIZE_T), dimension(:), allocatable :: d_size
 #ifdef NBODY_1FILE
       integer(kind=8)                           :: n_part
+      integer(HID_T),                intent(in) :: st_g_id
 #endif /* NBODY_1FILE */
 
       if (size(cg_n_b) /= size(cg_n_o)) call die("[restart_hdf5_v2:create_empty_cg_datasets_in_restart] size(cg_n_b) /= size(cg_n_o)")
@@ -964,10 +964,12 @@ contains
       type(cg_essentials),               intent(in)    :: cg_r      !< cg attributes that do not need to be reread
 
       integer(HID_T)                               :: cg_g_id !< cg group identifier
+#ifdef NBODY_1FILE
       integer(HID_T)                               :: part_g_id !< particles group identifier
       integer(HID_T)                               :: st_g_id !< stars group identifier
-      integer(HID_T)                               :: dset_id
       integer(HID_T)                               :: pdset_id
+#endif /* NBODY_1FILE */
+      integer(HID_T)                               :: dset_id
       integer(HID_T)                               :: filespace, memspace
       integer(HSIZE_T), dimension(:), allocatable  :: dims, off, cnt
       integer(kind=4)                              :: error
