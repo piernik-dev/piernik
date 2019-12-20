@@ -109,10 +109,10 @@ contains
       type(grid_container), pointer, intent(inout) :: cg    !< current grid piece
 
       real, dimension(:,:,:), pointer :: p3d
-      logical, save :: warned = .false.
       integer :: f
-
 #ifdef MAGNETIC
+      logical, save :: warned = .false.
+
       if (.not. warned) call warn("[unified_ref_crit_Jeans:mark_Jeans] magnetic pressure is ignored (unimplemented yet)")
       warned = .true.
 #endif /* MAGNETIC */
