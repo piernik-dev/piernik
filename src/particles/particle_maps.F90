@@ -94,6 +94,7 @@ contains
       use constants,  only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
       use dataio_pub, only: die
       use domain,     only: dom
+      use particle_types, only: particle
 
       implicit none
 
@@ -101,6 +102,7 @@ contains
       real,            intent(in)    :: factor !< typically fpiG
 
       type(cg_list_element), pointer :: cgl
+      type(particle), pointer        :: pset
       integer                        :: p
       integer, dimension(ndims)      :: ijkp
 
@@ -108,8 +110,9 @@ contains
       do while (associated(cgl))
 
          ijkp(:) = cgl%cg%ijkse(:,LO)
-         do p = lbound(cgl%cg%pset%p, dim=1), ubound(cgl%cg%pset%p, dim=1)
-            associate( field => cgl%cg%q(iv)%arr, part => cgl%cg%pset%p(p), cg => cgl%cg )
+         pset => cgl%cg%pset%first
+         do while (associated(pset))
+            associate( field => cgl%cg%q(iv)%arr, part => pset%pdata, cg => cgl%cg )
 
             if (dom%geometry_type /= GEO_XYZ) call die("[particle_maps:map_ngp] Unsupported geometry")
             where (dom%has_dir(:)) ijkp(:) = floor((part%pos(:) - cg%fbnd(:, LO)) * cg%idl(:)) + cg%ijkse(:, LO)
@@ -117,6 +120,7 @@ contains
                  field(ijkp(xdim), ijkp(ydim), ijkp(zdim)) = field(ijkp(xdim), ijkp(ydim), ijkp(zdim)) + factor * part%mass / cg%dvol
 
             end associate
+            pset => pset%nxt
          enddo
 
          cgl => cgl%nxt
@@ -130,6 +134,7 @@ contains
       use cg_list,   only: cg_list_element
       use constants, only: xdim, ydim, zdim, ndims, LO, HI, CENTER
       use domain,    only: dom
+      use particle_types, only: particle
 
       implicit none
 
@@ -137,6 +142,7 @@ contains
       real,            intent(in)      :: factor !< typically fpiG
 
       type(cg_list_element), pointer   :: cgl
+      type(particle), pointer          :: pset
       integer(kind=4)                  :: cdim
       integer                          :: cn, i, j, k, p
       integer, dimension(ndims, LO:HI) :: ijkp
@@ -146,10 +152,14 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
 
-         do p = lbound(cgl%cg%pset%p, dim=1), ubound(cgl%cg%pset%p, dim=1)
-            associate( field => cgl%cg%q(iv)%arr, part => cgl%cg%pset%p(p), cg => cgl%cg )
+         pset => cgl%cg%pset%first
+         do while (associated(pset))
+            associate( field => cgl%cg%q(iv)%arr, part => pset%pdata, cg => cgl%cg )
 
-               if (part%outside) cycle
+              if (part%outside) then
+                 pset => pset%nxt
+                 cycle
+              endif
 
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
@@ -178,7 +188,8 @@ contains
                   enddo
                enddo
 
-            end associate
+             end associate
+             pset => pset%nxt
          enddo
 
          cgl => cgl%nxt
@@ -192,6 +203,7 @@ contains
       use cg_list,   only: cg_list_element
       use constants, only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half, I_ONE
       use domain,    only: dom
+      use particle_types, only: particle
 
       implicit none
 
@@ -199,6 +211,7 @@ contains
       real,            intent(in)      :: factor !< typically fpiG
 
       type(cg_list_element), pointer   :: cgl
+      type(particle), pointer    :: pset
       integer(kind=4)                  :: cdim
       integer                          :: i, j, k, p
       integer(kind=4), dimension(ndims, IM:IP) :: ijkp
@@ -207,10 +220,14 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-
-         do p = lbound(cgl%cg%pset%p, dim=1), ubound(cgl%cg%pset%p, dim=1)
-            associate( field => cgl%cg%q(iv)%arr, part => cgl%cg%pset%p(p), cg => cgl%cg )
-               if (part%outside) cycle
+         
+         pset => cgl%cg%pset%first
+         do while (associated(pset))
+            associate( field => cgl%cg%q(iv)%arr, part => pset%pdata, cg => cgl%cg )
+              if (part%outside) then
+                 pset => pset%nxt
+                 cycle
+              endif
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
                      ijkp(cdim, I0) = floor((part%pos(cdim) - dom%edge(cdim,LO)) *cg%idl(cdim), kind=4)
@@ -244,6 +261,7 @@ contains
                   enddo
                enddo
              end associate
+             pset => pset%nxt
           enddo
          cgl => cgl%nxt
       enddo

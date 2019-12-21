@@ -136,6 +136,7 @@ module cg_particles_io
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
       use hdf5,      only: HID_T
+      use particle_types, only: particle
 
       implicit none
 
@@ -145,6 +146,7 @@ module cg_particles_io
       integer                            :: cgnp, recnp, i
       integer, dimension(:), allocatable :: tabi1
       type(cg_list_element), pointer     :: cgl
+      type(particle), pointer        :: pset
 
       allocate(tabi1(n_part))
       recnp = 0
@@ -154,11 +156,13 @@ module cg_particles_io
          cgnp = 0
          select case (pvar)
             case ('id')
-               do i = 1, size(cgl%cg%pset%p, dim=1)
-                  if (cgl%cg%pset%p(i)%phy) then
+               pset => cgl%cg%pset%first
+               do while (associated(pset))
+                  if (pset%pdata%phy) then
                      cgnp = cgnp + 1
-                     tabi1(recnp+cgnp) = cgl%cg%pset%p(i)%pid
+                     tabi1(recnp+cgnp) = pset%pdata%pid
                   endif
+                  pset => pset%nxt
                enddo
             case default
          end select
@@ -177,6 +181,7 @@ module cg_particles_io
       use cg_list,   only: cg_list_element
       use hdf5,      only: HID_T
       use constants, only: xdim, ydim, zdim
+      use particle_types, only: particle
 
       implicit none
 
@@ -186,43 +191,45 @@ module cg_particles_io
       integer                         :: cgnp, recnp, i
       real, dimension(:), allocatable :: tabr1
       type(cg_list_element), pointer  :: cgl
+      type(particle), pointer        :: pset
 
       allocate(tabr1(n_part))
       recnp = 0
 
       cgl => leaves%first
       do while (associated(cgl))
-         !cgnp = size(cgl%cg%pset%p, dim=1)
          cgnp = 0
-         do i = 1, size(cgl%cg%pset%p, dim=1)
-            if (cgl%cg%pset%p(i)%phy) then
+         pset => cgl%cg%pset%first
+         do while (associated(pset))
+            if (pset%pdata%phy) then
                cgnp = cgnp + 1
                select case (pvar)
                   case ('mass')
-                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%mass
+                     tabr1(recnp+cgnp) = pset%pdata%mass
                   case ('energy')
-                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%energy
+                     tabr1(recnp+cgnp) = pset%pdata%energy
                   case ('position_x')
-                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%pos(xdim)
+                     tabr1(recnp+cgnp) = pset%pdata%pos(xdim)
                   case ('position_y')
-                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%pos(ydim)
+                     tabr1(recnp+cgnp) = pset%pdata%pos(ydim)
                   case ('position_z')
-                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%pos(zdim)
+                     tabr1(recnp+cgnp) = pset%pdata%pos(zdim)
                   case ('velocity_x')
-                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%vel(xdim)
+                     tabr1(recnp+cgnp) = pset%pdata%vel(xdim)
                   case ('velocity_y')
-                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%vel(ydim)
+                     tabr1(recnp+cgnp) = pset%pdata%vel(ydim)
                   case ('velocity_z')
-                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%vel(zdim)
+                     tabr1(recnp+cgnp) = pset%pdata%vel(zdim)
                   case ('acceleration_x')
-                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%acc(xdim)
+                     tabr1(recnp+cgnp) = pset%pdata%acc(xdim)
                   case ('acceleration_y')
-                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%acc(ydim)
+                     tabr1(recnp+cgnp) = pset%pdata%acc(ydim)
                   case ('acceleration_z')
-                     tabr1(recnp+cgnp) = cgl%cg%pset%p(i)%acc(zdim)
+                     tabr1(recnp+cgnp) = pset%pdata%acc(zdim)
                   case default
                end select
             endif
+            pset => pset%nxt
          enddo
          recnp = recnp+cgnp
          cgl => cgl%nxt

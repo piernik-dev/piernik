@@ -62,7 +62,9 @@ contains
       use domain,     only: is_refined, is_multicg
       use global,     only: t, dt
       use grid_cont,  only: grid_container
-
+      use particle_utils, only: count_all_particles
+      use particle_types, only: particle
+      
       implicit none
 
       logical, optional, intent(in) :: forward
@@ -74,9 +76,10 @@ contains
       real, dimension(:),    allocatable :: mass
       real, dimension(:, :), allocatable :: pos, vel, acc, jerk
       type(grid_container),  pointer     :: cg
+      type(particle), pointer            :: pset
 
       real    :: epot, coll_time, t_dia, t_out, t_end, einit, dth, th
-      integer :: nsteps, n, ndim, lun_out, lun_err, i
+      integer :: nsteps, n, ndim, lun_out, lun_err, i, p
 
       if (is_refined) call die("[particle_solvers:hermit_4ord] AMR not implemented for hermit 4ord solver yet")
       if (is_multicg) call die("[particle_solvers:hermit_4ord] multi_cg not implemented for hermit 4ord solver yet")
@@ -85,14 +88,21 @@ contains
       open(newunit=lun_out, file='nbody_out.log', status='unknown',  position='append')
       open(newunit=lun_err, file='nbody_err.log', status='unknown',  position='append')
 
-      n = size(cg%pset%p, dim=1)
+      n = count_all_particles()
       th = t - dt
       allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), jerk(n, ndims))
 
-      mass(:) = cg%pset%p(:)%mass
-      do ndim = xdim, zdim
-         pos(:, ndim) = cg%pset%p(:)%pos(ndim)
-         vel(:, ndim) = cg%pset%p(:)%vel(ndim)
+      !Maybe not ideal with a list here?
+      pset => cg%pset%first
+      p=1
+      do while (associated(pset))
+         mass(p) = pset%pdata%mass
+         do ndim = xdim, zdim
+            pos(p, ndim) = pset%pdata%pos(ndim)
+            vel(p, ndim) = pset%pdata%vel(ndim)
+         enddo
+         pset => pset%nxt
+         p = p + 1
       enddo
 
       write(lun_err, *) "Starting a Hermite integration for a ", n, "-body system,"
@@ -129,10 +139,16 @@ contains
          endif
          if (th >= t_end) exit
       enddo
-
-      do ndim = xdim, zdim
-         cg%pset%p(:)%pos(ndim) = pos(:, ndim)
-         cg%pset%p(:)%vel(ndim) = vel(:, ndim)
+      
+      pset => cg%pset%first
+      p=1
+      do while (associated(pset))
+         do ndim = xdim, zdim
+            pset%pdata%pos(ndim) = pos(p, ndim)
+            pset%pdata%vel(ndim) = vel(p, ndim)
+         enddo
+         pset => pset%nxt
+         p = p + 1
       enddo
 
       deallocate (mass, pos, vel, acc, jerk)
@@ -352,18 +368,21 @@ contains
 
          subroutine kick(kdt)
 
+            use particle_types, only: particle
+            
             implicit none
 
             real, intent(in) :: kdt
             integer          :: i
+            type(particle), pointer        :: pset
 
             cgl => leaves%first
             do while (associated(cgl))
-               associate( parts => cgl%cg%pset )
-               do i = 1, size(parts%p, dim=1)
-                  parts%p(i)%vel = parts%p(i)%vel + parts%p(i)%acc * kdt
+               pset => cgl%cg%pset%first
+               do while (associated(pset))
+                  pset%pdata%vel = pset%pdata%vel + pset%pdata%acc * kdt
+                  pset => pset%nxt
                enddo
-               end associate
                cgl => cgl%nxt
             enddo
 
@@ -372,20 +391,29 @@ contains
          subroutine drift(ddt)
 
             use particle_utils, only: part_leave_cg, is_part_in_cg
+            use particle_types, only: particle
 
             implicit none
 
             real, intent(in)                  :: ddt
             integer                           :: i
+            type(particle), pointer        :: pset, pset2
 
             cgl => leaves%first
             do while (associated(cgl))
-               associate( parts => cgl%cg%pset )
-                 do i = 1, size(parts%p, dim=1)
-                    parts%p(i)%pos = parts%p(i)%pos + parts%p(i)%vel * ddt
-                    call is_part_in_cg(cgl%cg, parts%p(i)%pos, parts%p(i)%in, parts%p(i)%phy, parts%p(i)%out)
-                 enddo
-               end associate
+               pset => cgl%cg%pset%first
+               do while (associated(pset))
+                  !Remove ghosts
+                  if (.not. pset%pdata%phy) then
+                     pset2 => pset%nxt
+                     call cgl%cg%pset%remove(pset)
+                     pset => pset2
+                     cycle
+                  endif
+                  pset%pdata%pos = pset%pdata%pos + pset%pdata%vel * ddt
+                  call is_part_in_cg(cgl%cg, pset%pdata%pos, pset%pdata%in, pset%pdata%phy, pset%pdata%out)             
+                  pset => pset%nxt
+               enddo
                cgl => cgl%nxt
             enddo
 
@@ -400,22 +428,24 @@ contains
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
       use constants, only: half
+      use particle_types, only: particle
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
+      type(particle), pointer        :: pset
       integer :: p
       real    :: v2 !< particle velocity squared
 
       cgl => leaves%first
       do while (associated(cgl))
-         associate( parts => cgl%cg%pset )
-         do p = 1, size(parts%p, dim=1)
-            v2 = sum(parts%p(p)%vel(:)**2)
+         pset => cgl%cg%pset%first
+         do while (associated(pset))
+            v2 = sum(pset%pdata%vel(:)**2)
             !energy       = 1/2  *      m         *  v**2 +     Ep(x,y,z)
-            parts%p(p)%energy = half * parts%p(p)%mass * v2 + parts%p(p)%energy
+            pset%pdata%energy = half * pset%pdata%mass * v2 + pset%pdata%energy
+            pset => pset%nxt
          enddo
-         end associate
          cgl => cgl%nxt
       enddo
 

@@ -500,20 +500,22 @@ contains
       use constants,    only: xdim, ydim, zdim
       use grid_cont,    only: grid_container
       use units,        only: fpiG
+      use particle_types, only: particle
 
       implicit none
 
-      integer :: i
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
+      type(particle), pointer    :: pset
 
       ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         if (allocated(cg%pset%p)) then
-            do i = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
-               if (cg%pset%p(i)%outside) call Q%point2moments(fpiG*cg%pset%p(i)%mass, cg%pset%p(i)%pos(xdim), cg%pset%p(i)%pos(ydim), cg%pset%p(i)%pos(zdim))
+         pset => cg%pset%first
+         do while (associated(pset))
+            if (pset%pdata%outside) call Q%point2moments(fpiG*pset%pdata%mass, pset%pdata%pos(xdim), pset%pdata%pos(ydim), pset%pdata%pos(zdim))
+            
                ! WARNING: Particles that are too close to the outer boundary aren't fully mapped onto the grid.
                ! This may cause huge errors in the potential, even for "3D" solver because their mass is counted
                ! only partially in the mapping routine and the rest is ignored here.
@@ -524,9 +526,10 @@ contains
                ! particle mappings extending beyond domain boundaries.
                !
                ! BUG: Sometimes particles that are outside computational domain don't have the "outside" flag set up.
-               ! A "not_mapped" flag set in the mapping routine would fix this issue.
-            enddo
-         endif
+            ! A "not_mapped" flag set in the mapping routine would fix this issue.
+            
+            pset => pset%nxt
+         enddo
          cgl => cgl%nxt
       enddo
 

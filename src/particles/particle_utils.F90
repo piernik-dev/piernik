@@ -62,27 +62,39 @@ contains
 
       type(cg_list_element), pointer :: cgl
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         call cgl%cg%pset%print
-         cgl => cgl%nxt
-      enddo
+      !!!!!!!!!Does nothing for now
+      
+      !cgl => leaves%first
+      !do while (associated(cgl))
+      !   call cgl%cg%pset%print
+      !   cgl => cgl%nxt
+      !enddo
 
    end subroutine print_all_particles
 
    subroutine max_pvel_1d(cg, max_v)
 
-      use constants, only: ndims, xdim, zdim
+      use constants, only: ndims, xdim, zdim, zero
       use grid_cont, only: grid_container
+      use particle_types, only: particle
 
       implicit none
 
       type(grid_container), pointer, intent(in)  :: cg
+      type(particle), pointer                    :: pset
       real, dimension(ndims),        intent(out) :: max_v
       integer(kind=4)                            :: cdim
+      real                                       :: v_tmp
 
+      !Better way to do this? Was easier with arrays
+      max_v = zero
       do cdim = xdim, zdim
-         max_v(cdim)  = maxval(abs(cg%pset%p(:)%vel(cdim)))
+         pset => cg%pset%first
+         do while (associated(pset))
+            v_tmp = abs(pset%pdata%vel(cdim))
+            if (v_tmp > max_v(cdim)) max_v(cdim) = v_tmp
+            pset => pset%nxt
+         enddo
       enddo
 
    end subroutine max_pvel_1d
@@ -94,27 +106,28 @@ contains
       use grid_cont, only: grid_container
       use mpisetup,  only: proc
       use types,     only: value
+      use particle_types, only: particle
 
       implicit none
 
       type(grid_container), pointer, intent(in)  :: cg
+      type(particle), pointer                    :: pset
       type(value),                   intent(out) :: max_pacc
       real                                       :: acc2, max_acc
-      integer                                    :: i, n_part
       integer(kind=4) :: cdim
 
       max_pacc%assoc = big
 
       max_acc  = zero
-      n_part = size(cg%pset%p, dim=1)
-
-      do i = 1, n_part
-         acc2 = sum(cg%pset%p(i)%acc(:)**2)
+      pset => cg%pset%first
+      do while (associated(pset))
+         acc2 = sum(pset%pdata%acc(:)**2)
          if (acc2 > max_acc) then
             max_acc = acc2
-            max_pacc%coords(:) = cg%pset%p(i)%pos(:)
+            max_pacc%coords(:) = pset%pdata%pos(:)
             !max_pacc%proc = i !> \todo it might be an information about extremum particle, but the scheme of log file is to print the process number
          endif
+         pset => pset%nxt
       enddo
       max_pacc%val = sqrt(max_acc)
       do cdim = xdim, zdim
@@ -184,14 +197,15 @@ contains
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
       use constants, only: xdim, ydim, zdim, zero
+      use particle_types, only: particle
 
       implicit none
 
       real, intent(out)              :: ang_momentum
       real, intent(out)              :: total_energy !< total energy of set of particles
-      integer                        :: i
       real                           :: L1, L2, L3
       type(cg_list_element), pointer :: cgl
+      type(particle), pointer        :: pset
 
       ang_momentum = zero
       total_energy = zero
@@ -199,14 +213,16 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
 
-         do i = 1, size(cgl%cg%pset%p, dim=1)
-            associate( part => cgl%cg%pset%p(i) )
+         pset => cgl%cg%pset%first
+         do while (associated(pset))
+            associate( part => pset%pdata )
                L1 = part%pos(ydim) * part%vel(zdim) - part%pos(zdim) * part%vel(ydim)
                L2 = part%pos(zdim) * part%vel(xdim) - part%pos(xdim) * part%vel(zdim)
                L3 = part%pos(xdim) * part%vel(ydim) - part%pos(ydim) * part%vel(xdim)
                ang_momentum = ang_momentum + part%mass * sqrt(L1**2 + L2**2 + L3**2)
                total_energy = total_energy + part%energy
-            end associate
+             end associate
+             pset => pset%nxt
          enddo
 
          cgl => cgl%nxt
@@ -240,12 +256,10 @@ contains
       bnd2(:,1) = [cg%coord(LEFT, xdim)%r(cg%ijkse(xdim,LO)+I_ONE), cg%coord(LEFT, ydim)%r(cg%ijkse(ydim,LO)+I_ONE), cg%coord(LEFT, zdim)%r(cg%ijkse(zdim,LO)+I_ONE)]
       bnd2(:,2) = [cg%coord(RIGHT,xdim)%r(cg%ijkse(xdim,HI)-I_ONE), cg%coord(RIGHT,ydim)%r(cg%ijkse(ydim,HI)-I_ONE), cg%coord(RIGHT,zdim)%r(cg%ijkse(zdim,HI)-I_ONE)]
 
-
       if (particle_in_area(pos, bnd2))    in  = .true.
       if (particle_in_area(pos, cg%fbnd)) phy = .true.
       !Ghost particle
       if (particle_in_area(pos,bnd1))     out = .true.
-
       if (.not. particle_in_area(pos, dom%edge)) then
          call cg_outside_dom(pos, cg%fbnd, phy)
          if (phy) then
@@ -382,16 +396,18 @@ contains
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
       use mpisetup,      only: proc, comm, mpi_err, FIRST, LAST
       use particle_func, only: particle_in_area
+      use particle_types, only: particle
 
       implicit none
 
       integer, dimension(FIRST:LAST)     :: nsend, nrecv, counts, countr, disps, dispr
-      integer                            :: i, j, ind, pid, npart, k, b
+      integer                            :: i, j, ind, pid, k, b
       real, dimension(ndims)             :: pos, vel, acc
       real, dimension(:), allocatable    :: part_info, part_info2
       real                               :: mass, ener
       type(cg_list_element), pointer     :: cgl
       type(grid_container),  pointer     :: cg
+      type(particle), pointer            :: pset, pset2
       logical                            :: already, in, phy, out, phy_out
 
       nsend = 0
@@ -401,23 +417,24 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         npart = size(cg%pset%p, dim=1)
-         do i = 1, npart
-            if (.not. cg%pset%p(i)%in) then
+         pset => cg%pset%first
+         do while (associated(pset))
+            if (.not. pset%pdata%in) then
                do j = FIRST, LAST
                   if (j == proc) cycle
                   ! TO DO: ADD CONDITION FOR PARTICLES CHANGING CG OUTSIDE DOMAIN
                   associate ( gsej => base%level%dot%gse(j) )
                     do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
-                        if (particle_in_area(cg%pset%p(i)%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO)*cg%dl(:)])) nsend(j) = nsend(j) + 1 ! WON'T WORK in AMR!!!
-                        if (cg%pset%p(i)%outside) then
-                           call cg_outside_dom(cg%pset%p(i)%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2.) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO) * cg%dl(:)], phy_out)
+                        if (particle_in_area(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO)*cg%dl(:)])) nsend(j) = nsend(j) + 1 ! WON'T WORK in AMR!!!
+                        if (pset%pdata%outside) then
+                           call cg_outside_dom(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2.) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO) * cg%dl(:)], phy_out)
                            if (phy_out) nsend(j) = nsend(j) + 1
                         endif
                      enddo
                   end associate
                enddo
             endif
+            pset => pset%nxt
          enddo
          cgl => cgl%nxt
       enddo
@@ -431,33 +448,39 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          associate( cg => cgl%cg )
-            npart = size(cg%pset%p, dim=1)
             do j = FIRST, LAST
-               do i = 1, npart
-                  if (j == proc) cycle ! TO DO IN AMR: ADD PARTICLES CHANGING CG INSIDE PROCESSOR
-                  if (.not. cg%pset%p(i)%in) then
+               pset => cg%pset%first
+               do while (associated(pset))
+                  if (j == proc) then
+                     pset => pset%nxt
+                     cycle ! TO DO IN AMR: ADD PARTICLES CHANGING CG INSIDE PROCESSOR
+                  endif
+                  if (.not. pset%pdata%in) then
                      associate ( gsej => base%level%dot%gse(j) )
                        do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
-                           if (particle_in_area(cg%pset%p(i)%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO)*cg%dl(:)])) then
-                              part_info(ind:ind+npf-1) = collect_single_part_fields(ind, cg%pset%p(i))
-                           else if (cg%pset%p(i)%outside) then
-                              call cg_outside_dom(cg%pset%p(i)%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2.) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO) * cg%dl(:)], phy_out)
-                              if (phy_out) part_info(ind:ind+npf-1) = collect_single_part_fields(ind, cg%pset%p(i))
+                           if (particle_in_area(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO)*cg%dl(:)])) then
+                              part_info(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
+                           else if (pset%pdata%outside) then
+                              call cg_outside_dom(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2.) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO) * cg%dl(:)], phy_out)
+                              if (phy_out) part_info(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
                            endif
                         enddo
                      end associate
                   endif
+                  pset => pset%nxt
                enddo
             enddo
 
             !Remove particles out of cg
-            k = 1
-            do i = 1, npart
-               if (.not. cg%pset%p(k)%out) then
-                  call cg%pset%remove(k)
-               else
-                  k = k + 1
+            pset => cg%pset%first
+            do while (associated(pset))
+               if (.not. pset%pdata%out) then
+                  pset2 => pset%nxt
+                  call cg%pset%remove(pset)
+                  pset => pset2
+                  cycle
                endif
+               pset => pset%nxt
             enddo
 
          end associate
@@ -490,20 +513,12 @@ contains
                      if (.not. out) print *, 'error, particle', part_info2(ind), 'cannot be attributed!' ! NON-AMR ONLY
                      if (out) then
                         pid = nint(part_info2(ind))
-                        already = .false.
-                        do k = 1, size(cg%pset%p, dim=1)
-                           if (pid == cg%pset%p(k)%pid) then
-                              already = .true.
-                              exit
-                           endif
-                        enddo
-                        if (.not. already) then
-                           mass = part_info2(ind+1)
-                           vel  = part_info2(ind+5:ind+7)
-                           acc  = part_info2(ind+8:ind+10)
-                           ener = part_info2(ind+11)
-                           call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out)
-                        endif
+                        mass = part_info2(ind+1)
+                        vel  = part_info2(ind+5:ind+7)
+                        acc  = part_info2(ind+8:ind+10)
+                        ener = part_info2(ind+11)
+                        call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out)
+                        !endif
                      endif
                      ind = ind + npf
                   enddo
@@ -520,13 +535,13 @@ contains
 
    function collect_single_part_fields(ind, p) result(pinfo)
 
-      use particle_types, only: particle
+      use particle_types, only: particle_data
 
       implicit none
 
       real, dimension(npf)          :: pinfo
       integer,        intent(inout) :: ind
-      type(particle), intent(in)    :: p
+      type(particle_data), intent(in)    :: p
 
       pinfo(1)    = p%pid
       pinfo(2)    = p%mass
@@ -543,17 +558,21 @@ contains
 
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
+      use particle_types, only: particle
 
       implicit none
 
       integer(kind=4)                :: i
       type(cg_list_element), pointer :: cgl
+      type(particle), pointer    :: pset
 
       pcount = 0
       cgl => leaves%first
       do while (associated(cgl))
-         do i = 1, size(cgl%cg%pset%p, dim=1, kind=4)
-            if (cgl%cg%pset%p(i)%phy) pcount = pcount + 1
+         pset => cgl%cg%pset%first
+         do while (associated(pset))
+            if (pset%pdata%phy) pcount = pcount + 1
+            pset => pset%nxt
          enddo
          cgl => cgl%nxt
       enddo
@@ -567,6 +586,7 @@ contains
       use constants,        only: half, ndims
       use global,           only: t, dt
       use particle_gravity, only: get_acc_model
+      use particle_types,   only: particle
 
       implicit none
 
@@ -574,6 +594,7 @@ contains
       real, dimension(ndims)         :: acc2
       integer                        :: i, lun_out
       type(cg_list_element), pointer :: cgl
+      type(particle), pointer        :: pset
 
       kdt = dt ; if (.not.twodtscheme) kdt = half * dt
 
@@ -581,11 +602,13 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
 
-         do i = 1, size(cgl%cg%pset%p, dim=1)
-            associate( part => cgl%cg%pset%p(i) )
+         pset => cgl%cg%pset%first
+         do while (associated(pset))
+            associate( part => pset%pdata )
                call get_acc_model(part%pos, part%mass, acc2)
                write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, t, kdt, part%mass, part%pos, part%vel, part%acc, acc2(:), part%energy
-            end associate
+             end associate
+             pset => pset%nxt
          enddo
 
          cgl => cgl%nxt

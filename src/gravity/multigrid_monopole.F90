@@ -64,6 +64,7 @@ contains
       use grid_cont,    only: grid_container
       use mpisetup,     only: proc
       use units,        only: newtong
+      use particle_types, only: particle
 
       implicit none
 
@@ -71,6 +72,7 @@ contains
       real    :: r2
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+      type(particle), pointer    :: pset
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_monopole:isolated_monopole] non-cartesian geometry not implemented yet")
 
@@ -105,11 +107,13 @@ contains
          enddo
          cgl => cgl%nxt
 
-         do i = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
-            if (cg%pset%p(i)%outside) then
+         pset => cg%pset%first
+         do while (associated(pset))
+            if (pset%pdata%outside) then
                write(msg, '(a,i8,a,i5,a)')"[multigrid_monopole:isolated_monopole] Particle #", i, " on process ", proc, "ignored"
                call warn(msg)
             endif
+            pset => pset%nxt
          enddo
 
       enddo
@@ -132,6 +136,7 @@ contains
       use func,       only: operator(.notequals.)
       use grid_cont,  only: grid_container
       use mpisetup,   only: piernik_MPI_Allreduce
+      use particle_types, only: particle
 #ifdef DEBUG
       use dataio_pub, only: msg, printinfo
       use mpisetup,   only: master
@@ -144,6 +149,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
       integer                        :: lh, i, d
+      type(particle), pointer    :: pset
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_monopole:find_img_CoM] non-cartesian geometry not implemented yet")
 
@@ -181,8 +187,10 @@ contains
 
          ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
          !> \warning Do we need to use the fppiG factor here?
-         do i = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
-            if (cg%pset%p(i)%outside) lsum(:) = lsum(:) + [ cg%pset%p(i)%mass, cg%pset%p(i)%mass * cg%pset%p(i)%pos(:) ]
+         pset => cg%pset%first
+         do while (associated(pset))
+            if (pset%pdata%outside) lsum(:) = lsum(:) + [ pset%pdata%mass, pset%pdata%mass * pset%pdata%pos(:) ]
+            pset => pset%nxt
          enddo
 
          cgl => cgl%nxt

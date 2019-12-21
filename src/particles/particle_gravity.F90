@@ -48,6 +48,8 @@ contains
       use cg_list,        only: cg_list_element
       use gravity,        only: source_terms_grav
       use grid_cont,      only: grid_container
+      use particle_types, only: particle
+      !use particle_utils, only: count_all_particles
 #ifdef VERBOSE
       use dataio_pub,     only: printinfo
 #endif /* VERBOSE */
@@ -56,6 +58,7 @@ contains
 
       type(grid_container),  pointer       :: cg
       type(cg_list_element), pointer       :: cgl
+      type(particle), pointer              :: pset
 
       integer                              :: n_part, p, k
       real,    dimension(:,:), allocatable :: dist
@@ -70,10 +73,22 @@ contains
       call update_gravpot_from_particles
 #endif /* NBODY_GRIDDIRECT */
       call source_terms_grav
+      !n_part = count_all_particles
+      
+      n_part = 0
+      cgl => leaves%first
+      do while (associated(cgl))
+         pset => cgl%cg%pset%first
+         do while (associated(pset))
+            n_part = n_part + 1
+            pset => pset%nxt
+         enddo
+         cgl => cgl%nxt
+      enddo
+      
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         n_part = size(cg%pset%p, dim=1)
 
             allocate(cells(n_part, ndims), dist(n_part, ndims))
             call locate_particles_in_cells(n_part, cg, cells, dist)
@@ -84,13 +99,15 @@ contains
             call update_particle_potential_energy(n_part, cg, cells, dist, pdel)
             call update_particle_acc(n_part, cg, cells, dist)
             k=1
-            do p=1, n_part
-               if (pdel(p)==1) then
-                  call cg%pset%remove(k)
-               else
-                  k=k+1
-               endif
-            enddo
+            !Delete particles elsewhere
+            !pset => cg%pset%first
+            !do while (associated(pset))
+            !   if (pdel(p)==1) then
+            !      call pset%remove(k)
+            !   else
+            !      k=k+1
+            !   endif
+            !enddo
 
             deallocate(cells, dist)
 
@@ -109,11 +126,13 @@ contains
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_maps,    only: map_particles
+      use particle_types,   only: particle
 
       implicit none
 
       integer,                          intent(in)    :: n_part
       type(grid_container), pointer,    intent(inout) :: cg
+      type(particle), pointer                         :: pset
       integer, dimension(n_part,ndims), intent(in)    :: cells
       integer(kind=4)                                 :: ig
       integer                                         :: p
@@ -126,8 +145,12 @@ contains
 
       ig = qna%ind(prth_n)
       cg%prth = zero
-      do p = 1, n_part
-         if (.not. cg%pset%p(p)%outside) cg%q(ig)%arr(cells(p,xdim),cells(p,ydim),cells(p,zdim)) = cg%q(ig)%point(cells(p,:)) + one
+      p=1
+      pset => cg%pset%first
+      do while (associated(pset))
+         if (.not. pset%pdata%outside) cg%q(ig)%arr(cells(p,xdim),cells(p,ydim),cells(p,zdim)) = cg%q(ig)%point(cells(p,:)) + one
+         pset => pset%nxt
+         p = p + 1
       enddo
 
    end subroutine update_particle_density_array
@@ -148,14 +171,16 @@ contains
 
    end function phi_pm_part
 
-   subroutine gravpot1b(p, cg, ig)
+   subroutine gravpot1b(pset, cg, ig)
 
       use constants, only: CENTER, LO, HI, xdim, ydim, zdim
       use grid_cont, only: grid_container
+      use particle_types, only: particle
 
       implicit none
 
-      integer,                       intent(in)    :: p
+      !integer,                       intent(in)    :: p
+      type(particle), pointer, intent(in)          :: pset
       type(grid_container), pointer, intent(inout) :: cg
       integer(kind=4),               intent(in)    :: ig
       integer                                      :: i, j, k
@@ -163,9 +188,9 @@ contains
       do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
          do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
             do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
-               cg%q(ig)%arr(i,j,k) = cg%q(ig)%arr(i,j,k) + phi_pm_part([cg%coord(CENTER,xdim)%r(i) - cg%pset%p(p)%pos(xdim), &
-                                                                        cg%coord(CENTER,ydim)%r(j) - cg%pset%p(p)%pos(ydim), &
-                                                                        cg%coord(CENTER,zdim)%r(k) - cg%pset%p(p)%pos(zdim)], cg%pset%p(p)%mass)
+               cg%q(ig)%arr(i,j,k) = cg%q(ig)%arr(i,j,k) + phi_pm_part([cg%coord(CENTER,xdim)%r(i) - pset%pdata%pos(xdim), &
+                                                                        cg%coord(CENTER,ydim)%r(j) - pset%pdata%pos(ydim), &
+                                                                        cg%coord(CENTER,zdim)%r(k) - pset%pdata%pos(zdim)], pset%pdata%mass)
             enddo
          enddo
       enddo
@@ -180,22 +205,25 @@ contains
       use constants,        only: nbgp_n, zero
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
+      use particle_types, only: particle
 
       implicit none
 
       type(grid_container), pointer  :: cg
       type(cg_list_element), pointer :: cgl
-      integer                        :: p, n_part
+      type(particle), pointer        :: pset
+      integer                        :: p
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-            n_part = size(cg%pset%p, dim=1)
             cg%nbgp = zero
 
-            do p = 1, n_part
-               call gravpot1b(p, cg, qna%ind(nbgp_n))
+            pset => cg%pset%first
+            do while (associated(pset))
+               call gravpot1b(pset, cg, qna%ind(nbgp_n))
+               pset => pset%nxt
             enddo
 
          cgl => cgl%nxt
@@ -209,21 +237,28 @@ contains
      use constants, only: ndims, xdim, zdim, LO
      use domain,    only: dom
      use grid_cont, only: grid_container
+     use particle_types, only: particle
+     use mpisetup, only: proc
 
      implicit none
 
      integer,                          intent(in)    :: n_part
      type(grid_container),             intent(inout) :: cg
+     type(particle), pointer                         :: pset
      integer, dimension(n_part,ndims), intent(out)   :: cells
      real,    dimension(n_part,ndims), intent(out)   :: dist
      integer                                         :: i, cdim
 
-     do i = 1, n_part
-        call cg%pset%p(i)%is_outside()
+     i=1
+     pset => cg%pset%first
+     do while (associated(pset))
+        call pset%pdata%is_outside()
         do cdim = xdim, zdim
-           cells(i, cdim) = floor((cg%pset%p(i)%pos(cdim) - dom%edge(cdim,LO)) * cg%idl(cdim), kind=4)
-           dist(i, cdim)  = cg%pset%p(i)%pos(cdim) - ( dom%edge(cdim,LO) + cells(i,cdim) * cg%dl(cdim) )
+           cells(i, cdim) = floor((pset%pdata%pos(cdim) - dom%edge(cdim,LO)) * cg%idl(cdim), kind=4)
+           dist(i, cdim)  = pset%pdata%pos(cdim) - ( dom%edge(cdim,LO) + cells(i,cdim) * cg%dl(cdim) )
         enddo
+        pset => pset%nxt
+        i = i + 1
      enddo
 
    end subroutine locate_particles_in_cells
@@ -237,11 +272,13 @@ contains
       use particle_func,    only: df_d_o2, d2f_d2_o2, d2f_dd_o2
       use units,            only: newtong
       use mpisetup,         only: piernik_MPI_Allreduce
+      use particle_types, only: particle
 
       implicit none
 
       integer,                          intent(in) :: n_part
       type(grid_container), pointer,    intent(in) :: cg
+      type(particle), pointer                      :: pset
       integer, dimension(n_part,ndims), intent(in) :: cells
       real,    dimension(n_part,ndims), intent(in) :: dist
       integer                                      :: p
@@ -252,14 +289,18 @@ contains
 
       ig = qna%ind(gpot_n)
       Mtot = 0
-      do p = 1, n_part
-         if ((.not. cg%pset%p(p)%outside) .and. (cg%pset%p(p)%phy)) Mtot = Mtot + cg%pset%p(p)%mass   !TO DO: include gas
+      pset => cg%pset%first
+      do while (associated(pset))
+         if ((.not. pset%pdata%outside) .and. (pset%pdata%phy)) Mtot = Mtot + pset%pdata%mass   !TO DO: include gas
+         pset => pset%nxt
       enddo
       call piernik_MPI_Allreduce(Mtot, pSUM)
 
-      do p = 1, n_part
+      pset => cg%pset%first
+      p=1
+      do while (associated(pset))
          pdel(p) = 0
-         if (.not. cg%pset%p(p)%outside) then
+         if (.not. pset%pdata%outside) then
             dpot(p) = df_d_o2([cells(p, :)], cg, ig, xdim) * dist(p, xdim) + &
                       df_d_o2([cells(p, :)], cg, ig, ydim) * dist(p, ydim) + &
                       df_d_o2([cells(p, :)], cg, ig, zdim) * dist(p, zdim)
@@ -269,15 +310,17 @@ contains
                        d2f_d2_o2([cells(p, :)], cg, ig, zdim) * dist(p, zdim)**2 + &
                  two * d2f_dd_o2([cells(p, :)], cg, ig, xdim, ydim) * dist(p, xdim)*dist(p, ydim) + &
                  two * d2f_dd_o2([cells(p, :)], cg, ig, xdim, zdim) * dist(p, xdim)*dist(p, zdim)
-            cg%pset%p(p)%energy = cg%pset%p(p)%mass * (cg%q(ig)%point(cells(p,:)) + dpot(p) + half * d2pot(p))
+            pset%pdata%energy = pset%pdata%mass * (cg%q(ig)%point(cells(p,:)) + dpot(p) + half * d2pot(p))
          else
-            cg%pset%p(p)%energy = -newtong * cg%pset%p(p)%mass * Mtot / norm2(cg%pset%p(p)%pos(:))
-            if ((abs(cg%pset%p(p)%energy) < half * cg%pset%p(p)%mass * norm2(cg%pset%p(p)%vel(:)) **2)) then
+            pset%pdata%energy = -newtong * pset%pdata%mass * Mtot / norm2(pset%pdata%pos(:))
+            if ((abs(pset%pdata%energy) < half * pset%pdata%mass * norm2(pset%pdata%vel(:)) **2)) then
                pdel(p) = 1
-               cg%pset%p(p)%energy = 0.
+               pset%pdata%energy = 0.
             endif
 
          endif
+         pset => pset%nxt
+         p = p + 1
       enddo
 
    end subroutine update_particle_potential_energy
@@ -310,40 +353,46 @@ contains
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_func,    only: df_d_p, d2f_d2_p, d2f_dd_p
+      use particle_types, only: particle
 
       implicit none
 
       integer,                          intent(in) :: n_part
       type(grid_container), pointer,    intent(in) :: cg
+      type(particle), pointer                      :: pset
       integer, dimension(n_part,ndims), intent(in) :: cells
       real, dimension(n_part, ndims),   intent(in) :: dist
       integer                                      :: i
       integer(kind=4)                              :: ig
 
       ig = qna%ind(gpot_n)
-      do i = 1, n_part
-         if (cg%pset%p(i)%outside) then
+      pset => cg%pset%first
+      i=1
+      do while (associated(pset))
+         if (pset%pdata%outside) then
          ! multipole expansion for particles outside domain
             call warn('[particle_gravity:update_particle_acc_cic] particle is outside the domain - we need multipole expansion!!!')
-            cg%pset%p(i)%acc = zero
+            pset%pdata%acc = zero
             cycle
          endif
 
-         cg%pset%p(i)%acc(xdim) = - (df_d_p([cells(i, :)], cg, ig, xdim) + &
+         pset%pdata%acc(xdim) = - (df_d_p([cells(i, :)], cg, ig, xdim) + &
                                    d2f_d2_p([cells(i, :)], cg, ig, xdim)       * dist(i, xdim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, xdim, ydim) * dist(i, ydim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, xdim, zdim) * dist(i, zdim))
 
 
-         cg%pset%p(i)%acc(ydim) = -( df_d_p([cells(i, :)], cg, ig, ydim) + &
+         pset%pdata%acc(ydim) = -( df_d_p([cells(i, :)], cg, ig, ydim) + &
                                    d2f_d2_p([cells(i, :)], cg, ig, ydim)       * dist(i, ydim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, xdim, ydim) * dist(i, xdim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, ydim, zdim) * dist(i, zdim))
 
-         cg%pset%p(i)%acc(zdim) = -( df_d_p([cells(i, :)], cg, ig, zdim) + &
+         pset%pdata%acc(zdim) = -( df_d_p([cells(i, :)], cg, ig, zdim) + &
                                    d2f_d2_p([cells(i, :)], cg, ig, zdim)       * dist(i, zdim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, xdim, zdim) * dist(i, xdim) + &
                                    d2f_dd_p([cells(i, :)], cg, ig, ydim, zdim) * dist(i, ydim))
+         pset => pset%nxt
+         i = i + 1
       enddo
 
    end subroutine update_particle_acc_int
@@ -354,11 +403,13 @@ contains
       use dataio_pub,       only: warn
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
+      use particle_types,   only: particle
 
       implicit none
 
       integer,                          intent(in)    :: n_part
       type(grid_container), pointer,    intent(inout) :: cg
+      type(particle), pointer                         :: pset
       integer, dimension(n_part,ndims), intent(in)    :: cells
 
       integer                                         :: p
@@ -378,8 +429,10 @@ contains
          ig = qna%ind(gpot_n)
       endif
 
-      do p = 1, n_part
-         associate( part => cg%pset%p(p) )
+      pset => cg%pset%first
+      p=1
+      do while (associated(pset))
+         associate( part => pset%pdata )
 
             if (part%outside) then
             ! multipole expansion for particles outside domain
@@ -390,7 +443,7 @@ contains
 
             if (mask_gpot1b) then
                cg%gp1b = zero
-               call gravpot1b(p, cg, ig)
+               call gravpot1b(pset, cg, ig)
                cg%gp1b = -cg%gp1b + cg%gpot
             endif
 
@@ -423,7 +476,9 @@ contains
 
             part%acc(:) = half * axyz(:) * cg%idl(:)
 
-         end associate
+          end associate
+          pset => pset%nxt
+          p = p + 1
       enddo
 
    end subroutine update_particle_acc_cic
@@ -435,11 +490,13 @@ contains
       use grid_cont,        only: grid_container
       use multipole,        only: moments2pot
       use named_array_list, only: qna
+      use particle_types,   only: particle
 
       implicit none
 
 
       type(grid_container), pointer, intent(inout) :: cg
+      type(particle), pointer                      :: pset
       integer                                      :: p, i, j, k
       integer(kind=4)                              :: ig, cdim
       integer, dimension(ndims, IM:IP)             :: ijkp
@@ -455,9 +512,9 @@ contains
       endif
 
       fxyz = zero ! suppress -Wmaybe-uninitialized
-
-      do p = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
-         associate( part => cg%pset%p(p) )
+      pset => cg%pset%first
+      do while (associated(pset))
+         associate( part => pset%pdata )
             axyz(:) = zero
 
             if (part%outside) then
@@ -471,12 +528,14 @@ contains
                enddo
                axyz(:) = fxyz(:)
                part%acc(:) = half * axyz(:) * cg%idl(:)
+               
+               pset => pset%nxt
                cycle
             endif
 
             if (mask_gpot1b) then
                cg%gp1b = zero
-               call gravpot1b(p, cg, ig)
+               call gravpot1b(pset, cg, ig)
                cg%gp1b = -cg%gp1b + cg%gpot
             endif
 
@@ -511,15 +570,14 @@ contains
 
                         weight = weight_tmp * weight
                         fxyz(cdim) = -(cg%q(ig)%point(cur_ind(:) + idm(cdim,:)) - cg%q(ig)%point(cur_ind(:) - idm(cdim,:)))
-
                      enddo
                      axyz(:) = axyz(:) + fxyz(:)*weight
                   enddo
                enddo
             enddo
-
             part%acc(:) = half * axyz(:) * cg%idl(:)
-         end associate
+          end associate
+          pset => pset%nxt
       enddo
 
    end subroutine update_particle_acc_tsc
