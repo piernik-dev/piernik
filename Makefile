@@ -21,6 +21,7 @@
 #   'make qa'              # run qa.py on all F90 files in src and problems
 #                            directories
 #   'make pep8'            # run pep8 on all Python scripts, ignore long lines
+#   'make shellcheck'      # run shellcheck on all Bash scripts
 #   'make chk_err_msg'     # check filenames in error messages
 #   'make doxy'            # generate/updare Doxygen documentation
 #
@@ -81,11 +82,15 @@ qa: pep8 chk_err_msg
 
 pep8:
 	echo PEP8 check
-	pep8 `find . -name "*py"` --ignore=E501
+	pep8 `find bin src python problems benchmarking jenkins -name "*py"` --ignore=E501
 
 chk_err_msg:
 	echo Check filenames in error messages
 	./bin/checkmessages.sh
+
+shellcheck:
+	echo ShellCheck
+	shellcheck `find bin src python problems benchmarking jenkins -name "*.sh"`
 
 doxy:
 	doxygen piernik.doxy
