@@ -63,7 +63,7 @@ contains
       type(cg_list_element), pointer :: cgl
 
       !!!!!!!!!Does nothing for now
-      
+
       !cgl => leaves%first
       !do while (associated(cgl))
       !   call cgl%cg%pset%print
@@ -417,24 +417,28 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         pset => cg%pset%first
-         do while (associated(pset))
-            if (.not. pset%pdata%in) then
-               do j = FIRST, LAST
-                  if (j == proc) cycle
+         do j = FIRST, LAST
+            pset => cg%pset%first
+            do while (associated(pset))
+               if (j == proc) then
+                  pset => pset%nxt
+                  cycle
+               endif
+               if (.not. pset%pdata%in) then
                   ! TO DO: ADD CONDITION FOR PARTICLES CHANGING CG OUTSIDE DOMAIN
                   associate ( gsej => base%level%dot%gse(j) )
                     do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
-                        if (particle_in_area(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO)*cg%dl(:)])) nsend(j) = nsend(j) + 1 ! WON'T WORK in AMR!!!
-                        if (pset%pdata%outside) then
+                       if (particle_in_area(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO)*cg%dl(:)])) then
+                          nsend(j) = nsend(j) + 1 ! WON'T WORK in AMR!!!
+                       else if (pset%pdata%outside) then
                            call cg_outside_dom(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2.) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO) * cg%dl(:)], phy_out)
                            if (phy_out) nsend(j) = nsend(j) + 1
                         endif
                      enddo
                   end associate
-               enddo
-            endif
-            pset => pset%nxt
+               endif
+               pset => pset%nxt
+            enddo
          enddo
          cgl => cgl%nxt
       enddo
@@ -518,7 +522,6 @@ contains
                         acc  = part_info2(ind+8:ind+10)
                         ener = part_info2(ind+11)
                         call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out)
-                        !endif
                      endif
                      ind = ind + npf
                   enddo
@@ -544,6 +547,7 @@ contains
       type(particle_data), intent(in)    :: p
 
       pinfo(1)    = p%pid
+      if (.not. (pinfo(1) >=1)) print *, 'error, id cannot be zero', ind, pinfo(1)
       pinfo(2)    = p%mass
       pinfo(3:5)  = p%pos
       pinfo(6:8)  = p%vel
