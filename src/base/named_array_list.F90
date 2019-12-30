@@ -201,7 +201,7 @@ contains
          type is (na_var_list_w)
             if (element%name == fluid_n) this%fi  = ubound(this%lst(:), dim=1, kind=4)
             if (element%name == mag_n)   this%bi  = ubound(this%lst(:), dim=1, kind=4)
-        type is (na_var_list_q)
+         type is (na_var_list_q)
             if (element%name == wa_n)    this%wai = ubound(this%lst(:), dim=1, kind=4)
       end select
 

@@ -28,6 +28,8 @@
 
 module initproblem
 
+   use fluidtypes,  only: component_fluid
+
    implicit none
 
    private
@@ -36,6 +38,9 @@ module initproblem
 
    ! Private variables
    real :: kx, ky, kz
+   character(len=*), parameter :: plot_fname = "jeans.gnuplot"
+   real :: kn, cs0, omg2, kJ, Tamp, omg
+   class(component_fluid), pointer :: fl
 
    ! Namelist variables
    real            :: d0, p0, amp
@@ -49,7 +54,11 @@ contains
 
    subroutine problem_pointers
 
+      use user_hooks, only: finalize_problem
+
       implicit none
+
+      finalize_problem => dump_gnuplot
 
    end subroutine problem_pointers
 
@@ -57,22 +66,16 @@ contains
 
    subroutine read_problem_par
 
-      use constants,   only: xdim, ydim, zdim, pi, zero
+      use constants,   only: xdim, ydim, zdim, pi
       use dataio_pub,  only: nh    ! QA_WARN required for diff_nml
-      use dataio_pub,  only: tend, msg, die, warn, printinfo
+      use dataio_pub,  only: msg, die, warn
       use domain,      only: dom
       use fluidindex,  only: flind
-      use fluidtypes,  only: component_fluid
-      use func,        only: operator(.notequals.)
       use mpisetup,    only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
       use problem_pub, only: jeans_d0, jeans_mode
-      use units,       only: fpiG, newtong
+      use units,       only: fpiG
 
       implicit none
-
-      class(component_fluid), pointer :: fl
-      real                            :: kn, cs0, omg2, kJ, Tamp_rounded, Tamp_aux, Tamp, omg
-      integer, parameter              :: g_lun = 137
 
       ! namelist default parameter values
       d0          = 1.0                   !< Average density of the medium (density bias required for correct EOS evaluation)
@@ -173,89 +176,6 @@ contains
          if (master) call warn("[initproblem:problem_initial_conditions] No waves (kn == 0)")
       endif
       if (mode == 1) Tamp = Tamp / 4.
-      if (Tamp > 0) then
-         Tamp_aux = 10**int(log(Tamp)/log(10.))
-         Tamp_rounded = (int(1.05*Tamp/Tamp_aux)+1)*Tamp_aux
-      else
-         Tamp_rounded = 0.
-      endif
-
-      if (master) then
-         write(msg, *) 'Unperturbed adiabatic sound speed = ', cs0
-         call printinfo(msg, .true.)
-         write(msg, *) 'Gravitational constant * 4pi      = ', fpiG
-         call printinfo(msg, .true.)
-         write(msg, *) 'L_critical                        = ', sqrt(pi * fl%gam * p0 / newtong / d0**2)
-         call printinfo(msg, .true.)
-         write(msg, *) 'gamma                             = ', fl%gam
-         call printinfo(msg, .true.)
-         write(msg, *) 'Perturbation wavenumber           = ', kn
-         call printinfo(msg, .true.)
-         write(msg, *) 'Jeans wavenumber                  = ', kJ
-         call printinfo(msg, .true.)
-         if (omg2>0) then
-            write(msg, *) 'characteristic frequency          = ', omg
-            call printinfo(msg, .true.)
-            call printinfo("", .true.)
-            write(msg, *) 'T(t) = ',Tamp,'*[1 - cos(',omg,'t)]'
-            call printinfo(msg, .true.)
-         else
-            write(msg, *) 'characteristic timescale          = ', omg
-            call printinfo(msg, .true.)
-            !write(msg, *) 'Something like T(t) = ',Tamp,'* exp(',omg,'t)]' !BEWARE the formula is not completed
-            !call printinfo(msg, .true.)
-         endif
-         call printinfo('Divide T(t) for .tsl by L to get proper amplitude !', .true.)
-         call printinfo('', .true.)
-         call printinfo('To verify results, run:', .true.)
-#ifdef MULTIGRID
-         call printinfo(' % gnuplot verify.gpl; display jeans-mg.png', .true.)
-#else /* !MULTIGRID */
-         call printinfo(' % gnuplot verify.gpl; display jeans-fft.png', .true.)
-#endif /* !MULTIGRID */
-         call printinfo('', .true.)
-
-         open(g_lun,file="verify.gpl",status="unknown")
-         write(g_lun,'(a)') "set sample 1000"
-         write(g_lun,'(a)') "set term png #font luximr"
-#ifdef MULTIGRID
-         write(g_lun,'(a)') "set output 'jeans-mg.png'"
-         write(g_lun,'(a)') 'set title "Jeans oscillations (multigrid)"'
-#else /* !MULTIGRID */
-         write(g_lun,'(a)') "set output 'jeans-fft.png'"
-         write(g_lun,'(a)') 'set title "Jeans oscillations (FFT)"'
-#endif /* !MULTIGRID */
-         write(g_lun,'(3(a,/),a)') 'set ylabel "E_{int}"', 'set xtics 1', 'set mxtics 2', 'set mytics 2'
-         if ((Tamp_rounded .notequals. zero) .and. (Tamp > zero)) then
-            write(g_lun,'(a,g11.3)')'set ytics ',Tamp_rounded/2.
-            write(g_lun,'(2(a,g11.3),a)')'set yrange [ ',Tamp_rounded/(-4.),':',Tamp_rounded,']'
-         else
-            write(g_lun,'(a)')'set yrange [ * : * ]'
-         endif
-         if (Tamp >0) then
-            write(g_lun,'(a)') "set key left Left reverse bottom"
-            write(g_lun,'(a,g13.5)') "a = ", Tamp
-            write(g_lun,'(a,g13.5)') "b = ", omg
-            write(g_lun,'(a,g13.5)') "T = 2*pi/b"
-            write(g_lun,'(a,g13.5)') "y(x) = a * sin(b*x)**2"
-            write(g_lun,'(a)') 'set xlabel "time [periods]"'
-            if (tend > pi/omg) then
-               write(g_lun,'(a,g11.3,a)')'set xrange [ 0 : int(',tend,'/T)]'
-            else
-               write(g_lun,'(a)')'set xrange [ * : * ]'
-            endif
-            write(g_lun,'(a)') 'plot "jeans_ts1_000.tsl" u ($2/T):($10) w p t "calculated", "" u ($2/T):($10) smoo cspl t "" w l lt 1, y(x*T) t "analytical", "" u ($2/T):(10*(y($2)-$10)) t "10 * difference" w lp, 0 t "" w l lt 0'
-         else
-
-            write(g_lun,'(a,g13.5)') "a = ", amp**2 * omg**2 * 800000. !BEWARE: stronger dependence on omg, magic number 800000
-            write(g_lun,'(a,g13.5)') "b = ", 2.0*omg
-            write(g_lun,'(a,g13.5)') "T = 2*pi/b"
-            write(g_lun,'(a,g13.5)') "y(x) = a * exp(b*x)"
-            write(g_lun,'(3(a,/),a)') 'set key left Left reverse top', 'set log y', 'set xlabel "time"', 'set xrange [ * : * ]'
-            write(g_lun,'(a)') 'plot "jeans_ts1_000.tsl" u ($2):($10) w p t "calculated", y(x) t "exp(2 om T)"'
-         endif
-         close(g_lun)
-      endif
 
    end subroutine read_problem_par
 
@@ -285,6 +205,9 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+#ifdef MAGNETIC
+         call cg%set_constant_b_field([0., 0., 0.])
+#endif /* MAGNETIC */
          do k = cg%ks, cg%ke
             zk = cg%z(k)-dom%edge(zdim, LO)
             do j = cg%js, cg%je
@@ -306,9 +229,7 @@ contains
                   cg%u(fl%imx:fl%imz,i,j,k) = 0.0
 #ifndef ISO
                   cg%u(fl%ien,i,j,k)        = pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
-
 #ifdef MAGNETIC
-                  call cg%set_constant_b_field([0., 0., 0.])
                   cg%u(fl%ien,i,j,k)        = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 #endif /* MAGNETIC */
 #endif /* !ISO */
@@ -319,5 +240,145 @@ contains
       enddo
 
    end subroutine problem_initial_conditions
+
+!> \brief Inform about the simulation
+
+   subroutine describe_test
+
+      use constants,  only: pi
+      use dataio_pub, only: msg, printinfo
+      use mpisetup,   only: master
+      use units,      only: fpiG, newtong
+
+      implicit none
+
+      if (master) then
+         write(msg, *) 'Unperturbed adiabatic sound speed = ', cs0
+         call printinfo(msg, .true.)
+         write(msg, *) 'Gravitational constant * 4pi      = ', fpiG
+         call printinfo(msg, .true.)
+         write(msg, *) 'L_critical                        = ', sqrt(pi * fl%gam * p0 / newtong / d0**2)
+         call printinfo(msg, .true.)
+         write(msg, *) 'gamma                             = ', fl%gam
+         call printinfo(msg, .true.)
+         write(msg, *) 'Perturbation wavenumber           = ', kn
+         call printinfo(msg, .true.)
+         write(msg, *) 'Jeans wavenumber                  = ', kJ
+         call printinfo(msg, .true.)
+         if (omg2>0) then
+            write(msg, *) 'characteristic frequency          = ', omg
+            call printinfo(msg, .true.)
+            call printinfo("", .true.)
+            write(msg, *) 'T(t) = ',Tamp,'*[1 - cos(',omg,'t)]'
+            call printinfo(msg, .true.)
+         else
+            write(msg, *) 'characteristic timescale          = ', omg
+            call printinfo(msg, .true.)
+            !write(msg, *) 'Something like T(t) = ',Tamp,'* exp(',omg,'t)]' !BEWARE the formula is not completed
+            !call printinfo(msg, .true.)
+         endif
+         call printinfo('Divide T(t) for .tsl by L to get proper amplitude !', .true.)
+         call printinfo('', .true.)
+         call printinfo('To verify results, run:', .true.)
+         write(msg, '(5a)')' % gnuplot ', plot_fname, '; display jeans.png'
+         call printinfo(msg, .true.)
+         call printinfo('', .true.)
+      endif
+
+   end subroutine describe_test
+
+!>
+!! \brief Write the gnuplot file
+!!
+!! Scale everything by mass to get plots independent of domain volume
+!<
+
+   subroutine dump_gnuplot
+
+      use constants,  only: pi
+      use dataio_pub, only: tsl_file, tend
+      use domain,     only: dom
+      use mpisetup,   only: master
+
+      implicit none
+
+      integer, parameter :: g_lun = 137
+
+      call describe_test
+
+      ! write gnuplot file
+      if (master) then
+         open(g_lun, file=plot_fname, status="unknown")
+         write(g_lun,'(a)') "set sample 1000"
+         write(g_lun,'(a)') 'set ylabel "E_{int}"'
+         write(g_lun,'(a)') 'set xlabel "time"'
+         write(g_lun,'(3a)') 'file = "', trim(tsl_file), '"'
+         if (Tamp >0) then
+            write(g_lun,'(a)') "set key left Left reverse bottom"
+            write(g_lun,'(a,g13.5)') "aa = ", Tamp /(d0 * dom%Vol)
+            write(g_lun,'(a,g13.5)') "bb = ", omg
+            write(g_lun,'(a)') "T = 2*pi/bb"
+            write(g_lun,'(a)') "y(x) = aa * sin(bb*x)**2"
+            write(g_lun,'(a)') 'a = aa'
+            write(g_lun,'(a)') 'b = bb'
+            write(g_lun,'(a)') 'c = -1e-3'
+            write(g_lun,'(a)') 'f(x) = a * sin(b*x)**2 * exp(c*x)'
+            write(g_lun,'(a)') 'fit f(x) file using 2:($10/$4) via a,b,c'
+            write(g_lun,'(a)') 'set term dumb'
+            write(g_lun,'(a)') 'set output "/dev/null"'
+            write(g_lun,'(a)') 'plot file using 2:($10/$4) t ""'
+            write(g_lun,'(a)') 'maxval = GPVAL_DATA_Y_MAX'
+            write(g_lun,'(a)') 'plot file using 2:(abs(f($2)-$10/$4)) t ""'
+            write(g_lun,'(a)') 'maxres = GPVAL_DATA_Y_MAX'
+            write(g_lun,'(a)') 'plot file using 2:(abs(y($2)-$10/$4)) t ""'
+            write(g_lun,'(a)') 'maxdiff = GPVAL_DATA_Y_MAX'
+            write(g_lun,'(a)') 'resfactor = 10**floor(log10(maxval/maxres))'
+            write(g_lun,'(a)') 'difffactor = 10**floor(log10(maxval/maxdiff))'
+            write(g_lun,'(a)') 'f_str = sprintf("%.5g * sin(%.5g * t)^2 * exp(%.5g * t)", a, b, c)'
+            if (tend > pi/omg) then
+               write(g_lun,'(a,g11.3,a)')'set xrange [ 0 : T*floor(',tend,'/T)]'
+            else
+               write(g_lun,'(a)')'set xrange [ * : * ]'
+            endif
+            write(g_lun,'(a)') 'set xtics T'
+            write(g_lun,'(a)') 'set title sprintf("Jeans oscillations, period=%g\nanalytical: %.5g * sin(%.5g * t)^2\nfit: %s\nrelative errors: amplitude = %.2g, period = %.2g", T, aa, bb, f_str, (1. - aa/a), (1- bb/b))'
+         else ! unstable
+            write(g_lun,'(a)') 'set term dumb'
+            write(g_lun,'(a)') 'set output "/dev/null"'
+            write(g_lun,'(a,g13.5)') "b = ", 2.0*omg
+            ! find values from first few data points
+            write(g_lun,'(a)') 'splot [1:4] file u ($1):($2):($10/$4) t ""'
+            write(g_lun,'(a)') 't1 = GPVAL_Y_MAX'
+            write(g_lun,'(a)') 'e1 = GPVAL_Z_MAX'
+            write(g_lun,'(a)') "a = e1 / exp(b * t1)"
+            write(g_lun,'(a)') "T = 2*pi/b"
+            write(g_lun,'(a)') 'plot file u ($2):($10/$4) t ""'
+            write(g_lun,'(a)') 'maxval = GPVAL_DATA_Y_MAX'
+            write(g_lun,'(a,g11.3,a)')'set yrange [ * : 10**ceil(log10(maxval)) ]'
+            write(g_lun,'(a)') "y(x) = a * exp(b*x)"
+            write(g_lun,'(3(a,/),a)') 'set key right bottom', 'set log y', 'set xlabel "time"', 'set xrange [ * : * ]'
+            write(g_lun,'(a)') 'set title sprintf("Jeans instability\nrough fit: %.5g * exp(%.5g * t)", a, b)'
+         endif
+
+         write(g_lun,'(a)') "set term png enhanced size 800, 600"
+         write(g_lun,'(a)') "set output 'jeans.png'"
+         if (Tamp >0) then
+            write(g_lun,'(a)') 'plot file using 2:($10/$4) w p t "simulation", "" u 2:($10/$4) smoo cspl t "" w l lt 1, y(x) t "analytical", "" u 2:(difffactor*(y($2)-$10/$4)) t sprintf("%d",difffactor)." * analytical difference" w lp, "" u 2:(resfactor*(f($2)-$10/$4)) t sprintf("%d", resfactor)." * residuals (simulation - fit)" w lp, 0 t "" w l lt 0'
+         else
+            write(g_lun,'(a)') 'plot file u ($2):($10/$4) w p t "calculated", y(x) t "a * exp(2 om T)"'
+         endif
+         write(g_lun,'(a)') 'set output'
+
+         if (Tamp >0) then
+            write(g_lun,'(a,2g13.5)') 'print "#analytical = ", aa, bb'
+            write(g_lun,'(a,2g13.5)') 'print "#fit = ", a, b, c'
+            write(g_lun,'(a,2g13.5)') 'print "#maxval = ", maxval'
+            write(g_lun,'(a,2g13.5)') 'print "#maxres = ", maxres'
+            write(g_lun,'(a,2g13.5)') 'print "#maxdiff = ", maxdiff'
+         endif
+         close(g_lun)
+      endif
+
+   end subroutine dump_gnuplot
 
 end module initproblem

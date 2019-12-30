@@ -81,7 +81,7 @@ qa: pep8 chk_err_msg
 
 pep8:
 	echo PEP8 check
-	pep8 `find . -name "*py"` --ignore=E501
+	pep8 `find src problems bin jenkins python -name "*py"` --ignore=E501
 
 chk_err_msg:
 	echo Check filenames in error messages
