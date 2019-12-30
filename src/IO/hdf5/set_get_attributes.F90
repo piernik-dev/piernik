@@ -213,7 +213,7 @@ contains
       implicit none
 
       integer(HID_T),                 intent(in) :: file_id  !< File identifier
-      character(len=*),               intent(in) :: name     !< Integer attribute name
+      character(len=*),               intent(in) :: name     !< Character attribute name
       character(len=*), dimension(:), intent(in) :: array    !< Array of values (should contain at least one element)
       character(len=*), optional,     intent(in) :: path     !< Path to attribute ("/" if not specified)
 
@@ -257,7 +257,7 @@ contains
       implicit none
 
       integer(HID_T),                                      intent(in)  :: file_id  !< File identifier
-      character(len=*),                                    intent(in)  :: name     !< Integer attribute name
+      character(len=*),                                    intent(in)  :: name     !< Character attribute name
       character(len=cbuff_len), allocatable, dimension(:), intent(out) :: array    !< Array of returned values (empty array marks an error)
       character(len=*), optional,                          intent(in)  :: path     !< Path to attribute ("/" if not specified)
 
