@@ -18,20 +18,18 @@ else:
 
 # searches for variable name, if found splits and appends the value ----------
 def append_split_var(line, variable_name, var_array_to_append, param_found):
-    for word in str(line).split(" "):
-        if word == variable_name:
-            if (not_py27): line = str(line)[2:] # strip leading "b'" -- in python3 lines of file are byte type and converted to str have leading b.
-            line_fragment = line.split('=')
-            if str(line_fragment[0]).strip(' ') == str(variable_name):
-                tmp_str = str(line_fragment[1])
-                tmp_str = tmp_str.split('!')
-                var_value = tmp_str[0]
-                if (not_py27): var_value = var_value.strip("'")
-                var_value = determine_type_append(var_value)
-                var_array_to_append.append(var_value)
-                param_found = True
-    return var_array_to_append, param_found
+   if (not_py27):
+      words = (str(line).replace(" ","").replace("\t","").replace("b'","")).split('=') # remove leading b' (byte type) in python3
+   else:
+      words = str(line.replace(" ","").replace("\t","")).split('=')
+   if words[0] == variable_name:
+      var_value  = words[1].split("!")[0]
+      if (not_py27): var_value = var_value.strip("'") # remove remaining b' (byte type) in python3
+      var_value = determine_type_append(var_value)
+      var_array_to_append.append(var_value)
+      param_found = True
 
+   return var_array_to_append, param_found
 # reads problem.par file embedded in PIERNIK h5 file --------------------------
 def read_par(hdf5_filename, var_nam, default_values): #, var_array):
         if len(hdf5_filename)   <= 1:
