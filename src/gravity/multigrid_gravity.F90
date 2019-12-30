@@ -983,6 +983,7 @@ contains
       character(len=cbuff_len) :: dname
       integer(kind=4), dimension(4)    :: mg_fields
       type(cg_level_connected_T), pointer :: curl
+      integer, parameter :: some_warm_up_cycles = 1
 
 #ifdef DEBUG
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
@@ -1054,7 +1055,7 @@ contains
             if (norm_lhs < norm_lowest) then
                norm_lowest = norm_lhs
             else
-               if (norm_lhs/norm_lowest > vcycle_abort) then
+               if (v > some_warm_up_cycles .and. norm_lhs/norm_lowest > vcycle_abort) then
                   vstat%norm_final = norm_lhs/norm_rhs
                   if (.not. verbose_vcycle) call vstat%brief_v_log
                   call die("[multigrid_gravity:vcycle_hg] Serious nonconvergence detected.")
@@ -1063,7 +1064,7 @@ contains
             endif
          endif
 
-         if (v>0 .and. norm_old/norm_lhs <= vcycle_giveup) then
+         if (v > some_warm_up_cycles .and. norm_old/norm_lhs <= vcycle_giveup) then
             if (master) then
                write(msg, '(a,g8.1)')"[multigrid_gravity:vcycle_hg] Poor convergence detected. Giving up. norm_tol missed by a factor of ",norm_lhs/norm_rhs/merge(norm_tol, tiny(1.), norm_tol > 0.)
                call warn(msg)

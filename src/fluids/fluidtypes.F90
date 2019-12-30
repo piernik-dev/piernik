@@ -114,7 +114,7 @@ module fluidtypes
       integer(kind=4) :: fluids      = 0      !< number of fluids (ionized gas, neutral gas, dust)
       integer(kind=4) :: energ       = 0      !< number of non-isothermal fluids (indicating the presence of energy density in the vector of conservative variables)
       integer(kind=4) :: components  = 0      !< number of components, such as CRs, tracers, magnetic helicity (in future), whose formal description does not involve [???]
-      integer (kind=4):: fluids_sg   = 0      !< number of selfgravitating fluids (ionized gas, neutral gas, dust)
+      integer(kind=4) :: fluids_sg   = 0      !< number of selfgravitating fluids (ionized gas, neutral gas, dust)
 
       type(fluid_arr), dimension(:), pointer :: all_fluids
 
