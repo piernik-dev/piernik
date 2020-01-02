@@ -19,7 +19,7 @@ p_min_fix = 0.4e0
 p_max_fix = 1.65e4
 cre_eff = 0.01
 q_big   = 30.
-f_init  = 0.19 # 1.0
+f_init  = 0.00235 #0.019# 0.025 # 1.0
 q_init  = 4.1
 
 arr_dim = 200
@@ -31,30 +31,36 @@ first_run = True
 got_q_tabs = False
 q_explicit = True
 interpolate_cutoffs = True
+highlighted = False
 verbosity_1 = True
 verbosity_2 = False
 
 global par_visible_gridx, par_visible_gridy, par_vis_all_borders, par_visible_title, par_simple_title, par_alpha, par_plot_legend, \
        par_plot_e_small,  par_plot_color, par_plot_width, par_fixed_dims, i_plot, xkcd_colors, use_color_list, tightened, par_legend_loc
-
 xkcd_colors = [ 'xkcd:blue', 'xkcd:darkblue', 'xkcd:red', 'xkcd:crimson', 'xkcd:green']
 xkcd_colorsh= [ 'xkcd:azure', 'xkcd:blue', 'xkcd:coral', 'xkcd:orangered', 'xkcd:yellowgreen']
-par_plot_color     = xkcd_colors[1]
+plot_colors = ["crimson", "xkcd:azure", "green", "xkcd:purple", "xkcd:orange", "indigo", "chartreuse"]
+colors      = plot_colors
+
+linestyles = ["solid", (0,(5,1)), (0,(0.5,0.5)), (0,(3,1,1,1))]
+
 i_plot = 0
-use_color_list     = False
+par_plot_color     = colors[1]
+par_plot_linestyle = linestyles[0]
+use_color_list     = True
 par_visible_gridx  = False
 par_visible_gridy  = True
 par_vis_all_borders= False
 par_visible_title  = False
 par_simple_title   = True
-par_alpha          = 0.55
+par_alpha          = 0.85
 par_plot_width     = 2.0
 par_fixed_dims     = True
 par_plot_legend    = True
 par_plot_e3        = False
 par_plotted_src    = False
-par_plot_init_slope= False
-par_legend_loc     = (0.490,0.925)# 0.867 (0.490,0.925 )#+0.058)(-2,-2) #(0.515,0.780) #(0.385,0.715+0.058), (0.385,0.715+i_plot*0.058)
+par_plot_init_slope= True
+par_legend_loc     = (0.520,0.925)#(0.350,0.965- 0.0525*index_t*1.5)# 0.867 (0.490,0.925 )
 default_legend_loc = 1
 par_test_name      = "CRWa05"
 highlight_bins     = [10,16]
@@ -62,7 +68,7 @@ par_highlight_bins_rect = False
 tightened          = False
 
 def set_plot_color(plot_color, index, color_list):
-   global xkcd_colors, use_color_list
+   global use_color_list
    if use_color_list:
       plot_color = color_list[index%len(color_list)]
    else:
@@ -178,7 +184,7 @@ def interpolate_q(alpha):
    return q_out
 # plot data ------------------------------------
 def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
-   global first_run, e_small, i_plot, par_plot_color, s, clean_plot
+   global first_run, e_small, i_plot, par_plot_color, par_plot_linestyle, s, clean_plot
    f_lo_cut = fl[0] ;      f_up_cut = fr[-1]
    p_lo_cut = pl[0] ;   p_up_cut = pr[-1]
 
@@ -211,7 +217,7 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
    plt.ylabel('d$'+plot_var+' / $d$p$',fontsize = 20, labelpad=-0.)
    plt.tick_params(axis='both', which='major', labelsize=16)
 
-   global plot_p_min, plot_p_max, plot_var_min, plot_var_max, use_color_list, i_plot, handle_list, tightened
+   global plot_p_min, plot_p_max, plot_var_min, plot_var_max, use_color_list, i_plot, handle_list, tightened, highlighted
    if first_run :
       plot_p_min    =  p_lo_cut
       plot_p_max    =  p_up_cut
@@ -230,7 +236,7 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
          plt.ylim(9.5e-13,1.e-3)
          plt.xlim(p_fix[1], p_fix[-2]*0.5)
       else:
-         plt.ylim(e_small,1.e-1)
+         plt.ylim(e_small,1.e-2)
          plt.xlim(p_fix[1], p_fix[-2]*0.5)
 
    if (par_plot_e3): plt.ylim (10. * plot_var_min , 10.*max(plot_var_r)*max(pr)**3) # override
@@ -257,9 +263,12 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
    elif(plot_var == "n"):
       plt.plot(p_range, e_small/(c*p_range), color="xkcd:azure", label="$n_{small}$")
 
-   par_plot_color = set_plot_color(par_plot_color, i_plot, xkcd_colors)
-   spectrum_label  = ("d$%s$(p)/d$p$, \n[%3.1f, %3.1f, %3.1f] kpc " % (plot_var, location[0]/1000.,location[1]/1000.,location[2]/1000.) )
+   par_plot_color = set_plot_color(par_plot_color, i_plot, colors)
+   #par_plot_linestyle = set_plot_color(par_plot_linestyle, i_plot, linestyles)      ### WARNING temporary trick
+
+   spectrum_label  = ("d$%s$(p)/d$p$ %s, \n[%3.1f, %3.1f, %3.1f] kpc " % (plot_var, par_test_name, location[0]/1000.,location[1]/1000.,location[2]/1000.) )
    #spectrum_label  = ("d$%s$/d$p$, %s (  )" % (plot_var, par_test_name) ) #
+   spectrum_label  = (" %s (z=%3.1fkpc)" % ( par_test_name , location[2]/1000.) ) #
 
    for i in range(0, size(fr)) :
       if (par_plot_e3): # multiply times gamma**3
@@ -267,28 +276,26 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
          plt.plot([pl[i],pl[i]], [plot_var_min, (pl[i]**3)*plot_var_l[i]], lw=par_plot_width, color=par_plot_color, alpha = par_alpha)
          plt.plot([pr[i],pr[i]], [plot_var_min, (pr[i]**3)*plot_var_r[i]], lw=par_plot_width, color=par_plot_color, alpha = par_alpha)
       else:
-         plt.plot([pl[i],pr[i]], [plot_var_l[i], plot_var_r[i]], lw=par_plot_width, solid_capstyle='round', color=par_plot_color, alpha = par_alpha)
-         plt.plot([pl[i],pl[i]], [plot_var_min,  plot_var_l[i]], lw=par_plot_width, solid_capstyle='round', color=par_plot_color, alpha = par_alpha*0.75)
-         plt.plot([pr[i],pr[i]], [plot_var_min,  plot_var_r[i]], lw=par_plot_width, solid_capstyle='round', color=par_plot_color, alpha = par_alpha*0.75)
-      spectrum = mlines.Line2D([],[], color=par_plot_color, solid_capstyle='round', lw=par_plot_width, alpha = par_alpha, label = spectrum_label )
+         plt.plot([pl[i],pr[i]], [plot_var_l[i], plot_var_r[i]], lw=2*par_plot_width, solid_capstyle='round', color=par_plot_color, alpha = par_alpha, linestyle=par_plot_linestyle)
+         plt.plot([pl[i],pl[i]], [plot_var_r[i-1], plot_var_l[i]], lw=2*par_plot_width, solid_capstyle='round', color=par_plot_color, alpha = par_alpha, linestyle=par_plot_linestyle)
+         plt.plot([pl[i],pl[i]], [plot_var_min,  plot_var_l[i]], lw=par_plot_width, solid_capstyle='round', color="xkcd:gray", alpha = par_alpha*0.2)
+         plt.plot([pr[i],pr[i]], [plot_var_min,  plot_var_r[i]], lw=par_plot_width, solid_capstyle='round', color="xkcd:gray", alpha = par_alpha*0.2)
+   if (not par_plot_e3): plt.plot([pr[size(fr)-1],pr[size(fr)-1]], [plot_var_r[size(fr)-1],plot_var_min], lw=2*par_plot_width, solid_capstyle='round', color=par_plot_color, alpha = par_alpha) # rightmost edge
+   spectrum = mlines.Line2D([],[], color=par_plot_color, solid_capstyle='round', lw=par_plot_width, alpha = par_alpha, label = spectrum_label )
 
-   if (len(highlight_bins) > 0):
-      par_plot_color = set_plot_color(par_plot_color, i_plot, xkcd_colorsh)
-      for ind in highlight_bins:
-         i  = ind; i1 = i+1
-         imil = i-i_lo_cut
-         if ( (first_run == True and clean_plot == False) or (first_run == False and clean_plot == True)  ): # Trick - highlight only in first iteration if not clean_plot
-            plt.fill([p_fix[i],  p_fix[i1], p_fix[i1], p_fix[i]], [e_small,e_small, 10., 10.], color="xkcd:red", alpha = 0.20)
-         if (par_highlight_bins_rect):
-            plt.plot([p_fix[i],  p_fix[i1]], [plot_var_l[imil], plot_var_r[imil]],  lw=par_plot_width*2.5, solid_capstyle='round', color=par_plot_color, alpha = 0.5)
-            plt.plot([p_fix[i],  p_fix[i]],  [plot_var_min, plot_var_l[imil]],      lw=par_plot_width*2.5, solid_capstyle='round', color=par_plot_color, alpha = 0.55)
-            plt.plot([p_fix[i1], p_fix[i1]], [plot_var_min, plot_var_r[imil]],      lw=par_plot_width*2.5, solid_capstyle='round', color=par_plot_color, alpha = 0.55)
+   if (not highlighted):
+      if (len(highlight_bins) > 0):
+         par_plot_color = set_plot_color(par_plot_color, i_plot, xkcd_colorsh)
+         for ind in highlight_bins:
+            i  = ind; i1 = i+1
+            plt.fill([p_fix[i],  p_fix[i1], p_fix[i1], p_fix[i]], [e_small,e_small, 10., 10.], color="mediumseagreen", alpha = 0.20)
+         if (not (clean_plot == True)): highlighted = True
 
    if (par_plot_init_slope):
       if (plot_var == 'n'):
-         init_spec = plt.plot(p_range, (1.0+2.e-1)* f_init*4*pi* p_range**(-(q_init - 2 )), color = 'blue',linestyle=":", alpha = 0.75, label=r"d$n(p,t)$/d$p$, $E<1/bt$", lw=3 )     # initial spectrum
+         init_spec = plt.plot(p_range, (1.0+2.e-1)* f_init*4*pi* p_range**(-(q_init - 2 )), color = 'gray',linestyle=":", alpha = 0.75, label=r"d$n(p,t)$/d$p$, $E<1/bt$", lw=3 )     # initial spectrum
       if (plot_var == 'e'):
-         init_spec = plt.plot(p_range, (1.0+2.e-1)* f_init*4*pi* p_range**(-(q_init - 3)), color = 'blue',linestyle=":", alpha = 0.75, label=r"d$e(p,t)$/d$p$, $E<1/bt$", lw=3 )     # initial spectrum
+         init_spec = plt.plot(p_range, (1.0+2.e-1)* f_init*4*pi* p_range**(-(q_init - 3)), color = 'gray',linestyle=":", alpha = 0.45, label=r"d$e(p,t)$/d$p$, $E<1/bt$", lw=3 )     # initial spectrum
 
    if (par_visible_title):
       if (par_simple_title):
@@ -301,7 +308,7 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
 
    if (par_plot_legend):
       handle_list.append(spectrum)
-      plt.legend(handles=handle_list,  loc=default_legend_loc if par_legend_loc == (-2,-2) else par_legend_loc, edgecolor = "gray", facecolor="white", framealpha=0.45, fontsize = 14)
+      plt.legend(handles=handle_list,  loc=default_legend_loc if par_legend_loc == (-2,-2) else par_legend_loc, edgecolor = "gray", facecolor="white", framealpha=0.65, fontsize = 12)
 
    if (clean_plot): handle_list = []
 
@@ -331,7 +338,7 @@ def detect_active_bins_new(n_in, e_in):
          num_active_bins = num_active_bins + 1
    if num_active_bins == 0: return active_bins_new, i_lo_tmp, i_up_tmp
 
-   i_lo_tmp = max(ne_gt_zero[0]-1,0)
+   i_lo_tmp = max(ne_gt_zero[0]-2,0)
    i_up_tmp = ne_gt_zero[num_active_bins-1]
    pln = p_fix[i_lo_tmp:i_up_tmp]
    prn = p_fix[i_lo_tmp+1:i_up_tmp+1]
@@ -353,12 +360,12 @@ def detect_active_bins_new(n_in, e_in):
 
       if (e_ampl_l[-1] > e_small or e_ampl_r[-1] > e_small):
          if not (abs(q_gt_zero[-1]) >= q_big ) :      # outermost bins usually exceed q_big if inactive
-            active_bins_new.append(ne_gt_zero[i]+1)
+            active_bins_new.append(ne_gt_zero[i-1]+1)
             num_active_bins = num_active_bins +1
 
    if num_active_bins == 0: return active_bins_new, i_lo_tmp, i_up_tmp
 
-   i_lo_tmp = max(active_bins_new[0]-2,0)
+   i_lo_tmp = max(active_bins_new[0]-1,0)
    i_up_tmp = min(active_bins_new[-1]+1, ncre)  # temporary fix FIXME
 
    prtinfo("Active_bins: "+str(active_bins_new))
