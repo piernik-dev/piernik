@@ -43,6 +43,9 @@ parser.add_option("-q", "--quiet",  dest="py_quiet",     default=False,        h
 parser.add_option("-c", "--coords", dest="coords_dflt",  default=("x","y","z"),help=u"Provides coordinates for the first plot (non-clickable)", nargs=3, metavar="xc yc zc")
 parser.add_option("-k", "--keep",   dest="clean_plot",   default=True,         help=u"Keep spectrum plot (do not clean spectrum field)", action="store_false")
 parser.add_option("",  "--fontsize",dest="fontsize",     default=18,           help=u"Set fontsize for SlicePlot (default is 18)")
+parser.add_option("", "--noxlabels",dest="no_xlabels",   default=False,        help=u"Do not show labels of X axis on resulting SlicePlot",  action="store_true")
+parser.add_option("", "--noylabels",dest="no_ylabels",   default=False,        help=u"Do not show labels of Y axis on resulting SlicePlot",  action="store_true")
+parser.add_option("", "--nocbar",   dest="no_cbar",      default=False,        help=u"Do not show colorbar on the resulting SlicePlot",      action="store_true")
 
 (options, args) = parser.parse_args(argv[1:]) # argv[1] is filename
 yt.mylog.setLevel(int(options.yt_verbose))    # Reduces the output to desired level, 50 - least output
@@ -253,7 +256,7 @@ if f_run == True:
        elif (plot_field[0:4] == "cren"):
           disp_name="number"
           new_field_dimensions = 1./dimensions.volume
-       prtinfo( "Adding display name: %s" %disp_name)
+       prtinfo( "Adding display name: %s density" %disp_name)
        disp_name="CR electron %s density (bin %2i)" %(disp_name, int(plot_field[-2:]) )
        new_field            = str(plot_field+"_updated")
        new_field_units      = dsSlice[plot_field].units
@@ -318,8 +321,8 @@ if f_run == True:
        prtinfo("Marking line on yt.plot at (0 0 0) : (500 500 0)")
        yt_data_plot.annotate_line((0., 0., 0.), (500., 500.0, 0), plot_args={'color':'white',"lw":2.0} )
 
-    if (plot_vel): yt_data_plot.annotate_velocity(factor=20)
-    if (plot_mag): yt_data_plot.annotate_magnetic_field(factor=32,scale=50)
+    if (plot_vel): yt_data_plot.annotate_velocity(factor=32,scale=2.5e7)
+    if (plot_mag): yt_data_plot.annotate_magnetic_field(factor=32,scale=20)
     yt_data_plot.set_zlim(plot_field,plot_min,plot_max)
     marker_l   = ["x", "+", "*", "X", ".","^", "v","<",">","1"]
     m_size_l   = [500, 500, 400, 400, 500, 350, 350, 350, 350, 500]
@@ -411,7 +414,7 @@ if f_run == True:
             #prtinfo("  --->  Saved plot to: %s " %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
 
             if (plot_layer == True):   #Mark averaged level
-               yt_data_plot.annotate_line([coords[0],dom_l[avail_dim[0]],coords[2] ], [coords[0],dom_r[avail_dim[0]],coords[2]], plot_args={'color':'white',"lw":2.0} )
+               yt_data_plot.annotate_line([coords[0],dom_l[avail_dim[0]],coords[2] ], [coords[0],dom_r[avail_dim[0]],coords[2]], plot_args={'color':'white',"lw":10.0} )
             else:
                yt_data_plot.annotate_marker(coords, marker=marker_l[marker_index],  plot_args={'color':'red','s':m_size_l[marker_index],"lw":4.5}) # cumulatively annotate all clicked coordinates
             marker_index = marker_index + 1
@@ -449,6 +452,8 @@ if f_run == True:
          prtinfo("Not marking line on yt.plot (user_draw_timebox = %s)" %(user_draw_timebox))
          yt_data_plot.annotate_title('T = {:0.2f} Myr'.format(float(t.in_units('Myr'))))
 
+    if (options.no_cbar): yt_data_plot.hide_colorbar()
+    if (options.no_xlabels and options.no_ylabels):  yt_data_plot.hide_axes()
     yt_data_plot.save('results/'+filename_nam+'_'+plot_field+'_sliceplot.pdf') # save image (spectrum already saved) when finished.
 
     if (not user_coords_provided): s.canvas.mpl_disconnect(cid)
