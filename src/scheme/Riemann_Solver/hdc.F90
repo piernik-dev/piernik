@@ -44,7 +44,7 @@ module hdc
   character(len=dsetnamelen), parameter :: gradpsi_n = "grad_psi"
 
   private
-  public :: chspeed, update_chspeed, init_psi, glmdamping, eglm
+  public :: chspeed, update_chspeed, map_chspeed, init_psi, glmdamping, eglm
 
 contains
 
@@ -132,6 +132,46 @@ contains
       call piernik_MPI_Allreduce(chspeed, pMAX)
 
   end subroutine update_chspeed
+
+!> \brief put chspeed to cg%wa to allow for precise logging
+
+  subroutine map_chspeed
+
+     use cg_leaves,  only: leaves
+     use cg_list,    only: cg_list_element
+     use constants,  only: GEO_XYZ
+     use dataio_pub, only: die
+     use domain,     only: dom
+     use global,     only: cfl_glm, ch_grid, dt
+
+     implicit none
+
+     type(cg_list_element), pointer  :: cgl
+     integer                         :: i, j, k
+
+     ! no need to be as strict as in update_chspeed with dying
+
+     if (dom%geometry_type /= GEO_XYZ) call die("[hdc:update_chspeed] non-cartesian geometry not implemented yet.")
+     cgl => leaves%first
+     do while (associated(cgl))
+        if (ch_grid) then
+           ! Rely only on grid properties. Psi is an artificial field and psi waves have to propagate as fast as stability permits.
+           ! It leads to very bad values when time step drops suddenly (like on last timestep)
+           cgl%cg%wa =  cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt
+        else
+           ! Bind chspeed to fastest possible gas waves. Beware: check whether this works well with AMR.
+           do k = cgl%cg%ks, cgl%cg%ke
+              do j = cgl%cg%js, cgl%cg%je
+                 do i = cgl%cg%is, cgl%cg%ie
+                    cgl%cg%wa(i, j, k) = point_chspeed(cgl%cg, i, j, k)
+                 enddo
+              enddo
+           enddo
+        endif
+        cgl => cgl%nxt
+     enddo
+
+  end subroutine map_chspeed
 
 !>
 !! \brief chspeed at a point
