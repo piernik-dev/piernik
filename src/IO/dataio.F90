@@ -1461,9 +1461,11 @@ contains
       use constants,          only: MINL
 #endif /* COSM_RAYS || MAGNETIC */
 #ifdef MAGNETIC
+      use constants,          only: DIVB_HDC, RIEMANN_SPLIT
       use dataio_pub,         only: msg
       use func,               only: sq_sum3
-      use global,             only: cfl
+      use global,             only: cfl, divB_0_method, which_solver
+      use hdc,                only: map_chspeed
       use named_array_list,   only: wna
 #endif /* MAGNETIC */
 #ifdef RESISTIVE
@@ -1486,7 +1488,7 @@ contains
       type(cg_list_element), pointer             :: cgl
       type(value)                                :: drag
 #ifdef MAGNETIC
-      type(value)                                :: b_min, b_max, divb_max, vai_max, cfi_max
+      type(value)                                :: b_min, b_max, divb_max, vai_max, cfi_max, ch_max
       real                                       :: dxmn_safe
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
@@ -1579,6 +1581,9 @@ contains
          cgl => cgl%nxt ; NULLIFY(p)
       enddo
       call leaves%get_extremum(qna%wai, MAXL, divb_max)
+
+      call map_chspeed
+      call leaves%get_extremum(qna%wai, MAXL, ch_max)
 #endif /* MAGNETIC */
 
 #ifdef COSM_RAYS
@@ -1618,6 +1623,8 @@ contains
             call cmnlog_s(fmt_loc, 'min(|b|)    ', id, b_min)
             call cmnlog_s(fmt_loc, 'max(|b|)    ', id, b_max)
             call cmnlog_s(fmt_loc, 'max(|divb|) ', id, divb_max)
+            if (divB_0_method /= DIVB_HDC .or. which_solver /= RIEMANN_SPLIT) id = "N/A"
+            call cmnlog_s(fmt_loc, 'max(|c_h|)  ', id, ch_max)
 #endif /* MAGNETIC */
             if (has_neu) call common_shout(flind%neu%snap,'NEU',.true.,.true.,.true.)
             if (has_dst) call common_shout(flind%dst%snap,'DST',.false.,.false.,.false.)
