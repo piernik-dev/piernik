@@ -24,6 +24,7 @@
 #   'make chk_err_msg'     # check filenames in error messages
 #   'make doxy'            # generate/updare Doxygen documentation
 #   'make gold'            # run the gold tests from ./jenkins directory
+#   'make gold-serial'     # run the gold tests from ./jenkins directory in serial mode
 #   'make gold-clean'      # remove files after gold test
 #
 # Resetup will also call make for the object directories, unless you've
@@ -38,7 +39,7 @@ ALLOBJ = $(wildcard obj*)
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check dep qa pep8 doxy chk_err_msg gold gold-clean
+.PHONY: $(ALLOBJ) check dep qa pep8 doxy chk_err_msg gold gold-serial gold-clean
 
 all: $(ALLOBJ)
 
@@ -90,8 +91,10 @@ chk_err_msg:
 	./bin/checkmessages.sh
 
 gold:
-	which parallel > /dev/null 2>&1 || ( echo "You need to install parallel package to run gold tests"; exit 1 )
 	./jenkins/gold_test_list.sh
+
+gold-serial:
+	SERIAL=1 ./jenkins/gold_test_list.sh
 
 gold-clean:
 	\rm -rf jenkins/goldexec/* /tmp/jenkins_gold/*

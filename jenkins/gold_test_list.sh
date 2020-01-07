@@ -4,7 +4,19 @@ OUT_DIR=jenkins/goldexec/
 [ ! -d $OUT_DIR ] && mkdir -p $OUT_DIR
 [ ! -d $OUT_DIR ] && exit 1
 
-parallel --load 70% --delay 10 eval "./jenkins/gold_test.sh {} > ${OUT_DIR}{/.}'_gold_stdout'" ::: ./jenkins/gold_configs/*.config
+[ -z ${SERIAL+x} ] && SERIAL=0
+which parallel > /dev/null 2>&1 || SERIAL=1
+
+if [ $SERIAL -ne 0 ] ; then
+    echo "serial-gold"
+    for i in ./jenkins/gold_configs/*.config; do
+	echo "  $i"
+	eval "./jenkins/gold_test.sh $i > ${OUT_DIR}$( basename $i)'_gold_stdout'"
+    done
+else
+    echo "parallel-gold"
+    parallel --load 70% --delay 10 eval "./jenkins/gold_test.sh {} > ${OUT_DIR}{/}'_gold_stdout'" ::: ./jenkins/gold_configs/*.config
+fi
 
 OUT_DIR=jenkins/goldexec/
 
