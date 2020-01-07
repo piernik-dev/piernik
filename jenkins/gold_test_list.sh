@@ -18,8 +18,6 @@ else
     parallel --load 70% --delay 10 eval "./jenkins/gold_test.sh {} > ${OUT_DIR}{/}'_gold_stdout'" ::: ./jenkins/gold_configs/*.config
 fi
 
-OUT_DIR=jenkins/goldexec/
-
 for j in gold riem ; do
     case $j in
     	 ("gold") jj="gold" ;;
