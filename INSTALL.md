@@ -71,10 +71,14 @@ The file `bin/bash_completion.sh` may also make your life with Piernik a little 
 If you want to run so called `gold tests`, you will need:
 
 * An installation of [YT](https://yt-project.org/) package.
-* Gnu Parallel and h5py:
+* Gnu Parallel (optional) and h5py:
 
         sudo dnf install parallel python-h5py
     or
 
         apt install parallel python-h5py
     (on Fedora or Ubuntu, respectively).
+
+Then you can execute so called "gold tests" locally by invoking `make gold`
+or `make gold-serial` (when `make gold` requires too many resources, e.g. on
+a laptop).
