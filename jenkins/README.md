@@ -1,9 +1,10 @@
 # Running the gold tests by hand
 
 To run the gold tests locally, make sure that `yt` is available because `bin/gdf_distance` critically depends on it.
-You also need GNU Parallel installed in your system.
+You may also want GNU Parallel to be installed in your system for extra performance.
 Make sure that `/tmp/` directory has about 500 MB of free space.
 Then call `make gold` and wait for results summary on `stdout` and `stderr`.
+In case `make gold` fails due to limited resources you may want to use `make gold-serial`.
 Each tested problem creates some more output files which may be inspected or removed by `make gold-clean`.
 
 # The files
