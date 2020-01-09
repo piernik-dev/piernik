@@ -32,6 +32,8 @@
 !!
 !! \details The structure that contains most important information of all blocks on all processes on a given level
 !! and information on decomposition as well.
+!!
+!! OPT: consider converting gse to oct-tree for faster and morre natural searching.
 !<
 
 module dot
@@ -62,6 +64,7 @@ module dot
       integer                                      :: tot_se        !< global number of grids on the level
       logical                                      :: is_blocky     !< .true. when all grid pieces on this level on all processes have same shape and size
       logical                                      :: is_strict_SFC !< .true. when all grid pieces are distributd along SFC curve
+!      logical                                      :: is_complete   !< .true. but in the future allow incomplete dot for really large simulations containing only neighbor data
    contains
       procedure :: cleanup              !< Deallocate everything
       procedure :: update_global        !< Gather updated information about the level and overwrite it to this%gse
@@ -122,6 +125,7 @@ contains
       integer, parameter :: ncub = ndims*HI ! the number of integers in each cuboid
       integer(kind=8) :: prev_id, cur_id
 
+!      this%is_complete = .true.
       ! get the count of grid pieces on each process
       ! Beware: int(this%cnt, kind=4) is not properly updated after calling this%distribute.
       ! Use size(this%dot%gse(proc)%c) if you want to propagate gse before the grid containers are actually added to the level
@@ -192,6 +196,7 @@ contains
       integer                        :: i
       type(cg_list_element), pointer :: cgl
 
+!      this%is_complete = .true.
       if (.not. allocated(this%gse)) allocate(this%gse(FIRST:LAST))
       if (allocated(this%gse(proc)%c)) deallocate(this%gse(proc)%c)
       allocate(this%gse(proc)%c(cnt))
