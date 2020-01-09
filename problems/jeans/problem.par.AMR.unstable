@@ -1,0 +1,103 @@
+ $BASE_DOMAIN
+    n_d = 128, 32, 1
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = 0.0
+    xmax   = 1000.0
+    ymin   = 0.0
+    ymax   = 250.
+    zmin   = 0.0
+    zmax   = 250
+ /
+
+ $MPI_BLOCKS
+    allow_uneven = .true.
+    allow_noncart = .true.
+    dd_unif_quality = 1.1
+    dd_rect_quality = 1.1
+ /
+
+ $UNITS
+    units_set = "psm"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 600.0
+    nend   = 10000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='jeans'
+    run_id =  't01'
+    dt_hdf  = 10.0
+    dt_res  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1:) = 'ener', 'dens', 'gpot', 'velx', 'vely', 'nJ', "level"
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.67
+    selfgrav = .true.
+ /
+
+ $FLUID_NEUTRAL
+    gamma = 1.67
+    selfgrav = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 0
+    smallei= 0
+    limiter= 'vanleer'
+! DISALLOW_NEGATIVES=F
+ solver_str = "riemann"
+ /
+
+ $GRAVITY
+    external_gp = "null"
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    d0     = 0.025
+    p0     = 0.025
+    amp    = 0.001
+    ix     = 2
+    iy     = 0
+    iz     = 0
+    mode   = 0
+ /
+
+ $MULTIGRID_SOLVER
+ /
+
+ $MULTIGRID_GRAVITY
+    grav_bnd_str  = "periodic"
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+   bsize = 32, 32
+   level_max = 2
+   n_updamr = 5
+   jeans_ref     = 40.  ! Require really good Jeans-length refinement
+   jeans_plot = .true.  ! because we asked for "nJ" in plot vars(:)
+ /
+
+ $PARTICLES
+ /

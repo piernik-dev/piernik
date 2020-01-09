@@ -2,7 +2,7 @@
 
 if [ $# -lt 1 ]; then
     echo "Usage: $0 config_file"
-    echo "or somethink like: RUN_COMMAND=\"mpirun -np 2\" $0 config_file"
+    echo "or something like: RUN_COMMAND=\"mpirun -np 2\" $0 config_file"
     exit 1
 fi
 
@@ -42,10 +42,9 @@ GOLD_DIR=gold_dir
 OBJ_PREFIX=obj_
 GOLD_OBJ=${PROBLEM_NAME}_gold
 TEST_OBJ=${PROBLEM_NAME}_test
-RIEM_OBJ=${PROBLEM_NAME}_Rtest
-GOLD_LOG=gold_log
-RIEM_LOG=riem_log
-RIEM_CSV=riem.csv
+GOLD_LOG=${PROBLEM_NAME}_gold_log
+RIEM_LOG=${PROBLEM_NAME}_riem_log
+RIEM_CSV=${PROBLEM_NAME}_riem.csv
 TMP_DIR=/tmp/jenkins_gold/
 RUNS_DIR=$TMP_DIR
 GOLD_SHA_FILE=__sha__
@@ -55,18 +54,16 @@ cp Makefile $TMP_DIR
 
 rm -rf $GOLD_DIR ${OBJ_PREFIX}$GOLD_OBJ ${OBJ_PREFIX}$TEST_OBJ ${RUNS_DIR}/${PROBLEM_NAME}_$TEST_OBJ $GOLD_LOG
 
-for i in $GOLD_OBJ $TEST_OBJ $RIEM_OBJ ; do
+for i in $GOLD_OBJ $TEST_OBJ ; do
     mkdir ${RUNS_DIR}/${PROBLEM_NAME}_$i
 done
 
 python setup $PROBLEM_NAME $SETUP_PARAMS -o $TEST_OBJ
-python setup $PROBLEM_NAME $SETUP_PARAMS -d RIEMANN -o $RIEM_OBJ
-for i in $TEST_OBJ $RIEM_OBJ ; do
-    rsync -Icvxa --no-t ${OBJ_PREFIX}$i $TMP_DIR
-done
+rsync -Icvxa --no-t ${OBJ_PREFIX}${TEST_OBJ} $TMP_DIR
 
 git clone $PIERNIK_REPO $GOLD_DIR
 [ -e .setuprc ] && cp .setuprc $GOLD_DIR
+sed -i 's/--keeppar//' ${GOLD_DIR}/.setuprc
 cp python/piernik_setup.py ${GOLD_DIR}/python
 (
     cd $GOLD_DIR
@@ -79,25 +76,33 @@ rsync -Icvxa --no-t ${GOLD_DIR}/${OBJ_PREFIX}$GOLD_OBJ $TMP_DIR
 
 cp ${GOLD_DIR}/runs/${PROBLEM_NAME}_${GOLD_OBJ}/problem.par ${RUNS_DIR}/${PROBLEM_NAME}_${GOLD_OBJ}/
 cp runs/${PROBLEM_NAME}_${TEST_OBJ}/problem.par ${RUNS_DIR}/${PROBLEM_NAME}_${TEST_OBJ}/
-cp runs/${PROBLEM_NAME}_${RIEM_OBJ}/problem.par ${RUNS_DIR}/${PROBLEM_NAME}_${RIEM_OBJ}/
 
 (
     cd $TMP_DIR
-    rm ${OBJ_PREFIX}{$GOLD_OBJ,$TEST_OBJ,$RIEM_OBJ}/piernik
-    make -j ${OBJ_PREFIX}{$GOLD_OBJ,$TEST_OBJ,$RIEM_OBJ}
+    rm ${OBJ_PREFIX}{$GOLD_OBJ,$TEST_OBJ}/piernik
+    make -j ${OBJ_PREFIX}{$GOLD_OBJ,$TEST_OBJ}
 )
 
-for i in $GOLD_OBJ $TEST_OBJ $RIEM_OBJ ; do
+for i in $GOLD_OBJ $TEST_OBJ ; do
     rm ${RUNS_DIR}/${PROBLEM_NAME}_${i}/${PIERNIK} 2> /dev/null || echo "rundir clean"
     cp ${TMP_DIR}/${OBJ_PREFIX}${i}/${PIERNIK} ${RUNS_DIR}/${PROBLEM_NAME}_$i
 done
 
-for i in $TEST_OBJ $RIEM_OBJ ; do
-    cd ${RUNS_DIR}/${PROBLEM_NAME}_$i
-    rm *.h5 2> /dev/null
-    eval $RUN_COMMAND ./${PIERNIK} &
+
+cd ${RUNS_DIR}/${PROBLEM_NAME}_${TEST_OBJ}
+rm *.h5 2> /dev/null
+eval $RUN_COMMAND ./${PIERNIK} "-n '&NUMERICAL_SETUP solver_str = \"RTVD\" /'" &
+RIEM=Riemann
+(
+    mkdir $RIEM
+    cd $RIEM
+    ln -s ../piernik
+    cp ../problem.par .
+    eval $RUN_COMMAND ./${PIERNIK} "-n '&NUMERICAL_SETUP solver_str = \"Riemann\" /'" &
     cd -
-done
+)
+cd -
+
 wait
 
 (
@@ -119,8 +124,8 @@ wait
 [ ! -z $YT ] && source $YT
 ./bin/gdf_distance ${RUNS_DIR}/${PROBLEM_NAME}_{${TEST_OBJ},${GOLD_OBJ}}/${OUTPUT} 2>&1 | tee $GOLD_LOG
 
-if [ -e ${RUNS_DIR}/${PROBLEM_NAME}_${RIEM_OBJ}/${OUTPUT} ] ; then
-   ./bin/gdf_distance ${RUNS_DIR}/${PROBLEM_NAME}_{${TEST_OBJ},${RIEM_OBJ}}/${OUTPUT} 2>&1 | tee $RIEM_LOG
+if [ -e ${RUNS_DIR}/${PROBLEM_NAME}_${TEST_OBJ}/${RIEM}/${OUTPUT} ] ; then
+   ./bin/gdf_distance ${RUNS_DIR}/${PROBLEM_NAME}_${TEST_OBJ}{,/${RIEM}}/${OUTPUT} 2>&1 | tee $RIEM_LOG
 
    grep 'Difference of datafield `' $RIEM_LOG |\
        sed 's/.*`\([^ ]*\)[^ ] *: \(.*\)/\1 \2/' |\

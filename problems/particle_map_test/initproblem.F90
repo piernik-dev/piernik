@@ -171,9 +171,9 @@ contains
                            cg%u(fl%imy,i,j,k) = 0.0
                            cg%u(fl%imz,i,j,k) = 0.0
                         end associate
-                        cg%q(ncg_i)%arr(i, j, k) = 0.0
-                        cg%q(cic_i)%arr(i, j, k) = 0.0
-                        cg%q(tsc_i)%arr(i, j, k) = 0.0
+                        cg%q(ncg_i)%arr(i,j,k) = 0.0
+                        cg%q(cic_i)%arr(i,j,k) = 0.0
+                        cg%q(tsc_i)%arr(i,j,k) = 0.0
                      enddo
                   enddo
                enddo

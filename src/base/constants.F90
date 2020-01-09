@@ -132,8 +132,8 @@ module constants
    enum, bind(C)
       enumerator :: PIERNIK_START                        ! before initialization
       enumerator :: PIERNIK_INIT_MPI                     ! initialized MPI
-      enumerator :: PIERNIK_INIT_GLOBAL                  ! initialized global parameters
       enumerator :: PIERNIK_INIT_DOMAIN                  ! initialized domain
+      enumerator :: PIERNIK_INIT_GLOBAL                  ! initialized global parameters
       enumerator :: PIERNIK_INIT_FLUIDS                  ! initialized fluid properties
       enumerator :: PIERNIK_INIT_GRID                    ! initialized grids
       enumerator :: PIERNIK_INIT_IO_IC                   ! initialized all physics
@@ -168,6 +168,16 @@ module constants
       enumerator :: BND_USER                  !! user boundaries (provided in read_problem_par)
       enumerator :: BND_INVALID = BND_MPI - 1 !! non-recognized boundary
    end enum
+
+   ! solver type
+   enum, bind(C)
+      enumerator :: RTVD_SPLIT    !! MHD RTVD, as it was implemented from the beginning of Piernik
+      enumerator :: HLLC_SPLIT    !! non-magnetic (pure HD) HLLC as first attempt of something more precise than RTVD, lacks many features an ma be removed at some point
+      enumerator :: RIEMANN_SPLIT !! MHD Riemann, implementations by Varadarajan Parthasarathy; HD variant is slower than HLLC_SPLIT
+   end enum
+   ! Perhaps it may make sense to create compatibility matrix for solvers.
+   ! AMR, magnetic, FARGO, resistivity, ...
+
 
    ! enumerate stages of Runge-Kutta method in an unique way, so istep will contain information both about stage and method
    enum, bind(C)

@@ -54,7 +54,10 @@ module multigrid_gravity
    public :: write_oldsoln_to_restart, read_oldsoln_from_restart
 #endif
 
+#ifndef NO_FFT
    include "fftw3.f"
+#endif /* !NO_FFT */
+
    ! constants from fftw3.f
    !   integer, parameter :: FFTW_MEASURE=0, FFTW_PATIENT=32, FFTW_ESTIMATE=64
    !   integer, parameter :: FFTW_RODFT01=8, FFTW_RODFT10=9
@@ -68,7 +71,9 @@ module multigrid_gravity
    logical            :: fft_patient                                  !< Spend more time in init_multigrid to find faster fft plan
    character(len=cbuff_len) :: grav_bnd_str                           !< Type of gravitational boundary conditions.
    logical            :: require_FFT                                  !< .true. if we use FFT solver anywhere (and need face prolongation)
+#ifndef NO_FFT
    integer            :: fftw_flags = FFTW_MEASURE                    !< or FFTW_PATIENT on request
+#endif /* !NO_FFT */
 
    ! solution recycling
    type(soln_history), target :: inner, outer                         !< storage for recycling the inner and outer potentials
@@ -347,7 +352,9 @@ contains
          if (any([ord_laplacian, ord_laplacian_outer] /= O_I2)) call warn("[multigrid_gravity:multigrid_grav_par] Overrelaxation is implemented only for RBGS relaxation")
       endif
 
+#ifndef NO_FFT
       if (fft_patient) fftw_flags = FFTW_PATIENT
+#endif /* !NO_FFT */
 
       if (grav_bnd == bnd_isolated) call init_multipole
 
@@ -399,6 +406,12 @@ contains
 
       if (base_no_fft .and. (cnt /= 1) .and. master) call warn("[multigrid_gravity:init_multigrid_grav] Cannot use FFT solver on coarsest level")
       base_no_fft = base_no_fft .or. (cnt /= 1)
+#ifdef NO_FFT
+      if (.not. base_no_fft) then
+         call warn("[multigrid_gravity:init_multigrid_grav] Forced base_no_fft due to NO_FFT")
+         base_no_fft = .true.
+      endif
+#endif /* NO_FFT */
 
       cnt_max = cnt
       call piernik_MPI_Allreduce(cnt_max, pMAX)
@@ -445,6 +458,9 @@ contains
       enddo
 
       if (require_FFT) then
+#ifdef NO_FFT
+         call die("[multigrid_gravity:init_multigrid_grav] require_FFT conflicts with NO_FFT")
+#endif /* NO_FFT */
          curl => coarsest%level
          do while (associated(curl))
             cgl => curl%first
@@ -468,9 +484,12 @@ contains
 
       implicit none
 
+#ifndef NO_FFT
+      call dfftw_cleanup
+#endif /* !NO_FFT */
+
       call cleanup_multipole
       call vstat%cleanup
-      call dfftw_cleanup
       call inner%cleanup_history
       call outer%cleanup_history
 
@@ -499,19 +518,24 @@ contains
    subroutine mgg_cg_init(cg)
 
       use cg_level_connected, only: cg_level_connected_T, find_level
-      use constants,          only: fft_rcr, fft_dst, fft_none, pi, dpi, zero, half, one
+      use constants,          only: fft_none
       use dataio_pub,         only: die
-      use domain,             only: dom
       use grid_cont,          only: grid_container
       use func,               only: operator(.notequals.)
       use multigridvars,      only: overrelax
+#ifndef NO_FFT
+      use constants,          only: fft_rcr, fft_dst, pi, dpi, zero, half, one
+      use domain,             only: dom
+#endif /* !NO_FFT */
 
       implicit none
 
       type(grid_container), pointer,  intent(inout) :: cg
       type(cg_level_connected_T), pointer :: curl
+#ifndef NO_FFT
       real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
       integer :: i, j
+#endif /* !NO_FFT */
 
       ! this should work correctly also when dom%eff_dim < 3
       cg%mg%r  = overrelax / 2.
@@ -534,6 +558,10 @@ contains
       cg%mg%plani = 0
 
       if (curl%fft_type /= fft_none) then
+
+#ifdef NO_FFT
+         call die("[multigrid_gravity:mgg_cg_init] NO_FFT")
+#else /* !NO_FFT */
 
          select case (curl%fft_type)
             case (fft_rcr)
@@ -601,6 +629,7 @@ contains
                endwhere
             enddo
          enddo
+#endif /* !NO_FFT */
 
       endif
 
@@ -621,8 +650,10 @@ contains
       if (allocated(cg%mg%src))     deallocate(cg%mg%src)
       if (allocated(cg%mg%Green3D)) deallocate(cg%mg%Green3D)
 
+#ifndef NO_FFT
       if (cg%mg%planf /= 0) call dfftw_destroy_plan(cg%mg%planf)
       if (cg%mg%plani /= 0) call dfftw_destroy_plan(cg%mg%plani)
+#endif /* !NO_FFT */
 
    end subroutine mgg_cg_cleanup
 
@@ -952,6 +983,7 @@ contains
       character(len=cbuff_len) :: dname
       integer(kind=4), dimension(4)    :: mg_fields
       type(cg_level_connected_T), pointer :: curl
+      integer, parameter :: some_warm_up_cycles = 1
 
 #ifdef DEBUG
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
@@ -1023,7 +1055,7 @@ contains
             if (norm_lhs < norm_lowest) then
                norm_lowest = norm_lhs
             else
-               if (norm_lhs/norm_lowest > vcycle_abort) then
+               if (v > some_warm_up_cycles .and. norm_lhs/norm_lowest > vcycle_abort) then
                   vstat%norm_final = norm_lhs/norm_rhs
                   if (.not. verbose_vcycle) call vstat%brief_v_log
                   call die("[multigrid_gravity:vcycle_hg] Serious nonconvergence detected.")
@@ -1032,7 +1064,7 @@ contains
             endif
          endif
 
-         if (v>0 .and. norm_old/norm_lhs <= vcycle_giveup) then
+         if (v > some_warm_up_cycles .and. norm_old/norm_lhs <= vcycle_giveup) then
             if (master) then
                write(msg, '(a,g8.1)')"[multigrid_gravity:vcycle_hg] Poor convergence detected. Giving up. norm_tol missed by a factor of ",norm_lhs/norm_rhs/merge(norm_tol, tiny(1.), norm_tol > 0.)
                call warn(msg)
