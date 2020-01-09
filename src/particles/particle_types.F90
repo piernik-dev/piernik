@@ -31,7 +31,7 @@
 module particle_types
 ! pulled by GRAV
    use constants, only: ndims, dsetnamelen
-  
+
    implicit none
 
    private
@@ -69,8 +69,6 @@ module particle_types
       type(particle), pointer :: last
       integer(kind=4) :: cnt                  !< number of chain links
       character(len=dsetnamelen) :: label     !< name of the list for diagnostic and identification purposes
-      !type(particle), allocatable, dimension(:) :: p !< the list of particles
-      !type(particle), pointer :: p !< the list of particles
    contains
       procedure :: init        !< initialize the list
       !procedure :: print       !< print the list
@@ -87,7 +85,7 @@ contains
 
 !> \brief compute the outside flag
 
-   subroutine is_outside(this)
+   subroutine is_outside(this)  ! TO DO: CHECK if this is always the needed definition of outside (with boundary cells)
 
       use constants, only: LO, HI
       use domain,    only: dom
@@ -105,8 +103,6 @@ contains
 
    subroutine init(this)
 
-      use dataio_pub, only: die
-
       implicit none
 
       class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
@@ -115,9 +111,6 @@ contains
       this%first => null()
       this%last  => null()
       this%cnt   =  0
-      !this%label =  trim(label)
-      !if (allocated(this%pdata)) call die("[particle_types:init] already initialized")
-      !allocate(this%pdata(0))
 
    end subroutine init
 
@@ -169,11 +162,11 @@ contains
 
       use constants,  only: I_ONE
       use dataio_pub, only: die
-      
+
       implicit none
 
       class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
-      type(particle_data), pointer  :: part     !< new particle
+      type(particle_data), pointer       :: part     !< new particle
       type(particle),      pointer       :: new
       integer,                intent(in) :: pid
       real, dimension(ndims), intent(in) :: pos, vel
@@ -186,8 +179,6 @@ contains
 
       allocate(new)
       allocate(part)
-      !if (present(part)) then
-     ! if (associated(part)) then
             new%pdata => part
             new%pdata%pid = pid
             new%pdata%mass = mass
@@ -199,12 +190,8 @@ contains
             new%pdata%phy = phy
             new%pdata%out = out
             new%pdata%outside = .false.
-      !   endif
-      !else
-      !   allocate(new%pdata)
-      !endif
       new%nxt => null()
-      
+
       if (.not. associated(this%first)) then ! the list was empty
          if (associated(this%last)) call die("[cg_list:add_new_part] last without first")
          this%first => new
@@ -214,12 +201,12 @@ contains
          this%last%nxt => new
          new%prv => this%last
       endif
-      
+
       this%last => new
       this%cnt = this%cnt + I_ONE
-      
+
     end subroutine add_part_list
-      
+
 
 !> \brief Remove a particle number id from the list
 
@@ -227,13 +214,12 @@ contains
 
       use constants,  only: I_ONE
       use dataio_pub, only: die
-      
+
       implicit none
 
       class(particle_set), intent(inout) :: this !< an object invoking the type-bound procedure
       type(particle), pointer, intent(out) :: pdata
-      !integer,             intent(in)    :: id   !< position in the array of particles
-      
+
       if (.not. associated(pdata)) call die("[particle removal] tried to remove null() element")
       if (.not. associated(this%first)) call die("[particle removal] this%cnt <=0 .and. associated(this%first)")
 
@@ -243,14 +229,6 @@ contains
       if (associated(pdata%nxt)) pdata%nxt%prv => pdata%prv
       deallocate(pdata)
       this%cnt = this%cnt - I_ONE
-      !if (.not. this%exists(id)) then
-      !   write(msg, '("[particle_types:remove] Particle no Id = ",I6," does not exist")') id
-      !   call die(msg)
-      !endif
-
-      !this%p = [this%p(:id-1), this%p(id+1:)]   ! LHS-realloc, please note  that if id == lbound(this%p, 1)
-                                                ! or id == ubound(this%p, 1) it does not cause out of bound
-                                                ! access in p
    end subroutine remove
 
 !>

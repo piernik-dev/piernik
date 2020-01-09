@@ -42,7 +42,7 @@ module particles_io_hdf5
 
       use common_hdf5,    only: set_common_attributes
       use constants,      only: cwdlen, tmr_hdf, idlen
-      use cg_particles_io,only: dump_cg_particles
+      use cg_particles_io, only: dump_cg_particles
       use dataio_pub,     only: msg, printinfo, printio, thdf
       use hdf5,           only: h5open_f, h5close_f, h5fcreate_f, h5fclose_f, HID_T, H5F_ACC_TRUNC_F
       use mpisetup,       only: master, proc

@@ -74,7 +74,7 @@ contains
 #endif /* NBODY_GRIDDIRECT */
       call source_terms_grav
       !n_part = count_all_particles
-      
+
       n_part = 0
       cgl => leaves%first
       do while (associated(cgl))
@@ -85,7 +85,7 @@ contains
          enddo
          cgl => cgl%nxt
       enddo
-      
+
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -238,7 +238,6 @@ contains
      use domain,    only: dom
      use grid_cont, only: grid_container
      use particle_types, only: particle
-     use mpisetup, only: proc
 
      implicit none
 
@@ -528,7 +527,7 @@ contains
                enddo
                axyz(:) = fxyz(:)
                part%acc(:) = half * axyz(:) * cg%idl(:)
-               
+
                pset => pset%nxt
                cycle
             endif

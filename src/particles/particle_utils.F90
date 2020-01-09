@@ -55,12 +55,12 @@ contains
 
    subroutine print_all_particles
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
+      !use cg_leaves, only: leaves
+      !use cg_list,   only: cg_list_element
 
       implicit none
 
-      type(cg_list_element), pointer :: cgl
+      !type(cg_list_element), pointer :: cgl
 
       !!!!!!!!!Does nothing for now
 

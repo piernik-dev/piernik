@@ -515,7 +515,7 @@ contains
          pset => cg%pset%first
          do while (associated(pset))
             if (pset%pdata%outside) call Q%point2moments(fpiG*pset%pdata%mass, pset%pdata%pos(xdim), pset%pdata%pos(ydim), pset%pdata%pos(zdim))
-            
+
                ! WARNING: Particles that are too close to the outer boundary aren't fully mapped onto the grid.
                ! This may cause huge errors in the potential, even for "3D" solver because their mass is counted
                ! only partially in the mapping routine and the rest is ignored here.
@@ -527,7 +527,7 @@ contains
                !
                ! BUG: Sometimes particles that are outside computational domain don't have the "outside" flag set up.
             ! A "not_mapped" flag set in the mapping routine would fix this issue.
-            
+
             pset => pset%nxt
          enddo
          cgl => cgl%nxt

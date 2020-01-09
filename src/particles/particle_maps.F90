@@ -220,7 +220,7 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         
+
          pset => cgl%cg%pset%first
          do while (associated(pset))
             associate( field => cgl%cg%q(iv)%arr, part => pset%pdata, cg => cgl%cg )

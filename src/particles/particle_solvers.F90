@@ -64,7 +64,7 @@ contains
       use grid_cont,  only: grid_container
       use particle_utils, only: count_all_particles
       use particle_types, only: particle
-      
+
       implicit none
 
       logical, optional, intent(in) :: forward
@@ -139,7 +139,7 @@ contains
          endif
          if (th >= t_end) exit
       enddo
-      
+
       pset => cg%pset%first
       p=1
       do while (associated(pset))
@@ -369,7 +369,7 @@ contains
          subroutine kick(kdt)
 
             use particle_types, only: particle
-            
+
             implicit none
 
             real, intent(in) :: kdt
@@ -411,7 +411,7 @@ contains
                      cycle
                   endif
                   pset%pdata%pos = pset%pdata%pos + pset%pdata%vel * ddt
-                  call is_part_in_cg(cgl%cg, pset%pdata%pos, pset%pdata%in, pset%pdata%phy, pset%pdata%out)             
+                  call is_part_in_cg(cgl%cg, pset%pdata%pos, pset%pdata%in, pset%pdata%phy, pset%pdata%out)
                   pset => pset%nxt
                enddo
                cgl => cgl%nxt

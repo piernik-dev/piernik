@@ -308,7 +308,7 @@ contains
       real                   :: r_dom
       logical                :: outsphere
 #ifndef RANDOMIZE
-      integer                :: seed = 86437
+      integer, parameter     :: seed = 86437
 
       call random_seed(seed)
 #endif /* !RANDOMIZE */
@@ -346,10 +346,11 @@ contains
 
       integer                           :: i, j
       integer(kind=4)                   :: nbodies
-      integer                           :: galfile = 1
+      integer, parameter                :: galfile = 1
       real, dimension(:,:), allocatable :: pos, vel
       real, dimension(:),   allocatable :: mass
 
+      print *, 'yop'
       open(unit=galfile, file=bgfile, action='read', status='old')
          read(galfile,*) nbodies
          write(msg,'(3a,i8,a)') 'Reading ', trim(bgfile), ' file with ', nbodies, ' particles'
@@ -365,8 +366,8 @@ contains
          write(msg,'(a,i8,3a,i8,a)') 'Different number of particles declared in problem.par file (',npart,') than stored in ', trim(bgfile), ' (',nbodies,')'
          call warn(msg)
          nbodies = min(nbodies,npart)
-         write(msg,'(a,i8,a)') 'Reading ', nbodies, ' particles'
-         call printio(msg)
+         !write(msg,'(a,i8,a)') 'Reading ', nbodies, ' particles'
+         !call printio(msg)
       endif
 
       i = 0
@@ -375,7 +376,7 @@ contains
          if (i > nbodies) exit
 #ifdef VERBOSE
          if (modulo(i, 10000) .eq. 0) then
-            write(msg,'(i8,a)') i, ' particles read' ; call printio(msg)
+            write(msg,'(i8,a)') i, ' particles read'! ; call printio(msg)
          endif
 #endif /* VERBOSE */
          call add_part_in_proper_cg(i, mass(i), pos(i,:), vel(i,:),[0.0, 0.0, 0.0], 0.0)

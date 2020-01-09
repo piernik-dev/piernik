@@ -953,7 +953,6 @@ contains
       use data_hdf5,        only: gdf_translate
       use read_attr,        only: read_attribute
       use particle_utils,   only: add_part_in_proper_cg, part_leave_cg
-      use mpisetup, only: proc
 #endif /* NBODY_1FILE */
 
       implicit none
