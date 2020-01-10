@@ -76,13 +76,17 @@ contains
 #ifdef GRAV
       use gravity,               only: init_grav, init_terms_grav, source_terms_grav
       use hydrostatic,           only: init_hydrostatic, cleanup_hydrostatic
-      use particle_pub,          only: init_particles
 #endif /* GRAV */
 #ifdef NBODY
+#ifdef GRAV
+      use particle_pub,          only: init_particles
+#endif /* GRAV */
 #ifdef SELF_GRAV
       use gravity,               only: source_terms_grav
 #endif /* SELF_GRAV */
+#ifdef TWOBODY
       use initproblem,           only: problem_initial_nbody
+#endif /* TWOBODY */
       use particle_gravity,      only: update_particle_gravpot_and_acc
       use particle_solvers,      only: update_particle_kinetic_energy
 #endif /* NBODY */
@@ -182,7 +186,9 @@ contains
       call init_decomposition
 #ifdef GRAV
       call init_grav                         ! Has to be called before init_grid
+#ifdef NBODY
       call init_particles
+#endif /* NBODY */
       call init_hydrostatic
 #endif /* GRAV */
 #ifdef MULTIGRID
@@ -218,7 +224,9 @@ contains
       ! Initial conditions are read here from a restart file if possible
 
 #ifdef NBODY
+#ifdef TWOBODY
       if (.not.restarted_sim) call problem_initial_nbody
+#endif /* TWOBODY */
       call update_particle_gravpot_and_acc
       call update_particle_kinetic_energy
 #endif /* NBODY */

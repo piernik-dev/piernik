@@ -122,7 +122,9 @@ contains
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
       use gravity,             only: source_terms_grav
+#ifdef NBODY
       use particle_solvers,    only: psolver
+#endif /* NBODY */
 #endif /* GRAV */
 #if defined(COSM_RAYS) && defined(MULTIGRID)
       use all_boundaries,      only: all_fluid_boundaries
@@ -175,9 +177,9 @@ contains
          endif
       endif
 
-#ifdef GRAV
+#if defined(GRAV) && defined(NBODY)
       if (associated(psolver)) call psolver(forward)
-#endif /* GRAV */
+#endif /* GRAV && NBODY */
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
       call eglm

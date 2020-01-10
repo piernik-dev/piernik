@@ -48,11 +48,9 @@ module particle_types
      real                   :: mass       !< mass of the particle
      real, dimension(ndims) :: pos        !< physical position
      real, dimension(ndims) :: vel        !< particle velocity
-#ifdef NBODY
      real, dimension(ndims) :: acc        !< acceleration of the particle
      real                   :: energy     !< total energy of particle
      logical                :: in, phy, out !< Flags to locate particle in the inner part of the domain or the outer part
-#endif /* NBODY */
      logical                :: outside    !< this flag is true if the particle is outside the domain
    contains
      procedure :: is_outside              !< compute the outside flag
@@ -170,10 +168,8 @@ contains
       type(particle),      pointer       :: new
       integer,                intent(in) :: pid
       real, dimension(ndims), intent(in) :: pos, vel
-#ifdef NBODY
       real, dimension(ndims), intent(in) :: acc
       real,                   intent(in) :: energy
-#endif /* NBODY */
       real,                   intent(in) :: mass
       logical                            :: in,phy,out
 

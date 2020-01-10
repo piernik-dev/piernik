@@ -308,8 +308,9 @@ contains
       real                   :: r_dom
       logical                :: outsphere
 #ifndef RANDOMIZE
-      integer, parameter     :: seed = 86437
+      integer                :: seed
 
+      seed = 86437
       call random_seed(seed)
 #endif /* !RANDOMIZE */
 

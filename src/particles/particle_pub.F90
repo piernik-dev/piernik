@@ -39,13 +39,11 @@ module particle_pub
    implicit none
    private
    public :: init_particles, cleanup_particles
-#ifdef NBODY
    public :: npart, lf_c, ignore_dt_fluid
 
    integer(kind=4) :: npart              !< number of particles
    real            :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
    logical         :: ignore_dt_fluid    !< option to test only nbody part of the code, never true by default
-#endif /* NBODY */
 
 contains
 
@@ -59,14 +57,12 @@ contains
       use mpisetup,         only: master, slave, cbuff, piernik_mpi_bcast
       use particle_solvers, only: hermit_4ord, psolver
       use particle_maps,    only: set_map
-#ifdef NBODY
       use dataio_pub,       only: printinfo
       use mpisetup,         only: ibuff, lbuff, rbuff
       use particle_func,    only: check_ord
       use particle_gravity, only: is_setacc_cic, is_setacc_int, mask_gpot1b, is_setacc_int, is_setacc_tsc, eps
       use particle_solvers, only: leapfrog_2ord
       use particle_utils,   only: twodtscheme, dump_diagnose
-#endif /* NBODY */
 
       implicit none
       character(len=cbuff_len) :: time_integrator
@@ -74,18 +70,14 @@ contains
       character(len=cbuff_len), parameter :: default_ti = "none"
       character(len=cbuff_len), parameter :: default_is = "ngp"
 
-#ifdef NBODY
       character(len=cbuff_len) :: acc_interp_method  !< acceleration interpolation method
       integer                  :: order              !< order of Lagrange polynomials (if acc_interp_method = 'lagrange')
 
       namelist /PARTICLES/ npart, time_integrator, interpolation_scheme, acc_interp_method, lf_c, mask_gpot1b, ignore_dt_fluid, dump_diagnose, eps
-#else /* !NBODY */
-      namelist /PARTICLES/ time_integrator, interpolation_scheme
-#endif /* !NBODY */
 
       time_integrator      = default_ti
       interpolation_scheme = default_is
-#ifdef NBODY
+
       npart                = 0
       acc_interp_method    = 'cic'
       lf_c                 = 1.0
@@ -98,7 +90,6 @@ contains
 #else /* !NBODY_GRIDDIRECT */
       mask_gpot1b          = .false.
 #endif /* !NBODY_GRIDDIRECT */
-#endif /* NBODY */
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -119,7 +110,6 @@ contains
 
          cbuff(1) = time_integrator
          cbuff(2) = interpolation_scheme
-#ifdef NBODY
          cbuff(3) = acc_interp_method
 
          ibuff(1) = npart
@@ -131,20 +121,16 @@ contains
          lbuff(2) = twodtscheme
          lbuff(3) = ignore_dt_fluid
          lbuff(4) = dump_diagnose
-#endif /* NBODY */
       endif
 
       call piernik_MPI_Bcast(cbuff, cbuff_len)
-#ifdef NBODY
       call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(lbuff)
       call piernik_MPI_Bcast(rbuff)
-#endif /* NBODY */
 
       if (slave) then
          time_integrator = cbuff(1)
          interpolation_scheme = cbuff(2)
-#ifdef NBODY
          acc_interp_method    = cbuff(3)
 
          npart                = ibuff(1)
@@ -156,7 +142,6 @@ contains
          twodtscheme          = lbuff(2)
          ignore_dt_fluid      = lbuff(3)
          dump_diagnose        = lbuff(4)
-#endif /* NBODY */
       endif
 
       psolver => null()
@@ -164,10 +149,8 @@ contains
 #ifndef _CRAYFTN
          case ('hermit4')
             psolver => hermit_4ord
-#ifdef NBODY
          case ('leapfrog2')
             psolver => leapfrog_2ord
-#endif /* NBODY */
          case (default_ti) ! be quiet
 #endif /* !_CRAYFTN */
          case default
@@ -187,7 +170,6 @@ contains
             call die(msg)
       end select
 
-#ifdef NBODY
       is_setacc_int = .false.
       is_setacc_cic = .false.
       is_setacc_tsc = .false.
@@ -204,7 +186,6 @@ contains
             is_setacc_tsc = .true.
             call printinfo("[particle_pub:init_particles] Acceleration interpolation method: TSC")
       end select
-#endif /* NBODY */
 
    end subroutine init_particles
 

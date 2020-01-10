@@ -56,9 +56,9 @@ program piernik
    use domain,            only: dom
    use timer,             only: timer_start, timer_stop
 #endif /* PERFMON */
-#if defined DEBUG && defined GRAV
+#if defined DEBUG && defined GRAV && defined NBODY
    use particle_utils,    only: print_all_particles
-#endif /* DEBUG && GRAV */
+#endif /* DEBUG && GRAV && NBODY */
 
    implicit none
 
@@ -78,9 +78,9 @@ program piernik
 
    call all_cg%check_na
    !call all_cg%check_for_dirt
-#if defined DEBUG && defined GRAV
+#if defined DEBUG && defined GRAV && defined NBODY
    call print_all_particles
-#endif /* DEBUG && GRAV */
+#endif /* DEBUG && GRAV && NBODY */
 
    call piernik_MPI_Barrier
 !-------------------------------- MAIN LOOP ----------------------------------

@@ -34,9 +34,9 @@ module grid_cont
    use grid_cont_bnd,     only: segment
    use grid_cont_prolong, only: grid_container_prolong_T
    use refinement_flag,   only: ref_flag
-#ifdef GRAV
+#if defined(GRAV) && defined(NBODY)
    use particle_types,    only: particle_set
-#endif /* GRAV */
+#endif /* GRAV && NBODY */
 
    implicit none
 
@@ -71,9 +71,9 @@ module grid_cont
       logical, allocatable, dimension(:,:,:) :: refinemap         !< .true. when a cell triggers refinement criteria, .false. otherwise
 
       ! Particles
-#ifdef GRAV
+#if defined(GRAV) && defined(NBODY)
       type(particle_set) :: pset                                  !< set of particles that belong to this grid part
-#endif /* GRAV */
+#endif /* GRAV && NBODY */
 
       ! Misc
       integer(kind=8) :: SFC_id                                   !< position of the grid on space-filling curve

@@ -35,9 +35,7 @@ module particle_solvers
 
    private
    public :: psolver, hermit_4ord
-#ifdef NBODY
    public :: leapfrog_2ord, update_particle_kinetic_energy
-#endif /* NBODY */
 
    procedure(particle_solver_P), pointer :: psolver => NULL()
 
@@ -328,7 +326,6 @@ contains
 
    end subroutine get_acc_jerk_pot_coll
 
-#ifdef NBODY
    subroutine leapfrog_2ord(forward)
 
       use cg_leaves,        only: leaves
@@ -450,6 +447,5 @@ contains
       enddo
 
    end subroutine update_particle_kinetic_energy
-#endif /* NBODY */
 
 end module particle_solvers

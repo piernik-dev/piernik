@@ -244,14 +244,18 @@ contains
             ! With CoM or when it is known than CoM is close to the domain center one may try to save some CPU time by lowering mmax.
             call Q%reset
             call img_mass2moments
+#ifdef NBODY
             call particles2moments
+#endif /* NBODY */
             call Q%red_int_norm
             ! OPT: automagically reduce lmax for a couple of steps if higher multipoles fall below some thershold
             call moments2bnd_potential
          case (THREEDIM)
             call Q%reset
             call domain2moments
+#ifdef NBODY
             call particles2moments
+#endif /* NBODY */
             call Q%red_int_norm
             ! OPT: automagically reduce lmax for a couple of steps if higher multipoles fall below some thershold
             call moments2bnd_potential
@@ -493,6 +497,7 @@ contains
 
 !> \brief Compute multipole moments for the particles
 
+#ifdef NBODY
    subroutine particles2moments
 
       use cg_leaves,    only: leaves
@@ -534,6 +539,7 @@ contains
       enddo
 
    end subroutine particles2moments
+#endif /* NBODY */
 
 !>
 !! \brief Compute infinite-boundary potential from multipole moments

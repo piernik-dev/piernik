@@ -64,7 +64,9 @@ contains
       use grid_cont,    only: grid_container
       use mpisetup,     only: proc
       use units,        only: newtong
+#ifdef NBODY
       use particle_types, only: particle
+#endif /* NBODY */
 
       implicit none
 
@@ -72,7 +74,9 @@ contains
       real    :: r2
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+#ifdef NBODY
       type(particle), pointer    :: pset
+#endif /* NBODY */
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_monopole:isolated_monopole] non-cartesian geometry not implemented yet")
 
@@ -107,6 +111,7 @@ contains
          enddo
          cgl => cgl%nxt
 
+#ifdef NBODY
          pset => cg%pset%first
          do while (associated(pset))
             if (pset%pdata%outside) then
@@ -115,6 +120,7 @@ contains
             endif
             pset => pset%nxt
          enddo
+#endif /* NBODY */
 
       enddo
 
@@ -136,7 +142,9 @@ contains
       use func,       only: operator(.notequals.)
       use grid_cont,  only: grid_container
       use mpisetup,   only: piernik_MPI_Allreduce
+#ifdef NBODY
       use particle_types, only: particle
+#endif /* NBODY */
 #ifdef DEBUG
       use dataio_pub, only: msg, printinfo
       use mpisetup,   only: master
@@ -149,7 +157,9 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
       integer                        :: lh, i, d
+#ifdef NBODY
       type(particle), pointer    :: pset
+#endif /* NBODY */
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_monopole:find_img_CoM] non-cartesian geometry not implemented yet")
 
@@ -187,11 +197,13 @@ contains
 
          ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
          !> \warning Do we need to use the fppiG factor here?
+#ifdef NBODY
          pset => cg%pset%first
          do while (associated(pset))
             if (pset%pdata%outside) lsum(:) = lsum(:) + [ pset%pdata%mass, pset%pdata%mass * pset%pdata%pos(:) ]
             pset => pset%nxt
          enddo
+#endif /* NBODY */
 
          cgl => cgl%nxt
       enddo

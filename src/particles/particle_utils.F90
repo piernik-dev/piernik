@@ -39,7 +39,6 @@ module particle_utils
 
    private
    public :: max_pvel_1d, add_part_in_proper_cg, print_all_particles, is_part_in_cg
-#ifdef NBODY
    public :: max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom, count_all_particles, part_leave_cg
 
    real    :: tot_angmom           !< angular momentum of set of the particles
@@ -49,7 +48,6 @@ module particle_utils
    logical :: twodtscheme
    logical :: dump_diagnose        !< dump diagnose for each particle to a seperate log file
    integer, parameter :: npf = 12  !< number of single particle fields
-#endif /* NBODY */
 
 contains
 
@@ -99,7 +97,6 @@ contains
 
    end subroutine max_pvel_1d
 
-#ifdef NBODY
    subroutine max_pacc_3d(cg, max_pacc)
 
       use constants, only: big, CENTER, half, LO, xdim, zdim, zero
@@ -229,7 +226,6 @@ contains
       enddo
 
    end subroutine get_angmom_totener
-#endif /* NBODY */
 
    subroutine is_part_in_cg(cg, pos, in, phy, out)
 
@@ -342,11 +338,7 @@ contains
 
     end subroutine cg_outside_dom
 
-#ifdef NBODY
    subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener)
-#else /* !NBODY */
-   subroutine add_part_in_proper_cg(pid, mass, pos, vel)
-#endif /* !NBODY */
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
@@ -357,10 +349,8 @@ contains
 
       integer,                intent(in) :: pid
       real, dimension(ndims), intent(in) :: pos, vel
-#ifdef NBODY
       real, dimension(ndims), intent(in) :: acc
       real,                   intent(in) :: ener
-#endif /* NBODY */
       real,                   intent(in) :: mass
       type(cg_list_element), pointer     :: cgl
       logical                            :: in,phy,out
@@ -370,11 +360,7 @@ contains
          call is_part_in_cg(cgl%cg, pos, in, phy, out)
          if (phy .or. out) then
             call printinfo(msg)
-#ifdef NBODY
             call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out)
-#else /* !NBODY */
-            call cgl%cg%pset%add(pid, mass, pos, vel)
-#endif /* !NBODY */
             return
          endif
 
@@ -383,7 +369,6 @@ contains
 
    end subroutine add_part_in_proper_cg
 
-#ifdef NBODY
    ! Sends leaving particles between processors, and creates ghosts
    subroutine part_leave_cg()
 
@@ -620,6 +605,5 @@ contains
       close(lun_out)
 
    end subroutine dump_particles_to_textfile
-#endif /* NBODY */
 
 end module particle_utils
