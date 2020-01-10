@@ -386,14 +386,14 @@ contains
       implicit none
 
       integer, dimension(FIRST:LAST)     :: nsend, nrecv, counts, countr, disps, dispr
-      integer                            :: i, j, ind, pid, k, b
+      integer                            :: i, j, ind, pid, b
       real, dimension(ndims)             :: pos, vel, acc
       real, dimension(:), allocatable    :: part_info, part_info2
       real                               :: mass, ener
       type(cg_list_element), pointer     :: cgl
       type(grid_container),  pointer     :: cg
       type(particle), pointer            :: pset, pset2
-      logical                            :: already, in, phy, out, phy_out
+      logical                            :: in, phy, out, phy_out
 
       nsend = 0
       nrecv = 0
@@ -551,7 +551,6 @@ contains
 
       implicit none
 
-      integer(kind=4)                :: i
       type(cg_list_element), pointer :: cgl
       type(particle), pointer    :: pset
 

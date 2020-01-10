@@ -60,7 +60,7 @@ contains
       type(cg_list_element), pointer       :: cgl
       type(particle), pointer              :: pset
 
-      integer                              :: n_part, p, k
+      integer                              :: n_part, k
       real,    dimension(:,:), allocatable :: dist
       integer, dimension(:,:), allocatable :: cells
       integer, dimension(:),   allocatable :: pdel
@@ -496,7 +496,7 @@ contains
 
       type(grid_container), pointer, intent(inout) :: cg
       type(particle), pointer                      :: pset
-      integer                                      :: p, i, j, k
+      integer                                      :: i, j, k
       integer(kind=4)                              :: ig, cdim
       integer, dimension(ndims, IM:IP)             :: ijkp
       integer, dimension(ndims)                    :: cur_ind

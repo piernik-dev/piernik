@@ -156,7 +156,7 @@ contains
       real, dimension(imass:ndims)   :: lsum, dsum
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
-      integer                        :: lh, i, d
+      integer                        :: lh, d
 #ifdef NBODY
       type(particle), pointer    :: pset
 #endif /* NBODY */

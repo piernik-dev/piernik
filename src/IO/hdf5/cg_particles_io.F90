@@ -143,7 +143,7 @@ module cg_particles_io
       integer(HID_T),   intent(in)       :: group_id       !< File identifier
       character(len=*), intent(in)       :: pvar
       integer(kind=4),  intent(in)       :: n_part
-      integer                            :: cgnp, recnp, i
+      integer                            :: cgnp, recnp
       integer, dimension(:), allocatable :: tabi1
       type(cg_list_element), pointer     :: cgl
       type(particle), pointer        :: pset
@@ -188,7 +188,7 @@ module cg_particles_io
       integer(HID_T),   intent(in)    :: group_id       !< File identifier
       character(len=*), intent(in)    :: pvar
       integer(kind=4),  intent(in)    :: n_part
-      integer                         :: cgnp, recnp, i
+      integer                         :: cgnp, recnp
       real, dimension(:), allocatable :: tabr1
       type(cg_list_element), pointer  :: cgl
       type(particle), pointer        :: pset
@@ -250,19 +250,27 @@ module cg_particles_io
       integer(HID_T),        intent(in) :: group_id
       integer, dimension(:), intent(in) :: tab
       integer(HSIZE_T), dimension(1)    :: dimm
-      integer(HID_T)                    :: dataspace_id, dataset_id
-      integer(kind=4)                   :: error, rank1 = 1
+      integer(kind=4)                   :: error
+      integer(HID_T)                    :: dataset_id
+#ifndef NBODY_1FILE
+      integer(HID_T)                    :: dataspace_id
+      integer(kind=4)                   :: rank1 = 1
+#endif /* !NBODY_1FILE */
 
       dimm = shape(tab)
       dataset_id = group_id !For 1 file writing group_id is the cg_g_id
 #ifndef NBODY_1FILE
       call h5screate_simple_f(rank1, dimm, dataspace_id, error)
       call h5dcreate_f(group_id, vvar, H5T_NATIVE_INTEGER, dataspace_id, dataset_id, error)
-#endif /* NBODY_1FILE */
+#endif /* !NBODY_1FILE */
       call h5dwrite_f(dataset_id, H5T_NATIVE_INTEGER, tab, dimm, error)
 #ifndef NBODY_1FILE
       call h5dclose_f(dataset_id, error)
       call h5sclose_f(dataspace_id, error)
+#endif /* !NBODY_1FILE */
+
+#ifdef NBODY_1FILE
+      if (.false.) error = len(vvar)  ! suppress -Wunused-dummy-argument
 #endif /* NBODY_1FILE */
 
    end subroutine write_nbody_h5_int_rank1
@@ -277,19 +285,27 @@ module cg_particles_io
       integer(HID_T),     intent(in) :: group_id
       real, dimension(:), intent(in) :: tab
       integer(HSIZE_T), dimension(1) :: dimm
-      integer(HID_T)                 :: dataspace_id, dataset_id
-      integer(kind=4)                :: error, rank1 = 1
+      integer(HID_T)                 :: dataset_id
+      integer(kind=4)                :: error
+#ifndef NBODY_1FILE
+      integer(HID_T)                 :: dataspace_id
+      integer(kind=4)                :: rank1 = 1
+#endif /* !NBODY_1FILE */
 
       dimm = shape(tab)
       dataset_id = group_id
 #ifndef NBODY_1FILE
       call h5screate_simple_f(rank1, dimm, dataspace_id, error)
       call h5dcreate_f(group_id, vvar, H5T_NATIVE_DOUBLE, dataspace_id, dataset_id, error)
-#endif /* NBODY_1FILE */
+#endif /* !NBODY_1FILE */
       call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, tab, dimm, error)
 #ifndef NBODY_1FILE
       call h5dclose_f(dataset_id, error)
       call h5sclose_f(dataspace_id, error)
+#endif /* !NBODY_1FILE */
+
+#ifdef NBODY_1FILE
+      if (.false.) error = len(vvar)  ! suppress -Wunused-dummy-argument
 #endif /* NBODY_1FILE */
 
    end subroutine write_nbody_h5_rank1

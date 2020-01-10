@@ -103,7 +103,6 @@ contains
 
       type(cg_list_element), pointer :: cgl
       type(particle), pointer        :: pset
-      integer                        :: p
       integer, dimension(ndims)      :: ijkp
 
       cgl => leaves%first
@@ -144,7 +143,7 @@ contains
       type(cg_list_element), pointer   :: cgl
       type(particle), pointer          :: pset
       integer(kind=4)                  :: cdim
-      integer                          :: cn, i, j, k, p
+      integer                          :: cn, i, j, k
       integer, dimension(ndims, LO:HI) :: ijkp
       integer, dimension(ndims)        :: cur_ind
       real                             :: weight
@@ -213,7 +212,7 @@ contains
       type(cg_list_element), pointer   :: cgl
       type(particle), pointer    :: pset
       integer(kind=4)                  :: cdim
-      integer                          :: i, j, k, p
+      integer                          :: i, j, k
       integer(kind=4), dimension(ndims, IM:IP) :: ijkp
       integer, dimension(ndims)        :: cur_ind
       real                             :: weight, delta_x, weight_tmp

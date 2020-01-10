@@ -54,7 +54,7 @@ module particle_types
      logical                :: outside    !< this flag is true if the particle is outside the domain
    contains
      procedure :: is_outside              !< compute the outside flag
-  end type particle_data
+   end type particle_data
 
    type :: particle
       type(particle_data), pointer :: pdata !< list of particle data
@@ -150,6 +150,8 @@ contains
 
       !Does nothing for now... is it necessary for a list?
       !if (allocated(this%p)) deallocate(this%p)
+
+      if (.false.) this%cnt = this%cnt  ! suppress -Wunused-dummy-argument
 
     end subroutine cleanup
 

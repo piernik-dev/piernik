@@ -982,7 +982,8 @@ contains
       real, dimension(:,:,:),   allocatable        :: a3d
       real, dimension(:,:,:,:), allocatable        :: a4d
 #ifdef NBODY_1FILE
-      integer                                      :: j, pid1
+      integer(kind=8)                              :: j
+      integer                                      :: pid1
       real, dimension(:), allocatable              :: a1d
       integer(HSIZE_T), dimension(1)               :: n_part
       integer(kind=4),   dimension(:), allocatable :: ibuf

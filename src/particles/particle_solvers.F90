@@ -370,7 +370,6 @@ contains
             implicit none
 
             real, intent(in) :: kdt
-            integer          :: i
             type(particle), pointer        :: pset
 
             cgl => leaves%first
@@ -393,7 +392,7 @@ contains
             implicit none
 
             real, intent(in)                  :: ddt
-            integer                           :: i
+
             type(particle), pointer        :: pset, pset2
 
             cgl => leaves%first
@@ -431,7 +430,6 @@ contains
 
       type(cg_list_element), pointer :: cgl
       type(particle), pointer        :: pset
-      integer :: p
       real    :: v2 !< particle velocity squared
 
       cgl => leaves%first

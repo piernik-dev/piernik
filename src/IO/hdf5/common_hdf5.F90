@@ -819,7 +819,7 @@ contains
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_o           !< list of grid dimnsions with external guardcells from all cgs/procs
       integer(kind=8),  dimension(:,:), pointer     :: cg_off           !< list of offsets from all cgs/procs
 #ifdef NBODY_1FILE
-      integer(kind=4),  pointer                      :: cg_npart
+      integer(kind=8),  pointer                      :: cg_npart
 #endif /* NBODY_1FILE */
 
       !>
@@ -933,7 +933,10 @@ contains
                call h5gcreate_f(part_g_id, st_gname, st_g_id, error) ! create "/data/grid_%08d/particles/stars"
                allocate(cg_npart)
                cg_npart = n_part
-               call create_attribute(st_g_id, "n_part", [ cg_npart ])  ! create "/data/grid_%08d/particles/stars/stars/n_part"
+
+               if (int(cg_npart, kind=4) /= cg_npart) call die("[common_hdf5:write_to_hdf5_v2] cg_npart needs to be 64-bit")
+
+               call create_attribute(st_g_id, "n_part", [ int(cg_npart, kind=4) ])  ! create "/data/grid_%08d/particles/stars/stars/n_part"
                deallocate(cg_npart)
 #endif /* NBODY_1FILE */
                call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                ! create "/data/grid_%08d/level"
@@ -958,7 +961,9 @@ contains
                   rd%grid_left_index(:,indx) = cg_off(g,:)
                   rd%grid_parent_id(indx)     = -1
 #ifdef NBODY_1FILE
-                  rd%grid_particle_count(1,indx) = n_part
+                  if (int(n_part, kind=4) /= n_part) call die("[common_hdf5:write_to_hdf5_v2] n_part needs to be 64-bit")
+
+                  rd%grid_particle_count(1,indx) = int(n_part, kind=4)
 #endif /* NBODY_1FILE */
                endif
 
