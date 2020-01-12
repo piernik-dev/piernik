@@ -144,7 +144,7 @@ module cg_particles_io
       character(len=*), intent(in)       :: pvar
       integer(kind=4),  intent(in)       :: n_part
       integer                            :: cgnp, recnp
-      integer, dimension(:), allocatable :: tabi1
+      integer(kind=4), dimension(:), allocatable :: tabi1
       type(cg_list_element), pointer     :: cgl
       type(particle), pointer        :: pset
 
@@ -248,7 +248,7 @@ module cg_particles_io
 
       character(len=*),      intent(in) :: vvar
       integer(HID_T),        intent(in) :: group_id
-      integer, dimension(:), intent(in) :: tab
+      integer(kind=4), dimension(:), intent(in) :: tab
       integer(HSIZE_T), dimension(1)    :: dimm
       integer(kind=4)                   :: error
       integer(HID_T)                    :: dataset_id
@@ -263,7 +263,7 @@ module cg_particles_io
       call h5screate_simple_f(rank1, dimm, dataspace_id, error)
       call h5dcreate_f(group_id, vvar, H5T_NATIVE_INTEGER, dataspace_id, dataset_id, error)
 #endif /* !NBODY_1FILE */
-      call h5dwrite_f(dataset_id, H5T_NATIVE_INTEGER, tab, dimm, error)
+      call h5dwrite_f(dataset_id, H5T_NATIVE_INTEGER, tab, dimm, error)  ! beware: 64-bit tab(:) produces "no specific subroutine for the generic ‘h5dwrite_f'" error
 #ifndef NBODY_1FILE
       call h5dclose_f(dataset_id, error)
       call h5sclose_f(dataspace_id, error)

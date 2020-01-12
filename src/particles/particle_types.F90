@@ -44,7 +44,7 @@ module particle_types
    !<
 
    type :: particle_data
-     integer                :: pid        !< particle ID
+     integer(kind=4)        :: pid        !< particle ID
      real                   :: mass       !< mass of the particle
      real, dimension(ndims) :: pos        !< physical position
      real, dimension(ndims) :: vel        !< particle velocity
@@ -168,7 +168,7 @@ contains
       class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
       type(particle_data), pointer       :: part     !< new particle
       type(particle),      pointer       :: new
-      integer,                intent(in) :: pid
+      integer(kind=4),        intent(in) :: pid
       real, dimension(ndims), intent(in) :: pos, vel
       real, dimension(ndims), intent(in) :: acc
       real,                   intent(in) :: energy

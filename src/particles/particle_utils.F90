@@ -347,7 +347,7 @@ contains
 
       implicit none
 
-      integer,                intent(in) :: pid
+      integer(kind=4),        intent(in) :: pid
       real, dimension(ndims), intent(in) :: pos, vel
       real, dimension(ndims), intent(in) :: acc
       real,                   intent(in) :: ener
@@ -386,7 +386,8 @@ contains
       implicit none
 
       integer, dimension(FIRST:LAST)     :: nsend, nrecv, counts, countr, disps, dispr
-      integer                            :: i, j, ind, pid, b
+      integer                            :: i, j, ind, b
+      integer(kind=4)                    :: pid
       real, dimension(ndims)             :: pos, vel, acc
       real, dimension(:), allocatable    :: part_info, part_info2
       real                               :: mass, ener
@@ -501,7 +502,7 @@ contains
                      call is_part_in_cg(cg, pos, in, phy, out) ! TO DO IN AMR USE GRID_ID TO CUT THE SEARCH SHORT
                      if (.not. out) print *, 'error, particle', part_info2(ind), 'cannot be attributed!' ! NON-AMR ONLY
                      if (out) then
-                        pid = nint(part_info2(ind))
+                        pid = nint(part_info2(ind), kind=4)
                         mass = part_info2(ind+1)
                         vel  = part_info2(ind+5:ind+7)
                         acc  = part_info2(ind+8:ind+10)

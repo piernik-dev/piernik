@@ -983,11 +983,11 @@ contains
       real, dimension(:,:,:,:), allocatable        :: a4d
 #ifdef NBODY_1FILE
       integer(kind=8)                              :: j
-      integer                                      :: pid1
+      integer(kind=4)                              :: pid1
       real, dimension(:), allocatable              :: a1d
       integer(HSIZE_T), dimension(1)               :: n_part
       integer(kind=4),   dimension(:), allocatable :: ibuf
-      integer, allocatable, dimension(:)           :: pid
+      integer(kind=4), allocatable, dimension(:)   :: pid
       real, allocatable, dimension(:)              :: mass, ener
       real, allocatable, dimension(:, :)           :: pos, vel, acc
       real, dimension(ndims)                       :: pos1, vel1, acc1
@@ -1086,7 +1086,7 @@ contains
          do j = 1, n_part(1)
             select case (pdsets(i))
                case ('ppid')
-                  pid(j) = int(a1d(j))
+                  pid(j) = int(a1d(j), kind=4)
                case ('mass')
                   mass(j) = a1d(j)
                case ('ener')
