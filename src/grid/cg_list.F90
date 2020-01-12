@@ -442,7 +442,11 @@ contains
 
    end subroutine set_is_old
 
-!> \brief Clear refinement flags everywhere
+!>
+!! \brief Clear refinement flags everywhere
+!!
+!! \ToDo convert this to an URC routine
+!<
 
    subroutine clear_ref_flags(this)
 
@@ -456,6 +460,11 @@ contains
       do while (associated(cgl))
          call cgl%cg%refine_flags%init
          cgl%cg%refinemap = .false.
+
+         ! Mark everything for derefinement by default.
+         ! It requires to correctly propagate refinement requests from parent blocks as derefinement inhibitions.
+         cgl%cg%refine_flags%derefine = .true.
+
          cgl => cgl%nxt
       enddo
 
