@@ -51,7 +51,7 @@ module old_soln_list
       type(old_soln), pointer :: later    !< a pointer to later solution
    end type old_soln
 
-   type, abstract :: os_list_AT
+   type, abstract :: os_list_at
       type(old_soln), pointer    :: latest    !< first (most recent) element of the chain of historical solutions
       character(len=dsetnamelen) :: label     !< name of the list for diagnostic and identification purposes
    contains
@@ -61,15 +61,15 @@ module old_soln_list
       procedure :: print       !< dump some info to stdout
       procedure :: pick_head   !< unlink head and return it to the caller
       procedure :: new_head    !< put an element to the front of the list
-   end type os_list_AT
+   end type os_list_at
 
-   type, extends(os_list_AT) :: os_list_undef_t
+   type, extends(os_list_at) :: os_list_undef_t
    contains
       procedure :: new         !< add a fresh element anywhere
       procedure :: pick        !< unlink an element that is matching i_hist
    end type os_list_undef_t
 
-   type, extends(os_list_AT) :: os_list_t
+   type, extends(os_list_at) :: os_list_t
    contains
       procedure :: trim_tail   !< detach an element from the end of the list and return it to the caller
       procedure :: is_valid    !< can we trust this list?
@@ -83,7 +83,7 @@ contains
 
       implicit none
 
-      class(os_list_AT), intent(inout) :: this
+      class(os_list_at), intent(inout) :: this
 
       type(old_soln), pointer :: os, prev
 
@@ -107,7 +107,7 @@ contains
 
       implicit none
 
-      class(os_list_AT), intent(inout) :: this
+      class(os_list_at), intent(inout) :: this
 
       type(old_soln), pointer :: os
       integer :: cnt
@@ -144,7 +144,7 @@ contains
 
       implicit none
 
-      class(os_list_AT), intent(in) :: this
+      class(os_list_at), intent(in) :: this
 
       type(old_soln), pointer :: os
       integer(kind=4) :: cnt
@@ -222,7 +222,7 @@ contains
 
       implicit none
 
-      class(os_list_AT), intent(inout) :: this
+      class(os_list_at), intent(inout) :: this
 
       type(old_soln), pointer :: os
 
@@ -246,7 +246,7 @@ contains
 
       implicit none
 
-      class(os_list_AT),       intent(inout) :: this
+      class(os_list_at),       intent(inout) :: this
       type(old_soln), pointer, intent(in)    :: os
 
       os%later => null()
@@ -365,7 +365,7 @@ contains
 
       implicit none
 
-      class(os_list_AT), intent(in) :: this
+      class(os_list_at), intent(in) :: this
 
       type(old_soln), pointer :: os
       integer :: cnt
