@@ -191,11 +191,11 @@ contains
       new%nxt => null()
 
       if (.not. associated(this%first)) then ! the list was empty
-         if (associated(this%last)) call die("[cg_list:add_new_part] last without first")
+         if (associated(this%last)) call die("[particle_types:add_part_list] last without first")
          this%first => new
          new%prv => null()
       else
-         if (.not. associated(this%last)) call die("[cg_list:add_new_part] first without last")
+         if (.not. associated(this%last)) call die("[particle_types:add_part_list] first without last")
          this%last%nxt => new
          new%prv => this%last
       endif
