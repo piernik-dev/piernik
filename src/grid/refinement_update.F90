@@ -37,8 +37,6 @@ module refinement_update
 
 contains
 
-#define VERBOSED_REFINEMENTS
-
 !> \brief Apply all (de)refinement criteria: user, automatic and by primitive geometric shapes
 
    subroutine scan_for_refinements
@@ -46,17 +44,15 @@ contains
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_leaves,             only: leaves
       use cg_list_global,        only: all_cg
-      use constants,             only: I_ONE
-      use unified_ref_crit_list, only: urc_list
-      use user_hooks,            only: problem_refine_derefine
-#ifdef VERBOSED_REFINEMENTS
-      use constants,             only: pSUM
+      use constants,             only: I_ONE, pSUM
       use dataio_pub,            only: msg, printinfo
       use mpisetup,              only: master, piernik_MPI_Allreduce
-#endif /* VERBOSED_REFINEMENTS */
+      use unified_ref_crit_list, only: urc_list
+      use user_hooks,            only: problem_refine_derefine
 
       implicit none
 
+      logical, parameter :: verbose = .true.  ! be verbose for now, later we may want to be able to make it quiet
       enum, bind(C)
          enumerator :: PROBLEM
          enumerator :: URC
@@ -81,30 +77,28 @@ contains
 
       if (associated(problem_refine_derefine)) then
          call problem_refine_derefine ! call user routine first, so it cannot alter flags set by automatic routines
-#ifdef VERBOSED_REFINEMENTS
-         call sanitize_all_ref_flags
-#endif /* VERBOSED_REFINEMENTS */
+         if (verbose) call sanitize_all_ref_flags  ! don't trust user routines too much :->
       endif
 
-#ifdef VERBOSED_REFINEMENTS
-      cnt(PROBLEM) = all_cg%count_ref_flags()
-      call piernik_MPI_Allreduce(cnt(PROBLEM), pSUM)
-#endif /* VERBOSED_REFINEMENTS */
+      if (verbose) then
+         cnt(PROBLEM) = all_cg%count_ref_flags()
+         call piernik_MPI_Allreduce(cnt(PROBLEM), pSUM)
+      endif
 
       call urc_list%all_mark(leaves%first)
       call sanitize_all_ref_flags
-#ifdef VERBOSED_REFINEMENTS
-      cnt(URC) = all_cg%count_ref_flags()
-      call piernik_MPI_Allreduce(cnt(URC), pSUM)
-#endif /* VERBOSED_REFINEMENTS */
 
-#ifdef VERBOSED_REFINEMENTS
-     if (cnt(ubound(cnt, dim=1)) > 0) then
-         write(msg,'(a,2i6,a)')"[refinement_update:scan_for_refinements] User routine and URC marked ", &
-              &                cnt(PROBLEM), cnt(PROBLEM+I_ONE:URC)-cnt(PROBLEM:URC-I_ONE), " block(s) for refinement, respectively."
-         if (master) call printinfo(msg)
+      if (verbose) then
+         cnt(URC) = all_cg%count_ref_flags()
+         call piernik_MPI_Allreduce(cnt(URC), pSUM)
+
+         if (cnt(ubound(cnt, dim=1)) > 0) then
+            write(msg,'(a,2i6,a)')"[refinement_update:scan_for_refinements] User routine and URC marked ", &
+                 &                cnt(PROBLEM), cnt(PROBLEM+I_ONE:URC)-cnt(PROBLEM:URC-I_ONE), " block(s) for refinement, respectively."
+            if (master) call printinfo(msg)
+         endif
       endif
-#endif /* VERBOSED_REFINEMENTS */
+
       call ref_flags_to_ref_list
 
    contains
