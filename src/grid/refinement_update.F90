@@ -45,9 +45,6 @@ contains
 
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_leaves,             only: leaves
-      use cg_level_connected,    only: cg_level_connected_T
-      use cg_level_finest,       only: finest
-!      use cg_list,               only: cg_list_element
       use cg_list_global,        only: all_cg
       use constants,             only: I_ONE
       use unified_ref_crit_list, only: urc_list
@@ -60,21 +57,15 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer :: curl
-!      type(cg_list_element),      pointer :: cgl
       enum, bind(C)
          enumerator :: PROBLEM
          enumerator :: URC
       end enum
       integer, dimension(PROBLEM:URC) :: cnt
 
-      curl => finest%level
-      do while (associated(curl))
-         call curl%deallocate_patches
-         curl => curl%coarser
-      enddo
-      call all_cg%clear_ref_flags
       cnt = 0
+
+      call prepare_ref
 
       ! We have to guarantee up-to-date guardcells on all vital fields
       call all_bnd ! \todo find a way to minimize calling this - perhaps manage a flag that says whether the boundaries are up to date or not
@@ -116,61 +107,92 @@ contains
 #endif /* VERBOSED_REFINEMENTS */
       call ref_flags_to_ref_list
 
+   contains
+
+      !> \brief Initialize refinement flags and other data structures
+
+      subroutine prepare_ref
+
+         use cg_level_connected, only: cg_level_connected_T
+         use cg_level_finest,    only: finest
+
+         implicit none
+
+         type(cg_level_connected_T), pointer :: curl
+
+         curl => finest%level
+         do while (associated(curl))
+            call curl%deallocate_patches
+            curl => curl%coarser
+         enddo
+         call all_cg%clear_ref_flags
+
+      end subroutine prepare_ref
+
+      !>
+      !! \brief Convert refinement requests to list of blocks
+      !!
+      !! \todo remove loop over levels and use just leaves
+      !! \todo convert this to URC routine
+      !<
+
+      subroutine ref_flags_to_ref_list
+
+         use cg_list,            only: cg_list_element
+         use cg_level_base,      only: base
+         use cg_level_connected, only: cg_level_connected_T
+
+         implicit none
+
+         type(cg_list_element), pointer :: cgl
+         type(cg_level_connected_T), pointer :: curl
+
+         curl => base%level
+         do while (associated(curl))
+            cgl => curl%first
+            do while (associated(cgl))
+               call cgl%cg%refinemap2SFC_list ! assumed that it is called only once and the blocks aren't doubly added
+               cgl => cgl%nxt
+            enddo
+            curl => curl%finer
+         enddo
+
+      end subroutine ref_flags_to_ref_list
+
+      !>
+      !! \brief Sanitize refinement requests
+      !!
+      !! \todo convert this to URC routine
+      !<
+
+      subroutine sanitize_all_ref_flags
+
+         use cg_list,            only: cg_list_element
+         use cg_level_base,      only: base
+         use cg_level_connected, only: cg_level_connected_T
+
+         implicit none
+
+         type(cg_list_element), pointer :: cgl
+         type(cg_level_connected_T), pointer :: curl
+
+         !> \todo communicate refines from coarse to fine blocks to prevent oscillations that might occur when there is derefinement request on fine, when coarse requests refinement
+
+         curl => base%level
+         do while (associated(curl))
+            cgl => curl%first
+            do while (associated(cgl))
+               cgl%cg%refine_flags%refine = cgl%cg%refine_flags%refine .or. &
+                    any(cgl%cg%refinemap(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) .and. cgl%cg%leafmap)
+               call cgl%cg%refine_flags%sanitize(cgl%cg%l%id)
+               cgl => cgl%nxt
+            enddo
+            curl => curl%finer
+         enddo
+
+      end subroutine sanitize_all_ref_flags
+
    end subroutine scan_for_refinements
-
-!> \brief Sanitize refinement requests
-
-   subroutine sanitize_all_ref_flags
-
-      use cg_list,            only: cg_list_element
-      use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-      type(cg_level_connected_T), pointer :: curl
-
-      !> \todo communicate refines from coarse to fine blocks to prevent oscillations that might occur when there is derefinement request on fine, when coarse requests refinement
-
-      curl => base%level
-      do while (associated(curl))
-         cgl => curl%first
-         do while (associated(cgl))
-            cgl%cg%refine_flags%refine = cgl%cg%refine_flags%refine .or. &
-                 any(cgl%cg%refinemap(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) .and. cgl%cg%leafmap)
-            call cgl%cg%refine_flags%sanitize(cgl%cg%l%id)
-            cgl => cgl%nxt
-         enddo
-         curl => curl%finer
-      enddo
-
-   end subroutine sanitize_all_ref_flags
-
-!> \brief Convert refinement requests to list of blocks
-
-   subroutine ref_flags_to_ref_list
-
-      use cg_list,            only: cg_list_element
-      use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-      type(cg_level_connected_T), pointer :: curl
-
-      curl => base%level
-      do while (associated(curl))
-         cgl => curl%first
-         do while (associated(cgl))
-            call cgl%cg%refinemap2SFC_list ! assumed that it is called only once and the blocks aren't doubly added
-            cgl => cgl%nxt
-         enddo
-         curl => curl%finer
-      enddo
-
-   end subroutine ref_flags_to_ref_list
 
 !>
 !! \brief Update the refinement topology
