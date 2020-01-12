@@ -101,6 +101,9 @@ contains
 !! User criteria in initproblem are supposed to be added from read_problem_par this way:
 !!     call urc_list%add_user_urc(mark_user, do_plotfield)
 !! Multiple routines can be added, if necessary.
+!!
+!! Field-based refinement criteria can be added from initproblem as well by:
+!!     call urc_list%add_user_urcv(iv, ic, ref_thr, deref_thr, aux, rname, plotfield)
 !<
 
    subroutine init(this)
@@ -318,6 +321,7 @@ contains
             endif
          endif
 
+         ! If max >= 100 this should fail in add2list with empty name
          if (len_trim(ref_n) <= 0) then
             do i = 1, max  ! Beware: O(n^2)
                write(ref_n, '(a,i2.2)') "ref_", i
@@ -349,6 +353,7 @@ contains
          cnt  = cnt + 1
          p => p%next
       enddo
+
    end function cnt
 
 !> \brief Do a cleanup of all refinement criteria and deallocate them.
@@ -400,8 +405,8 @@ contains
 
       implicit none
 
-      class(urc_list_t),              intent(inout) :: this        !< an object invoking the type-bound procedure
-      type(cg_list_element), pointer, intent(in)    :: first         !< the list of cgs (usually leaves)
+      class(urc_list_t),              intent(inout) :: this   !< an object invoking the type-bound procedure
+      type(cg_list_element), pointer, intent(in)    :: first  !< the list of cgs (usually leaves)
 
       type(cg_list_element), pointer :: cgl
 
@@ -414,9 +419,9 @@ contains
    end subroutine all_mark
 
 !>
-!! \brief Check refinement criteria on a given list of cg only for iplot set
+!! \brief Check refinement criteria on a given list of cg only for iplot set.
 !!
-!! Perhaps it would be more optimal to exchange the loops and check if there is anything to do at all
+!! ToDo: check whether loop order matters performance-wise.
 !<
 
    subroutine plot_mark(this, first)
@@ -426,8 +431,8 @@ contains
 
       implicit none
 
-      class(urc_list_t),              intent(inout) :: this        !< an object invoking the type-bound procedure
-      type(cg_list_element), pointer, intent(in)    :: first         !< the list of cgs (usually leaves)
+      class(urc_list_t),              intent(inout) :: this   !< an object invoking the type-bound procedure
+      type(cg_list_element), pointer, intent(in)    :: first  !< the list of cgs (usually leaves)
 
       type(cg_list_element), pointer :: cgl
       class(urc), pointer :: p

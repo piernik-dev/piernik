@@ -49,7 +49,8 @@ module unified_ref_crit
 !! For each grid container the routines for marking refinements and derefinements are called in the same order.
 !! It is assumed that all vital fields will have valid boundaries for the routine mark.
 !! Each criterion should be applicable on any cg and no global communication should take place in this routine.
-!! Refinement criteria that require some global operations (like Toomre length in disks) should be implemented separately and used with care.
+!! Refinement criteria that require some global operations (like Toomre length in disks)
+!! should be implemented separately and used with care.
 !<
 
    type, abstract :: urc

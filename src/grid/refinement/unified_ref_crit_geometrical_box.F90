@@ -27,7 +27,7 @@
 
 #include "piernik.h"
 
-!> \brief Unified refinement criterion for a single point
+!> \brief Unified refinement criterion for a single box
 
 module unified_ref_crit_geometrical_box
 
@@ -39,12 +39,12 @@ module unified_ref_crit_geometrical_box
    private
    public :: urc_box
 
-!> \brief A type for point refinement
+!> \brief A type for box refinement
 
    type, extends(urc_geom) :: urc_box
-      real, dimension(ndims, LO:HI) :: coords  !< coordinates, where to refine
+      real, dimension(ndims, LO:HI)                          :: coords  !< coordinates, where to refine
       integer(kind=8), allocatable, dimension(:, :), private :: ijk_lo  !< integer coordinates of "bottom left corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
-      integer(kind=8), allocatable, dimension(:, :), private :: ijk_hi  !< integer coordinates ot "top right corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
+      integer(kind=8), allocatable, dimension(:, :), private :: ijk_hi  !< integer coordinates of "top right corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
    contains
       procedure          :: mark => mark_box
       procedure, private :: init_lev

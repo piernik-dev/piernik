@@ -27,7 +27,10 @@
 
 #include "piernik.h"
 
-!> \brief Unified refinement criteria for filters that provide scalar indicator of the need for refinement based on selected fields
+!>
+!! \brief Unified refinement criteria for filters that provide scalar indicator
+!! of the need for refinement based on selected fields.
+!<
 
 module unified_ref_crit_var
 
@@ -39,7 +42,10 @@ module unified_ref_crit_var
    private
    public :: urc_var, decode_urcv
 
-!> \brief Things that should be common for all refinement criteria based on filters that look for shockwaves or do other checks based on selected fields
+!>
+!! \brief Things that should be common for all refinement criteria based on filters
+!! that look for shockwaves or do other checks based on selected fields.
+!<
 
    type, extends(urc_filter) :: urc_var
 !      private  !unified_ref_crit_list:create_plotfields needs some of these
@@ -182,7 +188,7 @@ contains
 
    end subroutine identify_field
 
-!> \brief A simple constructor for single scalar fields
+!> \brief A constructor for single scalar fields
 
    function init(rf, iv, ic) result(this)
 
@@ -277,7 +283,9 @@ contains
 !>
 !! \brief R. Loechner criterion
 !! Original paper: https://www.researchgate.net/publication/222452974_An_adaptive_finite_element_scheme_for_transient_problems_in_CFD
-!! Cartesian grid implementation: http://flash.uchicago.edu/~jbgallag/2012/flash4_ug/node14.html#SECTION05163100000000000000 (note that some indices in the left part of denominator seem to be slightly messed up)
+!! Cartesian grid implementation:
+!! http://flash.uchicago.edu/~jbgallag/2012/flash4_ug/node14.html#SECTION05163100000000000000
+!! (note that some indices in the left part of denominator seem to be slightly messed up)
 !!
 !! this%aux is the noise filter (epsilon in Loechner's paper)
 !<

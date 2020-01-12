@@ -41,7 +41,8 @@ module unified_ref_crit_user
 !>
 !! \brief Things that should be common for all user criteria.
 !!
-!! All necessary parameters are supposed to be visible in the initproblem, where the user routine is supposed to be defined.
+!! All necessary parameters are supposed to be visible in the initproblem,
+!! where the user routine is supposed to be defined.
 !!
 !! \warning (spaghetti) urc_filter also defines plotfield in the same role
 !<

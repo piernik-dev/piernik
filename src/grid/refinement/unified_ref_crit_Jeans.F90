@@ -28,12 +28,12 @@
 #include "piernik.h"
 
 !>
-!! \brief Unified refinement criteriun based on Jeans length
+!! \brief Unified refinement criterion based on Jeans length
 !!
 !! The importance of proper resolution of Jeans length was presented in
 !! Truelove et al., ApJ, 489, L179-L183, Bibcode: 1997ApJ...489L.179T
 !!
-!! Their suggestion of 4 cell per length was well justified on computers available in 1997.
+!! Their suggestion of 4 cells per Jeans length was well justified on computers available in 1997.
 !! Some decades later don't hesitate to ask for more, unless you're using your phone for computing.
 !<
 
@@ -46,7 +46,7 @@ module unified_ref_crit_Jeans
    private
    public :: urc_Jeans
 
-!> \brief Things that should be common for all refinement criteria based on filters that decide whether local conditions deserve refinement or derefinement.
+!> \brief The type for Jeans length-based refinement criterion.
 
    type, extends(urc_filter) :: urc_Jeans
    contains
@@ -72,7 +72,8 @@ contains
 
       type(urc_Jeans) :: this  !< an object to be constructed
 
-      real, parameter :: safe_deref = refinement_factor * 1.25  !< if it proves to be not save then implement it as a problem.par parameter
+      !< If it proves to be not universally safe, then implement it as a problem.par parameter.
+      real, parameter :: safe_deref = refinement_factor * 1.25
 
       this%ref_thr   = jeans_ref
       this%deref_thr = safe_deref * jeans_ref
@@ -135,7 +136,10 @@ contains
          p3d(:,:,:) = 0.
          do f = 1, flind%fluids
             associate (fl => flind%all_fluids(f)%fl)
-               if (fl%has_energy) p3d = p3d + fl%gam * fl%gam_1 * (cg%u(fl%ien, :, :, :) - ekin(cg%u(fl%imx, :,:,:), cg%u(fl%imy, :,:,:), cg%u(fl%imz, :,:,:), cg%u(fl%idn, :,:,:)))
+               if (fl%has_energy) p3d = p3d + fl%gam * fl%gam_1 * ( &
+                    cg%u(fl%ien, :, :, :) - &
+                    ekin(cg%u(fl%imx, :,:,:), cg%u(fl%imy, :,:,:), cg%u(fl%imz, :,:,:), cg%u(fl%idn, :,:,:)) &
+                    )
             end associate
          enddo
          ! sum of ion/neu/dst

@@ -27,7 +27,7 @@
 
 #include "piernik.h"
 
-!> \brief Unified refinement criteria for filters that provide scalar indicator of the need for refinement
+!> \brief Unified refinement criteria for filters that provide scalar indicator of the need for refinement.
 
 module unified_ref_crit_filter
 
@@ -38,7 +38,10 @@ module unified_ref_crit_filter
    private
    public :: urc_filter
 
-!> \brief Things that should be common for all refinement criteria based on filters that decide whether local conditions deserve refinement or derefinement.
+!>
+!! \brief Things that should be common for all refinement criteria based on filters.
+!! The filters are supposed to decide whether local conditions deserve refinement or derefinement.
+!<
 
    type, abstract, extends(urc) :: urc_filter
       real    :: ref_thr    !< refinement threshold
