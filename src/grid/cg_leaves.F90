@@ -55,7 +55,7 @@ module cg_leaves
    !<
 
    type, extends(cg_list_bnd_T) :: cg_leaves_T ! cg_list_bnd_T is required for calling bnd_u and bnd_b
-      type(cg_level_connected_T), pointer :: coarsest_leaves
+      type(cg_level_connected_T), private, pointer :: coarsest_leaves
    contains
       procedure :: update                  !< Select grids that should be included on leaves list
       procedure :: balance_and_update      !< Rebalance if required and update
@@ -83,7 +83,7 @@ contains
 
    subroutine update(this, str)
 
-!      use cg_level_base,      only: base  ! cn't use it because of cyclic dependency
+!      use cg_level_base,      only: base  ! can't use it because of cyclic dependency
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
@@ -95,8 +95,8 @@ contains
 
       implicit none
 
-      class(cg_leaves_T),         intent(inout) :: this          !< object invoking type-bound procedure
-      character(len=*), optional, intent(in)    :: str           !< optional string identifier to show the progress of updating refinement
+      class(cg_leaves_T),         intent(inout) :: this  !< object invoking type-bound procedure
+      character(len=*), optional, intent(in)    :: str   !< optional string identifier to show the progress of updating refinement
 
       type(cg_level_connected_T), pointer :: curl
       type(cg_list_element),      pointer :: cgl
@@ -162,8 +162,8 @@ contains
 
       implicit none
 
-      class(cg_leaves_T),         intent(inout) :: this          !< object invoking type-bound procedure
-      character(len=*), optional, intent(in)    :: str           !< optional string identifier to show the progress of updating refinement
+      class(cg_leaves_T),         intent(inout) :: this  !< object invoking type-bound procedure
+      character(len=*), optional, intent(in)    :: str   !< optional string identifier to show the progress of updating refinement
 
       type(cg_level_connected_T), pointer :: curl
 
@@ -284,10 +284,8 @@ contains
 
    end subroutine internal_bnd_4d
 
-!>
-!! \brief Wrapper routine to set up external boundaries for for given rank-3 arrays
-!! \todo make it completed
-!<
+!> \brief Wrapper routine to set up external boundaries for for given rank-3 arrays
+
    subroutine external_bnd_3d(this, ind, area_type, bnd_type)
 
       use cg_level_connected, only: cg_level_connected_T
@@ -313,7 +311,7 @@ contains
 
 !>
 !! \brief Wrapper routine to set up external boundaries for for given rank-4 arrays
-!! \todo make it completed
+!! \todo Complete it. The code is mostly in cg_list_bnd in routines bnd_u and bnd_b.
 !<
    subroutine external_bnd_4d(this) !, ind, area_type, bnd_type)
 
