@@ -32,7 +32,7 @@ module grid_cont
 
    use constants,         only: LO, HI
    use grid_cont_bnd,     only: segment
-   use grid_cont_prolong, only: grid_container_prolong_T
+   use grid_cont_prolong, only: grid_container_prolong_t
    use refinement_flag,   only: ref_flag
 
    implicit none
@@ -46,7 +46,7 @@ module grid_cont
    end type tgt_list
 
    !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
-   type, extends(grid_container_prolong_T) :: grid_container
+   type, extends(grid_container_prolong_t) :: grid_container
 
       ! Prolongation and restriction
 

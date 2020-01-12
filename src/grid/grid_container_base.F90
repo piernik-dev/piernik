@@ -37,7 +37,7 @@ module grid_cont_base
    implicit none
 
    private
-   public :: grid_container_base_T
+   public :: grid_container_base_t
 
    !>
    !! \brief Multigrid-specific storage
@@ -66,7 +66,7 @@ module grid_cont_base
    end type mg_arr
 
    !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
-   type, abstract :: grid_container_base_T
+   type, abstract :: grid_container_base_t
 
       ! Cell properties
 
@@ -154,7 +154,7 @@ module grid_cont_base
       procedure          :: cleanup_base                         !< Deallocate all internals
       procedure, private :: set_coords                           !< Calculate arrays of coordinates along a given direction
 
-   end type grid_container_base_T
+   end type grid_container_base_t
 
 contains
 
@@ -170,7 +170,7 @@ contains
 
       implicit none
 
-      class(grid_container_base_T), target, intent(inout) :: this     !< object invoking type-bound procedure (grid_container)
+      class(grid_container_base_t), target, intent(inout) :: this     !< object invoking type-bound procedure (grid_container)
       integer(kind=8), dimension(:,:),      intent(in)    :: my_se    !< my segment
       integer,                              intent(in)    :: grid_id  !< ID which should be unique across level
       class(level_t), pointer,              intent(in)    :: l        !< level essential data
@@ -354,7 +354,7 @@ contains
 
       implicit none
 
-      class(grid_container_base_T), intent(inout) :: this  !< grid container, where the arrays have to be set
+      class(grid_container_base_t), intent(inout) :: this  !< grid container, where the arrays have to be set
 
       integer :: d, i
       integer, parameter :: safety_warn_factor = 1000 ! warn if a cell size is smaller than this * epsilon(coordinates)
@@ -416,7 +416,7 @@ contains
 
       implicit none
 
-      class(grid_container_base_T), intent(inout) :: this  !< object invoking type-bound procedure
+      class(grid_container_base_t), intent(inout) :: this  !< object invoking type-bound procedure
 
       integer :: b, cdim
 
