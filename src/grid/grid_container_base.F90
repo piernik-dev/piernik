@@ -32,7 +32,7 @@ module grid_cont_base
 
    use constants,        only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
    use level_essentials, only: level_t
-   use real_vector,      only: real_vec_T
+   use real_vector,      only: real_vec_t
 
    implicit none
 
@@ -125,7 +125,7 @@ module grid_cont_base
 
       real, dimension(ndims, LO:HI) :: fbnd                      !< current block boundary positions
 
-      type(real_vec_T), dimension(CENTER:INV_CENTER, ndims) :: coord !< all coordinates (CENTER, LEFT, RIGHT, INV_CENTER)
+      type(real_vec_t), dimension(CENTER:INV_CENTER, ndims) :: coord !< all coordinates (CENTER, LEFT, RIGHT, INV_CENTER)
       ! shortcuts
       real, pointer, dimension(:) :: x                             !< array of x-positions of %grid cells centers
       real, pointer, dimension(:) :: y                             !< array of x-positions of %grid cells centers

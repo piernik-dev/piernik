@@ -48,8 +48,8 @@
 
 module mergebox
 
-   use box_list,    only: box_list_T
-   use corner_list, only: corner_list_T
+   use box_list,    only: box_list_t
+   use corner_list, only: corner_list_t
    use constants,   only: ndims
 
    implicit none
@@ -59,8 +59,8 @@ module mergebox
 
    type :: wmap
       logical, allocatable, dimension(:,:,:) :: map !< Logical map to be processed
-      type(corner_list_T) :: clist                  !< List of convec corners
-      type(box_list_T) :: blist                     !< List of boxes
+      type(corner_list_t) :: clist                  !< List of convec corners
+      type(box_list_t) :: blist                     !< List of boxes
       real, dimension(ndims) :: CoM                 !< Center of Mass
    contains
       procedure :: init          !< Initialize

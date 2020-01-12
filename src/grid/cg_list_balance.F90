@@ -33,9 +33,9 @@ module cg_list_balance
 
    use cg_list_bnd,      only: cg_list_bnd_t
    use constants,        only: ndims, I_ONE
-   use dot,              only: dot_T
+   use dot,              only: dot_t
    use level_essentials, only: level_t
-   use patch_list,       only: patch_list_T
+   use patch_list,       only: patch_list_t
 
    implicit none
 
@@ -51,8 +51,8 @@ module cg_list_balance
    !> An abstract type created to take out some load-balance related code from cg_level (new grids)
 
    type, extends(cg_list_bnd_t), abstract :: cg_list_balance_t
-      type(patch_list_T)                :: plist            !< list of patches that exist on the current level
-      type(dot_T)                       :: dot              !< depiction of topology
+      type(patch_list_t)                :: plist            !< list of patches that exist on the current level
+      type(dot_t)                       :: dot              !< depiction of topology
       logical                           :: recently_changed !< .true. when anything was added to or deleted from this level
       class(level_t), pointer           :: l                !< single place to store off, n_d and id
    contains

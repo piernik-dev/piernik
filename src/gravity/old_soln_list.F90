@@ -38,7 +38,7 @@ module old_soln_list
    implicit none
 
    private
-   public :: old_soln, os_list_undef_T, os_list_T
+   public :: old_soln, os_list_undef_t, os_list_t
 
    real, parameter    :: invalid_time = -0.1 * huge(1.0)  !< don't trust too ancient solutions
    integer, parameter :: too_long = 100                   !< escape from loops
@@ -63,17 +63,17 @@ module old_soln_list
       procedure :: new_head    !< put an element to the front of the list
    end type os_list_AT
 
-   type, extends(os_list_AT) :: os_list_undef_T
+   type, extends(os_list_AT) :: os_list_undef_t
    contains
       procedure :: new         !< add a fresh element anywhere
       procedure :: pick        !< unlink an element that is matching i_hist
-   end type os_list_undef_T
+   end type os_list_undef_t
 
-   type, extends(os_list_AT) :: os_list_T
+   type, extends(os_list_AT) :: os_list_t
    contains
       procedure :: trim_tail   !< detach an element from the end of the list and return it to the caller
       procedure :: is_valid    !< can we trust this list?
-   end type os_list_T
+   end type os_list_t
 
 contains
 
@@ -168,7 +168,7 @@ contains
 
       implicit none
 
-      class(os_list_undef_T), intent(inout) :: this
+      class(os_list_undef_t), intent(inout) :: this
       integer(kind=4), intent(in) :: ind
 
       type(old_soln), pointer :: n
@@ -186,7 +186,7 @@ contains
 
       implicit none
 
-      class(os_list_undef_T), intent(inout) :: this
+      class(os_list_undef_t), intent(inout) :: this
       integer(kind=4),        intent(in)    :: ind
 
       type(old_soln), pointer :: os, ose, osl
@@ -252,8 +252,8 @@ contains
       os%later => null()
       os%earlier => this%latest
       select type(this)
-         type is (os_list_undef_T)
-         type is (os_list_T)
+         type is (os_list_undef_t)
+         type is (os_list_t)
             os%time = t
          class default
             call die("[old_soln_list:new_head] unknown type")
@@ -272,7 +272,7 @@ contains
 
       implicit none
 
-      class(os_list_T), intent(inout) :: this
+      class(os_list_t), intent(inout) :: this
 
       type(old_soln), pointer :: os
 
@@ -301,7 +301,7 @@ contains
 
       implicit none
 
-      class(os_list_T), intent(in) :: this
+      class(os_list_t), intent(in) :: this
 
       logical :: is_valid
 
@@ -375,9 +375,9 @@ contains
       do while (associated(os))
          cnt = cnt + I_ONE
          select type(this)
-            type is (os_list_undef_T)
+            type is (os_list_undef_t)
                write(msg, '(2(a,i3),2a)') "(Undef) soln# ", cnt, " qna_index: ", os%i_hist, " qna_name: ", qna%lst(os%i_hist)%name
-            type is (os_list_T)
+            type is (os_list_t)
                write(msg, '(a,i3,a,g14.6,a,i3,2a)') "(Old) soln# ", cnt, " time = ", os%time, " qna_index: ", os%i_hist, " qna_name: ", qna%lst(os%i_hist)%name
             class default
                write(msg, '(a,i3,a,g14.6,a,i3,2a)') "(Other ?) soln# ", cnt, " time = ", os%time, " qna_index: ", os%i_hist, " qna_name: ", qna%lst(os%i_hist)%name
@@ -389,7 +389,7 @@ contains
 
       write(msg, '(a,g14.6,3a,i3,a)') "[old_soln_list] t= ", t, " name: '", trim(this%label), "' contains ", this%cnt(), " elements"
       select type(this)
-         type is (os_list_T)
+         type is (os_list_t)
             write(msg, '(2a,l2)') trim(msg), " is valid? ", this%is_valid()
          class default
       end select

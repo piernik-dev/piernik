@@ -32,7 +32,7 @@
 module sort_cg_list
 
    use cg_list,       only: cg_list_element
-   use sortable_list, only: sortable_list_T
+   use sortable_list, only: sortable_list_t
 
    implicit none
 
@@ -44,7 +44,7 @@ module sort_cg_list
       type(cg_list_element), pointer :: cgl
    end type cg_piece
 
-   type, extends(sortable_list_T) :: sort_cg_list_t
+   type, extends(sortable_list_t) :: sort_cg_list_t
       type(cg_piece), dimension(:), allocatable :: list !< the list itself
       type(cg_piece) :: temp
    contains

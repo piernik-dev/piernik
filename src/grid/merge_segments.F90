@@ -31,20 +31,20 @@
 
 module merge_segments
 
-   use sort_segment_list, only: sort_segment_list_T
+   use sort_segment_list, only: sort_segment_list_t
 
    implicit none
 
    private
-   public :: merge_segments_T, IN, OUT
+   public :: merge_segments_t, IN, OUT
 
-   type :: merge_segments_T
-      type(sort_segment_list_T), dimension(:, :), allocatable :: sl ! array of sortable segment lists (FIRST:LAST, IN:OUT)
+   type :: merge_segments_t
+      type(sort_segment_list_t), dimension(:, :), allocatable :: sl ! array of sortable segment lists (FIRST:LAST, IN:OUT)
       logical :: valid
    contains
       procedure          :: merge     ! Merge segments
       procedure, private :: populate  ! Initialize segment list with fresh data
-   end type merge_segments_T
+   end type merge_segments_t
 
    enum, bind(C)
       enumerator :: IN, OUT
@@ -61,7 +61,7 @@ contains
 
       implicit none
 
-      class(merge_segments_T), intent(inout) :: this
+      class(merge_segments_t), intent(inout) :: this
       class(cg_list_t),        intent(in)    :: list
 
       integer :: p, i
@@ -98,7 +98,7 @@ contains
 
       implicit none
 
-      class(merge_segments_T), intent(inout) :: this
+      class(merge_segments_t), intent(inout) :: this
       class(cg_list_t),        intent(in)    :: list
 
       type(cg_list_element), pointer :: cgl

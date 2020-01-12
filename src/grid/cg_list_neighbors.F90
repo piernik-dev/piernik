@@ -231,7 +231,7 @@ contains
       use constants,  only: xdim, ydim, zdim, cor_dim, ndims, LO, HI, INVALID, BND_FC
       use dataio_pub, only: die
       use domain,     only: dom
-      use gcpa,       only: gcpa_T
+      use gcpa,       only: gcpa_t
       use grid_cont,  only: grid_container
       use mpisetup,   only: proc
       use ordering,   only: SFC_order
@@ -251,7 +251,7 @@ contains
       integer                           :: n_dd      !< neighbor's direction
       integer(kind=4)                   :: tag
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: overlap
-      type(gcpa_T) :: l_pse
+      type(gcpa_t) :: l_pse
 
       if (.not. this%dot%is_blocky) call die("[cg_list_neighbors:find_neighbors_SFC] Can work only on regular cartesian decompositions")
 
@@ -390,7 +390,7 @@ contains
       use cg_list,    only: cg_list_element
       use constants,  only: xdim, ydim, zdim, cor_dim, ndims, LO, HI, BND_MPI_FC, BND_FC
       use domain,     only: dom
-      use gcpa,       only: gcpa_T
+      use gcpa,       only: gcpa_t
       use grid_cont,  only: grid_container
       use mpisetup,   only: FIRST, LAST, proc
       use overlap,    only: is_overlap
@@ -412,7 +412,7 @@ contains
       end type fmap
       type(fmap), dimension(xdim:zdim, LO:HI)         :: f
       integer(kind=8), dimension(ndims, LO:HI)        :: box_8   !< temporary storage
-      type(gcpa_T) :: l_pse
+      type(gcpa_t) :: l_pse
 
       call l_pse%init(this)
 
@@ -613,7 +613,7 @@ contains
       use constants,  only: xdim, ydim, zdim, cor_dim, ndims, LO, HI, I_ONE
       use domain,     only: dom
       use dataio_pub, only: die
-      use gcpa,       only: gcpa_T
+      use gcpa,       only: gcpa_t
       use global,     only: do_external_corners
       use mpisetup,   only: FIRST, LAST, proc
       use overlap,    only: is_overlap
@@ -627,7 +627,7 @@ contains
       integer                                  :: j, b, ix, iy, iz
       integer(kind=8), dimension(ndims, LO:HI) :: box, box_narrow, e_guard, e_guard_wide, whole_level, poff, aux
       integer(kind=4)                          :: d, hl, lh, m_tag
-      type(gcpa_T)                             :: l_pse
+      type(gcpa_t)                             :: l_pse
 
       if (.not. do_external_corners) return
 
