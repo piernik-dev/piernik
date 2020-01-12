@@ -48,13 +48,14 @@ module unified_ref_crit_var
 !<
 
    type, extends(urc_filter) :: urc_var
-!      private  !unified_ref_crit_list:create_plotfields needs some of these
-      character(len=cbuff_len) :: rvar   !< name of the refinement variable
-      character(len=cbuff_len) :: rname  !< name of the refinement routine
-      real                     :: aux    !< auxiliary parameter (can be smoother or filter strength)
-      integer                  :: iv = INVALID  !< field index in cg%q or cg%w array
-      integer                  :: ic = INVALID  !< component index (cg%w(iv)%arr(ic,:,:,:)) or INVALID for 3D arrays
-      procedure(refine_crit), pass, pointer :: refine !< refinement routine
+      private
+      !unified_ref_crit_list:create_plotfields needs these components
+      character(len=cbuff_len), public      :: rname         !< name of the refinement routine
+      integer, public                       :: iv = INVALID  !< field index in cg%q or cg%w array
+      integer, public                       :: ic = INVALID  !< component index (cg%w(iv)%arr(ic,:,:,:)) or INVALID for 3D arrays
+      character(len=cbuff_len)              :: rvar          !< name of the refinement variable
+      real                                  :: aux           !< auxiliary parameter (can be smoother or filter strength)
+      procedure(refine_crit), pass, pointer :: refine        !< refinement routine
    contains
       procedure :: mark => mark_var
    end type urc_var

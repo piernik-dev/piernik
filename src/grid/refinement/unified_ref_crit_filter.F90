@@ -44,6 +44,9 @@ module unified_ref_crit_filter
 !<
 
    type, abstract, extends(urc) :: urc_filter
+! These components should be private but then derived types wouldn't have access to them.
+! Submodules doesn't seem to be a real solution for this.
+!      private
       real    :: ref_thr    !< refinement threshold
       real    :: deref_thr  !< derefinement threshold
       logical :: plotfield  !< create a 3D array to keep the value of refinement criterion

@@ -42,17 +42,17 @@ module unified_ref_crit_list
       class(urc), pointer :: first => null()  !< here the list should start
       ! A pointer to last refinement criterion would be of some use only during initialisation.
    contains
-      procedure :: add                !< append a single criterion to the list, or a chain of these
-      procedure :: init               !< initialize the list of refinement criteria with everything that is known at the beginning
-      procedure :: cnt                !< return the current number of defined refinement criteria
-      procedure :: cleanup            !< do a cleanup of all refinement criteria and deallocate them
-      procedure :: all_mark           !< check refinement criteria on a given list of cg
-      procedure :: plot_mark          !< check refinement criteria on a given list of cg only for iplot set
-      procedure :: create_plotfields  !< set up qna fields for refinement criteria
-      procedure :: add_user_urcv      !< add field-based refinement criteria from initproblem
-      procedure :: add_user_urc       !< add user-provided routine with refinement criteria from initproblem
-      procedure :: summary            !< print summary of refinement criteria in use
-      procedure, private :: mark      !< put all refinement marks or derefinement unmarks
+      procedure :: init           !< initialize the list of refinement criteria with everything that is known at the beginning
+      procedure :: cleanup        !< do a cleanup of all refinement criteria and deallocate them
+      procedure :: all_mark       !< check refinement criteria on a given list of cg
+      procedure :: plot_mark      !< check refinement criteria on a given list of cg only for iplot set
+      procedure :: add_user_urcv  !< add field-based refinement criteria from initproblem
+      procedure :: add_user_urc   !< add user-provided routine with refinement criteria from initproblem
+      procedure, private :: add                !< append a single criterion to the list, or a chain of these
+      procedure, private :: cnt                !< return the current number of defined refinement criteria
+      procedure, private :: create_plotfields  !< set up qna fields for refinement criteria
+      procedure, private :: summary            !< print summary of refinement criteria in use
+      procedure, private :: mark               !< put all refinement marks or derefinement unmarks
    end type urc_list_t
 
    type(urc_list_t) :: urc_list  !< the list of refinement criteria to be applied cg-wise
