@@ -999,7 +999,7 @@ contains
    subroutine collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
 
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: LO, HI, I_ONE
 
@@ -1012,7 +1012,7 @@ contains
       real(kind=8),    dimension(:,:,:), pointer, intent(inout) :: dbuf
       integer(kind=4),                            intent(in)    :: otype            !< Output type (restart, data)
 
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
       type(cg_list_element), pointer :: cgl
       integer :: g
 

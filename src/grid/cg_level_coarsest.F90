@@ -30,7 +30,7 @@
 
 module cg_level_coarsest
 
-   use cg_level_connected, only: cg_level_connected_T
+   use cg_level_connected, only: cg_level_connected_t
 
    implicit none
 
@@ -39,7 +39,7 @@ module cg_level_coarsest
 
    !> \brief The pointer of the coarsest refinement level and a method to add a coarser one
    type :: cg_level_coarsest_T
-      type(cg_level_connected_T), pointer :: level !< lowest refinement level
+      type(cg_level_connected_t), pointer :: level !< lowest refinement level
     contains
       procedure :: add_coarser                  !< add one level below current coarsest level
       procedure :: delete_coarsest              !< delete coarsest level
@@ -66,7 +66,7 @@ contains
 
       class(cg_level_coarsest_T), intent(inout) :: this    !< object calling type-bound routine
 
-      type(cg_level_connected_T), pointer       :: new_lev !< fresh refinement level to be added
+      type(cg_level_connected_t), pointer       :: new_lev !< fresh refinement level to be added
 
       if (associated(this%level%coarser)) call die("[cg_level_coarsest:add_coarser] coarser level already exists")
 

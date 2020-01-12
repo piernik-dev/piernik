@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 
-!> \brief This module manages tag pool for cg_level_connected_T%vertical_b_prep
+!> \brief This module manages tag pool for cg_level_connected_t%vertical_b_prep
 
 module tag_pool
 

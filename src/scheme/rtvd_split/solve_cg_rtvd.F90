@@ -50,7 +50,7 @@ contains
    subroutine solve_cg_rtvd(cg, cdim, istep, fargo_vel)
 
       use bfc_bcc,            only: interpolate_mag_field
-      use cg_level_connected, only: cg_level_connected_T, find_level
+      use cg_level_connected, only: cg_level_connected_t, find_level
       use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim, rk_coef
       use dataio_pub,         only: die
       use domain,             only: dom
@@ -84,7 +84,7 @@ contains
 #endif /* MAGNETIC */
       real, dimension(:),    pointer    :: cs2
       logical :: apply_sources
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
 
       uhi = wna%ind(uh_n)
       full_dim = dom%has_dir(cdim)

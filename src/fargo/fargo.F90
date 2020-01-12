@@ -75,7 +75,7 @@ contains
    subroutine check_yref
 
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: ydim, BND_FC, BND_MPI_FC
       use dataio_pub,         only: die, warn
@@ -83,7 +83,7 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
       type(cg_list_element), pointer :: cgl
 
       if (.not. use_fargo) call warn("[fargo:check_yref] There's no reason to call this routine when not using FARGO!")
@@ -136,7 +136,7 @@ contains
 
       use constants,          only: xdim, ydim, zdim, I_ONE, pSUM
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use dataio_pub,         only: die
       use global,             only: use_fargo
@@ -151,7 +151,7 @@ contains
       type(grid_container),  pointer    :: cg
       integer :: ifl, i
       class(component_fluid), pointer :: pfl
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
 
       if (.not. use_fargo) call die("[fargo:fargo_mean_omega] Not using FARGO")
 
@@ -203,7 +203,7 @@ contains
 
       use constants,          only: xdim, ydim, I_ONE
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use domain,             only: dom
       use fluidindex,         only: flind
 
@@ -211,7 +211,7 @@ contains
 
       real, intent(in) :: dt
       integer :: ifl
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
       real :: dl_ydim
 
       call fargo_mean_omega
@@ -325,7 +325,7 @@ contains
    subroutine int_shift
 
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: ydim
       use domain,             only: dom
@@ -344,7 +344,7 @@ contains
       type(grid_container),  pointer    :: cg
       class(component_fluid), pointer   :: pfl
       integer :: ifl, i, max_nshift, iter
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
 
       curl => base%level
       do while (associated(curl))

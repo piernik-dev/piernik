@@ -30,7 +30,7 @@
 
 module cg_level_base
 
-   use cg_level_connected, only: cg_level_connected_T
+   use cg_level_connected, only: cg_level_connected_t
 
    implicit none
 
@@ -40,7 +40,7 @@ module cg_level_base
    !! \brief The pointer of the base level and a method to initialize it
    !> \todo Domainshrinking, expanding and crawling should also be implemented here
    type :: cg_level_base_T
-      type(cg_level_connected_T), pointer :: level            !< The base level
+      type(cg_level_connected_t), pointer :: level            !< The base level
     contains
       procedure          :: set                               !< initialize the base level
       procedure          :: expand                            !< add one line of blocks in some directions
@@ -148,7 +148,7 @@ contains
    subroutine expand_side(this, d, lh)
 
       use cg_leaves,          only: leaves
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: expanded_domain
       use constants,          only: xdim, zdim, LO, HI, BND_MPI, BND_FC, refinement_factor
@@ -167,7 +167,7 @@ contains
 
       integer(kind=8), dimension(xdim:zdim) :: e_size, e_off, new_n_d, new_off
       type(cg_list_element),  pointer :: cgl
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
 
       if (.not. dom%has_dir(d)) call die("[cg_level_base:expand_side] Non-existing direction")
       if (bsize(d) < dom%nb) call die("[cg_level_base:expand_side] Invalid AMR::bsize")

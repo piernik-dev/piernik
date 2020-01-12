@@ -46,7 +46,7 @@ module cg_list_neighbors
    !! like O(this%cnt^2). When we have a list sorted according to Morton/Hilbert
    !! id's we can do a bisection search instead. It will result in massive
    !! speedups on cg_list_neighbors_T%find_neighbors and
-   !! cg_level_connected_T%{vertical_prep,vertical_b_prep). It may also simplify
+   !! cg_level_connected_t%{vertical_prep,vertical_b_prep). It may also simplify
    !! the process of fixing refinement structure in refinement_update::fix_refinement.
    !!
    !! * Non-cartesian decompositions should be handled with the bruteforce way.

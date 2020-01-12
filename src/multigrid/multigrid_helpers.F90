@@ -128,14 +128,14 @@ contains
 
    function copy_and_max(curl, soln) result(max_in)
 
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: pMAX
       use mpisetup,           only: piernik_MPI_Allreduce
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(in) :: curl  !< pointer to a level for which we approximate the solution
+      type(cg_level_connected_t), pointer, intent(in) :: curl  !< pointer to a level for which we approximate the solution
       integer(kind=4),                     intent(in) :: soln  !< index of solution in cg%q(:)
 
       type(cg_list_element), pointer :: cgl
