@@ -545,8 +545,9 @@ contains
 
    integer(kind=4) function count_all_particles() result(pcount)
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: I_ONE
       use particle_types, only: particle
 
       implicit none
@@ -559,7 +560,7 @@ contains
       do while (associated(cgl))
          pset => cgl%cg%pset%first
          do while (associated(pset))
-            if (pset%pdata%phy) pcount = pcount + 1
+            if (pset%pdata%phy) pcount = pcount + I_ONE
             pset => pset%nxt
          enddo
          cgl => cgl%nxt

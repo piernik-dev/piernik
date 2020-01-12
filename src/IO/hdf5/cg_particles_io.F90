@@ -270,7 +270,7 @@ module cg_particles_io
 #endif /* !NBODY_1FILE */
 
 #ifdef NBODY_1FILE
-      if (.false.) error = len(vvar)  ! suppress -Wunused-dummy-argument
+      if (.false.) error = len(vvar, kind=4)  ! suppress -Wunused-dummy-argument
 #endif /* NBODY_1FILE */
 
    end subroutine write_nbody_h5_int_rank1
@@ -305,7 +305,7 @@ module cg_particles_io
 #endif /* !NBODY_1FILE */
 
 #ifdef NBODY_1FILE
-      if (.false.) error = len(vvar)  ! suppress -Wunused-dummy-argument
+      if (.false.) error = len(vvar, kind=4)  ! suppress -Wunused-dummy-argument
 #endif /* NBODY_1FILE */
 
    end subroutine write_nbody_h5_rank1
