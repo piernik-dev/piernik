@@ -56,13 +56,13 @@ contains
 
    subroutine merge(this, list)
 
-      use cg_list,  only: cg_list_T
+      use cg_list,  only: cg_list_t
       use mpisetup, only: FIRST, LAST !, proc
 
       implicit none
 
       class(merge_segments_T), intent(inout) :: this
-      class(cg_list_T),        intent(in)    :: list
+      class(cg_list_t),        intent(in)    :: list
 
       integer :: p, i
 
@@ -91,7 +91,7 @@ contains
 
    subroutine populate(this, list)
 
-      use cg_list,    only: cg_list_T, cg_list_element
+      use cg_list,    only: cg_list_t, cg_list_element
       use constants,  only: xdim, cor_dim
       use dataio_pub, only: warn
       use mpisetup,   only: proc
@@ -99,7 +99,7 @@ contains
       implicit none
 
       class(merge_segments_T), intent(inout) :: this
-      class(cg_list_T),        intent(in)    :: list
+      class(cg_list_t),        intent(in)    :: list
 
       type(cg_list_element), pointer :: cgl
       integer :: d, i

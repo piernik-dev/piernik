@@ -45,7 +45,7 @@ module gcpa
 
    !> an array of pointers to local grid containers
    type :: gcpa_T
-      type(gcp), dimension(:), allocatable :: l_pse ! auxiliary array used to convert entries in cg_list_balance_T%dot%gse into pointers to grid containers for local exchanges
+      type(gcp), dimension(:), allocatable :: l_pse ! auxiliary array used to convert entries in cg_list_balance_t%dot%gse into pointers to grid containers for local exchanges
    contains
       procedure :: init
       procedure :: cleanup
@@ -58,14 +58,14 @@ contains
    subroutine init(this, curl)
 
       use cg_list,         only: cg_list_element
-      use cg_list_balance, only: cg_list_balance_T
+      use cg_list_balance, only: cg_list_balance_t
       use dataio_pub,      only: die
       use mpisetup,        only: proc
 
       implicit none
 
       class(gcpa_T),            intent(inout) :: this !< object invoking type bound procedure
-      class(cg_list_balance_T), intent(inout) :: curl !< current level
+      class(cg_list_balance_t), intent(inout) :: curl !< current level
 
       type(cg_list_element), pointer :: cgl
       integer                        :: b

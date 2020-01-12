@@ -44,7 +44,7 @@ module restart_hdf5_v2
       integer(kind=8), dimension(ndims) :: off
       integer(kind=4)                   :: level
    end type cg_essentials
-   ! nearly duplicate with level_essentials::level_T
+   ! nearly duplicate with level_essentials::level_t
 
 contains
 

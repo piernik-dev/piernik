@@ -30,7 +30,7 @@
 
 module cg_level_connected
 
-   use cg_level, only: cg_level_T
+   use cg_level, only: cg_level_t
 
    implicit none
 
@@ -38,7 +38,7 @@ module cg_level_connected
    public :: cg_level_connected_t, base_level, find_level
 
    !! \brief A list of all cg of the same resolution with links to coarser and finer levels
-   type, extends(cg_level_T) :: cg_level_connected_t
+   type, extends(cg_level_t) :: cg_level_connected_t
 
       type(cg_level_connected_t), pointer :: coarser          !< coarser level cg set or null()
       type(cg_level_connected_t), pointer :: finer            !< finer level cg set or null()

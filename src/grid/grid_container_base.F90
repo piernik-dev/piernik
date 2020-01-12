@@ -31,7 +31,7 @@
 module grid_cont_base
 
    use constants,        only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
-   use level_essentials, only: level_T
+   use level_essentials, only: level_t
    use real_vector,      only: real_vec_T
 
    implicit none
@@ -93,7 +93,7 @@ module grid_cont_base
       integer(kind=4) :: nxb                                     !< number of %grid cells in one block (without boundary cells) in x-direction
       integer(kind=4) :: nyb                                     !< number of %grid cells in one block (without boundary cells) in y-direction
       integer(kind=4) :: nzb                                     !< number of %grid cells in one block (without boundary cells) in z-direction
-      class(level_T), pointer :: l                               !< level essential data
+      class(level_t), pointer :: l                               !< level essential data
 
       ! shortcuts
       !> \todo Change kind from 4 to 8 to allow really deep refinements (effective resolution > 2**31, perhaps the other requirement will be default integer  kind = 8)
@@ -166,14 +166,14 @@ contains
       use dataio_pub,       only: die, warn
       use domain,           only: dom
       use func,             only: operator(.equals.)
-      use level_essentials, only: level_T
+      use level_essentials, only: level_t
 
       implicit none
 
       class(grid_container_base_T), target, intent(inout) :: this     !< object invoking type-bound procedure (grid_container)
       integer(kind=8), dimension(:,:),      intent(in)    :: my_se    !< my segment
       integer,                              intent(in)    :: grid_id  !< ID which should be unique across level
-      class(level_T), pointer,              intent(in)    :: l        !< level essential data
+      class(level_t), pointer,              intent(in)    :: l        !< level essential data
 
       integer :: i
 

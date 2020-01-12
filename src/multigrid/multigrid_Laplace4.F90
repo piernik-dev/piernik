@@ -65,10 +65,10 @@ contains
 
    subroutine residual4(cg_llst, src, soln, def)
 
-      use cg_leaves,          only: cg_leaves_T
+      use cg_leaves,          only: cg_leaves_t
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
-      use cg_list_bnd,        only: cg_list_bnd_T
+      use cg_list_bnd,        only: cg_list_bnd_t
       use constants,          only: ndims, idm2, xdim, ydim, zdim, BND_NEGREF, GEO_XYZ
       use dataio_pub,         only: die, warn
       use domain,             only: dom
@@ -79,7 +79,7 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T), intent(inout) :: cg_llst !< pointer to a level for which we approximate the solution
+      class(cg_list_bnd_t), intent(inout) :: cg_llst !< pointer to a level for which we approximate the solution
       integer(kind=4),      intent(in) :: src     !< index of source in cg%q(:)
       integer(kind=4),      intent(in) :: soln    !< index of solution in cg%q(:)
       integer(kind=4),      intent(in) :: def     !< index of defect in cg%q(:)
@@ -104,7 +104,7 @@ contains
       endif
 
       select type(cg_llst)
-         type is (cg_leaves_T)
+         type is (cg_leaves_t)
             call cg_llst%leaf_arr3d_boundaries(soln, bnd_type=BND_NEGREF, nocorners=.true.)
          type is (cg_level_connected_t)
             call cg_llst%arr3d_boundaries(soln, bnd_type=BND_NEGREF, nocorners=.true.)

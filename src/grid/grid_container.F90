@@ -92,7 +92,7 @@ contains
 
       use constants,        only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, LO, HI
       use dataio_pub,       only: die, code_progress
-      use level_essentials, only: level_T
+      use level_essentials, only: level_t
       use ordering,         only: SFC_order
 
       implicit none
@@ -101,7 +101,7 @@ contains
                                                               ! (also the fields in types derived from grid_container)
       integer(kind=8), dimension(:,:), intent(in)    :: my_se    !< my segment
       integer,                         intent(in)    :: grid_id  !< ID which should be unique across level
-      class(level_T), pointer,         intent(in)    :: l        !< level essential data
+      class(level_t), pointer,         intent(in)    :: l        !< level essential data
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init_gc] MPI not initialized.")
 

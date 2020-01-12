@@ -50,7 +50,7 @@ contains
    subroutine all_dirty
 
 #if defined(__INTEL_COMPILER)
-      use cg_list_bnd,    only: cg_list_bnd_T  ! QA_WARN intel
+      use cg_list_bnd,    only: cg_list_bnd_t  ! QA_WARN intel
 #endif /* __INTEL_COMPILER */
       use cg_list_global, only: all_cg
       use constants,      only: dirtyH1

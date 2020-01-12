@@ -76,10 +76,10 @@ contains
 
    subroutine residual_Mehrstellen(cg_llst, src, soln, def)
 
-      use cg_leaves,          only: cg_leaves_T
+      use cg_leaves,          only: cg_leaves_t
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
-      use cg_list_bnd,        only: cg_list_bnd_T
+      use cg_list_bnd,        only: cg_list_bnd_t
       use constants,          only: ndims, xdim, ydim, zdim, BND_NEGREF, LO, HI, GEO_XYZ, zero
       use dataio_pub,         only: die
       use domain,             only: dom
@@ -90,7 +90,7 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T), intent(inout) :: cg_llst !< pointer to a level for which we approximate the solution
+      class(cg_list_bnd_t), intent(inout) :: cg_llst !< pointer to a level for which we approximate the solution
       integer(kind=4),      intent(in) :: src     !< index of source in cg%q(:)
       integer(kind=4),      intent(in) :: soln    !< index of solution in cg%q(:)
       integer(kind=4),      intent(in) :: def     !< index of defect in cg%q(:)
@@ -110,7 +110,7 @@ contains
       ! the contribution of outer potential is simulated by a single layer of cells with image of density and we don't want to operate on this structure with the Laplacian.
       ! This image density is supposed to be infinitesimally thin, which we obviously can't reproduce, so we modify the operator instead
       select type(cg_llst)
-         type is (cg_leaves_T)
+         type is (cg_leaves_t)
             call cg_llst%leaf_arr3d_boundaries(soln, bnd_type=BND_NEGREF)
             if (src_lapl.notequals.zero) call cg_llst%leaf_arr3d_boundaries(src, bnd_type=BND_NEGREF, nocorners=.true.)
          type is (cg_level_connected_t)

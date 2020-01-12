@@ -39,7 +39,7 @@ module cg_level_base
 
    !! \brief The pointer of the base level and a method to initialize it
    !> \todo Domainshrinking, expanding and crawling should also be implemented here
-   type :: cg_level_base_T
+   type :: cg_level_base_t
       type(cg_level_connected_t), pointer :: level            !< The base level
     contains
       procedure          :: set                               !< initialize the base level
@@ -51,9 +51,9 @@ module cg_level_base
 !      procedure :: plunge      !< move one level lower
 !      procedure :: condense    !< shrink on all sides (halve size) and plunge
 !      procedure :: inflate     !< expand on all sides to double size and lift
-   end type cg_level_base_T
+   end type cg_level_base_t
 
-   type(cg_level_base_T), pointer :: base                     !< base level grid containers
+   type(cg_level_base_t), pointer :: base                     !< base level grid containers
 
 contains
 
@@ -69,7 +69,7 @@ contains
 
       implicit none
 
-      class(cg_level_base_T),            intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_base_t),            intent(inout) :: this   !< object invoking type bound procedure
       integer(kind=4), dimension(ndims), intent(in)    :: n_d    !< size of global base grid in cells
 
       ! Multigrid and refinement work properly with non-0, even offset.
@@ -108,7 +108,7 @@ contains
 
       implicit none
 
-      class(cg_level_base_T),               intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_base_t),               intent(inout) :: this   !< object invoking type bound procedure
       logical, dimension(xdim:zdim, LO:HI), intent(in)    :: sides  !< logical mask of sides to be extended
 
       integer :: d, lh
@@ -161,7 +161,7 @@ contains
 
       implicit none
 
-      class(cg_level_base_T), intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_base_t), intent(inout) :: this   !< object invoking type bound procedure
       integer,                intent(in)    :: d      !< direction to be expanded
       integer,                intent(in)    :: lh     !< side to be expanded
 

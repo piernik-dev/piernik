@@ -61,7 +61,7 @@ module multipole
 #if defined(__INTEL_COMPILER)
    !! \deprecated remove this clause as soon as Intel Compiler gets required
    !! features and/or bug fixes
-   use cg_list_bnd,   only: cg_list_bnd_T   ! QA_WARN intel
+   use cg_list_bnd,   only: cg_list_bnd_t   ! QA_WARN intel
 #endif /* __INTEL_COMPILER */
 
    implicit none

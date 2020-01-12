@@ -36,14 +36,14 @@ module cg_level
    !! \deprecated remove this clause as soon as Intel Compiler gets required
    !! features and/or bug fixes, it's needed for 12.1, fixed in 13.0 but the
    !! latter is broken and we cannot use it yet
-   use cg_list,           only: cg_list_T   ! QA_WARN intel
+   use cg_list,           only: cg_list_t   ! QA_WARN intel
 #endif /* __INTEL_COMPILER */
-   use cg_list_neighbors, only: cg_list_neighbors_T
+   use cg_list_neighbors, only: cg_list_neighbors_t
 
    implicit none
 
    private
-   public :: cg_level_T
+   public :: cg_level_t
 
    !>
    !! \brief A list of all cg of the same resolution.
@@ -52,7 +52,7 @@ module cg_level
    !! (islands: made of one or more cg's).
    !! This type is not intended for direct use. It is extended in cg_level_connected into a functional object.
    !<
-   type, extends(cg_list_neighbors_T), abstract :: cg_level_T
+   type, extends(cg_list_neighbors_t), abstract :: cg_level_t
 
       integer                                    :: fft_type     !< type of FFT to employ in some multigrid solvers (depending on boundaries)
 
@@ -78,7 +78,7 @@ module cg_level
       procedure          :: balance_old                                          !< Wrapper for rebalance_old
       procedure          :: refresh_SFC_id                                       !< Recalculate SFC_id for grids, useful after domain expansion
 
-   end type cg_level_T
+   end type cg_level_t
 
 contains
 
@@ -88,7 +88,7 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
+      class(cg_level_t), intent(inout) :: this !< object invoking type bound procedure
 
       call this%plist%p_deallocate
       call this%dot%cleanup
@@ -111,7 +111,7 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
+      class(cg_level_t), intent(inout) :: this !< object invoking type bound procedure
 
       call this%plist%p_deallocate
 
@@ -131,7 +131,7 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(in)   :: this   !< object invoking type bound procedure
+      class(cg_level_t), intent(in)   :: this   !< object invoking type bound procedure
 
       integer                         :: p, i, hl, tot_cg
       integer(kind=8)                 :: ccnt
@@ -211,7 +211,7 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
+      class(cg_level_t), intent(inout) :: this !< object invoking type bound procedure
 
       ! First: do the balancing of new grids
       call this%balance_new
@@ -231,7 +231,7 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_t), intent(inout) :: this   !< object invoking type bound procedure
 
       call this%update_decomposition_properties
       call this%dot%update_global(this%first, this%cnt, this%l%off) ! communicate everything that was added before
@@ -262,7 +262,7 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_t), intent(inout) :: this   !< object invoking type bound procedure
 
       integer                       :: i, p, ep
       integer(kind=8)               :: s
@@ -310,7 +310,7 @@ contains
 
       logical, save :: warned = .false.
 
-      class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_t), intent(inout) :: this   !< object invoking type bound procedure
 
       if (this%l%id > base_level_id) is_refined = .true.
       call piernik_MPI_Allreduce(is_refined, pLOR)
@@ -337,7 +337,7 @@ contains
 
       implicit none
 
-      class(cg_level_T), target, intent(inout) :: this     !< current level
+      class(cg_level_t), target, intent(inout) :: this     !< current level
       integer(kind=4), optional, intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
       call this%add_patch_detailed(this%l%n_d, this%l%off, n_pieces)
@@ -357,7 +357,7 @@ contains
 
       implicit none
 
-      class(cg_level_T), target,         intent(inout) :: this     !< current level
+      class(cg_level_t), target,         intent(inout) :: this     !< current level
       integer(kind=8), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
       integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level)
       integer(kind=4), optional,         intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
@@ -380,7 +380,7 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this
+      class(cg_level_t), intent(inout) :: this
 
       call this%rebalance_old
       ! OPT: call this%update_gse inside this%update_everything can be quite long to complete
@@ -399,7 +399,7 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this
+      class(cg_level_t), intent(inout) :: this
 
       type(cg_list_element), pointer  :: cgl
 
