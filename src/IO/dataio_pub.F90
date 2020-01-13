@@ -37,7 +37,7 @@ module dataio_pub
    public  ! QA_WARN most variables are not secrets here
    private :: mpi_err, colormessage, T_PLAIN, T_ERR, T_WARN, T_INFO, T_IO, T_SILENT, & ! QA_WARN no need to use these symbols outside dataio_pub
         &     ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, & ! QA_WARN
-        &     namelist_handler_T                                                       ! QA_WARN
+        &     namelist_handler_t                                                       ! QA_WARN
    private :: cbuff_len, domlen, idlen, cwdlen ! QA_WARN prevent re-exporting
    !mpisetup uses: ansi_white and ansi_black
 
@@ -150,7 +150,7 @@ module dataio_pub
       end subroutine compare_namelist_P
    end interface
 
-   type :: namelist_handler_T
+   type :: namelist_handler_t
       character(len=msglen), pointer :: cmdl_nml   !< buffer for namelist supplied via commandline
       character(len=cwdlen), pointer :: par_file   !< path to the parameter file
       character(len=cwdlen), pointer :: errstr     !< string for storing error messages
@@ -161,19 +161,19 @@ module dataio_pub
       procedure(namelist_errh_P), nopass, pointer    :: namelist_errh
       logical :: initialized = .false.
    contains
-      procedure :: init => namelist_handler_T_init
+      procedure :: init => namelist_handler_t_init
       procedure :: compare_namelist
-   end type namelist_handler_T
+   end type namelist_handler_t
 
-   type(namelist_handler_T) :: nh
+   type(namelist_handler_t) :: nh
 
 contains
 
-   subroutine namelist_handler_T_init(this)
+   subroutine namelist_handler_t_init(this)
 
       implicit none
 
-      class(namelist_handler_T), intent(inout) :: this
+      class(namelist_handler_t), intent(inout) :: this
 
       character(len=cwdlen) :: tmpdir
       integer :: lchar_tmpdir
@@ -199,7 +199,7 @@ contains
       this%namelist_errh => namelist_errh
 
       this%initialized = .true.
-   end subroutine namelist_handler_T_init
+   end subroutine namelist_handler_t_init
 !-----------------------------------------------------------------------------
    subroutine set_colors(enable)
 
@@ -467,7 +467,7 @@ contains
       use mpi,       only: MPI_COMM_WORLD
 
       implicit none
-      class(namelist_handler_T), intent(inout) :: this
+      class(namelist_handler_t), intent(inout) :: this
       integer                          :: io
       character(len=maxparfilelen)     :: sa, sb
       integer                          :: lun_bef, lun_aft

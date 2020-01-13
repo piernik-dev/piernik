@@ -35,7 +35,7 @@ module box_list
    implicit none
 
    private
-   public :: box_list_T, box
+   public :: box_list_t, box
 
    type :: box
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: b !< Box description
@@ -43,13 +43,13 @@ module box_list
       procedure :: sanitize                             !< Sort corners
    end type box
 
-   type :: box_list_T
+   type :: box_list_t
       type(box), allocatable, dimension(:) :: blist     !< List of boxes
    contains
       procedure :: add_b     !< Add a box
       procedure :: print     !< Print box
       procedure :: cleanup   !< Free memory
-   end type box_list_T
+   end type box_list_t
 
 contains
 
@@ -80,7 +80,7 @@ contains
 
       implicit none
 
-      class(box_list_T), intent(inout) :: this
+      class(box_list_t), intent(inout) :: this
       type(box),         intent(in)    :: b
 
       if (.not. allocated(this%blist)) allocate(this%blist(0))
@@ -98,7 +98,7 @@ contains
 
       implicit none
 
-      class(box_list_T), intent(inout) :: this
+      class(box_list_t), intent(inout) :: this
 
       integer :: i
 
@@ -115,7 +115,7 @@ contains
 
       implicit none
 
-      class(box_list_T), intent(inout) :: this
+      class(box_list_t), intent(inout) :: this
 
       if (allocated(this%blist)) deallocate(this%blist)
 

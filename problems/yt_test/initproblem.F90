@@ -183,7 +183,7 @@ contains
 
    subroutine add_a_patch
 
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
       use constants,          only: refinement_factor, xdim, ydim, zdim, LO
@@ -192,7 +192,7 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer :: rlev
+      type(cg_level_connected_t), pointer :: rlev
       type(cg_list_element), pointer :: cgl
 
       rlev => finest%level

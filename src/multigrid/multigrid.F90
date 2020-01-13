@@ -205,7 +205,7 @@ contains
 
       use cg_list,            only: cg_list_element
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T, base_level
+      use cg_level_connected, only: cg_level_connected_t, base_level
       use cg_level_finest,    only: finest
       use constants,          only: PIERNIK_INIT_GRID, I_ONE, refinement_factor
       use dataio_pub,         only: printinfo, warn, die, code_progress, msg
@@ -222,7 +222,7 @@ contains
       integer(kind=4)       :: j
 
       type(cg_list_element), pointer :: cgl
-      type(cg_level_connected_T), pointer :: curl          !< current level (a pointer sliding along the linked list) and temporary level
+      type(cg_level_connected_t), pointer :: curl          !< current level (a pointer sliding along the linked list) and temporary level
       type(grid_container),  pointer :: cg            !< current grid container
 
       if (code_progress < PIERNIK_INIT_GRID) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized")

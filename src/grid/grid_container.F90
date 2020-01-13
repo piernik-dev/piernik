@@ -32,7 +32,7 @@ module grid_cont
 
    use constants,         only: LO, HI
    use grid_cont_bnd,     only: segment
-   use grid_cont_prolong, only: grid_container_prolong_T
+   use grid_cont_prolong, only: grid_container_prolong_t
    use refinement_flag,   only: ref_flag
 #if defined(GRAV) && defined(NBODY)
    use particle_types,    only: particle_set
@@ -49,7 +49,7 @@ module grid_cont
    end type tgt_list
 
    !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
-   type, extends(grid_container_prolong_T) :: grid_container
+   type, extends(grid_container_prolong_t) :: grid_container
 
       ! Prolongation and restriction
 
@@ -100,7 +100,7 @@ contains
 
       use constants,        only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, LO, HI
       use dataio_pub,       only: die, code_progress
-      use level_essentials, only: level_T
+      use level_essentials, only: level_t
       use ordering,         only: SFC_order
 
       implicit none
@@ -109,7 +109,7 @@ contains
                                                               ! (also the fields in types derived from grid_container)
       integer(kind=8), dimension(:,:), intent(in)    :: my_se    !< my segment
       integer,                         intent(in)    :: grid_id  !< ID which should be unique across level
-      class(level_T), pointer,         intent(in)    :: l        !< level essential data
+      class(level_t), pointer,         intent(in)    :: l        !< level essential data
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init_gc] MPI not initialized.")
 

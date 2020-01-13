@@ -184,6 +184,8 @@ contains
          call die(msg)
       endif
 
+      if (len_trim(element%name) < 1) call die("[named_array_list:add2lst] empty names not allowed")
+
       if (.not. allocated(this%lst)) then
          allocate(this%lst(1))
       else

@@ -365,7 +365,7 @@ contains
 
       use cg_leaves,          only: leaves
 #if defined(__INTEL_COMPILER)
-      use cg_level_connected, only: cg_level_connected_T  ! QA_WARN workaround for stupid INTEL compiler
+      use cg_level_connected, only: cg_level_connected_t  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
       use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
@@ -411,7 +411,7 @@ contains
 
       use cg_list_global,   only: all_cg
 #if defined(__INTEL_COMPILER)
-      use cg_level_connected, only: cg_level_connected_T  ! QA_WARN workaround for stupid INTEL compiler
+      use cg_level_connected, only: cg_level_connected_t  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
       use cg_leaves,        only: leaves
       use constants,        only: dirtyH1
@@ -440,7 +440,7 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
@@ -456,7 +456,7 @@ contains
       integer(kind=4) :: ib
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      type(cg_level_connected_T),   pointer :: curl
+      type(cg_level_connected_t),   pointer :: curl
 
       do ib = xdim, zdim
          call all_cg%set_dirty(idiffb(ib), (0.965+0.0001*ib)*dirtyH1)
@@ -499,7 +499,7 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
@@ -522,7 +522,7 @@ contains
       integer            :: v
       real               :: norm_lhs, norm_rhs, norm_old
       logical            :: dump_every_step
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
 
       write(vstat%cprefix,'("C",i1,"-")') cr_id !> \deprecated BEWARE: this is another place with 0 <= cr_id <= 9 limit
       write(dirty_label, '("md_",i1,"_dump")')  cr_id
@@ -699,7 +699,7 @@ contains
 
    subroutine residual(curl, src, soln, def, cr_id)
 
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use constants,          only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
       use dataio_pub,         only: die
       use domain,             only: dom
@@ -712,7 +712,7 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(inout) :: curl !< level for which approximate the solution
+      type(cg_level_connected_t), pointer, intent(inout) :: curl !< level for which approximate the solution
       integer(kind=4),                     intent(in)    :: src   !< index of source in cg%q(:)
       integer(kind=4),                     intent(in)    :: soln  !< index of solution in cg%q(:)
       integer(kind=4),                     intent(in)    :: def   !< index of defect in cg%q(:)
@@ -768,7 +768,7 @@ contains
    subroutine approximate_solution(curl, src, soln, cr_id)
 
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use constants,          only: xdim, ydim, zdim, one, half, ndims, LO, GEO_XYZ
       use dataio_pub,         only: die
       use domain,             only: dom
@@ -779,7 +779,7 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(inout) :: curl  !< level for which approximate the solution
+      type(cg_level_connected_t), pointer, intent(inout) :: curl  !< level for which approximate the solution
       integer(kind=4),                     intent(in)    :: src   !< index of source in cg%q(:)
       integer(kind=4),                     intent(in)    :: soln  !< index of solution in cg%q(:)
       integer,                             intent(in)    :: cr_id !< CR component index

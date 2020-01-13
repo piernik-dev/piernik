@@ -31,20 +31,20 @@
 
 module cg_list_rebalance
 
-   use cg_list_balance, only: cg_list_balance_T
+   use cg_list_balance, only: cg_list_balance_t
 
    implicit none
 
    private
-   public :: cg_list_rebalance_T
+   public :: cg_list_rebalance_t
 
    !> \brief An abstract type created to take out some load-balance related code from cg_level (old grids)
 
-   type, extends(cg_list_balance_T), abstract :: cg_list_rebalance_T
+   type, extends(cg_list_balance_t), abstract :: cg_list_rebalance_t
    contains
       procedure          :: rebalance_old  !< Routine for measuring disorder level in distribution of grids across processes
       procedure, private :: reshuffle      !< Routine for moving existing grids between processes
-   end type cg_list_rebalance_T
+   end type cg_list_rebalance_t
 
 contains
 
@@ -68,7 +68,7 @@ contains
 
       implicit none
 
-      class(cg_list_rebalance_T), intent(inout) :: this
+      class(cg_list_rebalance_t), intent(inout) :: this
 
       integer(kind=4), dimension(FIRST:LAST) :: cnt_existing
       type(grid_piece_list) :: gp
@@ -196,7 +196,7 @@ contains
 
       implicit none
 
-      class(cg_list_rebalance_T), intent(inout) :: this
+      class(cg_list_rebalance_t), intent(inout) :: this
       type(grid_piece_list),      intent(in)    :: gp
 
       type(cg_list_element), pointer :: cgl
