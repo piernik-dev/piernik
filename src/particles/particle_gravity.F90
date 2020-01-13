@@ -63,7 +63,7 @@ contains
       integer                              :: n_part, k
       real,    dimension(:,:), allocatable :: dist
       integer, dimension(:,:), allocatable :: cells
-      integer, dimension(:),   allocatable :: pdel
+      !integer, dimension(:),   allocatable :: pdel
 
 #ifdef VERBOSE
       call printinfo('[particle_gravity:update_particle_gravpot_and_acc] Commencing update of particle gravpot & acceleration')
@@ -95,17 +95,14 @@ contains
 
             call update_particle_density_array(n_part, cg, cells)
 
-            allocate(pdel(n_part))
-            call update_particle_potential_energy(n_part, cg, cells, dist, pdel)
+            call update_particle_potential_energy(n_part, cg, cells, dist)!, pdel)
+
             call update_particle_acc(n_part, cg, cells, dist)
-            k=1
-            !Delete particles elsewhere
+            !Delete particles elsewhere > in update_particle_acc?
             !pset => cg%pset%first
             !do while (associated(pset))
             !   if (pdel(p)==1) then
             !      call pset%remove(k)
-            !   else
-            !      k=k+1
             !   endif
             !enddo
 
@@ -263,7 +260,7 @@ contains
    end subroutine locate_particles_in_cells
 
 !> \brief Determine potential energy in particle positions
-    subroutine update_particle_potential_energy(n_part, cg, cells, dist, pdel)
+    subroutine update_particle_potential_energy(n_part, cg, cells, dist)!, pdel)
 
       use constants,        only: gpot_n, ndims, half, two, xdim, ydim, zdim, pSUM
       use grid_cont,        only: grid_container
@@ -281,7 +278,7 @@ contains
       integer, dimension(n_part,ndims), intent(in) :: cells
       real,    dimension(n_part,ndims), intent(in) :: dist
       integer                                      :: p
-      integer, dimension(n_part),       intent(out):: pdel
+      !integer, dimension(n_part),       intent(out):: pdel
       integer(kind=4)                              :: ig
       real, dimension(n_part)                      :: dpot, d2pot
       real                                         :: Mtot
@@ -298,7 +295,7 @@ contains
       pset => cg%pset%first
       p=1
       do while (associated(pset))
-         pdel(p) = 0
+         !pdel(p) = 0
          if (.not. pset%pdata%outside) then
             dpot(p) = df_d_o2([cells(p, :)], cg, ig, xdim) * dist(p, xdim) + &
                       df_d_o2([cells(p, :)], cg, ig, ydim) * dist(p, ydim) + &
@@ -313,7 +310,7 @@ contains
          else
             pset%pdata%energy = -newtong * pset%pdata%mass * Mtot / norm2(pset%pdata%pos(:))
             if ((abs(pset%pdata%energy) < half * pset%pdata%mass * norm2(pset%pdata%vel(:)) **2)) then
-               pdel(p) = 1
+               !pdel(p) = 1
                pset%pdata%energy = 0.
             endif
 
@@ -495,7 +492,7 @@ contains
 
 
       type(grid_container), pointer, intent(inout) :: cg
-      type(particle), pointer                      :: pset
+      type(particle), pointer                      :: pset, pset2
       integer                                      :: i, j, k
       integer(kind=4)                              :: ig, cdim
       integer, dimension(ndims, IM:IP)             :: ijkp
@@ -513,7 +510,17 @@ contains
       fxyz = zero ! suppress -Wmaybe-uninitialized
       pset => cg%pset%first
       do while (associated(pset))
+
+         !Delete particles escaping the domain
+         if (pset%pdata%energy .eq. 0.0) then
+            pset2 => pset%nxt
+            call cg%pset%remove(pset)
+            pset => pset2
+            cycle
+         endif
+
          associate( part => pset%pdata )
+
             axyz(:) = zero
 
             if (part%outside) then
