@@ -223,18 +223,13 @@ contains
       call init_dataio                       ! depends on units, fluids (through common_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
       ! Initial conditions are read here from a restart file if possible
 
-#ifdef NBODY
 #ifdef TWOBODY
       if (.not.restarted_sim) call problem_initial_nbody
+#endif /* TWOBODY */
 
 #ifdef GRAV
       call init_terms_grav
 #endif /* GRAV */
-
-#endif /* TWOBODY */
-      call update_particle_gravpot_and_acc
-      call update_particle_kinetic_energy
-#endif /* NBODY */
 
       if (restarted_sim) then
          call all_bnd
@@ -272,6 +267,11 @@ contains
          write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
          if (master) call printinfo(msg)
 
+#ifdef NBODY
+         call update_particle_gravpot_and_acc
+         call update_particle_kinetic_energy
+#endif /* NBODY */
+      
          do while (.not. finished)
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
