@@ -226,14 +226,15 @@ contains
 #ifdef NBODY
 #ifdef TWOBODY
       if (.not.restarted_sim) call problem_initial_nbody
-#endif /* TWOBODY */
-      call update_particle_gravpot_and_acc
-      call update_particle_kinetic_energy
-#endif /* NBODY */
 
 #ifdef GRAV
       call init_terms_grav
 #endif /* GRAV */
+
+#endif /* TWOBODY */
+      call update_particle_gravpot_and_acc
+      call update_particle_kinetic_energy
+#endif /* NBODY */
 
       if (restarted_sim) then
          call all_bnd
