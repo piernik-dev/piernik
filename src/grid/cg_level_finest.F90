@@ -30,7 +30,7 @@
 
 module cg_level_finest
 
-   use cg_level_connected, only: cg_level_connected_T
+   use cg_level_connected, only: cg_level_connected_t
 
    implicit none
 
@@ -38,15 +38,15 @@ module cg_level_finest
    public :: finest
 
    !> \brief The pointer of the finest refinement level and a method to add a finer one
-   type :: cg_level_finest_T
-      type(cg_level_connected_T), pointer :: level !< highest refinement level
+   type :: cg_level_finest_t
+      type(cg_level_connected_t), pointer :: level !< highest refinement level
     contains
       procedure          :: add_finer
       procedure          :: equalize
       !> \todo Provide delete_finest and use it in cleanup
-   end type cg_level_finest_T
+   end type cg_level_finest_t
 
-   type(cg_level_finest_T) :: finest               !< finest level of refinement
+   type(cg_level_finest_t) :: finest               !< finest level of refinement
 
 contains
 
@@ -66,7 +66,7 @@ contains
 
       implicit none
 
-      class(cg_level_finest_T), intent(inout) :: this    !< object calling type-bound routine
+      class(cg_level_finest_t), intent(inout) :: this    !< object calling type-bound routine
 
       integer(kind=4) :: g_finest_id
 
@@ -95,9 +95,9 @@ contains
 
       implicit none
 
-      class(cg_level_finest_T), intent(inout) :: this    !< object calling type-bound routine
+      class(cg_level_finest_t), intent(inout) :: this    !< object calling type-bound routine
 
-      type(cg_level_connected_T), pointer     :: new_lev !< fresh refinement level to be added
+      type(cg_level_connected_t), pointer     :: new_lev !< fresh refinement level to be added
 
       allocate(new_lev)
       call new_lev%init_level

@@ -740,14 +740,14 @@ contains
    subroutine flip_flop
 
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: I_TWO
       use global,             only: nstep
 
       implicit none
 
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
       type(cg_list_element),      pointer :: cgl
 
       integer :: i

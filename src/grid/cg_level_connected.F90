@@ -30,19 +30,19 @@
 
 module cg_level_connected
 
-   use cg_level, only: cg_level_T
+   use cg_level, only: cg_level_t
 
    implicit none
 
    private
-   public :: cg_level_connected_T, base_level, find_level
+   public :: cg_level_connected_t, base_level, find_level
 
    !! \brief A list of all cg of the same resolution with links to coarser and finer levels
-   type, extends(cg_level_T) :: cg_level_connected_T
+   type, extends(cg_level_t) :: cg_level_connected_t
 
-      type(cg_level_connected_T), pointer :: coarser          !< coarser level cg set or null()
-      type(cg_level_connected_T), pointer :: finer            !< finer level cg set or null()
-      integer(kind=4)                     :: ord_prolong_set  !< Number of boundary cells for prolongation used in last update of cg_level_connected_T%vertical_prep
+      type(cg_level_connected_t), pointer :: coarser          !< coarser level cg set or null()
+      type(cg_level_connected_t), pointer :: finer            !< finer level cg set or null()
+      integer(kind=4)                     :: ord_prolong_set  !< Number of boundary cells for prolongation used in last update of cg_level_connected_t%vertical_prep
       logical, private                    :: need_vb_update   !< If .true. then execute vertical_b_prep
 
     contains
@@ -67,9 +67,9 @@ module cg_level_connected
       procedure :: sync_ru                                    !< Synchronize this%recently_changed and set flags for update requests
       procedure :: free_all_cg                                !< Erase all data on the level, leave it empty
 
-   end type cg_level_connected_T
+   end type cg_level_connected_t
 
-   type(cg_level_connected_T), pointer :: base_level !< The pointer to the base level. Do not use it unless referencing through base%level causes circular dependencies.
+   type(cg_level_connected_t), pointer :: base_level !< The pointer to the base level. Do not use it unless referencing through base%level causes circular dependencies.
 
 contains
 
@@ -81,7 +81,7 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_connected_t), intent(inout) :: this   !< object invoking type bound procedure
 
       this%coarser => null()
       this%finer => null()
@@ -119,7 +119,7 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout)   :: this   !< object invoking type bound procedure
+      class(cg_level_connected_t), intent(inout)   :: this   !< object invoking type bound procedure
 
       integer                                      :: g, j, jf, fmax
       integer(kind=8)                              :: tag
@@ -127,7 +127,7 @@ contains
       integer,         dimension(xdim:zdim, LO:HI) :: enlargement
       type(cg_list_element),      pointer          :: cgl
       type(grid_container),       pointer          :: cg            !< current grid container
-      type(cg_level_connected_T), pointer          :: fine, coarse  !< shortcut
+      type(cg_level_connected_t), pointer          :: fine, coarse  !< shortcut
       type :: int_pair
          integer :: proc
          integer :: n_se
@@ -316,7 +316,7 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), target, intent(inout) :: this       !< object invoking type-bound procedure
+      class(cg_level_connected_t), target, intent(inout) :: this       !< object invoking type-bound procedure
       integer(kind=4), optional,           intent(in)    :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
 
       integer(kind=4) :: i, iw
@@ -364,7 +364,7 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_level_connected_t), target, intent(inout) :: this !< object invoking type-bound procedure
 
       integer(kind=4) :: i, iw
 
@@ -399,7 +399,7 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_level_connected_t), intent(inout) :: this !< object invoking type-bound procedure
 
       if (this%l%id <= base_level_id) return
       call this%restrict
@@ -413,7 +413,7 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_level_connected_t), intent(inout) :: this !< object invoking type-bound procedure
       integer(kind=4),             intent(in)    :: iv   !< variable to be restricted
 
       if (.not. associated(this%coarser)) return
@@ -430,7 +430,7 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_level_connected_t), intent(inout) :: this !< object invoking type-bound procedure
       integer(kind=4),             intent(in)    :: iv   !< variable to be restricted
 
       if (this%l%id <= base_level_id) return
@@ -467,11 +467,11 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_level_connected_t), target, intent(inout) :: this !< object invoking type-bound procedure
       integer(kind=4),                     intent(in)    :: iv   !< variable to be restricted
       integer(kind=4), optional,           intent(in)    :: pos  !< position of the variable within cell
 
-      type(cg_level_connected_T), pointer                :: coarse
+      type(cg_level_connected_t), pointer                :: coarse
       integer                                            :: g
       integer(kind=8), dimension(xdim:zdim, LO:HI)       :: fse, cse              !< shortcuts for fine segment and coarse segment
       integer(kind=8)                                    :: i, j, k, ic, jc, kc
@@ -642,12 +642,12 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), target, intent(inout) :: this     !< object invoking type-bound procedure
+      class(cg_level_connected_t), target, intent(inout) :: this     !< object invoking type-bound procedure
       integer(kind=4),                     intent(in)    :: iv       !< variable to be prolonged
       integer(kind=4), optional,           intent(in)    :: pos      !< position of the variable within cell
       integer(kind=4), optional,           intent(in)    :: bnd_type !< Override default boundary type on external boundaries (useful in multigrid solver).
 
-      type(cg_level_connected_T), pointer                :: fine
+      type(cg_level_connected_t), pointer                :: fine
       integer                                            :: g
       integer(kind=8), dimension(xdim:zdim, LO:HI)       :: cse              !< shortcut for coarse segment
       integer(kind=4)                                    :: nr
@@ -762,7 +762,7 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
+      class(cg_level_connected_t), intent(inout) :: this      !< the list on which to perform the boundary exchange
       integer(kind=4),             intent(in)    :: ind       !< index of cg%q(:) 3d array
       integer(kind=4), optional,   intent(in)    :: area_type !< defines how do we treat boundaries
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
@@ -794,7 +794,7 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
+      class(cg_level_connected_t), intent(inout) :: this      !< the list on which to perform the boundary exchange
       integer(kind=4),             intent(in)    :: ind       !< index of cg%w(:) 4d array
       integer(kind=4), optional,   intent(in)    :: area_type !< defines how do we treat boundaries
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
@@ -849,14 +849,14 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
+      class(cg_level_connected_t), intent(inout) :: this      !< the list on which to perform the boundary exchange
       integer(kind=4),             intent(in)    :: ind       !< index of the prolonged variable
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
       logical,         optional,   intent(in)    :: nocorners !< when .true. then don't care about proper edge and corner update
 
-      type(cg_level_connected_T), pointer :: coarse
+      type(cg_level_connected_t), pointer :: coarse
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
       integer(kind=4), dimension(:, :), pointer :: mpistatus
@@ -1018,10 +1018,10 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout), target :: this !< the list on which to update connectivity data for fine-coarse boundary exchange
+      class(cg_level_connected_t), intent(inout), target :: this !< the list on which to update connectivity data for fine-coarse boundary exchange
 
-      class(cg_level_connected_T), pointer :: curl
-      type(cg_level_connected_T), pointer :: coarse
+      class(cg_level_connected_t), pointer :: curl
+      type(cg_level_connected_t), pointer :: coarse
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
       integer :: d, j, b, rp, ls, dd, ix, iy, iz
@@ -1301,9 +1301,9 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this !< the list on which to update connectivity data for fine->coarse flux exchange
+      class(cg_level_connected_t), intent(inout) :: this !< the list on which to update connectivity data for fine->coarse flux exchange
 
-      type(cg_level_connected_T), pointer :: coarse
+      type(cg_level_connected_t), pointer :: coarse
       type(cg_list_element), pointer :: cgl
       integer :: g, d, dd, lh, fc_fluxes
 
@@ -1444,9 +1444,9 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), target, intent(inout) :: this
+      class(cg_level_connected_t), target, intent(inout) :: this
 
-      class(cg_level_connected_T), pointer :: curl
+      class(cg_level_connected_t), pointer :: curl
 
       call piernik_MPI_Allreduce(this%recently_changed, pLOR)
       if (this%recently_changed) then
@@ -1479,7 +1479,7 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this
+      class(cg_level_connected_t), intent(inout) :: this
 
       type(cg_list_element), pointer :: cgl, aux
       type(grid_container),  pointer :: cg
@@ -1507,7 +1507,7 @@ contains
 
       integer(kind=4), intent(in) :: level_id         !< level number (relative to base level)
 
-      type(cg_level_connected_T), pointer :: lev_p, curl
+      type(cg_level_connected_t), pointer :: lev_p, curl
 
       nullify(lev_p)
       curl => base_level

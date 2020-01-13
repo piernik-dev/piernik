@@ -212,7 +212,7 @@ contains
    subroutine single_v_cycle(def, corr)
 
       use cg_level_coarsest,        only: coarsest
-      use cg_level_connected,       only: cg_level_connected_T
+      use cg_level_connected,       only: cg_level_connected_t
       use cg_level_finest,          only: finest
       use cg_list_global,           only: all_cg
       use constants,                only: dirtyH1
@@ -223,7 +223,7 @@ contains
       integer(kind=4), intent(in) :: def  !< Defect (source, residual)
       integer(kind=4), intent(in) :: corr !< Approximate solution for the defect (correction)
 
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
 
       ! the Huang-Greengard V-cycle
       call finest%level%restrict_to_floor_q_1var(def)

@@ -38,15 +38,15 @@ module cg_leaves
    !! \deprecated remove this clause as soon as Intel Compiler gets required
    !! features and/or bug fixes, it's needed for 12.1, fixed in 13.0 but the
    !! latter is broken and we cannot use it yet
-   use cg_list,            only: cg_list_T   ! QA_WARN intel
+   use cg_list,            only: cg_list_t   ! QA_WARN intel
 #endif /* __INTEL_COMPILER */
-   use cg_level_connected, only: cg_level_connected_T
-   use cg_list_bnd,        only: cg_list_bnd_T
+   use cg_level_connected, only: cg_level_connected_t
+   use cg_list_bnd,        only: cg_list_bnd_t
 
    implicit none
 
    private
-   public :: leaves, cg_leaves_T
+   public :: leaves, cg_leaves_t
 
    !>
    !! \brief Special list of grid containers that does not include fully-covered multigrid levels
@@ -54,8 +54,8 @@ module cg_leaves
    !! \todo Exclude also non-multigrid levels when fully covered
    !<
 
-   type, extends(cg_list_bnd_T) :: cg_leaves_T ! cg_list_bnd_T is required for calling bnd_u and bnd_b
-      type(cg_level_connected_T), private, pointer :: coarsest_leaves
+   type, extends(cg_list_bnd_t) :: cg_leaves_t ! cg_list_bnd_t is required for calling bnd_u and bnd_b
+      type(cg_level_connected_t), private, pointer :: coarsest_leaves
    contains
       procedure :: update                  !< Select grids that should be included on leaves list
       procedure :: balance_and_update      !< Rebalance if required and update
@@ -66,7 +66,7 @@ module cg_leaves
       procedure :: internal_bnd_4d         !< Wrapper routine to set up internal boundaries for for given rank-4 arrays
       procedure :: external_bnd_3d         !< Wrapper routine to set up external boundaries for for given rank-3 arrays
       procedure :: external_bnd_4d         !< Wrapper routine to set up external boundaries for for given rank-4 arrays
-   end type cg_leaves_T
+   end type cg_leaves_t
 
    !>
    !! \deprecated A it is much easier to complete boundary exchanges on whole levels, the leaves list contains all grids from the base level upwards.
@@ -75,7 +75,7 @@ module cg_leaves
    !! \todo exclude base level and some higher levels if these are fully covered by finer grids (does it have side effects on visualization?)
    !! Perhaps it will be useful to keep few similar lists with slightly different inclusion criteria
    !<
-   type(cg_leaves_T) :: leaves   !< grid containers not fully covered by finer grid containers
+   type(cg_leaves_t) :: leaves   !< grid containers not fully covered by finer grid containers
 
 contains
 
@@ -85,7 +85,7 @@ contains
 
 !      use cg_level_base,      only: base  ! can't use it because of cyclic dependency
       use cg_level_finest,    only: finest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: pSUM, pMAX, base_level_id, refinement_factor, base_level_id, INVALID
       use dataio_pub,         only: msg, printinfo
@@ -95,10 +95,10 @@ contains
 
       implicit none
 
-      class(cg_leaves_T),         intent(inout) :: this  !< object invoking type-bound procedure
+      class(cg_leaves_t),         intent(inout) :: this  !< object invoking type-bound procedure
       character(len=*), optional, intent(in)    :: str   !< optional string identifier to show the progress of updating refinement
 
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
       type(cg_list_element),      pointer :: cgl
 
       integer :: g_cnt, g_max, sum_max, ih, b_cnt
@@ -158,14 +158,14 @@ contains
    subroutine balance_and_update(this, str)
 
       use cg_level_finest,    only: finest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
 
       implicit none
 
-      class(cg_leaves_T),         intent(inout) :: this  !< object invoking type-bound procedure
+      class(cg_leaves_t),         intent(inout) :: this  !< object invoking type-bound procedure
       character(len=*), optional, intent(in)    :: str   !< optional string identifier to show the progress of updating refinement
 
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
 
       curl => finest%level
       do while (associated(curl)) ! perhaps it is worth to limit to the base level
@@ -182,11 +182,11 @@ contains
 
    subroutine leaf_arr3d_boundaries(this, ind, area_type, bnd_type, dir, nocorners)
 
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
 
       implicit none
 
-      class(cg_leaves_T),        intent(in) :: this       !< the list on which to perform the boundary exchange
+      class(cg_leaves_t),        intent(in) :: this       !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in) :: ind        !< index of cg%q(:) 3d array
       integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
@@ -194,7 +194,7 @@ contains
       integer(kind=4), optional, intent(in) :: dir        !< select only this direction
       logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
 
-      type(cg_level_connected_T), pointer   :: curl
+      type(cg_level_connected_t), pointer   :: curl
 
       curl => this%coarsest_leaves
       do while (associated(curl))
@@ -210,17 +210,17 @@ contains
 
    subroutine leaf_arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
 
       implicit none
 
-      class(cg_leaves_T),        intent(in) :: this       !< the list on which to perform the boundary exchange
+      class(cg_leaves_t),        intent(in) :: this       !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in) :: ind        !< index of cg%w(:) 4d array
       integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in) :: dir        !< select only this direction
       logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
 
-      type(cg_level_connected_T), pointer   :: curl
+      type(cg_level_connected_t), pointer   :: curl
 
       curl => this%coarsest_leaves
       do while (associated(curl))
@@ -236,17 +236,17 @@ contains
 !<
    subroutine internal_bnd_3d(this, ind, dir, nocorners)
 
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use dataio_pub,         only: die
 
       implicit none
 
-      class(cg_leaves_T),        intent(in) :: this       !< the list on which to perform the boundary exchange
+      class(cg_leaves_t),        intent(in) :: this       !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
       integer(kind=4), optional, intent(in) :: dir        !< do the internal boundaries only in the specified dimension
       logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
 
-      type(cg_level_connected_T), pointer   :: curl
+      type(cg_level_connected_t), pointer   :: curl
 
       curl => this%coarsest_leaves
       do while (associated(curl))
@@ -263,17 +263,17 @@ contains
 !<
    subroutine internal_bnd_4d(this, ind, dir, nocorners)
 
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use dataio_pub,         only: die
 
       implicit none
 
-      class(cg_leaves_T),        intent(in) :: this       !< the list on which to perform the boundary exchange
+      class(cg_leaves_t),        intent(in) :: this       !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
       integer(kind=4), optional, intent(in) :: dir        !< do the internal boundaries only in the specified dimension
       logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
 
-      type(cg_level_connected_T), pointer   :: curl
+      type(cg_level_connected_t), pointer   :: curl
 
       curl => this%coarsest_leaves
       do while (associated(curl))
@@ -288,17 +288,17 @@ contains
 
    subroutine external_bnd_3d(this, ind, area_type, bnd_type)
 
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use dataio_pub,         only: die
 
       implicit none
 
-      class(cg_leaves_T),        intent(in) :: this       !< the list on which to perform the boundary exchange
+      class(cg_leaves_t),        intent(in) :: this       !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
       integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                           !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
-      type(cg_level_connected_T), pointer   :: curl
+      type(cg_level_connected_t), pointer   :: curl
 
       curl => this%coarsest_leaves
       do while (associated(curl))
@@ -315,17 +315,17 @@ contains
 !<
    subroutine external_bnd_4d(this) !, ind, area_type, bnd_type)
 
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use dataio_pub,         only: die
 
       implicit none
 
-      class(cg_leaves_T),        intent(in) :: this       !< the list on which to perform the boundary exchange
+      class(cg_leaves_t),        intent(in) :: this       !< the list on which to perform the boundary exchange
 !      integer(kind=4),           intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
 !      integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
 !      integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                           !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
-      type(cg_level_connected_T), pointer   :: curl
+      type(cg_level_connected_t), pointer   :: curl
 
       call die("[cg_leaves::external_bnd_4d] This routine has not been implemented yet.")
       curl => this%coarsest_leaves

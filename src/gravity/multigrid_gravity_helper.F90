@@ -57,14 +57,14 @@ contains
    subroutine approximate_solution(curl, src, soln)
 
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use constants,          only: BND_NEGREF, fft_none
       use multigridvars,      only: nsmool
       use multigrid_Laplace,  only: approximate_solution_relax
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(inout) :: curl !< pointer to a level for which we approximate the solution
+      type(cg_level_connected_t), pointer, intent(inout) :: curl !< pointer to a level for which we approximate the solution
       integer(kind=4),                     intent(in)    :: src  !< index of source in cg%q(:)
       integer(kind=4),                     intent(in)    :: soln !< index of solution in cg%q(:)
 
@@ -96,7 +96,7 @@ contains
 
    subroutine fft_solve_level(curl, src, soln)
 
-      use cg_level_connected,  only: cg_level_connected_T
+      use cg_level_connected,  only: cg_level_connected_t
       use dataio_pub,          only: die
 #ifndef NO_FFT
       use cg_list,             only: cg_list_element
@@ -107,7 +107,7 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(inout) :: curl !< the level on which we want the solution to be performed
+      type(cg_level_connected_t), pointer, intent(inout) :: curl !< the level on which we want the solution to be performed
       integer(kind=4),                     intent(in)    :: src  !< index of source in cg%q(:)
       integer(kind=4),                     intent(in)    :: soln !< index of solution in cg%q(:)
 
