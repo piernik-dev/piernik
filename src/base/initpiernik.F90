@@ -271,7 +271,7 @@ contains
          call update_particle_gravpot_and_acc
          call update_particle_kinetic_energy
 #endif /* NBODY */
-      
+
          do while (.not. finished)
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
