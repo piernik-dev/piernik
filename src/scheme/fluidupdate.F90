@@ -46,7 +46,7 @@
 !<
 
 module fluidupdate   ! SPLIT
-! pulled by RTVD || RIEMANN
+! pulled by ANY
 
    implicit none
 
@@ -55,19 +55,39 @@ module fluidupdate   ! SPLIT
 
 contains
 
+!> \brief choose between fully equipped solver and the simplified HLLC one
+
+   subroutine fluid_update
+
+      use constants,        only: RTVD_SPLIT, RIEMANN_SPLIT, HLLC_SPLIT
+      use dataio_pub,       only: die
+      use global,           only: which_solver
+      use fluidupdate_hllc, only: fluid_update_simple
+
+      implicit none
+
+      select case (which_solver)
+         case (HLLC_SPLIT)
+            call fluid_update_simple
+         case (RTVD_SPLIT, RIEMANN_SPLIT)
+            call fluid_update_full
+         case default
+            call die("[fluidupdate:fluid_update] unknown solver")
+      end select
+
+   end subroutine fluid_update
+
 !>
 !! \brief Advance the solution by two timesteps using directional splitting
 !<
 
-   subroutine fluid_update
+   subroutine fluid_update_full
 
       use dataio_pub,     only: halfstep
       use global,         only: dt, dtm, t
+      use hdc,            only: update_chspeed
       use mass_defect,    only: update_magic_mass
       use timestep_retry, only: repeat_fluidstep
-#ifdef RIEMANN
-      use hdc,            only: update_chspeed
-#endif /* RIEMANN */
 #ifdef COSM_RAY_ELECTRONS
       use all_boundaries, only: all_fluid_boundaries
       use cresp_grid,     only: cresp_update_grid, cresp_clean_grid
@@ -77,10 +97,7 @@ contains
       implicit none
 
       call repeat_fluidstep
-
-#ifdef RIEMANN
       call update_chspeed
-#endif /* RIEMANN */
 
       halfstep = .false.
       t = t + dt
@@ -104,7 +121,7 @@ contains
       call cresp_clean_grid ! BEWARE: due to diffusion some junk remains in the grid - this nullifies all inactive bins.
 #endif /* COSM_RAY_ELECTRONS */
 
-   end subroutine fluid_update
+   end subroutine fluid_update_full
 
 !>
 !! \brief Perform sweeps in all three directions plus sources that are calculated every timestep
@@ -113,8 +130,9 @@ contains
 
       use cg_list_dataop,      only: expanded_domain
       use constants,           only: xdim, ydim, zdim, I_ONE
-      use global,              only: skip_sweep, use_fargo
       use fargo,               only: make_fargosweep
+      use global,              only: skip_sweep, use_fargo
+      use hdc,                 only: glmdamping, eglm
       use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
@@ -132,9 +150,6 @@ contains
 #ifdef SHEAR
       use shear,               only: shear_3sweeps
 #endif /* SHEAR */
-#ifdef RIEMANN
-      use hdc,                 only: glmdamping, eglm
-#endif /* RIEMANN */
 
       implicit none
 
@@ -190,10 +205,8 @@ contains
 #endif /* GRAV */
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
-#ifdef RIEMANN
       call eglm
       call glmdamping
-#endif /* RIEMANN */
 
    end subroutine make_3sweeps
 
@@ -209,9 +222,9 @@ contains
       use global,         only: geometry25D
       use sweeps,         only: sweep
 #ifdef MAGNETIC
-      use constants,      only: DIVB_CT
+      use constants,      only: DIVB_CT, RTVD_SPLIT
       use ct,             only: magfield
-      use global,         only: divB_0_method
+      use global,         only: divB_0_method, which_solver
 #endif /* MAGNETIC */
 #ifdef DEBUG
       use piernikiodebug, only: force_dumps
@@ -222,9 +235,9 @@ contains
       integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
       logical,         intent(in) :: forward  !< if .false. then reverse operation order in the sweep
 
-#if defined(RTVD) && defined(MAGNETIC)
-      if (divB_0_method /= DIVB_CT) call die("[fluidupdate:make_sweep] only CT is implemented in RTVD")
-#endif /* RTVD && MAGNETIC */
+#if defined(MAGNETIC)
+      if ((which_solver == RTVD_SPLIT) .and. (divB_0_method /= DIVB_CT)) call die("[fluidupdate:make_sweep] only CT is implemented in RTVD")
+#endif /* MAGNETIC */
 
       ! ToDo: check if changes of execution order here (block loop, direction loop, boundary update can change
       ! cost or allow for reduction of required guardcells

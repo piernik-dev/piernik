@@ -38,7 +38,3 @@
 #undef HDF5
 #endif /* I_KNOW_WHAT_I_AM_DOING */
 
-#if !defined(RTVD) && !defined(HLLC) && !defined(RIEMANN)
-#define RTVD
-/* #  warning no hydro solver defined, possible choices { RTVD, HLLC, RIEMANN }, defaulting to RTVD */
-#endif /* !RTVD && !HLLC && !RIEMANN */

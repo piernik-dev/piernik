@@ -32,7 +32,7 @@
 !<
 
 module bfc_bcc
-! pulled by RTVD || RIEMANN
+! pulled by ANY
 
    implicit none
 
