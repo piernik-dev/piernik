@@ -178,7 +178,7 @@ contains
       character(len=cwdlen) :: tmpdir
       integer :: lchar_tmpdir
 
-      call get_environment_variable("TMPDIR", tmpdir)
+      call get_environment_variable("PIERNIK_TMPDIR", tmpdir)
       lchar_tmpdir = len_trim(tmpdir)
       if (lchar_tmpdir == 0) then
          tmpdir = "."

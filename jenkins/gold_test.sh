@@ -83,7 +83,7 @@ done
 
 cd ${RUNS_DIR}/${PROBLEM_NAME}_${TEST_OBJ}
 rm *.h5 2> /dev/null
-eval TMPDIR="." $RUN_COMMAND ./${PIERNIK} "-n '&NUMERICAL_SETUP solver_str = \"RTVD\" /'"  > ${PROBLEM_NAME}.test_RTVD_stdout &
+eval $RUN_COMMAND ./${PIERNIK} "-n '&NUMERICAL_SETUP solver_str = \"RTVD\" /'"  > ${PROBLEM_NAME}.test_RTVD_stdout &
 RIEM=Riemann
 (
     RIEM_ERR=test_Riemann_stderr
@@ -92,7 +92,7 @@ RIEM=Riemann
     ln -s ../piernik
     cp ../problem.par .
     (
-	eval TMPDIR="." $RUN_COMMAND ./${PIERNIK} "-n '&NUMERICAL_SETUP solver_str = \"Riemann\" /'"  > ${PROBLEM_NAME}.test_Riemann_stdout 2> $RIEM_ERR
+	eval $RUN_COMMAND ./${PIERNIK} "-n '&NUMERICAL_SETUP solver_str = \"Riemann\" /'"  > ${PROBLEM_NAME}.test_Riemann_stdout 2> $RIEM_ERR
 	[ -s $RIEM_ERR ] && ( echo ${PROBLEM_NAME}": Riemann failed " ; grep "Error"  $RIEM_ERR | sort | grep -vE '(meaningful|Following)' ) 1>&2
     ) &
 )
@@ -108,7 +108,7 @@ else
     fi
 fi
 if [ ! -e ${OUTPUT} ] ; then
-    eval TMPDIR="." $RUN_COMMAND ./${PIERNIK} $GOLD_PARAMS > ${PROBLEM_NAME}.gold_stdout &
+    eval $RUN_COMMAND ./${PIERNIK} $GOLD_PARAMS > ${PROBLEM_NAME}.gold_stdout &
     echo $GOLD_COMMIT > $GOLD_SHA_FILE
 fi
 cd - > /dev/null
