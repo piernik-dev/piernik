@@ -359,7 +359,6 @@ contains
       do while (associated(cgl))
          call is_part_in_cg(cgl%cg, pos, in, phy, out)
          if (phy .or. out) then
-            call printinfo(msg)
             call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out)
             return
          endif
