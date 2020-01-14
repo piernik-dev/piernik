@@ -481,7 +481,7 @@ contains
 
    subroutine update_particle_acc_tsc(cg)
 
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, gp1b_n, gpot_n, idm, half, zero
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, gp1b_n, gpot_n, sgp_n, idm, half, zero
       use domain,           only: dom
       use grid_cont,        only: grid_container
       use multipole,        only: moments2pot
@@ -504,7 +504,8 @@ contains
       if (mask_gpot1b) then
          ig = qna%ind(gp1b_n)
       else
-         ig = qna%ind(gpot_n)
+         !ig = qna%ind(gpot_n)
+         ig = qna%ind(sgp_n)
       endif
 
       fxyz = zero ! suppress -Wmaybe-uninitialized

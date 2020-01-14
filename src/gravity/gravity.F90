@@ -522,9 +522,7 @@ contains
       use constants,        only: one, half, sgp_n, sgpm_n
       use constants,        only: one, half, sgp_n, sgpm_n, zero
       use func,             only: operator(.notequals.)
-#ifndef NBODY
       use global,           only: dt, dtm
-#endif /* !NBODY */
 #endif /* SELF_GRAV */
 #if defined(SELF_GRAV) || defined(NBODY_GRIDDIRECT)
       use cg_list_dataop,   only: ind_val
@@ -538,10 +536,7 @@ contains
 #ifdef SELF_GRAV
       real :: h
 
-      h = zero
-#ifndef NBODY
       if (dtm .notequals. zero) h = dt/dtm
-#endif /* !NBODY */
 
 #ifdef NBODY_GRIDDIRECT
       !> \todo correct it
