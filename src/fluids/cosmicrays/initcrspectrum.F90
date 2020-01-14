@@ -40,7 +40,7 @@ module initcrspectrum
    public :: use_cresp, p_init, initial_spectrum, p_br_init, f_init, q_init, q_br_init, q_big, cfl_cre, cre_eff, expan_order, e_small, e_small_approx_p, e_small_approx_init_cond,  &
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active, &
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,        &
-           & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, check_if_dump_fpq, cleanup_cresp_work_arrays
+           & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -95,6 +95,7 @@ module initcrspectrum
    real            :: tol_f_1D                    !< tolerance for f abs. error in NR algorithm (1D)
    real            :: tol_x_1D                    !< tolerance for x abs. error in NR algorithm (1D)
    integer(kind=4) :: arr_dim, arr_dim_q
+   real            :: q_eps                       !< parameter for q tolerance (alpha_to_q)
 
    real, parameter :: eps = 1.0e-15          !< epsilon parameter for real number comparisons
    real, parameter :: eps_det = eps * 1.0e-15
@@ -172,7 +173,7 @@ module initcrspectrum
       &                         e_small_approx_init_cond, p_br_init_lo, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,   &
       &                         NR_iter_limit, max_p_ratio, synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init,             &
       &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf,                &
-      &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up, p_diff
+      &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up, p_diff, q_eps
 
 ! Default values
       use_cresp         = .true.
@@ -226,6 +227,7 @@ module initcrspectrum
       tol_x_1D = 1.0e-14
       arr_dim  = 200
       arr_dim_q = 500
+      q_eps     = eps
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -302,6 +304,7 @@ module initcrspectrum
          rbuff(25) = p_br_init_up
          rbuff(26) = q_br_init
          rbuff(27) = p_diff
+         rbuff(28) = q_eps
 
          cbuff(1)  = initial_spectrum
       endif
@@ -366,6 +369,8 @@ module initcrspectrum
          p_br_init_up                = rbuff(25)
          q_br_init                   = rbuff(26)
          p_diff                      = rbuff(27)
+
+         q_eps                       = rbuff(28)
 
          initial_spectrum            = trim(cbuff(1))
 

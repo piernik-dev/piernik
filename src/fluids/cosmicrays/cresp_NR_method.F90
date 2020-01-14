@@ -925,7 +925,7 @@ contains
    real function alpha_to_q(x) ! this one (as of now) is only usable with fixed p_ratio_4_q bins (middle ones)
 
       use constants,      only: one, three
-      use initcrspectrum, only: eps
+      use initcrspectrum, only: q_eps
 
       implicit none
 
@@ -934,9 +934,9 @@ contains
 
       q_in3 = three - x
       q_in4 = one + q_in3
-      if (abs(q_in3) < eps) then
+      if (abs(q_in3) < q_eps) then
          alpha_to_q = (p_ratio_4_q**q_in4 - one)/log(p_ratio_4_q)
-      else if (abs(q_in4) < eps) then
+      else if (abs(q_in4) < q_eps) then
          alpha_to_q = q_in3 * log(p_ratio_4_q)/(p_ratio_4_q**q_in3 - one)
       else
          alpha_to_q = q_in3/q_in4 * (p_ratio_4_q**q_in4 - one)/(p_ratio_4_q**q_in3 - one)
