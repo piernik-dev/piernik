@@ -171,11 +171,14 @@ contains
 
    subroutine namelist_handler_T_init(this)
 
+      use constants, only: cbuff_len
+
       implicit none
 
       class(namelist_handler_T), intent(inout) :: this
 
       character(len=cwdlen) :: tmpdir
+      character(len=cbuff_len) :: pid
       integer :: lchar_tmpdir
 
       call get_environment_variable("PIERNIK_TMPDIR", tmpdir)
@@ -187,8 +190,12 @@ contains
          if (tmpdir(lchar_tmpdir:lchar_tmpdir) == '/') lchar_tmpdir = lchar_tmpdir - 1
       endif
 
-      write(this%tmp1, '(a,"/temp1.dat")') tmpdir(1:lchar_tmpdir)
-      write(this%tmp2, '(a,"/temp2.dat")') tmpdir(1:lchar_tmpdir)
+      write(pid, '(i5)') getpid()
+
+      ! The filenames here will be unique, unless multiple Piernik instances
+      ! from multiple machines are started in the same shared directory.
+      write(this%tmp1, '(a,"/temp1_' // trim(pid) // '.dat")') tmpdir(1:lchar_tmpdir)
+      write(this%tmp2, '(a,"/temp2_' // trim(pid) // '.dat")') tmpdir(1:lchar_tmpdir)
 
       this%cmdl_nml => cmdl_nml
       this%par_file => par_file
