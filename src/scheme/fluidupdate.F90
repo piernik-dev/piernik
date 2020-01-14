@@ -145,9 +145,9 @@ contains
       call shear_3sweeps
 #endif /* SHEAR */
 
-#if defined(GRAV) && !defined(NBODY)
+#if defined(GRAV)
       call source_terms_grav
-#endif /* GRAV && !NBODY */
+#endif /* GRAV
 
 #if defined(COSM_RAYS) && defined(MULTIGRID)
       if (.not. use_CRsplit) then
