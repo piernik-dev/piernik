@@ -372,7 +372,7 @@ contains
 
    subroutine timestep_fluid(cg, fl, dt, c_fl)
 
-      use cg_level_connected, only: cg_level_connected_T, find_level
+      use cg_level_connected, only: cg_level_connected_t, find_level
       use constants,          only: xdim, ydim, zdim, ndims, GEO_RPZ, ndims, small
       use domain,             only: dom
       use fluidtypes,         only: component_fluid
@@ -391,7 +391,7 @@ contains
       real, dimension(ndims) :: v                         !< maximum velocity of fluid in all directions
       real, dimension(ndims) :: dt_proc                   !< timestep for the current cg
       integer                :: i, j, k, d
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
 
       curl => find_level(cg%l%id)
 

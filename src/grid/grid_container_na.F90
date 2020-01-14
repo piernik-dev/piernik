@@ -30,16 +30,16 @@
 
 module grid_cont_na
 
-   use grid_cont_base, only: grid_container_base_T
+   use grid_cont_base, only: grid_container_base_t
    use named_array,    only: named_array4d, named_array3d
 
    implicit none
 
    private
-   public :: grid_container_na_T
+   public :: grid_container_na_t
 
    !> \brief This type adds named arrays and related routines to the grid container
-   type, extends(grid_container_base_T), abstract :: grid_container_na_T
+   type, extends(grid_container_base_t), abstract :: grid_container_na_t
 
       ! Registered variables
 
@@ -77,7 +77,7 @@ module grid_cont_na
       procedure :: add_na                !< Register a new 3D entry in current cg with given name.
       procedure :: add_na_4d             !< Register a new 4D entry in current cg with given name.
 
-   end type grid_container_na_T
+   end type grid_container_na_t
 
 contains
 
@@ -87,7 +87,7 @@ contains
 
       implicit none
 
-      class(grid_container_na_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(grid_container_na_t), intent(inout) :: this !< object invoking type-bound procedure
 
       integer :: g
 
@@ -120,7 +120,7 @@ contains
 
       implicit none
 
-      class(grid_container_na_T), intent(inout) :: this  !< object invoking type-bound procedure
+      class(grid_container_na_t), intent(inout) :: this  !< object invoking type-bound procedure
 
       integer :: i
 
@@ -159,7 +159,7 @@ contains
 
       implicit none
 
-      class(grid_container_na_T), intent(inout) :: this       !< object invoking type-bound procedure
+      class(grid_container_na_t), intent(inout) :: this       !< object invoking type-bound procedure
       logical,                    intent(in)    :: multigrid  !< If .true. then cg%q(:)%arr and cg%w(:)%arr are allocated also below base level
 
       type(named_array3d), allocatable, dimension(:) :: tmp
@@ -188,7 +188,7 @@ contains
 
       implicit none
 
-      class(grid_container_na_T), intent(inout) :: this  !< object invoking type-bound procedure
+      class(grid_container_na_t), intent(inout) :: this  !< object invoking type-bound procedure
       integer(kind=4),            intent(in)    :: n     !< Length of the vector quantity to be stored (first dimension of the array)
 
       type(named_array4d), allocatable, dimension(:) :: tmp
@@ -213,7 +213,7 @@ contains
 
       implicit none
 
-      class(grid_container_na_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(grid_container_na_t), intent(inout) :: this !< object invoking type-bound procedure
       real, dimension(xdim:zdim), intent(in)    :: b    !< the value of the magnetic field vector in whole block
 
       integer :: d

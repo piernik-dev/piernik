@@ -30,15 +30,15 @@
 
 module cg_list_dataop
 
-   use cg_list, only: cg_list_T
+   use cg_list, only: cg_list_t
 
    implicit none
 
    private
-   public :: cg_list_dataop_T, ind_val, dirty_label, expanded_domain
+   public :: cg_list_dataop_t, ind_val, dirty_label, expanded_domain
 
    !> \brief Arbitrary list of grid containers
-   type, extends(cg_list_T) :: cg_list_dataop_T
+   type, extends(cg_list_t) :: cg_list_dataop_t
    contains
 
       ! Misc
@@ -69,7 +69,7 @@ module cg_list_dataop
       procedure, private :: dirty_mg_boundaries               !< Set boundary values
 !> \todo merge lists
 
-   end type cg_list_dataop_T
+   end type cg_list_dataop_t
 
    !> \brief Index - value pairs for calling arithmetic on the grids with q_lin_comb
    type :: ind_val
@@ -80,7 +80,7 @@ module cg_list_dataop
    integer, parameter    :: dl_len = 64 !< length of label buffer
    character(len=dl_len) :: dirty_label !< buffer for label for check_dirty subroutine
 
-   type(cg_list_dataop_T):: expanded_domain !< grid pieces that were created in the area, where computational domain was recently expanded
+   type(cg_list_dataop_t):: expanded_domain !< grid pieces that were created in the area, where computational domain was recently expanded
 
 contains
 
@@ -103,7 +103,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T),   intent(in)    :: this    !< object invoking type-bound procedure
+      class(cg_list_dataop_t),   intent(in)    :: this    !< object invoking type-bound procedure
       integer(kind=4),           intent(in)    :: ind     !< Index in cg%q(:)
       integer(kind=4),           intent(in)    :: minmax  !< minimum or maximum ?
       type(value),               intent(out)   :: prop    !< precise location of the extremum to be found
@@ -212,7 +212,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(in) :: this    !< object invoking type-bound procedure
+      class(cg_list_dataop_t), intent(in) :: this    !< object invoking type-bound procedure
       integer(kind=4),         intent(in) :: ind     !< Index in cg%q(:)
       real,                    intent(in) :: val     !< value to put
 
@@ -238,7 +238,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(in) :: this    !< object invoking type-bound procedure
+      class(cg_list_dataop_t), intent(in) :: this    !< object invoking type-bound procedure
       integer(kind=4),         intent(in) :: i_from  !< Index of source in cg%q(:)
       integer(kind=4),         intent(in) :: i_to    !< Index of destination in cg%q(:)
 
@@ -260,7 +260,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(in) :: this    !< object invoking type-bound procedure
+      class(cg_list_dataop_t), intent(in) :: this    !< object invoking type-bound procedure
       integer(kind=4),         intent(in) :: q_from  !< Index of source in cg%q(:)
       integer(kind=4),         intent(in) :: w_to    !< Index of destination in cg%w(:)
       integer(kind=4),         intent(in) :: w_ind   !< First index of destination in cg%w(w_to)%arr(:,:,:,:)
@@ -283,7 +283,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(in) :: this    !< object invoking type-bound procedure
+      class(cg_list_dataop_t), intent(in) :: this    !< object invoking type-bound procedure
       integer(kind=4),         intent(in) :: w_from  !< Index of source in cg%w(:)
       integer(kind=4),         intent(in) :: w_ind   !< First index of source in cg%w(w_from)%arr(:,:,:,:)
       integer(kind=4),         intent(in) :: q_to    !< Index of destination in cg%q(:)
@@ -306,7 +306,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(in) :: this    !< object invoking type-bound procedure
+      class(cg_list_dataop_t), intent(in) :: this    !< object invoking type-bound procedure
       integer(kind=4),         intent(in) :: i_add   !< Index of field to be added in cg%q(:)
       integer(kind=4),         intent(in) :: i_to    !< Index of field to be modified in cg%q(:)
 
@@ -329,7 +329,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(in) :: this    !< object invoking type-bound procedure
+      class(cg_list_dataop_t), intent(in) :: this    !< object invoking type-bound procedure
       integer(kind=4),         intent(in) :: i_add   !< Index of field to be modified in cg%q(:)
       real,                    intent(in) :: val     !< Value to be added
 
@@ -359,7 +359,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T),     intent(in) :: this    !< object invoking type-bound procedure
+      class(cg_list_dataop_t),     intent(in) :: this    !< object invoking type-bound procedure
       type(ind_val), dimension(:), intent(in) :: iv      !< list of (coefficient, index) pairs
       integer(kind=4),             intent(in) :: ind     !< Index in cg%q(:)
 
@@ -418,7 +418,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(in) :: this !< list for which we want to subtract its average from
+      class(cg_list_dataop_t), intent(in) :: this !< list for which we want to subtract its average from
       integer(kind=4),         intent(in) :: iv   !< index of variable in cg%q(:) which we want to have zero average
 
       real                                :: avg, vol
@@ -479,7 +479,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(in) :: this   !< list for which we want to calculate the L2 norm
+      class(cg_list_dataop_t), intent(in) :: this   !< list for which we want to calculate the L2 norm
       integer(kind=4),         intent(in) :: iv     !< index of variable in cg%q(:) for which we want to find the norm
       logical, optional,       intent(in) :: nomask !< Treat the list as a complete level and do not use leafmask
 
@@ -532,7 +532,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(in) :: this   !< list for which we want to calculate the scalar product
+      class(cg_list_dataop_t), intent(in) :: this   !< list for which we want to calculate the scalar product
       integer(kind=4),         intent(in) :: var1   !< first vector
       integer(kind=4),         intent(in) :: var2   !< second vector
 
@@ -558,7 +558,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(in) :: this  !< object invoking type-bound procedure
+      class(cg_list_dataop_t), intent(in) :: this  !< object invoking type-bound procedure
       integer(kind=4),         intent(in) :: ind   !< index of variable in cg%q(:) which we want to pollute
 
       type(cg_list_element), pointer :: cgl
@@ -585,7 +585,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(in) :: this  !< object invoking type-bound procedure
+      class(cg_list_dataop_t), intent(in) :: this  !< object invoking type-bound procedure
       integer(kind=4),         intent(in) :: ind   !< index of variable in cg%q(:) which we want to pollute
 
       type(cg_list_element), pointer :: cgl
@@ -608,7 +608,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(inout) :: this  !< list for which clear the boundary values (typically a single level)
+      class(cg_list_dataop_t), intent(inout) :: this  !< list for which clear the boundary values (typically a single level)
 
       call this%dirty_mg_boundaries(0.)
 
@@ -622,7 +622,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(inout) :: this   !< list for which clear the boundary values (typically a single level)
+      class(cg_list_dataop_t), intent(inout) :: this   !< list for which clear the boundary values (typically a single level)
       real,                    intent(in)    :: value  !< value to pollute
 
       type(cg_list_element), pointer         :: cgl
@@ -651,7 +651,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(inout) :: this  !< list for which we want to apply pollution
+      class(cg_list_dataop_t), intent(inout) :: this  !< list for which we want to apply pollution
       integer(kind=4),         intent(in)    :: iv    !< index of variable in cg%q(:) which we want to pollute
       real, optional,          intent(in)    :: val   !< use alue to pollute the data, if provided, or dirtyH otherwise
 
@@ -674,7 +674,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T),   intent(inout) :: this      !< level which we are checking
+      class(cg_list_dataop_t),   intent(inout) :: this      !< level which we are checking
       character(len=*),          intent(in)    :: label     !< label to indicate the origin of call
       integer(kind=4), optional, intent(in)    :: expand    !< also check guardcells
       logical, optional,         intent(in)    :: warn_only !< do not die when dirty value has been spotted
@@ -707,7 +707,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T),   intent(inout) :: this      !< level which we are checking
+      class(cg_list_dataop_t),   intent(inout) :: this      !< level which we are checking
       integer(kind=4),           intent(in)    :: iv        !< index of variable in cg%q(:) which we want to check
       character(len=*),          intent(in)    :: label     !< label to indicate the origin of call
       integer(kind=4), optional, intent(in)    :: expand    !< also check guardcells
@@ -806,7 +806,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(in) :: this          !< object invoking type-bound procedure
+      class(cg_list_dataop_t), intent(in) :: this          !< object invoking type-bound procedure
 
       integer                             :: i
       type(cg_list_element), pointer      :: cgl
@@ -845,7 +845,7 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(in) :: this  !< object invoking type-bound procedure
+      class(cg_list_dataop_t), intent(in) :: this  !< object invoking type-bound procedure
       integer(kind=4),         intent(in) :: ind   !< index of variable in cg%q(:) which we want to pollute
 
       type(cg_list_element), pointer :: cgl
