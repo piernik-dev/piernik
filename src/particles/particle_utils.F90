@@ -343,7 +343,6 @@ contains
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
       use constants,  only: ndims
-      use dataio_pub, only: msg, printinfo
 
       implicit none
 

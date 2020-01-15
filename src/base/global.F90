@@ -263,10 +263,8 @@ contains
          endif
 
 #ifdef NBODY
-         if (repeat_step) then
+         if (repeat_step) call warn('[global:init_global] repeat_step unsupported by NBODY. Switching off.')
          repeat_step = .false.
-         call warn('[global:init_global] repeat_step unsupported by NBODY. Swithing off.')
-         endif
 #endif /* NBODY */
 
          cbuff(1) = limiter

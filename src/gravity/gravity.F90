@@ -536,7 +536,11 @@ contains
 #ifdef SELF_GRAV
       real :: h
 
-      if (dtm .notequals. zero) h = dt/dtm
+      if (dtm .notequals. zero) then
+         h = dt/dtm
+      else
+         h = 0.0
+      endif
 
 #ifdef NBODY_GRIDDIRECT
       !> \todo correct it

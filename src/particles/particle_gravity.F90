@@ -62,7 +62,7 @@ contains
       type(cg_list_element), pointer       :: cgl
       type(particle), pointer              :: pset
 
-      integer                              :: n_part, k
+      integer                              :: n_part !, k
       real,    dimension(:,:), allocatable :: dist
       integer, dimension(:,:), allocatable :: cells
       !integer, dimension(:),   allocatable :: pdel
@@ -485,6 +485,7 @@ contains
 
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, gp1b_n, gpot_n, idm, half, zero
       use domain,           only: dom
+      use func,             only: operator(.equals.)
       use grid_cont,        only: grid_container
       use multipole,        only: moments2pot
       use named_array_list, only: qna
@@ -514,7 +515,7 @@ contains
       do while (associated(pset))
 
          !Delete particles escaping the domain
-         if (pset%pdata%energy .eq. 0.0) then
+         if (pset%pdata%energy .equals. 0.0) then
             pset2 => pset%nxt
             call cg%pset%remove(pset)
             pset => pset2
