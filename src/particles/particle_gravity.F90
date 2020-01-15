@@ -43,11 +43,13 @@ contains
 
    subroutine update_particle_gravpot_and_acc
 
-      use constants,      only: ndims
+      use constants,      only: ndims, gp_n, gpot_n, sgp_n, one
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
+      use cg_list_dataop,   only: ind_val
       use gravity,        only: source_terms_grav
       use grid_cont,      only: grid_container
+      use named_array_list, only: qna
       use particle_types, only: particle
       !use particle_utils, only: count_all_particles
 #ifdef VERBOSE
@@ -73,7 +75,7 @@ contains
       call update_gravpot_from_particles
 #endif /* NBODY_GRIDDIRECT */
       call source_terms_grav
-      !n_part = count_all_particles
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one)   ], qna%ind(gpot_n))
 
       n_part = 0
       cgl => leaves%first
@@ -481,7 +483,7 @@ contains
 
    subroutine update_particle_acc_tsc(cg)
 
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, gp1b_n, gpot_n, sgp_n, idm, half, zero
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, gp1b_n, gpot_n, idm, half, zero
       use domain,           only: dom
       use grid_cont,        only: grid_container
       use multipole,        only: moments2pot
@@ -501,11 +503,10 @@ contains
       real,    dimension(5)                        :: tmp
       real                                         :: weight, delta_x, weight_tmp
 
-      if (mask_gpot1b) then
+       if (mask_gpot1b) then
          ig = qna%ind(gp1b_n)
       else
-         !ig = qna%ind(gpot_n)
-         ig = qna%ind(sgp_n)
+         ig = qna%ind(gpot_n)
       endif
 
       fxyz = zero ! suppress -Wmaybe-uninitialized
