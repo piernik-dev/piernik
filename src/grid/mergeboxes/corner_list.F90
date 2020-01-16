@@ -35,7 +35,7 @@ module corner_list
    implicit none
 
    private
-   public :: corner_list_T, corner
+   public :: corner_list_t, corner
 
    type :: corner
       integer(kind=8), dimension(ndims) :: pos  !< Position of the convex corner
@@ -43,14 +43,14 @@ module corner_list
       real :: dist                              !< Importance factor, e.g. distance from CoM
    end type corner
 
-   type :: corner_list_T
+   type :: corner_list_t
       type(corner), allocatable, dimension(:) :: clist !< List of convex corners
    contains
       procedure :: add_c        !< Add a convex corner
       procedure :: print        !< Print box
       procedure :: cleanup      !< Free memory
       procedure :: update_dists !< update importance factors
-   end type corner_list_T
+   end type corner_list_t
 
 contains
 
@@ -60,7 +60,7 @@ contains
 
       implicit none
 
-      class(corner_list_T), intent(inout) :: this
+      class(corner_list_t), intent(inout) :: this
       type(corner),         intent(in)    :: c
 
       if (.not. allocated(this%clist)) allocate(this%clist(0))
@@ -76,7 +76,7 @@ contains
 
       implicit none
 
-      class(corner_list_T), intent(inout) :: this
+      class(corner_list_t), intent(inout) :: this
 
       integer :: i
 
@@ -102,7 +102,7 @@ contains
 
       implicit none
 
-      class(corner_list_T), intent(inout) :: this
+      class(corner_list_t), intent(inout) :: this
 
       if (allocated(this%clist)) deallocate(this%clist)
 
@@ -116,7 +116,7 @@ contains
 
       implicit none
 
-      class(corner_list_T),   intent(inout) :: this
+      class(corner_list_t),   intent(inout) :: this
       real, dimension(ndims), intent(in)    :: CoM
 
       integer :: i

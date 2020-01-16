@@ -35,7 +35,7 @@ module gdf
    implicit none
    private
    public :: gdf_create_root_datasets, gdf_create_simulation_parameters, gdf_create_format_stamp, gdf_create_root_group, gdf_field_type, fmax
-   public :: gdf_parameters_T, gdf_root_datasets_T, GDF_CARTESIAN, GDF_POLAR, GDF_CYLINDRICAL, GDF_SPHERICAL
+   public :: gdf_parameters_t, gdf_root_datasets_t, GDF_CARTESIAN, GDF_POLAR, GDF_CYLINDRICAL, GDF_SPHERICAL
 
    integer, parameter :: fmax = 60
 
@@ -53,7 +53,7 @@ module gdf
        enumerator :: GDF_CARTESIAN = 0, GDF_POLAR, GDF_CYLINDRICAL, GDF_SPHERICAL
    end enum
 
-   type :: gdf_parameters_T
+   type :: gdf_parameters_t
       integer(kind=8), dimension(:), pointer :: refine_by                !< relative global refinement
       integer(kind=8), dimension(:), pointer :: dimensionality           !< 1-, 2- or 3-D data
       integer(kind=8), dimension(:), pointer :: cosmological_simulation  !< 0 or 1 == True or False
@@ -74,9 +74,9 @@ module gdf
    contains
       procedure :: init => gdf_parameters_init
       procedure :: cleanup => gdf_parameters_finalize
-   end type gdf_parameters_T
+   end type gdf_parameters_t
 
-   type :: gdf_root_datasets_T
+   type :: gdf_root_datasets_t
       integer(kind=8),  dimension(:),   pointer :: grid_parent_id       !< optional, may only reference a single parent
       integer(kind=8),  dimension(:,:), pointer :: grid_left_index      !< global, relative to current level, and only the active region
       integer(kind=4),  dimension(:,:), pointer :: grid_dimensions      !< only the active regions
@@ -88,7 +88,7 @@ module gdf
       generic, public :: init => gdf_root_datasets_init_new, gdf_root_datasets_init_existing
       procedure :: cleanup => gdf_root_datasets_cleanup
       ! finalize :: gdf_root_datasets_cleanup
-   end type gdf_root_datasets_T
+   end type gdf_root_datasets_t
 
 contains
 
@@ -100,7 +100,7 @@ contains
       implicit none
 
       integer(HID_T),            intent(in) :: file !< File identifier
-      type(gdf_root_datasets_T), intent(in) :: rd   !< cointainer for root datasets
+      type(gdf_root_datasets_t), intent(in) :: rd   !< cointainer for root datasets
 
       call create_dataset(file, 'grid_dimensions', rd%grid_dimensions)
       call create_dataset(file, 'grid_left_index', rd%grid_left_index)
@@ -117,7 +117,7 @@ contains
       implicit none
 
       integer(HID_T),         intent(in) :: file_id    !< hdf5 file identification number
-      type(gdf_parameters_T), intent(in) :: sp         !< container for simulation parameters
+      type(gdf_parameters_t), intent(in) :: sp         !< container for simulation parameters
 
       integer(HID_T)                     :: g_id
       integer(kind=4)                    :: error
@@ -191,7 +191,7 @@ contains
 
    subroutine gdf_root_datasets_init_existing(this, cg_all_n_b, cg_all_rl, cg_all_off, cg_all_parents, cg_all_particles)
       implicit none
-      class(gdf_root_datasets_T),                intent(inout) :: this
+      class(gdf_root_datasets_t),                intent(inout) :: this
       integer(kind=4),  dimension(:,:), pointer, intent(in)    :: cg_all_n_b       !> sizes of all cg
       integer(kind=4),  dimension(:),   pointer, intent(in)    :: cg_all_rl        !> refinement levels of all cgs
       integer(kind=8),  dimension(:,:), pointer, intent(in)    :: cg_all_off       !> offsets of all cgs
@@ -207,7 +207,7 @@ contains
 
    subroutine gdf_root_datasets_init_new(this, n)
       implicit none
-      class(gdf_root_datasets_T), intent(inout) :: this
+      class(gdf_root_datasets_t), intent(inout) :: this
       integer(kind=4),            intent(in)    :: n
 
       allocate(this%grid_dimensions(3, n))
@@ -219,7 +219,7 @@ contains
 
    subroutine gdf_root_datasets_cleanup(this)
       implicit none
-      class(gdf_root_datasets_T), intent(inout) :: this
+      class(gdf_root_datasets_t), intent(inout) :: this
 
       if (associated(this%grid_dimensions)) deallocate(this%grid_dimensions)
       if (associated(this%grid_left_index)) deallocate(this%grid_left_index)
@@ -230,7 +230,7 @@ contains
 
    subroutine gdf_parameters_init(this)
       implicit none
-      class(gdf_parameters_T), intent(inout) :: this
+      class(gdf_parameters_t), intent(inout) :: this
 
       allocate(this%refine_by(1))
       allocate(this%dimensionality(1))
@@ -248,7 +248,7 @@ contains
 
    subroutine gdf_parameters_finalize(this)
       implicit none
-      class(gdf_parameters_T), intent(inout) :: this
+      class(gdf_parameters_t), intent(inout) :: this
 
       deallocate(this%refine_by)
       deallocate(this%dimensionality)

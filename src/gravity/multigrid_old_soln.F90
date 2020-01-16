@@ -33,7 +33,7 @@
 module multigrid_old_soln
 ! pulled by MULTIGRID && SELF_GRAV
 
-   use old_soln_list, only: old_soln, os_list_undef_T, os_list_T
+   use old_soln_list, only: old_soln, os_list_undef_t, os_list_t
 
    implicit none
 
@@ -44,8 +44,8 @@ module multigrid_old_soln
    integer(kind=4), parameter :: nold_max=3   !< maximum implemented extrapolation order
 
    type :: soln_history                       !< container for a set of several old potential solutions
-      type(os_list_undef_T) :: invalid        !< a list of invalid slots ready to use
-      type(os_list_T) :: old                  !< indices and time points of stored solutions
+      type(os_list_undef_t) :: invalid        !< a list of invalid slots ready to use
+      type(os_list_t) :: old                  !< indices and time points of stored solutions
     contains
       procedure :: init_history               !< Allocate arrays, register fields
       procedure :: cleanup_history            !< Deallocate arrays

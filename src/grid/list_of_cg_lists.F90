@@ -30,7 +30,7 @@
 
 module list_of_cg_lists
 
-   use cg_list,   only: cg_list_T
+   use cg_list,   only: cg_list_t
 
    implicit none
 
@@ -38,7 +38,7 @@ module list_of_cg_lists
    public :: all_lists
 
    type :: cg_list_pointer
-      class(cg_list_T), pointer  :: lp
+      class(cg_list_t), pointer  :: lp
    end type cg_list_pointer
 
    type :: all_cg_lists
@@ -98,7 +98,7 @@ contains
       implicit none
 
       class(all_cg_lists),      intent(inout) :: this  !< object invoking type-bound procedure
-      class(cg_list_T), target, intent(inout) :: cgl   !< a cg list to be created or reset
+      class(cg_list_t), target, intent(inout) :: cgl   !< a cg list to be created or reset
       character(len=*),         intent(in)    :: label !< name of the list
 
       type(cg_list_pointer), dimension(:), allocatable :: new_list
@@ -131,7 +131,7 @@ contains
       implicit none
 
       class(all_cg_lists),       intent(inout) :: this  !< object invoking type-bound procedure
-      class(cg_list_T), pointer, intent(inout) :: cgl   !< a cg list to be created or reset
+      class(cg_list_t), pointer, intent(inout) :: cgl   !< a cg list to be created or reset
 
       type(cg_list_pointer), dimension(:), allocatable :: new_list
       integer :: i, j

@@ -378,7 +378,7 @@ contains
 
       use cg_leaves,           only: leaves
       use cg_level_coarsest,   only: coarsest
-      use cg_level_connected,  only: cg_level_connected_T
+      use cg_level_connected,  only: cg_level_connected_t
       use cg_list,             only: cg_list_element
       use constants,           only: GEO_XYZ, sgp_n, fft_none, fft_dst, fft_rcr, dsetnamelen, pMAX
       use dataio_pub,          only: die, warn, printinfo, msg
@@ -389,7 +389,7 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
       character(len=dsetnamelen) :: FFTn
       logical, save :: firstcall = .true.
       type(cg_list_element), pointer  :: cgl
@@ -516,7 +516,7 @@ contains
 
    subroutine mgg_cg_init(cg)
 
-      use cg_level_connected, only: cg_level_connected_T, find_level
+      use cg_level_connected, only: cg_level_connected_t, find_level
       use constants,          only: fft_none
       use dataio_pub,         only: die
       use grid_cont,          only: grid_container
@@ -530,7 +530,7 @@ contains
       implicit none
 
       type(grid_container), pointer,  intent(inout) :: cg
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
 #ifndef NO_FFT
       real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
       integer :: i, j
@@ -945,7 +945,7 @@ contains
       use cg_leaves,          only: leaves
       use cg_list_global,     only: all_cg
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use constants,          only: cbuff_len, tmr_mg, dirtyH1
       use dataio_pub,         only: msg, die, warn, printinfo
@@ -967,7 +967,7 @@ contains
       character(len=fmtlen)    :: fmt
       character(len=cbuff_len) :: dname
       integer(kind=4), dimension(4)    :: mg_fields
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
       integer, parameter :: some_warm_up_cycles = 1
 
 #ifdef DEBUG
