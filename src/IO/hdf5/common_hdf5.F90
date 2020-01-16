@@ -729,7 +729,7 @@ contains
       use dataio_pub,   only: die, nproc_io, can_i_write, domain_dump, msg
       use domain,       only: dom
       use gdf,          only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets, &
-         &                    gdf_root_datasets_T, gdf_parameters_T, GDF_CARTESIAN, GDF_POLAR
+         &                    gdf_root_datasets_t, gdf_parameters_t, GDF_CARTESIAN, GDF_POLAR
       use global,       only: t
       use hdf5,         only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
          &                    h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, h5pclose_f, &
@@ -795,8 +795,8 @@ contains
       real, dimension(LO:HI)                        :: edge
       real, dimension(ndims)                        :: temp
 
-      type(gdf_root_datasets_T)                     :: rd
-      type(gdf_parameters_T)                        :: gdf_sp
+      type(gdf_root_datasets_t)                     :: rd
+      type(gdf_parameters_t)                        :: gdf_sp
 
       ! Create a new file and initialize it
 
@@ -999,7 +999,7 @@ contains
    subroutine collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
 
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: LO, HI, I_ONE
 
@@ -1012,7 +1012,7 @@ contains
       real(kind=8),    dimension(:,:,:), pointer, intent(inout) :: dbuf
       integer(kind=4),                            intent(in)    :: otype            !< Output type (restart, data)
 
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
       type(cg_list_element), pointer :: cgl
       integer :: g
 

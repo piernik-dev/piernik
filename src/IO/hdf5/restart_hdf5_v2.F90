@@ -44,7 +44,7 @@ module restart_hdf5_v2
       integer(kind=8), dimension(ndims) :: off
       integer(kind=4)                   :: level
    end type cg_essentials
-   ! nearly duplicate with level_essentials::level_T
+   ! nearly duplicate with level_essentials::level_t
 
 contains
 
@@ -491,7 +491,7 @@ contains
    subroutine read_restart_hdf5_v2(status_v2)
 
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
       use cmp_1D_mpi,         only: compare_array1D
@@ -564,7 +564,7 @@ contains
       character(len=dsetnamelen)                        :: d_label
       type(cg_essentials), dimension(:), allocatable    :: cg_res
       type(cg_list_element), pointer                    :: cgl
-      type(cg_level_connected_T), pointer               :: curl
+      type(cg_level_connected_t), pointer               :: curl
 
       if (master) call warn("[restart_hdf5_v2:read_restart_hdf5_v2] Experimental implementation")
 
@@ -846,7 +846,7 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use mpisetup,           only: master
 
@@ -855,7 +855,7 @@ contains
       type(cg_essentials), dimension(:) :: cg_res
 
       integer :: lmax, i
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
 
       lmax = base%level%l%id
       do i = lbound(cg_res(:), dim=1), ubound(cg_res(:), dim=1)

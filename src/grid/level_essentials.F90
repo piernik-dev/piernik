@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 
-!> \brief Module containing most basic properties ofgrid levels. Created to avoid circular dependencies between grid_container and cg_level_T
+!> \brief Module containing most basic properties ofgrid levels. Created to avoid circular dependencies between grid_container and cg_level_t
 
 module level_essentials
 
@@ -34,18 +34,18 @@ module level_essentials
 
    implicit none
    private
-   public :: level_T
+   public :: level_t
 
    !> \brief the type that contains the most basic data to be linked, where appropriate
 
-   type :: level_T
+   type :: level_t
       integer(kind=8), dimension(ndims) :: off  !< offset of the level
       integer(kind=8), dimension(ndims) :: n_d  !< maximum number of grid cells in each direction (size of fully occupied level)
       integer(kind=4)                   :: id   !< level number (relative to base level). No arithmetic should depend on it.
-      !type(level_T), pointer :: coarser
-      !type(level_T), pointer :: finer
+      !type(level_t), pointer :: coarser
+      !type(level_t), pointer :: finer
 
-      ! Shadows of the values set by level_T%write.
+      ! Shadows of the values set by level_t%write.
       ! I would like to protect them from being modified by mistake, but can't find any convenient way other than making all of them private and accessible through functions (which is not convenient).
       integer(kind=8), dimension(ndims), private :: off_ = huge(1_LONG)
       integer(kind=8), dimension(ndims), private :: n_d_ = huge(1_LONG)
@@ -57,7 +57,7 @@ module level_essentials
       procedure          :: check  !< check against shadows if nothing has changed
       procedure          :: has_ext_bnd  !< tell whether a given block has any external boundary or not
       procedure          :: is_ext_bnd  !< tell whether a given boundary of a given block is an external boundary or not
-   end type level_T
+   end type level_t
 
 contains
 
@@ -72,7 +72,7 @@ contains
 
       implicit none
 
-      class(level_T),                    intent(inout) :: this
+      class(level_t),                    intent(inout) :: this
       integer(kind=4),                   intent(in)    :: id
       integer(kind=8), dimension(ndims), intent(in)    :: n_d
       integer(kind=8), dimension(ndims), intent(in)    :: off
@@ -101,7 +101,7 @@ contains
 
       implicit none
 
-      class(level_T),                    intent(inout) :: this
+      class(level_t),                    intent(inout) :: this
       integer(kind=4),                   intent(in)    :: id
       integer(kind=8), dimension(ndims), intent(in)    :: n_d
       integer(kind=8), dimension(ndims), intent(in)    :: off
@@ -125,7 +125,7 @@ contains
 
       implicit none
 
-      class(level_T),                    intent(inout) :: this
+      class(level_t),                    intent(inout) :: this
       integer(kind=4),                   intent(in)    :: id
       integer(kind=8), dimension(ndims), intent(in)    :: n_d
       integer(kind=8), dimension(ndims), intent(in)    :: off
@@ -154,7 +154,7 @@ contains
 
       implicit none
 
-      class(level_T), intent(in) :: this
+      class(level_t), intent(in) :: this
 
       if (this%id /= this%id_) then
          write(msg, '(a,i6,2(a,i4))')"[level_essentials:check] @", proc, " shadow id has changed: ", this%id, " /=", this%id_
@@ -182,7 +182,7 @@ contains
 
       implicit none
 
-      class(level_T),                               intent(in) :: this !< object invoking type bound procedure
+      class(level_t),                               intent(in) :: this !< object invoking type bound procedure
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: se   !< cuboid
 
       integer :: d
@@ -206,7 +206,7 @@ contains
 
       implicit none
 
-      class(level_T),                               intent(in) :: this !< object invoking type bound procedure
+      class(level_t),                               intent(in) :: this !< object invoking type bound procedure
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: se   !< cuboid
 
       integer(kind=4),                              intent(in) :: d    !< direction
