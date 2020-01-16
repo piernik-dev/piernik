@@ -54,7 +54,7 @@ contains
       use func,             only: emag
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp, cresp, fsynchr
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp, cresp, fsynchr, u_b_max
       use mpisetup,         only: piernik_MPI_Allreduce
       use named_array_list, only: qna
 
@@ -98,7 +98,7 @@ contains
                   call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_max_tmp) ! needed for synchrotron timestep
                   i_up_max = max(i_up_max, i_up_max_tmp)
 
-                  if (.not. empty_cell .and. synch_active) call cresp_timestep_synchrotron(sptab%ub, i_up_max_tmp)
+                  if (.not. empty_cell .and. synch_active) call cresp_timestep_synchrotron(min(sptab%ub, u_b_max), i_up_max_tmp)
                enddo
             enddo
          enddo
