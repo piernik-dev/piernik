@@ -553,8 +553,10 @@ module initcrspectrum
 
       u_b_max = fsynchr * emag(b_max_db, 0., 0.)   !< initializes factor for comparising u_b with u_b_max
 
-      write (msg, *) "[initcrspectrum:init_cresp] Maximal B_tot and u_b_max =", b_max_db, u_b_max                       ; call warn(msg)
-      write (msg, *) "[initcrspectrum:init_cresp] dt_synch(p_up_init, u_b_max) =", cfl_cre * w / (p_max_fix * u_b_max)  ; call warn(msg)
+      write (msg, "(A,F10.4,A,ES12.5)") "[initcrspectrum:init_cresp] Maximal B_tot =",b_max_db, "mGs, u_b_max = ", u_b_max
+      if (master)  call warn(msg)
+      write (msg, "(A,ES12.5,A,ES15.8,A,ES15.8)") "[initcrspectrum:init_cresp] dt_synch(p_max_fix = ",p_max_fix,", u_b_max = ",u_b_max,") = ", cfl_cre * w / (p_max_fix* u_b_max)
+      if (master)  call warn(msg)
 
       if ((q_init < three) .and. any(e_small_approx_p == I_ONE)) then
          call warn("[initcrspectrum:init_cresp] Initial parameters: q_init < 3.0 and approximation of outer momenta is on, approximation of outer momenta with hard energy spectrum might not work.")
