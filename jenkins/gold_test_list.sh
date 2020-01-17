@@ -47,7 +47,11 @@ done
 
 # print the results
 for i in ${OUT_DIR}*_gold_log ; do
-     grep "You must make yt available somehow" $i || printf "%-50s = %s\n" "[GOLD] Total difference for ${i/_gold_log/}" $( tail -n 1 $i | awk '{print $NF}' )
+     grep "You must make yt available somehow" $i || (
+	 gdist=$( tail -n 1 $i | awk '{print $NF}' )
+	 printf "%-50s = %s\n" "[GOLD] Total difference for ${i/_gold_log/}" $gdist
+	 [ ${gdist} != "0" ] && sed -n '/^Difference of /s/^Diff/    Diff/p' $i
+     )
 done
 for i in ${OUT_DIR}*_riem_log ; do
      grep "You must make yt available somehow" $i || printf "%-50s = %s\n" "[Riemann] Total difference for ${i/_riem_log/}" $( tail -n 1 $i | awk '{print $NF}' )
