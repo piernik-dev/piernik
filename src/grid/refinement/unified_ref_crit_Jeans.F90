@@ -44,18 +44,18 @@ module unified_ref_crit_Jeans
    implicit none
 
    private
-   public :: urc_Jeans
+   public :: urc_jeans
 
 !> \brief The type for Jeans length-based refinement criterion.
 
-   type, extends(urc_filter) :: urc_Jeans
+   type, extends(urc_filter) :: urc_jeans
    contains
       procedure :: mark => mark_Jeans
-   end type urc_Jeans
+   end type urc_jeans
 
-   interface urc_Jeans
+   interface urc_jeans
       procedure :: init
-   end interface urc_Jeans
+   end interface urc_jeans
 
 contains
 
@@ -70,7 +70,7 @@ contains
       real,    intent(in) :: jeans_ref   !< minimum resolution in cells per Jeans wavelength
       logical, intent(in) :: jeans_plot  !< create an array to keep the value of Jeans resolution
 
-      type(urc_Jeans) :: this  !< an object to be constructed
+      type(urc_jeans) :: this  !< an object to be constructed
 
       !< If it proves to be not universally safe, then implement it as a problem.par parameter.
       real, parameter :: safe_deref = refinement_factor * 1.25
@@ -106,7 +106,7 @@ contains
 
       implicit none
 
-      class(urc_Jeans),              intent(inout) :: this  !< an object invoking the type-bound procedure
+      class(urc_jeans),              intent(inout) :: this  !< an object invoking the type-bound procedure
       type(grid_container), pointer, intent(inout) :: cg    !< current grid piece
 
       real, dimension(:,:,:), pointer :: p3d

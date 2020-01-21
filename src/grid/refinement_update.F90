@@ -99,12 +99,12 @@ contains
 
       subroutine prepare_ref
 
-         use cg_level_connected, only: cg_level_connected_T
+         use cg_level_connected, only: cg_level_connected_t
          use cg_level_finest,    only: finest
 
          implicit none
 
-         type(cg_level_connected_T), pointer :: curl
+         type(cg_level_connected_t), pointer :: curl
 
          curl => finest%level
          do while (associated(curl))
@@ -155,12 +155,12 @@ contains
 
          use cg_list,            only: cg_list_element
          use cg_level_base,      only: base
-         use cg_level_connected, only: cg_level_connected_T
+         use cg_level_connected, only: cg_level_connected_t
 
          implicit none
 
          type(cg_list_element), pointer :: cgl
-         type(cg_level_connected_T), pointer :: curl
+         type(cg_level_connected_t), pointer :: curl
 
          !> \todo communicate refines from coarse to fine blocks to prevent oscillations that might occur when there is derefinement request on fine, when coarse requests refinement
 
@@ -192,7 +192,7 @@ contains
       use cg_leaves,             only: leaves
       use cg_list,               only: cg_list_element
       use cg_level_base,         only: base
-      use cg_level_connected,    only: cg_level_connected_T
+      use cg_level_connected,    only: cg_level_connected_t
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
       use constants,             only: pLOR, pLAND, pSUM
@@ -219,7 +219,7 @@ contains
       integer, parameter :: nciter_max = 100 ! should be more than refinement levels
       logical :: some_refined, derefined
       type(cg_list_element), pointer :: cgl, aux
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
       type(grid_container),  pointer :: cg
       logical :: correct, full_update
 
@@ -407,7 +407,7 @@ contains
 
    subroutine refine_one_grid(curl, cgl)
 
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
       use constants,          only: refinement_factor, LO, HI, ndims
@@ -417,7 +417,7 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(inout) :: curl
+      type(cg_level_connected_t), pointer, intent(inout) :: curl
       type(cg_list_element),      pointer, intent(in)    :: cgl
 
       type(wmap) :: lmap
@@ -643,7 +643,7 @@ end module refinement_update
 !!$#if defined(__INTEL_COMPILER)
 !!$   !! \deprecated remove this clause as soon as Intel Compiler gets required
 !!$   !! features and/or bug fixes
-!!$      use cg_level_connected, only: cg_level_connected_T  ! QA_WARN INTEL
+!!$      use cg_level_connected, only: cg_level_connected_t  ! QA_WARN INTEL
 !!$#endif /* __INTEL_COMPILER */
 !!$      use cg_level_finest, only: finest
 !!$      use dataio_pub,      only: msg, printinfo

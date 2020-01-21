@@ -88,14 +88,14 @@ contains
 
       use cg_level_base,      only: base
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list_global,     only: all_cg
       use list_of_cg_lists,   only: all_lists
       use named_array_list,   only: qna, wna
 
       implicit none
 
-      type(cg_level_connected_T), pointer :: curl, aux
+      type(cg_level_connected_t), pointer :: curl, aux
 
       curl => coarsest%level
       do while (associated(curl))

@@ -183,12 +183,12 @@ contains
 
      use constants,  only: small
      use dataio_pub, only: die
-     use domain,     only: dom
      use func,       only: emag, ekin
      use global,     only: cfl_glm
      use grid_cont,  only: grid_container
 #ifndef ISO
      use constants,  only: xdim, ydim, zdim, half
+     use domain,     only: dom
      use fluidindex, only: flind
      use fluids_pub, only: has_ion, has_neu, has_dst
      use fluidtypes, only: component_fluid

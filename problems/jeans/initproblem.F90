@@ -354,7 +354,7 @@ contains
             write(g_lun,'(a)') "T = 2*pi/b"
             write(g_lun,'(a)') 'plot file u ($2):($10/$4) t ""'
             write(g_lun,'(a)') 'maxval = GPVAL_DATA_Y_MAX'
-            write(g_lun,'(a,g11.3,a)')'set yrange [ * : 10**ceil(log10(maxval)) ]'
+            write(g_lun,'(a)')'set yrange [ * : 10**ceil(log10(maxval)) ]'
             write(g_lun,'(a)') "y(x) = a * exp(b*x)"
             write(g_lun,'(3(a,/),a)') 'set key right bottom', 'set log y', 'set xlabel "time"', 'set xrange [ * : * ]'
             write(g_lun,'(a)') 'set title sprintf("Jeans instability\nrough fit: %.5g * exp(%.5g * t)", a, b)'
@@ -370,11 +370,14 @@ contains
          write(g_lun,'(a)') 'set output'
 
          if (Tamp >0) then
-            write(g_lun,'(a,2g13.5)') 'print "#analytical = ", aa, bb'
-            write(g_lun,'(a,2g13.5)') 'print "#fit = ", a, b, c'
-            write(g_lun,'(a,2g13.5)') 'print "#maxval = ", maxval'
-            write(g_lun,'(a,2g13.5)') 'print "#maxres = ", maxres'
-            write(g_lun,'(a,2g13.5)') 'print "#maxdiff = ", maxdiff'
+            write(g_lun,'(a)') 'print "#analytical = ", aa, bb'
+            write(g_lun,'(a)') 'print "#fit = ", a, b, c'
+            write(g_lun,'(a)') 'print "#maxval = ", maxval'
+            write(g_lun,'(a)') 'print "#maxres = ", maxres'
+            write(g_lun,'(a)') 'print "#maxdiff = ", maxdiff'
+            write(g_lun,'(a)') 'set print "jeans.csv"'
+            write(g_lun,'(a)') 'print "amplitude_rel_error,period_rel_error,damping_factor/period"'
+            write(g_lun,'(a)') 'print (1. - aa/a), ",", (1- bb/b), ",", c/bb'
          endif
          close(g_lun)
       endif

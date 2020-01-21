@@ -31,13 +31,13 @@
 module grid_cont_bnd
 
    use constants,    only: xdim, zdim, LO, HI
-   use grid_cont_na, only: grid_container_na_T
+   use grid_cont_na, only: grid_container_na_t
    use fluxtypes,    only: fluxarray, fluxpoint
 
    implicit none
 
    private
-   public :: grid_container_bnd_T, segment
+   public :: grid_container_bnd_t, segment
 
    type(fluxpoint), target :: fpl, fpr, cpl, cpr
 
@@ -50,7 +50,7 @@ module grid_cont_bnd
       real, allocatable, dimension(:,:,:,:) :: buf4        !< buffer for the 4D (vector) data to be sent or received
       integer(kind=4), pointer :: req                      !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se2  !< auxiliary range, used in cg_level_connected:vertical_bf_prep
-      class(grid_container_bnd_T), pointer :: local        !< set this pointer to non-null when the exchange is local
+      class(grid_container_bnd_t), pointer :: local        !< set this pointer to non-null when the exchange is local
    end type segment
 
    !> \brief Array of boundary segments to exchange
@@ -61,7 +61,7 @@ module grid_cont_bnd
    end type bnd_list
 
    !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
-   type, extends(grid_container_na_T), abstract :: grid_container_bnd_T
+   type, extends(grid_container_na_t), abstract :: grid_container_bnd_t
 
       ! External boundary conditions and internal boundaries
 
@@ -79,7 +79,7 @@ module grid_cont_bnd
       procedure          :: set_fluxpointers  !< Calculate fluxes incoming from fine grid for 1D solver
       procedure          :: save_outfluxes    !< Collect outgoing fine fluxes, do curvilinear scaling and store in appropriate array
 
-   end type grid_container_bnd_T
+   end type grid_container_bnd_t
 
 contains
 
@@ -91,7 +91,7 @@ contains
 
       implicit none
 
-      class(grid_container_bnd_T), target, intent(inout) :: this  !< object invoking type-bound procedure
+      class(grid_container_bnd_t), target, intent(inout) :: this  !< object invoking type-bound procedure
 
       integer :: i
 
@@ -120,7 +120,7 @@ contains
 
       implicit none
 
-      class(grid_container_bnd_T), intent(inout) :: this  !< object invoking type-bound procedure
+      class(grid_container_bnd_t), intent(inout) :: this  !< object invoking type-bound procedure
 
       integer :: d, g
 
@@ -197,7 +197,7 @@ contains
 
       implicit none
 
-      class(grid_container_bnd_T), intent(in)    :: this    !< object invoking type-bound procedure
+      class(grid_container_bnd_t), intent(in)    :: this    !< object invoking type-bound procedure
       integer(kind=4),             intent(in)    :: cdim    !< direction of the flux
       integer,                     intent(in)    :: i1      !< coordinate
       integer,                     intent(in)    :: i2      !< coordinate
@@ -261,7 +261,7 @@ contains
 
       implicit none
 
-      class(grid_container_bnd_T), intent(inout) :: this    !< object invoking type-bound procedure
+      class(grid_container_bnd_t), intent(inout) :: this    !< object invoking type-bound procedure
       integer(kind=4),             intent(in)    :: cdim
       integer,                     intent(in)    :: i1
       integer,                     intent(in)    :: i2

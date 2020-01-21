@@ -75,7 +75,7 @@ contains
 
    subroutine residual(cg_llst, src, soln, def)
 
-      use cg_list_bnd,         only: cg_list_bnd_T
+      use cg_list_bnd,         only: cg_list_bnd_t
       use constants,           only: O_I2, O_I4
       use dataio_pub,          only: die
       use multigrid_Laplace2,  only: residual2
@@ -84,7 +84,7 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T), intent(inout) :: cg_llst !< pointer to a list of grids for which we approximate the solution
+      class(cg_list_bnd_t), intent(inout) :: cg_llst !< pointer to a list of grids for which we approximate the solution
       integer(kind=4),      intent(in) :: src     !< index of source in cg%q(:)
       integer(kind=4),      intent(in) :: soln    !< index of solution in cg%q(:)
       integer(kind=4),      intent(in) :: def     !< index of defect in cg%q(:)
@@ -112,7 +112,7 @@ contains
 
    subroutine approximate_solution_relax(curl, src, soln, nsmoo)
 
-      use cg_level_connected,  only: cg_level_connected_T
+      use cg_level_connected,  only: cg_level_connected_t
       use constants,           only: O_I2, O_I4
       use dataio_pub,          only: die
       use multigrid_Laplace2,  only: approximate_solution_rbgs2
@@ -121,7 +121,7 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(inout) :: curl  !< pointer to a level for which we approximate the solution
+      type(cg_level_connected_t), pointer, intent(inout) :: curl  !< pointer to a level for which we approximate the solution
       integer(kind=4),                     intent(in)    :: src   !< index of source in cg%q(:)
       integer(kind=4),                     intent(in)    :: soln  !< index of solution in cg%q(:)
       integer(kind=4),                     intent(in)    :: nsmoo !< Number of smoothing operations to perform

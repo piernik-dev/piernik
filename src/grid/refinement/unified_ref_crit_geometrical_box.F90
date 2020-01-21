@@ -133,7 +133,7 @@ contains
    subroutine init_lev(this)
 
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use constants,          only: LO, HI
       use dataio_pub,         only: printinfo, msg
       use domain,             only: dom
@@ -143,7 +143,7 @@ contains
 
       class(urc_box), intent(inout)  :: this  !< an object invoking the type-bound procedure
 
-      type(cg_level_connected_T), pointer :: l
+      type(cg_level_connected_t), pointer :: l
       logical, parameter :: verbose = .false.  ! for debugging only
 
       l => base%level

@@ -112,7 +112,7 @@ contains
       use refinement,                         only: refine_points, refine_boxes, refine_vars, inactive_name, jeans_ref, jeans_plot
       use unified_ref_crit_geometrical_box,   only: urc_box
       use unified_ref_crit_geometrical_point, only: urc_point
-      use unified_ref_crit_Jeans,             only: urc_Jeans
+      use unified_ref_crit_Jeans,             only: urc_jeans
       use unified_ref_crit_var,               only: decode_urcv
 
       implicit none
@@ -121,7 +121,7 @@ contains
 
       type(urc_box),   pointer :: urcb
       type(urc_point), pointer :: urcp
-      type(urc_Jeans), pointer :: urcj
+      type(urc_jeans), pointer :: urcj
       integer :: ip
 
       ! add automatic criteria detecting shock waves
@@ -134,7 +134,7 @@ contains
       ! add Jeans-length criterion
       if (jeans_ref > 0.) then
          allocate(urcj)
-         urcj = urc_Jeans(jeans_ref, jeans_plot)
+         urcj = urc_jeans(jeans_ref, jeans_plot)
          call this%add(urcj)
       endif
 
@@ -244,7 +244,7 @@ contains
       use dataio_pub,             only: printinfo, msg, warn
       use named_array_list,       only: qna, wna
       use mpisetup,               only: master
-      use unified_ref_crit_Jeans, only: urc_Jeans
+      use unified_ref_crit_Jeans, only: urc_jeans
       use unified_ref_crit_user,  only: urc_user
       use unified_ref_crit_var,   only: urc_var
 
@@ -273,7 +273,7 @@ contains
                   write(msg, '(4a)') trim(msg), "' is stored in array '", trim(ref_n), "'"
                   if (master) call printinfo(msg)
                endif
-            class is (urc_Jeans)
+            class is (urc_jeans)
                if (p%plotfield .and. p%iplot == INVALID) then
                   p%iplot = new_ref_field("nJ")
                   write(msg, '(3a)') "[unified_ref_crit_list:create_plotfields] Jeans refinement criterion is stored in array '", trim(ref_n), "'"
