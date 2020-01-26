@@ -184,6 +184,7 @@ contains
                tag = cg%grid_id + this%dot%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
                if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow (ri)")
+               nullify(seg%local)
                end associate
             enddo
 
@@ -206,6 +207,7 @@ contains
                tag = cg%grid_id + this%dot%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
                if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow po)")
+               nullify(seg%local)
                end associate
             enddo
 
@@ -266,6 +268,7 @@ contains
                tag = ps(g)%n_se + coarse%dot%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
                if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow (ro)")
+               nullify(seg%local)
                end associate
             enddo
 
@@ -283,6 +286,7 @@ contains
                tag = ps(g)%n_se + coarse%dot%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
                if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow (pi)")
+               nullify(seg%local)
                end associate
             enddo
 
