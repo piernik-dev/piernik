@@ -33,6 +33,7 @@ module grid_cont_bnd
    use constants,    only: xdim, zdim, LO, HI
    use grid_cont_na, only: grid_container_na_t
    use fluxtypes,    only: fluxarray, fluxpoint
+   use refinement_flag,   only: ref_flag
 
    implicit none
 
@@ -71,6 +72,7 @@ module grid_cont_bnd
       ! initialization of i_bnd and o_bnd are done in cg_list_neighbors because we don't have access to cg_level%dot here
       type(bnd_list),  dimension(:), allocatable   :: i_bnd       !< description of incoming boundary data
       type(bnd_list),  dimension(:), allocatable   :: o_bnd       !< description of outgoing boundary data
+      type(ref_flag) :: refine_flags                              !< refine or derefine this grid container?
 
    contains
 

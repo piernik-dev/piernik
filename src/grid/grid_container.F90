@@ -33,7 +33,6 @@ module grid_cont
    use constants,         only: LO, HI
    use grid_cont_bnd,     only: segment
    use grid_cont_prolong, only: grid_container_prolong_t
-   use refinement_flag,   only: ref_flag
 
    implicit none
 
@@ -69,7 +68,6 @@ module grid_cont
 
       ! Misc
       integer(kind=8) :: SFC_id                                  !< position of the grid on space-filling curve
-      type(ref_flag) :: refine_flags                             !< refine or derefine this grid container?
       integer :: membership                                      !< How many cg lists use this grid piece?
       logical :: ignore_prolongation                             !< When .true. do not upgrade interior with incoming prolonged values
       logical :: is_old                                          !< .true. if a given grid existed prior to  upgrade_refinement call
