@@ -266,16 +266,14 @@ contains
 
       real, dimension(:,:,:), pointer :: p3d
 
-      if (any(cg%leafmap)) then
-         if (this%ic == INVALID) then
-            p3d => cg%q(this%iv)%arr
-         else
-            associate (a => cg%w(this%iv)%arr)
-               p3d(lbound(a, dim=2):, lbound(a, dim=3):, lbound(a, dim=4):) => cg%w(this%iv)%arr(this%ic, :, :, :)
-            end associate
-         endif
-         call this%refine(cg, p3d)
+      if (this%ic == INVALID) then
+         p3d => cg%q(this%iv)%arr
+      else
+         associate (a => cg%w(this%iv)%arr)
+            p3d(lbound(a, dim=2):, lbound(a, dim=3):, lbound(a, dim=4):) => cg%w(this%iv)%arr(this%ic, :, :, :)
+         end associate
       endif
+      call this%refine(cg, p3d)
 
       return
 

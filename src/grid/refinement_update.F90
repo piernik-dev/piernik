@@ -91,6 +91,9 @@ contains
          endif
       endif
 
+      call parents_prevent_derefinement
+      call sanitize_all_ref_flags
+
       call ref_flags_to_ref_list
 
    contains
@@ -179,6 +182,101 @@ contains
       end subroutine sanitize_all_ref_flags
 
    end subroutine scan_for_refinements
+
+!> \brief Clear derefine flag on child whenever there is a refine flag below, on its parent.
+
+   subroutine parents_prevent_derefinement
+
+      use cg_list,    only: cg_list_element
+      use cg_leaves,  only: leaves
+      use constants,  only: xdim, ydim, zdim, LO, HI
+      use dataio_pub, only: die, warn
+      use domain,     only: dom
+      use mpisetup,   only: proc
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+      integer :: g
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: se
+      integer, parameter :: perimeter = 2
+
+      if (perimeter > dom%nb) call die("[refinement_update:parents_prevent_derefinement] perimeter > dom%nb")
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         ! look for refineflag .and. .not. leafmap + preimeter
+         if (any(cgl%cg%refinemap(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) .and. .not. cgl%cg%leafmap)) then
+            if (allocated(cgl%cg%ri_tgt%seg)) then
+               do g = lbound(cgl%cg%ri_tgt%seg(:), dim=1), ubound(cgl%cg%ri_tgt%seg(:), dim=1)
+                  ! clear own derefine flags (single-thread test)
+                  se(:, LO) = cgl%cg%ri_tgt%seg(g)%se(:, LO) - perimeter * dom%D_
+                  se(:, HI) = cgl%cg%ri_tgt%seg(g)%se(:, HI) + perimeter * dom%D_
+                  if (any(cgl%cg%refinemap(se(xdim,LO):se(xdim,HI),se(ydim,LO):se(ydim,HI),se(zdim,LO):se(zdim,HI)))) then
+
+!!$                     if (associated(cgl%cg%ri_tgt%seg(g)%local)) then
+!!$                        cgl%cg%ri_tgt%seg(g)%local%refine_flags%derefine = .false.
+!!$                     else
+                     if (cgl%cg%ri_tgt%seg(g)%proc == proc) then
+                       call disable_derefine_by_tag(cgl%cg%ri_tgt%seg(g)%tag)  ! beware: O(leaves%cnt^2)
+                     else
+                        call warn("[refinement_update:parents_prevent_derefinement] NI")
+                        ! create a list of foreign blocks that need not be derefined (proc, grid_id or SFC_id)
+                        ! use prolongation structures
+                     endif
+                  endif
+               enddo
+            endif
+         endif
+         cgl => cgl%nxt
+      enddo
+
+      ! count how many ids to which threads
+      ! call MPI_AlltoAll
+
+      ! prepare lists for each thread to send
+      ! prepare lists to receive
+      ! call MPI_AlltoAllv
+
+      ! clear received derefine flags
+
+   contains
+
+      !>
+      !! \brief Disable derefinement on child if we know only the tag for outgoing restriction
+      !!
+      !! Beware: slow: O(leaves%cnt^2)
+      !<
+
+      subroutine disable_derefine_by_tag(tag)
+
+         implicit none
+
+         integer(kind=4), intent(in) :: tag
+
+         integer :: g
+         logical :: done
+         type(cg_list_element), pointer :: cgl
+
+         done = .false.
+
+         cgl => leaves%first
+         do while (associated(cgl) .and. .not. done)
+            if (allocated(cgl%cg%ro_tgt%seg)) then
+               do g = lbound(cgl%cg%ro_tgt%seg(:), dim=1), ubound(cgl%cg%ro_tgt%seg(:), dim=1)
+                  if (cgl%cg%ro_tgt%seg(g)%tag == tag) then
+                     cgl%cg%refine_flags%derefine = .false.
+                     done = .true.
+                     exit
+                  endif
+               enddo
+            endif
+            cgl => cgl%nxt
+         enddo
+
+      end subroutine disable_derefine_by_tag
+
+   end subroutine parents_prevent_derefinement
 
 !>
 !! \brief Update the refinement topology
