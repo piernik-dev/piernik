@@ -141,10 +141,11 @@ module initcrspectrum
    integer, allocatable, dimension(:) :: cresp_all_edges, cresp_all_bins
 
 ! CRESP names
+   integer, parameter :: cnlen = 4
    type dump_fpq_type
-      character(len=4) :: f_nam = "cref" !< helping array for CRESP number density
-      character(len=4) :: p_nam = "crep" !< helping array for CRESP energy density
-      character(len=4) :: q_nam = "creq" !< helping array for CRESP energy density
+      character(len=cnlen) :: f_nam = "cref" !< helping array for CRESP number density
+      character(len=cnlen) :: p_nam = "crep" !< helping array for CRESP energy density
+      character(len=cnlen) :: q_nam = "creq" !< helping array for CRESP energy density
       logical :: any_dump, dump_f, dump_p, dump_q  ! diagnostic, if true - adding 'cref', 'crep', 'creq' to hdf_vars must follow
    end type dump_fpq_type
    type(dump_fpq_type) :: dfpq

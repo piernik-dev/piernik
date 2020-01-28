@@ -90,7 +90,6 @@ contains
       fun_vec_value = selected_function_2D(x)
       if (maxval(abs(fun_vec_value)) < 0.01 * err_f) then ! in case when f converges at initialization
          exit_code = .false.
-!         write(*,"(A33,2E22.15)")"Convergence (f) at initialization", x
          return
       endif
 
@@ -108,7 +107,6 @@ contains
 
          det = determinant_2d_real(fun_vec_jac)           ! WARNING - algorithm is used for ndim = 2. For more dimensions LU or other methods should be implemented.
          if (abs(det) < eps_det) then              ! Countermeasure against determinant = zero
-!      write (*,"(A20)") "WARNING: det ~ 0.0"
             exit_code = .true.
             return
          endif
@@ -117,7 +115,6 @@ contains
          cor(1) = fun_vec_inv_jac(1,1) * fun_vec_value(1) + fun_vec_inv_jac(1,2) * fun_vec_value(2)
          cor(2) = fun_vec_inv_jac(2,1) * fun_vec_value(1) + fun_vec_inv_jac(2,2) * fun_vec_value(2)
          x = x+cor
-!          write(*,'(A20, 2E35.25, A5, 2E22.14)') "Obtained values (x): ", x,' | ', sum(abs(cor)), sum(abs(fun_vec_value))!, maxval(abs(fun_vec_value)), maxval(abs(cor)),
          if (maxval(abs(cor)) < err_x) then                 ! For convergence via value of correction (cor) table.
 #ifdef CRESP_VERBOSED
             write(*,"(A47,I4,A12)",advance="no") "Convergence via value of cor array     after ",i," iterations."
@@ -126,7 +123,7 @@ contains
             return
          endif
       enddo
-!       write(*,"(A45,I4,A24)") "  ... WARNING: Maximum number of iterations (",NR_iter_limit,") exceeded @global_newt!"
+      ! "  ... WARNING: Maximum number of iterations (",NR_iter_limit,") exceeded @global_newt!"
       exit_code = .true.
 
    end subroutine NR_algorithm
@@ -187,7 +184,8 @@ contains
       implicit none
 
       real, intent(in) :: x
-      real             :: dx, dx_par = 1.0e-4
+      real             :: dx
+      real, parameter  :: dx_par = 1.0e-4
 
       dx = sign(1.0, x) * min(abs(x*dx_par), dx_par)
       dx = sign(1.0, x) * max(abs(dx), eps) ! dx = 0.0 must not be allowed

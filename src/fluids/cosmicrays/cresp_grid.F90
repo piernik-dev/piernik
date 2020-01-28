@@ -53,7 +53,6 @@ module cresp_grid
       use cresp_NR_method,  only: cresp_initialize_guess_grids
       use dataio,           only: vars
       use dataio_pub,       only: printinfo
-      use func,             only: emag
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_n, iarr_cre_e, ncre
       use initcrspectrum,   only: norm_init_spectrum, dfpq, check_if_dump_fpq
