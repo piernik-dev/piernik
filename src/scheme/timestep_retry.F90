@@ -42,6 +42,7 @@ module timestep_retry
    ! for simplicity create an array of pointers to qna and wna
    type :: na_p
       class(na_var_list), pointer :: p => null()
+      integer, allocatable, dimension(:) :: indices
    end type na_p
    type(na_p), dimension(2) :: na_lists  ! currently we have only 2 such lists, fna may join in the future
 
@@ -84,7 +85,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pSUM, I_ZERO, I_ONE, dsetnamelen, AT_IGNORE
+      use constants,        only: pSUM, I_ZERO, I_ONE, dsetnamelen, AT_IGNORE, INVALID
       use dataio_pub,       only: warn, msg, die
       use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_shrink, repeat_step, tstep_attempt
       use mass_defect,      only: downgrade_magic_mass
@@ -130,6 +131,28 @@ contains
       call randoms_redostep(cfl_violated)
 #endif /* RANDOMIZE */
 
+      ! refresh na_lists(:)%indices
+      do j = lbound(na_lists, dim=1), ubound(na_lists, dim=1)
+         associate (na => na_lists(j)%p)
+            allocate(na_lists(j)%indices(size(na%lst)))
+            do i = lbound(na%lst(:), dim=1), ubound(na%lst(:), dim=1)
+               if (na%lst(i)%restart_mode > AT_IGNORE) then
+                  rname = get_rname(na%lst(i)%name)
+                  select type(na)
+                     type is (na_var_list_q)
+                        na_lists(j)%indices(i) = qna%ind(rname)
+                     type is (na_var_list_w)
+                        na_lists(j)%indices(i) = wna%ind(rname)
+                     class default
+                        call die("[timestep_retry:repeat_fluidstep] unknown named array list type (rname)")
+                  end select
+               else
+                  na_lists(j)%indices(i) = INVALID
+               endif
+            enddo
+         end associate
+      enddo
+
       no_hist_count = 0
       cgl => leaves%first
       do while (associated(cgl))
@@ -145,9 +168,9 @@ contains
                         if (cgl%cg%has_previous_timestep) then
                            select type(na)  !! ToDo: unify qna and wna somehow at least in the grid_container
                               type is (na_var_list_q)
-                                 cgl%cg%q(i)%arr = cgl%cg%q(qna%ind(rname))%arr
+                                 cgl%cg%q(i)%arr = cgl%cg%q(na_lists(j)%indices(i))%arr
                               type is (na_var_list_w)
-                                 cgl%cg%w(i)%arr = cgl%cg%w(wna%ind(rname))%arr
+                                 cgl%cg%w(i)%arr = cgl%cg%w(na_lists(j)%indices(i))%arr
                               class default
                                  call die("[timestep_retry:repeat_fluidstep] unknown named array list type ->")
                            end select
@@ -157,9 +180,9 @@ contains
                      else
                         select type(na)
                            type is (na_var_list_q)
-                              cgl%cg%q(qna%ind(rname))%arr = cgl%cg%q(i)%arr
+                              cgl%cg%q(na_lists(j)%indices(i))%arr = cgl%cg%q(i)%arr
                            type is (na_var_list_w)
-                              cgl%cg%w(wna%ind(rname))%arr = cgl%cg%w(i)%arr
+                              cgl%cg%w(na_lists(j)%indices(i))%arr = cgl%cg%w(i)%arr
                            class default
                               call die("[timestep_retry:repeat_fluidstep] unknown named array list type <-")
                         end select
@@ -178,6 +201,10 @@ contains
          ! AMR domains require careful treatment of timestep retries.
          ! Going back past rebalancing or refinement change would require updating whole AMR structure, not just field values.
       endif
+
+      do j = lbound(na_lists, dim=1), ubound(na_lists, dim=1)
+         deallocate(na_lists(j)%indices)
+      enddo
 
    end subroutine repeat_fluidstep
 
