@@ -490,6 +490,7 @@ contains
       use multipole,        only: moments2pot
       use named_array_list, only: qna
       use particle_types,   only: particle
+      use domain,           only: dom
 
       implicit none
 
@@ -550,7 +551,7 @@ contains
 
             do cdim = xdim, zdim
                if (dom%has_dir(cdim)) then
-                  ijkp(cdim, I0) = nint((part%pos(cdim) - cg%fbnd(cdim,LO)-cg%dl(cdim)/2.) * cg%idl(cdim) + int(cg%lhn(cdim, LO)) + 4, kind=4)
+                  ijkp(cdim, I0) = nint((part%pos(cdim) - cg%fbnd(cdim,LO)-cg%dl(cdim)/2.) * cg%idl(cdim) + int(cg%lhn(cdim, LO)) + dom%nb, kind=4)
                   ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cg%lhn(cdim, LO)))
                   ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cg%lhn(cdim, HI)))
                else
