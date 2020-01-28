@@ -49,14 +49,13 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, half, zero, big, pMIN
       use cresp_crspectrum, only: cresp_find_prepare_spectrum
-      use crhelpers,        only: div_v, divv_n
+      use crhelpers,        only: div_v, divv_i
       use fluidindex,       only: flind
       use func,             only: emag
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp, cresp, fsynchr, u_b_max
       use mpisetup,         only: piernik_MPI_Allreduce
-      use named_array_list, only: qna
 
       implicit none
 
@@ -85,7 +84,7 @@ contains
 
          if (adiab_active) then
             call div_v(flind%ion%pos, cg)
-            abs_max_ud = max(abs_max_ud, maxval(abs(cg%q(qna%ind(divv_n))%span(cg%ijkse))))
+            abs_max_ud = max(abs_max_ud, maxval(abs(cg%q(divv_i)%span(cg%ijkse))))
          endif
 
          do k = cg%ks, cg%ke
