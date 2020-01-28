@@ -342,6 +342,7 @@ contains
       use dataio_pub,     only: msg, printio, warn
       use particle_pub,   only: npart
       use particle_utils, only: add_part_in_proper_cg
+      use mpisetup,       only: master
 
       implicit none
 
@@ -351,11 +352,12 @@ contains
       real, dimension(:,:), allocatable :: pos, vel
       real, dimension(:),   allocatable :: mass
 
-      print *, 'yop'
       open(unit=galfile, file=bgfile, action='read', status='old')
-         read(galfile,*) nbodies
-         write(msg,'(3a,i8,a)') 'Reading ', trim(bgfile), ' file with ', nbodies, ' particles'
-         call printio(msg)
+      read(galfile,*) nbodies
+         if (master) then
+            write(msg,'(3a,i8,a)') 'Reading ', trim(bgfile), ' file with ', nbodies, ' particles'
+            call printio(msg)
+         endif
 
          allocate(mass(nbodies),pos(nbodies,ndims),vel(nbodies,ndims))
 
@@ -364,11 +366,15 @@ contains
       close(galfile)
 
       if (nbodies /= npart) then
-         write(msg,'(a,i8,3a,i8,a)') 'Different number of particles declared in problem.par file (',npart,') than stored in ', trim(bgfile), ' (',nbodies,')'
-         call warn(msg)
+         if (master) then
+            write(msg,'(a,i8,3a,i8,a)') 'Different number of particles declared in problem.par file (',npart,') than stored in ', trim(bgfile), ' (',nbodies,')'
+            call warn(msg)
+         endif
          nbodies = min(nbodies,npart)
-         !write(msg,'(a,i8,a)') 'Reading ', nbodies, ' particles'
-         !call printio(msg)
+         if (master) then
+            write(msg,'(a,i8,a)') 'Reading ', nbodies, ' particles'
+            call printio(msg)
+         endif
       endif
 
       i = 0
@@ -377,7 +383,7 @@ contains
          if (i > nbodies) exit
 #ifdef VERBOSE
          if (modulo(i, 10000) .eq. 0) then
-            write(msg,'(i8,a)') i, ' particles read'! ; call printio(msg)
+            write(msg,'(i8,a)') i, ' particles read' ; call printio(msg)
          endif
 #endif /* VERBOSE */
          call add_part_in_proper_cg(i, mass(i), pos(i,:), vel(i,:),[0.0, 0.0, 0.0], 0.0)
