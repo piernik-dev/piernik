@@ -31,13 +31,13 @@
 module grid_cont_base
 
    use constants,        only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
-   use level_essentials, only: level_T
-   use real_vector,      only: real_vec_T
+   use level_essentials, only: level_t
+   use real_vector,      only: real_vec_t
 
    implicit none
 
    private
-   public :: grid_container_base_T
+   public :: grid_container_base_t
 
    !>
    !! \brief Multigrid-specific storage
@@ -66,7 +66,7 @@ module grid_cont_base
    end type mg_arr
 
    !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
-   type, abstract :: grid_container_base_T
+   type, abstract :: grid_container_base_t
 
       ! Cell properties
 
@@ -93,7 +93,7 @@ module grid_cont_base
       integer(kind=4) :: nxb                                     !< number of %grid cells in one block (without boundary cells) in x-direction
       integer(kind=4) :: nyb                                     !< number of %grid cells in one block (without boundary cells) in y-direction
       integer(kind=4) :: nzb                                     !< number of %grid cells in one block (without boundary cells) in z-direction
-      class(level_T), pointer :: l                               !< level essential data
+      class(level_t), pointer :: l                               !< level essential data
 
       ! shortcuts
       !> \todo Change kind from 4 to 8 to allow really deep refinements (effective resolution > 2**31, perhaps the other requirement will be default integer  kind = 8)
@@ -125,7 +125,7 @@ module grid_cont_base
 
       real, dimension(ndims, LO:HI) :: fbnd                      !< current block boundary positions
 
-      type(real_vec_T), dimension(CENTER:INV_CENTER, ndims) :: coord !< all coordinates (CENTER, LEFT, RIGHT, INV_CENTER)
+      type(real_vec_t), dimension(CENTER:INV_CENTER, ndims) :: coord !< all coordinates (CENTER, LEFT, RIGHT, INV_CENTER)
       ! shortcuts
       real, pointer, dimension(:) :: x                             !< array of x-positions of %grid cells centers
       real, pointer, dimension(:) :: y                             !< array of x-positions of %grid cells centers
@@ -154,7 +154,7 @@ module grid_cont_base
       procedure          :: cleanup_base                         !< Deallocate all internals
       procedure, private :: set_coords                           !< Calculate arrays of coordinates along a given direction
 
-   end type grid_container_base_T
+   end type grid_container_base_t
 
 contains
 
@@ -166,14 +166,14 @@ contains
       use dataio_pub,       only: die, warn
       use domain,           only: dom
       use func,             only: operator(.equals.)
-      use level_essentials, only: level_T
+      use level_essentials, only: level_t
 
       implicit none
 
-      class(grid_container_base_T), target, intent(inout) :: this     !< object invoking type-bound procedure (grid_container)
+      class(grid_container_base_t), target, intent(inout) :: this     !< object invoking type-bound procedure (grid_container)
       integer(kind=8), dimension(:,:),      intent(in)    :: my_se    !< my segment
       integer,                              intent(in)    :: grid_id  !< ID which should be unique across level
-      class(level_T), pointer,              intent(in)    :: l        !< level essential data
+      class(level_t), pointer,              intent(in)    :: l        !< level essential data
 
       integer :: i
 
@@ -354,7 +354,7 @@ contains
 
       implicit none
 
-      class(grid_container_base_T), intent(inout) :: this  !< grid container, where the arrays have to be set
+      class(grid_container_base_t), intent(inout) :: this  !< grid container, where the arrays have to be set
 
       integer :: d, i
       integer, parameter :: safety_warn_factor = 1000 ! warn if a cell size is smaller than this * epsilon(coordinates)
@@ -416,7 +416,7 @@ contains
 
       implicit none
 
-      class(grid_container_base_T), intent(inout) :: this  !< object invoking type-bound procedure
+      class(grid_container_base_t), intent(inout) :: this  !< object invoking type-bound procedure
 
       integer :: b, cdim
 

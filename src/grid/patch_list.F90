@@ -31,21 +31,21 @@
 
 module patch_list
 
-   use decomposition, only: box_T
+   use decomposition, only: box_t
 
    implicit none
 
    private
-   public :: patch_list_T
+   public :: patch_list_t
 
-   type :: patch_list_T
-      type(box_T), dimension(:), allocatable :: patches  !< list of patches
+   type :: patch_list_t
+      type(box_t), dimension(:), allocatable :: patches  !< list of patches
    contains
       procedure :: p_deallocate !< Throw out patches list
       procedure :: expand       !< Expand the patch list by one
       procedure :: p_count      !< Count local patches
       procedure :: p2a          !< Copy patches to an array
-   end type patch_list_T
+   end type patch_list_t
 
 contains
 
@@ -55,7 +55,7 @@ contains
 
       implicit none
 
-      class(patch_list_T), intent(inout) :: this !< object invoking type bound procedure
+      class(patch_list_t), intent(inout) :: this !< object invoking type bound procedure
 
       if (allocated(this%patches)) deallocate(this%patches)
       ! this%patches(:)%pse should be deallocated automagically
@@ -66,13 +66,13 @@ contains
 
    subroutine expand(this)
 
-      use decomposition, only: box_T
+      use decomposition, only: box_t
 
       implicit none
 
-      class(patch_list_T), target, intent(inout) :: this !< current level
+      class(patch_list_t), target, intent(inout) :: this !< current level
 
-      type(box_T), dimension(:), allocatable :: tmp
+      type(box_t), dimension(:), allocatable :: tmp
       integer :: i
 
       if (.not. allocated(this%patches)) then
@@ -95,7 +95,7 @@ contains
 
       implicit none
 
-      class(patch_list_T), intent(in) :: this
+      class(patch_list_t), intent(in) :: this
 
       integer :: p
 
@@ -116,7 +116,7 @@ contains
 
       implicit none
 
-      class(patch_list_T),             intent(in)    :: this
+      class(patch_list_t),             intent(in)    :: this
       integer(kind=8), dimension(:,:), intent(inout) :: gptemp
 
       integer :: i, p, ss

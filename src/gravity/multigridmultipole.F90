@@ -61,7 +61,7 @@ module multipole
 #if defined(__INTEL_COMPILER)
    !! \deprecated remove this clause as soon as Intel Compiler gets required
    !! features and/or bug fixes
-   use cg_list_bnd,   only: cg_list_bnd_T   ! QA_WARN intel
+   use cg_list_bnd,   only: cg_list_bnd_t   ! QA_WARN intel
 #endif /* __INTEL_COMPILER */
 
    implicit none
@@ -436,7 +436,7 @@ contains
       use cg_leaves,          only: leaves
       !use cg_level_base,      only: base ! cannot use it because cg_level_base depends on multigrid
       use cg_level_finest,    only: finest
-      use cg_level_connected, only: cg_level_connected_T, base_level
+      use cg_level_connected, only: cg_level_connected_t, base_level
       use cg_list,            only: cg_list_element
       use constants,          only: xdim, zdim, GEO_XYZ, zero, base_level_id
       use dataio_pub,         only: die, msg, warn
@@ -448,7 +448,7 @@ contains
       implicit none
 
       integer :: i, j, k
-      type(cg_level_connected_T), pointer :: level
+      type(cg_level_connected_t), pointer :: level
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 

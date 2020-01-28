@@ -35,19 +35,19 @@
 module decomposition
 
    use constants,    only: ndims, xdim, zdim, LO, HI
-   use primes_utils, only: primes_T
+   use primes_utils, only: primes_t
 
    implicit none
 
    private
-   public :: cleanup_decomposition, init_decomposition, box_T, cuboid
+   public :: cleanup_decomposition, init_decomposition, box_t, cuboid
 
    type :: cuboid
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se !< grid piece
    end type cuboid
 
    !> \brief A box (or rectangle) within a certain refinement level to be decomposed into smaller pieces
-   type :: box_T
+   type :: box_t
       integer(kind=8), dimension(ndims) :: n_d          !< number of grid cells
       integer(kind=8), dimension(ndims) :: off          !< offset (with respect to the base level, counted on own level)
       type(cuboid),    dimension(:), allocatable :: pse !< list of grid pieces
@@ -63,10 +63,10 @@ module decomposition
       procedure, private :: choppy_tiling               !< Less structured box decomposition
       procedure, private :: stamp_cg                    !< Divide the box into lots of identical blocks
       procedure, private :: is_not_too_small            !< Prevent domain decompositions into pieces that are narrower than allowed mimimum size
-   end type box_T
+   end type box_t
 
    ! Private variables
-   type(primes_T) :: primes
+   type(primes_t) :: primes
    real           :: ideal_bsize
 
 contains
@@ -101,7 +101,7 @@ contains
 
       implicit none
 
-      class(box_T),                      intent(inout) :: this     !< the patch, which we want to be chopped into pieces
+      class(box_t),                      intent(inout) :: this     !< the patch, which we want to be chopped into pieces
       integer(kind=8), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
       integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level), \todo make use of it
       integer(kind=4),                   intent(in)    :: level_id !< level identifier (for informational use only)
@@ -132,7 +132,7 @@ contains
 
       implicit none
 
-      class(box_T),              intent(inout) :: patch         !< the patch, which we want to be chopped into pieces
+      class(box_t),              intent(inout) :: patch         !< the patch, which we want to be chopped into pieces
       logical,                   intent(out)   :: patch_divided !< Set to .true. after a successful decomposition
       integer(kind=4),           intent(in)    :: level_id      !< level identifier (for informational use only)
       integer(kind=4), optional, intent(in)    :: n_pieces      !< how many pieces the patch should be divided to?
@@ -269,7 +269,7 @@ contains
 
       implicit none
 
-      class(box_T),                      intent(inout) :: patch    !< the patch, which we want to be chopped into pieces
+      class(box_t),                      intent(inout) :: patch    !< the patch, which we want to be chopped into pieces
       integer(kind=4), dimension(ndims), intent(in)    :: p_size   !< number of pieces in each direction
       integer(kind=4),                   intent(in)    :: pieces   !< number of pieces
       integer(kind=4),                   intent(in)    :: level_id !< level identifier (for informational use only)
@@ -318,7 +318,7 @@ contains
 
       implicit none
 
-      class(box_T),                      intent(inout) :: patch    !< the patch, which we want to be chopped into pieces
+      class(box_t),                      intent(inout) :: patch    !< the patch, which we want to be chopped into pieces
       integer(kind=4), dimension(ndims), intent(in)    :: p_size   !< number of pieces in each direction
       integer(kind=4),                   intent(in)    :: pieces   !< number of pieces
       integer(kind=4),                   intent(in)    :: level_id !< level identifier (for informational use only)
@@ -654,7 +654,7 @@ contains
 
       implicit none
 
-      class(box_T), intent(inout)           :: patch  !< the patch, which we want to be chopped into pieces
+      class(box_t), intent(inout)           :: patch  !< the patch, which we want to be chopped into pieces
 
       integer(kind=4), dimension(xdim:zdim) :: n_bl
       integer(kind=4)                       :: tot_bl, bx, by, bz, b
@@ -720,7 +720,7 @@ contains
 
       implicit none
 
-      class(box_T),     intent(inout) :: this
+      class(box_t),     intent(inout) :: this
       character(len=*), intent(in)    :: label
 
       integer :: p, too_small
@@ -766,7 +766,7 @@ contains
 
       implicit none
 
-      class(box_T),              intent(inout) :: patch       !< object invoking type-bound procedure
+      class(box_t),              intent(inout) :: patch       !< object invoking type-bound procedure
       integer(kind=4), optional, intent(in)    :: n_cg        !< how many segments
 
       integer                                  :: p, nseg
@@ -791,7 +791,7 @@ contains
 
       implicit none
 
-      class(box_T),                      intent(inout) :: this     !< the patch, which we want to be chopped into pieces
+      class(box_t),                      intent(inout) :: this     !< the patch, which we want to be chopped into pieces
       integer(kind=8), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
       integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level), \todo make use of it
 

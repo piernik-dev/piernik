@@ -141,6 +141,7 @@ module constants
       enumerator :: PIERNIK_INIT_FLUIDS                  ! initialized fluid properties
       enumerator :: PIERNIK_INIT_GRID                    ! initialized grids
       enumerator :: PIERNIK_INIT_IO_IC                   ! initialized all physics
+      enumerator :: PIERNIK_POST_IC                      ! initial conditions or restart completed
       enumerator :: PIERNIK_INITIALIZED                  ! initialized I/O and IC, running
       enumerator :: PIERNIK_FINISHED                     ! finished simulation
       enumerator :: PIERNIK_CLEANUP                      ! finished post-simulation computations and I/O

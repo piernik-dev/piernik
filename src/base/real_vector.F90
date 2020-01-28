@@ -33,71 +33,71 @@ module real_vector
    implicit none
 
    private
-   public :: real_vec_T
+   public :: real_vec_t
 
    !> \brief a type for vector of real data
-   type :: real_vec_T
+   type :: real_vec_t
       real, dimension(:), pointer :: r => null()
    contains
-      procedure       :: real_vec_T_allocate
-      procedure       :: real_vec_T_allocate2
-      generic, public :: allocate   => real_vec_T_allocate, real_vec_T_allocate2
-      procedure       :: associated => real_vec_T_associated
-      procedure       :: deallocate => real_vec_T_deallocate
-   end type real_vec_T
+      procedure       :: real_vec_t_allocate
+      procedure       :: real_vec_t_allocate2
+      generic, public :: allocate   => real_vec_t_allocate, real_vec_t_allocate2
+      procedure       :: associated => real_vec_t_associated
+      procedure       :: deallocate => real_vec_t_deallocate
+   end type real_vec_t
 
 contains
 
 !> \brief Check if it is associated
 
-   logical function real_vec_T_associated(this)
+   logical function real_vec_t_associated(this)
 
       implicit none
 
-      class(real_vec_T), intent(in) :: this
+      class(real_vec_t), intent(in) :: this
 
-      real_vec_T_associated = associated(this%r)
+      real_vec_t_associated = associated(this%r)
 
-   end function real_vec_T_associated
+   end function real_vec_t_associated
 
 !> \brief Simple allocation of given number of elements
 
-   subroutine real_vec_T_allocate(this, n)
+   subroutine real_vec_t_allocate(this, n)
 
       implicit none
 
-      class(real_vec_T), intent(inout) :: this
+      class(real_vec_t), intent(inout) :: this
       integer(kind=4),   intent(in)    :: n
 
       allocate(this%r(n))
 
-   end subroutine real_vec_T_allocate
+   end subroutine real_vec_t_allocate
 
 !> \brief Allocation of given range of indices
 
-   subroutine real_vec_T_allocate2(this, n1, n2)
+   subroutine real_vec_t_allocate2(this, n1, n2)
 
       implicit none
 
-      class(real_vec_T), intent(inout) :: this
+      class(real_vec_t), intent(inout) :: this
       integer(kind=4),   intent(in)    :: n1
       integer(kind=4),   intent(in)    :: n2
 
       allocate(this%r(n1:n2))
 
-   end subroutine real_vec_T_allocate2
+   end subroutine real_vec_t_allocate2
 
 !> free the memory
 
-   subroutine real_vec_T_deallocate(this)
+   subroutine real_vec_t_deallocate(this)
 
       implicit none
 
-      class(real_vec_T), intent(inout) :: this
+      class(real_vec_t), intent(inout) :: this
 
       deallocate(this%r)
       nullify(this%r)
 
-   end subroutine real_vec_T_deallocate
+   end subroutine real_vec_t_deallocate
 
 end module real_vector

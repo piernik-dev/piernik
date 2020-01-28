@@ -127,7 +127,7 @@ env.dat: piernik.def *.h $(SRCS_V)
 head_block2 = '''
 \tawk '{print}' piernik.def | sed -e '/^$$/ d' -e "/^\// d" ) > env.dat
 \t@$(ECHO) "Recent history:" >> env.dat
-\t@git log -5 --decorate --graph | sed -e 's/"//g' >> env.dat
+\t@git log -5 --decorate --graph 2> /dev/null | sed -e 's/"//g' >> env.dat
 
 version.F90: env.dat
 \t@( $(ECHO) "module version"; \\

@@ -41,7 +41,7 @@ module dot
    implicit none
 
    private
-   public :: dot_T
+   public :: dot_t
 
    !> \brief cuboid with SFC_id
    type, extends(cuboid) :: c_id
@@ -56,7 +56,7 @@ module dot
    end type cuboids
 
    !> \brief Depiction of global Topology of a level. Use with care, because this is an antiparallel thing
-   type :: dot_T
+   type :: dot_t
       type(cuboids),   dimension(:),   allocatable :: gse           !< lists of grid chunks on each process (FIRST:LAST)
       integer(kind=8), dimension(:,:), allocatable :: SFC_id_range  !< min and max SFC id on processes
       integer                                      :: tot_se        !< global number of grids on the level
@@ -71,7 +71,7 @@ module dot
       procedure :: check_blocky         !< Check if all blocks in the domain have same size and shape
       procedure :: update_SFC_id_range  !< Update SFC_id_range array and set this%is_strict_SFC
       procedure :: find_grid            !< Find process and grid_id using SFC_id
-   end type dot_T
+   end type dot_t
 
    integer(kind=8), parameter :: huge_SFC = huge(1_8)
    integer, dimension(:), allocatable :: pp  ! an array used in find_grid
@@ -84,7 +84,7 @@ contains
 
       implicit none
 
-      class(dot_T), intent(inout) :: this
+      class(dot_t), intent(inout) :: this
 
       if (allocated(this%gse)) deallocate(this%gse) ! this%gse(:)%c should be deallocated automagically
       if (allocated(this%SFC_id_range)) deallocate(this%SFC_id_range)
@@ -110,7 +110,7 @@ contains
 
       implicit none
 
-      class(dot_T),                      intent(inout) :: this       !< object invoking type bound procedure
+      class(dot_t),                      intent(inout) :: this       !< object invoking type bound procedure
       type(cg_list_element), pointer,    intent(in)    :: first_cgl  !< first grid on the list belonging to given level
       integer(kind=4),                   intent(in)    :: cnt        !< number of grids on given level
       integer(kind=8), dimension(ndims), intent(in)    :: off        !< offset of the level
@@ -186,7 +186,7 @@ contains
 
       implicit none
 
-      class(dot_T),                   intent(inout) :: this       !< object invoking type bound procedure
+      class(dot_t),                   intent(inout) :: this       !< object invoking type bound procedure
       type(cg_list_element), pointer, intent(in)    :: first_cgl  !< first grid on the list belonging to given level
       integer(kind=4),                intent(in)    :: cnt        !< number of grids on given level to be initialized
       integer                        :: i
@@ -219,7 +219,7 @@ contains
 
       implicit none
 
-      class(dot_T), intent(inout) :: this  !< object invoking type bound procedure
+      class(dot_t), intent(inout) :: this  !< object invoking type bound procedure
 
       integer :: p
 
@@ -240,7 +240,7 @@ contains
 
       implicit none
 
-      class(dot_T),                   intent(inout) :: this       !< object invoking type bound procedure
+      class(dot_t),                   intent(inout) :: this       !< object invoking type bound procedure
       type(cg_list_element), pointer, intent(in)    :: first_cgl  !< first grid on the list belonging to given level
 
       type(cg_list_element), pointer :: cgl
@@ -270,7 +270,7 @@ contains
 
       implicit none
 
-      class(dot_T), intent(inout) :: this       !< object invoking type bound procedure
+      class(dot_t), intent(inout) :: this       !< object invoking type bound procedure
 
       integer(kind=4), dimension(ndims) :: shape, shape1
       integer(kind=4), parameter :: sh_tag = 7
@@ -321,7 +321,7 @@ contains
 
       implicit none
 
-      class(dot_T),                      intent(inout) :: this !< object invoking type bound procedure
+      class(dot_t),                      intent(inout) :: this !< object invoking type bound procedure
       integer(kind=8), dimension(ndims), intent(in)    :: off  !< offset of the level
 
       integer(kind=8) :: SFC_id
@@ -372,7 +372,7 @@ contains
 
       implicit none
 
-      class(dot_T),    intent(inout) :: this
+      class(dot_t),    intent(inout) :: this
       integer(kind=8), intent(in)    :: SFC_id
       integer,         intent(out)   :: p
       integer,         intent(out)   :: grid_id
