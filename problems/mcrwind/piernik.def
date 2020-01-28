@@ -14,7 +14,7 @@
 #define MAGNETIC
 #define RESISTIVE
 
-#define SELF_GRAV
+#define GRAV
 
 #define SN_SRC
 #define RANDOMIZE
