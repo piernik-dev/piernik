@@ -1,0 +1,13 @@
+#if !defined GLOBAL_FR_SPEED
+#  define LOCAL_FR_SPEED
+#endif
+
+#undef ISO
+
+#if !defined IONIZED
+#  define  NEUTRAL
+#endif
+
+#define DUST
+
+#undef GRAV
