@@ -84,10 +84,10 @@ contains
 
       if (size(this%SFC_refine_list) > 0) this%refine = .true.
 
+      if (this%refine) this%derefine = .false.
+
       if (my_level >= level_max) this%refine   = .false.
       if (my_level <  level_min) this%refine   = .true.
-
-      if (this%refine) this%derefine = .false.
 
       if (my_level >  level_max) this%derefine = .true.
       if (my_level <= level_min) this%derefine = .false.
