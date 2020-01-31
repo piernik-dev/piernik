@@ -189,20 +189,33 @@ contains
 
       use cg_list,    only: cg_list_element
       use cg_leaves,  only: leaves
-      use constants,  only: xdim, ydim, zdim, LO, HI
-      use dataio_pub, only: die, warn
+      use constants,  only: xdim, ydim, zdim, LO, HI, I_ONE, I_ZERO
+      use dataio_pub, only: die
       use domain,     only: dom
-      use mpisetup,   only: proc
+      use mpi,        only: MPI_INTEGER, MPI_STATUS_IGNORE
+      use mpisetup,   only: FIRST, LAST, comm, mpi_err, proc, req, status, inflate_req
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      integer :: g
+      integer :: i, g, nr
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se
       integer, parameter :: perimeter = 2
+      integer(kind=4), dimension(FIRST:LAST) :: gscnt, grcnt
+      type :: pt  ! (proc, tag) pair
+         integer(kind=4) :: proc
+         integer(kind=4) :: tag  ! or grid_id, if tag fails
+      end type pt
+      type(pt), dimension(:), allocatable :: pt_list
+      integer :: pt_cnt
+      integer(kind=4) :: rtag
+      integer(kind=4), dimension(:,:), pointer :: mpistatus
 
       if (perimeter > dom%nb) call die("[refinement_update:parents_prevent_derefinement] perimeter > dom%nb")
 
+      gscnt = 0
+      allocate(pt_list(leaves%cnt))
+      pt_cnt = 0
       cgl => leaves%first
       do while (associated(cgl))
          ! look for refineflag .and. .not. leafmap + preimeter
@@ -217,13 +230,18 @@ contains
 !!$                     if (associated(cgl%cg%ri_tgt%seg(g)%local)) then
 !!$                        cgl%cg%ri_tgt%seg(g)%local%refine_flags%derefine = .false.
 !!$                     else
-                     if (cgl%cg%ri_tgt%seg(g)%proc == proc) then
-                       call disable_derefine_by_tag(cgl%cg%ri_tgt%seg(g)%tag)  ! beware: O(leaves%cnt^2)
-                     else
-                        call warn("[refinement_update:parents_prevent_derefinement] NI")
-                        ! create a list of foreign blocks that need not be derefined (proc, grid_id or SFC_id)
-                        ! use prolongation structures
-                     endif
+                     associate (fproc => cgl%cg%ri_tgt%seg(g)%proc, ftag => cgl%cg%ri_tgt%seg(g)%tag)
+                        if (fproc == proc) then
+                           call disable_derefine_by_tag(ftag)  ! beware: O(leaves%cnt^2)
+                        else
+                           ! create a list of foreign blocks that need not be derefined (proc, grid_id or SFC_id)
+                           ! use prolongation structures
+                           gscnt(fproc) = gscnt(fproc) + 1
+                           pt_cnt = pt_cnt + 1
+                           if (pt_cnt > size(pt_list)) call die("[refinement_update:parents_prevent_derefinement] pt_cnt > size(pt_list)")
+                           pt_list(pt_cnt) = pt(fproc, ftag)
+                        endif
+                     end associate
                   endif
                enddo
             endif
@@ -231,14 +249,36 @@ contains
          cgl => cgl%nxt
       enddo
 
-      ! count how many ids to which threads
-      ! call MPI_AlltoAll
+      ! communicate how many ids to which threads
+      call MPI_Alltoall(gscnt, I_ONE, MPI_INTEGER, grcnt, I_ONE, MPI_INTEGER, comm, mpi_err)
 
-      ! prepare lists for each thread to send
-      ! prepare lists to receive
-      ! call MPI_AlltoAllv
+      ! Apparently gscnt/grcnt represent quite sparse matrix, so we better do nonblocking point-to-point than MPI_AlltoAllv
+      nr = 0
+      if (pt_cnt > 0) then
+         do g = lbound(pt_list, dim=1), pt_cnt
+            nr = nr + 1
+            if (nr > size(req, dim=1)) call inflate_req
+            call MPI_Isend(pt_list(g)%tag, I_ONE, MPI_INTEGER, pt_list(g)%proc, I_ZERO, comm, req(nr), mpi_err)
+            ! OPT: Perhaps it will be more efficient to allocate arrays according to gscnt and send tags in bunches
+         enddo
+      endif
 
-      ! clear received derefine flags
+      do g = lbound(grcnt, dim=1), ubound(grcnt, dim=1)
+         if (grcnt(g) /= 0) then
+            if (g == proc) call die("[refinement_update:parents_prevent_derefinement] MPI_Recv from self")  ! this is not an error but it should've been handled as locat thing
+            do i = 1, grcnt(g)
+               call MPI_Recv(rtag, I_ONE, MPI_INTEGER, g, I_ZERO, comm, MPI_STATUS_IGNORE, mpi_err)
+               call disable_derefine_by_tag(rtag)  ! beware: O(leaves%cnt^2)
+            enddo
+         endif
+      enddo
+
+      if (nr > 0) then
+         mpistatus => status(:, :nr)
+         call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
+      endif
+
+      deallocate(pt_list)
 
    contains
 
