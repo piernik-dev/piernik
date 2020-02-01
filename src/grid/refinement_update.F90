@@ -183,19 +183,47 @@ contains
 
    end subroutine scan_for_refinements
 
-!> \brief Clear derefine flag on child whenever there is a refine flag below, on its parent.
+!>
+!! \brief Clear derefine flag on child whenever there is a refine flag below, on its parent.
+!!
+!! Here we do loop over levels because we use mpi tags for prolongation to identify target grids.
+!! These tags are guaranteed to be unique for a given pair of consecutive levels but not for the whole domain.
+!! Once we implement a better structure to identify parent-child relation, we should switch to leaves-based list here (as it was implemented in 1a048b08).
+!! Also consolidation of MPI communication is advised.
+!<
 
    subroutine parents_prevent_derefinement
 
-      use cg_list,    only: cg_list_element
-      use cg_leaves,  only: leaves
-      use constants,  only: xdim, ydim, zdim, LO, HI, I_ONE, I_ZERO
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use mpi,        only: MPI_INTEGER, MPI_STATUS_IGNORE
-      use mpisetup,   only: FIRST, LAST, comm, mpi_err, proc, req, status, inflate_req
+      use cg_level_base,      only: base
+      use cg_level_connected, only: cg_level_connected_t
 
       implicit none
+
+      type(cg_level_connected_t), pointer :: curl
+
+      curl => base%level
+      do while (associated(curl))
+         if (associated(curl%finer)) call parents_prevent_derefinement_lev(curl)
+         curl => curl%finer
+      enddo
+
+   end subroutine parents_prevent_derefinement
+
+!> \brief Clear derefine flag on child whenever there is a refine flag below, on its parent (single-level)
+
+   subroutine parents_prevent_derefinement_lev(lev)
+
+      use cg_level_connected, only: cg_level_connected_t
+      use cg_list,            only: cg_list_element
+      use constants,          only: xdim, ydim, zdim, LO, HI, I_ONE, I_ZERO
+      use dataio_pub        , only: die, warn
+      use domain,             only: dom
+      use mpi,                only: MPI_INTEGER, MPI_STATUS_IGNORE
+      use mpisetup,           only: FIRST, LAST, comm, mpi_err, proc, req, status, inflate_req
+
+      implicit none
+
+      type(cg_level_connected_t), pointer, intent(in) :: lev
 
       type(cg_list_element), pointer :: cgl
       integer :: i, g, nr
@@ -211,12 +239,16 @@ contains
       integer(kind=4) :: rtag
       integer(kind=4), dimension(:,:), pointer :: mpistatus
 
-      if (perimeter > dom%nb) call die("[refinement_update:parents_prevent_derefinement] perimeter > dom%nb")
+      if (perimeter > dom%nb) call die("[refinement_update:parents_prevent_derefinement_lev] perimeter > dom%nb")
+      if (.not. associated(lev%finer)) then
+         call warn("[refinement_update:parents_prevent_derefinement_lev] .not. associated(lev%finer)")
+         return
+      endif
 
       gscnt = 0
-      allocate(pt_list(leaves%cnt))
+      allocate(pt_list(lev%cnt * 2**dom%eff_dim))  ! ToDo make it more flexible
       pt_cnt = 0
-      cgl => leaves%first
+      cgl => lev%first
       do while (associated(cgl))
          ! look for refineflag .and. .not. leafmap + preimeter
          if (any(cgl%cg%refinemap(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) .and. .not. cgl%cg%leafmap)) then
@@ -232,13 +264,13 @@ contains
 !!$                     else
                      associate (fproc => cgl%cg%ri_tgt%seg(g)%proc, ftag => cgl%cg%ri_tgt%seg(g)%tag)
                         if (fproc == proc) then
-                           call disable_derefine_by_tag(ftag)  ! beware: O(leaves%cnt^2)
+                           call disable_derefine_by_tag(lev%finer, ftag)  ! beware: O(leaves%cnt^2)
                         else
                            ! create a list of foreign blocks that need not be derefined (proc, grid_id or SFC_id)
                            ! use prolongation structures
                            gscnt(fproc) = gscnt(fproc) + 1
                            pt_cnt = pt_cnt + 1
-                           if (pt_cnt > size(pt_list)) call die("[refinement_update:parents_prevent_derefinement] pt_cnt > size(pt_list)")
+                           if (pt_cnt > size(pt_list)) call die("[refinement_update:parents_prevent_derefinement_lev] pt_cnt > size(pt_list)")
                            pt_list(pt_cnt) = pt(fproc, ftag)
                         endif
                      end associate
@@ -268,7 +300,7 @@ contains
             if (g == proc) call die("[refinement_update:parents_prevent_derefinement] MPI_Recv from self")  ! this is not an error but it should've been handled as locat thing
             do i = 1, grcnt(g)
                call MPI_Recv(rtag, I_ONE, MPI_INTEGER, g, I_ZERO, comm, MPI_STATUS_IGNORE, mpi_err)
-               call disable_derefine_by_tag(rtag)  ! beware: O(leaves%cnt^2)
+               call disable_derefine_by_tag(lev%finer, rtag)  ! beware: O(leaves%cnt^2)
             enddo
          endif
       enddo
@@ -288,9 +320,13 @@ contains
       !! Beware: slow: O(leaves%cnt^2)
       !<
 
-      subroutine disable_derefine_by_tag(tag)
+      subroutine disable_derefine_by_tag(flev, tag)
+
+         use cg_level_connected, only: cg_level_connected_t
 
          implicit none
+
+         type(cg_level_connected_t), pointer, intent(in) :: flev
 
          integer(kind=4), intent(in) :: tag
 
@@ -300,7 +336,7 @@ contains
 
          done = .false.
 
-         cgl => leaves%first
+         cgl => flev%first
          do while (associated(cgl) .and. .not. done)
             if (allocated(cgl%cg%ro_tgt%seg)) then
                do g = lbound(cgl%cg%ro_tgt%seg(:), dim=1), ubound(cgl%cg%ro_tgt%seg(:), dim=1)
@@ -316,11 +352,9 @@ contains
 
       end subroutine disable_derefine_by_tag
 
-   end subroutine parents_prevent_derefinement
+   end subroutine parents_prevent_derefinement_lev
 
-!>
-!! \brief Update the refinement topology
-!<
+!> \brief Update the refinement topology
 
 !#define DEBUG_DUMPS
 

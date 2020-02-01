@@ -275,8 +275,6 @@ contains
       endif
       call this%refine(cg, p3d)
 
-      return
-
    end subroutine mark_var
 
 !>
