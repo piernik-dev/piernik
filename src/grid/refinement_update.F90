@@ -43,7 +43,6 @@ contains
 
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_leaves,             only: leaves
-      use cg_list_global,        only: all_cg
       use constants,             only: I_ONE, pSUM
       use dataio_pub,            only: msg, printinfo
       use mpisetup,              only: master, piernik_MPI_Allreduce
@@ -73,7 +72,7 @@ contains
       endif
 
       if (verbose) then
-         cnt(PROBLEM) = all_cg%count_ref_flags()
+         cnt(PROBLEM) = count_ref_flags()
          call piernik_MPI_Allreduce(cnt(PROBLEM), pSUM)
       endif
 
@@ -81,7 +80,7 @@ contains
       call sanitize_all_ref_flags
 
       if (verbose) then
-         cnt(URC) = all_cg%count_ref_flags()
+         cnt(URC) = count_ref_flags()
          call piernik_MPI_Allreduce(cnt(URC), pSUM)
 
          if (cnt(ubound(cnt, dim=1)) > 0) then
@@ -104,6 +103,7 @@ contains
 
          use cg_level_connected, only: cg_level_connected_t
          use cg_level_finest,    only: finest
+         use cg_list_global,     only: all_cg
 
          implicit none
 
@@ -180,6 +180,28 @@ contains
          enddo
 
       end subroutine sanitize_all_ref_flags
+
+      !> \brief Count refinement flags everywhere
+
+      function count_ref_flags() result(cnt)
+
+         use cg_list,        only: cg_list_element
+         use cg_list_global, only: all_cg
+
+         implicit none
+
+         integer :: cnt !< returned counter
+
+         type(cg_list_element), pointer :: cgl
+
+         cnt = 0
+         cgl => all_cg%first
+         do while (associated(cgl))
+            if ( cgl%cg%refine_flags%refine .or. size(cgl%cg%refine_flags%SFC_refine_list) > 0) cnt = cnt + 1
+            cgl => cgl%nxt
+         enddo
+
+      end function count_ref_flags
 
    end subroutine scan_for_refinements
 
