@@ -30,10 +30,10 @@
 
 module grid_cont_bnd
 
-   use constants,    only: xdim, zdim, LO, HI
-   use grid_cont_na, only: grid_container_na_t
-   use fluxtypes,    only: fluxarray, fluxpoint
-   use refinement_flag,   only: ref_flag
+   use constants,       only: xdim, zdim, LO, HI
+   use grid_cont_na,    only: grid_container_na_t
+   use fluxtypes,       only: fluxarray, fluxpoint
+   use refinement_flag, only: ref_flag
 
    implicit none
 
@@ -72,14 +72,19 @@ module grid_cont_bnd
       ! initialization of i_bnd and o_bnd are done in cg_list_neighbors because we don't have access to cg_level%dot here
       type(bnd_list),  dimension(:), allocatable   :: i_bnd       !< description of incoming boundary data
       type(bnd_list),  dimension(:), allocatable   :: o_bnd       !< description of outgoing boundary data
+
+      ! Refinements
+      logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .false. otherwise
       type(ref_flag) :: refine_flags                              !< refine or derefine this grid container?
+      logical, allocatable, dimension(:,:,:) :: refinemap         !< .true. when a cell triggers refinement criteria, .false. otherwise
 
    contains
 
-      procedure          :: init_gc_bnd       !< Initialization
-      procedure          :: cleanup_bnd       !< Deallocate all internals
-      procedure          :: set_fluxpointers  !< Calculate fluxes incoming from fine grid for 1D solver
-      procedure          :: save_outfluxes    !< Collect outgoing fine fluxes, do curvilinear scaling and store in appropriate array
+      procedure          :: init_gc_bnd         !< Initialization
+      procedure          :: cleanup_bnd         !< Deallocate all internals
+      procedure          :: set_fluxpointers    !< Calculate fluxes incoming from fine grid for 1D solver
+      procedure          :: save_outfluxes      !< Collect outgoing fine fluxes, do curvilinear scaling and store in appropriate array
+      procedure          :: refinemap2SFC_list  !< create list of SFC indices to be created from refine flags
 
    end type grid_container_bnd_t
 
@@ -111,6 +116,12 @@ contains
          this%coarsebnd(i, LO)%index = this%lhn(i, LO) - 1
          this%coarsebnd(i, HI)%index = this%lhn(i, HI) + 1
       enddo
+
+      allocate(this%leafmap(this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)))
+      allocate(this%refinemap(this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI), this%lhn(zdim, LO):this%lhn(zdim, HI)))
+
+      this%leafmap(:, :, :) = .true.
+      this%refinemap(:, :, :) = .false.
 
    end subroutine init_gc_bnd
 
@@ -150,6 +161,10 @@ contains
       call fpr%fpcleanup
       call cpl%fpcleanup
       call cpr%fpcleanup
+
+      ! arrays not handled through named_array feature
+      if (allocated(this%leafmap))   deallocate(this%leafmap)
+      if (allocated(this%refinemap)) deallocate(this%refinemap)
 
    end subroutine cleanup_bnd
 
@@ -307,5 +322,79 @@ contains
       end subroutine cyl_scale
 
    end subroutine save_outfluxes
+
+!< \brief Create list of SFC indices to be created from refine flags
+
+   subroutine refinemap2SFC_list(this)
+
+      use constants,  only: refinement_factor, xdim, ydim, zdim, I_ONE
+      use dataio_pub, only: die, warn
+      use domain,     only: dom
+      use refinement, only: bsize
+
+      implicit none
+
+      class(grid_container_bnd_t), intent(inout) :: this !< object invoking type-bound procedure
+
+      integer :: i, j, k, ifs, ife, jfs, jfe, kfs, kfe
+      enum, bind(C)
+         enumerator :: NONE, REFINE, LEAF
+      end enum
+      integer :: type
+      logical, save :: warned = .false.
+
+      this%refinemap(this%is:this%ie, this%js:this%je, this%ks:this%ke) = &
+           this%refinemap(this%is:this%ie, this%js:this%je, this%ks:this%ke) .and. this%leafmap
+      type = NONE
+      if (any(this%refinemap)) then
+         type = REFINE
+      else if (this%refine_flags%refine) then
+         type = LEAF
+         if (.not. warned) then
+            warned = .true.
+            call warn("[grid_container_bnd:refinemap2SFC_list] direct use of cg%refine_flags%refine is deprecated")
+         endif
+      endif
+
+      if (type == NONE) return
+
+      if (any((bsize <= 0) .and. dom%has_dir)) return ! this routine works only with blocky AMR
+
+      !! ToDo: precompute refinement decomposition in this%init_gc and simplify the code below.
+      !! It should also simplify decomposition management and make it more flexible in case we decide to work on uneven AMR blocks
+
+      !! beware: consider dropping this%l%off feature for simplicity. It will require handling the shift due to domain expansion (some increase CPU cost)
+
+      associate( b_size => merge(bsize, huge(I_ONE), dom%has_dir))
+         do i = int(((this%is - this%l%off(xdim))*refinement_factor) / b_size(xdim)), int(((this%ie - this%l%off(xdim))*refinement_factor + I_ONE) / b_size(xdim))
+            ifs = max(int(this%is), int(this%l%off(xdim)) + (i*b_size(xdim))/refinement_factor)
+            ife = min(int(this%ie), int(this%l%off(xdim)) + ((i+I_ONE)*b_size(xdim)-I_ONE)/refinement_factor)
+
+            do j = int(((this%js - this%l%off(ydim))*refinement_factor) / b_size(ydim)), int(((this%je - this%l%off(ydim))*refinement_factor + I_ONE) / b_size(ydim))
+               jfs = max(int(this%js), int(this%l%off(ydim)) + (j*b_size(ydim))/refinement_factor)
+               jfe = min(int(this%je), int(this%l%off(ydim)) + ((j+I_ONE)*b_size(ydim)-I_ONE)/refinement_factor)
+
+               do k = int(((this%ks - this%l%off(zdim))*refinement_factor) / b_size(zdim)), int(((this%ke - this%l%off(zdim))*refinement_factor + I_ONE) / b_size(zdim))
+                  kfs = max(int(this%ks), int(this%l%off(zdim)) + (k*b_size(zdim))/refinement_factor)
+                  kfe = min(int(this%ke), int(this%l%off(zdim)) + ((k+I_ONE)*b_size(zdim)-I_ONE)/refinement_factor)
+                  select case (type)
+                     case (REFINE)
+                        if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%l%id+I_ONE, int([i, j, k]*b_size, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
+                     case (LEAF)
+                        if (all(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
+                           call this%refine_flags%add(this%l%id+I_ONE, int([i, j, k]*b_size, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
+                        else if (any(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
+                           call die("[grid_container_bnd:refinemap2SFC_list] cannot refine partially leaf parf of the grid")
+                        endif
+                     case default
+                        call die("[grid_container_bnd:refinemap2SFC_list] invalid type")
+                  end select
+               enddo
+            enddo
+         enddo
+      end associate
+      this%refinemap = .false.
+
+   end subroutine refinemap2SFC_list
 
 end module grid_cont_bnd
