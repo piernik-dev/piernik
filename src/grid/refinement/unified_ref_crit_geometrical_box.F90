@@ -119,7 +119,6 @@ contains
          if (cg%l%id < this%level) cg%refinemap(ijk_l(xdim):ijk_h(xdim), &
               &                                 ijk_l(ydim):ijk_h(ydim), &
               &                                 ijk_l(zdim):ijk_h(zdim)) = .true.
-         cg%refine_flags%derefine = .false.  ! this should go one level up (sanitizing)
       endif
 
    end subroutine mark_box

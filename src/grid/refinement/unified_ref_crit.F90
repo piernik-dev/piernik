@@ -46,7 +46,7 @@ module unified_ref_crit
 !! \brief Things that should be common for all refinement criteria.
 !!
 !! \details The refinement criteria are meant to be ordered into a unidirectional list.
-!! For each grid container the routines for marking refinements and derefinements are called in the same order.
+!! For each grid container the routines for marking refinements are called in the same order.
 !! It is assumed that all vital fields will have valid boundaries for the routine mark.
 !! Each criterion should be applicable on any cg and no global communication should take place in this routine.
 !! Refinement criteria that require some global operations (like Toomre length in disks)
@@ -57,13 +57,13 @@ module unified_ref_crit
       integer             :: iplot = INVALID  !< field index for storing the refinement criterion value
       class(urc), pointer :: next  => null()  !< next refinement ctiterion or null() (for unidirectional list)
    contains
-      procedure(mark_urc), deferred :: mark   !< a routine that takes a cg and leaves suggestions on refining and derefining
+      procedure(mark_urc), deferred :: mark   !< a routine that takes a cg and leaves suggestions on refining
    end type urc
 
    interface
 
 !>
-!! \brief Mark refinements and derefinements on given grid container
+!! \brief Mark refinements on given grid container
 !!
 !! intent(inout) :: this allows for altering private variables (implicit initialisation)
 !<

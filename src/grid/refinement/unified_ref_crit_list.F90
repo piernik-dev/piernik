@@ -52,7 +52,7 @@ module unified_ref_crit_list
       procedure, private :: cnt                !< return the current number of defined refinement criteria
       procedure, private :: create_plotfields  !< set up qna fields for refinement criteria
       procedure, private :: summary            !< print summary of refinement criteria in use
-      procedure, private :: mark               !< put all refinement marks or derefinement unmarks
+      procedure, private :: mark               !< put all refinement marks
    end type urc_list_t
 
    type(urc_list_t) :: urc_list  !< the list of refinement criteria to be applied cg-wise
@@ -103,7 +103,7 @@ contains
 !! Multiple routines can be added, if necessary.
 !!
 !! Field-based refinement criteria can be added from initproblem as well by:
-!!     call urc_list%add_user_urcv(iv, ic, ref_thr, deref_thr, aux, rname, plotfield)
+!!     call urc_list%add_user_urcv(iv, ic, ref_thr, aux, rname, plotfield)
 !<
 
    subroutine init(this)
@@ -188,7 +188,7 @@ contains
 
 !< \brief Add field-based refinement criteria from initproblem
 
-   subroutine add_user_urcv(this, iv, ic, ref_thr, deref_thr, aux, rname, plotfield)
+   subroutine add_user_urcv(this, iv, ic, ref_thr, aux, rname, plotfield)
 
       use refinement,            only: ref_auto_param
       use unified_ref_crit_var,  only: urc_var
@@ -199,7 +199,6 @@ contains
       integer(kind=4),   intent(in)    :: iv        !< field index in cg%q or cg%w array
       integer(kind=4),   intent(in)    :: ic        !< component index of 4D array or INVALID for 3D arrays
       real,              intent(in)    :: ref_thr   !< refinement threshold
-      real,              intent(in)    :: deref_thr !< derefinement threshold
       real,              intent(in)    :: aux       !< auxiliary parameter
       character(len=*),  intent(in)    :: rname     !< name of the refinement routine
       logical,           intent(in)    :: plotfield !< create an array to keep the value of refinement criterion
@@ -207,7 +206,7 @@ contains
       type(urc_var), pointer :: urcv
 
       allocate(urcv)
-      urcv = urc_var(ref_auto_param("user", rname, ref_thr, deref_thr, aux, plotfield), iv, ic)
+      urcv = urc_var(ref_auto_param("user", rname, ref_thr, aux, plotfield), iv, ic)
       call this%add(urcv)
 
       call this%create_plotfields
@@ -376,7 +375,7 @@ contains
 
    end subroutine cleanup
 
-!> \brief Put all refinement marks or derefinement unmarks
+!> \brief Put all refinement marks
 
    subroutine mark(this, cg)
 

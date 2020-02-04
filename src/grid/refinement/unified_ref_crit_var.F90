@@ -208,7 +208,7 @@ contains
       type(urc_var) :: this  !< an object to be constructed
 
       if (master) then
-         write(msg, '(5a,2g13.5,a)')"[URC var]   Initializing refinement on variable '", trim(rf%rvar), "', method: '", trim(rf%rname), "', thresholds = [ ", rf%ref_thr, rf%deref_thr, " ]"
+         write(msg, '(5a,g13.5)')"[URC var]   Initializing refinement on variable '", trim(rf%rvar), "', method: '", trim(rf%rname), "', threshold = ", rf%ref_thr
          if (rf%aux .notequals. 0.) write(msg(len_trim(msg)+1:), '(a,g13.5)') ", with parameter = ", rf%aux
          if (rf%plotfield)  write(msg(len_trim(msg)+1:), '(a)') ", with plotfield"
          if (present(ic)) then
@@ -226,7 +226,6 @@ contains
 
       ! urc_filter
       this%ref_thr   = rf%ref_thr
-      this%deref_thr = rf%deref_thr
       this%plotfield = rf%plotfield
 
       ! own components
@@ -252,7 +251,7 @@ contains
 
    end function init
 
-!> \brief Mark regions for refinement and derefinement
+!> \brief Mark regions for refinement
 
    subroutine mark_var(this, cg)
 
@@ -301,7 +300,7 @@ contains
       real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least two layers of up-to-date guardcells)
 
       integer :: i, j, k
-      real :: sn, sd, r, max_r
+      real :: sn, sd, r
       integer, parameter :: how_far = 2
 
       if (dom%geometry_type /= GEO_XYZ) call die("[unified_ref_crit_var:refine_on_second_derivative] noncartesian geometry not supported yet")
@@ -310,7 +309,6 @@ contains
       ! Perhaps it will be a bit faster with arrays for storing first-order differences
       ! but let's see if it works first and then how expensive it is.
 
-      max_r = 0.
       do k = cg%ks - how_far*dom%D_z, cg%ke + how_far*dom%D_z
          do j = cg%js - how_far*dom%D_y, cg%je + how_far*dom%D_y
             do i = cg%is - how_far*dom%D_x, cg%ie + how_far*dom%D_x
@@ -367,15 +365,12 @@ contains
                   endif
                endif
                if (this%iplot /= INVALID) cg%q(this%iplot)%arr(i, j, k) = r
-               max_r = max(max_r, r)
 
                cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr)
 
             enddo
          enddo
       enddo
-
-      cg%refine_flags%derefine = cg%refine_flags%derefine .or. (max_r < this%deref_thr)
 
    contains
 
@@ -418,14 +413,13 @@ contains
    end subroutine refine_on_second_derivative
 
 !>
-!! \brief Refine/derefine based on ||grad u||
+!! \brief Refinement based on ||grad u||
 !! This is sensitive to gradients, but the thresholds must be rescaled, when you change units of the problem.
 !<
 
    subroutine refine_on_gradient(this, cg, p3d)
 
       use constants, only: INVALID
-      use domain,    only: dom
       use grid_cont, only: grid_container
 
       implicit none
@@ -435,34 +429,20 @@ contains
       real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least one layer of updated guardcells)
 
       integer :: i, j, k
-      real :: r, max_r
+      real :: r
 
-      max_r = -huge(1.)
-
-      !> \todo implement how far we should look for (de)refinements
+      !> \todo implement how far we should look for refinements
 
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
                r = grad2(i, j, k)
                if (this%iplot /= INVALID) cg%q(this%iplot)%arr(i, j, k) = r
-               max_r = max(max_r, r)
                cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr**2)
                ! we can avoid calculating square root here
             enddo
          enddo
       enddo
-
-      ! check additional 1 perimeter of cells for derefinement
-      max_r = max(max_r, &
-           maxgradoverarea(cg%is-dom%D_x, cg%is-dom%D_x, cg%js-dom%D_y, cg%je+dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
-           maxgradoverarea(cg%ie+dom%D_x, cg%ie+dom%D_x, cg%js-dom%D_y, cg%je+dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
-           maxgradoverarea(cg%is, cg%ie, cg%js-dom%D_y, cg%js-dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
-           maxgradoverarea(cg%is, cg%ie, cg%je+dom%D_y, cg%je+dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
-           maxgradoverarea(cg%is, cg%ie, cg%js, cg%je, cg%ks-dom%D_z, cg%ks-dom%D_z), &
-           maxgradoverarea(cg%is, cg%ie, cg%js, cg%je, cg%ke+dom%D_z, cg%ke+dom%D_z) )
-
-      cg%refine_flags%derefine = cg%refine_flags%derefine .or. (max_r < this%deref_thr**2)
 
    contains
 
@@ -513,14 +493,13 @@ contains
    end subroutine refine_on_gradient
 
 !>
-!! \brief Refine/derefine based on ||grad u||/||u||
+!! \brief Refinement based on ||grad u||/||u||
 !! This is sensitive to changes of sign or strong gradients (such as fast approaching 0.)
 !<
 
    subroutine refine_on_relative_gradient(this, cg, p3d)
 
       use constants, only: INVALID
-      use domain,    only: dom
       use grid_cont, only: grid_container
 
       implicit none
@@ -530,9 +509,7 @@ contains
       real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least one layer of updated guardcells)
 
       integer :: i, j, k
-      real :: r, max_r
-
-      max_r = -huge(1.)
+      real :: r
 
       !> \todo implement how far we should look for (de)refinements
 
@@ -541,23 +518,11 @@ contains
             do i = cg%is, cg%ie
                r = rel_grad2(i, j, k)
                if (this%iplot /= INVALID) cg%q(this%iplot)%arr(i, j, k) = r
-               max_r = max(max_r, r)
                cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr**2)
                ! we can avoid calculating square root here
             enddo
          enddo
       enddo
-
-      ! check additional 1 perimeter of cells for derefinement
-      max_r = max(max_r, &
-           maxrelgradoverarea(cg%is-dom%D_x, cg%is-dom%D_x, cg%js-dom%D_y, cg%je+dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
-           maxrelgradoverarea(cg%ie+dom%D_x, cg%ie+dom%D_x, cg%js-dom%D_y, cg%je+dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
-           maxrelgradoverarea(cg%is, cg%ie, cg%js-dom%D_y, cg%js-dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
-           maxrelgradoverarea(cg%is, cg%ie, cg%je+dom%D_y, cg%je+dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
-           maxrelgradoverarea(cg%is, cg%ie, cg%js, cg%je, cg%ks-dom%D_z, cg%ks-dom%D_z), &
-           maxrelgradoverarea(cg%is, cg%ie, cg%js, cg%je, cg%ke+dom%D_z, cg%ke+dom%D_z) )
-
-      cg%refine_flags%derefine = cg%refine_flags%derefine .or. (max_r < this%deref_thr**2)
 
    contains
 

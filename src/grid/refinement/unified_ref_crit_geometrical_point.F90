@@ -109,7 +109,6 @@ contains
 
       if (all(this%ijk(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk(cg%l%id, :) <= cg%ijkse(:, HI))) then
          if (cg%l%id < this%level) cg%refinemap(this%ijk(cg%l%id, xdim), this%ijk(cg%l%id, ydim), this%ijk(cg%l%id, zdim)) = .true.
-         cg%refine_flags%derefine = .false.  ! this should go one level up (sanitizing)
       endif
 
    end subroutine mark_point

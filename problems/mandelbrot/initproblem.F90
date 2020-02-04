@@ -58,9 +58,8 @@ module initproblem
    real :: y_polar            !< y-coordinate for polar mode
    real :: c_polar            !< correct colouring with x-coordinate multiplied by this factor
    real :: ref_thr            !< threshold for refining a grid
-   real :: deref_thr          !< threshold for derefining a grid
 
-   namelist /PROBLEM_CONTROL/  order, maxiter, smooth_map, log_polar, x_polar, y_polar, c_polar, ref_thr, deref_thr
+   namelist /PROBLEM_CONTROL/  order, maxiter, smooth_map, log_polar, x_polar, y_polar, c_polar, ref_thr
 
    ! other private data
    character(len=dsetnamelen), parameter :: mand_n = "mand", re_n = "real", imag_n = "imag"
@@ -103,7 +102,6 @@ contains
       y_polar = 0.
       c_polar = 0.
       ref_thr = 1.
-      deref_thr = .2
 
       if (master) then
 
@@ -130,7 +128,6 @@ contains
          lbuff(2) = log_polar
 
          rbuff(1) = ref_thr
-         rbuff(2) = deref_thr
          rbuff(3) = x_polar
          rbuff(4) = y_polar
          rbuff(5) = c_polar
@@ -150,7 +147,6 @@ contains
          log_polar  = lbuff(2)
 
          ref_thr    = rbuff(1)
-         deref_thr  = rbuff(2)
          x_polar    = rbuff(3)
          y_polar    = rbuff(4)
          c_polar    = rbuff(5)
@@ -164,8 +160,6 @@ contains
          if (master) call warn("[initproblem:read_problem_par] Only order == 2 is supported at the moment")
          order = 2
       endif
-
-      if (ref_thr <= deref_thr) call die("[initproblem:read_problem_par] ref_thr <= deref_thr")
 
       if (log_polar .and. master) then
          if (dom%edge(ydim, HI) - dom%edge(ydim, LO) < 0.999*dpi) call warn("[initproblem:read_problem_par] not covering full angle")
@@ -346,7 +340,6 @@ contains
                   enddo
                enddo
             enddo
-            cgl%cg%refine_flags%derefine = (diffmax <  deref_thr)
 
          endif
          cgl => cgl%nxt

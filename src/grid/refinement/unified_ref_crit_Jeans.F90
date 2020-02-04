@@ -63,8 +63,6 @@ contains
 
    function init(jeans_ref, jeans_plot) result(this)
 
-      use constants, only: refinement_factor
-
       implicit none
 
       real,    intent(in) :: jeans_ref   !< minimum resolution in cells per Jeans wavelength
@@ -72,11 +70,7 @@ contains
 
       type(urc_jeans) :: this  !< an object to be constructed
 
-      !< If it proves to be not universally safe, then implement it as a problem.par parameter.
-      real, parameter :: safe_deref = refinement_factor * 1.25
-
       this%ref_thr   = jeans_ref
-      this%deref_thr = safe_deref * jeans_ref
       this%plotfield = jeans_plot
 
    end function init
@@ -146,10 +140,7 @@ contains
          p3d(:,:,:) = sqrt(pi/newtong) / maxval(cg%dl) * sqrt(p3d)/ sum(cg%u(iarr_all_sg, :, :, :), dim=1)
       endif
 
-      where (p3d < this%ref_thr)
-         cg%refinemap = .true.
-      endwhere
-      if (any(p3d < this%deref_thr)) cg%refine_flags%derefine = .false.
+      where (p3d < this%ref_thr) cg%refinemap = .true.
 
    end subroutine mark_Jeans
 

@@ -51,12 +51,12 @@ module unified_ref_crit_user
       logical :: plotfield  !< create a 3D array to keep the value of refinement criterion
       procedure(mark_urc_user), pointer :: mark_u
    contains
-      procedure :: mark => mark_user  !< a routine that takes a cg and leaves suggestions on refining and derefining
+      procedure :: mark => mark_user  !< a routine that takes a cg and leaves suggestions on refining
    end type urc_user
 
    interface
 
-!> \brief Mark refinements and derefinements on given grid container
+!> \brief Mark refinements on given grid container
 
       subroutine mark_urc_user(this, cg)
 
@@ -78,7 +78,7 @@ module unified_ref_crit_user
 
 contains
 
-!> \brief Mark refinements and derefinements on given grid container
+!> \brief Mark refinements on given grid container
 
    subroutine mark_user(this, cg)
 

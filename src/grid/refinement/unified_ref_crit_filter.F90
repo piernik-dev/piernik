@@ -40,7 +40,7 @@ module unified_ref_crit_filter
 
 !>
 !! \brief Things that should be common for all refinement criteria based on filters.
-!! The filters are supposed to decide whether local conditions deserve refinement or derefinement.
+!! The filters are supposed to decide whether local conditions deserve refinement.
 !<
 
    type, abstract, extends(urc) :: urc_filter
@@ -48,7 +48,6 @@ module unified_ref_crit_filter
 ! Submodules doesn't seem to be a real solution for this.
 !      private
       real    :: ref_thr    !< refinement threshold
-      real    :: deref_thr  !< derefinement threshold
       logical :: plotfield  !< create a 3D array to keep the value of refinement criterion
    end type urc_filter
 
