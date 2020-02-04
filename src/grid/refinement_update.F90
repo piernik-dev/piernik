@@ -103,18 +103,33 @@ contains
 
          use cg_level_connected, only: cg_level_connected_t
          use cg_level_finest,    only: finest
-         use cg_list_global,     only: all_cg
+         use cg_list,            only: cg_list_element
 
          implicit none
 
          type(cg_level_connected_t), pointer :: curl
+         type(cg_list_element), pointer :: cgl
 
          curl => finest%level
          do while (associated(curl))
             call curl%deallocate_patches
+
+            ! formerly cg_list::clear_ref_flags
+            cgl => curl%first
+            do while (associated(cgl))
+               call cgl%cg%refine_flags%init
+               cgl%cg%refinemap = .false.
+
+               ! Mark everything for derefinement by default.
+               ! It requires correct propagation of refinement requests from parent blocks as
+               ! derefinement inhibitions on their appropriate children.
+               cgl%cg%refine_flags%derefine = .true.
+
+               cgl => cgl%nxt
+            enddo
+
             curl => curl%coarser
          enddo
-         call all_cg%clear_ref_flags
 
       end subroutine prepare_ref
 
@@ -521,7 +536,6 @@ contains
 
          ! sync structure before trying to fix it
          call leaves%update(" (correcting) ")
-         !call all_cg%clear_ref_flags  ! this was preventing proper derefinement in sedov
          ! \todo implement 1-pass correcting
          call fix_refinement(correct)
          call piernik_MPI_Allreduce(correct, pLAND)
