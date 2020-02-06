@@ -48,10 +48,12 @@ module refinement_flag
       logical :: refine   !> a request to refine, deprecated: use cg%refinemap whenever possible
       logical :: derefine !> a request to derefine
       type(SFC_candidate), allocatable, dimension(:) :: SFC_refine_list
+      logical, private, allocatable, dimension(:,:,:) :: map  !> .true. when a cell triggers refinement criteria, .false. otherwise
    contains
       procedure :: init      !> Initialize: (.false. , .false., allocate 0 elements)
       procedure :: add       !> Appends one element to SFC_refine_list
       procedure :: sanitize  !> Sanitize the refinement flags
+      procedure :: initmap   !> Allocate map
    end type ref_flag
 
 contains
@@ -60,16 +62,37 @@ contains
 
    subroutine init(this)
 
+      use dataio_pub, only: die
+
       implicit none
 
-      class(ref_flag), intent(inout) :: this     ! object invoking this procedure
+      class(ref_flag), intent(inout) :: this  !> object invoking this procedure
 
       this%refine = .false.
       this%derefine = .false.
       if (allocated(this%SFC_refine_list)) deallocate(this%SFC_refine_list)
       allocate(this%SFC_refine_list(0))
+      if (.not. allocated(this%map)) call die("[refinement_flag:init] map not allocated")
+      this%map = .false.
 
    end subroutine init
+
+!> \brief allocate map
+
+   subroutine initmap(this, ijkse)
+
+      use constants,  only: xdim, ydim, zdim, LO, HI
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(ref_flag),                              intent(inout) :: this   !> object invoking this procedure
+      integer(kind=4), dimension(xdim:zdim, LO:HI), intent(in)    :: ijkse  !> grid bounds, including guardcells
+
+      if (allocated(this%map)) call die("[refinement_flag:initmap] already allocated")
+      allocate(this%map(ijkse(xdim, LO):ijkse(xdim, HI), ijkse(ydim, LO):ijkse(ydim, HI), ijkse(zdim, LO):ijkse(zdim, HI)))
+
+   end subroutine initmap
 
 !> \brief Sanitize the refinement flags
 

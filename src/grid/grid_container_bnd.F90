@@ -122,6 +122,7 @@ contains
 
       this%leafmap(:, :, :) = .true.
       this%refinemap(:, :, :) = .false.
+      call this%refine_flags%initmap(this%lhn)
 
    end subroutine init_gc_bnd
 
