@@ -105,7 +105,7 @@ contains
       this%membership = 1
       this%SFC_id     = SFC_order(this%my_se(:, LO) - l%off)
 
-      call this%refine_flags%init
+      call this%flag%init
       this%ignore_prolongation = .false.
       this%is_old = .false.
       this%has_previous_timestep = .false.

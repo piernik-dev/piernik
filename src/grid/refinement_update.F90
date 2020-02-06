@@ -117,13 +117,13 @@ contains
             ! formerly cg_list::clear_ref_flags
             cgl => curl%first
             do while (associated(cgl))
-               call cgl%cg%refine_flags%init
+               call cgl%cg%flag%init
                cgl%cg%refinemap = .false.
 
                ! Mark everything for derefinement by default.
                ! It requires correct propagation of refinement requests from parent blocks as
                ! derefinement inhibitions on their appropriate children.
-               cgl%cg%refine_flags%derefine = .true.
+               cgl%cg%flag%derefine = .true.
 
                cgl => cgl%nxt
             enddo
@@ -186,9 +186,9 @@ contains
          do while (associated(curl))
             cgl => curl%first
             do while (associated(cgl))
-               cgl%cg%refine_flags%refine = cgl%cg%refine_flags%refine .or. &
+               cgl%cg%flag%refine = cgl%cg%flag%refine .or. &
                     any(cgl%cg%refinemap(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) .and. cgl%cg%leafmap)
-               call cgl%cg%refine_flags%sanitize(cgl%cg%l%id)
+               call cgl%cg%flag%sanitize(cgl%cg%l%id)
                cgl => cgl%nxt
             enddo
             curl => curl%finer
@@ -212,7 +212,7 @@ contains
          cnt = 0
          cgl => all_cg%first
          do while (associated(cgl))
-            if ( cgl%cg%refine_flags%refine .or. size(cgl%cg%refine_flags%SFC_refine_list) > 0) cnt = cnt + 1
+            if ( cgl%cg%flag%refine .or. size(cgl%cg%flag%SFC_refine_list) > 0) cnt = cnt + 1
             cgl => cgl%nxt
          enddo
 
@@ -297,7 +297,7 @@ contains
                   if (any(cgl%cg%refinemap(se(xdim,LO):se(xdim,HI),se(ydim,LO):se(ydim,HI),se(zdim,LO):se(zdim,HI)))) then
 
 !!$                     if (associated(cgl%cg%ri_tgt%seg(g)%local)) then
-!!$                        cgl%cg%ri_tgt%seg(g)%local%refine_flags%derefine = .false.
+!!$                        cgl%cg%ri_tgt%seg(g)%local%flag%derefine = .false.
 !!$                     else
                      associate (fproc => cgl%cg%ri_tgt%seg(g)%proc, ftag => cgl%cg%ri_tgt%seg(g)%tag)
                         if (fproc == proc) then
@@ -378,7 +378,7 @@ contains
             if (allocated(cgl%cg%ro_tgt%seg)) then
                do g = lbound(cgl%cg%ro_tgt%seg(:), dim=1), ubound(cgl%cg%ro_tgt%seg(:), dim=1)
                   if (cgl%cg%ro_tgt%seg(g)%tag == tag) then
-                     cgl%cg%refine_flags%derefine = .false.
+                     cgl%cg%flag%derefine = .false.
                      done = .true.
                      exit
                   endif
@@ -459,10 +459,10 @@ contains
             cgl => curl%first
             do while (associated(cgl))
                if (any(cgl%cg%leafmap)) then
-                  if (cgl%cg%refine_flags%refine) then
+                  if (cgl%cg%flag%refine) then
                      call refine_one_grid(curl, cgl)
                      if (present(act_count)) act_count = act_count + 1
-                     cgl%cg%refine_flags%refine = .false.
+                     cgl%cg%flag%refine = .false.
                   endif
                endif
                cgl => cgl%nxt
@@ -507,7 +507,7 @@ contains
             some_refined = .false.
             cgl => curl%first
             do while (associated(cgl))
-               if (cgl%cg%refine_flags%refine) then
+               if (cgl%cg%flag%refine) then
                   if (finest%level%l%id <= cgl%cg%l%id) call warn("[refinement_update:update_refinement] growing too fast!")
                   if (associated(curl%finer)) then
                      call refine_one_grid(curl, cgl)
@@ -516,7 +516,7 @@ contains
                   else
                      call warn("[refinement_update:update_refinement] nowhere to add!")
                   endif
-                  cgl%cg%refine_flags%refine = .false.
+                  cgl%cg%flag%refine = .false.
                endif
                cgl => cgl%nxt
             enddo
@@ -560,7 +560,7 @@ contains
             do while (associated(cgl))
                aux => cgl ! Auxiliary pointer makes it easier to loop over the list of grids when some of the elements are disappearing
                cgl => cgl%nxt
-               if (aux%cg%refine_flags%derefine) then
+               if (aux%cg%flag%derefine) then
                   if (aux%cg%is_old) then ! forgetting fresh blocks is not good because their data hasn't been properly initialized yet
                      if (all(aux%cg%leafmap)) then
                         cg => aux%cg
@@ -638,19 +638,19 @@ contains
       endif
 
       if (.not. associated(curl%finer)) call finest%add_finer
-      if (size(cgl%cg%refine_flags%SFC_refine_list) > 0) then ! we've got detailed map!
-         do b = lbound(cgl%cg%refine_flags%SFC_refine_list, dim=1), ubound(cgl%cg%refine_flags%SFC_refine_list, dim=1)
-            if (cgl%cg%refine_flags%SFC_refine_list(b)%level == curl%finer%l%id) then
-               call curl%finer%add_patch(int(bsize, kind=8), cgl%cg%refine_flags%SFC_refine_list(b)%off)
+      if (size(cgl%cg%flag%SFC_refine_list) > 0) then ! we've got detailed map!
+         do b = lbound(cgl%cg%flag%SFC_refine_list, dim=1), ubound(cgl%cg%flag%SFC_refine_list, dim=1)
+            if (cgl%cg%flag%SFC_refine_list(b)%level == curl%finer%l%id) then
+               call curl%finer%add_patch(int(bsize, kind=8), cgl%cg%flag%SFC_refine_list(b)%off)
             else
                call die("[refinement_update:refine_one_grid] wrong level!")
             endif
          enddo
-         call cgl%cg%refine_flags%init ! it is safer to forget it now
+         call cgl%cg%flag%init ! it is safer to forget it now
       else
          if (.not. warned) then
             warned = .true.
-            call warn("[refinement_update:refine_one_grid] populating refine_flags%SFC_refine_list before refining a grid is strongly encouraged")
+            call warn("[refinement_update:refine_one_grid] populating flag%SFC_refine_list before refining a grid is strongly encouraged")
          endif
          if (.not. all(cgl%cg%leafmap)) then ! decompose the partially refined grid container into boxes that contain all leafcells
             box_8 = int(cgl%cg%ijkse, kind=8)
@@ -790,19 +790,19 @@ contains
 !!$               enddo
 !!$            endif
 
-            if (allocated(cgl%cg%refine_flags%SFC_refine_list)) then
-               deallocate(cgl%cg%refine_flags%SFC_refine_list)
-               allocate(cgl%cg%refine_flags%SFC_refine_list(0))
+            if (allocated(cgl%cg%flag%SFC_refine_list)) then
+               deallocate(cgl%cg%flag%SFC_refine_list)
+               allocate(cgl%cg%flag%SFC_refine_list(0))
             endif
             cgl%cg%refinemap = .false.
-            cgl%cg%refine_flags%refine = .false. ! too late for refinements due to user request
+            cgl%cg%flag%refine = .false. ! too late for refinements due to user request
             do k = lbound(cgl%cg%leafmap, dim=3), ubound(cgl%cg%leafmap, dim=3)
                do j = lbound(cgl%cg%leafmap, dim=2), ubound(cgl%cg%leafmap, dim=2)
                   do i = lbound(cgl%cg%leafmap, dim=1), ubound(cgl%cg%leafmap, dim=1)
                      if (int(cgl%cg%prolong_xyz(i, j, k)) == BOUNDARY) then
                         lnear = int(min(huge(I_ONE)/10.,maxval(cgl%cg%wa(i-range*dom%D_x:i+range*dom%D_x, j-range*dom%D_y:j+range*dom%D_y, k-range*dom%D_z:k+range*dom%D_z))))
                         if (lnear > lleaf) then
-                           cgl%cg%refine_flags%derefine = .false.
+                           cgl%cg%flag%derefine = .false.
                            if (lnear > lleaf+1 .and. lnear <= finest%level%l%id) then
                               cgl%cg%refinemap(i, j, k) = .true.
                               if (present(correct)) correct = .false.
@@ -814,7 +814,7 @@ contains
                enddo
             enddo
             call cgl%cg%refinemap2SFC_list
-            call cgl%cg%refine_flags%sanitize(cgl%cg%l%id)
+            call cgl%cg%flag%sanitize(cgl%cg%l%id)
 
             if (any(cgl%cg%refinemap) .and. .not. present(correct)) then
                write(msg,'(a,i3,a,6i5,a,i3)')"[refinement_update:fix_refinement] neighbour level ^",lnear," at [",cgl%cg%my_se,"] ^",cgl%cg%l%id
@@ -823,7 +823,7 @@ contains
             endif
 
          else
-            cgl%cg%refine_flags%refine = .false.
+            cgl%cg%flag%refine = .false.
          endif
          cgl => cgl%nxt
       enddo

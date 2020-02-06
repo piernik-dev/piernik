@@ -753,12 +753,12 @@ contains
          cgl => curl%first
          i = 0
          do while (associated(cgl))
-            cgl%cg%refine_flags%refine   = .false.
-            cgl%cg%refine_flags%derefine = .false.
+            cgl%cg%flag%refine   = .false.
+            cgl%cg%flag%derefine = .false.
             if (real(i)/curl%cnt <= flipratio) then
                if (mod(nstep, nflip) == 0) then
-                  cgl%cg%refine_flags%refine   = (mod(nstep, I_TWO*nflip) /= 0)
-                  cgl%cg%refine_flags%derefine = .not. cgl%cg%refine_flags%refine
+                  cgl%cg%flag%refine   = (mod(nstep, I_TWO*nflip) /= 0)
+                  cgl%cg%flag%derefine = .not. cgl%cg%flag%refine
                endif
             endif
             i = i + 1

@@ -75,7 +75,7 @@ module grid_cont_bnd
 
       ! Refinements
       logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .false. otherwise
-      type(ref_flag) :: refine_flags                              !< refine or derefine this grid container?
+      type(ref_flag) :: flag                                      !< refine or derefine this grid container?
       logical, allocatable, dimension(:,:,:) :: refinemap         !< .true. when a cell triggers refinement criteria, .false. otherwise
 
    contains
@@ -122,7 +122,7 @@ contains
 
       this%leafmap(:, :, :) = .true.
       this%refinemap(:, :, :) = .false.
-      call this%refine_flags%initmap(this%lhn)
+      call this%flag%initmap(this%lhn)
 
    end subroutine init_gc_bnd
 
@@ -349,11 +349,11 @@ contains
       type = NONE
       if (any(this%refinemap)) then
          type = REFINE
-      else if (this%refine_flags%refine) then
+      else if (this%flag%refine) then
          type = LEAF
          if (.not. warned) then
             warned = .true.
-            call warn("[grid_container_bnd:refinemap2SFC_list] direct use of cg%refine_flags%refine is deprecated")
+            call warn("[grid_container_bnd:refinemap2SFC_list] direct use of cg%flag%refine is deprecated")
          endif
       endif
 
@@ -380,10 +380,10 @@ contains
                   kfe = min(int(this%ke), int(this%l%off(zdim)) + ((k+I_ONE)*b_size(zdim)-I_ONE)/refinement_factor)
                   select case (type)
                      case (REFINE)
-                        if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%l%id+I_ONE, int([i, j, k]*b_size, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
+                        if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%flag%add(this%l%id+I_ONE, int([i, j, k]*b_size, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
                      case (LEAF)
                         if (all(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
-                           call this%refine_flags%add(this%l%id+I_ONE, int([i, j, k]*b_size, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
+                           call this%flag%add(this%l%id+I_ONE, int([i, j, k]*b_size, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
                         else if (any(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
                            call die("[grid_container_bnd:refinemap2SFC_list] cannot refine partially leaf parf of the grid")
                         endif
