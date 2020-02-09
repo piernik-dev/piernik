@@ -43,7 +43,7 @@ module unified_ref_crit_geometrical_point
 
    type, extends(urc_geom) :: urc_point
       real, dimension(ndims)                                 :: coords  !< coordinates, where to refine
-      integer(kind=8), allocatable, dimension(:, :), private :: ijk     !< integer coordinates at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
+      integer(kind=4), allocatable, dimension(:, :), private :: ijk     !< integer coordinates at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
    contains
       procedure          :: mark => mark_point
       procedure, private :: init_lev
@@ -53,7 +53,7 @@ module unified_ref_crit_geometrical_point
       procedure :: init
    end interface urc_point
 
-   integer(kind=8), parameter :: uninit = huge(1_8)
+   integer(kind=4), parameter :: uninit = huge(1_4)
 
 contains
 
@@ -108,7 +108,7 @@ contains
       if (any(this%ijk(cg%l%id, :) == uninit)) call this%init_lev
 
       if (all(this%ijk(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk(cg%l%id, :) <= cg%ijkse(:, HI))) then
-         if (cg%l%id < this%level) cg%refinemap(this%ijk(cg%l%id, xdim), this%ijk(cg%l%id, ydim), this%ijk(cg%l%id, zdim)) = .true.
+         if (cg%l%id < this%level) call cg%flag%set(this%ijk(cg%l%id, xdim), this%ijk(cg%l%id, ydim), this%ijk(cg%l%id, zdim))
       endif
 
    end subroutine mark_point
@@ -140,13 +140,13 @@ contains
          if (l%l%id <= ubound(this%ijk, dim=1)) then
             if (any(this%ijk(l%l%id, :) == uninit)) then
                where (dom%has_dir)
-                  this%ijk(l%l%id, :) = l%l%off + floor((this%coords - dom%edge(:, LO))/dom%L_*l%l%n_d, kind=8)
+                  this%ijk(l%l%id, :) = int(l%l%off, kind=4) + floor((this%coords - dom%edge(:, LO))/dom%L_*l%l%n_d, kind=4)
                   ! Excessively large this%coords will result in FPE exception.
                   ! If FPE is not trapped, then huge() value will be assigned from uninit constant
                   ! (checked on gfortran 7.3.1), which is safe.
                   ! A wrapped value coming from integer overflow may be unsafe.
                elsewhere
-                  this%ijk(l%l%id, :) = l%l%off
+                  this%ijk(l%l%id, :) = int(l%l%off, kind=4)
                endwhere
                if (verbose .and. master) then
                   write(msg, '(a,i3,a,3i8,a)')"[URC point]   point coordinates at level ", &

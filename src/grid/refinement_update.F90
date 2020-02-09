@@ -93,7 +93,7 @@ contains
       call parents_prevent_derefinement
       call sanitize_all_ref_flags
 
-      call ref_flags_to_ref_list
+      call ref_flags_to_ref_list ! this calls cg%refinemap2SFC_list, which modifies cg%flag%map so no parent correction is possible afterwards
 
    contains
 
@@ -118,7 +118,6 @@ contains
             cgl => curl%first
             do while (associated(cgl))
                call cgl%cg%flag%init
-               cgl%cg%refinemap = .false.
 
                ! Mark everything for derefinement by default.
                ! It requires correct propagation of refinement requests from parent blocks as
@@ -186,9 +185,10 @@ contains
          do while (associated(curl))
             cgl => curl%first
             do while (associated(cgl))
-               cgl%cg%flag%refine = cgl%cg%flag%refine .or. &
-                    any(cgl%cg%refinemap(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) .and. cgl%cg%leafmap)
-               call cgl%cg%flag%sanitize(cgl%cg%l%id)
+               associate (cg => cgl%cg)
+                  cg%flag%refine = cg%flag%refine .or. cg%flag%get(cg%is,cg%ie, cg%js,cg%je, cg%ks,cg%ke, cg%leafmap)
+                  call cg%flag%sanitize(cg%l%id)
+               end associate
                cgl => cgl%nxt
             enddo
             curl => curl%finer
@@ -252,7 +252,7 @@ contains
 
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
-      use constants,          only: xdim, ydim, zdim, LO, HI, I_ONE, I_ZERO
+      use constants,          only: xdim, zdim, LO, HI, I_ONE, I_ZERO
       use dataio_pub        , only: die, warn
       use domain,             only: dom
       use mpi,                only: MPI_INTEGER, MPI_STATUS_IGNORE
@@ -287,35 +287,38 @@ contains
       pt_cnt = 0
       cgl => lev%first
       do while (associated(cgl))
-         ! look for refineflag .and. .not. leafmap + preimeter
-         if (any(cgl%cg%refinemap(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) .and. .not. cgl%cg%leafmap)) then
-            if (allocated(cgl%cg%ri_tgt%seg)) then
-               do g = lbound(cgl%cg%ri_tgt%seg(:), dim=1), ubound(cgl%cg%ri_tgt%seg(:), dim=1)
-                  ! clear own derefine flags (single-thread test)
-                  se(:, LO) = cgl%cg%ri_tgt%seg(g)%se(:, LO) - perimeter * dom%D_
-                  se(:, HI) = cgl%cg%ri_tgt%seg(g)%se(:, HI) + perimeter * dom%D_
-                  if (any(cgl%cg%refinemap(se(xdim,LO):se(xdim,HI),se(ydim,LO):se(ydim,HI),se(zdim,LO):se(zdim,HI)))) then
+         associate (cg => cgl%cg)
+            ! look for refineflag .and. .not. leafmap + preimeter
+            if (cg%flag%get(cg%is,cg%ie, cg%js,cg%je, cg%ks,cg%ke, .not. cg%leafmap)) then
+               if (allocated(cg%ri_tgt%seg)) then
+                  do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
+                     ! clear own derefine flags (single-thread test)
+                     se(:, LO) = cg%ri_tgt%seg(g)%se(:, LO) - perimeter * dom%D_
+                     se(:, HI) = cg%ri_tgt%seg(g)%se(:, HI) + perimeter * dom%D_
+                     if (cg%flag%get(se)) then
 
-!!$                     if (associated(cgl%cg%ri_tgt%seg(g)%local)) then
-!!$                        cgl%cg%ri_tgt%seg(g)%local%flag%derefine = .false.
+!!$                     if (associated(cg%ri_tgt%seg(g)%local)) then
+!!$                        cg%ri_tgt%seg(g)%local%flag%derefine = .false.
 !!$                     else
-                     associate (fproc => cgl%cg%ri_tgt%seg(g)%proc, ftag => cgl%cg%ri_tgt%seg(g)%tag)
-                        if (fproc == proc) then
-                           call disable_derefine_by_tag(lev%finer, ftag)  ! beware: O(leaves%cnt^2)
-                        else
-                           ! create a list of foreign blocks that need not be derefined (proc, grid_id or SFC_id)
-                           ! use prolongation structures
-                           gscnt(fproc) = gscnt(fproc) + 1
-                           pt_cnt = pt_cnt + 1
-                           if (pt_cnt > size(pt_list)) call die("[refinement_update:parents_prevent_derefinement_lev] pt_cnt > size(pt_list)")
-                           pt_list(pt_cnt) = pt(fproc, ftag)
-                        endif
-                     end associate
-                  endif
-               enddo
+                        associate (fproc => cg%ri_tgt%seg(g)%proc, ftag => cg%ri_tgt%seg(g)%tag)
+                           if (fproc == proc) then
+                              call disable_derefine_by_tag(lev%finer, ftag)  ! beware: O(leaves%cnt^2)
+                           else
+                              ! create a list of foreign blocks that need not be derefined (proc, grid_id or SFC_id)
+                              ! use prolongation structures
+                              gscnt(fproc) = gscnt(fproc) + 1
+                              pt_cnt = pt_cnt + 1
+                              if (pt_cnt > size(pt_list)) call die("[refinement_update:parents_prevent_derefinement_lev] pt_cnt > size(pt_list)")
+                              pt_list(pt_cnt) = pt(fproc, ftag)
+                           endif
+                        end associate
+                     endif
+                  enddo
+               endif
             endif
-         endif
+         end associate
          cgl => cgl%nxt
+
       enddo
 
       ! communicate how many ids to which threads
@@ -794,7 +797,7 @@ contains
                deallocate(cgl%cg%flag%SFC_refine_list)
                allocate(cgl%cg%flag%SFC_refine_list(0))
             endif
-            cgl%cg%refinemap = .false.
+            call cgl%cg%flag%clear
             cgl%cg%flag%refine = .false. ! too late for refinements due to user request
             do k = lbound(cgl%cg%leafmap, dim=3), ubound(cgl%cg%leafmap, dim=3)
                do j = lbound(cgl%cg%leafmap, dim=2), ubound(cgl%cg%leafmap, dim=2)
@@ -804,7 +807,7 @@ contains
                         if (lnear > lleaf) then
                            cgl%cg%flag%derefine = .false.
                            if (lnear > lleaf+1 .and. lnear <= finest%level%l%id) then
-                              cgl%cg%refinemap(i, j, k) = .true.
+                              call cgl%cg%flag%set(i, j, k)
                               if (present(correct)) correct = .false.
                            endif
                         endif
@@ -816,7 +819,7 @@ contains
             call cgl%cg%refinemap2SFC_list
             call cgl%cg%flag%sanitize(cgl%cg%l%id)
 
-            if (any(cgl%cg%refinemap) .and. .not. present(correct)) then
+            if (cgl%cg%flag%get() .and. .not. present(correct)) then
                write(msg,'(a,i3,a,6i5,a,i3)')"[refinement_update:fix_refinement] neighbour level ^",lnear," at [",cgl%cg%my_se,"] ^",cgl%cg%l%id
                call warn(msg)
                failed = .true.

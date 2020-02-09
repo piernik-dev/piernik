@@ -81,7 +81,7 @@ contains
 !! This routine has to conform to unified_ref_crit_user::mark_urc_user
 !!
 !! \todo implement predictive marks based on velocity, something like:
-!! where (cg%refinemap) cg%refinemap(x + v*2*n_updAMR) = .true.
+!! where (cg%flag%map) cg%flag%map(x + v*2*n_updAMR) = .true.
 !! count cases where internal refine flag goes beyond guardcells and suggest reducing n_updAMR
 !<
 
@@ -140,7 +140,7 @@ contains
          p3d(:,:,:) = sqrt(pi/newtong) / maxval(cg%dl) * sqrt(p3d)/ sum(cg%u(iarr_all_sg, :, :, :), dim=1)
       endif
 
-      where (p3d < this%ref_thr) cg%refinemap = .true.
+      call cg%flag%set(p3d < this%ref_thr)
 
    end subroutine mark_Jeans
 

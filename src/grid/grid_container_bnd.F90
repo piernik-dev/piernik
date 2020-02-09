@@ -76,7 +76,6 @@ module grid_cont_bnd
       ! Refinements
       logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .false. otherwise
       type(ref_flag) :: flag                                      !< refine or derefine this grid container?
-      logical, allocatable, dimension(:,:,:) :: refinemap         !< .true. when a cell triggers refinement criteria, .false. otherwise
 
    contains
 
@@ -118,10 +117,8 @@ contains
       enddo
 
       allocate(this%leafmap(this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)))
-      allocate(this%refinemap(this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI), this%lhn(zdim, LO):this%lhn(zdim, HI)))
 
       this%leafmap(:, :, :) = .true.
-      this%refinemap(:, :, :) = .false.
       call this%flag%initmap(this%lhn)
 
    end subroutine init_gc_bnd
@@ -165,7 +162,6 @@ contains
 
       ! arrays not handled through named_array feature
       if (allocated(this%leafmap))   deallocate(this%leafmap)
-      if (allocated(this%refinemap)) deallocate(this%refinemap)
 
    end subroutine cleanup_bnd
 
@@ -344,10 +340,10 @@ contains
       integer :: type
       logical, save :: warned = .false.
 
-      this%refinemap(this%is:this%ie, this%js:this%je, this%ks:this%ke) = &
-           this%refinemap(this%is:this%ie, this%js:this%je, this%ks:this%ke) .and. this%leafmap
+      call this%flag%clear(this%leafmap) ! no parent correction possible beyond this point
+
       type = NONE
-      if (any(this%refinemap)) then
+      if (this%flag%get()) then
          type = REFINE
       else if (this%flag%refine) then
          type = LEAF
@@ -380,7 +376,7 @@ contains
                   kfe = min(int(this%ke), int(this%l%off(zdim)) + ((k+I_ONE)*b_size(zdim)-I_ONE)/refinement_factor)
                   select case (type)
                      case (REFINE)
-                        if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%flag%add(this%l%id+I_ONE, int([i, j, k]*b_size, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
+                        if (this%flag%get(ifs, ife, jfs, jfe, kfs, kfe)) call this%flag%add(this%l%id+I_ONE, int([i, j, k]*b_size, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
                      case (LEAF)
                         if (all(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
                            call this%flag%add(this%l%id+I_ONE, int([i, j, k]*b_size, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
@@ -394,7 +390,7 @@ contains
             enddo
          enddo
       end associate
-      this%refinemap = .false.
+      call this%flag%clear
 
    end subroutine refinemap2SFC_list
 

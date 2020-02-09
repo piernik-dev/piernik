@@ -94,7 +94,7 @@ contains
 
    subroutine mark_box(this, cg)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI
+      use constants,  only: xdim, zdim, LO, HI
       use dataio_pub, only: die
       use grid_cont,  only: grid_container
 
@@ -103,7 +103,7 @@ contains
       class(urc_box),                intent(inout) :: this  !< an object invoking the type-bound procedure
       type(grid_container), pointer, intent(inout) :: cg    !< current grid piece
 
-      integer(kind=8), dimension(ndims) :: ijk_l, ijk_h
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: ijk
 
       if (cg%l%id > this%level) return
 
@@ -113,12 +113,10 @@ contains
       if (any(this%ijk_lo(cg%l%id, :) == uninit) .or. any(this%ijk_hi(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appears in the meantime
 
       if (all(this%ijk_hi(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk_lo(cg%l%id, :) <= cg%ijkse(:, HI))) then
-         ijk_l = min(max(int(this%ijk_lo(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
-         ijk_h = min(max(int(this%ijk_hi(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
+         ijk(:, LO) = min(max(int(this%ijk_lo(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
+         ijk(:, HI) = min(max(int(this%ijk_hi(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
 
-         if (cg%l%id < this%level) cg%refinemap(ijk_l(xdim):ijk_h(xdim), &
-              &                                 ijk_l(ydim):ijk_h(ydim), &
-              &                                 ijk_l(zdim):ijk_h(zdim)) = .true.
+         if (cg%l%id < this%level) call cg%flag%set(ijk)
       endif
 
    end subroutine mark_box

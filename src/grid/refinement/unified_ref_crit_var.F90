@@ -366,7 +366,7 @@ contains
                endif
                if (this%iplot /= INVALID) cg%q(this%iplot)%arr(i, j, k) = r
 
-               cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr)
+               if (r >= this%ref_thr) call cg%flag%set(i, j, k)
 
             enddo
          enddo
@@ -438,7 +438,7 @@ contains
             do i = cg%is, cg%ie
                r = grad2(i, j, k)
                if (this%iplot /= INVALID) cg%q(this%iplot)%arr(i, j, k) = r
-               cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr**2)
+               if (r >= this%ref_thr**2) call cg%flag%set(i, j, k)
                ! we can avoid calculating square root here
             enddo
          enddo
@@ -518,7 +518,7 @@ contains
             do i = cg%is, cg%ie
                r = rel_grad2(i, j, k)
                if (this%iplot /= INVALID) cg%q(this%iplot)%arr(i, j, k) = r
-               cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr**2)
+               if (r >= this%ref_thr**2) call cg%flag%set(i, j, k)
                ! we can avoid calculating square root here
             enddo
          enddo
