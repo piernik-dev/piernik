@@ -325,7 +325,6 @@ contains
    subroutine refinemap2SFC_list(this)
 
       use constants,  only: refinement_factor, xdim, ydim, zdim, I_ONE
-      use dataio_pub, only: die, warn
       use domain,     only: dom
       use refinement, only: bsize
 
@@ -334,26 +333,10 @@ contains
       class(grid_container_bnd_t), intent(inout) :: this !< object invoking type-bound procedure
 
       integer(kind=4) :: i, j, k, ifs, ife, jfs, jfe, kfs, kfe
-      enum, bind(C)
-         enumerator :: NONE, REFINE, LEAF
-      end enum
-      integer :: type
-      logical, save :: warned = .false.
 
       call this%flag%clear(this%leafmap) ! no parent correction possible beyond this point
 
-      type = NONE
-      if (this%flag%get()) then
-         type = REFINE
-      else if (this%flag%refine) then
-         type = LEAF
-         if (.not. warned) then
-            warned = .true.
-            call warn("[grid_container_bnd:refinemap2SFC_list] direct use of cg%flag%refine is deprecated")
-         endif
-      endif
-
-      if (type == NONE) return
+      if (.not. this%flag%get()) return
 
       if (any((bsize <= 0) .and. dom%has_dir)) return ! this routine works only with blocky AMR
 
@@ -374,18 +357,7 @@ contains
                do k = int(((this%ks - this%l%off(zdim))*refinement_factor) / b_size(zdim), kind=4), int(((this%ke - this%l%off(zdim))*refinement_factor + I_ONE) / b_size(zdim), kind=4)
                   kfs = max(this%ks, int(this%l%off(zdim), kind=4) + (k*b_size(zdim))/refinement_factor)
                   kfe = min(this%ke, int(this%l%off(zdim), kind=4) + ((k+I_ONE)*b_size(zdim)-I_ONE)/refinement_factor)
-                  select case (type)
-                     case (REFINE)
-                        if (this%flag%get(ifs, ife, jfs, jfe, kfs, kfe)) call this%flag%add(this%l%id+I_ONE, int([i, j, k]*b_size, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
-                     case (LEAF)
-                        if (all(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
-                           call this%flag%add(this%l%id+I_ONE, int([i, j, k]*b_size, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
-                        else if (any(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
-                           call die("[grid_container_bnd:refinemap2SFC_list] cannot refine partially leaf parf of the grid")
-                        endif
-                     case default
-                        call die("[grid_container_bnd:refinemap2SFC_list] invalid type")
-                  end select
+                  if (this%flag%get(ifs, ife, jfs, jfe, kfs, kfe)) call this%flag%add(this%l%id+I_ONE, int([i, j, k]*b_size, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
                enddo
             enddo
          enddo
