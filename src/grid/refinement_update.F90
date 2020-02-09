@@ -43,6 +43,7 @@ contains
 
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_leaves,             only: leaves
+      use cg_list,               only: cg_list_element
       use constants,             only: I_ONE, pSUM
       use dataio_pub,            only: msg, printinfo
       use mpisetup,              only: master, piernik_MPI_Allreduce
@@ -51,6 +52,7 @@ contains
 
       implicit none
 
+      type(cg_list_element), pointer :: cgl
       logical, parameter :: verbose = .true.  ! be verbose for now, later we may want to be able to make it quiet
       enum, bind(C)
          enumerator :: PROBLEM
@@ -77,12 +79,18 @@ contains
       endif
 
       call urc_list%all_mark(leaves%first)
-      call sanitize_all_ref_flags
+      if (verbose) call sanitize_all_ref_flags
 
       if (verbose) then
          cnt(URC) = count_ref_flags()
          call piernik_MPI_Allreduce(cnt(URC), pSUM)
+      endif
 
+      call parents_prevent_derefinement
+      call sanitize_all_ref_flags  ! last call has to be done regardless of verbosity
+      ! \todo count the change in derefinement flags here?
+
+      if (verbose) then
          if (cnt(ubound(cnt, dim=1)) > 0) then
             write(msg,'(a,2i6,a)')"[refinement_update:scan_for_refinements] User routine and URC marked ", &
                  &                cnt(PROBLEM), cnt(PROBLEM+I_ONE:URC)-cnt(PROBLEM:URC-I_ONE), " block(s) for refinement, respectively."
@@ -90,10 +98,12 @@ contains
          endif
       endif
 
-      call parents_prevent_derefinement
-      call sanitize_all_ref_flags
-
-      call ref_flags_to_ref_list ! this calls cg%refinemap2SFC_list, which modifies cg%flag%map so no parent correction is possible afterwards
+      ! \todo convert this to URC routine
+      cgl => leaves%first
+      do while (associated(cgl))
+         call cgl%cg%refinemap2SFC_list  ! modifies cg%flag%map so no parent correction is possible afterwards
+         cgl => cgl%nxt
+      enddo
 
    contains
 
@@ -133,36 +143,6 @@ contains
       end subroutine prepare_ref
 
       !>
-      !! \brief Convert refinement requests to list of blocks
-      !!
-      !! \todo remove loop over levels and use just leaves
-      !! \todo convert this to URC routine
-      !<
-
-      subroutine ref_flags_to_ref_list
-
-         use cg_list,            only: cg_list_element
-         use cg_level_base,      only: base
-         use cg_level_connected, only: cg_level_connected_T
-
-         implicit none
-
-         type(cg_list_element), pointer :: cgl
-         type(cg_level_connected_T), pointer :: curl
-
-         curl => base%level
-         do while (associated(curl))
-            cgl => curl%first
-            do while (associated(cgl))
-               call cgl%cg%refinemap2SFC_list ! assumed that it is called only once and the blocks aren't doubly added
-               cgl => cgl%nxt
-            enddo
-            curl => curl%finer
-         enddo
-
-      end subroutine ref_flags_to_ref_list
-
-      !>
       !! \brief Sanitize refinement requests
       !!
       !! \todo convert this to URC routine
@@ -170,28 +150,22 @@ contains
 
       subroutine sanitize_all_ref_flags
 
-         use cg_list,            only: cg_list_element
-         use cg_level_base,      only: base
-         use cg_level_connected, only: cg_level_connected_t
+         use cg_leaves, only: leaves
+         use cg_list,   only: cg_list_element
 
          implicit none
 
          type(cg_list_element), pointer :: cgl
-         type(cg_level_connected_t), pointer :: curl
 
          !> \todo communicate refines from coarse to fine blocks to prevent oscillations that might occur when there is derefinement request on fine, when coarse requests refinement
 
-         curl => base%level
-         do while (associated(curl))
-            cgl => curl%first
-            do while (associated(cgl))
-               associate (cg => cgl%cg)
-                  cg%flag%refine = cg%flag%refine .or. cg%flag%get(cg%is,cg%ie, cg%js,cg%je, cg%ks,cg%ke, cg%leafmap)
-                  call cg%flag%sanitize(cg%l%id)
-               end associate
-               cgl => cgl%nxt
-            enddo
-            curl => curl%finer
+         cgl => leaves%first
+         do while (associated(cgl))
+            associate (cg => cgl%cg)
+               cg%flag%refine = cg%flag%refine .or. cg%flag%get(cg%is,cg%ie, cg%js,cg%je, cg%ks,cg%ke, cg%leafmap)
+               call cg%flag%sanitize(cg%l%id)
+            end associate
+            cgl => cgl%nxt
          enddo
 
       end subroutine sanitize_all_ref_flags
