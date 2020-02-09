@@ -300,13 +300,13 @@ contains
 !!$                     if (associated(cg%ri_tgt%seg(g)%local)) then
 !!$                        cg%ri_tgt%seg(g)%local%flag%derefine = .false.
 !!$                     else
-                        associate (fproc => cg%ri_tgt%seg(g)%proc, ftag => cg%ri_tgt%seg(g)%tag)
+                        associate (fproc => int(cg%ri_tgt%seg(g)%proc, kind=4), ftag => int(cg%ri_tgt%seg(g)%tag, kind=4))
                            if (fproc == proc) then
                               call disable_derefine_by_tag(lev%finer, ftag)  ! beware: O(leaves%cnt^2)
                            else
                               ! create a list of foreign blocks that need not be derefined (proc, grid_id or SFC_id)
                               ! use prolongation structures
-                              gscnt(fproc) = gscnt(fproc) + 1
+                              gscnt(fproc) = gscnt(fproc) + I_ONE
                               pt_cnt = pt_cnt + 1
                               if (pt_cnt > size(pt_list)) call die("[refinement_update:parents_prevent_derefinement_lev] pt_cnt > size(pt_list)")
                               pt_list(pt_cnt) = pt(fproc, ftag)
@@ -699,7 +699,7 @@ contains
       logical, optional, intent(out) :: correct !< Flag to tell that corrections are required.
 
       type(cg_list_element), pointer :: cgl
-      integer ::  i, j, k
+      integer(kind=4) ::  i, j, k
       integer :: lleaf, lnear, range
       logical :: failed
       enum, bind(C)
@@ -744,9 +744,9 @@ contains
             lleaf = -huge(1)
 
             ! find the level of refinement on the leaf part and mark it with a negative value
-            do k = lbound(cgl%cg%leafmap, dim=3), ubound(cgl%cg%leafmap, dim=3)
-               do j = lbound(cgl%cg%leafmap, dim=2), ubound(cgl%cg%leafmap, dim=2)
-                  do i = lbound(cgl%cg%leafmap, dim=1), ubound(cgl%cg%leafmap, dim=1)
+            do k = lbound(cgl%cg%leafmap, dim=3, kind=4), ubound(cgl%cg%leafmap, dim=3, kind=4)
+               do j = lbound(cgl%cg%leafmap, dim=2, kind=4), ubound(cgl%cg%leafmap, dim=2, kind=4)
+                  do i = lbound(cgl%cg%leafmap, dim=1, kind=4), ubound(cgl%cg%leafmap, dim=1, kind=4)
                      if (cgl%cg%leafmap(i, j, k)) then
                         if (lleaf == -huge(1)) then
                            lleaf = int(cgl%cg%wa(i, j, k))
@@ -760,9 +760,9 @@ contains
             enddo
 
             ! find the border of the leaf map and mark it with positive value
-            do k = lbound(cgl%cg%leafmap, dim=3)-dom%D_z, ubound(cgl%cg%leafmap, dim=3)+dom%D_z
-               do j = lbound(cgl%cg%leafmap, dim=2)-dom%D_y, ubound(cgl%cg%leafmap, dim=2)+dom%D_y
-                  do i = lbound(cgl%cg%leafmap, dim=1)-dom%D_x, ubound(cgl%cg%leafmap, dim=1)+dom%D_x
+            do k = lbound(cgl%cg%leafmap, dim=3, kind=4)-dom%D_z, ubound(cgl%cg%leafmap, dim=3, kind=4)+dom%D_z
+               do j = lbound(cgl%cg%leafmap, dim=2, kind=4)-dom%D_y, ubound(cgl%cg%leafmap, dim=2, kind=4)+dom%D_y
+                  do i = lbound(cgl%cg%leafmap, dim=1, kind=4)-dom%D_x, ubound(cgl%cg%leafmap, dim=1, kind=4)+dom%D_x
                      if (int(cgl%cg%prolong_xyz(i, j, k)) == OUTSIDE) then
                         if (dom%has_dir(xdim)) then
                            if (int(cgl%cg%prolong_xyz(i+1, j, k)) /= 0) cgl%cg%prolong_xyz(i+1, j, k) = BOUNDARY
@@ -799,9 +799,9 @@ contains
             endif
             call cgl%cg%flag%clear
             cgl%cg%flag%refine = .false. ! too late for refinements due to user request
-            do k = lbound(cgl%cg%leafmap, dim=3), ubound(cgl%cg%leafmap, dim=3)
-               do j = lbound(cgl%cg%leafmap, dim=2), ubound(cgl%cg%leafmap, dim=2)
-                  do i = lbound(cgl%cg%leafmap, dim=1), ubound(cgl%cg%leafmap, dim=1)
+            do k = lbound(cgl%cg%leafmap, dim=3, kind=4), ubound(cgl%cg%leafmap, dim=3, kind=4)
+               do j = lbound(cgl%cg%leafmap, dim=2, kind=4), ubound(cgl%cg%leafmap, dim=2, kind=4)
+                  do i = lbound(cgl%cg%leafmap, dim=1, kind=4), ubound(cgl%cg%leafmap, dim=1, kind=4)
                      if (int(cgl%cg%prolong_xyz(i, j, k)) == BOUNDARY) then
                         lnear = int(min(huge(I_ONE)/10.,maxval(cgl%cg%wa(i-range*dom%D_x:i+range*dom%D_x, j-range*dom%D_y:j+range*dom%D_y, k-range*dom%D_z:k+range*dom%D_z))))
                         if (lnear > lleaf) then

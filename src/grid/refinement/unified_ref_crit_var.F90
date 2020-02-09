@@ -288,7 +288,7 @@ contains
 
    subroutine refine_on_second_derivative(this, cg, p3d)
 
-      use constants,  only: xdim, ydim, zdim, GEO_XYZ, INVALID
+      use constants,  only: xdim, ydim, zdim, GEO_XYZ, INVALID, I_ONE
       use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container
@@ -299,12 +299,12 @@ contains
       type(grid_container), pointer,   intent(inout) :: cg   !< current grid piece
       real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least two layers of up-to-date guardcells)
 
-      integer :: i, j, k
+      integer(kind=4) :: i, j, k
       real :: sn, sd, r
-      integer, parameter :: how_far = 2
+      integer(kind=4), parameter :: how_far = 2
 
       if (dom%geometry_type /= GEO_XYZ) call die("[unified_ref_crit_var:refine_on_second_derivative] noncartesian geometry not supported yet")
-      if (dom%nb < how_far+1) call die("[unified_ref_crit_var:refine_on_second_derivative] at east 2 guardcells are required")
+      if (dom%nb < how_far+I_ONE) call die("[unified_ref_crit_var:refine_on_second_derivative] at east 2 guardcells are required")
 
       ! Perhaps it will be a bit faster with arrays for storing first-order differences
       ! but let's see if it works first and then how expensive it is.
@@ -318,41 +318,41 @@ contains
 
                if (dom%has_dir(xdim)) then
                   ! d/dx d/dx
-                  sn = sn + ((dux(i+1, j, k) - dux(i-1, j, k)) * cg%idx)**2
-                  sd = sd + ((abs(dux(i+1, j, k)) + abs(dux(i-1, j, k)) + this%aux * (daux(i+1, j, k) + daux(i-1, j, k))) * cg%idx)**2
+                  sn = sn + ((dux(i+I_ONE, j, k) - dux(i-I_ONE, j, k)) * cg%idx)**2
+                  sd = sd + ((abs(dux(i+I_ONE, j, k)) + abs(dux(i-I_ONE, j, k)) + this%aux * (daux(i+I_ONE, j, k) + daux(i-I_ONE, j, k))) * cg%idx)**2
                   if (dom%has_dir(ydim)) then
                      ! d/dy d/dx
-                     sn = sn + 2 * ((dux(i, j+1, k) - dux(i, j-1, k)) * cg%idy)**2  ! == d/dx d/dy
-                     sd = sd + ((abs(dux(i, j+1, k)) + abs(dux(i, j-1, k)) + this%aux * (daux(i, j+1, k) + daux(i, j-1, k))) * cg%idy)**2 + &
-                          &    ((abs(duy(i+1, j, k)) + abs(duy(i-1, j, k)) + this%aux * (dauy(i+1, j, k) + dauy(i-1, j, k))) * cg%idx)**2     ! d/dx d/dy
-                     ! to be exploited: (dauy(i+1, j, k) + dauy(i-1, j, k)) * cg%idx == (daux(i, j+1, k) + daux(i, j-1, k)) * cg%idy
+                     sn = sn + 2 * ((dux(i, j+I_ONE, k) - dux(i, j-I_ONE, k)) * cg%idy)**2  ! == d/dx d/dy
+                     sd = sd + ((abs(dux(i, j+I_ONE, k)) + abs(dux(i, j-I_ONE, k)) + this%aux * (daux(i, j+I_ONE, k) + daux(i, j-I_ONE, k))) * cg%idy)**2 + &
+                          &    ((abs(duy(i+I_ONE, j, k)) + abs(duy(i-I_ONE, j, k)) + this%aux * (dauy(i+I_ONE, j, k) + dauy(i-I_ONE, j, k))) * cg%idx)**2     ! d/dx d/dy
+                     ! to be exploited: (dauy(i+I_ONE, j, k) + dauy(i-I_ONE, j, k)) * cg%idx == (daux(i, j+I_ONE, k) + daux(i, j-I_ONE, k)) * cg%idy
                   endif
                   if (dom%has_dir(zdim)) then
                      ! d/dz d/dx
-                     sn = sn + 2 * ((dux(i, j, k+1) - dux(i, j, k-1)) * cg%idz)**2  ! == d/dx d/dz
-                     sd = sd + ((abs(dux(i, j, k+1)) + abs(dux(i, j, k-1)) + this%aux * (daux(i, j, k+1) + daux(i, j, k-1))) * cg%idz)**2 + &
-                          &    ((abs(duz(i+1, j, k)) + abs(duz(i-1, j, k)) + this%aux * (dauz(i+1, j, k) + dauz(i-1, j, k))) * cg%idx)**2     ! d/dx d/dz
-                     ! to be exploited: dauz(i+1, j, k) + dauz(i-1, j, k)) * cg%idx == (daux(i, j, k+1) + daux(i, j, k-1)) * cg%idz
+                     sn = sn + 2 * ((dux(i, j, k+I_ONE) - dux(i, j, k-I_ONE)) * cg%idz)**2  ! == d/dx d/dz
+                     sd = sd + ((abs(dux(i, j, k+I_ONE)) + abs(dux(i, j, k-I_ONE)) + this%aux * (daux(i, j, k+I_ONE) + daux(i, j, k-I_ONE))) * cg%idz)**2 + &
+                          &    ((abs(duz(i+I_ONE, j, k)) + abs(duz(i-I_ONE, j, k)) + this%aux * (dauz(i+I_ONE, j, k) + dauz(i-I_ONE, j, k))) * cg%idx)**2     ! d/dx d/dz
+                     ! to be exploited: dauz(i+I_ONE, j, k) + dauz(i-I_ONE, j, k)) * cg%idx == (daux(i, j, k+I_ONE) + daux(i, j, k-I_ONE)) * cg%idz
                   endif
                endif
 
                if (dom%has_dir(ydim)) then
                   ! d/dy d/dy
-                  sn = sn + ((duy(i, j+1, k) - duy(i, j-1, k)) * cg%idy)**2
-                  sd = sd + ((abs(duy(i, j+1, k)) + abs(duy(i, j-1, k)) + this%aux * (dauy(i, j+1, k) + dauy(i, j-1, k))) * cg%idy)**2
+                  sn = sn + ((duy(i, j+I_ONE, k) - duy(i, j-I_ONE, k)) * cg%idy)**2
+                  sd = sd + ((abs(duy(i, j+I_ONE, k)) + abs(duy(i, j-I_ONE, k)) + this%aux * (dauy(i, j+I_ONE, k) + dauy(i, j-I_ONE, k))) * cg%idy)**2
                   if (dom%has_dir(zdim)) then
                      ! d/dz d/dy
-                     sn = sn + 2 * ((duy(i, j, k+1) - duy(i, j, k-1)) * cg%idz)**2  ! == d/dy d/dz
-                     sd = sd + ((abs(duy(i, j, k+1)) + abs(duy(i, j, k-1)) + this%aux * (dauy(i, j, k+1) + dauy(i, j, k-1))) * cg%idz)**2 + &
-                          &    ((abs(duz(i, j+1, k)) + abs(duz(i, j-1, k)) + this%aux * (dauz(i, j+1, k) + dauz(i, j-1, k))) * cg%idy)**2     ! d/dy d/dz
-                     ! to be exploited: (dauz(i, j+1, k) + dauz(i, j-1, k)) * cg%idy == (dauy(i, j, k+1) + dauy(i, j, k-1)) * cg%idz
+                     sn = sn + 2 * ((duy(i, j, k+I_ONE) - duy(i, j, k-I_ONE)) * cg%idz)**2  ! == d/dy d/dz
+                     sd = sd + ((abs(duy(i, j, k+I_ONE)) + abs(duy(i, j, k-I_ONE)) + this%aux * (dauy(i, j, k+I_ONE) + dauy(i, j, k-I_ONE))) * cg%idz)**2 + &
+                          &    ((abs(duz(i, j+I_ONE, k)) + abs(duz(i, j-I_ONE, k)) + this%aux * (dauz(i, j+I_ONE, k) + dauz(i, j-I_ONE, k))) * cg%idy)**2     ! d/dy d/dz
+                     ! to be exploited: (dauz(i, j+I_ONE, k) + dauz(i, j-I_ONE, k)) * cg%idy == (dauy(i, j, k+I_ONE) + dauy(i, j, k-I_ONE)) * cg%idz
                   endif
                endif
 
                if (dom%has_dir(zdim)) then
                   ! d/dz d/dz
-                  sn = sn + ((duz(i, j, k+1) - duz(i, j, k-1)) * cg%idz)**2
-                  sd = sd + ((abs(duz(i, j, k+1)) + abs(duz(i, j, k-1)) + this%aux * (dauz(i, j, k+1) + dauz(i, j, k-1))) * cg%idz)**2
+                  sn = sn + ((duz(i, j, k+I_ONE) - duz(i, j, k-I_ONE)) * cg%idz)**2
+                  sd = sd + ((abs(duz(i, j, k+I_ONE)) + abs(duz(i, j, k-I_ONE)) + this%aux * (dauz(i, j, k+I_ONE) + dauz(i, j, k-I_ONE))) * cg%idz)**2
                endif
 
                if (sd > 0.) then
@@ -375,39 +375,45 @@ contains
    contains
 
       elemental real function dux(i, j, k)
+         use constants, only: I_ONE
          implicit none
-         integer, intent(in) :: i, j, k !< (x, y, z)-indices
-         dux = (p3d(i+1, j, k) - p3d(i-1, j, k)) * cg%idx
+         integer(kind=4), intent(in) :: i, j, k !< (x, y, z)-indices
+         dux = (p3d(i+I_ONE, j, k) - p3d(i-I_ONE, j, k)) * cg%idx
       end function dux
 
       elemental real function daux(i, j, k)
+         use constants, only: I_ONE
          implicit none
-         integer, intent(in) :: i, j, k !< (x, y, z)-indices
-         daux = (abs(p3d(i+1, j, k)) + abs(p3d(i-1, j, k))) * cg%idx
+         integer(kind=4), intent(in) :: i, j, k !< (x, y, z)-indices
+         daux = (abs(p3d(i+I_ONE, j, k)) + abs(p3d(i-I_ONE, j, k))) * cg%idx
       end function daux
 
       elemental real function duy(i, j, k)
+         use constants, only: I_ONE
          implicit none
-         integer, intent(in) :: i, j, k !< (x, y, z)-indices
-         duy = (p3d(i, j+1, k) - p3d(i, j-1, k)) * cg%idy
+         integer(kind=4), intent(in) :: i, j, k !< (x, y, z)-indices
+         duy = (p3d(i, j+I_ONE, k) - p3d(i, j-I_ONE, k)) * cg%idy
       end function duy
 
       elemental real function dauy(i, j, k)
+         use constants, only: I_ONE
          implicit none
-         integer, intent(in) :: i, j, k !< (x, y, z)-indices
-         dauy = (abs(p3d(i, j+1, k)) + abs(p3d(i, j-1, k))) * cg%idy
+         integer(kind=4), intent(in) :: i, j, k !< (x, y, z)-indices
+         dauy = (abs(p3d(i, j+I_ONE, k)) + abs(p3d(i, j-I_ONE, k))) * cg%idy
       end function dauy
 
       elemental real function duz(i, j, k)
+         use constants, only: I_ONE
          implicit none
-         integer, intent(in) :: i, j, k !< (x, y, z)-indices
-         duz = (p3d(i, j, k+1) - p3d(i, j, k-1)) * cg%idz
+         integer(kind=4), intent(in) :: i, j, k !< (x, y, z)-indices
+         duz = (p3d(i, j, k+I_ONE) - p3d(i, j, k-I_ONE)) * cg%idz
       end function duz
 
       elemental real function dauz(i, j, k)
+         use constants, only: I_ONE
          implicit none
-         integer, intent(in) :: i, j, k !< (x, y, z)-indices
-         dauz = (abs(p3d(i, j, k+1)) + abs(p3d(i, j, k-1))) * cg%idz
+         integer(kind=4), intent(in) :: i, j, k !< (x, y, z)-indices
+         dauz = (abs(p3d(i, j, k+I_ONE)) + abs(p3d(i, j, k-I_ONE))) * cg%idz
       end function dauz
 
    end subroutine refine_on_second_derivative
@@ -428,7 +434,7 @@ contains
       type(grid_container), pointer,   intent(inout) :: cg   !< current grid piece
       real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least one layer of updated guardcells)
 
-      integer :: i, j, k
+      integer(kind=4) :: i, j, k
       real :: r
 
       !> \todo implement how far we should look for refinements
@@ -454,7 +460,7 @@ contains
 
          integer(kind=4), intent(in) :: i1, i2, j1, j2, k1, k2
 
-         integer :: i, j, k
+         integer(kind=4) :: i, j, k
 
          maxgradoverarea = -huge(1.)
 
@@ -480,9 +486,9 @@ contains
 
          implicit none
 
-         integer, intent(in) :: i !< x-index
-         integer, intent(in) :: j !< y-index
-         integer, intent(in) :: k !< z-index
+         integer(kind=4), intent(in) :: i !< x-index
+         integer(kind=4), intent(in) :: j !< y-index
+         integer(kind=4), intent(in) :: k !< z-index
 
          grad2 = (p3d(i+dom%D_x, j, k) - p3d(i-dom%D_x, j, k))**2 + &
               &  (p3d(i, j+dom%D_y, k) - p3d(i, j-dom%D_y, k))**2 + &
@@ -508,7 +514,7 @@ contains
       type(grid_container), pointer,   intent(inout) :: cg   !< current grid piece
       real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least one layer of updated guardcells)
 
-      integer :: i, j, k
+      integer(kind=4) :: i, j, k
       real :: r
 
       !> \todo implement how far we should look for (de)refinements
@@ -534,7 +540,7 @@ contains
 
          integer(kind=4), intent(in) :: i1, i2, j1, j2, k1, k2
 
-         integer :: i, j, k
+         integer(kind=4) :: i, j, k
 
          maxrelgradoverarea = -huge(1.)
 
@@ -561,9 +567,9 @@ contains
 
          implicit none
 
-         integer, intent(in) :: i !< x-index
-         integer, intent(in) :: j !< y-index
-         integer, intent(in) :: k !< z-index
+         integer(kind=4), intent(in) :: i !< x-index
+         integer(kind=4), intent(in) :: j !< y-index
+         integer(kind=4), intent(in) :: k !< z-index
 
          rel_grad2 = 0.
 
