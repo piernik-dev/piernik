@@ -312,36 +312,34 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         if (any(cgl%cg%leafmap)) then
+         associate (cg => cgl%cg)
             ! Cannot use mand_n as long as it stays uninitialized during second call to problem_refine_derefine in update_refinement
             ! wna%fi is vital and thus automagilaclly prolonged
             ! Possible fixes:
             ! * make mand_n vital
             ! * do not call problem_refine_derefine twice in update_refinement
-!!$            nitd = exp(maxval(cgl%cg%q(qna%ind(mand_n))%span(cgl%cg%ijkse), mask=cgl%cg%leafmap)) - &
-!!$                 & exp(minval(cgl%cg%q(qna%ind(mand_n))%span(cgl%cg%ijkse), mask=cgl%cg%leafmap))
+!!$            nitd = exp(maxval(cg%q(qna%ind(mand_n))%span(cg%ijkse), mask=cg%leafmap)) - &
+!!$                 & exp(minval(cg%q(qna%ind(mand_n))%span(cg%ijkse), mask=cg%leafmap))
 
             diffmax = -huge(1.)
             ! Look one cell beyond boundary to prevent unnecessary derefinements
-            do i = cgl%cg%is-dom%D_x, cgl%cg%ie+dom%D_x
-               do j = cgl%cg%js-dom%D_y, cgl%cg%je+dom%D_y
-                  do k = cgl%cg%ks-dom%D_z, cgl%cg%ke+dom%D_z
-                     nitd = maxval(abs(exp(cgl%cg%u(iarr_all_dn(1), i, j, k)) - [ &
-                          &            exp(cgl%cg%u(iarr_all_dn(1), i+dom%D_x, j, k)), &
-                          &            exp(cgl%cg%u(iarr_all_dn(1), i-dom%D_x, j, k)), &
-                          &            exp(cgl%cg%u(iarr_all_dn(1), i, j+dom%D_y, k)), &
-                          &            exp(cgl%cg%u(iarr_all_dn(1), i, j-dom%D_y, k)), &
-                          &            exp(cgl%cg%u(iarr_all_dn(1), i, j, k+dom%D_z)), &
-                          &            exp(cgl%cg%u(iarr_all_dn(1), i, j, k-dom%D_z)) ] ) )
-                     if ( i >= cgl%cg%is .and. i <= cgl%cg%ie .and. &
-                          j >= cgl%cg%js .and. j <= cgl%cg%je .and. &
-                          k >= cgl%cg%ks .and. k <= cgl%cg%ke) cgl%cg%refinemap(i, j, k) = (nitd >= ref_thr)
+            do i = cg%is-dom%D_x, cg%ie+dom%D_x
+               do j = cg%js-dom%D_y, cg%je+dom%D_y
+                  do k = cg%ks-dom%D_z, cg%ke+dom%D_z
+                     nitd = maxval(abs(exp(cg%u(iarr_all_dn(1), i, j, k)) - [ &
+                          &            exp(cg%u(iarr_all_dn(1), i+dom%D_x, j, k)), &
+                          &            exp(cg%u(iarr_all_dn(1), i-dom%D_x, j, k)), &
+                          &            exp(cg%u(iarr_all_dn(1), i, j+dom%D_y, k)), &
+                          &            exp(cg%u(iarr_all_dn(1), i, j-dom%D_y, k)), &
+                          &            exp(cg%u(iarr_all_dn(1), i, j, k+dom%D_z)), &
+                          &            exp(cg%u(iarr_all_dn(1), i, j, k-dom%D_z)) ] ) )
+                     if (nitd >= ref_thr) call cg%flag%set(i, j, k)
                      diffmax = max(diffmax, nitd)
                   enddo
                enddo
             enddo
 
-         endif
+         end associate
          cgl => cgl%nxt
       enddo
 
