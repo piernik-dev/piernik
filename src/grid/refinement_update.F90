@@ -68,10 +68,8 @@ contains
       call all_bnd ! \todo find a way to minimize calling this - perhaps manage a flag that says whether the boundaries are up to date or not
       call all_bnd_vital_q
 
-      if (associated(problem_refine_derefine)) then
-         call problem_refine_derefine ! call user routine first, so it cannot alter flags set by automatic routines
-         if (verbose) call sanitize_all_ref_flags  ! don't trust user routines too much :->
-      endif
+      if (associated(problem_refine_derefine)) &
+           call problem_refine_derefine ! call user routine first, so it cannot alter flags set by automatic routines
 
       if (verbose) then
          cnt(PROBLEM) = count_ref_flags()
@@ -79,7 +77,6 @@ contains
       endif
 
       call urc_list%all_mark(leaves%first)
-      if (verbose) call sanitize_all_ref_flags
 
       if (verbose) then
          cnt(URC) = count_ref_flags()
@@ -162,7 +159,7 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             associate (cg => cgl%cg)
-               cg%flag%refine = cg%flag%refine .or. cg%flag%get(cg%is, cg%ie, cg%js, cg%je, cg%ks, cg%ke, cg%leafmap)
+               cg%flag%refine = cg%flag%refine .or. cg%flag%get(int(cg%ijkse, kind=8), cg%leafmap)
                call cg%flag%sanitize(cg%l%id)
             end associate
             cgl => cgl%nxt
@@ -174,8 +171,8 @@ contains
 
       function count_ref_flags() result(cnt)
 
-         use cg_list,        only: cg_list_element
-         use cg_list_global, only: all_cg
+         use cg_leaves, only: leaves
+         use cg_list,   only: cg_list_element
 
          implicit none
 
@@ -183,10 +180,12 @@ contains
 
          type(cg_list_element), pointer :: cgl
 
+         call sanitize_all_ref_flags
+
          cnt = 0
-         cgl => all_cg%first
+         cgl => leaves%first
          do while (associated(cgl))
-            if ( cgl%cg%flag%refine .or. size(cgl%cg%flag%SFC_refine_list) > 0) cnt = cnt + 1
+            if (cgl%cg%flag%refine) cnt = cnt + 1
             cgl => cgl%nxt
          enddo
 
@@ -263,7 +262,7 @@ contains
       do while (associated(cgl))
          associate (cg => cgl%cg)
             ! look for refineflag .and. .not. leafmap + preimeter
-            if (cg%flag%get(cg%is, cg%ie, cg%js, cg%je, cg%ks, cg%ke, .not. cg%leafmap)) then
+            if (cg%flag%get(int(cg%ijkse, kind=8), .not. cg%leafmap)) then
                if (allocated(cg%ri_tgt%seg)) then
                   do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
                      ! clear own derefine flags (single-thread test)
