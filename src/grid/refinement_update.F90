@@ -381,19 +381,20 @@ contains
       use cg_level_connected,    only: cg_level_connected_t
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
-      use constants,             only: pLOR, pLAND, pSUM
+      use constants,             only: pLOR, pLAND, pSUM, tmr_amr
       use dataio_pub,            only: warn, die
       use global,                only: nstep
       use grid_cont,             only: grid_container
       use list_of_cg_lists,      only: all_lists
       use mpisetup,              only: piernik_MPI_Allreduce!, proc
       use refinement,            only: n_updAMR, emergency_fix
+      use timer,                 only: set_timer
       use unified_ref_crit_list, only: urc_list
 #ifdef GRAV
-      use gravity,              only: update_gp
+      use gravity,               only: update_gp
 #endif /* GRAV */
 #ifdef DEBUG_DUMPS
-      use data_hdf5,            only: write_hdf5
+      use data_hdf5,             only: write_hdf5
 #endif /* DEBUG_DUMPS */
 
       implicit none
@@ -408,6 +409,9 @@ contains
       type(cg_level_connected_t), pointer :: curl
       type(grid_container),  pointer :: cg
       logical :: correct, full_update
+      real :: ts  !< time for runtime profiling
+
+      ts =  set_timer(tmr_amr, .true.)
 
       if (present(act_count)) act_count = 0
 
@@ -416,8 +420,14 @@ contains
 
       call finest%level%restrict_to_base ! implies update of leafmap
 
-      if (n_updAMR <= 0) return
-      if (mod(nstep, n_updAMR) /= 0 .and. .not. emergency_fix) return
+      if (n_updAMR <= 0) then
+         ! call print_time("[refinement_update] No refinement update")  ! ToDo: enable only when detailed profiling is required
+         return
+      endif
+      if (mod(nstep, n_updAMR) /= 0 .and. .not. emergency_fix) then
+         ! call print_time("[refinement_update] No refinement update")  ! ToDo: enable only when detailed profiling is required
+         return
+      endif
 
       call all_cg%prevent_prolong
       call all_cg%set_is_old
@@ -584,6 +594,30 @@ contains
 #endif /* DEBUG_DUMPS */
 
       emergency_fix = .false.
+
+      if (full_update) then
+         call print_time("[refinement_update] Finishing (full update)")
+      else
+         call print_time("[refinement_update] Finishing (fixup only)")
+      endif
+
+   contains
+
+      subroutine print_time(str)
+
+         use constants,  only: tmr_amr
+         use dataio_pub, only: msg, printinfo
+         use mpisetup,   only: master
+         use timer,      only: set_timer
+
+         implicit none
+
+         character(len=*), intent(in) :: str
+
+         write(msg, '(2a,f7.3)') str, ", dt_wall= ", set_timer(tmr_amr)
+         if (master) call printinfo(msg)
+
+      end subroutine print_time
 
    end subroutine update_refinement
 

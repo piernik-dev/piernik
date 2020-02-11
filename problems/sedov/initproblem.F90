@@ -63,14 +63,15 @@ contains
 
    subroutine read_problem_par
 
-      use constants,            only: DST
-      use dataio_pub,           only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,           only: msg, printinfo, die
-      use domain,               only: dom
-      use fluidindex,           only: flind
-      use mpisetup,             only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
-      use named_array_list,     only: wna
+      use constants,             only: DST
+      use dataio_pub,            only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,            only: msg, printinfo, die
+      use domain,                only: dom
+      use fluidindex,            only: flind
+      use mpisetup,              only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
+      use named_array_list,      only: wna
       use unified_ref_crit_list, only: urc_list
+      use user_hooks,            only: problem_domain_update
 
       implicit none
 
@@ -169,6 +170,7 @@ contains
          call urc_list%add_user_urcv(wna%fi, flind%all_fluids(id)%fl%ien, ref_thr, ref_eps, "Loechner", .true.)
       enddo
 
+      if (dtrig < 0.) nullify(problem_domain_update)
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
