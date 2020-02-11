@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 
-!> \brief This module contains variables and initialization routines related to refinement
+!> \brief This module contains variables and initialization routines related to refinement flags and derefinement requests
 
 module refinement_flag
 
@@ -37,13 +37,14 @@ module refinement_flag
    private
    public :: ref_flag
 
-   ! A candidate for refinement
+   !> A candidate for refinement
    type :: SFC_candidate
-      integer(kind=8) :: level  ! level at which we want to put grid block
-      integer(kind=8) :: SFC_id ! position at which we want to put grid block
+      integer(kind=8) :: level                  ! level at which we want to put grid block
+      integer(kind=8) :: SFC_id                 ! position at which we want to put grid block
       integer(kind=8), dimension(ndims) :: off  ! offset of grid block (formally can be obtained from SFC_id)
    end type SFC_candidate
 
+   !> Refinement flags, derefinement request and a list of new grids to create
    type :: ref_flag
       logical :: refine   !> a request to refine, deprecated: use this%map whenever possible
       logical :: derefine !> a request to derefine
@@ -54,25 +55,28 @@ module refinement_flag
       procedure          :: add            !> Appends one element to SFC_refine_list
       procedure          :: sanitize       !> Sanitize the refinement flags
       procedure          :: initmap        !> Allocate map
+
+      generic,   public  :: set => set_cell, set_arrng, set_all, set_mask  !, set_range
       procedure, private :: set_cell       !> Mark a cell for refinement
 !      procedure, private :: set_range      !> Mark a box of cells for refinement (list of indices)
       procedure, private :: set_arrng      !> Mark a box of cells for refinement (se-type array of indices)
       procedure, private :: set_all        !> Mark all cells for refinement
       procedure, private :: set_mask       !> Mark cells according to mask
+
+      generic,   public  :: get => get_cell, get_any_range, get_any_arrng, get_any
       procedure, private :: get_cell       !> Read refinement status of a cell
       procedure, private :: get_any_range  !> Read refinement status of a box of cells (list of indices)
       procedure, private :: get_any_arrng  !> Read refinement status of a box of cells (se-type array of indices)
       procedure, private :: get_any        !> Read refinement status of all cells
+
+      generic,   public  :: clear => clear_mask, clear_all
       procedure, private :: clear_mask     !> Unmark cells according to mask
       procedure, private :: clear_all      !> Unmark all cells
-      generic,   public  :: set   => set_cell, set_arrng, set_all, set_mask  !, set_range
-      generic,   public  :: get   => get_cell, get_any_range, get_any_arrng, get_any
-      generic,   public  :: clear => clear_mask, clear_all
    end type ref_flag
 
 contains
 
-!> \brief Initialize to (.false. , .false., allocate 0 elements)
+!> \brief Initialize to (.false. , .false., allocate 0 elements, clear the map)
 
    subroutine init(this)
 
@@ -153,7 +157,7 @@ contains
 
       class(ref_flag), intent(inout) :: this     !> object invoking this procedure
       integer(kind=4), intent(in)    :: il, jl, kl, ih, jh, kh  !> box coordinates
-      logical, dimension(il:ih, jl:jh, kl:kh), optional, intent(in) :: mask
+      logical, dimension(il:ih, jl:jh, kl:kh), optional, intent(in) :: mask  !> the mask to filter out something
 
 #ifdef DEBUG
       if (any([il, jl, kl] < lbound(this%map)) .or. any([il, jl, kl] > ubound(this%map))) call die("[refinement_flag:get_any_range] out of range (l)")  ! this can be costly check
@@ -181,7 +185,7 @@ contains
 
       class(ref_flag), intent(inout) :: this  !> object invoking this procedure
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: se  !> box coordinates
-      logical, dimension(se(xdim,LO):se(xdim,HI), se(ydim,LO):se(ydim,HI), se(zdim,LO):se(zdim,HI)), optional, intent(in) :: mask
+      logical, dimension(se(xdim,LO):se(xdim,HI), se(ydim,LO):se(ydim,HI), se(zdim,LO):se(zdim,HI)), optional, intent(in) :: mask  !> the mask to filter out something
 
 #ifdef DEBUG
       if (any(se < lbound(this%map)) .or. any(se > ubound(this%map))) call die("[refinement_flag:get_any_arrng] out of range")  ! this can be costly check
@@ -334,8 +338,8 @@ contains
 
       implicit none
 
-      class(ref_flag), intent(inout) :: this     ! object invoking this procedure
-      integer(kind=4), intent(in)    :: my_level ! refinement level at which the flag has to be sanitized
+      class(ref_flag), intent(inout) :: this     !> object invoking this procedure
+      integer(kind=4), intent(in)    :: my_level !> refinement level at which the flag has to be sanitized
 
       if (size(this%SFC_refine_list) > 0) this%refine = .true.
 
@@ -358,10 +362,10 @@ contains
 
       implicit none
 
-      class(ref_flag),                   intent(inout) :: this   ! object invoking this procedure
-      integer(kind=4),                   intent(in)    :: level  ! level at which we want to put grid block
-      integer(kind=8), dimension(ndims), intent(in)    :: off    ! offset of grid block
-      integer(kind=8), dimension(ndims), intent(in)    :: l_off  ! offset of the level
+      class(ref_flag),                   intent(inout) :: this   !> object invoking this procedure
+      integer(kind=4),                   intent(in)    :: level  !> level at which we want to put grid block
+      integer(kind=8), dimension(ndims), intent(in)    :: off    !> offset of grid block
+      integer(kind=8), dimension(ndims), intent(in)    :: l_off  !> offset of the level
 
       this%SFC_refine_list = [ this%SFC_refine_list, SFC_candidate(int(level, kind=8), SFC_order(off-l_off), off) ] !lhs reallocation
 

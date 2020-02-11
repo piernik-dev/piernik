@@ -162,7 +162,7 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             associate (cg => cgl%cg)
-               cg%flag%refine = cg%flag%refine .or. cg%flag%get(cg%is,cg%ie, cg%js,cg%je, cg%ks,cg%ke, cg%leafmap)
+               cg%flag%refine = cg%flag%refine .or. cg%flag%get(cg%is, cg%ie, cg%js, cg%je, cg%ks, cg%ke, cg%leafmap)
                call cg%flag%sanitize(cg%l%id)
             end associate
             cgl => cgl%nxt
@@ -263,7 +263,7 @@ contains
       do while (associated(cgl))
          associate (cg => cgl%cg)
             ! look for refineflag .and. .not. leafmap + preimeter
-            if (cg%flag%get(cg%is,cg%ie, cg%js,cg%je, cg%ks,cg%ke, .not. cg%leafmap)) then
+            if (cg%flag%get(cg%is, cg%ie, cg%js, cg%je, cg%ks, cg%ke, .not. cg%leafmap)) then
                if (allocated(cg%ri_tgt%seg)) then
                   do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
                      ! clear own derefine flags (single-thread test)
@@ -535,7 +535,6 @@ contains
 
       ! Now try to derefine any excess of refinement.
       ! Derefinement saves memory and CPU usage, but it is of lowest priority here.
-      ! Note that it may happen that some grids scheduled to be derefined have triggered refinement topology corrections in the code above - it is not a big issue.
       ! Just go through derefinement stage once and don't try to do too much here at once.
       ! Any excess of refinement will be handled in next call to this routine anyway.
       if (full_update) then
@@ -621,7 +620,7 @@ contains
 
    end subroutine update_refinement
 
-!> \brief Refine a single grid piece. Pay attention wheter it is already refined
+!> \brief Refine a single grid piece. Pay attention whether it is already refined
 
    subroutine refine_one_grid(curl, cgl)
 
@@ -704,7 +703,7 @@ contains
 
       implicit none
 
-      logical, optional, intent(out) :: correct !< Flag to tell that corrections are required.
+      logical, optional, intent(out) :: correct !< Flag to tell if corrections are required.
 
       type(cg_list_element), pointer :: cgl
       integer(kind=4) ::  i, j, k
@@ -836,18 +835,16 @@ contains
          else
             cgl%cg%flag%refine = .false.
          endif
+
          cgl => cgl%nxt
       enddo
 
 #ifdef DEBUG_DUMPS
       call piernik_MPI_Allreduce(failed, pLOR)
+      if (failed) call write_hdf5
 #endif /* DEBUG_DUMPS */
-      if (failed) then
-#ifdef DEBUG_DUMPS
-         call write_hdf5
-#endif /* DEBUG_DUMPS */
-         call die("[refinement_update:fix_refinement] Refinement defects found.")
-      endif
+
+      if (failed) call die("[refinement_update:fix_refinement] Refinement defects found.")
 
    end subroutine fix_refinement
 
