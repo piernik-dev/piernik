@@ -746,6 +746,12 @@ contains
       ! detect high refinements near leafmap and alter refinement flags appropriately
       cgl => leaves%first
       do while (associated(cgl))
+
+         ! this is perhaps a bit suboptimal: todo let it grow and implement INVALID entries
+         if (allocated(cgl%cg%flag%SFC_refine_list)) deallocate(cgl%cg%flag%SFC_refine_list)
+         allocate(cgl%cg%flag%SFC_refine_list(0))
+         call cgl%cg%flag%clear
+
          if (any(cgl%cg%leafmap)) then
             cgl%cg%prolong_xyz = OUTSIDE
             lleaf = -huge(1)
@@ -800,12 +806,6 @@ contains
 !!$               enddo
 !!$            endif
 
-            if (allocated(cgl%cg%flag%SFC_refine_list)) then
-               deallocate(cgl%cg%flag%SFC_refine_list)
-               allocate(cgl%cg%flag%SFC_refine_list(0))
-            endif
-            call cgl%cg%flag%clear
-            cgl%cg%flag%refine = .false. ! too late for refinements due to user request
             do k = lbound(cgl%cg%leafmap, dim=3, kind=4), ubound(cgl%cg%leafmap, dim=3, kind=4)
                do j = lbound(cgl%cg%leafmap, dim=2, kind=4), ubound(cgl%cg%leafmap, dim=2, kind=4)
                   do i = lbound(cgl%cg%leafmap, dim=1, kind=4), ubound(cgl%cg%leafmap, dim=1, kind=4)
@@ -833,7 +833,7 @@ contains
             endif
 
          else
-            cgl%cg%flag%refine = .false.
+            call cgl%cg%flag%sanitize(cgl%cg%l%id)
          endif
 
          cgl => cgl%nxt
