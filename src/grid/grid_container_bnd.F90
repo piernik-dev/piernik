@@ -33,7 +33,7 @@ module grid_cont_bnd
    use constants,       only: xdim, zdim, LO, HI
    use grid_cont_na,    only: grid_container_na_t
    use fluxtypes,       only: fluxarray, fluxpoint
-   use refinement_flag, only: ref_flag
+   use refinement_flag, only: ref_flag_t
 
    implicit none
 
@@ -75,7 +75,7 @@ module grid_cont_bnd
 
       ! Refinements
       logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .false. otherwise
-      type(ref_flag) :: flag                                      !< refine or derefine this grid container?
+      type(ref_flag_t) :: flag                                    !< refine or derefine this grid container?
 
    contains
 

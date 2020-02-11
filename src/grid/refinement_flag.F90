@@ -35,20 +35,20 @@ module refinement_flag
    implicit none
 
    private
-   public :: ref_flag
+   public :: ref_flag_t
 
    !> A candidate for refinement
-   type :: SFC_candidate
+   type :: SFC_candidate_t
       integer(kind=8) :: level                  ! level at which we want to put grid block
       integer(kind=8) :: SFC_id                 ! position at which we want to put grid block
       integer(kind=8), dimension(ndims) :: off  ! offset of grid block (formally can be obtained from SFC_id)
-   end type SFC_candidate
+   end type SFC_candidate_t
 
    !> Refinement flags, derefinement request and a list of new grids to create
-   type :: ref_flag
+   type :: ref_flag_t
       logical :: refine   !> a request to refine, deprecated: use this%map whenever possible
       logical :: derefine !> a request to derefine
-      type(SFC_candidate), allocatable, dimension(:) :: SFC_refine_list
+      type(SFC_candidate_t), allocatable, dimension(:) :: SFC_refine_list
       logical, private, allocatable, dimension(:,:,:) :: map  !> .true. when a cell triggers refinement criteria, .false. otherwise
    contains
       procedure          :: init           !> Initialize: (.false. , .false., allocate 0 elements)
@@ -72,7 +72,7 @@ module refinement_flag
       generic,   public  :: clear => clear_mask, clear_all
       procedure, private :: clear_mask     !> Unmark cells according to mask
       procedure, private :: clear_all      !> Unmark all cells
-   end type ref_flag
+   end type ref_flag_t
 
 contains
 
@@ -84,7 +84,7 @@ contains
 
       implicit none
 
-      class(ref_flag), intent(inout) :: this  !> object invoking this procedure
+      class(ref_flag_t), intent(inout) :: this  !> object invoking this procedure
 
       this%refine = .false.
       this%derefine = .false.
@@ -104,7 +104,7 @@ contains
 
       implicit none
 
-      class(ref_flag),                              intent(inout) :: this   !> object invoking this procedure
+      class(ref_flag_t),                            intent(inout) :: this   !> object invoking this procedure
       integer(kind=4), dimension(xdim:zdim, LO:HI), intent(in)    :: ijkse  !> grid bounds, including guardcells
 
       if (allocated(this%map)) call die("[refinement_flag:initmap] already allocated")
@@ -122,8 +122,8 @@ contains
 
       implicit none
 
-      class(ref_flag), intent(inout) :: this     !> object invoking this procedure
-      integer(kind=4), intent(in)    :: i, j, k  !> cell coordinates
+      class(ref_flag_t), intent(inout) :: this     !> object invoking this procedure
+      integer(kind=4),   intent(in)    :: i, j, k  !> cell coordinates
 
 #ifdef DEBUG
       if (any([i, j, k] < lbound(this%map)) .or. any([i, j, k] > ubound(this%map))) call die("[refinement_flag:set_cell] out of range")  ! this can be costly check
@@ -139,7 +139,7 @@ contains
 
       implicit none
 
-      class(ref_flag), intent(inout) :: this  !> object invoking this procedure
+      class(ref_flag_t), intent(inout) :: this  !> object invoking this procedure
 
       refine = any(this%map)
 
@@ -155,8 +155,8 @@ contains
 
       implicit none
 
-      class(ref_flag), intent(inout) :: this     !> object invoking this procedure
-      integer(kind=4), intent(in)    :: il, jl, kl, ih, jh, kh  !> box coordinates
+      class(ref_flag_t), intent(inout) :: this     !> object invoking this procedure
+      integer(kind=4), intent(in)      :: il, jl, kl, ih, jh, kh  !> box coordinates
       logical, dimension(il:ih, jl:jh, kl:kh), optional, intent(in) :: mask  !> the mask to filter out something
 
 #ifdef DEBUG
@@ -183,7 +183,7 @@ contains
 
       implicit none
 
-      class(ref_flag), intent(inout) :: this  !> object invoking this procedure
+      class(ref_flag_t), intent(inout) :: this  !> object invoking this procedure
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: se  !> box coordinates
       logical, dimension(se(xdim,LO):se(xdim,HI), se(ydim,LO):se(ydim,HI), se(zdim,LO):se(zdim,HI)), optional, intent(in) :: mask  !> the mask to filter out something
 
@@ -209,8 +209,8 @@ contains
 
       implicit none
 
-      class(ref_flag), intent(inout) :: this     !> object invoking this procedure
-      integer(kind=4), intent(in)    :: i, j, k  !> cell coordinates
+      class(ref_flag_t), intent(inout) :: this     !> object invoking this procedure
+      integer(kind=4),   intent(in)    :: i, j, k  !> cell coordinates
 
 #ifdef DEBUG
       if (any([i, j, k] < lbound(this%map)) .or. any([i, j, k] > ubound(this%map))) call die("[refinement_flag:set_cell] out of range")  ! this can be costly check
@@ -230,8 +230,8 @@ contains
 !!$
 !!$      implicit none
 !!$
-!!$      class(ref_flag), intent(inout) :: this                    !> object invoking this procedure
-!!$      integer(kind=4), intent(in)    :: il, jl, kl, ih, jh, kh  !> box coordinates
+!!$      class(ref_flag_t), intent(inout) :: this                    !> object invoking this procedure
+!!$      integer(kind=4),   intent(in)    :: il, jl, kl, ih, jh, kh  !> box coordinates
 !!$
 !!$#ifdef DEBUG
 !!$      if (any([il, jl, kl] < lbound(this%map)) .or. any([il, jl, kl] > ubound(this%map))) call die("[refinement_flag:set_range] out of range (l)")  ! this can be costly check
@@ -253,7 +253,7 @@ contains
 
       implicit none
 
-      class(ref_flag), intent(inout) :: this  !> object invoking this procedure
+      class(ref_flag_t), intent(inout) :: this  !> object invoking this procedure
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: se  !> box coordinates
 
 #ifdef DEBUG
@@ -270,7 +270,7 @@ contains
 
       implicit none
 
-      class(ref_flag),   intent(inout) :: this   !> object invoking this procedure
+      class(ref_flag_t), intent(inout) :: this   !> object invoking this procedure
       logical, optional, intent(in)    :: value  !> used to clear flags
 
       if (present(value)) then
@@ -289,7 +289,7 @@ contains
 
       implicit none
 
-      class(ref_flag),           intent(inout) :: this  !> object invoking this procedure
+      class(ref_flag_t),         intent(inout) :: this  !> object invoking this procedure
       logical, dimension(:,:,:), intent(in)    :: mask  !> set flags according to this mask, preserve flags already set
 
       if (any(shape(mask) /= shape(this%map))) call die("[refinement_flag::set_mask] wrong mask shape")
@@ -304,7 +304,7 @@ contains
 
       implicit none
 
-      class(ref_flag),                        intent(inout) :: this  !> object invoking this procedure
+      class(ref_flag_t),                      intent(inout) :: this  !> object invoking this procedure
       logical, dimension(:,:,:), allocatable, intent(in)    :: mask  !> set flags according to this mask, preserve flags already set
       ! allocatable is required to get proper bounds, as they were allocated
 
@@ -324,7 +324,7 @@ contains
 
       implicit none
 
-      class(ref_flag), intent(inout) :: this  !> object invoking this procedure
+      class(ref_flag_t), intent(inout) :: this  !> object invoking this procedure
 
       this%map = .false.
 
@@ -338,8 +338,8 @@ contains
 
       implicit none
 
-      class(ref_flag), intent(inout) :: this     !> object invoking this procedure
-      integer(kind=4), intent(in)    :: my_level !> refinement level at which the flag has to be sanitized
+      class(ref_flag_t), intent(inout) :: this     !> object invoking this procedure
+      integer(kind=4),   intent(in)    :: my_level !> refinement level at which the flag has to be sanitized
 
       if (size(this%SFC_refine_list) > 0) this%refine = .true.
 
@@ -362,12 +362,12 @@ contains
 
       implicit none
 
-      class(ref_flag),                   intent(inout) :: this   !> object invoking this procedure
+      class(ref_flag_t),                 intent(inout) :: this   !> object invoking this procedure
       integer(kind=4),                   intent(in)    :: level  !> level at which we want to put grid block
       integer(kind=8), dimension(ndims), intent(in)    :: off    !> offset of grid block
       integer(kind=8), dimension(ndims), intent(in)    :: l_off  !> offset of the level
 
-      this%SFC_refine_list = [ this%SFC_refine_list, SFC_candidate(int(level, kind=8), SFC_order(off-l_off), off) ] !lhs reallocation
+      this%SFC_refine_list = [ this%SFC_refine_list, SFC_candidate_t(int(level, kind=8), SFC_order(off-l_off), off) ] !lhs reallocation
 
    end subroutine add
 
