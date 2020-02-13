@@ -52,7 +52,6 @@ module refinement_flag
    contains
       procedure          :: init           !> Initialize: (.false. , .false., allocate 0 elements)
       procedure          :: add            !> Appends one element to SFC_refine_list
-      procedure          :: sanitize       !> Sanitize the refinement flags
       procedure          :: initmap        !> Allocate map
 
       generic,   public  :: set => set_cell, set_arrng, set_all, set_mask  !, set_range
@@ -327,25 +326,6 @@ contains
       this%map = .false.
 
    end subroutine clear_all
-
-!> \brief Sanitize the refinement flags with respect to level_min and level_max
-
-   subroutine sanitize(this, my_level)
-
-      use refinement, only: level_min, level_max
-
-      implicit none
-
-      class(ref_flag_t), intent(inout) :: this     !> object invoking this procedure
-      integer(kind=4),   intent(in)    :: my_level !> refinement level at which the flag has to be sanitized
-
-      if (my_level >= level_max) call this%clear
-      if (my_level <  level_min) call this%set
-
-      if (my_level >  level_max) this%derefine = .true.
-      if (my_level <= level_min) this%derefine = .false.
-
-   end subroutine sanitize
 
 !> \brief Appends one element to SFC_refine_list
 

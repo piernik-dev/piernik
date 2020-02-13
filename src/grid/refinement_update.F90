@@ -147,8 +147,9 @@ contains
 
       subroutine sanitize_all_ref_flags
 
-         use cg_leaves, only: leaves
-         use cg_list,   only: cg_list_element
+         use cg_leaves,  only: leaves
+         use cg_list,    only: cg_list_element
+         use refinement, only: level_min, level_max
 
          implicit none
 
@@ -158,7 +159,10 @@ contains
          do while (associated(cgl))
             associate (cg => cgl%cg)
                if (cg%flag%get(int(cg%ijkse, kind=8), cg%leafmap)) cg%flag%derefine = .false.
-               call cg%flag%sanitize(cg%l%id)
+               if (cg%l%id >= level_max) call cg%flag%clear
+               if (cg%l%id <  level_min) call cg%flag%set
+               if (cg%l%id >  level_max) cg%flag%derefine = .true.
+               if (cg%l%id <= level_min) cg%flag%derefine = .false.
             end associate
             cgl => cgl%nxt
          enddo
