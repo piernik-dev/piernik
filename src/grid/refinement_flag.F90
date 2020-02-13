@@ -46,7 +46,6 @@ module refinement_flag
 
    !> Refinement flags, derefinement request and a list of new grids to create
    type :: ref_flag_t
-      logical :: refine   !> a request to refine, deprecated: use this%map whenever possible
       logical :: derefine !> a request to derefine
       type(SFC_candidate_t), allocatable, dimension(:) :: SFC_refine_list
       logical, private, allocatable, dimension(:,:,:) :: map  !> .true. when a cell triggers refinement criteria, .false. otherwise
@@ -86,7 +85,6 @@ contains
 
       class(ref_flag_t), intent(inout) :: this  !> object invoking this procedure
 
-      this%refine = .false.
       this%derefine = .false.
       if (allocated(this%SFC_refine_list)) deallocate(this%SFC_refine_list)
       allocate(this%SFC_refine_list(0))
@@ -330,7 +328,7 @@ contains
 
    end subroutine clear_all
 
-!> \brief Sanitize the refinement flags
+!> \brief Sanitize the refinement flags with respect to level_min and level_max
 
    subroutine sanitize(this, my_level)
 
@@ -341,12 +339,8 @@ contains
       class(ref_flag_t), intent(inout) :: this     !> object invoking this procedure
       integer(kind=4),   intent(in)    :: my_level !> refinement level at which the flag has to be sanitized
 
-      if (size(this%SFC_refine_list) > 0) this%refine = .true.
-
-      if (this%refine) this%derefine = .false.
-
-      if (my_level >= level_max) this%refine   = .false.
-      if (my_level <  level_min) this%refine   = .true.
+      if (my_level >= level_max) call this%clear
+      if (my_level <  level_min) call this%set
 
       if (my_level >  level_max) this%derefine = .true.
       if (my_level <= level_min) this%derefine = .false.

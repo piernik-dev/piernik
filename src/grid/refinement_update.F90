@@ -154,12 +154,10 @@ contains
 
          type(cg_list_element), pointer :: cgl
 
-         !> \todo communicate refines from coarse to fine blocks to prevent oscillations that might occur when there is derefinement request on fine, when coarse requests refinement
-
          cgl => leaves%first
          do while (associated(cgl))
             associate (cg => cgl%cg)
-               cg%flag%refine = cg%flag%refine .or. cg%flag%get(int(cg%ijkse, kind=8), cg%leafmap)
+               if (cg%flag%get(int(cg%ijkse, kind=8), cg%leafmap)) cg%flag%derefine = .false.
                call cg%flag%sanitize(cg%l%id)
             end associate
             cgl => cgl%nxt
@@ -185,7 +183,7 @@ contains
          cnt = 0
          cgl => leaves%first
          do while (associated(cgl))
-            if (cgl%cg%flag%refine) cnt = cnt + 1
+            if (cgl%cg%flag%get(int(cgl%cg%ijkse, kind=8), cgl%cg%leafmap)) cnt = cnt + 1
             cgl => cgl%nxt
          enddo
 
@@ -445,10 +443,9 @@ contains
             cgl => curl%first
             do while (associated(cgl))
                if (any(cgl%cg%leafmap)) then
-                  if (cgl%cg%flag%refine) then
+                  if (size(cgl%cg%flag%SFC_refine_list) > 0) then
                      call refine_one_grid(curl, cgl)
                      if (present(act_count)) act_count = act_count + 1
-                     cgl%cg%flag%refine = .false.
                   endif
                endif
                cgl => cgl%nxt
@@ -493,7 +490,7 @@ contains
             some_refined = .false.
             cgl => curl%first
             do while (associated(cgl))
-               if (cgl%cg%flag%refine) then
+               if (size(cgl%cg%flag%SFC_refine_list) > 0) then
                   if (finest%level%l%id <= cgl%cg%l%id) call warn("[refinement_update:update_refinement] growing too fast!")
                   if (associated(curl%finer)) then
                      call refine_one_grid(curl, cgl)
@@ -502,7 +499,6 @@ contains
                   else
                      call warn("[refinement_update:update_refinement] nowhere to add!")
                   endif
-                  cgl%cg%flag%refine = .false.
                endif
                cgl => cgl%nxt
             enddo
@@ -794,8 +790,6 @@ contains
             enddo
             call cgl%cg%refinemap2SFC_list
          endif
-
-         call cgl%cg%flag%sanitize(cgl%cg%l%id)
 
          cgl => cgl%nxt
       enddo
