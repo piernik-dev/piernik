@@ -53,6 +53,8 @@ module refinement_flag
       procedure          :: init           !> Initialize: (.false. , .false., allocate 0 elements)
       procedure          :: add            !> Appends one element to SFC_refine_list
       procedure          :: initmap        !> Allocate map
+      procedure          :: pending_blocks !> size(SFC_refine_list) > 0
+      procedure          :: reset_blocks   !> make SFC_refine_list empty
 
       generic,   public  :: set => set_cell, set_arrng, set_all, set_mask  !, set_range
       procedure, private :: set_cell       !> Mark a cell for refinement
@@ -85,8 +87,7 @@ contains
       class(ref_flag_t), intent(inout) :: this  !> object invoking this procedure
 
       this%derefine = .false.
-      if (allocated(this%SFC_refine_list)) deallocate(this%SFC_refine_list)
-      allocate(this%SFC_refine_list(0))
+      call this%reset_blocks
       if (.not. allocated(this%map)) call die("[refinement_flag:init] map not allocated")
       call this%clear
 
@@ -108,6 +109,32 @@ contains
       allocate(this%map(ijkse(xdim, LO):ijkse(xdim, HI), ijkse(ydim, LO):ijkse(ydim, HI), ijkse(zdim, LO):ijkse(zdim, HI)))
 
    end subroutine initmap
+
+!> \brief Tell whether we have nonempty list of blocks to be created
+
+   logical function pending_blocks(this)
+
+      implicit none
+
+      class(ref_flag_t), intent(inout) :: this  !> object invoking this procedure
+
+      pending_blocks = (size(this%SFC_refine_list) > 0)
+
+   end function pending_blocks
+
+!> \brief Make SFC_refine_list empty
+
+   subroutine reset_blocks(this)
+
+      implicit none
+
+      class(ref_flag_t), intent(inout) :: this  !> object invoking this procedure
+
+      ! this is perhaps a bit suboptimal: todo let cgl%cg%flag%SFC_refine_list(:) grow and implement INVALID entries
+      if (allocated(this%SFC_refine_list)) deallocate(this%SFC_refine_list)
+      allocate(this%SFC_refine_list(0))
+
+   end subroutine reset_blocks
 
 !> \brief  Read refinement status of a cell
 

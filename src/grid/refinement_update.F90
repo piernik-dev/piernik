@@ -447,7 +447,7 @@ contains
             cgl => curl%first
             do while (associated(cgl))
                if (any(cgl%cg%leafmap)) then
-                  if (size(cgl%cg%flag%SFC_refine_list) > 0) then
+                  if (cgl%cg%flag%pending_blocks()) then
                      call refine_one_grid(curl, cgl)
                      if (present(act_count)) act_count = act_count + 1
                   endif
@@ -494,7 +494,7 @@ contains
             some_refined = .false.
             cgl => curl%first
             do while (associated(cgl))
-               if (size(cgl%cg%flag%SFC_refine_list) > 0) then
+               if (cgl%cg%flag%pending_blocks()) then
                   if (finest%level%l%id <= cgl%cg%l%id) call warn("[refinement_update:update_refinement] growing too fast!")
                   if (associated(curl%finer)) then
                      call refine_one_grid(curl, cgl)
@@ -641,7 +641,7 @@ contains
       endif
 
       if (.not. associated(curl%finer)) call finest%add_finer
-      if (size(cgl%cg%flag%SFC_refine_list) > 0) then ! we require detailed map!
+      if (cgl%cg%flag%pending_blocks()) then ! we require detailed map!
          do b = lbound(cgl%cg%flag%SFC_refine_list, dim=1), ubound(cgl%cg%flag%SFC_refine_list, dim=1)
             if (cgl%cg%flag%SFC_refine_list(b)%level == curl%finer%l%id) then
                call curl%finer%add_patch(int(bsize, kind=8), cgl%cg%flag%SFC_refine_list(b)%off)
@@ -651,7 +651,7 @@ contains
          enddo
          call cgl%cg%flag%init ! it is safer to forget it now
       else
-         call die("[refinement_update:refine_one_grid] populating flag%SFC_refine_list before refining a grid is strongly encouragrequired")
+         call die("[refinement_update:refine_one_grid] populating flag%SFC_refine_list before refining a grid is required")
       endif
 
    end subroutine refine_one_grid
@@ -716,9 +716,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
 
-         ! this is perhaps a bit suboptimal: todo let cgl%cg%flag%SFC_refine_list(:) grow and implement INVALID entries
-         if (allocated(cgl%cg%flag%SFC_refine_list)) deallocate(cgl%cg%flag%SFC_refine_list)
-         allocate(cgl%cg%flag%SFC_refine_list(0))
+         call cgl%cg%flag%reset_blocks
          call cgl%cg%flag%clear
 
          if (any(cgl%cg%leafmap)) then
