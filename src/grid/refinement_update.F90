@@ -475,7 +475,7 @@ contains
       ! fix the structures, mark grids for refinement (and unmark derefinements) due to refinement restrictions.
       ! With clever use of SFC properties this part can be done together with refine stage above - everything can be determined in sanitize_all_ref_flags for regular refinement update.
       ! For refinement update due to domain expansion, everything can be fixed in the expansion routine.
-      call fix_refinement(correct)
+      correct = fix_refinement()
       call piernik_MPI_Allreduce(correct, pLAND)
       nciter = 0
       do while (.not. correct)
@@ -523,7 +523,7 @@ contains
          ! sync structure before trying to fix it
          call leaves%update(" (correcting) ")
          ! \todo implement 1-pass correcting
-         call fix_refinement(correct)
+         correct = fix_refinement()
          call piernik_MPI_Allreduce(correct, pLAND)
          if (.not. correct) nciter = nciter + 1
          if (nciter > nciter_max) then
@@ -565,13 +565,12 @@ contains
          enddo
          ! sync structure
          call leaves%balance_and_update(" ( derefine ) ")
-         call fix_refinement
+         !call fix_refinement
 
       endif
 
       ! Check refinement topology and crash if anything got broken
-      call fix_refinement(correct)
-      if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
+      if (.not. fix_refinement()) call die("[refinement_update:update_refinement] Refinement defects still present")
 
       call all_bnd
 
@@ -683,41 +682,32 @@ contains
 !! \details Important! Requires updated cg_leafmap!
 !<
 
-   subroutine fix_refinement(correct)
+   logical function fix_refinement() result(correct)
 
       use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
 !      use cg_list_global,   only: all_cg
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, ydim, zdim, I_ONE!, I_TWO, LO, HI
-      use dataio_pub,       only: die, warn, msg!, printinfo
+      use constants,        only: xdim, ydim, zdim, I_ONE!, I_TWO
+      use dataio_pub,       only: die
       use domain,           only: dom
       use named_array_list, only: qna
 !      use cg_level_base, only: base
-#ifdef DEBUG_DUMPS
-      use constants,        only: pLOR
-      use mpisetup,         only: piernik_MPI_Allreduce
-      use data_hdf5,        only: write_hdf5
-#endif /* DEBUG_DUMPS */
 
       implicit none
-
-      logical, optional, intent(out) :: correct !< Flag to tell if corrections are required.
 
       type(cg_list_element), pointer :: cgl
       integer(kind=4) ::  i, j, k
       integer :: lleaf, lnear, range
-      logical :: failed
       enum, bind(C)
          enumerator :: INSIDE   = -1
          enumerator :: OUTSIDE  =  0
          enumerator :: BOUNDARY =  1
       end enum
 
-      if (present(correct)) correct = .true.
-      failed = .false.
+      correct = .true.
 
-      !> \todo check for excess or refinement levels
+      !> \todo check for excess of refinement levels
 
       ! Put a level number to the working array, restrict it and exchange internal boundaries
       cgl => leaves%first
@@ -746,7 +736,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
 
-         ! this is perhaps a bit suboptimal: todo let it grow and implement INVALID entries
+         ! this is perhaps a bit suboptimal: todo let cgl%cg%flag%SFC_refine_list(:) grow and implement INVALID entries
          if (allocated(cgl%cg%flag%SFC_refine_list)) deallocate(cgl%cg%flag%SFC_refine_list)
          allocate(cgl%cg%flag%SFC_refine_list(0))
          call cgl%cg%flag%clear
@@ -814,7 +804,7 @@ contains
                            cgl%cg%flag%derefine = .false.
                            if (lnear > lleaf+1 .and. lnear <= finest%level%l%id) then
                               call cgl%cg%flag%set(i, j, k)
-                              if (present(correct)) correct = .false.
+                              correct = .false.
                            endif
                         endif
 
@@ -823,28 +813,13 @@ contains
                enddo
             enddo
             call cgl%cg%refinemap2SFC_list
-            call cgl%cg%flag%sanitize(cgl%cg%l%id)
-
-            if (cgl%cg%flag%get() .and. .not. present(correct)) then
-               write(msg,'(a,i3,a,6i5,a,i3)')"[refinement_update:fix_refinement] neighbour level ^",lnear," at [",cgl%cg%my_se,"] ^",cgl%cg%l%id
-               call warn(msg)
-               failed = .true.
-            endif
-
-         else
-            call cgl%cg%flag%sanitize(cgl%cg%l%id)
          endif
+
+         call cgl%cg%flag%sanitize(cgl%cg%l%id)
 
          cgl => cgl%nxt
       enddo
 
-#ifdef DEBUG_DUMPS
-      call piernik_MPI_Allreduce(failed, pLOR)
-      if (failed) call write_hdf5
-#endif /* DEBUG_DUMPS */
-
-      if (failed) call die("[refinement_update:fix_refinement] Refinement defects found.")
-
-   end subroutine fix_refinement
+   end function fix_refinement
 
 end module refinement_update
