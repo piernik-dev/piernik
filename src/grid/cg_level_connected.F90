@@ -1014,7 +1014,7 @@ contains
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c
-      use mergebox,       only: wmap
+      use mergebox,       only: wmap  ! this is the last place that uses this module
       use mpi,            only: MPI_INTEGER, MPI_INTEGER8
       use mpisetup,       only: FIRST, LAST, comm, mpi_err, proc
       use overlap,        only: is_overlap

@@ -625,20 +625,15 @@ contains
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
-      use constants,          only: refinement_factor, LO, HI, ndims
       use refinement,         only: bsize
       use dataio_pub,         only: warn, die
-      use mergebox,           only: wmap
 
       implicit none
 
       type(cg_level_connected_t), pointer, intent(inout) :: curl
       type(cg_list_element),      pointer, intent(in)    :: cgl
 
-      type(wmap) :: lmap
-      integer(kind=8), dimension(ndims, LO:HI)  :: box_8   !< temporary storage
       integer :: b
-      logical, save :: warned = .false.
 
       if (.not. any(cgl%cg%leafmap)) then
          call warn("[refinement_update:refine_one_grid] Attempting to refine a grid that is completely refined")
@@ -646,7 +641,7 @@ contains
       endif
 
       if (.not. associated(curl%finer)) call finest%add_finer
-      if (size(cgl%cg%flag%SFC_refine_list) > 0) then ! we've got detailed map!
+      if (size(cgl%cg%flag%SFC_refine_list) > 0) then ! we require detailed map!
          do b = lbound(cgl%cg%flag%SFC_refine_list, dim=1), ubound(cgl%cg%flag%SFC_refine_list, dim=1)
             if (cgl%cg%flag%SFC_refine_list(b)%level == curl%finer%l%id) then
                call curl%finer%add_patch(int(bsize, kind=8), cgl%cg%flag%SFC_refine_list(b)%off)
@@ -656,22 +651,7 @@ contains
          enddo
          call cgl%cg%flag%init ! it is safer to forget it now
       else
-         if (.not. warned) then
-            warned = .true.
-            call warn("[refinement_update:refine_one_grid] populating flag%SFC_refine_list before refining a grid is strongly encouraged")
-         endif
-         if (.not. all(cgl%cg%leafmap)) then ! decompose the partially refined grid container into boxes that contain all leafcells
-            box_8 = int(cgl%cg%ijkse, kind=8)
-            call lmap%init(box_8)
-            lmap%map(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = cgl%cg%leafmap(:,:,:)
-            call lmap%find_boxes
-            do b = lbound(lmap%blist%blist, dim=1), ubound(lmap%blist%blist, dim=1)
-               call curl%finer%add_patch(int((lmap%blist%blist(b)%b(:,HI)-lmap%blist%blist(b)%b(:,LO)+1)*refinement_factor, kind=8), lmap%blist%blist(b)%b(:,LO)*refinement_factor)
-            enddo
-            call lmap%cleanup
-         else
-            call curl%finer%add_patch(int(cgl%cg%n_b(:)*refinement_factor, kind=8), cgl%cg%my_se(:, LO)*refinement_factor)
-         endif
+         call die("[refinement_update:refine_one_grid] populating flag%SFC_refine_list before refining a grid is strongly encouragrequired")
       endif
 
    end subroutine refine_one_grid
