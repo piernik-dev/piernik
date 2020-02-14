@@ -215,7 +215,9 @@ contains
       logical, dimension(se(xdim,LO):se(xdim,HI), se(ydim,LO):se(ydim,HI), se(zdim,LO):se(zdim,HI)), optional, intent(in) :: mask  !> the mask to filter out something
 
 #ifdef DEBUG
-      if (any(se < lbound(this%map)) .or. any(se > ubound(this%map))) call die("[refinement_flag:get_any_arrng] out of range")  ! this can be costly check
+      if ( any(se(:, LO) > se(:, HI)) .or. &
+           any(se(:, LO) < lbound(this%map)) .or. &
+           any(se(:, HI) > ubound(this%map))) call die("[refinement_flag:get_any_arrng] out of range")  ! this can be costly check
 #endif /* DEBUG */
 
       if (present(mask)) then
@@ -284,7 +286,9 @@ contains
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: se  !> box coordinates
 
 #ifdef DEBUG
-      if (any(se < lbound(this%map)) .or. any(se > ubound(this%map))) call die("[refinement_flag:set_arrng] out of range")  ! this can be costly check
+      if ( any(se(:, LO) > se(:, HI)) .or. &
+           any(se(:, LO) < lbound(this%map)) .or. &
+           any(se(:, HI) > ubound(this%map))) call die("[refinement_flag:set_arrng] out of range")  ! this can be costly check
 #endif /* DEBUG */
 
       this%map(se(xdim,LO):se(xdim,HI), se(ydim,LO):se(ydim,HI), se(zdim,LO):se(zdim,HI)) = .true.
