@@ -26,6 +26,9 @@
 !
 #include "piernik.h"
 
+! This is a fork of advection test made before subproblems were possible
+! ToDo: reintegrate it back with advection test
+
 module initproblem
 
    use constants, only: dsetnamelen, ndims, LO, HI
@@ -445,6 +448,8 @@ contains
 
 !> \brief Periodically refine and derefine whole domain
 
+! Beware: it is copy&paste from advection test
+
    subroutine flip_flop
 
       use cg_level_base,      only: base
@@ -465,12 +470,12 @@ contains
          cgl => curl%first
          i = 0
          do while (associated(cgl))
-            cgl%cg%flag%refine   = .false.
+            call cgl%cg%flag%clear
             cgl%cg%flag%derefine = .false.
             if (real(i)/curl%cnt <= flipratio) then
                if (mod(nstep, nflip) == 0) then
-                  cgl%cg%flag%refine   = (mod(nstep, I_TWO*nflip) /= 0)
-                  cgl%cg%flag%derefine = .not. cgl%cg%flag%refine
+                  if (mod(nstep, I_TWO*nflip) /= 0) call cgl%cg%flag%set
+                  cgl%cg%flag%derefine = .not. cgl%cg%flag%get()
                endif
             endif
             i = i + 1
