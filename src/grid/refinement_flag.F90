@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 
-!> \brief This module contains variables and initialization routines related to refinement flags and derefinement requests
+!> \brief This module contains variables and routines related to refinement flags and derefinement requests
 
 module refinement_flag
 
@@ -44,18 +44,19 @@ module refinement_flag
       integer(kind=8), dimension(ndims) :: off  ! offset of grid block (formally can be obtained from SFC_id)
    end type SFC_candidate_t
 
-   !> Refinement flags, derefinement request and a list of new grids to create
+   !> Refinement map, derefinement request and a list of new grids to create
    type :: ref_flag_t
-      logical :: derefine !> a request to derefine
-      type(SFC_candidate_t), allocatable, dimension(:) :: SFC_refine_list
-      logical, private, allocatable, dimension(:,:,:) :: map  !> .true. when a cell triggers refinement criteria, .false. otherwise
+      logical :: derefine                                                  !> a request to derefine
+      type(SFC_candidate_t), allocatable, dimension(:) :: SFC_refine_list  !> A list of children to create; \todo make it private
+      logical, private, allocatable, dimension(:,:,:) :: map               !> .true. when a cell triggers refinement criteria, .false. otherwise
    contains
-      procedure          :: init           !> Initialize: (.false. , .false., allocate 0 elements)
+      procedure          :: init           !> Initialize: (.false., allocate 0 elements, clear the map)
       procedure          :: add            !> Appends one element to SFC_refine_list
       procedure          :: initmap        !> Allocate map
-      procedure          :: pending_blocks !> size(SFC_refine_list) > 0
+      procedure          :: pending_blocks !> A shortcut for size(SFC_refine_list) > 0
       procedure          :: reset_blocks   !> make SFC_refine_list empty
 
+      !> Set the refinement flag in the map. This is the only call supposed to be used in user routines.
       generic,   public  :: set => set_cell, set_arrng, set_all, set_mask  !, set_range
       procedure, private :: set_cell       !> Mark a cell for refinement
 !      procedure, private :: set_range      !> Mark a box of cells for refinement (list of indices)
@@ -63,12 +64,14 @@ module refinement_flag
       procedure, private :: set_all        !> Mark all cells for refinement
       procedure, private :: set_mask       !> Mark cells according to mask
 
+      !> Check if any refinement flag is set
       generic,   public  :: get => get_cell, get_any_range, get_any_arrng, get_any
       procedure, private :: get_cell       !> Read refinement status of a cell
       procedure, private :: get_any_range  !> Read refinement status of a box of cells (list of indices)
       procedure, private :: get_any_arrng  !> Read refinement status of a box of cells (se-type array of indices)
       procedure, private :: get_any        !> Read refinement status of all cells
 
+      !> Clear the refinement flag in the map
       generic,   public  :: clear => clear_mask, clear_all
       procedure, private :: clear_mask     !> Unmark cells according to mask
       procedure, private :: clear_all      !> Unmark all cells
@@ -76,7 +79,7 @@ module refinement_flag
 
 contains
 
-!> \brief Initialize to (.false. , .false., allocate 0 elements, clear the map)
+!> \brief Initialize to (.false., allocate 0 elements, clear the map)
 
    subroutine init(this)
 
@@ -93,7 +96,7 @@ contains
 
    end subroutine init
 
-!> \brief Allocate map
+!> \brief Allocate refinement map
 
    subroutine initmap(this, ijkse)
 
@@ -130,7 +133,7 @@ contains
 
       class(ref_flag_t), intent(inout) :: this  !> object invoking this procedure
 
-      ! this is perhaps a bit suboptimal: todo let cgl%cg%flag%SFC_refine_list(:) grow and implement INVALID entries
+      ! This is perhaps a bit suboptimal: todo let cgl%cg%flag%SFC_refine_list(:) grow and implement INVALID entries (will require to change this%pending_blocks() as well).
       if (allocated(this%SFC_refine_list)) deallocate(this%SFC_refine_list)
       allocate(this%SFC_refine_list(0))
 
@@ -288,20 +291,15 @@ contains
 
    end subroutine set_arrng
 
-!> \brief Mark a box of cells for refinement
+!> \brief Mark all cells for refinement
 
-   subroutine set_all(this, value)
+   subroutine set_all(this)
 
       implicit none
 
       class(ref_flag_t), intent(inout) :: this   !> object invoking this procedure
-      logical, optional, intent(in)    :: value  !> used to clear flags
 
-      if (present(value)) then
-         this%map = value
-      else
-         this%map = .true.
-      endif
+      this%map = .true.
 
    end subroutine set_all
 
