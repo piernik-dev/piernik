@@ -257,8 +257,7 @@ contains
       cgl => lev%first
       do while (associated(cgl))
          associate (cg => cgl%cg)
-            ! look for refineflag .and. .not. leafmap + preimeter
-            if (cg%flag%get(int(cg%ijkse, kind=8), .not. cg%leafmap)) then
+            if (cg%flag%get()) then
                if (allocated(cg%ri_tgt%seg)) then
                   do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
                      ! clear own derefine flags (single-thread test)
