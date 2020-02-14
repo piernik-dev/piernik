@@ -61,21 +61,21 @@ contains
       integer, dimension(PROBLEM:URC) :: cnt
 
       cnt = 0
-
       call prepare_ref
 
       ! We have to guarantee up-to-date guardcells on all vital fields
       call all_bnd ! \todo find a way to minimize calling this - perhaps manage a flag that says whether the boundaries are up to date or not
       call all_bnd_vital_q
 
-      if (associated(problem_refine_derefine)) &
-           call problem_refine_derefine ! call user routine first, so it cannot alter flags set by automatic routines
+      ! Call user routine first, so it cannot alter flags set by automatic routines
+      if (associated(problem_refine_derefine)) call problem_refine_derefine
 
       if (verbose) then
          cnt(PROBLEM) = count_ref_flags()
          call piernik_MPI_Allreduce(cnt(PROBLEM), pSUM)
       endif
 
+      ! Apply all Unified Refinement Criteria (everythinng that works locally, cg-wise)
       call urc_list%all_mark(leaves%first)
 
       if (verbose) then
@@ -83,9 +83,10 @@ contains
          call piernik_MPI_Allreduce(cnt(URC), pSUM)
       endif
 
+      ! Transform refinement requests on non-leaf parts of the grid into derefinement inhibitions on child grids to avoid refinement flickering
       call parents_prevent_derefinement
-      call sanitize_all_ref_flags  ! last call has to be done regardless of verbosity
-      ! \todo count the change in derefinement flags here?
+      call sanitize_ref_flags  ! it can be converted to URC routine but it must be guaranteed that it goes after all refinement mark routines
+      ! \todo count the change in derefinement flags here too?
 
       if (verbose) then
          if (cnt(ubound(cnt, dim=1)) > 0) then
@@ -95,10 +96,10 @@ contains
          endif
       endif
 
-      ! \todo convert this to URC routine
+      ! it can be converted to URC routine but it must be guaranteed that it goes after parents_prevent_derefinement because it modifies cg%flag%map
       cgl => leaves%first
       do while (associated(cgl))
-         call cgl%cg%refinemap2SFC_list  ! modifies cg%flag%map so no parent correction is possible afterwards
+         call cgl%cg%refinemap2SFC_list
          cgl => cgl%nxt
       enddo
 
@@ -127,8 +128,7 @@ contains
                call cgl%cg%flag%init
 
                ! Mark everything for derefinement by default.
-               ! It requires correct propagation of refinement requests from parent blocks as
-               ! derefinement inhibitions on their appropriate children.
+               ! It requires correct propagation of refinement requests from parent blocks as derefinement inhibitions on their appropriate children later
                cgl%cg%flag%derefine = .true.
 
                cgl => cgl%nxt
@@ -139,13 +139,9 @@ contains
 
       end subroutine prepare_ref
 
-      !>
-      !! \brief Sanitize refinement requests
-      !!
-      !! \todo convert this to URC routine
-      !<
+      !> \brief Sanitize refinement requests
 
-      subroutine sanitize_all_ref_flags
+      subroutine sanitize_ref_flags
 
          use cg_leaves,  only: leaves
          use cg_list,    only: cg_list_element
@@ -167,22 +163,20 @@ contains
             cgl => cgl%nxt
          enddo
 
-      end subroutine sanitize_all_ref_flags
+      end subroutine sanitize_ref_flags
 
       !> \brief Count refinement flags everywhere
 
-      function count_ref_flags() result(cnt)
+      integer function count_ref_flags() result(cnt)
 
          use cg_leaves, only: leaves
          use cg_list,   only: cg_list_element
 
          implicit none
 
-         integer :: cnt !< returned counter
-
          type(cg_list_element), pointer :: cgl
 
-         call sanitize_all_ref_flags
+         call sanitize_ref_flags
 
          cnt = 0
          cgl => leaves%first
@@ -201,7 +195,7 @@ contains
 !! Here we do loop over levels because we use mpi tags for prolongation to identify target grids.
 !! These tags are guaranteed to be unique for a given pair of consecutive levels but not for the whole domain.
 !! Once we implement a better structure to identify parent-child relation, we should switch to leaves-based list here (as it was implemented in 1a048b08).
-!! Also consolidation of MPI communication is advised.
+!! Also consolidation of MPI communication is advised (OPT).
 !<
 
    subroutine parents_prevent_derefinement
@@ -242,9 +236,9 @@ contains
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se
       integer, parameter :: perimeter = 2
       integer(kind=4), dimension(FIRST:LAST) :: gscnt, grcnt
-      type :: pt  ! (proc, tag) pair
+      type :: pt
          integer(kind=4) :: proc
-         integer(kind=4) :: tag  ! or grid_id, if tag fails
+         integer(kind=4) :: tag
       end type pt
       type(pt), dimension(:), allocatable :: pt_list
       integer :: pt_cnt
@@ -280,7 +274,7 @@ contains
                               call disable_derefine_by_tag(lev%finer, ftag)  ! beware: O(leaves%cnt^2)
                            else
                               ! create a list of foreign blocks that need not be derefined (proc, grid_id or SFC_id)
-                              ! use prolongation structures
+                              ! here we use prolongation structures
                               gscnt(fproc) = gscnt(fproc) + I_ONE
                               pt_cnt = pt_cnt + 1
                               if (pt_cnt > size(pt_list)) call die("[refinement_update:parents_prevent_derefinement_lev] pt_cnt > size(pt_list)")
@@ -312,7 +306,7 @@ contains
 
       do g = lbound(grcnt, dim=1), ubound(grcnt, dim=1)
          if (grcnt(g) /= 0) then
-            if (g == proc) call die("[refinement_update:parents_prevent_derefinement] MPI_Recv from self")  ! this is not an error but it should've been handled as locat thing
+            if (g == proc) call die("[refinement_update:parents_prevent_derefinement] MPI_Recv from self")  ! this is not an error but it should've been handled as local thing
             do i = 1, grcnt(g)
                call MPI_Recv(rtag, I_ONE, MPI_INTEGER, g, I_ZERO, comm, MPI_STATUS_IGNORE, mpi_err)
                call disable_derefine_by_tag(lev%finer, rtag)  ! beware: O(leaves%cnt^2)
@@ -342,8 +336,7 @@ contains
          implicit none
 
          type(cg_level_connected_t), pointer, intent(in) :: flev
-
-         integer(kind=4), intent(in) :: tag
+         integer(kind=4),                     intent(in) :: tag
 
          integer :: g
          logical :: done
@@ -387,7 +380,7 @@ contains
       use global,                only: nstep
       use grid_cont,             only: grid_container
       use list_of_cg_lists,      only: all_lists
-      use mpisetup,              only: piernik_MPI_Allreduce!, proc
+      use mpisetup,              only: piernik_MPI_Allreduce
       use refinement,            only: n_updAMR, emergency_fix
       use timer,                 only: set_timer
       use unified_ref_crit_list, only: urc_list
@@ -474,7 +467,7 @@ contains
       endif
 
       ! fix the structures, mark grids for refinement (and unmark derefinements) due to refinement restrictions.
-      ! With clever use of SFC properties this part can be done together with refine stage above - everything can be determined in sanitize_all_ref_flags for regular refinement update.
+      ! With clever use of SFC properties this part can be done together with refine stage above - everything can be determined in sanitize_ref_flags for regular refinement update.
       ! For refinement update due to domain expansion, everything can be fixed in the expansion routine.
       correct = fix_refinement()
       call piernik_MPI_Allreduce(correct, pLAND)
@@ -533,7 +526,7 @@ contains
       enddo
 
       ! Now try to derefine any excess of refinement.
-      ! Derefinement saves memory and CPU usage, but it is of lowest priority here.
+      ! Derefinement saves memory and CPU usage, but it is of lowest priority.
       ! Just go through derefinement stage once and don't try to do too much here at once.
       ! Any excess of refinement will be handled in next call to this routine anyway.
       if (full_update) then
@@ -565,7 +558,6 @@ contains
          enddo
          ! sync structure
          call leaves%balance_and_update(" ( derefine ) ")
-         !call fix_refinement
 
       endif
 
@@ -599,6 +591,11 @@ contains
       endif
 
    contains
+
+      !>
+      !! \brief Print how much time it took to execute a given stage
+      !! Call only for stages that don't call cg_leaves:update.
+      !<
 
       subroutine print_time(str)
 
@@ -641,25 +638,30 @@ contains
       endif
 
       if (.not. associated(curl%finer)) call finest%add_finer
-      if (cgl%cg%flag%pending_blocks()) then ! we require detailed map!
-         do b = lbound(cgl%cg%flag%SFC_refine_list, dim=1), ubound(cgl%cg%flag%SFC_refine_list, dim=1)
-            if (cgl%cg%flag%SFC_refine_list(b)%level == curl%finer%l%id) then
-               call curl%finer%add_patch(int(bsize, kind=8), cgl%cg%flag%SFC_refine_list(b)%off)
-            else
-               call die("[refinement_update:refine_one_grid] wrong level!")
-            endif
-         enddo
-         call cgl%cg%flag%init ! it is safer to forget it now
-      else
-         call die("[refinement_update:refine_one_grid] populating flag%SFC_refine_list before refining a grid is required")
-      endif
+      associate (flag => cgl%cg%flag)
+         if (flag%pending_blocks()) then
+            do b = lbound(flag%SFC_refine_list, dim=1), ubound(flag%SFC_refine_list, dim=1)
+               if (flag%SFC_refine_list(b)%level == curl%finer%l%id) then
+                  call curl%finer%add_patch(int(bsize, kind=8), flag%SFC_refine_list(b)%off)
+               else
+                  call die("[refinement_update:refine_one_grid] wrong level!")
+               endif
+            enddo
+            call flag%init ! it is safer to forget it now
+            ! flag%init clears flag%derefine as a side-effect but it should be already cleared by sanitization anyway
+         else
+            call die("[refinement_update:refine_one_grid] populating flag%SFC_refine_list before refining a grid is required")
+         endif
+      end associate
 
    end subroutine refine_one_grid
 
 !>
-!! \brief Apply some rules to fix refinement defects
+!! \brief Apply some rules to fix refinement defects such as more than one level change across a face, edge or corner.
 !!
-!! \details Important! Requires updated cg_leafmap!
+!! \details Important: requires updated cg_leafmap!
+!!
+!! OPT: use %dot for direct identification if possible without invoking prolongation and restriction
 !<
 
    logical function fix_refinement() result(correct)
@@ -716,82 +718,84 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
 
-         call cgl%cg%flag%reset_blocks
-         call cgl%cg%flag%clear
+         associate (cg => cgl%cg)
+            call cg%flag%reset_blocks
+            call cg%flag%clear
 
-         if (any(cgl%cg%leafmap)) then
-            cgl%cg%prolong_xyz = OUTSIDE
-            lleaf = -huge(1)
+            if (any(cg%leafmap)) then
+               cg%prolong_xyz = OUTSIDE
+               lleaf = -huge(1)
 
-            ! find the level of refinement on the leaf part and mark it with a negative value
-            do k = lbound(cgl%cg%leafmap, dim=3, kind=4), ubound(cgl%cg%leafmap, dim=3, kind=4)
-               do j = lbound(cgl%cg%leafmap, dim=2, kind=4), ubound(cgl%cg%leafmap, dim=2, kind=4)
-                  do i = lbound(cgl%cg%leafmap, dim=1, kind=4), ubound(cgl%cg%leafmap, dim=1, kind=4)
-                     if (cgl%cg%leafmap(i, j, k)) then
-                        if (lleaf == -huge(1)) then
-                           lleaf = int(cgl%cg%wa(i, j, k))
-                        else
-                           if (lleaf /= int(cgl%cg%wa(i, j, k)) .or. lleaf /= cgl%cg%l%id) call die("[refinement_update:fix_refinement] Inconsistent level map")
+               ! find the level of refinement on the leaf part and mark it with a negative value
+               do k = lbound(cg%leafmap, dim=3, kind=4), ubound(cg%leafmap, dim=3, kind=4)
+                  do j = lbound(cg%leafmap, dim=2, kind=4), ubound(cg%leafmap, dim=2, kind=4)
+                     do i = lbound(cg%leafmap, dim=1, kind=4), ubound(cg%leafmap, dim=1, kind=4)
+                        if (cg%leafmap(i, j, k)) then
+                           if (lleaf == -huge(1)) then
+                              lleaf = int(cg%wa(i, j, k))
+                           else
+                              if (lleaf /= int(cg%wa(i, j, k)) .or. lleaf /= cg%l%id) call die("[refinement_update:fix_refinement] Inconsistent level map")
+                           endif
+                           cg%prolong_xyz(i,j,k) = INSIDE
                         endif
-                        cgl%cg%prolong_xyz(i,j,k) = INSIDE
-                     endif
+                     enddo
                   enddo
                enddo
-            enddo
 
-            ! find the border of the leaf map and mark it with positive value
-            do k = lbound(cgl%cg%leafmap, dim=3, kind=4)-dom%D_z, ubound(cgl%cg%leafmap, dim=3, kind=4)+dom%D_z
-               do j = lbound(cgl%cg%leafmap, dim=2, kind=4)-dom%D_y, ubound(cgl%cg%leafmap, dim=2, kind=4)+dom%D_y
-                  do i = lbound(cgl%cg%leafmap, dim=1, kind=4)-dom%D_x, ubound(cgl%cg%leafmap, dim=1, kind=4)+dom%D_x
-                     if (int(cgl%cg%prolong_xyz(i, j, k)) == OUTSIDE) then
-                        if (dom%has_dir(xdim)) then
-                           if (int(cgl%cg%prolong_xyz(i+1, j, k)) /= 0) cgl%cg%prolong_xyz(i+1, j, k) = BOUNDARY
-                           if (int(cgl%cg%prolong_xyz(i-1, j, k)) /= 0) cgl%cg%prolong_xyz(i-1, j, k) = BOUNDARY
+               ! find the border of the leaf map and mark it with positive value
+               do k = lbound(cg%leafmap, dim=3, kind=4)-dom%D_z, ubound(cg%leafmap, dim=3, kind=4)+dom%D_z
+                  do j = lbound(cg%leafmap, dim=2, kind=4)-dom%D_y, ubound(cg%leafmap, dim=2, kind=4)+dom%D_y
+                     do i = lbound(cg%leafmap, dim=1, kind=4)-dom%D_x, ubound(cg%leafmap, dim=1, kind=4)+dom%D_x
+                        if (int(cg%prolong_xyz(i, j, k)) == OUTSIDE) then
+                           if (dom%has_dir(xdim)) then
+                              if (int(cg%prolong_xyz(i+1, j, k)) /= 0) cg%prolong_xyz(i+1, j, k) = BOUNDARY
+                              if (int(cg%prolong_xyz(i-1, j, k)) /= 0) cg%prolong_xyz(i-1, j, k) = BOUNDARY
+                           endif
+                           if (dom%has_dir(ydim)) then
+                              if (int(cg%prolong_xyz(i, j+1, k)) /= 0) cg%prolong_xyz(i, j+1, k) = BOUNDARY
+                              if (int(cg%prolong_xyz(i, j-1, k)) /= 0) cg%prolong_xyz(i, j-1, k) = BOUNDARY
+                           endif
+                           if (dom%has_dir(zdim)) then
+                              if (int(cg%prolong_xyz(i, j, k+1)) /= 0) cg%prolong_xyz(i, j, k+1) = BOUNDARY
+                              if (int(cg%prolong_xyz(i, j, k-1)) /= 0) cg%prolong_xyz(i, j, k-1) = BOUNDARY
+                           endif
                         endif
-                        if (dom%has_dir(ydim)) then
-                           if (int(cgl%cg%prolong_xyz(i, j+1, k)) /= 0) cgl%cg%prolong_xyz(i, j+1, k) = BOUNDARY
-                           if (int(cgl%cg%prolong_xyz(i, j-1, k)) /= 0) cgl%cg%prolong_xyz(i, j-1, k) = BOUNDARY
-                        endif
-                        if (dom%has_dir(zdim)) then
-                           if (int(cgl%cg%prolong_xyz(i, j, k+1)) /= 0) cgl%cg%prolong_xyz(i, j, k+1) = BOUNDARY
-                           if (int(cgl%cg%prolong_xyz(i, j, k-1)) /= 0) cgl%cg%prolong_xyz(i, j, k-1) = BOUNDARY
-                        endif
-                     endif
+                     enddo
                   enddo
                enddo
-            enddo
 
-            !find highest refinement level witin a "range" cells from the border of the leaf map
+               !find highest refinement level witin a "range" cells from the border of the leaf map
 ! dirty check
-!!$            if (maxval(cgl%cg%wa) > 10) then
-!!$               do k = lbound(cgl%cg%wa, dim=3), ubound(cgl%cg%wa, dim=3)
-!!$                  do j = lbound(cgl%cg%wa, dim=2), ubound(cgl%cg%wa, dim=2)
-!!$                     do i = lbound(cgl%cg%wa, dim=1), ubound(cgl%cg%wa, dim=1)
-!!$                        if (cgl%cg%wa(i,j,k) > 10) write(msg,*)"ur:fr WA(",i,j,k,") = ",cgl%cg%wa(i,j,k)
+!!$            if (maxval(cg%wa) > 10) then
+!!$               do k = lbound(cg%wa, dim=3), ubound(cg%wa, dim=3)
+!!$                  do j = lbound(cg%wa, dim=2), ubound(cg%wa, dim=2)
+!!$                     do i = lbound(cg%wa, dim=1), ubound(cg%wa, dim=1)
+!!$                        if (cg%wa(i,j,k) > 10) write(msg,*)"ur:fr WA(",i,j,k,") = ",cg%wa(i,j,k)
 !!$                     enddo
 !!$                  enddo
 !!$               enddo
 !!$            endif
 
-            do k = lbound(cgl%cg%leafmap, dim=3, kind=4), ubound(cgl%cg%leafmap, dim=3, kind=4)
-               do j = lbound(cgl%cg%leafmap, dim=2, kind=4), ubound(cgl%cg%leafmap, dim=2, kind=4)
-                  do i = lbound(cgl%cg%leafmap, dim=1, kind=4), ubound(cgl%cg%leafmap, dim=1, kind=4)
-                     if (int(cgl%cg%prolong_xyz(i, j, k)) == BOUNDARY) then
-                        lnear = int(min(huge(I_ONE)/10.,maxval(cgl%cg%wa(i-range*dom%D_x:i+range*dom%D_x, j-range*dom%D_y:j+range*dom%D_y, k-range*dom%D_z:k+range*dom%D_z))))
-                        if (lnear > lleaf) then
-                           cgl%cg%flag%derefine = .false.
-                           if (lnear > lleaf+1 .and. lnear <= finest%level%l%id) then
-                              call cgl%cg%flag%set(i, j, k)
-                              correct = .false.
+               do k = lbound(cg%leafmap, dim=3, kind=4), ubound(cg%leafmap, dim=3, kind=4)
+                  do j = lbound(cg%leafmap, dim=2, kind=4), ubound(cg%leafmap, dim=2, kind=4)
+                     do i = lbound(cg%leafmap, dim=1, kind=4), ubound(cg%leafmap, dim=1, kind=4)
+                        if (int(cg%prolong_xyz(i, j, k)) == BOUNDARY) then
+                           lnear = int(min(huge(I_ONE)/10.,maxval(cg%wa(i-range*dom%D_x:i+range*dom%D_x, j-range*dom%D_y:j+range*dom%D_y, k-range*dom%D_z:k+range*dom%D_z))))
+                           if (lnear > lleaf) then
+                              cg%flag%derefine = .false.
+                              if (lnear > lleaf+1 .and. lnear <= finest%level%l%id) then
+                                 call cg%flag%set(i, j, k)
+                                 correct = .false.
+                              endif
                            endif
-                        endif
 
-                     endif
+                        endif
+                     enddo
                   enddo
                enddo
-            enddo
-            call cgl%cg%refinemap2SFC_list
-         endif
+               call cg%refinemap2SFC_list
+            endif
+         end associate
 
          cgl => cgl%nxt
       enddo
