@@ -87,7 +87,7 @@ contains
 
    subroutine mark_Jeans(this, cg)
 
-      use constants,  only: pi, GEO_XYZ, INVALID
+      use constants,  only: pi, GEO_XYZ, INVALID, dirtyH
       use dataio_pub, only: die
       use domain,     only: dom
       use fluidindex, only: iarr_all_sg, flind
@@ -127,7 +127,7 @@ contains
       else
          ! l_J = sqrt( pi gam (gam - 1) (e_i - e_k + e_mag) / G ) / rho
          ! find the effective pressure of all components (non-selfgravitation as well)
-         p3d(:,:,:) = 0.
+         p3d(:,:,:) = dirtyH
          do f = 1, flind%fluids
             associate (fl => flind%all_fluids(f)%fl)
                if (fl%has_energy) p3d = p3d + fl%gam * fl%gam_1 * ( &
