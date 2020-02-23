@@ -146,8 +146,8 @@ contains
       if (finest%level%l%id > base_level_id) then
          write(msg(len_trim(msg)+1:), '(a)')", leaves/finest: "
          lf = g_cnt/real(b_cnt * (refinement_factor**dom%eff_dim)**finest%level%l%id)
-         if (lf >= 0.01) then
-            write(msg(len_trim(msg)+1:), '(" ",f6.3)') lf
+         if (lf >= 0.0001) then
+            write(msg(len_trim(msg)+1:), '(" ",f8.6)') lf
          else
             write(msg(len_trim(msg)+1:), '(" ",e8.2)') lf
          endif
