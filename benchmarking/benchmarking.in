@@ -1,10 +1,10 @@
 ###############################################################################
 #
-# Make definitions for Fedora 23+
+# Make definitions for HDF5 parallel fortran wrapper.
 #
 
 PROG     = piernik
-F90      = mpif90  -I/usr/lib64/gfortran/modules/mpich
+F90      = h5pfc
 F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
 F90FLAGS += -O3 -funroll-loops -fno-stack-arrays -w
 LDFLAGS   = -Wl,--as-needed -Wl,-O1

@@ -11,14 +11,14 @@ fi
 
 SCALE=${BIG:=1}
 
-MEMG=$( free -m | awk '/Mem/ {print $2/1024.}' )
-MEMM=$( free -m | awk '/Mem/ {print $2}' )
+MEMG=$( LC_ALL=C free -m | awk '/Mem/ {print $2/1024.}' )
+MEMM=$( LC_ALL=C free -m | awk '/Mem/ {print $2}' )
 # alternatively (should give value closer to the amount of physical RAM installed):
 #MEMG=0
 #for mem in /sys/devices/system/memory/memory*; do
 #    [[ "$(cat ${mem}/online)" == "1" ]] && MEMG=$(( MEMG+$((0x$(cat /sys/devices/system/memory/block_size_bytes)))))
 #done
-#MEMG=$( echo $MEMG | awk '{print $1 / 1024.**3 }' )
+#MEMG=$( echo $MEMG | awk '{print $1 / 1024.^3 }' )
 
 echo "## "$( cat /proc/cpuinfo  | grep "model name" | uniq )
 echo "## Memory : $MEMG GB"
@@ -192,7 +192,7 @@ for p in $B_PROBLEM_LIST ; do
 			SKIP=0
 			if [ $t == flood ] ; then
 			    NX=$( echo 64 $SCALE | awk '{print int($1*$2)}')
-			    REQMEM=$( echo $NX $i | awk '{print int($1**3 * $2 * 0.00060)}' )
+			    REQMEM=$( echo $NX $i | awk '{print int($1^3 * $2 * 0.00060)}' )
 			    for j in $( seq $i ) ; do
 				cd $j
 				rm *log 2> /dev/null
@@ -214,7 +214,7 @@ for p in $B_PROBLEM_LIST ; do
 			    case $t in
 				weak)
 				    NX=$( echo 64 $SCALE | awk '{print int($1*$2)}')
-				    REQMEM=$( echo $NX $i | awk '{print int($1**3 * $2 * 0.00060)}' )
+				    REQMEM=$( echo $NX $i | awk '{print int($1^3 * $2 * 0.00072)}' )
 				    if [ $MEMM -gt $REQMEM ] ; then
 					mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &AMR bsize = 3*32 /' 2> /dev/null | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
 				    else
@@ -222,7 +222,7 @@ for p in $B_PROBLEM_LIST ; do
 				    fi ;;
 				strong)
 				    NX=$( echo 128 $SCALE | awk '{print int($1*$2)}')
-				    REQMEM=$( echo $NX | awk '{print int($1**3 * 0.00060)}' )
+				    REQMEM=$( echo $NX | awk '{print int($1^3 * 0.00060)}' )
 				    if [ $MEMM -gt $REQMEM ] ; then
 					mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &AMR bsize = 3*32 /' 2> /dev/null | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
 				    else
