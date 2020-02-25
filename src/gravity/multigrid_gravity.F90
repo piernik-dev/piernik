@@ -628,8 +628,10 @@ contains
       if (allocated(cg%mg%Green3D)) deallocate(cg%mg%Green3D)
 
 #if !defined(BENCHMARKING_HACK)
+#ifndef NO_FFT
       if (cg%mg%planf /= 0) call dfftw_destroy_plan(cg%mg%planf)
       if (cg%mg%plani /= 0) call dfftw_destroy_plan(cg%mg%plani)
+#endif /* !NO_FFT */
 #endif /* !BENCHMARKING_HACK */
 
    end subroutine mgg_cg_cleanup
