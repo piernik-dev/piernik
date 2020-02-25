@@ -105,6 +105,7 @@ contains
 
       real, dimension(:,:,:), pointer :: p3d
       integer :: f
+      logical :: any_has_energy
 #ifdef MAGNETIC
       logical, save :: warned = .false.
 
@@ -125,9 +126,19 @@ contains
          p3d(:,:,:) = sqrt(pi/newtong) / maxval(cg%dl) * &
               sqrt(cg%cs_iso2(:,:,:) / sum(cg%u(iarr_all_sg, :, :, :), dim=1))
       else
+         any_has_energy = .false.
+         do f = 1, flind%fluids
+            if (flind%all_fluids(f)%fl%has_energy) any_has_energy = .true.
+         enddo
+
+         if (any_has_energy) then
+            p3d(:,:,:) = 0.
+         else
+            p3d(:,:,:) = dirtyH
+         endif
+
          ! l_J = sqrt( pi gam (gam - 1) (e_i - e_k + e_mag) / G ) / rho
          ! find the effective pressure of all components (non-selfgravitation as well)
-         p3d(:,:,:) = dirtyH
          do f = 1, flind%fluids
             associate (fl => flind%all_fluids(f)%fl)
                if (fl%has_energy) p3d = p3d + fl%gam * fl%gam_1 * ( &
