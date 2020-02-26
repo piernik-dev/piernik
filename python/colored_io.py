@@ -1,7 +1,14 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-from sys import exit, stdout
+from sys import exit, stdout, version as python_version
 import inspect
+
+if (python_version[0:3] != "2.7"):
+    raw_input = input
+    not_py27 = True
+else:
+    not_py27 = False
+
 
 '''
    Short module for colored output, can be used in all python scripts.
