@@ -33,7 +33,6 @@
 module initcrspectrum
 ! pulled by COSM_RAY_ELECTRONS
    use constants, only: cbuff_len
-   use units,     only: mGs
 
    implicit none
 
@@ -222,7 +221,7 @@ module initcrspectrum
       synch_active         = .true.
       adiab_active         = .true.
       cre_active           = 0.0
-      b_max_db             = 10. / mGs ! default value of B limiter in microgauss
+      b_max_db             = 10.  ! default value of B limiter
 ! NR parameters
       tol_f    = 1.0e-11
       tol_x    = 1.0e-11
@@ -537,8 +536,8 @@ module initcrspectrum
       K_cre_perp(1:ncre)  = K_cre_perp_1  * (p_fix(0:ncre-1) / p_diff)**K_cre_pow
       K_cre_perp(1)       = K_cre_perp_1  * (p_fix(1) / p_fix_ratio / p_diff)**K_cre_pow
 #ifdef VERBOSE
-      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_paral = ", K_cre_paral(1:ncre) ; call printinfo(msg)
-      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_perp = ", K_cre_perp(1:ncre) ; call printinfo(msg)
+      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_paral = ", K_cre_paral(1:ncre) ; if (master) call printinfo(msg)
+      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_perp = ", K_cre_perp(1:ncre)   ; if (master) call printinfo(msg)
 #endif /* VERBOSE */
 
       K_cre_paral(ncre+1:2*ncre)      = K_cre_paral(1:ncre)
