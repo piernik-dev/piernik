@@ -6,7 +6,7 @@ from   crs_pf import initialize_pf_arrays
 from   math   import isnan, pi
 import matplotlib.pyplot as plt
 from   matplotlib.colors import LogNorm
-from   numpy  import array as np_array, log, log10, mean
+from   numpy  import array as np_array, log, log10, mean, rot90
 import os
 from   optparse import OptionParser
 from   re     import search
@@ -36,8 +36,8 @@ parser.add_option("-V", "--vel" ,   dest="plot_vel",     default=False,        h
 parser.add_option("-m", "--mag",    dest="plot_mag",     default=False,        help=u"Plot magnetic field vectors ",  action="store_true")
 parser.add_option("-t", "--time",   dest="annotate_time",default=False,        help=u"Annotate time on resulting DS plot", action="store_true")
 parser.add_option("",   "--nosave", dest="not_save_spec",default=False,        help=u"Do not save output spectrum ",  action="store_true")
-parser.add_option("-a", "--average",dest="avg_layer",    default=False,        help=u"Plot mean spectrum at pointed layer at ordinate axis",  action="store_true")
-parser.add_option("-O", "--overlap",dest="overlap_layer",default=False,        help=u"Overlap all spectra at pointed layer at ordinate ax",   action="store_true")
+parser.add_option("-a", "--average", "--avg", dest="avg_layer",    default=False,        help=u"Plot mean spectrum at pointed layer at ordinate axis",  action="store_true")
+parser.add_option("-O", "--overlap",dest="overlap_layer",default=False,        help=u"Overlap all spectra at pointed layer at ordinate axis", action="store_true")
 parser.add_option("",   "--verbose",dest="yt_verbose",   default=40,           help=u"Append yt verbosity (value from 10 [high] to 50 [low])")
 parser.add_option("-q", "--quiet",  dest="py_quiet",     default=False,        help=u"Suppress ALL python warnings (not advised)",  action="store_true")
 parser.add_option("-c", "--coords", dest="coords_dflt",  default=("x","y","z"),help=u"Provides coordinates for the first plot (non-clickable)", nargs=3, metavar="xc yc zc")
@@ -46,6 +46,7 @@ parser.add_option("",  "--fontsize",dest="fontsize",     default=18,           h
 parser.add_option("", "--noxlabels",dest="no_xlabels",   default=False,        help=u"Do not show labels of X axis on resulting SlicePlot",  action="store_true")
 parser.add_option("", "--noylabels",dest="no_ylabels",   default=False,        help=u"Do not show labels of Y axis on resulting SlicePlot",  action="store_true")
 parser.add_option("", "--nocbar",   dest="no_cbar",      default=False,        help=u"Do not show colorbar on the resulting SlicePlot",      action="store_true")
+parser.add_option("", "--noaxes",   dest="no_axes",      default=False,        help=u"Hide axes on the spectrum plot (useful when combining spectra)", action="store_true")
 
 (options, args) = parser.parse_args(argv[1:]) # argv[1] is filename
 yt.mylog.setLevel(int(options.yt_verbose))    # Reduces the output to desired level, 50 - least output
@@ -70,6 +71,7 @@ user_annot_time   = True
 plot_layer        = options.avg_layer
 plot_ovlp         = options.overlap_layer
 options.fontsize  = int(options.fontsize)
+display_bin_no    = False
 
 user_coords_provided = ( (options.coords_dflt[0] != "x") and (options.coords_dflt[1] != "y") and (options.coords_dflt[2] != "z") )
 if user_coords_provided:
@@ -104,6 +106,10 @@ def _total_cren(field,data):
    for element in list_cren[1:]:
       cren_tot = cren_tot + data[element]
    return cren_tot
+
+def _total_B(field,data):
+   b_tot = 2.85*(data["mag_field_x"]**2 + data["mag_field_y"]**2 + data["mag_field_y"]**2)**0.5
+   return b_tot
 
 def en_ratio(field,data):     #DEPRECATED (?)
    bin_nr = field.name[1][-2:]
@@ -237,6 +243,12 @@ if f_run == True:
     click_coords = [0, 0]
     image_number = 0
 
+    if (plot_field == "b_tot"):
+      try:
+         h5ds.add_field(("gdf",plot_field), dimensions=dimensions.magnetic_field, units="",function=_total_B, display_name="Total magnetic field ($\mu$G)", sampling_type="cell")
+      except:
+         die("Failed to construct field %s" % plot_field)
+
     if ( plot_field[0:-2] == "en_ratio"):
       try:
          if str(dsSlice["cren01"].units) is "dimensionless":      #  DEPRECATED
@@ -257,7 +269,10 @@ if f_run == True:
           disp_name="number"
           new_field_dimensions = 1./dimensions.volume
        prtinfo( "Adding display name: %s density" %disp_name)
-       disp_name="CR electron %s density (bin %2i)" %(disp_name, int(plot_field[-2:]) )
+       if (display_bin_no):
+         disp_name="CR electron %s density (bin %2i)" %(disp_name, int(plot_field[-2:]) )
+       else:
+         disp_name="CR electron %s density" %(disp_name)
        new_field            = str(plot_field+"_updated")
        new_field_units      = dsSlice[plot_field].units
        h5ds.add_field(("gdf", new_field), units=new_field_units, function=copy_field, display_name=disp_name, dimensions=new_field_dimensions, sampling_type="cell")
@@ -271,16 +286,15 @@ if f_run == True:
     w = dom_r[avail_dim[0]] + abs(dom_l[avail_dim[0]])
     h = dom_r[avail_dim[1]] + abs(dom_l[avail_dim[1]])
 
-    if (plot_field[0:-2] != "en_ratio"):
+    if (slice_ax == "y"):
+      frb = np_array(dsSlice.to_frb(width=h, resolution=resolution, height=w)[plot_field])
+      frb = rot90(frb)
+    else:
       frb = np_array(dsSlice.to_frb(width=w, resolution=resolution, height=h)[plot_field])
-      if (not user_limits): plot_max = h5ds.find_max(plot_field)[0]
-      if (not user_limits): plot_min = h5ds.find_min(plot_field)[0]
-      plot_units = str(h5ds.all_data()[plot_field].units)
-    else:               #== "en_ratio"
-      frb = np_array(dsSlice.to_frb(width=w, resolution=resolution, height=h)[plot_field])
-      if (not user_limits): plot_min = h5ds.find_min(plot_field)[0]
-      if (not user_limits): plot_max = h5ds.find_max(plot_field)[0]
-      plot_units = str(h5ds.all_data()[plot_field].units)
+    if (not user_limits): plot_max = h5ds.find_max(plot_field)[0]
+    if (not user_limits): plot_min = h5ds.find_min(plot_field)[0]
+    plot_units = str(h5ds.all_data()[plot_field].units)
+
     if (user_limits == True): # Overwrites previously found values
        plot_min = plot_user_min
        plot_max = plot_user_max
@@ -298,10 +312,12 @@ if f_run == True:
     plot_min   = max(float(plot_min), par_epsilon)
     if (isnan(plot_min)==True or isnan(plot_max)==True): encountered_nans = True; prtwarn("Invalid data encountered (NaN), ZLIM will be adjusted")
 
+    im_orig = "lower"
+
     if (use_logscale):
-      plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower" ,norm = LogNorm(vmin = plot_min, vmax = plot_max) if (encountered_nans == False) else LogNorm())
+      plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin=im_orig, norm = LogNorm(vmin = plot_min, vmax = plot_max) if (encountered_nans == False) else LogNorm())
     elif (use_linscale):
-      plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower", vmin = plot_min if (encountered_nans == False) else None, vmax = plot_max if (encountered_nans == False) else None)
+      plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin=im_orig, vmin = plot_min if (encountered_nans == False) else None, vmax = plot_max if (encountered_nans == False) else None)
 
     plt.title("Component: "+plot_field+" | t = %9.3f Myr"  %time)
 
@@ -310,7 +326,7 @@ if f_run == True:
     except:
        die("An empty field might have been picked.")
 
-    yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field)
+    yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field,)
     yt_data_plot.set_font({'size':options.fontsize})
 
     colormap_my  = plt.cm.viridis
@@ -336,6 +352,11 @@ if f_run == True:
 
     crs_h5.crs_initialize(var_names, var_array)
 
+    mplot = yt_data_plot.plots[plot_field]
+
+    xticklabels = mplot.axes.xaxis.get_ticklabels()
+    yticklabels = mplot.axes.yaxis.get_ticklabels()
+
 #---------
     def read_click_and_plot(event):
         global click_coords, image_number, f_run, marker_index
@@ -352,11 +373,13 @@ if f_run == True:
         else: # slice_ax = "z"
             coords[0] = click_coords[0]
             coords[1] = click_coords[1]
+
         mark_plot_save(coords)
 
     def mark_plot_save(coords):
         global click_coords, image_number, f_run, marker_index
 # ------------ preparing data and passing -------------------------
+        print(coords)
         position = h5ds.r[coords:coords]
         if ( plot_field[0:-2] != "en_ratio"):
            prtinfo (">>>>>>>>>>>>>>>>>>> Value of %s at point [%f, %f, %f] = %f " %(plot_field, coords[0], coords[1], coords[2], position[plot_field]))
@@ -375,7 +398,7 @@ if f_run == True:
                for ind in range(1,ncre+1):
                   ecrs.append(float(mean(position['cree'+str(ind).zfill(2)][0].v)))
                   ncrs.append(float(mean(position['cren'+str(ind).zfill(2)][0].v)))
-               fig2,exit_code = crs_h5.crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot)
+               fig2,exit_code = crs_h5.crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot, hide_axes=options.no_axes)
 
            elif (plot_ovlp == True):    #for overlap_layer
                prtinfo("Plotting layer with overlap...")
@@ -386,7 +409,7 @@ if f_run == True:
                   for ind in range(1,ncre+1):
                      ecrs.append( position['cree'+str(ind).zfill(2)][0].v )
                      ncrs.append( position['cren'+str(ind).zfill(2)][0].v )
-                  fig2,exit_code_tmp = crs_h5.crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index],i_plot=image_number, clean_plot=options.clean_plot)
+                  fig2,exit_code_tmp = crs_h5.crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index],i_plot=image_number, clean_plot=options.clean_plot, hide_axes=options.no_axes)
                   if (exit_code_tmp == False): exit_code = exit_code_tmp # Just one plot is allright
                   ecrs = [] ; ncrs = []
         else:     # for fqp, DEPRECATED probably
@@ -423,8 +446,9 @@ if f_run == True:
 #------------- saving just the spectrum
             if (save_spectrum):
                extent = fig2.get_window_extent().transformed(s.dpi_scale_trans.inverted())
-               s.savefig('results/'+filename_nam+'_'+plot_var+'_spectrum_%03d.pdf' % image_number, transparent ='True', bbox_inches=extent.expanded(1.4, 1.195),quality=95,dpi=150)
-               #prtinfo("  --->  Saved plot to: %s.\n\033[44mPress 'q' to quit and save yt.SlicePlot with marked coordinates." %str('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.pdf' %image_number))
+               #s.savefig('results/'+filename_nam+'_'+plot_var+'_spectrum_%03d.pdf' % image_number, transparent ='True', bbox_inches=extent.expanded(1.495, 1.195),quality=95,dpi=150) # DEPRECATED
+               s.savefig('results/'+filename_nam+'_'+plot_var+'_spec_%03d.pdf' % image_number, transparent ='True', bbox_inches="tight",quality=95,dpi=150) # bbox not working in py27 FIXME
+               prtinfo("  --->  Saved plot to: %s.\n\033[44mPress 'q' to quit and save yt.SlicePlot with marked coordinates." %str('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.pdf' %image_number))
         else:
             prtwarn("Empty cell - not saving.")
 
@@ -454,6 +478,6 @@ if f_run == True:
 
     if (options.no_cbar): yt_data_plot.hide_colorbar()
     if (options.no_xlabels and options.no_ylabels):  yt_data_plot.hide_axes()
-    yt_data_plot.save('results/'+filename_nam+'_'+plot_field+'_sliceplot.pdf') # save image (spectrum already saved) when finished.
 
+    yt_data_plot.save('results/'+filename_nam+'_'+plot_field+'_sliceplot.pdf') # save image (spectrum already saved) when finished.
     if (not user_coords_provided): s.canvas.mpl_disconnect(cid)
