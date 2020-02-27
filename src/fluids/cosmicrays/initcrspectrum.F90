@@ -40,7 +40,7 @@ module initcrspectrum
    public :: use_cresp, p_init, initial_spectrum, p_br_init, f_init, q_init, q_br_init, q_big, cfl_cre, cre_eff, expan_order, e_small, e_small_approx_p, e_small_approx_init_cond,  &
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active, &
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,        &
-           & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps, u_b_max
+           & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps, u_b_max, write_cresp_to_restart
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -163,7 +163,7 @@ module initcrspectrum
       use func,            only: emag
       use initcosmicrays,  only: ncrn, ncre, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
-      use units,           only: clight, me, sigma_T, mGs
+      use units,           only: clight, me, sigma_T
 
       implicit none
 
@@ -657,6 +657,33 @@ module initcrspectrum
 
    end subroutine check_if_dump_fpq
 
+!----------------------------------------------------------------------------------------------------
+
+   subroutine write_cresp_to_restart(file_id)
+
+      use hdf5,            only: HID_T, SIZE_T
+      use h5lt,            only: h5ltset_attribute_int_f, h5ltset_attribute_double_f
+      use initcosmicrays,  only: ncre
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id
+      integer(SIZE_T)            :: bufsize
+      integer(kind=4)            :: error
+      integer, dimension(1)      :: lnsnbuf_i
+      real,    dimension(1)      :: lnsnbuf_r
+
+      bufsize = 1
+      lnsnbuf_i(bufsize) = ncre
+      call h5ltset_attribute_int_f(file_id, "/", "ncre",        lnsnbuf_i, bufsize, error)
+
+      lnsnbuf_r(bufsize) = p_min_fix
+      call h5ltset_attribute_double_f(file_id, "/", "p_min_fix", lnsnbuf_r, bufsize, error)
+
+      lnsnbuf_r(bufsize) = p_max_fix
+      call h5ltset_attribute_double_f(file_id, "/", "p_max_fix", lnsnbuf_r, bufsize, error)
+
+   end subroutine write_cresp_to_restart
 !----------------------------------------------------------------------------------------------------
 
    subroutine cleanup_cresp_work_arrays

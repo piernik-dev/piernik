@@ -452,6 +452,9 @@ contains
          & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
       use mpisetup,      only: master, slave
       use version,       only: env, nenv
+#ifdef COSM_RAY_ELECTRONS
+      use initcrspectrum, only: write_cresp_to_restart
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef RANDOMIZE
       use randomization, only: write_current_seed_to_restart
 #endif /* RANDOMIZE */
@@ -524,6 +527,9 @@ contains
       call H5Tclose_f(type_id, error)
       call H5Pclose_f(prp_id, error)
 
+#ifdef COSM_RAY_ELECTRONS
+      call write_cresp_to_restart(file_id)
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef RANDOMIZE
       call write_current_seed_to_restart(file_id)
 #endif /* RANDOMIZE */
