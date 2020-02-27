@@ -145,7 +145,7 @@ contains
       write(msg(len_trim(msg)+1:), '(a,f7.3)') ", dt_wall= ", set_timer(tmr_amr)
       if (finest%level%l%id > base_level_id) then
          write(msg(len_trim(msg)+1:), '(a)')", leaves/finest: "
-         lf = g_cnt/real(b_cnt * (refinement_factor**dom%eff_dim)**finest%level%l%id)
+         lf = g_cnt/(b_cnt * real(refinement_factor)**(dom%eff_dim * finest%level%l%id))
          if (lf >= 0.0001) then
             write(msg(len_trim(msg)+1:), '(" ",f8.6)') lf
          else
