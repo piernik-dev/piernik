@@ -675,13 +675,19 @@ module initcrspectrum
 
       bufsize = 1
       lnsnbuf_i(bufsize) = ncre
-      call h5ltset_attribute_int_f(file_id, "/", "ncre",        lnsnbuf_i, bufsize, error)
+      call h5ltset_attribute_int_f(file_id,    "/", "ncre",      lnsnbuf_i, bufsize, error)
 
       lnsnbuf_r(bufsize) = p_min_fix
       call h5ltset_attribute_double_f(file_id, "/", "p_min_fix", lnsnbuf_r, bufsize, error)
 
       lnsnbuf_r(bufsize) = p_max_fix
       call h5ltset_attribute_double_f(file_id, "/", "p_max_fix", lnsnbuf_r, bufsize, error)
+
+      lnsnbuf_r(bufsize) = q_big
+      call h5ltset_attribute_double_f(file_id, "/", "q_big",     lnsnbuf_r, bufsize, error)
+
+      lnsnbuf_r(bufsize) = e_small
+      call h5ltset_attribute_double_f(file_id, "/", "e_small",   lnsnbuf_r, bufsize, error)
 
    end subroutine write_cresp_to_restart
 !----------------------------------------------------------------------------------------------------
