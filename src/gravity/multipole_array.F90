@@ -32,19 +32,22 @@
 module multipole_array
 ! pulled by MULTIGRID && SELF_GRAV
 
+   use constants, only: ndims
+
    implicit none
 
    private
    public :: mpole_container
-   public :: interp_pt2mom, interp_mom2pot  ! initialized in multigrid_gravity
+   public :: res_factor, size_factor  ! initialized in multigrid_gravity
 
    ! namelist parameters for MULTIGRID_GRAVITY
-   logical :: interp_pt2mom  !< Distribute contribution from a cell between two adjacent radial bins (linear interpolation in radius)
-   logical :: interp_mom2pot !< Compute the potential from moments from two adjacent radial bins (linear interpolation in radius)
+   real :: res_factor        !< resolution of radial distribution of moments (in cells)
+   real :: size_factor       !< enlargement of radial distribution (w.r.t. diagonal)
 
    type :: mpole_container
 
       real, dimension(:,:,:), allocatable          :: Q       !< The whole moment array with dependence on radius
+      real, dimension(ndims)                       :: center  !< reference point for multipole expansion (such as domain center, CoM, centroid of particle subset, etc.)
       integer(kind=4),                     private :: lmax    !< Maximum l-order of multipole moments
       integer(kind=4),                     private :: mmax    !< Maximum m-order of multipole moments. Equal to lmax by default.
 
@@ -52,13 +55,14 @@ module multipole_array
       real, dimension(:,:,:), allocatable, private :: k12     !< array of Legendre recurrence factors
       real, dimension(:),     allocatable, private :: ofact   !< arrays of Legendre normalization factor (compressed)
       ! radial discretization
-      integer,                             private :: irmin   !< minimum Q(:, :, r) index in use
-      integer,                             private :: irmax   !< maximum Q(:, :, r) index in use
       integer,                             private :: rqbin   !< number of radial samples of multipoles
       real,                                private :: drq     !< radial resolution of multipoles
-      real,                                private :: rscale  !< scaling factor that limits risk of floating poin
+      real,                                private :: a_scale !< factor for computing index in nonlinear scale
+      real,                                private :: rscale  !< scaling factor that limits risk of floating point overflow
       real, dimension(:),     allocatable, private :: rn      !< 0..l_max sized array of positive powers of r
       real, dimension(:),     allocatable, private :: irn     !< 0..l_max sized array of negative powers of r
+      real, dimension(:),     allocatable, private :: i_r     !< rqbin sized array of radial bins
+      logical,                             private :: pr_log  !< when .true. then print radial discretisation to the log file
 
    contains
 
@@ -122,29 +126,37 @@ contains
       enddo
       this%ofact(0:this%lmax) = 1. ! this%lm(0:this%lmax,0)
 
+      this%pr_log = .true.
+
    end subroutine init_once
 
    subroutine refresh(this)
 
       use cg_level_finest, only: finest
       use constants,       only: xdim, zdim, GEO_XYZ, GEO_RPZ, HI, pMIN
-      use dataio_pub,      only: die
+      use dataio_pub,      only: die, warn, msg, printinfo
       use domain,          only: dom
-      use mpisetup,        only: piernik_MPI_Allreduce
-      use particle_pub,    only: pset
+      use mpisetup,        only: piernik_MPI_Allreduce, master
 
       implicit none
 
       class(mpole_container), intent(inout) :: this  !< object invoking type-bound procedure
 
-      integer :: i
+      integer :: i, prev
+      integer, parameter :: skip_pr = 125
+      character(len=*), parameter :: dots = "    ..."
+
+      if (res_factor <= 0.) then
+         call warn("[multipole_array:refresh] res_factor <= 0. : restoring the default value 0.5")
+         res_factor = 0.5
+      endif
 
       if (associated(finest%level%first)) then
          select case (dom%geometry_type)
             case (GEO_XYZ)
-               this%drq = minval(finest%level%first%cg%dl(:), mask=dom%has_dir(:)) / 2.
+               this%drq = minval(finest%level%first%cg%dl(:), mask=dom%has_dir(:)) * res_factor
             case (GEO_RPZ)
-               this%drq = min(finest%level%first%cg%dx, dom%C_(xdim)*finest%level%first%cg%dy, finest%level%first%cg%dz) / 2.
+               this%drq = min(finest%level%first%cg%dx, dom%C_(xdim)*finest%level%first%cg%dy, finest%level%first%cg%dz) * res_factor
             case default
                call die("[multipole_array:refresh] Unsupported geometry.")
          end select
@@ -153,9 +165,14 @@ contains
       endif
       call piernik_MPI_Allreduce(this%drq, pMIN)
 
+      if (size_factor <= 0.) then
+         if (master) call warn("[multipole_array:refresh] size_factor <= 0. : restoring the default value 1.0")
+         size_factor = 1.0
+      endif
+
       select case (dom%geometry_type)
          case (GEO_XYZ)
-            this%rqbin = int(sqrt(sum(dom%L_(:)**2))/this%drq) + 1
+            this%a_scale = sqrt(sum(dom%L_(:)**2, mask=dom%has_dir)) * size_factor
             ! arithmetic average of the closest and farthest points of computational domain with respect to its center
             !>
             !!\todo check what happens if there are points that are really close to the domain center (maybe we should use a harmonic average?)
@@ -163,20 +180,98 @@ contains
             !<
             this%rscale = ( minval(dom%L_(:)) + sqrt(sum(dom%L_(:)**2)) )/4.
          case (GEO_RPZ)
-            this%rqbin = int(sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2)/this%drq) + 1
+            this%a_scale = sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2) * size_factor
             this%rscale = ( min(2.*dom%edge(xdim, HI), dom%L_(zdim)) + sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2) )/4.
          case default
             call die("[multipole_array:refresh] Unsupported geometry.")
       end select
-
-      do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
-         !> \warning this is not optimal, when domain is placed far away form the origin
-         !> \warning a factor of up to 2 may be required if we use CoM as the origin
-         if (pset%p(i)%outside) this%rqbin = max(this%rqbin, int(sqrt(sum(pset%p(i)%pos**2))/this%drq) + 1)
-      enddo
+      this%rqbin = int(this%a_scale/this%drq) + 1
 
       if (allocated(this%Q)) deallocate(this%Q)
-      allocate(this%Q(0:this%lm(int(this%lmax), int(2*this%mmax)), INSIDE:OUTSIDE, 0:this%rqbin))
+      allocate(this%Q(0:this%lm(int(this%lmax), int(2*this%mmax)), INSIDE:OUTSIDE, -1:this%rqbin))
+
+      if (allocated(this%i_r)) deallocate(this%i_r)
+      allocate(this%i_r(0:this%rqbin-1))
+
+      if (this%pr_log) then
+         write(msg, '(a,3g13.5,a)')"[multipole_array:refresh] multipoles centered at ( ", this%center, " ) low edges of bins are at:"
+         if (master) call printinfo(msg, .false.)
+      endif
+      prev = 0
+      do i = lbound(this%i_r, dim=1), ubound(this%i_r, dim=1)
+         this%i_r(i) = i2r(i)
+         if (this%pr_log) then
+            if (i <= skip_pr) then
+               call print_ri(i)
+               prev = i
+            else if (i >= ubound(this%i_r, dim=1) - skip_pr) then
+               call print_ri(i)
+               prev = i
+            else if (div2n(i) <= 3) then  ! if the array is long then print only for some values
+               if (prev < i-2 .and. prev == skip_pr .and. master) call printinfo(dots, .false.)
+               if (prev < i-1) call print_ri(i-1)
+               call print_ri(i)
+               if (i+1 /= ubound(this%i_r, dim=1) - skip_pr .and. master) call printinfo(dots, .false.)
+               prev = i
+            endif
+         endif
+      enddo
+      if (this%pr_log .and. ubound(this%i_r, dim=1) > 1 .and. master) then
+         write(msg, '(a,3g13.5,2(a,g13.5))')"[multipole_array:refresh] multipoles centered at ( ", this%center, " ) first bin width = ", this%i_r(1), " last bin starts at = ", this%i_r(ubound(this%i_r, dim=1) - 1)
+         ! Expect inaccurate potential for sources that fall into last few bins due to large dr/r ratio.
+         call printinfo(msg)
+      endif
+      this%pr_log = .false.
+
+   contains
+
+      !> \brief this function has to match geomfac4moments::r2i(): r2i(i2r(j)) == j
+
+      pure real function i2r(i) result(r)
+
+         implicit none
+
+         integer, intent(in) :: i !< index
+
+         r = merge(0., this%a_scale / (this%rqbin/real(i) - 1), i==0)
+
+      end function i2r
+
+      !> \brief divide given integer by maximum possible power of 2 and return the remainder
+
+      pure integer function div2n(i) result(d)
+
+         implicit none
+
+         integer, intent(in) :: i !< input integer
+
+         d = abs(i)
+         do while (mod(d, 2) == 0)
+            d = d / 2
+         enddo
+
+      end function div2n
+
+      subroutine print_ri(i)
+
+         use constants,  only: fmt_len
+         use dataio_pub, only: msg, printinfo
+
+         implicit none
+
+         integer, intent(in) :: i  !< input integers
+
+         character(len=fmt_len) :: fmt
+
+         if (i >= 1000000000) then ! really big number, this should never happen here, in multipole_array
+            fmt = '(a,i20,a,g13.5)'  !i20 should be enough for any 64-bit integer, signed or not
+         else
+            write(fmt, '(a,i1,a)')'(a,i',1 + int(log10(real(max(1,i)))),',a,g13.5)'
+         endif
+         write(msg, fmt)"  r( ",i," ) = ", this%i_r(i)
+         if (master) call printinfo(msg, .false.)
+
+      end subroutine print_ri
 
    end subroutine refresh
 
@@ -189,8 +284,6 @@ contains
       class(mpole_container), intent(inout) :: this  !< object invoking type-bound procedure
 
       this%Q = 0.
-      this%irmax = 0
-      this%irmin = this%rqbin
 
    end subroutine reset
 
@@ -198,7 +291,7 @@ contains
 
    subroutine red_int_norm(this)
 
-      use constants, only: pSUM, pMIN, pMAX
+      use constants, only: pSUM
       use mpisetup,  only: piernik_MPI_Allreduce
 
       implicit none
@@ -207,22 +300,19 @@ contains
 
       integer :: r, rr
 
-      call piernik_MPI_Allreduce(this%irmin, pMIN)
-      call piernik_MPI_Allreduce(this%irmax, pMAX)
-
       ! integrate radially and apply normalization factor (the (4 \pi)/(2 l  + 1) terms cancel out)
-      rr = max(1, this%irmin)
+      rr = 0
       this%Q(:, INSIDE, rr-1) = this%Q(:, INSIDE, rr-1) * this%ofact(:)
-      do r = rr, this%irmax
+      do r = rr, ubound(this%Q, dim=3)
          this%Q(:, INSIDE, r) = this%Q(:, INSIDE, r) * this%ofact(:) + this%Q(:, INSIDE, r-1)
       enddo
 
-      this%Q(:, OUTSIDE, this%irmax+1) = this%Q(:, OUTSIDE, this%irmax+1) * this%ofact(:)
-      do r = this%irmax, rr, -1
+      this%Q(:, OUTSIDE, ubound(this%Q, dim=3)) = this%Q(:, OUTSIDE, ubound(this%Q, dim=3)) * this%ofact(:)
+      do r = ubound(this%Q, dim=3)-1, rr-1, -1
          this%Q(:, OUTSIDE, r) = this%Q(:, OUTSIDE, r) * this%ofact(:) + this%Q(:, OUTSIDE, r+1)
       enddo
 
-      call piernik_MPI_Allreduce(this%Q(:, :, this%irmin:this%irmax), pSUM)
+      call piernik_MPI_Allreduce(this%Q, pSUM)
 
    end subroutine red_int_norm
 
@@ -237,6 +327,7 @@ contains
       if (allocated(this%Q))     deallocate(this%Q)
       if (allocated(this%k12))   deallocate(this%k12)
       if (allocated(this%ofact)) deallocate(this%ofact)
+      if (allocated(this%i_r))   deallocate(this%i_r)
 
    end subroutine cleanup
 
@@ -275,38 +366,31 @@ contains
 !>
 !! \brief Compute multipole moments for a single point
 !!
-!! \todo try to improve accuracy with linear interpolation over radius
+!! \details This routine is manually optimized by exploiting properties of lm(l, m) mapping function.
+!! The lm(l, m) function was designed in such a way, that the elements are ordered in the way they're used.
+!! Thus it is not advisable to modify this routine carelessly ;-)
 !<
 
    subroutine point2moments(this, mass, x, y, z)
-
-      use constants, only: zero
-      use func,      only: operator(.notequals.)
 
       implicit none
 
       class(mpole_container), intent(inout) :: this  !< object invoking type-bound procedure
       real,                   intent(in)    :: mass  !< mass of the contributing point
-      real,                   intent(in)    :: x     !< x coordinate of the contributing point
-      real,                   intent(in)    :: y     !< y coordinate of the contributing point
-      real,                   intent(in)    :: z     !< z coordinate of the contributing point
+      real,                   intent(in)    :: x     !< absolute x-coordinate of the contributing point
+      real,                   intent(in)    :: y     !< absolute y-coordinate of the contributing point
+      real,                   intent(in)    :: z     !< absolute z-coordinate of the contributing point
 
-      real    :: sin_th, cos_th, sin_ph, cos_ph, del, cfac, sfac, tmpfac
+      real    :: sin_th, cos_th, sin_ph, cos_ph, cfac, sfac, tmpfac
       real    :: Ql, Ql1, Ql2
       integer :: l, m, ir, m2c
 
-      call this%geomfac4moments(mass, x, y, z, sin_th, cos_th, sin_ph, cos_ph, ir, del)
-
-      if (.not. interp_pt2mom) del = 0.
+      call this%geomfac4moments(mass, x, y, z, sin_th, cos_th, sin_ph, cos_ph, ir)
 
       ! monopole, the (0,0) moment; P_0 = 1.
       ! this%lm(0, 0) == 0
-      this%Q(0, INSIDE,  ir) = this%Q(0, INSIDE,  ir) +  this%rn(0) * (1.-del)
-      this%Q(0, OUTSIDE, ir) = this%Q(0, OUTSIDE, ir) + this%irn(0) * (1.-del)
-      if (del .notequals. zero) then
-         this%Q(0, INSIDE,  ir+1) = this%Q(0, INSIDE,  ir+1) +  this%rn(0) * del
-         this%Q(0, OUTSIDE, ir+1) = this%Q(0, OUTSIDE, ir+1) + this%irn(0) * del
-      endif
+      this%Q(0, INSIDE,  ir) = this%Q(0, INSIDE,  ir) +  this%rn(0)
+      this%Q(0, OUTSIDE, ir) = this%Q(0, OUTSIDE, ir) + this%irn(0)
 
       ! axisymmetric (l,0) moments
       ! Legendre polynomial recurrence: l P_l = x (2l-1) P_{l-1} - (l-1) P_{l-2}, x \eqiv \cos(\theta)
@@ -315,12 +399,8 @@ contains
       do l = 1, this%lmax
          ! this%lm(l, 0) == l
          Ql = cos_th * this%k12(1, l, 0) * Ql1 - this%k12(2, l, 0) * Ql2
-         this%Q(l, INSIDE,  ir) = this%Q(l, INSIDE,  ir) +  this%rn(l) * Ql * (1.-del)
-         this%Q(l, OUTSIDE, ir) = this%Q(l, OUTSIDE, ir) + this%irn(l) * Ql * (1.-del)
-         if (del .notequals. zero) then
-            this%Q(l, INSIDE,  ir+1) = this%Q(l, INSIDE,  ir+1) +  this%rn(l) * Ql * del
-            this%Q(l, OUTSIDE, ir+1) = this%Q(l, OUTSIDE, ir+1) + this%irn(l) * Ql * del
-         endif
+         this%Q(l, INSIDE,  ir) = this%Q(l, INSIDE,  ir) +  this%rn(l) * Ql
+         this%Q(l, OUTSIDE, ir) = this%Q(l, OUTSIDE, ir) + this%irn(l) * Ql
          Ql2 = Ql1
          Ql1 = Ql
       enddo
@@ -344,12 +424,8 @@ contains
          m2c = this%lm(m, 2*m)  ! "cosine" coefficient
          ! The "sine" coefficient has index this%lm(m, 2*m-1) in our cmapping convention.
          ! Here we also exploit the fact that it equals m2c -1
-         this%Q(m2c-1:m2c, INSIDE,  ir) = this%Q(m2c-1:m2c, INSIDE,  ir) +  this%rn(m) * Ql1 * (1.-del) * [ sfac, cfac ]
-         this%Q(m2c-1:m2c, OUTSIDE, ir) = this%Q(m2c-1:m2c, OUTSIDE, ir) + this%irn(m) * Ql1 * (1.-del) * [ sfac, cfac ]
-         if (del .notequals. zero) then
-            this%Q(m2c-1:m2c, INSIDE,  ir+1) = this%Q(m2c-1:m2c, INSIDE,  ir+1) +  this%rn(m) * Ql1 * del * [ sfac, cfac ]
-            this%Q(m2c-1:m2c, OUTSIDE, ir+1) = this%Q(m2c-1:m2c, OUTSIDE, ir+1) + this%irn(m) * Ql1 * del * [ sfac, cfac ]
-         endif
+         this%Q(m2c-1:m2c, INSIDE,  ir) = this%Q(m2c-1:m2c, INSIDE,  ir) +  this%rn(m) * Ql1 * [ sfac, cfac ]
+         this%Q(m2c-1:m2c, OUTSIDE, ir) = this%Q(m2c-1:m2c, OUTSIDE, ir) + this%irn(m) * Ql1 * [ sfac, cfac ]
 
          !>
          !! \deprecated BEWARE: most of computational cost of multipoles is here
@@ -362,12 +438,8 @@ contains
             Ql = cos_th * this%k12(1, l, m) * Ql1 - this%k12(2, l, m) * Ql2
             m2c = m2c + 2  ! = this%lm(l, 2*m)
             ! Here we exploit that this%lm(l, 2*m) + 2 == this%lm(l+1, 2*m) for current implementation
-            this%Q(m2c-1:m2c, INSIDE,  ir) = this%Q(m2c-1:m2c, INSIDE,  ir) +  this%rn(l) * Ql * (1.-del) * [ sfac, cfac ]
-            this%Q(m2c-1:m2c, OUTSIDE, ir) = this%Q(m2c-1:m2c, OUTSIDE, ir) + this%irn(l) * Ql * (1.-del) * [ sfac, cfac ]
-            if (del .notequals. zero) then
-               this%Q(m2c-1:m2c, INSIDE,  ir+1) = this%Q(m2c-1:m2c, INSIDE,  ir+1) +  this%rn(l) * Ql * del * [ sfac, cfac ]
-               this%Q(m2c-1:m2c, OUTSIDE, ir+1) = this%Q(m2c-1:m2c, OUTSIDE, ir+1) + this%irn(l) * Ql * del * [ sfac, cfac ]
-            endif
+            this%Q(m2c-1:m2c, INSIDE,  ir) = this%Q(m2c-1:m2c, INSIDE,  ir) +  this%rn(l) * Ql * [ sfac, cfac ]
+            this%Q(m2c-1:m2c, OUTSIDE, ir) = this%Q(m2c-1:m2c, OUTSIDE, ir) + this%irn(l) * Ql * [ sfac, cfac ]
             Ql2 = Ql1
             Ql1 = Ql
          enddo
@@ -379,38 +451,37 @@ contains
 !>
 !! \brief Compute potential from multipole moments at a single point
 !!
-!! \todo improve accuracy with linear interpolation over radius
+!! \details This function is manually optimized by exploiting properties of lm(l, m) mapping function
+!! in the same way as point2moments is.
+!!
+!! If, for some reasons, one would need to operate on a multipole array truncated to different lmax,
+!! the safest way, which won't degrade the performance in regular usage, is to allocate another mpole_container
+!! and copy relevant elements of this%q there.
+!!
+!! \todo implement this routine as elemental
 !<
 
    real function moments2pot(this, x, y, z) result(potential)
 
-      use constants, only: zero
-      use func,      only: operator(.notequals.)
       use units,     only: newtong
 
       implicit none
 
       class(mpole_container), intent(inout) :: this  !< object invoking type-bound procedure
-      real,                   intent(in)    :: x     !< x coordinate of the contributing point
-      real,                   intent(in)    :: y     !< y coordinate of the contributing point
-      real,                   intent(in)    :: z     !< z coordinate of the contributing point
+      real,                   intent(in)    :: x     !< absolute x-coordinate of the contributing point
+      real,                   intent(in)    :: y     !< absolute y-coordinate of the contributing point
+      real,                   intent(in)    :: z     !< absolute z-coordinate of the contributing point
 
-      real :: sin_th, cos_th, sin_ph, cos_ph, del, cfac, sfac, tmpfac
+      real :: sin_th, cos_th, sin_ph, cos_ph, cfac, sfac, tmpfac
       real :: Ql, Ql1, Ql2
       integer :: l, m, ir, m2c
 
-      call this%geomfac4moments(-newtong, x, y, z, sin_th, cos_th, sin_ph, cos_ph, ir, del)
-
-      if (.not. interp_mom2pot) del = 0.
+      call this%geomfac4moments(-newtong, x, y, z, sin_th, cos_th, sin_ph, cos_ph, ir)
 
       ! monopole, the (0,0) moment; P_0 = 1.
       ! this%lm(0, 0) == 0
-      potential = (1.-del) * ( &
-           this%Q(0, INSIDE,  ir)   * this%irn(0) + &
-           this%Q(0, OUTSIDE, ir+1) *  this%rn(0) )
-      if (del .notequals. zero) potential = potential + del * ( &
-           this%Q(0, INSIDE,  ir-1) * this%irn(0) + &
-           this%Q(0, OUTSIDE, ir)   *  this%rn(0) )
+      potential = this%Q(0, INSIDE,  ir)   * this%irn(0) + &
+           &      this%Q(0, OUTSIDE, ir+1) *  this%rn(0)
       ! ir+1 to prevent duplicate accounting contributions from ir bin; alternatively one can modify radial integration
 
       ! axisymmetric (l,0) moments
@@ -419,12 +490,9 @@ contains
       do l = 1, this%lmax
          ! this%lm(l, 0) == l
          Ql = cos_th * this%k12(1, l, 0) * Ql1 - this%k12(2, l, 0) * Ql2
-         potential = potential + Ql * (1.-del) * ( &
+         potential = potential + Ql * ( &
               &      this%Q(l, INSIDE,  ir)   * this%irn(l) + &
               &      this%Q(l, OUTSIDE, ir+1) *  this%rn(l) )
-         if (del .notequals. zero) potential = potential + Ql  * del * ( &
-              &      this%Q(l, INSIDE,  ir-1) * this%irn(l) + &
-              &      this%Q(l, OUTSIDE, ir)   *  this%rn(l) )
          Ql2 = Ql1
          Ql1 = Ql
       enddo
@@ -440,16 +508,11 @@ contains
          cfac = cos_ph * cfac - sin_ph * sfac
          sfac = cos_ph * sfac + sin_ph * tmpfac
          m2c = this%lm(m, 2*m)  ! see comments in point2moments
-         potential = potential + Ql1 * (1.-del) * ( &
+         potential = potential + Ql1 * ( &
               &       this%irn(m) * (this%Q(m2c-1, INSIDE,  ir)   * sfac  + &
               &                      this%Q(m2c,   INSIDE,  ir)   * cfac) + &
               &        this%rn(m) * (this%Q(m2c-1, OUTSIDE, ir+1) * sfac  + &
               &                      this%Q(m2c,   OUTSIDE, ir+1) * cfac) )
-         if (del .notequals. zero) potential = potential + Ql1 * del * ( &
-              &       this%irn(m) * (this%Q(m2c-1, INSIDE,  ir-1) * sfac  + &
-              &                      this%Q(m2c,   INSIDE,  ir-1) * cfac) + &
-              &        this%rn(m) * (this%Q(m2c-1, OUTSIDE, ir)   * sfac  + &
-              &                      this%Q(m2c,   OUTSIDE, ir)   * cfac) )
 
          !> \deprecated BEWARE: lots of computational cost of multipoles is here
          ! from (m+1,m) to (this%lmax,m)
@@ -457,16 +520,11 @@ contains
          do l = m+1, this%lmax
             m2c = m2c + 2  ! see comments in point2moments
             Ql = cos_th * this%k12(1, l, m) * Ql1 - this%k12(2, l, m) * Ql2
-            potential = potential + Ql * (1.-del) * ( &
+            potential = potential + Ql * ( &
                  &       this%irn(l) * (this%Q(m2c-1, INSIDE,  ir)   * sfac  + &
                  &                      this%Q(m2c,   INSIDE,  ir)   * cfac) + &
                  &        this%rn(l) * (this%Q(m2c-1, OUTSIDE, ir+1) * sfac  + &
                  &                      this%Q(m2c,   OUTSIDE, ir+1) * cfac) )
-            if (del .notequals. zero) potential = potential + Ql * del * ( &
-                 &       this%irn(l) * (this%Q(m2c-1, INSIDE,  ir-1) * sfac  + &
-                 &                      this%Q(m2c,   INSIDE,  ir-1) * cfac) + &
-                 &        this%rn(l) * (this%Q(m2c-1, OUTSIDE, ir)   * sfac  + &
-                 &                      this%Q(m2c,   OUTSIDE, ir)   * cfac) )
             Ql2 = Ql1
             Ql1 = Ql
          enddo
@@ -480,10 +538,10 @@ contains
 !! \details It modifies the this%rn(:) and this%irn(:) arrays. Scalars are passed through argument list.
 !<
 
-   subroutine geomfac4moments(this, factor, x, y, z, sin_th, cos_th, sin_ph, cos_ph, ir, delta)
+   subroutine geomfac4moments(this, factor, xx, yy, zz, sin_th, cos_th, sin_ph, cos_ph, ir)
 
-      use constants,  only: GEO_XYZ, GEO_RPZ, zero
-      use dataio_pub, only: die, msg
+      use constants,  only: GEO_XYZ, GEO_RPZ, zero, xdim, ydim, zdim
+      use dataio_pub, only: die
       use domain,     only: dom
       use func,       only: operator(.notequals.)
 
@@ -491,18 +549,22 @@ contains
 
       class(mpole_container), intent(inout) :: this  !< object invoking type-bound procedure
       real,                   intent(in)  :: factor  !< scaling factor (e.g. mass) of the contributing point
-      real,                   intent(in)  :: x       !< x coordinate of the contributing point
-      real,                   intent(in)  :: y       !< x coordinate of the contributing point
-      real,                   intent(in)  :: z       !< x coordinate of the contributing point
+      real,                   intent(in)  :: xx      !< absolute x-coordinate of the contributing point
+      real,                   intent(in)  :: yy      !< absolute y-coordinate of the contributing point
+      real,                   intent(in)  :: zz      !< absolute z-coordinate of the contributing point
       real,                   intent(out) :: sin_th  !< sine of the vertical angle
       real,                   intent(out) :: cos_th  !< cosine of the vertical angle
       real,                   intent(out) :: sin_ph  !< sine of the azimuthal angle
       real,                   intent(out) :: cos_ph  !< cosine of the azimuthal angle
       integer,                intent(out) :: ir      !< radial index for the this%Q(:, :, r) array
-      real,                   intent(out) :: delta   !< fraction of the radial cell for interpolation between ir and ir+1
 
+      real    :: x, y, z
       real    :: rxy, r, rinv
       integer :: l
+
+      x = xx - this%center(xdim)
+      y = yy - this%center(ydim)
+      z = zz - this%center(zdim)
 
       ! radius and its projection onto XY plane
       select case (dom%geometry_type)
@@ -523,18 +585,12 @@ contains
       endif
 
       !radial index for the this%Q(:, :, r) array
-      ir = int(r / this%drq)
-      if (ir < this%rqbin) then
-         delta = r/this%drq - ir
-      else
-         delta = 0
-      endif
-      if (ir > this%rqbin .or. ir < 0) then
-         write(msg,'(2(a,i7),a)')"[multipole_array:geomfac4moments] radial index = ", ir, " outside this%Q(:, :, ", this%rqbin, ") range"
-         call die(msg)
-      endif
-      this%irmax = max(this%irmax, ir)
-      this%irmin = min(this%irmin, ir)
+      ir = min(r2i(r), this%rqbin-1)
+      ! We had linear interpolation between bins previously but apparently it is easier and safer
+      ! to just increase resolution by lowering res_factor.
+      ! Linear interpolation between bins would be justified if it provides substantially better
+      ! estimate on our unevenly spaced bins
+      if (ir < 0) call die("[multipole_array:geomfac4moments] ir < 0")
 
       ! azimuthal angle sine and cosine tables
       ! ph = atan2(y, x); this%cfac(m) = cos(m * ph); this%sfac(m) = sin(m * ph)
@@ -573,6 +629,18 @@ contains
          this%rn(l)  =  this%rn(l-1) * r
          this%irn(l) = this%irn(l-1) * rinv
       enddo
+
+   contains
+
+      pure integer function r2i(r) result(i)
+
+         implicit none
+
+         real, intent(in) :: r     !< radius
+
+         i = merge(0, floor(this%rqbin / (this%a_scale/r + 1)), r <= 0.)
+
+      end function r2i
 
    end subroutine geomfac4moments
 

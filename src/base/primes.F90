@@ -33,17 +33,17 @@ module primes_utils
    implicit none
 
    private
-   public :: primes_T
+   public :: primes_t
 
    !> \brief The type that contain table of primes and initializer
-   type :: primes_T
+   type :: primes_t
       integer(kind=4), allocatable, dimension(:) :: tab !< table of prime numbers
       integer, private :: max                           !< max number to which the search was performed
     contains
       procedure :: sieve                                !< routine used to initialize (and extendif necessary) the table of prime numbers
       procedure :: erase                                !< restore initial state
       procedure, private :: print                       !< print what was found
-   end type primes_T
+   end type primes_t
 
 contains
 
@@ -61,7 +61,7 @@ contains
 
       implicit none
 
-      class(primes_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(primes_t), intent(inout) :: this !< object invoking type-bound procedure
       integer(kind=4), intent(in)    :: n    !< max value of prime number
 
       integer(kind=4), dimension(n) :: numb
@@ -100,7 +100,7 @@ contains
 
       implicit none
 
-      class(primes_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(primes_t), intent(inout) :: this !< object invoking type-bound procedure
 
       if (master) then
          write(msg,'(a,i5,a,i9,a)') "There are ", size(this%tab), " prime numbers smaller than", this%max,":"
@@ -118,7 +118,7 @@ contains
 
       implicit none
 
-      class(primes_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(primes_t), intent(inout) :: this !< object invoking type-bound procedure
 
       deallocate(this%tab)
       this%max = INVALID

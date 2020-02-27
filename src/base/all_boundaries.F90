@@ -35,7 +35,7 @@ module all_boundaries
    implicit none
 
    private
-   public :: all_bnd, all_fluid_boundaries
+   public :: all_bnd, all_bnd_vital_q, all_fluid_boundaries
 #ifdef MAGNETIC
    public :: all_mag_boundaries
 #endif /* MAGNETIC */
@@ -59,6 +59,21 @@ contains
 !      endif
 
    end subroutine all_bnd
+
+   subroutine all_bnd_vital_q
+
+      use cg_leaves,        only: leaves
+      use named_array_list, only: qna
+
+      implicit none
+
+      integer(kind=4) :: iq
+
+      do iq = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
+         if (qna%lst(iq)%vital) call leaves%leaf_arr3d_boundaries(iq)
+      enddo
+
+   end subroutine all_bnd_vital_q
 
    subroutine all_fluid_boundaries(dir, nocorners)
 

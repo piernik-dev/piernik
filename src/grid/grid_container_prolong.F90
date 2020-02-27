@@ -30,15 +30,15 @@
 
 module grid_cont_prolong
 
-   use grid_cont_bnd,   only: grid_container_bnd_T
+   use grid_cont_bnd,   only: grid_container_bnd_t
 
    implicit none
 
    private
-   public :: grid_container_prolong_T
+   public :: grid_container_prolong_t
 
    !> \brief This type adds auxiliary prolongation arrays to the grid_container
-   type, extends(grid_container_bnd_T), abstract :: grid_container_prolong_T
+   type, extends(grid_container_bnd_t), abstract :: grid_container_prolong_t
 
       real, dimension(:,:,:), allocatable :: prolong_, prolong_x, prolong_xy !< auxiliary prolongation arrays for intermediate results
       real, dimension(:,:,:), pointer     :: prolong_xyz                     !< auxiliary prolongation array for final result.
@@ -50,7 +50,7 @@ module grid_cont_prolong
       procedure          :: cleanup_prolong  !< Deallocate all internals
       procedure          :: prolong          !< perform prolongation of the data stored in this%prolong_
 
-   end type grid_container_prolong_T
+   end type grid_container_prolong_t
 
 contains
 
@@ -58,14 +58,14 @@ contains
 
    subroutine init_gc_prolong(this)
 
-      use constants,    only: xdim, ydim, zdim, ndims, big_float, LO, HI
+      use constants,    only: xdim, ydim, zdim, ndims, dirtyH1, LO, HI
       use dataio_pub,   only: die
       use domain,       only: dom
       use grid_helpers, only: f2c
 
       implicit none
 
-      class(grid_container_prolong_T), target, intent(inout) :: this !< object invoking type-bound procedure
+      class(grid_container_prolong_t), target, intent(inout) :: this !< object invoking type-bound procedure
 
       integer(kind=8), dimension(ndims, LO:HI) :: rn
 
@@ -84,10 +84,10 @@ contains
            &   this%prolong_xy (this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI),       rn(zdim, LO):      rn(zdim, HI)), &
            &   this%prolong_xyz(this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI), this%lhn(zdim, LO):this%lhn(zdim, HI)))
 
-      this%prolong_    = big_float
-      this%prolong_x   = big_float
-      this%prolong_xy  = big_float
-      this%prolong_xyz = big_float
+      this%prolong_    = 0.799*dirtyH1
+      this%prolong_x   = 0.798*dirtyH1
+      this%prolong_xy  = 0.797*dirtyH1
+      this%prolong_xyz = 0.796*dirtyH1
 
    end subroutine init_gc_prolong
 
@@ -97,7 +97,7 @@ contains
 
       implicit none
 
-      class(grid_container_prolong_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(grid_container_prolong_t), intent(inout) :: this !< object invoking type-bound procedure
 
       ! arrays not handled through named_array feature
       if (associated(this%prolong_xyz)) deallocate(this%prolong_xyz)
@@ -183,7 +183,7 @@ contains
 
       implicit none
 
-      class(grid_container_prolong_T),              intent(inout) :: this  !< object invoking type-bound procedure
+      class(grid_container_prolong_t),              intent(inout) :: this  !< object invoking type-bound procedure
       integer(kind=4),                              intent(in)    :: ind   !< index of cg%q(:) 3d array - variable to be prolonged
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: cse   !< coarse segment
       logical,                                      intent(in)    :: p_xyz !< store the result in this%prolong_xyz when true, in this%q(ind)%arr otherwise

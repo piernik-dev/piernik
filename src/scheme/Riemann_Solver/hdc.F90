@@ -32,7 +32,8 @@
 #include "piernik.h"
 
 module hdc
-! pulled by RIEMANN
+
+! pulled by ANY
 
    use constants, only: dsetnamelen, INVALID
 
@@ -43,7 +44,7 @@ module hdc
   character(len=dsetnamelen), parameter :: gradpsi_n = "grad_psi"
 
   private
-  public :: chspeed, update_chspeed, init_psi, glmdamping, eglm
+  public :: chspeed, update_chspeed, map_chspeed, init_psi, glmdamping, eglm
 
 contains
 
@@ -90,24 +91,19 @@ contains
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ, pMAX, small, xdim, ydim, zdim, half, DIVB_HDC
+      use constants,  only: GEO_XYZ, pMAX, small, DIVB_HDC, RIEMANN_SPLIT
       use dataio_pub, only: die
       use domain,     only: dom
-      use fluidindex, only: flind
-      use fluids_pub, only: has_ion, has_neu, has_dst
-      use fluidtypes, only: component_fluid
-      use func,       only: emag, ekin
-      use global,     only: use_fargo, cfl_glm, ch_grid, dt, divB_0_method
+      use global,     only: use_fargo, cfl_glm, ch_grid, dt, divB_0_method, which_solver
       use mpisetup,   only: piernik_MPI_Allreduce
 
       implicit none
 
       type(cg_list_element), pointer  :: cgl
-      class(component_fluid), pointer :: fl
-      integer                         :: i, j, k, d
-      real                            :: pmag, pgam
+      integer                         :: i, j, k
 
       if (divB_0_method /= DIVB_HDC) return
+      if (which_solver /= RIEMANN_SPLIT) call die("[hdc:update_chspeed] Only Riemann solver has DIVB_HDC implemented")
 
       chspeed = huge(1.)
       if (use_fargo) call die("[hdc:update_chspeed] FARGO is not implemented here yet.")
@@ -121,51 +117,11 @@ contains
             ! It leads to very bad values when time step drops suddenly (like on last timestep)
             chspeed = max(chspeed, cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt)
          else
-            ! Bind chspeed to fastest possible gas waves. Beware: checkwhether this works well with AMR.
+            ! Bind chspeed to fastest possible gas waves. Beware: check whether this works well with AMR.
             do k = cgl%cg%ks, cgl%cg%ke
                do j = cgl%cg%js, cgl%cg%je
                   do i = cgl%cg%is, cgl%cg%ie
-                     if (has_ion) then
-                        fl => flind%ion
-                        pmag = emag(cgl%cg%b(xdim, i, j, k), cgl%cg%b(ydim, i, j, k), cgl%cg%b(zdim, i, j, k))  ! 1/2 |B|**2
-                        pgam = half * fl%gam * fl%gam_1 * (cgl%cg%u(fl%ien, i, j, k) - ekin(cgl%cg%u(fl%imx, i, j, k), cgl%cg%u(fl%imy, i, j, k), cgl%cg%u(fl%imz, i, j, k), cgl%cg%u(fl%idn, i, j, k)) - pmag)
-                        ! pgam = 1/2 * gamma * p = 1/2 * gamma * (gamma - 1) * (e - 1/2 * rho * |v|**2 - 1/2 * |B|**2)
-                        do d = xdim, zdim
-                           if (dom%has_dir(d)) then
-                              chspeed = max(chspeed, cfl_glm * ( &
-                                   abs(cgl%cg%u(fl%imx + d - xdim, i, j, k) / cgl%cg%u(fl%idn, i, j, k)) + &
-                                   sqrt( (pgam + pmag + sqrt( (pgam + pmag)**2 - 2 * pgam * cgl%cg%b(d, i, j, k)**2) ) / cgl%cg%u(fl%idn, i, j, k)  ) &
-                                   ) )
-                              ! Eqs. (14) and (15) JCoPh 229 (2010) 2117-2138
-                              ! c_h = cfl * \frac{\Delta l_min}{\Delta t}, where cfl = cfl_glm (or)
-                              ! c_h = cfl * max (fastest signal in the domain).
-                              ! fl%get_cs(i, j, k, cgl%cg%u, cgl%cg%b, cgl%cg%cs_iso2) returns upper estimate of fast magnetosonic wave
-                           endif
-                        enddo
-                     else if (has_neu) then
-                        fl => flind%neu
-                        pgam = half * fl%gam * fl%gam_1 * (cgl%cg%u(fl%ien, i, j, k) - ekin(cgl%cg%u(fl%imx, i, j, k), cgl%cg%u(fl%imy, i, j, k), cgl%cg%u(fl%imz, i, j, k), cgl%cg%u(fl%idn, i, j, k)))
-                        ! pgam = 1/2 * gamma * p = 1/2 * gamma * (gamma - 1) * (e - 1/2 * rho * |v|**2)
-                        do d = xdim, zdim
-                           if (dom%has_dir(d)) then
-                              chspeed = max(chspeed, cfl_glm * ( &
-                                   abs(cgl%cg%u(fl%imx + d - xdim, i, j, k) / cgl%cg%u(fl%idn, i, j, k)) + &
-                                   sqrt( 2*pgam  / cgl%cg%u(fl%idn, i, j, k)  ) &
-                                   ) )
-                           endif
-                        enddo
-                     else if (has_dst) then
-                        fl => flind%dst
-                        do d = xdim, zdim
-                           if (dom%has_dir(d)) then
-                              chspeed = max(chspeed, cfl_glm * ( &
-                                   abs(cgl%cg%u(fl%imx + d - xdim, i, j, k) / cgl%cg%u(fl%idn, i, j, k)) &
-                                   ) )
-                           endif
-                        enddo
-                     else
-                        call die("[hdc:update_chspeed] Don't know what to do with chspeed without ION, NEU and DST")
-                     endif
+                     chspeed = max(chspeed, point_chspeed(cgl%cg, i, j, k))
                   enddo
                enddo
             enddo
@@ -174,7 +130,128 @@ contains
       enddo
 
       call piernik_MPI_Allreduce(chspeed, pMAX)
+
   end subroutine update_chspeed
+
+!> \brief put chspeed to cg%wa to allow for precise logging
+
+  subroutine map_chspeed
+
+     use cg_leaves,  only: leaves
+     use cg_list,    only: cg_list_element
+     use constants,  only: GEO_XYZ
+     use dataio_pub, only: die
+     use domain,     only: dom
+     use global,     only: cfl_glm, ch_grid, dt
+
+     implicit none
+
+     type(cg_list_element), pointer  :: cgl
+     integer                         :: i, j, k
+
+     ! no need to be as strict as in update_chspeed with dying
+
+     if (dom%geometry_type /= GEO_XYZ) call die("[hdc:update_chspeed] non-cartesian geometry not implemented yet.")
+     cgl => leaves%first
+     do while (associated(cgl))
+        if (ch_grid) then
+           ! Rely only on grid properties. Psi is an artificial field and psi waves have to propagate as fast as stability permits.
+           ! It leads to very bad values when time step drops suddenly (like on last timestep)
+           cgl%cg%wa =  cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt
+        else
+           ! Bind chspeed to fastest possible gas waves. Beware: check whether this works well with AMR.
+           do k = cgl%cg%ks, cgl%cg%ke
+              do j = cgl%cg%js, cgl%cg%je
+                 do i = cgl%cg%is, cgl%cg%ie
+                    cgl%cg%wa(i, j, k) = point_chspeed(cgl%cg, i, j, k)
+                 enddo
+              enddo
+           enddo
+        endif
+        cgl => cgl%nxt
+     enddo
+
+  end subroutine map_chspeed
+
+!>
+!! \brief chspeed at a point
+!!
+!! \beware The sound speed and |v|+c_s are independently coded in various places independently
+!<
+
+  real function point_chspeed(cg, i, j, k) result(chspeed)
+
+     use constants,  only: small
+     use dataio_pub, only: die
+     use func,       only: emag, ekin
+     use global,     only: cfl_glm
+     use grid_cont,  only: grid_container
+#ifndef ISO
+     use constants,  only: xdim, ydim, zdim, half
+     use domain,     only: dom
+     use fluidindex, only: flind
+     use fluids_pub, only: has_ion, has_neu, has_dst
+     use fluidtypes, only: component_fluid
+#endif /* !ISO */
+
+     implicit none
+
+     type(grid_container), pointer, intent(in) :: cg
+     integer,                       intent(in) :: i
+     integer,                       intent(in) :: j
+     integer,                       intent(in) :: k
+
+#ifndef ISO
+     integer                         :: d
+     real                            :: pmag, pgam
+     class(component_fluid), pointer :: fl
+#endif /* !ISO */
+
+     chspeed = small  ! suppress -Wmaybe-uninitialized on chspeed
+#ifdef ISO
+     chspeed = cfl_glm * cg%cs_iso2(i, j, k)  ! BUG? should be rather sqrt(cs_iso2)
+#else /* !ISO */
+     if (has_ion) then
+        fl => flind%ion
+        pmag = emag(cg%b(xdim, i, j, k), cg%b(ydim, i, j, k), cg%b(zdim, i, j, k))  ! 1/2 |B|**2
+        pgam = half * fl%gam * fl%gam_1 * (cg%u(fl%ien, i, j, k) - ekin(cg%u(fl%imx, i, j, k), cg%u(fl%imy, i, j, k), cg%u(fl%imz, i, j, k), cg%u(fl%idn, i, j, k)) - pmag)
+        ! pgam = 1/2 * gamma * p = 1/2 * gamma * (gamma - 1) * (e - 1/2 * rho * |v|**2 - 1/2 * |B|**2)
+        do d = xdim, zdim
+           if (dom%has_dir(d)) then
+              chspeed = max(chspeed, cfl_glm * ( &
+                   abs(cg%u(fl%imx + d - xdim, i, j, k) / cg%u(fl%idn, i, j, k)) + &
+                   sqrt( (pgam + pmag + sqrt( (pgam + pmag)**2 - 2 * pgam * cg%b(d, i, j, k)**2) ) / cg%u(fl%idn, i, j, k)  ) ) )
+              ! Eqs. (14) and (15) JCoPh 229 (2010) 2117-2138
+              ! c_h = cfl * \frac{\Delta l_min}{\Delta t}, where cfl = cfl_glm (or)
+              ! c_h = cfl * max (fastest signal in the domain).
+              ! fl%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2) returns upper estimate of fast magnetosonic wave
+           endif
+        enddo
+     else if (has_neu) then
+        fl => flind%neu
+        pgam = half * fl%gam * fl%gam_1 * (cg%u(fl%ien, i, j, k) - ekin(cg%u(fl%imx, i, j, k), cg%u(fl%imy, i, j, k), cg%u(fl%imz, i, j, k), cg%u(fl%idn, i, j, k)))
+        ! pgam = 1/2 * gamma * p = 1/2 * gamma * (gamma - 1) * (e - 1/2 * rho * |v|**2)
+        do d = xdim, zdim
+           if (dom%has_dir(d)) then
+              chspeed = max(chspeed, cfl_glm * ( &
+                   abs(cg%u(fl%imx + d - xdim, i, j, k) / cg%u(fl%idn, i, j, k)) + &
+                   sqrt( 2*pgam  / cg%u(fl%idn, i, j, k)  ) ) )
+           endif
+        enddo
+     else if (has_dst) then
+        fl => flind%dst
+        do d = xdim, zdim
+           if (dom%has_dir(d)) then
+              chspeed = max(chspeed, cfl_glm * abs(cg%u(fl%imx + d - xdim, i, j, k) / cg%u(fl%idn, i, j, k)))
+           endif
+        enddo
+     else
+        call die("[hdc:update_chspeed] Don't know what to do with chspeed without ION, NEU and DST")
+     endif
+#endif /* ISO */
+
+  end function point_chspeed
+
 !--------------------------------------------------------------------------------------------------------------
   subroutine init_psi
 
@@ -198,9 +275,10 @@ contains
 
      use cg_leaves,        only: leaves
      use cg_list,          only: cg_list_element
-     use constants,        only: psi_n, DIVB_HDC, pMIN
+     use constants,        only: psi_n, DIVB_HDC, pMIN, RIEMANN_SPLIT
+     use dataio_pub,       only: die
      use domain,           only: dom
-     use global,           only: glm_alpha, dt, divB_0_method
+     use global,           only: glm_alpha, dt, divB_0_method, which_solver
      use grid_cont,        only: grid_container
      use named_array_list, only: qna
      use mpisetup,         only: piernik_MPI_Allreduce
@@ -213,6 +291,7 @@ contains
      real :: fac
 
      if (divB_0_method /= DIVB_HDC) return ! I think it is equivalent to if (.not. qna%exists(psi_n))
+     if (which_solver /= RIEMANN_SPLIT) call die("[hdc:glmdamping] Only Riemann solver has DIVB_HDC implemented")
 
      if (qna%exists(psi_n)) then
 
@@ -252,14 +331,14 @@ contains
 #endif /* MAGNETIC */
      use cg_leaves,  only: leaves
      use cg_list,    only: cg_list_element
-     use constants,  only: xdim, zdim, psi_n, GEO_XYZ, half
+     use constants,  only: xdim, zdim, psi_n, GEO_XYZ, half, RIEMANN_SPLIT
      use dataio_pub, only: die
      use div_B,      only: divB, idivB
      use domain,     only: dom
      use fluidindex, only: flind
      use fluids_pub, only: has_ion
      use fluidtypes, only: component_fluid
-     use global,     only: use_eglm, dt
+     use global,     only: use_eglm, dt, which_solver
      use grid_cont,  only: grid_container
      use named_array_list, only: qna
 
@@ -272,6 +351,7 @@ contains
      integer(kind=4)                  :: ipsi
 
      if (.not. use_eglm) return
+     if (which_solver /= RIEMANN_SPLIT) call die("[hdc:eglm] Only Riemann solver has DIVB_HDC implemented")
 
      if (igp == INVALID) call aux_var
      ipsi = qna%ind(psi_n)

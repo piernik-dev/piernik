@@ -127,7 +127,7 @@ env.dat: piernik.def *.h $(SRCS_V)
 head_block2 = '''
 \tawk '{print}' piernik.def | sed -e '/^$$/ d' -e "/^\// d" ) > env.dat
 \t@$(ECHO) "Recent history:" >> env.dat
-\t@git log -5 --decorate --graph | sed -e 's/"//g' >> env.dat
+\t@git log -5 --decorate --graph 2> /dev/null | sed -e 's/"//g' >> env.dat
 
 version.F90: env.dat
 \t@( $(ECHO) "module version"; \\
@@ -530,9 +530,9 @@ def setup_piernik(data=None):
     if("PGPLOT" in our_defs):
         m.write("LIBS += -lpgplot\n")
     if("SHEAR" in our_defs or "MULTIGRID" in our_defs):
-        m.write("LIBS += $(shell pkg-config --libs fftw3)\n")
-    if("POISSON_FFT" in our_defs):
-        m.write("LIBS += $(shell pkg-config --libs fftw3 lapack)\n")
+        if ("NO_FFT" not in our_defs):
+            m.write("LIBS += $(shell pkg-config --libs fftw3)\n")
+        m.write("CPPFLAGS += $(shell pkg-config --libs fftw3 2> /dev/null || echo '-DNO_FFT')\n")
     if("PIERNIK_OPENCL" in our_defs):
         m.write("LIBS += $(shell pkg-config --libs fortrancl)\n")
         m.write("F90FLAGS += $(shell pkg-config --cflags fortrancl)\n")
@@ -659,15 +659,20 @@ def setup_piernik(data=None):
     try:
         os.makedirs(rundir)
     except OSError:
-        print('\033[93m' + "Found old run." + '\033[0m' +
-              " Making copy of old 'problem.par'.")
-        try:
-            if(os.path.isfile(rundir + 'problem.par')):
-                shutil.move(rundir + 'problem.par', rundir + 'problem.par.old')
-        except (IOError, OSError):
-            print('\033[91m' +
-                  "Problem with copying 'problem.par' to 'problem.par.old'." +
-                  '\033[0m')
+        if (not options.keep_par):
+            print('\033[93m' + "Found old run." + '\033[0m' +
+                  " Making copy of old 'problem.par'.")
+            try:
+                if(os.path.isfile(rundir + 'problem.par')):
+                    shutil.move(rundir + 'problem.par', rundir + 'problem.par.old')
+            except (IOError, OSError):
+                print('\033[91m' +
+                      "Problem with copying 'problem.par' to 'problem.par.old'." +
+                      '\033[0m')
+        else:
+            if (os.path.isfile(rundir + 'problem.par')):
+                print('\033[93m' + "Found old run." + '\033[0m' +
+                      " Preserving copy of old 'problem.par'.")
         try:
             if(os.path.isfile(rundir + 'piernik')):
                 os.remove(rundir + 'piernik')
@@ -705,7 +710,8 @@ def setup_piernik(data=None):
                 fatal_problem = True
 
     try:
-        shutil.copy(objdir + "/" + options.param, rundir + 'problem.par')
+        if (not (options.keep_par and os.path.isfile(rundir + 'problem.par'))):
+            shutil.copy(objdir + "/" + options.param, rundir + 'problem.par')
     except IOError:
         print('\033[91m' + "Failed to copy 'problem.par' to '%s'." %
               rundir.rstrip('/') + '\033[0m')
@@ -741,63 +747,66 @@ def piernik_parse_args(data=None):
 autocompletion. Frequently used options (like --linkexe, --laconic or
 -c <configuration>) can be stored in .setuprc and .setuprc.${HOSTNAME} files.
 """
-    usage = "usage: %prog [problem_name|--last|--problems|--units|--help] [options ...]"
+    usage = "Usage: %prog [problem_name|--last|--problems|--units|--help] [options ...]"
     try:
         parser = OptionParser(usage=usage, epilog=epilog_help)
     except TypeError:
         parser = OptionParser(usage=usage)
 
     parser.add_option("-v", "--verbose", action="store_true", dest="verbose",
-                      default=False, help="""try to confuse the user with some
+                      default=False, help="""Try to confuse the user with some
 diagnostics ;-)""")
 
     parser.add_option("-q", "--laconic", action="store_true", dest="laconic",
-                      default=False, help="compress stdout from make process")
+                      default=False, help="Compress the stdout from make.")
 
     parser.add_option("--debug", action="store_true", dest="piernik_debug",
-                      default=False, help="Use debug set of compiler flags")
+                      default=False, help="Use debug set of compiler flags.")
 
     parser.add_option("-n", "--nocompile", action="store_true",
                       dest="nocompile", default=False, help='''Create object
-directory, check for circular dependencies, but do not compile or prepare run
-directory. In combination with --copy will prepare portable object directory.
+directory, check for circular dependencies, but do not compile.
+In combination with --copy will prepare portable object directory.
 ''')
 
     parser.add_option("--problems", dest="show_problems", action="store_true",
-                      help="print available problems and exit")
+                      help="Print available problems and exit.")
 
     parser.add_option("-u", "--units", dest="show_units", action="store_true",
-                      help="print available units and exit")
+                      help="Print available measurement units and exit.")
 
     parser.add_option("--last", dest="recycle_cmd", action="store_true",
-                      default=False, help="""call setup with last used options
-and arguments (require Pickles)""")
+                      default=False, help="""Call setup with last used options
+and arguments (require Pickles).""")
 
     parser.add_option("--copy", dest="hard_copy", action="store_true",
-                      help="hard-copy source files instead of linking them")
+                      help="Hard-copy source files instead of linking them.")
 
     parser.add_option("-l", "--linkexe", dest="link_exe", action="store_true",
-                      help="""do not copy obj/piernik to runs/<problem> but link
-it instead""")
+                      help="""Do not copy obj/piernik to runs/<problem> but link
+it instead.""")
 
     parser.add_option("-p", "--param", dest="param", metavar="FILE",
-                      help="use FILE instead problem.par",
+                      help="Use FILE instead of problem.par .",
                       default="problem.par")
 
     parser.add_option("-d", "--define", dest="cppflags", metavar="CPPFLAGS",
-                      action="append", help="""add precompiler directives, '-d
-DEF1,DEF2' is equivalent to '-d DEF1 -d DEF2' or '--define DEF1 -d DEF2'""")
+                      action="append", help="""Add precompiler directives, '-d
+DEF1,DEF2' is equivalent to '-d DEF1 -d DEF2' or '--define DEF1 -d DEF2'.""")
 
     parser.add_option("--f90flags", dest="f90flags", metavar="F90FLAGS",
-                      help="pass additional compiler flags to F90FLAGS")
+                      help="Pass additional compiler flags to F90FLAGS .")
 
     parser.add_option("-c", "--compiler", dest="compiler",
-                      default="default.in", help="""choose specified config from
-compilers directory""", metavar="FILE")
+                      default="default.in", help="""Choose specified config from
+compilers directory.""", metavar="FILE")
 
     parser.add_option("-o", "--obj", dest="objdir", metavar="POSTFIX",
-                      default='', help="""use obj_POSTFIX directory instead of obj/ and
-runs/<problem>_POSTFIX rather than runs/<problem>""")
+                      default='', help="""Use obj_POSTFIX directory instead of obj/ and
+runs/<problem>_POSTFIX rather than runs/<problem> .""")
+
+    parser.add_option("-k", "--keeppar", action="store_true", dest="keep_par",
+                      help="Do not override existing problem.par file with the default one.")
 
     if data is None:
         all_args = []

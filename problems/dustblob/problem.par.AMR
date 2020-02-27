@@ -1,0 +1,86 @@
+ $BASE_DOMAIN
+    n_d = 2*64, 1
+    nb  = 5
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = -2.0
+    xmax   =  2.0
+    ymin   = -2.0
+    ymax   =  2.0
+    zmin   = -2.0
+    zmax   =  2.0
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 12.0
+    nend   = 100000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='dustblob'
+    run_id  =  'tst'
+    dt_hdf  = 0.5
+    dt_res  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.00001
+    vars(1:) = 'ener', 'dens', 'velx', 'vely', "cs_iso2", "level", "ref_01", "ref_02"
+    gdf_strict = .false.
+ /
+
+ $FLUID_NEUTRAL
+    gamma  = 1.666666667
+ /
+
+ $FLUID_DUST
+ /
+
+ $INTERACTIONS
+    cfl_interact = 0.5
+    dragc_gas_dust = 1.0
+    interactions_type = 'aerodrag'
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.5
+    smalld = 1.e-6
+    smallei= 1.e-4
+    integration_order = 2
+    limiter= 'vanleer'
+    dt_initial = 1.e-4
+    dt_max_grow = 1.25
+ /
+
+ $PROBLEM_CONTROL
+    d_gas   =  1.0
+    p_gas   =  1.0
+    v_gas   =  1.0
+    d_dust  =  1.0
+    v_dust  =  0.0
+    x0      =  0.0
+    y0      =  0.0
+    z0      =  0.0
+    r0      =  1.0
+ /
+
+ $AMR
+   level_max = 3
+   bsize = 2*32
+   n_updAMR = 5
+   refine_vars(1) = "dens", "Loechner", 0.9, 0.2, 0.001, .true.
+ /

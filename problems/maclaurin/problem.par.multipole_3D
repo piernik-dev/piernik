@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 3*16
+    n_d = 3*64 ! 3*128
     bnd_xl = 'out'
     bnd_xr = 'out'
     bnd_yl = 'out'
@@ -43,7 +43,8 @@
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1:) = 'dens', 'level', 'apot', 'gpot', 'errp', 'relerr'
+    vars(1:) = 'dens', 'gpot', 'apot', 'errp', "relerr", "mpole", "errm", "relerrm"
+    h5_64bit = .true.
  /
 
  $FLUID_DUST
@@ -64,13 +65,14 @@
  /
 
  $PROBLEM_CONTROL
-    x0     = .5
-    y0     = .5
-    z0     = 0.
+    x0     = 0.03125  !  0.015625 ! for resolution 3*128
+    y0     = 1.03125  !  1.015625
+    z0     = 0.28125  !  0.265625
     d0     = 1.
-    a1     = 0.75
+    a1     = 0.25  ! Use a1 = 0 to set up a particle instead of gas sphere
     e      = 0.
     nsub   = 3
+!    analytical_ext_pot = .true.  ! Skip the multipole solver and use analytical potential on the boundaries
  /
 
  $MULTIGRID_SOLVER
@@ -80,12 +82,17 @@
 
  $MULTIGRID_GRAVITY
     grav_bnd_str  = "isolated"
+    mpole_solver = "3D"  ! this is necessary to get 3D potental estimate from multipoles in "mpole" field
+                         ! "errm" and "rellerr" depend on "mpole"
+!    level_3D = -1       ! coarsening for the "3D" multipole integrator
+    res_factor = 0.3    ! radial resolution of the multipole distribution near the origin
+!    size_factor = 1.    ! enlargement factor to improve the accuaracy of multipoles at large distances
+!    lmax = 64
+!    norm_tol = 1e-10
  /
 
  $INTERACTIONS
  /
 
  $AMR
-    bsize = 3*8
-    level_max = 3
  /

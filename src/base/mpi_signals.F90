@@ -48,14 +48,14 @@ module mpisignals
       enumerator :: MSG_DIED = -1
    end enum
 
-   type :: mpi_signals_T
+   type :: mpi_signals_t
       integer(kind=4) :: clean_exit = MSG_CLEAN_EXIT
       integer(kind=4) :: tsl_updated = MSG_TSL_UPDATED
       integer(kind=4) :: log_updated = MSG_LOG_UPDATED
       integer(kind=4) :: hdf_written = MSG_HDF_WRITTEN
       integer(kind=4) :: res_written = MSG_RES_WRITTEN
       integer(kind=4) :: died = MSG_DIED
-   end type mpi_signals_T
+   end type mpi_signals_t
 
-   type(mpi_signals_T), protected :: sig
+   type(mpi_signals_t), protected :: sig
 end module mpisignals

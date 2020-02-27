@@ -75,7 +75,7 @@ contains
    subroutine check_yref
 
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: ydim, BND_FC, BND_MPI_FC
       use dataio_pub,         only: die, warn
@@ -83,7 +83,7 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
       type(cg_list_element), pointer :: cgl
 
       if (.not. use_fargo) call warn("[fargo:check_yref] There's no reason to call this routine when not using FARGO!")
@@ -112,14 +112,16 @@ contains
 !<
    subroutine make_fargosweep
 
-      use constants,   only: VEL_RES, VEL_CR, ydim
-      use global,      only: dt, skip_sweep
+      use constants,   only: VEL_RES, VEL_CR, ydim, HLLC_SPLIT
+      use dataio_pub,  only: die
+      use global,      only: dt, skip_sweep, which_solver
       use sweeps,      only: sweep
 
       implicit none
 
       ! TODO we are omitting B and cr update, but FARGO does not work with them yet...
       if (.not.skip_sweep(ydim)) then
+         if (which_solver == HLLC_SPLIT) call die("[fargo:make_fargosweep] Fargo is not yet enabled for HLLC")
          call get_fargo_vels(dt)
          call sweep(ydim, VEL_RES)  ! 1.
          call sweep(ydim, VEL_CR)   ! 2.
@@ -134,7 +136,7 @@ contains
 
       use constants,          only: xdim, ydim, zdim, I_ONE, pSUM
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use dataio_pub,         only: die
       use global,             only: use_fargo
@@ -149,7 +151,7 @@ contains
       type(grid_container),  pointer    :: cg
       integer :: ifl, i
       class(component_fluid), pointer :: pfl
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
 
       if (.not. use_fargo) call die("[fargo:fargo_mean_omega] Not using FARGO")
 
@@ -201,7 +203,7 @@ contains
 
       use constants,          only: xdim, ydim, I_ONE
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use domain,             only: dom
       use fluidindex,         only: flind
 
@@ -209,7 +211,7 @@ contains
 
       real, intent(in) :: dt
       integer :: ifl
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
       real :: dl_ydim
 
       call fargo_mean_omega
@@ -243,45 +245,53 @@ contains
 !!    the shift should not disconnect two neighbouring grid cells in radial and
 !!    in the vertical direction" -- Kley et al. 2009
 !<
-   real function timestep_fargo(cg, dt_min) result(dt)
+   subroutine timestep_fargo(dt)
 
-      use fluidindex,   only: flind
-      use grid_cont,    only: grid_container
-      use global,       only: cfl
-      use constants,    only: ydim, big, small, half
-      use fluidtypes,   only: component_fluid
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: ydim, big, small, half
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use global,     only: cfl, use_fargo
+      use grid_cont,  only: grid_container
 
       implicit none
-      type(grid_container), pointer, intent(in) :: cg
-      real, intent(in) :: dt_min
 
-      real :: dt_shear!, dt_res
-      !real :: v_mean, v_cr, nshft, c_fl
-      real :: omega!, omegap, dphi
-      integer :: i, j, k, ifl
+      real, intent(inout)             :: dt
+
+      real                            :: dt_shear, omega !, dt_res, omegap, dphi, v_mean, v_cr, nshft, c_fl
+      integer                         :: i, j, k, ifl
       class(component_fluid), pointer :: pfl
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
+      if (.not.use_fargo) return
+
+      call fargo_mean_omega
 
       dt_shear = big
-      do ifl = lbound(flind%all_fluids, 1), ubound(flind%all_fluids, 1)
-         pfl   => flind%all_fluids(ifl)%fl
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-                  if (cg%leafmap(i, j, k)) then
-                     omega  = cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) / cg%x(i) - cg%u(pfl%imy, i-1, j, k) / cg%u(pfl%idn, i-1, j, k) / cg%x(i-1)
-                     omega  = max(abs(omega), small)
-                     !omegap = (cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) - cg%u(pfl%imy, i, j-1, K) / cg%u(pfl%idn, i, j-1, k)) / cg%x(i)
-                     !omegap = max(abs(omegap), small)
-                     !dphi = cg%dl(ydim)
-                     !dt_shear = min(dt_shear, half*min(dphi / abs(omega), dphi / abs(omegap)))
-                     dt_shear = min(dt_shear, half * cg%dl(ydim) / omega)
-                  endif
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         do ifl = lbound(flind%all_fluids, 1), ubound(flind%all_fluids, 1)
+            pfl   => flind%all_fluids(ifl)%fl
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     if (cg%leafmap(i, j, k)) then
+                        omega = cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) / cg%x(i) - cg%u(pfl%imy, i-1, j, k) / cg%u(pfl%idn, i-1, j, k) / cg%x(i-1)
+                        omega = max(abs(omega), small)
+                        !omegap = (cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) - cg%u(pfl%imy, i, j-1, K) / cg%u(pfl%idn, i, j-1, k)) / cg%x(i)
+                        !omegap = max(abs(omegap), small)
+                        !dphi = cg%dl(ydim)
+                        !dt_shear = min(dt_shear, half*min(dphi / abs(omega), dphi / abs(omegap)))
+                        dt_shear = min(dt_shear, half * cg%dl(ydim) / omega)
+                     endif
+                  enddo
                enddo
             enddo
          enddo
-      enddo
-      dt = cfl * dt_shear
 
 !     dt_res = huge(real(1.0,4))
 !     c_fl = 0.0
@@ -298,9 +308,13 @@ contains
 !     enddo
 !
 !     dt = min(dt, cfl * dt_res)
-      if (.false.) print *, dt_min
 
-   end function timestep_fargo
+         cgl => cgl%nxt
+      enddo
+
+      dt = min(dt, cfl * dt_shear)
+
+   end subroutine timestep_fargo
 
 !>
 !! \brief Perform integer part of azimuthal transport step
@@ -311,7 +325,7 @@ contains
    subroutine int_shift
 
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: ydim
       use domain,             only: dom
@@ -330,7 +344,7 @@ contains
       type(grid_container),  pointer    :: cg
       class(component_fluid), pointer   :: pfl
       integer :: ifl, i, max_nshift, iter
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
 
       curl => base%level
       do while (associated(curl))

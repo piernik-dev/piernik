@@ -178,8 +178,6 @@ contains
       type(grid_container),   pointer :: cg
       integer                         :: p
 
-      call read_problem_par
-
       !   Secondary parameters
       do p = 1, flind%fluids
 

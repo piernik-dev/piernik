@@ -30,25 +30,27 @@
 !! \brief Module that implements 1D hydro calls for a single cg for RTVD
 !<
 
-module solvecg
+module solvecg_rtvd
 
-! pulled by RTVD
+! pulled by ANY
 
    implicit none
 
    private
-   public  :: solve_cg
+   public  :: solve_cg_rtvd
 
 contains
 
 !>
 !! \brief Apply MHD update + source terms to a single grid container, rely on properly updated guardcells, handle local fine-coarse fluxes.
+!!
+!! This routine has to conform to the interface defined in sweeps::sweep
 !<
 
-   subroutine solve_cg(cg, cdim, istep, fargo_vel)
+   subroutine solve_cg_rtvd(cg, cdim, istep, fargo_vel)
 
       use bfc_bcc,            only: interpolate_mag_field
-      use cg_level_connected, only: cg_level_connected_T, find_level
+      use cg_level_connected, only: cg_level_connected_t, find_level
       use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim, rk_coef
       use dataio_pub,         only: die
       use domain,             only: dom
@@ -82,7 +84,7 @@ contains
 #endif /* MAGNETIC */
       real, dimension(:),    pointer    :: cs2
       logical :: apply_sources
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
 
       uhi = wna%ind(uh_n)
       full_dim = dom%has_dir(cdim)
@@ -132,7 +134,7 @@ contains
                   enddo
                   apply_sources = .false.
                else
-                  call die("[solve_cg:solve_cg] Unknown FARGO_VEL")
+                  call die("[solve_cg_rtvd:solve_cg_rtvd] Unknown FARGO_VEL")
                   apply_sources = .false.
                endif
             else
@@ -167,6 +169,6 @@ contains
 
       cg%processed = .true.
 
-   end subroutine solve_cg
+   end subroutine solve_cg_rtvd
 
-end module solvecg
+end module solvecg_rtvd

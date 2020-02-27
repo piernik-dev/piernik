@@ -30,7 +30,7 @@
 
 module cg_level_coarsest
 
-   use cg_level_connected, only: cg_level_connected_T
+   use cg_level_connected, only: cg_level_connected_t
 
    implicit none
 
@@ -38,16 +38,16 @@ module cg_level_coarsest
    public :: coarsest
 
    !> \brief The pointer of the coarsest refinement level and a method to add a coarser one
-   type :: cg_level_coarsest_T
-      type(cg_level_connected_T), pointer :: level !< lowest refinement level
+   type :: cg_level_coarsest_t
+      type(cg_level_connected_t), pointer :: level !< lowest refinement level
     contains
       procedure :: add_coarser                  !< add one level below current coarsest level
       procedure :: delete_coarsest              !< delete coarsest level
       procedure :: delete_coarser_than_base     !< delete all levels below base level (multigrid levels)
       !> \todo use delete_coarsest in cleanup
-   end type cg_level_coarsest_T
+   end type cg_level_coarsest_t
 
-   type(cg_level_coarsest_T) :: coarsest             !< coarsest level of refinement
+   type(cg_level_coarsest_t) :: coarsest             !< coarsest level of refinement
 
 contains
 
@@ -64,9 +64,9 @@ contains
 
       implicit none
 
-      class(cg_level_coarsest_T), intent(inout) :: this    !< object calling type-bound routine
+      class(cg_level_coarsest_t), intent(inout) :: this    !< object calling type-bound routine
 
-      type(cg_level_connected_T), pointer       :: new_lev !< fresh refinement level to be added
+      type(cg_level_connected_t), pointer       :: new_lev !< fresh refinement level to be added
 
       if (associated(this%level%coarser)) call die("[cg_level_coarsest:add_coarser] coarser level already exists")
 
@@ -99,16 +99,16 @@ contains
 
    subroutine delete_coarsest(this)
 
-      use cg_list,            only: cg_list_T
+      use cg_list,            only: cg_list_t
       use constants,          only: base_level_id
       use dataio_pub,         only: die
       use list_of_cg_lists,   only: all_lists
 
       implicit none
 
-      class(cg_level_coarsest_T), intent(inout) :: this    !< object calling type-bound routine
+      class(cg_level_coarsest_t), intent(inout) :: this    !< object calling type-bound routine
 
-      class(cg_list_T), pointer :: curl
+      class(cg_list_t), pointer :: curl
 
       if (this%level%l%id >= base_level_id) call die("[cg_level_coarsest:delete_coarsest] Attempted to operate on base level or above")
 
@@ -129,7 +129,7 @@ contains
 
       implicit none
 
-      class(cg_level_coarsest_T), intent(inout) :: this    !< object calling type-bound routine
+      class(cg_level_coarsest_t), intent(inout) :: this    !< object calling type-bound routine
 
       do while (this%level%l%id < base_level_id)
          call this%delete_coarsest

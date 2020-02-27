@@ -44,7 +44,7 @@ module common_hdf5
    public :: hdf_vars, hdf_vars_avail, cancel_hdf_var, d_gname, base_d_gname, d_fc_aname, d_size_aname, &
         d_edge_apname, d_bnd_apname, cg_gname, cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, &
         n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, cg_dl_aname, O_OUT, O_RES, STAT_OK, STAT_INV, &
-        create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output
+        create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output, enable_all_hdf_var
 
    character(len=dsetnamelen), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
    logical,                    allocatable, dimension(:), protected :: hdf_vars_avail
@@ -197,7 +197,7 @@ contains
       enddo
 
       allocate(hdf_vars_avail(size(hdf_vars)))
-      if (size(hdf_vars_avail) > 0) hdf_vars_avail = .true.
+      call enable_all_hdf_var
 
    contains
 
@@ -246,6 +246,8 @@ contains
 
    end subroutine cleanup_hdf5
 
+!> \brief Mark a plot variable as faulty (don't spam warnings unnecessarily)
+
    subroutine cancel_hdf_var(var)
 
       use constants, only: I_ONE
@@ -260,6 +262,16 @@ contains
       enddo
 
    end subroutine cancel_hdf_var
+
+!> \brief Mark all plot variables as good
+
+   subroutine enable_all_hdf_var
+
+      implicit none
+
+      if (size(hdf_vars_avail) > 0) hdf_vars_avail = .true.
+
+   end subroutine enable_all_hdf_var
 
 !-----------------------------------------------------------------------------
 !>
@@ -717,7 +729,7 @@ contains
       use dataio_pub,   only: die, nproc_io, can_i_write, domain_dump, msg
       use domain,       only: dom
       use gdf,          only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets, &
-         &                    gdf_root_datasets_T, gdf_parameters_T, GDF_CARTESIAN, GDF_POLAR
+         &                    gdf_root_datasets_t, gdf_parameters_t, GDF_CARTESIAN, GDF_POLAR
       use global,       only: t
       use hdf5,         only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
          &                    h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, h5pclose_f, &
@@ -783,8 +795,8 @@ contains
       real, dimension(LO:HI)                        :: edge
       real, dimension(ndims)                        :: temp
 
-      type(gdf_root_datasets_T)                     :: rd
-      type(gdf_parameters_T)                        :: gdf_sp
+      type(gdf_root_datasets_t)                     :: rd
+      type(gdf_parameters_t)                        :: gdf_sp
 
       ! Create a new file and initialize it
 
@@ -987,7 +999,7 @@ contains
    subroutine collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
 
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: LO, HI, I_ONE
 
@@ -1000,7 +1012,7 @@ contains
       real(kind=8),    dimension(:,:,:), pointer, intent(inout) :: dbuf
       integer(kind=4),                            intent(in)    :: otype            !< Output type (restart, data)
 
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
       type(cg_list_element), pointer :: cgl
       integer :: g
 

@@ -37,7 +37,7 @@ module dataio_pub
    public  ! QA_WARN most variables are not secrets here
    private :: mpi_err, colormessage, T_PLAIN, T_ERR, T_WARN, T_INFO, T_IO, T_SILENT, & ! QA_WARN no need to use these symbols outside dataio_pub
         &     ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, & ! QA_WARN
-        &     namelist_handler_T                                                       ! QA_WARN
+        &     namelist_handler_t                                                       ! QA_WARN
    private :: cbuff_len, domlen, idlen, cwdlen ! QA_WARN prevent re-exporting
    !mpisetup uses: ansi_white and ansi_black
 
@@ -106,7 +106,8 @@ module dataio_pub
    logical, save               :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
    logical, save               :: log_file_initialized = .false. !< logical to mark initialization of logfile
    logical, save               :: log_file_opened = .false.      !< logical to mark opening of logfile
-   integer(kind=4), save       :: require_problem_IC = 0          !< 1 will call initproblem::problem_initial_conditions on restart
+   logical, save               :: restarted_sim = .false.        !< logical to distinguish between new and restarted simulation
+   integer(kind=4), save       :: require_problem_IC = 0         !< 1 will call initproblem::problem_initial_conditions on restart
 
    logical                     :: vizit = .false.                !< perform "live" visualization using pgplot
    logical                     :: multiple_h5files = .false.     !< write one HDF5 file per proc
@@ -149,7 +150,7 @@ module dataio_pub
       end subroutine compare_namelist_P
    end interface
 
-   type :: namelist_handler_T
+   type :: namelist_handler_t
       character(len=msglen), pointer :: cmdl_nml   !< buffer for namelist supplied via commandline
       character(len=cwdlen), pointer :: par_file   !< path to the parameter file
       character(len=cwdlen), pointer :: errstr     !< string for storing error messages
@@ -160,24 +161,27 @@ module dataio_pub
       procedure(namelist_errh_P), nopass, pointer    :: namelist_errh
       logical :: initialized = .false.
    contains
-      procedure :: init => namelist_handler_T_init
+      procedure :: init => namelist_handler_t_init
       procedure :: compare_namelist
-   end type namelist_handler_T
+   end type namelist_handler_t
 
-   type(namelist_handler_T) :: nh
+   type(namelist_handler_t) :: nh
 
 contains
 
-   subroutine namelist_handler_T_init(this)
+   subroutine namelist_handler_t_init(this)
+
+      use constants, only: cbuff_len
 
       implicit none
 
-      class(namelist_handler_T), intent(inout) :: this
+      class(namelist_handler_t), intent(inout) :: this
 
       character(len=cwdlen) :: tmpdir
+      character(len=cbuff_len) :: pid
       integer :: lchar_tmpdir
 
-      call get_environment_variable("TMPDIR", tmpdir)
+      call get_environment_variable("PIERNIK_TMPDIR", tmpdir)
       lchar_tmpdir = len_trim(tmpdir)
       if (lchar_tmpdir == 0) then
          tmpdir = "."
@@ -186,8 +190,12 @@ contains
          if (tmpdir(lchar_tmpdir:lchar_tmpdir) == '/') lchar_tmpdir = lchar_tmpdir - 1
       endif
 
-      write(this%tmp1, '(a,"/temp1.dat")') tmpdir(1:lchar_tmpdir)
-      write(this%tmp2, '(a,"/temp2.dat")') tmpdir(1:lchar_tmpdir)
+      write(pid, '(i5)') getpid()
+
+      ! The filenames here will be unique, unless multiple Piernik instances
+      ! from multiple machines are started in the same shared directory.
+      write(this%tmp1, '(a,"/temp1_' // trim(pid) // '.dat")') tmpdir(1:lchar_tmpdir)
+      write(this%tmp2, '(a,"/temp2_' // trim(pid) // '.dat")') tmpdir(1:lchar_tmpdir)
 
       this%cmdl_nml => cmdl_nml
       this%par_file => par_file
@@ -198,7 +206,7 @@ contains
       this%namelist_errh => namelist_errh
 
       this%initialized = .true.
-   end subroutine namelist_handler_T_init
+   end subroutine namelist_handler_t_init
 !-----------------------------------------------------------------------------
    subroutine set_colors(enable)
 
@@ -466,7 +474,7 @@ contains
       use mpi,       only: MPI_COMM_WORLD
 
       implicit none
-      class(namelist_handler_T), intent(inout) :: this
+      class(namelist_handler_t), intent(inout) :: this
       integer                          :: io
       character(len=maxparfilelen)     :: sa, sb
       integer                          :: lun_bef, lun_aft

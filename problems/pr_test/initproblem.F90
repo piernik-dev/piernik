@@ -150,7 +150,7 @@ contains
    subroutine prepare_fld(lev, n_c)
 
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use dataio_pub,    only: printinfo, warn, msg
       use mpisetup,      only: master, proc
       use named_array_list, only: qna
@@ -160,7 +160,7 @@ contains
       integer(kind=4), intent(in) :: lev !< which level to initialize
       integer,         intent(in) :: n_c !< how many times to coarsen the data
 
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
       integer :: c
 
       if (master) then
@@ -227,7 +227,7 @@ contains
 
       use cg_list,            only: cg_list_element
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use constants,          only: xdim, ydim, zdim, ndims, LO, HI
       use dataio_pub,         only: msg, warn
       use domain,             only: dom
@@ -240,7 +240,7 @@ contains
 
       integer(kind=4), intent(in) :: lev
 
-      type(cg_level_connected_T), pointer :: glev
+      type(cg_level_connected_t), pointer :: glev
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
       integer, dimension(ndims) :: ijk
@@ -414,13 +414,13 @@ contains
 
    subroutine clear_lev(lev)
 
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use dataio_pub  ,  only: warn
       use named_array_list, only: qna
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(in) :: lev
+      type(cg_level_connected_t), pointer, intent(in) :: lev
 
       if (.not. associated(lev)) then
          call warn("cl: null level")

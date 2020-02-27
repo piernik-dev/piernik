@@ -33,7 +33,7 @@
 module multigrid_old_soln
 ! pulled by MULTIGRID && SELF_GRAV
 
-   use old_soln_list, only: old_soln, os_list_undef_T, os_list_T
+   use old_soln_list, only: old_soln, os_list_undef_t, os_list_t
 
    implicit none
 
@@ -44,8 +44,8 @@ module multigrid_old_soln
    integer(kind=4), parameter :: nold_max=3   !< maximum implemented extrapolation order
 
    type :: soln_history                       !< container for a set of several old potential solutions
-      type(os_list_undef_T) :: invalid        !< a list of invalid slots ready to use
-      type(os_list_T) :: old                  !< indices and time points of stored solutions
+      type(os_list_undef_t) :: invalid        !< a list of invalid slots ready to use
+      type(os_list_t) :: old                  !< indices and time points of stored solutions
     contains
       procedure :: init_history               !< Allocate arrays, register fields
       procedure :: cleanup_history            !< Deallocate arrays
@@ -92,7 +92,7 @@ contains
       endif
       do i = 1, nold + I_TWO  ! extra two slots for seamless timestep retries
          write(hname,'(2a,i2.2)')prefix,"-h-",i
-         call all_cg%reg_var(hname, vital = .true., ord_prolong = ord_prolong) ! no need for multigrid attribute here because history is defined only on leaves
+         call all_cg%reg_var(hname, vital = .false., ord_prolong = ord_prolong) ! no need for multigrid attribute here because history is defined only on leaves
          call this%invalid%new(qna%ind(hname))
       enddo
 
@@ -136,7 +136,7 @@ contains
       use cg_list_dataop, only: ind_val
       use cg_leaves,      only: leaves
       use cg_list_global, only: all_cg
-      use constants,      only: INVALID, O_INJ, O_LIN, O_I2, I_ONE
+      use constants,      only: INVALID, O_INJ, O_LIN, O_I2, I_ONE, dirtyH1
       use dataio_pub,     only: msg, die, printinfo
       use global,         only: t
       use mpisetup,       only: master
@@ -152,7 +152,7 @@ contains
 
       ! BEWARE selfgrav_clump/initproblem.F90 requires monotonic time sequence t > this%old(p0)%time > this%old(p1)%time > this%old(p2)%time
 
-      call all_cg%set_dirty(solution)
+      call all_cg%set_dirty(solution, 0.98*dirtyH1)
 
       call this%sanitize
 
@@ -216,14 +216,15 @@ contains
 
    subroutine store_solution(this)
 
-      use cg_leaves,     only: leaves
-      use dataio_pub,    only: die, msg
-      use global,        only: t
-      use multigridvars, only: solution
-      use old_soln_list, only: old_soln
+      use cg_leaves,        only: leaves
+      use dataio_pub,       only: die, msg
+      use global,           only: t
+      use multigridvars,    only: solution
+      use named_array_list, only: qna
+      use old_soln_list,    only: old_soln
 #ifdef DEBUG
-      use dataio_pub,    only: printinfo
-      use mpisetup,      only: master
+      use dataio_pub,       only: printinfo
+      use mpisetup,         only: master
 #endif /* DEBUG */
 
       implicit none
@@ -244,6 +245,7 @@ contains
       os%time = t
       call this%old%new_head(os)
       call leaves%q_copy(solution, os%i_hist)
+      qna%lst(os%i_hist)%vital = .true.
 
 #ifdef DEBUG
       write(msg, '(a,g14.6)')"[multigrid_old_soln:store_solution] store solution at time ", t
@@ -256,9 +258,10 @@ contains
 
    subroutine sanitize(this)
 
-      use dataio_pub, only: printinfo, msg
-      use global,     only: t
-      use mpisetup,   only: master
+      use dataio_pub,       only: printinfo, msg
+      use global,           only: t
+      use mpisetup,         only: master
+      use named_array_list, only: qna
 
       implicit none
 
@@ -272,6 +275,7 @@ contains
          if (this%old%latest%time >= t) then
             os => this%old%pick_head()
             call this%invalid%new_head(os)
+            qna%lst(os%i_hist)%vital = .false.
          else
             exit
          endif
@@ -400,6 +404,7 @@ contains
       use hdf5,               only: HID_T, HSIZE_T, SIZE_T, &
            &                        h5aexists_f, h5gopen_f, h5gclose_f
       use h5lt,               only: h5ltget_attribute_ndims_f, h5ltget_attribute_info_f
+      use mpisetup,           only: master
       use named_array_list,   only: qna
       use set_get_attributes, only: get_attr
 
@@ -424,7 +429,7 @@ contains
       do i = lbound(nt, 1), ubound(nt, 1)
          call h5aexists_f(g_id, trim(this%old%label) // nt(i), a_exists, error)
          if (.not. a_exists) then
-            call printio("[multigrid_old_soln:read_os_attribute] " // trim(this%old%label) // nt(i) // " does not exist. Coldboot")
+            if (master) call printio("[multigrid_old_soln:read_os_attribute] " // trim(this%old%label) // nt(i) // " does not exist. Coldboot")
             return
          endif
       enddo
@@ -442,7 +447,7 @@ contains
       endif
       call h5ltget_attribute_info_f(file_id, "/", trim(this%old%label) // "_names", dims, tclass, tsize, error)
       if (dims(1) <= 0) then
-         call printio("[multigrid_old_soln:read_os_attribute] No " // trim(this%old%label) // "_names to read. Coldboot.")
+         if (master) call printio("[multigrid_old_soln:read_os_attribute] No " // trim(this%old%label) // "_names to read. Coldboot.")
          return
       endif
       allocate(namelist(dims(1)))
@@ -460,6 +465,7 @@ contains
                call this%old%new_head(os)
                os%time = timelist(i)  ! new_head did put current time, need to enforce it
                qna%lst(os%i_hist)%restart_mode = AT_NO_B
+               qna%lst(os%i_hist)%vital = .true.
             else
                call die("[multigrid_old_soln:read_os_attribute] Cannot find '" // trim(namelist(i)) // "' in free slots.")
             endif

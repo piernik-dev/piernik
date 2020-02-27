@@ -44,20 +44,22 @@ module initproblem
    real :: d0     !< density of the spheroid
    real :: a1     !< equatorial radius of the spheroid
    real :: e      !< polar eccentricity of the spheroid; e>0 gives oblate object, e<0 gives prolate object
-   real :: ref_thr !< refinement threshold
+   real :: ref_thr   !< refinement threshold
    real :: deref_thr !< derefinement threshold
+   real :: ref_eps   !< smoother filter
    integer(kind=4) :: nsub !< subsampling on the grid
    logical :: analytical_ext_pot  !< If .true. then bypass multipole solver and use analutical potential for external boundaries (debugging/developing only)
 
-   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, ref_thr, deref_thr, nsub, analytical_ext_pot
+   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, ref_thr, deref_thr, ref_eps, nsub, analytical_ext_pot
 
    ! private data
    real :: d1 !< ambient density
    real :: p0 !< pressure
    real :: a3 !< length of polar radius of the spheroid
-   character(len=dsetnamelen), parameter :: apot_n = "apot" !< name of the analytical potential field
-   character(len=dsetnamelen), parameter :: asrc_n = "asrc" !< name of the source field used for "ares" calculation (auxiliary space)
-   character(len=dsetnamelen), parameter :: ares_n = "ares" !< name of the numerical residuum with respect to analytical potential field
+   character(len=dsetnamelen), parameter :: apot_n = "apot"   !< name of the analytical potential field
+   character(len=dsetnamelen), parameter :: asrc_n = "asrc"   !< name of the source field used for "ares" calculation (auxiliary space)
+   character(len=dsetnamelen), parameter :: ares_n = "ares"   !< name of the numerical residuum with respect to analytical potential field
+   character(len=dsetnamelen), parameter :: mpole_n = "mpole" !< name of the potential recovered solely from multipole moments
 
 contains
 
@@ -65,13 +67,14 @@ contains
 
    subroutine problem_pointers
 
-      use user_hooks,  only: finalize_problem
+      use user_hooks,  only: finalize_problem, problem_post_IC
 #ifdef HDF5
       use dataio_user, only: user_vars_hdf5, user_attrs_wr
 #endif /* HDF5 */
 
       implicit none
 
+      problem_post_IC  => compute_mpole
       finalize_problem => finalize_problem_maclaurin
 #ifdef HDF5
       user_attrs_wr    => problem_initial_conditions_attrs
@@ -96,8 +99,8 @@ contains
       use multigridvars,    only: ord_prolong
       use named_array_list, only: wna
       use particle_pub,     only: pset
-      use refinement_crit_list, only: user_ref2list
       use user_hooks,       only: ext_bnd_potential
+      use unified_ref_crit_list, only: urc_list
 
       implicit none
 
@@ -115,8 +118,9 @@ contains
       e            = 0.0                 !< Eccentricity; e>0 for flattened spheroids, e<0 for elongated spheroids
       nsub         = 3                   !< Subsampling factor
 
-      ref_thr      = max(1e-3, 2.*smalld/d0)    !< Refine if density difference is greater than this value
-      deref_thr    = max(ref_thr**2, smalld/d0) !< Derefine if density difference is smaller than this value
+      ref_thr      = 0.3    !< Refine if density difference is greater than this value
+      deref_thr    = 0.01   !< Derefine if density difference is smaller than this value
+      ref_eps      = 0.01   !< refinement smoothing factor
 
       analytical_ext_pot = .false.
 
@@ -146,6 +150,7 @@ contains
          rbuff(6) = e
          rbuff(7) = ref_thr
          rbuff(8) = deref_thr
+         rbuff(9) = ref_eps
 
          ibuff(1) = nsub
 
@@ -167,6 +172,7 @@ contains
          e            = rbuff(6)
          ref_thr      = rbuff(7)
          deref_thr    = rbuff(8)
+         ref_eps      = rbuff(9)
 
          nsub         = ibuff(1)
 
@@ -225,11 +231,14 @@ contains
       call all_cg%reg_var(apot_n, ord_prolong = ord_prolong)
       call all_cg%reg_var(ares_n)
       call all_cg%reg_var(asrc_n)
+      call all_cg%reg_var(mpole_n)
 
       ! Set up automatic refinement criteria on densities
       do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
          !> \warning only selfgravitating fluids should be added
-         call user_ref2list(wna%fi, id, ref_thr*d0, deref_thr*d0, 0., "grad")
+!         call urc_list%add_user_urcv(wna%fi, id, ref_thr*d0, deref_thr*d0, 0., "grad", .true.)
+         call urc_list%add_user_urcv(wna%fi, id, ref_thr, deref_thr, ref_eps, "Loechner", .true.)
+
       enddo
 
    end subroutine read_problem_par
@@ -244,6 +253,7 @@ contains
       use dataio_pub,        only: die, msg, printinfo
       use domain,            only: dom
       use fluidindex,        only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use func,              only: operator(.notequals.)
       use global,            only: dirty_debug, no_dirty_checks
       use grid_cont,         only: grid_container
       use named_array_list,  only: qna
@@ -368,8 +378,14 @@ contains
          cgl => cgl%nxt
       enddo
 
-      write(msg,'(a,f13.10)')"[initproblem:problem_initial_conditions] Analytical norm residual/source= ",leaves%norm_sq(qna%ind(ares_n))/leaves%norm_sq(qna%ind(asrc_n))
-      if (master) call printinfo(msg)
+      dm = leaves%norm_sq(qna%ind(asrc_n))
+      if (dm .notequals. 0.) then
+         write(msg,'(a,f13.10)')"[initproblem:problem_initial_conditions] Analytical norm residual/source= ",leaves%norm_sq(qna%ind(ares_n))/dm
+         if (master) call printinfo(msg)
+      else
+         write(msg,'(2(a,f13.10))')"[initproblem:problem_initial_conditions] Analytical norm residual= ",leaves%norm_sq(qna%ind(ares_n)), " point mass= ", d0
+         if (master) call printinfo(msg)
+      endif
 
    end subroutine problem_initial_conditions
 
@@ -593,12 +609,32 @@ contains
 
    end subroutine finalize_problem_maclaurin
 
+!> \brief Compute multipole potential field
+
+   subroutine compute_mpole
+
+      use multipole,        only: compute_mpole_potential
+      use named_array_list, only: qna
+
+      implicit none
+
+      call compute_mpole_potential(qna%ind(mpole_n))
+
+   end subroutine compute_mpole
+
 !>
 !! \brief This routine provides the "apot" and "errp" variablesvalues to be dumped to the .h5 file
 !!
 !! \details
-!! * "apot" is the analytical potential solution for cell centers
-!! * "errp" is the difference between analytical potential and computed potential
+!! * "apot"    is the analytical potential solution for cell centers
+!! * "errp"    is the difference between analytical potential and computed potential
+!! * "relerr"  is the relative difference between analytical potential and multigrid solution
+!! * "errm"    is the difference between analytical potential and multipole solution
+!! * "relerrm" is the relative difference between analytical potential and multipole solution
+!!
+!! For "errm" and "relerr" use '$MULTIGRID_GRAVITY mpole_solver = "3D" /'
+!! for realistic 3D potential evaluation in whole computational domain.
+!! The default mpole_solver = "img_mass" will give only the "outer potential" correction.
 !<
 
    subroutine maclaurin_error_vars(var, tab, ierrh, cg)
@@ -627,6 +663,14 @@ contains
             elsewhere
                tab(:,:,:) = 0.
             endwhere
+         case ("errm")
+            tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%q(qna%ind(mpole_n))%span(cg%ijkse)
+         case ("relerrm")
+            where (cg%q(qna%ind(apot_n))%span(cg%ijkse) .notequals. 0.)
+               tab(:,:,:) = cg%q(qna%ind(mpole_n))%span(cg%ijkse)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1.
+            elsewhere
+               tab(:,:,:) = 0.
+            endwhere
          case default
             ierrh = -1
       end select
@@ -644,7 +688,14 @@ contains
 
       real, intent(in) :: x, y, z
 
-      phi = - 4./3. * a1**3 * pi * newtong * d0 / sqrt((x-x0)**2 + (y-y0)**2 + (z-z0)**2)
+      real :: f
+
+      if (a1 > 0.) then
+         f = 4./3. * a1**3 * pi
+      else
+         f = 1.
+      endif
+      phi = - f * newtong * d0 / sqrt((x-x0)**2 + (y-y0)**2 + (z-z0)**2)
 
    end function ap_potential
 

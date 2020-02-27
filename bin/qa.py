@@ -35,26 +35,18 @@ have_pub = re.compile('''^\s{0,9}public''', re.VERBOSE)
 have_priv = re.compile('''^\s{0,9}private\s::''', re.VERBOSE)
 remove_warn = re.compile('''(?!.*QA_WARN .+)''', re.VERBOSE)
 have_global_public = re.compile('''^\s{0,9}public(?!.*::)''', re.VERBOSE)
-depr_syntax_1 = re.compile('''
-        ^\s{1,12}(?i)(?:real(?:\s|,)|integer(?:\s|,)|logical
-        (?:\s|,|\()|character(?:\s|,))(?!.*::)
-    ''', re.IGNORECASE)
-depr_syntax_2 = re.compile(
-    '''^\s{1,12}(?i)use[\s](?!.*only)''', re.IGNORECASE)
-depr_syntax_3 = re.compile(
-    '''^\s{1,12}(?i)character(?![(])''', re.IGNORECASE)
+depr_syntax_1 = re.compile('''^\s{1,12}(?:real(?:\s|,)|integer(?:\s|,)|logical(?:\s|,|\()|character(?:\s|,))(?!.*::)''', re.IGNORECASE)
+depr_syntax_2 = re.compile('''^\s{1,12}use[\s](?!.*only)''', re.IGNORECASE)
+depr_syntax_3 = re.compile('''^\s{1,12}character(?![(])''', re.IGNORECASE)
 is_function = re.compile('''(?i)\sfunction\s''', re.IGNORECASE)
 not_function = re.compile('''(?!.*function)''', re.IGNORECASE)
 tab_char = re.compile('\t')
-has_use = re.compile("^\s{1,12}(?i)use\s")
+has_use = re.compile("^\s{1,12}use\s", re.IGNORECASE)
 have_label = re.compile('^[0-9]', re.VERBOSE)
 crude_write = re.compile("write *\( *\*", re.IGNORECASE)
 magic_integer = re.compile("\(len=[1-9]", re.IGNORECASE)
 continuation = re.compile('&$', re.VERBOSE)
-implicit_save = re.compile('''
-    (?i)(?:real(?:\s|,)|integer(?:\s|,)|logical(?:\s|,|\()|character(?:\s|,)).*
-    ::.*=(|\s)[0-9]
-''', re.IGNORECASE)
+implicit_save = re.compile('''(?:real(?:\s|,)|integer(?:\s|,)|logical(?:\s|,|\()|character(?:\s|,)).*::.*=(|\s|)[0-9]''', re.IGNORECASE)
 not_param_nor_save = re.compile("(?!.*(parameter|save))", re.IGNORECASE)
 
 nasty_spaces = [
@@ -95,9 +87,8 @@ def remove_binaries(files):
     for file in files:
         checkFile = sp.Popen('file -bi ' + file, stdout=sp.PIPE, shell=True,
                              executable="/bin/bash")
-        if not checkFile.communicate()[0].startswith('text'):
-            print b.WARNING + "QA:  " + b.ENDC + file + \
-                " is not a text file. I will not test it."
+        if not checkFile.communicate()[0].startswith(b'text'):
+            print(b.WARNING + "QA:  " + b.ENDC + file + " is not a text file. I will not test it.")
         else:
             list.append(file)
     return list
@@ -105,7 +96,7 @@ def remove_binaries(files):
 
 def select_sources(files):
     test = re.compile("F90$", re.IGNORECASE)
-    return filter(test.search, files)
+    return list(filter(test.search, files))
 
 
 def wtf(lines, line, rname, fname):
@@ -135,10 +126,10 @@ def give_err(s):
 
 def parse_f90file(lines, fname, store):
     if (debug):
-        print "[parse_f90file] fname = ", fname
+        print("[parse_f90file] fname = ", fname)
     subs_array = np.zeros((0,), dtype=typ1)
 
-    subs = filter(test_for_routines.search, lines)
+    subs = list(filter(test_for_routines.search, lines))
     subs_names = []
     subs_types = []
     for f in subs:
@@ -151,10 +142,10 @@ def parse_f90file(lines, fname, store):
                 store.append(give_warn("QA:  ") + '[%s] "%s" without %s name' %
                              (fname, f.strip(), word[1] if (len(word) > 1) else "any"))
     for f in subs_names:
-        cur_sub = filter(re.compile(f).search, subs)
+        cur_sub = list(filter(re.compile(f).search, subs))
         if (len(cur_sub) > 2):
             if (debug):
-                print "[parse_f90file] f, cur_sub = ", f, cur_sub
+                print("[parse_f90file] f, cur_sub = ", f, cur_sub)
             for index in range(0, len(cur_sub)):
                 if just_end.match(cur_sub[index]):
                     if cur_sub[index].split()[1] == subs_types[-1] and \
@@ -167,10 +158,10 @@ def parse_f90file(lines, fname, store):
         subs_array = np.append(subs_array, np.array([obj], dtype=typ1))
 
     if (debug):
-        print "[parse_f90file] subs = ", subs
-        print "[parse_f90file] subs_names = ", subs_names
+        print("[parse_f90file] subs = ", subs)
+        print("[parse_f90file] subs_names = ", subs_names)
 
-    mod = filter(module_body.match, lines)
+    mod = list(filter(module_body.match, lines))
     if (len(mod) <= 0):
         store.append(
             give_warn("QA:  ") + "[%s] => module body not found!" % fname)
@@ -189,9 +180,7 @@ def parse_f90file(lines, fname, store):
 
 
 def qa_checks(files, options):
-    print b.OKBLUE + \
-        '"I am the purifier, the light that clears all shadows."' + \
-        ' - seal of cleansing inscription' + b.ENDC
+    print(b.OKBLUE + '"I am the purifier, the light that clears all shadows."' + ' - seal of cleansing inscription' + b.ENDC)
     runpath = sys.argv[0].split("qa.py")[0]
     files = remove_binaries(files)
     # ToDo: check files other than F90
@@ -212,13 +201,12 @@ def qa_checks(files, options):
         if lines != [line + '\n' for line in pfile]:
             diff_cnt = 1 if (len(lines) != len(pfile)) else 0
             if diff_cnt:
-                print give_warn("Line count changed") + " in file '%s'" % f
+                print(give_warn("Line count changed") + " in file '%s'" % f)
             for i in range(min(len(lines), len(pfile))):
                 if (lines[i] != pfile[i] + '\n'):
                     diff_cnt += 1
             if diff_cnt:
-                print give_warn("QA:  ") + \
-                    "Whitespace changes found in file '%s' (%d lines changed)" % (f, diff_cnt)
+                print(give_warn("QA:  ") + "Whitespace changes found in file '%s' (%d lines changed)" % (f, diff_cnt))
             fp = open(f, 'w')
             for line in pfile:
                 fp.write(line + '\n')
@@ -238,20 +226,20 @@ def qa_checks(files, options):
             pfile, i) for i in filter(test_for_interfaces.search, pfile)]
         while len(interfaces) > 0:
             if (debug):
-                print "Removed interface"
+                print("Removed interface")
             pfile = np.delete(pfile, np.s_[interfaces[0]:interfaces[1] + 1], 0)
             interfaces = [line_num(
                 pfile, i) for i in filter(test_for_interfaces.search, pfile)]
 
         for obj in parse_f90file(pfile, f, warns):
             if (debug):
-                print '[qa_checks] obj =', obj
+                print('[qa_checks] obj =', obj)
             part = pfile[obj['beg']:obj['end']]
             #         if (debug):
             #            for f in part: print f
             # False refs need to be done before removal of types in module body
             qa_false_refs(part, obj['name'], warns, f)
-            if(obj['type'] == 'mod'):
+            if(obj['type'] == b'mod'):
                 # module body is always last, remove lines that've been
                 # already checked
                 part = np.delete(part, np.array(clean_ind) - obj['beg'])
@@ -260,25 +248,24 @@ def qa_checks(files, options):
                 clean_ind += range(obj['beg'], obj['end'] + 1)
 
             qa_depreciated_syntax(part, obj['name'], warns, f)
-            if(obj['type'] != 'type'):
+            if(obj['type'] != b'type'):
                 qa_have_implicit(part, obj['name'], errors, f)
                 qa_implicit_saves(part, obj['name'], errors, f)
 
     if (len(warns)):
-        print b.WARNING + "%i warning(s) detected. " % len(warns) + b.ENDC
+        print(b.WARNING + "%i warning(s) detected. " % len(warns) + b.ENDC)
         for warning in warns:
-            print warning
+            print(warning)
 
     if (len(errors)):
-        print b.FAIL + "%i error(s) detected! " % len(errors) + b.ENDC
+        print(b.FAIL + "%i error(s) detected! " % len(errors) + b.ENDC)
         for error in errors:
-            print error
+            print(error)
     else:
-        print b.OKGREEN + "Yay! No errors!!! " + b.ENDC
+        print(b.OKGREEN + "Yay! No errors!!! " + b.ENDC)
 
     if (len(errors) == 0 and len(warns) == 0):
-        print b.OKGREEN + "No warnings detected. " + b.ENDC + \
-            "If everyone were like you, I'd be out of business!"
+        print(b.OKGREEN + "No warnings detected. " + b.ENDC + "If everyone were like you, I'd be out of business!")
 
 
 def qa_have_priv_pub(lines, name, warns, fname):
@@ -287,12 +274,11 @@ def qa_have_priv_pub(lines, name, warns, fname):
                      "module [%s:%s] lacks public/private keywords." %
                      (fname, name))
     else:
-        if(filter(remove_warn.match, filter(have_priv.search, lines))):
+        if (list(filter(remove_warn.match, filter(have_priv.search, lines)))):
             warns.append(give_warn("QA:  ") +
                          "module [%s:%s] have selective private." %
                          (fname, name))
-        if(filter(remove_warn.match,
-                  filter(have_global_public.search, lines))):
+        if (list(filter(remove_warn.match, filter(have_global_public.search, lines)))):
             warns.append(give_warn("QA:  ") +
                          "module [%s:%s] is completely public." %
                          (fname, name))
@@ -301,8 +287,7 @@ def qa_have_priv_pub(lines, name, warns, fname):
 def qa_crude_write(lines, rname, store, fname):
     warning = 0
     for f in filter(remove_warn.match, filter(crude_write.search, lines)):
-        store.append(
-            give_warn("crude write  ") + wtf(lines, f, rname, fname))
+        store.append(give_warn("crude write  ") + wtf(lines, f, rname, fname))
 
 
 def qa_magic_integers(lines, rname, store, fname):
@@ -369,7 +354,7 @@ def remove_amp(lines, strip):
 
 def qa_false_refs(lines, name, store, fname):
     temp = remove_amp(filter(remove_warn.match, lines), True)
-    uses = filter(has_use.search, temp)
+    uses = list(filter(has_use.search, temp))
 
     for item in uses:
         to_check = [f.strip() for f in item.split("only:")[1].split(',')]
@@ -385,7 +370,7 @@ def qa_false_refs(lines, name, store, fname):
         for func in to_check:
             pattern = re.compile(func, re.IGNORECASE)
             # stupid but seems to work
-            if(len(filter(pattern.search, temp)) < 2):
+            if(len(list(filter(pattern.search, temp))) < 2):
                 store.append(give_warn("QA:  ") + "'" + func +
                              "' grabbed but not used in [%s:%s]" %
                              (fname, name))
@@ -393,8 +378,9 @@ def qa_false_refs(lines, name, store, fname):
 
 def qa_implicit_saves(lines, name, store, fname):
     #   print b.OKGREEN + "QA: " + b.ENDC + "Checking for implicit saves"
-    impl = filter(not_param_nor_save.match, filter(implicit_save.search,
-                  remove_amp(filter(remove_warn.match, lines), True)))
+    impl = list(filter(not_param_nor_save.match,
+                       filter(implicit_save.search,
+                              remove_amp(filter(remove_warn.match, lines), True))))
     if(len(impl)):
         store.append(give_err("implicit saves detected in   ") +
                      "[%s:%s]" % (fname, name))

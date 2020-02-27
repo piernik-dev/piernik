@@ -37,11 +37,14 @@
 
 
 #include "piernik.h"
+
 !>
 !!  \brief This module implements HLLD Riemann solver following the work of Miyoshi & Kusano (2005)
 !<
+
 module hlld
-! pulled by RIEMANN
+
+! pulled by ANY
 
    implicit none
 
@@ -55,7 +58,7 @@ contains
 !! OPT: check if passing pointers here will improve performance
 !<
 
-   subroutine riemann_wrap(ql, qr, b_cc_l, b_cc_r, flx, mag_cc)
+   subroutine riemann_wrap(ql, qr, b_cc_l, b_cc_r, cs2, flx, mag_cc)
 
       use constants,  only: I_ONE
       use fluidindex, only: flind
@@ -63,9 +66,10 @@ contains
 
       implicit none
 
-      real, dimension(:,:), target, intent(in)  :: ql, qr          ! left and right fluid states
-      real, dimension(:,:), target, intent(in)  :: b_cc_l, b_cc_r  ! left and right magnetic field states (relevant only for IONIZED fluid)
-      real, dimension(:,:), target, intent(out) :: flx, mag_cc     ! output fluxes: fluid, magnetic field and psi
+      real, dimension(:,:), target,  intent(in)  :: ql, qr          ! left and right fluid states
+      real, dimension(:,:), target,  intent(in)  :: b_cc_l, b_cc_r  ! left and right magnetic field states (relevant only for IONIZED fluid)
+      real, dimension(:),   pointer, intent(in)  :: cs2             !< square of local isothermal sound speed
+      real, dimension(:,:), target,  intent(out) :: flx, mag_cc     ! output fluxes: fluid, magnetic field and psi
 
       integer :: i
       class(component_fluid), pointer :: fl
@@ -98,16 +102,16 @@ contains
                p_ct_flx => flx(:, iend + I_ONE:)
                p_ctl => ql(:, iend + I_ONE:)
                p_ctr => qr(:, iend + I_ONE:)
-               call riemann_hlld(p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam, p_ct_flx, p_ctl, p_ctr)
+               call riemann_hlld(p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, cs2, fl%gam, p_ct_flx, p_ctl, p_ctr)
             else
-               call riemann_hlld(p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
+               call riemann_hlld(p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, cs2, fl%gam)
             endif
          end associate
       enddo
 
    end subroutine riemann_wrap
 
-   subroutine riemann_wrap_u(ql, qr, flx)
+   subroutine riemann_wrap_u(ql, qr, cs2, flx)
 
       use constants,  only: I_ONE
       use dataio_pub, only: die
@@ -116,8 +120,9 @@ contains
 
       implicit none
 
-      real, dimension(:,:), target, intent(in)  :: ql, qr  ! left and right fluid states
-      real, dimension(:,:), target, intent(out) :: flx     ! output fluxes: fluid, magnetic field and psi
+      real, dimension(:,:), target,  intent(in)  :: ql, qr  ! left and right fluid states
+      real, dimension(:),   pointer, intent(in)  :: cs2     !< square of local isothermal sound speed
+      real, dimension(:,:), target,  intent(out) :: flx     ! output fluxes: fluid, magnetic field and psi
 
       integer :: i
       class(component_fluid), pointer :: fl
@@ -139,9 +144,9 @@ contains
                p_ct_flx => flx(:, iend + I_ONE:)
                p_ctl => ql(:, iend + I_ONE:)
                p_ctr => qr(:, iend + I_ONE:)
-               call riemann_hlld_u(p_flx, p_ql, p_qr, fl%gam, p_ct_flx, p_ctl, p_ctr)
+               call riemann_hlld_u(p_flx, p_ql, p_qr, cs2, fl%gam, p_ct_flx, p_ctl, p_ctr)
             else
-               call riemann_hlld_u(p_flx, p_ql, p_qr, fl%gam)
+               call riemann_hlld_u(p_flx, p_ql, p_qr, cs2, fl%gam)
             endif
          end associate
       enddo
@@ -152,11 +157,12 @@ contains
 !! \brief single-fluid HLLD Riemann solver
 !<
 
-   subroutine riemann_hlld(f, ul, ur, b_cc, b_ccl, b_ccr, gamma, p_ct_flx, p_ctl, p_ctr)
+   subroutine riemann_hlld(f, ul, ur, b_cc, b_ccl, b_ccr, cs2, gamma, p_ct_flx, p_ctl, p_ctr)
 
     ! external procedures
 
     use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien, DIVB_HDC, psidim
+    use dataio_pub, only: die
     use func,       only: operator(.notequals.), operator(.equals.)
     use global,     only: divB_0_method
     use hdc,        only: chspeed
@@ -169,6 +175,7 @@ contains
     real, dimension(:,:), pointer,           intent(in)  :: ul, ur        !< left and right states of density, velocity and energy
     real, dimension(:,:), pointer,           intent(out) :: b_cc          !< cell-centered magnetic field flux (including psi field when necessary)
     real, dimension(:,:), pointer,           intent(in)  :: b_ccl, b_ccr  !< left and right states of magnetic field (including psi field when necessary)
+    real, dimension(:),   pointer,           intent(in)  :: cs2           !< square of local isothermal sound speed
     real, dimension(:,:), pointer, optional, intent(out) :: p_ct_flx      !< CR and tracers flux
     real, dimension(:,:), pointer, optional, intent(in)  :: p_ctl, p_ctr  !< left and right states of CR and tracers
     real,                                    intent(in)  :: gamma         !< gamma of current gas type
@@ -176,7 +183,9 @@ contains
     ! Local variables
 
     integer                                      :: i
+#ifndef ISO
     real, parameter                              :: four = 4.0
+#endif /* !ISO */
     real                                         :: sm, sl, sr
     real                                         :: alfven_l, alfven_r, c_fastm, gampr_l, gampr_r
     real                                         :: slsm, srsm, slvxl, srvxr, srmsl, dn_l, dn_r
@@ -195,10 +204,6 @@ contains
     logical                                      :: has_energy
     real                                         :: ue
 
-#ifdef ISO
-#  error Isothermal EOS is not implemented yet in this Riemann solver.
-#endif /* ISO */
-
     ! SOLVER
 
     ! suppress complains caused by -Wmaybe-uninitialized
@@ -206,6 +211,15 @@ contains
     b_ccrf = 0.
     !if (divB_0_method /= DIVB_HDC) b_cc(xdim,:) = 0.
     has_energy = (ubound(ul, dim=2) >= ien)
+    enl = huge(1.)
+    enr = huge(1.)
+#ifdef ISO
+    if (has_energy) call die("[hlld:riemann_hlld] ISO .and. has_energy")
+    gampr_l = huge(1.)
+    gampr_r = huge(1.)
+    if (.not. associated(cs2)) call die("[hlld:riemann_hlld] ISO .and. .not. associated(cs2)")
+#endif /* ISO */
+
     ue = 0.
 
     if (present(p_ct_flx)) p_ct_flx = huge(1.)
@@ -228,40 +242,49 @@ contains
        ! Left and right states of total pressure
        ! From fluidupdate.F90, utoq() (1) is used in hydro regime and (2) in MHD regime. In case of vanishing magnetic fields the magnetic components do not contribute and hydro results are obtained trivially.
 
-       if (has_energy) then
+       if (gamma < 0.) then  ! DUST
+          ! Beware: tricky detection, may take revenge on use some day
+          prl = 0.
+          prr = 0.
+          c_fastm = 0.
+       else
+#ifdef ISO
+          prl = cs2(i) * ul(i, idn) + magprl
+          prr = cs2(i) * ur(i, idn) + magprr
+          c_fastm = sqrt(max(cs2(i)+2*magprl/ul(i, idn), cs2(i)+2*magprr/ur(i, idn)))
+#else /* ISO */
+          if (has_energy) then
 
-          prl = ul(i, ien) + magprl ! ul(i, ien) is the left state of gas pressure
-          prr = ur(i, ien) + magprr ! ur(i, ien) is the right state of gas pressure
+             prl = ul(i, ien) + magprl ! ul(i, ien) is the left state of gas pressure
+             prr = ur(i, ien) + magprr ! ur(i, ien) is the right state of gas pressure
 
-          ! Left and right states of energy Eq. 2.
+             ! Left and right states of energy Eq. 2.
 
-          enl = (ul(i, ien)/(gamma -one)) + half*ul(i, idn)*sum(ul(i, imx:imz)**2) + half*sum(b_ccl(i, xdim:zdim)**2)
-          enr = (ur(i, ien)/(gamma -one)) + half*ur(i, idn)*sum(ur(i, imx:imz)**2) + half*sum(b_ccr(i, xdim:zdim)**2)
+             enl = (ul(i, ien)/(gamma -one)) + half*ul(i, idn)*sum(ul(i, imx:imz)**2) + half*sum(b_ccl(i, xdim:zdim)**2)
+             enr = (ur(i, ien)/(gamma -one)) + half*ur(i, idn)*sum(ur(i, imx:imz)**2) + half*sum(b_ccr(i, xdim:zdim)**2)
 
-          ! Left and right states of gamma*p_gas
+             ! Left and right states of gamma*p_gas
 
-          gampr_l = gamma*ul(i, ien)
-          gampr_r = gamma*ur(i, ien)
+             gampr_l = gamma*ul(i, ien)
+             gampr_r = gamma*ur(i, ien)
 
-       else ! this is for DUST (presureless fluid)
+             ! Left and right states of fast magnetosonic waves Eq. 3
+             c_fastm = sqrt(half*max( &
+                  ((gampr_l+sum(b_ccl(i, xdim:zdim)**2)) + sqrt((gampr_l+sum(b_ccl(i, xdim:zdim)**2))**2-(four*gampr_l*b_ccl(i, xdim)**2)))/ul(i, idn), &
+                  ((gampr_r+sum(b_ccr(i, xdim:zdim)**2)) + sqrt((gampr_r+sum(b_ccr(i, xdim:zdim)**2))**2-(four*gampr_r*b_ccr(i, xdim)**2)))/ur(i, idn)) )
 
-          ! check if it is consistent
-          prl = magprl
-          prr = magprr
+          else
 
-          enl = half*ul(i, idn)*sum(ul(i, imx:imz)**2) + half*sum(b_ccl(i, xdim:zdim)**2)
-          enr = half*ur(i, idn)*sum(ur(i, imx:imz)**2) + half*sum(b_ccr(i, xdim:zdim)**2)
+             call die("[hlld:riemann_hlld] non-ISO and non-dust and does not have energy?")
 
-          gampr_l = 0.
-          gampr_r = 0.
+             c_fastm = 0.
+             prl = 0.
+             prr = 0.
 
+          endif
+
+#endif /* ISO */
        endif
-
-       ! Left and right states of fast magnetosonic waves Eq. 3
-
-       c_fastm = sqrt(half*max( &
-             ((gampr_l+sum(b_ccl(i, xdim:zdim)**2)) + sqrt((gampr_l+sum(b_ccl(i, xdim:zdim)**2))**2-(four*gampr_l*b_ccl(i, xdim)**2)))/ul(i, idn), &
-             ((gampr_r+sum(b_ccr(i, xdim:zdim)**2)) + sqrt((gampr_r+sum(b_ccr(i, xdim:zdim)**2))**2-(four*gampr_r*b_ccr(i, xdim)**2)))/ur(i, idn)) )
 
        ! Estimates of speed for left and right going waves Eq. 67
 
@@ -405,7 +428,11 @@ contains
 
                 ! Left intermediate flux Eq. 64
 
-                f(i, :) = fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ] )
+                if (has_energy) then
+                   f(i, :) = fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ] )
+                else
+                   f(i, :) = fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz) ] )
+                endif
                 b_cc(i, ydim:zdim) = b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(i, ydim:zdim))
                 if (present(p_ct_flx)) &
                      p_ct_flx(i, :) = p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. ))
@@ -414,7 +441,11 @@ contains
 
                 ! Right intermediate flux Eq. 64
 
-                f(i, :) = fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ] )
+                if (has_energy) then
+                   f(i, :) = fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ] )
+                else
+                   f(i, :) = fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz) ] )
+                endif
                 b_cc(i, ydim:zdim) = b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(i, ydim:zdim))
                 if (present(p_ct_flx)) &
                      p_ct_flx(i, :) = p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. ))
@@ -475,7 +506,11 @@ contains
 
                 if (sm > zero) then
                    ! Left Alfven intermediate flux Eq. 65
-                   f(i, :) = fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]
+                   if (has_energy) then
+                      f(i, :) = fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]
+                   else
+                      f(i, :) = fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(i, idn), ul(i, idn)*ul(i, imx:imz) ]
+                   endif
                    b_cc(i, ydim:zdim) = b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(i, ydim:zdim)
                    if (present(p_ct_flx)) &
                         p_ct_flx(i, :) = p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. ))
@@ -483,7 +518,11 @@ contains
 
                 else if (sm < zero) then
                    ! Right Alfven intermediate flux Eq. 65
-                   f(i, :) = fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]
+                   if (has_energy) then
+                      f(i, :) = fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]
+                   else
+                      f(i, :) = fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(i, idn), ur(i, idn)*ur(i, imx:imz) ]
+                   endif
                    b_cc(i, ydim:zdim) = b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(i, ydim:zdim)
                    if (present(p_ct_flx)) &
                         p_ct_flx(i, :) = p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. ))
@@ -492,9 +531,15 @@ contains
                 else ! sm = 0
 
                    ! Left and right Alfven intermediate flux Eq. 65
-                   f(i, :) = half*( &
-                        (fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]) + &
-                        (fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]))
+                   if (has_energy) then
+                      f(i, :) = half*( &
+                           (fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]) + &
+                           (fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]))
+                   else
+                      f(i, :) = half*( &
+                           (fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(i, idn), ul(i, idn)*ul(i, imx:imz) ]) + &
+                           (fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(i, idn), ur(i, idn)*ur(i, imx:imz) ]))
+                   endif
 
                    b_cc(i, ydim:zdim) = half*( &
                         (b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(i, ydim:zdim)) + &
@@ -517,7 +562,11 @@ contains
 
                 ! Left intermediate flux Eq. 64
 
-                f(i, :)  =  fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ])
+                if (has_energy) then
+                   f(i, :)  =  fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ])
+                else
+                   f(i, :)  =  fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz) ])
+                endif
                 b_cc(i, ydim:zdim) = b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(i, ydim:zdim))
                 if (present(p_ct_flx)) &
                      p_ct_flx(i, :) = p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. ))
@@ -525,7 +574,11 @@ contains
 
              else if (sm < zero) then
 
-                f(i, :)  =  fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ])
+                if (has_energy) then
+                   f(i, :)  =  fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ])
+                else
+                   f(i, :)  =  fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz) ])
+                endif
                 b_cc(i, ydim:zdim) = b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(i, ydim:zdim))
                 if (present(p_ct_flx)) &
                      p_ct_flx(i, :) = p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. ))
@@ -535,8 +588,13 @@ contains
 
                 ! Average left and right flux if both sm = 0 = B_x
 
-                f(i, :) = half * (fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]) + &
-                     &           fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]))
+                if (has_energy) then
+                   f(i, :) = half * (fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]) + &
+                        &            fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]))
+                else
+                   f(i, :) = half * (fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz) ]) + &
+                        &            fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz) ]))
+                endif
                 b_cc(i, ydim:zdim) = half*(b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(i, ydim:zdim)) + &
                      &                    b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(i, ydim:zdim)))
                 if (present(p_ct_flx)) &
@@ -553,14 +611,26 @@ contains
 
     enddo
 
+#ifndef ISO
+    if (.false.) write(0,*) cs2
+#endif /* ISO */
+
  end subroutine riemann_hlld
 
- subroutine riemann_hlld_u(f, ul, ur, gamma, p_ct_flx, p_ctl, p_ctr)
+! This is riemann_hlld stripped of magnetic field
+! It should perhaps be renamed to HLLC
+! Unlike HLLD it has support for isothermal EOS
+
+ subroutine riemann_hlld_u(f, ul, ur, cs2, gamma, p_ct_flx, p_ctl, p_ctr)
 
     ! external procedures
 
-    use constants, only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien
-    use func,      only: operator(.equals.)
+    use constants,  only: half, zero, xdim, ydim, zdim, idn, imx, imy, imz, ien
+    use dataio_pub, only: die
+    use func,       only: operator(.equals.)
+#ifndef ISO
+    use constants,  only: one
+#endif /* ISO */
 
     ! arguments
 
@@ -568,6 +638,7 @@ contains
 
     real, dimension(:,:), pointer,           intent(out) :: f             !< demsity, momentum and energy fluxes
     real, dimension(:,:), pointer,           intent(in)  :: ul, ur        !< left and right states of density, velocity and energy
+    real, dimension(:),   pointer,           intent(in)  :: cs2           !< square of local isothermal sound speed
     real, dimension(:,:), pointer, optional, intent(out) :: p_ct_flx      !< CR and tracers flux
     real, dimension(:,:), pointer, optional, intent(in)  :: p_ctl, p_ctr  !< left and right states of CR and tracers
     real,                                    intent(in)  :: gamma         !< gamma of current gas type
@@ -589,13 +660,18 @@ contains
     logical                                      :: has_energy
     real                                         :: ue
 
-#ifdef ISO
-#  error Isothermal EOS is not implemented yet in this Riemann solver.
-#endif /* ISO */
-
     ! SOLVER
 
     has_energy = (ubound(ul, dim=2) >= ien)
+    enl = huge(1.)
+    enr = huge(1.)
+#ifdef ISO
+    if (has_energy) call die("[hlld:riemann_hlld_u] ISO .and. has_energy")
+    gampr_l = huge(1.)
+    gampr_r = huge(1.)
+    if (.not. associated(cs2)) call die("[hlld:riemann_hlld_u] ISO .and. .not. associated(cs2)")
+#endif /* ISO */
+
     ue = 0.
     slsm = 0.
     srsm = 0.
@@ -607,38 +683,47 @@ contains
        ! Left and right states of total pressure
        ! From fluidupdate.F90, utoq() (1) is used in hydro regime and (2) in MHD regime. In case of vanishing magnetic fields the magnetic components do not contribute and hydro results are obtained trivially.
 
-       if (has_energy) then
-
-          prl = ul(i, ien)  ! ul(i, ien) is the left state of gas pressure
-          prr = ur(i, ien)  ! ur(i, ien) is the right state of gas pressure
-
-          ! Left and right states of energy Eq. 2.
-
-          enl = (ul(i, ien)/(gamma -one)) + half*ul(i, idn)*sum(ul(i, imx:imz)**2)
-          enr = (ur(i, ien)/(gamma -one)) + half*ur(i, idn)*sum(ur(i, imx:imz)**2)
-
-          ! Left and right states of gamma*p_gas
-
-          gampr_l = gamma*ul(i, ien)
-          gampr_r = gamma*ur(i, ien)
-
-       else ! this is for DUST (presureless fluid)
-
-          ! check if it is consistent
+       if (gamma < 0.) then  ! DUST
+          ! Beware: tricky detection, may take revenge on use some day
           prl = 0.
           prr = 0.
+          c_fastm = 0.
+       else
+#ifdef ISO
+          prl = cs2(i) * ul(i, idn)
+          prr = cs2(i) * ur(i, idn)
+          c_fastm = sqrt(cs2(i))
+#else /* ISO */
+          if (has_energy) then
 
-          enl = half*ul(i, idn)*sum(ul(i, imx:imz)**2)
-          enr = half*ur(i, idn)*sum(ur(i, imx:imz)**2)
+             prl = ul(i, ien)  ! ul(i, ien) is the left state of gas pressure
+             prr = ur(i, ien)  ! ur(i, ien) is the right state of gas pressure
 
-          gampr_l = 0.
-          gampr_r = 0.
+             ! Left and right states of energy Eq. 2.
 
+             enl = (ul(i, ien)/(gamma - one)) + half*ul(i, idn)*sum(ul(i, imx:imz)**2)
+             enr = (ur(i, ien)/(gamma - one)) + half*ur(i, idn)*sum(ur(i, imx:imz)**2)
+
+             ! Left and right states of gamma*p_gas
+
+             gampr_l = gamma*ul(i, ien)
+             gampr_r = gamma*ur(i, ien)
+
+             ! Left and right states of fast magnetosonic waves Eq. 3
+             c_fastm = sqrt(max(gampr_l/ul(i, idn), gampr_r/ur(i, idn)) )
+
+          else
+
+             call die("[hlld:riemann_hlld_u] non-ISO and non-dust and does not have energy?")
+
+             c_fastm = 0.
+             prl = 0.
+             prr = 0.
+
+          endif
+
+#endif /* ISO */
        endif
-
-       ! Left and right states of fast magnetosonic waves Eq. 3
-
-       c_fastm = sqrt(max(gampr_l/ul(i, idn), gampr_r/ur(i, idn)) )
 
        ! Estimates of speed for left and right going waves Eq. 67
 
@@ -726,21 +811,33 @@ contains
           if (sm > zero) then
 
              ! Left intermediate flux Eq. 64
-
-             f(i, :)  =  fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ])
+             if (has_energy) then
+                f(i, :)  =  fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ])
+             else
+                f(i, :)  =  fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz) ])
+             endif
              if (present(p_ct_flx)) p_ct_flx(i, :) = p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. ))
 
           else if (sm < zero) then
 
-             f(i, :)  =  fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ])
+             if (has_energy) then
+                f(i, :)  =  fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ])
+             else
+                f(i, :)  =  fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz) ])
+             endif
              if (present(p_ct_flx)) p_ct_flx(i, :) = p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. ))
 
           else ! sm = 0
 
              ! Average left and right flux if both sm = 0 = B_x
 
-             f(i, :) = half * (fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]) + &
-                  &            fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]))
+             if (has_energy) then
+                f(i, :) = half * (fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]) + &
+                     &            fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]))
+             else
+                f(i, :) = half * (fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz) ]) + &
+                     &            fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz) ]))
+             endif
              if (present(p_ct_flx)) p_ct_flx(i, :) = half * (p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. )) + &
                   &                                          p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. )) )
 
@@ -749,6 +846,10 @@ contains
        endif
 
     enddo
+
+#ifndef ISO
+    if (.false.) write(0,*) cs2
+#endif /* ISO */
 
  end subroutine riemann_hlld_u
 

@@ -365,12 +365,12 @@ contains
 
       use cg_leaves,          only: leaves
 #if defined(__INTEL_COMPILER)
-      use cg_level_connected, only: cg_level_connected_T  ! QA_WARN workaround for stupid INTEL compiler
+      use cg_level_connected, only: cg_level_connected_t  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
       use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
-      use constants,          only: base_level_id, zero
+      use constants,          only: base_level_id, zero, dirtyH1
       use dataio_pub,         only: die
       use func,               only: operator(.notequals.)
       use initcosmicrays,     only: iarr_crs
@@ -383,9 +383,9 @@ contains
 
       if (finest%level%l%id /= base_level_id) call die("[multigrid_diffusion:init_source] refinements not implemented yet")
 
-      call all_cg%set_dirty(source)
-      call all_cg%set_dirty(correction)
-      call all_cg%set_dirty(defect)
+      call all_cg%set_dirty(source, 0.969*dirtyH1)
+      call all_cg%set_dirty(correction, 0.968*dirtyH1)
+      call all_cg%set_dirty(defect, 0.967*dirtyH1)
       ! Trick residual subroutine to initialize with: u + (1-theta) dt grad (c grad u)
       if (diff_theta .notequals. zero) then
          call leaves%wq_copy(wna%fi, iarr_crs(cr_id), qna%wai)
@@ -411,9 +411,10 @@ contains
 
       use cg_list_global,   only: all_cg
 #if defined(__INTEL_COMPILER)
-      use cg_level_connected, only: cg_level_connected_T  ! QA_WARN workaround for stupid INTEL compiler
+      use cg_level_connected, only: cg_level_connected_t  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
       use cg_leaves,        only: leaves
+      use constants,        only: dirtyH1
       use initcosmicrays,   only: iarr_crs
       use multigridvars,    only: solution
       use named_array_list, only: wna
@@ -422,7 +423,7 @@ contains
 
       integer, intent(in) :: cr_id !< CR component index
 
-      call all_cg%set_dirty(solution)
+      call all_cg%set_dirty(solution, 0.966*dirtyH1)
       call leaves%wq_copy(wna%fi, iarr_crs(cr_id), solution)
       call leaves%check_dirty(solution, "init solution")
 
@@ -439,12 +440,12 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
       use cg_list_global,     only: all_cg
-      use constants,          only: xdim, zdim, HI, LO, BND_REF
+      use constants,          only: xdim, zdim, HI, LO, BND_REF, dirtyH1
       use domain,             only: dom
       use grid_cont,          only: grid_container
       use named_array,        only: p3, p4
@@ -455,10 +456,10 @@ contains
       integer(kind=4) :: ib
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      type(cg_level_connected_T),   pointer :: curl
+      type(cg_level_connected_t),   pointer :: curl
 
       do ib = xdim, zdim
-         call all_cg%set_dirty(idiffb(ib))
+         call all_cg%set_dirty(idiffb(ib), (0.965+0.0001*ib)*dirtyH1)
 #if 1
          cgl => leaves%first
          do while (associated(cgl))
@@ -498,11 +499,11 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
-      use constants,          only: base_level_id, zero, tmr_mgd
+      use constants,          only: base_level_id, zero, tmr_mgd, dirtyH1
       use dataio_pub,         only: msg, warn, die
       use global,             only: do_ascii_dump
       use func,               only: operator(.notequals.)
@@ -521,7 +522,7 @@ contains
       integer            :: v
       real               :: norm_lhs, norm_rhs, norm_old
       logical            :: dump_every_step
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
 
       write(vstat%cprefix,'("C",i1,"-")') cr_id !> \deprecated BEWARE: this is another place with 0 <= cr_id <= 9 limit
       write(dirty_label, '("md_",i1,"_dump")')  cr_id
@@ -541,7 +542,7 @@ contains
 
       do v = 0, max_cycles
 
-         call all_cg%set_dirty(defect)
+         call all_cg%set_dirty(defect, 0.964*dirtyH1)
 
          call residual(finest%level, source, solution, defect, cr_id) ! leaves?
          norm_lhs = leaves%norm_sq(defect)
@@ -574,7 +575,7 @@ contains
 
          call finest%level%restrict_to_floor_q_1var(defect)
 
-         !call all_cg%set_dirty(correction)
+         !call all_cg%set_dirty(correction, 0.963*dirtyH1)
          call coarsest%level%set_q_value(correction, 0.)
 
          curl => coarsest%level
@@ -698,7 +699,7 @@ contains
 
    subroutine residual(curl, src, soln, def, cr_id)
 
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use constants,          only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
       use dataio_pub,         only: die
       use domain,             only: dom
@@ -711,7 +712,7 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(inout) :: curl !< level for which approximate the solution
+      type(cg_level_connected_t), pointer, intent(inout) :: curl !< level for which approximate the solution
       integer(kind=4),                     intent(in)    :: src   !< index of source in cg%q(:)
       integer(kind=4),                     intent(in)    :: soln  !< index of solution in cg%q(:)
       integer(kind=4),                     intent(in)    :: def   !< index of defect in cg%q(:)
@@ -767,7 +768,7 @@ contains
    subroutine approximate_solution(curl, src, soln, cr_id)
 
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use constants,          only: xdim, ydim, zdim, one, half, ndims, LO, GEO_XYZ
       use dataio_pub,         only: die
       use domain,             only: dom
@@ -778,7 +779,7 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(inout) :: curl  !< level for which approximate the solution
+      type(cg_level_connected_t), pointer, intent(inout) :: curl  !< level for which approximate the solution
       integer(kind=4),                     intent(in)    :: src   !< index of source in cg%q(:)
       integer(kind=4),                     intent(in)    :: soln  !< index of solution in cg%q(:)
       integer,                             intent(in)    :: cr_id !< CR component index

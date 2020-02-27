@@ -36,17 +36,17 @@
 
 module dot
 
-   use decomposition,   only: cuboid
+   use decomposition, only: cuboid
 
    implicit none
 
    private
-   public :: dot_T
+   public :: dot_t
 
    !> \brief cuboid with SFC_id
    type, extends(cuboid) :: c_id
       integer(kind=8) :: SFCid
-   end type C_id
+   end type c_id
 
    !> \brief A list of grid pieces (typically used as a list of all grids residing on a given process)
    type :: cuboids
@@ -56,7 +56,7 @@ module dot
    end type cuboids
 
    !> \brief Depiction of global Topology of a level. Use with care, because this is an antiparallel thing
-   type :: dot_T
+   type :: dot_t
       type(cuboids),   dimension(:),   allocatable :: gse           !< lists of grid chunks on each process (FIRST:LAST)
       integer(kind=8), dimension(:,:), allocatable :: SFC_id_range  !< min and max SFC id on processes
       integer                                      :: tot_se        !< global number of grids on the level
@@ -71,9 +71,10 @@ module dot
       procedure :: check_blocky         !< Check if all blocks in the domain have same size and shape
       procedure :: update_SFC_id_range  !< Update SFC_id_range array and set this%is_strict_SFC
       procedure :: find_grid            !< Find process and grid_id using SFC_id
-   end type dot_T
+   end type dot_t
 
    integer(kind=8), parameter :: huge_SFC = huge(1_8)
+   integer, dimension(:), allocatable :: pp  ! an array used in find_grid
 
 contains
 
@@ -83,10 +84,11 @@ contains
 
       implicit none
 
-      class(dot_T), intent(inout) :: this
+      class(dot_t), intent(inout) :: this
 
       if (allocated(this%gse)) deallocate(this%gse) ! this%gse(:)%c should be deallocated automagically
       if (allocated(this%SFC_id_range)) deallocate(this%SFC_id_range)
+      if (allocated(pp)) deallocate(pp)
 
    end subroutine cleanup
 
@@ -108,7 +110,7 @@ contains
 
       implicit none
 
-      class(dot_T),                      intent(inout) :: this       !< object invoking type bound procedure
+      class(dot_t),                      intent(inout) :: this       !< object invoking type bound procedure
       type(cg_list_element), pointer,    intent(in)    :: first_cgl  !< first grid on the list belonging to given level
       integer(kind=4),                   intent(in)    :: cnt        !< number of grids on given level
       integer(kind=8), dimension(ndims), intent(in)    :: off        !< offset of the level
@@ -184,7 +186,7 @@ contains
 
       implicit none
 
-      class(dot_T),                   intent(inout) :: this       !< object invoking type bound procedure
+      class(dot_t),                   intent(inout) :: this       !< object invoking type bound procedure
       type(cg_list_element), pointer, intent(in)    :: first_cgl  !< first grid on the list belonging to given level
       integer(kind=4),                intent(in)    :: cnt        !< number of grids on given level to be initialized
       integer                        :: i
@@ -217,7 +219,7 @@ contains
 
       implicit none
 
-      class(dot_T), intent(inout) :: this  !< object invoking type bound procedure
+      class(dot_t), intent(inout) :: this  !< object invoking type bound procedure
 
       integer :: p
 
@@ -238,7 +240,7 @@ contains
 
       implicit none
 
-      class(dot_T),                   intent(inout) :: this       !< object invoking type bound procedure
+      class(dot_t),                   intent(inout) :: this       !< object invoking type bound procedure
       type(cg_list_element), pointer, intent(in)    :: first_cgl  !< first grid on the list belonging to given level
 
       type(cg_list_element), pointer :: cgl
@@ -268,7 +270,7 @@ contains
 
       implicit none
 
-      class(dot_T), intent(inout) :: this       !< object invoking type bound procedure
+      class(dot_t), intent(inout) :: this       !< object invoking type bound procedure
 
       integer(kind=4), dimension(ndims) :: shape, shape1
       integer(kind=4), parameter :: sh_tag = 7
@@ -319,7 +321,7 @@ contains
 
       implicit none
 
-      class(dot_T),                      intent(inout) :: this !< object invoking type bound procedure
+      class(dot_t),                      intent(inout) :: this !< object invoking type bound procedure
       integer(kind=8), dimension(ndims), intent(in)    :: off  !< offset of the level
 
       integer(kind=8) :: SFC_id
@@ -370,20 +372,23 @@ contains
 
       implicit none
 
-      class(dot_T),    intent(inout) :: this
+      class(dot_t),    intent(inout) :: this
       integer(kind=8), intent(in)    :: SFC_id
       integer,         intent(out)   :: p
       integer,         intent(out)   :: grid_id
 
-      integer, dimension(:), allocatable :: pp
-      integer :: ip, il, iu, j
+      integer :: ip, il, iu, j, pp_lb, pp_ub
+      integer, parameter :: bin2seq = 3  ! when to switch from bisection to sequential search? 3 seemed to be most optimal value to switch to sequential in one experiment.
+
+      if (.not. allocated(pp)) allocate(pp(FIRST:LAST))
 
       ! search for p
       p = INVALID
       if (this%is_strict_SFC) then
          ! binary search
-         allocate(pp(1))
-         pp = INVALID
+         pp_lb = FIRST
+         pp_ub = pp_lb
+         pp(pp_lb) = INVALID
          il = lbound(this%SFC_id_range, dim=1)
          iu = ubound(this%SFC_id_range, dim=1)
          do while (iu-il > 1)
@@ -397,14 +402,15 @@ contains
             endif
          enddo
          do j = il, iu
-            if (this%SFC_id_range(j, LO) <= SFC_id .and. this%SFC_id_range(j, HI) >= SFC_id) pp(1) = j
+            if (this%SFC_id_range(j, LO) <= SFC_id .and. this%SFC_id_range(j, HI) >= SFC_id) pp(pp_lb) = j
          enddo
       else
          ! sequential search, return many possible p's
-         allocate(pp(FIRST:LAST))
-         pp = INVALID
-         il = lbound(pp, dim=1)
-         do ip = lbound(pp, dim=1), ubound(pp, dim=1)
+         pp_lb = FIRST
+         pp_ub = LAST
+         pp(pp_lb:pp_ub) = INVALID
+         il = pp_lb
+         do ip = pp_lb, pp_ub
             if (this%SFC_id_range(ip, LO) <= SFC_id .and. this%SFC_id_range(ip, HI) >= SFC_id) then
                pp(il) = ip
                il = il + 1
@@ -414,13 +420,13 @@ contains
 
       ! search for grid_id
       grid_id = INVALID
-      do ip = lbound(pp, dim=1), ubound(pp, dim=1)
+      do ip = pp_lb, pp_ub
          if (pp(ip) /= INVALID) then
             if (this%gse(pp(ip))%sorted) then
                ! binary search
                il = lbound(this%gse(pp(ip))%c, dim=1)
                iu = ubound(this%gse(pp(ip))%c, dim=1)
-               do while (iu-il > 1)
+               do while (iu-il > bin2seq)
                   j = (il+iu)/2
                   if (this%gse(pp(ip))%c(j)%SFCid <= SFC_id) then
                      il = j
@@ -440,7 +446,6 @@ contains
       enddo
 
       if (grid_id == INVALID) p = INVALID
-      deallocate(pp)
 
    contains
 

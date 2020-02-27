@@ -45,13 +45,13 @@ module cg_list_bnd
 
 ! pulled by ANY
 
-   use cg_list_dataop, only: cg_list_dataop_T
-   use merge_segments, only: merge_segments_T
+   use cg_list_dataop, only: cg_list_dataop_t
+   use merge_segments, only: merge_segments_t
 
    implicit none
 
    private
-   public :: cg_list_bnd_T
+   public :: cg_list_bnd_t
 
    !>
    !! \brief Lists of grid containers with boundary update
@@ -60,8 +60,8 @@ module cg_list_bnd
    !! Thus this type is usable only when the list consist of one or more full cg levels.
    !<
 
-   type, extends(cg_list_dataop_T), abstract :: cg_list_bnd_T
-      type(merge_segments_T) :: ms                         !< merged segments
+   type, extends(cg_list_dataop_t), abstract :: cg_list_bnd_t
+      type(merge_segments_t) :: ms                         !< merged segments
    contains
       procedure          :: level_3d_boundaries            !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
       procedure          :: level_4d_boundaries            !< Perform internal boundary exchanges and external boundary extrapolations on 4D named arrays
@@ -77,7 +77,7 @@ module cg_list_bnd
       procedure          :: bnd_u                          !< External (Non-MPI) boundary conditions for the fluid array: cg%u
       procedure          :: bnd_b                          !< External (Non-MPI) boundary conditions for the magnetic field array: cg%b
       !> \todo move routines for external guardcells for rank-4 arrays here as well (fluidboundaries and magboundaries)
-   end type cg_list_bnd_T
+   end type cg_list_bnd_t
 
 contains
 
@@ -93,7 +93,7 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(inout) :: this       !< the list on which to perform the boundary exchange
+      class(cg_list_bnd_t),      intent(inout) :: this       !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in)    :: ind        !< index of cg%q(:) 3d array
       integer(kind=4), optional, intent(in)    :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in)    :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
@@ -103,7 +103,7 @@ contains
 
       logical :: do_permpi
 
-      !> \todo fill corners with big_float ?
+      !> \todo fill corners with sth*dirtyH1 ?
 
       do_permpi = .true.
       if (present(area_type)) then
@@ -128,7 +128,7 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(inout) :: this       !< the list on which to perform the boundary exchange
+      class(cg_list_bnd_t),      intent(inout) :: this       !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in)    :: ind        !< index of cg%w(:) 4d array
       integer(kind=4), optional, intent(in)    :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in)    :: dir        !< select only this direction
@@ -136,7 +136,7 @@ contains
 
       logical :: do_permpi
 
-      !> \todo fill corners with big_float ?
+      !> \todo fill corners with sth*dirtyH1 ?
 
       do_permpi = .true.
       if (present(area_type)) then
@@ -155,7 +155,7 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(inout) :: this      !< the list on which to perform the boundary exchange
+      class(cg_list_bnd_t),      intent(inout) :: this      !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in)    :: ind       !< index of cg%q(:) 3d array
       integer(kind=4), optional, intent(in)    :: dir       !< do the internal boundaries only in the specified dimension
       logical,         optional, intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
@@ -170,7 +170,7 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(inout) :: this      !< the list on which to perform the boundary exchange
+      class(cg_list_bnd_t),      intent(inout) :: this      !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in)    :: ind       !< index of cg%w(:) 4d array
       integer(kind=4), optional, intent(in)    :: dir       !< do the internal boundaries only in the specified dimension
       logical,         optional, intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
@@ -203,7 +203,7 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(inout) :: this      !< the list on which to perform the boundary exchange
+      class(cg_list_bnd_t),      intent(inout) :: this      !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in)    :: ind       !< index of cg%q(:) 3d array or cg%w(:) 4d array
       logical,                   intent(in)    :: tgt3d     !< .true. for cg%q, .false. for cg%w
       integer(kind=4), optional, intent(in)    :: dir       !< do the internal boundaries only in the specified dimension
@@ -241,7 +241,7 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),             intent(in) :: this  !< the list on which to perform the boundary exchange
+      class(cg_list_bnd_t),             intent(in) :: this  !< the list on which to perform the boundary exchange
       integer(kind=4),                  intent(in) :: ind   !< index of cg%q(:) 3d array or cg%w(:) 4d array
       logical,                          intent(in) :: tgt3d !< .true. for cg%q, .false. for cg%w
       logical, dimension(xdim:cor_dim), intent(in) :: dmask !< .true. for the directions we want to exchange
@@ -322,7 +322,7 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),             intent(inout) :: this  !< the list on which to perform the boundary exchange
+      class(cg_list_bnd_t),             intent(inout) :: this  !< the list on which to perform the boundary exchange
       integer(kind=4),                  intent(in)    :: ind   !< index of cg%q(:) 3d array or cg%w(:) 4d array
       logical,                          intent(in)    :: tgt3d !< .true. for cg%q, .false. for cg%w
       logical, dimension(xdim:cor_dim), intent(in)    :: dmask !< .true. for the directions we want to exchange
@@ -472,7 +472,7 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),             intent(in) :: this  !< the list on which to perform the boundary exchange
+      class(cg_list_bnd_t),             intent(in) :: this  !< the list on which to perform the boundary exchange
       integer(kind=4),                  intent(in) :: ind   !< index of cg%q(:) 3d array or cg%w(:) 4d array
       logical,                          intent(in) :: tgt3d !< .true. for cg%q, .false. for cg%w
       logical, dimension(xdim:cor_dim), intent(in) :: dmask !< .true. for the directions we want to exchange
@@ -649,7 +649,7 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in)        :: this  !< the list on which to perform the action
+      class(cg_list_bnd_t), intent(in)        :: this  !< the list on which to perform the action
       integer(kind=4),      intent(in)        :: ind   !< Negative value: index of cg%q(:) 3d array
       real, optional,       intent(in)        :: value !< Value to be put in the boundaries (could be dirty)
 
@@ -660,7 +660,7 @@ contains
       real, dimension(:,:,:), pointer         :: pa3d
       real :: v
 
-      !> \todo fill corners with big_float ?
+      !> \todo fill corners with sth*dirtyH1 ?
 
       v = 0.
       if (present(value)) v=value
@@ -690,14 +690,14 @@ contains
 
    subroutine dirty_boundaries(this, ind)
 
-      use constants, only: dirtyH
+      use constants, only: dirtyH1
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in) :: this  !< the list on which to perform the action
+      class(cg_list_bnd_t), intent(in) :: this  !< the list on which to perform the action
       integer(kind=4),      intent(in) :: ind   !< Negative value: index of cg%q(:) 3d array
 
-      call this%clear_boundaries(ind, value=dirtyH)
+      call this%clear_boundaries(ind, value=0.87*dirtyH1)
 
    end subroutine dirty_boundaries
 
@@ -719,7 +719,7 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in)   :: this       !< the list on which to perform the boundary exchange
+      class(cg_list_bnd_t),      intent(in)   :: this       !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in)   :: ind        !< Negative value: index of cg%q(:) 3d array
       integer(kind=4), optional, intent(in)   :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in)   :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
@@ -822,11 +822,12 @@ contains
 #endif /* COSM_RAYS */
 #ifdef GRAV
       use constants,             only: BND_OUTH, BND_OUTHD, I_ZERO
+      use fluidboundaries_funcs, only: outh_fluidbnd
 #endif /* GRAV */
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in) :: this !< the list on which to perform the boundary exchange
+      class(cg_list_bnd_t), intent(in) :: this !< the list on which to perform the boundary exchange
       integer(kind=4),      intent(in) :: dir  !< the direction in which we perform fluid boundary update (xdim, ydim or zdim)
 
       type(grid_container), pointer           :: cg
@@ -890,9 +891,9 @@ contains
                   endif
 #ifdef GRAV
                case (BND_OUTH)
-                  call user_fluidbnd(dir, side, cg, wn=I_ZERO)
+                  call outh_fluidbnd(dir, side, cg, wn=I_ZERO)
                case (BND_OUTHD)
-                  call user_fluidbnd(dir, side, cg, wn=I_ONE)
+                  call outh_fluidbnd(dir, side, cg, wn=I_ONE)
 #endif /* GRAV */
                case default
                   write(msg,'("[cg_list_bnd:bnd_u]: Unrecognized ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
@@ -1003,7 +1004,7 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in) :: this !< the list on which to perform the boundary exchange
+      class(cg_list_bnd_t), intent(in) :: this !< the list on which to perform the boundary exchange
       integer(kind=4),      intent(in) :: dir  !< the direction in which we perform magnetic boundary update (xdim, ydim or zdim)
 
       type(grid_container), pointer           :: cg
