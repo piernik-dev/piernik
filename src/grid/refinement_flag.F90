@@ -184,7 +184,7 @@ contains
       implicit none
 
       class(ref_flag_t), intent(inout) :: this     !> object invoking this procedure
-      integer(kind=4), intent(in)      :: il, jl, kl, ih, jh, kh  !> box coordinates
+      integer(kind=8), intent(in)      :: il, jl, kl, ih, jh, kh  !> box coordinates
       logical, dimension(il:ih, jl:jh, kl:kh), optional, intent(in) :: mask  !> the mask to filter out something
 
 #ifdef DEBUG
