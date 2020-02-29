@@ -38,7 +38,7 @@ module global
    implicit none
 
    private
-   public :: cleanup_global, init_global, &
+   public :: cleanup_global, init_global, system_mem_usage, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
         &    integration_order, limiter, smalld, smallei, smallp, use_smalld, &
@@ -263,6 +263,48 @@ contains
       grace_period_passed = (t >= relax_time)
    end function grace_period_passed
 
-!-----------------------------------------------------------------------------
+!>
+!! \brief tell the current estimate of memory used by current thread.
+!!
+!! \todo Add optional intent(in) argument with other interesting labels such as VmPeak or VmSize
+!>
+
+   integer function system_mem_usage()
+
+      use constants,  only: INVALID, fnamelen
+      use dataio_pub, only: warn
+
+      implicit none
+
+      integer, parameter :: pidlen = 8
+      character(len=fnamelen) :: filename, line
+      character(len=pidlen)   :: pid_char
+      integer :: stat_lun, io
+      logical :: io_exists
+
+      system_mem_usage = INVALID
+
+      write(pid_char, '(i8)') getpid()
+      filename = '/proc/' // trim(adjustl(pid_char)) // '/status'
+
+      inquire (file=filename, exist=io_exists)
+      if (.not. io_exists) then
+         call warn("[global:system_mem_usage] Cannot find '" // filename // "'")
+         return
+      endif
+
+      open(newunit=stat_lun, file=filename, status='old')
+      do
+         read (stat_lun,'(a)', iostat=io) line
+         if (io /= 0) exit
+         if (line(1:6) == 'VmRSS:') then
+            read (line(7:), *) system_mem_usage
+            exit
+         endif
+      enddo
+
+      close(stat_lun)
+
+   end function system_mem_usage
 
 end module global
