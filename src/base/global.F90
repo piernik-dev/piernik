@@ -38,7 +38,7 @@ module global
    implicit none
 
    private
-   public :: cleanup_global, init_global, system_mem_usage, &
+   public :: cleanup_global, init_global, system_mem_usage, check_mem_usage, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
         &    integration_order, limiter, smalld, smallei, smallp, use_smalld, &
@@ -80,10 +80,11 @@ module global
    logical, dimension(xdim:zdim) :: skip_sweep        !< allows to skip sweep in chosen direction
    logical                       :: sweeps_mgu        !< Mimimal Guardcell Update in sweeps
    logical                       :: use_fargo         !< use Fast Eulerian Transport for differentially rotating disks
+   integer                       :: max_mem           !< MAximum allowed RSS memory per thread (in kiB)
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
         &                     repeat_step, limiter, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, &
-        &                     use_fargo
+        &                     use_fargo, max_mem
 
 contains
 
@@ -115,6 +116,7 @@ contains
 !!   <tr><td>skip_sweep       </td><td>F, F, F</td><td>logical array                        </td><td>\copydoc global::skip_sweep       </td></tr>
 !!   <tr><td>geometry25D      </td><td>F      </td><td>logical value                        </td><td>\copydoc global::geometry25d      </td></tr>
 !!   <tr><td>sweeps_mgu       </td><td>F      </td><td>logical value                        </td><td>\copydoc global::sweeps_mgu       </td></tr>
+!!   <tr><td>max_mem          </td><td>huge(1)</td><td>integer value                        </td><td>\copydoc global::max_mem          </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -158,6 +160,7 @@ contains
       relax_time  = 0.
       integration_order  = 2
       use_fargo   = .false.
+      max_mem     = huge(1)
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -191,6 +194,7 @@ contains
          cbuff(2) = cflcontrol
 
          ibuff(1) = integration_order
+         ibuff(2) = max_mem
 
          rbuff( 1) = smalld
          rbuff( 2) = smallc
@@ -243,6 +247,7 @@ contains
          cflcontrol = cbuff(2)
 
          integration_order = ibuff(1)
+         max_mem           = ibuff(2)
 
       endif
 
@@ -306,5 +311,42 @@ contains
       close(stat_lun)
 
    end function system_mem_usage
+
+!>
+!! \brief Check if current memory usage doex not exceed the limit.
+!!
+!! \detailed This routine should be called after each potentially large allocaltion.
+!! This may be used to crash Piernik before running into swapped memory.
+!!
+!! Cannot make a clean exit and call a restart dump from here because
+!! it is not guaranteed that each process visits this routine.
+!<
+
+   subroutine check_mem_usage
+
+      use dataio_pub, only: warn, die, msg
+      use mpisetup,   only: proc
+
+      implicit none
+
+      integer :: rss
+      real, parameter :: warnlevel = 0.95
+      integer, save :: nextwarn = 1, warncnt = 0
+
+      rss = system_mem_usage()
+
+      if (rss > max_mem) then
+         write(msg, '(a,2(i11,a),i5)')"[global:check_mem_usage] RSS exceeded max mem (", rss, " kiB > ", max_mem, " kiB) on process ", proc
+         call die(msg)
+      else if (rss > warnlevel*max_mem) then
+         warncnt = warncnt + 1
+         if (warncnt >= nextwarn) then
+            write(msg, '(a,2(i11,a),i5)')"[global:check_mem_usage] RSS is approaching max mem (", rss, " kiB <= ", max_mem, " kiB) on process ", proc
+            call warn(msg)
+            nextwarn = 2 * nextwarn
+         endif
+      endif
+
+   end subroutine check_mem_usage
 
 end module global

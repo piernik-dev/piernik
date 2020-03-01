@@ -103,6 +103,7 @@ contains
 
       use constants,  only: big_float, ndims, xdim, ydim, zdim, I_ONE
       use dataio_pub, only: die
+      use global,     only: check_mem_usage
 
       implicit none
 
@@ -123,6 +124,7 @@ contains
          class default
             call die("[named_array:named_array_init] No initialization for generic named array")
       end select
+      call check_mem_usage
 
    end subroutine named_array_init
 

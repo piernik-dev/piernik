@@ -181,6 +181,7 @@ contains
       use constants,       only: small, pi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, pMIN
       use dataio_pub,      only: die, warn
       use domain,          only: dom
+      use global,          only: check_mem_usage
       use mpisetup,        only: master, piernik_MPI_Allreduce
       use particle_pub,    only: pset
 
@@ -282,6 +283,7 @@ contains
 
          if (allocated(Q)) deallocate(Q)
          allocate(Q(0:lm(int(lmax), int(2*mmax)), INSIDE:OUTSIDE, 0:rqbin))
+         call check_mem_usage
 
       endif
 
