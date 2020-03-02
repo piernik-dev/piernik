@@ -326,7 +326,7 @@ if f_run == True:
     except:
        die("An empty field might have been picked.")
 
-    yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field,)
+    yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field)
     yt_data_plot.set_font({'size':options.fontsize})
 
     colormap_my  = plt.cm.viridis
@@ -379,7 +379,6 @@ if f_run == True:
     def mark_plot_save(coords):
         global click_coords, image_number, f_run, marker_index
 # ------------ preparing data and passing -------------------------
-        print(coords)
         position = h5ds.r[coords:coords]
         if ( plot_field[0:-2] != "en_ratio"):
            prtinfo (">>>>>>>>>>>>>>>>>>> Value of %s at point [%f, %f, %f] = %f " %(plot_field, coords[0], coords[1], coords[2], position[plot_field]))

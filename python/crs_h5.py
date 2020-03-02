@@ -343,19 +343,18 @@ def detect_active_bins_new(n_in, e_in):
    i_lo_tmp = 0 ; i_up_tmp = ncre
 
    for i in range(0,ncre):
-      if ( n_in[i] > 0.0 and e_in[i] > 0.0 ):
+      if ( n_in[i] > 0.0 and e_in[i] > 0.0 ):   # returns nonzero bin numbers reduced by one compared to CRESP fortran
          ne_gt_zero.append(i)
          num_active_bins = num_active_bins + 1
    if num_active_bins == 0: return active_bins_new, ncre, 0
 
-   i_lo_tmp = max(ne_gt_zero[0]-2,0)
-   i_up_tmp = ne_gt_zero[num_active_bins-1]
+   i_lo_tmp = max(ne_gt_zero[0]-2, 0)           # edge number
+   i_up_tmp = ne_gt_zero[num_active_bins-1]     # edge number
    pln = p_fix[i_lo_tmp:i_up_tmp]
    prn = p_fix[i_lo_tmp+1:i_up_tmp+1]
    num_active_bins = 0
 
-   for i in range(1,i_up_tmp - i_lo_tmp -1): # tmp: range(HI-1)
-
+   for i in range(1, i_up_tmp - i_lo_tmp -1):   # range(HI-1)
       q_tmp = 3.5 ; exit_code = False
       if (q_explicit == True):
          q_tmp, exit_code = nr_get_q(q_tmp, e_in[i+i_lo_tmp]/(n_in[i+i_lo_tmp]*c*pln[i]), prn[i]/pln[i], exit_code)
@@ -373,7 +372,7 @@ def detect_active_bins_new(n_in, e_in):
             num_active_bins = num_active_bins +1
 
    if num_active_bins == 0: return active_bins_new, i_lo_tmp, i_up_tmp
-   i_lo_tmp = max(active_bins_new[0]-2,0)
+   i_lo_tmp = max(active_bins_new[0]-1, 0)
    i_up_tmp = min(active_bins_new[-1]+2, ncre)  # temporary fix FIXME
 
    prtinfo("Active_bins: "+str(active_bins_new))
@@ -438,29 +437,32 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
     if interpolate_cutoffs:
        exit_code_lo = True
        pf_ratio_lo = [0., 0.]
-       pf_ratio_lo, exit_code_lo = crs_pf.get_interpolated_ratios("lo", ecrs[i_lo]/(ncrs[i_lo]*c*p_fix[i_lo+1]), ncrs[i_lo], exit_code_lo)
+       pf_ratio_lo, exit_code_lo = crs_pf.get_interpolated_ratios("lo", ecrs[i_lo]/(ncrs[i_lo]*c*p_fix[i_lo+1]), ncrs[i_lo], exit_code_lo, verbose=verbosity_2)
 
        exit_code_up = True
        pf_ratio_up = [0., 0.]
        if (i_up == ncre): i_up = i_up-1
-       pf_ratio_up, exit_code_up = crs_pf.get_interpolated_ratios("up", ecrs[i_up]/(ncrs[i_up]*c*p_fix[i_up-1]), ncrs[i_up], exit_code_up)
+       pf_ratio_up, exit_code_up = crs_pf.get_interpolated_ratios("up", ecrs[i_up-1]/(ncrs[i_up-1]*c*p_fix[i_up-1]), ncrs[i_up-1], exit_code_up, verbose=verbosity_2)
 
     pln = p_fix[i_lo:i_up]
     prn = p_fix[i_lo+1:i_up+1]
     pln = array(pln)
     prn = array(prn)
-    ncrs_act = ncrs[i_lo-2:i_up-2]
-    ecrs_act = ecrs[i_lo-2:i_up-2]
-    q_nr = [] ; fln = [] ; frn = []
+
     if interpolate_cutoffs:
        if exit_code_lo == True:
          if (verbosity_1): prtwarn("Failed to extract boundary (lo) p and f from e, n: pf_ratio_lo = %.6f. Assuming p_fix value." %pf_ratio_lo[0]) # p_fix assumed
        else:
-         pln[0]      = p_fix[i_lo+1] / pf_ratio_lo[0]
+         pln[0]    = p_fix[i_lo+1] / pf_ratio_lo[0]
+       fl_lo       = crs_pf.e_small_2_f(e_small, pln[0])
+       fr_lo       = fl_lo * pf_ratio_lo[1]
+
        if exit_code_up == True:
          if (verbosity_1): prtwarn("Failed to extract boundary (up) p and f from e, n: pf_ratio_up = %.6f. Assuming p_fix value." %pf_ratio_up[0]) # p_fix assumed
        else:
-         prn[-1]     = p_fix[i_up-1] * pf_ratio_up[0]
+         prn[-1]   = p_fix[i_up-1] * pf_ratio_up[0]
+       fr_up       = crs_pf.e_small_2_f(e_small, prn[-1])
+       fl_up       = fr_up / pf_ratio_up[1]
 
     if (not q_explicit):
        if (verbosity_2):  prtinfo("Spectral indices q will be interpolated")
@@ -470,6 +472,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
     else:
        if (verbosity_2):  prtinfo( "Spectral indices q will be obtained explicitly")
 
+    q_nr = [] ; fln = [] ; frn = []
     for i in range(0,i_up - i_lo):
       if (q_explicit == True):
          q_tmp = 3.5 ; exit_code = False
@@ -478,6 +481,18 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
          q_tmp = interpolate_q(ecrs[i+i_lo]/(ncrs[i+i_lo]*c*pln[i])) # this instruction is duplicated, TODO return it via detect_active_bins_new()
       q_nr.append(q_tmp)
       fln.append(nq2f(ncrs[i+i_lo], q_nr[-1], pln[i], prn[i]))
+
+    q_nr = array(q_nr)
+    fln  = array(fln)
+    frn  = array(fln)
+    frn  = frn * (prn/pln) ** (-q_nr)
+    plot = False
+
+    # retrieve slopes and f values for cutoffs
+    fln[0]  = fl_lo ; frn[0] = fr_lo
+    fln[-1] = fl_up ; frn[-1] = fr_up
+    q_nr[0]  = -log10(frn[0]/fln[0])/log10(prn[0]/pln[0])      ; q_nr[0]  = sign(q_nr[0])  * min(abs(q_nr[0]),  q_big)
+    q_nr[-1] = -log10(frn[-1]/fln[-1])/log10(prn[-1]/pln[-1])  ; q_nr[-1] = sign(q_nr[-1]) * min(abs(q_nr[-1]), q_big)
 
     if (verbosity_1):
       ncrs1e3=[];
@@ -490,12 +505,6 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
       fln1e3 = []
       for item in fln: fln1e3.append(float('%1.3e'%item))
       prtinfo("f = "+str(fln1e3))
-
-    q_nr = array(q_nr)
-    fln  = array(fln)
-    frn  = array(fln)
-    frn  = frn * (prn/pln) ** (-q_nr)
-    plot = False
 
     if (verbosity_1): prtinfo("Cutoff indices obtained (lo, up): %i, %i || momenta (lo, up): %f, %f " %(i_lo, i_up, pln[0], prn[-1]) )
 
