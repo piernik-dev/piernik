@@ -7,7 +7,6 @@
 #    anything, make it configurable
 
 import sys
-sys.path.append("python/")
 import os
 import json
 import tempfile
@@ -33,6 +32,7 @@ except ImportError:
     print "  emerge -1 dev-python/pysvn"
     print "  yum install pysvn"
     sys.exit(-1)
+sys.path.append("python/")
 
 
 def run_jenkins_job(branch, setup_args):

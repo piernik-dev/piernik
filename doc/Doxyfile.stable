@@ -1545,7 +1545,6 @@ PREDEFINED             = COLLISIONS \
                          NEUTRAL \
                          PERFMON \
                          PGPLOT \
-                         POISSON_FFT \
                          RESISTIVE \
                          SELF_GRAV \
                          SHEAR \

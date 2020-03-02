@@ -68,7 +68,7 @@ contains
    subroutine read_problem_par
 
       use cg_list_global, only: all_cg
-      use constants,      only: I_ONE, I_TEN, AT_NO_B
+      use constants,      only: xdim, ydim, zdim, I_ONE, I_TEN, AT_NO_B
       use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
       use dataio_pub,     only: die
       use domain,         only: dom
@@ -110,6 +110,10 @@ contains
          write(nh%lun,nml=PROBLEM_CONTROL)
          close(nh%lun)
          call nh%compare_namelist()
+
+         if (.not.dom%has_dir(xdim)) bx0 = 0. ! ignore B field in nonexistent direction to match the analytical solution
+         if (.not.dom%has_dir(ydim)) by0 = 0.
+         if (.not.dom%has_dir(zdim)) bz0 = 0.
 
          rbuff(1)  = d0
          rbuff(2)  = p0
@@ -193,10 +197,6 @@ contains
 ! Uniform equilibrium state
 
       cs_iso = sqrt(p0/d0)
-
-      if (.not.dom%has_dir(xdim)) bx0 = 0. ! ignore B field in nonexistent direction to match the analytical solution
-      if (.not.dom%has_dir(ydim)) by0 = 0.
-      if (.not.dom%has_dir(zdim)) bz0 = 0.
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -400,7 +400,7 @@ contains
       implicit none
 
       character(len=*),               intent(in)    :: var
-      real(kind=4), dimension(:,:,:), intent(inout) :: tab
+      real, dimension(:,:,:),         intent(inout) :: tab
       integer,                        intent(inout) :: ierrh
       type(grid_container), pointer,  intent(in)    :: cg
 
@@ -411,9 +411,9 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("acr1")
-            tab(:,:,:) = real(cg%q(qna%ind(aecr1_n))%span(cg%ijkse), 4)
+            tab(:,:,:) = real(cg%q(qna%ind(aecr1_n))%span(cg%ijkse), kind(tab))
          case ("err1")
-            tab(:,:,:) = real(cg%q(qna%ind(aecr1_n))%span(cg%ijkse) - cg%u(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = cg%q(qna%ind(aecr1_n))%span(cg%ijkse) - cg%u(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
          case default
             ierrh = -1
       end select

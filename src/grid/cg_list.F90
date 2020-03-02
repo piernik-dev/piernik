@@ -36,7 +36,7 @@ module cg_list
    implicit none
 
    private
-   public :: cg_list_T, cg_list_element
+   public :: cg_list_t, cg_list_element
 
    !>
    !! \brief A grid container with two links to other cg_list_elements
@@ -49,7 +49,7 @@ module cg_list
    end type cg_list_element
 
    !> \brief Arbitrary list of grid containers, not for direct use.
-   type, abstract :: cg_list_T
+   type, abstract :: cg_list_t
       type(cg_list_element), pointer :: first !< first element of the chain of grid containers, the most important one
       type(cg_list_element), pointer :: last  !< last element of the chain - useful for quick expanding and merging lists
       integer(kind=4) :: cnt                  !< number of chain links
@@ -78,7 +78,7 @@ module cg_list
 
 !> \todo merge lists
 
-   end type cg_list_T
+   end type cg_list_t
 
 contains
 
@@ -87,7 +87,7 @@ contains
 
       implicit none
 
-      class(cg_list_T), intent(inout) :: this  !< object invoking type-bound procedure
+      class(cg_list_t), intent(inout) :: this  !< object invoking type-bound procedure
       character(len=*), intent(in)    :: label !< name of the list
 
       this%first => null()
@@ -106,7 +106,7 @@ contains
 
       implicit none
 
-      class(cg_list_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_list_t), intent(inout) :: this !< object invoking type-bound procedure
       type(grid_container), optional, pointer, intent(in) :: cg !< new grid container that will be added to add_new::this
 
       type(cg_list_element), pointer :: new
@@ -145,7 +145,7 @@ contains
 
       implicit none
 
-      class(cg_list_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_list_t), intent(inout) :: this !< object invoking type-bound procedure
 
       type(cg_list_element), pointer  :: cgl
 
@@ -170,7 +170,7 @@ contains
 
       implicit none
 
-      class(cg_list_T),               intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_list_t),               intent(inout) :: this !< object invoking type-bound procedure
       type(cg_list_element), pointer, intent(inout) :: cgle !< the element to be unlinked
 
       if (.not. associated(cgle)) call die("[cg_list:un_link] tried to remove null() element")
@@ -193,7 +193,7 @@ contains
 
       implicit none
 
-      class(cg_list_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_list_t), intent(inout) :: this !< object invoking type-bound procedure
 
       type(cg_list_element), pointer :: cur
       integer :: cnt
@@ -262,7 +262,7 @@ contains
 
       implicit none
 
-      class(cg_list_T),              intent(inout) :: this     !< list for which do the dump (usually all_cg)
+      class(cg_list_t),              intent(inout) :: this     !< list for which do the dump (usually all_cg)
       integer(kind=4), dimension(:), intent(in)    :: qlst     !< list of scalar fields to be printed
       character(len=*),              intent(in)    :: basename !< first part of the filename
       integer, optional,             intent(in)    :: a        !< additional number
@@ -301,7 +301,7 @@ contains
 
       implicit none
 
-      class(cg_list_T),              intent(inout) :: this     !< list for which do the dump (usually all_cg)
+      class(cg_list_t),              intent(inout) :: this     !< list for which do the dump (usually all_cg)
       character(len=*),              intent(in)    :: filename !< name to write the emergency dump (should be different on each process)
       integer(kind=4), dimension(:), intent(in)    :: qlst     !< list of scalar fields to be printed
 
@@ -321,7 +321,7 @@ contains
          do i = cgl%cg%is, cgl%cg%ie
             do j = cgl%cg%js, cgl%cg%je
                do k = cgl%cg%ks, cgl%cg%ke
-                  write(fu, '(3i4,i6,3es20.11e3)', advance='no') i, j, k, cgl%cg%level_id, cgl%cg%x(i), cgl%cg%y(j), cgl%cg%z(k)
+                  write(fu, '(3i4,i6,3es20.11e3)', advance='no') i, j, k, cgl%cg%l%id, cgl%cg%x(i), cgl%cg%y(j), cgl%cg%z(k)
                   do q = lbound(qlst(:), dim=1), ubound(qlst(:), dim=1)
                      write(fu, '(es20.11e3)', advance='no') cgl%cg%q(qlst(q))%arr(i, j, k)
                   enddo
@@ -350,7 +350,7 @@ contains
 
       implicit none
 
-      class(cg_list_T), intent(in)   :: this
+      class(cg_list_t), intent(in)   :: this
 
       integer                        :: nrq, d, dr, dp
       type(cg_list_element), pointer :: cgl
@@ -394,7 +394,7 @@ contains
 
       implicit none
 
-      class(cg_list_T), intent(in)   :: this
+      class(cg_list_t), intent(in)   :: this
 
       type(cg_list_element), pointer :: cgl
 
@@ -412,7 +412,7 @@ contains
 
       implicit none
 
-      class(cg_list_T), intent(in)   :: this
+      class(cg_list_t), intent(in)   :: this
 
       type(cg_list_element), pointer :: cgl
 
@@ -430,7 +430,7 @@ contains
 
       implicit none
 
-      class(cg_list_T), intent(in)   :: this
+      class(cg_list_t), intent(in)   :: this
 
       type(cg_list_element), pointer :: cgl
 
@@ -448,13 +448,14 @@ contains
 
       implicit none
 
-      class(cg_list_T), intent(in) :: this !< object invoking type-bound procedure
+      class(cg_list_t), intent(in) :: this !< object invoking type-bound procedure
 
       type(cg_list_element), pointer :: cgl
 
       cgl => this%first
       do while (associated(cgl))
          call cgl%cg%refine_flags%init
+         cgl%cg%refinemap = .false.
          cgl => cgl%nxt
       enddo
 
@@ -466,7 +467,7 @@ contains
 
       implicit none
 
-      class(cg_list_T), intent(in) :: this !< object invoking type-bound procedure
+      class(cg_list_t), intent(in) :: this !< object invoking type-bound procedure
       integer :: cnt                       !< returned counter
 
       type(cg_list_element), pointer :: cgl
@@ -490,7 +491,7 @@ contains
 !!$
 !!$      implicit none
 !!$
-!!$      class(cg_list_T), intent(inout) :: this !< object invoking type-bound procedure
+!!$      class(cg_list_t), intent(inout) :: this !< object invoking type-bound procedure
 !!$      type(cg_list_element), pointer, intent(inout) :: cgle
 !!$
 !!$      type(cg_list_element), pointer :: cur, prv

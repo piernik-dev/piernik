@@ -36,7 +36,7 @@ module restart_hdf5_v1
    implicit none
 
    private
-   public :: read_restart_hdf5_v1, write_restart_hdf5_v1, read_arr_from_restart
+   public :: read_restart_hdf5_v1, write_restart_hdf5_v1
 
 contains
 
@@ -75,15 +75,11 @@ contains
 
       select case (area_type)
          case (AT_OUT_B)                                   ! physical domain with outer boundaries
-            where (cg%my_se(:, LO) == 0 .and. dom%has_dir(:))
-               lleft(:)  = lleft(:)  - dom%nb
-               chnk(:)   = chnk(:)   + dom%nb
-            endwhere
-            where (cg%h_cor1(:) == dom%n_d(:) .and. dom%has_dir(:)) !! \warning this should be checked against level%n_d
-               lright(:) = lright(:) + dom%nb
-               chnk(:)   = chnk(:)   + dom%nb
-            endwhere
-            where (loffs(:)>0) loffs(:) = loffs(:) + dom%nb ! the block adjacent to the left boundary are dom%nb cells wider than cg%n_b(:)
+            lleft(:)  = cg%lh_out(:, LO)
+            lright(:) = cg%lh_out(:, HI)
+            where (lleft(:)  /= cg%ijkse(:, LO)) chnk(:)  = chnk(:)  + dom%nb
+            where (lright(:) /= cg%ijkse(:, HI)) chnk(:)  = chnk(:)  + dom%nb
+            where (loffs(:)  >  cg%l%off(:))     loffs(:) = loffs(:) + dom%nb ! the block adjacent to the left boundary are dom%nb cells wider than cg%n_b(:)
          case (AT_NO_B)                                    ! only physical domain without any boundaries
             ! Nothing special
          case (AT_USER)                                    ! user defined domain (with no reference to simulations domain)
@@ -142,7 +138,6 @@ contains
 
       use constants,        only: cwdlen
       use hdf5,             only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
-      !, H5P_DATASET_XFER_F, h5pset_preserve_f
       use mpi,              only: MPI_INFO_NULL
       use mpisetup,         only: comm
       use named_array_list, only: qna, wna
@@ -174,20 +169,9 @@ contains
          enddo
       endif
 
-!     \todo writing axes using collective I/O takes order of magnitude more than
-!        dumping U and B arrays altogether, since XYZ-axis is not even read
-!        back during restart I'm commenting this out. Rewrite or punt.
-!      call write_axes_to_restart(file_id)
-
       ! End of parallel writing (close the HDF5 file stuff)
       call h5pclose_f(plist_id, error)
 
-      ! dump cg
-      !call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      !call h5pset_preserve_f(plist_id, .true., error)
-      !call write_grid_containter(cg, file_id, plist_id)
-      !call h5pclose_f(plist_id, error)
-      !
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
@@ -252,7 +236,7 @@ contains
       endif
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
-      if (area_type == AT_IGNORE) return !> \todo write a list of unsaved arrays?
+      if (area_type <= AT_IGNORE) return
       call set_area_for_restart(area_type, area)
 
       dimsf      = [dim1, area(:)] ! Dataset dimensions
@@ -395,7 +379,7 @@ contains
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
       if (present(alt_area_type)) area_type = alt_area_type
-      if (area_type == AT_IGNORE) return !! \todo write a list of unsaved arrays?
+      if (area_type <= AT_IGNORE) return
       call set_area_for_restart(area_type, area)
 
       dimsf = [dim1, area(:)]      ! Dataset dimensions
@@ -482,7 +466,7 @@ contains
       use common_hdf5,      only: output_fname
       use constants,        only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, RD
       use dataio_pub,       only: msg, warn, die, printio, require_problem_IC, problem_name, piernik_hdf5_version, fix_string, &
-           &                      domain_dump, last_hdf_time, last_res_time, last_log_time, last_tsl_time, nhdf, nres, new_id
+           &                      domain_dump, last_hdf_time, last_res_time, last_log_time, last_tsl_time, nhdf, nres, res_id
       use dataio_user,      only: user_reg_var_restart, user_attrs_rd
       use domain,           only: dom
       use fluidindex,       only: flind
@@ -495,6 +479,13 @@ contains
       use mpi,              only: MPI_INFO_NULL
       use mpisetup,         only: comm, master, piernik_MPI_Bcast, ibuff, rbuff, cbuff, slave
       use named_array_list, only: qna, wna
+      use timestep_pub,     only: c_all_old, cfl_c, stepcfl
+#ifdef RANDOMIZE
+      use randomization,    only: initseed, seed_size
+#endif /* RANDOMIZE */
+#ifdef SN_SRC
+      use snsources,        only: nsn
+#endif /* SN_SRC */
 
       implicit none
 
@@ -511,6 +502,9 @@ contains
       real,            dimension(1)            :: rbuf
       real,            dimension(flind%fluids) :: rbufm
       integer(kind=4), dimension(1)            :: ibuf
+#ifdef RANDOMIZE
+      integer,         dimension(seed_size)    :: ibufs
+#endif /* RANDOMIZE */
 
       real                                     :: restart_hdf5_version
 
@@ -611,13 +605,22 @@ contains
          call h5ltget_attribute_double_f(file_id,"/","last_tsl_time", rbuf, error) ; last_tsl_time = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","last_hdf_time", rbuf, error) ; last_hdf_time = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","last_res_time", rbuf, error) ; last_res_time = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","c_all_old",     rbuf, error) ; c_all_old = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","stepcfl",       rbuf, error) ; stepcfl = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","cfl_c",         rbuf, error) ; cfl_c = rbuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nstep", ibuf, error) ; nstep = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nres",  ibuf, error) ; nres  = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nhdf",  ibuf, error) ; nhdf  = ibuf(1)
+#ifdef RANDOMIZE
+         call h5ltget_attribute_int_f(file_id,"/","current_seed", ibufs, error) ; initseed = ibufs(:)
+#endif /* RANDOMIZE */
+#ifdef SN_SRC
+         call h5ltget_attribute_int_f(file_id,"/","nsn", ibuf, error) ; nsn = ibuf(1)
+#endif /* SN_SRC */
 
          call h5ltget_attribute_string_f(file_id,"/","problem_name", problem_name, error)
          call h5ltget_attribute_string_f(file_id,"/","domain",       domain_dump,  error)
-         call h5ltget_attribute_string_f(file_id,"/","run_id",       new_id,       error)
+         call h5ltget_attribute_string_f(file_id,"/","run_id",       res_id,       error)
 
          if (restart_hdf5_version > 1.11) then
             call h5ltget_attribute_int_f(file_id,"/","require_problem_IC", ibuf, error)
@@ -625,7 +628,7 @@ contains
          endif
 
          problem_name = fix_string(problem_name)   !> \deprecated BEWARE: >=HDF5-1.8.4 has weird issues with strings
-         new_id  = fix_string(new_id)    !> \deprecated   this bit hacks it around
+         res_id  = fix_string(res_id)    !> \deprecated   this bit hacks it around
          domain_dump  = fix_string(domain_dump)
 
          call h5fclose_f(file_id, error)
@@ -642,6 +645,12 @@ contains
          ibuff(2) = nres
          ibuff(3) = nhdf
          if (restart_hdf5_version > 1.11) ibuff(5) = require_problem_IC
+#ifdef SN_SRC
+         ibuff(6) = nsn
+#endif /* SN_SRC */
+#ifdef RANDOMIZE
+         ibuff(7:seed_size+6) = initseed
+#endif /* RANDOMIZE */
 
          rbuff(1) = last_log_time
          rbuff(2) = last_tsl_time
@@ -652,7 +661,7 @@ contains
 
          cbuff(1) = problem_name
          cbuff(2)(1:domlen) = domain_dump
-         cbuff(3)(1:idlen)  = new_id
+         cbuff(3)(1:idlen)  = res_id
       endif
 
       call piernik_MPI_Bcast(ibuff)
@@ -661,22 +670,31 @@ contains
 
       if (slave) then
          nstep = ibuff(1)
-         nres = ibuff(2)
-         nhdf = ibuff(3)
+         nres  = ibuff(2)
+         nhdf  = ibuff(3)
          if (restart_hdf5_version > 1.11) require_problem_IC = ibuff(5)
+#ifdef SN_SRC
+         nsn   = ibuff(6)
+#endif /* SN_SRC */
+#ifdef RANDOMIZE
+         initseed = ibuff(7:seed_size+6)
+#endif /* RANDOMIZE */
 
          last_log_time = rbuff(1)
          last_tsl_time = rbuff(2)
          last_hdf_time = rbuff(3)
          last_res_time = rbuff(4)
-         t = rbuff(6)
-         dt = rbuff(7)
+         t             = rbuff(6)
+         dt            = rbuff(7)
 
          problem_name = cbuff(1)
-         domain_dump = cbuff(2)(1:domlen)
-         new_id = cbuff(3)(1:idlen)
+         domain_dump  = cbuff(2)(1:domlen)
+         res_id       = cbuff(3)(1:idlen)
 
       endif
+#ifdef RANDOMIZE
+      call random_seed(put=initseed)
+#endif /* RANDOMIZE */
 
    end subroutine read_restart_hdf5_v1
 

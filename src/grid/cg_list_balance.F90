@@ -31,15 +31,16 @@
 
 module cg_list_balance
 
-   use cg_list_bnd, only: cg_list_bnd_T
-   use constants,   only: ndims, I_ONE
-   use dot,         only: dot_T
-   use patch_list,  only: patch_list_T
+   use cg_list_bnd,      only: cg_list_bnd_t
+   use constants,        only: ndims, I_ONE
+   use dot,              only: dot_t
+   use level_essentials, only: level_t
+   use patch_list,       only: patch_list_t
 
    implicit none
 
    private
-   public :: cg_list_balance_T, I_OFF, I_N_B
+   public :: cg_list_balance_t, I_OFF, I_N_B
 
    enum, bind(C)
       enumerator :: I_OFF
@@ -49,11 +50,11 @@ module cg_list_balance
 
    !> An abstract type created to take out some load-balance related code from cg_level (new grids)
 
-   type, extends(cg_list_bnd_T), abstract :: cg_list_balance_T
-      type(patch_list_T)                :: plist            !< list of patches that exist on the current level
-      type(dot_T)                       :: dot              !< depiction of topology
-      integer(kind=8), dimension(ndims) :: off              !< offset of the level
+   type, extends(cg_list_bnd_t), abstract :: cg_list_balance_t
+      type(patch_list_t)                :: plist            !< list of patches that exist on the current level
+      type(dot_t)                       :: dot              !< depiction of topology
       logical                           :: recently_changed !< .true. when anything was added to or deleted from this level
+      class(level_t), pointer           :: l                !< single place to store off, n_d and id
    contains
       procedure          :: balance_new          !< Routine selector for moving proposed grids between processes
       procedure, private :: balance_strict_SFC   !< Routine for moving proposed grids between processes: keep strict SFC ordering
@@ -62,7 +63,7 @@ module cg_list_balance
       procedure, private :: distribute_patches   !< Send balanced set patches from master to slaves and re-register them
       procedure, private :: add_patch_one_piece  !< Add a patch with only one grid piece
       procedure          :: sort_SFC             !< Sort list according to SFC id
-   end type cg_list_balance_T
+   end type cg_list_balance_t
 
 contains
 
@@ -82,7 +83,7 @@ contains
 
       implicit none
 
-      class(cg_list_balance_T), intent(inout) :: this
+      class(cg_list_balance_t), intent(inout) :: this
 
       ! The only available strategy ATM
       if (strict_SFC_ordering) then
@@ -113,13 +114,13 @@ contains
 
       implicit none
 
-      class(cg_list_balance_T), intent(inout) :: this
+      class(cg_list_balance_t), intent(inout) :: this
 
       type(grid_piece_list) :: gp
       integer(kind=4) :: ls, s, i, p
       integer(kind=4), dimension(FIRST:LAST+1) :: from
 
-      call this%dot%update_SFC_id_range(this%off)
+      call this%dot%update_SFC_id_range(this%l%off)
       if (.not. this%dot%is_strict_SFC) then
 !!$         ! call reshuffle
 !!$         call die("[cg_list_balance:balance_strict_SFC] reshuffling not implemented.")
@@ -138,7 +139,7 @@ contains
       ! sort id
       if (master) then !> \warning Antiparallel
          ! apply unique numbers to the grids and sort the list
-         call gp%set_id(this%off)
+         call gp%set_id(this%l%off)
          call gp%sort
 
          ! calculate patch distribution
@@ -223,7 +224,7 @@ contains
 
       implicit none
 
-      class(cg_list_balance_T), intent(inout) :: this
+      class(cg_list_balance_t), intent(inout) :: this
 
       type(grid_piece_list) :: gp
       integer :: i
@@ -244,7 +245,7 @@ contains
 
       if (master) then !> \warning Antiparallel
          ! apply unique numbers to the grids and sort the list
-         call gp%set_id(this%off)
+         call gp%set_id(this%l%off)
          call gp%sort
 
          ! measure their weight (unused yet)
@@ -306,7 +307,7 @@ contains
 
       implicit none
 
-      class(cg_list_balance_T), intent(inout) :: this !< object invoking type bound procedure
+      class(cg_list_balance_t), intent(inout) :: this !< object invoking type bound procedure
       type(grid_piece_list),    intent(inout) :: gp   !< list of grid pieces to be filled
       integer(kind=4),          intent(in)    :: ls   !< local number of patches
 
@@ -370,7 +371,7 @@ contains
 
       implicit none
 
-      class(cg_list_balance_T),                 intent(inout) :: this !< object invoking type bound procedure
+      class(cg_list_balance_t),                 intent(inout) :: this !< object invoking type bound procedure
       type(grid_piece_list),                    intent(in)    :: gp   !< list of grid pieces to be filled
       integer(kind=4), dimension(FIRST:LAST+1), intent(in)    :: from !< indices that mark ranges in gp to be sent to processes
 
@@ -420,7 +421,7 @@ contains
 
       implicit none
 
-      class(cg_list_balance_T), target,  intent(inout) :: this  !< current level
+      class(cg_list_balance_t), target,  intent(inout) :: this  !< current level
       integer(kind=8), dimension(ndims), intent(in)    :: n_d   !< number of grid cells
       integer(kind=8), dimension(ndims), intent(in)    :: off   !< offset (with respect to the base level, counted on own level)
 
@@ -435,15 +436,15 @@ contains
    subroutine sort_SFC(this)
 
       use cg_list,      only: cg_list_element
-      use sort_cg_list, only: sort_cg_list_T
+      use sort_cg_list, only: sort_cg_list_t
 
       implicit none
 
-      class(cg_list_balance_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_list_balance_t), intent(inout) :: this !< object invoking type-bound procedure
 
       type(cg_list_element), pointer :: cgl
       integer :: s
-      type(sort_cg_list_T) :: l
+      type(sort_cg_list_t) :: l
 
       if (this%cnt <= 0) return ! nothing to sort or renumber
 

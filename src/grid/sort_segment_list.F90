@@ -40,12 +40,12 @@ module sort_segment_list
 
    use constants,     only: xdim, zdim, LO, HI
    use grid_cont,     only: grid_container
-   use sortable_list, only: sortable_list_T
+   use sortable_list, only: sortable_list_t
 
    implicit none
 
    private
-   public :: sort_segment_list_T
+   public :: sort_segment_list_t
 
    ! prepare type to gather information on segments to be exchanged with one process
    type :: seg
@@ -57,7 +57,7 @@ module sort_segment_list
       integer :: dir                                      !< direction of the boundary segment
    end type seg
 
-   type, extends(sortable_list_T) :: sort_segment_list_T
+   type, extends(sortable_list_t) :: sort_segment_list_t
       type(seg), dimension(:), allocatable :: list !< the list itself
       integer :: cur_last                          !< last used entry in the list
       type(seg) :: temp
@@ -73,7 +73,7 @@ module sort_segment_list
       procedure :: u_bound          !< Get upper bound of the list
       procedure :: assign_element   !< Make an assignment
       procedure :: compare_elements !< Make a comparision
-   end type sort_segment_list_T
+   end type sort_segment_list_t
 
 contains
 
@@ -86,7 +86,7 @@ contains
 
       implicit none
 
-      class(sort_segment_list_T),                   intent(inout) :: this !< object invoking type-bound procedure
+      class(sort_segment_list_t),                   intent(inout) :: this !< object invoking type-bound procedure
       integer(kind=4),                              intent(in)    :: tag
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: se
       type(grid_container), pointer,                intent(in)    :: cg
@@ -126,7 +126,7 @@ contains
 
       implicit none
 
-      class(sort_segment_list_T),       intent(inout) :: this  !< object invoking type-bound procedure
+      class(sort_segment_list_t),       intent(inout) :: this  !< object invoking type-bound procedure
       logical, dimension(xdim:cor_dim), intent(in)    :: dmask !< .true. for the directions we want to include
 
       integer :: i
@@ -154,7 +154,7 @@ contains
 
       implicit none
 
-      class(sort_segment_list_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(sort_segment_list_t), intent(inout) :: this !< object invoking type-bound procedure
 
       if (allocated(this%list)) deallocate(this%list)
 
@@ -165,14 +165,14 @@ contains
 !! When the position equals temp_index, use temporary storage.
 !<
 
-   logical function compare_elements(this, a, b)
+   pure logical function compare_elements(this, a, b)
 
       use sortable_list, only: temp_index
 
       implicit none
 
-      class(sort_segment_list_T), intent(inout) :: this !< object invoking type-bound procedure
-      integer,                    intent(in)    :: a, b
+      class(sort_segment_list_t), intent(in) :: this !< object invoking type-bound procedure
+      integer,                    intent(in) :: a, b
 
       if (a == b) then
          compare_elements = .false.
@@ -199,7 +199,7 @@ contains
 
       implicit none
 
-      class(sort_segment_list_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(sort_segment_list_t), intent(inout) :: this !< object invoking type-bound procedure
       integer,                    intent(in)    :: a, b
 
       if (a == b) return
@@ -220,7 +220,7 @@ contains
 
       implicit none
 
-      class(sort_segment_list_T), intent(in) :: this !< object invoking type-bound procedure
+      class(sort_segment_list_t), intent(in) :: this !< object invoking type-bound procedure
 
       if (allocated(this%list)) then
          l_bound = lbound(this%list, dim=1)
@@ -236,7 +236,7 @@ contains
 
       implicit none
 
-      class(sort_segment_list_T), intent(in) :: this !< object invoking type-bound procedure
+      class(sort_segment_list_t), intent(in) :: this !< object invoking type-bound procedure
 
       if (allocated(this%list)) then
          u_bound = this%cur_last

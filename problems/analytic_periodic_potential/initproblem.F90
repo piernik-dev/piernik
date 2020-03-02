@@ -86,7 +86,7 @@ contains
       use mpisetup,         only: rbuff, ibuff, cbuff, master, slave, piernik_MPI_Bcast
       use multigridvars,    only: ord_prolong
       use named_array_list, only: qna
-      use refinement,       only: user_ref2list
+      use unified_ref_crit_list, only: urc_list
 
       implicit none
 
@@ -164,7 +164,7 @@ contains
       call all_cg%reg_var(ares_n)
       call all_cg%reg_var(asrc_n)
 
-      call user_ref2list(qna%ind(apot_n), INVALID, ref_thr, deref_thr, 0., "grad")
+      call urc_list%add_user_urcv(qna%ind(apot_n), INVALID, ref_thr, deref_thr, 0., "grad", .true.)
 
    end subroutine read_problem_par
 
@@ -415,7 +415,7 @@ contains
       implicit none
 
       character(len=*),               intent(in)    :: var
-      real(kind=4), dimension(:,:,:), intent(inout) :: tab
+      real, dimension(:,:,:),         intent(inout) :: tab
       integer,                        intent(inout) :: ierrh
       type(grid_container), pointer,  intent(in)    :: cg
 
@@ -424,10 +424,10 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("errp")
-            tab(:,:,:) = real(cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
          case ("relerr")
             where (cg%q(qna%ind(apot_n))%span(cg%ijkse) .notequals. 0.)
-               tab(:,:,:) = real(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1., 4)
+               tab(:,:,:) = cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1.
             elsewhere
                tab(:,:,:) = 0.
             endwhere

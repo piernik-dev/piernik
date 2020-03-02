@@ -36,11 +36,12 @@ module initproblem
    public  :: read_problem_par, problem_initial_conditions, problem_pointers
 
    integer(kind=4) :: n_sn
-   real            :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, dt_sn, r, t_sn, dtrig
-   real :: ref_thr !< refinement threshold
+   real            :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, smooth, dt_sn, r, t_sn, dtrig
+   real :: ref_thr   !< refinement threshold
    real :: deref_thr !< derefinement threshold
+   real :: ref_eps   !< smoother filter
 
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, n_sn, dt_sn, ref_thr, deref_thr, dtrig
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, smooth, n_sn, dt_sn, ref_thr, deref_thr, ref_eps, dtrig
 
 contains
 
@@ -63,14 +64,14 @@ contains
 
    subroutine read_problem_par
 
-      use constants,        only: DST
-      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,       only: msg, printinfo, die
-      use domain,           only: dom
-      use fluidindex,       only: flind
-      use mpisetup,         only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
-      use named_array_list, only: wna
-      use refinement,       only: user_ref2list
+      use constants,            only: DST
+      use dataio_pub,           only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,           only: msg, printinfo, die
+      use domain,               only: dom
+      use fluidindex,           only: flind
+      use mpisetup,             only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
+      use named_array_list,     only: wna
+      use unified_ref_crit_list, only: urc_list
 
       implicit none
 
@@ -89,10 +90,12 @@ contains
       y0      = 0.0
       z0      = 0.0
       r0      = minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))/2.
+      smooth  = 0.0 ! smoothing relative to r0, smooth == 1 => profile like cos(r)**2, without uniform core
       n_sn    = 1
       dt_sn   = 0.0
-      ref_thr      = 0.3 ! Lower these values if you want to track the shock wave as it gets weaker
-      deref_thr    = 0.1
+      ref_thr   = 0.5 ! Lower this value if you want to track the shock wave as it gets weaker
+      deref_thr = 0.1
+      ref_eps   = 0.01
 
       if (master) then
 
@@ -126,6 +129,8 @@ contains
          rbuff(12)= ref_thr
          rbuff(13)= deref_thr
          rbuff(14)= dtrig
+         rbuff(15)= smooth
+         rbuff(16)= ref_eps
 
          ibuff(1) = n_sn
 
@@ -150,6 +155,8 @@ contains
          ref_thr      = rbuff(12)
          deref_thr    = rbuff(13)
          dtrig        = rbuff(14)
+         smooth       = rbuff(15)
+         ref_eps      = rbuff(16)
 
          n_sn         = ibuff(1)
 
@@ -163,7 +170,7 @@ contains
       enddo
 
       do id = 1, flind%energ
-         call user_ref2list(wna%fi, flind%all_fluids(id)%fl%ien, ref_thr, deref_thr, 0., "relgrad")
+         call urc_list%add_user_urcv(wna%fi, flind%all_fluids(id)%fl%ien, ref_thr, deref_thr, ref_eps, "Loechner", .true.)
       enddo
 
 
@@ -173,9 +180,10 @@ contains
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use constants,  only: ION, xdim, ydim, zdim, LO, HI
+      use constants,  only: ION, xdim, ydim, zdim, LO, HI, pi, ndims
       use domain,     only: dom
       use fluidindex, only: flind
+      use func,       only: operator(.notequals.)
       use grid_cont,  only: grid_container
 
       implicit none
@@ -184,7 +192,7 @@ contains
       integer                         :: i, j, k, p, ii, jj, kk
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-      real :: x, y, z
+      real :: x, y, z, s
 
       ! BEWARE:
       !  3 triple loop are completely unnecessary here, but this problem serves
@@ -217,8 +225,8 @@ contains
             do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                   do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-                     r = sqrt( (cg%x(i)-x0)**2 + (cg%y(j)-y0)**2 + (cg%z(k)-z0)**2 )
-                     if ( r**2 < r0**2+2*sum(cg%dl**2, mask=dom%has_dir)) then
+                     r = (cg%x(i)-x0)**2 + (cg%y(j)-y0)**2 + (cg%z(k)-z0)**2
+                     if ( r < ((1 + smooth) * (r0 + maxval(cg%dl, mask=dom%has_dir) ))**2) then
                         do ii = 1, isub
                            x = cg%x(i)-x0
                            if (dom%has_dir(xdim)) x = x + cg%dx*(2*ii -isub - 1)/real(2*isub)
@@ -228,7 +236,16 @@ contains
                               do kk = 1, isub
                                  z = cg%z(k)-z0
                                  if (dom%has_dir(zdim)) z = z + cg%dx*(2*kk -isub - 1)/real(2*isub)
-                                 if (x*x+y*y+z*z < r0**2) cg%u(fl%ien,i,j,k)   = cg%u(fl%ien,i,j,k) + Eexpl/isub**dom%eff_dim
+                                 r = sqrt(x*x+y*y+z*z)/r0 - 1.
+                                 if (r < -smooth) then
+                                    s = 1.
+                                 else if (r > smooth) then
+                                    s = 0.
+                                 else
+                                    s = 0.5
+                                    if (smooth .notequals. 0.) s = 0.5 * (1. - sin(pi / 2. * r/smooth))
+                                 endif
+                                 if (s > 0.) cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + Eexpl/isub**ndims * s
                               enddo
                            enddo
                         enddo

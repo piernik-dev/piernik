@@ -32,19 +32,19 @@
 module sort_cg_list
 
    use cg_list,       only: cg_list_element
-   use sortable_list, only: sortable_list_T
+   use sortable_list, only: sortable_list_t
 
    implicit none
 
    private
-   public :: sort_cg_list_T
+   public :: sort_cg_list_t
 
    ! prepare pointer type to make an array of pointers
    type :: cg_piece
       type(cg_list_element), pointer :: cgl
    end type cg_piece
 
-   type, extends(sortable_list_T) :: sort_cg_list_T
+   type, extends(sortable_list_t) :: sort_cg_list_t
       type(cg_piece), dimension(:), allocatable :: list !< the list itself
       type(cg_piece) :: temp
    contains
@@ -56,7 +56,7 @@ module sort_cg_list
       procedure :: u_bound          !< Get upper bound of the list
       procedure :: assign_element   !< Make an assignment
       procedure :: compare_elements !< Make a comparision
-   end type sort_cg_list_T
+   end type sort_cg_list_t
 
 contains
 
@@ -66,7 +66,7 @@ contains
 
       implicit none
 
-      class(sort_cg_list_T), intent(inout) :: this
+      class(sort_cg_list_t), intent(inout) :: this
       integer(kind=4),       intent(in)    :: size
 
       allocate(this%list(size))
@@ -79,7 +79,7 @@ contains
 
       implicit none
 
-      class(sort_cg_list_T), intent(inout) :: this
+      class(sort_cg_list_t), intent(inout) :: this
 
       if (allocated(this%list)) deallocate(this%list)
 
@@ -90,14 +90,14 @@ contains
 !! When the position equals temp_index, use temporary storage.
 !<
 
-   logical function compare_elements(this, a, b)
+   pure logical function compare_elements(this, a, b)
 
       use sortable_list, only: temp_index
 
       implicit none
 
-      class(sort_cg_list_T), intent(inout) :: this
-      integer,               intent(in)    :: a, b
+      class(sort_cg_list_t), intent(in) :: this
+      integer,               intent(in) :: a, b
 
       if (a == b) then
          compare_elements = .false.
@@ -124,7 +124,7 @@ contains
 
       implicit none
 
-      class(sort_cg_list_T), intent(inout) :: this
+      class(sort_cg_list_t), intent(inout) :: this
       integer,               intent(in)    :: a, b
 
       if (a == b) return
@@ -145,7 +145,7 @@ contains
 
       implicit none
 
-      class(sort_cg_list_T), intent(in) :: this
+      class(sort_cg_list_t), intent(in) :: this
 
       l_bound = lbound(this%list, dim=1)
 
@@ -157,7 +157,7 @@ contains
 
       implicit none
 
-      class(sort_cg_list_T), intent(in) :: this
+      class(sort_cg_list_t), intent(in) :: this
 
       u_bound = ubound(this%list, dim=1)
 

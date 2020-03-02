@@ -35,19 +35,19 @@
 module decomposition
 
    use constants,    only: ndims, xdim, zdim, LO, HI
-   use primes_utils, only: primes_T
+   use primes_utils, only: primes_t
 
    implicit none
 
    private
-   public :: cleanup_decomposition, init_decomposition, box_T, cuboid
+   public :: cleanup_decomposition, init_decomposition, box_t, cuboid
 
    type :: cuboid
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se !< grid piece
    end type cuboid
 
    !> \brief A box (or rectangle) within a certain refinement level to be decomposed into smaller pieces
-   type :: box_T
+   type :: box_t
       integer(kind=8), dimension(ndims) :: n_d          !< number of grid cells
       integer(kind=8), dimension(ndims) :: off          !< offset (with respect to the base level, counted on own level)
       type(cuboid),    dimension(:), allocatable :: pse !< list of grid pieces
@@ -63,10 +63,10 @@ module decomposition
       procedure, private :: choppy_tiling               !< Less structured box decomposition
       procedure, private :: stamp_cg                    !< Divide the box into lots of identical blocks
       procedure, private :: is_not_too_small            !< Prevent domain decompositions into pieces that are narrower than allowed mimimum size
-   end type box_T
+   end type box_t
 
    ! Private variables
-   type(primes_T) :: primes
+   type(primes_t) :: primes
    real           :: ideal_bsize
 
 contains
@@ -101,7 +101,7 @@ contains
 
       implicit none
 
-      class(box_T),                      intent(inout) :: this     !< the patch, which we want to be chopped into pieces
+      class(box_t),                      intent(inout) :: this     !< the patch, which we want to be chopped into pieces
       integer(kind=8), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
       integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level), \todo make use of it
       integer(kind=4),                   intent(in)    :: level_id !< level identifier (for informational use only)
@@ -126,12 +126,13 @@ contains
 
       use constants,  only: ndims, I_ONE
       use dataio_pub, only: warn, printinfo, msg
-      use domain,     only: dom, psize, AMR_bsize, allow_noncart, allow_uneven, dd_rect_quality, dd_unif_quality, minsize
+      use domain,     only: dom, psize, allow_noncart, allow_uneven, dd_rect_quality, dd_unif_quality, minsize
       use mpisetup,   only: nproc, master, have_mpi
+      use refinement, only: bsize
 
       implicit none
 
-      class(box_T),              intent(inout) :: patch         !< the patch, which we want to be chopped into pieces
+      class(box_t),              intent(inout) :: patch         !< the patch, which we want to be chopped into pieces
       logical,                   intent(out)   :: patch_divided !< Set to .true. after a successful decomposition
       integer(kind=4),           intent(in)    :: level_id      !< level identifier (for informational use only)
       integer(kind=4), optional, intent(in)    :: n_pieces      !< how many pieces the patch should be divided to?
@@ -148,7 +149,7 @@ contains
       patch_divided = .false.
 
       ! Try the decomposition into same-size blocks
-      if (all(AMR_bsize(:) > 0 .or. .not. dom%has_dir(:)) .and. .not. present(n_pieces)) then
+      if (all(bsize(:) > 0 .or. .not. dom%has_dir(:)) .and. .not. present(n_pieces)) then
          call patch%stamp_cg
          patch_divided = allocated(patch%pse)
          if (patch_divided) patch_divided = patch%is_not_too_small("stamp_cg")
@@ -268,7 +269,7 @@ contains
 
       implicit none
 
-      class(box_T),                      intent(inout) :: patch    !< the patch, which we want to be chopped into pieces
+      class(box_t),                      intent(inout) :: patch    !< the patch, which we want to be chopped into pieces
       integer(kind=4), dimension(ndims), intent(in)    :: p_size   !< number of pieces in each direction
       integer(kind=4),                   intent(in)    :: pieces   !< number of pieces
       integer(kind=4),                   intent(in)    :: level_id !< level identifier (for informational use only)
@@ -317,7 +318,7 @@ contains
 
       implicit none
 
-      class(box_T),                      intent(inout) :: patch    !< the patch, which we want to be chopped into pieces
+      class(box_t),                      intent(inout) :: patch    !< the patch, which we want to be chopped into pieces
       integer(kind=4), dimension(ndims), intent(in)    :: p_size   !< number of pieces in each direction
       integer(kind=4),                   intent(in)    :: pieces   !< number of pieces
       integer(kind=4),                   intent(in)    :: level_id !< level identifier (for informational use only)
@@ -647,29 +648,37 @@ contains
 
       use constants,  only: xdim, ydim, zdim, LO, HI, I_ONE
       use dataio_pub, only: warn, msg
-      use domain,     only: dom, AMR_bsize
+      use domain,     only: dom
       use mpisetup,   only: master
+      use refinement, only: bsize
 
       implicit none
 
-      class(box_T), intent(inout)           :: patch  !< the patch, which we want to be chopped into pieces
+      class(box_t), intent(inout)           :: patch  !< the patch, which we want to be chopped into pieces
 
       integer(kind=4), dimension(xdim:zdim) :: n_bl
       integer(kind=4)                       :: tot_bl, bx, by, bz, b
+      logical                               :: warned
 
-      if (any(AMR_bsize(xdim:zdim) <=0)) then
-         if (master) call warn("[decomposition:stamp_cg] some(AMR_bsize(1:3)) <=0")
+      if (any((bsize <= 0) .and. dom%has_dir)) then
+         if (master) call warn("[decomposition:stamp_cg] some(AMR::bsize(1:3)) <=0")
          return
       endif
 
-      if (any(mod(patch%n_d(:), int(AMR_bsize(xdim:zdim), kind=8)) /= 0 .and. dom%has_dir(:))) then
-         write(msg,'(a,3f10.3,a)')"[decomposition:stamp_cg] Fractional number of blocks: n_d(:)/AMR_bsize(1:3) = [",patch%n_d(:)/real(AMR_bsize(xdim:zdim)),"]"
-         if (master) call warn(msg)
-         return
-      endif
+      warned = .false.
+      do b = xdim, zdim
+         if (dom%has_dir(b)) then
+            if (mod(patch%n_d(b), int(bsize(b), kind=8)) /= 0) then
+               write(msg,'(2(a,i2),a,f10.3,a)')"[decomposition:stamp_cg] Fractional number of blocks: n_d(", b, ")/AMR::bsize(", b, ") = [",patch%n_d(b)/real(bsize(b)),"]"
+               if (master) call warn(msg)
+               warned = .true.
+            endif
+         endif
+      enddo
+      if (warned) return
 
       where (dom%has_dir(:))
-         n_bl(:) = int(patch%n_d(:) / AMR_bsize(xdim:zdim), kind=4)
+         n_bl(:) = int(patch%n_d(:) / bsize(:), kind=4)
       elsewhere
          n_bl(:) = 1
       endwhere
@@ -683,8 +692,8 @@ contains
             do bx = 0, n_bl(xdim)-I_ONE
                b = b + I_ONE !b = 1 + bx + n_bl(xdim)*(by + bz*n_bl(ydim))
                where (dom%has_dir(:))
-                  patch%pse(b)%se(:, LO) = patch%off(:) + [ bx, by, bz ] * AMR_bsize(xdim:zdim)
-                  patch%pse(b)%se(:, HI) = patch%pse(b)%se(:, LO) + AMR_bsize(xdim:zdim) - 1
+                  patch%pse(b)%se(:, LO) = patch%off(:) + [ bx, by, bz ] * bsize(:)
+                  patch%pse(b)%se(:, HI) = patch%pse(b)%se(:, LO) + bsize(:) - 1
                endwhere
             enddo
          enddo
@@ -711,7 +720,7 @@ contains
 
       implicit none
 
-      class(box_T),     intent(inout) :: this
+      class(box_t),     intent(inout) :: this
       character(len=*), intent(in)    :: label
 
       integer :: p, too_small
@@ -757,7 +766,7 @@ contains
 
       implicit none
 
-      class(box_T),              intent(inout) :: patch       !< object invoking type-bound procedure
+      class(box_t),              intent(inout) :: patch       !< object invoking type-bound procedure
       integer(kind=4), optional, intent(in)    :: n_cg        !< how many segments
 
       integer                                  :: p, nseg
@@ -782,7 +791,7 @@ contains
 
       implicit none
 
-      class(box_T),                      intent(inout) :: this     !< the patch, which we want to be chopped into pieces
+      class(box_t),                      intent(inout) :: this     !< the patch, which we want to be chopped into pieces
       integer(kind=8), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
       integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level), \todo make use of it
 

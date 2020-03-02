@@ -30,20 +30,20 @@
 
 module cg_level_connected
 
-   use cg_level, only: cg_level_T
+   use cg_level, only: cg_level_t
 
    implicit none
 
    private
-   public :: cg_level_connected_T, base_level, find_level
+   public :: cg_level_connected_t, base_level, find_level
 
    !! \brief A list of all cg of the same resolution with links to coarser and finer levels
-   type, extends(cg_level_T) :: cg_level_connected_T
+   type, extends(cg_level_t) :: cg_level_connected_t
 
-      type(cg_level_connected_T), pointer :: coarser          !< coarser level cg set or null()
-      type(cg_level_connected_T), pointer :: finer            !< finer level cg set or null()
-      integer(kind=4)                     :: ord_prolong_set  !< Number of boundary cells for prolongation used in last update of cg_level_connected_T%vertical_prep
-      logical                             :: need_vb_update   !< If .true. then execute vertical_b_prep
+      type(cg_level_connected_t), pointer :: coarser          !< coarser level cg set or null()
+      type(cg_level_connected_t), pointer :: finer            !< finer level cg set or null()
+      integer(kind=4)                     :: ord_prolong_set  !< Number of boundary cells for prolongation used in last update of cg_level_connected_t%vertical_prep
+      logical, private                    :: need_vb_update   !< If .true. then execute vertical_b_prep
 
     contains
 
@@ -62,14 +62,14 @@ module cg_level_connected
       procedure :: arr3d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
       procedure :: arr4d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays.
       procedure :: prolong_bnd_from_coarser                   !< Interpolate boundaries from coarse level at fine-coarse interfaces
-      procedure :: vertical_b_prep                            !< Initialize prolongation targets for fine-coarse boundary exchange
+      procedure, private :: vertical_b_prep                   !< Initialize prolongation targets for fine-coarse boundary exchange
       procedure, private :: vertical_bf_prep                  !< Initialize prolongation targets for fine->coarse flux exchange
       procedure :: sync_ru                                    !< Synchronize this%recently_changed and set flags for update requests
       procedure :: free_all_cg                                !< Erase all data on the level, leave it empty
 
-   end type cg_level_connected_T
+   end type cg_level_connected_t
 
-   type(cg_level_connected_T), pointer :: base_level !< The pointer to the base level. Do not use it unless referencing through base%level causes circular dependencies.
+   type(cg_level_connected_t), pointer :: base_level !< The pointer to the base level. Do not use it unless referencing through base%level causes circular dependencies.
 
 contains
 
@@ -81,7 +81,7 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_connected_t), intent(inout) :: this   !< object invoking type bound procedure
 
       this%coarser => null()
       this%finer => null()
@@ -91,6 +91,7 @@ contains
       this%need_vb_update = .true.
       this%recently_changed = .false. ! this level was just created, but no grids were added yet, so no update is required.
       this%dot%is_blocky = .false.
+      allocate(this%l)
 
    end subroutine init_level
 
@@ -111,13 +112,14 @@ contains
       use constants,      only: xdim, ydim, zdim, LO, HI
       use dataio_pub,     only: die
       use domain,         only: dom
-      use grid_cont,      only: grid_container, is_overlap
+      use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c, c2f
       use mpisetup,       only: FIRST, LAST
+      use overlap,        only: is_overlap
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout)   :: this   !< object invoking type bound procedure
+      class(cg_level_connected_t), intent(inout)   :: this   !< object invoking type bound procedure
 
       integer                                      :: g, j, jf, fmax
       integer(kind=8)                              :: tag
@@ -125,7 +127,7 @@ contains
       integer,         dimension(xdim:zdim, LO:HI) :: enlargement
       type(cg_list_element),      pointer          :: cgl
       type(grid_container),       pointer          :: cg            !< current grid container
-      type(cg_level_connected_T), pointer          :: fine, coarse  !< shortcut
+      type(cg_level_connected_t), pointer          :: fine, coarse  !< shortcut
       type :: int_pair
          integer :: proc
          integer :: n_se
@@ -314,17 +316,20 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), target, intent(inout) :: this       !< object invoking type-bound procedure
+      class(cg_level_connected_t), target, intent(inout) :: this       !< object invoking type-bound procedure
       integer(kind=4), optional,           intent(in)    :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
 
       integer(kind=4) :: i, iw
 
       do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
-         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%level_id >= base_level_id)) call this%prolong_q_1var(i, bnd_type = bnd_type)
+         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%l%id >= base_level_id)) call this%prolong_q_1var(i, bnd_type = bnd_type)
+         ! Although we aren't worried too much by nonconservation of psi or multigrid fields here
+         ! but it will be worth checking if cnservative high-order prolongation can help.
       enddo
 
       do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
-         if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%level_id >= base_level_id)) then
+         if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%l%id >= base_level_id)) then
+            qna%lst(qna%wai)%ord_prolong = 0 !> \todo implement high order conservative prolongation and use wna%lst(i)%ord_prolong here
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:prolong] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, qna%wai)
@@ -359,16 +364,16 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_level_connected_t), target, intent(inout) :: this !< object invoking type-bound procedure
 
       integer(kind=4) :: i, iw
 
       do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
-         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%level_id > base_level_id)) call this%restrict_q_1var(i)
+         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%l%id > base_level_id)) call this%restrict_q_1var(i)
       enddo
 
       do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
-         if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%level_id > base_level_id)) then
+         if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%l%id > base_level_id)) then
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:restrict] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, qna%wai)
@@ -394,9 +399,9 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_level_connected_t), intent(inout) :: this !< object invoking type-bound procedure
 
-      if (this%level_id <= base_level_id) return
+      if (this%l%id <= base_level_id) return
       call this%restrict
       call this%coarser%restrict_to_base
 
@@ -408,7 +413,7 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_level_connected_t), intent(inout) :: this !< object invoking type-bound procedure
       integer(kind=4),             intent(in)    :: iv   !< variable to be restricted
 
       if (.not. associated(this%coarser)) return
@@ -425,10 +430,10 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_level_connected_t), intent(inout) :: this !< object invoking type-bound procedure
       integer(kind=4),             intent(in)    :: iv   !< variable to be restricted
 
-      if (this%level_id <= base_level_id) return
+      if (this%l%id <= base_level_id) return
       call this%restrict_q_1var(iv)
       call this%coarser%restrict_to_base_q_1var(iv)
 
@@ -442,7 +447,7 @@ contains
 !! \details Some data can be locally copied without MPI, but this seems to have really little impact on the performance.
 !! Some tests show that purely MPI code without local copies is marginally faster.
 !!
-!! OPT Usually there ara many messages that ate sent between the same pairs of processes
+!! OPT Usually there are many messages that are sent between the same pairs of processes
 !! \todo Sort all messages according to e.g. tag and send/receive aggregated message with everything
 !!
 !! \todo implement local copies without MPI anyway
@@ -462,11 +467,11 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_level_connected_t), target, intent(inout) :: this !< object invoking type-bound procedure
       integer(kind=4),                     intent(in)    :: iv   !< variable to be restricted
       integer(kind=4), optional,           intent(in)    :: pos  !< position of the variable within cell
 
-      type(cg_level_connected_T), pointer                :: coarse
+      type(cg_level_connected_t), pointer                :: coarse
       integer                                            :: g
       integer(kind=8), dimension(xdim:zdim, LO:HI)       :: fse, cse              !< shortcuts for fine segment and coarse segment
       integer(kind=8)                                    :: i, j, k, ic, jc, kc
@@ -488,7 +493,7 @@ contains
 
       coarse => this%coarser
       if (.not. associated(coarse)) then ! can't restrict base level
-         write(msg,'(a,i3)')"[cg_level_connected:restrict_q_1var] no coarser level than ", this%level_id
+         write(msg,'(a,i3)')"[cg_level_connected:restrict_q_1var] no coarser level than ", this%l%id
          call warn(msg)
          return
       endif
@@ -554,7 +559,7 @@ contains
                      call die("[cg_level_connected:restrict_q_1var] Unknown geometry (1)")
                end select
             else
-               ! OPT: Split the problem into the core that can be done by array arithmetic and finish the edges whetre necessary
+               ! OPT: Split the problem into the core that can be done by array arithmetic and finish the edges where necessary
                do k = fse(zdim, LO), fse(zdim, HI)
                   kc = (k-fse(zdim, LO)+off1(zdim))/refinement_factor + 1
                   do j = fse(ydim, LO), fse(ydim, HI)
@@ -619,7 +624,7 @@ contains
 !! The prolonged data is then copied to the destination if the cg%ignore_prolongation allows it.
 !! OPT: Find a way to prolong only what is really needed.
 !!
-!! OPT Usually there ara many messages that ate sent between the same pairs of processes
+!! OPT Usually there are many messages that are sent between the same pairs of processes
 !! \todo Sort all messages according to e.g. tag and send/receive aggregated message with everything
 !! \todo implement local copies without MPI
 !<
@@ -627,7 +632,7 @@ contains
    subroutine prolong_q_1var(this, iv, pos, bnd_type)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, O_INJ, VAR_CENTER, ndims
+      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_ZERO, VAR_CENTER, ndims  !, dirtyH1
       use dataio_pub,       only: msg, warn
       use grid_cont,        only: grid_container
       use grid_helpers,     only: f2c
@@ -637,12 +642,12 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), target, intent(inout) :: this     !< object invoking type-bound procedure
+      class(cg_level_connected_t), target, intent(inout) :: this     !< object invoking type-bound procedure
       integer(kind=4),                     intent(in)    :: iv       !< variable to be prolonged
       integer(kind=4), optional,           intent(in)    :: pos      !< position of the variable within cell
       integer(kind=4), optional,           intent(in)    :: bnd_type !< Override default boundary type on external boundaries (useful in multigrid solver).
 
-      type(cg_level_connected_T), pointer                :: fine
+      type(cg_level_connected_t), pointer                :: fine
       integer                                            :: g
       integer(kind=8), dimension(xdim:zdim, LO:HI)       :: cse              !< shortcut for coarse segment
       integer(kind=4)                                    :: nr
@@ -663,7 +668,7 @@ contains
 
       fine => this%finer
       if (.not. associated(fine)) then ! can't prolong finest level
-         write(msg,'(a,i3)')"[cg_level_connected:prolong_q_1var] no finer level than: ", this%level_id
+         write(msg,'(a,i3)')"[cg_level_connected:prolong_q_1var] no finer level than: ", this%l%id
          call warn(msg)
          return
       endif
@@ -671,9 +676,9 @@ contains
       call this%vertical_prep
       call fine%vertical_prep
 
-!      call fine%set_dirty(iv) !> \todo filter this through cg%ignore_prolongation
+!      call fine%set_dirty(iv, (0.895+0.0001*fine%l%id)*dirtyH1) !> \todo filter this through cg%ignore_prolongation
 
-      if (this%ord_prolong_set /= O_INJ) then
+      if (this%ord_prolong_set /= I_ZERO) then
          !> \todo some variables may need special care on external boundaries
          call this%arr3d_boundaries(iv, bnd_type = bnd_type)
       endif
@@ -730,13 +735,11 @@ contains
                cse = cg%pi_tgt%seg(g)%se
                cg%prolong_(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = cg%pi_tgt%seg(g)%buf(:,:,:)
 
-               !> When this%ord_prolong_set /= O_INJ, the received cg%pi_tgt%seg(:)%buf(:,:,:) may overlap
+               !> When this%ord_prolong_set /= I_ZERO, the received cg%pi_tgt%seg(:)%buf(:,:,:) may overlap
                !! The incoming data thus must either contain valid guardcells (even if qna%lst(iv)%ord_prolong == O_INJ)
                !! or the guardcells must be zeroed before sending data and received buffer should be added to cg%prolong_(:,:,:) not just assigned
 
             enddo
-
-            !! almost all occurrences of number "2" are in fact connected to refinement_factor
 
             box_8 = int(cg%ijkse, kind=8)
             cse = f2c(box_8)
@@ -754,9 +757,12 @@ contains
 
    subroutine arr3d_boundaries(this, ind, area_type, bnd_type, dir, nocorners)
 
+      use global,           only: ord_fc_eq_mag, ord_mag_prolong
+      use named_array_list, only: qna
+
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
+      class(cg_level_connected_t), intent(inout) :: this      !< the list on which to perform the boundary exchange
       integer(kind=4),             intent(in)    :: ind       !< index of cg%q(:) 3d array
       integer(kind=4), optional,   intent(in)    :: area_type !< defines how do we treat boundaries
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
@@ -764,10 +770,17 @@ contains
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
       logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
+      integer(kind=4) :: ord_saved
+
+      ord_saved = qna%lst(ind)%ord_prolong
+      if (ord_fc_eq_mag) qna%lst(ind)%ord_prolong = ord_mag_prolong
+
       call this%dirty_boundaries(ind)
       call this%prolong_bnd_from_coarser(ind, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
       call this%level_3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
       ! The correctness ot the sequence of calls above may depend on the implementation of internal boundary exchange
+
+      qna%lst(ind)%ord_prolong = ord_saved
 
    end subroutine arr3d_boundaries
 
@@ -776,11 +789,12 @@ contains
    subroutine arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
       use constants,        only: base_level_id
+      use global,           only: ord_mag_prolong, ord_fc_eq_mag
       use named_array_list, only: qna, wna
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
+      class(cg_level_connected_t), intent(inout) :: this      !< the list on which to perform the boundary exchange
       integer(kind=4),             intent(in)    :: ind       !< index of cg%w(:) 4d array
       integer(kind=4), optional,   intent(in)    :: area_type !< defines how do we treat boundaries
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
@@ -790,8 +804,14 @@ contains
 
 !      call this%dirty_boundaries(ind)
 !      call this%clear_boundaries(ind, value=10.)
-      if (associated(this%coarser) .and. this%level_id > base_level_id) then
+      if (associated(this%coarser) .and. this%l%id > base_level_id) then
          do iw = 1, wna%lst(ind)%dim4
+            ! here we can use any high order prolongation without destroying conservation
+            if (ord_fc_eq_mag) then
+               qna%lst(qna%wai)%ord_prolong = ord_mag_prolong
+            else
+               qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong
+            endif
             call this%coarser%wq_copy(ind, iw, qna%wai)
             call this%wq_copy(ind, iw, qna%wai) !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
             call this%prolong_bnd_from_coarser(qna%wai, dir=dir, nocorners=nocorners)
@@ -819,7 +839,7 @@ contains
 
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
-      use constants,      only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims, O_INJ, base_level_id
+      use constants,      only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims, O_INJ, base_level_id  !, dirtyH1
       use dataio_pub,     only: warn
       use domain,         only: dom
       use grid_cont,      only: grid_container
@@ -829,14 +849,14 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
+      class(cg_level_connected_t), intent(inout) :: this      !< the list on which to perform the boundary exchange
       integer(kind=4),             intent(in)    :: ind       !< index of the prolonged variable
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
       logical,         optional,   intent(in)    :: nocorners !< when .true. then don't care about proper edge and corner update
 
-      type(cg_level_connected_T), pointer :: coarse
+      type(cg_level_connected_t), pointer :: coarse
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
       integer(kind=4), dimension(:, :), pointer :: mpistatus
@@ -860,12 +880,12 @@ contains
       coarse => this%coarser
 
       if (.not. associated(coarse)) return
-      if (this%level_id == base_level_id) return ! There are no fine/coarse boundaries on the base level by definition
+      if (this%l%id == base_level_id) return ! There are no fine/coarse boundaries on the base level by definition
 
       call this%vertical_b_prep
       call coarse%vertical_b_prep
 
-      !call this%clear_boundaries(ind, dirtyH) ! not implemented yet
+      !call this%clear_boundaries(ind, (0.885+0.0001*this%l%id)*dirtyH1) ! not implemented yet
       ext_buf = dom%D_ * all_cg%ord_prolong_nb ! extension of the buffers due to stencil range
       if (all_cg%ord_prolong_nb /= O_INJ) call coarse%level_3d_boundaries(ind, bnd_type = bnd_type) ! it is really hard to determine which exchanges can be omitted
       ! bnd_type = BND_NEGREF above is critical for convergence of multigrid with isolated boundaries.
@@ -914,7 +934,7 @@ contains
 
       ! merge received coarse data into one array and interpolate it into the right place
       per(:) = 0
-      where (dom%periodic(:)) per(:) = coarse%n_d(:)
+      where (dom%periodic(:)) per(:) = coarse%l%n_d(:)
 
       cgl => this%first
       do while (associated(cgl))
@@ -945,7 +965,7 @@ contains
                   fse(:, LO) = max(fse(:, LO), int(cg%lhn(:, LO), kind=8))
                   fse(:, HI) = min(fse(:, HI), int(cg%lhn(:, HI), kind=8))
                   updatemap(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI)) = .true.
-                  !> When this%ord_prolong_set /= O_INJ, the received seg(:)%buf(:,:,:) may overlap
+                  !> When this%ord_prolong_set /= I_ZERO, the received seg(:)%buf(:,:,:) may overlap
                   !! The incoming data thus must either contain valid guardcells (even if qna%lst(iv)%ord_prolong == O_INJ)
                   !! or the guardcells must be zeroed before sending data and received buffer should be added to cg%prolong_(:,:,:) not just assigned
 
@@ -988,19 +1008,20 @@ contains
       use constants,      only: xdim, ydim, zdim, LO, HI, I_ONE, ndims, INVALID
       use dataio_pub,     only: warn, msg, die
       use domain,         only: dom
-      use grid_cont,      only: grid_container, is_overlap
+      use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c
       use mergebox,       only: wmap
       use mpi,            only: MPI_INTEGER, MPI_INTEGER8
       use mpisetup,       only: FIRST, LAST, comm, mpi_err, proc
+      use overlap,        only: is_overlap
       use tag_pool,       only: t_pool
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout), target :: this !< the list on which to update connectivity data for fine-coarse boundary exchange
+      class(cg_level_connected_t), intent(inout), target :: this !< the list on which to update connectivity data for fine-coarse boundary exchange
 
-      class(cg_level_connected_T), pointer :: curl
-      type(cg_level_connected_T), pointer :: coarse
+      class(cg_level_connected_t), pointer :: curl
+      type(cg_level_connected_t), pointer :: coarse
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
       integer :: d, j, b, rp, ls, dd, ix, iy, iz
@@ -1043,12 +1064,15 @@ contains
       if (.not. this%need_vb_update) return
 
       coarse => this%coarser
-      if (.not. associated(coarse)) return ! check is some null allocations are required
+      if (.not. associated(coarse)) then
+         this%need_vb_update = .false.
+         return ! check if some null allocations are required
+      endif
 
-      ! Unfortunately we can't use finest%level%level_id
+      ! Unfortunately we can't use finest%level%l%id
       curl => this
       do while (associated(curl))
-         max_level = curl%level_id
+         max_level = curl%l%id
          curl => curl%finer
       enddo
 
@@ -1056,10 +1080,10 @@ contains
 
       ! define areas on the fine side at BND_FC and BND_MPI_FC faces that require coarse data
       per(:) = 0
-      where (dom%periodic(:)) per(:) = coarse%n_d(:)
+      where (dom%periodic(:)) per(:) = coarse%l%n_d(:)
 
-      call t_pool%release(this%level_id)
-      call t_pool%get(this%level_id, tag_min, tag_max)
+      call t_pool%release(this%l%id)
+      call t_pool%get(this%l%id, tag_min, tag_max)
       tag = tag_min
       mpifc_cnt = 0
       allocate(seglist(initial_size))
@@ -1101,7 +1125,7 @@ contains
                                           seg(:, HI) = min( seg(:, HI), coarse%dot%gse(j)%c(b)%se(:, HI)) ! this is what we want
                                           tag = tag + I_ONE
                                           if (tag > tag_max) then
-                                             call t_pool%get(this%level_id, tag_min, tag_max)
+                                             call t_pool%get(this%l%id, tag_min, tag_max)
                                              tag = tag_min
                                           endif
                                           if (tag<0) call die("[cg_level_connected:vertical_b_prep] tag overflow")
@@ -1126,8 +1150,8 @@ contains
                                              endif
                                           enddo
                                           if (.not. found_flux) then
-                                             segp2(:, LO) = this%off(:)
-                                             segp2(:, HI) = this%off(:) - dom%D_(:)
+                                             segp2(:, LO) = this%l%off(:)
+                                             segp2(:, HI) = this%l%off(:) - dom%D_(:)
                                           endif
                                           seg2 (:, LO) = segp2(:, LO) + [ ix, iy, iz ] * per(:)
                                           seg2 (:, HI) = segp2(:, HI) + [ ix, iy, iz ] * per(:)
@@ -1218,12 +1242,12 @@ contains
                enddo
             endif
             if (rseg(I_GRID + (j-1)*I_LAST) == cg%grid_id) then
-               if (rseg(I_PROC + (j-1)*I_LAST) /= proc) call warn("[clc:vbp] I_PROC /= proc")
+               if (rseg(I_PROC + (j-1)*I_LAST) /= proc) call warn("[cg_level_connected:vertical_b_prep] I_PROC /= proc")
                if (rseg(I_SRC_PROC + (j-1)*I_LAST) /= rp) then
-                  write(msg,*)"[clc:vbp] I_SRC_PROC /= rp @",proc," @@",rp, rseg(I_SRC_PROC + (j-1)*I_LAST)
+                  write(msg,*)"[cg_level_connected:vertical_b_prep] I_SRC_PROC /= rp @",proc," @@",rp, rseg(I_SRC_PROC + (j-1)*I_LAST)
                   call warn(msg)
                endif
-               ! call warn("[clc:vbp] I_TAG: visited twice")
+               ! call warn("[cg_level_connected:vertical_b_prep] I_TAG: visited twice")
                b = b + 1
             endif
          enddo
@@ -1269,18 +1293,22 @@ contains
 
    subroutine vertical_bf_prep(this)
 
-      use cg_list,      only: cg_list_element
-      use constants,    only: LO, HI, pdims, ORTHO1, ORTHO2, xdim, zdim
-      use fluidindex,   only: flind
-      use grid_helpers, only: c2f
+      use cg_list,          only: cg_list_element
+      use constants,        only: LO, HI, pdims, ORTHO1, ORTHO2, xdim, zdim, psidim, mag_n
+      use fluidindex,       only: flind
+      use grid_helpers,     only: c2f
+      use named_array_list, only: wna
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this !< the list on which to update connectivity data for fine->coarse flux exchange
+      class(cg_level_connected_t), intent(inout) :: this !< the list on which to update connectivity data for fine->coarse flux exchange
 
-      type(cg_level_connected_T), pointer :: coarse
+      type(cg_level_connected_t), pointer :: coarse
       type(cg_list_element), pointer :: cgl
-      integer :: g, d, dd, lh
+      integer :: g, d, dd, lh, fc_fluxes
+
+      fc_fluxes = flind%all
+      if (wna%exists(mag_n)) fc_fluxes = fc_fluxes + psidim
 
       cgl => this%first
       do while (associated(cgl))
@@ -1306,7 +1334,7 @@ contains
                   seg2(d)%proc = seg(g)%proc
                   seg2(d)%tag  = seg(g)%tag
                   seg2(d)%se   = seg(g)%se2
-                  allocate(seg2(d)%buf(flind%all, seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
+                  allocate(seg2(d)%buf(fc_fluxes, seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
                        &                          seg2(d)%se(pdims(dd, ORTHO2), LO):seg2(d)%se(pdims(dd, ORTHO2), HI)))
                   if (seg(g)%se(dd, LO) == seg2(d)%se(dd, LO)) then
                      lh = HI
@@ -1353,7 +1381,7 @@ contains
                      seg2(d)%proc = seg(g)%proc
                      seg2(d)%tag  = seg(g)%tag
                      seg2(d)%se   = seg(g)%se2
-                     allocate(seg2(d)%buf(flind%all, seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
+                     allocate(seg2(d)%buf(fc_fluxes, seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
                           &                          seg2(d)%se(pdims(dd, ORTHO2), LO):seg2(d)%se(pdims(dd, ORTHO2), HI)))
                      if (seg(g)%se(dd, LO) == seg2(d)%se(dd, LO)) then
                         lh = HI
@@ -1416,9 +1444,9 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), target, intent(inout) :: this
+      class(cg_level_connected_t), target, intent(inout) :: this
 
-      class(cg_level_connected_T), pointer :: curl
+      class(cg_level_connected_t), pointer :: curl
 
       call piernik_MPI_Allreduce(this%recently_changed, pLOR)
       if (this%recently_changed) then
@@ -1451,7 +1479,7 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this
+      class(cg_level_connected_t), intent(inout) :: this
 
       type(cg_list_element), pointer :: cgl, aux
       type(grid_container),  pointer :: cg
@@ -1479,13 +1507,13 @@ contains
 
       integer(kind=4), intent(in) :: level_id         !< level number (relative to base level)
 
-      type(cg_level_connected_T), pointer :: lev_p, curl
+      type(cg_level_connected_t), pointer :: lev_p, curl
 
       nullify(lev_p)
       curl => base_level
-      if (level_id >= base_level%level_id) then
+      if (level_id >= base_level%l%id) then
          do while (associated(curl))
-            if (curl%level_id == level_id) then
+            if (curl%l%id == level_id) then
                lev_p => curl
                exit
             endif
@@ -1493,7 +1521,7 @@ contains
          enddo
       else
          do while (associated(curl))
-            if (curl%level_id == level_id) then
+            if (curl%l%id == level_id) then
                lev_p => curl
                exit
             endif

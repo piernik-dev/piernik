@@ -30,13 +30,11 @@
 !! \brief This module contains problem variables intended to use across the code.
 !!
 !! \details It is strongly discouraged to use this feature for purposes other than debugging.
+!!
+!! \todo Get rid of this file
 !<
 
 module problem_pub
-
-#ifdef MACLAURIN_PROBLEM
-   use constants, only: ndims
-#endif /* MACLAURIN_PROBLEM */
 
    implicit none
 
@@ -47,80 +45,8 @@ module problem_pub
    real :: jeans_d0
    integer :: jeans_mode
 #endif /* JEANS_PROBLEM */
-#ifdef MACLAURIN_PROBLEM
-   real, dimension(ndims) :: xs ! position of the sphere
-   real :: as ! factor used to calculate the potential
-#endif /* MACLAURIN_PROBLEM */
 
 contains
 
-#ifdef MACLAURIN_PROBLEM
-!> \brief Calculate point-like potential for the maclaurin problem
-
-   real function ap_potential(x, y, z) result(phi)
-
-      use constants, only: xdim, ydim, zdim
-
-      implicit none
-
-      real, intent(in) :: x, y, z
-
-      phi = as / sqrt((x-xs(xdim))**2 + (y-xs(ydim))**2 + (z-xs(zdim))**2)
-
-   end function ap_potential
-
-   subroutine maclaurin2bnd_potential
-
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim, LO, HI, GEO_XYZ
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
-      use units,      only: fpiG
-
-      implicit none
-
-      integer :: i, j, k
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-
-      if (dom%geometry_type /= GEO_XYZ) call die("[problem_pub:maclaurin2bnd_potential] only cartesian geometry implemented")
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         if (any(cg%ext_bnd(xdim, :))) then
-            do j = cg%js, cg%je
-               do k = cg%ks, cg%ke
-                  if (cg%ext_bnd(xdim, LO)) cg%mg%bnd_x(j, k, LO) = ap_potential(cg%fbnd(xdim, LO), cg%y(j), cg%z(k)) * fpiG
-                  if (cg%ext_bnd(xdim, HI)) cg%mg%bnd_x(j, k, HI) = ap_potential(cg%fbnd(xdim, HI), cg%y(j), cg%z(k)) * fpiG
-               enddo
-            enddo
-         endif
-
-         if (any(cg%ext_bnd(ydim, :))) then
-            do i = cg%is, cg%ie
-               do k = cg%ks, cg%ke
-                  if (cg%ext_bnd(ydim, LO)) cg%mg%bnd_y(i, k, LO) = ap_potential(cg%x(i), cg%fbnd(ydim, LO), cg%z(k)) * fpiG
-                  if (cg%ext_bnd(ydim, HI)) cg%mg%bnd_y(i, k, HI) = ap_potential(cg%x(i), cg%fbnd(ydim, HI), cg%z(k)) * fpiG
-               enddo
-            enddo
-         endif
-
-         if (any(cg%ext_bnd(zdim, :))) then
-            do i = cg%is, cg%ie
-               do j = cg%js, cg%je
-                  if (cg%ext_bnd(zdim, LO)) cg%mg%bnd_z(i, j, LO) = ap_potential(cg%x(i), cg%y(j), cg%fbnd(zdim, LO)) * fpiG
-                  if (cg%ext_bnd(zdim, HI)) cg%mg%bnd_z(i, j, HI) = ap_potential(cg%x(i), cg%y(j), cg%fbnd(zdim, HI)) * fpiG
-               enddo
-            enddo
-         endif
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine maclaurin2bnd_potential
-
-#endif /* MACLAURIN_PROBLEM */
 
 end module problem_pub

@@ -85,9 +85,9 @@ contains
       use multigridvars,       only: single_base, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, &
            &                         source_n, solution_n, defect_n, correction_n, source, solution, defect, correction
       use named_array_list,    only: qna
-#ifdef GRAV
+#ifdef SELF_GRAV
       use multigrid_gravity,   only: multigrid_grav_par
-#endif /* GRAV */
+#endif /* SELF_GRAV */
 #ifdef COSM_RAYS
       use multigrid_diffusion, only: multigrid_diff_par
 #endif /* COSM_RAYS */
@@ -173,9 +173,9 @@ contains
       if (dom%eff_dim < 1 .or. dom%eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
 
 !! \todo Make an array of subroutine pointers
-#ifdef GRAV
+#ifdef SELF_GRAV
       call multigrid_grav_par
-#endif /* GRAV */
+#endif /* SELF_GRAV */
 #ifdef COSM_RAYS
       call multigrid_diff_par
 #endif /* COSM_RAYS */
@@ -205,7 +205,7 @@ contains
 
       use cg_list,            only: cg_list_element
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T, base_level
+      use cg_level_connected, only: cg_level_connected_t, base_level
       use cg_level_finest,    only: finest
       use constants,          only: PIERNIK_INIT_GRID, I_ONE, refinement_factor
       use dataio_pub,         only: printinfo, warn, die, code_progress, msg
@@ -213,16 +213,16 @@ contains
       use grid_cont,          only: grid_container
       use mpisetup,           only: master
       use multigridvars,      only: single_base
-#ifdef GRAV
+#ifdef SELF_GRAV
       use multigrid_gravity,  only: init_multigrid_grav
-#endif /* GRAV */
+#endif /* SELF_GRAV */
 
       implicit none
 
       integer(kind=4)       :: j
 
       type(cg_list_element), pointer :: cgl
-      type(cg_level_connected_T), pointer :: curl          !< current level (a pointer sliding along the linked list) and temporary level
+      type(cg_level_connected_t), pointer :: curl          !< current level (a pointer sliding along the linked list) and temporary level
       type(grid_container),  pointer :: cg            !< current grid container
 
       if (code_progress < PIERNIK_INIT_GRID) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized")
@@ -235,8 +235,8 @@ contains
       endif
 
       do j = 0, level_incredible
-         if (any((mod(base_level%n_d(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .or. base_level%n_d(:)/refinement_factor**(j+1) < minsize(:)) .and. dom%has_dir(:))) exit
-         if (any((mod(base_level%off(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .and. dom%has_dir(:)))) exit
+         if (any((mod(base_level%l%n_d(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .or. base_level%l%n_d(:)/refinement_factor**(j+1) < minsize(:)) .and. dom%has_dir(:))) exit
+         if (any((mod(base_level%l%off(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .and. dom%has_dir(:)))) exit
       enddo
       if (level_depth > j) then
          if (master) then
@@ -247,7 +247,7 @@ contains
          level_depth = j
       endif
 
-      do while (coarsest%level%level_id > -level_depth)
+      do while (coarsest%level%l%id > -level_depth)
          call coarsest%add_coarser
       enddo
 
@@ -260,7 +260,7 @@ contains
 
             if (any(cg%n_b(:) < dom%nb .and. dom%has_dir(:))) then
                write(msg, '(a,i1,a,3i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells: ", &
-                    dom%nb, " > ", cg%n_b(:), " at level ", curl%level_id, ". You may try to set level_depth <=", -curl%level_id
+                    dom%nb, " > ", cg%n_b(:), " at level ", curl%l%id, ". You may try to set level_depth <=", -curl%l%id
                call die(msg)
             endif
 
@@ -273,10 +273,10 @@ contains
       curl => base_level%coarser
       do while (associated(curl))
          if (master) then
-            if (curl%level_id == -level_depth .and. single_base) then
+            if (curl%l%id == -level_depth .and. single_base) then
                call curl%add_patch(n_pieces=I_ONE)
             else
-               !> \todo When there is more AMR_bsize-pieces than processes, consider forcing cartesian or noncartesian decomposition
+               !> \todo When there is more AMR::bsize-pieces than processes, consider forcing cartesian or noncartesian decomposition
                call curl%add_patch
             endif
          endif
@@ -285,14 +285,14 @@ contains
          curl => curl%coarser
       enddo
 
-#ifdef GRAV
+#ifdef SELF_GRAV
       call init_multigrid_grav
-#endif /* GRAV */
+#endif /* SELF_GRAV */
 
       ! summary
       if (master) then
-         write(msg, '(a,i2,a,3i4,a)')"[multigrid:init_multigrid] Initialized ", finest%level%level_id - coarsest%level%level_id, &
-              &                      " coarse levels, coarsest level resolution [ ", coarsest%level%n_d(:)," ]"
+         write(msg, '(a,i2,a,3i4,a)')"[multigrid:init_multigrid] Initialized ", finest%level%l%id - coarsest%level%l%id, &
+              &                      " coarse levels, coarsest level resolution [ ", coarsest%level%l%n_d(:)," ]"
          call printinfo(msg)
       endif
 
@@ -304,9 +304,9 @@ contains
 
       use constants,          only: dsetnamelen
       use grid_container_ext, only: cg_ext, cg_extptrs
-#ifdef GRAV
+#ifdef SELF_GRAV
       use multigrid_gravity,  only: init_multigrid_grav_ext
-#endif /* GRAV */
+#endif /* SELF_GRAV */
 
       implicit none
 
@@ -317,9 +317,9 @@ contains
       mg_cg_cleanup_p => mg_cg_cleanup
       call cg_extptrs%extend(mg_cg_init_p, mg_cg_cleanup_p, mg_ext_name)
 
-#ifdef GRAV
+#ifdef SELF_GRAV
       call init_multigrid_grav_ext(mg_ext_name)
-#endif /* GRAV */
+#endif /* SELF_GRAV */
 !!$#ifdef COSM_RAYS
 !!$      call init_multigrid_cr_ext(mg_ext_name)
 !!$#endif /* COSM_RAYS */
@@ -371,9 +371,9 @@ contains
       use mpi,                 only: MPI_DOUBLE_PRECISION
       use mpisetup,            only: master, nproc, FIRST, LAST, comm, mpi_err
       use multigridvars,       only: tot_ts
-#ifdef GRAV
+#ifdef SELF_GRAV
       use multigrid_gravity,   only: cleanup_multigrid_grav
-#endif /* GRAV */
+#endif /* SELF_GRAV */
 #ifdef COSM_RAYS
       use multigrid_diffusion, only: cleanup_multigrid_diff
 #endif /* COSM_RAYS */
@@ -382,9 +382,9 @@ contains
 
       real, allocatable, dimension(:) :: all_ts
 
-#ifdef GRAV
+#ifdef SELF_GRAV
       call cleanup_multigrid_grav
-#endif /* GRAV */
+#endif /* SELF_GRAV */
 #ifdef COSM_RAYS
       call cleanup_multigrid_diff
 #endif /* COSM_RAYS */

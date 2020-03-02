@@ -23,7 +23,7 @@
 
  $RESTART_CONTROL
     restart  = 'last'
-    new_id   = ''
+    res_id   = ''
     nrestart = 0
  /
 
@@ -41,6 +41,7 @@
     dt_log  = 0.00001
     dt_tsl  = 0.00001
     vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'encr', 'velx', 'vely', 'velz'
+    h5_64bit = .true.
  /
 
  $NUMERICAL_SETUP
@@ -49,6 +50,7 @@
     smallei= 1.e-5
     integration_order = 2
     limiter= 'vanleer'
+    disallow_negatives = .false.
  /
 
  $FLUID_IONIZED
@@ -68,9 +70,9 @@
     K_crn_perp(1)  = 0     ! isotropic
     K_crn_perp(2)  = 0
     K_crn_perp(3)  = 0
-    ncre        = 0
-    use_split   = .false.
-    crn_gpcr_ess = .true.
+    ncre           = 0
+    use_CRsplit    = .false.
+    crn_gpcr_ess   = .true.
  /
 
  $CR_SPECIES
@@ -88,23 +90,23 @@
 !    diff_explicit = .true.
     diff_theta     = 0.5
     diff_tstep_fac = 91.0222223 !45.511112
-    norm_tol = 1e-3
+    norm_tol = 1e-5
     nsmoob = 4
     max_cycles = 50
  /
 
  $PROBLEM_CONTROL
-    d0     = 1.0 ! when COSM_RAYS_SOURCES are defined, the density somehow scales the result of sourcecosmicrays.F90 and values like 1e5 quickly lead to FP overflow. This must be a bug.
-    p0     = 1.0
-    bx0    = 5.0
-    by0    = 5.0
-    bz0    = 5.0
-    x0     = 0.0
-    y0     = 0.0
-    z0     = 0.0
-    r0     = 64.0
-    beta_cr= 0.0
-    amp_cr = 1.0
+    d0        = 1.0 ! when COSM_RAYS_SOURCES are defined, the density somehow scales the result of sourcecosmicrays.F90 and values like 1e5 quickly lead to FP overflow. This must be a bug.
+    p0        = 1.0
+    bx0       = 5.0
+    by0       = 5.0
+    bz0       = 5.0
+    x0        = 0.0
+    y0        = 0.0
+    z0        = 0.0
+    r0        = 64.0
+    beta_cr   = 0.0
+    amp_cr1   = 1.0
     norm_step = 1
  /
 

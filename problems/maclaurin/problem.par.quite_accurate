@@ -23,13 +23,13 @@
 
  $RESTART_CONTROL
     restart  = 'none'
-    new_id   = ''
+    res_id   = ''
     nrestart = 0
  /
 
  $END_CONTROL
     tend   = 0.0
-    nend   = 1 ! we can set here 0 as weel, but this would issue a warning
+    nend   = 1 ! we can set here 0 as well, but this would issue a warning
  /
 
  $OUTPUT_CONTROL
@@ -84,7 +84,6 @@
     ord_laplacian = 4
     L4_strength = 0.5
     grav_bnd_str  = "isolated"
-    coarsen_multipole = 0
     lmax = 96
      interp_pt2mom = .true.
 !    interp_mom2pot = .true.

@@ -28,9 +28,6 @@
 #if defined GALAXY && defined SN_SRC
 #define SN_GALAXY
 #endif /* GALAXY && SN_SRC */
-#if defined COSM_RAYS_SOURCES || defined SN_GALAXY
-#define CRS_GALAXY
-#endif /* COSM_RAYS_SOURCES || SN_GALAXY */
 #if defined COSM_RAYS && defined SN_SRC
 #define CR_SN
 #endif /* COSM_RAYS && SN_SRC */
@@ -90,6 +87,9 @@ contains
       x0     = 0.0
       y0     = 0.0
       z0     = 0.0
+      alpha  = 0.0
+      amp_cr = 0.0
+      beta_cr= 0.0
 
       if (master) then
 
@@ -167,21 +167,19 @@ contains
 #endif /* SHEAR */
 #ifdef COSM_RAYS
       use initcosmicrays, only: gamma_crn, iarr_crn
-#ifdef CRS_GALAXY
-      use cr_data,        only: eCRSP, cr_table
-#endif /* CRS_GALAXY */
 #ifdef SN_GALAXY
-      use cr_data,        only: icr_H1, icr_C12
+      use cr_data,        only: eCRSP, cr_table, icr_H1, icr_C12
       use domain,         only: dom
       use snsources,      only: r_sn
 #endif /* SN_GALAXY */
+#ifdef CR_SN
+      use snsources,      only: cr_sn
+#endif /* CR_SN */
 #endif /* COSM_RAYS */
 #ifdef GRAV
       use gravity,        only: grav_pot_3d
 #endif /* GRAV */
-#ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: cr_sigma, icr_N14, icr_O16
-#endif /* COSM_RAYS_SOURCES */
+
       implicit none
 
       class(component_fluid), pointer :: fl
@@ -192,12 +190,6 @@ contains
 #ifdef SN_GALAXY
       real                            :: decr, x1, x2, y1, y2, z1
 #endif /* SN_GALAXY */
-
-#ifdef COSM_RAYS_SOURCES
-! really workaround for the gold
-      if (eCRSP(icr_N14)) cr_sigma(cr_table(icr_N14),:) = 0.0
-      if (eCRSP(icr_O16)) cr_sigma(cr_table(icr_O16),:) = 0.0
-#endif /* COSM_RAYS_SOURCES */
 
 #ifdef GRAV
       call grav_pot_3d
@@ -257,7 +249,7 @@ contains
       enddo
 
 #ifdef CR_SN
-      call cr_sn_beware(sn_pos)
+      call cr_sn(sn_pos,amp_cr)
 #endif /* CR_SN */
 
 
@@ -436,92 +428,4 @@ contains
 
    end subroutine galactic_grav_pot
 #endif /* GRAV */
-!------------------------------------------------------------------------------
-#ifdef CR_SN
-!BEWARE!
-!>
-!! \brief Routine that inserts an amount of cosmic ray energy around the position of supernova
-!! \param pos real, dimension(3), array of supernova position components
-!! \author M. Hanasz
-!!
-!! BEWARE: the code is very similar to snsources:cr_sn . Merge?
-!!
-!<
-   subroutine cr_sn_beware(pos)
-
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI
-      use domain,         only: dom
-      use grid_cont,      only: grid_container
-#ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: cr_table, cr_primary, eCRSP, icr_H1, icr_C12 !, icr_N14, icr_O16
-      use initcosmicrays, only: iarr_crn
-#endif /* COSM_RAYS_SOURCES */
-      use snsources,      only: r_sn
-#ifdef SHEAR
-      use snsources,      only: sn_shear
-#endif /* SHEAR */
-
-      implicit none
-
-      real, dimension(ndims), intent(in) :: pos
-      integer                            :: i, j, k, ipm, jpm
-      real                               :: decr, xsn, ysn, zsn, ysna, zr
-      type(cg_list_element), pointer     :: cgl
-      type(grid_container),  pointer     :: cg
-#ifdef SHEAR
-      real, dimension(3)                 :: ysnoi
-#endif /* SHEAR */
-
-      xsn = pos(xdim)
-      ysn = pos(ydim)
-      zsn = pos(zdim)
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-
-#ifdef SHEAR
-         ysnoi(2) = ysn
-         call sn_shear(cg, ysnoi)
-#endif /* !SHEAR */
-
-         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-            zr = (cg%z(k)-zsn)**2
-            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-
-                  decr = 0.0
-                  do ipm=-1,1
-#ifdef SHEAR
-                     ysna = ysnoi(ipm+2)
-#else /* !SHEAR */
-                     ysna = ysn
-#endif /* !SHEAR */
-                     do jpm=-1,1
-
-!                     decr = amp_ecr_sn * ethu  &
-                        decr = decr + exp(-((cg%x(i)-xsn +real(ipm)*dom%L_(xdim))**2  &
-                             +              (cg%y(j)-ysna+real(jpm)*dom%L_(ydim))**2 + zr)/r_sn**2)
-
-                     enddo ! jpm
-                  enddo ! ipm
-                  decr = decr * amp_cr
-#ifdef COSM_RAYS_SOURCES
-!                     cg%u(iarr_crn,i,j,k) = cg%u(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
-                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) + decr
-                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12))*12*decr
-                  !> \deprecated BEWARE: following lines are inconsistent with the gold for some reason
-!                  if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14))*14*decr
-!                  if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16))*16*decr
-#endif /* COSM_RAYS_SOURCES */
-               enddo ! i
-            enddo ! j
-         enddo ! k
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine cr_sn_beware
-#endif /* CR_SN */
 end module initproblem

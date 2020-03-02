@@ -82,7 +82,8 @@ contains
       use global,           only: smalld
       use mpisetup,         only: rbuff, ibuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
       use named_array_list, only: wna
-      use refinement,       only: set_n_updAMR, n_updAMR, user_ref2list
+      use refinement,       only: set_n_updAMR, n_updAMR
+      use unified_ref_crit_list, only: urc_list
       use user_hooks,       only: problem_refine_derefine
 
       implicit none
@@ -183,7 +184,7 @@ contains
          call set_n_updAMR(nflip)
       else
          do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
-            call user_ref2list(wna%fi, id, ref_thr*pulse_low_density, deref_thr*pulse_low_density, 0., "grad")
+            call urc_list%add_user_urcv(wna%fi, id, ref_thr*pulse_low_density, deref_thr*pulse_low_density, 0., "grad", .true.)
          enddo
       endif
 
@@ -260,16 +261,16 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)                    :: var
-      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-      integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in)       :: cg
+      character(len=*),              intent(in)    :: var
+      real, dimension(:,:,:),        intent(inout) :: tab
+      integer,                       intent(inout) :: ierrh
+      type(grid_container), pointer, intent(in)    :: cg
 
       call analytic_solution(t) ! cannot handle this automagically because here we modify it
 
       ierrh = 0
       if (qna%exists(var)) then
-         tab(:,:,:) = real(cg%q(qna%ind(var))%span(cg%ijkse), 4)
+         tab(:,:,:) = real(cg%q(qna%ind(var))%span(cg%ijkse), kind(tab))
       else
          ierrh = -1
       endif
@@ -451,14 +452,14 @@ contains
    subroutine flip_flop
 
       use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: I_TWO
       use global,             only: nstep
 
       implicit none
 
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
       type(cg_list_element),      pointer :: cgl
 
       integer :: i

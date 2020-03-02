@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 
-!> \brief This module manages tag pool for cg_level_connected_T%vertical_b_prep
+!> \brief This module manages tag pool for cg_level_connected_t%vertical_b_prep
 
 module tag_pool
 
@@ -38,15 +38,15 @@ module tag_pool
    integer(kind=4), parameter :: POOL_SIZE = 2**16  !< number of entries in a single pool. This one gives 2**15 pools. Try to make it smaller if you ever run out of pools.
    integer(kind=4), parameter :: FREE = -2147483647 !< -2**31+1, special id, that means a given pool is free
 
-   type :: tag_pool_T
+   type :: tag_pool_t
       integer(kind=4), dimension(:), allocatable :: t_map
    contains
       procedure :: cleanup !< Deallocate everything
       procedure :: get     !< Give a pool of tags and mark it with given id
       procedure :: release !< Release all pools of tags with given id
-   end type tag_pool_T
+   end type tag_pool_t
 
-   type(tag_pool_T) :: t_pool
+   type(tag_pool_t) :: t_pool
 
 contains
 
@@ -56,7 +56,7 @@ contains
 
       implicit none
 
-      class(tag_pool_T), intent(inout) :: this
+      class(tag_pool_t), intent(inout) :: this
 
       if (allocated(this%t_map)) deallocate(this%t_map)
 
@@ -71,7 +71,7 @@ contains
 
       implicit none
 
-      class(tag_pool_T), intent(inout) :: this
+      class(tag_pool_t), intent(inout) :: this
       integer(kind=4),   intent(in)    :: id
       integer(kind=4),   intent(out)   :: t_start
       integer(kind=4),   intent(out)   :: t_end
@@ -108,7 +108,7 @@ contains
 
       implicit none
 
-      class(tag_pool_T), intent(inout) :: this
+      class(tag_pool_t), intent(inout) :: this
       integer(kind=4),   intent(in)    :: id
 
       integer :: i

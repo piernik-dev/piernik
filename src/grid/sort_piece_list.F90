@@ -27,12 +27,12 @@
 
 #include "piernik.h"
 
-!> \brief Module that contains a definition of sortable list of grid pieces, together with definition required by abstract type sortable_list_T
+!> \brief Module that contains a definition of sortable list of grid pieces, together with definition required by abstract type sortable_list_t
 
 module sort_piece_list
 
    use constants, only: ndims
-   use sortable_list, only: sortable_list_T
+   use sortable_list, only: sortable_list_t
 
    implicit none
 
@@ -52,7 +52,7 @@ module sort_piece_list
       procedure :: set_gp                            !< Set the primary properties, initialize derived properties with safe defaults
    end type grid_piece
 
-   type, extends(sortable_list_T) :: grid_piece_list
+   type, extends(sortable_list_t) :: grid_piece_list
       type(grid_piece), dimension(:), allocatable :: list !< the list itself
       type(grid_piece) :: temp
    contains
@@ -171,14 +171,14 @@ contains
 !! When the position equals temp_index, use temporary storage.
 !<
 
-   logical function compare_elements(this, a, b)
+   pure logical function compare_elements(this, a, b)
 
       use sortable_list, only: temp_index
 
       implicit none
 
-      class(grid_piece_list), intent(inout) :: this !< object invoking type-bound procedure
-      integer,                intent(in)    :: a, b
+      class(grid_piece_list), intent(in) :: this !< object invoking type-bound procedure
+      integer,                intent(in) :: a, b
 
       if (a == b) then
          compare_elements = .false.

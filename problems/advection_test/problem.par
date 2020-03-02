@@ -27,7 +27,7 @@
 
  $RESTART_CONTROL
     restart  = 'last'
-    new_id   = ''
+    res_id   = ''
     nrestart = 0
  /
 
@@ -62,6 +62,7 @@
  $PROBLEM_CONTROL
     pulse_vel = 2., -2., 2.
     pulse_size = 1., 1., 1.
+    !pulse_pres = 100.
  /
 
  $NONINERTIAL

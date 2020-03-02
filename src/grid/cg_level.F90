@@ -36,14 +36,14 @@ module cg_level
    !! \deprecated remove this clause as soon as Intel Compiler gets required
    !! features and/or bug fixes, it's needed for 12.1, fixed in 13.0 but the
    !! latter is broken and we cannot use it yet
-   use cg_list,           only: cg_list_T   ! QA_WARN intel
+   use cg_list,           only: cg_list_t   ! QA_WARN intel
 #endif /* __INTEL_COMPILER */
-   use cg_list_neighbors, only: cg_list_neighbors_T
+   use cg_list_neighbors, only: cg_list_neighbors_t
 
    implicit none
 
    private
-   public :: cg_level_T
+   public :: cg_level_t
 
    !>
    !! \brief A list of all cg of the same resolution.
@@ -52,7 +52,7 @@ module cg_level
    !! (islands: made of one or more cg's).
    !! This type is not intended for direct use. It is extended in cg_level_connected into a functional object.
    !<
-   type, extends(cg_list_neighbors_T), abstract :: cg_level_T
+   type, extends(cg_list_neighbors_t), abstract :: cg_level_t
 
       integer                                    :: fft_type     !< type of FFT to employ in some multigrid solvers (depending on boundaries)
 
@@ -78,7 +78,7 @@ module cg_level
       procedure          :: balance_old                                          !< Wrapper for rebalance_old
       procedure          :: refresh_SFC_id                                       !< Recalculate SFC_id for grids, useful after domain expansion
 
-   end type cg_level_T
+   end type cg_level_t
 
 contains
 
@@ -88,7 +88,7 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
+      class(cg_level_t), intent(inout) :: this !< object invoking type bound procedure
 
       call this%plist%p_deallocate
       call this%dot%cleanup
@@ -96,6 +96,8 @@ contains
       if (allocated(this%omega_cr))     deallocate(this%omega_cr)
       if (allocated(this%nshift))       deallocate(this%nshift)
       if (allocated(this%local_omega))  deallocate(this%local_omega)
+      call this%l%check
+      deallocate(this%l)
 
    end subroutine cleanup
 
@@ -109,7 +111,7 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
+      class(cg_level_t), intent(inout) :: this !< object invoking type bound procedure
 
       call this%plist%p_deallocate
 
@@ -129,7 +131,7 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(in)   :: this   !< object invoking type bound procedure
+      class(cg_level_t), intent(in)   :: this   !< object invoking type bound procedure
 
       integer                         :: p, i, hl, tot_cg
       integer(kind=8)                 :: ccnt
@@ -146,7 +148,7 @@ contains
          cgl => cgl%nxt
       enddo
 !!$      if (i /= this%cnt .or. this%cnt /= size(this%dot%gse(proc)%c(:)) .or. size(this%dot%gse(proc)%c(:)) /= i) then
-!!$         write(msg, '(2(a,i4),a,3i7)')"[cg_level:print_segments] Uncertain number of grid pieces @PE ",proc," on level ", this%level_id, &
+!!$         write(msg, '(2(a,i4),a,3i7)')"[cg_level:print_segments] Uncertain number of grid pieces @PE ",proc," on level ", this%l%id, &
 !!$              &                       " : ",i,this%cnt,size(this%dot%gse(proc)%c(:))
 !!$         call warn(msg)
 !!$
@@ -174,14 +176,14 @@ contains
             maxcnt(p) = maxcnt(p) + ccnt
 #ifdef VERBOSE
             if (i == 1) then
-               write(header, '(a,i4,a,i3)')"[cg_level:print_segments] segment @", p, " ^", this%level_id
+               write(header, '(a,i4,a,i3)')"[cg_level:print_segments] segment @", p, " ^", this%l%id
                hl = len_trim(header)
             else
                header = repeat(" ", hl)
             endif
-            if (maxval(this%n_d(:)) < 1000000) then
+            if (maxval(this%l%n_d(:)) < 1000000) then
                write(msg,'(2a,2(3i7,a),i8,a)') header(:hl), " : [", this%dot%gse(p)%c(i)%se(:, LO), "] : [", this%dot%gse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
-            else if (maxval(this%n_d(:)) < 1000000000) then
+            else if (maxval(this%l%n_d(:)) < 1000000000) then
                write(msg,'(2a,2(3i10,a),i8,a)') header(:hl), " : [", this%dot%gse(p)%c(i)%se(:, LO), "] : [", this%dot%gse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
             else
                write(msg,'(2a,2(3i18,a),i8,a)') header(:hl), " : [", this%dot%gse(p)%c(i)%se(:, LO), "] : [", this%dot%gse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
@@ -191,7 +193,7 @@ contains
          enddo
       enddo
 
-!      write(msg, '(a,i3,a,f5.1,a,i5,a,f8.5)')"[cg_level:print_segments] Level ", this%level_id, " filled in ",(100.*sum(maxcnt(:)))/product(real(this%n_d(:))), &
+!      write(msg, '(a,i3,a,f5.1,a,i5,a,f8.5)')"[cg_level:print_segments] Level ", this%l%id, " filled in ",(100.*sum(maxcnt(:)))/product(real(this%n_d(:))), &
 !           &                                 "%, ",tot_cg," grid(s), load balance : ", sum(maxcnt(:))/(nproc*maxval(maxcnt(:)))
       !> \todo add calculation of total internal boundary surface in cells
 !      call printinfo(msg)
@@ -209,7 +211,7 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
+      class(cg_level_t), intent(inout) :: this !< object invoking type bound procedure
 
       ! First: do the balancing of new grids
       call this%balance_new
@@ -229,11 +231,11 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_t), intent(inout) :: this   !< object invoking type bound procedure
 
       call this%update_decomposition_properties
-      call this%dot%update_global(this%first, this%cnt, this%off) ! communicate everything that was added before
-      call this%dot%update_SFC_id_range(this%off)
+      call this%dot%update_global(this%first, this%cnt, this%l%off) ! communicate everything that was added before
+      call this%dot%update_SFC_id_range(this%l%off)
       call this%find_neighbors ! requires access to whole this%dot%gse(:)%c(:)%se(:,:)
       call this%update_req     ! Perhaps this%find_neighbors added some new entries
       call this%dot%update_tot_se
@@ -260,7 +262,7 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_t), intent(inout) :: this   !< object invoking type bound procedure
 
       integer                       :: i, p, ep
       integer(kind=8)               :: s
@@ -281,7 +283,7 @@ contains
                this%dot%gse(proc)%c(i)%se(:,:) = this%plist%patches(p)%pse(s)%se(:,:)
                call this%add
                cg => this%last%cg
-               call cg%init_gc(this%n_d, this%off, this%dot%gse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
+               call cg%init_gc(this%dot%gse(proc)%c(i)%se(:, :), i, this%l)
                do ep = lbound(cg_extptrs%ext, dim=1), ubound(cg_extptrs%ext, dim=1)
                   if (associated(cg_extptrs%ext(ep)%init))  call cg_extptrs%ext(ep)%init(cg)
                enddo
@@ -308,9 +310,9 @@ contains
 
       logical, save :: warned = .false.
 
-      class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_t), intent(inout) :: this   !< object invoking type bound procedure
 
-      if (this%level_id > base_level_id) is_refined = .true.
+      if (this%l%id > base_level_id) is_refined = .true.
       call piernik_MPI_Allreduce(is_refined, pLOR)
       if (is_refined) then
          is_mpi_noncart = .true.
@@ -335,10 +337,10 @@ contains
 
       implicit none
 
-      class(cg_level_T), target, intent(inout) :: this     !< current level
+      class(cg_level_t), target, intent(inout) :: this     !< current level
       integer(kind=4), optional, intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
-      call this%add_patch_detailed(this%n_d, this%off, n_pieces)
+      call this%add_patch_detailed(this%l%n_d, this%l%off, n_pieces)
 
    end subroutine add_patch_fulllevel
 
@@ -355,15 +357,15 @@ contains
 
       implicit none
 
-      class(cg_level_T), target,         intent(inout) :: this     !< current level
+      class(cg_level_t), target,         intent(inout) :: this     !< current level
       integer(kind=8), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
       integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level)
       integer(kind=4), optional,         intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
       this%recently_changed = .true. ! assume that the new patches will change this level
       call this%plist%expand
-      if (.not. this%plist%patches(ubound(this%plist%patches(:), dim=1))%decompose_patch(n_d(:), off(:), this%level_id, n_pieces=n_pieces)) then
-         write(msg,'(a,i4)')"[cg_level:add_patch_detailed] Decomposition failed at level ",this%level_id
+      if (.not. this%plist%patches(ubound(this%plist%patches(:), dim=1))%decompose_patch(n_d(:), off(:), this%l%id, n_pieces=n_pieces)) then
+         write(msg,'(a,i4)')"[cg_level:add_patch_detailed] Decomposition failed at level ",this%l%id
          call die(msg)
       endif
 
@@ -378,7 +380,7 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this
+      class(cg_level_t), intent(inout) :: this
 
       call this%rebalance_old
       ! OPT: call this%update_gse inside this%update_everything can be quite long to complete
@@ -397,13 +399,13 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this
+      class(cg_level_t), intent(inout) :: this
 
       type(cg_list_element), pointer  :: cgl
 
       cgl => this%first
       do while (associated(cgl))
-         cgl%cg%SFC_id = SFC_order(cgl%cg%my_se(:, LO) - this%off)
+         cgl%cg%SFC_id = SFC_order(cgl%cg%my_se(:, LO) - this%l%off)
          cgl => cgl%nxt
       enddo
 

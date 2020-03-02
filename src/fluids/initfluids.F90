@@ -196,6 +196,7 @@ contains
 
    subroutine sanitize_smallx_checks
 
+      use constants,        only: INVALID
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: big_float, DST, xdim, ydim, zdim, cs_i2_n, pMAX, pMIN
@@ -214,7 +215,7 @@ contains
       type(grid_container),   pointer :: cg
       class(component_fluid), pointer :: fl
       integer                         :: i
-      real, pointer, dimension(:,:,:) :: dn, mx, my, mz, en, bx, by, bz
+      real, pointer, dimension(:,:,:) :: dn, mx, my, mz, en, bx => null(), by => null(), bz => null()
       real, parameter                 :: safety_factor = 1.e-4
       real, parameter                 :: max_dens_span = 5.0
       real                            :: maxdens, span, mindens, minpres
@@ -227,9 +228,11 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         bx => cg%w(wna%bi)%span(xdim,cg%ijkse)
-         by => cg%w(wna%bi)%span(ydim,cg%ijkse)
-         bz => cg%w(wna%bi)%span(zdim,cg%ijkse)
+         if (wna%bi > INVALID) then
+            bx => cg%w(wna%bi)%span(xdim,cg%ijkse)
+            by => cg%w(wna%bi)%span(ydim,cg%ijkse)
+            bz => cg%w(wna%bi)%span(zdim,cg%ijkse)
+         endif
 
          if (smalld >= big_float) then
             do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)

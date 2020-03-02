@@ -16,8 +16,16 @@
 #   'make allsetup'        # creates object directories for all valid problems,
 #                            but does not compile them
 #   'make ctags'           # recreate ctags for {src,problems}
-#   'make dep [P=problem]  # create and show dependency graph
+#   'make dep [P=problem]' # create and show dependency graph
 #                            $P defaults to mcrwind
+#   'make qa'              # run qa.py on all F90 files in src and problems
+#                            directories
+#   'make pep8'            # run pep8 on all Python scripts, ignore long lines
+#   'make chk_err_msg'     # check filenames in error messages
+#   'make doxy'            # generate/updare Doxygen documentation
+#   'make gold'            # run the gold tests from ./jenkins directory
+#   'make gold-serial'     # run the gold tests from ./jenkins directory in serial mode
+#   'make gold-clean'      # remove files after gold test
 #
 # Resetup will also call make for the object directories, unless you've
 # specified --nocompile either in your .setuprc* files or it was stored in
@@ -31,7 +39,7 @@ ALLOBJ = $(wildcard obj*)
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check dep
+.PHONY: $(ALLOBJ) check dep qa pep8 doxy chk_err_msg gold gold-serial gold-clean
 
 all: $(ALLOBJ)
 
@@ -60,7 +68,7 @@ clean:
 	@CL=1 $(MAKE) -k all
 
 allsetup:
-	for i in problems/* ; do \
+	for i in $$( find problems/* -type d ) ; do \
 		if [ ! -e $$i/OBSOLETE ] ; then \
 			if [ $$( dirname $$( dirname $$i ) ) == "." ] ; then \
 				nm=$$( basename $$i ); \
@@ -70,6 +78,29 @@ allsetup:
 			./setup $$nm -o "A_"$$( basename $$i ) --nocompile && sed -i 's/ --nocompile//' "obj_A_"$$( basename $$i )"/"{.setup.call,Makefile,env.dat,version.F90}; \
 		fi; \
 	done
+
+qa: pep8 chk_err_msg
+	./bin/qa.py $$( find src problems -name "*.F90" )
+
+pep8:
+	echo PEP8 check
+	pep8 `find src problems bin jenkins python -name "*py"` --ignore=E501
+
+chk_err_msg:
+	echo Check filenames in error messages
+	./bin/checkmessages.sh
+
+gold:
+	./jenkins/gold_test_list.sh
+
+gold-serial:
+	SERIAL=1 ./jenkins/gold_test_list.sh
+
+gold-clean:
+	\rm -rf jenkins/goldexec/* /tmp/jenkins_gold/*
+
+doxy:
+	doxygen piernik.doxy
 
 ifndef P
 P = "mcrwind"

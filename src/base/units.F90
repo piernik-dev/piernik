@@ -173,7 +173,7 @@ contains
 !<
    subroutine init_units
 
-      use constants,  only: pi, fpi, small, PIERNIK_INIT_MPI
+      use constants,  only: pi, fpi, dirtyL, PIERNIK_INIT_MPI
       use dataio_pub, only: warn, printinfo, msg, die, code_progress
       use func,       only: operator(.equals.)
       use mpisetup,   only: master
@@ -307,18 +307,21 @@ contains
 
          case ("USER", "user")
             if (master) call warn("[units:init_units] PIERNIK will use 'cm', 'sek', 'gram' defined in problem.par")
-            if (any([cm.equals.small, sek.equals.small, gram.equals.small])) &
+            if (any([cm.equals.dirtyL, sek.equals.dirtyL, gram.equals.dirtyL])) &
                call die("[units:init_units] units_set=='user', yet one of {'cm','sek','gram'} is not set in problem.par") ! Don't believe in coincidence
             to_stdout = .true.               ! Force output in case someone is not aware what he/she is doing
             if (trim(s_len_u)  == ' undefined') s_len_u   = ' [user unit]'
             if (trim(s_time_u) == ' undefined') s_time_u  = ' [user unit]'
             if (trim(s_mass_u) == ' undefined') s_mass_u  = ' [user unit]'
+            lmtvB    = [1.0, 1.0, 1.0, 1.0, 1.0]
+            s_lmtvB  = ["dimensionless", "dimensionless", "dimensionless", &
+                        "dimensionless", "dimensionless", "dimensionless"]  ! trick for yt
 
          case default
             if (master) call warn("[units:init_units] you haven't chosen units set. That means physical vars taken from 'units' are worthless or equal 1")
-            cm   = small
-            gram = small
-            sek  = small
+            cm   = dirtyL
+            gram = dirtyL
+            sek  = dirtyL
 
             scale_me = .true.
             lmtvB    = [1.0, 1.0, 1.0, 1.0, 1.0]
@@ -401,7 +404,7 @@ contains
 
    subroutine units_par_io
 
-      use constants,  only: one, fpi, small
+      use constants,  only: one, fpi, dirtyL
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
 
@@ -416,9 +419,9 @@ contains
 
       miu0   = fpi
       kelvin = one
-      cm     = small
-      gram   = small
-      sek    = small
+      cm     = dirtyL
+      gram   = dirtyL
+      sek    = dirtyL
 
       if (master) then
 

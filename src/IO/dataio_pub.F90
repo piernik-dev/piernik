@@ -37,20 +37,21 @@ module dataio_pub
    public  ! QA_WARN most variables are not secrets here
    private :: mpi_err, colormessage, T_PLAIN, T_ERR, T_WARN, T_INFO, T_IO, T_SILENT, & ! QA_WARN no need to use these symbols outside dataio_pub
         &     ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, & ! QA_WARN
-        &     namelist_handler_T                                                       ! QA_WARN
+        &     namelist_handler_t                                                       ! QA_WARN
    private :: cbuff_len, domlen, idlen, cwdlen ! QA_WARN prevent re-exporting
    !mpisetup uses: ansi_white and ansi_black
 
    real, parameter             :: piernik_hdf5_version = 1.18    !< output version
 
    ! v2 specific
-   real, parameter             :: piernik_hdf5_version2 = 2.01   !< output version for multi-file, multi-domain I/O
+   real, parameter             :: piernik_hdf5_version2 = 2.02   !< output version for multi-file, multi-domain I/O
    logical                     :: use_v2_io                      !< prefer the new I/O format
    logical                     :: gdf_strict                     !< adhere more strictly to GDF standard
    integer(kind=4)             :: nproc_io                       !< how many processes do the I/O (v2 only)
    logical                     :: can_i_write                    !< .true. for processes allowed to write
    logical                     :: enable_compression             !< set to .true. to enable automatic compression (test I/O performance before use, avoid on serial I/O)
    integer(kind=4)             :: gzip_level                     !< gzip compression strength: 1 - lowest and fast, 9 - best and slow
+   logical                     :: h5_64bit                       !< single or double precision plotfiles
 
    ! Buffer lengths used only in I/O routines
    integer, parameter          :: msglen = 1024                  !< 1kB for a message ought to be enough for anybody ;-)
@@ -59,7 +60,7 @@ module dataio_pub
    ! Simulation control
    character(len=cbuff_len)    :: problem_name                   !< The problem name
    character(len=idlen)        :: run_id                         !< Auxiliary run identifier
-   character(len=idlen)        :: new_id                         !< Auxiliary new run identifier to change run_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new_id = '' then run_id is still used)
+   character(len=idlen)        :: res_id                         !< Auxiliary run to restart identifier, yet different then current run_id of restarted simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if res_id = '' then run_id is used also for reading restart file)
    real                        :: tend                           !< simulation time to end
    real                        :: wend                           !< wall clock time to end (in hours)
 
@@ -67,7 +68,7 @@ module dataio_pub
    integer                     :: tsl_lun                        !< logical unit number for timeslice file
    integer                     :: log_lun                        !< logical unit number for log file
    integer(kind=4)             :: nend                           !< number of the step to end simulation
-   integer(kind=4), save       :: cbline = 1                     !< current buffer line
+   integer(kind=4), save       :: cbline = 0                     !< current buffer line
    integer                     :: nstep_start                    !< number of start timestep
    integer(kind=4)             :: nhdf                           !< current number of hdf file
    integer(kind=4)             :: nres                           !< current number of restart file
@@ -95,9 +96,9 @@ module dataio_pub
    integer                     :: code_progress                  !< rough estimate of code execution progress
 
    ! storage for the problem.par
-   integer, parameter          :: maxparfilelen   = 128          !< max length of line in problem.par file
+   integer, parameter          :: maxparfilelen   = 500          !< max length of line in problem.par file
    integer, parameter          :: maxparfilelines = 256          !< max number of lines in problem.par
-   integer(kind=4), parameter  :: bufferlines = 128              !< max number of lines in problem.par
+   integer(kind=4), parameter  :: bufferlines = 128              !< max number of lines in the log buffer
    character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
    character(len=msglen), dimension(bufferlines) :: logbuffer    !< buffer for log I/O
    integer, save               :: parfilelines = 0               !< number of lines in the parameter file
@@ -105,7 +106,8 @@ module dataio_pub
    logical, save               :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
    logical, save               :: log_file_initialized = .false. !< logical to mark initialization of logfile
    logical, save               :: log_file_opened = .false.      !< logical to mark opening of logfile
-   integer(kind=4), save       :: require_problem_IC = 0          !< 1 will call initproblem::problem_initial_conditions on restart
+   logical, save               :: restarted_sim = .false.        !< logical to distinguish between new and restarted simulation
+   integer(kind=4), save       :: require_problem_IC = 0         !< 1 will call initproblem::problem_initial_conditions on restart
 
    logical                     :: vizit = .false.                !< perform "live" visualization using pgplot
    logical                     :: multiple_h5files = .false.     !< write one HDF5 file per proc
@@ -127,10 +129,12 @@ module dataio_pub
 
    ! Per suggestion of ZEUS sysops:
    ! http://www.fz-juelich.de/ias/jsc/EN/Expertise/Supercomputers/JUROPA/UserInfo/IO_Tuning.htm
+#if defined(__INTEL_COMPILER)
    integer, parameter               :: io_par = 4
    character(len=io_par), parameter :: io_buffered = "yes"
    integer, parameter               :: io_blocksize = 1048576
    integer, parameter               :: io_buffno = 1
+#endif /* __INTEL_COMPILER */
 
    interface
       subroutine namelist_errh_P(ierrh, nm, skip_eof)
@@ -146,7 +150,7 @@ module dataio_pub
       end subroutine compare_namelist_P
    end interface
 
-   type :: namelist_handler_T
+   type :: namelist_handler_t
       character(len=msglen), pointer :: cmdl_nml   !< buffer for namelist supplied via commandline
       character(len=cwdlen), pointer :: par_file   !< path to the parameter file
       character(len=cwdlen), pointer :: errstr     !< string for storing error messages
@@ -157,21 +161,27 @@ module dataio_pub
       procedure(namelist_errh_P), nopass, pointer    :: namelist_errh
       logical :: initialized = .false.
    contains
-      procedure :: init => namelist_handler_T_init
+      procedure :: init => namelist_handler_t_init
       procedure :: compare_namelist
-   end type namelist_handler_T
+   end type namelist_handler_t
 
-   type(namelist_handler_T) :: nh
+   type(namelist_handler_t) :: nh
 
 contains
 
-   subroutine namelist_handler_T_init(this)
+   subroutine namelist_handler_t_init(this)
+
+      use constants, only: cbuff_len
+
       implicit none
-      class(namelist_handler_T), intent(inout) :: this
+
+      class(namelist_handler_t), intent(inout) :: this
+
       character(len=cwdlen) :: tmpdir
+      character(len=cbuff_len) :: pid
       integer :: lchar_tmpdir
 
-      call get_environment_variable("TMPDIR", tmpdir)
+      call get_environment_variable("PIERNIK_TMPDIR", tmpdir)
       lchar_tmpdir = len_trim(tmpdir)
       if (lchar_tmpdir == 0) then
          tmpdir = "."
@@ -180,8 +190,12 @@ contains
          if (tmpdir(lchar_tmpdir:lchar_tmpdir) == '/') lchar_tmpdir = lchar_tmpdir - 1
       endif
 
-      write(this%tmp1, '(a,"/temp1.dat")') tmpdir(1:lchar_tmpdir)
-      write(this%tmp2, '(a,"/temp2.dat")') tmpdir(1:lchar_tmpdir)
+      write(pid, '(i5)') getpid()
+
+      ! The filenames here will be unique, unless multiple Piernik instances
+      ! from multiple machines are started in the same shared directory.
+      write(this%tmp1, '(a,"/temp1_' // trim(pid) // '.dat")') tmpdir(1:lchar_tmpdir)
+      write(this%tmp2, '(a,"/temp2_' // trim(pid) // '.dat")') tmpdir(1:lchar_tmpdir)
 
       this%cmdl_nml => cmdl_nml
       this%par_file => par_file
@@ -192,13 +206,13 @@ contains
       this%namelist_errh => namelist_errh
 
       this%initialized = .true.
-   end subroutine namelist_handler_T_init
+   end subroutine namelist_handler_t_init
 !-----------------------------------------------------------------------------
    subroutine set_colors(enable)
 
       implicit none
 
-      logical :: enable
+      logical, intent(in) :: enable
 
       if (enable) then
          write(ansi_black,  '(A1,A3)') char(27),"[0m"
@@ -237,13 +251,7 @@ contains
       character(len=msg_type_len)   :: msg_type_str
       integer(kind=4)               :: proc
       integer                       :: outunit
-      logical, save                 :: frun = .true.
       character(len=idlen)          :: adv
-
-      if (frun) then
-         call set_colors(.false.)
-         frun = .false.
-      endif
 
 !      write(stdout,*) ansi_red, "Red ", ansi_green, "Green ", ansi_yellow, "Yellow ", ansi_blue, "Blue ", ansi_magenta, "Magenta ", ansi_cyan, "Cyan ", ansi_white, "White ", ansi_black
       adv = 'yes'
@@ -290,32 +298,34 @@ contains
          if (log_file_initialized) then
             if (.not.log_file_opened) then
 #if defined(__INTEL_COMPILER)
-               open(newunit=log_lun, file=log_file, position='append', &
-                 &  blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
+               open(newunit=log_lun, file=log_file, position='append', blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
 #else /* __INTEL_COMPILER */
-               open(newunit=log_lun, file=log_file, position='append', asynchronous='yes')
+               open(newunit=log_lun, file=log_file, position='append') !> \todo reconstruct asynchronous writing to log files
 #endif /* !__INTEL_COMPILER */
                log_file_opened = .true.
             endif
          else
             ! BEWARE: possible race condition
 #if defined(__INTEL_COMPILER)
-            open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', &
-              &  blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
+            open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
 #else /* __INTEL_COMPILER */
-            open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', asynchronous='yes')
+            open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append')
 #endif /* !__INTEL_COMPILER */
          endif
          if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
-         if (cbline <= bufferlines) then
-            write(logbuffer(cbline), '(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
+         if (cbline < size(logbuffer)) then
             cbline = cbline + I_ONE
-         else
+            write(logbuffer(cbline), '(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
+         endif
+         if (cbline >= size(logbuffer)) then
             call flush_to_log
-            cbline = 1
+            cbline = 0
          endif
          if (mode == T_ERR) call flush_to_log
          if (.not. log_file_initialized) close(log_lun)
+      else
+         if (mode == T_SILENT) &
+            write(stderr,'(a,a," @",a,i5,2a)', advance=adv) trim(ansi_red), "not logged", ansi_black, proc, ': ', trim(nm)
       endif
 
    end subroutine colormessage
@@ -324,14 +334,9 @@ contains
       implicit none
       integer :: line
 
-      do line = 1, min(cbline, bufferlines)
-#if defined(__INTEL_COMPILER)
-         write(log_lun, '(a)') trim(logbuffer(line))
-#else /* __INTEL_COMPILER */
-         write(log_lun, '(a)', asynchronous='yes') trim(logbuffer(line))
-#endif /* !__INTEL_COMPILER */
+      do line = 1, min(cbline, size(logbuffer, kind=4))
+         write(log_lun, '(a)') trim(logbuffer(line)) !> \todo reconstruct asynchronous writing to log files
       enddo
-      wait(log_lun)
 
    end subroutine flush_to_log
 !-----------------------------------------------------------------------------
@@ -358,7 +363,7 @@ contains
 
       implicit none
 
-      character(len=*), intent(in) :: nm
+      character(len=*),  intent(in) :: nm
       logical, optional, intent(in) :: noadvance
 
       logical :: adv
@@ -396,7 +401,7 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)  :: nm
+      character(len=*),  intent(in) :: nm
       integer, optional, intent(in) :: allprocs
 
       call colormessage(nm, T_ERR)
@@ -469,7 +474,7 @@ contains
       use mpi,       only: MPI_COMM_WORLD
 
       implicit none
-      class(namelist_handler_T), intent(inout) :: this
+      class(namelist_handler_t), intent(inout) :: this
       integer                          :: io
       character(len=maxparfilelen)     :: sa, sb
       integer                          :: lun_bef, lun_aft
@@ -524,9 +529,11 @@ contains
    end function move_file
 !-----------------------------------------------------------------------------
    subroutine close_txt_file(lfile, llun)
+
       implicit none
-      integer, intent(in)                 :: llun     !< logical unit number for txt file
-      character(len=cwdlen), intent(in)   :: lfile    !< path to txt file
+
+      integer,               intent(in) :: llun     !< logical unit number for txt file
+      character(len=cwdlen), intent(in) :: lfile    !< path to txt file
 
       logical :: lopen
 
@@ -540,11 +547,11 @@ contains
 
    subroutine close_logs
 
-      use mpi,       only: MPI_COMM_WORLD
+      use mpi, only: MPI_COMM_WORLD
 
       implicit none
 
-      integer(kind=4)               :: proc
+      integer(kind=4) :: proc
 
       call MPI_Comm_rank(MPI_COMM_WORLD, proc, mpi_err)
 
@@ -553,6 +560,7 @@ contains
          call close_txt_file(log_file, log_lun)
          call close_txt_file(tsl_file, tsl_lun)
       endif
+
    end subroutine close_logs
 !>
 !! \brief Sanitize a file name
@@ -565,10 +573,11 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)  :: str
+      character(len=*), intent(in) :: str
+
       character(len=len(str)) :: outstr
 
-      integer            :: i
+      integer :: i
 
       outstr = repeat(" ", len(str))
 

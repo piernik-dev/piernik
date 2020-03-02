@@ -87,7 +87,7 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>norm_tol      </td><td>1.e-2  </td><td>real value     </td><td>\copydoc multigrid_diffusion::norm_tol      </td></tr>
+!! <tr><td>norm_tol      </td><td>1.e-5  </td><td>real value     </td><td>\copydoc multigrid_diffusion::norm_tol      </td></tr>
 !! <tr><td>vcycle_abort  </td><td>2.0    </td><td>real value     </td><td>\copydoc multigrid_diffusion::vcycle_abort  </td></tr>
 !! <tr><td>max_cycles    </td><td>20     </td><td>integer value  </td><td>\copydoc multigrid_diffusion::max_cycles    </td></tr>
 !! <tr><td>nsmool        </td><td>4      </td><td>integer value  </td><td>\copydoc multigrid_diffusion::nsmool        </td></tr>
@@ -120,6 +120,7 @@ contains
       logical, save :: frun = .true.          !< First run flag
       integer(kind=4), dimension(I_ONE), target :: pos
       integer(kind=4), dimension(:), pointer :: pia      ! the pia pointer is used as a workaround for compiler warnings about possibly uninitialized variable in reg_var
+      real, parameter :: warn_norm_tol = 1e-3
 
       namelist /MULTIGRID_DIFFUSION/ norm_tol, vcycle_abort, max_cycles, nsmool, nsmoob, overrelax, &
            &                         diff_theta, diff_tstep_fac, diff_explicit, allow_explicit, diff_bnd_str
@@ -129,7 +130,7 @@ contains
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_gravdiffusion:multigrid_diff_par] non-cartesian geometry not implemented yet.")
 
       ! Default values for namelist variables
-      norm_tol       = 1.e-2
+      norm_tol       = 1.e-5
       vcycle_abort   = 2.    ! unused as yet
       diff_theta     = 1.
       diff_tstep_fac = 1.
@@ -198,6 +199,16 @@ contains
 
          diff_bnd_str   = cbuff(1)(1:len(diff_bnd_str))
 
+      endif
+
+      if (master) then
+         if (norm_tol < 100.*epsilon(1.)) then
+            write(msg,'(a,g12.4,a)')"[multigrid_diffusion:multigrid_diff_par] such small norm_tol may result in problems with convergence (",norm_tol,")"
+            call warn(msg)
+         else if (norm_tol > warn_norm_tol) then
+            write(msg,'(a,g12.4,a)')"[multigrid_diffusion:multigrid_diff_par] such big norm_tol may result in problems with accuracy (",norm_tol,")"
+            call warn(msg)
+         endif
       endif
 
       ! boundaries
@@ -354,12 +365,12 @@ contains
 
       use cg_leaves,          only: leaves
 #if defined(__INTEL_COMPILER)
-      use cg_level_connected, only: cg_level_connected_T  ! QA_WARN workaround for stupid INTEL compiler
+      use cg_level_connected, only: cg_level_connected_t  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
       use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
-      use constants,          only: base_level_id, zero
+      use constants,          only: base_level_id, zero, dirtyH1
       use dataio_pub,         only: die
       use func,               only: operator(.notequals.)
       use initcosmicrays,     only: iarr_crs
@@ -370,11 +381,11 @@ contains
 
       integer, intent(in) :: cr_id !< CR component index
 
-      if (finest%level%level_id /= base_level_id) call die("[multigrid_diffusion:init_source] refinements not implemented yet")
+      if (finest%level%l%id /= base_level_id) call die("[multigrid_diffusion:init_source] refinements not implemented yet")
 
-      call all_cg%set_dirty(source)
-      call all_cg%set_dirty(correction)
-      call all_cg%set_dirty(defect)
+      call all_cg%set_dirty(source, 0.969*dirtyH1)
+      call all_cg%set_dirty(correction, 0.968*dirtyH1)
+      call all_cg%set_dirty(defect, 0.967*dirtyH1)
       ! Trick residual subroutine to initialize with: u + (1-theta) dt grad (c grad u)
       if (diff_theta .notequals. zero) then
          call leaves%wq_copy(wna%fi, iarr_crs(cr_id), qna%wai)
@@ -400,9 +411,10 @@ contains
 
       use cg_list_global,   only: all_cg
 #if defined(__INTEL_COMPILER)
-      use cg_level_connected, only: cg_level_connected_T  ! QA_WARN workaround for stupid INTEL compiler
+      use cg_level_connected, only: cg_level_connected_t  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
       use cg_leaves,        only: leaves
+      use constants,        only: dirtyH1
       use initcosmicrays,   only: iarr_crs
       use multigridvars,    only: solution
       use named_array_list, only: wna
@@ -411,7 +423,7 @@ contains
 
       integer, intent(in) :: cr_id !< CR component index
 
-      call all_cg%set_dirty(solution)
+      call all_cg%set_dirty(solution, 0.966*dirtyH1)
       call leaves%wq_copy(wna%fi, iarr_crs(cr_id), solution)
       call leaves%check_dirty(solution, "init solution")
 
@@ -428,12 +440,12 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
       use cg_list_global,     only: all_cg
-      use constants,          only: xdim, zdim, HI, LO, BND_REF
+      use constants,          only: xdim, zdim, HI, LO, BND_REF, dirtyH1
       use domain,             only: dom
       use grid_cont,          only: grid_container
       use named_array,        only: p3, p4
@@ -444,10 +456,10 @@ contains
       integer(kind=4) :: ib
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      type(cg_level_connected_T),   pointer :: curl
+      type(cg_level_connected_t),   pointer :: curl
 
       do ib = xdim, zdim
-         call all_cg%set_dirty(idiffb(ib))
+         call all_cg%set_dirty(idiffb(ib), (0.965+0.0001*ib)*dirtyH1)
 #if 1
          cgl => leaves%first
          do while (associated(cgl))
@@ -487,11 +499,11 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
-      use constants,          only: base_level_id, zero, tmr_mgd
+      use constants,          only: base_level_id, zero, tmr_mgd, dirtyH1
       use dataio_pub,         only: msg, warn, die
       use global,             only: do_ascii_dump
       use func,               only: operator(.notequals.)
@@ -510,23 +522,27 @@ contains
       integer            :: v
       real               :: norm_lhs, norm_rhs, norm_old
       logical            :: dump_every_step
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_t), pointer :: curl
 
       write(vstat%cprefix,'("C",i1,"-")') cr_id !> \deprecated BEWARE: this is another place with 0 <= cr_id <= 9 limit
       write(dirty_label, '("md_",i1,"_dump")')  cr_id
 
+#ifdef DEBUG
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
+#else  /* !DEBUG */
+      dump_every_step = .false.
+#endif /* DEBUG */
       do_ascii_dump = do_ascii_dump .or. dump_every_step
 
       norm_lhs = 0.
       norm_rhs = leaves%norm_sq(solution)
       norm_old = norm_rhs
 
-      if (finest%level%level_id /= base_level_id) call die("[multigrid_diffusion:vcycle_hg] refinements not implemented yet")
+      if (finest%level%l%id /= base_level_id) call die("[multigrid_diffusion:vcycle_hg] refinements not implemented yet")
 
       do v = 0, max_cycles
 
-         call all_cg%set_dirty(defect)
+         call all_cg%set_dirty(defect, 0.964*dirtyH1)
 
          call residual(finest%level, source, solution, defect, cr_id) ! leaves?
          norm_lhs = leaves%norm_sq(defect)
@@ -559,7 +575,7 @@ contains
 
          call finest%level%restrict_to_floor_q_1var(defect)
 
-         !call all_cg%set_dirty(correction)
+         !call all_cg%set_dirty(correction, 0.963*dirtyH1)
          call coarsest%level%set_q_value(correction, 0.)
 
          curl => coarsest%level
@@ -683,7 +699,7 @@ contains
 
    subroutine residual(curl, src, soln, def, cr_id)
 
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use constants,          only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
       use dataio_pub,         only: die
       use domain,             only: dom
@@ -696,7 +712,7 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(inout) :: curl !< level for which approximate the solution
+      type(cg_level_connected_t), pointer, intent(inout) :: curl !< level for which approximate the solution
       integer(kind=4),                     intent(in)    :: src   !< index of source in cg%q(:)
       integer(kind=4),                     intent(in)    :: soln  !< index of solution in cg%q(:)
       integer(kind=4),                     intent(in)    :: def   !< index of defect in cg%q(:)
@@ -752,7 +768,7 @@ contains
    subroutine approximate_solution(curl, src, soln, cr_id)
 
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_t
       use constants,          only: xdim, ydim, zdim, one, half, ndims, LO, GEO_XYZ
       use dataio_pub,         only: die
       use domain,             only: dom
@@ -763,7 +779,7 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(inout) :: curl  !< level for which approximate the solution
+      type(cg_level_connected_t), pointer, intent(inout) :: curl  !< level for which approximate the solution
       integer(kind=4),                     intent(in)    :: src   !< index of source in cg%q(:)
       integer(kind=4),                     intent(in)    :: soln  !< index of solution in cg%q(:)
       integer,                             intent(in)    :: cr_id !< CR component index

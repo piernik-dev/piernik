@@ -1,0 +1,99 @@
+! 2D MHD blast wave, see
+! http://www.astro.princeton.edu/~jstone/Athena/tests/blast/blast.html
+! or
+! https://academic.oup.com/mnras/article/455/1/51/983632/Accurate-meshless-methods-for-magnetohydrodynamics
+! for more inspiration
+
+! The setup mostly follows the Athena approach except that we have different resolution and square domain.
+!
+! To mimic their setup use
+! n_d = 400, 600, 1
+! ymin = -0.75
+! ymax =  0.75
+! in the BASE_DOMAIN section below and also increase tend from END_CONTROL for full match
+
+
+ $BASE_DOMAIN
+    n_d = 512, 512, 1
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   =-0.5
+    xmax   = 0.5
+    ymin   =-0.5
+    ymax   = 0.5
+    zmin   =-0.5
+    zmax   = 0.5
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+    units_set = 'cgs'
+ /
+
+ $RESTART_CONTROL
+ /
+
+ $END_CONTROL
+    tend   = 0.2
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'sedov'
+    run_id =  'tst'
+    dt_hdf  = 2.0e-2
+    dt_res  = 1e-1
+    dt_log  = 1.0e-4
+    dt_tsl  = 1.0e-4
+    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'ethr', 'magB', "pres", "divb", "divb4", "psi"
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.666666666
+ /
+
+ $FLUID_NEUTRAL
+    gamma = 1.666666666
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-3
+    smallei= 1.e-5
+    print_divb = 10
+ /
+
+ $GRAVITY
+ /
+
+ $PROBLEM_CONTROL
+    d0     = 1.0
+    p0     = 0.1
+    Eexpl  = 14.85
+    bx0    = 0.7071067811865475
+    by0    = 0.7071067811865475
+    bz0    = 0.0
+    x0     = -0.0
+    y0     = -0.0
+    z0     = -0.0
+    r0     = 0.1
+    smooth = 0.
+ /
+
+ $MULTIGRID_SOLVER
+ /
+
+ $INTERACTIONS
+ /
+
+
+ $FLUID_TRACER
+ /
+
+ $AMR
+ /

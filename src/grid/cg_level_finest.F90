@@ -30,7 +30,7 @@
 
 module cg_level_finest
 
-   use cg_level_connected, only: cg_level_connected_T
+   use cg_level_connected, only: cg_level_connected_t
 
    implicit none
 
@@ -38,15 +38,15 @@ module cg_level_finest
    public :: finest
 
    !> \brief The pointer of the finest refinement level and a method to add a finer one
-   type :: cg_level_finest_T
-      type(cg_level_connected_T), pointer :: level !< highest refinement level
+   type :: cg_level_finest_t
+      type(cg_level_connected_t), pointer :: level !< highest refinement level
     contains
       procedure          :: add_finer
       procedure          :: equalize
       !> \todo Provide delete_finest and use it in cleanup
-   end type cg_level_finest_T
+   end type cg_level_finest_t
 
-   type(cg_level_finest_T) :: finest               !< finest level of refinement
+   type(cg_level_finest_t) :: finest               !< finest level of refinement
 
 contains
 
@@ -55,7 +55,7 @@ contains
 !!
 !! \details Multigrid levels are always created on all processes, so no need to fix anything on the bottom of the hierarchy
 !!
-!! \todo When global top level do not have any blocks then destroy it.
+!! \todo When global top level does not have any blocks then destroy it.
 !<
 
    subroutine equalize(this)
@@ -66,21 +66,21 @@ contains
 
       implicit none
 
-      class(cg_level_finest_T), intent(inout) :: this    !< object calling type-bound routine
+      class(cg_level_finest_t), intent(inout) :: this    !< object calling type-bound routine
 
       integer(kind=4) :: g_finest_id
 
-      g_finest_id = this%level%level_id
+      g_finest_id = this%level%l%id
       call piernik_MPI_Allreduce(g_finest_id, pMAX)
 
-      do while (g_finest_id > this%level%level_id)
+      do while (g_finest_id > this%level%l%id)
          call this%add_finer
       enddo
 
-      g_finest_id = this%level%level_id
+      g_finest_id = this%level%l%id
       call piernik_MPI_Allreduce(g_finest_id, pMAX)
 
-      if (g_finest_id /= this%level%level_id) call die("[cg_level_finest:equalize] failure")
+      if (g_finest_id /= this%level%l%id) call die("[cg_level_finest:equalize] failure")
 
    end subroutine equalize
 
@@ -90,29 +90,25 @@ contains
 
       use constants,        only: INVALID, I_ONE, refinement_factor
       use dataio_pub,       only: die, msg
-      use domain,           only: dom
       use grid_helpers,     only: c2f_o
       use list_of_cg_lists, only: all_lists
 
       implicit none
 
-      class(cg_level_finest_T), intent(inout) :: this    !< object calling type-bound routine
+      class(cg_level_finest_t), intent(inout) :: this    !< object calling type-bound routine
 
-      type(cg_level_connected_T), pointer     :: new_lev !< fresh refinement level to be added
+      type(cg_level_connected_t), pointer     :: new_lev !< fresh refinement level to be added
 
       allocate(new_lev)
       call new_lev%init_level
-      new_lev%n_d(:) = 1
 
       if (associated(this%level%finer)) call die("[cg_level_finest:add_finer] finer level already exists")
 
-      new_lev%level_id = this%level%level_id + I_ONE
-      new_lev%off = c2f_o(this%level%off)
-      where (dom%has_dir(:)) new_lev%n_d(:) = this%level%n_d(:) * refinement_factor
+      call new_lev%l%init(this%level%l%id+I_ONE, this%level%l%n_d*refinement_factor, c2f_o(this%level%l%off))
 
       !! make sure that vertical_prep will be called where necessary
       this%level%ord_prolong_set = INVALID
-      write(msg, '(a,i3)')"level ",new_lev%level_id
+      write(msg, '(a,i3)')"level ",new_lev%l%id
       call all_lists%register(new_lev, msg)
 
       this%level%finer => new_lev

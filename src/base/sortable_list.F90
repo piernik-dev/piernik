@@ -34,7 +34,7 @@ module sortable_list
    implicit none
 
    private
-   public ::  sortable_list_T, cleanup_sortable_list, temp_index
+   public ::  sortable_list_t, cleanup_sortable_list, temp_index
 
    !>
    !! \brief Abstract array of sortable elements with sorting method
@@ -44,38 +44,38 @@ module sortable_list
    !! deallocate it, get bounds, make assignments and comparisions based on integer indices.
    !! Note that we use special index (parameter temp_index) to denote temporary storage for swapping elements.
    !<
-   type, abstract :: sortable_list_T
+   type, abstract :: sortable_list_t
    contains
       procedure(lubound_list), deferred :: l_bound          !< Get lower bound of the list
       procedure(lubound_list), deferred :: u_bound          !< Get upper bound of the list
       procedure(assign_list),  deferred :: assign_element   !< Make an assignment
       procedure(compare_list), deferred :: compare_elements !< Make a comparision
       procedure                         :: sort             !< Sorting routine (currently shellsort)
-   end type sortable_list_T
+   end type sortable_list_t
 
    interface
 
       subroutine assign_list(this, a, b)
-         import sortable_list_T
-         class(sortable_list_T), intent(inout) :: this
+         import sortable_list_t
+         class(sortable_list_t), intent(inout) :: this
          integer,                intent(in)    :: a, b
       end subroutine assign_list
 
-      logical function compare_list(this, a, b)
-         import sortable_list_T
-         class(sortable_list_T), intent(inout) :: this
-         integer,                intent(in)    :: a, b
+      pure logical function compare_list(this, a, b)
+         import sortable_list_t
+         class(sortable_list_t), intent(in) :: this
+         integer,                intent(in) :: a, b
       end function compare_list
 
       integer function lubound_list(this)
-         import sortable_list_T
-         class(sortable_list_T), intent(in) :: this
+         import sortable_list_t
+         class(sortable_list_t), intent(in) :: this
       end function lubound_list
 
    end interface
 
    integer, parameter :: temp_index = -huge(1) !< Symbolic index indicating temporary storage
-   integer, dimension(:), allocatable :: gaps  !< Auxiliary array for the sorting routine. Can be expanded and reused, so it is detached from the type sortable_list_T
+   integer, dimension(:), allocatable :: gaps  !< Auxiliary array for the sorting routine. Can be expanded and reused, so it is detached from the type sortable_list_t
 
 contains
 
@@ -111,7 +111,7 @@ contains
 
       implicit none
 
-      class(sortable_list_T), intent(inout) :: this
+      class(sortable_list_t), intent(inout) :: this
 
       integer :: g, i, j
       integer :: lb, ub

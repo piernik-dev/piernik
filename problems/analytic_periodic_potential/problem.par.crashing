@@ -15,7 +15,6 @@
  /
 
  $MPI_BLOCKS
-    AMR_bsize = 3*5            ! it seems odd offsets are momewhat incompatible with coarse-to-fine prolongation. Also occurs for allow_uneven and allow_noncart
 !    allow_uneven = .true.
 !    allow_noncart = .true.
 !    dd_unif_quality = 1.1
@@ -28,7 +27,7 @@
 
  $RESTART_CONTROL
     restart  = 'none'
-    new_id   = ''
+    res_id   = ''
     nrestart = 0
  /
 
@@ -76,5 +75,6 @@
  /
 
  $AMR
+    bsize = 3*5            ! it seems odd offsets are momewhat incompatible with coarse-to-fine prolongation. Also occurs for allow_uneven and allow_noncart
     level_max = 1
  /
