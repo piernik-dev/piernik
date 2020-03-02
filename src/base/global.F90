@@ -106,7 +106,7 @@ module global
    logical                       :: ord_fc_eq_mag     !< when .true. enforce ord_mag_prolong order of prolongation of f/c guardcells for fluid and everything (EXPERIMENTAL)
    logical                       :: do_external_corners  !< when .true. then perform boundary exchanges inside external guardcells
    character(len=cbuff_len)      :: solver_str        !< allow to switch between RIEMANN and RTVD without recompilation
-   integer                       :: max_mem           !< MAximum allowed RSS memory per thread (in kiB)
+   integer(kind=4)               :: max_mem           !< MAximum allowed RSS memory per thread (in kiB)
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, disallow_negatives, disallow_CRnegatives, cfl_max, use_smalld, use_smallei, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
@@ -231,7 +231,7 @@ contains
       ord_fc_eq_mag = .false.          !< Conservative choice, perhaps O_LIN will be safer. Higher orders may result in negative density or energy in f/c guardcells
       do_external_corners =.false.
       solver_str = ""
-      max_mem     = huge(1)
+      max_mem     = huge(1_4)
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -495,7 +495,7 @@ contains
 !! \todo Add optional intent(in) argument with other interesting labels such as VmPeak or VmSize
 !>
 
-   integer function system_mem_usage()
+   integer(kind=4) function system_mem_usage()
 
       use constants,  only: INVALID, fnamelen
       use dataio_pub, only: warn
