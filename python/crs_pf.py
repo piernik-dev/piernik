@@ -79,7 +79,7 @@ def initialize_pf_arrays(pf_initialized = False):
    f_ratios_lo = read_dat_table("f_ratios_lo")
 
    p_ratios_up = read_dat_table("p_ratios_up")
-   f_ratios_up = read_dat_table("f_ratios_lo")
+   f_ratios_up = read_dat_table("f_ratios_up")
 
    size = int(len(p_ratios_lo))
 # As in cresp_NR_method
@@ -167,8 +167,9 @@ def get_interpolated_ratios(bnd, alpha_val, n_val , interpolation_error, **kwarg
    if min(pf_ratio[:]) <= 0.0:
       if (verbose): prtwarn("(ERROR) Obtained p & f (%s) ratios: [%f, %f]" %(bnd, pf_ratio[0], pf_ratio[1]))
       return pf_ratio, interpolation_error
-
-   interpolation_error = False
+   else:
+      if (verbose): prtinfo("        Obtained indices (%s): [%i, %i] -> [%f, %f]" %(bnd, loc1[0], loc1[1], pf_ratio[0], pf_ratio[1]))
+      interpolation_error = False
 
    return pf_ratio, interpolation_error
 
