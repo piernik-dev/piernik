@@ -342,7 +342,11 @@ contains
 
    end subroutine check_na
 
-!> \brief Find grid pieces that do not belong to any list except for all_cg
+!>
+!! \brief Find grid pieces that do not belong to any list except for all_cg
+!!
+!! \todo Convert warn() to die()
+!<
 
    subroutine mark_orphans(this)
 
@@ -356,10 +360,11 @@ contains
       class(cg_list_global_t), intent(in) :: this          !< object invoking type-bound procedure
 
       type(cg_list_element), pointer :: cgl
-      integer ::i
+      integer :: i
       integer, parameter :: VERY_INVALID = 2*INVALID
+      integer, save :: na = 0, nm = 0, nf = 0, no = 0
 
-      ! scan all lists except for all_cg and set their membership to a bogus value
+      ! scan all lists except for all_cg for cg and set their membership to a bogus value
       do i = lbound(all_lists%entries(:), dim=1), ubound(all_lists%entries(:), dim=1)
          cgl => all_lists%entries(i)%lp%first
          if (all_lists%entries(i)%lp%label /= all_cg_n) then
@@ -370,10 +375,14 @@ contains
          endif
       enddo
 
-      ! mark all cg's with INVALID. If some aren't listed on all_cg then they should have %membership set to VERY_INVALID
+      ! mark all cg's with INVALID. If some aren't listed on all_cg then they should remain with %membership set to VERY_INVALID
       cgl => this%first
       do while (associated(cgl))
-         if (associated(cgl%cg)) cgl%cg%membership = INVALID
+         if (associated(cgl%cg)) then
+            cgl%cg%membership = INVALID
+         else
+            na = na + 1
+         endif
          cgl => cgl%nxt
       enddo
 
@@ -386,6 +395,7 @@ contains
                   write(msg, '(a,i7,a,i3,a)')"[cg_list_global:mark_orphans] Grid #",cgl%cg%grid_id, " at level ",cgl%cg%l%id," is hidden."
                   call warn(msg)
                   cgl%cg%membership = 0
+                  nm = nm + 1
                endif
                if (cgl%cg%membership == INVALID) cgl%cg%membership = 0
                cgl%cg%membership = cgl%cg%membership + 1
@@ -394,12 +404,13 @@ contains
          endif
       enddo
 
-      ! Now search fon not associated grid containers
+      ! Now search for not associated grid containers
       cgl => this%first
       do while (associated(cgl))
          if (associated(cgl%cg)) then
             if (cgl%cg%membership < 1) then
                call all_lists%forget(cgl%cg)
+               nf = nf + 1
             endif
          endif
          cgl => cgl%nxt
@@ -411,10 +422,16 @@ contains
             if (cgl%cg%membership < 1) then
                write(msg, '(a,i7,a,i3,a)')"[cg_list_global:mark_orphans] Grid #",cgl%cg%grid_id, " at level ",cgl%cg%l%id," is orphaned."
                call warn(msg)
+               no = no + 1
             endif
          endif
          cgl => cgl%nxt
       enddo
+
+      if (any([na, nm, nf, no] /= 0)) then
+         write(msg, '(4(a,i6))')"[cg_list_global:mark_orphans] na = ", na, ", nm =", nm, ", nf = ", nf, ", no = ", no
+         call warn(msg)
+      endif
 
    end subroutine mark_orphans
 

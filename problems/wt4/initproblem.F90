@@ -366,7 +366,7 @@ contains
                         jic = nint((cg%y(j) + ic_xysize/2.)/ic_dx)
                         do i = cg%is, cg%ie
                            iic = nint((cg%x(i) + ic_xysize/2.)/ic_dx)
-                           call set_point(i, j, k, iic, jic, kic)
+                           call set_point(i, j, k, iic, jic, kic)  ! For the Jeans criterion we should perhaps use minima and maxima over ranges covered by a given cell to prevent flickering on IC
                         enddo
                      enddo
                   case (GEO_RPZ)
