@@ -73,8 +73,6 @@ module cg_list
       procedure       :: prevent_prolong                   !< Mark grids as untouchable for prolongation
       procedure       :: enable_prolong                    !< Mark grids eligible for prolongation
       procedure       :: set_is_old                        !< Mark grids as existing in the previous timestep
-      procedure       :: clear_ref_flags                   !< Clear refinement flags everywhere
-      procedure       :: count_ref_flags                   !< Count refinement flags
 
 !> \todo merge lists
 
@@ -441,45 +439,6 @@ contains
       enddo
 
    end subroutine set_is_old
-
-!> \brief Clear refinement flags everywhere
-
-   subroutine clear_ref_flags(this)
-
-      implicit none
-
-      class(cg_list_t), intent(in) :: this !< object invoking type-bound procedure
-
-      type(cg_list_element), pointer :: cgl
-
-      cgl => this%first
-      do while (associated(cgl))
-         call cgl%cg%refine_flags%init
-         cgl%cg%refinemap = .false.
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine clear_ref_flags
-
-!> \brief Count refinement flags everywhere
-
-   function count_ref_flags(this) result(cnt)
-
-      implicit none
-
-      class(cg_list_t), intent(in) :: this !< object invoking type-bound procedure
-      integer :: cnt                       !< returned counter
-
-      type(cg_list_element), pointer :: cgl
-
-      cnt = 0
-      cgl => this%first
-      do while (associated(cgl))
-         if ( cgl%cg%refine_flags%refine .or. size(cgl%cg%refine_flags%SFC_refine_list) > 0) cnt = cnt + 1
-         cgl => cgl%nxt
-      enddo
-
-   end function count_ref_flags
 
 ! unused
 !!$!>

@@ -28,12 +28,12 @@
 #include "piernik.h"
 
 !>
-!! \brief Unified refinement criteriun based on Jeans length
+!! \brief Unified refinement criterion based on Jeans length
 !!
 !! The importance of proper resolution of Jeans length was presented in
 !! Truelove et al., ApJ, 489, L179-L183, Bibcode: 1997ApJ...489L.179T
 !!
-!! Their suggestion of 4 cell per length was well justified on computers available in 1997.
+!! Their suggestion of 4 cells per Jeans length was well justified on computers available in 1997.
 !! Some decades later don't hesitate to ask for more, unless you're using your phone for computing.
 !<
 
@@ -46,7 +46,7 @@ module unified_ref_crit_Jeans
    private
    public :: urc_jeans
 
-!> \brief Things that should be common for all refinement criteria based on filters that decide whether local conditions deserve refinement or derefinement.
+!> \brief The type for Jeans length-based refinement criterion.
 
    type, extends(urc_filter) :: urc_jeans
    contains
@@ -63,8 +63,6 @@ contains
 
    function init(jeans_ref, jeans_plot) result(this)
 
-      use constants, only: refinement_factor
-
       implicit none
 
       real,    intent(in) :: jeans_ref   !< minimum resolution in cells per Jeans wavelength
@@ -72,10 +70,7 @@ contains
 
       type(urc_jeans) :: this  !< an object to be constructed
 
-      real, parameter :: safe_deref = refinement_factor * 1.25  !< if it proves to be not save then implement it as a problem.par parameter
-
       this%ref_thr   = jeans_ref
-      this%deref_thr = safe_deref * jeans_ref
       this%plotfield = jeans_plot
 
    end function init
@@ -86,13 +81,13 @@ contains
 !! This routine has to conform to unified_ref_crit_user::mark_urc_user
 !!
 !! \todo implement predictive marks based on velocity, something like:
-!! where (cg%refinemap) cg%refinemap(x + v*2*n_updAMR) = .true.
+!! where (cg%flag%map) cg%flag%map(x + v*2*n_updAMR) = .true.
 !! count cases where internal refine flag goes beyond guardcells and suggest reducing n_updAMR
 !<
 
    subroutine mark_Jeans(this, cg)
 
-      use constants,  only: pi, GEO_XYZ, INVALID
+      use constants,  only: pi, GEO_XYZ, INVALID, dirtyH
       use dataio_pub, only: die
       use domain,     only: dom
       use fluidindex, only: iarr_all_sg, flind
@@ -110,6 +105,7 @@ contains
 
       real, dimension(:,:,:), pointer :: p3d
       integer :: f
+      logical :: any_has_energy
 #ifdef MAGNETIC
       logical, save :: warned = .false.
 
@@ -130,22 +126,32 @@ contains
          p3d(:,:,:) = sqrt(pi/newtong) / maxval(cg%dl) * &
               sqrt(cg%cs_iso2(:,:,:) / sum(cg%u(iarr_all_sg, :, :, :), dim=1))
       else
+         any_has_energy = .false.
+         do f = 1, flind%fluids
+            if (flind%all_fluids(f)%fl%has_energy) any_has_energy = .true.
+         enddo
+
+         if (any_has_energy) then
+            p3d(:,:,:) = 0.
+         else
+            p3d(:,:,:) = dirtyH
+         endif
+
          ! l_J = sqrt( pi gam (gam - 1) (e_i - e_k + e_mag) / G ) / rho
          ! find the effective pressure of all components (non-selfgravitation as well)
-         p3d(:,:,:) = 0.
          do f = 1, flind%fluids
             associate (fl => flind%all_fluids(f)%fl)
-               if (fl%has_energy) p3d = p3d + fl%gam * fl%gam_1 * (cg%u(fl%ien, :, :, :) - ekin(cg%u(fl%imx, :,:,:), cg%u(fl%imy, :,:,:), cg%u(fl%imz, :,:,:), cg%u(fl%idn, :,:,:)))
+               if (fl%has_energy) p3d = p3d + fl%gam * fl%gam_1 * ( &
+                    cg%u(fl%ien, :, :, :) - &
+                    ekin(cg%u(fl%imx, :,:,:), cg%u(fl%imy, :,:,:), cg%u(fl%imz, :,:,:), cg%u(fl%idn, :,:,:)) &
+                    )
             end associate
          enddo
          ! sum of ion/neu/dst
          p3d(:,:,:) = sqrt(pi/newtong) / maxval(cg%dl) * sqrt(p3d)/ sum(cg%u(iarr_all_sg, :, :, :), dim=1)
       endif
 
-      where (p3d < this%ref_thr)
-         cg%refinemap = .true.
-      endwhere
-      if (any(p3d < this%deref_thr)) cg%refine_flags%derefine = .false.
+      call cg%flag%set(p3d < this%ref_thr)
 
    end subroutine mark_Jeans
 

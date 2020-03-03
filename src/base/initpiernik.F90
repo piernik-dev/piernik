@@ -119,7 +119,7 @@ contains
       integer :: nit, ac
       real    :: ts                  !< Timestep wallclock
       logical :: finished
-      integer, parameter :: nit_over = 5 ! maximum number of auxiliary iterations after reaching level_max
+      integer, parameter :: nit_over = 3 ! maximum number of auxiliary iterations after reaching level_max
 
       call set_colors(.false.)               ! Make sure that we won't emit colorful messages before we are allowed to do so
 
@@ -280,7 +280,7 @@ contains
 #endif /* GRAV */
 
             call update_refinement(act_count=ac)
-            finished = (ac == 0) .or. (nit > 2*level_max + nit_over) ! level_max iterations for creating refinement levels + level_max iterations for derefining excess of blocks
+            finished = (ac == 0) .or. (nit > level_max + nit_over) ! level_max iterations for creating refinement levels + level_max iterations for derefining excess of blocks
 
             call problem_initial_conditions ! reset initial conditions after possible changes of refinement structure
             nit = nit + 1

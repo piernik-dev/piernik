@@ -68,7 +68,6 @@ module refinement
       character(len=cbuff_len) :: rvar  !< name of the refinement variable
       character(len=cbuff_len) :: rname !< name of the refinement routine
       real :: ref_thr                   !< refinement threshold
-      real :: deref_thr                 !< derefinement threshold
       real :: aux                       !< auxiliary parameter (can be smoother or filter strength)
       logical :: plotfield              !< create a 3D array to keep the value of refinement criterion when set to .true.
    end type ref_auto_param
@@ -132,7 +131,7 @@ contains
       oop_thr = 0.1
       refine_points(:) = ref_point(base_level_id-1, [ 0., 0., 0.] )
       refine_boxes (:) = ref_box  (base_level_id-1, reshape([ 0., 0., 0., 0., 0., 0.], [ndims, HI-LO+I_ONE] ) )
-      refine_vars  (:) = ref_auto_param (inactive_name, inactive_name, 0., 0., 0., .false.)
+      refine_vars  (:) = ref_auto_param (inactive_name, inactive_name, 0., 0., .false.)
       jeans_ref = 0.       !< inactive by default, 4. is the absolute minimum for reasonable use
       jeans_plot = .false.
 
@@ -190,8 +189,7 @@ contains
          rbuff(3+7*nshapes:2+8*nshapes) = refine_boxes (:)%coords(zdim, LO)
          rbuff(3+8*nshapes:2+9*nshapes) = refine_boxes (:)%coords(zdim, HI)
          rbuff(3+9*nshapes                   :2+9*nshapes+  n_ref_auto_param) = refine_vars(:)%ref_thr
-         rbuff(3+9*nshapes+  n_ref_auto_param:2+9*nshapes+2*n_ref_auto_param) = refine_vars(:)%deref_thr
-         rbuff(3+9*nshapes+2*n_ref_auto_param:2+9*nshapes+3*n_ref_auto_param) = refine_vars(:)%aux
+         rbuff(3+9*nshapes+  n_ref_auto_param:2+9*nshapes+2*n_ref_auto_param) = refine_vars(:)%aux
 
       endif
 
@@ -229,8 +227,7 @@ contains
          refine_boxes (:)%coords(zdim, LO) = rbuff(3+7*nshapes:2+8*nshapes)
          refine_boxes (:)%coords(zdim, HI) = rbuff(3+8*nshapes:2+9*nshapes)
          refine_vars  (:)%ref_thr          = rbuff(3+9*nshapes                   :2+9*nshapes+  n_ref_auto_param)
-         refine_vars  (:)%deref_thr        = rbuff(3+9*nshapes+  n_ref_auto_param:2+9*nshapes+2*n_ref_auto_param)
-         refine_vars  (:)%aux              = rbuff(3+9*nshapes+2*n_ref_auto_param:2+9*nshapes+3*n_ref_auto_param)
+         refine_vars  (:)%aux              = rbuff(3+9*nshapes+  n_ref_auto_param:2+9*nshapes+2*n_ref_auto_param)
 
       endif
 

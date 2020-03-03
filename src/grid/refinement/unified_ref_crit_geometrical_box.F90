@@ -27,7 +27,7 @@
 
 #include "piernik.h"
 
-!> \brief Unified refinement criterion for a single point
+!> \brief Unified refinement criterion for a single box
 
 module unified_ref_crit_geometrical_box
 
@@ -39,12 +39,12 @@ module unified_ref_crit_geometrical_box
    private
    public :: urc_box
 
-!> \brief A type for point refinement
+!> \brief A type for box refinement
 
    type, extends(urc_geom) :: urc_box
-      real, dimension(ndims, LO:HI) :: coords  !< coordinates, where to refine
+      real, dimension(ndims, LO:HI)                          :: coords  !< coordinates, where to refine
       integer(kind=8), allocatable, dimension(:, :), private :: ijk_lo  !< integer coordinates of "bottom left corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
-      integer(kind=8), allocatable, dimension(:, :), private :: ijk_hi  !< integer coordinates ot "top right corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
+      integer(kind=8), allocatable, dimension(:, :), private :: ijk_hi  !< integer coordinates of "top right corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
    contains
       procedure          :: mark => mark_box
       procedure, private :: init_lev
@@ -94,7 +94,7 @@ contains
 
    subroutine mark_box(this, cg)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI
+      use constants,  only: xdim, zdim, LO, HI
       use dataio_pub, only: die
       use grid_cont,  only: grid_container
 
@@ -103,7 +103,7 @@ contains
       class(urc_box),                intent(inout) :: this  !< an object invoking the type-bound procedure
       type(grid_container), pointer, intent(inout) :: cg    !< current grid piece
 
-      integer(kind=8), dimension(ndims) :: ijk_l, ijk_h
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: ijk
 
       if (cg%l%id > this%level) return
 
@@ -113,13 +113,10 @@ contains
       if (any(this%ijk_lo(cg%l%id, :) == uninit) .or. any(this%ijk_hi(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appears in the meantime
 
       if (all(this%ijk_hi(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk_lo(cg%l%id, :) <= cg%ijkse(:, HI))) then
-         ijk_l = min(max(int(this%ijk_lo(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
-         ijk_h = min(max(int(this%ijk_hi(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
+         ijk(:, LO) = min(max(int(this%ijk_lo(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
+         ijk(:, HI) = min(max(int(this%ijk_hi(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
 
-         if (cg%l%id < this%level) cg%refinemap(ijk_l(xdim):ijk_h(xdim), &
-              &                                 ijk_l(ydim):ijk_h(ydim), &
-              &                                 ijk_l(zdim):ijk_h(zdim)) = .true.
-         cg%refine_flags%derefine = .false.  ! this should go one level up (sanitizing)
+         if (cg%l%id < this%level) call cg%flag%set(ijk)
       endif
 
    end subroutine mark_box
