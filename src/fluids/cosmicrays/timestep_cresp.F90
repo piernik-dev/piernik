@@ -49,14 +49,13 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, half, zero, big, pMIN
       use cresp_crspectrum, only: cresp_find_prepare_spectrum
-      use crhelpers,        only: div_v, divv_n
+      use crhelpers,        only: div_v, divv_i
       use fluidindex,       only: flind
       use func,             only: emag
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp, cresp, fsynchr, u_b_max
       use mpisetup,         only: piernik_MPI_Allreduce
-      use named_array_list, only: qna
 
       implicit none
 
@@ -85,7 +84,7 @@ contains
 
          if (adiab_active) then
             call div_v(flind%ion%pos, cg)
-            abs_max_ud = max(abs_max_ud, maxval(abs(cg%q(qna%ind(divv_n))%span(cg%ijkse))))
+            abs_max_ud = max(abs_max_ud, maxval(abs(cg%q(divv_i)%span(cg%ijkse))))
          endif
 
          do k = cg%ks, cg%ke
@@ -117,7 +116,7 @@ contains
       call piernik_MPI_Allreduce(dt_cre_adiab, pMIN)
       call piernik_MPI_Allreduce(dt_cre_synch, pMIN)
       call piernik_MPI_Allreduce(dt_cre_K,     pMIN)
-      dt_cre = half * min(dt_cre_adiab, dt_cre_synch, dt_cre_K)       ! dt comes in to cresp_crspectrum with factor * 2
+      dt_cre = min(dt_cre_adiab, dt_cre_synch, dt_cre_K)       ! dt comes in to cresp_crspectrum with factor * 2
 
    end subroutine cresp_timestep
 
@@ -125,14 +124,13 @@ contains
 
    subroutine cresp_timestep_adiabatic(u_d_abs)
 
-      use constants,      only: logten, three
-      use initcrspectrum, only: w, eps, cfl_cre
+      use initcrspectrum, only: def_dtadiab, eps
 
       implicit none
 
       real, intent(in) :: u_d_abs    ! assumes that u_d > 0 always
 
-      if (u_d_abs > eps) dt_cre_adiab = cfl_cre * three * logten * w / u_d_abs
+      if (u_d_abs > eps) dt_cre_adiab = def_dtadiab / u_d_abs
 
    end subroutine cresp_timestep_adiabatic
 
@@ -141,7 +139,7 @@ contains
    subroutine cresp_timestep_synchrotron(u_b, i_up_cell)
 
       use constants,      only: zero
-      use initcrspectrum, only: w, cfl_cre
+      use initcrspectrum, only: def_dtsynch
 
       implicit none
 
@@ -151,7 +149,7 @@ contains
 
  ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
       if (u_b > zero) then
-         dt_cre_ub = cfl_cre * w / (assume_p_up(i_up_cell) * u_b)
+         dt_cre_ub = def_dtsynch / (assume_p_up(i_up_cell) * u_b)
          dt_cre_synch = min(dt_cre_ub, dt_cre_synch)    ! remember to max dt_cre_synch at the beginning of the search
       endif
 

@@ -1497,7 +1497,10 @@ contains
 #ifdef COSM_RAY_ELECTRONS
       use fluidindex,         only: iarr_all_crn
       use initcosmicrays,     only: iarr_cre_e, iarr_cre_n
-      use timestep_cresp,     only: dt_cre_adiab, dt_cre_synch, dt_cre_K
+      use timestep_cresp,     only: dt_cre_adiab, dt_cre_K
+#ifdef MAGNETIC
+      use timestep_cresp,     only: dt_cre_synch
+#endif /* MAGNETIC */
 #else /* !COSM_RAY_ELECTRONS */
       use fluidindex,         only: iarr_all_crs
 #endif /* !COSM_RAY_ELECTRONS */

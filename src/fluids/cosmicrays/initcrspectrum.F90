@@ -40,7 +40,8 @@ module initcrspectrum
    public :: use_cresp, p_init, initial_spectrum, p_br_init, f_init, q_init, q_br_init, q_big, cfl_cre, cre_eff, expan_order, e_small, e_small_approx_p, e_small_approx_init_cond,  &
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active, &
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,        &
-           & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps, u_b_max, write_cresp_to_restart
+           & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,       &
+           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -139,15 +140,16 @@ module initcrspectrum
    integer, allocatable, dimension(:) :: cresp_all_edges, cresp_all_bins
 
 ! CRESP names
+   integer, parameter :: cnlen = 4
    type dump_fpq_type
-      character(len=4) :: f_nam = "cref" !< helping array for CRESP number density
-      character(len=4) :: p_nam = "crep" !< helping array for CRESP energy density
-      character(len=4) :: q_nam = "creq" !< helping array for CRESP energy density
+      character(len=cnlen) :: f_nam = "cref" !< helping array for CRESP number density
+      character(len=cnlen) :: p_nam = "crep" !< helping array for CRESP energy density
+      character(len=cnlen) :: q_nam = "creq" !< helping array for CRESP energy density
       logical :: any_dump, dump_f, dump_p, dump_q  ! diagnostic, if true - adding 'cref', 'crep', 'creq' to hdf_vars must follow
    end type dump_fpq_type
    type(dump_fpq_type) :: dfpq
 
-   real    :: fsynchr
+   real    :: fsynchr, def_dtadiab, def_dtsynch
 
 !====================================================================================================
 !
@@ -156,7 +158,7 @@ module initcrspectrum
 !====================================================================================================
    subroutine init_cresp
 
-      use constants,       only: cbuff_len, I_ZERO, I_ONE, zero, one, three, ten, LO, HI
+      use constants,       only: cbuff_len, I_ZERO, I_ONE, zero, one, three, ten, half, logten, LO, HI
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index
@@ -548,13 +550,16 @@ module initcrspectrum
       fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
       write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr
 
+      def_dtadiab = cfl_cre * half * three * logten * w
+      def_dtsynch = cfl_cre * half * w
+
       if (master) call printinfo(msg)
 
       u_b_max = fsynchr * emag(b_max_db, 0., 0.)   !< initializes factor for comparising u_b with u_b_max
 
       write (msg, "(A,F10.4,A,ES12.5)") "[initcrspectrum:init_cresp] Maximal B_tot =",b_max_db, "mGs, u_b_max = ", u_b_max
       if (master)  call warn(msg)
-      write (msg, "(A,ES12.5,A,ES15.8,A,ES15.8)") "[initcrspectrum:init_cresp] dt_synch(p_max_fix = ",p_max_fix,", u_b_max = ",u_b_max,") = ", cfl_cre * w / (p_max_fix* u_b_max)
+      write (msg, "(A,ES12.5,A,ES15.8,A,ES15.8)") "[initcrspectrum:init_cresp] dt_synch(p_max_fix = ",p_max_fix,", u_b_max = ",u_b_max,") = ", def_dtsynch / (p_max_fix* u_b_max)
       if (master)  call warn(msg)
 
       if ((q_init < three) .and. any(e_small_approx_p == I_ONE)) then
