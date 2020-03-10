@@ -1,0 +1,274 @@
+!
+! PIERNIK Code Copyright (C) 2006 Michal Hanasz
+!
+!    This file is part of PIERNIK code.
+!
+!    PIERNIK is free software: you can redistribute it and/or modify
+!    it under the terms of the GNU General Public License as published by
+!    the Free Software Foundation, either version 3 of the License, or
+!    (at your option) any later version.
+!
+!    PIERNIK is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!    GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License
+!    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
+!
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
+!    Ue-Li Pen
+!        see: Pen, Arras & Wong (2003) for algorithm and
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
+!    For full list of developers see $PIERNIK_HOME/license/pdt.txt
+!
+
+#include "piernik.h"
+
+!>
+!! \brief Module for obtaining precise parallel profiling data
+!!
+!! \details Collecting the data should be as simple and cheap as possible.
+!! Stored information should be sufficient to reconstruct tree of calls.
+!<
+
+module ppp
+
+   use constants, only: cbuff_len
+
+   implicit none
+
+   private
+   public :: eventlist
+
+   integer, parameter :: ev_arr_num = 10    ! number of allowed event arrays
+
+   !> \brief a cheap single-event entry
+   type :: event
+      character(len=cbuff_len) :: label  !< label used to identify the event
+      real(kind=8)             :: wtime  !< output from MPI_Wtime(); positive for start, negative for end
+   end type event
+
+   !> \brief a cheap array of events
+   type :: eventarray
+      type(event), dimension(:), allocatable :: ev_arr
+   contains
+      procedure :: arr_init     !< allocate eventarray of given size
+      procedure :: arr_cleanup  !< deallocate eventarray
+   end type eventarray
+
+   !> \briev list of events based on arrays of events, cheap to expand, avoid reallocation
+   type eventlist
+      private
+      character(len=cbuff_len) :: label  !< label used to identify the event list
+      type(eventarray), dimension(ev_arr_num) :: arrays  ! separate arrays to avoid lhs-reallocation
+      integer :: arr_ind  ! currently used array
+      integer :: ind      ! first unused entry in currently used array
+   contains
+      procedure :: init     !< create new event list
+      procedure :: cleanup  !< destroy this event list
+      procedure :: start    !< add a beginning of an interval
+      procedure :: stop     !< add an end of an interval
+      procedure, private :: next_event  !< for internal use in start and stop
+      procedure, private :: expand  !< create next array for events
+      procedure :: publish  !< write the collected data to a log file
+   end type eventlist
+
+contains
+
+!> \brief allocate eventarray of given size
+
+   subroutine arr_init(this, asize)
+
+      use constants,  only: PIERNIK_INIT_MPI
+      use dataio_pub, only: die, code_progress
+      use global,     only: check_mem_usage
+
+      implicit none
+
+      class(eventarray), intent(inout) :: this   !< an object invoking the type-bound procedure
+      integer,           intent(in)    :: asize  !< size of the event array
+
+      if (allocated(this%ev_arr)) call die("[ppprofiling:arr_init] already allocated")
+      allocate(this%ev_arr(asize))
+!      this%ev_arr(:)%wtime = 0.
+      if (code_progress >= PIERNIK_INIT_MPI) call check_mem_usage
+
+   end subroutine arr_init
+
+!> \brief deallocate eventarray
+
+   subroutine arr_cleanup(this)
+
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(eventarray), intent(inout) :: this   !< an object invoking the type-bound procedure
+
+      if (.not. allocated(this%ev_arr)) call die("[ppprofiling:arr_init] not allocated")
+      deallocate(this%ev_arr)
+
+   end subroutine arr_cleanup
+
+!> \brief Create new event list
+
+   subroutine init(this, label)
+
+      implicit none
+
+      class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
+      character(len=*), intent(in)    :: label  !< event list label
+
+      integer, parameter :: ev_arr_len = 1024  ! starting size of the array of events
+
+      this%ind = 1
+      this%arr_ind = 1
+      this%label = label(1:min(cbuff_len, len_trim(label)))
+      call this%arrays(this%arr_ind)%arr_init(ev_arr_len)
+
+   end subroutine init
+
+!> \brief Destroy this event list
+
+   subroutine cleanup(this)
+
+      use constants, only: INVALID
+
+      implicit none
+
+      class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
+
+      integer :: i
+
+      do i = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
+         if (allocated(this%arrays(i)%ev_arr)) call this%arrays(i)%arr_cleanup
+      enddo
+
+      this%ind = INVALID
+      this%arr_ind = INVALID
+
+   end subroutine cleanup
+
+!>
+!! \brief Add a beginning of an interval
+!!
+!! Do not use inside die(), warn(), system_mem_usage() or check_mem_usage()
+!<
+
+   subroutine start(this, label)
+
+      use mpi, only: MPI_Wtime
+
+      implicit none
+
+      class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
+      character(len=*), intent(in)    :: label  !< event label
+
+      character(len=cbuff_len) :: l
+
+      l = label(1:min(cbuff_len, len_trim(label)))
+      call this%next_event(event(l, MPI_Wtime()))
+
+   end subroutine start
+
+!>
+!! \brief Add an end of an interval, use negative sign
+!!
+!! Do not use inside die(), warn(), system_mem_usage() or check_mem_usage()
+!<
+
+   subroutine stop(this, label)
+
+      use mpi, only: MPI_Wtime
+
+      implicit none
+
+      class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
+      character(len=*), intent(in)    :: label  !< event label
+
+      character(len=cbuff_len) :: l
+
+      l = label(1:min(cbuff_len, len_trim(label)))
+      call this%next_event(event(l, -MPI_Wtime()))
+
+   end subroutine stop
+
+!> \brief Start and stop
+
+   subroutine next_event(this, ev)
+
+      implicit none
+
+      class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
+      type(event),      intent(in)    :: ev     !< an event to be stored
+
+      this%arrays(this%arr_ind)%ev_arr(this%ind) = ev
+      this%ind = this%ind + 1
+      if (this%ind > ubound(this%arrays(this%arr_ind)%ev_arr, dim=1)) then
+         call this%expand
+      else
+         this%arrays(this%arr_ind)%ev_arr(this%ind)%wtime = 0.
+      endif
+
+   end subroutine next_event
+
+!> \brief Create next array for events
+
+   subroutine expand(this)
+
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
+
+      integer, parameter :: grow_factor = 2  !< each next array should be bigger
+
+      if (this%arr_ind >= ev_arr_num) call die("[ppprofiling:expand] Cannot add more arrays (ev_arr_num exceeded)")
+
+      call this%arrays(this%arr_ind + 1)%arr_init(grow_factor*size(this%arrays(this%arr_ind)%ev_arr))
+
+      this%arr_ind = this%arr_ind + 1
+      this%ind = 1
+      this%arrays(this%arr_ind)%ev_arr(this%ind)%wtime = 0.
+
+   end subroutine expand
+
+!>
+!! \brief Write the collected data to a log file
+!!
+!! \todo Use HDF5 format when available, stdout otherwise
+!<
+
+   subroutine publish(this)
+
+      use dataio_pub, only: msg, printinfo
+      use func,       only: operator(.equals.)
+      use mpisetup,   only: proc
+
+      implicit none
+
+      class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
+
+      integer :: i, ia
+
+      do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
+         if (allocated(this%arrays(ia)%ev_arr)) then
+            do i = lbound(this%arrays(ia)%ev_arr, dim=1), ubound(this%arrays(ia)%ev_arr, dim=1)
+               associate (ev => this%arrays(ia)%ev_arr(i))
+                  if (ev%wtime .equals. 0.) exit
+                  write(msg, '(2a,i4,2a,f20.7)') this%label, " @", proc, " ", ev%label, ev%wtime
+                  call printinfo(msg)
+               end associate
+            enddo
+         endif
+      enddo
+
+      call this%cleanup
+
+   end subroutine publish
+
+end module ppp
