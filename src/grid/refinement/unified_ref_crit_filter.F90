@@ -27,7 +27,7 @@
 
 #include "piernik.h"
 
-!> \brief Unified refinement criteria for filters that provide scalar indicator of the need for refinement
+!> \brief Unified refinement criteria for filters that provide scalar indicator of the need for refinement.
 
 module unified_ref_crit_filter
 
@@ -38,11 +38,16 @@ module unified_ref_crit_filter
    private
    public :: urc_filter
 
-!> \brief Things that should be common for all refinement criteria based on filters that decide whether local conditions deserve refinement or derefinement.
+!>
+!! \brief Things that should be common for all refinement criteria based on filters.
+!! The filters are supposed to decide whether local conditions deserve refinement.
+!<
 
    type, abstract, extends(urc) :: urc_filter
+! These components should be private but then derived types wouldn't have access to them.
+! Submodules doesn't seem to be a real solution for this.
+!      private
       real    :: ref_thr    !< refinement threshold
-      real    :: deref_thr  !< derefinement threshold
       logical :: plotfield  !< create a 3D array to keep the value of refinement criterion
    end type urc_filter
 

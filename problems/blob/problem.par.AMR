@@ -79,5 +79,5 @@
    level_max = 3
    bsize = 3*32
    n_updAMR = 5
-   refine_vars(1) = "dens", "Loechner", 0.8, 0.2, 0.01, .true.
+   refine_vars(1) = "dens", "Loechner", 0.8, 0.01, .true.
  /

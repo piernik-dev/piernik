@@ -1810,7 +1810,36 @@ contains
          endif
       endif
 
+      if (.not.present(tsl)) call print_memory_usage
+
+   contains
+
+      subroutine print_memory_usage
+
+         use constants,  only: I_ONE
+         use dataio_pub, only: msg, printinfo
+         use global,     only: system_mem_usage
+         use mpi,        only: MPI_INTEGER
+         use mpisetup,   only: master, FIRST, LAST, comm, mpi_err
+
+         implicit none
+
+         integer(kind=4) :: rss
+         integer(kind=4), dimension(FIRST:LAST) :: cnt_rss
+         real, parameter :: Mi = 2.**10
+
+         rss = system_mem_usage()
+         call MPI_Gather(rss, I_ONE, MPI_INTEGER, cnt_rss, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
+
+         if (master) then
+            write(msg, '(a,3f7.1,a,f7.1,a)')"  RSS memory in use (avg/min/max): ", sum(cnt_rss)/size(cnt_rss)/Mi, minval(cnt_rss)/Mi, maxval(cnt_rss)/Mi, " MiB. Total RSS memory: ", sum(cnt_rss)/Mi, " MiB."
+            call printinfo(msg, .false.)
+         endif
+
+      end subroutine print_memory_usage
+
    end subroutine write_log
+
 !------------------------------------------------------------------------
    subroutine read_file_msg
 !-------------------------------------------------------------------------

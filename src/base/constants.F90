@@ -218,10 +218,11 @@ module constants
    character(len=dsetnamelen), parameter :: psih_n  = "psih"    !< auxiliary 3D array for divergence cleaning for half-step values
 
    ! timer names
-   character(len=*), parameter :: tmr_fu  = "fluid_update"   !< main timer used to measure fluid_update step
-   character(len=*), parameter :: tmr_hdf = "hdf_dump"       !< timer for I/O operations
-   character(len=*), parameter :: tmr_mg  = "multigrid"      !< timer for gravity multigrid solver
-   character(len=*), parameter :: tmr_mgd = "multigrid_diff" !< timer for gravityCR diffusion multigrid solver
+   character(len=*), parameter :: tmr_fu  = "fluid_update"       !< main timer used to measure fluid_update step
+   character(len=*), parameter :: tmr_hdf = "hdf_dump"           !< timer for I/O operations
+   character(len=*), parameter :: tmr_mg  = "multigrid"          !< timer for gravity multigrid solver
+   character(len=*), parameter :: tmr_mgd = "multigrid_diff"     !< timer for CR diffusion multigrid solver
+   character(len=*), parameter :: tmr_amr = "refinement_update"  !< timer for refinement updates
 
    ! Handling boundary cells in the output (AT stands for Area Type)
    enum, bind(C)

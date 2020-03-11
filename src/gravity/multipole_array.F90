@@ -136,6 +136,7 @@ contains
       use constants,       only: xdim, zdim, GEO_XYZ, GEO_RPZ, HI, pMIN
       use dataio_pub,      only: die, warn, msg, printinfo
       use domain,          only: dom
+      use global,          only: check_mem_usage
       use mpisetup,        only: piernik_MPI_Allreduce, master
 
       implicit none
@@ -192,6 +193,7 @@ contains
 
       if (allocated(this%i_r)) deallocate(this%i_r)
       allocate(this%i_r(0:this%rqbin-1))
+      call check_mem_usage
 
       if (this%pr_log) then
          write(msg, '(a,3g13.5,a)')"[multipole_array:refresh] multipoles centered at ( ", this%center, " ) low edges of bins are at:"
