@@ -30,9 +30,10 @@
 
 module grid_cont_bnd
 
-   use constants,    only: xdim, zdim, LO, HI
-   use grid_cont_na, only: grid_container_na_t
-   use fluxtypes,    only: fluxarray, fluxpoint
+   use constants,       only: xdim, zdim, LO, HI
+   use grid_cont_na,    only: grid_container_na_t
+   use fluxtypes,       only: fluxarray, fluxpoint
+   use refinement_flag, only: ref_flag_t
 
    implicit none
 
@@ -72,12 +73,17 @@ module grid_cont_bnd
       type(bnd_list),  dimension(:), allocatable   :: i_bnd       !< description of incoming boundary data
       type(bnd_list),  dimension(:), allocatable   :: o_bnd       !< description of outgoing boundary data
 
+      ! Refinements
+      logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .false. otherwise
+      type(ref_flag_t) :: flag                                    !< refine or derefine this grid container?
+
    contains
 
-      procedure          :: init_gc_bnd       !< Initialization
-      procedure          :: cleanup_bnd       !< Deallocate all internals
-      procedure          :: set_fluxpointers  !< Calculate fluxes incoming from fine grid for 1D solver
-      procedure          :: save_outfluxes    !< Collect outgoing fine fluxes, do curvilinear scaling and store in appropriate array
+      procedure          :: init_gc_bnd         !< Initialization
+      procedure          :: cleanup_bnd         !< Deallocate all internals
+      procedure          :: set_fluxpointers    !< Calculate fluxes incoming from fine grid for 1D solver
+      procedure          :: save_outfluxes      !< Collect outgoing fine fluxes, do curvilinear scaling and store in appropriate array
+      procedure          :: refinemap2SFC_list  !< create list of SFC indices to be created from refine flags
 
    end type grid_container_bnd_t
 
@@ -109,6 +115,11 @@ contains
          this%coarsebnd(i, LO)%index = this%lhn(i, LO) - 1
          this%coarsebnd(i, HI)%index = this%lhn(i, HI) + 1
       enddo
+
+      allocate(this%leafmap(this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)))
+
+      this%leafmap(:, :, :) = .true.
+      call this%flag%initmap(this%lhn)
 
    end subroutine init_gc_bnd
 
@@ -148,6 +159,9 @@ contains
       call fpr%fpcleanup
       call cpl%fpcleanup
       call cpr%fpcleanup
+
+      ! arrays not handled through named_array feature
+      if (allocated(this%leafmap))   deallocate(this%leafmap)
 
    end subroutine cleanup_bnd
 
@@ -305,5 +319,51 @@ contains
       end subroutine cyl_scale
 
    end subroutine save_outfluxes
+
+!< \brief Create list of SFC indices to be created from refine flags
+
+   subroutine refinemap2SFC_list(this)
+
+      use constants,  only: refinement_factor, xdim, ydim, zdim, I_ONE
+      use domain,     only: dom
+      use refinement, only: bsize
+
+      implicit none
+
+      class(grid_container_bnd_t), intent(inout) :: this !< object invoking type-bound procedure
+
+      integer(kind=4) :: i, j, k, ifs, ife, jfs, jfe, kfs, kfe
+
+      call this%flag%clear(this%leafmap) ! no parent correction possible beyond this point
+
+      if (.not. this%flag%get()) return
+
+      if (any((bsize <= 0) .and. dom%has_dir)) return ! this routine works only with blocky AMR
+
+      !! ToDo: precompute refinement decomposition in this%init_gc and simplify the code below.
+      !! It should also simplify decomposition management and make it more flexible in case we decide to work on uneven AMR blocks
+
+      !! beware: consider dropping this%l%off feature for simplicity. It will require handling the shift due to domain expansion (some increase CPU cost)
+
+      associate( b_size => merge(bsize, huge(I_ONE), dom%has_dir))
+         do i = int(((this%is - this%l%off(xdim))*refinement_factor) / b_size(xdim), kind=4), int(((this%ie - this%l%off(xdim))*refinement_factor + I_ONE) / b_size(xdim), kind=4)
+            ifs = max(this%is, int(this%l%off(xdim), kind=4) + (i*b_size(xdim))/refinement_factor)
+            ife = min(this%ie, int(this%l%off(xdim), kind=4) + ((i+I_ONE)*b_size(xdim)-I_ONE)/refinement_factor)
+
+            do j = int(((this%js - this%l%off(ydim))*refinement_factor) / b_size(ydim), kind=4), int(((this%je - this%l%off(ydim))*refinement_factor + I_ONE) / b_size(ydim), kind=4)
+               jfs = max(this%js, int(this%l%off(ydim), kind=4) + (j*b_size(ydim))/refinement_factor)
+               jfe = min(this%je, int(this%l%off(ydim), kind=4) + ((j+I_ONE)*b_size(ydim)-I_ONE)/refinement_factor)
+
+               do k = int(((this%ks - this%l%off(zdim))*refinement_factor) / b_size(zdim), kind=4), int(((this%ke - this%l%off(zdim))*refinement_factor + I_ONE) / b_size(zdim), kind=4)
+                  kfs = max(this%ks, int(this%l%off(zdim), kind=4) + (k*b_size(zdim))/refinement_factor)
+                  kfe = min(this%ke, int(this%l%off(zdim), kind=4) + ((k+I_ONE)*b_size(zdim)-I_ONE)/refinement_factor)
+                  if (this%flag%get(ifs, ife, jfs, jfe, kfs, kfe)) call this%flag%add(this%l%id+I_ONE, int([i, j, k]*b_size, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
+               enddo
+            enddo
+         enddo
+      end associate
+      call this%flag%clear
+
+   end subroutine refinemap2SFC_list
 
 end module grid_cont_bnd

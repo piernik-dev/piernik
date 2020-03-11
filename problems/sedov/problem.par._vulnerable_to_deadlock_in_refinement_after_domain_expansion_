@@ -76,7 +76,7 @@
     r0     = 0.25
     dtrig  = 1.5
     ref_thr = 0.9
-    deref_thr = 0.4
+    deref_thr = 0.4  ! parameter obsoleted after 8600704e : it might be necessary to check out 8600704e or earlier to reproduce the problem
  /
 
  $MULTIGRID_SOLVER

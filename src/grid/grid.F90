@@ -49,13 +49,17 @@ contains
       use cg_level_base,      only: base
       use cg_level_coarsest,  only: coarsest
       use cg_level_finest,    only: finest
-      use constants,          only: PIERNIK_INIT_DOMAIN
+      use constants,          only: PIERNIK_INIT_DOMAIN, tmr_amr
       use dataio_pub,         only: printinfo, die, code_progress
       use domain,             only: dom
       use mpisetup,           only: master
+      use timer,              only: set_timer
 
       implicit none
 
+      real :: ts  !< time for runtime profiling
+
+      ts =  set_timer(tmr_amr, .true.)  ! we need it here for call leaves%update()
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
 
 #ifdef VERBOSE
