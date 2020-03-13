@@ -179,7 +179,7 @@ contains
 
       use cg_level_finest, only: finest
       use constants,       only: zdim, LO, HI, I_ONE, LEFT, RIGHT
-      use domain,          only: dom, is_refined
+      use domain,          only: dom
       use gravity,         only: nsub
       use grid_cont,       only: grid_container
 
@@ -189,11 +189,11 @@ contains
       real                                      :: mindz     !< cell size in z direction of the finest grid
 
       hscg => cg
-      mindz = cg%dl(zdim)
-      if (is_refined) mindz = dom%L_(zdim)/finest%level%l%n_d(zdim)
+      mindz = dom%L_(zdim)/finest%level%l%n_d(zdim) ! if not is_defined then: mindz = cg%dl(zdim)
 
       nstot = nsub * (finest%level%l%n_d(zdim) + 2*dom%nb)
-      dzs   = mindz / nsub
+      dzs   = dom%L_(zdim)/(finest%level%l%n_d(zdim) * nsub)
+      !dzs   = mindz / nsub ! this simplification causes (different) truncation error
       rnsub = nint(cg%dl(zdim) / dzs)
       hsmin = dom%edge(zdim, LO) - dom%nb * mindz
       hsbn  = cg%lhn(zdim,:)
