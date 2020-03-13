@@ -191,7 +191,7 @@ contains
       hscg => cg
       mindz = dom%L_(zdim)/finest%level%l%n_d(zdim) ! if not is_defined then: mindz = cg%dl(zdim)
 
-      nstot = nsub * (finest%level%l%n_d(zdim) + 2*dom%nb)
+      nstot = nsub * int(finest%level%l%n_d(zdim) + 2*dom%nb, kind=4)  ! will fail silently somewhere beyond 20th refinement level
       dzs   = dom%L_(zdim)/(finest%level%l%n_d(zdim) * nsub)
       !dzs   = mindz / nsub ! this simplification causes (different) truncation error
       rnsub = nint(cg%dl(zdim) / dzs)
