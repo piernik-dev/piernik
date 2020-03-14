@@ -117,6 +117,7 @@ program piernik
    call print_progress(nstep)
    if (print_divB > 0) call print_divB_norm
 
+   nstep_started = nstep - 1
    call tst_cnt%start("steps")
    do while (t < tend .and. nstep < nend .and. .not.(end_sim) .or. (cfl_violated .and. repeat_step)) ! main loop
 
@@ -142,9 +143,11 @@ program piernik
 
          tlast = t
       endif
-      write(label, '(i8)') nstep
-      nstep_started = nstep
-      call tst_cnt%start("fluid_update " // adjustl(label))
+      if (nstep > nstep_started) then
+         write(label, '(i8)') nstep
+         call tst_cnt%start("fluid_update " // adjustl(label))
+         nstep_started = nstep
+      endif
       call fluid_update
       if (nstep >= nstep_started) then
          write(label, '(i8)') nstep
