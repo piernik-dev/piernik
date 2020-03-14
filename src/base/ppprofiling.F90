@@ -30,8 +30,19 @@
 !>
 !! \brief Module for obtaining precise parallel profiling data
 !!
-!! \details Collecting the data should be as simple and cheap as possible.
-!! Stored information should be sufficient to reconstruct tree of calls.
+!! \details MPI_Wtime-based event log that will be useful for parallel profiling
+!! of the Piernik code.
+!!
+!! General purpose profilers don't know what is important in Piernika and tend to
+!! provide a lot of detailed information about irrelevant routines.
+!! This sometimes adds too much overhear from instrumenting the code which can be
+!! misleading. Here, the developer can choose which parts of the code need closer
+!! look.
+!!
+!! Collecting the events should be as cheap as possible, thus we don't construct
+!! any trees inside Piernik. All the collected data is meant to be used in
+!! postprocessing. The developer can set up several logs, each focused on
+!! different aspect of the code and not interfering with other logs.
 !<
 
 module ppp
@@ -207,8 +218,6 @@ contains
 
    subroutine put(this, label, time)
 
-      use mpi, only: MPI_Wtime
-
       implicit none
 
       class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
@@ -241,7 +250,16 @@ contains
 
    end subroutine next_event
 
-!> \brief Create next array for events
+!>
+!! \brief Create next array for events
+!!
+!! \details Adding arrays should be cheaper than resizing existing ones.
+!! The size of new array is double of the size of previous one to
+!! prevent frequent, fragmented allocations on busy counters.
+!!
+!! \todo implement maximum of the log size and then politely give up instead of die()
+!! when the size is exceeded.
+!<
 
    subroutine expand(this)
 
@@ -264,7 +282,7 @@ contains
    end subroutine expand
 
 !>
-!! \brief Write the collected data to a log file
+!! \brief Write the collected data to a log file and clear the log
 !!
 !! \todo Use HDF5 format when available, stdout otherwise
 !<
