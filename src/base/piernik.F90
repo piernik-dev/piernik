@@ -34,7 +34,7 @@ program piernik
    use all_boundaries,    only: all_bnd
    use cg_leaves,         only: leaves
    use cg_list_global,    only: all_cg
-   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP
+   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP, cbuff_len
    use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump
    use dataio_pub,        only: nend, tend, msg, printinfo, warn, die, code_progress
    use div_B,             only: print_divB_norm
@@ -60,6 +60,8 @@ program piernik
    use particle_pub,      only: pset
 #endif /* DEBUG && GRAV */
 
+   use ppp, only: eventlist
+
    implicit none
 
    logical              :: end_sim             !< Used in main loop, to test whether to stop simulation or not
@@ -69,6 +71,11 @@ program piernik
    real                 :: tlast
    logical              :: try_rebalance
 
+   type(eventlist) :: tst_cnt
+   character(len=cbuff_len) :: label
+   integer(kind=4) :: nstep_started
+
+   call tst_cnt%init("main")
    try_rebalance = .false.
    tlast = 0.0
 
@@ -108,6 +115,7 @@ program piernik
    call print_progress(nstep)
    if (print_divB > 0) call print_divB_norm
 
+   call tst_cnt%start("steps")
    do while (t < tend .and. nstep < nend .and. .not.(end_sim) .or. (cfl_violated .and. repeat_step)) ! main loop
 
       dump(:) = .false.
@@ -132,8 +140,14 @@ program piernik
 
          tlast = t
       endif
-
+      write(label, '(i8)') nstep
+      nstep_started = nstep
+      call tst_cnt%start("fluid_update " // adjustl(label))
       call fluid_update
+      if (nstep >= nstep_started) then
+         write(label, '(i8)') nstep
+         call tst_cnt%stop("fluid_update " // adjustl(label))
+      endif
       nstep = nstep + I_ONE
       call print_progress(nstep)
       call check_cfl_violation(dt, flind)
@@ -174,7 +188,7 @@ program piernik
    if (print_divB > 0) then
       if (mod(nstep, print_divB) /= 0) call print_divB_norm ! print the norm at the end, if it wasn't printed inside the loop above
    endif
-
+   call tst_cnt%stop("steps")
 
    code_progress = PIERNIK_FINISHED
 
