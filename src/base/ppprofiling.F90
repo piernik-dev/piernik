@@ -71,7 +71,8 @@ module ppp
       procedure :: cleanup  !< destroy this event list
       procedure :: start    !< add a beginning of an interval
       procedure :: stop     !< add an end of an interval
-      procedure, private :: next_event  !< for internal use in start and stop
+      procedure :: put      !< add an event with time measured elsewhere
+      procedure, private :: next_event  !< for internal use in start, stop and put
       procedure, private :: expand  !< create next array for events
       procedure :: publish  !< write the collected data to a log file
    end type eventlist
@@ -196,7 +197,32 @@ contains
 
    end subroutine stop
 
-!> \brief Start and stop
+!>
+!! \brief Add an event with time measured elsewhere
+!!
+!! Do not use inside die(), warn(), system_mem_usage() or check_mem_usage().
+!!
+!! Do not use at all, except for inserting event with mpisetup::bigbang
+!<
+
+   subroutine put(this, label, time)
+
+      use mpi, only: MPI_Wtime
+
+      implicit none
+
+      class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
+      character(len=*), intent(in)    :: label  !< event label
+      real(kind=8),     intent(in)    :: time   !< time of the event
+
+      character(len=cbuff_len) :: l
+
+      l = label(1:min(cbuff_len, len_trim(label)))
+      call this%next_event(event(l, time))
+
+   end subroutine put
+
+!> \brief Start, stop and put
 
    subroutine next_event(this, ev)
 

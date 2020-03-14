@@ -45,7 +45,7 @@ program piernik
    use global,            only: t, nstep, dt, dtm, cfl_violated, print_divB, repeat_step
    use initpiernik,       only: init_piernik
    use list_of_cg_lists,  only: all_lists
-   use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast
+   use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast, bigbang, cleanup_mpi
    use named_array_list,  only: qna, wna
    use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
@@ -82,6 +82,8 @@ program piernik
    code_progress = PIERNIK_START
 
    call init_piernik
+   call tst_cnt%put("init_piernik", bigbang)  ! can't call tst_cnt%start("init_piernik") before init_mpi
+   call tst_cnt%stop("init_piernik")
 
    call all_cg%check_na
    !call all_cg%check_for_dirt
@@ -192,6 +194,7 @@ program piernik
 
    code_progress = PIERNIK_FINISHED
 
+   call tst_cnt%start("finalize")
    if (master) then
       write(tstr, '(g14.6)') t
       write(nstr, '(i7)') nstep
@@ -239,7 +242,12 @@ program piernik
    code_progress = PIERNIK_CLEANUP
 
    if (master) write(stdout, '(a)', advance='no') "Finishing "
+
    call cleanup_piernik
+
+   call tst_cnt%stop("finalize")
+   call tst_cnt%publish  ! we can use HDF5 here because we don't rely on anything that is affected by cleanup_hdf5
+   call cleanup_mpi
 
 contains
 
