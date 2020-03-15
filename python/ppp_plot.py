@@ -60,7 +60,10 @@ class PPP_Node:
         return ("" if self.parent is None else self.parent.shortpath() + "/") + self.label
 
     def print(self, bigbang, indent=1):
-        print("  " * indent + "'" + self.label + "' %.6f %.6f" % (self.start - bigbang, self.stop - self.start))
+        try:
+            print("  " * indent + "'" + self.label + "' %.6f %.6f" % (self.start - bigbang, self.stop - self.start))
+        except TypeError:
+            print("  " * indent + "'" + self.label + "' TypeError: ", self.start, self.stop)
         for i in self.children:
             self.children[i].print(bigbang, indent=indent + 1)
 
@@ -107,15 +110,22 @@ class PPP:
         self.name = name
         self.trees = {}
 
+    def get_bigbang_from_master(self):
+        try:
+            bigbang = self.trees[0].get_bigbang()
+        except KeyError:
+            bigbang = 0.
+        return bigbang
+
     def print(self):
         print(self.name)
+        bigbang = self.get_bigbang_from_master()
         for i in sorted(self.trees):
-            bigbang = self.trees[0].get_bigbang()
             self.trees[i].print(bigbang)
 
     def print_gnuplot(self):
         ev = {}
-        bigbang = self.trees[0].get_bigbang()
+        bigbang = self.get_bigbang_from_master()
         for p in self.trees:
             evlist = []
             for r in self.trees[p].root:
@@ -132,7 +142,10 @@ class PPP:
             print("#%d " % i + "'" + e + "'")
             for p in ev[e]:
                 for t in range(len(ev[e][p])):
-                    print(e.count("/"), p, "%.6f" % (ev[e][p][t] - bigbang), i)
+                    try:
+                        print(e.count("/"), p, "%.6f" % (ev[e][p][t] - bigbang), i)
+                    except TypeError:
+                        print(e.count("/"), p, "NaN", i)
                 print("")
             i += 1
             print("")
