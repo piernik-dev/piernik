@@ -64,6 +64,12 @@ class PPP_Node:
         for i in self.children:
             self.children[i].print(bigbang, indent=indent + 1)
 
+    def get_all_ev(self):
+        evl = [[self.shortpath(), self.start, self.stop]]
+        for i in self.children:
+            evl += self.children[i].get_all_ev()
+        return evl
+
 
 class PPP_Tree:
     """An event tree for one Piernik process"""
@@ -106,6 +112,30 @@ class PPP:
         for i in sorted(self.trees):
             bigbang = self.trees[0].get_bigbang()
             self.trees[i].print(bigbang)
+
+    def print_gnuplot(self):
+        ev = {}
+        bigbang = self.trees[0].get_bigbang()
+        for p in self.trees:
+            evlist = []
+            for r in self.trees[p].root:
+                evlist += self.trees[p].root[r].get_all_ev()
+            for e in evlist:
+                if e[0] not in ev:
+                    ev[e[0]] = {}
+                if p not in ev[e[0]]:
+                    ev[e[0]][p] = e[1:]
+                else:
+                    sys.stderr.write("Warning: repeated event '" + e[0] + "' @ " + str(p) + "\n")
+        i = 1
+        for e in ev:
+            print("#%d " % i + "'" + e + "'")
+            for p in ev[e]:
+                for t in range(len(ev[e][p])):
+                    print(e.count("/"), p, "%.6f" % (ev[e][p][t] - bigbang), i)
+                print("")
+            i += 1
+            print("")
 
     def decode(self, fname):
         """Try to extract the data from a given file"""
@@ -151,7 +181,8 @@ if (len(sys.argv) != 2):
 
 evt = PPP("Collection")
 evt.decode(sys.argv[1])
-evt.print()
+# evt.print()
+evt.print_gnuplot()
 
 # collect ev_tree[] into ev_summary
 # ev_summary.print()
