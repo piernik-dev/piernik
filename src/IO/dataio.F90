@@ -1206,13 +1206,13 @@ contains
 #ifdef ISO
       use constants,        only: pMIN, pMAX
       use mpisetup,         only: piernik_MPI_Allreduce
-#else
+#else /* !ISO */
 #ifdef MAGNETIC
       use constants,        only: ION, half
 #endif /* MAGNETIC */
       use constants,        only: DST, I_ZERO
       use global,           only: smallp
-#endif /* ISO */
+#endif /* !ISO */
 
       implicit none
 

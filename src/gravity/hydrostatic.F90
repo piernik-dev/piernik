@@ -44,17 +44,20 @@ module hydrostatic
    public :: set_default_hsparams, hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, cleanup_hydrostatic, outh_bnd, init_hydrostatic
    public :: dprof, gprofs, nstot, zs, dzs, hsmin, hsbn, hsl, hscg
 
-   real, allocatable, dimension(:), save :: zs        !< array of z-positions of subgrid cells centers
-   real, allocatable, dimension(:), save :: gprofs    !< array of gravitational acceleration in a column of subgrid
-   real, allocatable, dimension(:)       :: dprofs
-   real, allocatable, dimension(:), save :: dprof     !< Array used for storing density during calculation of hydrostatic equilibrium
-   real,                            save :: dzs       !< length of the subgrid cell in z-direction
-   integer(kind=4),                 save :: nstot     !< total number of subgrid cells in a column through all z-blocks
-   real,                            save :: dmid      !< density value in a midplane (fixed for hydrostatic_zeq_densmid, overwritten by hydrostatic_zeq_coldens)
-   real,                            save :: hsmin     !< lower position limit
-   integer(kind=4),   dimension(2), save :: hsbn      !< first and last cell indices in proceeded block
-   real, allocatable, dimension(:), save :: hsl       !< lower borders of cells of proceeded block
-   type(grid_container), pointer,   save :: hscg
+   real, allocatable, dimension(:) :: zs        !< array of z-positions of subgrid cells centers
+   real, allocatable, dimension(:) :: gprofs    !< array of gravitational acceleration in a column of subgrid
+   real, allocatable, dimension(:) :: dprofs
+   real, allocatable, dimension(:) :: dprof     !< Array used for storing density during calculation of hydrostatic equilibrium
+   real                            :: dzs       !< length of the subgrid cell in z-direction
+   integer                         :: nstot     !< total number of subgrid cells in a column through all z-blocks
+   integer                         :: rnsub     !< effective nsub relative to the refinement
+   real                            :: dmid      !< density value in a midplane (fixed for hydrostatic_zeq_densmid, overwritten by hydrostatic_zeq_coldens)
+   real                            :: hsmin     !< lower position limit
+   integer(kind=4),   dimension(2) :: hsbn      !< first and last cell indices in proceeded block
+   real, allocatable, dimension(:) :: hsl       !< lower borders of cells of proceeded block
+   type(grid_container), pointer   :: hscg
+   logical                         :: unresolved = .false. !< check if grid subdivision is sufficient
+   real                            :: urslvd               !< factor of grid subdivision insufficiency
 
    interface
       real function hzeqscheme(ksub, up)
@@ -122,7 +125,9 @@ contains
 
 !>
 !! \brief Routine that establishes hydrostatic equilibrium for fixed plane density value
-!! \details To properly use this routine it is important to make sure that get_gprofs pointer has been associated. See details of start_hydrostatic routine.
+!! \details It is important to have get_gprofs pointer associated to a proper routine that gives back the column of nsub*nzt elements of gravitational acceleration in z direction.
+!! In the most common cases the gprofs_target parameter from GRAVITY namelist may be used. When it is set to 'accel' or 'extgp' the pointer is associated to get_gprofs_accel or get_gprofs_extgp routines, respectively.
+!! \note In this routine gprofs is multiplied by dzs/csim2 which are assumed to be constant. This is done for optimizing the hydrostatic_main routine.
 !! \param iia x-coordinate of z-column
 !! \param jja y-coordinate of z-column
 !! \param d0 plane density value for given x and y coordinates
@@ -131,43 +136,19 @@ contains
 !<
    subroutine hydrostatic_zeq_densmid(iia, jja, d0, csim2, sd)
 
-      use constants,  only: small
+      use constants,  only: half, small, two
       use dataio_pub, only: die
+      use gravity,    only: get_gprofs
 
       implicit none
 
       integer,        intent(in)  :: iia, jja
       real,           intent(in)  :: d0, csim2
       real, optional, intent(out) :: sd
+      integer                     :: ksub
 
       if (d0 <= small) call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
       dmid = d0
-
-      call start_hydrostatic(iia, jja, csim2, sd)
-      call finish_hydrostatic
-
-   end subroutine hydrostatic_zeq_densmid
-
-!>
-!! \brief Routine that prepares data for constructing hydrostatic equilibrium by hydrostatic_main routine
-!! \details It is important to have get_gprofs pointer associated to a proper routine that gives back the column of nsub*nzt elements of gravitational acceleration in z direction. In the most common cases the gprofs_target parameter from GRAVITY namelist may be used. When it is set to 'accel' or 'extgp' the pointer is associated to get_gprofs_accel or get_gprofs_extgp routines, respectively.
-!! \note After calling this routine gprofs is multiplied by dzs/csim2 which are assumed to be constant. This is done for optimizing the hydrostatic_main routine.
-!! \param iia x-coordinate of z-column
-!! \param jja y-coordinate of z-column
-!! \param csim2 sqare of sound velocity
-!! \param sd optional variable to give a sum of dprofs array from hydrostatic_main routine
-!<
-   subroutine start_hydrostatic(iia, jja, csim2, sd)
-
-      use constants, only: half
-      use gravity,   only: get_gprofs
-
-      implicit none
-
-      integer,        intent(in)  :: iia, jja
-      real,           intent(in)  :: csim2
-      real, optional, intent(out) :: sd
-      integer                     :: ksub
 
       allocate(zs(nstot), gprofs(nstot), dprofs(nstot))
 
@@ -176,19 +157,19 @@ contains
       enddo
       call get_gprofs(iia, jja)
       gprofs(:) = gprofs(:) / csim2 * dzs
+
+      if (any(abs(gprofs) >= two)) then
+         unresolved = .true.
+         urslvd = max(urslvd, maxval(abs(gprofs))/two)
+      endif
+
       call hydrostatic_main(sd)
-
-   end subroutine start_hydrostatic
-
-   subroutine finish_hydrostatic
-
-      implicit none
 
       if (allocated(zs))     deallocate(zs)
       if (allocated(gprofs)) deallocate(gprofs)
       if (allocated(dprofs)) deallocate(dprofs)
 
-   end subroutine finish_hydrostatic
+   end subroutine hydrostatic_zeq_densmid
 
 !>
 !! \brief Routine to set up sizes of arrays used in hydrostatic module. Settings depend on cg structure.
@@ -196,27 +177,29 @@ contains
 !<
    subroutine set_default_hsparams(cg)
 
-      use constants,   only: zdim, LO, HI, I_ONE, LEFT, RIGHT
-      use diagnostics, only: my_deallocate !, my_allocate
-      use domain,      only: dom
-      use gravity,     only: nsub
-      use grid_cont,   only: grid_container
+      use cg_level_finest, only: finest
+      use constants,       only: zdim, LO, HI, I_ONE, LEFT, RIGHT
+      use domain,          only: dom
+      use gravity,         only: nsub
+      use grid_cont,       only: grid_container
 
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
+      real                                      :: mindz     !< cell size in z direction of the finest grid
 
       hscg => cg
+      mindz = dom%L_(zdim)/finest%level%l%n_d(zdim) ! if not is_defined then: mindz = cg%dl(zdim)
 
-      nstot = nsub * dom%n_t(zdim)
-      dzs   = (dom%edge(zdim, HI)-dom%edge(zdim, LO))/real(nstot-2*dom%nb*nsub)
-      hsmin = dom%edge(zdim, LO)-dom%nb*cg%dl(zdim)
+      nstot = nsub * int(finest%level%l%n_d(zdim) + 2*dom%nb, kind=4)  ! will fail silently somewhere beyond 20th refinement level
+      dzs   = dom%L_(zdim)/(finest%level%l%n_d(zdim) * nsub)
+      !dzs   = mindz / nsub ! this simplification causes (different) truncation error
+      rnsub = nint(cg%dl(zdim) / dzs)
+      hsmin = dom%edge(zdim, LO) - dom%nb * mindz
       hsbn  = cg%lhn(zdim,:)
-      if (allocated(dprof)) call my_deallocate(dprof)
-!      call my_allocate(dprof, [cg%n_(zdim)], "dprof")
+      if (allocated(dprof)) deallocate(dprof)
       allocate(dprof(hsbn(LO):hsbn(HI)))
-      if (allocated(hsl)) call my_deallocate(hsl)
-!      call my_allocate(hsl, [hsbn+I_ONE], "hsl")
+      if (allocated(hsl)) deallocate(hsl)
       allocate(hsl(hsbn(LO):hsbn(HI)+I_ONE))
       hsl(hsbn(LO):hsbn(HI)) = cg%coord(LEFT,  zdim)%r(hsbn(LO):hsbn(HI))
       hsl(hsbn(HI)+I_ONE)    = cg%coord(RIGHT, zdim)%r(hsbn(HI))
@@ -231,7 +214,6 @@ contains
       use constants,  only: LO, HI, zdim
       use dataio_pub, only: die
       use domain,     only: dom
-      use gravity,    only: nsub
 #ifdef HYDROSTATIC_V2
       use constants,  only: big_float
 #endif /* !HYDROSTATIC_V2 */
@@ -274,7 +256,7 @@ contains
       dprof(:) = 0.0
       do k = hsbn(LO), hsbn(HI)
          do ksub = 1, nstot
-            if (zs(ksub) > hsl(k) .and. zs(ksub) < hsl(k+1)) dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
+            if (zs(ksub) > hsl(k) .and. zs(ksub) < hsl(k+1)) dprof(k) = dprof(k) + dprofs(ksub)/real(rnsub)
          enddo
       enddo
 
@@ -310,21 +292,18 @@ contains
       factor = (4.0 + up*factor)/(4.0 - up*factor)
 
    end function hzeq_scheme_v2
-#endif
+#endif /* HYDROSTATIC_V2 */
 
    subroutine get_gprofs_accel(iia, jja)
 
-      use constants, only: xdim, ydim, zdim
+      use constants, only: zdim
       use gravity,   only: tune_zeq, grav_accel
 
       implicit none
 
       integer, intent(in) :: iia, jja
-      integer             :: ia, ja
 
-      ia = min(hscg%n_(xdim), int(max(1, iia), kind=4))
-      ja = min(hscg%n_(ydim), int(max(1, jja), kind=4))
-      call grav_accel(zdim, ia, ja, zs, nstot, gprofs)
+      call grav_accel(zdim, iia, jja, zs, nstot, gprofs)
       gprofs(:) = tune_zeq*gprofs(:)
 
    end subroutine get_gprofs_accel
@@ -360,6 +339,7 @@ contains
       gprofs(1:nstot) = (gpots(1,1,1:nstot) - gpots(1,1,2:nstot1))/dzs
       gprofs(:) = tune_zeq*gprofs(:)
       if (associated(gpots)) deallocate(gpots)
+
    end subroutine get_gprofs_extgp
 
    !>
@@ -497,9 +477,15 @@ contains
 !<
    subroutine cleanup_hydrostatic
 
+      use dataio_pub,  only: msg, warn
       use diagnostics, only: my_deallocate
 
       implicit none
+
+      if (unresolved) then
+         write(msg,*) '[hydrostatic:cleanup_hydrostatic] nsub is too small! Make it larger about ', urslvd, ' times'
+         call warn(msg)
+      endif
 
       if (allocated(dprof)) call my_deallocate(dprof)
       if (allocated(hsl))   call my_deallocate(hsl)
