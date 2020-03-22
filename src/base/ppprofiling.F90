@@ -427,7 +427,8 @@ contains
 
       class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
 
-      integer(kind=4) :: t, ia, p, ne
+      integer(kind=4) :: t, ne, p
+      integer :: ia
       character(len=cbuff_len), dimension(:), allocatable  :: buflabel
       real(kind=8), dimension(:), allocatable :: buftime
       integer(kind=4), dimension(:,:), pointer :: mpistatus
@@ -455,12 +456,12 @@ contains
          enddo
       else
          ! send
-         call inflate_req(TAG_ARR_T)
+         call inflate_req(int(TAG_ARR_T))
          t = TAG_CNT
          ne = I_ZERO
          do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
             if (allocated(this%arrays(ia)%ev_arr)) then
-               ne = ne + size(this%arrays(ia)%ev_arr)
+               ne = ne + size(this%arrays(ia)%ev_arr, kind=4)
             else
                exit
             endif
@@ -474,7 +475,7 @@ contains
                if (allocated(this%arrays(ia)%ev_arr)) then
                   buflabel(p:p+size(this%arrays(ia)%ev_arr)-I_ONE) = this%arrays(ia)%ev_arr(:)%label
                   buftime (p:p+size(this%arrays(ia)%ev_arr)-I_ONE) = this%arrays(ia)%ev_arr(:)%wtime
-                  p = p + size(this%arrays(ia)%ev_arr)
+                  p = p + size(this%arrays(ia)%ev_arr, kind=4)
                endif
             enddo
             call MPI_Isend(buflabel, size(buflabel)*len(buflabel(1)), MPI_CHARACTER,        FIRST, TAG_ARR_L, comm, req(TAG_ARR_L), mpi_err)
@@ -502,7 +503,7 @@ contains
 
       implicit none
 
-      integer,                   intent(in) :: process  !< origin of the event
+      integer(kind=4),           intent(in) :: process  !< origin of the event
       type(event), dimension(:), intent(in) :: ev_arr   !< array of events
 
       integer :: i
@@ -531,7 +532,7 @@ contains
 
       implicit none
 
-      integer,                                intent(in) :: process   !< origin of the event
+      integer(kind=4),                        intent(in) :: process   !< origin of the event
       character(len=cbuff_len), dimension(:), intent(in) :: ev_label  !< array of event labels
       real(kind=8), dimension(:),             intent(in) :: ev_time   !< array of event times
 

@@ -116,7 +116,7 @@ program piernik
    call print_progress(nstep)
    if (print_divB > 0) call print_divB_norm
 
-   nstep_started = nstep - 1
+   nstep_started = nstep - I_ONE
    call tst_cnt%start("steps")
    do while (t < tend .and. nstep < nend .and. .not.(end_sim) .or. (cfl_violated .and. repeat_step)) ! main loop
 
