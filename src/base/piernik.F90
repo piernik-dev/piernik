@@ -47,6 +47,7 @@ program piernik
    use list_of_cg_lists,  only: all_lists
    use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast, bigbang, cleanup_mpi
    use named_array_list,  only: qna, wna
+   use ppp,               only: eventlist, cleanup_profiling
    use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
    use timer,             only: walltime_end
@@ -59,8 +60,6 @@ program piernik
 #if defined DEBUG && defined GRAV
    use particle_pub,      only: pset
 #endif /* DEBUG && GRAV */
-
-   use ppp, only: eventlist
 
    implicit none
 
@@ -250,6 +249,7 @@ program piernik
 
    call tst_cnt%stop("finalize")
    call tst_cnt%publish  ! we can use HDF5 here because we don't rely on anything that is affected by cleanup_hdf5
+   call cleanup_profiling
    call cleanup_mpi
    if (master) write(stdout,'(a)')"#"
 

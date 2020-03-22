@@ -47,16 +47,22 @@
 
 module ppp
 
-   use constants, only: cbuff_len
+   use constants, only: cbuff_len, cwdlen
 
    implicit none
 
    private
-   public :: eventlist, init_profiling
+   public :: eventlist, init_profiling, cleanup_profiling
 
    ! namelist parametrs
    logical               :: use_profiling  !< control whether to do any PPProfiling or not
    logical               :: profile_hdf5   !< Use HDF5 output when possible, fallback to ASCII
+
+   character(len=cwdlen) :: profile_file  !< file name for the profile data
+   integer :: profile_lun  !< logical unit number for profile file
+   enum, bind(C)
+      enumerator :: TAG_CNT = 1, TAG_ARR_L, TAG_ARR_T
+   end enum
 
    integer, parameter :: ev_arr_num = 10    ! number of allowed event arrays
 
@@ -110,7 +116,7 @@ contains
 
    subroutine init_profiling
 
-      use dataio_pub, only: nh, warn
+      use dataio_pub, only: nh, printinfo, warn, die, log_wr, problem_name, run_id, nrestart
       use mpisetup,   only: lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
@@ -162,7 +168,43 @@ contains
          if (master) call warn("[ppprofiling:init_profiling] profile_hdf5 not implemented yet")
       endif
 
+      write(profile_file, '(6a,i3.3,a)') trim(log_wr), '/', trim(problem_name), '_', trim(run_id), '_', nrestart, '.ppprofile'
+
+      if (profile_hdf5) then
+         profile_file = trim(profile_file) // ".h5"
+      else
+         profile_file = trim(profile_file) // ".ascii"
+      endif
+
+      if (use_profiling .and. master) then
+         call printinfo("[ppprofiling:init_profiling] Profile timings will be written to '" // trim(profile_file) // "' file.")
+         if (profile_hdf5) then
+            call die("[ppprofiling:init_profiling] HDF5 profiles not implemented yet")
+         else
+            open(newunit=profile_lun, file=profile_file)
+         endif
+      endif
+
    end subroutine init_profiling
+
+!> \brief close the profile file
+
+   subroutine cleanup_profiling
+
+      use dataio_pub, only: close_txt_file, die
+      use mpisetup,   only: master
+
+      implicit none
+
+      if (master) then
+         if (profile_hdf5) then
+            call die("[ppprofiling:cleanup_profiling] HDF5 profiles not implemented yet")
+         else
+            call close_txt_file(profile_file, profile_lun)
+         endif
+      endif
+
+   end subroutine cleanup_profiling
 
 !> \brief allocate eventarray of given size
 
@@ -367,36 +409,148 @@ contains
 !! \brief Write the collected data to a log file and clear the log
 !!
 !! \todo Use HDF5 format when available, stdout otherwise
+!!
+!! Perhaps MPI_TYPE_CREATE_STRUCT would simplify the code and improve the communication
+!! but it requires some C-interoperability, which needs to be explored and tested first.
+!!
+!! \todo for lenghty event lists implement some splitting to avoid excessive allocation
 !<
 
    subroutine publish(this)
 
-      use dataio_pub, only: msg, printinfo
-      use func,       only: operator(.equals.)
-      use mpisetup,   only: proc
+      use constants, only: I_ZERO, I_ONE
+      use global,    only: check_mem_usage
+      use mpi,       only: MPI_STATUS_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use mpisetup,  only: proc, master, comm, mpi_err, FIRST, LAST, req, status, inflate_req
 
       implicit none
 
       class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
 
-      integer :: i, ia
+      integer(kind=4) :: t, ia, p, ne
+      character(len=cbuff_len), dimension(:), allocatable  :: buflabel
+      real(kind=8), dimension(:), allocatable :: buftime
+      integer(kind=4), dimension(:,:), pointer :: mpistatus
 
       if (.not. use_profiling) return
 
-      do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
-         if (allocated(this%arrays(ia)%ev_arr)) then
-            do i = lbound(this%arrays(ia)%ev_arr, dim=1), ubound(this%arrays(ia)%ev_arr, dim=1)
-               associate (ev => this%arrays(ia)%ev_arr(i))
-                  if (ev%wtime .equals. 0.) exit
-                  write(msg, '(2a,i4,2a,f20.7)') this%label, " @", proc, " ", ev%label, ev%wtime
-                  call printinfo(msg)
-               end associate
+      if (master) then
+         ! write(profile_lun, '(/,3a)') "#profile '", trim(this%label), "'"
+         do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
+            if (allocated(this%arrays(ia)%ev_arr)) &
+                 call publish_array(proc, this%arrays(ia)%ev_arr)
+         enddo
+
+         ! receive
+         do p = FIRST + I_ONE, LAST
+             call MPI_Recv(ne, I_ONE, MPI_INTEGER, p, TAG_CNT, comm, MPI_STATUS_IGNORE, mpi_err)
+             if (ne /= 0) then
+                allocate(buflabel(ne), buftime(ne))
+                call check_mem_usage
+                call MPI_Recv(buflabel, size(buflabel)*len(buflabel(1)), MPI_CHARACTER,        p, TAG_ARR_L, comm, MPI_STATUS_IGNORE, mpi_err)
+                call MPI_Recv(buftime,  size(buftime),                   MPI_DOUBLE_PRECISION, p, TAG_ARR_T, comm, MPI_STATUS_IGNORE, mpi_err)
+                call publish_buffers(p, buflabel, buftime)
+                deallocate(buflabel, buftime)
+             endif
+         enddo
+      else
+         ! send
+         call inflate_req(TAG_ARR_T)
+         t = TAG_CNT
+         ne = I_ZERO
+         do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
+            if (allocated(this%arrays(ia)%ev_arr)) then
+               ne = ne + size(this%arrays(ia)%ev_arr)
+            else
+               exit
+            endif
+         enddo
+
+         if (ne > 0) then
+            allocate(buflabel(ne), buftime(ne))
+            call check_mem_usage
+            p = I_ONE
+            do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
+               if (allocated(this%arrays(ia)%ev_arr)) then
+                  buflabel(p:p+size(this%arrays(ia)%ev_arr)-I_ONE) = this%arrays(ia)%ev_arr(:)%label
+                  buftime (p:p+size(this%arrays(ia)%ev_arr)-I_ONE) = this%arrays(ia)%ev_arr(:)%wtime
+                  p = p + size(this%arrays(ia)%ev_arr)
+               endif
             enddo
+            call MPI_Isend(buflabel, size(buflabel)*len(buflabel(1)), MPI_CHARACTER,        FIRST, TAG_ARR_L, comm, req(TAG_ARR_L), mpi_err)
+            call MPI_Isend(buftime,  size(buftime),                   MPI_DOUBLE_PRECISION, FIRST, TAG_ARR_T, comm, req(TAG_ARR_T), mpi_err)
+            t = TAG_ARR_T
          endif
-      enddo
+
+         call MPI_Isend(ne, I_ONE, MPI_INTEGER, FIRST, TAG_CNT, comm, req(TAG_CNT), mpi_err)
+         mpistatus => status(:, :t)
+         call MPI_Waitall(t, req(:t), mpistatus, mpi_err)
+         deallocate(buflabel, buftime)
+      endif
 
       call this%cleanup
 
    end subroutine publish
+
+!> \brief Print the events from event array to the profile log
+
+   subroutine publish_array(process, ev_arr)
+
+      use dataio_pub, only: warn, die
+      use func,       only: operator(.equals.)
+      use mpisetup,   only: slave
+
+      implicit none
+
+      integer,                   intent(in) :: process  !< origin of the event
+      type(event), dimension(:), intent(in) :: ev_arr   !< array of events
+
+      integer :: i
+
+      if (slave) then
+         call warn("[ppprofiling:publish_array] only master is supposed to write")
+         return
+      endif
+
+      if (profile_hdf5) call die("[ppprofiling:publish_array] HDF5 not implemented yet")
+
+      do i = lbound(ev_arr, dim=1), ubound(ev_arr, dim=1)
+         if (ev_arr(i)%wtime .equals. 0.) exit
+         write(profile_lun, '(i4,2a,f20.7)') process, " ", ev_arr(i)%label, ev_arr(i)%wtime
+      enddo
+
+   end subroutine publish_array
+
+!> \brief Print the events from buffer arrays to the profile log
+
+   subroutine publish_buffers(process, ev_label, ev_time)
+
+      use dataio_pub, only: warn, die
+      use func,       only: operator(.equals.)
+      use mpisetup,   only: slave
+
+      implicit none
+
+      integer,                                intent(in) :: process   !< origin of the event
+      character(len=cbuff_len), dimension(:), intent(in) :: ev_label  !< array of event labels
+      real(kind=8), dimension(:),             intent(in) :: ev_time   !< array of event times
+
+      integer :: i
+
+      if (slave) then
+         call warn("[ppprofiling:publish_array] only master is supposed to write")
+         return
+      endif
+
+      if (profile_hdf5) call die("[ppprofiling:publish_array] HDF5 not implemented yet")
+
+      if (size(ev_label) /= size(ev_time)) call die("[ppprofiling:publish_array] arrays size mismatch")
+
+      do i = lbound(ev_label, dim=1), ubound(ev_label, dim=1)
+         if (ev_time(i) .equals. 0.) exit
+         write(profile_lun, '(i4,2a,f20.7)') process, " ", ev_label(i), ev_time(i)
+      enddo
+
+   end subroutine publish_buffers
 
 end module ppp
