@@ -75,13 +75,13 @@ program piernik
    character(len=cbuff_len) :: label
    integer(kind=4) :: nstep_started
 
-   call tst_cnt%init("main")
    try_rebalance = .false.
    tlast = 0.0
 
    code_progress = PIERNIK_START
 
    call init_piernik
+   call tst_cnt%init("main")
    call tst_cnt%put("init_piernik", bigbang)  ! can't call tst_cnt%start("init_piernik") before init_mpi
    call tst_cnt%stop("init_piernik")
 
@@ -244,13 +244,14 @@ program piernik
 
    code_progress = PIERNIK_CLEANUP
 
-   if (master) write(stdout, '(a)', advance='no') "Finishing "
+   if (master) write(stdout, '(a)', advance='no') "Finishing #"
 
    call cleanup_piernik
 
    call tst_cnt%stop("finalize")
    call tst_cnt%publish  ! we can use HDF5 here because we don't rely on anything that is affected by cleanup_hdf5
    call cleanup_mpi
+   if (master) write(stdout,'(a)')"#"
 
 contains
 

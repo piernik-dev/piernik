@@ -63,6 +63,7 @@ contains
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
       use interpolations,        only: set_interpolations
       use mpisetup,              only: init_mpi, master
+      use ppp,                   only: init_profiling
       use refinement,            only: init_refinement, level_max
       use refinement_update,     only: update_refinement
       use sources,               only: init_sources
@@ -135,6 +136,7 @@ contains
       call cg_extptrs%epa_init
 
       call init_dataio_parameters            ! Required very early to call colormessage without side-effects
+      call init_profiling                    ! May require init_dataio_parameters set up
 
       call init_units
 

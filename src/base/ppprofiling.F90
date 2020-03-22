@@ -52,7 +52,11 @@ module ppp
    implicit none
 
    private
-   public :: eventlist
+   public :: eventlist, init_profiling
+
+   ! namelist parametrs
+   logical               :: use_profiling  !< control whether to do any PPProfiling or not
+   logical               :: profile_hdf5   !< Use HDF5 output when possible, fallback to ASCII
 
    integer, parameter :: ev_arr_num = 10    ! number of allowed event arrays
 
@@ -89,6 +93,76 @@ module ppp
    end type eventlist
 
 contains
+
+!>
+!! \brief initialize profiling output according to parameters from namelist PROFILING
+!!
+!! \n \n
+!! @b PROFILING
+!! \n \n
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>use_profiling  </td><td>.false.  </td><td>logical value  </td><td>\copydoc ppp::use_profiling   </td></tr>
+!! <tr><td>profile_hdf5   </td><td>.true.   </td><td>logical value  </td><td>\copydoc ppp::profile_hdf5    </td></tr>
+!! </table>
+!! \n \n
+!<
+
+   subroutine init_profiling
+
+      use dataio_pub, only: nh, warn
+      use mpisetup,   only: lbuff, master, slave, piernik_MPI_Bcast
+
+      implicit none
+
+      namelist /PROFILING/ use_profiling, profile_hdf5
+
+      use_profiling = .false.
+      profile_hdf5 = &
+#ifdef HDF5
+           .true.
+#else /* !HDF5 */
+           .false.
+#endif /* HDF5 */
+
+     if (master) then
+
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=PROFILING)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=PROFILING, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "PROFILING")
+         read(nh%cmdl_nml,nml=PROFILING, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "PROFILING", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=PROFILING)
+         close(nh%lun)
+         call nh%compare_namelist()
+
+         lbuff(1) = use_profiling
+         lbuff(2) = profile_hdf5
+
+      endif
+
+      call piernik_MPI_Bcast(lbuff)
+
+      if (slave) then
+
+         use_profiling = lbuff(1)
+         profile_hdf5  = lbuff(2)
+
+      endif
+
+      if (profile_hdf5) then
+         profile_hdf5 = .false.
+         if (master) call warn("[ppprofiling:init_profiling] profile_hdf5 not implemented yet")
+      endif
+
+   end subroutine init_profiling
 
 !> \brief allocate eventarray of given size
 
@@ -136,6 +210,8 @@ contains
 
       integer, parameter :: ev_arr_len = 1024  ! starting size of the array of events
 
+      if (.not. use_profiling) return
+
       this%ind = 1
       this%arr_ind = 1
       this%label = label(1:min(cbuff_len, len_trim(label)))
@@ -181,6 +257,8 @@ contains
 
       character(len=cbuff_len) :: l
 
+      if (.not. use_profiling) return
+
       l = label(1:min(cbuff_len, len_trim(label)))
       call this%next_event(event(l, MPI_Wtime()))
 
@@ -202,6 +280,8 @@ contains
       character(len=*), intent(in)    :: label  !< event label
 
       character(len=cbuff_len) :: l
+
+      if (.not. use_profiling) return
 
       l = label(1:min(cbuff_len, len_trim(label)))
       call this%next_event(event(l, -MPI_Wtime()))
@@ -225,6 +305,8 @@ contains
       real(kind=8),     intent(in)    :: time   !< time of the event
 
       character(len=cbuff_len) :: l
+
+      if (.not. use_profiling) return
 
       l = label(1:min(cbuff_len, len_trim(label)))
       call this%next_event(event(l, time))
@@ -298,6 +380,8 @@ contains
       class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
 
       integer :: i, ia
+
+      if (.not. use_profiling) return
 
       do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
          if (allocated(this%arrays(ia)%ev_arr)) then
