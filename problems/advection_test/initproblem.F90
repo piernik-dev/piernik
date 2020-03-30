@@ -46,7 +46,6 @@ module initproblem
    integer(kind=4)        :: nflip       !< how often to call refine/derefine routine
    real                   :: flipratio   !< percentage of blocks on each level to be refined on flip
    real                   :: ref_thr     !< refinement threshold
-   real                   :: deref_thr   !< derefinement threshold
    logical                :: usedust     !< If .false. then do not set velocity for dust
    real, dimension(ndims) :: B_const     !<  constant-B component strength
    real                   :: divB0_amp   !< Amplitude of the non-divergent component of the magnetic field
@@ -56,7 +55,7 @@ module initproblem
    real                   :: divBb_r0    !< divergence defect spatial scaling factor
    integer(kind=4), dimension(ndims) :: divB_k   !< wave numbers for creating initial field
 
-   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, pulse_pres, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, &
+   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, pulse_pres, norm_step, nflip, flipratio, ref_thr, usedust, &
         &                      divB0_amp, divBc_amp, divBs_amp, divBb_amp, divB_k, B_const, divBb_r0
 
    ! other private data
@@ -115,7 +114,6 @@ contains
       norm_step     = 5
       nflip         = 0
       ref_thr       = 0.1
-      deref_thr     = 0.01
       flipratio     = 1.
       usedust       = .false.
       divB0_amp     = 0.                   !< should be safe to set non-0
@@ -146,7 +144,6 @@ contains
 
          rbuff(1)   = pulse_amp
          rbuff(2)   = ref_thr
-         rbuff(3)   = deref_thr
          rbuff(4)   = flipratio
          rbuff(5)   = divB0_amp
          rbuff(6)   = divBc_amp
@@ -175,7 +172,6 @@ contains
 
          pulse_amp  = rbuff(1)
          ref_thr    = rbuff(2)
-         deref_thr  = rbuff(3)
          flipratio  = rbuff(4)
          divB0_amp  = rbuff(5)
          divBc_amp  = rbuff(6)
@@ -239,7 +235,7 @@ contains
       else
          ! Automatic refinement criteria
          do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
-            call urc_list%add_user_urcv(wna%fi, id, ref_thr*pulse_amp, deref_thr*pulse_amp, 0., "grad", .true.)
+            call urc_list%add_user_urcv(wna%fi, id, ref_thr*pulse_amp, 0., "grad", .true.)
          enddo
       endif
 
@@ -757,12 +753,12 @@ contains
          cgl => curl%first
          i = 0
          do while (associated(cgl))
-            cgl%cg%refine_flags%refine   = .false.
-            cgl%cg%refine_flags%derefine = .false.
+            call cgl%cg%flag%clear
+            cgl%cg%flag%derefine = .false.
             if (real(i)/curl%cnt <= flipratio) then
                if (mod(nstep, nflip) == 0) then
-                  cgl%cg%refine_flags%refine   = (mod(nstep, I_TWO*nflip) /= 0)
-                  cgl%cg%refine_flags%derefine = .not. cgl%cg%refine_flags%refine
+                  if (mod(nstep, I_TWO*nflip) /= 0) call cgl%cg%flag%set
+                  cgl%cg%flag%derefine = .not. cgl%cg%flag%get()
                endif
             endif
             i = i + 1
