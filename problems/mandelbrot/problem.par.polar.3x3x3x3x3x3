@@ -45,7 +45,6 @@
  $PROBLEM_CONTROL
     maxiter = 300000
     !smooth_map = .false.
-    deref_thr = 0.
     log_polar = .true.
     x_polar = -1.78644025556363695
     y_polar = 0.

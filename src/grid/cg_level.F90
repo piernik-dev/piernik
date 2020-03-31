@@ -302,13 +302,10 @@ contains
    subroutine update_decomposition_properties(this)
 
       use constants,  only: base_level_id, pLOR
-      use dataio_pub, only: warn
       use domain,     only: is_mpi_noncart, is_multicg, is_refined, is_uneven
-      use mpisetup,   only: proc, master, piernik_MPI_Allreduce, proc
+      use mpisetup,   only: proc, piernik_MPI_Allreduce, proc
 
       implicit none
-
-      logical, save :: warned = .false.
 
       class(cg_level_t), intent(inout) :: this   !< object invoking type bound procedure
 
@@ -317,10 +314,6 @@ contains
       if (is_refined) then
          is_mpi_noncart = .true.
          is_multicg = .true.
-         if (master .and. .not. warned) then
-            call warn("[cg_level:update_decomposition_properties] Refinements are experimental")
-            warned = .true.
-         endif
       endif
       if (is_mpi_noncart) is_uneven = .true.
 
