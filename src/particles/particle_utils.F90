@@ -409,13 +409,13 @@ contains
                   cycle
                endif
                if (.not. pset%pdata%in) then
-                  ! TO DO: ADD CONDITION FOR PARTICLES CHANGING CG OUTSIDE DOMAIN
+                  ! TO CHECK: PARTICLES CHANGING CG OUTSIDE DOMAIN?
                   associate ( gsej => base%level%dot%gse(j) )
                     do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
                        if (particle_in_area(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO)*cg%dl(:)])) then
                           nsend(j) = nsend(j) + 1 ! WON'T WORK in AMR!!!
                        else if (pset%pdata%outside) then
-                           call cg_outside_dom(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2.) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO) * cg%dl(:)], phy_out)
+                           call cg_outside_dom(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2.) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_ONE) * cg%dl(:)], phy_out)
                            if (phy_out) nsend(j) = nsend(j) + 1
                         endif
                      enddo
@@ -449,7 +449,7 @@ contains
                            if (particle_in_area(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO)*cg%dl(:)])) then
                               part_info(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
                            else if (pset%pdata%outside) then
-                              call cg_outside_dom(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2.) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO) * cg%dl(:)], phy_out)
+                              call cg_outside_dom(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2.) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_ONE) * cg%dl(:)], phy_out)
                               if (phy_out) part_info(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
                            endif
                         enddo
@@ -498,7 +498,9 @@ contains
                   do i = 1, nrecv(j)
                      pos = part_info2(ind+2:ind+4)
                      call is_part_in_cg(cg, pos, in, phy, out) ! TO DO IN AMR USE GRID_ID TO CUT THE SEARCH SHORT
-                     if (.not. out) print *, 'error, particle', part_info2(ind), 'cannot be attributed!' ! NON-AMR ONLY
+                     if (.not. out) then
+                        print *, 'error, particle', part_info2(ind), 'cannot be attributed!' ! NON-AMR ONLY
+                     endif
                      if (out) then
                         pid = nint(part_info2(ind), kind=4)
                         mass = part_info2(ind+1)
