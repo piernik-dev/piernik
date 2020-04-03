@@ -31,7 +31,7 @@
 !! \brief Monopole solver for isolated boundaries
 !<
 
-module monopole
+module mg_monopole
 ! pulled by MULTIGRID && SELF_GRAV
 
    ! needed for global vars in this module
@@ -205,4 +205,4 @@ contains
 
    end subroutine find_img_CoM
 
-end module monopole
+end module mg_monopole
