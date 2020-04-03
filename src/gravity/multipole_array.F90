@@ -136,7 +136,7 @@ contains
       use constants,       only: xdim, zdim, GEO_XYZ, GEO_RPZ, HI, pMIN
       use dataio_pub,      only: die, warn, msg, printinfo
       use domain,          only: dom
-      use global,          only: check_mem_usage
+      use memory_usage,    only: check_mem_usage
       use mpisetup,        only: piernik_MPI_Allreduce, master
 
       implicit none

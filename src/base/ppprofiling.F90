@@ -210,9 +210,9 @@ contains
 
    subroutine arr_init(this, asize)
 
-      use constants,  only: PIERNIK_INIT_MPI
-      use dataio_pub, only: die, code_progress
-      use global,     only: check_mem_usage
+      use constants,    only: PIERNIK_INIT_MPI
+      use dataio_pub,   only: die, code_progress
+      use memory_usage, only: check_mem_usage
 
       implicit none
 
@@ -418,10 +418,10 @@ contains
 
    subroutine publish(this)
 
-      use constants, only: I_ZERO, I_ONE
-      use global,    only: check_mem_usage
-      use mpi,       only: MPI_STATUS_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,  only: proc, master, comm, mpi_err, FIRST, LAST, req, status, inflate_req
+      use constants,    only: I_ZERO, I_ONE
+      use memory_usage, only: check_mem_usage
+      use mpi,          only: MPI_STATUS_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use mpisetup,     only: proc, master, comm, mpi_err, FIRST, LAST, req, status, inflate_req
 
       implicit none
 

@@ -1682,11 +1682,11 @@ contains
 
       subroutine print_memory_usage
 
-         use constants,  only: I_ONE
-         use dataio_pub, only: msg, printinfo
-         use global,     only: system_mem_usage
-         use mpi,        only: MPI_INTEGER
-         use mpisetup,   only: master, FIRST, LAST, comm, mpi_err
+         use constants,    only: I_ONE
+         use dataio_pub,   only: msg, printinfo
+         use memory_usage, only: system_mem_usage
+         use mpi,          only: MPI_INTEGER
+         use mpisetup,     only: master, FIRST, LAST, comm, mpi_err
 
          implicit none
 

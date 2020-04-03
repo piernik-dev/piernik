@@ -62,6 +62,7 @@ contains
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
       use interpolations,        only: set_interpolations
+      use memory_usage,          only: init_memory
       use mpisetup,              only: init_mpi, master
       use ppp,                   only: init_profiling
       use refinement,            only: init_refinement, level_max
@@ -136,7 +137,8 @@ contains
       call cg_extptrs%epa_init
 
       call init_dataio_parameters            ! Required very early to call colormessage without side-effects
-      call init_profiling                    ! May require init_dataio_parameters set up
+      call init_memory
+      call init_profiling                    ! May require init_dataio_parameters and memory_usage set up
 
       call init_units
 
