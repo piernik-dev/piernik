@@ -47,7 +47,7 @@ program piernik
    use list_of_cg_lists,  only: all_lists
    use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast, cleanup_mpi
    use named_array_list,  only: qna, wna
-   use ppp,               only: cleanup_profiling, tst_cnt
+   use ppp,               only: cleanup_profiling, ppp_main
    use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
    use timer,             only: walltime_end
@@ -115,7 +115,7 @@ program piernik
    if (print_divB > 0) call print_divB_norm
 
    nstep_started = nstep - I_ONE
-   call tst_cnt%start(st_label)
+   call ppp_main%start(st_label)
    do while (t < tend .and. nstep < nend .and. .not.(end_sim) .or. (cfl_violated .and. repeat_step)) ! main loop
 
       dump(:) = .false.
@@ -142,13 +142,13 @@ program piernik
       endif
       if (nstep > nstep_started) then
          write(label, '(i8)') nstep
-         call tst_cnt%start(fu_label // adjustl(label))
+         call ppp_main%start(fu_label // adjustl(label))
          nstep_started = nstep
       endif
       call fluid_update
       if (nstep >= nstep_started) then
          write(label, '(i8)') nstep
-         call tst_cnt%stop(fu_label // adjustl(label))
+         call ppp_main%stop(fu_label // adjustl(label))
       endif
       nstep = nstep + I_ONE
       call print_progress(nstep)
@@ -190,11 +190,11 @@ program piernik
    if (print_divB > 0) then
       if (mod(nstep, print_divB) /= 0) call print_divB_norm ! print the norm at the end, if it wasn't printed inside the loop above
    endif
-   call tst_cnt%stop(st_label)
+   call ppp_main%stop(st_label)
 
    code_progress = PIERNIK_FINISHED
 
-   call tst_cnt%start(f_label)
+   call ppp_main%start(f_label)
    if (master) then
       write(tstr, '(g14.6)') t
       write(nstr, '(i7)') nstep
@@ -245,8 +245,8 @@ program piernik
 
    call cleanup_piernik
 
-   call tst_cnt%stop(f_label)
-   call tst_cnt%publish  ! we can use HDF5 here because we don't rely on anything that is affected by cleanup_hdf5
+   call ppp_main%stop(f_label)
+   call ppp_main%publish  ! we can use HDF5 here because we don't rely on anything that is affected by cleanup_hdf5
    call cleanup_profiling
    call cleanup_mpi
    if (master) write(stdout,'(a)')"#"
