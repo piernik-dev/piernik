@@ -361,11 +361,30 @@ contains
 
    end subroutine parents_prevent_derefinement_lev
 
+!> \brief PPPP-aware wrapper for update the refinement topology
+
+   subroutine update_refinement(act_count, refinement_fixup_only)
+
+      use ppp, only: ppp_main
+
+      implicit none
+
+      integer, optional, intent(out) :: act_count             !< counts number of blocks refined or deleted
+      logical, optional, intent(in)  :: refinement_fixup_only !< When present and .true. then do not check refinement criteria, do only correction, if necessary.
+
+      character(len=*), parameter :: ref_label = "refinement"
+
+      call ppp_main%start(ref_label)
+      call update_refinement_wrapped(act_count, refinement_fixup_only)
+      call ppp_main%stop(ref_label)
+
+   end subroutine update_refinement
+
 !> \brief Update the refinement topology
 
 !#define DEBUG_DUMPS
 
-   subroutine update_refinement(act_count, refinement_fixup_only)
+   subroutine update_refinement_wrapped(act_count, refinement_fixup_only)
 
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_leaves,             only: leaves
@@ -612,7 +631,7 @@ contains
 
       end subroutine print_time
 
-   end subroutine update_refinement
+   end subroutine update_refinement_wrapped
 
 !> \brief Refine a single grid piece. Pay attention whether it is already refined
 

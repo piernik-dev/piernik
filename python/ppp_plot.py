@@ -7,51 +7,48 @@ import magic
 class PPP_Node:
     """A single event and links"""
 
-    start = None
-    stop = None
+    parent = None
+    proc = None
+    label = ""
 
     def __init__(self, label, time):
         self.label = label
+        self.start = []
+        self.stop = []
         self._set_time(time)
         self.children = {}
         self.parent = None
 
     def _set_time(self, time):
         if time > 0:
-            self._set_start(time)
+            if (len(self.start) != len(self.stop)):
+                sys.stderr.write("Warning: orphaned start for '" + self.path() + "' " + str(time) + " vs " + str(self.start[-1]) + "\n")
+                self.stop.append(None)
+            self.start.append(time)
         elif time < 0:
-            self._set_stop(-time)
+            if (len(self.start) != len(self.stop) + 1):
+                sys.stderr.write("Warning: orphaned stop for '" + self.path() + "' " + str(time) + " vs " + str(self.stop[-1]) + "\n")
+                self.start.append(None)
+            self.stop.append(-time)
         else:
             sys.stderr.write("Warning: time == 0 for '" + self.path() + "'\n")
 
-    def _set_start(self, time):
-        if self.start is None:
-            self.start = time
-        else:
-            sys.stderr.write("Warning: self.start already set for '" + self.path() + "' " + str(time) + " vs " + str(self.start) + "\n")
-
-    def _set_stop(self, time):  # a bit of spaghetti here (see _set_start)
-        if self.stop is None:
-            self.stop = time
-        else:
-            sys.stderr.write("Warning: self.stop already set for '" + self.path() + "' " + str(time) + " vs " + str(self.stop) + "\n")
 
     def _add(self, label, time):
-        if label == self.label:
-            self._set_time(time)
-            return self.parent if self.stop is not None else self
-        else:
-            if time > 0:  # create/update child
-                if label not in self.children:
-                    self.children[label] = PPP_Node(label, time)
-                    self.children[label].parent = self
-                    return self.children[label]
-                else:
-                    return self.children[label]._add(label, time)
+        if time > 0:  # create/update child
+            if label not in self.children:
+                self.children[label] = PPP_Node(label, time)
+                self.children[label].parent = self
             else:
-                if self.stop is None:
-                    sys.stderr.write("Warning: unfinished for '" + self.path() + "' " + str(time) + "\n")
-                return self.parent._add(label, time)
+                self.children[label]._set_time(time)
+            return self.children[label]
+        else:
+            if label == self.label:
+                self._set_time(time)
+            else:
+                sys.stderr.write("Warning: unfinished for '" + self.path() + "' " + str(time) + "\n")
+            return self.parent  # most likely won't recover properly
+
 
     def path(self):
         return (str(self.proc) if self.parent is None else self.parent.path()) + "/" + self.label
@@ -93,7 +90,7 @@ class PPP_Tree:
     def get_bigbang(self):
         bigbang = None
         for i in self.root:
-            bb = self.root[i].start
+            bb = min(self.root[i].start)
             bigbang = bb if bigbang is None else min(bb, bigbang)
         return bigbang
 
@@ -145,12 +142,13 @@ class PPP:
             print("# " + e.split("/")[-1] + " '" + e + "'")
             for p in ev[e]:
                 for t in range(len(ev[e][p])):
-                    try:
-                        print("0. 0. %.6f %.6f %.6f %.6f" % (ev[e][p][t][0] - bigbang, ev[e][p][t][1] - bigbang,
-                                                             depth + float(p + 1) / (np + 1), depth + float(p) / (np + 1)), depth, p)
-                    except TypeError:
-                        sys.stderr.write("Warning: inclomplete event '" + e + "' @" + p + " #" + t + ev[e][p][t])
-                print("")
+                    for _ in range(min(len(ev[e][p][t][0]), len(ev[e][p][t][1]))):
+                        try:
+                            print("0. 0. %.6f %.6f %.6f %.6f" % (ev[e][p][t][0][_] - bigbang, ev[e][p][t][1][_] - bigbang,
+                                                                 depth + float(p + 1) / (np + 1), depth + float(p) / (np + 1)), depth, p)
+                        except TypeError:
+                            sys.stderr.write("Warning: inclomplete event '" , e , "' @" , p , " #" , str(t) , ev[e][p][t])
+                    print("")
             print("")
 
     def decode(self, fname):
