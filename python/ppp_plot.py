@@ -56,7 +56,8 @@ class PPP_Node:
 
     def print(self, bigbang, indent=1):
         try:
-            print("  " * indent + "'" + self.label + "' %.6f %.6f" % (self.start - bigbang, self.stop - self.start))
+            for _ in range(min(len(self.start), len(self.stop))):
+                print("  " * indent + "'" + self.label + "' %.6f %.6f" % (self.start[_] - bigbang, self.stop[_] - self.start[_]))
         except TypeError:
             print("  " * indent + "'" + self.label + "' TypeError: ", self.start, self.stop)
         for i in self.children:
@@ -129,38 +130,50 @@ class PPP:
             for r in self.trees[p].root:
                 evlist += self.trees[p].root[r].get_all_ev()
             for e in evlist:
-                e_base = e[0].split()[0]
+                e_base = e[0].split('/')[-1].split()[0]
                 if e_base not in ev:
                     ev[e_base] = {}
                 if p not in ev[e_base]:
                     ev[e_base][p] = []
-                ev[e_base][p].append(e[1:])
+                ev[e_base][p].append(e)
 
         print("#!/usr/bin/gnuplot\n$PPPdata << EOD\n")
+        i_s = 1
+        i_e = 2
         for e in ev:
-            depth = e.count("/")
-            print("# " + e.split("/")[-1] + " '" + e + "'")
+            print("# __" + e + "__ '" + ev[e][0][0][0] + "'")
             for p in ev[e]:
                 for t in range(len(ev[e][p])):
-                    for _ in range(min(len(ev[e][p][t][0]), len(ev[e][p][t][1]))):
+                    depth = ev[e][p][t][0].count("/")
+                    for _ in range(min(len(ev[e][p][t][i_s]), len(ev[e][p][t][i_e]))):
                         try:
-                            print("0. 0. %.6f %.6f %.6f %.6f" % (ev[e][p][t][0][_] - bigbang, ev[e][p][t][1][_] - bigbang,
-                                                                 depth + float(p) / (np + 1), depth + float(p + 1) / (np + 1)), depth, p)
+                            if (ev[e][p][t][i_e][_] - ev[e][p][t][i_s][_]) > 0.:
+                                print("0. 0. %.6f %.6f %.6f %.6f" % (ev[e][p][t][i_s][_] - bigbang, ev[e][p][t][i_e][_] - bigbang,
+                                                                     depth + float(p) / (np + 1), depth + float(p + 1) / (np + 1)), depth, p)
                         except TypeError:
                             sys.stderr.write("Warning: inclomplete event '", e, "' @", p, " #", str(t), ev[e][p][t])
                     print("")
             print("")
-        print("EOD\n\n# Suggested gnuplot commands:\nset style fill solid 0.5\nset key outside horizontal")
+        print("EOD\n\n# Suggested gnuplot commands:\nset key outside horizontal")
         print("set xlabel 'time (walltime seconds)'\nset ylabel 'timer depth + proc/nproc'\nset title 'nproc = %d'" % (np + 1))
         pline = "plot $PPPdata "
         nocomma = True
+        fs = "solid 0.1"
+        i = 0
+        gp_colors = 8
         for e in ev:
             ind = e.split("/")[-1]
             if nocomma:
                 nocomma = False
             else:
                 pline += ', "" '
-            pline += ' index "' + ind + '" with boxxy title "' + ind.replace('_', "\\\\\\_") + '"'
+            pline += ' index "__' + ind + '__" with boxxy title "' + ind.replace('_', "\\\\\\_") + '" fs  ' + fs
+            i += 1
+            if i >= gp_colors:  # gnuplot seems to have only gp_colors colors for solid filling
+                npat = int(i / gp_colors)
+                if npat >= 3:  # pattern #3 does not show borders
+                    npat += 1
+                fs = "pat %d" % npat
         print(pline)
         print("pause mouse close")
 
@@ -215,3 +228,7 @@ evt.print_gnuplot()
 # ev_summary.print()
 # ev_summary.make_image()  # dump an .SVG
 # ev_summary.browse()  # create browsable image with zoom
+
+# for j  in *.ppprofile.ascii ; do for i in `awk '{print $2}' $j |  sort |  uniq` ; do in=`grep "$i *  -" $j | wc -l` ; out=`grep "$i *  [1-9]" $j | wc -l` ; [ $in != $out ] && echo $j $i $in $out ; done |  column -t ; done
+
+# awk '{print $2}' *.ppprofile.ascii |  sort |  uniq -c |  sort -n
