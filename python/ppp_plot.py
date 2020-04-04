@@ -125,29 +125,32 @@ class PPP:
 
     def print_gnuplot(self):
         ev = {}
+        np = 0  # number of processes
         bigbang = self.get_bigbang_from_master()
         for p in self.trees:
+            if p > np:
+                np = p
             evlist = []
             for r in self.trees[p].root:
                 evlist += self.trees[p].root[r].get_all_ev()
             for e in evlist:
-                if e[0] not in ev:
-                    ev[e[0]] = {}
-                if p not in ev[e[0]]:
-                    ev[e[0]][p] = e[1:]
-                else:
-                    sys.stderr.write("Warning: repeated event '" + e[0] + "' @ " + str(p) + "\n")
-        i = 1
+                e_base = e[0].split()[0]
+                if e_base not in ev:
+                    ev[e_base] = {}
+                if p not in ev[e_base]:
+                    ev[e_base][p] = []
+                ev[e_base][p].append(e[1:])
         for e in ev:
-            print("#%d " % i + "'" + e + "'")
+            depth = e.count("/")
+            print("# " + e.split("/")[-1] + " '" + e + "'")
             for p in ev[e]:
                 for t in range(len(ev[e][p])):
                     try:
-                        print(e.count("/"), p, "%.6f" % (ev[e][p][t] - bigbang), i)
+                        print("0. 0. %.6f %.6f %.6f %.6f" % (ev[e][p][t][0] - bigbang, ev[e][p][t][1] - bigbang,
+                                                             depth + float(p + 1) / (np + 1), depth + float(p) / (np + 1)), depth, p)
                     except TypeError:
-                        print(e.count("/"), p, "NaN", i)
+                        sys.stderr.write("Warning: inclomplete event '" + e + "' @" + p + " #" + t + ev[e][p][t])
                 print("")
-            i += 1
             print("")
 
     def decode(self, fname):

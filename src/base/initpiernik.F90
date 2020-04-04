@@ -46,7 +46,7 @@ contains
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
-      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, INCEPTIVE, tmr_fu
+      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, INCEPTIVE, tmr_fu, cbuff_len
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
       use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
       use decomposition,         only: init_decomposition
@@ -110,7 +110,9 @@ contains
       real    :: ts                  !< Timestep wallclock
       logical :: finished
       integer, parameter :: nit_over = 3 ! maximum number of auxiliary iterations after reaching level_max
-      character(len=*), parameter :: ip_label = "init_piernik"
+      character(len=*), parameter :: ip_label = "init_piernik", ic_label = "IC_piernik", iter_label = "IC_iteration ", &
+           &                         grav_label = "IC_grav "
+      character(len=cbuff_len) :: label
 
       call set_colors(.false.)               ! Make sure that we won't emit colorful messages before we are allowed to do so
 
@@ -224,6 +226,7 @@ contains
          call all_bnd_vital_q
       endif
 
+      call ppp_main%start(ic_label)
       if (master) then
          call printinfo("###############     Initial Conditions     ###############", .false.)
          write(msg,'(4a)') "   Starting problem : ",trim(problem_name)," :: ",trim(run_id)
@@ -249,23 +252,31 @@ contains
 
          nit = 0
          finished = .false.
+         call ppp_main%start(iter_label // "0")
          call problem_initial_conditions ! may depend on anything
+         call ppp_main%stop(iter_label // "0")
          call init_psi ! initialize the auxiliary field for divergence cleaning when needed
 
          write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
          if (master) call printinfo(msg)
 
          do while (.not. finished)
+            write(label, '(i8)') nit + 1
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
 #ifdef GRAV
+            call ppp_main%start(grav_label // adjustl(label))
             call source_terms_grav
+            call ppp_main%stop(grav_label // adjustl(label))
 #endif /* GRAV */
 
             call update_refinement(act_count=ac)
             finished = (ac == 0) .or. (nit > level_max + nit_over) ! level_max iterations for creating refinement levels + level_max iterations for derefining excess of blocks
 
+            call ppp_main%start(iter_label // adjustl(label))
             call problem_initial_conditions ! reset initial conditions after possible changes of refinement structure
+            call ppp_main%stop(iter_label // adjustl(label))
+
             nit = nit + 1
             write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%l%id,", time elapsed: ",set_timer(tmr_fu)
             if (master) call printinfo(msg)
@@ -277,11 +288,14 @@ contains
          if (ac /= 0) then
             if (master) call warn("[initpiernik:init_piernik] The refinement structure does not seem to converge. Your refinement criteria may lead to oscillations of refinement structure. Bailing out.")
 #ifdef GRAV
+            call ppp_main%start(grav_label // adjustl(label))
             call source_terms_grav  ! fix up gravitational potential when refiements did not converge
+            call ppp_main%stop(grav_label // adjustl(label))
 #endif /* GRAV */
          endif
          if (associated(problem_post_IC)) call problem_post_IC
       endif
+      call ppp_main%stop(ic_label)
 
       code_progress = PIERNIK_POST_IC
 
