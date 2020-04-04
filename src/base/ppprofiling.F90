@@ -52,7 +52,7 @@ module ppp
    implicit none
 
    private
-   public :: eventlist, init_profiling, cleanup_profiling
+   public :: eventlist, init_profiling, cleanup_profiling, tst_cnt
 
    ! namelist parametrs
    logical               :: use_profiling  !< control whether to do any PPProfiling or not
@@ -97,6 +97,8 @@ module ppp
       procedure, private :: expand  !< create next array for events
       procedure :: publish  !< write the collected data to a log file
    end type eventlist
+
+   type(eventlist) :: tst_cnt  ! main eventlist
 
 contains
 
@@ -184,6 +186,8 @@ contains
             open(newunit=profile_lun, file=profile_file)
          endif
       endif
+
+      call tst_cnt%init("main")
 
    end subroutine init_profiling
 

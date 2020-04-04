@@ -63,8 +63,8 @@ contains
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
       use interpolations,        only: set_interpolations
       use memory_usage,          only: init_memory
-      use mpisetup,              only: init_mpi, master
-      use ppp,                   only: init_profiling
+      use mpisetup,              only: init_mpi, master, bigbang
+      use ppp,                   only: init_profiling, tst_cnt
       use refinement,            only: init_refinement, level_max
       use refinement_update,     only: update_refinement
       use sources,               only: init_sources
@@ -110,6 +110,7 @@ contains
       real    :: ts                  !< Timestep wallclock
       logical :: finished
       integer, parameter :: nit_over = 3 ! maximum number of auxiliary iterations after reaching level_max
+      character(len=*), parameter :: ip_label = "init_piernik"
 
       call set_colors(.false.)               ! Make sure that we won't emit colorful messages before we are allowed to do so
 
@@ -139,6 +140,7 @@ contains
       call init_dataio_parameters            ! Required very early to call colormessage without side-effects
       call init_memory
       call init_profiling                    ! May require init_dataio_parameters and memory_usage set up
+      call tst_cnt%put(ip_label, bigbang)  ! can't call tst_cnt%start("init_piernik") before init_mpi
 
       call init_units
 
@@ -294,6 +296,8 @@ contains
       call write_data(output=INCEPTIVE)
 
       call sanitize_smallx_checks            ! depends on problem_initial_conditions || init_dataio/read_restart_hdf5
+
+      call tst_cnt%stop(ip_label)
 
    end subroutine init_piernik
 !-----------------------------------------------------------------------------
