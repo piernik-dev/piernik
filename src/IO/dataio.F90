@@ -871,6 +871,7 @@ contains
       use mass_defect,      only: update_tsl_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: wna
+      use ppp,              only: ppp_main
 #ifdef GRAV
       use constants,        only: gpot_n
       use named_array_list, only: qna
@@ -919,6 +920,9 @@ contains
       integer(kind=4)                        :: i, ii
       real                                   :: drvol
       integer(kind=4), dimension(ndims, LO:HI) :: ijkse
+      character(len=*), parameter :: tsl_label = "write_timeslice"
+
+      call ppp_main%start(tsl_label)
 
       if (has_ion) then
          cs_iso2 = flind%ion%cs2
@@ -1114,6 +1118,8 @@ contains
          ! some quantities computed in "write_log".One can add more, or change.
          deallocate(tsl_vars)
       endif
+
+      call ppp_main%stop(tsl_label)
 
    end subroutine write_timeslice
 
@@ -1452,6 +1458,7 @@ contains
       use interactions,       only: has_interactions, collfaq
       use mpisetup,           only: master
       use named_array_list,   only: qna
+      use ppp,                only: ppp_main
       use types,              only: value
 #ifdef COSM_RAYS
       use fluidindex,         only: iarr_all_crs
@@ -1503,6 +1510,9 @@ contains
       real, dimension(:,:,:), pointer            :: p
 #endif /* VARIABLE_GP || MAGNETIC */
       character(len=idlen)                       :: id
+      character(len=*), parameter :: log_label = "write_log"
+
+      call ppp_main%start(log_label)
 
       id = '' ! suppress compiler warnings if none of the modules requiring the id variable are switched on.
 
@@ -1677,6 +1687,8 @@ contains
       endif
 
       if (.not.present(tsl)) call print_memory_usage
+
+      call ppp_main%stop(log_label)
 
    contains
 

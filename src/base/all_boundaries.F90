@@ -64,14 +64,20 @@ contains
 
       use cg_leaves,        only: leaves
       use named_array_list, only: qna
+      use ppp,              only: ppp_main
 
       implicit none
 
       integer(kind=4) :: iq
+      character(len=*), parameter :: abq_label = "all_boundaries_vital_q"
+
+      call ppp_main%start(abq_label)
 
       do iq = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
          if (qna%lst(iq)%vital) call leaves%leaf_arr3d_boundaries(iq)
       enddo
+
+      call ppp_main%stop(abq_label)
 
    end subroutine all_bnd_vital_q
 
@@ -82,6 +88,7 @@ contains
       use constants,          only: xdim, zdim
       use domain,             only: dom
       use named_array_list,   only: wna
+      use ppp,                only: ppp_main
 
       implicit none
 
@@ -89,10 +96,13 @@ contains
       logical,         optional, intent(in) :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       integer(kind=4)                     :: d
+      character(len=*), parameter :: abf_label = "all_fluid_boundaries"
 
       if (present(dir)) then
          if (.not. dom%has_dir(dir)) return
       endif
+
+      call ppp_main%start(abf_label)
 
 !      call finest%level%restrict_to_base
 
@@ -106,6 +116,8 @@ contains
          enddo
       endif
 
+      call ppp_main%stop(abf_label)
+
    end subroutine all_fluid_boundaries
 
 #ifdef MAGNETIC
@@ -117,10 +129,14 @@ contains
       use domain,           only: dom
       use global,           only: psi_bnd
       use named_array_list, only: wna, qna
+      use ppp,              only: ppp_main
 
       implicit none
 
       integer(kind=4) :: dir
+      character(len=*), parameter :: abm_label = "all_mag_boundaries"
+
+      call ppp_main%start(abm_label)
 
 !!$      do dir = xdim, zdim
 !!$         if (dom%has_dir(dir)) then
@@ -143,6 +159,8 @@ contains
             call leaves%external_boundaries(qna%ind(psi_n), bnd_type=psi_bnd)
          endif
       endif
+
+      call ppp_main%stop(abm_label)
 
    end subroutine all_mag_boundaries
 #endif /* MAGNETIC */

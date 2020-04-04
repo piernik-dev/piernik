@@ -118,6 +118,7 @@ contains
       use fargo,               only: make_fargosweep
       use global,              only: skip_sweep, use_fargo
       use hdc,                 only: glmdamping, eglm
+      use ppp,                 only: ppp_main
       use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
@@ -139,6 +140,7 @@ contains
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
       integer(kind=4) :: s
+      character(len=*), parameter :: sw3_label = "sweeps"
 
 #ifdef SHEAR
       call shear_3sweeps
@@ -160,6 +162,7 @@ contains
 
       ! The following block of code may be treated as a 3D (M)HD solver.
       ! Don't put anything inside unless you're sure it should belong to the (M)HD solver.
+      call ppp_main%start(sw3_label)
       if (use_fargo) then
          if (.not.skip_sweep(zdim)) call make_sweep(zdim, forward)
          if (.not.skip_sweep(xdim)) call make_sweep(xdim, forward)
@@ -175,6 +178,7 @@ contains
             enddo
          endif
       endif
+      call ppp_main%stop(sw3_label)
 
 #ifdef GRAV
       if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)

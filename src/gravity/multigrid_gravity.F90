@@ -676,6 +676,7 @@ contains
       use func,           only: operator(.notequals.), operator(.equals.)
       use multigridvars,  only: source, bnd_periodic, bnd_dirichlet, bnd_givenval, grav_bnd
       use multigrid_Laplace, only: ord_laplacian_outer
+      use ppp,            only: ppp_main
       use units,          only: fpiG
       use particle_pub,   only: pset
 #ifdef JEANS_PROBLEM
@@ -691,6 +692,9 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       logical                        :: apply_src_Mcorrection
+      character(len=*), parameter :: mgi_label = "grav_MG_init_source"
+
+      call ppp_main%start(mgi_label)
 
       call all_cg%set_dirty(source, 0.979*dirtyH1)
 
@@ -771,6 +775,8 @@ contains
       end select
 
       call leaves%check_dirty(source, "init_src")
+
+      call ppp_main%stop(mgi_label)
 
    end subroutine init_source
 
@@ -954,6 +960,7 @@ contains
       use multigridvars,      only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts, grav_bnd, bnd_periodic
       use multigrid_gravity_helper, only: approximate_solution
       use multigrid_Laplace,  only: residual
+      use ppp,                only: ppp_main
       use timer,              only: set_timer
 
       implicit none
@@ -969,6 +976,10 @@ contains
       integer(kind=4), dimension(4)    :: mg_fields
       type(cg_level_connected_t), pointer :: curl
       integer, parameter :: some_warm_up_cycles = 1
+      character(len=*), parameter :: mgv_label = "grav_MG_V-cycles", mgc_label = "V-cycle "
+      character(len=cbuff_len)    :: label
+
+      call ppp_main%start(mgv_label)
 
 #ifdef DEBUG
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
@@ -995,11 +1006,13 @@ contains
          call leaves%set_q_value(solution, 0.)
          if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
          norm_was_zero = .true.
+         call ppp_main%stop(mgv_label)
          return
       endif
 
       ! iterations
       do v = 0, max_cycles
+         write(label, '(i8)') v
 
          call all_cg%set_dirty(defect, 0.977*dirtyH1)
          call residual(leaves, source, solution, defect)
@@ -1031,6 +1044,7 @@ contains
          if (dump_result .and. norm_lhs/norm_rhs <= norm_tol) call all_cg%numbered_ascii_dump(mg_fields, dname)
 
          if (norm_lhs/norm_rhs <= norm_tol) exit
+         call ppp_main%start(mgc_label // adjustl(label))
 
          if (v<1) then ! forgive poor convergence in some first V-cycles
             norm_lowest = norm_lhs
@@ -1072,6 +1086,7 @@ contains
          call finest%level%restrict_to_base_q_1var(solution)
 
          if (dump_every_step) call all_cg%numbered_ascii_dump(mg_fields, dname, v)
+         call ppp_main%stop(mgc_label // adjustl(label))
 
       enddo
 
@@ -1085,6 +1100,8 @@ contains
 
       vstat%norm_final = norm_lhs/norm_rhs
       if (.not. verbose_vcycle) call vstat%brief_v_log
+
+      call ppp_main%stop(mgv_label)
 
       call leaves%check_dirty(solution, "final_solution")
 

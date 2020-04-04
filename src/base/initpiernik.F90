@@ -110,8 +110,7 @@ contains
       real    :: ts                  !< Timestep wallclock
       logical :: finished
       integer, parameter :: nit_over = 3 ! maximum number of auxiliary iterations after reaching level_max
-      character(len=*), parameter :: ip_label = "init_piernik", ic_label = "IC_piernik", iter_label = "IC_iteration ", &
-           &                         grav_label = "IC_grav "
+      character(len=*), parameter :: ip_label = "init_piernik", ic_label = "IC_piernik", iter_label = "IC_iteration "
       character(len=cbuff_len) :: label
 
       call set_colors(.false.)               ! Make sure that we won't emit colorful messages before we are allowed to do so
@@ -265,9 +264,7 @@ contains
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
 #ifdef GRAV
-            call ppp_main%start(grav_label // adjustl(label))
             call source_terms_grav
-            call ppp_main%stop(grav_label // adjustl(label))
 #endif /* GRAV */
 
             call update_refinement(act_count=ac)
@@ -288,9 +285,7 @@ contains
          if (ac /= 0) then
             if (master) call warn("[initpiernik:init_piernik] The refinement structure does not seem to converge. Your refinement criteria may lead to oscillations of refinement structure. Bailing out.")
 #ifdef GRAV
-            call ppp_main%start(grav_label // adjustl(label))
             call source_terms_grav  ! fix up gravitational potential when refiements did not converge
-            call ppp_main%stop(grav_label // adjustl(label))
 #endif /* GRAV */
          endif
          if (associated(problem_post_IC)) call problem_post_IC

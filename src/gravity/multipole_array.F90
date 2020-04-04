@@ -281,11 +281,17 @@ contains
 
    subroutine reset(this)
 
+      use ppp, only: ppp_main
+
       implicit none
 
       class(mpole_container), intent(inout) :: this  !< object invoking type-bound procedure
 
+      character(len=*), parameter :: mpoleQr_label = "multipole_Q=0."
+
+      call ppp_main%start(mpoleQr_label)
       this%Q = 0.
+      call ppp_main%stop(mpoleQr_label)
 
    end subroutine reset
 
@@ -295,14 +301,17 @@ contains
 
       use constants, only: pSUM
       use mpisetup,  only: piernik_MPI_Allreduce
+      use ppp,       only: ppp_main
 
       implicit none
 
       class(mpole_container), intent(inout) :: this  !< object invoking type-bound procedure
 
       integer :: r, rr
+      character(len=*), parameter :: mpoleQr_label = "multipole_Qinout", mpoleQallred_label = "multipole_Q_allreduce"
 
       ! integrate radially and apply normalization factor (the (4 \pi)/(2 l  + 1) terms cancel out)
+      call ppp_main%start(mpoleQr_label)
       rr = 0
       this%Q(:, INSIDE, rr-1) = this%Q(:, INSIDE, rr-1) * this%ofact(:)
       do r = rr, ubound(this%Q, dim=3)
@@ -313,8 +322,11 @@ contains
       do r = ubound(this%Q, dim=3)-1, rr-1, -1
          this%Q(:, OUTSIDE, r) = this%Q(:, OUTSIDE, r) * this%ofact(:) + this%Q(:, OUTSIDE, r+1)
       enddo
+      call ppp_main%stop(mpoleQr_label)
 
+      call ppp_main%start(mpoleQallred_label)
       call piernik_MPI_Allreduce(this%Q, pSUM)
+      call ppp_main%stop(mpoleQallred_label)
 
    end subroutine red_int_norm
 

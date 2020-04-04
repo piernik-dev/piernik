@@ -61,6 +61,7 @@ contains
       use constants,          only: BND_NEGREF, fft_none
       use multigridvars,      only: nsmool
       use multigrid_Laplace,  only: approximate_solution_relax
+      use ppp,                only: ppp_main
 
       implicit none
 
@@ -69,11 +70,14 @@ contains
       integer(kind=4),                     intent(in)    :: soln !< index of solution in cg%q(:)
 
       integer(kind=4) :: nsmoo
+      character(len=*), parameter :: as_label = "grav_MG_approx_soln_"
 
       call curl%check_dirty(src, "approx_soln src-")
 
       if (associated(curl, coarsest%level) .and. curl%fft_type /= fft_none) then
+         call ppp_main%start(as_label // "FFT")
          call fft_solve_level(curl, src, soln)
+         call ppp_main%stop(as_label // "FFT")
       else
          if (associated(curl, coarsest%level)) then
             !> \todo Implement alternative bottom-solvers
@@ -85,7 +89,10 @@ contains
             !> \warning when this is incompatible with V-cycle or other scheme, use direct call to approximate_solution_relax
          endif
 
+         call ppp_main%start(as_label // "relax")
          call approximate_solution_relax(curl, src, soln, nsmoo)
+         call ppp_main%stop(as_label // "relax")
+
       endif
 
       call curl%check_dirty(soln, "approx_soln soln+")

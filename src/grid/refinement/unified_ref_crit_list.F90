@@ -400,7 +400,7 @@ contains
 
    subroutine all_mark(this, first)
 
-      use cg_list,   only: cg_list_element
+      use cg_list, only: cg_list_element
 
       implicit none
 

@@ -81,6 +81,7 @@ contains
       use multigrid_Laplace2,  only: residual2
       use multigrid_Laplace4,  only: residual4
       use multigrid_Laplace4M, only: residual_Mehrstellen
+      use ppp,                 only: ppp_main
 
       implicit none
 
@@ -89,6 +90,9 @@ contains
       integer(kind=4),      intent(in) :: soln    !< index of solution in cg%q(:)
       integer(kind=4),      intent(in) :: def     !< index of defect in cg%q(:)
 
+      character(len=*), parameter :: res_label = "grav_MG_residual"
+
+      call ppp_main%start(res_label)
       if (any(def == [ src, soln ])) call die("[multigrid_Laplace:residual] Cannot put the result into one of the input fields.") ! Use %q_copy method in such case
       select case (ordL())
          case (O_I2)
@@ -100,6 +104,7 @@ contains
          case default
             call die("[multigrid_Laplace:residual] The order of Laplacian must be equal to 2, 4 or -4")
       end select
+      call ppp_main%stop(res_label)
 
    end subroutine residual
 

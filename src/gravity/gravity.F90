@@ -422,6 +422,7 @@ contains
 
    subroutine source_terms_grav
 
+      use ppp,               only: ppp_main
 #ifdef SELF_GRAV
       use cg_leaves,         only: leaves
       use cg_list_dataop,    only: expanded_domain
@@ -435,10 +436,15 @@ contains
 
       implicit none
 
+      character(len=*), parameter :: grav_label = "source_terms_grav"
 #ifdef SELF_GRAV
       logical, save :: frun = .true.
       logical :: initialized
+#endif /* SELF_GRAV */
 
+      call ppp_main%start(grav_label)
+
+#ifdef SELF_GRAV
       initialized = .true.
       if (frun) then
          ! try to recover sgpm from old soln
@@ -469,6 +475,7 @@ contains
       if (variable_gp) call grav_pot_3d
 
       call sum_potential
+      call ppp_main%stop(grav_label)
 
    end subroutine source_terms_grav
 
