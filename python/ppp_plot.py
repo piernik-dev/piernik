@@ -33,7 +33,6 @@ class PPP_Node:
         else:
             sys.stderr.write("Warning: time == 0 for '" + self.path() + "'\n")
 
-
     def _add(self, label, time):
         if time > 0:  # create/update child
             if label not in self.children:
@@ -48,7 +47,6 @@ class PPP_Node:
             else:
                 sys.stderr.write("Warning: unfinished for '" + self.path() + "' " + str(time) + "\n")
             return self.parent  # most likely won't recover properly
-
 
     def path(self):
         return (str(self.proc) if self.parent is None else self.parent.path()) + "/" + self.label
@@ -137,6 +135,8 @@ class PPP:
                 if p not in ev[e_base]:
                     ev[e_base][p] = []
                 ev[e_base][p].append(e[1:])
+
+        print("#!/usr/bin/gnuplot\n$PPPdata << EOD\n")
         for e in ev:
             depth = e.count("/")
             print("# " + e.split("/")[-1] + " '" + e + "'")
@@ -145,11 +145,24 @@ class PPP:
                     for _ in range(min(len(ev[e][p][t][0]), len(ev[e][p][t][1]))):
                         try:
                             print("0. 0. %.6f %.6f %.6f %.6f" % (ev[e][p][t][0][_] - bigbang, ev[e][p][t][1][_] - bigbang,
-                                                                 depth + float(p + 1) / (np + 1), depth + float(p) / (np + 1)), depth, p)
+                                                                 depth + float(p) / (np + 1), depth + float(p + 1) / (np + 1)), depth, p)
                         except TypeError:
-                            sys.stderr.write("Warning: inclomplete event '" , e , "' @" , p , " #" , str(t) , ev[e][p][t])
+                            sys.stderr.write("Warning: inclomplete event '", e, "' @", p, " #", str(t), ev[e][p][t])
                     print("")
             print("")
+        print("EOD\n\n# Suggested gnuplot commands:\nset style fill solid 0.5\nset key outside horizontal")
+        print("set xlabel 'time (walltime seconds)'\nset ylabel 'timer depth + proc/nproc'\nset title 'nproc = %d'" % (np + 1))
+        pline = "plot $PPPdata "
+        nocomma = True
+        for e in ev:
+            ind = e.split("/")[-1]
+            if nocomma:
+                nocomma = False
+            else:
+                pline += ', "" '
+            pline += ' index "' + ind + '" with boxxy title "' + ind.replace('_', "\\\\\\_") + '"'
+        print(pline)
+        print("pause mouse close")
 
     def decode(self, fname):
         """Try to extract the data from a given file"""
