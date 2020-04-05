@@ -39,10 +39,11 @@ module cg_level_finest
 
    !> \brief The pointer of the finest refinement level and a method to add a finer one
    type :: cg_level_finest_t
-      type(cg_level_connected_t), pointer :: level !< highest refinement level
-    contains
-      procedure          :: add_finer
-      procedure          :: equalize
+      type(cg_level_connected_t), pointer :: level  !< highest refinement level
+   contains
+      procedure :: add_finer        !< Add a fine level to the top of existing hierarchy
+      procedure :: equalize         !< Add an empty fine level when any of the other threads has one
+      procedure :: find_finest_bnd  !< Find finest level with external boundary
       !> \todo Provide delete_finest and use it in cleanup
    end type cg_level_finest_t
 
@@ -116,5 +117,42 @@ contains
       this%level => new_lev
 
    end subroutine add_finer
+
+!<
+!! \brief Find finest level with external boundary
+!!
+!! Returns null() on periodic domains or pointer to highest level with any external boundary
+!>
+
+   function find_finest_bnd(this) result(level)
+
+      use cg_list,    only: cg_list_element
+      use dataio_pub, only: die
+      use domain,     only: dom
+
+      implicit none
+
+      class(cg_level_finest_t), intent(inout) :: this    !< object calling type-bound routine
+
+      type(cg_level_connected_t), pointer :: level
+
+      type(cg_level_connected_t), pointer :: l
+      type(cg_list_element), pointer :: cgl
+
+      nullify(level)
+      if (count(dom%periodic) == dom%eff_dim) return  ! fully periodic domain
+
+      l => this%level
+      do while (.not. associated(level))
+         cgl => l%first
+         do while (associated(cgl))
+            if (any(cgl%cg%ext_bnd)) level => l
+            cgl => cgl%nxt
+         enddo
+         l => l%coarser
+         if (.not. associated(l)) call die("[cg_level_finest:find_finest_bnd] Failed to find level with finest boundary")
+      enddo
+
+   end function find_finest_bnd
 
 end module cg_level_finest

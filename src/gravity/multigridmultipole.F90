@@ -68,28 +68,28 @@ module multipole
 
    private
    public :: init_multipole, cleanup_multipole, multipole_solver, moments2pot, compute_mpole_potential
-   public :: lmax, mmax, mpole_solver, level_3D, singlepass  ! initialized in multigrid_gravity
+   public :: lmax, mmax, mpole_solver, mpole_level, singlepass  ! initialized in multigrid_gravity
 
    interface moments2pot
       module procedure moments2pot_xyz
       module procedure moments2pot_r
    end interface moments2pot
 
-   type(mpole_container)        :: Q                   !< The whole moment array with dependence on radius
+   type(mpole_container)    :: Q             !< The whole moment array with dependence on radius
 
    ! namelist parameters for MULTIGRID_GRAVITY
-   integer(kind=4)              :: lmax                !< Maximum l-order of multipole moments
-   integer(kind=4)              :: mmax                !< Maximum m-order of multipole moments. Equal to lmax by default.
-   character(len=cbuff_len)     :: mpole_solver        !< Pick one of: "monopole", "img_mass" (default), "3D"
-   integer(kind=4)              :: level_3D            !< The level, at which we integrate the desnity field, to get is multipole representation. 0: base level, 1: leaves (default), <0: coarsened levels
+   integer(kind=4)          :: lmax          !< Maximum l-order of multipole moments
+   integer(kind=4)          :: mmax          !< Maximum m-order of multipole moments. Equal to lmax by default.
+   character(len=cbuff_len) :: mpole_solver  !< Pick one of: "monopole", "img_mass" (default), "3D"
+   integer(kind=4)          :: mpole_level   !< The level, at which we integrate the density field, to get the multipole representation. 0: base level, 1: leaves (default), <0: coarsened levels
 
-   logical                      :: zaxis_inside        !< true when z-axis belongs to the inner radial boundary in polar coordinates
-   logical                      :: singlepass          !< When .true. it allows for single-pass multigrid solve
+   logical                  :: zaxis_inside  !< true when z-axis belongs to the inner radial boundary in polar coordinates
+   logical                  :: singlepass    !< When .true. it allows for single-pass multigrid solve
 
    enum, bind(C)
       enumerator :: MONOPOLE, IMG_MASS, THREEDIM
    end enum
-   integer                      :: solver              !< mpole_solver decoded into one of the above enums
+   integer                  :: solver        !< mpole_solver decoded into one of the above enums
 
 !> \todo OPT derive a special set of leaves and coarsened leaves that can be safely used here
 
@@ -456,7 +456,6 @@ contains
    subroutine domain2moments
 
       use cg_leaves,          only: leaves
-      !use cg_level_base,      only: base ! cannot use it because cg_level_base depends on multigrid
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_t, base_level
       use cg_list,            only: cg_list_element
@@ -482,35 +481,42 @@ contains
       if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:domain2moments] Noncartesian geometry haven't been tested. Verify it before use.")
 
       ! scan
-      if (level_3D <= base_level_id) then
-         ! call finest%level%restrict_to_floor_q_1var(source)  ! overkill
+      if (mpole_level <= base_level_id) then
          level => base_level
          call finest%level%restrict_to_base_q_1var(source)
-         do while (level%l%id > level_3D)
+         do while (level%l%id > mpole_level)
             if (associated(level%coarser)) then
                call level%restrict_q_1var(source)
                level => level%coarser
             else
-               write(msg, '(2(a,i3))')"[multigridmultipole:domain2moments] Coarsest level reached. Will use level ", level%l%id, " instead of ", level_3D
+               write(msg, '(2(a,i3))')"[multigridmultipole:domain2moments] Coarsest level reached. Will use level ", level%l%id, " instead of ", mpole_level
                call warn(msg)
                exit
             endif
          enddo
          cgl => level%first
       else
+         level => finest%level
+         do while (level%l%id > mpole_level)
+            call level%restrict_q_1var(source)
+            level => level%coarser
+            if (.not. associated(level)) call die("[multigridmultipole:domain2moments] Coarsest level reached for mpole_level > base_level_id")
+         enddo
          cgl => leaves%first
       endif
       do while (associated(cgl))
          cg => cgl%cg
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-                  ! if (dom%geometry_type == GEO_RPZ) geofac = cg%x(i)
-                  if (cg%leafmap(i, j, k) .or. level_3D <= base_level_id) &
-                       call Q%point2moments(cg%dvol * cg%q(source)%arr(i, j, k), cg%x(i) , cg%y(j) , cg%z(k) )  ! * geofac for GEO_RPZ
+         if (cg%l%id <= mpole_level) then
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     ! if (dom%geometry_type == GEO_RPZ) geofac = cg%x(i)
+                     if (cg%leafmap(i, j, k) .or. mpole_level == cg%l%id) &
+                          call Q%point2moments(cg%dvol * cg%q(source)%arr(i, j, k), cg%x(i) , cg%y(j) , cg%z(k) )  ! * geofac for GEO_RPZ
+                  enddo
                enddo
             enddo
-         enddo
+         endif
          cgl => cgl%nxt
       enddo
       call ppp_main%stop(d2m_label, PPP_GRAV)
@@ -646,7 +652,7 @@ contains
    end function moments2pot_r
 
 !>
-!! \brief Compute multipole potential in whocle computational domain
+!! \brief Compute multipole potential in whole computational domain
 !!
 !! \details This routine is not intended for regular use because of huge
 !! computational cost per cell (O(lmax**2)). It is useful for understanding
