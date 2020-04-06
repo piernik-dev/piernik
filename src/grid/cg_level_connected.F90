@@ -878,13 +878,14 @@ contains
 
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
-      use constants,      only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims, O_INJ, base_level_id  !, dirtyH1
+      use constants,      only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims, O_INJ, base_level_id, PPP_AMR, PPP_MPI  !, dirtyH1
       use dataio_pub,     only: warn
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c, c2f
       use mpi,            only: MPI_DOUBLE_PRECISION
       use mpisetup,       only: comm, mpi_err, req, status, inflate_req, master
+      use ppp,            only: ppp_main
 
       implicit none
 
@@ -906,6 +907,7 @@ contains
       logical, allocatable, dimension(:,:,:) :: updatemap
       integer(kind=8), dimension(ndims, LO:HI)  :: box_8   !< temporary storage
       logical, save :: firstcall = .true.
+      character(len=*), parameter :: pbc_label = "prolong_bnd_from_coarser" , pbcv_label = "prolong_bnd_from_coarser:vbp", pbcw_label = "prolong_bnd_from_coarser:Waitall"
 
       if (present(dir)) then
          if (firstcall .and. master) call warn("[cg_level_connected:prolong_bnd_from_coarser] dir present but not implemented yet")
@@ -921,8 +923,11 @@ contains
       if (.not. associated(coarse)) return
       if (this%l%id == base_level_id) return ! There are no fine/coarse boundaries on the base level by definition
 
+      call ppp_main%start(pbc_label, PPP_AMR)
+      call ppp_main%start(pbcv_label, PPP_AMR)
       call this%vertical_b_prep
       call coarse%vertical_b_prep
+      call ppp_main%stop(pbcv_label, PPP_AMR)
 
       !call this%clear_boundaries(ind, (0.885+0.0001*this%l%id)*dirtyH1) ! not implemented yet
       ext_buf = dom%D_ * all_cg%ord_prolong_nb ! extension of the buffers due to stencil range
@@ -967,8 +972,10 @@ contains
       enddo
 
       if (nr > 0) then
+         call ppp_main%start(pbcw_label, PPP_AMR + PPP_MPI)
          mpistatus => status(:, :nr)
          call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
+         call ppp_main%stop(pbcw_label, PPP_AMR + PPP_MPI)
       endif
 
       ! merge received coarse data into one array and interpolate it into the right place
@@ -1024,6 +1031,7 @@ contains
          end associate
          cgl => cgl%nxt
       enddo
+      call ppp_main%stop(pbc_label, PPP_AMR)
 
    end subroutine prolong_bnd_from_coarser
 
