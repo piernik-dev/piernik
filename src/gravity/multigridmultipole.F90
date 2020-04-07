@@ -211,13 +211,13 @@ contains
 
    subroutine multipole_solver
 
-      use cg_leaves,  only: leaves
-      use constants,  only: dirtyH1
-      use dataio_pub, only: die
-      use global,     only: dirty_debug
-      use monopole,   only: isolated_monopole, find_img_CoM
-      use ppp,        only: ppp_main
-      use user_hooks, only: ext_bnd_potential
+      use cg_leaves,   only: leaves
+      use constants,   only: dirtyH1
+      use dataio_pub,  only: die
+      use global,      only: dirty_debug
+      use mg_monopole, only: isolated_monopole, find_img_CoM
+      use ppp,         only: ppp_main
+      use user_hooks,  only: ext_bnd_potential
 
       implicit none
 

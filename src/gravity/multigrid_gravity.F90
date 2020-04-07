@@ -52,7 +52,7 @@ module multigrid_gravity
    public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, unmark_oldsoln, recover_sgpm
 #ifdef HDF5
    public :: write_oldsoln_to_restart, read_oldsoln_from_restart
-#endif
+#endif /* HDF5 */
 
 #ifndef NO_FFT
    include "fftw3.f"
@@ -1152,6 +1152,6 @@ contains
 
    end subroutine read_oldsoln_from_restart
 
-#endif
+#endif /* HDF5 */
 
 end module multigrid_gravity

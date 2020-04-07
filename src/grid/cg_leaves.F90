@@ -153,7 +153,7 @@ contains
          if (lf >= 0.0001) then
             write(msg(len_trim(msg)+1:), '(" ",f8.6)') lf
          else
-            write(msg(len_trim(msg)+1:), '(" ",e8.2)') lf
+            write(msg(len_trim(msg)+1:), '(" ",e9.2)') lf
          endif
       endif
       if (master .and. (msg(ih:is) /= prev_msg(ih:prev_is))) call printinfo(msg)

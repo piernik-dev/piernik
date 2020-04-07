@@ -107,6 +107,9 @@ contains
 
       use constants,  only: INVALID, fnamelen
       use dataio_pub, only: warn
+#if defined(__INTEL_COMPILER)
+      use ifport,     only: getpid
+#endif /* __INTEL_COMPILER */
 
       implicit none
 
