@@ -900,6 +900,7 @@ contains
       use mass_defect,      only: update_tsl_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: wna
+      use ppp,              only: ppp_main
 #ifdef GRAV
       use constants,        only: gpot_n
       use named_array_list, only: qna
@@ -951,6 +952,9 @@ contains
       integer(kind=4)                        :: i, ii
       real                                   :: drvol
       integer(kind=4), dimension(ndims, LO:HI) :: ijkse
+      character(len=*), parameter :: tsl_label = "write_timeslice"
+
+      call ppp_main%start(tsl_label)
 
       if (has_ion) then
          cs_iso2 = flind%ion%cs2
@@ -1153,6 +1157,8 @@ contains
          deallocate(tsl_vars)
       endif
 
+      call ppp_main%stop(tsl_label)
+
    end subroutine write_timeslice
 
    subroutine common_shout(pr, fluid, pres_tn, temp_tn, cs_tn)
@@ -1244,13 +1250,13 @@ contains
 #ifdef ISO
       use constants,        only: pMIN, pMAX
       use mpisetup,         only: piernik_MPI_Allreduce
-#else
+#else /* !ISO */
 #ifdef MAGNETIC
       use constants,        only: ION, half
 #endif /* MAGNETIC */
       use constants,        only: DST, I_ZERO
       use global,           only: smallp
-#endif /* ISO */
+#endif /* !ISO */
 
       implicit none
 
@@ -1490,6 +1496,7 @@ contains
       use interactions,       only: has_interactions, collfaq
       use mpisetup,           only: master
       use named_array_list,   only: qna
+      use ppp,                only: ppp_main
       use types,              only: value
 #ifdef COSM_RAYS
       use fluidindex,         only: iarr_all_crs
@@ -1544,6 +1551,9 @@ contains
       real, dimension(:,:,:), pointer            :: p
 #endif /* VARIABLE_GP || MAGNETIC */
       character(len=idlen)                       :: id
+      character(len=*), parameter :: log_label = "write_log"
+
+      call ppp_main%start(log_label)
 
       id = '' ! suppress compiler warnings if none of the modules requiring the id variable are switched on.
 
@@ -1721,7 +1731,38 @@ contains
          endif
       endif
 
+      if (.not.present(tsl)) call print_memory_usage
+
+      call ppp_main%stop(log_label)
+
+   contains
+
+      subroutine print_memory_usage
+
+         use constants,    only: I_ONE
+         use dataio_pub,   only: msg, printinfo
+         use memory_usage, only: system_mem_usage
+         use mpi,          only: MPI_INTEGER
+         use mpisetup,     only: master, FIRST, LAST, comm, mpi_err
+
+         implicit none
+
+         integer(kind=4) :: rss
+         integer(kind=4), dimension(FIRST:LAST) :: cnt_rss
+         real, parameter :: Mi = 2.**10
+
+         rss = system_mem_usage()
+         call MPI_Gather(rss, I_ONE, MPI_INTEGER, cnt_rss, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
+
+         if (master) then
+            write(msg, '(a,3f7.1,a,f7.1,a)')"  RSS memory in use (avg/min/max): ", sum(cnt_rss)/size(cnt_rss)/Mi, minval(cnt_rss)/Mi, maxval(cnt_rss)/Mi, " MiB. Total RSS memory: ", sum(cnt_rss)/Mi, " MiB."
+            call printinfo(msg, .false.)
+         endif
+
+      end subroutine print_memory_usage
+
    end subroutine write_log
+
 !------------------------------------------------------------------------
    subroutine read_file_msg
 !-------------------------------------------------------------------------

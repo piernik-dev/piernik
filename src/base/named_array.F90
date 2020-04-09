@@ -101,8 +101,9 @@ contains
 !<
    subroutine named_array_init(this, n1, n2)
 
-      use constants,  only: dirtyH1, ndims, xdim, ydim, zdim, I_ONE
-      use dataio_pub, only: die
+      use constants,    only: dirtyH1, ndims, xdim, ydim, zdim, I_ONE
+      use dataio_pub,   only: die
+      use memory_usage, only: check_mem_usage
 
       implicit none
 
@@ -123,6 +124,7 @@ contains
          class default
             call die("[named_array:named_array_init] No initialization for generic named array")
       end select
+      call check_mem_usage
 
    end subroutine named_array_init
 

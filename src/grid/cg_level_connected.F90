@@ -116,6 +116,7 @@ contains
       use grid_helpers,   only: f2c, c2f
       use mpisetup,       only: FIRST, LAST
       use overlap,        only: is_overlap
+!      use ppp,            only: ppp_main
 
       implicit none
 
@@ -133,10 +134,12 @@ contains
          integer :: n_se
       end type int_pair
       type(int_pair), dimension(:), allocatable    :: ps
+!      character(len=*), parameter :: vp_label = "vertical_prep"
 
       call this%dot%update_tot_se
 
       if (all_cg%ord_prolong_nb == this%ord_prolong_set) return ! no need to update vertical communication on this level
+!      call ppp_main%start(vp_label)
 
       ! enlarge the fine blocks to allow for high orders of interpolation
       enlargement(:, LO) = -dom%D_(:) * all_cg%ord_prolong_nb
@@ -299,6 +302,7 @@ contains
       this%ord_prolong_set = all_cg%ord_prolong_nb
 
       call all_cg%update_req
+!      call ppp_main%stop(vp_label)
 
    end subroutine vertical_prep
 
@@ -317,6 +321,7 @@ contains
       use domain,           only: dom
       use fluidindex,       only: iarr_all_my
       use named_array_list, only: qna, wna
+      use ppp,              only: ppp_main
 
       implicit none
 
@@ -324,13 +329,17 @@ contains
       integer(kind=4), optional,           intent(in)    :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
 
       integer(kind=4) :: i, iw
+      character(len=*), parameter :: proq_label = "prolong_qna", prow_label = "prolong_wna"
 
+      call ppp_main%start(proq_label)
       do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
          if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%l%id >= base_level_id)) call this%prolong_q_1var(i, bnd_type = bnd_type)
          ! Although we aren't worried too much by nonconservation of psi or multigrid fields here
          ! but it will be worth checking if cnservative high-order prolongation can help.
       enddo
+      call ppp_main%stop(proq_label)
 
+      call ppp_main%start(prow_label)
       do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
          if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%l%id >= base_level_id)) then
             qna%lst(qna%wai)%ord_prolong = 0 !> \todo implement high order conservative prolongation and use wna%lst(i)%ord_prolong here
@@ -348,6 +357,7 @@ contains
             enddo
          endif
       enddo
+      call ppp_main%stop(prow_label)
 
    end subroutine prolong
 
@@ -365,17 +375,22 @@ contains
       use domain,           only: dom
       use fluidindex,       only: iarr_all_my
       use named_array_list, only: qna, wna
+      use ppp,              only: ppp_main
 
       implicit none
 
       class(cg_level_connected_t), target, intent(inout) :: this !< object invoking type-bound procedure
 
       integer(kind=4) :: i, iw
+      character(len=*), parameter :: resq_label = "restrict_qna", resw_label = "restrict_wna"
 
+      call ppp_main%start(resq_label)
       do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
          if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%l%id > base_level_id)) call this%restrict_q_1var(i)
       enddo
+      call ppp_main%stop(resq_label)
 
+      call ppp_main%start(resw_label)
       do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
          if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%l%id > base_level_id)) then
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:restrict] mg set for cg%w ???")
@@ -392,6 +407,8 @@ contains
             enddo
          endif
       enddo
+
+      call ppp_main%stop(resw_label)
 
    end subroutine restrict
 
@@ -643,6 +660,7 @@ contains
       use mpisetup,         only: comm, mpi_err, req, status, inflate_req, master
       use mpi,              only: MPI_DOUBLE_PRECISION
       use named_array_list, only: qna
+!      use ppp,              only: ppp_main
 
       implicit none
 
@@ -662,6 +680,9 @@ contains
       logical, save                                      :: warned = .false.
       integer                                            :: position
       integer(kind=8), dimension(ndims, LO:HI)           :: box_8            !< temporary storage
+!      character(len=*), parameter :: pq1_label = "prolong_q1v"
+
+!      call ppp_main%start(pq1_label)
 
       position = qna%lst(iv)%position(I_ONE)
       if (present(pos)) position = pos
@@ -752,6 +773,7 @@ contains
          endif
          cgl => cgl%nxt
       enddo
+!      call ppp_main%stop(pq1_label)
 
       call fine%check_dirty(iv, "prolong+")
 
@@ -763,6 +785,7 @@ contains
 
       use global,           only: ord_fc_eq_mag, ord_mag_prolong
       use named_array_list, only: qna
+!      use ppp,              only: ppp_main
 
       implicit none
 
@@ -775,6 +798,9 @@ contains
       logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       integer(kind=4) :: ord_saved
+!      character(len=*), parameter :: a3b_label = "level:arr3d_boundaries"
+
+!      call ppp_main%start(a3b_label)
 
       ord_saved = qna%lst(ind)%ord_prolong
       if (ord_fc_eq_mag) qna%lst(ind)%ord_prolong = ord_mag_prolong
@@ -786,6 +812,8 @@ contains
 
       qna%lst(ind)%ord_prolong = ord_saved
 
+!      call ppp_main%stop(a3b_label)
+
    end subroutine arr3d_boundaries
 
 !> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-4 arrays.
@@ -795,6 +823,7 @@ contains
       use constants,        only: base_level_id
       use global,           only: ord_mag_prolong, ord_fc_eq_mag
       use named_array_list, only: qna, wna
+!      use ppp,              only: ppp_main
 
       implicit none
 
@@ -805,6 +834,9 @@ contains
       logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       integer(kind=4) :: iw
+!      character(len=*), parameter :: a4b_label = "level:arr4d_boundaries"
+
+!      call ppp_main%start(a4b_label)
 
 !      call this%dirty_boundaries(ind)
 !      call this%clear_boundaries(ind, value=10.)
@@ -823,6 +855,8 @@ contains
          enddo
       endif
       call this%level_4d_boundaries(ind, area_type=area_type, dir=dir, nocorners=nocorners)
+
+!      call ppp_main%stop(a4b_label)
 
    end subroutine arr4d_boundaries
 

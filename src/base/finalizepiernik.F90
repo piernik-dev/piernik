@@ -52,7 +52,6 @@ contains
       use grid_container_ext,    only: cg_extptrs
       use initfluids,            only: cleanup_fluids
       use interactions,          only: cleanup_interactions
-      use mpisetup,              only: cleanup_mpi
       use sortable_list,         only: cleanup_sortable_list
       use tag_pool,              only: t_pool
       use timer,                 only: cleanup_timers
@@ -76,45 +75,44 @@ contains
 
       implicit none
 
-      if (associated(cleanup_problem)) call cleanup_problem; call nextdot(.false.)
-      call urc_list%cleanup;       call nextdot(.false.)
-      call t_pool%cleanup;         call nextdot(.false.)
-      call cleanup_interactions;   call nextdot(.false.)
-      call cleanup_dataio;         call nextdot(.false.)
-      call cleanup_fargo;          call nextdot(.false.)
+      if (associated(cleanup_problem)) call cleanup_problem; call nextdot
+      call urc_list%cleanup;       call nextdot
+      call t_pool%cleanup;         call nextdot
+      call cleanup_interactions;   call nextdot
+      call cleanup_dataio;         call nextdot
+      call cleanup_fargo;          call nextdot
 #ifdef RESISTIVE
-      call cleanup_resistivity;    call nextdot(.false.)
+      call cleanup_resistivity;    call nextdot
 #endif /* RESISTIVE */
-      call cleanup_grid;           call nextdot(.false.)
+      call cleanup_grid;           call nextdot
 #ifdef MULTIGRID
-      call cleanup_multigrid;      call nextdot(.false.)
+      call cleanup_multigrid;      call nextdot
 #endif /* MULTIGRID */
-      call cleanup_sortable_list;  call nextdot(.false.)
-      call cleanup_fluids;         call nextdot(.false.)
+      call cleanup_sortable_list;  call nextdot
+      call cleanup_fluids;         call nextdot
 #ifdef GRAV
-      call cleanup_particles;      call nextdot(.false.)
+      call cleanup_particles;      call nextdot
 #endif /* GRAV */
-      call cleanup_global;         call nextdot(.false.)
-      call cleanup_decomposition;  call nextdot(.false.)
-      call cleanup_domain;         call nextdot(.false.)
-      call cleanup_fluidindex;     call nextdot(.false., print_t = .true.)
-      call cleanup_timers;         call nextdot(.false.)
-      call cleanup_diagnostics;    call nextdot(.false.)
-      call cg_extptrs%epa_cleanup; call nextdot(.false.)
+      call cleanup_global;         call nextdot
+      call cleanup_decomposition;  call nextdot
+      call cleanup_domain;         call nextdot
+      call cleanup_fluidindex;     call nextdot(print_t = .true.)
+      call cleanup_timers;         call nextdot
+      call cleanup_diagnostics;    call nextdot
+      call cg_extptrs%epa_cleanup; call nextdot
 #ifdef PIERNIK_OPENCL
-      call cleanup_opencl;         call nextdot(.false.)
+      call cleanup_opencl;         call nextdot
 #endif /* PIERNIK_OPENCL */
 #ifdef RANDOMIZE
-      call cleanup_randomization;  call nextdot(.false.)
+      call cleanup_randomization;  call nextdot
 #endif /* RANDOMIZE */
-      call cleanup_mpi;            call nextdot(.true.)
 
    end subroutine cleanup_piernik
 
 !>
 !! Just print a dot on the screen, do not put a newline unless asked to do so.
 !<
-   subroutine nextdot(advance, print_t)
+   subroutine nextdot(print_t)
 
       use mpisetup,  only: master
       use constants, only: stdout, tmr_fu
@@ -122,19 +120,13 @@ contains
 
       implicit none
 
-      logical, intent(in) :: advance
       logical, optional, intent(in) :: print_t
 
       if (master) then
          if (present(print_t)) then
-            if (print_t) &
-               write(stdout,'(f7.2,a)',advance='no') set_timer(tmr_fu), " s "
+            if (print_t) write(stdout,'(f7.2,a)',advance='no') set_timer(tmr_fu), " s "
          endif
-         if (advance) then
-            write(stdout,'(a)')"."
-         else
-            write(stdout,'(a)',advance='no')"."
-         endif
+         write(stdout,'(a)',advance='no')"."
       endif
 
    end subroutine nextdot

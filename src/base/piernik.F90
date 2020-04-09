@@ -34,7 +34,7 @@ program piernik
    use all_boundaries,    only: all_bnd
    use cg_leaves,         only: leaves
    use cg_list_global,    only: all_cg
-   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP
+   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP, cbuff_len
    use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump
    use dataio_pub,        only: nend, tend, msg, printinfo, warn, die, code_progress
    use div_B,             only: print_divB_norm
@@ -45,8 +45,9 @@ program piernik
    use global,            only: t, nstep, dt, dtm, cfl_violated, print_divB, repeat_step
    use initpiernik,       only: init_piernik
    use list_of_cg_lists,  only: all_lists
-   use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast
+   use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast, cleanup_mpi
    use named_array_list,  only: qna, wna
+   use ppp,               only: cleanup_profiling, ppp_main
    use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
    use timer,             only: walltime_end
@@ -68,6 +69,11 @@ program piernik
    logical, save        :: first_step = .true.
    real                 :: tlast
    logical              :: try_rebalance
+
+   ! ppp-related
+   character(len=cbuff_len)    :: label
+   integer(kind=4)             :: nstep_started
+   character(len=*), parameter :: st_label = "steps", fu_label = "fluid_update ", f_label = "finalize"
 
    try_rebalance = .false.
    tlast = 0.0
@@ -108,6 +114,8 @@ program piernik
    call print_progress(nstep)
    if (print_divB > 0) call print_divB_norm
 
+   nstep_started = nstep - I_ONE
+   call ppp_main%start(st_label)
    do while (t < tend .and. nstep < nend .and. .not.(end_sim) .or. (cfl_violated .and. repeat_step)) ! main loop
 
       dump(:) = .false.
@@ -132,8 +140,16 @@ program piernik
 
          tlast = t
       endif
-
+      if (nstep > nstep_started) then
+         write(label, '(i8)') nstep
+         call ppp_main%start(fu_label // adjustl(label))
+         nstep_started = nstep
+      endif
       call fluid_update
+      if (nstep >= nstep_started) then
+         write(label, '(i8)') nstep
+         call ppp_main%stop(fu_label // adjustl(label))
+      endif
       nstep = nstep + I_ONE
       call print_progress(nstep)
       call check_cfl_violation(dt, flind)
@@ -174,10 +190,11 @@ program piernik
    if (print_divB > 0) then
       if (mod(nstep, print_divB) /= 0) call print_divB_norm ! print the norm at the end, if it wasn't printed inside the loop above
    endif
-
+   call ppp_main%stop(st_label)
 
    code_progress = PIERNIK_FINISHED
 
+   call ppp_main%start(f_label)
    if (master) then
       write(tstr, '(g14.6)') t
       write(nstr, '(i7)') nstep
@@ -224,8 +241,15 @@ program piernik
 
    code_progress = PIERNIK_CLEANUP
 
-   if (master) write(stdout, '(a)', advance='no') "Finishing "
+   if (master) write(stdout, '(a)', advance='no') "Finishing #"
+
    call cleanup_piernik
+
+   call ppp_main%stop(f_label)
+   call ppp_main%publish  ! we can use HDF5 here because we don't rely on anything that is affected by cleanup_hdf5
+   call cleanup_profiling
+   call cleanup_mpi
+   if (master) write(stdout,'(a)')"#"
 
 contains
 

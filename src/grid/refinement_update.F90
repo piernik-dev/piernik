@@ -47,6 +47,7 @@ contains
       use constants,             only: I_ONE, pSUM
       use dataio_pub,            only: msg, printinfo
       use mpisetup,              only: master, piernik_MPI_Allreduce
+      use ppp,                   only: ppp_main
       use unified_ref_crit_list, only: urc_list
       use user_hooks,            only: problem_refine_derefine
 
@@ -59,7 +60,9 @@ contains
          enumerator :: URC
       end enum
       integer, dimension(PROBLEM:URC) :: cnt
+      character(len=*), parameter :: scan_ref_label = "scan_for_refinement", u_ref_label = "user_scan_for_refinement", urc_label = "URC_scan_for_refinement"
 
+      call ppp_main%start(scan_ref_label)
       cnt = 0
       call prepare_ref
 
@@ -68,7 +71,11 @@ contains
       call all_bnd_vital_q
 
       ! Call user routine first, so it cannot alter flags set by automatic routines
-      if (associated(problem_refine_derefine)) call problem_refine_derefine
+      if (associated(problem_refine_derefine)) then
+         call ppp_main%start(u_ref_label)
+         call problem_refine_derefine
+         call ppp_main%stop(u_ref_label)
+      endif
 
       if (verbose) then
          cnt(PROBLEM) = count_ref_flags()
@@ -76,7 +83,9 @@ contains
       endif
 
       ! Apply all Unified Refinement Criteria (everythinng that works locally, cg-wise)
+      call ppp_main%start(urc_label)
       call urc_list%all_mark(leaves%first)
+      call ppp_main%stop(urc_label)
 
       if (verbose) then
          cnt(URC) = count_ref_flags()
@@ -102,6 +111,7 @@ contains
          call cgl%cg%refinemap2SFC_list
          cgl => cgl%nxt
       enddo
+      call ppp_main%stop(scan_ref_label)
 
    contains
 
@@ -202,14 +212,20 @@ contains
 
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_t
+      use ppp,                only: ppp_main
 
       implicit none
 
       type(cg_level_connected_t), pointer :: curl
+      character(len=*), parameter :: ppd_label = "refinement_parent_protection"
 
       curl => base%level
       do while (associated(curl))
-         if (associated(curl%finer)) call parents_prevent_derefinement_lev(curl)
+         if (associated(curl%finer)) then
+            call ppp_main%start(ppd_label)
+            call parents_prevent_derefinement_lev(curl)
+            call ppp_main%stop(ppd_label)
+         endif
          curl => curl%finer
       enddo
 
@@ -361,11 +377,30 @@ contains
 
    end subroutine parents_prevent_derefinement_lev
 
+!> \brief PPPP-aware wrapper for update the refinement topology
+
+   subroutine update_refinement(act_count, refinement_fixup_only)
+
+      use ppp, only: ppp_main
+
+      implicit none
+
+      integer, optional, intent(out) :: act_count             !< counts number of blocks refined or deleted
+      logical, optional, intent(in)  :: refinement_fixup_only !< When present and .true. then do not check refinement criteria, do only correction, if necessary.
+
+      character(len=*), parameter :: ref_label = "refinement"
+
+      call ppp_main%start(ref_label)
+      call update_refinement_wrapped(act_count, refinement_fixup_only)
+      call ppp_main%stop(ref_label)
+
+   end subroutine update_refinement
+
 !> \brief Update the refinement topology
 
 !#define DEBUG_DUMPS
 
-   subroutine update_refinement(act_count, refinement_fixup_only)
+   subroutine update_refinement_wrapped(act_count, refinement_fixup_only)
 
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_leaves,             only: leaves
@@ -380,6 +415,7 @@ contains
       use grid_cont,             only: grid_container
       use list_of_cg_lists,      only: all_lists
       use mpisetup,              only: piernik_MPI_Allreduce
+      use ppp,                   only: ppp_main
       use refinement,            only: n_updAMR, emergency_fix
       use timer,                 only: set_timer
       use unified_ref_crit_list, only: urc_list
@@ -403,6 +439,7 @@ contains
       type(grid_container),  pointer :: cg
       logical :: correct, full_update
       real :: ts  !< time for runtime profiling
+      character(len=*), parameter :: newref_label = "refine", deref_label = "derefinement", plot_label = "URC_map"
 
       ts =  set_timer(tmr_amr, .true.)
 
@@ -481,8 +518,10 @@ contains
             curl => curl%coarser
          enddo
 
+         call ppp_main%start(newref_label)
          curl => finest%level%coarser
          do while (associated(curl) .and. curl%l%id >= base%level%l%id)
+
             some_refined = .false.
             cgl => curl%first
             do while (associated(cgl))
@@ -511,6 +550,7 @@ contains
 
             curl => curl%coarser
          enddo
+         call ppp_main%stop(newref_label)
 
          ! sync structure before trying to fix it
          call leaves%update(" (correcting) ")
@@ -530,6 +570,7 @@ contains
       ! Any excess of refinement will be handled in next call to this routine anyway.
       if (full_update) then
 
+         call ppp_main%start(deref_label)
          curl => finest%level
          do while (associated(curl) .and. .not. associated(curl, base%level))
             cgl => curl%first
@@ -555,6 +596,8 @@ contains
             call curl%sync_ru
             curl => curl%coarser
          enddo
+         call ppp_main%stop(deref_label)
+
          ! sync structure
          call leaves%balance_and_update(" ( derefine ) ")
 
@@ -565,7 +608,9 @@ contains
 
       call all_bnd
 
+      call ppp_main%start(plot_label)
       call urc_list%plot_mark(leaves%first)
+      call ppp_main%stop(plot_label)
 
       !> \todo call the update of cs_i2 and other vital variables if and only if something has changed
       !> \todo add another flag to named_array_list::na_var so the user can also specify fields that need boundary updates on fine/coarse boundaries
@@ -612,7 +657,7 @@ contains
 
       end subroutine print_time
 
-   end subroutine update_refinement
+   end subroutine update_refinement_wrapped
 
 !> \brief Refine a single grid piece. Pay attention whether it is already refined
 
@@ -672,6 +717,7 @@ contains
       use constants,        only: xdim, ydim, zdim, I_ONE!, I_TWO
       use dataio_pub,       only: die
       use domain,           only: dom
+      use ppp,              only: ppp_main
       use named_array_list, only: qna
 !      use cg_level_base, only: base
 
@@ -685,7 +731,9 @@ contains
          enumerator :: OUTSIDE  =  0
          enumerator :: BOUNDARY =  1
       end enum
+      character(len=*), parameter :: fix_ref_label = "fix_refinement", frp_label = "fix_refinement_wa"
 
+      call ppp_main%start(fix_ref_label)
       correct = .true.
 
       !> \todo check for excess of refinement levels
@@ -696,6 +744,8 @@ contains
          cgl%cg%wa = cgl%cg%l%id
          cgl => cgl%nxt
       enddo
+
+      call ppp_main%start(frp_label)
       call finest%level%restrict_to_base_q_1var(qna%wai)
 
 !!$      curl => base%level
@@ -707,6 +757,7 @@ contains
 !!$         curl => curl%finer
 !!$      enddo
       call leaves%leaf_arr3d_boundaries(qna%wai)
+      call ppp_main%stop(frp_label)
 
       range = 1
       ! range = min((dom%nb+I_ONE)/I_TWO + all_cg%ord_prolong_nb, dom%nb)
@@ -798,6 +849,7 @@ contains
 
          cgl => cgl%nxt
       enddo
+      call ppp_main%stop(fix_ref_label)
 
    end function fix_refinement
 

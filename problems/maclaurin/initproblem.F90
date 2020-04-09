@@ -428,6 +428,7 @@ contains
       use grid_cont,        only: grid_container
       use mpisetup,         only: master
       use named_array_list, only: qna
+      use ppp,              only: ppp_main
       use units,            only: newtong
 
       implicit none
@@ -438,6 +439,9 @@ contains
       real, parameter                :: small_e = 1e-3
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      character(len=*), parameter :: cmp_label = "compute_maclaurin_potential"
+
+      call ppp_main%start(cmp_label)
 
       AA1 = 2./3. ; AA3 = 2./3.
       if (e < 0. .and. master) call warn("[initproblem:compute_maclaurin_potential] e<0. not fully implemented yet!")
@@ -538,6 +542,8 @@ contains
 
          cgl => cgl%nxt
       enddo
+
+      call ppp_main%stop(cmp_label)
 
    end subroutine compute_maclaurin_potential
 

@@ -211,14 +211,19 @@ contains
 
    subroutine multipole_solver
 
-      use cg_leaves,  only: leaves
-      use constants,  only: dirtyH1
-      use dataio_pub, only: die
-      use global,     only: dirty_debug
-      use monopole,   only: isolated_monopole, find_img_CoM
-      use user_hooks, only: ext_bnd_potential
+      use cg_leaves,   only: leaves
+      use constants,   only: dirtyH1
+      use dataio_pub,  only: die
+      use global,      only: dirty_debug
+      use mg_monopole, only: isolated_monopole, find_img_CoM
+      use ppp,         only: ppp_main
+      use user_hooks,  only: ext_bnd_potential
 
       implicit none
+
+      character(len=*), parameter :: mpole_label = "multipole_solver"
+
+      call ppp_main%start(mpole_label)
 
       if (associated(ext_bnd_potential)) then
          call ext_bnd_potential
@@ -263,6 +268,8 @@ contains
             call die("[multigridmultipole:multipole_solver] unimplemented solver")
       end select
 
+      call ppp_main%stop(mpole_label)
+
    end subroutine multipole_solver
 
 !>
@@ -287,6 +294,7 @@ contains
       use domain,        only: dom
       use grid_cont,     only: grid_container
       use multigridvars, only: solution
+      use ppp,           only: ppp_main
 
       implicit none
 
@@ -297,7 +305,9 @@ contains
       ! a1 = -2. is the simplest, 1st order choice, gives best agreement of total mass and CoM location when compared to 3-D integration
       ! a1 = -1., a2 = -1./3. seems to do the best job,
       ! a1 = -3./2., a2 = -1./6. seems to be 2nd order estimator
+      character(len=*), parameter :: p2m_label = "multipole_pot2img"
 
+      call ppp_main%start(p2m_label)
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -354,6 +364,7 @@ contains
          cgl => cgl%nxt
          end associate
       enddo
+      call ppp_main%stop(p2m_label)
 
    end subroutine potential2img_mass
 
@@ -365,21 +376,24 @@ contains
 
    subroutine img_mass2moments
 
-      use cg_leaves,    only: leaves
-      use cg_list,      only: cg_list_element
-      use constants,    only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero
-      use dataio_pub,   only: die
-      use domain,       only: dom
-      use func,         only: operator(.notequals.)
-      use grid_cont,    only: grid_container
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use grid_cont,  only: grid_container
+      use func,       only: operator(.notequals.)
+      use ppp,        only: ppp_main
 
       implicit none
 
       integer :: i, j, k
       real, dimension(LO:HI) :: geofac
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer  :: cg
+      type(grid_container), pointer :: cg
+      character(len=*), parameter :: m2m_label = "multipole_img2mom"
 
+      call ppp_main%start(m2m_label)
       if (dom%geometry_type /= GEO_XYZ .and. any(Q%center(xdim:zdim).notequals.zero)) call die("[multigridmultipole:img_mass2moments] Q%center /= 0. not implemented for non-cartesian geometry")
 
       geofac(:) = 1.
@@ -426,6 +440,7 @@ contains
 
          cgl => cgl%nxt
       enddo
+      call ppp_main%stop(m2m_label)
 
    end subroutine img_mass2moments
 
@@ -449,6 +464,7 @@ contains
       use grid_cont,          only: grid_container
       use func,               only: operator(.notequals.)
       use multigridvars,      only: source
+      use ppp,                only: ppp_main
 
       implicit none
 
@@ -456,6 +472,9 @@ contains
       type(cg_level_connected_t), pointer :: level
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+      character(len=*), parameter :: d2m_label = "multipole_dom2mom"
+
+      call ppp_main%start(d2m_label)
 
       if (dom%geometry_type /= GEO_XYZ .and. any(Q%center(xdim:zdim).notequals.zero)) call die("[multigridmultipole:domain2moments] Q%center /= 0. not implemented for non-cartesian geometry")
       if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:domain2moments] Noncartesian geometry haven't been tested. Verify it before use.")
@@ -492,6 +511,7 @@ contains
          enddo
          cgl => cgl%nxt
       enddo
+      call ppp_main%stop(d2m_label)
 
    end subroutine domain2moments
 
@@ -504,6 +524,7 @@ contains
       use cg_list,      only: cg_list_element
       use constants,    only: xdim, ydim, zdim
       use grid_cont,    only: grid_container
+      use ppp,          only: ppp_main
       use units,        only: fpiG
       use particle_types, only: particle
 
@@ -512,6 +533,10 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
       type(particle), pointer    :: pset
+      integer :: i
+      character(len=*), parameter :: p2m_label = "multipole_part2mom"
+
+      if (size(pset%p) > 0) call ppp_main%start(p2m_label)
 
       ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
       cgl => leaves%first
@@ -538,6 +563,8 @@ contains
          cgl => cgl%nxt
       enddo
 
+      if (size(pset%p) > 0) call ppp_main%stop(p2m_label)
+
    end subroutine particles2moments
 #endif /* NBODY */
 
@@ -556,12 +583,16 @@ contains
       use domain,     only: dom
       use grid_cont,  only: grid_container
       use func,       only: operator(.notequals.)
+      use ppp,        only: ppp_main
 
       implicit none
 
       integer :: i, j, k
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+      character(len=*), parameter :: m2p_label = "multipole_mom2pot"
+
+      call ppp_main%start(m2p_label)
 
       if (dom%geometry_type /= GEO_XYZ .and. any(Q%center(xdim:zdim).notequals.zero)) call die("[multigridmultipole:img_mass2moments] Q%center /= 0. not implemented for non-cartesian geometry")
 
@@ -597,6 +628,7 @@ contains
          endif
          cgl => cgl%nxt
       enddo
+      call ppp_main%stop(m2p_label)
 
    end subroutine moments2bnd_potential
 

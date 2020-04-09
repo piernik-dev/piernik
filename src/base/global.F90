@@ -489,6 +489,4 @@ contains
       grace_period_passed = (t >= relax_time)
    end function grace_period_passed
 
-!-----------------------------------------------------------------------------
-
 end module global

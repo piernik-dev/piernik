@@ -127,12 +127,16 @@ contains
       use global,     only: do_external_corners
       use refinement, only: prefer_n_bruteforce
       use mpisetup,   only: master
+      use ppp,        only: ppp_main
 
       implicit none
 
       class(cg_list_neighbors_t), intent(inout) :: this !< object invoking type bound procedure
 
       logical, save :: firstcall = .true.
+      character(len=*), parameter :: fn_label = "find_neighbors"
+
+      call ppp_main%start(fn_label)
 
       if (do_external_corners) then
          write(msg, '(3a)') "[cg_list_neighbors:find_neighbors] do_external_corners implemented experimentally (", trim(merge("SFC       ", "bruteforce", this%dot%is_blocky .and. .not. prefer_n_bruteforce)), ")"
@@ -152,9 +156,11 @@ contains
          ! covers the domain in at least one direction.
       endif
 
+      call ppp_main%stop(fn_label)
+
 #ifdef DEBUG
       call this%print_bnd_list
-#endif
+#endif /* DEBUG */
 
    end subroutine find_neighbors
 
