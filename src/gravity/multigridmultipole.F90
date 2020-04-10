@@ -536,7 +536,7 @@ contains
       integer :: i
       character(len=*), parameter :: p2m_label = "multipole_part2mom"
 
-      if (size(pset%p) > 0) call ppp_main%start(p2m_label)
+      call ppp_main%start(p2m_label)
 
       ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
       cgl => leaves%first
@@ -563,7 +563,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (size(pset%p) > 0) call ppp_main%stop(p2m_label)
+      call ppp_main%stop(p2m_label)
 
    end subroutine particles2moments
 #endif /* NBODY */
