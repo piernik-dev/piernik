@@ -37,7 +37,7 @@ module restart_hdf5_v2
    implicit none
 
    private
-   public :: read_restart_hdf5_v2, write_restart_hdf5_v2
+   public :: read_restart_hdf5_v2, write_restart_hdf5_v2, cg_essentials
 
    type :: cg_essentials                            !< All vital attributes of a cg in one place
       integer(kind=4), dimension(ndims) :: n_b
