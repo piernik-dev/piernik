@@ -2,6 +2,7 @@
 
 import sys
 import magic
+import argparse
 
 
 class PPP_Node:
@@ -214,15 +215,30 @@ class PPP:
         self.trees[proc]._add(label, time)
 
 
-if (len(sys.argv) != 2):
-    sys.stderr.write("Error: need exactly one file to process\n")
-    exit(1)
+parser = argparse.ArgumentParser(description="Piernik Precise Profiling Presenter")
+parser.add_argument("filename", nargs=1, help="PPP ascii file to process")
+parser.add_argument("-o", "--output", nargs=1, help="processed output file")
 
+# parser.add_argument("-e", "--exclude", help="do not show TIMER(s)")  # multiple excudes
+# parser.add_argument("--root", help="show only ROOT and its children")
+# parser.add_argument("-m", "--maxoutput", nargs=1, default=50000, help="limit output to MAXOUTPUT enries")
+
+pgroup = parser.add_mutually_exclusive_group()
+pgroup.add_argument("-g", "--gnuplot", action="store_const", dest="otype", const="gnu", default="gnu", help="gnuplot output (default)")
+pgroup.add_argument("-t", "--tree", action="store_const", dest="otype", const="tree", help="tree output")
+
+# pgroup.add_argument("-r", "--reduced_tree", action="store_const", dest="otype", const="rtree", help="reduced tree output")
+# pgroup.add_argument("-s", "--summary", action="store_const", dest="otype", const="summary", help="short summary")
+
+args = parser.parse_args()
 
 evt = PPP("Collection")
-evt.decode(sys.argv[1])
-# evt.print()
-evt.print_gnuplot()
+evt.decode(args.filename[0])
+if args.otype == "tree":
+    evt.print()
+elif args.otype == "gnu":
+    evt.print_gnuplot()
+
 
 # collect ev_tree[] into ev_summary
 # ev_summary.print()
