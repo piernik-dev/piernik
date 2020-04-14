@@ -4,6 +4,9 @@ import sys
 import argparse
 
 
+t_bias = 10  # I'd prefer to reduce the timers initially to 0, but sometimes slaves start before master
+
+
 class PPP_Node:
     """A single event and links"""
 
@@ -16,7 +19,7 @@ class PPP_Node:
         self.start = []
         self.stop = []
         self._set_time(time)
-        self.children = {}
+        self.children = {}  # this flattens the tree a bit ut we can recontruct it from timings anyway, if needed
         self.parent = None
 
     def _set_time(self, time):
@@ -54,14 +57,14 @@ class PPP_Node:
     def shortpath(self):
         return ("" if self.parent is None else self.parent.shortpath() + "/") + self.label
 
-    def print(self, bigbang, indent=1):
+    def print(self, indent=1):  # need to filter through parent range
         try:
             for _ in range(min(len(self.start), len(self.stop))):
-                print("  " * indent + "'" + self.label + "' %.6f %.6f" % (self.start[_] - bigbang, self.stop[_] - self.start[_]))
+                print("  " * indent + "'" + self.label + "' %.6f %.6f" % (self.start[_], self.stop[_] - self.start[_]))
         except TypeError:
             print("  " * indent + "'" + self.label + "' TypeError: ", self.start, self.stop)
         for i in self.children:
-            self.children[i].print(bigbang, indent=indent + 1)
+            self.children[i].print(indent=indent + 1)
 
     def get_all_ev(self):
         evl = [[self.shortpath(), self.start, self.stop]]
@@ -86,17 +89,10 @@ class PPP_Tree:
         else:
             self._last = self._last._add(label, time)
 
-    def get_bigbang(self):
-        bigbang = None
-        for i in self.root:
-            bb = min(self.root[i].start)
-            bigbang = bb if bigbang is None else min(bb, bigbang)
-        return bigbang
-
-    def print(self, bigbang):
+    def print(self):
         print("Process: " + str(self.label))
         for i in self.root:
-            self.root[i].print(bigbang)
+            self.root[i].print()
 
 
 class PPP:
@@ -106,23 +102,14 @@ class PPP:
         self.name = name
         self.trees = {}
 
-    def get_bigbang_from_master(self):
-        try:
-            bigbang = self.trees[0].get_bigbang()
-        except KeyError:
-            bigbang = 0.
-        return bigbang
-
     def print(self):
         print(self.name)
-        bigbang = self.get_bigbang_from_master()
         for i in sorted(self.trees):
-            self.trees[i].print(bigbang)
+            self.trees[i].print()
 
     def print_gnuplot(self):
         ev = {}
         np = 0  # number of processes
-        bigbang = self.get_bigbang_from_master()
         for p in self.trees:
             if p > np:
                 np = p
@@ -141,21 +128,22 @@ class PPP:
         i_s = 1
         i_e = 2
         for e in ev:
-            print("# __" + e + "__ '" + ev[e][0][0][0] + "'")
+            print("# __" + e + "__ '" + ev[e][next(iter(ev[e].keys()))][0][0] + "'")
             for p in ev[e]:
                 for t in range(len(ev[e][p])):
                     depth = ev[e][p][t][0].count("/")
                     for _ in range(min(len(ev[e][p][t][i_s]), len(ev[e][p][t][i_e]))):
                         try:
                             if (ev[e][p][t][i_e][_] - ev[e][p][t][i_s][_]) > 0.:
-                                print("0. 0. %.6f %.6f %.6f %.6f" % (ev[e][p][t][i_s][_] - bigbang, ev[e][p][t][i_e][_] - bigbang,
+                                print("0. 0. %.6f %.6f %.6f %.6f" % (ev[e][p][t][i_s][_] - t_bias, ev[e][p][t][i_e][_] - t_bias,
                                                                      depth + float(p) / (np + 1), depth + float(p + 1) / (np + 1)), depth, p)
                         except TypeError:
                             sys.stderr.write("Warning: inclomplete event '", e, "' @", p, " #", str(t), ev[e][p][t])
                     print("")
             print("")
         print("EOD\n\n# Suggested gnuplot commands:\nset key outside horizontal")
-        print("set xlabel 'time (walltime seconds)'\nset ylabel 'timer depth + proc/nproc'\nset title 'nproc = %d'" % (np + 1))
+        print("set xlabel 'time (walltime seconds)'\nset ylabel 'timer depth + proc/nproc'")
+        print('set title "%s"' % self.descr.replace('_', "\\\\_"))
         pline = "plot $PPPdata "
         nocomma = True
         fs = "solid 0.1"
@@ -194,20 +182,32 @@ class PPP:
             sys.stderr.write("Error: don't know what to do with " + ftype + "\n")
             exit(3)
 
-    def decode(self, fname):
+    def decode(self, fnamelist):
         """Let's focus on ASCII decoding for a while. Don't bother with HDF5 unltil we implement this type of PPP dump"""
-        self._decode_text(fname)
+        self._decode_text(fnamelist)
 
-    def _decode_text(self, fname):
+    def _decode_text(self, fnamelist):
         self.name += " of text events"
-        try:
-            file = open(fname, 'r')
-            for line in file:
-                l = line.split()
-                self._add(int(l[0]), line[line.index(l[1]):line.index(l[-1])].strip(), float(l[-1]))  # proc, label, time
-        except IOError:
-            sys.stderr.write("Error: cannot open '" + fname + "'\n")
-            exit(4)
+        self.descr = ""
+        poff = 0 if len(fnamelist) == 1 else 1
+        for fname in fnamelist:
+            nthr = -1
+            bigbang = None
+            try:
+                file = open(fname, 'r')
+                for line in file:
+                    l = line.split()
+                    if bigbang is None:
+                        bigbang = float(l[-1]) - t_bias
+                    self._add(poff + int(l[0]), line[line.index(l[1]):line.index(l[-1])].strip(), float(l[-1]) + bigbang * (-1. if float(l[-1]) > 0. else 1.))  # proc, label, time
+                    if int(l[0]) > nthr:
+                        nthr = int(l[0])
+                poff += 2 + nthr
+                tnl = "\\n" if len(self.descr) > 0 else ""
+                self.descr = "'%s' (%d thread%s)%s" % (fname, nthr + 1, "s" if nthr > 0 else "", tnl) + self.descr
+            except IOError:
+                sys.stderr.write("Error: cannot open '" + fname + "'\n")
+                exit(4)
 
     def _decode_hdf5(self, fname):
         self.name += " of HDF5 events"
@@ -221,7 +221,7 @@ class PPP:
 
 
 parser = argparse.ArgumentParser(description="Piernik Precise Profiling Presenter")
-parser.add_argument("filename", nargs=1, help="PPP ascii file to process")
+parser.add_argument("filename", nargs='+', help="PPP ascii file to process")
 parser.add_argument("-o", "--output", nargs=1, help="processed output file")
 
 # parser.add_argument("-e", "--exclude", help="do not show TIMER(s)")  # multiple excudes
@@ -238,7 +238,8 @@ pgroup.add_argument("-t", "--tree", action="store_const", dest="otype", const="t
 args = parser.parse_args()
 
 evt = PPP("Collection")
-evt.decode(args.filename[0])
+evt.decode(args.filename)
+
 if args.otype == "tree":
     evt.print()
 elif args.otype == "gnu":
