@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import sys
-import magic
 import argparse
 
 
@@ -178,8 +177,10 @@ class PPP:
         print(pline)
         print("pause mouse close")
 
-    def decode(self, fname):
+    def decode_magic(self, fname):  # It seems that magic may work in a bit different way on different versions. We should fix it when we start to use HDF5 data for real.
         """Try to extract the data from a given file"""
+        import magic
+
         try:
             ftype = magic.detect_from_filename(fname).mime_type
         except:
@@ -192,6 +193,10 @@ class PPP:
         else:
             sys.stderr.write("Error: don't know what to do with " + ftype + "\n")
             exit(3)
+
+    def decode(self, fname):
+        """Let's focus on ASCII decoding for a while. Don't bother with HDF5 unltil we implement this type of PPP dump"""
+        self._decode_text(fname)
 
     def _decode_text(self, fname):
         self.name += " of text events"
