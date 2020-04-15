@@ -181,10 +181,9 @@ contains
    subroutine init_domain
 
       use constants,  only: xdim, zdim, ndims, LO, HI, PIERNIK_INIT_MPI, I_ONE, I_ZERO, INVALID
-      use dataio_pub, only: die, warn, code_progress
+      use dataio_pub, only: die,  code_progress
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
-      use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast, have_mpi
-
+      use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
       implicit none
 
       real, dimension(ndims, LO:HI)     :: edges
@@ -323,10 +322,6 @@ contains
          minsize(:) = 1
       endwhere
 
-      if (have_mpi .and. master) then
-         if (allow_uneven) call warn("[domain:init_domain] Uneven domain decomposition is experimental.")
-         if (allow_noncart) call warn("[domain:init_domain] Non-cartesian domain decomposition is experimental.")
-      endif
       is_uneven = .false.
       is_mpi_noncart = .false.
       is_refined = .false.
