@@ -308,7 +308,7 @@ contains
 
       type(cg_list_element), pointer :: cgl
       real :: nitd, diffmax
-      integer :: i, j, k
+      integer(kind=4) :: i, j, k
 
       cgl => leaves%first
       do while (associated(cgl))
