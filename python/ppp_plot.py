@@ -134,8 +134,7 @@ class PPP:
 class PPPset:
     """A collection of event trees from one or many Piernik runs"""
 
-    def __init__(self, name):
-        self.name = name
+    def __init__(self):
         self.evt = []
 
     def decode(self, fnamelist):
@@ -152,10 +151,23 @@ class PPPset:
         elif otype == "gnu":
             self.print_gnuplot()
         elif otype == "summary":
-            print("ARGS ", args)
-            from pprint import pprint
-            for _ in range(len(self.evt)):
-                pprint(self.evt[_].__dict__)
+            # ToDo: add own time and "called from"
+            ed = {}
+            for f in range(len(self.evt)):
+                print("File: '%s', %d threads, bigbang = %.7f" % (self.evt[f].name, self.evt[f].nthr, self.evt[f].bigbang))
+                for p in self.evt[f].trees:
+                    for r in self.evt[f].trees[p].root:
+                        for e in self.evt[f].trees[p].root[r].get_all_ev():
+                            e_base = e[0].split('/')[-1]
+                            if e_base not in ed:
+                                ed[e_base] = [0, 0.]
+                            ed[e_base][0] += len(e[1])
+                            for t in range(len(e[1])):
+                                ed[e_base][1] += e[2][t] - e[1][t]
+            ml = len(max(ed, key=len))
+            print("\n#%-*s %20s %10s" % (ml - 1, "label", "time spent (s)", "calls"))
+            for e in sorted(ed.items(), key=lambda x: x[1][1], reverse=True):
+                print("%-*s %20.6f %10d" % (ml, e[0], e[1][1], e[1][0]))
 
     def print_gnuplot(self):
         self.descr = ""
@@ -219,7 +231,7 @@ class PPPset:
 
 
 parser = argparse.ArgumentParser(description="Piernik Precise Profiling Presenter")
-parser.add_argument("filename", nargs='+', help="PPP ascii file to process")
+parser.add_argument("filename", nargs='+', help="PPP ascii file(s) to process")
 parser.add_argument("-o", "--output", nargs=1, help="processed output file")
 
 # parser.add_argument("-e", "--exclude", help="do not show TIMER(s)")  # multiple excudes
@@ -229,21 +241,16 @@ parser.add_argument("-o", "--output", nargs=1, help="processed output file")
 pgroup = parser.add_mutually_exclusive_group()
 pgroup.add_argument("-g", "--gnuplot", action="store_const", dest="otype", const="gnu", default="gnu", help="gnuplot output (default)")
 pgroup.add_argument("-t", "--tree", action="store_const", dest="otype", const="tree", help="tree output")
+pgroup.add_argument("-s", "--summary", action="store_const", dest="otype", const="summary", help="short summary")
 
 # pgroup.add_argument("-r", "--reduced_tree", action="store_const", dest="otype", const="rtree", help="reduced tree output")
-pgroup.add_argument("-s", "--summary", action="store_const", dest="otype", const="summary", help="short summary")
+
 
 args = parser.parse_args()
 
-evt = PPPset("Collection")
+evt = PPPset()
 evt.decode(args.filename)
 evt.print(args.otype)
-
-
-# collect ev_tree[] into ev_summary
-# ev_summary.print()
-# ev_summary.make_image()  # dump an .SVG
-# ev_summary.browse()  # create browsable image with zoom
 
 # for j  in *.ppprofile.ascii ; do for i in `awk '{print $2}' $j |  sort |  uniq` ; do in=`grep "$i *  -" $j | wc -l` ; out=`grep "$i *  [1-9]" $j | wc -l` ; [ $in != $out ] && echo $j $i $in $out ; done |  column -t ; done
 
