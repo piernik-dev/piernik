@@ -198,8 +198,8 @@ class PPP:
                 for line in file:
                     l = line.split()
                     if bigbang is None:
-                        bigbang = float(l[-1]) - t_bias
-                    self._add(poff + int(l[0]), line[line.index(l[1]):line.index(l[-1])].strip(), float(l[-1]) + bigbang * (-1. if float(l[-1]) > 0. else 1.))  # proc, label, time
+                        bigbang = float(l[1]) - t_bias
+                    self._add(poff + int(l[0]), line[line.index(l[2]):].strip(), float(l[1]) + bigbang * (-1. if float(l[1]) > 0. else 1.))  # proc, label, time
                     if int(l[0]) > nthr:
                         nthr = int(l[0])
                 poff += 2 + nthr

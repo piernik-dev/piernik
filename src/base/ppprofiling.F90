@@ -512,7 +512,7 @@ contains
       character(len=cbuff_len), dimension(:), intent(in) :: ev_label  !< array of event labels
       real(kind=8), dimension(:),             intent(in) :: ev_time   !< array of event times
 
-      integer :: i
+      integer :: i, d
 
       if (slave) then
          call warn("[ppprofiling:publish_array] only master is supposed to write")
@@ -523,9 +523,12 @@ contains
 
       if (size(ev_label) /= size(ev_time)) call die("[ppprofiling:publish_array] arrays size mismatch")
 
+      d = 1
       do i = lbound(ev_label, dim=1), ubound(ev_label, dim=1)
          if (ev_time(i) .equals. 0.) exit
-         write(profile_lun, '(i4,2a,f20.7)') process, " ", ev_label(i), ev_time(i)
+         if (ev_time(i) < 0.) d = d - 1
+         write(profile_lun, '(i5,a,f20.7,2a)') process, " ", ev_time(i), repeat("  ", d) , trim(ev_label(i))
+         if (ev_time(i) > 0.) d = d + 1
       enddo
 
    end subroutine publish_buffers
