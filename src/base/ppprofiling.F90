@@ -412,12 +412,12 @@ contains
 !>
 !! \brief Write the collected data to a log file and clear the log
 !!
-!! \todo Use HDF5 format when available, stdout otherwise
+!! \todo Use HDF5 format when available, ASCII otherwise
 !!
 !! Perhaps MPI_TYPE_CREATE_STRUCT would simplify the code and improve the communication
 !! but it requires some C-interoperability, which needs to be explored and tested first.
 !!
-!! \todo for lenghty event lists implement some splitting to avoid excessive allocation
+!! \todo XMLot JSON output?
 !<
 
    subroutine publish(this)
@@ -425,7 +425,7 @@ contains
       use constants,    only: I_ZERO, I_ONE
       use memory_usage, only: check_mem_usage
       use mpi,          only: MPI_STATUS_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,     only: proc, master, comm, mpi_err, FIRST, LAST, req, status, inflate_req
+      use mpisetup,     only: proc, master, slave, comm, mpi_err, FIRST, LAST, req, status, inflate_req
 
       implicit none
 
@@ -439,12 +439,42 @@ contains
 
       if (.not. use_profiling) return
 
+      ! send
+      call inflate_req(int(TAG_ARR_T))
+      t = TAG_CNT
+      ne = I_ZERO
+      do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
+         if (allocated(this%arrays(ia)%ev_arr)) then
+            ne = ne + size(this%arrays(ia)%ev_arr, kind=4)
+         else
+            exit
+         endif
+      enddo
+      if (slave) call MPI_Isend(ne, I_ONE, MPI_INTEGER, FIRST, TAG_CNT, comm, req(TAG_CNT), mpi_err)
+
+      if (ne > 0) then
+         allocate(buflabel(ne), buftime(ne))
+         call check_mem_usage
+         p = I_ONE
+         do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
+            if (allocated(this%arrays(ia)%ev_arr)) then
+               buflabel(p:p+size(this%arrays(ia)%ev_arr)-I_ONE) = this%arrays(ia)%ev_arr(:)%label
+               buftime (p:p+size(this%arrays(ia)%ev_arr)-I_ONE) = this%arrays(ia)%ev_arr(:)%wtime
+               p = p + size(this%arrays(ia)%ev_arr, kind=4)
+            endif
+         enddo
+         if (master) then
+            call publish_buffers(proc, buflabel, buftime)
+            deallocate(buflabel, buftime)
+         else
+            call MPI_Isend(buflabel, size(buflabel)*len(buflabel(1)), MPI_CHARACTER,        FIRST, TAG_ARR_L, comm, req(TAG_ARR_L), mpi_err)
+            call MPI_Isend(buftime,  size(buftime),                   MPI_DOUBLE_PRECISION, FIRST, TAG_ARR_T, comm, req(TAG_ARR_T), mpi_err)
+            t = TAG_ARR_T
+         endif
+      endif
+
       if (master) then
          ! write(profile_lun, '(/,3a)') "#profile '", trim(this%label), "'"
-         do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
-            if (allocated(this%arrays(ia)%ev_arr)) &
-                 call publish_array(proc, this%arrays(ia)%ev_arr)
-         enddo
 
          ! receive
          do p = FIRST + I_ONE, LAST
@@ -459,35 +489,6 @@ contains
              endif
          enddo
       else
-         ! send
-         call inflate_req(int(TAG_ARR_T))
-         t = TAG_CNT
-         ne = I_ZERO
-         do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
-            if (allocated(this%arrays(ia)%ev_arr)) then
-               ne = ne + size(this%arrays(ia)%ev_arr, kind=4)
-            else
-               exit
-            endif
-         enddo
-
-         if (ne > 0) then
-            allocate(buflabel(ne), buftime(ne))
-            call check_mem_usage
-            p = I_ONE
-            do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
-               if (allocated(this%arrays(ia)%ev_arr)) then
-                  buflabel(p:p+size(this%arrays(ia)%ev_arr)-I_ONE) = this%arrays(ia)%ev_arr(:)%label
-                  buftime (p:p+size(this%arrays(ia)%ev_arr)-I_ONE) = this%arrays(ia)%ev_arr(:)%wtime
-                  p = p + size(this%arrays(ia)%ev_arr, kind=4)
-               endif
-            enddo
-            call MPI_Isend(buflabel, size(buflabel)*len(buflabel(1)), MPI_CHARACTER,        FIRST, TAG_ARR_L, comm, req(TAG_ARR_L), mpi_err)
-            call MPI_Isend(buftime,  size(buftime),                   MPI_DOUBLE_PRECISION, FIRST, TAG_ARR_T, comm, req(TAG_ARR_T), mpi_err)
-            t = TAG_ARR_T
-         endif
-
-         call MPI_Isend(ne, I_ONE, MPI_INTEGER, FIRST, TAG_CNT, comm, req(TAG_CNT), mpi_err)
          mpistatus => status(:, :t)
          call MPI_Waitall(t, req(:t), mpistatus, mpi_err)
          deallocate(buflabel, buftime)
@@ -496,35 +497,6 @@ contains
       call this%cleanup
 
    end subroutine publish
-
-!> \brief Print the events from event array to the profile log
-
-   subroutine publish_array(process, ev_arr)
-
-      use dataio_pub, only: warn, die
-      use func,       only: operator(.equals.)
-      use mpisetup,   only: slave
-
-      implicit none
-
-      integer(kind=4),           intent(in) :: process  !< origin of the event
-      type(event), dimension(:), intent(in) :: ev_arr   !< array of events
-
-      integer :: i
-
-      if (slave) then
-         call warn("[ppprofiling:publish_array] only master is supposed to write")
-         return
-      endif
-
-      if (profile_hdf5) call die("[ppprofiling:publish_array] HDF5 not implemented yet")
-
-      do i = lbound(ev_arr, dim=1), ubound(ev_arr, dim=1)
-         if (ev_arr(i)%wtime .equals. 0.) exit
-         write(profile_lun, '(i4,2a,f20.7)') process, " ", ev_arr(i)%label, ev_arr(i)%wtime
-      enddo
-
-   end subroutine publish_array
 
 !> \brief Print the events from buffer arrays to the profile log
 
