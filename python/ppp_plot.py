@@ -77,20 +77,20 @@ class PPP_Tree:
     """An event tree for one Piernik process"""
 
     def __init__(self, name):
-        self.label = name
+        self.thread = name
         self._last = None
         self.root = {}
 
     def _add(self, label, time):
         if self._last is None:
             self.root[label] = PPP_Node(label, time)
-            self.root[label].proc = self.label
+            self.root[label].proc = self.thread
             self._last = self.root[label]
         else:
             self._last = self._last._add(label, time)
 
     def print(self):
-        print("Process: " + str(self.label))
+        print("Process: " + str(self.thread))
         for i in self.root:
             self.root[i].print()
 
@@ -107,22 +107,74 @@ class PPP:
         for i in sorted(self.trees):
             self.trees[i].print()
 
+    def _decode_text(self, fname):
+        self.descr = ""
+        self.nthr = 0
+        self.bigbang = None
+        try:
+            file = open(fname, 'r')
+            for line in file:
+                l = line.split()
+                if self.bigbang is None:
+                    self.bigbang = float(l[1]) - t_bias
+                self._add(int(l[0]), line[line.index(l[2]):].strip(), float(l[1]) + self.bigbang * (-1. if float(l[1]) > 0. else 1.))  # proc, label, time
+                if int(l[0]) >= self.nthr:
+                    self.nthr = int(l[0]) + 1
+            self.descr = "'%s' (%d thread%s)" % (fname, self.nthr, "s" if self.nthr > 1 else "")
+        except IOError:
+            sys.stderr.write("Error: cannot open '" + fname + "'\n")
+            exit(4)
+
+    def _add(self, proc, label, time):
+        if proc not in self.trees:
+            self.trees[proc] = PPP_Tree(proc)
+        self.trees[proc]._add(label, time)
+
+
+class PPPset:
+    """A collection of event trees from one or many Piernik runs"""
+
+    def __init__(self, name):
+        self.name = name
+        self.evt = []
+
+    def decode(self, fnamelist):
+        """Let's focus on ASCII decoding for a while. Don't bother with HDF5 unltil we implement this type of PPP dump"""
+
+        for fname in fnamelist:
+            self.evt.append(PPP(fname))
+            self.evt[-1]._decode_text(fname)
+
+    def print(self, otype):
+        if otype == "tree":
+            for _ in range(len(self.evt)):
+                self.evt[_].print()
+        elif otype == "gnu":
+            self.print_gnuplot()
+        elif otype == "summary":
+            print("ARGS ", args)
+            from pprint import pprint
+            for _ in range(len(self.evt)):
+                pprint(self.evt[_].__dict__)
+
     def print_gnuplot(self):
+        self.descr = ""
         ev = {}
-        np = 0  # number of processes
-        for p in self.trees:
-            if p > np:
-                np = p
-            evlist = []
-            for r in self.trees[p].root:
-                evlist += self.trees[p].root[r].get_all_ev()
-            for e in evlist:
-                e_base = e[0].split('/')[-1].split()[0]
-                if e_base not in ev:
-                    ev[e_base] = {}
-                if p not in ev[e_base]:
-                    ev[e_base][p] = []
-                ev[e_base][p].append(e)
+        peff = 0
+        for f in range(len(self.evt)):
+            for p in self.evt[f].trees:
+                evlist = []
+                for r in self.evt[f].trees[p].root:
+                    evlist += self.evt[f].trees[p].root[r].get_all_ev()
+                for e in evlist:
+                    e_base = e[0].split('/')[-1].split()[0]
+                    if e_base not in ev:
+                        ev[e_base] = {}
+                    if p + peff not in ev[e_base]:
+                        ev[e_base][p + peff] = []
+                    ev[e_base][p + peff].append(e)
+            peff = peff + self.evt[f].nthr + (1 if len(self.evt) > 1 else 0)  # spacing only when we have multiple files
+            self.descr = self.evt[f].descr + ("\\n" if len(self.descr) > 0 else "") + self.descr
 
         print("#!/usr/bin/gnuplot\n$PPPdata << EOD\n")
         i_s = 1
@@ -136,7 +188,7 @@ class PPP:
                         try:
                             if (ev[e][p][t][i_e][_] - ev[e][p][t][i_s][_]) > 0.:
                                 print("0. 0. %.6f %.6f %.6f %.6f" % (ev[e][p][t][i_s][_] - t_bias, ev[e][p][t][i_e][_] - t_bias,
-                                                                     depth + float(p) / (np + 1), depth + float(p + 1) / (np + 1)), depth, p)
+                                                                     depth + float(p) / peff, depth + float(p + 1) / peff), depth, p)
                         except TypeError:
                             sys.stderr.write("Warning: inclomplete event '", e, "' @", p, " #", str(t), ev[e][p][t])
                     print("")
@@ -165,60 +217,6 @@ class PPP:
         print(pline)
         print("pause mouse close")
 
-    def decode_magic(self, fname):  # It seems that magic may work in a bit different way on different versions. We should fix it when we start to use HDF5 data for real.
-        """Try to extract the data from a given file"""
-        import magic
-
-        try:
-            ftype = magic.detect_from_filename(fname).mime_type
-        except:
-            sys.stderr.write("Error: cannot determine file type or file cannot be read\n")
-            exit(2)
-        if (ftype == "text/plain"):
-            self._decode_text(fname)
-        elif (ftype == "application/x-hdf"):
-            self._decode_hdf5(fname)
-        else:
-            sys.stderr.write("Error: don't know what to do with " + ftype + "\n")
-            exit(3)
-
-    def decode(self, fnamelist):
-        """Let's focus on ASCII decoding for a while. Don't bother with HDF5 unltil we implement this type of PPP dump"""
-        self._decode_text(fnamelist)
-
-    def _decode_text(self, fnamelist):
-        self.name += " of text events"
-        self.descr = ""
-        poff = 0 if len(fnamelist) == 1 else 1
-        for fname in fnamelist:
-            nthr = -1
-            bigbang = None
-            try:
-                file = open(fname, 'r')
-                for line in file:
-                    l = line.split()
-                    if bigbang is None:
-                        bigbang = float(l[1]) - t_bias
-                    self._add(poff + int(l[0]), line[line.index(l[2]):].strip(), float(l[1]) + bigbang * (-1. if float(l[1]) > 0. else 1.))  # proc, label, time
-                    if int(l[0]) > nthr:
-                        nthr = int(l[0])
-                poff += 2 + nthr
-                tnl = "\\n" if len(self.descr) > 0 else ""
-                self.descr = "'%s' (%d thread%s)%s" % (fname, nthr + 1, "s" if nthr > 0 else "", tnl) + self.descr
-            except IOError:
-                sys.stderr.write("Error: cannot open '" + fname + "'\n")
-                exit(4)
-
-    def _decode_hdf5(self, fname):
-        self.name += " of HDF5 events"
-        sys.stderr.write("Error: don't know how to decode HDF5 yet\n")
-        exit(5)
-
-    def _add(self, proc, label, time):
-        if proc not in self.trees:
-            self.trees[proc] = PPP_Tree(proc)
-        self.trees[proc]._add(label, time)
-
 
 parser = argparse.ArgumentParser(description="Piernik Precise Profiling Presenter")
 parser.add_argument("filename", nargs='+', help="PPP ascii file to process")
@@ -233,17 +231,13 @@ pgroup.add_argument("-g", "--gnuplot", action="store_const", dest="otype", const
 pgroup.add_argument("-t", "--tree", action="store_const", dest="otype", const="tree", help="tree output")
 
 # pgroup.add_argument("-r", "--reduced_tree", action="store_const", dest="otype", const="rtree", help="reduced tree output")
-# pgroup.add_argument("-s", "--summary", action="store_const", dest="otype", const="summary", help="short summary")
+pgroup.add_argument("-s", "--summary", action="store_const", dest="otype", const="summary", help="short summary")
 
 args = parser.parse_args()
 
-evt = PPP("Collection")
+evt = PPPset("Collection")
 evt.decode(args.filename)
-
-if args.otype == "tree":
-    evt.print()
-elif args.otype == "gnu":
-    evt.print_gnuplot()
+evt.print(args.otype)
 
 
 # collect ev_tree[] into ev_summary
