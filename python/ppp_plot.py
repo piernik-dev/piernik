@@ -158,11 +158,11 @@ class PPPset:
                 ofile.write(self.out)
                 ofile.close()
         elif otype == "summary":
-            # ToDo: add own time and "called from"
+            # ToDo: add own time, %time and "called from"
             print("ARGS: ", args)
-            ed = {}
             for f in range(len(self.evt)):
-                print("File: '%s', %d threads, bigbang = %.7f" % (self.evt[f].name, self.evt[f].nthr, self.evt[f].bigbang))
+                ed = {}
+                print("\n## File: '%s', %d threads, bigbang = %.7f" % (self.evt[f].name, self.evt[f].nthr, self.evt[f].bigbang))
                 for p in self.evt[f].trees:
                     for r in self.evt[f].trees[p].root:
                         for e in self.evt[f].trees[p].root[r].get_all_ev():
@@ -172,10 +172,11 @@ class PPPset:
                             ed[e_base][0] += len(e[1])
                             for t in range(len(e[1])):
                                 ed[e_base][1] += e[2][t] - e[1][t]
-            ml = len(max(ed, key=len))
-            print("\n#%-*s %20s %10s" % (ml - 1, "label", "time spent (s)", "calls"))
-            for e in sorted(ed.items(), key=lambda x: x[1][1], reverse=True):
-                print("%-*s %20.6f %10d" % (ml, e[0], e[1][1], e[1][0]))
+                ml = len(max(ed, key=len))
+                print("# %-*s %20s %10s" % (ml - 2, "label", "CPU time (s)", "occurred"))
+                for e in sorted(ed.items(), key=lambda x: x[1][1], reverse=True):
+                    print("%-*s %20.6f %10d" % (ml, e[0], e[1][1], e[1][0]))
+            # ToDo: merged summary with data presented side-by-side
 
     def print_gnuplot(self):
         self.descr = ""
@@ -245,6 +246,8 @@ parser.add_argument("-o", "--output", nargs=1, help="processed output file")
 # parser.add_argument("-e", "--exclude", help="do not show TIMER(s)")  # multiple excudes
 # parser.add_argument("--root", help="show only ROOT and its children")
 # parser.add_argument("-m", "--maxoutput", nargs=1, default=50000, help="limit output to MAXOUTPUT enries")
+# parser.add_argument("-c", "--check", help="do a formal check only")
+# parser.add_argument("-d", "--maxdepth", help="limit output to MAXDEPTH")
 
 pgroup = parser.add_mutually_exclusive_group()
 pgroup.add_argument("-g", "--gnuplot", action="store_const", dest="otype", const="gnu", default="gnu", help="gnuplot output (default)")
