@@ -145,13 +145,21 @@ class PPPset:
             self.evt[-1]._decode_text(fname)
 
     def print(self, otype):
+        self.out = ""
         if otype == "tree":
             for _ in range(len(self.evt)):
                 self.evt[_].print()
         elif otype == "gnu":
             self.print_gnuplot()
+            if args.output is None:
+                print(self.out)
+            else:
+                ofile = open(args.output[0], "w")
+                ofile.write(self.out)
+                ofile.close()
         elif otype == "summary":
             # ToDo: add own time and "called from"
+            print("ARGS: ", args)
             ed = {}
             for f in range(len(self.evt)):
                 print("File: '%s', %d threads, bigbang = %.7f" % (self.evt[f].name, self.evt[f].nthr, self.evt[f].bigbang))
@@ -188,26 +196,26 @@ class PPPset:
             peff = peff + self.evt[f].nthr + (1 if len(self.evt) > 1 else 0)  # spacing only when we have multiple files
             self.descr = self.evt[f].descr + ("\\n" if len(self.descr) > 0 else "") + self.descr
 
-        print("#!/usr/bin/gnuplot\n$PPPdata << EOD\n")
+        self.out += "#!/usr/bin/gnuplot\n$PPPdata << EOD\n\n"
         i_s = 1
         i_e = 2
         for e in ev:
-            print("# __" + e + "__ '" + ev[e][next(iter(ev[e].keys()))][0][0] + "'")
+            self.out += "# __" + e + "__ '" + ev[e][next(iter(ev[e].keys()))][0][0] + "'\n"
             for p in ev[e]:
                 for t in range(len(ev[e][p])):
                     depth = ev[e][p][t][0].count("/")
                     for _ in range(min(len(ev[e][p][t][i_s]), len(ev[e][p][t][i_e]))):
                         try:
                             if (ev[e][p][t][i_e][_] - ev[e][p][t][i_s][_]) > 0.:
-                                print("0. 0. %.6f %.6f %.6f %.6f" % (ev[e][p][t][i_s][_] - t_bias, ev[e][p][t][i_e][_] - t_bias,
-                                                                     depth + float(p) / peff, depth + float(p + 1) / peff), depth, p)
+                                self.out += "0. 0. %.6f %.6f %.6f %.6f %d %d\n" % (ev[e][p][t][i_s][_] - t_bias, ev[e][p][t][i_e][_] - t_bias,
+                                                                                   depth + float(p) / peff, depth + float(p + 1) / peff, depth, p)
                         except TypeError:
                             sys.stderr.write("Warning: inclomplete event '", e, "' @", p, " #", str(t), ev[e][p][t])
-                    print("")
-            print("")
-        print("EOD\n\n# Suggested gnuplot commands:\nset key outside horizontal")
-        print("set xlabel 'time (walltime seconds)'\nset ylabel 'timer depth + proc/nproc'")
-        print('set title "%s"' % self.descr.replace('_', "\\\\_"))
+                    self.out += "\n"
+            self.out += "\n"
+        self.out += "EOD\n\n# Suggested gnuplot commands:\nset key outside horizontal\n"
+        self.out += "set xlabel 'time (walltime seconds)'\nset ylabel 'timer depth + proc/nproc'\n"
+        self.out += 'set title "%s"\n' % self.descr.replace('_', "\\\\_")
         pline = "plot $PPPdata "
         nocomma = True
         fs = "solid 0.1"
@@ -226,8 +234,8 @@ class PPPset:
                 if npat >= 3:  # pattern #3 does not show borders
                     npat += 1
                 fs = "pat %d" % npat
-        print(pline)
-        print("pause mouse close")
+        self.out += pline + "\n"
+        self.out += "pause mouse close\n"
 
 
 parser = argparse.ArgumentParser(description="Piernik Precise Profiling Presenter")
