@@ -57,7 +57,7 @@ module multigrid_old_soln
 #ifdef HDF5
       procedure :: mark_and_create_attribute  !< Mark some old solutions for restarts and set up necessary attributes
       procedure :: read_os_attribute          !< Read old solutions identifiers, their times, and initialize history
-#endif
+#endif /* HDF5 */
    end type soln_history
 
    ! Namelist parameter

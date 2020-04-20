@@ -154,7 +154,7 @@ contains
 
 #ifdef DEBUG
       call this%print_bnd_list
-#endif
+#endif /* DEBUG */
 
    end subroutine find_neighbors
 
