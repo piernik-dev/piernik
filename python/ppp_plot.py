@@ -107,12 +107,12 @@ class PPP:
         for i in sorted(self.trees):
             self.trees[i].print()
 
-    def _decode_text(self, fname):
+    def _decode_text(self):
         self.descr = ""
         self.nthr = 0
         self.bigbang = None
         try:
-            file = open(fname, 'r')
+            file = open(self.name, 'r')
             for line in file:
                 l = line.split()
                 if self.bigbang is None:
@@ -120,9 +120,9 @@ class PPP:
                 self._add(int(l[0]), line[line.index(l[2]):].strip(), float(l[1]) + self.bigbang * (-1. if float(l[1]) > 0. else 1.))  # proc, label, time
                 if int(l[0]) >= self.nthr:
                     self.nthr = int(l[0]) + 1
-            self.descr = "'%s' (%d thread%s)" % (fname, self.nthr, "s" if self.nthr > 1 else "")
+            self.descr = "'%s' (%d thread%s)" % (self.name, self.nthr, "s" if self.nthr > 1 else "")
         except IOError:
-            sys.stderr.write("Error: cannot open '" + fname + "'\n")
+            sys.stderr.write("Error: cannot open '" + self.name + "'\n")
             exit(4)
 
     def _add(self, proc, label, time):
@@ -142,7 +142,7 @@ class PPPset:
 
         for fname in fnamelist:
             self.evt.append(PPP(fname))
-            self.evt[-1]._decode_text(fname)
+            self.evt[-1]._decode_text()
 
     def print(self, otype):
         self.out = ""
@@ -173,9 +173,10 @@ class PPPset:
                             for t in range(len(e[1])):
                                 ed[e_base][1] += e[2][t] - e[1][t]
                 ml = len(max(ed, key=len))
-                print("# %-*s %20s %10s" % (ml - 2, "label", "CPU time (s)", "occurred"))
+                print("# %-*s %20s %10s" % (ml - 2, "label", "avg. CPU time (s)", "occurred (avg."))
+                print("# %-*s %20s %10s" % (ml - 2, "", "(per thread)", "per thread)"))
                 for e in sorted(ed.items(), key=lambda x: x[1][1], reverse=True):
-                    print("%-*s %20.6f %10d" % (ml, e[0], e[1][1], e[1][0]))
+                    print("%-*s %20.6f %10d%s" % (ml, e[0], e[1][1] / self.evt[f].nthr, e[1][0] / self.evt[f].nthr, "" if e[1][0] % self.evt[f].nthr == 0 else "+"))
             # ToDo: merged summary with data presented side-by-side
 
     def print_gnuplot(self):
