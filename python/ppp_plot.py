@@ -67,10 +67,19 @@ class PPP_Node:
             self.children[i].print(indent=indent + 1)
 
     def get_all_ev(self):
-        evl = [[self.shortpath(), self.start, self.stop]]
+        evl = [[self.shortpath(), self.start, self.stop, self.own_time, self.child_time]]
         for i in self.children:
             evl += self.children[i].get_all_ev()
         return evl
+
+    def calculate_time(self):
+        self.own_time = 0.
+        for i in range(len(self.start)):
+            self.own_time += self.stop[i] - self.start[i]
+        self.child_time = 0.
+        for _ in self.children:
+            self.child_time += self.children[_].calculate_time()
+        return self.own_time
 
 
 class PPP_Tree:
@@ -93,6 +102,10 @@ class PPP_Tree:
         print("Process: " + str(self.thread))
         for i in self.root:
             self.root[i].print()
+
+    def calculate_time(self):
+        for _ in self.root:
+            self.root[_].calculate_time()
 
 
 class PPP:
@@ -130,6 +143,10 @@ class PPP:
             self.trees[proc] = PPP_Tree(proc)
         self.trees[proc]._add(label, time)
 
+    def calculate_time(self):
+        for _ in self.trees:
+            self.trees[_].calculate_time()
+
 
 class PPPset:
     """A collection of event trees from one or many Piernik runs"""
@@ -143,6 +160,7 @@ class PPPset:
         for fname in fnamelist:
             self.evt.append(PPP(fname))
             self.evt[-1]._decode_text()
+            self.evt[-1].calculate_time()
 
     def print(self, otype):
         self.out = ""
@@ -163,20 +181,26 @@ class PPPset:
             for f in range(len(self.evt)):
                 ed = {}
                 print("\n## File: '%s', %d threads, bigbang = %.7f" % (self.evt[f].name, self.evt[f].nthr, self.evt[f].bigbang))
+                total_time = 0.
                 for p in self.evt[f].trees:
                     for r in self.evt[f].trees[p].root:
                         for e in self.evt[f].trees[p].root[r].get_all_ev():
                             e_base = e[0].split('/')[-1]
                             if e_base not in ed:
-                                ed[e_base] = [0, 0.]
+                                ed[e_base] = [0, 0., 0.]  # calls, cumul. own time, cumul. child. time
                             ed[e_base][0] += len(e[1])
-                            for t in range(len(e[1])):
-                                ed[e_base][1] += e[2][t] - e[1][t]
+                            ed[e_base][1] += e[3]
+                            ed[e_base][2] += e[4]
+                            total_time += e[3] - e[4]
                 ml = len(max(ed, key=len))
-                print("# %-*s %20s %10s" % (ml - 2, "label", "avg. CPU time (s)", "occurred (avg."))
-                print("# %-*s %20s %10s" % (ml - 2, "", "(per thread)", "per thread)"))
-                for e in sorted(ed.items(), key=lambda x: x[1][1], reverse=True):
-                    print("%-*s %20.6f %10d%s" % (ml, e[0], e[1][1] / self.evt[f].nthr, e[1][0] / self.evt[f].nthr, "" if e[1][0] % self.evt[f].nthr == 0 else "+"))
+                print("# %-*s %20s %8s %15s \033[97m%20s\033[0m %10s" % (ml - 2, "label", "avg. CPU time (s)", "%time", "avg. occurred", "avg. non-child", "% of total"))
+                print("# %-*s %20s %8s %15s \033[97m%20s\033[0m %10s" % (ml - 2, "", "(per thread)", "in child", "(per thread)", "time (s)", "time"))
+                for e in sorted(ed.items(), key=lambda x: x[1][1] - x[1][2], reverse=True):
+                    print("%-*s %20.6f %8s %15d%s \033[97m%20.6f\033[0m %10.2f" % (ml, e[0], e[1][1] / self.evt[f].nthr,
+                                                                                   ("" if e[1][2] == 0. else "%8.2f" % ((100 * e[1][2] / e[1][1]) if e[1][1] > 0. else 0.)),
+                                                                                   e[1][0] / self.evt[f].nthr,
+                                                                                   "" if e[1][0] % self.evt[f].nthr == 0 else "+",
+                                                                                   (e[1][1] - e[1][2]) / self.evt[f].nthr, 100. * (e[1][1] - e[1][2]) / total_time))
             # ToDo: merged summary with data presented side-by-side
 
     def print_gnuplot(self):
