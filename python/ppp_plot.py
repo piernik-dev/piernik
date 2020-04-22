@@ -144,8 +144,11 @@ class PPP:
         self.trees[proc]._add(label, time)
 
     def calculate_time(self):
+        self.total_time = 0.
         for _ in self.trees:
             self.trees[_].calculate_time()
+            for r in self.trees[_].root:
+                self.total_time += self.trees[_].root[r].own_time
 
 
 class PPPset:
@@ -195,12 +198,19 @@ class PPPset:
                 ml = len(max(ed, key=len))
                 print("# %-*s %20s %8s %15s \033[97m%20s\033[0m %10s" % (ml - 2, "label", "avg. CPU time (s)", "%time", "avg. occurred", "avg. non-child", "% of total"))
                 print("# %-*s %20s %8s %15s \033[97m%20s\033[0m %10s" % (ml - 2, "", "(per thread)", "in child", "(per thread)", "time (s)", "time"))
+                skipped = [0, 0.]
                 for e in sorted(ed.items(), key=lambda x: x[1][1] - x[1][2], reverse=True):
-                    print("%-*s %20.6f %8s %15d%s \033[97m%20.6f\033[0m %10.2f" % (ml, e[0], e[1][1] / self.evt[f].nthr,
-                                                                                   ("" if e[1][2] == 0. else "%8.2f" % ((100 * e[1][2] / e[1][1]) if e[1][1] > 0. else 0.)),
-                                                                                   e[1][0] / self.evt[f].nthr,
-                                                                                   "" if e[1][0] % self.evt[f].nthr == 0 else "+",
-                                                                                   (e[1][1] - e[1][2]) / self.evt[f].nthr, 100. * (e[1][1] - e[1][2]) / total_time))
+                    if (e[1][1] - e[1][2]) / total_time > args.cutsmall[0] / 100.:
+                        print("%-*s %20.6f %8s %15d%s \033[97m%20.6f\033[0m %10.2f" % (ml, e[0], e[1][1] / self.evt[f].nthr,
+                                                                                       ("" if e[1][2] == 0. else "%8.2f" % ((100 * e[1][2] / e[1][1]) if e[1][1] > 0. else 0.)),
+                                                                                       e[1][0] / self.evt[f].nthr,
+                                                                                       "" if e[1][0] % self.evt[f].nthr == 0 else "+",
+                                                                                       (e[1][1] - e[1][2]) / self.evt[f].nthr, 100. * (e[1][1] - e[1][2]) / total_time))
+                    else:
+                        skipped[0] += 1
+                        skipped[1] += (e[1][1] - e[1][2]) / self.evt[f].nthr
+                if skipped[0] > 0:
+                    print("# (skipped %d timers that contributed %.6f seconds of non-child time = %.2f%% of total time)" % (skipped[0], skipped[1], 100. * self.evt[f].nthr * skipped[1] / total_time))
             # ToDo: merged summary with data presented side-by-side
 
     def print_gnuplot(self):
@@ -218,15 +228,35 @@ class PPPset:
                         ev[e_base] = {}
                     if p + peff not in ev[e_base]:
                         ev[e_base][p + peff] = []
-                    ev[e_base][p + peff].append(e)
+                    if e[3] / self.evt[f].nthr > args.cutsmall[0] / 100.:
+                        ev[e_base][p + peff].append(e)
             peff = peff + self.evt[f].nthr + (1 if len(self.evt) > 1 else 0)  # spacing only when we have multiple files
             self.descr = self.evt[f].descr + ("\\n" if len(self.descr) > 0 else "") + self.descr
+
+        ndel = []
+        for e in ev:
+            n = 0
+            for p in ev[e]:
+                n += len(ev[e][p])
+            if n == 0:
+                ndel.append(e)
+        for i in ndel:
+            del(ev[i])
+        if len(ndel) > 0:
+            self.descr += "\\n(omitted %d timers below %g%% threshold)" % (len(ndel), args.cutsmall[0])
 
         self.out += "#!/usr/bin/gnuplot\n$PPPdata << EOD\n\n"
         i_s = 1
         i_e = 2
         for e in ev:
-            self.out += "# __" + e + "__ '" + ev[e][next(iter(ev[e].keys()))][0][0] + "'\n"
+            try:
+                ftname = ev[e][next(iter(ev[e].keys()))][0][0]
+            except IndexError:
+                for p in ev[e]:
+                    if len(ev[e][p]) > 0:
+                        if len(ev[e][p][0][0]) > len(ftname):
+                            ftname = ev[e][p][0][0]
+            self.out += "# __" + e + "__ '" + ftname + "'\n"
             for p in ev[e]:
                 for t in range(len(ev[e][p])):
                     depth = ev[e][p][t][0].count("/")
@@ -242,31 +272,36 @@ class PPPset:
         self.out += "EOD\n\n# Suggested gnuplot commands:\nset key outside horizontal\n"
         self.out += "set xlabel 'time (walltime seconds)'\nset ylabel 'timer depth + proc/nproc'\n"
         self.out += 'set title "%s"\n' % self.descr.replace('_', "\\\\_")
-        pline = "plot $PPPdata "
-        nocomma = True
-        fs = "solid 0.1"
-        i = 0
-        gp_colors = 8
-        for e in ev:
-            ind = e.split("/")[-1]
-            if nocomma:
-                nocomma = False
-            else:
-                pline += ', "" '
-            pline += ' index "__' + ind + '__" with boxxy title "' + ind.replace('_', "\\\\\\_") + '" fs  ' + fs
-            i += 1
-            if i >= gp_colors:  # gnuplot seems to have only gp_colors colors for solid filling
-                npat = int(i / gp_colors)
-                if npat >= 3:  # pattern #3 does not show borders
-                    npat += 1
-                fs = "pat %d" % npat
-        self.out += pline + "\n"
-        self.out += "pause mouse close\n"
-
+        if len(ev) > 0:
+            pline = "plot $PPPdata "
+            nocomma = True
+            fs = "solid 0.1"
+            i = 0
+            gp_colors = 8
+            for e in ev:
+                ind = e.split("/")[-1]
+                if nocomma:
+                    nocomma = False
+                else:
+                    pline += ', "" '
+                pline += ' index "__' + ind + '__" with boxxy title "' + ind.replace('_', "\\\\\\_") + '" fs  ' + fs
+                i += 1
+                if i >= gp_colors:  # gnuplot seems to have only gp_colors colors for solid filling
+                    npat = int(i / gp_colors)
+                    if npat >= 3:  # pattern #3 does not show borders
+                        npat += 1
+                        fs = "pat %d" % npat
+            self.out += pline + "\n"
+            if len(ndel) > 0:
+                self.out += 'print "Timers below threshold:' + " ".join(ndel) + '"\n'
+            self.out += "pause mouse close\n"
+        else:
+            self.out += 'show title; print "No data to plot"'
 
 parser = argparse.ArgumentParser(description="Piernik Precise Profiling Presenter")
 parser.add_argument("filename", nargs='+', help="PPP ascii file(s) to process")
 parser.add_argument("-o", "--output", nargs=1, help="processed output file")
+parser.add_argument("-%", "--cutsmall", nargs=1, default=[.1], type=float, help="skip contributions below CUTSMALL% (default = 1%)")
 
 # parser.add_argument("-e", "--exclude", help="do not show TIMER(s)")  # multiple excudes
 # parser.add_argument("--root", help="show only ROOT and its children")
