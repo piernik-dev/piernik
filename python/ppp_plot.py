@@ -20,7 +20,7 @@ class PPP_Node:
         self.stop = []
         if time is not None:
             self._set_time(time)
-        self.children = {}  # this flattens the tree a bit ut we can recontruct it from timings anyway, if needed
+        self.children = {}  # this flattens the tree a bit but we can recontruct it from timings anyway, if needed
         self.parent = None
 
     def _set_time(self, time):
@@ -53,7 +53,7 @@ class PPP_Node:
             return self.parent  # most likely won't recover properly
 
     def path(self):
-        return (str(self.proc) if self.parent is None else self.parent.path()) + "/" + self.label
+        return str(self.proc) if self.parent is None else self.parent.path() + "/" + self.label
 
     def shortpath(self):
         return "" if self.parent is None else self.parent.shortpath() + "/" + self.label
@@ -89,6 +89,22 @@ class PPP_Node:
             else:
                 self.children[_].apply_exclusions()
 
+    def root_matches(self):
+        if self.label in args.root:
+            return [self]
+        else:
+            match = []
+            for _ in self.children:
+                match += self.children[_].root_matches()
+            return match
+
+    def shift_time(self, dt):
+        for i in range(len(self.start)):
+            self.start[i] -= dt
+            self.stop[i] -= dt
+        for _ in self.children:
+            self.children[_].shift_time(dt)
+
 
 class PPP_Tree:
     """An event tree for one Piernik process"""
@@ -105,6 +121,13 @@ class PPP_Tree:
     def print(self):
         print("Process: " + str(self.thread))
         self.root.print()
+
+    def rebase_root(self):
+        self.newroot = PPP_Node("/")
+        self.newroot.proc = self.thread
+        for r in self.root.root_matches():
+            self.newroot.children[r.parent.path() if r != self.root else "/"] = r
+        self.root = self.newroot
 
 
 class PPP:
@@ -148,6 +171,20 @@ class PPP:
             for p in self.trees:
                 self.trees[p].root.apply_exclusions()
 
+    def rebase_root(self):
+        if args.root is not None:
+            earliest = None
+            for p in self.trees:
+                self.trees[p].rebase_root()
+                for i in self.trees[p].root.children:
+                    if earliest is None:
+                        earliest = self.trees[p].root.children[i].start[0]
+                    else:
+                        earliest = min(earliest, self.trees[p].root.children[i].start[0])
+            if earliest is not None:
+                for p in self.trees:
+                    self.trees[p].root.shift_time(earliest - t_bias)
+
 
 class PPPset:
     """A collection of event trees from one or many Piernik runs"""
@@ -160,6 +197,7 @@ class PPPset:
         for _ in self.run:
             self.run[_]._decode_text()
             self.run[_].apply_exclusions()
+            self.run[_].rebase_root()
             self.run[_].calculate_time()
 
     def print(self, otype):
@@ -189,7 +227,7 @@ class PPPset:
                         ed[e_base][0] += len(e[1])
                         ed[e_base][1] += e[3]
                         ed[e_base][2] += e[4]
-                ml = len(max(ed, key=len))
+                ml = len(max(ed, key=len)) if len(ed) > 0 else 0
                 print("# %-*s %20s %8s %15s \033[97m%20s\033[0m %10s" % (ml - 2, "label", "avg. CPU time (s)", "%time", "avg. occurred", "avg. non-child", "% of total"))
                 print("# %-*s %20s %8s %15s \033[97m%20s\033[0m %10s" % (ml - 2, "", "(per thread)", "in child", "(per thread)", "time (s)", "time"))
                 skipped = [0, 0.]
@@ -198,14 +236,13 @@ class PPPset:
                         print("%-*s %20.6f %8s %15d%s \033[97m%20.6f\033[0m %10.2f" % (ml, e[0], e[1][1] / self.run[f].nthr,
                                                                                        ("" if e[1][2] == 0. else "%8.2f" % ((100 * e[1][2] / e[1][1]) if e[1][1] > 0. else 0.)),
                                                                                        e[1][0] / self.run[f].nthr,
-                                                                                       "" if e[1][0] % self.run[f].nthr == 0 else "+",
+                                                                                       " " if e[1][0] % self.run[f].nthr == 0 else "+",
                                                                                        (e[1][1] - e[1][2]) / self.run[f].nthr, 100. * (e[1][1] - e[1][2]) / self.run[f].total_time))
                     else:
                         skipped[0] += 1
                         skipped[1] += (e[1][1] - e[1][2]) / self.run[f].nthr
                 if skipped[0] > 0:
                     print("# (skipped %d timers that contributed %.6f seconds of non-child time = %.2f%% of total time)" % (skipped[0], skipped[1], 100. * self.run[f].nthr * skipped[1] / self.run[f].total_time))
-            # ToDo: merged summary with data presented side-by-side
 
     def print_gnuplot(self):
         self.descr = ""
@@ -296,7 +333,7 @@ parser.add_argument("filename", nargs='+', help="PPP ascii file(s) to process")
 parser.add_argument("-o", "--output", nargs=1, help="processed output file")
 parser.add_argument("-%", "--cutsmall", nargs=1, default=[.1], type=float, help="skip contributions below CUTSMALL%% (default = .1%%)")
 parser.add_argument("-e", "--exclude", nargs='+', help="do not show EXCLUDEd timer(s)")  # multiple excudes
-# parser.add_argument("-r", "--root", nargs='+', help="show only ROOT and their children")
+parser.add_argument("-r", "--root", nargs='+', help="show only ROOT and their children")
 
 # parser.add_argument("-m", "--maxoutput", nargs=1, default=50000, help="limit output to MAXOUTPUT enries")
 # parser.add_argument("-c", "--check", help="do a formal check only")
