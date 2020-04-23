@@ -83,11 +83,18 @@ class PPP_Node:
         return self.own_time
 
     def apply_exclusions(self):
-        for _ in list(self.children.keys()):
-            if self.children[_].label in args.exclude:
-                del self.children[_]
-            else:
-                self.children[_].apply_exclusions()
+        if args.exclude is not None:
+            for _ in list(self.children.keys()):
+                if self.children[_].label in args.exclude:
+                    del self.children[_]
+
+        if args.maxdepth is not None:
+            for _ in list(self.children.keys()):
+                if self.shortpath().count("/") >= args.maxdepth:
+                    del self.children[_]
+
+        for _ in self.children:
+            self.children[_].apply_exclusions()
 
     def root_matches(self):
         if self.label in args.root:
@@ -167,7 +174,7 @@ class PPP:
             self.total_time += self.trees[_].root.child_time  # root does not have time
 
     def apply_exclusions(self):
-        if args.exclude is not None:
+        if args.exclude is not None or args.maxdepth is not None:
             for p in self.trees:
                 self.trees[p].root.apply_exclusions()
 
@@ -334,10 +341,10 @@ parser.add_argument("-o", "--output", nargs=1, help="processed output file")
 parser.add_argument("-%", "--cutsmall", nargs=1, default=[.1], type=float, help="skip contributions below CUTSMALL%% (default = .1%%)")
 parser.add_argument("-e", "--exclude", nargs='+', help="do not show EXCLUDEd timer(s)")  # multiple excudes
 parser.add_argument("-r", "--root", nargs='+', help="show only ROOT and their children")
+parser.add_argument("-d", "--maxdepth", type=int, help="limit output to MAXDEPTH")
 
 # parser.add_argument("-m", "--maxoutput", nargs=1, default=50000, help="limit output to MAXOUTPUT enries")
 # parser.add_argument("-c", "--check", help="do a formal check only")
-# parser.add_argument("-d", "--maxdepth", help="limit output to MAXDEPTH")
 
 pgroup = parser.add_mutually_exclusive_group()
 pgroup.add_argument("-g", "--gnuplot", action="store_const", dest="otype", const="gnu", default="gnu", help="gnuplot output (default)")
@@ -349,5 +356,3 @@ all_events = PPPset(args.filename)
 all_events.print(args.otype)
 
 # for j  in *.ppprofile.ascii ; do for i in `awk '{print $2}' $j |  sort |  uniq` ; do in=`grep "$i *  -" $j | wc -l` ; out=`grep "$i *  [1-9]" $j | wc -l` ; [ $in != $out ] && echo $j $i $in $out ; done |  column -t ; done
-
-# awk '{print $2}' *.ppprofile.ascii |  sort |  uniq -c |  sort -n
