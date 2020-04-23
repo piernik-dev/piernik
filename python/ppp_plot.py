@@ -228,7 +228,7 @@ class PPPset:
                         ev[e_base] = {}
                     if p + peff not in ev[e_base]:
                         ev[e_base][p + peff] = []
-                    if e[3] / self.evt[f].nthr > args.cutsmall[0] / 100.:
+                    if e[3] > args.cutsmall[0] / 100. * self.evt[f].total_time / self.evt[f].nthr:
                         ev[e_base][p + peff].append(e)
             peff = peff + self.evt[f].nthr + (1 if len(self.evt) > 1 else 0)  # spacing only when we have multiple files
             self.descr = self.evt[f].descr + ("\\n" if len(self.descr) > 0 else "") + self.descr
@@ -243,7 +243,7 @@ class PPPset:
         for i in ndel:
             del(ev[i])
         if len(ndel) > 0:
-            self.descr += "\\n(omitted %d timers below %g%% threshold)" % (len(ndel), args.cutsmall[0])
+            self.descr += "\\n(omitted %d timer%s below %g%% threshold)" % (len(ndel), "" if len(ndel) == 1 else "s", args.cutsmall[0])
 
         self.out += "#!/usr/bin/gnuplot\n$PPPdata << EOD\n\n"
         i_s = 1
@@ -263,8 +263,9 @@ class PPPset:
                     for _ in range(min(len(ev[e][p][t][i_s]), len(ev[e][p][t][i_e]))):
                         try:
                             if (ev[e][p][t][i_e][_] - ev[e][p][t][i_s][_]) > 0.:
-                                self.out += "0. 0. %.6f %.6f %.6f %.6f %d %d\n" % (ev[e][p][t][i_s][_] - t_bias, ev[e][p][t][i_e][_] - t_bias,
-                                                                                   depth + float(p) / peff, depth + float(p + 1) / peff, depth, p)
+                                self.out += "%.6f %.6f %.6f %.6f %.6f %.6f %d %d\n" % (ev[e][p][t][i_s][_] - t_bias, depth,
+                                                                                       ev[e][p][t][i_s][_] - t_bias, ev[e][p][t][i_e][_] - t_bias,
+                                                                                       depth + float(p) / peff, depth + float(p + 1) / peff, depth, p)
                         except TypeError:
                             sys.stderr.write("Warning: inclomplete event '", e, "' @", p, " #", str(t), ev[e][p][t])
                     self.out += "\n"
@@ -293,7 +294,7 @@ class PPPset:
                         fs = "pat %d" % npat
             self.out += pline + "\n"
             if len(ndel) > 0:
-                self.out += 'print "Timers below threshold:' + " ".join(ndel) + '"\n'
+                self.out += 'print "Timers below threshold: ' + " ".join(ndel) + '"\n'
             self.out += "pause mouse close\n"
         else:
             self.out += 'show title; print "No data to plot"'
