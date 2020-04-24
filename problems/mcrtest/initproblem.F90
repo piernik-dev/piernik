@@ -313,9 +313,9 @@ contains
          call piernik_MPI_Allreduce(maxv, pMAX)
          if (master) then
 #ifdef COSM_RAY_ELECTRONS
-            if (icr < flind%cre%nbeg) then
+            if (iarr_crs(icr) < flind%cre%nbeg) then
                write(msg,*) '[initproblem:problem_initial_conditions] icr(nuc)  =',icr,' maxecr(nuc) =',maxv
-            else if (icr < flind%cre%ebeg .and. icr >= flind%cre%nbeg) then
+            else if (iarr_crs(icr) < flind%cre%ebeg .and. iarr_crs(icr) >= flind%cre%nbeg) then
                write(msg,*) '[initproblem:problem_initial_conditions] icr(cre_n)=',icr,' maxncr(cre) =',maxv
             else
                write(msg,*) '[initproblem:problem_initial_conditions] icr(cre_e)=',icr,' maxecr(cre) =',maxv
