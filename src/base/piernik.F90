@@ -47,7 +47,7 @@ program piernik
    use list_of_cg_lists,  only: all_lists
    use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast, cleanup_mpi
    use named_array_list,  only: qna, wna
-   use ppp,               only: cleanup_profiling, ppp_main
+   use ppp,               only: cleanup_profiling, update_profiling, ppp_main
    use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
    use timer,             only: walltime_end
@@ -184,6 +184,7 @@ program piernik
       first_step = .false.
 
       call ppp_main%stop(label)
+      call update_profiling
 
    enddo ! main loop
 

@@ -33,9 +33,9 @@
 !! \details MPI_Wtime-based event log that will be useful for parallel profiling
 !! of the Piernik code.
 !!
-!! General purpose profilers don't know what is important in Piernika and tend to
+!! General purpose profilers don't know what is important in Piernik and tend to
 !! provide a lot of detailed information about irrelevant routines.
-!! This sometimes adds too much overhear from instrumenting the code which can be
+!! This sometimes adds too much overhead from instrumenting the code which can be
 !! misleading. Here, the developer can choose which parts of the code need closer
 !! look.
 !!
@@ -43,6 +43,26 @@
 !! any trees inside Piernik. All the collected data is meant to be used in
 !! postprocessing. The developer can set up several logs, each focused on
 !! different aspect of the code and not interfering with other logs.
+!!
+!! The profiling is turned off by default. One can turn it on by:
+!! * enabling in problem.par or in CLI
+!!     ./piernik -n "&PROFILING use_profiling = T/"
+!!   to get the whole run profiled.
+!! * enabling via user_message_file
+!!      echo ppp > msg
+!!   to enable profiling for just one step, or
+!!      echo ppp 10 > msg
+!!   to enable profiling for 10 steps.
+!! Interacting with PPP via msg file will override the choice for use_profiling
+!! namelist parameter and can be uset to stop profiling and flush the data to the
+!! output file and continue the simulation without interrupting. The profiling may
+!! be later turned on when needed. For example:
+!!    ./piernik -n "&PROFILING use_profiling = T/" &\
+!!        sleep 15 && echo ppp > msg &&\
+!!        sleep 10 && echo ppp 2 > msg &&\
+!!        sleep 1 && echo stop > msg
+!! may give profiling data containing "init_piernik", first few steps, last step and
+!! "finalize" (exact list depends on how long the steps are executed in the actual run).
 !<
 
 module ppp
@@ -52,14 +72,16 @@ module ppp
    implicit none
 
    private
-   public :: eventlist, init_profiling, cleanup_profiling, ppp_main
+   public :: eventlist, init_profiling, cleanup_profiling, update_profiling, ppp_main, umsg_request
 
    ! namelist parametrs
    logical               :: use_profiling  !< control whether to do any PPProfiling or not
    logical               :: profile_hdf5   !< Use HDF5 output when possible, fallback to ASCII
 
-   character(len=cwdlen) :: profile_file  !< file name for the profile data
-   integer :: profile_lun  !< logical unit number for profile file
+   character(len=cwdlen) :: profile_file       !< file name for the profile data
+   integer :: profile_lun                      !< logical unit number for profile file
+   integer, save :: umsg_request = 0           !< turn on profiling for next umsg_request steps (read from msg file)
+   logical, save :: profile_file_cr = .false.  !< .true after we open the profile file for writing
    enum, bind(C)
       enumerator :: TAG_CNT = 1, TAG_ARR_L, TAG_ARR_T
    end enum
@@ -118,7 +140,7 @@ contains
 
    subroutine init_profiling
 
-      use dataio_pub, only: nh, printinfo, warn, die, log_wr, problem_name, run_id, nrestart
+      use dataio_pub, only: nh, warn, log_wr, problem_name, run_id, nrestart
       use mpisetup,   only: lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
@@ -128,7 +150,7 @@ contains
       use_profiling = .false.
       profile_hdf5 = &
 #ifdef HDF5
-           .true.
+           .false. ! ToDo: change to .true. after it gets implemented.
 #else /* !HDF5 */
            .false.
 #endif /* HDF5 */
@@ -167,29 +189,48 @@ contains
 
       if (profile_hdf5) then
          profile_hdf5 = .false.
-         if (master) call warn("[ppprofiling:init_profiling] profile_hdf5 not implemented yet")
+         if (master) call warn("[ppprofiling:init_profiling] profile_hdf5 not implemented yet. Forcing ASCII output.")
       endif
 
-      write(profile_file, '(6a,i3.3,a)') trim(log_wr), '/', trim(problem_name), '_', trim(run_id), '_', nrestart, '.ppprofile'
-
-      if (profile_hdf5) then
-         profile_file = trim(profile_file) // ".h5"
-      else
-         profile_file = trim(profile_file) // ".ascii"
-      endif
-
-      if (use_profiling .and. master) then
-         call printinfo("[ppprofiling:init_profiling] Profile timings will be written to '" // trim(profile_file) // "' file.")
-         if (profile_hdf5) then
-            call die("[ppprofiling:init_profiling] HDF5 profiles not implemented yet")
-         else
-            open(newunit=profile_lun, file=profile_file)
-         endif
-      endif
+      write(profile_file, '(6a,i3.3,a)') trim(log_wr), '/', trim(problem_name), '_', trim(run_id), '_', nrestart, '.ppprofile' // trim(merge(".h5   ", ".ascii", profile_hdf5))
 
       call ppp_main%init("main")
 
    end subroutine init_profiling
+
+!> \brief Turn on and off profiling upon request
+
+   subroutine update_profiling
+
+      use dataio_pub, only: printinfo
+      use global,     only: nstep
+      use mpisetup,   only: master
+
+      implicit none
+
+      integer, save :: turn_off = huge(1)
+
+      if (turn_off <= nstep) then  ! turn off ppp_main profiling
+         call ppp_main%publish
+         if (master) call printinfo("[ppprofiling:update_profiling] Stop PPP")
+         use_profiling = .false.
+         turn_off = huge(1)
+      endif
+
+      if (umsg_request < 1) return
+
+      ! this allows for overriding previous umsg_request
+      ! or to disable profiling enabled in problem.par and flush the data
+      turn_off = nstep + umsg_request
+      umsg_request = 0
+
+      if (.not. use_profiling) then  ! turn on ppp_main profiling
+         use_profiling = .true.
+         call ppp_main%init("main")
+         if (master) call printinfo("[ppprofiling:update_profiling] Start PPP")
+      endif
+
+   end subroutine update_profiling
 
 !> \brief close the profile file
 
@@ -423,6 +464,7 @@ contains
    subroutine publish(this)
 
       use constants,    only: I_ZERO, I_ONE
+      use dataio_pub,   only: die, printinfo
       use memory_usage, only: check_mem_usage
       use mpi,          only: MPI_STATUS_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,     only: proc, master, slave, comm, mpi_err, FIRST, LAST, req, status, inflate_req
@@ -438,6 +480,13 @@ contains
       integer(kind=4), dimension(:,:), pointer :: mpistatus
 
       if (.not. use_profiling) return
+
+      if (master .and. .not. profile_file_cr) then
+         if (profile_hdf5) call die("[ppprofiling:publish] HDF5 profiles not implemented yet")
+         call printinfo("[ppprofiling:publish] Profile timings will be written to '" // trim(profile_file) // "' file.")
+         open(newunit=profile_lun, file=profile_file)
+         profile_file_cr = .true.
+      endif
 
       ! send
       call inflate_req(int(TAG_ARR_T))
@@ -527,9 +576,10 @@ contains
       do i = lbound(ev_label, dim=1), ubound(ev_label, dim=1)
          if (ev_time(i) .equals. 0.) exit
          if (ev_time(i) < 0.) d = d - 1
-         write(profile_lun, '(i5,a,f20.7,2a)') process, " ", ev_time(i), repeat("  ", d) , trim(ev_label(i))
+         write(profile_lun, '(i5,a,f20.7,3a)') process, " ", ev_time(i), " ", repeat("  ", d), trim(ev_label(i))
          if (ev_time(i) > 0.) d = d + 1
       enddo
+      flush(profile_lun)
 
    end subroutine publish_buffers
 

@@ -61,7 +61,7 @@ class PPP_Node:
     def print(self, indent=0):  # need to filter through parent range
         try:
             for _ in range(min(len(self.start), len(self.stop))):
-                print("  " * indent + "'" + self.label + "' %.6f %.6f" % (self.start[_], self.stop[_] - self.start[_]))
+                print("  " * indent + "'" + self.label + "' %.6f %.6f" % (self.start[_] - t_bias, self.stop[_] - self.start[_]))
         except TypeError:
             print("  " * indent + "'" + self.label + "' TypeError: ", self.start, self.stop)
         for i in self.children:

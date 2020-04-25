@@ -579,6 +579,7 @@ contains
 
       use dataio_pub,   only: msg, printinfo, warn
       use mpisetup,     only: master, piernik_MPI_Bcast
+      use ppp,          only: umsg_request
       use timer,        only: walltime_end
 #ifdef HDF5
       use data_hdf5,    only: write_hdf5
@@ -611,6 +612,10 @@ contains
                call write_log
             case ('tsl')
                call write_timeslice
+            case ('ppp')
+               umsg_request = max(1, int(umsg_param))
+               write(msg,'(a,i8,a)') "[dataio:user_msg_handler] enable PPP for ", umsg_request, " step" // trim(merge("s", " ", umsg_request == 1))
+               if (master) call printinfo(msg)
             case ('wend')
                wend = umsg_param
                if (master) tn = walltime_end%time_left(wend)
@@ -648,6 +653,7 @@ contains
                   &"  hdf      - dumps a plotfile",char(10),&
                   &"  log      - update logfile",char(10),&
                   &"  tsl      - write a timeslice",char(10),&
+                  &"  ppp [N]  - start ppp_main profiling for N timesteps (default 1)",char(10),&
                   &"  wleft    - show how much walltime is left",char(10),&
                   &"  wresleft - show how much walltime is left till next restart",char(10),&
                   &"  sleep <number> - wait <number> seconds",char(10),&
