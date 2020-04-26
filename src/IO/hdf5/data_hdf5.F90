@@ -463,6 +463,7 @@ contains
          &                   msg, run_id, problem_name, use_v2_io, last_hdf_time
       use mpisetup,    only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
       use mpisignals,  only: sig
+      use ppp,         only: ppp_main
       use timer,       only: set_timer
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: unmark_oldsoln
@@ -472,7 +473,9 @@ contains
 
       character(len=cwdlen) :: fname
       real                  :: phv
+      character(len=*), parameter :: wrd_label = "IO_write_datafile_v1"
 
+      call ppp_main%start(wrd_label)
       thdf = set_timer(tmr_hdf,.true.)
       nhdf = nhdf + I_ONE
       ! Initialize HDF5 library and Fortran interfaces.
@@ -502,6 +505,7 @@ contains
       endif
       call report_to_master(sig%hdf_written, only_master=.True.)
       call report_string_to_master(fname, only_master=.True.)
+      call ppp_main%stop(wrd_label)
 
    end subroutine h5_write_to_single_file
 
@@ -509,10 +513,14 @@ contains
       use common_hdf5, only: write_to_hdf5_v2, O_OUT
       use gdf,         only: gdf_create_root_group
       use mpisetup,    only: master, piernik_MPI_Barrier
+      use ppp,         only: ppp_main
 
       implicit none
 
       character(len=*), intent(in) :: fname
+      character(len=*), parameter :: wrd_label = "IO_write_datafile_v2"
+
+      call ppp_main%start(wrd_label)
 
       call write_to_hdf5_v2(fname, O_OUT, create_empty_cg_datasets_in_output, write_cg_to_output)
 
@@ -521,6 +529,8 @@ contains
          call gdf_create_root_group(fname, 'dataset_units', create_units_description)
       endif
       call piernik_MPI_Barrier
+
+      call ppp_main%stop(wrd_label)
 
    end subroutine h5_write_to_single_file_v2
 
@@ -537,6 +547,7 @@ contains
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
       use mpisetup,    only: master, FIRST, proc, comm, mpi_err
+      use ppp,         only: ppp_main
 
       implicit none
 
@@ -554,6 +565,9 @@ contains
       type(cg_list_element),           pointer             :: cgl
       real, dimension(:,:,:),          pointer             :: data_dbl ! double precision buffer (internal default, single precision buffer is the plotfile output default, overridable by h5_64bit)
       type(cg_output)                                      :: cg_desc
+      character(len=*), parameter :: wrdc_label = "IO_write_data_v2_cg", wrdc1s_label = "IO_write_data_v2_1cg_(serial)", wrdc1p_label = "IO_write_data_v2_1cg_(parallel)"
+
+      call ppp_main%start(wrdc_label)
 
       call enable_all_hdf_var  ! just in case things have changed meanwhile
 
@@ -569,6 +583,7 @@ contains
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
          do ncg = 1, cg_desc%tot_cg_n
+            call ppp_main%start(wrdc1s_label)
             dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
             call recycle_data(dims, cg_all_n_b, ncg, data_dbl)
 
@@ -598,6 +613,7 @@ contains
                   enddo
                endif
             endif
+            call ppp_main%stop(wrdc1s_label)
          enddo
       else ! perform parallel write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
@@ -606,6 +622,7 @@ contains
             n = 0
             cgl => leaves%first
             do while (associated(cgl))
+               call ppp_main%start(wrdc1p_label)
                n = n + 1
                ncg = cg_desc%offsets(proc) + n
                dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
@@ -622,6 +639,7 @@ contains
                enddo
 
                cgl => cgl%nxt
+               call ppp_main%stop(wrdc1p_label)
             enddo
 
             ! Behold the MAGIC in its purest form!
@@ -678,6 +696,8 @@ contains
       if (allocated(dims)) deallocate(dims)
       if (associated(data_dbl)) deallocate(data_dbl)
       call cg_desc%clean()
+
+      call ppp_main%stop(wrdc_label)
 
       if (.false.) i = size(cg_all_n_o) ! suppress compiler warning
 

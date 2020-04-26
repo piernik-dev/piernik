@@ -132,6 +132,7 @@ contains
       use dataio_pub,       only: die
       use hdf5,             only: HID_T, HSIZE_T
       use named_array_list, only: qna, wna
+      use ppp,              only: ppp_main
 
       implicit none
 
@@ -142,8 +143,10 @@ contains
 
       integer :: i
       integer(HSIZE_T), dimension(:), allocatable :: d_size
+      character(len=*), parameter :: wrce_label = "IO_write_empty_dset"
 
       if (size(cg_n_b) /= size(cg_n_o)) call die("[restart_hdf5_v2:create_empty_cg_datasets_in_restart] size(cg_n_b) /= size(cg_n_o)")
+      call ppp_main%start(wrce_label)
 
       allocate(d_size(size(cg_n_b)))
       if (allocated(qna%lst)) then
@@ -173,6 +176,8 @@ contains
       endif
       deallocate(d_size)
 
+      call ppp_main%stop(wrce_label)
+
    end subroutine create_empty_cg_datasets_in_restart
 
 !> \brief Write all grid containers to the file
@@ -189,6 +194,7 @@ contains
       use mpi,              only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
       use mpisetup,         only: master, FIRST, proc, comm, mpi_err
       use named_array_list, only: qna, wna
+      use ppp,              only: ppp_main
 
       implicit none
 
@@ -213,6 +219,9 @@ contains
       real, target, dimension(0,0,0)                        :: null_r3d
       real, target, dimension(0,0,0,0)                      :: null_r4d
       integer(kind=4), dimension(ndims)                     :: n_b
+      character(len=*), parameter :: wrcg_label = "IO_write_restart_v2_all_cg", wrcg1s_label = "IO_write_restart_v2_1cg_(serial)", wrcg1p_label = "IO_write_restart_v2_1cg_(parallel)"
+
+      call ppp_main%start(wrcg_label)
 
       call qna%get_reslst(qr_lst)
       call wna%get_reslst(wr_lst)
@@ -236,6 +245,8 @@ contains
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
          do ncg = 1, cg_desc%tot_cg_n
+            call ppp_main%start(wrcg1s_label)
+
             if (master) then
                if (.not. can_i_write) call die("[restart_hdf5_v2:write_cg_to_restart] Master can't write")
 
@@ -295,6 +306,7 @@ contains
                   endif
                endif
             endif
+            call ppp_main%stop(wrcg1s_label)
          enddo
       else ! perform parallel write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
@@ -303,6 +315,7 @@ contains
             n = 0
             cgl => leaves%first
             do while (associated(cgl))
+               call ppp_main%start(wrcg1p_label)
                n = n + 1
                ncg = cg_desc%offsets(proc) + n
                cg => cgl%cg
@@ -329,6 +342,7 @@ contains
                   deallocate(dims)
                endif
                cgl => cgl%nxt
+               call ppp_main%stop(wrcg1p_label)
             enddo
 
             ! Parallel HDF calls have to be matched on each process, so we're doing some calls on non-existing data here.
@@ -385,6 +399,8 @@ contains
       ! clean up
       call cg_desc%clean()
       deallocate(qr_lst, wr_lst, dsets)
+
+      call ppp_main%stop(wrcg_label)
 
    contains
 
@@ -509,6 +525,7 @@ contains
       use mass_defect,        only: magic_mass
       use mpisetup,           only: master, piernik_MPI_Barrier
       use overlap,            only: is_overlap
+      use ppp,                only: ppp_main
       use read_attr,          only: read_attribute
       use set_get_attributes, only: get_attr
       use timestep_pub,       only: c_all_old, cfl_c, stepcfl
@@ -565,7 +582,9 @@ contains
       type(cg_essentials), dimension(:), allocatable    :: cg_res
       type(cg_list_element), pointer                    :: cgl
       type(cg_level_connected_t), pointer               :: curl
+      character(len=*), parameter :: rdr_label = "IO_read_restart_v2", rdrc_label = "IO_read_restart_v2_cg"
 
+      call ppp_main%start(rdr_label)
       if (master) call warn("[restart_hdf5_v2:read_restart_hdf5_v2] Experimental implementation")
 
       filename = output_fname(RD, '.res', nres, bcast=.true.)
@@ -793,6 +812,7 @@ contains
          curl => curl%finer
       enddo
 
+      call ppp_main%start(rdrc_label)
       ! On each process determine which parts of the restart cg have to be read and where
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
          my_box(:,LO) = cg_res(ia)%off(:)
@@ -811,6 +831,7 @@ contains
             curl => curl%finer
          enddo
       enddo
+      call ppp_main%stop(rdrc_label)
 
       ! Use leafmap to check if all existing grids were initialized
       curl => base%level
@@ -837,6 +858,7 @@ contains
 
       if (status_v2 /= STAT_OK) nres = nres_old ! let's hope read_restart_hdf5_v1 will fix what could possibly got broken here
       call piernik_MPI_Barrier
+      call ppp_main%stop(rdr_label)
 
    end subroutine read_restart_hdf5_v2
 
