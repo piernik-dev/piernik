@@ -74,7 +74,7 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
-      use constants,        only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n
+      use constants,        only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n, PPP_CR
       use dataio_pub,       only: die
       use domain,           only: dom
       use grid_cont,        only: grid_container
@@ -92,7 +92,7 @@ contains
 
       if (.not. has_cr) return
 
-      call ppp_main%start(awb_label)
+      call ppp_main%start(awb_label, PPP_CR)
 
       call all_cg%internal_boundaries_4d(wna%ind(wcr_n)) ! should be more selective (modified leaves?)
 
@@ -126,7 +126,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call ppp_main%stop(awb_label)
+      call ppp_main%stop(awb_label, PPP_CR)
 
    end subroutine all_wcr_boundaries
 
@@ -141,7 +141,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR
       use dataio_pub,       only: die
       use domain,           only: dom
       use fluidindex,       only: flind
@@ -175,7 +175,7 @@ contains
       if (.not. has_cr) return
       if (.not.dom%has_dir(crdim)) return
 
-      call ppp_main%start(crd_label(crdim))
+      call ppp_main%start(crd_label(crdim), PPP_CR)
 
       if (dom%geometry_type /= GEO_XYZ) call die("[crdiffusion:cr_diff] Unsupported geometry")
 
@@ -260,7 +260,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call ppp_main%stop(crd_label(crdim))
+      call ppp_main%stop(crd_label(crdim), PPP_CR)
 
    end subroutine cr_diff
 

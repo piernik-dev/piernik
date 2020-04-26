@@ -58,7 +58,7 @@ contains
 
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
-      use constants,          only: BND_NEGREF, fft_none
+      use constants,          only: BND_NEGREF, fft_none, PPP_MG
       use multigridvars,      only: nsmool
       use multigrid_Laplace,  only: approximate_solution_relax
       use ppp,                only: ppp_main
@@ -75,9 +75,9 @@ contains
       call curl%check_dirty(src, "approx_soln src-")
 
       if (associated(curl, coarsest%level) .and. curl%fft_type /= fft_none) then
-         call ppp_main%start(as_label // "FFT")
+         call ppp_main%start(as_label // "FFT", PPP_MG)
          call fft_solve_level(curl, src, soln)
-         call ppp_main%stop(as_label // "FFT")
+         call ppp_main%stop(as_label // "FFT", PPP_MG)
       else
          if (associated(curl, coarsest%level)) then
             !> \todo Implement alternative bottom-solvers
@@ -89,9 +89,9 @@ contains
             !> \warning when this is incompatible with V-cycle or other scheme, use direct call to approximate_solution_relax
          endif
 
-         call ppp_main%start(as_label // "relax")
+         call ppp_main%start(as_label // "relax", PPP_MG)
          call approximate_solution_relax(curl, src, soln, nsmoo)
-         call ppp_main%stop(as_label // "relax")
+         call ppp_main%stop(as_label // "relax", PPP_MG)
 
       endif
 

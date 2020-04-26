@@ -44,7 +44,7 @@ contains
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_leaves,             only: leaves
       use cg_list,               only: cg_list_element
-      use constants,             only: I_ONE, pSUM
+      use constants,             only: I_ONE, pSUM, PPP_AMR, PPP_PROB
       use dataio_pub,            only: msg, printinfo
       use mpisetup,              only: master, piernik_MPI_Allreduce
       use ppp,                   only: ppp_main
@@ -62,7 +62,7 @@ contains
       integer, dimension(PROBLEM:URC) :: cnt
       character(len=*), parameter :: scan_ref_label = "scan_for_refinement", u_ref_label = "user_scan_for_refinement", urc_label = "URC_scan_for_refinement"
 
-      call ppp_main%start(scan_ref_label)
+      call ppp_main%start(scan_ref_label, PPP_AMR)
       cnt = 0
       call prepare_ref
 
@@ -72,9 +72,9 @@ contains
 
       ! Call user routine first, so it cannot alter flags set by automatic routines
       if (associated(problem_refine_derefine)) then
-         call ppp_main%start(u_ref_label)
+         call ppp_main%start(u_ref_label, PPP_AMR + PPP_PROB)
          call problem_refine_derefine
-         call ppp_main%stop(u_ref_label)
+         call ppp_main%stop(u_ref_label, PPP_AMR + PPP_PROB)
       endif
 
       if (verbose) then
@@ -83,9 +83,9 @@ contains
       endif
 
       ! Apply all Unified Refinement Criteria (everythinng that works locally, cg-wise)
-      call ppp_main%start(urc_label)
+      call ppp_main%start(urc_label, PPP_AMR)
       call urc_list%all_mark(leaves%first)
-      call ppp_main%stop(urc_label)
+      call ppp_main%stop(urc_label, PPP_AMR)
 
       if (verbose) then
          cnt(URC) = count_ref_flags()
@@ -111,7 +111,7 @@ contains
          call cgl%cg%refinemap2SFC_list
          cgl => cgl%nxt
       enddo
-      call ppp_main%stop(scan_ref_label)
+      call ppp_main%stop(scan_ref_label, PPP_AMR)
 
    contains
 
@@ -212,6 +212,7 @@ contains
 
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_t
+      use constants,          only: PPP_AMR
       use ppp,                only: ppp_main
 
       implicit none
@@ -222,9 +223,9 @@ contains
       curl => base%level
       do while (associated(curl))
          if (associated(curl%finer)) then
-            call ppp_main%start(ppd_label)
+            call ppp_main%start(ppd_label, PPP_AMR)
             call parents_prevent_derefinement_lev(curl)
-            call ppp_main%stop(ppd_label)
+            call ppp_main%stop(ppd_label, PPP_AMR)
          endif
          curl => curl%finer
       enddo
@@ -381,7 +382,8 @@ contains
 
    subroutine update_refinement(act_count, refinement_fixup_only)
 
-      use ppp, only: ppp_main
+      use constants, only: PPP_AMR
+      use ppp,       only: ppp_main
 
       implicit none
 
@@ -390,9 +392,9 @@ contains
 
       character(len=*), parameter :: ref_label = "refinement"
 
-      call ppp_main%start(ref_label)
+      call ppp_main%start(ref_label, PPP_AMR)
       call update_refinement_wrapped(act_count, refinement_fixup_only)
-      call ppp_main%stop(ref_label)
+      call ppp_main%stop(ref_label, PPP_AMR)
 
    end subroutine update_refinement
 
@@ -409,7 +411,7 @@ contains
       use cg_level_connected,    only: cg_level_connected_t
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
-      use constants,             only: pLOR, pLAND, pSUM, tmr_amr
+      use constants,             only: pLOR, pLAND, pSUM, tmr_amr, PPP_AMR, PPP_IO
       use dataio_pub,            only: warn, die
       use global,                only: nstep
       use grid_cont,             only: grid_container
@@ -518,7 +520,7 @@ contains
             curl => curl%coarser
          enddo
 
-         call ppp_main%start(newref_label)
+         call ppp_main%start(newref_label, PPP_AMR)
          curl => finest%level%coarser
          do while (associated(curl) .and. curl%l%id >= base%level%l%id)
 
@@ -550,7 +552,7 @@ contains
 
             curl => curl%coarser
          enddo
-         call ppp_main%stop(newref_label)
+         call ppp_main%stop(newref_label, PPP_AMR)
 
          ! sync structure before trying to fix it
          call leaves%update(" (correcting) ")
@@ -570,7 +572,7 @@ contains
       ! Any excess of refinement will be handled in next call to this routine anyway.
       if (full_update) then
 
-         call ppp_main%start(deref_label)
+         call ppp_main%start(deref_label, PPP_AMR)
          curl => finest%level
          do while (associated(curl) .and. .not. associated(curl, base%level))
             cgl => curl%first
@@ -596,7 +598,7 @@ contains
             call curl%sync_ru
             curl => curl%coarser
          enddo
-         call ppp_main%stop(deref_label)
+         call ppp_main%stop(deref_label, PPP_AMR)
 
          ! sync structure
          call leaves%balance_and_update(" ( derefine ) ")
@@ -608,9 +610,9 @@ contains
 
       call all_bnd
 
-      call ppp_main%start(plot_label)
+      call ppp_main%start(plot_label, PPP_AMR + PPP_IO)
       call urc_list%plot_mark(leaves%first)
-      call ppp_main%stop(plot_label)
+      call ppp_main%stop(plot_label, PPP_AMR + PPP_IO)
 
       !> \todo call the update of cs_i2 and other vital variables if and only if something has changed
       !> \todo add another flag to named_array_list::na_var so the user can also specify fields that need boundary updates on fine/coarse boundaries
@@ -714,7 +716,7 @@ contains
       use cg_list,          only: cg_list_element
 !      use cg_list_global,   only: all_cg
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, ydim, zdim, I_ONE!, I_TWO
+      use constants,        only: xdim, ydim, zdim, PPP_AMR, I_ONE!, I_TWO
       use dataio_pub,       only: die
       use domain,           only: dom
       use ppp,              only: ppp_main
@@ -733,7 +735,7 @@ contains
       end enum
       character(len=*), parameter :: fix_ref_label = "fix_refinement", frp_label = "fix_refinement_wa"
 
-      call ppp_main%start(fix_ref_label)
+      call ppp_main%start(fix_ref_label, PPP_AMR)
       correct = .true.
 
       !> \todo check for excess of refinement levels
@@ -745,7 +747,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call ppp_main%start(frp_label)
+      call ppp_main%start(frp_label, PPP_AMR)
       call finest%level%restrict_to_base_q_1var(qna%wai)
 
 !!$      curl => base%level
@@ -757,7 +759,7 @@ contains
 !!$         curl => curl%finer
 !!$      enddo
       call leaves%leaf_arr3d_boundaries(qna%wai)
-      call ppp_main%stop(frp_label)
+      call ppp_main%stop(frp_label, PPP_AMR)
 
       range = 1
       ! range = min((dom%nb+I_ONE)/I_TWO + all_cg%ord_prolong_nb, dom%nb)
@@ -849,7 +851,7 @@ contains
 
          cgl => cgl%nxt
       enddo
-      call ppp_main%stop(fix_ref_label)
+      call ppp_main%stop(fix_ref_label, PPP_AMR)
 
    end function fix_refinement
 

@@ -128,7 +128,7 @@ contains
    subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, cg_n_o, Z_avail)
 
       use common_hdf5,      only: create_empty_cg_dataset, O_RES
-      use constants,        only: AT_IGNORE, AT_OUT_B, I_ONE
+      use constants,        only: AT_IGNORE, AT_OUT_B, I_ONE, PPP_IO, PPP_CG
       use dataio_pub,       only: die
       use hdf5,             only: HID_T, HSIZE_T
       use named_array_list, only: qna, wna
@@ -146,7 +146,7 @@ contains
       character(len=*), parameter :: wrce_label = "IO_write_empty_dset"
 
       if (size(cg_n_b) /= size(cg_n_o)) call die("[restart_hdf5_v2:create_empty_cg_datasets_in_restart] size(cg_n_b) /= size(cg_n_o)")
-      call ppp_main%start(wrce_label)
+      call ppp_main%start(wrce_label, PPP_IO + PPP_CG)
 
       allocate(d_size(size(cg_n_b)))
       if (allocated(qna%lst)) then
@@ -176,7 +176,7 @@ contains
       endif
       deallocate(d_size)
 
-      call ppp_main%stop(wrce_label)
+      call ppp_main%stop(wrce_label, PPP_IO + PPP_CG)
 
    end subroutine create_empty_cg_datasets_in_restart
 
@@ -187,7 +187,7 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use common_hdf5,      only: get_nth_cg, cg_output
-      use constants,        only: xdim, ydim, zdim, ndims, dsetnamelen, I_ONE
+      use constants,        only: xdim, ydim, zdim, ndims, dsetnamelen, I_ONE, PPP_IO, PPP_CG
       use dataio_pub,       only: die, nproc_io, can_i_write
       use grid_cont,        only: grid_container
       use hdf5,             only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
@@ -221,7 +221,7 @@ contains
       integer(kind=4), dimension(ndims)                     :: n_b
       character(len=*), parameter :: wrcg_label = "IO_write_restart_v2_all_cg", wrcg1s_label = "IO_write_restart_v2_1cg_(serial)", wrcg1p_label = "IO_write_restart_v2_1cg_(parallel)"
 
-      call ppp_main%start(wrcg_label)
+      call ppp_main%start(wrcg_label, PPP_IO)
 
       call qna%get_reslst(qr_lst)
       call wna%get_reslst(wr_lst)
@@ -245,7 +245,7 @@ contains
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
          do ncg = 1, cg_desc%tot_cg_n
-            call ppp_main%start(wrcg1s_label)
+            call ppp_main%start(wrcg1s_label, PPP_IO + PPP_CG)
 
             if (master) then
                if (.not. can_i_write) call die("[restart_hdf5_v2:write_cg_to_restart] Master can't write")
@@ -306,7 +306,7 @@ contains
                   endif
                endif
             endif
-            call ppp_main%stop(wrcg1s_label)
+            call ppp_main%stop(wrcg1s_label, PPP_IO + PPP_CG)
          enddo
       else ! perform parallel write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
@@ -315,7 +315,7 @@ contains
             n = 0
             cgl => leaves%first
             do while (associated(cgl))
-               call ppp_main%start(wrcg1p_label)
+               call ppp_main%start(wrcg1p_label, PPP_IO + PPP_CG)
                n = n + 1
                ncg = cg_desc%offsets(proc) + n
                cg => cgl%cg
@@ -342,7 +342,7 @@ contains
                   deallocate(dims)
                endif
                cgl => cgl%nxt
-               call ppp_main%stop(wrcg1p_label)
+               call ppp_main%stop(wrcg1p_label, PPP_IO + PPP_CG)
             enddo
 
             ! Parallel HDF calls have to be matched on each process, so we're doing some calls on non-existing data here.
@@ -400,7 +400,7 @@ contains
       call cg_desc%clean()
       deallocate(qr_lst, wr_lst, dsets)
 
-      call ppp_main%stop(wrcg_label)
+      call ppp_main%stop(wrcg_label, PPP_IO)
 
    contains
 
@@ -514,7 +514,7 @@ contains
       use common_hdf5,        only: d_gname, dir_pref, n_cg_name, d_size_aname, d_fc_aname, d_edge_apname, d_bnd_apname, &
            &                        cg_size_aname, cg_offset_aname, cg_lev_aname, base_d_gname, cg_cnt_aname, data_gname, &
            &                        output_fname, STAT_OK
-      use constants,          only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, INVALID, RD, LO, HI
+      use constants,          only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, INVALID, RD, LO, HI, PPP_IO
       use dataio_pub,         only: die, warn, printio, msg, last_hdf_time, last_res_time, last_log_time, last_tsl_time, problem_name, res_id, domain_dump, &
            &                        require_problem_IC, piernik_hdf5_version2, nres, nhdf, fix_string
       use dataio_user,        only: user_reg_var_restart, user_attrs_rd
@@ -584,7 +584,7 @@ contains
       type(cg_level_connected_t), pointer               :: curl
       character(len=*), parameter :: rdr_label = "IO_read_restart_v2", rdrc_label = "IO_read_restart_v2_cg"
 
-      call ppp_main%start(rdr_label)
+      call ppp_main%start(rdr_label, PPP_IO)
       if (master) call warn("[restart_hdf5_v2:read_restart_hdf5_v2] Experimental implementation")
 
       filename = output_fname(RD, '.res', nres, bcast=.true.)
@@ -812,7 +812,7 @@ contains
          curl => curl%finer
       enddo
 
-      call ppp_main%start(rdrc_label)
+      call ppp_main%start(rdrc_label, PPP_IO)
       ! On each process determine which parts of the restart cg have to be read and where
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
          my_box(:,LO) = cg_res(ia)%off(:)
@@ -831,7 +831,7 @@ contains
             curl => curl%finer
          enddo
       enddo
-      call ppp_main%stop(rdrc_label)
+      call ppp_main%stop(rdrc_label, PPP_IO)
 
       ! Use leafmap to check if all existing grids were initialized
       curl => base%level
@@ -858,7 +858,7 @@ contains
 
       if (status_v2 /= STAT_OK) nres = nres_old ! let's hope read_restart_hdf5_v1 will fix what could possibly got broken here
       call piernik_MPI_Barrier
-      call ppp_main%stop(rdr_label)
+      call ppp_main%stop(rdr_label, PPP_IO)
 
    end subroutine read_restart_hdf5_v2
 

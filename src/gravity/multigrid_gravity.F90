@@ -667,7 +667,7 @@ contains
    subroutine init_source(i_sg_dens)
 
       use cg_list_global, only: all_cg
-      use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4, zero, dirtyH1
+      use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4, zero, dirtyH1, PPP_GRAV, PPP_MG
       use dataio_pub,     only: die
       use domain,         only: dom
       use cg_list,        only: cg_list_element
@@ -694,7 +694,7 @@ contains
       logical                        :: apply_src_Mcorrection
       character(len=*), parameter :: mgi_label = "grav_MG_init_source"
 
-      call ppp_main%start(mgi_label)
+      call ppp_main%start(mgi_label, PPP_GRAV + PPP_MG)
 
       call all_cg%set_dirty(source, 0.979*dirtyH1)
 
@@ -776,7 +776,7 @@ contains
 
       call leaves%check_dirty(source, "init_src")
 
-      call ppp_main%stop(mgi_label)
+      call ppp_main%stop(mgi_label, PPP_GRAV + PPP_MG)
 
    end subroutine init_source
 
@@ -953,7 +953,7 @@ contains
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
-      use constants,          only: cbuff_len, tmr_mg, dirtyH1
+      use constants,          only: cbuff_len, tmr_mg, dirtyH1, PPP_GRAV, PPP_MG
       use dataio_pub,         only: msg, die, warn, printinfo
       use global,             only: do_ascii_dump
       use mpisetup,           only: master
@@ -979,7 +979,7 @@ contains
       character(len=*), parameter :: mgv_label = "grav_MG_V-cycles", mgc_label = "V-cycle "
       character(len=cbuff_len)    :: label
 
-      call ppp_main%start(mgv_label)
+      call ppp_main%start(mgv_label, PPP_GRAV + PPP_MG)
 
 #ifdef DEBUG
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
@@ -1006,7 +1006,7 @@ contains
          call leaves%set_q_value(solution, 0.)
          if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
          norm_was_zero = .true.
-         call ppp_main%stop(mgv_label)
+         call ppp_main%stop(mgv_label, PPP_GRAV + PPP_MG)
          return
       endif
 
@@ -1044,7 +1044,7 @@ contains
          if (dump_result .and. norm_lhs/norm_rhs <= norm_tol) call all_cg%numbered_ascii_dump(mg_fields, dname)
 
          if (norm_lhs/norm_rhs <= norm_tol) exit
-         call ppp_main%start(mgc_label // adjustl(label))
+         call ppp_main%start(mgc_label // adjustl(label), PPP_GRAV + PPP_MG)
 
          if (v<1) then ! forgive poor convergence in some first V-cycles
             norm_lowest = norm_lhs
@@ -1086,7 +1086,7 @@ contains
          call finest%level%restrict_to_base_q_1var(solution)
 
          if (dump_every_step) call all_cg%numbered_ascii_dump(mg_fields, dname, v)
-         call ppp_main%stop(mgc_label // adjustl(label))
+         call ppp_main%stop(mgc_label // adjustl(label), PPP_GRAV + PPP_MG)
 
       enddo
 
@@ -1101,7 +1101,7 @@ contains
       vstat%norm_final = norm_lhs/norm_rhs
       if (.not. verbose_vcycle) call vstat%brief_v_log
 
-      call ppp_main%stop(mgv_label)
+      call ppp_main%stop(mgv_label, PPP_GRAV + PPP_MG)
 
       call leaves%check_dirty(solution, "final_solution")
 

@@ -860,7 +860,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE, INVALID
+      use constants,        only: xdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE, INVALID, PPP_IO
       use dataio_pub,       only: log_wr, tsl_file, tsl_lun
 #if defined(__INTEL_COMPILER)
       use dataio_pub,       only: io_blocksize, io_buffered, io_buffno
@@ -928,7 +928,7 @@ contains
       integer(kind=4), dimension(ndims, LO:HI) :: ijkse
       character(len=*), parameter :: tsl_label = "write_timeslice"
 
-      call ppp_main%start(tsl_label)
+      call ppp_main%start(tsl_label, PPP_IO)
 
       if (has_ion) then
          cs_iso2 = flind%ion%cs2
@@ -1125,7 +1125,7 @@ contains
          deallocate(tsl_vars)
       endif
 
-      call ppp_main%stop(tsl_label)
+      call ppp_main%stop(tsl_label, PPP_IO)
 
    end subroutine write_timeslice
 
@@ -1456,7 +1456,7 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
-      use constants,          only: idlen, small, MAXL
+      use constants,          only: idlen, small, MAXL, PPP_IO
       use dataio_pub,         only: printinfo
       use fluidindex,         only: flind
       use fluids_pub,         only: has_dst, has_ion, has_neu
@@ -1518,7 +1518,7 @@ contains
       character(len=idlen)                       :: id
       character(len=*), parameter :: log_label = "write_log"
 
-      call ppp_main%start(log_label)
+      call ppp_main%start(log_label, PPP_IO)
 
       id = '' ! suppress compiler warnings if none of the modules requiring the id variable are switched on.
 
@@ -1694,7 +1694,7 @@ contains
 
       if (.not.present(tsl)) call print_memory_usage
 
-      call ppp_main%stop(log_label)
+      call ppp_main%stop(log_label, PPP_IO)
 
    contains
 

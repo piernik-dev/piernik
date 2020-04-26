@@ -370,7 +370,7 @@ contains
       use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
-      use constants,          only: base_level_id, zero, dirtyH1
+      use constants,          only: base_level_id, zero, dirtyH1, PPP_MG, PPP_CR
       use dataio_pub,         only: die
       use func,               only: operator(.notequals.)
       use initcosmicrays,     only: iarr_crs
@@ -383,7 +383,7 @@ contains
       integer, intent(in) :: cr_id !< CR component index
       character(len=*), parameter :: cris_label = "CR:init_source"
 
-      call ppp_main%start(cris_label)
+      call ppp_main%start(cris_label, PPP_MG + PPP_CR)
 
       if (finest%level%l%id /= base_level_id) call die("[multigrid_diffusion:init_source] refinements not implemented yet")
 
@@ -404,7 +404,7 @@ contains
 
       vstat%norm_rhs = leaves%norm_sq(source)
 
-      call ppp_main%stop(cris_label)
+      call ppp_main%stop(cris_label, PPP_MG + PPP_CR)
 
    end subroutine init_source
 
@@ -509,7 +509,7 @@ contains
       use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
-      use constants,          only: base_level_id, zero, tmr_mgd, dirtyH1, cbuff_len
+      use constants,          only: base_level_id, zero, tmr_mgd, dirtyH1, cbuff_len, PPP_MG, PPP_CR
       use dataio_pub,         only: msg, warn, die
       use global,             only: do_ascii_dump
       use func,               only: operator(.notequals.)
@@ -533,7 +533,7 @@ contains
       character(len=*), parameter :: crmgv_label = "CR:MG_V-cycles", crmgc_label = "CR:V-cycle "
       character(len=cbuff_len)    :: label
 
-      call ppp_main%start(crmgv_label)
+      call ppp_main%start(crmgv_label, PPP_MG + PPP_CR)
 
       write(vstat%cprefix,'("C",i1,"-")') cr_id !> \deprecated BEWARE: this is another place with 0 <= cr_id <= 9 limit
       write(dirty_label, '("md_",i1,"_dump")')  cr_id
@@ -574,7 +574,7 @@ contains
          if (dump_every_step) call all_cg%numbered_ascii_dump([ source, solution, defect, correction ], dirty_label, v)
 
          if (norm_lhs/norm_rhs <= norm_tol) exit
-         call ppp_main%start(crmgc_label // adjustl(label))
+         call ppp_main%start(crmgc_label // adjustl(label), PPP_MG + PPP_CR)
 
          if (v>convergence_history) then
             if (product(vstat%factor(v-convergence_history:v)) < barely_greater_than_1) then
@@ -601,7 +601,7 @@ contains
          call finest%level%check_dirty(correction, "c_residual")
          call finest%level%check_dirty(defect, "d_residual")
          call leaves%q_lin_comb( [ ind_val(solution, 1.), ind_val(correction, -1.) ], solution) ! solution := solution - correction
-         call ppp_main%stop(crmgc_label // adjustl(label))
+         call ppp_main%stop(crmgc_label // adjustl(label), PPP_MG + PPP_CR)
       enddo
 
       if (dump_every_step) call all_cg%numbered_ascii_dump([ source, solution, defect, correction ], dirty_label)
@@ -627,7 +627,7 @@ contains
 
       call leaves%qw_copy(solution, wna%fi, iarr_crs(cr_id))
 
-      call ppp_main%stop(crmgv_label)
+      call ppp_main%stop(crmgv_label, PPP_MG + PPP_CR)
 
    end subroutine vcycle_hg
 
@@ -715,7 +715,7 @@ contains
    subroutine residual(curl, src, soln, def, cr_id)
 
       use cg_level_connected, only: cg_level_connected_t
-      use constants,          only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
+      use constants,          only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ, PPP_MG, PPP_CR
       use dataio_pub,         only: die
       use domain,             only: dom
       use cg_list,            only: cg_list_element
@@ -741,7 +741,7 @@ contains
       type(grid_container), pointer  :: cg
       character(len=*), parameter :: crr_label = "CR:residual"
 
-      call ppp_main%start(crr_label)
+      call ppp_main%start(crr_label, PPP_MG + PPP_CR)
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_diffusion:diff_flux] Unsupported geometry")
 
@@ -773,7 +773,7 @@ contains
 
 !      call curl%check_dirty(def, "res def")
 
-     call ppp_main%stop(crr_label)
+     call ppp_main%stop(crr_label, PPP_MG + PPP_CR)
 
    end subroutine residual
 
@@ -790,7 +790,7 @@ contains
 
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
-      use constants,          only: xdim, ydim, zdim, one, half, ndims, LO, GEO_XYZ
+      use constants,          only: xdim, ydim, zdim, one, half, ndims, LO, GEO_XYZ, PPP_MG, PPP_CR
       use dataio_pub,         only: die
       use domain,             only: dom
       use cg_list,            only: cg_list_element
@@ -817,7 +817,7 @@ contains
       type(cg_list_element), pointer  :: cgl
       character(len=*), parameter :: crs_label = "CR:approximate_solution"
 
-      call ppp_main%start(crs_label)
+      call ppp_main%start(crs_label, PPP_MG + PPP_CR)
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_diffusion:diff_flux] Unsupported geometry")
 
@@ -882,7 +882,7 @@ contains
          enddo
       enddo
 
-      call ppp_main%stop(crs_label)
+      call ppp_main%stop(crs_label, PPP_MG + PPP_CR)
 
    end subroutine approximate_solution
 
