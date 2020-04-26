@@ -255,6 +255,8 @@ class PPPset:
         self.descr = ""
         ev = {}
         peff = 0
+        gcnt = 0
+        gomit = 0
         for f in self.run:
             for p in self.run[f].trees:
                 evlist = self.run[f].trees[p].root.get_all_ev()
@@ -284,14 +286,17 @@ class PPPset:
         self.out += "#!/usr/bin/gnuplot\n$PPPdata << EOD\n\n"
         i_s = 1
         i_e = 2
+        ev_cnt = {}
         for e in ev:
-            try:
-                ftname = ev[e][next(iter(ev[e].keys()))][0][0]
-            except IndexError:
-                for p in ev[e]:
-                    if len(ev[e][p]) > 0:
-                        if len(ev[e][p][0][0]) > len(ftname):
-                            ftname = ev[e][p][0][0]
+            ev_cnt[e] = 0
+            for p in ev[e]:
+                for t in range(len(ev[e][p])):
+                    ev_cnt[e] += len(ev[e][p][t][i_s])
+        for e in sorted(ev_cnt, key=lambda x: ev_cnt[x]):  # if we need to skip something due to MAXOUPUT, let it be the most abundant thing
+            ftname = None
+            for p in ev[e]:
+                if ftname is None and len(ev[e][p]) > 0:
+                    ftname = ev[e][p][0][0]
             self.out += "# __" + e + "__ '" + ftname + "'\n"
             for p in ev[e]:
                 for t in range(len(ev[e][p])):
@@ -299,13 +304,19 @@ class PPPset:
                     for _ in range(min(len(ev[e][p][t][i_s]), len(ev[e][p][t][i_e]))):
                         try:
                             if (ev[e][p][t][i_e][_] - ev[e][p][t][i_s][_]) > 0.:
-                                self.out += "%.7f %.7f %.7f %.7f %.7f %.7f %d %d\n" % (ev[e][p][t][i_s][_] - t_bias, depth,
-                                                                                       ev[e][p][t][i_s][_] - t_bias, ev[e][p][t][i_e][_] - t_bias,
-                                                                                       depth + float(p) / peff, depth + float(p + 1) / peff, depth, p)
+                                if gcnt < args.maxoutput[0]:
+                                    self.out += "%.7f %.7f %.7f %.7f %.7f %.7f %d %d\n" % (ev[e][p][t][i_s][_] - t_bias, depth,
+                                                                                           ev[e][p][t][i_s][_] - t_bias, ev[e][p][t][i_e][_] - t_bias,
+                                                                                           depth + float(p) / peff, depth + float(p + 1) / peff, depth, p)
+                                else:
+                                    gomit += 1
+                                gcnt += 1
                         except TypeError:
                             sys.stderr.write("Warning: inclomplete event '", e, "' @", p, " #", str(t), ev[e][p][t])
                     self.out += "\n"
             self.out += "\n"
+        if gomit > 0:
+            self.descr += "\\n(omitted %d entries above maxoutput limit of %d)" % (gomit, args.maxoutput[0])
         self.out += "EOD\n\n# Suggested gnuplot commands:\nset key outside horizontal\n"
         self.out += "set xlabel 'time (walltime seconds)'\nset ylabel 'timer depth + proc/nproc'\n"
         self.out += 'set title "%s"\n' % self.descr.replace('_', "\\\\_")
@@ -357,13 +368,12 @@ same as above but don't filter out timers that are contributing less than 0.1%%:
     ppp_plot.py file.ascii -e Loechner_mark -% 0 | gnuplot
 """)
 parser.add_argument("filename", nargs='+', help="PPP ascii file(s) to process")
-parser.add_argument("-o", "--output", nargs=1, help="processed output file")
+parser.add_argument("-o", "--output", nargs=1, help="processed output file (gnuplot only)")
 parser.add_argument("-%", "--cutsmall", nargs=1, default=[.1], type=float, help="skip contributions below CUTSMALL%% (default = 0.1%%)")
 parser.add_argument("-e", "--exclude", nargs='+', help="do not show EXCLUDEd timer(s)")  # multiple excudes
 parser.add_argument("-r", "--root", nargs='+', help="show only ROOT and their children")
 parser.add_argument("-d", "--maxdepth", type=int, help="limit output to MAXDEPTH")
-
-# parser.add_argument("-m", "--maxoutput", nargs=1, default=50000, help="limit output to MAXOUTPUT enries")
+parser.add_argument("-m", "--maxoutput", nargs=1, default=[50000], type=int, help="limit output to MAXOUTPUT enries (gnuplot only, default = 50000)")
 # parser.add_argument("-c", "--check", help="do a formal check only")
 
 pgroup = parser.add_mutually_exclusive_group()
