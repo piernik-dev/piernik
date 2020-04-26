@@ -63,6 +63,11 @@
 !!        sleep 1 && echo stop > msg
 !! may give profiling data containing "init_piernik", first few steps, last step and
 !! "finalize" (exact list depends on how long the steps are executed in the actual run).
+!!
+!! To exclude some categories of events one can use watch_* parameters.
+!! By default MPI, AMR, debug, single-cg and auxiliary categories are excluded.
+!! If an event is tagged with multiple categories, it will be excluded if any
+!! of them is excluded.
 !<
 
 module ppp
@@ -75,13 +80,26 @@ module ppp
    public :: eventlist, init_profiling, cleanup_profiling, update_profiling, ppp_main, umsg_request
 
    ! namelist parametrs
-   logical               :: use_profiling  !< control whether to do any PPProfiling or not
-   logical               :: profile_hdf5   !< Use HDF5 output when possible, fallback to ASCII
+   logical :: use_profiling    !< control whether to do any PPProfiling or not
+   logical :: profile_hdf5     !< use HDF5 output when possible, fallback to ASCII
+   logical :: watch_io         !< watch timers related to I/O
+   logical :: watch_multigrid  !< watch timers related to multigrid
+   logical :: watch_gravity    !< watch timers related to gravity
+   logical :: watch_cr         !< watch timers related to cosmic rays
+   logical :: watch_particles  !< watch timers related to partiles
+   logical :: watch_MPI        !< watch timers related to communication
+   logical :: watch_AMR        !< watch timers related to refinements
+   logical :: watch_cg         !< watch timers related to single-cg operations
+   logical :: watch_magnetic   !< watch timers related to magnetic field
+   logical :: watch_problem    !< watch timers related to problem
+   logical :: watch_debug      !< watch timers related to debugging
+   logical :: watch_aux        !< watch auxiliary timers
 
    character(len=cwdlen) :: profile_file       !< file name for the profile data
    integer :: profile_lun                      !< logical unit number for profile file
    integer, save :: umsg_request = 0           !< turn on profiling for next umsg_request steps (read from msg file)
    logical, save :: profile_file_cr = .false.  !< .true after we open the profile file for writing
+   integer :: disable_mask                     !< logical mask for disabled events
    enum, bind(C)
       enumerator :: TAG_CNT = 1, TAG_ARR_L, TAG_ARR_T
    end enum
@@ -134,18 +152,35 @@ contains
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>use_profiling  </td><td>.false.  </td><td>logical value  </td><td>\copydoc ppp::use_profiling   </td></tr>
 !! <tr><td>profile_hdf5   </td><td>.true.   </td><td>logical value  </td><td>\copydoc ppp::profile_hdf5    </td></tr>
+!! <tr><td>watch_io       </td><td>.true.   </td><td>logical value  </td><td>\copydoc ppp::watch_io        </td></tr>
+!! <tr><td>watch_multigrid</td><td>.true.   </td><td>logical value  </td><td>\copydoc ppp::watch_multigrid </td></tr>
+!! <tr><td>watch_gravity  </td><td>.true.   </td><td>logical value  </td><td>\copydoc ppp::watch_gravity   </td></tr>
+!! <tr><td>watch_cr       </td><td>.true.   </td><td>logical value  </td><td>\copydoc ppp::watch_cr        </td></tr>
+!! <tr><td>watch_particles</td><td>.true.   </td><td>logical value  </td><td>\copydoc ppp::watch_particles </td></tr>
+!! <tr><td>watch_MPI      </td><td>.false.  </td><td>logical value  </td><td>\copydoc ppp::watch_MPI       </td></tr>
+!! <tr><td>watch_AMR      </td><td>.false.  </td><td>logical value  </td><td>\copydoc ppp::watch_AMR       </td></tr>
+!! <tr><td>watch_cg       </td><td>.false.  </td><td>logical value  </td><td>\copydoc ppp::watch_cg        </td></tr>
+!! <tr><td>watch_magnetic </td><td>.true.   </td><td>logical value  </td><td>\copydoc ppp::watch_magnetic  </td></tr>
+!! <tr><td>watch_problem  </td><td>.true.   </td><td>logical value  </td><td>\copydoc ppp::watch_problem   </td></tr>
+!! <tr><td>watch_debug    </td><td>.false.  </td><td>logical value  </td><td>\copydoc ppp::watch_debug     </td></tr>
+!! <tr><td>watch_aux      </td><td>.false.  </td><td>logical value  </td><td>\copydoc ppp::watch_aux       </td></tr>
 !! </table>
 !! \n \n
 !<
 
    subroutine init_profiling
 
+      use constants,  only: PPP_IO, PPP_MG, PPP_GRAV, PPP_CR, PPP_PART, PPP_MPI, &
+           &                PPP_AMR, PPP_CG, PPP_MAG, PPP_PROB, PPP_DEBUG, PPP_AUX
       use dataio_pub, only: nh, warn, log_wr, problem_name, run_id, nrestart
       use mpisetup,   only: lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
-      namelist /PROFILING/ use_profiling, profile_hdf5
+      namelist /PROFILING/ use_profiling, profile_hdf5, &
+           &               watch_io, watch_multigrid, watch_gravity, watch_cr, &
+           &               watch_particles, watch_MPI, watch_AMR, watch_cg, &
+           &               watch_magnetic, watch_problem, watch_debug, watch_aux
 
       use_profiling = .false.
       profile_hdf5 = &
@@ -155,7 +190,20 @@ contains
            .false.
 #endif /* HDF5 */
 
-     if (master) then
+      watch_io        = .true.
+      watch_multigrid = .true.
+      watch_gravity   = .true.
+      watch_cr        = .true.
+      watch_particles = .true.
+      watch_MPI       = .false.
+      watch_AMR       = .false.
+      watch_cg        = .false.
+      watch_magnetic  = .true.
+      watch_problem   = .true.
+      watch_debug     = .false.
+      watch_aux       = .false.
+
+      if (master) then
 
          if (.not.nh%initialized) call nh%init()
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
@@ -173,8 +221,20 @@ contains
          close(nh%lun)
          call nh%compare_namelist()
 
-         lbuff(1) = use_profiling
-         lbuff(2) = profile_hdf5
+         lbuff(1)  = use_profiling
+         lbuff(2)  = profile_hdf5
+         lbuff(3)  = watch_io
+         lbuff(4)  = watch_multigrid
+         lbuff(5)  = watch_gravity
+         lbuff(6)  = watch_cr
+         lbuff(7)  = watch_particles
+         lbuff(8)  = watch_MPI
+         lbuff(9)  = watch_AMR
+         lbuff(10) = watch_cg
+         lbuff(11) = watch_magnetic
+         lbuff(12) = watch_problem
+         lbuff(13) = watch_debug
+         lbuff(14) = watch_aux
 
       endif
 
@@ -182,10 +242,36 @@ contains
 
       if (slave) then
 
-         use_profiling = lbuff(1)
-         profile_hdf5  = lbuff(2)
+         use_profiling   = lbuff(1)
+         profile_hdf5    = lbuff(2)
+         watch_io        = lbuff(3)
+         watch_multigrid = lbuff(4)
+         watch_gravity   = lbuff(5)
+         watch_cr        = lbuff(6)
+         watch_particles = lbuff(7)
+         watch_MPI       = lbuff(8)
+         watch_AMR       = lbuff(9)
+         watch_cg        = lbuff(10)
+         watch_magnetic  = lbuff(11)
+         watch_problem   = lbuff(12)
+         watch_debug     = lbuff(13)
+         watch_aux       = lbuff(14)
 
       endif
+
+      disable_mask = 0
+      if (.not. watch_io       ) disable_mask = disable_mask + PPP_IO
+      if (.not. watch_multigrid) disable_mask = disable_mask + PPP_MG
+      if (.not. watch_gravity  ) disable_mask = disable_mask + PPP_GRAV
+      if (.not. watch_cr       ) disable_mask = disable_mask + PPP_CR
+      if (.not. watch_particles) disable_mask = disable_mask + PPP_PART
+      if (.not. watch_MPI      ) disable_mask = disable_mask + PPP_MPI
+      if (.not. watch_AMR      ) disable_mask = disable_mask + PPP_AMR
+      if (.not. watch_cg       ) disable_mask = disable_mask + PPP_CG
+      if (.not. watch_magnetic ) disable_mask = disable_mask + PPP_MAG
+      if (.not. watch_problem  ) disable_mask = disable_mask + PPP_PROB
+      if (.not. watch_debug    ) disable_mask = disable_mask + PPP_DEBUG
+      if (.not. watch_aux      ) disable_mask = disable_mask + PPP_AUX
 
       if (profile_hdf5) then
          profile_hdf5 = .false.
@@ -333,18 +419,22 @@ contains
 !! Do not use inside die(), warn(), system_mem_usage() or check_mem_usage()
 !<
 
-   subroutine start(this, label)
+   subroutine start(this, label, mask)
 
       use mpi, only: MPI_Wtime
 
       implicit none
 
-      class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
-      character(len=*), intent(in)    :: label  !< event label
+      class(eventlist),  intent(inout) :: this   !< an object invoking the type-bound procedure
+      character(len=*),  intent(in)    :: label  !< event label
+      integer, optional, intent(in)    :: mask   !< event category, if provided
 
       character(len=cbuff_len) :: l
 
       if (.not. use_profiling) return
+      if (present(mask)) then
+         if (iand(mask, disable_mask) /= 0) return
+      endif
 
       l = label(1:min(cbuff_len, len_trim(label)))
       call this%next_event(event(l, MPI_Wtime()))
@@ -357,18 +447,22 @@ contains
 !! Do not use inside die(), warn(), system_mem_usage() or check_mem_usage()
 !<
 
-   subroutine stop(this, label)
+   subroutine stop(this, label, mask)
 
       use mpi, only: MPI_Wtime
 
       implicit none
 
-      class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
-      character(len=*), intent(in)    :: label  !< event label
+      class(eventlist),  intent(inout) :: this   !< an object invoking the type-bound procedure
+      character(len=*),  intent(in)    :: label  !< event label
+      integer, optional, intent(in)    :: mask   !< event category, if provided, should match the category provided in this%start call
 
       character(len=cbuff_len) :: l
 
       if (.not. use_profiling) return
+      if (present(mask)) then
+         if (iand(mask, disable_mask) /= 0) return
+      endif
 
       l = label(1:min(cbuff_len, len_trim(label)))
       call this%next_event(event(l, -MPI_Wtime()))
@@ -464,7 +558,7 @@ contains
    subroutine publish(this)
 
       use constants,    only: I_ZERO, I_ONE
-      use dataio_pub,   only: die, printinfo
+      use dataio_pub,   only: die, printinfo, msg
       use memory_usage, only: check_mem_usage
       use mpi,          only: MPI_STATUS_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,     only: proc, master, slave, comm, mpi_err, FIRST, LAST, req, status, inflate_req
@@ -482,8 +576,14 @@ contains
       if (.not. use_profiling) return
 
       if (master .and. .not. profile_file_cr) then
+         if (disable_mask /= 0) then
+            write(msg, '(a,b13)')"event disable mask = ", disable_mask
+         else
+            msg = "all events categories are enabled"
+         endif
+
          if (profile_hdf5) call die("[ppprofiling:publish] HDF5 profiles not implemented yet")
-         call printinfo("[ppprofiling:publish] Profile timings will be written to '" // trim(profile_file) // "' file.")
+         call printinfo("[ppprofiling:publish] Profile timings will be written to '" // trim(profile_file) // "' file, " // trim(msg))
          open(newunit=profile_lun, file=profile_file)
          profile_file_cr = .true.
       endif
