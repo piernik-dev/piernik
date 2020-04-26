@@ -211,6 +211,7 @@ class PPPset:
         self.out = ""
         if otype == "tree":
             for _ in self.run:
+                print("")
                 self.run[_].print()
         elif otype == "gnu":
             self.print_gnuplot()
@@ -367,6 +368,7 @@ plot profile without the identified too-often called timer (e.g. "Loechner_mark"
 same as above but don't filter out timers that are contributing less than 0.1%%:
     ppp_plot.py file.ascii -e Loechner_mark -% 0 | gnuplot
 """)
+
 parser.add_argument("filename", nargs='+', help="PPP ascii file(s) to process")
 parser.add_argument("-o", "--output", nargs=1, help="processed output file (gnuplot only)")
 parser.add_argument("-%", "--cutsmall", nargs=1, default=[.1], type=float, help="skip contributions below CUTSMALL%% (default = 0.1%%)")
