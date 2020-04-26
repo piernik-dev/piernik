@@ -299,7 +299,7 @@ class PPPset:
                     for _ in range(min(len(ev[e][p][t][i_s]), len(ev[e][p][t][i_e]))):
                         try:
                             if (ev[e][p][t][i_e][_] - ev[e][p][t][i_s][_]) > 0.:
-                                self.out += "%.6f %.6f %.6f %.6f %.6f %.6f %d %d\n" % (ev[e][p][t][i_s][_] - t_bias, depth,
+                                self.out += "%.7f %.7f %.7f %.7f %.7f %.7f %d %d\n" % (ev[e][p][t][i_s][_] - t_bias, depth,
                                                                                        ev[e][p][t][i_s][_] - t_bias, ev[e][p][t][i_e][_] - t_bias,
                                                                                        depth + float(p) / peff, depth + float(p + 1) / peff, depth, p)
                         except TypeError:
@@ -335,10 +335,30 @@ class PPPset:
         else:
             self.out += 'show title; print "No data to plot"'
 
-parser = argparse.ArgumentParser(description="Piernik Precise Profiling Presenter")
+parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
+                                 description="Piernik Precise Profiling Presenter", epilog="""
+examples:
+
+plot profile of 64th step from file.ascii with gnuplot (hopefully in the interactive mode):
+    ppp_plot.py file.ascii -r 'step 64'| gnuplot
+    ppp_plot.py file.ascii -r 'step 64'-o file.gnu; gnuplot file.gnu
+
+print list of top-lefel timers (steps) present in file.ascii:
+    ppp_plot.py file.ascii -t -d 1
+(the atep names are followed by their time offset and length)
+
+find most time-consuming timers:
+    ppp_plot.py file.ascii -s
+(this also helps to identify most often called timers to be excluded in case of performance problems with gnuplot)
+
+plot profile without the identified too-often called timer (e.g. "Loechner_mark") that makes interactive gnuplot to choke:
+    ppp_plot.py file.ascii -e Loechner_mark | gnuplot
+same as above but don't filter out timers that are contributing less than 0.1%%:
+    ppp_plot.py file.ascii -e Loechner_mark -% 0 | gnuplot
+""")
 parser.add_argument("filename", nargs='+', help="PPP ascii file(s) to process")
 parser.add_argument("-o", "--output", nargs=1, help="processed output file")
-parser.add_argument("-%", "--cutsmall", nargs=1, default=[.1], type=float, help="skip contributions below CUTSMALL%% (default = .1%%)")
+parser.add_argument("-%", "--cutsmall", nargs=1, default=[.1], type=float, help="skip contributions below CUTSMALL%% (default = 0.1%%)")
 parser.add_argument("-e", "--exclude", nargs='+', help="do not show EXCLUDEd timer(s)")  # multiple excudes
 parser.add_argument("-r", "--root", nargs='+', help="show only ROOT and their children")
 parser.add_argument("-d", "--maxdepth", type=int, help="limit output to MAXDEPTH")
