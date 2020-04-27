@@ -99,7 +99,7 @@ module ppp
    integer :: profile_lun                      !< logical unit number for profile file
    integer, save :: umsg_request = 0           !< turn on profiling for next umsg_request steps (read from msg file)
    logical, save :: profile_file_cr = .false.  !< .true after we open the profile file for writing
-   integer :: disable_mask                     !< logical mask for disabled events
+   integer(kind=4) :: disable_mask             !< logical mask for disabled events
    enum, bind(C)
       enumerator :: TAG_CNT = 1, TAG_ARR_L, TAG_ARR_T
    end enum
@@ -427,7 +427,7 @@ contains
 
       class(eventlist),  intent(inout) :: this   !< an object invoking the type-bound procedure
       character(len=*),  intent(in)    :: label  !< event label
-      integer, optional, intent(in)    :: mask   !< event category, if provided
+      integer(kind=4), optional, intent(in) :: mask   !< event category, if provided
 
       character(len=cbuff_len) :: l
 
@@ -455,7 +455,7 @@ contains
 
       class(eventlist),  intent(inout) :: this   !< an object invoking the type-bound procedure
       character(len=*),  intent(in)    :: label  !< event label
-      integer, optional, intent(in)    :: mask   !< event category, if provided, should match the category provided in this%start call
+      integer(kind=4), optional, intent(in) :: mask   !< event category, if provided, should match the category provided in this%start call
 
       character(len=cbuff_len) :: l
 
