@@ -105,12 +105,13 @@ contains
    subroutine multigrid_diff_par
 
       use cg_list_global,   only: all_cg
-      use constants,        only: BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF, xdim, ydim, zdim, GEO_XYZ, half, zero, one, VAR_XFACE, VAR_YFACE, VAR_ZFACE, I_ONE
+      use constants,        only: BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF, xdim, ydim, zdim, GEO_XYZ, half, zero, one, VAR_CENTER, VAR_XFACE, VAR_YFACE, VAR_ZFACE, I_ONE
       use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
       use dataio_pub,       only: die, warn, msg
       use domain,           only: dom
       use fluidindex,       only: flind
       use func,             only: operator(.notequals.)
+      use global,           only: force_cc_mag
       use mpisetup,         only: master, slave, nproc, ibuff, rbuff, lbuff, cbuff, piernik_MPI_Bcast
       use multigridvars,    only: single_base
       use named_array_list, only: qna
@@ -246,9 +247,9 @@ contains
 
       !> \todo consider adding multigrid = .true. to the b-field (re-register it?)
       pia => pos
-      pos = VAR_XFACE ; call all_cg%reg_var(diff_bx_n, multigrid = .true., position = pia)
-      pos = VAR_YFACE ; call all_cg%reg_var(diff_by_n, multigrid = .true., position = pia)
-      pos = VAR_ZFACE ; call all_cg%reg_var(diff_bz_n, multigrid = .true., position = pia)
+      pos = merge(VAR_CENTER, VAR_XFACE, force_cc_mag) ; call all_cg%reg_var(diff_bx_n, multigrid = .true., position = pia)
+      pos = merge(VAR_CENTER, VAR_YFACE, force_cc_mag) ; call all_cg%reg_var(diff_by_n, multigrid = .true., position = pia)
+      pos = merge(VAR_CENTER, VAR_ZFACE, force_cc_mag) ; call all_cg%reg_var(diff_bz_n, multigrid = .true., position = pia)
       idiffb(xdim) = qna%ind(diff_bx_n)
       idiffb(ydim) = qna%ind(diff_by_n)
       idiffb(zdim) = qna%ind(diff_bz_n)
