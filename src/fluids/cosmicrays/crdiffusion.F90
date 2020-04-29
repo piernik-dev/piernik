@@ -56,7 +56,7 @@ contains
       has_cr = (flind%crs%all > 0)
 
       if (has_cr) then
-         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all)
+         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all) !, ord_prolong = 2)  ! Smooth prolongation may help with interpolation from coarse grid to fine boundary
       else
          call warn("[crdiffusion:init_crdiffusion] No CR species to diffuse")
       endif
@@ -134,7 +134,9 @@ contains
 !<
    subroutine cr_diff(crdim)
 
+      use all_boundaries,   only: all_bnd
       use cg_leaves,        only: leaves
+      use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ
       use dataio_pub,       only: die
@@ -174,6 +176,9 @@ contains
       decr(:,:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.dom%has_dir(dim) .and. (dim /= crdim) )
       present_not_crdim = dom%has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
       wcri = wna%ind(wcr_n)
+
+      call finest%level%restrict_to_base ! overkill
+      call all_bnd ! overkill
 
       cgl => leaves%first
       do while (associated(cgl))
