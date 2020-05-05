@@ -519,8 +519,8 @@ contains
       use cg_level_connected, only: cg_level_connected_t, find_level
       use constants,          only: fft_none
       use dataio_pub,         only: die
-      use grid_cont,          only: grid_container
       use func,               only: operator(.notequals.)
+      use grid_cont,          only: grid_container
       use multigridvars,      only: overrelax
 #ifndef NO_FFT
       use constants,          only: fft_rcr, fft_dst, pi, dpi, zero, half, one
@@ -666,19 +666,19 @@ contains
 
    subroutine init_source(i_sg_dens)
 
-      use cg_list_global, only: all_cg
-      use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4, zero, dirtyH1, PPP_GRAV, PPP_MG
-      use dataio_pub,     only: die
-      use domain,         only: dom
-      use cg_list,        only: cg_list_element
-      use cg_leaves,      only: leaves
-      use grid_cont,      only: grid_container
-      use func,           only: operator(.notequals.), operator(.equals.)
-      use multigridvars,  only: source, bnd_periodic, bnd_dirichlet, bnd_givenval, grav_bnd
+      use cg_leaves,         only: leaves
+      use cg_list,           only: cg_list_element
+      use cg_list_global,    only: all_cg
+      use constants,         only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4, zero, dirtyH1, PPP_GRAV, PPP_MG
+      use dataio_pub,        only: die
+      use domain,            only: dom
+      use func,              only: operator(.notequals.), operator(.equals.)
+      use grid_cont,         only: grid_container
+      use multigridvars,     only: source, bnd_periodic, bnd_dirichlet, bnd_givenval, grav_bnd
       use multigrid_Laplace, only: ord_laplacian_outer
-      use ppp,            only: ppp_main
-      use units,          only: fpiG
-      use particle_pub,   only: pset
+      use particle_pub,      only: pset
+      use ppp,               only: ppp_main
+      use units,             only: fpiG
 #ifdef JEANS_PROBLEM
       use problem_pub,    only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
@@ -894,15 +894,15 @@ contains
 
    subroutine poisson_solver(history)
 
-      use cg_level_finest,    only: finest
-      use cg_list_global,     only: all_cg
-      use constants,          only: fft_none, dirtyH1
-      use dataio_pub,         only: printinfo
-      use mpisetup,           only: nproc
+      use cg_level_finest,          only: finest
+      use cg_list_global,           only: all_cg
+      use constants,                only: fft_none, dirtyH1
+      use dataio_pub,               only: printinfo
+      use mpisetup,                 only: nproc
       use multigrid_gravity_helper, only: fft_solve_level
-      use multigrid_old_soln, only: soln_history
-      use multigridvars,      only: grav_bnd, bnd_givenval, stdout, source, solution
-      use pcg,                only: mgpcg, use_CG, use_CG_outer
+      use multigrid_old_soln,       only: soln_history
+      use multigridvars,            only: grav_bnd, bnd_givenval, stdout, source, solution
+      use pcg,                      only: mgpcg, use_CG, use_CG_outer
 
       implicit none
 
@@ -948,20 +948,20 @@ contains
 
    subroutine vcycle_hg
 
-      use cg_leaves,          only: leaves
-      use cg_list_global,     only: all_cg
-      use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_t
-      use cg_level_finest,    only: finest
-      use constants,          only: cbuff_len, tmr_mg, dirtyH1, PPP_GRAV, PPP_MG
-      use dataio_pub,         only: msg, die, warn, printinfo
-      use global,             only: do_ascii_dump
-      use mpisetup,           only: master
-      use multigridvars,      only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts, grav_bnd, bnd_periodic
+      use cg_leaves,                only: leaves
+      use cg_level_coarsest,        only: coarsest
+      use cg_level_connected,       only: cg_level_connected_t
+      use cg_level_finest,          only: finest
+      use cg_list_global,           only: all_cg
+      use constants,                only: cbuff_len, tmr_mg, dirtyH1, PPP_GRAV, PPP_MG
+      use dataio_pub,               only: msg, die, warn, printinfo
+      use global,                   only: do_ascii_dump
+      use mpisetup,                 only: master
+      use multigridvars,            only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts, grav_bnd, bnd_periodic
       use multigrid_gravity_helper, only: approximate_solution
-      use multigrid_Laplace,  only: residual
-      use ppp,                only: ppp_main
-      use timer,              only: set_timer
+      use multigrid_Laplace,        only: residual
+      use ppp,                      only: ppp_main
+      use timer,                    only: set_timer
 
       implicit none
 
