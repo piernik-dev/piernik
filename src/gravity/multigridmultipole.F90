@@ -533,7 +533,6 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
       type(particle), pointer    :: pset
-      integer :: i
       character(len=*), parameter :: p2m_label = "multipole_part2mom"
 
       call ppp_main%start(p2m_label)

@@ -189,7 +189,7 @@ contains
 
       ! The particles don't affect this%rqbin by design.
       ! Current implementation does allow for limited radial resolution of multipole distribution
-      ! also outside the comutational domain.
+      ! also outside the computational domain.
       !
       ! The simulation with significant mass outside that radiuss (or even outside the domain) seems to be
       ! a bit pathological anyway.

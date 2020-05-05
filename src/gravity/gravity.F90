@@ -526,7 +526,6 @@ contains
       use constants,        only: gp_n, gpot_n, hgpot_n
       use named_array_list, only: qna
 #ifdef SELF_GRAV
-      use constants,        only: one, half, sgp_n, sgpm_n
       use constants,        only: one, half, sgp_n, sgpm_n, zero
       use func,             only: operator(.notequals.)
       use global,           only: dt, dtm
