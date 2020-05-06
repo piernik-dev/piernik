@@ -41,7 +41,7 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, init_terms_grav, grav_accel, source_terms_grav, grav_src_exec, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, update_gp
+   public :: init_grav, init_terms_grav, grav_accel, source_terms_grav, grav_src_exec, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, compute_h_gpot, update_gp
    public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x, variable_gp
 
    integer, parameter         :: gp_stat_len   = 9
@@ -413,7 +413,7 @@ contains
 
       if (restarted_sim) then
          if (.not.restart_gp) call grav_pot_3d
-         if (.not.restart_gpot) call sum_potential
+         if (.not.restart_gpot) call compute_h_gpot
       else
          call update_gp
       endif
@@ -450,7 +450,6 @@ contains
 
       call multigrid_solve_grav(iarr_all_sg)
 
-      !> \todo Perhaps it should be called after call sum_potential but that may depend on grav_pot_3d and its potential dependency on selfgravity results
       call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n)) !, nocorners=.true.)
       ! No solvers should requires corner values for the potential. Unfortunately some problems may relay on it indirectly (e.g. streaming_instability).
       !> \todo OPT: identify what relies on corner values of the potential and change it to work without corners. Then enable nocorners in the above call for some speedup.
@@ -468,8 +467,6 @@ contains
 #endif /* SELF_GRAV */
       if (variable_gp) call grav_pot_3d
 
-      call sum_potential
-
    end subroutine source_terms_grav
 
 !> \brief update static potential (gp field) in case of grid changes. Assume multigrid has been called
@@ -480,12 +477,26 @@ contains
 
       if (associated(grav_pot_3d)) then
          call grav_pot_3d
-         call sum_potential
+         call compute_h_gpot
       endif
 
    end subroutine update_gp
 
-   subroutine sum_potential
+!>
+!! \brief Compute estimates of gravitational potential for t + dt/2 and t + dt
+!! by extrapolation from current and previous potential. This is required by
+!! RK2 integration scheme (RK4 can use it too).
+!!
+!! Please note that other high order integration schemes may need estimates for somewhat different time points.
+!!
+!! ToDo: In RK2 it is possible to obtain density estimate for t + dt  from the midpoint:
+!!     u* = 2 u_h - u, which is equivalent to Euler's method
+!! The gravitational potential from u* should offer better gpot and hgpot estimates than extrapolation.
+!! The multigrid should be then called after execution of final RK2 step, but its cost should be
+!! relatively small as we expect that less V-cycles would be required there.
+!<
+
+   subroutine compute_h_gpot
 
       use cg_leaves,        only: leaves
       use constants,        only: gp_n, gpot_n, hgpot_n
@@ -517,7 +528,7 @@ contains
       call leaves%q_copy(qna%ind(gp_n), qna%ind(hgpot_n))
 #endif /* !SELF_GRAV */
 
-   end subroutine sum_potential
+   end subroutine compute_h_gpot
 
    subroutine grav_null(gp, ax, lhn, flatten)
 
