@@ -133,7 +133,13 @@ class PPP_Tree:
         self.newroot = PPP_Node("/")
         self.newroot.proc = self.thread
         for r in self.root.root_matches():
-            self.newroot.children[r.parent.path() if r != self.root else "/"] = r
+            nn = r.parent.path() if r != self.root else "/"
+            newname = nn
+            i = 1
+            while newname in self.newroot.children:  # find some unique label
+                newname = nn + " %d" % i
+                i += 1
+            self.newroot.children[newname] = r
         self.root = self.newroot
 
 
@@ -339,7 +345,7 @@ class PPPset:
                     npat = int(i / gp_colors)
                     if npat >= 3:  # pattern #3 does not show borders
                         npat += 1
-                        fs = "pat %d" % npat
+                    fs = "pat %d" % npat
             self.out += pline + "\n"
             if len(ndel) > 0:
                 self.out += 'print "Timers below threshold: ' + " ".join(ndel) + '"\n'
