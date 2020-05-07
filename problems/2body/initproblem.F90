@@ -172,7 +172,7 @@ contains
 
       real, dimension(ndims,2) :: init_pos_body, init_vel_body
       real, dimension(2)       :: m
-      integer                  :: p
+      integer(kind=4)          :: p
 
       m = [mass1, mass2]
       init_pos_body = 0.0
@@ -197,7 +197,7 @@ contains
 
       implicit none
 
-      integer                :: p
+      integer(kind=4)        :: p
       real, dimension(ndims) :: pos_init, vel_init
 
       pos_init = [2.0, 1.0, 0.0]
@@ -303,7 +303,7 @@ contains
 
       implicit none
 
-      integer                :: i
+      integer(kind=4)        :: i
       real, dimension(ndims) :: pos_init, nrand
       real                   :: r_dom
       logical                :: outsphere
@@ -338,7 +338,7 @@ contains
 
    subroutine read_buildgal
 
-      use constants,      only: ndims
+      use constants,      only: ndims, I_ONE
       use dataio_pub,     only: msg, printio, warn
       use particle_pub,   only: npart
       use particle_utils, only: add_part_in_proper_cg
@@ -346,8 +346,8 @@ contains
 
       implicit none
 
-      integer                           :: i, j
-      integer(kind=4)                   :: nbodies
+      integer                           :: j
+      integer(kind=4)                   :: i, nbodies
       integer, parameter                :: galfile = 1
       real, dimension(:,:), allocatable :: pos, vel
       real, dimension(:),   allocatable :: mass
@@ -379,7 +379,7 @@ contains
 
       i = 0
       do j = 1, nbodies
-         i = i + 1
+         i = i + I_ONE
          if (i > nbodies) exit
 #ifdef VERBOSE
          if (modulo(i, 10000) .eq. 0) then
