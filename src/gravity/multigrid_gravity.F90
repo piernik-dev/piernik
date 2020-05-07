@@ -49,7 +49,7 @@ module multigrid_gravity
    implicit none
 
    private
-   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, unmark_oldsoln, recover_sgpm
+   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, unmark_oldsoln, recover_sgpm, recover_sgp
 #ifdef HDF5
    public :: write_oldsoln_to_restart, read_oldsoln_from_restart
 #endif /* HDF5 */
@@ -81,6 +81,10 @@ module multigrid_gravity
    ! miscellaneous
    type(vcycle_stats) :: vstat                                        !< V-cycle statistics
    logical            :: something_in_particles                       !< A flag indicating that some mass may be hidden in particles wandering outside the computational domain
+
+   enum, bind(C)
+      enumerator :: SGP, SGPM
+   end enum
 
 contains
 
@@ -868,41 +872,88 @@ contains
 
    end subroutine multigrid_solve_grav
 
-!> \brief Recover sgpm field from history
+!> \brief Recover sgp field from history
 
-   function recover_sgpm() result(initialized)
+   logical function recover_sgp()
 
-      use constants,        only: sgpm_n
-      use cg_leaves,        only: leaves
-      use dataio_pub,       only: warn
-      use global,           only: nstep
-      use mpisetup,         only: master
-      use multigridvars,    only: grav_bnd, bnd_isolated
-      use multipole,        only: singlepass
+      use constants,        only: sgp_n
       use named_array_list, only: qna
 
       implicit none
 
+      recover_sgp = recover_sg(qna%ind(sgp_n), SGP)
+
+   end function recover_sgp
+
+!> \brief Recover sgpm field from history
+
+   logical function recover_sgpm()
+
+      use constants,        only: sgpm_n
+      use named_array_list, only: qna
+
+      implicit none
+
+      recover_sgpm = recover_sg(qna%ind(sgpm_n), SGPM)
+
+   end function recover_sgpm
+
+!> \brief Recover a potential field from history
+
+   function recover_sg(ind, how_old) result(initialized)
+
+      use cg_leaves,     only: leaves
+      use constants,     only: INVALID
+      use dataio_pub,    only: warn, die
+      use global,        only: nstep
+      use mpisetup,      only: master
+      use multigridvars, only: grav_bnd, bnd_isolated
+      use multipole,     only: singlepass
+
+      implicit none
+
+      integer(kind=4), intent(in) :: ind
+      integer(kind=4), intent(in) :: how_old
+
       logical :: initialized
+      integer(kind=4) :: i_hist
 
       initialized = .false.
       if (associated(inner%old%latest)) then
-         call leaves%q_copy(inner%old%latest%i_hist, qna%ind(sgpm_n))
+         select case (how_old)
+            case (SGP)
+               i_hist = inner%old%latest%i_hist
+            case (SGPM)
+               i_hist = inner%old%latest%earlier%i_hist
+            case default
+               call die("[multigrid_gravity:recover_sg] such old inner history not implemented yet")
+               i_hist = INVALID
+         end select
+         call leaves%q_copy(i_hist, ind)
          initialized = .true.
          if (grav_bnd == bnd_isolated .and. .not. singlepass) then
             if (associated(outer%old%latest)) then
-               call leaves%q_add(outer%old%latest%i_hist, qna%ind(sgpm_n))
+               select case (how_old)
+                  case (SGP)
+                     i_hist = outer%old%latest%i_hist
+                  case (SGPM)
+                     i_hist = outer%old%latest%earlier%i_hist
+                  case default
+                     call die("[multigrid_gravity:recover_sg] such old outer history not implemented yet")
+                     i_hist = INVALID
+               end select
+               call leaves%q_add(i_hist, ind)
             else
                initialized = .false.
-               if (master) call warn("[multigrid_gravity:recover_sgpm] i-history without o-history available. Ignoring.")
+               if (master) call warn("[multigrid_gravity:recover_sg] i-history without o-history available. Ignoring.")
             endif
          endif
       else
-         if (master .and. nstep > 0) call warn("[multigrid_gravity:recover_sgpm] no i-history available")
+         if (master .and. nstep > 0) call warn("[multigrid_gravity:recover_sg] no i-history available")
       endif
-      call leaves%leaf_arr3d_boundaries(qna%ind(sgpm_n))
+      call leaves%leaf_arr3d_boundaries(ind)
 
-   end function recover_sgpm
+   end function recover_sg
 
 !> \brief Chose the desired poisson solver
 

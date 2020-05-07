@@ -49,7 +49,7 @@ module hydrostatic
    real, allocatable, dimension(:) :: dprofs
    real, allocatable, dimension(:) :: dprof     !< Array used for storing density during calculation of hydrostatic equilibrium
    real                            :: dzs       !< length of the subgrid cell in z-direction
-   integer                         :: nstot     !< total number of subgrid cells in a column through all z-blocks
+   integer(kind=4)                 :: nstot     !< total number of subgrid cells in a column through all z-blocks
    integer                         :: rnsub     !< effective nsub relative to the refinement
    real                            :: dmid      !< density value in a midplane (fixed for hydrostatic_zeq_densmid, overwritten by hydrostatic_zeq_coldens)
    real                            :: hsmin     !< lower position limit

@@ -235,6 +235,7 @@ contains
 #endif /* TWOBODY */
 
 #ifdef GRAV
+      if (restarted_sim) call source_terms_grav
       call init_terms_grav
 #endif /* GRAV */
 

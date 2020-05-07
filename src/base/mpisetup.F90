@@ -39,7 +39,7 @@ module mpisetup
 
    private
    public :: cleanup_mpi, init_mpi, inflate_req, bigbang, &
-        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, mpi_err, procmask, &
+        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, mpi_err, &
         &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi, is_spawned, &
         &    piernik_MPI_Allreduce, piernik_MPI_Barrier, piernik_MPI_Bcast, report_to_master, &
         &    report_string_to_master
@@ -63,8 +63,6 @@ module mpisetup
    !> \warning Because we use one centralized req(:) and status(:,:) arrays, the routines that are using them should not call each other to avoid any interference.
    !! If you want nested non-blocking communication, only one set of MPI transactions may use these arrays.
    !< All other sets of communication should define their own req(:) and status(:,:) arrays
-
-   integer, dimension(:), allocatable :: procmask !< (FIRST:LAST)-sized auxiliary array for searching overlaps, neighbours etc. BEWARE: antiparallel
 
    integer, parameter :: buffer_dim = 200                   !< size of [cilr]buff arrays used to exchange namelist parameters
    character(len=cbuff_len), dimension(buffer_dim) :: cbuff !< buffer for character parameters
@@ -220,9 +218,6 @@ contains
 
       deallocate(host_all, pid_all, cwd_all)
 
-      if (allocated(procmask)) call die("[mpisetup:init_mpi] procmask already allocated")
-      allocate(procmask(FIRST:LAST))
-
    end subroutine init_mpi
 
 !> \brief Set size of req(:) and status(:,:) arrays for non-blocking communication on request.
@@ -292,7 +287,6 @@ contains
 
       implicit none
 
-      if (allocated(procmask)) deallocate(procmask)
       if (allocated(req)) deallocate(req)
       if (allocated(status)) deallocate(status)
 

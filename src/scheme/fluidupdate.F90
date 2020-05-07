@@ -122,7 +122,7 @@ contains
       use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
-      use gravity,             only: source_terms_grav
+      use gravity,             only: source_terms_grav, compute_h_gpot
 #ifdef NBODY
       use particle_solvers,    only: psolver
 #endif /* NBODY */
@@ -147,9 +147,9 @@ contains
       call shear_3sweeps
 #endif /* SHEAR */
 
-#if defined(GRAV)
-      call source_terms_grav
-#endif /* GRAV
+#ifdef GRAV
+      call compute_h_gpot
+#endif /* GRAV */
 
 #if defined(COSM_RAYS) && defined(MULTIGRID)
       if (.not. use_CRsplit) then
@@ -181,9 +181,12 @@ contains
       endif
       call ppp_main%stop(sw3_label)
 
-#if defined(GRAV) && defined(NBODY)
+#if defined(GRAV)
+      call source_terms_grav
+#if defined(NBODY)
       if (associated(psolver)) call psolver(forward)
-#endif /* GRAV && NBODY */
+#endif /* NBODY */
+#endif /* GRAV */
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
       call eglm
