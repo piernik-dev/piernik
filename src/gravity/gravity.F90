@@ -453,6 +453,7 @@ contains
       else
          call multigrid_solve_grav(iarr_all_sg)
       endif
+      frun = .false.
 
       call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n)) !, nocorners=.true.)
       ! No solvers should requires corner values for the potential. Unfortunately some problems may relay on it indirectly (e.g. streaming_instability).
@@ -470,8 +471,6 @@ contains
       call expanded_domain%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n)) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain expanded
 #endif /* SELF_GRAV */
       if (variable_gp) call grav_pot_3d
-
-      frun = .false.
 
    end subroutine source_terms_grav
 
