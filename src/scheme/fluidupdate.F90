@@ -122,7 +122,7 @@ contains
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
       use global,              only: t, dt
-      use gravity,             only: source_terms_grav
+      use gravity,             only: source_terms_grav, compute_h_gpot
       use particle_pub,        only: pset, psolver
 #endif /* GRAV */
 #if defined(COSM_RAYS) && defined(MULTIGRID)
@@ -145,7 +145,7 @@ contains
 #endif /* SHEAR */
 
 #ifdef GRAV
-      call source_terms_grav
+      call compute_h_gpot
 #endif /* GRAV */
 
 #if defined(COSM_RAYS) && defined(MULTIGRID)
@@ -177,6 +177,7 @@ contains
       endif
 
 #ifdef GRAV
+      call source_terms_grav
       if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
 #endif /* GRAV */
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
