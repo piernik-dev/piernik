@@ -426,10 +426,10 @@ contains
       use cg_leaves,         only: leaves
       use cg_list_dataop,    only: expanded_domain
       use constants,         only: sgp_n, sgpm_n
-      use dataio_pub,        only: warn
+      use dataio_pub,        only: warn, die, restarted_sim
       use fluidindex,        only: iarr_all_sg
       use mpisetup,          only: master
-      use multigrid_gravity, only: multigrid_solve_grav, recover_sgpm
+      use multigrid_gravity, only: multigrid_solve_grav, recover_sgpm, recover_sgp
       use named_array_list,  only: qna
 #endif /* SELF_GRAV */
 
@@ -441,14 +441,18 @@ contains
 
       initialized = .true.
       if (frun) then
-         ! try to recover sgpm from old soln
-         initialized = recover_sgpm()
-         frun = .false.
+         initialized = recover_sgpm() ! try to recover sgpm from old soln
       else
          call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
       endif
 
-      call multigrid_solve_grav(iarr_all_sg)
+      if (frun .and. restarted_sim) then
+         if (.not. recover_sgp()) call die("[gravity:source_terms_grav] cannot recover sgp")
+         ! Reproducibility f restarts strongly depends on avaability of multigrid history in the restart file.
+         ! ToDo: simplify the management of various histories of potential.
+      else
+         call multigrid_solve_grav(iarr_all_sg)
+      endif
 
       call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n)) !, nocorners=.true.)
       ! No solvers should requires corner values for the potential. Unfortunately some problems may relay on it indirectly (e.g. streaming_instability).
@@ -466,6 +470,8 @@ contains
       call expanded_domain%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n)) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain expanded
 #endif /* SELF_GRAV */
       if (variable_gp) call grav_pot_3d
+
+      frun = .false.
 
    end subroutine source_terms_grav
 
