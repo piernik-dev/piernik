@@ -210,7 +210,7 @@ contains
       ! Initial conditions are read here from a restart file if possible
 
 #ifdef GRAV
-      call source_terms_grav
+      if (restarted_sim) call source_terms_grav
       call init_terms_grav
 #endif /* GRAV */
 
