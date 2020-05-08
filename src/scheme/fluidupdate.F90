@@ -182,8 +182,9 @@ contains
       call ppp_main%stop(sw3_label)
 
 #if defined(GRAV)
+#if !defined(NBODY)
       call source_terms_grav
-#if defined(NBODY)
+#else /* NBODY */
       if (associated(psolver)) call psolver(forward)
 #endif /* NBODY */
 #endif /* GRAV */
