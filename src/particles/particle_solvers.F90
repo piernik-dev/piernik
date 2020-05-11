@@ -388,13 +388,16 @@ contains
 
             use particle_utils, only: part_leave_cg, is_part_in_cg
             use particle_types, only: particle
+            use ppp,            only: ppp_main
 
             implicit none
 
             real, intent(in)                  :: ddt
 
             type(particle), pointer        :: pset, pset2
+            character(len=*), parameter :: d_label = "part_drift"
 
+            call ppp_main%start(d_label)
             cgl => leaves%first
             do while (associated(cgl))
                pset => cgl%cg%pset%first
@@ -412,6 +415,7 @@ contains
                enddo
                cgl => cgl%nxt
             enddo
+            call ppp_main%stop(d_label)
 
             call part_leave_cg()
 

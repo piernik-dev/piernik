@@ -378,6 +378,7 @@ contains
       use grid_cont,     only: grid_container
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
       use mpisetup,      only: proc, comm, mpi_err, FIRST, LAST
+      use ppp,           only: ppp_main
       use particle_func, only: particle_in_area
       use particle_types, only: particle
 
@@ -393,6 +394,9 @@ contains
       type(grid_container),  pointer     :: cg
       type(particle), pointer            :: pset, pset2
       logical                            :: in, phy, out, phy_out
+      character(len=*), parameter        :: ts_label = "leave_cg"
+
+      call ppp_main%start(ts_label)
 
       nsend = 0
       nrecv = 0
@@ -520,7 +524,9 @@ contains
       deallocate(part_info2)
       deallocate(part_info)
 
-   end subroutine part_leave_cg
+      call ppp_main%stop(ts_label)
+
+    end subroutine part_leave_cg
 
    function collect_single_part_fields(ind, p) result(pinfo)
 

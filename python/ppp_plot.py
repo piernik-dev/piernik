@@ -142,6 +142,9 @@ class PPP:
                     print("")
             print("")
         print("EOD\n\n# Suggested gnuplot commands:\nset key outside horizontal")
+        #print ("se te png size 1920,1080")
+        #print("set output 'tempfile.png'")
+        print("set terminal x11")
         print("set xlabel 'time (walltime seconds)'\nset ylabel 'timer depth + proc/nproc'")
         print('set title "%s"' % self.descr.replace('_', "\\\\_"))
         pline = "plot $PPPdata "
