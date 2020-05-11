@@ -1105,7 +1105,6 @@ contains
                   vel(j, zdim) = a1d(j)
                case ('accx')
                   acc(j, xdim) = a1d(j)
-                  print *, 'acc', acc(j,xdim)
                case ('accy')
                   acc(j, ydim) = a1d(j)
                case ('accz')
