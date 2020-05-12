@@ -413,7 +413,7 @@ contains
          case ("acr1")
             tab(:,:,:) = real(cg%q(qna%ind(aecr1_n))%span(cg%ijkse), kind(tab))
          case ("err1")
-            tab(:,:,:) = cg%q(qna%ind(aecr1_n))%span(cg%ijkse) - cg%u(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            tab(:,:,:) = cg%u(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%q(qna%ind(aecr1_n))%span(cg%ijkse)
          case default
             ierrh = -1
       end select

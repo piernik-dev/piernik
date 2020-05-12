@@ -809,7 +809,7 @@ contains
       call this%dirty_boundaries(ind)
       call this%prolong_bnd_from_coarser(ind, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
       call this%level_3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
-      ! The correctness ot the sequence of calls above may depend on the implementation of internal boundary exchange
+      ! The correctness of the sequence of calls above may depend on the implementation of internal boundary exchange
 
       qna%lst(ind)%ord_prolong = ord_saved
 
