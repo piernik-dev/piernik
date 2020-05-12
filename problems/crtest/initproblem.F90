@@ -50,14 +50,18 @@ contains
 
    subroutine problem_pointers
 
+#ifdef HDF5
       use dataio_user, only: user_vars_hdf5
+#endif /* HDF5 */
       use user_hooks,  only: problem_customize_solution, finalize_problem, late_initial_conditions, problem_domain_update
 
       implicit none
 
       problem_customize_solution => check_norm_wrapper
       finalize_problem           => check_norm
+#ifdef HDF5
       user_vars_hdf5             => crtest_analytic_ecr1
+#endif /* HDF5 */
       late_initial_conditions    => cr_late_init
       problem_domain_update      => cr_dist_to_edge
 
