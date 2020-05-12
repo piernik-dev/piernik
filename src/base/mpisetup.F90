@@ -38,7 +38,7 @@ module mpisetup
    implicit none
 
    private
-   public :: cleanup_mpi, init_mpi, inflate_req, &
+   public :: cleanup_mpi, init_mpi, inflate_req, bigbang, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, mpi_err, &
         &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi, is_spawned, &
         &    piernik_MPI_Allreduce, piernik_MPI_Barrier, piernik_MPI_Bcast, report_to_master, &
@@ -51,6 +51,7 @@ module mpisetup
    integer(kind=4), protected :: intercomm      !< intercommunicator
    integer(kind=4) :: mpi_err                   !< error status
    integer(kind=INT4), parameter :: FIRST = 0   !< the rank of the master process
+   real(kind=8), protected    :: bigbang
 
    logical, protected :: master      !< .True. if proc == FIRST
    logical, protected :: slave       !< .True. if proc != FIRST
@@ -123,7 +124,7 @@ contains
    subroutine init_mpi
 
       use constants,     only: cwdlen, I_ONE
-      use mpi,           only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL
+      use mpi,           only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL, MPI_Wtime
       use dataio_pub,    only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
       use dataio_pub,    only: par_file, lun
       use signalhandler, only: SIGINT, register_sighandler
@@ -145,6 +146,7 @@ contains
       integer :: iproc
 
       call MPI_Init( mpi_err )
+      bigbang = MPI_Wtime()
       comm = MPI_COMM_WORLD
 
 #if defined(__INTEL_COMPILER) || defined(__GFORTRAN__)

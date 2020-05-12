@@ -63,9 +63,13 @@ contains
       use dataio_pub,       only: die
       use global,           only: which_solver
       use fluidupdate_hllc, only: fluid_update_simple
+      use ppp,              only: ppp_main
 
       implicit none
 
+      character(len=*), parameter :: fu_label = "fluid_update"
+
+      call ppp_main%start(fu_label)
       select case (which_solver)
          case (HLLC_SPLIT)
             call fluid_update_simple
@@ -74,6 +78,7 @@ contains
          case default
             call die("[fluidupdate:fluid_update] unknown solver")
       end select
+      call ppp_main%stop(fu_label)
 
    end subroutine fluid_update
 
@@ -118,6 +123,7 @@ contains
       use fargo,               only: make_fargosweep
       use global,              only: skip_sweep, use_fargo
       use hdc,                 only: glmdamping, eglm
+      use ppp,                 only: ppp_main
       use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
@@ -139,6 +145,7 @@ contains
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
       integer(kind=4) :: s
+      character(len=*), parameter :: sw3_label = "sweeps"
 
 #ifdef SHEAR
       call shear_3sweeps
@@ -160,6 +167,7 @@ contains
 
       ! The following block of code may be treated as a 3D (M)HD solver.
       ! Don't put anything inside unless you're sure it should belong to the (M)HD solver.
+      call ppp_main%start(sw3_label)
       if (use_fargo) then
          if (.not.skip_sweep(zdim)) call make_sweep(zdim, forward)
          if (.not.skip_sweep(xdim)) call make_sweep(xdim, forward)
@@ -175,6 +183,7 @@ contains
             enddo
          endif
       endif
+      call ppp_main%stop(sw3_label)
 
 #ifdef GRAV
       call source_terms_grav

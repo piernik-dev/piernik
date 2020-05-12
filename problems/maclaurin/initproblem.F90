@@ -419,13 +419,14 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pi, GEO_XYZ, GEO_RPZ
+      use constants,        only: pi, GEO_XYZ, GEO_RPZ, PPP_PROB
       use dataio_pub,       only: warn, die
       use domain,           only: dom
       use grid_cont,        only: grid_container
       use func,             only: operator(.equals.), operator(.notequals.)
       use mpisetup,         only: master
       use named_array_list, only: qna
+      use ppp,              only: ppp_main
       use units,            only: newtong
 
       implicit none
@@ -436,6 +437,9 @@ contains
       real, parameter                :: small_e = 1e-3
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      character(len=*), parameter :: cmp_label = "compute_maclaurin_potential"
+
+      call ppp_main%start(cmp_label, PPP_PROB)
 
       AA1 = 2./3. ; AA3 = 2./3.
       if (e < 0. .and. master) call warn("[initproblem:compute_maclaurin_potential] e<0. not fully implemented yet!")
@@ -536,6 +540,8 @@ contains
 
          cgl => cgl%nxt
       enddo
+
+      call ppp_main%stop(cmp_label, PPP_PROB)
 
    end subroutine compute_maclaurin_potential
 
