@@ -508,7 +508,7 @@ contains
       position = qna%lst(iv)%position(I_ONE)
       if (present(pos)) position = pos
       if (position /= VAR_CENTER .and. .not. warned) then
-         if (master) call warn("[cg_level_connected:restrict_q_1var] Only cell-centered interpolation scheme is implemented. Exprect inaccurate results for variables that are placed on faces or corners")
+         if (master) call warn("[cg_level_connected:restrict_q_1var] Only cell-centered interpolation scheme is implemented. Expect inaccurate results for variables that are placed on faces or corners")
          warned = .true.
       endif
 
@@ -687,7 +687,7 @@ contains
       position = qna%lst(iv)%position(I_ONE)
       if (present(pos)) position = pos
       if (position /= VAR_CENTER .and. .not. warned) then
-         if (master) call warn("[cg_level_connected:prolong_q_1var] Only cell-centered interpolation scheme is implemented. Exprect inaccurate results for variables that are placed on faces or corners")
+         if (master) call warn("[cg_level_connected:prolong_q_1var] Only cell-centered interpolation scheme is implemented. Expect inaccurate results for variables that are placed on faces or corners")
          warned = .true.
       endif
 
