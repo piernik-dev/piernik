@@ -70,13 +70,18 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_reg_var_restart, user_vars_hdf5
+      use dataio_user, only: user_reg_var_restart
+#ifdef HDF5
+      use dataio_user, only: user_vars_hdf5
+#endif /* HDF5 */
       use user_hooks,  only: problem_refine_derefine
 
       implicit none
 
       user_reg_var_restart    => register_user_var
+#ifdef HDF5
       user_vars_hdf5          => mand_vars
+#endif /* HDF5 */
       problem_refine_derefine => mark_the_set
 
    end subroutine problem_pointers

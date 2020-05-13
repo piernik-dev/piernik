@@ -198,8 +198,9 @@ contains
 
    subroutine internal_boundaries(this, ind, tgt3d, dir, nocorners)
 
-      use constants, only: xdim, zdim, cor_dim
+      use constants, only: xdim, zdim, cor_dim, PPP_AMR
       use domain,    only: dom
+      use ppp,       only: ppp_main
 
       implicit none
 
@@ -210,6 +211,7 @@ contains
       logical,         optional, intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       logical, dimension(xdim:cor_dim) :: dmask
+      character(len=*), parameter :: ibl_label = "internal_boundaries_MPI_local", ibm_label = "internal_boundaries_MPI_merged", ib1_label = "internal_boundaries_MPI_1by1"
 
       dmask(xdim:zdim) = dom%has_dir
       if (present(dir)) then
@@ -220,11 +222,18 @@ contains
       dmask(cor_dim) = .true.
       if (present(nocorners)) dmask(cor_dim) = .not. nocorners
 
+      call ppp_main%start(ibl_label, PPP_AMR)
       call internal_boundaries_local(this, ind, tgt3d, dmask)
+      call ppp_main%stop(ibl_label, PPP_AMR)
+
       if (this%ms%valid) then
+         call ppp_main%start(ibm_label, PPP_AMR)
          call internal_boundaries_MPI_merged(this, ind, tgt3d, dmask)
+         call ppp_main%stop(ibm_label, PPP_AMR)
       else
+         call ppp_main%start(ib1_label, PPP_AMR)
          call internal_boundaries_MPI_1by1(this, ind, tgt3d, dmask)
+         call ppp_main%stop(ib1_label, PPP_AMR)
       endif
 
    end subroutine internal_boundaries
