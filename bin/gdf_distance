@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 sp_key = 'simulation_parameters'
 
@@ -12,97 +12,39 @@ def is_comparable(fname1, fname2):
         h5f1 = h5py.File(fname1, "r")
     except IOError:
         status = False
-        print("IOError: %s (`%s')." % (sys.exc_info()[1], fname1))
+        print("IOError: %s" % sys.exc_info()[1])
+        return status
+
     try:
         h5f2 = h5py.File(fname2, "r")
     except IOError:
         status = False
-        print("IOError: %s (`%s')." % (sys.exc_info()[1], fname2))
-
-    if status is False:
+        print("IOError: %s" % sys.exc_info()[1])
         return status
 
-    # piernik versions
     v_key = 'piernik'
-    try:
-        v1 = h5f1.attrs[v_key][0]
-    except KeyError:
-        status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname1, v_key))
-    try:
-        v2 = h5f2.attrs[v_key][0]
-    except KeyError:
-        status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname2, v_key))
+    ver = {}
 
-    if status is False:
-        return status
-
-    if (int(v1) != int(v2)):
-        status = False
-        print("Cannot compare different major file format revisions (%d and %d)." %
-              (int(v1), int(v2)))
-        return status
-
-    if (int(v1) == 1 or int(v2) == 1):
-        status = False
-        print("Piernik v1 HDF files aren't supported now and perhaps will never be. (%.2f and/or %.2f)." %
-              (v1, v2))
-        return status
-
-    if (v1 != v2):
-        print("Warning: different revisions of Piernik HDF format. Expect troubles.")
-
-    # dimensionality, assume v2 naming conventions
     dim_key = 'dimensionality'
-    try:
-        d1 = h5f1[sp_key].attrs[dim_key][0]
-    except KeyError:
-        status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname1, dim_key))
-    try:
-        d2 = h5f2[sp_key].attrs[dim_key][0]
-    except KeyError:
-        status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname2, dim_key))
+    dim = {}
 
-    if status is False:
-        return status
+    geo_key = 'geometry'  # geo_CART = 0, geo_POLAR = 1
+    geo = {}
 
-    if (d1 != d2):
-        status = False
-        print("Cannot compare files with different dimensionality (%d != %d)." %
-              (d1, d2))
-        return status
-
-    # geometry, assume v2 naming conventions
-    geo_key = 'geometry'
-    # geo_CART = 0
-    # geo_POLAR = 1
-    try:
-        g1 = h5f1[sp_key].attrs[geo_key][0]
-    except KeyError:
-        status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname1, geo_key))
-    try:
-        g2 = h5f2[sp_key].attrs[geo_key][0]
-    except KeyError:
-        status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname2, geo_key))
-
-    if status is False:
-        return status
-
-    if (g1 != g2):
-        status = False
-        print("Cannot compare files with different geometries yet (%d != %d)." %
-              (g1, g2))
-        print("It is an interesting idea for future :-)")
-
-        return status
-
-    # Check for some refinement constraints
     for f in (h5f1, h5f2):
+        # piernik versions
+        ver[f.filename] = f.attrs[v_key][0]
+        if int(ver[f.filename]) != 2:
+            status = False
+            print("Only Piernik v2 HDF (GDF) files are supported, not %g." % ver[f.filename])
+
+        # dimensionality, assume v2 naming conventions
+        dim[f.filename] = f[sp_key].attrs[dim_key][0]
+
+        # geometry, assume v2 naming conventions
+        geo[f.filename] = f[sp_key].attrs[geo_key][0]
+
+        # Check for some refinement constraints
         levl = set(f["grid_level"])
         if 0 not in levl:
             status = False
@@ -119,9 +61,29 @@ def is_comparable(fname1, fname2):
                 print("Only refine factor of %d is supported. Cannot interpret '%s'." % (refine_by, f.filename))
                 return status
 
-    h5f1.close()
-    h5f2.close()
-    return status  # for safety, in case more checks will be added
+    if len(set(map(int, map(float, ver.values())))) > 1:
+        status = False
+        print("Cannot compare different major file format revisions: ", list(ver.values()))
+        return status
+
+    if len(set(ver.values())) > 1:
+        print("Warning: different revisions of Piernik HDF format. Expect troubles.")
+
+    if len(set(dim.values())) > 1:
+        status = False
+        print("Cannot compare files with different dimensionality: ", list(dim.values()))
+        return status
+
+    if len(set(geo.values())) > 1:
+        status = False
+        print("Cannot compare files with different geometries yet: ", list(geo.values()))
+        print("It is an interesting idea for future :-)")
+        return status
+
+    for f in (h5f1, h5f2):
+        f.close()
+
+    return status
 
 
 def compare_domains(h5f1, h5f2):
