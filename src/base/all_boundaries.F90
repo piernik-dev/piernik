@@ -125,7 +125,7 @@ contains
 
       use cg_leaves,        only: leaves
 !!$      use cg_list_global,   only: all_cg
-      use constants,        only: xdim, zdim, psi_n, BND_INVALID
+      use constants,        only: xdim, zdim, psi_n, BND_INVALID, PPP_MAG
       use domain,           only: dom
       use global,           only: psi_bnd
       use named_array_list, only: wna, qna
@@ -136,7 +136,7 @@ contains
       integer(kind=4) :: dir
       character(len=*), parameter :: abm_label = "all_mag_boundaries"
 
-      call ppp_main%start(abm_label)
+      call ppp_main%start(abm_label, PPP_MAG)
 
 !!$      do dir = xdim, zdim
 !!$         if (dom%has_dir(dir)) then
@@ -160,7 +160,7 @@ contains
          endif
       endif
 
-      call ppp_main%stop(abm_label)
+      call ppp_main%stop(abm_label, PPP_MAG)
 
    end subroutine all_mag_boundaries
 #endif /* MAGNETIC */

@@ -608,6 +608,7 @@ contains
 
       use dataio_pub,   only: msg, printinfo, warn
       use mpisetup,     only: master, piernik_MPI_Bcast
+      use ppp,          only: umsg_request
       use timer,        only: walltime_end
 #ifdef HDF5
       use data_hdf5,    only: write_hdf5
@@ -640,6 +641,10 @@ contains
                call write_log
             case ('tsl')
                call write_timeslice
+            case ('ppp')
+               umsg_request = max(1, int(umsg_param))
+               write(msg,'(a,i8,a)') "[dataio:user_msg_handler] enable PPP for ", umsg_request, " step" // trim(merge("s", " ", umsg_request == 1))
+               if (master) call printinfo(msg)
             case ('wend')
                wend = umsg_param
                if (master) tn = walltime_end%time_left(wend)
@@ -677,6 +682,7 @@ contains
                   &"  hdf      - dumps a plotfile",char(10),&
                   &"  log      - update logfile",char(10),&
                   &"  tsl      - write a timeslice",char(10),&
+                  &"  ppp [N]  - start ppp_main profiling for N timesteps (default 1)",char(10),&
                   &"  wleft    - show how much walltime is left",char(10),&
                   &"  wresleft - show how much walltime is left till next restart",char(10),&
                   &"  sleep <number> - wait <number> seconds",char(10),&
@@ -883,7 +889,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE, INVALID
+      use constants,        only: xdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE, INVALID, PPP_IO
       use dataio_pub,       only: log_wr, tsl_file, tsl_lun
 #if defined(__INTEL_COMPILER)
       use dataio_pub,       only: io_blocksize, io_buffered, io_buffno
@@ -954,7 +960,7 @@ contains
       integer(kind=4), dimension(ndims, LO:HI) :: ijkse
       character(len=*), parameter :: tsl_label = "write_timeslice"
 
-      call ppp_main%start(tsl_label)
+      call ppp_main%start(tsl_label, PPP_IO)
 
       if (has_ion) then
          cs_iso2 = flind%ion%cs2
@@ -1157,7 +1163,7 @@ contains
          deallocate(tsl_vars)
       endif
 
-      call ppp_main%stop(tsl_label)
+      call ppp_main%stop(tsl_label, PPP_IO)
 
    end subroutine write_timeslice
 
@@ -1488,7 +1494,7 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
-      use constants,          only: idlen, small, MAXL
+      use constants,          only: idlen, small, MAXL, PPP_IO
       use dataio_pub,         only: printinfo
       use fluidindex,         only: flind
       use fluids_pub,         only: has_dst, has_ion, has_neu
@@ -1553,7 +1559,7 @@ contains
       character(len=idlen)                       :: id
       character(len=*), parameter :: log_label = "write_log"
 
-      call ppp_main%start(log_label)
+      call ppp_main%start(log_label, PPP_IO)
 
       id = '' ! suppress compiler warnings if none of the modules requiring the id variable are switched on.
 
@@ -1733,7 +1739,7 @@ contains
 
       if (.not.present(tsl)) call print_memory_usage
 
-      call ppp_main%stop(log_label)
+      call ppp_main%stop(log_label, PPP_IO)
 
    contains
 

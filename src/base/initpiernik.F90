@@ -46,7 +46,7 @@ contains
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
-      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, INCEPTIVE, tmr_fu, cbuff_len
+      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, INCEPTIVE, tmr_fu, cbuff_len, PPP_PROB
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
       use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
       use decomposition,         only: init_decomposition
@@ -235,6 +235,7 @@ contains
 #endif /* TWOBODY */
 
 #ifdef GRAV
+      if (restarted_sim) call source_terms_grav
       call init_terms_grav
 #endif /* GRAV */
 
@@ -269,9 +270,9 @@ contains
 
          nit = 0
          finished = .false.
-         call ppp_main%start(iter_label // "0")
+         call ppp_main%start(iter_label // "0", PPP_PROB)
          call problem_initial_conditions ! may depend on anything
-         call ppp_main%stop(iter_label // "0")
+         call ppp_main%stop(iter_label // "0", PPP_PROB)
          call init_psi ! initialize the auxiliary field for divergence cleaning when needed
 
          write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
@@ -293,9 +294,9 @@ contains
             call update_refinement(act_count=ac)
             finished = (ac == 0) .or. (nit > level_max + nit_over) ! level_max iterations for creating refinement levels + level_max iterations for derefining excess of blocks
 
-            call ppp_main%start(iter_label // adjustl(label))
+            call ppp_main%start(iter_label // adjustl(label), PPP_PROB)
             call problem_initial_conditions ! reset initial conditions after possible changes of refinement structure
-            call ppp_main%stop(iter_label // adjustl(label))
+            call ppp_main%stop(iter_label // adjustl(label), PPP_PROB)
 
             nit = nit + 1
             write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%l%id,", time elapsed: ",set_timer(tmr_fu)

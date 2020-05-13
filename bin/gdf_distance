@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 sp_key = 'simulation_parameters'
 
@@ -12,98 +12,78 @@ def is_comparable(fname1, fname2):
         h5f1 = h5py.File(fname1, "r")
     except IOError:
         status = False
-        print("IOError: %s (`%s')." % (sys.exc_info()[1], fname1))
+        print("IOError: %s" % sys.exc_info()[1])
+        return status
+
     try:
         h5f2 = h5py.File(fname2, "r")
     except IOError:
         status = False
-        print("IOError: %s (`%s')." % (sys.exc_info()[1], fname2))
-
-    if status is False:
+        print("IOError: %s" % sys.exc_info()[1])
         return status
 
-    # piernik versions
     v_key = 'piernik'
-    try:
-        v1 = h5f1.attrs[v_key][0]
-    except KeyError:
-        status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname1, v_key))
-    try:
-        v2 = h5f2.attrs[v_key][0]
-    except KeyError:
-        status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname2, v_key))
+    ver = {}
 
-    if status is False:
+    dim_key = 'dimensionality'
+    dim = {}
+
+    geo_key = 'geometry'  # geo_CART = 0, geo_POLAR = 1
+    geo = {}
+
+    for f in (h5f1, h5f2):
+        # piernik versions
+        ver[f.filename] = f.attrs[v_key][0]
+        if int(ver[f.filename]) != 2:
+            status = False
+            print("Only Piernik v2 HDF (GDF) files are supported, not %g." % ver[f.filename])
+
+        # dimensionality, assume v2 naming conventions
+        dim[f.filename] = f[sp_key].attrs[dim_key][0]
+
+        # geometry, assume v2 naming conventions
+        geo[f.filename] = f[sp_key].attrs[geo_key][0]
+
+        # Check for some refinement constraints
+        levl = set(f["grid_level"])
+        if 0 not in levl:
+            status = False
+            print("Cannot find base level in '%s'." % f.filename)
+            return status
+        if set(range(max(levl) + 1)) != levl:
+            status = False
+            print("Missing levels in '%s'." % f.filename)
+            return status
+        if len(levl) > 1:
+            refine_by = 2  # the only supported factor
+            if f[sp_key].attrs["refine_by"][0] != refine_by:
+                status = False
+                print("Only refine factor of %d is supported. Cannot interpret '%s'." % (refine_by, f.filename))
+                return status
+
+    if len(set(map(int, map(float, ver.values())))) > 1:
+        status = False
+        print("Cannot compare different major file format revisions: ", list(ver.values()))
         return status
 
-    if (int(v1) != int(v2)):
-        status = False
-        print("Cannot compare different major file format revisions (%d and %d)." %
-              (int(v1), int(v2)))
-        return status
-
-    if (int(v1) == 1 or int(v2) == 1):
-        status = False
-        print("Piernik v1 HDF files aren't supported now and perhaps will never be. (%.2f and/or %.2f)." %
-              (v1, v2))
-        return status
-
-    if (v1 != v2):
+    if len(set(ver.values())) > 1:
         print("Warning: different revisions of Piernik HDF format. Expect troubles.")
 
-    # dimensionality, assume v2 naming conventions
-    dim_key = 'dimensionality'
-    try:
-        d1 = h5f1[sp_key].attrs[dim_key][0]
-    except KeyError:
+    if len(set(dim.values())) > 1:
         status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname1, dim_key))
-    try:
-        d2 = h5f2[sp_key].attrs[dim_key][0]
-    except KeyError:
-        status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname2, dim_key))
-
-    if status is False:
+        print("Cannot compare files with different dimensionality: ", list(dim.values()))
         return status
 
-    if (d1 != d2):
+    if len(set(geo.values())) > 1:
         status = False
-        print("Cannot compare files with different dimensionality (%d != %d)." %
-              (d1, d2))
-        return status
-
-    # geometry, assume v2 naming conventions
-    geo_key = 'geometry'
-    # geo_CART = 0
-    # geo_POLAR = 1
-    try:
-        g1 = h5f1[sp_key].attrs[geo_key][0]
-    except KeyError:
-        status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname1, geo_key))
-    try:
-        g2 = h5f2[sp_key].attrs[geo_key][0]
-    except KeyError:
-        status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname2, geo_key))
-
-    if status is False:
-        return status
-
-    if (g1 != g2):
-        status = False
-        print("Cannot compare files with different geometries yet (%d != %d)." %
-              (g1, g2))
+        print("Cannot compare files with different geometries yet: ", list(geo.values()))
         print("It is an interesting idea for future :-)")
-
         return status
 
-    h5f1.close()
-    h5f2.close()
-    return status  # for safety, in case more checks will be added
+    for f in (h5f1, h5f2):
+        f.close()
+
+    return status
 
 
 def compare_domains(h5f1, h5f2):
@@ -212,15 +192,35 @@ def compare_data(ds1, ds2, f):
     #   1. when one field is proportional to the other but with negative coefficient
     #   epsilon/2 when difference between fields is epsilon
 
-    n1 = numpy.linalg.norm(ds1.covering_grid(0, ds1.domain_left_edge, ds1.domain_dimensions)[f].v)
-    n2 = numpy.linalg.norm(ds2.covering_grid(0, ds2.domain_left_edge, ds2.domain_dimensions)[f].v)
-    nd = numpy.linalg.norm(ds1.covering_grid(0, ds1.domain_left_edge, ds1.domain_dimensions)[f].v -
-                           ds2.covering_grid(0, ds2.domain_left_edge, ds2.domain_dimensions)[f].v)
+    n1 = numpy.linalg.norm(ds1)
+    n2 = numpy.linalg.norm(ds2)
+    nd = numpy.linalg.norm(ds1 - ds2)
 
     if (n1 + n2 != 0.):
         return nd / (n1 + n2)
     else:
         return 0.
+
+
+def collect_dataset(h5f, dset_name):
+    import h5py as h5
+    import numpy as np
+
+    attrs = h5f['domains']['base'].attrs
+    nxd, nyd, nzd = attrs['n_d'][0:3]
+    dset = np.zeros((nxd, nyd, nzd))
+
+    grid = h5f['grid_dimensions']
+    for ig in range(grid.shape[0]):
+        h5g = h5f['data']['grid_' + str(ig).zfill(10)]
+        if h5g.attrs['level'] == 0:
+            off = h5g.attrs['off']
+            ngb = h5g.attrs['n_b']
+            n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
+            ce = n_b + off
+            dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name][:, :, :].swapaxes(0, 2)
+
+    return dset
 
 
 def piernik_gdf_compare(fname1, fname2):
@@ -246,25 +246,7 @@ def piernik_gdf_compare(fname1, fname2):
     # compare datafield lists
     norms["datafield lists"], common_fields = compare_dlists(h5f1, h5f2)
 
-    h5f1.close()
-    h5f2.close()
-
     if (norms["domains"] < 1.):
-        try:
-            import yt
-        except:
-            print("You must make yt available somehow!")
-            exit(30)
-        # For AMR domains it is way easier to make YT do the dirty work
-
-        print("yt.load(`%s')" % fname1)
-        ds1 = yt.load(fname1)
-        print("yt.load(`%s')" % fname2)
-        ds2 = yt.load(fname2)
-
-        if (ds1.index.level_stats['numgrids'][1] != 0 or ds2.index.level_stats['numgrids'][1] != 0):
-            print("Warning: refinement levels are not compared yet.")
-
         # compare AMR coverage (norm of difference of resolution on overlapped part of the domain)
         norms["AMR (not checked)"] = 0.
 
@@ -273,6 +255,8 @@ def piernik_gdf_compare(fname1, fname2):
         if (norms["domains"] == 0 and norms["resolution"] == 0):
             tot_datanorm = 0.
             for f in common_fields:
+                ds1 = collect_dataset(h5f1, f)
+                ds2 = collect_dataset(h5f2, f)
                 norm = compare_data(ds1, ds2, f)
                 norms["datafield `" + f + "'"] = norm
                 tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
@@ -280,6 +264,9 @@ def piernik_gdf_compare(fname1, fname2):
         else:
             print("Comparing domains of different size or resolution is not implemented yet")
             exit(31)
+
+    h5f1.close()
+    h5f2.close()
 
     return norms
 

@@ -63,9 +63,13 @@ contains
       use dataio_pub,       only: die
       use global,           only: which_solver
       use fluidupdate_hllc, only: fluid_update_simple
+      use ppp,              only: ppp_main
 
       implicit none
 
+      character(len=*), parameter :: fu_label = "fluid_update"
+
+      call ppp_main%start(fu_label)
       select case (which_solver)
          case (HLLC_SPLIT)
             call fluid_update_simple
@@ -74,6 +78,7 @@ contains
          case default
             call die("[fluidupdate:fluid_update] unknown solver")
       end select
+      call ppp_main%stop(fu_label)
 
    end subroutine fluid_update
 
@@ -122,7 +127,7 @@ contains
       use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
-      use gravity,             only: source_terms_grav
+      use gravity,             only: source_terms_grav, compute_h_gpot
 #ifdef NBODY
       use particle_solvers,    only: psolver
 #endif /* NBODY */
@@ -147,9 +152,9 @@ contains
       call shear_3sweeps
 #endif /* SHEAR */
 
-#if defined(GRAV)
-      call source_terms_grav
-#endif /* GRAV
+#ifdef GRAV
+      call compute_h_gpot
+#endif /* GRAV */
 
 #if defined(COSM_RAYS) && defined(MULTIGRID)
       if (.not. use_CRsplit) then
@@ -181,9 +186,13 @@ contains
       endif
       call ppp_main%stop(sw3_label)
 
-#if defined(GRAV) && defined(NBODY)
+#if defined(GRAV)
+#if !defined(NBODY)
+      call source_terms_grav
+#else /* NBODY */
       if (associated(psolver)) call psolver(forward)
-#endif /* GRAV && NBODY */
+#endif /* NBODY */
+#endif /* GRAV */
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
       call eglm

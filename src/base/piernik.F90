@@ -42,12 +42,12 @@ program piernik
    use fluidindex,        only: flind
    use fluidupdate,       only: fluid_update
    use func,              only: operator(.equals.)
-   use global,            only: t, nstep, dt, dtm, cfl_violated, print_divB, repeat_step
+   use global,            only: t, nstep, dt, dtm, cfl_violated, print_divB, repeat_step, tstep_attempt
    use initpiernik,       only: init_piernik
    use list_of_cg_lists,  only: all_lists
    use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast, cleanup_mpi
    use named_array_list,  only: qna, wna
-   use ppp,               only: cleanup_profiling, ppp_main
+   use ppp,               only: cleanup_profiling, update_profiling, ppp_main
    use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
    use timer,             only: walltime_end
@@ -71,9 +71,8 @@ program piernik
    logical              :: try_rebalance
 
    ! ppp-related
-   character(len=cbuff_len)    :: label
-   integer(kind=4)             :: nstep_started
-   character(len=*), parameter :: st_label = "steps", fu_label = "fluid_update ", f_label = "finalize"
+   character(len=cbuff_len)    :: label, buf
+   character(len=*), parameter :: f_label = "finalize"
 
    try_rebalance = .false.
    tlast = 0.0
@@ -114,9 +113,16 @@ program piernik
    call print_progress(nstep)
    if (print_divB > 0) call print_divB_norm
 
-   nstep_started = nstep - I_ONE
-   call ppp_main%start(st_label)
    do while (t < tend .and. nstep < nend .and. .not.(end_sim) .or. (cfl_violated .and. repeat_step)) ! main loop
+
+      write(buf, '(i10)') nstep
+      label = "step " // adjustl(trim(buf))
+      if (tstep_attempt /= 0) then
+         write(buf, '(i3)') tstep_attempt
+         label = "repeated_" // trim(label) // "." // adjustl(trim(buf))
+      endif
+      call ppp_main%start(label)
+
       dump(:) = .false.
       if (associated(problem_domain_update)) then
          call problem_domain_update
@@ -139,16 +145,8 @@ program piernik
 
          tlast = t
       endif
-      if (nstep > nstep_started) then
-         write(label, '(i8)') nstep
-         call ppp_main%start(fu_label // adjustl(label))
-         nstep_started = nstep
-      endif
+
       call fluid_update
-      if (nstep >= nstep_started) then
-         write(label, '(i8)') nstep
-         call ppp_main%stop(fu_label // adjustl(label))
-      endif
       nstep = nstep + I_ONE
       call print_progress(nstep)
       call check_cfl_violation(dt, flind)
@@ -186,12 +184,15 @@ program piernik
       if (.not.tleft) end_sim = .true.
 
       first_step = .false.
+
+      call ppp_main%stop(label)
+      call update_profiling
+
    enddo ! main loop
 
    if (print_divB > 0) then
       if (mod(nstep, print_divB) /= 0) call print_divB_norm ! print the norm at the end, if it wasn't printed inside the loop above
    endif
-   call ppp_main%stop(st_label)
 
    code_progress = PIERNIK_FINISHED
 

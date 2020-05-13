@@ -482,11 +482,12 @@ contains
    subroutine h5_write_to_single_file
 
       use common_hdf5, only: set_common_attributes
-      use constants,   only: cwdlen, I_ONE, tmr_hdf
+      use constants,   only: cwdlen, I_ONE, tmr_hdf, PPP_IO
       use dataio_pub,  only: printio, printinfo, nhdf, thdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
          &                   msg, run_id, problem_name, use_v2_io, last_hdf_time
       use mpisetup,    only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
       use mpisignals,  only: sig
+      use ppp,         only: ppp_main
       use timer,       only: set_timer
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: unmark_oldsoln
@@ -499,7 +500,9 @@ contains
 
       character(len=cwdlen) :: fname
       real                  :: phv
+      character(len=*), parameter :: wrd_label = "IO_write_datafile_v1"
 
+      call ppp_main%start(wrd_label, PPP_IO)
       thdf = set_timer(tmr_hdf,.true.)
       nhdf = nhdf + I_ONE
       ! Initialize HDF5 library and Fortran interfaces.
@@ -533,16 +536,24 @@ contains
 !      call write_nbody_hdf5(fname)
 #endif /* NBODY_1FILE */
 
+      call ppp_main%stop(wrd_label, PPP_IO)
+
    end subroutine h5_write_to_single_file
 
    subroutine h5_write_to_single_file_v2(fname)
+
+      use constants,   only: PPP_IO
       use common_hdf5, only: write_to_hdf5_v2, O_OUT
       use gdf,         only: gdf_create_root_group
       use mpisetup,    only: master, piernik_MPI_Barrier
+      use ppp,         only: ppp_main
 
       implicit none
 
       character(len=*), intent(in) :: fname
+      character(len=*), parameter :: wrd_label = "IO_write_datafile_v2"
+
+      call ppp_main%start(wrd_label, PPP_IO)
 
       call write_to_hdf5_v2(fname, O_OUT, create_empty_cg_datasets_in_output, write_cg_to_output)
 
@@ -551,6 +562,8 @@ contains
          call gdf_create_root_group(fname, 'dataset_units', create_units_description)
       endif
       call piernik_MPI_Barrier
+
+      call ppp_main%stop(wrd_label, PPP_IO)
 
    end subroutine h5_write_to_single_file_v2
 
@@ -561,12 +574,13 @@ contains
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
       use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars, hdf_vars_avail, enable_all_hdf_var
-      use constants,   only: xdim, ydim, zdim, ndims, FP_REAL
+      use constants,   only: xdim, ydim, zdim, ndims, FP_REAL, PPP_IO, PPP_CG
       use dataio_pub,  only: die, nproc_io, can_i_write, h5_64bit
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_DOUBLE_INT, MPI_LONG_INT
       use mpisetup,    only: master, FIRST, proc, comm, mpi_err, LAST
+      use ppp,         only: ppp_main
 #ifdef NBODY_1FILE
       use cg_particles_io, only: pdsets, nbody_datafields
       use particle_utils,  only: count_all_particles
@@ -592,8 +606,10 @@ contains
 #ifdef NBODY_1FILE
       integer(kind=4)                                      :: n_part
 #endif /* NBODY_1FILE */
-      integer, parameter :: lk = selected_int_kind(15)
       integer(kind=16), dimension(LAST+1)                     :: tmp
+      character(len=*), parameter :: wrdc_label = "IO_write_data_v2_cg", wrdc1s_label = "IO_write_data_v2_1cg_(serial)", wrdc1p_label = "IO_write_data_v2_1cg_(parallel)"
+
+      call ppp_main%start(wrdc_label, PPP_IO)
 
       call enable_all_hdf_var  ! just in case things have changed meanwhile
 
@@ -613,6 +629,7 @@ contains
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
          do ncg = 1, cg_desc%tot_cg_n
+            call ppp_main%start(wrdc1s_label, PPP_IO + PPP_CG)
             dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
             call recycle_data(dims, cg_all_n_b, ncg, data_dbl)
 
@@ -643,6 +660,7 @@ contains
                endif
             endif
             !Serial write for particles
+            call ppp_main%stop(wrdc1s_label, PPP_IO + PPP_CG)
          enddo
 #ifdef NBODY_1FILE
             !if (cg_desc%cg_src_p(ncg) == proc) then
@@ -672,6 +690,7 @@ contains
             n = 0
             cgl => leaves%first
             do while (associated(cgl))
+               call ppp_main%start(wrdc1p_label, PPP_IO + PPP_CG)
                n = n + 1
                ncg = cg_desc%offsets(proc) + n
                dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
@@ -696,6 +715,7 @@ contains
 #endif /* NBODY_1FILE */
 
                cgl => cgl%nxt
+               call ppp_main%stop(wrdc1p_label, PPP_IO + PPP_CG)
             enddo
 
             ! Behold the MAGIC in its purest form!
@@ -752,6 +772,8 @@ contains
       if (allocated(dims)) deallocate(dims)
       if (associated(data_dbl)) deallocate(data_dbl)
       call cg_desc%clean()
+
+      call ppp_main%stop(wrdc_label, PPP_IO)
 
       if (.false.) i = size(cg_all_n_o) ! suppress compiler warning
 

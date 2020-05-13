@@ -46,9 +46,10 @@ contains
    subroutine write_restart_hdf5
 
       use common_hdf5,     only: set_common_attributes, output_fname
-      use constants,       only: I_ONE, cwdlen, WR, tmr_hdf
+      use constants,       only: I_ONE, cwdlen, WR, tmr_hdf, PPP_IO
       use dataio_pub,      only: msg, printio, printinfo, thdf, use_v2_io, nres, piernik_hdf5_version, piernik_hdf5_version2, last_res_time
       use mpisetup,        only: master, piernik_MPI_Barrier
+      use ppp,             only: ppp_main
       use restart_hdf5_v1, only: write_restart_hdf5_v1
       use restart_hdf5_v2, only: write_restart_hdf5_v2
       use timer,           only: set_timer
@@ -60,6 +61,9 @@ contains
 
       character(len=cwdlen) :: filename  ! File name
       real                  :: phv
+      character(len=*), parameter :: wrr_label = "IO_write_restart"
+
+      call ppp_main%start(wrr_label, PPP_IO)
 
       nres = nres + I_ONE
 
@@ -91,6 +95,8 @@ contains
          write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
          call printinfo(msg, .true.)
       endif
+
+      call ppp_main%stop(wrr_label, PPP_IO)
 
    end subroutine write_restart_hdf5
 
