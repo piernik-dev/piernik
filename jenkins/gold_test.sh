@@ -115,7 +115,6 @@ cd - > /dev/null
 
 wait
 
-[ ! -z $YT ] && source $YT
 ./bin/gdf_distance ${RUNS_DIR}/${PROBLEM_NAME}_{${TEST_OBJ},${GOLD_OBJ}}/${OUTPUT} 2>&1 | tee $GOLD_LOG
 
 # The tool gdf_distance distance is supposed to return values in [0..1] range

@@ -450,6 +450,7 @@ contains
 
    subroutine source_terms_grav
 
+      use constants,         only: PPP_GRAV
       use ppp,               only: ppp_main
 #ifdef SELF_GRAV
       use cg_leaves,         only: leaves
@@ -470,7 +471,7 @@ contains
       logical :: initialized
 #endif /* SELF_GRAV */
 
-      call ppp_main%start(grav_label)
+      call ppp_main%start(grav_label, PPP_GRAV)
 
 #ifdef SELF_GRAV
       initialized = .true.
@@ -506,7 +507,7 @@ contains
 #endif /* SELF_GRAV */
       if (variable_gp) call grav_pot_3d
 
-      call ppp_main%stop(grav_label)
+      call ppp_main%stop(grav_label, PPP_GRAV)
 
    end subroutine source_terms_grav
 

@@ -212,7 +212,7 @@ contains
    subroutine multipole_solver
 
       use cg_leaves,   only: leaves
-      use constants,   only: dirtyH1
+      use constants,   only: dirtyH1, PPP_GRAV
       use dataio_pub,  only: die
       use global,      only: dirty_debug
       use mg_monopole, only: isolated_monopole, find_img_CoM
@@ -223,7 +223,7 @@ contains
 
       character(len=*), parameter :: mpole_label = "multipole_solver"
 
-      call ppp_main%start(mpole_label)
+      call ppp_main%start(mpole_label, PPP_GRAV)
 
       if (associated(ext_bnd_potential)) then
          call ext_bnd_potential
@@ -268,7 +268,7 @@ contains
             call die("[multigridmultipole:multipole_solver] unimplemented solver")
       end select
 
-      call ppp_main%stop(mpole_label)
+      call ppp_main%stop(mpole_label, PPP_GRAV)
 
    end subroutine multipole_solver
 
@@ -290,7 +290,7 @@ contains
 
       use cg_leaves,     only: leaves
       use cg_list,       only: cg_list_element
-      use constants,     only: GEO_RPZ, LO, HI, xdim, ydim, zdim
+      use constants,     only: GEO_RPZ, LO, HI, xdim, ydim, zdim, PPP_GRAV
       use domain,        only: dom
       use grid_cont,     only: grid_container
       use multigridvars, only: solution
@@ -307,7 +307,7 @@ contains
       ! a1 = -3./2., a2 = -1./6. seems to be 2nd order estimator
       character(len=*), parameter :: p2m_label = "multipole_pot2img"
 
-      call ppp_main%start(p2m_label)
+      call ppp_main%start(p2m_label, PPP_GRAV)
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -364,7 +364,7 @@ contains
          cgl => cgl%nxt
          end associate
       enddo
-      call ppp_main%stop(p2m_label)
+      call ppp_main%stop(p2m_label, PPP_GRAV)
 
    end subroutine potential2img_mass
 
@@ -378,7 +378,7 @@ contains
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero
+      use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero, PPP_GRAV
       use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container
@@ -393,7 +393,7 @@ contains
       type(grid_container), pointer :: cg
       character(len=*), parameter :: m2m_label = "multipole_img2mom"
 
-      call ppp_main%start(m2m_label)
+      call ppp_main%start(m2m_label, PPP_GRAV)
       if (dom%geometry_type /= GEO_XYZ .and. any(Q%center(xdim:zdim).notequals.zero)) call die("[multigridmultipole:img_mass2moments] Q%center /= 0. not implemented for non-cartesian geometry")
 
       geofac(:) = 1.
@@ -440,7 +440,7 @@ contains
 
          cgl => cgl%nxt
       enddo
-      call ppp_main%stop(m2m_label)
+      call ppp_main%stop(m2m_label, PPP_GRAV)
 
    end subroutine img_mass2moments
 
@@ -458,7 +458,7 @@ contains
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_t, base_level
       use cg_list,            only: cg_list_element
-      use constants,          only: xdim, zdim, GEO_XYZ, zero, base_level_id
+      use constants,          only: xdim, zdim, GEO_XYZ, zero, base_level_id, PPP_GRAV
       use dataio_pub,         only: die, msg, warn
       use domain,             only: dom
       use grid_cont,          only: grid_container
@@ -474,7 +474,7 @@ contains
       type(grid_container), pointer :: cg
       character(len=*), parameter :: d2m_label = "multipole_dom2mom"
 
-      call ppp_main%start(d2m_label)
+      call ppp_main%start(d2m_label, PPP_GRAV)
 
       if (dom%geometry_type /= GEO_XYZ .and. any(Q%center(xdim:zdim).notequals.zero)) call die("[multigridmultipole:domain2moments] Q%center /= 0. not implemented for non-cartesian geometry")
       if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:domain2moments] Noncartesian geometry haven't been tested. Verify it before use.")
@@ -511,7 +511,7 @@ contains
          enddo
          cgl => cgl%nxt
       enddo
-      call ppp_main%stop(d2m_label)
+      call ppp_main%stop(d2m_label, PPP_GRAV)
 
    end subroutine domain2moments
 
@@ -522,7 +522,7 @@ contains
 
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: xdim, ydim, zdim
+      use constants,    only: xdim, ydim, zdim, PPP_GRAV, PPP_PART
       use grid_cont,    only: grid_container
       use ppp,          only: ppp_main
       use units,        only: fpiG
@@ -535,7 +535,7 @@ contains
       type(particle), pointer    :: pset
       character(len=*), parameter :: p2m_label = "multipole_part2mom"
 
-      call ppp_main%start(p2m_label)
+      call ppp_main%start(p2m_label, PPP_GRAV + PPP_PART)
 
       ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
       cgl => leaves%first
@@ -562,7 +562,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call ppp_main%stop(p2m_label)
+      call ppp_main%stop(p2m_label, PPP_GRAV + PPP_PART)
 
    end subroutine particles2moments
 #endif /* NBODY */
@@ -577,7 +577,7 @@ contains
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero
+      use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero, PPP_GRAV
       use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container
@@ -591,7 +591,7 @@ contains
       type(grid_container), pointer :: cg
       character(len=*), parameter :: m2p_label = "multipole_mom2pot"
 
-      call ppp_main%start(m2p_label)
+      call ppp_main%start(m2p_label, PPP_GRAV)
 
       if (dom%geometry_type /= GEO_XYZ .and. any(Q%center(xdim:zdim).notequals.zero)) call die("[multigridmultipole:img_mass2moments] Q%center /= 0. not implemented for non-cartesian geometry")
 
@@ -627,7 +627,7 @@ contains
          endif
          cgl => cgl%nxt
       enddo
-      call ppp_main%stop(m2p_label)
+      call ppp_main%stop(m2p_label, PPP_GRAV)
 
    end subroutine moments2bnd_potential
 

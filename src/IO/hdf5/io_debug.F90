@@ -113,13 +113,25 @@ contains
       use constants,    only: LOGF
       use dataio,       only: write_data
       use dataio_pub,   only: warn
+#ifdef HDF5
       use data_hdf5,    only: write_hdf5
       use restart_hdf5, only: write_restart_hdf5
+#endif /* HDF5 */
 
       implicit none
 
-      if (force_hdf5_dump)   call write_hdf5
-      if (force_res_dump)    call write_restart_hdf5
+      if (force_hdf5_dump) &
+#ifdef HDF5
+           call write_hdf5
+#else /* !HDF5 */
+           call warn("[io_debug:force_dumps] no HDF5 available (w)")
+#endif /* !HDF5 */
+      if (force_res_dump) &
+#ifdef HDF5
+           call write_restart_hdf5
+#else /* !HDF5 */
+           call warn("[io_debug:force_dumps] no HDF5 available (r)")
+#endif /* !HDF5 */
       if (force_allbnd_dump) call warn("[io_debug:force_dumps] force_allbnd_dump has no effect for single-file HDF5 restart files")
       if (force_log_dump)    call write_data(output=LOGF)
 

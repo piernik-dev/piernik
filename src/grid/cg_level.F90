@@ -229,7 +229,8 @@ contains
 
    subroutine update_everything(this)
 
-      use ppp, only: ppp_main
+      use constants, only: PPP_AMR
+      use ppp,       only: ppp_main
 
       implicit none
 
@@ -237,7 +238,7 @@ contains
 
       character(len=*), parameter :: lue_label = "level_update_everything"
 
-      call ppp_main%start(lue_label)
+      call ppp_main%start(lue_label, PPP_AMR)
 
       call this%update_decomposition_properties
       call this%dot%update_global(this%first, this%cnt, this%l%off) ! communicate everything that was added before
@@ -247,7 +248,7 @@ contains
       call this%dot%update_tot_se
       call this%print_segments
 
-      call ppp_main%stop(lue_label)
+      call ppp_main%stop(lue_label, PPP_AMR)
 
    end subroutine update_everything
 

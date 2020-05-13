@@ -90,7 +90,7 @@ contains
       use mass_defect,      only: downgrade_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna, wna, na_var_list_q, na_var_list_w
-      use ppp,               only: ppp_main
+      use ppp,              only: ppp_main
       use user_hooks,       only: user_reaction_to_redo_step
 #ifdef RANDOMIZE
       use randomization,    only: randoms_redostep

@@ -56,7 +56,7 @@ contains
       use cg_list,         only: cg_list_element
       use cg_list_balance, only: I_N_B, I_OFF
       use cg_list_dataop,  only: expanded_domain
-      use constants,       only: LO, HI, I_ONE, pSUM, ndims
+      use constants,       only: LO, HI, I_ONE, pSUM, ndims, PPP_AMR
       use dataio_pub,      only: warn, msg, printinfo
       use mpisetup,        only: master, FIRST, LAST, nproc, piernik_MPI_Bcast, piernik_MPI_Allreduce
       use ppp,             only: ppp_main
@@ -87,7 +87,7 @@ contains
 #endif /* DEBUG */
       character(len=*), parameter :: ro_label = "rebalance_old"
 
-      call ppp_main%start(ro_label)
+      call ppp_main%start(ro_label, PPP_AMR)
 
       this%recently_changed = .false.
       allocate(gptemp(I_OFF:I_GID, this%cnt))
@@ -180,7 +180,7 @@ contains
 
       if (master) call gp%cleanup
 
-      call ppp_main%stop(ro_label)
+      call ppp_main%stop(ro_label, PPP_AMR)
 
    end subroutine rebalance_old
 
@@ -191,7 +191,7 @@ contains
       use grid_container_ext, only: cg_extptrs
       use cg_list,            only: cg_list_element
       use cg_list_global,     only: all_cg
-      use constants,          only: ndims, LO, HI, I_ONE, xdim, ydim, zdim, pMAX
+      use constants,          only: ndims, LO, HI, I_ONE, xdim, ydim, zdim, pMAX, PPP_AMR, PPP_MPI
       use dataio_pub,         only: die
       use grid_cont,          only: grid_container
       use list_of_cg_lists,   only: all_lists
@@ -262,7 +262,7 @@ contains
       call piernik_MPI_Bcast(gptemp)
 
       ! Irecv & Isend
-      call ppp_main%start(ISR_label)
+      call ppp_main%start(ISR_label, PPP_AMR)
       nr = 0
       allocate(cglepa(size(gptemp)))
       do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
@@ -320,14 +320,14 @@ contains
             call MPI_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf), MPI_DOUBLE_PRECISION, gptemp(I_C_P, i), i, comm, req(nr), mpi_err)
          endif
       enddo
-      call ppp_main%stop(ISR_label)
+      call ppp_main%stop(ISR_label, PPP_AMR)
 
-      call ppp_main%start(Wall_label)
+      call ppp_main%start(Wall_label, PPP_AMR + PPP_MPI)
       if (nr > 0) then
          mpistatus => status(:, :nr)
          call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
       endif
-      call ppp_main%stop(Wall_label)
+      call ppp_main%stop(Wall_label, PPP_AMR + PPP_MPI)
 
       do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
          cgl => cglepa(i)%p

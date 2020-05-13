@@ -63,9 +63,13 @@ contains
       use dataio_pub,       only: die
       use global,           only: which_solver
       use fluidupdate_hllc, only: fluid_update_simple
+      use ppp,              only: ppp_main
 
       implicit none
 
+      character(len=*), parameter :: fu_label = "fluid_update"
+
+      call ppp_main%start(fu_label)
       select case (which_solver)
          case (HLLC_SPLIT)
             call fluid_update_simple
@@ -74,6 +78,7 @@ contains
          case default
             call die("[fluidupdate:fluid_update] unknown solver")
       end select
+      call ppp_main%stop(fu_label)
 
    end subroutine fluid_update
 
