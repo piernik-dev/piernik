@@ -143,23 +143,16 @@ def compare_resolution(h5f1, h5f2):
 
 def compare_dlists(h5f1, h5f2):
     d_key = '/data'
-    g0_key = 'grid_0000000000'
+    g0_key = 'grid_0000000000'  # trick: GDF has to contain this grid id
     failed = False
 
-    try:
-        f1 = h5f1[d_key][g0_key].keys()
-    except KeyError:
-        failed = True
-        print("KeyError: %s (`%s': %s,%s)." % (sys.exc_info()[1], h5f1.filename, d_key, g0_key))
-    try:
-        f2 = h5f2[d_key][g0_key].keys()
-    except KeyError:
-        failed = True
-        print("KeyError: %s (`%s': %s,%s)." % (sys.exc_info()[1], h5f2.filename, d_key, g0_key))
-    # trick: GDF has to contain this grid id
-    # if anything changes dramatically, we may change it to yt.load(fname).field_list
-    if failed:
-        exit(20)
+    f1 = list(h5f1[d_key][g0_key].keys())
+    f2 = list(h5f2[d_key][g0_key].keys())
+
+    # Particles should be handled separately
+    for f in (f1, f2):
+        if "particles" in f:
+            f.remove("particles")
 
     fc = list(set(f1) & set(f2))
     if (len(fc) != len(f1)):
@@ -245,9 +238,6 @@ def piernik_gdf_compare(fname1, fname2):
 
     # compare datafield lists
     norms["datafield lists"], common_fields = compare_dlists(h5f1, h5f2)
-
-    if "particles" in common_fields:
-        common_fields.remove("particles")  # Particles should be handled separately
 
     if (norms["domains"] < 1.):
         # compare AMR coverage (norm of difference of resolution on overlapped part of the domain)
