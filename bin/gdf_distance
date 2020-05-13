@@ -192,15 +192,35 @@ def compare_data(ds1, ds2, f):
     #   1. when one field is proportional to the other but with negative coefficient
     #   epsilon/2 when difference between fields is epsilon
 
-    n1 = numpy.linalg.norm(ds1.covering_grid(0, ds1.domain_left_edge, ds1.domain_dimensions)[f].v)
-    n2 = numpy.linalg.norm(ds2.covering_grid(0, ds2.domain_left_edge, ds2.domain_dimensions)[f].v)
-    nd = numpy.linalg.norm(ds1.covering_grid(0, ds1.domain_left_edge, ds1.domain_dimensions)[f].v -
-                           ds2.covering_grid(0, ds2.domain_left_edge, ds2.domain_dimensions)[f].v)
+    n1 = numpy.linalg.norm(ds1)
+    n2 = numpy.linalg.norm(ds2)
+    nd = numpy.linalg.norm(ds1 - ds2)
 
     if (n1 + n2 != 0.):
         return nd / (n1 + n2)
     else:
         return 0.
+
+
+def collect_dataset(h5f, dset_name):
+    import h5py as h5
+    import numpy as np
+
+    attrs = h5f['domains']['base'].attrs
+    nxd, nyd, nzd = attrs['n_d'][0:3]
+    dset = np.zeros((nxd, nyd, nzd))
+
+    grid = h5f['grid_dimensions']
+    for ig in range(grid.shape[0]):
+        h5g = h5f['data']['grid_' + str(ig).zfill(10)]
+        if h5g.attrs['level'] == 0:
+            off = h5g.attrs['off']
+            ngb = h5g.attrs['n_b']
+            n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
+            ce = n_b + off
+            dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name][:, :, :].swapaxes(0, 2)
+
+    return dset
 
 
 def piernik_gdf_compare(fname1, fname2):
@@ -226,25 +246,7 @@ def piernik_gdf_compare(fname1, fname2):
     # compare datafield lists
     norms["datafield lists"], common_fields = compare_dlists(h5f1, h5f2)
 
-    h5f1.close()
-    h5f2.close()
-
     if (norms["domains"] < 1.):
-        try:
-            import yt
-        except:
-            print("You must make yt available somehow!")
-            exit(30)
-        # For AMR domains it is way easier to make YT do the dirty work
-
-        print("yt.load(`%s')" % fname1)
-        ds1 = yt.load(fname1)
-        print("yt.load(`%s')" % fname2)
-        ds2 = yt.load(fname2)
-
-        if (ds1.index.level_stats['numgrids'][1] != 0 or ds2.index.level_stats['numgrids'][1] != 0):
-            print("Warning: refinement levels are not compared yet.")
-
         # compare AMR coverage (norm of difference of resolution on overlapped part of the domain)
         norms["AMR (not checked)"] = 0.
 
@@ -253,6 +255,8 @@ def piernik_gdf_compare(fname1, fname2):
         if (norms["domains"] == 0 and norms["resolution"] == 0):
             tot_datanorm = 0.
             for f in common_fields:
+                ds1 = collect_dataset(h5f1, f)
+                ds2 = collect_dataset(h5f2, f)
                 norm = compare_data(ds1, ds2, f)
                 norms["datafield `" + f + "'"] = norm
                 tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
@@ -260,6 +264,9 @@ def piernik_gdf_compare(fname1, fname2):
         else:
             print("Comparing domains of different size or resolution is not implemented yet")
             exit(31)
+
+    h5f1.close()
+    h5f2.close()
 
     return norms
 
