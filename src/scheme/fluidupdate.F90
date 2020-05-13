@@ -127,7 +127,7 @@ contains
       use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
-      use gravity,             only: source_terms_grav, compute_h_gpot
+      use gravity,             only: source_terms_grav, compute_h_gpot, need_update
 #ifdef NBODY
       use particle_solvers,    only: psolver
 #endif /* NBODY */
@@ -187,12 +187,13 @@ contains
       call ppp_main%stop(sw3_label)
 
 #if defined(GRAV)
-#if !defined(NBODY)
-      call source_terms_grav
-#else /* NBODY */
-      if (associated(psolver)) call psolver(forward)
+      need_update = .true.
+#if defined(NBODY)
+      if (associated(psolver)) call psolver(forward)  ! this will clear need_update it it would call source_terms_grav
 #endif /* NBODY */
+      if (need_update) call source_terms_grav
 #endif /* GRAV */
+
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
       call eglm

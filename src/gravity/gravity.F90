@@ -41,7 +41,7 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, init_terms_grav, grav_accel, source_terms_grav, grav_src_exec, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, compute_h_gpot, update_gp
+   public :: init_grav, init_terms_grav, grav_accel, source_terms_grav, grav_src_exec, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, compute_h_gpot, update_gp, need_update
    public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x, variable_gp
 
    integer, parameter         :: gp_stat_len   = 9
@@ -70,6 +70,7 @@ module gravity
    logical                    :: user_grav             !< use user defined grav_pot_3d
    logical                    :: variable_gp           !< if .true. then cg%gp is evaluated at every step
    logical                    :: restart_gpot, restart_hgpot, restart_gp, restart_sgp, restart_sgpm !< if .true. then write this grav part to the restart files
+   logical                    :: need_update           !< a flag to indicate that source_terms_grav needs to be called (e.g. because psolver skipped this)
 
    interface
 
@@ -351,6 +352,8 @@ contains
 
       call init_grav_ext
 
+      need_update = .false.
+
    end subroutine init_grav
 
    integer(kind=4) function res_at(incl_gt)
@@ -472,6 +475,8 @@ contains
 #endif /* SELF_GRAV */
 
       call ppp_main%start(grav_label, PPP_GRAV)
+
+      need_update = .false.
 
 #ifdef SELF_GRAV
       initialized = .true.
