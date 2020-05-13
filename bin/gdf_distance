@@ -101,6 +101,24 @@ def is_comparable(fname1, fname2):
 
         return status
 
+    # Check for some refinement constraints
+    for f in (h5f1, h5f2):
+        levl = set(f["grid_level"])
+        if 0 not in levl:
+            status = False
+            print("Cannot find base level in '%s'." % f.filename)
+            return status
+        if set(range(max(levl) + 1)) != levl:
+            status = False
+            print("Missing levels in '%s'." % f.filename)
+            return status
+        if len(levl) > 1:
+            refine_by = 2  # the only supported factor
+            if f[sp_key].attrs["refine_by"][0] != refine_by:
+                status = False
+                print("Only refine factor of %d is supported. Cannot interpret '%s'." % (refine_by, f.filename))
+                return status
+
     h5f1.close()
     h5f2.close()
     return status  # for safety, in case more checks will be added
