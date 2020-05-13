@@ -246,6 +246,9 @@ def piernik_gdf_compare(fname1, fname2):
     # compare datafield lists
     norms["datafield lists"], common_fields = compare_dlists(h5f1, h5f2)
 
+    if "particles" in common_fields:
+        common_fields.remove("particles")  # Particles should be handled separately
+
     if (norms["domains"] < 1.):
         # compare AMR coverage (norm of difference of resolution on overlapped part of the domain)
         norms["AMR (not checked)"] = 0.
