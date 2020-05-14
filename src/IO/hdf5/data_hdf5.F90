@@ -605,8 +605,8 @@ contains
       type(cg_output)                                      :: cg_desc
 #ifdef NBODY_1FILE
       integer(kind=4)                                      :: n_part
+      integer(kind=16), dimension(LAST+1)                  :: tmp
 #endif /* NBODY_1FILE */
-      integer(kind=16), dimension(LAST+1)                     :: tmp
       character(len=*), parameter :: wrdc_label = "IO_write_data_v2_cg", wrdc1s_label = "IO_write_data_v2_1cg_(serial)", wrdc1p_label = "IO_write_data_v2_1cg_(parallel)"
 
       call ppp_main%start(wrdc_label, PPP_IO)
@@ -663,25 +663,22 @@ contains
             call ppp_main%stop(wrdc1s_label, PPP_IO + PPP_CG)
          enddo
 #ifdef NBODY_1FILE
-            !if (cg_desc%cg_src_p(ncg) == proc) then
-               n_part = count_all_particles()
-               if (n_part .gt. 0) then
-                  do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
-                     tmp(:) = 0
-                     id=0
-                     if (master) then
-                        tmp(:) = cg_desc%pdset_id(:, i)
-                     endif
-                     call MPI_Scatter( tmp, 1, MPI_DOUBLE_INT, id, 1, MPI_DOUBLE_INT, FIRST, comm, mpi_err)
-                     if (master) then
-                        call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
-                     else
-                        !print *, 'try', proc, id, gdf_translate(pdsets(i))
-                        call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
-                     endif
-                  enddo
+         n_part = count_all_particles()
+         if (n_part .gt. 0) then
+            do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
+               tmp(:) = 0
+               id=0
+               if (master) then
+                  tmp(:) = cg_desc%pdset_id(:, i)
                endif
-            !endif
+               call MPI_Scatter( tmp, 1, MPI_DOUBLE_INT, id, 1, MPI_DOUBLE_INT, FIRST, comm, mpi_err)
+               if (master) then
+                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
+               else
+                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
+               endif
+            enddo
+         endif
 #endif /* NBODY_1FILE */
       else ! perform parallel write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
