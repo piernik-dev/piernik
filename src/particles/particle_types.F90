@@ -208,7 +208,7 @@ contains
 
 !> \brief Remove a particle number id from the list
 
-   subroutine remove(this, pdata)
+   subroutine remove(this, pset)
 
       use constants,  only: I_ONE
       use dataio_pub, only: die
@@ -216,16 +216,17 @@ contains
       implicit none
 
       class(particle_set), intent(inout) :: this !< an object invoking the type-bound procedure
-      type(particle), pointer, intent(out) :: pdata
+      type(particle), pointer, intent(out) :: pset
 
-      if (.not. associated(pdata)) call die("[particle removal] tried to remove null() element")
+      if (.not. associated(pset)) call die("[particle removal] tried to remove null() element")
       if (.not. associated(this%first)) call die("[particle removal] this%cnt <=0 .and. associated(this%first)")
 
-      if (associated(this%first, pdata)) this%first => this%first%nxt
-      if (associated(this%last,  pdata)) this%last  => this%last%prv
-      if (associated(pdata%prv)) pdata%prv%nxt => pdata%nxt
-      if (associated(pdata%nxt)) pdata%nxt%prv => pdata%prv
-      deallocate(pdata)
+      if (associated(this%first, pset)) this%first => this%first%nxt
+      if (associated(this%last,  pset)) this%last  => this%last%prv
+      if (associated(pset%prv)) pset%prv%nxt => pset%nxt
+      if (associated(pset%nxt)) pset%nxt%prv => pset%prv
+      deallocate(pset%pdata)
+      deallocate(pset)
       this%cnt = this%cnt - I_ONE
    end subroutine remove
 
