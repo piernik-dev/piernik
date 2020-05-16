@@ -178,14 +178,15 @@ contains
             is_setacc_int = .true.
             order = 4
             call check_ord(order)
-            call printinfo("[particle_pub:init_particles] Acceleration interpolation method: Lagrange polynomials")
+            msg = "[particle_pub:init_particles] Acceleration interpolation method: Lagrange polynomials"
          case ('cic', 'CIC')
             is_setacc_cic = .true.
-            call printinfo("[particle_pub:init_particles] Acceleration interpolation method: CIC")
+            msg = "[particle_pub:init_particles] Acceleration interpolation method: CIC"
          case ('tsc', 'TSC')
             is_setacc_tsc = .true.
-            call printinfo("[particle_pub:init_particles] Acceleration interpolation method: TSC")
+            msg = "[particle_pub:init_particles] Acceleration interpolation method: TSC"
       end select
+      if (master) call printinfo(trim(msg))
 
    end subroutine init_particles
 

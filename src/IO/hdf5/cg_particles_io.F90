@@ -44,6 +44,7 @@ module cg_particles_io
    subroutine init_nbody_hdf5(pvars)
 
       use dataio_pub, only: msg, warn
+      use mpisetup,   only: master
 
       implicit none
 
@@ -63,7 +64,8 @@ module cg_particles_io
             endif
          enddo
          if (.not.var_found) then
-            write(msg,'(2a)')'[particles_io_hdf5::init_nbody_hdf5]: unknown particle var: ', pvars(il) ; call warn(msg)
+            write(msg,'(2a)')'[particles_io_hdf5::init_nbody_hdf5]: unknown particle var: ', pvars(il)
+            if (master) call warn(msg)
          endif
       enddo
 

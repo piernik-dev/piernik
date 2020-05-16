@@ -56,7 +56,7 @@ contains
       use func,           only: operator(.notequals.)
       use global,         only: dt_max
       use grid_cont,      only: grid_container
-      use mpisetup,       only: piernik_MPI_Allreduce
+      use mpisetup,       only: piernik_MPI_Allreduce, master
       use particle_utils, only: max_pacc_3d
       use particle_pub,   only: lf_c, ignore_dt_fluid
 #ifdef DUST_PARTICLES
@@ -125,7 +125,7 @@ contains
       endif
 
       write(msg,'(a,3g12.5)') '[particle_timestep:timestep_nbody] dt for hydro, nbody and both: ', dt_hydro, dt_nbody, dt
-      call printinfo(msg)
+      if (master) call printinfo(msg)
 
 #ifdef VERBOSE
       call printinfo('[particle_timestep:timestep_nbody] Finish timestep_nbody')

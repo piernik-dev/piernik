@@ -192,6 +192,7 @@ contains
 
       use constants,      only: ndims !, dpi, zdim
       use dataio_pub,     only: msg, printinfo
+      use mpisetup,       only: master
       use particle_pub,   only: npart
       use particle_utils, only: add_part_in_proper_cg
 
@@ -215,11 +216,11 @@ contains
       enddo
 
       write(msg,'(a,i6)') '[initproblem:orbits] Number of particles added to the domain: ', npart
-      call printinfo(msg)
+      if (master) call printinfo(msg)
       write(msg,'(a,3f5.2)') '[initproblem:orbits] Initial position of the particle: ', pos_init
-      call printinfo(msg)
+      if (master) call printinfo(msg)
       write(msg,'(a,3f5.2)') '[initproblem:orbits] Initial velocity of the particle: ', vel_init
-      call printinfo(msg)
+      if (master) call printinfo(msg)
 
    end subroutine orbits
 
