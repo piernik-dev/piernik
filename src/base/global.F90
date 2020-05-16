@@ -188,7 +188,12 @@ contains
 
       cflcontrol  = 'warn'
       interpol_str = 'linear'
+
+#ifdef NBODY
+      repeat_step = .false.
+#else /* !NBODY */
       repeat_step = .true.
+#endif /* !NBODY */
       geometry25D = .false.
       no_dirty_checks = .false.
 #ifdef MAGNETIC
@@ -261,11 +266,6 @@ contains
             write(msg,'(2(a,g10.3))')"[global:init_global] dt_shrink = ", dt_shrink, " is strange. Recommended values are in 0.1 .. 0.9 range."
             call warn(msg)
          endif
-
-#ifdef NBODY
-         if (repeat_step) call warn('[global:init_global] repeat_step unsupported by NBODY. Switching off.')
-         repeat_step = .false.
-#endif /* NBODY */
 
          cbuff(1) = limiter
          cbuff(2) = limiter_b
@@ -363,6 +363,10 @@ contains
          ord_mag_prolong      = ibuff(3)
 
       endif
+
+#ifdef NBODY
+      if (master .and. repeat_step) call warn("[global:init_global] repeat_step unsupported by NBODY (particles aren't implemented yet).")
+#endif /* NBODY */
 
       select case (solver_str)
          case ("")  ! leave the default
