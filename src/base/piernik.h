@@ -33,11 +33,12 @@
 #define VARIABLE_GP
 #endif /* VARIABLE_USER_GP || SELF_GRAV */
 
+#ifdef BENCHMARKING_HACK
+#  undef ISO
+#endif
+
 #define HDF5
 #if defined(I_KNOW_WHAT_I_AM_DOING)
 #undef HDF5
 #endif /* I_KNOW_WHAT_I_AM_DOING */
 
-#ifdef BENCHMARKING_HACK
-#  undef ISO
-#endif
