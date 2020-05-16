@@ -167,10 +167,10 @@ program piernik
          ! It can be used for diagnostic purposes. In production runs it may cost too much.
          if (try_rebalance) then
             !> \todo try to rewrite this ugly chain of flags passed through global variables into something more fool-proof
+            call leaves%balance_and_update(" (re-balance) ")
             call all_bnd ! For some strange reasons this call prevents MPI-deadlock
             try_rebalance = .false.
          endif
-         call ppp_main%stop('try_reb')
 
          if (print_divB > 0) then
             if (mod(nstep, print_divB) == 0) call print_divB_norm
