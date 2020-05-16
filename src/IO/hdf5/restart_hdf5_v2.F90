@@ -244,7 +244,7 @@ contains
 #ifdef NBODY_1FILE
       integer(kind=4)                                      :: n_part
       integer(kind=16), dimension(LAST+1)                  :: tmp
-      integer(kind=8)                                      :: id
+      integer(HID_T)                                       :: id
 #endif /* NBODY_1FILE */
       character(len=*), parameter :: wrcg_label = "IO_write_restart_v2_all_cg", wrcg1s_label = "IO_write_restart_v2_1cg_(serial)", wrcg1p_label = "IO_write_restart_v2_1cg_(parallel)"
 

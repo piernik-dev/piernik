@@ -578,7 +578,7 @@ contains
       use dataio_pub,  only: die, nproc_io, can_i_write, h5_64bit
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_DOUBLE_INT, MPI_LONG_INT
+      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_DOUBLE_INT
       use mpisetup,    only: master, FIRST, proc, comm, mpi_err, LAST
       use ppp,         only: ppp_main
 #ifdef NBODY_1FILE
@@ -596,9 +596,9 @@ contains
       integer(HID_T)                                       :: filespace_id, memspace_id
       integer(kind=4)                                      :: error
       integer(kind=4), parameter                           :: rank = 3
-      integer(kind=8)                                      :: id
+      integer(HID_T)                                       :: id
       integer(HSIZE_T), dimension(:), allocatable          :: dims
-      integer                                              :: i, j, ncg, n
+      integer                                              :: i, ncg, n
       type(grid_container),            pointer             :: cg
       type(cg_list_element),           pointer             :: cgl
       real, dimension(:,:,:),          pointer             :: data_dbl ! double precision buffer (internal default, single precision buffer is the plotfile output default, overridable by h5_64bit)

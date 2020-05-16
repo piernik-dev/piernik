@@ -118,7 +118,7 @@ module cg_particles_io
 
       implicit none
 
-      integer(kind=8),    intent(in) :: group_id       !< File identifier
+      integer(HID_T),    intent(in) :: group_id       !< File identifier
       character(len=*), intent(in) :: pvar
       integer(kind=4),  intent(in) :: n_part
 
@@ -137,13 +137,13 @@ module cg_particles_io
       use cg_list,        only: cg_list_element
       use dataio_pub,     only: nproc_io, can_i_write, die
       use hdf5,           only: HID_T
-      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_DOUBLE_INT
+      use mpi,            only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_DOUBLE_INT
       use mpisetup,       only: master, FIRST, LAST, proc, comm, mpi_err
       use particle_types, only: particle
 
       implicit none
 
-      integer(kind=8),   intent(in)       :: group_id       !< File identifier
+      integer(HID_T),   intent(in)       :: group_id       !< File identifier
       character(len=*), intent(in)       :: pvar
       integer(kind=4),  intent(in)       :: n_part
       integer                            :: cgnp, recnp, ncg
@@ -219,7 +219,7 @@ module cg_particles_io
 
       implicit none
 
-      integer(kind=8),   intent(in)    :: group_id       !< File identifier
+      integer(HID_T),   intent(in)    :: group_id       !< File identifier
       character(len=*), intent(in)    :: pvar
       integer(kind=4),  intent(in)    :: n_part
       integer                         :: cgnp, recnp, ncg, i
