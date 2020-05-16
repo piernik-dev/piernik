@@ -208,8 +208,8 @@ contains
       use dataio_pub,       only: die, nproc_io, can_i_write
       use grid_cont,        only: grid_container
       use hdf5,             only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
-      use mpisetup,         only: master, FIRST, proc, comm, mpi_err
+      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_DOUBLE_INT
+      use mpisetup,         only: master, FIRST, proc, comm, mpi_err, LAST
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 #ifdef NBODY_1FILE
@@ -243,6 +243,8 @@ contains
       integer(kind=4), dimension(ndims)                     :: n_b
 #ifdef NBODY_1FILE
       integer(kind=4)                                      :: n_part
+      integer(kind=16), dimension(LAST+1)                  :: tmp
+      integer(kind=8)                                      :: id
 #endif /* NBODY_1FILE */
       character(len=*), parameter :: wrcg_label = "IO_write_restart_v2_all_cg", wrcg1s_label = "IO_write_restart_v2_1cg_(serial)", wrcg1p_label = "IO_write_restart_v2_1cg_(parallel)"
 
@@ -316,14 +318,6 @@ contains
                   enddo
                   deallocate(dims)
                endif
-#ifdef NBODY_1FILE
-               n_part = count_all_particles()
-               if (n_part .gt. 0) then
-                  do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
-                     call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), n_part)
-                  enddo
-               endif
-#endif /* NBODY_1FILE */
             else
                if (can_i_write) call die("[restart_hdf5_v2:write_cg_to_restart] Slave can write")
                if (cg_desc%cg_src_p(ncg) == proc) then
@@ -344,6 +338,24 @@ contains
             endif
             call ppp_main%stop(wrcg1s_label, PPP_IO + PPP_CG)
          enddo
+#ifdef NBODY_1FILE
+         n_part = count_all_particles()
+         if (n_part .gt. 0) then
+            do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
+               tmp(:) = 0
+               id=0
+               if (master) then
+                  tmp(:) = cg_desc%pdset_id(:, i)
+               endif
+               call MPI_Scatter( tmp, 1, MPI_DOUBLE_INT, id, 1, MPI_DOUBLE_INT, FIRST, comm, mpi_err)
+               if (master) then
+                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
+               else
+                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
+               endif
+            enddo
+         endif
+#endif /* NBODY_1FILE */
       else ! perform parallel write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
          if (can_i_write) then
@@ -1126,7 +1138,6 @@ contains
                   vel(j, zdim) = a1d(j)
                case ('accx')
                   acc(j, xdim) = a1d(j)
-                  print *, 'acc', acc(j,xdim)
                case ('accy')
                   acc(j, ydim) = a1d(j)
                case ('accz')

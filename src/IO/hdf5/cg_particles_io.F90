@@ -118,7 +118,7 @@ module cg_particles_io
 
       implicit none
 
-      integer(HID_T),   intent(in) :: group_id       !< File identifier
+      integer(kind=8),    intent(in) :: group_id       !< File identifier
       character(len=*), intent(in) :: pvar
       integer(kind=4),  intent(in) :: n_part
 
@@ -133,18 +133,21 @@ module cg_particles_io
 
    subroutine collect_and_write_intr1(group_id, pvar, n_part)
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use hdf5,      only: HID_T
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use dataio_pub,     only: nproc_io, can_i_write, die
+      use hdf5,           only: HID_T
+      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_DOUBLE_INT
+      use mpisetup,       only: master, FIRST, LAST, proc, comm, mpi_err
       use particle_types, only: particle
 
       implicit none
 
-      integer(HID_T),   intent(in)       :: group_id       !< File identifier
+      integer(kind=8),   intent(in)       :: group_id       !< File identifier
       character(len=*), intent(in)       :: pvar
       integer(kind=4),  intent(in)       :: n_part
-      integer                            :: cgnp, recnp
-      integer(kind=4), dimension(:), allocatable :: tabi1
+      integer                            :: cgnp, recnp, ncg
+      integer(kind=4), dimension(:), allocatable :: tabi1, tabi2
       type(cg_list_element), pointer     :: cgl
       type(particle), pointer        :: pset
 
@@ -170,28 +173,59 @@ module cg_particles_io
          cgl => cgl%nxt
       enddo
 
-      call write_nbody_h5_int_rank1(group_id, pvar, tabi1)
+      ! Not compatible with AMR or several cg per processor
+      if (nproc_io == 1) then !perform serial write
+         ! write all cg, one by one
+         do ncg = FIRST, LAST
+            if (master) then
+               if (.not. can_i_write) call die("[cg_particles_io] Master can't write")
+               if (ncg == proc) then
+                  call write_nbody_h5_int_rank1(group_id, pvar, tabi1)
+               else
+                  call MPI_Recv(n_part, 1, MPI_INTEGER, ncg, ncg, comm, MPI_STATUS_IGNORE, mpi_err)
+                  allocate(tabi2(n_part))
+                  call MPI_Recv(tabi2, n_part, MPI_INTEGER, ncg, ncg, comm, MPI_STATUS_IGNORE, mpi_err)
+                  call MPI_Recv(group_id, 1, MPI_DOUBLE_INT, ncg, ncg, comm, MPI_STATUS_IGNORE, mpi_err)
+                  call write_nbody_h5_int_rank1(group_id, pvar, tabi2)
+                  deallocate(tabi2)
+               endif
+            else
+               if (can_i_write) call die("[cg_particles_io] Slave can write")
+               if (ncg == proc) then
+                  call MPI_Send(n_part, 1, MPI_INTEGER, FIRST, ncg, comm, mpi_err)
+                  call MPI_Send(tabi1, n_part, MPI_INTEGER, FIRST, ncg, comm, mpi_err)
+                  call MPI_Send(group_id, 1, MPI_DOUBLE_INT, FIRST, ncg, comm, mpi_err)
+               endif
+            endif
+         enddo
+      else
+         call write_nbody_h5_int_rank1(group_id, pvar, tabi1)
+      endif
+
       deallocate(tabi1)
 
    end subroutine collect_and_write_intr1
 
    subroutine collect_and_write_rank1(group_id, pvar, n_part)
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use hdf5,      only: HID_T
-      use constants, only: xdim, ydim, zdim
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim
+      use dataio_pub,     only: nproc_io, can_i_write, die
+      use hdf5,           only: HID_T
+      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_DOUBLE_INT
+      use mpisetup,       only: master, FIRST, LAST, proc, comm, mpi_err
       use particle_types, only: particle
 
       implicit none
 
-      integer(HID_T),   intent(in)    :: group_id       !< File identifier
+      integer(kind=8),   intent(in)    :: group_id       !< File identifier
       character(len=*), intent(in)    :: pvar
       integer(kind=4),  intent(in)    :: n_part
-      integer                         :: cgnp, recnp
-      real, dimension(:), allocatable :: tabr1
+      integer                         :: cgnp, recnp, ncg, i
+      real, dimension(:), allocatable :: tabr1, tabr2
       type(cg_list_element), pointer  :: cgl
-      type(particle), pointer        :: pset
+      type(particle), pointer         :: pset
 
       allocate(tabr1(n_part))
       recnp = 0
@@ -206,26 +240,37 @@ module cg_particles_io
                select case (pvar)
                   case ('mass')
                      tabr1(recnp+cgnp) = pset%pdata%mass
+                     i=2
                   case ('energy')
                      tabr1(recnp+cgnp) = pset%pdata%energy
+                     i=3
                   case ('position_x')
                      tabr1(recnp+cgnp) = pset%pdata%pos(xdim)
+                     i=4
                   case ('position_y')
                      tabr1(recnp+cgnp) = pset%pdata%pos(ydim)
+                     i=5
                   case ('position_z')
                      tabr1(recnp+cgnp) = pset%pdata%pos(zdim)
+                     i=6
                   case ('velocity_x')
                      tabr1(recnp+cgnp) = pset%pdata%vel(xdim)
+                     i=7
                   case ('velocity_y')
                      tabr1(recnp+cgnp) = pset%pdata%vel(ydim)
+                     i=8
                   case ('velocity_z')
                      tabr1(recnp+cgnp) = pset%pdata%vel(zdim)
+                     i=9
                   case ('acceleration_x')
                      tabr1(recnp+cgnp) = pset%pdata%acc(xdim)
+                     i=10
                   case ('acceleration_y')
                      tabr1(recnp+cgnp) = pset%pdata%acc(ydim)
+                     i=11
                   case ('acceleration_z')
                      tabr1(recnp+cgnp) = pset%pdata%acc(zdim)
+                     i=12
                   case default
                end select
             endif
@@ -235,7 +280,35 @@ module cg_particles_io
          cgl => cgl%nxt
       enddo
 
-      call write_nbody_h5_rank1(group_id, pvar, tabr1)
+      ! Not compatible with AMR or several cg per processor
+      if (nproc_io == 1) then !perform serial write
+         ! write all cg, one by one
+         do ncg = FIRST, LAST
+            if (master) then
+               if (.not. can_i_write) call die("[cg_particles_io] Master can't write")
+               if (ncg == proc) then
+                  call write_nbody_h5_rank1(group_id, pvar, tabr1)
+               else
+                  call MPI_Recv(n_part, 1, MPI_INTEGER, ncg, ncg, comm, MPI_STATUS_IGNORE, mpi_err)
+                  allocate(tabr2(n_part))
+                  call MPI_Recv(tabr2, n_part, MPI_DOUBLE_PRECISION, ncg, ncg, comm, MPI_STATUS_IGNORE, mpi_err)
+                  call MPI_Recv(group_id, 1, MPI_DOUBLE_INT, ncg, ncg, comm, MPI_STATUS_IGNORE, mpi_err)
+                  call write_nbody_h5_rank1(group_id, pvar, tabr2)
+                  deallocate(tabr2)
+               endif
+            else
+               if (can_i_write) call die("[cg_particles_io] Slave can write")
+               if (ncg == proc) then
+                  call MPI_Send(n_part, 1, MPI_INTEGER, FIRST, ncg, comm, mpi_err)
+                  call MPI_Send(tabr1, n_part, MPI_DOUBLE_PRECISION, FIRST, ncg, comm, mpi_err)
+                  call MPI_Send(group_id, 1, MPI_DOUBLE_INT, FIRST, ncg, comm, mpi_err)
+               endif
+            endif
+         enddo
+      else ! perform parallel write
+         call write_nbody_h5_rank1(group_id, pvar, tabr1)
+      endif
+
       deallocate(tabr1)
 
    end subroutine collect_and_write_rank1
@@ -277,7 +350,7 @@ module cg_particles_io
 
    subroutine write_nbody_h5_rank1(group_id, vvar, tab)
 
-      use hdf5, only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
+     use hdf5, only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
 
       implicit none
 

@@ -320,11 +320,13 @@ class PPPset:
                                 gcnt += 1
                         except TypeError:
                             sys.stderr.write("Warning: inclomplete event '", e, "' @", p, " #", str(t), ev[e][p][t])
+
                     self.out += "\n"
             self.out += "\n"
         if gomit > 0:
             self.descr += "\\n(omitted %d entries above maxoutput limit of %d)" % (gomit, args.maxoutput[0])
         self.out += "EOD\n\n# Suggested gnuplot commands:\nset key outside horizontal\n"
+        self.out += "set terminal x11 \n"
         self.out += "set xlabel 'time (walltime seconds)'\nset ylabel 'timer depth + proc/nproc'\n"
         self.out += 'set title "%s"\n' % self.descr.replace('_', "\\\\_")
         if len(ev) > 0:

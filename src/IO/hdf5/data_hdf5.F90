@@ -578,8 +578,8 @@ contains
       use dataio_pub,  only: die, nproc_io, can_i_write, h5_64bit
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
-      use mpisetup,    only: master, FIRST, proc, comm, mpi_err
+      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_DOUBLE_INT, MPI_LONG_INT
+      use mpisetup,    only: master, FIRST, proc, comm, mpi_err, LAST
       use ppp,         only: ppp_main
 #ifdef NBODY_1FILE
       use cg_particles_io, only: pdsets, nbody_datafields
@@ -596,14 +596,16 @@ contains
       integer(HID_T)                                       :: filespace_id, memspace_id
       integer(kind=4)                                      :: error
       integer(kind=4), parameter                           :: rank = 3
+      integer(kind=8)                                      :: id
       integer(HSIZE_T), dimension(:), allocatable          :: dims
-      integer                                              :: i, ncg, n
+      integer                                              :: i, j, ncg, n
       type(grid_container),            pointer             :: cg
       type(cg_list_element),           pointer             :: cgl
       real, dimension(:,:,:),          pointer             :: data_dbl ! double precision buffer (internal default, single precision buffer is the plotfile output default, overridable by h5_64bit)
       type(cg_output)                                      :: cg_desc
 #ifdef NBODY_1FILE
       integer(kind=4)                                      :: n_part
+      integer(kind=16), dimension(LAST+1)                  :: tmp
 #endif /* NBODY_1FILE */
       character(len=*), parameter :: wrdc_label = "IO_write_data_v2_cg", wrdc1s_label = "IO_write_data_v2_1cg_(serial)", wrdc1p_label = "IO_write_data_v2_1cg_(parallel)"
 
@@ -647,12 +649,6 @@ contains
                      call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, xfer_prp = cg_desc%xfer_prp)
                   endif
                enddo
-#ifdef NBODY_1FILE
-               n_part = count_all_particles()
-               do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
-                  call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), n_part)
-               enddo
-#endif /* NBODY_1FILE */
             else
                if (can_i_write) call die("[data_hdf5:write_cg_to_output] Slave can write")
                if (cg_desc%cg_src_p(ncg) == proc) then
@@ -663,8 +659,27 @@ contains
                   enddo
                endif
             endif
+            !Serial write for particles
             call ppp_main%stop(wrdc1s_label, PPP_IO + PPP_CG)
          enddo
+#ifdef NBODY_1FILE
+         n_part = count_all_particles()
+         if (n_part .gt. 0) then
+            do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
+               tmp(:) = 0
+               id=0
+               if (master) then
+                  tmp(:) = cg_desc%pdset_id(:, i)
+               endif
+               call MPI_Scatter( tmp, 1, MPI_DOUBLE_INT, id, 1, MPI_DOUBLE_INT, FIRST, comm, mpi_err)
+               if (master) then
+                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
+               else
+                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
+               endif
+            enddo
+         endif
+#endif /* NBODY_1FILE */
       else ! perform parallel write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
          if (can_i_write) then
