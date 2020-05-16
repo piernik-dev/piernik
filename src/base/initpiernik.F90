@@ -83,9 +83,6 @@ contains
 #ifdef GRAV
       use particle_pub,          only: init_particles
 #endif /* GRAV */
-#ifdef SELF_GRAV
-      use gravity,               only: source_terms_grav
-#endif /* SELF_GRAV */
 #ifdef TWOBODY
       use initproblem,           only: problem_initial_nbody
 #endif /* TWOBODY */
@@ -312,6 +309,9 @@ contains
             call source_terms_grav  ! fix up gravitational potential when refiements did not converge
 #endif /* GRAV */
          endif
+#if defined(SELF_GRAV) && defined(NBODY)
+         !  Do we need to do anything particle-related to be called here?
+#endif /* SELF_GRAV && NBODY */
          if (associated(problem_post_IC)) call problem_post_IC
       endif
       call ppp_main%stop(ic_label)
@@ -322,9 +322,6 @@ contains
       !> \todo Do an MPI_Reduce in case the master process don't have any part of the globally finest level or ensure it is empty in such case
       if (master) call printinfo(msg)
 
-#if defined(SELF_GRAV) && defined(NBODY)
-      call source_terms_grav                 ! moved from the beginning of the first make_3sweeps
-#endif /* SELF_GRAV && NBODY */
 #ifdef VERBOSE
       call diagnose_arrays                   ! may depend on everything
 #endif /* VERBOSE */
