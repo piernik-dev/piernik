@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 sp_key = 'simulation_parameters'
+pkeys = ['acceleration_x', 'acceleration_y', 'acceleration_z', 'energy', 'mass', 'position_x', 'position_y', 'position_z', 'velocity_x', 'velocity_y', 'velocity_z']
 
 
 def is_comparable(fname1, fname2):
@@ -176,7 +177,7 @@ def compare_time(h5f1, h5f2):
             return 1.
 
 
-def compare_data(ds1, ds2, f):
+def compare_data(ds1, ds2):
     import numpy
 
     # This norm is:
@@ -216,6 +217,89 @@ def collect_dataset(h5f, dset_name):
     return dset
 
 
+def get_particles(h5f):
+    plist = {}
+    if "grid_particle_count" not in h5f:
+        return plist
+    n = h5f['grid_particle_count'][0]
+    nf = 0
+    for ig in range(h5f['grid_dimensions'].shape[0]):
+        h5g = h5f['data']['grid_' + str(ig).zfill(10)]
+        if "particles" in h5g:
+            if "stars" in h5g["particles"]:
+                h5gps = h5g["particles"]["stars"]
+                nf += h5gps.attrs['n_part'][0]
+                for v in h5gps.keys():
+                    if v not in plist:
+                        plist[v] = []
+                    plist[v] += h5gps[v]
+    if nf != n:
+        print("Warning: read %d particles from '%s', %d expected." % (nf, h5f.filename, n))
+    for v in plist:
+        if len(plist[v]) != n:
+            print("Warning: incomplete list for particle quantity '%s' in '%s': read %d out of %d." % (v, h5f.filename, len(plist[v]), n))
+    if "id" in plist.keys():
+        if set(plist.keys()) != (set(pkeys) ^ set(['id'])):
+            print("Non-standard set of particle quantities detected in '%s':" % h5f.filename, set(plist.keys()))
+    return plist
+
+
+def convert_particles(p):
+    pp = {}
+    for i in range(len(p["id"])):
+        id = int(p["id"][i])
+        if id in pp:
+            print("Duplicated id %d" % id)
+        pp[id] = {}
+        for k in pkeys:
+            pp[id][k] = p[k][i]
+    return pp
+
+
+# I'm afraid this might be quite slow on large particle sets
+def compare_particles(h5f1, h5f2):
+    import numpy
+    pn = {}
+    p1 = get_particles(h5f1)
+    p2 = get_particles(h5f2)
+    if "id" not in p1 and "id" not in p2:
+        return pn
+    if len(p1["id"]) == 0 and len(p2["id"]) == 0:
+        return pn
+    try:
+        if len(p1["id"]) != len(p2["id"]):
+            pn["particles count"] = abs(len(p1["id"]) - len(p2["id"])) / (len(p1["id"]) + len(p2["id"]))
+    except KeyError:  # only one contains "id"
+        pn["particles exists"] = 1
+        return pn
+
+    pp1 = convert_particles(p1)
+    pp2 = convert_particles(p2)
+
+    n_comm_p = len(set(pp1.keys()) & set(pp2.keys()))
+    pn["particles id"] = 1. - 2 * n_comm_p / (len(pp1.keys()) + len(pp2.keys()))
+
+    for id in pp1.keys():
+        if id not in pp2:
+            del pp1[id]
+
+    tot_datanorm = 0.
+    for k in pkeys:
+        ds1 = numpy.zeros((n_comm_p))
+        ds2 = numpy.zeros((n_comm_p))
+        i = 0
+        for id in pp1:  # we've already removed particles that were unique to pp1
+            ds1[i] = pp1[id][k]
+            ds2[i] = pp2[id][k]
+            i += 1
+        norm = compare_data(ds1, ds2)
+        pn["particles `" + k + "'"] = norm
+        tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
+    print("All particles difference: %g" % tot_datanorm)
+
+    return pn
+
+
 def piernik_gdf_compare(fname1, fname2):
     import h5py
     norms = {}
@@ -239,6 +323,9 @@ def piernik_gdf_compare(fname1, fname2):
     # compare datafield lists
     norms["datafield lists"], common_fields = compare_dlists(h5f1, h5f2)
 
+    # compare particles
+    norms.update(compare_particles(h5f1, h5f2))
+
     if (norms["domains"] < 1.):
         # compare AMR coverage (norm of difference of resolution on overlapped part of the domain)
         norms["AMR (not checked)"] = 0.
@@ -250,7 +337,7 @@ def piernik_gdf_compare(fname1, fname2):
             for f in common_fields:
                 ds1 = collect_dataset(h5f1, f)
                 ds2 = collect_dataset(h5f2, f)
-                norm = compare_data(ds1, ds2, f)
+                norm = compare_data(ds1, ds2)
                 norms["datafield `" + f + "'"] = norm
                 tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
             print("All datafield difference: %g" % tot_datanorm)
