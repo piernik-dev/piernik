@@ -111,6 +111,7 @@ contains
       use global,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, cfl_violated
       use grid_cont,          only: grid_container
       use mpisetup,           only: master, piernik_MPI_Allreduce
+      use ppp,                only: ppp_main
       use sources,            only: timestep_sources
       use timestep_pub,       only: c_all, c_all_old
 #ifdef COSM_RAYS
@@ -132,6 +133,9 @@ contains
       type(grid_container),  pointer   :: cg
       real                             :: c_, dt_
       integer                          :: ifl
+      character(len=*), parameter :: ts_label = "timestep"
+
+      call ppp_main%start(ts_label)
 
 ! Timestep computation
 
@@ -198,6 +202,8 @@ contains
       endif
 #endif /* DEBUG */
       call compare_array1D([dt])  ! just in case
+
+      call ppp_main%stop(ts_label)
 
    end subroutine time_step
 

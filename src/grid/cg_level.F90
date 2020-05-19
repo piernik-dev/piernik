@@ -229,9 +229,16 @@ contains
 
    subroutine update_everything(this)
 
+      use constants, only: PPP_AMR
+      use ppp,       only: ppp_main
+
       implicit none
 
       class(cg_level_t), intent(inout) :: this   !< object invoking type bound procedure
+
+      character(len=*), parameter :: lue_label = "level_update_everything"
+
+      call ppp_main%start(lue_label, PPP_AMR)
 
       call this%update_decomposition_properties
       call this%dot%update_global(this%first, this%cnt, this%l%off) ! communicate everything that was added before
@@ -240,6 +247,8 @@ contains
       call this%update_req     ! Perhaps this%find_neighbors added some new entries
       call this%dot%update_tot_se
       call this%print_segments
+
+      call ppp_main%stop(lue_label, PPP_AMR)
 
    end subroutine update_everything
 

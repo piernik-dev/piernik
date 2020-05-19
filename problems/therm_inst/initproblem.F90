@@ -45,13 +45,17 @@ contains
 
    subroutine problem_pointers
 
+#ifdef HDF5
       use dataio_user, only: user_vars_hdf5
+#endif /* HDF5 */
       use dataio_user, only: user_tsl
 
       implicit none
 
       user_tsl       => thermal_tsl
+#ifdef HDF5
       user_vars_hdf5 => crtest_analytic_ecr1
+#endif /* HDF5 */
 
    end subroutine problem_pointers
 

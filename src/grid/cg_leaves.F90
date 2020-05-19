@@ -87,11 +87,12 @@ contains
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
-      use constants,          only: pSUM, pMAX, base_level_id, refinement_factor, base_level_id, INVALID, tmr_amr
+      use constants,          only: pSUM, pMAX, base_level_id, refinement_factor, base_level_id, INVALID, tmr_amr, PPP_AMR
       use dataio_pub,         only: msg, printinfo
       use domain,             only: dom
       use list_of_cg_lists,   only: all_lists
       use mpisetup,           only: master, piernik_MPI_Allreduce, nproc
+      use ppp,                only: ppp_main
       use timer,              only: set_timer
 
       implicit none
@@ -106,6 +107,9 @@ contains
       integer, save :: prev_is = 0
       character(len=len(msg)), save :: prev_msg
       real :: lf
+      character(len=*), parameter :: leaves_label = "leaves_update"
+
+      call ppp_main%start(leaves_label, PPP_AMR)
 
       call leaves%delete
       call all_lists%register(this, "leaves")
@@ -156,6 +160,8 @@ contains
       prev_msg = msg
       prev_is = is
 
+      call ppp_main%stop(leaves_label, PPP_AMR)
+
    end subroutine update
 
 !> \brief Rebalance if required and update.
@@ -164,6 +170,8 @@ contains
 
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_t
+      use constants,          only: PPP_AMR
+      use ppp,                only: ppp_main
 
       implicit none
 
@@ -171,7 +179,9 @@ contains
       character(len=*), optional, intent(in)    :: str   !< optional string identifier to show the progress of updating refinement
 
       type(cg_level_connected_t), pointer :: curl
+      character(len=*), parameter :: bu_label = "leaves_balance_and_update"
 
+      call ppp_main%start(bu_label, PPP_AMR)
       curl => finest%level
       do while (associated(curl)) ! perhaps it is worth to limit to the base level
          call curl%balance_old
@@ -180,6 +190,7 @@ contains
       enddo
 
       call this%update(str)
+      call ppp_main%stop(bu_label, PPP_AMR)
 
    end subroutine balance_and_update
 
