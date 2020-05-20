@@ -402,6 +402,13 @@ contains
          newtong   = 1.0  ! multigridmultipole, gravity, poissonsolver
       endif
 
+      if (master) then
+         write(msg,'(a,es20.13)') '[units:init_units] newtong = ', newtong
+         call printinfo(msg, to_stdout)
+         write(msg,'(a,es20.13)') '[units:init_units] kboltz  = ', kboltz
+         call printinfo(msg, to_stdout)
+      endif
+
    end subroutine init_units
 
    subroutine units_par_io
