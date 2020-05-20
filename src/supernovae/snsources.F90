@@ -258,9 +258,9 @@ contains
                   if (e_tot_sn .gt. smallcree) then
                      cresp%n =  0.0;  cresp%e = 0.0
                      call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn) !< injecting source spectrum scaled with e_tot_sn
+                     cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n   !< update, TODO need to talk to the team if this should be inside if-clause
+                     cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e   !< if outside, cresp%n and cresp%e needs to be zeroed
                   endif
-                  cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
-                  cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
 #endif /* COSM_RAY_ELECTRONS */
 
                enddo
