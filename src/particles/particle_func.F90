@@ -87,7 +87,7 @@ contains
       real, dimension(ndims,LO:HI), intent(in) :: area
       logical                                  :: itis
 
-      itis = (all(pos >= area(:,LO)) .and. all(pos <= area(:,HI)))
+      itis = (all(pos >= area(:,LO)) .and. all(pos < area(:,HI)))
 
    end function particle_in_area
 

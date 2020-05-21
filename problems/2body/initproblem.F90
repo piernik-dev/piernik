@@ -337,6 +337,8 @@ contains
 
    end subroutine relax_time
 
+! the routine read_buildgal should perhaps go somewhere to particles or IO (together with other readers for different particle containers)
+
    subroutine read_buildgal
 
       use constants,      only: ndims, I_ONE
@@ -389,6 +391,7 @@ contains
 #endif /* VERBOSE */
          call add_part_in_proper_cg(i, mass(i), pos(i,:), vel(i,:),[0.0, 0.0, 0.0], 0.0)
       enddo
+      ! ToDo: check whether all particles were added exactly once
       deallocate(mass,pos,vel)
 
    end subroutine read_buildgal
