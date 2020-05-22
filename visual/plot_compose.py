@@ -9,6 +9,11 @@ from mpl_toolkits.axes_grid1 import AxesGrid
 import plot_utils as pu
 import read_dataset as rd
 
+if (len(sys.argv) < 3):
+    print('PIERNIK VISUALIZATION FACILITY')
+    print('Usage: ./plot_compose.py <file> <varname>')
+    exit()
+
 pthfilen = sys.argv[1]
 var      = sys.argv[2]
 
