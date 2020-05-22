@@ -44,7 +44,7 @@ module initproblem
    real                     :: mass1               !< (higher) mass of the primary particle
    real                     :: mass2               !< (lower) mass of secondary particles
 
-   namelist /PROBLEM_CONTROL/ topic_2body, fdens, e, mass1, mass2
+   namelist /PROBLEM_CONTROL/ topic_2body, fdens, e, mass1, mass2, bgfile
 
 contains
 !-----------------------------------------------------------------------------
