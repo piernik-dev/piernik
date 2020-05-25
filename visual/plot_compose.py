@@ -12,12 +12,16 @@ import read_dataset as rd
 if (len(sys.argv) < 3):
     print('PIERNIK VISUALIZATION FACILITY')
     print('Usage: ./plot_compose.py <file> <varname [varname ...]>')
-    exit()
+    if len(sys.argv) < 2:
+        exit()
 
 pthfilen = sys.argv[1]
 filen  = pthfilen.split('/')[-1]
 
 h5f = h5py.File(pthfilen,'r')
+if len(sys.argv) < 3:
+    print("Available datafields: ", list(h5f['field_types'].keys()))
+    exit(1)
 if sys.argv[2] == "_all_":
     varlist = h5f['field_types'].keys()
 else:
