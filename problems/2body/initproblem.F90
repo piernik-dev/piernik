@@ -30,7 +30,7 @@ module initproblem
 ! Initial condition for Sedov-Taylor explosion
 ! Written by: M. Hanasz, March 2006
 
-   use constants, only: cbuff_len
+   use constants, only: cbuff_len, cwdlen
 
    implicit none
 
@@ -38,7 +38,7 @@ module initproblem
    public  :: read_problem_par, problem_initial_conditions, problem_initial_nbody, problem_pointers
 
    character(len=cbuff_len) :: topic_2body
-   character(len=cbuff_len) :: bgfile              !< buildgal file name
+   character(len=cwdlen)    :: bgfile              !< buildgal file name
    real                     :: fdens               !< fluid density
    real                     :: e                   !< orbit eccentricity
    real                     :: mass1               !< (higher) mass of the primary particle
@@ -88,7 +88,7 @@ contains
          call nh%compare_namelist()
 
          cbuff(1) = topic_2body
-         cbuff(2) = bgfile
+
          rbuff(1) = fdens
          rbuff(2) = e
          rbuff(3) = mass1
@@ -97,12 +97,13 @@ contains
       endif
 
       call piernik_MPI_Bcast(cbuff, cbuff_len)
+      call piernik_MPI_Bcast(bgfile, cwdlen)
       call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
 
          topic_2body = cbuff(1)
-         bgfile      = cbuff(2)
+
          fdens       = rbuff(1)
          e           = rbuff(2)
          mass1       = rbuff(3)
