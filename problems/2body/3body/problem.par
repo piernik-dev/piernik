@@ -1,0 +1,102 @@
+ $BASE_DOMAIN
+    n_d = 3*64
+    nb=5
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+    xmin   = -9999.0
+    xmax   = 10001.0
+    ymin   = -9999.0
+    ymax   = 10001.0
+    zmin   = -9999.0
+    zmax   = 10001.0
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+    units_set = "psm"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend    = 100.
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='leapfrog'
+    run_id =  'tst'
+    dt_hdf  = 200.
+    dt_res  = 200.
+    dt_log  = 0.05
+    dt_tsl  = 0.05
+    vars(1:) = 'dens' , 'gpot', 'nbdn' !, 'prth'
+    pvars(1:) = 'ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz'
+ /
+
+ $FLUID_IONIZED
+ /
+
+ $FLUID_NEUTRAL
+ !cs_iso = 0.01
+ !cs_iso = 0.01
+ !cs_iso = 0.001
+ !selfgrav = .true.
+ !selfgrav = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.5
+    smalld = 1.e-3
+    smallei= 1.e-5
+    integration_order = 2
+    limiter= 'vanleer'
+    !cflcontrol = 'none'
+    skip_sweep = .true., .true., .true.
+ /
+
+ $GRAVITY
+ !external_gp = 'ptmass'
+ !ptmass = 10.0
+ /
+
+ $MULTIGRID_GRAVITY
+  ord_time_extrap = 2 
+  grav_bnd_str  = "isolated"   
+/
+
+ $PROBLEM_CONTROL
+   topic_2body = 'buildgal'
+   bgfile = "../../problems/2body/3body/orbit-8"
+ /
+
+ $MULTIGRID_SOLVER
+   stdout = .true.
+ /
+
+ $INTERACTIONS
+ /
+
+ $FLUID_TRACER
+ /
+
+ $AMR
+ /
+
+ $PARTICLES
+   npart=3
+   time_integrator = 'leapfrog2'
+   interpolation_scheme = 'tsc'
+   acc_interp_method = 'tsc'
+   !acc_interp_method = 'lagrange'
+   lf_c = 1.
+ /
