@@ -894,6 +894,7 @@ contains
 
             if (.not.associated(data)) allocate(data(cg%nxb, cg%nyb, cg%nzb))
             call get_data_from_cg(hdf_vars(i), cg, data)
+            if (.not.hdf_vars_avail(i)) cycle
 
             chunk_dims = cg%n_b(:) ! Chunks dimensions
             call h5screate_simple_f(rank, chunk_dims, memspace, error)
@@ -949,7 +950,7 @@ contains
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use common_hdf5, only: hdf_vars
+      use common_hdf5, only: hdf_vars, hdf_vars_avail
       use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE, tmr_hdf
       use dataio_pub,  only: msg, printio, printinfo, thdf, last_hdf_time, piernik_hdf5_version
       use grid_cont,   only: grid_container
@@ -997,6 +998,7 @@ contains
          dims = cg%n_b(:)
          do i = I_ONE, size(hdf_vars, kind=4)
             call get_data_from_cg(hdf_vars(i), cg, data)
+            if (.not.hdf_vars_avail(i)) cycle
             call h5ltmake_dataset_double_f(grp_id, hdf_vars(i), rank, dims, data(:,:,:), error)
          enddo
          if (associated(data)) deallocate(data)
