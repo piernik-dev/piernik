@@ -183,7 +183,7 @@ contains
 
    subroutine create_units_description(gid)
 
-      use common_hdf5,  only: hdf_vars
+      use common_hdf5,  only: hdf_vars, hdf_vars_avail
       use constants,    only: units_len, cbuff_len, I_FIVE
       use hdf5,         only: HID_T, h5dopen_f, h5dclose_f
       use helpers_hdf5, only: create_dataset, create_attribute
@@ -192,7 +192,7 @@ contains
       implicit none
       integer(HID_T), intent(in)             :: gid
       integer(HID_T)                         :: dset_id
-      integer(kind=4)                        :: error, i
+      integer(kind=4)                        :: error, i, ip
       character(len=cbuff_len), pointer      :: ssbuf
       character(len=units_len), pointer      :: sbuf
       character(len=units_len), target       :: s_unit
@@ -202,14 +202,20 @@ contains
          &  ["length_unit  ", "mass_unit    ", "time_unit    ",  &
          &   "velocity_unit", "magnetic_unit"]
 
+      ip = lbound(base_dsets, 1) - 1
       do i = lbound(base_dsets, 1), ubound(base_dsets, 1)
+         if (.not.hdf_vars_avail(i)) cycle
+         ip = ip + 1
          call create_dataset(gid, base_dsets(i), lmtvB(i))
          call h5dopen_f(gid, base_dsets(i), dset_id, error)
          ssbuf => s_lmtvB(i)
          call create_attribute(dset_id, "unit", ssbuf)
          call h5dclose_f(dset_id, error)
       enddo
+      ip = lbound(base_dsets, 1) - 1
       do i = lbound(hdf_vars, 1, kind=4), ubound(hdf_vars, 1, kind=4)
+         if (.not.hdf_vars_avail(i)) cycle
+         ip = ip + 1
          call get_unit(gdf_translate(hdf_vars(i)), val_unit, s_unit)
          call create_dataset(gid, gdf_translate(hdf_vars(i)), val_unit)
          call h5dopen_f(gid, gdf_translate(hdf_vars(i)), dset_id, error)
@@ -222,7 +228,7 @@ contains
 
    subroutine create_datafields_descrs(place)
 
-      use common_hdf5,  only: hdf_vars
+      use common_hdf5,  only: hdf_vars, hdf_vars_avail
       use gdf,          only: gdf_field_type, fmax
       use hdf5,         only: HID_T, h5gcreate_f, h5gclose_f
       use helpers_hdf5, only: create_attribute
@@ -231,7 +237,7 @@ contains
 
       integer(HID_T), intent(in)             :: place
 
-      integer                                :: i
+      integer                                :: i, ip
       integer(kind=4)                        :: error
       integer(HID_T)                         :: g_id
       type(gdf_field_type), target           :: f
@@ -239,7 +245,10 @@ contains
       character(len=fmax), pointer           :: sbuf
 
       allocate(ibuf(1))
+      ip = lbound(hdf_vars,1) - 1
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
+         if (.not.hdf_vars_avail(i)) cycle
+         ip = ip + 1
          f = datafields_descr(hdf_vars(i))
          call h5gcreate_f(place, gdf_translate(hdf_vars(i)), g_id, error)
          call create_attribute(g_id, 'field_to_cgs', [f%f2cgs])
