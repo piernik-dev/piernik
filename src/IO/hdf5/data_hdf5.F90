@@ -572,7 +572,7 @@ contains
       integer(kind=4)                                      :: error
       integer(kind=4), parameter                           :: rank = 3
       integer(HSIZE_T), dimension(:), allocatable          :: dims
-      integer                                              :: i, ncg, n
+      integer                                              :: i, ip, ncg, n
       type(grid_container),            pointer             :: cg
       type(cg_list_element),           pointer             :: cgl
       real, dimension(:,:,:),          pointer             :: data_dbl ! double precision buffer (internal default, single precision buffer is the plotfile output default, overridable by h5_64bit)
@@ -583,7 +583,7 @@ contains
 
       if (nstep - nstep_start < 1) call enable_all_hdf_var  ! just in case things have changed meanwhile
 
-      call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(hdf_vars))
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(pack(hdf_vars, hdf_vars_avail)))
 
       if (cg_desc%tot_cg_n < 1) call die("[data_hdf5:write_cg_to_output] no cg available!")
 
@@ -602,17 +602,21 @@ contains
             if (master) then
                if (.not. can_i_write) call die("[data_hdf5:write_cg_to_output] Master can't write")
 
+               ip = lbound(hdf_vars,1) - 1
                do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
+                  if (.not.hdf_vars_avail(i)) cycle
+                  ip = ip + 1
                   if (cg_desc%cg_src_p(ncg) == proc) then
                      cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-                     if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
+                     call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                   else
                      call MPI_Recv(data_dbl(1,1,1), size(data_dbl), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
                   endif
+                  if (.not.hdf_vars_avail(i)) cycle
                   if (h5_64bit) then
-                     call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_DOUBLE, data_dbl, dims, error, xfer_prp = cg_desc%xfer_prp)
+                     call h5dwrite_f(cg_desc%dset_id(ncg, ip), H5T_NATIVE_DOUBLE, data_dbl, dims, error, xfer_prp = cg_desc%xfer_prp)
                   else
-                     call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, xfer_prp = cg_desc%xfer_prp)
+                     call h5dwrite_f(cg_desc%dset_id(ncg, ip), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, xfer_prp = cg_desc%xfer_prp)
                   endif
                enddo
             else
@@ -621,6 +625,7 @@ contains
                   cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                   do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
                      if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
+                     if (.not.hdf_vars_avail(i)) cycle
                      call MPI_Send(data_dbl(1,1,1), size(data_dbl), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, mpi_err)
                   enddo
                endif
@@ -641,12 +646,16 @@ contains
                call recycle_data(dims, cg_all_n_b, ncg, data_dbl)
                cg => cgl%cg
 
+               ip = lbound(hdf_vars,1) - 1
                do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-                  if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
+                  if (.not.hdf_vars_avail(i)) cycle
+                  ip = ip + 1
+                  call get_data_from_cg(hdf_vars(i), cg, data_dbl)
+                  if (.not.hdf_vars_avail(i)) cycle
                   if (h5_64bit) then
-                     call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_DOUBLE, data_dbl, dims, error, xfer_prp = cg_desc%xfer_prp)
+                     call h5dwrite_f(cg_desc%dset_id(ncg, ip), H5T_NATIVE_DOUBLE, data_dbl, dims, error, xfer_prp = cg_desc%xfer_prp)
                   else
-                     call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, xfer_prp = cg_desc%xfer_prp)
+                     call h5dwrite_f(cg_desc%dset_id(ncg, ip), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, xfer_prp = cg_desc%xfer_prp)
                   endif
                enddo
 
@@ -673,7 +682,10 @@ contains
 
             call recycle_data(dims, cg_all_n_b, 1, data_dbl)
             do ncg = 1, maxval(cg_n)-n
+               ip = lbound(hdf_vars,1) - 1
                do i = lbound(hdf_vars, 1), ubound(hdf_vars, 1)
+                  if (.not.hdf_vars_avail(i)) cycle
+                  ip = ip + 1
                   ! It is crashing due to FPE when there are more processes than blocks
                   ! because data_dbl contains too large values for single precision.
                   ! If a process doesn't have a block, data_dbl serves justa as
