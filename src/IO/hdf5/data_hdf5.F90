@@ -31,7 +31,6 @@
 !! \brief Module that contains HDF5 I/O routines for writing single-precision data dumps
 !<
 module data_hdf5
-
 ! pulled by HDF5
 
    implicit none
@@ -51,7 +50,7 @@ contains
 
    subroutine init_data
 
-      use dataio_pub,  only: multiple_h5files
+      use dataio_pub, only: multiple_h5files
 
       implicit none
 
@@ -121,8 +120,8 @@ contains
 
    elemental function gdf_translate(var) result(newname)
 
-      use constants,    only: dsetnamelen
-      use dataio_pub,   only: gdf_strict
+      use constants,  only: dsetnamelen
+      use dataio_pub, only: gdf_strict
 
       implicit none
 
@@ -190,6 +189,7 @@ contains
       use units,        only: lmtvB, s_lmtvB, get_unit
 
       implicit none
+
       integer(HID_T), intent(in)             :: gid
       integer(HID_T)                         :: dset_id
       integer(kind=4)                        :: error, i, ip
@@ -199,13 +199,9 @@ contains
       real                                   :: val_unit
 
       character(len=cbuff_len), dimension(I_FIVE), parameter :: base_dsets = &
-         &  ["length_unit  ", "mass_unit    ", "time_unit    ",  &
-         &   "velocity_unit", "magnetic_unit"]
+         &  ["length_unit  ", "mass_unit    ", "time_unit    ",  "velocity_unit", "magnetic_unit"]
 
-      ip = lbound(base_dsets, 1) - 1
       do i = lbound(base_dsets, 1), ubound(base_dsets, 1)
-         if (.not.hdf_vars_avail(i)) cycle
-         ip = ip + 1
          call create_dataset(gid, base_dsets(i), lmtvB(i))
          call h5dopen_f(gid, base_dsets(i), dset_id, error)
          ssbuf => s_lmtvB(i)
@@ -276,9 +272,9 @@ contains
       use grid_cont,   only: grid_container
       use mpisetup,    only: proc
 #ifdef MAGNETIC
+      use constants,   only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX, I_EIGHT
       use div_B,       only: divB_c_IO
       use domain,      only: dom
-      use constants,   only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX, I_EIGHT
       use global,      only: force_cc_mag
 #endif /* MAGNETIC */
 
@@ -480,8 +476,8 @@ contains
 
       implicit none
 
-      character(len=cwdlen) :: fname
-      real                  :: phv
+      character(len=cwdlen)       :: fname
+      real                        :: phv
       character(len=*), parameter :: wrd_label = "IO_write_datafile_v1"
 
       call ppp_main%start(wrd_label, PPP_IO)
@@ -754,8 +750,8 @@ contains
       use dataio_pub,       only: warn, msg, printinfo
       use dataio_user,      only: user_vars_hdf5
       use grid_cont,        only: grid_container
-      use named_array_list, only: qna
       use mpisetup,         only: master
+      use named_array_list, only: qna
 
       implicit none
 
@@ -955,8 +951,7 @@ contains
       use dataio_pub,  only: msg, printio, printinfo, thdf, last_hdf_time, piernik_hdf5_version
       use grid_cont,   only: grid_container
       use h5lt,        only: h5ltmake_dataset_double_f
-      use hdf5,        only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, &
-           &                 h5gclose_f, HSIZE_T
+      use hdf5,        only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, h5gclose_f, HSIZE_T
       use mpisetup,    only: master
       use timer,       only: set_timer
 
@@ -991,8 +986,7 @@ contains
          call h5gcreate_f(file_id, gname, grp_id, error)
 
          ! set attributes here
-         call h5ltmake_dataset_double_f(grp_id, "fbnd", int(2,kind=4), shape(cg%fbnd,kind=HSIZE_T), &
-                                      & cg%fbnd, error)
+         call h5ltmake_dataset_double_f(grp_id, "fbnd", int(2,kind=4), shape(cg%fbnd,kind=HSIZE_T), cg%fbnd, error)
 
          if (.not.associated(data)) allocate(data(cg%n_b(xdim),cg%n_b(ydim),cg%n_b(zdim)))
          dims = cg%n_b(:)
