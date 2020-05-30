@@ -216,7 +216,7 @@ contains
          !vel_init = rotate(vel_init, dpi/npart, zdim)
       enddo
 
-      write(msg,'(a,i6)') '[initproblem:orbits] Number of particles added to the domain: ', npart
+      write(msg,'(a,i8)') '[initproblem:orbits] Number of particles added to the domain: ', npart
       if (master) call printinfo(msg)
       write(msg,'(a,3f5.2)') '[initproblem:orbits] Initial position of the particle: ', pos_init
       if (master) call printinfo(msg)
