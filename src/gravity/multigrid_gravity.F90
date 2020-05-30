@@ -924,7 +924,12 @@ contains
             case (SGP)
                i_hist = inner%old%latest%i_hist
             case (SGPM)
-               i_hist = inner%old%latest%earlier%i_hist
+               if (associated(inner%old%latest%earlier)) then
+                  i_hist = inner%old%latest%earlier%i_hist
+               else
+                  i_hist = inner%old%latest%i_hist
+                  call warn("[multigrid_gravity:recover_sg] not enough historic fields for inner SGPM, using latest")
+               endif
             case default
                call die("[multigrid_gravity:recover_sg] such old inner history not implemented yet")
                i_hist = INVALID
@@ -937,7 +942,12 @@ contains
                   case (SGP)
                      i_hist = outer%old%latest%i_hist
                   case (SGPM)
-                     i_hist = outer%old%latest%earlier%i_hist
+                     if (associated(outer%old%latest%earlier)) then
+                        i_hist = outer%old%latest%earlier%i_hist
+                     else
+                        i_hist = outer%old%latest%i_hist
+                        call warn("[multigrid_gravity:recover_sg] not enough historic fields for outer SGPM, using latest")
+                     endif
                   case default
                      call die("[multigrid_gravity:recover_sg] such old outer history not implemented yet")
                      i_hist = INVALID
