@@ -357,7 +357,7 @@ contains
       character(len=cbuff_len), allocatable, dimension(:) :: namelist
       real, allocatable, dimension(:) :: timelist
 
-      n = min(this%old%cnt(), ord_time_extrap + I_ONE, I_TWO)  ! try to save at least 2 points to recover also sgpm
+      n = max(min(this%old%cnt(), ord_time_extrap + I_ONE), I_TWO)  ! try to save at least 2 points to recover also sgpm
 
       if (n <= 0) return
 
