@@ -1,18 +1,17 @@
  $BASE_DOMAIN
     n_d = 3*64
-    nb=5
     bnd_xl = 'out'
     bnd_xr = 'out'
     bnd_yl = 'out'
     bnd_yr = 'out'
     bnd_zl = 'out'
     bnd_zr = 'out'
-    xmin   = -9999.0
-    xmax   = 10001.0
-    ymin   = -9999.0
-    ymax   = 10001.0
-    zmin   = -9999.0
-    zmax   = 10001.0
+    xmin   = -10000.0
+    xmax   =  10000.0
+    ymin   = -10000.0
+    ymax   =  10000.0
+    zmin   = -10000.0
+    zmax   =  10000.0
  /
 
  $MPI_BLOCKS
@@ -47,15 +46,10 @@
  /
 
  $FLUID_NEUTRAL
- !cs_iso = 0.01
- !cs_iso = 0.01
- !cs_iso = 0.001
- !selfgrav = .true.
- !selfgrav = .false.
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.5
+    cfl    = 0.7
     smalld = 1.e-3
     smallei= 1.e-5
     integration_order = 2
@@ -65,14 +59,12 @@
  /
 
  $GRAVITY
- !external_gp = 'ptmass'
- !ptmass = 10.0
  /
 
  $MULTIGRID_GRAVITY
-  ord_time_extrap = 2 
-  grav_bnd_str  = "isolated"   
-/
+   ord_time_extrap = 2
+   grav_bnd_str  = "isolated"
+ /
 
  $PROBLEM_CONTROL
    topic_2body = 'buildgal'
