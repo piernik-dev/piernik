@@ -361,8 +361,14 @@ contains
       use global,         only: smallei
 #endif /* !ISO */
 #ifdef COSM_RAYS
-      use fluidindex,     only: iarr_all_crs
       use initcosmicrays, only: smallecr
+#ifdef COSM_RAY_ELECTRONS
+      use initcrspectrum,        only: smallcree, smallcren
+      use initcosmicrays,        only: iarr_cre_e, iarr_cre_n
+      use fluidindex,            only: iarr_all_crn
+#else  /* !COSM_RAY_ELECTRONS */
+      use fluidindex,     only: iarr_all_crs
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
 
       implicit none
@@ -456,7 +462,13 @@ contains
                   cg%u(iarr_all_en,i,j,kk) = eib(:) + ekin(cg%u(iarr_all_mx,i,j,kk),cg%u(iarr_all_my,i,j,kk),cg%u(iarr_all_mz,i,j,kk),db(:))
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                  cg%u(iarr_all_crs,i,j,kk) = smallecr
+#ifdef COSM_RAY_ELECTRONS
+                     cg%u(iarr_all_crn,i,j,kk) = smallecr
+                     cg%u(iarr_cre_n  ,i,j,kk) = smallcren     !< this line refers to CRESP number density component
+                     cg%u(iarr_cre_e  ,i,j,kk) = smallcree     !< this line refers to CRESP energy density component
+#else /* !COSM_RAY_ELECTRONS */
+                     cg%u(iarr_all_crs,i,j,kk) = smallecr
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
                endif
             enddo
