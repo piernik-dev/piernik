@@ -221,7 +221,7 @@ def get_particles(h5f):
     plist = {}
     if "grid_particle_count" not in h5f:
         return plist
-    n = h5f['grid_particle_count'][0]
+    n = sum(h5f['grid_particle_count'])
     nf = 0
     for ig in range(h5f['grid_dimensions'].shape[0]):
         h5g = h5f['data']['grid_' + str(ig).zfill(10)]
