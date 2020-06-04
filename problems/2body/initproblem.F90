@@ -150,10 +150,6 @@ contains
       select case (trim(topic_2body))
          case ('twobodies')
             call twobodies
-         case ('orbits')
-            call orbits
-         case ('relaxtime')
-            call relax_time
          case ('buildgal')
             call read_buildgal
          case default
@@ -188,42 +184,6 @@ contains
       enddo
 
    end subroutine twobodies
-
-   subroutine orbits
-
-      use constants,      only: ndims !, dpi, zdim
-      use dataio_pub,     only: msg, printinfo
-      use mpisetup,       only: master
-      use particle_pub,   only: npart
-      use particle_utils, only: add_part_in_proper_cg
-
-      implicit none
-
-      integer(kind=4)        :: p
-      real, dimension(ndims) :: pos_init, vel_init
-
-      pos_init = [2.0, 1.0, 0.0]
-
-      !vel_init = vel_2bodies(mass1, pos_init)
-      vel_init = [-0.5, 0.0, 0.0]
-
-      do p = 1, npart
-         call add_part_in_proper_cg(p, mass2, pos_init, vel_init, [0.0, 0.0, 0.0], 0.0 ) !elliptical orbit
-         !call add_part_in_proper_cg(mass2, [4.0, 2.0, 0.0],[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
-         !call add_part_in_proper_cg(mass2, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0],  [0.0, 0.0, 0.0], 0.0)
-
-         !pos_init = rotate(pos_init, dpi/npart, zdim)
-         !vel_init = rotate(vel_init, dpi/npart, zdim)
-      enddo
-
-      write(msg,'(a,i8)') '[initproblem:orbits] Number of particles added to the domain: ', npart
-      if (master) call printinfo(msg)
-      write(msg,'(a,3f5.2)') '[initproblem:orbits] Initial position of the particle: ', pos_init
-      if (master) call printinfo(msg)
-      write(msg,'(a,3f5.2)') '[initproblem:orbits] Initial velocity of the particle: ', vel_init
-      if (master) call printinfo(msg)
-
-   end subroutine orbits
 
 !<
 !! \brief compute velocity of particle
@@ -289,62 +249,12 @@ contains
 
    end function rotate
 
-!< \brief create a set of particles at random positions inside a sphere
-   subroutine relax_time
-
-      use constants,         only: ndims, onesth, one, two
-      use domain,            only: dom
-      use particle_pub,      only: npart
-      use particle_utils,    only: add_part_in_proper_cg
-#ifdef VERBOSE
-      use dataio_pub,        only: printinfo
-#endif /* VERBOSE */
-#ifdef HDF5
-      use particles_io_hdf5, only: write_nbody_hdf5
-#endif /* HDF5 */
-
-      implicit none
-
-      integer(kind=4)        :: i
-      real, dimension(ndims) :: pos_init, nrand
-      real                   :: r_dom
-      logical                :: outsphere
-#ifndef RANDOMIZE
-      integer                :: seed
-
-      seed = 86437
-      call random_seed(seed)
-#endif /* !RANDOMIZE */
-
-      r_dom = onesth*sqrt(sum(dom%L_(:)**2))
-
-      do i = 1, npart
-         outsphere = .true.
-         do while (outsphere)
-            call random_number(nrand)
-            pos_init(:) = dom%C_ + (two*nrand-one)*r_dom
-            outsphere = sqrt(sum(pos_init(:)**2)) >= r_dom
-         enddo
-
-         call add_part_in_proper_cg(i, mass2, pos_init(:), [0.0,0.0,0.0], [0.0, 0.0, 0.0], 0.0)
-
-      enddo
-#ifdef VERBOSE
-      call printinfo('[initproblem:relax_time] Particles position computed')
-#endif /* VERBOSE */
-#ifdef HDF5
-      call write_nbody_hdf5('relax_time_init.h5')
-#endif /* HDF5 */
-
-   end subroutine relax_time
-
 ! the routine read_buildgal should perhaps go somewhere to particles or IO (together with other readers for different particle containers)
 
    subroutine read_buildgal
 
       use constants,      only: ndims, I_ONE
       use dataio_pub,     only: msg, printio, warn
-      use particle_pub,   only: npart
       use particle_utils, only: add_part_in_proper_cg
       use mpisetup,       only: master
 
@@ -368,18 +278,6 @@ contains
          read(galfile,*) (mass(i),i=1,nbodies), ((pos(i,j),j=1,ndims),i=1,nbodies), ((vel(i,j),j=1,ndims),i=1,nbodies)
 
       close(galfile)
-
-      if (nbodies /= npart) then
-         if (master) then
-            write(msg,'(a,i8,3a,i8,a)') 'Different number of particles declared in problem.par file (',npart,') than stored in ', trim(bgfile), ' (',nbodies,')'
-            call warn(msg)
-         endif
-         nbodies = min(nbodies,npart)
-         if (master) then
-            write(msg,'(a,i8,a)') 'Reading ', nbodies, ' particles'
-            call printio(msg)
-         endif
-      endif
 
       i = 0
       do j = 1, nbodies

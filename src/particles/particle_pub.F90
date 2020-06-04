@@ -39,9 +39,8 @@ module particle_pub
    implicit none
    private
    public :: init_particles, cleanup_particles
-   public :: npart, lf_c, ignore_dt_fluid
+   public :: lf_c, ignore_dt_fluid
 
-   integer(kind=4) :: npart              !< number of particles
    real            :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
    logical         :: ignore_dt_fluid    !< option to test only nbody part of the code, never true by default
 
@@ -73,12 +72,11 @@ contains
       character(len=cbuff_len) :: acc_interp_method  !< acceleration interpolation method
       integer                  :: order              !< order of Lagrange polynomials (if acc_interp_method = 'lagrange')
 
-      namelist /PARTICLES/ npart, time_integrator, interpolation_scheme, acc_interp_method, lf_c, mask_gpot1b, ignore_dt_fluid, dump_diagnose, eps
+      namelist /PARTICLES/ time_integrator, interpolation_scheme, acc_interp_method, lf_c, mask_gpot1b, ignore_dt_fluid, dump_diagnose, eps
 
       time_integrator      = default_ti
       interpolation_scheme = default_is
 
-      npart                = 0
       acc_interp_method    = 'cic'
       lf_c                 = 1.0
       eps                  = 0.0
@@ -112,8 +110,6 @@ contains
          cbuff(2) = interpolation_scheme
          cbuff(3) = acc_interp_method
 
-         ibuff(1) = npart
-
          rbuff(1) = lf_c
          rbuff(2) = eps
 
@@ -132,8 +128,6 @@ contains
          time_integrator = cbuff(1)
          interpolation_scheme = cbuff(2)
          acc_interp_method    = cbuff(3)
-
-         npart                = ibuff(1)
 
          lf_c                 = rbuff(1)
          eps                  = rbuff(2)
