@@ -82,6 +82,7 @@ contains
 #ifdef NBODY
 #ifdef GRAV
       use particle_pub,          only: init_particles
+      use particle_utils,        only: global_count_all_particles
 #endif /* GRAV */
 #ifdef TWOBODY
       use initproblem,           only: problem_initial_nbody
@@ -317,10 +318,14 @@ contains
       call ppp_main%stop(ic_label)
 
       code_progress = PIERNIK_POST_IC
-
       write(msg, '(a,3i8,a,i3)')"[initpiernik:init_piernik] Effective resolution is [", finest%level%l%n_d(:), " ] at level ", finest%level%l%id
       !> \todo Do an MPI_Reduce in case the master process don't have any part of the globally finest level or ensure it is empty in such case
       if (master) call printinfo(msg)
+
+#ifdef GRAV
+      write(msg,'(a,i9)')"[initpiernik:init_piernik] Total number of particles is ", global_count_all_particles()
+      if (master) call printinfo(msg)
+#endif /* GRAV */
 
 #ifdef VERBOSE
       call diagnose_arrays                   ! may depend on everything

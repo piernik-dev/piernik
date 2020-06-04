@@ -39,7 +39,7 @@ module particle_utils
 
    private
    public :: max_pvel_1d, add_part_in_proper_cg, print_all_particles, is_part_in_cg
-   public :: max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom, count_all_particles, part_leave_cg
+   public :: max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom, count_all_particles, global_count_all_particles, part_leave_cg
 
    real    :: tot_angmom           !< angular momentum of set of the particles
    real    :: tot_energy           !< total energy of set of the particles
@@ -574,6 +574,18 @@ contains
       enddo
 
    end function count_all_particles
+
+   integer(kind=4) function global_count_all_particles() result(gpcount)
+
+      use constants, only: pSUM
+      use mpisetup,  only: piernik_MPI_Allreduce
+
+      implicit none
+
+      gpcount = count_all_particles()
+      call piernik_MPI_Allreduce(gpcount, pSUM)
+
+   end function global_count_all_particles
 
    subroutine dump_particles_to_textfile
 
