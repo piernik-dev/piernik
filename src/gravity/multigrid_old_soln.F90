@@ -84,8 +84,6 @@ contains
       integer :: i
       character(len=dsetnamelen) :: hname
 
-      if (nold <= 0) return
-
       if (associated(this%old%latest) .or. associated(this%invalid%latest)) then
          write(msg, '(3a)') "[multigrid_old_soln:init_history] ", prefix," already initialized."
          call die(msg)
@@ -171,7 +169,7 @@ contains
                call printinfo(msg, stdout)
             endif
             call all_cg%set_q_value(solution, 0.)
-            if (associated(this%old%latest)) call die("[multigrid_old_soln:init_solution] need to move %old to %invalid")
+            ! if (associated(this%old%latest)) call die("[multigrid_old_soln:init_solution] need to move %old to %invalid")
          case (O_INJ)
             call leaves%check_dirty(this%old%latest%i_hist, "history0")
             call leaves%q_copy(this%old%latest%i_hist, solution)
@@ -358,8 +356,6 @@ contains
       real, allocatable, dimension(:) :: timelist
 
       n = max(min(this%old%cnt(), ord_time_extrap + I_ONE), I_TWO)  ! try to save at least 2 points to recover also sgpm
-
-      if (n <= 0) return
 
       allocate(namelist(n), timelist(n))
 

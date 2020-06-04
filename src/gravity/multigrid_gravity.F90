@@ -364,10 +364,8 @@ contains
       ! solution recycling
       ord_time_extrap = min(nold_max-I_ONE, max(-I_ONE, ord_time_extrap))
       associate (nold => ord_time_extrap + 1)
-      if (nold > 0) then
          call inner%init_history(nold, "i")
          if (grav_bnd == bnd_isolated .and. .not. singlepass) call outer%init_history(nold, "o")
-      endif
       end associate
 
       call vstat%init(max_cycles)
