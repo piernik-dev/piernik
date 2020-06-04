@@ -218,6 +218,7 @@ def collect_dataset(h5f, dset_name):
 
 
 def get_particles(h5f):
+    import numpy as np
     plist = {}
     if "grid_particle_count" not in h5f:
         return plist
@@ -232,7 +233,7 @@ def get_particles(h5f):
                 for v in h5gps.keys():
                     if v not in plist:
                         plist[v] = []
-                    plist[v] += h5gps[v]
+                    plist[v] = np.append(plist[v], h5gps[v])
     if nf != n:
         print("Warning: read %d particles from '%s', %d expected." % (nf, h5f.filename, n))
     for v in plist:
@@ -365,7 +366,7 @@ if __name__ == "__main__":
             failed = False
             longestkey = len(max(norms, key=len))
             for i in sorted(norms.keys()):
-                if (norms[i] >= 0. and norms[i] <= 1.):
+                if (norms[i] >= 0. and norms[i] <= 1. + 1e-12):
                     print("Difference of %-*s: %g" % (longestkey + 1, i, norms[i]))
                     tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
                 else:
