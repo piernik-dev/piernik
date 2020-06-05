@@ -242,9 +242,10 @@ contains
 
      integer,                          intent(in)    :: n_part
      type(grid_container),             intent(inout) :: cg
-     type(particle), pointer                         :: pset
      integer, dimension(n_part,ndims), intent(out)   :: cells
      real,    dimension(n_part,ndims), intent(out)   :: dist
+
+     type(particle), pointer                         :: pset
      integer                                         :: i, cdim
 
      i=1

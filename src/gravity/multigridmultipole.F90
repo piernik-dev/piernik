@@ -520,20 +520,20 @@ contains
 #ifdef NBODY
    subroutine particles2moments
 
-      use cg_leaves,    only: leaves
-      use cg_list,      only: cg_list_element
-      use constants,    only: xdim, ydim, zdim, PPP_GRAV, PPP_PART
-      use grid_cont,    only: grid_container
-      use ppp,          only: ppp_main
-      use units,        only: fpiG
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, PPP_GRAV, PPP_PART
+      use grid_cont,      only: grid_container
+      use ppp,            only: ppp_main
+      use units,          only: fpiG
       use particle_types, only: particle
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
-      type(particle), pointer    :: pset
-      character(len=*), parameter :: p2m_label = "multipole_part2mom"
+      type(particle), pointer        :: pset
+      character(len=*), parameter    :: p2m_label = "multipole_part2mom"
 
       call ppp_main%start(p2m_label, PPP_GRAV + PPP_PART)
 
