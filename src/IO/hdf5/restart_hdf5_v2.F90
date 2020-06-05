@@ -985,6 +985,7 @@ contains
       use cg_particles_io,  only: pdsets
       use data_hdf5,        only: gdf_translate
       use read_attr,        only: read_attribute
+      use particle_types,   only: particle
       use particle_utils,   only: add_part_in_proper_cg, part_leave_cg
 #endif /* NBODY_1FILE */
 
@@ -1025,6 +1026,7 @@ contains
       real, allocatable, dimension(:, :)           :: pos, vel, acc
       real, dimension(ndims)                       :: pos1, vel1, acc1
       real                                         :: mass1, ener1
+      type(particle), pointer                      :: pset
 #endif /* NBODY_1FILE */
 
       ! Find overlap between own cg and restart cg
@@ -1158,6 +1160,12 @@ contains
          call add_part_in_proper_cg(pid1, mass1, pos1, vel1, acc1, ener1)
       enddo
       call part_leave_cg()
+
+      pset => cg%pset%first
+      do while (associated(pset))
+         call pset%pdata%is_outside()
+         pset => pset%nxt
+      enddo
 
       deallocate(pid, mass, ener)
       deallocate(pos, vel, acc)
