@@ -85,7 +85,6 @@
  /
 
  $PARTICLES
-   npart=3
    time_integrator = 'leapfrog2'
    interpolation_scheme = 'tsc'
    acc_interp_method = 'tsc'

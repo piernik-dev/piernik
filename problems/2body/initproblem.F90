@@ -254,7 +254,7 @@ contains
    subroutine read_buildgal
 
       use constants,      only: ndims, I_ONE
-      use dataio_pub,     only: msg, printio, warn
+      use dataio_pub,     only: msg, printio
       use particle_utils, only: add_part_in_proper_cg
       use mpisetup,       only: master
 
