@@ -30,7 +30,11 @@
 !<
 module snsources
 ! pulled by SN_SRC
+
+   use constants, only: ndims, LO, HI
+
    implicit none
+
    private
    public :: random_sn, init_snsources, r_sn, nsn
 #ifdef COSM_RAYS
@@ -43,16 +47,17 @@ module snsources
    public :: sn_shear
 #endif /* SHEAR */
 
-   integer, save      :: nsn, nsn_last
-   real               :: e_sn                !< energy per supernova
-   real               :: f_sn                !< frequency of SN
-   real               :: f_sn_kpc2           !< frequency of SN per kpc^2
-   real               :: h_sn                !< galactic height in SN gaussian distribution ?
-   real               :: r_sn                !< radius of SN
+   integer                                 :: nsn, nsn_last
+   real                                    :: e_sn                !< energy per supernova
+   real                                    :: f_sn                !< frequency of SN
+   real                                    :: f_sn_kpc2           !< frequency of SN per kpc^2
+   real                                    :: h_sn                !< galactic height in SN gaussian distribution ?
+   real                                    :: r_sn                !< radius of SN
+   integer(kind=4), dimension(ndims,LO:HI) :: auxper
 #ifdef COSM_RAYS
-   real, parameter    :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    !< thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
-   real               :: amp_ecr_sn          !< cosmic ray explosion amplitude in units: e_0 = 1/(5/3-1)*rho_0*c_s0**2  rho_0=1.67e-24g/cm**3, c_s0 = 7km/s
-   real               :: amp_cr_sn           !< default aplitude of CR in SN bursts
+   real, parameter                         :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    !< thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
+   real                                    :: amp_ecr_sn          !< cosmic ray explosion amplitude in units: e_0 = 1/(5/3-1)*rho_0*c_s0**2  rho_0=1.67e-24g/cm**3, c_s0 = 7km/s
+   real                                    :: amp_cr_sn           !< default aplitude of CR in SN bursts
 #endif /* COSM_RAYS */
 
    namelist /SN_SOURCES/ e_sn, h_sn, r_sn, f_sn_kpc2
@@ -76,7 +81,7 @@ contains
 !<
    subroutine init_snsources
 
-      use constants,      only: PIERNIK_INIT_GRID, two, xdim, ydim
+      use constants,      only: PIERNIK_INIT_GRID, two, xdim, ydim, zdim
       use dataio_pub,     only: nh                  ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, code_progress
       use domain,         only: dom
@@ -87,6 +92,8 @@ contains
 #endif /* COSM_RAYS */
 
       implicit none
+
+      integer(kind=4) :: id
 
       if (code_progress < PIERNIK_INIT_GRID) call die("[snsources:init_snsources] grid or fluids/cosmicrays not initialized.")
 
@@ -147,6 +154,11 @@ contains
       nsn_last = 0
       nsn      = 0
 
+      auxper = 0
+      do id = xdim, zdim
+         if (dom%periodic(id) .and. dom%has_dir(id)) auxper(id,:) = [-1, 1]
+      enddo
+
    end subroutine init_snsources
 
 !>
@@ -154,7 +166,6 @@ contains
 !<
    subroutine random_sn
 
-      use constants, only: ndims
       use global,    only: t, cfl_violated
 
       implicit none
@@ -189,7 +200,7 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: ndims, xdim, ydim, zdim, LO, HI
+      use constants,      only: xdim, ydim, zdim
       use domain,         only: dom
       use grid_cont,      only: grid_container
 #ifdef COSM_RAYS_SOURCES
@@ -226,12 +237,12 @@ contains
                do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
 
                   decr = 0.0
-                  do ipm = -1, 1
+                  do ipm = auxper(xdim,LO), auxper(xdim,HI)
                      xr = ((cg%x(i)-pos(xdim) + real(ipm)*dom%L_(xdim))/r_sn)**2
 #ifdef SHEAR
                      ysna = ysnoi(ipm+2)
 #endif /* SHEAR */
-                     do jpm = -1, 1
+                     do jpm = auxper(ydim,LO), auxper(ydim,HI)
                         yr = ((cg%y(j)-ysna + real(jpm)*dom%L_(ydim))/r_sn)**2
                         ! BEWARE:  for num < -744.6 the exp(num) is the underflow
                         decr = decr + exp(-(xr + yr + zr))
@@ -262,7 +273,7 @@ contains
 !<
    subroutine rand_coords(pos)
 
-      use constants,   only: ndims, xdim, ydim, zdim, LO
+      use constants,   only: xdim, ydim, zdim
       use domain,      only: dom
 
       implicit none
@@ -285,7 +296,7 @@ contains
 #ifdef SHEAR
    subroutine sn_shear(cg, ysnoi)
 
-      use constants,   only: ydim, LO, HI
+      use constants,   only: ydim
       use dataio_pub,  only: die
       use domain,      only: is_multicg, dom
       use grid_cont,   only: grid_container
