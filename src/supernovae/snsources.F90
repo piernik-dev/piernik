@@ -213,7 +213,8 @@ contains
       real, dimension(ndims), intent(in) :: pos
       real,                   intent(in) :: ampl
       integer                            :: i, j, k, ipm, jpm
-      real                               :: decr, ysna, xr, yr, zr
+      real                               :: decr, ysna
+      real, dimension(ndims)             :: posr
       type(cg_list_element), pointer     :: cgl
       type(grid_container),  pointer     :: cg
 #ifdef SHEAR
@@ -232,20 +233,20 @@ contains
 #endif /* !SHEAR */
 
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-            zr = ((cg%z(k)-pos(zdim))/r_sn)**2
+            posr(zdim) = ((cg%z(k)-pos(zdim))/r_sn)**2
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
 
                   decr = 0.0
                   do ipm = auxper(xdim,LO), auxper(xdim,HI)
-                     xr = ((cg%x(i)-pos(xdim) + real(ipm)*dom%L_(xdim))/r_sn)**2
+                     posr(xdim) = ((cg%x(i)-pos(xdim) + real(ipm)*dom%L_(xdim))/r_sn)**2
 #ifdef SHEAR
                      ysna = ysnoi(ipm+2)
 #endif /* SHEAR */
                      do jpm = auxper(ydim,LO), auxper(ydim,HI)
-                        yr = ((cg%y(j)-ysna + real(jpm)*dom%L_(ydim))/r_sn)**2
+                        posr(ydim) = ((cg%y(j)-ysna + real(jpm)*dom%L_(ydim))/r_sn)**2
                         ! BEWARE:  for num < -744.6 the exp(num) is the underflow
-                        decr = decr + exp(-(xr + yr + zr))
+                        decr = decr + exp(-sum(posr, mask=dom%has_dir))
                      enddo
                   enddo
                   decr = decr * ampl
