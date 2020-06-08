@@ -220,6 +220,7 @@ contains
          endif
       enddo
 
+      this%dl(:)        = dom%L_(:) / l%n_d(:)
       where (dom%has_dir(:))
          this%n_(:)        = this%n_b(:) + I_TWO * dom%nb       ! Block total grid size with guardcells
          this%ijkse(:, LO) = int(this%my_se(:, LO), kind=4)
@@ -230,7 +231,6 @@ contains
          this%lh1(:,HI)    = this%ijkse(:, HI) + I_ONE
          this%lhn(:,LO)    = this%ijkse(:, LO) - dom%nb
          this%lhn(:,HI)    = this%ijkse(:, HI) + dom%nb
-         this%dl(:)        = dom%L_(:) / l%n_d(:)
          this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, LO)         - l%off(:))
          this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, HI) + I_ONE - l%off(:))
       elsewhere
@@ -243,7 +243,7 @@ contains
          this%lh1(:,HI)    = this%ijkse(:, HI)
          this%lhn(:,LO)    = this%ijkse(:, LO)
          this%lhn(:,HI)    = this%ijkse(:, HI)
-         this%dl(:)        = 1.0
+         !this%dl(:)        = 1.0
          this%fbnd(:, LO)  = dom%edge(:, LO)
          this%fbnd(:, HI)  = dom%edge(:, HI)
       endwhere
