@@ -86,7 +86,7 @@ contains
       use dataio_pub,     only: die, code_progress
       use domain,         only: dom
       use mpisetup,       only: rbuff, master, slave, piernik_MPI_Bcast
-      use units,          only: Myr, kpc, pc, ethu
+      use units,          only: ethu, kpc, Myr
 #ifdef COSM_RAYS
       use initcosmicrays, only: cr_eff
 #endif /* COSM_RAYS */
@@ -135,7 +135,7 @@ contains
       endif
 
 #ifdef COSM_RAYS
-      amp_ecr_sn = e_sn*cr_eff/(r_sn/pc)**3
+      amp_ecr_sn = e_sn*cr_eff/r_sn**3
       amp_cr_sn  = amp_ecr_sn *ethu
 #endif /* COSM_RAYS */
 
