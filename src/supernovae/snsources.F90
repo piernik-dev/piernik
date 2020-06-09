@@ -57,7 +57,6 @@ module snsources
    real                                    :: gnorm               !< gauss distribution normalization factor
 #ifdef COSM_RAYS
    real                                    :: amp_ecr_sn          !< cosmic ray explosion amplitude in units: e_0 = 1/(5/3-1)*rho_0*c_s0**2  rho_0=1.67e-24g/cm**3, c_s0 = 7km/s
-   real                                    :: amp_cr_sn           !< default aplitude of CR in SN bursts
 #endif /* COSM_RAYS */
 
    namelist /SN_SOURCES/ e_sn, h_sn, r_sn, f_sn_kpc2
@@ -97,7 +96,7 @@ contains
 
       if (code_progress < PIERNIK_INIT_GRID) call die("[snsources:init_snsources] grid or fluids/cosmicrays not initialized.")
 
-      e_sn      = 4.96e6
+      e_sn      = 52.888
       h_sn      = 0.0
       r_sn      = 0.0
       f_sn_kpc2 = 0.0
@@ -134,9 +133,14 @@ contains
          f_sn_kpc2 = rbuff(4)
       endif
 
+      if (all(dom%has_dir)) then
+         gnorm = 1./(16./9.*pi*r_sn**3)
+      else
+         gnorm = 1./(pi*r_sn**2)
+      endif
+
 #ifdef COSM_RAYS
-      amp_ecr_sn = e_sn*cr_eff/r_sn**3
-      amp_cr_sn  = amp_ecr_sn *ethu
+      amp_ecr_sn = cr_eff * e_sn * ethu * 4./3. * pi * r_sn**3 * gnorm
 #endif /* COSM_RAYS */
 
       f_sn = f_sn_kpc2 / Myr * dom%L_(xdim) * dom%L_(ydim) / kpc**2
@@ -148,12 +152,6 @@ contains
       do id = xdim, zdim
          if (dom%periodic(id) .and. dom%has_dir(id)) auxper(id,:) = [-1, 1]
       enddo
-
-      if (all(dom%has_dir)) then ! gnorm should be multiply by cg%dvol while using
-         gnorm = 1./(16./9.*pi*r_sn**3)
-      else
-         gnorm = 1./(pi*r_sn**2)
-      endif
 
    end subroutine init_snsources
 
@@ -179,7 +177,7 @@ contains
          call rand_coords(snpos)
 
 #ifdef COSM_RAYS
-         call cr_sn(snpos,amp_cr_sn)
+         call cr_sn(snpos,amp_ecr_sn)
 #endif /* COSM_RAYS */
 
       enddo
@@ -245,7 +243,7 @@ contains
                         decr = decr + exp(-sum(posr, mask=dom%has_dir))
                      enddo
                   enddo
-                  decr = decr * ampl * gnorm * cg%dvol
+                  decr = decr * ampl
 
 #ifdef COSM_RAYS_SOURCES
                   if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) + decr
