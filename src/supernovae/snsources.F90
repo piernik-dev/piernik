@@ -54,6 +54,7 @@ module snsources
    real                                    :: h_sn                !< galactic height in SN gaussian distribution ?
    real                                    :: r_sn                !< radius of SN
    integer(kind=4), dimension(ndims,LO:HI) :: auxper
+   real                                    :: gnorm               !< gauss distribution normalization factor
 #ifdef COSM_RAYS
    real, parameter                         :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    !< thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
    real                                    :: amp_ecr_sn          !< cosmic ray explosion amplitude in units: e_0 = 1/(5/3-1)*rho_0*c_s0**2  rho_0=1.67e-24g/cm**3, c_s0 = 7km/s
@@ -81,7 +82,7 @@ contains
 !<
    subroutine init_snsources
 
-      use constants,      only: PIERNIK_INIT_GRID, xdim, ydim, zdim
+      use constants,      only: PIERNIK_INIT_GRID, xdim, ydim, zdim, pi
       use dataio_pub,     only: nh                  ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, code_progress
       use domain,         only: dom
@@ -148,6 +149,12 @@ contains
       do id = xdim, zdim
          if (dom%periodic(id) .and. dom%has_dir(id)) auxper(id,:) = [-1, 1]
       enddo
+
+      if (all(dom%has_dir)) then ! gnorm should be multiply by cg%dvol while using
+         gnorm = 1./(16./9.*pi*r_sn**3)
+      else
+         gnorm = 1./(pi*r_sn**2)
+      endif
 
    end subroutine init_snsources
 
@@ -239,7 +246,7 @@ contains
                         decr = decr + exp(-sum(posr, mask=dom%has_dir))
                      enddo
                   enddo
-                  decr = decr * ampl
+                  decr = decr * ampl * gnorm * cg%dvol
 
 #ifdef COSM_RAYS_SOURCES
                   if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) + decr
