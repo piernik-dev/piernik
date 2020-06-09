@@ -85,7 +85,7 @@ contains
       use dataio_pub,     only: die, code_progress
       use domain,         only: dom
       use mpisetup,       only: rbuff, master, slave, piernik_MPI_Bcast
-      use units,          only: ethu, kpc, Myr
+      use units,          only: erg, ethu, kpc, Myr
 #ifdef COSM_RAYS
       use initcosmicrays, only: cr_eff
 #endif /* COSM_RAYS */
@@ -96,7 +96,7 @@ contains
 
       if (code_progress < PIERNIK_INIT_GRID) call die("[snsources:init_snsources] grid or fluids/cosmicrays not initialized.")
 
-      e_sn      = 52.888
+      e_sn      = 1.e51 * erg / ethu
       h_sn      = 0.0
       r_sn      = 0.0
       f_sn_kpc2 = 0.0
@@ -140,7 +140,7 @@ contains
       endif
 
 #ifdef COSM_RAYS
-      amp_ecr_sn = cr_eff * e_sn * ethu * 4./3. * pi * r_sn**3 * gnorm
+      amp_ecr_sn = cr_eff * e_sn * ethu * gnorm
 #endif /* COSM_RAYS */
 
       f_sn = f_sn_kpc2 / Myr * dom%L_(xdim) * dom%L_(ydim) / kpc**2
