@@ -56,7 +56,6 @@ module snsources
    integer(kind=4), dimension(ndims,LO:HI) :: auxper
    real                                    :: gnorm               !< gauss distribution normalization factor
 #ifdef COSM_RAYS
-   real, parameter                         :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    !< thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
    real                                    :: amp_ecr_sn          !< cosmic ray explosion amplitude in units: e_0 = 1/(5/3-1)*rho_0*c_s0**2  rho_0=1.67e-24g/cm**3, c_s0 = 7km/s
    real                                    :: amp_cr_sn           !< default aplitude of CR in SN bursts
 #endif /* COSM_RAYS */
@@ -87,7 +86,7 @@ contains
       use dataio_pub,     only: die, code_progress
       use domain,         only: dom
       use mpisetup,       only: rbuff, master, slave, piernik_MPI_Bcast
-      use units,          only: Myr, kpc, pc
+      use units,          only: Myr, kpc, pc, ethu
 #ifdef COSM_RAYS
       use initcosmicrays, only: cr_eff
 #endif /* COSM_RAYS */
