@@ -581,7 +581,7 @@ contains
       use global,             only: t, dt, nstep
       use hdf5,               only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
       use mass_defect,        only: magic_mass
-      use mpisetup,           only: master, piernik_MPI_Barrier
+      use mpisetup,           only: master, piernik_MPI_Barrier, LAST
       use overlap,            only: is_overlap
       use ppp,                only: ppp_main
       use read_attr,          only: read_attribute
@@ -808,6 +808,10 @@ contains
 
       allocate(cg_res(ibuf(1)))
       deallocate(ibuf)
+
+#ifdef NBODY
+      if (ubound(cg_res, dim=1) .ne. LAST+1) call die("[restart_hdf5_v2:read_restart_hdf5_v2] : Particles require restart with same number of cgs")
+#endif /* NBODY */
 
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
          call h5gopen_f(cgl_g_id, n_cg_name(ia), cg_g_id, error) ! open "/data/grid_%08d, ia"
