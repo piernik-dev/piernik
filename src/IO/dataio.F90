@@ -59,7 +59,7 @@ module dataio
    integer                  :: iv                    !< work index to count successive variables to dump in hdf files
    character(len=dsetnamelen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
 #ifdef NBODY
-   character(len=dsetnamelen), dimension(nvarsmx) :: pvars !< array of 4-character strings standing for variables to dump in particle hdf files
+   character(len=dsetnamelen), dimension(12) :: pvars !< array of 4-character strings standing for variables to dump in particle hdf files
 #endif /* NBODY */
 #ifdef HDF5
    integer                  :: nhdf_start            !< number of hdf file for the first hdf dump in simulation run
@@ -103,9 +103,6 @@ module dataio
    namelist /RESTART_CONTROL/ restart, res_id, nrestart, resdel
    namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
                               domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
-#ifdef NBODY
-                              pvars, &
-#endif /* NBODY */
                               use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict, h5_64bit
 
 
@@ -294,7 +291,7 @@ contains
       domain_dump   = 'phys_domain'
       vars(:)       = ''
 #ifdef NBODY
-      pvars(:)      = ''
+      pvars(:)      = (/ 'ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz' /)
 #endif /* NBODY */
       mag_center    = .false.
       write(user_message_file,'(a,"/msg")') trim(wd_rd)
@@ -427,11 +424,6 @@ contains
          do iv = 1, nvarsmx
             cbuff(40+iv) = vars(iv)
          enddo
-#ifdef NBODY
-         do iv = 1, nvarsmx
-            cbuff(40+nvarsmx+iv) = pvars(iv)
-         enddo
-#endif /* NBODY */
 
          cbuff(90) = user_message_file(1:cbuff_len)
          cbuff(91) = system_message_file(1:cbuff_len)
@@ -491,11 +483,6 @@ contains
          do iv = 1, nvarsmx
             vars(iv)         = trim(cbuff(40+iv))
          enddo
-#ifdef NBODY
-         do iv = 1, nvarsmx
-            pvars(iv)         = trim(cbuff(40+nvarsmx+iv))
-         enddo
-#endif /* NBODY */
 
          user_message_file   = trim(cbuff(90))
          system_message_file = trim(cbuff(91))

@@ -28,11 +28,8 @@
  /
 
  $END_CONTROL
-    !tend   = 200.0
-    !tend   = 900.0
-    tend    = 26183.9442
+    tend   = 200.0
     nend   = 60000
-    !nend = 4
  /
 
  $OUTPUT_CONTROL
@@ -42,8 +39,7 @@
     dt_res  = 0.0
     dt_log  = 0.0
     dt_tsl  = 0.0
-    vars(1:) = 'dens'
-    pvars(1:) = 'ppos', 'pvel', 'pacc', 'mass', 'ener'
+    vars(1:) = 'dens', 'gpot'
  /
 
  $FLUID_IONIZED
@@ -73,10 +69,11 @@
  /
 
  $MULTIGRID_GRAVITY
+  ORD_TIME_EXTRAP= 1
 /
 
  $PROBLEM_CONTROL
-   topic_2body = 'orbits'
+   topic_2body = 'buildgal'
  /
 
  $MULTIGRID_SOLVER
@@ -96,5 +93,4 @@
    interpolation_scheme = 'tsc'
    acc_interp_method    = 'tsc'
    lf_c                 = 1.0
-   ignore_dt_fluid      = .true.
  /
