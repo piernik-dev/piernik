@@ -784,7 +784,6 @@ contains
    subroutine arr3d_boundaries(this, ind, area_type, bnd_type, dir, nocorners)
 
       use constants,        only: PPP_AMR
-      use global,           only: ord_fc_eq_mag, ord_mag_prolong
       use named_array_list, only: qna
       use ppp,              only: ppp_main
 
@@ -804,7 +803,6 @@ contains
       call ppp_main%start(a3b_label, PPP_AMR)
 
       ord_saved = qna%lst(ind)%ord_prolong
-      if (ord_fc_eq_mag) qna%lst(ind)%ord_prolong = ord_mag_prolong
 
       call this%dirty_boundaries(ind)
       call this%prolong_bnd_from_coarser(ind, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
@@ -822,7 +820,6 @@ contains
    subroutine arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
       use constants,        only: base_level_id, PPP_AMR
-      use global,           only: ord_mag_prolong, ord_fc_eq_mag
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 
@@ -844,11 +841,7 @@ contains
       if (associated(this%coarser) .and. this%l%id > base_level_id) then
          do iw = 1, wna%lst(ind)%dim4
             ! here we can use any high order prolongation without destroying conservation
-            if (ord_fc_eq_mag) then
-               qna%lst(qna%wai)%ord_prolong = ord_mag_prolong
-            else
-               qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong
-            endif
+            qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong
             call this%coarser%wq_copy(ind, iw, qna%wai)
             call this%wq_copy(ind, iw, qna%wai) !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
             call this%prolong_bnd_from_coarser(qna%wai, dir=dir, nocorners=nocorners)
