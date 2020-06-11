@@ -162,7 +162,7 @@ contains
    subroutine init_global
 
       use constants,  only: big_float, PIERNIK_INIT_DOMAIN, INVALID, DIVB_CT, DIVB_HDC, &
-           &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO, O_INJ, O_I2, INVALID, &
+           &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO, O_INJ, O_LIN, O_I2, INVALID, &
            &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, GEO_XYZ
       use dataio_pub, only: die, msg, warn, code_progress, printinfo
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
@@ -470,8 +470,15 @@ contains
       endif
 #endif /* MAGNETIC */
 
+      if (all(ord_fluid_prolong /= [O_INJ, O_LIN])) then
+         write(msg, '(a,i3,a)')"[global:init_global] Prolongation order ", ord_fluid_prolong, " is not positive-definite and thus not allowed for density and energy. Degrading to injection (0)"
+         if (master) call warn(msg)
+         ord_fluid_prolong = O_INJ
+         ! ToDo implement higher order monotonized prolongation scheme
+      endif
+
       if (master) then
-         if (ord_fluid_prolong /= O_INJ) call warn("[global:init_global] Smooth prolongation of fluid in AMR is experimental.")
+         if (ord_fluid_prolong /= O_INJ) call warn("[global:init_global] Linear prolongation of fluid in AMR is experimental.")
          if ((ord_fluid_prolong /= ord_mag_prolong) .and. ord_fc_eq_mag) call warn("[global:init_global] ord_fc_eq_mag may change fluid prolongation order")
          ! ord_fc_eq_mag seems to be a risky and obsolete idea
       endif
