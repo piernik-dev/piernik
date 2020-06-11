@@ -39,7 +39,6 @@
     dt_log  = 0.05
     dt_tsl  = 0.05
     vars(1:) = 'dens' , 'gpot', 'nbdn' !, 'prth'
-    pvars(1:) = 'ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz'
  /
 
  $FLUID_IONIZED
