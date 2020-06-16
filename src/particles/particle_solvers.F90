@@ -386,6 +386,7 @@ contains
 
          subroutine drift(ddt)
 
+            use constants,      only: PPP_PART
             use particle_utils, only: part_leave_cg, is_part_in_cg
             use particle_types, only: particle
             use ppp,            only: ppp_main
@@ -397,7 +398,7 @@ contains
             type(particle), pointer        :: pset, pset2
             character(len=*), parameter :: d_label = "part_drift"
 
-            call ppp_main%start(d_label)
+            call ppp_main%start(d_label, PPP_PART)
             cgl => leaves%first
             do while (associated(cgl))
                pset => cgl%cg%pset%first
@@ -415,7 +416,7 @@ contains
                enddo
                cgl => cgl%nxt
             enddo
-            call ppp_main%stop(d_label)
+            call ppp_main%stop(d_label, PPP_PART)
 
             call part_leave_cg()
 

@@ -34,7 +34,7 @@ program piernik
    use all_boundaries,    only: all_bnd
    use cg_leaves,         only: leaves
    use cg_list_global,    only: all_cg
-   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP, cbuff_len
+   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP, cbuff_len, PPP_IO, PPP_MPI
    use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump
    use dataio_pub,        only: nend, tend, msg, printinfo, warn, die, code_progress
    use div_B,             only: print_divB_norm
@@ -154,10 +154,11 @@ program piernik
       if ((t .equals. tlast) .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
 
       call piernik_MPI_Barrier
+
       if (.not.cfl_violated) then
-         call ppp_main%start('write_data')
+         call ppp_main%start('write_data', PPP_IO)
          call write_data(output=CHK)
-         call ppp_main%stop('write_data')
+         call ppp_main%stop('write_data', PPP_IO)
 
          call user_msg_handler(end_sim)
          call update_refinement
@@ -178,9 +179,9 @@ program piernik
       endif
 
       if (master) tleft = walltime_end%time_left()
-      call ppp_main%start('MPI_Bcast')
+      call ppp_main%start('MPI_Bcast', PPP_MPI)
       call piernik_MPI_Bcast(tleft)
-      call ppp_main%stop('MPI_Bcast')
+      call ppp_main%stop('MPI_Bcast', PPP_MPI)
       if (.not.tleft) end_sim = .true.
 
       first_step = .false.

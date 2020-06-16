@@ -373,7 +373,7 @@ contains
       use cg_leaves,     only: leaves
       use cg_level_base, only: base
       use cg_list,       only: cg_list_element
-      use constants,     only: ndims, I_ONE, I_TWO, LO, HI
+      use constants,     only: ndims, I_ONE, I_TWO, LO, HI, PPP_PART
       use dataio_pub,    only: die
       use domain,        only: dom, is_refined
       use grid_cont,     only: grid_container
@@ -399,7 +399,7 @@ contains
 
       if (is_refined) call die("[particle_utils:part_leave_cg] AMR not implemented yet")
 
-      call ppp_main%start(ts_label)
+      call ppp_main%start(ts_label, PPP_PART)
 
       nsend = 0
       nrecv = 0
@@ -527,7 +527,7 @@ contains
       deallocate(part_info2)
       deallocate(part_info)
 
-      call ppp_main%stop(ts_label)
+      call ppp_main%stop(ts_label, PPP_PART)
 
     end subroutine part_leave_cg
 
