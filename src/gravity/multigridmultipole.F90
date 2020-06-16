@@ -433,6 +433,7 @@ contains
                enddo
             enddo
          endif
+
          cgl => cgl%nxt
       enddo
       call ppp_main%stop(m2m_label, PPP_GRAV)

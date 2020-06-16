@@ -143,7 +143,7 @@ def compare_resolution(h5f1, h5f2):
 
 def compare_dlists(h5f1, h5f2):
     d_key = '/data'
-    g0_key = 'grid_0000000000'
+    g0_key = 'grid_0000000000'  # trick: GDF has to contain this grid id
     failed = False
 
     try:
@@ -183,7 +183,7 @@ def compare_time(h5f1, h5f2):
             return 1.
 
 
-def compare_data(ds1, ds2, f):
+def compare_data(ds1, ds2):
     import numpy
 
     # This norm is:
@@ -257,7 +257,7 @@ def piernik_gdf_compare(fname1, fname2):
             for f in common_fields:
                 ds1 = collect_dataset(h5f1, f)
                 ds2 = collect_dataset(h5f2, f)
-                norm = compare_data(ds1, ds2, f)
+                norm = compare_data(ds1, ds2)
                 norms["datafield `" + f + "'"] = norm
                 tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
             print("All datafield difference: %g" % tot_datanorm)
@@ -285,7 +285,7 @@ if __name__ == "__main__":
             failed = False
             longestkey = len(max(norms, key=len))
             for i in sorted(norms.keys()):
-                if (norms[i] >= 0. and norms[i] <= 1.):
+                if (norms[i] >= 0. and norms[i] <= 1. + 1e-12):
                     print("Difference of %-*s: %g" % (longestkey + 1, i, norms[i]))
                     tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
                 else:
