@@ -43,17 +43,17 @@ contains
 
    subroutine update_particle_gravpot_and_acc
 
-      use constants,      only: ndims, gp_n, gpot_n, sgp_n, one
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
       use cg_list_dataop,   only: ind_val
-      use gravity,        only: source_terms_grav
-      use grid_cont,      only: grid_container
+      use constants,        only: ndims, gp_n, gpot_n, sgp_n, one
+      use gravity,          only: source_terms_grav
+      use grid_cont,        only: grid_container
       use named_array_list, only: qna
-      use particle_types, only: particle
-      !use particle_utils, only: count_all_particles
+      use particle_types,   only: particle
+      !use particle_utils,   only: count_all_particles
 #ifdef VERBOSE
-      use dataio_pub,     only: printinfo
+      use dataio_pub,       only: printinfo
 #endif /* VERBOSE */
 
       implicit none
@@ -66,6 +66,7 @@ contains
       real,    dimension(:,:), allocatable :: dist
       integer, dimension(:,:), allocatable :: cells
       !integer, dimension(:),   allocatable :: pdel
+      real :: Mtot
 
 #ifdef VERBOSE
       call printinfo('[particle_gravity:update_particle_gravpot_and_acc] Commencing update of particle gravpot & acceleration')
@@ -88,6 +89,8 @@ contains
          cgl => cgl%nxt
       enddo
 
+      Mtot = find_Mtot()
+
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -97,7 +100,7 @@ contains
 
             call update_particle_density_array(n_part, cg, cells)
 
-            call update_particle_potential_energy(n_part, cg, cells, dist)!, pdel)
+            call update_particle_potential_energy(n_part, cg, cells, dist, Mtot)!, pdel)
 
             call update_particle_acc(n_part, cg, cells, dist)
             !Delete particles elsewhere > in update_particle_acc?
@@ -233,9 +236,9 @@ contains
 
    subroutine locate_particles_in_cells(n_part, cg, cells, dist)
 
-     use constants, only: ndims, xdim, zdim, LO
-     use domain,    only: dom
-     use grid_cont, only: grid_container
+     use constants,      only: ndims, xdim, zdim, LO
+     use domain,         only: dom
+     use grid_cont,      only: grid_container
      use particle_types, only: particle
 
      implicit none
@@ -262,38 +265,67 @@ contains
 
    end subroutine locate_particles_in_cells
 
-!> \brief Determine potential energy in particle positions
-    subroutine update_particle_potential_energy(n_part, cg, cells, dist)!, pdel)
+!> \brief Find the total mass of particles
 
-      use constants,        only: gpot_n, ndims, half, two, xdim, ydim, zdim, pSUM
+   real function find_Mtot() result(Mtot)
+
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: pSUM
+      use grid_cont,      only: grid_container
+      use mpisetup,       only: piernik_MPI_Allreduce
+      use particle_types, only: particle
+
+      implicit none
+
+      type(grid_container),  pointer :: cg
+      type(cg_list_element), pointer :: cgl
+      type(particle),        pointer :: pset
+
+      Mtot = 0
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         pset => cg%pset%first
+         do while (associated(pset))
+            if ((.not. pset%pdata%outside) .and. (pset%pdata%phy)) &
+                 Mtot = Mtot + pset%pdata%mass
+            !TO DO: include gas
+            pset => pset%nxt
+         enddo
+         cgl => cgl%nxt
+      enddo
+
+      call piernik_MPI_Allreduce(Mtot, pSUM)
+
+   end function find_Mtot
+
+!> \brief Determine potential energy in particle positions
+    subroutine update_particle_potential_energy(n_part, cg, cells, dist, Mtot)!, pdel)
+
+      use constants,        only: gpot_n, ndims, half, two, xdim, ydim, zdim
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_func,    only: df_d_o2, d2f_d2_o2, d2f_dd_o2
+      use particle_types,   only: particle
       use units,            only: newtong
-      use mpisetup,         only: piernik_MPI_Allreduce
-      use particle_types, only: particle
 
       implicit none
 
       integer,                          intent(in) :: n_part
       type(grid_container), pointer,    intent(in) :: cg
-      type(particle), pointer                      :: pset
       integer, dimension(n_part,ndims), intent(in) :: cells
       real,    dimension(n_part,ndims), intent(in) :: dist
+      real,                             intent(in) :: Mtot
+
+      type(particle), pointer                      :: pset
       integer                                      :: p
       !integer, dimension(n_part),       intent(out):: pdel
       integer(kind=4)                              :: ig
       real, dimension(n_part)                      :: dpot, d2pot
-      real                                         :: Mtot
 
       ig = qna%ind(gpot_n)
-      Mtot = 0
-      pset => cg%pset%first
-      do while (associated(pset))
-         if ((.not. pset%pdata%outside) .and. (pset%pdata%phy)) Mtot = Mtot + pset%pdata%mass   !TO DO: include gas
-         pset => pset%nxt
-      enddo
-      call piernik_MPI_Allreduce(Mtot, pSUM)
 
       pset => cg%pset%first
       p=1
