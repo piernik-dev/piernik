@@ -82,7 +82,6 @@ module grid_cont
       procedure          :: cleanup                               !< Deallocate all internals
       procedure          :: update_leafmap                        !< Check if the grid container has any parts covered by finer grids and update appropriate map
 
-
    end type grid_container
 
 contains

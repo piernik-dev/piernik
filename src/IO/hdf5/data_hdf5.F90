@@ -858,7 +858,7 @@ contains
          call cancel_hdf_var(hdf_var)
       endif
 
-    end subroutine get_data_from_cg
+   end subroutine get_data_from_cg
 
 #ifdef NBODY_1FILE
    subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)

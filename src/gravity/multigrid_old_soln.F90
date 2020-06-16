@@ -41,7 +41,7 @@ module multigrid_old_soln
    public :: nold_max, soln_history, ord_time_extrap
 
    ! solution recycling
-   integer(kind=4), parameter :: nold_max=3   !< rmaximum implemented extrapolation order
+   integer(kind=4), parameter :: nold_max=3   !< maximum implemented extrapolation order
 
    type :: soln_history                       !< container for a set of several old potential solutions
       type(os_list_undef_t) :: invalid        !< a list of invalid slots ready to use
@@ -204,7 +204,7 @@ contains
             end associate
          case default
             call die("[multigrid_old_soln:init_solution] Extrapolation order not implemented")
-         end select
+      end select
 
       call leaves%check_dirty(solution, "init_soln")
 

@@ -134,21 +134,21 @@ contains
 
    subroutine find_img_CoM
 
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, pSUM, zero !, GEO_RPZ
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use func,       only: operator(.notequals.)
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: piernik_MPI_Allreduce
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use constants,    only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, pSUM, zero !, GEO_RPZ
+      use dataio_pub,   only: die
+      use domain,       only: dom
+      use func,         only: operator(.notequals.)
+      use grid_cont,    only: grid_container
+      use mpisetup,     only: piernik_MPI_Allreduce
 #ifdef NBODY
       use particle_types, only: particle
 #endif /* NBODY */
 #ifdef DEBUG
-      use dataio_pub, only: msg, printinfo
-      use mpisetup,   only: master
-      use units,      only: fpiG
+      use dataio_pub,   only: msg, printinfo
+      use mpisetup,     only: master
+      use units,        only: fpiG
 #endif /* DEBUG */
 
       implicit none

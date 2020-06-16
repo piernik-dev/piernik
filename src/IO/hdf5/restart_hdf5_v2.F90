@@ -272,6 +272,7 @@ contains
 #else
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets)
 #endif /* NBODY_1FILE */
+
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
          do ncg = 1, cg_desc%tot_cg_n

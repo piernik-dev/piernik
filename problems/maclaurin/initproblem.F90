@@ -252,9 +252,9 @@ contains
       use func,              only: operator(.notequals.)
       use global,            only: dirty_debug, no_dirty_checks
       use grid_cont,         only: grid_container
+      use named_array_list,  only: qna
       use mpisetup,          only: master
       use multigrid_Laplace, only: residual
-      use named_array_list,  only: qna
       use units,             only: fpiG
 
       implicit none

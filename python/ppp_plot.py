@@ -320,7 +320,6 @@ class PPPset:
                                 gcnt += 1
                         except TypeError:
                             sys.stderr.write("Warning: inclomplete event '", e, "' @", p, " #", str(t), ev[e][p][t])
-
                     self.out += "\n"
             self.out += "\n"
         if gomit > 0:
