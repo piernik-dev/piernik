@@ -325,7 +325,6 @@ class PPPset:
         if gomit > 0:
             self.descr += "\\n(omitted %d entries above maxoutput limit of %d)" % (gomit, args.maxoutput[0])
         self.out += "EOD\n\n# Suggested gnuplot commands:\nset key outside horizontal\n"
-        self.out += "set terminal x11 \n"
         self.out += "set xlabel 'time (walltime seconds)'\nset ylabel 'timer depth + proc/nproc'\n"
         self.out += 'set title "%s"\n' % self.descr.replace('_', "\\\\_")
         if len(ev) > 0:
@@ -361,6 +360,9 @@ examples:
 plot profile of 64th step from file.ascii with gnuplot (hopefully in the interactive mode):
     ppp_plot.py file.ascii -r 'step 64'| gnuplot
     ppp_plot.py file.ascii -r 'step 64'-o file.gnu; gnuplot file.gnu
+
+when gnuplot fails to set up desired teminal by default, try to set $GNUTERM (qt or x11 are recommended):
+    ppp_plot.py file.ascii | GNUTERM=qt gnuplot
 
 print list of top-lefel timers (steps) present in file.ascii:
     ppp_plot.py file.ascii -t -d 1
