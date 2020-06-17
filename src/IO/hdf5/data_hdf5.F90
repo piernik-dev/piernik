@@ -581,6 +581,7 @@ contains
       use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars, hdf_vars_avail, enable_all_hdf_var
       use constants,   only: xdim, ydim, zdim, ndims, FP_REAL, PPP_IO, PPP_CG
       use dataio_pub,  only: die, nproc_io, can_i_write, h5_64bit, nstep_start
+      use domain,      only: is_multicg
       use global,      only: nstep
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
@@ -620,6 +621,7 @@ contains
       if (nstep - nstep_start < 1) call enable_all_hdf_var  ! just in case things have changed meanwhile
 
 #ifdef NBODY_1FILE
+      if (is_multicg) call die("[data_hdf5:write_cg_to_output] multicg is not implemented for NBODY_1FILE")
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(pack(hdf_vars, hdf_vars_avail)), gdf_translate(pdsets))
 #else
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(pack(hdf_vars, hdf_vars_avail)))

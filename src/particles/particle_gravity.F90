@@ -125,6 +125,8 @@ contains
    subroutine update_particle_density_array(n_part, cg, cells)
 
       use constants,        only: nbdn_n, prth_n, ndims, one, zero, xdim, ydim, zdim
+      use dataio_pub,       only: die
+      use domain,           only: is_multicg
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_maps,    only: map_particles
@@ -143,6 +145,10 @@ contains
       factor = one
       ig = qna%ind(nbdn_n)
       cg%nbdn = zero
+
+      if (is_multicg) call die("[particle_gravity:update_particle_density_array] multicg not implemented yet")
+      ! map_tsc contains a loop over cg and a call to update boundaries
+      ! it gives O(#cg^2) cost and funny MPI errors when the number of cg differ from thread to thread
       call map_particles(ig,factor)
 
       ig = qna%ind(prth_n)

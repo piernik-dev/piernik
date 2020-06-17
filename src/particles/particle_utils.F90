@@ -374,7 +374,8 @@ contains
       use cg_level_base, only: base
       use cg_list,       only: cg_list_element
       use constants,     only: ndims, I_ONE, I_TWO, LO, HI
-      use domain,        only: dom
+      use dataio_pub,    only: die
+      use domain,        only: dom, is_refined
       use grid_cont,     only: grid_container
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
       use mpisetup,      only: proc, comm, mpi_err, FIRST, LAST
@@ -395,6 +396,8 @@ contains
       type(particle), pointer            :: pset, pset2
       logical                            :: in, phy, out, phy_out
       character(len=*), parameter        :: ts_label = "leave_cg"
+
+      if (is_refined) call die("[particle_utils:part_leave_cg] AMR not implemented yet")
 
       call ppp_main%start(ts_label)
 
