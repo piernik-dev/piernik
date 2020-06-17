@@ -133,7 +133,6 @@ contains
       use cg_level_connected, only: cg_level_connected_t
       use constants,          only: LO, HI
       use dataio_pub,         only: printinfo, msg
-      use domain,             only: dom
       use mpisetup,           only: master
 
       implicit none
@@ -147,20 +146,15 @@ contains
       do while (associated(l))
          if (l%l%id <= ubound(this%ijk_lo, dim=1)) then
             if (any(this%ijk_lo(l%l%id, :) == uninit) .or. any(this%ijk_hi(l%l%id, :) == uninit)) then
-               where (dom%has_dir)
-                  this%ijk_lo(l%l%id, :) = l%l%off + floor((this%coords(:, LO) - dom%edge(:, LO))/dom%L_*l%l%n_d, kind=8)
-                  this%ijk_hi(l%l%id, :) = l%l%off + floor((this%coords(:, HI) - dom%edge(:, LO))/dom%L_*l%l%n_d, kind=8)
-                  ! Excessively large this%coords will result in FPE exception.
-                  ! If not trapped then huge() value will be assigned (checked on gfortran 7.3.1), which is safe.
-                  ! A wrapped value coming from integer overflow may be unsafe.
-               elsewhere
-                  this%ijk_lo(l%l%id, :) = l%l%off
-                  this%ijk_hi(l%l%id, :) = l%l%off
-               endwhere
+
+               this%ijk_lo(l%l%id, :) = this%coord2ind(this%coords(:, LO), l%l)
+               this%ijk_hi(l%l%id, :) = this%coord2ind(this%coords(:, HI), l%l)
+
                if (verbose .and. master) then
                   write(msg, '(a,i3,a,3i8,a,3i8,a)')"[URC box]   box coordinates at level ", l%l%id, " are: [ ", this%ijk_lo(l%l%id, :), " ]..[ ", this%ijk_hi(l%l%id, :), " ]"
                   call printinfo(msg)
                endif
+
             endif
          endif
          l => l%finer

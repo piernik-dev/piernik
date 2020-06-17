@@ -122,9 +122,7 @@ contains
 
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_t
-      use constants,          only: LO
       use dataio_pub,         only: printinfo, msg
-      use domain,             only: dom
       use mpisetup,           only: master
 
       implicit none
@@ -138,20 +136,15 @@ contains
       do while (associated(l))
          if (l%l%id <= ubound(this%ijk, dim=1)) then
             if (any(this%ijk(l%l%id, :) == uninit)) then
-               where (dom%has_dir)
-                  this%ijk(l%l%id, :) = int(l%l%off, kind=4) + floor((this%coords - dom%edge(:, LO))/dom%L_*l%l%n_d, kind=4)
-                  ! Excessively large this%coords will result in FPE exception.
-                  ! If FPE is not trapped, then huge() value will be assigned from uninit constant
-                  ! (checked on gfortran 7.3.1), which is safe.
-                  ! A wrapped value coming from integer overflow may be unsafe.
-               elsewhere
-                  this%ijk(l%l%id, :) = int(l%l%off, kind=4)
-               endwhere
+
+               this%ijk(l%l%id, :) = this%coord2ind(this%coords, l%l)
+
                if (verbose .and. master) then
                   write(msg, '(a,i3,a,3i8,a)')"[URC point]   point coordinates at level ", &
                        l%l%id, " are: [ ", this%ijk(l%l%id, :), " ]"
                   call printinfo(msg)
                endif
+
             endif
          endif
          l => l%finer
