@@ -375,7 +375,8 @@ contains
          i = i + I_ONE
          os => os%earlier
       enddo
-      if (master) then
+
+      if (master .and. found > 0) then
          call set_attr(file_id, trim(this%old%label) // "_names", namelist(:found))
          call set_attr(file_id, trim(this%old%label) // "_times", timelist(:found))
       endif

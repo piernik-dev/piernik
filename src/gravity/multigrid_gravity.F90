@@ -1186,13 +1186,14 @@ contains
 
       use hdf5,          only: HID_T
       use multigridvars, only: grav_bnd, bnd_isolated
+      use multipole,     only: singlepass
 
       implicit none
 
       integer(HID_T), intent(in) :: file_id  !< File identifier
 
       call inner%mark_and_create_attribute(file_id)
-      if (grav_bnd == bnd_isolated) call outer%mark_and_create_attribute(file_id)
+      if (grav_bnd == bnd_isolated .and. .not. singlepass) call outer%mark_and_create_attribute(file_id)
 
    end subroutine write_oldsoln_to_restart
 
