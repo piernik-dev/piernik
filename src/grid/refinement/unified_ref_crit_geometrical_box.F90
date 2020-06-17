@@ -105,12 +105,12 @@ contains
 
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: ijk
 
-      if (cg%l%id > this%level) return
+      if (cg%l%id >= this%level) return
 
       if (allocated(this%ijk_lo) .neqv. allocated(this%ijk_hi)) call die("[unified_ref_crit_geometrical_box:mark_box] inconsistent alloc")
 
       if (.not. allocated(this%ijk_lo)) call die("[unified_ref_crit_geometrical_box:mark_box] ijk_{lo,hi} not allocated")
-      if (any(this%ijk_lo(cg%l%id, :) == uninit) .or. any(this%ijk_hi(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appears in the meantime
+      if (any(this%ijk_lo(cg%l%id, :) == uninit) .or. any(this%ijk_hi(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appeared in the meantime
 
       if (all(this%ijk_hi(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk_lo(cg%l%id, :) <= cg%ijkse(:, HI))) then
          ijk(:, LO) = min(max(int(this%ijk_lo(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
@@ -124,7 +124,7 @@ contains
 !>
 !! \brief Initialize ths%ijk
 !!
-!! \details Initialize uning available levels. If more refinements appear then call this again to reinitialize.
+!! \details Initialize using available levels. If more refinements appear then call this again to reinitialize.
 !>
 
    subroutine init_lev(this)

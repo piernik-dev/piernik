@@ -119,7 +119,7 @@ contains
       real :: dist2_y, dist2_x
       integer :: i, j, k
 
-      if (cg%l%id > this%level) return
+      if (cg%l%id >= this%level) return
 
       if (allocated(this%ijk_lo) .neqv. allocated(this%ijk_hi)) call die("[unified_ref_crit_geometrical_box:mark_zcyl] inconsistent alloc")
 

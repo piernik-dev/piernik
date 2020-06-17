@@ -101,7 +101,7 @@ contains
       class(urc_point),              intent(inout) :: this  !< an object invoking the type-bound procedure
       type(grid_container), pointer, intent(inout) :: cg    !< current grid piece
 
-      if (cg%l%id > this%level) return
+      if (cg%l%id >= this%level) return
 
       if (.not. allocated(this%ijk)) call die("[unified_ref_crit_geometrical_point:mark_point] ijk not allocated")
       ! Did some new levels of refinement appeared in the meantime?
