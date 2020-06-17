@@ -156,29 +156,19 @@ contains
       endif
 
       if (trim(vname) == "dens") then
-         allocate(ic, source = iarr_all_dn)
-         iv = wna%fi
-         ic = iarr_all_dn
+         call alloc_ic(iarr_all_dn)
          return
       else if (trim(vname) == "velx") then
-         allocate(ic, source = iarr_all_mx)
-         iv = wna%fi
-         ic = iarr_all_mx
+         call alloc_ic(iarr_all_mx)
          return
       else if (trim(vname) == "vely") then
-         allocate(ic, source = iarr_all_my)
-         iv = wna%fi
-         ic = iarr_all_my
+         call alloc_ic(iarr_all_my)
          return
       else if (trim(vname) == "velz") then
-         allocate(ic, source = iarr_all_mz)
-         iv = wna%fi
-         ic = iarr_all_mz
+         call alloc_ic(iarr_all_mz)
          return
       else if (trim(vname) == "ener") then
-         allocate(ic, source = iarr_all_en)
-         iv = wna%fi
-         ic = iarr_all_en
+         call alloc_ic(iarr_all_en)
          return
       endif
       !> \todo identify here all {den,vl[xyz],ene}{d,n,i}
@@ -186,6 +176,21 @@ contains
 
       write(msg,'(3a)')"[unified_ref_crit_var:identify_field] Unidentified refinement variable: '",trim(vname),"'"
       if (master) call warn(msg)
+
+   contains
+
+      subroutine alloc_ic(tab)
+
+         implicit none
+
+         integer(kind=4), dimension(:), intent(in) :: tab
+
+         iv = wna%fi
+
+         allocate(ic(size(tab)))
+         ic = tab
+
+      end subroutine alloc_ic
 
    end subroutine identify_field
 
