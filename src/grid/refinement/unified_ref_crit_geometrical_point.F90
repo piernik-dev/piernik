@@ -43,7 +43,7 @@ module unified_ref_crit_geometrical_point
 
    type, extends(urc_geom) :: urc_point
       real, dimension(ndims)                                 :: coords  !< coordinates, where to refine
-      integer(kind=4), allocatable, dimension(:, :), private :: ijk     !< integer coordinates at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
+      integer(kind=8), allocatable, dimension(:, :), private :: ijk     !< integer coordinates at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
    contains
       procedure          :: mark => mark_point
       procedure, private :: init_lev
@@ -92,7 +92,7 @@ contains
 
    subroutine mark_point(this, cg)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI
+      use constants,  only: LO, HI
       use dataio_pub, only: die
       use grid_cont,  only: grid_container
 
@@ -107,9 +107,8 @@ contains
       ! Did some new levels of refinement appeared in the meantime?
       if (any(this%ijk(cg%l%id, :) == uninit)) call this%init_lev
 
-      if (all(this%ijk(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk(cg%l%id, :) <= cg%ijkse(:, HI))) then
-         if (cg%l%id < this%level) call cg%flag%set(this%ijk(cg%l%id, xdim), this%ijk(cg%l%id, ydim), this%ijk(cg%l%id, zdim))
-      endif
+      if (all(this%ijk(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk(cg%l%id, :) <= cg%ijkse(:, HI))) &
+           call cg%flag%set(this%ijk(cg%l%id, :))
 
    end subroutine mark_point
 

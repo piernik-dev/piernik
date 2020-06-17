@@ -47,6 +47,7 @@ module unified_ref_crit_geometrical_zcyl
       real, dimension(ndims), private                        :: size    !< x- and y-radius (elliptical cylinders are allowed) and half-height
       integer(kind=8), allocatable, dimension(:, :), private :: ijk_lo  !< integer coordinates of "bottom left corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
       integer(kind=8), allocatable, dimension(:, :), private :: ijk_hi  !< integer coordinates of "top right corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
+      integer(kind=8), allocatable, dimension(:, :), private :: ijk_c   !< integer coordinates of center at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
    contains
       procedure          :: mark => mark_zcyl
       procedure, private :: init_lev
@@ -87,11 +88,14 @@ contains
          this%size   = dom%L_
       endwhere
 
-      allocate(this%ijk_lo(base_level_id:this%level, ndims), this%ijk_hi(base_level_id:this%level, ndims))
+      allocate(this%ijk_lo(base_level_id:this%level, ndims), &
+           &   this%ijk_hi(base_level_id:this%level, ndims), &
+           &   this%ijk_c (base_level_id:this%level, ndims))
       this%ijk_lo = uninit
       this%ijk_hi = uninit
+      this%ijk_c  = uninit
       if (master) then
-         write(msg, '(a,3g13.5,a,3g13.5,a)')"[URC zcyl]   Initializing cylindrical refinement in a box: [ ", this%coords(:, LO), " ]..[ ", this%coords(:, HI), " ]"
+         write(msg, '(a,3g13.5,a,3g13.5,a)')"[URC zcyl]  Initializing cylindrical refinement in a box: [ ", this%coords(:, LO), " ]..[ ", this%coords(:, HI), " ]"
          call printinfo(msg)
       endif
 
@@ -121,10 +125,13 @@ contains
 
       if (this%enough_level(cg%l%id)) return
 
-      if (allocated(this%ijk_lo) .neqv. allocated(this%ijk_hi)) call die("[unified_ref_crit_geometrical_box:mark_zcyl] inconsistent alloc")
+      if (allocated(this%ijk_lo) .neqv. allocated(this%ijk_hi)) call die("[unified_ref_crit_geometrical_box:mark_zcyl] inconsistent alloc (lo|hi)")
+      if (allocated(this%ijk_lo) .neqv. allocated(this%ijk_c))  call die("[unified_ref_crit_geometrical_box:mark_zcyl] inconsistent alloc (lo|c)")
+      if (.not. allocated(this%ijk_lo)) call die("[unified_ref_crit_geometrical_box:mark_zcyl] ijk_{lo,hi,c} not allocated")
 
-      if (.not. allocated(this%ijk_lo)) call die("[unified_ref_crit_geometrical_box:mark_zcyl] ijk_{lo,hi} not allocated")
-      if (any(this%ijk_lo(cg%l%id, :) == uninit) .or. any(this%ijk_hi(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appeared in the meantime
+      if ( any(this%ijk_lo(cg%l%id, :) == uninit) .or. &
+           any(this%ijk_hi(cg%l%id, :) == uninit) .or. &
+           any(this%ijk_c (cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appeared in the meantime
 
       if (all(this%ijk_hi(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk_lo(cg%l%id, :) <= cg%ijkse(:, HI))) then
          do k = cg%ks, cg%ke
@@ -140,14 +147,16 @@ contains
          enddo
       endif
 
+      ! For ultra-thin and ultra-small cylinders mark at least their center, maybe at higher levels the resolution will help
+      if (all(this%ijk_c(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk_c(cg%l%id, :) <= cg%ijkse(:, HI))) &
+           call cg%flag%set(this%ijk_c(cg%l%id, :))
+
    end subroutine mark_zcyl
 
 !>
 !! \brief Initialize ths%ijk
 !!
 !! \details Initialize using available levels. If more refinements appear then call this again to reinitialize.
-!!
-!! Spaghetti warning: practically identical to unified_ref_crit_geometrical_box:init_lev
 !>
 
    subroutine init_lev(this)
@@ -169,16 +178,20 @@ contains
       l => base%level
       do while (associated(l))
          if (l%l%id <= ubound(this%ijk_lo, dim=1)) then
-            if (any(this%ijk_lo(l%l%id, :) == uninit) .or. any(this%ijk_hi(l%l%id, :) == uninit)) then
+            if ( any(this%ijk_lo(l%l%id, :) == uninit) .or. &
+                 any(this%ijk_hi(l%l%id, :) == uninit) .or. &
+                 any(this%ijk_c (l%l%id, :) == uninit)) then
                where (dom%has_dir)
                   this%ijk_lo(l%l%id, :) = l%l%off + floor((this%coords(:, LO) - dom%edge(:, LO))/dom%L_*l%l%n_d, kind=8)
                   this%ijk_hi(l%l%id, :) = l%l%off + floor((this%coords(:, HI) - dom%edge(:, LO))/dom%L_*l%l%n_d, kind=8)
+                  this%ijk_c (l%l%id, :) = l%l%off + floor((this%center(:)     - dom%edge(:, LO))/dom%L_*l%l%n_d, kind=8)
                   ! Excessively large this%coords will result in FPE exception.
                   ! If not trapped then huge() value will be assigned (checked on gfortran 7.3.1), which is safe.
                   ! A wrapped value coming from integer overflow may be unsafe.
                elsewhere
                   this%ijk_lo(l%l%id, :) = l%l%off
                   this%ijk_hi(l%l%id, :) = l%l%off
+                  this%ijk_c (l%l%id, :) = l%l%off
                endwhere
                if (verbose .and. master) then
                   write(msg, '(a,i3,a,3i8,a,3i8,a)')"[URC zcyl]  z-cylinder coordinates at level ", l%l%id, " are: [ ", this%ijk_lo(l%l%id, :), " ]..[ ", this%ijk_hi(l%l%id, :), " ]"

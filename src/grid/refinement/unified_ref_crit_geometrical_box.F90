@@ -116,7 +116,7 @@ contains
          ijk(:, LO) = min(max(int(this%ijk_lo(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
          ijk(:, HI) = min(max(int(this%ijk_hi(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
 
-         if (cg%l%id < this%level) call cg%flag%set(ijk)
+         call cg%flag%set(ijk)
       endif
 
    end subroutine mark_box
