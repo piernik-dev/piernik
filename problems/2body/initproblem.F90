@@ -56,7 +56,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
 
-      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub, only: nh, restarted_sim      ! QA_WARN required for diff_nml
       use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
@@ -110,6 +110,11 @@ contains
          mass2       = rbuff(4)
 
       endif
+
+      ! Perhaps a more general approach should be implemeted once we decide to drop most of precompiler conditionals on NBODY.
+      ! Right now it is used in just one setup.
+      ! restarted_sim is set up early in the initpiernik, in init_dataio_parameters, much earlier than init_dataio
+      if (.not. restarted_sim) call problem_initial_nbody
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------

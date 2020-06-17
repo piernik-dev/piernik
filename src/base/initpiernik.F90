@@ -84,9 +84,6 @@ contains
       use particle_pub,          only: init_particles
       use particle_utils,        only: global_count_all_particles
 #endif /* GRAV */
-#ifdef TWOBODY
-      use initproblem,           only: problem_initial_nbody
-#endif /* TWOBODY */
       use particle_gravity,      only: update_particle_gravpot_and_acc
       use particle_solvers,      only: update_particle_kinetic_energy
 #endif /* NBODY */
@@ -227,10 +224,6 @@ contains
 
       call init_dataio                       ! depends on units, fluids (through common_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
       ! Initial conditions are read here from a restart file if possible
-
-#ifdef TWOBODY
-      if (.not.restarted_sim) call problem_initial_nbody
-#endif /* TWOBODY */
 
 #ifdef GRAV
       if (restarted_sim) call source_terms_grav
