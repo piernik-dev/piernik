@@ -109,9 +109,10 @@ contains
    subroutine init(this)
 
       use constants,                          only: base_level_id
-      use refinement,                         only: refine_points, refine_boxes, refine_vars, inactive_name, jeans_ref, jeans_plot
+      use refinement,                         only: refine_points, refine_boxes, refine_zcyls, refine_vars, inactive_name, jeans_ref, jeans_plot
       use unified_ref_crit_geometrical_box,   only: urc_box
       use unified_ref_crit_geometrical_point, only: urc_point
+      use unified_ref_crit_geometrical_zcyl,  only: urc_zcyl
       use unified_ref_crit_Jeans,             only: urc_jeans
       use unified_ref_crit_var,               only: decode_urcv
 
@@ -121,6 +122,7 @@ contains
 
       type(urc_box),   pointer :: urcb
       type(urc_point), pointer :: urcp
+      type(urc_zcyl),  pointer :: urczc
       type(urc_jeans), pointer :: urcj
       integer :: ip
 
@@ -152,6 +154,14 @@ contains
             allocate(urcb)
             urcb = urc_box(refine_boxes(ip))
             call this%add(urcb)
+         endif
+      enddo
+
+      do ip = lbound(refine_zcyls, dim=1), ubound(refine_zcyls, dim=1)
+         if (refine_zcyls(ip)%level > base_level_id) then
+            allocate(urczc)
+            urczc = urc_zcyl(refine_zcyls(ip))
+            call this%add(urczc)
          endif
       enddo
 
