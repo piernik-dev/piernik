@@ -472,7 +472,7 @@ contains
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)
          domain_dump         = trim(cbuff(40))
-         do iv=1, nvarsmx
+         do iv = 1, nvarsmx
             vars(iv)         = trim(cbuff(40+iv))
          enddo
 
