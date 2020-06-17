@@ -621,7 +621,6 @@ contains
       if (nstep - nstep_start < 1) call enable_all_hdf_var  ! just in case things have changed meanwhile
 
 #ifdef NBODY_1FILE
-      if (is_multicg) call die("[data_hdf5:write_cg_to_output] multicg is not implemented for NBODY_1FILE")
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(pack(hdf_vars, hdf_vars_avail)), gdf_translate(pdsets))
 #else
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(pack(hdf_vars, hdf_vars_avail)))
@@ -678,13 +677,14 @@ contains
 #ifdef NBODY_1FILE
          n_part = count_all_particles()
          if (n_part .gt. 0) then
+            if (is_multicg) call die("[data_hdf5:write_cg_to_output] multicg is not implemented for NBODY_1FILE")
             do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
                tmp(:) = 0
                id=0
                if (master) then
                   tmp(:) = cg_desc%pdset_id(:, i)
                endif
-               call MPI_Scatter( tmp, 1, MPI_DOUBLE_INT, id, 1, MPI_DOUBLE_INT, FIRST, comm, mpi_err)
+               call MPI_Scatter( tmp, 1, MPI_DOUBLE_INT, id, 1, MPI_DOUBLE_INT, FIRST, comm, mpi_err)  ! what if n_part == 0 on some threads?
                if (master) then
                   call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
                else

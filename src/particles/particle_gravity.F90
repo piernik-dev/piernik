@@ -46,12 +46,13 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_dataop,   only: ind_val
-      use constants,        only: ndims, gp_n, gpot_n, sgp_n, one
+      use constants,        only: ndims, gp_n, gpot_n, sgp_n, one, pSUM
       use gravity,          only: source_terms_grav
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
+      use mpisetup,         only: piernik_MPI_Allreduce
       use particle_types,   only: particle
-      !use particle_utils,   only: count_all_particles
+
 #ifdef VERBOSE
       use dataio_pub,       only: printinfo
 #endif /* VERBOSE */
@@ -62,7 +63,7 @@ contains
       type(cg_list_element), pointer       :: cgl
       type(particle), pointer              :: pset
 
-      integer                              :: n_part !, k
+      integer                              :: n_part, g_np !, k
       real,    dimension(:,:), allocatable :: dist
       integer, dimension(:,:), allocatable :: cells
       !integer, dimension(:),   allocatable :: pdel
@@ -88,6 +89,11 @@ contains
          enddo
          cgl => cgl%nxt
       enddo
+
+      g_np = n_part
+      call piernik_MPI_Allreduce(g_np, pSUM)
+
+      if (g_np == 0) return
 
       Mtot = find_Mtot()
 
