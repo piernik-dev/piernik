@@ -105,7 +105,7 @@ contains
 
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: ijk
 
-      if (cg%l%id >= this%level) return
+      if (this%enough_level(cg%l%id)) return
 
       if (allocated(this%ijk_lo) .neqv. allocated(this%ijk_hi)) call die("[unified_ref_crit_geometrical_box:mark_box] inconsistent alloc")
 

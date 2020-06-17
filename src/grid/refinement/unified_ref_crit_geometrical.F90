@@ -48,6 +48,21 @@ module unified_ref_crit_geometrical
 
    type, abstract, extends(urc) :: urc_geom
       integer :: level  !< desired level of refinement
+   contains
+      procedure :: enough_level
    end type urc_geom
+
+contains
+
+   pure logical function enough_level(this, lev)
+
+      implicit none
+
+      class(urc_geom), intent(in) :: this
+      integer(kind=4), intent(in) :: lev
+
+      enough_level = (lev >= this%level)
+
+   end function enough_level
 
 end module unified_ref_crit_geometrical
