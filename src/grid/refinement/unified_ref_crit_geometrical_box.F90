@@ -76,7 +76,8 @@ contains
       this%level  = rp%level
       this%coords = rp%coords
 
-      allocate(this%ijk_lo(base_level_id:this%level, ndims), this%ijk_hi(base_level_id:this%level, ndims))
+      allocate(this%ijk_lo(base_level_id:this%level, ndims), &
+           &   this%ijk_hi(base_level_id:this%level, ndims))
       this%ijk_lo = uninit
       this%ijk_hi = uninit
       if (master) then
@@ -108,9 +109,10 @@ contains
       if (this%enough_level(cg%l%id)) return
 
       if (allocated(this%ijk_lo) .neqv. allocated(this%ijk_hi)) call die("[unified_ref_crit_geometrical_box:mark_box] inconsistent alloc")
-
       if (.not. allocated(this%ijk_lo)) call die("[unified_ref_crit_geometrical_box:mark_box] ijk_{lo,hi} not allocated")
-      if (any(this%ijk_lo(cg%l%id, :) == uninit) .or. any(this%ijk_hi(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appeared in the meantime
+
+      if ( any(this%ijk_lo(cg%l%id, :) == uninit) .or. &
+           any(this%ijk_hi(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appeared in the meantime
 
       if (all(this%ijk_hi(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk_lo(cg%l%id, :) <= cg%ijkse(:, HI))) then
          ijk(:, LO) = min(max(int(this%ijk_lo(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
@@ -132,28 +134,21 @@ contains
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_t
       use constants,          only: LO, HI
-      use dataio_pub,         only: printinfo, msg
-      use mpisetup,           only: master
 
       implicit none
 
       class(urc_box), intent(inout)  :: this  !< an object invoking the type-bound procedure
 
       type(cg_level_connected_t), pointer :: l
-      logical, parameter :: verbose = .false.  ! for debugging only
 
       l => base%level
       do while (associated(l))
          if (l%l%id <= ubound(this%ijk_lo, dim=1)) then
-            if (any(this%ijk_lo(l%l%id, :) == uninit) .or. any(this%ijk_hi(l%l%id, :) == uninit)) then
+            if ( any(this%ijk_lo(l%l%id, :) == uninit) .or. &
+                 any(this%ijk_hi(l%l%id, :) == uninit)) then
 
                this%ijk_lo(l%l%id, :) = this%coord2ind(this%coords(:, LO), l%l)
                this%ijk_hi(l%l%id, :) = this%coord2ind(this%coords(:, HI), l%l)
-
-               if (verbose .and. master) then
-                  write(msg, '(a,i3,a,3i8,a,3i8,a)')"[URC box]   box coordinates at level ", l%l%id, " are: [ ", this%ijk_lo(l%l%id, :), " ]..[ ", this%ijk_hi(l%l%id, :), " ]"
-                  call printinfo(msg)
-               endif
 
             endif
          endif

@@ -168,15 +168,12 @@ contains
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_t
       use constants,          only: LO, HI
-      use dataio_pub,         only: printinfo, msg
-      use mpisetup,           only: master
 
       implicit none
 
       class(urc_zcyl), intent(inout)  :: this  !< an object invoking the type-bound procedure
 
       type(cg_level_connected_t), pointer :: l
-      logical, parameter :: verbose = .false.  ! for debugging only
 
       l => base%level
       do while (associated(l))
@@ -188,11 +185,6 @@ contains
                this%ijk_lo(l%l%id, :) = this%coord2ind(this%coords(:, LO), l%l)
                this%ijk_hi(l%l%id, :) = this%coord2ind(this%coords(:, HI), l%l)
                this%ijk_c (l%l%id, :) = this%coord2ind(this%center,        l%l)
-
-               if (verbose .and. master) then
-                  write(msg, '(a,i3,a,3i8,a,3i8,a)')"[URC zcyl]  z-cylinder coordinates at level ", l%l%id, " are: [ ", this%ijk_lo(l%l%id, :), " ]..[ ", this%ijk_hi(l%l%id, :), " ]"
-                  call printinfo(msg)
-               endif
 
             endif
          endif

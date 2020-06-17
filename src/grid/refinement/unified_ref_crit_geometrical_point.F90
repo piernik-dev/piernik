@@ -104,8 +104,8 @@ contains
       if (this%enough_level(cg%l%id)) return
 
       if (.not. allocated(this%ijk)) call die("[unified_ref_crit_geometrical_point:mark_point] ijk not allocated")
-      ! Did some new levels of refinement appeared in the meantime?
-      if (any(this%ijk(cg%l%id, :) == uninit)) call this%init_lev
+
+      if (any(this%ijk(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appeared in the meantime
 
       if (all(this%ijk(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk(cg%l%id, :) <= cg%ijkse(:, HI))) &
            call cg%flag%set(this%ijk(cg%l%id, :))
@@ -122,30 +122,18 @@ contains
 
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_t
-      use dataio_pub,         only: printinfo, msg
-      use mpisetup,           only: master
 
       implicit none
 
       class(urc_point), intent(inout)  :: this  !< an object invoking the type-bound procedure
 
       type(cg_level_connected_t), pointer :: l
-      logical, parameter :: verbose = .false.  ! for debugging only
 
       l => base%level
       do while (associated(l))
          if (l%l%id <= ubound(this%ijk, dim=1)) then
-            if (any(this%ijk(l%l%id, :) == uninit)) then
-
-               this%ijk(l%l%id, :) = this%coord2ind(this%coords, l%l)
-
-               if (verbose .and. master) then
-                  write(msg, '(a,i3,a,3i8,a)')"[URC point]   point coordinates at level ", &
-                       l%l%id, " are: [ ", this%ijk(l%l%id, :), " ]"
-                  call printinfo(msg)
-               endif
-
-            endif
+            if (any(this%ijk(l%l%id, :) == uninit)) &
+                 this%ijk(l%l%id, :) = this%coord2ind(this%coords, l%l)
          endif
          l => l%finer
       enddo
