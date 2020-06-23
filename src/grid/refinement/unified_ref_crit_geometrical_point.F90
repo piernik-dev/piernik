@@ -43,7 +43,7 @@ module unified_ref_crit_geometrical_point
 
    type, extends(urc_geom) :: urc_point
       real, dimension(ndims)                                 :: coords  !< coordinates, where to refine
-      integer(kind=4), allocatable, dimension(:, :), private :: ijk     !< integer coordinates at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
+      integer(kind=8), allocatable, dimension(:, :), private :: ijk     !< integer coordinates at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
    contains
       procedure          :: mark => mark_point
       procedure, private :: init_lev
@@ -92,7 +92,7 @@ contains
 
    subroutine mark_point(this, cg)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI
+      use constants,  only: LO, HI
       use dataio_pub, only: die
       use grid_cont,  only: grid_container
 
@@ -101,15 +101,14 @@ contains
       class(urc_point),              intent(inout) :: this  !< an object invoking the type-bound procedure
       type(grid_container), pointer, intent(inout) :: cg    !< current grid piece
 
-      if (cg%l%id > this%level) return
+      if (this%enough_level(cg%l%id)) return
 
       if (.not. allocated(this%ijk)) call die("[unified_ref_crit_geometrical_point:mark_point] ijk not allocated")
-      ! Did some new levels of refinement appeared in the meantime?
-      if (any(this%ijk(cg%l%id, :) == uninit)) call this%init_lev
 
-      if (all(this%ijk(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk(cg%l%id, :) <= cg%ijkse(:, HI))) then
-         if (cg%l%id < this%level) call cg%flag%set(this%ijk(cg%l%id, xdim), this%ijk(cg%l%id, ydim), this%ijk(cg%l%id, zdim))
-      endif
+      if (any(this%ijk(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appeared in the meantime
+
+      if (all(this%ijk(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk(cg%l%id, :) <= cg%ijkse(:, HI))) &
+           call cg%flag%set(this%ijk(cg%l%id, :))
 
    end subroutine mark_point
 
@@ -123,37 +122,18 @@ contains
 
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_t
-      use constants,          only: LO
-      use dataio_pub,         only: printinfo, msg
-      use domain,             only: dom
-      use mpisetup,           only: master
 
       implicit none
 
       class(urc_point), intent(inout)  :: this  !< an object invoking the type-bound procedure
 
       type(cg_level_connected_t), pointer :: l
-      logical, parameter :: verbose = .false.  ! for debugging only
 
       l => base%level
       do while (associated(l))
          if (l%l%id <= ubound(this%ijk, dim=1)) then
-            if (any(this%ijk(l%l%id, :) == uninit)) then
-               where (dom%has_dir)
-                  this%ijk(l%l%id, :) = int(l%l%off, kind=4) + floor((this%coords - dom%edge(:, LO))/dom%L_*l%l%n_d, kind=4)
-                  ! Excessively large this%coords will result in FPE exception.
-                  ! If FPE is not trapped, then huge() value will be assigned from uninit constant
-                  ! (checked on gfortran 7.3.1), which is safe.
-                  ! A wrapped value coming from integer overflow may be unsafe.
-               elsewhere
-                  this%ijk(l%l%id, :) = int(l%l%off, kind=4)
-               endwhere
-               if (verbose .and. master) then
-                  write(msg, '(a,i3,a,3i8,a)')"[URC point]   point coordinates at level ", &
-                       l%l%id, " are: [ ", this%ijk(l%l%id, :), " ]"
-                  call printinfo(msg)
-               endif
-            endif
+            if (any(this%ijk(l%l%id, :) == uninit)) &
+                 this%ijk(l%l%id, :) = this%coord2ind(this%coords, l%l)
          endif
          l => l%finer
       enddo
