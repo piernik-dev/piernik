@@ -61,13 +61,17 @@ contains
 
    subroutine problem_pointers
 
+#ifdef HDF5
       use dataio_user, only: user_vars_hdf5
+#endif /* HDF5 */
       use user_hooks,  only: finalize_problem, problem_customize_solution
 
       implicit none
 
       finalize_problem           => calculate_error_norm
+#ifdef HDF5
       user_vars_hdf5             => inid_var_hdf5
+#endif /* HDF5 */
       problem_customize_solution => calculate_error_norm_wrapper
 
    end subroutine problem_pointers

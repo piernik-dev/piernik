@@ -105,12 +105,13 @@ contains
    subroutine multigrid_diff_par
 
       use cg_list_global,   only: all_cg
-      use constants,        only: BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF, xdim, ydim, zdim, GEO_XYZ, half, zero, one, VAR_XFACE, VAR_YFACE, VAR_ZFACE, I_ONE
+      use constants,        only: BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF, xdim, ydim, zdim, GEO_XYZ, half, zero, one, VAR_CENTER, VAR_XFACE, VAR_YFACE, VAR_ZFACE, I_ONE
       use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
       use dataio_pub,       only: die, warn, msg
       use domain,           only: dom
       use fluidindex,       only: flind
       use func,             only: operator(.notequals.)
+      use global,           only: force_cc_mag
       use mpisetup,         only: master, slave, nproc, ibuff, rbuff, lbuff, cbuff, piernik_MPI_Bcast
       use multigridvars,    only: single_base
       use named_array_list, only: qna
@@ -139,7 +140,7 @@ contains
       nsmool         = 4
       nsmoob         = 1
       diff_explicit  = .false.
-      allow_explicit = .true.
+      allow_explicit = .false.  ! explicit diffusion is not compatible with AMR at this point
       diff_bnd_str   = "zero"
 
       if (master) then
@@ -246,9 +247,9 @@ contains
 
       !> \todo consider adding multigrid = .true. to the b-field (re-register it?)
       pia => pos
-      pos = VAR_XFACE ; call all_cg%reg_var(diff_bx_n, multigrid = .true., position = pia)
-      pos = VAR_YFACE ; call all_cg%reg_var(diff_by_n, multigrid = .true., position = pia)
-      pos = VAR_ZFACE ; call all_cg%reg_var(diff_bz_n, multigrid = .true., position = pia)
+      pos = merge(VAR_CENTER, VAR_XFACE, force_cc_mag) ; call all_cg%reg_var(diff_bx_n, multigrid = .true., position = pia)
+      pos = merge(VAR_CENTER, VAR_YFACE, force_cc_mag) ; call all_cg%reg_var(diff_by_n, multigrid = .true., position = pia)
+      pos = merge(VAR_CENTER, VAR_ZFACE, force_cc_mag) ; call all_cg%reg_var(diff_bz_n, multigrid = .true., position = pia)
       idiffb(xdim) = qna%ind(diff_bx_n)
       idiffb(ydim) = qna%ind(diff_by_n)
       idiffb(zdim) = qna%ind(diff_bz_n)
@@ -363,42 +364,40 @@ contains
 
    subroutine init_source(cr_id)
 
-      use cg_leaves,          only: leaves
-#if defined(__INTEL_COMPILER)
-      use cg_level_connected, only: cg_level_connected_t  ! QA_WARN workaround for stupid INTEL compiler
-#endif /* __INTEL_COMPILER */
-      use cg_level_finest,    only: finest
-      use cg_list_dataop,     only: ind_val, dirty_label
-      use cg_list_global,     only: all_cg
-      use constants,          only: base_level_id, zero, dirtyH1
-      use dataio_pub,         only: die
-      use func,               only: operator(.notequals.)
-      use initcosmicrays,     only: iarr_crs
-      use multigridvars,      only: source, defect, correction
-      use named_array_list,   only: qna, wna
+      use cg_leaves,        only: leaves
+      use cg_list_dataop,   only: ind_val, dirty_label
+      use cg_list_global,   only: all_cg
+      use constants,        only: zero, dirtyH1, PPP_MG, PPP_CR
+      use dataio_pub,       only: die
+      use func,             only: operator(.equals.)
+      use initcosmicrays,   only: iarr_crs
+      use multigridvars,    only: source, defect, correction
+      use named_array_list, only: qna, wna
+      use ppp,              only: ppp_main
 
       implicit none
 
       integer, intent(in) :: cr_id !< CR component index
+      character(len=*), parameter :: cris_label = "CR:init_source"
 
-      if (finest%level%l%id /= base_level_id) call die("[multigrid_diffusion:init_source] refinements not implemented yet")
+      call ppp_main%start(cris_label, PPP_MG + PPP_CR)
 
       call all_cg%set_dirty(source, 0.969*dirtyH1)
       call all_cg%set_dirty(correction, 0.968*dirtyH1)
       call all_cg%set_dirty(defect, 0.967*dirtyH1)
+
       ! Trick residual subroutine to initialize with: u + (1-theta) dt grad (c grad u)
-      if (diff_theta .notequals. zero) then
-         call leaves%wq_copy(wna%fi, iarr_crs(cr_id), qna%wai)
-         call leaves%q_lin_comb( [ ind_val(qna%wai, (1. -1./diff_theta)) ], correction)
-         call leaves%q_lin_comb( [ ind_val(qna%wai,     -1./diff_theta ) ], defect)
-         call residual(finest%level, defect, correction, source, cr_id)
-      else
-         call die("[multigrid_diffusion:init_source] diff_theta = 0 not supported.")
-      endif
+      if (diff_theta .equals. zero) call die("[multigrid_diffusion:init_source] diff_theta = 0 not supported.")
+      call leaves%wq_copy(wna%fi, iarr_crs(cr_id), qna%wai)
+      call leaves%q_lin_comb( [ ind_val(qna%wai, (1. -1./diff_theta)) ], correction)
+      call leaves%q_lin_comb( [ ind_val(qna%wai,     -1./diff_theta ) ], defect)
+      call residual(defect, correction, source, cr_id)
       write(dirty_label, '(a,i2)')"init source#", cr_id
-      call finest%level%check_dirty(source, dirty_label)
+      call leaves%check_dirty(source, dirty_label)
 
       vstat%norm_rhs = leaves%norm_sq(source)
+
+      call ppp_main%stop(cris_label, PPP_MG + PPP_CR)
 
    end subroutine init_source
 
@@ -503,14 +502,15 @@ contains
       use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
-      use constants,          only: base_level_id, zero, tmr_mgd, dirtyH1
-      use dataio_pub,         only: msg, warn, die
+      use constants,          only: zero, tmr_mgd, dirtyH1, cbuff_len, PPP_MG, PPP_CR
+      use dataio_pub,         only: msg, warn
       use global,             only: do_ascii_dump
       use func,               only: operator(.notequals.)
       use initcosmicrays,     only: iarr_crs
       use mpisetup,           only: master
       use multigridvars,      only: source, defect, solution, correction, ts, tot_ts
       use named_array_list,   only: wna
+      use ppp,                only: ppp_main
       use timer,              only: set_timer
 
       implicit none
@@ -523,6 +523,10 @@ contains
       real               :: norm_lhs, norm_rhs, norm_old
       logical            :: dump_every_step
       type(cg_level_connected_t), pointer :: curl
+      character(len=*), parameter :: crmgv_label = "CR:MG_V-cycles", crmgc_label = "CR:V-cycle "
+      character(len=cbuff_len)    :: label
+
+      call ppp_main%start(crmgv_label, PPP_MG + PPP_CR)
 
       write(vstat%cprefix,'("C",i1,"-")') cr_id !> \deprecated BEWARE: this is another place with 0 <= cr_id <= 9 limit
       write(dirty_label, '("md_",i1,"_dump")')  cr_id
@@ -538,13 +542,12 @@ contains
       norm_rhs = leaves%norm_sq(solution)
       norm_old = norm_rhs
 
-      if (finest%level%l%id /= base_level_id) call die("[multigrid_diffusion:vcycle_hg] refinements not implemented yet")
-
       do v = 0, max_cycles
+         write(label, '(i8)') v
 
          call all_cg%set_dirty(defect, 0.964*dirtyH1)
 
-         call residual(finest%level, source, solution, defect, cr_id) ! leaves?
+         call residual(source, solution, defect, cr_id) ! leaves?
          norm_lhs = leaves%norm_sq(defect)
          ts = set_timer(tmr_mgd)
          tot_ts = tot_ts + ts
@@ -562,6 +565,7 @@ contains
          if (dump_every_step) call all_cg%numbered_ascii_dump([ source, solution, defect, correction ], dirty_label, v)
 
          if (norm_lhs/norm_rhs <= norm_tol) exit
+         call ppp_main%start(crmgc_label // adjustl(label), PPP_MG + PPP_CR)
 
          if (v>convergence_history) then
             if (product(vstat%factor(v-convergence_history:v)) < barely_greater_than_1) then
@@ -585,15 +589,15 @@ contains
             curl => curl%finer
          enddo
 
-         call finest%level%check_dirty(correction, "c_residual")
-         call finest%level%check_dirty(defect, "d_residual")
+         call leaves%check_dirty(correction, "c_residual")
+         call leaves%check_dirty(defect, "d_residual")
          call leaves%q_lin_comb( [ ind_val(solution, 1.), ind_val(correction, -1.) ], solution) ! solution := solution - correction
-
+         call ppp_main%stop(crmgc_label // adjustl(label), PPP_MG + PPP_CR)
       enddo
 
       if (dump_every_step) call all_cg%numbered_ascii_dump([ source, solution, defect, correction ], dirty_label)
 
-      call finest%level%check_dirty(solution, "v_soln")
+      call leaves%check_dirty(solution, "v_soln")
 
       if (v > max_cycles) then
          if (master .and. norm_lhs/norm_rhs > norm_tol) then
@@ -609,10 +613,12 @@ contains
       norm_rhs = leaves%norm_sq(solution)
       norm_lhs = leaves%norm_sq(defect)
 !     Do we need to take care of boundaries here?
-!      call finest%level%arr3d_boundaries(solution, bnd_type = diff_extbnd)
+!      call leaves%leaf_arr3d_boundaries(solution, bnd_type = diff_extbnd)
 !      cg%u%span(iarr_crs(cr_id),cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_) = cg%q(solution)%span(cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_)
 
       call leaves%qw_copy(solution, wna%fi, iarr_crs(cr_id))
+
+      call ppp_main%stop(crmgv_label, PPP_MG + PPP_CR)
 
    end subroutine vcycle_hg
 
@@ -697,40 +703,43 @@ contains
 !! defect = solution - source - grad (c grad (solution))
 !<
 
-   subroutine residual(curl, src, soln, def, cr_id)
+   subroutine residual(src, soln, def, cr_id)
 
-      use cg_level_connected, only: cg_level_connected_t
-      use constants,          only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
-      use dataio_pub,         only: die
-      use domain,             only: dom
-      use cg_list,            only: cg_list_element
-      use cg_list_dataop,     only: ind_val
-      use global,             only: dt
-      use grid_cont,          only: grid_container
-      use named_array,        only: p3
+      use constants,         only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ, PPP_MG, PPP_CR
+      use dataio_pub,        only: die
+      use domain,            only: dom
+      use cg_list,           only: cg_list_element
+      use cg_list_dataop,    only: ind_val
+      use global,            only: dt
+      use grid_cont,         only: grid_container
+      use cg_leaves,         only: leaves
+      use named_array,       only: p3
       use named_array_list,  only: qna
+      use ppp,               only: ppp_main
 
       implicit none
 
-      type(cg_level_connected_t), pointer, intent(inout) :: curl !< level for which approximate the solution
-      integer(kind=4),                     intent(in)    :: src   !< index of source in cg%q(:)
-      integer(kind=4),                     intent(in)    :: soln  !< index of solution in cg%q(:)
-      integer(kind=4),                     intent(in)    :: def   !< index of defect in cg%q(:)
-      integer,                             intent(in)    :: cr_id !< CR component index
+      integer(kind=4), intent(in) :: src    !< index of source in cg%q(:)
+      integer(kind=4), intent(in) :: soln   !< index of solution in cg%q(:)
+      integer(kind=4), intent(in) :: def    !< index of defect in cg%q(:)
+      integer,         intent(in) :: cr_id  !< CR component index
 
       integer                        :: i, j, k
       integer(kind=4)                :: idir
       integer, dimension(ndims)      :: iml, imh
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
+      character(len=*), parameter :: crr_label = "CR:residual"
+
+      call ppp_main%start(crr_label, PPP_MG + PPP_CR)
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_diffusion:diff_flux] Unsupported geometry")
 
-      call curl%arr3d_boundaries(soln, bnd_type = diff_extbnd)
+      call leaves%leaf_arr3d_boundaries(soln, bnd_type = diff_extbnd)
 
-      call curl%q_lin_comb([ ind_val(soln, 1.), ind_val(src, -1.) ], def)
+      call leaves%q_lin_comb([ ind_val(soln, 1.), ind_val(src, -1.) ], def)
 
-      cgl => curl%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          do idir = xdim, zdim
@@ -752,7 +761,9 @@ contains
          cgl => cgl%nxt
       enddo
 
-!      call curl%check_dirty(def, "res def")
+!      call leaves%check_dirty(def, "res def")
+
+     call ppp_main%stop(crr_label, PPP_MG + PPP_CR)
 
    end subroutine residual
 
@@ -769,13 +780,14 @@ contains
 
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
-      use constants,          only: xdim, ydim, zdim, one, half, ndims, LO, GEO_XYZ
+      use constants,          only: xdim, ydim, zdim, one, half, ndims, LO, GEO_XYZ, PPP_MG, PPP_CR
       use dataio_pub,         only: die
       use domain,             only: dom
       use cg_list,            only: cg_list_element
       use global,             only: dt
       use grid_cont,          only: grid_container
       use named_array_list,   only: qna
+      use ppp,                only: ppp_main
 
       implicit none
 
@@ -793,6 +805,9 @@ contains
       real                            :: Keff1, Keff2, dLdu, temp
       type(grid_container), pointer   :: cg
       type(cg_list_element), pointer  :: cgl
+      character(len=*), parameter :: crs_label = "CR:approximate_solution"
+
+      call ppp_main%start(crs_label, PPP_MG + PPP_CR)
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_diffusion:diff_flux] Unsupported geometry")
 
@@ -856,6 +871,8 @@ contains
             cgl => cgl%nxt
          enddo
       enddo
+
+      call ppp_main%stop(crs_label, PPP_MG + PPP_CR)
 
    end subroutine approximate_solution
 

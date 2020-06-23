@@ -31,7 +31,6 @@
 !! \brief Module that contains HDF5 I/O routines for writing single-precision data dumps
 !<
 module data_hdf5
-
 ! pulled by HDF5
 
    implicit none
@@ -51,7 +50,7 @@ contains
 
    subroutine init_data
 
-      use dataio_pub,  only: multiple_h5files
+      use dataio_pub, only: multiple_h5files
 
       implicit none
 
@@ -121,8 +120,8 @@ contains
 
    elemental function gdf_translate(var) result(newname)
 
-      use constants,    only: dsetnamelen
-      use dataio_pub,   only: gdf_strict
+      use constants,  only: dsetnamelen
+      use dataio_pub, only: gdf_strict
 
       implicit none
 
@@ -183,24 +182,24 @@ contains
 
    subroutine create_units_description(gid)
 
-      use common_hdf5,  only: hdf_vars
-      use constants,    only: units_len, cbuff_len, I_FIVE
+      use common_hdf5,  only: hdf_vars, hdf_vars_avail
+      use constants,    only: units_len, cbuff_len, I_FIVE, I_ONE
       use hdf5,         only: HID_T, h5dopen_f, h5dclose_f
       use helpers_hdf5, only: create_dataset, create_attribute
       use units,        only: lmtvB, s_lmtvB, get_unit
 
       implicit none
+
       integer(HID_T), intent(in)             :: gid
       integer(HID_T)                         :: dset_id
-      integer(kind=4)                        :: error, i
+      integer(kind=4)                        :: error, i, ip
       character(len=cbuff_len), pointer      :: ssbuf
       character(len=units_len), pointer      :: sbuf
       character(len=units_len), target       :: s_unit
       real                                   :: val_unit
 
       character(len=cbuff_len), dimension(I_FIVE), parameter :: base_dsets = &
-         &  ["length_unit  ", "mass_unit    ", "time_unit    ",  &
-         &   "velocity_unit", "magnetic_unit"]
+         &  ["length_unit  ", "mass_unit    ", "time_unit    ",  "velocity_unit", "magnetic_unit"]
 
       do i = lbound(base_dsets, 1), ubound(base_dsets, 1)
          call create_dataset(gid, base_dsets(i), lmtvB(i))
@@ -209,7 +208,10 @@ contains
          call create_attribute(dset_id, "unit", ssbuf)
          call h5dclose_f(dset_id, error)
       enddo
+      ip = lbound(base_dsets, 1) - 1
       do i = lbound(hdf_vars, 1, kind=4), ubound(hdf_vars, 1, kind=4)
+         if (.not.hdf_vars_avail(i)) cycle
+         ip = ip + I_ONE
          call get_unit(gdf_translate(hdf_vars(i)), val_unit, s_unit)
          call create_dataset(gid, gdf_translate(hdf_vars(i)), val_unit)
          call h5dopen_f(gid, gdf_translate(hdf_vars(i)), dset_id, error)
@@ -222,7 +224,7 @@ contains
 
    subroutine create_datafields_descrs(place)
 
-      use common_hdf5,  only: hdf_vars
+      use common_hdf5,  only: hdf_vars, hdf_vars_avail
       use gdf,          only: gdf_field_type, fmax
       use hdf5,         only: HID_T, h5gcreate_f, h5gclose_f
       use helpers_hdf5, only: create_attribute
@@ -231,7 +233,7 @@ contains
 
       integer(HID_T), intent(in)             :: place
 
-      integer                                :: i
+      integer                                :: i, ip
       integer(kind=4)                        :: error
       integer(HID_T)                         :: g_id
       type(gdf_field_type), target           :: f
@@ -239,7 +241,10 @@ contains
       character(len=fmax), pointer           :: sbuf
 
       allocate(ibuf(1))
+      ip = lbound(hdf_vars,1) - 1
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
+         if (.not.hdf_vars_avail(i)) cycle
+         ip = ip + 1
          f = datafields_descr(hdf_vars(i))
          call h5gcreate_f(place, gdf_translate(hdf_vars(i)), g_id, error)
          call create_attribute(g_id, 'field_to_cgs', [f%f2cgs])
@@ -267,9 +272,9 @@ contains
       use grid_cont,   only: grid_container
       use mpisetup,    only: proc
 #ifdef MAGNETIC
+      use constants,   only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX, I_EIGHT
       use div_B,       only: divB_c_IO
       use domain,      only: dom
-      use constants,   only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX, I_EIGHT
       use global,      only: force_cc_mag
 #endif /* MAGNETIC */
 
@@ -458,11 +463,12 @@ contains
    subroutine h5_write_to_single_file
 
       use common_hdf5, only: set_common_attributes
-      use constants,   only: cwdlen, I_ONE, tmr_hdf
+      use constants,   only: cwdlen, I_ONE, tmr_hdf, PPP_IO
       use dataio_pub,  only: printio, printinfo, nhdf, thdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
          &                   msg, run_id, problem_name, use_v2_io, last_hdf_time
       use mpisetup,    only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
       use mpisignals,  only: sig
+      use ppp,         only: ppp_main
       use timer,       only: set_timer
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: unmark_oldsoln
@@ -470,9 +476,11 @@ contains
 
       implicit none
 
-      character(len=cwdlen) :: fname
-      real                  :: phv
+      character(len=cwdlen)       :: fname
+      real                        :: phv
+      character(len=*), parameter :: wrd_label = "IO_write_datafile_v1"
 
+      call ppp_main%start(wrd_label, PPP_IO)
       thdf = set_timer(tmr_hdf,.true.)
       nhdf = nhdf + I_ONE
       ! Initialize HDF5 library and Fortran interfaces.
@@ -502,17 +510,24 @@ contains
       endif
       call report_to_master(sig%hdf_written, only_master=.True.)
       call report_string_to_master(fname, only_master=.True.)
+      call ppp_main%stop(wrd_label, PPP_IO)
 
    end subroutine h5_write_to_single_file
 
    subroutine h5_write_to_single_file_v2(fname)
+
+      use constants,   only: PPP_IO
       use common_hdf5, only: write_to_hdf5_v2, O_OUT
       use gdf,         only: gdf_create_root_group
       use mpisetup,    only: master, piernik_MPI_Barrier
+      use ppp,         only: ppp_main
 
       implicit none
 
       character(len=*), intent(in) :: fname
+      character(len=*), parameter :: wrd_label = "IO_write_datafile_v2"
+
+      call ppp_main%start(wrd_label, PPP_IO)
 
       call write_to_hdf5_v2(fname, O_OUT, create_empty_cg_datasets_in_output, write_cg_to_output)
 
@@ -521,6 +536,8 @@ contains
          call gdf_create_root_group(fname, 'dataset_units', create_units_description)
       endif
       call piernik_MPI_Barrier
+
+      call ppp_main%stop(wrd_label, PPP_IO)
 
    end subroutine h5_write_to_single_file_v2
 
@@ -531,12 +548,14 @@ contains
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
       use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars, hdf_vars_avail, enable_all_hdf_var
-      use constants,   only: xdim, ydim, zdim, ndims, FP_REAL
-      use dataio_pub,  only: die, nproc_io, can_i_write, h5_64bit
+      use constants,   only: xdim, ydim, zdim, ndims, FP_REAL, PPP_IO, PPP_CG
+      use dataio_pub,  only: die, nproc_io, can_i_write, h5_64bit, nstep_start
+      use global,      only: nstep
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
       use mpisetup,    only: master, FIRST, proc, comm, mpi_err
+      use ppp,         only: ppp_main
 
       implicit none
 
@@ -549,15 +568,18 @@ contains
       integer(kind=4)                                      :: error
       integer(kind=4), parameter                           :: rank = 3
       integer(HSIZE_T), dimension(:), allocatable          :: dims
-      integer                                              :: i, ncg, n
+      integer                                              :: i, ip, ncg, n
       type(grid_container),            pointer             :: cg
       type(cg_list_element),           pointer             :: cgl
       real, dimension(:,:,:),          pointer             :: data_dbl ! double precision buffer (internal default, single precision buffer is the plotfile output default, overridable by h5_64bit)
       type(cg_output)                                      :: cg_desc
+      character(len=*), parameter :: wrdc_label = "IO_write_data_v2_cg", wrdc1s_label = "IO_write_data_v2_1cg_(serial)", wrdc1p_label = "IO_write_data_v2_1cg_(parallel)"
 
-      call enable_all_hdf_var  ! just in case things have changed meanwhile
+      call ppp_main%start(wrdc_label, PPP_IO)
 
-      call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(hdf_vars))
+      if (nstep - nstep_start < 1) call enable_all_hdf_var  ! just in case things have changed meanwhile
+
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(pack(hdf_vars, hdf_vars_avail)))
 
       if (cg_desc%tot_cg_n < 1) call die("[data_hdf5:write_cg_to_output] no cg available!")
 
@@ -569,23 +591,28 @@ contains
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
          do ncg = 1, cg_desc%tot_cg_n
+            call ppp_main%start(wrdc1s_label, PPP_IO + PPP_CG)
             dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
             call recycle_data(dims, cg_all_n_b, ncg, data_dbl)
 
             if (master) then
                if (.not. can_i_write) call die("[data_hdf5:write_cg_to_output] Master can't write")
 
+               ip = lbound(hdf_vars,1) - 1
                do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
+                  if (.not.hdf_vars_avail(i)) cycle
+                  ip = ip + 1
                   if (cg_desc%cg_src_p(ncg) == proc) then
                      cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-                     if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
+                     call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                   else
                      call MPI_Recv(data_dbl(1,1,1), size(data_dbl), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
                   endif
+                  if (.not.hdf_vars_avail(i)) cycle
                   if (h5_64bit) then
-                     call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_DOUBLE, data_dbl, dims, error, xfer_prp = cg_desc%xfer_prp)
+                     call h5dwrite_f(cg_desc%dset_id(ncg, ip), H5T_NATIVE_DOUBLE, data_dbl, dims, error, xfer_prp = cg_desc%xfer_prp)
                   else
-                     call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, xfer_prp = cg_desc%xfer_prp)
+                     call h5dwrite_f(cg_desc%dset_id(ncg, ip), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, xfer_prp = cg_desc%xfer_prp)
                   endif
                enddo
             else
@@ -594,10 +621,12 @@ contains
                   cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                   do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
                      if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
+                     if (.not.hdf_vars_avail(i)) cycle
                      call MPI_Send(data_dbl(1,1,1), size(data_dbl), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, mpi_err)
                   enddo
                endif
             endif
+            call ppp_main%stop(wrdc1s_label, PPP_IO + PPP_CG)
          enddo
       else ! perform parallel write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
@@ -606,22 +635,28 @@ contains
             n = 0
             cgl => leaves%first
             do while (associated(cgl))
+               call ppp_main%start(wrdc1p_label, PPP_IO + PPP_CG)
                n = n + 1
                ncg = cg_desc%offsets(proc) + n
                dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
                call recycle_data(dims, cg_all_n_b, ncg, data_dbl)
                cg => cgl%cg
 
+               ip = lbound(hdf_vars,1) - 1
                do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-                  if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
+                  if (.not.hdf_vars_avail(i)) cycle
+                  ip = ip + 1
+                  call get_data_from_cg(hdf_vars(i), cg, data_dbl)
+                  if (.not.hdf_vars_avail(i)) cycle
                   if (h5_64bit) then
-                     call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_DOUBLE, data_dbl, dims, error, xfer_prp = cg_desc%xfer_prp)
+                     call h5dwrite_f(cg_desc%dset_id(ncg, ip), H5T_NATIVE_DOUBLE, data_dbl, dims, error, xfer_prp = cg_desc%xfer_prp)
                   else
-                     call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, xfer_prp = cg_desc%xfer_prp)
+                     call h5dwrite_f(cg_desc%dset_id(ncg, ip), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, xfer_prp = cg_desc%xfer_prp)
                   endif
                enddo
 
                cgl => cgl%nxt
+               call ppp_main%stop(wrdc1p_label, PPP_IO + PPP_CG)
             enddo
 
             ! Behold the MAGIC in its purest form!
@@ -643,7 +678,10 @@ contains
 
             call recycle_data(dims, cg_all_n_b, 1, data_dbl)
             do ncg = 1, maxval(cg_n)-n
+               ip = lbound(hdf_vars,1) - 1
                do i = lbound(hdf_vars, 1), ubound(hdf_vars, 1)
+                  if (.not.hdf_vars_avail(i)) cycle
+                  ip = ip + 1
                   ! It is crashing due to FPE when there are more processes than blocks
                   ! because data_dbl contains too large values for single precision.
                   ! If a process doesn't have a block, data_dbl serves justa as
@@ -679,6 +717,8 @@ contains
       if (associated(data_dbl)) deallocate(data_dbl)
       call cg_desc%clean()
 
+      call ppp_main%stop(wrdc_label, PPP_IO)
+
       if (.false.) i = size(cg_all_n_o) ! suppress compiler warning
 
       contains
@@ -710,8 +750,8 @@ contains
       use dataio_pub,       only: warn, msg, printinfo
       use dataio_user,      only: user_vars_hdf5
       use grid_cont,        only: grid_container
-      use named_array_list, only: qna
       use mpisetup,         only: master
+      use named_array_list, only: qna
 
       implicit none
 
@@ -750,7 +790,7 @@ contains
 
    subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail)
 
-      use common_hdf5, only: create_empty_cg_dataset, hdf_vars, O_OUT
+      use common_hdf5, only: create_empty_cg_dataset, hdf_vars, hdf_vars_avail, O_OUT
       use hdf5,        only: HID_T, HSIZE_T
 
       implicit none
@@ -763,6 +803,7 @@ contains
       integer :: i
 
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
+         if (.not.hdf_vars_avail(i)) cycle
          call create_empty_cg_dataset(cg_g_id, gdf_translate(hdf_vars(i)), int(cg_n_b, kind=HSIZE_T), Z_avail, O_OUT)
       enddo
 
@@ -849,6 +890,7 @@ contains
 
             if (.not.associated(data)) allocate(data(cg%nxb, cg%nyb, cg%nzb))
             call get_data_from_cg(hdf_vars(i), cg, data)
+            if (.not.hdf_vars_avail(i)) cycle
 
             chunk_dims = cg%n_b(:) ! Chunks dimensions
             call h5screate_simple_f(rank, chunk_dims, memspace, error)
@@ -904,13 +946,12 @@ contains
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use common_hdf5, only: hdf_vars
+      use common_hdf5, only: hdf_vars, hdf_vars_avail
       use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE, tmr_hdf
       use dataio_pub,  only: msg, printio, printinfo, thdf, last_hdf_time, piernik_hdf5_version
       use grid_cont,   only: grid_container
       use h5lt,        only: h5ltmake_dataset_double_f
-      use hdf5,        only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, &
-           &                 h5gclose_f, HSIZE_T
+      use hdf5,        only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, h5gclose_f, HSIZE_T
       use mpisetup,    only: master
       use timer,       only: set_timer
 
@@ -945,13 +986,13 @@ contains
          call h5gcreate_f(file_id, gname, grp_id, error)
 
          ! set attributes here
-         call h5ltmake_dataset_double_f(grp_id, "fbnd", int(2,kind=4), shape(cg%fbnd,kind=HSIZE_T), &
-                                      & cg%fbnd, error)
+         call h5ltmake_dataset_double_f(grp_id, "fbnd", int(2,kind=4), shape(cg%fbnd,kind=HSIZE_T), cg%fbnd, error)
 
          if (.not.associated(data)) allocate(data(cg%n_b(xdim),cg%n_b(ydim),cg%n_b(zdim)))
          dims = cg%n_b(:)
          do i = I_ONE, size(hdf_vars, kind=4)
             call get_data_from_cg(hdf_vars(i), cg, data)
+            if (.not.hdf_vars_avail(i)) cycle
             call h5ltmake_dataset_double_f(grp_id, hdf_vars(i), rank, dims, data(:,:,:), error)
          enddo
          if (associated(data)) deallocate(data)

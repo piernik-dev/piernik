@@ -86,20 +86,20 @@ contains
 
    subroutine read_problem_par
 
-      use cg_list_global,   only: all_cg
-      use constants,        only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
-      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,       only: die, warn, msg, printinfo
-      use domain,           only: dom
-      use fluidindex,       only: iarr_all_dn
-      use global,           only: smalld
-      use func,             only: operator(.equals.)
-      use mpisetup,         only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
-      use multigridvars,    only: ord_prolong
-      use named_array_list, only: wna
-      use particle_pub,     only: pset
-      use user_hooks,       only: ext_bnd_potential
+      use cg_list_global,        only: all_cg
+      use constants,             only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
+      use dataio_pub,            only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,            only: die, warn, msg, printinfo
+      use domain,                only: dom
+      use fluidindex,            only: iarr_all_dn
+      use func,                  only: operator(.equals.)
+      use global,                only: smalld
+      use mpisetup,              only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use multigridvars,         only: ord_prolong
+      use named_array_list,      only: wna
+      use particle_pub,          only: pset
       use unified_ref_crit_list, only: urc_list
+      use user_hooks,            only: ext_bnd_potential
 
       implicit none
 
@@ -419,13 +419,14 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pi, GEO_XYZ, GEO_RPZ
+      use constants,        only: pi, GEO_XYZ, GEO_RPZ, PPP_PROB
       use dataio_pub,       only: warn, die
       use domain,           only: dom
-      use grid_cont,        only: grid_container
       use func,             only: operator(.equals.), operator(.notequals.)
+      use grid_cont,        only: grid_container
       use mpisetup,         only: master
       use named_array_list, only: qna
+      use ppp,              only: ppp_main
       use units,            only: newtong
 
       implicit none
@@ -436,6 +437,9 @@ contains
       real, parameter                :: small_e = 1e-3
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      character(len=*), parameter :: cmp_label = "compute_maclaurin_potential"
+
+      call ppp_main%start(cmp_label, PPP_PROB)
 
       AA1 = 2./3. ; AA3 = 2./3.
       if (e < 0. .and. master) call warn("[initproblem:compute_maclaurin_potential] e<0. not fully implemented yet!")
@@ -537,6 +541,8 @@ contains
          cgl => cgl%nxt
       enddo
 
+      call ppp_main%stop(cmp_label, PPP_PROB)
+
    end subroutine compute_maclaurin_potential
 
 !> \brief Compute the L2 error norm of the error of computed potential with respect to the analytical solution
@@ -634,8 +640,8 @@ contains
    subroutine maclaurin_error_vars(var, tab, ierrh, cg)
 
       use dataio_pub,       only: die
-      use grid_cont,        only: grid_container
       use func,             only: operator(.notequals.)
+      use grid_cont,        only: grid_container
       use named_array_list, only: qna
 
       implicit none

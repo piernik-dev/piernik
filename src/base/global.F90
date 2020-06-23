@@ -38,13 +38,13 @@ module global
    implicit none
 
    private
-   public :: cleanup_global, init_global, system_mem_usage, check_mem_usage, &
+   public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, disallow_negatives, disallow_CRnegatives, unwanted_negatives, dn_negative, ei_negative, cr_negative, tstep_attempt, &
         &    dt, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, do_external_corners, &
-        &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fc_eq_mag, which_solver
+        &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fluid_prolong, which_solver
 
    logical         :: cfl_violated             !< True when cfl condition is violated
    logical         :: dn_negative = .false.
@@ -103,14 +103,13 @@ module global
    logical                       :: ch_grid           !< When true use grid properties to estimate ch (psi wave propagation speed). Use gas properties otherwise.
    real                          :: w_epsilon         !< small number for safe evaluation of weights in WENO interpolation
    integer(kind=4)               :: ord_mag_prolong   !< prolongation order for B and psi
-   logical                       :: ord_fc_eq_mag     !< when .true. enforce ord_mag_prolong order of prolongation of f/c guardcells for fluid and everything (EXPERIMENTAL)
+   integer(kind=4)               :: ord_fluid_prolong !< prolongation order for u
    logical                       :: do_external_corners  !< when .true. then perform boundary exchanges inside external guardcells
    character(len=cbuff_len)      :: solver_str        !< allow to switch between RIEMANN and RTVD without recompilation
-   integer(kind=4)               :: max_mem           !< MAximum allowed RSS memory per thread (in kiB)
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, disallow_negatives, disallow_CRnegatives, cfl_max, use_smalld, use_smallei, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
-        &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong, ord_fc_eq_mag, do_external_corners, solver_str, max_mem
+        &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong, ord_fluid_prolong, do_external_corners, solver_str
 
 contains
 
@@ -153,16 +152,15 @@ contains
 !!   <tr><td>w_epsilon        </td><td>1e-10  </td><td>real                                 </td><td>\copydoc global::w_epsilon        </td></tr>
 !!   <tr><td>psi_bnd_str      </td><td>"default" </td><td>string                            </td><td>\copydoc global::psi_bnd_str      </td></tr>
 !!   <tr><td>ord_mag_prolong  </td><td>2      </td><td>integer                              </td><td>\copydoc global::ord_mag_prolong  </td></tr>
-!!   <tr><td>ord_fc_eq_mag    </td><td>.false.</td><td>logical                              </td><td>\copydoc global::ord_fc_eq_mag    </td></tr>
+!!   <tr><td>ord_fluid_prolong </td><td>0     </td><td>integer                              </td><td>\copydoc global::ord_fluid_prolong </td></tr>
 !!   <tr><td>do_external_corners </td><td>.false.</td><td>logical                           </td><td>\copydoc global::do_external_corners </td></tr>
-!!   <tr><td>max_mem          </td><td>huge(1)</td><td>integer value                        </td><td>\copydoc global::max_mem          </td></tr>
 !! </table>
 !! \n \n
 !<
    subroutine init_global
 
       use constants,  only: big_float, PIERNIK_INIT_DOMAIN, INVALID, DIVB_CT, DIVB_HDC, &
-           &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO, O_I2, INVALID, &
+           &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO, O_INJ, O_LIN, O_I2, INVALID, &
            &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, GEO_XYZ
       use dataio_pub, only: die, msg, warn, code_progress, printinfo
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
@@ -228,10 +226,9 @@ contains
       psi_bnd_str = "default"
       integration_order  = 2
       ord_mag_prolong = O_I2           !< it looks like most f/c artifacts are gone just with cubic prolongation of magnetic guardcells
-      ord_fc_eq_mag = .false.          !< Conservative choice, perhaps O_LIN will be safer. Higher orders may result in negative density or energy in f/c guardcells
+      ord_fluid_prolong = O_INJ        !< O_INJ and O_LIN ensure monotoniciy and nonnegative density and energy
       do_external_corners =.false.
       solver_str = ""
-      max_mem     = huge(1_4)
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -276,7 +273,7 @@ contains
          ibuff(1) = integration_order
          ibuff(2) = print_divB
          ibuff(3) = ord_mag_prolong
-         ibuff(4) = max_mem
+         ibuff(4) = ord_fluid_prolong
 
          rbuff( 1) = smalld
          rbuff( 2) = smallc
@@ -304,7 +301,6 @@ contains
          lbuff(9)   = use_fargo
          lbuff(10)  = use_eglm
          lbuff(11)  = ch_grid
-         lbuff(12)  = ord_fc_eq_mag
          lbuff(13)  = do_external_corners
          lbuff(14)  = disallow_negatives
          lbuff(15)  = disallow_CRnegatives
@@ -327,7 +323,6 @@ contains
          use_fargo            = lbuff(9)
          use_eglm             = lbuff(10)
          ch_grid              = lbuff(11)
-         ord_fc_eq_mag        = lbuff(12)
          do_external_corners  = lbuff(13)
          disallow_negatives   = lbuff(14)
          disallow_CRnegatives = lbuff(15)
@@ -360,7 +355,7 @@ contains
          integration_order    = ibuff(1)
          print_divB           = ibuff(2)
          ord_mag_prolong      = ibuff(3)
-         max_mem              = ibuff(4)
+         ord_fluid_prolong    = ibuff(4)
 
       endif
 
@@ -470,6 +465,15 @@ contains
       endif
 #endif /* MAGNETIC */
 
+      if (all(ord_fluid_prolong /= [O_INJ, O_LIN])) then
+         write(msg, '(a,i3,a)')"[global:init_global] Prolongation order ", ord_fluid_prolong, " is not positive-definite and thus not allowed for density and energy. Degrading to injection (0)"
+         if (master) call warn(msg)
+         ord_fluid_prolong = O_INJ
+         ! ToDo implement higher order monotonized prolongation scheme
+      endif
+
+      if (master .and. ord_fluid_prolong /= O_INJ) call warn("[global:init_global] Linear prolongation of fluid in AMR is experimental.")
+
       tstep_attempt = I_ZERO
 
    end subroutine init_global
@@ -488,89 +492,5 @@ contains
       implicit none
       grace_period_passed = (t >= relax_time)
    end function grace_period_passed
-
-!>
-!! \brief tell the current estimate of memory used by current thread.
-!!
-!! \todo Add optional intent(in) argument with other interesting labels such as VmPeak or VmSize
-!>
-
-   integer(kind=4) function system_mem_usage()
-
-      use constants,  only: INVALID, fnamelen
-      use dataio_pub, only: warn
-#if defined(__INTEL_COMPILER)
-      use ifport,     only: getpid
-#endif /* __INTEL_COMPILER */
-
-      implicit none
-
-      integer, parameter :: pidlen = 8
-      character(len=fnamelen) :: filename, line
-      character(len=pidlen)   :: pid_char
-      integer :: stat_lun, io
-      logical :: io_exists
-
-      system_mem_usage = INVALID
-
-      write(pid_char, '(i8)') getpid()
-      filename = '/proc/' // trim(adjustl(pid_char)) // '/status'
-
-      inquire (file=filename, exist=io_exists)
-      if (.not. io_exists) then
-         call warn("[global:system_mem_usage] Cannot find '" // filename // "'")
-         return
-      endif
-
-      open(newunit=stat_lun, file=filename, status='old')
-      do
-         read (stat_lun,'(a)', iostat=io) line
-         if (io /= 0) exit
-         if (line(1:6) == 'VmRSS:') then
-            read (line(7:), *) system_mem_usage
-            exit
-         endif
-      enddo
-
-      close(stat_lun)
-
-   end function system_mem_usage
-
-!>
-!! \brief Check if current memory usage doex not exceed the limit.
-!!
-!! \detailed This routine should be called after each potentially large allocaltion.
-!! This may be used to crash Piernik before running into swapped memory.
-!!
-!! Cannot make a clean exit and call a restart dump from here because
-!! it is not guaranteed that each process visits this routine.
-!<
-
-   subroutine check_mem_usage
-
-      use dataio_pub, only: warn, die, msg
-      use mpisetup,   only: proc
-
-      implicit none
-
-      integer :: rss
-      real, parameter :: warnlevel = 0.95
-      integer, save :: nextwarn = 1, warncnt = 0
-
-      rss = system_mem_usage()
-
-      if (rss > max_mem) then
-         write(msg, '(a,2(i11,a),i5)')"[global:check_mem_usage] RSS exceeded max mem (", rss, " kiB > ", max_mem, " kiB) on process ", proc
-         call die(msg)
-      else if (rss > warnlevel*max_mem) then
-         warncnt = warncnt + 1
-         if (warncnt >= nextwarn) then
-            write(msg, '(a,2(i11,a),i5)')"[global:check_mem_usage] RSS is approaching max mem (", rss, " kiB <= ", max_mem, " kiB) on process ", proc
-            call warn(msg)
-            nextwarn = 2 * nextwarn
-         endif
-      endif
-
-   end subroutine check_mem_usage
 
 end module global

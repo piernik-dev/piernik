@@ -74,11 +74,12 @@ contains
       use cg_leaves,        only: leaves
       use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
-      use constants,        only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n
+      use constants,        only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n, PPP_CR
       use dataio_pub,       only: die
       use domain,           only: dom
       use grid_cont,        only: grid_container
       use named_array_list, only: wna
+      use ppp,              only: ppp_main
 
       implicit none
 
@@ -87,9 +88,12 @@ contains
       real, dimension(:,:,:,:), pointer       :: wcr
       type(cg_list_element),    pointer       :: cgl
       type(grid_container),     pointer       :: cg
+      character(len=*), parameter :: awb_label = "all_wcr_boundaries"
 
       if (.not. has_cr) return
 
+
+      call ppp_main%start(awb_label, PPP_CR)
       call finest%level%restrict_to_base_w_1var(wna%ind(wcr_n))
       call leaves%leaf_arr4d_boundaries(wna%ind(wcr_n))
 
@@ -123,6 +127,8 @@ contains
          cgl => cgl%nxt
       enddo
 
+      call ppp_main%stop(awb_label, PPP_CR)
+
    end subroutine all_wcr_boundaries
 
 !>
@@ -138,7 +144,7 @@ contains
       use cg_leaves,        only: leaves
       use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR
       use dataio_pub,       only: die
       use domain,           only: dom
       use fluidindex,       only: flind
@@ -147,6 +153,7 @@ contains
       use initcosmicrays,   only: iarr_crs, K_crs_paral, K_crs_perp
       use named_array,      only: p4
       use named_array_list, only: wna
+      use ppp,              only: ppp_main
 #ifdef MAGNETIC
       use constants,        only: four
 #endif /* MAGNETIC */
@@ -166,9 +173,12 @@ contains
       logical, dimension(ndims)            :: present_not_crdim
       real, dimension(:,:,:,:), pointer    :: wcr
       integer                              :: wcri
+      character(len=*), dimension(ndims), parameter :: crd_label = [ "cr_diff_X", "cr_diff_Y", "cr_diff_Z" ]
 
       if (.not. has_cr) return
       if (.not.dom%has_dir(crdim)) return
+
+      call ppp_main%start(crd_label(crdim), PPP_CR)
 
       if (dom%geometry_type /= GEO_XYZ) call die("[crdiffusion:cr_diff] Unsupported geometry")
 
@@ -255,6 +265,8 @@ contains
 
          cgl => cgl%nxt
       enddo
+
+      call ppp_main%stop(crd_label(crdim), PPP_CR)
 
    end subroutine cr_diff
 

@@ -46,7 +46,7 @@ contains
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
-      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, INCEPTIVE, tmr_fu
+      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, INCEPTIVE, tmr_fu, cbuff_len, PPP_PROB
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
       use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
       use decomposition,         only: init_decomposition
@@ -62,7 +62,9 @@ contains
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
       use interpolations,        only: set_interpolations
-      use mpisetup,              only: init_mpi, master
+      use memory_usage,          only: init_memory
+      use mpisetup,              only: init_mpi, master, bigbang
+      use ppp,                   only: init_profiling, ppp_main
       use refinement,            only: init_refinement, level_max
       use refinement_update,     only: update_refinement
       use sources,               only: init_sources
@@ -108,6 +110,8 @@ contains
       real    :: ts                  !< Timestep wallclock
       logical :: finished
       integer, parameter :: nit_over = 3 ! maximum number of auxiliary iterations after reaching level_max
+      character(len=*), parameter :: ip_label = "init_piernik", ic_label = "IC_piernik", iter_label = "IC_iteration "
+      character(len=cbuff_len) :: label
 
       call set_colors(.false.)               ! Make sure that we won't emit colorful messages before we are allowed to do so
 
@@ -135,6 +139,9 @@ contains
       call cg_extptrs%epa_init
 
       call init_dataio_parameters            ! Required very early to call colormessage without side-effects
+      call init_memory
+      call init_profiling                    ! May require init_dataio_parameters and memory_usage set up
+      call ppp_main%put(ip_label, bigbang)   ! can't call tst_cnt%start("init_piernik") before init_mpi
 
       call init_units
 
@@ -210,6 +217,7 @@ contains
       ! Initial conditions are read here from a restart file if possible
 
 #ifdef GRAV
+      if (restarted_sim) call source_terms_grav
       call init_terms_grav
 #endif /* GRAV */
 
@@ -218,6 +226,7 @@ contains
          call all_bnd_vital_q
       endif
 
+      call ppp_main%start(ic_label)
       if (master) then
          call printinfo("###############     Initial Conditions     ###############", .false.)
          write(msg,'(4a)') "   Starting problem : ",trim(problem_name)," :: ",trim(run_id)
@@ -243,13 +252,16 @@ contains
 
          nit = 0
          finished = .false.
+         call ppp_main%start(iter_label // "0", PPP_PROB)
          call problem_initial_conditions ! may depend on anything
+         call ppp_main%stop(iter_label // "0", PPP_PROB)
          call init_psi ! initialize the auxiliary field for divergence cleaning when needed
 
          write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
          if (master) call printinfo(msg)
 
          do while (.not. finished)
+            write(label, '(i8)') nit + 1
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
 #ifdef GRAV
@@ -259,7 +271,10 @@ contains
             call update_refinement(act_count=ac)
             finished = (ac == 0) .or. (nit > level_max + nit_over) ! level_max iterations for creating refinement levels + level_max iterations for derefining excess of blocks
 
+            call ppp_main%start(iter_label // adjustl(label), PPP_PROB)
             call problem_initial_conditions ! reset initial conditions after possible changes of refinement structure
+            call ppp_main%stop(iter_label // adjustl(label), PPP_PROB)
+
             nit = nit + 1
             write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%l%id,", time elapsed: ",set_timer(tmr_fu)
             if (master) call printinfo(msg)
@@ -276,6 +291,7 @@ contains
          endif
          if (associated(problem_post_IC)) call problem_post_IC
       endif
+      call ppp_main%stop(ic_label)
 
       code_progress = PIERNIK_POST_IC
 
@@ -290,6 +306,8 @@ contains
       call write_data(output=INCEPTIVE)
 
       call sanitize_smallx_checks            ! depends on problem_initial_conditions || init_dataio/read_restart_hdf5
+
+      call ppp_main%stop(ip_label)
 
    end subroutine init_piernik
 !-----------------------------------------------------------------------------

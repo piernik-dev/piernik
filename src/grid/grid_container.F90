@@ -62,17 +62,17 @@ module grid_cont
       type(tgt_list) :: rof_tgt       !< description of fluxes outgoing to coarse grid
 
       ! Misc
-      integer(kind=8) :: SFC_id       !< position of the grid on space-filling curve
-      integer :: membership           !< How many cg lists use this grid piece?
-      logical :: ignore_prolongation  !< When .true. do not upgrade interior with incoming prolonged values
-      logical :: is_old               !< .true. if a given grid existed prior to  upgrade_refinement call
-      logical :: processed            !< for use in sweeps.F90
+      integer(kind=8) :: SFC_id                                   !< position of the grid on space-filling curve
+      integer :: membership                                       !< How many cg lists use this grid piece?
+      logical :: ignore_prolongation                              !< When .true. do not upgrade interior with incoming prolonged values
+      logical :: is_old                                           !< .true. if a given grid existed prior to  upgrade_refinement call
+      logical :: processed                                        !< for use in sweeps.F90
 
    contains
 
-      procedure          :: init_gc         !< Initialization
-      procedure          :: cleanup         !< Deallocate all internals
-      procedure          :: update_leafmap  !< Check if the grid container has any parts covered by finer grids and update appropriate map
+      procedure          :: init_gc                               !< Initialization
+      procedure          :: cleanup                               !< Deallocate all internals
+      procedure          :: update_leafmap                        !< Check if the grid container has any parts covered by finer grids and update appropriate map
 
    end type grid_container
 

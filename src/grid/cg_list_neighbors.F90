@@ -123,16 +123,21 @@ contains
 
    subroutine find_neighbors(this)
 
+      use constants,  only: PPP_AMR
       use dataio_pub, only: warn, msg
       use global,     only: do_external_corners
       use refinement, only: prefer_n_bruteforce
       use mpisetup,   only: master
+      use ppp,        only: ppp_main
 
       implicit none
 
       class(cg_list_neighbors_t), intent(inout) :: this !< object invoking type bound procedure
 
       logical, save :: firstcall = .true.
+      character(len=*), parameter :: fn_label = "find_neighbors"
+
+      call ppp_main%start(fn_label, PPP_AMR)
 
       if (do_external_corners) then
          write(msg, '(3a)') "[cg_list_neighbors:find_neighbors] do_external_corners implemented experimentally (", trim(merge("SFC       ", "bruteforce", this%dot%is_blocky .and. .not. prefer_n_bruteforce)), ")"
@@ -151,6 +156,8 @@ contains
          ! calling this%ms%merge(this) here makes sense only for such setups, so in periodic boundaries 2 blocks
          ! covers the domain in at least one direction.
       endif
+
+      call ppp_main%stop(fn_label, PPP_AMR)
 
 #ifdef DEBUG
       call this%print_bnd_list

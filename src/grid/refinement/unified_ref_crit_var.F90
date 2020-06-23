@@ -156,29 +156,19 @@ contains
       endif
 
       if (trim(vname) == "dens") then
-         allocate(ic, source = iarr_all_dn)
-         iv = wna%fi
-         ic = iarr_all_dn
+         call alloc_ic(iarr_all_dn)
          return
       else if (trim(vname) == "velx") then
-         allocate(ic, source = iarr_all_mx)
-         iv = wna%fi
-         ic = iarr_all_mx
+         call alloc_ic(iarr_all_mx)
          return
       else if (trim(vname) == "vely") then
-         allocate(ic, source = iarr_all_my)
-         iv = wna%fi
-         ic = iarr_all_my
+         call alloc_ic(iarr_all_my)
          return
       else if (trim(vname) == "velz") then
-         allocate(ic, source = iarr_all_mz)
-         iv = wna%fi
-         ic = iarr_all_mz
+         call alloc_ic(iarr_all_mz)
          return
       else if (trim(vname) == "ener") then
-         allocate(ic, source = iarr_all_en)
-         iv = wna%fi
-         ic = iarr_all_en
+         call alloc_ic(iarr_all_en)
          return
       endif
       !> \todo identify here all {den,vl[xyz],ene}{d,n,i}
@@ -186,6 +176,21 @@ contains
 
       write(msg,'(3a)')"[unified_ref_crit_var:identify_field] Unidentified refinement variable: '",trim(vname),"'"
       if (master) call warn(msg)
+
+   contains
+
+      subroutine alloc_ic(tab)
+
+         implicit none
+
+         integer(kind=4), dimension(:), intent(in) :: tab
+
+         iv = wna%fi
+
+         allocate(ic(size(tab)))
+         ic = tab
+
+      end subroutine alloc_ic
 
    end subroutine identify_field
 
@@ -284,14 +289,18 @@ contains
 !! (note that some indices in the left part of denominator seem to be slightly messed up)
 !!
 !! this%aux is the noise filter (epsilon in Loechner's paper)
+!!
+!! OPT: this routine seems to take way too much CPU! Implement 3D variant without functions?
+!!
 !<
 
    subroutine refine_on_second_derivative(this, cg, p3d)
 
-      use constants,  only: xdim, ydim, zdim, GEO_XYZ, INVALID, I_ONE
+      use constants,  only: xdim, ydim, zdim, GEO_XYZ, INVALID, I_ONE, PPP_AMR, PPP_CG
       use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container
+      use ppp,        only: ppp_main
 
       implicit none
 
@@ -302,7 +311,9 @@ contains
       integer(kind=4) :: i, j, k
       real :: sn, sd, r
       integer(kind=4), parameter :: how_far = 2
+      character(len=*), parameter :: L_label = "Loechner_mark"
 
+      call ppp_main%start(L_label, PPP_AMR + PPP_CG)
       if (dom%geometry_type /= GEO_XYZ) call die("[unified_ref_crit_var:refine_on_second_derivative] noncartesian geometry not supported yet")
       if (dom%nb < how_far+I_ONE) call die("[unified_ref_crit_var:refine_on_second_derivative] at east 2 guardcells are required")
 
@@ -371,6 +382,7 @@ contains
             enddo
          enddo
       enddo
+      call ppp_main%stop(L_label, PPP_AMR + PPP_CG)
 
    contains
 

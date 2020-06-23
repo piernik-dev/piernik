@@ -69,7 +69,6 @@ contains
 
       use cg_list_global,   only: all_cg
       use constants,        only: xdim, zdim
-      use data_hdf5,        only: write_hdf5
       use dataio_pub,       only: printinfo, msg, die
       use mpisetup,         only: master
       use named_array_list, only: qna, wna
@@ -83,16 +82,16 @@ contains
       call set_up_ub
       call diffuse_idn
       if (master) call printinfo("ip:ip ub+diff")
-      call write_hdf5
+      call write_h
 
       call all_cg%internal_boundaries_4d(wna%fi)
       call all_cg%internal_boundaries_3d(qna%ind(fld_n))
       if (master) call printinfo("ip:ip ub+diff+ib")
-      call write_hdf5
+      call write_h
 
       call diffuse_idn
       if (master) call printinfo("ip:ip ub+ib+diff")
-      call write_hdf5
+      call write_h
 
       call set_up_ub
       do dir = xdim, zdim
@@ -102,7 +101,7 @@ contains
       enddo
       call diffuse_idn
       if (master) call printinfo("ip:ip ub+ibXYZ+diff")
-      call write_hdf5
+      call write_h
 
 !!$      call set_up_ub
 !!$      do dir = xdim, zdim
@@ -110,15 +109,35 @@ contains
 !!$         call all_cg%internal_boundaries_3d(qna%ind(fld_n), dim=dir)
 !!$         write(msg, '(a,i1)')"ip:ip ub+ib:",dir
 !!$         if (master) call printinfo(msg)
-!!$         call write_hdf5
+!!$         call write_h
 !!$         call diffuse_idn
 !!$         write(msg, '(a,i1,a)')"ip:ip ub+ib:",dir,"+diff"
 !!$         if (master) call printinfo(msg)
-!!$         call write_hdf5
+!!$         call write_h
 !!$         call clear_fld
 !!$      enddo
 
       call die("[initproblem:problem_initial_conditions] End of test")
+
+   contains
+
+      subroutine write_h
+
+#ifdef HDF5
+         use data_hdf5,  only: write_hdf5
+#else /* !HDF5 */
+         use dataio_pub, only: warn
+#endif /* !HDF5 */
+
+         implicit none
+
+#ifdef HDF5
+         call write_hdf5
+#else /* !HDF5 */
+         call warn("[initproblem:problem_initial_conditions:write_h] HDF5 is not available")
+#endif /* !HDF5 */
+
+      end subroutine write_h
 
    end subroutine problem_initial_conditions
 

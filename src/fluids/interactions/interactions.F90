@@ -203,7 +203,7 @@ contains
          enddo
          ! has_interactions = .true.    !> \deprecated BEWARE: temporary hack,  switches on timestep_interactions, don't needed in implicit solver??
       else
-         if (.not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
+         if (has_interactions .and. .not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
          warned = .true.
       endif
 
@@ -233,7 +233,7 @@ contains
             end select
             has_interactions = .true.    !> \deprecated BEWARE: temporary hack,  switches on timestep_interactions
          else
-            if (.not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
+            if (has_interactions .and. .not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
             warned = .true.
          endif
       endif

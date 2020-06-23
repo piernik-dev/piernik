@@ -57,6 +57,7 @@
     integration_order = 2
     limiter      = "vanleer"
     divB_0       = "CT"
+    repeat_step = .true.
   /
 
  $GRAVITY

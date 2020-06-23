@@ -90,6 +90,7 @@ contains
       use mass_defect,      only: downgrade_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna, wna, na_var_list_q, na_var_list_w
+      use ppp,              only: ppp_main
       use user_hooks,       only: user_reaction_to_redo_step
 #ifdef RANDOMIZE
       use randomization,    only: randoms_redostep
@@ -102,6 +103,7 @@ contains
       integer                        :: i, j
       character(len=dsetnamelen)     :: rname
       integer, parameter             :: max_attempts = 10  !< Something is terribly wrong if a single step requires too many reductions
+      character(len=*), parameter :: rs_label = "repeat_step_"
 
       if (.not.repeat_step) return
 
@@ -130,6 +132,11 @@ contains
       call randoms_redostep(cfl_violated)
 #endif /* RANDOMIZE */
 
+      if (cfl_violated) then
+         call ppp_main%start(rs_label // "reverting")
+      else
+         call ppp_main%start(rs_label // "saving")
+      endif
       no_hist_count = 0
       cgl => leaves%first
       do while (associated(cgl))
@@ -171,6 +178,12 @@ contains
          enddo
          cgl => cgl%nxt
       enddo
+      if (cfl_violated) then
+         call ppp_main%stop(rs_label // "reverting")
+      else
+         call ppp_main%stop(rs_label // "saving")
+      endif
+
       call piernik_MPI_Allreduce(no_hist_count, pSUM)
       if (master .and. no_hist_count/=0) then
          write(msg, '(a,i6,a)')"[timestep_retry:repeat_fluidstep] Error: not reverted: ", no_hist_count, " grid pieces."

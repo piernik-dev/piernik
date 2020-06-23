@@ -108,12 +108,13 @@ contains
 
    subroutine recv_cg_finebnd(cdim, cg, all_received)
 
-      use constants,  only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims
+      use constants,  only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims, PPP_MPI
       use dataio_pub, only: die
       use fluidindex, only: flind
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_STATUS_IGNORE
       use mpisetup,   only: mpi_err
+      use ppp,        only: ppp_main
 
       implicit none
 
@@ -124,7 +125,9 @@ contains
       integer :: g, lh
       logical :: received
       integer(kind=8), dimension(LO:HI) :: j1, j2, jc
+      character(len=*), parameter :: recv_label = "cg_recv_fine_bnd"
 
+      call ppp_main%start(recv_label, PPP_MPI)
       all_received = .true.
       if (allocated(cg%rif_tgt%seg)) then
          associate ( seg => cg%rif_tgt%seg )
@@ -157,7 +160,9 @@ contains
          enddo
          end associate
       endif
-      return
+
+      call ppp_main%stop(recv_label, PPP_MPI)
+
    end subroutine recv_cg_finebnd
 
 !>
@@ -166,13 +171,14 @@ contains
 
    subroutine send_cg_coarsebnd(cdim, cg, nr)
 
-      use constants,    only: pdims, LO, HI, ORTHO1, ORTHO2, I_ONE, INVALID
+      use constants,    only: pdims, LO, HI, ORTHO1, ORTHO2, I_ONE, INVALID, PPP_MPI
       use dataio_pub,   only: die
       use domain,       only: dom
       use grid_cont,    only: grid_container
       use grid_helpers, only: f2c_o
       use mpi,          only: MPI_DOUBLE_PRECISION
       use mpisetup,     only: comm, mpi_err, req, inflate_req
+      use ppp,          only: ppp_main
 
       implicit none
 
@@ -183,7 +189,9 @@ contains
       integer :: g, lh
       integer(kind=8), dimension(LO:HI) :: j1, j2, jc
       integer(kind=8) :: j, k
+      character(len=*), parameter :: send_label = "cg_send_coarse_bnd"
 
+      call ppp_main%start(send_label, PPP_MPI)
 
       if (allocated(cg%rof_tgt%seg)) then
          associate ( seg => cg%rof_tgt%seg )
@@ -221,6 +229,9 @@ contains
          enddo
          end associate
       endif
+
+      call ppp_main%stop(send_label, PPP_MPI)
+
    end subroutine send_cg_coarsebnd
 
 !>
@@ -281,13 +292,14 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: ydim, first_stage, last_stage, uh_n, magh_n, psih_n, psi_n, INVALID, &
-           &                      RTVD_SPLIT, RIEMANN_SPLIT
+      use constants,        only: ydim, ndims, first_stage, last_stage, uh_n, magh_n, psih_n, psi_n, INVALID, &
+           &                      RTVD_SPLIT, RIEMANN_SPLIT, PPP_CG
       use dataio_pub,       only: die
       use global,           only: integration_order, use_fargo, which_solver
       use grid_cont,        only: grid_container
       use mpisetup,         only: mpi_err, req, status
       use named_array_list, only: qna, wna
+      use ppp,              only: ppp_main
       use solvecg_rtvd,     only: solve_cg_rtvd
       use solvecg_riemann,  only: solve_cg_riemann
       use sources,          only: prepare_sources
@@ -323,6 +335,10 @@ contains
       integer                        :: uhi, bhi, psii, psihi
       integer(kind=4), dimension(:,:), pointer :: mpistatus
       procedure(solve_cg_sub), pointer :: solve_cg => null()
+      character(len=*), dimension(ndims), parameter :: sweep_label = [ "sweep_x", "sweep_y", "sweep_z" ]
+      character(len=*), parameter :: solve_cgs_label = "solve_bunch_of_cg", cg_label = "solve_cg"
+
+      call ppp_main%start(sweep_label(cdim))
 
       select case (which_solver)
          case (RTVD_SPLIT)
@@ -373,6 +389,8 @@ contains
             blocks_done = 0
             ! OPT this loop should probably go from finest to coarsest for better compute-communicate overlap.
             cgl => leaves%first
+
+            call ppp_main%start(solve_cgs_label)
             do while (associated(cgl))
                cg => cgl%cg
 
@@ -380,7 +398,10 @@ contains
                   call recv_cg_finebnd(cdim, cg, all_received)
 
                   if (all_received) then
+                     call ppp_main%start(cg_label, PPP_CG)
                      call solve_cg(cg, cdim, istep, fargo_vel)
+                     call ppp_main%stop(cg_label, PPP_CG)
+
                      call send_cg_coarsebnd(cdim, cg, nr)
                      blocks_done = blocks_done + 1
                   else
@@ -389,6 +410,7 @@ contains
                endif
                cgl => cgl%nxt
             enddo
+            call ppp_main%stop(solve_cgs_label)
 
             if (.not. all_processed .and. blocks_done == 0) then
                if (nr_recv > 0) then
@@ -406,6 +428,7 @@ contains
 
          call update_boundaries(cdim, istep)
       enddo
+      call ppp_main%stop(sweep_label(cdim))
 
    end subroutine sweep
 
