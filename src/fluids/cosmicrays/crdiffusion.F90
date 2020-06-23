@@ -56,7 +56,7 @@ contains
       has_cr = (flind%crs%all > 0)
 
       if (has_cr) then
-         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all)
+         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all) !, ord_prolong = 2)  ! Smooth prolongation may help with interpolation from coarse grid to fine boundary
       else
          call warn("[crdiffusion:init_crdiffusion] No CR species to diffuse")
       endif
@@ -72,8 +72,8 @@ contains
    subroutine all_wcr_boundaries
 
       use cg_leaves,        only: leaves
+      use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
-      use cg_list_global,   only: all_cg
       use constants,        only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n, PPP_CR
       use dataio_pub,       only: die
       use domain,           only: dom
@@ -92,10 +92,12 @@ contains
 
       if (.not. has_cr) return
 
+
       call ppp_main%start(awb_label, PPP_CR)
+      call finest%level%restrict_to_base_w_1var(wna%ind(wcr_n))
+      call leaves%leaf_arr4d_boundaries(wna%ind(wcr_n))
 
-      call all_cg%internal_boundaries_4d(wna%ind(wcr_n)) ! should be more selective (modified leaves?)
-
+      ! do the external boundaries
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -110,7 +112,6 @@ contains
                      case (BND_PER)
                      case (BND_MPI) !, BND_MPI_FC)
                      case (BND_FC, BND_MPI_FC)
-                        call die("[crdiffusion:all_wcr_boundaries] fine-coarse interfaces are not implemented here")
                      case default ! Set gradient == 0 on the external boundaries
                         r(d,:) = cg%ijkse(d,lh)
                         do i = 1, dom%nb
@@ -139,7 +140,9 @@ contains
 !<
    subroutine cr_diff(crdim)
 
+      use all_boundaries,   only: all_bnd
       use cg_leaves,        only: leaves
+      use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR
       use dataio_pub,       only: die
@@ -183,6 +186,9 @@ contains
       decr(:,:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.dom%has_dir(dim) .and. (dim /= crdim) )
       present_not_crdim = dom%has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
       wcri = wna%ind(wcr_n)
+
+      call finest%level%restrict_to_base ! overkill
+      call all_bnd ! overkill
 
       cgl => leaves%first
       do while (associated(cgl))

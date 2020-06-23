@@ -56,9 +56,11 @@ module cg_level_connected
       procedure :: restrict                                   !< interpolate the grid data which has the flag vital set from this%coarser level
       procedure :: restrict_to_base                           !< restrict all variables to the base level
       procedure :: prolong_q_1var                             !< interpolate the grid data in specified q field to this%finer level
-      procedure :: restrict_q_1var                            !< interpolate the grid data in specified q field from this%coarser level
+      procedure :: restrict_q_1var                            !< interpolate the grid data in specified q field to this%coarser level
+      procedure :: restrict_w_1var                            !< interpolate the grid data in specified w field to this%coarser level
       procedure :: restrict_to_floor_q_1var                   !< restrict specified q field as much as possible
       procedure :: restrict_to_base_q_1var                    !< restrict specified q field to the base level
+      procedure :: restrict_to_base_w_1var                    !< restrict specified w field to the base level
       procedure :: arr3d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
       procedure :: arr4d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays.
       procedure :: prolong_bnd_from_coarser                   !< Interpolate boundaries from coarse level at fine-coarse interfaces
@@ -370,10 +372,8 @@ contains
 !<
    subroutine restrict(this)
 
-      use constants,        only: base_level_id, GEO_RPZ, PPP_AMR
+      use constants,        only: base_level_id, PPP_AMR
       use dataio_pub,       only: warn
-      use domain,           only: dom
-      use fluidindex,       only: iarr_all_my
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 
@@ -381,7 +381,7 @@ contains
 
       class(cg_level_connected_t), target, intent(inout) :: this !< object invoking type-bound procedure
 
-      integer(kind=4) :: i, iw
+      integer(kind=4) :: i
       character(len=*), parameter :: resq_label = "restrict_qna", resw_label = "restrict_wna"
 
       call ppp_main%start(resq_label, PPP_AMR)
@@ -394,17 +394,7 @@ contains
       do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
          if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%l%id > base_level_id)) then
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:restrict] mg set for cg%w ???")
-            do iw = 1, wna%lst(i)%dim4
-               call this%wq_copy(i, iw, qna%wai)
-               if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%mul_by_r(qna%wai) ! angular momentum conservation
-               if (.true.) then  ! this is required because we don't use (.not. cg%leafmap) mask in the this%coarser%qw_copy call below
-                  call this%coarser%wq_copy(i, iw, qna%wai)
-                  if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%mul_by_r(qna%wai)
-               endif
-               call this%restrict_q_1var(qna%wai, wna%lst(i)%position(iw))
-               if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%div_by_r(qna%wai) ! angular momentum conservation
-               call this%coarser%qw_copy(qna%wai, i, iw)
-            enddo
+            call this%restrict_w_1var(i)
          endif
       enddo
 
@@ -459,6 +449,50 @@ contains
       call this%coarser%restrict_to_base_q_1var(iv)
 
    end subroutine restrict_to_base_q_1var
+
+   recursive subroutine restrict_to_base_w_1var(this, iv)
+
+      use constants, only: base_level_id
+
+      implicit none
+
+      class(cg_level_connected_t), intent(inout) :: this !< object invoking type-bound procedure
+      integer(kind=4),             intent(in)    :: iv   !< variable to be restricted
+
+      if (this%l%id <= base_level_id) return
+      call this%restrict_w_1var(iv)
+      call this%coarser%restrict_to_base_w_1var(iv)
+
+   end subroutine restrict_to_base_w_1var
+
+!> \brief Quick and dirty restriction of 4D arrays. OPTIMIZE ME!
+
+   subroutine restrict_w_1var(this, i)
+
+      use constants,        only: GEO_RPZ
+      use domain,           only: dom
+      use fluidindex,       only: iarr_all_my
+      use named_array_list, only: qna, wna
+
+      implicit none
+
+      class(cg_level_connected_t), target, intent(inout) :: this  !< object invoking type-bound procedure
+      integer(kind=4),                     intent(in)    :: i     !< variable to be restricted
+
+      integer(kind=4) :: iw
+
+      do iw = 1, wna%lst(i)%dim4
+         call this%wq_copy(i, iw, qna%wai)
+         if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%mul_by_r(qna%wai) ! angular momentum conservation
+         if (.true.) then  ! this is required because we don't use (.not. cg%leafmap) mask in the this%coarser%qw_copy call below
+            call this%coarser%wq_copy(i, iw, qna%wai)
+            if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%mul_by_r(qna%wai)
+         endif
+         call this%restrict_q_1var(qna%wai, wna%lst(i)%position(iw))
+         if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%div_by_r(qna%wai) ! angular momentum conservation
+         call this%coarser%qw_copy(qna%wai, i, iw)
+      enddo
+   end subroutine restrict_w_1var
 
 !>
 !! \brief Simplest restriction (averaging).
