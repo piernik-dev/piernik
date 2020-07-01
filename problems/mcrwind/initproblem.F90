@@ -77,6 +77,9 @@ contains
 #ifdef GRAV
       use gravity,    only: grav_pot_3d, user_grav
 #endif /* GRAV */
+#ifdef CR_SN
+      use snsources,  only: amp_ecr_sn
+#endif /* CR_SN */
 
       implicit none
 
@@ -146,6 +149,9 @@ contains
 !      if (user_grav) grav_pot_3d => my_grav_pot_3d
       if (user_grav) grav_pot_3d => galactic_grav_pot_3d
 #endif /* GRAV */
+#ifdef CR_SN
+      if (amp_cr < 0.) amp_cr = amp_ecr_sn
+#endif /* CR_SN */
 
    end subroutine read_problem_par
 
@@ -201,7 +207,6 @@ contains
       b0 = sqrt(2.*alpha*d0*fl%cs2)
 
       csim2 = fl%cs2*(1.0+alpha)
-
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
