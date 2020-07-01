@@ -147,8 +147,6 @@ module units
    real, protected :: Lsun                                  !< luminosity of Sun
    real, protected :: Mearth                                !< mass of Earth
    real, protected :: earthradius                           !< radius of Earth
-! auxiliary defined values:
-   real, protected :: ethu                                  !< thermal energy density unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
 
 contains
 !>
@@ -369,8 +367,6 @@ contains
       joul       = kg*metr**2/sek**2        !< 1J (SI energy unit)
       erg        = gram*cm**2/sek**2        !< 1 erg (cgs energy unit)
       eV         = 1.6022e-12*erg           !< 1 eV
-! energy density (auxiliary value):
-      ethu       = (7.0*km/sek)**2/(5.0/3.0-1.0) * mp/cm**3
 ! density units:
       ppcm3      = 1.36 * mp / cm**3        !< spatial density unit
       ppcm2      = 1.36 * mp / cm**2        !< column density unit

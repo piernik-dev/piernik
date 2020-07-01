@@ -38,7 +38,7 @@ module snsources
    private
    public :: random_sn, init_snsources, r_sn, nsn
 #ifdef COSM_RAYS
-   public :: cr_sn
+   public :: cr_sn, amp_ecr_sn
 #endif /* COSM_RAYS */
 #ifdef HDF5
    public :: read_snsources_from_restart, write_snsources_to_restart
@@ -48,7 +48,7 @@ module snsources
 #endif /* SHEAR */
 
    integer                                 :: nsn, nsn_last
-   real                                    :: e_sn                !< energy per supernova
+   real                                    :: e_sn                !< energy per supernova [erg]
    real                                    :: f_sn                !< frequency of SN
    real                                    :: f_sn_kpc2           !< frequency of SN per kpc^2
    real                                    :: h_sn                !< galactic height in SN gaussian distribution ?
@@ -56,7 +56,7 @@ module snsources
    integer(kind=4), dimension(ndims,LO:HI) :: auxper
    real                                    :: gnorm               !< gauss distribution normalization factor
 #ifdef COSM_RAYS
-   real                                    :: amp_ecr_sn          !< cosmic ray explosion amplitude in units: e_0 = 1/(5/3-1)*rho_0*c_s0**2  rho_0=1.67e-24g/cm**3, c_s0 = 7km/s
+   real                                    :: amp_ecr_sn          !< cosmic ray explosion amplitude
 #endif /* COSM_RAYS */
 
    namelist /SN_SOURCES/ e_sn, h_sn, r_sn, f_sn_kpc2
@@ -85,7 +85,7 @@ contains
       use dataio_pub,     only: die, code_progress
       use domain,         only: dom
       use mpisetup,       only: rbuff, master, slave, piernik_MPI_Bcast
-      use units,          only: erg, ethu, kpc, Myr
+      use units,          only: erg, kpc, Myr
 #ifdef COSM_RAYS
       use initcosmicrays, only: cr_eff
 #endif /* COSM_RAYS */
@@ -96,7 +96,7 @@ contains
 
       if (code_progress < PIERNIK_INIT_GRID) call die("[snsources:init_snsources] grid or fluids/cosmicrays not initialized.")
 
-      e_sn      = 1.e51 * erg / ethu
+      e_sn      = 1.e51
       h_sn      = 0.0
       r_sn      = 0.0
       f_sn_kpc2 = 0.0
@@ -140,7 +140,7 @@ contains
       endif
 
 #ifdef COSM_RAYS
-      amp_ecr_sn = cr_eff * e_sn * ethu * gnorm
+      amp_ecr_sn = cr_eff * e_sn * erg * gnorm
 #endif /* COSM_RAYS */
 
       f_sn = f_sn_kpc2 / Myr * dom%L_(xdim) * dom%L_(ydim) / kpc**2
