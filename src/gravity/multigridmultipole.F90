@@ -464,7 +464,7 @@ contains
       use grid_cont,          only: grid_container
       use func,               only: operator(.notequals.)
       use multigridvars,      only: source
-      use multipole_array,    only: mpole_level
+      use multipole_array,    only: mpole_level, mpole_level_auto
       use ppp,                only: ppp_main
 
       implicit none
@@ -481,7 +481,10 @@ contains
       if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:domain2moments] Noncartesian geometry haven't been tested. Verify it before use.")
 
       ! scan
-      if (mpole_level <= base_level_id) then
+      if (mpole_level <= mpole_level_auto) then
+         level => finest%find_finest_bnd()
+         cgl => level%first
+      else if (mpole_level <= base_level_id) then
          level => base_level
          call finest%level%restrict_to_base_q_1var(source)
          do while (level%l%id > mpole_level)
@@ -504,14 +507,15 @@ contains
          enddo
          cgl => leaves%first
       endif
+
       do while (associated(cgl))
          cg => cgl%cg
-         if (cg%l%id <= mpole_level) then
+         if (cg%l%id <= level%l%id) then
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
                      ! if (dom%geometry_type == GEO_RPZ) geofac = cg%x(i)
-                     if (cg%leafmap(i, j, k) .or. mpole_level == cg%l%id) &
+                     if (cg%leafmap(i, j, k) .or. level%l%id == cg%l%id) &
                           call Q%point2moments(cg%dvol * cg%q(source)%arr(i, j, k), cg%x(i) , cg%y(j) , cg%z(k) )  ! * geofac for GEO_RPZ
                   enddo
                enddo

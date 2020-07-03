@@ -139,9 +139,8 @@ contains
       use multigrid_Laplace4, only: L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
       use multipole,          only: mpole_solver, lmax, mmax, singlepass, init_multipole
-      use multipole_array,    only: res_factor, size_factor, mpole_level
+      use multipole_array,    only: res_factor, size_factor, mpole_level, mpole_level_auto
       use pcg,                only: use_CG, use_CG_outer, preconditioner, default_preconditioner, pcg_init
-      use refinement,         only: level_max
 
       implicit none
 
@@ -169,7 +168,7 @@ contains
 
       lmax                   = 16
       mmax                   = -1 ! will be automatically set to lmax unless explicitly limited in problem.par
-      mpole_level            = level_max
+      mpole_level            = mpole_level_auto
       max_cycles             = 20
       nsmool                 = -1  ! best to set it to dom%nb or its multiply
       nsmoob                 = 10000

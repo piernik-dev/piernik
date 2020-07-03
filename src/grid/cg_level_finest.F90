@@ -127,8 +127,10 @@ contains
    function find_finest_bnd(this) result(level)
 
       use cg_list,    only: cg_list_element
+      use constants,  only: pMAX
       use dataio_pub, only: die
       use domain,     only: dom
+      use mpisetup,   only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -138,19 +140,32 @@ contains
 
       type(cg_level_connected_t), pointer :: l
       type(cg_list_element), pointer :: cgl
+      integer(kind=4) :: il
 
       nullify(level)
       if (count(dom%periodic) == dom%eff_dim) return  ! fully periodic domain
 
       l => this%level
-      do while (.not. associated(level))
+      do while (.not. associated(level) .and. associated(l))
          cgl => l%first
          do while (associated(cgl))
             if (any(cgl%cg%ext_bnd)) level => l
             cgl => cgl%nxt
          enddo
          l => l%coarser
-         if (.not. associated(l)) call die("[cg_level_finest:find_finest_bnd] Failed to find level with finest boundary")
+      enddo
+
+      if (associated(level)) then
+         il = level%l%id
+      else
+         il = -1000  ! unrealistically small level
+      endif
+      call piernik_MPI_Allreduce(il, pMAX)
+
+      level => this%level
+      do while (level%l%id > il)
+         level => level%coarser
+         if (.not. associated(level)) call die("[cg_level_finest:find_finest_bnd] Failed to find level with finest boundary")
       enddo
 
    end function find_finest_bnd

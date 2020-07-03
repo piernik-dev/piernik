@@ -38,12 +38,14 @@ module multipole_array
 
    private
    public :: mpole_container
-   public :: res_factor, size_factor, mpole_level  ! initialized in multigrid_gravity
+   public :: res_factor, size_factor, mpole_level, mpole_level_auto ! initialized in multigrid_gravity
 
    ! namelist parameters for MULTIGRID_GRAVITY
    real            :: res_factor   !< resolution of radial distribution of moments (in cells)
    real            :: size_factor  !< enlargement of radial distribution (w.r.t. diagonal)
    integer(kind=4) :: mpole_level  !< The level, at which we integrate the density field, to get the multipole representation
+
+   integer, parameter :: mpole_level_auto = -1000 !< mpole_level <= mpole_level_auto implies automatic adjustment of mpole_level
 
    type :: mpole_container
 
@@ -137,6 +139,7 @@ contains
 
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
+      use cg_level_coarsest,  only: coarsest
       use cg_list,            only: cg_list_element
       use constants,          only: xdim, zdim, GEO_XYZ, GEO_RPZ, HI, pMIN
       use dataio_pub,         only: die, warn, msg, printinfo
@@ -159,7 +162,19 @@ contains
          res_factor = 0.5
       endif
 
-      fbl => finest%find_finest_bnd()
+      if (mpole_level <= mpole_level_auto) then
+         fbl => finest%find_finest_bnd()
+      else
+         fbl => finest%level
+         do while (fbl%l%id > mpole_level)
+            fbl => fbl%coarser
+            if (.not. associated(fbl)) then
+               fbl => coarsest%level
+               exit
+            endif
+         enddo
+      endif
+
       cgl => fbl%first
       if (associated(cgl)) then
          select case (dom%geometry_type)
