@@ -104,15 +104,17 @@ contains
 
    subroutine init_multipole
 
-      use constants,  only: ndims, INVALID
-      use dataio_pub, only: die, warn
-      use domain,     only: dom
-      use mpisetup,   only: master
-      use user_hooks, only: ext_bnd_potential
+      use constants,     only: ndims, INVALID
+      use dataio_pub,    only: die, warn
+      use domain,        only: dom
+      use mpisetup,      only: master
+      use multigridvars, only: grav_bnd, bnd_isolated
+      use user_hooks,    only: ext_bnd_potential
 
       implicit none
 
       if (dom%eff_dim /= ndims) call die("[multigridmultipole:init_multipole] Only 3D is supported") !> \todo add support for 2D RZ
+      if (grav_bnd /= bnd_isolated) call die("[multigridmultipole:init_multipole] Only fully periodic case is implemented")
 
       !fixup multipole moments
       if (mmax > lmax) then
@@ -211,19 +213,23 @@ contains
 
    subroutine multipole_solver
 
-      use cg_leaves,   only: leaves
-      use constants,   only: dirtyH1, PPP_GRAV
-      use dataio_pub,  only: die
-      use global,      only: dirty_debug
-      use mg_monopole, only: isolated_monopole, find_img_CoM
-      use ppp,         only: ppp_main
-      use user_hooks,  only: ext_bnd_potential
+      use cg_leaves,     only: leaves
+      use constants,     only: dirtyH1, PPP_GRAV
+      use dataio_pub,    only: die
+      use global,        only: dirty_debug
+      use mg_monopole,   only: isolated_monopole, find_img_CoM
+      ! use multigridvars, only: grav_bnd, bnd_isolated
+      use ppp,           only: ppp_main
+      use user_hooks,    only: ext_bnd_potential
 
       implicit none
 
       character(len=*), parameter :: mpole_label = "multipole_solver"
 
       call ppp_main%start(mpole_label, PPP_GRAV)
+
+      ! Cannot use this check, because we do tricks in multigrid_solve_grav
+      ! if (grav_bnd /= bnd_isolated) call die("[multigridmultipole:multipole_solver] Only fully periodic case is implemented")
 
       if (associated(ext_bnd_potential)) then
          call ext_bnd_potential
@@ -604,13 +610,17 @@ contains
 
    real function moments2pot_xyz(x, y, z) result(pot)
 
-      use units, only: fpiG
+      use dataio_pub,    only: die
+      use multigridvars, only: grav_bnd, bnd_isolated
+      use units,         only: fpiG
 
       implicit none
 
       real, intent(in) :: x !< absolute x-coordinate of the point
       real, intent(in) :: y !< absolute y-coordinate of the point
       real, intent(in) :: z !< absolute z-coordinate of the point
+
+      if (grav_bnd /= bnd_isolated) call die("[multigridmultipole:moments2pot_xyz] Only fully periodic case is implemented")
 
       pot = Q%moments2pot(x, y, z)/fpiG
 
@@ -620,12 +630,16 @@ contains
 
    real function moments2pot_r(r) result(pot)
 
-      use constants, only: xdim, ydim, zdim, ndims
-      use units,     only: fpiG
+      use constants,     only: xdim, ydim, zdim, ndims
+      use dataio_pub,    only: die
+      use multigridvars, only: grav_bnd, bnd_isolated
+      use units,         only: fpiG
 
       implicit none
 
       real, dimension(ndims), intent(in) :: r !< [x, y, z] coordinate of the point
+
+      if (grav_bnd /= bnd_isolated) call die("[multigridmultipole:moments2pot_r] Only fully periodic case is implemented")
 
       pot = Q%moments2pot(r(xdim), r(ydim), r(zdim))/fpiG
 
@@ -642,8 +656,9 @@ contains
 
    subroutine compute_mpole_potential(qvar)
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
+      use cg_leaves,     only: leaves
+      use cg_list,       only: cg_list_element
+      use multigridvars, only: grav_bnd, bnd_isolated
 
       implicit none
 
@@ -653,6 +668,8 @@ contains
       type(cg_list_element), pointer :: cgl
 
       call leaves%set_q_value(qvar, 0.)
+
+      if (grav_bnd /= bnd_isolated) return
 
       cgl => leaves%first
       do while (associated(cgl))

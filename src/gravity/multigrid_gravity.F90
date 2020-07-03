@@ -327,6 +327,7 @@ contains
          grav_bnd = bnd_periodic
          !> \warning the above statement is highly suspicious
       else if (periodic_bnd_cnt > 0 .and. periodic_bnd_cnt < dom%eff_dim) then
+         if (grav_bnd == bnd_isolated) call die("[multigrid_gravity:multigrid_grav_par] Isolated grav boundaries implemented only for fully periodic domain")
          if (.not. base_no_fft .and. master) &
               call warn("[multigrid_gravity:multigrid_grav_par] Mixing periodic and non-periodic boundary conditions for gravity disables FFT base-level solver.")
          ! This would require more careful set up of the Green's function and FFT type
