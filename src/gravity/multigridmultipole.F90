@@ -68,7 +68,7 @@ module multipole
 
    private
    public :: init_multipole, cleanup_multipole, multipole_solver, moments2pot, compute_mpole_potential
-   public :: lmax, mmax, mpole_solver, mpole_level, singlepass  ! initialized in multigrid_gravity
+   public :: lmax, mmax, mpole_solver, singlepass  ! initialized in multigrid_gravity
 
    interface moments2pot
       module procedure moments2pot_xyz
@@ -81,7 +81,6 @@ module multipole
    integer(kind=4)          :: lmax          !< Maximum l-order of multipole moments
    integer(kind=4)          :: mmax          !< Maximum m-order of multipole moments. Equal to lmax by default.
    character(len=cbuff_len) :: mpole_solver  !< Pick one of: "monopole", "img_mass" (default), "3D"
-   integer(kind=4)          :: mpole_level   !< The level, at which we integrate the density field, to get the multipole representation. 0: base level, 1: leaves (default), <0: coarsened levels
 
    logical                  :: zaxis_inside  !< true when z-axis belongs to the inner radial boundary in polar coordinates
    logical                  :: singlepass    !< When .true. it allows for single-pass multigrid solve
@@ -465,6 +464,7 @@ contains
       use grid_cont,          only: grid_container
       use func,               only: operator(.notequals.)
       use multigridvars,      only: source
+      use multipole_array,    only: mpole_level
       use ppp,                only: ppp_main
 
       implicit none

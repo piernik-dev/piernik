@@ -38,11 +38,12 @@ module multipole_array
 
    private
    public :: mpole_container
-   public :: res_factor, size_factor  ! initialized in multigrid_gravity
+   public :: res_factor, size_factor, mpole_level  ! initialized in multigrid_gravity
 
    ! namelist parameters for MULTIGRID_GRAVITY
-   real :: res_factor        !< resolution of radial distribution of moments (in cells)
-   real :: size_factor       !< enlargement of radial distribution (w.r.t. diagonal)
+   real            :: res_factor   !< resolution of radial distribution of moments (in cells)
+   real            :: size_factor  !< enlargement of radial distribution (w.r.t. diagonal)
+   integer(kind=4) :: mpole_level  !< The level, at which we integrate the density field, to get the multipole representation
 
    type :: mpole_container
 

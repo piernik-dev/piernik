@@ -112,11 +112,13 @@ contains
 !! <tr><td>lmax                  </td><td>16     </td><td>integer value  </td><td>\copydoc multipole::lmax                          </td></tr>
 !! <tr><td>mmax                  </td><td>-1     </td><td>integer value  </td><td>\copydoc multipole::mmax                          </td></tr>
 !! <tr><td>mpole_solver          </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::mpole_solver                  </td></tr>
-!! <tr><td>mpole_level           </td><td>1      </td><td>integer value  </td><td>\copydoc multipole::mpole_level                   </td></tr>
+!! <tr><td>res_factor            </td><td>0.5    </td><td>real value     </td><td>\copydoc multipole_array::res_factor              </td></tr>
+!! <tr><td>size_factor           </td><td>1.     </td><td>real value     </td><td>\copydoc multipole_array::size_factor             </td></tr>
+!! <tr><td>mpole_level           </td><td>1      </td><td>integer value  </td><td>\copydoc multipole_array::mpole_level             </td></tr>
 !! <tr><td>multidim_code_3D      </td><td>.false.</td><td>logical        </td><td>\copydoc multigridvars::multidim_code_3d          </td></tr>
 !! <tr><td>use_CG                </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::use_CG                </td></tr>
 !! <tr><td>use_CG_outer          </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::use_CG_outer          </td></tr>
-!! <tr><td>grav_bnd_str          </td><td>"periodic"/"dirichlet"</td><td>string of chars</td><td>\copydoc multigrid_gravity::grav_bnd_str          </td></tr>
+!! <tr><td>grav_bnd_str          </td><td>"periodic"/"dirichlet"</td><td>string of chars</td><td>\copydoc multigrid_gravity::grav_bnd_str </td></tr>
 !! <tr><td>preconditioner        </td><td>"HG_V-cycle"</td><td>string of chars</td><td>\copydoc multigrid_gravity::preconditioner   </td></tr>
 !! </table>
 !! The list is active while \b "SELF_GRAV" and \b "MULTIGRID" are defined.
@@ -136,8 +138,8 @@ contains
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
       use multigrid_Laplace4, only: L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
-      use multipole,          only: mpole_solver, lmax, mmax, mpole_level, singlepass, init_multipole
-      use multipole_array,    only: res_factor, size_factor
+      use multipole,          only: mpole_solver, lmax, mmax, singlepass, init_multipole
+      use multipole_array,    only: res_factor, size_factor, mpole_level
       use pcg,                only: use_CG, use_CG_outer, preconditioner, default_preconditioner, pcg_init
       use refinement,         only: level_max
 
