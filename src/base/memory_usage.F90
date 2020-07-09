@@ -107,7 +107,7 @@ contains
 
       use constants,  only: INVALID, fnamelen, APPLE, LINUX
       use dataio_pub, only: warn
-      use version,    only: which_os
+      use os_detect,  only: which_os
 #if defined(__INTEL_COMPILER)
       use ifport,     only: getpid
 #endif /* __INTEL_COMPILER */
