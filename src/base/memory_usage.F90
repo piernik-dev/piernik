@@ -105,8 +105,9 @@ contains
 
    integer(kind=4) function system_mem_usage()
 
-      use constants,  only: INVALID, fnamelen
+      use constants,  only: INVALID, fnamelen, APPLE, LINUX
       use dataio_pub, only: warn
+      use version,    only: which_os
 #if defined(__INTEL_COMPILER)
       use ifport,     only: getpid
 #endif /* __INTEL_COMPILER */
@@ -118,8 +119,26 @@ contains
       character(len=pidlen)   :: pid_char
       integer :: stat_lun, io
       logical :: io_exists
+      logical, save :: warned_os = .false.
 
       system_mem_usage = INVALID
+
+      select case (which_os())
+         case (LINUX)
+            ! No special action
+         case (APPLE)
+            if (.not. warned_os) then
+               call warn("[memory_usage:system_mem_usage] Memory monitoring not implemented for APPLE yet!")
+               warned_os = .true.
+            endif
+            return
+         case default
+            if (.not. warned_os) then
+               call warn("[memory_usage:system_mem_usage] Memory monitoring not implemented for unidentified OS!")
+               warned_os = .true.
+            endif
+            return
+      end select
 
       write(pid_char, '(i8)') getpid()
       filename = '/proc/' // trim(adjustl(pid_char)) // '/status'
