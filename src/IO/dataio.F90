@@ -1700,7 +1700,7 @@ contains
 
       subroutine print_memory_usage
 
-         use constants,    only: I_ONE
+         use constants,    only: I_ONE, INVALID
          use dataio_pub,   only: msg, printinfo
          use memory_usage, only: system_mem_usage
          use mpi,          only: MPI_INTEGER
@@ -1715,10 +1715,8 @@ contains
          rss = system_mem_usage()
          call MPI_Gather(rss, I_ONE, MPI_INTEGER, cnt_rss, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
 
-         if (master) then
-            write(msg, '(a,3f7.1,a,f7.1,a)')"  RSS memory in use (avg/min/max): ", sum(cnt_rss)/size(cnt_rss)/Mi, minval(cnt_rss)/Mi, maxval(cnt_rss)/Mi, " MiB. Total RSS memory: ", sum(cnt_rss)/Mi, " MiB."
-            call printinfo(msg, .false.)
-         endif
+         write(msg, '(a,3f7.1,a,f7.1,a)')"  RSS memory in use (avg/min/max): ", sum(cnt_rss)/size(cnt_rss)/Mi, minval(cnt_rss)/Mi, maxval(cnt_rss)/Mi, " MiB. Total RSS memory: ", sum(cnt_rss)/Mi, " MiB."
+         if (master .and. any(cnt_rss /= INVALID)) call printinfo(msg, .false.)
 
       end subroutine print_memory_usage
 
