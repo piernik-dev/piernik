@@ -107,6 +107,7 @@ contains
 
       use constants,  only: INVALID, fnamelen, APPLE, LINUX
       use dataio_pub, only: warn
+      use mpisetup,   only: master
       use os_detect,  only: which_os
 #if defined(__INTEL_COMPILER)
       use ifport,     only: getpid
@@ -128,13 +129,13 @@ contains
             ! No special action
          case (APPLE)
             if (.not. warned_os) then
-               call warn("[memory_usage:system_mem_usage] Memory monitoring not implemented for APPLE yet!")
+               if (master) call warn("[memory_usage:system_mem_usage] Memory monitoring not implemented for APPLE yet!")
                warned_os = .true.
             endif
             return
          case default
             if (.not. warned_os) then
-               call warn("[memory_usage:system_mem_usage] Memory monitoring not implemented for unidentified OS!")
+               if (master) call warn("[memory_usage:system_mem_usage] Memory monitoring not implemented for unidentified OS!")
                warned_os = .true.
             endif
             return
