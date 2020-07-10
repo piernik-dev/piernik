@@ -124,12 +124,15 @@ contains
       type(urc_point), pointer :: urcp
       type(urc_zcyl),  pointer :: urczc
       type(urc_jeans), pointer :: urcj
+      class(urc),      pointer :: p_urc
+
       integer :: ip
 
       ! add automatic criteria detecting shock waves
       do ip = lbound(refine_vars, 1), ubound(refine_vars, 1)
          if (trim(refine_vars(ip)%rname) /= trim(inactive_name)) then
-            call this%add(decode_urcv(refine_vars(ip)))
+            p_urc => decode_urcv(refine_vars(ip))
+            call this%add(p_urc)
          endif
       enddo
 
@@ -137,7 +140,8 @@ contains
       if (jeans_ref > 0.) then
          allocate(urcj)
          urcj = urc_jeans(jeans_ref, jeans_plot)
-         call this%add(urcj)
+         p_urc => urcj
+         call this%add(p_urc)
       endif
 
       ! add geometric primitives specified in problem.par
@@ -145,7 +149,8 @@ contains
          if (refine_points(ip)%level > base_level_id) then
             allocate(urcp)
             urcp = urc_point(refine_points(ip))
-            call this%add(urcp)
+            p_urc => urcp
+            call this%add(p_urc)
          endif
       enddo
 
@@ -153,7 +158,8 @@ contains
          if (refine_boxes(ip)%level > base_level_id) then
             allocate(urcb)
             urcb = urc_box(refine_boxes(ip))
-            call this%add(urcb)
+            p_urc => urcb
+            call this%add(p_urc)
          endif
       enddo
 
@@ -161,7 +167,8 @@ contains
          if (refine_zcyls(ip)%level > base_level_id) then
             allocate(urczc)
             urczc = urc_zcyl(refine_zcyls(ip))
-            call this%add(urczc)
+            p_urc => urczc
+            call this%add(p_urc)
          endif
       enddo
 
@@ -214,10 +221,12 @@ contains
       logical,           intent(in)    :: plotfield !< create an array to keep the value of refinement criterion
 
       type(urc_var), pointer :: urcv
+      class(urc),    pointer :: p_urc
 
       allocate(urcv)
       urcv = urc_var(ref_auto_param("user", rname, ref_thr, aux, plotfield), iv, ic)
-      call this%add(urcv)
+      p_urc => urcv
+      call this%add(p_urc)
 
       call this%create_plotfields
 
@@ -235,11 +244,13 @@ contains
       logical,           intent(in)    :: plotfield  !< create an array to keep the value of refinement criterion
       procedure(mark_urc_user)         :: user_mark  !< user-provided routine
 
-      type(urc_user),   pointer :: urcu
+      type(urc_user), pointer :: urcu
+      class(urc),     pointer :: p_urc
 
       allocate(urcu)
       urcu = urc_user(user_mark, plotfield)
-      call this%add(urcu)
+      p_urc => urcu
+      call this%add(p_urc)
 
       call this%create_plotfields
 
