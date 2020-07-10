@@ -21,6 +21,8 @@
 #   'make qa'              # run qa.py on all F90 files in src and problems
 #                            directories
 #   'make pep8'            # run pep8 on all Python scripts, ignore long lines
+#                            (obsoleted by pycodestyle)
+#   'make pycodestyle'     # run pycodestyle on all Python scripts, ignore long lines
 #   'make chk_err_msg'     # check filenames in error messages
 #   'make doxy'            # generate/updare Doxygen documentation
 #   'make gold'            # run the gold tests from ./jenkins directory
@@ -39,7 +41,7 @@ ALLOBJ = $(wildcard obj*)
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check dep qa pep8 doxy chk_err_msg gold gold-serial gold-clean
+.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean
 
 all: $(ALLOBJ)
 
@@ -79,12 +81,14 @@ allsetup:
 		fi; \
 	done
 
-qa: pep8 chk_err_msg
+qa: chk_err_msg pycodestyle
 	./bin/qa.py $$( find src problems -name "*.F90" )
 
-pep8:
-	echo PEP8 check
-	pep8 `find src problems bin jenkins python -name "*py"` bin/gdf_distance --ignore=E501
+pep8: pycodestyle
+
+pycodestyle:
+	echo Pycodestyle check
+	pycodestyle `find src problems bin python -name "*py"` bin/gdf_distance --ignore=E501,E722
 
 chk_err_msg:
 	echo Check filenames in error messages
