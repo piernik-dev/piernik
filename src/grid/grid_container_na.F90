@@ -54,6 +54,14 @@ module grid_cont_na
       real, dimension(:,:,:), pointer :: sgpm    => null()  !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
       real, dimension(:,:,:), pointer :: cs_iso2 => null()  !< Array for sound speed for isothermal EOS (not associated for gamma EOS)
       real, dimension(:,:,:), pointer :: wa      => null()  !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
+#ifdef NBODY
+      real, dimension(:,:,:), pointer :: prth    => null()  !< Array for histogram of particles
+      real, dimension(:,:,:), pointer :: nbdn    => null()  !< Array of density from particles
+      real, dimension(:,:,:), pointer :: gp1b    => null()  !< Array of gravitational potential from particles
+#ifdef NBODY_GRIDDIRECT
+      real, dimension(:,:,:), pointer :: nbgp    => null()  !< Array of gravitational potential from particles
+#endif /* NBODY_GRIDDIRECT */
+#endif /* NBODY */
 
       ! handy shortcuts to some entries in w(:)
       real, dimension(:,:,:,:), pointer :: u     => null()  !< Main array of all fluids' components

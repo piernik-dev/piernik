@@ -188,7 +188,12 @@ contains
 
       cflcontrol  = 'warn'
       interpol_str = 'linear'
+
+#ifdef NBODY
+      repeat_step = .false.
+#else /* !NBODY */
       repeat_step = .true.
+#endif /* !NBODY */
       geometry25D = .false.
       no_dirty_checks = .false.
 #ifdef MAGNETIC
@@ -359,6 +364,10 @@ contains
 
       endif
 
+#ifdef NBODY
+      if (master .and. repeat_step) call warn("[global:init_global] repeat_step unsupported by NBODY (particles aren't implemented yet).")
+#endif /* NBODY */
+
       select case (solver_str)
          case ("")  ! leave the default
          case ("rtvd", "RTVD")
@@ -383,6 +392,10 @@ contains
          case default
             call die("[global:init_global] no solvers defined")
       end select
+
+#ifndef MAGNETIC
+      if (print_divB > 0) call warn("[global:init_global] No magnetic field: printing div(B) will be ignored.")
+#endif /* !MAGNETIC */
 
 #ifdef CORIOLIS
       if (which_solver /= RTVD_SPLIT) call die("[global:init_global] CORIOLIS has been implemented only for RTVD so far.")

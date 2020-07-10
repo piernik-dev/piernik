@@ -63,8 +63,10 @@ contains
       use domain,       only: dom
       use grid_cont,    only: grid_container
       use mpisetup,     only: proc
-      use particle_pub, only: pset
       use units,        only: newtong
+#ifdef NBODY
+      use particle_types, only: particle
+#endif /* NBODY */
 
       implicit none
 
@@ -72,6 +74,9 @@ contains
       real    :: r2
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+#ifdef NBODY
+      type(particle), pointer    :: pset
+#endif /* NBODY */
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_monopole:isolated_monopole] non-cartesian geometry not implemented yet")
 
@@ -105,13 +110,18 @@ contains
             endif
          enddo
          cgl => cgl%nxt
-      enddo
 
-      do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
-         if (pset%p(i)%outside) then
-            write(msg, '(a,i8,a,i5,a)')"[multigrid_monopole:isolated_monopole] Particle #", i, " on process ", proc, "ignored"
-            call warn(msg)
-         endif
+#ifdef NBODY
+         pset => cg%pset%first
+         do while (associated(pset))
+            if (pset%pdata%outside) then
+               write(msg, '(a,i8,a,i5,a)')"[multigrid_monopole:isolated_monopole] Particle #", i, " on process ", proc, "ignored"
+               call warn(msg)
+            endif
+            pset => pset%nxt
+         enddo
+#endif /* NBODY */
+
       enddo
 
    end subroutine isolated_monopole
@@ -132,7 +142,9 @@ contains
       use func,         only: operator(.notequals.)
       use grid_cont,    only: grid_container
       use mpisetup,     only: piernik_MPI_Allreduce
-      use particle_pub, only: pset
+#ifdef NBODY
+      use particle_types, only: particle
+#endif /* NBODY */
 #ifdef DEBUG
       use dataio_pub,   only: msg, printinfo
       use mpisetup,     only: master
@@ -144,7 +156,10 @@ contains
       real, dimension(imass:ndims)   :: lsum, dsum
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
-      integer :: lh, i, d
+      integer                        :: lh, d
+#ifdef NBODY
+      type(particle), pointer    :: pset
+#endif /* NBODY */
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_monopole:find_img_CoM] non-cartesian geometry not implemented yet")
 
@@ -179,13 +194,18 @@ contains
                lsum(:)         = lsum(:) + dsum(:) * cg%dxy
             endif
          enddo
-         cgl => cgl%nxt
-      enddo
 
-      ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
-      !> \warning Do we need to use the fppiG factor here?
-      do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
-         if (pset%p(i)%outside) lsum(:) = lsum(:) + [ pset%p(i)%mass, pset%p(i)%mass * pset%p(i)%pos(:) ]
+         ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
+         !> \warning Do we need to use the fppiG factor here?
+#ifdef NBODY
+         pset => cg%pset%first
+         do while (associated(pset))
+            if (pset%pdata%outside) lsum(:) = lsum(:) + [ pset%pdata%mass, pset%pdata%mass * pset%pdata%pos(:) ]
+            pset => pset%nxt
+         enddo
+#endif /* NBODY */
+
+         cgl => cgl%nxt
       enddo
 
       CoM(imass:ndims) = lsum(imass:ndims)

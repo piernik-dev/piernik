@@ -297,7 +297,7 @@ contains
    subroutine refine_on_second_derivative(this, cg, p3d)
 
       use constants,  only: xdim, ydim, zdim, GEO_XYZ, INVALID, I_ONE, PPP_AMR, PPP_CG
-      use dataio_pub, only: die
+      use dataio_pub, only: die, msg
       use domain,     only: dom
       use grid_cont,  only: grid_container
       use ppp,        only: ppp_main
@@ -315,7 +315,10 @@ contains
 
       call ppp_main%start(L_label, PPP_AMR + PPP_CG)
       if (dom%geometry_type /= GEO_XYZ) call die("[unified_ref_crit_var:refine_on_second_derivative] noncartesian geometry not supported yet")
-      if (dom%nb < how_far+I_ONE) call die("[unified_ref_crit_var:refine_on_second_derivative] at east 2 guardcells are required")
+      if (dom%nb <= how_far+I_ONE) then
+         write(msg, '(a,i1,a)')"[unified_ref_crit_var:refine_on_second_derivative] at least ", how_far+I_ONE, " guardcells are required"
+         call die(msg)
+      endif
 
       ! Perhaps it will be a bit faster with arrays for storing first-order differences
       ! but let's see if it works first and then how expensive it is.

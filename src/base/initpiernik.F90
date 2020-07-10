@@ -78,8 +78,15 @@ contains
 #ifdef GRAV
       use gravity,               only: init_grav, init_terms_grav, source_terms_grav
       use hydrostatic,           only: init_hydrostatic, cleanup_hydrostatic
-      use particle_pub,          only: init_particles
 #endif /* GRAV */
+#ifdef NBODY
+#ifdef GRAV
+      use particle_pub,          only: init_particles
+      use particle_utils,        only: global_count_all_particles
+#endif /* GRAV */
+      use particle_gravity,      only: update_particle_gravpot_and_acc
+      use particle_solvers,      only: update_particle_kinetic_energy
+#endif /* NBODY */
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid, init_multigrid_ext, multigrid_par
 #endif /* MULTIGRID */
@@ -181,7 +188,9 @@ contains
       call init_decomposition
 #ifdef GRAV
       call init_grav                         ! Has to be called before init_grid
+#ifdef NBODY
       call init_particles
+#endif /* NBODY */
       call init_hydrostatic
 #endif /* GRAV */
 #ifdef MULTIGRID
@@ -260,6 +269,11 @@ contains
          write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
          if (master) call printinfo(msg)
 
+#ifdef NBODY
+         call update_particle_gravpot_and_acc
+         call update_particle_kinetic_energy
+#endif /* NBODY */
+
          do while (.not. finished)
             write(label, '(i8)') nit + 1
 
@@ -289,6 +303,9 @@ contains
             call source_terms_grav  ! fix up gravitational potential when refiements did not converge
 #endif /* GRAV */
          endif
+#if defined(SELF_GRAV) && defined(NBODY)
+         !  Do we need to do anything particle-related to be called here?
+#endif /* SELF_GRAV && NBODY */
          if (associated(problem_post_IC)) call problem_post_IC
       endif
       call ppp_main%stop(ic_label)
@@ -298,6 +315,11 @@ contains
       write(msg, '(a,3i8,a,i3)')"[initpiernik:init_piernik] Effective resolution is [", finest%level%l%n_d(:), " ] at level ", finest%level%l%id
       !> \todo Do an MPI_Reduce in case the master process don't have any part of the globally finest level or ensure it is empty in such case
       if (master) call printinfo(msg)
+
+#ifdef GRAV
+      write(msg,'(a,i9)')"[initpiernik:init_piernik] Total number of particles is ", global_count_all_particles()
+      if (master) call printinfo(msg)
+#endif /* GRAV */
 
 #ifdef VERBOSE
       call diagnose_arrays                   ! may depend on everything

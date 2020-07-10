@@ -41,7 +41,7 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, init_terms_grav, grav_accel, source_terms_grav, grav_src_exec, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, compute_h_gpot, update_gp
+   public :: init_grav, init_terms_grav, grav_accel, source_terms_grav, grav_src_exec, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, compute_h_gpot, update_gp, need_update
    public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x, variable_gp
 
    integer, parameter         :: gp_stat_len   = 9
@@ -70,6 +70,7 @@ module gravity
    logical                    :: user_grav             !< use user defined grav_pot_3d
    logical                    :: variable_gp           !< if .true. then cg%gp is evaluated at every step
    logical                    :: restart_gpot, restart_hgpot, restart_gp, restart_sgp, restart_sgpm !< if .true. then write this grav part to the restart files
+   logical                    :: need_update           !< a flag to indicate that source_terms_grav needs to be called (e.g. because psolver skipped this)
 
    interface
 
@@ -170,6 +171,12 @@ contains
 #ifdef SELF_GRAV
       use constants,      only: sgp_n, sgpm_n
 #endif /* SELF_GRAV */
+#ifdef NBODY
+      use constants,      only: gp1b_n, nbdn_n, prth_n
+#ifdef NBODY_GRIDDIRECT
+      use constants,      only: nbgp_n
+#endif /* NBODY_GRIDDIRECT */
+#endif /* NBODY */
 #ifdef CORIOLIS
       use coriolis,       only: set_omega
 #endif /* CORIOLIS */
@@ -318,6 +325,14 @@ contains
       call all_cg%reg_var(sgp_n,   restart_mode = res_at(restart_sgp)  )
       call all_cg%reg_var(sgpm_n,  restart_mode = res_at(restart_sgpm) )
 #endif /* SELF_GRAV */
+#ifdef NBODY
+      call all_cg%reg_var(prth_n)
+      call all_cg%reg_var(nbdn_n)
+      call all_cg%reg_var(gp1b_n)
+#ifdef NBODY_GRIDDIRECT
+      call all_cg%reg_var(nbgp_n)
+#endif /* NBODY_GRIDDIRECT */
+#endif /* NBODY */
 
       if (.not.user_grav) then
          grav_pot_3d => default_grav_pot_3d
@@ -336,6 +351,8 @@ contains
       end select
 
       call init_grav_ext
+
+      need_update = .false.
 
    end subroutine init_grav
 
@@ -378,6 +395,12 @@ contains
 #ifdef SELF_GRAV
       use constants,        only: sgp_n, sgpm_n
 #endif /* SELF_GRAV */
+#ifdef NBODY
+      use constants,          only: gp1b_n, nbdn_n, prth_n
+#ifdef NBODY_GRIDDIRECT
+      use constants,          only: nbgp_n
+#endif /* NBODY_GRIDDIRECT */
+#endif /* NBODY */
 
       implicit none
 
@@ -394,6 +417,14 @@ contains
          cg%sgp   => cg%q(qna%ind(  sgp_n))%arr
          cg%sgpm  => cg%q(qna%ind( sgpm_n))%arr
 #endif /* SELF_GRAV */
+#ifdef NBODY
+         cg%prth  => cg%q(qna%ind( prth_n))%arr
+         cg%nbdn  => cg%q(qna%ind( nbdn_n))%arr
+         cg%gp1b  => cg%q(qna%ind( gp1b_n))%arr
+#ifdef NBODY_GRIDDIRECT
+         cg%nbgp  => cg%q(qna%ind( nbgp_n))%arr
+#endif /* NBODY_GRIDDIRECT */
+#endif /* NBODY */
 
       endif
 
@@ -444,6 +475,8 @@ contains
 #endif /* SELF_GRAV */
 
       call ppp_main%start(grav_label, PPP_GRAV)
+
+      need_update = .false.
 
 #ifdef SELF_GRAV
       initialized = .true.
@@ -516,11 +549,16 @@ contains
       use constants,        only: gp_n, gpot_n, hgpot_n
       use named_array_list, only: qna
 #ifdef SELF_GRAV
-      use cg_list_dataop,   only: ind_val
       use constants,        only: one, half, sgp_n, sgpm_n, zero
       use func,             only: operator(.notequals.)
       use global,           only: dt, dtm
 #endif /* SELF_GRAV */
+#if defined(SELF_GRAV) || defined(NBODY_GRIDDIRECT)
+      use cg_list_dataop,   only: ind_val
+#endif /* SELF_GRAV || NBODY_GRIDDIRECT */
+#ifdef NBODY_GRIDDIRECT
+      use constants,        only: nbgp_n
+#endif /* NBODY_GRIDDIRECT */
 
       implicit none
 
@@ -533,13 +571,25 @@ contains
          h = 0.0
       endif
 
+#ifdef NBODY_GRIDDIRECT
+      !> \todo correct it
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.), ind_val(qna%ind(sgp_n), one+h),      ind_val(qna%ind(sgpm_n), -h)     ], qna%ind(gpot_n))
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.), ind_val(qna%ind(sgp_n), one+half*h), ind_val(qna%ind(sgpm_n), -half*h)], qna%ind(hgpot_n))
+#else /* !NBODY_GRIDDIRECT */
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+h),      ind_val(qna%ind(sgpm_n), -h)     ], qna%ind(gpot_n))
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+half*h), ind_val(qna%ind(sgpm_n), -half*h)], qna%ind(hgpot_n))
+#endif /* !NBODY_GRIDDIRECT */
 
 #else /* !SELF_GRAV */
       !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
+#ifdef NBODY_GRIDDIRECT
+      !> \todo correct it
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.)], qna%ind(gpot_n))
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.)], qna%ind(hgpot_n))
+#else /* !NBODY_GRIDDIRECT */
       call leaves%q_copy(qna%ind(gp_n), qna%ind(gpot_n))
       call leaves%q_copy(qna%ind(gp_n), qna%ind(hgpot_n))
+#endif /* !NBODY_GRIDDIRECT */
 #endif /* !SELF_GRAV */
 
    end subroutine compute_h_gpot
