@@ -316,7 +316,9 @@ contains
       call ppp_main%start(L_label, PPP_AMR + PPP_CG)
       if (dom%geometry_type /= GEO_XYZ) call die("[unified_ref_crit_var:refine_on_second_derivative] noncartesian geometry not supported yet")
       if (dom%nb <= how_far+I_ONE) then
-         write(msg, '(a,i1,a)')"[unified_ref_crit_var:refine_on_second_derivative] at least ", how_far+I_ONE, " guardcells are required"
+         write(msg, '(a,i1,a)')"[unified_ref_crit_var:refine_on_second_derivative] at least ", how_far+I_ONE+I_ONE, " guardcells are required"
+         ! dux(i+I_ONE, j, k) is accessing p3d(i+I_ONE+I_ONE, j, k), so for i = cg%ie + how_far*dom%D_x means that dom%nb has to be at least 4
+         ! ToDo: check if it is safe to reduce how_far and avoid refinement flickering
          call die(msg)
       endif
 
