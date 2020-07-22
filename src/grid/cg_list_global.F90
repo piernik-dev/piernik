@@ -207,7 +207,7 @@ contains
       if (I_TWO*this%ord_prolong_nb > dom%nb) call die("[cg_list_global:reg_var] Insufficient number of guardcells for requested prolongation stencil. Expected crash in cg_level_connected::prolong_bnd_from_coarser")
       ! I-TWO because our refinement factor is 2. and we want to fill all layers of fine guardcells
       ! Technically it is possible to maintain high order prolongation and thin layer of guardcells,
-      ! but fine boundaries that coincide tith coarse boundaries cannot be fully reconstructed
+      ! but fine boundaries that coincide with coarse boundaries cannot be fully reconstructed
       ! unless we communicate the missing part from another block (do multi-parent prolongation).
 
       cgl => this%first

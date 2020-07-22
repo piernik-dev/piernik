@@ -737,6 +737,7 @@ contains
 
       call ppp_main%start(fix_ref_label, PPP_AMR)
       correct = .true.
+      if (dom%nb < 2) call die("[refinement_update:fix_refinement] dom%nb >= 2 required")
 
       !> \todo check for excess of refinement levels
 
@@ -794,7 +795,7 @@ contains
                   enddo
                enddo
 
-               ! find the border of the leaf map and mark it with positive value
+               ! find the border of the leaf map and mark it with positive value (requires dom%nb >= 2)
                do k = lbound(cg%leafmap, dim=3, kind=4)-dom%D_z, ubound(cg%leafmap, dim=3, kind=4)+dom%D_z
                   do j = lbound(cg%leafmap, dim=2, kind=4)-dom%D_y, ubound(cg%leafmap, dim=2, kind=4)+dom%D_y
                      do i = lbound(cg%leafmap, dim=1, kind=4)-dom%D_x, ubound(cg%leafmap, dim=1, kind=4)+dom%D_x

@@ -384,6 +384,10 @@ contains
             call die("[global:init_global] no solvers defined")
       end select
 
+#ifndef MAGNETIC
+      if (print_divB > 0) call warn("[global:init_global] No magnetic field: printing div(B) will be ignored.")
+#endif /* !MAGNETIC */
+
 #ifdef CORIOLIS
       if (which_solver /= RTVD_SPLIT) call die("[global:init_global] CORIOLIS has been implemented only for RTVD so far.")
 #endif /* CORIOLIS */
