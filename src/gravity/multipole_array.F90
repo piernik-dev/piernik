@@ -38,11 +38,14 @@ module multipole_array
 
    private
    public :: mpole_container
-   public :: res_factor, size_factor  ! initialized in multigrid_gravity
+   public :: res_factor, size_factor, mpole_level, mpole_level_auto ! initialized in multigrid_gravity
 
    ! namelist parameters for MULTIGRID_GRAVITY
-   real :: res_factor        !< resolution of radial distribution of moments (in cells)
-   real :: size_factor       !< enlargement of radial distribution (w.r.t. diagonal)
+   real            :: res_factor   !< resolution of radial distribution of moments (in cells)
+   real            :: size_factor  !< enlargement of radial distribution (w.r.t. diagonal)
+   integer(kind=4) :: mpole_level  !< The level, at which we integrate the density field, to get the multipole representation
+
+   integer, parameter :: mpole_level_auto = -1000 !< mpole_level <= mpole_level_auto implies automatic adjustment of mpole_level
 
    type :: mpole_container
 
@@ -130,14 +133,19 @@ contains
 
    end subroutine init_once
 
+!> \brief Refresh the multipole container, especially when something important has changed
+
    subroutine refresh(this)
 
-      use cg_level_finest, only: finest
-      use constants,       only: xdim, zdim, GEO_XYZ, GEO_RPZ, HI, pMIN
-      use dataio_pub,      only: die, warn, msg, printinfo
-      use domain,          only: dom
-      use memory_usage,    only: check_mem_usage
-      use mpisetup,        only: piernik_MPI_Allreduce, master
+      use cg_level_connected, only: cg_level_connected_t
+      use cg_level_finest,    only: finest
+      use cg_level_coarsest,  only: coarsest
+      use cg_list,            only: cg_list_element
+      use constants,          only: xdim, zdim, GEO_XYZ, GEO_RPZ, HI, pMIN
+      use dataio_pub,         only: die, warn, msg, printinfo
+      use domain,             only: dom
+      use memory_usage,       only: check_mem_usage
+      use mpisetup,           only: piernik_MPI_Allreduce, master
 
       implicit none
 
@@ -146,18 +154,34 @@ contains
       integer :: i, prev
       integer, parameter :: skip_pr = 125
       character(len=*), parameter :: dots = "    ..."
+      type(cg_list_element), pointer :: cgl
+      type(cg_level_connected_t), pointer :: fbl  ! finest level with external boundary
 
       if (res_factor <= 0.) then
          call warn("[multipole_array:refresh] res_factor <= 0. : restoring the default value 0.5")
          res_factor = 0.5
       endif
 
-      if (associated(finest%level%first)) then
+      if (mpole_level <= mpole_level_auto) then
+         fbl => finest%find_finest_bnd()
+      else
+         fbl => finest%level
+         do while (fbl%l%id > mpole_level)
+            fbl => fbl%coarser
+            if (.not. associated(fbl)) then
+               fbl => coarsest%level
+               exit
+            endif
+         enddo
+      endif
+
+      cgl => fbl%first
+      if (associated(cgl)) then
          select case (dom%geometry_type)
             case (GEO_XYZ)
-               this%drq = minval(finest%level%first%cg%dl(:), mask=dom%has_dir(:)) * res_factor
+               this%drq = minval(cgl%cg%dl(:), mask=dom%has_dir(:)) * res_factor
             case (GEO_RPZ)
-               this%drq = min(finest%level%first%cg%dx, dom%C_(xdim)*finest%level%first%cg%dy, finest%level%first%cg%dz) * res_factor
+               this%drq = min(cgl%cg%dx, dom%C_(xdim)*cgl%cg%dy, cgl%cg%dz) * res_factor
             case default
                call die("[multipole_array:refresh] Unsupported geometry.")
          end select
@@ -191,7 +215,12 @@ contains
       if (allocated(this%Q)) deallocate(this%Q)
       allocate(this%Q(0:this%lm(int(this%lmax), int(2*this%mmax)), INSIDE:OUTSIDE, -1:this%rqbin))
 
-      if (allocated(this%i_r)) deallocate(this%i_r)
+      if (allocated(this%i_r)) then
+         this%pr_log = (this%rqbin - 1 /= ubound(this%i_r, 1))
+         deallocate(this%i_r)
+      else
+         this%pr_log = .true.
+      endif
       allocate(this%i_r(0:this%rqbin-1))
       call check_mem_usage
 
@@ -223,7 +252,6 @@ contains
          ! Expect inaccurate potential for sources that fall into last few bins due to large dr/r ratio.
          call printinfo(msg)
       endif
-      this%pr_log = .false.
 
    contains
 
@@ -349,15 +377,18 @@ contains
 
 !>
 !! \brief This function returns array index for "compressed" this%Q(:, inout, r) array replacing "plain" this%Q(l, m, inout, r) array
-!! \details Originally there were separate indices for l and m multipole numbers in Q and ofact arrays. Since there are no Y_{l,m} harmonics for l<|m|, approximately half of the Q array
-!! was left unused. For each m there is only lmax-|m|+1 valid Y_{l,m} harmonic contributions (for l = |m| .. lmax). The function lm(l, m) converts each valid (l,m) pair into an
-!! unique index leaving no unused entries in the Q array.
+!!
+!! \details If there were separate indices for l and m multipole numbers in Q and ofact arrays, then approximately half of the Q array
+!! would be left unused because there are no Y_{l,m} harmonics for l<|m|.
+!!
+!! For each m there is only lmax-|m|+1 valid Y_{l,m} harmonic contributions (for l = |m| .. lmax).
+!! The function lm(l, m) converts each valid (l,m) pair into an unique index leaving no unused entries in the Q array.
 !! Let store harmonics in the following way
 !!    Y_{l,m}  in this%Q(this%lm(l, 2*|m|  ), :, :) for even (cosine, positive-m) harmonic,
 !!    Y_{l,-m} in this%Q(this%lm(l, 2*|m|-1), :, :) for odd  (sine,   negative-m) harmonic.
-!! Then for best performance consecutive entries in compressed this%Q(:, inout, r) array should be related to Y_{l,m} harmonics in the same order as they're referenced in point2moments and moments2pot.
-!! So the ordering goes from index 0 as follows
-!! Y_{0,0}, Y_{1,0}, ..., Y_{lmax, 0}, Y_{1,-1}, Y_{1,1}, ..., Y_{lmax,-1}, Y_{lmax,1}, Y_{2,-2}, Y{2,2}, ..., Y(lmax-1,-(mmax-1)), Y(lmax-1,mmax-1), Y(lmax,-(mmax-1)), Y(lmax,mmax-1), Y(lmax,-mmax), Y(lmax,mmax)
+!! Then for best performance consecutive entries in compressed this%Q(:, inout, r) array should be related to Y_{l,m} harmonics
+!! in the same order as they're referenced in point2moments and moments2pot. So the ordering goes from index 0 as follows
+!!    Y_{0,0}, Y_{1,0}, ..., Y_{lmax, 0}, Y_{1,-1}, Y_{1,1}, ..., Y_{lmax,-1}, Y_{lmax,1}, Y_{2,-2}, Y{2,2}, ..., Y(lmax-1,-(mmax-1)), Y(lmax-1,mmax-1), Y(lmax,-(mmax-1)), Y(lmax,mmax-1), Y(lmax,-mmax), Y(lmax,mmax)
 !! Does it looks a bit cryptic? I agree.
 !!
 !! Since this ordering does not depend on mmax we can safely truncate highest azimuthal moments and use mmax < lmax.

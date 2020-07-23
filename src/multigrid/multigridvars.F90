@@ -42,42 +42,41 @@ module multigridvars
 
    implicit none
 
-   public ! QA_WARN no secrets are kept here
-   private :: dsetnamelen ! QA_WARN prevent re-exporting
+   public                  ! QA_WARN no secrets are kept here
+   private :: dsetnamelen  ! QA_WARN prevent re-exporting
 
    ! these 4 variables are required for basic use of the multigrid solver
-   character(len=dsetnamelen), parameter :: source_n     = "source"     !< density field
-   character(len=dsetnamelen), parameter :: solution_n   = "solution"   !< iterated solution (potential) fields
-   character(len=dsetnamelen), parameter :: defect_n     = "defect"     !< defect field (effectively the density not accounted in current solution)
-   character(len=dsetnamelen), parameter :: correction_n = "correction" !< correction to the potential to be applied at the end of V-cycle
+   character(len=dsetnamelen), parameter :: source_n     = "source"      !< density field
+   character(len=dsetnamelen), parameter :: solution_n   = "solution"    !< iterated solution (potential) field
+   character(len=dsetnamelen), parameter :: defect_n     = "defect"      !< defect field (effectively the density not accounted in current solution)
+   character(len=dsetnamelen), parameter :: correction_n = "correction"  !< correction to the potential to be applied at the end of V-cycle
+
    integer(kind=4) :: source, solution, defect, correction !< indices to the fields described above
 
    ! namelist parameters
-   integer(kind=4)    :: ord_prolong                                  !< Prolongation operator order; allowed values are -4 -2, 0 (default), 2 and 4; -2 is often fast
-   integer(kind=4)    :: ord_prolong_face_norm                        !< Face prolongation operator order in the direction normal to the face; allowed values are 0, 1  and 2
-   integer(kind=4)    :: ord_prolong_face_par                         !< Face prolongation operator order in the directions parallel to the face; allowed values are -2 .. 2
-   logical            :: stdout                                       !< print verbose messages to stdout
-   logical            :: verbose_vcycle                               !< Print one line of log per V-cycle, summary otherwise
+   integer(kind=4)  :: ord_prolong     !< Prolongation operator order; allowed values are -4 -2, 0 (default), 2 and 4; -2 is often fast
+   logical          :: stdout          !< print verbose messages to stdout
+   logical          :: verbose_vcycle  !< Print one line of log per V-cycle, summary otherwise
 
    ! miscellaneous
-   real                    :: ts                                      !< time for runtime profiling
-   real                    :: tot_ts                                  !< total multigrid time
-   logical                 :: single_base                             !< .true. when the whole base level is located on a single cpu
-   integer(kind=4)         :: nsmool                                  !< smoothing cycles per call
-   logical                 :: multidim_code_3D                        !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
-   real                    :: overrelax                               !< overrealaxation factor (if < 1. then works as underrelaxation), provided for tests
-   real                    :: coarsest_tol                            !< criterion for automagic coarsest level relaxation
-   real, parameter         :: nc_growth = 1.3                         !< how much ncheck grows between checks in relaxation
+   real             :: ts                !< time for runtime profiling
+   real             :: tot_ts            !< total multigrid time
+   logical          :: single_base       !< .true. when the whole base level is located on a single cpu
+   integer(kind=4)  :: nsmool            !< smoothing cycles per call
+   logical          :: multidim_code_3D  !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
+   real             :: overrelax         !< overrealaxation factor (if < 1. then works as underrelaxation), provided for tests
+   real             :: coarsest_tol      !< criterion for automagic coarsest level relaxation
+   real, parameter  :: nc_growth = 1.3   !< how much ncheck grows between checks in relaxation
 
-   ! boundaries
-   enum, bind(C)                                                      !< constants for enumerating multigrid boundary types
-      enumerator :: bnd_periodic                                      !< periodic
-      enumerator :: bnd_dirichlet                                     !< 0-value boundary type (uniform Dirichlet)
-      enumerator :: bnd_isolated                                      !< isolated boundary type
-      enumerator :: bnd_neumann                                       !< 0-gradient boundary type (uniform Neumann)
-      enumerator :: bnd_givenval                                      !< given value boundary type (general Dirichlet)
-      enumerator :: bnd_invalid = bnd_periodic - 1                    !< invalid
+   ! constants for enumerating multigrid boundary types
+   enum, bind(C)
+      enumerator :: bnd_periodic                    !< periodic
+      enumerator :: bnd_dirichlet                   !< 0-value boundary type (uniform Dirichlet)
+      enumerator :: bnd_isolated                    !< isolated boundary type
+      enumerator :: bnd_neumann                     !< 0-gradient boundary type (uniform Neumann)
+      enumerator :: bnd_givenval                    !< given value boundary type (general Dirichlet)
+      enumerator :: bnd_invalid = bnd_periodic - 1  !< invalid
    end enum
-   integer            :: grav_bnd                                     !< boundary type for computational domain
+   integer       :: grav_bnd                        !< boundary type for computational domain
 
 end module multigridvars

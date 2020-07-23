@@ -477,7 +477,7 @@ contains
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)
          domain_dump         = trim(cbuff(40))
-         do iv=1, nvarsmx
+         do iv = 1, nvarsmx
             vars(iv)         = trim(cbuff(40+iv))
          enddo
 
@@ -1834,7 +1834,7 @@ contains
 
       subroutine print_memory_usage
 
-         use constants,    only: I_ONE
+         use constants,    only: I_ONE, INVALID
          use dataio_pub,   only: msg, printinfo
          use memory_usage, only: system_mem_usage
          use mpi,          only: MPI_INTEGER
@@ -1844,17 +1844,46 @@ contains
 
          integer(kind=4) :: rss
          integer(kind=4), dimension(FIRST:LAST) :: cnt_rss
-         real, parameter :: Mi = 2.**10
 
          rss = system_mem_usage()
          call MPI_Gather(rss, I_ONE, MPI_INTEGER, cnt_rss, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
 
-         if (master) then
-            write(msg, '(a,3f7.1,a,f7.1,a)')"  RSS memory in use (avg/min/max): ", sum(cnt_rss)/size(cnt_rss)/Mi, minval(cnt_rss)/Mi, maxval(cnt_rss)/Mi, " MiB. Total RSS memory: ", sum(cnt_rss)/Mi, " MiB."
+         if (master .and. any(cnt_rss /= INVALID)) then
+            write(msg, '(9a)')"  RSS memory in use (avg/min/max):", &
+                 trim(kMGTP(sum(real(cnt_rss))/size(cnt_rss))), "/", &
+                 trim(kMGTP(minval(real(cnt_rss)))), "/", &
+                 trim(kMGTP(maxval(real(cnt_rss)))), &
+                 ". Total RSS memory:", trim(kMGTP(sum(real(cnt_rss)))), "."
             call printinfo(msg, .false.)
          endif
 
       end subroutine print_memory_usage
+
+      function kMGTP(kmem)
+
+         use constants, only: fplen
+
+         implicit none
+
+         real, intent(in) :: kmem
+
+         character(len=fplen) :: kMGTP
+
+         real, parameter :: ord = 2.**10, ki = 1, Mi = ki *ord, Gi = Mi * ord, Ti = Gi * ord, Pi = Ti * ord
+
+         if (kmem < Mi) then
+            write(kMGTP, '(f7.1,a)') kmem / ki, " kiB"
+         else if (kmem < Gi) then
+            write(kMGTP, '(f7.1,a)') kmem / Mi, " MiB"
+         else if (kmem < Ti) then
+            write(kMGTP, '(f7.1,a)') kmem / Gi, " GiB"
+         else if (kmem < Pi) then
+            write(kMGTP, '(f7.1,a)') kmem / Ti, " TiB"
+         else
+            write(kMGTP, '(f10.1,a)') kmem / Pi, " PiB ???"
+         endif
+
+      end function kMGTP
 
    end subroutine write_log
 

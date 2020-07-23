@@ -959,7 +959,7 @@ contains
                if (otype == O_OUT) &
                   & call MPI_Recv(dbuf,   size(dbuf),   MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, mpi_err)
                if (otype == O_RES) &
-                  & call MPI_Recv(cg_n_o, size(cg_n_o), MPI_INTEGER,  p, tag+I_FOUR,  comm, MPI_STATUS_IGNORE, mpi_err)
+                    & call MPI_Recv(cg_n_o, size(cg_n_o), MPI_INTEGER,  p, tag+I_FOUR,  comm, MPI_STATUS_IGNORE, mpi_err)
             endif
 
             do g = 1, cg_n(p)
@@ -969,6 +969,7 @@ contains
                temp = cg_n_b(g, :)
                call create_attribute(cg_g_id, cg_size_aname, temp)                        ! create "/data/grid_%08d/n_b"
                call create_attribute(cg_g_id, cg_offset_aname, int(cg_off(g, :), kind=4)) ! create "/data/grid_%08d/off"
+
                if (otype == O_OUT) then
                   temp(:) = dbuf(cg_le, g, :)
                   call create_attribute(cg_g_id, cg_ledge_aname, temp)  ! create "/data/grid_%08d/left_edge"
