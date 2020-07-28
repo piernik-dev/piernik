@@ -511,7 +511,7 @@ contains
          case ("magx", "magy", "magz")
             val = lmtvB(U_MAG)
             write(s_val, '(a)') trim(s_lmtvB(U_MAG))
-         case ("cr1" : "cr9")
+         case ("cr01" : "cr99")
             val = lmtvB(U_MASS) / lmtvB(U_LEN) / lmtvB(U_TIME) ** 2
             if (trim(s_lmtvB(U_ENER)) /= "complex") then
                write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))

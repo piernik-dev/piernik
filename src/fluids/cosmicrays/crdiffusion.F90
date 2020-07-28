@@ -45,11 +45,12 @@ contains
 
    subroutine init_crdiffusion
 
-      use cg_list_global, only: all_cg
-      use constants,      only: wcr_n
-      use crhelpers,      only: divv_n
-      use dataio_pub,     only: warn
-      use fluidindex,     only: flind
+      use cg_list_global,   only: all_cg
+      use constants,        only: wcr_n
+      use crhelpers,        only: divv_i, divv_n
+      use dataio_pub,       only: warn
+      use fluidindex,       only: flind
+      use named_array_list, only: qna
 
       implicit none
 
@@ -61,6 +62,7 @@ contains
          call warn("[crdiffusion:init_crdiffusion] No CR species to diffuse")
       endif
       call all_cg%reg_var(divv_n)
+      divv_i = qna%ind(divv_n)
 
    end subroutine init_crdiffusion
 

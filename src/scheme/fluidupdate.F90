@@ -148,8 +148,14 @@ contains
 
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
-      integer(kind=4) :: s
+      integer(kind=4) :: s, sFRST, sLAST, sCHNG
       character(len=*), parameter :: sw3_label = "sweeps"
+
+      if (forward) then
+         sFRST = xdim ; sLAST = zdim ; sCHNG = I_ONE
+      else
+         sFRST = zdim ; sLAST = xdim ; sCHNG = -I_ONE
+      endif
 
 #ifdef SHEAR
       call shear_3sweeps
@@ -177,15 +183,9 @@ contains
          if (.not.skip_sweep(xdim)) call make_sweep(xdim, forward)
          if (.not.skip_sweep(ydim)) call make_fargosweep
       else
-         if (forward) then
-            do s = xdim, zdim
-               if (.not.skip_sweep(s)) call make_sweep(s, forward)
-            enddo
-         else
-            do s = zdim, xdim, -I_ONE
-               if (.not.skip_sweep(s)) call make_sweep(s, forward)
-            enddo
-         endif
+         do s = sFRST, sLAST, sCHNG
+            if (.not.skip_sweep(s)) call make_sweep(s, forward)
+         enddo
       endif
       call ppp_main%stop(sw3_label)
 

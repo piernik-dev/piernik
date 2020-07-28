@@ -171,8 +171,8 @@ contains
 #ifdef COSM_RAYS
             case ('encr')
                do k = 1, size(iarr_all_crs,1)
-                  if (k<=9) then
-                     write(aux,'(A2,I1)') 'cr', k
+                  if (k<=99) then
+                     write(aux,'(A2,I2.2)') 'cr', k
                      call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", k
