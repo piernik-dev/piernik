@@ -109,11 +109,7 @@ contains
          case ("magdir")
             f%fu = "\rm{radians}"
 #ifdef COSM_RAYS
-#ifdef COSM_RAY_ELECTRONS
          case ("cr01" : "cr99")
-#else /* !COSM_RAY_ELECTRONS */
-         case ("cr1" : "cr9")
-#endif /* !COSM_RAY_ELECTRONS */
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
 #ifdef COSM_RAY_ELECTRONS
@@ -340,13 +336,11 @@ contains
 #endif /* !MAGNETIC */
       select case (var)
 #ifdef COSM_RAYS
-#ifdef COSM_RAY_ELECTRONS
          case ("cr01" : "cr99")
             read(var,'(A2,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+#ifdef COSM_RAY_ELECTRONS
             tab(:,:,:) = cg%u(flind%crn%beg+i-1, RNG)
 #else /* ! COSM_RAY_ELECTRONS */
-         case ("cr1" : "cr9")
-            read(var,'(A2,I1)') aux, i !> \deprecated BEWARE 0 <= i<= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = cg%u(flind%crs%beg+i-1, RNG)
 #endif /* !COSM_RAY_ELECTRONS */
 #ifdef COSM_RAY_ELECTRONS
