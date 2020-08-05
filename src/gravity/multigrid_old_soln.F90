@@ -169,7 +169,6 @@ contains
                call printinfo(msg, stdout)
             endif
             call all_cg%set_q_value(solution, 0.)
-            ! if (associated(this%old%latest)) call die("[multigrid_old_soln:init_solution] need to move %old to %invalid")
          case (O_INJ)
             call leaves%check_dirty(this%old%latest%i_hist, "history0")
             call leaves%q_copy(this%old%latest%i_hist, solution)
@@ -350,7 +349,7 @@ contains
       class(soln_history), intent(in) :: this !< potential history to be registered for restarts
       integer(HID_T),      intent(in) :: file_id  !< File identifier
 
-      integer(kind=4) :: n, i, b
+      integer(kind=4) :: n, i, b, found
       type(old_soln), pointer :: os
       character(len=cbuff_len), allocatable, dimension(:) :: namelist
       real, allocatable, dimension(:) :: timelist
@@ -361,6 +360,7 @@ contains
 
       ! set the flags to mark which fields should go to the restart
       i = 1
+      found = 0
       os => this%old%latest
       do while (associated(os))
          b = AT_IGNORE
@@ -368,15 +368,16 @@ contains
             b = AT_NO_B
             namelist(i) = qna%lst(os%i_hist)%name
             timelist(i) = os%time
+            found = found + 1
          endif
          qna%lst(os%i_hist)%restart_mode = b
          i = i + I_ONE
          os => os%earlier
       enddo
 
-      if (master) then
-         call set_attr(file_id, trim(this%old%label) // "_names", namelist)
-         call set_attr(file_id, trim(this%old%label) // "_times", timelist)
+      if (master .and. found > 0) then
+         call set_attr(file_id, trim(this%old%label) // "_names", namelist(:found))
+         call set_attr(file_id, trim(this%old%label) // "_times", timelist(:found))
       endif
 
       deallocate(namelist)

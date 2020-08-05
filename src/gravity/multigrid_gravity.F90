@@ -113,11 +113,13 @@ contains
 !! <tr><td>lmax                  </td><td>16     </td><td>integer value  </td><td>\copydoc multipole::lmax                          </td></tr>
 !! <tr><td>mmax                  </td><td>-1     </td><td>integer value  </td><td>\copydoc multipole::mmax                          </td></tr>
 !! <tr><td>mpole_solver          </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::mpole_solver                  </td></tr>
-!! <tr><td>level_3D              </td><td>1      </td><td>integer value  </td><td>\copydoc multipole::level_3D                      </td></tr>
+!! <tr><td>res_factor            </td><td>0.5    </td><td>real value     </td><td>\copydoc multipole_array::res_factor              </td></tr>
+!! <tr><td>size_factor           </td><td>1.     </td><td>real value     </td><td>\copydoc multipole_array::size_factor             </td></tr>
+!! <tr><td>mpole_level           </td><td>1      </td><td>integer value  </td><td>\copydoc multipole_array::mpole_level             </td></tr>
 !! <tr><td>multidim_code_3D      </td><td>.false.</td><td>logical        </td><td>\copydoc multigridvars::multidim_code_3d          </td></tr>
 !! <tr><td>use_CG                </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::use_CG                </td></tr>
 !! <tr><td>use_CG_outer          </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::use_CG_outer          </td></tr>
-!! <tr><td>grav_bnd_str          </td><td>"periodic"/"dirichlet"</td><td>string of chars</td><td>\copydoc multigrid_gravity::grav_bnd_str          </td></tr>
+!! <tr><td>grav_bnd_str          </td><td>"periodic"/"dirichlet"</td><td>string of chars</td><td>\copydoc multigrid_gravity::grav_bnd_str </td></tr>
 !! <tr><td>preconditioner        </td><td>"HG_V-cycle"</td><td>string of chars</td><td>\copydoc multigrid_gravity::preconditioner   </td></tr>
 !! </table>
 !! The list is active while \b "SELF_GRAV" and \b "MULTIGRID" are defined.
@@ -137,8 +139,8 @@ contains
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
       use multigrid_Laplace4, only: L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
-      use multipole,          only: mpole_solver, lmax, mmax, level_3D, singlepass, init_multipole
-      use multipole_array,    only: res_factor, size_factor
+      use multipole,          only: mpole_solver, lmax, mmax, singlepass, init_multipole
+      use multipole_array,    only: res_factor, size_factor, mpole_level, mpole_level_auto
       use pcg,                only: use_CG, use_CG_outer, preconditioner, default_preconditioner, pcg_init
 
       implicit none
@@ -149,7 +151,7 @@ contains
       namelist /MULTIGRID_GRAVITY/ norm_tol, coarsest_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
            &                       overrelax, L4_strength, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       base_no_fft, fft_patient, &
-           &                       lmax, mmax, mpole_solver, level_3D, res_factor, size_factor, &
+           &                       lmax, mmax, mpole_solver, mpole_level, res_factor, size_factor, &
            &                       multidim_code_3D, grav_bnd_str, preconditioner
 
       if (.not.frun) call die("[multigrid_gravity:multigrid_grav_par] Called more than once.")
@@ -167,7 +169,7 @@ contains
 
       lmax                   = 16
       mmax                   = -1 ! will be automatically set to lmax unless explicitly limited in problem.par
-      level_3D               = 1
+      mpole_level            = mpole_level_auto
       max_cycles             = 20
       nsmool                 = -1  ! best to set it to dom%nb or its multiply
       nsmoob                 = 10000
@@ -248,7 +250,7 @@ contains
          rbuff(7)  = res_factor
          rbuff(8)  = size_factor
 
-         ibuff( 1) = level_3D
+         ibuff( 1) = mpole_level
          ibuff( 2) = lmax
          ibuff( 3) = mmax
          ibuff( 4) = max_cycles
@@ -285,14 +287,14 @@ contains
          res_factor     = rbuff(7)
          size_factor    = rbuff(8)
 
-         level_3D          = ibuff( 1)
-         lmax              = ibuff( 2)
-         mmax              = ibuff( 3)
-         max_cycles        = ibuff( 4)
-         nsmool            = ibuff( 5)
-         nsmoob            = ibuff( 6)
-         ord_laplacian     = ibuff( 7)
-         ord_time_extrap   = ibuff( 9)
+         mpole_level         = ibuff( 1)
+         lmax                = ibuff( 2)
+         mmax                = ibuff( 3)
+         max_cycles          = ibuff( 4)
+         nsmool              = ibuff( 5)
+         nsmoob              = ibuff( 6)
+         ord_laplacian       = ibuff( 7)
+         ord_time_extrap     = ibuff( 9)
          ord_laplacian_outer = ibuff(10)
 
          base_no_fft        = lbuff(2)
@@ -328,6 +330,7 @@ contains
          grav_bnd = bnd_periodic
          !> \warning the above statement is highly suspicious
       else if (periodic_bnd_cnt > 0 .and. periodic_bnd_cnt < dom%eff_dim) then
+         if (grav_bnd == bnd_isolated) call die("[multigrid_gravity:multigrid_grav_par] Isolated grav boundaries implemented only for fully periodic domain")
          if (.not. base_no_fft .and. master) &
               call warn("[multigrid_gravity:multigrid_grav_par] Mixing periodic and non-periodic boundary conditions for gravity disables FFT base-level solver.")
          ! This would require more careful set up of the Green's function and FFT type
@@ -898,11 +901,10 @@ contains
 
 !> \brief Recover a potential field from history
 
-   function recover_sg(ind, how_old) result(initialized)
+   logical function recover_sg(ind, how_old) result(initialized)
 
       use cg_leaves,     only: leaves
-      use constants,     only: INVALID
-      use dataio_pub,    only: warn, die
+      use dataio_pub,    only: warn
       use global,        only: nstep
       use mpisetup,      only: master
       use multigridvars, only: grav_bnd, bnd_isolated
@@ -913,43 +915,16 @@ contains
       integer(kind=4), intent(in) :: ind
       integer(kind=4), intent(in) :: how_old
 
-      logical :: initialized
       integer(kind=4) :: i_hist
 
       initialized = .false.
       if (associated(inner%old%latest)) then
-         select case (how_old)
-            case (SGP)
-               i_hist = inner%old%latest%i_hist
-            case (SGPM)
-               if (associated(inner%old%latest%earlier)) then
-                  i_hist = inner%old%latest%earlier%i_hist
-               else
-                  i_hist = inner%old%latest%i_hist
-                  call warn("[multigrid_gravity:recover_sg] not enough historic fields for inner SGPM, using latest")
-               endif
-            case default
-               call die("[multigrid_gravity:recover_sg] such old inner history not implemented yet")
-               i_hist = INVALID
-         end select
+         i_hist = which_history(inner)
          call leaves%q_copy(i_hist, ind)
          initialized = .true.
          if (grav_bnd == bnd_isolated .and. .not. singlepass) then
             if (associated(outer%old%latest)) then
-               select case (how_old)
-                  case (SGP)
-                     i_hist = outer%old%latest%i_hist
-                  case (SGPM)
-                     if (associated(outer%old%latest%earlier)) then
-                        i_hist = outer%old%latest%earlier%i_hist
-                     else
-                        i_hist = outer%old%latest%i_hist
-                        call warn("[multigrid_gravity:recover_sg] not enough historic fields for outer SGPM, using latest")
-                     endif
-                  case default
-                     call die("[multigrid_gravity:recover_sg] such old outer history not implemented yet")
-                     i_hist = INVALID
-               end select
+               i_hist = which_history(outer)
                call leaves%q_add(i_hist, ind)
             else
                initialized = .false.
@@ -960,6 +935,34 @@ contains
          if (master .and. nstep > 0) call warn("[multigrid_gravity:recover_sg] no i-history available")
       endif
       call leaves%leaf_arr3d_boundaries(ind)
+
+   contains
+
+      integer(kind=4) function which_history(hist) result(ih)
+
+         use constants,  only: INVALID
+         use dataio_pub, only: die
+
+         implicit none
+
+         type(soln_history) :: hist
+
+         select case (how_old)
+            case (SGP)
+               ih = hist%old%latest%i_hist
+            case (SGPM)
+               if (associated(hist%old%latest%earlier)) then
+                  ih = hist%old%latest%earlier%i_hist
+               else
+                  ih = hist%old%latest%i_hist
+                  call warn("[multigrid_gravity:recover_sg:which_history] not enough historic fields for  SGPM, using latest")
+               endif
+            case default
+               call die("[multigrid_gravity:recover_sg:which_history] such old history not implemented yet")
+               ih = INVALID
+         end select
+
+      end function which_history
 
    end function recover_sg
 
@@ -1202,13 +1205,14 @@ contains
 
       use hdf5,          only: HID_T
       use multigridvars, only: grav_bnd, bnd_isolated
+      use multipole,     only: singlepass
 
       implicit none
 
       integer(HID_T), intent(in) :: file_id  !< File identifier
 
       call inner%mark_and_create_attribute(file_id)
-      if (grav_bnd == bnd_isolated) call outer%mark_and_create_attribute(file_id)
+      if (grav_bnd == bnd_isolated .and. .not. singlepass) call outer%mark_and_create_attribute(file_id)
 
    end subroutine write_oldsoln_to_restart
 

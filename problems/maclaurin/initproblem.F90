@@ -625,10 +625,9 @@ contains
    end subroutine compute_mpole
 
 !>
-!! \brief This routine provides the "apot" and "errp" variablesvalues to be dumped to the .h5 file
+!! \brief This routine provides the "errp", "errm", "relerr" and "relerrm" values to be dumped to the .h5 file
 !!
 !! \details
-!! * "apot"    is the analytical potential solution for cell centers
 !! * "errp"    is the difference between analytical potential and computed potential
 !! * "relerr"  is the relative difference between analytical potential and multigrid solution
 !! * "errm"    is the difference between analytical potential and multipole solution
@@ -637,6 +636,9 @@ contains
 !! For "errm" and "relerr" use '$MULTIGRID_GRAVITY mpole_solver = "3D" /'
 !! for realistic 3D potential evaluation in whole computational domain.
 !! The default mpole_solver = "img_mass" will give only the "outer potential" correction.
+!!
+!! The values are calculated for nonperiodic, isolated case.
+!! Any other configuration of boundary conditions will show large inaccuracies.
 !<
 
    subroutine maclaurin_error_vars(var, tab, ierrh, cg)

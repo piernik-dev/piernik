@@ -108,7 +108,7 @@ contains
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek * cm)
          case ("magdir")
             f%fu = "\rm{radians}"
-         case ("cr1" : "cr9")
+         case ("cr01" : "cr99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
          case ("gpot", "sgpt")
@@ -207,7 +207,7 @@ contains
    subroutine create_units_description(gid)
 
       use common_hdf5,  only: hdf_vars, hdf_vars_avail
-      use constants,    only: units_len, cbuff_len, I_FIVE
+      use constants,    only: units_len, cbuff_len, I_FIVE, I_ONE
       use hdf5,         only: HID_T, h5dopen_f, h5dclose_f
       use helpers_hdf5, only: create_dataset, create_attribute
       use units,        only: lmtvB, s_lmtvB, get_unit
@@ -235,7 +235,7 @@ contains
       ip = lbound(base_dsets, 1) - 1
       do i = lbound(hdf_vars, 1, kind=4), ubound(hdf_vars, 1, kind=4)
          if (.not.hdf_vars_avail(i)) cycle
-         ip = ip + 1
+         ip = ip + I_ONE
          call get_unit(gdf_translate(hdf_vars(i)), val_unit, s_unit)
          call create_dataset(gid, gdf_translate(hdf_vars(i)), val_unit)
          call h5dopen_f(gid, gdf_translate(hdf_vars(i)), dset_id, error)
@@ -337,8 +337,8 @@ contains
 #endif /* !MAGNETIC */
       select case (var)
 #ifdef COSM_RAYS
-         case ("cr1" : "cr9")
-            read(var,'(A2,I1)') aux, i !> \deprecated BEWARE 0 <= i <= 9, no other indices can be dumped to hdf file
+         case ("cr01" : "cr99")
+            read(var,'(A2,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = cg%u(flind%crs%beg+i-1, RNG)
 #endif /* COSM_RAYS */
 #ifdef TRACER

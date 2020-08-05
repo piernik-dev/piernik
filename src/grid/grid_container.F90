@@ -55,14 +55,14 @@ module grid_cont
       ! these lists are initialized and maintained in cg_level_connected
       ! perhaps parts of vertical_bf_prep can be moved here
       ! vertical_b_prep has to stay in cg_level_connected because we don't have dot here
-      type(tgt_list) :: ri_tgt        !< description of incoming restriction data (this should be a linked list)
-      type(tgt_list) :: ro_tgt        !< description of outgoing restriction data
-      type(tgt_list) :: pi_tgt        !< description of incoming prolongation data
-      type(tgt_list) :: po_tgt        !< description of outgoing prolongation data
-      type(tgt_list) :: pib_tgt       !< description of incoming boundary prolongation data
-      type(tgt_list) :: pob_tgt       !< description of outgoing boundary prolongation data
-      type(tgt_list) :: rif_tgt       !< description of fluxes incoming from fine grid
-      type(tgt_list) :: rof_tgt       !< description of fluxes outgoing to coarse grid
+      type(tgt_list) :: ri_tgt   !< description of incoming restriction data (this should be a linked list)
+      type(tgt_list) :: ro_tgt   !< description of outgoing restriction data
+      type(tgt_list) :: pi_tgt   !< description of incoming prolongation data
+      type(tgt_list) :: po_tgt   !< description of outgoing prolongation data
+      type(tgt_list) :: pib_tgt  !< description of incoming boundary prolongation data
+      type(tgt_list) :: pob_tgt  !< description of outgoing boundary prolongation data
+      type(tgt_list) :: rif_tgt  !< description of fluxes incoming from fine grid
+      type(tgt_list) :: rof_tgt  !< description of fluxes outgoing to coarse grid
 
       ! Particles
 #if defined(GRAV) && defined(NBODY)
@@ -70,17 +70,18 @@ module grid_cont
 #endif /* GRAV && NBODY */
 
       ! Misc
-      integer(kind=8) :: SFC_id                                   !< position of the grid on space-filling curve
-      integer :: membership                                       !< How many cg lists use this grid piece?
-      logical :: ignore_prolongation                              !< When .true. do not upgrade interior with incoming prolonged values
-      logical :: is_old                                           !< .true. if a given grid existed prior to  upgrade_refinement call
-      logical :: processed                                        !< for use in sweeps.F90
+      integer(kind=8) :: SFC_id       !< position of the grid on space-filling curve
+      integer :: membership           !< How many cg lists use this grid piece?
+      logical :: ignore_prolongation  !< When .true. do not upgrade interior with incoming prolonged values
+      logical :: is_old               !< .true. if a given grid existed prior to  upgrade_refinement call
+      logical :: processed            !< for use in sweeps.F90
 
    contains
 
-      procedure          :: init_gc                               !< Initialization
-      procedure          :: cleanup                               !< Deallocate all internals
-      procedure          :: update_leafmap                        !< Check if the grid container has any parts covered by finer grids and update appropriate map
+      procedure :: init_gc         !< Initialization
+      procedure :: cleanup         !< Deallocate all internals
+      procedure :: update_leafmap  !< Check if the grid container has any parts covered by finer grids and update appropriate map
+      procedure :: print_tgt       !< print all tht_lists (for debugging only)
 
    end type grid_container
 
@@ -97,8 +98,8 @@ contains
 
       implicit none
 
-      class(grid_container), target,   intent(inout) :: this  ! intent(out) would silently clear everything, that was already set
-                                                              ! (also the fields in types derived from grid_container)
+      class(grid_container), target,   intent(inout) :: this     ! intent(out) would silently clear everything, that was already set
+                                                                 ! (also the fields in types derived from grid_container)
       integer(kind=8), dimension(:,:), intent(in)    :: my_se    !< my segment
       integer,                         intent(in)    :: grid_id  !< ID which should be unique across level
       class(level_t), pointer,         intent(in)    :: l        !< level essential data
@@ -129,7 +130,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this !< object invoking type-bound procedure
+      class(grid_container), intent(inout) :: this  !< object invoking type-bound procedure
 
       integer :: b, g
       integer, parameter :: nseg = 4*2
@@ -164,7 +165,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this !< object invoking type-bound procedure
+      class(grid_container), intent(inout) :: this  !< object invoking type-bound procedure
 
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se
       integer :: g
@@ -178,5 +179,59 @@ contains
       endif
 
    end subroutine update_leafmap
+
+!> \brief Print all tht_lists (for debugging only)
+
+   subroutine print_tgt(this)
+
+      use constants, only: LO, HI, cwdlen
+      use mpisetup,  only: proc
+
+      implicit none
+
+      class(grid_container), intent(in) :: this  !< object invoking type-bound procedure
+
+      character(len=cwdlen) :: msg
+
+      write(msg, '(a,i5,a,i2,a,i7,a,2(3i7,a))')"@", proc, " ^", this%l%id, " #", this%grid_id, " [", this%ijkse(:, LO), "]..[", this%ijkse(:, HI), "] "
+
+      call pr_tgt(this%ri_tgt,  "ri " // trim(msg))
+      call pr_tgt(this%ro_tgt,  "ro " // trim(msg))
+      call pr_tgt(this%pi_tgt,  "pi " // trim(msg))
+      call pr_tgt(this%po_tgt,  "po " // trim(msg))
+      call pr_tgt(this%rif_tgt, "rif" // trim(msg))
+      call pr_tgt(this%rof_tgt, "rof" // trim(msg))
+      call pr_tgt(this%pib_tgt, "pib" // trim(msg))
+      call pr_tgt(this%pob_tgt, "pob" // trim(msg))
+
+   contains
+
+      subroutine pr_tgt(tgt, label)
+
+         use constants,  only: LO, HI
+         use dataio_pub, only: printinfo, msg
+
+         implicit none
+
+         type(tgt_list),   intent(in) :: tgt   ! segment list to print
+         character(len=*), intent(in) :: label ! identifier of segment type
+
+         integer :: i
+         logical, parameter :: stdout = .true.
+
+         if (.not. allocated(tgt%seg)) then
+            call printinfo(label // " not allocated", stdout)
+         else if (size(tgt%seg) == 0) then
+            call printinfo(label // " no entries", stdout)
+         else
+            do i = lbound(tgt%seg, 1), ubound(tgt%seg, 1)
+               write(msg, '(2a,i5,2(a,3i7),a,i9)') label,  " -> @", tgt%seg(i)%proc, " [", tgt%seg(i)%se(:, LO), "]..[", tgt%seg(i)%se(:, HI), "] t", tgt%seg(i)%tag
+               call printinfo(msg, stdout)
+            enddo
+         endif
+
+      end subroutine pr_tgt
+
+   end subroutine print_tgt
 
 end module grid_cont
