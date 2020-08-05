@@ -71,6 +71,10 @@ module gravity
    logical                    :: variable_gp           !< if .true. then cg%gp is evaluated at every step
    logical                    :: restart_gpot, restart_hgpot, restart_gp, restart_sgp, restart_sgpm !< if .true. then write this grav part to the restart files
 
+#ifdef SELF_GRAV
+   integer(kind=4) :: i_sgp, i_sgpm
+#endif /* SELF_GRAV */
+
    interface
 
       !< COMMENT ME
@@ -161,17 +165,18 @@ contains
 !<
    subroutine init_grav
 
-      use cg_list_global, only: all_cg
-      use constants,      only: PIERNIK_INIT_MPI, gp_n, gpot_n, hgpot_n, O_I2, O_I4
-      use dataio_pub,     only: nh    ! QA_WARN required for diff_nml
-      use dataio_pub,     only: printinfo, warn, die, code_progress
-      use mpisetup,       only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
-      use units,          only: newtong
+      use cg_list_global,   only: all_cg
+      use constants,        only: PIERNIK_INIT_MPI, gp_n, gpot_n, hgpot_n, O_I2, O_I4
+      use dataio_pub,       only: nh    ! QA_WARN required for diff_nml
+      use dataio_pub,       only: printinfo, warn, die, code_progress
+      use mpisetup,         only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
+      use units,            only: newtong
 #ifdef SELF_GRAV
-      use constants,      only: sgp_n, sgpm_n
+      use constants,        only: sgp_n, sgpm_n
+      use named_array_list, only: qna
 #endif /* SELF_GRAV */
 #ifdef CORIOLIS
-      use coriolis,       only: set_omega
+      use coriolis,         only: set_omega
 #endif /* CORIOLIS */
 
       implicit none
@@ -317,6 +322,8 @@ contains
 #ifdef SELF_GRAV
       call all_cg%reg_var(sgp_n,   restart_mode = res_at(restart_sgp)  )
       call all_cg%reg_var(sgpm_n,  restart_mode = res_at(restart_sgpm) )
+      i_sgp  = qna%ind(sgp_n)
+      i_sgpm = qna%ind(sgpm_n)
 #endif /* SELF_GRAV */
 
       if (.not.user_grav) then
@@ -375,9 +382,6 @@ contains
       use constants,        only: gp_n, gpot_n, hgpot_n, base_level_id
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
-#ifdef SELF_GRAV
-      use constants,        only: sgp_n, sgpm_n
-#endif /* SELF_GRAV */
 
       implicit none
 
@@ -391,8 +395,8 @@ contains
          cg%gp(:,:,:) = 0.0
          !> \todo move the following to multigrid?
 #ifdef SELF_GRAV
-         cg%sgp   => cg%q(qna%ind(  sgp_n))%arr
-         cg%sgpm  => cg%q(qna%ind( sgpm_n))%arr
+         cg%sgp   => cg%q(i_sgp)%arr
+         cg%sgpm  => cg%q(i_sgpm)%arr
 #endif /* SELF_GRAV */
 
       endif
@@ -420,6 +424,8 @@ contains
 
    end subroutine init_terms_grav
 
+!> \brief Recover or update self-gravity potential, update other potential if needed
+
    subroutine source_terms_grav
 
       use constants,         only: PPP_GRAV
@@ -427,12 +433,10 @@ contains
 #ifdef SELF_GRAV
       use cg_leaves,         only: leaves
       use cg_list_dataop,    only: expanded_domain
-      use constants,         only: sgp_n, sgpm_n
       use dataio_pub,        only: warn, die, restarted_sim
       use fluidindex,        only: iarr_all_sg
       use mpisetup,          only: master
       use multigrid_gravity, only: multigrid_solve_grav, recover_sgpm, recover_sgp
-      use named_array_list,  only: qna
 #endif /* SELF_GRAV */
 
       implicit none
@@ -440,34 +444,35 @@ contains
       character(len=*), parameter :: grav_label = "source_terms_grav"
 #ifdef SELF_GRAV
       logical, save :: frun = .true.
-      logical :: initialized
+      logical :: sgpm_initialized
 #endif /* SELF_GRAV */
 
       call ppp_main%start(grav_label, PPP_GRAV)
 
 #ifdef SELF_GRAV
-      initialized = .true.
+
+      sgpm_initialized = .true.
       if (frun) then
-         initialized = recover_sgpm() ! try to recover sgpm from old soln
+         sgpm_initialized = recover_sgpm() ! try to recover sgpm from old soln
       else
-         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
+         call leaves%q_copy(i_sgp, i_sgpm)
       endif
 
       if (frun .and. restarted_sim) then
          if (.not. recover_sgp()) call die("[gravity:source_terms_grav] cannot recover sgp")
-         ! Reproducibility f restarts strongly depends on avaability of multigrid history in the restart file.
+         ! Reproducibility of restarts strongly depends on avaability of multigrid history in the restart file.
          ! ToDo: simplify the management of various histories of potential.
       else
          call multigrid_solve_grav(iarr_all_sg)
       endif
       frun = .false.
 
-      call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n)) !, nocorners=.true.)
-      ! No solvers should requires corner values for the potential. Unfortunately some problems may relay on it indirectly (e.g. streaming_instability).
+      call leaves%leaf_arr3d_boundaries(i_sgp) !, nocorners=.true.)
+      ! No solvers should require corner values for the potential. Unfortunately some problems may relay on it indirectly (e.g. streaming_instability).
       !> \todo OPT: identify what relies on corner values of the potential and change it to work without corners. Then enable nocorners in the above call for some speedup.
 
-      if (.not. initialized) then
-         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n)) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain was created
+      if (.not. sgpm_initialized) then
+         call leaves%q_copy(i_sgp, i_sgpm) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain was created
          !> Restarted runs will be slightly affected as the previous selfgravitating potential was forgotten
          !> First step in highly dynamical setups will behave as the potential was frozen before first timestep
          !> Solution? Take one step backwards just for calculating old potential? Sounds complicated.
@@ -475,7 +480,7 @@ contains
          if (master) call warn("[gravity:source_terms_grav] assigned sgpm = sgp")
       endif
 
-      call expanded_domain%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n)) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain expanded
+      call expanded_domain%q_copy(i_sgp, i_sgpm) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain expanded
 #endif /* SELF_GRAV */
       if (variable_gp) call grav_pot_3d
 
@@ -517,7 +522,7 @@ contains
       use named_array_list, only: qna
 #ifdef SELF_GRAV
       use cg_list_dataop,   only: ind_val
-      use constants,        only: one, half, sgp_n, sgpm_n, zero
+      use constants,        only: one, half, zero
       use func,             only: operator(.notequals.)
       use global,           only: dt, dtm
 #endif /* SELF_GRAV */
@@ -533,8 +538,8 @@ contains
          h = 0.0
       endif
 
-      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+h),      ind_val(qna%ind(sgpm_n), -h)     ], qna%ind(gpot_n))
-      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+half*h), ind_val(qna%ind(sgpm_n), -half*h)], qna%ind(hgpot_n))
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(i_sgp, one+h),      ind_val(i_sgpm, -h)     ], qna%ind(gpot_n))
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(i_sgp, one+half*h), ind_val(i_sgpm, -half*h)], qna%ind(hgpot_n))
 
 #else /* !SELF_GRAV */
       !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once

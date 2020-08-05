@@ -368,7 +368,7 @@ contains
             b = AT_NO_B
             namelist(i) = qna%lst(os%i_hist)%name
             timelist(i) = os%time
-            found = found + 1
+            found = found + I_ONE
          endif
          qna%lst(os%i_hist)%restart_mode = b
          i = i + I_ONE
