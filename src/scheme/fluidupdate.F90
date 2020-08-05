@@ -61,6 +61,7 @@ contains
 
       use constants,        only: RTVD_SPLIT, RIEMANN_SPLIT, HLLC_SPLIT
       use dataio_pub,       only: die
+      use domain,           only: dom, is_refined
       use global,           only: which_solver
       use fluidupdate_hllc, only: fluid_update_simple
       use ppp,              only: ppp_main
@@ -70,6 +71,9 @@ contains
       character(len=*), parameter :: fu_label = "fluid_update"
 
       call ppp_main%start(fu_label)
+
+      if (is_refined .and. (mod(dom%nb, 2) == 1)) call die("[fluidupdate:fluid_update] odd number of guardcells is known to cause inaccuracies in (M)HD and nonconvergence of V-cycles")
+
       select case (which_solver)
          case (HLLC_SPLIT)
             call fluid_update_simple
@@ -144,8 +148,14 @@ contains
 
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
-      integer(kind=4) :: s
+      integer(kind=4) :: s, sFRST, sLAST, sCHNG
       character(len=*), parameter :: sw3_label = "sweeps"
+
+      if (forward) then
+         sFRST = xdim ; sLAST = zdim ; sCHNG = I_ONE
+      else
+         sFRST = zdim ; sLAST = xdim ; sCHNG = -I_ONE
+      endif
 
 #ifdef SHEAR
       call shear_3sweeps
@@ -173,15 +183,9 @@ contains
          if (.not.skip_sweep(xdim)) call make_sweep(xdim, forward)
          if (.not.skip_sweep(ydim)) call make_fargosweep
       else
-         if (forward) then
-            do s = xdim, zdim
-               if (.not.skip_sweep(s)) call make_sweep(s, forward)
-            enddo
-         else
-            do s = zdim, xdim, -I_ONE
-               if (.not.skip_sweep(s)) call make_sweep(s, forward)
-            enddo
-         endif
+         do s = sFRST, sLAST, sCHNG
+            if (.not.skip_sweep(s)) call make_sweep(s, forward)
+         enddo
       endif
       call ppp_main%stop(sw3_label)
 

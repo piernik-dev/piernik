@@ -361,6 +361,9 @@ plot profile of 64th step from file.ascii with gnuplot (hopefully in the interac
     ppp_plot.py file.ascii -r 'step 64'| gnuplot
     ppp_plot.py file.ascii -r 'step 64'-o file.gnu; gnuplot file.gnu
 
+when gnuplot fails to set up desired teminal by default, try to set $GNUTERM (qt or x11 are recommended):
+    ppp_plot.py file.ascii | GNUTERM=qt gnuplot
+
 print list of top-lefel timers (steps) present in file.ascii:
     ppp_plot.py file.ascii -t -d 1
 (the atep names are followed by their time offset and length)

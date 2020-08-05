@@ -81,7 +81,7 @@
  $MULTIGRID_GRAVITY
     grav_bnd_str  = "isolated"
     mpole_solver  = "3d"
-    level_3D      = 0   ! base level evaluation of multipole moments seems to be good enough for maclaurin, even -2 would be sufficient
+    mpole_level   = 0   ! base level evaluation of multipole moments seems to be good enough for maclaurin, even -2 would be sufficient
  /
 
  $INTERACTIONS

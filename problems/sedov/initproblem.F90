@@ -166,9 +166,13 @@ contains
          if (master) call printinfo(msg)
       enddo
 
-      do id = 1, flind%energ
-         call urc_list%add_user_urcv(wna%fi, flind%all_fluids(id)%fl%ien, ref_thr, ref_eps, "Loechner", .true.)
-      enddo
+      if (ref_thr > 0.) then
+         do id = 1, flind%energ
+            call urc_list%add_user_urcv(wna%fi, flind%all_fluids(id)%fl%ien, ref_thr, ref_eps, "Loechner", .true.)
+         enddo
+      else
+         if (master) call printinfo("[initproblem:problem_initial_conditions] automatic refinement disabled by negative ref_thr")
+      endif
 
       if (dtrig < 0.) nullify(problem_domain_update)
 
