@@ -169,7 +169,6 @@ contains
                call printinfo(msg, stdout)
             endif
             call all_cg%set_q_value(solution, 0.)
-            ! if (associated(this%old%latest)) call die("[multigrid_old_soln:init_solution] need to move %old to %invalid")
          case (O_INJ)
             call leaves%check_dirty(this%old%latest%i_hist, "history0")
             call leaves%q_copy(this%old%latest%i_hist, solution)
