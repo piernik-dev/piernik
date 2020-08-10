@@ -35,7 +35,7 @@ module crhelpers
    implicit none
 
    private
-   public :: div_v, set_div_v1d, divv_i, divv_l, divv_n
+   public :: div_v, set_div_v1d, divv_i, divv_n
 #if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
       !! \deprecated remove this clause as soon as Intel Compiler gets required
       !! features and/or bug fixes
@@ -53,7 +53,6 @@ module crhelpers
 
    character(len=dsetnamelen), parameter :: divv_n = "divvel" !< divergence of velocity
    integer(kind=4)                       :: divv_i
-   logical                               :: divv_l
 
 #if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
       !! \deprecated remove this clause as soon as Intel Compiler gets required
@@ -108,8 +107,7 @@ contains
 
    subroutine set_div_v1d(p, dir, i1, i2, cg)
 
-      use dataio_pub, only: die
-      use grid_cont,  only: grid_container
+      use grid_cont, only: grid_container
 
       implicit none
 
@@ -118,7 +116,6 @@ contains
       real, dimension(:),   pointer, intent(inout) :: p
       type(grid_container), pointer, intent(in)    :: cg
 
-      if (.not. divv_l) call die("[crhelpers:set_div_v1d] cannot get divvel")
       p => cg%q(divv_i)%get_sweep(dir, i1, i2)
 
    end subroutine set_div_v1d

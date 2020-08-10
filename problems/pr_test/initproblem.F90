@@ -347,15 +347,19 @@ contains
 
    subroutine find_non_0_or_write_hdf5
 
-      use cg_list,        only: cg_list_element
-      use cg_list_global, only: all_cg
-      use constants,      only: stdout
-      use data_hdf5,      only: write_hdf5
-      use dataio_pub,     only: msg, printinfo
-      use func,           only: operator(.notequals.)
-      use grid_cont,      only: grid_container
-      use mpisetup,       only: proc, comm, mpi_err
+      use cg_list,          only: cg_list_element
+      use cg_list_global,   only: all_cg
+      use constants,        only: stdout
+      use dataio_pub,       only: msg, printinfo
+      use func,             only: operator(.notequals.)
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: proc, comm, mpi_err
       use named_array_list, only: qna
+#ifdef HDF5
+      use data_hdf5,        only: write_hdf5
+#else /* !HDF5 */
+      use dataio_pub,       only: warn
+#endif /* !HDF5 */
 
       implicit none
 
@@ -384,7 +388,11 @@ contains
          enddo
          n = n + 1
       else
-         call write_hdf5
+#ifdef HDF5
+        call write_hdf5
+#else /* !HDF5 */
+        call warn("[initproblem:find_non_0_or_write_hdf5] no HDF5 available")
+#endif /* !HDF5 */
       endif
 
       call flush(stdout)

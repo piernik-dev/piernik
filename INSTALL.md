@@ -20,7 +20,7 @@ and try again to install the pacages mentioned above. You may use `libhdf5-openm
 For Fedora try:
 
     sudo dnf install make hdf5-mpich-devel fftw-devel python\
-    environment-modules python-pep8 python2-numpy
+    environment-modules python-pep8 python2-numpy python3-h5py
 
 You may use `hdf5-openmpi-devel` if you prefer OpenMPI over MPICH.
 

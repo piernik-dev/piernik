@@ -45,12 +45,11 @@ module initproblem
    real :: a1     !< equatorial radius of the spheroid
    real :: e      !< polar eccentricity of the spheroid; e>0 gives oblate object, e<0 gives prolate object
    real :: ref_thr   !< refinement threshold
-   real :: deref_thr !< derefinement threshold
    real :: ref_eps   !< smoother filter
    integer(kind=4) :: nsub !< subsampling on the grid
    logical :: analytical_ext_pot  !< If .true. then bypass multipole solver and use analutical potential for external boundaries (debugging/developing only)
 
-   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, ref_thr, deref_thr, ref_eps, nsub, analytical_ext_pot
+   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, ref_thr, ref_eps, nsub, analytical_ext_pot
 
    ! private data
    real :: d1 !< ambient density
@@ -87,20 +86,20 @@ contains
 
    subroutine read_problem_par
 
-      use cg_list_global,   only: all_cg
-      use constants,        only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
-      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,       only: die, warn, msg, printinfo
-      use domain,           only: dom
-      use fluidindex,       only: iarr_all_dn
-      use global,           only: smalld
-      use func,             only: operator(.equals.)
-      use mpisetup,         only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
-      use multigridvars,    only: ord_prolong
-      use named_array_list, only: wna
-      use particle_pub,     only: pset
-      use user_hooks,       only: ext_bnd_potential
+      use cg_list_global,        only: all_cg
+      use constants,             only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
+      use dataio_pub,            only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,            only: die, warn, msg, printinfo
+      use domain,                only: dom
+      use fluidindex,            only: iarr_all_dn
+      use func,                  only: operator(.equals.)
+      use global,                only: smalld
+      use mpisetup,              only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use multigridvars,         only: ord_prolong
+      use named_array_list,      only: wna
+      use particle_pub,          only: pset
       use unified_ref_crit_list, only: urc_list
+      use user_hooks,            only: ext_bnd_potential
 
       implicit none
 
@@ -119,7 +118,6 @@ contains
       nsub         = 3                   !< Subsampling factor
 
       ref_thr      = 0.3    !< Refine if density difference is greater than this value
-      deref_thr    = 0.01   !< Derefine if density difference is smaller than this value
       ref_eps      = 0.01   !< refinement smoothing factor
 
       analytical_ext_pot = .false.
@@ -149,7 +147,6 @@ contains
          rbuff(5) = a1
          rbuff(6) = e
          rbuff(7) = ref_thr
-         rbuff(8) = deref_thr
          rbuff(9) = ref_eps
 
          ibuff(1) = nsub
@@ -171,7 +168,6 @@ contains
          a1           = rbuff(5)
          e            = rbuff(6)
          ref_thr      = rbuff(7)
-         deref_thr    = rbuff(8)
          ref_eps      = rbuff(9)
 
          nsub         = ibuff(1)
@@ -205,8 +201,6 @@ contains
          nsub = maxsub
       endif
 
-      if (ref_thr <= deref_thr) call die("[initproblem:read_problem_par] ref_thr <= deref_thr")
-
       if (a1 .equals. 0.) call pset%add(d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0])
 
       if (master) then
@@ -236,8 +230,8 @@ contains
       ! Set up automatic refinement criteria on densities
       do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
          !> \warning only selfgravitating fluids should be added
-!         call urc_list%add_user_urcv(wna%fi, id, ref_thr*d0, deref_thr*d0, 0., "grad", .true.)
-         call urc_list%add_user_urcv(wna%fi, id, ref_thr, deref_thr, ref_eps, "Loechner", .true.)
+!         call urc_list%add_user_urcv(wna%fi, id, ref_thr*d0, 0., "grad", .true.)
+         call urc_list%add_user_urcv(wna%fi, id, ref_thr, ref_eps, "Loechner", .true.)
 
       enddo
 
@@ -425,13 +419,14 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pi, GEO_XYZ, GEO_RPZ
+      use constants,        only: pi, GEO_XYZ, GEO_RPZ, PPP_PROB
       use dataio_pub,       only: warn, die
       use domain,           only: dom
-      use grid_cont,        only: grid_container
       use func,             only: operator(.equals.), operator(.notequals.)
+      use grid_cont,        only: grid_container
       use mpisetup,         only: master
       use named_array_list, only: qna
+      use ppp,              only: ppp_main
       use units,            only: newtong
 
       implicit none
@@ -442,6 +437,9 @@ contains
       real, parameter                :: small_e = 1e-3
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      character(len=*), parameter :: cmp_label = "compute_maclaurin_potential"
+
+      call ppp_main%start(cmp_label, PPP_PROB)
 
       AA1 = 2./3. ; AA3 = 2./3.
       if (e < 0. .and. master) call warn("[initproblem:compute_maclaurin_potential] e<0. not fully implemented yet!")
@@ -543,6 +541,8 @@ contains
          cgl => cgl%nxt
       enddo
 
+      call ppp_main%stop(cmp_label, PPP_PROB)
+
    end subroutine compute_maclaurin_potential
 
 !> \brief Compute the L2 error norm of the error of computed potential with respect to the analytical solution
@@ -623,10 +623,9 @@ contains
    end subroutine compute_mpole
 
 !>
-!! \brief This routine provides the "apot" and "errp" variablesvalues to be dumped to the .h5 file
+!! \brief This routine provides the "errp", "errm", "relerr" and "relerrm" values to be dumped to the .h5 file
 !!
 !! \details
-!! * "apot"    is the analytical potential solution for cell centers
 !! * "errp"    is the difference between analytical potential and computed potential
 !! * "relerr"  is the relative difference between analytical potential and multigrid solution
 !! * "errm"    is the difference between analytical potential and multipole solution
@@ -635,13 +634,16 @@ contains
 !! For "errm" and "relerr" use '$MULTIGRID_GRAVITY mpole_solver = "3D" /'
 !! for realistic 3D potential evaluation in whole computational domain.
 !! The default mpole_solver = "img_mass" will give only the "outer potential" correction.
+!!
+!! The values are calculated for nonperiodic, isolated case.
+!! Any other configuration of boundary conditions will show large inaccuracies.
 !<
 
    subroutine maclaurin_error_vars(var, tab, ierrh, cg)
 
       use dataio_pub,       only: die
-      use grid_cont,        only: grid_container
       use func,             only: operator(.notequals.)
+      use grid_cont,        only: grid_container
       use named_array_list, only: qna
 
       implicit none

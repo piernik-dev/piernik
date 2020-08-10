@@ -256,7 +256,9 @@ contains
 
    subroutine qw_copy(this, q_from, w_to, w_ind)
 
-      use cg_list, only: cg_list_element
+      use cg_list,   only: cg_list_element
+      use constants, only: PPP_AMR
+      use ppp,       only: ppp_main
 
       implicit none
 
@@ -266,12 +268,15 @@ contains
       integer(kind=4),         intent(in) :: w_ind   !< First index of destination in cg%w(w_to)%arr(:,:,:,:)
 
       type(cg_list_element), pointer      :: cgl
+      character(len=*), parameter :: qwc_label = "qw_copy"
 
+      call ppp_main%start(qwc_label, PPP_AMR)
       cgl => this%first
       do while (associated(cgl))
          cgl%cg%w(w_to)%arr(w_ind, :, :, :) = cgl%cg%q(q_from)%arr(:, :, :)
          cgl => cgl%nxt
       enddo
+      call ppp_main%stop(qwc_label, PPP_AMR)
 
    end subroutine qw_copy
 
@@ -279,7 +284,9 @@ contains
 
    subroutine wq_copy(this, w_from, w_ind, q_to)
 
-      use cg_list, only: cg_list_element
+      use cg_list,   only: cg_list_element
+      use constants, only: PPP_AMR
+      use ppp,       only: ppp_main
 
       implicit none
 
@@ -289,12 +296,15 @@ contains
       integer(kind=4),         intent(in) :: q_to    !< Index of destination in cg%q(:)
 
       type(cg_list_element), pointer      :: cgl
+      character(len=*), parameter :: wqc_label = "wq_copy"
 
+      call ppp_main%start(wqc_label, PPP_AMR)
       cgl => this%first
       do while (associated(cgl))
          cgl%cg%q(q_to)%arr(:, :, :) = cgl%cg%w(w_from)%arr(w_ind, :, :, :)
          cgl => cgl%nxt
       enddo
+      call ppp_main%stop(wqc_label, PPP_AMR)
 
    end subroutine wq_copy
 

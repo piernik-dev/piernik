@@ -42,17 +42,17 @@ module unified_ref_crit_list
       class(urc), pointer :: first => null()  !< here the list should start
       ! A pointer to last refinement criterion would be of some use only during initialisation.
    contains
-      procedure :: add                !< append a single criterion to the list, or a chain of these
-      procedure :: init               !< initialize the list of refinement criteria with everything that is known at the beginning
-      procedure :: cnt                !< return the current number of defined refinement criteria
-      procedure :: cleanup            !< do a cleanup of all refinement criteria and deallocate them
-      procedure :: all_mark           !< check refinement criteria on a given list of cg
-      procedure :: plot_mark          !< check refinement criteria on a given list of cg only for iplot set
-      procedure :: create_plotfields  !< set up qna fields for refinement criteria
-      procedure :: add_user_urcv      !< add field-based refinement criteria from initproblem
-      procedure :: add_user_urc       !< add user-provided routine with refinement criteria from initproblem
-      procedure :: summary            !< print summary of refinement criteria in use
-      procedure, private :: mark      !< put all refinement marks or derefinement unmarks
+      procedure :: init           !< initialize the list of refinement criteria with everything that is known at the beginning
+      procedure :: cleanup        !< do a cleanup of all refinement criteria and deallocate them
+      procedure :: all_mark       !< check refinement criteria on a given list of cg
+      procedure :: plot_mark      !< check refinement criteria on a given list of cg only for iplot set
+      procedure :: add_user_urcv  !< add field-based refinement criteria from initproblem
+      procedure :: add_user_urc   !< add user-provided routine with refinement criteria from initproblem
+      procedure, private :: add                !< append a single criterion to the list, or a chain of these
+      procedure, private :: cnt                !< return the current number of defined refinement criteria
+      procedure, private :: create_plotfields  !< set up qna fields for refinement criteria
+      procedure, private :: summary            !< print summary of refinement criteria in use
+      procedure, private :: mark               !< put all refinement marks
    end type urc_list_t
 
    type(urc_list_t) :: urc_list  !< the list of refinement criteria to be applied cg-wise
@@ -101,14 +101,18 @@ contains
 !! User criteria in initproblem are supposed to be added from read_problem_par this way:
 !!     call urc_list%add_user_urc(mark_user, do_plotfield)
 !! Multiple routines can be added, if necessary.
+!!
+!! Field-based refinement criteria can be added from initproblem as well by:
+!!     call urc_list%add_user_urcv(iv, ic, ref_thr, aux, rname, plotfield)
 !<
 
    subroutine init(this)
 
       use constants,                          only: base_level_id
-      use refinement,                         only: refine_points, refine_boxes, refine_vars, inactive_name, jeans_ref, jeans_plot
+      use refinement,                         only: refine_points, refine_boxes, refine_zcyls, refine_vars, inactive_name, jeans_ref, jeans_plot
       use unified_ref_crit_geometrical_box,   only: urc_box
       use unified_ref_crit_geometrical_point, only: urc_point
+      use unified_ref_crit_geometrical_zcyl,  only: urc_zcyl
       use unified_ref_crit_Jeans,             only: urc_jeans
       use unified_ref_crit_var,               only: decode_urcv
 
@@ -118,13 +122,17 @@ contains
 
       type(urc_box),   pointer :: urcb
       type(urc_point), pointer :: urcp
+      type(urc_zcyl),  pointer :: urczc
       type(urc_jeans), pointer :: urcj
+      class(urc),      pointer :: p_urc
+
       integer :: ip
 
       ! add automatic criteria detecting shock waves
       do ip = lbound(refine_vars, 1), ubound(refine_vars, 1)
          if (trim(refine_vars(ip)%rname) /= trim(inactive_name)) then
-            call this%add(decode_urcv(refine_vars(ip)))
+            p_urc => decode_urcv(refine_vars(ip))
+            call this%add(p_urc)
          endif
       enddo
 
@@ -132,7 +140,8 @@ contains
       if (jeans_ref > 0.) then
          allocate(urcj)
          urcj = urc_jeans(jeans_ref, jeans_plot)
-         call this%add(urcj)
+         p_urc => urcj
+         call this%add(p_urc)
       endif
 
       ! add geometric primitives specified in problem.par
@@ -140,7 +149,8 @@ contains
          if (refine_points(ip)%level > base_level_id) then
             allocate(urcp)
             urcp = urc_point(refine_points(ip))
-            call this%add(urcp)
+            p_urc => urcp
+            call this%add(p_urc)
          endif
       enddo
 
@@ -148,7 +158,17 @@ contains
          if (refine_boxes(ip)%level > base_level_id) then
             allocate(urcb)
             urcb = urc_box(refine_boxes(ip))
-            call this%add(urcb)
+            p_urc => urcb
+            call this%add(p_urc)
+         endif
+      enddo
+
+      do ip = lbound(refine_zcyls, dim=1), ubound(refine_zcyls, dim=1)
+         if (refine_zcyls(ip)%level > base_level_id) then
+            allocate(urczc)
+            urczc = urc_zcyl(refine_zcyls(ip))
+            p_urc => urczc
+            call this%add(p_urc)
          endif
       enddo
 
@@ -185,7 +205,7 @@ contains
 
 !< \brief Add field-based refinement criteria from initproblem
 
-   subroutine add_user_urcv(this, iv, ic, ref_thr, deref_thr, aux, rname, plotfield)
+   subroutine add_user_urcv(this, iv, ic, ref_thr, aux, rname, plotfield)
 
       use refinement,            only: ref_auto_param
       use unified_ref_crit_var,  only: urc_var
@@ -196,16 +216,17 @@ contains
       integer(kind=4),   intent(in)    :: iv        !< field index in cg%q or cg%w array
       integer(kind=4),   intent(in)    :: ic        !< component index of 4D array or INVALID for 3D arrays
       real,              intent(in)    :: ref_thr   !< refinement threshold
-      real,              intent(in)    :: deref_thr !< derefinement threshold
       real,              intent(in)    :: aux       !< auxiliary parameter
       character(len=*),  intent(in)    :: rname     !< name of the refinement routine
       logical,           intent(in)    :: plotfield !< create an array to keep the value of refinement criterion
 
       type(urc_var), pointer :: urcv
+      class(urc),    pointer :: p_urc
 
       allocate(urcv)
-      urcv = urc_var(ref_auto_param("user", rname, ref_thr, deref_thr, aux, plotfield), iv, ic)
-      call this%add(urcv)
+      urcv = urc_var(ref_auto_param("user", rname, ref_thr, aux, plotfield), iv, ic)
+      p_urc => urcv
+      call this%add(p_urc)
 
       call this%create_plotfields
 
@@ -223,11 +244,13 @@ contains
       logical,           intent(in)    :: plotfield  !< create an array to keep the value of refinement criterion
       procedure(mark_urc_user)         :: user_mark  !< user-provided routine
 
-      type(urc_user),   pointer :: urcu
+      type(urc_user), pointer :: urcu
+      class(urc),     pointer :: p_urc
 
       allocate(urcu)
       urcu = urc_user(user_mark, plotfield)
-      call this%add(urcu)
+      p_urc => urcu
+      call this%add(p_urc)
 
       call this%create_plotfields
 
@@ -318,6 +341,7 @@ contains
             endif
          endif
 
+         ! If max >= 100 this should fail in add2list with empty name
          if (len_trim(ref_n) <= 0) then
             do i = 1, max  ! Beware: O(n^2)
                write(ref_n, '(a,i2.2)') "ref_", i
@@ -349,6 +373,7 @@ contains
          cnt  = cnt + 1
          p => p%next
       enddo
+
    end function cnt
 
 !> \brief Do a cleanup of all refinement criteria and deallocate them.
@@ -371,7 +396,7 @@ contains
 
    end subroutine cleanup
 
-!> \brief Put all refinement marks or derefinement unmarks
+!> \brief Put all refinement marks
 
    subroutine mark(this, cg)
 
@@ -396,12 +421,12 @@ contains
 
    subroutine all_mark(this, first)
 
-      use cg_list,   only: cg_list_element
+      use cg_list, only: cg_list_element
 
       implicit none
 
-      class(urc_list_t),              intent(inout) :: this        !< an object invoking the type-bound procedure
-      type(cg_list_element), pointer, intent(in)    :: first         !< the list of cgs (usually leaves)
+      class(urc_list_t),              intent(inout) :: this   !< an object invoking the type-bound procedure
+      type(cg_list_element), pointer, intent(in)    :: first  !< the list of cgs (usually leaves)
 
       type(cg_list_element), pointer :: cgl
 
@@ -414,9 +439,9 @@ contains
    end subroutine all_mark
 
 !>
-!! \brief Check refinement criteria on a given list of cg only for iplot set
+!! \brief Check refinement criteria on a given list of cg only for iplot set.
 !!
-!! Perhaps it would be more optimal to exchange the loops and check if there is anything to do at all
+!! ToDo: check whether loop order matters performance-wise.
 !<
 
    subroutine plot_mark(this, first)
@@ -426,8 +451,8 @@ contains
 
       implicit none
 
-      class(urc_list_t),              intent(inout) :: this        !< an object invoking the type-bound procedure
-      type(cg_list_element), pointer, intent(in)    :: first         !< the list of cgs (usually leaves)
+      class(urc_list_t),              intent(inout) :: this   !< an object invoking the type-bound procedure
+      type(cg_list_element), pointer, intent(in)    :: first  !< the list of cgs (usually leaves)
 
       type(cg_list_element), pointer :: cgl
       class(urc), pointer :: p

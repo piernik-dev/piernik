@@ -208,7 +208,7 @@ contains
 
     use constants,    only: GEO_XYZ, onet, twot, one, two
     use dataio_pub,   only: die, msg
-    use domain,       only: dom
+    use domain,       only: dom, is_refined
     use fluxlimiters, only: limiter
     use global,       only: w_epsilon
 
@@ -232,12 +232,13 @@ contains
     integer, parameter                       :: in = 1  ! index for cells
     integer                                  :: i, v
 
-    if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
+    if (is_refined .and. dom%nb <= 3) call die("[interpolations:weno3] AMR and WENO3 lead to inaccurate results when dom%nb <= 3")
+    if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:weno3] non-cartesian geometry not implemented yet.")
     if (size(q, in) - size(ql, in) /= 1) then
-       write(msg, '(2(a,2i7),a)')"[interpolations:linear] face vector of wrong length: ", size(q, in), size(ql, in), " (expecting: ", size(q, in), size(q, in)-1, ")"
+       write(msg, '(2(a,2i7),a)')"[interpolations:weno3] face vector of wrong length: ", size(q, in), size(ql, in), " (expecting: ", size(q, in), size(q, in)-1, ")"
        call die(msg)
     endif
-    if (any(shape(ql) /= shape(qr))) call die("[interpolations:linear] face vectors of different lengths")
+    if (any(shape(ql) /= shape(qr))) call die("[interpolations:weno3] face vectors of different lengths")
 
     n = size(q, in)
 

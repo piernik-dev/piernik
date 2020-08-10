@@ -43,9 +43,8 @@ module initproblem
    real, dimension(ndims)   :: kx   !< wave number
    integer(kind=4)          :: n    !< exponent
    real :: ref_thr                  !< refinement threshold
-   real :: deref_thr                !< derefinement threshold
 
-   namelist /PROBLEM_CONTROL/ type, a, n, kx, ref_thr, deref_thr
+   namelist /PROBLEM_CONTROL/ type, a, n, kx, ref_thr
 
    ! private data
    character(len=dsetnamelen), parameter :: apot_n = "apot" !< name of the analytical potential field
@@ -65,13 +64,17 @@ contains
 
    subroutine problem_pointers
 
+#ifdef HDF5
       use dataio_user, only: user_vars_hdf5
+#endif /* HDF5 */
       use user_hooks,  only: finalize_problem
 
       implicit none
 
       finalize_problem => finalize_problem_app
+#ifdef HDF5
       user_vars_hdf5   => app_error_vars
+#endif /* HDF5 */
 
    end subroutine problem_pointers
 
@@ -96,7 +99,6 @@ contains
       kx(:)      = pi
       n          = 0
       ref_thr    = 3e-2     !< Refine if density difference is greater than this value
-      deref_thr  = 1e-3     !< Derefine if density difference is smaller than this value
 
       if (master) then
 
@@ -119,7 +121,6 @@ contains
          rbuff(1) = a
          rbuff(2:4) = kx(:)
          rbuff(5) = ref_thr
-         rbuff(6) = deref_thr
 
          ibuff(1) = n
 
@@ -136,7 +137,6 @@ contains
          a         = rbuff(1)
          kx(:)     = rbuff(2:4)
          ref_thr   = rbuff(5)
-         deref_thr = rbuff(6)
 
          n    = ibuff(1)
 
@@ -164,7 +164,7 @@ contains
       call all_cg%reg_var(ares_n)
       call all_cg%reg_var(asrc_n)
 
-      call urc_list%add_user_urcv(qna%ind(apot_n), INVALID, ref_thr, deref_thr, 0., "grad", .true.)
+      call urc_list%add_user_urcv(qna%ind(apot_n), INVALID, ref_thr, 0., "grad", .true.)
 
    end subroutine read_problem_par
 

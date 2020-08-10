@@ -27,7 +27,10 @@
 
 #include "piernik.h"
 
-!> \brief Unified refinement criteria for filters that provide scalar indicator of the need for refinement based on selected fields
+!>
+!! \brief Unified refinement criteria for filters that provide scalar indicator
+!! of the need for refinement based on selected fields.
+!<
 
 module unified_ref_crit_var
 
@@ -39,16 +42,20 @@ module unified_ref_crit_var
    private
    public :: urc_var, decode_urcv
 
-!> \brief Things that should be common for all refinement criteria based on filters that look for shockwaves or do other checks based on selected fields
+!>
+!! \brief Things that should be common for all refinement criteria based on filters
+!! that look for shockwaves or do other checks based on selected fields.
+!<
 
    type, extends(urc_filter) :: urc_var
-!      private  !unified_ref_crit_list:create_plotfields needs some of these
-      character(len=cbuff_len) :: rvar   !< name of the refinement variable
-      character(len=cbuff_len) :: rname  !< name of the refinement routine
-      real                     :: aux    !< auxiliary parameter (can be smoother or filter strength)
-      integer                  :: iv = INVALID  !< field index in cg%q or cg%w array
-      integer                  :: ic = INVALID  !< component index (cg%w(iv)%arr(ic,:,:,:)) or INVALID for 3D arrays
-      procedure(refine_crit), pass, pointer :: refine !< refinement routine
+      private
+      !unified_ref_crit_list:create_plotfields needs these components
+      character(len=cbuff_len), public      :: rname         !< name of the refinement routine
+      integer, public                       :: iv = INVALID  !< field index in cg%q or cg%w array
+      integer, public                       :: ic = INVALID  !< component index (cg%w(iv)%arr(ic,:,:,:)) or INVALID for 3D arrays
+      character(len=cbuff_len)              :: rvar          !< name of the refinement variable
+      real                                  :: aux           !< auxiliary parameter (can be smoother or filter strength)
+      procedure(refine_crit), pass, pointer :: refine        !< refinement routine
    contains
       procedure :: mark => mark_var
    end type urc_var
@@ -149,29 +156,19 @@ contains
       endif
 
       if (trim(vname) == "dens") then
-         allocate(ic, source = iarr_all_dn)
-         iv = wna%fi
-         ic = iarr_all_dn
+         call alloc_ic(iarr_all_dn)
          return
       else if (trim(vname) == "velx") then
-         allocate(ic, source = iarr_all_mx)
-         iv = wna%fi
-         ic = iarr_all_mx
+         call alloc_ic(iarr_all_mx)
          return
       else if (trim(vname) == "vely") then
-         allocate(ic, source = iarr_all_my)
-         iv = wna%fi
-         ic = iarr_all_my
+         call alloc_ic(iarr_all_my)
          return
       else if (trim(vname) == "velz") then
-         allocate(ic, source = iarr_all_mz)
-         iv = wna%fi
-         ic = iarr_all_mz
+         call alloc_ic(iarr_all_mz)
          return
       else if (trim(vname) == "ener") then
-         allocate(ic, source = iarr_all_en)
-         iv = wna%fi
-         ic = iarr_all_en
+         call alloc_ic(iarr_all_en)
          return
       endif
       !> \todo identify here all {den,vl[xyz],ene}{d,n,i}
@@ -180,9 +177,24 @@ contains
       write(msg,'(3a)')"[unified_ref_crit_var:identify_field] Unidentified refinement variable: '",trim(vname),"'"
       if (master) call warn(msg)
 
+   contains
+
+      subroutine alloc_ic(tab)
+
+         implicit none
+
+         integer(kind=4), dimension(:), intent(in) :: tab
+
+         iv = wna%fi
+
+         allocate(ic(size(tab)))
+         ic = tab
+
+      end subroutine alloc_ic
+
    end subroutine identify_field
 
-!> \brief A simple constructor for single scalar fields
+!> \brief A constructor for single scalar fields
 
    function init(rf, iv, ic) result(this)
 
@@ -201,7 +213,7 @@ contains
       type(urc_var) :: this  !< an object to be constructed
 
       if (master) then
-         write(msg, '(5a,2g13.5,a)')"[URC var]   Initializing refinement on variable '", trim(rf%rvar), "', method: '", trim(rf%rname), "', thresholds = [ ", rf%ref_thr, rf%deref_thr, " ]"
+         write(msg, '(5a,g13.5)')"[URC var]   Initializing refinement on variable '", trim(rf%rvar), "', method: '", trim(rf%rname), "', threshold = ", rf%ref_thr
          if (rf%aux .notequals. 0.) write(msg(len_trim(msg)+1:), '(a,g13.5)') ", with parameter = ", rf%aux
          if (rf%plotfield)  write(msg(len_trim(msg)+1:), '(a)') ", with plotfield"
          if (present(ic)) then
@@ -219,7 +231,6 @@ contains
 
       ! urc_filter
       this%ref_thr   = rf%ref_thr
-      this%deref_thr = rf%deref_thr
       this%plotfield = rf%plotfield
 
       ! own components
@@ -245,7 +256,7 @@ contains
 
    end function init
 
-!> \brief Mark regions for refinement and derefinement
+!> \brief Mark regions for refinement
 
    subroutine mark_var(this, cg)
 
@@ -259,35 +270,37 @@ contains
 
       real, dimension(:,:,:), pointer :: p3d
 
-      if (any(cg%leafmap)) then
-         if (this%ic == INVALID) then
-            p3d => cg%q(this%iv)%arr
-         else
-            associate (a => cg%w(this%iv)%arr)
-               p3d(lbound(a, dim=2):, lbound(a, dim=3):, lbound(a, dim=4):) => cg%w(this%iv)%arr(this%ic, :, :, :)
-            end associate
-         endif
-         call this%refine(cg, p3d)
+      if (this%ic == INVALID) then
+         p3d => cg%q(this%iv)%arr
+      else
+         associate (a => cg%w(this%iv)%arr)
+            p3d(lbound(a, dim=2):, lbound(a, dim=3):, lbound(a, dim=4):) => cg%w(this%iv)%arr(this%ic, :, :, :)
+         end associate
       endif
-
-      return
+      call this%refine(cg, p3d)
 
    end subroutine mark_var
 
 !>
 !! \brief R. Loechner criterion
 !! Original paper: https://www.researchgate.net/publication/222452974_An_adaptive_finite_element_scheme_for_transient_problems_in_CFD
-!! Cartesian grid implementation: http://flash.uchicago.edu/~jbgallag/2012/flash4_ug/node14.html#SECTION05163100000000000000 (note that some indices in the left part of denominator seem to be slightly messed up)
+!! Cartesian grid implementation:
+!! http://flash.uchicago.edu/~jbgallag/2012/flash4_ug/node14.html#SECTION05163100000000000000
+!! (note that some indices in the left part of denominator seem to be slightly messed up)
 !!
 !! this%aux is the noise filter (epsilon in Loechner's paper)
+!!
+!! OPT: this routine seems to take way too much CPU! Implement 3D variant without functions?
+!!
 !<
 
    subroutine refine_on_second_derivative(this, cg, p3d)
 
-      use constants,  only: xdim, ydim, zdim, GEO_XYZ, INVALID
-      use dataio_pub, only: die
+      use constants,  only: xdim, ydim, zdim, GEO_XYZ, INVALID, I_ONE, PPP_AMR, PPP_CG
+      use dataio_pub, only: die, msg
       use domain,     only: dom
       use grid_cont,  only: grid_container
+      use ppp,        only: ppp_main
 
       implicit none
 
@@ -295,17 +308,23 @@ contains
       type(grid_container), pointer,   intent(inout) :: cg   !< current grid piece
       real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least two layers of up-to-date guardcells)
 
-      integer :: i, j, k
-      real :: sn, sd, r, max_r
-      integer, parameter :: how_far = 2
+      integer(kind=4) :: i, j, k
+      real :: sn, sd, r
+      integer(kind=4), parameter :: how_far = 2
+      character(len=*), parameter :: L_label = "Loechner_mark"
 
+      call ppp_main%start(L_label, PPP_AMR + PPP_CG)
       if (dom%geometry_type /= GEO_XYZ) call die("[unified_ref_crit_var:refine_on_second_derivative] noncartesian geometry not supported yet")
-      if (dom%nb < how_far+1) call die("[unified_ref_crit_var:refine_on_second_derivative] at east 2 guardcells are required")
+      if (dom%nb <= how_far+I_ONE) then
+         write(msg, '(a,i1,a)')"[unified_ref_crit_var:refine_on_second_derivative] at least ", how_far+I_ONE+I_ONE, " guardcells are required"
+         ! dux(i+I_ONE, j, k) is accessing p3d(i+I_ONE+I_ONE, j, k), so for i = cg%ie + how_far*dom%D_x means that dom%nb has to be at least 4
+         ! ToDo: check if it is safe to reduce how_far and avoid refinement flickering
+         call die(msg)
+      endif
 
       ! Perhaps it will be a bit faster with arrays for storing first-order differences
       ! but let's see if it works first and then how expensive it is.
 
-      max_r = 0.
       do k = cg%ks - how_far*dom%D_z, cg%ke + how_far*dom%D_z
          do j = cg%js - how_far*dom%D_y, cg%je + how_far*dom%D_y
             do i = cg%is - how_far*dom%D_x, cg%ie + how_far*dom%D_x
@@ -315,41 +334,41 @@ contains
 
                if (dom%has_dir(xdim)) then
                   ! d/dx d/dx
-                  sn = sn + ((dux(i+1, j, k) - dux(i-1, j, k)) * cg%idx)**2
-                  sd = sd + ((abs(dux(i+1, j, k)) + abs(dux(i-1, j, k)) + this%aux * (daux(i+1, j, k) + daux(i-1, j, k))) * cg%idx)**2
+                  sn = sn + ((dux(i+I_ONE, j, k) - dux(i-I_ONE, j, k)) * cg%idx)**2
+                  sd = sd + ((abs(dux(i+I_ONE, j, k)) + abs(dux(i-I_ONE, j, k)) + this%aux * (daux(i+I_ONE, j, k) + daux(i-I_ONE, j, k))) * cg%idx)**2
                   if (dom%has_dir(ydim)) then
                      ! d/dy d/dx
-                     sn = sn + 2 * ((dux(i, j+1, k) - dux(i, j-1, k)) * cg%idy)**2  ! == d/dx d/dy
-                     sd = sd + ((abs(dux(i, j+1, k)) + abs(dux(i, j-1, k)) + this%aux * (daux(i, j+1, k) + daux(i, j-1, k))) * cg%idy)**2 + &
-                          &    ((abs(duy(i+1, j, k)) + abs(duy(i-1, j, k)) + this%aux * (dauy(i+1, j, k) + dauy(i-1, j, k))) * cg%idx)**2     ! d/dx d/dy
-                     ! to be exploited: (dauy(i+1, j, k) + dauy(i-1, j, k)) * cg%idx == (daux(i, j+1, k) + daux(i, j-1, k)) * cg%idy
+                     sn = sn + 2 * ((dux(i, j+I_ONE, k) - dux(i, j-I_ONE, k)) * cg%idy)**2  ! == d/dx d/dy
+                     sd = sd + ((abs(dux(i, j+I_ONE, k)) + abs(dux(i, j-I_ONE, k)) + this%aux * (daux(i, j+I_ONE, k) + daux(i, j-I_ONE, k))) * cg%idy)**2 + &
+                          &    ((abs(duy(i+I_ONE, j, k)) + abs(duy(i-I_ONE, j, k)) + this%aux * (dauy(i+I_ONE, j, k) + dauy(i-I_ONE, j, k))) * cg%idx)**2     ! d/dx d/dy
+                     ! to be exploited: (dauy(i+I_ONE, j, k) + dauy(i-I_ONE, j, k)) * cg%idx == (daux(i, j+I_ONE, k) + daux(i, j-I_ONE, k)) * cg%idy
                   endif
                   if (dom%has_dir(zdim)) then
                      ! d/dz d/dx
-                     sn = sn + 2 * ((dux(i, j, k+1) - dux(i, j, k-1)) * cg%idz)**2  ! == d/dx d/dz
-                     sd = sd + ((abs(dux(i, j, k+1)) + abs(dux(i, j, k-1)) + this%aux * (daux(i, j, k+1) + daux(i, j, k-1))) * cg%idz)**2 + &
-                          &    ((abs(duz(i+1, j, k)) + abs(duz(i-1, j, k)) + this%aux * (dauz(i+1, j, k) + dauz(i-1, j, k))) * cg%idx)**2     ! d/dx d/dz
-                     ! to be exploited: dauz(i+1, j, k) + dauz(i-1, j, k)) * cg%idx == (daux(i, j, k+1) + daux(i, j, k-1)) * cg%idz
+                     sn = sn + 2 * ((dux(i, j, k+I_ONE) - dux(i, j, k-I_ONE)) * cg%idz)**2  ! == d/dx d/dz
+                     sd = sd + ((abs(dux(i, j, k+I_ONE)) + abs(dux(i, j, k-I_ONE)) + this%aux * (daux(i, j, k+I_ONE) + daux(i, j, k-I_ONE))) * cg%idz)**2 + &
+                          &    ((abs(duz(i+I_ONE, j, k)) + abs(duz(i-I_ONE, j, k)) + this%aux * (dauz(i+I_ONE, j, k) + dauz(i-I_ONE, j, k))) * cg%idx)**2     ! d/dx d/dz
+                     ! to be exploited: dauz(i+I_ONE, j, k) + dauz(i-I_ONE, j, k)) * cg%idx == (daux(i, j, k+I_ONE) + daux(i, j, k-I_ONE)) * cg%idz
                   endif
                endif
 
                if (dom%has_dir(ydim)) then
                   ! d/dy d/dy
-                  sn = sn + ((duy(i, j+1, k) - duy(i, j-1, k)) * cg%idy)**2
-                  sd = sd + ((abs(duy(i, j+1, k)) + abs(duy(i, j-1, k)) + this%aux * (dauy(i, j+1, k) + dauy(i, j-1, k))) * cg%idy)**2
+                  sn = sn + ((duy(i, j+I_ONE, k) - duy(i, j-I_ONE, k)) * cg%idy)**2
+                  sd = sd + ((abs(duy(i, j+I_ONE, k)) + abs(duy(i, j-I_ONE, k)) + this%aux * (dauy(i, j+I_ONE, k) + dauy(i, j-I_ONE, k))) * cg%idy)**2
                   if (dom%has_dir(zdim)) then
                      ! d/dz d/dy
-                     sn = sn + 2 * ((duy(i, j, k+1) - duy(i, j, k-1)) * cg%idz)**2  ! == d/dy d/dz
-                     sd = sd + ((abs(duy(i, j, k+1)) + abs(duy(i, j, k-1)) + this%aux * (dauy(i, j, k+1) + dauy(i, j, k-1))) * cg%idz)**2 + &
-                          &    ((abs(duz(i, j+1, k)) + abs(duz(i, j-1, k)) + this%aux * (dauz(i, j+1, k) + dauz(i, j-1, k))) * cg%idy)**2     ! d/dy d/dz
-                     ! to be exploited: (dauz(i, j+1, k) + dauz(i, j-1, k)) * cg%idy == (dauy(i, j, k+1) + dauy(i, j, k-1)) * cg%idz
+                     sn = sn + 2 * ((duy(i, j, k+I_ONE) - duy(i, j, k-I_ONE)) * cg%idz)**2  ! == d/dy d/dz
+                     sd = sd + ((abs(duy(i, j, k+I_ONE)) + abs(duy(i, j, k-I_ONE)) + this%aux * (dauy(i, j, k+I_ONE) + dauy(i, j, k-I_ONE))) * cg%idz)**2 + &
+                          &    ((abs(duz(i, j+I_ONE, k)) + abs(duz(i, j-I_ONE, k)) + this%aux * (dauz(i, j+I_ONE, k) + dauz(i, j-I_ONE, k))) * cg%idy)**2     ! d/dy d/dz
+                     ! to be exploited: (dauz(i, j+I_ONE, k) + dauz(i, j-I_ONE, k)) * cg%idy == (dauy(i, j, k+I_ONE) + dauy(i, j, k-I_ONE)) * cg%idz
                   endif
                endif
 
                if (dom%has_dir(zdim)) then
                   ! d/dz d/dz
-                  sn = sn + ((duz(i, j, k+1) - duz(i, j, k-1)) * cg%idz)**2
-                  sd = sd + ((abs(duz(i, j, k+1)) + abs(duz(i, j, k-1)) + this%aux * (dauz(i, j, k+1) + dauz(i, j, k-1))) * cg%idz)**2
+                  sn = sn + ((duz(i, j, k+I_ONE) - duz(i, j, k-I_ONE)) * cg%idz)**2
+                  sd = sd + ((abs(duz(i, j, k+I_ONE)) + abs(duz(i, j, k-I_ONE)) + this%aux * (dauz(i, j, k+I_ONE) + dauz(i, j, k-I_ONE))) * cg%idz)**2
                endif
 
                if (sd > 0.) then
@@ -362,65 +381,68 @@ contains
                   endif
                endif
                if (this%iplot /= INVALID) cg%q(this%iplot)%arr(i, j, k) = r
-               max_r = max(max_r, r)
 
-               cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr)
+               if (r >= this%ref_thr) call cg%flag%set(i, j, k)
 
             enddo
          enddo
       enddo
-
-      cg%refine_flags%derefine = cg%refine_flags%derefine .or. (max_r < this%deref_thr)
+      call ppp_main%stop(L_label, PPP_AMR + PPP_CG)
 
    contains
 
       elemental real function dux(i, j, k)
+         use constants, only: I_ONE
          implicit none
-         integer, intent(in) :: i, j, k !< (x, y, z)-indices
-         dux = (p3d(i+1, j, k) - p3d(i-1, j, k)) * cg%idx
+         integer(kind=4), intent(in) :: i, j, k !< (x, y, z)-indices
+         dux = (p3d(i+I_ONE, j, k) - p3d(i-I_ONE, j, k)) * cg%idx
       end function dux
 
       elemental real function daux(i, j, k)
+         use constants, only: I_ONE
          implicit none
-         integer, intent(in) :: i, j, k !< (x, y, z)-indices
-         daux = (abs(p3d(i+1, j, k)) + abs(p3d(i-1, j, k))) * cg%idx
+         integer(kind=4), intent(in) :: i, j, k !< (x, y, z)-indices
+         daux = (abs(p3d(i+I_ONE, j, k)) + abs(p3d(i-I_ONE, j, k))) * cg%idx
       end function daux
 
       elemental real function duy(i, j, k)
+         use constants, only: I_ONE
          implicit none
-         integer, intent(in) :: i, j, k !< (x, y, z)-indices
-         duy = (p3d(i, j+1, k) - p3d(i, j-1, k)) * cg%idy
+         integer(kind=4), intent(in) :: i, j, k !< (x, y, z)-indices
+         duy = (p3d(i, j+I_ONE, k) - p3d(i, j-I_ONE, k)) * cg%idy
       end function duy
 
       elemental real function dauy(i, j, k)
+         use constants, only: I_ONE
          implicit none
-         integer, intent(in) :: i, j, k !< (x, y, z)-indices
-         dauy = (abs(p3d(i, j+1, k)) + abs(p3d(i, j-1, k))) * cg%idy
+         integer(kind=4), intent(in) :: i, j, k !< (x, y, z)-indices
+         dauy = (abs(p3d(i, j+I_ONE, k)) + abs(p3d(i, j-I_ONE, k))) * cg%idy
       end function dauy
 
       elemental real function duz(i, j, k)
+         use constants, only: I_ONE
          implicit none
-         integer, intent(in) :: i, j, k !< (x, y, z)-indices
-         duz = (p3d(i, j, k+1) - p3d(i, j, k-1)) * cg%idz
+         integer(kind=4), intent(in) :: i, j, k !< (x, y, z)-indices
+         duz = (p3d(i, j, k+I_ONE) - p3d(i, j, k-I_ONE)) * cg%idz
       end function duz
 
       elemental real function dauz(i, j, k)
+         use constants, only: I_ONE
          implicit none
-         integer, intent(in) :: i, j, k !< (x, y, z)-indices
-         dauz = (abs(p3d(i, j, k+1)) + abs(p3d(i, j, k-1))) * cg%idz
+         integer(kind=4), intent(in) :: i, j, k !< (x, y, z)-indices
+         dauz = (abs(p3d(i, j, k+I_ONE)) + abs(p3d(i, j, k-I_ONE))) * cg%idz
       end function dauz
 
    end subroutine refine_on_second_derivative
 
 !>
-!! \brief Refine/derefine based on ||grad u||
+!! \brief Refinement based on ||grad u||
 !! This is sensitive to gradients, but the thresholds must be rescaled, when you change units of the problem.
 !<
 
    subroutine refine_on_gradient(this, cg, p3d)
 
       use constants, only: INVALID
-      use domain,    only: dom
       use grid_cont, only: grid_container
 
       implicit none
@@ -429,35 +451,21 @@ contains
       type(grid_container), pointer,   intent(inout) :: cg   !< current grid piece
       real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least one layer of updated guardcells)
 
-      integer :: i, j, k
-      real :: r, max_r
+      integer(kind=4) :: i, j, k
+      real :: r
 
-      max_r = -huge(1.)
-
-      !> \todo implement how far we should look for (de)refinements
+      !> \todo implement how far we should look for refinements
 
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
                r = grad2(i, j, k)
                if (this%iplot /= INVALID) cg%q(this%iplot)%arr(i, j, k) = r
-               max_r = max(max_r, r)
-               cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr**2)
+               if (r >= this%ref_thr**2) call cg%flag%set(i, j, k)
                ! we can avoid calculating square root here
             enddo
          enddo
       enddo
-
-      ! check additional 1 perimeter of cells for derefinement
-      max_r = max(max_r, &
-           maxgradoverarea(cg%is-dom%D_x, cg%is-dom%D_x, cg%js-dom%D_y, cg%je+dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
-           maxgradoverarea(cg%ie+dom%D_x, cg%ie+dom%D_x, cg%js-dom%D_y, cg%je+dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
-           maxgradoverarea(cg%is, cg%ie, cg%js-dom%D_y, cg%js-dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
-           maxgradoverarea(cg%is, cg%ie, cg%je+dom%D_y, cg%je+dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
-           maxgradoverarea(cg%is, cg%ie, cg%js, cg%je, cg%ks-dom%D_z, cg%ks-dom%D_z), &
-           maxgradoverarea(cg%is, cg%ie, cg%js, cg%je, cg%ke+dom%D_z, cg%ke+dom%D_z) )
-
-      cg%refine_flags%derefine = cg%refine_flags%derefine .or. (max_r < this%deref_thr**2)
 
    contains
 
@@ -469,7 +477,7 @@ contains
 
          integer(kind=4), intent(in) :: i1, i2, j1, j2, k1, k2
 
-         integer :: i, j, k
+         integer(kind=4) :: i, j, k
 
          maxgradoverarea = -huge(1.)
 
@@ -495,9 +503,9 @@ contains
 
          implicit none
 
-         integer, intent(in) :: i !< x-index
-         integer, intent(in) :: j !< y-index
-         integer, intent(in) :: k !< z-index
+         integer(kind=4), intent(in) :: i !< x-index
+         integer(kind=4), intent(in) :: j !< y-index
+         integer(kind=4), intent(in) :: k !< z-index
 
          grad2 = (p3d(i+dom%D_x, j, k) - p3d(i-dom%D_x, j, k))**2 + &
               &  (p3d(i, j+dom%D_y, k) - p3d(i, j-dom%D_y, k))**2 + &
@@ -508,14 +516,13 @@ contains
    end subroutine refine_on_gradient
 
 !>
-!! \brief Refine/derefine based on ||grad u||/||u||
+!! \brief Refinement based on ||grad u||/||u||
 !! This is sensitive to changes of sign or strong gradients (such as fast approaching 0.)
 !<
 
    subroutine refine_on_relative_gradient(this, cg, p3d)
 
       use constants, only: INVALID
-      use domain,    only: dom
       use grid_cont, only: grid_container
 
       implicit none
@@ -524,10 +531,8 @@ contains
       type(grid_container), pointer,   intent(inout) :: cg   !< current grid piece
       real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs (should contain at least one layer of updated guardcells)
 
-      integer :: i, j, k
-      real :: r, max_r
-
-      max_r = -huge(1.)
+      integer(kind=4) :: i, j, k
+      real :: r
 
       !> \todo implement how far we should look for (de)refinements
 
@@ -536,23 +541,11 @@ contains
             do i = cg%is, cg%ie
                r = rel_grad2(i, j, k)
                if (this%iplot /= INVALID) cg%q(this%iplot)%arr(i, j, k) = r
-               max_r = max(max_r, r)
-               cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr**2)
+               if (r >= this%ref_thr**2) call cg%flag%set(i, j, k)
                ! we can avoid calculating square root here
             enddo
          enddo
       enddo
-
-      ! check additional 1 perimeter of cells for derefinement
-      max_r = max(max_r, &
-           maxrelgradoverarea(cg%is-dom%D_x, cg%is-dom%D_x, cg%js-dom%D_y, cg%je+dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
-           maxrelgradoverarea(cg%ie+dom%D_x, cg%ie+dom%D_x, cg%js-dom%D_y, cg%je+dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
-           maxrelgradoverarea(cg%is, cg%ie, cg%js-dom%D_y, cg%js-dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
-           maxrelgradoverarea(cg%is, cg%ie, cg%je+dom%D_y, cg%je+dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
-           maxrelgradoverarea(cg%is, cg%ie, cg%js, cg%je, cg%ks-dom%D_z, cg%ks-dom%D_z), &
-           maxrelgradoverarea(cg%is, cg%ie, cg%js, cg%je, cg%ke+dom%D_z, cg%ke+dom%D_z) )
-
-      cg%refine_flags%derefine = cg%refine_flags%derefine .or. (max_r < this%deref_thr**2)
 
    contains
 
@@ -564,7 +557,7 @@ contains
 
          integer(kind=4), intent(in) :: i1, i2, j1, j2, k1, k2
 
-         integer :: i, j, k
+         integer(kind=4) :: i, j, k
 
          maxrelgradoverarea = -huge(1.)
 
@@ -591,9 +584,9 @@ contains
 
          implicit none
 
-         integer, intent(in) :: i !< x-index
-         integer, intent(in) :: j !< y-index
-         integer, intent(in) :: k !< z-index
+         integer(kind=4), intent(in) :: i !< x-index
+         integer(kind=4), intent(in) :: j !< y-index
+         integer(kind=4), intent(in) :: k !< z-index
 
          rel_grad2 = 0.
 

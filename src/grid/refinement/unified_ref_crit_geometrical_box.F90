@@ -27,7 +27,7 @@
 
 #include "piernik.h"
 
-!> \brief Unified refinement criterion for a single point
+!> \brief Unified refinement criterion for a single box
 
 module unified_ref_crit_geometrical_box
 
@@ -39,12 +39,12 @@ module unified_ref_crit_geometrical_box
    private
    public :: urc_box
 
-!> \brief A type for point refinement
+!> \brief A type for box refinement
 
    type, extends(urc_geom) :: urc_box
-      real, dimension(ndims, LO:HI) :: coords  !< coordinates, where to refine
+      real, dimension(ndims, LO:HI)                          :: coords  !< coordinates, where to refine
       integer(kind=8), allocatable, dimension(:, :), private :: ijk_lo  !< integer coordinates of "bottom left corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
-      integer(kind=8), allocatable, dimension(:, :), private :: ijk_hi  !< integer coordinates ot "top right corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
+      integer(kind=8), allocatable, dimension(:, :), private :: ijk_hi  !< integer coordinates of "top right corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
    contains
       procedure          :: mark => mark_box
       procedure, private :: init_lev
@@ -76,7 +76,8 @@ contains
       this%level  = rp%level
       this%coords = rp%coords
 
-      allocate(this%ijk_lo(base_level_id:this%level, ndims), this%ijk_hi(base_level_id:this%level, ndims))
+      allocate(this%ijk_lo(base_level_id:this%level, ndims), &
+           &   this%ijk_hi(base_level_id:this%level, ndims))
       this%ijk_lo = uninit
       this%ijk_hi = uninit
       if (master) then
@@ -94,7 +95,7 @@ contains
 
    subroutine mark_box(this, cg)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI
+      use constants,  only: xdim, zdim, LO, HI
       use dataio_pub, only: die
       use grid_cont,  only: grid_container
 
@@ -103,23 +104,21 @@ contains
       class(urc_box),                intent(inout) :: this  !< an object invoking the type-bound procedure
       type(grid_container), pointer, intent(inout) :: cg    !< current grid piece
 
-      integer(kind=8), dimension(ndims) :: ijk_l, ijk_h
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: ijk
 
-      if (cg%l%id > this%level) return
+      if (this%enough_level(cg%l%id)) return
 
       if (allocated(this%ijk_lo) .neqv. allocated(this%ijk_hi)) call die("[unified_ref_crit_geometrical_box:mark_box] inconsistent alloc")
-
       if (.not. allocated(this%ijk_lo)) call die("[unified_ref_crit_geometrical_box:mark_box] ijk_{lo,hi} not allocated")
-      if (any(this%ijk_lo(cg%l%id, :) == uninit) .or. any(this%ijk_hi(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appears in the meantime
+
+      if ( any(this%ijk_lo(cg%l%id, :) == uninit) .or. &
+           any(this%ijk_hi(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appeared in the meantime
 
       if (all(this%ijk_hi(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk_lo(cg%l%id, :) <= cg%ijkse(:, HI))) then
-         ijk_l = min(max(int(this%ijk_lo(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
-         ijk_h = min(max(int(this%ijk_hi(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
+         ijk(:, LO) = min(max(int(this%ijk_lo(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
+         ijk(:, HI) = min(max(int(this%ijk_hi(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
 
-         if (cg%l%id < this%level) cg%refinemap(ijk_l(xdim):ijk_h(xdim), &
-              &                                 ijk_l(ydim):ijk_h(ydim), &
-              &                                 ijk_l(zdim):ijk_h(zdim)) = .true.
-         cg%refine_flags%derefine = .false.  ! this should go one level up (sanitizing)
+         call cg%flag%set(ijk)
       endif
 
    end subroutine mark_box
@@ -127,7 +126,7 @@ contains
 !>
 !! \brief Initialize ths%ijk
 !!
-!! \details Initialize uning available levels. If more refinements appear then call this again to reinitialize.
+!! \details Initialize using available levels. If more refinements appear then call this again to reinitialize.
 !>
 
    subroutine init_lev(this)
@@ -135,35 +134,22 @@ contains
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_t
       use constants,          only: LO, HI
-      use dataio_pub,         only: printinfo, msg
-      use domain,             only: dom
-      use mpisetup,           only: master
 
       implicit none
 
       class(urc_box), intent(inout)  :: this  !< an object invoking the type-bound procedure
 
       type(cg_level_connected_t), pointer :: l
-      logical, parameter :: verbose = .false.  ! for debugging only
 
       l => base%level
       do while (associated(l))
          if (l%l%id <= ubound(this%ijk_lo, dim=1)) then
-            if (any(this%ijk_lo(l%l%id, :) == uninit) .or. any(this%ijk_hi(l%l%id, :) == uninit)) then
-               where (dom%has_dir)
-                  this%ijk_lo(l%l%id, :) = l%l%off + floor((this%coords(:, LO) - dom%edge(:, LO))/dom%L_*l%l%n_d, kind=8)
-                  this%ijk_hi(l%l%id, :) = l%l%off + floor((this%coords(:, HI) - dom%edge(:, LO))/dom%L_*l%l%n_d, kind=8)
-                  ! Excessively large this%coords will result in FPE exception.
-                  ! If not trapped then huge() value will be assigned (checked on gfortran 7.3.1), which is safe.
-                  ! A wrapped value coming from integer overflow may be unsafe.
-               elsewhere
-                  this%ijk_lo(l%l%id, :) = l%l%off
-                  this%ijk_hi(l%l%id, :) = l%l%off
-               endwhere
-               if (verbose .and. master) then
-                  write(msg, '(a,i3,a,3i8,a,3i8,a)')"[URC box]   box coordinates at level ", l%l%id, " are: [ ", this%ijk_lo(l%l%id, :), " ]..[ ", this%ijk_hi(l%l%id, :), " ]"
-                  call printinfo(msg)
-               endif
+            if ( any(this%ijk_lo(l%l%id, :) == uninit) .or. &
+                 any(this%ijk_hi(l%l%id, :) == uninit)) then
+
+               this%ijk_lo(l%l%id, :) = this%coord2ind(this%coords(:, LO), l%l)
+               this%ijk_hi(l%l%id, :) = this%coord2ind(this%coords(:, HI), l%l)
+
             endif
          endif
          l => l%finer

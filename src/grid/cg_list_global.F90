@@ -207,7 +207,7 @@ contains
       if (I_TWO*this%ord_prolong_nb > dom%nb) call die("[cg_list_global:reg_var] Insufficient number of guardcells for requested prolongation stencil. Expected crash in cg_level_connected::prolong_bnd_from_coarser")
       ! I-TWO because our refinement factor is 2. and we want to fill all layers of fine guardcells
       ! Technically it is possible to maintain high order prolongation and thin layer of guardcells,
-      ! but fine boundaries that coincide tith coarse boundaries cannot be fully reconstructed
+      ! but fine boundaries that coincide with coarse boundaries cannot be fully reconstructed
       ! unless we communicate the missing part from another block (do multi-parent prolongation).
 
       cgl => this%first
@@ -231,6 +231,7 @@ contains
       use constants,  only: wa_n, fluid_n, uh_n, AT_NO_B, PIERNIK_INIT_FLUIDS
       use dataio_pub, only: die, code_progress
       use fluidindex, only: flind
+      use global,     only: ord_fluid_prolong
 #ifdef ISO
       use constants,  only: cs_i2_n
 #endif /* ISO */
@@ -253,9 +254,9 @@ contains
 
       if (code_progress < PIERNIK_INIT_FLUIDS) call die("[cg_list_global:register_fluids] Fluids are not yet initialized")
 
-      call this%reg_var(wa_n,                                                           multigrid=.true.)  !! Auxiliary array. Multigrid required only for CR diffusion
-      call this%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = flind%all)                !! Main array of all fluids' components, "u"
-      call this%reg_var(uh_n,                                             dim4 = flind%all)                !! Main array of all fluids' components (for t += dt/2)
+      call this%reg_var(wa_n, multigrid=.true.)  !! Auxiliary array. Multigrid required only for CR diffusion
+      call this%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = flind%all, ord_prolong = ord_fluid_prolong) !! Main array of all fluids' components, "u"
+      call this%reg_var(uh_n,                                             dim4 = flind%all, ord_prolong = ord_fluid_prolong) !! Main array of all fluids' components (for t += dt/2)
 
 #ifdef MAGNETIC
       call this%reg_var(mag_n,  vital = .true.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B, position=pia)  !! Main array of magnetic field's components, "b"
@@ -342,7 +343,11 @@ contains
 
    end subroutine check_na
 
-!> \brief Find grid pieces that do not belong to any list except for all_cg
+!>
+!! \brief Find grid pieces that do not belong to any list except for all_cg
+!!
+!! \todo Convert warn() to die()
+!<
 
    subroutine mark_orphans(this)
 
@@ -356,10 +361,11 @@ contains
       class(cg_list_global_t), intent(in) :: this          !< object invoking type-bound procedure
 
       type(cg_list_element), pointer :: cgl
-      integer ::i
+      integer :: i
       integer, parameter :: VERY_INVALID = 2*INVALID
+      integer, save :: na = 0, nm = 0, nf = 0, no = 0
 
-      ! scan all lists except for all_cg and set their membership to a bogus value
+      ! scan all lists except for all_cg for cg and set their membership to a bogus value
       do i = lbound(all_lists%entries(:), dim=1), ubound(all_lists%entries(:), dim=1)
          cgl => all_lists%entries(i)%lp%first
          if (all_lists%entries(i)%lp%label /= all_cg_n) then
@@ -370,10 +376,14 @@ contains
          endif
       enddo
 
-      ! mark all cg's with INVALID. If some aren't listed on all_cg then they should have %membership set to VERY_INVALID
+      ! mark all cg's with INVALID. If some aren't listed on all_cg then they should remain with %membership set to VERY_INVALID
       cgl => this%first
       do while (associated(cgl))
-         if (associated(cgl%cg)) cgl%cg%membership = INVALID
+         if (associated(cgl%cg)) then
+            cgl%cg%membership = INVALID
+         else
+            na = na + 1
+         endif
          cgl => cgl%nxt
       enddo
 
@@ -386,6 +396,7 @@ contains
                   write(msg, '(a,i7,a,i3,a)')"[cg_list_global:mark_orphans] Grid #",cgl%cg%grid_id, " at level ",cgl%cg%l%id," is hidden."
                   call warn(msg)
                   cgl%cg%membership = 0
+                  nm = nm + 1
                endif
                if (cgl%cg%membership == INVALID) cgl%cg%membership = 0
                cgl%cg%membership = cgl%cg%membership + 1
@@ -394,12 +405,13 @@ contains
          endif
       enddo
 
-      ! Now search fon not associated grid containers
+      ! Now search for not associated grid containers
       cgl => this%first
       do while (associated(cgl))
          if (associated(cgl%cg)) then
             if (cgl%cg%membership < 1) then
                call all_lists%forget(cgl%cg)
+               nf = nf + 1
             endif
          endif
          cgl => cgl%nxt
@@ -411,10 +423,16 @@ contains
             if (cgl%cg%membership < 1) then
                write(msg, '(a,i7,a,i3,a)')"[cg_list_global:mark_orphans] Grid #",cgl%cg%grid_id, " at level ",cgl%cg%l%id," is orphaned."
                call warn(msg)
+               no = no + 1
             endif
          endif
          cgl => cgl%nxt
       enddo
+
+      if (any([na, nm, nf, no] /= 0)) then
+         write(msg, '(4(a,i6))')"[cg_list_global:mark_orphans] na = ", na, ", nm =", nm, ", nf = ", nf, ", no = ", no
+         call warn(msg)
+      endif
 
    end subroutine mark_orphans
 

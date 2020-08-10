@@ -46,7 +46,6 @@
     maxiter = 1000000
     ! maxiter = 100000000 for better coloring of the leftmost part (period 2**18 bulb near F-M point)
     !smooth_map = .false.
-    deref_thr = 0.
     log_polar = .true.
 ! Feigenbaum-Myrberg point
     x_polar = -1.4011551890920505

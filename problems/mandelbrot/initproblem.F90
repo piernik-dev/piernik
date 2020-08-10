@@ -58,9 +58,8 @@ module initproblem
    real :: y_polar            !< y-coordinate for polar mode
    real :: c_polar            !< correct colouring with x-coordinate multiplied by this factor
    real :: ref_thr            !< threshold for refining a grid
-   real :: deref_thr          !< threshold for derefining a grid
 
-   namelist /PROBLEM_CONTROL/  order, maxiter, smooth_map, log_polar, x_polar, y_polar, c_polar, ref_thr, deref_thr
+   namelist /PROBLEM_CONTROL/  order, maxiter, smooth_map, log_polar, x_polar, y_polar, c_polar, ref_thr
 
    ! other private data
    character(len=dsetnamelen), parameter :: mand_n = "mand", re_n = "real", imag_n = "imag"
@@ -71,13 +70,18 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_reg_var_restart, user_vars_hdf5
+      use dataio_user, only: user_reg_var_restart
+#ifdef HDF5
+      use dataio_user, only: user_vars_hdf5
+#endif /* HDF5 */
       use user_hooks,  only: problem_refine_derefine
 
       implicit none
 
       user_reg_var_restart    => register_user_var
+#ifdef HDF5
       user_vars_hdf5          => mand_vars
+#endif /* HDF5 */
       problem_refine_derefine => mark_the_set
 
    end subroutine problem_pointers
@@ -103,7 +107,6 @@ contains
       y_polar = 0.
       c_polar = 0.
       ref_thr = 1.
-      deref_thr = .2
 
       if (master) then
 
@@ -130,7 +133,6 @@ contains
          lbuff(2) = log_polar
 
          rbuff(1) = ref_thr
-         rbuff(2) = deref_thr
          rbuff(3) = x_polar
          rbuff(4) = y_polar
          rbuff(5) = c_polar
@@ -150,7 +152,6 @@ contains
          log_polar  = lbuff(2)
 
          ref_thr    = rbuff(1)
-         deref_thr  = rbuff(2)
          x_polar    = rbuff(3)
          y_polar    = rbuff(4)
          c_polar    = rbuff(5)
@@ -164,8 +165,6 @@ contains
          if (master) call warn("[initproblem:read_problem_par] Only order == 2 is supported at the moment")
          order = 2
       endif
-
-      if (ref_thr <= deref_thr) call die("[initproblem:read_problem_par] ref_thr <= deref_thr")
 
       if (log_polar .and. master) then
          if (dom%edge(ydim, HI) - dom%edge(ydim, LO) < 0.999*dpi) call warn("[initproblem:read_problem_par] not covering full angle")
@@ -314,41 +313,38 @@ contains
 
       type(cg_list_element), pointer :: cgl
       real :: nitd, diffmax
-      integer :: i, j, k
+      integer(kind=4) :: i, j, k
 
       cgl => leaves%first
       do while (associated(cgl))
-         if (any(cgl%cg%leafmap)) then
+         associate (cg => cgl%cg)
             ! Cannot use mand_n as long as it stays uninitialized during second call to problem_refine_derefine in update_refinement
             ! wna%fi is vital and thus automagilaclly prolonged
             ! Possible fixes:
             ! * make mand_n vital
             ! * do not call problem_refine_derefine twice in update_refinement
-!!$            nitd = exp(maxval(cgl%cg%q(qna%ind(mand_n))%span(cgl%cg%ijkse), mask=cgl%cg%leafmap)) - &
-!!$                 & exp(minval(cgl%cg%q(qna%ind(mand_n))%span(cgl%cg%ijkse), mask=cgl%cg%leafmap))
+!!$            nitd = exp(maxval(cg%q(qna%ind(mand_n))%span(cg%ijkse), mask=cg%leafmap)) - &
+!!$                 & exp(minval(cg%q(qna%ind(mand_n))%span(cg%ijkse), mask=cg%leafmap))
 
             diffmax = -huge(1.)
             ! Look one cell beyond boundary to prevent unnecessary derefinements
-            do i = cgl%cg%is-dom%D_x, cgl%cg%ie+dom%D_x
-               do j = cgl%cg%js-dom%D_y, cgl%cg%je+dom%D_y
-                  do k = cgl%cg%ks-dom%D_z, cgl%cg%ke+dom%D_z
-                     nitd = maxval(abs(exp(cgl%cg%u(iarr_all_dn(1), i, j, k)) - [ &
-                          &            exp(cgl%cg%u(iarr_all_dn(1), i+dom%D_x, j, k)), &
-                          &            exp(cgl%cg%u(iarr_all_dn(1), i-dom%D_x, j, k)), &
-                          &            exp(cgl%cg%u(iarr_all_dn(1), i, j+dom%D_y, k)), &
-                          &            exp(cgl%cg%u(iarr_all_dn(1), i, j-dom%D_y, k)), &
-                          &            exp(cgl%cg%u(iarr_all_dn(1), i, j, k+dom%D_z)), &
-                          &            exp(cgl%cg%u(iarr_all_dn(1), i, j, k-dom%D_z)) ] ) )
-                     if ( i >= cgl%cg%is .and. i <= cgl%cg%ie .and. &
-                          j >= cgl%cg%js .and. j <= cgl%cg%je .and. &
-                          k >= cgl%cg%ks .and. k <= cgl%cg%ke) cgl%cg%refinemap(i, j, k) = (nitd >= ref_thr)
+            do i = cg%is-dom%D_x, cg%ie+dom%D_x
+               do j = cg%js-dom%D_y, cg%je+dom%D_y
+                  do k = cg%ks-dom%D_z, cg%ke+dom%D_z
+                     nitd = maxval(abs(exp(cg%u(iarr_all_dn(1), i, j, k)) - [ &
+                          &            exp(cg%u(iarr_all_dn(1), i+dom%D_x, j, k)), &
+                          &            exp(cg%u(iarr_all_dn(1), i-dom%D_x, j, k)), &
+                          &            exp(cg%u(iarr_all_dn(1), i, j+dom%D_y, k)), &
+                          &            exp(cg%u(iarr_all_dn(1), i, j-dom%D_y, k)), &
+                          &            exp(cg%u(iarr_all_dn(1), i, j, k+dom%D_z)), &
+                          &            exp(cg%u(iarr_all_dn(1), i, j, k-dom%D_z)) ] ) )
+                     if (nitd >= ref_thr) call cg%flag%set(i, j, k)
                      diffmax = max(diffmax, nitd)
                   enddo
                enddo
             enddo
-            cgl%cg%refine_flags%derefine = (diffmax <  deref_thr)
 
-         endif
+         end associate
          cgl => cgl%nxt
       enddo
 

@@ -229,9 +229,16 @@ contains
 
    subroutine update_everything(this)
 
+      use constants, only: PPP_AMR
+      use ppp,       only: ppp_main
+
       implicit none
 
       class(cg_level_t), intent(inout) :: this   !< object invoking type bound procedure
+
+      character(len=*), parameter :: lue_label = "level_update_everything"
+
+      call ppp_main%start(lue_label, PPP_AMR)
 
       call this%update_decomposition_properties
       call this%dot%update_global(this%first, this%cnt, this%l%off) ! communicate everything that was added before
@@ -240,6 +247,8 @@ contains
       call this%update_req     ! Perhaps this%find_neighbors added some new entries
       call this%dot%update_tot_se
       call this%print_segments
+
+      call ppp_main%stop(lue_label, PPP_AMR)
 
    end subroutine update_everything
 
@@ -302,13 +311,10 @@ contains
    subroutine update_decomposition_properties(this)
 
       use constants,  only: base_level_id, pLOR
-      use dataio_pub, only: warn
       use domain,     only: is_mpi_noncart, is_multicg, is_refined, is_uneven
-      use mpisetup,   only: proc, master, piernik_MPI_Allreduce, proc
+      use mpisetup,   only: proc, piernik_MPI_Allreduce, proc
 
       implicit none
-
-      logical, save :: warned = .false.
 
       class(cg_level_t), intent(inout) :: this   !< object invoking type bound procedure
 
@@ -317,10 +323,6 @@ contains
       if (is_refined) then
          is_mpi_noncart = .true.
          is_multicg = .true.
-         if (master .and. .not. warned) then
-            call warn("[cg_level:update_decomposition_properties] Refinements are experimental")
-            warned = .true.
-         endif
       endif
       if (is_mpi_noncart) is_uneven = .true.
 

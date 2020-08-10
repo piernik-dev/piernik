@@ -93,6 +93,10 @@ contains
 
       integer(kind=4) :: i
 
+#ifndef MAGNETIC
+      return
+#endif /* !MAGNETIC */
+
       write(msg,'(a)')"[divB:print_divB_norm]"
       do i = I_TWO, I_TWO*min(max_c, dom%nb), I_TWO  ! only even-order norms;  tricky: I_TWO*max_c
          call divB(i)
@@ -117,6 +121,10 @@ contains
       use named_array_list, only: qna
 
       implicit none
+
+#ifndef MAGNETIC
+      return
+#endif /* !MAGNETIC */
 
       if (qna%exists(divB_n)) then
          if (idivB /= qna%ind(divB_n)) call die ("[divB:divB_init] qna%exists(divB_n) .and. idivB /= qna%ind(divB_n)")
@@ -150,6 +158,11 @@ contains
       integer(kind=4) :: ord
       logical         :: ccB
       integer, parameter :: max_ord = 8
+
+#ifndef MAGNETIC
+      call warn("[[divB:divB] No magnetic field!")
+      return
+#endif /* !MAGNETIC */
 
       if (dom%geometry_type /= GEO_XYZ) call die("[divB:divB] non-cartesian geometry not implemented yet.")
 
@@ -296,6 +309,8 @@ contains
       integer :: spm1
 
       if ((coeff .equals. 0.) .or. span <=0 .or. span > dom%nb) call die("[divB:sixpoint] coeff == 0. or unacceptable span")
+
+      if (.not. associated(cg%b)) call die("[divB:sixpoint] no cg%b")
 
       if (cell_centered) then
          sixpoint = coeff * ( &

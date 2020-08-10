@@ -57,7 +57,7 @@ module multigrid_old_soln
 #ifdef HDF5
       procedure :: mark_and_create_attribute  !< Mark some old solutions for restarts and set up necessary attributes
       procedure :: read_os_attribute          !< Read old solutions identifiers, their times, and initialize history
-#endif
+#endif /* HDF5 */
    end type soln_history
 
    ! Namelist parameter
@@ -340,7 +340,7 @@ contains
 !<
    subroutine mark_and_create_attribute(this, file_id)
 
-      use constants,          only: I_ONE, AT_IGNORE, AT_NO_B, cbuff_len, I_ONE
+      use constants,          only: I_ONE, AT_IGNORE, AT_NO_B, cbuff_len, I_ONE, I_TWO
       use hdf5,               only: HID_T
       use named_array_list,   only: qna
       use mpisetup,           only: master
@@ -357,7 +357,7 @@ contains
       character(len=cbuff_len), allocatable, dimension(:) :: namelist
       real, allocatable, dimension(:) :: timelist
 
-      n = min(this%old%cnt(), ord_time_extrap + I_ONE)
+      n = max(min(this%old%cnt(), ord_time_extrap + I_ONE), I_TWO)  ! try to save at least 2 points to recover also sgpm
 
       if (n <= 0) return
 

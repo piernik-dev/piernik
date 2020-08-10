@@ -36,7 +36,7 @@ module refinement
 
    private
    public :: n_updAMR, oop_thr, ref_point, refine_points, ref_auto_param, refine_vars, level_min, level_max, inactive_name, bsize, &
-        &    ref_box, refine_boxes, init_refinement, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce, jeans_ref, jeans_plot
+        &    ref_box, refine_boxes, refine_zcyls, init_refinement, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce, jeans_ref, jeans_plot
 
    integer(kind=4), protected :: n_updAMR            !< How often to update the refinement structure
    logical,         protected :: strict_SFC_ordering !< Enforce strict SFC ordering to allow for optimized neighbour search
@@ -62,13 +62,13 @@ module refinement
       real, dimension(ndims, LO:HI) :: coords !< coordinates, where to refine
    end type ref_box
    type(ref_box), dimension(nshapes), protected :: refine_boxes !< Areas (boxes) of refinement to be used from problem.par: level, (x-y-z)-coordinates of lower left corner and (x-y-z)-coordinates of upper right corner
+   type(ref_box), dimension(nshapes), protected :: refine_zcyls !< z-axis cylinders that fit the specified boxes
 
    !> \brief Parameters of automagic refinement
    type :: ref_auto_param
       character(len=cbuff_len) :: rvar  !< name of the refinement variable
       character(len=cbuff_len) :: rname !< name of the refinement routine
       real :: ref_thr                   !< refinement threshold
-      real :: deref_thr                 !< derefinement threshold
       real :: aux                       !< auxiliary parameter (can be smoother or filter strength)
       logical :: plotfield              !< create a 3D array to keep the value of refinement criterion when set to .true.
    end type ref_auto_param
@@ -84,7 +84,7 @@ module refinement
    logical :: emergency_fix                                                    !< set to .true. if you want to call update_refinement ASAP
 
    namelist /AMR/ level_min, level_max, bsize, n_updAMR, strict_SFC_ordering, &
-        &         prefer_n_bruteforce, oop_thr, refine_points, refine_boxes, refine_vars, &
+        &         prefer_n_bruteforce, oop_thr, refine_points, refine_boxes, refine_zcyls, refine_vars, &
         &         jeans_ref, jeans_plot
 
 contains
@@ -102,6 +102,7 @@ contains
 !!   <tr><td> oop_thr             </td><td> 0.1     </td><td> real             </td><td> \copydoc refinement::oop_thr             </td></tr>
 !!   <tr><td> refine_points(10)   </td><td> none    </td><td> integer, 3*real  </td><td> \copydoc refinement::refine_points       </td></tr>
 !!   <tr><td> refine_boxes(10)    </td><td> none    </td><td> integer, 6*real  </td><td> \copydoc refinement::refine_boxes        </td></tr>
+!!   <tr><td> refine_zcyls(10)    </td><td> none    </td><td> integer, 6*real  </td><td> \copydoc refinement::refine_zcyls        </td></tr>
 !!   <tr><td> refine_vars(10)     </td><td> none    </td><td> 2*string, 3*real </td><td> \copydoc refinement::refine_vars         </td></tr>
 !!   <tr><td> prefer_n_bruteforce </td><td> .false. </td><td> logical          </td><td> \copydoc refinement::prefer_n_bruteforce </td></tr>
 !!   <tr><td> strict_SFC_ordering </td><td> .false. </td><td> logical          </td><td> \copydoc refinement::strict_SFC_ordering </td></tr>
@@ -132,7 +133,8 @@ contains
       oop_thr = 0.1
       refine_points(:) = ref_point(base_level_id-1, [ 0., 0., 0.] )
       refine_boxes (:) = ref_box  (base_level_id-1, reshape([ 0., 0., 0., 0., 0., 0.], [ndims, HI-LO+I_ONE] ) )
-      refine_vars  (:) = ref_auto_param (inactive_name, inactive_name, 0., 0., 0., .false.)
+      refine_zcyls(:)  = refine_boxes (:)
+      refine_vars  (:) = ref_auto_param (inactive_name, inactive_name, 0., 0., .false.)
       jeans_ref = 0.       !< inactive by default, 4. is the absolute minimum for reasonable use
       jeans_plot = .false.
 
@@ -170,8 +172,9 @@ contains
          ibuff(2) = level_max
          ibuff(3) = n_updAMR
          ibuff(4:3+ndims) = bsize
-         ibuff(11        :10+  nshapes) = refine_points(:)%level
-         ibuff(11+nshapes:10+2*nshapes) = refine_boxes (:)%level
+         ibuff(11          :10+  nshapes) = refine_points(:)%level
+         ibuff(11+  nshapes:10+2*nshapes) = refine_boxes (:)%level
+         ibuff(11+2*nshapes:10+3*nshapes) = refine_zcyls (:)%level
 
          lbuff(1) = jeans_plot
          lbuff(2) = strict_SFC_ordering
@@ -183,15 +186,26 @@ contains
          rbuff(3          :2+  nshapes) = refine_points(:)%coords(xdim)
          rbuff(3+  nshapes:2+2*nshapes) = refine_points(:)%coords(ydim)
          rbuff(3+2*nshapes:2+3*nshapes) = refine_points(:)%coords(zdim)
+
          rbuff(3+3*nshapes:2+4*nshapes) = refine_boxes (:)%coords(xdim, LO)
          rbuff(3+4*nshapes:2+5*nshapes) = refine_boxes (:)%coords(xdim, HI)
          rbuff(3+5*nshapes:2+6*nshapes) = refine_boxes (:)%coords(ydim, LO)
          rbuff(3+6*nshapes:2+7*nshapes) = refine_boxes (:)%coords(ydim, HI)
          rbuff(3+7*nshapes:2+8*nshapes) = refine_boxes (:)%coords(zdim, LO)
          rbuff(3+8*nshapes:2+9*nshapes) = refine_boxes (:)%coords(zdim, HI)
-         rbuff(3+9*nshapes                   :2+9*nshapes+  n_ref_auto_param) = refine_vars(:)%ref_thr
-         rbuff(3+9*nshapes+  n_ref_auto_param:2+9*nshapes+2*n_ref_auto_param) = refine_vars(:)%deref_thr
-         rbuff(3+9*nshapes+2*n_ref_auto_param:2+9*nshapes+3*n_ref_auto_param) = refine_vars(:)%aux
+
+         rbuff(3+ 9*nshapes:2+10*nshapes) = refine_zcyls (:)%coords(xdim, LO)
+         rbuff(3+10*nshapes:2+11*nshapes) = refine_zcyls (:)%coords(xdim, HI)
+         rbuff(3+11*nshapes:2+12*nshapes) = refine_zcyls (:)%coords(ydim, LO)
+         rbuff(3+12*nshapes:2+13*nshapes) = refine_zcyls (:)%coords(ydim, HI)
+         rbuff(3+13*nshapes:2+14*nshapes) = refine_zcyls (:)%coords(zdim, LO)
+         rbuff(3+14*nshapes:2+15*nshapes) = refine_zcyls (:)%coords(zdim, HI)
+
+         rbuff(3+15*nshapes                   :2+15*nshapes+  n_ref_auto_param) = refine_vars(:)%ref_thr
+         rbuff(3+15*nshapes+  n_ref_auto_param:2+15*nshapes+2*n_ref_auto_param) = refine_vars(:)%aux
+
+         if (2+15*nshapes+2*n_ref_auto_param > ubound(rbuff, dim=1)) &
+              call die("[refinement:init_refinement] run out of buffer_dim")
 
       endif
 
@@ -209,8 +223,9 @@ contains
          level_max = ibuff(2)
          n_updAMR  = ibuff(3)
          bsize     = ibuff(4:3+ndims)
-         refine_points(:)%level = ibuff(11        :10+  nshapes)
-         refine_boxes (:)%level = ibuff(11+nshapes:10+2*nshapes)
+         refine_points(:)%level = ibuff(11          :10+  nshapes)
+         refine_boxes (:)%level = ibuff(11+  nshapes:10+2*nshapes)
+         refine_zcyls (:)%level = ibuff(11+2*nshapes:10+3*nshapes)
 
          jeans_plot               = lbuff(1)
          strict_SFC_ordering      = lbuff(2)
@@ -222,15 +237,23 @@ contains
          refine_points(:)%coords(xdim)     = rbuff(3          :2+  nshapes)
          refine_points(:)%coords(ydim)     = rbuff(3+  nshapes:2+2*nshapes)
          refine_points(:)%coords(zdim)     = rbuff(3+2*nshapes:2+3*nshapes)
+
          refine_boxes (:)%coords(xdim, LO) = rbuff(3+3*nshapes:2+4*nshapes)
          refine_boxes (:)%coords(xdim, HI) = rbuff(3+4*nshapes:2+5*nshapes)
          refine_boxes (:)%coords(ydim, LO) = rbuff(3+5*nshapes:2+6*nshapes)
          refine_boxes (:)%coords(ydim, HI) = rbuff(3+6*nshapes:2+7*nshapes)
          refine_boxes (:)%coords(zdim, LO) = rbuff(3+7*nshapes:2+8*nshapes)
          refine_boxes (:)%coords(zdim, HI) = rbuff(3+8*nshapes:2+9*nshapes)
-         refine_vars  (:)%ref_thr          = rbuff(3+9*nshapes                   :2+9*nshapes+  n_ref_auto_param)
-         refine_vars  (:)%deref_thr        = rbuff(3+9*nshapes+  n_ref_auto_param:2+9*nshapes+2*n_ref_auto_param)
-         refine_vars  (:)%aux              = rbuff(3+9*nshapes+2*n_ref_auto_param:2+9*nshapes+3*n_ref_auto_param)
+
+         refine_zcyls (:)%coords(xdim, LO) = rbuff(3+ 9*nshapes:2+10*nshapes)
+         refine_zcyls (:)%coords(xdim, HI) = rbuff(3+10*nshapes:2+11*nshapes)
+         refine_zcyls (:)%coords(ydim, LO) = rbuff(3+11*nshapes:2+12*nshapes)
+         refine_zcyls (:)%coords(ydim, HI) = rbuff(3+12*nshapes:2+13*nshapes)
+         refine_zcyls (:)%coords(zdim, LO) = rbuff(3+13*nshapes:2+14*nshapes)
+         refine_zcyls (:)%coords(zdim, HI) = rbuff(3+14*nshapes:2+15*nshapes)
+
+         refine_vars  (:)%ref_thr          = rbuff(3+15*nshapes                   :2+15*nshapes+  n_ref_auto_param)
+         refine_vars  (:)%aux              = rbuff(3+15*nshapes+  n_ref_auto_param:2+15*nshapes+2*n_ref_auto_param)
 
       endif
 
