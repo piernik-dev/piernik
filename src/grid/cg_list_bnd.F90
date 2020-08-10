@@ -198,8 +198,9 @@ contains
 
    subroutine internal_boundaries(this, ind, tgt3d, dir, nocorners)
 
-      use constants, only: xdim, zdim, cor_dim
+      use constants, only: xdim, zdim, cor_dim, PPP_AMR
       use domain,    only: dom
+      use ppp,       only: ppp_main
 
       implicit none
 
@@ -210,6 +211,7 @@ contains
       logical,         optional, intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       logical, dimension(xdim:cor_dim) :: dmask
+      character(len=*), parameter :: ibl_label = "internal_boundaries_MPI_local", ibm_label = "internal_boundaries_MPI_merged", ib1_label = "internal_boundaries_MPI_1by1"
 
       dmask(xdim:zdim) = dom%has_dir
       if (present(dir)) then
@@ -220,11 +222,18 @@ contains
       dmask(cor_dim) = .true.
       if (present(nocorners)) dmask(cor_dim) = .not. nocorners
 
+      call ppp_main%start(ibl_label, PPP_AMR)
       call internal_boundaries_local(this, ind, tgt3d, dmask)
+      call ppp_main%stop(ibl_label, PPP_AMR)
+
       if (this%ms%valid) then
+         call ppp_main%start(ibm_label, PPP_AMR)
          call internal_boundaries_MPI_merged(this, ind, tgt3d, dmask)
+         call ppp_main%stop(ibm_label, PPP_AMR)
       else
+         call ppp_main%start(ib1_label, PPP_AMR)
          call internal_boundaries_MPI_1by1(this, ind, tgt3d, dmask)
+         call ppp_main%stop(ib1_label, PPP_AMR)
       endif
 
    end subroutine internal_boundaries
@@ -818,7 +827,13 @@ contains
       use named_array_list,      only: wna
 #ifdef COSM_RAYS
       use initcosmicrays,        only: smallecr
+#ifdef COSM_RAY_ELECTRONS
+      use initcrspectrum,        only: smallcree, smallcren
+      use initcosmicrays,        only: iarr_cre_e, iarr_cre_n
+      use fluidindex,            only: iarr_all_crn
+#else  /* !COSM_RAY_ELECTRONS */
       use fluidindex,            only: iarr_all_crs
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
 #ifdef GRAV
       use constants,             only: BND_OUTH, BND_OUTHD, I_ZERO
@@ -869,7 +884,13 @@ contains
                      l(dir,:) = cg%ijkse(dir,side)+ssign*ib
                      cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
 #ifdef COSM_RAYS
+#ifdef COSM_RAY_ELECTRONS
+                     cg%u(iarr_all_crn,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
+                     cg%u(iarr_cre_n,  l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcren   !< CRESP number density component
+                     cg%u(iarr_cre_e,  l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcree   !< CRESP energy density component
+#else /* !COSM_RAY_ELECTRONS */
                      cg%u(iarr_all_crs,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
                   enddo
                case (BND_OUTD)
@@ -880,7 +901,13 @@ contains
                      cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                      !> \deprecated BEWARE: use of uninitialized value on first call (a side effect of r1726)
 #ifdef COSM_RAYS
+#ifdef COSM_RAY_ELECTRONS
+                     cg%u(iarr_all_crn,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
+                     cg%u(iarr_cre_n,  l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcren   !< CRESP number density component
+                     cg%u(iarr_cre_e,  l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcree   !< CRESP energy density component
+#else /* !COSM_RAY_ELECTRONS */
                      cg%u(iarr_all_crs,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
                   enddo
                   l(dir,:) = cg%ijkse(dir,side) - [dom%nb, 1_INT4] +(dom%nb+1_INT4)*(side-LO)

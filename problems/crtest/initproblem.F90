@@ -50,14 +50,18 @@ contains
 
    subroutine problem_pointers
 
+#ifdef HDF5
       use dataio_user, only: user_vars_hdf5
+#endif /* HDF5 */
       use user_hooks,  only: problem_customize_solution, finalize_problem, late_initial_conditions, problem_domain_update
 
       implicit none
 
       problem_customize_solution => check_norm_wrapper
       finalize_problem           => check_norm
+#ifdef HDF5
       user_vars_hdf5             => crtest_analytic_ecr1
+#endif /* HDF5 */
       late_initial_conditions    => cr_late_init
       problem_domain_update      => cr_dist_to_edge
 
@@ -413,7 +417,7 @@ contains
          case ("acr1")
             tab(:,:,:) = real(cg%q(qna%ind(aecr1_n))%span(cg%ijkse), kind(tab))
          case ("err1")
-            tab(:,:,:) = cg%q(qna%ind(aecr1_n))%span(cg%ijkse) - cg%u(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            tab(:,:,:) = cg%u(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%q(qna%ind(aecr1_n))%span(cg%ijkse)
          case default
             ierrh = -1
       end select

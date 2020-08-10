@@ -30,11 +30,15 @@
 !<
 module snsources
 ! pulled by SN_SRC
+
+   use constants, only: ndims, LO, HI
+
    implicit none
+
    private
    public :: random_sn, init_snsources, r_sn, nsn
 #ifdef COSM_RAYS
-   public :: cr_sn
+   public :: cr_sn, amp_ecr_sn
 #endif /* COSM_RAYS */
 #ifdef HDF5
    public :: read_snsources_from_restart, write_snsources_to_restart
@@ -43,16 +47,16 @@ module snsources
    public :: sn_shear
 #endif /* SHEAR */
 
-   integer, save      :: nsn, nsn_last
-   real               :: e_sn                !< energy per supernova
-   real               :: f_sn                !< frequency of SN
-   real               :: f_sn_kpc2           !< frequency of SN per kpc^2
-   real               :: h_sn                !< galactic height in SN gaussian distribution ?
-   real               :: r_sn                !< radius of SN
+   integer                                 :: nsn, nsn_last
+   real                                    :: e_sn                !< energy per supernova [erg]
+   real                                    :: f_sn                !< frequency of SN
+   real                                    :: f_sn_kpc2           !< frequency of SN per kpc^2
+   real                                    :: h_sn                !< galactic height in SN gaussian distribution ?
+   real                                    :: r_sn                !< radius of SN
+   integer(kind=4), dimension(ndims,LO:HI) :: auxper
+   real                                    :: gnorm               !< gauss distribution normalization factor
 #ifdef COSM_RAYS
-   real, parameter    :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    !< thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
-   real               :: amp_ecr_sn          !< cosmic ray explosion amplitude in units: e_0 = 1/(5/3-1)*rho_0*c_s0**2  rho_0=1.67e-24g/cm**3, c_s0 = 7km/s
-   real               :: amp_cr_sn           !< default aplitude of CR in SN bursts
+   real                                    :: amp_ecr_sn          !< cosmic ray explosion amplitude
 #endif /* COSM_RAYS */
 
    namelist /SN_SOURCES/ e_sn, h_sn, r_sn, f_sn_kpc2
@@ -76,21 +80,23 @@ contains
 !<
    subroutine init_snsources
 
-      use constants,      only: PIERNIK_INIT_GRID, two, xdim, ydim
+      use constants,      only: PIERNIK_INIT_GRID, xdim, ydim, zdim, pi
       use dataio_pub,     only: nh                  ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, code_progress
       use domain,         only: dom
       use mpisetup,       only: rbuff, master, slave, piernik_MPI_Bcast
-      use units,          only: kpc, pc
+      use units,          only: erg, kpc, Myr
 #ifdef COSM_RAYS
       use initcosmicrays, only: cr_eff
 #endif /* COSM_RAYS */
 
       implicit none
 
+      integer(kind=4) :: id
+
       if (code_progress < PIERNIK_INIT_GRID) call die("[snsources:init_snsources] grid or fluids/cosmicrays not initialized.")
 
-      e_sn      = 4.96e6
+      e_sn      = 1.e51
       h_sn      = 0.0
       r_sn      = 0.0
       f_sn_kpc2 = 0.0
@@ -127,25 +133,25 @@ contains
          f_sn_kpc2 = rbuff(4)
       endif
 
+      if (all(dom%has_dir)) then
+         gnorm = 1./(16./9.*pi*r_sn**3)
+      else
+         gnorm = 1./(pi*r_sn**2)
+      endif
+
 #ifdef COSM_RAYS
-      amp_ecr_sn = e_sn*cr_eff/(r_sn/pc)**3
-      amp_cr_sn  = amp_ecr_sn *ethu
+      amp_ecr_sn = cr_eff * e_sn * erg * gnorm
 #endif /* COSM_RAYS */
 
-      if (dom%has_dir(xdim)) then
-         f_sn = f_sn_kpc2 * dom%L_(xdim)/kpc
-      else
-         f_sn = f_sn_kpc2 * two*r_sn/kpc
-      endif
-
-      if (dom%has_dir(ydim)) then
-         f_sn = f_sn * dom%L_(ydim)/kpc
-      else
-         f_sn = f_sn * two*r_sn/kpc
-      endif
+      f_sn = f_sn_kpc2 / Myr * dom%L_(xdim) * dom%L_(ydim) / kpc**2
 
       nsn_last = 0
       nsn      = 0
+
+      auxper = 0
+      do id = xdim, zdim
+         if (dom%periodic(id) .and. dom%has_dir(id)) auxper(id,:) = [-1, 1]
+      enddo
 
    end subroutine init_snsources
 
@@ -154,7 +160,6 @@ contains
 !<
    subroutine random_sn
 
-      use constants, only: ndims
       use global,    only: t, cfl_violated
 
       implicit none
@@ -172,7 +177,7 @@ contains
          call rand_coords(snpos)
 
 #ifdef COSM_RAYS
-         call cr_sn(snpos,amp_cr_sn)
+         call cr_sn(snpos,amp_ecr_sn)
 #endif /* COSM_RAYS */
 
       enddo
@@ -189,11 +194,11 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: ndims, xdim, ydim, zdim, LO, HI
+      use constants,      only: xdim, ydim, zdim
       use domain,         only: dom
       use grid_cont,      only: grid_container
 #ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: cr_table, cr_primary, eCRSP, icr_H1, icr_C12, icr_N14, icr_O16
+      use cr_data,        only: cr_table, cr_mass, cr_primary, eCRSP, icr_H1, icr_C12, icr_N14, icr_O16
       use initcosmicrays, only: iarr_crn
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
@@ -207,7 +212,8 @@ contains
       real, dimension(ndims), intent(in) :: pos
       real,                   intent(in) :: ampl
       integer                            :: i, j, k, ipm, jpm
-      real                               :: decr, ysna, xr, yr, zr
+      real                               :: decr, ysna
+      real, dimension(ndims)             :: posr
       type(cg_list_element), pointer     :: cgl
       type(grid_container),  pointer     :: cg
 #ifdef SHEAR
@@ -229,38 +235,38 @@ contains
 #endif /* !SHEAR */
 
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-            zr = ((cg%z(k)-pos(zdim))/r_sn)**2
+            posr(zdim) = ((cg%z(k)-pos(zdim))/r_sn)**2
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
 
                   decr = 0.0
-                  do ipm = -1, 1
-                     xr = ((cg%x(i)-pos(xdim) + real(ipm)*dom%L_(xdim))/r_sn)**2
+                  do ipm = auxper(xdim,LO), auxper(xdim,HI)
+                     posr(xdim) = ((cg%x(i)-pos(xdim) + real(ipm)*dom%L_(xdim))/r_sn)**2
 #ifdef SHEAR
                      ysna = ysnoi(ipm+2)
 #endif /* SHEAR */
-                     do jpm = -1, 1
-                        yr = ((cg%y(j)-ysna + real(jpm)*dom%L_(ydim))/r_sn)**2
+                     do jpm = auxper(ydim,LO), auxper(ydim,HI)
+                        posr(ydim) = ((cg%y(j)-ysna + real(jpm)*dom%L_(ydim))/r_sn)**2
                         ! BEWARE:  for num < -744.6 the exp(num) is the underflow
-                        decr = decr + exp(-(xr + yr + zr))
+                        decr = decr + exp(-sum(posr, mask=dom%has_dir))
                      enddo
                   enddo
                   decr = decr * ampl
 
 #ifdef COSM_RAYS_SOURCES
                   if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) + decr
-                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12))*12*decr
-                  if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14))*14*decr
-                  if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16))*16*decr
+                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12))*cr_mass(cr_table(icr_C12))*decr
+                  if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14))*cr_mass(cr_table(icr_N14))*decr
+                  if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16))*cr_mass(cr_table(icr_O16))*decr
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
                   e_tot_sn = decr * cre_eff
                   if (e_tot_sn .gt. smallcree) then
                      cresp%n =  0.0;  cresp%e = 0.0
                      call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn) !< injecting source spectrum scaled with e_tot_sn
+                     cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n   !< update, TODO need to talk to the team if this should be inside if-clause
+                     cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e   !< if outside, cresp%n and cresp%e needs to be zeroed
                   endif
-                  cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
-                  cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
 #endif /* COSM_RAY_ELECTRONS */
 
                enddo
@@ -279,7 +285,7 @@ contains
 !<
    subroutine rand_coords(pos)
 
-      use constants,   only: ndims, xdim, ydim, zdim, LO
+      use constants,   only: xdim, ydim, zdim
       use domain,      only: dom
 
       implicit none
@@ -302,7 +308,7 @@ contains
 #ifdef SHEAR
    subroutine sn_shear(cg, ysnoi)
 
-      use constants,   only: ydim, LO, HI
+      use constants,   only: ydim
       use dataio_pub,  only: die
       use domain,      only: is_multicg, dom
       use grid_cont,   only: grid_container

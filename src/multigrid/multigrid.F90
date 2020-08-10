@@ -63,8 +63,6 @@ contains
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>level_depth          </td><td>1      </td><td>integer value </td><td>\copydoc multigrid::init_multigrid::level_depth</td></tr>
 !! <tr><td>ord_prolong          </td><td>0      </td><td>integer value </td><td>\copydoc multigridvars::ord_prolong          </td></tr>
-!! <tr><td>ord_prolong_face_norm</td><td>0      </td><td>integer value </td><td>\copydoc multigridvars::ord_prolong_face_norm</td></tr>
-!! <tr><td>ord_prolong_face_par </td><td>0      </td><td>integer value </td><td>\copydoc multigridvars::ord_prolong_face_par </td></tr>
 !! <tr><td>stdout               </td><td>.false.</td><td>logical       </td><td>\copydoc multigridvars::stdout               </td></tr>
 !! <tr><td>verbose_vcycle       </td><td>.false.</td><td>logical       </td><td>\copydoc multigridvars::verbose_vcycle       </td></tr>
 !! <tr><td>do_ascii_dump        </td><td>.false.</td><td>logical       </td><td>\copydoc global::do_ascii_dump               </td></tr>
@@ -76,13 +74,13 @@ contains
    subroutine multigrid_par
 
       use cg_list_global,      only: all_cg
-      use constants,           only: PIERNIK_INIT_DOMAIN, O_INJ, O_LIN, O_I2, O_D3
+      use constants,           only: PIERNIK_INIT_DOMAIN, O_LIN, O_D3
       use dataio_pub,          only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
       use domain,              only: dom
       use global,              only: dirty_debug, do_ascii_dump, show_n_dirtys !< \warning: alien variables go to local namelist
       use mpisetup,            only: master, slave, nproc, ibuff, lbuff, piernik_MPI_Bcast
-      use multigridvars,       only: single_base, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, &
+      use multigridvars,       only: single_base, ord_prolong, stdout, verbose_vcycle, tot_ts, &
            &                         source_n, solution_n, defect_n, correction_n, source, solution, defect, correction
       use named_array_list,    only: qna
 #ifdef SELF_GRAV
@@ -96,7 +94,7 @@ contains
 
       logical, save         :: frun = .true.          !< First run flag
 
-      namelist /MULTIGRID_SOLVER/ level_depth, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, do_ascii_dump, dirty_debug, show_n_dirtys
+      namelist /MULTIGRID_SOLVER/ level_depth, ord_prolong, stdout, verbose_vcycle, do_ascii_dump, dirty_debug, show_n_dirtys
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized")
       ! This check is too weak (geometry), arrays are required only for multigrid_gravity
@@ -107,8 +105,6 @@ contains
       ! Default values for namelist variables
       level_depth           = level_incredible
       ord_prolong           = O_D3
-      ord_prolong_face_norm = O_I2
-      ord_prolong_face_par  = O_INJ
       show_n_dirtys         = 16
       ! May all the logical parameters be .false. by default
       stdout                = .false.
@@ -136,9 +132,7 @@ contains
 
          ibuff(1) = level_depth
          ibuff(2) = ord_prolong
-         ibuff(3) = ord_prolong_face_norm
-         ibuff(4) = ord_prolong_face_par
-         ibuff(5) = show_n_dirtys
+         ibuff(3) = show_n_dirtys
 
          lbuff(1) = stdout
          lbuff(2) = verbose_vcycle
@@ -154,9 +148,7 @@ contains
 
          level_depth           = ibuff(1)
          ord_prolong           = int(ibuff(2), kind=4)
-         ord_prolong_face_norm = int(ibuff(3), kind=4)
-         ord_prolong_face_par  = int(ibuff(4), kind=4)
-         show_n_dirtys         = ibuff(5)
+         show_n_dirtys         = ibuff(3)
 
          stdout           = lbuff(1)
          verbose_vcycle   = lbuff(2)
@@ -181,10 +173,6 @@ contains
 #endif /* COSM_RAYS */
 
       !! Sanity checks
-      if (ord_prolong_face_norm < O_INJ) then
-         if (master) call warn("[multigrid:init_multigrid] ord_prolong_face_norm < 0 is not defined, defaulting to 0")
-         ord_prolong_face_norm = O_INJ
-      endif
       if (ord_prolong == -1) ord_prolong = O_LIN
 
       tot_ts = 0.

@@ -61,10 +61,18 @@ contains
 
       use constants,        only: RTVD_SPLIT, RIEMANN_SPLIT, HLLC_SPLIT
       use dataio_pub,       only: die
+      use domain,           only: dom, is_refined
       use global,           only: which_solver
       use fluidupdate_hllc, only: fluid_update_simple
+      use ppp,              only: ppp_main
 
       implicit none
+
+      character(len=*), parameter :: fu_label = "fluid_update"
+
+      call ppp_main%start(fu_label)
+
+      if (is_refined .and. (mod(dom%nb, 2) == 1)) call die("[fluidupdate:fluid_update] odd number of guardcells is known to cause inaccuracies in (M)HD and nonconvergence of V-cycles")
 
       select case (which_solver)
          case (HLLC_SPLIT)
@@ -74,6 +82,7 @@ contains
          case default
             call die("[fluidupdate:fluid_update] unknown solver")
       end select
+      call ppp_main%stop(fu_label)
 
    end subroutine fluid_update
 
@@ -133,11 +142,12 @@ contains
       use fargo,               only: make_fargosweep
       use global,              only: skip_sweep, use_fargo
       use hdc,                 only: glmdamping, eglm
+      use ppp,                 only: ppp_main
       use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
       use global,              only: t, dt
-      use gravity,             only: source_terms_grav
+      use gravity,             only: source_terms_grav, compute_h_gpot
       use particle_pub,        only: pset, psolver
 #endif /* GRAV */
 #ifdef COSM_RAYS
@@ -156,6 +166,7 @@ contains
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
       integer(kind=4) :: s, sFRST, sLAST, sCHNG
+      character(len=*), parameter :: sw3_label = "sweeps"
 
       if (forward) then
          sFRST = xdim ; sLAST = zdim ; sCHNG = I_ONE
@@ -168,7 +179,7 @@ contains
 #endif /* SHEAR */
 
 #ifdef GRAV
-      call source_terms_grav
+      call compute_h_gpot
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
@@ -190,6 +201,7 @@ contains
 
       ! The following block of code may be treated as a 3D (M)HD solver.
       ! Don't put anything inside unless you're sure it should belong to the (M)HD solver.
+      call ppp_main%start(sw3_label)
       if (use_fargo) then
          if (.not.skip_sweep(zdim)) call make_adv_sweep(zdim, forward)
          if (.not.skip_sweep(xdim)) call make_adv_sweep(xdim, forward)
@@ -199,8 +211,10 @@ contains
             if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
          enddo
       endif
+      call ppp_main%stop(sw3_label)
 
 #ifdef GRAV
+      call source_terms_grav
       if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
 #endif /* GRAV */
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)

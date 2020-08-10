@@ -38,8 +38,8 @@ module mpisetup
    implicit none
 
    private
-   public :: cleanup_mpi, init_mpi, inflate_req, &
-        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, mpi_err, procmask, &
+   public :: cleanup_mpi, init_mpi, inflate_req, bigbang, &
+        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, mpi_err, &
         &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi, is_spawned, &
         &    piernik_MPI_Allreduce, piernik_MPI_Barrier, piernik_MPI_Bcast, report_to_master, &
         &    report_string_to_master
@@ -51,6 +51,7 @@ module mpisetup
    integer(kind=4), protected :: intercomm      !< intercommunicator
    integer(kind=4) :: mpi_err                   !< error status
    integer(kind=INT4), parameter :: FIRST = 0   !< the rank of the master process
+   real(kind=8), protected    :: bigbang
 
    logical, protected :: master      !< .True. if proc == FIRST
    logical, protected :: slave       !< .True. if proc != FIRST
@@ -62,8 +63,6 @@ module mpisetup
    !> \warning Because we use one centralized req(:) and status(:,:) arrays, the routines that are using them should not call each other to avoid any interference.
    !! If you want nested non-blocking communication, only one set of MPI transactions may use these arrays.
    !< All other sets of communication should define their own req(:) and status(:,:) arrays
-
-   integer, dimension(:), allocatable :: procmask !< (FIRST:LAST)-sized auxiliary array for searching overlaps, neighbours etc. BEWARE: antiparallel
 
    integer, parameter :: buffer_dim = 200                   !< size of [cilr]buff arrays used to exchange namelist parameters
    character(len=cbuff_len), dimension(buffer_dim) :: cbuff !< buffer for character parameters
@@ -125,7 +124,7 @@ contains
    subroutine init_mpi
 
       use constants,     only: cwdlen, I_ONE
-      use mpi,           only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL
+      use mpi,           only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL, MPI_Wtime
       use dataio_pub,    only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
       use dataio_pub,    only: par_file, lun
       use signalhandler, only: SIGINT, register_sighandler
@@ -147,6 +146,7 @@ contains
       integer :: iproc
 
       call MPI_Init( mpi_err )
+      bigbang = MPI_Wtime()
       comm = MPI_COMM_WORLD
 
 #if defined(__INTEL_COMPILER) || defined(__GFORTRAN__)
@@ -218,9 +218,6 @@ contains
 
       deallocate(host_all, pid_all, cwd_all)
 
-      if (allocated(procmask)) call die("[mpisetup:init_mpi] procmask already allocated")
-      allocate(procmask(FIRST:LAST))
-
    end subroutine init_mpi
 
 !> \brief Set size of req(:) and status(:,:) arrays for non-blocking communication on request.
@@ -290,7 +287,6 @@ contains
 
       implicit none
 
-      if (allocated(procmask)) deallocate(procmask)
       if (allocated(req)) deallocate(req)
       if (allocated(status)) deallocate(status)
 

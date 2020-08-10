@@ -68,28 +68,27 @@ module multipole
 
    private
    public :: init_multipole, cleanup_multipole, multipole_solver, moments2pot, compute_mpole_potential
-   public :: lmax, mmax, mpole_solver, level_3D, singlepass  ! initialized in multigrid_gravity
+   public :: lmax, mmax, mpole_solver, singlepass  ! initialized in multigrid_gravity
 
    interface moments2pot
       module procedure moments2pot_xyz
       module procedure moments2pot_r
    end interface moments2pot
 
-   type(mpole_container)        :: Q                   !< The whole moment array with dependence on radius
+   type(mpole_container)    :: Q             !< The whole moment array with dependence on radius
 
    ! namelist parameters for MULTIGRID_GRAVITY
-   integer(kind=4)              :: lmax                !< Maximum l-order of multipole moments
-   integer(kind=4)              :: mmax                !< Maximum m-order of multipole moments. Equal to lmax by default.
-   character(len=cbuff_len)     :: mpole_solver        !< Pick one of: "monopole", "img_mass" (default), "3D"
-   integer(kind=4)              :: level_3D            !< The level, at which we integrate the desnity field, to get is multipole representation. 0: base level, 1: leaves (default), <0: coarsened levels
+   integer(kind=4)          :: lmax          !< Maximum l-order of multipole moments
+   integer(kind=4)          :: mmax          !< Maximum m-order of multipole moments. Equal to lmax by default.
+   character(len=cbuff_len) :: mpole_solver  !< Pick one of: "monopole", "img_mass" (default), "3D"
 
-   logical                      :: zaxis_inside        !< true when z-axis belongs to the inner radial boundary in polar coordinates
-   logical                      :: singlepass          !< When .true. it allows for single-pass multigrid solve
+   logical                  :: zaxis_inside  !< true when z-axis belongs to the inner radial boundary in polar coordinates
+   logical                  :: singlepass    !< When .true. it allows for single-pass multigrid solve
 
    enum, bind(C)
       enumerator :: MONOPOLE, IMG_MASS, THREEDIM
    end enum
-   integer                      :: solver              !< mpole_solver decoded into one of the above enums
+   integer                  :: solver        !< mpole_solver decoded into one of the above enums
 
 !> \todo OPT derive a special set of leaves and coarsened leaves that can be safely used here
 
@@ -104,15 +103,17 @@ contains
 
    subroutine init_multipole
 
-      use constants,  only: ndims, INVALID
-      use dataio_pub, only: die, warn
-      use domain,     only: dom
-      use mpisetup,   only: master
-      use user_hooks, only: ext_bnd_potential
+      use constants,     only: ndims, INVALID
+      use dataio_pub,    only: die, warn
+      use domain,        only: dom
+      use mpisetup,      only: master
+      use multigridvars, only: grav_bnd, bnd_isolated
+      use user_hooks,    only: ext_bnd_potential
 
       implicit none
 
       if (dom%eff_dim /= ndims) call die("[multigridmultipole:init_multipole] Only 3D is supported") !> \todo add support for 2D RZ
+      if (grav_bnd /= bnd_isolated) call die("[multigridmultipole:init_multipole] Only fully periodic case is implemented")
 
       !fixup multipole moments
       if (mmax > lmax) then
@@ -211,14 +212,23 @@ contains
 
    subroutine multipole_solver
 
-      use cg_leaves,  only: leaves
-      use constants,  only: dirtyH1
-      use dataio_pub, only: die
-      use global,     only: dirty_debug
-      use monopole,   only: isolated_monopole, find_img_CoM
-      use user_hooks, only: ext_bnd_potential
+      use cg_leaves,     only: leaves
+      use constants,     only: dirtyH1, PPP_GRAV
+      use dataio_pub,    only: die
+      use global,        only: dirty_debug
+      use mg_monopole,   only: isolated_monopole, find_img_CoM
+      ! use multigridvars, only: grav_bnd, bnd_isolated
+      use ppp,           only: ppp_main
+      use user_hooks,    only: ext_bnd_potential
 
       implicit none
+
+      character(len=*), parameter :: mpole_label = "multipole_solver"
+
+      call ppp_main%start(mpole_label, PPP_GRAV)
+
+      ! Cannot use this check, because we do tricks in multigrid_solve_grav
+      ! if (grav_bnd /= bnd_isolated) call die("[multigridmultipole:multipole_solver] Only fully periodic case is implemented")
 
       if (associated(ext_bnd_potential)) then
          call ext_bnd_potential
@@ -259,6 +269,8 @@ contains
             call die("[multigridmultipole:multipole_solver] unimplemented solver")
       end select
 
+      call ppp_main%stop(mpole_label, PPP_GRAV)
+
    end subroutine multipole_solver
 
 !>
@@ -279,10 +291,11 @@ contains
 
       use cg_leaves,     only: leaves
       use cg_list,       only: cg_list_element
-      use constants,     only: GEO_RPZ, LO, HI, xdim, ydim, zdim
+      use constants,     only: GEO_RPZ, LO, HI, xdim, ydim, zdim, PPP_GRAV
       use domain,        only: dom
       use grid_cont,     only: grid_container
       use multigridvars, only: solution
+      use ppp,           only: ppp_main
 
       implicit none
 
@@ -293,7 +306,9 @@ contains
       ! a1 = -2. is the simplest, 1st order choice, gives best agreement of total mass and CoM location when compared to 3-D integration
       ! a1 = -1., a2 = -1./3. seems to do the best job,
       ! a1 = -3./2., a2 = -1./6. seems to be 2nd order estimator
+      character(len=*), parameter :: p2m_label = "multipole_pot2img"
 
+      call ppp_main%start(p2m_label, PPP_GRAV)
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -350,6 +365,7 @@ contains
          cgl => cgl%nxt
          end associate
       enddo
+      call ppp_main%stop(p2m_label, PPP_GRAV)
 
    end subroutine potential2img_mass
 
@@ -361,13 +377,14 @@ contains
 
    subroutine img_mass2moments
 
-      use cg_leaves,    only: leaves
-      use cg_list,      only: cg_list_element
-      use constants,    only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero
-      use dataio_pub,   only: die
-      use domain,       only: dom
-      use grid_cont,    only: grid_container
-      use func,         only: operator(.notequals.)
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero, PPP_GRAV
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use grid_cont,  only: grid_container
+      use func,       only: operator(.notequals.)
+      use ppp,        only: ppp_main
 
       implicit none
 
@@ -375,7 +392,9 @@ contains
       real, dimension(LO:HI) :: geofac
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+      character(len=*), parameter :: m2m_label = "multipole_img2mom"
 
+      call ppp_main%start(m2m_label, PPP_GRAV)
       if (dom%geometry_type /= GEO_XYZ .and. any(Q%center(xdim:zdim).notequals.zero)) call die("[multigridmultipole:img_mass2moments] Q%center /= 0. not implemented for non-cartesian geometry")
 
       geofac(:) = 1.
@@ -419,8 +438,10 @@ contains
                enddo
             enddo
          endif
+
          cgl => cgl%nxt
       enddo
+      call ppp_main%stop(m2m_label, PPP_GRAV)
 
    end subroutine img_mass2moments
 
@@ -434,16 +455,17 @@ contains
    subroutine domain2moments
 
       use cg_leaves,          only: leaves
-      !use cg_level_base,      only: base ! cannot use it because cg_level_base depends on multigrid
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_t, base_level
       use cg_list,            only: cg_list_element
-      use constants,          only: xdim, zdim, GEO_XYZ, zero, base_level_id
+      use constants,          only: xdim, zdim, GEO_XYZ, zero, base_level_id, PPP_GRAV
       use dataio_pub,         only: die, msg, warn
       use domain,             only: dom
       use grid_cont,          only: grid_container
       use func,               only: operator(.notequals.)
       use multigridvars,      only: source
+      use multipole_array,    only: mpole_level, mpole_level_auto
+      use ppp,                only: ppp_main
 
       implicit none
 
@@ -451,42 +473,57 @@ contains
       type(cg_level_connected_t), pointer :: level
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+      character(len=*), parameter :: d2m_label = "multipole_dom2mom"
+
+      call ppp_main%start(d2m_label, PPP_GRAV)
 
       if (dom%geometry_type /= GEO_XYZ .and. any(Q%center(xdim:zdim).notequals.zero)) call die("[multigridmultipole:domain2moments] Q%center /= 0. not implemented for non-cartesian geometry")
       if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:domain2moments] Noncartesian geometry haven't been tested. Verify it before use.")
 
       ! scan
-      if (level_3D <= base_level_id) then
-         ! call finest%level%restrict_to_floor_q_1var(source)  ! overkill
+      if (mpole_level <= mpole_level_auto) then
+         level => finest%find_finest_bnd()
+         cgl => level%first
+      else if (mpole_level <= base_level_id) then
          level => base_level
          call finest%level%restrict_to_base_q_1var(source)
-         do while (level%l%id > level_3D)
+         do while (level%l%id > mpole_level)
             if (associated(level%coarser)) then
                call level%restrict_q_1var(source)
                level => level%coarser
             else
-               write(msg, '(2(a,i3))')"[multigridmultipole:domain2moments] Coarsest level reached. Will use level ", level%l%id, " instead of ", level_3D
+               write(msg, '(2(a,i3))')"[multigridmultipole:domain2moments] Coarsest level reached. Will use level ", level%l%id, " instead of ", mpole_level
                call warn(msg)
                exit
             endif
          enddo
          cgl => level%first
       else
+         level => finest%level
+         do while (level%l%id > mpole_level)
+            call level%restrict_q_1var(source)
+            level => level%coarser
+            if (.not. associated(level)) call die("[multigridmultipole:domain2moments] Coarsest level reached for mpole_level > base_level_id")
+         enddo
          cgl => leaves%first
       endif
+
       do while (associated(cgl))
          cg => cgl%cg
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-                  ! if (dom%geometry_type == GEO_RPZ) geofac = cg%x(i)
-                  if (cg%leafmap(i, j, k) .or. level_3D <= base_level_id) &
-                       call Q%point2moments(cg%dvol * cg%q(source)%arr(i, j, k), cg%x(i) , cg%y(j) , cg%z(k) )  ! * geofac for GEO_RPZ
+         if (cg%l%id <= level%l%id) then
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     ! if (dom%geometry_type == GEO_RPZ) geofac = cg%x(i)
+                     if (cg%leafmap(i, j, k) .or. level%l%id == cg%l%id) &
+                          call Q%point2moments(cg%dvol * cg%q(source)%arr(i, j, k), cg%x(i) , cg%y(j) , cg%z(k) )  ! * geofac for GEO_RPZ
+                  enddo
                enddo
             enddo
-         enddo
+         endif
          cgl => cgl%nxt
       enddo
+      call ppp_main%stop(d2m_label, PPP_GRAV)
 
    end subroutine domain2moments
 
@@ -494,18 +531,24 @@ contains
 
    subroutine particles2moments
 
-      use constants,    only: xdim, ydim, zdim
+      use constants,    only: xdim, ydim, zdim, PPP_GRAV, PPP_PART
       use particle_pub, only: pset
+      use ppp,          only: ppp_main
       use units,        only: fpiG
 
       implicit none
 
       integer :: i
+      character(len=*), parameter :: p2m_label = "multipole_part2mom"
+
+      if (size(pset%p) > 0) call ppp_main%start(p2m_label, PPP_GRAV + PPP_PART)
 
       ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
       do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
          if (pset%p(i)%outside) call Q%point2moments(fpiG*pset%p(i)%mass, pset%p(i)%pos(xdim), pset%p(i)%pos(ydim), pset%p(i)%pos(zdim))
       enddo
+
+      if (size(pset%p) > 0) call ppp_main%stop(p2m_label, PPP_GRAV + PPP_PART)
 
    end subroutine particles2moments
 
@@ -519,17 +562,21 @@ contains
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero
+      use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero, PPP_GRAV
       use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container
       use func,       only: operator(.notequals.)
+      use ppp,        only: ppp_main
 
       implicit none
 
       integer :: i, j, k
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+      character(len=*), parameter :: m2p_label = "multipole_mom2pot"
+
+      call ppp_main%start(m2p_label, PPP_GRAV)
 
       if (dom%geometry_type /= GEO_XYZ .and. any(Q%center(xdim:zdim).notequals.zero)) call die("[multigridmultipole:img_mass2moments] Q%center /= 0. not implemented for non-cartesian geometry")
 
@@ -565,6 +612,7 @@ contains
          endif
          cgl => cgl%nxt
       enddo
+      call ppp_main%stop(m2p_label, PPP_GRAV)
 
    end subroutine moments2bnd_potential
 
@@ -572,13 +620,17 @@ contains
 
    real function moments2pot_xyz(x, y, z) result(pot)
 
-      use units, only: fpiG
+      use dataio_pub,    only: die
+      use multigridvars, only: grav_bnd, bnd_isolated
+      use units,         only: fpiG
 
       implicit none
 
       real, intent(in) :: x !< absolute x-coordinate of the point
       real, intent(in) :: y !< absolute y-coordinate of the point
       real, intent(in) :: z !< absolute z-coordinate of the point
+
+      if (grav_bnd /= bnd_isolated) call die("[multigridmultipole:moments2pot_xyz] Only fully periodic case is implemented")
 
       pot = Q%moments2pot(x, y, z)/fpiG
 
@@ -588,19 +640,23 @@ contains
 
    real function moments2pot_r(r) result(pot)
 
-      use constants, only: xdim, ydim, zdim, ndims
-      use units,     only: fpiG
+      use constants,     only: xdim, ydim, zdim, ndims
+      use dataio_pub,    only: die
+      use multigridvars, only: grav_bnd, bnd_isolated
+      use units,         only: fpiG
 
       implicit none
 
       real, dimension(ndims), intent(in) :: r !< [x, y, z] coordinate of the point
+
+      if (grav_bnd /= bnd_isolated) call die("[multigridmultipole:moments2pot_r] Only fully periodic case is implemented")
 
       pot = Q%moments2pot(r(xdim), r(ydim), r(zdim))/fpiG
 
    end function moments2pot_r
 
 !>
-!! \brief Compute multipole potential in whocle computational domain
+!! \brief Compute multipole potential in whole computational domain
 !!
 !! \details This routine is not intended for regular use because of huge
 !! computational cost per cell (O(lmax**2)). It is useful for understanding
@@ -610,8 +666,9 @@ contains
 
    subroutine compute_mpole_potential(qvar)
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
+      use cg_leaves,     only: leaves
+      use cg_list,       only: cg_list_element
+      use multigridvars, only: grav_bnd, bnd_isolated
 
       implicit none
 
@@ -621,6 +678,8 @@ contains
       type(cg_list_element), pointer :: cgl
 
       call leaves%set_q_value(qvar, 0.)
+
+      if (grav_bnd /= bnd_isolated) return
 
       cgl => leaves%first
       do while (associated(cgl))

@@ -172,6 +172,9 @@ contains
    subroutine namelist_handler_t_init(this)
 
       use constants, only: cbuff_len
+#if defined(__INTEL_COMPILER)
+      use ifport,    only: getpid
+#endif /* __INTEL_COMPILER */
 
       implicit none
 

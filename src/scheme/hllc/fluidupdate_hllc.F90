@@ -59,7 +59,7 @@ contains
       if (is_multicg) call die("[fluidupdate_hllc:fluid_update_simple] something here is not compatible with multiple blocks per process yet")
 #ifdef MAGNETIC
       call die("[fluidupdate_hllc:fluid_update_simple] Magnetic field is not compatible with HLLC")
-#endif
+#endif /* MAGNETIC */
 
       halfstep = .false.
       if (first_run) then

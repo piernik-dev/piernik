@@ -56,9 +56,11 @@ module cg_level_connected
       procedure :: restrict                                   !< interpolate the grid data which has the flag vital set from this%coarser level
       procedure :: restrict_to_base                           !< restrict all variables to the base level
       procedure :: prolong_q_1var                             !< interpolate the grid data in specified q field to this%finer level
-      procedure :: restrict_q_1var                            !< interpolate the grid data in specified q field from this%coarser level
+      procedure :: restrict_q_1var                            !< interpolate the grid data in specified q field to this%coarser level
+      procedure :: restrict_w_1var                            !< interpolate the grid data in specified w field to this%coarser level
       procedure :: restrict_to_floor_q_1var                   !< restrict specified q field as much as possible
       procedure :: restrict_to_base_q_1var                    !< restrict specified q field to the base level
+      procedure :: restrict_to_base_w_1var                    !< restrict specified w field to the base level
       procedure :: arr3d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
       procedure :: arr4d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays.
       procedure :: prolong_bnd_from_coarser                   !< Interpolate boundaries from coarse level at fine-coarse interfaces
@@ -109,13 +111,14 @@ contains
 
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
-      use constants,      only: xdim, ydim, zdim, LO, HI
+      use constants,      only: xdim, ydim, zdim, LO, HI, PPP_AMR
       use dataio_pub,     only: die
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c, c2f
       use mpisetup,       only: FIRST, LAST
       use overlap,        only: is_overlap
+      use ppp,            only: ppp_main
 
       implicit none
 
@@ -133,10 +136,12 @@ contains
          integer :: n_se
       end type int_pair
       type(int_pair), dimension(:), allocatable    :: ps
+      character(len=*), parameter :: vp_label = "vertical_prep"
 
       call this%dot%update_tot_se
 
       if (all_cg%ord_prolong_nb == this%ord_prolong_set) return ! no need to update vertical communication on this level
+      call ppp_main%start(vp_label, PPP_AMR)
 
       ! enlarge the fine blocks to allow for high orders of interpolation
       enlargement(:, LO) = -dom%D_(:) * all_cg%ord_prolong_nb
@@ -299,6 +304,7 @@ contains
       this%ord_prolong_set = all_cg%ord_prolong_nb
 
       call all_cg%update_req
+      call ppp_main%stop(vp_label, PPP_AMR)
 
    end subroutine vertical_prep
 
@@ -312,11 +318,12 @@ contains
 !<
    subroutine prolong(this, bnd_type)
 
-      use constants,        only: base_level_id, GEO_RPZ
+      use constants,        only: base_level_id, GEO_RPZ, PPP_AMR
       use dataio_pub,       only: warn
       use domain,           only: dom
       use fluidindex,       only: iarr_all_my
       use named_array_list, only: qna, wna
+      use ppp,              only: ppp_main
 
       implicit none
 
@@ -324,13 +331,17 @@ contains
       integer(kind=4), optional,           intent(in)    :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
 
       integer(kind=4) :: i, iw
+      character(len=*), parameter :: proq_label = "prolong_qna", prow_label = "prolong_wna"
 
+      call ppp_main%start(proq_label, PPP_AMR)
       do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
          if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%l%id >= base_level_id)) call this%prolong_q_1var(i, bnd_type = bnd_type)
          ! Although we aren't worried too much by nonconservation of psi or multigrid fields here
          ! but it will be worth checking if cnservative high-order prolongation can help.
       enddo
+      call ppp_main%stop(proq_label, PPP_AMR)
 
+      call ppp_main%start(prow_label, PPP_AMR)
       do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
          if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%l%id >= base_level_id)) then
             qna%lst(qna%wai)%ord_prolong = 0 !> \todo implement high order conservative prolongation and use wna%lst(i)%ord_prolong here
@@ -348,6 +359,7 @@ contains
             enddo
          endif
       enddo
+      call ppp_main%stop(prow_label, PPP_AMR)
 
    end subroutine prolong
 
@@ -360,38 +372,33 @@ contains
 !<
    subroutine restrict(this)
 
-      use constants,        only: base_level_id, GEO_RPZ
+      use constants,        only: base_level_id, PPP_AMR
       use dataio_pub,       only: warn
-      use domain,           only: dom
-      use fluidindex,       only: iarr_all_my
       use named_array_list, only: qna, wna
+      use ppp,              only: ppp_main
 
       implicit none
 
       class(cg_level_connected_t), target, intent(inout) :: this !< object invoking type-bound procedure
 
-      integer(kind=4) :: i, iw
+      integer(kind=4) :: i
+      character(len=*), parameter :: resq_label = "restrict_qna", resw_label = "restrict_wna"
 
+      call ppp_main%start(resq_label, PPP_AMR)
       do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
          if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%l%id > base_level_id)) call this%restrict_q_1var(i)
       enddo
+      call ppp_main%stop(resq_label, PPP_AMR)
 
+      call ppp_main%start(resw_label, PPP_AMR)
       do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
          if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%l%id > base_level_id)) then
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:restrict] mg set for cg%w ???")
-            do iw = 1, wna%lst(i)%dim4
-               call this%wq_copy(i, iw, qna%wai)
-               if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%mul_by_r(qna%wai) ! angular momentum conservation
-               if (.true.) then  ! this is required because we don't use (.not. cg%leafmap) mask in the this%coarser%qw_copy call below
-                  call this%coarser%wq_copy(i, iw, qna%wai)
-                  if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%mul_by_r(qna%wai)
-               endif
-               call this%restrict_q_1var(qna%wai, wna%lst(i)%position(iw))
-               if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%div_by_r(qna%wai) ! angular momentum conservation
-               call this%coarser%qw_copy(qna%wai, i, iw)
-            enddo
+            call this%restrict_w_1var(i)
          endif
       enddo
+
+      call ppp_main%stop(resw_label, PPP_AMR)
 
    end subroutine restrict
 
@@ -443,6 +450,50 @@ contains
 
    end subroutine restrict_to_base_q_1var
 
+   recursive subroutine restrict_to_base_w_1var(this, iv)
+
+      use constants, only: base_level_id
+
+      implicit none
+
+      class(cg_level_connected_t), intent(inout) :: this !< object invoking type-bound procedure
+      integer(kind=4),             intent(in)    :: iv   !< variable to be restricted
+
+      if (this%l%id <= base_level_id) return
+      call this%restrict_w_1var(iv)
+      call this%coarser%restrict_to_base_w_1var(iv)
+
+   end subroutine restrict_to_base_w_1var
+
+!> \brief Quick and dirty restriction of 4D arrays. OPTIMIZE ME!
+
+   subroutine restrict_w_1var(this, i)
+
+      use constants,        only: GEO_RPZ
+      use domain,           only: dom
+      use fluidindex,       only: iarr_all_my
+      use named_array_list, only: qna, wna
+
+      implicit none
+
+      class(cg_level_connected_t), target, intent(inout) :: this  !< object invoking type-bound procedure
+      integer(kind=4),                     intent(in)    :: i     !< variable to be restricted
+
+      integer(kind=4) :: iw
+
+      do iw = 1, wna%lst(i)%dim4
+         call this%wq_copy(i, iw, qna%wai)
+         if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%mul_by_r(qna%wai) ! angular momentum conservation
+         if (.true.) then  ! this is required because we don't use (.not. cg%leafmap) mask in the this%coarser%qw_copy call below
+            call this%coarser%wq_copy(i, iw, qna%wai)
+            if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%mul_by_r(qna%wai)
+         endif
+         call this%restrict_q_1var(qna%wai, wna%lst(i)%position(iw))
+         if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%div_by_r(qna%wai) ! angular momentum conservation
+         call this%coarser%qw_copy(qna%wai, i, iw)
+      enddo
+   end subroutine restrict_w_1var
+
 !>
 !! \brief Simplest restriction (averaging).
 !!
@@ -491,7 +542,7 @@ contains
       position = qna%lst(iv)%position(I_ONE)
       if (present(pos)) position = pos
       if (position /= VAR_CENTER .and. .not. warned) then
-         if (master) call warn("[cg_level_connected:restrict_q_1var] Only cell-centered interpolation scheme is implemented. Exprect inaccurate results for variables that are placed on faces or corners")
+         if (master) call warn("[cg_level_connected:restrict_q_1var] Only cell-centered interpolation scheme is implemented. Expect inaccurate results for variables that are placed on faces or corners")
          warned = .true.
       endif
 
@@ -636,13 +687,14 @@ contains
    subroutine prolong_q_1var(this, iv, pos, bnd_type)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_ZERO, VAR_CENTER, ndims  !, dirtyH1
+      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_ZERO, VAR_CENTER, ndims, PPP_AMR  !, dirtyH1
       use dataio_pub,       only: msg, warn
       use grid_cont,        only: grid_container
       use grid_helpers,     only: f2c
       use mpisetup,         only: comm, mpi_err, req, status, inflate_req, master
       use mpi,              only: MPI_DOUBLE_PRECISION
       use named_array_list, only: qna
+      use ppp,              only: ppp_main
 
       implicit none
 
@@ -662,11 +714,14 @@ contains
       logical, save                                      :: warned = .false.
       integer                                            :: position
       integer(kind=8), dimension(ndims, LO:HI)           :: box_8            !< temporary storage
+      character(len=*), parameter :: pq1_label = "prolong_q1v"
+
+      call ppp_main%start(pq1_label, PPP_AMR)
 
       position = qna%lst(iv)%position(I_ONE)
       if (present(pos)) position = pos
       if (position /= VAR_CENTER .and. .not. warned) then
-         if (master) call warn("[cg_level_connected:prolong_q_1var] Only cell-centered interpolation scheme is implemented. Exprect inaccurate results for variables that are placed on faces or corners")
+         if (master) call warn("[cg_level_connected:prolong_q_1var] Only cell-centered interpolation scheme is implemented. Expect inaccurate results for variables that are placed on faces or corners")
          warned = .true.
       endif
 
@@ -752,6 +807,7 @@ contains
          endif
          cgl => cgl%nxt
       enddo
+      call ppp_main%stop(pq1_label, PPP_AMR)
 
       call fine%check_dirty(iv, "prolong+")
 
@@ -761,8 +817,9 @@ contains
 
    subroutine arr3d_boundaries(this, ind, area_type, bnd_type, dir, nocorners)
 
-      use global,           only: ord_fc_eq_mag, ord_mag_prolong
+      use constants,        only: PPP_AMR
       use named_array_list, only: qna
+      use ppp,              only: ppp_main
 
       implicit none
 
@@ -775,16 +832,20 @@ contains
       logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       integer(kind=4) :: ord_saved
+      character(len=*), parameter :: a3b_label = "level:arr3d_boundaries"
+
+      call ppp_main%start(a3b_label, PPP_AMR)
 
       ord_saved = qna%lst(ind)%ord_prolong
-      if (ord_fc_eq_mag) qna%lst(ind)%ord_prolong = ord_mag_prolong
 
       call this%dirty_boundaries(ind)
       call this%prolong_bnd_from_coarser(ind, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
       call this%level_3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
-      ! The correctness ot the sequence of calls above may depend on the implementation of internal boundary exchange
+      ! The correctness of the sequence of calls above may depend on the implementation of internal boundary exchange
 
       qna%lst(ind)%ord_prolong = ord_saved
+
+      call ppp_main%stop(a3b_label, PPP_AMR)
 
    end subroutine arr3d_boundaries
 
@@ -792,9 +853,9 @@ contains
 
    subroutine arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
-      use constants,        only: base_level_id
-      use global,           only: ord_mag_prolong, ord_fc_eq_mag
+      use constants,        only: base_level_id, PPP_AMR
       use named_array_list, only: qna, wna
+      use ppp,              only: ppp_main
 
       implicit none
 
@@ -805,17 +866,16 @@ contains
       logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       integer(kind=4) :: iw
+      character(len=*), parameter :: a4b_label = "level:arr4d_boundaries"
+
+      call ppp_main%start(a4b_label, PPP_AMR)
 
 !      call this%dirty_boundaries(ind)
 !      call this%clear_boundaries(ind, value=10.)
       if (associated(this%coarser) .and. this%l%id > base_level_id) then
          do iw = 1, wna%lst(ind)%dim4
             ! here we can use any high order prolongation without destroying conservation
-            if (ord_fc_eq_mag) then
-               qna%lst(qna%wai)%ord_prolong = ord_mag_prolong
-            else
-               qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong
-            endif
+            qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong
             call this%coarser%wq_copy(ind, iw, qna%wai)
             call this%wq_copy(ind, iw, qna%wai) !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
             call this%prolong_bnd_from_coarser(qna%wai, dir=dir, nocorners=nocorners)
@@ -823,6 +883,8 @@ contains
          enddo
       endif
       call this%level_4d_boundaries(ind, area_type=area_type, dir=dir, nocorners=nocorners)
+
+      call ppp_main%stop(a4b_label, PPP_AMR)
 
    end subroutine arr4d_boundaries
 
@@ -843,13 +905,14 @@ contains
 
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
-      use constants,      only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims, O_INJ, base_level_id  !, dirtyH1
+      use constants,      only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims, O_INJ, base_level_id, PPP_AMR, PPP_MPI  !, dirtyH1
       use dataio_pub,     only: warn
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c, c2f
       use mpi,            only: MPI_DOUBLE_PRECISION
       use mpisetup,       only: comm, mpi_err, req, status, inflate_req, master
+      use ppp,            only: ppp_main
 
       implicit none
 
@@ -871,6 +934,7 @@ contains
       logical, allocatable, dimension(:,:,:) :: updatemap
       integer(kind=8), dimension(ndims, LO:HI)  :: box_8   !< temporary storage
       logical, save :: firstcall = .true.
+      character(len=*), parameter :: pbc_label = "prolong_bnd_from_coarser" , pbcv_label = "prolong_bnd_from_coarser:vbp", pbcw_label = "prolong_bnd_from_coarser:Waitall"
 
       if (present(dir)) then
          if (firstcall .and. master) call warn("[cg_level_connected:prolong_bnd_from_coarser] dir present but not implemented yet")
@@ -886,8 +950,11 @@ contains
       if (.not. associated(coarse)) return
       if (this%l%id == base_level_id) return ! There are no fine/coarse boundaries on the base level by definition
 
+      call ppp_main%start(pbc_label, PPP_AMR)
+      call ppp_main%start(pbcv_label, PPP_AMR)
       call this%vertical_b_prep
       call coarse%vertical_b_prep
+      call ppp_main%stop(pbcv_label, PPP_AMR)
 
       !call this%clear_boundaries(ind, (0.885+0.0001*this%l%id)*dirtyH1) ! not implemented yet
       ext_buf = dom%D_ * all_cg%ord_prolong_nb ! extension of the buffers due to stencil range
@@ -932,8 +999,10 @@ contains
       enddo
 
       if (nr > 0) then
+         call ppp_main%start(pbcw_label, PPP_AMR + PPP_MPI)
          mpistatus => status(:, :nr)
          call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
+         call ppp_main%stop(pbcw_label, PPP_AMR + PPP_MPI)
       endif
 
       ! merge received coarse data into one array and interpolate it into the right place
@@ -989,6 +1058,7 @@ contains
          end associate
          cgl => cgl%nxt
       enddo
+      call ppp_main%stop(pbc_label, PPP_AMR)
 
    end subroutine prolong_bnd_from_coarser
 
@@ -1293,12 +1363,16 @@ contains
 !! \brief Initialize targets for fine->coarse flux exchange
 !!
 !! \details This routine relies on the data generated by vertical_b_prep. Rejects corner locations, leaves only face layer.
+!!
+!! The problem with dom%nb <= 2 can be solved but practically we won't ever use such thin buffer of guardcells.
 !<
 
    subroutine vertical_bf_prep(this)
 
       use cg_list,          only: cg_list_element
       use constants,        only: LO, HI, pdims, ORTHO1, ORTHO2, xdim, zdim, psidim, mag_n
+      use dataio_pub,       only: die
+      use domain,           only: dom
       use fluidindex,       only: flind
       use grid_helpers,     only: c2f
       use named_array_list, only: wna
@@ -1310,6 +1384,8 @@ contains
       type(cg_level_connected_t), pointer :: coarse
       type(cg_list_element), pointer :: cgl
       integer :: g, d, dd, lh, fc_fluxes
+
+      if (dom%nb <= 2) call die("[cg_level_connected:vertical_bf_prep] dom%nb <= 2 leads to incorrect calculations")
 
       fc_fluxes = flind%all
       if (wna%exists(mag_n)) fc_fluxes = fc_fluxes + psidim
@@ -1340,7 +1416,7 @@ contains
                   seg2(d)%se   = seg(g)%se2
                   allocate(seg2(d)%buf(fc_fluxes, seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
                        &                          seg2(d)%se(pdims(dd, ORTHO2), LO):seg2(d)%se(pdims(dd, ORTHO2), HI)))
-                  if (seg(g)%se(dd, LO) == seg2(d)%se(dd, LO)) then
+                  if (seg(g)%se(dd, LO) == seg2(d)%se(dd, LO)) then  ! This doesn't work correctly when dom%nb == 2 or less
                      lh = HI
                   else
                      lh = LO

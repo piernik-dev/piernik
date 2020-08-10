@@ -34,7 +34,7 @@
 !<
 
 module cmp_1D_mpi
-! pulled by HDF5
+! pulled by ANY
 
    implicit none
 

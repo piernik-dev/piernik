@@ -57,8 +57,9 @@ module refinement_flag
       procedure          :: reset_blocks   !> make SFC_refine_list empty
 
       !> Set the refinement flag in the map. This is the only call supposed to be used in user routines.
-      generic,   public  :: set => set_cell, set_arrng, set_all, set_mask  !, set_range
-      procedure, private :: set_cell       !> Mark a cell for refinement
+      generic,   public  :: set => set_cell, set_arrcell, set_arrng, set_all, set_mask  !, set_range
+      procedure, private :: set_cell       !> Mark a cell for refinement (separate indices)
+      procedure, private :: set_arrcell    !> Mark a cell for refinement (array indices)
 !      procedure, private :: set_range      !> Mark a box of cells for refinement (list of indices)
       procedure, private :: set_arrng      !> Mark a box of cells for refinement (se-type array of indices)
       procedure, private :: set_all        !> Mark all cells for refinement
@@ -228,7 +229,7 @@ contains
 
    end function get_any_arrng
 
-!> \brief Mark a cell for refinement
+!> \brief Mark a cell for refinement (separate indices)
 
    subroutine set_cell(this, i, j, k)
 
@@ -248,6 +249,29 @@ contains
       this%map(i, j, k) = .true.
 
    end subroutine set_cell
+
+!> \brief Mark a cell for refinement (array indices)
+
+   subroutine set_arrcell(this, ijk)
+
+      use constants, only: xdim, ydim, zdim
+
+#ifdef DEBUG
+      use dataio_pub, only: die
+#endif /* DEBUG */
+
+      implicit none
+
+      class(ref_flag_t),                     intent(inout) :: this  !> object invoking this procedure
+      integer(kind=8), dimension(xdim:zdim), intent(in)    :: ijk   !> cell coordinates
+
+#ifdef DEBUG
+      if (any(ijk < lbound(this%map)) .or. any(ijk > ubound(this%map))) call die("[refinement_flag:set_arrcell] out of range")  ! this can be costly check
+#endif /* DEBUG */
+
+      this%map(ijk(xdim), ijk(ydim), ijk(zdim)) = .true.
+
+   end subroutine set_arrcell
 
 !> \brief Mark a box of cells for refinement
 

@@ -338,4 +338,29 @@ module constants
    integer(kind=4), dimension(ndims,ndims,LO:HI), parameter :: idm2 = reshape([idm,idm],[ndims,ndims,2_INT4])                             !< auxiliary matrix 3x3x2 based on identity matrix
    integer(kind=4), dimension(ndims),             parameter :: uv   = int([1,1,1], kind=4)                                                !< unity vector
 
+   ! PPP timer categories
+   enum, bind(C)                                      ! Event related to:
+      !enumerator :: PPP_MAIN  = int(B"000000000000", kind=4)  ! general, unmasked, always enabled
+      enumerator :: PPP_IO    = int(B"000000000001", kind=4)  ! I/O
+      enumerator :: PPP_MG    = int(B"000000000010", kind=4)  ! multigrid
+      enumerator :: PPP_GRAV  = int(B"000000000100", kind=4)  ! gravity
+      enumerator :: PPP_CR    = int(B"000000001000", kind=4)  ! cosmic rays
+      enumerator :: PPP_PART  = int(B"000000010000", kind=4)  ! particles
+      enumerator :: PPP_MPI   = int(B"000000100000", kind=4)  ! MPI
+      enumerator :: PPP_AMR   = int(B"000001000000", kind=4)  ! refinement
+      enumerator :: PPP_CG    = int(B"000010000000", kind=4)  ! single cg
+      enumerator :: PPP_MAG   = int(B"000100000000", kind=4)  ! magnetic field
+      enumerator :: PPP_PROB  = int(B"001000000000", kind=4)  ! problem
+      enumerator :: PPP_DEBUG = int(B"010000000000", kind=4)  ! debug
+      enumerator :: PPP_AUX   = int(B"100000000000", kind=4)  ! auxiliary (unused by default)
+   end enum
+
+   ! OS type
+   enum, bind(C)
+      enumerator :: LINUX
+      enumerator :: APPLE
+      !enumerator :: ANDROID
+      !enumerator :: WINDOWS
+   end enum
+
 end module constants

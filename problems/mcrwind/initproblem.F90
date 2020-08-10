@@ -77,6 +77,9 @@ contains
 #ifdef GRAV
       use gravity,    only: grav_pot_3d, user_grav
 #endif /* GRAV */
+#ifdef CR_SN
+      use snsources,  only: amp_ecr_sn
+#endif /* CR_SN */
 
       implicit none
 
@@ -146,6 +149,9 @@ contains
 !      if (user_grav) grav_pot_3d => my_grav_pot_3d
       if (user_grav) grav_pot_3d => galactic_grav_pot_3d
 #endif /* GRAV */
+#ifdef CR_SN
+      if (amp_cr < 0.) amp_cr = amp_ecr_sn
+#endif /* CR_SN */
 
    end subroutine read_problem_par
 
@@ -173,7 +179,8 @@ contains
       use snsources,      only: r_sn
 #ifdef COSM_RAY_ELECTRONS
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
-      use initcrspectrum,   only: cresp, smallcree, iarr_cre_n, iarr_cre_e
+      use initcrspectrum,   only: cresp, smallcree, cre_eff
+      use initcosmicrays,   only: iarr_cre_n, iarr_cre_e
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* SN_GALAXY */
 #ifdef CR_SN
@@ -205,7 +212,6 @@ contains
       b0 = sqrt(2.*alpha*d0*fl%cs2)
 
       csim2 = fl%cs2*(1.0+alpha)
-
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -246,7 +252,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS
                   if (decr * cre_eff .gt. smallcree) then
                      cresp%n = 0.0 ;  cresp%e = 0.0
-                     call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn * cre_eff)
+                     call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, decr * cre_eff)   !< amplitude of cre_eff * proton energy density
                      cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
                      cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
                   endif                                                                                ! distribution function amplitude computed from total explosion energy multiplied by factor cre_eff

@@ -101,9 +101,9 @@ contains
 !<
    subroutine named_array_init(this, n1, n2)
 
-      use constants,  only: dirtyH1, ndims, xdim, ydim, zdim, I_ONE
-      use dataio_pub, only: die
-      use global,     only: check_mem_usage
+      use constants,    only: dirtyH1, ndims, xdim, ydim, zdim, I_ONE
+      use dataio_pub,   only: die
+      use memory_usage, only: check_mem_usage
 
       implicit none
 

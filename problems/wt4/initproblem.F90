@@ -81,13 +81,17 @@ contains
 
    subroutine problem_pointers
 
+#ifdef HDF5
       use dataio_user, only: user_attrs_wr
+#endif /* HDF5 */
       use user_hooks,  only: problem_customize_solution, cleanup_problem, problem_post_restart
 
       implicit none
 
       problem_customize_solution => problem_customize_solution_wt4
+#ifdef HDF5
       user_attrs_wr              => problem_initial_conditions_attrs
+#endif /* HDF5 */
       cleanup_problem            => cleanup_wt4
       problem_post_restart       => IC_bnd_update
 
@@ -461,6 +465,7 @@ contains
 
    end subroutine problem_initial_conditions
 
+#ifdef HDF5
 !> \brief Add some attributes to the datafiles
 
    subroutine problem_initial_conditions_attrs(file_id)
@@ -479,6 +484,7 @@ contains
       call h5ltset_attribute_double_f(file_id, "/", "fpiG", [fpiG], bufsize, error)
 
    end subroutine problem_initial_conditions_attrs
+#endif /* HDF5 */
 
 !> \brief update the IC boundaries after reading them from restart
 

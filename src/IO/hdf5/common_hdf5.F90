@@ -177,13 +177,11 @@ contains
             case ('encr')
 #ifdef COSM_RAY_ELECTRONS
                do k = 1, size(iarr_all_crn,1)
-                  if (k<=99) then
-                     write(aux,'(A2,I2.2)') 'cr', k
 #else /* !COSM_RAY_ELECTRONS */
                do k = 1, size(iarr_all_crs,1)
-                  if (k<=9) then
-                     write(aux,'(A2,I1)') 'cr', k
 #endif /* !COSM_RAY_ELECTRONS */
+                  if (k<=99) then
+                     write(aux,'(A2,I2.2)') 'cr', k
                      call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", k
@@ -959,7 +957,7 @@ contains
                if (otype == O_OUT) &
                   & call MPI_Recv(dbuf,   size(dbuf),   MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, mpi_err)
                if (otype == O_RES) &
-                  & call MPI_Recv(cg_n_o, size(cg_n_o), MPI_INTEGER,  p, tag+I_FOUR,  comm, MPI_STATUS_IGNORE, mpi_err)
+                    & call MPI_Recv(cg_n_o, size(cg_n_o), MPI_INTEGER,  p, tag+I_FOUR,  comm, MPI_STATUS_IGNORE, mpi_err)
             endif
 
             do g = 1, cg_n(p)
@@ -969,6 +967,7 @@ contains
                temp = cg_n_b(g, :)
                call create_attribute(cg_g_id, cg_size_aname, temp)                        ! create "/data/grid_%08d/n_b"
                call create_attribute(cg_g_id, cg_offset_aname, int(cg_off(g, :), kind=4)) ! create "/data/grid_%08d/off"
+
                if (otype == O_OUT) then
                   temp(:) = dbuf(cg_le, g, :)
                   call create_attribute(cg_g_id, cg_ledge_aname, temp)  ! create "/data/grid_%08d/left_edge"
