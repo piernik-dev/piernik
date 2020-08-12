@@ -111,21 +111,34 @@ module cresp_grid
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max
+      use initcrspectrum,   only: cresp_substep
       use named_array_list, only: wna
+      use timestep_cresp,   only: dt_cre
+!       use mpisetup,         only: master
 #ifdef DEBUG
       use cresp_crspectrum, only: cresp_detect_negative_content
 #endif /* DEBUG */
 
       implicit none
 
-      integer                        :: i, j, k
+      integer                        :: i, j, k, nssteps = 1
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
       type(spec_mod_trms)            :: sptab
+      real                           :: dt_crs_sstep, dt_cresp
 
       cgl => leaves%first
       cfl_cresp_violation = .false.
 
+!       if (master) print *, "[cresp_grid:update_grid] (1) ns=", nssteps," dt=", dt, ", dt_cre=", dt_cre, ", dtsstep=", dt_crs_sstep
+      if (cresp_substep) then
+         call prepare_substep(2 * dt, dt_cre, dt_crs_sstep, nssteps)
+         dt_cresp = dt_crs_sstep    !< 2 * dt is equal to nssteps * dt_crs_sstep
+      else
+         dt_cresp = 2 * dt
+      endif
+
+!       if (master) print *, "[cresp_grid:update_grid] (2) ns=", nssteps," dt=", dt, ", dt_cre=", dt_cre, ", dtsstep=", dt_crs_sstep
       do while (associated(cgl))
          cg => cgl%cg
          do k = cg%ks, cg%ke
@@ -139,7 +152,7 @@ module cresp_grid
 #ifdef CRESP_VERBOSED
                   print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* CRESP_VERBOSED */
-                  call cresp_update_cell(2 * dt, cresp%n, cresp%e, sptab, cfl_cresp_violation)
+                  call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_cresp_violation, substeps = nssteps)
 #ifdef DEBUG
                   call cresp_detect_negative_content([i, j, k])
 #endif /* DEBUG */
@@ -158,6 +171,25 @@ module cresp_grid
       enddo
 
    end subroutine cresp_update_grid
+
+   subroutine prepare_substep(dt_mhd, dt_crs, dt_substep, n_substeps)
+!       use mpisetup,     only: master
+
+      implicit none
+
+      real,    intent(in)  :: dt_mhd, dt_crs
+      real,    intent(out) :: dt_substep
+      integer, intent(out) :: n_substeps
+
+      n_substeps  = ceiling(dt_mhd / dt_crs ) ! ceiling to assure resulting dt_substep .le. dt_crs
+      dt_substep  = dt_mhd / n_substeps
+
+! #ifdef CRESP_VERBOSED
+!       if (master) write (*,"(A,E12.6,A,E12.6,A,E12.6,A,I3)") " [cresp_driver:prepare_substep] dt_mhd = ", dt_mhd, ", dt_crs = ", dt_crs, " | dt_crs_out = ", dt_substep, ", n_iter = ", n_substeps
+! #endif /* CRESP_VERBOSED */
+
+   end subroutine prepare_substep
+
 
 !----------------------------------------------------------------------------------------------------
 

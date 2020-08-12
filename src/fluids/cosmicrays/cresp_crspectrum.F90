@@ -103,7 +103,7 @@ contains
 
 !----- main subroutine -----
 
-   subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, p_out)
+   subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, p_out, substeps)
 
       use constants,      only: zero, one
 #ifdef CRESP_VERBOSED
@@ -121,6 +121,8 @@ contains
       logical,                        intent(inout) :: cfl_cresp_violation
       real, dimension(1:2), optional, intent(inout) :: p_out
       logical                                       :: solve_fail_lo, solve_fail_up, empty_cell
+      integer, optional                             :: substeps
+      integer                                       :: i_sub, n_substep
 
       e = zero; n = zero; edt = zero; ndt = zero
       solve_fail_lo = .false.
@@ -131,6 +133,7 @@ contains
       approx_p = e_small_approx_p
 
       p_cut_next = zero
+      n_substep  = 1
 
       r = zero
       f = zero
@@ -138,6 +141,12 @@ contains
 
       u_b = sptab%ub
       u_d = sptab%ud
+
+      if (present(substeps)) then
+         n_substep = substeps
+      else
+         n_substep = 1
+      endif
 
       if (present(p_out)) then
          p_cut    = p_out
@@ -229,42 +238,65 @@ contains
          return
       endif
 
-      call cresp_update_bin_index(dt, p_cut, p_cut_next, cfl_cresp_violation)
-      if (cfl_cresp_violation) then
-         approx_p = e_small_approx_p         !< restore approximation after momenta computed
-         call deallocate_active_arrays
+      do i_sub = 1, n_substep                   !< if one substep, all is done the classic way
+! Compute momentum changes in after time period [t,t+dt]
+         call cresp_update_bin_index(dt, p_cut, p_cut_next, cfl_cresp_violation)
+
+         if (cfl_cresp_violation) then
+            approx_p = e_small_approx_p         !< restore approximation after momenta computed
+            call deallocate_active_arrays
 #ifdef CRESP_VERBOSED
-         write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
+            write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
 #endif /* CRESP_VERBOSED */
-         return
-      endif
+            return                              !< returns with cfl_cresp_violation = T
+         endif
 ! Compute fluxes through fixed edges in time period [t,t+dt], using f, q, p_cut(LO) and p_cut(HI) at [t]
 ! Note that new [t+dt] values of p_cut(LO) and p_cut(HI) in case new fixed edges appear or disappear.
 ! fill new bins
-      call cresp_compute_fluxes(cooling_edges_next,heating_edges_next)
+         call cresp_compute_fluxes(cooling_edges_next,heating_edges_next)
 
 ! Computing e and n at [t+dt]
 
-      ndt(1:ncre) = n(1:ncre)  - (nflux(1:ncre) - nflux(0:ncre-1))
-      edt(1:ncre) = e(1:ncre)  - (eflux(1:ncre) - eflux(0:ncre-1))
+         ndt(1:ncre) = n(1:ncre)  - (nflux(1:ncre) - nflux(0:ncre-1))
+         edt(1:ncre) = e(1:ncre)  - (eflux(1:ncre) - eflux(0:ncre-1))
 
 ! edt(1:ncre) = e(1:ncre) *(one-0.5*dt*r(1:ncre)) - (eflux(1:ncre) - eflux(0:ncre-1))/(one+0.5*dt*r(1:ncre))   !!! oryginalnie u Miniatiego
 ! Compute coefficients R_i needed to find energy in [t,t+dt]
-      call cresp_compute_r(p_next, active_bins_next)                 ! new active bins already received some particles, Ri is needed for those bins too
+         call cresp_compute_r(p_next, active_bins_next)                 ! new active bins already received some particles, Ri is needed for those bins too
 
-      edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
+         edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
 
-      if ((del_i(HI) == 0) .and. (approx_p(HI) > 0)) then
-         if (.not. assert_active_bin_via_nei(ndt(i_cut_next(HI)), edt(i_cut_next(HI)), i_cut_next(HI))) then
-            call manually_deactivate_bin_via_transfer(i_cut_next(HI), -1, ndt, edt)
+         if ((del_i(HI) == 0) .and. (approx_p(HI) > 0)) then
+            if (.not. assert_active_bin_via_nei(ndt(i_cut_next(HI)), edt(i_cut_next(HI)), i_cut_next(HI))) then
+               call manually_deactivate_bin_via_transfer(i_cut_next(HI), -1, ndt, edt)
+            endif
          endif
-      endif
-      if ((del_i(LO) == 0) .and. (approx_p(LO) > 0) .and. (i_cut_next(LO)+2 <= ncre)) then
-         if (.not. assert_active_bin_via_nei(ndt(i_cut_next(LO)+1), edt(i_cut_next(LO)+1), i_cut_next(LO))) then
-            call manually_deactivate_bin_via_transfer(i_cut_next(LO)+1, 1, ndt, edt)
+         if ((del_i(LO) == 0) .and. (approx_p(LO) > 0) .and. (i_cut_next(LO)+2 <= ncre)) then
+            if (.not. assert_active_bin_via_nei(ndt(i_cut_next(LO)+1), edt(i_cut_next(LO)+1), i_cut_next(LO))) then
+               call manually_deactivate_bin_via_transfer(i_cut_next(LO)+1, 1, ndt, edt)
+            endif
          endif
-      endif
 
+         if (i_sub .ne. n_substep) then         !< proceed with end of substep
+            p_cut = p_cut_next                  !< append changes for cutoffs
+            i_cut = i_cut_next                  !< -//-
+            p     = p_fix                       !< restore p
+            p(i_cut_next(LO)) = p_cut_next(LO)  !< update cutoff p
+            p(i_cut_next(HI)) = p_cut_next(HI)  !< update cutoff p
+
+            e     = edt                         !< append changes for e
+            n     = ndt                         !< append changes for e
+            approx_p = [0, 0]                   !< switch off cutoff approximation
+
+            deallocate(active_bins_next)        !< must be deallocated, reallocation in upcoming substep (update_bin_index)
+            deallocate(cooling_edges_next)      !< -//-
+            deallocate(heating_edges_next)      !< -//-
+
+            call ne_to_q(n, e, q, active_bins)  !< begins new step
+            f = nq_to_f(p(0:ncre-1), p(1:ncre), n(1:ncre), q(1:ncre), active_bins)  !< Compute values of distribution function in the new step
+         endif
+
+      enddo
 
       approx_p = e_small_approx_p         !< restore approximation after momenta computed
 
