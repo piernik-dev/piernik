@@ -114,7 +114,6 @@ module cresp_grid
       use initcrspectrum,   only: cresp_substep
       use named_array_list, only: wna
       use timestep_cresp,   only: dt_cre
-!       use mpisetup,         only: master
 #ifdef DEBUG
       use cresp_crspectrum, only: cresp_detect_negative_content
 #endif /* DEBUG */
@@ -130,7 +129,6 @@ module cresp_grid
       cgl => leaves%first
       cfl_cresp_violation = .false.
 
-!       if (master) print *, "[cresp_grid:update_grid] (1) ns=", nssteps," dt=", dt, ", dt_cre=", dt_cre, ", dtsstep=", dt_crs_sstep
       if (cresp_substep) then
          call prepare_substep(2 * dt, dt_cre, dt_crs_sstep, nssteps)
          dt_cresp = dt_crs_sstep    !< 2 * dt is equal to nssteps * dt_crs_sstep
@@ -138,7 +136,6 @@ module cresp_grid
          dt_cresp = 2 * dt
       endif
 
-!       if (master) print *, "[cresp_grid:update_grid] (2) ns=", nssteps," dt=", dt, ", dt_cre=", dt_cre, ", dtsstep=", dt_crs_sstep
       do while (associated(cgl))
          cg => cgl%cg
          do k = cg%ks, cg%ke
@@ -154,7 +151,7 @@ module cresp_grid
 #endif /* CRESP_VERBOSED */
                   call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_cresp_violation, substeps = nssteps)
 #ifdef DEBUG
-                  call cresp_detect_negative_content([i, j, k])
+                  call cresp_detect_negative_content(cfl_cresp_violation, [i, j, k])
 #endif /* DEBUG */
                   if (cfl_cresp_violation) return ! nothing to do here!
                   cg%u(iarr_cre_n, i, j, k) = cresp%n
@@ -172,21 +169,16 @@ module cresp_grid
 
    end subroutine cresp_update_grid
 
-   subroutine prepare_substep(dt_mhd, dt_crs, dt_substep, n_substeps)
-!       use mpisetup,     only: master
+   subroutine prepare_substep(dt_simulation, dt_process_short, dt_substep, n_substeps)
 
       implicit none
 
-      real,    intent(in)  :: dt_mhd, dt_crs
+      real,    intent(in)  :: dt_simulation, dt_process_short
       real,    intent(out) :: dt_substep
       integer, intent(out) :: n_substeps
 
-      n_substeps  = ceiling(dt_mhd / dt_crs ) ! ceiling to assure resulting dt_substep .le. dt_crs
-      dt_substep  = dt_mhd / n_substeps
-
-! #ifdef CRESP_VERBOSED
-!       if (master) write (*,"(A,E12.6,A,E12.6,A,E12.6,A,I3)") " [cresp_driver:prepare_substep] dt_mhd = ", dt_mhd, ", dt_crs = ", dt_crs, " | dt_crs_out = ", dt_substep, ", n_iter = ", n_substeps
-! #endif /* CRESP_VERBOSED */
+      n_substeps  = ceiling(dt_simulation / dt_process_short ) ! ceiling to assure resulting dt_substep .le. dt_process_short
+      dt_substep  = dt_simulation / n_substeps
 
    end subroutine prepare_substep
 

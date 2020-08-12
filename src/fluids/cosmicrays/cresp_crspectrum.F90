@@ -292,6 +292,15 @@ contains
             deallocate(cooling_edges_next)      !< -//-
             deallocate(heating_edges_next)      !< -//-
 
+            call cresp_detect_negative_content(cfl_cresp_violation)
+            if (cfl_cresp_violation) then
+               call deallocate_active_arrays
+#ifdef CRESP_VERBOSED
+               write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
+#endif /* CRESP_VERBOSED */
+               return
+            endif
+
             call ne_to_q(n, e, q, active_bins)  !< begins new step
             f = nq_to_f(p(0:ncre-1), p(1:ncre), n(1:ncre), q(1:ncre), active_bins)  !< Compute values of distribution function in the new step
          endif
@@ -335,7 +344,6 @@ contains
          call deallocate_active_arrays
 #ifdef CRESP_VERBOSED
          write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
-         call printinfo(msg)
 #endif /* CRESP_VERBOSED */
          return
       endif
@@ -732,7 +740,7 @@ contains
 
 !-----------------------------------------------------------------------
 
-   subroutine cresp_detect_negative_content(location) ! Diagnostic measure - negative values should not show up:
+   subroutine cresp_detect_negative_content(negatives_found, location) ! Diagnostic measure - negative values should not show up:
 
       use constants,      only: zero, ndims
       use dataio_pub,     only: warn, msg
@@ -742,6 +750,7 @@ contains
 
       integer, dimension(ndims),optional :: location
       integer                            :: i
+      logical, intent(inout)             :: negatives_found
 
       do i = 1, ncre
          if (e(i) < zero .or. n(i) < zero .or. edt(i) < zero .or. ndt(i) < zero) then
@@ -749,9 +758,10 @@ contains
                write(msg,'(A81,3I3,A7,I4,A9,E18.9,A9,E18.9)') '[cresp_crspectrum:cresp_detect_negative_content] Negative values @ (i j k ) = (', &
                            location, '): i=', i,': n(i)=', n(i), ', e(i)=',e(i)
             else
-               write(msg,'(A66,A7,I4,A9,E18.9,A9,E18.9,A3,A9,I4,A9,E18.9,A9,E18.9)') '[cresp_crspectrum:cresp_detect_negative_content] Negative values:',  &
+               write(msg,'(A66,A7,I4,A9,E18.9,A9,E18.9,A3,A9,I4,A9,E18.9,A9,E18.9,I2)') '[cresp_crspectrum:cresp_detect_negative_content] Negative values:',  &
                            'i=', i,': n(i)=', n(i), ', e(i)=',e(i), "|", 'i=', i,': ndt(i)=', ndt(i), ', edt(i)=',edt(i)
             endif
+            negatives_found = .true. ! TODO usage with substep might prevent crash
             call warn(msg)
          endif
       enddo
