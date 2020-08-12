@@ -61,6 +61,7 @@ contains
 #endif /* MULTIGRID */
 #ifdef COSM_RAY_ELECTRONS
       use timestep_cresp,      only: dt_cre, cresp_timestep
+      use initcrspectrum,      only: cresp_substep
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -74,7 +75,9 @@ contains
 
 #ifdef COSM_RAY_ELECTRONS
       call cresp_timestep
-      dt = min(dt, dt_cre)
+      ! with cresp_substep is enabled, dt_cre is used only within CRESP module for substepping
+      ! thus no need to update domain
+      if (.not. cresp_substep) dt = min(dt, dt_cre)
 #endif /* COSM_RAY_ELECTRONS */
 
       if (.not.K_crs_valid) return

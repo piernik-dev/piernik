@@ -41,7 +41,7 @@ module initcrspectrum
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active, &
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,        &
            & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,       &
-           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart
+           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, cresp_substep, cresp_substep_bcast_dt
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -89,6 +89,10 @@ module initcrspectrum
    logical         :: synch_active                !< TEST feature - turns on / off synchrotron cooling @ CRESP
    logical         :: adiab_active                !< TEST feature - turns on / off adiabatic   cooling @ CRESP
    real            :: cre_active                  !< electron contribution to Pcr
+
+! substepping parameters
+   logical         :: cresp_substep               !< turns on / off usage of substepping
+   logical         :: cresp_substep_bcast_dt      !< turns on / off propagation of one (smallest) dt over the domain
 
 ! NR parameters
    real            :: tol_f                       !< tolerance for f abs. error in NR algorithm
@@ -177,7 +181,8 @@ module initcrspectrum
       &                         e_small_approx_init_cond, p_br_init_lo, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,   &
       &                         NR_iter_limit, max_p_ratio, synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init,             &
       &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf, b_max_db,      &
-      &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up, p_diff, q_eps
+      &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up, p_diff,&
+      &                         q_eps, cresp_substep, cresp_substep_bcast_dt
 
 ! Default values
       use_cresp         = .true.
@@ -233,6 +238,9 @@ module initcrspectrum
       arr_dim_q = 500
       q_eps     = eps
 
+      cresp_substep           = .true.
+      cresp_substep_bcast_dt = .false.
+
       if (master) then
          if (.not.nh%initialized) call nh%init()
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
@@ -276,6 +284,9 @@ module initcrspectrum
          lbuff(9)  =  NR_refine_pf_up
          lbuff(10) =  nullify_empty_bins
          lbuff(11) =  approx_cutoffs
+
+         lbuff(12) =  cresp_substep
+         lbuff(13) =  cresp_substep_bcast_dt
 
          rbuff(1)  = cfl_cre
          rbuff(2)  = cre_eff
@@ -342,6 +353,9 @@ module initcrspectrum
          NR_refine_pf_up             = lbuff(9)
          nullify_empty_bins          = lbuff(10)
          approx_cutoffs              = lbuff(11)
+
+         cresp_substep               = lbuff(12)
+         cresp_substep_bcast_dt      = lbuff(13)
 
          cfl_cre                     = rbuff(1)
          cre_eff                     = rbuff(2)
@@ -561,6 +575,12 @@ module initcrspectrum
       if (master)  call warn(msg)
       write (msg, "(A,ES12.5,A,ES15.8,A,ES15.8)") "[initcrspectrum:init_cresp] dt_synch(p_max_fix = ",p_max_fix,", u_b_max = ",u_b_max,") = ", def_dtsynch / (p_max_fix* u_b_max)
       if (master)  call warn(msg)
+
+      if (cresp_substep) then
+         if (master) then
+            write(msg,"(A)") "[initcrspectrum:init_cresp] Substep (cresp_substep) for CRESP is ON"; call printinfo(msg)
+         endif
+      endif
 
       if ((q_init < three) .and. any(e_small_approx_p == I_ONE)) then
          call warn("[initcrspectrum:init_cresp] Initial parameters: q_init < 3.0 and approximation of outer momenta is on, approximation of outer momenta with hard energy spectrum might not work.")
