@@ -89,7 +89,9 @@ for var in varlist:
     plotdir = 'frames'
     if not os.path.exists(plotdir):
         os.makedirs(plotdir)
-    output = plotdir+'/'+filen.split('/')[-1].replace('.h5',"_%s.png" % var)
+    #output = plotdir+'/'+filen.split('/')[-1].replace('.h5',"_%s.png" % var)
+    fnl = filen.split('/')[-1]
+    output = '_'.join(fnl.split('_')[:-1])+'_'+var+'_'+fnl.split('_')[-1].replace('.h5',".png")
     P.savefig(output, facecolor='white')
     print(output, "written to disk")
     P.clf()
