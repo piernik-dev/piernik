@@ -4,6 +4,7 @@
 import h5py, matplotlib, sys
 matplotlib.use('cairo')      # choose output format
 import numpy as np
+import os
 import pylab as P
 from mpl_toolkits.axes_grid1 import AxesGrid
 import plot_utils as pu
@@ -85,7 +86,10 @@ for var in varlist:
     cbar.ax.set_ylabel(var+" [%s]" % pu.labelx()(uvar))
 
     P.draw()
-    output = filen.split('/')[-1].replace('.h5',"_%s.png" % var)
+    plotdir = 'frames'
+    if not os.path.exists(plotdir):
+        os.makedirs(plotdir)
+    output = plotdir+'/'+filen.split('/')[-1].replace('.h5',"_%s.png" % var)
     P.savefig(output, facecolor='white')
     print(output, "written to disk")
     P.clf()
