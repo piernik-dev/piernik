@@ -1,20 +1,38 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys
-import os
-import h5py
+import getopt, h5py, os, sys
 import plot_compose as pc
 
 if (len(sys.argv) < 3):
     print('PIERNIK VISUALIZATION FACILITY')
-    print('Usage: ./pvf.py <file> <varname [varname ...]>')
+    print('Usage: ./pvf.py <file> <varname,[varname,...]> [options]')
     if len(sys.argv) < 2:
         exit()
 
+plotdir = 'frames'
+
+def cli_params(argv):
+    try:
+        opts,args=getopt.getopt(argv,"ho:",["help","output="])
+    except getopt.GetoptError:
+        print("Unidentified error.")
+        sys.exit(2)
+    for opt, arg in opts:
+        print('OPTARG: ', opt, arg)
+        if opt in ("-h", "--help"):
+            print(" -h, \t\t--help \t\t\tprint this help \n  -o OUTPUT, \t--output OUTPUT \tdump plot files into OUTPUT directory")
+            sys.exit()
+
+        elif opt in ("-o", "--output"):
+            global plotdir
+            plotdir = str(arg)
+            print('PLOTDIR: ', plotdir)
+
+cli_params(sys.argv[3:])
+
 pthfilen = sys.argv[1]
 filen  = pthfilen.split('/')[-1]
-plotdir = 'frames'
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 
@@ -25,7 +43,7 @@ if len(sys.argv) < 3:
 if sys.argv[2] == "_all_":
     varlist = h5f['field_types'].keys()
 else:
-    varlist  = sys.argv[2:]
+    varlist  = sys.argv[2].split(',')
 
 print(varlist)
 
