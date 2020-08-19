@@ -9,7 +9,7 @@ from mpl_toolkits.axes_grid1 import AxesGrid
 import plot_utils as pu
 import read_dataset as rd
 
-def plotcompose(pthfilen, var, output):
+def plotcompose(pthfilen, var, output, cmap):
     h5f = h5py.File(pthfilen,'r')
     time = h5f.attrs['time'][0]
     utim = h5f['dataset_units']['time_unit'].attrs['unit']
@@ -43,18 +43,18 @@ def plotcompose(pthfilen, var, output):
     grid = AxesGrid(fig, 111, nrows_ncols = (2, 2), axes_pad = 0.2, add_all=True, aspect=True, cbar_mode='single', label_mode = "L",)
 
     ax = grid[3]
-    a = ax.imshow(xz, origin="lower",extent=[xmin,xmax,zmin,zmax], vmin=vmin, vmax=vmax, interpolation='nearest')
+    a = ax.imshow(xz, origin="lower",extent=[xmin,xmax,zmin,zmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     ax.set_xlabel("x [%s]" % pu.labelx()(ulen))
     ax.set_ylabel("z [%s]" % pu.labelx()(ulen))
 
     ax = grid[0]
-    a = ax.imshow(xy, origin="lower",extent=[ymin,ymax,xmin,xmax], vmin=vmin, vmax=vmax, interpolation='nearest')
+    a = ax.imshow(xy, origin="lower",extent=[ymin,ymax,xmin,xmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     ax.set_ylabel("x [%s]" % pu.labelx()(ulen))
     ax.set_xlabel("y [%s]" % pu.labelx()(ulen))
     ax.set_title(timep)
 
     ax = grid[2]
-    a = ax.imshow(yz, origin="lower",extent=[ymin,ymax,zmin,zmax], vmin=vmin, vmax=vmax, interpolation='nearest')
+    a = ax.imshow(yz, origin="lower",extent=[ymin,ymax,zmin,zmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     ax.set_xlabel("y [%s]" % pu.labelx()(ulen))
     ax.set_ylabel("z [%s]" % pu.labelx()(ulen))
 
