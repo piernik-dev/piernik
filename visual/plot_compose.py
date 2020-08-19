@@ -1,37 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import h5py, matplotlib, sys
+import h5py, matplotlib
 matplotlib.use('cairo')      # choose output format
 import numpy as np
-import os
 import pylab as P
 from mpl_toolkits.axes_grid1 import AxesGrid
 import plot_utils as pu
 import read_dataset as rd
 
-if (len(sys.argv) < 3):
-    print('PIERNIK VISUALIZATION FACILITY')
-    print('Usage: ./plot_compose.py <file> <varname [varname ...]>')
-    if len(sys.argv) < 2:
-        exit()
-
-pthfilen = sys.argv[1]
-filen  = pthfilen.split('/')[-1]
-
-h5f = h5py.File(pthfilen,'r')
-if len(sys.argv) < 3:
-    print("Available datafields: ", list(h5f['field_types'].keys()))
-    exit(1)
-if sys.argv[2] == "_all_":
-    varlist = h5f['field_types'].keys()
-else:
-    varlist  = sys.argv[2:]
-
-print(varlist)
-
-print("Reading file: %s" % pthfilen)
-for var in varlist:
+def plotcompose(pthfilen, var, output):
     h5f = h5py.File(pthfilen,'r')
     time = h5f.attrs['time'][0]
     utim = h5f['dataset_units']['time_unit'].attrs['unit']
@@ -86,12 +64,6 @@ for var in varlist:
     cbar.ax.set_ylabel(var+" [%s]" % pu.labelx()(uvar))
 
     P.draw()
-    plotdir = 'frames'
-    if not os.path.exists(plotdir):
-        os.makedirs(plotdir)
-    #output = plotdir+'/'+filen.split('/')[-1].replace('.h5',"_%s.png" % var)
-    fnl = filen.split('/')[-1]
-    output = '_'.join(fnl.split('_')[:-1])+'_'+var+'_'+fnl.split('_')[-1].replace('.h5',".png")
     P.savefig(output, facecolor='white')
     print(output, "written to disk")
     P.clf()
