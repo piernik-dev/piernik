@@ -189,6 +189,7 @@ contains
       real,                              intent(out) :: bndsign !< 1. or -1. to change the sign or not
       logical,                           intent(out) :: zndiff  !< COMMENT ME
 
+      bndsign = huge(1.0)
       select case (bndcase)
          case (1)
             edge(LO)    = dom%nb
