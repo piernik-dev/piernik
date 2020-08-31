@@ -87,8 +87,8 @@ qa: chk_err_msg pycodestyle
 pep8: pycodestyle
 
 pycodestyle:
-	echo Pycodestyle check
-	pycodestyle `find src problems bin python -name "*py"` bin/gdf_distance --ignore=E501,E722
+	echo 'Pycodestyle check (--ignore=E501,E722,W504,W605)'
+	pycodestyle `find src problems bin python -name "*py"` bin/gdf_distance --ignore=E501,E722,W504,W605
 
 chk_err_msg:
 	echo Check filenames in error messages
