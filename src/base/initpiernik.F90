@@ -63,7 +63,7 @@ contains
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
       use interpolations,        only: set_interpolations
       use memory_usage,          only: init_memory
-      use mpisetup,              only: init_mpi, master, bigbang
+      use mpisetup,              only: init_mpi, master
       use ppp,                   only: init_profiling, ppp_main
       use refinement,            only: init_refinement, level_max
       use refinement_update,     only: update_refinement
@@ -141,7 +141,7 @@ contains
       call init_dataio_parameters            ! Required very early to call colormessage without side-effects
       call init_memory
       call init_profiling                    ! May require init_dataio_parameters and memory_usage set up
-      call ppp_main%put(ip_label, bigbang)   ! can't call tst_cnt%start("init_piernik") before init_mpi
+      call ppp_main%set_bb(ip_label)         ! can't call tst_cnt%start("init_piernik") before init_mpi
 
       call init_units
 
