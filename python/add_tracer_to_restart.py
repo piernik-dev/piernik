@@ -19,6 +19,7 @@ def grow_dsets(h5f, datasets):
         h5f[dset] = np.resize(fluid, (n + 1, nx, ny, nz)).T
         h5f[dset][:, :, :, -1] = 0.0
 
+
 for f in sys.argv[1:]:
     h5f = h5.File(f)
     try:

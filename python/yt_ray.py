@@ -52,11 +52,11 @@ def print_ray(fname, startpoint, endpoint):
             print("{:<20.12g} ".format(line[l].v[i]), end='')
         print()
 
+
 if __name__ == "__main__":
     import sys
     if (len(sys.argv) < 8):
-        print("Error: too few arguments.\nUsage: " +
-              sys.argv[0] + " hdf_file x_start y_start z_start x_end y_end z_end", file=sys.stderr)
+        print("Error: too few arguments.\nUsage: " + sys.argv[0] + " hdf_file x_start y_start z_start x_end y_end z_end", file=sys.stderr)
     else:
         ndim = 3
         print_ray(sys.argv[1],
