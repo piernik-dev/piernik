@@ -33,6 +33,7 @@ def compare_with_previous(tdir, fname, pref):
     shutil.move(fname, gold_file)
     return
 
+
 # test_dir = tempfile.mkdtemp()
 test_dir = '/dev/shm/dupa'
 os.mkdir(test_dir)

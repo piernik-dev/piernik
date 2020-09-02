@@ -132,7 +132,7 @@ module ppp
       procedure :: cleanup  !< destroy this event list
       procedure :: start    !< add a beginning of an interval
       procedure :: stop     !< add an end of an interval
-      procedure :: put      !< add an event with time measured elsewhere
+      procedure :: set_bb   !< add the initial event with bigbang time
       procedure, private :: next_event  !< for internal use in start, stop and put
       procedure, private :: expand  !< create next array for events
       procedure :: publish  !< write the collected data to a log file
@@ -421,7 +421,8 @@ contains
 
    subroutine start(this, label, mask)
 
-      use mpi, only: MPI_Wtime
+      use mpi,      only: MPI_Wtime
+      use mpisetup, only: bigbang_shift
 
       implicit none
 
@@ -437,7 +438,7 @@ contains
       endif
 
       l = label(1:min(cbuff_len, len_trim(label)))
-      call this%next_event(event(l, MPI_Wtime()))
+      call this%next_event(event(l, MPI_Wtime() + bigbang_shift))
 
    end subroutine start
 
@@ -449,7 +450,8 @@ contains
 
    subroutine stop(this, label, mask)
 
-      use mpi, only: MPI_Wtime
+      use mpi,      only: MPI_Wtime
+      use mpisetup, only: bigbang_shift
 
       implicit none
 
@@ -465,34 +467,33 @@ contains
       endif
 
       l = label(1:min(cbuff_len, len_trim(label)))
-      call this%next_event(event(l, -MPI_Wtime()))
+      call this%next_event(event(l, -MPI_Wtime() - bigbang_shift))
 
    end subroutine stop
 
 !>
-!! \brief Add an event with time measured elsewhere
+!! \brief Add the initial event with bigbang time
 !!
 !! Do not use inside die(), warn(), system_mem_usage() or check_mem_usage().
-!!
-!! Do not use at all, except for inserting event with mpisetup::bigbang
 !<
 
-   subroutine put(this, label, time)
+   subroutine set_bb(this, label)
+
+      use mpisetup, only: bigbang, bigbang_shift
 
       implicit none
 
       class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
       character(len=*), intent(in)    :: label  !< event label
-      real(kind=8),     intent(in)    :: time   !< time of the event
 
       character(len=cbuff_len) :: l
 
       if (.not. use_profiling) return
 
       l = label(1:min(cbuff_len, len_trim(label)))
-      call this%next_event(event(l, time))
+      call this%next_event(event(l, bigbang + bigbang_shift))
 
-   end subroutine put
+   end subroutine set_bb
 
 !> \brief Start, stop and put
 
@@ -552,7 +553,7 @@ contains
 !! Perhaps MPI_TYPE_CREATE_STRUCT would simplify the code and improve the communication
 !! but it requires some C-interoperability, which needs to be explored and tested first.
 !!
-!! \todo XMLot JSON output?
+!! \todo XML or JSON output?
 !<
 
    subroutine publish(this)
