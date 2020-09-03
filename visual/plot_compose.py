@@ -42,7 +42,7 @@ def plotcompose(pthfilen, var, output, options):
 
     fig = P.figure(1,figsize=(10,10.5))
 
-    grid = AxesGrid(fig, 111, nrows_ncols = (2, 2), axes_pad = 0.2, add_all=True, aspect=True, cbar_mode='single', label_mode = "L",)
+    grid = AxesGrid(fig, 111, nrows_ncols = (2, 2), axes_pad = 0.2, aspect=True, cbar_mode='single', label_mode = "L",)
 
     ax = grid[3]
     a = ax.imshow(xz, origin="lower",extent=[xmin,xmax,zmin,zmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
