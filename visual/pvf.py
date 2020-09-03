@@ -23,11 +23,11 @@ def cli_params(argv):
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-h", "--help"):
-            print(" -h, \t\t--help \t\t\tprint this help \n  \
-               -c CX,CY,CZ, \t--center CX,CY,CZ \tplot cuts across given point coordinates CX, CY, CZ \n \
-               -o OUTPUT, \t--output OUTPUT \tdump plot files into OUTPUT directory \n \
-               -r COLORMAP, \t--colormap COLORMAP \tuse COLORMAP palette \n \
-               -z ZMIN,ZMAX, \t--zlim ZMIN,ZMAX \tlimit colorscale to ZMIN and ZMAX")
+            print(" -h, \t\t--help \t\t\tprint this help \n\
+ -c CX,CY,CZ, \t--center CX,CY,CZ \tplot cuts across given point coordinates CX, CY, CZ [default: computed domain center] \n\
+ -o OUTPUT, \t--output OUTPUT \tdump plot files into OUTPUT directory [default: frames] \n\
+ -r COLORMAP, \t--colormap COLORMAP \tuse COLORMAP palette [default: viridis] \n\
+ -z ZMIN,ZMAX, \t--zlim ZMIN,ZMAX \tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]")
             sys.exit()
 
         elif opt in ("-c", "--center"):
