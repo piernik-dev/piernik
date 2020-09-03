@@ -9,7 +9,8 @@ from mpl_toolkits.axes_grid1 import AxesGrid
 import plot_utils as pu
 import read_dataset as rd
 
-def plotcompose(pthfilen, var, output, cmap):
+def plotcompose(pthfilen, var, output, options):
+    vmin, vmax, cmap = options
     h5f = h5py.File(pthfilen,'r')
     time = h5f.attrs['time'][0]
     utim = h5f['dataset_units']['time_unit'].attrs['unit']
@@ -33,10 +34,11 @@ def plotcompose(pthfilen, var, output, cmap):
     xz = dset[:,iy,:].swapaxes(0,1)
     yz = dset[ix,:,:].swapaxes(0,1)
 
-    vmax = max(np.max(xz), np.max(xy), np.max(yz))
-    vmin = min(np.min(xz), np.min(xy), np.min(yz))
-    print('Value range: ', vmin, vmax)
-    vmin, vmax = pu.fsym(vmin,vmax)
+    if (vmin == 0.0 and vmax == 0.0):
+       vmax = max(np.max(xz), np.max(xy), np.max(yz))
+       vmin = min(np.min(xz), np.min(xy), np.min(yz))
+       print('Value range: ', vmin, vmax)
+       vmin, vmax = pu.fsym(vmin,vmax)
 
     fig = P.figure(1,figsize=(10,10.5))
 
