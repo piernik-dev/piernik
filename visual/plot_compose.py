@@ -10,7 +10,7 @@ import plot_utils as pu
 import read_dataset as rd
 
 def plotcompose(pthfilen, var, output, options):
-    vmin, vmax, cmap = options
+    vmin, vmax, cmap, cu, cx, cy, cz = options
     h5f = h5py.File(pthfilen,'r')
     time = h5f.attrs['time'][0]
     utim = h5f['dataset_units']['time_unit'].attrs['unit']
@@ -29,6 +29,11 @@ def plotcompose(pthfilen, var, output, options):
     ix = int(nx/2-1)
     iy = int(ny/2-1)
     iz = int(nz/2-1)
+    if cu:
+        ix = int(min(nx-1, max(0, np.floor(nx * (cx - xmin) / (xmax - xmin)))))
+        iy = int(min(ny-1, max(0, np.floor(ny * (cy - ymin) / (ymax - ymin)))))
+        iz = int(min(nz-1, max(0, np.floor(nz * (cz - zmin) / (zmax - zmin)))))
+        print('Ordered plot center', cx, cy, cz, ' gives following uniform grid indices:', ix, iy, iz)
 
     xy = dset[:,:,iz]
     xz = dset[:,iy,:].swapaxes(0,1)

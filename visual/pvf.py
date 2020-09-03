@@ -12,22 +12,28 @@ if (len(sys.argv) < 3):
 
 cmap    = 'viridis'
 plotdir = 'frames'
-zmin = 0.0
-zmax = 0.0
+cu, cx, cy, cz = False, 0.0, 0.0, 0.0
+zmin, zmax = 0.0, 0.0
 
 def cli_params(argv):
     try:
-        opts,args=getopt.getopt(argv,"ho:r:z:",["help","colormap=","output=","zlim="])
+        opts,args=getopt.getopt(argv,"c:ho:r:z:",["help","center=","colormap=","output=","zlim="])
     except getopt.GetoptError:
         print("Unidentified error.")
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-h", "--help"):
             print(" -h, \t\t--help \t\t\tprint this help \n  \
+               -c CX,CY,CZ, \t--center CX,CY,CZ \tplot cuts across given point coordinates CX, CY, CZ \n \
                -o OUTPUT, \t--output OUTPUT \tdump plot files into OUTPUT directory \n \
                -r COLORMAP, \t--colormap COLORMAP \tuse COLORMAP palette \n \
                -z ZMIN,ZMAX, \t--zlim ZMIN,ZMAX \tlimit colorscale to ZMIN and ZMAX")
             sys.exit()
+
+        elif opt in ("-c", "--center"):
+            global cx, cy, cz, cu
+            cx, cy, cz = arg.split(',')
+            cu, cx, cy, cz = True, float(cx), float(cy), float(cz)
 
         elif opt in ("-o", "--output"):
             global plotdir
@@ -68,7 +74,7 @@ for var in varlist:
     #output = plotdir+'/'+filen.split('/')[-1].replace('.h5',"_%s.png" % var)
     fnl = filen.split('/')[-1]
     output = plotdir+'/'+'_'.join(fnl.split('_')[:-1])+'_'+var+'_'+fnl.split('_')[-1].replace('.h5',".png")
-    options = zmin, zmax, cmap
+    options = zmin, zmax, cmap, cu, cx, cy, cz
     pc.plotcompose(pthfilen, var, output, options)
 
 h5f.close()
