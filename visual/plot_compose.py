@@ -69,7 +69,7 @@ def plotcompose(pthfilen, var, output, options):
 
     bar = grid.cbar_axes[0]
     bar.axis["right"].toggle(all=True)
-    cbar = P.colorbar(a, cax=bar,format='%.3f', drawedges=False)
+    cbar = P.colorbar(a, cax=bar,format='%.1e', drawedges=False)
     cbar.ax.set_ylabel(var+" [%s]" % pu.labelx()(uvar))
 
     P.draw()
