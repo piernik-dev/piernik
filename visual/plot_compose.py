@@ -10,7 +10,7 @@ import plot_utils as pu
 import read_dataset as rd
 
 def plotcompose(pthfilen, var, output, options):
-    vmin, vmax, cmap, cu, cx, cy, cz = options
+    umin, umax, cmap, sctype, cu, cx, cy, cz = options
     h5f = h5py.File(pthfilen,'r')
     time = h5f.attrs['time'][0]
     utim = h5f['dataset_units']['time_unit'].attrs['unit']
@@ -38,13 +38,15 @@ def plotcompose(pthfilen, var, output, options):
     xy = dset[:,:,iz]
     xz = dset[:,iy,:].swapaxes(0,1)
     yz = dset[ix,:,:].swapaxes(0,1)
+    d3min, d3max = np.min(dset), np.max(dset)
+    d2max = max(np.max(xz), np.max(xy), np.max(yz))
+    d2min = min(np.min(xz), np.min(xy), np.min(yz))
 
-    if (vmin == 0.0 and vmax == 0.0):
-       vmax = max(np.max(xz), np.max(xy), np.max(yz))
-       vmin = min(np.min(xz), np.min(xy), np.min(yz))
-       print('Value range: ', vmin, vmax)
-       vmin, vmax = pu.fsym(vmin,vmax)
+    xy, xz, yz, vmin, vmax = pu.scale_manage(sctype, xy, xz, yz, umin, umax, d2min, d2max)
 
+    print('3D data value range: ', d3min, d3max)
+    print('Slices  value range: ', d2min, d2max)
+    print('Plotted value range: ', vmin, vmax)
     fig = P.figure(1,figsize=(10,10.5))
 
     grid = AxesGrid(fig, 111, nrows_ncols = (2, 2), axes_pad = 0.2, aspect=True, cbar_mode='single', label_mode = "L",)
