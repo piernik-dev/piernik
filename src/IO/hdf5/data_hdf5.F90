@@ -851,7 +851,11 @@ contains
       ! Setup file access property list with parallel I/O access.
       !
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_idf, error)
+#ifdef MPIF08
+      call h5pset_fapl_mpio_f(plist_idf, comm%mpi_val, MPI_INFO_NULL%mpi_val, error)
+#else /* !MPIF08 */
       call h5pset_fapl_mpio_f(plist_idf, comm, MPI_INFO_NULL, error)
+#endif /* !MPIF08 */
       !
       ! Create the file collectively.
       !

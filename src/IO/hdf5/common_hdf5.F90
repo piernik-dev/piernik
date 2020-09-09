@@ -735,7 +735,8 @@ contains
          &                    h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, h5pclose_f, &
          &                    h5zfilter_avail_f
       use helpers_hdf5, only: create_attribute!, create_corefile
-      use MPIF,         only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
+      use MPIF,         only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8, &
+           &                  MPI_Allgather, MPI_Recv, MPI_Send
       use mpisetup,     only: comm, FIRST, LAST, master, mpi_err, piernik_MPI_Bcast
 
       implicit none
@@ -1056,7 +1057,11 @@ contains
          ! when nproc_io < nproc we'll probably need another communicator for subset of processes that
          ! have can_i_write flag set
          if (h5p == H5P_FILE_ACCESS_F) then
+#ifdef MPIF08
+            call h5pset_fapl_mpio_f(plist_id, comm%mpi_val, MPI_INFO_NULL%mpi_val, error)  ! really?
+#else /* !MPIF08 */
             call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
+#endif /* !MPIF08 */
          else if (h5p == H5P_DATASET_XFER_F) then
             call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
          endif

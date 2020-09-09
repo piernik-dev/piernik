@@ -104,7 +104,7 @@ contains
       use cg_list,    only: cg_list_element
       use constants,  only: I_ZERO, I_ONE, ndims, LO, HI
       use dataio_pub, only: die
-      use MPIF,       only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER
+      use MPIF,       only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER, MPI_Allgather
       use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
       use ordering,   only: SFC_order
 
@@ -265,7 +265,7 @@ contains
    subroutine check_blocky(this)
 
       use constants,  only: ndims, LO, HI, pLAND, I_ONE
-      use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL
+      use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_Waitall
       use mpisetup,   only: proc, req, status, comm, mpi_err, LAST, inflate_req, slave, piernik_MPI_Allreduce
 
       implicit none
@@ -295,7 +295,11 @@ contains
       req = MPI_REQUEST_NULL
       if (slave)     call MPI_Irecv(shape1, size(shape1), MPI_INTEGER, proc-I_ONE, sh_tag, comm, req(1 ), mpi_err)
       if (proc<LAST) call MPI_Isend(shape,  size(shape),  MPI_INTEGER, proc+I_ONE, sh_tag, comm, req(nr), mpi_err)
+#ifdef MPIF08
+      call MPI_Waitall(nr, req(:nr), status(:nr), mpi_err)
+#else /* !MPIF08 */
       call MPI_Waitall(nr, req(:nr), status(:, :nr), mpi_err)
+#endif /* !MPIF08 */
       if (any(shape /= 0) .and. any(shape1 /= 0)) then
          if (any(shape /= shape1)) this%is_blocky = .false.
       endif
@@ -315,7 +319,7 @@ contains
 
       use constants,  only: LO, HI, ndims
       use dataio_pub, only: die
-      use MPIF,       only: MPI_INTEGER8
+      use MPIF,       only: MPI_INTEGER8, MPI_Allgather
       use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
       use ordering,   only: SFC_order
 

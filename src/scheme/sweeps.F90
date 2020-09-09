@@ -303,6 +303,9 @@ contains
       use solvecg_rtvd,     only: solve_cg_rtvd
       use solvecg_riemann,  only: solve_cg_riemann
       use sources,          only: prepare_sources
+#ifdef MPIF08
+      use MPIF,             only: MPI_Status
+#endif
 
       implicit none
 
@@ -333,7 +336,11 @@ contains
       integer                        :: blocks_done
       integer                        :: g, nr, nr_recv
       integer                        :: uhi, bhi, psii, psihi
+#ifdef MPIF08
+      type(MPI_Status), dimension(:), pointer :: mpistatus
+#else /* !MPIF08 */
       integer(kind=4), dimension(:,:), pointer :: mpistatus
+#endif /* !MPIF08 */
       procedure(solve_cg_sub), pointer :: solve_cg => null()
       character(len=*), dimension(ndims), parameter :: sweep_label = [ "sweep_x", "sweep_y", "sweep_z" ]
       character(len=*), parameter :: solve_cgs_label = "solve_bunch_of_cg", cg_label = "solve_cg"
@@ -414,7 +421,11 @@ contains
 
             if (.not. all_processed .and. blocks_done == 0) then
                if (nr_recv > 0) then
+#ifdef MPIF08
+                  mpistatus => status(:nr_recv)
+#else /* !MPIF08 */
                   mpistatus => status(:, :nr_recv)
+#endif /* !MPIF08 */
                   call MPI_Waitany(nr_recv, req(:nr_recv), g, mpistatus, mpi_err)
                   ! g is the number of completed operations
                endif
@@ -422,7 +433,11 @@ contains
          enddo
 
          if (nr > 0) then
+#ifdef MPIF08
+            mpistatus => status(:nr)
+#else /* !MPIF08 */
             mpistatus => status(:, :nr)
+#endif /* !MPIF08 */
             call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
          endif
 

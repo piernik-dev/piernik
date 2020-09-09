@@ -62,7 +62,7 @@ contains
       use constants,  only: I_ONE
       use dataio_pub, only: die
       use func,       only: operator(.notequals.)
-      use MPIF,       only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
+      use MPIF,       only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_Send, MPI_Recv
       use mpisetup,   only: slave, LAST, comm, proc, mpi_err
 
       implicit none
@@ -86,7 +86,7 @@ contains
 
       use constants,  only: I_ONE
       use dataio_pub, only: die
-      use MPIF,       only: MPI_INTEGER, MPI_STATUS_IGNORE
+      use MPIF,       only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_Send, MPI_Recv
       use mpisetup,   only: slave, LAST, comm, proc, mpi_err
 
       implicit none
@@ -110,7 +110,7 @@ contains
 
       use constants,  only: I_ONE
       use dataio_pub, only: die
-      use MPIF,       only: MPI_CHARACTER, MPI_STATUS_IGNORE
+      use MPIF,       only: MPI_CHARACTER, MPI_STATUS_IGNORE, MPI_Send, MPI_Recv
       use mpisetup,   only: slave, LAST, comm, proc, mpi_err
 
       implicit none

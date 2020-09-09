@@ -96,10 +96,14 @@ contains
       use dataio_pub,  only: msg, warn, die
       use domain,      only: dom
       use grid_cont,   only: grid_container
-      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_2DOUBLE_PRECISION, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
+      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_2DOUBLE_PRECISION, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE, &
+           &                 MPI_Allreduce, MPI_Send, MPI_Recv
       use mpisetup,    only: comm, mpi_err, master, proc, FIRST
 !      use named_array_list, only: qna
       use types,       only: value
+#ifdef MPIF08
+      use MPIF,      only: MPI_Op
+#endif
 
       implicit none
 
@@ -114,7 +118,11 @@ contains
       type(cg_list_element),  pointer          :: cgl
       real, dimension(:,:,:), pointer          :: tab
       integer,                       parameter :: tag1 = 11, tag2 = tag1 + 1, tag3 = tag2 + 1
+#ifdef MPIF08
+      type(MPI_Op), dimension(MINL:MAXL), parameter :: op = [ MPI_MINLOC, MPI_MAXLOC ]
+#else /* !MPIF08 */
       integer, dimension(MINL:MAXL), parameter :: op = [ MPI_MINLOC, MPI_MAXLOC ]
+#endif /* !MPIF08 */
       enum, bind(C)
          enumerator :: I_V, I_P !< value and proc
       end enum

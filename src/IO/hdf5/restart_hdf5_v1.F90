@@ -153,7 +153,11 @@ contains
       ! Set up a new HDF5 file for parallel write
       call h5open_f(error)
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
+#ifdef MPIF08
+      call h5pset_fapl_mpio_f(plist_id, comm%mpi_val, MPI_INFO_NULL%mpi_val, error)
+#else /* !MPIF08 */
       call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
+#endif /* !MPIF08 */
       call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error, access_prp = plist_id)
 
       ! Write scalar fields that were declared to be required on restart
@@ -571,7 +575,11 @@ contains
       endif
 
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
+#ifdef MPIF08
+      call h5pset_fapl_mpio_f(plist_id, comm%mpi_val, MPI_INFO_NULL%mpi_val, error)
+#else /* !MPIF08 */
       call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
+#endif /* !MPIF08 */
 
       call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error, access_prp = plist_id)
       call h5pclose_f(plist_id, error)

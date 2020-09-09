@@ -34,6 +34,9 @@ module grid_cont_bnd
    use grid_cont_na,    only: grid_container_na_t
    use fluxtypes,       only: fluxarray, fluxpoint
    use refinement_flag, only: ref_flag_t
+#ifdef MPIF08
+   use MPIF,            only: MPI_Request
+#endif /* MPIF08 */
 
    implicit none
 
@@ -49,7 +52,12 @@ module grid_cont_bnd
       integer(kind=4) :: tag                               !< unique tag for data exchange
       real, allocatable, dimension(:,:,:)   :: buf         !< buffer for the 3D (scalar) data to be sent or received
       real, allocatable, dimension(:,:,:,:) :: buf4        !< buffer for the 4D (vector) data to be sent or received
+#ifdef MPIF08
+      type(MPI_Request), pointer :: req                    !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
+#else /* !MPIF08 */
       integer(kind=4), pointer :: req                      !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
+#endif /* !MPIF08 */
+
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se2  !< auxiliary range, used in cg_level_connected:vertical_bf_prep
       class(grid_container_bnd_t), pointer :: local        !< set this pointer to non-null when the exchange is local
    end type segment

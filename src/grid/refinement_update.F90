@@ -239,10 +239,13 @@ contains
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: xdim, zdim, LO, HI, I_ONE, I_ZERO
-      use dataio_pub        , only: die, warn
+      use dataio_pub,         only: die, warn
       use domain,             only: dom
       use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE
       use mpisetup,           only: FIRST, LAST, comm, mpi_err, proc, req, status, inflate_req
+#ifdef MPIF08
+      use MPIF,               only: MPI_Status
+#endif
 
       implicit none
 
@@ -260,7 +263,11 @@ contains
       type(pt), dimension(:), allocatable :: pt_list
       integer :: pt_cnt
       integer(kind=4) :: rtag
+#ifdef MPIF08
+      type(MPI_Status), dimension(:), pointer :: mpistatus
+#else /* !MPIF08 */
       integer(kind=4), dimension(:,:), pointer :: mpistatus
+#endif /* !MPIF08 */
 
       if (perimeter > dom%nb) call die("[refinement_update:parents_prevent_derefinement_lev] perimeter > dom%nb")
       if (.not. associated(lev%finer)) then
@@ -331,7 +338,11 @@ contains
       enddo
 
       if (nr > 0) then
+#ifdef MPIF08
+         mpistatus => status(:nr)
+#else /* !MPIF08 */
          mpistatus => status(:, :nr)
+#endif /* !MPIF08 */
          call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
       endif
 
