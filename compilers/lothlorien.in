@@ -18,12 +18,19 @@ F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -Wno-unused-fun
 F90FLAGS += -fbacktrace -ggdb
 F90FLAGS += -fcheck=all
 
-GFORTRAN := $(shell gfortran -dumpversion)
-ifeq ($(GFORTRAN),10)
-  # Ugly hack for old MPI interface
-  F90FLAGS += -fallow-argument-mismatch -frecursive
-else
+# Since gfortran >= 10.0 -frecursive was adviced by the compiler.
+# ToDo: Find out why.
+F90FLAGS += -frecursive
+
+# for gfortran >= 10.0 the use mpi_f08 interface is strongly encouraged
+USE_MPI_F08 := 1
+
+ifeq ($(USE_MPI_F08),1)
   F90FLAGS += -pedantic
+  CPPFLAGS += -DMPIF08
+else
+  # Ugly hack for old MPI interface
+  F90FLAGS += -fallow-argument-mismatch
 endif
 
 ifdef I64
