@@ -553,7 +553,7 @@ contains
       use global,      only: nstep
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
+      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
       use mpisetup,    only: master, FIRST, proc, comm, mpi_err
       use ppp,         only: ppp_main
 
@@ -825,7 +825,7 @@ contains
            &                     h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5sclose_f, h5dget_space_f, h5sselect_hyperslab_f, &
            &                     h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
       use mpisetup,        only: comm
-      use mpi,             only: MPI_INFO_NULL
+      use MPIF,            only: MPI_INFO_NULL
 
       implicit none
 

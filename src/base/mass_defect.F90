@@ -62,7 +62,7 @@ contains
    subroutine update_magic_mass
 
       use fluidindex,  only: flind
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,    only: comm, mpi_err, FIRST, master
 
       implicit none

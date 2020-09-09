@@ -63,7 +63,7 @@ contains
       use refinement,      only: oop_thr
       use sort_piece_list, only: grid_piece_list
 #ifdef DEBUG
-      use mpi,             only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
+      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
       use mpisetup,        only: comm, mpi_err
 #endif /* DEBUG */
 
@@ -195,7 +195,7 @@ contains
       use dataio_pub,         only: die
       use grid_cont,          only: grid_container
       use list_of_cg_lists,   only: all_lists
-      use mpi,                only: MPI_DOUBLE_PRECISION
+      use MPIF,               only: MPI_DOUBLE_PRECISION
       use mpisetup,           only: master, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, comm, mpi_err, req, status, inflate_req
       use named_array_list,   only: qna, wna
       use ppp,                only: ppp_main

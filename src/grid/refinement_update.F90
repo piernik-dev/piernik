@@ -241,7 +241,7 @@ contains
       use constants,          only: xdim, zdim, LO, HI, I_ONE, I_ZERO
       use dataio_pub        , only: die, warn
       use domain,             only: dom
-      use mpi,                only: MPI_INTEGER, MPI_STATUS_IGNORE
+      use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE
       use mpisetup,           only: FIRST, LAST, comm, mpi_err, proc, req, status, inflate_req
 
       implicit none

@@ -356,7 +356,7 @@ contains
 
       use constants,           only: I_ONE
       use dataio_pub,          only: msg, printinfo
-      use mpi,                 only: MPI_DOUBLE_PRECISION
+      use MPIF,                only: MPI_DOUBLE_PRECISION
       use mpisetup,            only: master, nproc, FIRST, LAST, comm, mpi_err
       use multigridvars,       only: tot_ts
 #ifdef SELF_GRAV

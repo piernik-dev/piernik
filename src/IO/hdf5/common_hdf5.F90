@@ -735,7 +735,7 @@ contains
          &                    h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, h5pclose_f, &
          &                    h5zfilter_avail_f
       use helpers_hdf5, only: create_attribute!, create_corefile
-      use mpi,          only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
+      use MPIF,         only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
       use mpisetup,     only: comm, FIRST, LAST, master, mpi_err, piernik_MPI_Bcast
 
       implicit none
@@ -1042,7 +1042,7 @@ contains
    function set_h5_properties(h5p, nproc_io) result (plist_id)
       use hdf5,     only: HID_T, H5P_FILE_ACCESS_F, h5pcreate_f, h5pset_fapl_mpio_f, &
          &                H5FD_MPIO_COLLECTIVE_F, h5pset_dxpl_mpio_f, H5P_DATASET_XFER_F
-      use mpi,      only: MPI_INFO_NULL
+      use MPIF,     only: MPI_INFO_NULL
       use mpisetup, only: comm
 
       implicit none

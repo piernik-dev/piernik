@@ -421,7 +421,7 @@ contains
 
    subroutine start(this, label, mask)
 
-      use mpi,      only: MPI_Wtime
+      use MPIF,     only: MPI_Wtime
       use mpisetup, only: bigbang_shift
 
       implicit none
@@ -450,7 +450,7 @@ contains
 
    subroutine stop(this, label, mask)
 
-      use mpi,      only: MPI_Wtime
+      use MPIF,     only: MPI_Wtime
       use mpisetup, only: bigbang_shift
 
       implicit none
@@ -561,7 +561,7 @@ contains
       use constants,    only: I_ZERO, I_ONE
       use dataio_pub,   only: die, printinfo, msg
       use memory_usage, only: check_mem_usage
-      use mpi,          only: MPI_STATUS_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use MPIF,         only: MPI_STATUS_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,     only: proc, master, slave, comm, mpi_err, FIRST, LAST, req, status, inflate_req
 
       implicit none

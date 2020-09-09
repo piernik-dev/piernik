@@ -104,7 +104,7 @@ contains
       use cg_list,    only: cg_list_element
       use constants,  only: I_ZERO, I_ONE, ndims, LO, HI
       use dataio_pub, only: die
-      use mpi,        only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER
+      use MPIF,       only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER
       use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
       use ordering,   only: SFC_order
 
@@ -265,7 +265,7 @@ contains
    subroutine check_blocky(this)
 
       use constants,  only: ndims, LO, HI, pLAND, I_ONE
-      use mpi,        only: MPI_INTEGER, MPI_REQUEST_NULL
+      use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL
       use mpisetup,   only: proc, req, status, comm, mpi_err, LAST, inflate_req, slave, piernik_MPI_Allreduce
 
       implicit none
@@ -315,7 +315,7 @@ contains
 
       use constants,  only: LO, HI, ndims
       use dataio_pub, only: die
-      use mpi,        only: MPI_INTEGER8
+      use MPIF,       only: MPI_INTEGER8
       use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
       use ordering,   only: SFC_order
 

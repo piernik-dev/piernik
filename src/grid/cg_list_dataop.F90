@@ -96,7 +96,7 @@ contains
       use dataio_pub,  only: msg, warn, die
       use domain,      only: dom
       use grid_cont,   only: grid_container
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_2DOUBLE_PRECISION, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
+      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_2DOUBLE_PRECISION, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
       use mpisetup,    only: comm, mpi_err, master, proc, FIRST
 !      use named_array_list, only: qna
       use types,       only: value

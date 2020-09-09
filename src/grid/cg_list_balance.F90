@@ -218,7 +218,7 @@ contains
 
       use constants,       only: pSUM, I_ONE
       use dataio_pub,      only: die
-      use mpi,             only: MPI_INTEGER
+      use MPIF,            only: MPI_INTEGER
       use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, comm, mpi_err, nproc
       use sort_piece_list, only: grid_piece_list
 
@@ -301,7 +301,7 @@ contains
    subroutine patches_to_list(this, gp, ls)
 
       use constants,       only: ndims, INVALID, I_ONE
-      use mpi,             only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
+      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
       use mpisetup,        only: master, slave, FIRST, LAST, comm, req, mpi_err, status, inflate_req
       use sort_piece_list, only: grid_piece_list
 
@@ -365,7 +365,7 @@ contains
    subroutine distribute_patches(this, gp, from)
 
       use constants,       only: ndims, I_ONE
-      use mpi,             only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
+      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
       use mpisetup,        only: master, FIRST, LAST, comm, mpi_err
       use sort_piece_list, only: grid_piece_list
 

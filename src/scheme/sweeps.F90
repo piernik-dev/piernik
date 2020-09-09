@@ -66,7 +66,7 @@ contains
       use constants, only: LO, HI, I_ONE
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
-      use mpi,       only: MPI_DOUBLE_PRECISION
+      use MPIF,      only: MPI_DOUBLE_PRECISION
       use mpisetup,  only: comm, mpi_err, req, inflate_req
 
       implicit none
@@ -112,7 +112,7 @@ contains
       use dataio_pub, only: die
       use fluidindex, only: flind
       use grid_cont,  only: grid_container
-      use mpi,        only: MPI_STATUS_IGNORE
+      use MPIF,       only: MPI_STATUS_IGNORE
       use mpisetup,   only: mpi_err
       use ppp,        only: ppp_main
 
@@ -176,7 +176,7 @@ contains
       use domain,       only: dom
       use grid_cont,    only: grid_container
       use grid_helpers, only: f2c_o
-      use mpi,          only: MPI_DOUBLE_PRECISION
+      use MPIF,         only: MPI_DOUBLE_PRECISION
       use mpisetup,     only: comm, mpi_err, req, inflate_req
       use ppp,          only: ppp_main
 

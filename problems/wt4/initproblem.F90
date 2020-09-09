@@ -230,7 +230,7 @@ contains
       use dataio_pub,  only: msg, die
       use func,        only: operator(.notequals.)
       use grid_cont,   only: grid_container
-      use mpi,         only: MPI_DOUBLE_PRECISION
+      use MPIF,        only: MPI_DOUBLE_PRECISION
       use mpisetup,    only: proc, master, FIRST, LAST, comm, status, mpi_err
 
       implicit none

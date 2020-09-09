@@ -516,7 +516,7 @@ contains
       use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
       use mpisetup,         only: comm, mpi_err, req, status, inflate_req, master
-      use mpi,              only: MPI_DOUBLE_PRECISION
+      use MPIF,             only: MPI_DOUBLE_PRECISION
       use named_array,      only: p3
       use named_array_list, only: qna
 
@@ -692,7 +692,7 @@ contains
       use grid_cont,        only: grid_container
       use grid_helpers,     only: f2c
       use mpisetup,         only: comm, mpi_err, req, status, inflate_req, master
-      use mpi,              only: MPI_DOUBLE_PRECISION
+      use MPIF,             only: MPI_DOUBLE_PRECISION
       use named_array_list, only: qna
       use ppp,              only: ppp_main
 
@@ -910,7 +910,7 @@ contains
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c, c2f
-      use mpi,            only: MPI_DOUBLE_PRECISION
+      use MPIF,           only: MPI_DOUBLE_PRECISION
       use mpisetup,       only: comm, mpi_err, req, status, inflate_req, master
       use ppp,            only: ppp_main
 
@@ -1085,7 +1085,7 @@ contains
       use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c
       use mergebox,       only: wmap  ! this is the last place that uses this module
-      use mpi,            only: MPI_INTEGER, MPI_INTEGER8
+      use MPIF,           only: MPI_INTEGER, MPI_INTEGER8
       use mpisetup,       only: FIRST, LAST, comm, mpi_err, proc
       use overlap,        only: is_overlap
       use tag_pool,       only: t_pool

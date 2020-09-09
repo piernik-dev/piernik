@@ -325,7 +325,7 @@ contains
       use constants,        only: xdim, ydim, zdim, cor_dim, I_ONE, I_TWO, LO, HI
       use dataio_pub,       only: die
       use merge_segments,   only: IN, OUT
-      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_STATUS_SIZE
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUS_SIZE
       use mpisetup,         only: FIRST, LAST, proc, comm, mpi_err, req, inflate_req
       use named_array_list, only: wna
 
@@ -475,7 +475,7 @@ contains
       use dataio_pub,       only: die, warn
       use grid_cont,        only: grid_container
       use grid_cont_bnd,    only: segment
-      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_STATUS_SIZE
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUS_SIZE
       use mpisetup,         only: comm, mpi_err, req, inflate_req
       use named_array_list, only: wna
 
