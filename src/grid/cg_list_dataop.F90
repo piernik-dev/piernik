@@ -117,11 +117,11 @@ contains
       type(grid_container),   pointer          :: cg_x
       type(cg_list_element),  pointer          :: cgl
       real, dimension(:,:,:), pointer          :: tab
-      integer,                       parameter :: tag1 = 11, tag2 = tag1 + 1, tag3 = tag2 + 1
+      integer(kind=4),               parameter :: tag1 = 11, tag2 = tag1 + 1, tag3 = tag2 + 1
 #ifdef MPIF08
       type(MPI_Op), dimension(MINL:MAXL), parameter :: op = [ MPI_MINLOC, MPI_MAXLOC ]
 #else /* !MPIF08 */
-      integer, dimension(MINL:MAXL), parameter :: op = [ MPI_MINLOC, MPI_MAXLOC ]
+      integer(kind=4), dimension(MINL:MAXL), parameter :: op = [ MPI_MINLOC, MPI_MAXLOC ]
 #endif /* !MPIF08 */
       enum, bind(C)
          enumerator :: I_V, I_P !< value and proc
@@ -176,7 +176,7 @@ contains
       call MPI_Allreduce(MPI_IN_PLACE, v_red, I_ONE, MPI_2DOUBLE_PRECISION, op(minmax), comm, mpi_err)
 
       prop%val = v_red(I_V)
-      prop%proc = int(v_red(I_P))
+      prop%proc = int(v_red(I_P), kind=4)
 
       if (proc == prop%proc) then
          where (.not. dom%has_dir(:)) prop%coords(:) = 0.

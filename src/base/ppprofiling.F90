@@ -387,7 +387,7 @@ contains
 
       this%ind = 1
       this%arr_ind = 1
-      this%label = label(1:min(cbuff_len, len_trim(label)))
+      this%label = label(1:min(cbuff_len, len_trim(label, kind=4)))
       call this%arrays(this%arr_ind)%arr_init(ev_arr_len)
 
    end subroutine init
@@ -437,7 +437,7 @@ contains
          if (iand(mask, disable_mask) /= 0) return
       endif
 
-      l = label(1:min(cbuff_len, len_trim(label)))
+      l = label(1:min(cbuff_len, len_trim(label, kind=4)))
       call this%next_event(event(l, MPI_Wtime() + bigbang_shift))
 
    end subroutine start
@@ -466,7 +466,7 @@ contains
          if (iand(mask, disable_mask) /= 0) return
       endif
 
-      l = label(1:min(cbuff_len, len_trim(label)))
+      l = label(1:min(cbuff_len, len_trim(label, kind=4)))
       call this%next_event(event(l, -MPI_Wtime() - bigbang_shift))
 
    end subroutine stop
@@ -490,7 +490,7 @@ contains
 
       if (.not. use_profiling) return
 
-      l = label(1:min(cbuff_len, len_trim(label)))
+      l = label(1:min(cbuff_len, len_trim(label, kind=4)))
       call this%next_event(event(l, bigbang + bigbang_shift))
 
    end subroutine set_bb
@@ -598,7 +598,7 @@ contains
       endif
 
       ! send
-      call inflate_req(int(TAG_ARR_T))
+      call inflate_req(int(TAG_ARR_T, kind=4))
       t = TAG_CNT
       ne = I_ZERO
       do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
@@ -625,8 +625,8 @@ contains
             call publish_buffers(proc, buflabel, buftime)
             deallocate(buflabel, buftime)
          else
-            call MPI_Isend(buflabel, size(buflabel)*len(buflabel(1)), MPI_CHARACTER,        FIRST, TAG_ARR_L, comm, req(TAG_ARR_L), mpi_err)
-            call MPI_Isend(buftime,  size(buftime),                   MPI_DOUBLE_PRECISION, FIRST, TAG_ARR_T, comm, req(TAG_ARR_T), mpi_err)
+            call MPI_Isend(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        FIRST, TAG_ARR_L, comm, req(TAG_ARR_L), mpi_err)
+            call MPI_Isend(buftime,  size(buftime, kind=4),                           MPI_DOUBLE_PRECISION, FIRST, TAG_ARR_T, comm, req(TAG_ARR_T), mpi_err)
             t = TAG_ARR_T
          endif
       endif
@@ -640,8 +640,8 @@ contains
              if (ne /= 0) then
                 allocate(buflabel(ne), buftime(ne))
                 call check_mem_usage
-                call MPI_Recv(buflabel, size(buflabel)*len(buflabel(1)), MPI_CHARACTER,        p, TAG_ARR_L, comm, MPI_STATUS_IGNORE, mpi_err)
-                call MPI_Recv(buftime,  size(buftime),                   MPI_DOUBLE_PRECISION, p, TAG_ARR_T, comm, MPI_STATUS_IGNORE, mpi_err)
+                call MPI_Recv(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        p, TAG_ARR_L, comm, MPI_STATUS_IGNORE, mpi_err)
+                call MPI_Recv(buftime,  size(buftime, kind=4),                           MPI_DOUBLE_PRECISION, p, TAG_ARR_T, comm, MPI_STATUS_IGNORE, mpi_err)
                 call publish_buffers(p, buflabel, buftime)
                 deallocate(buflabel, buftime)
              endif

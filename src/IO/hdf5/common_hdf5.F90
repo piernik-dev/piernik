@@ -775,9 +775,9 @@ contains
       integer(HID_T)                                :: cg_g_id          !< cg group identifiers
       integer(HID_T)                                :: doml_g_id        !< domain list identifier
       integer(HID_T)                                :: dom_g_id         !< domain group identifier
-      integer(kind=4)                               :: error, cg_cnt
-      integer                                       :: g, p, i
-      integer, parameter                            :: tag = I_ONE
+      integer(kind=4)                               :: error, cg_cnt, p
+      integer                                       :: g, i
+      integer(kind=4), parameter                    :: tag = I_ONE
       integer(kind=4),  dimension(:),   pointer     :: cg_n             !< offset for cg group numbering
       integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_b       !< sizes of all cg
       integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_o       !< sizes of all cg, expanded by external boundaries
@@ -871,13 +871,13 @@ contains
             if (p == FIRST) then
                call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
             else
-               call MPI_Recv(cg_rl,  size(cg_rl),  MPI_INTEGER,  p, tag,         comm, MPI_STATUS_IGNORE, mpi_err)
-               call MPI_Recv(cg_n_b, size(cg_n_b), MPI_INTEGER,  p, tag+I_ONE,   comm, MPI_STATUS_IGNORE, mpi_err)
-               call MPI_Recv(cg_off, size(cg_off), MPI_INTEGER8, p, tag+I_TWO,   comm, MPI_STATUS_IGNORE, mpi_err)
+               call MPI_Recv(cg_rl,  size(cg_rl, kind=4),  MPI_INTEGER,  p, tag,         comm, MPI_STATUS_IGNORE, mpi_err)
+               call MPI_Recv(cg_n_b, size(cg_n_b, kind=4), MPI_INTEGER,  p, tag+I_ONE,   comm, MPI_STATUS_IGNORE, mpi_err)
+               call MPI_Recv(cg_off, size(cg_off, kind=4), MPI_INTEGER8, p, tag+I_TWO,   comm, MPI_STATUS_IGNORE, mpi_err)
                if (otype == O_OUT) &
-                  & call MPI_Recv(dbuf,   size(dbuf),   MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, mpi_err)
+                  & call MPI_Recv(dbuf,   size(dbuf, kind=4),   MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, mpi_err)
                if (otype == O_RES) &
-                    & call MPI_Recv(cg_n_o, size(cg_n_o), MPI_INTEGER,  p, tag+I_FOUR,  comm, MPI_STATUS_IGNORE, mpi_err)
+                    & call MPI_Recv(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  p, tag+I_FOUR,  comm, MPI_STATUS_IGNORE, mpi_err)
             endif
 
             do g = 1, cg_n(p)
@@ -962,11 +962,11 @@ contains
          nullify(cg_n_o)
          if (otype == O_RES) allocate(cg_n_o(leaves%cnt, ndims))
          call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
-         call MPI_Send(cg_rl,  size(cg_rl),  MPI_INTEGER,  FIRST, tag,         comm, mpi_err)
-         call MPI_Send(cg_n_b, size(cg_n_b), MPI_INTEGER,  FIRST, tag+I_ONE,   comm, mpi_err)
-         call MPI_Send(cg_off, size(cg_off), MPI_INTEGER8, FIRST, tag+I_TWO,   comm, mpi_err)
-         if (otype == O_OUT) call MPI_Send(dbuf,   size(dbuf),   MPI_REAL8,    FIRST, tag+I_THREE, comm, mpi_err)
-         if (otype == O_RES) call MPI_Send(cg_n_o, size(cg_n_o), MPI_INTEGER,  FIRST, tag+I_FOUR,  comm, mpi_err)
+         call MPI_Send(cg_rl,  size(cg_rl, kind=4),  MPI_INTEGER,  FIRST, tag,         comm, mpi_err)
+         call MPI_Send(cg_n_b, size(cg_n_b, kind=4), MPI_INTEGER,  FIRST, tag+I_ONE,   comm, mpi_err)
+         call MPI_Send(cg_off, size(cg_off, kind=4), MPI_INTEGER8, FIRST, tag+I_TWO,   comm, mpi_err)
+         if (otype == O_OUT) call MPI_Send(dbuf,   size(dbuf, kind=4),   MPI_REAL8,    FIRST, tag+I_THREE, comm, mpi_err)
+         if (otype == O_RES) call MPI_Send(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  FIRST, tag+I_FOUR,  comm, mpi_err)
          deallocate(cg_rl, cg_n_b, cg_off)
          if (associated(dbuf)) deallocate(dbuf)
          if (associated(cg_n_o)) deallocate(cg_n_o)

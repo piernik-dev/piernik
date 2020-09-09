@@ -274,7 +274,7 @@ contains
 
       integer(kind=4), dimension(ndims) :: shape, shape1
       integer(kind=4), parameter :: sh_tag = 7
-      integer, parameter :: nr = 2
+      integer(kind=4), parameter :: nr = 2
       integer :: i
 
       call inflate_req(nr)
@@ -317,7 +317,7 @@ contains
 
    subroutine update_SFC_id_range(this, off)
 
-      use constants,  only: LO, HI, ndims
+      use constants,  only: LO, HI, ndims, I_ONE
       use dataio_pub, only: die
       use MPIF,       only: MPI_INTEGER8, MPI_Allgather
       use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
@@ -350,7 +350,7 @@ contains
       endif
 
       allocate(id_buf(size(this%SFC_id_range)))
-      call MPI_Allgather(this%SFC_id_range(proc, :), HI-LO+1, MPI_INTEGER8, id_buf, HI-LO+1, MPI_INTEGER8, comm, mpi_err)
+      call MPI_Allgather(this%SFC_id_range(proc, :), HI-LO+I_ONE, MPI_INTEGER8, id_buf, HI-LO+I_ONE, MPI_INTEGER8, comm, mpi_err)
       this%SFC_id_range(:, LO) = id_buf(1::2)
       this%SFC_id_range(:, HI) = id_buf(2::2)
 

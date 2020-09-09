@@ -325,7 +325,7 @@ contains
       use constants,        only: xdim, ydim, zdim, cor_dim, I_ONE, I_TWO, LO, HI
       use dataio_pub,       only: die
       use merge_segments,   only: IN, OUT
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUS_SIZE
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUS_SIZE, MPI_Irecv, MPI_Isend
       use mpisetup,         only: FIRST, LAST, proc, comm, mpi_err, req, inflate_req
       use named_array_list, only: wna
 
@@ -336,7 +336,8 @@ contains
       logical,                          intent(in)    :: tgt3d !< .true. for cg%q, .false. for cg%w
       logical, dimension(xdim:cor_dim), intent(in)    :: dmask !< .true. for the directions we want to exchange
 
-      integer :: p, i
+      integer :: i
+      integer(kind=4) :: p
       integer(kind=4) :: nr !< index of first free slot in req and status arrays
       integer(kind=4), allocatable, dimension(:,:) :: mpistatus !< status array for MPI_Waitall
 
@@ -392,8 +393,8 @@ contains
                   enddo
                endif
                if (nr+I_TWO >  ubound(req(:), dim=1)) call inflate_req
-               call MPI_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf), MPI_DOUBLE_PRECISION, p, p,    comm, req(nr+I_ONE), mpi_err)
-               call MPI_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf), MPI_DOUBLE_PRECISION, p, proc, comm, req(nr+I_TWO), mpi_err)
+               call MPI_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    comm, req(nr+I_ONE), mpi_err)
+               call MPI_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, comm, req(nr+I_TWO), mpi_err)
                nr = nr + I_TWO
             endif
 
