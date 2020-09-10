@@ -296,7 +296,7 @@ contains
 
       use constants,  only: I_ONE, half
       use dataio_pub, only: msg, printinfo
-      use MPIF,       only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use MPIF,       only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_Reduce
       use mpisetup,   only: comm, mpi_err, master, FIRST
 
       implicit none

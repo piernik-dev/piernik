@@ -104,7 +104,7 @@ contains
       use cg_list,    only: cg_list_element
       use constants,  only: I_ZERO, I_ONE, ndims, LO, HI
       use dataio_pub, only: die
-      use MPIF,       only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER, MPI_Allgather
+      use MPIF,       only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER, MPI_Allgather, MPI_Allgatherv
       use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
       use ordering,   only: SFC_order
 
@@ -265,7 +265,7 @@ contains
    subroutine check_blocky(this)
 
       use constants,  only: ndims, LO, HI, pLAND, I_ONE
-      use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_Waitall
+      use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_Waitall, MPI_Irecv, MPI_Isend
       use mpisetup,   only: proc, req, status, comm, mpi_err, LAST, inflate_req, slave, piernik_MPI_Allreduce
 
       implicit none
@@ -293,8 +293,8 @@ contains
          endif
       endif
       req = MPI_REQUEST_NULL
-      if (slave)     call MPI_Irecv(shape1, size(shape1), MPI_INTEGER, proc-I_ONE, sh_tag, comm, req(1 ), mpi_err)
-      if (proc<LAST) call MPI_Isend(shape,  size(shape),  MPI_INTEGER, proc+I_ONE, sh_tag, comm, req(nr), mpi_err)
+      if (slave)     call MPI_Irecv(shape1, size(shape1, kind=4), MPI_INTEGER, proc-I_ONE, sh_tag, comm, req(1 ), mpi_err)
+      if (proc<LAST) call MPI_Isend(shape,  size(shape, kind=4),  MPI_INTEGER, proc+I_ONE, sh_tag, comm, req(nr), mpi_err)
 #ifdef MPIF08
       call MPI_Waitall(nr, req(:nr), status(:nr), mpi_err)
 #else /* !MPIF08 */
@@ -378,7 +378,7 @@ contains
 
       class(dot_t),    intent(inout) :: this
       integer(kind=8), intent(in)    :: SFC_id
-      integer,         intent(out)   :: p
+      integer(kind=4), intent(out)   :: p
       integer,         intent(out)   :: grid_id
 
       integer :: ip, il, iu, j, pp_lb, pp_ub
@@ -462,7 +462,7 @@ contains
          do j = i1, i2
             if (this%gse(pp(ip))%c(j)%SFCid == SFC_id) then
                grid_id = j
-               p = pp(ip)
+               p = int(pp(ip), kind=4)
                exit
             endif
          enddo

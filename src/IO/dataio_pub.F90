@@ -242,7 +242,7 @@ contains
    subroutine colormessage(nm, mode)
 
       use constants, only: stdout, stderr, idlen, I_ONE
-      use MPIF,      only: MPI_COMM_WORLD
+      use MPIF,      only: MPI_COMM_WORLD, MPI_Comm_rank
 
       implicit none
 
@@ -397,7 +397,7 @@ contains
    !> \deprecated BEWARE: routine is not finished, it should kill PIERNIK gracefully
    subroutine die(nm, allprocs)
 
-      use MPIF,   only: MPI_COMM_WORLD
+      use MPIF,   only: MPI_COMM_WORLD, MPI_Barrier, MPI_Finalize
 #if defined(__INTEL_COMPILER)
       use ifcore, only: tracebackqq
 #endif /* __INTEL_COMPILER */
@@ -474,7 +474,7 @@ contains
    subroutine compare_namelist(this)
 
       use constants, only: PIERNIK_INIT_IO_IC
-      use MPIF,      only: MPI_COMM_WORLD
+      use MPIF,      only: MPI_COMM_WORLD, MPI_Comm_rank
 
       implicit none
       class(namelist_handler_t), intent(inout) :: this
@@ -550,7 +550,7 @@ contains
 
    subroutine close_logs
 
-      use MPIF, only: MPI_COMM_WORLD
+      use MPIF, only: MPI_COMM_WORLD, MPI_Comm_rank
 
       implicit none
 

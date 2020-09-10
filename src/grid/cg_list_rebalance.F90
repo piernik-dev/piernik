@@ -63,7 +63,8 @@ contains
       use refinement,      only: oop_thr
       use sort_piece_list, only: grid_piece_list
 #ifdef DEBUG
-      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
+      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, &
+           &                     MPI_Gather, MPI_Recv, MPI_Send
       use mpisetup,        only: comm, mpi_err
 #endif /* DEBUG */
 
@@ -188,14 +189,14 @@ contains
 
    subroutine reshuffle(this, gp)
 
-      use grid_container_ext, only: cg_extptrs
       use cg_list,            only: cg_list_element
       use cg_list_global,     only: all_cg
-      use constants,          only: ndims, LO, HI, I_ONE, xdim, ydim, zdim, pMAX, PPP_AMR, PPP_MPI
+      use constants,          only: ndims, LO, HI, I_ZERO, I_ONE, xdim, ydim, zdim, pMAX, PPP_AMR, PPP_MPI
       use dataio_pub,         only: die
       use grid_cont,          only: grid_container
+      use grid_container_ext, only: cg_extptrs
       use list_of_cg_lists,   only: all_lists
-      use MPIF,               only: MPI_DOUBLE_PRECISION
+      use MPIF,               only: MPI_DOUBLE_PRECISION, MPI_Isend, MPI_Irecv, MPI_Waitall
       use mpisetup,           only: master, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, comm, mpi_err, req, status, inflate_req
       use named_array_list,   only: qna, wna
       use ppp,                only: ppp_main
@@ -210,8 +211,8 @@ contains
       type(grid_piece_list),      intent(in)    :: gp
 
       type(cg_list_element), pointer :: cgl
-      integer :: s, n_gid, totfld, nr
-      integer(kind=4) :: i, p
+      integer :: s, n_gid, totfld
+      integer(kind=4) :: i, p, nr
       integer(kind=8), dimension(:,:), allocatable :: gptemp
       integer(kind=8), dimension(ndims, LO:HI) :: se
       logical :: found
@@ -270,7 +271,7 @@ contains
 
       ! Irecv & Isend
       call ppp_main%start(ISR_label, PPP_AMR)
-      nr = 0
+      nr = I_ZERO
       allocate(cglepa(size(gptemp)))
       do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
          cglepa(i)%p => null()
@@ -303,9 +304,9 @@ contains
                cgl => cgl%nxt
             enddo
             if (.not. found) call die("[cg_list_rebalance:balance_old] Grid id not found")
-            nr = nr + 1
+            nr = nr + I_ONE
             if (nr > size(req, dim=1)) call inflate_req
-            call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf), MPI_DOUBLE_PRECISION, gptemp(I_D_P, i), i, comm, req(nr), mpi_err)
+            call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i, comm, req(nr), mpi_err)
          endif
          if (gptemp(I_D_P, i) == proc) then ! receive
             n_gid = 1
@@ -322,9 +323,9 @@ contains
                if (associated(cg_extptrs%ext(p)%init))  call cg_extptrs%ext(p)%init(this%last%cg)
             enddo
             call all_cg%add(this%last%cg)
-            nr = nr + 1
+            nr = nr + I_ONE
             if (nr > size(req, dim=1)) call inflate_req
-            call MPI_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf), MPI_DOUBLE_PRECISION, gptemp(I_C_P, i), i, comm, req(nr), mpi_err)
+            call MPI_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), i, comm, req(nr), mpi_err)
          endif
       enddo
       call ppp_main%stop(ISR_label, PPP_AMR)

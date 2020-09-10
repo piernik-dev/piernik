@@ -78,10 +78,10 @@ module common_hdf5
       integer(HID_T), dimension(:), allocatable   :: cg_g_id
       integer(HID_T), dimension(:,:), allocatable :: dset_id
       integer(HID_T)                              :: xfer_prp
-      integer, allocatable, dimension(:)          :: offsets
-      integer, allocatable, dimension(:)          :: cg_src_p
-      integer, allocatable, dimension(:)          :: cg_src_n
-      integer                                     :: tot_cg_n
+      integer(kind=4), allocatable, dimension(:)  :: offsets
+      integer(kind=4), allocatable, dimension(:)  :: cg_src_p
+      integer(kind=4), allocatable, dimension(:)  :: cg_src_n
+      integer(kind=4)                             :: tot_cg_n
    contains
       procedure :: init => initialize_write_cg
       procedure :: clean => finalize_write_cg
@@ -613,7 +613,7 @@ contains
    function n_cg_name(g)
       use constants, only: dsetnamelen
       implicit none
-      integer, intent(in)        :: g !< group number
+      integer(kind=4), intent(in) :: g !< group number
       character(len=dsetnamelen) :: n_cg_name
       write(n_cg_name,'(2a,i10.10)')trim(cg_gname), "_", g-1
    end function n_cg_name
@@ -629,7 +629,7 @@ contains
 
       implicit none
 
-      integer, intent(in)            :: n
+      integer(kind=4), intent(in) :: n
 
       type(grid_container),  pointer :: cg
       type(cg_list_element), pointer :: cgl
@@ -881,7 +881,7 @@ contains
             endif
 
             do g = 1, cg_n(p)
-               call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error) ! create "/data/grid_%08d"
+               call h5gcreate_f(cgl_g_id, n_cg_name(int(sum(cg_n(:p))-cg_n(p)+g, kind=4)), cg_g_id, error) ! create "/data/grid_%08d"
 
                call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                ! create "/data/grid_%08d/level"
                temp = cg_n_b(g, :)
@@ -1127,7 +1127,7 @@ contains
 
    subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets)
 
-      use constants,  only: dsetnamelen
+      use constants,  only: dsetnamelen, I_ONE
       use dataio_pub, only: can_i_write
       use hdf5,       only: HID_T, H5P_GROUP_ACCESS_F, H5P_DATASET_ACCESS_F, H5P_DATASET_XFER_F, &
           &                 h5gopen_f, h5pclose_f, h5dopen_f
@@ -1141,7 +1141,7 @@ contains
       integer(kind=4),                          intent(in)    :: nproc_io
       character(len=dsetnamelen), dimension(:), intent(in)    :: dsets
 
-      integer                                                 :: i, ncg
+      integer(kind=4)                                         :: i, ncg
       integer(HID_T)                                          :: plist_id
       integer(kind=4)                                         :: error
 
@@ -1162,7 +1162,7 @@ contains
       !> \todo silent assumption that nproc_io == nproc FIXME
       this%offsets(:) = 0
       if (nproc_io > 0) then
-         do i = 1, nproc_io-1
+         do i = 1, nproc_io - I_ONE
             this%offsets(i) = sum(cg_n(:i-1))
          enddo
       endif
@@ -1171,15 +1171,15 @@ contains
       if (can_i_write) then
 
          plist_id = set_h5_properties(H5P_GROUP_ACCESS_F, nproc_io)
-         do ncg = 1, this%tot_cg_n
+         do ncg = I_ONE, this%tot_cg_n
             call h5gopen_f(cgl_g_id, n_cg_name(ncg), this%cg_g_id(ncg), error, gapl_id = plist_id)
          enddo
          call h5pclose_f(plist_id, error)
 
          plist_id = set_h5_properties(H5P_DATASET_ACCESS_F, nproc_io)
          allocate(this%dset_id(1:this%tot_cg_n, lbound(dsets, dim=1):ubound(dsets, dim=1)))
-         do ncg = 1, this%tot_cg_n
-            do i = lbound(dsets, dim=1), ubound(dsets, dim=1)
+         do ncg = I_ONE, this%tot_cg_n
+            do i = lbound(dsets, dim=1, kind=4), ubound(dsets, dim=1, kind=4)
                call h5dopen_f(this%cg_g_id(ncg), dsets(i), this%dset_id(ncg,i), error, dapl_id = plist_id)
             enddo
          enddo

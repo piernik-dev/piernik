@@ -124,7 +124,8 @@ contains
 
       class(cg_level_connected_t), intent(inout)   :: this   !< object invoking type bound procedure
 
-      integer                                      :: g, j, jf, fmax
+      integer                                      :: g, jf, fmax
+      integer(kind=4)                              :: j
       integer(kind=8)                              :: tag
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened
       integer,         dimension(xdim:zdim, LO:HI) :: enlargement
@@ -132,7 +133,7 @@ contains
       type(grid_container),       pointer          :: cg            !< current grid container
       type(cg_level_connected_t), pointer          :: fine, coarse  !< shortcut
       type :: int_pair
-         integer :: proc
+         integer(kind=4) :: proc
          integer :: n_se
       end type int_pair
       type(int_pair), dimension(:), allocatable    :: ps
@@ -516,7 +517,7 @@ contains
       use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
       use mpisetup,         only: comm, mpi_err, req, status, inflate_req, master
-      use MPIF,             only: MPI_DOUBLE_PRECISION
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_Irecv, MPI_Isend, MPI_Waitall
       use named_array,      only: p3
       use named_array_list, only: qna
 #ifdef MPIF08
@@ -572,7 +573,7 @@ contains
             do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Irecv(cg%ri_tgt%seg(g)%buf(1, 1, 1), size(cg%ri_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%ri_tgt%seg(g)%proc, cg%ri_tgt%seg(g)%tag, comm, req(nr), mpi_err)
+               call MPI_Irecv(cg%ri_tgt%seg(g)%buf(1, 1, 1), size(cg%ri_tgt%seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, cg%ri_tgt%seg(g)%proc, cg%ri_tgt%seg(g)%tag, comm, req(nr), mpi_err)
             enddo
          endif
          cgl => cgl%nxt
@@ -642,7 +643,7 @@ contains
             endif
             nr = nr + I_ONE
             if (nr > size(req, dim=1)) call inflate_req
-            call MPI_Isend(cg%ro_tgt%seg(g)%buf(1, 1, 1), size(cg%ro_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%ro_tgt%seg(g)%proc, cg%ro_tgt%seg(g)%tag, comm, req(nr), mpi_err)
+            call MPI_Isend(cg%ro_tgt%seg(g)%buf(1, 1, 1), size(cg%ro_tgt%seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, cg%ro_tgt%seg(g)%proc, cg%ro_tgt%seg(g)%tag, comm, req(nr), mpi_err)
          enddo
          cgl => cgl%nxt
       enddo
@@ -703,7 +704,7 @@ contains
       use grid_cont,        only: grid_container
       use grid_helpers,     only: f2c
       use mpisetup,         only: comm, mpi_err, req, status, inflate_req, master
-      use MPIF,             only: MPI_DOUBLE_PRECISION
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_Irecv, MPI_Isend, MPI_Waitall
       use named_array_list, only: qna
       use ppp,              only: ppp_main
 #ifdef MPIF08
@@ -771,7 +772,7 @@ contains
             do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Irecv(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+               call MPI_Irecv(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
             enddo
          endif
          end associate
@@ -790,7 +791,7 @@ contains
             if (nr > size(req, dim=1)) call inflate_req
             p3d => cg%q(iv)%span(cse)
             seg(g)%buf(:, :, :) = p3d
-            call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+            call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
          enddo
          end associate
          cgl => cgl%nxt
@@ -932,7 +933,7 @@ contains
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c, c2f
-      use MPIF,           only: MPI_DOUBLE_PRECISION
+      use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_Irecv, MPI_Isend, MPI_Waitall
       use mpisetup,       only: comm, mpi_err, req, status, inflate_req, master
       use ppp,            only: ppp_main
 #ifdef MPIF08
@@ -999,7 +1000,7 @@ contains
             do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Irecv(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+               call MPI_Irecv(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
             enddo
          endif
          end associate
@@ -1020,7 +1021,7 @@ contains
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
                seg(g)%buf(:, :, :) = cgl%cg%q(ind)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
-               call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+               call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
             enddo
          endif
          end associate
@@ -1112,13 +1113,13 @@ contains
 
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
-      use constants,      only: xdim, ydim, zdim, LO, HI, I_ONE, ndims, INVALID
+      use constants,      only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, ndims, INVALID
       use dataio_pub,     only: warn, msg, die
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c
       use mergebox,       only: wmap  ! this is the last place that uses this module
-      use MPIF,           only: MPI_INTEGER, MPI_INTEGER8
+      use MPIF,           only: MPI_INTEGER, MPI_INTEGER8, MPI_Alltoall, MPI_Alltoallv
       use mpisetup,       only: FIRST, LAST, comm, mpi_err, proc
       use overlap,        only: is_overlap
       use tag_pool,       only: t_pool
@@ -1131,16 +1132,17 @@ contains
       type(cg_level_connected_t), pointer :: coarse
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
-      integer :: d, j, b, rp, ls, dd, ix, iy, iz
+      integer :: d, b, rp, dd, ix, iy, iz
+      integer(kind=4) :: j, ls
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: seg, segp, seg2, segp2, segf
       integer(kind=8), dimension(xdim:zdim) :: per, ext_buf
       integer :: mpifc_cnt
       integer(kind=4) :: tag, tag_min, tag_max
       type :: fc_seg !< the absolutely minimal set of data that defines the communication consists of [ grid_id, tag, and, seg ]. The proc numbers are for convenience only.
-         integer :: proc     ! it can be rewritten in a way that does not need this numbet to be explicitly stored, but it is easier to have it
+         integer(kind=4) :: proc     ! it can be rewritten in a way that does not need this number to be explicitly stored, but it is easier to have it
          integer :: grid_id
          integer(kind=4) :: tag
-         integer :: src_proc ! this can be computed on destination process, but it is easier to have it
+         integer(kind=4) :: src_proc ! this can be computed on destination process, but it is easier to have it
          integer(kind=8), dimension(xdim:zdim, LO:HI) :: seg
          integer(kind=8), dimension(xdim:zdim, LO:HI) :: seg2
          integer(kind=8), dimension(xdim:zdim, LO:HI) :: fse
@@ -1166,7 +1168,7 @@ contains
       integer :: max_level
       integer, parameter :: initial_size = 16 ! for seglist
       real, parameter :: grow_ratio = 2.      ! for seglist
-      integer :: isl                          ! current position in seglist
+      integer(kind=4) :: isl                          ! current position in seglist
 
       if (.not. this%need_vb_update) return
 
@@ -1194,7 +1196,7 @@ contains
       tag = tag_min
       mpifc_cnt = 0
       allocate(seglist(initial_size))
-      isl = 0
+      isl = I_ZERO
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -1262,7 +1264,7 @@ contains
                                           endif
                                           seg2 (:, LO) = segp2(:, LO) + [ ix, iy, iz ] * per(:)
                                           seg2 (:, HI) = segp2(:, HI) + [ ix, iy, iz ] * per(:)
-                                          isl = isl + 1
+                                          isl = isl + I_ONE
                                           if (isl > ubound(seglist, dim=1)) then
                                              allocate(tmp(lbound(seglist(:),dim=1):int(abs(grow_ratio*ubound(seglist(:), dim=1)))))
                                              tmp(:ubound(seglist(:), dim=1)) = seglist(:)
@@ -1284,7 +1286,7 @@ contains
 
          if (allocated(cg%pib_tgt%seg)) deallocate(cg%pib_tgt%seg)
          allocate(cg%pib_tgt%seg(isl-ls))
-         do j = ls+1, isl
+         do j = ls + I_ONE, isl
             associate ( se => cg%pib_tgt%seg(j-ls) )
             se%proc = seglist(j)%proc
             se%tag  = seglist(j)%tag
@@ -1305,7 +1307,7 @@ contains
 
       pscnt = 0
       if (isl > 0) then
-         do j = lbound(seglist, dim=1), isl
+         do j = lbound(seglist, dim=1, kind=4), isl
             pscnt(seglist(j)%proc) = pscnt(seglist(j)%proc) + I_ONE
          enddo
       endif
@@ -1322,9 +1324,9 @@ contains
       allocate(sseg(I_LAST*sum(pscnt)))
       allocate(rseg(I_LAST*sum(prcnt)))
       psind = 0
-      do j = lbound(seglist, dim=1), isl
+      do j = lbound(seglist, dim=1, kind=4), isl
          b = (psdispl(seglist(j)%proc) + psind(seglist(j)%proc)) * I_LAST
-         sseg(b+I_PROC:b+I_LAST) = [ int([seglist(j)%proc, seglist(j)%grid_id], kind=8), int(seglist(j)%tag, kind=8), int(seglist(j)%src_proc, kind=8), seglist(j)%seg, seglist(j)%seg2 ]
+         sseg(b+I_PROC:b+I_LAST) = [ int(seglist(j)%proc, kind=8), int(seglist(j)%grid_id, kind=8), int(seglist(j)%tag, kind=8), int(seglist(j)%src_proc, kind=8), seglist(j)%seg, seglist(j)%seg2 ]
          psind(seglist(j)%proc) = psind(seglist(j)%proc) + I_ONE
       enddo
       ! communicate to the processes with coarse data the segments that are required

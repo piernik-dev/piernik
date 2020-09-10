@@ -61,12 +61,12 @@ contains
 !! \brief Post a non-blocking MPI receives for all expected fluxes from fine grids.
 !<
 
-   integer function compute_nr_recv(cdim) result(nr)
+   integer(kind=4) function compute_nr_recv(cdim) result(nr)
 
       use constants, only: LO, HI, I_ONE
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
-      use MPIF,      only: MPI_DOUBLE_PRECISION
+      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_Irecv
       use mpisetup,  only: comm, mpi_err, req, inflate_req
 
       implicit none
@@ -92,7 +92,7 @@ contains
                   if (jc(LO) == jc(HI)) then
                      nr = nr + I_ONE
                      if (nr > size(req, dim=1)) call inflate_req
-                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
                      seg(g)%req => req(nr)
                   endif
                enddo
@@ -112,7 +112,7 @@ contains
       use dataio_pub, only: die
       use fluidindex, only: flind
       use grid_cont,  only: grid_container
-      use MPIF,       only: MPI_STATUS_IGNORE
+      use MPIF,       only: MPI_STATUS_IGNORE, MPI_Test
       use mpisetup,   only: mpi_err
       use ppp,        only: ppp_main
 
@@ -123,7 +123,7 @@ contains
       logical, intent(out)                         :: all_received
 
       integer :: g, lh
-      logical :: received
+      logical(kind=4) :: received
       integer(kind=8), dimension(LO:HI) :: j1, j2, jc
       character(len=*), parameter :: recv_label = "cg_recv_fine_bnd"
 
@@ -176,7 +176,7 @@ contains
       use domain,       only: dom
       use grid_cont,    only: grid_container
       use grid_helpers, only: f2c_o
-      use MPIF,         only: MPI_DOUBLE_PRECISION
+      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_Isend
       use mpisetup,     only: comm, mpi_err, req, inflate_req
       use ppp,          only: ppp_main
 
@@ -184,7 +184,7 @@ contains
 
       integer(kind=4), intent(in)                  :: cdim
       type(grid_container), pointer, intent(inout) :: cg
-      integer, intent(inout)                       :: nr
+      integer(kind=4), intent(inout)               :: nr
 
       integer :: g, lh
       integer(kind=8), dimension(LO:HI) :: j1, j2, jc
@@ -223,7 +223,7 @@ contains
 
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+               call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
                seg(g)%req => req(nr)
             endif
          enddo
@@ -297,15 +297,13 @@ contains
       use dataio_pub,       only: die
       use global,           only: integration_order, use_fargo, which_solver
       use grid_cont,        only: grid_container
-      use mpisetup,         only: mpi_err, req, status
+      use MPIF,             only: MPI_STATUSES_IGNORE, MPI_STATUS_IGNORE, MPI_Waitany, MPI_Waitall
+      use mpisetup,         only: mpi_err, req
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
       use solvecg_rtvd,     only: solve_cg_rtvd
       use solvecg_riemann,  only: solve_cg_riemann
       use sources,          only: prepare_sources
-#ifdef MPIF08
-      use MPIF,             only: MPI_Status
-#endif
 
       implicit none
 
@@ -334,13 +332,8 @@ contains
       type(grid_container),  pointer :: cg
       logical                        :: all_processed, all_received
       integer                        :: blocks_done
-      integer                        :: g, nr, nr_recv
+      integer(kind=4)                :: g, nr, nr_recv
       integer                        :: uhi, bhi, psii, psihi
-#ifdef MPIF08
-      type(MPI_Status), dimension(:), pointer :: mpistatus
-#else /* !MPIF08 */
-      integer(kind=4), dimension(:,:), pointer :: mpistatus
-#endif /* !MPIF08 */
       procedure(solve_cg_sub), pointer :: solve_cg => null()
       character(len=*), dimension(ndims), parameter :: sweep_label = [ "sweep_x", "sweep_y", "sweep_z" ]
       character(len=*), parameter :: solve_cgs_label = "solve_bunch_of_cg", cg_label = "solve_cg"
@@ -420,26 +413,12 @@ contains
             call ppp_main%stop(solve_cgs_label)
 
             if (.not. all_processed .and. blocks_done == 0) then
-               if (nr_recv > 0) then
-#ifdef MPIF08
-                  mpistatus => status(:nr_recv)
-#else /* !MPIF08 */
-                  mpistatus => status(:, :nr_recv)
-#endif /* !MPIF08 */
-                  call MPI_Waitany(nr_recv, req(:nr_recv), g, mpistatus, mpi_err)
-                  ! g is the number of completed operations
-               endif
+               if (nr_recv > 0) call MPI_Waitany(nr_recv, req(:nr_recv), g, MPI_STATUS_IGNORE, mpi_err)
+               ! g is the number of completed operations
             endif
          enddo
 
-         if (nr > 0) then
-#ifdef MPIF08
-            mpistatus => status(:nr)
-#else /* !MPIF08 */
-            mpistatus => status(:, :nr)
-#endif /* !MPIF08 */
-            call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
-         endif
+         if (nr > 0) call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, mpi_err)
 
          call update_boundaries(cdim, istep)
       enddo

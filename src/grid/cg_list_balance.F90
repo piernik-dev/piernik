@@ -302,7 +302,7 @@ contains
 
       use constants,       only: ndims, INVALID, I_ONE
       use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, &
-           &                     MPI_Isend, MPI_Recv, MPI_Wait
+           &                     MPI_Isend, MPI_Send, MPI_Recv, MPI_Wait
       use mpisetup,        only: master, slave, FIRST, LAST, comm, req, mpi_err, status, inflate_req
       use sort_piece_list, only: grid_piece_list
 
@@ -354,7 +354,7 @@ contains
 #else /* !MPIF08 */
          call MPI_Wait(req(nreq), status(:, nreq), mpi_err)
 #endif /* !MPIF08 */
-         if (ls > 0) call MPI_Send(gptemp, size(gptemp), MPI_INTEGER8, FIRST, tag_gpt, comm, mpi_err)
+         if (ls > 0) call MPI_Send(gptemp, size(gptemp, kind=4), MPI_INTEGER8, FIRST, tag_gpt, comm, mpi_err)
          deallocate(gptemp)
 
       endif

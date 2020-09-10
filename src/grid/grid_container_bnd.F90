@@ -47,7 +47,7 @@ module grid_cont_bnd
 
    !> \brief Specification of segment of data for boundary exchange
    type :: segment
-      integer :: proc                                      !< target process
+      integer(kind=4) :: proc                              !< target process
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se   !< range
       integer(kind=4) :: tag                               !< unique tag for data exchange
       real, allocatable, dimension(:,:,:)   :: buf         !< buffer for the 3D (scalar) data to be sent or received
@@ -182,7 +182,7 @@ contains
       implicit none
 
       class(bnd_list),                              intent(inout) :: this !< object invoking type-bound procedure
-      integer,                                      intent(in)    :: proc !< process to be communicated
+      integer(kind=4),                              intent(in)    :: proc !< process to be communicated
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: se   !< segment definition
       integer(kind=4),                              intent(in)    :: tag  !< tag for MPI calls
 

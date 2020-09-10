@@ -140,7 +140,8 @@ contains
 
       use constants,     only: cwdlen, I_ONE, pMIN
       use MPIF,          only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL, &
-           &                   MPI_Wtime, MPI_Allreduce, MPI_Gather
+           &                   MPI_Wtime, MPI_Allreduce, MPI_Gather, MPI_Init, &
+           &                   MPI_Comm_get_parent, MPI_Comm_rank, MPI_Comm_size
       use dataio_pub,    only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
       use dataio_pub,    only: par_file, lun
       use signalhandler, only: SIGINT, register_sighandler
@@ -333,6 +334,7 @@ contains
    subroutine cleanup_mpi
 
       use dataio_pub, only: printinfo, close_logs
+      use MPIF,       only: MPI_Barrier, MPI_Comm_disconnect, MPI_Finalize
       use mpisignals, only: sig
 
       implicit none
@@ -357,6 +359,8 @@ contains
 !! \brief Wrapper for MPI_Barrier
 !<
    subroutine piernik_MPI_Barrier
+
+      use MPIF, only: MPI_Barrier
 
       implicit none
 
@@ -1061,7 +1065,8 @@ contains
       implicit none
       character(len=*),  intent(in) :: str
       logical, optional, intent(in) :: only_master
-      integer(kind=4)               :: tag  !< master scripts accepts ANY_TAG, so it can carry meaningful value too
+
+      integer(kind=4) :: tag  !< master scripts accepts ANY_TAG, so it can carry meaningful value too
       integer(kind=4) :: buf
 
       if (.not.is_spawned) return
@@ -1078,6 +1083,9 @@ contains
 
    integer(kind=4) function abort_sigint(signum)
 
+      use constants, only: I_ZERO
+      use MPIF,      only: MPI_Abort
+
       implicit none
 
       integer(kind=4), intent(in) :: signum !< signal identifier
@@ -1085,7 +1093,7 @@ contains
       if (master) print *, "[mpisetup:abort_sigint] CTRL-C caught, calling abort"
       ! As per MPI documentation for MPI_Abort():
       !   "This routine should not be used from within a signal handler."
-      call MPI_Abort(comm, 0) ! "I too like to live dangerously." -- Austin Powers
+      call MPI_Abort(comm, I_ZERO, mpi_err) ! "I too like to live dangerously." -- Austin Powers
       abort_sigint = signum
 
    end function abort_sigint

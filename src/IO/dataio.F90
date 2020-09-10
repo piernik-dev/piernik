@@ -1703,7 +1703,7 @@ contains
          use constants,    only: I_ONE, INVALID
          use dataio_pub,   only: msg, printinfo
          use memory_usage, only: system_mem_usage
-         use MPIF,         only: MPI_INTEGER
+         use MPIF,         only: MPI_INTEGER, MPI_Gather
          use mpisetup,     only: master, FIRST, LAST, comm, mpi_err
 
          implicit none

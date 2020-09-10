@@ -253,7 +253,7 @@ contains
       integer                           :: lh
       integer(kind=8), dimension(ndims) :: n_off     !< neighbor's offset
       integer(kind=8)                   :: n_id      !< neighbor's id
-      integer                           :: n_p       !< neighbor's process
+      integer(kind=4)                   :: n_p       !< neighbor's process
       integer                           :: n_grid_id !< neighbor's grid_id on n_p
       integer                           :: n_dd      !< neighbor's direction
       integer(kind=4)                   :: tag
@@ -408,7 +408,8 @@ contains
 
       type(grid_container),  pointer                  :: cg      !< grid container that we are currently working on
       type(cg_list_element), pointer                  :: cgl
-      integer                                         :: j, b, id, ix, iy, iz
+      integer                                         :: b, id, ix, iy, iz
+      integer(kind=4)                                 :: j
       integer(kind=8)                                 :: n_lbnd_face_cells
       integer(kind=4)                                 :: d, dd, hl, lh, tag
       integer(kind=8), dimension(xdim:zdim)           :: per
@@ -631,7 +632,8 @@ contains
 
       type(cg_list_element), pointer           :: cgl
       integer(kind=8), dimension(xdim:zdim)    :: per
-      integer                                  :: j, b, ix, iy, iz
+      integer(kind=4)                          :: j
+      integer                                  :: b, ix, iy, iz
       integer(kind=8), dimension(ndims, LO:HI) :: box, box_narrow, e_guard, e_guard_wide, whole_level, poff, aux
       integer(kind=4)                          :: d, hl, lh, m_tag
       type(gcpa_t)                             :: l_pse
