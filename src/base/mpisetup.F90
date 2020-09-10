@@ -33,9 +33,9 @@
 !<
 module mpisetup
 
-   use constants, only: cbuff_len, INT4
+   use constants, only: cbuff_len, INT4, pSUM, pLAND
 #ifdef MPIF08
-   use MPIF, only: MPI_Status, MPI_Comm, MPI_Request
+   use MPIF, only: MPI_Status, MPI_Comm, MPI_Request, MPI_Op
 #endif /* MPIF08 */
 
    implicit none
@@ -66,11 +66,13 @@ module mpisetup
    type(MPI_Status), allocatable, dimension(:), target  :: status     !< status array for MPI_Waitall
    type(MPI_Comm), protected                            :: comm       !< global communicator
    type(MPI_Comm), protected                            :: intercomm  !< intercommunicator
+   type(MPI_Op), dimension(pSUM:pLAND)                  :: mpiop      !< translation between pSUM:pLAND and MPI_SUM:MPI_LAND
 #else /* !MPIF08 */
    integer(kind=4), allocatable, dimension(:),   target :: req        !< request array for MPI_Waitall
    integer(kind=4), allocatable, dimension(:,:), target :: status     !< status array for MPI_Waitall
    integer(kind=4), protected                           :: comm       !< global communicator
    integer(kind=4), protected                           :: intercomm  !< intercommunicator
+   integer(kind=4), dimension(pSUM:pLAND)               :: mpiop      !< translation between pSUM:pLAND and MPI_SUM:MPI_LAND
 #endif /* !MPIF08 */
 
    !> \warning Because we use one centralized req(:) and status(:,:) arrays, the routines that are using them should not call each other to avoid any interference.
@@ -140,6 +142,7 @@ contains
 
       use constants,     only: cwdlen, I_ONE, pMIN
       use MPIF,          only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL, &
+           &                   MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND, &
            &                   MPI_Wtime, MPI_Allreduce, MPI_Gather, MPI_Init, &
            &                   MPI_Comm_get_parent, MPI_Comm_rank, MPI_Comm_size
       use dataio_pub,    only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
@@ -165,6 +168,7 @@ contains
       call MPI_Init( mpi_err )
       bigbang = MPI_Wtime()
       comm = MPI_COMM_WORLD
+      mpiop(:) = [ MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND ]
 
 #if defined(__INTEL_COMPILER) || defined(__GFORTRAN__)
       call register_sighandler(SIGINT, abort_sigint)
@@ -722,21 +726,13 @@ contains
 !<
    subroutine MPI_Allreduce_single_logical(lvar, reduction)
 
-      use constants, only: I_ONE, pLOR, pLAND
-      use MPIF,      only: MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_LAND, MPI_Allreduce
-#ifdef MPIF08
-      use MPIF,      only: MPI_Op
-#endif
+      use constants, only: I_ONE
+      use MPIF,      only: MPI_LOGICAL, MPI_IN_PLACE, MPI_Allreduce
 
       implicit none
 
       logical,         intent(inout) :: lvar      !< logical that will be reduced
       integer(kind=4), intent(in)    :: reduction !< integer to mark a reduction type
-#ifdef MPIF08
-      type(MPI_Op), dimension(pLOR:pLAND), parameter :: mpiop = [MPI_LOR, MPI_LAND]
-#else /* !MPIF08 */
-      integer(kind=4), dimension(pLOR:pLAND), parameter :: mpiop = [MPI_LOR, MPI_LAND]
-#endif /* !MPIF08 */
 
       call MPI_Allreduce(MPI_IN_PLACE, lvar, I_ONE, MPI_LOGICAL, mpiop(reduction), comm, mpi_err)
 
@@ -748,21 +744,13 @@ contains
 !<
    subroutine MPI_Allreduce_single_int4(ivar4, reduction)
 
-      use constants, only: pSUM, pMAX, I_ONE
-      use MPIF,      only: MPI_INTEGER, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX, MPI_Allreduce
-#ifdef MPIF08
-      use MPIF,      only: MPI_Op
-#endif
+      use constants, only: I_ONE
+      use MPIF,      only: MPI_INTEGER, MPI_IN_PLACE, MPI_Allreduce
 
       implicit none
 
       integer(kind=4), intent(inout) :: ivar4     !< int4 that will be reduced
       integer(kind=4), intent(in)    :: reduction !< integer to mark a reduction type
-#ifdef MPIF08
-      type(MPI_Op), dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#else /* !MPIF08 */
-      integer(kind=4), dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#endif /* !MPIF08 */
 
       call MPI_Allreduce(MPI_IN_PLACE, ivar4, I_ONE, MPI_INTEGER, mpiop(reduction), comm, mpi_err)
 
@@ -774,21 +762,13 @@ contains
 !<
    subroutine MPI_Allreduce_single_int8(ivar8, reduction)
 
-      use constants, only: pSUM, pMAX, I_ONE
-      use MPIF,      only: MPI_INTEGER8, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX, MPI_Allreduce
-#ifdef MPIF08
-      use MPIF,      only: MPI_Op
-#endif
+      use constants, only: I_ONE
+      use MPIF,      only: MPI_INTEGER8, MPI_IN_PLACE, MPI_Allreduce
 
       implicit none
 
       integer(kind=8), intent(inout) :: ivar8     !< int8 that will be reduced
       integer(kind=4), intent(in)    :: reduction !< integer to mark a reduction type
-#ifdef MPIF08
-      type(MPI_Op), dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#else /* !MPIF08 */
-      integer(kind=4), dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#endif /* !MPIF08 */
 
       call MPI_Allreduce(MPI_IN_PLACE, ivar8, I_ONE, MPI_INTEGER8, mpiop(reduction), comm, mpi_err)
 
@@ -800,21 +780,12 @@ contains
 !<
    subroutine MPI_Allreduce_vec_int4(ivar4, reduction)
 
-      use constants, only: pSUM, pMAX
-      use MPIF,      only: MPI_INTEGER, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX, MPI_Allreduce
-#ifdef MPIF08
-      use MPIF,      only: MPI_Op
-#endif
+      use MPIF, only: MPI_INTEGER, MPI_IN_PLACE, MPI_Allreduce
 
       implicit none
 
       integer(kind=4), dimension(:), intent(inout) :: ivar4     !< int4 that will be reduced
       integer(kind=4),               intent(in)    :: reduction !< integer to mark a reduction type
-#ifdef MPIF08
-      type(MPI_Op), dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#else /* !MPIF08 */
-      integer(kind=4), dimension(pSUM:pMAX), parameter     :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#endif /* !MPIF08 */
 
       call MPI_Allreduce(MPI_IN_PLACE, ivar4, size(ivar4, kind=4), MPI_INTEGER, mpiop(reduction), comm, mpi_err)
 
@@ -826,21 +797,12 @@ contains
 !<
    subroutine MPI_Allreduce_vec_int8(ivar8, reduction)
 
-      use constants, only: pSUM, pMAX
-      use MPIF,      only: MPI_INTEGER8, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX, MPI_Allreduce
-#ifdef MPIF08
-      use MPIF,      only: MPI_Op
-#endif
+      use MPIF, only: MPI_INTEGER8, MPI_IN_PLACE, MPI_Allreduce
 
       implicit none
 
       integer(kind=8), dimension(:), intent(inout) :: ivar8     !< int8 that will be reduced
       integer(kind=4),               intent(in)    :: reduction !< integer to mark a reduction type
-#ifdef MPIF08
-      type(MPI_Op), dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#else /* !MPIF08 */
-      integer(kind=4), dimension(pSUM:pMAX), parameter     :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#endif /* !MPIF08 */
 
       call MPI_Allreduce(MPI_IN_PLACE, ivar8, size(ivar8, kind=4), MPI_INTEGER8, mpiop(reduction), comm, mpi_err)
 
@@ -852,21 +814,13 @@ contains
 !<
    subroutine MPI_Allreduce_single_real4(rvar4, reduction)
 
-      use constants, only: pSUM, pMAX, I_ONE
-      use MPIF,      only: MPI_REAL, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX, MPI_Allreduce
-#ifdef MPIF08
-      use MPIF,      only: MPI_Op
-#endif
+      use constants, only: I_ONE
+      use MPIF,      only: MPI_REAL, MPI_IN_PLACE, MPI_Allreduce
 
       implicit none
 
       real(kind=4),    intent(inout) :: rvar4     !< real4 that will be reduced
       integer(kind=4), intent(in)    :: reduction !< integer to mark a reduction type
-#ifdef MPIF08
-      type(MPI_Op), dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#else /* !MPIF08 */
-      integer(kind=4), dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#endif /* !MPIF08 */
 
       call MPI_Allreduce(MPI_IN_PLACE, rvar4, I_ONE, MPI_REAL, mpiop(reduction), comm, mpi_err)
 
@@ -878,21 +832,13 @@ contains
 !<
    subroutine MPI_Allreduce_single_real8(rvar8, reduction)
 
-      use constants, only: pSUM, pMAX, I_ONE
-      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX, MPI_Allreduce
-#ifdef MPIF08
-      use MPIF,      only: MPI_Op
-#endif
+      use constants, only: I_ONE
+      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_Allreduce
 
       implicit none
 
-      real(kind=8),    intent(inout) :: rvar8     !< int8 that will be reduced
+      real(kind=8),    intent(inout) :: rvar8     !< real8 that will be reduced
       integer(kind=4), intent(in)    :: reduction !< integer to mark a reduction type
-#ifdef MPIF08
-      type(MPI_Op), dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#else /* !MPIF08 */
-      integer(kind=4), dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#endif /* !MPIF08 */
 
       call MPI_Allreduce(MPI_IN_PLACE, rvar8, I_ONE, MPI_DOUBLE_PRECISION, mpiop(reduction), comm, mpi_err)
 
@@ -904,21 +850,12 @@ contains
 !<
    subroutine MPI_Allreduce_vec_real4(rvar4, reduction)
 
-      use constants, only: pSUM, pMAX
-      use MPIF,      only: MPI_REAL, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX, MPI_Allreduce
-#ifdef MPIF08
-      use MPIF,      only: MPI_Op
-#endif
+      use MPIF,      only: MPI_REAL, MPI_IN_PLACE, MPI_Allreduce
 
       implicit none
 
-      real(kind=4), dimension(:), intent(inout) :: rvar4     !< int8 that will be reduced
+      real(kind=4), dimension(:), intent(inout) :: rvar4     !< real4 that will be reduced
       integer(kind=4),            intent(in)    :: reduction !< integer to mark a reduction type
-#ifdef MPIF08
-      type(MPI_Op), dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#else /* !MPIF08 */
-      integer(kind=4), dimension(pSUM:pMAX), parameter  :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#endif /* !MPIF08 */
 
       call MPI_Allreduce(MPI_IN_PLACE, rvar4, size(rvar4, kind=4), MPI_REAL, mpiop(reduction), comm, mpi_err)
 
@@ -930,21 +867,12 @@ contains
 !<
    subroutine MPI_Allreduce_vec_real8(rvar8, reduction)
 
-      use constants, only: pSUM, pMAX
-      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX, MPI_Allreduce
-#ifdef MPIF08
-      use MPIF,      only: MPI_Op
-#endif
+      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_Allreduce
 
       implicit none
 
-      real(kind=8), dimension(:), intent(inout) :: rvar8     !< int8 that will be reduced
+      real(kind=8), dimension(:), intent(inout) :: rvar8     !< real8 that will be reduced
       integer(kind=4),            intent(in)    :: reduction !< integer to mark a reduction type
-#ifdef MPIF08
-      type(MPI_Op), dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#else /* !MPIF08 */
-      integer(kind=4), dimension(pSUM:pMAX), parameter  :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#endif /* !MPIF08 */
 
       call MPI_Allreduce(MPI_IN_PLACE, rvar8, size(rvar8, kind=4), MPI_DOUBLE_PRECISION, mpiop(reduction), comm, mpi_err)
 
@@ -956,21 +884,12 @@ contains
 !<
    subroutine MPI_Allreduce_arr3d_real8(rvar8, reduction)
 
-      use constants, only: pSUM, pMAX
-      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX, MPI_Allreduce
-#ifdef MPIF08
-      use MPIF,      only: MPI_Op
-#endif
+      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_Allreduce
 
       implicit none
 
-      real(kind=8), dimension(:,:,:), intent(inout) :: rvar8     !< int8 that will be reduced
+      real(kind=8), dimension(:,:,:), intent(inout) :: rvar8     !< real8 that will be reduced
       integer(kind=4),                intent(in)    :: reduction !< integer to mark a reduction type
-#ifdef MPIF08
-      type(MPI_Op), dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#else /* !MPIF08 */
-      integer(kind=4), dimension(pSUM:pMAX), parameter      :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#endif /* !MPIF08 */
 
       call MPI_Allreduce(MPI_IN_PLACE, rvar8, size(rvar8, kind=4), MPI_DOUBLE_PRECISION, mpiop(reduction), comm, mpi_err)
 
@@ -982,21 +901,12 @@ contains
 !<
    subroutine MPI_Allreduce_arr2d_real8(rvar8, reduction)
 
-      use constants, only: pSUM, pMAX
-      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX, MPI_Allreduce
-#ifdef MPIF08
-      use MPIF,      only: MPI_Op
-#endif
+      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_Allreduce
 
       implicit none
 
-      real(kind=8), dimension(:,:), intent(inout) :: rvar8     !< int8 that will be reduced
+      real(kind=8), dimension(:,:), intent(inout) :: rvar8     !< real8 that will be reduced
       integer(kind=4),              intent(in)    :: reduction !< integer to mark a reduction type
-#ifdef MPIF08
-      type(MPI_Op), dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#else /* !MPIF08 */
-      integer(kind=4), dimension(pSUM:pMAX), parameter    :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#endif /* !MPIF08 */
 
       call MPI_Allreduce(MPI_IN_PLACE, rvar8, size(rvar8, kind=4), MPI_DOUBLE_PRECISION, mpiop(reduction), comm, mpi_err)
 
@@ -1008,21 +918,12 @@ contains
 !<
    subroutine MPI_Allreduce_arr2d_real4(rvar4, reduction)
 
-      use constants, only: pSUM, pMAX
-      use MPIF,      only: MPI_REAL, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX, MPI_Allreduce
-#ifdef MPIF08
-      use MPIF,      only: MPI_Op
-#endif
+      use MPIF, only: MPI_REAL, MPI_IN_PLACE, MPI_Allreduce
 
       implicit none
 
-      real(kind=4), dimension(:,:), intent(inout) :: rvar4     !< int8 that will be reduced
+      real(kind=4), dimension(:,:), intent(inout) :: rvar4     !< real4 that will be reduced
       integer(kind=4),              intent(in)    :: reduction !< integer to mark a reduction type
-#ifdef MPIF08
-      type(MPI_Op), dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#else /* !MPIF08 */
-      integer(kind=4), dimension(pSUM:pMAX), parameter    :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
-#endif /* !MPIF08 */
 
       call MPI_Allreduce(MPI_IN_PLACE, rvar4, size(rvar4, kind=4), MPI_REAL, mpiop(reduction), comm, mpi_err)
 
