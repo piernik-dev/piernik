@@ -119,9 +119,9 @@ contains
       real, dimension(:,:,:), pointer          :: tab
       integer(kind=4),               parameter :: tag1 = 11, tag2 = tag1 + 1, tag3 = tag2 + 1
 #ifdef MPIF08
-      type(MPI_Op), dimension(MINL:MAXL), parameter :: op = [ MPI_MINLOC, MPI_MAXLOC ]
+      type(MPI_Op) :: op
 #else /* !MPIF08 */
-      integer(kind=4), dimension(MINL:MAXL), parameter :: op = [ MPI_MINLOC, MPI_MAXLOC ]
+      integer(kind=4) :: op
 #endif /* !MPIF08 */
       enum, bind(C)
          enumerator :: I_V, I_P !< value and proc
@@ -134,8 +134,10 @@ contains
       select case (minmax)
          case (MINL)
             prop%val = huge(1.)
+            op = MPI_MINLOC
          case (MAXL)
             prop%val = -huge(1.)
+            op = MPI_MAXLOC
          case default
             prop%val = 0.0   !! set dummy value
             write(msg,*) "[cg_list_dataop:get_extremum]: I don't know what to do with minmax = ", minmax
@@ -173,7 +175,7 @@ contains
 
       v_red(I_P) = real(proc)
 
-      call MPI_Allreduce(MPI_IN_PLACE, v_red, I_ONE, MPI_2DOUBLE_PRECISION, op(minmax), comm, mpi_err)
+      call MPI_Allreduce(MPI_IN_PLACE, v_red, I_ONE, MPI_2DOUBLE_PRECISION, op, comm, mpi_err)
 
       prop%val = v_red(I_V)
       prop%proc = int(v_red(I_P), kind=4)
