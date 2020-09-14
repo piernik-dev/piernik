@@ -38,7 +38,7 @@ module mpisetup
    implicit none
 
    private
-   public :: cleanup_mpi, init_mpi, inflate_req, bigbang, &
+   public :: cleanup_mpi, init_mpi, inflate_req, bigbang, bigbang_shift, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, mpi_err, &
         &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi, is_spawned, &
         &    piernik_MPI_Allreduce, piernik_MPI_Barrier, piernik_MPI_Bcast, report_to_master, &
@@ -51,7 +51,9 @@ module mpisetup
    integer(kind=4), protected :: intercomm      !< intercommunicator
    integer(kind=4) :: mpi_err                   !< error status
    integer(kind=INT4), parameter :: FIRST = 0   !< the rank of the master process
-   real(kind=8), protected    :: bigbang
+   real(kind=8), protected    :: bigbang        !< First result of MPI_Wtime()
+   real(kind=8), protected    :: bigbang_shift  !< A correction applied to readouts of MPI_Wtime() if necessary
+   real(kind=8), parameter    :: min_bigbang = 1.
 
    logical, protected :: master      !< .True. if proc == FIRST
    logical, protected :: slave       !< .True. if proc != FIRST
@@ -123,7 +125,7 @@ contains
 
    subroutine init_mpi
 
-      use constants,     only: cwdlen, I_ONE
+      use constants,     only: cwdlen, I_ONE, pMIN
       use mpi,           only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL, MPI_Wtime
       use dataio_pub,    only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
       use dataio_pub,    only: par_file, lun
@@ -196,6 +198,14 @@ contains
       call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, FIRST, comm, mpi_err)
       call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, FIRST, comm, mpi_err)
       call MPI_Gather(pid_proc,  I_ONE, MPI_INTEGER,   pid_all,  I_ONE, MPI_INTEGER,   FIRST, comm, mpi_err)
+
+      bigbang_shift = bigbang
+      call piernik_MPI_Allreduce(bigbang_shift, pMIN)
+      if (bigbang_shift > min_bigbang) then
+         bigbang_shift = 0.
+      else
+         bigbang_shift = 2. * min_bigbang - bigbang_shift  ! If Big Bang < 0. then modify readouts of MPI_Wtime taken for PPP to pretend that everything started at around 1 sec.
+      endif
 
       if (master) then
          inquire(file=par_file, exist=par_file_exist)

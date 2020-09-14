@@ -11,11 +11,20 @@ LDFLAGS   = -Wl,--as-needed -Wl,-O1
 
 ifeq ($(PIERNIK_DEBUG), 1)
    F90FLAGS += -ggdb -O0 -ffpe-trap=zero,overflow,invalid -fcheck=all -fno-omit-frame-pointer -fbacktrace
-   F90FLAGS += -Wall -W -Wextra -pedantic-errors -Wno-unused-function
+   F90FLAGS += -Wall -W -Wextra -Wno-unused-function
 endif
 
 # safe optimization choice
 F90FLAGS += -O2 -fno-stack-arrays
+
+GFORTRAN := $(shell gfortran -dumpversion | cut -f1 -d.)
+#ifeq ($(shell expr $(GFORTRAN) \>= 10), 1)
+ifeq ($(GFORTRAN),10)
+  # Ugly hack for old MPI interface
+  F90FLAGS += -fallow-argument-mismatch -frecursive
+else ifeq ($(PIERNIK_DEBUG), 1)
+  F90FLAGS += -pedantic-errors
+endif
 
 # The option -fstack-arrays may offer a bit better performance but also may require to set
 #    ulimit -s unlimited
