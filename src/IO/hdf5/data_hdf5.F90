@@ -679,7 +679,7 @@ contains
          n_part = count_all_particles()
          if (n_part .gt. 0) then
             if (is_multicg) call die("[data_hdf5:write_cg_to_output] multicg is not implemented for NBODY_1FILE")
-            do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
+            do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
                tmp(:) = 0
                id=0
                if (master) then
@@ -724,7 +724,7 @@ contains
 #ifdef NBODY_1FILE
                n_part = count_all_particles()
                if (n_part .gt. 0) then
-                  do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
+                  do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
                      call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), n_part)
                   enddo
                endif

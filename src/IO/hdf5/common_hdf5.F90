@@ -926,7 +926,7 @@ contains
                if (otype == O_RES) &
                     & call MPI_Recv(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  p, tag+I_FOUR,  comm, MPI_STATUS_IGNORE, mpi_err)
 #ifdef NBODY_1FILE
-               call MPI_Recv(n_part, 1, MPI_INTEGER, p, tag+I_FIVE, comm, MPI_STATUS_IGNORE, mpi_err)
+               call MPI_Recv(n_part, I_ONE, MPI_INTEGER, p, tag+I_FIVE, comm, MPI_STATUS_IGNORE, mpi_err)
 #endif /* NBODY_1FILE */
             endif
 
@@ -1046,7 +1046,7 @@ contains
          if (otype == O_RES) call MPI_Send(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  FIRST, tag+I_FOUR,  comm, mpi_err)
 #ifdef NBODY_1FILE
          n_part = count_all_particles()
-         call MPI_Send(n_part, 1, MPI_INTEGER, FIRST, tag+I_FIVE, comm, mpi_err)
+         call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, tag+I_FIVE, comm, mpi_err)
 #endif /* NBODY_1FILE */
          deallocate(cg_rl, cg_n_b, cg_off)
          if (associated(dbuf)) deallocate(dbuf)
@@ -1283,7 +1283,7 @@ contains
             enddo
 
 #ifdef NBODY_1FILE
-            do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
+            do i = lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
                call h5dopen_f(this%st_g_id(ncg), pdsets(i), this%pdset_id(ncg,i), error, dapl_id = plist_id)
             enddo
 #endif /* NBODY_1FILE */

@@ -188,7 +188,7 @@ contains
       deallocate(d_size)
 
 #ifdef NBODY_1FILE
-      do i = lbound(pdsets,1), ubound(pdsets,1)
+      do i = lbound(pdsets,1, kind=4), ubound(pdsets,1, kind=4)
          call create_empty_cg_dataset(st_g_id, gdf_translate(pdsets(i)), (/n_part/), Z_avail, O_RES)
       enddo
 #endif /* NBODY_1FILE */
@@ -343,7 +343,7 @@ contains
 #ifdef NBODY_1FILE
          n_part = count_all_particles()
          if (n_part .gt. 0) then
-            do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
+            do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
                tmp(:) = 0
                id=0
                if (master) then
@@ -395,7 +395,7 @@ contains
 #ifdef NBODY_1FILE
                n_part = count_all_particles()
                if (n_part .gt. 0) then
-                  do i=lbound(pdsets, dim=1), ubound(pdsets, dim=1)
+                  do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
                      call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), n_part)
                   enddo
                endif

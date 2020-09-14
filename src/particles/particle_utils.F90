@@ -47,7 +47,7 @@ module particle_utils
    real    :: d_angmom             !< error of angular momentum in succeeding timensteps
    logical :: twodtscheme
    logical :: dump_diagnose        !< dump diagnose for each particle to a seperate log file
-   integer, parameter :: npf = 12  !< number of single particle fields
+   integer(kind=4), parameter :: npf = 12  !< number of single particle fields
 
 contains
 
@@ -377,7 +377,7 @@ contains
       use dataio_pub,    only: die
       use domain,        only: dom, is_refined
       use grid_cont,     only: grid_container
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
+      use MPIF,          only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_Alltoall, MPI_Alltoallv
       use mpisetup,      only: proc, comm, mpi_err, FIRST, LAST
       use ppp,           only: ppp_main
       use particle_func, only: particle_in_area
@@ -385,7 +385,7 @@ contains
 
       implicit none
 
-      integer, dimension(FIRST:LAST)     :: nsend, nrecv, counts, countr, disps, dispr
+      integer(kind=4), dimension(FIRST:LAST) :: nsend, nrecv, counts, countr, disps, dispr
       integer                            :: i, j, ind, b
       integer(kind=4)                    :: pid
       real, dimension(ndims)             :: pos, vel, acc
@@ -420,10 +420,10 @@ contains
                   associate ( gsej => base%level%dot%gse(j) )
                     do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
                        if (particle_in_area(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO)*cg%dl(:)])) then
-                          nsend(j) = nsend(j) + 1 ! WON'T WORK in AMR!!!
+                          nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
                        else if (pset%pdata%outside) then
                            call cg_outside_dom(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2.) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_ONE) * cg%dl(:)], phy_out)
-                           if (phy_out) nsend(j) = nsend(j) + 1
+                           if (phy_out) nsend(j) = nsend(j) + I_ONE
                         endif
                      enddo
                   end associate
