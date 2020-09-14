@@ -166,7 +166,7 @@ contains
 
       real function modify_timer(tp,reset)
 
-         use mpi, only: MPI_Wtime
+         use MPIF, only: MPI_Wtime
 
          implicit none
 
@@ -187,7 +187,7 @@ contains
 
       subroutine insert_timer(tp, item)
 
-         use mpi, only: MPI_Wtime
+         use MPIF, only: MPI_Wtime
 
          implicit none
 
@@ -296,7 +296,7 @@ contains
 
       use constants,  only: I_ONE, half
       use dataio_pub, only: msg, printinfo
-      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use MPIF,       only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_Reduce
       use mpisetup,   only: comm, mpi_err, master, FIRST
 
       implicit none

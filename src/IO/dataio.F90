@@ -73,7 +73,7 @@ module dataio
    logical, dimension(RES:TSL) :: dump = .false.     !< logical values for all dump types to restrict to only one dump of each type a step
 
 !   integer                  :: nchar                 !< number of characters in a user/system message
-   integer, parameter       :: umsg_len = 16
+   integer(kind=4), parameter :: umsg_len = 16
    character(len=umsg_len)  :: umsg                  !< string of characters - content of a user/system message
    real                     :: umsg_param            !< parameter changed by a user/system message
 
@@ -1732,7 +1732,7 @@ contains
          use constants,    only: I_ONE, INVALID
          use dataio_pub,   only: msg, printinfo
          use memory_usage, only: system_mem_usage
-         use mpi,          only: MPI_INTEGER
+         use MPIF,         only: MPI_INTEGER, MPI_Gather
          use mpisetup,     only: master, FIRST, LAST, comm, mpi_err
 
          implicit none

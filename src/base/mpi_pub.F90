@@ -53,7 +53,7 @@ module mpi_pub
 contains
 
    subroutine mpi_container(this)
-      use mpi, only: MPI_COMM_WORLD, MPI_LOGICAL, MPI_CHARACTER
+      use MPIF, only: MPI_COMM_WORLD, MPI_LOGICAL, MPI_CHARACTER
 
       implicit none
 
@@ -73,7 +73,7 @@ contains
       contains
 
          function get_mpi_type(dummy) result (mpi_type)
-            use mpi, only: MPI_REAL, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_INTEGER8
+            use MPIF, only: MPI_REAL, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_INTEGER8
 
             implicit none
             class(*), pointer :: dummy

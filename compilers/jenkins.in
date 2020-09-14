@@ -23,14 +23,18 @@ F90FLAGS += -fcheck=all
 F90FLAGS += -frecursive
 
 # for gfortran >= 10.0 the use mpi_f08 interface is strongly encouraged
-USE_MPI_F08 := 1
+#change this as soon as Jenkins gets updated to gcc 10
+USE_MPI_F08 := 0
+
 
 ifeq ($(USE_MPI_F08),1)
   F90FLAGS += -pedantic
   CPPFLAGS += -DMPIF08
 else
-  # Ugly hack for old MPI interface
-  F90FLAGS += -fallow-argument-mismatch
+  # Ugly hack for old MPI interface, only got gfortran >= 10
+  # F90FLAGS += -fallow-argument-mismatch
+  # restore pedantic for gfortran < 10
+  F90FLAGS += -pedantic
 endif
 
 ifdef I64

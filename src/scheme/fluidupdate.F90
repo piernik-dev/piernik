@@ -59,7 +59,7 @@ contains
 
    subroutine fluid_update
 
-      use constants,        only: RTVD_SPLIT, RIEMANN_SPLIT, HLLC_SPLIT
+      use constants,        only: RTVD_SPLIT, RIEMANN_SPLIT, HLLC_SPLIT, I_ONE, I_TWO
       use dataio_pub,       only: die
       use domain,           only: dom, is_refined
       use global,           only: which_solver
@@ -72,7 +72,7 @@ contains
 
       call ppp_main%start(fu_label)
 
-      if (is_refined .and. (mod(dom%nb, 2) == 1)) call die("[fluidupdate:fluid_update] odd number of guardcells is known to cause inaccuracies in (M)HD and nonconvergence of V-cycles")
+      if (is_refined .and. (mod(dom%nb, I_TWO) == I_ONE)) call die("[fluidupdate:fluid_update] odd number of guardcells is known to cause inaccuracies in (M)HD and nonconvergence of V-cycles")
 
       select case (which_solver)
          case (HLLC_SPLIT)

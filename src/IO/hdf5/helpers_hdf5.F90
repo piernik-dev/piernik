@@ -83,7 +83,7 @@ contains
       character(len=*),     intent(in)           :: fname   !< Filename
       integer(HID_T),       intent(inout)        :: f_id    !< File id
       integer(kind=SIZE_T), intent(in), optional :: incr    !< \copydoc helpers_hdf5::default_increment
-      logical,              intent(in), optional :: bstore  !< \copydoc helpers_hdf5::default_backing_store
+      logical(kind=4),      intent(in), optional :: bstore  !< \copydoc helpers_hdf5::default_backing_store
 
       integer(hid_t)                             :: faplist_id
       integer(kind=SIZE_T)                       :: increment

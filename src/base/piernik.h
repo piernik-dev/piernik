@@ -51,3 +51,9 @@
 #   define NBODY_1FILE
 #   define SELF_GRAV
 #endif /* GRAV */
+
+#ifdef MPIF08
+#  define MPIF mpi_f08
+#else
+#  define MPIF mpi
+#endif
