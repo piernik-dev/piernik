@@ -548,12 +548,12 @@ contains
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
       use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars, hdf_vars_avail, enable_all_hdf_var
-      use constants,   only: xdim, ydim, zdim, ndims, FP_REAL, PPP_IO, PPP_CG
+      use constants,   only: xdim, ydim, zdim, ndims, FP_REAL, PPP_IO, PPP_CG, I_ONE
       use dataio_pub,  only: die, nproc_io, can_i_write, h5_64bit, nstep_start
       use global,      only: nstep
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
+      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_Recv, MPI_Send
       use mpisetup,    only: master, FIRST, proc, comm, mpi_err
       use ppp,         only: ppp_main
 
@@ -568,7 +568,8 @@ contains
       integer(kind=4)                                      :: error
       integer(kind=4), parameter                           :: rank = 3
       integer(HSIZE_T), dimension(:), allocatable          :: dims
-      integer                                              :: i, ip, ncg, n
+      integer(kind=4)                                      :: i, ncg, n
+      integer                                              :: ip
       type(grid_container),            pointer             :: cg
       type(cg_list_element),           pointer             :: cgl
       real, dimension(:,:,:),          pointer             :: data_dbl ! double precision buffer (internal default, single precision buffer is the plotfile output default, overridable by h5_64bit)
@@ -599,14 +600,14 @@ contains
                if (.not. can_i_write) call die("[data_hdf5:write_cg_to_output] Master can't write")
 
                ip = lbound(hdf_vars,1) - 1
-               do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
+               do i = lbound(hdf_vars,1, kind=4), ubound(hdf_vars,1, kind=4)
                   if (.not.hdf_vars_avail(i)) cycle
                   ip = ip + 1
                   if (cg_desc%cg_src_p(ncg) == proc) then
                      cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                      call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                   else
-                     call MPI_Recv(data_dbl(1,1,1), size(data_dbl), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
+                     call MPI_Recv(data_dbl(1,1,1), size(data_dbl, kind=4), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
                   endif
                   if (.not.hdf_vars_avail(i)) cycle
                   if (h5_64bit) then
@@ -619,10 +620,10 @@ contains
                if (can_i_write) call die("[data_hdf5:write_cg_to_output] Slave can write")
                if (cg_desc%cg_src_p(ncg) == proc) then
                   cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-                  do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
+                  do i = lbound(hdf_vars,1, kind=4), ubound(hdf_vars,1, kind=4)
                      if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                      if (.not.hdf_vars_avail(i)) cycle
-                     call MPI_Send(data_dbl(1,1,1), size(data_dbl), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, mpi_err)
+                     call MPI_Send(data_dbl(1,1,1), size(data_dbl, kind=4), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, mpi_err)
                   enddo
                endif
             endif
@@ -636,14 +637,14 @@ contains
             cgl => leaves%first
             do while (associated(cgl))
                call ppp_main%start(wrdc1p_label, PPP_IO + PPP_CG)
-               n = n + 1
+               n = n + I_ONE
                ncg = cg_desc%offsets(proc) + n
                dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
                call recycle_data(dims, cg_all_n_b, ncg, data_dbl)
                cg => cgl%cg
 
                ip = lbound(hdf_vars,1) - 1
-               do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
+               do i = lbound(hdf_vars,1, kind=4), ubound(hdf_vars,1, kind=4)
                   if (.not.hdf_vars_avail(i)) cycle
                   ip = ip + 1
                   call get_data_from_cg(hdf_vars(i), cg, data_dbl)
@@ -676,10 +677,10 @@ contains
             ! empty memoryspace
             call h5sselect_none_f(memspace_id, error)
 
-            call recycle_data(dims, cg_all_n_b, 1, data_dbl)
-            do ncg = 1, maxval(cg_n)-n
+            call recycle_data(dims, cg_all_n_b, I_ONE, data_dbl)
+            do ncg = I_ONE, maxval(cg_n)-n
                ip = lbound(hdf_vars,1) - 1
-               do i = lbound(hdf_vars, 1), ubound(hdf_vars, 1)
+               do i = lbound(hdf_vars, 1, kind=4), ubound(hdf_vars, 1, kind=4)
                   if (.not.hdf_vars_avail(i)) cycle
                   ip = ip + 1
                   ! It is crashing due to FPE when there are more processes than blocks
@@ -719,7 +720,7 @@ contains
 
       call ppp_main%stop(wrdc_label, PPP_IO)
 
-      if (.false.) i = size(cg_all_n_o) ! suppress compiler warning
+      if (.false.) i = size(cg_all_n_o, kind=4) ! suppress compiler warning
 
       contains
          !>
@@ -731,7 +732,7 @@ contains
             implicit none
             integer(HSIZE_T), dimension(:)                          :: dims        !< shape of current cg
             integer(kind=4), dimension(:,:), pointer, intent(in)    :: cg_all_n_b  !< all cg sizes
-            integer,                                  intent(in)    :: i           !< no. of cg
+            integer(kind=4),                          intent(in)    :: i           !< no. of cg
             real, dimension(:,:,:), pointer,          intent(inout) :: data        !< temporary storage array used for I/O
 
             if (associated(data)) then
@@ -825,7 +826,7 @@ contains
            &                     h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5sclose_f, h5dget_space_f, h5sselect_hyperslab_f, &
            &                     h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
       use mpisetup,        only: comm
-      use mpi,             only: MPI_INFO_NULL
+      use MPIF,            only: MPI_INFO_NULL
 
       implicit none
 
@@ -851,7 +852,11 @@ contains
       ! Setup file access property list with parallel I/O access.
       !
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_idf, error)
+#ifdef MPIF08
+      call h5pset_fapl_mpio_f(plist_idf, comm%mpi_val, MPI_INFO_NULL%mpi_val, error)
+#else /* !MPIF08 */
       call h5pset_fapl_mpio_f(plist_idf, comm, MPI_INFO_NULL, error)
+#endif /* !MPIF08 */
       !
       ! Create the file collectively.
       !

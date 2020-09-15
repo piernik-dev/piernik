@@ -78,10 +78,10 @@ module common_hdf5
       integer(HID_T), dimension(:), allocatable   :: cg_g_id
       integer(HID_T), dimension(:,:), allocatable :: dset_id
       integer(HID_T)                              :: xfer_prp
-      integer, allocatable, dimension(:)          :: offsets
-      integer, allocatable, dimension(:)          :: cg_src_p
-      integer, allocatable, dimension(:)          :: cg_src_n
-      integer                                     :: tot_cg_n
+      integer(kind=4), allocatable, dimension(:)  :: offsets
+      integer(kind=4), allocatable, dimension(:)  :: cg_src_p
+      integer(kind=4), allocatable, dimension(:)  :: cg_src_n
+      integer(kind=4)                             :: tot_cg_n
    contains
       procedure :: init => initialize_write_cg
       procedure :: clean => finalize_write_cg
@@ -613,7 +613,7 @@ contains
    function n_cg_name(g)
       use constants, only: dsetnamelen
       implicit none
-      integer, intent(in)        :: g !< group number
+      integer(kind=4), intent(in) :: g !< group number
       character(len=dsetnamelen) :: n_cg_name
       write(n_cg_name,'(2a,i10.10)')trim(cg_gname), "_", g-1
    end function n_cg_name
@@ -629,7 +629,7 @@ contains
 
       implicit none
 
-      integer, intent(in)            :: n
+      integer(kind=4), intent(in) :: n
 
       type(grid_container),  pointer :: cg
       type(cg_list_element), pointer :: cgl
@@ -735,7 +735,8 @@ contains
          &                    h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, h5pclose_f, &
          &                    h5zfilter_avail_f
       use helpers_hdf5, only: create_attribute!, create_corefile
-      use mpi,          only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
+      use MPIF,         only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8, &
+           &                  MPI_Allgather, MPI_Recv, MPI_Send
       use mpisetup,     only: comm, FIRST, LAST, master, mpi_err, piernik_MPI_Bcast
 
       implicit none
@@ -774,9 +775,9 @@ contains
       integer(HID_T)                                :: cg_g_id          !< cg group identifiers
       integer(HID_T)                                :: doml_g_id        !< domain list identifier
       integer(HID_T)                                :: dom_g_id         !< domain group identifier
-      integer(kind=4)                               :: error, cg_cnt
-      integer                                       :: g, p, i
-      integer, parameter                            :: tag = I_ONE
+      integer(kind=4)                               :: error, cg_cnt, p
+      integer                                       :: g, i
+      integer(kind=4), parameter                    :: tag = I_ONE
       integer(kind=4),  dimension(:),   pointer     :: cg_n             !< offset for cg group numbering
       integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_b       !< sizes of all cg
       integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_o       !< sizes of all cg, expanded by external boundaries
@@ -870,17 +871,17 @@ contains
             if (p == FIRST) then
                call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
             else
-               call MPI_Recv(cg_rl,  size(cg_rl),  MPI_INTEGER,  p, tag,         comm, MPI_STATUS_IGNORE, mpi_err)
-               call MPI_Recv(cg_n_b, size(cg_n_b), MPI_INTEGER,  p, tag+I_ONE,   comm, MPI_STATUS_IGNORE, mpi_err)
-               call MPI_Recv(cg_off, size(cg_off), MPI_INTEGER8, p, tag+I_TWO,   comm, MPI_STATUS_IGNORE, mpi_err)
+               call MPI_Recv(cg_rl,  size(cg_rl, kind=4),  MPI_INTEGER,  p, tag,         comm, MPI_STATUS_IGNORE, mpi_err)
+               call MPI_Recv(cg_n_b, size(cg_n_b, kind=4), MPI_INTEGER,  p, tag+I_ONE,   comm, MPI_STATUS_IGNORE, mpi_err)
+               call MPI_Recv(cg_off, size(cg_off, kind=4), MPI_INTEGER8, p, tag+I_TWO,   comm, MPI_STATUS_IGNORE, mpi_err)
                if (otype == O_OUT) &
-                  & call MPI_Recv(dbuf,   size(dbuf),   MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, mpi_err)
+                  & call MPI_Recv(dbuf,   size(dbuf, kind=4),   MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, mpi_err)
                if (otype == O_RES) &
-                    & call MPI_Recv(cg_n_o, size(cg_n_o), MPI_INTEGER,  p, tag+I_FOUR,  comm, MPI_STATUS_IGNORE, mpi_err)
+                    & call MPI_Recv(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  p, tag+I_FOUR,  comm, MPI_STATUS_IGNORE, mpi_err)
             endif
 
             do g = 1, cg_n(p)
-               call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error) ! create "/data/grid_%08d"
+               call h5gcreate_f(cgl_g_id, n_cg_name(int(sum(cg_n(:p))-cg_n(p)+g, kind=4)), cg_g_id, error) ! create "/data/grid_%08d"
 
                call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                ! create "/data/grid_%08d/level"
                temp = cg_n_b(g, :)
@@ -961,11 +962,11 @@ contains
          nullify(cg_n_o)
          if (otype == O_RES) allocate(cg_n_o(leaves%cnt, ndims))
          call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
-         call MPI_Send(cg_rl,  size(cg_rl),  MPI_INTEGER,  FIRST, tag,         comm, mpi_err)
-         call MPI_Send(cg_n_b, size(cg_n_b), MPI_INTEGER,  FIRST, tag+I_ONE,   comm, mpi_err)
-         call MPI_Send(cg_off, size(cg_off), MPI_INTEGER8, FIRST, tag+I_TWO,   comm, mpi_err)
-         if (otype == O_OUT) call MPI_Send(dbuf,   size(dbuf),   MPI_REAL8,    FIRST, tag+I_THREE, comm, mpi_err)
-         if (otype == O_RES) call MPI_Send(cg_n_o, size(cg_n_o), MPI_INTEGER,  FIRST, tag+I_FOUR,  comm, mpi_err)
+         call MPI_Send(cg_rl,  size(cg_rl, kind=4),  MPI_INTEGER,  FIRST, tag,         comm, mpi_err)
+         call MPI_Send(cg_n_b, size(cg_n_b, kind=4), MPI_INTEGER,  FIRST, tag+I_ONE,   comm, mpi_err)
+         call MPI_Send(cg_off, size(cg_off, kind=4), MPI_INTEGER8, FIRST, tag+I_TWO,   comm, mpi_err)
+         if (otype == O_OUT) call MPI_Send(dbuf,   size(dbuf, kind=4),   MPI_REAL8,    FIRST, tag+I_THREE, comm, mpi_err)
+         if (otype == O_RES) call MPI_Send(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  FIRST, tag+I_FOUR,  comm, mpi_err)
          deallocate(cg_rl, cg_n_b, cg_off)
          if (associated(dbuf)) deallocate(dbuf)
          if (associated(cg_n_o)) deallocate(cg_n_o)
@@ -1042,7 +1043,7 @@ contains
    function set_h5_properties(h5p, nproc_io) result (plist_id)
       use hdf5,     only: HID_T, H5P_FILE_ACCESS_F, h5pcreate_f, h5pset_fapl_mpio_f, &
          &                H5FD_MPIO_COLLECTIVE_F, h5pset_dxpl_mpio_f, H5P_DATASET_XFER_F
-      use mpi,      only: MPI_INFO_NULL
+      use MPIF,     only: MPI_INFO_NULL
       use mpisetup, only: comm
 
       implicit none
@@ -1056,7 +1057,11 @@ contains
          ! when nproc_io < nproc we'll probably need another communicator for subset of processes that
          ! have can_i_write flag set
          if (h5p == H5P_FILE_ACCESS_F) then
+#ifdef MPIF08
+            call h5pset_fapl_mpio_f(plist_id, comm%mpi_val, MPI_INFO_NULL%mpi_val, error)  ! really?
+#else /* !MPIF08 */
             call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
+#endif /* !MPIF08 */
          else if (h5p == H5P_DATASET_XFER_F) then
             call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
          endif
@@ -1122,7 +1127,7 @@ contains
 
    subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets)
 
-      use constants,  only: dsetnamelen
+      use constants,  only: dsetnamelen, I_ONE
       use dataio_pub, only: can_i_write
       use hdf5,       only: HID_T, H5P_GROUP_ACCESS_F, H5P_DATASET_ACCESS_F, H5P_DATASET_XFER_F, &
           &                 h5gopen_f, h5pclose_f, h5dopen_f
@@ -1136,7 +1141,7 @@ contains
       integer(kind=4),                          intent(in)    :: nproc_io
       character(len=dsetnamelen), dimension(:), intent(in)    :: dsets
 
-      integer                                                 :: i, ncg
+      integer(kind=4)                                         :: i, ncg
       integer(HID_T)                                          :: plist_id
       integer(kind=4)                                         :: error
 
@@ -1157,7 +1162,7 @@ contains
       !> \todo silent assumption that nproc_io == nproc FIXME
       this%offsets(:) = 0
       if (nproc_io > 0) then
-         do i = 1, nproc_io-1
+         do i = 1, nproc_io - I_ONE
             this%offsets(i) = sum(cg_n(:i-1))
          enddo
       endif
@@ -1166,15 +1171,15 @@ contains
       if (can_i_write) then
 
          plist_id = set_h5_properties(H5P_GROUP_ACCESS_F, nproc_io)
-         do ncg = 1, this%tot_cg_n
+         do ncg = I_ONE, this%tot_cg_n
             call h5gopen_f(cgl_g_id, n_cg_name(ncg), this%cg_g_id(ncg), error, gapl_id = plist_id)
          enddo
          call h5pclose_f(plist_id, error)
 
          plist_id = set_h5_properties(H5P_DATASET_ACCESS_F, nproc_io)
          allocate(this%dset_id(1:this%tot_cg_n, lbound(dsets, dim=1):ubound(dsets, dim=1)))
-         do ncg = 1, this%tot_cg_n
-            do i = lbound(dsets, dim=1), ubound(dsets, dim=1)
+         do ncg = I_ONE, this%tot_cg_n
+            do i = lbound(dsets, dim=1, kind=4), ubound(dsets, dim=1, kind=4)
                call h5dopen_f(this%cg_g_id(ncg), dsets(i), this%dset_id(ncg,i), error, dapl_id = plist_id)
             enddo
          enddo

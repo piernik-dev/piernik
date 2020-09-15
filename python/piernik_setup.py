@@ -530,9 +530,9 @@ def setup_piernik(data=None):
             uses.append([])
         module.setdefault(f, f)
 
-    known_external_modules = (
-        "hdf5", "h5lt", "mpi", "iso_c_binding", "iso_fortran_env", "fgsl",
-        "ifposix", "ifport", "ifcore")  # Ugly trick: these modules are detected by -D__INTEL_COMPILER
+    known_external_modules = ["hdf5", "h5lt", "iso_c_binding", "iso_fortran_env", "fgsl",
+                              "ifposix", "ifport", "ifcore"]  # Ugly trick: these modules are detected by -D__INTEL_COMPILER
+    known_external_modules.append("mpi_f08" if "-DMPIF08" in cppflags.split() else "mpi")
 
     files_to_build = remove_suf(stripped_files)
 

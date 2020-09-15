@@ -104,7 +104,7 @@ contains
       use cg_list,    only: cg_list_element
       use constants,  only: I_ZERO, I_ONE, ndims, LO, HI
       use dataio_pub, only: die
-      use mpi,        only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER
+      use MPIF,       only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER, MPI_Allgather, MPI_Allgatherv
       use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
       use ordering,   only: SFC_order
 
@@ -265,7 +265,7 @@ contains
    subroutine check_blocky(this)
 
       use constants,  only: ndims, LO, HI, pLAND, I_ONE
-      use mpi,        only: MPI_INTEGER, MPI_REQUEST_NULL
+      use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_Waitall, MPI_Irecv, MPI_Isend
       use mpisetup,   only: proc, req, status, comm, mpi_err, LAST, inflate_req, slave, piernik_MPI_Allreduce
 
       implicit none
@@ -274,7 +274,7 @@ contains
 
       integer(kind=4), dimension(ndims) :: shape, shape1
       integer(kind=4), parameter :: sh_tag = 7
-      integer, parameter :: nr = 2
+      integer(kind=4), parameter :: nr = 2
       integer :: i
 
       call inflate_req(nr)
@@ -293,9 +293,13 @@ contains
          endif
       endif
       req = MPI_REQUEST_NULL
-      if (slave)     call MPI_Irecv(shape1, size(shape1), MPI_INTEGER, proc-I_ONE, sh_tag, comm, req(1 ), mpi_err)
-      if (proc<LAST) call MPI_Isend(shape,  size(shape),  MPI_INTEGER, proc+I_ONE, sh_tag, comm, req(nr), mpi_err)
+      if (slave)     call MPI_Irecv(shape1, size(shape1, kind=4), MPI_INTEGER, proc-I_ONE, sh_tag, comm, req(1 ), mpi_err)
+      if (proc<LAST) call MPI_Isend(shape,  size(shape, kind=4),  MPI_INTEGER, proc+I_ONE, sh_tag, comm, req(nr), mpi_err)
+#ifdef MPIF08
+      call MPI_Waitall(nr, req(:nr), status(:nr), mpi_err)
+#else /* !MPIF08 */
       call MPI_Waitall(nr, req(:nr), status(:, :nr), mpi_err)
+#endif /* !MPIF08 */
       if (any(shape /= 0) .and. any(shape1 /= 0)) then
          if (any(shape /= shape1)) this%is_blocky = .false.
       endif
@@ -313,9 +317,9 @@ contains
 
    subroutine update_SFC_id_range(this, off)
 
-      use constants,  only: LO, HI, ndims
+      use constants,  only: LO, HI, ndims, I_ONE
       use dataio_pub, only: die
-      use mpi,        only: MPI_INTEGER8
+      use MPIF,       only: MPI_INTEGER8, MPI_Allgather
       use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
       use ordering,   only: SFC_order
 
@@ -346,7 +350,7 @@ contains
       endif
 
       allocate(id_buf(size(this%SFC_id_range)))
-      call MPI_Allgather(this%SFC_id_range(proc, :), HI-LO+1, MPI_INTEGER8, id_buf, HI-LO+1, MPI_INTEGER8, comm, mpi_err)
+      call MPI_Allgather(this%SFC_id_range(proc, :), HI-LO+I_ONE, MPI_INTEGER8, id_buf, HI-LO+I_ONE, MPI_INTEGER8, comm, mpi_err)
       this%SFC_id_range(:, LO) = id_buf(1::2)
       this%SFC_id_range(:, HI) = id_buf(2::2)
 
@@ -374,7 +378,7 @@ contains
 
       class(dot_t),    intent(inout) :: this
       integer(kind=8), intent(in)    :: SFC_id
-      integer,         intent(out)   :: p
+      integer(kind=4), intent(out)   :: p
       integer,         intent(out)   :: grid_id
 
       integer :: ip, il, iu, j, pp_lb, pp_ub
@@ -458,7 +462,7 @@ contains
          do j = i1, i2
             if (this%gse(pp(ip))%c(j)%SFCid == SFC_id) then
                grid_id = j
-               p = pp(ip)
+               p = int(pp(ip), kind=4)
                exit
             endif
          enddo

@@ -239,17 +239,22 @@ contains
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: xdim, zdim, LO, HI, I_ONE, I_ZERO
-      use dataio_pub        , only: die, warn
+      use dataio_pub,         only: die, warn
       use domain,             only: dom
-      use mpi,                only: MPI_INTEGER, MPI_STATUS_IGNORE
+      use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE, &
+           &                        MPI_Alltoall, MPI_Isend, MPI_Recv, MPI_Waitall
       use mpisetup,           only: FIRST, LAST, comm, mpi_err, proc, req, status, inflate_req
+#ifdef MPIF08
+      use MPIF,               only: MPI_Status
+#endif
 
       implicit none
 
       type(cg_level_connected_t), pointer, intent(in) :: lev
 
       type(cg_list_element), pointer :: cgl
-      integer :: i, g, nr
+      integer :: i
+      integer(kind=4) :: nr, g
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se
       integer, parameter :: perimeter = 2
       integer(kind=4), dimension(FIRST:LAST) :: gscnt, grcnt
@@ -258,9 +263,13 @@ contains
          integer(kind=4) :: tag
       end type pt
       type(pt), dimension(:), allocatable :: pt_list
-      integer :: pt_cnt
+      integer(kind=4) :: pt_cnt
       integer(kind=4) :: rtag
+#ifdef MPIF08
+      type(MPI_Status), dimension(:), pointer :: mpistatus
+#else /* !MPIF08 */
       integer(kind=4), dimension(:,:), pointer :: mpistatus
+#endif /* !MPIF08 */
 
       if (perimeter > dom%nb) call die("[refinement_update:parents_prevent_derefinement_lev] perimeter > dom%nb")
       if (.not. associated(lev%finer)) then
@@ -276,7 +285,7 @@ contains
          associate (cg => cgl%cg)
             if (cg%flag%get()) then
                if (allocated(cg%ri_tgt%seg)) then
-                  do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
+                  do g = lbound(cg%ri_tgt%seg(:), dim=1, kind=4), ubound(cg%ri_tgt%seg(:), dim=1, kind=4)
                      ! clear own derefine flags (single-thread test)
                      se(:, LO) = cg%ri_tgt%seg(g)%se(:, LO) - perimeter * dom%D_
                      se(:, HI) = cg%ri_tgt%seg(g)%se(:, HI) + perimeter * dom%D_
@@ -292,7 +301,7 @@ contains
                               ! create a list of foreign blocks that need not be derefined (proc, grid_id or SFC_id)
                               ! here we use prolongation structures
                               gscnt(fproc) = gscnt(fproc) + I_ONE
-                              pt_cnt = pt_cnt + 1
+                              pt_cnt = pt_cnt + I_ONE
                               if (pt_cnt > size(pt_list)) call die("[refinement_update:parents_prevent_derefinement_lev] pt_cnt > size(pt_list)")
                               pt_list(pt_cnt) = pt(fproc, ftag)
                            endif
@@ -312,15 +321,15 @@ contains
       ! Apparently gscnt/grcnt represent quite sparse matrix, so we better do nonblocking point-to-point than MPI_AlltoAllv
       nr = 0
       if (pt_cnt > 0) then
-         do g = lbound(pt_list, dim=1), pt_cnt
-            nr = nr + 1
+         do g = lbound(pt_list, dim=1, kind=4), pt_cnt
+            nr = nr + I_ONE
             if (nr > size(req, dim=1)) call inflate_req
             call MPI_Isend(pt_list(g)%tag, I_ONE, MPI_INTEGER, pt_list(g)%proc, I_ZERO, comm, req(nr), mpi_err)
             ! OPT: Perhaps it will be more efficient to allocate arrays according to gscnt and send tags in bunches
          enddo
       endif
 
-      do g = lbound(grcnt, dim=1), ubound(grcnt, dim=1)
+      do g = lbound(grcnt, dim=1, kind=4), ubound(grcnt, dim=1, kind=4)
          if (grcnt(g) /= 0) then
             if (g == proc) call die("[refinement_update:parents_prevent_derefinement] MPI_Recv from self")  ! this is not an error but it should've been handled as local thing
             do i = 1, grcnt(g)
@@ -331,7 +340,11 @@ contains
       enddo
 
       if (nr > 0) then
+#ifdef MPIF08
+         mpistatus => status(:nr)
+#else /* !MPIF08 */
          mpistatus => status(:, :nr)
+#endif /* !MPIF08 */
          call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
       endif
 
