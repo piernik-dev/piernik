@@ -265,6 +265,7 @@ contains
    subroutine check_blocky(this)
 
       use constants,  only: ndims, LO, HI, pLAND, I_ONE
+      use dataio_pub, only: msg, warn
       use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_Waitall, MPI_Irecv, MPI_Isend
       use mpisetup,   only: proc, req, status, comm, mpi_err, LAST, inflate_req, slave, piernik_MPI_Allreduce
 
@@ -276,6 +277,7 @@ contains
       integer(kind=4), parameter :: sh_tag = 7
       integer(kind=4), parameter :: nr = 2
       integer :: i
+      logical, save :: is_warned = .false.
 
       call inflate_req(nr)
       this%is_blocky = .true.
@@ -300,10 +302,31 @@ contains
 #else /* !MPIF08 */
       call MPI_Waitall(nr, req(:nr), status(:, :nr), mpi_err)
 #endif /* !MPIF08 */
+
+
+      ! Try this with the default Maclaurin config (or anything with blocky decomposition)
+      ! If your compiler works correctly, no writes would be executed.
+      ! If it is not a gfortran bug then it is a really weird data race in MPI. Any ideas?
+
       if (any(shape /= 0) .and. any(shape1 /= 0)) then
-         if (any(shape /= shape1)) this%is_blocky = .false.
+         if (any(shape /= shape1)) then
+            write(*,*)"dot: ", shape , "/=", shape1, " ???"
+            do i = lbound(shape, dim=1), ubound(shape, dim=1)
+               if (shape(i) /= shape1(i)) then
+                  this%is_blocky = .false.
+                  write(*,*)"dot: i=",i, ": ",shape(i), "/=", shape1(i), " ??? ", shape(i) /= shape1(i)
+               end if
+            enddo
+            if (this%is_blocky) then
+               write(msg, '(a,2(3i5,a))') "Buggy compiler? [", shape, "] /= [", shape1, "] ??? Reducing optimization level may help."
+               if (.not. is_warned) call warn(msg)
+               is_warned = .true.
+            endif
+         endif
       endif
       call piernik_MPI_Allreduce(this%is_blocky, pLAND)
+
+      if (.not. this%is_blocky)  write(*,*)"dot: ", this%is_blocky
 
    end subroutine check_blocky
 
