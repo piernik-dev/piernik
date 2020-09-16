@@ -96,10 +96,14 @@ contains
       use dataio_pub,  only: msg, warn, die
       use domain,      only: dom
       use grid_cont,   only: grid_container
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_2DOUBLE_PRECISION, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
+      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_2DOUBLE_PRECISION, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE, &
+           &                 MPI_Allreduce, MPI_Send, MPI_Recv
       use mpisetup,    only: comm, mpi_err, master, proc, FIRST
 !      use named_array_list, only: qna
       use types,       only: value
+#ifdef MPIF08
+      use MPIF,      only: MPI_Op
+#endif
 
       implicit none
 
@@ -113,8 +117,12 @@ contains
       type(grid_container),   pointer          :: cg_x
       type(cg_list_element),  pointer          :: cgl
       real, dimension(:,:,:), pointer          :: tab
-      integer,                       parameter :: tag1 = 11, tag2 = tag1 + 1, tag3 = tag2 + 1
-      integer, dimension(MINL:MAXL), parameter :: op = [ MPI_MINLOC, MPI_MAXLOC ]
+      integer(kind=4),               parameter :: tag1 = 11, tag2 = tag1 + 1, tag3 = tag2 + 1
+#ifdef MPIF08
+      type(MPI_Op) :: op
+#else /* !MPIF08 */
+      integer(kind=4) :: op
+#endif /* !MPIF08 */
       enum, bind(C)
          enumerator :: I_V, I_P !< value and proc
       end enum
@@ -126,8 +134,10 @@ contains
       select case (minmax)
          case (MINL)
             prop%val = huge(1.)
+            op = MPI_MINLOC
          case (MAXL)
             prop%val = -huge(1.)
+            op = MPI_MAXLOC
          case default
             prop%val = 0.0   !! set dummy value
             write(msg,*) "[cg_list_dataop:get_extremum]: I don't know what to do with minmax = ", minmax
@@ -165,10 +175,10 @@ contains
 
       v_red(I_P) = real(proc)
 
-      call MPI_Allreduce(MPI_IN_PLACE, v_red, I_ONE, MPI_2DOUBLE_PRECISION, op(minmax), comm, mpi_err)
+      call MPI_Allreduce(MPI_IN_PLACE, v_red, I_ONE, MPI_2DOUBLE_PRECISION, op, comm, mpi_err)
 
       prop%val = v_red(I_V)
-      prop%proc = int(v_red(I_P))
+      prop%proc = int(v_red(I_P), kind=4)
 
       if (proc == prop%proc) then
          where (.not. dom%has_dir(:)) prop%coords(:) = 0.

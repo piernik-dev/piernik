@@ -40,7 +40,7 @@ You may use `hdf5-mpich-devel` if you prefer MPICH over OpenMPI.
 
 * OpenMPI refuses to run on all threads of a CPU with SMT/HT. Override with `--use-hwthread-cpus` or `--oversubscribe` (only when necessary).
 
-### older Fedora releases
+### older Fedora releases (24 .. 31)
 
 * Install `python-pycodestyle` instead of `python3-pycodestyle` if necessary for `make qa`.
 * If you are affected by a bug in dependencies in Fedora packages that results in failure of MPI compilation due to missing `/usr/lib/rpm/redhat/redhat-hardened-cc1`, you can fix it by installing the missing package:
@@ -58,6 +58,17 @@ You may use `hdf5-mpich-devel` if you prefer MPICH over OpenMPI.
     Remember that doing so is a sort of hack, which may take revenge on you in a distant future.
 
 If you have installed OpenMPI libraries, remember to replace `mpich` with `openmpi` in the `sed` calls above.
+
+### other systems
+
+On other systems you need to find your own way (and you may choose to describe it here). You will need:
+
+* git
+* decent Fortran 2008 compiler (for such things as polymorphism or modern MPI interface)
+* MPI with Fortran support, preferably version that provides mpi_f08.mod. If it is limited to mpi.mod, it must provide interface to all MPI calls
+* hdf5 1.8.8 or newer with high-level library, Fortran 2003 interface and MPI support (--enable-shared --enable-fortran --enable-fortran2003 --enable-parallel) – it allows you to use a wrapper ‘h5pfc’ as a compiler
+* Python (unfortunately we still have some 2.7-based scripts), including packages such as h5py, numpy
+* There are optional tasks that depend on gnuplot, parallel, graphviz and yt
 
 ## Piernik
 
