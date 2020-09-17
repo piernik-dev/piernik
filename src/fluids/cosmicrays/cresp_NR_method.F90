@@ -476,7 +476,7 @@ contains
       integer(kind=4), intent(in) :: bound_case ! HI or LO
       real, dimension(:,:)        :: fill_p, fill_f
       real, dimension(1:2)        :: x_vec, prev_solution, prev_solution_1, x_step
-      integer(kind=4)             :: i, j, is, js
+      integer(kind=4)             :: i, j, is, js, jm
       logical                     :: exit_code, new_line
 #ifdef CRESP_VERBOSED
       real, dimension(1:2)        :: x_in
@@ -496,7 +496,8 @@ contains
       do i = 1, arr_dim
          new_line = .true.
          prev_solution = prev_solution_1 ! easier to find when not searching from the top
-         do j = 1, arr_dim ! j_incr = 1
+         do j = 1, arr_dim
+         ! j_incr = 1
             alpha = p_a(i)
             n_in  = p_n(j)
 #ifdef CRESP_VERBOSED
@@ -511,9 +512,11 @@ contains
             endif
 
             if (exit_code) then
-               if (check_dimm(j-2)) call step_extr(fill_p(i,j-2:j), fill_f(i,j-2:j), p_n(j-2:j), exit_code)
-               if (j-1 >= 1) then
-                  if (fill_p(i,j-1) > zero) call seek_solution_step(fill_p(i,j), fill_f(i,j), prev_solution, i, j-1, exit_code)
+               jm = j-2
+               if (check_dimm(jm)) call step_extr(fill_p(i,jm:j), fill_f(i,jm:j), p_n(jm:j), exit_code)
+               if (j >= 2) then
+                  jm = j-1
+                  if (fill_p(i,jm) > zero) call seek_solution_step(fill_p(i,j), fill_f(i,j), prev_solution, i, jm, exit_code)
                endif
             endif
             if (exit_code) then !still...
