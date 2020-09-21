@@ -98,13 +98,13 @@ define ECHO_CC
 endef
 endif
 
-CPPFLAGS += $(shell $(F90) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null && (echo -DMPIF08; rm mpi_f08.o) || echo -DNO_MPIF08_AVAILABLE)
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null && echo -DMPIF08 || echo -DNO_MPIF08_AVAILABLE)
 
 all: env.dat print_setup $(PROG)
 
 check_mpi:
-\t$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null && rm mpi_f08.o || (\
-\t$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90 2> /dev/null && rm mpi.o || echo -e "\033[91mWarning: current MPI fortran compiler may not be capable of 'mpi_f90' or sufficiently modern 'mpi' interface\033[0m" )
+\t$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null  || (\
+$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90 2> /dev/null || echo -e "\033[91mWarning: current MPI fortran compiler may not be capable of 'mpi_f90' or sufficiently modern 'mpi' interface\033[0m" )
 
 $(PROG): $(OBJS) check_mpi
 ifeq ("$(SILENT)","1")
@@ -113,6 +113,8 @@ ifeq ("$(SILENT)","1")
 endif
 \t@$(ECHO) $(F90) $(LDFLAGS) -o $@ '*.o' $(LIBS)
 \t@$(F90) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+\t@touch mpi_f08.o mpi.o
+\t@$(RM) mpi_f08.o mpi.o
 \t@AO1=`mktemp _ao_XXXXXX`;\\
 \tAO2=`mktemp _ao_XXXXXX`;\\
 \t$(ECHO) $(OBJS) | tr ' ' '\\n' | sort > $$AO1;\\
