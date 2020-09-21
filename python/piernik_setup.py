@@ -103,8 +103,8 @@ CPPFLAGS += $(shell $(F90) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/nu
 all: env.dat print_setup $(PROG)
 
 check_mpi:
-	$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null && rm mpi_f08.o || (\
-	$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90 2> /dev/null && rm mpi.o || echo -e "\033[91mWarning: current MPI fortran compiler may not be capable of 'mpi_f90' or sufficiently modern 'mpi' interface\033[0m" )
+\t$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null && rm mpi_f08.o || (\
+\t$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90 2> /dev/null && rm mpi.o || echo -e "\033[91mWarning: current MPI fortran compiler may not be capable of 'mpi_f90' or sufficiently modern 'mpi' interface\033[0m" )
 
 $(PROG): $(OBJS) check_mpi
 ifeq ("$(SILENT)","1")
