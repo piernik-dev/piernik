@@ -115,7 +115,7 @@ contains
          do p = FIRST + 1, LAST
             if (cnt_existing(p) > 0) then
                allocate(gptemp(I_OFF:I_GID, cnt_existing(p)))
-               call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gpt, comm, MPI_STATUS_IGNORE, mpi_err)
+               call MPI_Recv(gptemp, size(gptemp, kind=4), MPI_INTEGER8, p, tag_gpt, comm, MPI_STATUS_IGNORE, mpi_err)
                do i = I_ONE, cnt_existing(p)
                   call gp%list(i+s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), p)
                   if (any(this%dot%gse(p)%c(i)%se(:, LO) /= gp%list(i+s)%off) .or. gp%list(i+s)%cur_gid /= i .or. &
@@ -127,7 +127,7 @@ contains
             endif
          enddo
       else
-         if (this%cnt > 0) call MPI_Send(gptemp, size(gptemp), MPI_INTEGER8, FIRST, tag_gpt, comm, mpi_err)
+         if (this%cnt > 0) call MPI_Send(gptemp, size(gptemp, kind=4), MPI_INTEGER8, FIRST, tag_gpt, comm, mpi_err)
       endif
 #else /* !DEBUG */
       ! Trust that this%dot%gse is updated
