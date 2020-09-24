@@ -357,7 +357,7 @@ contains
       use constants,           only: I_ONE
       use dataio_pub,          only: msg, printinfo
       use MPIF,                only: MPI_DOUBLE_PRECISION, MPI_Gather
-      use mpisetup,            only: master, nproc, FIRST, LAST, comm, mpi_err
+      use mpisetup,            only: master, nproc, FIRST, LAST, comm, err_mpi
       use multigridvars,       only: tot_ts
 #ifdef SELF_GRAV
       use multigrid_gravity,   only: cleanup_multigrid_grav
@@ -380,7 +380,7 @@ contains
       if (allocated(all_ts)) deallocate(all_ts)
       allocate(all_ts(FIRST:LAST))
 
-      call MPI_Gather(tot_ts, I_ONE, MPI_DOUBLE_PRECISION, all_ts, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call MPI_Gather(tot_ts, I_ONE, MPI_DOUBLE_PRECISION, all_ts, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, err_mpi)
 
       if (master) then
          write(msg, '(a,3(g11.4,a))')"[multigrid] Spent ", sum(all_ts)/nproc, " seconds in multigrid_solve_* (min= ",minval(all_ts)," max= ",maxval(all_ts),")."

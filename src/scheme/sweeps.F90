@@ -67,7 +67,7 @@ contains
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
       use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_Irecv
-      use mpisetup,  only: comm, mpi_err, req, inflate_req
+      use mpisetup,  only: comm, err_mpi, req, inflate_req
 
       implicit none
 
@@ -92,7 +92,7 @@ contains
                   if (jc(LO) == jc(HI)) then
                      nr = nr + I_ONE
                      if (nr > size(req, dim=1)) call inflate_req
-                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), err_mpi)
                      seg(g)%req => req(nr)
                   endif
                enddo
@@ -113,7 +113,7 @@ contains
       use fluidindex, only: flind
       use grid_cont,  only: grid_container
       use MPIF,       only: MPI_STATUS_IGNORE, MPI_Test
-      use mpisetup,   only: mpi_err
+      use mpisetup,   only: err_mpi
       use ppp,        only: ppp_main
 
       implicit none
@@ -134,7 +134,7 @@ contains
          do g = lbound(seg, dim=1), ubound(seg, dim=1)
             jc = seg(g)%se(cdim, :)
             if (jc(LO) == jc(HI)) then
-               call MPI_Test(seg(g)%req, received, MPI_STATUS_IGNORE, mpi_err)
+               call MPI_Test(seg(g)%req, received, MPI_STATUS_IGNORE, err_mpi)
                if (received) then
                   jc = seg(g)%se(cdim, :) !> \warning: partially duplicated code (see below)
                   j1 = seg(g)%se(pdims(cdim, ORTHO1), :)
@@ -177,7 +177,7 @@ contains
       use grid_cont,    only: grid_container
       use grid_helpers, only: f2c_o
       use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_Isend
-      use mpisetup,     only: comm, mpi_err, req, inflate_req
+      use mpisetup,     only: comm, err_mpi, req, inflate_req
       use ppp,          only: ppp_main
 
       implicit none
@@ -223,7 +223,7 @@ contains
 
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+               call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), err_mpi)
                seg(g)%req => req(nr)
             endif
          enddo
@@ -298,7 +298,7 @@ contains
       use global,           only: integration_order, use_fargo, which_solver
       use grid_cont,        only: grid_container
       use MPIF,             only: MPI_STATUSES_IGNORE, MPI_STATUS_IGNORE, MPI_Waitany, MPI_Waitall
-      use mpisetup,         only: mpi_err, req
+      use mpisetup,         only: err_mpi, req
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
       use solvecg_rtvd,     only: solve_cg_rtvd
@@ -413,12 +413,12 @@ contains
             call ppp_main%stop(solve_cgs_label)
 
             if (.not. all_processed .and. blocks_done == 0) then
-               if (nr_recv > 0) call MPI_Waitany(nr_recv, req(:nr_recv), g, MPI_STATUS_IGNORE, mpi_err)
+               if (nr_recv > 0) call MPI_Waitany(nr_recv, req(:nr_recv), g, MPI_STATUS_IGNORE, err_mpi)
                ! g is the number of completed operations
             endif
          enddo
 
-         if (nr > 0) call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, mpi_err)
+         if (nr > 0) call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
 
          call update_boundaries(cdim, istep)
       enddo

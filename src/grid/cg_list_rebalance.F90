@@ -65,7 +65,7 @@ contains
 #ifdef DEBUG
       use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, &
            &                     MPI_Gather, MPI_Recv, MPI_Send
-      use mpisetup,        only: comm, mpi_err
+      use mpisetup,        only: comm, err_mpi
 #endif /* DEBUG */
 
       implicit none
@@ -101,7 +101,7 @@ contains
       enddo
 #ifdef DEBUG
       ! Gather complete grid list and compare with this%dot%gse
-      call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
+      call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, comm, err_mpi)
       if (master) then
          call gp%init(sum(cnt_existing))
          do i = I_ONE, this%cnt
@@ -115,7 +115,7 @@ contains
          do p = FIRST + 1, LAST
             if (cnt_existing(p) > 0) then
                allocate(gptemp(I_OFF:I_GID, cnt_existing(p)))
-               call MPI_Recv(gptemp, size(gptemp, kind=4), MPI_INTEGER8, p, tag_gpt, comm, MPI_STATUS_IGNORE, mpi_err)
+               call MPI_Recv(gptemp, size(gptemp, kind=4), MPI_INTEGER8, p, tag_gpt, comm, MPI_STATUS_IGNORE, err_mpi)
                do i = I_ONE, cnt_existing(p)
                   call gp%list(i+s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), p)
                   if (any(this%dot%gse(p)%c(i)%se(:, LO) /= gp%list(i+s)%off) .or. gp%list(i+s)%cur_gid /= i .or. &
@@ -127,7 +127,7 @@ contains
             endif
          enddo
       else
-         if (this%cnt > 0) call MPI_Send(gptemp, size(gptemp, kind=4), MPI_INTEGER8, FIRST, tag_gpt, comm, mpi_err)
+         if (this%cnt > 0) call MPI_Send(gptemp, size(gptemp, kind=4), MPI_INTEGER8, FIRST, tag_gpt, comm, err_mpi)
       endif
 #else /* !DEBUG */
       ! Trust that this%dot%gse is updated
@@ -197,7 +197,7 @@ contains
       use grid_container_ext, only: cg_extptrs
       use list_of_cg_lists,   only: all_lists
       use MPIF,               only: MPI_DOUBLE_PRECISION, MPI_Isend, MPI_Irecv, MPI_Waitall
-      use mpisetup,           only: master, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, comm, mpi_err, req, status, inflate_req
+      use mpisetup,           only: master, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, comm, err_mpi, req, status, inflate_req
       use named_array_list,   only: qna, wna
       use ppp,                only: ppp_main
       use sort_piece_list,    only: grid_piece_list
@@ -306,7 +306,7 @@ contains
             if (.not. found) call die("[cg_list_rebalance:balance_old] Grid id not found")
             nr = nr + I_ONE
             if (nr > size(req, dim=1)) call inflate_req
-            call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i, comm, req(nr), mpi_err)
+            call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i, comm, req(nr), err_mpi)
          endif
          if (gptemp(I_D_P, i) == proc) then ! receive
             n_gid = 1
@@ -325,7 +325,7 @@ contains
             call all_cg%add(this%last%cg)
             nr = nr + I_ONE
             if (nr > size(req, dim=1)) call inflate_req
-            call MPI_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), i, comm, req(nr), mpi_err)
+            call MPI_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), i, comm, req(nr), err_mpi)
          endif
       enddo
       call ppp_main%stop(ISR_label, PPP_AMR)
@@ -337,7 +337,7 @@ contains
 #else /* !MPIF08 */
          mpistatus => status(:, :nr)
 #endif /* !MPIF08 */
-         call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
+         call MPI_Waitall(nr, req(:nr), mpistatus, err_mpi)
       endif
       call ppp_main%stop(Wall_label, PPP_AMR + PPP_MPI)
 

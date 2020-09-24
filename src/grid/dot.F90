@@ -105,7 +105,7 @@ contains
       use constants,  only: I_ZERO, I_ONE, ndims, LO, HI
       use dataio_pub, only: die
       use MPIF,       only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER, MPI_Allgather, MPI_Allgatherv
-      use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
+      use mpisetup,   only: FIRST, LAST, proc, comm, err_mpi
       use ordering,   only: SFC_order
 
       implicit none
@@ -126,7 +126,7 @@ contains
       ! Beware: int(this%cnt, kind=4) is not properly updated after calling this%distribute.
       ! Use size(this%dot%gse(proc)%c) if you want to propagate gse before the grid containers are actually added to the level
       ! OPT: this call can be quite long to complete
-      call MPI_Allgather(cnt, I_ONE, MPI_INTEGER, allcnt, I_ONE, MPI_INTEGER, comm, mpi_err)
+      call MPI_Allgather(cnt, I_ONE, MPI_INTEGER, allcnt, I_ONE, MPI_INTEGER, comm, err_mpi)
 
       ! compute offsets for  a composite table of all grid pieces
       alloff(FIRST) = I_ZERO
@@ -151,7 +151,7 @@ contains
       ! First use of MPI_Allgatherv in the Piernik Code!
       ncub_allcnt(:) = int(ncub * allcnt(:), kind=4)
       ncub_alloff(:) = int(ncub * alloff(:), kind=4)
-      call MPI_Allgatherv(MPI_IN_PLACE, I_ZERO, MPI_DATATYPE_NULL, allse, ncub_allcnt, ncub_alloff, MPI_INTEGER, comm, mpi_err)
+      call MPI_Allgatherv(MPI_IN_PLACE, I_ZERO, MPI_DATATYPE_NULL, allse, ncub_allcnt, ncub_alloff, MPI_INTEGER, comm, err_mpi)
 
       ! Rewrite the gse array, forget about past.
       if (.not. allocated(this%gse)) allocate(this%gse(FIRST:LAST))
@@ -266,7 +266,7 @@ contains
 
       use constants,  only: ndims, LO, HI, pLAND, I_ONE
       use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_Waitall, MPI_Irecv, MPI_Isend
-      use mpisetup,   only: proc, req, status, comm, mpi_err, LAST, inflate_req, slave, piernik_MPI_Allreduce
+      use mpisetup,   only: proc, req, status, comm, err_mpi, LAST, inflate_req, slave, piernik_MPI_Allreduce
 
       implicit none
 
@@ -293,12 +293,12 @@ contains
          endif
       endif
       req = MPI_REQUEST_NULL
-      if (slave)     call MPI_Irecv(shape1, size(shape1, kind=4), MPI_INTEGER, proc-I_ONE, sh_tag, comm, req(1 ), mpi_err)
-      if (proc<LAST) call MPI_Isend(shape,  size(shape, kind=4),  MPI_INTEGER, proc+I_ONE, sh_tag, comm, req(nr), mpi_err)
+      if (slave)     call MPI_Irecv(shape1, size(shape1, kind=4), MPI_INTEGER, proc-I_ONE, sh_tag, comm, req(1 ), err_mpi)
+      if (proc<LAST) call MPI_Isend(shape,  size(shape, kind=4),  MPI_INTEGER, proc+I_ONE, sh_tag, comm, req(nr), err_mpi)
 #ifdef MPIF08
-      call MPI_Waitall(nr, req(:nr), status(:nr), mpi_err)
+      call MPI_Waitall(nr, req(:nr), status(:nr), err_mpi)
 #else /* !MPIF08 */
-      call MPI_Waitall(nr, req(:nr), status(:, :nr), mpi_err)
+      call MPI_Waitall(nr, req(:nr), status(:, :nr), err_mpi)
 #endif /* !MPIF08 */
       if (any(shape /= 0) .and. any(shape1 /= 0)) then
          if (any(shape /= shape1)) this%is_blocky = .false.
@@ -320,7 +320,7 @@ contains
       use constants,  only: LO, HI, ndims, I_ONE
       use dataio_pub, only: die
       use MPIF,       only: MPI_INTEGER8, MPI_Allgather
-      use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
+      use mpisetup,   only: FIRST, LAST, proc, comm, err_mpi
       use ordering,   only: SFC_order
 
       implicit none
@@ -350,7 +350,7 @@ contains
       endif
 
       allocate(id_buf(size(this%SFC_id_range)))
-      call MPI_Allgather(this%SFC_id_range(proc, :), HI-LO+I_ONE, MPI_INTEGER8, id_buf, HI-LO+I_ONE, MPI_INTEGER8, comm, mpi_err)
+      call MPI_Allgather(this%SFC_id_range(proc, :), HI-LO+I_ONE, MPI_INTEGER8, id_buf, HI-LO+I_ONE, MPI_INTEGER8, comm, err_mpi)
       this%SFC_id_range(:, LO) = id_buf(1::2)
       this%SFC_id_range(:, HI) = id_buf(2::2)
 

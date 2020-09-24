@@ -353,7 +353,7 @@ contains
       use dataio_pub,       only: msg, printinfo
       use func,             only: operator(.notequals.)
       use grid_cont,        only: grid_container
-      use mpisetup,         only: proc, comm, mpi_err
+      use mpisetup,         only: proc, comm, err_mpi
       use named_array_list, only: qna
 #ifdef HDF5
       use data_hdf5,        only: write_hdf5
@@ -396,7 +396,7 @@ contains
       endif
 
       call flush(stdout)
-      call MPI_Barrier(comm, mpi_err)
+      call MPI_Barrier(comm, err_mpi)
 
    end subroutine find_non_0_or_write_hdf5
 

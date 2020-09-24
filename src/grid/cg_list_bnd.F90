@@ -326,7 +326,7 @@ contains
       use dataio_pub,       only: die
       use merge_segments,   only: IN, OUT
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_Irecv, MPI_Isend, MPI_Waitall
-      use mpisetup,         only: FIRST, LAST, proc, comm, mpi_err, req, inflate_req
+      use mpisetup,         only: FIRST, LAST, proc, comm, err_mpi, req, inflate_req
       use named_array_list, only: wna
 #ifdef MPIF08
       use MPIF,             only: MPI_Status
@@ -402,8 +402,8 @@ contains
                   enddo
                endif
                if (nr+I_TWO >  ubound(req(:), dim=1)) call inflate_req
-               call MPI_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    comm, req(nr+I_ONE), mpi_err)
-               call MPI_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, comm, req(nr+I_TWO), mpi_err)
+               call MPI_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    comm, req(nr+I_ONE), err_mpi)
+               call MPI_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, comm, req(nr+I_TWO), err_mpi)
                nr = nr + I_TWO
             endif
 
@@ -415,7 +415,7 @@ contains
 #else /* !MPIF08 */
       allocate(mpistatus(MPI_STATUS_SIZE, nr))
 #endif /* !MPIF08 */
-      call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
+      call MPI_Waitall(nr, req(:nr), mpistatus, err_mpi)
       deallocate(mpistatus)
 
       do p = FIRST, LAST
@@ -490,7 +490,7 @@ contains
       use grid_cont,        only: grid_container
       use grid_cont_bnd,    only: segment
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_Irecv, MPI_Isend, MPI_Waitall
-      use mpisetup,         only: comm, mpi_err, req, inflate_req
+      use mpisetup,         only: comm, err_mpi, req, inflate_req
       use named_array_list, only: wna
 #ifdef MPIF08
       use MPIF,             only: MPI_Status
@@ -555,7 +555,7 @@ contains
                            allocate(i_seg%buf(i_seg%se(xdim, HI) - i_seg%se(xdim, LO) + 1, &
                                 &             i_seg%se(ydim, HI) - i_seg%se(ydim, LO) + 1, &
                                 &             i_seg%se(zdim, HI) - i_seg%se(zdim, LO) + 1))
-                           call MPI_Irecv(i_seg%buf, size(i_seg%buf, kind=4), MPI_DOUBLE_PRECISION, i_seg%proc, i_seg%tag, comm, req(nr+I_ONE), mpi_err)
+                           call MPI_Irecv(i_seg%buf, size(i_seg%buf, kind=4), MPI_DOUBLE_PRECISION, i_seg%proc, i_seg%tag, comm, req(nr+I_ONE), err_mpi)
 
                            if (allocated(o_seg%buf)) then
                               call warn("clb:ib allocated o-buf")
@@ -566,7 +566,7 @@ contains
                                 &             o_seg%se(zdim, HI) - o_seg%se(zdim, LO) + 1))
                            pa3d => cg%q(ind)%span(o_seg%se(:,:))
                            o_seg%buf(:,:,:) = pa3d(:,:,:)
-                           call MPI_Isend(o_seg%buf, size(o_seg%buf, kind=4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, comm, req(nr+I_TWO), mpi_err)
+                           call MPI_Isend(o_seg%buf, size(o_seg%buf, kind=4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, comm, req(nr+I_TWO), err_mpi)
 
                         else
                            if (ind > ubound(cg%w(:), dim=1) .or. ind < lbound(cg%w(:), dim=1)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] wrong 4d index")
@@ -579,7 +579,7 @@ contains
                                 &              i_seg%se(xdim, HI) - i_seg%se(xdim, LO) + 1, &
                                 &              i_seg%se(ydim, HI) - i_seg%se(ydim, LO) + 1, &
                                 &              i_seg%se(zdim, HI) - i_seg%se(zdim, LO) + 1))
-                           call MPI_Irecv(i_seg%buf4, size(i_seg%buf4, kind=4), MPI_DOUBLE_PRECISION, i_seg%proc, i_seg%tag, comm, req(nr+I_ONE), mpi_err)
+                           call MPI_Irecv(i_seg%buf4, size(i_seg%buf4, kind=4), MPI_DOUBLE_PRECISION, i_seg%proc, i_seg%tag, comm, req(nr+I_ONE), err_mpi)
 
                            if (allocated(o_seg%buf4)) then
                               call warn("clb:ib allocated o-buf")
@@ -599,7 +599,7 @@ contains
                            !<
                            pa4d => cg%w(ind)%span(o_seg%se(:,:))
                            o_seg%buf4(:,:,:,:) = pa4d(:,:,:,:)
-                           call MPI_Isend(o_seg%buf4, size(o_seg%buf4, kind=4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, comm, req(nr+I_TWO), mpi_err)
+                           call MPI_Isend(o_seg%buf4, size(o_seg%buf4, kind=4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, comm, req(nr+I_TWO), err_mpi)
 
                         endif
                         nr = nr + I_TWO
@@ -619,7 +619,7 @@ contains
 #else /* !MPIF08 */
       allocate(mpistatus(MPI_STATUS_SIZE, nr))
 #endif /* !MPIF08 */
-      call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
+      call MPI_Waitall(nr, req(:nr), mpistatus, err_mpi)
       deallocate(mpistatus)
 
       ! Move the received data from buffers to the right place. Deallocate buffers

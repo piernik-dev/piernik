@@ -554,7 +554,7 @@ contains
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
       use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_Recv, MPI_Send
-      use mpisetup,    only: master, FIRST, proc, comm, mpi_err
+      use mpisetup,    only: master, FIRST, proc, comm, err_mpi
       use ppp,         only: ppp_main
 
       implicit none
@@ -607,7 +607,7 @@ contains
                      cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                      call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                   else
-                     call MPI_Recv(data_dbl(1,1,1), size(data_dbl, kind=4), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
+                     call MPI_Recv(data_dbl(1,1,1), size(data_dbl, kind=4), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, err_mpi)
                   endif
                   if (.not.hdf_vars_avail(i)) cycle
                   if (h5_64bit) then
@@ -623,7 +623,7 @@ contains
                   do i = lbound(hdf_vars,1, kind=4), ubound(hdf_vars,1, kind=4)
                      if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                      if (.not.hdf_vars_avail(i)) cycle
-                     call MPI_Send(data_dbl(1,1,1), size(data_dbl, kind=4), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, mpi_err)
+                     call MPI_Send(data_dbl(1,1,1), size(data_dbl, kind=4), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, err_mpi)
                   enddo
                endif
             endif

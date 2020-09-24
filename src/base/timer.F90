@@ -297,7 +297,7 @@ contains
       use constants,  only: I_ONE, half
       use dataio_pub, only: msg, printinfo
       use MPIF,       only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_Reduce
-      use mpisetup,   only: comm, mpi_err, master, FIRST
+      use mpisetup,   only: comm, err_mpi, master, FIRST
 
       implicit none
       integer(kind=8), intent(in) :: total_ncells !< total number of %grid cells
@@ -325,7 +325,7 @@ contains
       cpusecs  =  int ( cputot + half   ) - 3600 * cpuhours &
                                         - 60   * cpumins
 
-      call MPI_Reduce(cputot, cpuallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, mpi_err)
+      call MPI_Reduce(cputot, cpuallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, err_mpi)
 
       if (master) then
 

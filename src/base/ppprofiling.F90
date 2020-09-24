@@ -563,7 +563,7 @@ contains
       use memory_usage, only: check_mem_usage
       use MPIF,         only: MPI_STATUS_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
            &                  MPI_Isend, MPI_Recv, MPI_Waitall
-      use mpisetup,     only: proc, master, slave, comm, mpi_err, FIRST, LAST, req, status, inflate_req
+      use mpisetup,     only: proc, master, slave, comm, err_mpi, FIRST, LAST, req, status, inflate_req
 #ifdef MPIF08
       use MPIF,         only: MPI_Status
 #endif
@@ -608,7 +608,7 @@ contains
             exit
          endif
       enddo
-      if (slave) call MPI_Isend(ne, I_ONE, MPI_INTEGER, FIRST, TAG_CNT, comm, req(TAG_CNT), mpi_err)
+      if (slave) call MPI_Isend(ne, I_ONE, MPI_INTEGER, FIRST, TAG_CNT, comm, req(TAG_CNT), err_mpi)
 
       if (ne > 0) then
          allocate(buflabel(ne), buftime(ne))
@@ -625,8 +625,8 @@ contains
             call publish_buffers(proc, buflabel, buftime)
             deallocate(buflabel, buftime)
          else
-            call MPI_Isend(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        FIRST, TAG_ARR_L, comm, req(TAG_ARR_L), mpi_err)
-            call MPI_Isend(buftime,  size(buftime, kind=4),                           MPI_DOUBLE_PRECISION, FIRST, TAG_ARR_T, comm, req(TAG_ARR_T), mpi_err)
+            call MPI_Isend(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        FIRST, TAG_ARR_L, comm, req(TAG_ARR_L), err_mpi)
+            call MPI_Isend(buftime,  size(buftime, kind=4),                           MPI_DOUBLE_PRECISION, FIRST, TAG_ARR_T, comm, req(TAG_ARR_T), err_mpi)
             t = TAG_ARR_T
          endif
       endif
@@ -636,12 +636,12 @@ contains
 
          ! receive
          do p = FIRST + I_ONE, LAST
-             call MPI_Recv(ne, I_ONE, MPI_INTEGER, p, TAG_CNT, comm, MPI_STATUS_IGNORE, mpi_err)
+             call MPI_Recv(ne, I_ONE, MPI_INTEGER, p, TAG_CNT, comm, MPI_STATUS_IGNORE, err_mpi)
              if (ne /= 0) then
                 allocate(buflabel(ne), buftime(ne))
                 call check_mem_usage
-                call MPI_Recv(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        p, TAG_ARR_L, comm, MPI_STATUS_IGNORE, mpi_err)
-                call MPI_Recv(buftime,  size(buftime, kind=4),                           MPI_DOUBLE_PRECISION, p, TAG_ARR_T, comm, MPI_STATUS_IGNORE, mpi_err)
+                call MPI_Recv(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        p, TAG_ARR_L, comm, MPI_STATUS_IGNORE, err_mpi)
+                call MPI_Recv(buftime,  size(buftime, kind=4),                           MPI_DOUBLE_PRECISION, p, TAG_ARR_T, comm, MPI_STATUS_IGNORE, err_mpi)
                 call publish_buffers(p, buflabel, buftime)
                 deallocate(buflabel, buftime)
              endif
@@ -652,7 +652,7 @@ contains
 #else /* !MPIF08 */
          mpistatus => status(:, :t)
 #endif /* !MPIF08 */
-         call MPI_Waitall(t, req(:t), mpistatus, mpi_err)
+         call MPI_Waitall(t, req(:t), mpistatus, err_mpi)
          deallocate(buflabel, buftime)
       endif
 
