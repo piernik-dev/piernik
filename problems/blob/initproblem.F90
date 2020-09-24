@@ -182,7 +182,11 @@ contains
       type(grid_container),   pointer :: cg
 
       if (firstcall) then
+#ifdef HDF5
          call problem_initial_conditions_readh5
+#else /* !HDF5 */
+         call die("[initproblem:problem_initial_conditions_original] Without HDF5 available try to use analytical initial conditions (leave empty ICfile variable)")
+#endif /* !HDF5 */
          firstcall = .false.
       endif
 
@@ -211,6 +215,7 @@ contains
 
    end subroutine problem_initial_conditions_original
 
+#ifdef HDF5
    subroutine problem_initial_conditions_readh5
 
       use constants,  only: cbuff_len
@@ -265,6 +270,7 @@ contains
       call h5close_f(error)
 
    end subroutine problem_initial_conditions_readh5
+#endif /* HDF5 */
 
    subroutine deallocate_h5IC
 
