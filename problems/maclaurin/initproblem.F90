@@ -408,7 +408,7 @@ contains
       call h5ltset_attribute_double_f(file_id, "/", "z0",   [z0],   bufsize, error)
 
    end subroutine problem_initial_conditions_attrs
-#endif HDF5
+#endif /* HDF5 */
 
 !>
 !! \brief Calculate analytical potential for given spheroid.
