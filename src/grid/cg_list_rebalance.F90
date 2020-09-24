@@ -197,7 +197,7 @@ contains
       use grid_container_ext, only: cg_extptrs
       use list_of_cg_lists,   only: all_lists
       use MPIF,               only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_Isend, MPI_Irecv, MPI_Waitall
-      use mpisetup,           only: master, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, comm, err_mpi, req, inflate_req
+      use mpisetup,           only: master, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, comm, err_mpi, req, inflate_req, tag_ub
       use named_array_list,   only: qna, wna
       use ppp,                only: ppp_main
       use sort_piece_list,    only: grid_piece_list
@@ -265,6 +265,7 @@ contains
       call ppp_main%start(ISR_label, PPP_AMR)
       nr = I_ZERO
       allocate(cglepa(size(gptemp)))
+      if (ubound(gptemp, dim=2, kind=4) > tag_ub) call die("[cg_list_rebalance:balance_old] this MPI implementation has too low MPI_TAG_UB attribute")
       do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
          cglepa(i)%p => null()
          if (gptemp(I_C_P, i) == gptemp(I_D_P, i)) call die("[cg_list_rebalance:balance_old] can not send to self")

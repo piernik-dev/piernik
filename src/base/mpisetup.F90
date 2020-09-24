@@ -34,6 +34,7 @@
 module mpisetup
 
    use constants, only: cbuff_len, INT4, pSUM, pLAND
+   use MPIF,      only: MPI_ADDRESS_KIND
 #ifdef MPIF08
    use MPIF, only: MPI_Comm, MPI_Request, MPI_Op
 #endif /* MPIF08 */
@@ -42,7 +43,7 @@ module mpisetup
 
    private
    public :: cleanup_mpi, init_mpi, inflate_req, bigbang, bigbang_shift, &
-        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, err_mpi, &
+        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, err_mpi, tag_ub, &
         &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi, is_spawned, &
         &    piernik_MPI_Allreduce, piernik_MPI_Barrier, piernik_MPI_Bcast, report_to_master, &
         &    report_string_to_master
@@ -55,6 +56,7 @@ module mpisetup
    real(kind=8), protected    :: bigbang        !< First result of MPI_Wtime()
    real(kind=8), protected    :: bigbang_shift  !< A correction applied to readouts of MPI_Wtime() if necessary
    real(kind=8), parameter    :: min_bigbang = 1.
+   integer(kind=MPI_ADDRESS_KIND), protected :: tag_ub
 
    logical, protected :: master      !< .True. if proc == FIRST
    logical, protected :: slave       !< .True. if proc != FIRST
@@ -140,9 +142,9 @@ contains
 
       use constants,     only: cwdlen, I_ONE, pMIN
       use MPIF,          only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL, &
-           &                   MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND, &
+           &                   MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND, MPI_TAG_UB, &
            &                   MPI_Wtime, MPI_Allreduce, MPI_Gather, MPI_Init, &
-           &                   MPI_Comm_get_parent, MPI_Comm_rank, MPI_Comm_size
+           &                   MPI_Comm_get_parent, MPI_Comm_rank, MPI_Comm_size, MPI_Comm_get_attr
       use dataio_pub,    only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
       use dataio_pub,    only: par_file, lun
       use signalhandler, only: SIGINT, register_sighandler
@@ -162,6 +164,7 @@ contains
       logical :: par_file_exist
       logical :: tmp_log_exist
       integer :: iproc
+      logical(kind=4) :: flag
 
       call MPI_Init( err_mpi )
       bigbang = MPI_Wtime()
@@ -181,6 +184,7 @@ contains
 
       call MPI_Comm_rank(comm, proc, err_mpi)
       call MPI_Comm_size(comm, nproc, err_mpi)
+      call MPI_Comm_get_attr(comm, MPI_TAG_UB, tag_ub, flag, err_mpi)
 
       LAST = nproc-I_ONE
       master = (proc == FIRST)

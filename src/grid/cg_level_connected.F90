@@ -116,7 +116,7 @@ contains
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c, c2f
-      use mpisetup,       only: FIRST, LAST
+      use mpisetup,       only: FIRST, LAST, tag_ub
       use overlap,        only: is_overlap
       use ppp,            only: ppp_main
 
@@ -189,7 +189,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = cg%grid_id + this%dot%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
-               if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow (ri)")
+               if (tag /= seg%tag .or. tag < 0 .or. tag > tag_ub) call die("[cg_level_connected:vertical_prep] tag overflow (ri)")
                nullify(seg%local)
                end associate
             enddo
@@ -212,7 +212,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = cg%grid_id + this%dot%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
-               if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow po)")
+               if (tag /= seg%tag .or. tag < 0 .or. tag > tag_ub) call die("[cg_level_connected:vertical_prep] tag overflow (po))")
                nullify(seg%local)
                end associate
             enddo
@@ -273,7 +273,7 @@ contains
                seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
                tag = ps(g)%n_se + coarse%dot%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
-               if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow (ro)")
+               if (tag /= seg%tag .or. tag < 0 .or. tag > tag_ub) call die("[cg_level_connected:vertical_prep] tag overflow (ro)")
                nullify(seg%local)
                end associate
             enddo
@@ -291,7 +291,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = ps(g)%n_se + coarse%dot%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
-               if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow (pi)")
+               if (tag /= seg%tag .or. tag < 0 .or. tag > tag_ub) call die("[cg_level_connected:vertical_prep] tag overflow (pi)")
                nullify(seg%local)
                end associate
             enddo

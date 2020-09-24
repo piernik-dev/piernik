@@ -554,7 +554,7 @@ contains
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
       use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_Recv, MPI_Send
-      use mpisetup,    only: master, FIRST, proc, comm, err_mpi
+      use mpisetup,    only: master, FIRST, proc, comm, err_mpi, tag_ub
       use ppp,         only: ppp_main
 
       implicit none
@@ -591,6 +591,7 @@ contains
 
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
+         if (cg_desc%tot_cg_n *(ubound(hdf_vars,1, kind=4) + I_ONE) > tag_ub) call die("[data_hdf5:write_cg_to_output] this MPI implementation has too low MPI_TAG_UB attribute")
          do ncg = 1, cg_desc%tot_cg_n
             call ppp_main%start(wrdc1s_label, PPP_IO + PPP_CG)
             dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]

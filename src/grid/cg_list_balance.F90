@@ -349,11 +349,7 @@ contains
       else
 
          ! send patches to master
-#ifdef MPIF08
          call MPI_Wait(req(nreq), MPI_STATUS_IGNORE, err_mpi)
-#else /* !MPIF08 */
-         call MPI_Wait(req(nreq), MPI_STATUS_IGNORE, err_mpi)
-#endif /* !MPIF08 */
          if (ls > 0) call MPI_Send(gptemp, size(gptemp, kind=4), MPI_INTEGER8, FIRST, tag_gpt, comm, err_mpi)
          deallocate(gptemp)
 
