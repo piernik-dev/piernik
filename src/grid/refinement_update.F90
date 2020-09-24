@@ -241,12 +241,9 @@ contains
       use constants,          only: xdim, zdim, LO, HI, I_ONE, I_ZERO
       use dataio_pub,         only: die, warn
       use domain,             only: dom
-      use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE, &
+      use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, &
            &                        MPI_Alltoall, MPI_Isend, MPI_Recv, MPI_Waitall
-      use mpisetup,           only: FIRST, LAST, comm, err_mpi, proc, req, status, inflate_req
-#ifdef MPIF08
-      use MPIF,               only: MPI_Status
-#endif
+      use mpisetup,           only: FIRST, LAST, comm, err_mpi, proc, req, inflate_req
 
       implicit none
 
@@ -265,11 +262,6 @@ contains
       type(pt), dimension(:), allocatable :: pt_list
       integer(kind=4) :: pt_cnt
       integer(kind=4) :: rtag
-#ifdef MPIF08
-      type(MPI_Status), dimension(:), pointer :: mpistatus
-#else /* !MPIF08 */
-      integer(kind=4), dimension(:,:), pointer :: mpistatus
-#endif /* !MPIF08 */
 
       if (perimeter > dom%nb) call die("[refinement_update:parents_prevent_derefinement_lev] perimeter > dom%nb")
       if (.not. associated(lev%finer)) then
@@ -339,14 +331,7 @@ contains
          endif
       enddo
 
-      if (nr > 0) then
-#ifdef MPIF08
-         mpistatus => status(:nr)
-#else /* !MPIF08 */
-         mpistatus => status(:, :nr)
-#endif /* !MPIF08 */
-         call MPI_Waitall(nr, req(:nr), mpistatus, err_mpi)
-      endif
+      if (nr > 0) call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
 
       deallocate(pt_list)
 

@@ -196,14 +196,11 @@ contains
       use grid_cont,          only: grid_container
       use grid_container_ext, only: cg_extptrs
       use list_of_cg_lists,   only: all_lists
-      use MPIF,               only: MPI_DOUBLE_PRECISION, MPI_Isend, MPI_Irecv, MPI_Waitall
-      use mpisetup,           only: master, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, comm, err_mpi, req, status, inflate_req
+      use MPIF,               only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_Isend, MPI_Irecv, MPI_Waitall
+      use mpisetup,           only: master, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, comm, err_mpi, req, inflate_req
       use named_array_list,   only: qna, wna
       use ppp,                only: ppp_main
       use sort_piece_list,    only: grid_piece_list
-#ifdef MPIF08
-      use MPIF,               only: MPI_Status
-#endif
 
       implicit none
 
@@ -217,11 +214,6 @@ contains
       integer(kind=8), dimension(ndims, LO:HI) :: se
       logical :: found
       type(grid_container),  pointer :: cg
-#ifdef MPIF08
-      type(MPI_Status), dimension(:), pointer :: mpistatus
-#else /* !MPIF08 */
-      integer(kind=4), dimension(:,:), pointer :: mpistatus
-#endif /* !MPIF08 */
       type :: cglep
          type(cg_list_element), pointer :: p
          real, dimension(:,:,:,:), allocatable :: tbuf
@@ -331,14 +323,7 @@ contains
       call ppp_main%stop(ISR_label, PPP_AMR)
 
       call ppp_main%start(Wall_label, PPP_AMR + PPP_MPI)
-      if (nr > 0) then
-#ifdef MPIF08
-         mpistatus => status(:nr)
-#else /* !MPIF08 */
-         mpistatus => status(:, :nr)
-#endif /* !MPIF08 */
-         call MPI_Waitall(nr, req(:nr), mpistatus, err_mpi)
-      endif
+      if (nr > 0) call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
       call ppp_main%stop(Wall_label, PPP_AMR + PPP_MPI)
 
       do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)

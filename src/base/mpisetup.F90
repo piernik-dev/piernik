@@ -35,14 +35,14 @@ module mpisetup
 
    use constants, only: cbuff_len, INT4, pSUM, pLAND
 #ifdef MPIF08
-   use MPIF, only: MPI_Status, MPI_Comm, MPI_Request, MPI_Op
+   use MPIF, only: MPI_Comm, MPI_Request, MPI_Op
 #endif /* MPIF08 */
 
    implicit none
 
    private
    public :: cleanup_mpi, init_mpi, inflate_req, bigbang, bigbang_shift, &
-        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, err_mpi, &
+        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, err_mpi, &
         &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi, is_spawned, &
         &    piernik_MPI_Allreduce, piernik_MPI_Barrier, piernik_MPI_Bcast, report_to_master, &
         &    report_string_to_master
@@ -63,21 +63,19 @@ module mpisetup
 
 #ifdef MPIF08
    type(MPI_Request), allocatable, dimension(:), target :: req        !< request array for MPI_Waitall
-   type(MPI_Status), allocatable, dimension(:), target  :: status     !< status array for MPI_Waitall
    type(MPI_Comm), protected                            :: comm       !< global communicator
    type(MPI_Comm), protected                            :: intercomm  !< intercommunicator
    type(MPI_Op), dimension(pSUM:pLAND)                  :: mpiop      !< translation between pSUM:pLAND and MPI_SUM:MPI_LAND
 #else /* !MPIF08 */
    integer(kind=4), allocatable, dimension(:),   target :: req        !< request array for MPI_Waitall
-   integer(kind=4), allocatable, dimension(:,:), target :: status     !< status array for MPI_Waitall
    integer(kind=4), protected                           :: comm       !< global communicator
    integer(kind=4), protected                           :: intercomm  !< intercommunicator
    integer(kind=4), dimension(pSUM:pLAND)               :: mpiop      !< translation between pSUM:pLAND and MPI_SUM:MPI_LAND
 #endif /* !MPIF08 */
 
-   !> \warning Because we use one centralized req(:) and status(:,:) arrays, the routines that are using them should not call each other to avoid any interference.
+   !> \warning Because we use one centralized req(:) array, the routines that are using them should not call each other to avoid any interference.
    !! If you want nested non-blocking communication, only one set of MPI transactions may use these arrays.
-   !< All other sets of communication should define their own req(:) and status(:,:) arrays
+   !< All other sets of communication should define their own req(:) array
 
    integer, parameter :: buffer_dim = 200                   !< size of [cilr]buff arrays used to exchange namelist parameters
    character(len=cbuff_len), dimension(buffer_dim) :: cbuff !< buffer for character parameters
@@ -253,13 +251,9 @@ contains
 
    end subroutine init_mpi
 
-!> \brief Set size of req(:) and status(:,:) arrays for non-blocking communication on request.
+!> \brief Set size of req(:) array for non-blocking communication on request.
 
    subroutine setsize_req(nreq)
-
-#ifndef MPIF08
-      use MPIF, only: MPI_STATUS_SIZE
-#endif /* !MPIF08 */
 
       implicit none
 
@@ -269,28 +263,19 @@ contains
 
       if (allocated(req)) then
          sreq = size(req)
-         if (sreq < nreq) then
-            deallocate(req)
-            if (allocated(status)) deallocate(status)
-         endif
+         if (sreq < nreq) deallocate(req)
       else
          sreq = 0
       endif
 
-      if (sreq < nreq) then
-#ifdef MPIF08
-         allocate(req(nreq), status(nreq))
-#else /* !MPIF08 */
-         allocate(req(nreq), status(MPI_STATUS_SIZE, nreq))
-#endif /* !MPIF08 */
-      endif
+      if (sreq < nreq) allocate(req(nreq))
 
    end subroutine setsize_req
 
 !>
-!! \brief Double size of req(:) and status(:,:) arrays for non-blocking communication on request.
+!! \brief Double size of req(:) array for non-blocking communication on request.
 !!
-!! \details Perform an emergency resize by a factor of 2. Save existing values stored in req(:) and status(:,:).
+!! \details Perform an emergency resize by a factor of 2. Save existing values stored in req(:).
 !<
 
    subroutine doublesize_req
@@ -298,38 +283,27 @@ contains
       use dataio_pub, only: warn, msg, die
 #ifdef MPIF08
       use MPIF,       only: MPI_Request
-#else
-      use MPIF,       only: MPI_STATUS_SIZE
-#endif /* !MPIF08 */
+#endif /* MPIF08 */
 
       implicit none
 
       integer :: sreq
 #ifdef MPIF08
       type(MPI_Request), allocatable, dimension(:) :: new_req    !< new request array for MPI_Waitall
-      type(MPI_Status), allocatable, dimension(:)  :: new_status !< new status array for MPI_Waitall
 #else /* !MPIF08 */
       integer(kind=4), allocatable, dimension(:)   :: new_req    !< new request array for MPI_Waitall
-      integer(kind=4), allocatable, dimension(:,:) :: new_status !< new status array for MPI_Waitall
 #endif /* !MPIF08 */
 
       if (.not. allocated(req)) call die("[mpisetup:doublesize_req] req not allocated")
       sreq = size(req)
       if (sreq <= 0) call die("[mpisetup:doublesize_req] req is a 0-zised array")
 
-      write(msg, '(2(a,i6))')"[mpisetup:doublesize_req] Emergency doubling size of req and status from ",sreq," to ",2*sreq
+      write(msg, '(2(a,i6))')"[mpisetup:doublesize_req] Emergency doubling size of req from ",sreq," to ",2*sreq
       if (master) call warn(msg)
-#ifdef MPIF08
-      allocate(new_req(2*sreq), new_status(2*sreq))
-      new_status(1:sreq) = status(:)
-#else /* !MPIF08 */
-      allocate(new_req(2*sreq), new_status(MPI_STATUS_SIZE, 2*sreq))
-      new_status(:, 1:sreq) = status(:,:)
-#endif /* !MPIF08 */
+      allocate(new_req(2*sreq))
       new_req(1:sreq) = req(:)
 
       call move_alloc(from=new_req, to=req)
-      call move_alloc(from=new_status, to=status)
 
    end subroutine doublesize_req
 
@@ -344,7 +318,6 @@ contains
       implicit none
 
       if (allocated(req)) deallocate(req)
-      if (allocated(status)) deallocate(status)
 
       if (master) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
       call MPI_Barrier(comm,err_mpi)

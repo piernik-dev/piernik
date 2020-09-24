@@ -561,12 +561,9 @@ contains
       use constants,    only: I_ZERO, I_ONE
       use dataio_pub,   only: die, printinfo, msg
       use memory_usage, only: check_mem_usage
-      use MPIF,         only: MPI_STATUS_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
+      use MPIF,         only: MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
            &                  MPI_Isend, MPI_Recv, MPI_Waitall
-      use mpisetup,     only: proc, master, slave, comm, err_mpi, FIRST, LAST, req, status, inflate_req
-#ifdef MPIF08
-      use MPIF,         only: MPI_Status
-#endif
+      use mpisetup,     only: proc, master, slave, comm, err_mpi, FIRST, LAST, req, inflate_req
 
       implicit none
 
@@ -576,11 +573,6 @@ contains
       integer :: ia
       character(len=cbuff_len), dimension(:), allocatable  :: buflabel
       real(kind=8), dimension(:), allocatable :: buftime
-#ifdef MPIF08
-      type(MPI_Status), dimension(:), pointer :: mpistatus
-#else /* !MPIF08 */
-      integer(kind=4), dimension(:,:), pointer :: mpistatus
-#endif /* !MPIF08 */
 
       if (.not. use_profiling) return
 
@@ -647,12 +639,7 @@ contains
              endif
          enddo
       else
-#ifdef MPIF08
-         mpistatus => status(:t)
-#else /* !MPIF08 */
-         mpistatus => status(:, :t)
-#endif /* !MPIF08 */
-         call MPI_Waitall(t, req(:t), mpistatus, err_mpi)
+         call MPI_Waitall(t, req(:t), MPI_STATUSES_IGNORE, err_mpi)
          deallocate(buflabel, buftime)
       endif
 

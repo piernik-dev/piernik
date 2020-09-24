@@ -325,14 +325,9 @@ contains
       use constants,        only: xdim, ydim, zdim, cor_dim, I_ONE, I_TWO, LO, HI
       use dataio_pub,       only: die
       use merge_segments,   only: IN, OUT
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_Irecv, MPI_Isend, MPI_Waitall
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_Irecv, MPI_Isend, MPI_Waitall
       use mpisetup,         only: FIRST, LAST, proc, comm, err_mpi, req, inflate_req
       use named_array_list, only: wna
-#ifdef MPIF08
-      use MPIF,             only: MPI_Status
-#else /* !MPIF08 */
-      use MPIF,             only: MPI_STATUS_SIZE
-#endif /* !MPIF08 */
 
       implicit none
 
@@ -343,12 +338,7 @@ contains
 
       integer :: i
       integer(kind=4) :: p
-      integer(kind=4) :: nr !< index of first free slot in req and status arrays
-#ifdef MPIF08
-      type(MPI_Status), allocatable, dimension(:)  :: mpistatus  !< status array for MPI_Waitall
-#else /* !MPIF08 */
-      integer(kind=4), allocatable, dimension(:,:) :: mpistatus  !< status array for MPI_Waitall
-#endif /* !MPIF08 */
+      integer(kind=4) :: nr !< index of first free slot in req array
 
       if (.not. this%ms%valid) call die("[cg_list_bnd:internal_boundaries_MPI_merged] this%ms%valid .eqv. .false.")
 
@@ -410,13 +400,7 @@ contains
          endif
       enddo
 
-#ifdef MPIF08
-      allocate(mpistatus(nr))
-#else /* !MPIF08 */
-      allocate(mpistatus(MPI_STATUS_SIZE, nr))
-#endif /* !MPIF08 */
-      call MPI_Waitall(nr, req(:nr), mpistatus, err_mpi)
-      deallocate(mpistatus)
+      call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
 
       do p = FIRST, LAST
          if (p /= proc) then
@@ -489,14 +473,9 @@ contains
       use dataio_pub,       only: die, warn
       use grid_cont,        only: grid_container
       use grid_cont_bnd,    only: segment
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_Irecv, MPI_Isend, MPI_Waitall
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_Irecv, MPI_Isend, MPI_Waitall
       use mpisetup,         only: comm, err_mpi, req, inflate_req
       use named_array_list, only: wna
-#ifdef MPIF08
-      use MPIF,             only: MPI_Status
-#else /* !MPIF08 */
-      use MPIF,             only: MPI_STATUS_SIZE
-#endif /* !MPIF08 */
 
       implicit none
 
@@ -506,18 +485,13 @@ contains
       logical, dimension(xdim:cor_dim), intent(in) :: dmask !< .true. for the directions we want to exchange
 
       integer                                      :: g, d
-      integer(kind=4)                              :: nr     !< index of first free slot in req and status arrays
+      integer(kind=4)                              :: nr     !< index of first free slot in req array
       type(grid_container),     pointer            :: cg
       type(cg_list_element),    pointer            :: cgl
       real, dimension(:,:,:),   pointer            :: pa3d
       real, dimension(:,:,:,:), pointer            :: pa4d
       logical                                      :: active
       type(segment), pointer                       :: i_seg, o_seg !< shortcuts
-#ifdef MPIF08
-      type(MPI_Status), allocatable, dimension(:)  :: mpistatus  !< status array for MPI_Waitall
-#else /* !MPIF08 */
-      integer(kind=4), allocatable, dimension(:,:) :: mpistatus  !< status array for MPI_Waitall
-#endif /* !MPIF08 */
 
       nr = 0
       cgl => this%first
@@ -614,13 +588,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-#ifdef MPIF08
-      allocate(mpistatus(nr))
-#else /* !MPIF08 */
-      allocate(mpistatus(MPI_STATUS_SIZE, nr))
-#endif /* !MPIF08 */
-      call MPI_Waitall(nr, req(:nr), mpistatus, err_mpi)
-      deallocate(mpistatus)
+      call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
 
       ! Move the received data from buffers to the right place. Deallocate buffers
       cgl => this%first
