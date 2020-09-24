@@ -150,7 +150,7 @@ version.F90: env.dat
 \t$(ECHO) "   implicit none"; \\
 \t$(ECHO) "   public"; \\
 \twc -l env.dat | awk '{print "   integer, parameter :: nenv = "$$1"+0"}'; \\
-\tawk '{if (length($0)>s) s=length($0)} END {print "   character(len="s"), dimension(nenv) :: env\\ncontains\\n   subroutine init_version\\n      implicit none"}' env.dat; \\
+\tawk '{if (length($0)>s) s=length($0)} END {print "   character(len="s+10"), dimension(nenv) :: env\\ncontains\\n   subroutine init_version\\n      implicit none"}' env.dat; \\
 \tawk '{printf("      env(%i) = \\"%s\\"\\n",NR,$$0)}' env.dat; \\
 \t$(ECHO) "   end subroutine init_version"; \\
 \t$(ECHO) "end module version" ) > version_.F90; \\
