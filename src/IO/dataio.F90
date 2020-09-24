@@ -800,10 +800,10 @@ contains
 
    subroutine check_tsl
 
-      use constants,  only: CHK
-      use dataio_pub, only: last_tsl_time
-      use mpisetup,   only: report_to_master
-      use mpisignals, only: sig
+      use constants,       only: CHK
+      use dataio_pub,      only: last_tsl_time
+      use mpisetup,        only: report_to_master
+      use piernik_mpi_sig, only: sig
 
       implicit none
 

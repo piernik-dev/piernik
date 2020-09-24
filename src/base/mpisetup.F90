@@ -337,9 +337,9 @@ contains
 
    subroutine cleanup_mpi
 
-      use dataio_pub, only: printinfo, close_logs
-      use MPIF,       only: MPI_Barrier, MPI_Comm_disconnect, MPI_Finalize
-      use mpisignals, only: sig
+      use dataio_pub,      only: printinfo, close_logs
+      use MPIF,            only: MPI_Barrier, MPI_Comm_disconnect, MPI_Finalize
+      use piernik_mpi_sig, only: sig
 
       implicit none
 

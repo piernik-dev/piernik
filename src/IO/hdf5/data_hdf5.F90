@@ -462,14 +462,14 @@ contains
 !
    subroutine h5_write_to_single_file
 
-      use common_hdf5, only: set_common_attributes
-      use constants,   only: cwdlen, I_ONE, tmr_hdf, PPP_IO
-      use dataio_pub,  only: printio, printinfo, nhdf, thdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
-         &                   msg, run_id, problem_name, use_v2_io, last_hdf_time
-      use mpisetup,    only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
-      use mpisignals,  only: sig
-      use ppp,         only: ppp_main
-      use timer,       only: set_timer
+      use common_hdf5,     only: set_common_attributes
+      use constants,       only: cwdlen, I_ONE, tmr_hdf, PPP_IO
+      use dataio_pub,      only: printio, printinfo, nhdf, thdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
+         &                       msg, run_id, problem_name, use_v2_io, last_hdf_time
+      use mpisetup,        only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
+      use piernik_mpi_sig, only: sig
+      use ppp,             only: ppp_main
+      use timer,           only: set_timer
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: unmark_oldsoln
 #endif /* MULTIGRID && SELF_GRAV */
