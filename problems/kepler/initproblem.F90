@@ -220,4 +220,3 @@ contains
    end subroutine problem_initial_conditions
 
 end module initproblem
-! vim: set tw=120:
