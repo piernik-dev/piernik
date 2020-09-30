@@ -44,7 +44,7 @@ module mpisetup
    private
    public :: cleanup_mpi, init_mpi, inflate_req, bigbang, bigbang_shift, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, err_mpi, tag_ub, &
-        &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi, is_spawned, &
+        &    master, slave, nproc, proc, FIRST, LAST, have_mpi, is_spawned, &
         &    piernik_MPI_Allreduce, piernik_MPI_Barrier, piernik_MPI_Bcast, report_to_master, &
         &    report_string_to_master
 
@@ -65,12 +65,10 @@ module mpisetup
 
 #ifdef MPIF08
    type(MPI_Request), allocatable, dimension(:), target :: req        !< request array for MPI_Waitall
-   type(MPI_Comm), protected                            :: comm       !< global communicator
    type(MPI_Comm), protected                            :: intercomm  !< intercommunicator
    type(MPI_Op), dimension(pSUM:pLAND)                  :: mpiop      !< translation between pSUM:pLAND and MPI_SUM:MPI_LAND
 #else /* !MPIF08 */
    integer(kind=4), allocatable, dimension(:),   target :: req        !< request array for MPI_Waitall
-   integer(kind=4), protected                           :: comm       !< global communicator
    integer(kind=4), protected                           :: intercomm  !< intercommunicator
    integer(kind=4), dimension(pSUM:pLAND)               :: mpiop      !< translation between pSUM:pLAND and MPI_SUM:MPI_LAND
 #endif /* !MPIF08 */
@@ -168,7 +166,6 @@ contains
 
       call MPI_Init( err_mpi )
       bigbang = MPI_Wtime()
-      comm = MPI_COMM_WORLD
       mpiop(:) = [ MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND ]
 
 #if defined(__INTEL_COMPILER) || defined(__GFORTRAN__)
@@ -182,9 +179,9 @@ contains
       is_spawned = (intercomm /= MPI_COMM_NULL)
 #endif /* !MPIF08 */
 
-      call MPI_Comm_rank(comm, proc, err_mpi)
-      call MPI_Comm_size(comm, nproc, err_mpi)
-      call MPI_Comm_get_attr(comm, MPI_TAG_UB, tag_ub, flag, err_mpi)
+      call MPI_Comm_rank(MPI_COMM_WORLD, proc, err_mpi)
+      call MPI_Comm_size(MPI_COMM_WORLD, nproc, err_mpi)
+      call MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, tag_ub, flag, err_mpi)
 
       LAST = nproc-I_ONE
       master = (proc == FIRST)
@@ -220,9 +217,9 @@ contains
       call printinfo(msg)
 #endif /* DEBUG */
 
-      call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, FIRST, comm, err_mpi)
-      call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, FIRST, comm, err_mpi)
-      call MPI_Gather(pid_proc,  I_ONE, MPI_INTEGER,   pid_all,  I_ONE, MPI_INTEGER,   FIRST, comm, err_mpi)
+      call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, FIRST, MPI_COMM_WORLD, err_mpi)
+      call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, FIRST, MPI_COMM_WORLD, err_mpi)
+      call MPI_Gather(pid_proc,  I_ONE, MPI_INTEGER,   pid_all,  I_ONE, MPI_INTEGER,   FIRST, MPI_COMM_WORLD, err_mpi)
 
       bigbang_shift = bigbang
       call piernik_MPI_Allreduce(bigbang_shift, pMIN)
@@ -316,7 +313,7 @@ contains
    subroutine cleanup_mpi
 
       use dataio_pub,      only: printinfo, close_logs
-      use MPIF,            only: MPI_Barrier, MPI_Comm_disconnect, MPI_Finalize
+      use MPIF,            only: MPI_COMM_WORLD, MPI_Barrier, MPI_Comm_disconnect, MPI_Finalize
       use piernik_mpi_sig, only: sig
 
       implicit none
@@ -324,7 +321,7 @@ contains
       if (allocated(req)) deallocate(req)
 
       if (master) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
-      call MPI_Barrier(comm,err_mpi)
+      call MPI_Barrier(MPI_COMM_WORLD,err_mpi)
       if (have_mpi) call sleep(1) ! Prevent random SIGSEGVs in openmpi's MPI_Finalize
       if (is_spawned) then
          call report_to_master(sig%clean_exit)
@@ -341,11 +338,11 @@ contains
 !<
    subroutine piernik_MPI_Barrier
 
-      use MPIF, only: MPI_Barrier
+      use MPIF, only: MPI_COMM_WORLD, MPI_Barrier
 
       implicit none
 
-      call MPI_Barrier(comm, err_mpi)
+      call MPI_Barrier(MPI_COMM_WORLD, err_mpi)
 
    end subroutine piernik_MPI_Barrier
 
@@ -358,13 +355,13 @@ contains
    subroutine MPI_Bcast_single_logical(lvar)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_LOGICAL, MPI_Bcast
+      use MPIF,      only: MPI_LOGICAL, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       logical, intent(inout) :: lvar   !< logical scalar that will be broadcasted
 
-      call MPI_Bcast(lvar, I_ONE, MPI_LOGICAL, FIRST, comm, err_mpi)
+      call MPI_Bcast(lvar, I_ONE, MPI_LOGICAL, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_single_logical
 !-----------------------------------------------------------------------------
@@ -375,13 +372,13 @@ contains
 !<
    subroutine MPI_Bcast_vec_logical(lvar)
 
-      use MPIF, only: MPI_LOGICAL, MPI_Bcast
+      use MPIF, only: MPI_LOGICAL, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       logical, dimension(:), intent(inout) :: lvar   !< logical scalar that will be broadcasted
 
-      call MPI_Bcast(lvar, size(lvar, kind=4), MPI_LOGICAL, FIRST, comm, err_mpi)
+      call MPI_Bcast(lvar, size(lvar, kind=4), MPI_LOGICAL, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_vec_logical
 !-----------------------------------------------------------------------------
@@ -392,14 +389,14 @@ contains
 !<
    subroutine MPI_Bcast_single_string(cvar, clen)
 
-      use MPIF, only: MPI_CHARACTER, MPI_Bcast
+      use MPIF, only: MPI_CHARACTER, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       character(len=*), intent(inout) :: cvar   !< string that will be broadcasted
       integer(kind=4),  intent(in)    :: clen   !< length of the cvar
 
-      call MPI_Bcast(cvar, clen, MPI_CHARACTER, FIRST, comm, err_mpi)
+      call MPI_Bcast(cvar, clen, MPI_CHARACTER, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_single_string
 !-----------------------------------------------------------------------------
@@ -410,14 +407,14 @@ contains
 !<
    subroutine MPI_Bcast_vec_string(cvar, clen)
 
-      use MPIF, only: MPI_CHARACTER, MPI_Bcast
+      use MPIF, only: MPI_CHARACTER, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       character(len=*), dimension(:), intent(inout) :: cvar   !< vector of strings that will be broadcasted
       integer(kind=4),                intent(in)    :: clen   !< length of the cvar
 
-      call MPI_Bcast(cvar, clen*size(cvar, kind=4), MPI_CHARACTER, FIRST, comm, err_mpi)
+      call MPI_Bcast(cvar, clen*size(cvar, kind=4), MPI_CHARACTER, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_vec_string
 !-----------------------------------------------------------------------------
@@ -429,13 +426,13 @@ contains
    subroutine MPI_Bcast_single_int4(ivar4)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_INTEGER, MPI_Bcast
+      use MPIF,      only: MPI_INTEGER, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       integer(kind=4), intent(inout) :: ivar4   !< integer scalar that will be broadcasted
 
-      call MPI_Bcast(ivar4, I_ONE, MPI_INTEGER, FIRST, comm, err_mpi)
+      call MPI_Bcast(ivar4, I_ONE, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_single_int4
 !-----------------------------------------------------------------------------
@@ -447,13 +444,13 @@ contains
    subroutine MPI_Bcast_single_int8(ivar8)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_INTEGER8, MPI_Bcast
+      use MPIF,      only: MPI_INTEGER8, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       integer(kind=8), intent(inout) :: ivar8   !< integer scalar that will be broadcasted
 
-      call MPI_Bcast(ivar8, I_ONE, MPI_INTEGER8, FIRST, comm, err_mpi)
+      call MPI_Bcast(ivar8, I_ONE, MPI_INTEGER8, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_single_int8
 !-----------------------------------------------------------------------------
@@ -465,13 +462,13 @@ contains
    subroutine MPI_Bcast_single_real4(rvar4)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_REAL, MPI_Bcast
+      use MPIF,      only: MPI_REAL, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       real(kind=4), intent(inout) :: rvar4   !< integer scalar that will be broadcasted
 
-      call MPI_Bcast(rvar4, I_ONE, MPI_REAL, FIRST, comm, err_mpi)
+      call MPI_Bcast(rvar4, I_ONE, MPI_REAL, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_single_real4
 !-----------------------------------------------------------------------------
@@ -483,13 +480,13 @@ contains
    subroutine MPI_Bcast_single_real8(rvar8)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_Bcast
+      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       real(kind=8), intent(inout) :: rvar8   !< real scalar that will be broadcasted
 
-      call MPI_Bcast(rvar8, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, err_mpi)
+      call MPI_Bcast(rvar8, I_ONE, MPI_DOUBLE_PRECISION, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_single_real8
 !-----------------------------------------------------------------------------
@@ -500,13 +497,13 @@ contains
 !<
    subroutine MPI_Bcast_vec_real4(rvar4)
 
-      use MPIF, only: MPI_REAL, MPI_Bcast
+      use MPIF, only: MPI_REAL, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       real(kind=4), dimension(:), intent(inout) :: rvar4   !< real4 vector that will be broadcasted
 
-      call MPI_Bcast(rvar4, size(rvar4, kind=4), MPI_REAL, FIRST, comm, err_mpi)
+      call MPI_Bcast(rvar4, size(rvar4, kind=4), MPI_REAL, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_vec_real4
 !-----------------------------------------------------------------------------
@@ -517,13 +514,13 @@ contains
 !<
    subroutine MPI_Bcast_vec_real8(rvar8)
 
-      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_Bcast
+      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       real(kind=8), dimension(:), intent(inout) :: rvar8   !< real8 vector that will be broadcasted
 
-      call MPI_Bcast(rvar8, size(rvar8, kind=4), MPI_DOUBLE_PRECISION, FIRST, comm, err_mpi)
+      call MPI_Bcast(rvar8, size(rvar8, kind=4), MPI_DOUBLE_PRECISION, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_vec_real8
 !-----------------------------------------------------------------------------
@@ -534,13 +531,13 @@ contains
 !<
    subroutine MPI_Bcast_vec_int4(ivar4)
 
-      use MPIF, only: MPI_INTEGER, MPI_Bcast
+      use MPIF, only: MPI_INTEGER, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       integer(kind=4), dimension(:), intent(inout) :: ivar4   !< int4 vector that will be broadcasted
 
-      call MPI_Bcast(ivar4, size(ivar4, kind=4), MPI_INTEGER, FIRST, comm, err_mpi)
+      call MPI_Bcast(ivar4, size(ivar4, kind=4), MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_vec_int4
 !-----------------------------------------------------------------------------
@@ -551,13 +548,13 @@ contains
 !<
    subroutine MPI_Bcast_vec_int8(ivar8)
 
-      use MPIF, only: MPI_INTEGER8, MPI_Bcast
+      use MPIF, only: MPI_INTEGER8, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       integer(kind=8), dimension(:), intent(inout) :: ivar8   !< int8 vector that will be broadcasted
 
-      call MPI_Bcast(ivar8, size(ivar8, kind=4), MPI_INTEGER8, FIRST, comm, err_mpi)
+      call MPI_Bcast(ivar8, size(ivar8, kind=4), MPI_INTEGER8, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_vec_int8
 !-----------------------------------------------------------------------------
@@ -568,13 +565,13 @@ contains
 !<
    subroutine MPI_Bcast_arr2d_real4(rvar4)
 
-      use MPIF, only: MPI_REAL, MPI_Bcast
+      use MPIF, only: MPI_REAL, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       real(kind=4), dimension(:,:), intent(inout) :: rvar4   !< real4 arr2d that will be broadcasted
 
-      call MPI_Bcast(rvar4, size(rvar4, kind=4), MPI_REAL, FIRST, comm, err_mpi)
+      call MPI_Bcast(rvar4, size(rvar4, kind=4), MPI_REAL, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_arr2d_real4
 !-----------------------------------------------------------------------------
@@ -585,13 +582,13 @@ contains
 !<
    subroutine MPI_Bcast_arr2d_real8(rvar8)
 
-      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_Bcast
+      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       real(kind=8), dimension(:,:), intent(inout) :: rvar8   !< real8 arr2d that will be broadcasted
 
-      call MPI_Bcast(rvar8, size(rvar8, kind=4), MPI_DOUBLE_PRECISION, FIRST, comm, err_mpi)
+      call MPI_Bcast(rvar8, size(rvar8, kind=4), MPI_DOUBLE_PRECISION, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_arr2d_real8
 !-----------------------------------------------------------------------------
@@ -602,13 +599,13 @@ contains
 !<
    subroutine MPI_Bcast_arr2d_int4(ivar4)
 
-      use MPIF, only: MPI_INTEGER, MPI_Bcast
+      use MPIF, only: MPI_INTEGER, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       integer(kind=4), dimension(:, :), intent(inout) :: ivar4   !< int4 arr2d that will be broadcasted
 
-      call MPI_Bcast(ivar4, size(ivar4, kind=4), MPI_INTEGER, FIRST, comm, err_mpi)
+      call MPI_Bcast(ivar4, size(ivar4, kind=4), MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_arr2d_int4
 !-----------------------------------------------------------------------------
@@ -619,13 +616,13 @@ contains
 !<
    subroutine MPI_Bcast_arr2d_int8(ivar8)
 
-      use MPIF, only: MPI_INTEGER8, MPI_Bcast
+      use MPIF, only: MPI_INTEGER8, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       integer(kind=8), dimension(:,:), intent(inout) :: ivar8   !< int8 arr2d that will be broadcasted
 
-      call MPI_Bcast(ivar8, size(ivar8, kind=4), MPI_INTEGER8, FIRST, comm, err_mpi)
+      call MPI_Bcast(ivar8, size(ivar8, kind=4), MPI_INTEGER8, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_arr2d_int8
 !-----------------------------------------------------------------------------
@@ -636,13 +633,13 @@ contains
 !<
    subroutine MPI_Bcast_arr3d_real4(rvar4)
 
-      use MPIF, only: MPI_REAL, MPI_Bcast
+      use MPIF, only: MPI_REAL, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       real(kind=4), dimension(:,:,:), intent(inout) :: rvar4   !< real4 arr3d that will be broadcasted
 
-      call MPI_Bcast(rvar4, size(rvar4, kind=4), MPI_REAL, FIRST, comm, err_mpi)
+      call MPI_Bcast(rvar4, size(rvar4, kind=4), MPI_REAL, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_arr3d_real4
 !-----------------------------------------------------------------------------
@@ -653,13 +650,13 @@ contains
 !<
    subroutine MPI_Bcast_arr3d_real8(rvar8)
 
-      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_Bcast
+      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       real(kind=8), dimension(:,:,:), intent(inout) :: rvar8   !< real8 arr3d that will be broadcasted
 
-      call MPI_Bcast(rvar8, size(rvar8, kind=4), MPI_DOUBLE_PRECISION, FIRST, comm, err_mpi)
+      call MPI_Bcast(rvar8, size(rvar8, kind=4), MPI_DOUBLE_PRECISION, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_arr3d_real8
 !-----------------------------------------------------------------------------
@@ -670,13 +667,13 @@ contains
 !<
    subroutine MPI_Bcast_arr3d_int4(ivar4)
 
-      use MPIF, only: MPI_INTEGER, MPI_Bcast
+      use MPIF, only: MPI_INTEGER, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       integer(kind=4), dimension(:,:, :), intent(inout) :: ivar4   !< int4 arr3d that will be broadcasted
 
-      call MPI_Bcast(ivar4, size(ivar4, kind=4), MPI_INTEGER, FIRST, comm, err_mpi)
+      call MPI_Bcast(ivar4, size(ivar4, kind=4), MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_arr3d_int4
 !-----------------------------------------------------------------------------
@@ -687,13 +684,13 @@ contains
 !<
    subroutine MPI_Bcast_arr3d_int8(ivar8)
 
-      use MPIF, only: MPI_INTEGER8, MPI_Bcast
+      use MPIF, only: MPI_INTEGER8, MPI_COMM_WORLD, MPI_Bcast
 
       implicit none
 
       integer(kind=8), dimension(:,:,:), intent(inout) :: ivar8   !< int8 arr3d that will be broadcasted
 
-      call MPI_Bcast(ivar8, size(ivar8, kind=4), MPI_INTEGER8, FIRST, comm, err_mpi)
+      call MPI_Bcast(ivar8, size(ivar8, kind=4), MPI_INTEGER8, FIRST, MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Bcast_arr3d_int8
 !-----------------------------------------------------------------------------
@@ -704,14 +701,14 @@ contains
    subroutine MPI_Allreduce_single_logical(lvar, reduction)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_LOGICAL, MPI_IN_PLACE, MPI_Allreduce
+      use MPIF,      only: MPI_LOGICAL, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
 
       implicit none
 
       logical,         intent(inout) :: lvar      !< logical that will be reduced
       integer(kind=4), intent(in)    :: reduction !< integer to mark a reduction type
 
-      call MPI_Allreduce(MPI_IN_PLACE, lvar, I_ONE, MPI_LOGICAL, mpiop(reduction), comm, err_mpi)
+      call MPI_Allreduce(MPI_IN_PLACE, lvar, I_ONE, MPI_LOGICAL, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Allreduce_single_logical
 !-----------------------------------------------------------------------------
@@ -722,14 +719,14 @@ contains
    subroutine MPI_Allreduce_single_int4(ivar4, reduction)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_INTEGER, MPI_IN_PLACE, MPI_Allreduce
+      use MPIF,      only: MPI_INTEGER, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
 
       implicit none
 
       integer(kind=4), intent(inout) :: ivar4     !< int4 that will be reduced
       integer(kind=4), intent(in)    :: reduction !< integer to mark a reduction type
 
-      call MPI_Allreduce(MPI_IN_PLACE, ivar4, I_ONE, MPI_INTEGER, mpiop(reduction), comm, err_mpi)
+      call MPI_Allreduce(MPI_IN_PLACE, ivar4, I_ONE, MPI_INTEGER, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Allreduce_single_int4
 !-----------------------------------------------------------------------------
@@ -740,14 +737,14 @@ contains
    subroutine MPI_Allreduce_single_int8(ivar8, reduction)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_INTEGER8, MPI_IN_PLACE, MPI_Allreduce
+      use MPIF,      only: MPI_INTEGER8, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
 
       implicit none
 
       integer(kind=8), intent(inout) :: ivar8     !< int8 that will be reduced
       integer(kind=4), intent(in)    :: reduction !< integer to mark a reduction type
 
-      call MPI_Allreduce(MPI_IN_PLACE, ivar8, I_ONE, MPI_INTEGER8, mpiop(reduction), comm, err_mpi)
+      call MPI_Allreduce(MPI_IN_PLACE, ivar8, I_ONE, MPI_INTEGER8, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Allreduce_single_int8
 !-----------------------------------------------------------------------------
@@ -757,14 +754,14 @@ contains
 !<
    subroutine MPI_Allreduce_vec_int4(ivar4, reduction)
 
-      use MPIF, only: MPI_INTEGER, MPI_IN_PLACE, MPI_Allreduce
+      use MPIF, only: MPI_INTEGER, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
 
       implicit none
 
       integer(kind=4), dimension(:), intent(inout) :: ivar4     !< int4 that will be reduced
       integer(kind=4),               intent(in)    :: reduction !< integer to mark a reduction type
 
-      call MPI_Allreduce(MPI_IN_PLACE, ivar4, size(ivar4, kind=4), MPI_INTEGER, mpiop(reduction), comm, err_mpi)
+      call MPI_Allreduce(MPI_IN_PLACE, ivar4, size(ivar4, kind=4), MPI_INTEGER, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Allreduce_vec_int4
 !-----------------------------------------------------------------------------
@@ -774,14 +771,14 @@ contains
 !<
    subroutine MPI_Allreduce_vec_int8(ivar8, reduction)
 
-      use MPIF, only: MPI_INTEGER8, MPI_IN_PLACE, MPI_Allreduce
+      use MPIF, only: MPI_INTEGER8, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
 
       implicit none
 
       integer(kind=8), dimension(:), intent(inout) :: ivar8     !< int8 that will be reduced
       integer(kind=4),               intent(in)    :: reduction !< integer to mark a reduction type
 
-      call MPI_Allreduce(MPI_IN_PLACE, ivar8, size(ivar8, kind=4), MPI_INTEGER8, mpiop(reduction), comm, err_mpi)
+      call MPI_Allreduce(MPI_IN_PLACE, ivar8, size(ivar8, kind=4), MPI_INTEGER8, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Allreduce_vec_int8
 !-----------------------------------------------------------------------------
@@ -792,14 +789,14 @@ contains
    subroutine MPI_Allreduce_single_real4(rvar4, reduction)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_REAL, MPI_IN_PLACE, MPI_Allreduce
+      use MPIF,      only: MPI_REAL, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
 
       implicit none
 
       real(kind=4),    intent(inout) :: rvar4     !< real4 that will be reduced
       integer(kind=4), intent(in)    :: reduction !< integer to mark a reduction type
 
-      call MPI_Allreduce(MPI_IN_PLACE, rvar4, I_ONE, MPI_REAL, mpiop(reduction), comm, err_mpi)
+      call MPI_Allreduce(MPI_IN_PLACE, rvar4, I_ONE, MPI_REAL, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Allreduce_single_real4
 !-----------------------------------------------------------------------------
@@ -810,14 +807,14 @@ contains
    subroutine MPI_Allreduce_single_real8(rvar8, reduction)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_Allreduce
+      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
 
       implicit none
 
       real(kind=8),    intent(inout) :: rvar8     !< real8 that will be reduced
       integer(kind=4), intent(in)    :: reduction !< integer to mark a reduction type
 
-      call MPI_Allreduce(MPI_IN_PLACE, rvar8, I_ONE, MPI_DOUBLE_PRECISION, mpiop(reduction), comm, err_mpi)
+      call MPI_Allreduce(MPI_IN_PLACE, rvar8, I_ONE, MPI_DOUBLE_PRECISION, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Allreduce_single_real8
 !-----------------------------------------------------------------------------
@@ -827,14 +824,14 @@ contains
 !<
    subroutine MPI_Allreduce_vec_real4(rvar4, reduction)
 
-      use MPIF,      only: MPI_REAL, MPI_IN_PLACE, MPI_Allreduce
+      use MPIF,      only: MPI_REAL, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
 
       implicit none
 
       real(kind=4), dimension(:), intent(inout) :: rvar4     !< real4 that will be reduced
       integer(kind=4),            intent(in)    :: reduction !< integer to mark a reduction type
 
-      call MPI_Allreduce(MPI_IN_PLACE, rvar4, size(rvar4, kind=4), MPI_REAL, mpiop(reduction), comm, err_mpi)
+      call MPI_Allreduce(MPI_IN_PLACE, rvar4, size(rvar4, kind=4), MPI_REAL, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Allreduce_vec_real4
 !-----------------------------------------------------------------------------
@@ -844,14 +841,14 @@ contains
 !<
    subroutine MPI_Allreduce_vec_real8(rvar8, reduction)
 
-      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_Allreduce
+      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
 
       implicit none
 
       real(kind=8), dimension(:), intent(inout) :: rvar8     !< real8 that will be reduced
       integer(kind=4),            intent(in)    :: reduction !< integer to mark a reduction type
 
-      call MPI_Allreduce(MPI_IN_PLACE, rvar8, size(rvar8, kind=4), MPI_DOUBLE_PRECISION, mpiop(reduction), comm, err_mpi)
+      call MPI_Allreduce(MPI_IN_PLACE, rvar8, size(rvar8, kind=4), MPI_DOUBLE_PRECISION, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Allreduce_vec_real8
 !-----------------------------------------------------------------------------
@@ -861,14 +858,14 @@ contains
 !<
    subroutine MPI_Allreduce_arr3d_real8(rvar8, reduction)
 
-      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_Allreduce
+      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
 
       implicit none
 
       real(kind=8), dimension(:,:,:), intent(inout) :: rvar8     !< real8 that will be reduced
       integer(kind=4),                intent(in)    :: reduction !< integer to mark a reduction type
 
-      call MPI_Allreduce(MPI_IN_PLACE, rvar8, size(rvar8, kind=4), MPI_DOUBLE_PRECISION, mpiop(reduction), comm, err_mpi)
+      call MPI_Allreduce(MPI_IN_PLACE, rvar8, size(rvar8, kind=4), MPI_DOUBLE_PRECISION, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Allreduce_arr3d_real8
 !-----------------------------------------------------------------------------
@@ -878,14 +875,14 @@ contains
 !<
    subroutine MPI_Allreduce_arr2d_real8(rvar8, reduction)
 
-      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_Allreduce
+      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
 
       implicit none
 
       real(kind=8), dimension(:,:), intent(inout) :: rvar8     !< real8 that will be reduced
       integer(kind=4),              intent(in)    :: reduction !< integer to mark a reduction type
 
-      call MPI_Allreduce(MPI_IN_PLACE, rvar8, size(rvar8, kind=4), MPI_DOUBLE_PRECISION, mpiop(reduction), comm, err_mpi)
+      call MPI_Allreduce(MPI_IN_PLACE, rvar8, size(rvar8, kind=4), MPI_DOUBLE_PRECISION, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Allreduce_arr2d_real8
 !-----------------------------------------------------------------------------
@@ -895,14 +892,14 @@ contains
 !<
    subroutine MPI_Allreduce_arr2d_real4(rvar4, reduction)
 
-      use MPIF, only: MPI_REAL, MPI_IN_PLACE, MPI_Allreduce
+      use MPIF, only: MPI_REAL, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
 
       implicit none
 
       real(kind=4), dimension(:,:), intent(inout) :: rvar4     !< real4 that will be reduced
       integer(kind=4),              intent(in)    :: reduction !< integer to mark a reduction type
 
-      call MPI_Allreduce(MPI_IN_PLACE, rvar4, size(rvar4, kind=4), MPI_REAL, mpiop(reduction), comm, err_mpi)
+      call MPI_Allreduce(MPI_IN_PLACE, rvar4, size(rvar4, kind=4), MPI_REAL, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Allreduce_arr2d_real4
 !-----------------------------------------------------------------------------
@@ -962,7 +959,7 @@ contains
    integer(kind=4) function abort_sigint(signum)
 
       use constants, only: I_ZERO
-      use MPIF,      only: MPI_Abort
+      use MPIF,      only: MPI_Abort, MPI_COMM_WORLD
 
       implicit none
 
@@ -971,7 +968,7 @@ contains
       if (master) print *, "[mpisetup:abort_sigint] CTRL-C caught, calling abort"
       ! As per MPI documentation for MPI_Abort():
       !   "This routine should not be used from within a signal handler."
-      call MPI_Abort(comm, I_ZERO, err_mpi) ! "I too like to live dangerously." -- Austin Powers
+      call MPI_Abort(MPI_COMM_WORLD, I_ZERO, err_mpi) ! "I too like to live dangerously." -- Austin Powers
       abort_sigint = signum
 
    end function abort_sigint

@@ -230,8 +230,8 @@ contains
       use dataio_pub,  only: msg, die
       use func,        only: operator(.notequals.)
       use grid_cont,   only: grid_container
-      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_Send, MPI_Recv
-      use mpisetup,    only: proc, master, FIRST, LAST, comm, err_mpi
+      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Send, MPI_Recv
+      use mpisetup,    only: proc, master, FIRST, LAST, err_mpi
 
       implicit none
 
@@ -265,10 +265,10 @@ contains
                enddo
             enddo
             do pe = FIRST+1, LAST
-               call MPI_Send(ic_data, size(ic_data, kind=4), MPI_DOUBLE_PRECISION, pe, pe, comm, err_mpi)
+               call MPI_Send(ic_data, size(ic_data, kind=4), MPI_DOUBLE_PRECISION, pe, pe, MPI_COMM_WORLD, err_mpi)
             enddo
          else
-            call MPI_Recv(ic_data, size(ic_data, kind=4), MPI_DOUBLE_PRECISION, FIRST, proc, comm, MPI_STATUS_IGNORE, err_mpi)
+            call MPI_Recv(ic_data, size(ic_data, kind=4), MPI_DOUBLE_PRECISION, FIRST, proc, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
          endif
       enddo
 

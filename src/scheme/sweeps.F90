@@ -66,8 +66,8 @@ contains
       use constants, only: LO, HI, I_ONE
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
-      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_Irecv
-      use mpisetup,  only: comm, err_mpi, req, inflate_req
+      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv
+      use mpisetup,  only: err_mpi, req, inflate_req
 
       implicit none
 
@@ -92,7 +92,7 @@ contains
                   if (jc(LO) == jc(HI)) then
                      nr = nr + I_ONE
                      if (nr > size(req, dim=1)) call inflate_req
-                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), err_mpi)
+                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
                      seg(g)%req => req(nr)
                   endif
                enddo
@@ -176,8 +176,8 @@ contains
       use domain,       only: dom
       use grid_cont,    only: grid_container
       use grid_helpers, only: f2c_o
-      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_Isend
-      use mpisetup,     only: comm, err_mpi, req, inflate_req
+      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Isend
+      use mpisetup,     only: err_mpi, req, inflate_req
       use ppp,          only: ppp_main
 
       implicit none
@@ -223,7 +223,7 @@ contains
 
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), err_mpi)
+               call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
                seg(g)%req => req(nr)
             endif
          enddo

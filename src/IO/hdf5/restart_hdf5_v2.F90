@@ -191,8 +191,8 @@ contains
       use dataio_pub,       only: die, nproc_io, can_i_write
       use grid_cont,        only: grid_container
       use hdf5,             only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_Recv, MPI_Send
-      use mpisetup,         only: master, FIRST, proc, comm, err_mpi, tag_ub
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
+      use mpisetup,         only: master, FIRST, proc, err_mpi, tag_ub
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 
@@ -263,7 +263,7 @@ contains
                      else
                         n_b = pick_size(ncg, qna%lst(qr_lst(i))%restart_mode)
                         allocate(pa3d(n_b(xdim), n_b(ydim), n_b(zdim)))
-                        call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:), kind=4), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, err_mpi)
+                        call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:), kind=4), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                         dims(:) = shape(pa3d)
                      endif
                      call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = cg_desc%xfer_prp)
@@ -283,7 +283,7 @@ contains
                         n_b = pick_size(ncg, wna%lst(wr_lst(i))%restart_mode)
                         allocate(pa4d(wna%lst(wr_lst(i))%dim4, n_b(xdim), n_b(ydim), n_b(zdim)))
                         call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:), kind=4), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), &
-                           ncg + cg_desc%tot_cg_n*(size(qr_lst, kind=4)+i), comm, MPI_STATUS_IGNORE, err_mpi)
+                           ncg + cg_desc%tot_cg_n*(size(qr_lst, kind=4)+i), MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                         dims(:) = shape(pa4d)
                      endif
                      call h5dwrite_f(cg_desc%dset_id(ncg, i+size(qr_lst)), H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = cg_desc%xfer_prp)
@@ -298,13 +298,13 @@ contains
                   if (size(qr_lst) > 0) then
                      do i = lbound(qr_lst, dim=1, kind=4), ubound(qr_lst, dim=1, kind=4)
                         pa3d => cg%q(qr_lst(i))%span(pick_area(cg, qna%lst(qr_lst(i))%restart_mode))
-                        call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:), kind=4), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, err_mpi)
+                        call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:), kind=4), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, MPI_COMM_WORLD, err_mpi)
                      enddo
                   endif
                   if (size(wr_lst) > 0) then
                      do i = lbound(wr_lst, dim=1, kind=4), ubound(wr_lst, dim=1, kind=4)
                         pa4d => cg%w(wr_lst(i))%span(pick_area(cg, wna%lst(wr_lst(i))%restart_mode))
-                        call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:), kind=4), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*(size(qr_lst, kind=4)+i), comm, err_mpi)
+                        call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:), kind=4), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*(size(qr_lst, kind=4)+i), MPI_COMM_WORLD, err_mpi)
                      enddo
                   endif
                endif

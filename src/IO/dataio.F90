@@ -1703,8 +1703,8 @@ contains
          use constants,    only: I_ONE, INVALID
          use dataio_pub,   only: msg, printinfo
          use memory_usage, only: system_mem_usage
-         use MPIF,         only: MPI_INTEGER, MPI_Gather
-         use mpisetup,     only: master, FIRST, LAST, comm, err_mpi
+         use MPIF,         only: MPI_INTEGER, MPI_COMM_WORLD, MPI_Gather
+         use mpisetup,     only: master, FIRST, LAST, err_mpi
 
          implicit none
 
@@ -1712,7 +1712,7 @@ contains
          integer(kind=4), dimension(FIRST:LAST) :: cnt_rss
 
          rss = system_mem_usage()
-         call MPI_Gather(rss, I_ONE, MPI_INTEGER, cnt_rss, I_ONE, MPI_INTEGER, FIRST, comm, err_mpi)
+         call MPI_Gather(rss, I_ONE, MPI_INTEGER, cnt_rss, I_ONE, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
 
          if (master .and. any(cnt_rss /= INVALID)) then
             write(msg, '(9a)')"  RSS memory in use (avg/min/max):", &
