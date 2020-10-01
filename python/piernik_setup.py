@@ -103,7 +103,7 @@ CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(F90FLAGS) ../compilers/tests/mpi_f08.F9
 all: env.dat print_setup $(PROG)
 
 check_mpi:
-\t$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null  || (\
+\t@$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null  || (\
 $(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90 2> /dev/null || echo -e "\033[91mWarning: current MPI fortran compiler may not be capable of 'mpi_f90' or sufficiently modern 'mpi' interface\033[0m" )
 
 $(PROG): $(OBJS) check_mpi
@@ -158,7 +158,7 @@ version.F90: env.dat
 \t$(ECHO) "   implicit none"; \\
 \t$(ECHO) "   public"; \\
 \twc -l env.dat | awk '{print "   integer, parameter :: nenv = "$$1"+0"}'; \\
-\tawk '{if (length($0)>s) s=length($0)} END {print "   character(len="s"), dimension(nenv) :: env\\ncontains\\n   subroutine init_version\\n      implicit none"}' env.dat; \\
+\tawk '{if (length($0)>s) s=length($0)} END {print "   character(len="s+10"), dimension(nenv) :: env\\ncontains\\n   subroutine init_version\\n      implicit none"}' env.dat; \\
 \tawk '{printf("      env(%i) = \\"%s\\"\\n",NR,$$0)}' env.dat; \\
 \t$(ECHO) "   end subroutine init_version"; \\
 \t$(ECHO) "end module version" ) > version_.F90; \\

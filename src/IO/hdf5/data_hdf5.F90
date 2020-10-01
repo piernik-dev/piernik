@@ -462,14 +462,14 @@ contains
 !
    subroutine h5_write_to_single_file
 
-      use common_hdf5, only: set_common_attributes
-      use constants,   only: cwdlen, I_ONE, tmr_hdf, PPP_IO
-      use dataio_pub,  only: printio, printinfo, nhdf, thdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
-         &                   msg, run_id, problem_name, use_v2_io, last_hdf_time
-      use mpisetup,    only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
-      use mpisignals,  only: sig
-      use ppp,         only: ppp_main
-      use timer,       only: set_timer
+      use common_hdf5,     only: set_common_attributes
+      use constants,       only: cwdlen, I_ONE, tmr_hdf, PPP_IO
+      use dataio_pub,      only: printio, printinfo, nhdf, thdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
+         &                       msg, run_id, problem_name, use_v2_io, last_hdf_time
+      use mpisetup,        only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
+      use piernik_mpi_sig, only: sig
+      use ppp,             only: ppp_main
+      use timer,           only: set_timer
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: unmark_oldsoln
 #endif /* MULTIGRID && SELF_GRAV */
@@ -553,8 +553,8 @@ contains
       use global,      only: nstep
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_Recv, MPI_Send
-      use mpisetup,    only: master, FIRST, proc, comm, mpi_err
+      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
+      use mpisetup,    only: master, FIRST, proc, err_mpi, tag_ub
       use ppp,         only: ppp_main
 
       implicit none
@@ -591,6 +591,7 @@ contains
 
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
+         if (cg_desc%tot_cg_n *(ubound(hdf_vars,1, kind=4) + I_ONE) > tag_ub) call die("[data_hdf5:write_cg_to_output] this MPI implementation has too low MPI_TAG_UB attribute")
          do ncg = 1, cg_desc%tot_cg_n
             call ppp_main%start(wrdc1s_label, PPP_IO + PPP_CG)
             dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
@@ -607,7 +608,7 @@ contains
                      cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                      call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                   else
-                     call MPI_Recv(data_dbl(1,1,1), size(data_dbl, kind=4), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
+                     call MPI_Recv(data_dbl(1,1,1), size(data_dbl, kind=4), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                   endif
                   if (.not.hdf_vars_avail(i)) cycle
                   if (h5_64bit) then
@@ -623,7 +624,7 @@ contains
                   do i = lbound(hdf_vars,1, kind=4), ubound(hdf_vars,1, kind=4)
                      if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                      if (.not.hdf_vars_avail(i)) cycle
-                     call MPI_Send(data_dbl(1,1,1), size(data_dbl, kind=4), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, mpi_err)
+                     call MPI_Send(data_dbl(1,1,1), size(data_dbl, kind=4), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, MPI_COMM_WORLD, err_mpi)
                   enddo
                endif
             endif
@@ -825,8 +826,7 @@ contains
            &                     H5S_SELECT_SET_F, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, &
            &                     h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5sclose_f, h5dget_space_f, h5sselect_hyperslab_f, &
            &                     h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
-      use mpisetup,        only: comm
-      use MPIF,            only: MPI_INFO_NULL
+      use MPIF,            only: MPI_INFO_NULL, MPI_COMM_WORLD
 
       implicit none
 
@@ -853,9 +853,9 @@ contains
       !
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_idf, error)
 #ifdef MPIF08
-      call h5pset_fapl_mpio_f(plist_idf, comm%mpi_val, MPI_INFO_NULL%mpi_val, error)
+      call h5pset_fapl_mpio_f(plist_idf, MPI_COMM_WORLD%mpi_val, MPI_INFO_NULL%mpi_val, error)
 #else /* !MPIF08 */
-      call h5pset_fapl_mpio_f(plist_idf, comm, MPI_INFO_NULL, error)
+      call h5pset_fapl_mpio_f(plist_idf, MPI_COMM_WORLD, MPI_INFO_NULL, error)
 #endif /* !MPIF08 */
       !
       ! Create the file collectively.
