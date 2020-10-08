@@ -468,9 +468,10 @@ contains
    end subroutine assoc_pointers
 
 !----------------------------------------------------------------------------------------------------
-   subroutine fill_boundary_grid(bound_case, fill_p, fill_f) ! to be paralelized
+   subroutine fill_boundary_grid(bound_case, fill_p, fill_f) ! TODO FIXME to be paralelized
 
       use constants,      only: zero
+      use dataio_pub,     only: msg, printinfo
       use initcrspectrum, only: arr_dim, eps
 
       implicit none
@@ -494,8 +495,11 @@ contains
 
       fill_p = zero ; fill_f = zero
       x_step = zero
+      write(msg, "(A,I1,A,I3,A)") "[cresp_NR_method:fill_boundary_grid] Solving solution maps for cutoff case (",bound_case,"): DIM=",arr_dim,"**2"
+      call printinfo(msg)
 
       do i = 1, arr_dim
+         call add_dot
          new_line = .true.
          prev_solution = prev_solution_1 ! easier to find when not searching from the top
          do j = 1, arr_dim
@@ -1466,4 +1470,16 @@ contains
    end subroutine initialize_arrays
 !----------------------------------------------------------------------------------------------------
 
+   subroutine add_dot
+
+      use constants, only: stdout
+      use mpisetup,  only: master
+
+      implicit none
+
+      if (master) then
+         write(stdout,'(a)',advance='no')"."
+      endif
+
+   end subroutine add_dot
 end module cresp_NR_method
