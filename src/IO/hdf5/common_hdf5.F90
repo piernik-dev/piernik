@@ -816,9 +816,9 @@ contains
          &                    h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, h5pclose_f, &
          &                    h5zfilter_avail_f
       use helpers_hdf5, only: create_attribute!, create_corefile
-      use MPIF,         only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8, &
+      use MPIF,         only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8, MPI_COMM_WORLD, &
            &                  MPI_Allgather, MPI_Recv, MPI_Send
-      use mpisetup,     only: comm, FIRST, LAST, master, mpi_err, piernik_MPI_Bcast
+      use mpisetup,     only: FIRST, LAST, master, err_mpi, piernik_MPI_Bcast
 
       implicit none
 
@@ -884,7 +884,7 @@ contains
 
       ! Prepare groups and datasets for grid containers on the master
       allocate(cg_n(FIRST:LAST))
-      call MPI_Allgather(leaves%cnt, I_ONE, MPI_INTEGER, cg_n, I_ONE, MPI_INTEGER, comm, mpi_err)
+      call MPI_Allgather(leaves%cnt, I_ONE, MPI_INTEGER, cg_n, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
       cg_cnt = sum(cg_n(:))
       allocate(cg_all_n_b(ndims, cg_cnt), cg_all_n_o(ndims, cg_cnt))
 
@@ -952,13 +952,13 @@ contains
             if (p == FIRST) then
                call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
             else
-               call MPI_Recv(cg_rl,  size(cg_rl, kind=4),  MPI_INTEGER,  p, tag,         comm, MPI_STATUS_IGNORE, mpi_err)
-               call MPI_Recv(cg_n_b, size(cg_n_b, kind=4), MPI_INTEGER,  p, tag+I_ONE,   comm, MPI_STATUS_IGNORE, mpi_err)
-               call MPI_Recv(cg_off, size(cg_off, kind=4), MPI_INTEGER8, p, tag+I_TWO,   comm, MPI_STATUS_IGNORE, mpi_err)
+               call MPI_Recv(cg_rl,  size(cg_rl, kind=4),  MPI_INTEGER,  p, tag,         MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               call MPI_Recv(cg_n_b, size(cg_n_b, kind=4), MPI_INTEGER,  p, tag+I_ONE,   MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               call MPI_Recv(cg_off, size(cg_off, kind=4), MPI_INTEGER8, p, tag+I_TWO,   MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                if (otype == O_OUT) &
-                  & call MPI_Recv(dbuf,   size(dbuf, kind=4),   MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, mpi_err)
+                  & call MPI_Recv(dbuf,   size(dbuf, kind=4),   MPI_REAL8,    p, tag+I_THREE, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                if (otype == O_RES) &
-                    & call MPI_Recv(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  p, tag+I_FOUR,  comm, MPI_STATUS_IGNORE, mpi_err)
+                    & call MPI_Recv(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  p, tag+I_FOUR,  MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
             endif
 
             do g = 1, cg_n(p)
@@ -1043,11 +1043,11 @@ contains
          nullify(cg_n_o)
          if (otype == O_RES) allocate(cg_n_o(leaves%cnt, ndims))
          call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
-         call MPI_Send(cg_rl,  size(cg_rl, kind=4),  MPI_INTEGER,  FIRST, tag,         comm, mpi_err)
-         call MPI_Send(cg_n_b, size(cg_n_b, kind=4), MPI_INTEGER,  FIRST, tag+I_ONE,   comm, mpi_err)
-         call MPI_Send(cg_off, size(cg_off, kind=4), MPI_INTEGER8, FIRST, tag+I_TWO,   comm, mpi_err)
-         if (otype == O_OUT) call MPI_Send(dbuf,   size(dbuf, kind=4),   MPI_REAL8,    FIRST, tag+I_THREE, comm, mpi_err)
-         if (otype == O_RES) call MPI_Send(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  FIRST, tag+I_FOUR,  comm, mpi_err)
+         call MPI_Send(cg_rl,  size(cg_rl, kind=4),  MPI_INTEGER,  FIRST, tag,         MPI_COMM_WORLD, err_mpi)
+         call MPI_Send(cg_n_b, size(cg_n_b, kind=4), MPI_INTEGER,  FIRST, tag+I_ONE,   MPI_COMM_WORLD, err_mpi)
+         call MPI_Send(cg_off, size(cg_off, kind=4), MPI_INTEGER8, FIRST, tag+I_TWO,   MPI_COMM_WORLD, err_mpi)
+         if (otype == O_OUT) call MPI_Send(dbuf,   size(dbuf, kind=4),   MPI_REAL8,    FIRST, tag+I_THREE, MPI_COMM_WORLD, err_mpi)
+         if (otype == O_RES) call MPI_Send(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  FIRST, tag+I_FOUR,  MPI_COMM_WORLD, err_mpi)
          deallocate(cg_rl, cg_n_b, cg_off)
          if (associated(dbuf)) deallocate(dbuf)
          if (associated(cg_n_o)) deallocate(cg_n_o)
@@ -1124,8 +1124,7 @@ contains
    function set_h5_properties(h5p, nproc_io) result (plist_id)
       use hdf5,     only: HID_T, H5P_FILE_ACCESS_F, h5pcreate_f, h5pset_fapl_mpio_f, &
          &                H5FD_MPIO_COLLECTIVE_F, h5pset_dxpl_mpio_f, H5P_DATASET_XFER_F
-      use MPIF,     only: MPI_INFO_NULL
-      use mpisetup, only: comm
+      use MPIF,     only: MPI_INFO_NULL, MPI_COMM_WORLD
 
       implicit none
       integer(HID_T),  intent(in) :: h5p
@@ -1139,9 +1138,9 @@ contains
          ! have can_i_write flag set
          if (h5p == H5P_FILE_ACCESS_F) then
 #ifdef MPIF08
-            call h5pset_fapl_mpio_f(plist_id, comm%mpi_val, MPI_INFO_NULL%mpi_val, error)  ! really?
+            call h5pset_fapl_mpio_f(plist_id, MPI_COMM_WORLD%mpi_val, MPI_INFO_NULL%mpi_val, error)  ! really?
 #else /* !MPIF08 */
-            call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
+            call h5pset_fapl_mpio_f(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL, error)
 #endif /* !MPIF08 */
          else if (h5p == H5P_DATASET_XFER_F) then
             call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
@@ -1300,4 +1299,3 @@ contains
    end subroutine finalize_write_cg
 
 end module common_hdf5
-! vim: set tw=120:

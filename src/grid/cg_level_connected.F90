@@ -116,7 +116,7 @@ contains
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c, c2f
-      use mpisetup,       only: FIRST, LAST
+      use mpisetup,       only: FIRST, LAST, tag_ub
       use overlap,        only: is_overlap
       use ppp,            only: ppp_main
 
@@ -189,7 +189,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = cg%grid_id + this%dot%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
-               if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow (ri)")
+               if (tag /= seg%tag .or. tag < 0 .or. tag > tag_ub) call die("[cg_level_connected:vertical_prep] tag overflow (ri)")
                nullify(seg%local)
                end associate
             enddo
@@ -212,7 +212,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = cg%grid_id + this%dot%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
-               if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow po)")
+               if (tag /= seg%tag .or. tag < 0 .or. tag > tag_ub) call die("[cg_level_connected:vertical_prep] tag overflow (po))")
                nullify(seg%local)
                end associate
             enddo
@@ -273,7 +273,7 @@ contains
                seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
                tag = ps(g)%n_se + coarse%dot%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
-               if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow (ro)")
+               if (tag /= seg%tag .or. tag < 0 .or. tag > tag_ub) call die("[cg_level_connected:vertical_prep] tag overflow (ro)")
                nullify(seg%local)
                end associate
             enddo
@@ -291,7 +291,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = ps(g)%n_se + coarse%dot%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
-               if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow (pi)")
+               if (tag /= seg%tag .or. tag < 0 .or. tag > tag_ub) call die("[cg_level_connected:vertical_prep] tag overflow (pi)")
                nullify(seg%local)
                end associate
             enddo
@@ -516,13 +516,10 @@ contains
       use domain,           only: dom
       use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
-      use mpisetup,         only: comm, mpi_err, req, status, inflate_req, master
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_Irecv, MPI_Isend, MPI_Waitall
+      use mpisetup,         only: err_mpi, req, inflate_req, master
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
       use named_array,      only: p3
       use named_array_list, only: qna
-#ifdef MPIF08
-      use MPIF,             only: MPI_Status
-#endif
 
       implicit none
 
@@ -537,11 +534,6 @@ contains
       integer(kind=8), dimension(xdim:zdim)              :: off1
       real                                               :: norm
       integer(kind=4)                                    :: nr
-#ifdef MPIF08
-      type(MPI_Status), dimension(:), pointer            :: mpistatus
-#else /* !MPIF08 */
-      integer(kind=4), dimension(:,:), pointer           :: mpistatus
-#endif /* !MPIF08 */
       type(cg_list_element), pointer                     :: cgl
       type(grid_container),  pointer                     :: cg                    !< current grid container
       logical, save                                      :: warned = .false.
@@ -573,7 +565,7 @@ contains
             do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Irecv(cg%ri_tgt%seg(g)%buf(1, 1, 1), size(cg%ri_tgt%seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, cg%ri_tgt%seg(g)%proc, cg%ri_tgt%seg(g)%tag, comm, req(nr), mpi_err)
+               call MPI_Irecv(cg%ri_tgt%seg(g)%buf(1, 1, 1), size(cg%ri_tgt%seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, cg%ri_tgt%seg(g)%proc, cg%ri_tgt%seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
             enddo
          endif
          cgl => cgl%nxt
@@ -643,19 +635,12 @@ contains
             endif
             nr = nr + I_ONE
             if (nr > size(req, dim=1)) call inflate_req
-            call MPI_Isend(cg%ro_tgt%seg(g)%buf(1, 1, 1), size(cg%ro_tgt%seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, cg%ro_tgt%seg(g)%proc, cg%ro_tgt%seg(g)%tag, comm, req(nr), mpi_err)
+            call MPI_Isend(cg%ro_tgt%seg(g)%buf(1, 1, 1), size(cg%ro_tgt%seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, cg%ro_tgt%seg(g)%proc, cg%ro_tgt%seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
          enddo
          cgl => cgl%nxt
       enddo
 
-      if (nr > 0) then
-#ifdef MPIF08
-         mpistatus => status(:nr)
-#else /* !MPIF08 */
-         mpistatus => status(:, :nr)
-#endif /* !MPIF08 */
-         call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
-      endif
+      if (nr > 0) call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
 
       ! copy the received buffers to the right places
       cgl => coarse%first
@@ -703,13 +688,10 @@ contains
       use dataio_pub,       only: msg, warn
       use grid_cont,        only: grid_container
       use grid_helpers,     only: f2c
-      use mpisetup,         only: comm, mpi_err, req, status, inflate_req, master
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_Irecv, MPI_Isend, MPI_Waitall
+      use mpisetup,         only: err_mpi, req, inflate_req, master
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
       use named_array_list, only: qna
       use ppp,              only: ppp_main
-#ifdef MPIF08
-      use MPIF,             only: MPI_Status
-#endif
 
       implicit none
 
@@ -722,11 +704,6 @@ contains
       integer                                            :: g
       integer(kind=8), dimension(xdim:zdim, LO:HI)       :: cse              !< shortcut for coarse segment
       integer(kind=4)                                    :: nr
-#ifdef MPIF08
-      type(MPI_Status), dimension(:), pointer            :: mpistatus
-#else /* !MPIF08 */
-      integer(kind=4), dimension(:,:), pointer           :: mpistatus
-#endif /* !MPIF08 */
       type(cg_list_element),            pointer          :: cgl
       type(grid_container),             pointer          :: cg               !< current grid container
       real, dimension(:,:,:),           pointer          :: p3d
@@ -772,7 +749,7 @@ contains
             do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Irecv(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+               call MPI_Irecv(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
             enddo
          endif
          end associate
@@ -791,20 +768,13 @@ contains
             if (nr > size(req, dim=1)) call inflate_req
             p3d => cg%q(iv)%span(cse)
             seg(g)%buf(:, :, :) = p3d
-            call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+            call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
          enddo
          end associate
          cgl => cgl%nxt
       enddo
 
-      if (nr > 0) then
-#ifdef MPIF08
-         mpistatus => status(:nr)
-#else /* !MPIF08 */
-         mpistatus => status(:, :nr)
-#endif /* !MPIF08 */
-         call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
-      endif
+      if (nr > 0) call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
 
       ! merge received coarse data into one array and interpolate it into the right place
       cgl => fine%first
@@ -933,12 +903,9 @@ contains
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c, c2f
-      use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_Irecv, MPI_Isend, MPI_Waitall
-      use mpisetup,       only: comm, mpi_err, req, status, inflate_req, master
+      use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
+      use mpisetup,       only: err_mpi, req, inflate_req, master
       use ppp,            only: ppp_main
-#ifdef MPIF08
-      use MPIF,         only: MPI_Status
-#endif
 
       implicit none
 
@@ -952,11 +919,6 @@ contains
       type(cg_level_connected_t), pointer :: coarse
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
-#ifdef MPIF08
-      type(MPI_Status), dimension(:), pointer :: mpistatus
-#else /* !MPIF08 */
-      integer(kind=4), dimension(:,:), pointer :: mpistatus
-#endif /* !MPIF08 */
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: cse, fse ! shortcuts for fine segment and coarse segment
       integer(kind=8), dimension(xdim:zdim) :: per, ext_buf
       integer(kind=4) :: nr
@@ -1000,7 +962,7 @@ contains
             do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Irecv(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+               call MPI_Irecv(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
             enddo
          endif
          end associate
@@ -1021,7 +983,7 @@ contains
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
                seg(g)%buf(:, :, :) = cgl%cg%q(ind)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
-               call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+               call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
             enddo
          endif
          end associate
@@ -1030,12 +992,7 @@ contains
 
       if (nr > 0) then
          call ppp_main%start(pbcw_label, PPP_AMR + PPP_MPI)
-#ifdef MPIF08
-         mpistatus => status(:nr)
-#else /* !MPIF08 */
-         mpistatus => status(:, :nr)
-#endif /* !MPIF08 */
-         call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
+         call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
          call ppp_main%stop(pbcw_label, PPP_AMR + PPP_MPI)
       endif
 
@@ -1119,8 +1076,8 @@ contains
       use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c
       use mergebox,       only: wmap  ! this is the last place that uses this module
-      use MPIF,           only: MPI_INTEGER, MPI_INTEGER8, MPI_Alltoall, MPI_Alltoallv
-      use mpisetup,       only: FIRST, LAST, comm, mpi_err, proc
+      use MPIF,           only: MPI_INTEGER, MPI_INTEGER8, MPI_COMM_WORLD, MPI_Alltoall, MPI_Alltoallv
+      use mpisetup,       only: FIRST, LAST, err_mpi, proc
       use overlap,        only: is_overlap
       use tag_pool,       only: t_pool
 
@@ -1313,7 +1270,7 @@ contains
       endif
 
       ! communicate to the processes with coarse data how many segments are required
-      call MPI_Alltoall(pscnt, I_ONE, MPI_INTEGER, prcnt, I_ONE, MPI_INTEGER, comm, mpi_err)
+      call MPI_Alltoall(pscnt, I_ONE, MPI_INTEGER, prcnt, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
 
       psdispl(FIRST) = 0; prdispl(FIRST) = 0
       do j = FIRST+1, LAST
@@ -1335,7 +1292,7 @@ contains
       recvcounts = I_LAST * prcnt
       rdispls = I_LAST * prdispl
       ! OPT: this call can be quite long to complete
-      call MPI_Alltoallv(sseg, sendcounts, sdispls, MPI_INTEGER8, rseg, recvcounts, rdispls, MPI_INTEGER8, comm, mpi_err)
+      call MPI_Alltoallv(sseg, sendcounts, sdispls, MPI_INTEGER8, rseg, recvcounts, rdispls, MPI_INTEGER8, MPI_COMM_WORLD, err_mpi)
 
       ! define areas on the coarse side at fine BND_FC and BND_MPI_FC faces that have to be sent
       cgl => coarse%first

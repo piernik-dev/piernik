@@ -325,14 +325,9 @@ contains
       use constants,        only: xdim, ydim, zdim, cor_dim, I_ONE, I_TWO, LO, HI
       use dataio_pub,       only: die
       use merge_segments,   only: IN, OUT
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_Irecv, MPI_Isend, MPI_Waitall
-      use mpisetup,         only: FIRST, LAST, proc, comm, mpi_err, req, inflate_req
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
+      use mpisetup,         only: FIRST, LAST, proc, err_mpi, req, inflate_req
       use named_array_list, only: wna
-#ifdef MPIF08
-      use MPIF,             only: MPI_Status
-#else /* !MPIF08 */
-      use MPIF,             only: MPI_STATUS_SIZE
-#endif /* !MPIF08 */
 
       implicit none
 
@@ -343,12 +338,7 @@ contains
 
       integer :: i
       integer(kind=4) :: p
-      integer(kind=4) :: nr !< index of first free slot in req and status arrays
-#ifdef MPIF08
-      type(MPI_Status), allocatable, dimension(:)  :: mpistatus  !< status array for MPI_Waitall
-#else /* !MPIF08 */
-      integer(kind=4), allocatable, dimension(:,:) :: mpistatus  !< status array for MPI_Waitall
-#endif /* !MPIF08 */
+      integer(kind=4) :: nr !< index of first free slot in req array
 
       if (.not. this%ms%valid) call die("[cg_list_bnd:internal_boundaries_MPI_merged] this%ms%valid .eqv. .false.")
 
@@ -402,21 +392,15 @@ contains
                   enddo
                endif
                if (nr+I_TWO >  ubound(req(:), dim=1)) call inflate_req
-               call MPI_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    comm, req(nr+I_ONE), mpi_err)
-               call MPI_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, comm, req(nr+I_TWO), mpi_err)
+               call MPI_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
+               call MPI_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
                nr = nr + I_TWO
             endif
 
          endif
       enddo
 
-#ifdef MPIF08
-      allocate(mpistatus(nr))
-#else /* !MPIF08 */
-      allocate(mpistatus(MPI_STATUS_SIZE, nr))
-#endif /* !MPIF08 */
-      call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
-      deallocate(mpistatus)
+      call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
 
       do p = FIRST, LAST
          if (p /= proc) then
@@ -489,14 +473,9 @@ contains
       use dataio_pub,       only: die, warn
       use grid_cont,        only: grid_container
       use grid_cont_bnd,    only: segment
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_Irecv, MPI_Isend, MPI_Waitall
-      use mpisetup,         only: comm, mpi_err, req, inflate_req
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
+      use mpisetup,         only: err_mpi, req, inflate_req
       use named_array_list, only: wna
-#ifdef MPIF08
-      use MPIF,             only: MPI_Status
-#else /* !MPIF08 */
-      use MPIF,             only: MPI_STATUS_SIZE
-#endif /* !MPIF08 */
 
       implicit none
 
@@ -506,18 +485,13 @@ contains
       logical, dimension(xdim:cor_dim), intent(in) :: dmask !< .true. for the directions we want to exchange
 
       integer                                      :: g, d
-      integer(kind=4)                              :: nr     !< index of first free slot in req and status arrays
+      integer(kind=4)                              :: nr     !< index of first free slot in req array
       type(grid_container),     pointer            :: cg
       type(cg_list_element),    pointer            :: cgl
       real, dimension(:,:,:),   pointer            :: pa3d
       real, dimension(:,:,:,:), pointer            :: pa4d
       logical                                      :: active
       type(segment), pointer                       :: i_seg, o_seg !< shortcuts
-#ifdef MPIF08
-      type(MPI_Status), allocatable, dimension(:)  :: mpistatus  !< status array for MPI_Waitall
-#else /* !MPIF08 */
-      integer(kind=4), allocatable, dimension(:,:) :: mpistatus  !< status array for MPI_Waitall
-#endif /* !MPIF08 */
 
       nr = 0
       cgl => this%first
@@ -555,7 +529,7 @@ contains
                            allocate(i_seg%buf(i_seg%se(xdim, HI) - i_seg%se(xdim, LO) + 1, &
                                 &             i_seg%se(ydim, HI) - i_seg%se(ydim, LO) + 1, &
                                 &             i_seg%se(zdim, HI) - i_seg%se(zdim, LO) + 1))
-                           call MPI_Irecv(i_seg%buf, size(i_seg%buf, kind=4), MPI_DOUBLE_PRECISION, i_seg%proc, i_seg%tag, comm, req(nr+I_ONE), mpi_err)
+                           call MPI_Irecv(i_seg%buf, size(i_seg%buf, kind=4), MPI_DOUBLE_PRECISION, i_seg%proc, i_seg%tag, MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
 
                            if (allocated(o_seg%buf)) then
                               call warn("clb:ib allocated o-buf")
@@ -566,7 +540,7 @@ contains
                                 &             o_seg%se(zdim, HI) - o_seg%se(zdim, LO) + 1))
                            pa3d => cg%q(ind)%span(o_seg%se(:,:))
                            o_seg%buf(:,:,:) = pa3d(:,:,:)
-                           call MPI_Isend(o_seg%buf, size(o_seg%buf, kind=4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, comm, req(nr+I_TWO), mpi_err)
+                           call MPI_Isend(o_seg%buf, size(o_seg%buf, kind=4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
 
                         else
                            if (ind > ubound(cg%w(:), dim=1) .or. ind < lbound(cg%w(:), dim=1)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] wrong 4d index")
@@ -579,7 +553,7 @@ contains
                                 &              i_seg%se(xdim, HI) - i_seg%se(xdim, LO) + 1, &
                                 &              i_seg%se(ydim, HI) - i_seg%se(ydim, LO) + 1, &
                                 &              i_seg%se(zdim, HI) - i_seg%se(zdim, LO) + 1))
-                           call MPI_Irecv(i_seg%buf4, size(i_seg%buf4, kind=4), MPI_DOUBLE_PRECISION, i_seg%proc, i_seg%tag, comm, req(nr+I_ONE), mpi_err)
+                           call MPI_Irecv(i_seg%buf4, size(i_seg%buf4, kind=4), MPI_DOUBLE_PRECISION, i_seg%proc, i_seg%tag, MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
 
                            if (allocated(o_seg%buf4)) then
                               call warn("clb:ib allocated o-buf")
@@ -599,7 +573,7 @@ contains
                            !<
                            pa4d => cg%w(ind)%span(o_seg%se(:,:))
                            o_seg%buf4(:,:,:,:) = pa4d(:,:,:,:)
-                           call MPI_Isend(o_seg%buf4, size(o_seg%buf4, kind=4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, comm, req(nr+I_TWO), mpi_err)
+                           call MPI_Isend(o_seg%buf4, size(o_seg%buf4, kind=4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
 
                         endif
                         nr = nr + I_TWO
@@ -614,13 +588,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-#ifdef MPIF08
-      allocate(mpistatus(nr))
-#else /* !MPIF08 */
-      allocate(mpistatus(MPI_STATUS_SIZE, nr))
-#endif /* !MPIF08 */
-      call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
-      deallocate(mpistatus)
+      call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
 
       ! Move the received data from buffers to the right place. Deallocate buffers
       cgl => this%first

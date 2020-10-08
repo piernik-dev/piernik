@@ -35,7 +35,7 @@ module tag_pool
    private
    public :: t_pool
 
-   integer(kind=4), parameter :: POOL_SIZE = 2**16  !< number of entries in a single pool. This one gives 2**15 pools. Try to make it smaller if you ever run out of pools.
+   integer(kind=4), parameter :: POOL_SIZE = 2**16  !< number of entries in a single pool. This one gives floor(tag_ub/2**16) pools. Try to make it smaller if you ever run out of pools.
    integer(kind=4), parameter :: FREE = -2147483647 !< -2**31+1, special id, that means a given pool is free
 
    type :: tag_pool_t
@@ -68,6 +68,7 @@ contains
 
       use constants,  only: INVALID, I_ONE
       use dataio_pub, only: die
+      use mpisetup,   only: tag_ub
 
       implicit none
 
@@ -96,7 +97,8 @@ contains
             exit
          endif
       enddo
-      if (t_start == INVALID .or. t_end == INVALID .or. t_start < 0 .or. t_end < 0) call die("[tag_pool:get] Cannot give valid pool of tags")
+      if (t_start == INVALID .or. t_end == INVALID .or. t_start < 0 .or. t_end < 0 .or. t_end > tag_ub) &
+           call die("[tag_pool:get] Cannot give valid pool of tags")
 
    end subroutine get
 
