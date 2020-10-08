@@ -75,7 +75,7 @@ $BASE_DOMAIN
  /
 
  $COSMIC_RAY_SPECTRUM
-    use_cresp   = .true.   ! enables usage of cresp_update_grid @fluidupdate
+    use_cresp_evol   = .true.   ! enables usage of cresp_update_grid @fluidupdate
     cre_eff     = 0.01     ! factor scaling sn explosion energy to total spectrum energy
     cfl_cre     = 0.1
     p_min_fix = 1.0     ! momentum fixed grid
