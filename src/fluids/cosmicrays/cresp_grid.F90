@@ -55,7 +55,7 @@ module cresp_grid
       use dataio_pub,       only: printinfo
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_n, iarr_cre_e, ncre
-      use initcrspectrum,   only: norm_init_spectrum, dfpq, check_if_dump_fpq
+      use initcrspectrum,   only: norm_init_spectrum, dfpq, check_if_dump_fpq, use_cresp
       use mpisetup,         only: master
       use named_array_list, only: wna
 
@@ -63,6 +63,8 @@ module cresp_grid
 
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+
+      if (.not. use_cresp) return
 
       call cresp_initialize_guess_grids
       call cresp_allocate_all
