@@ -166,7 +166,7 @@ contains
 
       real function modify_timer(tp,reset)
 
-         use mpi, only: MPI_Wtime
+         use MPIF, only: MPI_Wtime
 
          implicit none
 
@@ -187,7 +187,7 @@ contains
 
       subroutine insert_timer(tp, item)
 
-         use mpi, only: MPI_Wtime
+         use MPIF, only: MPI_Wtime
 
          implicit none
 
@@ -296,8 +296,8 @@ contains
 
       use constants,  only: I_ONE, half
       use dataio_pub, only: msg, printinfo
-      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,   only: comm, mpi_err, master, FIRST
+      use MPIF,       only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, MPI_Reduce
+      use mpisetup,   only: err_mpi, master, FIRST
 
       implicit none
       integer(kind=8), intent(in) :: total_ncells !< total number of %grid cells
@@ -325,7 +325,7 @@ contains
       cpusecs  =  int ( cputot + half   ) - 3600 * cpuhours &
                                         - 60   * cpumins
 
-      call MPI_Reduce(cputot, cpuallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, mpi_err)
+      call MPI_Reduce(cputot, cpuallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, MPI_COMM_WORLD, err_mpi)
 
       if (master) then
 

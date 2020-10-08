@@ -883,6 +883,7 @@ contains
 
    end subroutine sg_dist_to_edge
 
+#ifdef HDF5
 !> \brief Write dmax to the restart file
 
    subroutine sg_attrs_wr(file_id)
@@ -986,5 +987,6 @@ contains
       end select
 
    end subroutine sg_vars
+#endif /* HDF5 */
 
 end module initproblem

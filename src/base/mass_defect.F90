@@ -62,12 +62,12 @@ contains
    subroutine update_magic_mass
 
       use fluidindex,  only: flind
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,    only: comm, mpi_err, FIRST, master
+      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, MPI_Reduce
+      use mpisetup,    only: err_mpi, FIRST, master
 
       implicit none
 
-      call MPI_Reduce(local_magic_mass, magic_mass_step, int(flind%fluids, kind=4), MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, mpi_err)
+      call MPI_Reduce(local_magic_mass, magic_mass_step, int(flind%fluids, kind=4), MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, MPI_COMM_WORLD, err_mpi)
       local_magic_mass(:) = 0.0
 
       if (master) magic_mass(:) = magic_mass(:) + magic_mass_step(:)

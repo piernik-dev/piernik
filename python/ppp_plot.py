@@ -160,12 +160,12 @@ class PPP:
         self.bigbang = None
         file = open(self.name, 'r')
         for line in file:
-            l = line.split()
+            ln = line.split()
             if self.bigbang is None:
-                self.bigbang = float(l[1]) - t_bias
-            self._add(int(l[0]), line[line.index(l[2]):].strip(), float(l[1]) + self.bigbang * (-1. if float(l[1]) > 0. else 1.))  # proc, label, time
-            if int(l[0]) >= self.nthr:
-                self.nthr = int(l[0]) + 1
+                self.bigbang = float(ln[1]) - t_bias
+            self._add(int(ln[0]), line[line.index(ln[2]):].strip(), float(ln[1]) + self.bigbang * (-1. if float(ln[1]) > 0. else 1.))  # proc, label, time
+            if int(ln[0]) >= self.nthr:
+                self.nthr = int(ln[0]) + 1
         self.descr = "'%s' (%d thread%s)" % (self.name, self.nthr, "s" if self.nthr > 1 else "")
 
     def _add(self, proc, label, time):
@@ -352,6 +352,7 @@ class PPPset:
             self.out += "pause mouse close\n"
         else:
             self.out += 'show title; print "No data to plot"'
+
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                  description="Piernik Precise Profiling Presenter", epilog="""

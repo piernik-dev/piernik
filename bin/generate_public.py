@@ -33,6 +33,7 @@ def pretty_format(list, col):
         str = str + item + ", "
     print str.rstrip(", ")
 
+
 if __name__ == "__main__":
     from optparse import OptionParser
     usage = "usage: %prog module_name line_lenght FILES\n\nExample: bin/generate_public.py grid 140 $(find . -name \"*F90\")"

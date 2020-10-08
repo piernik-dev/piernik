@@ -21,10 +21,10 @@ for line in data:
     if re.search(namelist, line):
         print('$%s' % (line.split('&')[-1]))
     if re.search(change, line):
-        l = line.split('* ')[-1].strip(',')
-        l = re.sub(' *"', '"', l)
-        l = re.sub(' *, *', ', ', l)
-        l = re.sub(' *= *', ' = ', l)
-        print('  %s' % l)
+        ln = line.split('* ')[-1].strip(',')
+        ln = re.sub(' *"', '"', ln)
+        ln = re.sub(' *, *', ', ', ln)
+        ln = re.sub(' *= *', ' = ', ln)
+        print('  %s' % ln)
     if re.search(slash, line.strip()):
         print('/\n')
