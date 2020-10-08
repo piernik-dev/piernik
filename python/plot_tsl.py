@@ -19,19 +19,20 @@ if len(args.files) < 1:
 data = []
 
 for fn in args.files:
-    f = open(fn, "rb")
+    f = open(fn, "r")
     tab = [line.strip() for line in f.readlines()]
     f.close()
     header = np.array(tab[0][1:].split())
     if args.f is None:
         print("There are following fields available in %s" % fn)
-        print header
+        print(header)
     else:
         field = args.f[0]
         fno = np.where(header == field)[0][0]
 
-    tab = np.array([map(np.float64, line.split())
-                    for line in filter(remove_comments.match, tab)])
+    tab_work = tab   # problems with map in python3+
+    tab = np.array([ [float(item) for item in line.split()]
+                    for line in filter(remove_comments.match, tab_work) ])
     data.append(tab)
 
 fig = plt.figure()
