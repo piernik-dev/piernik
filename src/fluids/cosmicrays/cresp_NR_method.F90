@@ -273,8 +273,8 @@ contains
 
       integer(kind=4) :: i, j, ilim = 0, qmaxiter = 100
       logical         :: exit_code_p, exit_code_f
-      real            :: a_min_lo = big, a_max_lo = small, a_min_up = big, a_max_up = small, n_min_lo = big, n_max_lo = small, n_min_up = big, n_max_up = small, &
-                       & a_min_q = small, a_max_q = small, q_in3, pq_cmplx
+      real                   :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
+      real, dimension(2)     :: a_min = big, a_max = small, n_min = big, n_max = small
 
       q_space = zero
       do i = 1, int(half*helper_arr_dim)
@@ -293,32 +293,33 @@ contains
          do j = 1, helper_arr_dim
             q_in3 = three - q_space(j)
             pq_cmplx = p_space(i)**q_in3
-            a_min_lo = min(a_min_lo, abs(encp_func_2_zero(LO, p_space(i),           zero, q_in3)))
-            n_min_lo = min(n_min_lo, abs(   n_func_2_zero(    p_space(i), one,      zero, q_in3)))
-            a_min_up = min(a_min_up, abs(encp_func_2_zero(HI, p_space(i),           zero, q_in3)))
-            n_min_up = min(n_min_up, abs(   n_func_2_zero(    p_space(i), pq_cmplx, zero, q_in3)))
 
-            a_max_lo = max(a_max_lo, abs(encp_func_2_zero(LO, p_space(i),           zero, q_in3)))
-            n_max_lo = max(n_max_lo, abs(   n_func_2_zero(    p_space(i), one,      zero, q_in3)))
-            a_max_up = max(a_max_up, abs(encp_func_2_zero(HI, p_space(i),           zero, q_in3)))
-            n_max_up = max(n_max_up, abs(   n_func_2_zero(    p_space(i), pq_cmplx, zero, q_in3)))
+            a_min(LO) = min(a_min(LO), abs(encp_func_2_zero(LO, p_space(i),           zero, q_in3)))
+            n_min(LO) = min(n_min(LO), abs(   n_func_2_zero(    p_space(i), one,      zero, q_in3)))
+            a_min(HI) = min(a_min(HI), abs(encp_func_2_zero(HI, p_space(i),           zero, q_in3)))
+            n_min(HI) = min(n_min(HI), abs(   n_func_2_zero(    p_space(i), pq_cmplx, zero, q_in3)))
+
+            a_max(LO) = max(a_max(LO), abs(encp_func_2_zero(LO, p_space(i),           zero, q_in3)))
+            n_max(LO) = max(n_max(LO), abs(   n_func_2_zero(    p_space(i), one,      zero, q_in3)))
+            a_max(HI) = max(a_max(HI), abs(encp_func_2_zero(HI, p_space(i),           zero, q_in3)))
+            n_max(HI) = max(n_max(HI), abs(   n_func_2_zero(    p_space(i), pq_cmplx, zero, q_in3)))
          enddo
       enddo
 
-      a_min_lo = 0.2       ! BEWARE: magic numbers!
-      a_max_lo = 0.999999
-      a_min_up = 1.000005
-      a_max_up = 200.0
-      n_min_lo = 1.0e-11
-      n_max_lo = 5000.0
-      n_min_up = 1.0e-12
-      n_max_up = 1000.0
+!       a_min(LO) = 0.2       ! BEWARE: magic numbers!
+!       a_max(LO) = 0.999999
+!       a_min(HI) = 1.000005
+!       a_max(HI) = 200.0
+!       n_min(LO) = 1.0e-11
+!       n_max(LO) = 5000.0
+!       n_min(HI) = 1.0e-12
+!       n_max(HI) = 1000.0
 
       do i = 1, arr_dim
-         alpha_tab_lo(i) = ind_to_flog(i, a_min_lo, a_max_lo, arr_dim) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim-1)*real(i-1))
-         alpha_tab_up(i) = ind_to_flog(i, a_min_up, a_max_up, arr_dim) ! a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim-1)*real(i-1))
-         n_tab_lo(i)     = ind_to_flog(i, n_min_lo, n_max_lo, arr_dim) ! n_min_lo * ten**((log10(n_max_lo/n_min_lo))/real(arr_dim-1)*real(i-1))
-         n_tab_up(i)     = ind_to_flog(i, n_min_up, n_max_up, arr_dim) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1)*real(i-1))
+         alpha_tab_lo(i) = ind_to_flog(i, a_min(LO), a_max(LO), arr_dim) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim-1)*real(i-1))
+         alpha_tab_up(i) = ind_to_flog(i, a_min(HI), a_max(HI), arr_dim) ! a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim-1)*real(i-1))
+         n_tab_lo(i)     = ind_to_flog(i, n_min(LO), n_max(LO), arr_dim) ! n_min_lo * ten**((log10(n_max_lo/n_min_lo))/real(arr_dim-1)*real(i-1))
+         n_tab_up(i)     = ind_to_flog(i, n_min(HI), n_max(HI), arr_dim) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1)*real(i-1))
       enddo
 
       if (e_small_approx_init_cond == 1) then
