@@ -324,46 +324,42 @@ contains
 
       if (e_small_approx_init_cond == 1) then
          write (*, "(A36)", advance="no") "Reading (up) boundary ratio files..."
-         do j = 1, 2
-            call read_NR_guess_grid(p_ratios_up, "p_ratios_", HI, exit_code_p)
-            call read_NR_guess_grid(f_ratios_up, "f_ratios_", HI, exit_code_f)
+         call read_NR_guess_grid(p_ratios_up, "p_ratios_", HI, exit_code_p)
+         call read_NR_guess_grid(f_ratios_up, "f_ratios_", HI, exit_code_f)
 
-            if (exit_code_f .or. exit_code_p .or. force_init_NR) then
-   ! Setting up the "guess grid" for p_up case
-               call fill_boundary_grid(HI, p_ratios_up, f_ratios_up)
-            else
-               print *," >> Will not solve ratios table (up), reading data from file instead."
-            endif
+         if (exit_code_f .or. exit_code_p .or. force_init_NR) then
+! Setting up the "guess grid" for p_up case
+            call fill_boundary_grid(HI, p_ratios_up, f_ratios_up)
+         else
+            print *," >> Will not solve ratios table (up), reading data from file instead."
+         endif
 
-            if (NR_run_refine_pf) then
-               call assoc_pointers(HI)
-               call refine_all_directions(HI)
-            endif
+         if (NR_run_refine_pf) then
+            call assoc_pointers(HI)
+            call refine_all_directions(HI)
+         endif
 
-            call save_NR_guess_grid(p_ratios_up, "p_ratios_", HI)
-            call save_NR_guess_grid(f_ratios_up, "f_ratios_", HI)
-         enddo
+         call save_NR_guess_grid(p_ratios_up, "p_ratios_", HI)
+         call save_NR_guess_grid(f_ratios_up, "f_ratios_", HI)
 
          write (*, "(A36)", advance="no") "Reading (lo) boundary ratio files"
-         do j = 1, 2
-            call read_NR_guess_grid(p_ratios_lo, "p_ratios_", LO, exit_code_p)
-            call read_NR_guess_grid(f_ratios_lo, "f_ratios_", LO, exit_code_f)
+         call read_NR_guess_grid(p_ratios_lo, "p_ratios_", LO, exit_code_p)
+         call read_NR_guess_grid(f_ratios_lo, "f_ratios_", LO, exit_code_f)
 
-            if (exit_code_f .or. exit_code_p .or. force_init_NR) then
-   ! Setting up the "guess grid" for p_lo case
-               call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo)
-            else
-               print *," >> Will not solve ratios table (lo), reading data from file instead."
-            endif
+         if (exit_code_f .or. exit_code_p .or. force_init_NR) then
+! Setting up the "guess grid" for p_lo case
+            call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo)
+         else
+            print *," >> Will not solve ratios table (lo), reading data from file instead."
+         endif
 
-            if (NR_run_refine_pf) then
-               call assoc_pointers(LO)
-               call refine_all_directions(LO)
-            endif
+         if (NR_run_refine_pf) then
+            call assoc_pointers(LO)
+            call refine_all_directions(LO)
+         endif
 
-            call save_NR_guess_grid(p_ratios_lo, "p_ratios_", LO)
-            call save_NR_guess_grid(f_ratios_lo, "f_ratios_", LO)
-         enddo
+         call save_NR_guess_grid(p_ratios_lo, "p_ratios_", LO)
+         call save_NR_guess_grid(f_ratios_lo, "f_ratios_", LO)
       endif
 
       a_min_q = one  + epsilon(one)
