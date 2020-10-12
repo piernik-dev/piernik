@@ -65,6 +65,15 @@ module cresp_NR_method
 
    procedure (function_pointer_2D), pointer :: selected_function_2D => null()
 
+   type     map_header
+      integer  :: s_dim1, s_dim2
+      real     :: s_es
+      real     :: s_pr
+      real     :: s_qbig
+      real     :: s_c
+      real     :: s_amin, s_amax, s_nmin, s_nmax
+   end type map_header
+
 !----------------------------------------------------------------------------------------------------
 
 contains
@@ -266,8 +275,9 @@ contains
    subroutine fill_guess_grids
 
       use constants,      only: zero, half, one, three, I_ONE, big, small
-      use initcrspectrum, only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio
-      use dataio_pub,     only: die
+      use dataio_pub,     only: die, msg, printinfo
+      use initcrspectrum, only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio, e_small
+      use cresp_variables,only: clight_cresp
 
       implicit none
 
@@ -275,6 +285,7 @@ contains
       logical         :: exit_code_p, exit_code_f
       real                   :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
       real, dimension(2)     :: a_min = big, a_max = small, n_min = big, n_max = small
+      type(map_header)       :: hdr_init, hdr_read
 
       q_space = zero
       do i = 1, int(half*helper_arr_dim)
@@ -315,6 +326,13 @@ contains
 !       n_min(HI) = 1.0e-12
 !       n_max(HI) = 1000.0
 
+      hdr_init%s_es     = e_small
+      hdr_init%s_dim1   = arr_dim
+      hdr_init%s_dim2   = arr_dim
+      hdr_init%s_pr     = max_p_ratio
+      hdr_init%s_c      = clight_cresp
+
+
       do i = 1, arr_dim
          alpha_tab_lo(i) = ind_to_flog(i, a_min(LO), a_max(LO), arr_dim) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim-1)*real(i-1))
          alpha_tab_up(i) = ind_to_flog(i, a_min(HI), a_max(HI), arr_dim) ! a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim-1)*real(i-1))
@@ -323,15 +341,22 @@ contains
       enddo
 
       if (e_small_approx_init_cond == 1) then
-         write (*, "(A36)", advance="no") "Reading (up) boundary ratio files..."
+
+         hdr_init%s_amin   = alpha_tab_up(1)
+         hdr_init%s_amax   = alpha_tab_up(arr_dim)
+         hdr_init%s_nmin   = n_tab_up(1)
+         hdr_init%s_nmin   = n_tab_up(arr_dim)
+
+         call NR_maps_read_header("p_ratios_"//bound_name(HI), hdr_read, exit_code_p)
+         call NR_maps_check_header(hdr_read, hdr_init, exit_code_p)
+
+         write (msg, "(A29,A2,A22)") "[cresp_NR_method] Preparing (",bound_name(HI), ") boundary ratio files"; call printinfo(msg)
          call read_NR_guess_grid(p_ratios_up, "p_ratios_", HI, exit_code_p)
          call read_NR_guess_grid(f_ratios_up, "f_ratios_", HI, exit_code_f)
 
          if (exit_code_f .or. exit_code_p .or. force_init_NR) then
 ! Setting up the "guess grid" for p_up case
             call fill_boundary_grid(HI, p_ratios_up, f_ratios_up)
-         else
-            print *," >> Will not solve ratios table (up), reading data from file instead."
          endif
 
          if (NR_run_refine_pf) then
@@ -342,15 +367,22 @@ contains
          call save_NR_guess_grid(p_ratios_up, "p_ratios_", HI)
          call save_NR_guess_grid(f_ratios_up, "f_ratios_", HI)
 
-         write (*, "(A36)", advance="no") "Reading (lo) boundary ratio files"
+!--------------------
+         hdr_init%s_amin   = alpha_tab_lo(1)
+         hdr_init%s_amax   = alpha_tab_lo(arr_dim)
+         hdr_init%s_nmin   = n_tab_lo(1)
+         hdr_init%s_nmin   = n_tab_lo(arr_dim)
+
+         write (msg, "(A29,A2,A22)") "[cresp_NR_method] Preparing (",bound_name(LO), ") boundary ratio files"; call printinfo(msg)
+         call NR_maps_read_header("p_ratios_"//bound_name(LO), hdr_read, exit_code_p)
+         call NR_maps_check_header(hdr_read, hdr_init, exit_code_p)
+
          call read_NR_guess_grid(p_ratios_lo, "p_ratios_", LO, exit_code_p)
          call read_NR_guess_grid(f_ratios_lo, "f_ratios_", LO, exit_code_f)
 
          if (exit_code_f .or. exit_code_p .or. force_init_NR) then
 ! Setting up the "guess grid" for p_lo case
             call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo)
-         else
-            print *," >> Will not solve ratios table (lo), reading data from file instead."
          endif
 
          if (NR_run_refine_pf) then
@@ -492,11 +524,11 @@ contains
 
       fill_p = zero ; fill_f = zero
       x_step = zero
-      write(msg, "(A,I1,A,I3,A)") "[cresp_NR_method:fill_boundary_grid] Solving solution maps for cutoff case (",bound_case,"): DIM=",arr_dim,"**2"
+      write(msg, "(A,A2,A,I3,A)") "[cresp_NR_method:fill_boundary_grid] Solving solution maps for cutoff case (",bound_name(bound_case),"): DIM=",arr_dim,"**2"
       call printinfo(msg)
 
       do i = 1, arr_dim
-         call add_dot
+         call add_dot( i .eq. arr_dim )
          new_line = .true.
          prev_solution = prev_solution_1 ! easier to find when not searching from the top
          do j = 1, arr_dim
@@ -1397,6 +1429,72 @@ contains
       close(31)
 
    end subroutine read_NR_guess_grid
+
+   subroutine NR_maps_read_header(var_name, hdr, exit_code)
+
+      use dataio_pub,   only: msg, printinfo, warn
+      use constants,    only: fmt_len
+
+      implicit none
+
+      logical                          :: exit_code
+      integer(kind=4), parameter       :: flun = 31
+      character(len=flen)              :: f_name
+      type(map_header), intent(inout)  :: hdr
+      character(len=fmt_len)           :: fmt
+      character(len=*), intent(in)     :: var_name
+      integer(kind=4)                  :: fstat, rstat
+
+      fstat = 0
+      rstat = 0
+      f_name = var_name // extension
+      fmt = "(1E15.8,2I10,10E22.15)"
+
+      open(flun, file=f_name, status="old", position="rewind", IOSTAT=fstat)
+
+      if (fstat > 0) then
+         write(msg,"(A8,I4,A8,2A20)") "IOSTAT:", fstat, ": file ", f_name, " does not exist!"; call warn(msg)
+         exit_code = .true.
+         return
+      endif
+
+      read(flun, fmt, IOSTAT=rstat) hdr%s_es, hdr%s_dim1, hdr%s_dim2, hdr%s_pr, hdr%s_qbig, hdr%s_c, hdr%s_amin, hdr%s_amax, hdr%s_nmin, hdr%s_nmax
+      if (rstat > 0 ) then  ! should work for older files using the same format
+         read(flun, fmt, IOSTAT=rstat) hdr%s_es, hdr%s_dim1, hdr%s_dim2, hdr%s_pr, hdr%s_qbig, hdr%s_c
+         hdr%s_amin = 0.
+         hdr%s_amax = 0.
+         hdr%s_nmin = 0.
+         hdr%s_nmax = 0.
+      endif
+
+      exit_code = .false.
+      close(flun)
+
+   end subroutine NR_maps_read_header
+
+   subroutine NR_maps_check_header(hdr, hdr_std, hdr_equal)
+
+      use constants, only: zero
+      use func,      only: operator(.equals.)
+
+      implicit none
+
+      type(map_header), intent(in)  :: hdr, hdr_std
+      logical                       :: hdr_equal
+
+      hdr_equal = (hdr%s_es .equals. hdr_std%s_es) ;     if (.not. hdr_equal) return
+      hdr_equal = (hdr%s_dim1 .eq.   hdr_std%s_dim1) ;   if (.not. hdr_equal) return
+      hdr_equal = (hdr%s_dim2 .eq.   hdr_std%s_dim2) ;   if (.not. hdr_equal) return
+      hdr_equal = (hdr%s_pr .equals. hdr_std%s_pr);      if (.not. hdr_equal) return
+      hdr_equal = (hdr%s_c  .equals. hdr_std%s_c);       if (.not. hdr_equal) return
+
+!  WARNING allowing to read old solution maps; without saved a_tab and n_tab limits
+      hdr_equal = ((hdr%s_amin .equals. hdr_std%s_amin) .or. (hdr%s_amin .equals. zero)); if (.not. hdr_equal) return
+      hdr_equal = ((hdr%s_amax .equals. hdr_std%s_amax) .or. (hdr%s_amax .equals. zero)); if (.not. hdr_equal) return
+      hdr_equal = ((hdr%s_nmin .equals. hdr_std%s_nmin) .or. (hdr%s_nmin .equals. zero)); if (.not. hdr_equal) return
+      hdr_equal = ((hdr%s_nmax .equals. hdr_std%s_nmax) .or. (hdr%s_nmax .equals. zero)); if (.not. hdr_equal) return
+
+   end subroutine NR_maps_check_header
 !----------------------------------------------------------------------------------------------------
    real function ind_to_flog(ind, min_in, max_in, length)
 
@@ -1467,15 +1565,21 @@ contains
    end subroutine initialize_arrays
 !----------------------------------------------------------------------------------------------------
 
-   subroutine add_dot
+   subroutine add_dot(is_finishing)
 
       use constants, only: stdout
       use mpisetup,  only: master
 
       implicit none
 
+      logical   ::  is_finishing
+
       if (master) then
-         write(stdout,'(a)',advance='no')"."
+         if (.not. is_finishing) then
+            write(stdout,'(a)',advance='no')"."
+         else
+            write(stdout,'(a)',advance='yes')"."
+         endif
       endif
 
    end subroutine add_dot
