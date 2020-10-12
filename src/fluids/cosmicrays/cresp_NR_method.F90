@@ -1470,6 +1470,7 @@ contains
    subroutine check_NR_smap_header(hdr, hdr_std, hdr_equal)
 
       use constants, only: zero
+      use dataio_pub,only: msg, printinfo, warn
       use func,      only: operator(.equals.)
 
       implicit none
@@ -1477,17 +1478,27 @@ contains
       type(map_header), intent(in)  :: hdr, hdr_std
       logical                       :: hdr_equal
 
-      hdr_equal = (hdr%s_es .equals. hdr_std%s_es) ;     if (.not. hdr_equal) return
-      hdr_equal = (hdr%s_dim1 .eq.   hdr_std%s_dim1) ;   if (.not. hdr_equal) return
-      hdr_equal = (hdr%s_dim2 .eq.   hdr_std%s_dim2) ;   if (.not. hdr_equal) return
-      hdr_equal = (hdr%s_pr .equals. hdr_std%s_pr);      if (.not. hdr_equal) return
-      hdr_equal = (hdr%s_c  .equals. hdr_std%s_c);       if (.not. hdr_equal) return
+      hdr_equal = .true.
+
+      hdr_equal = hdr_equal .and. (hdr%s_es .equals. hdr_std%s_es)
+      hdr_equal = hdr_equal .and. (hdr%s_dim1 .eq.   hdr_std%s_dim1)
+      hdr_equal = hdr_equal .and. (hdr%s_dim2 .eq.   hdr_std%s_dim2)
+      hdr_equal = hdr_equal .and. (hdr%s_pr .equals. hdr_std%s_pr)
+      hdr_equal = hdr_equal .and. (hdr%s_c  .equals. hdr_std%s_c)
 
 !  WARNING allowing to read old solution maps; without saved a_tab and n_tab limits
-      hdr_equal = ((hdr%s_amin .equals. hdr_std%s_amin) .or. (hdr%s_amin .equals. zero)); if (.not. hdr_equal) return
-      hdr_equal = ((hdr%s_amax .equals. hdr_std%s_amax) .or. (hdr%s_amax .equals. zero)); if (.not. hdr_equal) return
-      hdr_equal = ((hdr%s_nmin .equals. hdr_std%s_nmin) .or. (hdr%s_nmin .equals. zero)); if (.not. hdr_equal) return
-      hdr_equal = ((hdr%s_nmax .equals. hdr_std%s_nmax) .or. (hdr%s_nmax .equals. zero)); if (.not. hdr_equal) return
+      hdr_equal = hdr_equal .and. ((hdr%s_amin .equals. hdr_std%s_amin) .or. (hdr%s_amin .equals. zero))
+      hdr_equal = hdr_equal .and. ((hdr%s_amax .equals. hdr_std%s_amax) .or. (hdr%s_amax .equals. zero))
+      hdr_equal = hdr_equal .and. ((hdr%s_nmin .equals. hdr_std%s_nmin) .or. (hdr%s_nmin .equals. zero))
+      hdr_equal = hdr_equal .and. ((hdr%s_nmax .equals. hdr_std%s_nmax) .or. (hdr%s_nmax .equals. zero))
+
+      if (.not. hdr_equal) then
+         write(msg,"(A117)") "[cresp_NR_method:check_NR_smap_header] Headers differ (provided in ratios files vs. values resulting from parameters)"
+         call warn(msg)
+      else
+         write(msg,"(A115)") "[cresp_NR_method:check_NR_smap_header] Headers match (provided in ratios files vs. values resulting from parameters)"
+         call printinfo(msg)
+      endif
 
    end subroutine check_NR_smap_header
 !----------------------------------------------------------------------------------------------------
