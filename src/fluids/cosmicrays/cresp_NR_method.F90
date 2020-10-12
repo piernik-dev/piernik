@@ -281,11 +281,11 @@ contains
 
       implicit none
 
-      integer(kind=4) :: i, j, ilim = 0, qmaxiter = 100
-      logical         :: exit_code_p, exit_code_f
-      real                   :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
-      real, dimension(2)     :: a_min = big, a_max = small, n_min = big, n_max = small
-      type(map_header)       :: hdr_init, hdr_read
+      integer(kind=4)      :: i, j, ilim = 0, qmaxiter = 100
+      logical              :: read_error, headers_match
+      real                 :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
+      real, dimension(2)   :: a_min = big, a_max = small, n_min = big, n_max = small
+      type(map_header)     :: hdr_init, hdr_read
 
       q_space = zero
       do i = 1, int(half*helper_arr_dim)
@@ -347,15 +347,18 @@ contains
          hdr_init%s_nmin   = n_tab_up(1)
          hdr_init%s_nmin   = n_tab_up(arr_dim)
 
-         call NR_maps_read_header("p_ratios_"//bound_name(HI), hdr_read, exit_code_p)
-         call NR_maps_check_header(hdr_read, hdr_init, exit_code_p)
+         write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(HI), ") boundary"
+         call printinfo(msg)
 
-         write (msg, "(A29,A2,A22)") "[cresp_NR_method] Preparing (",bound_name(HI), ") boundary ratio files"; call printinfo(msg)
-         call read_NR_guess_grid(p_ratios_up, "p_ratios_", HI, exit_code_p)
-         call read_NR_guess_grid(f_ratios_up, "f_ratios_", HI, exit_code_f)
-
-         if (exit_code_f .or. exit_code_p .or. force_init_NR) then
-! Setting up the "guess grid" for p_up case
+         call read_NR_smap_header("p_ratios_"//bound_name(HI), hdr_read, read_error)
+         if (.not. read_error) then
+            call check_NR_smap_header(hdr_read, hdr_init, headers_match)
+            if (headers_match .and. (.not. force_init_NR)) then
+               call read_NR_smap(p_ratios_up, "p_ratios_", HI, read_error)
+               call read_NR_smap(f_ratios_up, "f_ratios_", HI, read_error)
+            endif
+         endif
+         if (force_init_NR .or. (read_error .or. .not. headers_match) ) then
             call fill_boundary_grid(HI, p_ratios_up, f_ratios_up)
          endif
 
@@ -373,15 +376,18 @@ contains
          hdr_init%s_nmin   = n_tab_lo(1)
          hdr_init%s_nmin   = n_tab_lo(arr_dim)
 
-         write (msg, "(A29,A2,A22)") "[cresp_NR_method] Preparing (",bound_name(LO), ") boundary ratio files"; call printinfo(msg)
-         call NR_maps_read_header("p_ratios_"//bound_name(LO), hdr_read, exit_code_p)
-         call NR_maps_check_header(hdr_read, hdr_init, exit_code_p)
+         write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(HI), ") boundary"
+         call printinfo(msg)
 
-         call read_NR_guess_grid(p_ratios_lo, "p_ratios_", LO, exit_code_p)
-         call read_NR_guess_grid(f_ratios_lo, "f_ratios_", LO, exit_code_f)
-
-         if (exit_code_f .or. exit_code_p .or. force_init_NR) then
-! Setting up the "guess grid" for p_lo case
+         call read_NR_smap_header("p_ratios_"//bound_name(LO), hdr_read, read_error)
+         if (.not. read_error) then
+            call check_NR_smap_header(hdr_read, hdr_init, headers_match)
+            if (headers_match .and. (.not. force_init_NR)) then
+               call read_NR_smap(p_ratios_lo, "p_ratios_", LO, read_error)
+               call read_NR_smap(f_ratios_lo, "f_ratios_", LO, read_error)
+            endif
+         endif
+         if (force_init_NR .or. (read_error .or. .not. headers_match) ) then
             call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo)
          endif
 
@@ -1385,52 +1391,41 @@ contains
    end subroutine save_loc
 #endif /* CRESP_VERBOSED */
 !----------------------------------------------------------------------------------------------------
-   subroutine read_NR_guess_grid(NR_guess_grid, var_name, bc, exit_code) ! must be improved, especially for cases when files do not exist
+   subroutine read_NR_smap(NR_smap, vname, bc, exit_code)
 
-      use cresp_variables, only: clight_cresp
       use func,            only: operator(.equals.)
       use initcrspectrum,  only: e_small, q_big, max_p_ratio
 
       implicit none
 
-      real, dimension(:,:), intent(inout) :: NR_guess_grid
-      character(len=*),     intent(in)    :: var_name
+      real, dimension(:,:), intent(inout) :: NR_smap
+      character(len=*),     intent(in)    :: vname
       integer(kind=4),      intent(in)    :: bc
       logical,              intent(out)   :: exit_code
-      real                                :: svd_e_sm, svd_max_p_r, svd_q_big, svd_clight
-      integer(kind=4)                     :: j, svd_cols, svd_rows, file_status = 0
-      character(len=flen)                 :: f_name
+      integer(kind=4)                     :: j, rstat = 0, flun = 31
+      character(len=flen)                 :: fname
 
-      f_name = var_name // bound_name(bc) // extension
-      open(31, file=f_name, status="old", position="rewind", IOSTAT=file_status)
-      if (file_status > 0) then
-         write(*,"(A8,I4,A8,2A20)") "IOSTAT:", file_status, ": file ", var_name//bound_name(bc)//extension," does not exist!"
+      fname = vname // bound_name(bc) // extension
+      open(flun, file=fname, status="old", position="rewind", IOSTAT=rstat)
+      if (rstat > 0) then
+         write(*,"(A8,I4,A8,2A20)") "IOSTAT:", rstat, ": file ", vname//bound_name(bc)//extension," does not exist!"
          exit_code = .true.
          return
       else
-         read(31,*) ! Skipping comment line
-         read(31,"(1E15.8,2I10,10E22.15)") svd_e_sm, svd_rows, svd_cols, svd_max_p_r, svd_q_big, svd_clight
-         if ((svd_e_sm .equals. e_small) .and. (svd_rows == size(NR_guess_grid, dim=1)) .and. &
-           &  (svd_cols == size(NR_guess_grid, dim=2)) .and. &       ! TODO: swap rows and cols with just arr_dim, drop max_p_ratio
-           &  (svd_max_p_r .equals. max_p_ratio) .and. (svd_q_big .equals. q_big) .and. (svd_clight .equals. clight_cresp) ) then ! This saves a lot of time
-            read(31, *)
-
-            do j=1, size(NR_guess_grid,dim=2)
-               read(31, "(*(E24.15E3))") NR_guess_grid(:,j)  ! WARNING - THIS MIGHT NEED EXPLICIT INDICATION OF ELEMENTS COUNT IN LINE IN OLDER COMPILERS
-            enddo
-            exit_code = .false.
-         else
-            write(*,"(A61,A4,A6)") "Different initial parameters: will resolve ratio tables for ", bound_name(bc)," case."
-            write(*,"(2I10,10E22.15)") svd_cols, svd_rows, svd_e_sm, svd_max_p_r, svd_q_big, svd_clight
-            write(*,"(2I10,10E22.15)") size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2), e_small, max_p_ratio, q_big, clight_cresp
-            exit_code = .true.
-         endif
+         read(flun, *) ! Skipping comment line
+         read(flun, *) ! Skipping header
+         read(flun, *) ! Skipping blank line
+         do j=1, size(NR_smap, dim=2)
+            read(flun, "(*(E24.15E3))") NR_smap(:,j)  ! WARNING - THIS MIGHT NEED EXPLICIT INDICATION OF ELEMENTS COUNT IN LINE IN OLDER COMPILERS
+         enddo
+         exit_code = .false.
       endif
-      close(31)
 
-   end subroutine read_NR_guess_grid
+      close(flun)
 
-   subroutine NR_maps_read_header(var_name, hdr, exit_code)
+   end subroutine read_NR_smap
+
+   subroutine read_NR_smap_header(var_name, hdr, exit_code)
 
       use dataio_pub,   only: msg, printinfo, warn
       use constants,    only: fmt_len
@@ -1470,9 +1465,9 @@ contains
       exit_code = .false.
       close(flun)
 
-   end subroutine NR_maps_read_header
+   end subroutine read_NR_smap_header
 
-   subroutine NR_maps_check_header(hdr, hdr_std, hdr_equal)
+   subroutine check_NR_smap_header(hdr, hdr_std, hdr_equal)
 
       use constants, only: zero
       use func,      only: operator(.equals.)
@@ -1494,7 +1489,7 @@ contains
       hdr_equal = ((hdr%s_nmin .equals. hdr_std%s_nmin) .or. (hdr%s_nmin .equals. zero)); if (.not. hdr_equal) return
       hdr_equal = ((hdr%s_nmax .equals. hdr_std%s_nmax) .or. (hdr%s_nmax .equals. zero)); if (.not. hdr_equal) return
 
-   end subroutine NR_maps_check_header
+   end subroutine check_NR_smap_header
 !----------------------------------------------------------------------------------------------------
    real function ind_to_flog(ind, min_in, max_in, length)
 
