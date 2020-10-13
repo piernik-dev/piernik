@@ -1513,11 +1513,12 @@ contains
 
       hdr_equal = .true.
 
-      hdr_equal = hdr_equal .and. (hdr%s_es .equals. hdr_std%s_es)
-      hdr_equal = hdr_equal .and. (hdr%s_dim1 .eq.   hdr_std%s_dim1)
-      hdr_equal = hdr_equal .and. (hdr%s_dim2 .eq.   hdr_std%s_dim2)
-      hdr_equal = hdr_equal .and. (hdr%s_pr .equals. hdr_std%s_pr)
-      hdr_equal = hdr_equal .and. (hdr%s_c  .equals. hdr_std%s_c)
+      hdr_equal = hdr_equal .and. (hdr%s_es   .equals.   hdr_std%s_es)
+      hdr_equal = hdr_equal .and. (hdr%s_dim1 .eq.       hdr_std%s_dim1)
+      hdr_equal = hdr_equal .and. (hdr%s_dim2 .eq.       hdr_std%s_dim2)
+      hdr_equal = hdr_equal .and. (hdr%s_qbig .equals.   hdr_std%s_qbig)
+      hdr_equal = hdr_equal .and. (hdr%s_pr   .equals.   hdr_std%s_pr)
+      hdr_equal = hdr_equal .and. (hdr%s_c    .equals.   hdr_std%s_c)
 
 !  WARNING allowing to read old solution maps; without saved a_tab and n_tab limits
       hdr_equal = hdr_equal .and. ((hdr%s_amin .equals. hdr_std%s_amin) .or. (hdr%s_amin .equals. zero))
