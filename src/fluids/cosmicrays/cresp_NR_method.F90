@@ -329,6 +329,7 @@ contains
       hdr_init%s_es     = e_small
       hdr_init%s_dim1   = arr_dim
       hdr_init%s_dim2   = arr_dim
+      hdr_init%s_qbig   = q_big
       hdr_init%s_pr     = max_p_ratio
       hdr_init%s_c      = clight_cresp
 
@@ -345,7 +346,7 @@ contains
          hdr_init%s_amin   = alpha_tab_up(1)
          hdr_init%s_amax   = alpha_tab_up(arr_dim)
          hdr_init%s_nmin   = n_tab_up(1)
-         hdr_init%s_nmin   = n_tab_up(arr_dim)
+         hdr_init%s_nmax   = n_tab_up(arr_dim)
 
          write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(HI), ") boundary"
          call printinfo(msg)
@@ -373,12 +374,11 @@ contains
 
          call save_NR_smap(p_ratios_up, hdr_init, "p_ratios_", HI)
          call save_NR_smap(f_ratios_up, hdr_init, "f_ratios_", HI)
-
 !--------------------
          hdr_init%s_amin   = alpha_tab_lo(1)
          hdr_init%s_amax   = alpha_tab_lo(arr_dim)
          hdr_init%s_nmin   = n_tab_lo(1)
-         hdr_init%s_nmin   = n_tab_lo(arr_dim)
+         hdr_init%s_nmax   = n_tab_lo(arr_dim)
 
          write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(HI), ") boundary"
          call printinfo(msg)
@@ -407,7 +407,6 @@ contains
          call save_NR_smap(p_ratios_lo, hdr_init, "p_ratios_", LO)
          call save_NR_smap(f_ratios_lo, hdr_init, "f_ratios_", LO)
       endif
-
       a_min_q = one  + epsilon(one)
       a_max_q = (one + epsilon(one)) * p_fix_ratio
       j = min(arr_dim_q - int(arr_dim_q/100, kind=4), arr_dim_q - I_ONE)               ! BEWARE: magic number
