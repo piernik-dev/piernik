@@ -282,7 +282,7 @@ contains
       implicit none
 
       integer(kind=4)      :: i, j, ilim = 0, qmaxiter = 100
-      logical              :: read_error, headers_match
+      logical              :: read_error, headers_match, read_error_p, read_error_f
       real                 :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
       real, dimension(2)   :: a_min = big, a_max = small, n_min = big, n_max = small
       type(map_header)     :: hdr_init, hdr_read
@@ -355,15 +355,16 @@ contains
          if (.not. read_error) then
             call check_NR_smap_header(hdr_read, hdr_init, headers_match)
             if (headers_match .and. (.not. force_init_NR)) then
-               call read_NR_smap(p_ratios_up, "p_ratios_", HI, read_error)
-               call read_NR_smap(f_ratios_up, "f_ratios_", HI, read_error)
+               call read_NR_smap(p_ratios_up, "p_ratios_", HI, read_error_p)
+               call read_NR_smap(f_ratios_up, "f_ratios_", HI, read_error_f)
+               read_error = read_error_p .or. read_error_f
             endif
          endif
          if (read_error) then
-            write(msg,"(A,A,A)") "[cresp_NR_method] Problem reading data for (",bound_name(HI), ") boundary"
+            write(msg,"(A44,A2,A10)") "[cresp_NR_method] Problem reading data for (",bound_name(HI), ") boundary"
             call warn(msg)
          endif
-         if (force_init_NR .or. (read_error .or. .not. headers_match) ) then
+         if (force_init_NR .or. (read_error .or. (headers_match .eqv. .false.)) ) then
             call fill_boundary_grid(HI, p_ratios_up, f_ratios_up)
          endif
 
@@ -387,15 +388,16 @@ contains
          if (.not. read_error) then
             call check_NR_smap_header(hdr_read, hdr_init, headers_match)
             if (headers_match .and. (.not. force_init_NR)) then
-               call read_NR_smap(p_ratios_lo, "p_ratios_", LO, read_error)
-               call read_NR_smap(f_ratios_lo, "f_ratios_", LO, read_error)
+               call read_NR_smap(p_ratios_lo, "p_ratios_", LO, read_error_p)
+               call read_NR_smap(f_ratios_lo, "f_ratios_", LO, read_error_f)
+               read_error = read_error_p .or. read_error_f
             endif
          endif
          if (read_error) then
-            write(msg,"(A,A,A)") "[cresp_NR_method] Problem reading data for (",bound_name(HI), ") boundary"
+            write(msg,"(A44,A2,A10)") "[cresp_NR_method] Problem reading data for (",bound_name(HI), ") boundary"
             call warn(msg)
          endif
-         if (force_init_NR .or. (read_error .or. .not. headers_match) ) then
+         if (force_init_NR .or. (read_error .or. (headers_match .eqv. .false.)) ) then
             call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo)
          endif
 
