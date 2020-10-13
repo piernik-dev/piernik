@@ -275,7 +275,7 @@ contains
    subroutine fill_guess_grids
 
       use constants,      only: zero, half, one, three, I_ONE, big, small
-      use dataio_pub,     only: die, msg, printinfo
+      use dataio_pub,     only: die,msg, printinfo, warn
       use initcrspectrum, only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio, e_small
       use cresp_variables,only: clight_cresp
 
@@ -358,6 +358,10 @@ contains
                call read_NR_smap(f_ratios_up, "f_ratios_", HI, read_error)
             endif
          endif
+         if (read_error) then
+            write(msg,"(A,A,A)") "[cresp_NR_method] Problem reading data for (",bound_name(HI), ") boundary"
+            call warn(msg)
+         endif
          if (force_init_NR .or. (read_error .or. .not. headers_match) ) then
             call fill_boundary_grid(HI, p_ratios_up, f_ratios_up)
          endif
@@ -367,8 +371,8 @@ contains
             call refine_all_directions(HI)
          endif
 
-         call save_NR_guess_grid(p_ratios_up, "p_ratios_", HI)
-         call save_NR_guess_grid(f_ratios_up, "f_ratios_", HI)
+         call save_NR_smap(p_ratios_up, hdr_init, "p_ratios_", HI)
+         call save_NR_smap(f_ratios_up, hdr_init, "f_ratios_", HI)
 
 !--------------------
          hdr_init%s_amin   = alpha_tab_lo(1)
@@ -387,6 +391,10 @@ contains
                call read_NR_smap(f_ratios_lo, "f_ratios_", LO, read_error)
             endif
          endif
+         if (read_error) then
+            write(msg,"(A,A,A)") "[cresp_NR_method] Problem reading data for (",bound_name(HI), ") boundary"
+            call warn(msg)
+         endif
          if (force_init_NR .or. (read_error .or. .not. headers_match) ) then
             call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo)
          endif
@@ -396,8 +404,8 @@ contains
             call refine_all_directions(LO)
          endif
 
-         call save_NR_guess_grid(p_ratios_lo, "p_ratios_", LO)
-         call save_NR_guess_grid(f_ratios_lo, "f_ratios_", LO)
+         call save_NR_smap(p_ratios_lo, hdr_init, "p_ratios_", LO)
+         call save_NR_smap(f_ratios_lo, hdr_init, "f_ratios_", LO)
       endif
 
       a_min_q = one  + epsilon(one)
@@ -1345,32 +1353,58 @@ contains
 
    end function compute_q
 !----------------------------------------------------------------------------------------------------
-   subroutine save_NR_guess_grid(NR_guess_grid, var_name, bc)
+!    subroutine save_NR_guess_grid(NR_guess_grid, var_name, bc)
+!
+!       use cresp_variables, only: clight_cresp
+!       use initcrspectrum,  only: e_small, q_big, max_p_ratio
+!
+!       implicit none
+!
+!       real, dimension(:,:), intent(in) :: NR_guess_grid
+!       character(len=*),     intent(in) :: var_name
+!       integer(kind=4),      intent(in) :: bc
+!       integer(kind=4)                  :: j
+!       character(len=flen)              :: f_name
+!
+!       f_name = var_name // bound_name(bc) // extension
+!       open(31, file=f_name, status="unknown", position="rewind")
+!          write(31,"(A56,A2,A110)") "This is a storage file for NR init grid, boundary case: ", bound_name(bc), &
+!             &    " Saved below: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2), max_p_ratio, q_big, clight_cresp. Do not remove content from this file"
+!          write(31, "(1E15.8, 2I10,10E22.15)") e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2), max_p_ratio, q_big, clight_cresp ! TODO: remove max_p_ratio, swap cols, rows with just arr_dim
+!          write(31, "(A1)") " "                            ! Blank line for
+!
+!          do j=1, size(NR_guess_grid,dim=2)
+!             write(31, "(*(E24.15E3))") NR_guess_grid(:,j)  ! WARNING - MIGHT NEED EXPLICIT ELEMENT COUNT IN LINE IN OLDER COMPILERS
+!          enddo
+!          close(31)
+!
+!    end subroutine save_NR_guess_grid
 
-      use cresp_variables, only: clight_cresp
-      use initcrspectrum,  only: e_small, q_big, max_p_ratio
+   subroutine save_NR_smap(NR_smap, hdr, vname, bc)
 
       implicit none
 
-      real, dimension(:,:), intent(in) :: NR_guess_grid
-      character(len=*),     intent(in) :: var_name
       integer(kind=4),      intent(in) :: bc
+      integer(kind=4), parameter       :: flun = 31
+      character(len=flen)              :: fname
+      type(map_header),     intent(in) :: hdr
       integer(kind=4)                  :: j
-      character(len=flen)              :: f_name
+      real, dimension(:,:), intent(in) :: NR_smap
+      character(len=*),     intent(in) :: vname
 
-      f_name = var_name // bound_name(bc) // extension
-      open(31, file=f_name, status="unknown", position="rewind")
-         write(31,"(A56,A2,A110)") "This is a storage file for NR init grid, boundary case: ", bound_name(bc), &
-            &    " Saved below: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2), max_p_ratio, q_big, clight_cresp. Do not remove content from this file"
-         write(31, "(1E15.8, 2I10,10E22.15)") e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2), max_p_ratio, q_big, clight_cresp ! TODO: remove max_p_ratio, swap cols, rows with just arr_dim
-         write(31, "(A1)") " "                            ! Blank line for
+      fname = vname // bound_name(bc) // extension
+      open(flun, file=fname, status="unknown", position="rewind")
+         write(flun,"(A56,A2,A26)") "This is a storage file for NR init grid, boundary case: ", bound_name(bc), &
+            & ". Do not append this file."
 
-         do j=1, size(NR_guess_grid,dim=2)
-            write(31, "(*(E24.15E3))") NR_guess_grid(:,j)  ! WARNING - THIS MIGHT NEED EXPLICIT INDICATION OF ELEMENTS COUNT IN LINE IN OLDER COMPILERS
+         write(flun, "(1E15.8, 2I10,10E22.15)") hdr%s_es, hdr%s_dim1, hdr%s_dim2, hdr%s_pr, hdr%s_qbig, hdr%s_c, hdr%s_amin, hdr%s_amax, hdr%s_nmin, hdr%s_nmax
+         write(flun, "(A1)") " "                             ! Blank line
+         do j=1, size(NR_smap,dim=2)
+            write(flun, "(*(E24.15E3))") NR_smap(:,j)  ! WARNING - MIGHT NEED EXPLICIT ELEMENT COUNT IN LINE IN OLDER COMPILERS
          enddo
-         close(31)
+         close(flun)
 
-   end subroutine save_NR_guess_grid
+   end subroutine save_NR_smap
 !----------------------------------------------------------------------------------------------------
 #ifdef CRESP_VERBOSED
    subroutine save_loc(bound_case, loc1, loc2)
@@ -1416,11 +1450,11 @@ contains
          read(flun, *) ! Skipping header
          read(flun, *) ! Skipping blank line
          do j=1, size(NR_smap, dim=2)
-            read(flun, "(*(E24.15E3))") NR_smap(:,j)  ! WARNING - THIS MIGHT NEED EXPLICIT INDICATION OF ELEMENTS COUNT IN LINE IN OLDER COMPILERS
+            read(flun, "(*(E24.15E3))", IOSTAT=rstat) NR_smap(:,j)  ! WARNING - THIS MIGHT NEED EXPLICIT INDICATION OF ELEMENTS COUNT IN LINE IN OLDER COMPILERS
          enddo
          exit_code = .false.
       endif
-
+      if (rstat > 0) exit_code = .true.
       close(flun)
 
    end subroutine read_NR_smap
