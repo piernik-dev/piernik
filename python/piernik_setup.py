@@ -98,15 +98,23 @@ define ECHO_CC
 endef
 endif
 
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null && echo -DMPIF08 || echo -DNO_MPIF08_AVAILABLE)
+
 all: env.dat print_setup $(PROG)
 
-$(PROG): $(OBJS)
+check_mpi:
+\t@$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null  || (\
+$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90 2> /dev/null || echo -e "\033[91mWarning: current MPI fortran compiler may not be capable of 'mpi_f90' or sufficiently modern 'mpi' interface\033[0m" )
+
+$(PROG): $(OBJS) check_mpi
 ifeq ("$(SILENT)","1")
 \t@$(ECHO) $(PNAME)FC = $(F90) $(CPPFLAGS) $(F90FLAGS) -c
 \t@$(ECHO) $(PNAME)CC = $(CC) $(CPPFLAGS) $(CFLAGS) -c
 endif
 \t@$(ECHO) $(F90) $(LDFLAGS) -o $@ '*.o' $(LIBS)
 \t@$(F90) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+\t@touch mpi_f08.o mpi.o
+\t@$(RM) mpi_f08.o mpi.o
 \t@AO1=`mktemp _ao_XXXXXX`;\\
 \tAO2=`mktemp _ao_XXXXXX`;\\
 \t$(ECHO) $(OBJS) | tr ' ' '\\n' | sort > $$AO1;\\
@@ -150,7 +158,7 @@ version.F90: env.dat
 \t$(ECHO) "   implicit none"; \\
 \t$(ECHO) "   public"; \\
 \twc -l env.dat | awk '{print "   integer, parameter :: nenv = "$$1"+0"}'; \\
-\tawk '{if (length($0)>s) s=length($0)} END {print "   character(len="s"), dimension(nenv) :: env\\ncontains\\n   subroutine init_version\\n      implicit none"}' env.dat; \\
+\tawk '{if (length($0)>s) s=length($0)} END {print "   character(len="s+10"), dimension(nenv) :: env\\ncontains\\n   subroutine init_version\\n      implicit none"}' env.dat; \\
 \tawk '{printf("      env(%i) = \\"%s\\"\\n",NR,$$0)}' env.dat; \\
 \t$(ECHO) "   end subroutine init_version"; \\
 \t$(ECHO) "end module version" ) > version_.F90; \\

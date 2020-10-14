@@ -377,8 +377,8 @@ contains
       use dataio_pub,    only: die
       use domain,        only: dom, is_refined
       use grid_cont,     only: grid_container
-      use MPIF,          only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_Alltoall, MPI_Alltoallv
-      use mpisetup,      only: proc, comm, mpi_err, FIRST, LAST
+      use MPIF,          only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD, MPI_Alltoall, MPI_Alltoallv
+      use mpisetup,      only: proc, err_mpi, FIRST, LAST
       use ppp,           only: ppp_main
       use particle_func, only: particle_in_area
       use particle_types, only: particle
@@ -435,7 +435,7 @@ contains
       enddo
 
       !Exchange information about particles numbers to be sent / received
-      call MPI_Alltoall(nsend, I_ONE, MPI_INTEGER, nrecv, I_ONE, MPI_INTEGER, comm, mpi_err)
+      call MPI_Alltoall(nsend, I_ONE, MPI_INTEGER, nrecv, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
 
       !Store data of particles to be sent
       allocate(part_info(sum(nsend(:))*npf))
@@ -493,7 +493,7 @@ contains
          dispr(j) = dispr(j-1) + countr(j-1)
       enddo
 
-      call MPI_Alltoallv(part_info, counts, disps, MPI_DOUBLE_PRECISION, part_info2, countr, dispr, MPI_DOUBLE_PRECISION, comm, mpi_err)
+      call MPI_Alltoallv(part_info, counts, disps, MPI_DOUBLE_PRECISION, part_info2, countr, dispr, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, err_mpi)
 
       !Add particles in cgs
       cgl => leaves%first

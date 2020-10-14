@@ -387,6 +387,7 @@ contains
 
 !> \brief Provides parameters useful for python/maclaurin.py in .h5 files
 
+#ifdef HDF5
    subroutine problem_initial_conditions_attrs(file_id)
 
       use hdf5,  only: HID_T, SIZE_T
@@ -409,6 +410,7 @@ contains
       call h5ltset_attribute_double_f(file_id, "/", "z0",   [z0],   bufsize, error)
 
    end subroutine problem_initial_conditions_attrs
+#endif /* HDF5 */
 
 !>
 !! \brief Calculate analytical potential for given spheroid.

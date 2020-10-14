@@ -62,8 +62,8 @@ contains
       use constants,  only: I_ONE
       use dataio_pub, only: die
       use func,       only: operator(.notequals.)
-      use MPIF,       only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_Send, MPI_Recv
-      use mpisetup,   only: slave, LAST, comm, proc, mpi_err
+      use MPIF,       only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Send, MPI_Recv
+      use mpisetup,   only: slave, LAST, proc, err_mpi
 
       implicit none
 
@@ -72,9 +72,9 @@ contains
       real, dimension(size(arr)) :: aux
       integer(kind=4), parameter :: tag = 10
 
-      if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_DOUBLE_PRECISION, proc+I_ONE, tag, comm, mpi_err)
+      if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_DOUBLE_PRECISION, proc+I_ONE, tag, MPI_COMM_WORLD, err_mpi)
       if (slave) then
-         call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_DOUBLE_PRECISION, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, mpi_err)
+         call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_DOUBLE_PRECISION, proc-I_ONE, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
          if (any(aux(:).notequals.arr(:))) call die("[cmp_1D_mpi:compare_real_array1D] Inconsistency found.")
       endif
 
@@ -86,8 +86,8 @@ contains
 
       use constants,  only: I_ONE
       use dataio_pub, only: die
-      use MPIF,       only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_Send, MPI_Recv
-      use mpisetup,   only: slave, LAST, comm, proc, mpi_err
+      use MPIF,       only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Send, MPI_Recv
+      use mpisetup,   only: slave, LAST, proc, err_mpi
 
       implicit none
 
@@ -96,9 +96,9 @@ contains
       integer(kind=4), dimension(size(arr)) :: aux
       integer(kind=4), parameter            :: tag = 10
 
-      if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_INTEGER, proc+I_ONE, tag, comm, mpi_err)
+      if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_INTEGER, proc+I_ONE, tag, MPI_COMM_WORLD, err_mpi)
       if (slave) then
-         call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_INTEGER, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, mpi_err)
+         call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_INTEGER, proc-I_ONE, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
          if (any(aux(:) /= arr(:))) call die("[cmp_1D_mpi:compare_int_array1D] Inconsistency found.")
       endif
 
@@ -110,8 +110,8 @@ contains
 
       use constants,  only: I_ONE
       use dataio_pub, only: die
-      use MPIF,       only: MPI_CHARACTER, MPI_STATUS_IGNORE, MPI_Send, MPI_Recv
-      use mpisetup,   only: slave, LAST, comm, proc, mpi_err
+      use MPIF,       only: MPI_CHARACTER, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Send, MPI_Recv
+      use mpisetup,   only: slave, LAST, proc, err_mpi
 
       implicit none
 
@@ -120,9 +120,9 @@ contains
       character(len=len(str))      :: aux
       integer(kind=4), parameter   :: tag = 10
 
-      if (proc /= LAST) call MPI_Send(str, len(str, kind=4), MPI_CHARACTER, proc+I_ONE, tag, comm, mpi_err)
+      if (proc /= LAST) call MPI_Send(str, len(str, kind=4), MPI_CHARACTER, proc+I_ONE, tag, MPI_COMM_WORLD, err_mpi)
       if (slave) then
-         call MPI_Recv(aux, len(aux, kind=4), MPI_CHARACTER, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, mpi_err)
+         call MPI_Recv(aux, len(aux, kind=4), MPI_CHARACTER, proc-I_ONE, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
          if (aux /= str) call die("[cmp_1D_mpi:compare_string] Inconsistency found.")
       endif
 

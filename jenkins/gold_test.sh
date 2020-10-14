@@ -61,6 +61,7 @@ cp python/piernik_setup.py ${GOLD_DIR}/python/piernik_setup_today.py
     git fetch -q $PIERNIK_REPO +refs/pull/*:refs/remotes/origin/pr/*
     git checkout -q $GOLD_COMMIT
     rsync -avxq --delete "${BASE_DIR}"/compilers/ ./compilers
+    sed -i 's/USE_MPI_F08 := 1/USE_MPI_F08 := /' ./compilers/*.in
     python python/piernik_setup_today.py $PROBLEM_NAME $SETUP_PARAMS -o $GOLD_OBJ
 )
 

@@ -37,10 +37,10 @@ program hello_world
    implicit none
 
    integer(kind=4) :: proc    !< rank of my process
-   integer(kind=4) :: mpi_err !< error status
+   integer(kind=4) :: err_mpi !< error status
 
-   call MPI_Init(mpi_err)
-   call MPI_Comm_rank(MPI_COMM_WORLD, proc, mpi_err)
+   call MPI_Init(err_mpi)
+   call MPI_Comm_rank(MPI_COMM_WORLD, proc, err_mpi)
 
    if (proc == 0) then
       write(*,*)"This is a demonstration how to replace any of the standard Piernik files with your own version."                                                                                         ! QA_WARN intentional
@@ -50,6 +50,6 @@ program hello_world
 
    write(*,*)"Hello world from process #", proc ! QA_WARN intentional
 
-   call MPI_Finalize(mpi_err)
+   call MPI_Finalize(err_mpi)
 
 end program hello_world
