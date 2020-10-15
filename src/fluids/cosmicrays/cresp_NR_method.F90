@@ -74,6 +74,14 @@ module cresp_NR_method
       real     :: s_amin, s_amax, s_nmin, s_nmax
    end type map_header
 
+   type axlim
+      integer  :: ibeg, iend
+   end type axlim
+
+   type smaplmts
+      type(axlim) :: ai, ni
+   end type smaplmts
+
 !----------------------------------------------------------------------------------------------------
 
 contains
@@ -286,6 +294,7 @@ contains
       real                 :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
       real, dimension(2)   :: a_min = big, a_max = small, n_min = big, n_max = small
       type(map_header)     :: hdr_init, hdr_read
+      type(smaplmts)       :: sml
 
       q_space = zero
       do i = 1, int(half*helper_arr_dim)
@@ -342,7 +351,12 @@ contains
       enddo
 
       if (e_small_approx_init_cond == 1) then
-
+! TODO not yet paralelized, values to be passed to main solving routine
+         sml%ai%ibeg = 1
+         sml%ai%iend= arr_dim
+         sml%ni%ibeg = 1
+         sml%ni%iend = arr_dim
+! --------------------
          hdr_init%s_amin   = alpha_tab_up(1)
          hdr_init%s_amax   = alpha_tab_up(arr_dim)
          hdr_init%s_nmin   = n_tab_up(1)
@@ -365,7 +379,7 @@ contains
             call warn(msg)
          endif
          if (force_init_NR .or. (read_error .or. (headers_match .eqv. .false.)) ) then
-            call fill_boundary_grid(HI, p_ratios_up, f_ratios_up)
+            call fill_boundary_grid(HI, p_ratios_up, f_ratios_up, sml)
          endif
 
          if (NR_run_refine_pf) then
@@ -381,7 +395,7 @@ contains
          hdr_init%s_nmin   = n_tab_lo(1)
          hdr_init%s_nmax   = n_tab_lo(arr_dim)
 
-         write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(HI), ") boundary"
+         write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(LO), ") boundary"
          call printinfo(msg)
 
          call read_NR_smap_header("p_ratios_"//bound_name(LO), hdr_read, read_error)
@@ -398,7 +412,7 @@ contains
             call warn(msg)
          endif
          if (force_init_NR .or. (read_error .or. (headers_match .eqv. .false.)) ) then
-            call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo)
+            call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo, sml)
          endif
 
          if (NR_run_refine_pf) then
@@ -512,7 +526,7 @@ contains
    end subroutine assoc_pointers
 
 !----------------------------------------------------------------------------------------------------
-   subroutine fill_boundary_grid(bound_case, fill_p, fill_f) ! TODO FIXME to be paralelized
+   subroutine fill_boundary_grid(bound_case, fill_p, fill_f, sml) ! TODO FIXME to be paralelized
 
       use constants,      only: zero
       use dataio_pub,     only: msg, printinfo
@@ -525,6 +539,7 @@ contains
       real, dimension(1:2)        :: x_vec, prev_solution, prev_solution_1, x_step
       integer(kind=4)             :: i, j, is, js, jm
       logical                     :: exit_code, new_line
+      type(smaplmts)              :: sml
 #ifdef CRESP_VERBOSED
       real, dimension(1:2)        :: x_in
 
@@ -542,11 +557,11 @@ contains
       write(msg, "(A,A2,A,I3,A)") "[cresp_NR_method:fill_boundary_grid] Solving solution maps for cutoff case (",bound_name(bound_case),"): DIM=",arr_dim,"**2"
       call printinfo(msg)
 
-      do i = 1, arr_dim
+      do i = sml%ai%ibeg, sml%ai%iend
          call add_dot( i .eq. arr_dim )
          new_line = .true.
          prev_solution = prev_solution_1 ! easier to find when not searching from the top
-         do j = 1, arr_dim
+         do j = sml%ni%ibeg, sml%ni%iend
          ! j_incr = 1
             alpha = p_a(i)
             n_in  = p_n(j)
@@ -563,7 +578,7 @@ contains
 
             if (exit_code) then
                jm = j-2
-               if (check_dimm(jm)) call step_extr(fill_p(i,jm:j), fill_f(i,jm:j), p_n(jm:j), exit_code)
+               if (check_dimm(jm, sml%ni)) call step_extr(fill_p(i,jm:j), fill_f(i,jm:j), p_n(jm:j), exit_code)
                if (j >= 2) then
                   jm = j-1
                   if (fill_p(i,jm) > zero) call seek_solution_step(fill_p(i,j), fill_f(i,j), prev_solution, i, jm, exit_code)
@@ -719,15 +734,20 @@ contains
 
  !----------------------------------------------------------------------------------------------------
 
-   logical function check_dimm(ind)
+   logical function check_dimm(ind, irange)
 
       use initcrspectrum, only: arr_dim
 
       implicit none
 
-      integer(kind=4), intent(in) :: ind
+      integer(kind=4), intent(in)     :: ind
+      type(axlim),intent(in),optional :: irange
 
-      check_dimm = (ind >= 1 .and. ind <= arr_dim)
+      if (present(irange)) then
+         check_dimm = (ind >= irange%ibeg .and. ind <= irange%iend)
+      else
+         check_dimm = (ind >= 1 .and. ind <= arr_dim)
+      endif
 
    end function check_dimm
 
