@@ -215,15 +215,12 @@ contains
    subroutine cresp_initialize_guess_grids
 
       use constants,       only: zero, I_FOUR
-      use cresp_variables, only: clight_cresp
       use initcrspectrum,  only: e_small, q_big, max_p_ratio, arr_dim, arr_dim_q
       use mpisetup,        only: master
 
       implicit none
 
-      logical      :: first_run = .true., save_to_log = .false.
-      character(8) :: date
-      character(9) :: time
+      logical      :: first_run = .true.
 
       call initialize_arrays
       if (master .and. first_run) then
@@ -232,10 +229,6 @@ contains
          if (.not. allocated(p_space)) allocate(p_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
          if (.not. allocated(q_space)) allocate(q_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
 
-         call date_and_time(date,time)
-         call date_and_time(DATE=date)
-         call date_and_time(TIME=time)
-
          p_ratios_up = zero ; f_ratios_up = zero
          p_ratios_lo = zero ; f_ratios_lo = zero
 
@@ -243,31 +236,6 @@ contains
 
          call fill_guess_grids
 
-         print *, "Are there zeros? (q_ratios)",    count(abs(q_space) <= zero)
-         print *, "Are there zeros? (p_ratios_up)", count(p_ratios_up  <= zero)
-         print *, "Are there zeros? (f_ratios_up)", count(f_ratios_up  <= zero)
-         print *, "Are there zeros? (p_ratios_lo)", count(p_ratios_lo  <= zero)
-         print *, "Are there zeros? (f_ratios_lo)", count(f_ratios_lo  <= zero)
-         print *, "Count of array elements:", size(p_ratios_lo)
-         print *,"----------"
-         if (save_to_log) then
-            open(15, file="log_NR_solve", position = "append")
-            write (15,*) "------------------------------------------"
-            write (15,"(A,2x,A,2x)") "Run on: ", date, "at: ", time
-            write (15,*) "For set of parameters: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2), max_p_ratio, q_big, clight_cresp"
-            write (15, "(1E15.8, 2I10,10E22.15)") e_small, size(p_space), size(q_space), max_p_ratio, q_big, clight_cresp
-            write (15,*) "Are there zeros? (q_ratios)",    count(abs(q_space) <= zero)
-            write (15,*) "Are there zeros? (p_ratios_up)", count(p_ratios_up  <= zero), real(count(p_ratios_up <= zero))/real(size(p_ratios_up)) * 100.0,"%"
-            write (15,*) "Are there zeros? (f_ratios_up)", count(f_ratios_up  <= zero), real(count(f_ratios_up <= zero))/real(size(f_ratios_up)) * 100.0,"%"
-            write (15,*) "Are there zeros? (p_ratios_lo)", count(p_ratios_lo  <= zero), real(count(p_ratios_lo <= zero))/real(size(p_ratios_lo)) * 100.0,"%"
-            write (15,*) "Are there zeros? (f_ratios_lo)", count(f_ratios_lo  <= zero), real(count(f_ratios_lo <= zero))/real(size(f_ratios_lo)) * 100.0,"%"
-            write (15,*) "Count of array elements:", size(p_ratios_lo)
-            write (15,*) "----------"
-            close(15)
-         else
-            print *, "!!! Warning: save_to_log = F; result will not be registered in LOG file !!!"
-         endif
-!
          if (allocated(p_space)) deallocate(p_space) ! only needed at initialization
          if (allocated(q_space)) deallocate(q_space)
 
