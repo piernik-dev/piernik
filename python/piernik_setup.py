@@ -98,13 +98,14 @@ define ECHO_CC
 endef
 endif
 
-CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null && echo -DMPIF08 || echo -DNO_MPIF08_AVAILABLE)
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 -o F08 2> /dev/null && rm ./F08 && echo -DMPIF08 || echo -DNO_MPIF08_AVAILABLE)
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(F90FLAGS) ../compilers/tests/Get_bug.F90 -o Get_bug && ./Get_bug > /dev/null 2>&1 || echo -DNO_MPI2 ; rm ./Get_bug*)
 
 all: env.dat print_setup $(PROG)
 
 check_mpi:
-\t@$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null  || (\
-$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90 2> /dev/null || echo -e "\033[91mWarning: current MPI fortran compiler may not be capable of 'mpi_f90' or sufficiently modern 'mpi' interface\033[0m" )
+\t@$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 -o MPI 2> /dev/null && rm ./MPI || (\
+$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90 -o MPI 2> /dev/null && rm ./MPI || echo -e "\033[91mWarning: current MPI fortran compiler may not be capable of 'mpi_f90' or sufficiently modern 'mpi' interface\033[0m" )
 
 $(PROG): $(OBJS) check_mpi
 ifeq ("$(SILENT)","1")

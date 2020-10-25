@@ -7,7 +7,7 @@ program onesided
 
    implicit none
 
-   integer, parameter :: asize = 10, saoff = 4, sasize = 2, ssoff = 6
+   integer, parameter :: asize = 10, sasize = 2, ssoff = 6
    integer, allocatable, dimension(:,:) :: arr, srr
    integer(kind=4) :: err_mpi
    integer(kind=4) :: nproc          !< number of processes
