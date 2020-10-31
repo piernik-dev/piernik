@@ -35,7 +35,7 @@ module cg_level_connected
    implicit none
 
    private
-   public :: cg_level_connected_t, base_level
+   public :: cg_level_connected_t
 
    !! \brief A list of all cg of the same resolution with links to coarser and finer levels
    type, extends(cg_level_t) :: cg_level_connected_t
@@ -70,8 +70,6 @@ module cg_level_connected
       procedure :: free_all_cg                                !< Erase all data on the level, leave it empty
 
    end type cg_level_connected_t
-
-   type(cg_level_connected_t), pointer :: base_level !< The pointer to the base level. Do not use it unless referencing through base%level causes circular dependencies.
 
 contains
 

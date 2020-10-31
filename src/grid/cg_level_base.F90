@@ -72,7 +72,6 @@ contains
       use dataio_pub,         only: die
       use domain,             only: dom
       use list_of_cg_lists,   only: all_lists
-      use cg_level_connected, only: base_level
 
       implicit none
 
@@ -94,7 +93,6 @@ contains
 
       call this%level%l%init(base_level_id, int(n_d, kind=8), dom%off)
 
-      base_level => this%level
       call all_lists%register(this%level, "Base level")
 
    end subroutine set
