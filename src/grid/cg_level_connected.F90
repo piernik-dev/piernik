@@ -51,7 +51,7 @@ module cg_level_connected
       procedure :: init_level                                 !< common initialization for base level and other levels
 
       ! Prolongation and restriction
-      procedure :: vertical_prep                              !< initialize prolongation and restriction targets
+      procedure :: vertical_prep                              !< initialize prolongation and restriction targets; not PRIVATE because of single call in cg_leaves:update
       procedure :: prolong                                    !< interpolate the grid data which has the flag vital set to this%finer level
       procedure :: restrict                                   !< interpolate the grid data which has the flag vital set from this%coarser level
       procedure :: restrict_to_base                           !< restrict all variables to the base level
@@ -63,7 +63,7 @@ module cg_level_connected
       procedure :: restrict_to_base_w_1var                    !< restrict specified w field to the base level
       procedure :: arr3d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
       procedure :: arr4d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays.
-      procedure :: prolong_bnd_from_coarser                   !< Interpolate boundaries from coarse level at fine-coarse interfaces
+      procedure, private :: prolong_bnd_from_coarser          !< Interpolate boundaries from coarse level at fine-coarse interfaces
       procedure, private :: vertical_b_prep                   !< Initialize prolongation targets for fine-coarse boundary exchange
       procedure, private :: vertical_bf_prep                  !< Initialize prolongation targets for fine->coarse flux exchange
       procedure :: sync_ru                                    !< Synchronize this%recently_changed and set flags for update requests

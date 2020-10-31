@@ -139,7 +139,7 @@ contains
          call piernik_MPI_Allreduce(g_cnt, pSUM)
          write(msg(len_trim(msg)+1:),'(i6)') g_cnt
          if (associated(curl, this%coarsest_leaves)) b_cnt = g_cnt
-         call curl%vertical_prep
+         call curl%vertical_prep  ! is it necessary here?
          curl => curl%finer
       enddo
       g_cnt = leaves%cnt
