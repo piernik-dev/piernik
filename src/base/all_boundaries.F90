@@ -138,13 +138,6 @@ contains
 
       call ppp_main%start(abm_label, PPP_MAG)
 
-!!$      do dir = xdim, zdim
-!!$         if (dom%has_dir(dir)) then
-!!$            call all_cg%internal_boundaries_4d(wna%bi, dir=dir) ! should be more selective (modified leaves?)
-!!$            if (qna%exists(psi_n)) call all_cg%internal_boundaries_3d(qna%ind(psi_n), dir=dir)
-!!$         endif
-!!$      enddo
-
       call leaves%leaf_arr4d_boundaries(wna%bi)
       if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
 
