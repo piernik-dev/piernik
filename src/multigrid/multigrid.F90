@@ -192,6 +192,7 @@ contains
    subroutine init_multigrid
 
       use cg_list,            only: cg_list_element
+      use cg_level_base,      only: base
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t, base_level
       use cg_level_finest,    only: finest
@@ -210,12 +211,13 @@ contains
       integer(kind=4)       :: j
 
       type(cg_list_element), pointer :: cgl
-      type(cg_level_connected_t), pointer :: curl          !< current level (a pointer sliding along the linked list) and temporary level
-      type(grid_container),  pointer :: cg            !< current grid container
+      type(cg_level_connected_t), pointer :: curl  !< current level (a pointer sliding along the linked list) and temporary level
+      type(grid_container),  pointer :: cg         !< current grid container
 
       if (code_progress < PIERNIK_INIT_GRID) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized")
       ! This check is too weak (geometry), arrays are required only for multigrid_gravity
 
+      base%init_multigrid => init_multigrid
 
       if (level_depth <= 0) then
          if (master) call warn("[multigrid:init_multigrid] level_depth < 1: solving on a single grid may be extremely slow")
