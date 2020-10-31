@@ -823,20 +823,22 @@ contains
       logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       integer(kind=4) :: ord_saved
-      character(len=*), parameter :: a3b_label = "level:arr3d_boundaries"
+      character(len=*), parameter :: a3b_label = "level:arr3d_boundaries", a3bp_label = "level:arr3d_boundaries:prolong"
 
-      call ppp_main%start(a3b_label, PPP_AMR)
+      call ppp_main%start(a3b_label)
 
       ord_saved = qna%lst(ind)%ord_prolong
 
       call this%dirty_boundaries(ind)
+      call ppp_main%start(a3bp_label, PPP_AMR)
       call this%prolong_bnd_from_coarser(ind, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
+      call ppp_main%stop(a3bp_label, PPP_AMR)
       call this%level_3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
       ! The correctness of the sequence of calls above may depend on the implementation of internal boundary exchange
 
       qna%lst(ind)%ord_prolong = ord_saved
 
-      call ppp_main%stop(a3b_label, PPP_AMR)
+      call ppp_main%stop(a3b_label)
 
    end subroutine arr3d_boundaries
 
@@ -857,12 +859,14 @@ contains
       logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       integer(kind=4) :: iw
-      character(len=*), parameter :: a4b_label = "level:arr4d_boundaries"
+      character(len=*), parameter :: a4b_label = "level:arr4d_boundaries", a4bp_label = "level:arr4d_boundaries:prolong"
 
-      call ppp_main%start(a4b_label, PPP_AMR)
+      call ppp_main%start(a4b_label)
 
 !      call this%dirty_boundaries(ind)
 !      call this%clear_boundaries(ind, value=10.)
+
+      call ppp_main%start(a4bp_label, PPP_AMR)
       if (associated(this%coarser) .and. this%l%id > base_level_id) then
          do iw = 1, wna%lst(ind)%dim4
             ! here we can use any high order prolongation without destroying conservation
@@ -873,9 +877,11 @@ contains
             call this%qw_copy(qna%wai, ind, iw) !> \todo filter this through cg%ignore_prolongation
          enddo
       endif
+      call ppp_main%stop(a4bp_label, PPP_AMR)
+
       call this%level_4d_boundaries(ind, area_type=area_type, dir=dir, nocorners=nocorners)
 
-      call ppp_main%stop(a4b_label, PPP_AMR)
+      call ppp_main%stop(a4b_label)
 
    end subroutine arr4d_boundaries
 
