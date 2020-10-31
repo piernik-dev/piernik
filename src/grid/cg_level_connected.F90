@@ -870,6 +870,11 @@ contains
       if (associated(this%coarser) .and. this%l%id > base_level_id) then
          do iw = 1, wna%lst(ind)%dim4
             ! here we can use any high order prolongation without destroying conservation
+
+            ! OPT: this is insanely safe but highly inefficient implementation.
+            ! A lot of data is copied there and back through cg%wa
+            ! but only small fraction of it is actually used in boundary prolongation.
+
             qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong
             call this%coarser%wq_copy(ind, iw, qna%wai)
             call this%wq_copy(ind, iw, qna%wai) !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
