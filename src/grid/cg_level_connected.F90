@@ -1031,23 +1031,25 @@ contains
 !! \todo implement local copies without MPI
 !<
 
-   subroutine prolong_bnd_from_coarser(this, ind, bnd_type, dir, nocorners)
+   subroutine prolong_bnd_from_coarser(this, ind, sub, bnd_type, dir, nocorners)
 
-      use cg_list,        only: cg_list_element
-      use cg_list_global, only: all_cg
-      use constants,      only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims, O_INJ, base_level_id, PPP_AMR, PPP_MPI  !, dirtyH1
-      use dataio_pub,     only: warn
-      use domain,         only: dom
-      use grid_cont,      only: grid_container
-      use grid_helpers,   only: f2c, c2f
-      use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
-      use mpisetup,       only: err_mpi, req, inflate_req, master
-      use ppp,            only: ppp_main
+      use cg_list,          only: cg_list_element
+      use cg_list_global,   only: all_cg
+      use constants,        only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims, O_INJ, base_level_id, PPP_AMR, PPP_MPI  !, dirtyH1
+      use dataio_pub,       only: warn, die
+      use domain,           only: dom
+      use grid_cont,        only: grid_container
+      use grid_helpers,     only: f2c, c2f
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
+      use mpisetup,         only: err_mpi, req, inflate_req, master
+      use named_array_list, only: qna, wna
+      use ppp,              only: ppp_main
 
       implicit none
 
       class(cg_level_connected_t), intent(inout) :: this      !< the list on which to perform the boundary exchange
       integer(kind=4),             intent(in)    :: ind       !< index of the prolonged variable
+      integer(kind=4), optional,   intent(in)    :: sub       !< subindex, present only when ind refers to rank-4 arrays
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
@@ -1071,6 +1073,9 @@ contains
       if (present(nocorners)) then
          if (firstcall .and. master) call warn("[cg_level_connected:prolong_bnd_from_coarser] nocorners present but not implemented yet")
       endif
+      if (present(sub)) then
+         if (sub <=0 .or. sub > wna%lst(ind)%dim4) call die("[cg_level_connected:prolong_bnd_from_coarser] invalid index in wna")
+      endif
 
       firstcall = .false.
 
@@ -1087,7 +1092,11 @@ contains
 
       !call this%clear_boundaries(ind, (0.885+0.0001*this%l%id)*dirtyH1) ! not implemented yet
       ext_buf = dom%D_ * all_cg%ord_prolong_nb ! extension of the buffers due to stencil range
-      if (all_cg%ord_prolong_nb /= O_INJ) call coarse%level_3d_boundaries(ind, bnd_type = bnd_type) ! it is really hard to determine which exchanges can be omitted
+      if (.not. present(sub)) then
+         ! for rank-4 it was already called
+         ! ToDo: make it uniform with rank-3
+         if (all_cg%ord_prolong_nb /= O_INJ) call coarse%level_3d_boundaries(ind, bnd_type = bnd_type) ! it is really hard to determine which exchanges can be omitted
+      endif
       ! bnd_type = BND_NEGREF above is critical for convergence of multigrid with isolated boundaries.
 
       nr = 0
@@ -1119,7 +1128,11 @@ contains
 
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
-               seg(g)%buf(:, :, :) = cgl%cg%q(ind)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
+               if (present(sub)) then
+                  seg(g)%buf(:, :, :) = cgl%cg%w(ind)%arr(sub, cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
+               else
+                  seg(g)%buf(:, :, :) = cgl%cg%q(ind)%arr(     cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
+               endif
                call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
             enddo
          endif
@@ -1145,10 +1158,10 @@ contains
          if (allocated(cg%pib_tgt%seg)) then
 
             !> \todo restore dirty checks when the implementation will be complete
-            cg%prolong_ = 3. !dirtyH
-            cg%prolong_x = 7.
-            cg%prolong_xy = 15.
-            cg%prolong_xyz = 31.
+!!$            cg%prolong_ = 3. !dirtyH
+!!$            cg%prolong_x = 7.
+!!$            cg%prolong_xy = 15.
+!!$            cg%prolong_xyz = 31.
 
             if (size(seg) > 0) then ! this if looks to be necessary to prevent polluting on the base level. Strange. \todo Check out why and fix it.
 
@@ -1177,9 +1190,19 @@ contains
                cse(:, LO) = cse(:, LO) - dom%nb*dom%D_(:)/refinement_factor
                cse(:, HI) = cse(:, HI) + dom%nb*dom%D_(:)/refinement_factor
 
-               call cg%prolong(ind, cse, p_xyz = .true.) ! prolong to auxiliary array cg%prolong_xyz. OPT find a way to avoid unnecessary calculations where .not. updatemap
+               call cg%prolong(qna%wai, cse, p_xyz = .true.)  ! prolong to auxiliary array cg%prolong_xyz.
+               ! qna%wai is required only for indirect determination of prolongation order (TOO QUIRKY)
+               ! OPT Find a way to avoid unnecessary calculations where .not. updatemap
+               ! The cg%prolong above consumes about half of the prolong_bnd_from_coarser execution time
+               ! because it operates on whole cg regardless of needs.
+               ! The updatemap tricks are responsible for another half.
 
-               where (updatemap) cg%q(ind)%arr = cg%prolong_xyz
+               if (present(sub)) then
+                  where (updatemap) cg%w(ind)%arr(sub,:,:,:) = cg%prolong_xyz
+               else
+                  where (updatemap) cg%q(ind)%arr = cg%prolong_xyz
+               endif
+
                deallocate(updatemap)
             endif
          endif
@@ -1537,7 +1560,8 @@ contains
 
    subroutine arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
-      use constants,        only: base_level_id, PPP_AMR
+      use cg_list_global,   only: all_cg
+      use constants,        only: base_level_id, PPP_AMR, O_INJ
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 
@@ -1559,18 +1583,11 @@ contains
 
       call ppp_main%start(a4bp_label, PPP_AMR)
       if (associated(this%coarser) .and. this%l%id > base_level_id) then
+         if (all_cg%ord_prolong_nb /= O_INJ) call this%coarser%level_4d_boundaries(ind)  ! perhaps overkill sometimes
+         qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong
          do iw = 1, wna%lst(ind)%dim4
             ! here we can use any high order prolongation without destroying conservation
-
-            ! OPT: this is insanely safe but highly inefficient implementation.
-            ! A lot of data is copied there and back through cg%wa
-            ! but only small fraction of it is actually used in boundary prolongation.
-
-            qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong
-            call this%coarser%wq_copy(ind, iw, qna%wai)
-            call this%wq_copy(ind, iw, qna%wai) !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
-            call this%prolong_bnd_from_coarser(qna%wai, dir=dir, nocorners=nocorners)
-            call this%qw_copy(qna%wai, ind, iw) !> \todo filter this through cg%ignore_prolongation
+            call this%prolong_bnd_from_coarser(ind, sub=iw, dir=dir, nocorners=nocorners)
          enddo
       endif
       call ppp_main%stop(a4bp_label, PPP_AMR)
