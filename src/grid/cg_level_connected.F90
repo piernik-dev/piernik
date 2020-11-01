@@ -1171,6 +1171,13 @@ contains
                   call cg%prolong(merge(qna%wai, ind, present(sub)), seg(g)%se, p_xyz = present(sub))  ! prolong rank-4 to auxiliary array cg%prolong_xyz.
                   ! qna%wai is required only for indirect determination of prolongation order (TOO QUIRKY)
                   ! The cg%prolong above consumes about half of the prolong_bnd_from_coarser execution time
+                  ! ToDo: implement special cases, especially O_INJ and O_LIN, perhaps O_I2 too,
+                  ! at least for for 3D (precompute full stencils), watch for even/odd issues
+                  ! For higher orders should issue a one-time warning
+
+                  ! OPT: in many cases (like in (M)HD directionally split solver we don't need all f/c guardcells.
+                  ! Implement efficient directional selection and avoid updating edge/corner f/c when not strictly necessary.
+                  ! Full corner update is important in multigrid and may be important for divB cleaning.
 
                   if (present(sub)) cg%w(ind)%arr(sub, fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI)) = &
                        &           cg%prolong_xyz(     fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI))
