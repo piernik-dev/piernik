@@ -1035,11 +1035,11 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
-      use constants,        only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims, base_level_id, PPP_AMR, PPP_MPI  !, dirtyH1
+      use constants,        only: I_ONE, xdim, ydim, zdim, LO, HI, base_level_id, PPP_AMR, PPP_MPI  !, dirtyH1
       use dataio_pub,       only: warn, die
       use domain,           only: dom
       use grid_cont,        only: grid_container
-      use grid_helpers,     only: f2c, c2f
+      use grid_helpers,     only: c2f
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
       use mpisetup,         only: err_mpi, req, inflate_req, master
       use named_array_list, only: qna, wna
@@ -1060,8 +1060,6 @@ contains
       integer(kind=8), dimension(xdim:zdim) :: per, ext_buf
       integer(kind=4) :: nr
       integer :: g
-      logical, allocatable, dimension(:,:,:) :: updatemap
-      integer(kind=8), dimension(ndims, LO:HI)  :: box_8   !< temporary storage
       logical, save :: firstcall = .true.
       character(len=*), parameter :: pbc_label = "prolong_bnd_from_coarser" , pbcv_label = "prolong_bnd_from_coarser:vbp", pbcw_label = "prolong_bnd_from_coarser:Waitall"
 
@@ -1090,6 +1088,7 @@ contains
 
       !call this%clear_boundaries(ind, (0.885+0.0001*this%l%id)*dirtyH1) ! not implemented yet
       ext_buf = dom%D_ * all_cg%ord_prolong_nb ! extension of the buffers due to stencil range
+      ! OPT: actual stencil range should be used instead
 
       nr = 0
       ! be ready to receive everything into right buffers
@@ -1155,10 +1154,7 @@ contains
 !!$            cg%prolong_xy = 15.
 !!$            cg%prolong_xyz = 31.
 
-            if (size(seg) > 0) then ! this if looks to be necessary to prevent polluting on the base level. Strange. \todo Check out why and fix it.
-
-               allocate(updatemap(cg%lhn(xdim, LO):cg%lhn(xdim, HI), cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)))
-               updatemap = .false.
+            if (size(seg) > 0) then
 
                do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
 
@@ -1170,32 +1166,17 @@ contains
                   fse = c2f(seg(g)%se)
                   fse(:, LO) = max(fse(:, LO), int(cg%lhn(:, LO), kind=8))
                   fse(:, HI) = min(fse(:, HI), int(cg%lhn(:, HI), kind=8))
-                  updatemap(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI)) = .true.
-                  !> When this%ord_prolong_set /= I_ZERO, the received seg(:)%buf(:,:,:) may overlap
-                  !! The incoming data thus must either contain valid guardcells (even if qna%lst(iv)%ord_prolong == O_INJ)
-                  !! or the guardcells must be zeroed before sending data and received buffer should be added to cg%prolong_(:,:,:) not just assigned
+                  !> When this%ord_prolong_set /= I_ZERO, the incoming data thus must contain valid guardcells
+
+                  call cg%prolong(merge(qna%wai, ind, present(sub)), seg(g)%se, p_xyz = present(sub))  ! prolong rank-4 to auxiliary array cg%prolong_xyz.
+                  ! qna%wai is required only for indirect determination of prolongation order (TOO QUIRKY)
+                  ! The cg%prolong above consumes about half of the prolong_bnd_from_coarser execution time
+
+                  if (present(sub)) cg%w(ind)%arr(sub, fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI)) = &
+                       &           cg%prolong_xyz(     fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI))
 
                enddo
 
-               box_8 = int(cg%ijkse, kind=8)
-               cse = f2c(box_8)
-               cse(:, LO) = cse(:, LO) - dom%nb*dom%D_(:)/refinement_factor
-               cse(:, HI) = cse(:, HI) + dom%nb*dom%D_(:)/refinement_factor
-
-               call cg%prolong(merge(qna%wai, ind, present(sub)), cse, p_xyz = .true.)  ! prolong to auxiliary array cg%prolong_xyz.
-               ! qna%wai is required only for indirect determination of prolongation order (TOO QUIRKY)
-               ! OPT Find a way to avoid unnecessary calculations where .not. updatemap
-               ! The cg%prolong above consumes about half of the prolong_bnd_from_coarser execution time
-               ! because it operates on whole cg regardless of needs.
-               ! The updatemap tricks are responsible for another half.
-
-               if (present(sub)) then
-                  where (updatemap) cg%w(ind)%arr(sub,:,:,:) = cg%prolong_xyz
-               else
-                  where (updatemap) cg%q(ind)%arr = cg%prolong_xyz
-               endif
-
-               deallocate(updatemap)
             endif
          endif
          end associate
@@ -1578,7 +1559,7 @@ contains
       call ppp_main%start(a4bp_label, PPP_AMR)
       if (associated(this%coarser) .and. this%l%id > base_level_id) then
          if (wna%lst(ind)%ord_prolong /= O_INJ) call this%coarser%level_4d_boundaries(ind)  ! perhaps overkill sometimes
-         qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong
+         qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong  ! QUIRKY
          do iw = 1, wna%lst(ind)%dim4
             ! here we can use any high order prolongation without destroying conservation
             call this%prolong_bnd_from_coarser(ind, sub=iw, dir=dir, nocorners=nocorners)
