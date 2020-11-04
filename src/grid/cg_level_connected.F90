@@ -1190,7 +1190,7 @@ contains
                cse(:, LO) = cse(:, LO) - dom%nb*dom%D_(:)/refinement_factor
                cse(:, HI) = cse(:, HI) + dom%nb*dom%D_(:)/refinement_factor
 
-               call cg%prolong(qna%wai, cse, p_xyz = .true.)  ! prolong to auxiliary array cg%prolong_xyz.
+               call cg%prolong(merge(qna%wai, ind, present(sub)), cse, p_xyz = .true.)  ! prolong to auxiliary array cg%prolong_xyz.
                ! qna%wai is required only for indirect determination of prolongation order (TOO QUIRKY)
                ! OPT Find a way to avoid unnecessary calculations where .not. updatemap
                ! The cg%prolong above consumes about half of the prolong_bnd_from_coarser execution time
