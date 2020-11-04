@@ -271,14 +271,13 @@ module initcrspectrum
          lbuff(3)  =  allow_source_spectrum_break
          lbuff(4)  =  synch_active
          lbuff(5)  =  adiab_active
-
-         lbuff(5)  =  force_init_NR
-         lbuff(6)  =  NR_run_refine_pf
-         lbuff(7)  =  NR_refine_solution_q
-         lbuff(8)  =  NR_refine_pf_lo
-         lbuff(9)  =  NR_refine_pf_up
-         lbuff(10) =  nullify_empty_bins
-         lbuff(11) =  approx_cutoffs
+         lbuff(6)  =  force_init_NR
+         lbuff(7)  =  NR_run_refine_pf
+         lbuff(8)  =  NR_refine_solution_q
+         lbuff(9)  =  NR_refine_pf_lo
+         lbuff(10) =  NR_refine_pf_up
+         lbuff(11) =  nullify_empty_bins
+         lbuff(12) =  approx_cutoffs
 
          rbuff(1)  = cfl_cre
          rbuff(2)  = cre_eff
@@ -338,14 +337,13 @@ module initcrspectrum
          allow_source_spectrum_break = lbuff(3)
          synch_active                = lbuff(4)
          adiab_active                = lbuff(5)
-
-         force_init_NR               = lbuff(5)
-         NR_run_refine_pf            = lbuff(6)
-         NR_refine_solution_q        = lbuff(7)
-         NR_refine_pf_lo             = lbuff(8)
-         NR_refine_pf_up             = lbuff(9)
-         nullify_empty_bins          = lbuff(10)
-         approx_cutoffs              = lbuff(11)
+         force_init_NR               = lbuff(6)
+         NR_run_refine_pf            = lbuff(7)
+         NR_refine_solution_q        = lbuff(8)
+         NR_refine_pf_lo             = lbuff(9)
+         NR_refine_pf_up             = lbuff(10)
+         nullify_empty_bins          = lbuff(11)
+         approx_cutoffs              = lbuff(12)
 
          cfl_cre                     = rbuff(1)
          cre_eff                     = rbuff(2)
