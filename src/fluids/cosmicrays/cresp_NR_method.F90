@@ -267,10 +267,11 @@ contains
 
       use constants,      only: zero, half, one, three, I_ONE, big, small
       use initcrspectrum, only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio
+      use dataio_pub,     only: die
 
       implicit none
 
-      integer(kind=4) :: i, j
+      integer(kind=4) :: i, j, ilim = 0, qmaxiter = 100
       logical         :: exit_code_p, exit_code_f
       real            :: a_min_lo = big, a_max_lo = small, a_min_up = big, a_max_up = small, n_min_lo = big, n_max_lo = small, n_min_up = big, n_max_up = small, &
                        & a_min_q = small, a_max_q = small, q_in3, pq_cmplx
@@ -368,14 +369,15 @@ contains
       a_max_q = (one + epsilon(one)) * p_fix_ratio
       j = min(arr_dim_q - int(arr_dim_q/100, kind=4), arr_dim_q - I_ONE)               ! BEWARE: magic number
 
-      do while (q_grid(j) <= (-q_big) .and. (q_grid(arr_dim_q) <= (-q_big)))
+      do while ((q_grid(j) <= (-q_big) .and. (q_grid(arr_dim_q) <= (-q_big))) .and. (ilim .le. qmaxiter) )
          a_max_q = a_max_q - a_max_q*0.005                                             ! BEWARE: magic number
          do i = 1, arr_dim_q
             alpha_tab_q(i)  = ind_to_flog(i, a_min_q, a_max_q, arr_dim_q)
          enddo
          call fill_q_grid(i_incr=1) ! computing q_grid takes so little time, that saving the grid is not necessary.
+         ilim = ilim + 1
       enddo
-
+      if (ilim .ge. qmaxiter) call die ("[cresp_NR_method:fill_guess_grids] Maximal iteration limit exceeded, q_grid might not have converged!")
 #ifdef CRESP_VERBOSED
       do i = 1, arr_dim_q
          print "(A1,I3,A7,2F18.12)", "[ ", i,"] a : q ", q_grid(i), alpha_tab_q(i)
