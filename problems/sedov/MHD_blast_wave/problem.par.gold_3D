@@ -1,17 +1,13 @@
-! 2D MHD blast wave, see
-! http://www.astro.princeton.edu/~jstone/Athena/tests/blast/blast.html
-! or
-! https://academic.oup.com/mnras/article/455/1/51/983632/Accurate-meshless-methods-for-magnetohydrodynamics
-! for more inspiration
-
-! The setup mostly follows the Athena approach except that we have different resolution and square domain.
+! This was intended to be a 3D gold test of sedow with AMR
 !
-! To mimic their setup use
-! n_d = 400, 600, 1
-! ymin = -0.75
-! ymax =  0.75
-! in the BASE_DOMAIN section below and also increase tend from END_CONTROL for full match
-
+! It will require to modify current jenkins/gold_test.sh because of name
+! clash (both this and problem.par.gold_2D would use the same directories
+! concurrently).
+!
+! For best performance the jenkins/gold_test.sh should avoid compilation in
+! case of 2 gold tests nbased on the same problem.
+!
+! Oldest SHA1 that can be used with this file is 7f30050e8095e49d9d0f65e4a79622148530343e
 
  $BASE_DOMAIN
     n_d = 3*16
