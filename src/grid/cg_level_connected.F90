@@ -1031,11 +1031,11 @@ contains
 !! \todo implement local copies without MPI
 !<
 
-   subroutine prolong_bnd_from_coarser(this, ind, sub, bnd_type, dir, nocorners)
+   subroutine prolong_bnd_from_coarser(this, ind, sub, dir, nocorners)
 
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
-      use constants,        only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims, O_INJ, base_level_id, PPP_AMR, PPP_MPI  !, dirtyH1
+      use constants,        only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims, base_level_id, PPP_AMR, PPP_MPI  !, dirtyH1
       use dataio_pub,       only: warn, die
       use domain,           only: dom
       use grid_cont,        only: grid_container
@@ -1050,8 +1050,6 @@ contains
       class(cg_level_connected_t), intent(inout) :: this      !< the list on which to perform the boundary exchange
       integer(kind=4),             intent(in)    :: ind       !< index of the prolonged variable
       integer(kind=4), optional,   intent(in)    :: sub       !< subindex, present only when ind refers to rank-4 arrays
-      integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
-                                                              !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
       logical,         optional,   intent(in)    :: nocorners !< when .true. then don't care about proper edge and corner update
 
@@ -1092,12 +1090,6 @@ contains
 
       !call this%clear_boundaries(ind, (0.885+0.0001*this%l%id)*dirtyH1) ! not implemented yet
       ext_buf = dom%D_ * all_cg%ord_prolong_nb ! extension of the buffers due to stencil range
-      if (.not. present(sub)) then
-         ! for rank-4 it was already called
-         ! ToDo: make it uniform with rank-3
-         if (all_cg%ord_prolong_nb /= O_INJ) call coarse%level_3d_boundaries(ind, bnd_type = bnd_type) ! it is really hard to determine which exchanges can be omitted
-      endif
-      ! bnd_type = BND_NEGREF above is critical for convergence of multigrid with isolated boundaries.
 
       nr = 0
       ! be ready to receive everything into right buffers
@@ -1522,7 +1514,7 @@ contains
 
    subroutine arr3d_boundaries(this, ind, area_type, bnd_type, dir, nocorners)
 
-      use constants,        only: PPP_AMR
+      use constants,        only: base_level_id, PPP_AMR, O_INJ
       use named_array_list, only: qna
       use ppp,              only: ppp_main
 
@@ -1545,7 +1537,10 @@ contains
 
       call this%dirty_boundaries(ind)
       call ppp_main%start(a3bp_label, PPP_AMR)
-      call this%prolong_bnd_from_coarser(ind, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
+      if (associated(this%coarser) .and. this%l%id > base_level_id .and. qna%lst(ind)%ord_prolong /= O_INJ) &
+           call this%coarser%level_3d_boundaries(ind, bnd_type = bnd_type)
+      ! bnd_type = BND_NEGREF above is critical for convergence of multigrid with isolated boundaries.
+      call this%prolong_bnd_from_coarser(ind, dir=dir, nocorners=nocorners)
       call ppp_main%stop(a3bp_label, PPP_AMR)
       call this%level_3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
       ! The correctness of the sequence of calls above may depend on the implementation of internal boundary exchange
@@ -1560,7 +1555,6 @@ contains
 
    subroutine arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
-      use cg_list_global,   only: all_cg
       use constants,        only: base_level_id, PPP_AMR, O_INJ
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
@@ -1583,7 +1577,7 @@ contains
 
       call ppp_main%start(a4bp_label, PPP_AMR)
       if (associated(this%coarser) .and. this%l%id > base_level_id) then
-         if (all_cg%ord_prolong_nb /= O_INJ) call this%coarser%level_4d_boundaries(ind)  ! perhaps overkill sometimes
+         if (wna%lst(ind)%ord_prolong /= O_INJ) call this%coarser%level_4d_boundaries(ind)  ! perhaps overkill sometimes
          qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong
          do iw = 1, wna%lst(ind)%dim4
             ! here we can use any high order prolongation without destroying conservation
