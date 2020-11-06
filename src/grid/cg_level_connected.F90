@@ -48,29 +48,29 @@ module cg_level_connected
     contains
 
       ! Level management
-      procedure :: init_level                                 !< common initialization for base level and other levels
-      procedure :: sync_ru                                    !< Synchronize this%recently_changed and set flags for update requests
-      procedure :: free_all_cg                                !< Erase all data on the level, leave it empty
+      procedure :: init_level                 !< common initialization for base level and other levels
+      procedure :: sync_ru                    !< Synchronize this%recently_changed and set flags for update requests
+      procedure :: free_all_cg                !< Erase all data on the level, leave it empty
 
       ! Prolongation and restriction
-      procedure :: vertical_prep                              !< initialize prolongation and restriction targets; not PRIVATE because of single call in cg_leaves:update
-      procedure, private :: vertical_b_prep                   !< Initialize prolongation targets for fine-coarse boundary exchange
-      procedure, private :: vertical_bf_prep                  !< Initialize prolongation targets for fine->coarse flux exchange
+      procedure :: vertical_prep              !< initialize prolongation and restriction targets; not PRIVATE because of single call in cg_leaves:update
+      procedure, private :: vertical_b_prep   !< Initialize prolongation targets for fine-coarse boundary exchange
+      procedure, private :: vertical_bf_prep  !< Initialize prolongation targets for fine->coarse flux exchange
 
-      procedure :: prolong                                    !< interpolate the grid data which has the flag vital set to this%finer level
-      procedure :: prolong_q_1var                             !< interpolate the grid data in specified q field to this%finer level
-      procedure, private :: prolong_bnd_from_coarser          !< Interpolate boundaries from coarse level at fine-coarse interfaces
+      procedure :: prolong                    !< interpolate the grid data which has the flag vital set to this%finer level
+      procedure :: prolong_q_1var             !< interpolate the grid data in specified q field to this%finer level
+      procedure :: prolong_bnd_from_coarser   !< Interpolate boundaries from coarse level at fine-coarse interfaces
 
-      procedure :: restrict                                   !< interpolate the grid data which has the flag vital set from this%coarser level
-      procedure :: restrict_to_base                           !< restrict all variables to the base level
-      procedure :: restrict_to_floor_q_1var                   !< restrict specified q field as much as possible
-      procedure :: restrict_to_base_q_1var                    !< restrict specified q field to the base level
-      procedure :: restrict_to_base_w_1var                    !< restrict specified w field to the base level
-      procedure :: restrict_q_1var                            !< interpolate the grid data in specified q field to this%coarser level
-      procedure :: restrict_w_1var                            !< interpolate the grid data in specified w field to this%coarser level
+      procedure :: restrict                   !< interpolate the grid data which has the flag vital set from this%coarser level
+      procedure :: restrict_to_base           !< restrict all variables to the base level
+      procedure :: restrict_to_floor_q_1var   !< restrict specified q field as much as possible
+      procedure :: restrict_to_base_q_1var    !< restrict specified q field to the base level
+      procedure :: restrict_to_base_w_1var    !< restrict specified w field to the base level
+      procedure :: restrict_q_1var            !< interpolate the grid data in specified q field to this%coarser level
+      procedure :: restrict_w_1var            !< interpolate the grid data in specified w field to this%coarser level
 
-      procedure :: arr3d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
-      procedure :: arr4d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays.
+      procedure :: arr3d_boundaries           !< Set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays on a single level.
+      procedure :: arr4d_boundaries           !< Set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays on a single level.
 
    end type cg_level_connected_t
 
@@ -1498,11 +1498,22 @@ contains
       enddo
    end subroutine restrict_w_1var
 
-!> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
+!>
+!! \brief This routine sets up all guardcells (internal, external and fine-coarse)
+!! for given rank-3 arrays on a single level.
+!!
+!! Use of this routine for whole stack of levels (leaves) will result in double update
+!! of internal boundaries on all levels below the finest%level when prolongation
+!! order is higher than injection.
+!!
+!! Currently only multigrid solver use level-wise updates on rank-3 array,
+!! ande leaves%leaf_arr3d_boundaries can't be used instead there.
+!<
 
    subroutine arr3d_boundaries(this, ind, area_type, bnd_type, dir, nocorners)
 
       use constants,        only: base_level_id, PPP_AMR, O_INJ
+      use global,           only: dirty_debug
       use named_array_list, only: qna
       use ppp,              only: ppp_main
 
@@ -1516,14 +1527,12 @@ contains
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
       logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
-      integer(kind=4) :: ord_saved
       character(len=*), parameter :: a3b_label = "level:arr3d_boundaries", a3bp_label = "level:arr3d_boundaries:prolong"
 
       call ppp_main%start(a3b_label)
 
-      ord_saved = qna%lst(ind)%ord_prolong
+      if (dirty_debug) call this%dirty_boundaries(ind)
 
-      call this%dirty_boundaries(ind)
       call ppp_main%start(a3bp_label, PPP_AMR)
       if (associated(this%coarser) .and. this%l%id > base_level_id .and. qna%lst(ind)%ord_prolong /= O_INJ) &
            call this%coarser%level_3d_boundaries(ind, bnd_type = bnd_type)
@@ -1533,17 +1542,27 @@ contains
       call this%level_3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
       ! The correctness of the sequence of calls above may depend on the implementation of internal boundary exchange
 
-      qna%lst(ind)%ord_prolong = ord_saved
-
       call ppp_main%stop(a3b_label)
 
    end subroutine arr3d_boundaries
 
-!> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-4 arrays.
+!>
+!! \brief This routine sets up all guardcells (internal, external and fine-coarse)
+!! for given rank-4 arrays on a single level.
+!!
+!! Use of this routine for whole stack of levels (leaves) will result in double update
+!! of internal boundaries on all levels below the finest%level when prolongation
+!! order is higher than injection.
+!!
+!! Currently no solvers use level-wise updates on rank-4 array, so it is more efficient
+!! to  use leaves%leaf_arr4d_boundaries instead.
+!<
 
    subroutine arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
       use constants,        only: base_level_id, PPP_AMR, O_INJ
+      use dataio_pub,       only: warn
+      use mpisetup,         only: master
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 
@@ -1556,7 +1575,14 @@ contains
       logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       integer(kind=4) :: iw
-      character(len=*), parameter :: a4b_label = "level:arr4d_boundaries", a4bp_label = "level:arr4d_boundaries:prolong"
+      character(len=*), parameter :: a4b_label = "lev:a4d_bnd:DEPR", a4bp_label = "lev:a4d_bndr:prolong:DEPR"
+      logical, save :: warned = .false.
+
+      if (.not. warned) then
+         if (master) call warn("[cg_level_connected:arr4d_boundaries] This routine is deprecated. Use leaves%leaf_arr4d_boundaries instead")
+         ! Disable this warning when we get a solver that really requires level-wise update of guardcells in rank-4 arrays.
+         warned = .true.
+      endif
 
       call ppp_main%start(a4b_label)
 

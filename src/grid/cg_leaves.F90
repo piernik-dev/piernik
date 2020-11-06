@@ -59,8 +59,8 @@ module cg_leaves
    contains
       procedure :: update                  !< Select grids that should be included on leaves list
       procedure :: balance_and_update      !< Rebalance if required and update
-      procedure :: leaf_arr3d_boundaries   !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays
-      procedure :: leaf_arr4d_boundaries   !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays
+      procedure :: leaf_arr3d_boundaries   !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays on leaves
+      procedure :: leaf_arr4d_boundaries   !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays on leaves
       !< \todo fix *_bnd_* routines contents for this type as soon as possible
       procedure :: internal_bnd_3d         !< Wrapper routine to set up internal boundaries for for given rank-3 arrays
       procedure :: internal_bnd_4d         !< Wrapper routine to set up internal boundaries for for given rank-4 arrays
@@ -194,11 +194,14 @@ contains
 
    end subroutine balance_and_update
 
-!> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-3 arrays
+!> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-3 arrays on leaves.
 
    subroutine leaf_arr3d_boundaries(this, ind, area_type, bnd_type, dir, nocorners)
 
       use cg_level_connected, only: cg_level_connected_t
+      use constants,          only: PPP_AMR
+      use global,             only: dirty_debug
+      use ppp,                only: ppp_main
 
       implicit none
 
@@ -211,22 +214,38 @@ contains
       logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
 
       type(cg_level_connected_t), pointer   :: curl
+      character(len=*), parameter :: l3b_label = "leaf:arr3d_boundaries", l3bp_label = "leaf:arr3d_boundaries:prolong"
+
+      call ppp_main%start(l3b_label)
 
       curl => this%coarsest_leaves
       do while (associated(curl))
-         ! OPT this results in duplicated calls to level_3d_boundaries for levels from this%coarsest_leaves to finest%level%coarser
-         !> \todo implement it with lower level routines to remove this duplication
-         call curl%arr3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
+         if (dirty_debug) call curl%dirty_boundaries(ind)
+         call curl%level_3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
          curl => curl%finer
       enddo
 
+      call ppp_main%start(l3bp_label, PPP_AMR)
+      curl => this%coarsest_leaves
+      do while (associated(curl))
+         ! here we can use any high order prolongation without destroying conservation
+         call curl%prolong_bnd_from_coarser(ind, dir=dir, nocorners=nocorners)
+         curl => curl%finer
+      enddo
+      call ppp_main%stop(l3bp_label, PPP_AMR)
+
+      call ppp_main%stop(l3b_label)
+
    end subroutine leaf_arr3d_boundaries
 
-!> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-4 arrays
+!> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-4 arrays on leaves.
 
    subroutine leaf_arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
       use cg_level_connected, only: cg_level_connected_t
+      use constants,          only: PPP_AMR
+      use named_array_list,   only: qna, wna
+      use ppp,                only: ppp_main
 
       implicit none
 
@@ -237,12 +256,30 @@ contains
       logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
 
       type(cg_level_connected_t), pointer   :: curl
+      integer(kind=4) :: iw
+      character(len=*), parameter :: l4b_label = "leaf:arr4d_boundaries", l4bp_label = "leaf:arr4d_boundaries:prolong"
+
+      call ppp_main%start(l4b_label)
 
       curl => this%coarsest_leaves
       do while (associated(curl))
-         call curl%arr4d_boundaries(ind, area_type=area_type, dir=dir, nocorners=nocorners)
+         call curl%level_4d_boundaries(ind, area_type=area_type, dir=dir, nocorners=nocorners)
          curl => curl%finer
       enddo
+
+      call ppp_main%start(l4bp_label, PPP_AMR)
+      curl => this%coarsest_leaves
+      do while (associated(curl))
+         qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong  ! QUIRKY
+         do iw = 1, wna%lst(ind)%dim4
+            ! here we can use any high order prolongation without destroying conservation
+            call curl%prolong_bnd_from_coarser(ind, sub=iw, dir=dir, nocorners=nocorners)
+         enddo
+         curl => curl%finer
+      enddo
+      call ppp_main%stop(l4bp_label, PPP_AMR)
+
+      call ppp_main%stop(l4b_label)
 
    end subroutine leaf_arr4d_boundaries
 
