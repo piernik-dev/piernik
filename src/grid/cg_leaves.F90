@@ -199,8 +199,9 @@ contains
    subroutine leaf_arr3d_boundaries(this, ind, area_type, bnd_type, dir, nocorners)
 
       use cg_level_connected, only: cg_level_connected_t
-      use constants,          only: PPP_AMR
+      use constants,          only: PPP_AMR, O_INJ
       use global,             only: dirty_debug
+      use named_array_list,   only: qna
       use ppp,                only: ppp_main
 
       implicit none
@@ -215,13 +216,19 @@ contains
 
       type(cg_level_connected_t), pointer   :: curl
       character(len=*), parameter :: l3b_label = "leaf:arr3d_boundaries", l3bp_label = "leaf:arr3d_boundaries:prolong"
+      logical :: nc
 
       call ppp_main%start(l3b_label)
+
+      nc = .false.
+      if (present(nocorners)) nc=nocorners
+      if (qna%lst(ind)%ord_prolong /= O_INJ) nc = .false.
 
       curl => this%coarsest_leaves
       do while (associated(curl))
          if (dirty_debug) call curl%dirty_boundaries(ind)
-         call curl%level_3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
+         call curl%level_3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type, dir=dir, nocorners=nc)
+         ! corners are required on all levels except for finest anyway if prolongation is greater than injection
          curl => curl%finer
       enddo
 
@@ -230,6 +237,10 @@ contains
       do while (associated(curl))
          ! here we can use any high order prolongation without destroying conservation
          call curl%prolong_bnd_from_coarser(ind, dir=dir, nocorners=nocorners)
+
+         if (present(bnd_type)) call curl%external_boundaries(ind, area_type=area_type, bnd_type=bnd_type)
+         ! this is needed in multigrid residual to enforce strict BND_NEGREF on fine corners at domain boundaries
+
          curl => curl%finer
       enddo
       call ppp_main%stop(l3bp_label, PPP_AMR)
@@ -243,7 +254,7 @@ contains
    subroutine leaf_arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
       use cg_level_connected, only: cg_level_connected_t
-      use constants,          only: PPP_AMR
+      use constants,          only: PPP_AMR, O_INJ
       use named_array_list,   only: qna, wna
       use ppp,                only: ppp_main
 
@@ -258,8 +269,13 @@ contains
       type(cg_level_connected_t), pointer   :: curl
       integer(kind=4) :: iw
       character(len=*), parameter :: l4b_label = "leaf:arr4d_boundaries", l4bp_label = "leaf:arr4d_boundaries:prolong"
+      logical :: nc
 
       call ppp_main%start(l4b_label)
+
+      nc = .false.
+      if (present(nocorners)) nc=nocorners
+      if (wna%lst(ind)%ord_prolong /= O_INJ) nc = .false.
 
       curl => this%coarsest_leaves
       do while (associated(curl))
@@ -272,8 +288,8 @@ contains
       do while (associated(curl))
          qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong  ! QUIRKY
          do iw = 1, wna%lst(ind)%dim4
-            ! here we can use any high order prolongation without destroying conservation
-            call curl%prolong_bnd_from_coarser(ind, sub=iw, dir=dir, nocorners=nocorners)
+            call curl%prolong_bnd_from_coarser(ind, sub=iw, dir=dir, nocorners=nc)
+            ! corners are required on all levels except for finest anyway if prolongation is greater than injection
          enddo
          curl => curl%finer
       enddo
