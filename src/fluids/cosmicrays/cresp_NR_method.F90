@@ -250,10 +250,10 @@ contains
 
    subroutine fill_guess_grids
 
-      use constants,      only: zero, half, one, three, I_ONE, big, small
-      use dataio_pub,     only: die,msg, printinfo, warn
-      use initcrspectrum, only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio, e_small
-      use cresp_variables,only: clight_cresp
+      use constants,       only: zero, half, one, three, I_ONE, big, small
+      use dataio_pub,      only: die, msg, printinfo, warn
+      use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio, e_small
+      use cresp_variables, only: clight_cresp
 
       implicit none
 
@@ -993,6 +993,8 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine prepare_indices(ind_incr, ind_beg, ind_end)
 
+      use constants,      only: INVALID
+      use dataio_pub,     only: die
       use initcrspectrum, only: arr_dim
 
       implicit none
@@ -1004,6 +1006,9 @@ contains
          ind_beg = 1 ; ind_end = arr_dim
       else if (ind_incr == -1) then
          ind_beg = arr_dim ; ind_end = 1
+      else
+         ind_beg = INVALID; ind_end = INVALID
+         call die("[cresp_NR_method:prepare_indices] ind_incr /= +/-1")
       endif
 
    end subroutine prepare_indices
@@ -1023,6 +1028,7 @@ contains
    function jac_fin_diff(x) ! jacobian via finite difference method
 
       use constants, only: half
+      use func,      only: operator(.equals.)
 
       implicit none
 
@@ -1035,7 +1041,7 @@ contains
       do j = 1, ndim
          dx(j) = max(x(j), dx_min )          ! assure dx > zero
          dx(j) = min(dx(j)*dx_par, dx_par)   ! the value of dx is scaled not to go over value of x
-         if (x(j) == dx(j)) dx(j) = half * dx(j)
+         if (x(j) .equals. dx(j)) dx(j) = half * dx(j)
          xp = x ; xm = x
          xp(j) = x(j) - dx(j) ;  xm(j) = x(j) + dx(j)
          jac_fin_diff(:,j)  = half*( selected_function_2D(xp) - selected_function_2D(xm)) / dx(j)
@@ -1470,9 +1476,9 @@ contains
 
    subroutine check_NR_smap_header(hdr, hdr_std, hdr_equal)
 
-      use constants, only: zero
-      use dataio_pub,only: msg, printinfo, warn
-      use func,      only: operator(.equals.)
+      use constants,  only: zero
+      use dataio_pub, only: msg, printinfo, warn
+      use func,       only: operator(.equals.)
 
       implicit none
 
