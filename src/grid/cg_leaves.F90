@@ -87,7 +87,7 @@ contains
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
-      use constants,          only: pSUM, pMAX, base_level_id, refinement_factor, base_level_id, INVALID, tmr_amr, PPP_AMR
+      use constants,          only: pSUM, pMAX, base_level_id, refinement_factor, INVALID, tmr_amr, PPP_AMR
       use dataio_pub,         only: msg, printinfo
       use domain,             only: dom
       use list_of_cg_lists,   only: all_lists
