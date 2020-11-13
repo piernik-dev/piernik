@@ -465,7 +465,7 @@ contains
    subroutine cr_dist_to_edge
 
       use cg_leaves,      only: leaves
-      use cg_level_base,  only: base
+      use cg_level_base,  only: expand_base
       use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, LO, HI, pMAX
       use domain,         only: dom
@@ -555,7 +555,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call base%expand(ddist(:,:) < iprox)
+      call expand_base(ddist(:,:) < iprox)
 
    end subroutine cr_dist_to_edge
 

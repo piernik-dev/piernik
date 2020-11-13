@@ -35,7 +35,7 @@ module cg_level_base
    implicit none
 
    private
-   public :: base
+   public :: base, expand_base
 
    abstract interface
       subroutine no_args
@@ -44,20 +44,11 @@ module cg_level_base
    end interface
 
    !! \brief The pointer of the base level and a method to initialize it
-   !> \todo Domainshrinking, expanding and crawling should also be implemented here
    type :: cg_level_base_t
       type(cg_level_connected_t), pointer :: level            !< The base level
       procedure(no_args), nopass, pointer :: init_multigrid   !< a pointer to multigrid:init_multigrid or null()
    contains
       procedure          :: set                               !< initialize the base level
-      procedure          :: expand                            !< add one line of blocks in some directions
-      procedure, private :: expand_side                       !< add one line of blocks in selected direction
-!      procedure :: shrink      !< delete one line of blocks in some directions
-!      procedure, private :: shrink_side !< delete one line of blocks in selected direction
-!      procedure :: lift        !< move one level higher
-!      procedure :: plunge      !< move one level lower
-!      procedure :: condense    !< shrink on all sides (halve size) and plunge
-!      procedure :: inflate     !< expand on all sides to double size and lift
    end type cg_level_base_t
 
    type(cg_level_base_t), pointer :: base                     !< base level grid containers
@@ -99,7 +90,7 @@ contains
 
 !> \brief Add one line of blocks in some directions (wrapper for expand_side)
 
-   subroutine expand(this, sides)
+   subroutine expand_base(sides)
 
       use all_boundaries,    only: all_fluid_boundaries
       use cg_level_coarsest, only: coarsest
@@ -111,11 +102,10 @@ contains
 
       implicit none
 
-      class(cg_level_base_t),               intent(inout) :: this   !< object invoking type bound procedure
       logical, dimension(xdim:zdim, LO:HI), intent(in)    :: sides  !< logical mask of sides to be extended
 
       integer :: d, lh
-      logical :: changed, side
+      logical :: changed, ch, side
 
       changed = .false.
       do d = xdim, zdim
@@ -124,8 +114,8 @@ contains
                side = sides(d, lh)
                call piernik_MPI_Allreduce(side, pLOR)
                if (side) then
-                  call this%expand_side(d, lh)
-                  changed = .true.
+                  ch = expand_side(d, lh)
+                  changed = changed .or. ch
                endif
             enddo
          endif
@@ -133,27 +123,28 @@ contains
 
       if (changed) then
          if (master) then
-            write(msg, '(a,3i8,a,i3)')"[cg_level_base:expand] Effective resolution is [", finest%level%l%n_d(:), " ] at level ", finest%level%l%id
+            write(msg, '(a,3i8,a,i3)')"[cg_level_base:expand_base] Effective resolution is [", finest%level%l%n_d(:), " ] at level ", finest%level%l%id
             call warn(msg) ! As long as the restart file does not automagically recognize changed parameters, this message should be easily visible
          endif
          call coarsest%delete_coarser_than_base
-         if (associated(this%init_multigrid)) call this%init_multigrid
+         if (associated(base%init_multigrid)) call base%init_multigrid
          call all_fluid_boundaries
          ! the cg%gp and cg%cs_iso2 are updated in refinement_update::update_refinement which should be called right after domain expansion to fix refinement structure
       endif
 
-   end subroutine expand
+   end subroutine expand_base
 
 !> \brief Add one line of blocks in selected direction
 
-   subroutine expand_side(this, d, lh)
+   logical function expand_side(d, lh)
 
       use cg_leaves,          only: leaves
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: expanded_domain
-      use constants,          only: xdim, zdim, LO, HI, BND_MPI, BND_FC, refinement_factor
-      use dataio_pub,         only: die
+      use constants,          only: xdim, zdim, LO, HI, refinement_factor, &
+           &                        BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_PER, BND_REF, BND_MPI, BND_FC
+      use dataio_pub,         only: die, warn, msg
       use domain,             only: dom
       use list_of_cg_lists,   only: all_lists
       use mpisetup,           only: master
@@ -162,7 +153,6 @@ contains
 
       implicit none
 
-      class(cg_level_base_t), intent(inout) :: this   !< object invoking type bound procedure
       integer,                intent(in)    :: d      !< direction to be expanded
       integer,                intent(in)    :: lh     !< side to be expanded
 
@@ -170,16 +160,26 @@ contains
       type(cg_list_element),  pointer :: cgl
       type(cg_level_connected_t), pointer :: curl
 
+      expand_side = .false.
+
       if (.not. dom%has_dir(d)) call die("[cg_level_base:expand_side] Non-existing direction")
       if (bsize(d) < dom%nb) call die("[cg_level_base:expand_side] Invalid AMR::bsize")
       if (.not. associated(late_initial_conditions)) call die("[cg_level_base:expand_side] You must provide a routine to initialize vital arrays for current time")
 
-      call this%level%set_is_old
+      if (any(dom%bnd(d, lh) == [ BND_PER, BND_REF ])) return
+      if (all(dom%bnd(d, lh) /= [ BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD ])) then
+         write(msg, '(a,i2,a,2i2,a)')"[cg_level_base:expand_side] Not sure if boundary type ", dom%bnd(d, lh), " at direction (", d, lh, ") is expandable. You were warned."
+         call warn(msg)
+      endif
+
+      expand_side = .true.
+
+      call base%level%set_is_old
       cgl => leaves%first
       do while (associated(cgl))
          if (cgl%cg%ext_bnd(d, lh)) then
             cgl%cg%ext_bnd(d, lh) = .false.
-            if (cgl%cg%l%id == this%level%l%id) then
+            if (cgl%cg%l%id == base%level%l%id) then
                cgl%cg%bnd(d, lh) = BND_MPI
             else
                cgl%cg%bnd(d, lh) = BND_FC
@@ -188,46 +188,54 @@ contains
          cgl => cgl%nxt
       enddo
 
-      e_size = this%level%l%n_d
+      e_size = base%level%l%n_d
       e_size(d) = bsize(d)
 
-      e_off = this%level%l%off
+      e_off = base%level%l%off
       select case (lh)
          case (LO)
-            e_off(d) = this%level%l%off(d) - bsize(d)
+            e_off(d) = base%level%l%off(d) - bsize(d)
          case (HI)
-            e_off(d) = this%level%l%off(d) + this%level%l%n_d(d)
+            e_off(d) = base%level%l%off(d) + base%level%l%n_d(d)
       end select
 
-      curl => this%level
+      curl => base%level
       do while (associated(curl))
          new_n_d = curl%l%n_d
-         new_n_d(d) = curl%l%n_d(d) + bsize(d)*refinement_factor**(curl%l%id-this%level%l%id)
+         new_n_d(d) = curl%l%n_d(d) + bsize(d)*refinement_factor**(curl%l%id-base%level%l%id)
          new_off = curl%l%off
-         new_off(d) = min(curl%l%off(d), e_off(d)*refinement_factor**(curl%l%id-this%level%l%id))
+         new_off(d) = min(curl%l%off(d), e_off(d)*refinement_factor**(curl%l%id-base%level%l%id))
          call curl%l%update(curl%l%id, new_n_d, new_off)
          call curl%refresh_SFC_id
          curl => curl%finer
       enddo
-      ! multigrid levels are destroyed and re-created in this%expand
+      ! multigrid levels are destroyed and re-created in expand_base
 
       call dom%modify_side(d, lh, bsize(d))
-      if (master) call this%level%add_patch(e_size, e_off)
-      call this%level%init_all_new_cg
+      if (master) call base%level%add_patch(e_size, e_off)
+      call base%level%init_all_new_cg
 
       call all_lists%register(expanded_domain, "e-dom")
-      cgl => this%level%first
+      cgl => base%level%first
       do while (associated(cgl))
          if (.not. cgl%cg%is_old) call expanded_domain%add(cgl%cg)
          cgl => cgl%nxt
       enddo
 
-      call this%level%sync_ru
+      call base%level%sync_ru
       call leaves%update(" (  expand  ) ") !cannot call balance here as it will mess up the expanded_domain list
-      call this%level%deallocate_patches
+      call base%level%deallocate_patches
       call late_initial_conditions
       emergency_fix = .true.
 
-   end subroutine expand_side
+   end function expand_side
+
+!> \todo Domain shrinking, expanding and crawling should also be implemented here
+!      procedure :: shrink      !< delete one line of blocks in some directions
+!      procedure, private :: shrink_side !< delete one line of blocks in selected direction
+!      procedure :: lift        !< move one level higher
+!      procedure :: plunge      !< move one level lower
+!      procedure :: condense    !< shrink on all sides (halve size) and plunge
+!      procedure :: inflate     !< expand on all sides to double size and lift
 
 end module cg_level_base
