@@ -179,8 +179,9 @@ contains
       logical,         optional, intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       logical, dimension(xdim:cor_dim) :: dmask
-      character(len=*), parameter :: ibl_label = "internal_boundaries_MPI_local", ibm_label = "internal_boundaries_MPI_merged", ib1_label = "internal_boundaries_MPI_1by1"
+      character(len=*), parameter :: ib_label = "internal_boundaries", ibl_label = "internal_boundaries_local", ibm_label = "internal_boundaries_MPI_merged", ib1_label = "internal_boundaries_MPI_1by1"
 
+      call ppp_main%start(ib_label)
       dmask(xdim:zdim) = dom%has_dir
       if (present(dir)) then
          dmask(xdim:zdim) = .false.
@@ -190,9 +191,9 @@ contains
       dmask(cor_dim) = .true.
       if (present(nocorners)) dmask(cor_dim) = .not. nocorners
 
-      call ppp_main%start(ibl_label, PPP_AMR)
+      call ppp_main%start(ibl_label)
       call internal_boundaries_local(this, ind, tgt3d, dmask)
-      call ppp_main%stop(ibl_label, PPP_AMR)
+      call ppp_main%stop(ibl_label)
 
       if (this%ms%valid) then
          call ppp_main%start(ibm_label, PPP_AMR)
@@ -203,6 +204,7 @@ contains
          call internal_boundaries_MPI_1by1(this, ind, tgt3d, dmask)
          call ppp_main%stop(ib1_label, PPP_AMR)
       endif
+      call ppp_main%stop(ib_label)
 
    end subroutine internal_boundaries
 
@@ -788,6 +790,7 @@ contains
       use fluidindex,            only: iarr_all_dn
       use grid_cont,             only: grid_container
       use named_array_list,      only: wna
+      use ppp,                   only: ppp_main
 #ifdef COSM_RAYS
       use initcosmicrays,        only: smallecr
       use fluidindex,            only: iarr_all_crs
@@ -807,8 +810,11 @@ contains
       logical, save                           :: frun = .true.
       integer(kind=4)                         :: side, ssign, ib
       type(cg_list_element), pointer          :: cgl
+      character(len=*), parameter             :: bu_label = "bnd_u"
 
       if (.not. any([xdim, ydim, zdim] == dir)) call die("[cg_list_bnd:bnd_u] Invalid direction.")
+
+      call ppp_main%start(bu_label)
 
       if (frun) then
          call init_fluidboundaries
@@ -875,6 +881,8 @@ contains
          enddo
          cgl => cgl%nxt
       enddo
+
+      call ppp_main%stop(bu_label)
 
    contains
 
@@ -973,6 +981,7 @@ contains
       use grid_cont,             only: grid_container
       use mpisetup,              only: master
       use named_array_list,      only: wna
+      use ppp,                   only: ppp_main
 
       implicit none
 
@@ -985,6 +994,9 @@ contains
       logical, save,   dimension(ndims,LO:HI) :: bnd_not_provided = .false.
       integer(kind=4), dimension(ndims,LO:HI) :: l, r
       type(cg_list_element), pointer          :: cgl
+      character(len=*), parameter             :: bb_label = "bnd_b"
+
+      call ppp_main%start(bb_label)
 
 ! Non-MPI boundary conditions
       if (frun) then
@@ -1030,6 +1042,8 @@ contains
          enddo
          cgl => cgl%nxt
       enddo
+
+      call ppp_main%stop(bb_label)
 
       contains
 
