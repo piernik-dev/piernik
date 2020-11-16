@@ -538,14 +538,13 @@ module initcrspectrum
 
       call init_cresp_types
 
-      K_cre_paral(1:ncre) = K_cre_paral_1 * (p_fix(0:ncre-1) / p_diff)**K_cre_pow
-      K_cre_paral(1)      = K_cre_paral_1 * (p_fix(1) / p_fix_ratio / p_diff)**K_cre_pow
+      K_cre_paral(1:ncre) = K_cre_paral_1 * (p_mid_fix(1:ncre) / p_diff)**K_cre_pow
 
-      K_cre_perp(1:ncre)  = K_cre_perp_1  * (p_fix(0:ncre-1) / p_diff)**K_cre_pow
-      K_cre_perp(1)       = K_cre_perp_1  * (p_fix(1) / p_fix_ratio / p_diff)**K_cre_pow
+      K_cre_perp(1:ncre)  = K_cre_perp_1  * (p_mid_fix(1:ncre) / p_diff)**K_cre_pow
+
 #ifdef VERBOSE
       write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_paral = ", K_cre_paral(1:ncre) ; if (master) call printinfo(msg)
-      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_perp = ", K_cre_perp(1:ncre)   ; if (master) call printinfo(msg)
+      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_perp = ",  K_cre_perp(1:ncre)  ; if (master) call printinfo(msg)
 #endif /* VERBOSE */
 
       K_cre_paral(ncre+1:2*ncre)      = K_cre_paral(1:ncre)
