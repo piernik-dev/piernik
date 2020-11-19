@@ -39,9 +39,9 @@ module initproblem
 
    integer(kind=4)    :: norm_step
    real               :: t_sn
-   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr1, amp_cr2
+   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr1, amp_cr2, vxd0, vyd0, vzd0, expansion_cnst
 
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr1, amp_cr2, norm_step
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, vxd0, vyd0, vzd0, beta_cr, amp_cr1, amp_cr2, norm_step, expansion_cnst
 
 contains
 
@@ -77,6 +77,10 @@ contains
       y0             = 0.0         !< y-position of the blob
       z0             = 0.0         !< z-position of the blob
       r0             = 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))  !< radius of the blob
+      vxd0           = 0.0         !< initial velocity_x, refers to whole domain
+      vyd0           = 0.0         !< initial velocity_y, refers to whole domain
+      vzd0           = 0.0         !< initial velocity_z, refers to whole domain
+      expansion_cnst = 0.0
 
       beta_cr        = 0.0         !< ambient level
       amp_cr1        = 1.0         !< amplitude of the blob
@@ -114,6 +118,10 @@ contains
          rbuff(10) = beta_cr
          rbuff(11) = amp_cr1
          rbuff(12) = amp_cr2
+         rbuff(13) = vxd0
+         rbuff(14) = vyd0
+         rbuff(15) = vzd0
+         rbuff(16) = expansion_cnst
 
          ibuff(1)  = norm_step
 
@@ -136,6 +144,10 @@ contains
          beta_cr   = rbuff(10)
          amp_cr1   = rbuff(11)
          amp_cr2   = rbuff(12)
+         vxd0      = rbuff(13)
+         vyd0      = rbuff(14)
+         vzd0      = rbuff(15)
+         expansion_cnst = rbuff(16)
 
          norm_step = int(ibuff(1), kind=4)
 
@@ -163,6 +175,11 @@ contains
 #ifdef COSM_RAYS_SOURCES
       use cr_data,        only: eCRSP, icr_H1, icr_C12, cr_table
 #endif /* COSM_RAYS_SOURCES */
+#ifdef COSM_RAY_ELECTRONS
+     use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
+     use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
+     use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -172,6 +189,9 @@ contains
       real                            :: cs_iso, decr, r2, maxv
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
+#ifdef COSM_RAY_ELECTRONS
+      real                            :: e_tot
+#endif /* COSM_RAY_ELECTRONS */
 
       fl => flind%ion
 
@@ -201,6 +221,27 @@ contains
          call cg%set_constant_b_field([bx0, by0, bz0])
          cg%u(fl%idn,:,:,:) = d0
          cg%u(fl%imx:fl%imz,:,:,:) = 0.0
+#ifdef IONIZED
+! Velocity field
+         if (expansion_cnst .notequals. 0.0 ) then ! adiabatic expansion / compression
+            write(msg,*) '[initproblem:problem_initial_conditions] setting up expansion/compression, expansion_cnst = ',expansion_cnst
+            call printinfo(msg)
+
+            do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+               do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+                  do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+                     cg%u(flind%ion%imx,i,j,k) = cg%u(flind%ion%idn,i,j,k) * (cg%x(i)-x0) * expansion_cnst  !< vxd0 * rho
+                     cg%u(flind%ion%imy,i,j,k) = cg%u(flind%ion%idn,i,j,k) * (cg%y(j)-y0) * expansion_cnst  !< vyd0 * rho
+                     cg%u(flind%ion%imz,i,j,k) = cg%u(flind%ion%idn,i,j,k) * (cg%z(k)-z0) * expansion_cnst  !< vzd0 * rho
+                  enddo
+               enddo
+            enddo
+         else
+            cg%u(flind%ion%imx,:,:,:) = vxd0 * cg%u(flind%ion%idn,:,:,:)
+            cg%u(flind%ion%imy,:,:,:) = vyd0 * cg%u(flind%ion%idn,:,:,:)
+            cg%u(flind%ion%imz,:,:,:) = vzd0 * cg%u(flind%ion%idn,:,:,:)
+         endif
+#endif /* IONIZED */
 
 #ifndef ISO
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
@@ -214,7 +255,7 @@ contains
          enddo
 #endif /* !ISO */
 
-         cg%u(iarr_crn,:,:,:) = 0.0
+         cg%u(iarr_crs,:,:,:) = 0.0
 #ifdef COSM_RAYS_SOURCES
          if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(cr_table(icr_H1 ))-1.0)
          if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(cr_table(icr_C12))-1.0)
@@ -243,6 +284,16 @@ contains
 #else /* !COSM_RAYS_SOURCES */
                   cg%u(iarr_crn(1:2), i, j, k) = cg%u(iarr_crn(1:2), i, j, k) + [amp_cr1, amp_cr2]*decr
 #endif /* !COSM_RAYS_SOURCES */
+#ifdef COSM_RAY_ELECTRONS
+! Explosions @CRESP independent of cr nucleons
+                  e_tot = amp_cr1 * cre_eff * decr
+                  if (e_tot > smallcree) then
+                     cresp%n = 0.0 ;  cresp%e = 0.0
+                     call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot)
+                     cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
+                     cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
+                  endif
+#endif /* COSM_RAY_ELECTRONS */
                enddo
             enddo
          enddo
@@ -261,11 +312,25 @@ contains
 
          call piernik_MPI_Allreduce(maxv, pMAX)
          if (master) then
+#ifdef COSM_RAY_ELECTRONS
+            if (iarr_crs(icr) < flind%cre%nbeg) then
+               write(msg,*) '[initproblem:problem_initial_conditions] icr(nuc)  =',icr,' maxecr(nuc) =',maxv
+            else if (iarr_crs(icr) < flind%cre%ebeg .and. iarr_crs(icr) >= flind%cre%nbeg) then
+               write(msg,*) '[initproblem:problem_initial_conditions] icr(cre_n)=',icr,' maxncr(cre) =',maxv
+            else
+               write(msg,*) '[initproblem:problem_initial_conditions] icr(cre_e)=',icr,' maxecr(cre) =',maxv
+            endif
+#else /* !COSM_RAY_ELECTRONS */
             write(msg,*) '[initproblem:problem_initial_conditions] icr=', icr, ' maxecr =', maxv
+#endif /* !COSM_RAY_ELECTRONS */
             call printinfo(msg)
          endif
 
       enddo
+#ifdef COSM_RAY_ELECTRONS
+      write(msg,*) '[initproblem:problem_initial_conditions]: Taylor_exp._ord. (cresp)    = ', expan_order
+      call printinfo(msg)
+#endif /* COSM_RAY_ELECTRONS */
 
    end subroutine problem_initial_conditions
 

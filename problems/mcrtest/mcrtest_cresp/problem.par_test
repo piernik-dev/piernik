@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 128, 128, 1
+    n_d = 24, 24, 1
     nb  = 4
     bnd_xl = 'per'
     bnd_xr = 'per'
@@ -25,23 +25,23 @@
 
  $RESTART_CONTROL
     restart  = 'last'
-    res_id   = ''
+    new_id   = ''
     nrestart = 0
  /
 
  $END_CONTROL
-    tend   = 50.0
-    nend   = 10000
+    tend   = 300.0
+    nend   = 1000
  /
 
  $OUTPUT_CONTROL
     problem_name = 'mcr'
     run_id = 'tst'
-    dt_hdf  = 5.0
+    dt_hdf  = 0.5
     dt_res  = 0.0
-    dt_log  = 0.05
+    dt_log  = 1.0e-10
     dt_tsl  = 0.000
-    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'encr', 'velx', 'vely', 'velz'
+    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'encr', 'velx', 'vely', 'velz', 'cree', 'cren'
  /
 
  $NUMERICAL_SETUP
@@ -58,19 +58,34 @@
 
  $COSMIC_RAYS
     cfl_cr      = 0.9
-    cr_active   = 1.0
-    ncrn        = 4
+    cr_active   = 0.0
+    ncrn        = 1
+    ncre        = 0      ! number of fixed spectrum bins between
     gamma_crn(1)   = 1.333333
     gamma_crn(2)   = 1.333333
-    gamma_crn(3)   = 1.333333
-    K_crn_paral(1) = 10000.0 ! anisotropic
-    K_crn_paral(2) = 10000.0
-    K_crn_paral(3) = 0.0
+!    gamma_crn(3)   = 1.333333
+    K_crn_paral(1) = 0.0 !10000.0 ! anisotropic
+    K_crn_paral(2) = 0.0 !10000.0
+!   K_crn_paral(3) = 0.0
     K_crn_perp(1)  = 0     ! isotropic
     K_crn_perp(2)  = 0
-    K_crn_perp(3)  = 0
-    ncre           = 0
-    use_CRsplit    = .false.
+!    K_crn_perp(3)  = 0
+    use_split   = .false.
+ /   
+  
+ $COSMIC_RAY_SPECTRUM
+    cre_eff     = 0.01   ! Fraction of total cr01 energy passed to cosmic ray electrons
+    cfl_cre     = 0.4    ! CFL coefficient for cosmic ray electrons
+    expan_order = 3     ! 1/2/3 - Taylor expansion order for computing electron spectrum
+    p_lo_init = 1.0e1   ! initial lower cut momentum[1]
+    p_up_init = 1.0e4   ! initial upper cut momentum[3]
+    f_init    = 1.0e0   ! < initial value of the normalization parameter in cre energy spectrum
+    q_init    = 4.2e0   ! < initial value of power law coefficient in cre enrgy spectrum
+    p_min_fix = 1.0e2  ! momentum fixed grid
+    p_max_fix = 1.0e3  ! momentum fixed grid
+    K_cre_paral_1 = 0.0 !1.e3
+    K_cre_perp_1  = 0.0 !1.e1
+    K_cre_pow     = 0.0 !0.5
  /
 
  $CR_SPECIES
@@ -82,10 +97,10 @@
  /
 
  $MULTIGRID_DIFFUSION
-!    diff_explicit = .true.
+    diff_explicit = .true.
     diff_theta     = 0.6
     diff_tstep_fac = 1000
-    norm_tol = 1e-5
+    norm_tol = 1e-2
     nsmoob = 4
     max_cycles = 50
  /
@@ -93,14 +108,14 @@
  $PROBLEM_CONTROL
     d0        = 1.0 ! when COSM_RAYS_SOURCES are defined, the density somehow scales the result of sourcecosmicrays.F90 and values like 1e5 quickly lead to FP overflow. This must be a bug.
     p0        = 1.0
-    bx0       = 5.0
-    by0       = 5.0
-    bz0       = 5.0
-    x0        = 500.0
+    bx0       = 0.0
+    by0       = 0.0
+    bz0       = 0.0
+    x0        = 0.0
     y0        = 0.0
     z0        = 0.0
     r0        = 64.0
-    beta_cr   = 0.0
+    beta_cr   = 1.0
     amp_cr1   = 1000.0
     norm_step = 1
  /
