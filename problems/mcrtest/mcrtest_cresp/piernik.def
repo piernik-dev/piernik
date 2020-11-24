@@ -5,6 +5,8 @@
 
 #undef ISO
 
+#define COSM_RAY_ELECTRONS
+
 
 #if !defined GLOBAL_FR_SPEED
 #  define LOCAL_FR_SPEED
@@ -14,4 +16,6 @@
 
 #undef GRAV
 
-#define MULTIGRID
+#undef MULTIGRID
+
+#define RTVD

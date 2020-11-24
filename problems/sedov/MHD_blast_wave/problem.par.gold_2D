@@ -14,7 +14,7 @@
 
 
  $BASE_DOMAIN
-    n_d = 2*64, 1
+    n_d = 2*16, 1
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
@@ -40,14 +40,14 @@
  /
 
  $END_CONTROL
-    tend   = 0.2
+    tend   = 0.5
  /
 
  $OUTPUT_CONTROL
     problem_name = 'sedov'
-    run_id =  'tsA'
-    dt_hdf  = 2.0e-2
-    dt_res  = 1e-1
+    run_id =  't2A'
+    dt_hdf  = 0.1
+    dt_res  = 0e-1
     dt_log  = 1.0e-4
     dt_tsl  = 1.0e-4
     vars(1:) = 'ener', 'dens', 'ethr', 'magB', "pres", "divb", "divb4", "psi", "level", "ref_01"
@@ -67,6 +67,7 @@
     smallei= 1.e-5
     print_divb = 10
     solver_str = "Riemann"
+    disallow_negatives = .false.  ! there is something fishy here
  /
 
  $GRAVITY
@@ -79,11 +80,12 @@
     bx0    = 0.7071067811865475
     by0    = 0.7071067811865475
     bz0    = 0.0
-    x0     = -0.0
-    y0     = -0.0
+    x0     = -0.25
+    y0     = -0.25
     z0     = -0.0
     r0     = 0.1
     smooth = 0.
+    ref_thr = 0.7
  /
 
  $MULTIGRID_SOLVER
@@ -96,8 +98,7 @@
  /
 
  $AMR
-    bsize = 3*32
+    bsize = 3*8
     level_max = 4
     n_updAMR = 3
-!    refine_vars(1) = "dens", "Loechner", 0.5, 0.01, .true.
  /

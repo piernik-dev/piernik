@@ -1,6 +1,7 @@
 #define IONIZED
 #define COSM_RAYS
 #define COSM_RAYS_SOURCES
+#define COSM_RAY_ELECTRONS
 
 #define ISO
 
@@ -13,9 +14,9 @@
 #define MAGNETIC
 #define RESISTIVE
 
-#define SELF_GRAV
+#define GRAV
 
 #define SN_SRC
 #define RANDOMIZE
 
-#define MULTIGRID
+#undef MULTIGRID

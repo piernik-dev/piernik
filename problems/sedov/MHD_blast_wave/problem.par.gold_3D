@@ -1,20 +1,16 @@
-! 2D MHD blast wave, see
-! http://www.astro.princeton.edu/~jstone/Athena/tests/blast/blast.html
-! or
-! https://academic.oup.com/mnras/article/455/1/51/983632/Accurate-meshless-methods-for-magnetohydrodynamics
-! for more inspiration
-
-! The setup mostly follows the Athena approach except that we have different resolution and square domain.
+! This was intended to be a 3D gold test of sedow with AMR
 !
-! To mimic their setup use
-! n_d = 400, 600, 1
-! ymin = -0.75
-! ymax =  0.75
-! in the BASE_DOMAIN section below and also increase tend from END_CONTROL for full match
-
+! It will require to modify current jenkins/gold_test.sh because of name
+! clash (both this and problem.par.gold_2D would use the same directories
+! concurrently).
+!
+! For best performance the jenkins/gold_test.sh should avoid compilation in
+! case of 2 gold tests nbased on the same problem.
+!
+! Oldest SHA1 that can be used with this file is 7f30050e8095e49d9d0f65e4a79622148530343e
 
  $BASE_DOMAIN
-    n_d = 2*64, 1
+    n_d = 3*16
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
@@ -40,14 +36,14 @@
  /
 
  $END_CONTROL
-    tend   = 0.2
+    tend   = 0.1
  /
 
  $OUTPUT_CONTROL
     problem_name = 'sedov'
-    run_id =  'tsA'
-    dt_hdf  = 2.0e-2
-    dt_res  = 1e-1
+    run_id =  't3A'
+    dt_hdf  = 0.01
+    dt_res  = 0e-1
     dt_log  = 1.0e-4
     dt_tsl  = 1.0e-4
     vars(1:) = 'ener', 'dens', 'ethr', 'magB', "pres", "divb", "divb4", "psi", "level", "ref_01"
@@ -67,6 +63,7 @@
     smallei= 1.e-5
     print_divb = 10
     solver_str = "Riemann"
+    disallow_negatives = .false.  ! there is something fishy here
  /
 
  $GRAVITY
@@ -79,11 +76,12 @@
     bx0    = 0.7071067811865475
     by0    = 0.7071067811865475
     bz0    = 0.0
-    x0     = -0.0
-    y0     = -0.0
+    x0     = -0.125
+    y0     = -0.125
     z0     = -0.0
     r0     = 0.1
     smooth = 0.
+    ref_thr = 0.
  /
 
  $MULTIGRID_SOLVER
@@ -96,8 +94,11 @@
  /
 
  $AMR
-    bsize = 3*32
+    bsize = 3*8
     level_max = 4
-    n_updAMR = 3
-!    refine_vars(1) = "dens", "Loechner", 0.5, 0.01, .true.
+    n_updAMR = 30
+    refine_points(1) = 4,  0.01, -0.01, 0.
+    refine_points(2) = 4, -0.01,  0.01, 0.
+    refine_points(3) = 4, -0.26, -0.26, 0.01
+    refine_points(4) = 4, -0.24, -0.24, -0.01
  /

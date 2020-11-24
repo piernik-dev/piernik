@@ -192,8 +192,9 @@ contains
    subroutine init_multigrid
 
       use cg_list,            only: cg_list_element
+      use cg_level_base,      only: base
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_t, base_level
+      use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use constants,          only: PIERNIK_INIT_GRID, I_ONE, refinement_factor
       use dataio_pub,         only: printinfo, warn, die, code_progress, msg
@@ -210,12 +211,13 @@ contains
       integer(kind=4)       :: j
 
       type(cg_list_element), pointer :: cgl
-      type(cg_level_connected_t), pointer :: curl          !< current level (a pointer sliding along the linked list) and temporary level
-      type(grid_container),  pointer :: cg            !< current grid container
+      type(cg_level_connected_t), pointer :: curl  !< current level (a pointer sliding along the linked list) and temporary level
+      type(grid_container),  pointer :: cg         !< current grid container
 
       if (code_progress < PIERNIK_INIT_GRID) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized")
       ! This check is too weak (geometry), arrays are required only for multigrid_gravity
 
+      base%init_multigrid => init_multigrid
 
       if (level_depth <= 0) then
          if (master) call warn("[multigrid:init_multigrid] level_depth < 1: solving on a single grid may be extremely slow")
@@ -223,8 +225,8 @@ contains
       endif
 
       do j = 0, level_incredible
-         if (any((mod(base_level%l%n_d(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .or. base_level%l%n_d(:)/refinement_factor**(j+1) < minsize(:)) .and. dom%has_dir(:))) exit
-         if (any((mod(base_level%l%off(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .and. dom%has_dir(:)))) exit
+         if (any((mod(base%level%l%n_d(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .or. base%level%l%n_d(:)/refinement_factor**(j+1) < minsize(:)) .and. dom%has_dir(:))) exit
+         if (any((mod(base%level%l%off(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .and. dom%has_dir(:)))) exit
       enddo
       if (level_depth > j) then
          if (master) then
@@ -258,7 +260,7 @@ contains
          curl => curl%coarser ! descend until null() is encountered
       enddo
 
-      curl => base_level%coarser
+      curl => base%level%coarser
       do while (associated(curl))
          if (master) then
             if (curl%l%id == -level_depth .and. single_base) then

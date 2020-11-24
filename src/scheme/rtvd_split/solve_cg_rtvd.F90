@@ -50,10 +50,11 @@ contains
    subroutine solve_cg_rtvd(cg, cdim, istep, fargo_vel)
 
       use bfc_bcc,            only: interpolate_mag_field
-      use cg_level_connected, only: cg_level_connected_t, find_level
+      use cg_level_connected, only: cg_level_connected_t
       use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim, rk_coef
       use dataio_pub,         only: die
       use domain,             only: dom
+      use find_lev,           only: find_level
       use fluidindex,         only: flind, iarr_all_swp, nmag, iarr_all_dn, iarr_all_mx
       use fluxtypes,          only: ext_fluxes
       use global,             only: dt, use_fargo
