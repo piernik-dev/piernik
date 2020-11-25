@@ -1342,33 +1342,6 @@ contains
 
    end function compute_q
 !----------------------------------------------------------------------------------------------------
-!    subroutine save_NR_guess_grid(NR_guess_grid, var_name, bc)
-!
-!       use cresp_variables, only: clight_cresp
-!       use initcrspectrum,  only: e_small, q_big, max_p_ratio
-!
-!       implicit none
-!
-!       real, dimension(:,:), intent(in) :: NR_guess_grid
-!       character(len=*),     intent(in) :: var_name
-!       integer(kind=4),      intent(in) :: bc
-!       integer(kind=4)                  :: j
-!       character(len=flen)              :: f_name
-!
-!       f_name = var_name // bound_name(bc) // extension
-!       open(31, file=f_name, status="unknown", position="rewind")
-!          write(31,"(A56,A2,A110)") "This is a storage file for NR init grid, boundary case: ", bound_name(bc), &
-!             &    " Saved below: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2), max_p_ratio, q_big, clight_cresp. Do not remove content from this file"
-!          write(31, "(1E15.8, 2I10,10E22.15)") e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2), max_p_ratio, q_big, clight_cresp ! TODO: remove max_p_ratio, swap cols, rows with just arr_dim
-!          write(31, "(A1)") " "                            ! Blank line for
-!
-!          do j=1, size(NR_guess_grid,dim=2)
-!             write(31, "(*(E24.15E3))") NR_guess_grid(:,j)  ! WARNING - MIGHT NEED EXPLICIT ELEMENT COUNT IN LINE IN OLDER COMPILERS
-!          enddo
-!          close(31)
-!
-!    end subroutine save_NR_guess_grid
-
    subroutine save_NR_smap(NR_smap, hdr, vname, bc)
 
       implicit none
