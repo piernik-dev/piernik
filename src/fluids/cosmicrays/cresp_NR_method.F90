@@ -215,7 +215,7 @@ contains
    subroutine cresp_initialize_guess_grids
 
       use constants,       only: zero, I_FOUR
-      use initcrspectrum,  only: e_small, q_big, max_p_ratio, arr_dim, arr_dim_q
+      use initcrspectrum,  only: q_big, arr_dim, arr_dim_q
       use mpisetup,        only: master
 
       implicit none
@@ -1416,9 +1416,6 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine read_NR_smap(NR_smap, vname, bc, exit_code)
 
-      use func,            only: operator(.equals.)
-      use initcrspectrum,  only: e_small, q_big, max_p_ratio
-
       implicit none
 
       real, dimension(:,:), intent(inout) :: NR_smap
@@ -1450,7 +1447,7 @@ contains
 
    subroutine read_NR_smap_header(var_name, hdr, exit_code)
 
-      use dataio_pub,   only: msg, printinfo, warn
+      use dataio_pub,   only: msg, warn
       use constants,    only: fmt_len
 
       implicit none
@@ -1471,7 +1468,8 @@ contains
       open(flun, file=f_name, status="old", position="rewind", IOSTAT=fstat)
 
       if (fstat > 0) then
-         write(msg,"(A8,I4,A8,2A20)") "IOSTAT:", fstat, ": file ", f_name, " does not exist!"; call warn(msg)
+         write(msg,"(A8,I4,A8,2A20)") "IOSTAT:", fstat, ": file ", f_name, " does not exist!"
+         call warn(msg)
          exit_code = .true.
          return
       endif
