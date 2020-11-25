@@ -264,6 +264,8 @@ contains
       type(map_header)     :: hdr_init, hdr_read
       type(smaplmts)       :: sml
 
+      character(len=flen-len(extension))  :: filename_read
+
       q_space = zero
       do i = 1, int(half*helper_arr_dim)
          q_space(i) = ln_eval_array_val(i, q_big, real(0.05), int(1,kind=4), int(half*helper_arr_dim,kind=4)) ! BEWARE: magic number
@@ -333,12 +335,14 @@ contains
          write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(HI), ") boundary"
          call printinfo(msg)
 
-         call read_NR_smap_header("p_ratios_"//bound_name(HI), hdr_read, read_error)
+         call get_smap_filename("p_ratios_", HI, filename_read)
+         call read_NR_smap_header(filename_read, hdr_read, read_error)
+
          if (.not. read_error) then
             call check_NR_smap_header(hdr_read, hdr_init, headers_match)
             if (headers_match .and. (.not. force_init_NR)) then
-               call read_NR_smap(p_ratios_up, "p_ratios_", HI, read_error_p)
-               call read_NR_smap(f_ratios_up, "f_ratios_", HI, read_error_f)
+               call read_NR_smap(p_ratios_up, "p"//filename_read(2:9), HI, read_error_p)
+               call read_NR_smap(f_ratios_up, "f"//filename_read(2:9), HI, read_error_f)
                read_error = read_error_p .or. read_error_f
             endif
          endif
@@ -355,8 +359,9 @@ contains
             call refine_all_directions(HI)
          endif
 
-         call save_NR_smap(p_ratios_up, hdr_init, "p_ratios_", HI)
-         call save_NR_smap(f_ratios_up, hdr_init, "f_ratios_", HI)
+         call save_NR_smap(p_ratios_up, hdr_init, "pWratios_", HI)   ! save to work file
+         call save_NR_smap(f_ratios_up, hdr_init, "fWratios_", HI)   ! save to work file
+
 !--------------------
          hdr_init%s_amin   = alpha_tab_lo(1)
          hdr_init%s_amax   = alpha_tab_lo(arr_dim)
@@ -366,12 +371,14 @@ contains
          write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(LO), ") boundary"
          call printinfo(msg)
 
-         call read_NR_smap_header("p_ratios_"//bound_name(LO), hdr_read, read_error)
+         call get_smap_filename("p_ratios_", LO, filename_read)
+         call read_NR_smap_header(filename_read, hdr_read, read_error)
+
          if (.not. read_error) then
             call check_NR_smap_header(hdr_read, hdr_init, headers_match)
             if (headers_match .and. (.not. force_init_NR)) then
-               call read_NR_smap(p_ratios_lo, "p_ratios_", LO, read_error_p)
-               call read_NR_smap(f_ratios_lo, "f_ratios_", LO, read_error_f)
+               call read_NR_smap(p_ratios_lo, "p"//filename_read(2:9), LO, read_error_p)
+               call read_NR_smap(f_ratios_lo, "p"//filename_read(2:9), LO, read_error_f)
                read_error = read_error_p .or. read_error_f
             endif
          endif
@@ -388,8 +395,8 @@ contains
             call refine_all_directions(LO)
          endif
 
-         call save_NR_smap(p_ratios_lo, hdr_init, "p_ratios_", LO)
-         call save_NR_smap(f_ratios_lo, hdr_init, "f_ratios_", LO)
+         call save_NR_smap(p_ratios_lo, hdr_init, "pWratios_", LO)   ! save to work file
+         call save_NR_smap(f_ratios_lo, hdr_init, "fWratios_", LO)   ! save to work file
       endif
       a_min_q = one  + epsilon(one)
       a_max_q = (one + epsilon(one)) * p_fix_ratio
@@ -1541,7 +1548,39 @@ contains
       call piernik_MPI_Bcast(alpha_tab_q)
 
    end subroutine cresp_NR_mpi_exchange
- !----------------------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------------------
+!>
+!! (Stub) If work (more recent) smap file exists in directory, the subroutine
+!! returns its name, so that it will be used later for header check, etc.
+!<
+   subroutine get_smap_filename(var_name, bc, fname_no_ext)
+
+      use dataio_pub,   only: msg, printinfo
+
+      implicit none
+
+      integer(kind=4),     intent(in)                 :: bc
+      character(len=flen-len(extension)), intent(out) :: fname_no_ext
+      character(len=flen-len(extension))              :: fname_no_ext_work
+      character(len=*),    intent(in)                 :: var_name
+      logical                                         :: file_exists
+
+      fname_no_ext_work = var_name // bound_name(bc)
+      fname_no_ext_work(2:2) = "W"                                    ! WARNING magic numbers
+      inquire(file=fname_no_ext_work // extension, exist=file_exists)
+
+      if (file_exists) then
+         fname_no_ext = fname_no_ext_work
+         write(msg, "(A,A)") "[cresp_NR_method] More recent (work) solution map files found: {p,f}", fname_no_ext(2:)//extension
+      else
+         fname_no_ext = var_name // bound_name(bc)
+         write(msg, "(A,A)") "[cresp_NR_method] Default solution map files will be used: {p,f}", fname_no_ext(2:)//extension
+      endif
+
+      call printinfo(msg)
+
+   end subroutine get_smap_filename
+!----------------------------------------------------------------------------------------------------
    subroutine initialize_arrays
 
       use diagnostics,    only: my_allocate_with_index, my_allocate, ma1d, ma2d
