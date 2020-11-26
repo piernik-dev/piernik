@@ -736,7 +736,7 @@ def setup_piernik(data=None):
                               "Ratios file (" + ratio_f_nam + ") already present in " +
                               rundir.strip('/') + ".")
                     else:
-                        #shutil.copy(probdir + ratio_f_nam, rundir + ratio_f_nam)
+                        # shutil.copy(probdir + ratio_f_nam, rundir + ratio_f_nam)
                         os.symlink("../../" + ratio_path + ratio_f_nam, rundir + ratio_f_nam)
                         print('\033[92m' + '(' + args[0] + ') ' + '\033[0m' + "CRESP ratios (" +
                               ratio_f_nam + ") linked to " + '\033[92m' + rundir.strip('/') + ".")
