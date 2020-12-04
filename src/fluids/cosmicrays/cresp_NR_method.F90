@@ -38,7 +38,7 @@ module cresp_NR_method
    implicit none
 
    private
-   public :: alpha, assoc_pointers, bound_name, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios
+   public :: alpha, assoc_pointers, bound_name, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, hdr_master
 
    integer, parameter                        :: ndim = 2
    real, allocatable, dimension(:)           :: p_space, q_space
@@ -73,6 +73,8 @@ module cresp_NR_method
       real     :: s_c
       real     :: s_amin, s_amax, s_nmin, s_nmax
    end type map_header
+
+   type(map_header), dimension(LO:HI)  :: hdr_master
 
    type axlim
       integer  :: ibeg, iend
@@ -332,6 +334,8 @@ contains
          hdr_init%s_nmin   = n_tab_up(1)
          hdr_init%s_nmax   = n_tab_up(arr_dim)
 
+         hdr_master(HI) = hdr_init
+
          write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(HI), ") boundary"
          call printinfo(msg)
 
@@ -367,6 +371,8 @@ contains
          hdr_init%s_amax   = alpha_tab_lo(arr_dim)
          hdr_init%s_nmin   = n_tab_lo(1)
          hdr_init%s_nmax   = n_tab_lo(arr_dim)
+
+         hdr_master(LO) = hdr_init
 
          write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(LO), ") boundary"
          call printinfo(msg)
