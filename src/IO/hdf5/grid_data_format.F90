@@ -36,6 +36,9 @@ module gdf
    private
    public :: gdf_create_root_datasets, gdf_create_simulation_parameters, gdf_create_format_stamp, gdf_create_root_group, gdf_field_type, fmax
    public :: gdf_parameters_t, gdf_root_datasets_t, GDF_CARTESIAN, GDF_POLAR, GDF_CYLINDRICAL, GDF_SPHERICAL
+#ifdef COSM_RAY_ELECTRONS
+   public :: gdf_create_cresp_smap_fields
+#endif /* COSM_RAY_ELECTRONS */
 
    integer, parameter :: fmax = 60
 
@@ -263,4 +266,46 @@ contains
       deallocate(this%boundary_conditions)
       deallocate(this%unique_identifier)
    end subroutine gdf_parameters_finalize
+
+#ifdef COSM_RAY_ELECTRONS
+   subroutine gdf_create_cresp_smap_fields(file_id)
+
+      use constants,       only: LO, HI
+      use cresp_NR_method, only: hdr_master
+      use hdf5,            only: HID_T, h5gcreate_f, h5gclose_f
+      use helpers_hdf5,    only: create_attribute
+
+      integer(HID_T), intent(in) :: file_id
+      integer(HID_T)             :: g_id, g_id0
+      integer                    :: error
+
+      call h5gcreate_f(file_id, "cresp", g_id0, error)
+         call h5gcreate_f(file_id, "cresp/smaps_LO", g_id, error)
+            call create_attribute(g_id, "dims",     (/ hdr_master(LO)%s_dim1, hdr_master(LO)%s_dim2 /) )
+            call create_attribute(g_id, "e_small",     hdr_master(LO)%s_es)
+            call create_attribute(g_id, "max_p_ratio", hdr_master(LO)%s_pr)
+            call create_attribute(g_id, "q_big",       hdr_master(LO)%s_qbig)
+            call create_attribute(g_id, "used_clight", hdr_master(LO)%s_c)
+            call create_attribute(g_id, "a_min",       hdr_master(LO)%s_amin)
+            call create_attribute(g_id, "a_max",       hdr_master(LO)%s_amax)
+            call create_attribute(g_id, "n_min",       hdr_master(LO)%s_nmin)
+            call create_attribute(g_id, "n_max",       hdr_master(LO)%s_nmax)
+         call h5gclose_f(g_id, error)
+
+         call h5gcreate_f(file_id, "cresp/smaps_UP", g_id, error)
+            call create_attribute(g_id, "dims",     (/ hdr_master(HI)%s_dim1, hdr_master(HI)%s_dim2 /) )
+            call create_attribute(g_id, "e_small",     hdr_master(HI)%s_es)
+            call create_attribute(g_id, "max_p_ratio", hdr_master(HI)%s_pr)
+            call create_attribute(g_id, "q_big",       hdr_master(HI)%s_qbig)
+            call create_attribute(g_id, "used_clight", hdr_master(HI)%s_c)
+            call create_attribute(g_id, "a_min",       hdr_master(HI)%s_amin)
+            call create_attribute(g_id, "a_max",       hdr_master(HI)%s_amax)
+            call create_attribute(g_id, "n_min",       hdr_master(HI)%s_nmin)
+            call create_attribute(g_id, "n_max",       hdr_master(HI)%s_nmax)
+         call h5gclose_f(g_id, error)
+      call h5gclose_f(g_id0, error)
+
+   end subroutine gdf_create_cresp_smap_fields
+#endif /* COSM_RAY_ELECTRONS */
+
 end module gdf
