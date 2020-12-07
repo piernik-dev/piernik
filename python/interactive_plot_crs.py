@@ -55,23 +55,23 @@ parser.add_option("", "--center", dest="usr_center", default=(0., 0.), help=u"Se
 
 (options, args) = parser.parse_args(argv[1:])  # argv[1] is filename
 yt.mylog.setLevel(int(options.yt_verbose))    # Reduces the output to desired level, 50 - least output
-if (options.py_quiet == True):
+if (options.py_quiet is True):
     warnings.simplefilter(action='ignore', category=FutureWarning)
     warnings.simplefilter(action='ignore', category=Warning)
     # warnings.filterwarnings("ignore")
     prtwarn("Python warnings are turned off from here (-q, --quiet switch)")
 plot_var = options.var_name
 user_draw_timebox = options.annotate_time
-user_limits = (options.default_range != True)
-save_spectrum = (options.not_save_spec != True)
-use_logscale = (options.use_linscale != True)
+user_limits = (options.default_range is not True)
+save_spectrum = (options.not_save_spec is not True)
+use_logscale = (options.use_linscale is not True)
 plot_field = options.fieldname
 plot_var = options.var_name
 plot_vel = options.plot_vel
 plot_mag = options.plot_mag
-if (plot_vel == True):
+if (plot_vel is True):
     plot_mag = False
-if (plot_mag == True):
+if (plot_mag is True):
     plot_vel = False
 user_annot_line = False
 user_annot_time = True
@@ -186,7 +186,7 @@ if f_run:
         prtinfo("Output directory created: %s" % (os.getcwd() + '/results'))
 
 var_array = []
-if f_run == True:
+if f_run is True:
     var_names = []
     var_names = ["ncre", "p_min_fix", "p_max_fix", "e_small", "cre_eff", "q_big"]
     var_def = [20, 10., 1.e5, 1.e-6, 0.01, 30., ]
@@ -234,7 +234,7 @@ if f_run == True:
         slice_coord = float(options.slice_info[1])
         while slice_ax not in dim_map.keys():
             slice_ax = read_var("Choose slice ax (x, y, z)      : ")
-        while (slice_coord < dom_l[dim_map[slice_ax]]) or (slice_coord > dom_r[dim_map[slice_ax]] or isnan(slice_coord) == True):  # or slice_coord < -10000:
+        while (slice_coord < dom_l[dim_map[slice_ax]]) or (slice_coord > dom_r[dim_map[slice_ax]] or isnan(slice_coord) is True):  # or slice_coord < -10000:
             try:
                 slice_coord = float(read_var("Choose slice coordinate (%d:%d %s ) (if empty, middle is assumed): \033[0m" % (dom_l[dim_map[slice_ax]], dom_r[dim_map[slice_ax]], length_unit)))
             except:
@@ -339,7 +339,7 @@ if f_run == True:
         plot_min = h5ds.find_min(plot_field)[0]
     plot_units = str(h5ds.all_data()[plot_field].units)
 
-    if (user_limits == True):  # Overwrites previously found values
+    if (user_limits is True):  # Overwrites previously found values
         plot_min = plot_user_min
         plot_max = plot_user_max
 
@@ -360,15 +360,15 @@ if f_run == True:
     encountered_nans = False
     plot_max = float(plot_max)
     plot_min = max(float(plot_min), par_epsilon)
-    if (isnan(plot_min) == True or isnan(plot_max) == True):
+    if (isnan(plot_min) is True or isnan(plot_max) is True):
         encountered_nans = True
         prtwarn("Invalid data encountered (NaN), ZLIM will be adjusted")
 
     im_orig = "lower"
     if (use_logscale):
-        plt.imshow(frb, extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]]], origin=im_orig, norm=LogNorm(vmin=plot_min, vmax=plot_max) if (encountered_nans == False) else LogNorm())
+        plt.imshow(frb, extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]]], origin=im_orig, norm=LogNorm(vmin=plot_min, vmax=plot_max) if (encountered_nans is False) else LogNorm())
     elif (use_linscale):
-        plt.imshow(frb, extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]]], origin=im_orig, vmin=plot_min if (encountered_nans == False) else None, vmax=plot_max if (encountered_nans == False) else None)
+        plt.imshow(frb, extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]]], origin=im_orig, vmin=plot_min if (encountered_nans is False) else None, vmax=plot_max if (encountered_nans is False) else None)
 
     plt.title("Component: " + plot_field + " | t = %9.3f Myr" % time)
 
@@ -381,7 +381,7 @@ if f_run == True:
     colormap_my.set_bad(color=colormap_my(par_epsilon))     # masks bad values
     yt_data_plot.set_cmap(field=plot_field, cmap=colormap_my)
 
-    if (user_annot_line == True):
+    if (user_annot_line is True):
         prtinfo("Marking line on yt.plot at (0 0 0) : (500 500 0)")
         yt_data_plot.annotate_line((0., 0., 0.), (500., 500.0, 0), plot_args={'color': 'white', "lw": 2.0})
 
@@ -443,7 +443,7 @@ if f_run == True:
         if (True):   # TODO DEPRECATED save_fqp
             ecrs = []
             ncrs = []
-            if (plot_ovlp != True):  # overwrites position
+            if (plot_ovlp is not True):  # overwrites position
                 if (plot_layer is True):
                     prtinfo("Plotting layer...")
                     position = h5ds.r[[coords[0], dom_l[avail_dim[0]], coords[2]]: [coords[0], dom_r[avail_dim[0]], coords[2]]]
@@ -482,7 +482,7 @@ if f_run == True:
 
                 fig2, exit_code = crs_h5.crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot, hide_axes=options.no_axes)
 
-            elif (plot_ovlp == True):  # for overlap_layer
+            elif (plot_ovlp is True):  # for overlap_layer
                 prtinfo("Plotting layer with overlap...")
                 dnum = int(h5ds.domain_dimensions[avail_dim[0]])
                 dl = (dom_r[avail_dim[0]] - dom_l[avail_dim[0]]) / float(dnum)
@@ -492,7 +492,7 @@ if f_run == True:
                         ecrs.append(position['cree' + str(ind).zfill(2)][0].v)
                         ncrs.append(position['cren' + str(ind).zfill(2)][0].v)
                     fig2, exit_code_tmp = crs_h5.crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], i_plot=image_number, clean_plot=options.clean_plot, hide_axes=options.no_axes)
-                    if (exit_code_tmp == False):
+                    if (exit_code_tmp is False):
                         exit_code = exit_code_tmp  # Just one plot is allright
                     ecrs = []
                     ncrs = []
@@ -515,15 +515,15 @@ if f_run == True:
 
             fig2, exit_code = crs_h5.crs_plot_main_fpq(var_names, var_array, plot_var, fcrs, qcrs, pcut, field_max, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot)
 
-        if (exit_code != True):
-            if ((plot_layer == True) or (plot_ovlp == True)):
+        if (exit_code is not True):
+            if ((plot_layer is True) or (plot_ovlp is True)):
                 line = s1.plot([dom_l[avail_dim[0]], dom_r[avail_dim[0]]], [coords[2], coords[2]], color="white")    # plot line (layer) if cell not empty WARNING - for now only works with mcrwind
             else:
                 point = s1.plot(coords[avail_dim[0]], coords[avail_dim[1]], marker=marker_l[marker_index], color="red")  # plot point if cell not empty
             s.savefig('results/' + filename_nam + '_' + plot_var + '_%04d.png' % image_number, transparent='True')
-            #prtinfo("  --->  Saved plot to: %s " %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
+            # prtinfo("  --->  Saved plot to: %s " %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
 
-            if (plot_layer == True):  # Mark averaged level
+            if (plot_layer is True):  # Mark averaged level
                 yt_data_plot.annotate_line([coords[0], dom_l[avail_dim[0]], coords[2]], [coords[0], dom_r[avail_dim[0]], coords[2]], plot_args={'color': 'white', "lw": 10.0})
             else:
                 if (not options.annotate_rect and marker_index > 0):
@@ -565,7 +565,7 @@ if f_run == True:
     text_coords = [item * 0.9 for item in text_coords]
 
     if (user_annot_time):
-        if (user_draw_timebox == True):
+        if (user_draw_timebox is True):
             yt_data_plot.annotate_text(text_coords, 'T = {:0.2f} Myr'.format(float(t.in_units('Myr'))), text_args={'fontsize': options.fontsize, 'color': 'white', 'alpha': '0.0'}, inset_box_args={'boxstyle': 'round', 'pad': 0.2, 'alpha': 0.8})
         else:
             prtinfo("Not marking line on yt.plot (user_draw_timebox = %s)" % (user_draw_timebox))

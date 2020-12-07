@@ -49,10 +49,10 @@ def read_par(hdf5_filename, var_nam, default_values):  # , var_array):
         h5File = h5py.File(hdf5_filename, 'r')
         parfile = h5File['problem.par']
         for line in parfile:
-            if found_parameter[i] == False:
+            if found_parameter[i] is False:
                 value, found_parameter[i] = append_split_var(line, var_nam[i], var_array, found_parameter[i])
     for i in range(len(var_nam)):
-        if found_parameter[i] == False:
+        if found_parameter[i] is False:
             prtwarn("Warning: some parameters were not included in problem.par, i.e: %s (default value: %s) . Please provide it:" % (var_nam[i], str(default_values[i])))
             value = input_names_array()
             if (len(value) > 1):
