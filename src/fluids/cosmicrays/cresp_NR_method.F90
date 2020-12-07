@@ -114,7 +114,7 @@ contains
          if (maxval(abs(fun_vec_value)) < err_f) then    ! For convergence via value of f
             exit_code = .false.
 #ifdef CRESP_VERBOSED
-            write(*,"(A47,I4,A12)",advance="no") "Convergence via value of fun_vec_value after ",i, " iterations."!, x, fun_vec_value
+            write(*,"(A47,I4,A12)",advance="no") "Convergence via value of fun_vec_value after ",i, " iterations."!, x, fun_vec_value  ! QA_WARN debug
 #endif /* CRESP_VERBOSED */
             return
          endif
@@ -134,7 +134,7 @@ contains
          x = x+cor
          if (maxval(abs(cor)) < err_x) then                 ! For convergence via value of correction (cor) table.
 #ifdef CRESP_VERBOSED
-            write(*,"(A47,I4,A12)",advance="no") "Convergence via value of cor array     after ",i," iterations."
+            write(*,"(A47,I4,A12)",advance="no") "Convergence via value of cor array     after ",i," iterations."  ! QA_WARN debug
 #endif /* CRESP_VERBOSED */
             exit_code = .false.
             return
@@ -250,10 +250,10 @@ contains
 
    subroutine fill_guess_grids
 
-      use constants,      only: zero, half, one, three, I_ONE, big, small
-      use dataio_pub,     only: die,msg, printinfo, warn
-      use initcrspectrum, only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio, e_small
-      use cresp_variables,only: clight_cresp
+      use constants,       only: zero, half, one, three, I_ONE, big, small
+      use dataio_pub,      only: die, msg, printinfo, warn
+      use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio, e_small
+      use cresp_variables, only: clight_cresp
 
       implicit none
 
@@ -541,7 +541,7 @@ contains
             alpha = p_a(i)
             n_in  = p_n(j)
 #ifdef CRESP_VERBOSED
-            write(*,"(A14,A2,A2,2I4,A9,I4,A1)",advance="no") "Now solving (",bound_name(bound_case),") ",i,j,", sized ",arr_dim," "
+            write(*,"(A14,A2,A2,2I4,A9,I4,A1)",advance="no") "Now solving (",bound_name(bound_case),") ",i,j,", sized ",arr_dim," "  ! QA_WARN debug
 #endif /* CRESP_VERBOSED */
 
             call seek_solution_prev(fill_p(i,j), fill_f(i,j), prev_solution, exit_code)
@@ -818,9 +818,9 @@ contains
       integer, parameter                      :: slen = 6
       character(len=slen), dimension(SLV:RFN) :: sought = ['Solve ', 'Refine']
 
-      write (*, "(A6,A13,2E16.9)",advance="no") sought(sought_by)," (alpha, n): ",alpha,n_in
-      write (*, "(A5,A4,A42, 2E19.10e3)",advance="no") " -> (",met_name,") solution obtained, (p_ratio, f_ratio) = ", x_out
-      write (*, "(A21, 2E17.10)",advance="no") ", provided input:", x_in ; print *,""
+      write (*, "(A6,A13,2E16.9)",advance="no") sought(sought_by)," (alpha, n): ",alpha,n_in  ! QA_WARN debug
+      write (*, "(A5,A4,A42, 2E19.10e3)",advance="no") " -> (",met_name,") solution obtained, (p_ratio, f_ratio) = ", x_out  ! QA_WARN debug
+      write (*, "(A21, 2E17.10)",advance="no") ", provided input:", x_in ; print *,""  ! QA_WARN debug
 
    end subroutine msg_success
 #endif /* CRESP_VERBOSED */
@@ -919,7 +919,7 @@ contains
          exit_code = .true.
          alpha = alpha_tab_q(i)
 #ifdef CRESP_VERBOSED
-         write(*,"(A25,1I4,A9,I4,A10,1E16.9)",advance="no") "Now solving (q_grid) no.",i,", sized ",arr_dim_q, ", (alpha): ",alpha
+         write(*,"(A25,1I4,A9,I4,A10,1E16.9)",advance="no") "Now solving (q_grid) no.",i,", sized ",arr_dim_q, ", (alpha): ",alpha  ! QA_WARN debug
 #endif /* CRESP_VERBOSED */
          x = prev_solution
          call NR_algorithm_1D(x, exit_code)
@@ -932,14 +932,14 @@ contains
                      q_grid(i) = x
                      prev_solution = x
 #ifdef CRESP_VERBOSED
-                     write (*, "(A44, 2E22.15)",advance="no") " ->        solution obtained, q_grid = ", x
+                     write (*, "(A44, 2E22.15)",advance="no") " ->        solution obtained, q_grid = ", x  ! QA_WARN debug
 #endif /* CRESP_VERBOSED */
                   endif
                endif
          enddo
          else
 #ifdef CRESP_VERBOSED
-            write (*, "(A44, 1E22.15)",advance="no") " -> (prev) solution obtained, q_grid = ", x
+            write (*, "(A44, 1E22.15)",advance="no") " -> (prev) solution obtained, q_grid = ", x  ! QA_WARN debug
 #endif /* CRESP_VERBOSED */
             q_grid(i) = x
          endif
@@ -993,6 +993,8 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine prepare_indices(ind_incr, ind_beg, ind_end)
 
+      use constants,      only: INVALID
+      use dataio_pub,     only: die
       use initcrspectrum, only: arr_dim
 
       implicit none
@@ -1004,6 +1006,9 @@ contains
          ind_beg = 1 ; ind_end = arr_dim
       else if (ind_incr == -1) then
          ind_beg = arr_dim ; ind_end = 1
+      else
+         ind_beg = INVALID; ind_end = INVALID
+         call die("[cresp_NR_method:prepare_indices] ind_incr /= +/-1")
       endif
 
    end subroutine prepare_indices
@@ -1023,6 +1028,7 @@ contains
    function jac_fin_diff(x) ! jacobian via finite difference method
 
       use constants, only: half
+      use func,      only: operator(.equals.)
 
       implicit none
 
@@ -1035,7 +1041,7 @@ contains
       do j = 1, ndim
          dx(j) = max(x(j), dx_min )          ! assure dx > zero
          dx(j) = min(dx(j)*dx_par, dx_par)   ! the value of dx is scaled not to go over value of x
-         if (x(j) == dx(j)) dx(j) = half * dx(j)
+         if (x(j) .equals. dx(j)) dx(j) = half * dx(j)
          xp = x ; xm = x
          xp(j) = x(j) - dx(j) ;  xm(j) = x(j) + dx(j)
          jac_fin_diff(:,j)  = half*( selected_function_2D(xp) - selected_function_2D(xm)) / dx(j)
@@ -1220,13 +1226,13 @@ contains
       integer(kind=4), dimension(1:2) :: l1, l2 ! indexes that points where alpha_tab_ and up nad n_tab_ and up are closest in value to a_val and n_val - indexes point to
 
 #ifdef CRESP_VERBOSED
-      write (*,"(A30,A2,A4)",advance="no") "Determining indices for case: ", bound_name(current_bound), "... "
+      write (*,"(A30,A2,A4)",advance="no") "Determining indices for case: ", bound_name(current_bound), "... "  ! QA_WARN debug
 #endif /* CRESP_VERBOSED */
       call determine_loc(a_val, n_val, l1, successful)
       l2 = l1 + 1
 
 #ifdef CRESP_VERBOSED
-      if (successful) write(*,"(A19, 2I8, A3, 2I8)") "Obtained indices:", l1, " | ", l2
+      if (successful) write(*,"(A19, 2I8, A3, 2I8)") "Obtained indices:", l1, " | ", l2  ! QA_WARN debug
       call save_loc(current_bound, l1, l2)
 #endif /* CRESP_VERBOSED */
 
@@ -1396,6 +1402,8 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine read_NR_smap(NR_smap, vname, bc, exit_code)
 
+      use dataio_pub, only: msg, warn
+
       implicit none
 
       real, dimension(:,:), intent(inout) :: NR_smap
@@ -1408,7 +1416,8 @@ contains
       fname = vname // bound_name(bc) // extension
       open(flun, file=fname, status="old", position="rewind", IOSTAT=rstat)
       if (rstat > 0) then
-         write(*,"(A8,I4,A8,2A20)") "IOSTAT:", rstat, ": file ", vname//bound_name(bc)//extension," does not exist!"
+         write(msg, "(A8,I4,A8,2A20)") "IOSTAT:", rstat, ": file ", vname//bound_name(bc)//extension," does not exist!"
+         call warn(msg)
          exit_code = .true.
          return
       else
@@ -1470,9 +1479,9 @@ contains
 
    subroutine check_NR_smap_header(hdr, hdr_std, hdr_equal)
 
-      use constants, only: zero
-      use dataio_pub,only: msg, printinfo, warn
-      use func,      only: operator(.equals.)
+      use constants,  only: zero
+      use dataio_pub, only: msg, printinfo, warn
+      use func,       only: operator(.equals.)
 
       implicit none
 

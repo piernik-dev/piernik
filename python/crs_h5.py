@@ -171,11 +171,11 @@ def fill_q_grid():
     x = previous_solution
     for i in range(1, arr_dim, 1):
         x, exit_code = nr_get_q(previous_solution, alpha_tab_q[i], p_fix_ratio, exit_code)
-        if exit_code == True:  # == True
+        if exit_code is True:
             for j in range(1, helper_arr_dim, 1):
                 x = q_space[j]
                 x, exit_code = nr_get_q(x, alpha_tab_q[i], p_fix_ratio, exit_code)
-                if exit_code == False:
+                if exit_code is False:
                     q_grid[i] = x
                     prev_solution = x
         else:  # exit_code == false
@@ -286,8 +286,8 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
 
     spectrum_label = ("d$%s$(p)/d$p$ %s, \n[%3.1f, %3.1f, %3.1f] kpc " % (plot_var, par_test_name, location[0] / 1000., location[1] / 1000., location[2] / 1000.))
     spectrum_label = ("d$%s$(p)/d$p$ [%3.1f, %3.1f, %3.1f] kpc " % (plot_var, location[0] / 1000., location[1] / 1000., location[2] / 1000.))
-    #spectrum_label  = ("d$%s$/d$p$, %s (  )" % (plot_var, par_test_name) ) #
-    #spectrum_label  = (" %s (z=%3.1fkpc)" % ( par_test_name , location[2]/1000.) )
+    # spectrum_label  = ("d$%s$/d$p$, %s (  )" % (plot_var, par_test_name) ) #
+    # spectrum_label  = (" %s (z=%3.1fkpc)" % ( par_test_name , location[2]/1000.) )
 
     for i in range(0, size(fr)):
         if (par_plot_e3):  # multiply times gamma**3
@@ -310,15 +310,15 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
                 i = ind
                 i1 = i + 1
                 plt.fill([p_fix[i], p_fix[i1], p_fix[i1], p_fix[i]], [e_small, e_small, 10., 10.], color="mediumseagreen", alpha=0.20)
-            if (not (clean_plot == True)):
+            if (not (clean_plot is True)):
                 highlighted = True
 
-    if ((par_plot_init_slope == True) and (plotted_init_slope == False)):
+    if ((par_plot_init_slope is True) and (plotted_init_slope is False)):
         if (plot_var == 'n'):
             init_spec = plt.plot(p_range, (1.0 + 2.e-1) * f_init * 4 * pi * p_range**(-(q_init - 2)), color='gray', linestyle=":", alpha=0.75, label=r"d$n(p,t)$/d$p$, $E<1/bt$", lw=3)     # initial spectrum
         if (plot_var == 'e'):
             init_spec = plt.plot(p_range, (1.0 + 2.e-1) * f_init * 4 * pi * p_range**(-(q_init - 3)), color='gray', linestyle=":", alpha=0.45, label=r"d$e(p,t)$/d$p$, $E<1/bt$", lw=3)     # initial spectrum
-        if (not (clean_plot == True)):
+        if (not (clean_plot is True)):
             plotted_init_slope = True  # if cleaning plot is on, init slope must be replotted each iteration
 
     if (par_visible_title):
@@ -326,7 +326,7 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
             plt.title("Spectrum of %s(p), Time = %7.3f" % (plot_var, time))
         else:
             plt.title("Spectrum of %s(p) \n Time = %7.3f | location: %7.2f %7.2f %7.2f " % (plot_var, time, location[0], location[1], location[2]))
-    if (tightened != True):
+    if (tightened is not True):
         plt.tight_layout()
         tightened = True
 
@@ -337,10 +337,10 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
     if (clean_plot):
         handle_list = []
 
-    if (first_run == True):
+    if (first_run is True):
         first_run = False
 
-    if (hide_axes == True):
+    if (hide_axes is True):
         s.axis('off')           # allows one to hide all axes for the plot, useful for combining mulitple plots.
 
     return s
@@ -380,7 +380,7 @@ def detect_active_bins_new(n_in, e_in):
     for i in range(1, i_up_tmp - i_lo_tmp - 1):   # range(HI-1)
         q_tmp = 3.5
         exit_code = False
-        if (q_explicit == True):
+        if (q_explicit is True):
             q_tmp, exit_code = nr_get_q(q_tmp, e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * c * pln[i]), prn[i] / pln[i], exit_code)
         else:
             q_tmp = interpolate_q(e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * c * pln[i]))  # this instruction is duplicated, TODO return it via detect_active_bins_new()
@@ -480,7 +480,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
     prn = array(prn)
 
     if interpolate_cutoffs:
-        if exit_code_lo == True:
+        if exit_code_lo is True:
             if (verbosity_1):
                 prtwarn("Failed to extract boundary (lo) p and f from e, n: pf_ratio_lo = %.6f. Assuming p_fix value." % pf_ratio_lo[0])  # p_fix assumed
         else:
@@ -488,7 +488,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
         fl_lo = crs_pf.e_small_2_f(e_small, pln[0])
         fr_lo = fl_lo * pf_ratio_lo[1]
 
-        if exit_code_up == True:
+        if exit_code_up is True:
             if (verbosity_1):
                 prtwarn("Failed to extract boundary (up) p and f from e, n: pf_ratio_up = %.6f. Assuming p_fix value." % pf_ratio_up[0])  # p_fix assumed
         else:
@@ -510,7 +510,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
     fln = []
     frn = []
     for i in range(0, i_up - i_lo):
-        if (q_explicit == True):
+        if (q_explicit is True):
             q_tmp = 3.5
             exit_code = False
             q_tmp, exit_code = nr_get_q(q_tmp, ecrs[i + i_lo] / (ncrs[i + i_lo] * c * pln[i]), prn[i] / pln[i], exit_code)  # this instruction is duplicated, TODO return it via detect_active_bins_new()
@@ -567,7 +567,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
         dummyCRSfile.write("%s " % string.replace("\n", "").replace("nan", "0.0") + "\n")
         dummyCRSfile.close()
 
-    if empty_cell != True:
+    if empty_cell is not True:
         plot = plot_data(plot_var, pln, prn, fln, frn, q_nr, time, location, i_lo, i_up)
         i_plot = i_plot + 1
 
@@ -647,7 +647,7 @@ def crs_plot_main_fpq(parameter_names, parameter_values, plot_var, fcrs, qcrs, p
         prtinfo("f = " + str(fcrs1e3))
         prtinfo("q = " + str(around(qcrs, 3)))
 
-    if (empty_cell == False):
+    if (empty_cell is False):
 
         plot = plot_data(plot_var, pln, prn, fln, frn, q, time, location, i_lo, i_up)
         i_plot = i_plot + 1
