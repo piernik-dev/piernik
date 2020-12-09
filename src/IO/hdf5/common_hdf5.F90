@@ -812,7 +812,7 @@ contains
       use gdf,          only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets, &
          &                    gdf_root_datasets_t, gdf_parameters_t, GDF_CARTESIAN, GDF_POLAR
 #ifdef COSM_RAY_ELECTRONS
-      use gdf,          only: gdf_create_cresp_smap_fields
+      use cresp_io_write, only: gdf_create_cresp_smap_fields
 #endif /* COSM_RAY_ELECTRONS */
       use global,       only: t
       use hdf5,         only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
@@ -941,7 +941,7 @@ contains
          call create_attribute(cgl_g_id, cg_cnt_aname, [ cg_cnt ])  ! create "/data/cg_count"
 
 #ifdef COSM_RAY_ELECTRONS
-         call gdf_create_cresp_smap_fields(file_id)
+         if (otype .eq. O_RES) call gdf_create_cresp_smap_fields(file_id) ! create "/cresp/smaps_{LO,UP}/..."
 #endif /* COSM_RAY_ELECTRONS */
 
          Z_avail = .false.
