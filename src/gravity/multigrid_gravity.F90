@@ -112,11 +112,13 @@ contains
 !! <tr><td>lmax                  </td><td>16     </td><td>integer value  </td><td>\copydoc multipole::lmax                          </td></tr>
 !! <tr><td>mmax                  </td><td>-1     </td><td>integer value  </td><td>\copydoc multipole::mmax                          </td></tr>
 !! <tr><td>mpole_solver          </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::mpole_solver                  </td></tr>
-!! <tr><td>level_3D              </td><td>1      </td><td>integer value  </td><td>\copydoc multipole::level_3D                      </td></tr>
+!! <tr><td>res_factor            </td><td>0.5    </td><td>real value     </td><td>\copydoc multipole_array::res_factor              </td></tr>
+!! <tr><td>size_factor           </td><td>1.     </td><td>real value     </td><td>\copydoc multipole_array::size_factor             </td></tr>
+!! <tr><td>mpole_level           </td><td>1      </td><td>integer value  </td><td>\copydoc multipole_array::mpole_level             </td></tr>
 !! <tr><td>multidim_code_3D      </td><td>.false.</td><td>logical        </td><td>\copydoc multigridvars::multidim_code_3d          </td></tr>
 !! <tr><td>use_CG                </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::use_CG                </td></tr>
 !! <tr><td>use_CG_outer          </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::use_CG_outer          </td></tr>
-!! <tr><td>grav_bnd_str          </td><td>"periodic"/"dirichlet"</td><td>string of chars</td><td>\copydoc multigrid_gravity::grav_bnd_str          </td></tr>
+!! <tr><td>grav_bnd_str          </td><td>"periodic"/"dirichlet"</td><td>string of chars</td><td>\copydoc multigrid_gravity::grav_bnd_str </td></tr>
 !! <tr><td>preconditioner        </td><td>"HG_V-cycle"</td><td>string of chars</td><td>\copydoc multigrid_gravity::preconditioner   </td></tr>
 !! </table>
 !! The list is active while \b "SELF_GRAV" and \b "MULTIGRID" are defined.
@@ -136,8 +138,8 @@ contains
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
       use multigrid_Laplace4, only: L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
-      use multipole,          only: mpole_solver, lmax, mmax, level_3D, singlepass, init_multipole
-      use multipole_array,    only: res_factor, size_factor
+      use multipole,          only: mpole_solver, lmax, mmax, singlepass, init_multipole
+      use multipole_array,    only: res_factor, size_factor, mpole_level, mpole_level_auto
       use pcg,                only: use_CG, use_CG_outer, preconditioner, default_preconditioner, pcg_init
 
       implicit none
@@ -148,7 +150,7 @@ contains
       namelist /MULTIGRID_GRAVITY/ norm_tol, coarsest_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
            &                       overrelax, L4_strength, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       base_no_fft, fft_patient, &
-           &                       lmax, mmax, mpole_solver, level_3D, res_factor, size_factor, &
+           &                       lmax, mmax, mpole_solver, mpole_level, res_factor, size_factor, &
            &                       multidim_code_3D, grav_bnd_str, preconditioner
 
       if (.not.frun) call die("[multigrid_gravity:multigrid_grav_par] Called more than once.")
@@ -166,7 +168,7 @@ contains
 
       lmax                   = 16
       mmax                   = -1 ! will be automatically set to lmax unless explicitly limited in problem.par
-      level_3D               = 1
+      mpole_level            = mpole_level_auto
       max_cycles             = 20
       nsmool                 = -1  ! best to set it to dom%nb or its multiply
       nsmoob                 = 10000
@@ -247,7 +249,7 @@ contains
          rbuff(7)  = res_factor
          rbuff(8)  = size_factor
 
-         ibuff( 1) = level_3D
+         ibuff( 1) = mpole_level
          ibuff( 2) = lmax
          ibuff( 3) = mmax
          ibuff( 4) = max_cycles
@@ -284,14 +286,14 @@ contains
          res_factor     = rbuff(7)
          size_factor    = rbuff(8)
 
-         level_3D          = ibuff( 1)
-         lmax              = ibuff( 2)
-         mmax              = ibuff( 3)
-         max_cycles        = ibuff( 4)
-         nsmool            = ibuff( 5)
-         nsmoob            = ibuff( 6)
-         ord_laplacian     = ibuff( 7)
-         ord_time_extrap   = ibuff( 9)
+         mpole_level         = ibuff( 1)
+         lmax                = ibuff( 2)
+         mmax                = ibuff( 3)
+         max_cycles          = ibuff( 4)
+         nsmool              = ibuff( 5)
+         nsmoob              = ibuff( 6)
+         ord_laplacian       = ibuff( 7)
+         ord_time_extrap     = ibuff( 9)
          ord_laplacian_outer = ibuff(10)
 
          base_no_fft        = lbuff(2)
@@ -327,6 +329,7 @@ contains
          grav_bnd = bnd_periodic
          !> \warning the above statement is highly suspicious
       else if (periodic_bnd_cnt > 0 .and. periodic_bnd_cnt < dom%eff_dim) then
+         if (grav_bnd == bnd_isolated) call die("[multigrid_gravity:multigrid_grav_par] Isolated grav boundaries implemented only for fully periodic domain")
          if (.not. base_no_fft .and. master) &
               call warn("[multigrid_gravity:multigrid_grav_par] Mixing periodic and non-periodic boundary conditions for gravity disables FFT base-level solver.")
          ! This would require more careful set up of the Green's function and FFT type
@@ -520,9 +523,10 @@ contains
 
    subroutine mgg_cg_init(cg)
 
-      use cg_level_connected, only: cg_level_connected_t, find_level
+      use cg_level_connected, only: cg_level_connected_t
       use constants,          only: fft_none
       use dataio_pub,         only: die
+      use find_lev,           only: find_level
       use func,               only: operator(.notequals.)
       use grid_cont,          only: grid_container
       use multigridvars,      only: overrelax

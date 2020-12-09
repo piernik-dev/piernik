@@ -117,16 +117,16 @@ module constants
    end enum
 
    ! string lengths
-   integer, parameter :: cwdlen = 512                    !< allow for quite long CWD
-   integer, parameter :: fmt_len = 128                   !< length of format string
-   integer, parameter :: fnamelen = 128                  !< length of output filename
-   integer, parameter :: cbuff_len = 32                  !< length for problem parameters
-   integer, parameter :: units_len = 5 * cbuff_len       !< length for unit strings
-   integer, parameter :: fplen = 24                      !< length of buffer for printed FP or integer number
-   integer, parameter :: domlen = 16                     !< should be <= cbuff_len
-   integer, parameter :: dsetnamelen = cbuff_len         !< length of dataset name and state variable names in hdf files
-   integer, parameter :: idlen = 3                       !< COMMENT ME
-   integer, parameter :: singlechar = 1                  !< a single character
+   integer(kind=4), parameter :: cwdlen = 512               !< allow for quite long CWD
+   integer(kind=4), parameter :: fmt_len = 128              !< length of format string
+   integer(kind=4), parameter :: fnamelen = 128             !< length of output filename
+   integer(kind=4), parameter :: cbuff_len = 32             !< length for problem parameters
+   integer(kind=4), parameter :: units_len = 5 * cbuff_len  !< length for unit strings
+   integer(kind=4), parameter :: fplen = 24                 !< length of buffer for printed FP or integer number
+   integer(kind=4), parameter :: domlen = 16                !< should be <= cbuff_len
+   integer(kind=4), parameter :: dsetnamelen = cbuff_len    !< length of dataset name and state variable names in hdf files
+   integer(kind=4), parameter :: idlen = 3                  !< COMMENT ME
+   integer(kind=4), parameter :: singlechar = 1             !< a single character
 
    ! simulation state
    enum, bind(C)
@@ -350,4 +350,13 @@ module constants
       enumerator :: PPP_DEBUG = int(B"010000000000", kind=4)  ! debug
       enumerator :: PPP_AUX   = int(B"100000000000", kind=4)  ! auxiliary (unused by default)
    end enum
+
+   ! OS type
+   enum, bind(C)
+      enumerator :: LINUX
+      enumerator :: APPLE
+      !enumerator :: ANDROID
+      !enumerator :: WINDOWS
+   end enum
+
 end module constants

@@ -31,6 +31,7 @@ def diff_files(fn1, fn2, field):
           (norm, diff.min(), diff.max()))
     del data1, data2, diff, pf1, pf2
 
+
 for i in range(1, 3):
     fn1 = "moving_pulse_ts1_%4.4i.h5" % i
     fn2 = "moving_pulse_ts2_%4.4i.h5" % i

@@ -160,12 +160,12 @@ class PPP:
         self.bigbang = None
         file = open(self.name, 'r')
         for line in file:
-            l = line.split()
+            ln = line.split()
             if self.bigbang is None:
-                self.bigbang = float(l[1]) - t_bias
-            self._add(int(l[0]), line[line.index(l[2]):].strip(), float(l[1]) + self.bigbang * (-1. if float(l[1]) > 0. else 1.))  # proc, label, time
-            if int(l[0]) >= self.nthr:
-                self.nthr = int(l[0]) + 1
+                self.bigbang = float(ln[1]) - t_bias
+            self._add(int(ln[0]), line[line.index(ln[2]):].strip(), float(ln[1]) + self.bigbang * (-1. if float(ln[1]) > 0. else 1.))  # proc, label, time
+            if int(ln[0]) >= self.nthr:
+                self.nthr = int(ln[0]) + 1
         self.descr = "'%s' (%d thread%s)" % (self.name, self.nthr, "s" if self.nthr > 1 else "")
 
     def _add(self, proc, label, time):
@@ -353,6 +353,7 @@ class PPPset:
         else:
             self.out += 'show title; print "No data to plot"'
 
+
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                  description="Piernik Precise Profiling Presenter", epilog="""
 examples:
@@ -360,6 +361,9 @@ examples:
 plot profile of 64th step from file.ascii with gnuplot (hopefully in the interactive mode):
     ppp_plot.py file.ascii -r 'step 64'| gnuplot
     ppp_plot.py file.ascii -r 'step 64'-o file.gnu; gnuplot file.gnu
+
+when gnuplot fails to set up desired teminal by default, try to set $GNUTERM (qt or x11 are recommended):
+    ppp_plot.py file.ascii | GNUTERM=qt gnuplot
 
 print list of top-lefel timers (steps) present in file.ascii:
     ppp_plot.py file.ascii -t -d 1

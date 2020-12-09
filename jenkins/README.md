@@ -9,12 +9,11 @@ Each tested problem creates some more output files which may be inspected or rem
 
 # The files
 
-* `gold_test_list` – The script called by `make gold` and by the `user_gold` test on our Jenkins server.
+* `gold_test_list.sh` – The script called by `make gold` and by the `user_gold` test on our Jenkins server.
 * `gold_test.sh` – The script called for every gold test by `gold_test_list`.
     It creates `/tmp/jenkins_gold/` directory and keeps there some non-critical data like results of gold runs that can be regenerated easily.
-    Can be used to selectively run only some tests.
 * `gold_configs/` – The directory with configuration of the problems.
-    Files placed here will be automatically used by `Piernik CI` task on the Jenkins server.
+    Files placed here will be automatically used by `user gold CI` or `Piernik CI` task on the Jenkins server.
     Each file there should assign values to the following variables:
     * `GOLD_COMMIT` – SHA1 of commit considered to be good. Update czrefully, when everything else fails.
     * `PROBLEM_NAME` – name of the problem in `problems/` directory

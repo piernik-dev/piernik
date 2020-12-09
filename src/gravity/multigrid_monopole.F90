@@ -129,8 +129,8 @@ contains
       use constants,    only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, pSUM, zero !, GEO_RPZ
       use dataio_pub,   only: die
       use domain,       only: dom
-      use grid_cont,    only: grid_container
       use func,         only: operator(.notequals.)
+      use grid_cont,    only: grid_container
       use mpisetup,     only: piernik_MPI_Allreduce
       use particle_pub, only: pset
 #ifdef DEBUG
@@ -141,9 +141,9 @@ contains
 
       implicit none
 
-      real, dimension(imass:ndims) :: lsum, dsum
+      real, dimension(imass:ndims)   :: lsum, dsum
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container), pointer  :: cg
       integer :: lh, i, d
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_monopole:find_img_CoM] non-cartesian geometry not implemented yet")

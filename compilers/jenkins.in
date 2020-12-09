@@ -1,0 +1,64 @@
+###############################################################################
+#
+# Make definitions for lothlorien (Fedora 25..32)
+#
+# Do not modify if you aren't me :-)
+# Feel free to make your own copy if you like something here.
+#
+
+PROG     = piernik
+
+F90      = h5pfc
+
+F90 += -I/usr/lib64/gfortran/modules/$(subst _,,$(MPI_SUFFIX))
+
+F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
+F90FLAGS += -O3 -funroll-loops -fno-stack-arrays
+F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -Wno-unused-function -fmodule-private
+F90FLAGS += -fbacktrace -ggdb
+F90FLAGS += -fcheck=all
+
+# Since gfortran >= 10.0 -frecursive was adviced by the compiler.
+# ToDo: Find out why.
+F90FLAGS += -frecursive
+
+# for gfortran >= 10.0 the use mpi_f08 interface is strongly encouraged
+F90FLAGS += -pedantic
+
+# Ugly hack for old MPI interface
+# F90FLAGS += -fallow-argument-mismatch
+
+ifdef I64
+  F90FLAGS += -fdefault-integer-8
+endif
+
+ifdef ALLINIT
+  RINIT := 1
+  IINIT := 1
+  CINIT := 1
+  LINIT := 1
+endif
+ifdef RINIT
+  F90FLAGS += -finit-real=snan
+endif
+ifdef IINIT
+  F90FLAGS += -finit-integer=-2098765432
+endif
+ifdef CINIT
+  F90FLAGS += -finit-character=96
+endif
+ifdef LINIT
+  F90FLAGS += -finit-logical=true
+endif
+
+F90FLAGS +=  -ffpe-trap=invalid,zero,overflow
+#denormal,underflow,inexact
+## denormal causes weird problems since gcc 4.7.0
+
+LDFLAGS   = -Wl,--as-needed -Wl,-O1
+MAKEFLAGS += -j4
+F90FLAGS += -I/usr/include
+
+# for the kepler problem
+#F90FLAGS += -I/home/gawrysz/usr/include/gfortran
+#LDFLAGS += -L/home/gawrysz/usr/lib/
