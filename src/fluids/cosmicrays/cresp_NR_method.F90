@@ -33,12 +33,13 @@
 module cresp_NR_method
 ! pulled by COSM_RAY_ELECTRONS
 
-   use constants, only: LO, HI
+   use constants,       only: LO, HI
+   use cresp_io_common, only: map_header
 
    implicit none
 
    private
-   public :: alpha, assoc_pointers, bound_name, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, hdr_master
+   public :: alpha, assoc_pointers, bound_name, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios
 
    integer, parameter                        :: ndim = 2
    real, allocatable, dimension(:)           :: p_space, q_space
@@ -64,17 +65,6 @@ module cresp_NR_method
    end interface
 
    procedure (function_pointer_2D), pointer :: selected_function_2D => null()
-
-   type     map_header
-      integer  :: s_dim1, s_dim2
-      real     :: s_es
-      real     :: s_pr
-      real     :: s_qbig
-      real     :: s_c
-      real     :: s_amin, s_amax, s_nmin, s_nmax
-   end type map_header
-
-   type(map_header), dimension(LO:HI)  :: hdr_master
 
    type axlim
       integer  :: ibeg, iend
@@ -253,6 +243,8 @@ contains
    subroutine fill_guess_grids
 
       use constants,       only: zero, half, one, three, I_ONE, big, small
+      use cresp_io_common, only: map_header, hdr_io
+      use cresp_io_read,   only: read_cresp_smap_fields
       use dataio_pub,      only: die, msg, printinfo, warn
       use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio, e_small
       use cresp_variables, only: clight_cresp
@@ -267,6 +259,8 @@ contains
       type(smaplmts)       :: sml
 
       character(len=flen-len(extension))  :: filename_read
+
+      call read_cresp_smap_fields(read_error) ! STUB
 
       q_space = zero
       do i = 1, int(half*helper_arr_dim)
@@ -334,7 +328,7 @@ contains
          hdr_init%s_nmin   = n_tab_up(1)
          hdr_init%s_nmax   = n_tab_up(arr_dim)
 
-         hdr_master(HI) = hdr_init
+         hdr_io(HI) = hdr_init
 
          write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(HI), ") boundary"
          call printinfo(msg)
@@ -372,7 +366,7 @@ contains
          hdr_init%s_nmin   = n_tab_lo(1)
          hdr_init%s_nmax   = n_tab_lo(arr_dim)
 
-         hdr_master(LO) = hdr_init
+         hdr_io(LO) = hdr_init
 
          write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(LO), ") boundary"
          call printinfo(msg)
@@ -1363,6 +1357,8 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine save_NR_smap(NR_smap, hdr, vname, bc)
 
+      use cresp_io_common,    only: map_header
+
       implicit none
 
       integer(kind=4),      intent(in) :: bc
@@ -1442,8 +1438,9 @@ contains
 
    subroutine read_NR_smap_header(var_name, hdr, exit_code)
 
-      use dataio_pub,   only: msg, warn
-      use constants,    only: fmt_len
+      use dataio_pub,      only: msg, warn
+      use constants,       only: fmt_len
+      use cresp_io_common, only: map_header
 
       implicit none
 
@@ -1485,9 +1482,10 @@ contains
 
    subroutine check_NR_smap_header(hdr, hdr_std, hdr_equal)
 
-      use constants,  only: zero
-      use dataio_pub, only: msg, printinfo, warn
-      use func,       only: operator(.equals.)
+      use constants,       only: zero
+      use cresp_io_common, only: map_header
+      use dataio_pub,      only: msg, printinfo, warn
+      use func,            only: operator(.equals.)
 
       implicit none
 
