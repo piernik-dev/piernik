@@ -24,7 +24,7 @@ except:
 parameter_object = fh5["problem.par"]
 for line in parameter_object:
     # print(line.decode("utf-8"))
-    parfile_out.write(line.decode("utf-8")+"\n")
+    parfile_out.write(line.decode("utf-8") + "\n")
 
 prtinfo("Successfully read parameters from %s file, list of parameters saved to %s" % (hdf5_filename, parfile_out.name))
 parfile_out.close()
