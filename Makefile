@@ -81,8 +81,11 @@ allsetup:
 		fi; \
 	done
 
-qa: chk_err_msg pycodestyle
+qa:
 	./bin/qa.py $$( find src problems -name "*.F90" )
+
+QA:
+	make -k  chk_err_msg pycodestyle qa
 
 pep8: pycodestyle
 
