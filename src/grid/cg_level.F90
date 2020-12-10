@@ -27,7 +27,7 @@
 #include "piernik.h"
 
 !>
-!! \brief This module contains list of grid containers that belong to a single level level.
+!! \brief This module contains list of grid containers that belong to a single level.
 !! Everything that relies on connection between levels is placed in cg_level_connected module.
 !<
 
