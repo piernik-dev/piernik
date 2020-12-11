@@ -38,8 +38,9 @@ module cresp_io_common
    implicit none
 
    private
-   public   :: hdr_io, map_header, n_g_cresp, n_g_smaps, n_a_dims, n_a_esmall, n_a_max_p_r, n_a_clight, &
-      &  n_a_qbig, n_a_amin, n_a_amax, n_a_nmin, n_a_nmax, real_attrs, int_attrs
+   public   :: hdr_io, map_header, n_g_cresp, n_g_smaps, n_a_dims, n_a_esmall, n_a_max_p_r, n_a_clight,     &
+      &  n_a_qbig, n_a_amin, n_a_amax, n_a_nmin, n_a_nmax, real_attrs, int_attrs, create_dataset_real8_dim2,&
+      &  bound_name, dset_attrs
 
    character(len=*), parameter, dimension(LO:HI)      ::   n_g_smaps = (/ "cresp/smaps_LO", "cresp/smaps_UP" /)
    character(len=*), parameter :: n_g_cresp = "cresp", &
@@ -54,7 +55,13 @@ module cresp_io_common
                                                          &              "n_min      ",  &
                                                          &              "n_max      "   ]
 
+   character(len=cbuff_len), parameter, dimension(2)  :: dset_attrs = [ "p_ratios",     &
+                                                         &              "f_ratios"      ]
    character(len=cbuff_len), parameter, dimension(1)  :: int_attrs =  [ "dims       "   ]
+
+   integer, parameter                                 :: blen = 2
+
+   character(len=blen), dimension(LO:HI), parameter   :: bound_name = ['lo', 'up']
 
    type     map_header
       integer  :: s_dim1, s_dim2

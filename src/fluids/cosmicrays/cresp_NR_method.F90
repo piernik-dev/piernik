@@ -34,7 +34,7 @@ module cresp_NR_method
 ! pulled by COSM_RAY_ELECTRONS
 
    use constants,       only: LO, HI
-   use cresp_io_common, only: map_header
+   use cresp_io_common, only: map_header, bound_name
 
    implicit none
 
@@ -53,8 +53,7 @@ module cresp_NR_method
    integer(kind=4)                           :: current_bound, sought_by
    integer(kind=4), parameter                :: SLV = 1, RFN = 2
 #endif /* CRESP_VERBOSED */
-   integer, parameter                               :: blen = 2, extlen = 4, flen = 15
-   character(len=blen), dimension(LO:HI), parameter :: bound_name = ['lo', 'up']
+   integer, parameter                               :: extlen = 4, flen = 15
    character(len=extlen), parameter                 :: extension =  ".dat"
 
    abstract interface
