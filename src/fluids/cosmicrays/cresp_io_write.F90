@@ -34,7 +34,7 @@ module cresp_io_write
 ! pulled by COSM_RAY_ELECTRONS
 
    private
-   public   :: gdf_create_cresp_smap_fields
+   public   :: gdf_create_cresp_smap_fields, save_cresp_smap_h5
 
    contains
 
@@ -71,5 +71,61 @@ module cresp_io_write
       call h5gclose_f(g_id_cresp, error)
 
    end subroutine gdf_create_cresp_smap_fields
+!---------------------------------------------------------------------------------------------------
+   subroutine save_cresp_smap_h5(smap_data, bound, dsname, filename)
+
+      use cresp_io_common, only: n_g_smaps, create_dataset_real8_dim2!, dset_attrs
+      use dataio_pub,      only: msg, printinfo
+      use hdf5,            only: HID_T, h5fclose_f, h5open_f, h5fopen_f, h5gopen_f, h5gclose_f, &
+         &  H5F_ACC_RDWR_F, H5F_ACC_TRUNC_F, h5fcreate_f
+      use helpers_hdf5,    only: create_attribute
+
+      implicit none
+
+      integer,                      intent(in) :: bound
+      character(len=*),             intent(in) :: dsname
+      logical                                  :: file_exist
+      integer(HID_T)                           :: file_id, g_id
+      character(len=*),        intent(in)      :: filename
+      logical, save                            :: first_run = .true.! WARNING FIXME remove me when subroutine is divided in smaller parts
+      integer                                  :: error
+      real, dimension(:,:), intent(inout), target :: smap_data
+      real(kind=8), pointer, dimension(:,:)       :: p_smap
+
+      inquire(file = trim(filename), exist = file_exist)
+
+      if (first_run) then
+         write(msg,"(A,A)") "[cresp_io_write:save_cresp_smap_h5] File to process is:", trim(filename)
+         call printinfo(msg)
+      endif
+
+      if (file_exist) then
+         write(msg,"(A,A,A)") "[cresp_io_write:save_cresp_smap_h5] File '", trim(filename),"' exists, proceeding." !, no alteration to existing fields will occur."
+         call printinfo(msg)
+      else
+         write(msg,"(A,A,A)") "[cresp_io_write:save_cresp_smap_h5] File '", trim(filename),"' does not exist; must be created and initialized."
+         call printinfo(msg)
+         call h5fcreate_f(trim(filename), H5F_ACC_TRUNC_F, file_id, error) !even if you create file here, it does not have any fields here!
+         call h5fclose_f(file_id, error)
+
+         call h5open_f(error)
+         call h5fopen_f(trim(filename), H5F_ACC_RDWR_F, file_id, error)
+         call gdf_create_cresp_smap_fields(file_id)
+         call h5fclose_f(file_id, error)
+      endif
+
+      call h5open_f(error)
+      call h5fopen_f(trim(filename), H5F_ACC_RDWR_F, file_id, error)
+      call h5gopen_f(file_id, n_g_smaps(bound), g_id, error)
+
+      p_smap => smap_data
+      call create_dataset_real8_dim2(g_id, dsname, p_smap)
+      call h5gclose_f(g_id, error)
+      call h5fclose_f(file_id, error)
+      p_smap => null()
+
+      first_run = .false.
+
+   end subroutine save_cresp_smap_h5
 
 end module cresp_io_write
