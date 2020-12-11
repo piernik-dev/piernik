@@ -244,6 +244,7 @@ contains
       use constants,       only: zero, half, one, three, I_ONE, big, small
       use cresp_io_common, only: map_header, hdr_io
       use cresp_io_read,   only: read_cresp_smap_fields
+      use cresp_io_write,  only: save_cresp_smap_h5
       use dataio_pub,      only: die, msg, printinfo, warn
       use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio, e_small
       use cresp_variables, only: clight_cresp
@@ -427,6 +428,12 @@ contains
       enddo
       print *, "-----------"
 #endif /* CRESP_VERBOSED */
+
+!  WARNING FIXME temporary solution for the needs of development
+      call save_cresp_smap_h5(p_ratios_lo, LO, "p_ratios", "CRESP_smaps.h5")
+      call save_cresp_smap_h5(f_ratios_lo, LO, "f_ratios", "CRESP_smaps.h5")
+      call save_cresp_smap_h5(p_ratios_up, HI, "p_ratios", "CRESP_smaps.h5")
+      call save_cresp_smap_h5(f_ratios_up, HI, "f_ratios", "CRESP_smaps.h5")
 
    end subroutine fill_guess_grids
 
