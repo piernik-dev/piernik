@@ -74,57 +74,59 @@ module cresp_io_write
 !---------------------------------------------------------------------------------------------------
    subroutine save_cresp_smap_h5(smap_data, bound, dsname, filename)
 
-      use cresp_io_common, only: n_g_smaps, create_dataset_real8_dim2!, dset_attrs
+      use cresp_io_common, only: n_g_smaps, create_dataset_real8_dim2, check_file_group, file_has_group, &
+         &  file_has_dataset
       use dataio_pub,      only: msg, printinfo
-      use hdf5,            only: HID_T, h5fclose_f, h5open_f, h5fopen_f, h5gopen_f, h5gclose_f, &
-         &  H5F_ACC_RDWR_F, H5F_ACC_TRUNC_F, h5fcreate_f
+      use hdf5,            only: HID_T, h5close_f, h5fclose_f, h5fcreate_f, h5fopen_f, h5gclose_f,       &
+         &  h5gopen_f, h5open_f, H5F_ACC_RDWR_F, H5F_ACC_TRUNC_F
       use helpers_hdf5,    only: create_attribute
 
       implicit none
 
       integer,                      intent(in) :: bound
       character(len=*),             intent(in) :: dsname
-      logical                                  :: file_exist
+      logical                                  :: file_exist, has_group, has_dset
       integer(HID_T)                           :: file_id, g_id
-      character(len=*),        intent(in)      :: filename
-      logical, save                            :: first_run = .true.! WARNING FIXME remove me when subroutine is divided in smaller parts
-      integer                                  :: error
-      real, dimension(:,:), intent(inout), target :: smap_data
+      character(len=*),             intent(in) :: filename
+      integer                                     :: error
+      real, dimension(:,:), target, intent(inout) :: smap_data
       real(kind=8), pointer, dimension(:,:)       :: p_smap
 
-      inquire(file = trim(filename), exist = file_exist)
+      call check_file_group(filename, "/cresp", file_exist, has_group) ! Assumption: if H5 file has "/cresp" group, other fields should be present
 
-      if (first_run) then
-         write(msg,"(A,A)") "[cresp_io_write:save_cresp_smap_h5] File to process is:", trim(filename)
-         call printinfo(msg)
-      endif
-
-      if (file_exist) then
-         write(msg,"(A,A,A)") "[cresp_io_write:save_cresp_smap_h5] File '", trim(filename),"' exists, proceeding." !, no alteration to existing fields will occur."
-         call printinfo(msg)
-      else
+      if (.not. file_exist) then
          write(msg,"(A,A,A)") "[cresp_io_write:save_cresp_smap_h5] File '", trim(filename),"' does not exist; must be created and initialized."
          call printinfo(msg)
-         call h5fcreate_f(trim(filename), H5F_ACC_TRUNC_F, file_id, error) !even if you create file here, it does not have any fields here!
-         call h5fclose_f(file_id, error)
 
          call h5open_f(error)
-         call h5fopen_f(trim(filename), H5F_ACC_RDWR_F, file_id, error)
-         call gdf_create_cresp_smap_fields(file_id)
+         call h5fcreate_f(trim(filename), H5F_ACC_TRUNC_F, file_id, error)
          call h5fclose_f(file_id, error)
+         call h5close_f(error)
       endif
 
-      call h5open_f(error)
-      call h5fopen_f(trim(filename), H5F_ACC_RDWR_F, file_id, error)
-      call h5gopen_f(file_id, n_g_smaps(bound), g_id, error)
+      if (.not. has_group) then
+         call h5open_f(error)
+         call h5fopen_f(trim(filename), H5F_ACC_RDWR_F, file_id, error)
+         call gdf_create_cresp_smap_fields(file_id)   ! Creates "/cresp" group and associated attrs
+         call h5fclose_f(file_id, error)
+         call h5close_f(error)
+      endif
 
-      p_smap => smap_data
-      call create_dataset_real8_dim2(g_id, dsname, p_smap)
-      call h5gclose_f(g_id, error)
-      call h5fclose_f(file_id, error)
-      p_smap => null()
+      has_dset = file_has_dataset(filename, "/"//n_g_smaps(bound)//"/"//dsname)
 
-      first_run = .false.
+      if (.not. has_dset) then
+         call h5open_f(error)
+         call h5fopen_f(trim(filename), H5F_ACC_RDWR_F, file_id, error)
+         call h5gopen_f(file_id, n_g_smaps(bound), g_id, error)
+         p_smap => smap_data
+         call create_dataset_real8_dim2(g_id, dsname, p_smap)
+         call h5gclose_f(g_id, error)
+         call h5fclose_f(file_id, error)
+         p_smap => null()
+      else
+         write(msg,"(A,A,A)") "[cresp_io_write:save_cresp_smap_h5] Dataset ", "/"//n_g_smaps(bound)//"/"//dsname, " already present in file; omitting."
+         call printinfo(msg)
+      endif
 
    end subroutine save_cresp_smap_h5
 
