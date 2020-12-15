@@ -652,48 +652,45 @@ contains
 
       real,            intent(in) :: n_in, e_in
       integer(kind=4), intent(in) :: i_cutoff
-      real                        :: f_one, q_one, p_l, p_r, e_amplitude_l, e_amplitude_r, alpha
+      real                        :: f_one, q_one, q_1m3, p_l, p_r, e_amplitude_l, e_amplitude_r, alpha
       logical                     :: exit_code
 
+      assert_active_bin_via_nei = .false.
+
       if (e_in > zero .and. n_in > zero .and. p_fix(max(i_cutoff-1,0)) > zero ) then
-         assert_active_bin_via_nei = .true.
 
-         exit_code = .true.
-
-         if (i_cutoff > 0 .and. i_cutoff < ncre) then
-            alpha = e_in/(n_in * clight_cresp * p_fix(i_cutoff-1))
-            q_one = compute_q(alpha, exit_code)
-         else
+         if (i_cutoff <= 0 .or. i_cutoff >= ncre) then
+            assert_active_bin_via_nei = .true.
             return            ! WARN: returns .true. if bin of choice is the extreme one -- FIX_ME
          endif
+
+         exit_code = .true.
+         alpha = e_in/(n_in * clight_cresp * p_fix(i_cutoff-1))
+         q_one = compute_q(alpha, exit_code)
+         q_1m3 = three - q_one
 
          p_l = p_fix(i_cutoff-1)
          p_r = p_fix(i_cutoff)
          f_one = n_in / (fpi*p_l**3)
 
-         if (abs(q_one-three) > eps) then
-            f_one = f_one*(three - q_one) /((p_r/p_l)**(three - q_one) - one)
+         if (abs(q_1m3) > eps) then
+            f_one = f_one*(q_1m3) /((p_r/p_l)**(q_1m3) - one)
          else
             f_one = f_one/log(p_r/p_l)
          endif
 
          e_amplitude_l = fp_to_e_ampl(p_l, f_one)
          e_amplitude_r = fp_to_e_ampl(p_r, f_one)
+         assert_active_bin_via_nei = ((e_amplitude_l > e_small) .and. (e_amplitude_r > e_small))
 
-         if ((e_amplitude_l > e_small) .and. (e_amplitude_r > e_small)) then
 #ifdef CRESP_VERBOSED
-            write(msg,*) "[cresp_crspectrum:verify_cutoff_i_next] No change to ", i_cutoff ; call printinfo(msg)
-#endif /* CRESP_VERBOSED */
-            assert_active_bin_via_nei = .true.
+         if (assert_active_bin_via_nei) then
+            write(msg,*) "[cresp_crspectrum:verify_cutoff_i_next] No change to ", i_cutoff
          else
-#ifdef CRESP_VERBOSED
-            write(msg,*) "[cresp_crspectrum:verify_cutoff_i_next] Cutoff index should change index no. ", i_cutoff; call printinfo(msg)
-#endif /* CRESP_VERBOSED */
-            assert_active_bin_via_nei = .false.
+            write(msg,*) "[cresp_crspectrum:verify_cutoff_i_next] Cutoff index should change index no. ", i_cutoff
          endif
-      else
-         assert_active_bin_via_nei = .false.
-         return
+         call printinfo(msg)
+#endif /* CRESP_VERBOSED */
       endif
 
    end function assert_active_bin_via_nei
