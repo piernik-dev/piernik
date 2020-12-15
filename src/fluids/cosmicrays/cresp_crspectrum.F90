@@ -77,7 +77,6 @@ module cresp_crspectrum
    real, allocatable, dimension(:) :: f                                   !> distribution function for piecewise power-law spectrum
    real, allocatable, dimension(:) :: p_next, p_upw , nflux, eflux        !> predicted and upwind momenta, number density / energy density fluxes
    real                            :: n_tot, n_tot0, e_tot, e_tot0        !> precision control for energy / number density transport and dissipation of energy
-   real                            :: u_b, u_d                            !> in-algorithm energy dissipation terms
    real, allocatable, dimension(:) :: ndt, edt                            !> work array of number density and energy during algorithm execution
    real, allocatable, dimension(:) :: n, e                                !> in-algorithm energy & number density
    real, allocatable, dimension(:) :: e_amplitudes_l, e_amplitudes_r
@@ -135,9 +134,6 @@ contains
       r = zero
       f = zero
       q = zero
-
-      u_b = sptab%ub
-      u_d = sptab%ud
 
       if (present(p_out)) then
          p_cut    = p_out
@@ -229,7 +225,7 @@ contains
          return
       endif
 
-      call cresp_update_bin_index(dt, p_cut, p_cut_next, cfl_cresp_violation)
+      call cresp_update_bin_index(sptab%ub*dt, sptab%ud*dt, p_cut, p_cut_next, cfl_cresp_violation)
       if (cfl_cresp_violation) then
          approx_p = e_small_approx_p         !< restore approximation after momenta computed
          call deallocate_active_arrays
@@ -250,7 +246,7 @@ contains
 
 ! edt(1:ncre) = e(1:ncre) *(one-0.5*dt*r(1:ncre)) - (eflux(1:ncre) - eflux(0:ncre-1))/(one+0.5*dt*r(1:ncre))   !!! oryginalnie u Miniatiego
 ! Compute coefficients R_i needed to find energy in [t,t+dt]
-      call cresp_compute_r(p_next, active_bins_next)                 ! new active bins already received some particles, Ri is needed for those bins too
+      call cresp_compute_r(sptab%ub, sptab%ud, p_next, active_bins_next)                 ! new active bins already received some particles, Ri is needed for those bins too
 
       edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
 
@@ -750,7 +746,7 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   subroutine cresp_update_bin_index(dt, p_cut, p_cut_next, dt_too_high) ! evaluates only "next" momenta and is called after finding outer cutoff momenta
+   subroutine cresp_update_bin_index(ubdt, uddt, p_cut, p_cut_next, dt_too_high) ! evaluates only "next" momenta and is called after finding outer cutoff momenta
 
       use constants,      only: zero, I_ZERO, one
 #ifdef CRESP_VERBOSED
@@ -761,7 +757,7 @@ contains
 
       implicit none
 
-      real,                   intent(in)  :: dt
+      real,                   intent(in)  :: ubdt, uddt     !> in-algorithm energy dissipation terms
       real, dimension(LO:HI), intent(in)  :: p_cut
       real, dimension(LO:HI), intent(out) :: p_cut_next
       logical,                intent(out) :: dt_too_high
@@ -769,7 +765,7 @@ contains
 
       dt_too_high = .false.
 ! Compute p_cut at [t+dt] (update p_range)
-      p_cut_next = p_cut * (one + [p_rch(dt, p_cut(LO)), p_rch(dt, p_cut(HI))]) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
+      p_cut_next = p_cut * (one + [p_rch(uddt, ubdt*p_cut(LO)), p_rch(uddt, ubdt*p_cut(HI))]) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
       p_cut_next = abs(p_cut_next)
 ! Compute likely cut-off indices after current timestep
       i_cut_next = get_i_cut(p_cut_next)
@@ -803,7 +799,7 @@ contains
 
 ! Compute upwind momentum p_upw for all fixed edges
       p_upw = zero
-      p_upw(1:ncre) = [( p_fix(i)*(one - p_rch(dt,p_fix(i))), i=1,ncre )] !< p_upw is computed with minus sign
+      p_upw(1:ncre) = [( p_fix(i)*(one - p_rch(uddt,ubdt*p_fix(i))), i=1,ncre )] !< p_upw is computed with minus sign
 
 #ifdef CRESP_VERBOSED
       write (msg, "(A, 2I3)") 'Change of  cut index lo,up:', del_i    ; call printinfo(msg)
@@ -1545,7 +1541,7 @@ contains
 ! compute R (eq. 25)
 !
 !-------------------------------------------------------------------------------------------------
-   subroutine cresp_compute_r(p, bins)
+   subroutine cresp_compute_r(u_b, u_d, p, bins)
 
       use constants,      only: zero, four, five
       use initcosmicrays, only: ncre
@@ -1554,6 +1550,7 @@ contains
       implicit none
 
       integer, dimension(:),   intent(in) :: bins
+      real,                    intent(in) :: u_b, u_d
       real, dimension(0:ncre), intent(in) :: p
       real, dimension(size(bins))         :: r_num, r_den
 
@@ -1804,37 +1801,37 @@ contains
 !>
 !! \brief Relative change of momentum due to losses (u_b*p*dt) and compression u_d*dt (Taylor expansion up to 3rd order)
 !<
-   real function p_rch_ord_1(dt, p)
+   real function p_rch_ord_1(uddt, ubpdt)
 
       implicit none
 
-      real, intent(in) :: dt, p
+      real, intent(in) :: uddt, ubpdt
 
-      p_rch_ord_1 = -( u_d + p * u_b ) * dt
+      p_rch_ord_1 = -(uddt + ubpdt)
 
    end function p_rch_ord_1
 !-------------------------------------------------------------------------------------------------
-   real function p_rch_ord_2_1(dt, p)     !< adds 2nd term and calls 1st order
+   real function p_rch_ord_2_1(uddt, ubpdt)     !< adds 2nd term and calls 1st order
 
       use constants, only: half
 
       implicit none
 
-      real, intent(in) :: dt, p
+      real, intent(in) :: uddt, ubpdt
 
-      p_rch_ord_2_1 = p_rch_ord_1(dt, p) + ( half*(u_d*dt)**2 + (u_b * p * dt)**2)
+      p_rch_ord_2_1 = p_rch_ord_1(uddt, ubpdt) + ( half*uddt**2 + ubpdt**2)
 
    end function p_rch_ord_2_1
 !-------------------------------------------------------------------------------------------------
-   real function p_rch_ord_3_2_1(dt, p)     !< adds 3rd term and calls 2nd and 1st order
+   real function p_rch_ord_3_2_1(uddt, ubpdt)     !< adds 3rd term and calls 2nd and 1st order
 
       use constants, only: onesth
 
       implicit none
 
-      real, intent(in) :: dt, p
+      real, intent(in) :: uddt, ubpdt
 
-      p_rch_ord_3_2_1 = p_rch_ord_2_1(dt, p) - onesth * (u_d * dt)**3 - (u_b * p * dt)**3
+      p_rch_ord_3_2_1 = p_rch_ord_2_1(uddt, ubpdt) - onesth * uddt**3 - ubpdt**3
 
    end function p_rch_ord_3_2_1
 !----------------------------------------------------------------------------------------------------
