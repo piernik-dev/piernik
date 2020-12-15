@@ -42,7 +42,7 @@ module   cresp_io_read
 
    contains
 
-   subroutine read_cresp_smap_fields(read_error)
+   subroutine read_cresp_smap_fields(read_error, filename_opt)
 
       use common_hdf5,        only: output_fname
       use constants,          only: cwdlen, RD
@@ -54,17 +54,22 @@ module   cresp_io_read
 
       implicit none
 
-      integer                         :: error, i, ia
-      integer(HID_T)                  :: file_id
-      character(len=cwdlen)           :: filename
-      logical                         :: file_exist
-      logical, intent(inout)          :: read_error
+      integer                                    :: error, i, ia
+      integer(HID_T)                             :: file_id
+      character(len=cwdlen)                      :: filename
+      character(len=*), optional,     intent(in) :: filename_opt
+      logical                                    :: file_exist
+      logical,                       intent(out) :: read_error
       integer(kind=4), dimension(:), allocatable :: ibuf
       real,            dimension(:), allocatable :: rbuf
 
-      filename = output_fname(RD, '.res', nres+1, bcast=.true.) ! TRY opening res with number > 0
-      write (msg,"(A,A)") "[cresp_io_read:read_cresp_smap_fields] Name of file to open: ", trim(filename)
-      call printinfo(msg)
+      if (present(filename_opt)) then
+         filename = filename_opt
+      else
+         filename = output_fname(RD, '.res', nres+1, bcast=.true.) ! TRY opening res with number > 0
+         write (msg,"(A,A)") "[cresp_io_read:read_cresp_smap_fields] Name of file to open: ", trim(filename)
+         call printinfo(msg)
+      endif
 
       inquire(file = trim(filename), exist = file_exist)
 
@@ -76,6 +81,7 @@ module   cresp_io_read
       else
          write(msg, "(A,A,A)") "[cresp_io_common:read_cresp_smap_fields] Proceeding with '", trim(filename), "' file."
          call printinfo(msg)
+         read_error = .false.
       endif
 
       call h5open_f(error)
