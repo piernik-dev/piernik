@@ -863,34 +863,28 @@ contains
 
    end subroutine arrange_assoc_active_edge_arrays
 !-------------------------------------------------------------------------------------------------
-   subroutine cresp_init_state(init_n, init_e, sptab)
+   subroutine cresp_init_state(init_n, init_e)
 
       use constants,       only: zero, I_ZERO, I_ONE
       use cresp_NR_method, only: bound_name
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
-      use initcrspectrum,  only: spec_mod_trms, q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel,   &
+      use initcrspectrum,  only: q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel,   &
                               &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins
       use mpisetup,        only: master
 
       implicit none
 
-      real, dimension(I_ONE:ncre)               :: init_n, init_e
-      type(spec_mod_trms), optional, intent(in) :: sptab
-      integer                                   :: i, k, co
-      integer, dimension(LO:HI)                 :: i_ch
-      real                                      :: c
-      logical                                   :: exit_code
+      real, dimension(I_ONE:ncre), intent(out) :: init_n, init_e
+      integer                                  :: i, k, co
+      integer, dimension(LO:HI)                :: i_ch
+      real                                     :: c
+      logical                                  :: exit_code
 
       max_ic = [I_ZERO, ncre]
       fail_count_interpol = 0
       fail_count_NR_2dim  = 0
       fail_count_comp_q   = 0
-
-      u_b = zero ; u_d = zero
-
-      if (present(sptab)) u_b = sptab%ub
-      if (present(sptab)) u_d = sptab%ud
 
       approx_p    = e_small_approx_p
       e_threshold = e_small_approx_p * e_small
