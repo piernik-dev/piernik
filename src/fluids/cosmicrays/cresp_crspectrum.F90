@@ -254,7 +254,7 @@ contains
 
       edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
 
-      if ((del_i(HI) == 0) .and. (approx_p(HI) > 0)) then
+      if ((del_i(HI) == 0) .and. (approx_p(HI) > 0) .and. (i_cut_next(HI)-1 > 0)) then
          if (.not. assert_active_bin_via_nei(ndt(i_cut_next(HI)), edt(i_cut_next(HI)), i_cut_next(HI))) then
             call manually_deactivate_bin_via_transfer(i_cut_next(HI), -1, ndt, edt)
          endif
