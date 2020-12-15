@@ -265,7 +265,6 @@ contains
          endif
       endif
 
-
       approx_p = e_small_approx_p         !< restore approximation after momenta computed
 
       p_cut = p_cut_next
@@ -769,9 +768,8 @@ contains
       integer                             :: i
 
       dt_too_high = .false.
-! Compute p_cut at [t+dt]
-      call p_update(dt, p_cut(LO), p_cut_next(LO))
-      call p_update(dt, p_cut(HI), p_cut_next(HI))
+! Compute p_cut at [t+dt] (update p_range)
+      p_cut_next = p_cut * (one + [p_rch(dt, p_cut(LO)), p_rch(dt, p_cut(HI))]) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
       p_cut_next = abs(p_cut_next)
 ! Compute likely cut-off indices after current timestep
       i_cut_next = get_i_cut(p_cut_next)
@@ -838,25 +836,6 @@ contains
 
    end subroutine cresp_update_bin_index
 
-!-------------------------------------------------------------------------------------------------
-!
-! update p_range
-!
-!-------------------------------------------------------------------------------------------------
-
-   subroutine p_update(dt, p_old, p_new)
-
-      use constants, only: one
-
-      implicit none
-
-      real, intent(in)  :: dt
-      real, intent(in)  :: p_old
-      real, intent(out) :: p_new
-
-      p_new = p_old*(one + p_rch(dt, p_old)) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
-
-   end subroutine p_update
 !-------------------------------------------------------------------------------------------------
 !
 ! arrays initialization | TODO: reorganize cresp_init_state
