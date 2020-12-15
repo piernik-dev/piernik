@@ -1827,22 +1827,10 @@ contains
       alpha = zero ;  n_in = zero
 
    end subroutine get_fqp_cutoff
-!----------------------------------------------------------------------------------------------------
-   function b_losses(p)
 
-      implicit none
-
-      real, dimension(:), intent(in)  :: p
-      real, dimension(size(p))        :: b_losses
-
-      b_losses = u_b*p**2  !!! b_sync_ic = 8.94e-25*(u_b+u_cmb)*gamma_l**2 ! erg/cm
-
-   end function b_losses
-!-------------------------------------------------------------------------------------------------
 !>
 !! \brief Relative change of momentum due to losses (u_b*p*dt) and compression u_d*dt (Taylor expansion up to 3rd order)
 !<
-!====================================================================================================
    real function p_rch_ord_1(dt, p)
 
       implicit none
