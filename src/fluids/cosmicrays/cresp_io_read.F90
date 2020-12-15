@@ -38,7 +38,7 @@ module   cresp_io_read
    implicit none
 
    private
-   public   :: read_cresp_smap_fields
+   public   :: read_cresp_smap_fields, read_cresp_smap_h5
 
    contains
 
@@ -48,8 +48,8 @@ module   cresp_io_read
       use constants,          only: cwdlen, RD
       use cresp_io_common,    only: n_g_smaps, n_a_dims, n_a_esmall, n_a_max_p_r, n_a_clight,   &
         &  n_a_qbig, n_a_amin, n_a_amax, n_a_nmin, n_a_nmax, hdr_io, int_attrs, real_attrs
-      use dataio_pub,         only: die, msg, nres, printinfo, warn
-      use hdf5,               only: HID_T, H5F_ACC_RDONLY_F, h5close_f, h5fclose_f, h5fcreate_f, h5open_f, h5fopen_f
+      use dataio_pub,         only: die, msg, nres, printinfo
+      use hdf5,               only: HID_T, H5F_ACC_RDONLY_F, h5close_f, h5fclose_f, h5open_f, h5fopen_f
       use set_get_attributes, only: get_attr
 
       implicit none
@@ -123,5 +123,74 @@ module   cresp_io_read
       call h5close_f(error)
 
    end subroutine read_cresp_smap_fields
+!---------------------------------------------------------------------------------------------------
+!
+!> \brief Opens h5 file, checks if dset is present and reads it
+!  TODO optimize me: many overlapping open / close instructions.
+!
+   subroutine read_cresp_smap_h5(filename, dsetname, dset, read_error)
+
+      use cresp_io_common, only: file_has_dataset
+      use dataio_pub,      only: msg, warn
+      use hdf5,            only: HID_T, h5fclose_f, h5close_f, h5fopen_f, &
+                        &     h5open_f, H5F_ACC_RDONLY_F
+      implicit none
+
+      character(len=*),                  intent(in) :: dsetname
+      real,   dimension(:,:), target, intent(inout) :: dset
+      integer                                       :: error
+      integer(HID_T)                                :: file_id
+      character(len=*),                  intent(in) :: filename
+      logical                                       :: has_dataset
+      real, dimension(:,:), pointer                 :: pdset
+      logical,                          intent(out) :: read_error
+
+      pdset => null()
+      has_dataset = file_has_dataset(filename, dsetname)
+      read_error  = .not. has_dataset
+
+      if (has_dataset) then
+         call h5open_f(error)
+         call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
+
+         pdset => dset(:,:)
+         call read_real_arr2d_dset(file_id, dsetname, pdset)
+         pdset => null()
+
+         call h5fclose_f(file_id, error)
+         call h5close_f(error)
+      else
+         write(msg, "(5a)") "[cresp_io_read:read_cresp_smap_h5] Problem reading dataset '", dsetname, "' from file '", trim(filename),"'."
+         call warn(msg)
+      endif
+
+   end subroutine read_cresp_smap_h5
+!---------------------------------------------------------------------------------------------------
+!
+!> \brief  Read 2D double precision dataset 'dsdata' of provided name 'dsetname' with 'file_id'
+!  Requires file to be open, may be slow. WARNING Does not contain fail-safe instructions!
+!
+   subroutine read_real_arr2d_dset(file_id, dsetname, pa2d)
+
+      use hdf5,      only: HID_T, h5dopen_f, h5dread_f, h5dopen_f, &
+                     &  h5dclose_f, H5T_NATIVE_DOUBLE, HSIZE_T
+      implicit none
+
+      integer(HID_T)                 :: dset_id
+      integer(HID_T),     intent(in) :: file_id
+      integer                        :: error
+      character(len=*),   intent(in) :: dsetname
+      real, dimension(:,:),  pointer :: pa2d
+      integer(HSIZE_T), dimension(2) :: pa2ddims
+
+      if (associated(pa2d)) then
+         pa2ddims = shape(pa2d)
+
+         call h5dopen_f(file_id, dsetname, dset_id, error)
+         call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa2d, pa2ddims, error)
+         call h5dclose_f(dset_id, error)
+      endif
+
+   end subroutine read_real_arr2d_dset
 
 end module cresp_io_read
