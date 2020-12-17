@@ -1602,27 +1602,49 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine initialize_arrays
 
-      use diagnostics,    only: my_allocate_with_index, my_allocate, ma1d, ma2d
+      use diagnostics,    only: my_allocate_with_index, my_allocate, ma1d
       use initcrspectrum, only: arr_dim, arr_dim_q
 
       implicit none
 
       ma1d = arr_dim
-      ma2d = [arr_dim, arr_dim]
 
-      call my_allocate_with_index(alpha_tab_lo, arr_dim, 1)
-      call my_allocate_with_index(alpha_tab_up, arr_dim, 1)
-      call my_allocate_with_index(n_tab_lo, arr_dim, 1)
-      call my_allocate_with_index(n_tab_up, arr_dim, 1)
-      call my_allocate_with_index(alpha_tab_q, arr_dim_q, 1)
-      call my_allocate_with_index(q_grid, arr_dim_q, 1)
-      call my_allocate(p_ratios_lo, ma2d )
-      call my_allocate(f_ratios_lo, ma2d )
-      call my_allocate(p_ratios_up, ma2d )
-      call my_allocate(f_ratios_up, ma2d )
-
+      if(.not. allocated(alpha_tab_lo)) call my_allocate_with_index(alpha_tab_lo, arr_dim, 1)
+      if(.not. allocated(alpha_tab_up)) call my_allocate_with_index(alpha_tab_up, arr_dim, 1)
+      if(.not. allocated(n_tab_lo))     call my_allocate_with_index(n_tab_lo, arr_dim, 1)
+      if(.not. allocated(n_tab_up))     call my_allocate_with_index(n_tab_up, arr_dim, 1)
+      if(.not. allocated(alpha_tab_q))  call my_allocate_with_index(alpha_tab_q, arr_dim_q, 1)
+      if(.not. allocated(q_grid))       call my_allocate_with_index(q_grid, arr_dim_q, 1)
+      call allocate_smaps(arr_dim, arr_dim)
    end subroutine initialize_arrays
 !----------------------------------------------------------------------------------------------------
+   subroutine deallocate_smaps
+
+      implicit none
+
+      if( allocated(p_ratios_lo) ) deallocate(p_ratios_lo)
+      if( allocated(f_ratios_lo) ) deallocate(f_ratios_lo)
+      if( allocated(p_ratios_up) ) deallocate(p_ratios_up)
+      if( allocated(f_ratios_up) ) deallocate(f_ratios_up)
+
+   end subroutine deallocate_smaps
+!----------------------------------------------------------------------------------------------------
+   subroutine allocate_smaps(dim1, dim2)
+
+      use diagnostics,  only: my_allocate, ma2d
+
+      implicit none
+
+      integer,    intent(in)  :: dim1, dim2
+
+      ma2d = [dim1, dim2]
+
+      if( .not. allocated(p_ratios_lo) ) call my_allocate(p_ratios_lo, ma2d )
+      if( .not. allocated(f_ratios_lo) ) call my_allocate(f_ratios_lo, ma2d )
+      if( .not. allocated(p_ratios_up) ) call my_allocate(p_ratios_up, ma2d )
+      if( .not. allocated(f_ratios_up) ) call my_allocate(f_ratios_up, ma2d )
+
+   end subroutine allocate_smaps
 
    subroutine add_dot(is_finishing)
 
