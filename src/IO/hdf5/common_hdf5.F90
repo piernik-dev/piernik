@@ -452,6 +452,7 @@ contains
       use version,       only: env, nenv
 #ifdef COSM_RAY_ELECTRONS
       use initcrspectrum, only: write_cresp_to_restart
+      use cresp_io_write, only: create_cresp_smap_fields
 #endif /* COSM_RAY_ELECTRONS */
 #ifdef RANDOMIZE
       use randomization, only: write_current_seed_to_restart
@@ -534,6 +535,9 @@ contains
 #ifdef SN_SRC
       call write_snsources_to_restart(file_id)
 #endif /* SN_SRC */
+#ifdef COSM_RAY_ELECTRONS
+      call create_cresp_smap_fields(file_id) ! create "/cresp/smaps_{LO,UP}/..."
+#endif /* COSM_RAY_ELECTRONS */
       if (associated(user_attrs_wr)) call user_attrs_wr(file_id)
 
       call h5fclose_f(file_id, error)
@@ -811,9 +815,6 @@ contains
       use domain,       only: dom
       use gdf,          only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets, &
          &                    gdf_root_datasets_t, gdf_parameters_t, GDF_CARTESIAN, GDF_POLAR
-#ifdef COSM_RAY_ELECTRONS
-      use cresp_io_write, only: gdf_create_cresp_smap_fields
-#endif /* COSM_RAY_ELECTRONS */
       use global,       only: t
       use hdf5,         only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
          &                    h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, h5pclose_f, &
@@ -939,10 +940,6 @@ contains
          call h5gcreate_f(file_id, data_gname, cgl_g_id, error)     ! create "/data"
 
          call create_attribute(cgl_g_id, cg_cnt_aname, [ cg_cnt ])  ! create "/data/cg_count"
-
-#ifdef COSM_RAY_ELECTRONS
-         if (otype .eq. O_RES) call gdf_create_cresp_smap_fields(file_id) ! create "/cresp/smaps_{LO,UP}/..."
-#endif /* COSM_RAY_ELECTRONS */
 
          Z_avail = .false.
          if (nproc_io == 1) call h5zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)

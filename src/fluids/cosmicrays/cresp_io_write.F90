@@ -34,13 +34,13 @@ module cresp_io_write
 ! pulled by COSM_RAY_ELECTRONS
 
    private
-   public   :: gdf_create_cresp_smap_fields, save_cresp_smap_h5
+   public   :: create_cresp_smap_fields, save_cresp_smap_h5
 
    contains
 
 !  TODO include creation / writing to a new file when basic functionalities are working
 
-   subroutine gdf_create_cresp_smap_fields(file_id)
+   subroutine create_cresp_smap_fields(file_id)
 
       use constants,       only: LO, HI
       use cresp_io_common, only: n_g_cresp, n_g_smaps, n_a_dims, n_a_esmall, n_a_max_p_r, &
@@ -70,7 +70,7 @@ module cresp_io_write
          enddo
       call h5gclose_f(g_id_cresp, error)
 
-   end subroutine gdf_create_cresp_smap_fields
+   end subroutine create_cresp_smap_fields
 !---------------------------------------------------------------------------------------------------
    subroutine save_cresp_smap_h5(smap_data, bound, dsname, filename)
 
@@ -107,7 +107,7 @@ module cresp_io_write
       if (.not. has_group) then
          call h5open_f(error)
          call h5fopen_f(trim(filename), H5F_ACC_RDWR_F, file_id, error)
-         call gdf_create_cresp_smap_fields(file_id)   ! Creates "/cresp" group and associated attrs
+         call create_cresp_smap_fields(file_id)   ! Creates "/cresp" group and associated attrs
          call h5fclose_f(file_id, error)
          call h5close_f(error)
       endif
