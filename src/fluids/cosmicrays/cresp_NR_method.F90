@@ -58,6 +58,7 @@ module cresp_NR_method
    character(len=extlen), parameter                 :: extension =  ".dat"
 
    logical, save                             :: got_smaps_from_restart = .false.
+   type(map_header), dimension(2)            :: hdr_res
 
    abstract interface
       function function_pointer_2D(z)
@@ -253,12 +254,12 @@ contains
 
       implicit none
 
-      integer(kind=4)      :: i, j, ilim = 0, qmaxiter = 100
-      logical              :: read_error, headers_match, read_error_p, read_error_f
-      real                 :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
-      real, dimension(2)   :: a_min = big, a_max = small, n_min = big, n_max = small
-      type(map_header)     :: hdr_init, hdr_read
-      type(smaplmts)       :: sml
+      real                          :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
+      real, dimension(2)            :: a_min = big, a_max = small, n_min = big, n_max = small
+      type(map_header),dimension(2) :: hdr_init, hdr_read
+      integer(kind=4)               :: i, j, ilim = 0, qmaxiter = 100
+      logical                       :: read_error, headers_match, read_error_p, read_error_f
+      type(smaplmts)                :: sml
 
       character(len=flen-len(extension))  :: filename_read
 
@@ -303,13 +304,12 @@ contains
 !       n_min(HI) = 1.0e-12
 !       n_max(HI) = 1000.0
 
-      hdr_init%s_es     = e_small
-      hdr_init%s_dim1   = arr_dim
-      hdr_init%s_dim2   = arr_dim
-      hdr_init%s_qbig   = q_big
-      hdr_init%s_pr     = max_p_ratio
-      hdr_init%s_c      = clight_cresp
-
+      hdr_init(:)%s_es     = e_small
+      hdr_init(:)%s_dim1   = arr_dim
+      hdr_init(:)%s_dim2   = arr_dim
+      hdr_init(:)%s_qbig   = q_big
+      hdr_init(:)%s_pr     = max_p_ratio
+      hdr_init(:)%s_c      = clight_cresp
 
       do i = 1, arr_dim
          alpha_tab_lo(i) = ind_to_flog(i, a_min(LO), a_max(LO), arr_dim) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim-1)*real(i-1))
@@ -325,21 +325,26 @@ contains
          sml%ni%ibeg = 1
          sml%ni%iend = arr_dim
 ! --------------------
-         hdr_init%s_amin = alpha_tab_up(1)
-         hdr_init%s_amax = alpha_tab_up(arr_dim)
-         hdr_init%s_nmin = n_tab_up(1)
-         hdr_init%s_nmax = n_tab_up(arr_dim)
 
-         hdr_io(HI) = hdr_init
+         hdr_init(1)%s_amin   = alpha_tab_lo(1)
+         hdr_init(1)%s_amax   = alpha_tab_lo(arr_dim)
+         hdr_init(1)%s_nmin   = n_tab_lo(1)
+         hdr_init(1)%s_nmax   = n_tab_lo(arr_dim)
+         hdr_init(2)%s_amin = alpha_tab_up(1)
+         hdr_init(2)%s_amax = alpha_tab_up(arr_dim)
+         hdr_init(2)%s_nmin = n_tab_up(1)
+         hdr_init(2)%s_nmax = n_tab_up(arr_dim)
+
+         hdr_io = hdr_init
 
          write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(HI), ") boundary"
          call printinfo(msg)
 
          call get_smap_filename("p_ratios_", HI, filename_read)
-         call read_NR_smap_header(filename_read, hdr_read, read_error)
+         call read_NR_smap_header(filename_read, hdr_read(HI), read_error)
 
          if (.not. read_error) then
-            call check_NR_smap_header(hdr_read, hdr_init, headers_match)
+            call check_NR_smap_header(hdr_read(HI), hdr_init(HI), headers_match)
             if (headers_match .and. (.not. force_init_NR)) then
                call read_NR_smap(p_ratios_up, "p"//filename_read(2:9), HI, read_error_p)
                call read_NR_smap(f_ratios_up, "f"//filename_read(2:9), HI, read_error_f)
@@ -359,25 +364,18 @@ contains
             call refine_all_directions(HI)
          endif
 
-         call save_NR_smap(p_ratios_up, hdr_init, "pWratios_", HI)   ! save to work file
-         call save_NR_smap(f_ratios_up, hdr_init, "fWratios_", HI)   ! save to work file
+         call save_NR_smap(p_ratios_up, hdr_init(HI), "pWratios_", HI)   ! save to work file
+         call save_NR_smap(f_ratios_up, hdr_init(HI), "fWratios_", HI)   ! save to work file
 
 !--------------------
-         hdr_init%s_amin   = alpha_tab_lo(1)
-         hdr_init%s_amax   = alpha_tab_lo(arr_dim)
-         hdr_init%s_nmin   = n_tab_lo(1)
-         hdr_init%s_nmax   = n_tab_lo(arr_dim)
-
-         hdr_io(LO) = hdr_init
-
          write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(LO), ") boundary"
          call printinfo(msg)
 
          call get_smap_filename("p_ratios_", LO, filename_read)
-         call read_NR_smap_header(filename_read, hdr_read, read_error)
+         call read_NR_smap_header(filename_read, hdr_read(LO), read_error)
 
          if (.not. read_error) then
-            call check_NR_smap_header(hdr_read, hdr_init, headers_match)
+            call check_NR_smap_header(hdr_read(LO), hdr_init(LO), headers_match)
             if (headers_match .and. (.not. force_init_NR)) then
                call read_NR_smap(p_ratios_lo, "p"//filename_read(2:9), LO, read_error_p)
                call read_NR_smap(f_ratios_lo, "p"//filename_read(2:9), LO, read_error_f)
@@ -397,8 +395,8 @@ contains
             call refine_all_directions(LO)
          endif
 
-         call save_NR_smap(p_ratios_lo, hdr_init, "pWratios_", LO)   ! save to work file
-         call save_NR_smap(f_ratios_lo, hdr_init, "fWratios_", LO)   ! save to work file
+         call save_NR_smap(p_ratios_lo, hdr_init(LO), "pWratios_", LO)   ! save to work file
+         call save_NR_smap(f_ratios_lo, hdr_init(LO), "fWratios_", LO)   ! save to work file
       endif
       a_min_q = one  + epsilon(one)
       a_max_q = (one + epsilon(one)) * p_fix_ratio
@@ -1675,12 +1673,11 @@ contains
       implicit none
 
       integer(HID_T),             intent(in) :: file_id
-      type(map_header), dimension(2)         :: hdr_tmp
 
-      call read_smap_header_h5(file_id, hdr_tmp)
+      call read_smap_header_h5(file_id, hdr_res)
 
       call deallocate_smaps ! TODO just in case. Reading should be called before "fill_guess_grids"
-      call allocate_smaps(hdr_tmp(1)%s_dim1, hdr_tmp(1)%s_dim2) ! TODO decide whether the same dim is forced onto all maps (rather so)
+      call allocate_smaps(hdr_res(1)%s_dim1, hdr_res(1)%s_dim2) ! TODO decide whether the same dim is forced onto all maps (rather so)
 
       call read_real_arr2d_dset(file_id, n_g_smaps(LO)//"/"//dset_attrs(1), p_ratios_lo)
       call read_real_arr2d_dset(file_id, n_g_smaps(LO)//"/"//dset_attrs(2), f_ratios_lo)
