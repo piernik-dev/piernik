@@ -39,7 +39,7 @@ module cresp_io
 
    private
    public   :: check_file_group, file_has_group, file_has_dataset, save_smap_to_open, save_cresp_smap_h5, &
-            &  read_cresp_smap_fields, create_cresp_smap_fields
+            &  read_cresp_smap_fields, create_cresp_smap_fields, read_real_arr2d_dset, read_smap_header_h5
 
 
    contains
@@ -161,22 +161,18 @@ module cresp_io
    subroutine read_cresp_smap_fields(read_error, filename_opt)
 
       use constants,          only: cwdlen
-      use cresp_helpers,      only: n_g_smaps, n_a_dims, n_a_esmall, n_a_max_p_r, n_a_clight,   &
-        &  n_a_qbig, n_a_amin, n_a_amax, n_a_nmin, n_a_nmax, hdr_io, int_attrs, real_attrs
       use dataio_pub,         only: die, msg, printinfo
       use hdf5,               only: HID_T, H5F_ACC_RDONLY_F, h5close_f, h5fclose_f, h5open_f, h5fopen_f
       use set_get_attributes, only: get_attr
 
       implicit none
 
-      integer                                    :: error, i, ia
+      integer                                    :: error
       integer(HID_T)                             :: file_id
       character(len=cwdlen)                      :: filename
       character(len=*), optional,     intent(in) :: filename_opt
       logical                                    :: file_exist
       logical,                       intent(out) :: read_error
-      integer(kind=4), dimension(:), allocatable :: ibuf
-      real,            dimension(:), allocatable :: rbuf
 
       if (present(filename_opt)) then
          filename = filename_opt
@@ -203,11 +199,34 @@ module cresp_io
       call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
 
 ! WARNING format version omitted - CRESP is not included in older versions of piernik
+      call read_smap_header_h5(file_id)
+
+      call h5fclose_f(file_id, error)
+      call h5close_f(error)
+
+   end subroutine read_cresp_smap_fields
+!---------------------------------------------------------------------------------------------------
+
+   subroutine read_smap_header_h5(file_id, hdr_out)
+
+      use constants,          only: LO, HI
+      use cresp_helpers,      only: hdr_io, map_header, n_g_smaps, n_a_clight, n_a_dims, n_a_esmall, &
+            &  n_a_max_p_r, n_a_qbig, n_a_amax, n_a_amin, n_a_nmax, n_a_nmin, real_attrs, int_attrs
+      use dataio_pub,         only: die
+      use hdf5,               only: HID_T
+      use set_get_attributes, only: get_attr
+
+      implicit none
+
+      integer                                               :: i, ia
+      integer(HID_T),                            intent(in) :: file_id
+      type(map_header), dimension(2), optional, intent(out) :: hdr_out
+      integer(kind=4), dimension(:), allocatable            :: ibuf
+      real,            dimension(:), allocatable            :: rbuf
 
       do i = LO, HI              ! use statement for LO, HI in the upper level
-
          do ia = lbound(int_attrs, dim=1), ubound(int_attrs, dim=1)
-            call get_attr(file_id, trim(int_attrs(ia)),  ibuf, n_g_smaps(i))
+            call get_attr(file_id, trim(int_attrs(ia)), ibuf, n_g_smaps(i))
             if ((int_attrs(ia)) .eq. n_a_dims ) then
                hdr_io(i)%s_dim1    = ibuf(1)
                hdr_io(i)%s_dim2    = ibuf(2)
@@ -239,11 +258,40 @@ module cresp_io
             end select
          enddo
       enddo
+      if (present(hdr_out)) hdr_out = hdr_io
 
-      call h5fclose_f(file_id, error)
-      call h5close_f(error)
+   end subroutine read_smap_header_h5
+!---------------------------------------------------------------------------------------------------
+!
+!> \brief  Read 2D double precision dataset 'dsdata' of provided name 'dsetname' with 'file_id'
+!  Requires file to be open. WARNING Does not contain fail-safe instructions!
+!
+   subroutine read_real_arr2d_dset(file_id, dsetname, dsdata)
 
-   end subroutine read_cresp_smap_fields
+      use hdf5,      only: HID_T, h5dopen_f, h5dread_f, h5dopen_f, &
+                     &  h5dclose_f, H5T_NATIVE_DOUBLE, HSIZE_T
+      implicit none
+
+      real, dimension(:,:), target, intent(in) :: dsdata
+      integer(HID_T)                           :: dset_id
+      character(len=*),             intent(in) :: dsetname
+      integer(HID_T),               intent(in) :: file_id
+      integer                                  :: error
+      real, dimension(:,:),            pointer :: pa2d
+      integer(HSIZE_T), dimension(2)           :: pa2ddims
+
+      pa2d => dsdata(:,:)
+      if (associated(pa2d)) then
+         pa2ddims = shape(pa2d)
+
+         call h5dopen_f(file_id, dsetname, dset_id, error)
+         call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa2d, pa2ddims, error)
+         call h5dclose_f(dset_id, error)
+      endif
+      pa2d => null()
+
+   end subroutine read_real_arr2d_dset
+
 !---------------------------------------------------------------------------------------------------
 !> \brief Check if file "filename" exists and has group "groupname".
 !
