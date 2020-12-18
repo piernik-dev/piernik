@@ -321,14 +321,14 @@ contains
       if (e_small_approx_init_cond == 1) then
 ! TODO not yet paralelized, values to be passed to main solving routine
          sml%ai%ibeg = 1
-         sml%ai%iend= arr_dim
+         sml%ai%iend = arr_dim
          sml%ni%ibeg = 1
          sml%ni%iend = arr_dim
 ! --------------------
-         hdr_init%s_amin   = alpha_tab_up(1)
-         hdr_init%s_amax   = alpha_tab_up(arr_dim)
-         hdr_init%s_nmin   = n_tab_up(1)
-         hdr_init%s_nmax   = n_tab_up(arr_dim)
+         hdr_init%s_amin = alpha_tab_up(1)
+         hdr_init%s_amax = alpha_tab_up(arr_dim)
+         hdr_init%s_nmin = n_tab_up(1)
+         hdr_init%s_nmax = n_tab_up(arr_dim)
 
          hdr_io(HI) = hdr_init
 
@@ -545,7 +545,6 @@ contains
          new_line = .true.
          prev_solution = prev_solution_1 ! easier to find when not searching from the top
          do j = sml%ni%ibeg, sml%ni%iend
-         ! j_incr = 1
             alpha = p_a(i)
             n_in  = p_n(j)
 #ifdef CRESP_VERBOSED
@@ -1030,26 +1029,25 @@ contains
       q_ratios = -log10(f_ratio) / log10(p_ratio)
 
    end function q_ratios
-!---------------------------------------------------------------------------------------------------
-! Function estimating values of jacobian via finite difference method
-!---------------------------------------------------------------------------------------------------
-   function jac_fin_diff(x) ! jacobian via finite difference method
+
+!>
+!! \brief Function estimating values of jacobian via finite difference method
+!! \todo allow user to tune dx_par
+!<
+   function jac_fin_diff(x)
 
       use constants, only: half
-      use func,      only: operator(.equals.)
 
       implicit none
 
       real, dimension(ndim)            :: x, xp, xm
       real, dimension(size(x),size(x)) :: jac_fin_diff
       real, dimension(size(x))         :: dx
-      real, parameter                  :: dx_par = 1.0e-3, dx_min = epsilon(dx_par)
+      real, parameter                  :: dx_par = 1.0e-3
       integer(kind=2)                  :: j
 
       do j = 1, ndim
-         dx(j) = max(x(j), dx_min )          ! assure dx > zero
-         dx(j) = min(dx(j)*dx_par, dx_par)   ! the value of dx is scaled not to go over value of x
-         if (x(j) .equals. dx(j)) dx(j) = half * dx(j)
+         dx(j) = min(x(j)*dx_par, dx_par) ! the value of dx is scaled not to go over value of x
          xp = x ; xm = x
          xp(j) = x(j) - dx(j) ;  xm(j) = x(j) + dx(j)
          jac_fin_diff(:,j)  = half*( selected_function_2D(xp) - selected_function_2D(xm)) / dx(j)
