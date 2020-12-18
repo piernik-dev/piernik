@@ -57,6 +57,8 @@ module cresp_NR_method
    integer, parameter                               :: extlen = 4, flen = 15
    character(len=extlen), parameter                 :: extension =  ".dat"
 
+   logical, save                             :: got_smaps_from_restart = .false.
+
    abstract interface
       function function_pointer_2D(z)
          real, dimension(2), intent(inout) :: z
@@ -1646,6 +1648,52 @@ contains
 
    end subroutine allocate_smaps
 
+!----------------------------------------------------------------------------------------------------
+   subroutine cresp_write_smaps_to_hdf(file_id)
+
+      use constants,       only: LO, HI
+      use cresp_io,        only: save_smap_to_open
+      use cresp_helpers,   only: n_g_smaps, dset_attrs
+      use hdf5,            only: HID_T
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id
+
+      call save_smap_to_open(file_id, n_g_smaps(LO), dset_attrs(1), p_ratios_lo)
+      call save_smap_to_open(file_id, n_g_smaps(LO), dset_attrs(2), f_ratios_lo)
+      call save_smap_to_open(file_id, n_g_smaps(HI), dset_attrs(1), p_ratios_up)
+      call save_smap_to_open(file_id, n_g_smaps(HI), dset_attrs(2), f_ratios_up)
+
+   end subroutine cresp_write_smaps_to_hdf
+!----------------------------------------------------------------------------------------------------
+   subroutine cresp_read_smaps_from_hdf(file_id)
+
+      use constants,       only: LO, HI
+      use cresp_io,        only: read_real_arr2d_dset, read_smap_header_h5
+      use cresp_helpers,   only: map_header, dset_attrs, n_g_smaps
+      use hdf5,            only: HID_T
+
+      implicit none
+
+      integer(HID_T),             intent(in) :: file_id
+      type(map_header), dimension(2)         :: hdr_tmp
+
+      call read_smap_header_h5(file_id, hdr_tmp)
+
+      call deallocate_smaps ! TODO just in case. Reading should be called before "fill_guess_grids"
+      call allocate_smaps(hdr_tmp(1)%s_dim1, hdr_tmp(1)%s_dim2) ! TODO decide whether the same dim is forced onto all maps (rather so)
+
+      call read_real_arr2d_dset(file_id, n_g_smaps(LO)//"/"//dset_attrs(1), p_ratios_lo)
+      call read_real_arr2d_dset(file_id, n_g_smaps(LO)//"/"//dset_attrs(2), f_ratios_lo)
+
+      call read_real_arr2d_dset(file_id, n_g_smaps(HI)//"/"//dset_attrs(1), p_ratios_up)
+      call read_real_arr2d_dset(file_id, n_g_smaps(HI)//"/"//dset_attrs(2), f_ratios_up)
+
+      got_smaps_from_restart = .true.
+
+   end subroutine cresp_read_smaps_from_hdf
+!----------------------------------------------------------------------------------------------------
    subroutine add_dot(is_finishing)
 
       use constants, only: stdout
