@@ -224,8 +224,10 @@ contains
          if (.not. allocated(p_space)) allocate(p_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
          if (.not. allocated(q_space)) allocate(q_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
 
-         p_ratios_up = zero ; f_ratios_up = zero
-         p_ratios_lo = zero ; f_ratios_lo = zero
+         if (.not. got_smaps_from_restart) then
+            p_ratios_up = zero ; f_ratios_up = zero
+            p_ratios_lo = zero ; f_ratios_lo = zero
+         endif
 
          q_grid      = q_big; q_grid(int(arr_dim_q/2):) = -q_big
 
@@ -258,12 +260,10 @@ contains
       real, dimension(2)            :: a_min = big, a_max = small, n_min = big, n_max = small
       type(map_header),dimension(2) :: hdr_init, hdr_read
       integer(kind=4)               :: i, j, ilim = 0, qmaxiter = 100
-      logical                       :: read_error, headers_match, read_error_p, read_error_f
+      logical                       :: read_error, headers_match, read_error_p, read_error_f, hdr_match_res_lo, hdr_match_res_up
       type(smaplmts)                :: sml
 
       character(len=flen-len(extension))  :: filename_read
-
-      call read_cresp_smap_fields(read_error) ! STUB
 
       q_space = zero
       do i = 1, int(half*helper_arr_dim)
@@ -326,78 +326,93 @@ contains
          sml%ni%iend = arr_dim
 ! --------------------
 
-         hdr_init(1)%s_amin   = alpha_tab_lo(1)
-         hdr_init(1)%s_amax   = alpha_tab_lo(arr_dim)
-         hdr_init(1)%s_nmin   = n_tab_lo(1)
-         hdr_init(1)%s_nmax   = n_tab_lo(arr_dim)
+         hdr_init(1)%s_amin = alpha_tab_lo(1)
+         hdr_init(1)%s_amax = alpha_tab_lo(arr_dim)
+         hdr_init(1)%s_nmin = n_tab_lo(1)
+         hdr_init(1)%s_nmax = n_tab_lo(arr_dim)
+
          hdr_init(2)%s_amin = alpha_tab_up(1)
          hdr_init(2)%s_amax = alpha_tab_up(arr_dim)
          hdr_init(2)%s_nmin = n_tab_up(1)
          hdr_init(2)%s_nmax = n_tab_up(arr_dim)
 
-         hdr_io = hdr_init
-
-         write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(HI), ") boundary"
-         call printinfo(msg)
-
-         call get_smap_filename("p_ratios_", HI, filename_read)
-         call read_NR_smap_header(filename_read, hdr_read(HI), read_error)
-
-         if (.not. read_error) then
-            call check_NR_smap_header(hdr_read(HI), hdr_init(HI), headers_match)
-            if (headers_match .and. (.not. force_init_NR)) then
-               call read_NR_smap(p_ratios_up, "p"//filename_read(2:9), HI, read_error_p)
-               call read_NR_smap(f_ratios_up, "f"//filename_read(2:9), HI, read_error_f)
-               read_error = read_error_p .or. read_error_f
-            endif
+         if (got_smaps_from_restart) then
+            call check_NR_smap_header(hdr_res(LO), hdr_init(LO), hdr_match_res_lo)
+            call check_NR_smap_header(hdr_res(HI), hdr_init(HI), hdr_match_res_up)
          endif
-         if (read_error) then
-            write(msg,"(A44,A2,A10)") "[cresp_NR_method] Problem reading data for (",bound_name(HI), ") boundary"
+
+         if  ( (.not. got_smaps_from_restart) .or. ( (hdr_match_res_lo .eqv. .false.) .and. (hdr_match_res_up .eqv. .false.) ) ) then
+            write (msg, "(a)") "[cresp_NR_method] Solution maps read from restart, but maps parameters differ, proceeding to solve."
             call warn(msg)
-         endif
-         if (force_init_NR .or. (read_error .or. (headers_match .eqv. .false.)) ) then
-            call fill_boundary_grid(HI, p_ratios_up, f_ratios_up, sml)
-         endif
+            write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(HI), ") boundary"
+            call printinfo(msg)
 
-         if (NR_run_refine_pf) then
-            call assoc_pointers(HI)
-            call refine_all_directions(HI)
-         endif
+            hdr_io = hdr_init
+            call get_smap_filename("p_ratios_", HI, filename_read)
+            call read_NR_smap_header(filename_read, hdr_read(HI), read_error)
 
-         call save_NR_smap(p_ratios_up, hdr_init(HI), "pWratios_", HI)   ! save to work file
-         call save_NR_smap(f_ratios_up, hdr_init(HI), "fWratios_", HI)   ! save to work file
+            if (.not. read_error) then
+               call check_NR_smap_header(hdr_read(HI), hdr_init(HI), headers_match)
+               if (headers_match .and. (.not. force_init_NR)) then
+                  call read_NR_smap(p_ratios_up, "p"//filename_read(2:9), HI, read_error_p)
+                  call read_NR_smap(f_ratios_up, "f"//filename_read(2:9), HI, read_error_f)
+                  read_error = read_error_p .or. read_error_f
+               endif
+            endif
+            if (read_error) then
+               write(msg,"(A44,A2,A10)") "[cresp_NR_method] Problem reading data for (",bound_name(HI), ") boundary"
+               call warn(msg)
+            endif
+            if (force_init_NR .or. (read_error .or. (headers_match .eqv. .false.)) ) then
+               call fill_boundary_grid(HI, p_ratios_up, f_ratios_up, sml)
+            endif
+
+            if (NR_run_refine_pf) then
+               call assoc_pointers(HI)
+               call refine_all_directions(HI)
+            endif
+
+            call save_NR_smap(p_ratios_up, hdr_init(HI), "pWratios_", HI)   ! save to work file
+            call save_NR_smap(f_ratios_up, hdr_init(HI), "fWratios_", HI)   ! save to work file
 
 !--------------------
-         write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(LO), ") boundary"
-         call printinfo(msg)
+            write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(LO), ") boundary"
+            call printinfo(msg)
 
-         call get_smap_filename("p_ratios_", LO, filename_read)
-         call read_NR_smap_header(filename_read, hdr_read(LO), read_error)
+            call get_smap_filename("p_ratios_", LO, filename_read)
+            call read_NR_smap_header(filename_read, hdr_read(LO), read_error)
 
-         if (.not. read_error) then
-            call check_NR_smap_header(hdr_read(LO), hdr_init(LO), headers_match)
-            if (headers_match .and. (.not. force_init_NR)) then
-               call read_NR_smap(p_ratios_lo, "p"//filename_read(2:9), LO, read_error_p)
-               call read_NR_smap(f_ratios_lo, "p"//filename_read(2:9), LO, read_error_f)
-               read_error = read_error_p .or. read_error_f
+            if (.not. read_error) then
+               call check_NR_smap_header(hdr_read(LO), hdr_init(LO), headers_match)
+               if (headers_match .and. (.not. force_init_NR)) then
+                  call read_NR_smap(p_ratios_lo, "p"//filename_read(2:9), LO, read_error_p)
+                  call read_NR_smap(f_ratios_lo, "p"//filename_read(2:9), LO, read_error_f)
+                  read_error = read_error_p .or. read_error_f
+               endif
             endif
-         endif
-         if (read_error) then
-            write(msg,"(A44,A2,A10)") "[cresp_NR_method] Problem reading data for (",bound_name(HI), ") boundary"
-            call warn(msg)
-         endif
-         if (force_init_NR .or. (read_error .or. (headers_match .eqv. .false.)) ) then
-            call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo, sml)
-         endif
+            if (read_error) then
+               write(msg,"(A44,A2,A10)") "[cresp_NR_method] Problem reading data for (",bound_name(HI), ") boundary"
+               call warn(msg)
+            endif
+            if (force_init_NR .or. (read_error .or. (headers_match .eqv. .false.)) ) then
+               call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo, sml)
+            endif
 
-         if (NR_run_refine_pf) then
-            call assoc_pointers(LO)
-            call refine_all_directions(LO)
-         endif
+            if (NR_run_refine_pf) then
+               call assoc_pointers(LO)
+               call refine_all_directions(LO)
+            endif
 
-         call save_NR_smap(p_ratios_lo, hdr_init(LO), "pWratios_", LO)   ! save to work file
-         call save_NR_smap(f_ratios_lo, hdr_init(LO), "fWratios_", LO)   ! save to work file
+            call save_NR_smap(p_ratios_lo, hdr_init(LO), "pWratios_", LO)   ! save to work file
+            call save_NR_smap(f_ratios_lo, hdr_init(LO), "fWratios_", LO)   ! save to work file
+
+         else
+            hdr_io = hdr_res
+            write (msg, "(a)") "[cresp_NR_method] Solution maps read from restart are in agreement with parameters."
+            call printinfo(msg)
+         endif
       endif
+
       a_min_q = one  + epsilon(one)
       a_max_q = (one + epsilon(one)) * p_fix_ratio
       j = min(arr_dim_q - int(arr_dim_q/100, kind=4), arr_dim_q - I_ONE)               ! BEWARE: magic number
@@ -1681,7 +1696,6 @@ contains
 
       call read_real_arr2d_dset(file_id, n_g_smaps(LO)//"/"//dset_attrs(1), p_ratios_lo)
       call read_real_arr2d_dset(file_id, n_g_smaps(LO)//"/"//dset_attrs(2), f_ratios_lo)
-
       call read_real_arr2d_dset(file_id, n_g_smaps(HI)//"/"//dset_attrs(1), p_ratios_up)
       call read_real_arr2d_dset(file_id, n_g_smaps(HI)//"/"//dset_attrs(2), f_ratios_up)
 
