@@ -34,12 +34,13 @@ module cresp_NR_method
 ! pulled by COSM_RAY_ELECTRONS
 
    use constants,       only: LO, HI
-   use cresp_io_common, only: map_header, bound_name
+   use cresp_helpers,   only: map_header, bound_name
 
    implicit none
 
    private
-   public :: alpha, assoc_pointers, bound_name, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios
+   public :: alpha, assoc_pointers, bound_name, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, &
+         &   cresp_write_smaps_to_hdf, cresp_read_smaps_from_hdf
 
    integer, parameter                        :: ndim = 2
    real, allocatable, dimension(:)           :: p_space, q_space
@@ -242,9 +243,8 @@ contains
    subroutine fill_guess_grids
 
       use constants,       only: zero, half, one, three, I_ONE, big, small
-      use cresp_io_common, only: map_header, hdr_io
-      use cresp_io_read,   only: read_cresp_smap_fields
-      use cresp_io_write,  only: save_cresp_smap_h5
+      use cresp_helpers,   only: map_header, hdr_io
+      use cresp_io,        only: read_cresp_smap_fields, save_cresp_smap_h5
       use dataio_pub,      only: die, msg, printinfo, warn
       use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio, e_small
       use cresp_variables, only: clight_cresp
@@ -429,11 +429,11 @@ contains
       print *, "-----------"
 #endif /* CRESP_VERBOSED */
 
-!  WARNING FIXME temporary solution for the needs of development
-      call save_cresp_smap_h5(p_ratios_lo, LO, "p_ratios", "CRESP_smaps.h5")
-      call save_cresp_smap_h5(f_ratios_lo, LO, "f_ratios", "CRESP_smaps.h5")
-      call save_cresp_smap_h5(p_ratios_up, HI, "p_ratios", "CRESP_smaps.h5")
-      call save_cresp_smap_h5(f_ratios_up, HI, "f_ratios", "CRESP_smaps.h5")
+! !  WARNING FIXME temporary solution for the needs of development
+!       call save_cresp_smap_h5(p_ratios_lo, LO, "p_ratios", "CRESP_smaps.h5")
+!       call save_cresp_smap_h5(f_ratios_lo, LO, "f_ratios", "CRESP_smaps.h5")
+!       call save_cresp_smap_h5(p_ratios_up, HI, "p_ratios", "CRESP_smaps.h5")
+!       call save_cresp_smap_h5(f_ratios_up, HI, "f_ratios", "CRESP_smaps.h5")
 
    end subroutine fill_guess_grids
 
@@ -1363,7 +1363,7 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine save_NR_smap(NR_smap, hdr, vname, bc)
 
-      use cresp_io_common,    only: map_header
+      use cresp_helpers,    only: map_header
 
       implicit none
 
@@ -1446,7 +1446,7 @@ contains
 
       use dataio_pub,      only: msg, warn
       use constants,       only: fmt_len
-      use cresp_io_common, only: map_header
+      use cresp_helpers,   only: map_header
 
       implicit none
 
@@ -1489,7 +1489,7 @@ contains
    subroutine check_NR_smap_header(hdr, hdr_std, hdr_equal)
 
       use constants,       only: zero
-      use cresp_io_common, only: map_header
+      use cresp_helpers,   only: map_header
       use dataio_pub,      only: msg, printinfo, warn
       use func,            only: operator(.equals.)
 
