@@ -246,7 +246,7 @@ contains
 
       use constants,       only: zero, half, one, three, I_ONE, big, small
       use cresp_helpers,   only: extension, flen, hdr_io, map_header
-      use cresp_io,        only: check_NR_smap_header, read_cresp_smap_fields, read_NR_smap_header, read_NR_smap, save_cresp_smap_h5, save_NR_smap
+      use cresp_io,        only: check_NR_smap_header, read_NR_smap_header, read_NR_smap, save_NR_smap
       use dataio_pub,      only: die, msg, printinfo, warn
       use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio, e_small
       use cresp_variables, only: clight_cresp
@@ -257,7 +257,8 @@ contains
       real, dimension(2)            :: a_min = big, a_max = small, n_min = big, n_max = small
       type(map_header),dimension(2) :: hdr_init, hdr_read
       integer(kind=4)               :: i, j, ilim = 0, qmaxiter = 100
-      logical                       :: read_error, headers_match, read_error_p, read_error_f, hdr_match_res_lo, hdr_match_res_up
+      logical                       :: read_error, headers_match, read_error_p, read_error_f, hdr_match_res_lo, hdr_match_res_up,   &
+                                    &  solve_smap, try_load_ext_smap
       type(smaplmts)                :: sml
       character(len=flen-len(extension))  :: filename_read
 
@@ -332,13 +333,26 @@ contains
          hdr_init(2)%s_nmin = n_tab_up(1)
          hdr_init(2)%s_nmax = n_tab_up(arr_dim)
 
+         if (force_init_NR) solve_smap = .true.
+
          if (got_smaps_from_restart) then
             call check_NR_smap_header(hdr_res(LO), hdr_init(LO), hdr_match_res_lo)
             call check_NR_smap_header(hdr_res(HI), hdr_init(HI), hdr_match_res_up)
+         else
+            write (msg, "(a)") "[cresp_NR_method] Could not read solution maps from .res file. Trying harder (NR_smap_file, ASCII files)."
+            call printinfo(msg)
          endif
 
          if  ( (.not. got_smaps_from_restart) .or. ( (hdr_match_res_lo .eqv. .false.) .and. (hdr_match_res_up .eqv. .false.) ) ) then
-            write (msg, "(a)") "[cresp_NR_method] Solution maps read from restart, but maps parameters differ, proceeding to solve."
+            solve_smap        = ( .not. (hdr_match_res_lo .and. hdr_match_res_up) )
+            try_load_ext_smap = .true.
+         else
+            solve_smap        = .false.
+            try_load_ext_smap = .false.
+         endif
+
+         if (try_load_ext_smap) then
+            write (msg, "(a)") "[cresp_NR_method] Different smap parameters in restart or restart unavailable. Trying harder..."
             call warn(msg)
             write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(HI), ") boundary"
             call printinfo(msg)
@@ -353,13 +367,19 @@ contains
                   call read_NR_smap(p_ratios_up, "p"//filename_read(2:9), HI, read_error_p)
                   call read_NR_smap(f_ratios_up, "f"//filename_read(2:9), HI, read_error_f)
                   read_error = read_error_p .or. read_error_f
+                  solve_smap = read_error
+               else
+                  solve_smap = .true.  ! Different header (solution map) parameters
                endif
             endif
+
             if (read_error) then
                write(msg,"(A44,A2,A10)") "[cresp_NR_method] Problem reading data for (",bound_name(HI), ") boundary"
                call warn(msg)
+               solve_smap = .true.
             endif
-            if (force_init_NR .or. (read_error .or. (headers_match .eqv. .false.)) ) then
+
+            if (solve_smap) then
                call fill_boundary_grid(HI, p_ratios_up, f_ratios_up, sml)
             endif
 
@@ -372,6 +392,7 @@ contains
             call save_NR_smap(f_ratios_up, hdr_init(HI), "fWratios_", HI)   ! save to work file
 
 !--------------------
+
             write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(LO), ") boundary"
             call printinfo(msg)
 
@@ -383,14 +404,18 @@ contains
                if (headers_match .and. (.not. force_init_NR)) then
                   call read_NR_smap(p_ratios_lo, "p"//filename_read(2:9), LO, read_error_p)
                   call read_NR_smap(f_ratios_lo, "p"//filename_read(2:9), LO, read_error_f)
-                  read_error = read_error_p .or. read_error_f
+                  solve_smap = read_error
+               else
+                  solve_smap = .true.  ! Different header (solution map) parameters
                endif
             endif
+
             if (read_error) then
                write(msg,"(A44,A2,A10)") "[cresp_NR_method] Problem reading data for (",bound_name(HI), ") boundary"
                call warn(msg)
+               solve_smap = .true.
             endif
-            if (force_init_NR .or. (read_error .or. (headers_match .eqv. .false.)) ) then
+            if (solve_smap) then
                call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo, sml)
             endif
 
@@ -439,12 +464,6 @@ contains
       enddo
       print *, "-----------"
 #endif /* CRESP_VERBOSED */
-
-! !  WARNING FIXME temporary solution for the needs of development
-!       call save_cresp_smap_h5(p_ratios_lo, LO, "p_ratios", "CRESP_smaps.h5")
-!       call save_cresp_smap_h5(f_ratios_lo, LO, "f_ratios", "CRESP_smaps.h5")
-!       call save_cresp_smap_h5(p_ratios_up, HI, "p_ratios", "CRESP_smaps.h5")
-!       call save_cresp_smap_h5(f_ratios_up, HI, "f_ratios", "CRESP_smaps.h5")
 
    end subroutine fill_guess_grids
 
