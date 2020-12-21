@@ -38,9 +38,9 @@ module cresp_io
    implicit none
 
    private
-   public   :: check_file_group, file_has_group, file_has_dataset, save_smap_to_open, save_cresp_smap_h5, &
-            &  read_cresp_smap_fields, create_cresp_smap_fields, read_real_arr2d_dset, read_smap_header_h5
-
+   public   :: check_file_group, file_has_group, file_has_dataset, save_smap_to_open, save_cresp_smap_h5,   &
+            &  read_cresp_smap_fields, create_cresp_smap_fields, read_real_arr2d_dset, read_smap_header_h5, &
+            &  save_NR_smap, check_NR_smap_header, read_NR_smap, read_NR_smap_header
 
    contains
 
@@ -155,8 +155,160 @@ module cresp_io
 
 
    end subroutine save_smap_to_open
+!----------------------------------------------------------------------------------------------------
+!> \brief Save NR solution map to an ASCII file DEPRECATED
+!
+   subroutine save_NR_smap(NR_smap, hdr, vname, bc)
+
+      use cresp_helpers,    only: bound_name, extension, flen, map_header
+
+      implicit none
+
+      integer(kind=4),      intent(in) :: bc
+      integer(kind=4), parameter       :: flun = 31
+      character(len=flen)              :: fname
+      type(map_header),     intent(in) :: hdr
+      integer(kind=4)                  :: j
+      real, dimension(:,:), intent(in) :: NR_smap
+      character(len=*),     intent(in) :: vname
+
+      fname = vname // bound_name(bc) // extension
+      open(flun, file=fname, status="unknown", position="rewind")
+         write(flun,"(A56,A2,A26)") "This is a storage file for NR init grid, boundary case: ", bound_name(bc), &
+            & ". Do not append this file."
+
+         write(flun, "(1E15.8, 2I10,10E22.15)") hdr%s_es, hdr%s_dim1, hdr%s_dim2, hdr%s_pr, hdr%s_qbig, hdr%s_c, hdr%s_amin, hdr%s_amax, hdr%s_nmin, hdr%s_nmax
+         write(flun, "(A1)") " "                             ! Blank line
+         do j=1, size(NR_smap,dim=2)
+            write(flun, "(*(E24.15E3))") NR_smap(:,j)  ! WARNING - MIGHT NEED EXPLICIT ELEMENT COUNT IN LINE IN OLDER COMPILERS
+         enddo
+         close(flun)
+
+   end subroutine save_NR_smap
+!----------------------------------------------------------------------------------------------------
+!> \brief Read solution map from an ASCII file ! DEPRECATED
+   subroutine read_NR_smap(NR_smap, vname, bc, exit_code)
+
+      use cresp_helpers,   only: bound_name, extension, flen
+      use dataio_pub,      only: msg, warn
+
+      implicit none
+
+      real, dimension(:,:), intent(inout) :: NR_smap
+      character(len=*),     intent(in)    :: vname
+      integer(kind=4),      intent(in)    :: bc
+      logical,              intent(out)   :: exit_code
+      integer(kind=4)                     :: j, rstat = 0, flun = 31
+      character(len=flen)                 :: fname
+
+      fname = vname // bound_name(bc) // extension
+      open(flun, file=fname, status="old", position="rewind", IOSTAT=rstat)
+      if (rstat > 0) then
+         write(msg, "(A8,I4,A8,2A20)") "IOSTAT:", rstat, ": file ", vname//bound_name(bc)//extension," does not exist!"
+         call warn(msg)
+         exit_code = .true.
+         return
+      else
+         read(flun, *) ! Skipping comment line
+         read(flun, *) ! Skipping header
+         read(flun, *) ! Skipping blank line
+         do j=1, size(NR_smap, dim=2)
+            read(flun, "(*(E24.15E3))", IOSTAT=rstat) NR_smap(:,j)  ! WARNING - THIS MIGHT NEED EXPLICIT INDICATION OF ELEMENTS COUNT IN LINE IN OLDER COMPILERS
+         enddo
+         exit_code = .false.
+      endif
+      if (rstat > 0) exit_code = .true.
+      close(flun)
+
+   end subroutine read_NR_smap
 !---------------------------------------------------------------------------------------------------
-!> \brief Prepare and read cresp solution map fields from an external file.
+!> \brief Read parameters used to construct solution map from an ASCII file ! DEPRECATED
+!
+   subroutine read_NR_smap_header(var_name, hdr, exit_code)
+
+      use dataio_pub,      only: msg, warn
+      use constants,       only: fmt_len
+      use cresp_helpers,   only: extension, flen, map_header
+
+      implicit none
+
+      logical                          :: exit_code
+      integer(kind=4), parameter       :: flun = 31
+      character(len=flen)              :: f_name
+      type(map_header), intent(inout)  :: hdr
+      character(len=fmt_len)           :: fmt
+      character(len=*), intent(in)     :: var_name
+      integer(kind=4)                  :: fstat, rstat
+
+      fstat = 0
+      rstat = 0
+      f_name = var_name // extension
+      fmt = "(1E15.8,2I10,10E22.15)"
+
+      open(flun, file=f_name, status="old", position="rewind", IOSTAT=fstat)
+
+      if (fstat > 0) then
+         write(msg,"(A8,I4,A8,2A20)") "IOSTAT:", fstat, ": file ", f_name, " does not exist!"
+         call warn(msg)
+         exit_code = .true.
+         return
+      endif
+
+      read(flun, fmt, IOSTAT=rstat) hdr%s_es, hdr%s_dim1, hdr%s_dim2, hdr%s_pr, hdr%s_qbig, hdr%s_c, hdr%s_amin, hdr%s_amax, hdr%s_nmin, hdr%s_nmax
+      if (rstat > 0 ) then  ! should work for older files using the same format
+         read(flun, fmt, IOSTAT=rstat) hdr%s_es, hdr%s_dim1, hdr%s_dim2, hdr%s_pr, hdr%s_qbig, hdr%s_c
+         hdr%s_amin = 0.
+         hdr%s_amax = 0.
+         hdr%s_nmin = 0.
+         hdr%s_nmax = 0.
+      endif
+
+      exit_code = .false.
+      close(flun)
+
+   end subroutine read_NR_smap_header
+!---------------------------------------------------------------------------------------------------
+!> \brief Check parameters used to construct solution map against the loadable file.
+!
+   subroutine check_NR_smap_header(hdr, hdr_std, hdr_equal)
+
+      use constants,       only: zero
+      use cresp_helpers,   only: map_header
+      use dataio_pub,      only: msg, printinfo, warn
+      use func,            only: operator(.equals.)
+
+      implicit none
+
+      type(map_header), intent(in)  :: hdr, hdr_std
+      logical                       :: hdr_equal
+
+      hdr_equal = .true.
+
+      hdr_equal = hdr_equal .and. (hdr%s_es   .equals.   hdr_std%s_es)
+      hdr_equal = hdr_equal .and. (hdr%s_dim1 .eq.       hdr_std%s_dim1)
+      hdr_equal = hdr_equal .and. (hdr%s_dim2 .eq.       hdr_std%s_dim2)
+      hdr_equal = hdr_equal .and. (hdr%s_qbig .equals.   hdr_std%s_qbig)
+      hdr_equal = hdr_equal .and. (hdr%s_pr   .equals.   hdr_std%s_pr)
+      hdr_equal = hdr_equal .and. (hdr%s_c    .equals.   hdr_std%s_c)
+
+!  WARNING allowing to read old solution maps; without saved a_tab and n_tab limits
+      hdr_equal = hdr_equal .and. ((hdr%s_amin .equals. hdr_std%s_amin) .or. (hdr%s_amin .equals. zero))
+      hdr_equal = hdr_equal .and. ((hdr%s_amax .equals. hdr_std%s_amax) .or. (hdr%s_amax .equals. zero))
+      hdr_equal = hdr_equal .and. ((hdr%s_nmin .equals. hdr_std%s_nmin) .or. (hdr%s_nmin .equals. zero))
+      hdr_equal = hdr_equal .and. ((hdr%s_nmax .equals. hdr_std%s_nmax) .or. (hdr%s_nmax .equals. zero))
+
+      if (.not. hdr_equal) then
+         write(msg,"(A117)") "[cresp_NR_method:check_NR_smap_header] Headers differ (provided in ratios files vs. values resulting from parameters)"
+         call warn(msg)
+      else
+         write(msg,"(A115)") "[cresp_NR_method:check_NR_smap_header] Headers match (provided in ratios files vs. values resulting from parameters)"
+         call printinfo(msg)
+      endif
+
+   end subroutine check_NR_smap_header
+
+!---------------------------------------------------------------------------------------------------
+!> \brief Prepare and read cresp solution map fields from an ASCII file. !DEPRECATED
 !
    subroutine read_cresp_smap_fields(read_error, filename_opt)
 
@@ -206,7 +358,8 @@ module cresp_io
 
    end subroutine read_cresp_smap_fields
 !---------------------------------------------------------------------------------------------------
-
+!> \brief Read parameters used to construct solution map from an h5 file
+!
    subroutine read_smap_header_h5(file_id, hdr_out)
 
       use constants,          only: LO, HI
