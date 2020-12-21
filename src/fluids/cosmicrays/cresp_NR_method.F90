@@ -34,12 +34,12 @@ module cresp_NR_method
 ! pulled by COSM_RAY_ELECTRONS
 
    use constants,       only: LO, HI
-   use cresp_helpers,   only: map_header, bound_name
+   use cresp_helpers,   only: map_header, bound_name, extension, flen
 
    implicit none
 
    private
-   public :: alpha, assoc_pointers, bound_name, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, &
+   public :: alpha, assoc_pointers, bound_name, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, & !WARNING element abuse in group public
          &   cresp_write_smaps_to_hdf, cresp_read_smaps_from_hdf
 
    integer, parameter                        :: ndim = 2
@@ -54,8 +54,6 @@ module cresp_NR_method
    integer(kind=4)                           :: current_bound, sought_by
    integer(kind=4), parameter                :: SLV = 1, RFN = 2
 #endif /* CRESP_VERBOSED */
-   integer, parameter                               :: extlen = 4, flen = 15
-   character(len=extlen), parameter                 :: extension =  ".dat"
 
    logical, save                             :: got_smaps_from_restart = .false.
    type(map_header), dimension(2)            :: hdr_res
@@ -248,7 +246,7 @@ contains
    subroutine fill_guess_grids
 
       use constants,       only: zero, half, one, three, I_ONE, big, small
-      use cresp_helpers,   only: map_header, hdr_io
+      use cresp_helpers,   only: extension, flen, hdr_io, map_header
       use cresp_io,        only: read_cresp_smap_fields, save_cresp_smap_h5
       use dataio_pub,      only: die, msg, printinfo, warn
       use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio, e_small
@@ -262,7 +260,6 @@ contains
       integer(kind=4)               :: i, j, ilim = 0, qmaxiter = 100
       logical                       :: read_error, headers_match, read_error_p, read_error_f, hdr_match_res_lo, hdr_match_res_up
       type(smaplmts)                :: sml
-
       character(len=flen-len(extension))  :: filename_read
 
       q_space = zero
