@@ -207,12 +207,14 @@ contains
    subroutine cresp_initialize_guess_grids
 
       use constants,       only: zero, I_FOUR
+      use cresp_helpers,   only: map_header
       use initcrspectrum,  only: arr_dim
       use mpisetup,        only: master
 
       implicit none
 
-      logical      :: first_run = .true.
+      logical                        :: first_run = .true.
+      type(map_header), dimension(2) :: hdr
 
       call allocate_all_smap_arrays
       if (master .and. first_run) then
@@ -226,8 +228,16 @@ contains
             p_ratios_lo = zero ; f_ratios_lo = zero
          endif
 
-         call initialize_smap_array_values
-         call fill_guess_grids
+         call init_smap_array_values(hdr)
+         ! now check if restart file was loaded
+         ! if restart file loaded, check the header
+         ! if header not in agreement, try to load backup, e.g., "NR_smap_file". If additionaly user declared "NR_allow_old_smaps", read dat files
+         ! check header of the backup file
+         ! if header not in agreement, run the below
+         call fill_guess_grids(hdr)
+         ! if "NR_allow_old_smaps" save to work dat files
+         ! if flag "NR_run_refine_pf", try to overwrite solution in "NR_smap_file". Die, if file has extension "res"
+         ! finalize, broadcast, clean and exit.
 
          if (allocated(p_space)) deallocate(p_space) ! only needed at initialization
          if (allocated(q_space)) deallocate(q_space)
@@ -240,15 +250,19 @@ contains
    end subroutine cresp_initialize_guess_grids
 
 !----------------------------------------------------------------------------------------------------
-   subroutine initialize_smap_array_values
+   subroutine init_smap_array_values(hdr_init)
 
       use constants,       only: zero, half, one, three, I_ONE, big, small
+      use cresp_helpers,   only: map_header
+      use cresp_variables, only: clight_cresp
       use dataio_pub,      only: die
-      use initcrspectrum,  only: arr_dim, arr_dim_q, max_p_ratio, p_fix_ratio, q_big
+      use initcrspectrum,  only: arr_dim, arr_dim_q, e_small, max_p_ratio, p_fix_ratio, q_big
 
       real               :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
       real, dimension(2) :: a_min   = big, a_max   = small, n_min = big, n_max = small
       integer(kind=4)    :: i, j, ilim = 0, qmaxiter = 100
+      type(map_header), dimension(2), intent(inout) :: hdr_init
+
 
       q_space = zero
       do i = 1, int(half*helper_arr_dim)
@@ -331,32 +345,42 @@ contains
       print *, "-----------"
 #endif /* CRESP_VERBOSED */
 
-   end subroutine initialize_smap_array_values
-
-!----------------------------------------------------------------------------------------------------
-   subroutine fill_guess_grids
-
-!       use constants,       only: zero, half, one, three, I_ONE, big, small
-      use cresp_helpers,   only: extension, flen, hdr_io, map_header
-      use cresp_io,        only: check_NR_smap_header, read_NR_smap_header, read_NR_smap, save_NR_smap
-      use dataio_pub,      only: die, msg, printinfo, warn
-      use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio, e_small
-      use cresp_variables, only: clight_cresp
-
-      implicit none
-
-      type(map_header),dimension(2) :: hdr_init, hdr_read
-      logical                       :: read_error, headers_match, read_error_p, read_error_f, hdr_match_res_lo, hdr_match_res_up,   &
-                                    &  solve_smap, try_load_ext_smap
-      type(smaplmts)                :: sml
-      character(len=flen-len(extension))  :: filename_read
-
       hdr_init(:)%s_es     = e_small
       hdr_init(:)%s_dim1   = arr_dim
       hdr_init(:)%s_dim2   = arr_dim
       hdr_init(:)%s_qbig   = q_big
       hdr_init(:)%s_pr     = max_p_ratio
       hdr_init(:)%s_c      = clight_cresp
+
+      hdr_init(1)%s_amin = alpha_tab_lo(1)
+      hdr_init(1)%s_amax = alpha_tab_lo(arr_dim)
+      hdr_init(1)%s_nmin = n_tab_lo(1)
+      hdr_init(1)%s_nmax = n_tab_lo(arr_dim)
+
+      hdr_init(2)%s_amin = alpha_tab_up(1)
+      hdr_init(2)%s_amax = alpha_tab_up(arr_dim)
+      hdr_init(2)%s_nmin = n_tab_up(1)
+      hdr_init(2)%s_nmax = n_tab_up(arr_dim)
+
+
+   end subroutine init_smap_array_values
+
+!----------------------------------------------------------------------------------------------------
+   subroutine fill_guess_grids(hdr_init)
+
+      use cresp_helpers,   only: extension, flen, hdr_io
+      use cresp_io,        only: check_NR_smap_header, read_NR_smap_header, read_NR_smap, save_NR_smap
+      use dataio_pub,      only: die, msg, printinfo, warn
+      use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, e_small_approx_init_cond, arr_dim, arr_dim_q
+
+      implicit none
+      type(map_header),dimension(2), intent(in) :: hdr_init
+      type(map_header),dimension(2)             :: hdr_read
+      logical                       :: read_error, headers_match, read_error_p, read_error_f, hdr_match_res_lo, hdr_match_res_up,   &
+                                    &  solve_smap, try_load_ext_smap
+      type(smaplmts)                :: sml
+      character(len=flen-len(extension))  :: filename_read
+
 
       if (e_small_approx_init_cond == 1) then
 ! TODO not yet paralelized, values to be passed to main solving routine
@@ -365,17 +389,6 @@ contains
          sml%ni%ibeg = 1
          sml%ni%iend = arr_dim
 ! --------------------
-
-         hdr_init(1)%s_amin = alpha_tab_lo(1)
-         hdr_init(1)%s_amax = alpha_tab_lo(arr_dim)
-         hdr_init(1)%s_nmin = n_tab_lo(1)
-         hdr_init(1)%s_nmax = n_tab_lo(arr_dim)
-
-         hdr_init(2)%s_amin = alpha_tab_up(1)
-         hdr_init(2)%s_amax = alpha_tab_up(arr_dim)
-         hdr_init(2)%s_nmin = n_tab_up(1)
-         hdr_init(2)%s_nmax = n_tab_up(arr_dim)
-
          if (force_init_NR) solve_smap = .true.
 
          if (got_smaps_from_restart) then
