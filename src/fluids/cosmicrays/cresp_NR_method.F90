@@ -207,14 +207,14 @@ contains
    subroutine cresp_initialize_guess_grids
 
       use constants,       only: zero, I_FOUR
-      use initcrspectrum,  only: q_big, arr_dim, arr_dim_q
+      use initcrspectrum,  only: arr_dim
       use mpisetup,        only: master
 
       implicit none
 
       logical      :: first_run = .true.
 
-      call initialize_arrays
+      call allocate_all_smap_arrays
       if (master .and. first_run) then
          helper_arr_dim = int(arr_dim/I_FOUR,kind=4)
 
@@ -226,8 +226,7 @@ contains
             p_ratios_lo = zero ; f_ratios_lo = zero
          endif
 
-         q_grid      = q_big; q_grid(int(arr_dim_q/2):) = -q_big
-
+         call initialize_smap_array_values
          call fill_guess_grids
 
          if (allocated(p_space)) deallocate(p_space) ! only needed at initialization
@@ -241,26 +240,15 @@ contains
    end subroutine cresp_initialize_guess_grids
 
 !----------------------------------------------------------------------------------------------------
-
-   subroutine fill_guess_grids
+   subroutine initialize_smap_array_values
 
       use constants,       only: zero, half, one, three, I_ONE, big, small
-      use cresp_helpers,   only: extension, flen, hdr_io, map_header
-      use cresp_io,        only: check_NR_smap_header, read_NR_smap_header, read_NR_smap, save_NR_smap
-      use dataio_pub,      only: die, msg, printinfo, warn
-      use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio, e_small
-      use cresp_variables, only: clight_cresp
+      use dataio_pub,      only: die
+      use initcrspectrum,  only: arr_dim, arr_dim_q, max_p_ratio, p_fix_ratio, q_big
 
-      implicit none
-
-      real                          :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
-      real, dimension(2)            :: a_min = big, a_max = small, n_min = big, n_max = small
-      type(map_header),dimension(2) :: hdr_init, hdr_read
-      integer(kind=4)               :: i, j, ilim = 0, qmaxiter = 100
-      logical                       :: read_error, headers_match, read_error_p, read_error_f, hdr_match_res_lo, hdr_match_res_up,   &
-                                    &  solve_smap, try_load_ext_smap
-      type(smaplmts)                :: sml
-      character(len=flen-len(extension))  :: filename_read
+      real               :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
+      real, dimension(2) :: a_min   = big, a_max   = small, n_min = big, n_max = small
+      integer(kind=4)    :: i, j, ilim = 0, qmaxiter = 100
 
       q_space = zero
       do i = 1, int(half*helper_arr_dim)
@@ -301,19 +289,74 @@ contains
 !       n_min(HI) = 1.0e-12
 !       n_max(HI) = 1000.0
 
-      hdr_init(:)%s_es     = e_small
-      hdr_init(:)%s_dim1   = arr_dim
-      hdr_init(:)%s_dim2   = arr_dim
-      hdr_init(:)%s_qbig   = q_big
-      hdr_init(:)%s_pr     = max_p_ratio
-      hdr_init(:)%s_c      = clight_cresp
-
       do i = 1, arr_dim
          alpha_tab_lo(i) = ind_to_flog(i, a_min(LO), a_max(LO), arr_dim) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim-1)*real(i-1))
          alpha_tab_up(i) = ind_to_flog(i, a_min(HI), a_max(HI), arr_dim) ! a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim-1)*real(i-1))
          n_tab_lo(i)     = ind_to_flog(i, n_min(LO), n_max(LO), arr_dim) ! n_min_lo * ten**((log10(n_max_lo/n_min_lo))/real(arr_dim-1)*real(i-1))
          n_tab_up(i)     = ind_to_flog(i, n_min(HI), n_max(HI), arr_dim) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1)*real(i-1))
       enddo
+
+
+      q_grid      = q_big; q_grid(int(arr_dim_q/2):) = -q_big
+
+
+      a_min_q = one  + epsilon(one)
+      a_max_q = (one + epsilon(one)) * p_fix_ratio
+      j = min(arr_dim_q - int(arr_dim_q/100, kind=4), arr_dim_q - I_ONE)               ! BEWARE: magic number
+
+      do while ((q_grid(j) <= (-q_big) .and. (q_grid(arr_dim_q) <= (-q_big))) .and. (ilim .le. qmaxiter) )
+         a_max_q = a_max_q - a_max_q*0.005                                             ! BEWARE: magic number
+         do i = 1, arr_dim_q
+            alpha_tab_q(i)  = ind_to_flog(i, a_min_q, a_max_q, arr_dim_q)
+         enddo
+         call fill_q_grid(i_incr=1) ! computing q_grid takes so little time, that saving the grid is not necessary.
+         ilim = ilim + 1
+      enddo
+      if (ilim .ge. qmaxiter) call die ("[cresp_NR_method:fill_guess_grids] Maximal iteration limit exceeded, q_grid might not have converged!")
+#ifdef CRESP_VERBOSED
+      do i = 1, arr_dim_q
+         print "(A1,I3,A7,2F18.12)", "[ ", i,"] a : q ", q_grid(i), alpha_tab_q(i)
+      enddo
+
+      print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i)  |       p_space(i),     q_space(i)"
+      do i = 1, arr_dim
+         if (i <= helper_arr_dim) then
+            print *,i,"|",  alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i), "| i = ", &
+                          min(i,helper_arr_dim), p_space(min(i,helper_arr_dim)), q_space(min(i,helper_arr_dim)), &
+                          p_space(min(i,helper_arr_dim))**(-q_space(min(i,helper_arr_dim)))
+         else
+            print *,i,"|",  alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i)
+        endif
+      enddo
+      print *, "-----------"
+#endif /* CRESP_VERBOSED */
+
+   end subroutine initialize_smap_array_values
+
+!----------------------------------------------------------------------------------------------------
+   subroutine fill_guess_grids
+
+!       use constants,       only: zero, half, one, three, I_ONE, big, small
+      use cresp_helpers,   only: extension, flen, hdr_io, map_header
+      use cresp_io,        only: check_NR_smap_header, read_NR_smap_header, read_NR_smap, save_NR_smap
+      use dataio_pub,      only: die, msg, printinfo, warn
+      use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio, e_small
+      use cresp_variables, only: clight_cresp
+
+      implicit none
+
+      type(map_header),dimension(2) :: hdr_init, hdr_read
+      logical                       :: read_error, headers_match, read_error_p, read_error_f, hdr_match_res_lo, hdr_match_res_up,   &
+                                    &  solve_smap, try_load_ext_smap
+      type(smaplmts)                :: sml
+      character(len=flen-len(extension))  :: filename_read
+
+      hdr_init(:)%s_es     = e_small
+      hdr_init(:)%s_dim1   = arr_dim
+      hdr_init(:)%s_dim2   = arr_dim
+      hdr_init(:)%s_qbig   = q_big
+      hdr_init(:)%s_pr     = max_p_ratio
+      hdr_init(:)%s_c      = clight_cresp
 
       if (e_small_approx_init_cond == 1) then
 ! TODO not yet paralelized, values to be passed to main solving routine
@@ -433,37 +476,6 @@ contains
             call printinfo(msg)
          endif
       endif
-
-      a_min_q = one  + epsilon(one)
-      a_max_q = (one + epsilon(one)) * p_fix_ratio
-      j = min(arr_dim_q - int(arr_dim_q/100, kind=4), arr_dim_q - I_ONE)               ! BEWARE: magic number
-
-      do while ((q_grid(j) <= (-q_big) .and. (q_grid(arr_dim_q) <= (-q_big))) .and. (ilim .le. qmaxiter) )
-         a_max_q = a_max_q - a_max_q*0.005                                             ! BEWARE: magic number
-         do i = 1, arr_dim_q
-            alpha_tab_q(i)  = ind_to_flog(i, a_min_q, a_max_q, arr_dim_q)
-         enddo
-         call fill_q_grid(i_incr=1) ! computing q_grid takes so little time, that saving the grid is not necessary.
-         ilim = ilim + 1
-      enddo
-      if (ilim .ge. qmaxiter) call die ("[cresp_NR_method:fill_guess_grids] Maximal iteration limit exceeded, q_grid might not have converged!")
-#ifdef CRESP_VERBOSED
-      do i = 1, arr_dim_q
-         print "(A1,I3,A7,2F18.12)", "[ ", i,"] a : q ", q_grid(i), alpha_tab_q(i)
-      enddo
-
-      print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i)  |       p_space(i),     q_space(i)"
-      do i = 1, arr_dim
-         if (i <= helper_arr_dim) then
-            print *,i,"|",  alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i), "| i = ", &
-                          min(i,helper_arr_dim), p_space(min(i,helper_arr_dim)), q_space(min(i,helper_arr_dim)), &
-                          p_space(min(i,helper_arr_dim))**(-q_space(min(i,helper_arr_dim)))
-         else
-            print *,i,"|",  alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i)
-        endif
-      enddo
-      print *, "-----------"
-#endif /* CRESP_VERBOSED */
 
    end subroutine fill_guess_grids
 
@@ -1486,7 +1498,7 @@ contains
 
    end subroutine get_smap_filename
 !----------------------------------------------------------------------------------------------------
-   subroutine initialize_arrays
+   subroutine allocate_all_smap_arrays
 
       use diagnostics,    only: my_allocate_with_index, my_allocate, ma1d
       use initcrspectrum, only: arr_dim, arr_dim_q
@@ -1502,7 +1514,7 @@ contains
       if(.not. allocated(alpha_tab_q))  call my_allocate_with_index(alpha_tab_q, arr_dim_q, 1)
       if(.not. allocated(q_grid))       call my_allocate_with_index(q_grid, arr_dim_q, 1)
       call allocate_smaps(arr_dim, arr_dim)
-   end subroutine initialize_arrays
+   end subroutine allocate_all_smap_arrays
 !----------------------------------------------------------------------------------------------------
    subroutine deallocate_smaps
 
