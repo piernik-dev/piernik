@@ -366,6 +366,114 @@ contains
    end subroutine init_smap_array_values
 
 !----------------------------------------------------------------------------------------------------
+   subroutine fill_guess_grid(i, hdr_init)
+
+      use cresp_helpers,   only: extension, flen
+      use cresp_io,        only: check_NR_smap_header, read_NR_smap_header, read_NR_smap, save_NR_smap
+      use dataio_pub,      only: die, msg, printinfo, warn
+      use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, e_small_approx_init_cond, arr_dim, arr_dim_q
+
+      implicit none
+
+      character(len=flen-len(extension))        :: filename_read
+      type(map_header),dimension(2), intent(in) :: hdr_init
+      type(map_header),dimension(2)             :: hdr_read
+      integer,           intent(in) :: i
+      logical, dimension(2)         :: hdr_match_res
+      logical                       :: read_error, headers_match, read_error_p, read_error_f, solve_smap, try_load_ext_smap
+      type(smaplmts)                :: sml
+
+! TODO not yet paralelized, values to be passed to main solving routine
+      sml%ai%ibeg = 1
+      sml%ai%iend = arr_dim
+      sml%ni%ibeg = 1
+      sml%ni%iend = arr_dim
+
+      if (force_init_NR) solve_smap = .true.
+
+      if (got_smaps_from_restart) then
+         call check_NR_smap_header(hdr_res(i), hdr_init(i), hdr_match_res(i))
+      else
+         write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(i), ") boundary."
+         call printinfo(msg)
+         write (msg, "(a)") "[cresp_NR_method] Could not read solution maps from .res file. Trying harder (NR_smap_file, ASCII files)."
+         call printinfo(msg)
+      endif
+
+      if  ( (.not. got_smaps_from_restart) .or. ( hdr_match_res(i) .eqv. .false.) ) then
+         solve_smap        =  hdr_match_res(i)
+         try_load_ext_smap = .true.
+      else
+         solve_smap        = .false.
+         try_load_ext_smap = .false.
+      endif
+
+      if (try_load_ext_smap) then
+         write (msg, "(a)") "[cresp_NR_method] Different smap parameters in restart or restart unavailable. Trying harder..."
+         call warn(msg)
+
+         call get_smap_filename("p_ratios_", i, filename_read)
+         call read_NR_smap_header(filename_read, hdr_read(i), read_error)
+
+         if (.not. read_error) then
+            call check_NR_smap_header(hdr_read(i), hdr_init(i), headers_match)
+            if (headers_match .and. (.not. force_init_NR)) then
+               select case (i)
+               case (LO)
+                  call read_NR_smap(p_ratios_lo, "p"//filename_read(2:9), LO, read_error_p)
+                  call read_NR_smap(f_ratios_lo, "f"//filename_read(2:9), LO, read_error_f)
+               case (HI)
+                  call read_NR_smap(p_ratios_up, "p"//filename_read(2:9), HI, read_error_p)
+                  call read_NR_smap(f_ratios_up, "f"//filename_read(2:9), HI, read_error_f)
+               case default
+                  call die("[cresp_NR_method:fill_guess_grid] Boundary not supported.")
+               end select
+               read_error = read_error_p .or. read_error_f
+               solve_smap = read_error
+            else
+               solve_smap = .true.  ! Different header (solution map) parameters
+            endif
+         endif
+
+
+         if (read_error) then
+            write(msg,"(A44,A2,A10)") "[cresp_NR_method] Problem reading data for (",bound_name(i), ") boundary"
+            call warn(msg)
+            solve_smap = .true.
+         endif
+
+         if (solve_smap) then
+            select case (i)
+            case (LO)
+               call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo, sml)
+            case (HI)
+               call fill_boundary_grid(HI, p_ratios_up, f_ratios_up, sml)
+            case default
+               call die("[cresp_NR_method:fill_guess_grid] Boundary not supported.")
+            end select
+         endif
+
+         if (NR_run_refine_pf) then
+            call assoc_pointers(i)
+            call refine_all_directions(i)
+         endif
+
+         select case (i)
+         case (LO)
+            call save_NR_smap(p_ratios_lo, hdr_init(LO), "pWratios_", LO)   ! save to work file
+            call save_NR_smap(f_ratios_lo, hdr_init(LO), "fWratios_", LO)   ! save to work file
+         case (HI)
+            call save_NR_smap(p_ratios_up, hdr_init(HI), "pWratios_", HI)   ! save to work file
+            call save_NR_smap(f_ratios_up, hdr_init(HI), "fWratios_", HI)   ! save to work file
+         case default
+            call die("[cresp_NR_method:fill_guess_grid] Boundary not supported.")
+         end select
+
+      endif
+
+   end subroutine fill_guess_grid
+
+!----------------------------------------------------------------------------------------------------
    subroutine fill_guess_grids(hdr_init)
 
       use cresp_helpers,   only: extension, flen, hdr_io
