@@ -209,7 +209,7 @@ contains
       use cresp_helpers,   only: map_header, hdr_io
       use cresp_io,        only: check_NR_smap_header, save_NR_smap
       use dataio_pub,      only: warn
-      use initcrspectrum,  only: arr_dim, force_init_NR, e_small_approx_init_cond, NR_allow_old_smaps
+      use initcrspectrum,  only: arr_dim, force_init_NR, e_small_approx_init_cond, NR_allow_old_smaps, NR_smap_file
       use mpisetup,        only: master
 
       implicit none
@@ -247,6 +247,7 @@ contains
             if (e_small_approx_init_cond == 1) then   ! implies solution maps will be needed at leas once. ! TODO make imports from initcrspectrum more readable
                call warn("[cresp_NR_method] Different smap parameters in restart or restart unavailable. Trying harder...")
                ! if header not in agreement, try to load backup, e.g., "NR_smap_file". If additionaly user declared "NR_allow_old_smaps", read dat files
+               call try_read_user_h5(NR_smap_file, hdr, solve_new_smaps)
                if (NR_allow_old_smaps) call try_read_old_smap_files(hdr, solve_new_smaps)
                if (solve_new_smaps .or. force_init_NR) then
                   do icut = LO, HI
@@ -1580,6 +1581,52 @@ contains
       endif
 
    end subroutine cresp_read_smaps_from_hdf
+!----------------------------------------------------------------------------------------------------
+!> /brief Check if file of given name exists and contains readable solution maps. If describing parameters match, load data and proceed.
+!
+   subroutine try_read_user_h5(filename, hdr_init, unable_to_read)
+
+      use constants,       only: LO, HI
+      use cresp_helpers,   only: map_header
+      use cresp_io,        only: check_file_group, check_NR_smap_header
+      use dataio_pub,      only: warn, printinfo
+      use hdf5,            only: HID_T, h5close_f, h5open_f, h5fclose_f, h5fopen_f, H5F_ACC_RDONLY_F
+
+      implicit none
+
+      integer                                       :: error, i
+      character(len=*)                              :: filename
+      integer(HID_T)                                :: file_id
+      logical                                       :: file_exists, file_has_data
+      logical, dimension(2)                         :: hdr_match
+      type(map_header), dimension(2), intent(inout) :: hdr_init
+      integer, parameter                            :: min_fnamelen = 4 ! at least "?.h5"
+      logical,                          intent(out) :: unable_to_read
+
+      unable_to_read = .true.
+
+      if (len(filename) .le. min_fnamelen) return
+
+      call check_file_group(filename, "/cresp", file_exists, file_has_data)
+
+      if (.not. file_exists) call warn("[cresp_NR_method:try_read_user_h5] File provided as 'NR_smap_file' "//trim(filename)//" does not contain usable data.")
+      unable_to_read = (.not. file_exists) .and. (.not. file_has_data)
+      if (unable_to_read) return
+
+      call h5open_f(error)
+      call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
+      call cresp_read_smaps_from_hdf(file_id)   ! loads ratios and hdr_res
+      do i = LO, HI
+         call check_NR_smap_header(hdr_res(i), hdr_init(i), hdr_match(i))
+      enddo
+
+      call h5fclose_f(file_id, error)
+      call h5close_f(error)
+      unable_to_read = (.not. hdr_match(LO)) .and. (.not. hdr_match(HI))
+
+      if (unable_to_read .eqv. .false.) call printinfo("[cresp_NR_method:try_read_user_h5] Successfully read data from provided file "//trim(filename))
+
+   end subroutine try_read_user_h5
 !----------------------------------------------------------------------------------------------------
    subroutine add_dot(is_finishing)
 

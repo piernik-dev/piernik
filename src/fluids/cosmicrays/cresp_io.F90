@@ -308,7 +308,7 @@ module cresp_io
    end subroutine check_NR_smap_header
 
 !---------------------------------------------------------------------------------------------------
-!> \brief Prepare and read cresp solution map fields from an ASCII file. !DEPRECATED
+!> \brief Prepare and read cresp solution map fields from hdf5 file. !DEPRECATED
 !
    subroutine read_cresp_smap_fields(read_error, filename_opt)
 
