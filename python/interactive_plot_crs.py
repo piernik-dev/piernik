@@ -177,7 +177,7 @@ else:
 filename_trimmed = filename.split("/")[-1]
 filename_ext = filename_trimmed.split('.')[-1]
 filename_nam = filename_trimmed.split('.')[0].split('/')[-1]
-if filename_ext[0:2] != 'h5':
+if (filename_ext != 'h5'):
     die("Script requires a (list of) hdf5 file(s) on input")
 
 if f_run:
@@ -202,9 +202,10 @@ if f_run is True:
     for i in range(len(var_names)):
         prtinfo(" %15s =  %10s ( %15s  ) " % (var_names[i], var_array[i], type(var_array[i])))
 
-    initialize_pf_arrays(pf_initialized)
 # ---------- Open file
     h5ds = yt.load(filename)
+
+    initialize_pf_arrays(filename, pf_initialized)
 # ---------- bounds on domain size
     grid_dim = h5ds.domain_dimensions
     dim_map = {'x': 0, 'y': 1, 'z': 2}
