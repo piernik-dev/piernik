@@ -33,7 +33,7 @@ module cresp_io
 
 ! pulled by COSM_RAY_ELECTRONS
 
-   use constants,    only: cbuff_len, LO, HI
+   use constants, only: LO, HI
 
    implicit none
 
@@ -83,10 +83,9 @@ module cresp_io
    subroutine save_cresp_smap_h5(smap_data, bound, dsname, filename)
 
       use cresp_helpers, only: n_g_smaps
-      use dataio_pub,      only: msg, printinfo
-      use hdf5,            only: HID_T, h5close_f, h5fclose_f, h5fcreate_f, h5fopen_f, h5gclose_f,       &
-         &  h5gopen_f, h5open_f, H5F_ACC_RDWR_F, H5F_ACC_TRUNC_F
-      use helpers_hdf5,    only: create_attribute
+      use dataio_pub,    only: msg, printinfo
+      use hdf5,          only: HID_T, h5close_f, h5fclose_f, h5fcreate_f, h5fopen_f, &
+           &                   h5open_f, H5F_ACC_RDWR_F, H5F_ACC_TRUNC_F
 
       implicit none
 
@@ -298,10 +297,10 @@ module cresp_io
       hdr_equal = hdr_equal .and. ((hdr%s_nmax .equals. hdr_std%s_nmax) .or. (hdr%s_nmax .equals. zero))
 
       if (.not. hdr_equal) then
-         write(msg,"(A117)") "[cresp_NR_method:check_NR_smap_header] Headers differ (provided in ratios files vs. values resulting from parameters)"
+         write(msg,"(A117)") "[cresp_io:check_NR_smap_header] Headers differ (provided in ratios files vs. values resulting from parameters)"
          call warn(msg)
       else
-         write(msg,"(A115)") "[cresp_NR_method:check_NR_smap_header] Headers match (provided in ratios files vs. values resulting from parameters)"
+         write(msg,"(A115)") "[cresp_io:check_NR_smap_header] Headers match (provided in ratios files vs. values resulting from parameters)"
          call printinfo(msg)
       endif
 
@@ -312,10 +311,9 @@ module cresp_io
 !
    subroutine read_cresp_smap_fields(read_error, filename_opt)
 
-      use constants,          only: cwdlen
-      use dataio_pub,         only: die, msg, printinfo
-      use hdf5,               only: HID_T, H5F_ACC_RDONLY_F, h5close_f, h5fclose_f, h5open_f, h5fopen_f
-      use set_get_attributes, only: get_attr
+      use constants,  only: cwdlen
+      use dataio_pub, only: msg, printinfo
+      use hdf5,       only: HID_T, H5F_ACC_RDONLY_F, h5close_f, h5fclose_f, h5open_f, h5fopen_f
 
       implicit none
 
