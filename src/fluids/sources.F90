@@ -50,9 +50,6 @@ contains
 #ifdef CORIOLIS
       use coriolis,     only: init_coriolis
 #endif /* CORIOLIS */
-#ifdef COSM_RAY_ELECTRONS
-      use cresp_grid,   only: cresp_init_grid
-#endif /* COSM_RAY_ELECTRONS */
 #ifdef NON_INERTIAL
       use non_inertial, only: init_non_inertial
 #endif /* NON_INERTIAL */
@@ -85,10 +82,6 @@ contains
 #ifdef SN_SRC
       call init_snsources                    ! depends on grid and fluids/cosmicrays
 #endif /* SN_SRC */
-
-#ifdef COSM_RAY_ELECTRONS
-      call cresp_init_grid                   ! depends on cg
-#endif /* COSM_RAY_ELECTRONS */
 
 #ifdef THERM
       call init_thermal

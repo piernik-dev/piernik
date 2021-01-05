@@ -33,12 +33,14 @@
 module cresp_NR_method
 ! pulled by COSM_RAY_ELECTRONS
 
-   use constants, only: LO, HI
+   use constants,       only: LO, HI
+   use cresp_helpers,   only: map_header, bound_name
 
    implicit none
 
    private
-   public :: alpha, assoc_pointers, bound_name, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios
+   public :: alpha, assoc_pointers, bound_name, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, & !WARNING element abuse in group public
+         &   cresp_write_smaps_to_hdf, cresp_read_smaps_from_hdf
 
    integer, parameter                        :: ndim = 2
    real, allocatable, dimension(:)           :: p_space, q_space
@@ -52,9 +54,8 @@ module cresp_NR_method
    integer(kind=4)                           :: current_bound, sought_by
    integer(kind=4), parameter                :: SLV = 1, RFN = 2
 #endif /* CRESP_VERBOSED */
-   integer, parameter                               :: blen = 2, extlen = 4, flen = 15
-   character(len=blen), dimension(LO:HI), parameter :: bound_name = ['lo', 'up']
-   character(len=extlen), parameter                 :: extension =  ".dat"
+   logical, save                             :: got_smaps_from_restart = .false.
+   type(map_header), dimension(2)            :: hdr_res
 
    abstract interface
       function function_pointer_2D(z)
@@ -64,15 +65,6 @@ module cresp_NR_method
    end interface
 
    procedure (function_pointer_2D), pointer :: selected_function_2D => null()
-
-   type     map_header
-      integer  :: s_dim1, s_dim2
-      real     :: s_es
-      real     :: s_pr
-      real     :: s_qbig
-      real     :: s_c
-      real     :: s_amin, s_amax, s_nmin, s_nmax
-   end type map_header
 
    type axlim
       integer  :: ibeg, iend
@@ -211,30 +203,70 @@ contains
    end function derivative_1D
 
 !----------------------------------------------------------------------------------------------------
-
    subroutine cresp_initialize_guess_grids
 
-      use constants,       only: zero, I_FOUR
-      use initcrspectrum,  only: q_big, arr_dim, arr_dim_q
+      use constants,       only: zero, I_FOUR, LO, HI
+      use cresp_helpers,   only: map_header, hdr_io
+      use cresp_io,        only: check_NR_smap_header, save_NR_smap
+      use dataio_pub,      only: warn
+      use initcrspectrum,  only: arr_dim, force_init_NR, e_small_approx_init_cond, NR_allow_old_smaps, NR_smap_file
       use mpisetup,        only: master
 
       implicit none
 
-      logical      :: first_run = .true.
+      integer                        :: icut
+      logical                        :: first_run = .true., solve_new_smaps
+      logical, dimension(2)          :: hdr_match_res
+      type(map_header), dimension(2) :: hdr
 
-      call initialize_arrays
+      call allocate_all_smap_arrays
       if (master .and. first_run) then
          helper_arr_dim = int(arr_dim/I_FOUR,kind=4)
 
          if (.not. allocated(p_space)) allocate(p_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
          if (.not. allocated(q_space)) allocate(q_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
 
-         p_ratios_up = zero ; f_ratios_up = zero
-         p_ratios_lo = zero ; f_ratios_lo = zero
+         if (.not. got_smaps_from_restart) then
+            p_ratios_up = zero ; f_ratios_up = zero
+            p_ratios_lo = zero ; f_ratios_lo = zero
+         endif
 
-         q_grid      = q_big; q_grid(int(arr_dim_q/2):) = -q_big
+         call init_smap_array_values(hdr)
+         ! now check if restart file was loaded
+         solve_new_smaps = .not. got_smaps_from_restart
+         if (got_smaps_from_restart) then
+         ! if restart file loaded, check the header
+            do icut = LO, HI
+               call check_NR_smap_header(hdr_res(icut), hdr(icut), hdr_match_res(icut))
+            enddo
+            solve_new_smaps = .not. (hdr_match_res(LO) .and. hdr_match_res(HI))
+         endif
 
-         call fill_guess_grids
+         if ( .not. got_smaps_from_restart .or. (hdr_match_res(LO) .eqv. .false. .or. hdr_match_res(HI) .eqv. .false.) ) then
+            hdr_io = hdr
+            if (e_small_approx_init_cond == 1) then   ! implies solution maps will be needed at leas once. ! TODO make imports from initcrspectrum more readable
+               call warn("[cresp_NR_method] Different smap parameters in restart or restart unavailable. Trying harder...")
+               ! if header not in agreement, try to load backup, e.g., "NR_smap_file". If additionaly user declared "NR_allow_old_smaps", read dat files
+               call try_read_user_h5(NR_smap_file, hdr, solve_new_smaps)
+               if (NR_allow_old_smaps) call try_read_old_smap_files(hdr, solve_new_smaps)
+               if (solve_new_smaps .or. force_init_NR) then
+                  do icut = LO, HI
+                     call fill_refine_smap(icut)
+                  enddo
+               endif
+            endif
+         endif
+
+         ! if "NR_allow_old_smaps" save to work dat files
+         if (NR_allow_old_smaps) then
+            call save_NR_smap(p_ratios_lo, hdr(LO), "pWratios_", LO)   ! save to work file
+            call save_NR_smap(f_ratios_lo, hdr(LO), "fWratios_", LO)   ! save to work file
+            call save_NR_smap(p_ratios_up, hdr(HI), "pWratios_", HI)   ! save to work file
+            call save_NR_smap(f_ratios_up, hdr(HI), "fWratios_", HI)   ! save to work file
+         endif
+
+         ! if flag "NR_run_refine_pf", try to overwrite solution in "NR_smap_file". Die, if file has extension "res"
+         ! finalize, broadcast, clean and exit.
 
          if (allocated(p_space)) deallocate(p_space) ! only needed at initialization
          if (allocated(q_space)) deallocate(q_space)
@@ -247,24 +279,19 @@ contains
    end subroutine cresp_initialize_guess_grids
 
 !----------------------------------------------------------------------------------------------------
-
-   subroutine fill_guess_grids
+   subroutine init_smap_array_values(hdr_init)
 
       use constants,       only: zero, half, one, three, I_ONE, big, small
-      use dataio_pub,      only: die, msg, printinfo, warn
-      use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio, e_small
+      use cresp_helpers,   only: map_header
       use cresp_variables, only: clight_cresp
+      use dataio_pub,      only: die
+      use initcrspectrum,  only: arr_dim, arr_dim_q, e_small, max_p_ratio, p_fix_ratio, q_big
 
-      implicit none
+      real               :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
+      real, dimension(2) :: a_min   = big, a_max   = small, n_min = big, n_max = small
+      integer(kind=4)    :: i, j, ilim = 0, qmaxiter = 100
+      type(map_header), dimension(2), intent(inout) :: hdr_init
 
-      integer(kind=4)      :: i, j, ilim = 0, qmaxiter = 100
-      logical              :: read_error, headers_match, read_error_p, read_error_f
-      real                 :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
-      real, dimension(2)   :: a_min = big, a_max = small, n_min = big, n_max = small
-      type(map_header)     :: hdr_init, hdr_read
-      type(smaplmts)       :: sml
-
-      character(len=flen-len(extension))  :: filename_read
 
       q_space = zero
       do i = 1, int(half*helper_arr_dim)
@@ -305,14 +332,6 @@ contains
 !       n_min(HI) = 1.0e-12
 !       n_max(HI) = 1000.0
 
-      hdr_init%s_es     = e_small
-      hdr_init%s_dim1   = arr_dim
-      hdr_init%s_dim2   = arr_dim
-      hdr_init%s_qbig   = q_big
-      hdr_init%s_pr     = max_p_ratio
-      hdr_init%s_c      = clight_cresp
-
-
       do i = 1, arr_dim
          alpha_tab_lo(i) = ind_to_flog(i, a_min(LO), a_max(LO), arr_dim) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim-1)*real(i-1))
          alpha_tab_up(i) = ind_to_flog(i, a_min(HI), a_max(HI), arr_dim) ! a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim-1)*real(i-1))
@@ -320,84 +339,10 @@ contains
          n_tab_up(i)     = ind_to_flog(i, n_min(HI), n_max(HI), arr_dim) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1)*real(i-1))
       enddo
 
-      if (e_small_approx_init_cond == 1) then
-! TODO not yet paralelized, values to be passed to main solving routine
-         sml%ai%ibeg = 1
-         sml%ai%iend = arr_dim
-         sml%ni%ibeg = 1
-         sml%ni%iend = arr_dim
-! --------------------
-         hdr_init%s_amin = alpha_tab_up(1)
-         hdr_init%s_amax = alpha_tab_up(arr_dim)
-         hdr_init%s_nmin = n_tab_up(1)
-         hdr_init%s_nmax = n_tab_up(arr_dim)
 
-         write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(HI), ") boundary"
-         call printinfo(msg)
+      q_grid      = q_big; q_grid(int(arr_dim_q/2):) = -q_big
 
-         call get_smap_filename("p_ratios_", HI, filename_read)
-         call read_NR_smap_header(filename_read, hdr_read, read_error)
 
-         if (.not. read_error) then
-            call check_NR_smap_header(hdr_read, hdr_init, headers_match)
-            if (headers_match .and. (.not. force_init_NR)) then
-               call read_NR_smap(p_ratios_up, "p"//filename_read(2:9), HI, read_error_p)
-               call read_NR_smap(f_ratios_up, "f"//filename_read(2:9), HI, read_error_f)
-               read_error = read_error_p .or. read_error_f
-            endif
-         endif
-         if (read_error) then
-            write(msg,"(A44,A2,A10)") "[cresp_NR_method] Problem reading data for (",bound_name(HI), ") boundary"
-            call warn(msg)
-         endif
-         if (force_init_NR .or. (read_error .or. (headers_match .eqv. .false.)) ) then
-            call fill_boundary_grid(HI, p_ratios_up, f_ratios_up, sml)
-         endif
-
-         if (NR_run_refine_pf) then
-            call assoc_pointers(HI)
-            call refine_all_directions(HI)
-         endif
-
-         call save_NR_smap(p_ratios_up, hdr_init, "pWratios_", HI)   ! save to work file
-         call save_NR_smap(f_ratios_up, hdr_init, "fWratios_", HI)   ! save to work file
-
-!--------------------
-         hdr_init%s_amin   = alpha_tab_lo(1)
-         hdr_init%s_amax   = alpha_tab_lo(arr_dim)
-         hdr_init%s_nmin   = n_tab_lo(1)
-         hdr_init%s_nmax   = n_tab_lo(arr_dim)
-
-         write (msg, "(A47,A2,A10)") "[cresp_NR_method] Preparing solution maps for (",bound_name(LO), ") boundary"
-         call printinfo(msg)
-
-         call get_smap_filename("p_ratios_", LO, filename_read)
-         call read_NR_smap_header(filename_read, hdr_read, read_error)
-
-         if (.not. read_error) then
-            call check_NR_smap_header(hdr_read, hdr_init, headers_match)
-            if (headers_match .and. (.not. force_init_NR)) then
-               call read_NR_smap(p_ratios_lo, "p"//filename_read(2:9), LO, read_error_p)
-               call read_NR_smap(f_ratios_lo, "p"//filename_read(2:9), LO, read_error_f)
-               read_error = read_error_p .or. read_error_f
-            endif
-         endif
-         if (read_error) then
-            write(msg,"(A44,A2,A10)") "[cresp_NR_method] Problem reading data for (",bound_name(HI), ") boundary"
-            call warn(msg)
-         endif
-         if (force_init_NR .or. (read_error .or. (headers_match .eqv. .false.)) ) then
-            call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo, sml)
-         endif
-
-         if (NR_run_refine_pf) then
-            call assoc_pointers(LO)
-            call refine_all_directions(LO)
-         endif
-
-         call save_NR_smap(p_ratios_lo, hdr_init, "pWratios_", LO)   ! save to work file
-         call save_NR_smap(f_ratios_lo, hdr_init, "fWratios_", LO)   ! save to work file
-      endif
       a_min_q = one  + epsilon(one)
       a_max_q = (one + epsilon(one)) * p_fix_ratio
       j = min(arr_dim_q - int(arr_dim_q/100, kind=4), arr_dim_q - I_ONE)               ! BEWARE: magic number
@@ -429,8 +374,100 @@ contains
       print *, "-----------"
 #endif /* CRESP_VERBOSED */
 
-   end subroutine fill_guess_grids
+      hdr_init(:)%s_es     = e_small
+      hdr_init(:)%s_dim1   = arr_dim
+      hdr_init(:)%s_dim2   = arr_dim
+      hdr_init(:)%s_qbig   = q_big
+      hdr_init(:)%s_pr     = max_p_ratio
+      hdr_init(:)%s_c      = clight_cresp
 
+      hdr_init(1)%s_amin = alpha_tab_lo(1)
+      hdr_init(1)%s_amax = alpha_tab_lo(arr_dim)
+      hdr_init(1)%s_nmin = n_tab_lo(1)
+      hdr_init(1)%s_nmax = n_tab_lo(arr_dim)
+
+      hdr_init(2)%s_amin = alpha_tab_up(1)
+      hdr_init(2)%s_amax = alpha_tab_up(arr_dim)
+      hdr_init(2)%s_nmin = n_tab_up(1)
+      hdr_init(2)%s_nmax = n_tab_up(arr_dim)
+
+
+   end subroutine init_smap_array_values
+
+!----------------------------------------------------------------------------------------------------
+   subroutine fill_refine_smap(i)
+
+      use dataio_pub,      only: die
+      use initcrspectrum,  only: NR_run_refine_pf, arr_dim
+
+      implicit none
+
+      integer, intent(in) :: i
+      type(smaplmts)      :: sml
+
+      sml%ai%ibeg = 1
+      sml%ai%iend = arr_dim
+      sml%ni%ibeg = 1
+      sml%ni%iend = arr_dim
+
+      select case (i)
+         case (LO)
+            call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo, sml)
+         case (HI)
+            call fill_boundary_grid(HI, p_ratios_up, f_ratios_up, sml)
+         case default
+            call die("[cresp_NR_method:fill_guess_grid] Boundary not supported.")
+      end select
+
+      if (NR_run_refine_pf) then
+         call assoc_pointers(i)
+         call refine_all_directions(i)
+      endif
+
+   end subroutine fill_refine_smap
+
+!----------------------------------------------------------------------------------------------------
+   subroutine try_read_old_smap_files(hdr_init, solve_new_smap)
+
+      use constants,       only: LO, HI
+      use cresp_helpers,   only: extension, flen, map_header
+      use cresp_io,        only: read_NR_smap, read_NR_smap_header, check_NR_smap_header
+
+      implicit none
+
+      character(len=flen-len(extension))         :: filename_read_lo, filename_read_up
+      type(map_header), dimension(2), intent(in) :: hdr_init
+      type(map_header), dimension(2)             :: hdr_read
+      logical, dimension(2)                      :: read_error, hdr_match !, read_error_f, read_error_p, hdr_match
+      logical,                       intent(out) :: solve_new_smap
+
+      call get_smap_filename("p_ratios_", LO, filename_read_lo)
+      call read_NR_smap_header(filename_read_lo, hdr_read(LO), read_error(LO))
+      call get_smap_filename("p_ratios_", HI, filename_read_up)
+      call read_NR_smap_header(filename_read_up, hdr_read(HI), read_error(HI))
+
+      solve_new_smap = read_error(LO) .and. read_error(HI)
+
+      if (.not. (read_error(LO) .and. read_error(HI)) ) then
+
+         call check_NR_smap_header(hdr_read(LO), hdr_init(LO), hdr_match(LO))
+         call check_NR_smap_header(hdr_read(HI), hdr_init(HI), hdr_match(HI))
+         if (hdr_match(LO) .and. hdr_match(HI)) then
+            call read_NR_smap(p_ratios_lo, "p"//filename_read_lo(2:9), LO, read_error(LO))
+            call read_NR_smap(f_ratios_lo, "f"//filename_read_lo(2:9), LO, read_error(HI))
+
+            solve_new_smap = solve_new_smap .and. (read_error(LO) .and. read_error(HI))
+
+            call read_NR_smap(p_ratios_up, "p"//filename_read_up(2:9), HI, read_error(LO))
+            call read_NR_smap(f_ratios_up, "f"//filename_read_up(2:9), HI, read_error(HI))
+
+            solve_new_smap = solve_new_smap .and. (read_error(LO) .and. read_error(HI))
+         else
+            solve_new_smap = .true.
+         endif
+      endif
+
+   end subroutine try_read_old_smap_files
 !----------------------------------------------------------------------------------------------------
    subroutine refine_all_directions(bound_case)
 
@@ -509,7 +546,7 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: bound_case ! HI or LO
+      integer(kind=4), intent(in) :: bound_case
       real, dimension(:,:)        :: fill_p, fill_f
       real, dimension(1:2)        :: x_vec, prev_solution, prev_solution_1, x_step
       integer(kind=4)             :: i, j, is, js, jm
@@ -1353,32 +1390,6 @@ contains
 
    end function compute_q
 !----------------------------------------------------------------------------------------------------
-   subroutine save_NR_smap(NR_smap, hdr, vname, bc)
-
-      implicit none
-
-      integer(kind=4),      intent(in) :: bc
-      integer(kind=4), parameter       :: flun = 31
-      character(len=flen)              :: fname
-      type(map_header),     intent(in) :: hdr
-      integer(kind=4)                  :: j
-      real, dimension(:,:), intent(in) :: NR_smap
-      character(len=*),     intent(in) :: vname
-
-      fname = vname // bound_name(bc) // extension
-      open(flun, file=fname, status="unknown", position="rewind")
-         write(flun,"(A56,A2,A26)") "This is a storage file for NR init grid, boundary case: ", bound_name(bc), &
-            & ". Do not append this file."
-
-         write(flun, "(1E15.8, 2I10,10E22.15)") hdr%s_es, hdr%s_dim1, hdr%s_dim2, hdr%s_pr, hdr%s_qbig, hdr%s_c, hdr%s_amin, hdr%s_amax, hdr%s_nmin, hdr%s_nmax
-         write(flun, "(A1)") " "                             ! Blank line
-         do j=1, size(NR_smap,dim=2)
-            write(flun, "(*(E24.15E3))") NR_smap(:,j)  ! WARNING - MIGHT NEED EXPLICIT ELEMENT COUNT IN LINE IN OLDER COMPILERS
-         enddo
-         close(flun)
-
-   end subroutine save_NR_smap
-!----------------------------------------------------------------------------------------------------
 #ifdef CRESP_VERBOSED
    subroutine save_loc(bound_case, loc1, loc2)
 
@@ -1397,119 +1408,6 @@ contains
 
    end subroutine save_loc
 #endif /* CRESP_VERBOSED */
-!----------------------------------------------------------------------------------------------------
-   subroutine read_NR_smap(NR_smap, vname, bc, exit_code)
-
-      use dataio_pub, only: msg, warn
-
-      implicit none
-
-      real, dimension(:,:), intent(inout) :: NR_smap
-      character(len=*),     intent(in)    :: vname
-      integer(kind=4),      intent(in)    :: bc
-      logical,              intent(out)   :: exit_code
-      integer(kind=4)                     :: j, rstat = 0, flun = 31
-      character(len=flen)                 :: fname
-
-      fname = vname // bound_name(bc) // extension
-      open(flun, file=fname, status="old", position="rewind", IOSTAT=rstat)
-      if (rstat > 0) then
-         write(msg, "(A8,I4,A8,2A20)") "IOSTAT:", rstat, ": file ", vname//bound_name(bc)//extension," does not exist!"
-         call warn(msg)
-         exit_code = .true.
-         return
-      else
-         read(flun, *) ! Skipping comment line
-         read(flun, *) ! Skipping header
-         read(flun, *) ! Skipping blank line
-         do j=1, size(NR_smap, dim=2)
-            read(flun, "(*(E24.15E3))", IOSTAT=rstat) NR_smap(:,j)  ! WARNING - THIS MIGHT NEED EXPLICIT INDICATION OF ELEMENTS COUNT IN LINE IN OLDER COMPILERS
-         enddo
-         exit_code = .false.
-      endif
-      if (rstat > 0) exit_code = .true.
-      close(flun)
-
-   end subroutine read_NR_smap
-
-   subroutine read_NR_smap_header(var_name, hdr, exit_code)
-
-      use dataio_pub,   only: msg, warn
-      use constants,    only: fmt_len
-
-      implicit none
-
-      logical                          :: exit_code
-      integer(kind=4), parameter       :: flun = 31
-      character(len=flen)              :: f_name
-      type(map_header), intent(inout)  :: hdr
-      character(len=fmt_len)           :: fmt
-      character(len=*), intent(in)     :: var_name
-      integer(kind=4)                  :: fstat, rstat
-
-      fstat = 0
-      rstat = 0
-      f_name = var_name // extension
-      fmt = "(1E15.8,2I10,10E22.15)"
-
-      open(flun, file=f_name, status="old", position="rewind", IOSTAT=fstat)
-
-      if (fstat > 0) then
-         write(msg,"(A8,I4,A8,2A20)") "IOSTAT:", fstat, ": file ", f_name, " does not exist!"
-         call warn(msg)
-         exit_code = .true.
-         return
-      endif
-
-      read(flun, fmt, IOSTAT=rstat) hdr%s_es, hdr%s_dim1, hdr%s_dim2, hdr%s_pr, hdr%s_qbig, hdr%s_c, hdr%s_amin, hdr%s_amax, hdr%s_nmin, hdr%s_nmax
-      if (rstat > 0 ) then  ! should work for older files using the same format
-         read(flun, fmt, IOSTAT=rstat) hdr%s_es, hdr%s_dim1, hdr%s_dim2, hdr%s_pr, hdr%s_qbig, hdr%s_c
-         hdr%s_amin = 0.
-         hdr%s_amax = 0.
-         hdr%s_nmin = 0.
-         hdr%s_nmax = 0.
-      endif
-
-      exit_code = .false.
-      close(flun)
-
-   end subroutine read_NR_smap_header
-
-   subroutine check_NR_smap_header(hdr, hdr_std, hdr_equal)
-
-      use constants,  only: zero
-      use dataio_pub, only: msg, printinfo, warn
-      use func,       only: operator(.equals.)
-
-      implicit none
-
-      type(map_header), intent(in)  :: hdr, hdr_std
-      logical                       :: hdr_equal
-
-      hdr_equal = .true.
-
-      hdr_equal = hdr_equal .and. (hdr%s_es   .equals.   hdr_std%s_es)
-      hdr_equal = hdr_equal .and. (hdr%s_dim1 .eq.       hdr_std%s_dim1)
-      hdr_equal = hdr_equal .and. (hdr%s_dim2 .eq.       hdr_std%s_dim2)
-      hdr_equal = hdr_equal .and. (hdr%s_qbig .equals.   hdr_std%s_qbig)
-      hdr_equal = hdr_equal .and. (hdr%s_pr   .equals.   hdr_std%s_pr)
-      hdr_equal = hdr_equal .and. (hdr%s_c    .equals.   hdr_std%s_c)
-
-!  WARNING allowing to read old solution maps; without saved a_tab and n_tab limits
-      hdr_equal = hdr_equal .and. ((hdr%s_amin .equals. hdr_std%s_amin) .or. (hdr%s_amin .equals. zero))
-      hdr_equal = hdr_equal .and. ((hdr%s_amax .equals. hdr_std%s_amax) .or. (hdr%s_amax .equals. zero))
-      hdr_equal = hdr_equal .and. ((hdr%s_nmin .equals. hdr_std%s_nmin) .or. (hdr%s_nmin .equals. zero))
-      hdr_equal = hdr_equal .and. ((hdr%s_nmax .equals. hdr_std%s_nmax) .or. (hdr%s_nmax .equals. zero))
-
-      if (.not. hdr_equal) then
-         write(msg,"(A117)") "[cresp_NR_method:check_NR_smap_header] Headers differ (provided in ratios files vs. values resulting from parameters)"
-         call warn(msg)
-      else
-         write(msg,"(A115)") "[cresp_NR_method:check_NR_smap_header] Headers match (provided in ratios files vs. values resulting from parameters)"
-         call printinfo(msg)
-      endif
-
-   end subroutine check_NR_smap_header
 !----------------------------------------------------------------------------------------------------
    real function ind_to_flog(ind, min_in, max_in, length)
 
@@ -1562,7 +1460,8 @@ contains
 !<
    subroutine get_smap_filename(var_name, bc, fname_no_ext)
 
-      use dataio_pub,   only: msg, printinfo
+      use cresp_helpers,   only: extension, flen
+      use dataio_pub,      only: msg, printinfo
 
       implicit none
 
@@ -1588,30 +1487,147 @@ contains
 
    end subroutine get_smap_filename
 !----------------------------------------------------------------------------------------------------
-   subroutine initialize_arrays
+   subroutine allocate_all_smap_arrays
 
-      use diagnostics,    only: my_allocate_with_index, my_allocate, ma1d, ma2d
+      use diagnostics,    only: my_allocate_with_index, my_allocate, ma1d
       use initcrspectrum, only: arr_dim, arr_dim_q
 
       implicit none
 
       ma1d = arr_dim
-      ma2d = [arr_dim, arr_dim]
 
-      call my_allocate_with_index(alpha_tab_lo, arr_dim, 1)
-      call my_allocate_with_index(alpha_tab_up, arr_dim, 1)
-      call my_allocate_with_index(n_tab_lo, arr_dim, 1)
-      call my_allocate_with_index(n_tab_up, arr_dim, 1)
-      call my_allocate_with_index(alpha_tab_q, arr_dim_q, 1)
-      call my_allocate_with_index(q_grid, arr_dim_q, 1)
-      call my_allocate(p_ratios_lo, ma2d )
-      call my_allocate(f_ratios_lo, ma2d )
-      call my_allocate(p_ratios_up, ma2d )
-      call my_allocate(f_ratios_up, ma2d )
-
-   end subroutine initialize_arrays
+      if(.not. allocated(alpha_tab_lo)) call my_allocate_with_index(alpha_tab_lo, arr_dim, 1)
+      if(.not. allocated(alpha_tab_up)) call my_allocate_with_index(alpha_tab_up, arr_dim, 1)
+      if(.not. allocated(n_tab_lo))     call my_allocate_with_index(n_tab_lo, arr_dim, 1)
+      if(.not. allocated(n_tab_up))     call my_allocate_with_index(n_tab_up, arr_dim, 1)
+      if(.not. allocated(alpha_tab_q))  call my_allocate_with_index(alpha_tab_q, arr_dim_q, 1)
+      if(.not. allocated(q_grid))       call my_allocate_with_index(q_grid, arr_dim_q, 1)
+      call allocate_smaps(arr_dim, arr_dim)
+   end subroutine allocate_all_smap_arrays
 !----------------------------------------------------------------------------------------------------
+   subroutine deallocate_smaps
 
+      implicit none
+
+      if( allocated(p_ratios_lo) ) deallocate(p_ratios_lo)
+      if( allocated(f_ratios_lo) ) deallocate(f_ratios_lo)
+      if( allocated(p_ratios_up) ) deallocate(p_ratios_up)
+      if( allocated(f_ratios_up) ) deallocate(f_ratios_up)
+
+   end subroutine deallocate_smaps
+!----------------------------------------------------------------------------------------------------
+   subroutine allocate_smaps(dim1, dim2)
+
+      use diagnostics,  only: my_allocate, ma2d
+
+      implicit none
+
+      integer,    intent(in)  :: dim1, dim2
+
+      ma2d = [dim1, dim2]
+
+      if( .not. allocated(p_ratios_lo) ) call my_allocate(p_ratios_lo, ma2d )
+      if( .not. allocated(f_ratios_lo) ) call my_allocate(f_ratios_lo, ma2d )
+      if( .not. allocated(p_ratios_up) ) call my_allocate(p_ratios_up, ma2d )
+      if( .not. allocated(f_ratios_up) ) call my_allocate(f_ratios_up, ma2d )
+
+   end subroutine allocate_smaps
+
+!----------------------------------------------------------------------------------------------------
+   subroutine cresp_write_smaps_to_hdf(file_id)
+
+      use constants,       only: LO, HI
+      use cresp_io,        only: save_smap_to_open
+      use cresp_helpers,   only: n_g_smaps, dset_attrs
+      use hdf5,            only: HID_T
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id
+
+      call save_smap_to_open(file_id, n_g_smaps(LO), dset_attrs(1), p_ratios_lo)
+      call save_smap_to_open(file_id, n_g_smaps(LO), dset_attrs(2), f_ratios_lo)
+      call save_smap_to_open(file_id, n_g_smaps(HI), dset_attrs(1), p_ratios_up)
+      call save_smap_to_open(file_id, n_g_smaps(HI), dset_attrs(2), f_ratios_up)
+
+   end subroutine cresp_write_smaps_to_hdf
+!----------------------------------------------------------------------------------------------------
+   subroutine cresp_read_smaps_from_hdf(file_id)
+
+      use constants,       only: LO, HI, I_ZERO
+      use cresp_io,        only: read_real_arr2d_dset, read_smap_header_h5
+      use cresp_helpers,   only: map_header, dset_attrs, n_g_smaps
+      use dataio_pub,      only: warn
+      use hdf5,            only: HID_T
+
+      implicit none
+
+      integer(HID_T),             intent(in) :: file_id
+
+      call read_smap_header_h5(file_id, hdr_res)
+
+      if (hdr_res(1)%s_dim1 .eq. I_ZERO .or. hdr_res(1)%s_dim2 .eq. I_ZERO) then
+         call warn("[cresp_NR_method:cresp_read_smaps_from_hdf] Got solution map dimension = 0. Will solve for new maps.")
+      else
+         call deallocate_smaps ! TODO just in case. Reading should be called before "fill_guess_grids"
+
+         call allocate_smaps(hdr_res(1)%s_dim1, hdr_res(1)%s_dim2) ! TODO decide whether the same dim is forced onto all maps (rather so)
+
+         call read_real_arr2d_dset(file_id, n_g_smaps(LO)//"/"//dset_attrs(1), p_ratios_lo)
+         call read_real_arr2d_dset(file_id, n_g_smaps(LO)//"/"//dset_attrs(2), f_ratios_lo)
+         call read_real_arr2d_dset(file_id, n_g_smaps(HI)//"/"//dset_attrs(1), p_ratios_up)
+         call read_real_arr2d_dset(file_id, n_g_smaps(HI)//"/"//dset_attrs(2), f_ratios_up)
+         got_smaps_from_restart = .true.
+      endif
+
+   end subroutine cresp_read_smaps_from_hdf
+!----------------------------------------------------------------------------------------------------
+!> /brief Check if file of given name exists and contains readable solution maps. If describing parameters match, load data and proceed.
+!
+   subroutine try_read_user_h5(filename, hdr_init, unable_to_read)
+
+      use constants,       only: LO, HI
+      use cresp_helpers,   only: map_header
+      use cresp_io,        only: check_file_group, check_NR_smap_header
+      use dataio_pub,      only: warn, printinfo
+      use hdf5,            only: HID_T, h5close_f, h5open_f, h5fclose_f, h5fopen_f, H5F_ACC_RDONLY_F
+
+      implicit none
+
+      integer                                       :: error, i
+      character(len=*)                              :: filename
+      integer(HID_T)                                :: file_id
+      logical                                       :: file_exists, file_has_data
+      logical, dimension(2)                         :: hdr_match
+      type(map_header), dimension(2), intent(inout) :: hdr_init
+      integer, parameter                            :: min_fnamelen = 4 ! at least "?.h5"
+      logical,                          intent(out) :: unable_to_read
+
+      unable_to_read = .true.
+
+      if (len(filename) .le. min_fnamelen) return
+
+      call check_file_group(filename, "/cresp", file_exists, file_has_data)
+
+      if (.not. file_exists) call warn("[cresp_NR_method:try_read_user_h5] File provided as 'NR_smap_file' "//trim(filename)//" does not contain usable data.")
+      unable_to_read = (.not. file_exists) .and. (.not. file_has_data)
+      if (unable_to_read) return
+
+      call h5open_f(error)
+      call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
+      call cresp_read_smaps_from_hdf(file_id)   ! loads ratios and hdr_res
+      do i = LO, HI
+         call check_NR_smap_header(hdr_res(i), hdr_init(i), hdr_match(i))
+      enddo
+
+      call h5fclose_f(file_id, error)
+      call h5close_f(error)
+      unable_to_read = (.not. hdr_match(LO)) .and. (.not. hdr_match(HI))
+
+      if (unable_to_read .eqv. .false.) call printinfo("[cresp_NR_method:try_read_user_h5] Successfully read data from provided file "//trim(filename))
+
+   end subroutine try_read_user_h5
+!----------------------------------------------------------------------------------------------------
    subroutine add_dot(is_finishing)
 
       use constants, only: stdout

@@ -47,6 +47,9 @@ contains
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, INCEPTIVE, tmr_fu, cbuff_len, PPP_PROB
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_grid,            only: cresp_init_grid
+#endif /* COSM_RAY_ELECTRONS */
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
       use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
       use decomposition,         only: init_decomposition
@@ -215,6 +218,10 @@ contains
 
       call init_dataio                       ! depends on units, fluids (through common_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
       ! Initial conditions are read here from a restart file if possible
+
+#ifdef COSM_RAY_ELECTRONS
+     call cresp_init_grid                    ! depends on cg
+#endif /* COSM_RAY_ELECTRONS */
 
 #ifdef GRAV
       if (restarted_sim) call source_terms_grav
