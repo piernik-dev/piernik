@@ -84,8 +84,8 @@ contains
       if (master) call printinfo("ip:ip ub+diff")
       call write_h
 
-      call all_cg%internal_boundaries_4d(wna%fi)
-      call all_cg%internal_boundaries_3d(qna%ind(fld_n))
+      call all_cg%level_4d_boundaries(wna%fi)
+      call all_cg%level_3d_boundaries(qna%ind(fld_n))
       if (master) call printinfo("ip:ip ub+diff+ib")
       call write_h
 
@@ -95,7 +95,7 @@ contains
 
       call set_up_ub
       do dir = xdim, zdim
-         call all_cg%internal_boundaries_4d(wna%fi, dir=dir)
+         call all_cg%level_4d_boundaries(wna%fi, dir=dir)
          write(msg, '(a,i1)')"ip:ip ub+diff+ib:",dir
          if (master) call printinfo(msg)
       enddo
@@ -105,8 +105,8 @@ contains
 
 !!$      call set_up_ub
 !!$      do dir = xdim, zdim
-!!$         call all_cg%internal_boundaries_4d(wna%fi, dim=dir)
-!!$         call all_cg%internal_boundaries_3d(qna%ind(fld_n), dim=dir)
+!!$         call all_cg%level_4d_boundaries(wna%fi, dim=dir)
+!!$         call all_cg%level_3d_boundaries(qna%ind(fld_n), dim=dir)
 !!$         write(msg, '(a,i1)')"ip:ip ub+ib:",dir
 !!$         if (master) call printinfo(msg)
 !!$         call write_h

@@ -65,8 +65,6 @@ module cg_list_bnd
    contains
       procedure          :: level_3d_boundaries            !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
       procedure          :: level_4d_boundaries            !< Perform internal boundary exchanges and external boundary extrapolations on 4D named arrays
-      procedure          :: internal_boundaries_3d         !< A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
-      procedure          :: internal_boundaries_4d         !< A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
       procedure, private :: internal_boundaries            !< Exchanges guardcells for BND_MPI and BND_PER boundaries (internal and periodic external boundaries)
       procedure, private :: internal_boundaries_local      !< Exchanges guardcells between local grid containers
       procedure, private :: internal_boundaries_MPI_1by1   !< Exchanges guardcells with remote grid containers, one-by-one
@@ -110,7 +108,7 @@ contains
          if (area_type /= AT_NO_B) do_permpi = .false.
       endif
 
-      if (do_permpi) call this%internal_boundaries_3d(ind, dir=dir, nocorners=nocorners)
+      if (do_permpi) call this%internal_boundaries(ind, .true., dir=dir, nocorners=nocorners)
 
       call this%external_boundaries(ind, area_type=area_type, bnd_type=bnd_type)
 
@@ -143,41 +141,11 @@ contains
          if (area_type /= AT_NO_B) do_permpi = .false.
       endif
 
-      if (do_permpi) call this%internal_boundaries_4d(ind, dir=dir, nocorners=nocorners)
+      if (do_permpi) call this%internal_boundaries(ind, .false., dir=dir, nocorners=nocorners)
 
 !      call this%external_boundaries(ind, area_type=area_type, bnd_type=bnd_type) ! should call cg_list_bnd:bnd_u, but that depends on hydrostatic too much
 
    end subroutine level_4d_boundaries
-
-!> \brief A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
-
-   subroutine internal_boundaries_3d(this, ind, dir, nocorners)
-
-      implicit none
-
-      class(cg_list_bnd_t),      intent(inout) :: this      !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in)    :: ind       !< index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in)    :: dir       !< do the internal boundaries only in the specified dimension
-      logical,         optional, intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
-
-      call internal_boundaries(this, ind, .true., dir=dir, nocorners=nocorners)
-
-   end subroutine internal_boundaries_3d
-
-!> \brief A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
-
-   subroutine internal_boundaries_4d(this, ind, dir, nocorners)
-
-      implicit none
-
-      class(cg_list_bnd_t),      intent(inout) :: this      !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in)    :: ind       !< index of cg%w(:) 4d array
-      integer(kind=4), optional, intent(in)    :: dir       !< do the internal boundaries only in the specified dimension
-      logical,         optional, intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
-
-      call internal_boundaries(this, ind, .false., dir=dir, nocorners=nocorners)
-
-   end subroutine internal_boundaries_4d
 
 !>
 !! \brief This routine exchanges guardcells for BND_MPI and BND_PER boundaries on rank-3 and rank-4 arrays
@@ -211,8 +179,9 @@ contains
       logical,         optional, intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       logical, dimension(xdim:cor_dim) :: dmask
-      character(len=*), parameter :: ibl_label = "internal_boundaries_MPI_local", ibm_label = "internal_boundaries_MPI_merged", ib1_label = "internal_boundaries_MPI_1by1"
+      character(len=*), parameter :: ib_label = "internal_boundaries", ibl_label = "internal_boundaries_local", ibm_label = "internal_boundaries_MPI_merged", ib1_label = "internal_boundaries_MPI_1by1"
 
+      call ppp_main%start(ib_label)
       dmask(xdim:zdim) = dom%has_dir
       if (present(dir)) then
          dmask(xdim:zdim) = .false.
@@ -222,9 +191,9 @@ contains
       dmask(cor_dim) = .true.
       if (present(nocorners)) dmask(cor_dim) = .not. nocorners
 
-      call ppp_main%start(ibl_label, PPP_AMR)
+      call ppp_main%start(ibl_label)
       call internal_boundaries_local(this, ind, tgt3d, dmask)
-      call ppp_main%stop(ibl_label, PPP_AMR)
+      call ppp_main%stop(ibl_label)
 
       if (this%ms%valid) then
          call ppp_main%start(ibm_label, PPP_AMR)
@@ -235,6 +204,7 @@ contains
          call internal_boundaries_MPI_1by1(this, ind, tgt3d, dmask)
          call ppp_main%stop(ib1_label, PPP_AMR)
       endif
+      call ppp_main%stop(ib_label)
 
    end subroutine internal_boundaries
 
@@ -820,6 +790,7 @@ contains
       use fluidindex,            only: iarr_all_dn
       use grid_cont,             only: grid_container
       use named_array_list,      only: wna
+      use ppp,                   only: ppp_main
 #ifdef COSM_RAYS
       use initcosmicrays,        only: smallecr
       use fluidindex,            only: iarr_all_crs
@@ -839,8 +810,11 @@ contains
       logical, save                           :: frun = .true.
       integer(kind=4)                         :: side, ssign, ib
       type(cg_list_element), pointer          :: cgl
+      character(len=*), parameter             :: bu_label = "bnd_u"
 
       if (.not. any([xdim, ydim, zdim] == dir)) call die("[cg_list_bnd:bnd_u] Invalid direction.")
+
+      call ppp_main%start(bu_label)
 
       if (frun) then
          call init_fluidboundaries
@@ -907,6 +881,8 @@ contains
          enddo
          cgl => cgl%nxt
       enddo
+
+      call ppp_main%stop(bu_label)
 
    contains
 
@@ -1005,6 +981,7 @@ contains
       use grid_cont,             only: grid_container
       use mpisetup,              only: master
       use named_array_list,      only: wna
+      use ppp,                   only: ppp_main
 
       implicit none
 
@@ -1017,6 +994,9 @@ contains
       logical, save,   dimension(ndims,LO:HI) :: bnd_not_provided = .false.
       integer(kind=4), dimension(ndims,LO:HI) :: l, r
       type(cg_list_element), pointer          :: cgl
+      character(len=*), parameter             :: bb_label = "bnd_b"
+
+      call ppp_main%start(bb_label)
 
 ! Non-MPI boundary conditions
       if (frun) then
@@ -1062,6 +1042,8 @@ contains
          enddo
          cgl => cgl%nxt
       enddo
+
+      call ppp_main%stop(bb_label)
 
       contains
 
