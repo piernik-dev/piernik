@@ -63,8 +63,9 @@ contains
       use refinement,      only: oop_thr
       use sort_piece_list, only: grid_piece_list
 #ifdef DEBUG
-      use mpi,             only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
-      use mpisetup,        only: comm, mpi_err
+      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, &
+           &                     MPI_Gather, MPI_Recv, MPI_Send
+      use mpisetup,        only: err_mpi
 #endif /* DEBUG */
 
       implicit none
@@ -100,7 +101,7 @@ contains
       enddo
 #ifdef DEBUG
       ! Gather complete grid list and compare with this%dot%gse
-      call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
+      call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
       if (master) then
          call gp%init(sum(cnt_existing))
          do i = I_ONE, this%cnt
@@ -114,7 +115,7 @@ contains
          do p = FIRST + 1, LAST
             if (cnt_existing(p) > 0) then
                allocate(gptemp(I_OFF:I_GID, cnt_existing(p)))
-               call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gpt, comm, MPI_STATUS_IGNORE, mpi_err)
+               call MPI_Recv(gptemp, size(gptemp, kind=4), MPI_INTEGER8, p, tag_gpt, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                do i = I_ONE, cnt_existing(p)
                   call gp%list(i+s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), p)
                   if (any(this%dot%gse(p)%c(i)%se(:, LO) /= gp%list(i+s)%off) .or. gp%list(i+s)%cur_gid /= i .or. &
@@ -126,7 +127,7 @@ contains
             endif
          enddo
       else
-         if (this%cnt > 0) call MPI_Send(gptemp, size(gptemp), MPI_INTEGER8, FIRST, tag_gpt, comm, mpi_err)
+         if (this%cnt > 0) call MPI_Send(gptemp, size(gptemp, kind=4), MPI_INTEGER8, FIRST, tag_gpt, MPI_COMM_WORLD, err_mpi)
       endif
 #else /* !DEBUG */
       ! Trust that this%dot%gse is updated
@@ -188,15 +189,15 @@ contains
 
    subroutine reshuffle(this, gp)
 
-      use grid_container_ext, only: cg_extptrs
       use cg_list,            only: cg_list_element
       use cg_list_global,     only: all_cg
-      use constants,          only: ndims, LO, HI, I_ONE, xdim, ydim, zdim, pMAX, PPP_AMR, PPP_MPI
+      use constants,          only: ndims, LO, HI, I_ZERO, I_ONE, xdim, ydim, zdim, pMAX, PPP_AMR, PPP_MPI
       use dataio_pub,         only: die
       use grid_cont,          only: grid_container
+      use grid_container_ext, only: cg_extptrs
       use list_of_cg_lists,   only: all_lists
-      use mpi,                only: MPI_DOUBLE_PRECISION
-      use mpisetup,           only: master, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, comm, mpi_err, req, status, inflate_req
+      use MPIF,               only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Isend, MPI_Irecv, MPI_Waitall
+      use mpisetup,           only: master, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, err_mpi, req, inflate_req, tag_ub
       use named_array_list,   only: qna, wna
       use ppp,                only: ppp_main
       use sort_piece_list,    only: grid_piece_list
@@ -207,13 +208,12 @@ contains
       type(grid_piece_list),      intent(in)    :: gp
 
       type(cg_list_element), pointer :: cgl
-      integer :: s, n_gid, totfld, nr
-      integer(kind=4) :: i, p
+      integer :: s, n_gid, totfld
+      integer(kind=4) :: i, p, nr
       integer(kind=8), dimension(:,:), allocatable :: gptemp
       integer(kind=8), dimension(ndims, LO:HI) :: se
       logical :: found
       type(grid_container),  pointer :: cg
-      integer(kind=4), dimension(:,:), pointer :: mpistatus
       type :: cglep
          type(cg_list_element), pointer :: p
          real, dimension(:,:,:,:), allocatable :: tbuf
@@ -263,8 +263,9 @@ contains
 
       ! Irecv & Isend
       call ppp_main%start(ISR_label, PPP_AMR)
-      nr = 0
+      nr = I_ZERO
       allocate(cglepa(size(gptemp)))
+      if (ubound(gptemp, dim=2, kind=4) > tag_ub) call die("[cg_list_rebalance:balance_old] this MPI implementation has too low MPI_TAG_UB attribute")
       do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
          cglepa(i)%p => null()
          if (gptemp(I_C_P, i) == gptemp(I_D_P, i)) call die("[cg_list_rebalance:balance_old] can not send to self")
@@ -296,9 +297,9 @@ contains
                cgl => cgl%nxt
             enddo
             if (.not. found) call die("[cg_list_rebalance:balance_old] Grid id not found")
-            nr = nr + 1
+            nr = nr + I_ONE
             if (nr > size(req, dim=1)) call inflate_req
-            call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf), MPI_DOUBLE_PRECISION, gptemp(I_D_P, i), i, comm, req(nr), mpi_err)
+            call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i, MPI_COMM_WORLD, req(nr), err_mpi)
          endif
          if (gptemp(I_D_P, i) == proc) then ! receive
             n_gid = 1
@@ -315,18 +316,15 @@ contains
                if (associated(cg_extptrs%ext(p)%init))  call cg_extptrs%ext(p)%init(this%last%cg)
             enddo
             call all_cg%add(this%last%cg)
-            nr = nr + 1
+            nr = nr + I_ONE
             if (nr > size(req, dim=1)) call inflate_req
-            call MPI_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf), MPI_DOUBLE_PRECISION, gptemp(I_C_P, i), i, comm, req(nr), mpi_err)
+            call MPI_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), i, MPI_COMM_WORLD, req(nr), err_mpi)
          endif
       enddo
       call ppp_main%stop(ISR_label, PPP_AMR)
 
       call ppp_main%start(Wall_label, PPP_AMR + PPP_MPI)
-      if (nr > 0) then
-         mpistatus => status(:, :nr)
-         call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
-      endif
+      if (nr > 0) call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
       call ppp_main%stop(Wall_label, PPP_AMR + PPP_MPI)
 
       do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)

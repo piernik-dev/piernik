@@ -230,13 +230,14 @@ contains
       use dataio_pub,  only: msg, die
       use func,        only: operator(.notequals.)
       use grid_cont,   only: grid_container
-      use mpi,         only: MPI_DOUBLE_PRECISION
-      use mpisetup,    only: proc, master, FIRST, LAST, comm, status, mpi_err
+      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Send, MPI_Recv
+      use mpisetup,    only: proc, master, FIRST, LAST, err_mpi
 
       implicit none
 
-      integer                             :: i, j, k, v, pe, ostat
-      type(grid_container), pointer       :: cg
+      integer                       :: i, j, k, v, ostat
+      integer(kind=4)               :: pe
+      type(grid_container), pointer :: cg
       enum, bind(C)
          enumerator :: DEN0 = 1, VELX0, VELZ0 = VELX0+ndims-1, ENER0
       end enum
@@ -264,10 +265,10 @@ contains
                enddo
             enddo
             do pe = FIRST+1, LAST
-               call MPI_Send(ic_data, size(ic_data), MPI_DOUBLE_PRECISION, pe, pe, comm, mpi_err)
+               call MPI_Send(ic_data, size(ic_data, kind=4), MPI_DOUBLE_PRECISION, pe, pe, MPI_COMM_WORLD, err_mpi)
             enddo
          else
-            call MPI_Recv(ic_data, size(ic_data), MPI_DOUBLE_PRECISION, FIRST, proc, comm, status, mpi_err)
+            call MPI_Recv(ic_data, size(ic_data, kind=4), MPI_DOUBLE_PRECISION, FIRST, proc, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
          endif
       enddo
 

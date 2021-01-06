@@ -26,6 +26,7 @@ for j in gold riem ; do
     esac
     for i in ./jenkins/gold_configs/*.config ; do
     	eval $( grep PROBLEM_NAME $i )
+	PROBLEM_NAME=${PROBLEM_NAME//\//___}
 
     	LOG=${OUT_DIR}${PROBLEM_NAME}_${j}_log
 	if [ -e $LOG ] ; then

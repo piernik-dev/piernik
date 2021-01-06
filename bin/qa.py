@@ -79,6 +79,7 @@ class bcolors:
         self.FAIL = ''
         self.ENDC = ''
 
+
 b = bcolors()
 
 
@@ -240,9 +241,13 @@ def qa_checks(files, options):
             # False refs need to be done before removal of types in module body
             qa_false_refs(part, obj['name'], warns, f)
             if(obj['type'] == b'mod'):
-                # module body is always last, remove lines that've been
-                # already checked
-                part = np.delete(part, np.array(clean_ind) - obj['beg'])
+                # check whether already checked lines are accounted to module lines range
+                ci = np.array(clean_ind)
+                eitc = np.where(np.logical_or(ci < obj['beg'], ci > obj['end']))
+                ind_tbr = np.delete(ci, eitc)
+                # module body is always last, remove lines that've been already checked
+                if (ind_tbr.size > 0):
+                    part = np.delete(part, ind_tbr - obj['beg'])
                 qa_have_priv_pub(part, obj['name'], warns, f)
             else:
                 clean_ind += range(obj['beg'], obj['end'] + 1)
@@ -270,17 +275,14 @@ def qa_checks(files, options):
 
 def qa_have_priv_pub(lines, name, warns, fname):
     if(not filter(have_privpub.search, lines)):
-        warns.append(give_warn("QA:  ") +
-                     "module [%s:%s] lacks public/private keywords." %
+        warns.append(give_warn("QA:  ") + "module [%s:%s] lacks public/private keywords." %
                      (fname, name))
     else:
         if (list(filter(remove_warn.match, filter(have_priv.search, lines)))):
-            warns.append(give_warn("QA:  ") +
-                         "module [%s:%s] have selective private." %
+            warns.append(give_warn("QA:  ") + "module [%s:%s] have selective private." %
                          (fname, name))
         if (list(filter(remove_warn.match, filter(have_global_public.search, lines)))):
-            warns.append(give_warn("QA:  ") +
-                         "module [%s:%s] is completely public." %
+            warns.append(give_warn("QA:  ") + "module [%s:%s] is completely public." %
                          (fname, name))
 
 
@@ -306,14 +308,12 @@ def qa_magic_integers(lines, rname, store, fname):
 
 def qa_nonconforming_tabs(lines, rname, store, fname):
     for f in filter(tab_char.search, lines):
-        store.append(give_err("non conforming tab detected ") +
-                     wtf(lines, f, rname, fname))
+        store.append(give_err("non conforming tab detected ") + wtf(lines, f, rname, fname))
 
 
 def qa_labels(lines, rname, store, fname):
     for f in filter(have_label.search, lines):
-        store.append(give_err("label detected              ") +
-                     wtf(lines, f, rname, fname))
+        store.append(give_err("label detected              ") + wtf(lines, f, rname, fname))
 
 
 def qa_depreciated_syntax(lines, rname, store, fname):
@@ -331,8 +331,7 @@ def qa_depreciated_syntax(lines, rname, store, fname):
 
 def qa_have_implicit(lines, name, store, fname):
     if(not filter(have_implicit.search, lines)):
-        store.append(give_err("missing 'implicit none'      ") +
-                     "[%s:%s]" % (fname, name))
+        store.append(give_err("missing 'implicit none'      ") + "[%s:%s]" % (fname, name))
 
 
 def remove_amp(lines, strip):
@@ -371,8 +370,7 @@ def qa_false_refs(lines, name, store, fname):
             pattern = re.compile(func, re.IGNORECASE)
             # stupid but seems to work
             if(len(list(filter(pattern.search, temp))) < 2):
-                store.append(give_warn("QA:  ") + "'" + func +
-                             "' grabbed but not used in [%s:%s]" %
+                store.append(give_warn("QA:  ") + "'" + func + "' grabbed but not used in [%s:%s]" %
                              (fname, name))
 
 
@@ -382,10 +380,10 @@ def qa_implicit_saves(lines, name, store, fname):
                        filter(implicit_save.search,
                               remove_amp(filter(remove_warn.match, lines), True))))
     if(len(impl)):
-        store.append(give_err("implicit saves detected in   ") +
-                     "[%s:%s]" % (fname, name))
+        store.append(give_err("implicit saves detected in   ") + "[%s:%s]" % (fname, name))
     for line in impl:
         store.append(line.strip())
+
 
 if __name__ == "__main__":
     from optparse import OptionParser

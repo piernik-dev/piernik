@@ -41,7 +41,7 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, init_terms_grav, grav_accel, source_terms_grav, grav_src_exec, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, compute_h_gpot, update_gp
+   public :: init_grav, init_terms_grav, grav_accel, source_terms_grav, grav_src_exec, grav_pot_3d, grav_type, get_gprofs, compute_h_gpot, update_gp
    public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x, variable_gp
 
    integer, parameter         :: gp_stat_len   = 9
@@ -928,18 +928,8 @@ contains
                   call die("[gravity:default_grav_pot_3d] user 'grav_pot_3d' should be defined in initprob!")
                case default
                   gp_status = 'undefined'
+                  call die("[gravity:default_grav_pot_3d] unimplemented external_gp: '" // trim(external_gp) // "'")
             end select
-
-!-----------------------
-
-            if (gp_status == 'undefined') then
-               if (associated(grav_accel)) then
-                  if (master) call warn("[gravity:default_grav_pot_3d]: using 'grav_accel' defined by user")
-                  call grav_accel2pot
-               else
-                  call die("[gravity:default_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")
-               endif
-            endif
 
             call ax%deallocate_axes
 
@@ -1093,45 +1083,5 @@ contains
 #endif /* !ISO */
 
    end subroutine grav_src_exec
-
-!--------------------------------------------------------------------------
-!>
-!! \brief Routine that uses %gravity acceleration given in grav_accel to compute values of gravitational potential filling in gp array
-!!
-!! \details Gravitational potential gp(i,j,k) is defined in cell centers
-!! First we find gp(:,:,:) in each block separately.
-!! Instead of gp, gpwork is used to not change already computed possibly existing other parts of gravitational potential.
-!<
-   subroutine grav_accel2pot
-
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use dataio_pub,       only: die
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-
-      call die("[gravity:grav_accel2pot] cdd%comm3d == MPI_COMM_NULL")
-      cgl => leaves%first
-      do while (associated(cgl))
-         ! calculate local gpwork
-
-         ! post receives from appropriate neighbour (requires identitying proc number from cg%o_bnd elements for the same level)
-         ! \warning receiving from fine/coarse levels may require interpolation and doing things level-wise from finest to base
-         ! \warning Levels higher than base may be split into separate clusters or form loops around unrefined region
-         cgl => cgl%nxt
-      enddo
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         ! Use MPI_Probe to check if desired corner values already arrived
-         ! If there is nothing to wait for, use cg%o_bnd elements to send offsets
-         cgl => cgl%nxt
-      enddo
-
-      ! Find the maximum, and adjust cg%gp (call leaves%q_add_val(igp, -max))
-
-   end subroutine grav_accel2pot
 
 end module gravity

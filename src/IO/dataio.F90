@@ -70,7 +70,7 @@ module dataio
    logical, dimension(RES:TSL) :: dump = .false.     !< logical values for all dump types to restrict to only one dump of each type a step
 
 !   integer                  :: nchar                 !< number of characters in a user/system message
-   integer, parameter       :: umsg_len = 16
+   integer(kind=4), parameter :: umsg_len = 16
    character(len=umsg_len)  :: umsg                  !< string of characters - content of a user/system message
    real                     :: umsg_param            !< parameter changed by a user/system message
 
@@ -800,10 +800,10 @@ contains
 
    subroutine check_tsl
 
-      use constants,  only: CHK
-      use dataio_pub, only: last_tsl_time
-      use mpisetup,   only: report_to_master
-      use mpisignals, only: sig
+      use constants,       only: CHK
+      use dataio_pub,      only: last_tsl_time
+      use mpisetup,        only: report_to_master
+      use piernik_mpi_sig, only: sig
 
       implicit none
 
@@ -1703,8 +1703,8 @@ contains
          use constants,    only: I_ONE, INVALID
          use dataio_pub,   only: msg, printinfo
          use memory_usage, only: system_mem_usage
-         use mpi,          only: MPI_INTEGER
-         use mpisetup,     only: master, FIRST, LAST, comm, mpi_err
+         use MPIF,         only: MPI_INTEGER, MPI_COMM_WORLD, MPI_Gather
+         use mpisetup,     only: master, FIRST, LAST, err_mpi
 
          implicit none
 
@@ -1712,7 +1712,7 @@ contains
          integer(kind=4), dimension(FIRST:LAST) :: cnt_rss
 
          rss = system_mem_usage()
-         call MPI_Gather(rss, I_ONE, MPI_INTEGER, cnt_rss, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
+         call MPI_Gather(rss, I_ONE, MPI_INTEGER, cnt_rss, I_ONE, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
 
          if (master .and. any(cnt_rss /= INVALID)) then
             write(msg, '(9a)')"  RSS memory in use (avg/min/max):", &

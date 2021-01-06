@@ -38,3 +38,8 @@
 #undef HDF5
 #endif /* I_KNOW_WHAT_I_AM_DOING */
 
+#ifdef MPIF08
+#  define MPIF mpi_f08
+#else
+#  define MPIF mpi
+#endif

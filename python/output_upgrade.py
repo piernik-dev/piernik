@@ -15,6 +15,7 @@ def upgrade_200_201(fname):
                         1.0 / group.attrs['field_to_cgs']
             h5f.attrs['piernik'] = np.array([2.01])
 
+
 for fname in sys.argv[1:]:
     try:
         with h5.File(fname, 'r') as h5f:

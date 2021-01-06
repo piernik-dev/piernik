@@ -146,7 +146,6 @@ contains
       b_n    = [bxn, byn, bzn]
 
 #ifdef GRAV
-!      if (user_grav) grav_pot_3d => my_grav_pot_3d
       if (user_grav) grav_pot_3d => galactic_grav_pot_3d
 #endif /* GRAV */
 #ifdef CR_SN
@@ -291,28 +290,6 @@ contains
    end subroutine supernovae_wrapper
 
 #ifdef GRAV
-   subroutine my_grav_pot_3d
-
-      use dataio_pub, only: die, warn
-      use gravity,    only: grav_accel, grav_accel2pot
-      use mpisetup,   only: master
-
-      implicit none
-
-      logical, save  :: frun = .true.
-
-      if (.not.frun) return
-
-      if (associated(grav_accel)) then
-         if (master) call warn("[initproblem:my_grav_pot_3d]: using 'grav_accel' defined by user")
-         call grav_accel2pot
-      else
-         call die("[initproblem:my_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")
-      endif
-      frun = .false.
-
-   end subroutine my_grav_pot_3d
-
 !--------------------------------------------------------------------------
 !>
 !! \brief Routine that compute values of gravitational acceleration
@@ -432,5 +409,7 @@ contains
       if (.false. .and. present(flatten)) k = 0 ! suppress compiler warnings
 
    end subroutine galactic_grav_pot
+
 #endif /* GRAV */
+
 end module initproblem

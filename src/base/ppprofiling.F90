@@ -132,7 +132,7 @@ module ppp
       procedure :: cleanup  !< destroy this event list
       procedure :: start    !< add a beginning of an interval
       procedure :: stop     !< add an end of an interval
-      procedure :: put      !< add an event with time measured elsewhere
+      procedure :: set_bb   !< add the initial event with bigbang time
       procedure, private :: next_event  !< for internal use in start, stop and put
       procedure, private :: expand  !< create next array for events
       procedure :: publish  !< write the collected data to a log file
@@ -387,7 +387,7 @@ contains
 
       this%ind = 1
       this%arr_ind = 1
-      this%label = label(1:min(cbuff_len, len_trim(label)))
+      this%label = label(1:min(cbuff_len, len_trim(label, kind=4)))
       call this%arrays(this%arr_ind)%arr_init(ev_arr_len)
 
    end subroutine init
@@ -421,7 +421,8 @@ contains
 
    subroutine start(this, label, mask)
 
-      use mpi, only: MPI_Wtime
+      use MPIF,     only: MPI_Wtime
+      use mpisetup, only: bigbang_shift
 
       implicit none
 
@@ -436,8 +437,8 @@ contains
          if (iand(mask, disable_mask) /= 0) return
       endif
 
-      l = label(1:min(cbuff_len, len_trim(label)))
-      call this%next_event(event(l, MPI_Wtime()))
+      l = label(1:min(cbuff_len, len_trim(label, kind=4)))
+      call this%next_event(event(l, MPI_Wtime() + bigbang_shift))
 
    end subroutine start
 
@@ -449,7 +450,8 @@ contains
 
    subroutine stop(this, label, mask)
 
-      use mpi, only: MPI_Wtime
+      use MPIF,     only: MPI_Wtime
+      use mpisetup, only: bigbang_shift
 
       implicit none
 
@@ -464,35 +466,34 @@ contains
          if (iand(mask, disable_mask) /= 0) return
       endif
 
-      l = label(1:min(cbuff_len, len_trim(label)))
-      call this%next_event(event(l, -MPI_Wtime()))
+      l = label(1:min(cbuff_len, len_trim(label, kind=4)))
+      call this%next_event(event(l, -MPI_Wtime() - bigbang_shift))
 
    end subroutine stop
 
 !>
-!! \brief Add an event with time measured elsewhere
+!! \brief Add the initial event with bigbang time
 !!
 !! Do not use inside die(), warn(), system_mem_usage() or check_mem_usage().
-!!
-!! Do not use at all, except for inserting event with mpisetup::bigbang
 !<
 
-   subroutine put(this, label, time)
+   subroutine set_bb(this, label)
+
+      use mpisetup, only: bigbang, bigbang_shift
 
       implicit none
 
       class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
       character(len=*), intent(in)    :: label  !< event label
-      real(kind=8),     intent(in)    :: time   !< time of the event
 
       character(len=cbuff_len) :: l
 
       if (.not. use_profiling) return
 
-      l = label(1:min(cbuff_len, len_trim(label)))
-      call this%next_event(event(l, time))
+      l = label(1:min(cbuff_len, len_trim(label, kind=4)))
+      call this%next_event(event(l, bigbang + bigbang_shift))
 
-   end subroutine put
+   end subroutine set_bb
 
 !> \brief Start, stop and put
 
@@ -552,7 +553,7 @@ contains
 !! Perhaps MPI_TYPE_CREATE_STRUCT would simplify the code and improve the communication
 !! but it requires some C-interoperability, which needs to be explored and tested first.
 !!
-!! \todo XMLot JSON output?
+!! \todo XML or JSON output?
 !<
 
    subroutine publish(this)
@@ -560,8 +561,9 @@ contains
       use constants,    only: I_ZERO, I_ONE
       use dataio_pub,   only: die, printinfo, msg
       use memory_usage, only: check_mem_usage
-      use mpi,          only: MPI_STATUS_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,     only: proc, master, slave, comm, mpi_err, FIRST, LAST, req, status, inflate_req
+      use MPIF,         only: MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, &
+           &                  MPI_Isend, MPI_Recv, MPI_Waitall
+      use mpisetup,     only: proc, master, slave, err_mpi, FIRST, LAST, req, inflate_req
 
       implicit none
 
@@ -571,7 +573,6 @@ contains
       integer :: ia
       character(len=cbuff_len), dimension(:), allocatable  :: buflabel
       real(kind=8), dimension(:), allocatable :: buftime
-      integer(kind=4), dimension(:,:), pointer :: mpistatus
 
       if (.not. use_profiling) return
 
@@ -589,7 +590,7 @@ contains
       endif
 
       ! send
-      call inflate_req(int(TAG_ARR_T))
+      call inflate_req(int(TAG_ARR_T, kind=4))
       t = TAG_CNT
       ne = I_ZERO
       do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
@@ -599,7 +600,7 @@ contains
             exit
          endif
       enddo
-      if (slave) call MPI_Isend(ne, I_ONE, MPI_INTEGER, FIRST, TAG_CNT, comm, req(TAG_CNT), mpi_err)
+      if (slave) call MPI_Isend(ne, I_ONE, MPI_INTEGER, FIRST, TAG_CNT, MPI_COMM_WORLD, req(TAG_CNT), err_mpi)
 
       if (ne > 0) then
          allocate(buflabel(ne), buftime(ne))
@@ -616,8 +617,8 @@ contains
             call publish_buffers(proc, buflabel, buftime)
             deallocate(buflabel, buftime)
          else
-            call MPI_Isend(buflabel, size(buflabel)*len(buflabel(1)), MPI_CHARACTER,        FIRST, TAG_ARR_L, comm, req(TAG_ARR_L), mpi_err)
-            call MPI_Isend(buftime,  size(buftime),                   MPI_DOUBLE_PRECISION, FIRST, TAG_ARR_T, comm, req(TAG_ARR_T), mpi_err)
+            call MPI_Isend(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        FIRST, TAG_ARR_L, MPI_COMM_WORLD, req(TAG_ARR_L), err_mpi)
+            call MPI_Isend(buftime,  size(buftime, kind=4),                           MPI_DOUBLE_PRECISION, FIRST, TAG_ARR_T, MPI_COMM_WORLD, req(TAG_ARR_T), err_mpi)
             t = TAG_ARR_T
          endif
       endif
@@ -627,19 +628,18 @@ contains
 
          ! receive
          do p = FIRST + I_ONE, LAST
-             call MPI_Recv(ne, I_ONE, MPI_INTEGER, p, TAG_CNT, comm, MPI_STATUS_IGNORE, mpi_err)
+             call MPI_Recv(ne, I_ONE, MPI_INTEGER, p, TAG_CNT, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
              if (ne /= 0) then
                 allocate(buflabel(ne), buftime(ne))
                 call check_mem_usage
-                call MPI_Recv(buflabel, size(buflabel)*len(buflabel(1)), MPI_CHARACTER,        p, TAG_ARR_L, comm, MPI_STATUS_IGNORE, mpi_err)
-                call MPI_Recv(buftime,  size(buftime),                   MPI_DOUBLE_PRECISION, p, TAG_ARR_T, comm, MPI_STATUS_IGNORE, mpi_err)
+                call MPI_Recv(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        p, TAG_ARR_L, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+                call MPI_Recv(buftime,  size(buftime, kind=4),                           MPI_DOUBLE_PRECISION, p, TAG_ARR_T, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                 call publish_buffers(p, buflabel, buftime)
                 deallocate(buflabel, buftime)
              endif
          enddo
       else
-         mpistatus => status(:, :t)
-         call MPI_Waitall(t, req(:t), mpistatus, mpi_err)
+         call MPI_Waitall(t, req(:t), MPI_STATUSES_IGNORE, err_mpi)
          deallocate(buflabel, buftime)
       endif
 

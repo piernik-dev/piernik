@@ -37,11 +37,18 @@ module cg_level_base
    private
    public :: base
 
+   abstract interface
+      subroutine no_args
+         implicit none
+      end subroutine no_args
+   end interface
+
    !! \brief The pointer of the base level and a method to initialize it
    !> \todo Domainshrinking, expanding and crawling should also be implemented here
    type :: cg_level_base_t
       type(cg_level_connected_t), pointer :: level            !< The base level
-    contains
+      procedure(no_args), nopass, pointer :: init_multigrid   !< a pointer to multigrid:init_multigrid or null()
+   contains
       procedure          :: set                               !< initialize the base level
       procedure          :: expand                            !< add one line of blocks in some directions
       procedure, private :: expand_side                       !< add one line of blocks in selected direction
@@ -65,7 +72,6 @@ contains
       use dataio_pub,         only: die
       use domain,             only: dom
       use list_of_cg_lists,   only: all_lists
-      use cg_level_connected, only: base_level
 
       implicit none
 
@@ -81,12 +87,12 @@ contains
       if (any(n_d(:) < 1)) call die("[cg_level_base:set] non-positive base grid sizes")
       if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_level_base:set] base grid size incompatible with has_dir masks")
 
+      this%init_multigrid => null()  ! it will be set by init_multigrid, if it is included and called
       allocate(this%level)
       call this%level%init_level
 
       call this%level%l%init(base_level_id, int(n_d, kind=8), dom%off)
 
-      base_level => this%level
       call all_lists%register(this%level, "Base level")
 
    end subroutine set
@@ -102,9 +108,6 @@ contains
       use dataio_pub,        only: msg, warn
       use domain,            only: dom
       use mpisetup,          only: piernik_MPI_Allreduce, master
-#ifdef MULTIGRID
-      use multigrid,         only: init_multigrid
-#endif /* MULTIGRID */
 
       implicit none
 
@@ -134,9 +137,7 @@ contains
             call warn(msg) ! As long as the restart file does not automagically recognize changed parameters, this message should be easily visible
          endif
          call coarsest%delete_coarser_than_base
-#ifdef MULTIGRID
-         call init_multigrid
-#endif /* MULTIGRID */
+         if (associated(this%init_multigrid)) call this%init_multigrid
          call all_fluid_boundaries
          ! the cg%gp and cg%cs_iso2 are updated in refinement_update::update_refinement which should be called right after domain expansion to fix refinement structure
       endif

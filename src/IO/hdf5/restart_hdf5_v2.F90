@@ -191,8 +191,8 @@ contains
       use dataio_pub,       only: die, nproc_io, can_i_write
       use grid_cont,        only: grid_container
       use hdf5,             only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
-      use mpisetup,         only: master, FIRST, proc, comm, mpi_err
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
+      use mpisetup,         only: master, FIRST, proc, err_mpi, tag_ub
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 
@@ -210,7 +210,8 @@ contains
       integer(HSIZE_T), dimension(:), allocatable           :: dims
       real, pointer,    dimension(:,:,:)                    :: pa3d
       real, pointer,    dimension(:,:,:,:)                  :: pa4d
-      integer                                               :: i, ncg, tot_lst_n, ic, n
+      integer                                               :: tot_lst_n, ic
+      integer(kind=4)                                       :: ncg, n, i
       type(grid_container),  pointer                        :: cg
       type(cg_list_element), pointer                        :: cgl
       integer, allocatable, dimension(:)                    :: qr_lst, wr_lst
@@ -229,13 +230,13 @@ contains
       allocate(dsets(tot_lst_n))
       ic = 1
       if (size(qr_lst) > 0) then
-         do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
+         do i = lbound(qr_lst, dim=1, kind=4), ubound(qr_lst, dim=1, kind=4)
             dsets(ic) = trim(qna%lst(qr_lst(i))%name)
             ic = ic + 1
          enddo
       endif
       if (size(wr_lst) > 0) then
-         do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
+         do i = lbound(wr_lst, dim=1, kind=4), ubound(wr_lst, dim=1, kind=4)
             dsets(ic) = trim(wna%lst(wr_lst(i))%name)
             ic = ic + 1
          enddo
@@ -244,6 +245,8 @@ contains
 
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
+         if (cg_desc%tot_cg_n * (ubound(qr_lst, dim=1, kind=4) + I_ONE) > tag_ub) &
+              call die("[restart_hdf5_v2:write_cg_to_restart] this MPI implementation has too low MPI_TAG_UB attribute")
          do ncg = 1, cg_desc%tot_cg_n
             call ppp_main%start(wrcg1s_label, PPP_IO + PPP_CG)
 
@@ -252,7 +255,7 @@ contains
 
                if (size(qr_lst) > 0) then
                   allocate(dims(rank3))
-                  do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
+                  do i = lbound(qr_lst, dim=1, kind=4), ubound(qr_lst, dim=1, kind=4)
                      if (cg_desc%cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                         pa3d => cg%q(qr_lst(i))%span(pick_area(cg, qna%lst(qr_lst(i))%restart_mode))
@@ -260,7 +263,7 @@ contains
                      else
                         n_b = pick_size(ncg, qna%lst(qr_lst(i))%restart_mode)
                         allocate(pa3d(n_b(xdim), n_b(ydim), n_b(zdim)))
-                        call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
+                        call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:), kind=4), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                         dims(:) = shape(pa3d)
                      endif
                      call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = cg_desc%xfer_prp)
@@ -271,7 +274,7 @@ contains
 
                if (size(wr_lst) > 0) then
                   allocate(dims(rank4))
-                  do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
+                  do i = lbound(wr_lst, dim=1, kind=4), ubound(wr_lst, dim=1, kind=4)
                      if (cg_desc%cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                         pa4d => cg%w(wr_lst(i))%span(pick_area(cg, wna%lst(wr_lst(i))%restart_mode))
@@ -279,8 +282,8 @@ contains
                      else
                         n_b = pick_size(ncg, wna%lst(wr_lst(i))%restart_mode)
                         allocate(pa4d(wna%lst(wr_lst(i))%dim4, n_b(xdim), n_b(ydim), n_b(zdim)))
-                        call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), &
-                           ncg + cg_desc%tot_cg_n*(size(qr_lst)+i), comm, MPI_STATUS_IGNORE, mpi_err)
+                        call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:), kind=4), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), &
+                           ncg + cg_desc%tot_cg_n*(size(qr_lst, kind=4)+i), MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                         dims(:) = shape(pa4d)
                      endif
                      call h5dwrite_f(cg_desc%dset_id(ncg, i+size(qr_lst)), H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = cg_desc%xfer_prp)
@@ -293,15 +296,15 @@ contains
                if (cg_desc%cg_src_p(ncg) == proc) then
                   cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                   if (size(qr_lst) > 0) then
-                     do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
+                     do i = lbound(qr_lst, dim=1, kind=4), ubound(qr_lst, dim=1, kind=4)
                         pa3d => cg%q(qr_lst(i))%span(pick_area(cg, qna%lst(qr_lst(i))%restart_mode))
-                        call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, mpi_err)
+                        call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:), kind=4), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, MPI_COMM_WORLD, err_mpi)
                      enddo
                   endif
                   if (size(wr_lst) > 0) then
-                     do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
+                     do i = lbound(wr_lst, dim=1, kind=4), ubound(wr_lst, dim=1, kind=4)
                         pa4d => cg%w(wr_lst(i))%span(pick_area(cg, wna%lst(wr_lst(i))%restart_mode))
-                        call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*(size(qr_lst)+i), comm, mpi_err)
+                        call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:), kind=4), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*(size(qr_lst, kind=4)+i), MPI_COMM_WORLD, err_mpi)
                      enddo
                   endif
                endif
@@ -316,14 +319,14 @@ contains
             cgl => leaves%first
             do while (associated(cgl))
                call ppp_main%start(wrcg1p_label, PPP_IO + PPP_CG)
-               n = n + 1
+               n = n + I_ONE
                ncg = cg_desc%offsets(proc) + n
                cg => cgl%cg
                ic = 0
                if (size(qr_lst) > 0) then
                   allocate(dims(rank3))
                   dims(:) = cg%n_b
-                  do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
+                  do i = lbound(qr_lst, dim=1, kind=4), ubound(qr_lst, dim=1, kind=4)
                      ic = ic + 1
                      pa3d => cg%q(qr_lst(i))%span(pick_area(cg, qna%lst(qr_lst(i))%restart_mode))
                      dims(:) = pick_dims(cg, qna%lst(qr_lst(i))%restart_mode)
@@ -333,7 +336,7 @@ contains
                endif
                if (size(wr_lst) > 0) then
                   allocate(dims(rank4))
-                  do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
+                  do i = lbound(wr_lst, dim=1, kind=4), ubound(wr_lst, dim=1, kind=4)
                      ic = ic + 1
                      pa4d => cg%w(wr_lst(i))%span(pick_area(cg, wna%lst(wr_lst(i))%restart_mode))
                      dims(:) = [ wna%lst(wr_lst(i))%dim4, pick_dims(cg, wna%lst(wr_lst(i))%restart_mode) ]
@@ -346,7 +349,7 @@ contains
             enddo
 
             ! Parallel HDF calls have to be matched on each process, so we're doing some calls on non-existing data here.
-            do ncg = 1, maxval(cg_n)-n
+            do ncg = I_ONE, maxval(cg_n)-n
                ic = 0
                if (size(qr_lst) > 0) then
                   allocate(dims(rank3))
@@ -356,7 +359,7 @@ contains
                   call h5screate_simple_f(rank3, dims, memspace_id, error)
                   call h5sselect_none_f(memspace_id, error)   ! empty memoryscape
 
-                  do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
+                  do i = lbound(qr_lst, dim=1, kind=4), ubound(qr_lst, dim=1, kind=4)
                      ic = ic + 1
                      pa3d => null_r3d
                      dims(:) = 0
@@ -369,7 +372,7 @@ contains
                endif
                if (size(wr_lst) > 0) then
                   allocate(dims(rank4))
-                  do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
+                  do i = lbound(wr_lst, dim=1, kind=4), ubound(wr_lst, dim=1, kind=4)
                      ic = ic + 1
                      dims(:) = 0
                      ! dims can change so h5s* is here as well, I don't know it
@@ -456,7 +459,7 @@ contains
 
          implicit none
 
-         integer,         intent(in) :: ncg
+         integer(kind=4), intent(in) :: ncg
          integer(kind=4), intent(in) :: mode
 
          integer(kind=4), dimension(ndims) :: n_b
@@ -547,7 +550,8 @@ contains
       integer(HID_T)                                    :: doml_g_id, dom_g_id  !< domain list and domain group identifiers
       integer(HID_T)                                    :: cgl_g_id,  cg_g_id   !< cg list and cg group identifiers
       logical                                           :: file_exist, outside, overlapped
-      integer                                           :: ia, j
+      integer                                           :: j
+      integer(kind=4)                                   :: ia
       integer(kind=8)                                   :: tot_cells
       integer(kind=8), dimension(xdim:zdim, LO:HI)      :: my_box, other_box
       integer(kind=4)                                   :: error, nres_old
@@ -751,7 +755,7 @@ contains
       allocate(cg_res(ibuf(1)))
       deallocate(ibuf)
 
-      do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
+      do ia = lbound(cg_res, dim=1, kind=4), ubound(cg_res, dim=1, kind=4)
          call h5gopen_f(cgl_g_id, n_cg_name(ia), cg_g_id, error) ! open "/data/grid_%08d, ia"
 
          allocate(ibuf(1))
@@ -776,7 +780,7 @@ contains
       tot_cells = 0
       outside = .false.
       overlapped = .false.
-      do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
+      do ia = lbound(cg_res, dim=1, kind=4), ubound(cg_res, dim=1, kind=4)
          if (cg_res(ia)%level == base%level%l%id) then
             tot_cells = tot_cells + product(cg_res(ia)%n_b(:))
             my_box(:,LO) = cg_res(ia)%off(:)
@@ -814,7 +818,7 @@ contains
 
       call ppp_main%start(rdrc_label, PPP_IO)
       ! On each process determine which parts of the restart cg have to be read and where
-      do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
+      do ia = lbound(cg_res, dim=1, kind=4), ubound(cg_res, dim=1, kind=4)
          my_box(:,LO) = cg_res(ia)%off(:)
          my_box(:,HI) = cg_res(ia)%off(:) + cg_res(ia)%n_b(:) - 1
          curl => base%level
@@ -928,7 +932,7 @@ contains
 
       type(grid_container), pointer,     intent(inout) :: cg        !< Own grid container
       integer(HID_T),                    intent(in)    :: cgl_g_id  !< cg group identifier in the restart file
-      integer,                           intent(in)    :: ncg       !< number of cg in the restart file
+      integer(kind=4),                   intent(in)    :: ncg       !< number of cg in the restart file
       type(cg_essentials),               intent(in)    :: cg_r      !< cg attributes that do not need to be reread
 
       integer(HID_T)                               :: cg_g_id !< cg group identifier
@@ -980,7 +984,7 @@ contains
 
       if (size(qr_lst) > 0) then
          allocate(dims(ndims), off(ndims), cnt(ndims))
-         do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
+         do i = lbound(qr_lst, dim=1, kind=4), ubound(qr_lst, dim=1, kind=4)
             call pick_off_and_size(qna%lst(qr_lst(i))%restart_mode, o_size, restart_off, own_off)
             dims(:) = o_size(:)
             call h5dopen_f(cg_g_id, qna%lst(qr_lst(i))%name, dset_id, error) ! open "/data/grid_%08d/cg%q(qr_lst(i))%name"
@@ -1002,7 +1006,7 @@ contains
 
       if (size(wr_lst) > 0) then
          allocate(dims(ndims+1), off(ndims+1), cnt(ndims+1))
-         do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
+         do i = lbound(wr_lst, dim=1, kind=4), ubound(wr_lst, dim=1, kind=4)
             call pick_off_and_size(wna%lst(wr_lst(i))%restart_mode, o_size, restart_off, own_off)
             dims(:) = [ int(wna%lst(wr_lst(i))%dim4, kind=HSIZE_T), int(o_size(:), kind=HSIZE_T) ]
             call h5dopen_f(cg_g_id, wna%lst(wr_lst(i))%name, dset_id, error)
