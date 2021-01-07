@@ -287,6 +287,8 @@ contains
       use dataio_pub,      only: die
       use initcrspectrum,  only: arr_dim, arr_dim_q, e_small, max_p_ratio, p_fix_ratio, q_big
 
+      implicit none
+
       real               :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
       real, dimension(2) :: a_min   = big, a_max   = small, n_min = big, n_max = small
       integer(kind=4)    :: i, j, ilim = 0, qmaxiter = 100
