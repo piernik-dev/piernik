@@ -269,7 +269,7 @@ contains
    subroutine create_dataset_real8_dim2(place, dname, ddata)
 
       use constants,     only: I_TWO
-      use hdf5,          only: h5dcreate_f, h5dclose_f, h5kind_to_type, h5sclose_f, h5screate_simple_f, &
+      use hdf5,          only: h5dcreate_f, h5dclose_f, h5sclose_f, h5screate_simple_f, &
           &                    h5dwrite_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
       use iso_c_binding, only: c_ptr, c_loc
 
