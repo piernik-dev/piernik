@@ -274,7 +274,7 @@ def qa_checks(files, options):
 
 
 def qa_have_priv_pub(lines, name, warns, fname):
-    if(not filter(have_privpub.search, lines)):
+    if(len(list(filter(have_privpub.search, lines))) < 1):
         warns.append(give_warn("QA:  ") + "module [%s:%s] lacks public/private keywords." %
                      (fname, name))
     else:
@@ -330,7 +330,7 @@ def qa_depreciated_syntax(lines, rname, store, fname):
 
 
 def qa_have_implicit(lines, name, store, fname):
-    if(not filter(have_implicit.search, lines)):
+    if(len(list(filter(have_implicit.search, lines))) < 1):
         store.append(give_err("missing 'implicit none'      ") + "[%s:%s]" % (fname, name))
 
 
