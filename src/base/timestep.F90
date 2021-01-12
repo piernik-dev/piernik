@@ -378,9 +378,10 @@ contains
 
    subroutine timestep_fluid(cg, fl, dt, c_fl)
 
-      use cg_level_connected, only: cg_level_connected_t, find_level
+      use cg_level_connected, only: cg_level_connected_t
       use constants,          only: xdim, ydim, zdim, ndims, GEO_RPZ, ndims, small
       use domain,             only: dom
+      use find_lev,           only: find_level
       use fluidtypes,         only: component_fluid
       use global,             only: cfl, use_fargo
       use grid_cont,          only: grid_container

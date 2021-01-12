@@ -748,15 +748,6 @@ contains
 
       call ppp_main%start(frp_label, PPP_AMR)
       call finest%level%restrict_to_base_q_1var(qna%wai)
-
-!!$      curl => base%level
-!!$      do while (associated(curl))
-!!$         call curl%clear_boundaries(ind, value=10.)
-!!$         call curl%prolong_bnd_from_coarser(ind)
-!!$         call curl%level_3d_boundaries(ind, nb, area_type, bnd_type, corners)
-!!$!         call curl%arr3d_boundaries(ind, nb, area_type, bnd_type, corners)
-!!$         curl => curl%finer
-!!$      enddo
       call leaves%leaf_arr3d_boundaries(qna%wai)
       call ppp_main%stop(frp_label, PPP_AMR)
 

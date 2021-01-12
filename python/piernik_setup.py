@@ -33,36 +33,6 @@ have_inc = re.compile(r"^#include\s", re.IGNORECASE).search
 have_mod = re.compile(r"^\s*module\s+(?!procedure)", re.IGNORECASE).search
 cpp_junk = re.compile("(?!#define\s_)", re.IGNORECASE)
 
-desc = '''
-EXAMPLE:
-> cd obj
-> ./newcompiler <settingsname>
-> make
-then copy files to your run directory (optional), e.g.
-> cp {piernik,problem.par} ../runs/<problem>
-> cd ../runs/<problem>
-
-to run PIERNIK:
-edit problem.par as appropriate, e.g.
-* add var names for visualisation => var(<number>)='<name>'
-* change domain dimensions/resolution => DOMAIN_SIZES
-* change domain divisions for parallel processing => MPI_BLOCKS
-* change frequency of data dumps => dt_* entries
-* etc.
-execute
-> ./piernik
-or for <np> parallel processes
-> mpirun -n <np> ./piernik
-
-HEALTH WARNINGS:
-* the contents of \'./obj\' and \'./runs/<problem>\' are overwritten
-  each time setup <problem>\' is run, unless you specify -obj <postfix>
-  in which case the contents of runs/<problem>_<postfix> will be only updated
-* by default PIERNIK will read the configuration file \'problem.par\' from the
-working directory, to use alternative configurations execute
-\'./piernik <directory with an alternative problem.par>\'
-Enjoy your work with the Piernik Code!
-'''
 
 head_block1 = '''ifneq (,$(findstring h5pfc, $(F90)))
 LIBS += ${STATIC} -lz ${DYNAMIC}

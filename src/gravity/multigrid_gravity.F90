@@ -522,9 +522,10 @@ contains
 
    subroutine mgg_cg_init(cg)
 
-      use cg_level_connected, only: cg_level_connected_t, find_level
+      use cg_level_connected, only: cg_level_connected_t
       use constants,          only: fft_none
       use dataio_pub,         only: die
+      use find_lev,           only: find_level
       use func,               only: operator(.notequals.)
       use grid_cont,          only: grid_container
       use multigridvars,      only: overrelax
