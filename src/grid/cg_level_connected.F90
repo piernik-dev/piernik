@@ -901,9 +901,9 @@ contains
       use grid_cont,        only: grid_container
       use grid_helpers,     only: f2c
       use mpisetup,         only: err_mpi, req, inflate_req, master
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
       use named_array_list, only: qna
-      use ppp,              only: ppp_main
+      use ppp,              only: ppp_main, piernik_Waitall
 
       implicit none
 
@@ -986,7 +986,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (nr > 0) call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
+      call piernik_Waitall(nr, "prolong_q1v")
 
       ! merge received coarse data into one array and interpolate it into the right place
       cgl => fine%first
@@ -1035,15 +1035,15 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
-      use constants,        only: I_ONE, xdim, ydim, zdim, LO, HI, base_level_id, PPP_AMR, PPP_MPI  !, dirtyH1
+      use constants,        only: I_ONE, xdim, ydim, zdim, LO, HI, base_level_id, PPP_AMR  !, dirtyH1
       use dataio_pub,       only: warn, die
       use domain,           only: dom
       use grid_cont,        only: grid_container
       use grid_helpers,     only: c2f
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
       use mpisetup,         only: err_mpi, req, inflate_req, master
       use named_array_list, only: qna, wna
-      use ppp,              only: ppp_main
+      use ppp,              only: ppp_main, piernik_Waitall
 
       implicit none
 
@@ -1061,7 +1061,7 @@ contains
       integer(kind=4) :: nr
       integer :: g
       logical, save :: firstcall = .true.
-      character(len=*), parameter :: pbc_label = "prolong_bnd_from_coarser" , pbcv_label = "prolong_bnd_from_coarser:vbp", pbcw_label = "prolong_bnd_from_coarser:Waitall"
+      character(len=*), parameter :: pbc_label = "prolong_bnd_from_coarser" , pbcv_label = "prolong_bnd_from_coarser:vbp"
 
       if (present(dir)) then
          if (firstcall .and. master) call warn("[cg_level_connected:prolong_bnd_from_coarser] dir present but not implemented yet")
@@ -1131,11 +1131,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (nr > 0) then
-         call ppp_main%start(pbcw_label, PPP_AMR + PPP_MPI)
-         call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
-         call ppp_main%stop(pbcw_label, PPP_AMR + PPP_MPI)
-      endif
+      call piernik_Waitall(nr, "prolong_bnd_from_coarser", PPP_AMR)
 
       ! merge received coarse data into one array and interpolate it into the right place
       per(:) = 0
@@ -1317,9 +1313,10 @@ contains
       use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
       use mpisetup,         only: err_mpi, req, inflate_req, master
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
       use named_array,      only: p3
       use named_array_list, only: qna
+      use ppp,              only: piernik_Waitall
 
       implicit none
 
@@ -1440,7 +1437,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (nr > 0) call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
+      call piernik_Waitall(nr, "restrict_q1v")
 
       ! copy the received buffers to the right places
       cgl => coarse%first
