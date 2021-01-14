@@ -349,7 +349,8 @@ contains
       endif
 
       allocate(id_buf(size(this%SFC_id_range)))
-      call MPI_Allgather(this%SFC_id_range(proc, :), HI-LO+I_ONE, MPI_INTEGER8, id_buf, HI-LO+I_ONE, MPI_INTEGER8, MPI_COMM_WORLD, err_mpi)
+      call MPI_Allgather([this%SFC_id_range(proc, LO), this%SFC_id_range(proc, HI)], HI-LO+I_ONE, MPI_INTEGER8, &
+           &             id_buf, HI-LO+I_ONE, MPI_INTEGER8, MPI_COMM_WORLD, err_mpi)
       this%SFC_id_range(:, LO) = id_buf(1::2)
       this%SFC_id_range(:, HI) = id_buf(2::2)
 
