@@ -295,9 +295,10 @@ contains
       use constants,        only: xdim, ydim, zdim, cor_dim, I_ONE, I_TWO, LO, HI
       use dataio_pub,       only: die
       use merge_segments,   only: IN, OUT
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
       use mpisetup,         only: FIRST, LAST, proc, err_mpi, req, inflate_req
       use named_array_list, only: wna
+      use ppp,              only: piernik_Waitall
 
       implicit none
 
@@ -370,7 +371,7 @@ contains
          endif
       enddo
 
-      call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
+      call piernik_Waitall(nr, "int_bnd_merged")
 
       do p = FIRST, LAST
          if (p /= proc) then
@@ -443,9 +444,10 @@ contains
       use dataio_pub,       only: die, warn
       use grid_cont,        only: grid_container
       use grid_cont_bnd,    only: segment
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
       use mpisetup,         only: err_mpi, req, inflate_req
       use named_array_list, only: wna
+      use ppp,              only: piernik_Waitall
 
       implicit none
 
@@ -558,7 +560,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
+      call piernik_Waitall(nr, "int_bnd_1by1")
 
       ! Move the received data from buffers to the right place. Deallocate buffers
       cgl => this%first
