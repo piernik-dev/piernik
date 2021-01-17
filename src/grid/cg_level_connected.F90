@@ -1517,6 +1517,7 @@ contains
       enddo
 
       if (d4) then
+
          cgl => this%first
          do while (associated(cgl))
             cg => cgl%cg
@@ -1525,6 +1526,12 @@ contains
                   if (allocated(cg%ro_tgt%seg(g)%buf4)) deallocate(cg%ro_tgt%seg(g)%buf4)
                enddo
             endif
+            cgl => cgl%nxt
+         enddo
+
+         cgl => coarse%first
+         do while (associated(cgl))
+            cg => cgl%cg
             if (allocated(cg%ri_tgt%seg)) then
                do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
                   if (allocated(cg%ri_tgt%seg(g)%buf4)) deallocate(cg%ri_tgt%seg(g)%buf4)
@@ -1532,6 +1539,7 @@ contains
             endif
             cgl => cgl%nxt
          enddo
+
       endif
 
    end subroutine restrict_1var
