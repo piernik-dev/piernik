@@ -83,8 +83,8 @@ ifeq ("$(SILENT)","1")
 endif
 \t@$(ECHO) $(F90) $(LDFLAGS) -o $@ '*.o' $(LIBS)
 \t@$(F90) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
-\t@touch mpi_f08.o mpi.o
-\t@$(RM) mpi_f08.o mpi.o
+\t@touch mpi_f08.o mpi.o a.out
+\t@$(RM) mpi_f08.o mpi.o a.out
 \t@AO1=`mktemp _ao_XXXXXX`;\\
 \tAO2=`mktemp _ao_XXXXXX`;\\
 \t$(ECHO) $(OBJS) | tr ' ' '\\n' | sort > $$AO1;\\
@@ -494,6 +494,13 @@ def setup_piernik(data=None):
                 print("Possible duplicate link or a name clash :", f)
                 raise
 
+    if (options.hard_copy):
+        otdir = objdir + "/tests/"
+        os.mkdir(otdir)
+        ctdir = "compilers/tests/"
+        for f in os.listdir(ctdir):
+            shutil.copy(ctdir + f, otdir)
+
     if(options.param != 'problem.par'):
         os.symlink(options.param, objdir + '/' + 'problem.par')
 
@@ -543,13 +550,10 @@ def setup_piernik(data=None):
     if("PIERNIK_OPENCL" in our_defs):
         m.write("LIBS += $(shell pkg-config --libs fortrancl)\n")
         m.write("F90FLAGS += $(shell pkg-config --cflags fortrancl)\n")
-    if(options.laconic):
-        m.write("SILENT = 1\n\n")
-    else:
-        m.write("SILENT = 0\n\n")
-    m.write(head_block1)
-    m.write(
-        "\t@( $(ECHO) \"%s\"; \\" % ("./setup " + " ".join(all_args)))
+
+    m.write("SILENT = %d\n\n" % (1 if options.laconic else 0))
+    m.write(head_block1.replace("./compilers", "") if options.hard_copy else head_block1)
+    m.write("\t@( $(ECHO) \"%s\"; \\" % ("./setup " + " ".join(all_args)))
     m.write(head_block2)
 
     for i in range(0, len(files_to_build)):

@@ -66,7 +66,7 @@ module cg_level_connected
       procedure :: restrict_to_floor_q_1var   !< restrict specified q field as much as possible
       procedure :: restrict_to_base_q_1var    !< restrict specified q field to the base level
       procedure :: restrict_to_base_w_1var    !< restrict specified w field to the base level
-      procedure :: restrict_q_1var            !< interpolate the grid data in specified q field to this%coarser level
+      procedure :: restrict_1var              !< interpolate the grid data in specified q field to this%coarser level
       procedure :: restrict_w_1var            !< interpolate the grid data in specified w field to this%coarser level
 
       procedure :: arr3d_boundaries           !< Set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays on a single level.
@@ -901,9 +901,9 @@ contains
       use grid_cont,        only: grid_container
       use grid_helpers,     only: f2c
       use mpisetup,         only: err_mpi, req, inflate_req, master
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
       use named_array_list, only: qna
-      use ppp,              only: ppp_main
+      use ppp,              only: ppp_main, piernik_Waitall
 
       implicit none
 
@@ -986,7 +986,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (nr > 0) call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
+      call piernik_Waitall(nr, "prolong_q1v")
 
       ! merge received coarse data into one array and interpolate it into the right place
       cgl => fine%first
@@ -1035,15 +1035,15 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
-      use constants,        only: I_ONE, xdim, ydim, zdim, LO, HI, base_level_id, PPP_AMR, PPP_MPI  !, dirtyH1
+      use constants,        only: I_ONE, xdim, ydim, zdim, LO, HI, base_level_id, PPP_AMR  !, dirtyH1
       use dataio_pub,       only: warn, die
       use domain,           only: dom
       use grid_cont,        only: grid_container
       use grid_helpers,     only: c2f
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
       use mpisetup,         only: err_mpi, req, inflate_req, master
       use named_array_list, only: qna, wna
-      use ppp,              only: ppp_main
+      use ppp,              only: ppp_main, piernik_Waitall
 
       implicit none
 
@@ -1061,7 +1061,7 @@ contains
       integer(kind=4) :: nr
       integer :: g
       logical, save :: firstcall = .true.
-      character(len=*), parameter :: pbc_label = "prolong_bnd_from_coarser" , pbcv_label = "prolong_bnd_from_coarser:vbp", pbcw_label = "prolong_bnd_from_coarser:Waitall"
+      character(len=*), parameter :: pbc_label = "prolong_bnd_from_coarser" , pbcv_label = "prolong_bnd_from_coarser:vbp"
 
       if (present(dir)) then
          if (firstcall .and. master) call warn("[cg_level_connected:prolong_bnd_from_coarser] dir present but not implemented yet")
@@ -1131,11 +1131,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (nr > 0) then
-         call ppp_main%start(pbcw_label, PPP_AMR + PPP_MPI)
-         call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
-         call ppp_main%stop(pbcw_label, PPP_AMR + PPP_MPI)
-      endif
+      call piernik_Waitall(nr, "prolong_bnd_from_coarser", PPP_AMR)
 
       ! merge received coarse data into one array and interpolate it into the right place
       per(:) = 0
@@ -1193,13 +1189,8 @@ contains
 
    end subroutine prolong_bnd_from_coarser
 
-!>
-!! \brief interpolate the grid data which has the flag vital set from this%coarser level
-!!
-!! \todo Implement a more efficient alternative to this%restrict_q_1var that would restrict all fields at once
-!! (requires a lot more temporary buffers for a 4D array).
-!!
-!<
+!> \brief interpolate the grid data which has the flag vital set from this%coarser level
+
    subroutine restrict(this)
 
       use constants,        only: base_level_id, PPP_AMR
@@ -1216,7 +1207,7 @@ contains
 
       call ppp_main%start(resq_label, PPP_AMR)
       do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
-         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%l%id > base_level_id)) call this%restrict_q_1var(i)
+         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%l%id > base_level_id)) call this%restrict_1var(i)
       enddo
       call ppp_main%stop(resq_label, PPP_AMR)
 
@@ -1258,7 +1249,7 @@ contains
       integer(kind=4),             intent(in)    :: iv   !< variable to be restricted
 
       if (.not. associated(this%coarser)) return
-      call this%restrict_q_1var(iv)
+      call this%restrict_1var(iv)
       call this%coarser%restrict_to_floor_q_1var(iv)
 
    end subroutine restrict_to_floor_q_1var
@@ -1275,7 +1266,7 @@ contains
       integer(kind=4),             intent(in)    :: iv   !< variable to be restricted
 
       if (this%l%id <= base_level_id) return
-      call this%restrict_q_1var(iv)
+      call this%restrict_1var(iv)
       call this%coarser%restrict_to_base_q_1var(iv)
 
    end subroutine restrict_to_base_q_1var
@@ -1309,7 +1300,7 @@ contains
 !! \todo implement local copies without MPI anyway
 !<
 
-   subroutine restrict_q_1var(this, iv, pos)
+   subroutine restrict_1var(this, iv, pos, dim4)
 
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, I_ONE, refinement_factor, VAR_CENTER, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: msg, warn, die
@@ -1317,15 +1308,17 @@ contains
       use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
       use mpisetup,         only: err_mpi, req, inflate_req, master
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
-      use named_array,      only: p3
-      use named_array_list, only: qna
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
+      use named_array,      only: p3, p4
+      use named_array_list, only: qna, wna
+      use ppp,              only: piernik_Waitall
 
       implicit none
 
-      class(cg_level_connected_t), target, intent(inout) :: this !< object invoking type-bound procedure
-      integer(kind=4),                     intent(in)    :: iv   !< variable to be restricted
-      integer(kind=4), optional,           intent(in)    :: pos  !< position of the variable within cell
+      class(cg_level_connected_t), target, intent(inout) :: this  !< object invoking type-bound procedure
+      integer(kind=4),                     intent(in)    :: iv    !< variable to be restricted
+      integer(kind=4), optional,           intent(in)    :: pos   !< position of the variable within cell
+      logical, optional,                   intent(in)    :: dim4  !< operate on wna instead
 
       type(cg_level_connected_t), pointer                :: coarse
       integer                                            :: g
@@ -1338,17 +1331,23 @@ contains
       type(grid_container),  pointer                     :: cg                    !< current grid container
       logical, save                                      :: warned = .false.
       integer                                            :: position
+      logical                                            :: d4
+
+      d4 = .false.
+      if (present(dim4)) d4 = dim4
 
       position = qna%lst(iv)%position(I_ONE)
       if (present(pos)) position = pos
       if (position /= VAR_CENTER .and. .not. warned) then
-         if (master) call warn("[cg_level_connected:restrict_q_1var] Only cell-centered interpolation scheme is implemented. Expect inaccurate results for variables that are placed on faces or corners")
+         if (master) call warn("[cg_level_connected:restrict_1var] Only cell-centered interpolation scheme is implemented. Expect inaccurate results for variables that are placed on faces or corners")
          warned = .true.
       endif
 
+      ! ToDo warn about positions when d4
+
       coarse => this%coarser
       if (.not. associated(coarse)) then ! can't restrict base level
-         write(msg,'(a,i3)')"[cg_level_connected:restrict_q_1var] no coarser level than ", this%l%id
+         write(msg,'(a,i3)')"[cg_level_connected:restrict_1var] no coarser level than ", this%l%id
          call warn(msg)
          return
       endif
@@ -1365,7 +1364,14 @@ contains
             do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Irecv(cg%ri_tgt%seg(g)%buf(1, 1, 1), size(cg%ri_tgt%seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, cg%ri_tgt%seg(g)%proc, cg%ri_tgt%seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+               associate (seg => cg%ri_tgt%seg(g))
+                  if (d4) then
+                     allocate(seg%buf4(wna%lst(iv)%dim4, size(seg%buf, dim=1), size(seg%buf, dim=2), size(seg%buf, dim=3)))
+                     call MPI_Irecv(seg%buf4(1, 1, 1, 1), size(seg%buf4(:, :, :, :), kind=4), MPI_DOUBLE_PRECISION, seg%proc, seg%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+                  else
+                     call MPI_Irecv(seg%buf(1, 1, 1), size(seg%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg%proc, seg%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+                  endif
+               end associate
             enddo
          endif
          cgl => cgl%nxt
@@ -1378,31 +1384,53 @@ contains
          cg => cgl%cg
          do g = lbound(cg%ro_tgt%seg(:), dim=1), ubound(cg%ro_tgt%seg(:), dim=1)
 
-            cg%ro_tgt%seg(g)%buf(:, :, :) = 0.
-            fse(:,:) = cg%ro_tgt%seg(g)%se(:,:)
-            off1(:) = mod(cg%ro_tgt%seg(g)%se(:, LO), int(refinement_factor, kind=8))
-            if (all(off1 == 0) .and. all(mod(fse(:, HI)-fse(:, LO), int(refinement_factor, kind=8)) == 1) .and. dom%eff_dim == ndims) then
-               ! This is the easy, even offset/even size case. Happens in AMR and when UG has regular cartesian decomposition.
-               ! It is few times faster than the code for odd cases below
-               select case (dom%geometry_type)
-                  case (GEO_XYZ)
-                     cg%ro_tgt%seg(g)%buf(1:1+(fse(xdim, HI)-fse(xdim, LO))/refinement_factor, &
-                          &               1:1+(fse(ydim, HI)-fse(ydim, LO))/refinement_factor, &
-                          &               1:1+(fse(zdim, HI)-fse(zdim, LO))/refinement_factor) = ( &
-                          cg%q(iv)%arr(fse(xdim, LO):fse(xdim, HI)-1:2, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
-                          cg%q(iv)%arr(fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
-                          cg%q(iv)%arr(fse(xdim, LO):fse(xdim, HI)-1:2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
-                          cg%q(iv)%arr(fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
-                          cg%q(iv)%arr(fse(xdim, LO):fse(xdim, HI)-1:2, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO)+1:fse(zdim, HI):2) + &
-                          cg%q(iv)%arr(fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO)+1:fse(zdim, HI):2) + &
-                          cg%q(iv)%arr(fse(xdim, LO):fse(xdim, HI)-1:2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO)+1:fse(zdim, HI):2) + &
-                          cg%q(iv)%arr(fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO)+1:fse(zdim, HI):2)) * norm
+            associate (seg => cg%ro_tgt%seg(g))
+               if (d4) then
+                  allocate(seg%buf4(wna%lst(iv)%dim4, size(seg%buf, dim=1), size(seg%buf, dim=2), size(seg%buf, dim=3)))
+                  seg%buf4(:, :, :, :) = 0.
+               else
+                  seg%buf(:, :, :) = 0.
+               endif
+
+               fse(:,:) = seg%se(:,:)
+               off1(:) = mod(seg%se(:, LO), int(refinement_factor, kind=8))
+               if (all(off1 == 0) .and. all(mod(fse(:, HI)-fse(:, LO), int(refinement_factor, kind=8)) == 1) .and. dom%eff_dim == ndims) then
+                  ! This is the easy, even offset/even size case. Happens in AMR and when UG has regular cartesian decomposition.
+                  ! It is few times faster than the code for odd cases below
+                  select case (dom%geometry_type)
+                     case (GEO_XYZ)
+                        if (d4) then
+                           seg%buf4(:, 1:1+(fse(xdim, HI)-fse(xdim, LO))/refinement_factor, &
+                                &      1:1+(fse(ydim, HI)-fse(ydim, LO))/refinement_factor, &
+                                &      1:1+(fse(zdim, HI)-fse(zdim, LO))/refinement_factor) = ( &
+                                cg%w(iv)%arr(:, fse(xdim, LO):fse(xdim, HI)-1:2, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
+                                cg%w(iv)%arr(:, fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
+                                cg%w(iv)%arr(:, fse(xdim, LO):fse(xdim, HI)-1:2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
+                                cg%w(iv)%arr(:, fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
+                                cg%w(iv)%arr(:, fse(xdim, LO):fse(xdim, HI)-1:2, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO)+1:fse(zdim, HI):2) + &
+                                cg%w(iv)%arr(:, fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO)+1:fse(zdim, HI):2) + &
+                                cg%w(iv)%arr(:, fse(xdim, LO):fse(xdim, HI)-1:2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO)+1:fse(zdim, HI):2) + &
+                                cg%w(iv)%arr(:, fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO)+1:fse(zdim, HI):2)) * norm
+                        else
+                           seg%buf(1:1+(fse(xdim, HI)-fse(xdim, LO))/refinement_factor, &
+                                &  1:1+(fse(ydim, HI)-fse(ydim, LO))/refinement_factor, &
+                                &  1:1+(fse(zdim, HI)-fse(zdim, LO))/refinement_factor) = ( &
+                                cg%q(iv)%arr(fse(xdim, LO):fse(xdim, HI)-1:2, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
+                                cg%q(iv)%arr(fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
+                                cg%q(iv)%arr(fse(xdim, LO):fse(xdim, HI)-1:2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
+                                cg%q(iv)%arr(fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
+                                cg%q(iv)%arr(fse(xdim, LO):fse(xdim, HI)-1:2, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO)+1:fse(zdim, HI):2) + &
+                                cg%q(iv)%arr(fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO)+1:fse(zdim, HI):2) + &
+                                cg%q(iv)%arr(fse(xdim, LO):fse(xdim, HI)-1:2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO)+1:fse(zdim, HI):2) + &
+                                cg%q(iv)%arr(fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO)+1:fse(zdim, HI):2)) * norm
+                        endif
                      case (GEO_RPZ)
+                        if (d4) call die("clc:r1v GEO_RPZ not implemented (restrict)")
                         do i = fse(xdim, LO), fse(xdim, HI)
-                           cg%ro_tgt%seg(g)%buf     (  1+(i            -fse(xdim, LO))/refinement_factor, &
+                           seg%buf     (  1+(i            -fse(xdim, LO))/refinement_factor, &
                                 &                    1:1+(fse(ydim, HI)-fse(ydim, LO))/refinement_factor, &
                                 &                    1:1+(fse(zdim, HI)-fse(zdim, LO))/refinement_factor) = &
-                                cg%ro_tgt%seg(g)%buf(  1+(i            -fse(xdim, LO))/refinement_factor, &
+                                seg%buf(  1+(i            -fse(xdim, LO))/refinement_factor, &
                                 &                    1:1+(fse(ydim, HI)-fse(ydim, LO))/refinement_factor, &
                                 &                    1:1+(fse(zdim, HI)-fse(zdim, LO))/refinement_factor) + ( &
                                 cg%q(iv)%arr(i, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
@@ -1410,70 +1438,122 @@ contains
                                 cg%q(iv)%arr(i, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO)+1:fse(zdim, HI):2) + &
                                 cg%q(iv)%arr(i, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO)+1:fse(zdim, HI):2)) * norm * cg%x(i)
                         enddo
-                  case default
-                     call die("[cg_level_connected:restrict_q_1var] Unknown geometry (1)")
-               end select
-            else
-               ! OPT: Split the problem into the core that can be done by array arithmetic and finish the edges where necessary
-               do k = fse(zdim, LO), fse(zdim, HI)
-                  kc = (k-fse(zdim, LO)+off1(zdim))/refinement_factor + 1
-                  do j = fse(ydim, LO), fse(ydim, HI)
-                     jc = (j-fse(ydim, LO)+off1(ydim))/refinement_factor + 1
-                     do i = fse(xdim, LO), fse(xdim, HI)
-                        ic = (i-fse(xdim, LO)+off1(xdim))/refinement_factor + 1
-                        select case (dom%geometry_type)
-                           case (GEO_XYZ)
-                              cg%ro_tgt%seg(g)%buf(ic, jc, kc) = cg%ro_tgt%seg(g)%buf(ic, jc, kc) + cg%q(iv)%arr(i, j, k) * norm
-                           case (GEO_RPZ)
-                              cg%ro_tgt%seg(g)%buf(ic, jc, kc) = cg%ro_tgt%seg(g)%buf(ic, jc, kc) + cg%q(iv)%arr(i, j, k) * norm * cg%x(i)
-                           case default
-                              call die("[cg_level_connected:restrict_q_1var] Unknown geometry (2)")
-                        end select
+                     case default
+                        call die("[cg_level_connected:restrict_1var] Unknown geometry (1)")
+                  end select
+               else
+                  ! OPT: Split the problem into the core that can be done by array arithmetic and finish the edges where necessary
+                  do k = fse(zdim, LO), fse(zdim, HI)
+                     kc = (k-fse(zdim, LO)+off1(zdim))/refinement_factor + 1
+                     do j = fse(ydim, LO), fse(ydim, HI)
+                        jc = (j-fse(ydim, LO)+off1(ydim))/refinement_factor + 1
+                        do i = fse(xdim, LO), fse(xdim, HI)
+                           ic = (i-fse(xdim, LO)+off1(xdim))/refinement_factor + 1
+                           select case (dom%geometry_type)
+                              case (GEO_XYZ)
+                                 if (d4) then
+                                    seg%buf4(:, ic, jc, kc) = seg%buf4(:, ic, jc, kc) + cg%w(iv)%arr(:, i, j, k) * norm
+                                 else
+                                    seg%buf(ic, jc, kc) = seg%buf(ic, jc, kc) + cg%q(iv)%arr(i, j, k) * norm
+                                 endif
+                              case (GEO_RPZ)
+                                 if (d4) call die("clc:r1v odd not implemented for GEO_RPZ")
+                                 seg%buf(ic, jc, kc) = seg%buf(ic, jc, kc) + cg%q(iv)%arr(i, j, k) * norm * cg%x(i)
+                              case default
+                                 call die("[cg_level_connected:restrict_1var] Unknown geometry (2)")
+                           end select
+                        enddo
                      enddo
                   enddo
-               enddo
-            endif
-            nr = nr + I_ONE
-            if (nr > size(req, dim=1)) call inflate_req
-            call MPI_Isend(cg%ro_tgt%seg(g)%buf(1, 1, 1), size(cg%ro_tgt%seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, cg%ro_tgt%seg(g)%proc, cg%ro_tgt%seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+               endif
+               nr = nr + I_ONE
+               if (nr > size(req, dim=1)) call inflate_req
+               if (d4) then
+                  call MPI_Isend(seg%buf4(1, 1, 1, 1), size(seg%buf4(:, :, :, :), kind=4), MPI_DOUBLE_PRECISION, seg%proc, seg%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+               else
+                  call MPI_Isend(seg%buf(1, 1, 1), size(seg%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg%proc, seg%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+               endif
+            end associate
          enddo
          cgl => cgl%nxt
       enddo
 
-      if (nr > 0) call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
+      call piernik_Waitall(nr, "restrict_1v")
 
       ! copy the received buffers to the right places
       cgl => coarse%first
       do while (associated(cgl))
          cg => cgl%cg
          if (allocated(cg%ri_tgt%seg)) then
-            where (.not. cg%leafmap(:,:,:)) cg%q(iv)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0. ! disables check_dirty
+
+            ! disables check_dirty
+            if (d4) then
+               do g = 1, wna%lst(iv)%dim4
+                  where (.not. cg%leafmap(:,:,:)) cg%w(iv)%arr(g, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
+               enddo
+            else
+               where (.not. cg%leafmap(:,:,:)) cg%q(iv)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
+            endif
+
             do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
                cse(:,:) = cg%ri_tgt%seg(g)%se(:,:)
                select case (dom%geometry_type)
                   case (GEO_XYZ) ! do nothing
                   case (GEO_RPZ)
+                     if (d4) call die("clc:r1v GEO_RPZ not implemented (copy)")
                      do i = lbound(cg%ri_tgt%seg(g)%buf, dim=1), ubound(cg%ri_tgt%seg(g)%buf, dim=1)
                         ic = cse(xdim, LO) +i - lbound(cg%ri_tgt%seg(g)%buf, dim=1)
                         cg%ri_tgt%seg(g)%buf(i, :, :) = cg%ri_tgt%seg(g)%buf(i, :, :) / cg%x(ic)
                      enddo
                   case default
-                     call die("[cg_level_connected:restrict_q_1var] Unknown geometry")
+                     call die("[cg_level_connected:restrict_1var] Unknown geometry")
                end select
-               p3 => cg%q(iv)%span(cse)
-               p3 = p3 + cg%ri_tgt%seg(g)%buf(:, :, :) !errors on overlap?
+               if (d4) then
+                  p4 => cg%w(iv)%span(cse)
+                  p4 = p4 + cg%ri_tgt%seg(g)%buf4(:, :, :, :) !errors on overlap?
+               else
+                  p3 => cg%q(iv)%span(cse)
+                  p3 = p3 + cg%ri_tgt%seg(g)%buf(:, :, :) !errors on overlap?
+               endif
             enddo
          endif
          cgl => cgl%nxt
       enddo
 
-   end subroutine restrict_q_1var
+      if (d4) then
+
+         cgl => this%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            if (allocated(cg%ro_tgt%seg)) then
+               do g = lbound(cg%ro_tgt%seg(:), dim=1), ubound(cg%ro_tgt%seg(:), dim=1)
+                  if (allocated(cg%ro_tgt%seg(g)%buf4)) deallocate(cg%ro_tgt%seg(g)%buf4)
+               enddo
+            endif
+            cgl => cgl%nxt
+         enddo
+
+         cgl => coarse%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            if (allocated(cg%ri_tgt%seg)) then
+               do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
+                  if (allocated(cg%ri_tgt%seg(g)%buf4)) deallocate(cg%ri_tgt%seg(g)%buf4)
+               enddo
+            endif
+            cgl => cgl%nxt
+         enddo
+
+      endif
+
+   end subroutine restrict_1var
 
 !> \brief Quick and dirty restriction of 4D arrays. OPTIMIZE ME!
 
    subroutine restrict_w_1var(this, i)
 
       use constants,        only: GEO_RPZ
+      use dataio_pub,       only: warn
       use domain,           only: dom
       use fluidindex,       only: iarr_all_my
       use named_array_list, only: qna, wna
@@ -1484,18 +1564,27 @@ contains
       integer(kind=4),                     intent(in)    :: i     !< variable to be restricted
 
       integer(kind=4) :: iw
+      logical, save :: warned = .false.
 
-      do iw = 1, wna%lst(i)%dim4
-         call this%wq_copy(i, iw, qna%wai)
-         if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%mul_by_r(qna%wai) ! angular momentum conservation
-         if (.true.) then  ! this is required because we don't use (.not. cg%leafmap) mask in the this%coarser%qw_copy call below
-            call this%coarser%wq_copy(i, iw, qna%wai)
-            if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%mul_by_r(qna%wai)
+      if (dom%geometry_type == GEO_RPZ .and. i == wna%fi) then ! take the slow way
+         if (.not. warned) then
+            call warn("[cg_level_connected:restrict_w_1var] Using the slow w-q-w copy algorithm")
+            warned = .true.
          endif
-         call this%restrict_q_1var(qna%wai, wna%lst(i)%position(iw))
-         if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%div_by_r(qna%wai) ! angular momentum conservation
-         call this%coarser%qw_copy(qna%wai, i, iw)
-      enddo
+         do iw = 1, wna%lst(i)%dim4
+            call this%wq_copy(i, iw, qna%wai)
+            if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%mul_by_r(qna%wai) ! angular momentum conservation
+            if (.true.) then  ! this is required because we don't use (.not. cg%leafmap) mask in the this%coarser%qw_copy call below
+               call this%coarser%wq_copy(i, iw, qna%wai)
+               if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%mul_by_r(qna%wai)
+            endif
+            call this%restrict_1var(qna%wai, wna%lst(i)%position(iw))
+            if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%div_by_r(qna%wai) ! angular momentum conservation
+            call this%coarser%qw_copy(qna%wai, i, iw)
+         enddo
+      else
+         call this%restrict_1var(i, dim4 = .true.)
+      endif
    end subroutine restrict_w_1var
 
 !>

@@ -297,10 +297,10 @@ contains
       use dataio_pub,       only: die
       use global,           only: integration_order, use_fargo, which_solver
       use grid_cont,        only: grid_container
-      use MPIF,             only: MPI_STATUSES_IGNORE, MPI_STATUS_IGNORE, MPI_Waitany, MPI_Waitall
+      use MPIF,             only: MPI_STATUS_IGNORE, MPI_Waitany
       use mpisetup,         only: err_mpi, req
       use named_array_list, only: qna, wna
-      use ppp,              only: ppp_main
+      use ppp,              only: ppp_main, piernik_Waitall
       use solvecg_rtvd,     only: solve_cg_rtvd
       use solvecg_riemann,  only: solve_cg_riemann
       use sources,          only: prepare_sources
@@ -418,7 +418,7 @@ contains
             endif
          enddo
 
-         if (nr > 0) call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
+         call piernik_Waitall(nr, "sweeps")
 
          call update_boundaries(cdim, istep)
       enddo
