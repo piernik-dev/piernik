@@ -5,70 +5,55 @@ from colored_io import die, prtinfo, prtwarn
 from math import pi
 from numpy import log, log10, zeros
 
-p_ratios_lo = []
-f_ratios_lo = []
-alpha_tab_lo = []
-n_tab_lo = []
+p_ratios_lo    = []
+f_ratios_lo    = []
+alpha_tab_lo   = []
+n_tab_lo       = []
 
-p_ratios_up = []
-f_ratios_up = []
-alpha_tab_up = []
-n_tab_up = []
-
-size = 0
-
+p_ratios_up    = []
+f_ratios_up    = []
+alpha_tab_up   = []
+n_tab_up       = []
 
 def read_dat_table(table_name):
+   path = "./"
+   sFile, array_size = check_old_file(path, table_name)
+   if (sFile == False):
+      path = "../src/fluids/cosmicrays/"
+      sFile, array_size = check_old_file(path, table_name)
+      if (sFile == False):
+         die("Failed to load solution map file with "+table_name)
 
-    try:
-        sFile = open("../src/fluids/cosmicrays/" + table_name + ".dat", "r")
-        sFile.readline(200)
-        sFile.readline(22)
-        size = int(sFile.readline(3))
-    except(IOError):
-        try:
-            sFile = open("./" + table_name + ".dat", "r")
-            sFile.readline(200)
-            sFile.readline(22)
-            size = int(sFile.readline(3))
-        except:
-            print("FAILED")
+   dataArray = []
+   data_to_plot = [[0.0 for i in range(array_size )]for j in range(array_size )]
+   i = 0
 
-    dataArray = []
-    data_to_plot = [[0.0 for i in range(size)]for j in range(size)]
-    i = 0
-    try:
-        with open("../src/fluids/cosmicrays/" + table_name + ".dat", "r") as sFile:
-            next(sFile)
-            next(sFile)
-            next(sFile)
-            for line in sFile:
-                data = []
-                for item in line.split(' '):
-                    if item != '':
-                        data.append(float(item))
-                    data_to_plot[i][:] = data
-                i = i + 1
-        table = data_to_plot
-        return table
-    except(IOError):
-        try:
-            print("Patch ../src/fluids/cosmicrays/" + table_name + ".dat not found, trying to open ratio files via symlink")
-            with open("./" + table_name + ".dat", "r") as sFile:
-                next(sFile)
-                next(sFile)
-                next(sFile)
-                for line in sFile:
-                    data = []
-                    for item in line.split(' '):
-                        if item != '':
-                            data.append(float(item))
-                        data_to_plot[i][:] = data
-                    i = i + 1
-            table = data_to_plot
-            return table
-        except:
-            print("FAILED")
+   with open(path+table_name+".dat", "r") as sFile:
+      next(sFile)
+      next(sFile)
+      next(sFile)
+      for line in sFile:
+         data_in_line = []
+         for item in line.split(' '):
+            if item != '':
+               data_in_line.append(float(item))
+            data_to_plot[i][:] = data_in_line
+         i = i + 1
+      table = data_to_plot
+
+   return table
+
+def check_old_file(path, table_name):
+   sFile = False
+   try:
+      sFile = open(path + table_name + ".dat", "r")
+      sFile.readline(200)
+      sFile.readline(22)
+      size = int(sFile.readline(3))
+   except:
+      return False, 0
+
+   return sFile, size
 
 
 def initialize_pf_arrays(h5fname, pf_initialized=False):
