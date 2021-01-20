@@ -146,9 +146,10 @@ contains
       use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
-      use global,              only: t, dt
-      use gravity,             only: source_terms_grav, compute_h_gpot
-      use particle_pub,        only: pset, psolver
+      use gravity,             only: source_terms_grav, compute_h_gpot, need_update
+#ifdef NBODY
+      use particle_solvers,    only: psolver
+#endif /* NBODY */
 #endif /* GRAV */
 #ifdef COSM_RAYS
       use all_boundaries,      only: all_fluid_boundaries
@@ -213,10 +214,14 @@ contains
       endif
       call ppp_main%stop(sw3_label)
 
-#ifdef GRAV
-      call source_terms_grav
-      if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
+#if defined(GRAV)
+      need_update = .true.
+#if defined(NBODY)
+      if (associated(psolver)) call psolver(forward)  ! this will clear need_update it it would call source_terms_grav
+#endif /* NBODY */
+      if (need_update) call source_terms_grav
 #endif /* GRAV */
+
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
       call eglm

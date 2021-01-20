@@ -20,6 +20,13 @@
 #undef RESISTIVE
 #endif /* !MAGNETIC && RESISTIVE */
 
+
+#ifdef NBODY_MULTIGRID
+#  ifndef SELF_GRAV
+#    define SELF_GRAV
+#  endif /* !SELF_GRAV */
+#endif /* NBODY_MULTIGRID */
+
 #ifdef SELF_GRAV
 #  ifndef GRAV
 #    define GRAV
@@ -37,6 +44,13 @@
 #if defined(I_KNOW_WHAT_I_AM_DOING)
 #undef HDF5
 #endif /* I_KNOW_WHAT_I_AM_DOING */
+
+#ifdef GRAV 
+#   define NBODY
+#   define NBODY_MULTIGRID
+#   define NBODY_1FILE
+#   define SELF_GRAV
+#endif /* GRAV */
 
 #ifdef MPIF08
 #  define MPIF mpi_f08

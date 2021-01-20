@@ -63,9 +63,9 @@ contains
 #ifdef MULTIGRID
       use multigrid,             only: cleanup_multigrid
 #endif /* MULTIGRID */
-#ifdef GRAV
+#if defined(GRAV) && defined(NBODY)
       use particle_pub,          only: cleanup_particles
-#endif /* GRAV */
+#endif /* GRAV && NBODY */
 #ifdef PIERNIK_OPENCL
       use piernikcl,             only: cleanup_opencl
 #endif /* PIERNIK_OPENCL */
