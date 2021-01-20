@@ -215,7 +215,7 @@ contains
 #ifdef NBODY_1FILE
       use cg_particles_io,  only: pdsets, nbody_datafields
       use data_hdf5,        only: gdf_translate
-      use MPIF,             only: MPI_DOUBLE_INT
+      use MPIF,             only: MPI_INTEGER16
       use particle_utils,   only: count_all_particles
 #endif /* NBODY_1FILE */
 
@@ -352,7 +352,7 @@ contains
                if (master) then
                   tmp(:) = cg_desc%pdset_id(:, i)
                endif
-               call MPI_Scatter( tmp, 1, MPI_DOUBLE_INT, id, 1, MPI_DOUBLE_INT, FIRST, MPI_COMM_WORLD, err_mpi)
+               call MPI_Scatter(tmp, 1, MPI_INTEGER16, id, 1, MPI_INTEGER16, FIRST, MPI_COMM_WORLD, err_mpi)
                if (master) then
                   call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
                else
