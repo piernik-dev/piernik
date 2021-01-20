@@ -196,7 +196,7 @@ module cg_particles_io
                   allocate(tabi2(n_part))
                   call MPI_Recv(tabi2, n_part, MPI_INTEGER, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                   call MPI_Recv(gid, I_ONE, MPI_INTEGER8, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-                  group_id = gid
+                  group_id = int(gid, kind=HID_T)
                   call write_nbody_h5_int_rank1(group_id, pvar, tabi2)
                   deallocate(tabi2)
                endif
@@ -312,7 +312,7 @@ module cg_particles_io
                   allocate(tabr2(n_part))
                   call MPI_Recv(tabr2, n_part, MPI_DOUBLE_PRECISION, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                   call MPI_Recv(gid, I_ONE, MPI_INTEGER8, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-                  group_id = gid
+                  group_id = int(gid, kind=HID_T)
                   call write_nbody_h5_rank1(group_id, pvar, tabr2)
                   deallocate(tabr2)
                endif

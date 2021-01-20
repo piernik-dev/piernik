@@ -585,12 +585,12 @@ contains
       use global,      only: nstep
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
+      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
       use mpisetup,    only: master, FIRST, proc, err_mpi, tag_ub, LAST
       use ppp,         only: ppp_main
 #ifdef NBODY_1FILE
       use cg_particles_io, only: pdsets, nbody_datafields
-      use MPIF,            only: MPI_INTEGER16
+      use MPIF,            only: MPI_INTEGER8
       use particle_utils,  only: count_all_particles
 #endif /* NBODY_1FILE */
 
@@ -614,7 +614,7 @@ contains
       type(cg_output)                                      :: cg_desc
 #ifdef NBODY_1FILE
       integer(kind=4)                                      :: n_part
-      integer(kind=16), dimension(LAST+1)                  :: tmp
+      integer(HID_T), dimension(LAST+1)                  :: tmp
 #endif /* NBODY_1FILE */
       character(len=*), parameter :: wrdc_label = "IO_write_data_v2_cg", wrdc1s_label = "IO_write_data_v2_1cg_(serial)", wrdc1p_label = "IO_write_data_v2_1cg_(parallel)"
 
@@ -687,7 +687,13 @@ contains
                if (master) then
                   tmp(:) = cg_desc%pdset_id(:, i)
                endif
-               call MPI_Scatter(tmp, 1, MPI_INTEGER16, id, 1, MPI_INTEGER16, FIRST, MPI_COMM_WORLD, err_mpi)  ! what if n_part == 0 on some threads?
+               if (kind(id) == 4) then
+                  call MPI_Scatter(tmp, 1, MPI_INTEGER, id, 1, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
+               else if (kind(id) == 8) then
+                  call MPI_Scatter(tmp, 1, MPI_INTEGER8, id, 1, MPI_INTEGER8, FIRST, MPI_COMM_WORLD, err_mpi)
+               else
+                  call die("[data_hdf5:write_cg_to_output] no recognized kind of HID_T")
+               endif
                if (master) then
                   call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
                else
