@@ -133,6 +133,29 @@ module cg_particles_io
 
    end subroutine nbody_datafields
 
+   function hid_mpi_type(gid) result(mpi_type)
+
+      use dataio_pub, only: die
+      use hdf5,       only: HID_T
+      use MPIF,       only: MPI_DATATYPE, MPI_INTEGER, MPI_INTEGER8
+
+      implicit none
+
+      integer(HID_T), intent(in) :: gid
+
+      type(MPI_DATATYPE) :: mpi_type
+
+      if (kind(gid) == 4) then
+         mpi_type = MPI_INTEGER
+      else if (kind(gid) == 8) then
+         mpi_type = MPI_INTEGER8
+      else
+         mpi_type = MPI_INTEGER8  ! suppress comiler warning
+         call die("[cg_particles_io:hid_mpi_type] non recognized kind of HID_T")
+      endif
+
+   end function hid_mpi_type
+
    subroutine collect_and_write_intr1(group_id, pvar, n_part)
 
       use cg_leaves,      only: leaves
@@ -141,7 +164,7 @@ module cg_particles_io
       use dataio_pub,     only: nproc_io, can_i_write, die
       use domain,         only: is_multicg
       use hdf5,           only: HID_T
-      use MPIF,           only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_INTEGER8, MPI_COMM_WORLD, MPI_Recv, MPI_Send
+      use MPIF,           only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
       use mpisetup,       only: master, FIRST, LAST, proc, err_mpi
       use particle_types, only: particle
 
@@ -157,7 +180,6 @@ module cg_particles_io
       type(particle), pointer        :: pset
 
       if (is_multicg) call die("[cg_particles_io:collect_and_write_intr1] several cg per processor not implemented yet")
-      if (kind(group_id) /= 8) call die("[cg_particles_io:collect_and_write_intr1] HID_T .neqv. MPI_INTEGER8")
 
       allocate(tabi1(n_part))
       recnp = 0
@@ -193,7 +215,7 @@ module cg_particles_io
                   call MPI_Recv(n_part, I_ONE, MPI_INTEGER, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                   allocate(tabi2(n_part))
                   call MPI_Recv(tabi2, n_part, MPI_INTEGER, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-                  call MPI_Recv(group_id, I_ONE, MPI_INTEGER8, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+                  call MPI_Recv(group_id, I_ONE, hid_mpi_type(group_id), ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                   call write_nbody_h5_int_rank1(group_id, pvar, tabi2)
                   deallocate(tabi2)
                endif
@@ -202,7 +224,7 @@ module cg_particles_io
                if (ncg == proc) then
                   call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
                   call MPI_Send(tabi1, n_part, MPI_INTEGER, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
-                  call MPI_Send(group_id, I_ONE, MPI_INTEGER8, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
+                  call MPI_Send(group_id, I_ONE, hid_mpi_type(group_id), FIRST, ncg, MPI_COMM_WORLD, err_mpi)
                endif
             endif
          enddo
@@ -222,7 +244,7 @@ module cg_particles_io
       use dataio_pub,     only: nproc_io, can_i_write, die
       use domain,         only: is_multicg
       use hdf5,           only: HID_T
-      use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_INTEGER8, MPI_COMM_WORLD, MPI_Recv, MPI_Send
+      use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
       use mpisetup,       only: master, FIRST, LAST, proc, err_mpi
       use particle_types, only: particle
 
@@ -239,7 +261,6 @@ module cg_particles_io
       type(particle), pointer         :: pset
 
       if (is_multicg) call die("[cg_particles_io:collect_and_write_rank1] several cg per processor not implemented yet")
-      if (kind(group_id) /= 8) call die("[cg_particles_io:collect_and_write_rank1] HID_T .neqv. MPI_INTEGER8")
 
       allocate(tabr1(n_part))
       recnp = 0
@@ -306,7 +327,7 @@ module cg_particles_io
                   call MPI_Recv(n_part, I_ONE, MPI_INTEGER, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                   allocate(tabr2(n_part))
                   call MPI_Recv(tabr2, n_part, MPI_DOUBLE_PRECISION, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-                  call MPI_Recv(group_id, I_ONE, MPI_INTEGER8, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+                  call MPI_Recv(group_id, I_ONE, hid_mpi_type(group_id), ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                   call write_nbody_h5_rank1(group_id, pvar, tabr2)
                   deallocate(tabr2)
                endif
@@ -315,7 +336,7 @@ module cg_particles_io
                if (ncg == proc) then
                   call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
                   call MPI_Send(tabr1, n_part, MPI_DOUBLE_PRECISION, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
-                  call MPI_Send(group_id, I_ONE, MPI_INTEGER8, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
+                  call MPI_Send(group_id, I_ONE, hid_mpi_type(group_id), FIRST, ncg, MPI_COMM_WORLD, err_mpi)
                endif
             endif
          enddo
