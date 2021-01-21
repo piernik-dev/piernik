@@ -33,8 +33,8 @@
 module cresp_NR_method
 ! pulled by COSM_RAY_ELECTRONS
 
-   use constants,       only: LO, HI
-   use cresp_helpers,   only: map_header, bound_name
+   use constants,     only: LO
+   use cresp_helpers, only: map_header, bound_name
 
    implicit none
 
@@ -281,7 +281,7 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine init_smap_array_values(hdr_init)
 
-      use constants,       only: zero, half, one, three, I_ONE, big, small
+      use constants,       only: zero, half, one, three, I_ONE, big, small, HI
       use cresp_helpers,   only: map_header
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: die
@@ -397,8 +397,9 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine fill_refine_smap(i)
 
-      use dataio_pub,      only: die
-      use initcrspectrum,  only: NR_run_refine_pf, arr_dim
+      use constants,      only: HI
+      use dataio_pub,     only: die
+      use initcrspectrum, only: NR_run_refine_pf, arr_dim
 
       implicit none
 
@@ -511,6 +512,8 @@ contains
 
 !----------------------------------------------------------------------------------------------------
    subroutine assoc_pointers(bound_case)
+
+      use constants, only: HI
 
       implicit none
 
@@ -1126,7 +1129,7 @@ contains
 !----------------------------------------------------------------------------------------------------
    function fvec_up(x)
 
-      use constants, only: three
+      use constants, only: three, HI
 
       implicit none
 
@@ -1496,12 +1499,12 @@ contains
 
       ma1d = arr_dim
 
-      if(.not. allocated(alpha_tab_lo)) call my_allocate_with_index(alpha_tab_lo, arr_dim, 1)
-      if(.not. allocated(alpha_tab_up)) call my_allocate_with_index(alpha_tab_up, arr_dim, 1)
-      if(.not. allocated(n_tab_lo))     call my_allocate_with_index(n_tab_lo, arr_dim, 1)
-      if(.not. allocated(n_tab_up))     call my_allocate_with_index(n_tab_up, arr_dim, 1)
-      if(.not. allocated(alpha_tab_q))  call my_allocate_with_index(alpha_tab_q, arr_dim_q, 1)
-      if(.not. allocated(q_grid))       call my_allocate_with_index(q_grid, arr_dim_q, 1)
+      if (.not. allocated(alpha_tab_lo)) call my_allocate_with_index(alpha_tab_lo, arr_dim, 1)
+      if (.not. allocated(alpha_tab_up)) call my_allocate_with_index(alpha_tab_up, arr_dim, 1)
+      if (.not. allocated(n_tab_lo))     call my_allocate_with_index(n_tab_lo, arr_dim, 1)
+      if (.not. allocated(n_tab_up))     call my_allocate_with_index(n_tab_up, arr_dim, 1)
+      if (.not. allocated(alpha_tab_q))  call my_allocate_with_index(alpha_tab_q, arr_dim_q, 1)
+      if (.not. allocated(q_grid))       call my_allocate_with_index(q_grid, arr_dim_q, 1)
       call allocate_smaps(arr_dim, arr_dim)
    end subroutine allocate_all_smap_arrays
 !----------------------------------------------------------------------------------------------------
@@ -1509,10 +1512,10 @@ contains
 
       implicit none
 
-      if( allocated(p_ratios_lo) ) deallocate(p_ratios_lo)
-      if( allocated(f_ratios_lo) ) deallocate(f_ratios_lo)
-      if( allocated(p_ratios_up) ) deallocate(p_ratios_up)
-      if( allocated(f_ratios_up) ) deallocate(f_ratios_up)
+      if ( allocated(p_ratios_lo) ) deallocate(p_ratios_lo)
+      if ( allocated(f_ratios_lo) ) deallocate(f_ratios_lo)
+      if ( allocated(p_ratios_up) ) deallocate(p_ratios_up)
+      if ( allocated(f_ratios_up) ) deallocate(f_ratios_up)
 
    end subroutine deallocate_smaps
 !----------------------------------------------------------------------------------------------------
@@ -1526,10 +1529,10 @@ contains
 
       ma2d = [dim1, dim2]
 
-      if( .not. allocated(p_ratios_lo) ) call my_allocate(p_ratios_lo, ma2d )
-      if( .not. allocated(f_ratios_lo) ) call my_allocate(f_ratios_lo, ma2d )
-      if( .not. allocated(p_ratios_up) ) call my_allocate(p_ratios_up, ma2d )
-      if( .not. allocated(f_ratios_up) ) call my_allocate(f_ratios_up, ma2d )
+      if ( .not. allocated(p_ratios_lo) ) call my_allocate(p_ratios_lo, ma2d )
+      if ( .not. allocated(f_ratios_lo) ) call my_allocate(f_ratios_lo, ma2d )
+      if ( .not. allocated(p_ratios_up) ) call my_allocate(p_ratios_up, ma2d )
+      if ( .not. allocated(f_ratios_up) ) call my_allocate(f_ratios_up, ma2d )
 
    end subroutine allocate_smaps
 

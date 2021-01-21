@@ -14,11 +14,12 @@ def collect_dataset(filen, dset_name):
     grid = h5f['grid_dimensions']
     for ig in range(grid.shape[0]):
         h5g = h5f['data']['grid_' + str(ig).zfill(10)]
-        off = h5g.attrs['off']
-        ngb = h5g.attrs['n_b']
-        n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
-        ce = n_b + off
-        dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name][:, :, :].swapaxes(0, 2)
+        if h5g.attrs['level'] == 0:
+            off = h5g.attrs['off']
+            ngb = h5g.attrs['n_b']
+            n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
+            ce = n_b + off
+            dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name][:, :, :].swapaxes(0, 2)
 
     h5f.close()
     return dset

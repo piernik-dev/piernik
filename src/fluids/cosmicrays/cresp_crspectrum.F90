@@ -1953,7 +1953,9 @@ contains
 
       implicit none
 
-      call print_failcounts
+#ifdef CRESP_VERBOSED
+      call print_failcounts   ! since active bin counting method changed some time ago, failcounts are overestimated, possibly DEPRECATED
+#endif /* CRESP_VERBOSED */
       call cresp_deallocate_all
 
    end subroutine cleanup_cresp
@@ -1966,9 +1968,9 @@ contains
 
       implicit none
 
-      write(msg, '(A36,I6,A6,I6)') "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(LO),  ", p_up", fail_count_NR_2dim(HI)  ; call printinfo(msg)
-      write(msg, '(A36,I6,A6,I6)') "NR_2dim:interpolation failure: p_lo", fail_count_interpol(LO), ", p_up", fail_count_interpol(HI) ; call printinfo(msg)
-      write(msg, '(A36,   100I5)') "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q                                          ; call printinfo(msg)
+      write(msg, '(A36,I8,A6,I8)') "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(LO),  ", p_up", fail_count_NR_2dim(HI)  ; call printinfo(msg)
+      write(msg, '(A36,I8,A6,I8)') "NR_2dim:interpolation failure: p_lo", fail_count_interpol(LO), ", p_up", fail_count_interpol(HI) ; call printinfo(msg)
+      write(msg, '(A36,   100I8)') "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q                                          ; call printinfo(msg)
 
    end subroutine print_failcounts
 

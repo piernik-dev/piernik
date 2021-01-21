@@ -2,117 +2,102 @@
 import h5py
 import os
 from colored_io import die, prtinfo, prtwarn
-from math       import pi
-from numpy      import log, log10, zeros
+from math import pi
+from numpy import log, log10, zeros
 
-p_ratios_lo = []
-f_ratios_lo = []
-alpha_tab_lo = []
-n_tab_lo = []
+p_ratios_lo    = []
+f_ratios_lo    = []
+alpha_tab_lo   = []
+n_tab_lo       = []
 
-p_ratios_up = []
-f_ratios_up = []
-alpha_tab_up = []
-n_tab_up = []
-
-size = 0
-
+p_ratios_up    = []
+f_ratios_up    = []
+alpha_tab_up   = []
+n_tab_up       = []
 
 def read_dat_table(table_name):
+   path = "./"
+   sFile, array_size = check_old_file(path, table_name)
+   if (sFile == False):
+      path = "../src/fluids/cosmicrays/"
+      sFile, array_size = check_old_file(path, table_name)
+      if (sFile == False):
+         die("Failed to load solution map file with "+table_name)
 
-    try:
-        sFile = open("../src/fluids/cosmicrays/" + table_name + ".dat", "r")
-        sFile.readline(200)
-        sFile.readline(22)
-        size = int(sFile.readline(3))
-    except(IOError):
-        try:
-            sFile = open("./" + table_name + ".dat", "r")
-            sFile.readline(200)
-            sFile.readline(22)
-            size = int(sFile.readline(3))
-        except:
-            print("FAILED")
+   dataArray = []
+   data_to_plot = [[0.0 for i in range(array_size )]for j in range(array_size )]
+   i = 0
 
-    dataArray = []
-    data_to_plot = [[0.0 for i in range(size)]for j in range(size)]
-    i = 0
-    try:
-        with open("../src/fluids/cosmicrays/" + table_name + ".dat", "r") as sFile:
-            next(sFile)
-            next(sFile)
-            next(sFile)
-            for line in sFile:
-                data = []
-                for item in line.split(' '):
-                    if item != '':
-                        data.append(float(item))
-                    data_to_plot[i][:] = data
-                i = i + 1
-        table = data_to_plot
-        return table
-    except(IOError):
-        try:
-            print("Patch ../src/fluids/cosmicrays/" + table_name + ".dat not found, trying to open ratio files via symlink")
-            with open("./" + table_name + ".dat", "r") as sFile:
-                next(sFile)
-                next(sFile)
-                next(sFile)
-                for line in sFile:
-                    data = []
-                    for item in line.split(' '):
-                        if item != '':
-                            data.append(float(item))
-                        data_to_plot[i][:] = data
-                    i = i + 1
-            table = data_to_plot
-            return table
-        except:
-            print("FAILED")
+   with open(path+table_name+".dat", "r") as sFile:
+      next(sFile)
+      next(sFile)
+      next(sFile)
+      for line in sFile:
+         data_in_line = []
+         for item in line.split(' '):
+            if item != '':
+               data_in_line.append(float(item))
+            data_to_plot[i][:] = data_in_line
+         i = i + 1
+      table = data_to_plot
+
+   return table
+
+def check_old_file(path, table_name):
+   sFile = False
+   try:
+      sFile = open(path + table_name + ".dat", "r")
+      sFile.readline(200)
+      sFile.readline(22)
+      size = int(sFile.readline(3))
+   except:
+      return False, 0
+
+   return sFile, size
 
 
 def initialize_pf_arrays(h5fname, pf_initialized=False):
     global p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, alpha_tab_lo, n_tab_lo, alpha_tab_up, n_tab_up, size
     h5f = h5py.File(h5fname, "r")
     if ("/cresp" in h5f):
-      p_ratios_lo = h5f["cresp/smaps_LO/p_ratios"]
-      f_ratios_lo = h5f["cresp/smaps_LO/f_ratios"]
-      p_ratios_up = h5f["cresp/smaps_UP/p_ratios"]
-      f_ratios_up = h5f["cresp/smaps_UP/f_ratios"]
-# Use whatever values are saved in h5 file
-      a_min_lo = h5f["cresp"]["smaps_LO"].attrs["a_min"]
-      a_max_lo = h5f["cresp"]["smaps_LO"].attrs["a_max"]
-      n_min_lo = h5f["cresp"]["smaps_LO"].attrs["n_min"]
-      n_max_lo = h5f["cresp"]["smaps_LO"].attrs["n_max"]
+        p_ratios_lo = h5f["cresp/smaps_LO/p_ratios"]
+        f_ratios_lo = h5f["cresp/smaps_LO/f_ratios"]
+        p_ratios_up = h5f["cresp/smaps_UP/p_ratios"]
+        f_ratios_up = h5f["cresp/smaps_UP/f_ratios"]
+        # Use whatever values are saved in h5 file
+        a_min_lo = h5f["cresp"]["smaps_LO"].attrs["a_min"]
+        a_max_lo = h5f["cresp"]["smaps_LO"].attrs["a_max"]
+        n_min_lo = h5f["cresp"]["smaps_LO"].attrs["n_min"]
+        n_max_lo = h5f["cresp"]["smaps_LO"].attrs["n_max"]
 
-      a_min_up = h5f["cresp"]["smaps_UP"].attrs["a_min"]
-      a_max_up = h5f["cresp"]["smaps_UP"].attrs["a_max"]
-      n_min_up = h5f["cresp"]["smaps_UP"].attrs["n_min"]
-      n_max_up = h5f["cresp"]["smaps_UP"].attrs["n_max"]
+        a_min_up = h5f["cresp"]["smaps_UP"].attrs["a_min"]
+        a_max_up = h5f["cresp"]["smaps_UP"].attrs["a_max"]
+        n_min_up = h5f["cresp"]["smaps_UP"].attrs["n_min"]
+        n_max_up = h5f["cresp"]["smaps_UP"].attrs["n_max"]
     else:
-# Try load old dat files
-      p_ratios_lo = read_dat_table("p_ratios_lo")
-      f_ratios_lo = read_dat_table("f_ratios_lo")
+        # Try load old dat files
+        p_ratios_lo = read_dat_table("p_ratios_lo")
+        f_ratios_lo = read_dat_table("f_ratios_lo")
 
-      p_ratios_up = read_dat_table("p_ratios_up")
-      f_ratios_up = read_dat_table("f_ratios_up")
-# Assume the same values as in cresp_NR_method before d0c434e0322db2bf9c4123a5f938ba3fdd51414d
-      a_min_lo = 0.2
-      a_max_lo = 0.999999
-      a_min_up = 1.000005
-      a_max_up = 200.0
+        p_ratios_up = read_dat_table("p_ratios_up")
+        f_ratios_up = read_dat_table("f_ratios_up")
+        # Assume the same values as in cresp_NR_method before d0c434e0322db2bf9c4123a5f938ba3fdd51414d
+        a_min_lo = 0.2
+        a_max_lo = 0.999999
+        a_min_up = 1.000005
+        a_max_up = 200.0
 
-      n_min_lo = 1.0e-11
-      n_max_lo = 5000.0
-      n_min_up = 1.0e-12
-      n_max_up = 1000.0
+        n_min_lo = 1.0e-11
+        n_max_lo = 5000.0
+        n_min_up = 1.0e-12
+        n_max_up = 1000.0
 
-    size = int(len(p_ratios_lo))
+        size = int(len(p_ratios_lo))
 
-    alpha_tab_lo = zeros(size)
-    n_tab_lo = zeros(size)
-    alpha_tab_up = zeros(size)
-    n_tab_up = zeros(size)
+        alpha_tab_lo = zeros(size)
+        n_tab_lo = zeros(size)
+        alpha_tab_up = zeros(size)
+        n_tab_up = zeros(size)
 
     for i in range(size):
         alpha_tab_lo[i] = ind_to_flog(i, a_min_lo, a_max_lo, size)
