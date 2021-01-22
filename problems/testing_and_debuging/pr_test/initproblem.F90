@@ -193,7 +193,7 @@ contains
             if (master) call warn(msg)
             return
          endif
-         call curl%restrict_q_1var(qna%ind(fld_n))
+         call curl%restrict_1var(qna%ind(fld_n))
          call clear_lev(curl)
          if (point) then
             write(msg,*)"ip:pf restricted ^",curl%l%id

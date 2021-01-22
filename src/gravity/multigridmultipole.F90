@@ -490,7 +490,7 @@ contains
          call finest%level%restrict_to_base_q_1var(source)
          do while (level%l%id > mpole_level)
             if (associated(level%coarser)) then
-               call level%restrict_q_1var(source)
+               call level%restrict_1var(source)
                level => level%coarser
             else
                write(msg, '(2(a,i3))')"[multigridmultipole:domain2moments] Coarsest level reached. Will use level ", level%l%id, " instead of ", mpole_level
@@ -502,7 +502,7 @@ contains
       else
          level => finest%level
          do while (level%l%id > mpole_level)
-            call level%restrict_q_1var(source)
+            call level%restrict_1var(source)
             level => level%coarser
             if (.not. associated(level)) call die("[multigridmultipole:domain2moments] Coarsest level reached for mpole_level > base_level_id")
          enddo
