@@ -1647,7 +1647,11 @@ contains
       call h5close_f(error)
       unable_to_read = (.not. hdr_match(LO)) .and. (.not. hdr_match(HI))
 
-      if (unable_to_read .eqv. .false.) call printinfo("[cresp_NR_method:try_read_user_h5] Successfully read data from provided file "//trim(filename))
+      if (unable_to_read .eqv. .false.) then
+         call printinfo("[cresp_NR_method:try_read_user_h5] Successfully read data from provided file "//trim(filename))
+      else
+         call warn("[cresp_NR_method:try_read_user_h5] File provided as 'NR_smap_file' "//trim(filename)//" does not contain usable data.")
+      endif
 
    end subroutine try_read_user_h5
 !----------------------------------------------------------------------------------------------------

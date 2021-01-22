@@ -297,10 +297,10 @@ module cresp_io
       hdr_equal = hdr_equal .and. ((hdr%s_nmax .equals. hdr_std%s_nmax) .or. (hdr%s_nmax .equals. zero))
 
       if (.not. hdr_equal) then
-         write(msg,"(A117)") "[cresp_io:check_NR_smap_header] Headers differ (provided in ratios files vs. values resulting from parameters)"
+         write(msg,"(A110)") "[cresp_io:check_NR_smap_header] Headers differ (provided in ratios files vs. values resulting from parameters)"
          call warn(msg)
       else
-         write(msg,"(A115)") "[cresp_io:check_NR_smap_header] Headers match (provided in ratios files vs. values resulting from parameters)"
+         write(msg,"(A109)") "[cresp_io:check_NR_smap_header] Headers match (provided in ratios files vs. values resulting from parameters)"
          call printinfo(msg)
       endif
 
