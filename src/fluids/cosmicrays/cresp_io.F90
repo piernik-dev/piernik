@@ -365,19 +365,19 @@ module cresp_io
             &  n_a_max_p_r, n_a_qbig, n_a_amax, n_a_amin, n_a_nmax, n_a_nmin, real_attrs, int_attrs
       use dataio_pub,         only: die
       use hdf5,               only: HID_T
-      use set_get_attributes, only: get_attr
+      use h5lt,               only: h5ltget_attribute_double_f, h5ltget_attribute_int_f
 
       implicit none
 
-      integer                                               :: i, ia
+      integer                                               :: i, ia, error
       integer(HID_T),                            intent(in) :: file_id
       type(map_header), dimension(2), optional, intent(out) :: hdr_out
-      integer(kind=4), dimension(:), allocatable            :: ibuf
-      real,            dimension(:), allocatable            :: rbuf
+      integer(kind=4),  dimension(2)                        :: ibuf
+      real,             dimension(1)                        :: rbuf
 
       do i = LO, HI              ! use statement for LO, HI in the upper level
          do ia = lbound(int_attrs, dim=1), ubound(int_attrs, dim=1)
-            call get_attr(file_id, trim(int_attrs(ia)), ibuf, n_g_smaps(i))
+            call h5ltget_attribute_int_f(file_id, n_g_smaps(i), trim(int_attrs(ia)), ibuf, error)
             if ((int_attrs(ia)) .eq. n_a_dims ) then
                hdr_io(i)%s_dim1    = ibuf(1)
                hdr_io(i)%s_dim2    = ibuf(2)
@@ -386,7 +386,7 @@ module cresp_io
             endif
          enddo
          do ia = lbound(real_attrs, dim=1), ubound(real_attrs, dim=1)
-            call get_attr(file_id, trim(real_attrs(ia)), rbuf, n_g_smaps(i))
+            call h5ltget_attribute_double_f(file_id, n_g_smaps(i), trim(real_attrs(ia)), rbuf, error)
             select case (real_attrs(ia))
                case (n_a_esmall)
                   hdr_io(i)%s_es      = rbuf(1)
@@ -409,9 +409,6 @@ module cresp_io
             end select
          enddo
       enddo
-
-      if (allocated(ibuf)) deallocate(ibuf)
-      if (allocated(rbuf)) deallocate(rbuf)
 
       if (present(hdr_out)) hdr_out = hdr_io
 
