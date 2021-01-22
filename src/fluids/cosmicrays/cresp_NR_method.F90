@@ -243,7 +243,6 @@ contains
          endif
 
          if ( .not. got_smaps_from_restart .or. (hdr_match_res(LO) .eqv. .false. .or. hdr_match_res(HI) .eqv. .false.) ) then
-            hdr_io = hdr
             if (e_small_approx_init_cond == 1) then   ! implies solution maps will be needed at leas once. ! TODO make imports from initcrspectrum more readable
                call warn("[cresp_NR_method] Different smap parameters in restart or restart unavailable. Trying harder...")
                ! if header not in agreement, try to load backup, e.g., "NR_smap_file". If additionaly user declared "NR_allow_old_smaps", read dat files
@@ -274,7 +273,9 @@ contains
          first_run = .false.
       endif
 
-      call cresp_NR_mpi_exchange
+      call cresp_NR_mpi_exchange(hdr)
+
+      hdr_io = hdr   ! for consistency in hdr_io within all threads, though most important arrays were already broadcasted
 
    end subroutine cresp_initialize_guess_grids
 
@@ -1440,11 +1441,15 @@ contains
 
    end function inverse_f_to_ind
 !----------------------------------------------------------------------------------------------------
-   subroutine cresp_NR_mpi_exchange
+   subroutine cresp_NR_mpi_exchange(hdr_share)
 
-      use mpisetup, only: piernik_MPI_Bcast
+      use constants,       only: LO, HI
+      use mpisetup,        only: piernik_MPI_Bcast
 
       implicit none
+
+      integer                        :: i
+      type(map_header), dimension(2) :: hdr_share
 
       call piernik_MPI_Bcast(p_ratios_lo)
       call piernik_MPI_Bcast(p_ratios_up)
@@ -1456,6 +1461,19 @@ contains
       call piernik_MPI_Bcast(alpha_tab_up)
       call piernik_MPI_Bcast(alpha_tab_lo)
       call piernik_MPI_Bcast(alpha_tab_q)
+
+      do i = LO, HI
+         call piernik_MPI_Bcast(hdr_share(i)%s_dim1)
+         call piernik_MPI_Bcast(hdr_share(i)%s_dim2)
+         call piernik_MPI_Bcast(hdr_share(i)%s_es)
+         call piernik_MPI_Bcast(hdr_share(i)%s_pr)
+         call piernik_MPI_Bcast(hdr_share(i)%s_qbig)
+         call piernik_MPI_Bcast(hdr_share(i)%s_c)
+         call piernik_MPI_Bcast(hdr_share(i)%s_amin)
+         call piernik_MPI_Bcast(hdr_share(i)%s_amax)
+         call piernik_MPI_Bcast(hdr_share(i)%s_nmin)
+         call piernik_MPI_Bcast(hdr_share(i)%s_nmax)
+      enddo
 
    end subroutine cresp_NR_mpi_exchange
 !----------------------------------------------------------------------------------------------------

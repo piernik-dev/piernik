@@ -409,6 +409,10 @@ module cresp_io
             end select
          enddo
       enddo
+
+      if (allocated(ibuf)) deallocate(ibuf)
+      if (allocated(rbuf)) deallocate(rbuf)
+
       if (present(hdr_out)) hdr_out = hdr_io
 
    end subroutine read_smap_header_h5
