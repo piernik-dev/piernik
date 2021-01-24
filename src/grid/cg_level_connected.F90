@@ -1692,7 +1692,7 @@ contains
 
    subroutine arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
-      use constants,        only: base_level_id, PPP_AMR, O_INJ
+      use constants,        only: base_level_id, O_INJ
       use dataio_pub,       only: warn
       use mpisetup,         only: master
       use named_array_list, only: wna
@@ -1706,7 +1706,7 @@ contains
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
       logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
-      character(len=*), parameter :: a4b_label = "lev:a4d_bnd:DEPR", a4bp_label = "lev:a4d_bndr:prolong:DEPR"
+      character(len=*), parameter :: a4b_label = "lev:a4d_bnd:DEPR"
       logical, save :: warned = .false.
 
       if (.not. warned) then
@@ -1720,13 +1720,11 @@ contains
 !      call this%dirty_boundaries(ind)
 !      call this%clear_boundaries(ind, value=10.)
 
-      call ppp_main%start(a4bp_label, PPP_AMR)
       if (associated(this%coarser) .and. this%l%id > base_level_id) then
          if (wna%lst(ind)%ord_prolong /= O_INJ) call this%coarser%level_4d_boundaries(ind)  ! overkill in most places
          ! here we can use any high order prolongation without destroying conservation
          call this%prolong_bnd_from_coarser(ind, arr4d=.true., dir=dir, nocorners=nocorners)
       endif
-      call ppp_main%stop(a4bp_label, PPP_AMR)
 
       call this%level_4d_boundaries(ind, area_type=area_type, dir=dir, nocorners=nocorners)
 
