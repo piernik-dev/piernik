@@ -296,11 +296,11 @@ contains
 
    subroutine internal_boundaries_MPI_merged(this, ind, tgt3d, dmask)
 
-      use constants,        only: xdim, ydim, zdim, cor_dim, I_ONE, I_TWO, LO, HI
+      use constants,        only: xdim, ydim, zdim, cor_dim, I_ONE, LO, HI
       use dataio_pub,       only: die
       use merge_segments,   only: IN, OUT
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
-      use mpisetup,         only: FIRST, LAST, proc, err_mpi, req, inflate_req
+      use mpisetup,         only: FIRST, LAST, proc, err_mpi, req, req2, inflate_req, nproc
       use named_array_list, only: wna
       use ppp,              only: piernik_Waitall
 
@@ -316,6 +316,8 @@ contains
       integer(kind=4) :: nr !< index of first free slot in req array
 
       if (.not. this%ms%valid) call die("[cg_list_bnd:internal_boundaries_MPI_merged] this%ms%valid .eqv. .false.")
+
+      call inflate_req(nproc, .true.)
 
       nr = 0
       do p = FIRST, LAST
@@ -366,16 +368,17 @@ contains
                      endif
                   enddo
                endif
-               if (nr+I_TWO >  ubound(req(:), dim=1)) call inflate_req
-               call MPI_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
-               call MPI_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
-               nr = nr + I_TWO
+               if (nr+I_ONE >  ubound(req(:), dim=1)) call inflate_req
+               if (nr+I_ONE >  ubound(req2(:), dim=1)) call inflate_req(.true.)
+               call MPI_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    MPI_COMM_WORLD, req( nr+I_ONE), err_mpi)
+               call MPI_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, MPI_COMM_WORLD, req2(nr+I_ONE), err_mpi)
+               nr = nr + I_ONE
             endif
 
          endif
       enddo
 
-      call piernik_Waitall(nr, "int_bnd_merged")
+      call piernik_Waitall(nr, "int_bnd_merged_R")
 
       do p = FIRST, LAST
          if (p /= proc) then
@@ -426,6 +429,13 @@ contains
                   enddo
                endif
             endif
+         endif
+      enddo
+
+      call piernik_Waitall(nr, "int_bnd_merged_S", use_req2 = .true.)
+
+      do p = FIRST, LAST
+         if (p /= proc) then
             if (allocated(this%ms%sl(p, IN )%buf)) deallocate(this%ms%sl(p, IN )%buf)
             if (allocated(this%ms%sl(p, OUT)%buf)) deallocate(this%ms%sl(p, OUT)%buf)
          endif
@@ -444,12 +454,12 @@ contains
    subroutine internal_boundaries_MPI_1by1(this, ind, tgt3d, dmask)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, cor_dim, LO, HI, I_ONE, I_TWO
+      use constants,        only: xdim, ydim, zdim, cor_dim, LO, HI, I_ONE
       use dataio_pub,       only: die, warn
       use grid_cont,        only: grid_container
       use grid_cont_bnd,    only: segment
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
-      use mpisetup,         only: err_mpi, req, inflate_req
+      use mpisetup,         only: err_mpi, req, req2, inflate_req, nproc
       use named_array_list, only: wna
       use ppp,              only: piernik_Waitall
 
@@ -468,6 +478,8 @@ contains
       real, dimension(:,:,:),   pointer            :: pa3d
       logical                                      :: active
       type(segment), pointer                       :: i_seg, o_seg !< shortcuts
+
+      call inflate_req(nproc, .true.)
 
       nr = 0
       cgl => this%first
@@ -490,7 +502,8 @@ contains
                   do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
 
                      if (.not. associated(cg%i_bnd(d)%seg(g)%local)) then
-                        if (nr+I_TWO >  ubound(req(:), dim=1)) call inflate_req
+                        if (nr+I_ONE >  ubound(req(:), dim=1)) call inflate_req
+                        if (nr+I_ONE >  ubound(req2(:), dim=1)) call inflate_req(.true.)
                         i_seg => cg%i_bnd(d)%seg(g)
                         o_seg => cg%o_bnd(d)%seg(g)
 
@@ -516,7 +529,7 @@ contains
                                 &             o_seg%se(zdim, HI) - o_seg%se(zdim, LO) + 1))
                            pa3d => cg%q(ind)%span(o_seg%se(:,:))
                            o_seg%buf(:,:,:) = pa3d(:,:,:)
-                           call MPI_Isend(o_seg%buf, size(o_seg%buf, kind=4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
+                           call MPI_Isend(o_seg%buf, size(o_seg%buf, kind=4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req2(nr+I_ONE), err_mpi)
 
                         else
                            if (ind > ubound(cg%w(:), dim=1) .or. ind < lbound(cg%w(:), dim=1)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] wrong 4d index")
@@ -545,10 +558,10 @@ contains
                               o_seg%buf4(:, :, :, ni - o_seg%se(zdim, LO) + lbound(o_seg%buf4, dim=4)) = &
                                    cg%w(ind)%arr(:, o_seg%se(xdim, LO):o_seg%se(xdim, HI), o_seg%se(ydim, LO):o_seg%se(ydim, HI), ni)
                            enddo
-                           call MPI_Isend(o_seg%buf4, size(o_seg%buf4, kind=4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
+                           call MPI_Isend(o_seg%buf4, size(o_seg%buf4, kind=4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req2(nr+I_ONE), err_mpi)
 
                         endif
-                        nr = nr + I_TWO
+                        nr = nr + I_ONE
                      endif
                   enddo
                else
@@ -560,7 +573,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call piernik_Waitall(nr, "int_bnd_1by1")
+      call piernik_Waitall(nr, "int_bnd_1by1_R")
 
       ! Move the received data from buffers to the right place. Deallocate buffers
       cgl => this%first
@@ -586,14 +599,49 @@ contains
                         if (tgt3d) then
                            pa3d => cg%q(ind)%span(i_seg%se(:,:))
                            pa3d(:,:,:) = i_seg%buf(:,:,:)
-                           deallocate(i_seg%buf)
-                           deallocate(o_seg%buf)
                         else
                            ! BEWARE: manual optimisation
                            do ni = i_seg%se(zdim, LO), i_seg%se(zdim, HI)
                               cg%w(ind)%arr(:, i_seg%se(xdim, LO):i_seg%se(xdim, HI), i_seg%se(ydim, LO):i_seg%se(ydim, HI), ni) = &
                                    i_seg%buf4(:, :, :, ni - i_seg%se(zdim, LO) + lbound(i_seg%buf4, dim=4))
                            enddo
+                        endif
+                     endif
+
+                  enddo
+               endif
+            endif
+         enddo
+
+         cgl => cgl%nxt
+      enddo
+
+      call piernik_Waitall(nr, "int_bnd_1by1_S", use_req2 = .true.)
+
+      cgl => this%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         ! exclude non-multigrid variables below base level
+         if (tgt3d) then
+            active = associated(cg%q(ind)%arr)
+         else
+            active = associated(cg%w(ind)%arr)
+         endif
+
+         do d = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
+            if (dmask(d) .and. active) then
+               if (allocated(cg%i_bnd(d)%seg)) then
+                  ! sanity checks are already done
+                  do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
+
+                     if (.not. associated(cg%i_bnd(d)%seg(g)%local)) then
+                        i_seg => cg%i_bnd(d)%seg(g)
+                        o_seg => cg%o_bnd(d)%seg(g)
+
+                        if (tgt3d) then
+                           deallocate(i_seg%buf)
+                           deallocate(o_seg%buf)
+                        else
                            deallocate(i_seg%buf4)
                            deallocate(o_seg%buf4)
                         endif
