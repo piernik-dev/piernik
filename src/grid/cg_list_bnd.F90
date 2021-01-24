@@ -168,6 +168,7 @@ contains
 
       use constants, only: xdim, zdim, cor_dim, PPP_AMR
       use domain,    only: dom
+      use global,    only: prefer_merged_MPI
       use ppp,       only: ppp_main
 
       implicit none
@@ -195,7 +196,7 @@ contains
       call internal_boundaries_local(this, ind, tgt3d, dmask)
       call ppp_main%stop(ibl_label)
 
-      if (this%ms%valid) then
+      if (this%ms%valid .and. prefer_merged_MPI) then
          call ppp_main%start(ibm_label, PPP_AMR)
          call internal_boundaries_MPI_merged(this, ind, tgt3d, dmask)
          call ppp_main%stop(ibm_label, PPP_AMR)
