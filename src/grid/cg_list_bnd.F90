@@ -213,7 +213,7 @@ contains
    subroutine internal_boundaries_local(this, ind, tgt3d, dmask)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, cor_dim, INVALID
+      use constants,        only: xdim, ydim, zdim, LO, HI, cor_dim, INVALID
       use dataio_pub,       only: die
       use grid_cont,        only: grid_container
       use grid_cont_bnd,    only: segment
@@ -226,10 +226,10 @@ contains
       logical, dimension(xdim:cor_dim), intent(in) :: dmask !< .true. for the directions we want to exchange
 
       integer                           :: g, d, g_o, i
+      integer(kind=8)                   :: j
       type(grid_container),     pointer :: cg
       type(cg_list_element),    pointer :: cgl
       real, dimension(:,:,:),   pointer :: pa3d, pa3d_o
-      real, dimension(:,:,:,:), pointer :: pa4d, pa4d_o
       logical                           :: active
       type(segment), pointer            :: i_seg, o_seg !< shortcuts
 
@@ -269,9 +269,13 @@ contains
                            pa3d_o => i_seg%local%q(ind)%span(o_seg%se(:,:))
                            pa3d(:,:,:) = pa3d_o(:,:,:)
                         else
-                           pa4d   =>          cg%w(ind)%span(i_seg%se(:,:))
-                           pa4d_o => i_seg%local%w(ind)%span(o_seg%se(:,:))
-                           pa4d(:,:,:,:) = pa4d_o(:,:,:,:)
+                           ! BEWARE: manual optimisation ... but it works (at least in gfortran)
+                           do j = o_seg%se(zdim, LO), o_seg%se(zdim, HI)
+                              cg%w(ind)%arr(:, i_seg%se(xdim, LO):i_seg%se(xdim, HI), &
+                                   &           i_seg%se(ydim, LO):i_seg%se(ydim, HI), &
+                                   &           j - o_seg%se(zdim, LO) + i_seg%se(zdim, LO)) = &
+                                   i_seg%local%w(ind)%arr(:, o_seg%se(xdim, LO):o_seg%se(xdim, HI), o_seg%se(ydim, LO):o_seg%se(ydim, HI), j)
+                           enddo
                         endif
                      endif
                   enddo
