@@ -462,10 +462,10 @@ contains
 
       integer                                      :: g, d
       integer(kind=4)                              :: nr     !< index of first free slot in req array
+      integer(kind=8)                              :: ni
       type(grid_container),     pointer            :: cg
       type(cg_list_element),    pointer            :: cgl
       real, dimension(:,:,:),   pointer            :: pa3d
-      real, dimension(:,:,:,:), pointer            :: pa4d
       logical                                      :: active
       type(segment), pointer                       :: i_seg, o_seg !< shortcuts
 
@@ -539,16 +539,12 @@ contains
                                 &              o_seg%se(xdim, HI) - o_seg%se(xdim, LO) + 1, &
                                 &              o_seg%se(ydim, HI) - o_seg%se(ydim, LO) + 1, &
                                 &              o_seg%se(zdim, HI) - o_seg%se(zdim, LO) + 1))
-                           !>
-                           !! \todo optimize me
-                           !! do ni = lbound(o_seg%buf4, 4), ubound(o_seg%buf4, 4)
-                           !!    hhi = o_seg%se(zdim,LO) - 1 + ni
-                           !!    o_seg%buf4(:,:,:,ni) = &
-                           !!       cg%w(ind)%arr(:,o_seg%se(xdim,LO):o_seg%se(xdim,HI),o_seg%se(ydim,LO):o_seg%se(ydim,HI),hhi)
-                           !! enddo
-                           !<
-                           pa4d => cg%w(ind)%span(o_seg%se(:,:))
-                           o_seg%buf4(:,:,:,:) = pa4d(:,:,:,:)
+
+                           ! BEWARE: manual optimisation
+                           do ni = o_seg%se(zdim, LO), o_seg%se(zdim, HI)
+                              o_seg%buf4(:, :, :, ni - o_seg%se(zdim, LO) + lbound(o_seg%buf4, dim=4)) = &
+                                   cg%w(ind)%arr(:, o_seg%se(xdim, LO):o_seg%se(xdim, HI), o_seg%se(ydim, LO):o_seg%se(ydim, HI), ni)
+                           enddo
                            call MPI_Isend(o_seg%buf4, size(o_seg%buf4, kind=4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
 
                         endif
@@ -593,16 +589,11 @@ contains
                            deallocate(i_seg%buf)
                            deallocate(o_seg%buf)
                         else
-                           !>
-                           !! \todo optimize me
-                           !! do ni = lbound(i_seg%buf4, 4), ubound(i_seg%buf4, 4)
-                           !!    hhi = i_seg%se(zdim,LO) - 1 + ni
-                           !!    cg%w(ind)%arr(:,i_seg%se(xdim,LO):i_seg%se(xdim,HI),i_seg%se(ydim,LO):i_seg%se(ydim,HI),hhi) = &
-                           !!       i_seg%buf4(:,:,:,ni)
-                           !! enddo
-                           !<
-                           pa4d => cg%w(ind)%span(i_seg%se(:,:))
-                           pa4d(:,:,:,:) = i_seg%buf4(:,:,:,:)
+                           ! BEWARE: manual optimisation
+                           do ni = i_seg%se(zdim, LO), i_seg%se(zdim, HI)
+                              cg%w(ind)%arr(:, i_seg%se(xdim, LO):i_seg%se(xdim, HI), i_seg%se(ydim, LO):i_seg%se(ydim, HI), ni) = &
+                                   i_seg%buf4(:, :, :, ni - i_seg%se(zdim, LO) + lbound(i_seg%buf4, dim=4))
+                           enddo
                            deallocate(i_seg%buf4)
                            deallocate(o_seg%buf4)
                         endif
