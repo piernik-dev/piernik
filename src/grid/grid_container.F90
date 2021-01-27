@@ -70,10 +70,12 @@ module grid_cont
 
    contains
 
-      procedure :: init_gc         !< Initialization
-      procedure :: cleanup         !< Deallocate all internals
-      procedure :: update_leafmap  !< Check if the grid container has any parts covered by finer grids and update appropriate map
-      procedure :: print_tgt       !< print all tht_lists (for debugging only)
+      procedure :: init_gc               !< Initialization
+      procedure :: cleanup               !< Deallocate all internals
+      procedure :: update_leafmap        !< Check if the grid container has any parts covered by finer grids and update appropriate map
+      procedure :: print_tgt             !< Print all tht_lists (for debugging only)
+      procedure :: is_sending_fc_flux    !< Returns .true. if this block has fine hydro flux to be sent to some coarse block in specified direction
+      procedure :: is_receiving_fc_flux  !< Returns .true. if this block expects fine hydro flux to be received from some fine block in specified direction
 
    end type grid_container
 
@@ -165,6 +167,62 @@ contains
       endif
 
    end subroutine update_leafmap
+
+!> \brief Returns .true. if this block has fine hydro flux to be sent to some coarse block in specified direction
+
+   pure logical function is_sending_fc_flux(this, cdim)
+
+      use constants, only: LO, HI
+
+      implicit none
+
+      class(grid_container), intent(in) :: this
+      integer(kind=4),       intent(in) :: cdim
+
+      integer :: g
+
+      is_sending_fc_flux = .false.
+
+      if (allocated(this%rof_tgt%seg)) then
+         associate ( seg => this%rof_tgt%seg )
+            do g = lbound(seg, dim=1), ubound(seg, dim=1)
+               if (seg(g)%se(cdim, LO) == seg(g)%se(cdim, HI)) then
+                  is_sending_fc_flux = .true.
+                  exit
+               endif
+            enddo
+         end associate
+      endif
+
+   end function is_sending_fc_flux
+
+!> \brief Returns .true. if this block expects fine hydro flux to be received from some fine block in specified direction
+
+   pure logical function is_receiving_fc_flux(this, cdim)
+
+      use constants, only: LO, HI
+
+      implicit none
+
+      class(grid_container), intent(in) :: this
+      integer(kind=4),       intent(in) :: cdim
+
+      integer :: g
+
+      is_receiving_fc_flux = .false.
+
+      if (allocated(this%rif_tgt%seg)) then
+         associate ( seg => this%rif_tgt%seg )
+            do g = lbound(seg, dim=1), ubound(seg, dim=1)
+               if (seg(g)%se(cdim, LO) == seg(g)%se(cdim, HI)) then
+                  is_receiving_fc_flux = .true.
+                  exit
+               endif
+            enddo
+         end associate
+      endif
+
+   end function is_receiving_fc_flux
 
 !> \brief Print all tht_lists (for debugging only)
 

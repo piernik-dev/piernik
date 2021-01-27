@@ -295,6 +295,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
+      use cg_list_dataop,   only: cg_list_dataop_t
       use constants,        only: ydim, ndims, first_stage, last_stage, uh_n, magh_n, psih_n, psi_n, INVALID, &
            &                      RTVD_SPLIT, RIEMANN_SPLIT, PPP_CG
       use dataio_pub,       only: die
@@ -333,6 +334,7 @@ contains
       integer                        :: istep
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      type(cg_list_dataop_t), pointer :: sl
       logical                        :: all_processed, all_received
       integer                        :: blocks_done
       integer(kind=4)                :: g, nr, nr_recv
@@ -371,6 +373,12 @@ contains
          psihi = qna%ind(psih_n)
       endif
 
+      sl => leaves%prioritized_cg(cdim, covered_too = .true.)
+      ! We can't just skip the covered cg because it affects divvel (or
+      ! other things that rely on data computed on coarse cells and not
+      ! restricted from fine blocks).
+!      sl => leaves%leaf_only_cg()
+
       ! for use with GLM divergence cleaning we also make a copy of b and psi fields
       cgl => leaves%first
       do while (associated(cgl))
@@ -388,7 +396,7 @@ contains
             all_processed = .true.
             blocks_done = 0
             ! OPT this loop should probably go from finest to coarsest for better compute-communicate overlap.
-            cgl => leaves%first
+            cgl => sl%first
 
             call ppp_main%start(solve_cgs_label)
             do while (associated(cgl))
@@ -422,6 +430,9 @@ contains
 
          call update_boundaries(cdim, istep)
       enddo
+
+      deallocate(sl)
+
       call ppp_main%stop(sweep_label(cdim))
 
    end subroutine sweep
