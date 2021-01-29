@@ -192,7 +192,14 @@ contains
       dmask(cor_dim) = .true.
       if (present(nocorners)) dmask(cor_dim) = .not. nocorners
 
-      if (this%ms%valid .and. prefer_merged_MPI) then
+      ! for CRESP (many components, big rank-4 arrays) it is definitely better to use internal_boundaries_MPI_1by1
+      ! for multigrid (rank-3 arrays) it is better to use internal_boundaries_MPI_merged
+      ! for non-CRESP (few components, rank-4 arrays, small bsize) it is a bit better to use internal_boundaries_MPI_merged
+      !
+      ! OPT: at what size of cg%w array (number of components, size of block) one approach wins over another?
+      ! it seems that at [5, 16, 16, 16] internal_boundaries_MPI_merged and internal_boundaries_MPI_1by1 have similar performance
+
+      if (this%ms%valid .and. (prefer_merged_MPI .or. tgt3d)) then
          call ppp_main%start(ibl_label)
          call internal_boundaries_local(this, ind, tgt3d, dmask)
          call ppp_main%stop(ibl_label)
