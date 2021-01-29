@@ -192,11 +192,10 @@ contains
       dmask(cor_dim) = .true.
       if (present(nocorners)) dmask(cor_dim) = .not. nocorners
 
-      call ppp_main%start(ibl_label)
-      call internal_boundaries_local(this, ind, tgt3d, dmask)
-      call ppp_main%stop(ibl_label)
-
       if (this%ms%valid .and. prefer_merged_MPI) then
+         call ppp_main%start(ibl_label)
+         call internal_boundaries_local(this, ind, tgt3d, dmask)
+         call ppp_main%stop(ibl_label)
          call ppp_main%start(ibm_label, PPP_AMR)
          call internal_boundaries_MPI_merged(this, ind, tgt3d, dmask)
          call ppp_main%stop(ibm_label, PPP_AMR)
@@ -496,44 +495,43 @@ contains
                        call die("[cg_list_bnd:internal_boundaries_MPI_1by1] cg%i_bnd differs in number of entries from cg%o_bnd")
                   do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
 
-                     if (.not. associated(cg%i_bnd(d)%seg(g)%local)) then
-                        if (nr+I_TWO > ubound(req(:), dim=1)) call inflate_req
-                        i_seg => cg%i_bnd(d)%seg(g)
-                        o_seg => cg%o_bnd(d)%seg(g)
+                     if (nr+I_TWO > ubound(req(:), dim=1)) call inflate_req
 
-                        !> \deprecated: A lot of semi-duplicated code below
-                        ! array_of_starts has to be C-like, so b3st(:) = 0  points to lbound(cg%q(ind)%arr)
-                        if (tgt3d) then
+                     i_seg => cg%i_bnd(d)%seg(g)
+                     o_seg => cg%o_bnd(d)%seg(g)
 
-                           b3su = int(i_seg%se(:, HI) - i_seg%se(:, LO) + I_ONE, kind=4)
-                           b3st = int(i_seg%se(:, LO), kind=4) - lbound(cg%q(ind)%arr, kind=4)
-                           call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
-                           call MPI_Type_commit(i_seg%sub_type, err_mpi)
-                           call MPI_Irecv(cg%q(ind)%arr(:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
+                     !> \deprecated: A lot of semi-duplicated code below
+                     ! array_of_starts has to be C-like, so b3st(:) = 0  points to lbound(cg%q(ind)%arr)
+                     if (tgt3d) then
 
-                           b3su = int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4)
-                           b3st = int(o_seg%se(:, LO), kind=4) - lbound(cg%q(ind)%arr, kind=4)
-                           call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
-                           call MPI_Type_commit(o_seg%sub_type, err_mpi)
-                           call MPI_Isend(cg%q(ind)%arr(:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
+                        b3su = int(i_seg%se(:, HI) - i_seg%se(:, LO) + I_ONE, kind=4)
+                        b3st = int(i_seg%se(:, LO), kind=4) - lbound(cg%q(ind)%arr, kind=4)
+                        call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
+                        call MPI_Type_commit(i_seg%sub_type, err_mpi)
+                        call MPI_Irecv(cg%q(ind)%arr(:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
 
-                        else
+                        b3su = int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4)
+                        b3st = int(o_seg%se(:, LO), kind=4) - lbound(cg%q(ind)%arr, kind=4)
+                        call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
+                        call MPI_Type_commit(o_seg%sub_type, err_mpi)
+                        call MPI_Isend(cg%q(ind)%arr(:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
 
-                           b4su = [ int(wna%lst(ind)%dim4, kind=4), int(i_seg%se(:, HI) - i_seg%se(:, LO) + I_ONE, kind=4) ]
-                           b4st = [ I_ONE, int(i_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
-                           call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
-                           call MPI_Type_commit(i_seg%sub_type, err_mpi)
-                           call MPI_Irecv(cg%w(ind)%arr(:,:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
+                     else
 
-                           b4su = [ int(wna%lst(ind)%dim4, kind=4), int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4) ]
-                           b4st = [ I_ONE, int(o_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
-                           call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
-                           call MPI_Type_commit(o_seg%sub_type, err_mpi)
-                           call MPI_Isend(cg%w(ind)%arr(:,:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
+                        b4su = [ int(wna%lst(ind)%dim4, kind=4), int(i_seg%se(:, HI) - i_seg%se(:, LO) + I_ONE, kind=4) ]
+                        b4st = [ I_ONE, int(i_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
+                        call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
+                        call MPI_Type_commit(i_seg%sub_type, err_mpi)
+                        call MPI_Irecv(cg%w(ind)%arr(:,:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
 
-                        endif
-                        nr = nr + I_TWO
+                        b4su = [ int(wna%lst(ind)%dim4, kind=4), int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4) ]
+                        b4st = [ I_ONE, int(o_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
+                        call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
+                        call MPI_Type_commit(o_seg%sub_type, err_mpi)
+                        call MPI_Isend(cg%w(ind)%arr(:,:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
+
                      endif
+                     nr = nr + I_TWO
                   enddo
                else
                   if (allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] cg%o_bnd without cg%i_bnd")
@@ -555,12 +553,8 @@ contains
                if (allocated(cg%i_bnd(d)%seg)) then
                   ! sanity checks are already done
                   do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
-
-                     if (.not. associated(cg%i_bnd(d)%seg(g)%local)) then
-                        call MPI_Type_free(cg%i_bnd(d)%seg(g)%sub_type, err_mpi)
-                        call MPI_Type_free(cg%o_bnd(d)%seg(g)%sub_type, err_mpi)
-                     endif
-
+                     call MPI_Type_free(cg%i_bnd(d)%seg(g)%sub_type, err_mpi)
+                     call MPI_Type_free(cg%o_bnd(d)%seg(g)%sub_type, err_mpi)
                   enddo
                endif
             endif
