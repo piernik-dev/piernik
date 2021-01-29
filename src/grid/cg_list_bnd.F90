@@ -479,7 +479,7 @@ contains
       logical                                      :: active
       type(segment), pointer                       :: i_seg, o_seg !< shortcuts
 
-      integer, parameter :: rank3 = I_THREE, rank4 = I_FOUR
+      integer(kind=4), parameter :: rank3 = I_THREE, rank4 = I_FOUR
       integer(kind=4), dimension(rank3) :: b3sz, b3su, b3st
       integer(kind=4), dimension(rank4) :: b4sz, b4su, b4st
 
@@ -504,7 +504,7 @@ contains
                   do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
 
                      if (.not. associated(cg%i_bnd(d)%seg(g)%local)) then
-                        if (nr+I_ONE >  ubound(req(:), dim=1)) call inflate_req
+                        if (nr+I_TWO >  ubound(req(:), dim=1)) call inflate_req
                         i_seg => cg%i_bnd(d)%seg(g)
                         o_seg => cg%o_bnd(d)%seg(g)
 
@@ -513,16 +513,16 @@ contains
                         if (tgt3d) then
                            if (ind > ubound(cg%q(:), dim=1) .or. ind < lbound(cg%q(:), dim=1)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] wrong 3d index")
 
-                           b3sz = shape(cg%q(ind)%arr)
+                           b3sz = shape(cg%q(ind)%arr, kind=4)
                            b3su = int(i_seg%se(:, HI) - i_seg%se(:, LO) + I_ONE, kind=4)
-                           b3st = [ int(i_seg%se(:, LO), kind=4) ] - lbound(cg%q(ind)%arr)
+                           b3st = [ int(i_seg%se(:, LO), kind=4) ] - lbound(cg%q(ind)%arr, kind=4)
                            call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
                            call MPI_Type_commit(i_seg%sub_type, err_mpi)
                            call MPI_Irecv(cg%q(ind)%arr(:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
 
-                           b3sz = shape(cg%q(ind)%arr)
+                           b3sz = shape(cg%q(ind)%arr, kind=4)
                            b3su = int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4)
-                           b3st = [ int(o_seg%se(:, LO), kind=4) ] - lbound(cg%q(ind)%arr)
+                           b3st = [ int(o_seg%se(:, LO), kind=4) ] - lbound(cg%q(ind)%arr, kind=4)
                            call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
                            call MPI_Type_commit(o_seg%sub_type, err_mpi)
                            call MPI_Isend(cg%q(ind)%arr(:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
@@ -530,16 +530,16 @@ contains
                         else
                            if (ind > ubound(cg%w(:), dim=1) .or. ind < lbound(cg%w(:), dim=1)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] wrong 4d index")
 
-                           b4sz = shape(cg%w(ind)%arr)
+                           b4sz = shape(cg%w(ind)%arr, kind=4)
                            b4su = [ int(wna%lst(ind)%dim4, kind=4), int(i_seg%se(:, HI) - i_seg%se(:, LO) + I_ONE, kind=4) ]
-                           b4st = [ I_ONE, int(i_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr)
+                           b4st = [ I_ONE, int(i_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
                            call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
                            call MPI_Type_commit(i_seg%sub_type, err_mpi)
                            call MPI_Irecv(cg%w(ind)%arr(:,:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
 
-                           b4sz = shape(cg%w(ind)%arr)
+                           b4sz = shape(cg%w(ind)%arr, kind=4)
                            b4su = [ int(wna%lst(ind)%dim4, kind=4), int(o_seg%se(:, HI) - o_seg%se(:, LO) + 1, kind=4) ]
-                           b4st = [ I_ONE, int(o_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr)
+                           b4st = [ I_ONE, int(o_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
                            call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
                            call MPI_Type_commit(o_seg%sub_type, err_mpi)
                            call MPI_Isend(cg%w(ind)%arr(:,:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)

@@ -231,7 +231,7 @@ contains
       ord_fluid_prolong = O_INJ        !< O_INJ and O_LIN ensure monotoniciy and nonnegative density and energy
       do_external_corners =.false.
       solver_str = ""
-      prefer_merged_MPI = .true.
+      prefer_merged_MPI = .false.  ! non-merged MPI in internal_boundaries are implemented without buffers, which is faster
 
       if (master) then
          if (.not.nh%initialized) call nh%init()

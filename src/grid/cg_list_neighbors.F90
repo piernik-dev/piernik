@@ -125,7 +125,7 @@ contains
 
       use constants,  only: PPP_AMR
       use dataio_pub, only: warn, msg
-      use global,     only: do_external_corners
+      use global,     only: do_external_corners, prefer_merged_MPI
       use refinement, only: prefer_n_bruteforce
       use mpisetup,   only: master
       use ppp,        only: ppp_main
@@ -149,7 +149,7 @@ contains
       if (this%dot%is_blocky .and. .not. prefer_n_bruteforce) then
          call this%find_neighbors_SFC
          call this%find_ext_neighbors_bruteforce
-         call this%ms%merge(this)  ! temporarily incompatible with find_ext_neighbors_bruteforce
+         if (prefer_merged_MPI) call this%ms%merge(this)  ! temporarily incompatible with find_ext_neighbors_bruteforce
       else
          call this%find_neighbors_bruteforce
          call this%find_ext_neighbors_bruteforce
