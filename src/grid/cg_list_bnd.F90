@@ -231,22 +231,14 @@ contains
       type(grid_container),     pointer :: cg
       type(cg_list_element),    pointer :: cgl
       real, dimension(:,:,:),   pointer :: pa3d, pa3d_o
-      logical                           :: active
       type(segment), pointer            :: i_seg, o_seg !< shortcuts
 
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         ! exclude non-multigrid variables below base level
-         if (tgt3d) then
-            active = associated(cg%q(ind)%arr)
-         else
-            active = associated(cg%w(ind)%arr)
-         endif
-
          do d = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
-            if (dmask(d) .and. active) then
+            if (dmask(d) .and. is_active(cg, ind, tgt3d)) then
                if (allocated(cg%i_bnd(d)%seg)) then
                   if (.not. allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries_local] cg%i_bnd without cg%o_bnd")
                   if (ubound(cg%i_bnd(d)%seg(:), dim=1) /= ubound(cg%o_bnd(d)%seg(:), dim=1)) &
@@ -476,7 +468,6 @@ contains
       integer(kind=4)                              :: nr     !< index of first free slot in req array
       type(grid_container),     pointer            :: cg
       type(cg_list_element),    pointer            :: cgl
-      logical                                      :: active
       type(segment), pointer                       :: i_seg, o_seg !< shortcuts
 
       integer(kind=4), parameter :: rank3 = I_THREE, rank4 = I_FOUR
@@ -490,13 +481,15 @@ contains
 
          ! exclude non-multigrid variables below base level
          if (tgt3d) then
-            active = associated(cg%q(ind)%arr)
+            if (ind > ubound(cg%q(:), dim=1) .or. ind < lbound(cg%q(:), dim=1)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] wrong 3d index")
+            b3sz = shape(cg%q(ind)%arr, kind=4)
          else
-            active = associated(cg%w(ind)%arr)
+            if (ind > ubound(cg%w(:), dim=1) .or. ind < lbound(cg%w(:), dim=1)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] wrong 4d index")
+            b4sz = shape(cg%w(ind)%arr, kind=4)
          endif
 
          do d = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
-            if (dmask(d) .and. active) then
+            if (dmask(d) .and. is_active(cg, ind, tgt3d)) then
                if (allocated(cg%i_bnd(d)%seg)) then
                   if (.not. allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] cg%i_bnd without cg%o_bnd")
                   if (ubound(cg%i_bnd(d)%seg(:), dim=1) /= ubound(cg%o_bnd(d)%seg(:), dim=1)) &
@@ -504,41 +497,35 @@ contains
                   do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
 
                      if (.not. associated(cg%i_bnd(d)%seg(g)%local)) then
-                        if (nr+I_TWO >  ubound(req(:), dim=1)) call inflate_req
+                        if (nr+I_TWO > ubound(req(:), dim=1)) call inflate_req
                         i_seg => cg%i_bnd(d)%seg(g)
                         o_seg => cg%o_bnd(d)%seg(g)
 
                         !> \deprecated: A lot of semi-duplicated code below
                         ! array_of_starts has to be C-like, so b3st(:) = 0  points to lbound(cg%q(ind)%arr)
                         if (tgt3d) then
-                           if (ind > ubound(cg%q(:), dim=1) .or. ind < lbound(cg%q(:), dim=1)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] wrong 3d index")
 
-                           b3sz = shape(cg%q(ind)%arr, kind=4)
                            b3su = int(i_seg%se(:, HI) - i_seg%se(:, LO) + I_ONE, kind=4)
-                           b3st = [ int(i_seg%se(:, LO), kind=4) ] - lbound(cg%q(ind)%arr, kind=4)
+                           b3st = int(i_seg%se(:, LO), kind=4) - lbound(cg%q(ind)%arr, kind=4)
                            call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
                            call MPI_Type_commit(i_seg%sub_type, err_mpi)
                            call MPI_Irecv(cg%q(ind)%arr(:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
 
-                           b3sz = shape(cg%q(ind)%arr, kind=4)
                            b3su = int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4)
-                           b3st = [ int(o_seg%se(:, LO), kind=4) ] - lbound(cg%q(ind)%arr, kind=4)
+                           b3st = int(o_seg%se(:, LO), kind=4) - lbound(cg%q(ind)%arr, kind=4)
                            call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
                            call MPI_Type_commit(o_seg%sub_type, err_mpi)
                            call MPI_Isend(cg%q(ind)%arr(:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
 
                         else
-                           if (ind > ubound(cg%w(:), dim=1) .or. ind < lbound(cg%w(:), dim=1)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] wrong 4d index")
 
-                           b4sz = shape(cg%w(ind)%arr, kind=4)
                            b4su = [ int(wna%lst(ind)%dim4, kind=4), int(i_seg%se(:, HI) - i_seg%se(:, LO) + I_ONE, kind=4) ]
                            b4st = [ I_ONE, int(i_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
                            call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
                            call MPI_Type_commit(i_seg%sub_type, err_mpi)
                            call MPI_Irecv(cg%w(ind)%arr(:,:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
 
-                           b4sz = shape(cg%w(ind)%arr, kind=4)
-                           b4su = [ int(wna%lst(ind)%dim4, kind=4), int(o_seg%se(:, HI) - o_seg%se(:, LO) + 1, kind=4) ]
+                           b4su = [ int(wna%lst(ind)%dim4, kind=4), int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4) ]
                            b4st = [ I_ONE, int(o_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
                            call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
                            call MPI_Type_commit(o_seg%sub_type, err_mpi)
@@ -562,25 +549,16 @@ contains
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
-         ! exclude non-multigrid variables below base level
-         if (tgt3d) then
-            active = associated(cg%q(ind)%arr)
-         else
-            active = associated(cg%w(ind)%arr)
-         endif
 
          do d = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
-            if (dmask(d) .and. active) then
+            if (dmask(d) .and. is_active(cg, ind, tgt3d)) then
                if (allocated(cg%i_bnd(d)%seg)) then
                   ! sanity checks are already done
                   do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
 
                      if (.not. associated(cg%i_bnd(d)%seg(g)%local)) then
-                        i_seg => cg%i_bnd(d)%seg(g)
-                        o_seg => cg%o_bnd(d)%seg(g)
-
-                        call MPI_Type_free(i_seg%sub_type, err_mpi)
-                        call MPI_Type_free(o_seg%sub_type, err_mpi)
+                        call MPI_Type_free(cg%i_bnd(d)%seg(g)%sub_type, err_mpi)
+                        call MPI_Type_free(cg%o_bnd(d)%seg(g)%sub_type, err_mpi)
                      endif
 
                   enddo
@@ -592,6 +570,26 @@ contains
       enddo
 
    end subroutine internal_boundaries_MPI_1by1
+
+!> \brief exclude non-multigrid variables below base level
+
+   pure logical function is_active(cg, ind, tgt3d)
+
+      use grid_cont, only: grid_container
+
+      implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
+      integer(kind=4),               intent(in) :: ind   !< index of cg%q(:) 3d array or cg%w(:) 4d array
+      logical,                       intent(in) :: tgt3d !< .true. for cg%q, .false. for cg%w
+
+      if (tgt3d) then ! cannot use merge() here
+         is_active = associated(cg%q(ind)%arr)
+      else
+         is_active = associated(cg%w(ind)%arr)
+      endif
+
+   end function is_active
 
 !> \brief Set zero to all boundaries (will defeat any attemts of use of dirty checks on boundaries)
 
