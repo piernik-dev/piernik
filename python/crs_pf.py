@@ -76,6 +76,11 @@ def initialize_pf_arrays(h5fname, pf_initialized=False):
         a_max_up = h5f["cresp"]["smaps_UP"].attrs["a_max"]
         n_min_up = h5f["cresp"]["smaps_UP"].attrs["n_min"]
         n_max_up = h5f["cresp"]["smaps_UP"].attrs["n_max"]
+
+        if (h5f["cresp"]["smaps_LO"].attrs["dims"][0] != h5f["cresp"]["smaps_UP"].attrs["dims"][0]):
+            die("Error, different sizes of solution maps!")
+        else:
+            size = h5f["cresp"]["smaps_UP"].attrs["dims"][0]
     else:
         # Try load old dat files
         p_ratios_lo = read_dat_table("p_ratios_lo")
@@ -96,10 +101,10 @@ def initialize_pf_arrays(h5fname, pf_initialized=False):
 
         size = int(len(p_ratios_lo))
 
-        alpha_tab_lo = zeros(size)
-        n_tab_lo = zeros(size)
-        alpha_tab_up = zeros(size)
-        n_tab_up = zeros(size)
+    alpha_tab_lo = zeros(size)
+    n_tab_lo = zeros(size)
+    alpha_tab_up = zeros(size)
+    n_tab_up = zeros(size)
 
     for i in range(size):
         alpha_tab_lo[i] = ind_to_flog(i, a_min_lo, a_max_lo, size)
