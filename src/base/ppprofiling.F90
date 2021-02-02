@@ -686,26 +686,35 @@ contains
 
 !> \brief a PPP wrapper for MPI_Waitall
 
-   subroutine piernik_Waitall(nr, ppp_label, x_mask)
+   subroutine piernik_Waitall(nr, ppp_label, x_mask, use_req2)
 
       use constants, only: PPP_MPI
-      use mpisetup,  only: err_mpi, req
+      use mpisetup,  only: err_mpi, req, req2
       use MPIF,      only: MPI_STATUSES_IGNORE, MPI_Waitall
 
       implicit none
 
       integer(kind=4),           intent(in) :: nr         !< number of requests in req(:)
       character(len=*),          intent(in) :: ppp_label  !< identifier for PPP entry
-      integer(kind=4), optional, intent(in) :: x_mask       !< extra mask, if necessary
+      integer(kind=4), optional, intent(in) :: x_mask     !< extra mask, if necessary
+      logical, optional,         intent(in) :: use_req2   !< use req2 if .true.
 
       character(len=*), parameter :: mpiw = "MPI_Waitall:"
       integer(kind=4) :: mask
+      logical :: r2
+
+      r2 = .false.
+      if (present(use_req2)) r2 = use_req2
 
       if (nr > 0) then
          mask = PPP_MPI
          if (present(x_mask)) mask = mask + x_mask
          call ppp_main%start(mpiw // ppp_label, mask)
-         call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
+         if (r2) then
+            call MPI_Waitall(nr, req2(:nr), MPI_STATUSES_IGNORE, err_mpi)
+         else
+            call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
+         endif
          call ppp_main%stop(mpiw // ppp_label, mask)
       endif
 
