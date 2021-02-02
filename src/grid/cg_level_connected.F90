@@ -1031,7 +1031,7 @@ contains
 !! \todo implement local copies without MPI
 !<
 
-   subroutine prolong_bnd_from_coarser(this, ind, sub, dir, nocorners)
+   subroutine prolong_bnd_from_coarser(this, ind, arr4d, dir, nocorners)
 
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
@@ -1049,7 +1049,7 @@ contains
 
       class(cg_level_connected_t), intent(inout) :: this      !< the list on which to perform the boundary exchange
       integer(kind=4),             intent(in)    :: ind       !< index of the prolonged variable
-      integer(kind=4), optional,   intent(in)    :: sub       !< subindex, present only when ind refers to rank-4 arrays
+      logical,         optional,   intent(in)    :: arr4d     !< present only when ind refers to rank-4 arrays
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
       logical,         optional,   intent(in)    :: nocorners !< when .true. then don't care about proper edge and corner update
 
@@ -1058,19 +1058,18 @@ contains
       type(grid_container),  pointer :: cg            !< current grid container
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: cse, fse ! shortcuts for fine segment and coarse segment
       integer(kind=8), dimension(xdim:zdim) :: per, ext_buf
-      integer(kind=4) :: nr
+      integer(kind=4) :: nr, iw
       integer :: g
       logical, save :: firstcall = .true.
       character(len=*), parameter :: pbc_label = "prolong_bnd_from_coarser" , pbcv_label = "prolong_bnd_from_coarser:vbp"
-
       if (present(dir)) then
          if (firstcall .and. master) call warn("[cg_level_connected:prolong_bnd_from_coarser] dir present but not implemented yet")
       endif
       if (present(nocorners)) then
          if (firstcall .and. master) call warn("[cg_level_connected:prolong_bnd_from_coarser] nocorners present but not implemented yet")
       endif
-      if (present(sub)) then
-         if (sub <=0 .or. sub > wna%lst(ind)%dim4) call die("[cg_level_connected:prolong_bnd_from_coarser] invalid index in wna")
+      if (present(arr4d)) then
+         if (.not. arr4d) call die("[cg_level_connected:prolong_bnd_from_coarser] nonsense, fix it in the caller")
       endif
 
       firstcall = .false.
@@ -1099,7 +1098,13 @@ contains
             do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Irecv(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+               if (present(arr4d)) then
+                  if (allocated(seg(g)%buf4)) call die("[cg_level_connected:prolong_bnd_from_coarser] allocated pib buf4")
+                  allocate(seg(g)%buf4(wna%lst(ind)%dim4, size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
+                  call MPI_Irecv(seg(g)%buf4(1, 1, 1, 1), size(seg(g)%buf4(:, :, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+               else
+                  call MPI_Irecv(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+               endif
             enddo
          endif
          end associate
@@ -1119,12 +1124,15 @@ contains
 
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
-               if (present(sub)) then
-                  seg(g)%buf(:, :, :) = cgl%cg%w(ind)%arr(sub, cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
+               if (present(arr4d)) then
+                  if (allocated(seg(g)%buf4)) call die("[cg_level_connected:prolong_bnd_from_coarser] allocated pob buf4")
+                  allocate(seg(g)%buf4(wna%lst(ind)%dim4, size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
+                  seg(g)%buf4(:, :, :, :) = cgl%cg%w(ind)%arr(:, cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
+                  call MPI_Isend(seg(g)%buf4(1, 1, 1, 1), size(seg(g)%buf4(:, :, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
                else
-                  seg(g)%buf(:, :, :) = cgl%cg%q(ind)%arr(     cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
+                  seg(g)%buf(:, :, :)     = cgl%cg%q(ind)%arr(   cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
+                  call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
                endif
-               call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
             enddo
          endif
          end associate
@@ -1157,15 +1165,26 @@ contains
                   cse = seg(g)%se
                   cse(:, LO) = cse(:, LO) - ext_buf
                   cse(:, HI) = cse(:, HI) + ext_buf
-                  cg%prolong_(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = seg(g)%buf(:,:,:)
 
                   fse = c2f(seg(g)%se)
                   fse(:, LO) = max(fse(:, LO), int(cg%lhn(:, LO), kind=8))
                   fse(:, HI) = min(fse(:, HI), int(cg%lhn(:, HI), kind=8))
                   !> When this%ord_prolong_set /= I_ZERO, the incoming data thus must contain valid guardcells
 
-                  call cg%prolong(merge(qna%wai, ind, present(sub)), seg(g)%se, p_xyz = present(sub))  ! prolong rank-4 to auxiliary array cg%prolong_xyz.
-                  ! qna%wai is required only for indirect determination of prolongation order (TOO QUIRKY)
+                  if (present(arr4d)) then
+                     qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong  ! QUIRKY
+                     do iw = 1, wna%lst(ind)%dim4
+                        cg%prolong_(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = seg(g)%buf4(iw, :, :, :)
+                        call cg%prolong(qna%wai, seg(g)%se, p_xyz=.true.)  ! prolong rank-4 to auxiliary array cg%prolong_xyz.
+                        ! qna%wai is required only for indirect determination of prolongation order (TOO QUIRKY)
+                        cg%w(ind)%arr(iw,               fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI)) = &
+                             &           cg%prolong_xyz(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI))
+                     enddo
+                  else
+                     cg%prolong_(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = seg(g)%buf(:,:,:)
+                     call cg%prolong(ind, seg(g)%se, p_xyz=.false.)
+                  endif
+
                   ! The cg%prolong above consumes about half of the prolong_bnd_from_coarser execution time
                   ! ToDo: implement special cases, especially O_INJ and O_LIN, perhaps O_I2 too,
                   ! at least for for 3D (precompute full stencils), watch for even/odd issues
@@ -1174,9 +1193,7 @@ contains
                   ! OPT: in many cases (like in (M)HD directionally split solver we don't need all f/c guardcells.
                   ! Implement efficient directional selection and avoid updating edge/corner f/c when not strictly necessary.
                   ! Full corner update is important in multigrid and may be important for divB cleaning.
-
-                  if (present(sub)) cg%w(ind)%arr(sub, fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI)) = &
-                       &           cg%prolong_xyz(     fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI))
+                  ! Full corner update is required for prolongation orders better than injection
 
                enddo
 
@@ -1185,6 +1202,32 @@ contains
          end associate
          cgl => cgl%nxt
       enddo
+
+      if (present(arr4d)) then
+
+         cgl => this%first
+         do while (associated(cgl))
+            if (allocated(cgl%cg%pib_tgt%seg)) then
+               do g = lbound(cgl%cg%pib_tgt%seg(:), dim=1), ubound(cgl%cg%pib_tgt%seg(:), dim=1)
+                  if (allocated(cgl%cg%pib_tgt%seg(g)%buf4)) deallocate(cgl%cg%pib_tgt%seg(g)%buf4)
+               enddo
+            endif
+            cgl => cgl%nxt
+         enddo
+
+         ! send coarse data
+         cgl => coarse%first
+         do while (associated(cgl))
+            if (allocated(cgl%cg%pob_tgt%seg)) then
+               do g = lbound(cgl%cg%pob_tgt%seg(:), dim=1), ubound(cgl%cg%pob_tgt%seg(:), dim=1)
+                  if (allocated(cgl%cg%pob_tgt%seg(g)%buf4)) deallocate(cgl%cg%pob_tgt%seg(g)%buf4)
+               enddo
+            endif
+            cgl => cgl%nxt
+         enddo
+
+      endif
+
       call ppp_main%stop(pbc_label, PPP_AMR)
 
    end subroutine prolong_bnd_from_coarser
@@ -1649,10 +1692,10 @@ contains
 
    subroutine arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
-      use constants,        only: base_level_id, PPP_AMR, O_INJ
+      use constants,        only: base_level_id, O_INJ
       use dataio_pub,       only: warn
       use mpisetup,         only: master
-      use named_array_list, only: qna, wna
+      use named_array_list, only: wna
       use ppp,              only: ppp_main
 
       implicit none
@@ -1663,8 +1706,7 @@ contains
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
       logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
-      integer(kind=4) :: iw
-      character(len=*), parameter :: a4b_label = "lev:a4d_bnd:DEPR", a4bp_label = "lev:a4d_bndr:prolong:DEPR"
+      character(len=*), parameter :: a4b_label = "lev:a4d_bnd:DEPR"
       logical, save :: warned = .false.
 
       if (.not. warned) then
@@ -1678,16 +1720,11 @@ contains
 !      call this%dirty_boundaries(ind)
 !      call this%clear_boundaries(ind, value=10.)
 
-      call ppp_main%start(a4bp_label, PPP_AMR)
       if (associated(this%coarser) .and. this%l%id > base_level_id) then
-         if (wna%lst(ind)%ord_prolong /= O_INJ) call this%coarser%level_4d_boundaries(ind)  ! perhaps overkill sometimes
-         qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong  ! QUIRKY
-         do iw = 1, wna%lst(ind)%dim4
-            ! here we can use any high order prolongation without destroying conservation
-            call this%prolong_bnd_from_coarser(ind, sub=iw, dir=dir, nocorners=nocorners)
-         enddo
+         if (wna%lst(ind)%ord_prolong /= O_INJ) call this%coarser%level_4d_boundaries(ind)  ! overkill in most places
+         ! here we can use any high order prolongation without destroying conservation
+         call this%prolong_bnd_from_coarser(ind, arr4d=.true., dir=dir, nocorners=nocorners)
       endif
-      call ppp_main%stop(a4bp_label, PPP_AMR)
 
       call this%level_4d_boundaries(ind, area_type=area_type, dir=dir, nocorners=nocorners)
 

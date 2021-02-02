@@ -249,8 +249,8 @@ contains
    subroutine leaf_arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
       use cg_level_connected, only: cg_level_connected_t
-      use constants,          only: PPP_AMR, O_INJ
-      use named_array_list,   only: qna, wna
+      use constants,          only: O_INJ
+      use named_array_list,   only: wna
       use ppp,                only: ppp_main
 
       implicit none
@@ -262,8 +262,7 @@ contains
       logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
 
       type(cg_level_connected_t), pointer   :: curl
-      integer(kind=4) :: iw
-      character(len=*), parameter :: l4b_label = "leaf:arr4d_boundaries", l4bp_label = "leaf:arr4d_boundaries:prolong"
+      character(len=*), parameter :: l4b_label = "leaf:arr4d_boundaries"
       logical :: nc
 
       call ppp_main%start(l4b_label)
@@ -278,17 +277,12 @@ contains
          curl => curl%finer
       enddo
 
-      call ppp_main%start(l4bp_label, PPP_AMR)
       curl => this%coarsest_leaves
       do while (associated(curl))
-         qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong  ! QUIRKY
-         do iw = 1, wna%lst(ind)%dim4
-            call curl%prolong_bnd_from_coarser(ind, sub=iw, dir=dir, nocorners=nc)
-            ! corners are required on all levels except for finest anyway if prolongation order is greater than injection
-         enddo
+         call curl%prolong_bnd_from_coarser(ind, arr4d=.true., dir=dir, nocorners=nc)
+         ! corners are required on all levels except for finest anyway if prolongation order is greater than injection
          curl => curl%finer
       enddo
-      call ppp_main%stop(l4bp_label, PPP_AMR)
 
       call ppp_main%stop(l4b_label)
 
