@@ -58,7 +58,7 @@ module cg_level_connected
       procedure, private :: vertical_bf_prep  !< Initialize prolongation targets for fine->coarse flux exchange
 
       procedure :: prolong                    !< interpolate the grid data which has the flag vital set to this%finer level
-      procedure :: prolong_q_1var             !< interpolate the grid data in specified q field to this%finer level
+      procedure :: prolong_1var               !< interpolate the grid data in specified q field to this%finer level
       procedure :: prolong_bnd_from_coarser   !< Interpolate boundaries from coarse level at fine-coarse interfaces
 
       procedure :: restrict                   !< interpolate the grid data which has the flag vital set from this%coarser level
@@ -830,9 +830,6 @@ contains
 !! \brief interpolate the grid data which has the flag vital set to this%finer level
 !!
 !! The communication is done on 3D arrays. This means that there are as many communication events as there are "vital" arrays present.
-!!
-!! \todo Implement a more efficient alternative to this%prolong_q_1var that would restrict all fields at once
-!! (requires a lot more temporary buffers for a 4D array).
 !<
    subroutine prolong(this, bnd_type)
 
@@ -853,7 +850,7 @@ contains
 
       call ppp_main%start(proq_label, PPP_AMR)
       do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
-         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%l%id >= base_level_id)) call this%prolong_q_1var(i, bnd_type = bnd_type)
+         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%l%id >= base_level_id)) call this%prolong_1var(i, bnd_type = bnd_type)
          ! Although we aren't worried too much by nonconservation of psi or multigrid fields here
          ! but it will be worth checking if cnservative high-order prolongation can help.
       enddo
@@ -862,19 +859,24 @@ contains
       call ppp_main%start(prow_label, PPP_AMR)
       do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
          if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%l%id >= base_level_id)) then
-            qna%lst(qna%wai)%ord_prolong = 0 !> \todo implement high order conservative prolongation and use wna%lst(i)%ord_prolong here
-            if (wna%lst(i)%multigrid) call warn("[cg_level_connected:prolong] mg set for cg%w ???")
-            do iw = 1, wna%lst(i)%dim4
-               call this%wq_copy(i, iw, qna%wai)
-               if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%mul_by_r(qna%wai) ! angular momentum conservation
-               if (.true.) then  !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
-                  call this%finer%wq_copy(i, iw, qna%wai)
-                  if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%finer%mul_by_r(qna%wai)
-               endif
-               call this%prolong_q_1var(qna%wai, wna%lst(i)%position(iw), bnd_type = bnd_type)
-               if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%finer%div_by_r(qna%wai) ! angular momentum conservation
-               call this%finer%qw_copy(qna%wai, i, iw) !> \todo filter this through cg%ignore_prolongation
-            enddo
+
+            if (dom%geometry_type == GEO_RPZ .and. i == wna%fi) then  ! take the slow way
+               qna%lst(qna%wai)%ord_prolong = 0 !> \todo implement high order conservative prolongation and use wna%lst(i)%ord_prolong here
+               if (wna%lst(i)%multigrid) call warn("[cg_level_connected:prolong] mg set for cg%w ???")
+               do iw = 1, wna%lst(i)%dim4
+                  call this%wq_copy(i, iw, qna%wai)
+                  if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%mul_by_r(qna%wai) ! angular momentum conservation
+                  if (.true.) then  !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
+                     call this%finer%wq_copy(i, iw, qna%wai)
+                     if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%finer%mul_by_r(qna%wai)
+                  endif
+                  call this%prolong_1var(qna%wai, wna%lst(i)%position(iw), bnd_type = bnd_type)
+                  if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%finer%div_by_r(qna%wai) ! angular momentum conservation
+                  call this%finer%qw_copy(qna%wai, i, iw) !> \todo filter this through cg%ignore_prolongation
+               enddo
+            else
+               call this%prolong_1var(i, dim4 = .true., bnd_type = bnd_type)
+            endif
          endif
       enddo
       call ppp_main%stop(prow_label, PPP_AMR)
@@ -893,16 +895,16 @@ contains
 !! \todo implement local copies without MPI
 !<
 
-   subroutine prolong_q_1var(this, iv, pos, bnd_type)
+   subroutine prolong_1var(this, iv, pos, bnd_type, dim4)
 
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_ZERO, VAR_CENTER, ndims, PPP_AMR  !, dirtyH1
       use dataio_pub,       only: msg, warn
       use grid_cont,        only: grid_container
-      use grid_helpers,     only: f2c
+      use grid_helpers,     only: f2c, c2f
       use mpisetup,         only: err_mpi, req, inflate_req, master
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
-      use named_array_list, only: qna
+      use named_array_list, only: qna, wna
       use ppp,              only: ppp_main, piernik_Waitall
 
       implicit none
@@ -911,31 +913,37 @@ contains
       integer(kind=4),                     intent(in)    :: iv       !< variable to be prolonged
       integer(kind=4), optional,           intent(in)    :: pos      !< position of the variable within cell
       integer(kind=4), optional,           intent(in)    :: bnd_type !< Override default boundary type on external boundaries (useful in multigrid solver).
+      logical, optional,                   intent(in)    :: dim4     !< operate on wna instead
 
       type(cg_level_connected_t), pointer                :: fine
       integer                                            :: g
-      integer(kind=8), dimension(xdim:zdim, LO:HI)       :: cse              !< shortcut for coarse segment
-      integer(kind=4)                                    :: nr
+      integer(kind=8), dimension(xdim:zdim, LO:HI)       :: cse, fse         !< shortcuts for coarse and fine segments
+      integer(kind=4)                                    :: nr, iw
       type(cg_list_element),            pointer          :: cgl
       type(grid_container),             pointer          :: cg               !< current grid container
       real, dimension(:,:,:),           pointer          :: p3d
+      real, dimension(:,:,:,:),         pointer          :: p4d
       logical, save                                      :: warned = .false.
       integer                                            :: position
       integer(kind=8), dimension(ndims, LO:HI)           :: box_8            !< temporary storage
-      character(len=*), parameter :: pq1_label = "prolong_q1v"
+      character(len=*), parameter                        :: pq1_label = "prolong_1v"
+      logical                                            :: d4
+
+      d4 = .false.
+      if (present(dim4)) d4 = dim4
 
       call ppp_main%start(pq1_label, PPP_AMR)
 
       position = qna%lst(iv)%position(I_ONE)
       if (present(pos)) position = pos
       if (position /= VAR_CENTER .and. .not. warned) then
-         if (master) call warn("[cg_level_connected:prolong_q_1var] Only cell-centered interpolation scheme is implemented. Expect inaccurate results for variables that are placed on faces or corners")
+         if (master) call warn("[cg_level_connected:prolong_1var] Only cell-centered interpolation scheme is implemented. Expect inaccurate results for variables that are placed on faces or corners")
          warned = .true.
       endif
 
       fine => this%finer
       if (.not. associated(fine)) then ! can't prolong finest level
-         write(msg,'(a,i3)')"[cg_level_connected:prolong_q_1var] no finer level than: ", this%l%id
+         write(msg,'(a,i3)')"[cg_level_connected:prolong_1var] no finer level than: ", this%l%id
          call warn(msg)
          return
       endif
@@ -961,7 +969,12 @@ contains
             do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Irecv(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+               if (d4) then
+                  allocate(seg(g)%buf4(wna%lst(iv)%dim4, size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
+                  call MPI_Irecv(seg(g)%buf4(1, 1, 1, 1), size(seg(g)%buf4(:, :, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+               else
+                  call MPI_Irecv(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+               endif
             enddo
          endif
          end associate
@@ -978,15 +991,22 @@ contains
             cse = seg(g)%se
             nr = nr + I_ONE
             if (nr > size(req, dim=1)) call inflate_req
-            p3d => cg%q(iv)%span(cse)
-            seg(g)%buf(:, :, :) = p3d
-            call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+            if (d4) then
+               allocate(seg(g)%buf4(wna%lst(iv)%dim4, size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
+               p4d => cg%w(iv)%span(cse)
+               seg(g)%buf4(:, :, :, :) = p4d
+               call MPI_Isend(seg(g)%buf4(1, 1, 1, 1), size(seg(g)%buf4(:, :, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+            else
+               p3d => cg%q(iv)%span(cse)
+               seg(g)%buf(:, :, :) = p3d
+               call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+            endif
          enddo
          end associate
          cgl => cgl%nxt
       enddo
 
-      call piernik_Waitall(nr, "prolong_q1v")
+      call piernik_Waitall(nr, "prolong_1v")
 
       ! merge received coarse data into one array and interpolate it into the right place
       cgl => fine%first
@@ -994,29 +1014,79 @@ contains
          cg => cgl%cg
          if (allocated(cg%pi_tgt%seg) .and. .not. cg%ignore_prolongation) then
 
-            do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
-
-               cse = cg%pi_tgt%seg(g)%se
-               cg%prolong_(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = cg%pi_tgt%seg(g)%buf(:,:,:)
-
-               !> When this%ord_prolong_set /= I_ZERO, the received cg%pi_tgt%seg(:)%buf(:,:,:) may overlap
-               !! The incoming data thus must either contain valid guardcells (even if qna%lst(iv)%ord_prolong == O_INJ)
-               !! or the guardcells must be zeroed before sending data and received buffer should be added to cg%prolong_(:,:,:) not just assigned
-
-            enddo
-
             box_8 = int(cg%ijkse, kind=8)
             cse = f2c(box_8)
-            call cg%prolong(iv, cse, p_xyz = .false.) ! prolong directly to cg%q(iv)%arr
+            fse = c2f(cse)  ! what about odd-sized or odd-offset cg?
+
+            if (d4) then
+               qna%lst(qna%wai)%ord_prolong = 0  !> QUIRKY \todo implement high order conservative prolongation and use wna%lst(i)%ord_prolong here
+               do iw = 1, wna%lst(iv)%dim4
+                  do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
+
+                     associate (csep => cg%pi_tgt%seg(g)%se)
+                        cg%prolong_(csep(xdim, LO):csep(xdim, HI), csep(ydim, LO):csep(ydim, HI), csep(zdim, LO):csep(zdim, HI)) = cg%pi_tgt%seg(g)%buf4(iw, :, :, :)
+                     end associate
+                  enddo
+                  call cg%prolong(qna%wai, cse, p_xyz = .true.) ! prolong to auxiliary array cg%prolong_xyz
+                  cg%w(iv)%arr(iw,       fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI)) = &
+                       &  cg%prolong_xyz(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI))
+
+               enddo
+            else
+               do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
+
+                  associate (csep => cg%pi_tgt%seg(g)%se)
+                     cg%prolong_(csep(xdim, LO):csep(xdim, HI), csep(ydim, LO):csep(ydim, HI), csep(zdim, LO):csep(zdim, HI)) = cg%pi_tgt%seg(g)%buf(:,:,:)
+                  end associate
+
+                  !> When this%ord_prolong_set /= I_ZERO, the received cg%pi_tgt%seg(:)%buf(:,:,:) may overlap
+                  !! The incoming data thus must either contain valid guardcells (even if qna%lst(iv)%ord_prolong == O_INJ)
+                  !! or the guardcells must be zeroed before sending data and received buffer should be added to cg%prolong_(:,:,:) not just assigned
+
+               enddo
+
+               call cg%prolong(iv, cse, p_xyz = .false.) ! prolong directly to cg%q(iv)%arr
+            endif
 
          endif
          cgl => cgl%nxt
       enddo
       call ppp_main%stop(pq1_label, PPP_AMR)
 
-      call fine%check_dirty(iv, "prolong+")
+      if (d4) then
+         do iw = 1, wna%lst(iv)%dim4
+            call fine%check_dirty(iv, "prolong_w+", subfield=iw)
+         enddo
+      else
+         call fine%check_dirty(iv, "prolong_q+")
+      endif
 
-   end subroutine prolong_q_1var
+      if (d4) then
+         cgl => fine%first
+         do while (associated(cgl))
+            associate( seg => cgl%cg%pi_tgt%seg )
+               if (allocated(cgl%cg%pi_tgt%seg)) then
+                  do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
+                     deallocate(seg(g)%buf4)
+                  enddo
+               endif
+            end associate
+            cgl => cgl%nxt
+         enddo
+
+         cgl => this%first
+         do while (associated(cgl))
+            associate( seg => cgl%cg%po_tgt%seg )
+               do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
+                  deallocate(seg(g)%buf4)
+               enddo
+            end associate
+            cgl => cgl%nxt
+         enddo
+
+      endif
+
+   end subroutine prolong_1var
 
 !>
 !! \brief Interpolate boundaries from coarse level at fine-coarse interfaces

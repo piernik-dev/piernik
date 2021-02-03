@@ -85,7 +85,7 @@ contains
             call coarsest%level%set_q_value(soln, 0.)
          else
             nsmoo = nsmool
-            call curl%coarser%prolong_q_1var(soln, bnd_type = BND_NEGREF)
+            call curl%coarser%prolong_1var(soln, bnd_type = BND_NEGREF)
             !> \warning when this is incompatible with V-cycle or other scheme, use direct call to approximate_solution_relax
          endif
 
