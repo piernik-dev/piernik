@@ -955,7 +955,11 @@ contains
 
       if (this%ord_prolong_set /= I_ZERO) then
          !> \todo some variables may need special care on external boundaries
-         call this%arr3d_boundaries(iv, bnd_type = bnd_type)
+         if (d4) then
+            call this%arr4d_boundaries(iv) !, bnd_type = bnd_type)
+         else
+            call this%arr3d_boundaries(iv, bnd_type = bnd_type)
+         endif
       endif
       call this%check_dirty(iv, "prolong-")
 
