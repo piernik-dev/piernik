@@ -826,11 +826,8 @@ contains
 
    end subroutine vertical_bf_prep
 
-!>
-!! \brief interpolate the grid data which has the flag vital set to this%finer level
-!!
-!! The communication is done on 3D arrays. This means that there are as many communication events as there are "vital" arrays present.
-!<
+!> \brief interpolate the grid data which has the flag vital set to this%finer level
+
    subroutine prolong(this, bnd_type)
 
       use constants,        only: base_level_id, GEO_RPZ, PPP_AMR
@@ -884,11 +881,12 @@ contains
    end subroutine prolong
 
 !>
-!! \brief Perform prolongation of one 3D variable
+!! \brief Perform prolongation of one ramk-3 or rank-4 array.
 !!
-!! \details This routine communicates selected 3D array from coarse to fine grid.
+!! \details This routine communicates selected named array from coarse to fine grid.
 !! The prolonged data is then copied to the destination if the cg%ignore_prolongation allows it.
-!! OPT: Find a way to prolong only what is really needed.
+!!
+!! OPT: Find a way to prolong only what is really needed (some communication can be skipped).
 !!
 !! OPT Usually there are many messages that are sent between the same pairs of processes
 !! \todo Sort all messages according to e.g. tag and send/receive aggregated message with everything
@@ -1760,15 +1758,13 @@ contains
 !! of internal boundaries on all levels below the finest%level when prolongation
 !! order is higher than injection.
 !!
-!! Currently no solvers use level-wise updates on rank-4 array, so it is more efficient
-!! to  use leaves%leaf_arr4d_boundaries instead.
+!! This routine should be used only for level-wise updates of rank-4 arrays (like in prolongation called from refinement update).
+!! In most other cases use leaves%leaf_arr4d_boundaries instead.
 !<
 
    subroutine arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
       use constants,        only: base_level_id, O_INJ
-      use dataio_pub,       only: warn
-      use mpisetup,         only: master
       use named_array_list, only: wna
       use ppp,              only: ppp_main
 
@@ -1780,14 +1776,7 @@ contains
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
       logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
-      character(len=*), parameter :: a4b_label = "lev:a4d_bnd:DEPR"
-      logical, save :: warned = .false.
-
-      if (.not. warned) then
-         if (master) call warn("[cg_level_connected:arr4d_boundaries] This routine is deprecated. Use leaves%leaf_arr4d_boundaries instead")
-         ! Disable this warning when we get a solver that really requires level-wise update of guardcells in rank-4 arrays.
-         warned = .true.
-      endif
+      character(len=*), parameter :: a4b_label = "lev:a4d_bnd"
 
       call ppp_main%start(a4b_label)
 
