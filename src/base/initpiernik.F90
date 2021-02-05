@@ -113,7 +113,7 @@ contains
       real    :: ts                  !< Timestep wallclock
       logical :: finished
       integer, parameter :: nit_over = 3 ! maximum number of auxiliary iterations after reaching level_max
-      character(len=*), parameter :: ip_label = "init_piernik", ic_label = "IC_piernik", iter_label = "IC_iteration "
+      character(len=*), parameter :: ip_label = "init_piernik", ic_label = "IC_piernik", iter_label = "IC_iteration ", prob_label = "problem_IC"
       character(len=cbuff_len) :: label
 
       call set_colors(.false.)               ! Make sure that we won't emit colorful messages before we are allowed to do so
@@ -257,18 +257,23 @@ contains
          endif
       else
 
+         call ppp_main%start(iter_label // "0", PPP_PROB)
          nit = 0
          finished = .false.
-         call ppp_main%start(iter_label // "0", PPP_PROB)
+
+         call ppp_main%start(prob_label)
          call problem_initial_conditions ! may depend on anything
-         call ppp_main%stop(iter_label // "0", PPP_PROB)
+         call ppp_main%stop(prob_label)
+
          call init_psi ! initialize the auxiliary field for divergence cleaning when needed
 
          write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
          if (master) call printinfo(msg)
+         call ppp_main%stop(iter_label // "0", PPP_PROB)
 
          do while (.not. finished)
             write(label, '(i8)') nit + 1
+            call ppp_main%start(iter_label // adjustl(label), PPP_PROB)
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
 #ifdef GRAV
@@ -278,13 +283,14 @@ contains
             call update_refinement(act_count=ac)
             finished = (ac == 0) .or. (nit > level_max + nit_over) ! level_max iterations for creating refinement levels + level_max iterations for derefining excess of blocks
 
-            call ppp_main%start(iter_label // adjustl(label), PPP_PROB)
+            call ppp_main%start(prob_label)
             call problem_initial_conditions ! reset initial conditions after possible changes of refinement structure
-            call ppp_main%stop(iter_label // adjustl(label), PPP_PROB)
+            call ppp_main%stop(prob_label)
 
             nit = nit + 1
             write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%l%id,", time elapsed: ",set_timer(tmr_fu)
             if (master) call printinfo(msg)
+            call ppp_main%stop(iter_label // adjustl(label), PPP_PROB)
          enddo
 #ifdef GRAV
          call cleanup_hydrostatic
