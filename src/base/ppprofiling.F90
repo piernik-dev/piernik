@@ -342,9 +342,7 @@ contains
 
    subroutine arr_init(this, asize)
 
-      use constants,    only: PIERNIK_INIT_MPI
-      use dataio_pub,   only: die, code_progress
-      use memory_usage, only: check_mem_usage
+      use dataio_pub, only: die
 
       implicit none
 
@@ -354,7 +352,6 @@ contains
       if (allocated(this%ev_arr)) call die("[ppprofiling:arr_init] already allocated")
       allocate(this%ev_arr(asize))
 !      this%ev_arr(:)%wtime = 0.
-      if (code_progress >= PIERNIK_INIT_MPI) call check_mem_usage
 
    end subroutine arr_init
 
@@ -414,11 +411,7 @@ contains
 
    end subroutine cleanup
 
-!>
-!! \brief Add a beginning of an interval
-!!
-!! Do not use inside die(), warn(), system_mem_usage() or check_mem_usage()
-!<
+!> \brief Add a beginning of an interval
 
    subroutine start(this, label, mask)
 
@@ -443,11 +436,7 @@ contains
 
    end subroutine start
 
-!>
-!! \brief Add an end of an interval, use negative sign
-!!
-!! Do not use inside die(), warn(), system_mem_usage() or check_mem_usage()
-!<
+!> \brief Add an end of an interval, use negative sign
 
    subroutine stop(this, label, mask)
 
@@ -472,11 +461,8 @@ contains
 
    end subroutine stop
 
-!>
-!! \brief Add the initial event with bigbang time
-!!
-!! Do not use inside die(), warn(), system_mem_usage() or check_mem_usage().
-!<
+!> \brief Add the initial event with bigbang time
+
 
    subroutine set_bb(this, label)
 
@@ -561,7 +547,6 @@ contains
 
       use constants,    only: I_ZERO, I_ONE
       use dataio_pub,   only: die, printinfo, msg
-      use memory_usage, only: check_mem_usage
       use MPIF,         only: MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, &
            &                  MPI_Isend, MPI_Recv, MPI_Waitall
       use mpisetup,     only: proc, master, slave, err_mpi, FIRST, LAST, req, inflate_req
@@ -605,7 +590,6 @@ contains
 
       if (ne > 0) then
          allocate(buflabel(ne), buftime(ne))
-         call check_mem_usage
          p = I_ONE
          do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
             if (allocated(this%arrays(ia)%ev_arr)) then
@@ -632,7 +616,6 @@ contains
              call MPI_Recv(ne, I_ONE, MPI_INTEGER, p, TAG_CNT, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
              if (ne /= 0) then
                 allocate(buflabel(ne), buftime(ne))
-                call check_mem_usage
                 call MPI_Recv(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        p, TAG_ARR_L, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                 call MPI_Recv(buftime,  size(buftime, kind=4),                           MPI_DOUBLE_PRECISION, p, TAG_ARR_T, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                 call publish_buffers(p, buflabel, buftime)
