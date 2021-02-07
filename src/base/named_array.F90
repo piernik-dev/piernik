@@ -98,12 +98,14 @@ contains
 !!
 !! \warning Please note that maxloc and minloc return positions as all the declared lower bounds of array were 1, so whenever you plan to use these functions
 !! on this%arr remember to add lbound(this%arr) - 1 to the result
+!!
+!! OPT: check_mem_usage is relatively slow, se we prefer to call it only in grid_container_na::add_all_na
 !<
    subroutine named_array_init(this, n1, n2)
 
       use constants,    only: dirtyH1, ndims, xdim, ydim, zdim, I_ONE
       use dataio_pub,   only: die
-      use memory_usage, only: check_mem_usage
+!      use memory_usage, only: check_mem_usage
 
       implicit none
 
@@ -124,7 +126,7 @@ contains
          class default
             call die("[named_array:named_array_init] No initialization for generic named array")
       end select
-      call check_mem_usage
+!      call check_mem_usage
 
    end subroutine named_array_init
 
