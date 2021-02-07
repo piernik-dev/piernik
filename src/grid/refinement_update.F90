@@ -410,7 +410,7 @@ contains
       use cg_level_connected,    only: cg_level_connected_t
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
-      use constants,             only: pLOR, pLAND, pSUM, tmr_amr, PPP_AMR, PPP_IO
+      use constants,             only: pLOR, pLAND, pSUM, tmr_amr, PPP_AMR
       use dataio_pub,            only: warn, die
       use global,                only: nstep
       use grid_cont,             only: grid_container
@@ -440,7 +440,7 @@ contains
       type(grid_container),  pointer :: cg
       logical :: correct, full_update
       real :: ts  !< time for runtime profiling
-      character(len=*), parameter :: newref_label = "refine", deref_label = "derefinement", plot_label = "URC_map"
+      character(len=*), parameter :: newref_label = "refine", deref_label = "derefinement", prol_label = "prolong_new"
 
       ts =  set_timer(tmr_amr, .true.)
 
@@ -474,6 +474,7 @@ contains
          ! do the refinements first
          curl => base%level
          do while (associated(curl))
+
             cgl => curl%first
             do while (associated(cgl))
                if (any(cgl%cg%leafmap)) then
@@ -487,6 +488,7 @@ contains
 
             call finest%equalize
 
+            call ppp_main%start(prol_label, PPP_AMR)
             !> \todo merge small blocks into larger ones
             if (associated(curl%finer)) then
                call curl%finer%init_all_new_cg
@@ -494,6 +496,7 @@ contains
                call curl%finer%sync_ru
                call curl%prolong
             endif
+            call ppp_main%stop(prol_label, PPP_AMR)
 
             curl => curl%finer
          enddo
@@ -609,9 +612,7 @@ contains
 
       call all_bnd
 
-      call ppp_main%start(plot_label, PPP_AMR + PPP_IO)
       call urc_list%plot_mark(leaves%first)
-      call ppp_main%stop(plot_label, PPP_AMR + PPP_IO)
 
       !> \todo call the update of cs_i2 and other vital variables if and only if something has changed
       !> \todo add another flag to named_array_list::na_var so the user can also specify fields that need boundary updates on fine/coarse boundaries
