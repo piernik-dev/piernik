@@ -141,7 +141,7 @@ contains
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
     use func,        only: ekin, emag
-!    use global,      only: force_cc_mag
+!    use global,      only: cc_mag
 
     implicit none
 
@@ -201,7 +201,7 @@ contains
                 cg%u(fl%ien,i,j,k) = uni_pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
                                              emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 
-                !if (force_cc_mag) then
+                !if (cc_mag) then
 
                     cg%b(xdim,i,j,k) = Bx
                     cg%b(ydim,i,j,k) = zero

@@ -275,7 +275,7 @@ contains
       use constants,   only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX, I_EIGHT
       use div_B,       only: divB_c_IO
       use domain,      only: dom
-      use global,      only: force_cc_mag
+      use global,      only: cc_mag
 #endif /* MAGNETIC */
 
       implicit none
@@ -307,7 +307,7 @@ contains
            &                    emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
            &                         half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
            &                         half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))), &
-           &                    force_cc_mag))  ! fortran way of constructing ternary operators
+           &                    cc_mag))  ! fortran way of constructing ternary operators
 #else /* !MAGNETIC */
       associate(emag_c => 0.)
 #endif /* !MAGNETIC */
@@ -370,7 +370,7 @@ contains
             tab(:,:,:) =  merge(atan2(cg%b(ydim, RNG), cg%b(xdim, RNG)), &
                  &              atan2(cg%b(ydim, RNG) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ), &
                  &                    cg%b(xdim, RNG) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )),  &
-                 &              force_cc_mag)
+                 &              cc_mag)
             ! ToDo: magi - inclination
             ! ToDo: curlb - nabla x B
 !! ToDo: autodetect centering, add option for dumping both just in case
