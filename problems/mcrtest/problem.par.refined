@@ -49,7 +49,6 @@
     cfl    = 0.5
     smalld = 1.e-3
     smallei= 1.e-5
-    integration_order = 2
     limiter= 'vanleer'
     disallow_negatives = .false.
     solver_str = "Riemann"
