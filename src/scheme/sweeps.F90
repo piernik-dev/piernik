@@ -273,10 +273,13 @@ contains
                call all_fluid_boundaries(nocorners = .true.)
             endif
          else
+            ! nocorners and dir = cdim can be used safely only when ord_fluid_prolong == 0 .and. cc_mag
+            ! essential speedups here are possible but it requires c/f boundary prolongation that does not require corners
+
             ! if (istep == first_stage(integration_order)) then
-            !    call all_fluid_boundaries(nocorners = .true.) ! nocorners was doing something bad to periodic boundaries in Riemann with CT
+            !    call all_fluid_boundaries(nocorners = .true.)
             ! else
-               call all_fluid_boundaries
+               call all_fluid_boundaries !(nocorners = .true., dir = cdim)
             ! endif
          endif
       endif
