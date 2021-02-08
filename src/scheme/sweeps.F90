@@ -259,12 +259,6 @@ contains
       integer(kind=4), intent(in) :: cdim
       integer,         intent(in) :: istep
 
-      if (divB_0_method == DIVB_HDC) then
-#ifdef MAGNETIC
-         call all_mag_boundaries ! ToDo: take care of psi boundaries
-#endif /* MAGNETIC */
-      endif
-
       if (dom%has_dir(cdim)) then
          if (sweeps_mgu) then
             if (istep == first_stage(integration_order)) then
@@ -282,6 +276,12 @@ contains
                call all_fluid_boundaries !(nocorners = .true., dir = cdim)
             ! endif
          endif
+      endif
+
+      if (divB_0_method == DIVB_HDC) then
+#ifdef MAGNETIC
+         call all_mag_boundaries ! ToDo: take care of psi boundaries
+#endif /* MAGNETIC */
       endif
 
    end subroutine update_boundaries

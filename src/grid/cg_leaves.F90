@@ -249,6 +249,7 @@ contains
    subroutine leaf_arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
       use cg_level_connected, only: cg_level_connected_t
+      use cg_level_finest,    only: finest
       use constants,          only: O_INJ
       use named_array_list,   only: wna
       use ppp,                only: ppp_main
@@ -271,10 +272,11 @@ contains
       if (present(nocorners)) nc=nocorners
       if (wna%lst(ind)%ord_prolong /= O_INJ) nc = .false.
 
-      curl => this%coarsest_leaves
+      curl => finest%level
       do while (associated(curl))
-         call curl%level_4d_boundaries(ind, area_type=area_type, dir=dir, nocorners=nocorners)
-         curl => curl%finer
+         if (this%coarsest_leaves%l%id <= curl%l%id) &
+              call curl%level_4d_boundaries(ind, area_type=area_type, dir=dir, nocorners=nocorners)
+         curl => curl%coarser
       enddo
 
       curl => this%coarsest_leaves

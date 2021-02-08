@@ -51,12 +51,10 @@ contains
 
       implicit none
 
-!      if (all(cg%bnd(:,:) /= BND_USER)) then
       call all_fluid_boundaries
 #ifdef MAGNETIC
       call all_mag_boundaries
 #endif /* MAGNETIC */
-!      endif
 
    end subroutine all_bnd
 
