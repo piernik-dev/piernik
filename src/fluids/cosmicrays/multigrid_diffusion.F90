@@ -284,8 +284,8 @@ contains
 
    subroutine multigrid_solve_diff
 
-      use constants,         only: xdim, ydim, zdim, zero, tmr_mgd
-      use crdiffusion,       only: cr_diff
+      use constants,         only: zero, tmr_mgd
+      use crdiffusion,       only: cr_diff3
       use dataio_pub,        only: halfstep, warn, printinfo, msg
       use fluidindex,        only: flind
       use global,            only: dt
@@ -309,15 +309,8 @@ contains
             if (master .and. diff_explicit) call warn("[multigrid_diffusion:multigrid_solve_diff] Multigrid was initialized but is not used")
             frun = .false.
          endif
-         if (halfstep) then
-            call cr_diff(zdim)
-            call cr_diff(ydim)
-            call cr_diff(xdim)
-         else
-            call cr_diff(xdim)
-            call cr_diff(ydim)
-            call cr_diff(zdim)
-         endif
+
+         call cr_diff3(forward = .not. halfstep)
 
       else
 
