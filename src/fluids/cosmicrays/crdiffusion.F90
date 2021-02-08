@@ -74,7 +74,6 @@ contains
    subroutine all_wcr_boundaries
 
       use cg_leaves,        only: leaves
-      use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
       use constants,        only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n, PPP_CR
       use dataio_pub,       only: die
@@ -90,13 +89,19 @@ contains
       real, dimension(:,:,:,:), pointer       :: wcr
       type(cg_list_element),    pointer       :: cgl
       type(grid_container),     pointer       :: cg
-      character(len=*), parameter :: awb_label = "all_wcr_boundaries"
+      character(len=*), parameter             :: awb_label = "all_wcr_boundaries"
 
       if (.not. has_cr) return
 
-
       call ppp_main%start(awb_label, PPP_CR)
-      call finest%level%restrict_to_base_w_1var(wna%ind(wcr_n))
+
+      ! Since wcr was computed using valid data, so it should not be necessary to do restriction here
+      ! Additionally, wcr is face-centered thing, so it should not go through regular restriction -
+      ! for better accuracy we should use flux exchange routines here to match fine-coarse boundaries in a fully conservative way.
+
+      ! Since we don't exchange f/c fluxes, we don't want to prolong anything to fine guardsells.
+      ! Unfortunately, this is still required for avoiding crashes. ToDo: find out why.
+      ! Technically we have enough guardcells to avoid local boundary updates of wcr at all and the call below should not be necessary.
       call leaves%leaf_arr4d_boundaries(wna%ind(wcr_n))
 
       ! do the external boundaries
