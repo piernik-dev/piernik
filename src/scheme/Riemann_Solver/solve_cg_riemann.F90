@@ -116,7 +116,7 @@ contains
       use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, uh_n, magh_n, psih_n, INVALID, rk_coef, psidim, cs_i2_n
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp, iarr_mag_swp
       use fluxtypes,        only: ext_fluxes
-      use global,           only: dt, force_cc_mag
+      use global,           only: dt, cc_mag
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
       use sources,          only: all_sources, care_for_positives
@@ -173,7 +173,7 @@ contains
             u(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
 
             pb => cg%w(wna%bi)%get_sweep(ddim,i1,i2)
-            if (force_cc_mag) then
+            if (cc_mag) then
                pb0 => cg%w(bhi)%get_sweep(ddim,i1,i2)
                b0(:, iarr_mag_swp(ddim,:)) = transpose(pb0(:,:))
                b(:, iarr_mag_swp(ddim,:)) = transpose(pb(:,:))
@@ -212,7 +212,7 @@ contains
 
             call cg%save_outfluxes(ddim, i1, i2, eflx)
             pu(:,:) = transpose(u1(:, iarr_all_swp(ddim,:)))
-            if (force_cc_mag) pb(:,:) = transpose(b1(:, iarr_mag_swp(ddim,:))) ! ToDo figure out how to manage CT energy fixup without extra storage
+            if (cc_mag) pb(:,:) = transpose(b1(:, iarr_mag_swp(ddim,:))) ! ToDo figure out how to manage CT energy fixup without extra storage
             if (psii /= INVALID) ppsi = b1(:, psidim)
          enddo
       enddo
