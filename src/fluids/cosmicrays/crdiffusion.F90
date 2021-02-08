@@ -37,7 +37,7 @@ module crdiffusion
    implicit none
 
    private
-   public :: cr_diff, init_crdiffusion
+   public :: cr_diff, cr_diff3, init_crdiffusion
 
    logical :: has_cr
 
@@ -132,6 +132,31 @@ contains
       call ppp_main%stop(awb_label, PPP_CR)
 
    end subroutine all_wcr_boundaries
+
+!> \brief A wrapper for calling consecutive diffusion sweeps in forward or backward order
+
+   subroutine cr_diff3(forward)
+
+      use constants, only: xdim, zdim, I_ONE
+      use global,    only: skip_sweep
+
+      implicit none
+
+      logical, intent(in) :: forward
+
+      integer(kind=4) :: s, sFRST, sLAST, sCHNG
+
+      if (forward) then
+         sFRST = xdim ; sLAST = zdim ; sCHNG = I_ONE
+      else
+         sFRST = zdim ; sLAST = xdim ; sCHNG = -I_ONE
+      endif
+
+      do s = sFRST, sLAST, sCHNG
+         if (.not.skip_sweep(s)) call cr_diff(s)
+      enddo
+
+   end subroutine cr_diff3
 
 !>
 !! \brief Diffusive transport of ecr in crdim/ibdir-direction
