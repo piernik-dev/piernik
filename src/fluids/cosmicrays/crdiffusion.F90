@@ -183,7 +183,7 @@ contains
       use dataio_pub,       only: die
       use domain,           only: dom
       use fluidindex,       only: flind
-      use global,           only: dt
+      use global,           only: dt, cc_mag
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crs, K_crs_paral, K_crs_perp
       use named_array,      only: p4
@@ -191,6 +191,7 @@ contains
       use ppp,              only: ppp_main
 #ifdef MAGNETIC
       use constants,        only: four
+      use global,           only: cc_mag
 #endif /* MAGNETIC */
 
       implicit none
@@ -242,14 +243,18 @@ contains
                   decr(crdim,:) = (cg%u(iarr_crs,i,j,k) - cg%u(iarr_crs,ild,jld,kld)) * f1
                   fcrdif = K_crs_perp * decr(crdim,:)
 #ifdef MAGNETIC
-                  bcomp(crdim) =  cg%b(crdim,i,j,k) * four
+                  if (cc_mag) then
+                     bcomp(:) =  cg%b(:, i, j, k) + cg%b(:, ild, jld, kld)
+                  else
+                     bcomp(crdim) =  cg%b(crdim,i,j,k) * four
+                  endif
 #endif /* MAGNETIC */
                   if (present_not_crdim(xdim)) then
                      dqm = (cg%u(iarr_crs,i ,jld,kld) + cg%u(iarr_crs,i ,j,k)) - (cg%u(iarr_crs,il,jld,kld) + cg%u(iarr_crs,il,j,k))
                      dqp = (cg%u(iarr_crs,ih,jld,kld) + cg%u(iarr_crs,ih,j,k)) - (cg%u(iarr_crs,i ,jld,kld) + cg%u(iarr_crs,i ,j,k))
                      decr(xdim,:) = (dqp+dqm) * (1.0 + sign(1.0, dqm*dqp)) * cg%idx
 #ifdef MAGNETIC
-                     bcomp(xdim)  = sum(cg%b(xdim,i:ih, jld:j, kld:k))
+                     if (.not. cc_mag) bcomp(xdim)  = sum(cg%b(xdim,i:ih, jld:j, kld:k))
 #endif /* MAGNETIC */
                   endif
 
@@ -258,7 +263,7 @@ contains
                      dqp = (cg%u(iarr_crs,ild,jh,kld) + cg%u(iarr_crs,i,jh,k)) - (cg%u(iarr_crs,ild,j ,kld) + cg%u(iarr_crs,i,j ,k))
                      decr(ydim,:) = (dqp+dqm) * (1.0 + sign(1.0, dqm*dqp)) * cg%idy
 #ifdef MAGNETIC
-                     bcomp(ydim)  = sum(cg%b(ydim,ild:i, j:jh, kld:k))
+                     if (.not. cc_mag) bcomp(ydim)  = sum(cg%b(ydim,ild:i, j:jh, kld:k))
 #endif /* MAGNETIC */
                   endif
 
@@ -267,7 +272,7 @@ contains
                      dqp = (cg%u(iarr_crs,ild,jld,kh) + cg%u(iarr_crs,i,j,kh)) - (cg%u(iarr_crs,ild,jld,k ) + cg%u(iarr_crs,i,j,k ))
                      decr(zdim,:) = (dqp+dqm) * (1.0 + sign(1.0, dqm*dqp)) * cg%idz
 #ifdef MAGNETIC
-                     bcomp(zdim)  = sum(cg%b(zdim,ild:i, jld:j, k:kh))
+                     if (.not. cc_mag) bcomp(zdim)  = sum(cg%b(zdim,ild:i, jld:j, k:kh))
 #endif /* MAGNETIC */
                   endif
 
