@@ -122,7 +122,10 @@ contains
             if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim,i1,i2)
 
             u (:, iarr_all_swp(cdim,:)) = transpose(pu (:,:))
+
             if (istep == first_stage(integration_order)) pu0 = pu
+            ! such copy is a bit faster than whole copy of u and we don't have to modify all the source routines
+
             u0(:, iarr_all_swp(cdim,:)) = transpose(pu0(:,:))
             if (use_fargo .and. cdim == ydim) then
                if (fargo_vel == VEL_RES) then

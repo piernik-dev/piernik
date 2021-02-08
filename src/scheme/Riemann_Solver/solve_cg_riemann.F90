@@ -171,6 +171,7 @@ contains
             pu0 => cg%w(uhi)%get_sweep(ddim,i1,i2)
             pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
             if (istep == first_stage(integration_order)) pu0 = pu
+            ! such copy is a bit faster than whole copy of u and we don't have to modify all the source routines
 
             u0(:, iarr_all_swp(ddim,:)) = transpose(pu0(:,:))
             u(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))

@@ -372,9 +372,6 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          call prepare_sources(cgl%cg)
-         cgl%cg%w(uhi)%arr = cgl%cg%u
-         if (bhi  > INVALID) cgl%cg%w(bhi)%arr = cgl%cg%b
-         if (psii > INVALID) cgl%cg%q(psihi)%arr = cgl%cg%q(psii)%arr
          cgl => cgl%nxt
       enddo
 
