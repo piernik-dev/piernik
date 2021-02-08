@@ -37,7 +37,7 @@ module crdiffusion
    implicit none
 
    private
-   public :: cr_diff, cr_diff3, init_crdiffusion
+   public :: cr_diff3, init_crdiffusion
 
    logical :: has_cr
 
@@ -137,8 +137,10 @@ contains
 
    subroutine cr_diff3(forward)
 
-      use constants, only: xdim, zdim, I_ONE
-      use global,    only: skip_sweep
+      use all_boundaries,  only: all_bnd
+      use cg_level_finest, only: finest
+      use constants,       only: xdim, zdim, I_ONE
+      use global,          only: skip_sweep
 
       implicit none
 
@@ -151,6 +153,9 @@ contains
       else
          sFRST = zdim ; sLAST = xdim ; sCHNG = -I_ONE
       endif
+
+      call finest%level%restrict_to_base ! seems to be required by divvel
+      call all_bnd
 
       do s = sFRST, sLAST, sCHNG
          if (.not.skip_sweep(s)) call cr_diff(s)
@@ -167,9 +172,7 @@ contains
 !<
    subroutine cr_diff(crdim)
 
-      use all_boundaries,   only: all_bnd
       use cg_leaves,        only: leaves
-      use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR
       use dataio_pub,       only: die
@@ -213,9 +216,6 @@ contains
       decr(:,:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.dom%has_dir(dim) .and. (dim /= crdim) )
       present_not_crdim = dom%has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
       wcri = wna%ind(wcr_n)
-
-      call finest%level%restrict_to_base ! overkill
-      call all_bnd ! overkill
 
       cgl => leaves%first
       do while (associated(cgl))
