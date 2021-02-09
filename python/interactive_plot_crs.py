@@ -1,25 +1,24 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from colored_io import die, prtinfo, prtwarn, read_var
-import crs_h5
-import read_h5
-from crs_pf import initialize_pf_arrays
+from crs_h5  import crs_initialize, crs_plot_main, crs_plot_main_fpq
+from crs_pf  import initialize_pf_arrays
 from math import isnan, pi
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-from numpy import array as np_array, log, log10, mean, rot90
-import os
+from numpy   import array as np_array, log, log10, mean, rot90
+from os      import getcwd, makedirs, path
 from optparse import OptionParser
-from re import search
-from sys import argv, version
-import warnings
+from re      import search
+from read_h5 import read_par, input_names_array
+from sys     import argv, version
+from warnings import simplefilter
 try:
     import yt
     from yt.units import dimensions
 except:
     die("You must make yt available somehow")
 if (version[0:3] != "2.7"):
-    prtwarn("Using python version higher than 2.7!")
     raw_input = input
     not_py27 = True
 else:
@@ -56,15 +55,15 @@ parser.add_option("", "--center", dest="usr_center", default=(0., 0.), help=u"Se
 (options, args) = parser.parse_args(argv[1:])  # argv[1] is filename
 yt.mylog.setLevel(int(options.yt_verbose))    # Reduces the output to desired level, 50 - least output
 if (options.py_quiet is True):
-    warnings.simplefilter(action='ignore', category=FutureWarning)
-    warnings.simplefilter(action='ignore', category=Warning)
-    # warnings.filterwarnings("ignore")
+    simplefilter(action='ignore', category=FutureWarning)
+    simplefilter(action='ignore', category=Warning)
     prtwarn("Python warnings are turned off from here (-q, --quiet switch)")
 plot_var = options.var_name
 user_draw_timebox = options.annotate_time
 user_limits = (options.default_range is not True)
 save_spectrum = (options.not_save_spec is not True)
 use_logscale = (options.use_linscale is not True)
+use_linscale = (options.use_linscale)
 plot_field = options.fieldname
 plot_var = options.var_name
 plot_vel = options.plot_vel
@@ -181,9 +180,9 @@ if (filename_ext != 'h5'):
     die("Script requires a (list of) hdf5 file(s) on input")
 
 if f_run:
-    if not os.path.exists('results'):
-        os.makedirs('results')
-        prtinfo("Output directory created: %s" % (os.getcwd() + '/results'))
+    if not path.exists('results'):
+        makedirs('results')
+        prtinfo("Output directory created: %s" % (getcwd() + '/results'))
 
 var_array = []
 if f_run is True:
@@ -192,9 +191,9 @@ if f_run is True:
     var_def = [20, 10., 1.e5, 1.e-6, 0.01, 30., ]
     if len(var_names) == 0:
         prtwarn("Empty list of parameter names provided: enter names of parameters to read")
-        var_names = read_h5.input_names_array()
+        var_names = input_names_array()
 
-    var_array = read_h5.read_par(filename, var_names, var_def)
+    var_array = read_par(filename, var_names, var_def)
     for i in range(len(var_names)):
         exec("%s=%s" % (var_names[i], var_array[i]))
 
@@ -211,6 +210,7 @@ if f_run is True:
     dim_map = {'x': 0, 'y': 1, 'z': 2}
     dom_l = np_array(h5ds.domain_left_edge[0:3])
     dom_r = np_array(h5ds.domain_right_edge[0:3])
+    prtinfo("Max level of refinement is %i." %(h5ds.max_level))
 
 # ----------- Loading other data
     t = h5ds.current_time[0]
@@ -251,7 +251,7 @@ if f_run is True:
             slice_ax = 'z'
     avail_dim = avail_dims_by_slice[dim_map[slice_ax]]
     prtinfo("Slice ax set to %s, coordinate = %f %s \033[0m" % (slice_ax, slice_coord, length_unit))
-    resolution = [grid_dim[avail_dim[0]], grid_dim[avail_dim[1]]]
+    resolution = [grid_dim[avail_dim[0]]*2**h5ds.max_level, grid_dim[avail_dim[1]]*2**h5ds.max_level]
 
 # --------- Preparing clickable image
     s = plt.figure(figsize=(12, 8), dpi=100)
@@ -379,7 +379,7 @@ if f_run is True:
         die("An empty field might have been picked.")
 
     colormap_my = plt.cm.viridis
-    colormap_my.set_bad(color=colormap_my(par_epsilon))     # masks bad values
+    colormap_my.set_bad(color=colormap_my(par_epsilon))     # masks bad values | FIXME - modifying cmap is deprecated in future versions
     yt_data_plot.set_cmap(field=plot_field, cmap=colormap_my)
 
     if (user_annot_line is True):
@@ -401,7 +401,7 @@ if f_run is True:
 
     print("")
 
-    crs_h5.crs_initialize(var_names, var_array)
+    crs_initialize(var_names, var_array)
 
     mplot = yt_data_plot.plots[plot_field]
 
@@ -481,7 +481,7 @@ if f_run is True:
                     ecrs.append(float(mean(position['cree' + str(ind).zfill(2)][0].v)))
                     ncrs.append(float(mean(position['cren' + str(ind).zfill(2)][0].v)))
 
-                fig2, exit_code = crs_h5.crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot, hide_axes=options.no_axes)
+                fig2, exit_code = crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot, hide_axes=options.no_axes)
 
             elif (plot_ovlp is True):  # for overlap_layer
                 prtinfo("Plotting layer with overlap...")
@@ -492,7 +492,7 @@ if f_run is True:
                     for ind in range(1, ncre + 1):
                         ecrs.append(position['cree' + str(ind).zfill(2)][0].v)
                         ncrs.append(position['cren' + str(ind).zfill(2)][0].v)
-                    fig2, exit_code_tmp = crs_h5.crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], i_plot=image_number, clean_plot=options.clean_plot, hide_axes=options.no_axes)
+                    fig2, exit_code_tmp = crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], i_plot=image_number, clean_plot=options.clean_plot, hide_axes=options.no_axes)
                     if (exit_code_tmp is False):
                         exit_code = exit_code_tmp  # Just one plot is allright
                     ecrs = []
@@ -514,7 +514,7 @@ if f_run is True:
                 qcrs.append(float(position['creq' + str(ind).zfill(2)][0].v))
             pcut[:] = [position['crep01'][0].v, position['crep02'][0].v]
 
-            fig2, exit_code = crs_h5.crs_plot_main_fpq(var_names, var_array, plot_var, fcrs, qcrs, pcut, field_max, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot)
+            fig2, exit_code = crs_plot_main_fpq(var_names, var_array, plot_var, fcrs, qcrs, pcut, field_max, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot)
 
         if (exit_code is not True):
             if ((plot_layer is True) or (plot_ovlp is True)):
