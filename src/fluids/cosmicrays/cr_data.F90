@@ -265,6 +265,16 @@ contains
 
    end subroutine init_crsources
 
+!> \brief cleanup routine
+
+   subroutine cleanup_crsources
+
+      implicit none
+
+      deallocate(cr_names, cr_table, cr_sigma, cr_tau, cr_primary, cr_mass)
+
+   end subroutine cleanup_crsources
+
 end module cr_data
 
 ! this type looks useful but is unused.
