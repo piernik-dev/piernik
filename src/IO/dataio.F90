@@ -1714,13 +1714,15 @@ contains
          rss = system_mem_usage()
          call MPI_Gather(rss, I_ONE, MPI_INTEGER, cnt_rss, I_ONE, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
 
-         if (master .and. any(cnt_rss /= INVALID)) then
-            write(msg, '(9a)')"  RSS memory in use (avg/min/max):", &
-                 trim(kMGTP(sum(real(cnt_rss))/size(cnt_rss))), "/", &
-                 trim(kMGTP(minval(real(cnt_rss)))), "/", &
-                 trim(kMGTP(maxval(real(cnt_rss)))), &
-                 ". Total RSS memory:", trim(kMGTP(sum(real(cnt_rss)))), "."
-            call printinfo(msg, .false.)
+         if (master) then
+            if (any(cnt_rss /= INVALID)) then
+               write(msg, '(9a)')"  RSS memory in use (avg/min/max):", &
+                    trim(kMGTP(sum(real(cnt_rss))/size(cnt_rss))), "/", &
+                    trim(kMGTP(minval(real(cnt_rss)))), "/", &
+                    trim(kMGTP(maxval(real(cnt_rss)))), &
+                    ". Total RSS memory:", trim(kMGTP(sum(real(cnt_rss)))), "."
+               call printinfo(msg, .false.)
+            endif
          endif
 
       end subroutine print_memory_usage
