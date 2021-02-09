@@ -144,7 +144,8 @@ contains
       use dataio_pub,     only: nproc_io, can_i_write, die
       use domain,         only: is_multicg
       use hdf5,           only: HID_T
-      use MPIF,           only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
+      use MPIF,           only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,         only: MPI_Recv, MPI_Send
       use mpisetup,       only: master, FIRST, LAST, proc, err_mpi
       use particle_types, only: particle
 
@@ -229,7 +230,8 @@ contains
       use dataio_pub,     only: nproc_io, can_i_write, die
       use domain,         only: is_multicg
       use hdf5,           only: HID_T
-      use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
+      use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,         only: MPI_Recv, MPI_Send
       use mpisetup,       only: master, FIRST, LAST, proc, err_mpi
       use particle_types, only: particle
 
