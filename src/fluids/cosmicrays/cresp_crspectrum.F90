@@ -77,7 +77,6 @@ module cresp_crspectrum
    real, allocatable, dimension(:) :: f                                   !> distribution function for piecewise power-law spectrum
    real, allocatable, dimension(:) :: p_next, p_upw , nflux, eflux        !> predicted and upwind momenta, number density / energy density fluxes
    real                            :: n_tot, n_tot0, e_tot, e_tot0        !> precision control for energy / number density transport and dissipation of energy
-   real                            :: u_b, u_d                            !> in-algorithm energy dissipation terms
    real, allocatable, dimension(:) :: ndt, edt                            !> work array of number density and energy during algorithm execution
    real, allocatable, dimension(:) :: n, e                                !> in-algorithm energy & number density
    real, allocatable, dimension(:) :: e_amplitudes_l, e_amplitudes_r
@@ -138,9 +137,6 @@ contains
       r = zero
       f = zero
       q = zero
-
-      u_b = sptab%ub
-      u_d = sptab%ud
 
       if (present(substeps)) then
          n_substep = substeps
@@ -240,7 +236,7 @@ contains
 
       do i_sub = 1, n_substep                   !< if one substep, all is done the classic way
 ! Compute momentum changes in after time period [t,t+dt]
-         call cresp_update_bin_index(dt, p_cut, p_cut_next, cfl_cresp_violation)
+         call cresp_update_bin_index(sptab%ub*dt, sptab%ud*dt, p_cut, p_cut_next, cfl_cresp_violation)
 
          if (cfl_cresp_violation) then
             approx_p = e_small_approx_p         !< restore approximation after momenta computed
@@ -262,7 +258,7 @@ contains
 
 ! edt(1:ncre) = e(1:ncre) *(one-0.5*dt*r(1:ncre)) - (eflux(1:ncre) - eflux(0:ncre-1))/(one+0.5*dt*r(1:ncre))   !!! oryginalnie u Miniatiego
 ! Compute coefficients R_i needed to find energy in [t,t+dt]
-         call cresp_compute_r(p_next, active_bins_next)                 ! new active bins already received some particles, Ri is needed for those bins too
+         call cresp_compute_r(sptab%ub, sptab%ud, p_next, active_bins_next)                 ! new active bins already received some particles, Ri is needed for those bins too
 
          edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
 
@@ -692,48 +688,45 @@ contains
 
       real,            intent(in) :: n_in, e_in
       integer(kind=4), intent(in) :: i_cutoff
-      real                        :: f_one, q_one, p_l, p_r, e_amplitude_l, e_amplitude_r, alpha
+      real                        :: f_one, q_one, q_1m3, p_l, p_r, e_amplitude_l, e_amplitude_r, alpha
       logical                     :: exit_code
 
+      assert_active_bin_via_nei = .false.
+
       if (e_in > zero .and. n_in > zero .and. p_fix(max(i_cutoff-1,0)) > zero ) then
-         assert_active_bin_via_nei = .true.
 
-         exit_code = .true.
-
-         if (i_cutoff > 0 .and. i_cutoff < ncre) then
-            alpha = e_in/(n_in * clight_cresp * p_fix(i_cutoff-1))
-            q_one = compute_q(alpha, exit_code)
-         else
+         if (i_cutoff <= 0 .or. i_cutoff >= ncre) then
+            assert_active_bin_via_nei = .true.
             return            ! WARN: returns .true. if bin of choice is the extreme one -- FIX_ME
          endif
+
+         exit_code = .true.
+         alpha = e_in/(n_in * clight_cresp * p_fix(i_cutoff-1))
+         q_one = compute_q(alpha, exit_code)
+         q_1m3 = three - q_one
 
          p_l = p_fix(i_cutoff-1)
          p_r = p_fix(i_cutoff)
          f_one = n_in / (fpi*p_l**3)
 
-         if (abs(q_one-three) > eps) then
-            f_one = f_one*(three - q_one) /((p_r/p_l)**(three - q_one) - one)
+         if (abs(q_1m3) > eps) then
+            f_one = f_one*(q_1m3) /((p_r/p_l)**(q_1m3) - one)
          else
             f_one = f_one/log(p_r/p_l)
          endif
 
          e_amplitude_l = fp_to_e_ampl(p_l, f_one)
          e_amplitude_r = fp_to_e_ampl(p_r, f_one)
+         assert_active_bin_via_nei = ((e_amplitude_l > e_small) .and. (e_amplitude_r > e_small))
 
-         if ((e_amplitude_l > e_small) .and. (e_amplitude_r > e_small)) then
 #ifdef CRESP_VERBOSED
-            write(msg,*) "[cresp_crspectrum:verify_cutoff_i_next] No change to ", i_cutoff ; call printinfo(msg)
-#endif /* CRESP_VERBOSED */
-            assert_active_bin_via_nei = .true.
+         if (assert_active_bin_via_nei) then
+            write(msg,*) "[cresp_crspectrum:verify_cutoff_i_next] No change to ", i_cutoff
          else
-#ifdef CRESP_VERBOSED
-            write(msg,*) "[cresp_crspectrum:verify_cutoff_i_next] Cutoff index should change index no. ", i_cutoff; call printinfo(msg)
-#endif /* CRESP_VERBOSED */
-            assert_active_bin_via_nei = .false.
+            write(msg,*) "[cresp_crspectrum:verify_cutoff_i_next] Cutoff index should change index no. ", i_cutoff
          endif
-      else
-         assert_active_bin_via_nei = .false.
-         return
+         call printinfo(msg)
+#endif /* CRESP_VERBOSED */
       endif
 
    end function assert_active_bin_via_nei
@@ -796,7 +789,7 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   subroutine cresp_update_bin_index(dt, p_cut, p_cut_next, dt_too_high) ! evaluates only "next" momenta and is called after finding outer cutoff momenta
+   subroutine cresp_update_bin_index(ubdt, uddt, p_cut, p_cut_next, dt_too_high) ! evaluates only "next" momenta and is called after finding outer cutoff momenta
 
       use constants,      only: zero, I_ZERO, one
 #ifdef CRESP_VERBOSED
@@ -807,16 +800,15 @@ contains
 
       implicit none
 
-      real,                   intent(in)  :: dt
+      real,                   intent(in)  :: ubdt, uddt     !> in-algorithm energy dissipation terms
       real, dimension(LO:HI), intent(in)  :: p_cut
       real, dimension(LO:HI), intent(out) :: p_cut_next
       logical,                intent(out) :: dt_too_high
       integer                             :: i
 
       dt_too_high = .false.
-! Compute p_cut at [t+dt]
-      call p_update(dt, p_cut(LO), p_cut_next(LO))
-      call p_update(dt, p_cut(HI), p_cut_next(HI))
+! Compute p_cut at [t+dt] (update p_range)
+      p_cut_next = p_cut * (one + [p_rch(uddt, ubdt*p_cut(LO)), p_rch(uddt, ubdt*p_cut(HI))]) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
       p_cut_next = abs(p_cut_next)
 ! Compute likely cut-off indices after current timestep
       i_cut_next = get_i_cut(p_cut_next)
@@ -850,7 +842,7 @@ contains
 
 ! Compute upwind momentum p_upw for all fixed edges
       p_upw = zero
-      p_upw(1:ncre) = [( p_fix(i)*(one - p_rch(dt,p_fix(i))), i=1,ncre )] !< p_upw is computed with minus sign
+      p_upw(1:ncre) = [( p_fix(i)*(one - p_rch(uddt,ubdt*p_fix(i))), i=1,ncre )] !< p_upw is computed with minus sign
 
 #ifdef CRESP_VERBOSED
       write (msg, "(A, 2I3)") 'Change of  cut index lo,up:', del_i    ; call printinfo(msg)
@@ -885,25 +877,6 @@ contains
 
 !-------------------------------------------------------------------------------------------------
 !
-! update p_range
-!
-!-------------------------------------------------------------------------------------------------
-
-   subroutine p_update(dt, p_old, p_new)
-
-      use constants, only: one
-
-      implicit none
-
-      real, intent(in)  :: dt
-      real, intent(in)  :: p_old
-      real, intent(out) :: p_new
-
-      p_new = p_old*(one + p_rch(dt, p_old)) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
-
-   end subroutine p_update
-!-------------------------------------------------------------------------------------------------
-!
 ! arrays initialization | TODO: reorganize cresp_init_state
 !
 !-------------------------------------------------------------------------------------------------
@@ -929,34 +902,28 @@ contains
 
    end subroutine arrange_assoc_active_edge_arrays
 !-------------------------------------------------------------------------------------------------
-   subroutine cresp_init_state(init_n, init_e, sptab)
+   subroutine cresp_init_state(init_n, init_e)
 
       use constants,       only: zero, I_ZERO, I_ONE
       use cresp_NR_method, only: bound_name
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncre
-      use initcrspectrum,  only: spec_mod_trms, q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel,   &
+      use initcrspectrum,  only: q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel,   &
                               &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins
       use mpisetup,        only: master
 
       implicit none
 
-      real, dimension(I_ONE:ncre)               :: init_n, init_e
-      type(spec_mod_trms), optional, intent(in) :: sptab
-      integer                                   :: i, k, co
-      integer, dimension(LO:HI)                 :: i_ch
-      real                                      :: c
-      logical                                   :: exit_code
+      real, dimension(I_ONE:ncre), intent(out) :: init_n, init_e
+      integer                                  :: i, k, co
+      integer, dimension(LO:HI)                :: i_ch
+      real                                     :: c
+      logical                                  :: exit_code
 
       max_ic = [I_ZERO, ncre]
       fail_count_interpol = 0
       fail_count_NR_2dim  = 0
       fail_count_comp_q   = 0
-
-      u_b = zero ; u_d = zero
-
-      if (present(sptab)) u_b = sptab%ub
-      if (present(sptab)) u_d = sptab%ud
 
       approx_p    = e_small_approx_p
       e_threshold = e_small_approx_p * e_small
@@ -1617,7 +1584,7 @@ contains
 ! compute R (eq. 25)
 !
 !-------------------------------------------------------------------------------------------------
-   subroutine cresp_compute_r(p, bins)
+   subroutine cresp_compute_r(u_b, u_d, p, bins)
 
       use constants,      only: zero, four, five
       use initcosmicrays, only: ncre
@@ -1626,6 +1593,7 @@ contains
       implicit none
 
       integer, dimension(:),   intent(in) :: bins
+      real,                    intent(in) :: u_b, u_d
       real, dimension(0:ncre), intent(in) :: p
       real, dimension(size(bins))         :: r_num, r_den
 
@@ -1872,53 +1840,41 @@ contains
       alpha = zero ;  n_in = zero
 
    end subroutine get_fqp_cutoff
-!----------------------------------------------------------------------------------------------------
-   function b_losses(p)
 
-      implicit none
-
-      real, dimension(:), intent(in)  :: p
-      real, dimension(size(p))        :: b_losses
-
-      b_losses = u_b*p**2  !!! b_sync_ic = 8.94e-25*(u_b+u_cmb)*gamma_l**2 ! erg/cm
-
-   end function b_losses
-!-------------------------------------------------------------------------------------------------
 !>
 !! \brief Relative change of momentum due to losses (u_b*p*dt) and compression u_d*dt (Taylor expansion up to 3rd order)
 !<
-!====================================================================================================
-   real function p_rch_ord_1(dt, p)
+   real function p_rch_ord_1(uddt, ubpdt)
 
       implicit none
 
-      real, intent(in) :: dt, p
+      real, intent(in) :: uddt, ubpdt
 
-      p_rch_ord_1 = -( u_d + p * u_b ) * dt
+      p_rch_ord_1 = -(uddt + ubpdt)
 
    end function p_rch_ord_1
 !-------------------------------------------------------------------------------------------------
-   real function p_rch_ord_2_1(dt, p)     !< adds 2nd term and calls 1st order
+   real function p_rch_ord_2_1(uddt, ubpdt)     !< adds 2nd term and calls 1st order
 
       use constants, only: half
 
       implicit none
 
-      real, intent(in) :: dt, p
+      real, intent(in) :: uddt, ubpdt
 
-      p_rch_ord_2_1 = p_rch_ord_1(dt, p) + ( half*(u_d*dt)**2 + (u_b * p * dt)**2)
+      p_rch_ord_2_1 = p_rch_ord_1(uddt, ubpdt) + ( half*uddt**2 + ubpdt**2)
 
    end function p_rch_ord_2_1
 !-------------------------------------------------------------------------------------------------
-   real function p_rch_ord_3_2_1(dt, p)     !< adds 3rd term and calls 2nd and 1st order
+   real function p_rch_ord_3_2_1(uddt, ubpdt)     !< adds 3rd term and calls 2nd and 1st order
 
       use constants, only: onesth
 
       implicit none
 
-      real, intent(in) :: dt, p
+      real, intent(in) :: uddt, ubpdt
 
-      p_rch_ord_3_2_1 = p_rch_ord_2_1(dt, p) - onesth * (u_d * dt)**3 - (u_b * p * dt)**3
+      p_rch_ord_3_2_1 = p_rch_ord_2_1(uddt, ubpdt) - onesth * uddt**3 - ubpdt**3
 
    end function p_rch_ord_3_2_1
 !----------------------------------------------------------------------------------------------------
@@ -1941,7 +1897,7 @@ contains
             call die(msg)
       end select
    end subroutine p_rch_init
-!====================================================================================================
+!----------------------------------------------------------------------------------------------------
    subroutine transfer_quantities(take_from, give_to)
 
       use constants, only: zero
@@ -2040,7 +1996,9 @@ contains
 
       implicit none
 
-      call print_failcounts
+#ifdef CRESP_VERBOSED
+      call print_failcounts   ! since active bin counting method changed some time ago, failcounts are overestimated, possibly DEPRECATED
+#endif /* CRESP_VERBOSED */
       call cresp_deallocate_all
 
    end subroutine cleanup_cresp
@@ -2053,9 +2011,9 @@ contains
 
       implicit none
 
-      write(msg, '(A36,I6,A6,I6)') "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(LO),  ", p_up", fail_count_NR_2dim(HI)  ; call printinfo(msg)
-      write(msg, '(A36,I6,A6,I6)') "NR_2dim:interpolation failure: p_lo", fail_count_interpol(LO), ", p_up", fail_count_interpol(HI) ; call printinfo(msg)
-      write(msg, '(A36,   100I5)') "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q                                          ; call printinfo(msg)
+      write(msg, '(A36,I8,A6,I8)') "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(LO),  ", p_up", fail_count_NR_2dim(HI)  ; call printinfo(msg)
+      write(msg, '(A36,I8,A6,I8)') "NR_2dim:interpolation failure: p_lo", fail_count_interpol(LO), ", p_up", fail_count_interpol(HI) ; call printinfo(msg)
+      write(msg, '(A36,   100I8)') "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q                                          ; call printinfo(msg)
 
    end subroutine print_failcounts
 

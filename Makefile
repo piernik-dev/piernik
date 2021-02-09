@@ -81,14 +81,17 @@ allsetup:
 		fi; \
 	done
 
-qa: chk_err_msg pycodestyle
+qa:
 	./bin/qa.py $$( find src problems -name "*.F90" )
+
+QA:
+	make -k  chk_err_msg pycodestyle qa
 
 pep8: pycodestyle
 
 pycodestyle:
 	echo 'Pycodestyle check (--ignore=E501,E722,W504,W605)'
-	pycodestyle `find src problems bin python -name "*py"` bin/gdf_distance --ignore=E501,E722,W504,W605
+	pycodestyle `find src problems bin python visual -name "*py"` bin/gdf_distance --ignore=E501,E722,W504,W605
 
 chk_err_msg:
 	echo Check filenames in error messages

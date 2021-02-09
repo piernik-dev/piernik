@@ -29,8 +29,8 @@
  /
 
  $END_CONTROL
-    tend         = 100.0
-    nend         = 100000
+    tend         = 10.0
+    nend         = 1000000000
  /
 
  $OUTPUT_CONTROL
@@ -38,9 +38,9 @@
     run_id       = 'tst'
     dt_hdf       = 1.0
     dt_res       = 0.0
-    dt_log       = 1.0e-2
-    dt_tsl       = 1.0e-3
-    vars(1:) = 'encr', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz', 'cree', 'cren'
+    dt_log       = 1.0e-1
+    dt_tsl       = 1.0e-1
+    vars(1:) = 'encr', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz'
  /
 
  $FLUID_IONIZED
@@ -65,54 +65,30 @@
 
  $RESISTIVITY
     cfl_resist   =    0.9   ! Courant's number for resistiwity
-    eta_0        =    1.0   ! uniform resistivity
+    eta_0        =  100.0   ! uniform resistivity
     eta_1        =    0.0   ! anomalous resistivity, works above j_crit
     j_crit       = 1000.0   ! critical value of current
  /
 
   $COSMIC_RAYS
-    ncrn        =   1
-    ncre        =   15      ! number of cr electron spectrum bins (including cutoff bins)
+    ncrn        =   4
+    ncre        =   0
     cfl_cr      =   0.9
     cr_active   =   1.0
     gamma_crn(1)   =  1.333333
     K_crn_paral(1) = 10000.0
-    K_crn_perp(1)  = 100.0 ! 10% of paral
+    K_crn_paral(2) = 10000.0
+    K_crn_paral(3) = 10000.0
+    K_crn_paral(4) = 10000.0
+    K_crn_paral(5) = 10000.0
+    K_crn_paral(6) = 10000.0
+    K_crn_paral(7) = 10000.0
+    K_crn_perp(1)  = 0
     smallecr       = 0.e-2
-    cre_gpcr_ess   = .false.
     use_CRsplit    = .false.
  /
 
- $COSMIC_RAY_SPECTRUM
-    use_cresp   = .true.   ! enables usage of cresp_update_grid @fluidupdate
-    cre_eff     = 0.01     ! factor scaling sn explosion energy to total spectrum energy
-    cfl_cre = 0.2
-    p_min_fix = 1.e0    ! momentum fixed grid
-    p_max_fix = 1.e6    ! momentum fixed grid
-    p_lo_init = 1.e1    ! initial lower cut momentum
-    p_up_init = 1.e5    ! initial upper cut momentum
-    q_init    = 4.1     ! < initial value of power law coefficient in cre enrgy spectrum
-    q_big     = 30.0    ! < limit value of power law coefficient in cre energy spectrum, do not set that value too high!
-    K_cre_paral_1 = 1.0e5
-    K_cre_perp_1  = 1.0e3
-    K_cre_pow     = 0.5 !
-    e_small       = 1.0e-6    ! lower energy cutoff for energy-approximated cutoff momenta
-    initial_spectrum = 'powl' ! 'powl', 'brpl', 'bump', 'symf', 'syme'
-    cre_active   = 0.0
-    NR_iter_limit = 50
-    synch_active  = .true.
-    adiab_active  = .true.
-    nullify_empty_bins = .false.
- /
-
  $CR_SPECIES
-    eH1 = .true.
-    eLi7 = .false.
-    eBe9 = .false.
-    eBe10 = .false.
-    eC12 = .false.
-    eN14 = .false.
-    eO16 = .false.
  /
 
  $SHEARING
@@ -123,7 +99,7 @@
  $SN_SOURCES
     r_sn         =  50.0    ! radius of explosion (gauss function)
     h_sn         = 100.0    ! std. dev. for normal distribution of SN i "z" direction
-    f_sn_kpc2    = 200.0    ! surface frequency of SN ( / kpc^2 / Myr )
+    f_sn_kpc2    =   0.0    ! surface frequency of SN ( / kpc^2 / Myr )
  /
 
  $PROBLEM_CONTROL

@@ -241,9 +241,13 @@ def qa_checks(files, options):
             # False refs need to be done before removal of types in module body
             qa_false_refs(part, obj['name'], warns, f)
             if(obj['type'] == b'mod'):
-                # module body is always last, remove lines that've been
-                # already checked
-                part = np.delete(part, np.array(clean_ind) - obj['beg'])
+                # check whether already checked lines are accounted to module lines range
+                ci = np.array(clean_ind)
+                eitc = np.where(np.logical_or(ci < obj['beg'], ci > obj['end']))
+                ind_tbr = np.delete(ci, eitc)
+                # module body is always last, remove lines that've been already checked
+                if (ind_tbr.size > 0):
+                    part = np.delete(part, ind_tbr - obj['beg'])
                 qa_have_priv_pub(part, obj['name'], warns, f)
             else:
                 clean_ind += range(obj['beg'], obj['end'] + 1)
@@ -270,7 +274,7 @@ def qa_checks(files, options):
 
 
 def qa_have_priv_pub(lines, name, warns, fname):
-    if(not filter(have_privpub.search, lines)):
+    if(len(list(filter(have_privpub.search, lines))) < 1):
         warns.append(give_warn("QA:  ") + "module [%s:%s] lacks public/private keywords." %
                      (fname, name))
     else:
@@ -326,7 +330,7 @@ def qa_depreciated_syntax(lines, rname, store, fname):
 
 
 def qa_have_implicit(lines, name, store, fname):
-    if(not filter(have_implicit.search, lines)):
+    if(len(list(filter(have_implicit.search, lines))) < 1):
         store.append(give_err("missing 'implicit none'      ") + "[%s:%s]" % (fname, name))
 
 

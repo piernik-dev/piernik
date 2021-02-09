@@ -32,20 +32,21 @@
 
 module initcrspectrum
 ! pulled by COSM_RAY_ELECTRONS
-   use constants, only: cbuff_len
+   use constants, only: cbuff_len, fnamelen
 
    implicit none
 
    private
-   public :: use_cresp, p_init, initial_spectrum, p_br_init, f_init, q_init, q_br_init, q_big, cfl_cre, cre_eff, expan_order, e_small, e_small_approx_p, e_small_approx_init_cond,  &
+   public :: use_cresp, use_cresp_evol, p_init, initial_spectrum, p_br_init, f_init, q_init, q_br_init, q_big, cfl_cre, cre_eff, expan_order, e_small, e_small_approx_p, e_small_approx_init_cond,  &
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active, &
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,        &
            & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,       &
-           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, cresp_substep, cresp_substep_bcast_dt
+           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, cresp_substep_bcast_dt
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
-   logical         :: use_cresp                   !< determines whether CRESP update is called by fluidupdate
+   logical         :: use_cresp                   !< determines whether CRESP routines are called anywhere
+   logical         :: use_cresp_evol              !< determines whether CRESP update is called by fluidupdate
    real            :: p_min_fix                   !< fixed momentum grid lower cutoff
    real            :: p_max_fix                   !< fixed momentum grid upper cutoff
    real            :: p_lo_init                   !< initial lower cutoff momentum
@@ -82,7 +83,9 @@ module initcrspectrum
    logical         :: NR_refine_solution_q        !< enables NR_1D refinement for value of interpolated "q" value
    logical         :: NR_refine_pf_lo             !< enables NR_2D refinement for interpolated values of "p" and "f" for lower cutoff. Note - algorithm tries to refine values if interpolation was unsuccessful.
    logical         :: NR_refine_pf_up             !< enables NR_2D refinement for interpolated values of "p" and "f" for upper cutoff. Note - algorithm tries to refine values if interpolation was unsuccessful.
+   logical         :: NR_allow_old_smaps          !< allows to override h5 smap reading in favor of old ".dat" files ! WARNING : parameter not included in the namelist ! WARNING
    logical, dimension(2) :: NR_refine_pf          !< vector to store NR_refine_pf_lo and NR_refine_pf_up
+   character(len=fnamelen):: NR_smap_file         !< provides name for NR solution maps to be read from / saved to
 
    logical         :: nullify_empty_bins          !< nullifies empty bins when entering CRESP module / exiting empty cell.
    logical         :: allow_source_spectrum_break !< allow extension of spectrum to adjacent bins if momenta found exceed set p_fix
@@ -177,15 +180,16 @@ module initcrspectrum
       real    :: p_br_def, q_br_def
 
       namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum, p_min_fix, p_max_fix, &
-      &                         cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, K_cre_pow, expan_order, e_small, use_cresp,      &
+      &                         cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, K_cre_pow, expan_order, e_small, use_cresp, use_cresp_evol, &
       &                         e_small_approx_init_cond, p_br_init_lo, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,   &
       &                         NR_iter_limit, max_p_ratio, synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init,             &
       &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf, b_max_db,      &
       &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up, p_diff,&
-      &                         q_eps, cresp_substep, cresp_substep_bcast_dt
+      &                         q_eps, NR_smap_file, cresp_substep, cresp_substep_bcast_dt
 
 ! Default values
       use_cresp         = .true.
+      use_cresp_evol    = .true.
       p_min_fix         = 1.5e1
       p_max_fix         = 1.65e4
       p_lo_init         = 1.5e1
@@ -221,6 +225,8 @@ module initcrspectrum
       NR_refine_solution_q = .false.
       NR_refine_pf_lo      = .false.
       NR_refine_pf_up      = .false.
+      NR_smap_file         = "CRESP_smaps.h5"
+      NR_allow_old_smaps   = .false.
       nullify_empty_bins   = .false.
       smallcren            = 0.0
       smallcree            = 0.0
@@ -273,17 +279,18 @@ module initcrspectrum
          ibuff(7)  =  arr_dim_q
 
          lbuff(1)  =  use_cresp
-         lbuff(2)  =  allow_source_spectrum_break
-         lbuff(3)  =  synch_active
-         lbuff(4)  =  adiab_active
-
-         lbuff(5)  =  force_init_NR
-         lbuff(6)  =  NR_run_refine_pf
-         lbuff(7)  =  NR_refine_solution_q
-         lbuff(8)  =  NR_refine_pf_lo
-         lbuff(9)  =  NR_refine_pf_up
-         lbuff(10) =  nullify_empty_bins
-         lbuff(11) =  approx_cutoffs
+         lbuff(2)  =  use_cresp_evol
+         lbuff(3)  =  allow_source_spectrum_break
+         lbuff(4)  =  synch_active
+         lbuff(5)  =  adiab_active
+         lbuff(6)  =  force_init_NR
+         lbuff(7)  =  NR_run_refine_pf
+         lbuff(8)  =  NR_refine_solution_q
+         lbuff(9)  =  NR_refine_pf_lo
+         lbuff(10) =  NR_refine_pf_up
+         lbuff(11) =  nullify_empty_bins
+         lbuff(12) =  approx_cutoffs
+         lbuff(13) =  NR_allow_old_smaps
 
          lbuff(12) =  cresp_substep
          lbuff(13) =  cresp_substep_bcast_dt
@@ -329,6 +336,7 @@ module initcrspectrum
       call piernik_MPI_Bcast(rbuff)
       call piernik_MPI_Bcast(lbuff)
       call piernik_MPI_Bcast(cbuff, cbuff_len)
+      call piernik_MPI_Bcast(NR_smap_file, fnamelen)
 
       if (slave) then
          expan_order                 = int(ibuff(1),kind=4)
@@ -342,17 +350,18 @@ module initcrspectrum
          arr_dim_q                   = int(ibuff(7),kind=4)
 
          use_cresp                   = lbuff(1)
-         allow_source_spectrum_break = lbuff(2)
-         synch_active                = lbuff(3)
-         adiab_active                = lbuff(4)
-
-         force_init_NR               = lbuff(5)
-         NR_run_refine_pf            = lbuff(6)
-         NR_refine_solution_q        = lbuff(7)
-         NR_refine_pf_lo             = lbuff(8)
-         NR_refine_pf_up             = lbuff(9)
-         nullify_empty_bins          = lbuff(10)
-         approx_cutoffs              = lbuff(11)
+         use_cresp_evol              = lbuff(2)
+         allow_source_spectrum_break = lbuff(3)
+         synch_active                = lbuff(4)
+         adiab_active                = lbuff(5)
+         force_init_NR               = lbuff(6)
+         NR_run_refine_pf            = lbuff(7)
+         NR_refine_solution_q        = lbuff(8)
+         NR_refine_pf_lo             = lbuff(9)
+         NR_refine_pf_up             = lbuff(10)
+         nullify_empty_bins          = lbuff(11)
+         approx_cutoffs              = lbuff(12)
+         NR_allow_old_smaps          = lbuff(13)
 
          cresp_substep               = lbuff(12)
          cresp_substep_bcast_dt      = lbuff(13)
@@ -402,13 +411,17 @@ module initcrspectrum
       NR_refine_pf     = [NR_refine_pf_lo, NR_refine_pf_up]
 
 ! Input parameters check
-      if (ncre < 3) then
-         if (ncre <= I_ZERO)  then
-            write (msg,"(A,I4,A)") '[initcrspectrum:init_cresp] ncre   = ', ncre, '; cr-electrons NOT initnialized. If COSM_RAY_ELECTRONS flag is on, please check your parameters.'
-            call die(msg)
-         endif
-         call die("[initcrspectrum:init_cresp] CRESP algorithm currently requires at least 3 bins (ncre) in order to work properly, check your parameters.")
+      if (use_cresp .and. ncre <= I_ZERO)  then
+         write (msg,"(A,I4,A)") '[initcrspectrum:init_cresp] ncre   = ', ncre, '; cr-electrons NOT initnialized. Switching CRESP module off.'
+         call warn(msg)
+         use_cresp      = .false.
+         use_cresp_evol = .false.
+         ncre           = 0
       endif
+
+      if (.not. use_cresp) return
+
+      if (ncre < 3) call die("[initcrspectrum:init_cresp] CRESP algorithm currently requires at least 3 bins (ncre) in order to work properly, check your parameters.")
 
       if (approx_cutoffs) then
          e_small_approx_p = 1
@@ -546,14 +559,13 @@ module initcrspectrum
 
       call init_cresp_types
 
-      K_cre_paral(1:ncre) = K_cre_paral_1 * (p_fix(0:ncre-1) / p_diff)**K_cre_pow
-      K_cre_paral(1)      = K_cre_paral_1 * (p_fix(1) / p_fix_ratio / p_diff)**K_cre_pow
+      K_cre_paral(1:ncre) = K_cre_paral_1 * (p_mid_fix(1:ncre) / p_diff)**K_cre_pow
 
-      K_cre_perp(1:ncre)  = K_cre_perp_1  * (p_fix(0:ncre-1) / p_diff)**K_cre_pow
-      K_cre_perp(1)       = K_cre_perp_1  * (p_fix(1) / p_fix_ratio / p_diff)**K_cre_pow
+      K_cre_perp(1:ncre)  = K_cre_perp_1  * (p_mid_fix(1:ncre) / p_diff)**K_cre_pow
+
 #ifdef VERBOSE
       write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_paral = ", K_cre_paral(1:ncre) ; if (master) call printinfo(msg)
-      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_perp = ", K_cre_perp(1:ncre)   ; if (master) call printinfo(msg)
+      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_perp = ",  K_cre_perp(1:ncre)  ; if (master) call printinfo(msg)
 #endif /* VERBOSE */
 
       K_cre_paral(ncre+1:2*ncre)      = K_cre_paral(1:ncre)

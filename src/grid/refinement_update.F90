@@ -241,9 +241,10 @@ contains
       use constants,          only: xdim, zdim, LO, HI, I_ONE, I_ZERO
       use dataio_pub,         only: die, warn
       use domain,             only: dom
-      use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, &
-           &                        MPI_Alltoall, MPI_Isend, MPI_Recv, MPI_Waitall
+      use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD, &
+           &                        MPI_Alltoall, MPI_Isend, MPI_Recv
       use mpisetup,           only: FIRST, LAST, err_mpi, proc, req, inflate_req
+      use ppp,                only: piernik_Waitall
 
       implicit none
 
@@ -331,7 +332,7 @@ contains
          endif
       enddo
 
-      if (nr > 0) call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
+      call piernik_Waitall(nr, "prevent_derefinement")
 
       deallocate(pt_list)
 
@@ -748,15 +749,6 @@ contains
 
       call ppp_main%start(frp_label, PPP_AMR)
       call finest%level%restrict_to_base_q_1var(qna%wai)
-
-!!$      curl => base%level
-!!$      do while (associated(curl))
-!!$         call curl%clear_boundaries(ind, value=10.)
-!!$         call curl%prolong_bnd_from_coarser(ind)
-!!$         call curl%level_3d_boundaries(ind, nb, area_type, bnd_type, corners)
-!!$!         call curl%arr3d_boundaries(ind, nb, area_type, bnd_type, corners)
-!!$         curl => curl%finer
-!!$      enddo
       call leaves%leaf_arr3d_boundaries(qna%wai)
       call ppp_main%stop(frp_label, PPP_AMR)
 

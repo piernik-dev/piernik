@@ -100,7 +100,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS
       use all_boundaries, only: all_fluid_boundaries
       use cresp_grid,     only: cresp_update_grid, cresp_clean_grid
-      use initcrspectrum, only: use_cresp
+      use initcrspectrum, only: use_cresp_evol
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -115,7 +115,7 @@ contains
 ! Sources should be hooked to problem_customize_solution with forward argument
 
 #ifdef COSM_RAY_ELECTRONS
-      if (use_cresp) then
+      if (use_cresp_evol) then
          call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module
          call all_fluid_boundaries
       endif

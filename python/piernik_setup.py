@@ -33,36 +33,6 @@ have_inc = re.compile(r"^#include\s", re.IGNORECASE).search
 have_mod = re.compile(r"^\s*module\s+(?!procedure)", re.IGNORECASE).search
 cpp_junk = re.compile("(?!#define\s_)", re.IGNORECASE)
 
-desc = '''
-EXAMPLE:
-> cd obj
-> ./newcompiler <settingsname>
-> make
-then copy files to your run directory (optional), e.g.
-> cp {piernik,problem.par} ../runs/<problem>
-> cd ../runs/<problem>
-
-to run PIERNIK:
-edit problem.par as appropriate, e.g.
-* add var names for visualisation => var(<number>)='<name>'
-* change domain dimensions/resolution => DOMAIN_SIZES
-* change domain divisions for parallel processing => MPI_BLOCKS
-* change frequency of data dumps => dt_* entries
-* etc.
-execute
-> ./piernik
-or for <np> parallel processes
-> mpirun -n <np> ./piernik
-
-HEALTH WARNINGS:
-* the contents of \'./obj\' and \'./runs/<problem>\' are overwritten
-  each time setup <problem>\' is run, unless you specify -obj <postfix>
-  in which case the contents of runs/<problem>_<postfix> will be only updated
-* by default PIERNIK will read the configuration file \'problem.par\' from the
-working directory, to use alternative configurations execute
-\'./piernik <directory with an alternative problem.par>\'
-Enjoy your work with the Piernik Code!
-'''
 
 head_block1 = '''ifneq (,$(findstring h5pfc, $(F90)))
 LIBS += ${STATIC} -lz ${DYNAMIC}
@@ -113,8 +83,8 @@ ifeq ("$(SILENT)","1")
 endif
 \t@$(ECHO) $(F90) $(LDFLAGS) -o $@ '*.o' $(LIBS)
 \t@$(F90) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
-\t@touch mpi_f08.o mpi.o
-\t@$(RM) mpi_f08.o mpi.o
+\t@touch mpi_f08.o mpi.o a.out
+\t@$(RM) mpi_f08.o mpi.o a.out
 \t@AO1=`mktemp _ao_XXXXXX`;\\
 \tAO2=`mktemp _ao_XXXXXX`;\\
 \t$(ECHO) $(OBJS) | tr ' ' '\\n' | sort > $$AO1;\\
@@ -426,17 +396,10 @@ def setup_piernik(data=None):
         print(our_defs)
 
     files = ['src/base/defines.c']
-    
+
     uses = [[]]
     incl = ['']
     module = dict()
-
-    if "COSM_RAY_ELECTRONS" in our_defs: # args[0] == 'mcrtest':
-        ratio_path="src/fluids/cosmicrays/"
-        allfiles.append(ratio_path + "p_ratios_lo.dat")
-        allfiles.append(ratio_path + "f_ratios_lo.dat")
-        allfiles.append(ratio_path + "p_ratios_up.dat")
-        allfiles.append(ratio_path + "f_ratios_up.dat")
 
     for f in f90files:  # exclude links that symbolise file locks
         if (not os.access(f, os.F_OK)):
@@ -524,6 +487,13 @@ def setup_piernik(data=None):
                 print("Possible duplicate link or a name clash :", f)
                 raise
 
+    if (options.hard_copy):
+        otdir = objdir + "/tests/"
+        os.mkdir(otdir)
+        ctdir = "compilers/tests/"
+        for f in os.listdir(ctdir):
+            shutil.copy(ctdir + f, otdir)
+
     if(options.param != 'problem.par'):
         os.symlink(options.param, objdir + '/' + 'problem.par')
 
@@ -573,13 +543,10 @@ def setup_piernik(data=None):
     if("PIERNIK_OPENCL" in our_defs):
         m.write("LIBS += $(shell pkg-config --libs fortrancl)\n")
         m.write("F90FLAGS += $(shell pkg-config --cflags fortrancl)\n")
-    if(options.laconic):
-        m.write("SILENT = 1\n\n")
-    else:
-        m.write("SILENT = 0\n\n")
-    m.write(head_block1)
-    m.write(
-        "\t@( $(ECHO) \"%s\"; \\" % ("./setup " + " ".join(all_args)))
+
+    m.write("SILENT = %d\n\n" % (1 if options.laconic else 0))
+    m.write(head_block1.replace("./compilers", "") if options.hard_copy else head_block1)
+    m.write("\t@( $(ECHO) \"%s\"; \\" % ("./setup " + " ".join(all_args)))
     m.write(head_block2)
 
     for i in range(0, len(files_to_build)):
@@ -724,26 +691,6 @@ def setup_piernik(data=None):
             print('\033[91m' +
                   "Problem with removing old 'piernik.def' from '%s'." %
                   rundir.rstrip('/') + '\033[0m')
-        
-    if "COSM_RAY_ELECTRONS" in our_defs: # added by mogrodnik, CRESP needs these, flagname might change
-        ratio_path="src/fluids/cosmicrays/"
-        for suf_nam in ["lo","up"]:
-            for pref_nam in ["p","f"]:
-                ratio_f_nam = str(pref_nam+'_ratios_'+suf_nam+'.dat')
-                try:
-                    if(os.path.isfile(rundir + ratio_f_nam)):
-                        print('\033[92m' + '('+args[0]+') ' + '\033[0m' +
-                        "Ratios file ("+ratio_f_nam+") already present in "+
-                        rundir.strip('/')+".")
-                    else:
-                        #shutil.copy(probdir + ratio_f_nam, rundir + ratio_f_nam)
-                        os.symlink("../../"+ratio_path + ratio_f_nam, rundir + ratio_f_nam)
-                        print('\033[92m' + '('+args[0]+') ' + '\033[0m' + "CRESP ratios ("
-                        +ratio_f_nam+") linked to "+'\033[92m'+rundir.strip('/')+".")
-                except (IOError):
-                    print ('\033[93m'+'('+args[0]+') '+ '\033[0m' +
-                    "Problem with copying "+ratio_f_nam+
-                    ". Piernik will compute it from scratch." )
 
     if (options.link_exe):
         try:

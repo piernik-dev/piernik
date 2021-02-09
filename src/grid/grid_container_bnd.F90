@@ -35,7 +35,7 @@ module grid_cont_bnd
    use fluxtypes,       only: fluxarray, fluxpoint
    use refinement_flag, only: ref_flag_t
 #ifdef MPIF08
-   use MPIF,            only: MPI_Request
+   use MPIF,            only: MPI_Request, MPI_Datatype
 #endif /* MPIF08 */
 
    implicit none
@@ -54,8 +54,10 @@ module grid_cont_bnd
       real, allocatable, dimension(:,:,:,:) :: buf4        !< buffer for the 4D (vector) data to be sent or received
 #ifdef MPIF08
       type(MPI_Request), pointer :: req                    !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
+      type(MPI_Datatype) :: sub_type                       !< MPI type related to this segment
 #else /* !MPIF08 */
       integer(kind=4), pointer :: req                      !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
+      integer(kind=4) :: sub_type                          !< MPI type related to this segment
 #endif /* !MPIF08 */
 
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se2  !< auxiliary range, used in cg_level_connected:vertical_bf_prep

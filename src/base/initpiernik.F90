@@ -47,6 +47,9 @@ contains
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, INCEPTIVE, tmr_fu, cbuff_len, PPP_PROB
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_grid,            only: cresp_init_grid
+#endif /* COSM_RAY_ELECTRONS */
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
       use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
       use decomposition,         only: init_decomposition
@@ -110,7 +113,7 @@ contains
       real    :: ts                  !< Timestep wallclock
       logical :: finished
       integer, parameter :: nit_over = 3 ! maximum number of auxiliary iterations after reaching level_max
-      character(len=*), parameter :: ip_label = "init_piernik", ic_label = "IC_piernik", iter_label = "IC_iteration "
+      character(len=*), parameter :: ip_label = "init_piernik", ic_label = "IC_piernik", iter_label = "IC_iteration ", prob_label = "problem_IC"
       character(len=cbuff_len) :: label
 
       call set_colors(.false.)               ! Make sure that we won't emit colorful messages before we are allowed to do so
@@ -216,6 +219,10 @@ contains
       call init_dataio                       ! depends on units, fluids (through common_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
       ! Initial conditions are read here from a restart file if possible
 
+#ifdef COSM_RAY_ELECTRONS
+     call cresp_init_grid                    ! depends on cg
+#endif /* COSM_RAY_ELECTRONS */
+
 #ifdef GRAV
       if (restarted_sim) call source_terms_grav
       call init_terms_grav
@@ -250,18 +257,23 @@ contains
          endif
       else
 
+         call ppp_main%start(iter_label // "0", PPP_PROB)
          nit = 0
          finished = .false.
-         call ppp_main%start(iter_label // "0", PPP_PROB)
+
+         call ppp_main%start(prob_label)
          call problem_initial_conditions ! may depend on anything
-         call ppp_main%stop(iter_label // "0", PPP_PROB)
+         call ppp_main%stop(prob_label)
+
          call init_psi ! initialize the auxiliary field for divergence cleaning when needed
 
          write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
          if (master) call printinfo(msg)
+         call ppp_main%stop(iter_label // "0", PPP_PROB)
 
          do while (.not. finished)
             write(label, '(i8)') nit + 1
+            call ppp_main%start(iter_label // adjustl(label), PPP_PROB)
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
 #ifdef GRAV
@@ -271,13 +283,14 @@ contains
             call update_refinement(act_count=ac)
             finished = (ac == 0) .or. (nit > level_max + nit_over) ! level_max iterations for creating refinement levels + level_max iterations for derefining excess of blocks
 
-            call ppp_main%start(iter_label // adjustl(label), PPP_PROB)
+            call ppp_main%start(prob_label)
             call problem_initial_conditions ! reset initial conditions after possible changes of refinement structure
-            call ppp_main%stop(iter_label // adjustl(label), PPP_PROB)
+            call ppp_main%stop(prob_label)
 
             nit = nit + 1
             write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%l%id,", time elapsed: ",set_timer(tmr_fu)
             if (master) call printinfo(msg)
+            call ppp_main%stop(iter_label // adjustl(label), PPP_PROB)
          enddo
 #ifdef GRAV
          call cleanup_hydrostatic

@@ -54,7 +54,7 @@ contains
       use func,             only: emag
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp, cresp, fsynchr, u_b_max
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max
       use mpisetup,         only: piernik_MPI_Allreduce
 
       implicit none
@@ -71,7 +71,7 @@ contains
       dt_cre_synch = big
       dt_cre_adiab = big
 
-      if (.not. use_cresp) return
+      if (.not. use_cresp_evol) return
 
       abs_max_ud   = zero
       i_up_max     = 1

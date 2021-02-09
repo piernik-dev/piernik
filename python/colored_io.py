@@ -15,15 +15,21 @@ else:
    Returns: name of calling unit + message kind (info, warn, exit) + message content
 '''
 
+
 def talkgreen(message):
-   message = "\033[92m"+message+"\033[0m"
-   return message
+    message = "\033[92m" + message + "\033[0m"
+    return message
+
+
 def talkred(message):
-   message = "\033[91m"+message+"\033[0m"
-   return message
+    message = "\033[91m" + message + "\033[0m"
+    return message
+
+
 def talkyellow(message):
-   message = "\033[93m"+message+"\033[0m"
-   return message
+    message = "\033[93m" + message + "\033[0m"
+    return message
+
 
 '''
    Name of calling_unit is trimmed to len = 9 (default)
@@ -33,19 +39,25 @@ def talkyellow(message):
 
 calling_unit_namelen = 8
 
+
 def prtinfo(message):
-   calling_unit = ((inspect.stack()[1][1].split("/")[-1]).split(".")[0])[0:calling_unit_namelen].ljust(calling_unit_namelen)
-   print (talkgreen(calling_unit+": [INFO] "+message))
-   return
+    calling_unit = ((inspect.stack()[1][1].split("/")[-1]).split(".")[0])[0:calling_unit_namelen].ljust(calling_unit_namelen)
+    print(talkgreen(calling_unit + ": [INFO] " + message))
+    return
+
+
 def prtwarn(message):
-   calling_unit = ((inspect.stack()[1][1].split("/")[-1]).split(".")[0])[0:calling_unit_namelen].ljust(calling_unit_namelen)
-   print (talkyellow(calling_unit+": [WARN] "+message))
-   return
+    calling_unit = ((inspect.stack()[1][1].split("/")[-1]).split(".")[0])[0:calling_unit_namelen].ljust(calling_unit_namelen)
+    print(talkyellow(calling_unit + ": [WARN] " + message))
+    return
+
+
 def die(message):
-   calling_unit = ((inspect.stack()[1][1].split("/")[-1]).split(".")[0])[0:calling_unit_namelen].ljust(calling_unit_namelen)
-   exit(talkred(calling_unit+": [EXIT] "+message))
+    calling_unit = ((inspect.stack()[1][1].split("/")[-1]).split(".")[0])[0:calling_unit_namelen].ljust(calling_unit_namelen)
+    exit(talkred(calling_unit + ": [EXIT] " + message))
+
 
 def read_var(message):
-    stdout.write (talkgreen("[IO]   "+  message+" "))
+    stdout.write(talkgreen("[IO]   " + message + " "))
     var = raw_input()
     return var

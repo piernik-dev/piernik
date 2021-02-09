@@ -31,8 +31,8 @@ for fn in args.files:
         fno = np.where(header == field)[0][0]
 
     tab_work = tab   # problems with map in python3+
-    tab = np.array([ [float(item) for item in line.split()]
-                    for line in filter(remove_comments.match, tab_work) ])
+    tab = np.array([[float(item) for item in line.split()]
+                    for line in filter(remove_comments.match, tab_work)])
     data.append(tab)
 
 fig = plt.figure()

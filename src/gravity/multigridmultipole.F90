@@ -455,8 +455,9 @@ contains
    subroutine domain2moments
 
       use cg_leaves,          only: leaves
+      use cg_level_base,      only: base
       use cg_level_finest,    only: finest
-      use cg_level_connected, only: cg_level_connected_t, base_level
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: xdim, zdim, GEO_XYZ, zero, base_level_id, PPP_GRAV
       use dataio_pub,         only: die, msg, warn
@@ -485,11 +486,11 @@ contains
          level => finest%find_finest_bnd()
          cgl => level%first
       else if (mpole_level <= base_level_id) then
-         level => base_level
+         level => base%level
          call finest%level%restrict_to_base_q_1var(source)
          do while (level%l%id > mpole_level)
             if (associated(level%coarser)) then
-               call level%restrict_q_1var(source)
+               call level%restrict_1var(source)
                level => level%coarser
             else
                write(msg, '(2(a,i3))')"[multigridmultipole:domain2moments] Coarsest level reached. Will use level ", level%l%id, " instead of ", mpole_level
@@ -501,7 +502,7 @@ contains
       else
          level => finest%level
          do while (level%l%id > mpole_level)
-            call level%restrict_q_1var(source)
+            call level%restrict_1var(source)
             level => level%coarser
             if (.not. associated(level)) call die("[multigridmultipole:domain2moments] Coarsest level reached for mpole_level > base_level_id")
          enddo

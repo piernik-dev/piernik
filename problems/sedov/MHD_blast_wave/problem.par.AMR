@@ -66,6 +66,7 @@
     smalld = 1.e-3
     smallei= 1.e-5
     print_divb = 10
+    solver_str = "Riemann"
  /
 
  $GRAVITY
@@ -90,7 +91,6 @@
 
  $INTERACTIONS
  /
-
 
  $FLUID_TRACER
  /

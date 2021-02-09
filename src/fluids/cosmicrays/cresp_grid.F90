@@ -52,10 +52,10 @@ module cresp_grid
       use cresp_crspectrum, only: cresp_allocate_all, cresp_init_state, p_rch_init
       use cresp_NR_method,  only: cresp_initialize_guess_grids
       use dataio,           only: vars
-      use dataio_pub,       only: printinfo
+      use dataio_pub,       only: printinfo, restarted_sim
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_n, iarr_cre_e, ncre
-      use initcrspectrum,   only: norm_init_spectrum, dfpq, check_if_dump_fpq
+      use initcrspectrum,   only: norm_init_spectrum, dfpq, check_if_dump_fpq, use_cresp
       use mpisetup,         only: master
       use named_array_list, only: wna
 
@@ -63,6 +63,8 @@ module cresp_grid
 
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+
+      if (.not. use_cresp) return
 
       call cresp_initialize_guess_grids
       call cresp_allocate_all
@@ -75,21 +77,24 @@ module cresp_grid
          if (dfpq%dump_q) call all_cg%reg_var(dfpq%q_nam, dim4=ncre)
       endif
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
+      if (.not. restarted_sim) then
+         cgl => leaves%first
+         do while (associated(cgl))
+            cg => cgl%cg
 
-         cg%u(iarr_cre_n,:,:,:)  = 0.0
-         cg%u(iarr_cre_e,:,:,:)  = 0.0
+            cg%u(iarr_cre_n,:,:,:)  = 0.0
+            cg%u(iarr_cre_e,:,:,:)  = 0.0
 
-         if (dfpq%any_dump) then
-            if (dfpq%dump_f) cg%w(wna%ind(dfpq%f_nam))%arr = 0.0
-            if (dfpq%dump_p) cg%w(wna%ind(dfpq%p_nam))%arr = 0.0
-            if (dfpq%dump_q) cg%w(wna%ind(dfpq%q_nam))%arr = 0.0
-         endif
+            if (dfpq%any_dump) then
+               if (dfpq%dump_f) cg%w(wna%ind(dfpq%f_nam))%arr = 0.0
+               if (dfpq%dump_p) cg%w(wna%ind(dfpq%p_nam))%arr = 0.0
+               if (dfpq%dump_q) cg%w(wna%ind(dfpq%q_nam))%arr = 0.0
+            endif
 
-         cgl => cgl%nxt
-      enddo
+            cgl => cgl%nxt
+         enddo
+
+      endif
 
       call p_rch_init               !< sets the right pointer for p_rch function, based on used Taylor expansion coefficient
 
