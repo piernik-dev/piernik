@@ -118,7 +118,7 @@ module cresp_grid
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max
       use initcrspectrum,   only: cresp_substep
       use named_array_list, only: wna
-      use timestep_cresp,   only: dt_cre
+      use timestep_cresp,   only: dt_spectrum
 #ifdef DEBUG
       use cresp_crspectrum, only: cresp_detect_negative_content
 #endif /* DEBUG */
@@ -135,7 +135,7 @@ module cresp_grid
       cfl_cresp_violation = .false.
 
       if (cresp_substep) then
-         call prepare_substep(2 * dt, dt_cre, dt_crs_sstep, nssteps)
+         call prepare_substep(2 * dt, dt_spectrum, dt_crs_sstep, nssteps)
          dt_cresp = dt_crs_sstep    !< 2 * dt is equal to nssteps * dt_crs_sstep
       else
          dt_cresp = 2 * dt
