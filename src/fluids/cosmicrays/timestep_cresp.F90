@@ -36,9 +36,9 @@ module timestep_cresp
    implicit none
 
    private
-   public :: dt_cre, cresp_timestep, dt_cre_synch, dt_cre_adiab, dt_cre_K
+   public :: dt_cre, cresp_timestep, dt_cre_synch, dt_cre_adiab, dt_cre_K, dt_spectrum
 
-   real :: dt_cre, dt_cre_synch, dt_cre_adiab, dt_cre_K
+   real :: dt_cre, dt_cre_synch, dt_cre_adiab, dt_cre_K, dt_spectrum
 
 contains
 
@@ -54,7 +54,7 @@ contains
       use func,             only: emag
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep
       use mpisetup,         only: piernik_MPI_Allreduce
 
       implicit none
@@ -70,6 +70,7 @@ contains
       dt_cre_K     = big
       dt_cre_synch = big
       dt_cre_adiab = big
+      dt_spectrum  = big
 
       if (.not. use_cresp_evol) return
 
@@ -116,7 +117,16 @@ contains
       call piernik_MPI_Allreduce(dt_cre_adiab, pMIN)
       call piernik_MPI_Allreduce(dt_cre_synch, pMIN)
       call piernik_MPI_Allreduce(dt_cre_K,     pMIN)
-      dt_cre = min(dt_cre_adiab, dt_cre_synch, dt_cre_K)       ! dt comes in to cresp_crspectrum with factor * 2
+
+      dt_spectrum = min(dt_cre_adiab, dt_cre_synch)
+
+      if (cresp_substep) then
+      ! with cresp_substep enabled, dt_cre_adiab and dt_cre_synch are used only within CRESP module for substepping
+      ! thus no additional dt are considered  | TODO / FIXME enchancements (e.g. max. number of substeps) are underway
+         dt_cre = dt_cre_K
+      else
+         dt_cre = min(dt_spectrum, dt_cre_K)       ! dt comes in to cresp_crspectrum with factor * 2
+      endif
 
    end subroutine cresp_timestep
 
