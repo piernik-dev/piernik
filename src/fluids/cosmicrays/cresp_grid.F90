@@ -176,6 +176,9 @@ module cresp_grid
 
    subroutine prepare_substep(dt_simulation, dt_process_short, dt_substep, n_substeps)
 
+      use dataio_pub,         only: msg, warn
+      use initcrspectrum,     only: n_substeps_max
+
       implicit none
 
       real,    intent(in)  :: dt_simulation, dt_process_short
@@ -183,6 +186,11 @@ module cresp_grid
       integer, intent(out) :: n_substeps
 
       n_substeps  = ceiling(dt_simulation / dt_process_short ) ! ceiling to assure resulting dt_substep .le. dt_process_short
+      if (n_substeps > n_substeps_max) then
+         write (msg,*) "[cresp_grid:prepare_substep] n_substeps = ", n_substeps, " exceeds limit ", n_substeps_max
+         call warn(msg)
+      endif
+
       dt_substep  = dt_simulation / n_substeps
 
    end subroutine prepare_substep
