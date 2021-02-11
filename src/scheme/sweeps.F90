@@ -431,6 +431,7 @@ contains
          call update_boundaries(cdim, istep)
       enddo
 
+      call sl%delete
       deallocate(sl)
 
       call ppp_main%stop(sweep_label(cdim))
