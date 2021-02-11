@@ -296,8 +296,8 @@ module initcrspectrum
          lbuff(12) =  approx_cutoffs
          lbuff(13) =  NR_allow_old_smaps
 
-         lbuff(12) =  cresp_substep
-         lbuff(13) =  cresp_substep_bcast_dt
+         lbuff(14) =  cresp_substep
+         lbuff(15) =  cresp_substep_bcast_dt
 
          rbuff(1)  = cfl_cre
          rbuff(2)  = cre_eff
@@ -369,8 +369,8 @@ module initcrspectrum
          approx_cutoffs              = lbuff(12)
          NR_allow_old_smaps          = lbuff(13)
 
-         cresp_substep               = lbuff(12)
-         cresp_substep_bcast_dt      = lbuff(13)
+         cresp_substep               = lbuff(14)
+         cresp_substep_bcast_dt      = lbuff(15)
 
          cfl_cre                     = rbuff(1)
          cre_eff                     = rbuff(2)
