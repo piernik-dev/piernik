@@ -54,7 +54,7 @@ contains
       use func,             only: emag
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep, n_substeps_max
       use mpisetup,         only: piernik_MPI_Allreduce
 
       implicit none
@@ -122,10 +122,10 @@ contains
 
       if (cresp_substep) then
       ! with cresp_substep enabled, dt_cre_adiab and dt_cre_synch are used only within CRESP module for substepping
-      ! thus no additional dt are considered  | TODO / FIXME enchancements (e.g. max. number of substeps) are underway
-         dt_cre = dt_cre_K
+      ! half * dt_spectrum * n_substeps_max tries to prevent number of substeps from exceeding n_substeps_max limit
+         dt_cre = min(half * dt_spectrum * n_substeps_max, dt_cre_K)  ! number of substeps with dt_spectrum limited by n_substeps_max
       else
-         dt_cre = min(dt_spectrum, dt_cre_K)       ! dt comes in to cresp_crspectrum with factor * 2
+         dt_cre = min(dt_spectrum, dt_cre_K)                   ! dt comes in to cresp_crspectrum with factor * 2
       endif
 
    end subroutine cresp_timestep
