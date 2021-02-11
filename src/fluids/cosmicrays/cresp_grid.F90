@@ -178,6 +178,7 @@ module cresp_grid
 
       use dataio_pub,         only: msg, warn
       use initcrspectrum,     only: n_substeps_max
+      use mpisetup,           only: master
 
       implicit none
 
@@ -187,8 +188,10 @@ module cresp_grid
 
       n_substeps  = ceiling(dt_simulation / dt_process_short ) ! ceiling to assure resulting dt_substep .le. dt_process_short
       if (n_substeps > n_substeps_max) then
-         write (msg,*) "[cresp_grid:prepare_substep] n_substeps = ", n_substeps, " exceeds limit ", n_substeps_max
-         call warn(msg)
+         if (master)
+            write (msg,*) "[cresp_grid:prepare_substep] n_substeps = ", n_substeps, " exceeds limit ", n_substeps_max
+            call warn(msg)
+         endif
       endif
 
       dt_substep  = dt_simulation / n_substeps
