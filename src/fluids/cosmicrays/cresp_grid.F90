@@ -188,7 +188,7 @@ module cresp_grid
 
       n_substeps  = ceiling(dt_simulation / dt_process_short ) ! ceiling to assure resulting dt_substep .le. dt_process_short
       if (n_substeps > n_substeps_max) then
-         if (master)
+         if (master) then
             write (msg,*) "[cresp_grid:prepare_substep] n_substeps = ", n_substeps, " exceeds limit ", n_substeps_max
             call warn(msg)
          endif
