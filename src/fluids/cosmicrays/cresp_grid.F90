@@ -118,7 +118,7 @@ module cresp_grid
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max
       use initcrspectrum,   only: cresp_substep
       use named_array_list, only: wna
-      use timestep_cresp,   only: dt_spectrum
+      use timestep_cresp,   only: cresp_reaction_to_redo_step, dt_spectrum
 #ifdef DEBUG
       use cresp_crspectrum, only: cresp_detect_negative_content
 #endif /* DEBUG */
@@ -133,6 +133,8 @@ module cresp_grid
 
       cgl => leaves%first
       cfl_cresp_violation = .false.
+
+      call cresp_reaction_to_redo_step !< alters dt for CRESP components if cfl_violated
 
       if (cresp_substep) then
          call prepare_substep(2 * dt, dt_spectrum, dt_crs_sstep, nssteps)
@@ -189,7 +191,7 @@ module cresp_grid
       n_substeps  = ceiling(dt_simulation / dt_process_short ) ! ceiling to assure resulting dt_substep .le. dt_process_short
       if (n_substeps > n_substeps_max) then
          if (master) then
-            write (msg,*) "[cresp_grid:prepare_substep] n_substeps = ", n_substeps, " exceeds limit ", n_substeps_max
+            write (msg,"(A42,I5, A14, I5)") "[cresp_grid:prepare_substep] n_substeps = ", n_substeps, " exceeds limit ", n_substeps_max
             call warn(msg)
          endif
       endif
