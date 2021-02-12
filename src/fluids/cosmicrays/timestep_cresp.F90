@@ -47,7 +47,7 @@ contains
       use all_boundaries,   only: all_fluid_boundaries
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, half, zero, big, pMIN
+      use constants,        only: xdim, ydim, zdim, half, zero, big, pMIN, I_ONE
       use cresp_crspectrum, only: cresp_find_prepare_spectrum
       use crhelpers,        only: div_v, divv_i
       use fluidindex,       only: flind
@@ -123,7 +123,7 @@ contains
       if (cresp_substep) then
       ! with cresp_substep enabled, dt_cre_adiab and dt_cre_synch are used only within CRESP module for substepping
       ! half * dt_spectrum * n_substeps_max tries to prevent number of substeps from exceeding n_substeps_max limit
-         dt_cre = min(half * dt_spectrum * n_substeps_max, dt_cre_K)  ! number of substeps with dt_spectrum limited by n_substeps_max
+         dt_cre = min(half * dt_spectrum * max(n_substeps_max-I_ONE, I_ONE), dt_cre_K)  ! number of substeps with dt_spectrum limited by n_substeps_max
       else
          dt_cre = min(dt_spectrum, dt_cre_K)                   ! dt comes in to cresp_crspectrum with factor * 2
       endif
