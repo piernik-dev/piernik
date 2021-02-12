@@ -36,7 +36,7 @@ module timestep_cresp
    implicit none
 
    private
-   public :: dt_cre, cresp_timestep, dt_cre_synch, dt_cre_adiab, dt_cre_K, dt_spectrum
+   public :: dt_cre, cresp_timestep, dt_cre_synch, dt_cre_adiab, dt_cre_K, dt_spectrum, cresp_reaction_to_redo_step
 
    real :: dt_cre, dt_cre_synch, dt_cre_adiab, dt_cre_K, dt_spectrum
 
@@ -164,6 +164,35 @@ contains
       endif
 
    end subroutine cresp_timestep_synchrotron
+
+!----------------------------------------------------------------------------------------------------
+
+   subroutine cresp_reaction_to_redo_step
+
+      use dataio_pub,      only: msg, warn
+      use global,          only: cfl_violated, dt_shrink, repeat_step
+      use initcrspectrum,  only: cresp_substep
+      use mpisetup,        only: master
+
+      if (.not. repeat_step) return
+
+      if (cfl_violated) then
+         if (cresp_substep) then
+            dt_spectrum = dt_spectrum * dt_shrink ! If dt is repeated, dt_spectrum should follow, this way seems legit
+
+            if (master) then
+               write (msg, "(A72,2E14.7)") "[cresp_timestep:repeat_step_prep] (repeat step) shrinking dt_spectrum = ", dt_spectrum
+               call warn(msg)
+            endif
+
+         else
+            return   !< if .not. cresp_substep, no other than default reactions necessary
+         endif
+      else
+         return      !< no action necessary if CFL not violated
+      endif
+
+   end subroutine cresp_reaction_to_redo_step
 
 !----------------------------------------------------------------------------------------------------
 
