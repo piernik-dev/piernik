@@ -336,7 +336,7 @@ contains
       integer                        :: uhi, bhi, psii, psihi
       procedure(solve_cg_sub), pointer :: solve_cg => null()
       character(len=*), dimension(ndims), parameter :: sweep_label = [ "sweep_x", "sweep_y", "sweep_z" ]
-      character(len=*), parameter :: solve_cgs_label = "solve_bunch_of_cg", cg_label = "solve_cg"
+      character(len=*), parameter :: solve_cgs_label = "solve_bunch_of_cg", cg_label = "solve_cg", copy_u_label = "copy_u"
 
       call ppp_main%start(sweep_label(cdim))
 
@@ -368,6 +368,7 @@ contains
          psihi = qna%ind(psih_n)
       endif
 
+      call ppp_main%start(copy_u_label)
       ! for use with GLM divergence cleaning we also make a copy of b and psi fields
       cgl => leaves%first
       do while (associated(cgl))
@@ -377,6 +378,7 @@ contains
          if (psii > INVALID) cgl%cg%q(psihi)%arr = cgl%cg%q(psii)%arr
          cgl => cgl%nxt
       enddo
+      call ppp_main%stop(copy_u_label)
 
       ! This is the loop over Runge-Kutta stages
       do istep = first_stage(integration_order), last_stage(integration_order)

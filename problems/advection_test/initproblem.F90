@@ -423,7 +423,7 @@ contains
          call cg%set_constant_b_field([0., 0., 0.])
 #endif /* !MAGNETIC */
 
-         cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         cg%u(fl%idn, :, :, :) = cg%q(qna%ind(inid_n))%arr(:, :, :)
 
          select case (dom%geometry_type)
             case (GEO_XYZ)
@@ -685,6 +685,8 @@ contains
             if (master) call warn("[initproblem:analytic_solution] Cannot store the initial conditions.")
             return
          endif
+
+         inid(:,:,:) = pulse_low_density  ! workaround for use of uninitialized values in problem_initial_conditions
 
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
