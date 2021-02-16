@@ -341,7 +341,7 @@ contains
       integer                        :: uhi, bhi, psii, psihi
       procedure(solve_cg_sub), pointer :: solve_cg => null()
       character(len=*), dimension(ndims), parameter :: sweep_label = [ "sweep_x", "sweep_y", "sweep_z" ]
-      character(len=*), parameter :: solve_cgs_label = "solve_bunch_of_cg", cg_label = "solve_cg", copy_u_label = "copy_u"
+      character(len=*), parameter :: solve_cgs_label = "solve_bunch_of_cg", cg_label = "solve_cg", init_src_label = "init_src"
 
       call ppp_main%start(sweep_label(cdim))
 
@@ -375,18 +375,18 @@ contains
 
       sl => leaves%prioritized_cg(cdim, covered_too = .true.)
       ! We can't just skip the covered cg because it affects divvel (or
-      ! other things that rely on data computed on coarse cells and not
+      ! other things that rely on data computed on coarse cells and are not
       ! restricted from fine blocks).
 !      sl => leaves%leaf_only_cg()
 
-      call ppp_main%start(copy_u_label)
+      call ppp_main%start(init_src_label)
       ! for use with GLM divergence cleaning we also make a copy of b and psi fields
       cgl => leaves%first
       do while (associated(cgl))
          call prepare_sources(cgl%cg)
          cgl => cgl%nxt
       enddo
-      call ppp_main%stop(copy_u_label)
+      call ppp_main%stop(init_src_label)
 
       ! This is the loop over Runge-Kutta stages
       do istep = first_stage(integration_order), last_stage(integration_order)
