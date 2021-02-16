@@ -173,6 +173,7 @@ contains
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[global:init_global] MPI not initialized.")
 
+      dirty_debug = .false.
       dt_old = -1.
       t = 0.
 

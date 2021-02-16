@@ -85,10 +85,11 @@ contains
 
    subroutine init_gc(this, my_se, grid_id, l)
 
-      use constants,        only: PIERNIK_INIT_DOMAIN, LO
+      use constants,        only: PIERNIK_INIT_DOMAIN, LO, PPP_AMR, PPP_CG
       use dataio_pub,       only: die, code_progress
       use level_essentials, only: level_t
       use ordering,         only: SFC_order
+      use ppp,              only: ppp_main
 
       implicit none
 
@@ -98,11 +99,18 @@ contains
       integer,                         intent(in)    :: grid_id  !< ID which should be unique across level
       class(level_t), pointer,         intent(in)    :: l        !< level essential data
 
+      character(len=*), parameter :: na_label = "add_all_na"
+
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init_gc] MPI not initialized.")
 
       call this%init_gc_base(my_se, grid_id, l)
+
       call this%init_gc_bnd
+
+      call ppp_main%start(na_label, PPP_AMR + PPP_CG)
       call this%add_all_na
+      call ppp_main%stop(na_label, PPP_AMR + PPP_CG)
+
       call this%init_gc_prolong
 
       this%membership = 1
