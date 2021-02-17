@@ -975,7 +975,7 @@ contains
       use dataio_pub,            only: msg, warn, die
       use domain,                only: dom
       use fluidboundaries_funcs, only: user_fluidbnd
-      use global,                only: force_cc_mag
+      use global,                only: cc_mag
       use grid_cont,             only: grid_container
       use mpisetup,              only: master
       use named_array_list,      only: wna
@@ -1018,7 +1018,7 @@ contains
                case (BND_USER)
                   call user_fluidbnd(dir, side, cg, wn=wna%bi)
                case (BND_FC, BND_MPI_FC)
-                  if (.not. force_cc_mag) &
+                  if (.not. cc_mag) &
                        call die("[cg_list_bnd:bnd_b] fine-coarse interfaces not implemented yet for face-centered B field.")
                case (BND_COR)
                   if (dir == zdim) then
@@ -1047,7 +1047,7 @@ contains
 
          subroutine outflow_b(cg, dir, side)
 
-            ! use global,                only: force_cc_mag
+            ! use global,                only: cc_mag
             use grid_cont,             only: grid_container
 
             implicit none
@@ -1070,7 +1070,7 @@ contains
             !
             !   it = cg%ijkse(dir, side) - pm_one * i + (side - LO)
             !
-            ! when force_cc_mag is .false. in evaluation of dir-component of magnetic field
+            ! when cc_mag is .false. in evaluation of dir-component of magnetic field
             ! for more strict external boundary treatment.
 
             ! BEWARE: this kind of boundaries does not guarantee div(B) == 0 .
