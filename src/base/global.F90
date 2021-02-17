@@ -44,7 +44,7 @@ module global
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, do_external_corners, prefer_merged_MPI, &
-        &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fluid_prolong, which_solver
+        &    divB_0_method, cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fluid_prolong, which_solver
 
    logical         :: cfl_violated             !< True when cfl condition is violated
    logical         :: dn_negative = .false.
@@ -58,7 +58,7 @@ module global
    integer(kind=4) :: nstep, nstep_saved
    real            :: t, dt, dt_old, dtm, t_saved
    integer         :: divB_0_method            !< encoded method of making div(B) = 0 (currently DIVB_CT or DIVB_HDC)
-   logical         :: force_cc_mag             !< treat magnetic field as cell-centered in the Riemann solver (temporary hack)
+   logical         :: cc_mag                   !< use cell-centered magnetic field
    integer(kind=4) :: psi_bnd                  !< BND_INVALID or enforce some other psi boundary
    integer         :: tstep_attempt            !< /= 0 when we retry timesteps
    integer         :: which_solver             !< one of RTVD_SPLIT, HLLC_SPLIT or RIEMANN_SPLIT
@@ -132,7 +132,7 @@ contains
 !!   <tr><td>use_smalld       </td><td>.true. </td><td>logical value                        </td><td>\copydoc global::use_smalld       </td></tr>
 !!   <tr><td>smallei          </td><td>1.e-10 </td><td>real value                           </td><td>\copydoc global::smallei          </td></tr>
 !!   <tr><td>smallc           </td><td>1.e-10 </td><td>real value                           </td><td>\copydoc global::smallc           </td></tr>
-!!   <tr><td>integration_order</td><td>2      </td><td>1 or 2 (or 3 - currently unavailable)</td><td>\copydoc global::integration_order</td></tr>
+!!   <tr><td>integration_order</td><td>2      </td><td>1 or 2                               </td><td>\copydoc global::integration_order</td></tr>
 !!   <tr><td>cfr_smooth       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::cfr_smooth       </td></tr>
 !!   <tr><td>dt_initial       </td><td>-1.    </td><td>positive real value or -1. .. 0.     </td><td>\copydoc global::dt_initial       </td></tr>
 !!   <tr><td>dt_max_grow      </td><td>2.     </td><td>real value, should be > 1.           </td><td>\copydoc global::dt_max_grow      </td></tr>
@@ -419,13 +419,13 @@ contains
       endif
 
       !> reshape_b should carefully check things here
-      force_cc_mag = .false.
+      cc_mag = .false.
       select case (divB_0_method)
          case (DIVB_HDC)
-            force_cc_mag = .true.
+            cc_mag = .true.
             if (ch_grid .and. master) call warn("[global] ch_grid = .true. is risky")
          case (DIVB_CT)
-            force_cc_mag = .false.
+            cc_mag = .false.
          case default
             call die("[global:init_global] unrecognized divergence cleaning method.")
       end select
@@ -467,7 +467,7 @@ contains
                 call die("    The div(B) constraint is maintaineded by Uknown Something.")
          end select
 
-         if (force_cc_mag) then
+         if (cc_mag) then
             call printinfo("    Magnetic field is cell-centered.")
          else
             call printinfo("    Magnetic field is face-centered (staggered).")

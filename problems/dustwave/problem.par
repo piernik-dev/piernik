@@ -45,7 +45,6 @@
     cfl    = 0.9
     smalld = 1.e-8
     smallei= 1.e-8
-    integration_order = 2
     limiter= 'vanleer'
  /
 

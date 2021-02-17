@@ -61,6 +61,9 @@ module cg_leaves
       procedure :: balance_and_update      !< Rebalance if required and update
       procedure :: leaf_arr3d_boundaries   !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays on leaves
       procedure :: leaf_arr4d_boundaries   !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays on leaves
+      procedure :: prioritized_cg          !< Returna a leaves list with different ordering of cg to optimize fine->coarse flux transfer
+      procedure :: leaf_only_cg            !< Returna a leaves list without fully covered cg
+
    end type cg_leaves_t
 
    !>
@@ -249,6 +252,7 @@ contains
    subroutine leaf_arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
       use cg_level_connected, only: cg_level_connected_t
+      use cg_level_finest,    only: finest
       use constants,          only: O_INJ
       use named_array_list,   only: wna
       use ppp,                only: ppp_main
@@ -271,10 +275,11 @@ contains
       if (present(nocorners)) nc=nocorners
       if (wna%lst(ind)%ord_prolong /= O_INJ) nc = .false.
 
-      curl => this%coarsest_leaves
+      curl => finest%level
       do while (associated(curl))
-         call curl%level_4d_boundaries(ind, area_type=area_type, dir=dir, nocorners=nocorners)
-         curl => curl%finer
+         if (this%coarsest_leaves%l%id <= curl%l%id) &
+              call curl%level_4d_boundaries(ind, area_type=area_type, dir=dir, nocorners=nocorners)
+         curl => curl%coarser
       enddo
 
       curl => this%coarsest_leaves
@@ -287,5 +292,101 @@ contains
       call ppp_main%stop(l4b_label)
 
    end subroutine leaf_arr4d_boundaries
+
+!>
+!! \brief Change the order of cg to optimize fine->coarse flux transfer.
+!!
+!! * Put these cg which have something to send, but aren't waiting for receives.
+!! * Then put remaining cg which have something to send.
+!! * Then put remaining cg which have any leaf (active) cells.
+!! * Fully covered cg should optionally be appended at the end just in case.
+!<
+
+   function prioritized_cg(this, dir, covered_too) result(sorted_leaves)
+
+      use cg_list,        only: cg_list_element
+      use cg_list_dataop, only: cg_list_dataop_t
+
+      implicit none
+
+      class(cg_leaves_t), intent(in) :: this  !< object invoking type-bound procedure
+      integer(kind=4),    intent(in) :: dir
+      logical, optional,  intent(in) :: covered_too
+
+      type(cg_list_dataop_t), pointer :: sorted_leaves
+      type(cg_list_element),  pointer :: cgl
+
+      allocate(sorted_leaves)
+      call sorted_leaves%init_new("sorted_leaves")
+
+      cgl => this%first
+      do while (associated(cgl))
+         cgl%cg%processed = .false.
+         if (cgl%cg%is_sending_fc_flux(dir) .and. .not. cgl%cg%is_receiving_fc_flux(dir)) then
+            call sorted_leaves%add(cgl%cg)
+            cgl%cg%processed = .true.
+         endif
+         cgl => cgl%nxt
+      enddo
+
+      cgl => this%first
+      do while (associated(cgl))
+         if (.not. cgl%cg%processed) then
+            if (cgl%cg%is_sending_fc_flux(dir)) then
+               call sorted_leaves%add(cgl%cg)
+               cgl%cg%processed = .true.
+            endif
+         endif
+         cgl => cgl%nxt
+      enddo
+
+      cgl => this%first
+      do while (associated(cgl))
+         if (.not. cgl%cg%processed) then
+            if (cgl%cg%has_leaves()) then
+               call sorted_leaves%add(cgl%cg)
+               cgl%cg%processed = .true.
+           endif
+         endif
+         cgl => cgl%nxt
+      enddo
+
+      if (covered_too) then
+         cgl => this%first
+         do while (associated(cgl))
+            if (.not. cgl%cg%processed) then
+               call sorted_leaves%add(cgl%cg)
+               cgl%cg%processed = .true.
+            endif
+            cgl => cgl%nxt
+         enddo
+      endif
+
+   end function prioritized_cg
+
+!> \brief Returna a leaves list without fully covered cg
+
+   function leaf_only_cg(this) result(selected_leaves)
+
+      use cg_list,        only: cg_list_element
+      use cg_list_dataop, only: cg_list_dataop_t
+
+      implicit none
+
+      class(cg_leaves_t), intent(in) :: this  !< object invoking type-bound procedure
+
+      type(cg_list_dataop_t), pointer :: selected_leaves
+      type(cg_list_element), pointer :: cgl
+
+      allocate(selected_leaves)
+      call selected_leaves%init_new("non-covered_leaves")
+
+      cgl => this%first
+      do while (associated(cgl))
+         if (cgl%cg%has_leaves()) call selected_leaves%add(cgl%cg)
+         cgl => cgl%nxt
+      enddo
+
+   end function leaf_only_cg
 
 end module cg_leaves

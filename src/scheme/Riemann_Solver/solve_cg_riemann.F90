@@ -113,10 +113,11 @@ contains
    subroutine solve_cg_ub(cg, ddim, istep)
 
       use bfc_bcc,          only: interpolate_mag_field
-      use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, uh_n, magh_n, psih_n, INVALID, rk_coef, psidim, cs_i2_n
+      use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, uh_n, magh_n, psih_n, INVALID, &
+           &                      rk_coef, psidim, cs_i2_n, first_stage
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp, iarr_mag_swp
       use fluxtypes,        only: ext_fluxes
-      use global,           only: dt, force_cc_mag
+      use global,           only: dt, cc_mag, integration_order
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
       use sources,          only: all_sources, care_for_positives
@@ -168,13 +169,18 @@ contains
 
             ! transposition for compatibility with RTVD-based routines
             pu0 => cg%w(uhi)%get_sweep(ddim,i1,i2)
-            u0(:, iarr_all_swp(ddim,:)) = transpose(pu0(:,:))
             pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
+            if (istep == first_stage(integration_order)) pu0 = pu
+            ! such copy is a bit faster than whole copy of u and we don't have to modify all the source routines
+
+            u0(:, iarr_all_swp(ddim,:)) = transpose(pu0(:,:))
             u(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
 
             pb => cg%w(wna%bi)%get_sweep(ddim,i1,i2)
-            if (force_cc_mag) then
-               pb0 => cg%w(bhi)%get_sweep(ddim,i1,i2)
+            pb0 => cg%w(bhi)%get_sweep(ddim,i1,i2)
+            if (istep == first_stage(integration_order)) pb0 = pb
+
+            if (cc_mag) then
                b0(:, iarr_mag_swp(ddim,:)) = transpose(pb0(:,:))
                b(:, iarr_mag_swp(ddim,:)) = transpose(pb(:,:))
             else
@@ -195,8 +201,10 @@ contains
             vx = u(:, iarr_all_mx) / u(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
             if (psii > INVALID) then
                ppsi0 => cg%q(psihi)%get_sweep(ddim,i1,i2)
-               b0(:, psidim) = ppsi0(:)
                ppsi => cg%q(psii)%get_sweep(ddim,i1,i2)
+               if (istep == first_stage(integration_order)) ppsi0 = ppsi
+
+               b0(:, psidim) = ppsi0(:)
                b1(:, psidim) = ppsi(:)
 
                call solve(u0, b0, u1, b1, cs2, rk_coef(istep) * dt/cg%dl(ddim), eflx)
@@ -212,7 +220,7 @@ contains
 
             call cg%save_outfluxes(ddim, i1, i2, eflx)
             pu(:,:) = transpose(u1(:, iarr_all_swp(ddim,:)))
-            if (force_cc_mag) pb(:,:) = transpose(b1(:, iarr_mag_swp(ddim,:))) ! ToDo figure out how to manage CT energy fixup without extra storage
+            if (cc_mag) pb(:,:) = transpose(b1(:, iarr_mag_swp(ddim,:))) ! ToDo figure out how to manage CT energy fixup without extra storage
             if (psii /= INVALID) ppsi = b1(:, psidim)
          enddo
       enddo
@@ -223,10 +231,10 @@ contains
 
    subroutine solve_cg_u(cg, ddim, istep)
 
-      use constants,        only: pdims, ORTHO1, ORTHO2, LO, HI, uh_n, rk_coef, cs_i2_n
+      use constants,        only: pdims, ORTHO1, ORTHO2, LO, HI, uh_n, rk_coef, cs_i2_n, first_stage
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp
       use fluxtypes,        only: ext_fluxes
-      use global,           only: dt
+      use global,           only: dt, integration_order
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
       use sources,          only: all_sources, care_for_positives
@@ -264,8 +272,10 @@ contains
 
             ! transposition for compatibility with RTVD-based routines
             pu0 => cg%w(uhi)%get_sweep(ddim,i1,i2)
-            u0(:, iarr_all_swp(ddim,:)) = transpose(pu0(:,:))
             pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
+            if (istep == first_stage(integration_order)) pu0 = pu
+
+            u0(:, iarr_all_swp(ddim,:)) = transpose(pu0(:,:))
             u(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
             if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(ddim,i1,i2)
 
