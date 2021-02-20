@@ -37,11 +37,10 @@ module ppp_eventlist
    implicit none
 
    private
-   public :: eventlist, use_profiling, profile_hdf5, disable_mask, profile_file, profile_lun
+   public :: eventlist, use_profiling, disable_mask, profile_file, profile_lun
 
    ! namelist parametrs
    logical :: use_profiling    !< control whether to do any PPProfiling or not
-   logical :: profile_hdf5     !< use HDF5 output when possible, fallback to ASCII
 
    character(len=cwdlen) :: profile_file       !< file name for the profile data
    integer :: profile_lun                      !< logical unit number for profile file
@@ -254,7 +253,7 @@ contains
    subroutine publish(this)
 
       use constants,    only: I_ZERO, I_ONE
-      use dataio_pub,   only: die, printinfo, msg
+      use dataio_pub,   only: printinfo, msg
       use MPIF,         only: MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, &
            &                  MPI_Isend, MPI_Recv, MPI_Waitall
       use mpisetup,     only: proc, master, slave, err_mpi, FIRST, LAST, req, inflate_req
@@ -277,7 +276,6 @@ contains
             msg = "all events categories are enabled"
          endif
 
-         if (profile_hdf5) call die("[ppp_eventlist:publish] HDF5 profiles not implemented yet")
          call printinfo("[ppp_eventlist:publish] Profile timings will be written to '" // trim(profile_file) // "' file, " // trim(msg))
          open(newunit=profile_lun, file=profile_file)
          profile_file_cr = .true.
@@ -359,8 +357,6 @@ contains
          call warn("[ppp_eventlist:publish_array] only master is supposed to write")
          return
       endif
-
-      if (profile_hdf5) call die("[ppp_eventlist:publish_array] HDF5 not implemented yet")
 
       if (size(ev_label) /= size(ev_time)) call die("[ppp_eventlist:publish_array] arrays size mismatch")
 

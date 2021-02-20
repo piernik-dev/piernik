@@ -68,6 +68,11 @@
 !! By default MPI, AMR, debug, single-cg and auxiliary categories are excluded.
 !! If an event is tagged with multiple categories, it will be excluded if any
 !! of them is excluded.
+!!
+!! Perhaps it is possible to get much smaller output file (currently it is plain ASCII)
+!! by implementing HDF5 output. I don't think it is critical as PPP profiling is
+!! a debugging-type activity, not a production thing. It would require upgrading
+!! python/ppp_plot.py script.
 !<
 
 module ppp
@@ -108,7 +113,6 @@ contains
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>use_profiling  </td><td>.false.  </td><td>logical value  </td><td>\copydoc ppp::use_profiling   </td></tr>
-!! <tr><td>profile_hdf5   </td><td>.true.   </td><td>logical value  </td><td>\copydoc ppp::profile_hdf5    </td></tr>
 !! <tr><td>watch_io       </td><td>.true.   </td><td>logical value  </td><td>\copydoc ppp::watch_io        </td></tr>
 !! <tr><td>watch_multigrid</td><td>.true.   </td><td>logical value  </td><td>\copydoc ppp::watch_multigrid </td></tr>
 !! <tr><td>watch_gravity  </td><td>.true.   </td><td>logical value  </td><td>\copydoc ppp::watch_gravity   </td></tr>
@@ -129,25 +133,18 @@ contains
 
       use constants,     only: PPP_IO, PPP_MG, PPP_GRAV, PPP_CR, PPP_PART, PPP_MPI, &
            &                   PPP_AMR, PPP_CG, PPP_MAG, PPP_PROB, PPP_DEBUG, PPP_AUX
-      use dataio_pub,    only: nh, warn, log_wr, problem_name, run_id, nrestart
+      use dataio_pub,    only: nh, log_wr, problem_name, run_id, nrestart
       use mpisetup,      only: lbuff, master, slave, piernik_MPI_Bcast
-      use ppp_eventlist, only: use_profiling, profile_hdf5, disable_mask, profile_file
+      use ppp_eventlist, only: use_profiling, disable_mask, profile_file
 
       implicit none
 
-      namelist /PROFILING/ use_profiling, profile_hdf5, &
+      namelist /PROFILING/ use_profiling, &
            &               watch_io, watch_multigrid, watch_gravity, watch_cr, &
            &               watch_particles, watch_MPI, watch_AMR, watch_cg, &
            &               watch_magnetic, watch_problem, watch_debug, watch_aux
 
-      use_profiling = .false.
-      profile_hdf5 = &
-#ifdef HDF5
-           .false. ! ToDo: change to .true. after it gets implemented.
-#else /* !HDF5 */
-           .false.
-#endif /* HDF5 */
-
+      use_profiling   = .false.
       watch_io        = .true.
       watch_multigrid = .true.
       watch_gravity   = .true.
@@ -180,7 +177,6 @@ contains
          call nh%compare_namelist()
 
          lbuff(1)  = use_profiling
-         lbuff(2)  = profile_hdf5
          lbuff(3)  = watch_io
          lbuff(4)  = watch_multigrid
          lbuff(5)  = watch_gravity
@@ -201,7 +197,6 @@ contains
       if (slave) then
 
          use_profiling   = lbuff(1)
-         profile_hdf5    = lbuff(2)
          watch_io        = lbuff(3)
          watch_multigrid = lbuff(4)
          watch_gravity   = lbuff(5)
@@ -231,12 +226,7 @@ contains
       if (.not. watch_debug    ) disable_mask = disable_mask + PPP_DEBUG
       if (.not. watch_aux      ) disable_mask = disable_mask + PPP_AUX
 
-      if (profile_hdf5) then
-         profile_hdf5 = .false.
-         if (master) call warn("[ppprofiling:init_profiling] profile_hdf5 not implemented yet. Forcing ASCII output.")
-      endif
-
-      write(profile_file, '(6a,i3.3,a)') trim(log_wr), '/', trim(problem_name), '_', trim(run_id), '_', nrestart, '.ppprofile' // trim(merge(".h5   ", ".ascii", profile_hdf5))
+      write(profile_file, '(6a,i3.3,a)') trim(log_wr), '/', trim(problem_name), '_', trim(run_id), '_', nrestart, '.ppprofile.ascii'
 
       call ppp_main%init("main")
 
@@ -281,19 +271,13 @@ contains
 
    subroutine cleanup_profiling
 
-      use dataio_pub,    only: close_txt_file, die
+      use dataio_pub,    only: close_txt_file
       use mpisetup,      only: master
-      use ppp_eventlist, only: profile_file, profile_lun, profile_hdf5
+      use ppp_eventlist, only: profile_file, profile_lun
 
       implicit none
 
-      if (master) then
-         if (profile_hdf5) then
-            call die("[ppprofiling:cleanup_profiling] HDF5 profiles not implemented yet")
-         else
-            call close_txt_file(profile_file, profile_lun)
-         endif
-      endif
+      if (master) call close_txt_file(profile_file, profile_lun)
 
    end subroutine cleanup_profiling
 
