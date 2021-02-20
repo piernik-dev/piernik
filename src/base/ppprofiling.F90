@@ -72,7 +72,8 @@
 
 module ppp
 
-   use constants, only: cbuff_len, cwdlen
+   use constants,  only: cbuff_len, cwdlen
+   use ppp_events, only: eventarray
 
    implicit none
 
@@ -107,21 +108,7 @@ module ppp
 
    integer, parameter :: ev_arr_num = 10    ! number of allowed event arrays
 
-   !> \brief a cheap single-event entry
-   type :: event
-      character(len=cbuff_len) :: label  !< label used to identify the event
-      real(kind=8)             :: wtime  !< output from MPI_Wtime(); positive for start, negative for end
-   end type event
-
-   !> \brief a cheap array of events
-   type :: eventarray
-      type(event), dimension(:), allocatable :: ev_arr
-   contains
-      procedure :: arr_init     !< allocate eventarray of given size
-      procedure :: arr_cleanup  !< deallocate eventarray
-   end type eventarray
-
-   !> \briev list of events based on arrays of events, cheap to expand, avoid reallocation
+   !> \brief list of events based on arrays of events, cheap to expand, avoid reallocation
    type eventlist
       private
       character(len=cbuff_len) :: label  !< label used to identify the event list
@@ -338,38 +325,6 @@ contains
 
    end subroutine cleanup_profiling
 
-!> \brief allocate eventarray of given size
-
-   subroutine arr_init(this, asize)
-
-      use dataio_pub, only: die
-
-      implicit none
-
-      class(eventarray), intent(inout) :: this   !< an object invoking the type-bound procedure
-      integer,           intent(in)    :: asize  !< size of the event array
-
-      if (allocated(this%ev_arr)) call die("[ppprofiling:arr_init] already allocated")
-      allocate(this%ev_arr(asize))
-!      this%ev_arr(:)%wtime = 0.
-
-   end subroutine arr_init
-
-!> \brief deallocate eventarray
-
-   subroutine arr_cleanup(this)
-
-      use dataio_pub, only: die
-
-      implicit none
-
-      class(eventarray), intent(inout) :: this   !< an object invoking the type-bound procedure
-
-      if (.not. allocated(this%ev_arr)) call die("[ppprofiling:arr_init] not allocated")
-      deallocate(this%ev_arr)
-
-   end subroutine arr_cleanup
-
 !> \brief Create new event list
 
    subroutine init(this, label)
@@ -386,7 +341,7 @@ contains
       this%ind = 1
       this%arr_ind = 1
       this%label = label(1:min(cbuff_len, len_trim(label, kind=4)))
-      call this%arrays(this%arr_ind)%arr_init(ev_arr_len)
+      call this%arrays(this%arr_ind)%init(ev_arr_len)
 
    end subroutine init
 
@@ -403,7 +358,7 @@ contains
       integer :: i
 
       do i = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
-         if (allocated(this%arrays(i)%ev_arr)) call this%arrays(i)%arr_cleanup
+         if (allocated(this%arrays(i)%ev_arr)) call this%arrays(i)%cleanup
       enddo
 
       this%ind = INVALID
@@ -415,14 +370,15 @@ contains
 
    subroutine start(this, label, mask)
 
-      use MPIF,     only: MPI_Wtime
-      use mpisetup, only: bigbang_shift
+      use MPIF,       only: MPI_Wtime
+      use mpisetup,   only: bigbang_shift
+      use ppp_events, only: event
 
       implicit none
 
-      class(eventlist),  intent(inout) :: this   !< an object invoking the type-bound procedure
-      character(len=*),  intent(in)    :: label  !< event label
-      integer(kind=4), optional, intent(in) :: mask   !< event category, if provided
+      class(eventlist),          intent(inout) :: this   !< an object invoking the type-bound procedure
+      character(len=*),          intent(in)    :: label  !< event label
+      integer(kind=4), optional, intent(in)    :: mask   !< event category, if provided
 
       character(len=cbuff_len) :: l
 
@@ -440,14 +396,15 @@ contains
 
    subroutine stop(this, label, mask)
 
-      use MPIF,     only: MPI_Wtime
-      use mpisetup, only: bigbang_shift
+      use MPIF,       only: MPI_Wtime
+      use mpisetup,   only: bigbang_shift
+      use ppp_events, only: event
 
       implicit none
 
-      class(eventlist),  intent(inout) :: this   !< an object invoking the type-bound procedure
-      character(len=*),  intent(in)    :: label  !< event label
-      integer(kind=4), optional, intent(in) :: mask   !< event category, if provided, should match the category provided in this%start call
+      class(eventlist),          intent(inout) :: this   !< an object invoking the type-bound procedure
+      character(len=*),          intent(in)    :: label  !< event label
+      integer(kind=4), optional, intent(in)    :: mask   !< event category, if provided, should match the category provided in this%start call
 
       character(len=cbuff_len) :: l
 
@@ -466,7 +423,8 @@ contains
 
    subroutine set_bb(this, label)
 
-      use mpisetup, only: bigbang, bigbang_shift
+      use mpisetup,   only: bigbang, bigbang_shift
+      use ppp_events, only: event
 
       implicit none
 
@@ -485,6 +443,8 @@ contains
 !> \brief Start, stop and put
 
    subroutine next_event(this, ev)
+
+      use ppp_events, only: event
 
       implicit none
 
@@ -524,7 +484,7 @@ contains
 
       if (this%arr_ind >= ev_arr_num) call die("[ppprofiling:expand] Cannot add more arrays (ev_arr_num exceeded)")
 
-      call this%arrays(this%arr_ind + 1)%arr_init(grow_factor*size(this%arrays(this%arr_ind)%ev_arr))
+      call this%arrays(this%arr_ind + 1)%init(grow_factor*size(this%arrays(this%arr_ind)%ev_arr))
 
       this%arr_ind = this%arr_ind + 1
       this%ind = 1
