@@ -72,17 +72,14 @@
 
 module ppp
 
-   use constants,  only: cbuff_len, cwdlen
-   use ppp_events, only: eventarray
+   use ppp_eventlist, only: eventlist
 
    implicit none
 
    private
-   public :: eventlist, init_profiling, cleanup_profiling, update_profiling, ppp_main, umsg_request
+   public :: init_profiling, cleanup_profiling, update_profiling, ppp_main, umsg_request
 
    ! namelist parametrs
-   logical :: use_profiling    !< control whether to do any PPProfiling or not
-   logical :: profile_hdf5     !< use HDF5 output when possible, fallback to ASCII
    logical :: watch_io         !< watch timers related to I/O
    logical :: watch_multigrid  !< watch timers related to multigrid
    logical :: watch_gravity    !< watch timers related to gravity
@@ -96,34 +93,7 @@ module ppp
    logical :: watch_debug      !< watch timers related to debugging
    logical :: watch_aux        !< watch auxiliary timers
 
-   character(len=cwdlen) :: profile_file       !< file name for the profile data
-   integer :: profile_lun                      !< logical unit number for profile file
    integer, save :: umsg_request = 0           !< turn on profiling for next umsg_request steps (read from msg file)
-   logical, save :: profile_file_cr = .false.  !< .true after we open the profile file for writing
-   integer(kind=4) :: disable_mask             !< logical mask for disabled events
-   enum, bind(C)
-      enumerator :: TAG_CNT = 1, TAG_ARR_L, TAG_ARR_T
-   end enum
-
-   integer, parameter :: ev_arr_num = 10    ! number of allowed event arrays
-
-   !> \brief list of events based on arrays of events, cheap to expand, avoid reallocation
-   type eventlist
-      private
-      character(len=cbuff_len) :: label  !< label used to identify the event list
-      type(eventarray), dimension(ev_arr_num) :: arrays  ! separate arrays to avoid lhs-reallocation
-      integer :: arr_ind  ! currently used array
-      integer :: ind      ! first unused entry in currently used array
-   contains
-      procedure :: init     !< create new event list
-      procedure :: cleanup  !< destroy this event list (typically called by publish)
-      procedure :: start    !< add a beginning of an interval
-      procedure :: stop     !< add an end of an interval
-      procedure :: set_bb   !< add the initial event with bigbang time
-      procedure, private :: next_event  !< for internal use in start, stop and put
-      procedure, private :: expand  !< create next array for events
-      procedure :: publish  !< write the collected data to a log file
-   end type eventlist
 
    type(eventlist) :: ppp_main  ! main eventlist
 
@@ -157,10 +127,11 @@ contains
 
    subroutine init_profiling
 
-      use constants,  only: PPP_IO, PPP_MG, PPP_GRAV, PPP_CR, PPP_PART, PPP_MPI, &
-           &                PPP_AMR, PPP_CG, PPP_MAG, PPP_PROB, PPP_DEBUG, PPP_AUX
-      use dataio_pub, only: nh, warn, log_wr, problem_name, run_id, nrestart
-      use mpisetup,   only: lbuff, master, slave, piernik_MPI_Bcast
+      use constants,     only: PPP_IO, PPP_MG, PPP_GRAV, PPP_CR, PPP_PART, PPP_MPI, &
+           &                   PPP_AMR, PPP_CG, PPP_MAG, PPP_PROB, PPP_DEBUG, PPP_AUX
+      use dataio_pub,    only: nh, warn, log_wr, problem_name, run_id, nrestart
+      use mpisetup,      only: lbuff, master, slave, piernik_MPI_Bcast
+      use ppp_eventlist, only: use_profiling, profile_hdf5, disable_mask, profile_file
 
       implicit none
 
@@ -275,9 +246,10 @@ contains
 
    subroutine update_profiling
 
-      use dataio_pub, only: printinfo
-      use global,     only: nstep
-      use mpisetup,   only: master
+      use dataio_pub,    only: printinfo
+      use global,        only: nstep
+      use mpisetup,      only: master
+      use ppp_eventlist, only: use_profiling
 
       implicit none
 
@@ -309,8 +281,9 @@ contains
 
    subroutine cleanup_profiling
 
-      use dataio_pub, only: close_txt_file, die
-      use mpisetup,   only: master
+      use dataio_pub,    only: close_txt_file, die
+      use mpisetup,      only: master
+      use ppp_eventlist, only: profile_file, profile_lun, profile_hdf5
 
       implicit none
 
@@ -323,307 +296,5 @@ contains
       endif
 
    end subroutine cleanup_profiling
-
-!> \brief Create new event list
-
-   subroutine init(this, label)
-
-      implicit none
-
-      class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
-      character(len=*), intent(in)    :: label  !< event list label
-
-      integer, parameter :: ev_arr_len = 1024  ! starting size of the array of events
-
-      if (.not. use_profiling) return
-
-      this%ind = 1
-      this%arr_ind = 1
-      this%label = label(1:min(cbuff_len, len_trim(label, kind=4)))
-      call this%arrays(this%arr_ind)%init(ev_arr_len)
-
-   end subroutine init
-
-!> \brief Destroy this event list
-
-   subroutine cleanup(this)
-
-      use constants, only: INVALID
-
-      implicit none
-
-      class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
-
-      integer :: i
-
-      do i = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
-         if (allocated(this%arrays(i)%ev_arr)) call this%arrays(i)%cleanup
-      enddo
-
-      this%ind = INVALID
-      this%arr_ind = INVALID
-
-   end subroutine cleanup
-
-!> \brief Add a beginning of an interval
-
-   subroutine start(this, label, mask)
-
-      use MPIF,       only: MPI_Wtime
-      use mpisetup,   only: bigbang_shift
-      use ppp_events, only: event
-
-      implicit none
-
-      class(eventlist),          intent(inout) :: this   !< an object invoking the type-bound procedure
-      character(len=*),          intent(in)    :: label  !< event label
-      integer(kind=4), optional, intent(in)    :: mask   !< event category, if provided
-
-      character(len=cbuff_len) :: l
-
-      if (.not. use_profiling) return
-      if (present(mask)) then
-         if (iand(mask, disable_mask) /= 0) return
-      endif
-
-      l = label(1:min(cbuff_len, len_trim(label, kind=4)))
-      call this%next_event(event(l, MPI_Wtime() + bigbang_shift))
-
-   end subroutine start
-
-!> \brief Add an end of an interval, use negative sign
-
-   subroutine stop(this, label, mask)
-
-      use MPIF,       only: MPI_Wtime
-      use mpisetup,   only: bigbang_shift
-      use ppp_events, only: event
-
-      implicit none
-
-      class(eventlist),          intent(inout) :: this   !< an object invoking the type-bound procedure
-      character(len=*),          intent(in)    :: label  !< event label
-      integer(kind=4), optional, intent(in)    :: mask   !< event category, if provided, should match the category provided in this%start call
-
-      character(len=cbuff_len) :: l
-
-      if (.not. use_profiling) return
-      if (present(mask)) then
-         if (iand(mask, disable_mask) /= 0) return
-      endif
-
-      l = label(1:min(cbuff_len, len_trim(label, kind=4)))
-      call this%next_event(event(l, -MPI_Wtime() - bigbang_shift))
-
-   end subroutine stop
-
-!> \brief Add the initial event with bigbang time
-
-
-   subroutine set_bb(this, label)
-
-      use mpisetup,   only: bigbang, bigbang_shift
-      use ppp_events, only: event
-
-      implicit none
-
-      class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
-      character(len=*), intent(in)    :: label  !< event label
-
-      character(len=cbuff_len) :: l
-
-      if (.not. use_profiling) return
-
-      l = label(1:min(cbuff_len, len_trim(label, kind=4)))
-      call this%next_event(event(l, bigbang + bigbang_shift))
-
-   end subroutine set_bb
-
-!> \brief Start, stop and put
-
-   subroutine next_event(this, ev)
-
-      use ppp_events, only: event
-
-      implicit none
-
-      class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
-      type(event),      intent(in)    :: ev     !< an event to be stored
-
-      this%arrays(this%arr_ind)%ev_arr(this%ind) = ev
-      this%ind = this%ind + 1
-      if (this%ind > ubound(this%arrays(this%arr_ind)%ev_arr, dim=1)) then
-         call this%expand
-      else
-         this%arrays(this%arr_ind)%ev_arr(this%ind)%wtime = 0.
-      endif
-
-   end subroutine next_event
-
-!>
-!! \brief Create next array for events
-!!
-!! \details Adding arrays should be cheaper than resizing existing ones.
-!! The size of new array is double of the size of previous one to
-!! prevent frequent, fragmented allocations on busy counters.
-!!
-!! \todo implement maximum of the log size and then politely give up instead of die()
-!! when the size is exceeded.
-!<
-
-   subroutine expand(this)
-
-      use dataio_pub, only: die
-
-      implicit none
-
-      class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
-
-      integer, parameter :: grow_factor = 2  !< each next array should be bigger
-
-      if (this%arr_ind >= ev_arr_num) call die("[ppprofiling:expand] Cannot add more arrays (ev_arr_num exceeded)")
-
-      call this%arrays(this%arr_ind + 1)%init(grow_factor*size(this%arrays(this%arr_ind)%ev_arr))
-
-      this%arr_ind = this%arr_ind + 1
-      this%ind = 1
-      this%arrays(this%arr_ind)%ev_arr(this%ind)%wtime = 0.
-
-   end subroutine expand
-
-!>
-!! \brief Write the collected data to a log file and clear the log
-!!
-!! \todo Use HDF5 format when available, ASCII otherwise
-!!
-!! Perhaps MPI_TYPE_CREATE_STRUCT would simplify the code and improve the communication
-!! but it requires some C-interoperability, which needs to be explored and tested first.
-!!
-!! \todo XML or JSON output?
-!<
-
-   subroutine publish(this)
-
-      use constants,    only: I_ZERO, I_ONE
-      use dataio_pub,   only: die, printinfo, msg
-      use MPIF,         only: MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, &
-           &                  MPI_Isend, MPI_Recv, MPI_Waitall
-      use mpisetup,     only: proc, master, slave, err_mpi, FIRST, LAST, req, inflate_req
-
-      implicit none
-
-      class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
-
-      integer(kind=4) :: t, ne, p
-      integer :: ia
-      character(len=cbuff_len), dimension(:), allocatable  :: buflabel
-      real(kind=8), dimension(:), allocatable :: buftime
-
-      if (.not. use_profiling) return
-
-      if (master .and. .not. profile_file_cr) then
-         if (disable_mask /= 0) then
-            write(msg, '(a,b13)')"event disable mask = ", disable_mask
-         else
-            msg = "all events categories are enabled"
-         endif
-
-         if (profile_hdf5) call die("[ppprofiling:publish] HDF5 profiles not implemented yet")
-         call printinfo("[ppprofiling:publish] Profile timings will be written to '" // trim(profile_file) // "' file, " // trim(msg))
-         open(newunit=profile_lun, file=profile_file)
-         profile_file_cr = .true.
-      endif
-
-      ! send
-      call inflate_req(int(TAG_ARR_T, kind=4))
-      t = TAG_CNT
-      ne = I_ZERO
-      do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
-         if (allocated(this%arrays(ia)%ev_arr)) then
-            ne = ne + size(this%arrays(ia)%ev_arr, kind=4)
-         else
-            exit
-         endif
-      enddo
-      if (slave) call MPI_Isend(ne, I_ONE, MPI_INTEGER, FIRST, TAG_CNT, MPI_COMM_WORLD, req(TAG_CNT), err_mpi)
-
-      if (ne > 0) then
-         allocate(buflabel(ne), buftime(ne))
-         p = I_ONE
-         do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
-            if (allocated(this%arrays(ia)%ev_arr)) then
-               buflabel(p:p+size(this%arrays(ia)%ev_arr)-I_ONE) = this%arrays(ia)%ev_arr(:)%label
-               buftime (p:p+size(this%arrays(ia)%ev_arr)-I_ONE) = this%arrays(ia)%ev_arr(:)%wtime
-               p = p + size(this%arrays(ia)%ev_arr, kind=4)
-            endif
-         enddo
-         if (master) then
-            call publish_buffers(proc, buflabel, buftime)
-            deallocate(buflabel, buftime)
-         else
-            call MPI_Isend(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        FIRST, TAG_ARR_L, MPI_COMM_WORLD, req(TAG_ARR_L), err_mpi)
-            call MPI_Isend(buftime,  size(buftime, kind=4),                           MPI_DOUBLE_PRECISION, FIRST, TAG_ARR_T, MPI_COMM_WORLD, req(TAG_ARR_T), err_mpi)
-            t = TAG_ARR_T
-         endif
-      endif
-
-      if (master) then
-         ! write(profile_lun, '(/,3a)') "#profile '", trim(this%label), "'"
-
-         ! receive
-         do p = FIRST + I_ONE, LAST
-             call MPI_Recv(ne, I_ONE, MPI_INTEGER, p, TAG_CNT, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-             if (ne /= 0) then
-                allocate(buflabel(ne), buftime(ne))
-                call MPI_Recv(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        p, TAG_ARR_L, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-                call MPI_Recv(buftime,  size(buftime, kind=4),                           MPI_DOUBLE_PRECISION, p, TAG_ARR_T, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-                call publish_buffers(p, buflabel, buftime)
-                deallocate(buflabel, buftime)
-             endif
-         enddo
-      else
-         call MPI_Waitall(t, req(:t), MPI_STATUSES_IGNORE, err_mpi)
-         deallocate(buflabel, buftime)
-      endif
-
-      call this%cleanup
-
-   end subroutine publish
-
-!> \brief Print the events from buffer arrays to the profile log
-
-   subroutine publish_buffers(process, ev_label, ev_time)
-
-      use dataio_pub, only: warn, die
-      use func,       only: operator(.equals.)
-      use mpisetup,   only: slave
-
-      implicit none
-
-      integer(kind=4),                        intent(in) :: process   !< origin of the event
-      character(len=cbuff_len), dimension(:), intent(in) :: ev_label  !< array of event labels
-      real(kind=8), dimension(:),             intent(in) :: ev_time   !< array of event times
-
-      integer :: i, d
-
-      if (slave) then
-         call warn("[ppprofiling:publish_array] only master is supposed to write")
-         return
-      endif
-
-      if (profile_hdf5) call die("[ppprofiling:publish_array] HDF5 not implemented yet")
-
-      if (size(ev_label) /= size(ev_time)) call die("[ppprofiling:publish_array] arrays size mismatch")
-
-      d = 1
-      do i = lbound(ev_label, dim=1), ubound(ev_label, dim=1)
-         if (ev_time(i) .equals. 0.) exit
-         if (ev_time(i) < 0.) d = d - 1
-         write(profile_lun, '(i5,a,f20.7,3a)') process, " ", ev_time(i), " ", repeat("  ", d), trim(ev_label(i))
-         if (ev_time(i) > 0.) d = d + 1
-      enddo
-      flush(profile_lun)
-
-   end subroutine publish_buffers
 
 end module ppp
