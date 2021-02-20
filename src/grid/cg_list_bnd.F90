@@ -301,7 +301,7 @@ contains
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
       use mpisetup,         only: FIRST, LAST, proc, err_mpi, req, req2, inflate_req, nproc
       use named_array_list, only: wna
-      use ppp,              only: piernik_Waitall
+      use ppp_mpi,          only: piernik_Waitall
 
       implicit none
 
@@ -461,7 +461,7 @@ contains
            &                      MPI_Irecv, MPI_Isend, MPI_Type_create_subarray, MPI_Type_commit, MPI_Type_free
       use mpisetup,         only: err_mpi, req, inflate_req
       use named_array_list, only: wna
-      use ppp,              only: piernik_Waitall
+      use ppp_mpi,          only: piernik_Waitall
 
       implicit none
 
