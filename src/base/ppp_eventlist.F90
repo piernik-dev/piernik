@@ -40,34 +40,30 @@ module ppp_eventlist
    public :: eventlist, use_profiling, disable_mask, profile_file, profile_lun
 
    ! namelist parametrs
-   logical :: use_profiling    !< control whether to do any PPProfiling or not
+   logical :: use_profiling  !< control whether to do any PPProfiling or not
 
-   character(len=cwdlen) :: profile_file       !< file name for the profile data
-   integer :: profile_lun                      !< logical unit number for profile file
-   logical, save :: profile_file_cr = .false.  !< .true after we open the profile file for writing
-   integer(kind=4) :: disable_mask             !< logical mask for disabled events
-   enum, bind(C)
-      enumerator :: TAG_CNT = 1, TAG_ARR_L, TAG_ARR_T
-   end enum
+   character(len=cwdlen) :: profile_file  !< file name for the profile data
+   integer :: profile_lun                 !< logical unit number for profile file
+   integer(kind=4) :: disable_mask        !< logical mask for disabled events
 
-   integer, parameter :: ev_arr_num = 10    ! number of allowed event arrays
+   integer, parameter :: ev_arr_num = 10  !< number of allowed event arrays
 
    !> \brief list of events based on arrays of events, cheap to expand, avoid reallocation
    type eventlist
       private
       character(len=cbuff_len) :: label  !< label used to identify the event list
-      type(eventarray), dimension(ev_arr_num) :: arrays  ! separate arrays to avoid lhs-reallocation
-      integer :: arr_ind  ! currently used array
-      integer :: ind      ! first unused entry in currently used array
+      type(eventarray), dimension(ev_arr_num) :: arrays  !< separate arrays to avoid lhs-reallocation
+      integer :: arr_ind                !< currently used array
+      integer :: ind                    !< first unused entry in currently used array
    contains
-      procedure :: init     !< create new event list
-      procedure :: cleanup  !< destroy this event list (typically called by publish)
-      procedure :: start    !< add a beginning of an interval
-      procedure :: stop     !< add an end of an interval
-      procedure :: set_bb   !< add the initial event with bigbang time
+      procedure :: init                 !< create new event list
+      procedure :: cleanup              !< destroy this event list (typically called by publish)
+      procedure :: start                !< add a beginning of an interval
+      procedure :: stop                 !< add an end of an interval
+      procedure :: set_bb               !< add the initial event with bigbang time
       procedure, private :: next_event  !< for internal use in start, stop and put
-      procedure, private :: expand  !< create next array for events
-      procedure :: publish  !< write the collected data to a log file
+      procedure, private :: expand      !< create next array for events
+      procedure :: publish              !< write the collected data to a log file
    end type eventlist
 
 contains
@@ -266,10 +262,13 @@ contains
       integer :: ia
       character(len=cbuff_len), dimension(:), allocatable  :: buflabel
       real(kind=8), dimension(:), allocatable :: buftime
+      enum, bind(C)
+         enumerator :: TAG_CNT = 1, TAG_ARR_L, TAG_ARR_T
+      end enum
 
       if (.not. use_profiling) return
 
-      if (master .and. .not. profile_file_cr) then
+      if (master) then
          if (disable_mask /= 0) then
             write(msg, '(a,b13)')"event disable mask = ", disable_mask
          else
@@ -278,7 +277,6 @@ contains
 
          call printinfo("[ppp_eventlist:publish] Profile timings will be written to '" // trim(profile_file) // "' file, " // trim(msg))
          open(newunit=profile_lun, file=profile_file)
-         profile_file_cr = .true.
       endif
 
       ! send

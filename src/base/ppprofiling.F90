@@ -98,7 +98,7 @@ module ppp
    logical :: watch_debug      !< watch timers related to debugging
    logical :: watch_aux        !< watch auxiliary timers
 
-   integer, save :: umsg_request = 0           !< turn on profiling for next umsg_request steps (read from msg file)
+   integer, save :: umsg_request = 0  !< turn on profiling for next umsg_request steps (read from msg file)
 
    type(eventlist) :: ppp_main  ! main eventlist
 
