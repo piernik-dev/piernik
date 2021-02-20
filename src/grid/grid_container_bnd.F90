@@ -35,7 +35,7 @@ module grid_cont_bnd
    use fluxtypes,       only: fluxarray, fluxpoint
    use refinement_flag, only: ref_flag_t
 #ifdef MPIF08
-   use MPIF,            only: MPI_Request
+   use MPIF,            only: MPI_Request, MPI_Datatype
 #endif /* MPIF08 */
 
    implicit none
@@ -54,8 +54,10 @@ module grid_cont_bnd
       real, allocatable, dimension(:,:,:,:) :: buf4        !< buffer for the 4D (vector) data to be sent or received
 #ifdef MPIF08
       type(MPI_Request), pointer :: req                    !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
+      type(MPI_Datatype) :: sub_type                       !< MPI type related to this segment
 #else /* !MPIF08 */
       integer(kind=4), pointer :: req                      !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
+      integer(kind=4) :: sub_type                          !< MPI type related to this segment
 #endif /* !MPIF08 */
 
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se2  !< auxiliary range, used in cg_level_connected:vertical_bf_prep
@@ -87,11 +89,12 @@ module grid_cont_bnd
 
    contains
 
-      procedure          :: init_gc_bnd         !< Initialization
-      procedure          :: cleanup_bnd         !< Deallocate all internals
-      procedure          :: set_fluxpointers    !< Calculate fluxes incoming from fine grid for 1D solver
-      procedure          :: save_outfluxes      !< Collect outgoing fine fluxes, do curvilinear scaling and store in appropriate array
-      procedure          :: refinemap2SFC_list  !< create list of SFC indices to be created from refine flags
+      procedure :: init_gc_bnd         !< Initialization
+      procedure :: cleanup_bnd         !< Deallocate all internals
+      procedure :: set_fluxpointers    !< Calculate fluxes incoming from fine grid for 1D solver
+      procedure :: save_outfluxes      !< Collect outgoing fine fluxes, do curvilinear scaling and store in appropriate array
+      procedure :: refinemap2SFC_list  !< Create list of SFC indices to be created from refine flags
+      procedure :: has_leaves          !< Returns .true. if there are any non-covered cells on this
 
    end type grid_container_bnd_t
 
@@ -373,5 +376,17 @@ contains
       call this%flag%clear
 
    end subroutine refinemap2SFC_list
+
+!> \brief Returns .true. if there are any non-covered cells on this
+
+   pure logical function has_leaves(this)
+
+      implicit none
+
+      class(grid_container_bnd_t), intent(in) :: this
+
+      has_leaves = any(this%leafmap)
+
+   end function has_leaves
 
 end module grid_cont_bnd

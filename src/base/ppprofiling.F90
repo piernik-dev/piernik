@@ -342,9 +342,7 @@ contains
 
    subroutine arr_init(this, asize)
 
-      use constants,    only: PIERNIK_INIT_MPI
-      use dataio_pub,   only: die, code_progress
-      use memory_usage, only: check_mem_usage
+      use dataio_pub, only: die
 
       implicit none
 
@@ -354,7 +352,6 @@ contains
       if (allocated(this%ev_arr)) call die("[ppprofiling:arr_init] already allocated")
       allocate(this%ev_arr(asize))
 !      this%ev_arr(:)%wtime = 0.
-      if (code_progress >= PIERNIK_INIT_MPI) call check_mem_usage
 
    end subroutine arr_init
 
@@ -414,11 +411,7 @@ contains
 
    end subroutine cleanup
 
-!>
-!! \brief Add a beginning of an interval
-!!
-!! Do not use inside die(), warn(), system_mem_usage() or check_mem_usage()
-!<
+!> \brief Add a beginning of an interval
 
    subroutine start(this, label, mask)
 
@@ -443,11 +436,7 @@ contains
 
    end subroutine start
 
-!>
-!! \brief Add an end of an interval, use negative sign
-!!
-!! Do not use inside die(), warn(), system_mem_usage() or check_mem_usage()
-!<
+!> \brief Add an end of an interval, use negative sign
 
    subroutine stop(this, label, mask)
 
@@ -472,11 +461,8 @@ contains
 
    end subroutine stop
 
-!>
-!! \brief Add the initial event with bigbang time
-!!
-!! Do not use inside die(), warn(), system_mem_usage() or check_mem_usage().
-!<
+!> \brief Add the initial event with bigbang time
+
 
    subroutine set_bb(this, label)
 
@@ -561,7 +547,6 @@ contains
 
       use constants,    only: I_ZERO, I_ONE
       use dataio_pub,   only: die, printinfo, msg
-      use memory_usage, only: check_mem_usage
       use MPIF,         only: MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, &
            &                  MPI_Isend, MPI_Recv, MPI_Waitall
       use mpisetup,     only: proc, master, slave, err_mpi, FIRST, LAST, req, inflate_req
@@ -605,7 +590,6 @@ contains
 
       if (ne > 0) then
          allocate(buflabel(ne), buftime(ne))
-         call check_mem_usage
          p = I_ONE
          do ia = lbound(this%arrays, dim=1), ubound(this%arrays, dim=1)
             if (allocated(this%arrays(ia)%ev_arr)) then
@@ -632,7 +616,6 @@ contains
              call MPI_Recv(ne, I_ONE, MPI_INTEGER, p, TAG_CNT, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
              if (ne /= 0) then
                 allocate(buflabel(ne), buftime(ne))
-                call check_mem_usage
                 call MPI_Recv(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        p, TAG_ARR_L, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                 call MPI_Recv(buftime,  size(buftime, kind=4),                           MPI_DOUBLE_PRECISION, p, TAG_ARR_T, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                 call publish_buffers(p, buflabel, buftime)
@@ -686,26 +669,35 @@ contains
 
 !> \brief a PPP wrapper for MPI_Waitall
 
-   subroutine piernik_Waitall(nr, ppp_label, x_mask)
+   subroutine piernik_Waitall(nr, ppp_label, x_mask, use_req2)
 
       use constants, only: PPP_MPI
-      use mpisetup,  only: err_mpi, req
+      use mpisetup,  only: err_mpi, req, req2
       use MPIF,      only: MPI_STATUSES_IGNORE, MPI_Waitall
 
       implicit none
 
       integer(kind=4),           intent(in) :: nr         !< number of requests in req(:)
       character(len=*),          intent(in) :: ppp_label  !< identifier for PPP entry
-      integer(kind=4), optional, intent(in) :: x_mask       !< extra mask, if necessary
+      integer(kind=4), optional, intent(in) :: x_mask     !< extra mask, if necessary
+      logical, optional,         intent(in) :: use_req2   !< use req2 if .true.
 
       character(len=*), parameter :: mpiw = "MPI_Waitall:"
       integer(kind=4) :: mask
+      logical :: r2
+
+      r2 = .false.
+      if (present(use_req2)) r2 = use_req2
 
       if (nr > 0) then
          mask = PPP_MPI
          if (present(x_mask)) mask = mask + x_mask
          call ppp_main%start(mpiw // ppp_label, mask)
-         call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
+         if (r2) then
+            call MPI_Waitall(nr, req2(:nr), MPI_STATUSES_IGNORE, err_mpi)
+         else
+            call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
+         endif
          call ppp_main%stop(mpiw // ppp_label, mask)
       endif
 

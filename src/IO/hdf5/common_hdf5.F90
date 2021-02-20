@@ -104,11 +104,11 @@ contains
 
    subroutine init_hdf5(vars)
 
-      use constants,      only: dsetnamelen, singlechar
-      use dataio_pub,     only: warn
-      use fluids_pub,     only: has_ion, has_dst, has_neu
-      use global,         only: force_cc_mag
-      use mpisetup,       only: master
+      use constants,  only: dsetnamelen, singlechar
+      use dataio_pub, only: warn
+      use fluids_pub, only: has_ion, has_dst, has_neu
+      use global,     only: cc_mag
+      use mpisetup,   only: master
 #ifdef COSM_RAYS
       use dataio_pub,     only: msg
 #ifdef COSM_RAY_ELECTRONS
@@ -168,13 +168,13 @@ contains
                if (has_neu) call append_var('ethn')
                if (has_ion) call append_var('ethi')
             case ("divb", "divB")
-               if (force_cc_mag) then
+               if (cc_mag) then
                   call append_var("divbc")
                else
                   call append_var("divbf")
                endif
             case ("divb4", "divb6", "divb8")
-               if (force_cc_mag) then
+               if (cc_mag) then
                   fc = "c"
                else
                   fc = "f"

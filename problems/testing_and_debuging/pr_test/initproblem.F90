@@ -205,7 +205,7 @@ contains
 
       do while (associated(curl))
          if (associated(curl%finer)) then
-            call curl%prolong_q_1var(qna%ind(fld_n))
+            call curl%prolong_1var(qna%ind(fld_n))
             call clear_lev(curl)
             if (point) then
                write(msg,*)"ip:pf prolonged ^",curl%l%id, " @", proc

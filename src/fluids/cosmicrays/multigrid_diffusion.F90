@@ -111,7 +111,7 @@ contains
       use domain,           only: dom
       use fluidindex,       only: flind
       use func,             only: operator(.notequals.)
-      use global,           only: force_cc_mag
+      use global,           only: cc_mag
       use mpisetup,         only: master, slave, nproc, ibuff, rbuff, lbuff, cbuff, piernik_MPI_Bcast
       use multigridvars,    only: single_base
       use named_array_list, only: qna
@@ -247,9 +247,9 @@ contains
 
       !> \todo consider adding multigrid = .true. to the b-field (re-register it?)
       pia => pos
-      pos = merge(VAR_CENTER, VAR_XFACE, force_cc_mag) ; call all_cg%reg_var(diff_bx_n, multigrid = .true., position = pia)
-      pos = merge(VAR_CENTER, VAR_YFACE, force_cc_mag) ; call all_cg%reg_var(diff_by_n, multigrid = .true., position = pia)
-      pos = merge(VAR_CENTER, VAR_ZFACE, force_cc_mag) ; call all_cg%reg_var(diff_bz_n, multigrid = .true., position = pia)
+      pos = merge(VAR_CENTER, VAR_XFACE, cc_mag) ; call all_cg%reg_var(diff_bx_n, multigrid = .true., position = pia)
+      pos = merge(VAR_CENTER, VAR_YFACE, cc_mag) ; call all_cg%reg_var(diff_by_n, multigrid = .true., position = pia)
+      pos = merge(VAR_CENTER, VAR_ZFACE, cc_mag) ; call all_cg%reg_var(diff_bz_n, multigrid = .true., position = pia)
       idiffb(xdim) = qna%ind(diff_bx_n)
       idiffb(ydim) = qna%ind(diff_by_n)
       idiffb(zdim) = qna%ind(diff_bz_n)
@@ -585,7 +585,7 @@ contains
          curl => coarsest%level
          do while (associated(curl))
             call approximate_solution(curl, defect, correction, cr_id)
-            if (.not. associated(curl, finest%level)) call curl%prolong_q_1var(correction) ! In case of problems, consider enforcing bnd_type
+            if (.not. associated(curl, finest%level)) call curl%prolong_1var(correction) ! In case of problems, consider enforcing bnd_type
             curl => curl%finer
          enddo
 
