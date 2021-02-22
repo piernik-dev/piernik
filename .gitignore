@@ -1,7 +1,9 @@
+mystory.txt
 obj*/
 runs/
 *~
 .lastsetup
+.DS_Store
 *.pyc
 .setuprc
 html/

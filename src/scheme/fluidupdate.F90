@@ -97,6 +97,11 @@ contains
       use hdc,            only: update_chspeed
       use mass_defect,    only: update_magic_mass
       use timestep_retry, only: repeat_fluidstep
+#ifdef COSM_RAY_ELECTRONS
+      use all_boundaries, only: all_fluid_boundaries
+      use cresp_grid,     only: cresp_update_grid, cresp_clean_grid
+      use initcrspectrum, only: use_cresp_evol
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -109,11 +114,21 @@ contains
 
 ! Sources should be hooked to problem_customize_solution with forward argument
 
+#ifdef COSM_RAY_ELECTRONS
+      if (use_cresp_evol) then
+         call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module
+         call all_fluid_boundaries
+      endif
+#endif /* COSM_RAY_ELECTRONS */
+
       halfstep = .true.
       t = t + dt
       dtm = dt
       call make_3sweeps(.false.) ! Z -> Y -> X
       call update_magic_mass
+#ifdef COSM_RAY_ELECTRONS
+      call cresp_clean_grid ! BEWARE: due to diffusion some junk remains in the grid - this nullifies all inactive bins.
+#endif /* COSM_RAY_ELECTRONS */
 
    end subroutine fluid_update_full
 
@@ -135,11 +150,13 @@ contains
       use gravity,             only: source_terms_grav, compute_h_gpot
       use particle_pub,        only: pset, psolver
 #endif /* GRAV */
-#if defined(COSM_RAYS) && defined(MULTIGRID)
+#ifdef COSM_RAYS
       use all_boundaries,      only: all_fluid_boundaries
       use initcosmicrays,      only: use_CRsplit
+#ifdef MULTIGRID
       use multigrid_diffusion, only: multigrid_solve_diff
-#endif /* COSM_RAYS && MULTIGRID */
+#endif /* MULTIGRID */
+#endif /* COSM_RAYS */
 #ifdef SHEAR
       use shear,               only: shear_3sweeps
 #endif /* SHEAR */
@@ -165,12 +182,19 @@ contains
       call compute_h_gpot
 #endif /* GRAV */
 
-#if defined(COSM_RAYS) && defined(MULTIGRID)
+#ifdef COSM_RAYS
       if (.not. use_CRsplit) then
+#ifdef MULTIGRID
          call multigrid_solve_diff
          call all_fluid_boundaries
+#endif /* MULTIGRID */
+
+      else
+         do s = sFRST, sLAST, sCHNG
+            if (.not.skip_sweep(s)) call make_diff_sweep(s)
+         enddo
       endif
-#endif /* COSM_RAYS && MULTIGRID */
+#endif /* COSM_RAYS */
 
       ! At this point everything should be initialized after domain expansion and we no longer need this list.
       call expanded_domain%delete
@@ -179,12 +203,12 @@ contains
       ! Don't put anything inside unless you're sure it should belong to the (M)HD solver.
       call ppp_main%start(sw3_label)
       if (use_fargo) then
-         if (.not.skip_sweep(zdim)) call make_sweep(zdim, forward)
-         if (.not.skip_sweep(xdim)) call make_sweep(xdim, forward)
+         if (.not.skip_sweep(zdim)) call make_adv_sweep(zdim, forward)
+         if (.not.skip_sweep(xdim)) call make_adv_sweep(xdim, forward)
          if (.not.skip_sweep(ydim)) call make_fargosweep
       else
          do s = sFRST, sLAST, sCHNG
-            if (.not.skip_sweep(s)) call make_sweep(s, forward)
+            if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
          enddo
       endif
       call ppp_main%stop(sw3_label)
@@ -205,16 +229,12 @@ contains
 !!
 !! \details Effectively this is a 3D (M)HD solver that applies only terms related to the direction dir/
 !<
-   subroutine make_sweep(dir, forward)
+   subroutine make_adv_sweep(dir, forward)
 
       use dataio_pub,     only: die
       use domain,         only: dom
       use global,         only: geometry25D
       use sweeps,         only: sweep
-#ifdef COSM_RAYS
-      use crdiffusion,    only: cr_diff
-      use initcosmicrays, only: use_CRsplit
-#endif /* COSM_RAYS */
 #ifdef MAGNETIC
       use constants,      only: DIVB_CT, RTVD_SPLIT
       use ct,             only: magfield
@@ -238,9 +258,6 @@ contains
 
       if (dom%has_dir(dir)) then
          if (.not. forward) then
-#ifdef COSM_RAYS
-            if (use_CRsplit) call cr_diff(dir)
-#endif /* COSM_RAYS */
 #ifdef MAGNETIC
             if (divB_0_method == DIVB_CT) call magfield(dir)
 #endif /* MAGNETIC */
@@ -252,9 +269,6 @@ contains
 #ifdef MAGNETIC
             if (divB_0_method == DIVB_CT) call magfield(dir)
 #endif /* MAGNETIC */
-#ifdef COSM_RAYS
-            if (use_CRsplit) call cr_diff(dir)
-#endif /* COSM_RAYS */
          endif
       else
          if (geometry25D) call sweep(dir)
@@ -264,6 +278,30 @@ contains
       call force_dumps
 #endif /* DEBUG */
 
-   end subroutine make_sweep
+   end subroutine make_adv_sweep
+
+#ifdef COSM_RAYS
+!>
+!! \brief Perform single diffusion sweep in forward or backward direction
+!<
+   subroutine make_diff_sweep(dir)
+
+      use crdiffusion,    only: cr_diff
+#ifdef DEBUG
+      use piernikiodebug, only: force_dumps
+#endif /* DEBUG */
+
+      implicit none
+
+      integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
+
+      call cr_diff(dir)
+
+#ifdef DEBUG
+      call force_dumps
+#endif /* DEBUG */
+
+   end subroutine make_diff_sweep
+#endif /* COSM_RAYS */
 
 end module fluidupdate

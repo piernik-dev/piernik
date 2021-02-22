@@ -201,6 +201,11 @@ contains
       use cr_data,        only: cr_table, cr_mass, cr_primary, eCRSP, icr_H1, icr_C12, icr_N14, icr_O16
       use initcosmicrays, only: iarr_crn
 #endif /* COSM_RAYS_SOURCES */
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
+      use initcrspectrum,   only: cresp, cre_eff, smallcree, use_cresp
+      use initcosmicrays,   only: iarr_cre_n, iarr_cre_e
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -214,6 +219,9 @@ contains
 #ifdef SHEAR
       real, dimension(3)                 :: ysnoi
 #endif /* SHEAR */
+#ifdef COSM_RAY_ELECTRONS
+      real                               :: e_tot_sn
+#endif /* COSM_RAY_ELECTRONS */
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -251,6 +259,17 @@ contains
                   if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14))*cr_mass(cr_table(icr_N14))*decr
                   if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16))*cr_mass(cr_table(icr_O16))*decr
 #endif /* COSM_RAYS_SOURCES */
+#ifdef COSM_RAY_ELECTRONS
+                  if (use_cresp) then
+                     e_tot_sn = decr * cre_eff
+                     if (e_tot_sn .gt. smallcree) then
+                        cresp%n =  0.0;  cresp%e = 0.0
+                        call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn) !< injecting source spectrum scaled with e_tot_sn
+                        cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n   !< update, TODO need to talk to the team if this should be inside if-clause
+                        cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e   !< if outside, cresp%n and cresp%e needs to be zeroed
+                     endif
+                  endif
+#endif /* COSM_RAY_ELECTRONS */
 
                enddo
             enddo

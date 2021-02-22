@@ -396,6 +396,7 @@ def setup_piernik(data=None):
         print(our_defs)
 
     files = ['src/base/defines.c']
+
     uses = [[]]
     incl = ['']
     module = dict()

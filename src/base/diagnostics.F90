@@ -29,6 +29,12 @@ module diagnostics
 
    implicit none
 
+   interface my_allocate_with_index  ! < works only for 1D arrays!
+      module procedure allocate_1D_arr_w_ind_int4        ! < not in PIERNIK
+      module procedure allocate_1D_arr_w_ind_real8       ! < not in PIERNIK
+      module procedure allocate_1D_arr_w_ind_logical     ! < not in PIERNIK
+   end interface my_allocate_with_index       ! < not in PIERNIK
+
    interface my_allocate
       module procedure allocate_array_1D_int4
       module procedure allocate_array_2D_int4
@@ -49,6 +55,7 @@ module diagnostics
       module procedure deallocate_array_3D_real
       module procedure deallocate_array_4D_real
       module procedure deallocate_array_5D_real
+      module procedure deallocate_array_1D_logical ! < not in PIERNIK!
    end interface my_deallocate
 
    interface incr_vec
@@ -62,10 +69,15 @@ module diagnostics
       module procedure pop_real_vector
    end interface pop_vector
 
-   private
-   public :: diagnose_arrays, ma1d, ma2d, ma3d, ma4d, ma5d, my_allocate, my_deallocate, pop_vector, check_environment, cleanup_diagnostics
+   interface decr_vec
+      module procedure decrease_vector_int4
+   end interface decr_vec
 
-   integer(kind=8), parameter :: i4_s=4, r8_s=8 ! sizeof(int(kind=4)), sizeof(double)
+
+   private
+   public :: diagnose_arrays, ma1d, ma2d, ma3d, ma4d, ma5d, my_allocate, my_allocate_with_index, my_deallocate, pop_vector, check_environment, cleanup_diagnostics, incr_vec, decr_vec
+
+   integer(kind=8), parameter :: i4_s=4, r8_s=8, bool_s=1 ! sizeof(int(kind=4)), sizeof(double)
 !   real,    parameter :: MiB = 8./1048576.  ! sizeof(double) / 2**20
    integer, parameter :: an_len = 64
    integer(kind=8), save :: used_memory = 0
@@ -317,6 +329,28 @@ contains
       endif
    end subroutine increase_int8_vector
 
+   subroutine decrease_vector_int4(vec, ind_no)
+
+      implicit none
+
+      integer(kind=4), dimension(:), allocatable, intent(inout) :: vec  !< vector that will be decreased by one item
+      integer(kind=4), dimension(:), allocatable                :: temp
+      integer, intent(in)  :: ind_no                     !< index of element to decreased by
+      integer              :: old_size
+
+      if (allocated(vec)) then
+         old_size = size(vec)
+         allocate(temp(old_size))
+         temp = vec
+         deallocate(vec)
+         allocate(vec(old_size-1))
+         vec = 0
+         vec = [temp(:ind_no-1), temp(ind_no+1:)]
+         deallocate(temp)
+      endif
+
+   end subroutine decrease_vector_int4
+
    ! GOD I NEED TEMPLATES IN FORTRAN!!!!
 
    subroutine deallocate_array_1D_int4(array)
@@ -390,6 +424,14 @@ contains
       if (allocated(array)) deallocate(array)
 
    end subroutine deallocate_array_5D_real
+
+   subroutine deallocate_array_1D_logical(array)
+      implicit none
+      logical, dimension(:), allocatable, intent(inout) :: array
+
+      if (allocated(array)) deallocate(array)
+      used_memory = used_memory - size(array)*bool_s
+   end subroutine deallocate_array_1D_logical
 
    subroutine allocate_array_1D_int4(array, as, aname)
 
@@ -542,5 +584,36 @@ contains
       if (present(aname)) call keep_track_of_arrays(size(array)*r8_s,aname)
 
    end subroutine allocate_array_5D_real
+
+   ! Dropping usage of keep_track_of_arrays for now, as the names are not usually provided
+   subroutine allocate_1D_arr_w_ind_int4(array, as, a_ind_beg)
+      implicit none
+      integer(kind=4), allocatable, dimension(:), intent(inout) :: array
+      integer(kind=4),                            intent(in)    :: as
+      integer(kind=4),                  optional, intent(in)    :: a_ind_beg
+      if (.not. allocated(array)) allocate(array(a_ind_beg:as))
+      used_memory = used_memory + size(array)*i4_s
+  end subroutine allocate_1D_arr_w_ind_int4
+
+!----------------------------------------------------------------------------------------------------
+   subroutine allocate_1D_arr_w_ind_real8(array, as, a_ind_beg)
+      implicit none
+      real(kind=8), allocatable, dimension(:), intent(inout) :: array
+      integer(kind=4),                         intent(in)    :: as
+      integer(kind=4),               optional, intent(in)    :: a_ind_beg
+
+      if (.not. allocated(array)) allocate(array(a_ind_beg:as))
+      used_memory = used_memory + size(array)*i4_s
+  end subroutine allocate_1D_arr_w_ind_real8
+!----------------------------------------------------------------------------------------------------
+   subroutine allocate_1D_arr_w_ind_logical(array,as,a_ind_beg)
+      implicit none
+      logical, allocatable, dimension(:), intent(inout) :: array
+      integer(kind=4),                    intent(in)    :: as
+      integer(kind=4),          optional, intent(in)    :: a_ind_beg
+
+      if (.not. allocated(array)) allocate(array(a_ind_beg:as))
+      used_memory = used_memory + size(array)*bool_s
+  end subroutine allocate_1D_arr_w_ind_logical
 
 end module diagnostics

@@ -192,7 +192,7 @@ contains
       iarr_mag_swp(zdim,:) = [zdim,ydim,xdim]
       iarr_all_mag(:)      = [xdim,ydim,zdim]
 
-         ! Compute index arrays for the ionized fluid
+      ! Compute index arrays for the ionized fluid
       if (has_ion) call set_fluidindex_arrays(flind%ion,.true.)
 
       ! Compute index arrays for the neutral fluid
