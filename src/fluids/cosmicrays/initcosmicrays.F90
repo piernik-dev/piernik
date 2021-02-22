@@ -432,6 +432,10 @@ contains
       call my_deallocate(K_crs_paral)
       call my_deallocate(K_crs_perp)
       call my_deallocate(gpcr_essential)
+#ifdef COSM_RAY_ELECTRONS
+      call my_deallocate(iarr_cre_e)
+      call my_deallocate(iarr_cre_n)
+#endif /* COSM_RAY_ELECTRONS */
 
    end subroutine cleanup_cosmicrays
 

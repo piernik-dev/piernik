@@ -89,11 +89,12 @@ module grid_cont_bnd
 
    contains
 
-      procedure          :: init_gc_bnd         !< Initialization
-      procedure          :: cleanup_bnd         !< Deallocate all internals
-      procedure          :: set_fluxpointers    !< Calculate fluxes incoming from fine grid for 1D solver
-      procedure          :: save_outfluxes      !< Collect outgoing fine fluxes, do curvilinear scaling and store in appropriate array
-      procedure          :: refinemap2SFC_list  !< create list of SFC indices to be created from refine flags
+      procedure :: init_gc_bnd         !< Initialization
+      procedure :: cleanup_bnd         !< Deallocate all internals
+      procedure :: set_fluxpointers    !< Calculate fluxes incoming from fine grid for 1D solver
+      procedure :: save_outfluxes      !< Collect outgoing fine fluxes, do curvilinear scaling and store in appropriate array
+      procedure :: refinemap2SFC_list  !< Create list of SFC indices to be created from refine flags
+      procedure :: has_leaves          !< Returns .true. if there are any non-covered cells on this
 
    end type grid_container_bnd_t
 
@@ -375,5 +376,17 @@ contains
       call this%flag%clear
 
    end subroutine refinemap2SFC_list
+
+!> \brief Returns .true. if there are any non-covered cells on this
+
+   pure logical function has_leaves(this)
+
+      implicit none
+
+      class(grid_container_bnd_t), intent(in) :: this
+
+      has_leaves = any(this%leafmap)
+
+   end function has_leaves
 
 end module grid_cont_bnd
