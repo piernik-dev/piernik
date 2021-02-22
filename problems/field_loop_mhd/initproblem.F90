@@ -147,7 +147,7 @@ contains
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
     use func,        only: ekin, emag
-    use global,      only: force_cc_mag
+    use global,      only: cc_mag
 
     implicit none
 
@@ -176,7 +176,7 @@ contains
                 cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
                 cg%u(fl%imz,i,j,k) = zero
                 ! Mangetic field
-                if (force_cc_mag) then
+                if (cc_mag) then
                    if ( sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) ) .le. R ) then
                       cg%b(xdim,i,j,k) = -A0*cg%y(j)/(sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) )) !  dA_z/dy
                       cg%b(ydim,i,j,k) =  A0*cg%x(i)/(sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) )) ! -dA_z/dx

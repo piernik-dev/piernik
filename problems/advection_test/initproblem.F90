@@ -281,7 +281,7 @@ contains
       use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi
       use dataio_pub,       only: warn
       use div_B,            only: print_divB_norm
-      use global,           only: force_cc_mag
+      use global,           only: cc_mag
       use mpisetup,         only: master
 #endif /* MAGNETIC */
 
@@ -302,7 +302,7 @@ contains
       kk = 0.
       where (dom%D_ > 0) kk = divB_k * dpi / dom%L_
       right_face = 1
-      if (force_cc_mag) right_face = 0
+      if (cc_mag) right_face = 0
       r02 = divBb_r0**2
 #endif /* MAGNETIC */
 
@@ -346,7 +346,7 @@ contains
                      select case (dom%eff_dim)
                         case (I_ONE) ! can't do anything fancy, just set up something non-zero
                            cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp
-                           if (force_cc_mag) then
+                           if (cc_mag) then
                               if (dom%D_x == 1) then
                                  cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ kk(xdim)*cx, 1., 1. ]
                               else if (dom%D_y == 1) then
@@ -367,7 +367,7 @@ contains
                            ! [sin(x)*sin(y), cos(x)*cos(y), 0] should produce divB == 0. for XY case (curl([0, 0, -sin(x)*cos(y)]))
                            ! The div(B) is really close to numerical noise around 0 only in the case of exactly the same resolution per sine wave in all directions.
                            ! If the resolutions of sine waves don't match, then numerical estimates of mixed derivatives of the vector potential don't cancel out and only high-order estimates of div(b) are close to 0.
-                           if (force_cc_mag) then
+                           if (cc_mag) then
                               if (dom%D_z == 0) then
                                  cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
                                       divB0_amp * [ kk(ydim)*sx*sy, kk(xdim)*cx*cy, 1. ] + &
@@ -399,7 +399,7 @@ contains
                         case (I_THREE)
                            ! curl([sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z)]) should produce div(B) == 0, but see the notes for 2D case.
                            ! setting up a div(B)-free field in flattened domain requires careful choice of kk(:)
-                           if (force_cc_mag) then
+                           if (cc_mag) then
                               cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ &
                                    kk(ydim)*cx*sy*cz - kk(zdim)*cx*cy*sz, &
                                    kk(zdim)*cx*cy*sz - kk(xdim)*sx*cy*cz, &
@@ -423,7 +423,7 @@ contains
          call cg%set_constant_b_field([0., 0., 0.])
 #endif /* !MAGNETIC */
 
-         cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         cg%u(fl%idn, :, :, :) = cg%q(qna%ind(inid_n))%arr(:, :, :)
 
          select case (dom%geometry_type)
             case (GEO_XYZ)
@@ -460,7 +460,7 @@ contains
          cg%u(fl%ien,:,:,:) = max(smallei, pulse_pres / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,:,:,:)**2,1) / cg%u(fl%idn,:,:,:))
 
 #if defined MAGNETIC && defined IONIZED
-         if (force_cc_mag) then
+         if (cc_mag) then
             cg%u(fl%ien,:,:,:) = cg%u(fl%ien,:,:,:) + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))
          else
             cg%u(fl%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%u(fl%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + &
@@ -685,6 +685,8 @@ contains
             if (master) call warn("[initproblem:analytic_solution] Cannot store the initial conditions.")
             return
          endif
+
+         inid(:,:,:) = pulse_low_density  ! workaround for use of uninitialized values in problem_initial_conditions
 
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je

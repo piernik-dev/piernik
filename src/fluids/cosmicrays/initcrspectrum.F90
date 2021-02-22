@@ -40,7 +40,7 @@ module initcrspectrum
    public :: use_cresp, use_cresp_evol, p_init, initial_spectrum, p_br_init, f_init, q_init, q_br_init, q_big, cfl_cre, cre_eff, expan_order, e_small, e_small_approx_p, e_small_approx_init_cond,  &
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active, &
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,        &
-           & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,       &
+           & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,       &
            & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, cresp_substep_bcast_dt, n_substeps_max
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
@@ -608,6 +608,28 @@ module initcrspectrum
       endif
 
    end subroutine init_cresp
+
+!----------------------------------------------------------------------------------------------------
+
+   subroutine cleanup_cresp_sp
+
+      use diagnostics, only: my_deallocate
+
+      implicit none
+
+      call my_deallocate(p_fix)
+      call my_deallocate(p_mid_fix)
+      call my_deallocate(cresp_all_edges)
+      call my_deallocate(cresp_all_bins)
+      call my_deallocate(n_small_bin)
+
+      call my_deallocate(Gamma_fix)
+      call my_deallocate(Gamma_mid_fix)
+      call my_deallocate(mom_cre_fix)
+      call my_deallocate(mom_mid_cre_fix)
+      call my_deallocate(gamma_beta_c_fix)
+
+   end subroutine cleanup_cresp_sp
 
 !----------------------------------------------------------------------------------------------------
 

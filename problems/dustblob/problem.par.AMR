@@ -60,7 +60,6 @@
     cfl    = 0.5
     smalld = 1.e-6
     smallei= 1.e-4
-    integration_order = 2
     limiter= 'vanleer'
     dt_initial = 1.e-4
     dt_max_grow = 1.25

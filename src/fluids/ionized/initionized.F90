@@ -92,7 +92,7 @@ contains
       use constants, only: xdim, ydim, zdim, half
       use domain,    only: dom
       use func,      only: emag
-      use global,    only: force_cc_mag
+      use global,    only: cc_mag
 #else /* !MAGNETIC */
       use constants, only: zero
 #endif /* !MAGNETIC */
@@ -110,7 +110,7 @@ contains
       real :: pmag, p, ps
 
 #ifdef MAGNETIC
-      if (force_cc_mag) then
+      if (cc_mag) then
          pmag = emag(b(xdim,i,j,k), b(ydim,i,j,k), b(zdim,i,j,k))
       else
          bx = half*(b(xdim,i,j,k) + b(xdim, i+dom%D_x, j,         k        ))

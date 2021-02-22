@@ -1,17 +1,17 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from colored_io import die, prtinfo, prtwarn, read_var
-from crs_h5  import crs_initialize, crs_plot_main, crs_plot_main_fpq
-from crs_pf  import initialize_pf_arrays
+from crs_h5 import crs_initialize, crs_plot_main, crs_plot_main_fpq
+from crs_pf import initialize_pf_arrays
 from math import isnan, pi
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-from numpy   import array as np_array, log, log10, mean, rot90
-from os      import getcwd, makedirs, path
+from numpy import array as np_array, log, log10, mean, rot90
+from os import getcwd, makedirs, path
 from optparse import OptionParser
-from re      import search
+from re import search
 from read_h5 import read_par, input_names_array
-from sys     import argv, version
+from sys import argv, version
 from warnings import simplefilter
 try:
     import yt
@@ -210,7 +210,7 @@ if f_run is True:
     dim_map = {'x': 0, 'y': 1, 'z': 2}
     dom_l = np_array(h5ds.domain_left_edge[0:3])
     dom_r = np_array(h5ds.domain_right_edge[0:3])
-    prtinfo("Max level of refinement is %i." %(h5ds.max_level))
+    prtinfo("Max level of refinement is %i." % (h5ds.max_level))
 
 # ----------- Loading other data
     t = h5ds.current_time[0]
@@ -251,7 +251,7 @@ if f_run is True:
             slice_ax = 'z'
     avail_dim = avail_dims_by_slice[dim_map[slice_ax]]
     prtinfo("Slice ax set to %s, coordinate = %f %s \033[0m" % (slice_ax, slice_coord, length_unit))
-    resolution = [grid_dim[avail_dim[0]]*2**h5ds.max_level, grid_dim[avail_dim[1]]*2**h5ds.max_level]
+    resolution = [grid_dim[avail_dim[0]] * 2**h5ds.max_level, grid_dim[avail_dim[1]] * 2**h5ds.max_level]
 
 # --------- Preparing clickable image
     s = plt.figure(figsize=(12, 8), dpi=100)
