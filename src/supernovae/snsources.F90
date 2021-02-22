@@ -47,7 +47,7 @@ module snsources
    public :: sn_shear
 #endif /* SHEAR */
 
-   integer                                 :: nsn, nsn_last
+   integer(kind=4)                         :: nsn, nsn_last
    real                                    :: e_sn                !< energy per supernova [erg]
    real                                    :: f_sn                !< frequency of SN
    real                                    :: f_sn_kpc2           !< frequency of SN per kpc^2
@@ -80,7 +80,7 @@ contains
 !<
    subroutine init_snsources
 
-      use constants,      only: PIERNIK_INIT_GRID, xdim, ydim, zdim, pi
+      use constants,      only: PIERNIK_INIT_GRID, xdim, ydim, zdim, pi, I_ONE
       use dataio_pub,     only: nh                  ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, code_progress
       use domain,         only: dom
@@ -150,7 +150,7 @@ contains
 
       auxper = 0
       do id = xdim, zdim
-         if (dom%periodic(id) .and. dom%has_dir(id)) auxper(id,:) = [-1, 1]
+         if (dom%periodic(id) .and. dom%has_dir(id)) auxper(id,:) = [-I_ONE, I_ONE]
       enddo
 
    end subroutine init_snsources
@@ -169,7 +169,7 @@ contains
 
       if (.not.cfl_violated) nsn_last = nsn
 
-      nsn = int(t * f_sn)
+      nsn = int(t * f_sn, kind=4)
       nsn_per_timestep = nsn - nsn_last
 
       do isn = 1, nsn_per_timestep
@@ -401,7 +401,7 @@ contains
       integer(HID_T), intent(in) :: file_id
       integer(SIZE_T)            :: bufsize
       integer(kind=4)            :: error
-      integer, dimension(1)      :: lnsnbuf
+      integer(kind=4), dimension(1) :: lnsnbuf
 
       bufsize = 1
       lnsnbuf(bufsize) = nsn
@@ -421,7 +421,7 @@ contains
 
       integer(HID_T), intent(in)         :: file_id
       integer(kind=4)                    :: error
-      integer, dimension(:), allocatable :: lnsnbuf
+      integer(kind=4), dimension(:), allocatable :: lnsnbuf
 
       if (.not.allocated(lnsnbuf)) allocate(lnsnbuf(1))
       call h5ltget_attribute_int_f(file_id, "/", "nsn", lnsnbuf, error)
