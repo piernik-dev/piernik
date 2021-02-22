@@ -515,7 +515,7 @@ module initcrspectrum
             if (master) call warn(msg)
          else
             !> p_br_init_lo should be equal to one of p_fix values
-            i = minloc(abs(p_fix - p_br_init(LO)), dim=1, kind=4) - I_ONE
+            i = int(minloc(abs(p_fix - p_br_init(LO)), dim=1), kind=4) - I_ONE
             write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_lo was set, but should be equal to one of p_fix. Assuming p_br_init_lo =", p_fix(i),"."
             p_br_init(LO) = p_fix(i)
             if (master) call warn(msg)
@@ -532,12 +532,12 @@ module initcrspectrum
             if (master) call die(msg)
          else
             !> p_br_init_lo should be equal to one of p_fix values
-            i = minloc(abs(p_fix - p_br_init(LO)), dim=1, kind=4) - I_ONE
+            i = int(minloc(abs(p_fix - p_br_init(LO)), dim=1), kind=4) - I_ONE
             write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_lo was set, but should be equal to one of p_fix. Assuming p_br_init_lo =", p_fix(i),"."
             p_br_init(LO) = p_fix(i)
             if (master) call warn(msg)
             !> p_br_init_up should also be equal to one of p_fix values
-            i = minloc(abs(p_fix - p_br_init(HI)), dim=1, kind=4) - I_ONE
+            i = int(minloc(abs(p_fix - p_br_init(HI)), dim=1), kind=4) - I_ONE
             write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_up was set, but should be equal to one of p_fix. Assuming p_br_init_up =", p_fix(i),"."
             p_br_init(HI) = p_fix(i)
             if (master) call warn(msg)

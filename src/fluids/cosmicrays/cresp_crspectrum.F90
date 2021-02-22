@@ -1101,7 +1101,7 @@ contains
       integer(kind=4)                            :: i_br, i
 
       p_range_add(:) = zero
-      i_br = minloc(abs(p_fix - p_br_init(LO)), dim=1, kind=4) - I_ONE
+      i_br = int(minloc(abs(p_fix - p_br_init(LO)), dim=1), kind=4) - I_ONE
       ic = get_i_cut(p_init)
 
       p_range_add(ic(LO):ic(HI)) = p_fix(ic(LO):ic(HI))
@@ -1131,7 +1131,7 @@ contains
       enddo
 
 ! HIGH ENERGY CUTOFF; a and b remain unchanged
-      i_br = minloc(abs(p_fix - p_br_init(HI)), dim=1, kind=4)
+      i_br = int(minloc(abs(p_fix - p_br_init(HI)), dim=1), kind=4)
 
       lpu = log10(p_init(HI))
       lpb = log10(p_br_init(HI))
@@ -1168,7 +1168,7 @@ contains
 
       integer(kind=4) :: i, i_br
 
-      i_br = minloc(abs(p_fix - p_br_init(LO)), dim=1, kind=4) - I_ONE
+      i_br = int(minloc(abs(p_fix - p_br_init(LO)), dim=1), kind=4) - I_ONE
       f(i_cut(LO):i_br-1) = f(i_br-1) * exp(-(q_br_init*log(2.0) * log(p(i_cut(LO):i_br-1)/sqrt(p_init(LO) * p(i_br)))**2))
       do i = 1, i_br
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
@@ -1192,7 +1192,7 @@ contains
 
       integer(kind=4) :: i_br
 
-      i_br = minloc(abs(p_fix - p_br_init(LO)), dim=1, kind=4) - I_ONE
+      i_br = int(minloc(abs(p_fix - p_br_init(LO)), dim=1), kind=4) - I_ONE
       q(:i_br) = q_br_init ; q(i_br+1:) = q_init
       f(i_cut(LO):i_br-1) = f(i_br) * (p(i_cut(LO):i_br-1) / p(i_br))**(-q_br_init)
       e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
