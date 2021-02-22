@@ -1917,8 +1917,12 @@ contains
 
       implicit none
 
+      call my_deallocate(fail_count_comp_q)
+
       call my_deallocate(n)
       call my_deallocate(e)
+      call my_deallocate(e_amplitudes_l)
+      call my_deallocate(e_amplitudes_r)
       call my_deallocate(r)
       call my_deallocate(q)
       call my_deallocate(f)

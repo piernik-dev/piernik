@@ -40,7 +40,7 @@ module cresp_NR_method
 
    private
    public :: alpha, assoc_pointers, bound_name, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, & !WARNING element abuse in group public
-         &   cresp_write_smaps_to_hdf, cresp_read_smaps_from_hdf
+         &   cresp_write_smaps_to_hdf, cresp_read_smaps_from_hdf, deallocate_all_smaps
 
    integer, parameter                        :: ndim = 2
    real, allocatable, dimension(:)           :: p_space, q_space
@@ -1526,16 +1526,35 @@ contains
       if (.not. allocated(alpha_tab_q))  call my_allocate_with_index(alpha_tab_q, arr_dim_q, 1)
       if (.not. allocated(q_grid))       call my_allocate_with_index(q_grid, arr_dim_q, 1)
       call allocate_smaps(arr_dim, arr_dim)
+
    end subroutine allocate_all_smap_arrays
 !----------------------------------------------------------------------------------------------------
-   subroutine deallocate_smaps
+   subroutine deallocate_all_smaps
+
+      use diagnostics, only: my_deallocate
 
       implicit none
 
-      if ( allocated(p_ratios_lo) ) deallocate(p_ratios_lo)
-      if ( allocated(f_ratios_lo) ) deallocate(f_ratios_lo)
-      if ( allocated(p_ratios_up) ) deallocate(p_ratios_up)
-      if ( allocated(f_ratios_up) ) deallocate(f_ratios_up)
+      call my_deallocate(alpha_tab_lo)
+      call my_deallocate(alpha_tab_up)
+      call my_deallocate(n_tab_lo)
+      call my_deallocate(n_tab_up)
+      call my_deallocate(alpha_tab_q)
+      call my_deallocate(q_grid)
+      call deallocate_smaps
+
+   end subroutine deallocate_all_smaps
+!----------------------------------------------------------------------------------------------------
+   subroutine deallocate_smaps
+
+      use diagnostics, only: my_deallocate
+
+      implicit none
+
+      call my_deallocate(p_ratios_lo)
+      call my_deallocate(f_ratios_lo)
+      call my_deallocate(p_ratios_up)
+      call my_deallocate(f_ratios_up)
 
    end subroutine deallocate_smaps
 !----------------------------------------------------------------------------------------------------
