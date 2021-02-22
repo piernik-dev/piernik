@@ -342,7 +342,7 @@ contains
       do icr = 1, ncre
         if (cre_gpcr_ess(icr)) then
             jcr = jcr + I_ONE
-            gpcr_essential(jcr) = ncrn + 1
+            gpcr_essential(jcr) = ncrn + I_ONE
         endif
       enddo
 #endif /* !COSM_RAY_ELECTRONS */
