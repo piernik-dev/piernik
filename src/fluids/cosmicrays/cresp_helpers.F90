@@ -67,7 +67,7 @@ module cresp_helpers
    character(len=extlen), parameter                 :: extension =  ".dat"
 
    type     map_header
-      integer  :: s_dim1, s_dim2
+      integer(kind=4) :: s_dim1, s_dim2
       real     :: s_es
       real     :: s_pr
       real     :: s_qbig

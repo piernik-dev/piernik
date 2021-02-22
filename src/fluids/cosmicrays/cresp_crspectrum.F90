@@ -32,7 +32,7 @@
 module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
 
-   use constants, only: LO, HI
+   use constants, only: LO, HI, I_ZERO, I_ONE
 
    implicit none
 
@@ -41,7 +41,7 @@ module cresp_crspectrum
       &      src_gpcresp, p_rch_init, detect_clean_spectrum, cresp_find_prepare_spectrum, cresp_detect_negative_content
 
    integer, dimension(1:2)            :: fail_count_NR_2dim, fail_count_interpol
-   integer, allocatable, dimension(:) :: fail_count_comp_q
+   integer(kind=4), allocatable, dimension(:) :: fail_count_comp_q
 
 ! variables informing about change of bins
    integer, dimension(LO:HI)          :: del_i
@@ -61,18 +61,18 @@ module cresp_crspectrum
    integer                            :: num_heating_edges_next
 
 ! dynamic arrays
-   integer, allocatable, dimension(:) :: fixed_edges,   fixed_edges_next
-   integer, allocatable, dimension(:) :: active_edges,  active_edges_next
-   integer, allocatable, dimension(:) :: active_bins,   active_bins_next
-   integer, allocatable, dimension(:) :: cooling_edges_next
-   integer, allocatable, dimension(:) :: heating_edges_next
+   integer(kind=4), allocatable, dimension(:) :: fixed_edges,   fixed_edges_next
+   integer(kind=4), allocatable, dimension(:) :: active_edges,  active_edges_next
+   integer(kind=4), allocatable, dimension(:) :: active_bins,   active_bins_next
+   integer(kind=4), allocatable, dimension(:) :: cooling_edges_next
+   integer(kind=4), allocatable, dimension(:) :: heating_edges_next
 
    real, allocatable, dimension(:) :: r                                   !> r term for energy losses (Miniati 2001, eqn. 25)
    real, allocatable, dimension(:) :: q                                   !> power-law exponent array
 
 ! power-law
    real,    dimension(LO:HI)       :: p_cut_next, p_cut
-   integer, dimension(LO:HI)       :: i_cut, i_cut_next
+   integer(kind=4), dimension(LO:HI) :: i_cut, i_cut_next
    real, allocatable, dimension(:) :: p                                   !> momentum table for piecewise power-law spectru intervals
    real, allocatable, dimension(:) :: f                                   !> distribution function for piecewise power-law spectrum
    real, allocatable, dimension(:) :: p_next, p_upw , nflux, eflux        !> predicted and upwind momenta, number density / energy density fluxes
@@ -81,10 +81,10 @@ module cresp_crspectrum
    real, allocatable, dimension(:) :: n, e                                !> in-algorithm energy & number density
    real, allocatable, dimension(:) :: e_amplitudes_l, e_amplitudes_r
    real,    dimension(LO:HI)       :: e_threshold                         !> lower / upper energy needed for bin activation
-   integer, dimension(LO:HI)       :: approx_p                            !> if one bin, switch off cutoff p approximation
-   integer, dimension(LO:HI)       :: max_ic                              !> maximum i_cut
+   integer(kind=4), dimension(LO:HI) :: approx_p                            !> if one bin, switch off cutoff p approximation
+   integer(kind=4), dimension(LO:HI) :: max_ic                              !> maximum i_cut
 
-   integer(kind=4), dimension(LO:HI), parameter:: oz = [1,0], pm = [1,-1] !> auxiliary vectors /todo to be renamed
+   integer(kind=4), dimension(LO:HI), parameter:: oz = [I_ONE, I_ZERO], pm = [I_ONE, -I_ONE] !> auxiliary vectors /todo to be renamed
 
    abstract interface
       real function function_pointer_1D(x,y)
@@ -104,7 +104,7 @@ contains
 
    subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, p_out)
 
-      use constants,      only: zero, one
+      use constants,      only: zero, one, I_ONE
 #ifdef CRESP_VERBOSED
       use dataio_pub,     only: msg, printinfo
 #endif /* CRESP_VERBOSED */
@@ -178,13 +178,13 @@ contains
 
          if (solve_fail_up) then                               !< exit_code support
             if (i_cut(HI) < ncre) then
-               call manually_deactivate_bin_via_transfer(i_cut(HI), -1, n, e)
+               call manually_deactivate_bin_via_transfer(i_cut(HI), -I_ONE, n, e)
                call decr_vec(active_bins, num_active_bins)
                call decr_vec(active_edges, num_active_edges)
                is_active_bin(i_cut(HI))  = .false.
                is_active_edge(i_cut(HI)) = .false.
-               num_active_bins = num_active_bins - 1
-               i_cut(HI) = i_cut(HI) - 1
+               num_active_bins = num_active_bins - I_ONE
+               i_cut(HI) = i_cut(HI) - I_ONE
                p_cut(HI) = p_fix(i_cut(HI))
             else
                p_cut(HI) = p_mid_fix(i_cut(HI))
@@ -204,13 +204,13 @@ contains
 
          if (solve_fail_lo) then                               !< exit_code support
             if (i_cut(LO) > 0) then
-               call manually_deactivate_bin_via_transfer(i_cut(LO)+1, 1, n, e)
+               call manually_deactivate_bin_via_transfer(i_cut(LO) + I_ONE, I_ONE, n, e)
                call decr_vec(active_bins, 1)
                call decr_vec(active_edges, 1)
                is_active_bin(i_cut(LO)+1) = .false.
                is_active_edge(i_cut(LO))  = .false.
-               num_active_bins = num_active_bins - 1
-               i_cut(LO) = i_cut(LO) + 1
+               num_active_bins = num_active_bins - I_ONE
+               i_cut(LO) = i_cut(LO) + I_ONE
                p_cut(LO) = p_fix(i_cut(LO))
             else
                p_cut(LO) = p_mid_fix(1)
@@ -252,12 +252,12 @@ contains
 
       if ((del_i(HI) == 0) .and. (approx_p(HI) > 0) .and. (i_cut_next(HI)-1 > 0)) then
          if (.not. assert_active_bin_via_nei(ndt(i_cut_next(HI)), edt(i_cut_next(HI)), i_cut_next(HI))) then
-            call manually_deactivate_bin_via_transfer(i_cut_next(HI), -1, ndt, edt)
+            call manually_deactivate_bin_via_transfer(i_cut_next(HI), -I_ONE, ndt, edt)
          endif
       endif
       if ((del_i(LO) == 0) .and. (approx_p(LO) > 0) .and. (i_cut_next(LO)+2 <= ncre)) then
          if (.not. assert_active_bin_via_nei(ndt(i_cut_next(LO)+1), edt(i_cut_next(LO)+1), i_cut_next(LO))) then
-            call manually_deactivate_bin_via_transfer(i_cut_next(LO)+1, 1, ndt, edt)
+            call manually_deactivate_bin_via_transfer(i_cut_next(LO) + I_ONE, I_ONE, ndt, edt)
          endif
       endif
 
@@ -291,8 +291,8 @@ contains
       call cresp_detect_negative_content
 #endif /* CRESP_VERBOSED */
 
-      call check_cutoff_ne(ndt(i_cut_next(LO)+1), edt(i_cut_next(LO)+1), i_cut_next(LO)+1, cfl_cresp_violation)
-      call check_cutoff_ne(ndt(i_cut_next(HI)),   edt(i_cut_next(HI)),   i_cut_next(HI),   cfl_cresp_violation)
+      call check_cutoff_ne(ndt(i_cut_next(LO) + I_ONE), edt(i_cut_next(LO) + I_ONE), i_cut_next(LO) + I_ONE, cfl_cresp_violation)
+      call check_cutoff_ne(ndt(i_cut_next(HI)),         edt(i_cut_next(HI)),         i_cut_next(HI),         cfl_cresp_violation)
 
       if (cfl_cresp_violation) then
          call deallocate_active_arrays
@@ -406,7 +406,7 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine find_i_bound(empty_cell) ! DEPRECATED
 
-      use constants,      only: zero
+      use constants,      only: zero, I_ONE
       use initcosmicrays, only: ncre
       use initcrspectrum, only: cresp
 
@@ -419,7 +419,7 @@ contains
 
       i_cut(LO) = 0
       do i = 1, ncre                        ! if energy density is nonzero, so should be the number density
-         i_cut(LO) = i-1
+         i_cut(LO) = i - I_ONE
          if (cresp%e(i) > e_threshold(LO)) then
            if (cresp%n(i) > zero) then
               empty_cell = .false.
@@ -476,7 +476,7 @@ contains
          has_e_gt_zero(i) = (e(i) > zero)
          if (has_n_gt_zero(i) .and. has_e_gt_zero(i)) then
             num_has_gt_zero = num_has_gt_zero + I_ONE
-            call incr_vec(nonempty_bins, I_ONE)
+            call incr_vec(nonempty_bins, 1)
             nonempty_bins(num_has_gt_zero) = i
          endif
       enddo
@@ -748,7 +748,7 @@ contains
 
    subroutine cresp_update_bin_index(ubdt, uddt, p_cut, p_cut_next, dt_too_high) ! evaluates only "next" momenta and is called after finding outer cutoff momenta
 
-      use constants,      only: zero, I_ZERO, one
+      use constants,      only: zero, I_ZERO, I_ONE, one
 #ifdef CRESP_VERBOSED
       use dataio_pub,     only: msg, printinfo
 #endif /* CRESP_VERBOSED */
@@ -769,13 +769,13 @@ contains
       p_cut_next = abs(p_cut_next)
 ! Compute likely cut-off indices after current timestep
       i_cut_next = get_i_cut(p_cut_next)
-      i_cut_next(LO) = max(i_cut_next(LO), i_cut(LO)-1)
-      i_cut_next(LO) = min(i_cut_next(LO), i_cut(LO)+1)
+      i_cut_next(LO) = max(i_cut_next(LO), i_cut(LO)- I_ONE)
+      i_cut_next(LO) = min(i_cut_next(LO), i_cut(LO)+ I_ONE)
 
-      i_cut_next(HI) = max(i_cut_next(HI), i_cut(HI)-1)
-      i_cut_next(HI) = min(i_cut_next(HI), i_cut(HI)+1)
+      i_cut_next(HI) = max(i_cut_next(HI), i_cut(HI)- I_ONE)
+      i_cut_next(HI) = min(i_cut_next(HI), i_cut(HI)+ I_ONE)
 
-      if (p_cut_next(HI) < p_fix(i_cut_next(HI)-1)) then ! if no solution is found at the first try, approximation usually causes p_cut(HI) to jump
+      if (p_cut_next(HI) < p_fix(i_cut_next(HI)- I_ONE)) then ! if no solution is found at the first try, approximation usually causes p_cut(HI) to jump
          dt_too_high = .true.                 ! towards higher values, which for sufficiently high dt can cause p_cut_next(HI) to even
          return                               ! become negative. As p_cut(HI) would propagate more than one bin this is clearly cfl violation.
       endif
@@ -783,8 +783,8 @@ contains
       del_i = i_cut_next - i_cut
 
 ! Construct index arrays for fixed edges betwen p_cut(LO) and p_cut(HI), active edges after timestep
-      call arrange_assoc_active_edge_arrays(fixed_edges_next,  is_fixed_edge_next,  num_fixed_edges_next,  [i_cut_next(LO)+1, i_cut_next(HI)-1])
-      call arrange_assoc_active_edge_arrays(active_edges_next, is_active_edge_next, num_active_edges_next, [i_cut_next(LO),   i_cut_next(HI)])
+      call arrange_assoc_active_edge_arrays(fixed_edges_next,  is_fixed_edge_next,  num_fixed_edges_next,  [i_cut_next(LO) + I_ONE, i_cut_next(HI) - I_ONE])
+      call arrange_assoc_active_edge_arrays(active_edges_next, is_active_edge_next, num_active_edges_next, [i_cut_next(LO),         i_cut_next(HI)])
 
 ! Active bins after timestep
       is_active_bin_next = .false.
@@ -845,10 +845,10 @@ contains
 
       implicit none
 
-      integer,          dimension(I_TWO), intent(in)   :: range_in
-      integer,                            intent(out)  :: count_is_true
-      integer, allocatable, dimension(:), intent(out)  :: index_array
-      logical,         dimension(0:ncre), intent(out)  :: where_true_array
+      integer(kind=4),          dimension(I_TWO), intent(in)   :: range_in
+      integer,                                    intent(out)  :: count_is_true
+      integer(kind=4), allocatable, dimension(:), intent(out)  :: index_array
+      logical,                 dimension(0:ncre), intent(out)  :: where_true_array
 
       where_true_array  = .false.
       where_true_array(range_in(LO):range_in(HI)) = .true.
@@ -872,8 +872,9 @@ contains
       implicit none
 
       real, dimension(I_ONE:ncre), intent(out) :: init_n, init_e
-      integer                                  :: i, k, co
-      integer, dimension(LO:HI)                :: i_ch
+      integer                                  :: i, k
+      integer(kind=4)                          :: co
+      integer(kind=4), dimension(LO:HI)        :: i_ch
       real                                     :: c
       logical                                  :: exit_code
 
@@ -1085,7 +1086,7 @@ contains
 !<
    subroutine cresp_init_plpc_spectrum
 
-      use constants,       only: zero, one, two, three, ten
+      use constants,       only: zero, one, two, three, ten, I_ONE
       use cresp_variables, only: fpcc
       use diagnostics,     only: my_deallocate
       use initcosmicrays,  only: ncre
@@ -1100,7 +1101,7 @@ contains
       integer(kind=4)                            :: i_br, i
 
       p_range_add(:) = zero
-      i_br = minloc(abs(p_fix - p_br_init(LO)),dim=1)-1
+      i_br = minloc(abs(p_fix - p_br_init(LO)), dim=1, kind=4) - I_ONE
       ic = get_i_cut(p_init)
 
       p_range_add(ic(LO):ic(HI)) = p_fix(ic(LO):ic(HI))
@@ -1125,12 +1126,12 @@ contains
 
       f(ic(LO):i_br-1) = ten**(c_1 * log10(p_range_add(ic(LO):i_br-1))**two + c_2 * log10(p_range_add(ic(LO):i_br-1)) + c_3)
 
-      do i = ic(LO)+1, i_br
+      do i = ic(LO) + I_ONE, i_br
          q(i) = pf_to_q(p_range_add(i-1), p_range_add(i), f(i-1), f(i))
       enddo
 
 ! HIGH ENERGY CUTOFF; a and b remain unchanged
-      i_br = minloc(abs(p_fix - p_br_init(HI)),dim=1)
+      i_br = minloc(abs(p_fix - p_br_init(HI)), dim=1, kind=4)
 
       lpu = log10(p_init(HI))
       lpb = log10(p_br_init(HI))
@@ -1159,6 +1160,7 @@ contains
 !<
    subroutine cresp_init_brpg_spectrum
 
+      use constants,      only: I_ONE
       use initcosmicrays, only: ncre
       use initcrspectrum, only: p_fix, p_br_init, p_init, q_br_init
 
@@ -1166,7 +1168,7 @@ contains
 
       integer(kind=4) :: i, i_br
 
-      i_br = minloc(abs(p_fix - p_br_init(LO)), dim=1) - 1
+      i_br = minloc(abs(p_fix - p_br_init(LO)), dim=1, kind=4) - I_ONE
       f(i_cut(LO):i_br-1) = f(i_br-1) * exp(-(q_br_init*log(2.0) * log(p(i_cut(LO):i_br-1)/sqrt(p_init(LO) * p(i_br)))**2))
       do i = 1, i_br
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
@@ -1182,6 +1184,7 @@ contains
 !<
    subroutine cresp_init_brpl_spectrum
 
+      use constants,      only: I_ONE
       use initcosmicrays, only: ncre
       use initcrspectrum, only: p_fix, p_br_init, q_br_init, q_init
 
@@ -1189,7 +1192,7 @@ contains
 
       integer(kind=4) :: i_br
 
-      i_br = minloc(abs(p_fix - p_br_init(LO)), dim=1) - 1
+      i_br = minloc(abs(p_fix - p_br_init(LO)), dim=1, kind=4) - I_ONE
       q(:i_br) = q_br_init ; q(i_br+1:) = q_init
       f(i_cut(LO):i_br-1) = f(i_br) * (p(i_cut(LO):i_br-1) / p(i_br))**(-q_br_init)
       e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
@@ -1202,6 +1205,7 @@ contains
 !<
    subroutine cresp_init_symf_spectrum
 
+      use constants,      only: I_ONE
       use initcosmicrays, only: ncre
       use initcrspectrum, only: p_fix, q_init
 
@@ -1209,7 +1213,7 @@ contains
 
       integer(kind=4) :: i, i_br
 
-      i_br = int(sum(i_cut)/2)
+      i_br = int(sum(i_cut)/2, kind=4)
       q(i_cut(LO)+1:i_br) = -q_init
       f(i_br) = f(i_br+1)*(p(i_br+1)/p(i_br))**(-q(i_br))
 
@@ -1218,7 +1222,7 @@ contains
       enddo
 
       if ((i_cut(HI) - i_br /= i_br - i_cut(LO))) p_cut(HI) = p_cut(HI) - (p_cut(HI) - p_fix(i_cut(HI)-1))
-      p(i_cut(HI)) = p_cut(HI) ; i_cut(HI) = i_cut(HI) -1
+      p(i_cut(HI)) = p_cut(HI) ; i_cut(HI) = i_cut(HI) - I_ONE
       e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
       n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
 
@@ -1229,6 +1233,7 @@ contains
 !<
    subroutine cresp_init_syme_spectrum
 
+      use constants,      only: I_ONE
       use initcosmicrays, only: ncre
       use initcrspectrum, only: p_fix, q_init
 
@@ -1236,13 +1241,13 @@ contains
 
       integer(kind=4) :: i, i_br
 
-      i_br = int(sum(i_cut)/2)
+      i_br = int(sum(i_cut)/2, kind=4)
       q(i_cut(LO)+1:i_br) = q_init-2.2
       do i = 1, i_br-i_cut(LO)
          f(i_br-i) = f(i_br)*(p(i_br)/p(i_br-i))**(q(i_br-i+1))
       enddo
       if ((i_cut(HI) - i_br /= i_br - i_cut(LO))) p_cut(HI) = p_cut(HI) - (p_cut(HI) - p_fix(i_cut(HI)-1))
-      p(i_cut(HI)) = p_cut(HI) ; i_cut(HI) = i_cut(HI) -1
+      p(i_cut(HI)) = p_cut(HI) ; i_cut(HI) = i_cut(HI) -I_ONE
       e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
       n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
 
@@ -1291,6 +1296,7 @@ contains
 
    function get_i_cut(pc) result(gic)
 
+      use constants,       only: I_ONE
       use initcosmicrays,  only: ncre
       use initcrspectrum,  only: p_fix, w
 
@@ -1301,9 +1307,9 @@ contains
       integer(kind=4)                    :: side
 
       do side = LO, HI
-         gic(side) = int(floor(log10(pc(side)/p_fix(1))/w)) + side
-         gic(side) = max(gic(side), side-1       )
-         gic(side) = min(gic(side), ncre-oz(side))
+         gic(side) = int(floor(log10(pc(side)/p_fix(1))/w), kind=4) + side
+         gic(side) = max(gic(side), side - I_ONE   )
+         gic(side) = min(gic(side), ncre - oz(side))
       enddo
 
    end function get_i_cut
@@ -1323,8 +1329,8 @@ contains
 
       implicit none
 
-      real,    dimension(:), intent(in) :: p_l, p_r, f_l, q
-      integer, dimension(:), intent(in) :: bins
+      real,            dimension(:), intent(in) :: p_l, p_r, f_l, q
+      integer(kind=4), dimension(:), intent(in) :: bins
       real,    dimension(size(bins))    :: e_bins
       real,    dimension(1:ncre)        :: fq_to_e
 
@@ -1371,8 +1377,8 @@ contains
 
       implicit none
 
-      integer, dimension(:), intent(in) :: bins
-      real,    dimension(:), intent(in) :: p_l, p_r, f_l, q
+      integer(kind=4), dimension(:), intent(in) :: bins
+      real,            dimension(:), intent(in) :: p_l, p_r, f_l, q
       real,    dimension(size(bins))    :: n_bins
       real,    dimension(1:ncre)        :: fq_to_n
 
@@ -1457,7 +1463,7 @@ contains
 
       implicit none
 
-      integer, dimension(:), intent(in) :: ce, he    ! cooling edges, heating edges
+      integer(kind=4), dimension(:), intent(in) :: ce, he    ! cooling edges, heating edges
       real,    dimension(1:ncre-1)      :: pimh, pimth, fimh,fimth  ! *imh = i_minus_half, *imth = i_minus_third
       real,    dimension(1:ncre-1)      :: dn_upw, de_upw, qi,qim1  ! *im1 = i_minus_one
 
@@ -1549,10 +1555,10 @@ contains
 
       implicit none
 
-      integer, dimension(:),   intent(in) :: bins
-      real,                    intent(in) :: u_b, u_d
-      real, dimension(0:ncre), intent(in) :: p
-      real, dimension(size(bins))         :: r_num, r_den
+      integer(kind=4), dimension(:), intent(in) :: bins
+      real,                          intent(in) :: u_b, u_d
+      real, dimension(0:ncre),       intent(in) :: p
+      real, dimension(size(bins))               :: r_num, r_den
 
       r = zero
 
@@ -1582,7 +1588,7 @@ contains
 
    subroutine ne_to_q(n, e, q, bins)
 
-      use constants,       only: zero
+      use constants,       only: zero, I_ONE
       use cresp_NR_method, only: compute_q
       use cresp_variables, only: clight_cresp
       use initcosmicrays,  only: ncre
@@ -1612,7 +1618,7 @@ contains
          else
             q(i) = zero
         endif
-        if (exit_code) fail_count_comp_q(i) = fail_count_comp_q(i) + 1
+        if (exit_code) fail_count_comp_q(i) = fail_count_comp_q(i) + I_ONE
       enddo
 
    end subroutine ne_to_q
@@ -1643,7 +1649,7 @@ contains
 
       implicit none
 
-      integer, dimension(:)       :: bins
+      integer(kind=4), dimension(:) :: bins
       real, dimension(1:ncre)     :: p_l, p_r, n, q
       real, dimension(size(bins)) :: f_bins
       real, dimension(0:ncre)     :: nq_to_f
@@ -1870,6 +1876,7 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine cresp_allocate_all
 
+      use constants,      only: I_ZERO, I_ONE
       use diagnostics,    only: my_allocate_with_index
       use initcosmicrays, only: ncre
 
@@ -1878,36 +1885,36 @@ contains
       integer(kind=4) :: ma1d
 
       ma1d = ncre
-      call my_allocate_with_index(fail_count_comp_q,ma1d,1)
+      call my_allocate_with_index(fail_count_comp_q,ma1d, I_ONE)
 
-      call my_allocate_with_index(n,ma1d,1)   !:: n, e, r
-      call my_allocate_with_index(e,ma1d,1)
-      call my_allocate_with_index(e_amplitudes_l,ma1d,1)   !:: n, e, r
-      call my_allocate_with_index(e_amplitudes_r,ma1d,1)
-      call my_allocate_with_index(r,ma1d,1)
-      call my_allocate_with_index(q,ma1d,1)
+      call my_allocate_with_index(n,ma1d, I_ONE)   !:: n, e, r
+      call my_allocate_with_index(e,ma1d, I_ONE)
+      call my_allocate_with_index(e_amplitudes_l,ma1d, I_ONE)   !:: n, e, r
+      call my_allocate_with_index(e_amplitudes_r,ma1d, I_ONE)
+      call my_allocate_with_index(r,ma1d, I_ONE)
+      call my_allocate_with_index(q,ma1d, I_ONE)
 
-      call my_allocate_with_index(f,ma1d,0)
-      call my_allocate_with_index(p,ma1d,0)
+      call my_allocate_with_index(f,ma1d, I_ZERO)
+      call my_allocate_with_index(p,ma1d, I_ZERO)
 
-      call my_allocate_with_index(edt,ma1d,1)
-      call my_allocate_with_index(ndt,ma1d,1)
+      call my_allocate_with_index(edt,ma1d, I_ONE)
+      call my_allocate_with_index(ndt,ma1d, I_ONE)
 
-      call my_allocate_with_index(p_next,ma1d,0)
-      call my_allocate_with_index(p_upw,ma1d,0)
-      call my_allocate_with_index(nflux,ma1d,0)
-      call my_allocate_with_index(eflux,ma1d,0)
+      call my_allocate_with_index(p_next,ma1d, I_ZERO)
+      call my_allocate_with_index(p_upw,ma1d, I_ZERO)
+      call my_allocate_with_index(nflux,ma1d, I_ZERO)
+      call my_allocate_with_index(eflux,ma1d, I_ZERO)
 
-      call my_allocate_with_index(is_fixed_edge,ma1d,0)
-      call my_allocate_with_index(is_fixed_edge_next,ma1d,0)
-      call my_allocate_with_index(is_active_edge,ma1d,0)
-      call my_allocate_with_index(is_active_edge_next,ma1d,0)
-      call my_allocate_with_index(is_cooling_edge,ma1d,0)
-      call my_allocate_with_index(is_cooling_edge_next,ma1d,0)
-      call my_allocate_with_index(is_heating_edge,ma1d,0)
-      call my_allocate_with_index(is_heating_edge_next,ma1d,0)
-      call my_allocate_with_index(is_active_bin,ma1d,1)
-      call my_allocate_with_index(is_active_bin_next,ma1d,1)
+      call my_allocate_with_index(is_fixed_edge,ma1d, I_ZERO)
+      call my_allocate_with_index(is_fixed_edge_next,ma1d, I_ZERO)
+      call my_allocate_with_index(is_active_edge,ma1d, I_ZERO)
+      call my_allocate_with_index(is_active_edge_next,ma1d, I_ZERO)
+      call my_allocate_with_index(is_cooling_edge,ma1d, I_ZERO)
+      call my_allocate_with_index(is_cooling_edge_next,ma1d, I_ZERO)
+      call my_allocate_with_index(is_heating_edge,ma1d, I_ZERO)
+      call my_allocate_with_index(is_heating_edge_next,ma1d, I_ZERO)
+      call my_allocate_with_index(is_active_bin,ma1d, I_ONE)
+      call my_allocate_with_index(is_active_bin_next,ma1d, I_ONE)
 
    end subroutine cresp_allocate_all
 !----------------------------------------------------------------------------------------------------
