@@ -36,9 +36,9 @@ module timestep_cresp
    implicit none
 
    private
-   public :: dt_cre, cresp_timestep, dt_cre_synch, dt_cre_adiab, dt_cre_K, dt_spectrum, cresp_reaction_to_redo_step
+   public :: dt_cre, cresp_timestep, dt_cre_synch, dt_cre_adiab, dt_cre_K, dt_spectrum, cresp_reaction_to_redo_step, dt_cresp_bck
 
-   real :: dt_cre, dt_cre_synch, dt_cre_adiab, dt_cre_K, dt_spectrum
+   real :: dt_cre, dt_cre_synch, dt_cre_adiab, dt_cre_K, dt_spectrum, dt_cresp_bck
 
 contains
 
@@ -123,7 +123,7 @@ contains
       if (cresp_substep) then
       ! with cresp_substep enabled, dt_cre_adiab and dt_cre_synch are used only within CRESP module for substepping
       ! half * dt_spectrum * n_substeps_max tries to prevent number of substeps from exceeding n_substeps_max limit
-         dt_cre = min(half * dt_spectrum * max(n_substeps_max-I_ONE, I_ONE), dt_cre_K)  ! number of substeps with dt_spectrum limited by n_substeps_max
+         dt_cre = min(dt_spectrum * max(n_substeps_max-I_ONE, I_ONE), dt_cre_K)  ! number of substeps with dt_spectrum limited by n_substeps_max
       else
          dt_cre = min(dt_spectrum, dt_cre_K)                   ! dt comes in to cresp_crspectrum with factor * 2
       endif
@@ -170,7 +170,7 @@ contains
    subroutine cresp_reaction_to_redo_step
 
       use dataio_pub,      only: msg, warn
-      use global,          only: cfl_violated, dt_shrink, repeat_step
+      use global,          only: cfl_violated, dt_shrink, repeat_step, tstep_attempt
       use initcrspectrum,  only: cresp_substep
       use mpisetup,        only: master
 
@@ -178,10 +178,10 @@ contains
 
       if (cfl_violated) then
          if (cresp_substep) then
-            dt_spectrum = dt_spectrum * dt_shrink ! If dt is repeated, dt_spectrum should follow, this way seems legit
+            dt_spectrum = dt_spectrum * (dt_shrink ** tstep_attempt) ! If dt is repeated, dt_spectrum should follow, this way seems legit
 
             if (master) then
-               write (msg, "(A72,2E14.7)") "[cresp_timestep:repeat_step_prep] (repeat step) shrinking dt_spectrum = ", dt_spectrum
+               write (msg, "(A72,E14.7)") "[cresp_timestep:repeat_step_prep] (repeat step) shrinking dt_spectrum = ", dt_spectrum
                call warn(msg)
             endif
 
