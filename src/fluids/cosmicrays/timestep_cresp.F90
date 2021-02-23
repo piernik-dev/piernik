@@ -36,7 +36,7 @@ module timestep_cresp
    implicit none
 
    private
-   public :: dt_cre, cresp_timestep, dt_cre_synch, dt_cre_adiab, dt_cre_K, dt_spectrum, cresp_reaction_to_redo_step, dt_cresp_bck
+   public :: dt_cre, cresp_timestep, dt_cre_synch, dt_cre_adiab, dt_cre_K, dt_spectrum, cresp_reaction_to_redo_step, dt_cresp_bck, cresp_timestep_cell
 
    real :: dt_cre, dt_cre_synch, dt_cre_adiab, dt_cre_K, dt_spectrum, dt_cresp_bck
 
@@ -193,6 +193,41 @@ contains
       endif
 
    end subroutine cresp_reaction_to_redo_step
+
+!----------------------------------------------------------------------------------------------------
+!! \brief This subroutine returns timestep for cell at (i,j,k) position, with already prepared u_b and u_d values.
+
+   subroutine cresp_timestep_cell(b, dt_cell, empty_cell)
+
+      use initcrspectrum,     only: adiab_active, cresp, synch_active, spec_mod_trms
+      use cresp_crspectrum,   only: cresp_find_prepare_spectrum
+      use constants,          only: big
+
+      implicit none
+
+      type(spec_mod_trms), intent(in) :: b
+      real,               intent(out) :: dt_cell
+      logical,            intent(out) :: empty_cell
+      integer                         :: i_up_cell
+
+      dt_cell = big
+      dt_cre_adiab = big
+      dt_cre_synch = big
+
+      empty_cell = .false.
+
+      call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_cell) ! needed for synchrotron timestep
+
+      if (.not. empty_cell) then
+         if (synch_active) call cresp_timestep_synchrotron(b%ub, i_up_cell)
+         if (adiab_active) call cresp_timestep_adiabatic(b%ud)
+      else
+         return
+      endif
+
+      dt_cell = min(dt_cre_adiab, dt_cre_synch)
+
+   end subroutine cresp_timestep_cell
 
 !----------------------------------------------------------------------------------------------------
 
