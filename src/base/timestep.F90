@@ -223,6 +223,10 @@ contains
 #ifdef COSM_RAYS
       use global,         only: cr_negative, disallow_CRnegatives
 #endif /* COSM_RAYS */
+#ifdef COSM_RAY_ELECTRONS
+      use initcrspectrum, only: cresp_substep
+      use timestep_cresp, only: dt_spectrum, dt_cresp_bck
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -236,6 +240,10 @@ contains
       checkdt = dt
 
       bck = [dt_old, c_all_old, c_all]
+
+#ifdef COSM_RAY_ELECTRONS
+      if (cresp_substep) dt_cresp_bck = dt_spectrum !< backup necessary if cresp_substep is active
+#endif /* COSM_RAY_ELECTRONS */
 
       unwanted_negatives = .false.
       call time_step(checkdt, flind)
@@ -263,6 +271,10 @@ contains
       if (cfl_violated) call reset_freezing_speed
 
       dt_old = bck(1) ; c_all_old = bck(2) ; c_all = bck(3) !> \todo check if this backup is necessary
+
+#ifdef COSM_RAY_ELECTRONS
+      if (cresp_substep) dt_spectrum = dt_cresp_bck !< backup necessary if cresp_substep is active
+#endif /* COSM_RAY_ELECTRONS */
 
    end subroutine check_cfl_violation
 
