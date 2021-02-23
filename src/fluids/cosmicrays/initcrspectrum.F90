@@ -140,7 +140,7 @@ module initcrspectrum
 
    real :: total_init_cree
    real :: p_fix_ratio
-   integer, allocatable, dimension(:) :: cresp_all_edges, cresp_all_bins
+   integer(kind=4), allocatable, dimension(:) :: cresp_all_edges, cresp_all_bins
 
 ! CRESP names
    integer, parameter :: cnlen = 4
@@ -172,7 +172,7 @@ module initcrspectrum
 
       implicit none
 
-      integer :: i
+      integer(kind=4) :: i
       real    :: p_br_def, q_br_def
 
       namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum, p_min_fix, p_max_fix, &
@@ -434,20 +434,20 @@ module initcrspectrum
       if (e_small_approx_init_cond + sum(e_small_approx_p) == 0) e_small = zero                !< no threshold energy for bin activation necessary
 
 ! arrays initialization
-      call my_allocate_with_index(p_fix,           ncre, 0)
-      call my_allocate_with_index(p_mid_fix,       ncre, 1)
-      call my_allocate_with_index(cresp_all_edges, ncre, 0)
-      call my_allocate_with_index(cresp_all_bins,  ncre, 1)
-      call my_allocate_with_index(n_small_bin,     ncre, 1)
+      call my_allocate_with_index(p_fix,           ncre, I_ZERO)
+      call my_allocate_with_index(p_mid_fix,       ncre, I_ONE )
+      call my_allocate_with_index(cresp_all_edges, ncre, I_ZERO)
+      call my_allocate_with_index(cresp_all_bins,  ncre, I_ONE )
+      call my_allocate_with_index(n_small_bin,     ncre, I_ONE )
 
-      call my_allocate_with_index(Gamma_fix,        ncre, 0)
-      call my_allocate_with_index(Gamma_mid_fix,    ncre, 1)
-      call my_allocate_with_index(mom_cre_fix,      ncre, 0)
-      call my_allocate_with_index(mom_mid_cre_fix,  ncre, 1)
-      call my_allocate_with_index(gamma_beta_c_fix, ncre, 0)
+      call my_allocate_with_index(Gamma_fix,        ncre, I_ZERO)
+      call my_allocate_with_index(Gamma_mid_fix,    ncre, I_ONE )
+      call my_allocate_with_index(mom_cre_fix,      ncre, I_ZERO)
+      call my_allocate_with_index(mom_mid_cre_fix,  ncre, I_ONE )
+      call my_allocate_with_index(gamma_beta_c_fix, ncre, I_ZERO)
 
-      cresp_all_edges = [(i, i = 0, ncre)]
-      cresp_all_bins  = [(i, i = 1, ncre)]
+      cresp_all_edges = [(i, i = I_ZERO, ncre)]
+      cresp_all_bins  = [(i, i = I_ONE,  ncre)]
 
 !!\brief for now algorithm requires at least 3 bins
       p_fix = zero
@@ -473,8 +473,8 @@ module initcrspectrum
       Gamma_mid_fix(1)        = sqrt( Gamma_mid_fix(1)      * Gamma_mid_fix(2))
       Gamma_mid_fix(ncre)     = sqrt( Gamma_mid_fix(ncre-1) * Gamma_mid_fix(ncre-1) * Gamma_fix_ratio )
 ! compute physical momenta of particles in given unit set
-      mom_cre_fix      = [(cresp_get_mom(Gamma_fix(i),me),     i = 0, ncre )]
-      mom_mid_cre_fix  = [(cresp_get_mom(Gamma_mid_fix(i),me), i = 1, ncre )]
+      mom_cre_fix      = [(cresp_get_mom(Gamma_fix(i),me),     i = I_ZERO, ncre )]
+      mom_mid_cre_fix  = [(cresp_get_mom(Gamma_mid_fix(i),me), i = I_ONE,  ncre )]
 
       gamma_beta_c_fix = mom_cre_fix / me
 
@@ -515,7 +515,7 @@ module initcrspectrum
             if (master) call warn(msg)
          else
             !> p_br_init_lo should be equal to one of p_fix values
-            i = minloc(abs(p_fix - p_br_init(LO)),dim=1)-1
+            i = int(minloc(abs(p_fix - p_br_init(LO)), dim=1), kind=4) - I_ONE
             write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_lo was set, but should be equal to one of p_fix. Assuming p_br_init_lo =", p_fix(i),"."
             p_br_init(LO) = p_fix(i)
             if (master) call warn(msg)
@@ -532,12 +532,12 @@ module initcrspectrum
             if (master) call die(msg)
          else
             !> p_br_init_lo should be equal to one of p_fix values
-            i = minloc(abs(p_fix - p_br_init(LO)),dim=1)-1
+            i = int(minloc(abs(p_fix - p_br_init(LO)), dim=1), kind=4) - I_ONE
             write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_lo was set, but should be equal to one of p_fix. Assuming p_br_init_lo =", p_fix(i),"."
             p_br_init(LO) = p_fix(i)
             if (master) call warn(msg)
             !> p_br_init_up should also be equal to one of p_fix values
-            i = minloc(abs(p_fix - p_br_init(HI)),dim=1)-1
+            i = int(minloc(abs(p_fix - p_br_init(HI)), dim=1), kind=4) - I_ONE
             write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_up was set, but should be equal to one of p_fix. Assuming p_br_init_up =", p_fix(i),"."
             p_br_init(HI) = p_fix(i)
             if (master) call warn(msg)
@@ -607,16 +607,16 @@ module initcrspectrum
 
    subroutine init_cresp_types
 
-      use constants,      only: zero
+      use constants,      only: zero, I_ONE
       use diagnostics,    only: my_allocate_with_index
       use initcosmicrays, only: ncre
 
       implicit none
 
-      if (.not. allocated(cresp%n)) call my_allocate_with_index(cresp%n,ncre,1)
-      if (.not. allocated(cresp%e)) call my_allocate_with_index(cresp%e,ncre,1)
-      if (.not. allocated(norm_init_spectrum%n)) call my_allocate_with_index(norm_init_spectrum%n,ncre,1)
-      if (.not. allocated(norm_init_spectrum%e)) call my_allocate_with_index(norm_init_spectrum%e,ncre,1)
+      if (.not. allocated(cresp%n)) call my_allocate_with_index(cresp%n, ncre, I_ONE)
+      if (.not. allocated(cresp%e)) call my_allocate_with_index(cresp%e, ncre, I_ONE)
+      if (.not. allocated(norm_init_spectrum%n)) call my_allocate_with_index(norm_init_spectrum%n, ncre, I_ONE)
+      if (.not. allocated(norm_init_spectrum%e)) call my_allocate_with_index(norm_init_spectrum%e, ncre, I_ONE)
 
       cresp%e = zero
       cresp%n = zero
@@ -630,17 +630,17 @@ module initcrspectrum
 
    subroutine init_crel
 
-      use constants,      only: zero, I_ZERO
+      use constants,      only: zero, I_ZERO, I_ONE
       use diagnostics,    only: my_allocate_with_index
       use initcosmicrays, only: ncre
 
       implicit none
 
-      if (.not. allocated(crel%p)) call my_allocate_with_index(crel%p,ncre,0)
-      if (.not. allocated(crel%f)) call my_allocate_with_index(crel%f,ncre,0)
-      if (.not. allocated(crel%q)) call my_allocate_with_index(crel%q,ncre,1)
-      if (.not. allocated(crel%n)) call my_allocate_with_index(crel%n,ncre,1)
-      if (.not. allocated(crel%e)) call my_allocate_with_index(crel%e,ncre,1)
+      if (.not. allocated(crel%p)) call my_allocate_with_index(crel%p, ncre, I_ZERO)
+      if (.not. allocated(crel%f)) call my_allocate_with_index(crel%f, ncre, I_ZERO)
+      if (.not. allocated(crel%q)) call my_allocate_with_index(crel%q, ncre, I_ONE )
+      if (.not. allocated(crel%n)) call my_allocate_with_index(crel%n, ncre, I_ONE )
+      if (.not. allocated(crel%e)) call my_allocate_with_index(crel%e, ncre, I_ONE )
 
       crel%p = zero
       crel%q = zero
@@ -710,7 +710,7 @@ module initcrspectrum
       integer(HID_T), intent(in) :: file_id
       integer(SIZE_T)            :: bufsize
       integer(kind=4)            :: error
-      integer, dimension(1)      :: lnsnbuf_i
+      integer(kind=4), dimension(1) :: lnsnbuf_i
       real,    dimension(1)      :: lnsnbuf_r
 
       bufsize = 1

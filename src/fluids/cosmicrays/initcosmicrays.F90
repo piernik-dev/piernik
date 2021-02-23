@@ -123,6 +123,7 @@ contains
       use dataio_pub,      only: die, warn
       use mpisetup,        only: ibuff, rbuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
 #ifdef COSM_RAYS_SOURCES
+      use constants,       only: I_TWO
       use cr_data,         only: init_crsources
 #endif /* COSM_RAYS_SOURCES */
 
@@ -306,7 +307,7 @@ contains
          ma1d = 0
       else
 #ifdef COSM_RAY_ELECTRONS
-         ma1d = [2*ncre]
+         ma1d = [I_TWO * ncre]
 #else /* !COSM_RAY_ELECTRONS */
          ma1d = ncre
 #endif /* !COSM_RAY_ELECTRONS */
@@ -342,7 +343,7 @@ contains
       do icr = 1, ncre
         if (cre_gpcr_ess(icr)) then
             jcr = jcr + I_ONE
-            gpcr_essential(jcr) = ncrn + 1
+            gpcr_essential(jcr) = ncrn + I_ONE
         endif
       enddo
 #endif /* !COSM_RAY_ELECTRONS */
@@ -361,6 +362,9 @@ contains
 
       use constants,    only: I_ONE
       use fluidtypes,   only: var_numbers
+#ifdef COSM_RAY_ELECTRONS
+      use constants,    only: I_TWO
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -373,7 +377,7 @@ contains
       flind%crn%all  = ncrn
 
 #ifdef COSM_RAY_ELECTRONS
-      flind%cre%all  = 2*ncre
+      flind%cre%all  = I_TWO * ncre
 #else /* !COSM_RAY_ELECTRONS */
       flind%cre%all  = ncre
 #endif /* !COSM_RAY_ELECTRONS */
@@ -386,9 +390,9 @@ contains
       flind%all = flind%all + flind%crn%all
 
 #ifdef COSM_RAY_ELECTRONS
-      do icr = 1, 2 * ncre
+      do icr = I_ONE, I_TWO * ncre
 #else /* !COSM_RAY_ELECTRONS */
-      do icr = 1, ncre
+      do icr = I_ONE, ncre
 #endif /* !COSM_RAY_ELECTRONS */
          iarr_cre(icr)        = flind%all + icr
          iarr_crs(ncrn + icr) = flind%all + icr
