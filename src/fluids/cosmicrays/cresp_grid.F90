@@ -125,23 +125,24 @@ module cresp_grid
 
       implicit none
 
-      integer                        :: i, j, k
+      integer                        :: i, j, k, nssteps
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
       type(spec_mod_trms)            :: sptab
-      real                           :: dt_crs_sstep, dt_cresp
+      real                           :: dt_crs_sstep, dt_cresp, dt_doubled
       logical                        :: inactive_cell
 
       cgl => leaves%first
       cfl_cresp_violation = .false.
       inactive_cell       = .false.
-      dt_cresp = 2 * dt
-      nssteps = 1
+      dt_doubled  = 2 * dt
+      dt_cresp    = dt_doubled
+      nssteps     = 1
 
       call cresp_reaction_to_redo_step !< alters dt for CRESP components if cfl_violated
 
       if (cresp_substep .and. (.not. cresp_substep_cell) ) then
-         call prepare_substep(2 * dt, dt_spectrum, dt_crs_sstep, nssteps)
+         call prepare_substep(dt_doubled, dt_spectrum, dt_crs_sstep, nssteps)
          dt_cresp = dt_crs_sstep    !< 2 * dt is equal to nssteps * dt_crs_sstep
       endif
 
@@ -158,7 +159,7 @@ module cresp_grid
 
                   if (cresp_substep_cell) then
                      call cresp_timestep_cell(sptab, dt_spectrum, inactive_cell)
-                     call prepare_substep(dt_cresp, dt_spectrum, dt_crs_sstep, nssteps) ! dt_cresp should be 2*dt here!
+                     call prepare_substep(dt_doubled, dt_spectrum, dt_crs_sstep, nssteps) ! dt_cresp should be 2*dt here!
                      dt_cresp = dt_crs_sstep    !< 2 * dt is equal to nssteps * dt_crs_sstep
                   endif
 #ifdef CRESP_VERBOSED
