@@ -20,6 +20,17 @@
 #undef RESISTIVE
 #endif /* !MAGNETIC && RESISTIVE */
 
+#ifdef NBODY
+#   define NBODY_MULTIGRID
+#   define NBODY_1FILE
+#endif /* NBODY */
+
+#ifdef NBODY_MULTIGRID
+#  ifndef SELF_GRAV
+#    define SELF_GRAV
+#  endif /* !SELF_GRAV */
+#endif /* NBODY_MULTIGRID */
+
 #ifdef SELF_GRAV
 #  ifndef GRAV
 #    define GRAV

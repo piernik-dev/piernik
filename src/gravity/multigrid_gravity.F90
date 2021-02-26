@@ -80,6 +80,7 @@ module multigrid_gravity
 
    ! miscellaneous
    type(vcycle_stats) :: vstat                                        !< V-cycle statistics
+   logical            :: something_in_particles                       !< A flag indicating that some mass may be hidden in particles wandering outside the computational domain
 
    enum, bind(C)
       enumerator :: SGP, SGPM
@@ -667,6 +668,9 @@ contains
 !!
 !! \details Typically i_sg_dens is a copy of fluidindex::iarr_all_sg.
 !! Passing this as an argument allows for independent computation of the potential for several density fields if necessary.
+!! Pass an empty array when there are no selfgravitating fluids but we have particles
+!! Omit i_sg_dens when calculating "outer potential" for isolated gravity boundaries.
+!!
 !! \todo compact the following more (if possible)
 !<
 
@@ -682,16 +686,18 @@ contains
       use grid_cont,         only: grid_container
       use multigridvars,     only: source, bnd_periodic, bnd_dirichlet, bnd_givenval, grav_bnd
       use multigrid_Laplace, only: ord_laplacian_outer
-      use particle_pub,      only: pset
       use ppp,               only: ppp_main
       use units,             only: fpiG
 #ifdef JEANS_PROBLEM
-      use problem_pub,    only: jeans_d0, jeans_mode ! hack for tests
+      use problem_pub,       only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
+#ifdef NBODY_MULTIGRID
+      use particle_maps,     only: map_particles
+#endif /* NBODY_MULTIGRID */
 
       implicit none
 
-      integer(kind=4), dimension(:), intent(in) :: i_sg_dens !< indices to selfgravitating fluids
+      integer(kind=4), dimension(:), optional, intent(in) :: i_sg_dens !< indices to selfgravitating fluids
 
       real                           :: fac
       integer                        :: i, side
@@ -703,17 +709,26 @@ contains
       call ppp_main%start(mgi_label, PPP_GRAV + PPP_MG)
 
       call all_cg%set_dirty(source, 0.979*dirtyH1)
+      something_in_particles = .false.
 
-      if (size(i_sg_dens) > 0) then
-         cgl => leaves%first
-         do while (associated(cgl))
-            cg => cgl%cg
-            cgl%cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_sg_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
-            cgl => cgl%nxt
-         enddo
-         call pset%map(source, fpiG)
+      if (present(i_sg_dens)) then
+         if (size(i_sg_dens) > 0) then
+            cgl => leaves%first
+            do while (associated(cgl))
+               cg => cgl%cg
+               cgl%cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_sg_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
+               cgl => cgl%nxt
+            enddo
+         else
+            call leaves%set_q_value(source, 0.)  ! no selfgravitating fluids => vacuum unless we have particles
+         endif
+
+#ifdef NBODY_MULTIGRID
+         call map_particles(source, fpiG)
+         something_in_particles = .true.
+#endif /* NBODY_MULTIGRID */
       else
-         call leaves%set_q_value(source, 0.)
+         call leaves%set_q_value(source, 0.)  ! empty domain for "outer potential" calculation
       endif
 
       select case (grav_bnd)
@@ -806,7 +821,6 @@ contains
       integer(kind=4), dimension(:), intent(in) :: i_sg_dens !< indices to selfgravitating fluids
 
       integer :: grav_bnd_global
-      integer(kind=4), dimension(0) :: empty_array !< trick to avoid compiler warnings on possibly uninitialized i_sg_dens.0 in init_source
 
       ts =  set_timer(tmr_mg, .true.)
 
@@ -846,7 +860,7 @@ contains
 
          vstat%cprefix = "Go-"
          call multipole_solver
-         call init_source(empty_array)
+         call init_source
 
          call poisson_solver(outer)
 
@@ -1067,8 +1081,10 @@ contains
          norm_was_zero = .false.
       else
          call leaves%set_q_value(solution, 0.)
-         if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
-         norm_was_zero = .true.
+         if (.not. something_in_particles) then
+            if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
+            norm_was_zero = .true.
+         endif
          call ppp_main%stop(mgv_label, PPP_GRAV + PPP_MG)
          return
       endif
