@@ -122,8 +122,10 @@ contains
       use dataio_pub,      only: nh   ! QA_WARN required for diff_nml
       use dataio_pub,      only: die, warn
       use mpisetup,        only: ibuff, rbuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
-#ifdef COSM_RAYS_SOURCES
+#ifdef COSM_RAY_ELECTRONS
       use constants,       only: I_TWO
+#endif /* COSM_RAY_ELECTRONS */
+#ifdef COSM_RAYS_SOURCES
       use cr_data,         only: init_crsources
 #endif /* COSM_RAYS_SOURCES */
 

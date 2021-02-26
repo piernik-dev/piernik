@@ -49,6 +49,7 @@ module cresp_grid
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
+      use constants,        only: I_ONE, I_TWO
       use cresp_crspectrum, only: cresp_allocate_all, cresp_init_state, p_rch_init
       use cresp_NR_method,  only: cresp_initialize_guess_grids
       use dataio,           only: vars
@@ -72,8 +73,8 @@ module cresp_grid
       call check_if_dump_fpq(vars)
 
       if (dfpq%any_dump) then
-         if (dfpq%dump_f) call all_cg%reg_var(dfpq%f_nam, dim4=ncre+1)
-         if (dfpq%dump_p) call all_cg%reg_var(dfpq%p_nam, dim4=2)
+         if (dfpq%dump_f) call all_cg%reg_var(dfpq%f_nam, dim4=ncre + I_ONE)
+         if (dfpq%dump_p) call all_cg%reg_var(dfpq%p_nam, dim4=I_TWO)
          if (dfpq%dump_q) call all_cg%reg_var(dfpq%q_nam, dim4=ncre)
       endif
 

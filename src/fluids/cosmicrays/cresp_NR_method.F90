@@ -554,7 +554,8 @@ contains
       implicit none
 
       integer(kind=4), intent(in) :: bound_case
-      real, dimension(:,:)        :: fill_p, fill_f
+      real, dimension(:,:), target :: fill_p, fill_f
+      real, dimension(:), pointer :: pfp, pff
       real, dimension(1:2)        :: x_vec, prev_solution, prev_solution_1, x_step
       integer(kind=4)             :: i, j, is, js, jm
       logical                     :: exit_code, new_line
@@ -596,7 +597,11 @@ contains
 
             if (exit_code) then
                jm = j - I_TWO
-               if (check_dimm(jm, sml%ni)) call step_extr(fill_p(i,jm:j), fill_f(i,jm:j), p_n(jm:j), exit_code)
+               if (check_dimm(jm, sml%ni)) then
+                  pfp => fill_p(i,jm:j)
+                  pff => fill_f(i,jm:j)
+                  call step_extr(pfp, pff, p_n(jm:j), exit_code)
+               endif
                if (j >= 2) then
                   jm = j - I_ONE
                   if (fill_p(i,jm) > zero) call seek_solution_step(fill_p(i,j), fill_f(i,j), prev_solution, i, jm, exit_code)
