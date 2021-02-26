@@ -316,10 +316,10 @@ contains
       !> \todo Do an MPI_Reduce in case the master process don't have any part of the globally finest level or ensure it is empty in such case
       if (master) call printinfo(msg)
 
-#ifdef GRAV
+#if defined(GRAV) && defined(NBODY)
       write(msg,'(a,i9)')"[initpiernik:init_piernik] Total number of particles is ", global_count_all_particles()
       if (master) call printinfo(msg)
-#endif /* GRAV */
+#endif /* GRAV && NBODY */
 
 #ifdef VERBOSE
       call diagnose_arrays                   ! may depend on everything

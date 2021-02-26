@@ -33,7 +33,7 @@
 !<
 
 module particle_utils
-! pulled by GRAV
+! pulled by NBODY
 
    implicit none
 

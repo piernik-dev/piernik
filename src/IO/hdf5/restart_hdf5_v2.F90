@@ -208,14 +208,15 @@ contains
       use dataio_pub,       only: die, nproc_io, can_i_write
       use grid_cont,        only: grid_container
       use hdf5,             only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
-      use mpisetup,         only: master, FIRST, proc, err_mpi, tag_ub, LAST
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
+      use mpisetup,         only: master, FIRST, proc, err_mpi, tag_ub
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 #ifdef NBODY_1FILE
       use cg_particles_io,  only: pdsets, nbody_datafields
       use data_hdf5,        only: gdf_translate
-      use MPIF,             only: MPI_INTEGER8
+      use MPIF,             only: MPI_INTEGER, MPI_INTEGER8
+      use mpisetup,         only: LAST
       use particle_utils,   only: count_all_particles
 #endif /* NBODY_1FILE */
 
@@ -592,12 +593,15 @@ contains
       use global,             only: t, dt, nstep
       use hdf5,               only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
       use mass_defect,        only: magic_mass
-      use mpisetup,           only: master, piernik_MPI_Barrier, LAST
+      use mpisetup,           only: master, piernik_MPI_Barrier
       use overlap,            only: is_overlap
       use ppp,                only: ppp_main
       use read_attr,          only: read_attribute
       use set_get_attributes, only: get_attr
       use timestep_pub,       only: c_all_old, cfl_c, stepcfl
+#ifdef NBODY
+      use mpisetup,           only: LAST
+#endif /* NBODY */
 #ifdef RANDOMIZE
       use randomization,      only: read_current_seed_from_restart
 #endif /* RANDOMIZE */

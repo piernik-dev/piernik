@@ -34,7 +34,7 @@
 !<
 
 module particle_pub
-! pulled by GRAV
+! pulled by NBODY
 
    implicit none
    private

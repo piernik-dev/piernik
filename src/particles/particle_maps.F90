@@ -30,7 +30,7 @@
 !<
 
 module particle_maps
-! pulled by GRAV
+! pulled by NBODY
    implicit none
 
    private
