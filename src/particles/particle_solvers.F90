@@ -29,7 +29,7 @@
 !>  \brief Integrators for particles
 
 module particle_solvers
-! pulled by GRAV
+! pulled by NBODY
 
    implicit none
 
