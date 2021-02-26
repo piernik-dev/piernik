@@ -8,3 +8,4 @@
 #endif
 
 #define SELF_GRAV
+#define NBODY
