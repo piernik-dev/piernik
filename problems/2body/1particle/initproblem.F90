@@ -135,12 +135,13 @@ contains
 
    subroutine problem_initial_nbody
 
+      use constants,      only: I_ONE
       use domain,         only: dom
       use particle_utils, only: add_part_in_proper_cg
 
       implicit none
 
-      call add_part_in_proper_cg(1., dom%C_, vel, [0.0, 0.0, 0.0], 0.0)
+      call add_part_in_proper_cg(I_ONE, 1., dom%C_, vel, [0.0, 0.0, 0.0], 0.0)
 
    end subroutine problem_initial_nbody
 
@@ -184,13 +185,16 @@ contains
       use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
+      use particle_types,   only: particle
       use units,            only: newtong
 
       implicit none
 
-      integer                        :: i, j, k, apot_i, p
+      integer                        :: i, j, k
+      integer(kind=4)                :: apot_i
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      type(particle), pointer    :: pset
 
       apot_i = qna%ind(apot_n)
       call leaves%set_q_value(apot_i, 0.)
@@ -201,10 +205,14 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  do p = lbound(cg%pset%p, dim=1), ubound(cg%pset%p, dim=1)
-                     cg%q(apot_i)%arr(i, j, k) = cg%q(apot_i)%arr(i, j, k) - newtong * cg%pset%p(p)%mass / &
-                          sqrt(sum((cg%pset%p(p)%pos - [cg%x(i), cg%y(j), cg%z(k)])**2))
+#ifdef NBODY
+                  pset => cg%pset%first
+                  do while (associated(pset))
+                     cg%q(apot_i)%arr(i, j, k) = cg%q(apot_i)%arr(i, j, k) - newtong * pset%pdata%mass / &
+                          sqrt(sum((pset%pdata%pos - [cg%x(i), cg%y(j), cg%z(k)])**2))
+                     pset => pset%nxt
                   enddo
+#endif /* NBODY */
                enddo
             enddo
          enddo
@@ -220,25 +228,32 @@ contains
       use cg_list,    only: cg_list_element
       use dataio_pub, only: msg, printinfo
       use global,     only: t
+      use particle_types, only: particle
 
       implicit none
 
       logical, intent(in) :: fwd
 
       type(cg_list_element), pointer :: cgl
-      integer :: p
+      type(particle), pointer    :: pset
 
       cgl => leaves%first
       do while (associated(cgl))
-         do p = lbound(cgl%cg%pset%p, dim=1), ubound(cgl%cg%pset%p, dim=1)
-            write(msg, '(a,i7,a,g12.4,a,g12.4,2(a,3g12.4),a)')"particle(", p, ") t=", t, " m=", cgl%cg%pset%p(p)%mass, " @[", cgl%cg%pset%p(p)%pos, "] ->[", cgl%cg%pset%p(p)%vel, " ]"
-            if (cgl%cg%pset%p(p)%outside) msg = trim(msg) // " (is outside)"
+
+#ifdef NBODY
+         pset => cgl%cg%pset%first
+         do while (associated(pset))
+            write(msg, '(a,i7,a,g12.4,a,g12.4,2(a,3g12.4),a)')"particle(",  pset%pdata%pid, ") t=", t, " m=", pset%pdata%mass, " @[", pset%pdata%pos, "] ->[", pset%pdata%vel, " ]"
+            if (pset%pdata%outside) msg = trim(msg) // " (is outside)"
             call printinfo(msg)
+            pset => pset%nxt
          enddo
+#endif /* NBODY */
+
          cgl => cgl%nxt
       enddo
 
-      if (.false.) p = merge(1, 0, fwd)
+      if (.false.) write(msg, '(l1)') fwd
 
    end subroutine list_particles
 
