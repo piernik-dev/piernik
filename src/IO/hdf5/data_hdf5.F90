@@ -581,16 +581,17 @@ contains
       use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars, hdf_vars_avail, enable_all_hdf_var
       use constants,   only: xdim, ydim, zdim, ndims, FP_REAL, PPP_IO, PPP_CG, I_ONE
       use dataio_pub,  only: die, nproc_io, can_i_write, h5_64bit, nstep_start
-      use domain,      only: is_multicg
       use global,      only: nstep
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
-      use mpisetup,    only: master, FIRST, proc, err_mpi, tag_ub, LAST
+      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
+      use mpisetup,    only: master, FIRST, proc, err_mpi, tag_ub
       use ppp,         only: ppp_main
 #ifdef NBODY_1FILE
       use cg_particles_io, only: pdsets, nbody_datafields
-      use MPIF,            only: MPI_INTEGER8
+      use domain,          only: is_multicg
+      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8
+      use mpisetup,        only: LAST
       use particle_utils,  only: count_all_particles
 #endif /* NBODY_1FILE */
 
@@ -604,7 +605,6 @@ contains
       integer(HID_T)                                       :: filespace_id, memspace_id
       integer(kind=4)                                      :: error
       integer(kind=4), parameter                           :: rank = 3
-      integer(HID_T)                                       :: id
       integer(HSIZE_T), dimension(:), allocatable          :: dims
       integer(kind=4)                                      :: i, ncg, n
       integer                                              :: ip
@@ -614,7 +614,8 @@ contains
       type(cg_output)                                      :: cg_desc
 #ifdef NBODY_1FILE
       integer(kind=4)                                      :: n_part
-      integer(HID_T), dimension(LAST+1)                  :: tmp
+      integer(HID_T)                                       :: id
+      integer(HID_T), dimension(LAST+1)                    :: tmp
 #endif /* NBODY_1FILE */
       character(len=*), parameter :: wrdc_label = "IO_write_data_v2_cg", wrdc1s_label = "IO_write_data_v2_1cg_(serial)", wrdc1p_label = "IO_write_data_v2_1cg_(parallel)"
 
