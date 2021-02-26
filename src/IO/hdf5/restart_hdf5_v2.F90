@@ -611,6 +611,9 @@ contains
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity,  only: read_oldsoln_from_restart
 #endif /* MULTIGRID && SELF_GRAV */
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_NR_method, only: cresp_read_smaps_from_hdf
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -873,6 +876,10 @@ contains
       if (tot_cells /= product(dom%n_d(:)) .or. outside .or. overlapped) call die("[restart_hdf5_v2:read_restart_hdf5_v2] Improper coverage of base domain by available cg")
 
       call set_refinement(cg_res)
+
+#ifdef COSM_RAY_ELECTRONS
+      call cresp_read_smaps_from_hdf(file_id)
+#endif /* COSM_RAY_ELECTRONS */
 
       ! set up things such as register user rank-3 and rank-4 arrays to be read by read_arr_from_restart. Read also anything that is not read by all read_cg_from_restart calls
       if (associated(user_attrs_rd)) call user_attrs_rd(file_id)

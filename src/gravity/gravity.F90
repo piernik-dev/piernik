@@ -76,6 +76,10 @@ module gravity
    integer(kind=4) :: i_sgp, i_sgpm
 #endif /* SELF_GRAV */
 
+#ifdef SELF_GRAV
+   integer(kind=4) :: i_sgp, i_sgpm
+#endif /* SELF_GRAV */
+
    interface
 
       !< COMMENT ME

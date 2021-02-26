@@ -1,0 +1,165 @@
+ $BASE_DOMAIN
+    n_d = 1, 48, 96
+    nb           = 4
+    bnd_xl       = 'per'
+    bnd_xr       = 'per'
+    bnd_yl       = 'per'
+    bnd_yr       = 'per'
+    bnd_zl       = 'outd'
+    bnd_zr       = 'outd'
+    xmin         =-250.0
+    xmax         = 250.0
+    ymin         =-500.0
+    ymax         = 500.0
+    zmin         =-1000.0
+    zmax         = 1000.0
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+    units_set = "PSM"
+ /
+
+ $RESTART_CONTROL
+    restart      = 'last'
+    nrestart     = 0
+    new_id       = ''
+ /
+
+ $END_CONTROL
+    tend         = 10.0
+    nend         = 1000000000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'crwind'
+    run_id       = 'nc1'
+    dt_hdf       = .5
+    dt_res       = 0.0
+    dt_log       = 1.0e-1
+    dt_tsl       = 1.0e-1
+    vars(1:) = 'encr', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz', 'cree', 'cren'
+ /
+
+ $FLUID_IONIZED
+    gamma = 1.66666667
+    cs_iso  =  7.0            ! sound speed
+ /
+
+ $NUMERICAL_SETUP
+    cfl          = 0.9
+    smalld       = 1.e-5
+    smallei      = 1.e-4
+    integration_order = 2
+    limiter      = 'vanleer'
+  /
+
+ $GRAVITY
+    user_grav    = .true.
+    gprofs_target= 'extgp'
+    r_gc         = 5000     ! Galactic radius of coordinate system
+    nsub         = 10
+ /
+
+ $RESISTIVITY
+    cfl_resist   =    0.9   ! Courant's number for resistiwity
+    eta_0        =  100.0   ! uniform resistivity
+    eta_1        =    0.0   ! anomalous resistivity, works above j_crit
+    j_crit       = 1000.0   ! critical value of current
+ /
+
+  $COSMIC_RAYS
+    ncrn        =   1
+    ncre        =   15    ! number of cr electron spectrum bins (including cutoff bins)
+    cfl_cr      =   0.9
+    cr_active   =   0.0
+    gamma_crn(1)   =  1.333333
+    K_crn_paral(1) = 1000.0
+    K_crn_paral(2) = 1000.0
+    K_crn_paral(3) = 1000.0
+    K_crn_paral(4) = 1000.0
+    K_crn_paral(5) = 1000.0
+    K_crn_paral(6) = 1000.0
+    K_crn_paral(7) = 1000.0
+    K_crn_perp(1)  = 100.0 ! 10% of paral
+    smallecr       = 0.e-2
+    cre_gpcr_ess   = .false. 
+    use_CRsplit    = .false.
+ /
+
+ $COSMIC_RAY_SPECTRUM
+    cfl_cre = 0.5
+    cre_eff = 0.01
+    p_min_fix = 0.4e-3   ! momentum fixed grid
+    p_max_fix = 1.65e1  ! momentum fixed grid
+    p_lo_init = 1.5e-1   ! initial lower cut momentum
+    p_up_init = 7.5e0   ! initial upper cut momentum
+    q_init    = 3.6     ! < initial value of power law coefficient in cre enrgy spectrum
+    K_cre_paral_1 = 1.0e3
+    K_cre_perp_1  = 1.0e2
+    K_cre_pow     = 0.5 ! 0.5
+    e_small = 1.0e-5    ! lower energy cutoff for energy-approximated cutoff momenta
+    initial_spectrum = 'powl' ! 'powl', 'brpl', 'bump', 'symf', 'syme'
+    NR_iter_limit = 50
+    synch_active  = .false.
+    adiab_active =  .false.
+    cre_active   =  0.0
+ /
+
+ $CR_SPECIES
+    eLi7 = .false.
+    eBe9 = .false.
+    eBe10 = .false.
+    eC12 = .false.
+    eN14 = .false.
+    eO16 = .false
+ /
+
+ $SHEARING
+    omega        = 0.0      ! angular freq.
+    qshear       = 1.0      ! shearing param. q: vy=q*omega*x
+ /
+
+ $SN_SOURCES
+    r_sn         =  50.0    ! radius of explosion (gauss function)
+    h_sn         = 100.0    ! std. dev. for normal distribution of SN in "z" direction
+    f_sn_kpc2    = 100.0    ! surface frequency of SN ( / kpc^2 / Myr )
+ /
+
+ $PROBLEM_CONTROL
+    d0           =  5.0     ! density in galactic plane
+    bxn          =  0.0     !
+    byn          =  1.0e-1     ! __direction__ of B field
+    bzn          =  0.0     !
+    x0           =  0.0     ! coordinates of single expl with amplitude
+    y0           =  0.0     ! that is set in problem_initial_conditions (testing purpose)
+    z0           =  100.0   !
+    beta_cr      =  0.0     ! participation of CR in initial equil. (similar to alfa for B)
+    amp_cr       =  1000.0  ! amplitude of expl. (problem_initial_conditionslem, x0,y0,z0)
+    alpha        =  1.0
+ /
+
+ $MULTIGRID_SOLVER
+ /
+
+ $MULTIGRID_DIFFUSION
+    diff_explicit = .true.
+    diff_theta     = 0.6
+    diff_tstep_fac = 30
+    norm_tol = 1e-4
+    nsmoob = 4
+    max_cycles = 20
+    diff_bnd_str = "zero"
+    overrelax = 1.4 ! dirty trick; optimal value depends at least on diff_tstep_fac
+ /
+
+ $MULTIGRID_GRAVITY
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+ /

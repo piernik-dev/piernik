@@ -168,6 +168,7 @@ contains
 
       use constants, only: xdim, zdim, cor_dim, PPP_AMR
       use domain,    only: dom
+      use global,    only: prefer_merged_MPI
       use ppp,       only: ppp_main
 
       implicit none
@@ -191,11 +192,17 @@ contains
       dmask(cor_dim) = .true.
       if (present(nocorners)) dmask(cor_dim) = .not. nocorners
 
-      call ppp_main%start(ibl_label)
-      call internal_boundaries_local(this, ind, tgt3d, dmask)
-      call ppp_main%stop(ibl_label)
+      ! for CRESP (many components, big rank-4 arrays) it is definitely better to use internal_boundaries_MPI_1by1
+      ! for multigrid (rank-3 arrays) it is better to use internal_boundaries_MPI_merged
+      ! for non-CRESP (few components, rank-4 arrays, small bsize) it is a bit better to use internal_boundaries_MPI_merged
+      !
+      ! OPT: at what size of cg%w array (number of components, size of block) one approach wins over another?
+      ! it seems that at [5, 16, 16, 16] internal_boundaries_MPI_merged and internal_boundaries_MPI_1by1 have similar performance
 
-      if (this%ms%valid) then
+      if (this%ms%valid .and. (prefer_merged_MPI .or. tgt3d)) then
+         call ppp_main%start(ibl_label)
+         call internal_boundaries_local(this, ind, tgt3d, dmask)
+         call ppp_main%stop(ibl_label)
          call ppp_main%start(ibm_label, PPP_AMR)
          call internal_boundaries_MPI_merged(this, ind, tgt3d, dmask)
          call ppp_main%stop(ibm_label, PPP_AMR)
@@ -213,7 +220,7 @@ contains
    subroutine internal_boundaries_local(this, ind, tgt3d, dmask)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, cor_dim, INVALID
+      use constants,        only: xdim, ydim, zdim, LO, HI, cor_dim, INVALID
       use dataio_pub,       only: die
       use grid_cont,        only: grid_container
       use grid_cont_bnd,    only: segment
@@ -226,26 +233,18 @@ contains
       logical, dimension(xdim:cor_dim), intent(in) :: dmask !< .true. for the directions we want to exchange
 
       integer                           :: g, d, g_o, i
+      integer(kind=8)                   :: j
       type(grid_container),     pointer :: cg
       type(cg_list_element),    pointer :: cgl
       real, dimension(:,:,:),   pointer :: pa3d, pa3d_o
-      real, dimension(:,:,:,:), pointer :: pa4d, pa4d_o
-      logical                           :: active
       type(segment), pointer            :: i_seg, o_seg !< shortcuts
 
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         ! exclude non-multigrid variables below base level
-         if (tgt3d) then
-            active = associated(cg%q(ind)%arr)
-         else
-            active = associated(cg%w(ind)%arr)
-         endif
-
          do d = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
-            if (dmask(d) .and. active) then
+            if (dmask(d) .and. is_active(cg, ind, tgt3d)) then
                if (allocated(cg%i_bnd(d)%seg)) then
                   if (.not. allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries_local] cg%i_bnd without cg%o_bnd")
                   if (ubound(cg%i_bnd(d)%seg(:), dim=1) /= ubound(cg%o_bnd(d)%seg(:), dim=1)) &
@@ -269,9 +268,13 @@ contains
                            pa3d_o => i_seg%local%q(ind)%span(o_seg%se(:,:))
                            pa3d(:,:,:) = pa3d_o(:,:,:)
                         else
-                           pa4d   =>          cg%w(ind)%span(i_seg%se(:,:))
-                           pa4d_o => i_seg%local%w(ind)%span(o_seg%se(:,:))
-                           pa4d(:,:,:,:) = pa4d_o(:,:,:,:)
+                           ! BEWARE: manual optimisation ... but it works (at least in gfortran)
+                           do j = o_seg%se(zdim, LO), o_seg%se(zdim, HI)
+                              cg%w(ind)%arr(:, i_seg%se(xdim, LO):i_seg%se(xdim, HI), &
+                                   &           i_seg%se(ydim, LO):i_seg%se(ydim, HI), &
+                                   &           j - o_seg%se(zdim, LO) + i_seg%se(zdim, LO)) = &
+                                   i_seg%local%w(ind)%arr(:, o_seg%se(xdim, LO):o_seg%se(xdim, HI), o_seg%se(ydim, LO):o_seg%se(ydim, HI), j)
+                           enddo
                         endif
                      endif
                   enddo
@@ -292,12 +295,13 @@ contains
 
    subroutine internal_boundaries_MPI_merged(this, ind, tgt3d, dmask)
 
-      use constants,        only: xdim, ydim, zdim, cor_dim, I_ONE, I_TWO, LO, HI
+      use constants,        only: xdim, ydim, zdim, cor_dim, I_ONE, LO, HI
       use dataio_pub,       only: die
       use merge_segments,   only: IN, OUT
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
-      use mpisetup,         only: FIRST, LAST, proc, err_mpi, req, inflate_req
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
+      use mpisetup,         only: FIRST, LAST, proc, err_mpi, req, req2, inflate_req, nproc
       use named_array_list, only: wna
+      use ppp_mpi,          only: piernik_Waitall
 
       implicit none
 
@@ -311,6 +315,8 @@ contains
       integer(kind=4) :: nr !< index of first free slot in req array
 
       if (.not. this%ms%valid) call die("[cg_list_bnd:internal_boundaries_MPI_merged] this%ms%valid .eqv. .false.")
+
+      call inflate_req(nproc, .true.)
 
       nr = 0
       do p = FIRST, LAST
@@ -361,16 +367,17 @@ contains
                      endif
                   enddo
                endif
-               if (nr+I_TWO >  ubound(req(:), dim=1)) call inflate_req
-               call MPI_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
-               call MPI_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
-               nr = nr + I_TWO
+               if (nr+I_ONE >  ubound(req(:), dim=1)) call inflate_req
+               if (nr+I_ONE >  ubound(req2(:), dim=1)) call inflate_req(.true.)
+               call MPI_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    MPI_COMM_WORLD, req( nr+I_ONE), err_mpi)
+               call MPI_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, MPI_COMM_WORLD, req2(nr+I_ONE), err_mpi)
+               nr = nr + I_ONE
             endif
 
          endif
       enddo
 
-      call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
+      call piernik_Waitall(nr, "int_bnd_merged_R")
 
       do p = FIRST, LAST
          if (p /= proc) then
@@ -421,6 +428,13 @@ contains
                   enddo
                endif
             endif
+         endif
+      enddo
+
+      call piernik_Waitall(nr, "int_bnd_merged_S", use_req2 = .true.)
+
+      do p = FIRST, LAST
+         if (p /= proc) then
             if (allocated(this%ms%sl(p, IN )%buf)) deallocate(this%ms%sl(p, IN )%buf)
             if (allocated(this%ms%sl(p, OUT)%buf)) deallocate(this%ms%sl(p, OUT)%buf)
          endif
@@ -439,13 +453,15 @@ contains
    subroutine internal_boundaries_MPI_1by1(this, ind, tgt3d, dmask)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, cor_dim, LO, HI, I_ONE, I_TWO
-      use dataio_pub,       only: die, warn
+      use constants,        only: xdim, cor_dim, LO, HI, I_ONE, I_TWO, I_THREE, I_FOUR
+      use dataio_pub,       only: die
       use grid_cont,        only: grid_container
       use grid_cont_bnd,    only: segment
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend, MPI_Waitall
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_ORDER_FORTRAN, &
+           &                      MPI_Irecv, MPI_Isend, MPI_Type_create_subarray, MPI_Type_commit, MPI_Type_free
       use mpisetup,         only: err_mpi, req, inflate_req
       use named_array_list, only: wna
+      use ppp_mpi,          only: piernik_Waitall
 
       implicit none
 
@@ -458,10 +474,11 @@ contains
       integer(kind=4)                              :: nr     !< index of first free slot in req array
       type(grid_container),     pointer            :: cg
       type(cg_list_element),    pointer            :: cgl
-      real, dimension(:,:,:),   pointer            :: pa3d
-      real, dimension(:,:,:,:), pointer            :: pa4d
-      logical                                      :: active
       type(segment), pointer                       :: i_seg, o_seg !< shortcuts
+
+      integer(kind=4), parameter :: rank3 = I_THREE, rank4 = I_FOUR
+      integer(kind=4), dimension(rank3) :: b3sz, b3su, b3st
+      integer(kind=4), dimension(rank4) :: b4sz, b4su, b4st
 
       nr = 0
       cgl => this%first
@@ -470,84 +487,58 @@ contains
 
          ! exclude non-multigrid variables below base level
          if (tgt3d) then
-            active = associated(cg%q(ind)%arr)
+            if (ind > ubound(cg%q(:), dim=1) .or. ind < lbound(cg%q(:), dim=1)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] wrong 3d index")
+            b3sz = shape(cg%q(ind)%arr, kind=4)
          else
-            active = associated(cg%w(ind)%arr)
+            if (ind > ubound(cg%w(:), dim=1) .or. ind < lbound(cg%w(:), dim=1)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] wrong 4d index")
+            b4sz = shape(cg%w(ind)%arr, kind=4)
          endif
 
          do d = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
-            if (dmask(d) .and. active) then
+            if (dmask(d) .and. is_active(cg, ind, tgt3d)) then
                if (allocated(cg%i_bnd(d)%seg)) then
                   if (.not. allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] cg%i_bnd without cg%o_bnd")
                   if (ubound(cg%i_bnd(d)%seg(:), dim=1) /= ubound(cg%o_bnd(d)%seg(:), dim=1)) &
                        call die("[cg_list_bnd:internal_boundaries_MPI_1by1] cg%i_bnd differs in number of entries from cg%o_bnd")
                   do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
 
-                     if (.not. associated(cg%i_bnd(d)%seg(g)%local)) then
-                        if (nr+I_TWO >  ubound(req(:), dim=1)) call inflate_req
-                        i_seg => cg%i_bnd(d)%seg(g)
-                        o_seg => cg%o_bnd(d)%seg(g)
+                     if (nr+I_TWO > ubound(req(:), dim=1)) call inflate_req
 
-                        !> \deprecated: A lot of semi-duplicated code below
-                        if (tgt3d) then
-                           if (ind > ubound(cg%q(:), dim=1) .or. ind < lbound(cg%q(:), dim=1)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] wrong 3d index")
+                     i_seg => cg%i_bnd(d)%seg(g)
+                     o_seg => cg%o_bnd(d)%seg(g)
 
-                           if (allocated(i_seg%buf)) then
-                              call warn("clb:ib allocated i-buf")
-                              deallocate(i_seg%buf) !> \todo check shape and recycle if possible
-                           endif
-                           allocate(i_seg%buf(i_seg%se(xdim, HI) - i_seg%se(xdim, LO) + 1, &
-                                &             i_seg%se(ydim, HI) - i_seg%se(ydim, LO) + 1, &
-                                &             i_seg%se(zdim, HI) - i_seg%se(zdim, LO) + 1))
-                           call MPI_Irecv(i_seg%buf, size(i_seg%buf, kind=4), MPI_DOUBLE_PRECISION, i_seg%proc, i_seg%tag, MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
+                     !> \deprecated: A lot of semi-duplicated code below
+                     ! array_of_starts has to be C-like, so b3st(:) = 0  points to lbound(cg%q(ind)%arr)
+                     if (tgt3d) then
 
-                           if (allocated(o_seg%buf)) then
-                              call warn("clb:ib allocated o-buf")
-                              deallocate(o_seg%buf) !> \todo check shape and recycle if possible
-                           endif
-                           allocate(o_seg%buf(o_seg%se(xdim, HI) - o_seg%se(xdim, LO) + 1, &
-                                &             o_seg%se(ydim, HI) - o_seg%se(ydim, LO) + 1, &
-                                &             o_seg%se(zdim, HI) - o_seg%se(zdim, LO) + 1))
-                           pa3d => cg%q(ind)%span(o_seg%se(:,:))
-                           o_seg%buf(:,:,:) = pa3d(:,:,:)
-                           call MPI_Isend(o_seg%buf, size(o_seg%buf, kind=4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
+                        b3su = int(i_seg%se(:, HI) - i_seg%se(:, LO) + I_ONE, kind=4)
+                        b3st = int(i_seg%se(:, LO), kind=4) - lbound(cg%q(ind)%arr, kind=4)
+                        call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
+                        call MPI_Type_commit(i_seg%sub_type, err_mpi)
+                        call MPI_Irecv(cg%q(ind)%arr(:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
 
-                        else
-                           if (ind > ubound(cg%w(:), dim=1) .or. ind < lbound(cg%w(:), dim=1)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] wrong 4d index")
+                        b3su = int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4)
+                        b3st = int(o_seg%se(:, LO), kind=4) - lbound(cg%q(ind)%arr, kind=4)
+                        call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
+                        call MPI_Type_commit(o_seg%sub_type, err_mpi)
+                        call MPI_Isend(cg%q(ind)%arr(:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
 
-                           if (allocated(i_seg%buf4)) then
-                              call warn("clb:ib allocated i-buf")
-                              deallocate(i_seg%buf4) !> \todo check shape and recycle if possible
-                           endif
-                           allocate(i_seg%buf4(wna%lst(ind)%dim4, &
-                                &              i_seg%se(xdim, HI) - i_seg%se(xdim, LO) + 1, &
-                                &              i_seg%se(ydim, HI) - i_seg%se(ydim, LO) + 1, &
-                                &              i_seg%se(zdim, HI) - i_seg%se(zdim, LO) + 1))
-                           call MPI_Irecv(i_seg%buf4, size(i_seg%buf4, kind=4), MPI_DOUBLE_PRECISION, i_seg%proc, i_seg%tag, MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
+                     else
 
-                           if (allocated(o_seg%buf4)) then
-                              call warn("clb:ib allocated o-buf")
-                              deallocate(o_seg%buf4) !> \todo check shape and recycle if possible
-                           endif
-                           allocate(o_seg%buf4(wna%lst(ind)%dim4, &
-                                &              o_seg%se(xdim, HI) - o_seg%se(xdim, LO) + 1, &
-                                &              o_seg%se(ydim, HI) - o_seg%se(ydim, LO) + 1, &
-                                &              o_seg%se(zdim, HI) - o_seg%se(zdim, LO) + 1))
-                           !>
-                           !! \todo optimize me
-                           !! do ni = lbound(o_seg%buf4, 4), ubound(o_seg%buf4, 4)
-                           !!    hhi = o_seg%se(zdim,LO) - 1 + ni
-                           !!    o_seg%buf4(:,:,:,ni) = &
-                           !!       cg%w(ind)%arr(:,o_seg%se(xdim,LO):o_seg%se(xdim,HI),o_seg%se(ydim,LO):o_seg%se(ydim,HI),hhi)
-                           !! enddo
-                           !<
-                           pa4d => cg%w(ind)%span(o_seg%se(:,:))
-                           o_seg%buf4(:,:,:,:) = pa4d(:,:,:,:)
-                           call MPI_Isend(o_seg%buf4, size(o_seg%buf4, kind=4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
+                        b4su = [ int(wna%lst(ind)%dim4, kind=4), int(i_seg%se(:, HI) - i_seg%se(:, LO) + I_ONE, kind=4) ]
+                        b4st = [ I_ONE, int(i_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
+                        call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
+                        call MPI_Type_commit(i_seg%sub_type, err_mpi)
+                        call MPI_Irecv(cg%w(ind)%arr(:,:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, MPI_COMM_WORLD, req(nr+I_ONE), err_mpi)
 
-                        endif
-                        nr = nr + I_TWO
+                        b4su = [ int(wna%lst(ind)%dim4, kind=4), int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4) ]
+                        b4st = [ I_ONE, int(o_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
+                        call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
+                        call MPI_Type_commit(o_seg%sub_type, err_mpi)
+                        call MPI_Isend(cg%w(ind)%arr(:,:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, MPI_COMM_WORLD, req(nr+I_TWO), err_mpi)
+
                      endif
+                     nr = nr + I_TWO
                   enddo
                else
                   if (allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] cg%o_bnd without cg%i_bnd")
@@ -558,50 +549,19 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
+      call piernik_Waitall(nr, "int_bnd_1by1")
 
-      ! Move the received data from buffers to the right place. Deallocate buffers
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
-         ! exclude non-multigrid variables below base level
-         if (tgt3d) then
-            active = associated(cg%q(ind)%arr)
-         else
-            active = associated(cg%w(ind)%arr)
-         endif
 
          do d = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
-            if (dmask(d) .and. active) then
+            if (dmask(d) .and. is_active(cg, ind, tgt3d)) then
                if (allocated(cg%i_bnd(d)%seg)) then
                   ! sanity checks are already done
                   do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
-
-                     if (.not. associated(cg%i_bnd(d)%seg(g)%local)) then
-                        i_seg => cg%i_bnd(d)%seg(g)
-                        o_seg => cg%o_bnd(d)%seg(g)
-
-                        if (tgt3d) then
-                           pa3d => cg%q(ind)%span(i_seg%se(:,:))
-                           pa3d(:,:,:) = i_seg%buf(:,:,:)
-                           deallocate(i_seg%buf)
-                           deallocate(o_seg%buf)
-                        else
-                           !>
-                           !! \todo optimize me
-                           !! do ni = lbound(i_seg%buf4, 4), ubound(i_seg%buf4, 4)
-                           !!    hhi = i_seg%se(zdim,LO) - 1 + ni
-                           !!    cg%w(ind)%arr(:,i_seg%se(xdim,LO):i_seg%se(xdim,HI),i_seg%se(ydim,LO):i_seg%se(ydim,HI),hhi) = &
-                           !!       i_seg%buf4(:,:,:,ni)
-                           !! enddo
-                           !<
-                           pa4d => cg%w(ind)%span(i_seg%se(:,:))
-                           pa4d(:,:,:,:) = i_seg%buf4(:,:,:,:)
-                           deallocate(i_seg%buf4)
-                           deallocate(o_seg%buf4)
-                        endif
-                     endif
-
+                     call MPI_Type_free(cg%i_bnd(d)%seg(g)%sub_type, err_mpi)
+                     call MPI_Type_free(cg%o_bnd(d)%seg(g)%sub_type, err_mpi)
                   enddo
                endif
             endif
@@ -611,6 +571,26 @@ contains
       enddo
 
    end subroutine internal_boundaries_MPI_1by1
+
+!> \brief exclude non-multigrid variables below base level
+
+   pure logical function is_active(cg, ind, tgt3d)
+
+      use grid_cont, only: grid_container
+
+      implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
+      integer(kind=4),               intent(in) :: ind   !< index of cg%q(:) 3d array or cg%w(:) 4d array
+      logical,                       intent(in) :: tgt3d !< .true. for cg%q, .false. for cg%w
+
+      if (tgt3d) then ! cannot use merge() here
+         is_active = associated(cg%q(ind)%arr)
+      else
+         is_active = associated(cg%w(ind)%arr)
+      endif
+
+   end function is_active
 
 !> \brief Set zero to all boundaries (will defeat any attemts of use of dirty checks on boundaries)
 
@@ -793,7 +773,13 @@ contains
       use ppp,                   only: ppp_main
 #ifdef COSM_RAYS
       use initcosmicrays,        only: smallecr
+#ifdef COSM_RAY_ELECTRONS
+      use initcrspectrum,        only: smallcree, smallcren
+      use initcosmicrays,        only: iarr_cre_e, iarr_cre_n
+      use fluidindex,            only: iarr_all_crn
+#else  /* !COSM_RAY_ELECTRONS */
       use fluidindex,            only: iarr_all_crs
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
 #ifdef GRAV
       use constants,             only: BND_OUTH, BND_OUTHD, I_ZERO
@@ -847,7 +833,13 @@ contains
                      l(dir,:) = cg%ijkse(dir,side)+ssign*ib
                      cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
 #ifdef COSM_RAYS
+#ifdef COSM_RAY_ELECTRONS
+                     cg%u(iarr_all_crn,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
+                     cg%u(iarr_cre_n,  l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcren   !< CRESP number density component
+                     cg%u(iarr_cre_e,  l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcree   !< CRESP energy density component
+#else /* !COSM_RAY_ELECTRONS */
                      cg%u(iarr_all_crs,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
                   enddo
                case (BND_OUTD)
@@ -858,7 +850,13 @@ contains
                      cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                      !> \deprecated BEWARE: use of uninitialized value on first call (a side effect of r1726)
 #ifdef COSM_RAYS
+#ifdef COSM_RAY_ELECTRONS
+                     cg%u(iarr_all_crn,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
+                     cg%u(iarr_cre_n,  l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcren   !< CRESP number density component
+                     cg%u(iarr_cre_e,  l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcree   !< CRESP energy density component
+#else /* !COSM_RAY_ELECTRONS */
                      cg%u(iarr_all_crs,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
                   enddo
                   l(dir,:) = cg%ijkse(dir,side) - [dom%nb, 1_INT4] +(dom%nb+1_INT4)*(side-LO)
@@ -977,7 +975,7 @@ contains
       use dataio_pub,            only: msg, warn, die
       use domain,                only: dom
       use fluidboundaries_funcs, only: user_fluidbnd
-      use global,                only: force_cc_mag
+      use global,                only: cc_mag
       use grid_cont,             only: grid_container
       use mpisetup,              only: master
       use named_array_list,      only: wna
@@ -1020,7 +1018,7 @@ contains
                case (BND_USER)
                   call user_fluidbnd(dir, side, cg, wn=wna%bi)
                case (BND_FC, BND_MPI_FC)
-                  if (.not. force_cc_mag) &
+                  if (.not. cc_mag) &
                        call die("[cg_list_bnd:bnd_b] fine-coarse interfaces not implemented yet for face-centered B field.")
                case (BND_COR)
                   if (dir == zdim) then
@@ -1049,7 +1047,7 @@ contains
 
          subroutine outflow_b(cg, dir, side)
 
-            ! use global,                only: force_cc_mag
+            ! use global,                only: cc_mag
             use grid_cont,             only: grid_container
 
             implicit none
@@ -1072,7 +1070,7 @@ contains
             !
             !   it = cg%ijkse(dir, side) - pm_one * i + (side - LO)
             !
-            ! when force_cc_mag is .false. in evaluation of dir-component of magnetic field
+            ! when cc_mag is .false. in evaluation of dir-component of magnetic field
             ! for more strict external boundary treatment.
 
             ! BEWARE: this kind of boundaries does not guarantee div(B) == 0 .

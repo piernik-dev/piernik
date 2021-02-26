@@ -265,8 +265,9 @@ contains
    subroutine check_blocky(this)
 
       use constants,  only: ndims, LO, HI, pLAND, I_ONE
-      use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Waitall, MPI_Irecv, MPI_Isend
+      use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
       use mpisetup,   only: proc, req, err_mpi, LAST, inflate_req, slave, piernik_MPI_Allreduce
+      use ppp_mpi,    only: piernik_Waitall
 
       implicit none
 
@@ -295,7 +296,9 @@ contains
       req = MPI_REQUEST_NULL
       if (slave)     call MPI_Irecv(shape1, size(shape1, kind=4), MPI_INTEGER, proc-I_ONE, sh_tag, MPI_COMM_WORLD, req(1 ), err_mpi)
       if (proc<LAST) call MPI_Isend(shape,  size(shape, kind=4),  MPI_INTEGER, proc+I_ONE, sh_tag, MPI_COMM_WORLD, req(nr), err_mpi)
-      call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
+
+      call piernik_Waitall(nr, "dot:chk_blocky")
+
       if (any(shape /= 0) .and. any(shape1 /= 0)) then
          if (any(shape /= shape1)) this%is_blocky = .false.
       endif
@@ -346,7 +349,8 @@ contains
       endif
 
       allocate(id_buf(size(this%SFC_id_range)))
-      call MPI_Allgather(this%SFC_id_range(proc, :), HI-LO+I_ONE, MPI_INTEGER8, id_buf, HI-LO+I_ONE, MPI_INTEGER8, MPI_COMM_WORLD, err_mpi)
+      call MPI_Allgather([this%SFC_id_range(proc, LO), this%SFC_id_range(proc, HI)], HI-LO+I_ONE, MPI_INTEGER8, &
+           &             id_buf, HI-LO+I_ONE, MPI_INTEGER8, MPI_COMM_WORLD, err_mpi)
       this%SFC_id_range(:, LO) = id_buf(1::2)
       this%SFC_id_range(:, HI) = id_buf(2::2)
 

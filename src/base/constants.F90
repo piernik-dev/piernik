@@ -56,8 +56,11 @@ module constants
    real, parameter :: zero       = 0.0                   !< zero
    real, parameter :: one        = 1.0                   !< one
    real, parameter :: two        = 2.0                   !< two
+   real, parameter :: three      = 3.0                   !< three
    real, parameter :: four       = 4.0                   !< four
+   real, parameter :: five       = 5.0
    real, parameter :: eight      = 8.0                   !< eight
+   real, parameter :: ten        = 10.0
    real, parameter :: half       = 0.5                   !< a half
    real, parameter :: onet       = 1./3.                 !< one third
    real, parameter :: twot       = 2./3.                 !< two thirds
@@ -65,6 +68,7 @@ module constants
    real, parameter :: thrq       = 3./4.                 !< three fourths
    real, parameter :: onesth     = 1./6.                 !< one sixth
    real, parameter :: oneeig     = 1./8.                 !< one eighth
+   real, parameter :: logten     = log(ten)              !< natural logarithm of ten
 
    enum, bind(C)
       enumerator :: idn = 1, imx, imy, imz, ien

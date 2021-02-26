@@ -59,6 +59,9 @@ contains
       use initcosmicrays,      only: use_CRsplit
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
 #endif /* MULTIGRID */
+#ifdef COSM_RAY_ELECTRONS
+      use timestep_cresp,      only: dt_cre, cresp_timestep
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -68,6 +71,11 @@ contains
 
       logical, save                  :: frun = .true.
       real                           :: dt_thiscg
+
+#ifdef COSM_RAY_ELECTRONS
+      call cresp_timestep
+      dt = min(dt, dt_cre)
+#endif /* COSM_RAY_ELECTRONS */
 
       if (.not.K_crs_valid) return
 

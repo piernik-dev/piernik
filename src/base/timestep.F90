@@ -285,6 +285,10 @@ contains
       use global,       only: cfl, cfl_max, cfl_violated, unwanted_negatives
       use mpisetup,     only: piernik_MPI_Bcast, master
       use timestep_pub, only: c_all, c_all_old, stepcfl
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_grid,   only: cfl_cresp_violation
+      use initcrspectrum, only: cfl_cre
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -297,6 +301,11 @@ contains
          if (stepcfl > cfl_max) then
             write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL: ",stepcfl
             cfl_violated = .true.
+#ifdef COSM_RAY_ELECTRONS
+         else if ( cfl_cresp_violation ) then
+            write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL @ CRESP module:", cfl_cre
+            cfl_violated = .true.
+#endif /* COSM_RAY_ELECTRONS */
          else if (stepcfl < 2*cfl - cfl_max) then
             write(msg,'(2(a,g10.3))') "[timestep:cfl_warn] Low CFL: ", stepcfl, " << ", cfl
          endif

@@ -1,0 +1,146 @@
+$BASE_DOMAIN
+    n_d = 64, 64, 4
+    nb  = 4
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   =-500.0
+    xmax   = 500.0
+    ymin   =-500.0
+    ymax   = 500.0
+    zmin   =-31.25
+    zmax   = 31.25
+ /
+
+ $MPI_BLOCKS
+    psize = 2, 2, 1
+ /
+
+ $UNITS
+    units_set = "PSM"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 0.5
+    nend   = 1000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'mcr_CRESP-gold'
+    run_id = 'tst'
+    dt_hdf  = 0.5
+    dt_res  = 0.0
+    dt_log  = 1.0e-2
+    dt_tsl  = 1.0e-3
+    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'encr', 'velx', 'vely', 'velz', 'cree', 'cren'
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.5
+    smalld = 1.e-3
+    smallei= 1.e-5
+    integration_order = 2
+    limiter= 'vanleer'
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.66666666666666666
+ /
+
+ $COSMIC_RAYS
+    cfl_cr      = 0.9
+    cr_active   = 0.0
+    ncrn        = 1
+    ncre        = 23 ! number of spectrum bins (including cutoff bins)
+    gamma_crn(1)   = 1.333333
+    gamma_crn(2)   = 1.333333
+    gamma_crn(3)   = 1.333333
+    K_crn_paral(1) = 1000 ! anisotropic
+    K_crn_paral(2) = 0.0
+    K_crn_paral(3) = 0.0
+    K_crn_perp(1)  = 1. ! 1.! 1000   ! isotropic
+    K_crn_perp(2)  = 0
+    K_crn_perp(3)  = 0
+    cre_gpcr_ess   = .false.
+    use_CRsplit    = .true.
+    divv_scheme    = "6lp"
+ /
+
+ $COSMIC_RAY_SPECTRUM
+    use_cresp   = .true.   ! < enables usage of cresp_update_grid @fluidupdate
+    cre_eff     = 0.01     ! < factor scaling sn explosion energy to total spectrum energy
+    cfl_cre     = 0.1
+    p_min_fix         = 1.e0    ! < momentum fixed grid
+    p_max_fix         = 1.e7    ! < momentum fixed grid
+    p_lo_init         = 5.0e0   ! < initial lower cut momentum
+    p_up_init         = 8.5e5   ! < initial upper cut momentum
+    expan_order       = 3       ! < Taylor exp. order for dp/dt computation
+    f_init            = 1.e-9   ! < 1.e-10
+    q_init            = 4.1     ! < initial value of power-law spectral index
+    q_big             = 30.0    ! < maximal allowed abs(q)
+    p_br_init_lo      = 1.0e2   ! < initial lower momentum break
+    p_br_init_up      = 5.0e5   ! < iniital upper momentum break
+    K_cre_paral_1     = 1.e3
+    K_cre_perp_1      = 1.
+    K_cre_pow         = 0.5     ! < scaling factor for diffusion coefficients
+    e_small           = 1.0e-10 ! < lower energy cutoff for energy-approximated cutoff momenta
+    initial_spectrum  = 'plpc'  ! < one of setups: 'brpg', 'powl', 'brpl', 'bump', 'symf', 'syme', 'plpc'
+    NR_iter_limit     = 50      ! < iteration limit for NR
+    q_eps             = 0.01    ! < factor for comparisons when solving for q
+    synch_active      = .true.
+    adiab_active      = .true.
+    force_init_NR     = .true.	! < force solving for new solution maps, regardless of detecting existing ones
+/
+
+ $CR_SPECIES
+    eH1 = .true.
+    eLi7 = .false.
+    eBe9 = .false.
+    eBe10 = .false.
+    eC12 = .false.
+    eN14 = .false.
+    eO16 = .false.
+ /
+
+ $MULTIGRID_SOLVER
+    dirty_debug = .true.
+ /
+
+
+ $PROBLEM_CONTROL
+    d0        = 1.0 ! when COSM_RAYS_SOURCES are defined, the density somehow scales the result of sourcecosmicrays.F90 and values like 1e5 quickly lead to FP overflow. This must be a bug.
+    p0        = 1.0
+    bx0       = 1.0	! for diffusion along diagonal and synchrotron cooling in CRESP
+    by0       = 1.0	! for diffusion along diagonal and synchrotron cooling in CRESP
+    bz0       = 0.0
+    x0        = 0.0
+    y0        = 0.0
+    z0        = 0.0
+    r0        = 64.0
+    vxd0      = 0.
+    vyd0      = 0.
+    vzd0      = 0.0
+    beta_cr   = 0.0
+    amp_cr1   = 3.603740328699372 ! 3d for SN fully encompassed ! gives initial supernova e_sn = 1.e51 ergs
+    norm_step = 1
+    expansion_cnst = 0.0023026 ! small expansion for adiabatic cooling testing, can cause problem in a longer test with periodic boundaries!
+ /
+
+ $PIERNIK_DEBUG
+    constant_dt = 0.0
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+ /

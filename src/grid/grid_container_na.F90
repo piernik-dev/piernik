@@ -112,6 +112,7 @@ contains
    subroutine add_all_na(this)
 
       use constants,        only: INVALID
+      use memory_usage,     only: check_mem_usage
       use named_array_list, only: qna, wna
 #ifdef ISO
       use constants,        only: cs_i2_n
@@ -129,11 +130,14 @@ contains
             call this%add_na(qna%lst(i)%multigrid)
          enddo
       endif
+      call check_mem_usage
+
       if (allocated(wna%lst)) then
          do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
             call this%add_na_4d(wna%lst(i)%dim4)
          enddo
       endif
+      call check_mem_usage
 
       ! shortcuts
       if (wna%fi > INVALID)  this%u  => this%w(wna%fi)%arr

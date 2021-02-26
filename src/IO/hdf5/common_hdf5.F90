@@ -107,11 +107,16 @@ contains
       use constants,  only: dsetnamelen, singlechar
       use dataio_pub, only: warn
       use fluids_pub, only: has_ion, has_dst, has_neu
-      use global,     only: force_cc_mag
+      use global,     only: cc_mag
       use mpisetup,   only: master
 #ifdef COSM_RAYS
-      use dataio_pub, only: msg
-      use fluidindex, only: iarr_all_crs
+      use dataio_pub,     only: msg
+#ifdef COSM_RAY_ELECTRONS
+      use fluidindex,     only: iarr_all_crn
+      use initcosmicrays, only: ncre
+#else /* !COSM_RAY_ELECTRONS */
+      use fluidindex,     only: iarr_all_crs
+#endif /* !COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
 
       implicit none
@@ -163,13 +168,13 @@ contains
                if (has_neu) call append_var('ethn')
                if (has_ion) call append_var('ethi')
             case ("divb", "divB")
-               if (force_cc_mag) then
+               if (cc_mag) then
                   call append_var("divbc")
                else
                   call append_var("divbf")
                endif
             case ("divb4", "divb6", "divb8")
-               if (force_cc_mag) then
+               if (cc_mag) then
                   fc = "c"
                else
                   fc = "f"
@@ -179,7 +184,11 @@ contains
                call append_var(aux)
 #ifdef COSM_RAYS
             case ('encr')
+#ifdef COSM_RAY_ELECTRONS
+               do k = 1, size(iarr_all_crn,1)
+#else /* !COSM_RAY_ELECTRONS */
                do k = 1, size(iarr_all_crs,1)
+#endif /* !COSM_RAY_ELECTRONS */
                   if (k<=99) then
                      write(aux,'(A2,I2.2)') 'cr', k
                      call append_var(aux)
@@ -188,6 +197,72 @@ contains
                      call warn(msg)
                   endif
                enddo
+#ifdef COSM_RAY_ELECTRONS
+            case ('cren') !< CRESP number density fields
+               do k = 1, ncre
+                  if (k<=99) then
+                    write(aux,'(A4,I2.2)') 'cren', k
+                    call append_var(aux)
+                  else
+                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP number density component #", k
+                     call warn(msg)
+                  endif
+               enddo
+               do k = lbound(vars, 1), ubound(vars, 1)
+                    if (vars(k) .eq. 'cree') exit
+                    if (k .eq. ubound(vars, 1)) then
+                        write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cren' field created, but 'cree' not defined: reconstruction of spectrum from hdf files requires both."
+                        call warn(msg)
+                    endif
+               enddo
+            case ('cree') !< CRESP energy density fields
+               do k = 1, ncre
+                  if (k<=99) then
+                    write(aux,'(A4,I2.2)') 'cree', k
+                    call append_var(aux)
+                  else
+                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP energy density component #", k
+                     call warn(msg)
+                  endif
+               enddo
+               do k = lbound(vars, 1), ubound(vars, 1)
+                    if (vars(k) .eq. 'cren') exit
+                    if (k .eq. ubound(vars, 1)) then
+                        write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cree' field created, but 'cren' not defined: reconstruction of spectrum from hdf files requires both."
+                        call warn(msg)
+                    endif
+               enddo
+            case ('cref') !< CRESP distribution function
+               do k = 1, ncre+1
+                  if (k<=99) then
+                    write(aux,'(A4,I2.2)') 'cref', k
+                    call append_var(aux)
+                  else
+                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP distribution function component #", k
+                     call warn(msg)
+                  endif
+               enddo
+            case ('crep') !< CRESP cutoff momenta
+               do k = 1, 2
+                  if (k<=99) then
+                    write(aux,'(A4,I2.2)') 'crep', k
+                    call append_var(aux)
+                  else
+                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP cutoff momentum component #", k
+                     call warn(msg)
+                  endif
+               enddo
+            case ('creq') !< CRESP spectrum index
+               do k = 1, ncre
+                  if (k<=99) then
+                    write(aux,'(A4,I2.2)') 'creq', k
+                    call append_var(aux)
+                  else
+                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP spectrum index component #", k
+                     call warn(msg)
+                  endif
+               enddo
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
             case ('pres')
                if (has_neu) call append_var('pren')
@@ -391,6 +466,11 @@ contains
          & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
       use mpisetup,      only: master, slave
       use version,       only: env, nenv
+#ifdef COSM_RAY_ELECTRONS
+      use initcrspectrum,  only: write_cresp_to_restart
+      use cresp_io,        only: create_cresp_smap_fields
+      use cresp_NR_method, only: cresp_write_smaps_to_hdf
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef RANDOMIZE
       use randomization, only: write_current_seed_to_restart
 #endif /* RANDOMIZE */
@@ -463,12 +543,19 @@ contains
       call H5Tclose_f(type_id, error)
       call H5Pclose_f(prp_id, error)
 
+#ifdef COSM_RAY_ELECTRONS
+      call write_cresp_to_restart(file_id)
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef RANDOMIZE
       call write_current_seed_to_restart(file_id)
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
       call write_snsources_to_restart(file_id)
 #endif /* SN_SRC */
+#ifdef COSM_RAY_ELECTRONS
+      call create_cresp_smap_fields(file_id) ! create "/cresp/smaps_{LO,UP}/..."
+      call cresp_write_smaps_to_hdf(file_id) ! create "/cresp/smaps_{LO,UP}/{p_f}_ratio"
+#endif /* COSM_RAY_ELECTRONS */
       if (associated(user_attrs_wr)) call user_attrs_wr(file_id)
 
       call h5fclose_f(file_id, error)
