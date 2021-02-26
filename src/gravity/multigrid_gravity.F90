@@ -367,10 +367,8 @@ contains
       ! solution recycling
       ord_time_extrap = min(nold_max-I_ONE, max(-I_ONE, ord_time_extrap))
       associate (nold => ord_time_extrap + 1)
-      if (nold > 0) then
          call inner%init_history(nold, "i")
          if (grav_bnd == bnd_isolated .and. .not. singlepass) call outer%init_history(nold, "o")
-      endif
       end associate
 
       call vstat%init(max_cycles)
@@ -890,11 +888,10 @@ contains
 
 !> \brief Recover a potential field from history
 
-   function recover_sg(ind, how_old) result(initialized)
+   logical function recover_sg(ind, how_old) result(initialized)
 
       use cg_leaves,     only: leaves
-      use constants,     only: INVALID
-      use dataio_pub,    only: warn, die
+      use dataio_pub,    only: warn
       use global,        only: nstep
       use mpisetup,      only: master
       use multigridvars, only: grav_bnd, bnd_isolated
@@ -905,43 +902,16 @@ contains
       integer(kind=4), intent(in) :: ind
       integer(kind=4), intent(in) :: how_old
 
-      logical :: initialized
       integer(kind=4) :: i_hist
 
       initialized = .false.
       if (associated(inner%old%latest)) then
-         select case (how_old)
-            case (SGP)
-               i_hist = inner%old%latest%i_hist
-            case (SGPM)
-               if (associated(inner%old%latest%earlier)) then
-                  i_hist = inner%old%latest%earlier%i_hist
-               else
-                  i_hist = inner%old%latest%i_hist
-                  call warn("[multigrid_gravity:recover_sg] not enough historic fields for inner SGPM, using latest")
-               endif
-            case default
-               call die("[multigrid_gravity:recover_sg] such old inner history not implemented yet")
-               i_hist = INVALID
-         end select
+         i_hist = which_history(inner)
          call leaves%q_copy(i_hist, ind)
          initialized = .true.
          if (grav_bnd == bnd_isolated .and. .not. singlepass) then
             if (associated(outer%old%latest)) then
-               select case (how_old)
-                  case (SGP)
-                     i_hist = outer%old%latest%i_hist
-                  case (SGPM)
-                     if (associated(outer%old%latest%earlier)) then
-                        i_hist = outer%old%latest%earlier%i_hist
-                     else
-                        i_hist = outer%old%latest%i_hist
-                        call warn("[multigrid_gravity:recover_sg] not enough historic fields for outer SGPM, using latest")
-                     endif
-                  case default
-                     call die("[multigrid_gravity:recover_sg] such old outer history not implemented yet")
-                     i_hist = INVALID
-               end select
+               i_hist = which_history(outer)
                call leaves%q_add(i_hist, ind)
             else
                initialized = .false.
@@ -952,6 +922,34 @@ contains
          if (master .and. nstep > 0) call warn("[multigrid_gravity:recover_sg] no i-history available")
       endif
       call leaves%leaf_arr3d_boundaries(ind)
+
+   contains
+
+      integer(kind=4) function which_history(hist) result(ih)
+
+         use constants,  only: INVALID
+         use dataio_pub, only: die
+
+         implicit none
+
+         type(soln_history) :: hist
+
+         select case (how_old)
+            case (SGP)
+               ih = hist%old%latest%i_hist
+            case (SGPM)
+               if (associated(hist%old%latest%earlier)) then
+                  ih = hist%old%latest%earlier%i_hist
+               else
+                  ih = hist%old%latest%i_hist
+                  call warn("[multigrid_gravity:recover_sg:which_history] not enough historic fields for  SGPM, using latest")
+               endif
+            case default
+               call die("[multigrid_gravity:recover_sg:which_history] such old history not implemented yet")
+               ih = INVALID
+         end select
+
+      end function which_history
 
    end function recover_sg
 
@@ -1192,13 +1190,14 @@ contains
 
       use hdf5,          only: HID_T
       use multigridvars, only: grav_bnd, bnd_isolated
+      use multipole,     only: singlepass
 
       implicit none
 
       integer(HID_T), intent(in) :: file_id  !< File identifier
 
       call inner%mark_and_create_attribute(file_id)
-      if (grav_bnd == bnd_isolated) call outer%mark_and_create_attribute(file_id)
+      if (grav_bnd == bnd_isolated .and. .not. singlepass) call outer%mark_and_create_attribute(file_id)
 
    end subroutine write_oldsoln_to_restart
 

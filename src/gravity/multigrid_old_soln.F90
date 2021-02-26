@@ -84,8 +84,6 @@ contains
       integer :: i
       character(len=dsetnamelen) :: hname
 
-      if (nold <= 0) return
-
       if (associated(this%old%latest) .or. associated(this%invalid%latest)) then
          write(msg, '(3a)') "[multigrid_old_soln:init_history] ", prefix," already initialized."
          call die(msg)
@@ -171,7 +169,6 @@ contains
                call printinfo(msg, stdout)
             endif
             call all_cg%set_q_value(solution, 0.)
-            if (associated(this%old%latest)) call die("[multigrid_old_soln:init_solution] need to move %old to %invalid")
          case (O_INJ)
             call leaves%check_dirty(this%old%latest%i_hist, "history0")
             call leaves%q_copy(this%old%latest%i_hist, solution)
@@ -352,19 +349,18 @@ contains
       class(soln_history), intent(in) :: this !< potential history to be registered for restarts
       integer(HID_T),      intent(in) :: file_id  !< File identifier
 
-      integer(kind=4) :: n, i, b
+      integer(kind=4) :: n, i, b, found
       type(old_soln), pointer :: os
       character(len=cbuff_len), allocatable, dimension(:) :: namelist
       real, allocatable, dimension(:) :: timelist
 
       n = max(min(this%old%cnt(), ord_time_extrap + I_ONE), I_TWO)  ! try to save at least 2 points to recover also sgpm
 
-      if (n <= 0) return
-
       allocate(namelist(n), timelist(n))
 
       ! set the flags to mark which fields should go to the restart
       i = 1
+      found = 0
       os => this%old%latest
       do while (associated(os))
          b = AT_IGNORE
@@ -372,15 +368,16 @@ contains
             b = AT_NO_B
             namelist(i) = qna%lst(os%i_hist)%name
             timelist(i) = os%time
+            found = found + I_ONE
          endif
          qna%lst(os%i_hist)%restart_mode = b
          i = i + I_ONE
          os => os%earlier
       enddo
 
-      if (master) then
-         call set_attr(file_id, trim(this%old%label) // "_names", namelist)
-         call set_attr(file_id, trim(this%old%label) // "_times", timelist)
+      if (master .and. found > 0) then
+         call set_attr(file_id, trim(this%old%label) // "_names", namelist(:found))
+         call set_attr(file_id, trim(this%old%label) // "_times", timelist(:found))
       endif
 
       deallocate(namelist)
