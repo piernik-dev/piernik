@@ -90,9 +90,9 @@ contains
 #endif /* MULTIGRID */
       call cleanup_sortable_list;  call nextdot
       call cleanup_fluids;         call nextdot
-#ifdef GRAV
+#if defined(GRAV) && defined(NBODY)
       call cleanup_particles;      call nextdot
-#endif /* GRAV */
+#endif /* GRAV && NBODY */
       call cleanup_global;         call nextdot
       call cleanup_decomposition;  call nextdot
       call cleanup_domain;         call nextdot
