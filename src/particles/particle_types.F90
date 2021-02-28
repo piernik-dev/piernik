@@ -30,7 +30,7 @@
 
 module particle_types
 ! pulled by GRAV
-   use constants, only: ndims, dsetnamelen
+   use constants, only: ndims
 
    implicit none
 
@@ -66,7 +66,6 @@ module particle_types
       type(particle), pointer :: first
       type(particle), pointer :: last
       integer(kind=4) :: cnt                  !< number of chain links
-      character(len=dsetnamelen) :: label     !< name of the list for diagnostic and identification purposes
    contains
       procedure :: init        !< initialize the list
       procedure :: print       !< print the list
@@ -151,7 +150,7 @@ contains
                enddo
             else
                if (this%cnt > 0) then
-                  write(msg, '(i6,3a)')this%cnt, " particles missing in ", trim(this%label), "set"
+                  write(msg, '(i6,a)')this%cnt, " particles missing in the set"
                   call printinfo(msg)
                endif
             endif
