@@ -148,10 +148,12 @@ contains
 
       class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
 
-      !Does nothing for now... is it necessary for a list?
-      !if (allocated(this%p)) deallocate(this%p)
+      type(particle), pointer :: pp
 
-      if (.false.) this%cnt = this%cnt  ! suppress -Wunused-dummy-argument
+      do while (associated(this%first))
+         pp => this%last
+         call this%remove(pp) ! cannot just pass this%last because it will change after un_link and wrong element will be deallocated
+      enddo
 
     end subroutine cleanup
 
@@ -215,8 +217,8 @@ contains
 
       implicit none
 
-      class(particle_set), intent(inout) :: this !< an object invoking the type-bound procedure
-      type(particle), pointer, intent(out) :: pset
+      class(particle_set),     intent(inout) :: this !< an object invoking the type-bound procedure
+      type(particle), pointer, intent(inout) :: pset
 
       if (.not. associated(pset)) call die("[particle removal] tried to remove null() element")
       if (.not. associated(this%first)) call die("[particle removal] this%cnt <=0 .and. associated(this%first)")
