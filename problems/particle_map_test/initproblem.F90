@@ -104,7 +104,8 @@ contains
 
       implicit none
 
-      integer                         :: i, j, k, p
+      integer(kind=4)                 :: i
+      integer                         :: j, k, p
       type(cg_list_element),  pointer :: cgl
       integer :: ncg_i, cic_i, tsc_i
       logical, save :: frun = .true.

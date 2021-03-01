@@ -30,7 +30,7 @@
 
 module particle_types
 ! pulled by GRAV
-   use constants, only: ndims, dsetnamelen
+   use constants, only: ndims
 
    implicit none
 
@@ -66,10 +66,9 @@ module particle_types
       type(particle), pointer :: first
       type(particle), pointer :: last
       integer(kind=4) :: cnt                  !< number of chain links
-      character(len=dsetnamelen) :: label     !< name of the list for diagnostic and identification purposes
    contains
       procedure :: init        !< initialize the list
-      !procedure :: print       !< print the list
+      procedure :: print       !< print the list
       procedure :: cleanup     !< delete the list
       procedure :: remove      !< remove a particle
       !procedure :: merge_parts !< merge two particles
@@ -114,31 +113,71 @@ contains
 
 !> \brief print the list
 
-!   subroutine print(this)
+   subroutine print(this)
 
-!      use dataio_pub, only: msg, printinfo
-!      use mpisetup,   only: slave
+      use dataio_pub, only: msg, printinfo, warn
+      use mpisetup,   only: master, proc, FIRST, LAST
 
-!      implicit none
+      implicit none
 
-!      class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
+      class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
 
-!      integer :: i
+      integer :: i
+      type(particle), pointer :: pp
 
-      !> \ todo communicate particles that aren't known to the master
-!      if (slave) return
-!
-!      if (size(this%p) <= 0) return
-!
-!      call printinfo("[particle_types:print] Known particles:")
-!      write(msg, '(a,a12,2(a,a36),2a)')" #number   : ","mass"," [ ","position"," ] [ ","velocity"," ]  is_outside"
-!      call printinfo(msg)
-!      do i = lbound(this%p, dim=1), ubound(this%p, dim=1)
-!         write(msg, '(a,i7,a,g12.3,2(a,3g12.3),a,l2)')" # ",i," : ",this%p(i)%mass," [ ",this%p(i)%pos," ] [ ",this%p(i)%vel," ] ",this%p(i)%outside
-!         call printinfo(msg)
-!      enddo
+      if (this%cnt < 0) call warn("[particle_types:print] this%cnt < 0")
+      if (associated(this%first) .neqv. associated(this%last)) call warn("[particle_types:print] associated(this%first) .neqv. associated(this%last)")
+      if (this%cnt > 0 .and. .not. associated(this%first)) call warn("[particle_types:print] this%cnt > 0 .and. .not. associated(this%first)")
+      if (this%cnt > 0 .and. .not. associated(this%last))  call warn("[particle_types:print] this%cnt > 0 .and. .not. associated(this%last)")
+      if (this%cnt <= 0 .and. (associated(this%first) .or. associated(this%last))) call warn("[particle_types:print] <=0 .and. (associated(this%first) .or. associated(this%last))")
 
-!   end subroutine print
+      if (master) call printinfo("[particle_types:print] Known particles:")
+      do i = FIRST, LAST
+         if (proc == i) then
+            write(msg, '(a,a12,2(a,a36),2a)')" #number   : ","mass"," [ ","position"," ] [ ","velocity"," ]  is_outside, prv, nxt"
+            call printinfo(msg)
+            if (associated(this%first)) then
+               pp => this%first
+               do while (associated(pp))
+                  call prntline
+                  pp => pp%nxt
+               enddo
+            else if (associated(this%last)) then
+               call warn("[particle_types:print] Going backward")
+               do while (associated(pp))
+                  call prntline
+                  pp => pp%prv
+               enddo
+            else
+               if (this%cnt > 0) then
+                  write(msg, '(i6,a)')this%cnt, " particles missing in the set"
+                  call printinfo(msg)
+               endif
+            endif
+         endif
+      enddo
+
+   contains
+
+      subroutine prntline
+
+         use constants, only: INVALID
+
+         implicit none
+
+         integer :: ip, in
+
+         ip = INVALID
+         if (associated(pp%prv)) ip = pp%prv%pdata%pid
+         in = INVALID
+         if (associated(pp%nxt)) in = pp%nxt%pdata%pid
+
+         write(msg, '(a,i7,a,g12.3,2(a,3g12.3),a,l11,2i5)')" # ",pp%pdata%pid," : ",pp%pdata%mass," [ ",pp%pdata%pos," ] [ ",pp%pdata%vel," ] ",pp%pdata%outside, ip, in
+         call printinfo(msg)
+
+      end subroutine prntline
+
+   end subroutine print
 
 !> \brief delete the list
 
@@ -148,10 +187,12 @@ contains
 
       class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
 
-      !Does nothing for now... is it necessary for a list?
-      !if (allocated(this%p)) deallocate(this%p)
+      type(particle), pointer :: pp
 
-      if (.false.) this%cnt = this%cnt  ! suppress -Wunused-dummy-argument
+      do while (associated(this%first))
+         pp => this%last
+         call this%remove(pp) ! cannot just pass this%last because it will change after un_link and wrong element will be deallocated
+      enddo
 
     end subroutine cleanup
 
@@ -215,8 +256,8 @@ contains
 
       implicit none
 
-      class(particle_set), intent(inout) :: this !< an object invoking the type-bound procedure
-      type(particle), pointer, intent(out) :: pset
+      class(particle_set),     intent(inout) :: this !< an object invoking the type-bound procedure
+      type(particle), pointer, intent(inout) :: pset
 
       if (.not. associated(pset)) call die("[particle removal] tried to remove null() element")
       if (.not. associated(this%first)) call die("[particle removal] this%cnt <=0 .and. associated(this%first)")
