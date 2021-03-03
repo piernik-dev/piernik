@@ -540,8 +540,8 @@ if f_run is True:
 # ------------- saving just the spectrum
             if (save_spectrum):
                 extent = fig2.get_window_extent().transformed(s.dpi_scale_trans.inverted())
-                s.savefig('results/' + filename_nam + '_' + plot_var + '_spec_%03d.pdf' % image_number, transparent='True', bbox_inches="tight", quality=95, dpi=150)  # bbox not working in py27 FIXME
-                prtinfo("  --->  Saved plot to: %s.\n\033[44mPress 'q' to quit and save yt.SlicePlot with marked coordinates." % str('results/' + filename_nam + '_' + plot_var + '_spectrum_%04d.pdf' % image_number))
+                s.savefig('results/' + filename_nam + '_' + 'slice_' + slice_ax + '_' + plot_var + '_spec_%03d.pdf' % image_number, transparent='True', bbox_inches="tight", dpi=150)  # bbox not working in py27 FIXME
+                prtinfo("  --->  Saved plot to: %s.\n\033[44mPress 'q' to quit and save yt.SlicePlot with marked coordinates." % str('results/' + filename_nam + '_' + 'slice_' + slice_ax + '_' + plot_var + '_spectrum_%04d.pdf' % image_number))
         else:
             prtwarn("Empty cell - not saving.")
 
@@ -577,6 +577,6 @@ if f_run is True:
     if (options.no_xlabels and options.no_ylabels):
         yt_data_plot.hide_axes()
 
-    yt_data_plot.save('results/' + filename_nam + '_' + plot_field + '_sliceplot.pdf')  # save image (spectrum already saved) when finished.
+    yt_data_plot.save('results/' + filename_nam + '_' + plot_field + '_sliceplot_' + slice_ax + '.pdf')  # save image (spectrum already saved) when finished.
     if (not user_coords_provided):
         s.canvas.mpl_disconnect(cid)
