@@ -34,7 +34,8 @@ def cli_params(argv):
     try:
         opts, args = getopt.getopt(argv, "c:hl:o:r:z:", ["help", "center=", "colormap=", "output=", "scale=", "zlim="])
     except getopt.GetoptError:
-        print("Unidentified error.")
+        print("Unrecognized options: %s \n" % argv)
+        print_usage()
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-h", "--help"):
