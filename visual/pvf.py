@@ -7,18 +7,28 @@ import os
 import sys
 import plot_compose as pc
 
-if (len(sys.argv) < 3):
-    print('PIERNIK VISUALIZATION FACILITY')
-    print('Usage: ./pvf.py <file> <varname,[varname,...]> [options]')
-    if len(sys.argv) < 2:
-        exit()
-
 cmap = 'viridis'
 plotdir = 'frames'
 sctype = 'linear'
 cu, cx, cy, cz = False, 0.0, 0.0, 0.0
 zmin, zmax = 0.0, 0.0
 
+print('PIERNIK VISUALIZATION FACILITY')
+
+def print_usage():
+    print('Usage: ./pvf.py <file> <varname,[varname,...] | _all_> [options]')
+    print('')
+    print('./pvf.py <file> - print available datafields from <file>')
+    print('./pvf.py <file> _all_ - plot all available datafields from <file>')
+    print('./pfv.py <file> <varname,[varname,...] [options] - plot specified datafields from <file>')
+    print('')
+    print('Options:')
+    print(' -h, \t\t--help \t\t\tprint this help')
+    print(' -c CX,CY,CZ, \t--center CX,CY,CZ \tplot cuts across given point coordinates CX, CY, CZ [default: computed domain center]')
+    print(' -l SCALETYPE, \t--scale SCALETYPE \tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: linear]')
+    print(' -o OUTPUT, \t--output OUTPUT \tdump plot files into OUTPUT directory [default: frames]')
+    print(' -r COLORMAP, \t--colormap COLORMAP \tuse COLORMAP palette [default: viridis]')
+    print(' -z ZMIN,ZMAX, \t--zlim ZMIN,ZMAX \tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]')
 
 def cli_params(argv):
     try:
@@ -28,12 +38,7 @@ def cli_params(argv):
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-h", "--help"):
-            print(" -h, \t\t--help \t\t\tprint this help \n\
- -c CX,CY,CZ, \t--center CX,CY,CZ \tplot cuts across given point coordinates CX, CY, CZ [default: computed domain center] \n\
- -l SCALETYPE, \t--scale SCALETYPE \tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: linear] \n\
- -o OUTPUT, \t--output OUTPUT \tdump plot files into OUTPUT directory [default: frames] \n\
- -r COLORMAP, \t--colormap COLORMAP \tuse COLORMAP palette [default: viridis] \n\
- -z ZMIN,ZMAX, \t--zlim ZMIN,ZMAX \tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]")
+            print_usage()
             sys.exit()
 
         elif opt in ("-c", "--center"):
@@ -60,6 +65,11 @@ def cli_params(argv):
             zmin = float(zmin)
             zmax = float(zmax)
             print("zmin, zmax = ", zmin, zmax)
+
+if (len(sys.argv) < 3):
+    print_usage()
+    if len(sys.argv) < 2:
+        exit()
 
 
 cli_params(sys.argv[3:])
