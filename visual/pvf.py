@@ -83,7 +83,7 @@ if (len(sys.argv) < 3):
         print('')
         check_file(pthfilen)
         list_file_fields(pthfilen)
-        exit()
+    exit()
 
 cli_params(sys.argv[3:])
 
@@ -99,14 +99,16 @@ if sys.argv[2] == "_all_":
 else:
     varlist = sys.argv[2].split(',')
 
-print(varlist)
-
 print("Reading file: %s" % pthfilen)
+print('Reading datasets: %s' % varlist)
 for var in varlist:
-    # output = plotdir+'/'+filen.split('/')[-1].replace('.h5',"_%s.png" % var)
-    fnl = filen.split('/')[-1]
-    output = plotdir + '/' + '_'.join(fnl.split('_')[:-1]) + '_' + var + '_' + fnl.split('_')[-1].replace('.h5', ".png")
-    options = zmin, zmax, cmap, sctype, cu, cx, cy, cz
-    pc.plotcompose(pthfilen, var, output, options)
+    if (var in list(h5f['field_types'].keys())):
+        # output = plotdir+'/'+filen.split('/')[-1].replace('.h5',"_%s.png" % var)
+        fnl = filen.split('/')[-1]
+        output = plotdir + '/' + '_'.join(fnl.split('_')[:-1]) + '_' + var + '_' + fnl.split('_')[-1].replace('.h5', ".png")
+        options = zmin, zmax, cmap, sctype, cu, cx, cy, cz
+        pc.plotcompose(pthfilen, var, output, options)
+    else:
+        print(var, ' is not available in the file ', pthfilen)
 
 h5f.close()
