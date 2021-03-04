@@ -15,6 +15,7 @@ zmin, zmax = 0.0, 0.0
 
 print('PIERNIK VISUALIZATION FACILITY')
 
+
 def print_usage():
     print('Usage: ./pvf.py <file> <varname,[varname,...] | _all_> [options]')
     print('')
@@ -29,6 +30,7 @@ def print_usage():
     print(' -o OUTPUT, \t--output OUTPUT \tdump plot files into OUTPUT directory [default: frames]')
     print(' -r COLORMAP, \t--colormap COLORMAP \tuse COLORMAP palette [default: viridis]')
     print(' -z ZMIN,ZMAX, \t--zlim ZMIN,ZMAX \tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]')
+
 
 def cli_params(argv):
     try:
@@ -67,14 +69,17 @@ def cli_params(argv):
             zmax = float(zmax)
             print("zmin, zmax = ", zmin, zmax)
 
+
 def check_file(pfile):
     if not os.path.exists(pfile):
         print('The file %s does not exist!' % pfile)
         exit()
 
+
 def list_file_fields(pfile):
     h5f = h5py.File(pfile, 'r')
     print('Available datafields in the file %s: \n' % pfile, list(h5f['field_types'].keys()))
+
 
 pthfilen = sys.argv[1]
 if (len(sys.argv) < 3):
