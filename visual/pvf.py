@@ -81,17 +81,18 @@ def list_file_fields(pfile):
     print('Available datafields in the file %s: \n' % pfile, list(h5f['field_types'].keys()))
 
 
-pthfilen = sys.argv[1]
 if (len(sys.argv) < 3):
     print_usage()
     if (len(sys.argv) == 2 and sys.argv[-1][0] != '-'):
         print('')
+        pthfilen = sys.argv[1]
         check_file(pthfilen)
         list_file_fields(pthfilen)
     exit()
 
 cli_params(sys.argv[3:])
 
+pthfilen = sys.argv[1]
 check_file(pthfilen)
 h5f = h5py.File(pthfilen, 'r')
 
