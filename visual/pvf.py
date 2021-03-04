@@ -67,23 +67,33 @@ def cli_params(argv):
             zmax = float(zmax)
             print("zmin, zmax = ", zmin, zmax)
 
-if (len(sys.argv) < 3):
-    print_usage()
-    if len(sys.argv) < 2:
+def check_file(pfile):
+    if not os.path.exists(pfile):
+        print('The file %s does not exist!' % pfile)
         exit()
 
+def list_file_fields(pfile):
+    h5f = h5py.File(pfile, 'r')
+    print('Available datafields in the file %s: \n' % pfile, list(h5f['field_types'].keys()))
+
+pthfilen = sys.argv[1]
+if (len(sys.argv) < 3):
+    print_usage()
+    if (len(sys.argv) == 2 and sys.argv[-1][0] != '-'):
+        print('')
+        check_file(pthfilen)
+        list_file_fields(pthfilen)
+        exit()
 
 cli_params(sys.argv[3:])
 
-pthfilen = sys.argv[1]
+check_file(pthfilen)
+h5f = h5py.File(pthfilen, 'r')
+
 filen = pthfilen.split('/')[-1]
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 
-h5f = h5py.File(pthfilen, 'r')
-if len(sys.argv) < 3:
-    print("Available datafields: ", list(h5f['field_types'].keys()))
-    exit(1)
 if sys.argv[2] == "_all_":
     varlist = h5f['field_types'].keys()
 else:
