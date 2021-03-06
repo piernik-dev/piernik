@@ -63,7 +63,7 @@ contains
       type(grid_container),  pointer :: cg
       type(cg_list_element), pointer :: cgl
       type(spec_mod_trms)            :: sptab
-      real                           :: K_cre_max_sum, abs_max_ud
+      real                           :: K_cre_max_sum, abs_max_ud, min_dt
       logical                        :: empty_cell
 
       dt_cre       = big
@@ -109,8 +109,15 @@ contains
 
       K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
       if (K_cre_max_sum > zero) then                               ! K_cre dependent on momentum - maximal for highest bin number
+         min_dt = dt_cre_K
          dt_cre_K = cfl_cr * half / K_cre_max_sum                  ! We use cfl_cr here (CFL number for diffusive CR transport), cfl_cre used only for spectrum evolution
-         if (cg%dxmn < sqrt(big)/dt_cre_K) dt_cre_K = dt_cre_K * cg%dxmn**2
+         cgl => leaves%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            if (cg%dxmn < sqrt(big)/dt_cre_K) min_dt = min(min_dt, dt_cre_K * cg%dxmn**2)
+            cgl=>cgl%nxt
+         enddo
+         dt_cre_K = min_dt
       endif
 
       call piernik_MPI_Allreduce(dt_cre_adiab, pMIN)
