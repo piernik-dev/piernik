@@ -63,9 +63,9 @@ contains
 #ifdef MULTIGRID
       use multigrid,             only: cleanup_multigrid
 #endif /* MULTIGRID */
-#ifdef GRAV
+#if defined(GRAV) && defined(NBODY)
       use particle_pub,          only: cleanup_particles
-#endif /* GRAV */
+#endif /* GRAV && NBODY */
 #ifdef PIERNIK_OPENCL
       use piernikcl,             only: cleanup_opencl
 #endif /* PIERNIK_OPENCL */
@@ -93,9 +93,9 @@ contains
 #endif /* MULTIGRID */
       call cleanup_sortable_list;  call nextdot
       call cleanup_fluids;         call nextdot
-#ifdef GRAV
+#if defined(GRAV) && defined(NBODY)
       call cleanup_particles;      call nextdot
-#endif /* GRAV */
+#endif /* GRAV && NBODY */
       call cleanup_global;         call nextdot
       call cleanup_decomposition;  call nextdot
       call cleanup_domain;         call nextdot

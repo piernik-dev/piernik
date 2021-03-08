@@ -267,7 +267,7 @@ contains
       use constants,  only: ndims, LO, HI, pLAND, I_ONE
       use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
       use mpisetup,   only: proc, req, err_mpi, LAST, inflate_req, slave, piernik_MPI_Allreduce
-      use ppp,        only: piernik_Waitall
+      use ppp_mpi,    only: piernik_Waitall
 
       implicit none
 

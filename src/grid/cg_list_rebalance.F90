@@ -199,7 +199,8 @@ contains
       use MPIF,               only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Isend, MPI_Irecv
       use mpisetup,           only: master, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, err_mpi, req, inflate_req, tag_ub
       use named_array_list,   only: qna, wna
-      use ppp,                only: ppp_main, piernik_Waitall
+      use ppp,                only: ppp_main
+      use ppp_mpi,            only: piernik_Waitall
       use sort_piece_list,    only: grid_piece_list
 
       implicit none

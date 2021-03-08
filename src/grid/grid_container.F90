@@ -33,6 +33,9 @@ module grid_cont
    use constants,         only: LO, HI
    use grid_cont_bnd,     only: segment
    use grid_cont_prolong, only: grid_container_prolong_t
+#if defined(GRAV) && defined(NBODY)
+   use particle_types,    only: particle_set
+#endif /* GRAV && NBODY */
 
    implicit none
 
@@ -60,6 +63,11 @@ module grid_cont
       type(tgt_list) :: pob_tgt  !< description of outgoing boundary prolongation data
       type(tgt_list) :: rif_tgt  !< description of fluxes incoming from fine grid
       type(tgt_list) :: rof_tgt  !< description of fluxes outgoing to coarse grid
+
+      ! Particles
+#if defined(GRAV) && defined(NBODY)
+      type(particle_set) :: pset                                  !< set of particles that belong to this grid part
+#endif /* GRAV && NBODY */
 
       ! Misc
       integer(kind=8) :: SFC_id       !< position of the grid on space-filling curve
@@ -112,6 +120,9 @@ contains
       call ppp_main%stop(na_label, PPP_AMR + PPP_CG)
 
       call this%init_gc_prolong
+#ifdef NBODY
+      call this%pset%init()
+#endif /* NBODY */
 
       this%membership = 1
       this%SFC_id     = SFC_order(this%my_se(:, LO) - l%off)
@@ -139,6 +150,9 @@ contains
       call this%cleanup_na
       call this%cleanup_bnd
       call this%cleanup_prolong
+#ifdef NBODY
+      call this%pset%cleanup
+#endif /* NBODY */
 
       rpio_tgt(1:nseg) = [ this%ri_tgt,  this%ro_tgt,  this%pi_tgt,  this%po_tgt, &
            &               this%pib_tgt, this%pob_tgt, this%rif_tgt, this%rof_tgt ]

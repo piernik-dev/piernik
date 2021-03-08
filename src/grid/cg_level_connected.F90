@@ -903,7 +903,8 @@ contains
       use mpisetup,         only: err_mpi, req, inflate_req, master
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
       use named_array_list, only: qna, wna
-      use ppp,              only: ppp_main, piernik_Waitall
+      use ppp,              only: ppp_main
+      use ppp_mpi,          only: piernik_Waitall
 
       implicit none
 
@@ -1115,7 +1116,8 @@ contains
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
       use mpisetup,         only: err_mpi, req, inflate_req, master
       use named_array_list, only: qna, wna
-      use ppp,              only: ppp_main, piernik_Waitall
+      use ppp,              only: ppp_main
+      use ppp_mpi,          only: piernik_Waitall
 
       implicit none
 
@@ -1426,7 +1428,7 @@ contains
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
       use named_array,      only: p3, p4
       use named_array_list, only: qna, wna
-      use ppp,              only: piernik_Waitall
+      use ppp_mpi,          only: piernik_Waitall
 
       implicit none
 

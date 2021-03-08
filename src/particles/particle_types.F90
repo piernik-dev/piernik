@@ -1,0 +1,313 @@
+!
+! PIERNIK Code Copyright (C) 2006 Michal Hanasz
+!
+!    This file is part of PIERNIK code.
+!
+!    PIERNIK is free software: you can redistribute it and/or modify
+!    it under the terms of the GNU General Public License as published by
+!    the Free Software Foundation, either version 3 of the License, or
+!    (at your option) any later version.
+!
+!    PIERNIK is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!    GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License
+!    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
+!
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
+!    Ue-Li Pen
+!        see: Pen, Arras & Wong (2003) for algorithm and
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
+!    For full list of developers see $PIERNIK_HOME/license/pdt.txt
+!
+#include "piernik.h"
+
+!>  \brief Types for selfgravitating particles
+
+module particle_types
+! pulled by GRAV
+   use constants, only: ndims
+
+   implicit none
+
+   private
+   public :: particle, particle_set, particle_data
+
+   !>
+   !! \brief simple particle: just mass and position
+   !!
+   !! \todo Extend it a bit
+   !<
+
+   type :: particle_data
+     integer(kind=4)        :: pid        !< particle ID
+     real                   :: mass       !< mass of the particle
+     real, dimension(ndims) :: pos        !< physical position
+     real, dimension(ndims) :: vel        !< particle velocity
+     real, dimension(ndims) :: acc        !< acceleration of the particle
+     real                   :: energy     !< total energy of particle
+     logical                :: in, phy, out !< Flags to locate particle in the inner part of the domain or the outer part
+     logical                :: outside    !< this flag is true if the particle is outside the domain
+   contains
+     procedure :: is_outside              !< compute the outside flag
+   end type particle_data
+
+   type :: particle
+      type(particle_data), pointer :: pdata !< list of particle data
+      type(particle), pointer :: prv, nxt !< pointers to previous and next particle
+   end type particle
+
+   !> \brief A list of particles and some associated methods
+   type :: particle_set
+      type(particle), pointer :: first
+      type(particle), pointer :: last
+      integer(kind=4) :: cnt                  !< number of chain links
+   contains
+      procedure :: init        !< initialize the list
+      procedure :: print       !< print the list
+      procedure :: cleanup     !< delete the list
+      procedure :: remove      !< remove a particle
+      !procedure :: merge_parts !< merge two particles
+      procedure :: add_part_list   !< add a particle
+      !procedure :: particle_with_id_exists  !< Check if particle no. "i" exists
+      !generic, public :: exists => particle_with_id_exists
+      generic, public :: add => add_part_list
+   end type particle_set
+
+contains
+
+!> \brief compute the outside flag
+
+   subroutine is_outside(this)  ! TO DO: CHECK if this is always the needed definition of outside (with boundary cells)
+
+      use constants, only: LO, HI
+      use domain,    only: dom
+
+      implicit none
+
+      class(particle_data), intent(inout) :: this     !< an object invoking the type-bound procedure
+
+      this%outside = any(dom%has_dir(:) .and. (this%pos(:) < dom%edge(:, LO) .or. this%pos(:) >= dom%edge(:, HI)))
+      ! Inequalities above must match the rounding function used in map routine (floor() includes bottom edge, but excludes top edge)
+
+   end subroutine is_outside
+
+!> \brief initialize the list with 0 elements
+
+   subroutine init(this)
+
+      implicit none
+
+      class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
+      !character(len=*), intent(in)    :: label !< name of the list
+
+      this%first => null()
+      this%last  => null()
+      this%cnt   =  0
+
+   end subroutine init
+
+!> \brief print the list
+
+   subroutine print(this)
+
+      use dataio_pub, only: msg, printinfo, warn
+      use mpisetup,   only: master, proc, FIRST, LAST
+
+      implicit none
+
+      class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
+
+      integer :: i
+      type(particle), pointer :: pp
+
+      if (this%cnt < 0) call warn("[particle_types:print] this%cnt < 0")
+      if (associated(this%first) .neqv. associated(this%last)) call warn("[particle_types:print] associated(this%first) .neqv. associated(this%last)")
+      if (this%cnt > 0 .and. .not. associated(this%first)) call warn("[particle_types:print] this%cnt > 0 .and. .not. associated(this%first)")
+      if (this%cnt > 0 .and. .not. associated(this%last))  call warn("[particle_types:print] this%cnt > 0 .and. .not. associated(this%last)")
+      if (this%cnt <= 0 .and. (associated(this%first) .or. associated(this%last))) call warn("[particle_types:print] <=0 .and. (associated(this%first) .or. associated(this%last))")
+
+      if (master) call printinfo("[particle_types:print] Known particles:")
+      do i = FIRST, LAST
+         if (proc == i) then
+            write(msg, '(a,a12,2(a,a36),2a)')" #number   : ","mass"," [ ","position"," ] [ ","velocity"," ]  is_outside, prv, nxt"
+            call printinfo(msg)
+            if (associated(this%first)) then
+               pp => this%first
+               do while (associated(pp))
+                  call prntline
+                  pp => pp%nxt
+               enddo
+            else if (associated(this%last)) then
+               call warn("[particle_types:print] Going backward")
+               do while (associated(pp))
+                  call prntline
+                  pp => pp%prv
+               enddo
+            else
+               if (this%cnt > 0) then
+                  write(msg, '(i6,a)')this%cnt, " particles missing in the set"
+                  call printinfo(msg)
+               endif
+            endif
+         endif
+      enddo
+
+   contains
+
+      subroutine prntline
+
+         use constants, only: INVALID
+
+         implicit none
+
+         integer :: ip, in
+
+         ip = INVALID
+         if (associated(pp%prv)) ip = pp%prv%pdata%pid
+         in = INVALID
+         if (associated(pp%nxt)) in = pp%nxt%pdata%pid
+
+         write(msg, '(a,i7,a,g12.3,2(a,3g12.3),a,l11,2i5)')" # ",pp%pdata%pid," : ",pp%pdata%mass," [ ",pp%pdata%pos," ] [ ",pp%pdata%vel," ] ",pp%pdata%outside, ip, in
+         call printinfo(msg)
+
+      end subroutine prntline
+
+   end subroutine print
+
+!> \brief delete the list
+
+   subroutine cleanup(this)
+
+      implicit none
+
+      class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
+
+      type(particle), pointer :: pp
+
+      do while (associated(this%first))
+         pp => this%last
+         call this%remove(pp) ! cannot just pass this%last because it will change after un_link and wrong element will be deallocated
+      enddo
+
+    end subroutine cleanup
+
+!> \brief Add a particle to the list
+
+
+    subroutine add_part_list(this, pid, mass, pos, vel, acc, energy, in, phy, out)
+
+      use constants,  only: I_ONE
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
+      type(particle_data), pointer       :: part     !< new particle
+      type(particle),      pointer       :: new
+      integer(kind=4),        intent(in) :: pid
+      real, dimension(ndims), intent(in) :: pos, vel
+      real, dimension(ndims), intent(in) :: acc
+      real,                   intent(in) :: energy
+      real,                   intent(in) :: mass
+      logical                            :: in,phy,out
+
+      allocate(new)
+      allocate(part)
+            new%pdata => part
+            new%pdata%pid = pid
+            new%pdata%mass = mass
+            new%pdata%pos = pos
+            new%pdata%vel = vel
+            new%pdata%acc = acc
+            new%pdata%energy = energy
+            new%pdata%in = in
+            new%pdata%phy = phy
+            new%pdata%out = out
+            new%pdata%outside = .false.
+      new%nxt => null()
+
+      if (.not. associated(this%first)) then ! the list was empty
+         if (associated(this%last)) call die("[particle_types:add_part_list] last without first")
+         this%first => new
+         new%prv => null()
+      else
+         if (.not. associated(this%last)) call die("[particle_types:add_part_list] first without last")
+         this%last%nxt => new
+         new%prv => this%last
+      endif
+
+      this%last => new
+      this%cnt = this%cnt + I_ONE
+
+    end subroutine add_part_list
+
+
+!> \brief Remove a particle number id from the list
+
+   subroutine remove(this, pset)
+
+      use constants,  only: I_ONE
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(particle_set),     intent(inout) :: this !< an object invoking the type-bound procedure
+      type(particle), pointer, intent(inout) :: pset
+
+      if (.not. associated(pset)) call die("[particle removal] tried to remove null() element")
+      if (.not. associated(this%first)) call die("[particle removal] this%cnt <=0 .and. associated(this%first)")
+
+      if (associated(this%first, pset)) this%first => this%first%nxt
+      if (associated(this%last,  pset)) this%last  => this%last%prv
+      if (associated(pset%prv)) pset%prv%nxt => pset%nxt
+      if (associated(pset%nxt)) pset%nxt%prv => pset%prv
+      deallocate(pset%pdata)
+      deallocate(pset)
+      this%cnt = this%cnt - I_ONE
+   end subroutine remove
+
+!>
+!! \brief Merge two particles
+!!
+!! \todo consider implementation as overloading of the (+) operator
+!<
+
+!   subroutine merge_parts(this, id1, id2)
+
+!      implicit none
+
+!      class(particle_set), intent(inout) :: this !< an object invoking the type-bound procedure
+!      integer,             intent(in)    :: id1  !< position of the first particle in the array of particles (particle to be replaced by the merger)
+!      integer,             intent(in)    :: id2  !< position of the second partilce in the array of particles (particle to be removed)
+!
+!      type(particle) :: merger
+!
+!      merger%mass = this%p(id1)%mass + this%p(id2)%mass
+!      merger%pos  = (this%p(id1)%mass*this%p(id1)%pos + this%p(id2)%mass*this%p(id2)%pos) / merger%mass ! CoM
+!
+!      this%p(id1) = merger
+!      call this%p(id1)%is_outside
+!      call this%remove(id2)
+
+!   end subroutine merge_parts
+
+!   function particle_with_id_exists(this, id) result (tf)
+
+!      implicit none
+
+!      class(particle_set), intent(inout) :: this
+!      integer,             intent(in)    :: id
+
+!      logical :: tf
+
+!      tf = allocated(this%p)
+!      if (tf) tf = (id >= lbound(this%p, dim=1)) .and. (id <= ubound(this%p, dim=1))
+
+!   end function particle_with_id_exists
+
+end module particle_types

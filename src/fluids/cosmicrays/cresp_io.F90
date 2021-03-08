@@ -58,7 +58,7 @@ module cresp_io
 
       integer(HID_T), intent(in) :: file_id
       integer(HID_T)             :: g_id, g_id_cresp
-      integer                    :: error, i
+      integer(kind=4)            :: error, i
 
       call h5gcreate_f(file_id, n_g_cresp, g_id_cresp, error)
          do i = LO, HI
@@ -94,7 +94,7 @@ module cresp_io
       logical                                  :: file_exist, has_group, has_dset
       integer(HID_T)                           :: file_id
       character(len=*),             intent(in) :: filename
-      integer                                     :: error
+      integer(kind=4)                          :: error
       real, dimension(:,:), target, intent(inout) :: smap_data
 
       call check_file_group(filename, "/cresp", file_exist, has_group) ! Assumption: if H5 file has "/cresp" group, other fields should be present
@@ -143,7 +143,7 @@ module cresp_io
       character(len=*),             intent(in) :: dsname, path
       integer(HID_T),               intent(in) :: file_id
       integer(HID_T)                           :: group_id
-      integer                                  :: error
+      integer(kind=4)                          :: error
       real, dimension(:,:), pointer            :: pdsdata
 
       call h5gopen_f(file_id, path, group_id, error)
@@ -159,6 +159,7 @@ module cresp_io
 !
    subroutine save_NR_smap(NR_smap, hdr, vname, bc)
 
+      use constants,        only: I_ONE
       use cresp_helpers,    only: bound_name, extension, flen, map_header
 
       implicit none
@@ -178,7 +179,7 @@ module cresp_io
 
          write(flun, "(1E15.8, 2I10,10E22.15)") hdr%s_es, hdr%s_dim1, hdr%s_dim2, hdr%s_pr, hdr%s_qbig, hdr%s_c, hdr%s_amin, hdr%s_amax, hdr%s_nmin, hdr%s_nmax
          write(flun, "(A1)") " "                             ! Blank line
-         do j=1, size(NR_smap,dim=2)
+         do j = I_ONE, size(NR_smap, dim=2, kind=4)
             write(flun, "(*(E24.15E3))") NR_smap(:,j)  ! WARNING - MIGHT NEED EXPLICIT ELEMENT COUNT IN LINE IN OLDER COMPILERS
          enddo
          close(flun)
@@ -188,6 +189,7 @@ module cresp_io
 !> \brief Read solution map from an ASCII file ! DEPRECATED
    subroutine read_NR_smap(NR_smap, vname, bc, exit_code)
 
+      use constants,       only: I_ONE
       use cresp_helpers,   only: bound_name, extension, flen
       use dataio_pub,      only: msg, warn
 
@@ -211,7 +213,7 @@ module cresp_io
          read(flun, *) ! Skipping comment line
          read(flun, *) ! Skipping header
          read(flun, *) ! Skipping blank line
-         do j=1, size(NR_smap, dim=2)
+         do j = I_ONE, size(NR_smap, dim=2, kind=4)
             read(flun, "(*(E24.15E3))", IOSTAT=rstat) NR_smap(:,j)  ! WARNING - THIS MIGHT NEED EXPLICIT INDICATION OF ELEMENTS COUNT IN LINE IN OLDER COMPILERS
          enddo
          exit_code = .false.
@@ -317,7 +319,7 @@ module cresp_io
 
       implicit none
 
-      integer                                    :: error
+      integer(kind=4)                            :: error
       integer(HID_T)                             :: file_id
       character(len=cwdlen)                      :: filename
       character(len=*), optional,     intent(in) :: filename_opt
@@ -369,7 +371,8 @@ module cresp_io
 
       implicit none
 
-      integer                                               :: i, ia, error
+      integer                                               :: i, ia
+      integer(kind=4)                                       :: error
       integer(HID_T),                            intent(in) :: file_id
       type(map_header), dimension(2), optional, intent(out) :: hdr_out
       integer(kind=4),  dimension(2)                        :: ibuf
@@ -428,7 +431,7 @@ module cresp_io
       integer(HID_T)                           :: dset_id
       character(len=*),             intent(in) :: dsetname
       integer(HID_T),               intent(in) :: file_id
-      integer                                  :: error
+      integer(kind=4)                          :: error
       real, dimension(:,:),            pointer :: pa2d
       integer(HSIZE_T), dimension(2)           :: pa2ddims
 
@@ -477,7 +480,7 @@ module cresp_io
                         &     h5gclose_f, h5gopen_f, h5eset_auto_f, h5open_f
       implicit none
 
-      integer                       :: error
+      integer(kind=4)               :: error
       integer(HID_T)                :: file_id, group_id
       character(len=*), intent(in)  :: filename, groupname
 
@@ -505,7 +508,7 @@ module cresp_io
                         &  h5fopen_f, h5dclose_f, h5eset_auto_f, h5open_f
       implicit none
 
-      integer                       :: error
+      integer(kind=4)               :: error
       integer(HID_T)                :: file_id, dset_id
       character(len=*), intent(in)  :: filename, dsname
 

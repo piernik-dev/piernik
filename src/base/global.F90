@@ -191,7 +191,12 @@ contains
 
       cflcontrol  = 'warn'
       interpol_str = 'linear'
+
+#ifdef NBODY
+      repeat_step = .false.
+#else /* !NBODY */
       repeat_step = .true.
+#endif /* !NBODY */
       geometry25D = .false.
       no_dirty_checks = .false.
 #ifdef MAGNETIC
@@ -364,6 +369,10 @@ contains
          ord_fluid_prolong    = ibuff(4)
 
       endif
+
+#ifdef NBODY
+      if (master .and. repeat_step) call warn("[global:init_global] repeat_step unsupported by NBODY (particles aren't implemented yet).")
+#endif /* NBODY */
 
       select case (solver_str)
          case ("")  ! leave the default
