@@ -244,7 +244,7 @@ contains
       use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD, &
            &                        MPI_Alltoall, MPI_Isend, MPI_Recv
       use mpisetup,           only: FIRST, LAST, err_mpi, proc, req, inflate_req
-      use ppp,                only: piernik_Waitall
+      use ppp_mpi,            only: piernik_Waitall
 
       implicit none
 

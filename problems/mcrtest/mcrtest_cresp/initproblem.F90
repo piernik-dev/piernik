@@ -218,7 +218,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         call cg%set_constant_b_field([bx0, by0, bz0])
+         call cg%set_constant_b_field([bx0, by0, bz0])  ! this acts only inside cg%ijkse box
          cg%u(fl%idn,:,:,:) = d0
          cg%u(fl%imx:fl%imz,:,:,:) = 0.0
 #ifdef IONIZED
@@ -227,9 +227,9 @@ contains
             write(msg,*) '[initproblem:problem_initial_conditions] setting up expansion/compression, expansion_cnst = ',expansion_cnst
             call printinfo(msg)
 
-            do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-               do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-                  do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
                      cg%u(flind%ion%imx,i,j,k) = cg%u(flind%ion%idn,i,j,k) * (cg%x(i)-x0) * expansion_cnst  !< vxd0 * rho
                      cg%u(flind%ion%imy,i,j,k) = cg%u(flind%ion%idn,i,j,k) * (cg%y(j)-y0) * expansion_cnst  !< vyd0 * rho
                      cg%u(flind%ion%imz,i,j,k) = cg%u(flind%ion%idn,i,j,k) * (cg%z(k)-z0) * expansion_cnst  !< vzd0 * rho
@@ -244,9 +244,9 @@ contains
 #endif /* IONIZED */
 
 #ifndef ISO
-         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
                   cg%u(fl%ien,i,j,k) = p0/fl%gam_1 + &
                        &               ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
                        &               emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))

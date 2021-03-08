@@ -36,7 +36,7 @@ module data_hdf5
    implicit none
 
    private
-   public :: init_data, write_hdf5
+   public :: init_data, write_hdf5, gdf_translate
 
    interface
       subroutine h5_write
@@ -191,6 +191,30 @@ contains
 #else /* !MAGNETIC */
                newname = "Mach_number"
 #endif /* MAGNETIC */
+#ifdef NBODY
+            case ("ppid")
+               newname="id"
+            case ("ener")
+               newname="energy"
+            case ("posx")
+               newname="position_x"
+            case ("posy")
+               newname="position_y"
+            case ("posz")
+               newname="position_z"
+            case ("velx")
+               newname="velocity_x"
+            case ("vely")
+               newname="velocity_y"
+            case ("velz")
+               newname="velocity_z"
+            case ("accx")
+               newname="acceleration_x"
+            case ("accy")
+               newname="acceleration_y"
+            case ("accz")
+               newname="acceleration_z"
+#endif /* NBODY */
             case default
                write(newname, '(A)') trim(var)
          end select
@@ -517,6 +541,9 @@ contains
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: unmark_oldsoln
 #endif /* MULTIGRID && SELF_GRAV */
+#ifdef NBODY_1FILE
+!      use particles_io_hdf5, only: write_nbody_hdf5
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -554,6 +581,10 @@ contains
       endif
       call report_to_master(sig%hdf_written, only_master=.True.)
       call report_string_to_master(fname, only_master=.True.)
+#ifdef NBODY_1FILE
+!      call write_nbody_hdf5(fname)
+#endif /* NBODY_1FILE */
+
       call ppp_main%stop(wrd_label, PPP_IO)
 
    end subroutine h5_write_to_single_file
@@ -600,6 +631,13 @@ contains
       use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
       use mpisetup,    only: master, FIRST, proc, err_mpi, tag_ub
       use ppp,         only: ppp_main
+#ifdef NBODY_1FILE
+      use cg_particles_io, only: pdsets, nbody_datafields
+      use domain,          only: is_multicg
+      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8
+      use mpisetup,        only: LAST
+      use particle_utils,  only: count_all_particles
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -618,13 +656,22 @@ contains
       type(cg_list_element),           pointer             :: cgl
       real, dimension(:,:,:),          pointer             :: data_dbl ! double precision buffer (internal default, single precision buffer is the plotfile output default, overridable by h5_64bit)
       type(cg_output)                                      :: cg_desc
+#ifdef NBODY_1FILE
+      integer(kind=4)                                      :: n_part
+      integer(HID_T)                                       :: id
+      integer(HID_T), dimension(LAST+1)                    :: tmp
+#endif /* NBODY_1FILE */
       character(len=*), parameter :: wrdc_label = "IO_write_data_v2_cg", wrdc1s_label = "IO_write_data_v2_1cg_(serial)", wrdc1p_label = "IO_write_data_v2_1cg_(parallel)"
 
       call ppp_main%start(wrdc_label, PPP_IO)
 
       if (nstep - nstep_start < 1) call enable_all_hdf_var  ! just in case things have changed meanwhile
 
+#ifdef NBODY_1FILE
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(pack(hdf_vars, hdf_vars_avail)), gdf_translate(pdsets))
+#else
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(pack(hdf_vars, hdf_vars_avail)))
+#endif /* NBODY_1FILE */
 
       if (cg_desc%tot_cg_n < 1) call die("[data_hdf5:write_cg_to_output] no cg available!")
 
@@ -672,8 +719,34 @@ contains
                   enddo
                endif
             endif
+            !Serial write for particles
             call ppp_main%stop(wrdc1s_label, PPP_IO + PPP_CG)
          enddo
+#ifdef NBODY_1FILE
+         n_part = count_all_particles()
+         if (n_part .gt. 0) then
+            if (is_multicg) call die("[data_hdf5:write_cg_to_output] multicg is not implemented for NBODY_1FILE")
+            do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
+               tmp(:) = 0
+               id=0
+               if (master) then
+                  tmp(:) = cg_desc%pdset_id(:, i)
+               endif
+               if (kind(id) == 4) then
+                  call MPI_Scatter(tmp, 1, MPI_INTEGER, id, 1, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
+               else if (kind(id) == 8) then
+                  call MPI_Scatter(tmp, 1, MPI_INTEGER8, id, 1, MPI_INTEGER8, FIRST, MPI_COMM_WORLD, err_mpi)
+               else
+                  call die("[data_hdf5:write_cg_to_output] no recognized kind of HID_T")
+               endif
+               if (master) then
+                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
+               else
+                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
+               endif
+            enddo
+         endif
+#endif /* NBODY_1FILE */
       else ! perform parallel write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
          if (can_i_write) then
@@ -700,6 +773,15 @@ contains
                      call h5dwrite_f(cg_desc%dset_id(ncg, ip), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, xfer_prp = cg_desc%xfer_prp)
                   endif
                enddo
+
+#ifdef NBODY_1FILE
+               n_part = count_all_particles()
+               if (n_part .gt. 0) then
+                  do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
+                     call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), n_part)
+                  enddo
+               endif
+#endif /* NBODY_1FILE */
 
                cgl => cgl%nxt
                call ppp_main%stop(wrdc1p_label, PPP_IO + PPP_CG)
@@ -834,10 +916,17 @@ contains
 
    end subroutine get_data_from_cg
 
+#ifdef NBODY_1FILE
+   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)
+#else
    subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail)
+#endif /* NBODY_1FILE */
 
       use common_hdf5, only: create_empty_cg_dataset, hdf_vars, hdf_vars_avail, O_OUT
       use hdf5,        only: HID_T, HSIZE_T
+#ifdef NBODY_1FILE
+      use cg_particles_io, only: pdsets
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -847,6 +936,10 @@ contains
       logical(kind=4),               intent(in) :: Z_avail
 
       integer :: i
+#ifdef NBODY_1FILE
+      integer(kind=8)                           :: n_part
+      integer(HID_T),                intent(in) :: st_g_id
+#endif /* NBODY_1FILE */
 
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
          if (.not.hdf_vars_avail(i)) cycle
@@ -854,6 +947,12 @@ contains
       enddo
 
       if (.false.) i = size(cg_n_o) ! suppress compiler warning
+
+#ifdef NBODY_1FILE
+      do i = lbound(pdsets,1), ubound(pdsets,1)
+         call create_empty_cg_dataset(st_g_id, gdf_translate(pdsets(i)), (/n_part/), Z_avail, O_OUT)
+      enddo
+#endif /* NBODY_1FILE */
 
    end subroutine create_empty_cg_datasets_in_output
 

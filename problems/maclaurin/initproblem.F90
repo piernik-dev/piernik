@@ -97,9 +97,12 @@ contains
       use mpisetup,              only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
       use multigridvars,         only: ord_prolong
       use named_array_list,      only: wna
-      use particle_pub,          only: pset
       use unified_ref_crit_list, only: urc_list
       use user_hooks,            only: ext_bnd_potential
+#ifdef NBODY
+      use constants,             only: I_ONE
+      use particle_utils,        only: add_part_in_proper_cg
+#endif /* NBODY */
 
       implicit none
 
@@ -201,7 +204,9 @@ contains
          nsub = maxsub
       endif
 
-      if (a1 .equals. 0.) call pset%add(d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0])
+#ifdef NBODY
+      if (a1 .equals. 0.) call add_part_in_proper_cg(I_ONE, d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
+#endif /* NBODY */
 
       if (master) then
          if (a1 > 0.) then

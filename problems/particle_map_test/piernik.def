@@ -7,3 +7,4 @@
 #endif
 
 #define GRAV
+#define NBODY

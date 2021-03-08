@@ -304,7 +304,8 @@ contains
       use MPIF,             only: MPI_STATUS_IGNORE, MPI_Waitany
       use mpisetup,         only: err_mpi, req
       use named_array_list, only: qna, wna
-      use ppp,              only: ppp_main, piernik_Waitall
+      use ppp,              only: ppp_main
+      use ppp_mpi,          only: piernik_Waitall
       use solvecg_rtvd,     only: solve_cg_rtvd
       use solvecg_riemann,  only: solve_cg_riemann
       use sources,          only: prepare_sources

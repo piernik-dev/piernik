@@ -124,6 +124,10 @@ contains
       use dataio_pub,         only: printinfo
       use piernikdebug,       only: has_const_dt, constant_dt
 #endif /* DEBUG */
+#ifdef NBODY
+      use particle_timestep,    only: timestep_nbody
+#endif /* NBODY */
+
       implicit none
 
       real,              intent(inout) :: dt    !< the timestep
@@ -169,6 +173,10 @@ contains
 
       call piernik_MPI_Allreduce(dt,    pMIN)
       call piernik_MPI_Allreduce(c_all, pMAX)
+
+#ifdef NBODY
+      call timestep_nbody(dt)
+#endif /* NBODY */
 
       ! finally apply some sanity factors
       if (nstep < 1) then
