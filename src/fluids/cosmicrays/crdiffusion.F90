@@ -183,7 +183,7 @@ contains
       use dataio_pub,       only: die
       use domain,           only: dom
       use fluidindex,       only: flind
-      use global,           only: dt, cc_mag
+      use global,           only: dt
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crs, K_crs_paral, K_crs_perp
       use named_array,      only: p4
