@@ -89,7 +89,7 @@ contains
       integer(hid_t)                             :: faplist_id
       integer(kind=SIZE_T)                       :: increment
       logical(kind=4)                            :: backing_store
-      integer(kind=4)                            :: hdferr
+      integer(kind=4)                            :: hdferr  !< hdferr perhaps should be of type integer(HID_T)
 
       increment = default_increment
       backing_store = default_backing_store
@@ -129,7 +129,7 @@ contains
       integer(kind=4), dimension(:,:), pointer, intent(in) :: ddata !< data used to create dataset
 
       integer(HID_T)                                       :: dset, space, mem_type
-      integer(kind=4)                                      :: hdferr
+      integer(kind=4)                                      :: hdferr  !< hdferr perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(2)                       :: dims
       type(c_ptr)                                          :: f_ptr
 
@@ -160,7 +160,7 @@ contains
       integer(kind=8), dimension(:,:), pointer, intent(in) :: ddata !< data used to create dataset
 
       integer(HID_T)                                       :: dset, space, mem_type
-      integer(kind=4)                                      :: hdferr
+      integer(kind=4)                                      :: hdferr !< hdferr perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(2)                       :: dims
       type(c_ptr)                                          :: f_ptr
 
@@ -191,7 +191,7 @@ contains
       integer(kind=4), dimension(:), pointer, intent(in) :: ddata !< data used to create dataset
 
       integer(HID_T)                                     :: dset, space, mem_type
-      integer(kind=4)                                    :: hdferr
+      integer(kind=4)                                    :: hdferr !< hdferr perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(1)                     :: dims
       type(c_ptr)                                        :: f_ptr
 
@@ -222,7 +222,7 @@ contains
       integer(kind=8), dimension(:), pointer, intent(in) :: ddata !< data used to create dataset
 
       integer(HID_T)                                     :: dset, space, mem_type
-      integer(kind=4)                                    :: hdferr
+      integer(kind=4)                                    :: hdferr !< hdferr perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(1)                     :: dims
       type(c_ptr)                                        :: f_ptr
 
@@ -252,7 +252,7 @@ contains
       real(kind=8),                           intent(in) :: ddata !< data used to create dataset
 
       integer(HID_T)                                     :: dset, space
-      integer(kind=4)                                    :: hdferr
+      integer(kind=4)                                    :: hdferr !< hdferr perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(1)                     :: dims
 
       dims(1) = -99
@@ -309,7 +309,7 @@ contains
       integer(kind=4), dimension(:), intent(in) :: int_array !< the data
 
       integer(HID_T)                            :: aspace_id, attr_id
-      integer(kind=4)                           :: error
+      integer(kind=4)                           :: error     !< error perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(I_ONE)        :: dims
 
       dims(I_ONE) = size(int_array, kind=HSIZE_T)
@@ -336,7 +336,7 @@ contains
       integer(kind=8), dimension(:), pointer, intent(in) :: int_array !< the data
 
       integer(HID_T)                                     :: attr, space, mem_type
-      integer(kind=4)                                    :: hdferr
+      integer(kind=4)                                    :: hdferr    !< hdferr perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(I_ONE)                 :: dims
       type(c_ptr)                                        :: f_ptr
 
@@ -365,7 +365,7 @@ contains
       real(kind=8), dimension(:), intent(in) :: real_array !< the data
 
       integer(HID_T)                         :: aspace_id, attr_id
-      integer(kind=4)                        :: error
+      integer(kind=4)                        :: error      !< error perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(I_ONE)     :: dims
 
       dims = shape(real_array)
@@ -391,7 +391,7 @@ contains
       real(kind=8),               intent(in) :: real_data !< the data
 
       integer(HID_T)                         :: aspace_id, attr_id
-      integer(kind=4)                        :: error
+      integer(kind=4)                        :: error      !< error perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(I_ONE)     :: dims
 
       dims = -99
@@ -419,7 +419,7 @@ contains
       character(len=*), intent(in), pointer :: data !< the data
 
       integer(HID_T)                        :: space, attr_id, memtype, filetype
-      integer(kind=4)                       :: error
+      integer(kind=4)                       :: error !< error perhaps should be of type integer(HID_T)
       type(c_ptr)                           :: f_ptr
       integer(HSIZE_T), dimension(I_ONE)    :: dims
 

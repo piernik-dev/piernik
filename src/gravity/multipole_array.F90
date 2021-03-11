@@ -175,6 +175,7 @@ contains
          enddo
       endif
 
+      this%drq = maxval(dom%L_(:))
       cgl => fbl%first
       if (associated(cgl)) then
          select case (dom%geometry_type)
@@ -185,9 +186,8 @@ contains
             case default
                call die("[multipole_array:refresh] Unsupported geometry.")
          end select
-      else
-         this%drq = maxval(dom%L_(:))
       endif
+
       call piernik_MPI_Allreduce(this%drq, pMIN)
 
       if (size_factor <= 0.) then
@@ -227,6 +227,7 @@ contains
 
       if (allocated(this%Q)) deallocate(this%Q)
       allocate(this%Q(0:this%lm(int(this%lmax), int(2*this%mmax)), INSIDE:OUTSIDE, -1:this%rqbin))
+      if ((size(this%Q) >= 2_8**(31-3) .or. size(this%Q) < 0) .and. master) call warn("[multipole_array:refresh] this%Q grew beyond 2 GB. Expect MPI errors")
 
       if (allocated(this%i_r)) then
          this%pr_log = (this%rqbin - 1 /= ubound(this%i_r, 1))

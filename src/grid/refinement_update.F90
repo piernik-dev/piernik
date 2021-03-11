@@ -92,6 +92,9 @@ contains
          call piernik_MPI_Allreduce(cnt(URC), pSUM)
       endif
 
+      ! ToDo: exploit dot for making corrections
+      ! if dot is complete then correction can be done in one step
+
       ! Transform refinement requests on non-leaf parts of the grid into derefinement inhibitions on child grids to avoid refinement flickering
       call parents_prevent_derefinement
       call sanitize_ref_flags  ! it can be converted to URC routine but it must be guaranteed that it goes after all refinement mark routines
@@ -513,6 +516,9 @@ contains
       call piernik_MPI_Allreduce(correct, pLAND)
       nciter = 0
       do while (.not. correct)
+         ! exploit dot and iterate only when dot is not complete
+         ! perform quick dot-based checks instead of wa workaround
+         ! warn if dot%is_complete and any corrections were required
 
          call all_cg%prevent_prolong
 

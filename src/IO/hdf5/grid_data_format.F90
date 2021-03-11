@@ -120,7 +120,7 @@ contains
       type(gdf_parameters_t), intent(in) :: sp         !< container for simulation parameters
 
       integer(HID_T)                     :: g_id
-      integer(kind=4)                    :: error
+      integer(kind=4)                    :: error      !< error perhaps should be of type integer(HID_T)
 
       call h5gcreate_f(file_id, 'simulation_parameters', g_id, error)
       call create_attribute(g_id, 'refine_by', sp%refine_by)
@@ -148,7 +148,7 @@ contains
 
       integer(HID_T), intent(in) :: file
       integer(HID_T)             :: g_id
-      integer(kind=4)            :: error
+      integer(kind=4)            :: error !< error perhaps should be of type integer(HID_T)
 
       character(len=*), parameter :: gname = 'gridded_data_format'
       character(len=*), parameter :: gname2 = '/gridded_data_format'

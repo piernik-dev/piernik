@@ -161,6 +161,8 @@ contains
 !! \brief Linear interpolation scheme for estimating left and right states on cell interfaces.
 !!
 !! Note that the arrays with left and right states are one cell shorter because we don't have enough knowledge to compute complete interface states at both vector ends.
+!!
+!! OPT: it looks like vectors longer than 1000 elements tend to be slower than shorter ones
 !<
 
   subroutine linear(q, ql, qr, f_limiter)
