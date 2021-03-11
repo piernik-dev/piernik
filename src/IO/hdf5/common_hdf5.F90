@@ -844,6 +844,8 @@ contains
 #ifdef NBODY_1FILE
       use constants,      only: I_FIVE
       use particle_utils, only: count_all_particles
+#else /* !NBODY_1FILE */
+      use constants,      only: I_ZERO
 #endif /* NBODY_1FILE */
 
       implicit none
@@ -1057,6 +1059,8 @@ contains
                   if (int(n_part, kind=4) /= n_part) call die("[common_hdf5:write_to_hdf5_v2] n_part needs to be 64-bit")
 
                   rd%grid_particle_count(1,indx) = int(n_part, kind=4)
+#else /* !NBODY_1FILE */
+                  rd%grid_particle_count(1,indx) = I_ZERO
 #endif /* NBODY_1FILE */
                endif
 

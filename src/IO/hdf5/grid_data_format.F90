@@ -81,9 +81,7 @@ module gdf
       integer(kind=8),  dimension(:,:), pointer :: grid_left_index      !< global, relative to current level, and only the active region
       integer(kind=4),  dimension(:,:), pointer :: grid_dimensions      !< only the active regions
       integer(kind=4),  dimension(:),   pointer :: grid_level           !< level, indexed by zero
-#ifdef NBODY
       integer(kind=4),  dimension(:,:), pointer :: grid_particle_count  !< total number of particles.  (May change in subsequent versions.)
-#endif /* NBODY */
    contains
       procedure :: gdf_root_datasets_init_existing
       procedure :: gdf_root_datasets_init_new
@@ -108,9 +106,7 @@ contains
       call create_dataset(file, 'grid_left_index', rd%grid_left_index)
       call create_dataset(file, 'grid_level', rd%grid_level)
       call create_dataset(file, 'grid_parent_id', rd%grid_parent_id)
-#ifdef NBODY
       call create_dataset(file, 'grid_particle_count', rd%grid_particle_count)
-#endif /* NBODY */
    end subroutine gdf_create_root_datasets
 
    subroutine gdf_create_simulation_parameters(file_id, sp)
@@ -193,27 +189,19 @@ contains
 
    end subroutine gdf_create_root_group
 
-#ifdef NBODY
    subroutine gdf_root_datasets_init_existing(this, cg_all_n_b, cg_all_rl, cg_all_off, cg_all_parents, cg_all_particles)
-#else
-   subroutine gdf_root_datasets_init_existing(this, cg_all_n_b, cg_all_rl, cg_all_off, cg_all_parents)
-#endif /* NBODY */
       implicit none
       class(gdf_root_datasets_t),                intent(inout) :: this
       integer(kind=4),  dimension(:,:), pointer, intent(in)    :: cg_all_n_b       !> sizes of all cg
       integer(kind=4),  dimension(:),   pointer, intent(in)    :: cg_all_rl        !> refinement levels of all cgs
       integer(kind=8),  dimension(:,:), pointer, intent(in)    :: cg_all_off       !> offsets of all cgs
       integer(kind=8),  dimension(:),   pointer, intent(in)    :: cg_all_parents   !> parents IDs of all cgs
-#ifdef NBODY
       integer(kind=4),  dimension(:,:), pointer, intent(in)    :: cg_all_particles !> particles counts in all cgs
-#endif /* NBODY */
 
       allocate(this%grid_dimensions(size(cg_all_n_b,1), size(cg_all_n_b, 2)), source=cg_all_n_b)
       allocate(this%grid_left_index(size(cg_all_off,1), size(cg_all_off, 2)), source=cg_all_off)
       allocate(this%grid_level(size(cg_all_rl,1)), source=cg_all_rl)
-#ifdef NBODY
       allocate(this%grid_particle_count(size(cg_all_particles,1), size(cg_all_particles, 2)), source=cg_all_particles)
-#endif /* NBODY */
       allocate(this%grid_parent_id(size(cg_all_parents,1)), source=cg_all_parents)
    end subroutine gdf_root_datasets_init_existing
 
@@ -225,9 +213,7 @@ contains
       allocate(this%grid_dimensions(3, n))
       allocate(this%grid_left_index(3, n))
       allocate(this%grid_level(n))
-#ifdef NBODY
       allocate(this%grid_particle_count(1, n))
-#endif /* NBODY */
       allocate(this%grid_parent_id(n))
    end subroutine gdf_root_datasets_init_new
 
@@ -239,9 +225,7 @@ contains
       if (associated(this%grid_left_index)) deallocate(this%grid_left_index)
       if (associated(this%grid_level)) deallocate(this%grid_level)
       if (associated(this%grid_parent_id)) deallocate(this%grid_parent_id)
-#ifdef NBODY
       if (associated(this%grid_particle_count)) deallocate(this%grid_particle_count)
-#endif /* NBODY */
    end subroutine gdf_root_datasets_cleanup
 
    subroutine gdf_parameters_init(this)
