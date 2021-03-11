@@ -410,7 +410,7 @@ contains
       use cg_level_connected,    only: cg_level_connected_t
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
-      use constants,             only: pLOR, pLAND, pSUM, tmr_amr, PPP_AMR
+      use constants,             only: pLOR, pLAND, pSUM, pMAX, tmr_amr, PPP_AMR
       use dataio_pub,            only: die
       use global,                only: nstep
       use grid_cont,             only: grid_container
@@ -432,9 +432,9 @@ contains
       integer, optional, intent(out) :: act_count             !< counts number of blocks refined or deleted
       logical, optional, intent(in)  :: refinement_fixup_only !< When present and .true. then do not check refinement criteria, do only correction, if necessary.
 
-      integer :: nciter
+      integer :: nciter, top_level
       integer, parameter :: nciter_max = 100 ! should be more than refinement levels
-      logical :: some_refined, derefined
+      logical :: some_refined, derefined, ctop_exists, fu
       type(cg_list_element), pointer :: cgl, aux
       type(cg_level_connected_t), pointer :: curl
       type(grid_container),  pointer :: cg
@@ -468,6 +468,11 @@ contains
          curl => curl%coarser
       enddo
 
+      ! Maybe a bit overkill
+      fu = full_update
+      call piernik_MPI_Allreduce(fu, pLAND)
+      if (fu .neqv. full_update) call die("[refinement_update:update_refinement] inconsistent full_update")
+
       if (full_update) then
          call scan_for_refinements
 
@@ -487,6 +492,10 @@ contains
             enddo
 
             call finest%equalize
+
+            top_level = finest%level%l%id
+            call piernik_MPI_Allreduce(top_level, pMAX)
+            if (top_level /= finest%level%l%id) call die("[refinement_update:update_refinement] inconsistent top level (r)")
 
             call ppp_main%start(prol_label, PPP_AMR)
             !> \todo merge small blocks into larger ones
@@ -523,7 +532,17 @@ contains
          enddo
 
          call ppp_main%start(newref_label, PPP_AMR)
+
+         ! Maybe a bit overkill - call finest%equalize should've take care of that
+         top_level = finest%level%l%id
+         call piernik_MPI_Allreduce(top_level, pMAX)
+         if (top_level /= finest%level%l%id) call die("[refinement_update:update_refinement] inconsistent top level (c)")
+
          curl => finest%level%coarser
+         ctop_exists = associated(curl)
+         call piernik_MPI_Allreduce(ctop_exists, pLAND)
+         if (ctop_exists .neqv. associated(curl)) call die("[refinement_update:update_refinement] inconsistent coarser than top level")
+
          do while (associated(curl))
             if (curl%l%id >= base%level%l%id) then
 
@@ -573,7 +592,7 @@ contains
       ! Now try to derefine any excess of refinement.
       ! Derefinement saves memory and CPU usage, but it is of lowest priority.
       ! Just go through derefinement stage once and don't try to do too much here at once.
-      ! Any excess of refinement will be handled in next call to this routine anyway.
+      ! Any excess of refinement will be handled in the next call to this routine anyway.
       if (full_update) then
 
          call ppp_main%start(deref_label, PPP_AMR)
