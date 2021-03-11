@@ -411,7 +411,7 @@ contains
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
       use constants,             only: pLOR, pLAND, pSUM, tmr_amr, PPP_AMR
-      use dataio_pub,            only: warn, die
+      use dataio_pub,            only: die
       use global,                only: nstep
       use grid_cont,             only: grid_container
       use list_of_cg_lists,      only: all_lists
@@ -524,32 +524,34 @@ contains
 
          call ppp_main%start(newref_label, PPP_AMR)
          curl => finest%level%coarser
-         do while (associated(curl) .and. curl%l%id >= base%level%l%id)
+         do while (associated(curl))
+            if (curl%l%id >= base%level%l%id) then
 
-            some_refined = .false.
-            cgl => curl%first
-            do while (associated(cgl))
-               if (cgl%cg%flag%pending_blocks()) then
-                  if (finest%level%l%id <= cgl%cg%l%id) call warn("[refinement_update:update_refinement] growing too fast!")
-                  if (associated(curl%finer)) then
-                     call refine_one_grid(curl, cgl)
-                     if (present(act_count)) act_count = act_count + 1
-                     some_refined = .true.
-                  else
-                     call warn("[refinement_update:update_refinement] nowhere to add!")
+               some_refined = .false.
+               cgl => curl%first
+               do while (associated(cgl))
+                  if (cgl%cg%flag%pending_blocks()) then
+                     if (finest%level%l%id <= cgl%cg%l%id) call die("[refinement_update:update_refinement] growing too fast!")
+                     if (associated(curl%finer)) then
+                        call refine_one_grid(curl, cgl)
+                        if (present(act_count)) act_count = act_count + 1
+                        some_refined = .true.
+                     else
+                        call die("[refinement_update:update_refinement] nowhere to add!")
+                     endif
                   endif
-               endif
-               cgl => cgl%nxt
-            enddo
+                  cgl => cgl%nxt
+               enddo
 
-            call piernik_MPI_Allreduce(some_refined, pLOR)
-            if (some_refined) then
-               call curl%finer%init_all_new_cg
-               call curl%finer%sync_ru
-               call curl%deallocate_patches
-               !call finest%equalize
-               call curl%prolong
-               call all_cg%mark_orphans
+               call piernik_MPI_Allreduce(some_refined, pLOR)
+               if (some_refined) then
+                  call curl%finer%init_all_new_cg
+                  call curl%finer%sync_ru
+                  call curl%deallocate_patches
+                  !call finest%equalize
+                  call curl%prolong
+                  call all_cg%mark_orphans
+               endif
             endif
 
             curl => curl%coarser
