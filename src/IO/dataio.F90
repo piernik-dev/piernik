@@ -1546,12 +1546,13 @@ contains
       use constants,          only: MINL
 #endif /* COSM_RAYS || MAGNETIC */
 #ifdef MAGNETIC
-      use constants,          only: DIVB_HDC, RIEMANN_SPLIT
+      use all_boundaries,     only: all_mag_boundaries
+      use constants,          only: DIVB_HDC, RIEMANN_SPLIT, I_TWO
       use dataio_pub,         only: msg
+      use div_B,              only: divB, idivB
       use func,               only: sq_sum3
       use global,             only: cfl, divB_0_method, which_solver
       use hdc,                only: map_chspeed
-      use named_array_list,   only: wna
 #endif /* MAGNETIC */
 #ifdef RESISTIVE
       use resistivity,        only: etamax, cu2max, eta1_active
@@ -1591,9 +1592,11 @@ contains
       type(value)                                :: gpxmax, gpymax, gpzmax
       integer                                    :: var_i
 #endif /* VARIABLE_GP */
+#if defined VARIABLE_GP || defined COSM_RAY_ELECTRONS
+      real, dimension(:,:,:), pointer            :: p
+#endif /* VARIABLE_GP || COSM_RAY_ELECTRONS */
 #if defined VARIABLE_GP || defined MAGNETIC
       integer(kind=4), dimension(ndims,ndims,HI) :: D
-      real, dimension(:,:,:), pointer            :: p
 #endif /* VARIABLE_GP || MAGNETIC */
       character(len=idlen)                       :: id
       character(len=*), parameter :: log_label = "write_log"
@@ -1666,21 +1669,9 @@ contains
 #endif /* VARIABLE_GP */
 
 #ifdef MAGNETIC
-      cgl => leaves%first
-      do while (associated(cgl))
-         p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
-         p = (cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse+D(xdim,:,:)) - cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse))*cgl%cg%dy*cgl%cg%dz &
-            +(cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse+D(ydim,:,:)) - cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dz &
-            +(cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse+D(zdim,:,:)) - cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dy
-         cgl%cg%wa = abs(cgl%cg%wa)
-
-         cgl%cg%wa(cgl%cg%ie,:,:) = cgl%cg%wa(cgl%cg%ie-dom%D_x,:,:)
-         cgl%cg%wa(:,cgl%cg%je,:) = cgl%cg%wa(:,cgl%cg%je-dom%D_y,:)
-         cgl%cg%wa(:,:,cgl%cg%ke) = cgl%cg%wa(:,:,cgl%cg%ke-dom%D_z)
-
-         cgl => cgl%nxt ; NULLIFY(p)
-      enddo
-      call leaves%get_extremum(qna%wai, MAXL, divb_max)
+      call all_mag_boundaries  ! ToDo: check if it is really necessary
+      call divB(I_TWO)
+      call leaves%get_extremum(idivB, MAXL, divb_max)
 
       call map_chspeed
       call leaves%get_extremum(qna%wai, MAXL, ch_max)
