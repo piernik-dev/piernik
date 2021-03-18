@@ -59,7 +59,7 @@ contains
       integer(kind=4), dimension(:), intent(out) :: int_array !< the data
 
       integer(HID_T)                             :: attr_id
-      integer(kind=4)                            :: error
+      integer(kind=4)                            :: error         !< error perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(I_ONE)         :: dims
 
       !> \todo Implement size checks
@@ -84,7 +84,7 @@ contains
       real, dimension(:), intent(out)    :: real_array  !< the data
 
       integer(HID_T)                     :: attr_id
-      integer(kind=4)                    :: error
+      integer(kind=4)                    :: error       !< error perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(I_ONE) :: dims
 
       !> \todo Implement size checks

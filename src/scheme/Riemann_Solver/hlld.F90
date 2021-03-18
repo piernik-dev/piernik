@@ -163,7 +163,7 @@ contains
 
     use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien, DIVB_HDC, psidim
     use dataio_pub, only: die
-    use func,       only: operator(.notequals.), operator(.equals.)
+    use func,       only: operator(.notequals.), operator(.equals.)  ! OPT: ~15% speedup is expected by eliminating the use of these functions
     use global,     only: divB_0_method
     use hdc,        only: chspeed
 
@@ -627,7 +627,7 @@ contains
 
     use constants,  only: half, zero, xdim, ydim, zdim, idn, imx, imy, imz, ien
     use dataio_pub, only: die
-    use func,       only: operator(.equals.)
+    use func,       only: operator(.equals.)  ! OPT: ~7% speedup is expected by eliminating the use of this function
 #ifndef ISO
     use constants,  only: one
 #endif /* ISO */
@@ -757,7 +757,7 @@ contains
           ! Speed of contact discontinuity Eq. 38
           ! Total left and right states of pressure, so prr and prl sm_nr/sm_dr
 
-          if ((sr - ur(i, imx))*ur(i, idn) .equals. (sl - ul(i, imx))*ul(i, idn)) then
+          if ((sr - ur(i, imx))*ur(i, idn) .equals. (sl - ul(i, imx))*ul(i, idn)) then  ! find a way to replace .equals. with something both faster and free of warnings (same for full MHD variant)
              sm = (sl + sr) / 2.
           else
              sm =   ( ((sr - ur(i, imx))*ur(i, idn)*ur(i, imx) - prr) - &

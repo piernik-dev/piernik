@@ -108,6 +108,11 @@ contains
       bufsize = seed_size
       ! warning: this doesn't work with -fdefault-integer-8 because we don't have proper Fortran H5LT interface for 64-bit integer attributes and random_seed works with te default integer kind
       call h5ltset_attribute_int_f(file_id, "/", "current_seed", resseed, bufsize, error)
+      ! There is no h5ltset_attribute_long_f in the library, so it can't compile with -fdefault-integer-8.
+      ! This is not something critical, so we can:
+      ! * wait for full support,
+      ! * rewrite LT calls with more primitive ones,
+      ! * exclude 64-bit tests with RANDOMIZE from Jenkins (current workaround).
 
    end subroutine write_current_seed_to_restart
 
@@ -128,6 +133,8 @@ contains
       if (.not.allocated(resseed)) allocate(resseed(seed_size))
       ! warning: this doesn't work with -fdefault-integer-8 because we don't have proper Fortran H5LT interface for 64-bit integer attributes and random_seed works with te default integer kind
       call h5ltget_attribute_int_f(file_id, "/", "current_seed", resseed, error)
+      ! There is no h5ltget_attribute_long_f in the library, so it can't compile with -fdefault-integer-8, see comments in write_current_seed_to_restart.
+
       call compare_array1D(resseed)
       call random_seed(put=resseed)
       deallocate(resseed)

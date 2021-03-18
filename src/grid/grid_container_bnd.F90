@@ -343,7 +343,7 @@ contains
 
       class(grid_container_bnd_t), intent(inout) :: this !< object invoking type-bound procedure
 
-      integer(kind=4) :: i, j, k, ifs, ife, jfs, jfe, kfs, kfe
+      integer(kind=8) :: i, j, k, ifs, ife, jfs, jfe, kfs, kfe
 
       call this%flag%clear(this%leafmap) ! no parent correction possible beyond this point
 
@@ -357,18 +357,18 @@ contains
       !! beware: consider dropping this%l%off feature for simplicity. It will require handling the shift due to domain expansion (some increase CPU cost)
 
       associate( b_size => merge(bsize, huge(I_ONE), dom%has_dir))
-         do i = int(((this%is - this%l%off(xdim))*refinement_factor) / b_size(xdim), kind=4), int(((this%ie - this%l%off(xdim))*refinement_factor + I_ONE) / b_size(xdim), kind=4)
-            ifs = max(this%is, int(this%l%off(xdim), kind=4) + (i*b_size(xdim))/refinement_factor)
-            ife = min(this%ie, int(this%l%off(xdim), kind=4) + ((i+I_ONE)*b_size(xdim)-I_ONE)/refinement_factor)
+         do i = int(((this%is - this%l%off(xdim))*refinement_factor) / b_size(xdim)), int(((this%ie - this%l%off(xdim))*refinement_factor + I_ONE) / b_size(xdim))
+            ifs = max(int(this%is, kind=8), int(this%l%off(xdim)) + (i*b_size(xdim))/refinement_factor)
+            ife = min(int(this%ie, kind=8), int(this%l%off(xdim)) + ((i+I_ONE)*b_size(xdim)-I_ONE)/refinement_factor)
 
-            do j = int(((this%js - this%l%off(ydim))*refinement_factor) / b_size(ydim), kind=4), int(((this%je - this%l%off(ydim))*refinement_factor + I_ONE) / b_size(ydim), kind=4)
-               jfs = max(this%js, int(this%l%off(ydim), kind=4) + (j*b_size(ydim))/refinement_factor)
-               jfe = min(this%je, int(this%l%off(ydim), kind=4) + ((j+I_ONE)*b_size(ydim)-I_ONE)/refinement_factor)
+            do j = int(((this%js - this%l%off(ydim))*refinement_factor) / b_size(ydim)), int(((this%je - this%l%off(ydim))*refinement_factor + I_ONE) / b_size(ydim))
+               jfs = max(int(this%js, kind=8), int(this%l%off(ydim)) + (j*b_size(ydim))/refinement_factor)
+               jfe = min(int(this%je, kind=8), int(this%l%off(ydim)) + ((j+I_ONE)*b_size(ydim)-I_ONE)/refinement_factor)
 
-               do k = int(((this%ks - this%l%off(zdim))*refinement_factor) / b_size(zdim), kind=4), int(((this%ke - this%l%off(zdim))*refinement_factor + I_ONE) / b_size(zdim), kind=4)
-                  kfs = max(this%ks, int(this%l%off(zdim), kind=4) + (k*b_size(zdim))/refinement_factor)
-                  kfe = min(this%ke, int(this%l%off(zdim), kind=4) + ((k+I_ONE)*b_size(zdim)-I_ONE)/refinement_factor)
-                  if (this%flag%get(ifs, ife, jfs, jfe, kfs, kfe)) call this%flag%add(this%l%id+I_ONE, int([i, j, k]*b_size, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
+               do k = int(((this%ks - this%l%off(zdim))*refinement_factor) / b_size(zdim)), int(((this%ke - this%l%off(zdim))*refinement_factor + I_ONE) / b_size(zdim))
+                  kfs = max(int(this%ks, kind=8), int(this%l%off(zdim)) + (k*b_size(zdim))/refinement_factor)
+                  kfe = min(int(this%ke, kind=8), int(this%l%off(zdim)) + ((k+I_ONE)*b_size(zdim)-I_ONE)/refinement_factor)
+                  if (this%flag%get(ifs, ife, jfs, jfe, kfs, kfe)) call this%flag%add(this%l%id+I_ONE, [i, j, k]*b_size + refinement_factor*this%l%off, refinement_factor*this%l%off)
                enddo
             enddo
          enddo

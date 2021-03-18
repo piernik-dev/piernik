@@ -40,7 +40,7 @@ module unified_ref_crit_filter
 
 !>
 !! \brief Things that should be common for all refinement criteria based on filters.
-!! The filters are supposed to decide whether local conditions deserve refinement.
+!! The filters are supposed to decide whether local conditions deserve refinement or derefinement.
 !<
 
    type, abstract, extends(urc) :: urc_filter

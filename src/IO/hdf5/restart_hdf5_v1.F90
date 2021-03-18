@@ -147,7 +147,7 @@ contains
       integer(kind=4)                   :: i
       integer(HID_T)                    :: file_id       !< File identifier
       integer(HID_T)                    :: plist_id      !< Property list identifier
-      integer(kind=4)                   :: error
+      integer(kind=4)                   :: error         !< error perhaps should be of type integer(HID_T)
 
       ! Set up a new HDF5 file for parallel write
       call h5open_f(error)
@@ -218,7 +218,7 @@ contains
       integer(kind=4), dimension(ndims)  :: lleft, lright
       integer(kind=8), dimension(ndims)  :: loffs
       integer(HSIZE_T), dimension(rank4) :: cnt, offset, stride
-      integer(kind=4)                    :: rank, error, area_type
+      integer(kind=4)                    :: rank, error, area_type    !< error perhaps should be of type integer(HID_T)
       integer                            :: ir, dim1
       type(cg_list_element), pointer     :: cgl
       type(grid_container),  pointer     :: cg
@@ -358,7 +358,7 @@ contains
       integer, dimension(ndims)              :: area, chnk
       integer(kind=4), dimension(ndims)      :: lleft, lright
       integer(kind=8),  dimension(ndims)     :: loffs
-      integer(kind=4)                        :: rank, rankf, error, area_type
+      integer(kind=4)                        :: rank, rankf, error, area_type !< error perhaps should be of type integer(HID_T)
       integer                                :: ir, dim1
       type(cg_list_element), pointer         :: cgl
       type(grid_container),  pointer         :: cg
@@ -502,7 +502,7 @@ contains
       integer(HID_T)                           :: file_id       !< File identifier
       integer(HID_T)                           :: plist_id      !< Property list identifier
 
-      integer(kind=4)                          :: error
+      integer(kind=4)                          :: error         !< error perhaps should be of type integer(HID_T)
       logical                                  :: file_exist
 
       real,            dimension(1)            :: rbuf

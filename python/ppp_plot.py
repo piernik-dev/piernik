@@ -203,7 +203,6 @@ class PPPset:
     """A collection of event trees from one or many Piernik runs"""
 
     def __init__(self, fnamelist):
-        """Let's focus on ASCII decoding for a while. Don't bother with HDF5 until we implement such type of PPP dump"""
         self.run = {}
         for fname in fnamelist:
             self.run[fname] = PPP(fname)
@@ -360,14 +359,14 @@ examples:
 
 plot profile of 64th step from file.ascii with gnuplot (hopefully in the interactive mode):
     ppp_plot.py file.ascii -r 'step 64'| gnuplot
-    ppp_plot.py file.ascii -r 'step 64'-o file.gnu; gnuplot file.gnu
+    ppp_plot.py file.ascii -r 'step 64' -o file.gnu; gnuplot file.gnu
 
 when gnuplot fails to set up desired teminal by default, try to set $GNUTERM (qt or x11 are recommended):
     ppp_plot.py file.ascii | GNUTERM=qt gnuplot
 
-print list of top-lefel timers (steps) present in file.ascii:
+print list of top-level timers (steps) present in file.ascii:
     ppp_plot.py file.ascii -t -d 1
-(the atep names are followed by their time offset and length)
+(the step names are followed by their time offset and length)
 
 find most time-consuming timers:
     ppp_plot.py file.ascii -s
@@ -397,4 +396,9 @@ args = parser.parse_args()
 all_events = PPPset(args.filename)
 all_events.print(args.otype)
 
-# for j  in *.ppprofile.ascii ; do for i in `awk '{print $2}' $j |  sort |  uniq` ; do in=`grep "$i *  -" $j | wc -l` ; out=`grep "$i *  [1-9]" $j | wc -l` ; [ $in != $out ] && echo $j $i $in $out ; done |  column -t ; done
+# An attempt to find unbalanced timers:
+# for j  in *.ppprofile.ascii ; do for i in `awk '{print $1}' $j |  sort |  uniq` ; do in=`grep "$i *  -" $j | wc -l` ; out=`grep "$i *  [1-9]" $j | wc -l` ; [ $in != $out ] && echo $j $i $in $out ; done |  column -t ; done
+# No output is good
+# An output in the form:
+#     filename thread_number closed_timers opened_timers
+# means that something bad happened and the data is truncated or corrupted in some other way

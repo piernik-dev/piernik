@@ -53,7 +53,13 @@ module gcpa
 
 contains
 
-!> \brief Set up an array to be able to convert from local grid_id to pointers to cg
+!>
+!! \brief Set up an array to be able to convert from local grid_id to pointers to cg
+!!
+!! \warning This tends to be very expensive routine when there are thousands of cg on one process.
+!! It is called from init_all_new_cg -> update_everything -> find_neighbors -> find_neighbors_sfc .
+!! Closer relation with dot may help to avoid doing blind O(n^2) searches.
+!<
 
    subroutine init(this, curl)
 

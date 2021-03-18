@@ -105,7 +105,8 @@ contains
 
       if (.not. allocated(this%ijk)) call die("[unified_ref_crit_geometrical_point:mark_point] ijk not allocated")
 
-      if (any(this%ijk(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appeared in the meantime
+      ! Did some new levels of refinement appeared in the meantime?
+      if (any(this%ijk(cg%l%id, :) == uninit)) call this%init_lev
 
       if (all(this%ijk(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk(cg%l%id, :) <= cg%ijkse(:, HI))) &
            call cg%flag%set(this%ijk(cg%l%id, :))

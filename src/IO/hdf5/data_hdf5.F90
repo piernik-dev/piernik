@@ -235,7 +235,7 @@ contains
 
       integer(HID_T), intent(in)             :: gid
       integer(HID_T)                         :: dset_id
-      integer(kind=4)                        :: error, i, ip
+      integer(kind=4)                        :: error, i, ip  !< error perhaps should be of type integer(HID_T)
       character(len=cbuff_len), pointer      :: ssbuf
       character(len=units_len), pointer      :: sbuf
       character(len=units_len), target       :: s_unit
@@ -277,7 +277,7 @@ contains
       integer(HID_T), intent(in)             :: place
 
       integer                                :: i, ip
-      integer(kind=4)                        :: error
+      integer(kind=4)                        :: error  !< error perhaps should be of type integer(HID_T)
       integer(HID_T)                         :: g_id
       type(gdf_field_type), target           :: f
       integer(kind=8), pointer, dimension(:) :: ibuf
@@ -647,7 +647,7 @@ contains
       integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_o  !< all cg sizes, expanded by external boundaries
 
       integer(HID_T)                                       :: filespace_id, memspace_id
-      integer(kind=4)                                      :: error
+      integer(kind=4)                                      :: error       !< error perhaps should be of type integer(HID_T)
       integer(kind=4), parameter                           :: rank = 3
       integer(HSIZE_T), dimension(:), allocatable          :: dims
       integer(kind=4)                                      :: i, ncg, n
@@ -977,7 +977,7 @@ contains
       integer(HID_T)                    :: file_id                 !< File identifier
       integer(HID_T)                    :: plist_id, plist_idf     !< Property list identifier
       integer                           :: i
-      integer(kind=4)                   :: error
+      integer(kind=4)                   :: error                   !< error perhaps should be of type integer(HID_T)
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
       real, pointer                     :: data (:,:,:)            !< Data to write
@@ -1108,7 +1108,7 @@ contains
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
       integer(kind=4), parameter        :: rank = 3
-      integer(kind=4)                   :: error, i
+      integer(kind=4)                   :: error, i         !< error perhaps should be of type integer(HID_T)
       integer(HID_T)                    :: file_id, grp_id
       integer(kind=8)                   :: ngc              !< current grid index
       integer(HSIZE_T), dimension(rank) :: dims
