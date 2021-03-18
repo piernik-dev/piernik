@@ -160,6 +160,7 @@ contains
 !-----------------------------------------------------------------------------------------------------------------------
 
 ! Monotonized central limiter
+! OPT: it looks like vectors longer than 1000 elements tend to be slower than shorter ones (in MHD only)
 
    function slope_limiter_moncen(u) result(dq)
 

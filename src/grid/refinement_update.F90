@@ -92,6 +92,9 @@ contains
          call piernik_MPI_Allreduce(cnt(URC), pSUM)
       endif
 
+      ! ToDo: exploit dot for making corrections
+      ! if dot is complete then correction can be done in one step
+
       ! Transform refinement requests on non-leaf parts of the grid into derefinement inhibitions on child grids to avoid refinement flickering
       call parents_prevent_derefinement
       call sanitize_ref_flags  ! it can be converted to URC routine but it must be guaranteed that it goes after all refinement mark routines
@@ -410,8 +413,8 @@ contains
       use cg_level_connected,    only: cg_level_connected_t
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
-      use constants,             only: pLOR, pLAND, pSUM, tmr_amr, PPP_AMR
-      use dataio_pub,            only: warn, die
+      use constants,             only: pLOR, pLAND, pSUM, pMAX, tmr_amr, PPP_AMR
+      use dataio_pub,            only: die
       use global,                only: nstep
       use grid_cont,             only: grid_container
       use list_of_cg_lists,      only: all_lists
@@ -432,9 +435,9 @@ contains
       integer, optional, intent(out) :: act_count             !< counts number of blocks refined or deleted
       logical, optional, intent(in)  :: refinement_fixup_only !< When present and .true. then do not check refinement criteria, do only correction, if necessary.
 
-      integer :: nciter
+      integer :: nciter, top_level
       integer, parameter :: nciter_max = 100 ! should be more than refinement levels
-      logical :: some_refined, derefined
+      logical :: some_refined, derefined, ctop_exists, fu
       type(cg_list_element), pointer :: cgl, aux
       type(cg_level_connected_t), pointer :: curl
       type(grid_container),  pointer :: cg
@@ -468,6 +471,11 @@ contains
          curl => curl%coarser
       enddo
 
+      ! Maybe a bit overkill
+      fu = full_update
+      call piernik_MPI_Allreduce(fu, pLAND)
+      if (fu .neqv. full_update) call die("[refinement_update:update_refinement] inconsistent full_update")
+
       if (full_update) then
          call scan_for_refinements
 
@@ -487,6 +495,10 @@ contains
             enddo
 
             call finest%equalize
+
+            top_level = finest%level%l%id
+            call piernik_MPI_Allreduce(top_level, pMAX)
+            if (top_level /= finest%level%l%id) call die("[refinement_update:update_refinement] inconsistent top level (r)")
 
             call ppp_main%start(prol_label, PPP_AMR)
             !> \todo merge small blocks into larger ones
@@ -513,6 +525,9 @@ contains
       call piernik_MPI_Allreduce(correct, pLAND)
       nciter = 0
       do while (.not. correct)
+         ! exploit dot and iterate only when dot is not complete
+         ! perform quick dot-based checks instead of wa workaround
+         ! warn if dot%is_complete and any corrections were required
 
          call all_cg%prevent_prolong
 
@@ -523,33 +538,45 @@ contains
          enddo
 
          call ppp_main%start(newref_label, PPP_AMR)
+
+         ! Maybe a bit overkill - call finest%equalize should've take care of that
+         top_level = finest%level%l%id
+         call piernik_MPI_Allreduce(top_level, pMAX)
+         if (top_level /= finest%level%l%id) call die("[refinement_update:update_refinement] inconsistent top level (c)")
+
          curl => finest%level%coarser
-         do while (associated(curl) .and. curl%l%id >= base%level%l%id)
+         ctop_exists = associated(curl)
+         call piernik_MPI_Allreduce(ctop_exists, pLAND)
+         if (ctop_exists .neqv. associated(curl)) call die("[refinement_update:update_refinement] inconsistent coarser than top level")
 
-            some_refined = .false.
-            cgl => curl%first
-            do while (associated(cgl))
-               if (cgl%cg%flag%pending_blocks()) then
-                  if (finest%level%l%id <= cgl%cg%l%id) call warn("[refinement_update:update_refinement] growing too fast!")
-                  if (associated(curl%finer)) then
-                     call refine_one_grid(curl, cgl)
-                     if (present(act_count)) act_count = act_count + 1
-                     some_refined = .true.
-                  else
-                     call warn("[refinement_update:update_refinement] nowhere to add!")
+         do while (associated(curl))
+            if (curl%l%id >= base%level%l%id) then
+
+               some_refined = .false.
+               cgl => curl%first
+               do while (associated(cgl))
+                  if (cgl%cg%flag%pending_blocks()) then
+                     if (finest%level%l%id <= cgl%cg%l%id) call die("[refinement_update:update_refinement] growing too fast!")
+                     if (associated(curl%finer)) then
+                        call refine_one_grid(curl, cgl)
+                        if (present(act_count)) act_count = act_count + 1
+                        some_refined = .true.
+                     else
+                        call die("[refinement_update:update_refinement] nowhere to add!")
+                     endif
                   endif
-               endif
-               cgl => cgl%nxt
-            enddo
+                  cgl => cgl%nxt
+               enddo
 
-            call piernik_MPI_Allreduce(some_refined, pLOR)
-            if (some_refined) then
-               call curl%finer%init_all_new_cg
-               call curl%finer%sync_ru
-               call curl%deallocate_patches
-               !call finest%equalize
-               call curl%prolong
-               call all_cg%mark_orphans
+               call piernik_MPI_Allreduce(some_refined, pLOR)
+               if (some_refined) then
+                  call curl%finer%init_all_new_cg
+                  call curl%finer%sync_ru
+                  call curl%deallocate_patches
+                  !call finest%equalize
+                  call curl%prolong
+                  call all_cg%mark_orphans
+               endif
             endif
 
             curl => curl%coarser
@@ -571,7 +598,7 @@ contains
       ! Now try to derefine any excess of refinement.
       ! Derefinement saves memory and CPU usage, but it is of lowest priority.
       ! Just go through derefinement stage once and don't try to do too much here at once.
-      ! Any excess of refinement will be handled in next call to this routine anyway.
+      ! Any excess of refinement will be handled in the next call to this routine anyway.
       if (full_update) then
 
          call ppp_main%start(deref_label, PPP_AMR)

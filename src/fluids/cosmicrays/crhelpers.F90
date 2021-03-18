@@ -123,7 +123,8 @@ contains
 !>
 !! \brief Compute divergence of velocity
 !!
-!! \details This routine requires a single layer of valid guardcells in cg%u arrays
+!! \details This routine requires four layers of valid guardcells in cg%u arrays.
+!! The computed value is valid in one layer of guardcells.
 !!
 !! The divergence of velocity computed with the aid of 6-th order finite
 !! differencing based on the Lagendre Polynomial interpolation.
@@ -185,7 +186,8 @@ contains
 !>
 !! \brief Compute divergence of velocity
 !!
-!! \details This routine requires a single layer of valid guardcells uin cg%u arrays
+!! \details This routine requires at least a single layer of valid guardcells in cg%u arrays and sane values in other layers.
+!! The computed value is valid in one less layers of guardcells.
 !<
 
    subroutine div_v_1st(ifluid, cg)

@@ -627,7 +627,7 @@ contains
       integer(kind=4)                                   :: ia
       integer(kind=8)                                   :: tot_cells
       integer(kind=8), dimension(xdim:zdim, LO:HI)      :: my_box, other_box
-      integer(kind=4)                                   :: error, nres_old
+      integer(kind=4)                                   :: error, nres_old  !< error perhaps should be of type integer(HID_T)
 
       ! buffers for reading attributes
       integer(kind=4),          dimension(:), allocatable :: ibuf
@@ -1032,7 +1032,7 @@ contains
       integer(HID_T)                               :: dset_id
       integer(HID_T)                               :: filespace, memspace
       integer(HSIZE_T), dimension(:), allocatable  :: dims, off, cnt
-      integer(kind=4)                              :: error
+      integer(kind=4)                              :: error                          !< error perhaps should be of type integer(HID_T)
       integer(kind=8), dimension(xdim:zdim)        :: own_off, restart_off, o_size   ! the position and size of the overlapped region
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: own_box_nb, restart_box_nb              ! variants for AT_NO_B
       integer(kind=8), dimension(xdim:zdim)        :: own_off_nb, restart_off_nb, o_size_nb   !

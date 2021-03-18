@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from colored_io import die, prtinfo, prtwarn, read_var
+from copy import copy
 from crs_h5 import crs_initialize, crs_plot_main, crs_plot_main_fpq
 from crs_pf import initialize_pf_arrays
 from math import isnan, pi
@@ -51,7 +52,6 @@ parser.add_option("", "--rectangle", dest="annotate_rect", default=False, help=u
 parser.add_option("", "--width", dest="usr_width", default=0., help=u"Set custom frb width")
 parser.add_option("", "--height", dest="usr_height", default=0., help=u"Set custom frb width")
 parser.add_option("", "--center", dest="usr_center", default=(0., 0.), help=u"Set custom frb center", nargs=2, metavar="XC YC")
-
 (options, args) = parser.parse_args(argv[1:])  # argv[1] is filename
 yt.mylog.setLevel(int(options.yt_verbose))    # Reduces the output to desired level, 50 - least output
 if (options.py_quiet is True):
@@ -78,7 +78,6 @@ plot_layer = options.avg_layer
 plot_ovlp = options.overlap_layer
 options.fontsize = int(options.fontsize)
 display_bin_no = False
-
 user_coords_provided = ((options.coords_dflt[0] != "x") and (options.coords_dflt[1] != "y") and (options.coords_dflt[2] != "z"))
 if user_coords_provided:
     try:
@@ -357,7 +356,6 @@ if f_run is True:
         yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field, width=(frb_w, frb_h), center=slice_center)
     yt_data_plot.set_font({'size': options.fontsize})
 
-    plt.colormap = "plasma"
     encountered_nans = False
     plot_max = float(plot_max)
     plot_min = max(float(plot_min), par_epsilon)
@@ -365,11 +363,14 @@ if f_run is True:
         encountered_nans = True
         prtwarn("Invalid data encountered (NaN), ZLIM will be adjusted")
 
+    colormap_my = copy(plt.cm.viridis)
+    colormap_my.set_bad(colormap_my(par_epsilon))
+
     im_orig = "lower"
     if (use_logscale):
-        plt.imshow(frb, extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]]], origin=im_orig, norm=LogNorm(vmin=plot_min, vmax=plot_max) if (encountered_nans is False) else LogNorm())
+        plt.imshow(frb, extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]]], origin=im_orig, cmap=colormap_my, norm=LogNorm(vmin=plot_min, vmax=plot_max) if (encountered_nans is False) else LogNorm())
     elif (use_linscale):
-        plt.imshow(frb, extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]]], origin=im_orig, vmin=plot_min if (encountered_nans is False) else None, vmax=plot_max if (encountered_nans is False) else None)
+        plt.imshow(frb, extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]]], origin=im_orig, cmap=colormap_my)
 
     plt.title("Component: " + plot_field + " | t = %9.3f Myr" % time)
 
@@ -377,10 +378,6 @@ if f_run is True:
         cbar = plt.colorbar(shrink=0.9, pad=0.01, label=plot_units)
     except:
         die("An empty field might have been picked.")
-
-    colormap_my = plt.cm.viridis
-    colormap_my.set_bad(color=colormap_my(par_epsilon))     # masks bad values | FIXME - modifying cmap is deprecated in future versions
-    yt_data_plot.set_cmap(field=plot_field, cmap=colormap_my)
 
     if (user_annot_line is True):
         prtinfo("Marking line on yt.plot at (0 0 0) : (500 500 0)")
@@ -390,7 +387,10 @@ if f_run is True:
         yt_data_plot.annotate_velocity(factor=32, scale=3e7)
     if (plot_mag):
         yt_data_plot.annotate_magnetic_field(factor=32, scale=40)
+
+    yt_data_plot.set_cmap(field=plot_field, cmap=colormap_my)
     yt_data_plot.set_zlim(plot_field, plot_min, plot_max)
+
     marker_l = ["x", "+", "*", "X", ".", "^", "v", "<", ">", "1"]
     m_size_l = [350, 500, 400, 400, 500, 350, 350, 350, 350, 500]
     m_e_width = 5
@@ -540,8 +540,8 @@ if f_run is True:
 # ------------- saving just the spectrum
             if (save_spectrum):
                 extent = fig2.get_window_extent().transformed(s.dpi_scale_trans.inverted())
-                s.savefig('results/' + filename_nam + '_' + plot_var + '_spec_%03d.pdf' % image_number, transparent='True', bbox_inches="tight", quality=95, dpi=150)  # bbox not working in py27 FIXME
-                prtinfo("  --->  Saved plot to: %s.\n\033[44mPress 'q' to quit and save yt.SlicePlot with marked coordinates." % str('results/' + filename_nam + '_' + plot_var + '_spectrum_%04d.pdf' % image_number))
+                s.savefig('results/' + filename_nam + '_' + 'slice_' + slice_ax + '_' + plot_var + '_spec_%03d.pdf' % image_number, transparent='True', bbox_inches="tight", dpi=150)  # bbox not working in py27 FIXME
+                prtinfo("  --->  Saved plot to: %s.\n\033[44mPress 'q' to quit and save yt.SlicePlot with marked coordinates." % str('results/' + filename_nam + '_' + 'slice_' + slice_ax + '_' + plot_var + '_spectrum_%04d.pdf' % image_number))
         else:
             prtwarn("Empty cell - not saving.")
 
@@ -577,6 +577,6 @@ if f_run is True:
     if (options.no_xlabels and options.no_ylabels):
         yt_data_plot.hide_axes()
 
-    yt_data_plot.save('results/' + filename_nam + '_' + plot_field + '_sliceplot.pdf')  # save image (spectrum already saved) when finished.
+    yt_data_plot.save('results/' + filename_nam + '_' + plot_field + '_sliceplot_' + slice_ax + '.pdf')  # save image (spectrum already saved) when finished.
     if (not user_coords_provided):
         s.canvas.mpl_disconnect(cid)
