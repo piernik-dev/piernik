@@ -30,6 +30,7 @@
 
 module grid_cont
 
+   use cg_cost,           only: cg_cost_t
    use constants,         only: LO, HI
    use grid_cont_bnd,     only: segment
    use grid_cont_prolong, only: grid_container_prolong_t
@@ -75,6 +76,7 @@ module grid_cont
       logical :: ignore_prolongation  !< When .true. do not upgrade interior with incoming prolonged values
       logical :: is_old               !< .true. if a given grid existed prior to  upgrade_refinement call
       logical :: processed            !< for use in sweeps.F90
+      type(cg_cost_t) :: costs        !< accumulate cg costs here for better work balance
 
    contains
 
@@ -131,6 +133,8 @@ contains
       this%ignore_prolongation = .false.
       this%is_old = .false.
       this%has_previous_timestep = .false.
+
+      call this%costs%reset
 
    end subroutine init_gc
 
