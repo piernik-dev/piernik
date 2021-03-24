@@ -59,12 +59,13 @@ contains
       use cg_list,      only: cg_list_element
       use cg_leaves,    only: leaves
       use constants,    only: xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
-      use dataio_pub,   only: die, msg, warn
+      use dataio_pub,   only: die
       use domain,       only: dom
       use grid_cont,    only: grid_container
-      use mpisetup,     only: proc
       use units,        only: newtong
 #ifdef NBODY
+      use dataio_pub,     only: msg, warn
+      use mpisetup,       only: proc
       use particle_types, only: particle
 #endif /* NBODY */
 
