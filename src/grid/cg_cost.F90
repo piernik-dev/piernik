@@ -33,14 +33,25 @@ module cg_cost
    implicit none
 
    private
-   public :: cg_cost_t, I_MHD, I_MULTIGRID, I_MULTIPOLE, I_DIFFUSE, I_PARTICLE, I_OTHER
+   public :: cg_cost_data_t, cg_cost_t, cost_labels, I_MHD, I_MULTIGRID, I_MULTIPOLE, I_DIFFUSE, I_PARTICLE, I_OTHER
 
    enum, bind(C)
       enumerator :: I_MHD, I_MULTIGRID, I_MULTIPOLE, I_DIFFUSE, I_PARTICLE, I_OTHER
    end enum
 
-   type :: cg_cost_t
-      real, private, dimension(I_MHD:I_OTHER) :: wtime  ! walltime costs split into different categories
+   character(len=*), dimension(I_MHD:I_OTHER), parameter :: cost_labels = &
+        [ "MHD       ", &
+        & "multigrid ", &
+        & "multipole ", &
+        & "diffussion", &
+        & "particles ", &
+        & "other     " ]
+
+   type :: cg_cost_data_t
+      real, dimension(I_MHD:I_OTHER) :: wtime  ! walltime costs split into different categories
+   end type cg_cost_data_t
+
+   type, extends(cg_cost_data_t) :: cg_cost_t
       real, private :: wstart                           ! start value of the timer
    contains
       procedure :: reset  !< Set all counters to 0.
