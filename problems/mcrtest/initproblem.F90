@@ -203,9 +203,9 @@ contains
          cg%u(fl%imx:fl%imz,:,:,:) = 0.0
 
 #ifndef ISO
-         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
                   cg%u(fl%ien,i,j,k) = p0/fl%gam_1 + &
                        &               ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
                        &               emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
@@ -214,13 +214,13 @@ contains
          enddo
 #endif /* !ISO */
 
-         cg%u(iarr_crn,:,:,:) = 0.0
+         cg%u(iarr_crn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
 #ifdef COSM_RAYS_SOURCES
-         if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(cr_table(icr_H1 ))-1.0)
-         if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(cr_table(icr_C12))-1.0)
+         if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = beta_cr*fl%cs2 * cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/(gamma_crn(cr_table(icr_H1 ))-1.0)
+         if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = beta_cr*fl%cs2 * cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/(gamma_crn(cr_table(icr_C12))-1.0)
 #else /* !COSM_RAYS_SOURCES */
-         cg%u(iarr_crn(1),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(1)-1.0)
-         cg%u(iarr_crn(2),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(2)-1.0)
+         cg%u(iarr_crn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = beta_cr*fl%cs2 * cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/(gamma_crn(1)-1.0)
+         cg%u(iarr_crn(2), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = beta_cr*fl%cs2 * cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/(gamma_crn(2)-1.0)
 #endif /* !COSM_RAYS_SOURCES */
 
 ! Explosions
@@ -255,7 +255,9 @@ contains
          maxv = - huge(1.)
          cgl => leaves%first
          do while (associated(cgl))
-            maxv = max(maxv, maxval(cgl%cg%u(iarr_crs(icr),:,:,:)))
+            associate (cg => cgl%cg)
+               maxv = max(maxv, maxval(cg%u(iarr_crs(icr), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
+            end associate
             cgl => cgl%nxt
          enddo
 
