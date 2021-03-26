@@ -88,7 +88,7 @@ module mpisetup
    interface inflate_req
       module procedure doublesize_req
       module procedure setsize_req
-   end interface
+   end interface inflate_req
 
    !! \todo expand this wrapper to make it more general, unlimited polymorphism will render this obsolete
    !! Switching to pure mpi_f08 interface should allow for great simplification of these routines.
@@ -202,10 +202,11 @@ contains
          call printinfo("[mpisetup:init_mpi]: commencing...")
 #endif /* VERBOSE */
          if (is_spawned) &
-            call printinfo("[mpisetup:init_mpi] Piernik was called via MPI_Spawn. Additional magic will happen!")
+              call printinfo("[mpisetup:init_mpi] Piernik was called via MPI_Spawn. Additional magic will happen!")
       endif
 
-      if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) call die("[mpisetup:init_mpi] cwd_all, host_all or pid_all already allocated")
+      if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) &
+           call die("[mpisetup:init_mpi] cwd_all, host_all or pid_all already allocated")
       !> \deprecated BEWARE on slave it is probably enough to allocate only one element or none at all (may depend on MPI implementation)
       allocate(cwd_all(FIRST:LAST), host_all(FIRST:LAST), pid_all(FIRST:LAST))
 
@@ -221,7 +222,7 @@ contains
 
       call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, FIRST, MPI_COMM_WORLD, err_mpi)
       call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, FIRST, MPI_COMM_WORLD, err_mpi)
-      call MPI_Gather(pid_proc,  I_ONE, MPI_INTEGER,   pid_all,  I_ONE, MPI_INTEGER,   FIRST, MPI_COMM_WORLD, err_mpi)
+      call MPI_Gather(pid_proc,  I_ONE,  MPI_INTEGER,   pid_all,  I_ONE,  MPI_INTEGER,   FIRST, MPI_COMM_WORLD, err_mpi)
 
       bigbang_shift = bigbang
       call piernik_MPI_Allreduce(bigbang_shift, pMIN)

@@ -30,7 +30,7 @@
 
 module refinement
 
-   use constants,          only: ndims, LO, HI, cbuff_len
+   use constants, only: ndims, LO, HI, cbuff_len
 
    implicit none
 
