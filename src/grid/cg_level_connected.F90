@@ -960,7 +960,13 @@ contains
             call this%arr3d_boundaries(iv, bnd_type = bnd_type)
          endif
       endif
-      call this%check_dirty(iv, "prolong-")
+      if (d4) then
+         do iw = 1, wna%lst(iv)%dim4
+            call this%check_dirty(iv, "prolong-", subfield=iw)
+         enddo
+      else
+         call this%check_dirty(iv, "prolong-")
+      endif
 
       nr = 0
       ! be ready to receive everything into right buffers

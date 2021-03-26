@@ -368,7 +368,8 @@ if __name__ == "__main__":
             for i in sorted(norms.keys()):
                 if (norms[i] >= 0. and norms[i] <= 1. + 1e-12):
                     print("Difference of %-*s: %g" % (longestkey + 1, i, norms[i]))
-                    tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
+                    # tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
+                    tot_norm += (1. - tot_norm) * norms[i]
                 else:
                     print("Difference measure `%s` out of [0,1] range: %g" %
                           (i, norms[i]))
