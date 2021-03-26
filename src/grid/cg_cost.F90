@@ -33,19 +33,21 @@ module cg_cost
    implicit none
 
    private
-   public :: cg_cost_data_t, cg_cost_t, cost_labels, I_MHD, I_MULTIGRID, I_MULTIPOLE, I_DIFFUSE, I_PARTICLE, I_OTHER
+   public :: cg_cost_data_t, cg_cost_t, cost_labels, I_MHD, I_MULTIGRID, I_MULTIPOLE, I_DIFFUSE, I_PARTICLE, I_REFINE, I_IC, I_OTHER
 
    enum, bind(C)
-      enumerator :: I_MHD, I_MULTIGRID, I_MULTIPOLE, I_DIFFUSE, I_PARTICLE, I_OTHER
+      enumerator :: I_MHD, I_MULTIGRID, I_MULTIPOLE, I_DIFFUSE, I_PARTICLE, I_REFINE, I_IC, I_OTHER
    end enum
 
    character(len=*), dimension(I_MHD:I_OTHER), parameter :: cost_labels = &
-        [ "MHD       ", &
-        & "multigrid ", &
-        & "multipole ", &
-        & "diffussion", &
-        & "particles ", &
-        & "other     " ]
+        [ "MHD       ", &  ! Riemann, RTVD, CT, divB cleaning
+        & "multigrid ", &  ! self-gravity multigrid relaxation, residuals
+        & "multipole ", &  ! multipole moments <=> potential conversions, not the costs of Q array manipulation
+        & "diffusion ", &  ! explicit and multigrid diffussion costs
+        & "particles ", &  ! particles in cg
+        & "refines   ", &  ! prolongation, restriction, marking criteria
+        & "init.cond.", &  ! for use only in the initproblems
+        & "other     " ]   ! everything else that is related to cg but not tied to particular algorithm
 
    type :: cg_cost_data_t
       real, dimension(I_MHD:I_OTHER) :: wtime  ! walltime costs split into different categories

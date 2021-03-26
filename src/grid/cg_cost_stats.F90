@@ -35,15 +35,15 @@ module cg_cost_stats
    implicit none
 
    private
-   public :: cg_stats_t, stat_labels, I_MIN, I_MAX, I_AVG, I_SIGMA
+   public :: cg_stats_t, stat_labels, I_MIN, I_MAX, I_AVG, I_SIGMA, I_SUM
 
    type :: cg_stats_t
       type(cg_cost_data_t), private :: min     !< element-wise minimum
       type(cg_cost_data_t), private :: max     !< element-wise maximum
       type(cg_cost_data_t), private :: w_sum   !< sum of elements
       type(cg_cost_data_t), private :: w_sum2  !< sum of squares
+      ! type(cg_cost_data_t), private :: bias    !< bias for improved accuracy of the mean
       integer,              private :: n       !< number of elements
-      ! type(cg_cost_data_t), private :: bias    !< bias for improved accuracy
    contains
       procedure :: reset        !< initialize
       procedure :: add          !< add sample
@@ -51,18 +51,20 @@ module cg_cost_stats
       procedure :: get_maximum  !< return minima
       procedure :: get_average  !< return average
       procedure :: get_sigma    !< return standard deviation
-      procedure :: get          !< return minimum, maximum mean and sigma for selected accumulator
+      procedure :: get          !< return minimum, maximum mean, sigma and sum for selected accumulator
+      procedure :: get_sum      !< return total accumulated time
    end type cg_stats_t
 
    enum, bind(C)
-      enumerator :: I_MIN = 1, I_MAX, I_AVG, I_SIGMA
+      enumerator :: I_MIN = 1, I_MAX, I_AVG, I_SIGMA, I_SUM
    end enum
 
-   character(len=*), dimension(I_MIN:I_SIGMA), parameter :: stat_labels = &
+   character(len=*), dimension(I_MIN:I_SUM), parameter :: stat_labels = &
         [ "minimum  ", &
         & "maximum  ", &
         & "average  ", &
-        & "deviation" ]
+        & "deviation", &
+        & "sum      " ]
 
 contains
 
@@ -91,11 +93,13 @@ contains
       class(cg_stats_t),     intent(inout) :: this
       class(cg_cost_data_t), intent(in)    :: data
 
-      this%min%wtime = min(this%min%wtime, data%wtime)
-      this%max%wtime = max(this%max%wtime, data%wtime)
-      this%w_sum%wtime = this%w_sum%wtime + data%wtime
-      this%w_sum2%wtime = this%w_sum2%wtime + data%wtime**2
-      this%n = this%n + 1
+      if (any(data%wtime > 0.)) then
+         this%min%wtime = min(this%min%wtime, data%wtime)
+         this%max%wtime = max(this%max%wtime, data%wtime)
+         this%w_sum%wtime = this%w_sum%wtime + data%wtime
+         this%w_sum2%wtime = this%w_sum2%wtime + data%wtime**2
+         this%n = this%n + 1
+      endif
 
    end subroutine add
 
@@ -165,7 +169,7 @@ contains
       class(cg_stats_t), intent(in) :: this
       integer(kind=4),   intent(in) :: ind
 
-      real, dimension(I_MIN:I_SIGMA) :: get
+      real, dimension(size(stat_labels)) :: get
 
       if (ind >= lbound(this%min%wtime, 1) .and. ind <= ubound(this%min%wtime, 1)) then
          if (this%n /= 0) then
@@ -173,7 +177,8 @@ contains
             get = [ this%min%wtime(ind), &
                  &  this%max%wtime(ind), &
                  &  this%w_sum%wtime(ind) / this%n, &
-                 &  sqrt(this%w_sum2%wtime(ind) / this%n - (this%w_sum%wtime(ind) / this%n)**2) ]
+                 &  sqrt(this%w_sum2%wtime(ind) / this%n - (this%w_sum%wtime(ind) / this%n)**2), &
+                 &  this%w_sum%wtime(ind) ]
          else
             get = 0.
          endif
@@ -183,5 +188,17 @@ contains
       endif
 
    end function get
+
+!> \brief Return total accumulated time
+
+   real function get_sum(this)
+
+      implicit none
+
+      class(cg_stats_t), intent(in) :: this
+
+      get_sum = sum(this%w_sum%wtime)
+
+   end function get_sum
 
 end module cg_cost_stats
