@@ -103,6 +103,7 @@ contains
 
    subroutine fft_solve_level(curl, src, soln)
 
+      use cg_cost,             only: I_MULTIGRID
       use cg_level_connected,  only: cg_level_connected_t
       use dataio_pub,          only: die
 #ifndef NO_FFT
@@ -137,6 +138,7 @@ contains
       cgl => curl%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          p3 => cg%q(src)%span(cg%ijkse)
          cg%mg%src(:, :, :) = p3
@@ -158,6 +160,7 @@ contains
          p3 => cg%q(soln)%span(cg%ijkse)
          p3 = cg%mg%src(:, :, :)
 
+         call cg%costs%stop(I_MULTIGRID)
          cgl => cgl%nxt
       enddo
 #endif /* !NO_FFT */

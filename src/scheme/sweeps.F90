@@ -63,9 +63,10 @@ contains
 
    integer(kind=4) function compute_nr_recv(cdim) result(nr)
 
-      use constants, only: LO, HI, I_ONE
+      use cg_cost,   only: I_MHD
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
+      use constants, only: LO, HI, I_ONE
       use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv
       use mpisetup,  only: err_mpi, req, inflate_req
 
@@ -80,6 +81,8 @@ contains
       nr = 0
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          cgl%cg%processed = .false.
          cgl%cg%finebnd(cdim, LO)%uflx(:, :, :) = 0. !> \warning overkill
          cgl%cg%finebnd(cdim, HI)%uflx(:, :, :) = 0.
@@ -98,6 +101,8 @@ contains
                enddo
             end associate
          endif
+
+         call cgl%cg%costs%stop(I_MHD)
          cgl => cgl%nxt
       enddo
    end function compute_nr_recv
@@ -128,6 +133,7 @@ contains
       character(len=*), parameter :: recv_label = "cg_recv_fine_bnd"
 
       call ppp_main%start(recv_label, PPP_MPI)
+
       all_received = .true.
       if (allocated(cg%rif_tgt%seg)) then
          associate ( seg => cg%rif_tgt%seg )
@@ -293,6 +299,7 @@ contains
 
    subroutine sweep(cdim, fargo_vel)
 
+      use cg_cost,          only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_dataop,   only: cg_list_dataop_t
@@ -404,6 +411,7 @@ contains
             call ppp_main%start(solve_cgs_label)
             do while (associated(cgl))
                cg => cgl%cg
+               call cg%costs%start
 
                if (.not. cg%processed) then
                   call recv_cg_finebnd(cdim, cg, all_received)
@@ -419,6 +427,8 @@ contains
                      all_processed = .false.
                   endif
                endif
+
+               call cg%costs%stop(I_MHD)
                cgl => cgl%nxt
             enddo
             call ppp_main%stop(solve_cgs_label)

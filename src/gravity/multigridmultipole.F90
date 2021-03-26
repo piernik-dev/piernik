@@ -293,6 +293,7 @@ contains
 
    subroutine potential2img_mass
 
+      use cg_cost,       only: I_MULTIPOLE
       use cg_leaves,     only: leaves
       use cg_list,       only: cg_list_element
       use constants,     only: GEO_RPZ, LO, HI, xdim, ydim, zdim, PPP_GRAV
@@ -316,6 +317,8 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          associate( &
             bnd_x => cg%mg%bnd_x, &
             bnd_y => cg%mg%bnd_y, &
@@ -366,6 +369,8 @@ contains
          if (cg%ext_bnd(zdim, HI)) bnd_z(cg%is:cg%ie, cg%js:cg%je, HI) =   ( &
               &         a1 * soln(cg%is:cg%ie, cg%js:cg%je, cg%ke) + &
               &         a2 * soln(cg%is:cg%ie, cg%js:cg%je, cg%ke-1) ) * cg%idz
+
+         call cg%costs%stop(I_MULTIPOLE)
          cgl => cgl%nxt
          end associate
       enddo
@@ -381,6 +386,7 @@ contains
 
    subroutine img_mass2moments
 
+      use cg_cost,    only: I_MULTIPOLE
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
       use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero, PPP_GRAV
@@ -408,6 +414,8 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          if (any(cg%ext_bnd(xdim, :))) then
             if (dom%geometry_type == GEO_RPZ) geofac(:) = [ cg%fbnd(xdim, LO), cg%fbnd(xdim, HI) ]
             do j = cg%js, cg%je
@@ -443,6 +451,7 @@ contains
             enddo
          endif
 
+         call cg%costs%stop(I_MULTIPOLE)
          cgl => cgl%nxt
       enddo
       call ppp_main%stop(m2m_label, PPP_GRAV)
@@ -458,6 +467,7 @@ contains
 
    subroutine domain2moments
 
+      use cg_cost,            only: I_MULTIPOLE
       use cg_leaves,          only: leaves
       use cg_level_base,      only: base
       use cg_level_finest,    only: finest
@@ -515,6 +525,8 @@ contains
 
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          if (cg%l%id <= level%l%id) then
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
@@ -526,6 +538,8 @@ contains
                enddo
             enddo
          endif
+
+         call cg%costs%stop(I_MULTIPOLE)
          cgl => cgl%nxt
       enddo
       call ppp_main%stop(d2m_label, PPP_GRAV)
@@ -537,6 +551,7 @@ contains
 #ifdef NBODY
    subroutine particles2moments
 
+      use cg_cost,        only: I_PARTICLE
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, PPP_GRAV, PPP_PART
@@ -558,6 +573,8 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          pset => cg%pset%first
          do while (associated(pset))
             if (pset%pdata%outside) call Q%point2moments(fpiG*pset%pdata%mass, pset%pdata%pos(xdim), pset%pdata%pos(ydim), pset%pdata%pos(zdim))
@@ -576,6 +593,8 @@ contains
 
             pset => pset%nxt
          enddo
+
+         call cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 
@@ -592,6 +611,7 @@ contains
 
    subroutine moments2bnd_potential
 
+      use cg_cost,    only: I_MULTIPOLE
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
       use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero, PPP_GRAV
@@ -615,6 +635,8 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          if (any(cg%ext_bnd(xdim, :))) then
             do j = cg%js, cg%je
                do k = cg%ks, cg%ke
@@ -642,6 +664,8 @@ contains
                enddo
             enddo
          endif
+
+         call cg%costs%stop(I_MULTIPOLE)
          cgl => cgl%nxt
       enddo
       call ppp_main%stop(m2p_label, PPP_GRAV)
@@ -698,6 +722,7 @@ contains
 
    subroutine compute_mpole_potential(qvar)
 
+      use cg_cost,       only: I_MULTIPOLE
       use cg_leaves,     only: leaves
       use cg_list,       only: cg_list_element
       use multigridvars, only: grav_bnd, bnd_isolated
@@ -718,6 +743,8 @@ contains
          ! an ELEMENTAL implementation of moments2pot would allow simplifications of this routine.
          ! At least the loop over i may be worth stripping.
          associate (cg => cgl%cg)
+            call cg%costs%start
+
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
@@ -725,6 +752,8 @@ contains
                   enddo
                enddo
             enddo
+
+            call cg%costs%stop(I_MULTIPOLE)
          end associate
          cgl => cgl%nxt
       enddo

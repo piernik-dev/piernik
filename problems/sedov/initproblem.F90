@@ -180,6 +180,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_initial_conditions
 
+      use cg_cost,    only: I_IC
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
       use constants,  only: ION, xdim, ydim, zdim, LO, HI, pi, ndims
@@ -208,6 +209,7 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
+            call cg%costs%start
 
             do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
@@ -267,6 +269,7 @@ contains
                enddo
             endif
 
+            call cg%costs%stop(I_IC)
             cgl => cgl%nxt
          enddo
 

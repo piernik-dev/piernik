@@ -45,6 +45,7 @@ contains
    subroutine cresp_timestep
 
       use all_boundaries,   only: all_fluid_boundaries
+      use cg_cost,          only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, half, zero, big, pMIN
@@ -81,6 +82,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          if (adiab_active) then
             call div_v(flind%ion%pos, cg)
@@ -102,6 +104,7 @@ contains
             enddo
          enddo
 
+         call cg%costs%stop(I_OTHER)
          cgl=>cgl%nxt
       enddo
 

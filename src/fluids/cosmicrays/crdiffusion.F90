@@ -73,6 +73,7 @@ contains
 !<
    subroutine all_wcr_boundaries
 
+      use cg_cost,          only: I_DIFFUSE
       use cg_leaves,        only: leaves
       use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
@@ -103,6 +104,8 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          wcr => cg%w(wna%ind(wcr_n))%arr
          if (.not. associated(wcr)) call die("[crdiffusion:all_wcr_boundaries] cannot get wcr")
 
@@ -126,6 +129,7 @@ contains
             endif
          enddo
 
+         call cg%costs%stop(I_DIFFUSE)
          cgl => cgl%nxt
       enddo
 
@@ -143,6 +147,7 @@ contains
    subroutine cr_diff(crdim)
 
       use all_boundaries,   only: all_bnd
+      use cg_cost,          only: I_DIFFUSE
       use cg_leaves,        only: leaves
       use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
@@ -195,6 +200,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          wcr => cg%w(wcri)%arr
          if (.not. associated(wcr)) call die("[crdiffusion:cr_diff] cannot get wcr")
@@ -249,6 +255,8 @@ contains
                enddo
             enddo
          enddo
+
+         call cg%costs%stop(I_DIFFUSE)
          cgl => cgl%nxt
       enddo
 
@@ -257,6 +265,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          ndm = cg%lhn(:,HI) - idm
          hdm = cg%lhn(:,LO) ; hdm(crdim) = cg%lhn(crdim,HI)
@@ -265,6 +274,7 @@ contains
          p4(iarr_crs,:,:,:) = p4(iarr_crs,:,:,:) - (cg%w(wcri)%span(int(cg%lhn(:,LO)+idm, kind=4), cg%lhn(:,HI)) - cg%w(wcri)%span(cg%lhn(:,LO), int(ndm, kind=4)))
          cg%u(iarr_crs,hdm(xdim):cg%lhn(xdim,HI),hdm(ydim):cg%lhn(ydim,HI),hdm(zdim):cg%lhn(zdim,HI)) = cg%u(iarr_crs,ldm(xdim):ndm(xdim),ldm(ydim):ndm(ydim),ldm(zdim):ndm(zdim)) ! for sanity
 
+         call cg%costs%stop(I_DIFFUSE)
          cgl => cgl%nxt
       enddo
 

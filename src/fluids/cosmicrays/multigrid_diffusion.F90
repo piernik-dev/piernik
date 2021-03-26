@@ -720,6 +720,7 @@ contains
 
    subroutine residual(src, soln, def, cr_id)
 
+      use cg_cost,           only: I_DIFFUSE
       use constants,         only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ, PPP_MG, PPP_CR
       use dataio_pub,        only: die
       use domain,            only: dom
@@ -757,6 +758,8 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          do idir = xdim, zdim
             if (dom%has_dir(idir)) then
                imh = cg%ijkse(:,HI) ; imh(idir) = imh(idir) + 1
@@ -773,6 +776,8 @@ contains
                p3 = p3 - (cg%q(qna%wai)%span(int(iml, kind=4), int(imh, kind=4)) - cg%q(qna%wai)%span(cg%ijkse) ) * diff_theta * dt * cg%idl(idir)
             endif
          enddo
+
+         call cg%costs%stop(I_DIFFUSE)
          cgl => cgl%nxt
       enddo
 
@@ -793,6 +798,7 @@ contains
 
    subroutine approximate_solution(curl, src, soln, cr_id)
 
+      use cg_cost,            only: I_DIFFUSE
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
       use constants,          only: xdim, ydim, zdim, one, half, ndims, LO, GEO_XYZ, PPP_MG, PPP_CR
@@ -838,6 +844,7 @@ contains
          cgl => curl%first
          do while (associated(cgl))
             cg => cgl%cg
+            call cg%costs%start
 
             i1 = cg%is; id = 1 ! mv to multigridvars, init_multigrid
             j1 = cg%js; jd = 1
@@ -883,6 +890,8 @@ contains
                   enddo
                enddo
             enddo
+
+            call cg%costs%stop(I_DIFFUSE)
             cgl => cgl%nxt
          enddo
       enddo

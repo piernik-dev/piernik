@@ -83,6 +83,7 @@ contains
 
    subroutine repeat_fluidstep
 
+      use cg_cost,          only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: pSUM, I_ZERO, I_ONE, dsetnamelen, AT_IGNORE, INVALID
@@ -163,6 +164,7 @@ contains
       no_hist_count = 0
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
          ! No need to take care of any cgl%cg%q arrays as long as gravity is extrapolated from the previous timestep.
 
          ! error checking should've been done in restart_arrays, called few lines earlier
@@ -199,6 +201,8 @@ contains
                enddo
             end associate
          enddo
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
       if (cfl_violated) then

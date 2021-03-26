@@ -107,6 +107,7 @@ module cresp_grid
 
    subroutine cresp_update_grid
 
+      use cg_cost,          only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, onet
@@ -134,6 +135,8 @@ module cresp_grid
 
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
@@ -160,6 +163,8 @@ module cresp_grid
                enddo
             enddo
          enddo
+
+         call cg%costs%stop(I_MHD)
          cgl=>cgl%nxt
       enddo
 
@@ -169,6 +174,7 @@ module cresp_grid
 
    subroutine cresp_clean_grid
 
+      use cg_cost,          only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cresp_crspectrum, only: detect_clean_spectrum
@@ -187,6 +193,8 @@ module cresp_grid
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
@@ -200,6 +208,8 @@ module cresp_grid
                enddo
             enddo
          enddo
+
+         call cg%costs%stop(I_MHD)
          cgl=>cgl%nxt
       enddo
 
