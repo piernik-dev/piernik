@@ -154,6 +154,7 @@ program piernik
       if ((t .equals. tlast) .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
 
       call piernik_MPI_Barrier
+      call all_cg%process_costs
 
       if (.not.cfl_violated) then
          call ppp_main%start('write_data', PPP_IO)

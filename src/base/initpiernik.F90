@@ -285,6 +285,8 @@ contains
          call update_particle_kinetic_energy
 #endif /* NBODY */
 
+         call all_cg%process_costs
+
          do while (.not. finished)
             write(label, '(i8)') nit + 1
             call ppp_main%start(iter_label // adjustl(label), PPP_PROB)
@@ -305,6 +307,7 @@ contains
             write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%l%id,", time elapsed: ",set_timer(tmr_fu)
             if (master) call printinfo(msg)
             call ppp_main%stop(iter_label // adjustl(label), PPP_PROB)
+            call all_cg%process_costs
          enddo
 #ifdef GRAV
          call cleanup_hydrostatic
@@ -337,6 +340,7 @@ contains
 #ifdef VERBOSE
       call diagnose_arrays                   ! may depend on everything
 #endif /* VERBOSE */
+      call all_cg%process_costs
 
       call write_data(output=INCEPTIVE)
 

@@ -67,6 +67,7 @@ module cg_list_global
       procedure :: check_na          !< Check if all named arrays are consistently registered
       procedure :: delete_all        !< Delete the grid container from all lists
       procedure :: mark_orphans      !< Find grid pieces that do not belong to any list except for all_cg
+      procedure :: process_costs     !< Gather info about measured costs and print them to the log
    end type cg_list_global_t
 
    type(cg_list_global_t)                :: all_cg   !< all grid containers; \todo restore protected
@@ -87,6 +88,7 @@ contains
 
       call all_lists%register(this, all_cg_n)
       this%ord_prolong_nb = I_ZERO
+      call this%process_costs
 
    end subroutine init
 
@@ -435,5 +437,43 @@ contains
       endif
 
    end subroutine mark_orphans
+
+!< \brief Gather info about measured costs and print them to the log
+
+   subroutine process_costs(this)
+
+      use cg_cost_stats, only: cg_stats_t
+      use cg_list,       only: cg_list_element
+      use constants,     only: base_level_id
+      use MPIF,          only: MPI_Wtime
+
+      implicit none
+
+      class(cg_list_global_t), intent(in) :: this  !< object invoking type-bound procedure
+
+      type(cg_list_element), pointer :: cgl
+      type(cg_stats_t) :: leaves_stats, all_stats
+      real, save :: prev_time = -huge(1.)
+
+      ! gather mean, standard deviation and extrema for the costs
+      call leaves_stats%reset
+      call all_stats%reset
+      cgl => this%first
+      do while (associated(cgl))
+         if (cgl%cg%l%id >= base_level_id) call leaves_stats%add(cgl%cg%costs)
+         call all_stats%add(cgl%cg%costs)
+         cgl => cgl%nxt
+      enddo
+
+      ! clear the data before next stage
+      cgl => this%first
+      do while (associated(cgl))
+         call cgl%cg%costs%reset
+         cgl => cgl%nxt
+      enddo
+
+      prev_time = MPI_Wtime()
+
+   end subroutine process_costs
 
 end module cg_list_global
