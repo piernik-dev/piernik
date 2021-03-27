@@ -666,7 +666,8 @@ contains
 
       ! Assumes dom%has_dir(crdim)
       !> \warning *cg%idl(crdim) makes a difference
-      d_par = (cg%q(soln)%point(im) - cg%q(soln)%point(ilm)) * cg%idl(crdim)
+      d_par = (cg%q(soln)%arr(im(xdim), im(ydim), im(zdim)) - &
+           &   cg%q(soln)%arr(ilm(xdim), ilm(ydim), ilm(zdim))) * cg%idl(crdim)
 #ifdef COSM_RAY_ELECTRONS
       fcrdif = K_crn_perp(cr_id) * d_par
       if (present(Keff)) Keff = K_crn_perp(cr_id)
@@ -680,7 +681,7 @@ contains
 #endif /* !COSM_RAY_ELECTRONS */
 
          b_perp = 0.
-         b_par = cg%q(idiffb(crdim))%point(im)
+         b_par = cg%q(idiffb(crdim))%arr(im(xdim), im(ydim), im(zdim))
          db = d_par * b_par
          magb = b_par**2
 
@@ -691,7 +692,11 @@ contains
                b_perp = sum(cg%q(idiffb(idir))%span(int(ilm, kind=4), int(imp, kind=4)))*oneq
                magb = magb + b_perp**2
                !> \warning *cg%idl(crdim) makes a difference
-               db = db + b_perp*((cg%q(soln)%point(ilmp) + cg%q(soln)%point(imp)) - (cg%q(soln)%point(ilmm) + cg%q(soln)%point(imm))) * oneq * cg%idl(idir)
+               !db = db + b_perp*((cg%q(soln)%point(ilmp) + cg%q(soln)%point(imp)) - (cg%q(soln)%point(ilmm) + cg%q(soln)%point(imm))) * oneq * cg%idl(idir)
+               db = db + b_perp*((cg%q(soln)%arr(ilmp(xdim), ilmp(ydim), ilmp(zdim))  + &
+                    &             cg%q(soln)%arr(imp(xdim),  imp(ydim),  imp(zdim)))  - &
+                    &            (cg%q(soln)%arr(ilmm(xdim), ilmm(ydim), ilmm(zdim))  + &
+                    &             cg%q(soln)%arr(imm(xdim),  imm(ydim),  imm(zdim)))) * oneq * cg%idl(idir)
             endif
          enddo
 
@@ -871,7 +876,7 @@ contains
                            call diff_flux(idir, im, soln, cg, cr_id, Keff1)
                            call diff_flux(idir, ih, soln, cg, cr_id, Keff2)
 
-                           temp = temp - (cg%q(qna%wai)%point(ih) - cg%wa(i, j, k)) * diff_theta * dt * cg%idl(idir)
+                           temp = temp - (cg%q(qna%wai)%arr(ih(xdim), ih(ydim), ih(zdim)) - cg%wa(i, j, k)) * diff_theta * dt * cg%idl(idir)
                            dLdu = dLdu - 2 * (Keff1 + Keff2) * cg%idl2(idir)
 
                         endif
