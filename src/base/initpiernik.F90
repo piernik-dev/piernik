@@ -65,6 +65,7 @@ contains
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
       use interpolations,        only: set_interpolations
+      use load_balance,          only: init_load_balance
       use memory_usage,          only: init_memory
       use mpisetup,              only: init_mpi, master
       use ppp,                   only: init_profiling, ppp_main
@@ -149,6 +150,8 @@ contains
       call cg_extptrs%epa_init
 
       call init_dataio_parameters            ! Required very early to call colormessage without side-effects
+
+      call init_load_balance
       call init_memory
       call init_profiling                    ! May require init_dataio_parameters and memory_usage set up
       call ppp_main%set_bb(ip_label)         ! can't call tst_cnt%start("init_piernik") before init_mpi
