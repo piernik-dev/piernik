@@ -42,35 +42,34 @@ module load_balance
 
    private
    public :: init_load_balance, &
-        &    auto_balance, cost_mask, balance_thr, verbosity_log, verbosity_stdout, verbosity_nstep, &
+        &    auto_balance, cost_mask, balance_thr, verbosity, verbosity_nstep, &
         &    enable_exclusion, watch_ind, nstep_exclusion, reset_exclusion, exclusion_thr
 
    ! namelist parameters
-   ! balance:
+   !   balance
    logical,                  protected :: auto_balance      !< When .true. the use cg-associated costs in rebalance routine
    character(len=cbuff_len), protected :: cost_to_balance   !< One of [ cg_cost:cost_labels, "all", "none" ], default: "MHD", ToDo: enable selected subset.
    real,                     protected :: balance_thr       !< Minimum tolerated imbalance
 
-   ! verbosity
-   integer(kind=4),          protected :: verbosity_log     !< Enumerated from 0: none, summary, detailed
-   integer(kind=4),          protected :: verbosity_stdout  !< Enumerated from 0: none, summary, detailed
+   !   verbosity
+   integer(kind=4),          protected :: verbosity         !< Enumerated from 0: none, summary, detailed, elaborate
    integer(kind=4),          protected :: verbosity_nstep   !< How often to inform about cg costs
 
-   ! thread exclusion
+   !   thread exclusion
    logical,                  protected :: enable_exclusion  !< When .true. then threads detected as underperforming will be excluded for load balancing
    character(len=cbuff_len), protected :: watch_cost        !< Which cg cost to watch? One of [ cg_cost:cost_labels, "all", "none" ], default: "MHD"
    integer(kind=4),          protected :: nstep_exclusion   !< How often to check for underperforming CPUs
    integer(kind=4),          protected :: reset_exclusion   !< How often to routinely reset excluded status
    real,                     protected :: exclusion_thr     !< Exclusion threshold
 
-   namelist /BALANCE/ auto_balance, cost_to_balance, balance_thr, verbosity_log, verbosity_stdout, verbosity_nstep, &
+   namelist /BALANCE/ auto_balance, cost_to_balance, balance_thr, verbosity, verbosity_nstep, &
         &             enable_exclusion, watch_cost, nstep_exclusion, reset_exclusion, exclusion_thr
 
-   logical, dimension(lbound(cost_labels,1):ubound(cost_labels,1)) :: cost_mask  !< translated cost_to_balance
+   logical, dimension(lbound(cost_labels,1):ubound(cost_labels,1)) :: cost_mask  !< translated from cost_to_balance
    integer(kind=4) :: watch_ind  !< which index to watch for exclusion
 
    enum, bind(C)
-      enumerator :: V_NONE = 0, V_SUM, V_DETAILED
+      enumerator :: V_NONE = 0, V_SUM, V_DETAILED, V_ELABORATE  !< verbosity levels
    end enum
 
 contains
@@ -84,8 +83,7 @@ contains
 !!   <tr><td> auto_balance     </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::auto_balance     </td></tr>
 !!   <tr><td> cost_to_balance  </td><td> "MHD"    </td><td> character() </td><td> \copydoc load_balance::cost_to_balance  </td></tr>
 !!   <tr><td> balance_thr      </td><td> 1.       </td><td> real        </td><td> \copydoc load_balance::balance_thr      </td></tr>
-!!   <tr><td> verbosity_log    </td><td> 1        </td><td> integer     </td><td> \copydoc load_balance:verbosity_log:    </td></tr>
-!!   <tr><td> verbosity_stdout </td><td> 0        </td><td> integer     </td><td> \copydoc load_balance::verbosity_stdout </td></tr>
+!!   <tr><td> verbosity        </td><td> 1        </td><td> integer     </td><td> \copydoc load_balance::verbosity        </td></tr>
 !!   <tr><td> verbosity_nstep  </td><td> 10       </td><td> integer     </td><td> \copydoc load_balance::verbosity_nstep  </td></tr>
 !!   <tr><td> enable_exclusion </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::enable_exclusion </td></tr>
 !!   <tr><td> watch_cost       </td><td> "MHD"    </td><td> character() </td><td> \copydoc load_balance::watch_cost       </td></tr>
@@ -115,8 +113,7 @@ contains
       auto_balance     = .false.
       cost_to_balance  = "MHD"
       balance_thr      = tolerable_imbalance
-      verbosity_log    = V_SUM
-      verbosity_stdout = V_NONE
+      verbosity        = V_SUM
       verbosity_nstep  = verbosity_nstep_default
       enable_exclusion = .false.
       watch_cost       = "MHD"
@@ -145,11 +142,10 @@ contains
          cbuff(1) = cost_to_balance
          cbuff(2) = watch_cost
 
-         ibuff(1) = verbosity_log
-         ibuff(2) = verbosity_stdout
-         ibuff(3) = verbosity_nstep
-         ibuff(4) = nstep_exclusion
-         ibuff(5) = reset_exclusion
+         ibuff(1) = verbosity
+         ibuff(2) = verbosity_nstep
+         ibuff(3) = nstep_exclusion
+         ibuff(4) = reset_exclusion
 
          lbuff(1) = auto_balance
          lbuff(2) = enable_exclusion
@@ -169,11 +165,10 @@ contains
          cost_to_balance  = cbuff(1)
          watch_cost       = cbuff(2)
 
-         verbosity_log    = ibuff(1)
-         verbosity_stdout = ibuff(2)
-         verbosity_nstep  = ibuff(3)
-         nstep_exclusion  = ibuff(4)
-         reset_exclusion  = ibuff(5)
+         verbosity        = ibuff(1)
+         verbosity_nstep  = ibuff(2)
+         nstep_exclusion  = ibuff(3)
+         reset_exclusion  = ibuff(4)
 
          auto_balance     = lbuff(1)
          enable_exclusion = lbuff(2)

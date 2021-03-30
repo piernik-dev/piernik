@@ -299,7 +299,7 @@ contains
 
    subroutine sweep(cdim, fargo_vel)
 
-      use cg_cost,          only: I_MHD
+      use cg_cost,          only: I_MHD, I_REFINE
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_dataop,   only: cg_list_dataop_t
@@ -418,9 +418,18 @@ contains
 
                   if (all_received) then
                      call ppp_main%start(cg_label, PPP_CG)
+                     call cg%costs%stop(I_REFINE)
+                     ! The recv_cg_finebnd and send_cg_coarsebnd aren't MHD, so we should count them separately.
+                     ! The tricky part is that we need to fit all the switching inside the conditional part
+                     ! adn don't mess pairing and don't let them to nest.
+
+                     call cg%costs%start
                      call solve_cg(cg, cdim, istep, fargo_vel)
+                     call cg%costs%stop(I_MHD)
+
                      call ppp_main%stop(cg_label, PPP_CG)
 
+                     call cg%costs%start
                      call send_cg_coarsebnd(cdim, cg, nr)
                      blocks_done = blocks_done + 1
                   else
@@ -428,7 +437,7 @@ contains
                   endif
                endif
 
-               call cg%costs%stop(I_MHD)
+               call cg%costs%stop(I_REFINE)
                cgl => cgl%nxt
             enddo
             call ppp_main%stop(solve_cgs_label)

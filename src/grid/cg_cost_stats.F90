@@ -169,7 +169,7 @@ contains
       class(cg_stats_t), intent(in) :: this
       integer(kind=4),   intent(in) :: ind
 
-      real, dimension(size(stat_labels)) :: get
+      real, dimension(lbound(stat_labels,1):ubound(stat_labels,1)) :: get
 
       if (ind >= lbound(this%min%wtime, 1) .and. ind <= ubound(this%min%wtime, 1)) then
          if (this%n /= 0) then
