@@ -41,9 +41,8 @@ module load_balance
    implicit none
 
    private
-   public :: init_load_balance, &
-        &    auto_balance, cost_mask, balance_thr, verbosity, verbosity_nstep, &
-        &    enable_exclusion, watch_ind, nstep_exclusion, reset_exclusion, exclusion_thr
+   public :: init_load_balance, print_costs, &
+        &    auto_balance, cost_mask, balance_thr, enable_exclusion, watch_ind, nstep_exclusion, reset_exclusion, exclusion_thr
 
    ! namelist parameters
    !   balance
@@ -69,7 +68,7 @@ module load_balance
    integer(kind=4) :: watch_ind  !< which index to watch for exclusion
 
    enum, bind(C)
-      enumerator :: V_NONE = 0, V_SUM, V_DETAILED, V_ELABORATE  !< verbosity levels
+      enumerator :: V_NONE = 0, V_SUMMARY, V_DETAILED, V_ELABORATE  !< verbosity levels
    end enum
 
 contains
@@ -113,7 +112,7 @@ contains
       auto_balance     = .false.
       cost_to_balance  = "MHD"
       balance_thr      = tolerable_imbalance
-      verbosity        = V_SUM
+      verbosity        = V_DETAILED
       verbosity_nstep  = verbosity_nstep_default
       enable_exclusion = .false.
       watch_cost       = "MHD"
@@ -195,6 +194,11 @@ contains
          exclusion_thr = huge(1.)
       endif
 
+      if (verbosity_nstep <= 0) then
+         if (master) call warn("[load_balance] verbosity_nstep <= 0 (disabling)")
+         verbosity_nstep = huge(1_4)
+      endif
+
       if (master) then
          if (any(cost_mask) .and. auto_balance) call printinfo("[load_balance] Auto-balance enabled")
          if (watch_ind /= INVALID .and. enable_exclusion) then
@@ -228,5 +232,229 @@ contains
       end function decode_cost
 
    end subroutine init_load_balance
+
+!> \brief Report the measured costs
+
+   subroutine print_costs(cglist)
+
+      use cg_cost,       only: cost_labels
+      use cg_cost_stats, only: cg_stats_t, stat_labels, I_MAX
+      use cg_list,       only: cg_list_t, cg_list_element
+      use constants,     only: I_ONE, base_level_id
+      use dataio_pub,    only: msg, warn
+      use global,        only: nstep
+      use mpisetup,      only: master, FIRST, LAST, err_mpi
+      use MPIF,          only: MPI_COMM_WORLD, MPI_DOUBLE_PRECISION, MPI_Wtime, MPI_Gather
+
+      implicit none
+
+      class(cg_list_t), intent(in) :: cglist
+
+      type(cg_list_element), pointer :: cgl
+      type(cg_stats_t) :: leaves_stats, all_stats
+      integer(kind=4) :: i
+      real :: maxv, mul
+      character(len=I_ONE) :: prefix
+      real, save :: prev_time = -huge(1.)
+      real, allocatable, dimension(:, :, :) :: all_proc_stats
+      real, allocatable, dimension(:, :) :: send_stats
+      integer, parameter :: N_STATS = size(stat_labels) + I_ONE
+
+      if ((verbosity > V_NONE) .and. ((nstep <= 0 .and. verbosity_nstep <= 1) .or. (nstep > 0 .and. mod(nstep, verbosity_nstep) == 0))) then
+
+         ! gather mean, standard deviation and extrema for the costs
+         call leaves_stats%reset
+         call all_stats%reset
+         cgl => cglist%first
+         do while (associated(cgl))
+            if (cgl%cg%l%id >= base_level_id) call leaves_stats%add(cgl%cg%costs)
+            call all_stats%add(cgl%cg%costs)
+            cgl => cgl%nxt
+         enddo
+
+         if (master) then
+            allocate(all_proc_stats(N_STATS, size(cost_labels), FIRST:LAST))
+         else
+            allocate(all_proc_stats(0, 0, 0))
+         endif
+
+         allocate(send_stats(N_STATS, size(cost_labels)))
+         do i = lbound(cost_labels, 1), ubound(cost_labels, 1)
+            send_stats(:, i - lbound(cost_labels, 1) + lbound(send_stats, 2)) = [ leaves_stats%get(i), all_stats%get_sum() ]
+         enddo
+         call MPI_Gather(send_stats,     size(send_stats, kind=4), MPI_DOUBLE_PRECISION, &
+              &          all_proc_stats, size(send_stats, kind=4), MPI_DOUBLE_PRECISION, &
+              &          FIRST, MPI_COMM_WORLD, err_mpi)
+
+         ! find outliers(MHD) @master (proc), @proc (cg)
+
+         if (master) then
+
+            ! Choose between s and ms.
+            maxv = maxval(all_proc_stats(:, I_MAX - lbound(stat_labels) + I_ONE, :))
+            if (maxv > 0.999) then  ! let's prevent rounding up by write to 1000 ms
+               mul = 1.
+               prefix = " "
+            else
+               mul = 1e3
+               prefix = "m"
+            endif
+
+            if (maxv <= 0.) then
+               if (prev_time >= 0.) then
+                  write(msg, '(a,f11.6,a)')"No cg cost data found anywhere. Walltime:", MPI_Wtime() - prev_time, " s"
+                  call warn(msg)
+               endif
+            else
+               select case (verbosity)
+                  case (V_ELABORATE:)
+                     call log_elaborate
+                  case (V_DETAILED)
+                     call log_detailed
+                  case (V_SUMMARY)
+                     call log_summary
+               end select
+            endif
+
+         endif
+
+         deallocate(all_proc_stats, send_stats)
+
+      endif
+
+      prev_time = MPI_Wtime()
+
+   contains
+
+      subroutine log_elaborate
+
+         use dataio_pub, only: printinfo
+         use procnames,  only: pnames
+
+         implicit none
+
+         integer :: j, p
+         real, dimension(lbound(stat_labels,1):ubound(stat_labels,1)) :: stat
+
+         do i = lbound(cost_labels, 1), ubound(cost_labels, 1)
+            if (any(all_proc_stats(I_MAX - lbound(stat_labels) + I_ONE, i - lbound(cost_labels, 1) + I_ONE, :) > 0.)) then
+               do p = FIRST, LAST  ! lbound(all_proc_stats, 3), ubound(all_proc_stats, 3)
+                  stat = all_proc_stats(:N_STATS-I_ONE, i - lbound(cost_labels, 1) + I_ONE, p)
+                  if (stat(I_MAX) > 0.) then
+                     write(msg, '(2a,i5,3a)')"@", pnames%procnames(p)(:pnames%maxnamelen), p, " Cost('", cost_labels(i), "')"
+                     do j = lbound(stat_labels, 1), ubound(stat_labels, 1)
+                        write(msg(len_trim(msg)+1:), '(3a,f10.3,3a)') merge(": ", ", ", j == lbound(stat_labels, 1)), &
+                             &                                      trim(stat_labels(j)), "= ", mul*stat(j), " ", trim(prefix), "s "
+                     enddo
+                     call printinfo(msg)
+                  endif
+               enddo
+            endif
+         enddo
+
+         call log_summary
+
+      end subroutine log_elaborate
+
+      subroutine log_detailed
+
+         use cg_cost_stats, only: I_AVG, I_SIGMA
+         use dataio_pub,    only: printinfo
+         use procnames,     only: pnames
+
+         implicit none
+
+         integer :: p
+
+         write(msg, '(2a,a5,a)')" host", repeat(" ", pnames%maxnamelen - 4), "rank", " :"
+         do i = lbound(cost_labels, 1), ubound(cost_labels, 1)
+            if (any(all_proc_stats(I_AVG, i - lbound(cost_labels, 1) + I_ONE, :) > 0.)) then
+               write(msg(len_trim(msg)+1:), '(a24)') "avg(" // trim(cost_labels(i)) // ") ± σ"
+            endif
+         enddo
+         write(msg(len_trim(msg)+1:), '(a)') " (per cg)"
+         call printinfo(msg)
+
+         do p = FIRST, LAST
+            write(msg, '(2a,i5,a)')"@", pnames%procnames(p)(:pnames%maxnamelen), p, " :"
+            do i = lbound(cost_labels, 1), ubound(cost_labels, 1)
+               if (any(all_proc_stats(I_AVG, i - lbound(cost_labels, 1) + I_ONE, :) > 0.)) then
+                  if (all_proc_stats(I_AVG,   i - lbound(cost_labels, 1) + I_ONE, p) > 0.) then
+                     write(msg(len_trim(msg)+1:), '(f10.3,3a,f6.1,a)') &
+                          &  mul*all_proc_stats(I_AVG,   i - lbound(cost_labels, 1) + I_ONE, p),  " ", prefix, "s ±", &
+                          & 100.*all_proc_stats(I_SIGMA, i - lbound(cost_labels, 1) + I_ONE, p) / &
+                          &      all_proc_stats(I_AVG,   i - lbound(cost_labels, 1) + I_ONE, p), "%"
+                  else
+                     write(msg(len_trim(msg)+1:), '(f10.3,3a,a6,a)') &
+                          &  mul*all_proc_stats(I_AVG,   i - lbound(cost_labels, 1) + I_ONE, p),  " ", prefix, "s  ", "N/A", "%"
+                  endif
+               endif
+            enddo
+            call printinfo(msg)
+         enddo
+
+         call log_summary
+
+      end subroutine log_detailed
+
+      subroutine log_summary
+
+         use dataio_pub, only: printinfo
+         use procnames,  only: pnames
+
+         implicit none
+
+         integer :: p, host, lines, per_line, l
+         real :: dt_wall
+         integer, parameter :: max_one_line = 8, max_per_line = 12
+
+         if (prev_time >= 0.) then
+            dt_wall = MPI_Wtime() - prev_time
+
+            write(msg, '(a,f11.3,3a)') "All accumulated cg costs out of ", mul*dt_wall, " ", trim(prefix), "s"
+            call printinfo(msg)
+
+            do host = lbound(pnames%proc_on_node, 1), ubound(pnames%proc_on_node, 1)
+               write(msg, '(3a)')"@", pnames%proc_on_node(host)%nodename(:pnames%maxnamelen), " : "
+
+               if (size(pnames%proc_on_node(host)%proc) <= max_one_line) then
+                  do p = lbound(pnames%proc_on_node(host)%proc, 1), ubound(pnames%proc_on_node(host)%proc, 1)
+                     write(msg(len_trim(msg)+1:), '(f11.3)') mul*all_proc_stats(N_STATS, I_ONE, pnames%proc_on_node(host)%proc(p))
+                  enddo
+                  write(msg(len_trim(msg)+1:), '(a)') " | "
+                  do p = lbound(pnames%proc_on_node(host)%proc, 1), ubound(pnames%proc_on_node(host)%proc, 1)
+                     write(msg(len_trim(msg)+1:), '(f6.1,a)') all_proc_stats(N_STATS, I_ONE, pnames%proc_on_node(host)%proc(p))/dt_wall * 100., "%"
+                  enddo
+                  call printinfo(msg)
+               else
+                  lines = ceiling(real(size(pnames%proc_on_node(host)%proc)) / max_per_line)
+                  per_line = ceiling(real(size(pnames%proc_on_node(host)%proc)) / lines)  ! or max_per_line for extremely heterogenous set of nodes
+                  do l = 1, lines
+                     if (l > I_ONE) write(msg, '(2a)') repeat(" ", pnames%maxnamelen + 1), " : "
+                     do p =   lbound(pnames%proc_on_node(host)%proc, 1) + per_line * (l - 1), &
+                          min(lbound(pnames%proc_on_node(host)%proc, 1) + per_line *  l - 1 , &
+                          &   ubound(pnames%proc_on_node(host)%proc, 1))
+                        write(msg(len_trim(msg)+1:), '(f11.3)') mul*all_proc_stats(N_STATS, I_ONE, pnames%proc_on_node(host)%proc(p))
+                     enddo
+                     call printinfo(msg)
+                  enddo
+                  do l = 1, lines
+                     write(msg, '(2a)') repeat(" ", pnames%maxnamelen + 1), " : "
+                     do p =   lbound(pnames%proc_on_node(host)%proc, 1) + per_line * (l - 1), &
+                          min(lbound(pnames%proc_on_node(host)%proc, 1) + per_line *  l - 1 , &
+                          &   ubound(pnames%proc_on_node(host)%proc, 1))
+                        write(msg(len_trim(msg)+1:), '(f10.1,a)') all_proc_stats(N_STATS, I_ONE, pnames%proc_on_node(host)%proc(p))/dt_wall * 100., "%"
+                     enddo
+                     call printinfo(msg)
+                  enddo
+               endif
+
+            enddo
+
+         endif
+
+      end subroutine log_summary
+
+   end subroutine print_costs
 
 end module load_balance

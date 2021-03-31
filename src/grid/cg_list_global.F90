@@ -442,28 +442,16 @@ contains
 
    subroutine process_costs(this)
 
-      use cg_cost_stats, only: cg_stats_t
       use cg_list,       only: cg_list_element
-      use constants,     only: base_level_id
-      use MPIF,          only: MPI_Wtime
+      use load_balance,  only: print_costs
 
       implicit none
 
       class(cg_list_global_t), intent(in) :: this  !< object invoking type-bound procedure
 
       type(cg_list_element), pointer :: cgl
-      type(cg_stats_t) :: leaves_stats, all_stats
-      real, save :: prev_time = -huge(1.)
 
-      ! gather mean, standard deviation and extrema for the costs
-      call leaves_stats%reset
-      call all_stats%reset
-      cgl => this%first
-      do while (associated(cgl))
-         if (cgl%cg%l%id >= base_level_id) call leaves_stats%add(cgl%cg%costs)
-         call all_stats%add(cgl%cg%costs)
-         cgl => cgl%nxt
-      enddo
+      call print_costs(this)
 
       ! clear the data before next stage
       cgl => this%first
@@ -471,8 +459,6 @@ contains
          call cgl%cg%costs%reset
          cgl => cgl%nxt
       enddo
-
-      prev_time = MPI_Wtime()
 
    end subroutine process_costs
 
