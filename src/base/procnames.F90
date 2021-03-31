@@ -1,0 +1,168 @@
+!
+! PIERNIK Code Copyright (C) 2006 Michal Hanasz
+!
+!    This file is part of PIERNIK code.
+!
+!    PIERNIK is free software: you can redistribute it and/or modify
+!    it under the terms of the GNU General Public License as published by
+!    the Free Software Foundation, either version 3 of the License, or
+!    (at your option) any later version.
+!
+!    PIERNIK is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!    GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License
+!    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
+!
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
+!    Ue-Li Pen
+!        see: Pen, Arras & Wong (2003) for algorithm and
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
+!    For full list of developers see $PIERNIK_HOME/license/pdt.txt
+!
+#include "piernik.h"
+
+!>
+!! \brief Collect names of nodes. Provide structures that allow for quick translation between rank and node name.
+!!
+!! To be used in load balancing and possibly in MPI-3 (shared memory parallelism).
+!!
+!! To allow usage in IO routines try to avoid dependencies on dataio_pub.
+!<
+
+module procnames
+
+   use MPIF, only: MPI_MAX_PROCESSOR_NAME
+
+   implicit none
+
+   private
+   public :: pnames
+
+   ! all MPI rank associated with particular node name
+   type nodeproc_t
+      character(len=MPI_MAX_PROCESSOR_NAME) :: nodename
+      integer(kind=4), allocatable, dimension(:) :: proc
+   end type nodeproc_t
+
+   ! all connections between MPI ranks and nodes
+   type procnamelist_t
+      character(len=MPI_MAX_PROCESSOR_NAME), allocatable, dimension(:) :: procnames  !< node names associated with MPI ranks
+      character(len=MPI_MAX_PROCESSOR_NAME), allocatable, dimension(:) :: nodenames  !< unique node names (perhaps can be removed as auxiliary)
+      type(nodeproc_t), allocatable, dimension(:) :: proc_on_node                    !< array of nodes and MPI ranks
+      integer(kind=4) :: maxnamelen
+   contains
+      procedure :: init
+      procedure :: cleanup
+   end type procnamelist_t
+
+   type(procnamelist_t) :: pnames
+
+contains
+
+!< \brief initialise the pnames structure
+
+   subroutine init(this)
+
+      use constants, only: I_ZERO
+      use mpisetup,  only: FIRST, LAST, err_mpi
+      use MPIF,      only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_Get_processor_name, MPI_Allgather
+
+      implicit none
+
+      class(procnamelist_t), intent(inout) :: this
+
+      character(len=MPI_MAX_PROCESSOR_NAME) :: myname
+      integer(kind=4) :: mynamelen
+
+      allocate(this%procnames(FIRST:LAST))
+      this%maxnamelen = I_ZERO
+
+      call MPI_Get_processor_name(myname, mynamelen, err_mpi)
+      call MPI_Allgather(myname,         MPI_MAX_PROCESSOR_NAME, MPI_CHARACTER, &
+           &             this%procnames, MPI_MAX_PROCESSOR_NAME, MPI_CHARACTER, &
+           &             MPI_COMM_WORLD, err_mpi)
+
+      call find_unique
+      call fill_proc_on_node
+
+   contains
+
+      !> \brief Find unique node names
+
+      subroutine find_unique
+
+         use constants,  only: I_ONE
+
+         implicit none
+
+         integer :: i, j
+         logical :: found
+
+         allocate(this%nodenames(I_ONE))
+         this%nodenames(I_ONE) = this%procnames(FIRST)
+         do i = lbound(this%procnames, 1), ubound(this%procnames, 1)
+            found = .false.
+            do j = lbound(this%nodenames, 1), ubound(this%nodenames, 1)
+               found = found .or. (this%procnames(i) == this%nodenames(j))  ! longer loop perhaps would benefit from use of exit statement
+            enddo
+            if (.not. found) this%nodenames = [ this%nodenames, this%procnames(i) ]  ! lhs reallocation
+         enddo
+
+         do j = lbound(this%nodenames, 1), ubound(this%nodenames, 1)
+            this%maxnamelen = max(this%maxnamelen, len_trim(this%nodenames(j), kind=4))
+         enddo
+
+      end subroutine find_unique
+
+      !> Connect unique node names with MPI ranks
+
+      subroutine fill_proc_on_node
+
+         implicit none
+
+         integer(kind=4) :: i, j
+
+         allocate(this%proc_on_node(size(this%nodenames)))
+         do i = lbound(this%nodenames, 1, kind=4), ubound(this%nodenames, 1, kind=4)
+            this%proc_on_node(i)%nodename = this%nodenames(i)
+            allocate(this%proc_on_node(i)%proc(0))
+         enddo
+
+         do j = lbound(this%proc_on_node, 1, kind=4), ubound(this%proc_on_node, 1, kind=4)
+            do i = lbound(this%procnames, 1, kind=4), ubound(this%procnames, 1, kind=4)
+               if (this%procnames(i) == this%proc_on_node(j)%nodename) &
+                    & this%proc_on_node(j)%proc = [ this%proc_on_node(j)%proc, i ]  ! lhs reallocation
+            enddo
+         enddo
+
+      end subroutine fill_proc_on_node
+
+   end subroutine init
+
+!< \brief Clean up the pnames structure
+
+   subroutine cleanup(this)
+
+      implicit none
+
+      class(procnamelist_t), intent(inout) :: this
+
+      integer :: i
+
+      if (.not. allocated(this%procnames)) return  !< in case it wasn't ever initialized
+
+      do i = lbound(this%proc_on_node, 1), ubound(this%proc_on_node, 1)
+         deallocate(this%proc_on_node(i)%proc)
+      enddo
+      deallocate(this%proc_on_node)
+      deallocate(this%nodenames)
+      deallocate(this%procnames)
+
+   end subroutine cleanup
+
+end module procnames

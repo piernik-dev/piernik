@@ -69,6 +69,7 @@ contains
       use memory_usage,          only: init_memory
       use mpisetup,              only: init_mpi, master
       use ppp,                   only: init_profiling, ppp_main
+      use procnames,             only: pnames
       use refinement,            only: init_refinement, level_max
       use refinement_update,     only: update_refinement
       use sources,               only: init_sources
@@ -150,7 +151,14 @@ contains
       call cg_extptrs%epa_init
 
       call init_dataio_parameters            ! Required very early to call colormessage without side-effects
-
+      call pnames%init
+      ! The logging below was intentionally moved outside procnames module because of dataio_pub dependencies.
+      if (master) then
+         do nit = lbound(pnames%proc_on_node, 1), ubound(pnames%proc_on_node, 1)
+            write(msg, '(3a,1024i6)')"Ranks at host '", pnames%proc_on_node(nit)%nodename(:pnames%maxnamelen), "' : ", pnames%proc_on_node(nit)%proc
+            call printinfo(msg)
+         enddo
+      endif
       call init_load_balance
       call init_memory
       call init_profiling                    ! May require init_dataio_parameters and memory_usage set up
