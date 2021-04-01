@@ -55,7 +55,7 @@ module mpisetup
    integer(kind=INT4), parameter :: FIRST = 0   !< the rank of the master process
    real(kind=8), protected    :: bigbang        !< First result of MPI_Wtime()
    real(kind=8), protected    :: bigbang_shift  !< A correction applied to readouts of MPI_Wtime() if necessary
-   real(kind=8), parameter    :: min_bigbang = 1.
+   real(kind=8), parameter    :: min_bigbang = 1e-6  !< Start all processes from time = 1 µs
    integer(kind=MPI_ADDRESS_KIND), protected :: tag_ub
 
    logical, protected :: master      !< .True. if proc == FIRST
@@ -140,10 +140,10 @@ contains
 
    subroutine init_mpi
 
-      use constants,     only: cwdlen, I_ONE, pMIN
+      use constants,     only: cwdlen, I_ONE
       use MPIF,          only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL, &
            &                   MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND, MPI_TAG_UB, &
-           &                   MPI_Wtime, MPI_Allreduce, MPI_Gather, MPI_Init, &
+           &                   MPI_Wtime, MPI_Gather, MPI_Init, &
            &                   MPI_Comm_get_parent, MPI_Comm_rank, MPI_Comm_size, MPI_Comm_get_attr
       use dataio_pub,    only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
       use dataio_pub,    only: par_file, lun
@@ -223,13 +223,7 @@ contains
       call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, FIRST, MPI_COMM_WORLD, err_mpi)
       call MPI_Gather(pid_proc,  I_ONE, MPI_INTEGER,   pid_all,  I_ONE, MPI_INTEGER,   FIRST, MPI_COMM_WORLD, err_mpi)
 
-      bigbang_shift = bigbang
-      call piernik_MPI_Allreduce(bigbang_shift, pMIN)
-      if (bigbang_shift > min_bigbang) then
-         bigbang_shift = 0.
-      else
-         bigbang_shift = 2. * min_bigbang - bigbang_shift  ! If Big Bang < 0. then modify readouts of MPI_Wtime taken for PPP to pretend that everything started at around 1 sec.
-      endif
+      bigbang_shift = min_bigbang - bigbang
 
       if (master) then
          inquire(file=par_file, exist=par_file_exist)
