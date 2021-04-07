@@ -58,7 +58,7 @@ module named_array
    !> \brief A named array for multi-scalar and vector fields
    type, extends(generic_na) :: named_array4d
       real, dimension(:,:,:,:), pointer :: arr => null()
-    contains
+   contains
       procedure :: array4d_associate
       procedure :: array4d_get_sweep
       procedure :: array4d_get_sweep_one_var
@@ -78,7 +78,7 @@ module named_array
    !> \brief A named array for scalar fields
    type, extends(generic_na) :: named_array3d
       real, dimension(:,:,:), pointer :: arr => null()
-    contains
+   contains
       procedure :: array3d_associate
       procedure :: array3d_span
       procedure :: array3d_span_ijkse
@@ -107,7 +107,7 @@ contains
 !! these can affect some conditional parts of the code such as initialisation
 !! of refinement or check for non negative internal energy.
 !!
-!! OPT: check_mem_usage is relatively slow, se we prefer to call it only in
+!! OPT: check_mem_usage is relatively slow, so we prefer to call it only in
 !! grid_container_na::add_all_na.
 !<
    subroutine named_array_init(this, n1, n2)
@@ -158,6 +158,7 @@ contains
          class default
             call die("[named_array:clean] No cleanup for generic named array")
       end select
+
    end subroutine clean
 
 !> \brief check if the array was initialized with sane values
