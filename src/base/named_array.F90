@@ -96,10 +96,19 @@ contains
 !!
 !! \details The mbc component is initialized separately
 !!
-!! \warning Please note that maxloc and minloc return positions as all the declared lower bounds of array were 1, so whenever you plan to use these functions
-!! on this%arr remember to add lbound(this%arr) - 1 to the result
+!! \warning Please note that maxloc and minloc return positions as all the
+!! declared lower bounds of array were 1, so whenever you plan to use these
+!! functions on this%arr remember to add lbound(this%arr) - 1 to the result.
 !!
-!! OPT: check_mem_usage is relatively slow, se we prefer to call it only in grid_container_na::add_all_na
+!! \warning Explicit initialisation of this%arr adds significant cost to the
+!! process of cg creation. It should not be necessary at all. For dirty_debug
+!! a -huge(1.), NaN or some other weird value should be used. Unfortunately
+!! some uninits do leak into the solution in some configurations or at least
+!! these can affect some conditional parts of the code such as initialisation
+!! of refinement or check for non negative internal energy.
+!!
+!! OPT: check_mem_usage is relatively slow, se we prefer to call it only in
+!! grid_container_na::add_all_na.
 !<
    subroutine named_array_init(this, n1, n2)
 
@@ -119,11 +128,11 @@ contains
          type is (named_array3d)
             if (size(n1) /= ndims) call die("[named_array:array_init] expected 3d shape")
             if (.not.associated(this%arr)) allocate(this%arr(n1(xdim):n2(xdim), n1(ydim):n2(ydim), n1(zdim):n2(zdim)))
-            if (dirty_debug) this%arr = 0.789*dirtyH1
+            if (dirty_debug .or. .true.) this%arr = 0.789*dirtyH1  ! FixMe: remove ".or. true" once proper initialisation will be properly enforced
          type is (named_array4d)
             if (size(n1) /= I_ONE + ndims) call die("[named_array:array_init] expected 4d shape")
             if (.not.associated(this%arr)) allocate(this%arr(n1(I_ONE):n2(I_ONE), n1(I_ONE+xdim):n2(I_ONE+xdim), n1(I_ONE+ydim):n2(I_ONE+ydim), n1(I_ONE+zdim):n2(I_ONE+zdim)))
-            if (dirty_debug) this%arr = 0.788*dirtyH1
+            if (dirty_debug .or. .true.) this%arr = 0.788*dirtyH1  ! FixMe (as above)
          class default
             call die("[named_array:named_array_init] No initialization for generic named array")
       end select
