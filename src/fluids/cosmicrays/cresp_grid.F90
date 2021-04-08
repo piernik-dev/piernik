@@ -144,7 +144,7 @@ module cresp_grid
                   cresp%n = cg%u(iarr_cre_n, i, j, k)
                   cresp%e = cg%u(iarr_cre_e, i, j, k)
                   if (synch_active) sptab%ub = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr, u_b_max)    !< WARNING assusmes that b is in mGs
-                  if (adiab_active) sptab%ud = cg%q(divv_i)%point([i,j,k]) * onet
+                  if (adiab_active) sptab%ud = cg%q(divv_i)%arr(i, j, k) * onet
 #ifdef CRESP_VERBOSED
                   print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* CRESP_VERBOSED */

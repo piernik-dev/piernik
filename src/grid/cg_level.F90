@@ -278,7 +278,7 @@ contains
       integer                       :: i, p, ep
       integer(kind=8)               :: s
       type(grid_container), pointer :: cg
-      character(len=*), parameter :: gc_label = "init_gc"
+      character(len=*), parameter   :: gc_label = "init_gc"
 
       ! Find how many pieces are to be added and recreate local gse and make room for new pieces in the gse array
       call this%dot%update_local(this%first, int(this%cnt + this%plist%p_count(), kind=4))

@@ -274,6 +274,7 @@ contains
          enddo
 
 #ifdef TRACER
+#error Check this code and move into loop over cg above
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
