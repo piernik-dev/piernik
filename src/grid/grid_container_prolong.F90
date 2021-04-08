@@ -181,12 +181,13 @@ contains
 
    subroutine prolong(this, ind, cse, p_xyz)
 
-      use constants,          only: xdim, ydim, zdim, zero, LO, HI, I_ZERO, I_ONE, I_TWO, I_THREE, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_D5, O_D6, O_I2, O_I3, O_I4, O_I5, O_I6
-      use dataio_pub,         only: die
-      use domain,             only: dom
-      use func,               only: operator(.notequals.)
-      use grid_helpers,       only: c2f
-      use named_array_list,   only: qna
+      use constants,        only: xdim, ydim, zdim, zero, LO, HI, I_ZERO, I_ONE, I_TWO, I_THREE, &
+           &                      O_INJ, O_LIN, O_D2, O_D3, O_D4, O_D5, O_D6, O_I2, O_I3, O_I4, O_I5, O_I6
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use func,             only: operator(.notequals.)
+      use grid_helpers,     only: c2f
+      use named_array_list, only: qna
 
       implicit none
 
