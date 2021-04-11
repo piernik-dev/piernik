@@ -35,7 +35,7 @@ module cg_cost_stats
    implicit none
 
    private
-   public :: cg_stats_t, stat_labels, I_MIN, I_MAX, I_AVG, I_SIGMA, I_SUM
+   public :: cg_stats_t, stat_labels, I_MIN, I_MAX, I_AVG, I_SIGMA, I_SUM, I_SUM2
 
    type :: cg_stats_t
       type(cg_cost_data_t), private :: min     !< element-wise minimum
@@ -56,15 +56,16 @@ module cg_cost_stats
    end type cg_stats_t
 
    enum, bind(C)
-      enumerator :: I_MIN = 1, I_MAX, I_AVG, I_SIGMA, I_SUM
+      enumerator :: I_MIN = 1, I_MAX, I_AVG, I_SIGMA, I_SUM, I_SUM2
    end enum
 
-   character(len=*), dimension(I_MIN:I_SUM), parameter :: stat_labels = &
+   character(len=*), dimension(I_MIN:I_SUM2), parameter :: stat_labels = &
         [ "minimum  ", &
         & "maximum  ", &
         & "average  ", &
         & "deviation", &
-        & "sum      " ]
+        & "sum      ", &
+        & "sum^2    " ]
 
 contains
 
@@ -178,7 +179,8 @@ contains
                  &  this%max%wtime(ind), &
                  &  this%w_sum%wtime(ind) / this%n, &
                  &  sqrt(this%w_sum2%wtime(ind) / this%n - (this%w_sum%wtime(ind) / this%n)**2), &
-                 &  this%w_sum%wtime(ind) ]
+                 &  this%w_sum%wtime(ind) , &
+                 &  this%w_sum2%wtime(ind) ]
          else
             get = 0.
          endif

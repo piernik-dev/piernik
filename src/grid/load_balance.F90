@@ -68,7 +68,7 @@ module load_balance
    integer(kind=4) :: watch_ind  !< which index to watch for exclusion
 
    enum, bind(C)
-      enumerator :: V_NONE = 0, V_SUMMARY, V_DETAILED, V_ELABORATE  !< verbosity levels
+      enumerator :: V_NONE = 0, V_SUMMARY, V_HOST, V_DETAILED, V_ELABORATE  !< verbosity levels
    end enum
 
 contains
@@ -309,8 +309,15 @@ contains
                select case (verbosity)
                   case (V_ELABORATE:)
                      call log_elaborate
+                     call log_host
+                     call log_summary
                   case (V_DETAILED)
                      call log_detailed
+                     call log_host
+                     call log_summary
+                  case (V_HOST)
+                     call log_host
+                     call log_summary
                   case (V_SUMMARY)
                      call log_summary
                end select
@@ -328,8 +335,9 @@ contains
 
       subroutine log_elaborate
 
-         use dataio_pub, only: printinfo
-         use procnames,  only: pnames
+         use cg_cost_stats, only: I_SUM2
+         use dataio_pub,    only: printinfo
+         use procnames,     only: pnames
 
          implicit none
 
@@ -343,16 +351,15 @@ contains
                   if (stat(I_MAX) > 0.) then
                      write(msg, '(2a,i5,3a)')"@", pnames%procnames(p)(:pnames%maxnamelen), p, " Cost('", cost_labels(i), "')"
                      do j = lbound(stat_labels, 1), ubound(stat_labels, 1)
-                        write(msg(len_trim(msg)+1:), '(3a,f10.3,3a)') merge(": ", ", ", j == lbound(stat_labels, 1)), &
-                             &                                      trim(stat_labels(j)), "= ", mul*stat(j), " ", trim(prefix), "s "
+                        if (j /= I_SUM2) &
+                             write(msg(len_trim(msg)+1:), '(3a,f10.3,3a)') merge(": ", ", ", j == lbound(stat_labels, 1)), &
+                             &                                             trim(stat_labels(j)), "= ", mul*stat(j), " ", trim(prefix), "s "
                      enddo
                      call printinfo(msg)
                   endif
                enddo
             endif
          enddo
-
-         call log_summary
 
       end subroutine log_elaborate
 
@@ -393,9 +400,61 @@ contains
             call printinfo(msg)
          enddo
 
-         call log_summary
-
       end subroutine log_detailed
+
+      subroutine log_host
+
+         use cg_cost,       only: cg_cost_data_t
+         use cg_cost_stats, only: I_AVG, I_SUM, I_SUM2
+         use dataio_pub,    only: printinfo
+         use procnames,     only: pnames
+
+         implicit none
+
+         integer :: host, p1, i
+         type(cg_cost_data_t) :: n, sum, sum2
+
+         write(msg, '(2a,a5,a)')" host", repeat(" ", pnames%maxnamelen - 4), " ", " :"
+         do i = lbound(cost_labels, 1), ubound(cost_labels, 1)
+            if (any(all_proc_stats(I_AVG, i - lbound(cost_labels, 1) + I_ONE, :) > 0.)) then
+               write(msg(len_trim(msg)+1:), '(a24)') "avg(" // trim(cost_labels(i)) // ") ± σ"
+            endif
+         enddo
+         write(msg(len_trim(msg)+1:), '(a)') " (per cg, on whole host)"
+         call printinfo(msg)
+
+         do host = lbound(pnames%proc_on_node, 1), ubound(pnames%proc_on_node, 1)
+            ! this is a bit awkward but we need to find moments over a host from already computed moments on threads
+            n%wtime = 0.
+            sum%wtime = 0.
+            sum2%wtime = 0.
+            associate (ph => pnames%proc_on_node(host))
+               do p1 = lbound(ph%proc, 1), ubound(ph%proc, 1)
+                  associate (p => ph%proc(p1))
+                     where (all_proc_stats(I_AVG, :, p) > 0.)  ! reconstruct number of cg, total time and sum of squared durations
+                        n%wtime(:) = n%wtime(:) + all_proc_stats(I_SUM, :, p) / all_proc_stats(I_AVG, :, p)
+                        sum%wtime(:) = sum%wtime(:) + all_proc_stats(I_SUM, :, p)
+                        sum2%wtime(:) = sum2%wtime(:) + all_proc_stats(I_SUM2, :, p)
+                     endwhere
+                  end associate
+               enddo
+               write(msg, '(3a)')"@", ph%nodename(:pnames%maxnamelen), "      :"
+               do i = lbound(cost_labels, 1), ubound(cost_labels, 1)
+                  if (any(all_proc_stats(I_AVG, i - lbound(cost_labels, 1) + I_ONE, :) > 0.)) then
+                     if (sum%wtime(i) > 0.) then
+                        write(msg(len_trim(msg)+1:), '(f10.3,3a,f6.1,a)') &
+                             &  mul * sum%wtime(i) / n%wtime(i),  " ", prefix, "s ±", &
+                             & 100. * sqrt(sum2%wtime(i) * n%wtime(i) / sum%wtime(i)**2 - 1.), "%"
+                     else
+                        write(msg(len_trim(msg)+1:), '(f10.3,3a,a6,a)') 0.,  " ", prefix, "s  ", "N/A", "%"
+                     endif
+                  endif
+               enddo
+               call printinfo(msg)
+            end associate
+         enddo
+
+      end subroutine log_host
 
       subroutine log_summary
 
@@ -415,40 +474,43 @@ contains
             call printinfo(msg)
 
             do host = lbound(pnames%proc_on_node, 1), ubound(pnames%proc_on_node, 1)
-               write(msg, '(3a)')"@", pnames%proc_on_node(host)%nodename(:pnames%maxnamelen), " : "
+               associate (ph => pnames%proc_on_node(host))
 
-               if (size(pnames%proc_on_node(host)%proc) <= max_one_line) then
-                  do p = lbound(pnames%proc_on_node(host)%proc, 1), ubound(pnames%proc_on_node(host)%proc, 1)
-                     write(msg(len_trim(msg)+1:), '(f11.3)') mul*all_proc_stats(N_STATS, I_ONE, pnames%proc_on_node(host)%proc(p))
-                  enddo
-                  write(msg(len_trim(msg)+1:), '(a)') " | "
-                  do p = lbound(pnames%proc_on_node(host)%proc, 1), ubound(pnames%proc_on_node(host)%proc, 1)
-                     write(msg(len_trim(msg)+1:), '(f6.1,a)') all_proc_stats(N_STATS, I_ONE, pnames%proc_on_node(host)%proc(p))/dt_wall * 100., "%"
-                  enddo
-                  call printinfo(msg)
-               else
-                  lines = ceiling(real(size(pnames%proc_on_node(host)%proc)) / max_per_line)
-                  per_line = ceiling(real(size(pnames%proc_on_node(host)%proc)) / lines)  ! or max_per_line for extremely heterogenous set of nodes
-                  do l = 1, lines
-                     if (l > I_ONE) write(msg, '(2a)') repeat(" ", pnames%maxnamelen + 1), " : "
-                     do p =   lbound(pnames%proc_on_node(host)%proc, 1) + per_line * (l - 1), &
-                          min(lbound(pnames%proc_on_node(host)%proc, 1) + per_line *  l - 1 , &
-                          &   ubound(pnames%proc_on_node(host)%proc, 1))
-                        write(msg(len_trim(msg)+1:), '(f11.3)') mul*all_proc_stats(N_STATS, I_ONE, pnames%proc_on_node(host)%proc(p))
+                  write(msg, '(3a)')"@", ph%nodename(:pnames%maxnamelen), " : "
+
+                  if (size(ph%proc) <= max_one_line) then
+                     do p = lbound(ph%proc, 1), ubound(ph%proc, 1)
+                        write(msg(len_trim(msg)+1:), '(f11.3)') mul*all_proc_stats(N_STATS, I_ONE, ph%proc(p))
+                     enddo
+                     write(msg(len_trim(msg)+1:), '(a)') " | "
+                     do p = lbound(ph%proc, 1), ubound(ph%proc, 1)
+                        write(msg(len_trim(msg)+1:), '(f6.1,a)') all_proc_stats(N_STATS, I_ONE, ph%proc(p))/dt_wall * 100., "%"
                      enddo
                      call printinfo(msg)
-                  enddo
-                  do l = 1, lines
-                     write(msg, '(2a)') repeat(" ", pnames%maxnamelen + 1), " : "
-                     do p =   lbound(pnames%proc_on_node(host)%proc, 1) + per_line * (l - 1), &
-                          min(lbound(pnames%proc_on_node(host)%proc, 1) + per_line *  l - 1 , &
-                          &   ubound(pnames%proc_on_node(host)%proc, 1))
-                        write(msg(len_trim(msg)+1:), '(f10.1,a)') all_proc_stats(N_STATS, I_ONE, pnames%proc_on_node(host)%proc(p))/dt_wall * 100., "%"
+                  else
+                     lines = ceiling(real(size(ph%proc)) / max_per_line)
+                     per_line = ceiling(real(size(ph%proc)) / lines)  ! or max_per_line for extremely heterogenous set of nodes
+                     do l = 1, lines
+                        if (l > I_ONE) write(msg, '(2a)') repeat(" ", pnames%maxnamelen + 1), " : "
+                        do p =   lbound(ph%proc, 1) + per_line * (l - 1), &
+                             min(lbound(ph%proc, 1) + per_line *  l - 1 , &
+                             &   ubound(ph%proc, 1))
+                           write(msg(len_trim(msg)+1:), '(f11.3)') mul*all_proc_stats(N_STATS, I_ONE, ph%proc(p))
+                        enddo
+                        call printinfo(msg)
                      enddo
-                     call printinfo(msg)
-                  enddo
-               endif
+                     do l = 1, lines
+                        write(msg, '(2a)') repeat(" ", pnames%maxnamelen + 1), " | "
+                        do p =   lbound(ph%proc, 1) + per_line * (l - 1), &
+                             min(lbound(ph%proc, 1) + per_line *  l - 1 , &
+                             &   ubound(ph%proc, 1))
+                           write(msg(len_trim(msg)+1:), '(f10.1,a)') all_proc_stats(N_STATS, I_ONE, ph%proc(p))/dt_wall * 100., "%"
+                        enddo
+                        call printinfo(msg)
+                     enddo
+                  endif
 
+               end associate
             enddo
 
          endif
