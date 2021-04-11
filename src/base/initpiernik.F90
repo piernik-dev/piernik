@@ -151,14 +151,8 @@ contains
       call cg_extptrs%epa_init
 
       call init_dataio_parameters            ! Required very early to call colormessage without side-effects
-      call pnames%init
-      ! The logging below was intentionally moved outside procnames module because of dataio_pub dependencies.
-      if (master) then
-         do nit = lbound(pnames%proc_on_node, 1), ubound(pnames%proc_on_node, 1)
-            write(msg, '(3a,1024i6)')"Ranks at host '", pnames%proc_on_node(nit)%nodename(:pnames%maxnamelen), "' : ", pnames%proc_on_node(nit)%proc
-            call printinfo(msg)
-         enddo
-      endif
+
+      call pnames%init ; call print_hostnames
       call init_load_balance
       call init_memory
       call init_profiling                    ! May require init_dataio_parameters and memory_usage set up
@@ -358,6 +352,78 @@ contains
       call sanitize_smallx_checks            ! depends on problem_initial_conditions || init_dataio/read_restart_hdf5
 
       call ppp_main%stop(ip_label)
+
+   contains
+
+      !>
+      !! \brief Print the list of hostnames in use and associated MPI ranks
+      !!
+      !! It was intentionally moved outside procnames module because of dataio_pub dependencies.
+      !<
+
+      subroutine print_hostnames
+
+         use constants,  only: fmt_len
+         use dataio_pub, only: msg, printinfo
+         use mpisetup,   only: slave, nproc
+         use procnames,  only: pnames
+
+         implicit none
+
+         integer :: h, hl
+         integer, parameter :: mpl = 16  ! maximum ranks per line to be printed (in non-consecutive case)
+         character(len=*), parameter :: rah_o = "Ranks at host '", rah_c = "' : "
+         character(len=fmt_len) :: fmtl, fmtr, fmt1
+         logical :: successive, succ
+
+         if (slave) return
+
+         associate (intlen => int(log10(real(max(1, nproc-1)))) + 2)
+
+            write(fmtl, *)"(a,", mpl, "i", intlen, ")"
+            write(fmtr, *)"(a,i", intlen, ",' ..',i", intlen, ")"
+            write(fmt1, *)"(a,i", intlen, ")"
+
+         end associate
+
+         successive = .true.
+         do h = lbound(pnames%proc_on_node, 1), ubound(pnames%proc_on_node, 1)
+            associate (p => pnames%proc_on_node(h), &
+                 &     header => rah_o // pnames%proc_on_node(h)%nodename(:pnames%maxnamelen) // rah_c)
+
+               succ = .true.
+               if (size(p%proc) > 1) succ = all(p%proc(:ubound(p%proc, 1)-1) + 1 == p%proc(lbound(p%proc, 1)+1:))
+               successive = successive .and. succ
+
+               if (succ) then
+
+                  if (size(p%proc) > 1) then
+                     write(msg, fmtr)  header, p%proc(lbound(p%proc, 1)), p%proc(ubound(p%proc, 1))
+                  else
+                     write(msg, fmt1) header, p%proc(lbound(p%proc, 1))
+                  endif
+                  call printinfo(msg)
+
+               else
+
+                  do hl = 0, int((ubound(p%proc, 1) - 1)/ mpl)
+                     write(msg, fmtl) merge(repeat(" ", len(header)), header, hl>0), p%proc(hl*mpl+1:min((hl+1)*mpl, ubound(p%proc, 1)))
+                     call printinfo(msg)
+                  enddo
+
+               endif
+
+            end associate
+         enddo
+
+         ! The load balance and cg distribution routines are designed to use
+         ! space-filling curve that is placing spatially adjacent cgs closely
+         ! on the block list in most cases.
+         ! The use of mpirun options like "-map-by node" may defeat these efforts
+         ! and significantly increase the amount of inter-node communication.
+         if (.not. successive) call warn("[initpiernik:init_piernik] Non-successive MPI ranks on hosts detected. This may severely degrade the performance.")
+
+      end subroutine print_hostnames
 
    end subroutine init_piernik
 !-----------------------------------------------------------------------------
