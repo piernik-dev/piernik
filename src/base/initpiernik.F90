@@ -372,8 +372,8 @@ contains
 
          integer :: h, hl
          integer, parameter :: mpl = 16  ! maximum ranks per line to be printed (in non-consecutive case)
-         character(len=*), parameter :: rah_o = "Ranks at host '", rah_c = "' : "
-         character(len=fmt_len) :: fmtl, fmtr, fmt1
+         character(len=*), parameter :: rah_o = "Ranks at host '", rah_c = "' :"
+         character(len=fmt_len) :: fmtl, fmtr, fmt1, header
          logical :: successive, succ
 
          if (slave) return
@@ -388,8 +388,9 @@ contains
 
          successive = .true.
          do h = lbound(pnames%proc_on_node, 1), ubound(pnames%proc_on_node, 1)
-            associate (p => pnames%proc_on_node(h), &
-                 &     header => rah_o // pnames%proc_on_node(h)%nodename(:pnames%maxnamelen) // rah_c)
+            associate (p => pnames%proc_on_node(h))
+
+               header = rah_o // p%nodename(:pnames%maxnamelen) // rah_c
 
                succ = .true.
                if (size(p%proc) > 1) succ = all(p%proc(:ubound(p%proc, 1)-1) + 1 == p%proc(lbound(p%proc, 1)+1:))
@@ -398,16 +399,16 @@ contains
                if (succ) then
 
                   if (size(p%proc) > 1) then
-                     write(msg, fmtr)  header, p%proc(lbound(p%proc, 1)), p%proc(ubound(p%proc, 1))
+                     write(msg, fmtr) trim(header), p%proc(lbound(p%proc, 1)), p%proc(ubound(p%proc, 1))
                   else
-                     write(msg, fmt1) header, p%proc(lbound(p%proc, 1))
+                     write(msg, fmt1) trim(header), p%proc(lbound(p%proc, 1))
                   endif
                   call printinfo(msg)
 
                else
 
                   do hl = 0, int((ubound(p%proc, 1) - 1)/ mpl)
-                     write(msg, fmtl) merge(repeat(" ", len(header)), header, hl>0), p%proc(hl*mpl+1:min((hl+1)*mpl, ubound(p%proc, 1)))
+                     write(msg, fmtl) merge(repeat(" ", len_trim(header)), trim(header), hl>0), p%proc(hl*mpl+1:min((hl+1)*mpl, ubound(p%proc, 1)))
                      call printinfo(msg)
                   enddo
 
