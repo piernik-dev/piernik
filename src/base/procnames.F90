@@ -31,7 +31,7 @@
 !!
 !! To be used in load balancing and possibly in MPI-3 (shared memory parallelism).
 !!
-!! To allow usage in IO routines try to avoid dependencies on dataio_pub.
+!! To allow usage in IO routines do not use entities from dataio_pub.
 !<
 
 module procnames
@@ -52,7 +52,6 @@ module procnames
    ! all connections between MPI ranks and nodes
    type procnamelist_t
       character(len=MPI_MAX_PROCESSOR_NAME), allocatable, dimension(:) :: procnames  !< node names associated with MPI ranks
-      character(len=MPI_MAX_PROCESSOR_NAME), allocatable, dimension(:) :: nodenames  !< unique node names (perhaps can be removed as auxiliary)
       type(nodeproc_t), allocatable, dimension(:) :: proc_on_node                    !< array of nodes and MPI ranks
       integer(kind=4) :: maxnamelen
    contains
@@ -78,6 +77,7 @@ contains
 
       character(len=MPI_MAX_PROCESSOR_NAME) :: myname
       integer(kind=4) :: mynamelen
+      character(len=MPI_MAX_PROCESSOR_NAME), allocatable, dimension(:) :: nodenames  !< aux array for unique node names
 
       allocate(this%procnames(FIRST:LAST))
       this%maxnamelen = I_ZERO
@@ -89,6 +89,7 @@ contains
 
       call find_unique
       call fill_proc_on_node
+      deallocate(nodenames)
 
    contains
 
@@ -103,18 +104,18 @@ contains
          integer :: i, j
          logical :: found
 
-         allocate(this%nodenames(I_ONE))
-         this%nodenames(I_ONE) = this%procnames(FIRST)
+         allocate(nodenames(I_ONE))
+         nodenames(I_ONE) = this%procnames(FIRST)
          do i = lbound(this%procnames, 1), ubound(this%procnames, 1)
             found = .false.
-            do j = lbound(this%nodenames, 1), ubound(this%nodenames, 1)
-               found = found .or. (this%procnames(i) == this%nodenames(j))  ! longer loop perhaps would benefit from use of exit statement
+            do j = lbound(nodenames, 1), ubound(nodenames, 1)
+               found = found .or. (this%procnames(i) == nodenames(j))  ! longer loop perhaps would benefit from use of exit statement
             enddo
-            if (.not. found) this%nodenames = [ this%nodenames, this%procnames(i) ]  ! lhs reallocation
+            if (.not. found) nodenames = [ nodenames, this%procnames(i) ]  ! lhs reallocation
          enddo
 
-         do j = lbound(this%nodenames, 1), ubound(this%nodenames, 1)
-            this%maxnamelen = max(this%maxnamelen, len_trim(this%nodenames(j), kind=4))
+         do j = lbound(nodenames, 1), ubound(nodenames, 1)
+            this%maxnamelen = max(this%maxnamelen, len_trim(nodenames(j), kind=4))
          enddo
 
       end subroutine find_unique
@@ -127,9 +128,9 @@ contains
 
          integer(kind=4) :: i, j
 
-         allocate(this%proc_on_node(size(this%nodenames)))
-         do i = lbound(this%nodenames, 1, kind=4), ubound(this%nodenames, 1, kind=4)
-            this%proc_on_node(i)%nodename = this%nodenames(i)
+         allocate(this%proc_on_node(size(nodenames)))
+         do i = lbound(nodenames, 1, kind=4), ubound(nodenames, 1, kind=4)
+            this%proc_on_node(i)%nodename = nodenames(i)
             allocate(this%proc_on_node(i)%proc(0))
          enddo
 
@@ -160,7 +161,6 @@ contains
          deallocate(this%proc_on_node(i)%proc)
       enddo
       deallocate(this%proc_on_node)
-      deallocate(this%nodenames)
       deallocate(this%procnames)
 
    end subroutine cleanup
