@@ -49,6 +49,7 @@ module load_balance
    logical,                  protected :: auto_balance      !< When .true. the use cg-associated costs in rebalance routine
    character(len=cbuff_len), protected :: cost_to_balance   !< One of [ cg_cost:cost_labels, "all", "none" ], default: "MHD", ToDo: enable selected subset.
    real,                     protected :: balance_thr       !< Minimum tolerated imbalance
+   real,                     protected :: avg_factor        !< Exponential moving average factor
 
    !   verbosity
    integer(kind=4),          protected :: verbosity         !< Enumerated from 0: none, summary, detailed, elaborate
@@ -61,7 +62,7 @@ module load_balance
    integer(kind=4),          protected :: reset_exclusion   !< How often to routinely reset excluded status
    real,                     protected :: exclusion_thr     !< Exclusion threshold
 
-   namelist /BALANCE/ auto_balance, cost_to_balance, balance_thr, verbosity, verbosity_nstep, &
+   namelist /BALANCE/ auto_balance, cost_to_balance, balance_thr, avg_factor, verbosity, verbosity_nstep, &
         &             enable_exclusion, watch_cost, nstep_exclusion, reset_exclusion, exclusion_thr
 
    logical, dimension(lbound(cost_labels,1):ubound(cost_labels,1)) :: cost_mask  !< translated from cost_to_balance
@@ -82,6 +83,7 @@ contains
 !!   <tr><td> auto_balance     </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::auto_balance     </td></tr>
 !!   <tr><td> cost_to_balance  </td><td> "MHD"    </td><td> character() </td><td> \copydoc load_balance::cost_to_balance  </td></tr>
 !!   <tr><td> balance_thr      </td><td> 1.       </td><td> real        </td><td> \copydoc load_balance::balance_thr      </td></tr>
+!!   <tr><td> avg_factor       </td><td> 0.2      </td><td> real        </td><td> \copydoc load_balance::avg_factor       </td></tr>
 !!   <tr><td> verbosity        </td><td> 1        </td><td> integer     </td><td> \copydoc load_balance::verbosity        </td></tr>
 !!   <tr><td> verbosity_nstep  </td><td> 10       </td><td> integer     </td><td> \copydoc load_balance::verbosity_nstep  </td></tr>
 !!   <tr><td> enable_exclusion </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::enable_exclusion </td></tr>
@@ -104,6 +106,7 @@ contains
       integer, parameter :: verbosity_nstep_default = 10
       real,    parameter :: intolerable_perf = 3.
       real,    parameter :: tolerable_imbalance = 1.  ! A bit above 1. may prevent throwing cg back and forth
+      real,    parameter :: default_ema = 0.2  ! Exponential moving average factor (1.0 => no tail, 0.0 => no update)
       integer            :: ind
 
       ! No code_progress dependencies apart from PIERNIK_INIT_MPI (obvious for our use of namelist)
@@ -112,6 +115,7 @@ contains
       auto_balance     = .false.
       cost_to_balance  = "MHD"
       balance_thr      = tolerable_imbalance
+      avg_factor       = default_ema
       verbosity        = V_DETAILED
       verbosity_nstep  = verbosity_nstep_default
       enable_exclusion = .false.
@@ -150,7 +154,8 @@ contains
          lbuff(2) = enable_exclusion
 
          rbuff(1) = balance_thr
-         rbuff(2) = exclusion_thr
+         rbuff(2) = avg_factor
+         rbuff(3) = exclusion_thr
 
       endif
 
@@ -173,7 +178,8 @@ contains
          enable_exclusion = lbuff(2)
 
          balance_thr      = rbuff(1)
-         exclusion_thr    = rbuff(2)
+         avg_factor       = rbuff(2)
+         exclusion_thr    = rbuff(3)
 
       endif
 
@@ -197,6 +203,11 @@ contains
       if (verbosity_nstep <= 0) then
          if (master) call warn("[load_balance] verbosity_nstep <= 0 (disabling)")
          verbosity_nstep = huge(1_4)
+      endif
+
+      if (abs(avg_factor) > 1.) then
+         if (master) call warn("[load_balance] |avg_factor| > 1. (disabling)")
+         avg_factor = 0.
       endif
 
       if (master) then
@@ -260,35 +271,35 @@ contains
       real, allocatable, dimension(:, :) :: send_stats
       integer, parameter :: N_STATS = size(stat_labels) + I_ONE
 
-      if ((verbosity > V_NONE) .and. ((nstep <= 0 .and. verbosity_nstep <= 1) .or. (nstep > 0 .and. mod(nstep, verbosity_nstep) == 0))) then
+      ! gather mean, standard deviation and extrema for the costs
+      call leaves_stats%reset
+      call all_stats%reset
+      cgl => cglist%first
+      do while (associated(cgl))
+         if (cgl%cg%l%id >= base_level_id) call leaves_stats%add(cgl%cg%costs)
+         call all_stats%add(cgl%cg%costs)
+         cgl => cgl%nxt
+      enddo
 
-         ! gather mean, standard deviation and extrema for the costs
-         call leaves_stats%reset
-         call all_stats%reset
-         cgl => cglist%first
-         do while (associated(cgl))
-            if (cgl%cg%l%id >= base_level_id) call leaves_stats%add(cgl%cg%costs)
-            call all_stats%add(cgl%cg%costs)
-            cgl => cgl%nxt
-         enddo
+      if (master) then
+         allocate(all_proc_stats(N_STATS, size(cost_labels), FIRST:LAST))
+      else
+         allocate(all_proc_stats(0, 0, 0))
+      endif
 
-         if (master) then
-            allocate(all_proc_stats(N_STATS, size(cost_labels), FIRST:LAST))
-         else
-            allocate(all_proc_stats(0, 0, 0))
-         endif
+      allocate(send_stats(N_STATS, size(cost_labels)))
+      do i = lbound(cost_labels, 1), ubound(cost_labels, 1)
+         send_stats(:, i - lbound(cost_labels, 1) + lbound(send_stats, 2)) = [ leaves_stats%get(i), all_stats%get_sum() ]
+      enddo
+      call MPI_Gather(send_stats,     size(send_stats, kind=4), MPI_DOUBLE_PRECISION, &
+           &          all_proc_stats, size(send_stats, kind=4), MPI_DOUBLE_PRECISION, &
+           &          FIRST, MPI_COMM_WORLD, err_mpi)
 
-         allocate(send_stats(N_STATS, size(cost_labels)))
-         do i = lbound(cost_labels, 1), ubound(cost_labels, 1)
-            send_stats(:, i - lbound(cost_labels, 1) + lbound(send_stats, 2)) = [ leaves_stats%get(i), all_stats%get_sum() ]
-         enddo
-         call MPI_Gather(send_stats,     size(send_stats, kind=4), MPI_DOUBLE_PRECISION, &
-              &          all_proc_stats, size(send_stats, kind=4), MPI_DOUBLE_PRECISION, &
-              &          FIRST, MPI_COMM_WORLD, err_mpi)
+      if (master) then
 
-         ! find outliers(MHD) @master (proc), @proc (cg)
+         if (nstep >= 1) call update_costs
 
-         if (master) then
+         if ((verbosity > V_NONE) .and. ((nstep <= 0 .and. verbosity_nstep <= 1) .or. (nstep > 0 .and. mod(nstep, verbosity_nstep) == 0))) then
 
             ! Choose between s and ms.
             maxv = maxval(all_proc_stats(:, I_MAX - lbound(stat_labels) + I_ONE, :))
@@ -321,17 +332,46 @@ contains
                   case (V_SUMMARY)
                      call log_summary
                end select
+               if ((auto_balance .or. enable_exclusion) .and. (nstep >= 1)) call log_speed
             endif
 
          endif
-
-         deallocate(all_proc_stats, send_stats)
-
       endif
+
+      deallocate(all_proc_stats, send_stats)
 
       prev_time = MPI_Wtime()
 
    contains
+
+      subroutine update_costs
+
+         use cg_cost,       only: cost_labels, I_MHD  ! Hardcoded MHD cost as the most reliable measure. ToDo: give some choice.
+         use cg_cost_stats, only: I_AVG
+         use procnames,     only: pnames
+
+         implicit none
+
+         logical, save :: firstcall = .true.
+         integer :: p
+
+         do p = FIRST, LAST
+            if (firstcall) then
+               call pnames%speed(p)%add(all_proc_stats(I_AVG, I_MHD - lbound(cost_labels, 1) + I_ONE, p), avg_factor)
+            else
+               call pnames%speed(p)%add(all_proc_stats(I_AVG, I_MHD - lbound(cost_labels, 1) + I_ONE, p))
+            endif
+         enddo
+
+         if (firstcall) then
+            call pnames%calc_hostspeed(avg_factor)
+         else
+            call pnames%calc_hostspeed
+         endif
+
+         firstcall = .false.
+
+      end subroutine update_costs
 
       subroutine log_elaborate
 
@@ -516,6 +556,30 @@ contains
          endif
 
       end subroutine log_summary
+
+      subroutine log_speed
+
+         use constants,  only: fmt_len
+         use dataio_pub, only: printinfo
+         use procnames,  only: pnames
+
+         implicit none
+
+         integer :: host
+         character(len=fmt_len) :: fmt
+
+         do host = lbound(pnames%proc_on_node, 1), ubound(pnames%proc_on_node, 1)
+            associate (ph => pnames%proc_on_node(host))
+
+               write(fmt, *) "(3a,f7.3,a,", size(ph%proc), "f7.3,a)"
+               write(msg, fmt)"@", ph%nodename(:pnames%maxnamelen), " <MHD speed> = ", &
+                    1./ph%speed%avg, " blk/s [", 1./pnames%speed(ph%proc(:))%avg, " ]"
+               call printinfo(msg)
+
+            end associate
+         enddo
+
+      end subroutine log_speed
 
    end subroutine print_costs
 

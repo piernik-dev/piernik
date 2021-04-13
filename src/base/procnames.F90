@@ -36,7 +36,8 @@
 
 module procnames
 
-   use MPIF, only: MPI_MAX_PROCESSOR_NAME
+   use MPIF,  only: MPI_MAX_PROCESSOR_NAME
+   use types, only: ema_t
 
    implicit none
 
@@ -45,25 +46,28 @@ module procnames
 
    ! all MPI rank associated with particular node name
    type nodeproc_t
-      character(len=MPI_MAX_PROCESSOR_NAME) :: nodename
-      integer(kind=4), allocatable, dimension(:) :: proc
+      character(len=MPI_MAX_PROCESSOR_NAME) :: nodename   !< local $HOSTNAME
+      integer(kind=4), allocatable, dimension(:) :: proc  !< list of MPI ranks that belong to this%nodename
+      type(ema_t) :: speed                                !< estimated average speed of local MPI processes
    end type nodeproc_t
 
    ! all connections between MPI ranks and nodes
    type procnamelist_t
       character(len=MPI_MAX_PROCESSOR_NAME), allocatable, dimension(:) :: procnames  !< node names associated with MPI ranks
+      type(ema_t), allocatable, dimension(:) :: speed                                !< estimated speed of MPI ranks
       type(nodeproc_t), allocatable, dimension(:) :: proc_on_node                    !< array of nodes and MPI ranks
       integer(kind=4) :: maxnamelen
    contains
-      procedure :: init
-      procedure :: cleanup
+      procedure :: init            !< Initialize the pnames structure
+      procedure :: cleanup         !< Clean up the pnames structure
+      procedure :: calc_hostspeed  !< Compute this%proc_on_node(:)%speed from this%speed
    end type procnamelist_t
 
    type(procnamelist_t) :: pnames
 
 contains
 
-!< \brief initialise the pnames structure
+!< \brief Initialize the pnames structure
 
    subroutine init(this)
 
@@ -80,6 +84,7 @@ contains
       character(len=MPI_MAX_PROCESSOR_NAME), allocatable, dimension(:) :: nodenames  !< aux array for unique node names
 
       allocate(this%procnames(FIRST:LAST))
+      allocate(this%speed(FIRST:LAST))
       this%maxnamelen = I_ZERO
 
       call MPI_Get_processor_name(myname, mynamelen, err_mpi)
@@ -162,7 +167,31 @@ contains
       enddo
       deallocate(this%proc_on_node)
       deallocate(this%procnames)
+      deallocate(this%speed)
 
    end subroutine cleanup
+
+!< \brief Compute this%proc_on_node(:)%speed from this%speed
+
+   subroutine calc_hostspeed(this, factor)
+
+      implicit none
+
+      class(procnamelist_t), intent(inout) :: this
+      real, optional,        intent(in)    :: factor
+
+      integer :: host
+      real :: avg
+
+      do host = lbound(this%proc_on_node, 1), ubound(this%proc_on_node, 1)
+         avg = sum(this%speed(this%proc_on_node(host)%proc(:))%avg) / size(this%proc_on_node(host)%proc(:))
+         if (present(factor)) then
+            call this%proc_on_node(host)%speed%add(avg, factor)
+         else
+            call this%proc_on_node(host)%speed%add(avg)
+         endif
+      enddo
+
+   end subroutine calc_hostspeed
 
 end module procnames
