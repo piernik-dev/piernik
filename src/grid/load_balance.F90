@@ -565,16 +565,33 @@ contains
 
          implicit none
 
-         integer :: host
-         character(len=fmt_len) :: fmt
+         integer :: host, dec, ln
+         character(len=fmt_len) :: fmt, header
+         real :: mx
+         integer, parameter :: mpl = 16
+
+         mx = maxval(1./pnames%speed(:)%avg, mask=(pnames%speed(:)%avg > 0.))
+         dec = 3
+         if (mx > 0.) dec = max(0, min(3, 3 - int(floor(log10(mx)))))
 
          do host = lbound(pnames%proc_on_node, 1), ubound(pnames%proc_on_node, 1)
             associate (ph => pnames%proc_on_node(host))
 
-               write(fmt, *) "(3a,f7.3,a,", size(ph%proc), "f7.3,a)"
-               write(msg, fmt)"@", ph%nodename(:pnames%maxnamelen), " <MHD speed> = ", &
-                    1./ph%speed%avg, " blk/s [", 1./pnames%speed(ph%proc(:))%avg, " ]"
-               call printinfo(msg)
+               do ln = 0, int((size(ph%proc) - 1)/ mpl)
+                  associate (pb =>     lbound(ph%proc, 1) +  ln    * mpl, &
+                       &     pe => min(lbound(ph%proc, 1) + (ln+1) * mpl - 1, ubound(ph%proc, 1)))
+
+                     write(fmt, *)"(3a,f6.", dec, ",a)"
+                     write(header, fmt) "@", ph%nodename(:pnames%maxnamelen), " <MHD speed> = ", &
+                          merge(1. / ph%speed%avg, 0., ph%speed%avg > 0.), " blk/s ["
+                     write(fmt,  *) "(a,", pe - pb + 1, "f6.", dec, ",a)"
+                     write(msg, fmt) merge(trim(header), repeat(" ", len_trim(header)), ln == 0), &
+                          merge(1. / pnames%speed(ph%proc(pb:pe))%avg, 0., pnames%speed(ph%proc(pb:pe))%avg > 0.), &
+                          merge(" ]", "  ", ln == int((size(ph%proc) - 1)/ mpl))
+                     call printinfo(msg)
+
+                  end associate
+               enddo
 
             end associate
          enddo
