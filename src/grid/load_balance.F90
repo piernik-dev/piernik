@@ -369,6 +369,8 @@ contains
             call pnames%calc_hostspeed
          endif
 
+         call pnames%mark_for_exclusion(exclusion_thr)
+
          firstcall = .false.
 
       end subroutine update_costs
@@ -560,7 +562,7 @@ contains
       subroutine log_speed
 
          use constants,  only: fmt_len
-         use dataio_pub, only: printinfo
+         use dataio_pub, only: printinfo, warn
          use procnames,  only: pnames
 
          implicit none
@@ -568,7 +570,7 @@ contains
          integer :: host, dec, ln
          character(len=fmt_len) :: fmt, header
          real :: mx
-         integer, parameter :: mpl = 16
+         integer, parameter :: mpl = 16, maxex = 128
 
          mx = maxval(1./pnames%speed(:)%avg, mask=(pnames%speed(:)%avg > 0.))
          dec = 3
@@ -595,6 +597,24 @@ contains
 
             end associate
          enddo
+
+         if (any(pnames%exclude)) then
+            call warn("[load_balance] There are threads marked for exclusion:")
+            do host = lbound(pnames%proc_on_node, 1), ubound(pnames%proc_on_node, 1)
+               associate (ph => pnames%proc_on_node(host))
+                  if (any(pnames%exclude(ph%proc))) then
+                     header = "@" // ph%nodename(:pnames%maxnamelen)
+                     if (size(ph%proc) <= maxex) then
+                        write(fmt, *)"(a,", size(ph%proc), "a2,a)"
+                        write(msg, fmt) trim(header) // ": [", merge("X", ".", pnames%exclude(ph%proc)), " ]"
+                     else
+                        write(msg, '(a,2(i5,a))') trim(header), count(pnames%exclude(ph%proc)), " out of ", size(ph%proc), " threads"
+                     endif
+                     call warn(msg)
+                  endif
+               end associate
+            enddo
+         endif
 
       end subroutine log_speed
 

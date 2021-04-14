@@ -55,12 +55,15 @@ module procnames
    type procnamelist_t
       character(len=MPI_MAX_PROCESSOR_NAME), allocatable, dimension(:) :: procnames  !< node names associated with MPI ranks
       type(ema_t), allocatable, dimension(:) :: speed                                !< estimated speed of MPI ranks
+      logical, allocatable, dimension(:) :: exclude                                  !< When .true. then exclude given thread from computations
       type(nodeproc_t), allocatable, dimension(:) :: proc_on_node                    !< array of nodes and MPI ranks
       integer(kind=4) :: maxnamelen
    contains
-      procedure :: init            !< Initialize the pnames structure
-      procedure :: cleanup         !< Clean up the pnames structure
-      procedure :: calc_hostspeed  !< Compute this%proc_on_node(:)%speed from this%speed
+      procedure :: init                !< Initialize the pnames structure
+      procedure :: cleanup             !< Clean up the pnames structure
+      procedure :: calc_hostspeed      !< Compute this%proc_on_node(:)%speed from this%speed
+      procedure :: mark_for_exclusion  !< Mark underperforming processes for exclusion
+      procedure :: enable_all          !< Unmark any exclusions
    end type procnamelist_t
 
    type(procnamelist_t) :: pnames
@@ -77,14 +80,17 @@ contains
 
       implicit none
 
-      class(procnamelist_t), intent(inout) :: this
+      class(procnamelist_t), intent(inout) :: this !< an object invoking the type-bound procedure
 
       character(len=MPI_MAX_PROCESSOR_NAME) :: myname
       integer(kind=4) :: mynamelen
       character(len=MPI_MAX_PROCESSOR_NAME), allocatable, dimension(:) :: nodenames  !< aux array for unique node names
 
-      allocate(this%procnames(FIRST:LAST))
-      allocate(this%speed(FIRST:LAST))
+      allocate(this%procnames(FIRST:LAST), &
+           &   this%speed    (FIRST:LAST), &
+           &   this%exclude  (FIRST:LAST))
+
+      call this%enable_all
       this%maxnamelen = I_ZERO
 
       call MPI_Get_processor_name(myname, mynamelen, err_mpi)
@@ -156,7 +162,7 @@ contains
 
       implicit none
 
-      class(procnamelist_t), intent(inout) :: this
+      class(procnamelist_t), intent(inout) :: this !< an object invoking the type-bound procedure
 
       integer :: i
 
@@ -168,6 +174,7 @@ contains
       deallocate(this%proc_on_node)
       deallocate(this%procnames)
       deallocate(this%speed)
+      deallocate(this%exclude)
 
    end subroutine cleanup
 
@@ -177,8 +184,8 @@ contains
 
       implicit none
 
-      class(procnamelist_t), intent(inout) :: this
-      real, optional,        intent(in)    :: factor
+      class(procnamelist_t), intent(inout) :: this    !< an object invoking the type-bound procedure
+      real, optional,        intent(in)    :: factor  !< if present then (re)initialize and set up the exponential moving average factor
 
       integer :: host
       real :: avg
@@ -193,5 +200,43 @@ contains
       enddo
 
    end subroutine calc_hostspeed
+
+!< \brief Mark underperforming processes for exclusion
+
+   subroutine mark_for_exclusion(this, threshold)
+
+      implicit none
+
+      class(procnamelist_t), intent(inout) :: this       !< an object invoking the type-bound procedure
+      real,                  intent(in)    :: threshold  !< mark for exclusion when a process is that much slower than average
+
+      real, parameter :: fast_enough = 1.2  ! count slightly slower threads in the average but reject marauders
+      real :: avg, fast_avg
+
+      if (all(this%exclude)) return  ! absurd situation but still not worth dividing by 0
+
+      ! average MHD cost per cg on active threads
+      avg = sum(this%speed(:)%avg, mask = .not. this%exclude .and. this%speed(:)%avg > 0.) / &
+           &                        count(.not. this%exclude .and. this%speed(:)%avg > 0.)
+
+      ! average MHD cost per cg on active threads that aren't lagging too much behind average
+      fast_avg = sum(this%speed(:)%avg, mask = (.not. this%exclude .and. this%speed(:)%avg > 0. .and. this%speed(:)%avg <= fast_enough * avg)) / &
+           &                              count(.not. this%exclude .and. this%speed(:)%avg > 0. .and. this%speed(:)%avg <= fast_enough * avg)
+
+      this%exclude = this%exclude .or. this%speed(:)%avg > fast_avg * threshold
+
+   end subroutine mark_for_exclusion
+
+!< \brief Unmark any exclusions
+
+   subroutine enable_all(this)
+
+      implicit none
+
+      class(procnamelist_t), intent(inout) :: this !< an object invoking the type-bound procedure
+
+      this%exclude = .false.
+
+   end subroutine enable_all
 
 end module procnames
