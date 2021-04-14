@@ -1,4 +1,5 @@
-! Code Copyright (C) 2006 Michal Hanasz
+!
+! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
 !    This file is part of PIERNIK code.
 !
