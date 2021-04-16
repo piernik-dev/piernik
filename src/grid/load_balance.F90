@@ -41,8 +41,7 @@ module load_balance
    implicit none
 
    private
-   public :: init_load_balance, print_costs, &
-        &    auto_balance, cost_mask, balance_thr, enable_exclusion, watch_ind, nstep_exclusion, reset_exclusion, exclusion_thr
+   public :: init_load_balance, print_costs
 
    ! namelist parameters
    !   balance
@@ -58,12 +57,10 @@ module load_balance
    !   thread exclusion
    logical,                  protected :: enable_exclusion  !< When .true. then threads detected as underperforming will be excluded for load balancing
    character(len=cbuff_len), protected :: watch_cost        !< Which cg cost to watch? One of [ cg_cost:cost_labels, "all", "none" ], default: "MHD"
-   integer(kind=4),          protected :: nstep_exclusion   !< How often to check for underperforming CPUs
-   integer(kind=4),          protected :: reset_exclusion   !< How often to routinely reset excluded status
    real,                     protected :: exclusion_thr     !< Exclusion threshold
 
    namelist /BALANCE/ auto_balance, cost_to_balance, balance_thr, avg_factor, verbosity, verbosity_nstep, &
-        &             enable_exclusion, watch_cost, nstep_exclusion, reset_exclusion, exclusion_thr
+        &             enable_exclusion, watch_cost, exclusion_thr
 
    logical, dimension(lbound(cost_labels,1):ubound(cost_labels,1)) :: cost_mask  !< translated from cost_to_balance
    integer(kind=4) :: watch_ind  !< which index to watch for exclusion
@@ -88,15 +85,13 @@ contains
 !!   <tr><td> verbosity_nstep  </td><td> 10       </td><td> integer     </td><td> \copydoc load_balance::verbosity_nstep  </td></tr>
 !!   <tr><td> enable_exclusion </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::enable_exclusion </td></tr>
 !!   <tr><td> watch_cost       </td><td> "MHD"    </td><td> character() </td><td> \copydoc load_balance::watch_cost       </td></tr>
-!!   <tr><td> nstep_exclusion  </td><td> 1        </td><td> integer     </td><td> \copydoc load_balance::nstep_exclusion  </td></tr>
-!!   <tr><td> reset_exclusion  </td><td> huge(1)  </td><td> integer     </td><td> \copydoc load_balance::reset_exclusion  </td></tr>
 !!   <tr><td> exclusion_thr    </td><td> 3.       </td><td> real        </td><td> \copydoc load_balance::exclusion_thr    </td></tr>
 !! </table>
 !! \n \n
 !<
    subroutine init_load_balance
 
-      use constants,  only: I_ONE, INVALID, cbuff_len
+      use constants,  only: INVALID, cbuff_len
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
       use dataio_pub, only: msg, printinfo, warn
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
@@ -120,8 +115,6 @@ contains
       verbosity_nstep  = verbosity_nstep_default
       enable_exclusion = .false.
       watch_cost       = "MHD"
-      nstep_exclusion  = I_ONE
-      reset_exclusion  = huge(I_ONE)
       exclusion_thr    = intolerable_perf
 
       if (master) then
@@ -147,8 +140,6 @@ contains
 
          ibuff(1) = verbosity
          ibuff(2) = verbosity_nstep
-         ibuff(3) = nstep_exclusion
-         ibuff(4) = reset_exclusion
 
          lbuff(1) = auto_balance
          lbuff(2) = enable_exclusion
@@ -171,8 +162,6 @@ contains
 
          verbosity        = ibuff(1)
          verbosity_nstep  = ibuff(2)
-         nstep_exclusion  = ibuff(3)
-         reset_exclusion  = ibuff(4)
 
          auto_balance     = lbuff(1)
          enable_exclusion = lbuff(2)
