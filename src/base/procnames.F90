@@ -213,7 +213,7 @@ contains
       real, parameter :: fast_enough = 1.2  ! count slightly slower threads in the average but reject marauders
       real :: avg, fast_avg
 
-      if (all(this%exclude)) return  ! absurd situation but still not worth dividing by 0
+      if (count(.not. this%exclude .and. this%speed(:)%avg > 0.) <= 0) return  ! this may occur right after restart
 
       ! average MHD cost per cg on active threads
       avg = sum(this%speed(:)%avg, mask = .not. this%exclude .and. this%speed(:)%avg > 0.) / &
