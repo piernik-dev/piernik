@@ -46,8 +46,8 @@ module sort_piece_list
       integer(kind=4)                   :: cur_gid   !< current grid_id
       integer(kind=4)                   :: cur_proc  !< current process number
       integer(kind=4)                   :: dest_proc !< process number according to ideal ordering
-      real                              :: weight    !< number of cells relative to total number of cells on given level (unused)
-      real                              :: cweight   !< cumulative weight for id <= own id (unused)
+      real                              :: weight    !< an estimate of cg cost (unused yet)
+      real                              :: cweight   !< cumulative cost for id <= own id (unused yet)
    contains
       procedure :: set_gp                            !< Set the primary properties, initialize derived properties with safe defaults
    end type grid_piece
@@ -66,24 +66,26 @@ module sort_piece_list
       procedure :: init             !< Allocate the list
       procedure :: cleanup          !< Deallocate the list
       procedure :: set_id           !< Find grid id using a space-filling curve
-      procedure :: set_weights      !< Find estimates of the cost of the grids
+      procedure :: find_cweights    !< Compute list(:)%cweight
    end type grid_piece_list
 
 contains
 
 !> \brief initialize an element of the list to be sorted
 
-   subroutine set_gp(this, off, n_b, gid, proc)
+   subroutine set_gp(this, off, n_b, gid, proc, weight)
 
       use constants, only: ndims, INVALID
+      use domain,    only: dom
 
       implicit none
 
-      class(grid_piece),                 intent(inout) :: this  !< object invoking type-bound procedure
-      integer(kind=8), dimension(ndims), intent(in)    :: off   !< offset
-      integer(kind=4), dimension(ndims), intent(in)    :: n_b   !< size
-      integer(kind=4),                   intent(in)    :: gid   !< current grid_id
-      integer(kind=4),                   intent(in)    :: proc  !< current process number
+      class(grid_piece),                 intent(inout) :: this    !< object invoking type-bound procedure
+      integer(kind=8), dimension(ndims), intent(in)    :: off     !< offset
+      integer(kind=4), dimension(ndims), intent(in)    :: n_b     !< size
+      integer(kind=4),                   intent(in)    :: gid     !< current grid_id
+      integer(kind=4),                   intent(in)    :: proc    !< current process number
+      real, optional,                    intent(in)    :: weight  !< measured weight of a cg
 
       this%off       = off
       this%n_b       = n_b
@@ -91,7 +93,16 @@ contains
       this%cur_proc  = proc
       this%dest_proc = INVALID
       this%id        = INVALID
-      this%weight    = 0.
+
+      ! Use the provided weight or use total cell count.
+      if (present(weight)) then
+         this%weight = weight
+      else
+         this%weight = product(real(n_b + 2 *dom%nb))
+         ! Since we use the guardcells a lot, it seems that in most aspects
+         ! the cost of processing a cg depends on its total number of cells,
+         ! not just active cells.
+      endif
       this%cweight   = 0.
 
    end subroutine set_gp
@@ -141,30 +152,24 @@ contains
 
    end subroutine set_id
 
-!> \brief Find estimates of the cost of the grids
-!> \todo Do we want to include count of cg%leafmap, when available?
+!> \brief Compute this%list(:)%cweight
 
-   subroutine set_weights(this)
+   subroutine find_cweights(this)
 
       implicit none
 
-      class(grid_piece_list), intent(inout) :: this !< object invoking type-bound procedure
+      class(grid_piece_list), intent(inout) :: this  !< object invoking type-bound procedure
 
       integer :: s
-      integer(kind=8) :: cc, c
+      real :: cml
 
-      cc = 0
+      cml = 0.
       do s = lbound(this%list, dim=1), ubound(this%list, dim=1)
-         cc = cc + product(this%list(s)%n_b)
-      enddo
-      c = 0
-      do s = lbound(this%list, dim=1), ubound(this%list, dim=1)
-         c = c + product(this%list(s)%n_b)
-         this%list(s)%weight = product(this%list(s)%n_b)/real(cc)
-         this%list(s)%cweight = c/real(cc)
+         cml = cml + this%list(s)%weight
+         this%list(s)%cweight = cml
       enddo
 
-   end subroutine set_weights
+   end subroutine find_cweights
 
 !>
 !! \brief Tell if element at position a is greater than element at position b.

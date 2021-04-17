@@ -142,6 +142,7 @@ contains
          ! apply unique numbers to the grids and sort the list
          call gp%set_id(this%l%off)
          call gp%sort
+         ! call gp%find_cweights
 
          ! calculate patch distribution
          if (all(this%dot%SFC_id_range(:, HI) < this%dot%SFC_id_range(:, LO))) then !special case: empty level, huge values in this%dot%SFC_id_range(:,:)
@@ -259,9 +260,7 @@ contains
          ! apply unique numbers to the grids and sort the list
          call gp%set_id(this%l%off)
          call gp%sort
-
-         ! measure their weight (unused yet)
-         ! call gp%set_weights
+         ! call gp%find_cweights
 
          !> compute destination process corrected for current imbalance of existing grids as much as possible
          !> \todo replace counting of blocks with counting of weights - it will be required for merged blocks

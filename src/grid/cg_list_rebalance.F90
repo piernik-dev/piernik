@@ -156,6 +156,7 @@ contains
 
          call gp%set_id(this%l%off)
          call gp%sort
+         ! call gp%find_cweights
 
          act_proc = count(.not. pnames%exclude, kind=4)
          i = 0  ! counter for non-excluded processes
