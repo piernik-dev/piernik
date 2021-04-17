@@ -55,10 +55,11 @@ contains
       use cg_list,         only: cg_list_element
       use cg_list_balance, only: I_N_B, I_OFF
       use cg_list_dataop,  only: expanded_domain
-      use constants,       only: LO, HI, I_ONE, pSUM, ndims, PPP_AMR
-      use dataio_pub,      only: warn, msg, printinfo
-      use mpisetup,        only: master, FIRST, LAST, nproc, piernik_MPI_Bcast, piernik_MPI_Allreduce
+      use constants,       only: LO, HI, I_ONE, pSUM, ndims, PPP_AMR, INVALID
+      use dataio_pub,      only: warn, msg, printinfo, die
+      use mpisetup,        only: master, FIRST, LAST, piernik_MPI_Bcast, piernik_MPI_Allreduce
       use ppp,             only: ppp_main
+      use procnames,       only: pnames
       use refinement,      only: oop_thr
       use sort_piece_list, only: grid_piece_list
 #ifdef DEBUG
@@ -74,8 +75,8 @@ contains
       integer(kind=4), dimension(FIRST:LAST) :: cnt_existing
       type(grid_piece_list) :: gp
       type(cg_list_element), pointer :: cgl
-      integer :: s
-      integer(kind=4) :: i, p
+      integer :: s, from, to
+      integer(kind=4) :: i, p, act_proc
       integer(kind=8), dimension(:,:), allocatable :: gptemp
       enum, bind(C)
          enumerator :: I_GID = I_N_B + ndims
@@ -148,21 +149,35 @@ contains
 #endif /* DEBUG */
       if (allocated(gptemp)) deallocate(gptemp)
 
-      if (master) then
+      s = 0
+      if (master .and. size(gp%list) > 0) then
+
+         if (all(pnames%exclude)) call die("[cg_list_rebalance:balance_old] all threads excluded")
+
          call gp%set_id(this%l%off)
          call gp%sort
+
+         act_proc = count(.not. pnames%exclude, kind=4)
+         i = 0  ! counter for non-excluded processes
+         from = lbound(gp%list, 1)
+         gp%list(:)%dest_proc = INVALID
          do p = FIRST, LAST
-            gp%list(p*size(gp%list)/nproc+1 : ((p+1)*size(gp%list))/nproc)%dest_proc = p
-         enddo
-         s = 0
-         if (size(gp%list) > 0) then
-            s = count(gp%list(:)%cur_proc /= gp%list(:)%dest_proc)
-            if (s/real(size(gp%list)) > oop_thr) then
-               write(msg,'(a,i3,2(a,i6),a,f6.3,a)')"[cg_list_rebalance:balance_old] ^", this%l%id," Reshuffling OutOfPlace grids:",s, "/",size(gp%list)," (load balance: ",sum(cnt_existing)/real(maxval(cnt_existing)*size(cnt_existing)),")"
-               call printinfo(msg)
-            else
-               s = 0
+            ! implicit weights here
+            if (.not. pnames%exclude(p)) then
+               to = merge( ubound(gp%list, 1), min(ubound(gp%list, 1), ((i+1)*size(gp%list))/act_proc), i + 1 >= act_proc)
+               if (to >=from) gp%list(from:to)%dest_proc = p
+               i = i + I_ONE
+               from = to + 1
             endif
+         enddo
+         if (any(gp%list(:)%dest_proc == INVALID)) call die("[cg_list_rebalance:balance_old] not all dest_proc have been set")
+         s = count(gp%list(:)%cur_proc /= gp%list(:)%dest_proc)
+         ! if we exceed per-level threshold or any excluded thread has cg
+         if (s/real(size(gp%list)) > oop_thr .or. sum(cnt_existing, mask = pnames%exclude) /= 0) then
+            write(msg,'(a,i3,2(a,i6),a,f6.3,a)')"[cg_list_rebalance:balance_old] ^", this%l%id," Reshuffling OutOfPlace grids:",s, "/",size(gp%list)," (load balance: ",sum(cnt_existing)/real(maxval(cnt_existing)*size(cnt_existing)),")"
+            call printinfo(msg)
+         else
+            s = 0
          endif
       endif
 
@@ -173,6 +188,7 @@ contains
          if (p /= 0) then
             write(msg,'(a,i5,a)')"[cg_list_rebalance:balance_old] Allreduce(expanded_domain%cnt) = ",p,", aborting reshuffling."
             if (master) call warn(msg)
+            ! Unfortunately this will bypass thread exclusion
          else
             call this%reshuffle(gp)
          endif
