@@ -109,7 +109,8 @@ contains
 
       use constants,       only: pSUM, LO, HI, I_ONE
       use dataio_pub,      only: warn
-      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, nproc
+      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST
+      use procnames,       only: pnames
       use sort_piece_list, only: grid_piece_list
 
       implicit none
@@ -117,7 +118,7 @@ contains
       class(cg_list_balance_t), intent(inout) :: this
 
       type(grid_piece_list) :: gp
-      integer(kind=4) :: ls, s, i, p
+      integer(kind=4) :: ls, s, i, p, n_proc
       integer(kind=4), dimension(FIRST:LAST+1) :: from
 
       call this%dot%update_SFC_id_range(this%l%off)
@@ -144,8 +145,12 @@ contains
 
          ! calculate patch distribution
          if (all(this%dot%SFC_id_range(:, HI) < this%dot%SFC_id_range(:, LO))) then !special case: empty level, huge values in this%dot%SFC_id_range(:,:)
+            n_proc = count(.not. pnames%exclude, kind=4)
+            i = 0  ! counter for non-excluded processes
             do p = FIRST, LAST
-               from(p) = int(lbound(gp%list, dim=1) + (p*size(gp%list))/nproc, kind=4)
+               ! assume equal weights (simply use size(gp%list)) since we don't have any better idea now
+               from(p) = int(lbound(gp%list, dim=1) + real(i*size(gp%list))/n_proc, kind=4)
+               if (.not. pnames%exclude(p)) i = i + I_ONE
             enddo
             from(LAST+1) = ubound(gp%list, dim=1, kind=4) + I_ONE
 !!$            do p = FIRST, LAST
@@ -156,10 +161,13 @@ contains
             !> \todo OPT try to do as much balance as possible
             p = FIRST
             do i = lbound(gp%list, dim=1, kind=4), ubound(gp%list, dim=1, kind=4)
-               do while (this%dot%SFC_id_range(p, HI) < this%dot%SFC_id_range(p, LO)) ! skip processes with no grids for the sake of simplicity
+               ! skip processes with no grids for the sake of simplicity
+               ! it also should skip excluded processes that were emptied already
+               do while (this%dot%SFC_id_range(p, HI) < this%dot%SFC_id_range(p, LO))
                   p = p + I_ONE
                   if (p > LAST) exit
                enddo
+               ! what if LAST is excluded? or even few before LAST?
                if (p > LAST) p = LAST
                do while (gp%list(i)%id > this%dot%SFC_id_range(p, HI) .and. p < LAST)
                   p = p + I_ONE
@@ -216,10 +224,11 @@ contains
 
    subroutine balance_fill_lowest(this)
 
-      use constants,       only: pSUM, I_ONE
+      use constants,       only: pSUM, I_ZERO, I_ONE
       use dataio_pub,      only: die
       use MPIF,            only: MPI_INTEGER, MPI_COMM_WORLD, MPI_Gather
-      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, err_mpi, nproc
+      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, err_mpi
+      use procnames,       only: pnames
       use sort_piece_list, only: grid_piece_list
 
       implicit none
@@ -244,6 +253,9 @@ contains
       call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
 
       if (master) then !> \warning Antiparallel
+
+         if (all(pnames%exclude)) call die("[cg_list_balance:balance_fill_lowest] all threads excluded")
+
          ! apply unique numbers to the grids and sort the list
          call gp%set_id(this%l%off)
          call gp%sort
@@ -253,31 +265,39 @@ contains
 
          !> compute destination process corrected for current imbalance of existing grids as much as possible
          !> \todo replace counting of blocks with counting of weights - it will be required for merged blocks
-         s = int((size(gp%list) + sum(cnt_existing))/real(nproc), kind=4)
-         i = (size(gp%list) + sum(cnt_existing, mask=(cnt_existing <= s)))/(nproc - count(cnt_existing > s))
-         from(FIRST) = lbound(gp%list, dim=1, kind=4)
-         do p = FIRST, LAST
-            from(p+1) = int(max(0, i - cnt_existing(p)), kind=4)
-         enddo
+
+         ! target number of cg per thread (ideal, level-balanced)
+         s = int((size(gp%list) + sum(cnt_existing))/real(count(.not. pnames%exclude)), kind=4)
+
+         ! first estimate how to fill lowest-occupied threads
+         i = (size(gp%list) + sum(cnt_existing, mask=(cnt_existing <= s .and. .not. pnames%exclude))) / &
+              &               count(cnt_existing <= s .and. .not. pnames%exclude)
+         from(:) = [ lbound(gp%list, dim=1, kind=4), merge(I_ZERO, int(max(0, i - cnt_existing(:)), kind=4), pnames%exclude(:)) ]
          i = size(gp%list) - sum(from(FIRST+1:LAST+1))
-         p = LAST
-         do while (p >= FIRST .and. i /= 0)
-            if (i<0) then
-               do while (from(p+1)>0 .and. i<0)
-                  from(p+1) = from(p+1) - I_ONE
-                  i = i + 1
-               enddo
-            else if (i>0) then
-               !> \deprecated this approach may result in building a small imbalance in favour of process with low id.
-               if (cnt_existing(p) <= s) then
+
+         if (i < 0) then  ! this occurs rarely, if at all
+            p = FIRST
+            do while (i < 0)
+               if (from(p+1) > 0) from(p+1) = from(p+1) - I_ONE
+               i = i + 1
+               p = p + I_ONE
+               if (p > LAST) p = FIRST
+            enddo
+         else if (i > 0) then  ! this is the dominating case
+            p = LAST
+            do while (i > 0)
+               ! here we tend to overload last processes on each level independently
+               ! ToDo involve all_cg%cnt and try to improve global balancing
+               if (.not. pnames%exclude(p)) then
                   from(p+1) = from(p+1) + I_ONE
                   i = i - 1
                endif
-            endif
-            p = p - I_ONE
-         enddo
-         i = size(gp%list) - sum(from(FIRST+1:LAST+1))
-         if (i /= 0) call die("[cg_list_balance:balance_fill_lowest] i /= 0")
+               p = p - I_ONE
+               if (p < FIRST) p = LAST
+            enddo
+         endif
+
+         if (size(gp%list) - sum(from(FIRST+1:LAST+1)) /= 0) call die("[cg_list_balance:balance_fill_lowest] i /= 0")
          do p = FIRST, LAST
             from(p+1) = from(p+1) + from(p)
          enddo
@@ -286,13 +306,6 @@ contains
       call this%distribute_patches(gp, from)
 
       if (master) call gp%cleanup
-
-!!$      allocate(area(1:lmax))
-!!$      area = 0
-!!$      do i = lbound(cg_res(:), dim=1), ubound(cg_res(:), dim=1)
-!!$         if (cg_res(i)%level >= 1) area(cg_res(i)%level) = area(cg_res(i)%level) + product(cg_res(i)%n_b)
-!!$      enddo
-!!$      deallocate(area)
 
    end subroutine balance_fill_lowest
 
