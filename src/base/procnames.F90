@@ -192,7 +192,11 @@ contains
 
       do host = lbound(this%proc_on_node, 1), ubound(this%proc_on_node, 1)
          associate (h => this%proc_on_node(host))
-            avg = sum(this%speed(h%proc(:))%avg) / count(this%speed(h%proc(:))%avg > 0.)  !don't average on unoccupied/excluded threads
+            if (count(this%speed(h%proc(:))%avg > 0.) > 0) then
+               avg = sum(this%speed(h%proc(:))%avg) / count(this%speed(h%proc(:))%avg > 0.)  !don't average on unoccupied/excluded threads
+            else
+               avg = 0.
+            endif
             if (present(factor)) then
                call h%speed%add(avg, factor)
             else
