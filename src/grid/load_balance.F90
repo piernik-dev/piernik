@@ -345,11 +345,18 @@ contains
          integer :: p
 
          do p = FIRST, LAST
-            if (firstcall) then
-               call pnames%speed(p)%add(all_proc_stats(I_AVG, I_MHD - lbound(cost_labels, 1) + I_ONE, p), avg_factor)
-            else
-               call pnames%speed(p)%add(all_proc_stats(I_AVG, I_MHD - lbound(cost_labels, 1) + I_ONE, p))
-            endif
+            associate (cur_speed => all_proc_stats(I_AVG, I_MHD - lbound(cost_labels, 1) + I_ONE, p), &
+               &       pspeed => pnames%speed(p))
+               if (firstcall .or. cur_speed <= 0.) then  ! first call or depleted thread
+                  call pspeed%add(max(0., cur_speed), avg_factor)
+               else
+                  if (pnames%speed(p)%avg <= 0.) then  ! repopulated thread (e.g. after "unexclude" msg
+                     call pspeed%add(cur_speed, avg_factor)
+                  else
+                     call pspeed%add(cur_speed)
+                  endif
+               endif
+            end associate
          enddo
 
          if (firstcall) then

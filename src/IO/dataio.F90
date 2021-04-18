@@ -664,6 +664,7 @@ contains
                end_sim = .true.
             case ('unexclude')
                call pnames%enable_all
+               ! manual excluding may be helpful too, but we need to pass a list, like "exclude 2,7-9,32769", and process it safely
             case ('help')
                if (master) then
                   write(msg,*) "[dataio:user_msg_handler] Recognized messages:", char(10), &

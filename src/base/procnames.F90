@@ -191,12 +191,14 @@ contains
       real :: avg
 
       do host = lbound(this%proc_on_node, 1), ubound(this%proc_on_node, 1)
-         avg = sum(this%speed(this%proc_on_node(host)%proc(:))%avg) / size(this%proc_on_node(host)%proc(:))
-         if (present(factor)) then
-            call this%proc_on_node(host)%speed%add(avg, factor)
-         else
-            call this%proc_on_node(host)%speed%add(avg)
-         endif
+         associate (h => this%proc_on_node(host))
+            avg = sum(this%speed(h%proc(:))%avg) / count(this%speed(h%proc(:))%avg > 0.)  !don't average on unoccupied/excluded threads
+            if (present(factor)) then
+               call h%speed%add(avg, factor)
+            else
+               call h%speed%add(avg)
+            endif
+         end associate
       enddo
 
    end subroutine calc_hostspeed
