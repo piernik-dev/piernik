@@ -402,8 +402,6 @@ contains
 
 !> \brief Update the refinement topology
 
-!#define DEBUG_DUMPS
-
    subroutine update_refinement_wrapped(act_count, refinement_fixup_only)
 
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
@@ -426,9 +424,6 @@ contains
 #ifdef GRAV
       use gravity,               only: update_gp
 #endif /* GRAV */
-#ifdef DEBUG_DUMPS
-      use data_hdf5,             only: write_hdf5
-#endif /* DEBUG_DUMPS */
 
       implicit none
 
@@ -650,10 +645,6 @@ contains
 
       call all_cg%enable_prolong
       if (present(act_count)) call piernik_MPI_Allreduce(act_count, pSUM)
-
-#ifdef DEBUG_DUMPS
-      call write_hdf5
-#endif /* DEBUG_DUMPS */
 
       emergency_fix = .false.
 

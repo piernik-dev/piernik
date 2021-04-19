@@ -117,10 +117,11 @@ contains
 !<
    subroutine init_cosmicrays
 
-      use constants,       only: cbuff_len, I_ONE, half
+      use constants,       only: cbuff_len, I_ONE, half, big
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: nh   ! QA_WARN required for diff_nml
       use dataio_pub,      only: die, warn
+      use func,            only: operator(.notequals.)
       use mpisetup,        only: ibuff, rbuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
 #ifdef COSM_RAY_ELECTRONS
       use constants,       only: I_TWO
@@ -350,12 +351,15 @@ contains
       enddo
 #endif /* !COSM_RAY_ELECTRONS */
 
+      def_dtcrs = big
 #ifdef COSM_RAY_ELECTRONS
       K_crs_valid = (maxval(K_crn_paral+K_crn_perp) > 0)
-      def_dtcrs = cfl_cr * half/maxval(K_crn_paral+K_crn_perp)
+      if (maxval(K_crn_paral+K_crn_perp) .notequals. 0.) &
+           def_dtcrs = cfl_cr * half/maxval(K_crn_paral+K_crn_perp)
 #else /* !COSM_RAY_ELECTRONS */
       K_crs_valid = (maxval(K_crs_paral+K_crs_perp) > 0)
-      def_dtcrs = cfl_cr * half/maxval(K_crs_paral+K_crs_perp)
+      if (maxval(K_crs_paral+K_crs_perp) .notequals. 0.) &
+           def_dtcrs = cfl_cr * half/maxval(K_crs_paral+K_crs_perp)
 #endif /* !COSM_RAY_ELECTRONS */
 
    end subroutine init_cosmicrays
