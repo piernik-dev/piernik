@@ -4,7 +4,7 @@ import sys
 import argparse
 
 
-t_bias = 10  # I'd prefer to reduce the timers initially to 0, but sometimes slaves start before master
+t_bias = 1.e-6  # For global bigbang thih may need to be increased to some large values. For per-thread bigbang it can be some small posityve value.
 
 
 class PPP_Node:
@@ -49,7 +49,8 @@ class PPP_Node:
             if label == self.label:
                 self._set_time(time)
             else:
-                sys.stderr.write("Warning: unfinished for '" + self.path() + "' " + str(time) + "\n")
+                sys.stderr.write("Warning: unfinished for '" + self.path() +
+                                 "' '" + str(label) + "' " + str(time) + "\n")
             return self.parent  # most likely won't recover properly
 
     def path(self):
@@ -161,11 +162,12 @@ class PPP:
         file = open(self.name, 'r')
         for line in file:
             ln = line.split()
+            if int(ln[0]) >= self.nthr:
+                self.nthr = int(ln[0]) + 1
+                self.bigbang = None  # force per-thread bigbang
             if self.bigbang is None:
                 self.bigbang = float(ln[1]) - t_bias
             self._add(int(ln[0]), line[line.index(ln[2]):].strip(), float(ln[1]) + self.bigbang * (-1. if float(ln[1]) > 0. else 1.))  # proc, label, time
-            if int(ln[0]) >= self.nthr:
-                self.nthr = int(ln[0]) + 1
         self.descr = "'%s' (%d thread%s)" % (self.name, self.nthr, "s" if self.nthr > 1 else "")
 
     def _add(self, proc, label, time):
@@ -231,7 +233,7 @@ class PPPset:
             print("ARGS: ", args)
             for f in self.run:
                 ed = {}
-                print("\n## File: '%s', %d threads, bigbang = %.7f" % (self.run[f].name, self.run[f].nthr, self.run[f].bigbang))
+                print("\n## File: '%s', %d threads" % (self.run[f].name, self.run[f].nthr))
                 for p in self.run[f].trees:
                     for e in self.run[f].trees[p].root.get_all_ev():
                         e_base = e[0].split('/')[-1]

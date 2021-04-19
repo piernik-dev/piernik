@@ -50,7 +50,6 @@ contains
 
 !> \brief Routine for measuring disorder level in distribution of grids across processes
 
-!#define DEBUG
    subroutine rebalance_old(this)
 
       use cg_list,         only: cg_list_element
