@@ -117,7 +117,7 @@ module cresp_grid
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max
-      use initcrspectrum,   only: cresp_substep, cresp_substep_cell
+      use initcrspectrum,   only: cresp_substep
       use named_array_list, only: wna
       use timestep_cresp,   only: cresp_reaction_to_redo_step, dt_spectrum, cresp_timestep_cell
 #ifdef DEBUG
@@ -136,16 +136,11 @@ module cresp_grid
       cgl => leaves%first
       cfl_cresp_violation = .false.
       inactive_cell       = .false.
-      dt_doubled  = 2 * dt
-      dt_cresp    = dt_doubled
+      dt_doubled  = 2 * dt       !< used always when cresp_substep is not performed
+      dt_cresp    = dt_doubled   !< computed for each cell if cresp_substep, using dt_doubled
       nssteps     = 1
 
       call cresp_reaction_to_redo_step !< alters dt for CRESP components if cfl_violated
-
-      if (cresp_substep .and. (.not. cresp_substep_cell) ) then
-         call prepare_substep(dt_doubled, dt_spectrum, dt_crs_sstep, nssteps)
-         dt_cresp = dt_crs_sstep    !< 2 * dt is equal to nssteps * dt_crs_sstep
-      endif
 
       do while (associated(cgl))
          cg => cgl%cg
@@ -158,9 +153,9 @@ module cresp_grid
                   if (synch_active) sptab%ub = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr, u_b_max)    !< WARNING assusmes that b is in mGs
                   if (adiab_active) sptab%ud = cg%q(divv_i)%point([i,j,k]) * onet
 
-                  if (cresp_substep_cell) then
+                  if (cresp_substep) then !< prepare substep timestep for each cell
                      call cresp_timestep_cell(sptab, dt_spectrum, inactive_cell)
-                     call prepare_substep(dt_doubled, dt_spectrum, dt_crs_sstep, nssteps) ! dt_cresp should be 2*dt here!
+                     call prepare_substep(dt_doubled, dt_spectrum, dt_crs_sstep, nssteps)
                      dt_cresp = dt_crs_sstep    !< 2 * dt is equal to nssteps * dt_crs_sstep
                   endif
 #ifdef CRESP_VERBOSED

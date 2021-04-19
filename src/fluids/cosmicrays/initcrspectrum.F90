@@ -41,7 +41,7 @@ module initcrspectrum
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active, &
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,        &
            & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,       &
-           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, cresp_substep_cell, n_substeps_max
+           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -94,8 +94,7 @@ module initcrspectrum
    real            :: cre_active                  !< electron contribution to Pcr
 
 ! substepping parameters
-   logical         :: cresp_substep               !< turns on / off usage of substepping
-   logical         :: cresp_substep_cell          !< turns on / off usage of substepping for each cell independently
+   logical         :: cresp_substep               !< turns on / off usage of substepping for each cell independently
    integer         :: n_substeps_max              !< maximal allowed number of substeps
 
 ! NR parameters
@@ -186,7 +185,7 @@ module initcrspectrum
       &                         NR_iter_limit, max_p_ratio, synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init,             &
       &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf, b_max_db,      &
       &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up, p_diff,&
-      &                         q_eps, NR_smap_file, cresp_substep, cresp_substep_cell, n_substeps_max
+      &                         q_eps, NR_smap_file, cresp_substep, n_substeps_max
 
 ! Default values
       use_cresp         = .true.
@@ -245,8 +244,7 @@ module initcrspectrum
       arr_dim_q = 500
       q_eps     = eps
 
-      cresp_substep           = .true.
-      cresp_substep_cell      = .true.
+      cresp_substep           = .false.
       n_substeps_max          = 100
 
       if (master) then
@@ -297,7 +295,6 @@ module initcrspectrum
          lbuff(13) =  NR_allow_old_smaps
 
          lbuff(14) =  cresp_substep
-         lbuff(15) =  cresp_substep_cell
 
          rbuff(1)  = cfl_cre
          rbuff(2)  = cre_eff
@@ -370,7 +367,6 @@ module initcrspectrum
          NR_allow_old_smaps          = lbuff(13)
 
          cresp_substep               = lbuff(14)
-         cresp_substep_cell          = lbuff(15)
 
          cfl_cre                     = rbuff(1)
          cre_eff                     = rbuff(2)
@@ -594,20 +590,10 @@ module initcrspectrum
       write (msg, "(A,ES12.5,A,ES15.8,A,ES15.8)") "[initcrspectrum:init_cresp] dt_synch(p_max_fix = ",p_max_fix,", u_b_max = ",u_b_max,") = ", def_dtsynch / (p_max_fix* u_b_max)
       if (master)  call warn(msg)
 
-      if (cresp_substep_cell) then
-         cresp_substep = .true.  !> cresp_substep_cell implies cresp_substep, but with additional features
-         if (master) then
-            write(msg,"(A, I4)") "[initcrspectrum:init_cresp] Substep (cresp_substep, cresp_substep_cell) for CRESP for each cell is ON, max. substeps: ", n_substeps_max
-            call printinfo(msg)
-         endif
-      endif
-
       if (cresp_substep) then
-         if (.not. cresp_substep_cell) then
-            if (master) then
-               write(msg,"(A, I4)") "[initcrspectrum:init_cresp] Substep (cresp_substep) for CRESP is ON, max. substeps: ", n_substeps_max
-               call printinfo(msg)
-            endif
+         if (master) then
+            write(msg,"(A, I4)") "[initcrspectrum:init_cresp] Substep for CRESP for each cell is ON, max. substeps: ", n_substeps_max
+            call printinfo(msg)
          endif
       else
          n_substeps_max = 1            !< for sanity assuming 1 substep if cresp_substep = .false.
