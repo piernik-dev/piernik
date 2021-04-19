@@ -41,7 +41,7 @@ module initcrspectrum
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active, &
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,        &
            & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,       &
-           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, cresp_substep_cell, cresp_substep_bcast_dt, n_substeps_max
+           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, cresp_substep_cell, n_substeps_max
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -96,7 +96,6 @@ module initcrspectrum
 ! substepping parameters
    logical         :: cresp_substep               !< turns on / off usage of substepping
    logical         :: cresp_substep_cell          !< turns on / off usage of substepping for each cell independently
-   logical         :: cresp_substep_bcast_dt      !< turns on / off propagation of one (smallest) dt over the domain
    integer         :: n_substeps_max              !< maximal allowed number of substeps
 
 ! NR parameters
@@ -187,7 +186,7 @@ module initcrspectrum
       &                         NR_iter_limit, max_p_ratio, synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init,             &
       &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf, b_max_db,      &
       &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up, p_diff,&
-      &                         q_eps, NR_smap_file, cresp_substep, cresp_substep_cell, cresp_substep_bcast_dt, n_substeps_max
+      &                         q_eps, NR_smap_file, cresp_substep, cresp_substep_cell, n_substeps_max
 
 ! Default values
       use_cresp         = .true.
@@ -248,7 +247,6 @@ module initcrspectrum
 
       cresp_substep           = .true.
       cresp_substep_cell      = .true.
-      cresp_substep_bcast_dt  = .false.
       n_substeps_max          = 100
 
       if (master) then
@@ -300,7 +298,6 @@ module initcrspectrum
 
          lbuff(14) =  cresp_substep
          lbuff(15) =  cresp_substep_cell
-         lbuff(16) =  cresp_substep_bcast_dt
 
          rbuff(1)  = cfl_cre
          rbuff(2)  = cre_eff
@@ -374,7 +371,6 @@ module initcrspectrum
 
          cresp_substep               = lbuff(14)
          cresp_substep_cell          = lbuff(15)
-         cresp_substep_bcast_dt      = lbuff(16)
 
          cfl_cre                     = rbuff(1)
          cre_eff                     = rbuff(2)
