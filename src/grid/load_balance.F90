@@ -313,18 +313,13 @@ contains
                select case (verbosity)
                   case (V_ELABORATE:)
                      call log_elaborate
-                     call log_host
-                     call log_summary
                   case (V_DETAILED)
                      call log_detailed
-                     call log_host
-                     call log_summary
                   case (V_HOST)
-                     call log_host
-                     call log_summary
                   case (V_SUMMARY)
-                     call log_summary
                end select
+               if (verbosity >= V_HOST) call log_host
+               if (verbosity >= V_SUMMARY) call log_summary
                if ((auto_balance .or. enable_exclusion) .and. (nstep >= 1)) call log_speed
             endif
 
