@@ -1605,6 +1605,11 @@ contains
 
       r = zero
 
+      ! Found here an FPE occuring in mcrwind/mcrwind_cresp
+      ! bins = [ 11, 12, 13, 14, 15 ]
+      ! q = [ 0, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, 4.922038984459582, -30 ]
+      ! five-q(bins) = 35, that seems to be a bit high power to apply carelessly
+
       where (abs(q(bins) - five) > eps)
          r_num = (p(bins)**(five-q(bins)) - p(bins-1)**(five-q(bins)))/(five - q(bins))
       elsewhere
@@ -1632,6 +1637,7 @@ contains
    subroutine ne_to_q(n, e, q, bins)
 
       use constants,       only: zero, I_ONE
+      use dataio_pub,      only: warn
       use cresp_NR_method, only: compute_q
       use cresp_variables, only: clight_cresp
       use initcosmicrays,  only: ncre
@@ -1652,6 +1658,9 @@ contains
          i = bins(i_active)
          if (e(i) > e_small .and. p(i-1) > zero) then
             exit_code = .true.
+            if (abs(n(i)) < 1e-300) call warn("[cresp_crspectrum:ne_to_q] 1/|n(i)| > 1e300")
+            ! n(i) of order 1e-100 does happen sometimes, but extreme values like 4.2346894890376292e-312 tend to create FPE in the line below
+            ! these could be uninitialized values
             alpha_in = e(i)/(n(i)*p(i-1)*clight_cresp)
             if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boudary case, when momenta are not approximated
                q(i) = compute_q(alpha_in, exit_code, p(i)/p(i-1))
