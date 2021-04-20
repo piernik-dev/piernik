@@ -96,15 +96,21 @@ contains
 
    subroutine start(this)
 
-      use dataio_pub, only: die
+      use dataio_pub, only: msg, warn
       use MPIF,       only: MPI_Wtime
 
       implicit none
 
       class(cg_cost_t), intent(inout) :: this
 
-      if (this%wstart > T_INVALID) call die("[cg_cost:start] some counting has already begin")
-      this%wstart =  MPI_Wtime()
+      real :: t
+
+      t = MPI_Wtime()
+      if (this%wstart > T_INVALID) then
+         write(msg, '(2(a,f18.6))')"[cg_cost:start] Some counting has already begin at ", this%wstart, ". Resetting to ", t
+         call warn(msg)
+      endif
+      this%wstart = t
 
    end subroutine start
 
@@ -112,7 +118,7 @@ contains
 
    subroutine stop(this, ind)
 
-      use dataio_pub, only: die
+      use dataio_pub, only: msg, warn, die
       use MPIF,       only: MPI_Wtime
 
       implicit none
@@ -120,10 +126,16 @@ contains
       class(cg_cost_t), intent(inout) :: this
       integer(kind=4),  intent(in)    :: ind
 
-      if (this%wstart <= T_INVALID) call die("[cg_cost:start] counting hasn't been started")
+      real :: t
+
+      t = MPI_Wtime()
+      if (this%wstart <= T_INVALID) then
+         write(msg, '(a,i3,a,f18.6)')"[cg_cost:start] Counting hasn't been started! index: ", ind, " time: ", t
+         call warn(msg)
+      endif
 
       if (ind >= lbound(this%wtime, 1) .and. ind <= ubound(this%wtime, 1)) then
-         this%wtime(ind) = this%wtime(ind) + MPI_Wtime() - this%wstart
+         this%wtime(ind) = this%wtime(ind) + (t - this%wstart)
       else
          call die("[cg_cost:start] invalid index")
       endif
