@@ -240,11 +240,12 @@ contains
       use cg_cost,       only: cost_labels
       use cg_cost_stats, only: cg_stats_t, stat_labels, I_MAX
       use cg_list,       only: cg_list_t, cg_list_element
-      use constants,     only: I_ONE, base_level_id
+      use constants,     only: I_ONE, base_level_id, PPP_AMR
       use dataio_pub,    only: msg, warn
       use global,        only: nstep
       use mpisetup,      only: master, FIRST, LAST, err_mpi
       use MPIF,          only: MPI_COMM_WORLD, MPI_DOUBLE_PRECISION, MPI_Wtime, MPI_Gather
+      use ppp,           only: ppp_main
 
       implicit none
 
@@ -259,6 +260,9 @@ contains
       real, allocatable, dimension(:, :, :) :: all_proc_stats
       real, allocatable, dimension(:, :) :: send_stats
       integer, parameter :: N_STATS = size(stat_labels) + I_ONE
+      character(len=*), parameter :: lbpc_label = "load_balance:print_costs"
+
+      call ppp_main%start(lbpc_label, PPP_AMR)
 
       ! gather mean, standard deviation and extrema for the costs
       call leaves_stats%reset
@@ -330,6 +334,8 @@ contains
       deallocate(all_proc_stats, send_stats)
 
       prev_time = MPI_Wtime()
+
+      call ppp_main%stop(lbpc_label, PPP_AMR)
 
    contains
 
