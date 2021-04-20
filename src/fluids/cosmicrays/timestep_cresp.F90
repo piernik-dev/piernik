@@ -181,6 +181,8 @@ contains
       use initcrspectrum,  only: cresp_substep
       use mpisetup,        only: master
 
+      implicit none
+
       if (.not. repeat_step) return
 
       if (cfl_violated) then
