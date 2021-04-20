@@ -81,8 +81,8 @@ contains
 !!   <tr><td> cost_to_balance  </td><td> "MHD"    </td><td> character() </td><td> \copydoc load_balance::cost_to_balance  </td></tr>
 !!   <tr><td> balance_thr      </td><td> 1.       </td><td> real        </td><td> \copydoc load_balance::balance_thr      </td></tr>
 !!   <tr><td> avg_factor       </td><td> 0.2      </td><td> real        </td><td> \copydoc load_balance::avg_factor       </td></tr>
-!!   <tr><td> verbosity        </td><td> 1        </td><td> integer     </td><td> \copydoc load_balance::verbosity        </td></tr>
-!!   <tr><td> verbosity_nstep  </td><td> 10       </td><td> integer     </td><td> \copydoc load_balance::verbosity_nstep  </td></tr>
+!!   <tr><td> verbosity        </td><td> 2        </td><td> integer     </td><td> \copydoc load_balance::verbosity        </td></tr>
+!!   <tr><td> verbosity_nstep  </td><td> 20       </td><td> integer     </td><td> \copydoc load_balance::verbosity_nstep  </td></tr>
 !!   <tr><td> enable_exclusion </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::enable_exclusion </td></tr>
 !!   <tr><td> watch_cost       </td><td> "MHD"    </td><td> character() </td><td> \copydoc load_balance::watch_cost       </td></tr>
 !!   <tr><td> exclusion_thr    </td><td> 3.       </td><td> real        </td><td> \copydoc load_balance::exclusion_thr    </td></tr>
@@ -98,7 +98,7 @@ contains
 
       implicit none
 
-      integer, parameter :: verbosity_nstep_default = 10
+      integer, parameter :: verbosity_nstep_default = 20
       real,    parameter :: intolerable_perf = 3.
       real,    parameter :: tolerable_imbalance = 1.  ! A bit above 1. may prevent throwing cg back and forth
       real,    parameter :: default_ema = 0.2  ! Exponential moving average factor (1.0 => no tail, 0.0 => no update)
@@ -111,7 +111,7 @@ contains
       cost_to_balance  = "MHD"
       balance_thr      = tolerable_imbalance
       avg_factor       = default_ema
-      verbosity        = V_DETAILED
+      verbosity        = V_HOST
       verbosity_nstep  = verbosity_nstep_default
       enable_exclusion = .false.
       watch_cost       = "MHD"
