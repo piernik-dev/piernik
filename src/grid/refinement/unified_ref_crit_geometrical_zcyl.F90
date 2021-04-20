@@ -99,7 +99,7 @@ contains
       this%ijk_hi = uninit
       this%ijk_c  = uninit
       if (master) then
-         write(msg, '(a,3g13.5,a,3g13.5,a)')"[URC zcyl]  Initializing cylindrical refinement in a box: [ ", this%coords(:, LO), " ]..[ ", this%coords(:, HI), " ]"
+         write(msg, '(a,3g13.5,a,3g13.5,a,i3)')"[URC zcyl]  Initializing cylindrical refinement in a box: [ ", this%coords(:, LO), " ]..[ ", this%coords(:, HI), " ] at level ", this%level
          call printinfo(msg)
       endif
 

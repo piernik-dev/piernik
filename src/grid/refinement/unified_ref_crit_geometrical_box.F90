@@ -81,7 +81,7 @@ contains
       this%ijk_lo = uninit
       this%ijk_hi = uninit
       if (master) then
-         write(msg, '(a,3g13.5,a,3g13.5,a)')"[URC box]   Initializing refinement at box: [ ", this%coords(:, LO), " ]..[ ", this%coords(:, HI), " ]"
+         write(msg, '(a,3g13.5,a,3g13.5,a,i3)')"[URC box]   Initializing refinement at box: [ ", this%coords(:, LO), " ]..[ ", this%coords(:, HI), " ] at level ", this%level
          call printinfo(msg)
       endif
 

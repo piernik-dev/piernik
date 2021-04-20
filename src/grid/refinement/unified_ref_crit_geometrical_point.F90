@@ -78,7 +78,7 @@ contains
       allocate(this%ijk(base_level_id:this%level, ndims))
       this%ijk = uninit
       if (master) then
-         write(msg, '(a,3g13.5,a)')"[URC point] Initializing refinement at point: [ ", this%coords, " ]"
+         write(msg, '(a,3g13.5,a,i3)')"[URC point] Initializing refinement at point: [ ", this%coords, " ] at level ", this%level
          call printinfo(msg)
       endif
 
