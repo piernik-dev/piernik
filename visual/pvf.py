@@ -12,6 +12,8 @@ plotdir = 'frames'
 sctype = 'linear'
 cu, cx, cy, cz = False, 0.0, 0.0, 0.0
 zmin, zmax = 0.0, 0.0
+draw_part = False
+draw_data = True
 
 print('PIERNIK VISUALIZATION FACILITY')
 
@@ -28,13 +30,15 @@ def print_usage():
     print(' -c CX,CY,CZ, \t--center CX,CY,CZ \tplot cuts across given point coordinates CX, CY, CZ [default: computed domain center]')
     print(' -l SCALETYPE, \t--scale SCALETYPE \tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: linear]')
     print(' -o OUTPUT, \t--output OUTPUT \tdump plot files into OUTPUT directory [default: frames]')
+    print(' -p,\t\t--particles\t\tscatter particles onto slices [default: switched-off]')
+    print(' -P,\t\t--particles-only\tscatter particles without slices of any grid dataset')
     print(' -r COLORMAP, \t--colormap COLORMAP \tuse COLORMAP palette [default: viridis]')
     print(' -z ZMIN,ZMAX, \t--zlim ZMIN,ZMAX \tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]')
 
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "c:hl:o:r:z:", ["help", "center=", "colormap=", "output=", "scale=", "zlim="])
+        opts, args = getopt.getopt(argv, "c:hl:o:pPr:z:", ["help", "center=", "colormap=", "output=", "particles", "particles-only", "scale=", "zlim="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -61,6 +65,15 @@ def cli_params(argv):
         elif opt in ("-r", "--colormap"):
             global cmap
             cmap = str(arg)
+
+        elif opt in ("-p", "--particles"):
+            global draw_part
+            draw_part = True
+
+        elif opt in ("-P", "--particles-only"):
+            global draw_data
+            draw_part = True
+            draw_data = False
 
         elif opt in ("-z", "--zlim"):
             global zmin, zmax
@@ -112,7 +125,7 @@ for var in varlist:
         # output = plotdir+'/'+filen.split('/')[-1].replace('.h5',"_%s.png" % var)
         fnl = filen.split('/')[-1]
         output = plotdir + '/' + '_'.join(fnl.split('_')[:-1]) + '_' + var + '_' + fnl.split('_')[-1].replace('.h5', ".png")
-        options = zmin, zmax, cmap, sctype, cu, cx, cy, cz
+        options = zmin, zmax, cmap, sctype, cu, cx, cy, cz, draw_data, draw_part
         pc.plotcompose(pthfilen, var, output, options)
     else:
         print(var, ' is not available in the file ', pthfilen)
