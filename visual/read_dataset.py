@@ -23,3 +23,14 @@ def collect_dataset(filen, dset_name):
 
     h5f.close()
     return dset
+
+def collect_particles(filen):
+    import h5py as h5
+    import numpy as np
+    print('Prepearing to read particles')
+    h5f = h5.File(filen, 'r')
+    posx = h5f['data']['grid_0000000000']['particles']['stars']['position_x'][:]
+    posy = h5f['data']['grid_0000000000']['particles']['stars']['position_y'][:]
+    posz = h5f['data']['grid_0000000000']['particles']['stars']['position_z'][:]
+    h5f.close()
+    return posx, posy, posz
