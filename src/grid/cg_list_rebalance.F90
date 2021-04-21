@@ -154,9 +154,7 @@ contains
 
          if (all(pnames%exclude)) call die("[cg_list_rebalance:balance_old] all threads excluded")
 
-         call gp%set_id(this%l%off)
-         call gp%sort
-         ! call gp%find_cweights
+         call gp%set_sort_weight(this%l%off)
 
          act_proc = count(.not. pnames%exclude, kind=4)
          i = 0  ! counter for non-excluded processes

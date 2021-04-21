@@ -63,13 +63,29 @@ module sort_piece_list
       procedure :: compare_elements !< Make a comparision
 
       ! own routines
-      procedure :: init             !< Allocate the list
-      procedure :: cleanup          !< Deallocate the list
-      procedure :: set_id           !< Find grid id using a space-filling curve
-      procedure :: find_cweights    !< Compute list(:)%cweight
+      procedure :: init                    !< Allocate the list
+      procedure :: cleanup                 !< Deallocate the list
+      procedure, private :: set_id         !< Find grid id using a space-filling curve
+      procedure, private :: find_cweights  !< Compute list(:)%cweight
+      procedure :: set_sort_weight         !< a shortcut for set_id + sort + find_cweights
    end type grid_piece_list
 
 contains
+
+!> \brief A shortcut for set_id + sort + find_cweights
+
+   subroutine set_sort_weight(this, off)
+
+      implicit none
+
+      class(grid_piece_list),            intent(inout) :: this  !< object invoking type-bound procedure
+      integer(kind=8), dimension(ndims), intent(in)    :: off   !< offset of the level
+
+      call this%set_id(off)
+      call this%sort
+      call this%find_cweights
+
+   end subroutine set_sort_weight
 
 !> \brief initialize an element of the list to be sorted
 
