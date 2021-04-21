@@ -28,6 +28,8 @@ def plotcompose(pthfilen, var, output, options):
 
     dset = rd.collect_dataset(pthfilen, var)
 
+    px, py, pz = rd.collect_particles(pthfilen)
+
     ix = int(nx / 2 - 1)
     iy = int(ny / 2 - 1)
     iz = int(nz / 2 - 1)
@@ -57,17 +59,20 @@ def plotcompose(pthfilen, var, output, options):
     a = ax.imshow(xz, origin="lower", extent=[xmin, xmax, zmin, zmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     ax.set_xlabel("x [%s]" % pu.labelx()(ulen))
     ax.set_ylabel("z [%s]" % pu.labelx()(ulen))
+    ax.scatter(px, pz, marker=".")
 
     ax = grid[0]
     a = ax.imshow(xy, origin="lower", extent=[ymin, ymax, xmin, xmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     ax.set_ylabel("x [%s]" % pu.labelx()(ulen))
     ax.set_xlabel("y [%s]" % pu.labelx()(ulen))
+    ax.scatter(py, px, marker=".")
     ax.set_title(timep)
 
     ax = grid[2]
     a = ax.imshow(yz, origin="lower", extent=[ymin, ymax, zmin, zmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     ax.set_xlabel("y [%s]" % pu.labelx()(ulen))
     ax.set_ylabel("z [%s]" % pu.labelx()(ulen))
+    ax.scatter(py, pz, marker=".")
 
     bar = grid.cbar_axes[0]
     bar.axis["right"].toggle(all=True)
