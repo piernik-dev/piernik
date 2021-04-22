@@ -18,19 +18,14 @@ dnames = ''
 
 print('PIERNIK VISUALIZATION FACILITY')
 
-print(sys.argv)
 
 def print_usage():
-    print('Usage: ./pvf.py <file> <varname,[varname,...] | _all_> [options]')
-    print('')
-    print('./pvf.py <file> - print available datafields from <file>')
-    print('./pvf.py <file> _all_ - plot all available datafields from <file>')
-    print('./pfv.py <file> <varname,[varname,...] [options] - plot specified datafields from <file>')
+    print('Usage: ./pvf.py <file> [options]')
     print('')
     print('Options:')
     print(' -h, \t\t--help \t\t\tprint this help')
     print(' -c CX,CY,CZ, \t--center CX,CY,CZ \tplot cuts across given point coordinates CX, CY, CZ [default: computed domain center]')
-    print(' -d VAR[,VAR2], --dataset VAR[,VAR2] \tspecify dataset(s) to plot [default: list available dataset; all or _all_ to plot all available]')
+    print(' -d VAR[,VAR2], --dataset VAR[,VAR2] \tspecify one or more datafield(s) to plot [default: print available datafields; all or _all_ to plot all available datafields]')
     print(' -l SCALETYPE, \t--scale SCALETYPE \tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: linear]')
     print(' -o OUTPUT, \t--output OUTPUT \tdump plot files into OUTPUT directory [default: frames]')
     print(' -p,\t\t--particles\t\tscatter particles onto slices [default: switched-off]')
@@ -100,6 +95,7 @@ def list_file_fields(pfile):
     h5f = h5py.File(pfile, 'r')
     print('Available datafields in the file %s: \n' % pfile, list(h5f['field_types'].keys()))
 
+
 if (len(sys.argv) < 3):
     print_usage()
     if (len(sys.argv) == 2 and sys.argv[-1][0] != '-'):
@@ -121,7 +117,7 @@ for pthfilen in files_list:
     filen = pthfilen.split('/')[-1]
 
     print("Reading file: %s" % pthfilen)
-    prd,prp = '', ''
+    prd, prp = '', ''
     if draw_data:
         if dnames == "_all_" or dnames == "all":
             varlist = h5f['field_types'].keys()
