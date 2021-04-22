@@ -85,39 +85,40 @@ def cli_params(argv):
             print("zmin, zmax = ", zmin, zmax)
 
 
-def check_file(pfile):
-    if not os.path.exists(pfile):
-        print('The file %s does not exist!' % pfile)
-        exit()
-
-
-def list_file_fields(pfile):
-    h5f = h5py.File(pfile, 'r')
-    print('Available datafields in the file %s: \n' % pfile, list(h5f['field_types'].keys()))
-
-
-if (len(sys.argv) < 3):
+if (len(sys.argv) < 2):
     print_usage()
-    if (len(sys.argv) == 2 and sys.argv[-1][0] != '-'):
-        print('')
-        pthfilen = sys.argv[1]
-        check_file(pthfilen)
-        list_file_fields(pthfilen)
     exit()
 
-cli_params(sys.argv[2:])
+iw = 1
+for word in sys.argv[1:]:
+    if word[0] == '-':
+        break
+    iw += 1
+
+cli_params(sys.argv[iw:])
 options = zmin, zmax, cmap, sctype, cu, cx, cy, cz, draw_data, draw_part
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 
-files_list = [sys.argv[1]]
+files_list = sys.argv[1:iw]
 for pthfilen in files_list:
-    check_file(pthfilen)
-    h5f = h5py.File(pthfilen, 'r')
+    print('')
+    file_exists = os.path.exists(pthfilen)
+    if not file_exists:
+        print('The file %s does not exist!' % pthfilen)
+        continue
+    if pthfilen.split('.')[-1] == 'h5':
+        h5f = h5py.File(pthfilen, 'r')
+    else:
+        continue
+    if draw_data and dnames == '':
+        print('Available datafields in the file %s: \n' % pthfilen, list(h5f['field_types'].keys()))
+        h5f.close()
+        continue
     filen = pthfilen.split('/')[-1]
 
     print("Reading file: %s" % pthfilen)
-    prd, prp = '', ''
+    prd, prp = '', '',
     if draw_data:
         if dnames == "_all_" or dnames == "all":
             varlist = h5f['field_types'].keys()
