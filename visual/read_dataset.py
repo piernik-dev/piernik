@@ -1,9 +1,9 @@
 #!/usr/bin/env python
+import h5py as h5
+import numpy as np
 
 
 def collect_dataset(filen, dset_name):
-    import h5py as h5
-    import numpy as np
     print('Prepearing to read ', dset_name)
     h5f = h5.File(filen, 'r')
     attrs = h5f['domains']['base'].attrs
@@ -24,13 +24,14 @@ def collect_dataset(filen, dset_name):
     h5f.close()
     return dset
 
+
 def collect_particles(filen):
-    import h5py as h5
-    import numpy as np
     print('Prepearing to read particles')
+    px, py, pz = np.array([]), np.array([]), np.array([])
     h5f = h5.File(filen, 'r')
-    posx = h5f['data']['grid_0000000000']['particles']['stars']['position_x'][:]
-    posy = h5f['data']['grid_0000000000']['particles']['stars']['position_y'][:]
-    posz = h5f['data']['grid_0000000000']['particles']['stars']['position_z'][:]
+    for gn in h5f['data']:
+        px = np.concatenate((px, h5f['data'][gn]['particles']['stars']['position_x'][:]))
+        py = np.concatenate((py, h5f['data'][gn]['particles']['stars']['position_y'][:]))
+        pz = np.concatenate((pz, h5f['data'][gn]['particles']['stars']['position_z'][:]))
     h5f.close()
-    return posx, posy, posz
+    return px, py, pz
