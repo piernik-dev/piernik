@@ -113,15 +113,23 @@ filen = pthfilen.split('/')[-1]
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 
-if sys.argv[2] == "_all_":
-    varlist = h5f['field_types'].keys()
-else:
-    varlist = sys.argv[2].split(',')
-
 print("Reading file: %s" % pthfilen)
-print('Reading datasets: %s' % varlist)
+prd = ''
+if draw_data:
+    if sys.argv[2] == "_all_":
+        varlist = h5f['field_types'].keys()
+    else:
+        varlist = sys.argv[2].split(',')
+    prd = 'datasets: %s' % varlist
+    if draw_part:
+        prp = 'particles and '
+else:
+    varlist = ['part']
+    prp = 'particles only'
+print('Going to read '+prp+prd)
+
 for var in varlist:
-    if (var in list(h5f['field_types'].keys())):
+    if (not draw_data or var in list(h5f['field_types'].keys())):
         # output = plotdir+'/'+filen.split('/')[-1].replace('.h5',"_%s.png" % var)
         fnl = filen.split('/')[-1]
         output = plotdir + '/' + '_'.join(fnl.split('_')[:-1]) + '_' + var + '_' + fnl.split('_')[-1].replace('.h5', ".png")

@@ -17,7 +17,8 @@ def plotcompose(pthfilen, var, output, options):
     time = h5f.attrs['time'][0]
     utim = h5f['dataset_units']['time_unit'].attrs['unit']
     ulen = h5f['dataset_units']['length_unit'].attrs['unit']
-    uvar = h5f['dataset_units'][var].attrs['unit']
+    if drawd:
+        uvar = h5f['dataset_units'][var].attrs['unit']
     nx, ny, nz = h5f['simulation_parameters'].attrs['domain_dimensions']
     xmin, ymin, zmin = h5f['simulation_parameters'].attrs['domain_left_edge']
     xmax, ymax, zmax = h5f['simulation_parameters'].attrs['domain_right_edge']

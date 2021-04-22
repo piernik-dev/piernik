@@ -4,7 +4,7 @@ import numpy as np
 
 
 def collect_dataset(filen, dset_name):
-    print('Prepearing to read ', dset_name)
+    print('Reading', dset_name)
     h5f = h5.File(filen, 'r')
     attrs = h5f['domains']['base'].attrs
     nxd, nyd, nzd = attrs['n_d'][0:3]
@@ -26,7 +26,7 @@ def collect_dataset(filen, dset_name):
 
 
 def collect_particles(filen):
-    print('Prepearing to read particles')
+    print('Reading particles')
     px, py, pz = np.array([]), np.array([]), np.array([])
     h5f = h5.File(filen, 'r')
     for gn in h5f['data']:
