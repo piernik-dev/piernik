@@ -14,6 +14,7 @@ cu, cx, cy, cz = False, 0.0, 0.0, 0.0
 zmin, zmax = 0.0, 0.0
 draw_part = False
 draw_data = True
+dnames = ''
 
 print('PIERNIK VISUALIZATION FACILITY')
 
@@ -29,6 +30,7 @@ def print_usage():
     print('Options:')
     print(' -h, \t\t--help \t\t\tprint this help')
     print(' -c CX,CY,CZ, \t--center CX,CY,CZ \tplot cuts across given point coordinates CX, CY, CZ [default: computed domain center]')
+    print(' -d VAR[,VAR2], --dataset VAR[,VAR2] \tspecify dataset(s) to plot [default: list available dataset; all or _all_ to plot all available]')
     print(' -l SCALETYPE, \t--scale SCALETYPE \tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: linear]')
     print(' -o OUTPUT, \t--output OUTPUT \tdump plot files into OUTPUT directory [default: frames]')
     print(' -p,\t\t--particles\t\tscatter particles onto slices [default: switched-off]')
@@ -39,7 +41,7 @@ def print_usage():
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "c:hl:o:pPr:z:", ["help", "center=", "colormap=", "output=", "particles", "particles-only", "scale=", "zlim="])
+        opts, args = getopt.getopt(argv, "c:d:hl:o:pPr:z:", ["help", "center=", "colormap=", "dataset=", "output=", "particles", "particles-only", "scale=", "zlim="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -53,6 +55,10 @@ def cli_params(argv):
             global cx, cy, cz, cu
             cx, cy, cz = arg.split(',')
             cu, cx, cy, cz = True, float(cx), float(cy), float(cz)
+
+        elif opt in ("-d", "--dataset"):
+            global dnames
+            dnames = str(arg)
 
         elif opt in ("-l", "--scale"):
             global sctype
@@ -94,7 +100,6 @@ def list_file_fields(pfile):
     h5f = h5py.File(pfile, 'r')
     print('Available datafields in the file %s: \n' % pfile, list(h5f['field_types'].keys()))
 
-
 if (len(sys.argv) < 3):
     print_usage()
     if (len(sys.argv) == 2 and sys.argv[-1][0] != '-'):
@@ -104,7 +109,7 @@ if (len(sys.argv) < 3):
         list_file_fields(pthfilen)
     exit()
 
-cli_params(sys.argv[3:])
+cli_params(sys.argv[2:])
 options = zmin, zmax, cmap, sctype, cu, cx, cy, cz, draw_data, draw_part
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
@@ -116,12 +121,12 @@ for pthfilen in files_list:
     filen = pthfilen.split('/')[-1]
 
     print("Reading file: %s" % pthfilen)
-    prd = ''
+    prd,prp = '', ''
     if draw_data:
-        if sys.argv[2] == "_all_":
+        if dnames == "_all_" or dnames == "all":
             varlist = h5f['field_types'].keys()
         else:
-            varlist = sys.argv[2].split(',')
+            varlist = dnames.split(',')
         prd = 'datasets: %s' % varlist
         if draw_part:
             prp = 'particles and '
