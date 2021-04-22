@@ -12,16 +12,20 @@ matplotlib.use('cairo')      # choose output format
 
 
 def plotcompose(pthfilen, var, output, options):
-    umin, umax, cmap, sctype, cu, cx, cy, cz, drawd, drawp = options
+    umin, umax, cmap, sctype, cu, cx, cy, cz, drawd, drawp, uaxes = options
     h5f = h5py.File(pthfilen, 'r')
     time = h5f.attrs['time'][0]
     utim = h5f['dataset_units']['time_unit'].attrs['unit']
-    ulen = h5f['dataset_units']['length_unit'].attrs['unit']
+    ulenf = h5f['dataset_units']['length_unit'].attrs['unit']
+    usc, ulen, uupd = rd.change_units(ulenf, uaxes)
     if drawd:
         uvar = h5f['dataset_units'][var].attrs['unit']
     nx, ny, nz = h5f['simulation_parameters'].attrs['domain_dimensions']
     xmin, ymin, zmin = h5f['simulation_parameters'].attrs['domain_left_edge']
     xmax, ymax, zmax = h5f['simulation_parameters'].attrs['domain_right_edge']
+    if uupd:
+        xmin, ymin, zmin = xmin / usc, ymin / usc, zmin / usc
+        xmax, ymax, zmax = xmax / usc, ymax / usc, zmax / usc
     h5f.close()
 
     timep = "time = %5.2f %s" % (time, pu.labelx()(utim))
@@ -29,6 +33,8 @@ def plotcompose(pthfilen, var, output, options):
 
     if drawp:
         px, py, pz = rd.collect_particles(pthfilen)
+        if uupd:
+            px, py, pz = px / usc, py / usc, pz / usc
 
     if drawd:
         dset = rd.collect_dataset(pthfilen, var)

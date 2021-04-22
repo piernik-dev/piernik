@@ -15,6 +15,7 @@ zmin, zmax = 0.0, 0.0
 draw_part = False
 draw_data = True
 dnames = ''
+uaxes = ''
 
 print('PIERNIK VISUALIZATION FACILITY')
 
@@ -24,6 +25,7 @@ def print_usage():
     print('')
     print('Options:')
     print(' -h, \t\t--help \t\t\tprint this help')
+    print(' -a UNIT, \t--axes UNIT \t\tscale plot axes with UNIT [default: dataset units]')
     print(' -c CX,CY,CZ, \t--center CX,CY,CZ \tplot cuts across given point coordinates CX, CY, CZ [default: computed domain center]')
     print(' -d VAR[,VAR2], --dataset VAR[,VAR2] \tspecify one or more datafield(s) to plot [default: print available datafields; all or _all_ to plot all available datafields]')
     print(' -l SCALETYPE, \t--scale SCALETYPE \tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: linear]')
@@ -36,7 +38,7 @@ def print_usage():
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "c:d:hl:o:pPr:z:", ["help", "center=", "colormap=", "dataset=", "output=", "particles", "particles-only", "scale=", "zlim="])
+        opts, args = getopt.getopt(argv, "a:c:d:hl:o:pPr:z:", ["help", "axes=", "center=", "colormap=", "dataset=", "output=", "particles", "particles-only", "scale=", "zlim="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -45,6 +47,10 @@ def cli_params(argv):
         if opt in ("-h", "--help"):
             print_usage()
             sys.exit()
+
+        elif opt in ("-a", "--axes"):
+            global uaxes
+            uaxes = str(arg)
 
         elif opt in ("-c", "--center"):
             global cx, cy, cz, cu
@@ -96,7 +102,7 @@ for word in sys.argv[1:]:
     iw += 1
 
 cli_params(sys.argv[iw:])
-options = zmin, zmax, cmap, sctype, cu, cx, cy, cz, draw_data, draw_part
+options = zmin, zmax, cmap, sctype, cu, cx, cy, cz, draw_data, draw_part, uaxes
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 
