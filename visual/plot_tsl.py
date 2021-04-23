@@ -9,7 +9,8 @@ import argparse
 remove_comments = re.compile("(?!\#)", re.VERBOSE)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-f", nargs=1, default=None)
+parser.add_argument("-f", nargs=1, default=None, help='variable to plot on vertical axis')
+parser.add_argument("-x", nargs=1, default=['time'], help='variable to plot on horizontal axis')
 parser.add_argument("files", nargs='*')
 
 args = parser.parse_args()
@@ -34,6 +35,8 @@ for fn in args.files:
         nenough = True
     elif args.f[0] not in header:
         print("Field %s not met in %s!" % (args.f[0], fn))
+    elif args.x[0] not in header:
+        print("Field %s not met in %s!" % (args.x[0], fn))
     else:
         nenough = False
     if nenough:
@@ -42,6 +45,8 @@ for fn in args.files:
 
     field = args.f[0]
     fno = np.where(header == field)[0][0]
+    xtime = args.x[0]
+    xno = np.where(header == xtime)[0][0]
 
     tab_work = tab   # problems with map in python3+
     tab = np.array([[float(item) for item in line.split()]
@@ -51,7 +56,7 @@ for fn in args.files:
 fig = plt.figure()
 ax = fig.add_subplot(111)
 for i, fn in enumerate(data):
-    ax.plot(fn[:, 1], fn[:, fno], label=args.files[i])
+    ax.plot(fn[:, xno], fn[:, fno], label=args.files[i])
 
 ax.legend()
 
