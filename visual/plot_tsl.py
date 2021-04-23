@@ -61,6 +61,6 @@ for i, fn in enumerate(data):
 ax.legend()
 
 plt.ylabel(field)
-plt.xlabel(header[1])
+plt.xlabel(xtime)
 plt.draw()
 plt.show()
