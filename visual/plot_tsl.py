@@ -13,6 +13,7 @@ parser.add_argument("-f", nargs=1, default=None, help='variable to plot on verti
 parser.add_argument("-x", nargs=1, default=['time'], help='variable to plot on horizontal axis')
 parser.add_argument("--xlim", nargs=2, default=None, help='scale span for horizontal axis')
 parser.add_argument("--ylim", nargs=2, default=None, help='scale span for vertical axis')
+parser.add_argument("-s", "--save", nargs=1, default=None, help="save plot to a file")
 parser.add_argument("files", nargs='*')
 
 args = parser.parse_args()
@@ -72,4 +73,9 @@ ax.legend()
 plt.ylabel(field)
 plt.xlabel(xtime)
 plt.draw()
-plt.show()
+if args.save is None:
+    plt.show()
+else:
+    plt.savefig(args.save[0], facecolor='white')
+    print(args.save[0], "written to disk")
+plt.clf()
