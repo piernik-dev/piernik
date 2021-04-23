@@ -11,6 +11,8 @@ remove_comments = re.compile("(?!\#)", re.VERBOSE)
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", nargs=1, default=None, help='variable to plot on vertical axis')
 parser.add_argument("-x", nargs=1, default=['time'], help='variable to plot on horizontal axis')
+parser.add_argument("--xlim", nargs=2, default=None, help='scale span for horizontal axis')
+parser.add_argument("--ylim", nargs=2, default=None, help='scale span for vertical axis')
 parser.add_argument("files", nargs='*')
 
 args = parser.parse_args()
@@ -20,10 +22,12 @@ if len(args.files) < 1:
 data = []
 nenough = True
 
+
 def print_header(fn, header):
     print("There are following fields available in %s" % fn)
     for ii, he in enumerate(header):
         print(ii+1, he)
+
 
 for fn in args.files:
     f = open(fn, "r")
@@ -55,6 +59,11 @@ for fn in args.files:
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
+if args.xlim is not None:
+    plt.xlim(float(args.xlim[0]), float(args.xlim[1]))
+if args.ylim is not None:
+    plt.ylim(float(args.ylim[0]), float(args.ylim[1]))
+
 for i, fn in enumerate(data):
     ax.plot(fn[:, xno], fn[:, fno], label=args.files[i])
 
