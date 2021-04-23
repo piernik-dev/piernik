@@ -190,7 +190,7 @@ contains
             dt_spectrum = dt_spectrum * (dt_shrink ** tstep_attempt) ! If dt is repeated, dt_spectrum should follow, this way seems legit
 
             if (master) then
-               write (msg, "(A72,E14.7)") "[cresp_timestep:repeat_step_prep] (repeat step) shrinking dt_spectrum = ", dt_spectrum
+               write (msg, "(A72,E14.7)") "[timestep_cresp:cresp_reaction_to_redo_step] (repeat step) shrinking dt_spectrum = ", dt_spectrum
                call warn(msg)
             endif
 
