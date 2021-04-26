@@ -134,17 +134,26 @@ contains
 
    end subroutine max_pacc_3d
 
-   subroutine particle_diagnostics
+   subroutine particle_diagnostics(regular)
 
 #ifdef VERBOSE
       use dataio_pub, only: msg, printinfo
+      use mpisetup,   only: master
 #endif /* VERBOSE */
 
       implicit none
 
-      real, save    :: init_energy          !< total initial energy of set of the particles
-      real, save    :: init_angmom          !< initial angular momentum of set of the particles
-      logical, save :: first_run_lf = .true.
+      logical, intent(in) :: regular              !< govern shorter diagnostics
+      real, save          :: init_energy          !< total initial energy of set of the particles
+      real, save          :: init_angmom          !< initial angular momentum of set of the particles
+      logical, save       :: first_run_lf = .true.
+
+      if (dump_diagnose .and. regular) call dump_particles_to_textfile
+
+#ifdef VERBOSE
+      regular = .false.
+#endif /* VERBOSE */
+      if (regular) return
 
       call get_angmom_totener(tot_angmom, tot_energy)
 
@@ -157,13 +166,13 @@ contains
       d_angmom = log_error(tot_angmom, init_angmom)
 
 #ifdef VERBOSE
-      write(msg,'(a,3(1x,e12.5))') '[particle_utils:particle_diagnostics] Total energy: initial, current, error ', init_energy, tot_energy, d_energy
-      call printinfo(msg)
-      write(msg,'(a,3(1x,e12.5))') '[particle_utils:particle_diagnostics] ang_momentum: initial, current, error ', init_angmom, tot_angmom, d_angmom
-      call printinfo(msg)
+      if (master) then
+         write(msg,'(a,3(1x,e12.5))') '[particle_utils:particle_diagnostics] Total energy: initial, current, error ', init_energy, tot_energy, d_energy
+         call printinfo(msg)
+         write(msg,'(a,3(1x,e12.5))') '[particle_utils:particle_diagnostics] ang_momentum: initial, current, error ', init_angmom, tot_angmom, d_angmom
+         call printinfo(msg)
+      endif
 #endif /* VERBOSE */
-
-      if (dump_diagnose) call dump_particles_to_textfile
 
    end subroutine particle_diagnostics
 

@@ -349,7 +349,7 @@ contains
             call update_particle_gravpot_and_acc
             call kick(dt)                        !3. kick
             call update_particle_kinetic_energy
-            call particle_diagnostics
+            call particle_diagnostics(.true.)
          endif
       else
          dt_kick = dt * half
@@ -358,7 +358,7 @@ contains
          call update_particle_gravpot_and_acc
          call kick(dt_kick)                   !3. kick
          call update_particle_kinetic_energy
-         call particle_diagnostics
+         call particle_diagnostics(.true.)
       endif
 
       contains

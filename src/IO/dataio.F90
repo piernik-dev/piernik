@@ -918,7 +918,7 @@ contains
       use constants,        only: ydim, zdim
 #endif /* MAGNETIC */
 #ifdef NBODY
-      use particle_utils,   only: tot_energy, d_energy, tot_angmom, d_angmom
+      use particle_utils,   only: particle_diagnostics, tot_energy, d_energy, tot_angmom, d_angmom
 #endif /* NBODY */
 
       implicit none
@@ -1137,6 +1137,10 @@ contains
 #endif /* GRAV */
 
       call piernik_MPI_Allreduce(tot_q, pSUM)
+
+#ifdef NBODY
+      call particle_diagnostics(.false.)
+#endif /* NBODY */
 
       call write_log(tsl)
       call update_tsl_magic_mass
