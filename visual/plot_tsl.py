@@ -76,10 +76,11 @@ for i, fn in enumerate(data):
     for ii, ff in enumerate(fls[i][0]):
         ax.plot(fn[:, xno], fn[:, ff], label=fls[i][1][ii]+' '+args.files[i])
 
-ax.legend()
+ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), fancybox=True, fontsize='small', ncol=2)
 print(ax.get_ylim())
 plt.ylabel(' | '.join(field))
 plt.xlabel(xtime)
+plt.tight_layout()
 plt.draw()
 if args.save is None:
     plt.show()
