@@ -594,7 +594,8 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: half, ndims
+      use constants,        only: cwdlen, half, ndims
+      use dataio_pub,       only: log_wr, nrestart, problem_name, run_id
       use global,           only: t, dt
       use particle_gravity, only: get_acc_model
       use particle_types,   only: particle
@@ -604,12 +605,14 @@ contains
       real                           :: kdt
       real, dimension(ndims)         :: acc2
       integer                        :: i, lun_out
+      character(len=cwdlen)          :: plog_file
       type(cg_list_element), pointer :: cgl
       type(particle), pointer        :: pset
 
       kdt = dt ; if (.not.twodtscheme) kdt = half * dt
 
-      open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
+      write(plog_file,'(6a,i3.3,a)') trim(log_wr),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'_out.log'
+      open(newunit=lun_out, file=plog_file, status='unknown',  position='append')
       cgl => leaves%first
       do while (associated(cgl))
 
