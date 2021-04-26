@@ -117,20 +117,30 @@ module cresp_grid
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max
+      use initcrspectrum,   only: cresp_substep
       use named_array_list, only: wna
+      use timestep_cresp,   only: cresp_reaction_to_redo_step, dt_spectrum, cresp_timestep_cell
 #ifdef DEBUG
       use cresp_crspectrum, only: cresp_detect_negative_content
 #endif /* DEBUG */
 
       implicit none
 
-      integer                        :: i, j, k
+      integer                        :: i, j, k, nssteps
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
       type(spec_mod_trms)            :: sptab
+      real                           :: dt_crs_sstep, dt_cresp, dt_doubled
+      logical                        :: inactive_cell
 
       cgl => leaves%first
       cfl_cresp_violation = .false.
+      inactive_cell       = .false.
+      dt_doubled  = 2 * dt       !< used always when cresp_substep is not performed
+      dt_cresp    = dt_doubled   !< computed for each cell if cresp_substep, using dt_doubled
+      nssteps     = 1
+
+      call cresp_reaction_to_redo_step !< alters dt for CRESP components if cfl_violated
 
       do while (associated(cgl))
          cg => cgl%cg
@@ -141,13 +151,19 @@ module cresp_grid
                   cresp%n = cg%u(iarr_cre_n, i, j, k)
                   cresp%e = cg%u(iarr_cre_e, i, j, k)
                   if (synch_active) sptab%ub = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr, u_b_max)    !< WARNING assusmes that b is in mGs
-                  if (adiab_active) sptab%ud = cg%q(divv_i)%arr(i, j, k) * onet
+                  if (adiab_active) sptab%ud = cg%q(divv_i)%point([i,j,k]) * onet
+
+                  if (cresp_substep) then !< prepare substep timestep for each cell
+                     call cresp_timestep_cell(sptab, dt_spectrum, inactive_cell)
+                     call prepare_substep(dt_doubled, dt_spectrum, dt_crs_sstep, nssteps)
+                     dt_cresp = dt_crs_sstep    !< 2 * dt is equal to nssteps * dt_crs_sstep
+                  endif
 #ifdef CRESP_VERBOSED
                   print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* CRESP_VERBOSED */
-                  call cresp_update_cell(2 * dt, cresp%n, cresp%e, sptab, cfl_cresp_violation)
+                  if (.not. inactive_cell) call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_cresp_violation, substeps = nssteps)
 #ifdef DEBUG
-                  call cresp_detect_negative_content([i, j, k])
+                  call cresp_detect_negative_content(cfl_cresp_violation, [i, j, k])
 #endif /* DEBUG */
                   if (cfl_cresp_violation) return ! nothing to do here!
                   cg%u(iarr_cre_n, i, j, k) = cresp%n
@@ -164,6 +180,31 @@ module cresp_grid
       enddo
 
    end subroutine cresp_update_grid
+
+   subroutine prepare_substep(dt_simulation, dt_process_short, dt_substep, n_substeps)
+
+      use dataio_pub,         only: msg, warn
+      use initcrspectrum,     only: n_substeps_max
+      use mpisetup,           only: master
+
+      implicit none
+
+      real,    intent(in)  :: dt_simulation, dt_process_short
+      real,    intent(out) :: dt_substep
+      integer, intent(out) :: n_substeps
+
+      n_substeps  = ceiling(dt_simulation / dt_process_short ) ! ceiling to assure resulting dt_substep .le. dt_process_short
+      if (n_substeps > n_substeps_max) then
+         if (master) then
+            write (msg,"(A42,I5, A14, I5)") "[cresp_grid:prepare_substep] n_substeps = ", n_substeps, " exceeds limit ", n_substeps_max
+            call warn(msg)
+         endif
+      endif
+
+      dt_substep  = dt_simulation / n_substeps
+
+   end subroutine prepare_substep
+
 
 !----------------------------------------------------------------------------------------------------
 
