@@ -28,8 +28,7 @@ def print_header(fn, header):
 
 
 data = []
-field = []
-fno = []
+fls = []
 nenough = True
 
 for fn in args.files:
@@ -39,6 +38,8 @@ for fn in args.files:
     header = np.array(tab[0][1:].split())
 
     if args.f is not None:
+        field = []
+        fno = []
         for ff in args.f:
             if ff not in header:
                 print("Field %s not met in %s!" % (ff, fn))
@@ -54,6 +55,7 @@ for fn in args.files:
     if nenough:
         print_header(fn, header)
         exit(0)
+    fls.append([fno, field])
 
     xtime = args.x[0]
     xno = np.where(header == xtime)[0][0]
@@ -68,18 +70,17 @@ ax = fig.add_subplot(111)
 if args.xlim is not None:
     plt.xlim(float(args.xlim[0]), float(args.xlim[1]))
 if args.ylim is not None:
-    print(args.ylim)
     plt.ylim(float(args.ylim[0]), float(args.ylim[1]))
 
 for i, fn in enumerate(data):
-    for ii, ff in enumerate(fno):
-        ax.plot(fn[:, xno], fn[:, ff], label=field[ii]+' '+args.files[i])
+    for ii, ff in enumerate(fls[i][0]):
+        ax.plot(fn[:, xno], fn[:, ff], label=fls[i][1][ii]+' '+args.files[i])
 
-ax.legend()
-print(ax.get_ylim())
-print(field)
+ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), fancybox=True, fontsize='small', ncol=2)
+print('Y axis range: ', ax.get_ylim())
 plt.ylabel(' | '.join(field))
 plt.xlabel(xtime)
+plt.tight_layout()
 plt.draw()
 if args.save is None:
     plt.show()
