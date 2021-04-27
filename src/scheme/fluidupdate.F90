@@ -72,8 +72,7 @@ contains
 
       call ppp_main%start(fu_label)
 
-      if (is_refined .and. (mod(dom%nb, I_TWO) == I_ONE)) &
-           call die("[fluidupdate:fluid_update] odd number of guardcells is known to cause inaccuracies in (M)HD and nonconvergence of V-cycles")
+      if (is_refined .and. (mod(dom%nb, I_TWO) == I_ONE)) call die("[fluidupdate:fluid_update] odd number of guardcells is known to cause inaccuracies in (M)HD and nonconvergence of V-cycles")
 
       select case (which_solver)
          case (HLLC_SPLIT)
@@ -98,18 +97,10 @@ contains
       use hdc,            only: update_chspeed
       use mass_defect,    only: update_magic_mass
       use timestep_retry, only: repeat_fluidstep
-#ifdef COSM_RAY_ELECTRONS
-      use all_boundaries, only: all_fluid_boundaries
-      use cresp_grid,     only: cresp_update_grid, cresp_clean_grid
-      use initcrspectrum, only: use_cresp_evol
-      use ppp,            only: ppp_main
-#endif /* COSM_RAY_ELECTRONS */
-
+#ifdef THERM
+      use thermal,        only: EIS
+#endif /* THERM */
       implicit none
-
-#ifdef COSM_RAY_ELECTRONS
-      character(len=*), parameter :: crug_label = "CRESP_upd_grid", crcg_label = "CRESP_clean_grid"
-#endif /* COSM_RAY_ELECTRONS */
 
       call repeat_fluidstep
       call update_chspeed
@@ -120,25 +111,14 @@ contains
 
 ! Sources should be hooked to problem_customize_solution with forward argument
 
-#ifdef COSM_RAY_ELECTRONS
-      if (use_cresp_evol) then
-         call ppp_main%start(crug_label)
-         call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module
-         call all_fluid_boundaries
-         call ppp_main%stop(crug_label)
-      endif
-#endif /* COSM_RAY_ELECTRONS */
-
       halfstep = .true.
       t = t + dt
       dtm = dt
+#ifdef THERM
+      call EIS(dt)
+#endif /* THERM */
       call make_3sweeps(.false.) ! Z -> Y -> X
       call update_magic_mass
-#ifdef COSM_RAY_ELECTRONS
-      call ppp_main%start(crcg_label)
-      call cresp_clean_grid ! BEWARE: due to diffusion some junk remains in the grid - this nullifies all inactive bins.
-      call ppp_main%stop(crcg_label)
-#endif /* COSM_RAY_ELECTRONS */
 
    end subroutine fluid_update_full
 
@@ -161,13 +141,11 @@ contains
       use particle_solvers,    only: psolver
 #endif /* NBODY */
 #endif /* GRAV */
-#ifdef COSM_RAYS
+#if defined(COSM_RAYS) && defined(MULTIGRID)
       use all_boundaries,      only: all_fluid_boundaries
       use initcosmicrays,      only: use_CRsplit
-#ifdef MULTIGRID
       use multigrid_diffusion, only: multigrid_solve_diff
-#endif /* MULTIGRID */
-#endif /* COSM_RAYS */
+#endif /* COSM_RAYS && MULTIGRID */
 #ifdef SHEAR
       use shear,               only: shear_3sweeps
 #endif /* SHEAR */
@@ -193,19 +171,12 @@ contains
       call compute_h_gpot
 #endif /* GRAV */
 
-#ifdef COSM_RAYS
+#if defined(COSM_RAYS) && defined(MULTIGRID)
       if (.not. use_CRsplit) then
-#ifdef MULTIGRID
          call multigrid_solve_diff
          call all_fluid_boundaries
-#endif /* MULTIGRID */
-
-      else
-         do s = sFRST, sLAST, sCHNG
-            if (.not.skip_sweep(s)) call make_diff_sweep(s)
-         enddo
       endif
-#endif /* COSM_RAYS */
+#endif /* COSM_RAYS && MULTIGRID */
 
       ! At this point everything should be initialized after domain expansion and we no longer need this list.
       call expanded_domain%delete
@@ -214,12 +185,12 @@ contains
       ! Don't put anything inside unless you're sure it should belong to the (M)HD solver.
       call ppp_main%start(sw3_label)
       if (use_fargo) then
-         if (.not.skip_sweep(zdim)) call make_adv_sweep(zdim, forward)
-         if (.not.skip_sweep(xdim)) call make_adv_sweep(xdim, forward)
+         if (.not.skip_sweep(zdim)) call make_sweep(zdim, forward)
+         if (.not.skip_sweep(xdim)) call make_sweep(xdim, forward)
          if (.not.skip_sweep(ydim)) call make_fargosweep
       else
          do s = sFRST, sLAST, sCHNG
-            if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
+            if (.not.skip_sweep(s)) call make_sweep(s, forward)
          enddo
       endif
       call ppp_main%stop(sw3_label)
@@ -244,12 +215,16 @@ contains
 !!
 !! \details Effectively this is a 3D (M)HD solver that applies only terms related to the direction dir/
 !<
-   subroutine make_adv_sweep(dir, forward)
+   subroutine make_sweep(dir, forward)
 
       use dataio_pub,     only: die
       use domain,         only: dom
       use global,         only: geometry25D
       use sweeps,         only: sweep
+#ifdef COSM_RAYS
+      use crdiffusion,    only: cr_diff
+      use initcosmicrays, only: use_CRsplit
+#endif /* COSM_RAYS */
 #ifdef MAGNETIC
       use constants,      only: DIVB_CT, RTVD_SPLIT
       use ct,             only: magfield
@@ -273,6 +248,9 @@ contains
 
       if (dom%has_dir(dir)) then
          if (.not. forward) then
+#ifdef COSM_RAYS
+            if (use_CRsplit) call cr_diff(dir)
+#endif /* COSM_RAYS */
 #ifdef MAGNETIC
             if (divB_0_method == DIVB_CT) call magfield(dir)
 #endif /* MAGNETIC */
@@ -284,6 +262,9 @@ contains
 #ifdef MAGNETIC
             if (divB_0_method == DIVB_CT) call magfield(dir)
 #endif /* MAGNETIC */
+#ifdef COSM_RAYS
+            if (use_CRsplit) call cr_diff(dir)
+#endif /* COSM_RAYS */
          endif
       else
          if (geometry25D) call sweep(dir)
@@ -293,30 +274,6 @@ contains
       call force_dumps
 #endif /* DEBUG */
 
-   end subroutine make_adv_sweep
-
-#ifdef COSM_RAYS
-!>
-!! \brief Perform single diffusion sweep in forward or backward direction
-!<
-   subroutine make_diff_sweep(dir)
-
-      use crdiffusion,    only: cr_diff
-#ifdef DEBUG
-      use piernikiodebug, only: force_dumps
-#endif /* DEBUG */
-
-      implicit none
-
-      integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
-
-      call cr_diff(dir)
-
-#ifdef DEBUG
-      call force_dumps
-#endif /* DEBUG */
-
-   end subroutine make_diff_sweep
-#endif /* COSM_RAYS */
+   end subroutine make_sweep
 
 end module fluidupdate

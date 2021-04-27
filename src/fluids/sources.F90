@@ -208,7 +208,7 @@ contains
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS && IONIZED */
 #ifdef THERM
-      call src_thermal_exec(u, n, bb, newsrc)
+      call src_thermal_exec(u, n, cg, i1, i2, sweep, bb, newsrc)
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #endif /* THERM */
 
@@ -427,10 +427,6 @@ contains
       use fluidindex,     only: flind
       use global,         only: cr_negative, disallow_CRnegatives
       use initcosmicrays, only: iarr_crs, smallecr, use_smallecr
-#ifdef COSM_RAY_ELECTRONS
-      use initcosmicrays, only: iarr_cre_e, iarr_cre_n, iarr_crn
-      use initcrspectrum,   only: smallcree, smallcren
-#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -438,15 +434,7 @@ contains
       real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
 
       if (disallow_CRnegatives) cr_negative = cr_negative .or. (any(u1(:, iarr_crs(:)) < zero))
-      if (use_smallecr) then
-#ifndef COSM_RAY_ELECTRONS
-         u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
-#else /* !COSM_RAY_ELECTRONS */
-         u1(:, iarr_crn(:)) = max(smallecr, u1(:, iarr_crn(:)))
-         u1(:, iarr_cre_n(:)) = max(smallcren, u1(:, iarr_cre_n(:)))        !< \deprecated BEWARE - this line refers to CRESP number density component
-         u1(:, iarr_cre_e(:)) = max(smallcree, u1(:, iarr_cre_e(:)))
-#endif /* !COSM_RAY_ELECTRONS */
-      endif
+      if (use_smallecr) u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
 
    end subroutine limit_minimal_ecr
 #endif /* COSM_RAYS */

@@ -133,10 +133,15 @@ contains
       implicit none
 
       integer                         :: i, j, k, p
-      real                            :: cs, p0
+      real                            :: cs, p0, kx, ky, kz
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
+      complex                         :: im
 
+      im = (0,1)
+      kx = 2.*pi/dom%L_(xdim)
+      ky= 2.*pi/dom%L_(ydim)
+      kz= 2.*pi/dom%L_(zdim)
       do p = 1, flind%energ
          associate(fl => flind%all_fluids(p)%fl)
 
@@ -160,12 +165,18 @@ contains
                      cg%u(fl%imz,i,j,k) = 0.0
                      cg%u(fl%ien,i,j,k) = p0/(fl%gam_1)
 ! Perturbation
+                     !cg%u(fl%imx,i,j,k) = cg%u(fl%imx,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*sin(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*cos(2.*pi*cg%z(k)/dom%L_(zdim))
+                     !cg%u(fl%imy,i,j,k) = cg%u(fl%imy,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*cos(2.*pi*cg%x(i)/dom%L_(xdim))*sin(2.*pi*cg%y(j)/dom%L_(ydim))*cos(2.*pi*cg%z(k)/dom%L_(zdim))
+                     !cg%u(fl%imz,i,j,k) = cg%u(fl%imz,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*cos(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*sin(2.*pi*cg%z(k)/dom%L_(zdim))
 
-                     cg%u(fl%imx,i,j,k) = cg%u(fl%imx,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*sin(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*cos(2.*pi*cg%z(k)/dom%L_(zdim))
-                     cg%u(fl%imy,i,j,k) = cg%u(fl%imy,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*cos(2.*pi*cg%x(i)/dom%L_(xdim))*sin(2.*pi*cg%y(j)/dom%L_(ydim))*cos(2.*pi*cg%z(k)/dom%L_(zdim))
-                     cg%u(fl%imz,i,j,k) = cg%u(fl%imz,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*cos(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*sin(2.*pi*cg%z(k)/dom%L_(zdim))
+                     !cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*(cg%u(fl%imx,i,j,k)**2 +cg%u(fl%imy,i,j,k)**2 + cg%u(fl%imz,i,j,k)**2)/cg%u(fl%idn,i,j,k)
 
-                     cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*(cg%u(fl%imx,i,j,k)**2 +cg%u(fl%imy,i,j,k)**2 + cg%u(fl%imz,i,j,k)**2)/cg%u(fl%idn,i,j,k)
+                     cg%u(fl%idn,i,j,k) = cg%u(fl%idn,i,j,k) + pertamp*cg%u(fl%idn,i,j,k) * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
+                     cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) +  pertamp*cg%u(fl%ien,i,j,k)*exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
+                     cg%u(fl%imx,i,j,k) = cg%u(fl%imx,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs* exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
+                     cg%u(fl%imy,i,j,k) = cg%u(fl%imy,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs* exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
+                     cg%u(fl%imz,i,j,k) = cg%u(fl%imz,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs* exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
+                     
                   enddo
                enddo
             enddo
