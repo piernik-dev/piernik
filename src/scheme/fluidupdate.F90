@@ -93,7 +93,7 @@ contains
    subroutine fluid_update_full
 
       use dataio_pub,     only: halfstep
-      use global,         only: dt, dtm, t
+      use global,         only: dt, dtm, t, nstep
       use hdc,            only: update_chspeed
       use mass_defect,    only: update_magic_mass
       use timestep_retry, only: repeat_fluidstep
@@ -108,7 +108,9 @@ contains
       halfstep = .false.
       t = t + dt
 #ifdef THERM
-      call EIS(dt)
+      if (nstep .gt. 0) then
+         call EIS(dt)
+      endif
 #endif /* THERM */
       call make_3sweeps(.true.) ! X -> Y -> Z
 
