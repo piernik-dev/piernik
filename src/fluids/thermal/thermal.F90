@@ -355,7 +355,6 @@ contains
       use cg_list,    only: cg_list_element
       use domain,     only: dom
       use fluidindex, only: flind
-      use global,     only : nstep
       use grid_cont,  only: grid_container
       use named_array_list, only: wna
       use units,      only: kboltz, mH
@@ -378,11 +377,7 @@ contains
       gamma = flind%all_fluids(1)%fl%gam
       cgl => leaves%first
       do while (associated(cgl))
-         cg => cgl%cg      
-         if (nstep .eq. 0) then
-            !cg%q(itemp)%span(cg%ijkse) = 0.0
-            return
-         endif
+         cg => cgl%cg
 
          dens =>  cg%w(wna%fi)%span(flind%all_fluids(1)%fl%idn,cg%ijkse)
          ta => cg%q(itemp)%span(cg%ijkse)
