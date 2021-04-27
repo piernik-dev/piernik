@@ -169,7 +169,7 @@ contains
                      !cg%u(fl%imy,i,j,k) = cg%u(fl%imy,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*cos(2.*pi*cg%x(i)/dom%L_(xdim))*sin(2.*pi*cg%y(j)/dom%L_(ydim))*cos(2.*pi*cg%z(k)/dom%L_(zdim))
                      !cg%u(fl%imz,i,j,k) = cg%u(fl%imz,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*cos(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*sin(2.*pi*cg%z(k)/dom%L_(zdim))
 
-                     !cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*(cg%u(fl%imx,i,j,k)**2 +cg%u(fl%imy,i,j,k)**2 + cg%u(fl%imz,i,j,k)**2)/cg%u(fl%idn,i,j,k)
+                     cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*(cg%u(fl%imx,i,j,k)**2 +cg%u(fl%imy,i,j,k)**2 + cg%u(fl%imz,i,j,k)**2)/cg%u(fl%idn,i,j,k)
 
                      cg%u(fl%idn,i,j,k) = cg%u(fl%idn,i,j,k) + pertamp*cg%u(fl%idn,i,j,k) * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
                      cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) +  pertamp*cg%u(fl%ien,i,j,k)*exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
