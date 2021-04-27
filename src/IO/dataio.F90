@@ -58,9 +58,6 @@ module dataio
    character(len=cwdlen)    :: system_message_file   !< path to possible system (UPS) message file containing orders to dump/stop/end simulation
    integer                  :: iv                    !< work index to count successive variables to dump in hdf files
    character(len=dsetnamelen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
-#ifdef NBODY
-   character(len=dsetnamelen), dimension(12) :: pvars !< array of 4-character strings standing for variables to dump in particle hdf files
-#endif /* NBODY */
 #ifdef HDF5
    integer                  :: nhdf_start            !< number of hdf file for the first hdf dump in simulation run
    integer                  :: nres_start            !< number of restart file for the first restart dump in simulation run
@@ -146,7 +143,6 @@ contains
 !! <tr><td>tsl_with_ptc       </td><td>if ISO .false. else .true.</td><td>logical   </td><td>\copydoc dataio::plt_with_ptc      </td></tr>
 !! <tr><td>domain_dump        </td><td>'phys_domain'      </td><td>'phys_domain' or 'full_domain'                       </td><td>\copydoc dataio_pub::domain_dump</td></tr>
 !! <tr><td>vars               </td><td>''                 </td><td>'dens', 'velx', 'vely', 'velz', 'ener' and some more </td><td>\copydoc dataio::vars  </td></tr>
-!! <tr><td>pvars              </td><td>''                 </td><td>'ppos', 'pvel', 'pacc', 'mass', 'ener' and some more </td><td>\copydoc dataio::pvars </td></tr>
 !! <tr><td>mag_center         </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio::mag_center       </td></tr>
 !! <tr><td>vizit              </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::vizit        </td></tr>
 !! <tr><td>fmin               </td><td>                   </td><td>real      </td><td>\copydoc dataio_pub::fmin         </td></tr>
@@ -289,9 +285,6 @@ contains
 
       domain_dump   = 'phys_domain'
       vars(:)       = ''
-#ifdef NBODY
-      pvars(:)      = (/ 'ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz' /)
-#endif /* NBODY */
       mag_center    = .false.
       write(user_message_file,'(a,"/msg")') trim(wd_rd)
       system_message_file = "/tmp/piernik_msg"
@@ -510,9 +503,6 @@ contains
       use fluidindex,   only: flind
       use global,       only: t, nstep
       use restart_hdf5, only: read_restart_hdf5
-#ifdef NBODY
-      use cg_particles_io, only: init_nbody_hdf5
-#endif /* NBODY */
 #endif /* HDF5 */
 
       implicit none
@@ -537,9 +527,6 @@ contains
          gdf_strict = .false.
       endif
       call init_hdf5(vars)
-#ifdef NBODY
-      call init_nbody_hdf5(pvars)
-#endif /* NBODY */
       call init_data
 #endif /* HDF5 */
 
@@ -907,9 +894,6 @@ contains
 #ifdef MAGNETIC
       use constants,        only: ydim, zdim
 #endif /* MAGNETIC */
-#ifdef NBODY
-      use particle_utils,   only: tot_energy, d_energy, tot_angmom, d_angmom
-#endif /* NBODY */
 
       implicit none
 
@@ -997,9 +981,6 @@ contains
                call pop_vector(tsl_names, field_len, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
                call pop_vector(tsl_names, field_len, ["dst_mmass_cur", "dst_mmass_cum"])
             endif
-#ifdef NBODY
-            call pop_vector(tsl_names, field_len, ["totpener", "errpener", "totpamom", "errpamom"])
-#endif /* NBODY */
 
             if (associated(user_tsl)) call user_tsl(tsl_vars, tsl_names)
 
@@ -1133,9 +1114,6 @@ contains
           & call pop_vector(tsl_vars, [sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val  ])
             call pop_vector(tsl_vars, [sn%mmass_cur, sn%mmass_cum])
          enddo
-#ifdef NBODY
-         call pop_vector(tsl_vars, [tot_energy, d_energy, tot_angmom, d_angmom])
-#endif /* NBODY */
 
       endif
 
@@ -1463,6 +1441,7 @@ contains
          call leaves%get_extremum(qna%wai, MINL, pr%dtcs_min)
          if (pr%dtcs_min%val >= 0.) pr%dtcs_min%val = sqrt(pr%dtcs_min%val)
 
+
       endif
 #endif /* !ISO */
 
@@ -1517,9 +1496,6 @@ contains
       use constants,          only: xdim, ydim, zdim, HI, idm, ndims
       use domain,             only: dom
 #endif /* VARIABLE_GP || MAGNETIC */
-#ifdef NBODY
-      use particle_timestep,  only: pacc_max
-#endif /* NBODY */
 
       implicit none
 
@@ -1692,10 +1668,6 @@ contains
             call cmnlog_s(fmt_loc, 'max(|gpy|)  ', id, gpymax)
             call cmnlog_s(fmt_loc, 'max(|gpz|)  ', id, gpzmax)
 #endif /* VARIABLE_GP */
-#ifdef NBODY
-            id = "PRT"
-            call cmnlog_l(fmt_dtloc, 'max(|acc|)  ', id, pacc_max)
-#endif /* NBODY */
             call printinfo('================================================================================================================', .false.)
          else
 #ifdef MAGNETIC
