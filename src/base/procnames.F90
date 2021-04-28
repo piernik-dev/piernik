@@ -182,6 +182,8 @@ contains
 
    subroutine calc_hostspeed(this, factor)
 
+      use constants, only: one
+
       implicit none
 
       class(procnamelist_t), intent(inout) :: this    !< an object invoking the type-bound procedure
@@ -200,7 +202,11 @@ contains
             if (present(factor)) then
                call h%speed%add(avg, factor)
             else
-               call h%speed%add(avg)
+               if (avg > 0.) then
+                  call h%speed%add(avg)
+               else
+                  call h%speed%add(avg, one)
+               endif
             endif
          end associate
       enddo
