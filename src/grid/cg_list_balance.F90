@@ -57,7 +57,6 @@ module cg_list_balance
       class(level_t), pointer           :: l                !< single place to store off, n_d and id
    contains
       procedure          :: balance_new          !< Routine selector for moving proposed grids between processes
-      procedure, private :: balance_strict_SFC   !< Routine for moving proposed grids between processes: keep strict SFC ordering
       procedure, private :: balance_fill_lowest  !< Routine for moving proposed grids between processes: add load to lightly-loaded processes
       procedure, private :: patches_to_list      !< Collect local proposed patches into an array on the master process
       procedure, private :: distribute_patches   !< Send balanced set patches from master to slaves and re-register them
@@ -71,128 +70,28 @@ contains
 !! \brief Routine selector for moving proposed grids between processes
 !!
 !! There are several strategies that can be implemented:
-!! * Local refinements go to local process. It is very simple, but for most simulations will build up load imbalance. Suitable for tests and global refinement.
-!! * Local refinements can be assigned to remote processes, existing blocks stays in place. Should keep good load balance, but the amount of inter-process
-!!   internal boundaries may grow significantly with time. Suitable for minor refinement updates and base level decomposition. This is the current implementation of balance_fill_lowest.
-!! * All blocks (existing and new) have recalculated assignment and can be migrated to other processes. Most advanced. Should be used after reading restart data.
+!! * Local refinements go to local process. It is very simple, but for most
+!!   simulations will build up load imbalance. Suitable for tests and global
+!!   refinement. Removed.
+!! * Local refinements can be assigned to remote processes, existing blocks
+!!   stays in place. Should keep good load balance, but the amount of inter-process
+!!   internal boundaries may grow significantly with time. Suitable for minor
+!!   refinement updates and base level decomposition. This is the current
+!!   implementation in balance_fill_lowest.
+!! * All blocks (existing and new) have recalculated assignment and can be
+!!   migrated to other processes. Most advanced. Should be used after reading
+!!   restart data. ToDo.
 !<
 
    subroutine balance_new(this)
 
-      use refinement, only: strict_SFC_ordering
-
       implicit none
 
       class(cg_list_balance_t), intent(inout) :: this
 
-      ! The only available strategy ATM
-      if (strict_SFC_ordering) then
-         call this%balance_strict_SFC
-      else
-         call this%balance_fill_lowest ! never rebalances
-      endif
+      call this%balance_fill_lowest ! never rebalances
 
    end subroutine balance_new
-
-!>
-!! \brief Routine for moving proposed grids between processes: keep strict SFC ordering
-!!
-!! \details Starts with list of already allocated blocks and list of patches which are not yet turned into blocks
-!! on a given level. Assume that the existing blocks are distributed according to Space-Filling curve ordering:
-!! maximum id for process p is always lower than minimum id for process p+1. Add new grids in a way that keeps the
-!! strict SFC ordering property even if it may introduce imbalance.
-!!
-!! \todo Do a global rebalance if it is allowed and worth the effort.
-!<
-
-   subroutine balance_strict_SFC(this)
-
-      use constants,       only: pSUM, LO, HI, I_ONE
-      use dataio_pub,      only: warn
-      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST
-      use procnames,       only: pnames
-      use sort_piece_list, only: grid_piece_list
-
-      implicit none
-
-      class(cg_list_balance_t), intent(inout) :: this
-
-      type(grid_piece_list) :: gp
-      integer(kind=4) :: ls, s, i, p, n_proc
-      integer(kind=4), dimension(FIRST:LAST+1) :: from
-
-      call this%dot%update_SFC_id_range(this%l%off)
-      if (.not. this%dot%is_strict_SFC) then
-!!$         ! call reshuffle
-!!$         call die("[cg_list_balance:balance_strict_SFC] reshuffling not implemented.")
-         if (master) call warn("[cg_list_balance:balance_strict_SFC] non-SFC ordering!") ! May happen after resizing domain on the left sides
-      endif
-
-      ! gather patches id
-      s = int(this%plist%p_count(), kind=4)
-      ls = int(s, kind=4)
-      call piernik_MPI_Allreduce(s, pSUM) !> \warning overkill: MPI_reduce is enough here
-      if (s==0) return ! nihil novi
-
-      if (master) call gp%init(s)
-      call this%patches_to_list(gp, ls)
-
-      ! sort id
-      if (master) then !> \warning Antiparallel
-         ! apply unique numbers to the grids and sort the list
-         call gp%set_sort_weight(this%l%off)
-
-         ! calculate patch distribution
-         if (all(this%dot%SFC_id_range(:, HI) < this%dot%SFC_id_range(:, LO))) then !special case: empty level, huge values in this%dot%SFC_id_range(:,:)
-            n_proc = count(.not. pnames%exclude, kind=4)
-            i = 0  ! counter for non-excluded processes
-            do p = FIRST, LAST
-               ! assume equal weights (simply use size(gp%list)) since we don't have any better idea now
-               from(p) = int(lbound(gp%list, dim=1) + real(i*size(gp%list))/n_proc, kind=4)
-               if (.not. pnames%exclude(p)) i = i + I_ONE
-            enddo
-            from(LAST+1) = ubound(gp%list, dim=1, kind=4) + I_ONE
-!!$            do p = FIRST, LAST
-!!$               gp%list(from(p):from(p+1)-1)%dest_proc = p
-!!$            enddo
-         else
-            ! just keep SFC ordering, no attempts to balance things here
-            !> \todo OPT try to do as much balance as possible
-            p = FIRST
-            do i = lbound(gp%list, dim=1, kind=4), ubound(gp%list, dim=1, kind=4)
-               ! skip processes with no grids for the sake of simplicity
-               ! it also should skip excluded processes that were emptied already
-               do while (this%dot%SFC_id_range(p, HI) < this%dot%SFC_id_range(p, LO))
-                  p = p + I_ONE
-                  if (p > LAST) exit
-               enddo
-               ! what if LAST is excluded? or even few before LAST?
-               if (p > LAST) p = LAST
-               do while (gp%list(i)%id > this%dot%SFC_id_range(p, HI) .and. p < LAST)
-                  p = p + I_ONE
-                  if (p > LAST) exit
-               enddo
-               gp%list(i)%dest_proc = p
-            enddo
-
-            p = FIRST
-            from(FIRST)  = lbound(gp%list, dim=1, kind=4)
-            from(FIRST+1:LAST+1) = ubound(gp%list, dim=1, kind=4) + I_ONE
-            do i = lbound(gp%list, dim=1, kind=4), ubound(gp%list, dim=1, kind=4)
-               if (gp%list(i)%dest_proc /= p) then
-                  from(p+1:gp%list(i)%dest_proc) = i
-                  p = gp%list(i)%dest_proc
-               endif
-            enddo
-         endif
-      endif
-
-      ! send to slaves
-      call this%distribute_patches(gp, from)
-
-      if (master) call gp%cleanup
-
-   end subroutine balance_strict_SFC
 
 !>
 !! \brief Routine for moving proposed grids between processes: add load to lightly-loaded processes
