@@ -45,9 +45,10 @@ module load_balance
 
    ! namelist parameters
    !   balance
-   logical,                  protected :: auto_balance      !< When .true. the use cg-associated costs in rebalance routine
+   real,                     protected :: balance_cg        !< Use the cg-associated costs in rebalance routine as weights. Value <= 0. means no cost weighting (assume all cg of equal weight), use 1. for full cost weighting.
+   real,                     protected :: balance_host      !< Use averaged cg MHD costs to account for differing host speed. Value <=0 disables thread speed estimate (assume all hosts equally fast), use 1. for fully speed-weighted rebalance.
+   logical,                  protected :: balance_thread    !< If .true. then use balance_host for each thread separately (CPU affinity has to be ensured outside of Piernik).
    character(len=cbuff_len), protected :: cost_to_balance   !< One of [ cg_cost:cost_labels, "all", "none" ], default: "MHD", ToDo: enable selected subset.
-   real,                     protected :: balance_thr       !< Minimum tolerated imbalance
    real,                     protected :: avg_factor        !< Exponential moving average factor
 
    !   verbosity
@@ -59,7 +60,8 @@ module load_balance
    character(len=cbuff_len), protected :: watch_cost        !< Which cg cost to watch? One of [ cg_cost:cost_labels, "all", "none" ], default: "MHD"
    real,                     protected :: exclusion_thr     !< Exclusion threshold
 
-   namelist /BALANCE/ auto_balance, cost_to_balance, balance_thr, avg_factor, verbosity, verbosity_nstep, &
+   namelist /BALANCE/ balance_cg, balance_host, balance_thread, cost_to_balance, avg_factor, &
+        &             verbosity, verbosity_nstep, &
         &             enable_exclusion, watch_cost, exclusion_thr
 
    logical, dimension(lbound(cost_labels,1):ubound(cost_labels,1)) :: cost_mask  !< translated from cost_to_balance
@@ -77,9 +79,10 @@ contains
 !! @b BALANCE
 !! \n \n
 !! <table border="+1">
-!!   <tr><td> auto_balance     </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::auto_balance     </td></tr>
+!!   <tr><td> balance_cg       </td><td> 0.       </td><td> real        </td><td> \copydoc load_balance::balance_cg       </td></tr>
+!!   <tr><td> balance_host     </td><td> 0.       </td><td> real        </td><td> \copydoc load_balance::balance_host     </td></tr>
+!!   <tr><td> balance_thread   </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::balance_thread   </td></tr>
 !!   <tr><td> cost_to_balance  </td><td> "MHD"    </td><td> character() </td><td> \copydoc load_balance::cost_to_balance  </td></tr>
-!!   <tr><td> balance_thr      </td><td> 1.       </td><td> real        </td><td> \copydoc load_balance::balance_thr      </td></tr>
 !!   <tr><td> avg_factor       </td><td> 0.2      </td><td> real        </td><td> \copydoc load_balance::avg_factor       </td></tr>
 !!   <tr><td> verbosity        </td><td> 2        </td><td> integer     </td><td> \copydoc load_balance::verbosity        </td></tr>
 !!   <tr><td> verbosity_nstep  </td><td> 20       </td><td> integer     </td><td> \copydoc load_balance::verbosity_nstep  </td></tr>
@@ -100,16 +103,16 @@ contains
 
       integer, parameter :: verbosity_nstep_default = 20
       real,    parameter :: intolerable_perf = 3.
-      real,    parameter :: tolerable_imbalance = 1.  ! A bit above 1. may prevent throwing cg back and forth
       real,    parameter :: default_ema = 0.2  ! Exponential moving average factor (1.0 => no tail, 0.0 => no update)
       integer            :: ind
 
       ! No code_progress dependencies apart from PIERNIK_INIT_MPI (obvious for our use of namelist)
 
       ! Namelist defaults
-      auto_balance     = .false.
+      balance_cg       = 0.
+      balance_host     = 0.
+      balance_thread   = .false.
       cost_to_balance  = "MHD"
-      balance_thr      = tolerable_imbalance
       avg_factor       = default_ema
       verbosity        = V_HOST
       verbosity_nstep  = verbosity_nstep_default
@@ -141,12 +144,13 @@ contains
          ibuff(1) = verbosity
          ibuff(2) = verbosity_nstep
 
-         lbuff(1) = auto_balance
+         lbuff(1) = balance_thread
          lbuff(2) = enable_exclusion
 
-         rbuff(1) = balance_thr
-         rbuff(2) = avg_factor
-         rbuff(3) = exclusion_thr
+         rbuff(1) = avg_factor
+         rbuff(2) = exclusion_thr
+         rbuff(3) = balance_cg
+         rbuff(4) = balance_host
 
       endif
 
@@ -163,12 +167,13 @@ contains
          verbosity        = ibuff(1)
          verbosity_nstep  = ibuff(2)
 
-         auto_balance     = lbuff(1)
+         balance_thread   = lbuff(1)
          enable_exclusion = lbuff(2)
 
-         balance_thr      = rbuff(1)
-         avg_factor       = rbuff(2)
-         exclusion_thr    = rbuff(3)
+         avg_factor       = rbuff(1)
+         exclusion_thr    = rbuff(2)
+         balance_cg       = rbuff(3)
+         balance_host     = rbuff(4)
 
       endif
 
@@ -200,7 +205,7 @@ contains
       endif
 
       if (master) then
-         if (any(cost_mask) .and. auto_balance) call printinfo("[load_balance] Auto-balance enabled")
+         if (any(cost_mask) .and. (balance_cg > 0. .or. balance_host > 0.)) call printinfo("[load_balance] Auto-balance enabled")
          if (watch_ind /= INVALID .and. enable_exclusion) then
             write(msg, '(a,f4.1,a)')"[load_balance] Thread exclusion enabled (threshold = ", exclusion_thr, ")"
             call printinfo(msg)
@@ -320,7 +325,7 @@ contains
                end select
                if (verbosity >= V_HOST) call log_host
                if (verbosity >= V_SUMMARY) call log_summary
-               if ((auto_balance .or. enable_exclusion) .and. (nstep >= 1)) call log_speed
+               if ((balance_cg > 0. .or. balance_host > 0. .or. enable_exclusion) .and. (nstep >= 1)) call log_speed
             endif
 
          endif
