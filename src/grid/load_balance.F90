@@ -436,8 +436,7 @@ contains
                           & 100.*all_proc_stats(I_SIGMA, i - lbound(cost_labels, 1) + I_ONE, p) / &
                           &      all_proc_stats(I_AVG,   i - lbound(cost_labels, 1) + I_ONE, p), "%"
                   else
-                     write(msg(len_trim(msg)+1:), '(f10.3,3a,a6,a)') &
-                          &  mul*all_proc_stats(I_AVG,   i - lbound(cost_labels, 1) + I_ONE, p),  " ", prefix, "s  ", "N/A", "%"
+                     write(msg(len_trim(msg)+1:), '(a22)') "-"
                   endif
                endif
             enddo
@@ -490,7 +489,7 @@ contains
                              &  mul * sum%wtime(i) / n%wtime(i),  " ", prefix, "s ±", &
                              & 100. * sqrt(sum2%wtime(i) * n%wtime(i) / sum%wtime(i)**2 - 1.), "%"
                      else
-                        write(msg(len_trim(msg)+1:), '(f10.3,3a,a6,a)') 0.,  " ", prefix, "s  ", "N/A", "%"
+                        write(msg(len_trim(msg)+1:), '(a22)') "-"
                      endif
                   endif
                enddo
@@ -524,11 +523,19 @@ contains
 
                   if (size(ph%proc) <= max_one_line) then
                      do p = lbound(ph%proc, 1), ubound(ph%proc, 1)
-                        write(msg(len_trim(msg)+1:), '(f11.3)') mul*all_proc_stats(N_STATS, I_ONE, ph%proc(p))
+                        if (all_proc_stats(N_STATS, I_ONE, ph%proc(p)) > 0.) then
+                           write(msg(len_trim(msg)+1:), '(f11.3)') mul*all_proc_stats(N_STATS, I_ONE, ph%proc(p))
+                        else
+                           write(msg(len_trim(msg)+1:), '(a11)') "-"
+                        endif
                      enddo
                      write(msg(len_trim(msg)+1:), '(a)') " | "
                      do p = lbound(ph%proc, 1), ubound(ph%proc, 1)
-                        write(msg(len_trim(msg)+1:), '(f6.1,a)') all_proc_stats(N_STATS, I_ONE, ph%proc(p))/dt_wall * 100., "%"
+                        if (all_proc_stats(N_STATS, I_ONE, ph%proc(p)) > 0.) then
+                           write(msg(len_trim(msg)+1:), '(f6.1,a)') all_proc_stats(N_STATS, I_ONE, ph%proc(p))/dt_wall * 100., "%"
+                        else
+                           write(msg(len_trim(msg)+1:), '(a7)') "-"
+                        endif
                      enddo
                      call printinfo(msg)
                   else
@@ -539,7 +546,11 @@ contains
                         do p =   lbound(ph%proc, 1) + per_line * (l - 1), &
                              min(lbound(ph%proc, 1) + per_line *  l - 1 , &
                              &   ubound(ph%proc, 1))
-                           write(msg(len_trim(msg)+1:), '(f11.3)') mul*all_proc_stats(N_STATS, I_ONE, ph%proc(p))
+                           if (all_proc_stats(N_STATS, I_ONE, ph%proc(p)) > 0.) then
+                              write(msg(len_trim(msg)+1:), '(f11.3)') mul*all_proc_stats(N_STATS, I_ONE, ph%proc(p))
+                           else
+                              write(msg(len_trim(msg)+1:), '(a11)') "-"
+                           endif
                         enddo
                         call printinfo(msg)
                      enddo
@@ -548,7 +559,11 @@ contains
                         do p =   lbound(ph%proc, 1) + per_line * (l - 1), &
                              min(lbound(ph%proc, 1) + per_line *  l - 1 , &
                              &   ubound(ph%proc, 1))
-                           write(msg(len_trim(msg)+1:), '(f10.1,a)') all_proc_stats(N_STATS, I_ONE, ph%proc(p))/dt_wall * 100., "%"
+                           if (all_proc_stats(N_STATS, I_ONE, ph%proc(p)) > 0.) then
+                              write(msg(len_trim(msg)+1:), '(f10.1,a)') all_proc_stats(N_STATS, I_ONE, ph%proc(p))/dt_wall * 100., "%"
+                           else
+                              write(msg(len_trim(msg)+1:), '(a11)') "-"
+                           endif
                         enddo
                         call printinfo(msg)
                      enddo
@@ -585,13 +600,16 @@ contains
                   associate (pb =>     lbound(ph%proc, 1) +  ln    * mpl, &
                        &     pe => min(lbound(ph%proc, 1) + (ln+1) * mpl - 1, ubound(ph%proc, 1)))
 
-                     write(fmt, *)"(3a,f6.", dec, ",a)"
-                     write(header, fmt) "@", ph%nodename(:pnames%maxnamelen), " <MHD speed> = ", &
-                          merge(1. / ph%speed%avg, 0., ph%speed%avg > 0.), " blk/s ["
-                     write(fmt,  *) "(a,", pe - pb + 1, "f6.", dec, ",a)"
-                     write(msg, fmt) merge(trim(header), repeat(" ", len_trim(header)), ln == 0), &
-                          merge(1. / pnames%speed(ph%proc(pb:pe))%avg, 0., pnames%speed(ph%proc(pb:pe))%avg > 0.), &
-                          merge(" ]", "  ", ln == int((size(ph%proc) - 1)/ mpl))
+                     if (ph%speed%avg > 0.) then
+                        write(fmt, *)"(3a,f6.", dec, ",a)"
+                        write(header, fmt) "@", ph%nodename(:pnames%maxnamelen), " <MHD speed> = ", 1./ph%speed%avg, " blk/s ["
+                        write(fmt,  *) "(a,", pe - pb + 1, "f6.", dec, ",a)"
+                        write(msg, fmt) merge(trim(header), repeat(" ", len_trim(header)), ln == 0), &
+                             merge(1. / pnames%speed(ph%proc(pb:pe))%avg, 0., pnames%speed(ph%proc(pb:pe))%avg > 0.), &
+                             merge(" ]", "  ", ln == int((size(ph%proc) - 1)/ mpl))
+                     else
+                        write(msg, '(3a)') "@", ph%nodename(:pnames%maxnamelen), " <MHD speed> = N/A"
+                     endif
                      call printinfo(msg)
 
                   end associate
