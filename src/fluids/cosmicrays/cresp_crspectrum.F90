@@ -104,7 +104,7 @@ contains
 
    subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, p_out, substeps)
 
-      use constants,      only: zero, one, I_ONE
+      use constants,      only: zero, one, I_ZERO, I_ONE
 #ifdef CRESP_VERBOSED
       use dataio_pub,     only: msg, printinfo
 #endif /* CRESP_VERBOSED */
@@ -282,7 +282,7 @@ contains
 
             e     = edt                         !< append changes for e
             n     = ndt                         !< append changes for e
-            approx_p = [0, 0]                   !< switch off cutoff approximation
+            approx_p = [I_ZERO, I_ZERO]         !< switch off cutoff approximation
 
             deallocate(active_bins_next)        !< must be deallocated, reallocation in upcoming substep (update_bin_index)
             deallocate(cooling_edges_next)      !< -//-

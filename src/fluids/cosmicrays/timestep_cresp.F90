@@ -217,7 +217,7 @@ contains
       type(spec_mod_trms), intent(in) :: b
       real,               intent(out) :: dt_cell
       logical,            intent(out) :: empty_cell
-      integer                         :: i_up_cell
+      integer(kind=4)                 :: i_up_cell
 
       dt_cell = big
       dt_cre_adiab = big
