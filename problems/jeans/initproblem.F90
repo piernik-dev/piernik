@@ -67,8 +67,7 @@ contains
    subroutine read_problem_par
 
       use constants,   only: xdim, ydim, zdim, pi
-      use dataio_pub,  only: nh    ! QA_WARN required for diff_nml
-      use dataio_pub,  only: msg, die, warn
+      use dataio_pub,  only: msg, die, warn, nh
       use domain,      only: dom
       use fluidindex,  only: flind
       use mpisetup,    only: rbuff, ibuff, master, slave, piernik_MPI_Bcast

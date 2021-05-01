@@ -88,7 +88,7 @@ contains
    subroutine init_interactions
 
       use constants,     only: PIERNIK_INIT_FLUIDS, cbuff_len
-      use dataio_pub,    only: die, code_progress, nh      ! QA_WARN required for diff_nml
+      use dataio_pub,    only: die, code_progress, nh
       use fluidindex,    only: flind
       use mpisetup,      only: master, slave, cbuff, lbuff, rbuff, piernik_MPI_Bcast
       use units,         only: cm, gram

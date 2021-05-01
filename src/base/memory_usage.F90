@@ -59,7 +59,7 @@ contains
 !<
    subroutine init_memory
 
-      use dataio_pub, only: nh  ! QA_WARN required for diff_nml
+      use dataio_pub, only: nh
       use mpisetup,   only: ibuff, master, slave, piernik_MPI_Bcast
 
       implicit none

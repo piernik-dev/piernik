@@ -51,8 +51,7 @@ contains
    subroutine init_particles
 
       use constants,        only: cbuff_len, I_NGP, I_CIC, I_TSC
-      use dataio_pub,       only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,       only: msg, die
+      use dataio_pub,       only: msg, die, nh
       use mpisetup,         only: master, slave, cbuff, piernik_mpi_bcast
       use particle_solvers, only: hermit_4ord, psolver
       use particle_maps,    only: set_map

@@ -29,8 +29,6 @@
 !>
 !! \brief Initialization of the neutral fluid
 !!
-!!
-!!
 !! In this module following namelist of parameters is specified:
 !! \copydetails initneutral::init_neutral
 !! \deprecated This module should not export any variables
@@ -144,7 +142,7 @@ contains
 !<
    subroutine init_neutral
 
-      use dataio_pub, only: nh ! QA_WARN required for diff_nml
+      use dataio_pub, only: nh
       use mpisetup,   only: rbuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none

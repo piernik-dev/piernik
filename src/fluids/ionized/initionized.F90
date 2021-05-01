@@ -182,7 +182,7 @@ contains
 !<
    subroutine init_ionized
 
-      use dataio_pub, only: nh ! QA_WARN required for diff_nml
+      use dataio_pub, only: nh
       use mpisetup,   only: rbuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none

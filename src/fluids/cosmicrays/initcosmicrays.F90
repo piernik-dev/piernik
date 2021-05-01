@@ -119,8 +119,7 @@ contains
 
       use constants,       only: cbuff_len, I_ONE, half, big
       use diagnostics,     only: ma1d, my_allocate
-      use dataio_pub,      only: nh   ! QA_WARN required for diff_nml
-      use dataio_pub,      only: die, warn
+      use dataio_pub,      only: die, warn, nh
       use func,            only: operator(.notequals.)
       use mpisetup,        only: ibuff, rbuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
 #ifdef COSM_RAY_ELECTRONS

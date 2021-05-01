@@ -128,8 +128,7 @@ contains
    subroutine multigrid_grav_par
 
       use constants,          only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_I2, O_D4, I_ONE, INVALID
-      use dataio_pub,         only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,         only: msg, die, warn
+      use dataio_pub,         only: msg, die, warn, nh
       use domain,             only: dom, is_multicg !, is_uneven
       use func,               only: operator(.notequals.)
       use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff, piernik_MPI_Bcast

@@ -181,9 +181,9 @@ contains
    subroutine init_domain
 
       use constants,  only: xdim, zdim, ndims, LO, HI, PIERNIK_INIT_MPI, I_ONE, I_ZERO, INVALID
-      use dataio_pub, only: die,  code_progress
-      use dataio_pub, only: nh  ! QA_WARN required for diff_nml
+      use dataio_pub, only: die,  code_progress, nh
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
+
       implicit none
 
       real, dimension(ndims, LO:HI)     :: edges
