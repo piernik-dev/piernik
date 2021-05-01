@@ -65,7 +65,7 @@ contains
 
    subroutine residual4(cg_llst, src, soln, def)
 
-      use cg_cost,            only: I_MULTIGRID
+      use cg_cost_data,       only: I_MULTIGRID
       use cg_leaves,          only: cg_leaves_t
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element

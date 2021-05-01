@@ -89,14 +89,14 @@ contains
 
    subroutine update_chspeed()
 
-      use cg_cost,    only: I_MHD
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ, pMAX, small, DIVB_HDC, RIEMANN_SPLIT
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use global,     only: use_fargo, cfl_glm, ch_grid, dt, divB_0_method, which_solver
-      use mpisetup,   only: piernik_MPI_Allreduce
+      use cg_cost_data, only: I_MHD
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use constants,    only: GEO_XYZ, pMAX, small, DIVB_HDC, RIEMANN_SPLIT
+      use dataio_pub,   only: die
+      use domain,       only: dom
+      use global,       only: use_fargo, cfl_glm, ch_grid, dt, divB_0_method, which_solver
+      use mpisetup,     only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -142,13 +142,13 @@ contains
 
   subroutine map_chspeed
 
-     use cg_cost,    only: I_MHD
-     use cg_leaves,  only: leaves
-     use cg_list,    only: cg_list_element
-     use constants,  only: GEO_XYZ
-     use dataio_pub, only: die
-     use domain,     only: dom
-     use global,     only: cfl_glm, ch_grid, dt
+     use cg_cost_data, only: I_MHD
+     use cg_leaves,    only: leaves
+     use cg_list,      only: cg_list_element
+     use constants,    only: GEO_XYZ
+     use dataio_pub,   only: die
+     use domain,       only: dom
+     use global,       only: cfl_glm, ch_grid, dt
 
      implicit none
 
@@ -283,7 +283,7 @@ contains
 !<
   subroutine glmdamping
 
-     use cg_cost,          only: I_MHD
+     use cg_cost_data,     only: I_MHD
      use cg_leaves,        only: leaves
      use cg_list,          only: cg_list_element
      use constants,        only: psi_n, DIVB_HDC, pMIN, RIEMANN_SPLIT

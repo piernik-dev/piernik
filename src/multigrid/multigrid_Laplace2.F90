@@ -54,7 +54,7 @@ contains
 
    subroutine residual2(cg_llst, src, soln, def)
 
-      use cg_cost,            only: I_MULTIGRID
+      use cg_cost_data,       only: I_MULTIGRID
       use cg_leaves,          only: cg_leaves_t
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
@@ -180,7 +180,7 @@ contains
 
    subroutine approximate_solution_rbgs2(curl, src, soln, nsmoo)
 
-      use cg_cost,            only: I_MULTIGRID
+      use cg_cost_data,       only: I_MULTIGRID
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element

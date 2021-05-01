@@ -192,7 +192,7 @@ contains
 
    subroutine compute_resist
 
-      use cg_cost,          only: I_MHD
+      use cg_cost_data,     only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, zero, oneq, LO, HI, GEO_XYZ
@@ -296,7 +296,7 @@ contains
 
    subroutine timestep_resist(dt)
 
-      use cg_cost,          only: I_OTHER
+      use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: big, zero, pMIN, MAXL
@@ -435,7 +435,7 @@ contains
 
    subroutine diffuseb(ibdir, sdir)
 
-      use cg_cost,          only: I_MHD
+      use cg_cost_data,     only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, ndims, half, I_ONE, wcu_n, idm, INT4, LO, HI

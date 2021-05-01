@@ -100,7 +100,7 @@ contains
 !<
    subroutine time_step(dt, flind)
 
-      use cg_cost,            only: I_OTHER
+      use cg_cost_data,       only: I_OTHER
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
       use cmp_1D_mpi,         only: compare_array1D

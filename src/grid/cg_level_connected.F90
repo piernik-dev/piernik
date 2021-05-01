@@ -181,7 +181,7 @@ contains
 
    subroutine vertical_prep(this)
 
-      use cg_cost,        only: I_REFINE
+      use cg_cost_data,   only: I_REFINE
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
       use constants,      only: xdim, ydim, zdim, LO, HI, PPP_AMR
@@ -401,7 +401,7 @@ contains
 
    subroutine vertical_b_prep(this)
 
-      use cg_cost,        only: I_REFINE
+      use cg_cost_data,   only: I_REFINE
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
       use constants,      only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, ndims, INVALID
@@ -697,7 +697,7 @@ contains
 
    subroutine vertical_bf_prep(this)
 
-      use cg_cost,          only: I_REFINE
+      use cg_cost_data,     only: I_REFINE
       use cg_list,          only: cg_list_element
       use constants,        only: LO, HI, pdims, ORTHO1, ORTHO2, xdim, zdim, psidim, mag_n
       use dataio_pub,       only: die
@@ -913,7 +913,7 @@ contains
 
    subroutine prolong_1var(this, iv, pos, bnd_type, dim4)
 
-      use cg_cost,          only: I_REFINE
+      use cg_cost_data,     only: I_REFINE
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_ZERO, VAR_CENTER, ndims, PPP_AMR  !, dirtyH1
       use dataio_pub,       only: msg, warn
@@ -1143,7 +1143,7 @@ contains
 
    subroutine prolong_bnd_from_coarser(this, ind, arr4d, dir, nocorners)
 
-      use cg_cost,          only: I_REFINE
+      use cg_cost_data,     only: I_REFINE
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
       use constants,        only: I_ONE, xdim, ydim, zdim, LO, HI, base_level_id, PPP_AMR  !, dirtyH1
@@ -1468,7 +1468,7 @@ contains
 
    subroutine restrict_1var(this, iv, pos, dim4)
 
-      use cg_cost,          only: I_REFINE
+      use cg_cost_data,     only: I_REFINE
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, I_ONE, refinement_factor, VAR_CENTER, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: msg, warn, die
       use domain,           only: dom

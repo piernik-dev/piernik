@@ -91,20 +91,20 @@ contains
 !<
    subroutine get_extremum(this, ind, minmax, prop, dir)
 
-      use cg_cost,     only: I_OTHER
-      use cg_list,     only: cg_list_element
-      use constants,   only: MINL, MAXL, I_ZERO, I_ONE, ndims, xdim, ydim, zdim, big_float, LO
-      use dataio_pub,  only: msg, warn, die
-      use domain,      only: dom
-      use grid_cont,   only: grid_container
-      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_2DOUBLE_PRECISION, &
-           &                 MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE, &
-           &                 MPI_Allreduce, MPI_Send, MPI_Recv
-      use mpisetup,    only: err_mpi, master, proc, FIRST
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
+      use constants,    only: MINL, MAXL, I_ZERO, I_ONE, ndims, xdim, ydim, zdim, big_float, LO
+      use dataio_pub,   only: msg, warn, die
+      use domain,       only: dom
+      use grid_cont,    only: grid_container
+      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_2DOUBLE_PRECISION, &
+           &                  MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE, &
+           &                  MPI_Allreduce, MPI_Send, MPI_Recv
+      use mpisetup,     only: err_mpi, master, proc, FIRST
 !      use named_array_list, only: qna
-      use types,       only: value
+      use types,        only: value
 #ifdef MPIF08
-      use MPIF,      only: MPI_Op
+      use MPIF,         only: MPI_Op
 #endif
 
       implicit none
@@ -224,8 +224,8 @@ contains
 
    subroutine set_q_value(this, ind, val)
 
-      use cg_cost, only: I_OTHER
-      use cg_list, only: cg_list_element
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
 
       implicit none
 
@@ -255,8 +255,8 @@ contains
 
    subroutine q_copy(this, i_from, i_to)
 
-      use cg_cost, only: I_OTHER
-      use cg_list, only: cg_list_element
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
 
       implicit none
 
@@ -282,10 +282,10 @@ contains
 
    subroutine qw_copy(this, q_from, w_to, w_ind)
 
-      use cg_cost,   only: I_OTHER
-      use cg_list,   only: cg_list_element
-      use constants, only: PPP_AMR
-      use ppp,       only: ppp_main
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
+      use constants,    only: PPP_AMR
+      use ppp,          only: ppp_main
 
       implicit none
 
@@ -315,10 +315,10 @@ contains
 
    subroutine wq_copy(this, w_from, w_ind, q_to)
 
-      use cg_cost,   only: I_OTHER
-      use cg_list,   only: cg_list_element
-      use constants, only: PPP_AMR
-      use ppp,       only: ppp_main
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
+      use constants,    only: PPP_AMR
+      use ppp,          only: ppp_main
 
       implicit none
 
@@ -348,8 +348,8 @@ contains
 
    subroutine q_add(this, i_add, i_to)
 
-      use cg_cost, only: I_OTHER
-      use cg_list, only: cg_list_element
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
 
       implicit none
 
@@ -376,8 +376,8 @@ contains
 
    subroutine q_add_val(this, i_add, val)
 
-      use cg_cost, only: I_OTHER
-      use cg_list, only: cg_list_element
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
 
       implicit none
 
@@ -410,9 +410,9 @@ contains
 
    subroutine q_lin_comb(this, iv, ind)
 
-      use cg_cost,    only: I_OTHER
-      use cg_list,    only: cg_list_element
-      use dataio_pub, only: die, warn
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
+      use dataio_pub,   only: die, warn
 
       implicit none
 
@@ -465,7 +465,7 @@ contains
 
    subroutine subtract_average(this, iv)
 
-      use cg_cost,          only: I_OTHER
+      use cg_cost_data,     only: I_OTHER
       use cg_list,          only: cg_list_element
       use constants,        only: GEO_XYZ, GEO_RPZ, pSUM
       use dataio_pub,       only: die
@@ -536,13 +536,13 @@ contains
 
    real function norm_sq(this, iv, nomask) result (norm)
 
-      use cg_cost,    only: I_OTHER
-      use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ, GEO_RPZ, pSUM
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: piernik_MPI_Allreduce
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
+      use constants,    only: GEO_XYZ, GEO_RPZ, pSUM
+      use dataio_pub,   only: die
+      use domain,       only: dom
+      use grid_cont,    only: grid_container
+      use mpisetup,     only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -597,10 +597,10 @@ contains
 
    real function scalar_product(this, var1, var2)
 
-      use cg_cost,   only: I_OTHER
-      use cg_list,   only: cg_list_element
-      use constants, only: pSUM
-      use mpisetup,  only: piernik_MPI_Allreduce
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
+      use constants,    only: pSUM
+      use mpisetup,     only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -630,8 +630,8 @@ contains
 
    subroutine mul_by_r(this, ind)
 
-      use cg_cost, only: I_OTHER
-      use cg_list, only: cg_list_element
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
 
       implicit none
 
@@ -659,11 +659,11 @@ contains
 
    subroutine div_by_r(this, ind)
 
-      use cg_cost,    only: I_OTHER
-      use cg_list,    only: cg_list_element
-      use constants,  only: zero
-      use dataio_pub, only: die
-      use func,       only: operator(.equals.)
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
+      use constants,    only: zero
+      use dataio_pub,   only: die
+      use func,         only: operator(.equals.)
 
       implicit none
 
@@ -704,8 +704,8 @@ contains
 
    subroutine dirty_mg_boundaries(this, value)
 
-      use cg_cost, only: I_OTHER
-      use cg_list, only: cg_list_element
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
 
       implicit none
 

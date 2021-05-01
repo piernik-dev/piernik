@@ -161,7 +161,7 @@ contains
 
    subroutine problem_initial_conditions
 
-      use cg_cost,        only: I_IC
+      use cg_cost_data,   only: I_IC
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: ndims, xdim, ydim, zdim, LO, HI, pMAX, BND_PER

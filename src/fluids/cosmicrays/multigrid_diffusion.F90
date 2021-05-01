@@ -725,7 +725,7 @@ contains
 
    subroutine residual(src, soln, def, cr_id)
 
-      use cg_cost,           only: I_DIFFUSE
+      use cg_cost_data,      only: I_DIFFUSE
       use constants,         only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ, PPP_MG, PPP_CR
       use dataio_pub,        only: die
       use domain,            only: dom
@@ -803,7 +803,7 @@ contains
 
    subroutine approximate_solution(curl, src, soln, cr_id)
 
-      use cg_cost,            only: I_DIFFUSE
+      use cg_cost_data,       only: I_DIFFUSE
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
       use constants,          only: xdim, ydim, zdim, one, half, ndims, LO, GEO_XYZ, PPP_MG, PPP_CR

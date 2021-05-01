@@ -207,12 +207,12 @@ contains
 
    subroutine divB_c(ord, ccB)
 
-      use cg_cost,    only: I_OTHER
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: I_ONE, I_TWO
-      use dataio_pub, only: die
-      use func,       only: operator(.notequals.)
+      use cg_cost_data, only: I_OTHER
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use constants,    only: I_ONE, I_TWO
+      use dataio_pub,   only: die
+      use func,         only: operator(.notequals.)
 
       implicit none
 

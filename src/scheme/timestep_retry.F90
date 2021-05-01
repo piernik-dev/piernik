@@ -83,7 +83,7 @@ contains
 
    subroutine repeat_fluidstep
 
-      use cg_cost,          only: I_OTHER
+      use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: pSUM, I_ZERO, I_ONE, dsetnamelen, AT_IGNORE, INVALID

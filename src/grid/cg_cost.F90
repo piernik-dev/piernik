@@ -30,37 +30,19 @@
 
 module cg_cost
 
+   use cg_cost_data, only: cg_cost_data_t
+
    implicit none
 
    private
-   public :: cg_cost_data_t, cg_cost_t, cost_labels, I_MHD, I_MULTIGRID, I_MULTIPOLE, I_DIFFUSE, I_PARTICLE, I_REFINE, I_IC, I_OTHER
-
-   enum, bind(C)
-      enumerator :: I_MHD, I_MULTIGRID, I_MULTIPOLE, I_DIFFUSE, I_PARTICLE, I_REFINE, I_IC, I_OTHER
-   end enum
-
-   character(len=*), dimension(I_MHD:I_OTHER), parameter :: cost_labels = &
-        [ "MHD       ", &  ! Riemann, RTVD, CT, divB cleaning
-        & "multigrid ", &  ! self-gravity multigrid relaxation, residuals
-        & "multipole ", &  ! multipole moments <=> potential conversions, not the costs of Q array manipulation
-        & "diffusion ", &  ! explicit and multigrid diffussion costs
-        & "particles ", &  ! particles in cg
-        & "refines   ", &  ! prolongation, restriction, marking criteria
-        & "init.cond.", &  ! for use only in the initproblems
-        & "other     " ]   ! everything else that is related to cg but not tied to particular algorithm
-
-   type :: cg_cost_data_t
-      real, dimension(I_MHD:I_OTHER) :: wtime  ! walltime costs split into different categories
-   end type cg_cost_data_t
+   public :: cg_cost_t
 
    type, extends(cg_cost_data_t) :: cg_cost_t
-      real, private :: wstart                           ! start value of the timer
+      real, private :: wstart  !< start value of the timer
    contains
       procedure :: reset  !< Set all counters to 0.
-      procedure :: total  !< Return accumulated cost
       procedure :: start  !< Remember start time
       procedure :: stop   !< Stop measuring the time and add to specified timer
-      procedure :: get    !< Read specified timer
    end type cg_cost_t
 
    real, parameter :: T_INVALID = -huge(1.)
@@ -75,22 +57,10 @@ contains
 
       class(cg_cost_t), intent(out) :: this
 
-      this%wtime = 0.
+      call this%init
       this%wstart = T_INVALID
 
    end subroutine reset
-
-!> \brief Return accumulated cost
-
-   real function total(this)
-
-      implicit none
-
-      class(cg_cost_t), intent(in) :: this
-
-      total = sum(this%wtime(:))
-
-   end function total
 
 !> \brief Remember start time
 
@@ -130,38 +100,18 @@ contains
 
       t = MPI_Wtime()
       if (this%wstart <= T_INVALID) then
-         write(msg, '(a,i3,a,f18.6)')"[cg_cost:start] Counting hasn't been started! index: ", ind, " time: ", t
+         write(msg, '(a,i3,a,f18.6)')"[cg_cost:stop] Counting hasn't been started! index: ", ind, " time: ", t
          call warn(msg)
       endif
 
       if (ind >= lbound(this%wtime, 1) .and. ind <= ubound(this%wtime, 1)) then
          this%wtime(ind) = this%wtime(ind) + (t - this%wstart)
       else
-         call die("[cg_cost:start] invalid index")
+         call die("[cg_cost:stop] invalid index")
       endif
 
       this%wstart = T_INVALID
 
    end subroutine stop
-
-!> \brief Read specified timer
-
-   real function get(this, ind)
-
-      use dataio_pub, only: die
-
-      implicit none
-
-      class(cg_cost_t), intent(in) :: this
-      integer(kind=4),  intent(in) :: ind
-
-      if (ind >= lbound(this%wtime, 1) .and. ind <= ubound(this%wtime, 1)) then
-         get = this%wtime(ind)
-      else
-         call die("[cg_cost:start] invalid index")
-         get = 0.
-      endif
-
-   end function get
 
 end module cg_cost

@@ -676,7 +676,7 @@ contains
 
    subroutine init_source(i_sg_dens)
 
-      use cg_cost,           only: I_MULTIGRID
+      use cg_cost_data,      only: I_MULTIGRID
       use cg_leaves,         only: leaves
       use cg_list,           only: cg_list_element
       use cg_list_global,    only: all_cg

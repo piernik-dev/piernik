@@ -180,14 +180,14 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_initial_conditions
 
-      use cg_cost,    only: I_IC
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: ION, xdim, ydim, zdim, LO, HI, pi, ndims
-      use domain,     only: dom
-      use fluidindex, only: flind
-      use func,       only: operator(.notequals.)
-      use grid_cont,  only: grid_container
+      use cg_cost_data, only: I_IC
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use constants,    only: ION, xdim, ydim, zdim, LO, HI, pi, ndims
+      use domain,       only: dom
+      use fluidindex,   only: flind
+      use func,         only: operator(.notequals.)
+      use grid_cont,    only: grid_container
 
       implicit none
 

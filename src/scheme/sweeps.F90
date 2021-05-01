@@ -63,12 +63,12 @@ contains
 
    integer(kind=4) function compute_nr_recv(cdim) result(nr)
 
-      use cg_cost,   only: I_MHD
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use constants, only: LO, HI, I_ONE
-      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv
-      use mpisetup,  only: err_mpi, req, inflate_req
+      use cg_cost_data, only: I_MHD
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use constants,    only: LO, HI, I_ONE
+      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv
+      use mpisetup,     only: err_mpi, req, inflate_req
 
       implicit none
 
@@ -299,7 +299,7 @@ contains
 
    subroutine sweep(cdim, fargo_vel)
 
-      use cg_cost,          only: I_MHD, I_REFINE
+      use cg_cost_data,     only: I_MHD, I_REFINE
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_dataop,   only: cg_list_dataop_t

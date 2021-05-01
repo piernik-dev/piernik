@@ -45,7 +45,7 @@ contains
    subroutine cresp_timestep
 
       use all_boundaries,   only: all_fluid_boundaries
-      use cg_cost,          only: I_OTHER
+      use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, half, zero, big, pMIN

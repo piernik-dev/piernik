@@ -35,8 +35,8 @@
 
 module load_balance
 
-   use cg_cost,   only: cost_labels
-   use constants, only: cbuff_len
+   use cg_cost_data, only: cost_labels
+   use constants,    only: cbuff_len
 
    implicit none
 
@@ -48,7 +48,7 @@ module load_balance
    real,                     protected :: balance_cg        !< Use the cg-associated costs in rebalance routine as weights. Value <= 0. means no cost weighting (assume all cg of equal weight), use 1. for full cost weighting.
    real,                     protected :: balance_host      !< Use averaged cg MHD costs to account for differing host speed. Value <=0 disables thread speed estimate (assume all hosts equally fast), use 1. for fully speed-weighted rebalance.
    logical,                  protected :: balance_thread    !< If .true. then use balance_host for each thread separately (CPU affinity has to be ensured outside of Piernik).
-   character(len=cbuff_len), protected :: cost_to_balance   !< One of [ cg_cost:cost_labels, "all", "none" ], default: "MHD", ToDo: enable selected subset.
+   character(len=cbuff_len), protected :: cost_to_balance   !< One of [ cg_cost_data:cost_labels, "all", "none" ], default: "MHD", ToDo: enable selected subset.
    real,                     protected :: avg_factor        !< Exponential moving average factor
 
    !   verbosity
@@ -57,7 +57,7 @@ module load_balance
 
    !   thread exclusion
    logical,                  protected :: enable_exclusion  !< When .true. then threads detected as underperforming will be excluded for load balancing
-   character(len=cbuff_len), protected :: watch_cost        !< Which cg cost to watch? One of [ cg_cost:cost_labels, "all", "none" ], default: "MHD"
+   character(len=cbuff_len), protected :: watch_cost        !< Which cg cost to watch? One of [ cg_cost_data:cost_labels, "all", "none" ], default: "MHD"
    real,                     protected :: exclusion_thr     !< Exclusion threshold
 
    namelist /BALANCE/ balance_cg, balance_host, balance_thread, cost_to_balance, avg_factor, &
@@ -216,8 +216,8 @@ contains
 
       function decode_cost(str) result(cost_ind)
 
-         use cg_cost,   only: cost_labels
-         use constants, only: cbuff_len, INVALID
+         use cg_cost_data, only: cost_labels
+         use constants,    only: cbuff_len, INVALID
 
          implicit none
 
@@ -242,7 +242,7 @@ contains
 
    subroutine print_costs(cglist)
 
-      use cg_cost,       only: cost_labels
+      use cg_cost_data,  only: cost_labels
       use cg_cost_stats, only: cg_stats_t, stat_labels, I_MAX
       use cg_list,       only: cg_list_t, cg_list_element
       use constants,     only: I_ONE, base_level_id, PPP_AMR
@@ -341,7 +341,7 @@ contains
 
       subroutine update_costs
 
-         use cg_cost,       only: cost_labels, I_MHD  ! Hardcoded MHD cost as the most reliable measure. ToDo: give some choice.
+         use cg_cost_data,  only: cost_labels, I_MHD  ! Hardcoded MHD cost as the most reliable measure. ToDo: give some choice.
          use cg_cost_stats, only: I_AVG
          use procnames,     only: pnames
 
@@ -447,7 +447,7 @@ contains
 
       subroutine log_host
 
-         use cg_cost,       only: cg_cost_data_t
+         use cg_cost_data,  only: cg_cost_data_t
          use cg_cost_stats, only: I_AVG, I_SUM, I_SUM2
          use dataio_pub,    only: printinfo
          use procnames,     only: pnames

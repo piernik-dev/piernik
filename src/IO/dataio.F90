@@ -883,7 +883,7 @@ contains
 
    subroutine write_timeslice
 
-      use cg_cost,          only: I_OTHER
+      use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE, INVALID, PPP_IO
@@ -1276,7 +1276,7 @@ contains
    subroutine get_common_vars(fl)
 
       use types,            only: value                          !QA_WARN: used by get_extremum (intel compiler)
-      use cg_cost,          only: I_OTHER
+      use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: MINL, MAXL, small, xdim, ydim, zdim, GEO_RPZ
@@ -1578,7 +1578,7 @@ contains
 !
    subroutine  write_log(tsl)
 
-      use cg_cost,            only: I_OTHER
+      use cg_cost_data,       only: I_OTHER
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
       use constants,          only: idlen, small, MAXL, PPP_IO

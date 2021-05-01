@@ -30,7 +30,7 @@
 
 module cg_cost_stats
 
-   use cg_cost, only: cg_cost_data_t
+   use cg_cost_data, only: cg_cost_data_t
 
    implicit none
 

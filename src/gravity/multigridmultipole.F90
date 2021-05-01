@@ -293,7 +293,7 @@ contains
 
    subroutine potential2img_mass
 
-      use cg_cost,       only: I_MULTIPOLE
+      use cg_cost_data,  only: I_MULTIPOLE
       use cg_leaves,     only: leaves
       use cg_list,       only: cg_list_element
       use constants,     only: GEO_RPZ, LO, HI, xdim, ydim, zdim, PPP_GRAV
@@ -386,15 +386,15 @@ contains
 
    subroutine img_mass2moments
 
-      use cg_cost,    only: I_MULTIPOLE
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero, PPP_GRAV
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
-      use func,       only: operator(.notequals.)
-      use ppp,        only: ppp_main
+      use cg_cost_data, only: I_MULTIPOLE
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use constants,    only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero, PPP_GRAV
+      use dataio_pub,   only: die
+      use domain,       only: dom
+      use grid_cont,    only: grid_container
+      use func,         only: operator(.notequals.)
+      use ppp,          only: ppp_main
 
       implicit none
 
@@ -467,7 +467,7 @@ contains
 
    subroutine domain2moments
 
-      use cg_cost,            only: I_MULTIPOLE
+      use cg_cost_data,       only: I_MULTIPOLE
       use cg_leaves,          only: leaves
       use cg_level_base,      only: base
       use cg_level_finest,    only: finest
@@ -551,7 +551,7 @@ contains
 #ifdef NBODY
    subroutine particles2moments
 
-      use cg_cost,        only: I_PARTICLE
+      use cg_cost_data,   only: I_PARTICLE
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, PPP_GRAV, PPP_PART
@@ -611,15 +611,15 @@ contains
 
    subroutine moments2bnd_potential
 
-      use cg_cost,    only: I_MULTIPOLE
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero, PPP_GRAV
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
-      use func,       only: operator(.notequals.)
-      use ppp,        only: ppp_main
+      use cg_cost_data, only: I_MULTIPOLE
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use constants,    only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero, PPP_GRAV
+      use dataio_pub,   only: die
+      use domain,       only: dom
+      use grid_cont,    only: grid_container
+      use func,         only: operator(.notequals.)
+      use ppp,          only: ppp_main
 
       implicit none
 
@@ -722,7 +722,7 @@ contains
 
    subroutine compute_mpole_potential(qvar)
 
-      use cg_cost,       only: I_MULTIPOLE
+      use cg_cost_data,  only: I_MULTIPOLE
       use cg_leaves,     only: leaves
       use cg_list,       only: cg_list_element
       use multigridvars, only: grav_bnd, bnd_isolated

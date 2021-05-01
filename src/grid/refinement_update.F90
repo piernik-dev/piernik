@@ -42,7 +42,7 @@ contains
    subroutine scan_for_refinements
 
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
-      use cg_cost,               only: I_REFINE
+      use cg_cost_data,          only: I_REFINE
       use cg_leaves,             only: leaves
       use cg_list,               only: cg_list_element
       use constants,             only: I_ONE, pSUM, PPP_AMR, PPP_PROB
@@ -127,7 +127,7 @@ contains
 
       subroutine prepare_ref
 
-         use cg_cost,            only: I_REFINE
+         use cg_cost_data,       only: I_REFINE
          use cg_level_connected, only: cg_level_connected_t
          use cg_level_finest,    only: finest
          use cg_list,            only: cg_list_element
@@ -165,10 +165,10 @@ contains
 
       subroutine sanitize_ref_flags
 
-         use cg_cost,    only: I_REFINE
-         use cg_leaves,  only: leaves
-         use cg_list,    only: cg_list_element
-         use refinement, only: level_min, level_max
+         use cg_cost_data, only: I_REFINE
+         use cg_leaves,    only: leaves
+         use cg_list,      only: cg_list_element
+         use refinement,   only: level_min, level_max
 
          implicit none
 
@@ -196,9 +196,9 @@ contains
 
       integer function count_ref_flags() result(cnt)
 
-         use cg_cost,   only: I_REFINE
-         use cg_leaves, only: leaves
-         use cg_list,   only: cg_list_element
+         use cg_cost_data, only: I_REFINE
+         use cg_leaves,    only: leaves
+         use cg_list,      only: cg_list_element
 
          implicit none
 
@@ -258,7 +258,7 @@ contains
 
    subroutine parents_prevent_derefinement_lev(lev)
 
-      use cg_cost,            only: I_REFINE
+      use cg_cost_data,       only: I_REFINE
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: xdim, zdim, LO, HI, I_ONE, I_ZERO
@@ -707,7 +707,7 @@ contains
 
    subroutine refine_one_grid(curl, cgl)
 
-      use cg_cost,            only: I_REFINE
+      use cg_cost_data,       only: I_REFINE
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
@@ -758,7 +758,7 @@ contains
 
    logical function fix_refinement() result(correct)
 
-      use cg_cost,          only: I_REFINE
+      use cg_cost_data,     only: I_REFINE
       use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
 !      use cg_list_global,   only: all_cg

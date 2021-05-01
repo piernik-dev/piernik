@@ -219,7 +219,7 @@ contains
 
    subroutine internal_boundaries_local(this, ind, tgt3d, dmask)
 
-      use cg_cost,       only: I_OTHER
+      use cg_cost_data,  only: I_OTHER
       use cg_list,       only: cg_list_element
       use constants,     only: xdim, ydim, zdim, LO, HI, cor_dim, INVALID
       use dataio_pub,    only: die
@@ -455,7 +455,7 @@ contains
 
    subroutine internal_boundaries_MPI_1by1(this, ind, tgt3d, dmask)
 
-      use cg_cost,          only: I_OTHER
+      use cg_cost_data,     only: I_OTHER
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, cor_dim, LO, HI, I_ONE, I_TWO, I_THREE, I_FOUR
       use dataio_pub,       only: die
@@ -672,13 +672,13 @@ contains
 
    subroutine external_boundaries(this, ind, area_type, bnd_type)
 
-      use cg_cost,    only: I_OTHER
-      use cg_list,    only: cg_list_element
-      use constants,  only: ndims, xdim, ydim, zdim, LO, HI, AT_NO_B, I_ONE, I_TWO, I_THREE, &
-           &                BND_PER, BND_MPI, BND_FC, BND_MPI_FC, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
+      use constants,    only: ndims, xdim, ydim, zdim, LO, HI, AT_NO_B, I_ONE, I_TWO, I_THREE, &
+           &                  BND_PER, BND_MPI, BND_FC, BND_MPI_FC, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
+      use dataio_pub,   only: die
+      use domain,       only: dom
+      use grid_cont,    only: grid_container
 
       implicit none
 
@@ -772,7 +772,7 @@ contains
 
    subroutine bnd_u(this, dir)
 
-      use cg_cost,               only: I_OTHER
+      use cg_cost_data,          only: I_OTHER
       use cg_list,               only: cg_list_element
       use constants,             only: ndims, xdim, ydim, zdim, LO, HI, INT4, I_ONE, &
            &                           BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_USER
@@ -985,7 +985,7 @@ contains
 
    subroutine bnd_b(this, dir)
 
-      use cg_cost,               only: I_OTHER
+      use cg_cost_data,          only: I_OTHER
       use cg_list,               only: cg_list_element
       use constants,             only: ndims, xdim, ydim, zdim, LO, HI, I_TWO, I_THREE, &
            &                           BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER

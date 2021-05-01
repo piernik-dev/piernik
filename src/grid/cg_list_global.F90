@@ -456,6 +456,7 @@ contains
       ! clear the data before next stage
       cgl => this%first
       do while (associated(cgl))
+         cgl%cg%old_costs%wtime = cgl%cg%costs%wtime
          call cgl%cg%costs%reset
          cgl => cgl%nxt
       enddo

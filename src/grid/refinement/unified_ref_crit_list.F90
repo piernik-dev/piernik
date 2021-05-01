@@ -421,8 +421,8 @@ contains
 
    subroutine all_mark(this, first)
 
-      use cg_cost, only: I_REFINE
-      use cg_list, only: cg_list_element
+      use cg_cost_data, only: I_REFINE
+      use cg_list,      only: cg_list_element
 
       implicit none
 
@@ -451,10 +451,10 @@ contains
 
    subroutine plot_mark(this, first)
 
-      use cg_cost,   only: I_REFINE
-      use cg_list,   only: cg_list_element
-      use constants, only: INVALID, PPP_AMR, PPP_IO
-      use ppp,       only: ppp_main
+      use cg_cost_data, only: I_REFINE
+      use cg_list,      only: cg_list_element
+      use constants,    only: INVALID, PPP_AMR, PPP_IO
+      use ppp,          only: ppp_main
 
       implicit none
 

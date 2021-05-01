@@ -73,7 +73,7 @@ contains
 !<
    subroutine all_wcr_boundaries
 
-      use cg_cost,          only: I_DIFFUSE
+      use cg_cost_data,     only: I_DIFFUSE
       use cg_leaves,        only: leaves
       use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
@@ -147,7 +147,7 @@ contains
    subroutine cr_diff(crdim)
 
       use all_boundaries,   only: all_bnd
-      use cg_cost,          only: I_DIFFUSE
+      use cg_cost_data,     only: I_DIFFUSE
       use cg_leaves,        only: leaves
       use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element

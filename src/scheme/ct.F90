@@ -238,7 +238,7 @@ contains
 
   subroutine advectb(bdir, vdir)
 
-      use cg_cost,          only: I_MHD
+      use cg_cost_data,     only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, LO, HI, ndims, INT4
@@ -330,7 +330,7 @@ contains
 #if defined(IONIZED) || defined(RESISTIVE)
    subroutine mag_add(dim1, dim2)
 
-      use cg_cost,          only: I_MHD
+      use cg_cost_data,     only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use dataio_pub,       only: die
