@@ -65,6 +65,7 @@ contains
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
       use interpolations,        only: set_interpolations
+      use lb_helpers,            only: costs_maintenance
       use load_balance,          only: init_load_balance
       use memory_usage,          only: init_memory
       use mpisetup,              only: init_mpi, master
@@ -290,7 +291,7 @@ contains
          call update_particle_kinetic_energy
 #endif /* NBODY */
 
-         call all_cg%process_costs
+         call costs_maintenance
 
          do while (.not. finished)
             write(label, '(i8)') nit + 1
@@ -312,7 +313,7 @@ contains
             write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%l%id,", time elapsed: ",set_timer(tmr_fu)
             if (master) call printinfo(msg)
             call ppp_main%stop(iter_label // adjustl(label), PPP_PROB)
-            call all_cg%process_costs
+            call costs_maintenance
          enddo
 #ifdef GRAV
          call cleanup_hydrostatic
@@ -345,7 +346,7 @@ contains
 #ifdef VERBOSE
       call diagnose_arrays                   ! may depend on everything
 #endif /* VERBOSE */
-      call all_cg%process_costs
+      call costs_maintenance
 
       call write_data(output=INCEPTIVE)
 

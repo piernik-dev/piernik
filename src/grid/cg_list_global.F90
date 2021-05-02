@@ -57,17 +57,15 @@ module cg_list_global
    !! for their data (and additional routine for coupling the two grid sets).
    !<
    type, extends(cg_list_bnd_t) :: cg_list_global_t
-
-      integer(kind=4) :: ord_prolong_nb                !< Maximum number of boundary cells required for prolongation
-
-    contains
-      procedure :: init              !< Initialize
-      procedure :: reg_var           !< Add a variable (cg%q or cg%w) to all grid containers
-      procedure :: register_fluids   !< Register all crucial fields, which we cannot live without
-      procedure :: check_na          !< Check if all named arrays are consistently registered
-      procedure :: delete_all        !< Delete the grid container from all lists
-      procedure :: mark_orphans      !< Find grid pieces that do not belong to any list except for all_cg
-      procedure :: process_costs     !< Gather info about measured costs and print them to the log
+      integer(kind=4) :: ord_prolong_nb  !< Maximum number of boundary cells required for prolongation
+   contains
+      procedure :: init             !< Initialize
+      procedure :: reg_var          !< Add a variable (cg%q or cg%w) to all grid containers
+      procedure :: register_fluids  !< Register all crucial fields, which we cannot live without
+      procedure :: check_na         !< Check if all named arrays are consistently registered
+      procedure :: delete_all       !< Delete the grid container from all lists
+      procedure :: mark_orphans     !< Find grid pieces that do not belong to any list except for all_cg
+      procedure :: reset_costs      !< Gather info about measured costs and print them to the log
    end type cg_list_global_t
 
    type(cg_list_global_t)                :: all_cg   !< all grid containers; \todo restore protected
@@ -88,7 +86,7 @@ contains
 
       call all_lists%register(this, all_cg_n)
       this%ord_prolong_nb = I_ZERO
-      call this%process_costs
+      call this%reset_costs
 
    end subroutine init
 
@@ -440,18 +438,15 @@ contains
 
 !< \brief Gather info about measured costs and print them to the log
 
-   subroutine process_costs(this)
+   subroutine reset_costs(this)
 
-      use cg_list,       only: cg_list_element
-      use load_balance,  only: print_costs
+      use cg_list, only: cg_list_element
 
       implicit none
 
       class(cg_list_global_t), intent(in) :: this  !< object invoking type-bound procedure
 
       type(cg_list_element), pointer :: cgl
-
-      call print_costs(this)
 
       ! clear the data before next stage
       cgl => this%first
@@ -461,6 +456,6 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine process_costs
+   end subroutine reset_costs
 
 end module cg_list_global
