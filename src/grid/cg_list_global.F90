@@ -65,7 +65,6 @@ module cg_list_global
       procedure :: check_na         !< Check if all named arrays are consistently registered
       procedure :: delete_all       !< Delete the grid container from all lists
       procedure :: mark_orphans     !< Find grid pieces that do not belong to any list except for all_cg
-      procedure :: reset_costs      !< Gather info about measured costs and print them to the log
    end type cg_list_global_t
 
    type(cg_list_global_t)                :: all_cg   !< all grid containers; \todo restore protected
@@ -435,27 +434,5 @@ contains
       endif
 
    end subroutine mark_orphans
-
-!< \brief Gather info about measured costs and print them to the log
-
-   subroutine reset_costs(this)
-
-      use cg_list, only: cg_list_element
-
-      implicit none
-
-      class(cg_list_global_t), intent(in) :: this  !< object invoking type-bound procedure
-
-      type(cg_list_element), pointer :: cgl
-
-      ! clear the data before next stage
-      cgl => this%first
-      do while (associated(cgl))
-         cgl%cg%old_costs%wtime = cgl%cg%costs%wtime
-         call cgl%cg%costs%reset
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine reset_costs
 
 end module cg_list_global

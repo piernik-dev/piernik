@@ -26,19 +26,22 @@
 !
 #include "piernik.h"
 
-!> \brief This module contains grid container list and some methods to manipulate data contained in cg
+!>
+!! \brief This module contains grid container list methods to manipulate field data contained in cg
+!! Non-field operations should be implemented in cg_list_misc_t.
+!<
 
 module cg_list_dataop
 
-   use cg_list, only: cg_list_t
+   use cg_list_misc, only: cg_list_misc_t
 
    implicit none
 
    private
-   public :: cg_list_dataop_t, ind_val, dirty_label, expanded_domain
+   public :: cg_list_dataop_t, ind_val, expanded_domain
 
    !> \brief Arbitrary list of grid containers
-   type, extends(cg_list_t) :: cg_list_dataop_t
+   type, extends(cg_list_misc_t) :: cg_list_dataop_t
    contains
 
       ! Misc
@@ -67,7 +70,6 @@ module cg_list_dataop
       generic,   public  :: reset_boundaries => zero_boundaries, dirty_mg_boundaries
       procedure, private :: zero_boundaries                   !< Clear boundary values
       procedure, private :: dirty_mg_boundaries               !< Set boundary values
-!> \todo merge lists
 
    end type cg_list_dataop_t
 
@@ -76,9 +78,6 @@ module cg_list_dataop
       integer :: ind  !< index in cg%q
       real    :: val  !< value for multiplication
    end type ind_val
-
-   integer, parameter    :: dl_len = 64 !< length of label buffer
-   character(len=dl_len) :: dirty_label !< buffer for label for check_dirty subroutine
 
    type(cg_list_dataop_t):: expanded_domain !< grid pieces that were created in the area, where computational domain was recently expanded
 

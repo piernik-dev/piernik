@@ -365,13 +365,13 @@ contains
    subroutine init_source(cr_id)
 
       use cg_leaves,        only: leaves
-      use cg_list_dataop,   only: ind_val, dirty_label
+      use cg_list_dataop,   only: ind_val
       use cg_list_global,   only: all_cg
       use constants,        only: zero, dirtyH1, PPP_MG, PPP_CR
       use dataio_pub,       only: die
       use func,             only: operator(.equals.)
       use initcosmicrays,   only: iarr_crs
-      use multigridvars,    only: source, defect, correction
+      use multigridvars,    only: source, defect, correction, dirty_label
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 
@@ -442,11 +442,11 @@ contains
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
-      use cg_list_dataop,     only: dirty_label
       use cg_list_global,     only: all_cg
       use constants,          only: xdim, zdim, HI, LO, BND_REF, dirtyH1
       use domain,             only: dom
       use grid_cont,          only: grid_container
+      use multigridvars,      only: dirty_label
       use named_array,        only: p3, p4
       use named_array_list,   only: wna
 
@@ -500,7 +500,7 @@ contains
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
-      use cg_list_dataop,     only: ind_val, dirty_label
+      use cg_list_dataop,     only: ind_val
       use cg_list_global,     only: all_cg
       use constants,          only: zero, tmr_mgd, dirtyH1, cbuff_len, PPP_MG, PPP_CR
       use dataio_pub,         only: msg, warn
@@ -508,7 +508,7 @@ contains
       use func,               only: operator(.notequals.)
       use initcosmicrays,     only: iarr_crs
       use mpisetup,           only: master
-      use multigridvars,      only: source, defect, solution, correction, ts, tot_ts
+      use multigridvars,      only: source, defect, solution, correction, ts, tot_ts, dirty_label
       use named_array_list,   only: wna
       use ppp,                only: ppp_main
       use timer,              only: set_timer

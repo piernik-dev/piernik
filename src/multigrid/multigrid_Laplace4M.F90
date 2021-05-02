@@ -193,7 +193,6 @@ contains
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
-      use cg_list_dataop,     only: dirty_label
       use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, BND_NEGREF, pMAX, zero
       use dataio_pub,         only: die, warn
       use domain,             only: dom
@@ -202,7 +201,7 @@ contains
       use func,               only: operator(.notequals.)
       use mpisetup,           only: piernik_MPI_Allreduce, master
       use multigrid_helpers,  only: set_relax_boundaries, copy_and_max
-      use multigridvars,      only: multidim_code_3D, coarsest_tol, nc_growth
+      use multigridvars,      only: multidim_code_3D, coarsest_tol, nc_growth, dirty_label
       use named_array_list,   only: qna
 
       implicit none
