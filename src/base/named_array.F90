@@ -45,7 +45,7 @@ module named_array
 
    !> \brief Common methods for 3D and 4D named arrays
    type, abstract :: generic_na
-    contains
+   contains
       procedure :: lb
       procedure :: ub
       procedure :: named_array_init

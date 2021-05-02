@@ -515,7 +515,6 @@ contains
 
          ijkse = pick_area(cg, mode)
          n_b = ijkse(:,HI) - ijkse(:,LO) + I_ONE
-         return
 
       end function pick_dims
 
@@ -542,9 +541,8 @@ contains
             case default
                call die("[restart_hdf5_v2:write_cg_to_restart:pick_size] Non-recognized area_type.")
          end select
-         return
 
-     end function pick_size
+      end function pick_size
 
    end subroutine write_cg_to_restart
 

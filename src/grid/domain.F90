@@ -81,7 +81,7 @@ module domain
       integer                   :: eff_dim      !< effective dimensionality of the simulation (count(has_dir))
       integer(kind=8), dimension(ndims) :: off  !< offset of the base level
 
-    contains
+   contains
 
       procedure :: translate_bnds_to_ints     !< Convert strings to integer-coded boundary types
       procedure :: print_me                   !< Print computational domain details

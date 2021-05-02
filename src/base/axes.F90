@@ -36,16 +36,12 @@ module axes_M
    public :: axes
 
    type :: axes
-
       real, allocatable, dimension(:) :: x      !< array of x-positions of %grid cells centers
       real, allocatable, dimension(:) :: y      !< array of y-positions of %grid cells centers
       real, allocatable, dimension(:) :: z      !< array of z-positions of %grid cells centers
-
    contains
-
       procedure :: allocate_axes
       procedure :: deallocate_axes
-
    end type axes
 
 contains
@@ -59,9 +55,9 @@ contains
       class(axes),                             intent(inout) :: this
       integer(kind=4), dimension(ndims,LO:HI), intent(in)    :: sizes
 
-      if (.not.allocated(this%x)) allocate(this%x(sizes(xdim,LO):sizes(xdim,HI)))
-      if (.not.allocated(this%y)) allocate(this%y(sizes(ydim,LO):sizes(ydim,HI)))
-      if (.not.allocated(this%z)) allocate(this%z(sizes(zdim,LO):sizes(zdim,HI)))
+      if (.not.allocated(this%x)) allocate(this%x(sizes(xdim, LO):sizes(xdim, HI)))
+      if (.not.allocated(this%y)) allocate(this%y(sizes(ydim, LO):sizes(ydim, HI)))
+      if (.not.allocated(this%z)) allocate(this%z(sizes(zdim, LO):sizes(zdim, HI)))
 
    end subroutine allocate_axes
 

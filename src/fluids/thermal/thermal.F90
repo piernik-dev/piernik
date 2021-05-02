@@ -276,9 +276,9 @@ contains
             coolf = -L0_cool * (temp/Teql)**(alpha_cool)
          case ('null')
             return
-        case default
-          write(msg,'(3a)') 'Cool model: ',cool_model,' not implemented'
-          if (master) call warn(msg)
+         case default
+            write(msg,'(3a)') 'Cool model: ',cool_model,' not implemented'
+            if (master) call warn(msg)
       end select
 
    end subroutine cool
@@ -295,13 +295,13 @@ contains
       real, dimension(n), intent(out) :: heatf
 
       select case (heat_model)
-        case ('G012')
-          heatf =  G0_heat * dens**2 + G1_heat * dens + G2_heat
-        case ('null')
-          return
-        case default
-           write(msg,'(3a)') 'Heat model: ',heat_model,' not implemented'
-           if (master) call warn(msg)
+         case ('G012')
+            heatf =  G0_heat * dens**2 + G1_heat * dens + G2_heat
+         case ('null')
+            return
+         case default
+            write(msg,'(3a)') 'Heat model: ',heat_model,' not implemented'
+            if (master) call warn(msg)
       end select
 
    end subroutine heat

@@ -33,6 +33,7 @@ module level_essentials
    use constants, only: ndims, LONG, INT4
 
    implicit none
+
    private
    public :: level_t
 

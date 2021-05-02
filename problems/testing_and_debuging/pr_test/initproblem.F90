@@ -389,9 +389,9 @@ contains
          n = n + 1
       else
 #ifdef HDF5
-        call write_hdf5
+         call write_hdf5
 #else /* !HDF5 */
-        call warn("[initproblem:find_non_0_or_write_hdf5] no HDF5 available")
+         call warn("[initproblem:find_non_0_or_write_hdf5] no HDF5 available")
 #endif /* !HDF5 */
       endif
 

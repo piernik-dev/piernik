@@ -317,14 +317,14 @@ contains
 
          ! receive
          do p = FIRST + I_ONE, LAST
-             call MPI_Recv(ne, I_ONE, MPI_INTEGER, p, TAG_CNT, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-             if (ne /= 0) then
-                allocate(buflabel(ne), buftime(ne))
-                call MPI_Recv(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        p, TAG_ARR_L, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-                call MPI_Recv(buftime,  size(buftime, kind=4),                           MPI_DOUBLE_PRECISION, p, TAG_ARR_T, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-                call publish_buffers(p, buflabel, buftime)
-                deallocate(buflabel, buftime)
-             endif
+            call MPI_Recv(ne, I_ONE, MPI_INTEGER, p, TAG_CNT, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+            if (ne /= 0) then
+               allocate(buflabel(ne), buftime(ne))
+               call MPI_Recv(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        p, TAG_ARR_L, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               call MPI_Recv(buftime,  size(buftime, kind=4),                           MPI_DOUBLE_PRECISION, p, TAG_ARR_T, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               call publish_buffers(p, buflabel, buftime)
+               deallocate(buflabel, buftime)
+            endif
          enddo
       else
          call MPI_Waitall(t, req(:t), MPI_STATUSES_IGNORE, err_mpi)

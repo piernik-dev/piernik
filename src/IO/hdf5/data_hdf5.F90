@@ -417,7 +417,7 @@ contains
                  &       emag_c)
 #endif /* IONIZED */
 #endif /* !ISO */
-        case ("ethn")
+         case ("ethn")
 #ifndef ISO
             tab(:,:,:) = (cg%u(flind%neu%ien, RNG) - &
                  &       ekin(cg%u(flind%neu%imx, RNG), cg%u(flind%neu%imy, RNG), cg%u(flind%neu%imz, RNG), cg%u(flind%neu%idn, RNG))) /         &
@@ -849,26 +849,29 @@ contains
 
       if (.false.) i = size(cg_all_n_o, kind=4) ! suppress compiler warning
 
-      contains
-         !>
-         !! Try to avoid pointless data reallocation for every cg if shape doesn't change
-         !<
-         subroutine recycle_data(dims, cg_all_n_b, i, data)
-            use constants, only: xdim, ydim, zdim
-            use hdf5,      only: HSIZE_T
-            implicit none
-            integer(HSIZE_T), dimension(:)                          :: dims        !< shape of current cg
-            integer(kind=4), dimension(:,:), pointer, intent(in)    :: cg_all_n_b  !< all cg sizes
-            integer(kind=4),                          intent(in)    :: i           !< no. of cg
-            real, dimension(:,:,:), pointer,          intent(inout) :: data        !< temporary storage array used for I/O
+   contains
+      !>
+      !! Try to avoid pointless data reallocation for every cg if shape doesn't change
+      !<
+      subroutine recycle_data(dims, cg_all_n_b, i, data)
 
-            if (associated(data)) then
-               if ( any(dims /= shape(data)) ) then
-                  deallocate(data)
-                  allocate(data(cg_all_n_b(xdim, i), cg_all_n_b(ydim, i), cg_all_n_b(zdim, i)))
-               endif
+         use constants, only: xdim, ydim, zdim
+         use hdf5,      only: HSIZE_T
+
+         implicit none
+
+         integer(HSIZE_T), dimension(:)                          :: dims        !< shape of current cg
+         integer(kind=4), dimension(:,:), pointer, intent(in)    :: cg_all_n_b  !< all cg sizes
+         integer(kind=4),                          intent(in)    :: i           !< no. of cg
+         real, dimension(:,:,:), pointer,          intent(inout) :: data        !< temporary storage array used for I/O
+
+         if (associated(data)) then
+            if ( any(dims /= shape(data)) ) then
+               deallocate(data)
+               allocate(data(cg_all_n_b(xdim, i), cg_all_n_b(ydim, i), cg_all_n_b(zdim, i)))
             endif
-         end subroutine recycle_data
+         endif
+      end subroutine recycle_data
 
    end subroutine write_cg_to_output
 

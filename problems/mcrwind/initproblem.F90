@@ -327,10 +327,10 @@ contains
 
       if (sweep == zdim) then
          grav = 3.23e8 * (  &
-           (-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * xsw/sqrt(xsw**2+(0.2*kpc)**2)) &
-           -( 1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*xsw/kpc) )
-!          -Om*(Om+G) * Z * (kpc ?) ! in the transition region between rigid
-!                                   ! and flat rotation F'98: eq.(36)
+              (-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * xsw/sqrt(xsw**2+(0.2*kpc)**2)) &
+              -( 1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*xsw/kpc) )
+!            -Om*(Om+G) * Z * (kpc ?) ! in the transition region between rigid
+!                                    ! and flat rotation F'98: eq.(36)
       else
          grav=0.0
       endif

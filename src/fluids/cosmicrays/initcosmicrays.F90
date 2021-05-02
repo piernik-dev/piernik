@@ -297,9 +297,9 @@ contains
       K_crs_perp (:) = 0.0
 
       if (ncrn > 0) then
-        gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
-        K_crs_paral(1:ncrn) = K_crn_paral(1:ncrn)
-        K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
+         gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
+         K_crs_paral(1:ncrn) = K_crn_paral(1:ncrn)
+         K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
       endif
 
       ma1d = [ncrn]
@@ -343,10 +343,10 @@ contains
       enddo
 #ifndef COSM_RAY_ELECTRONS
       do icr = 1, ncre
-        if (cre_gpcr_ess(icr)) then
+         if (cre_gpcr_ess(icr)) then
             jcr = jcr + I_ONE
             gpcr_essential(jcr) = ncrn + I_ONE
-        endif
+         endif
       enddo
 #endif /* !COSM_RAY_ELECTRONS */
 

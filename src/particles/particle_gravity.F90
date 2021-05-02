@@ -248,32 +248,32 @@ contains
 
    subroutine locate_particles_in_cells(n_part, cg, cells, dist)
 
-     use constants,      only: ndims, xdim, zdim, LO
-     use domain,         only: dom
-     use grid_cont,      only: grid_container
-     use particle_types, only: particle
+      use constants,      only: ndims, xdim, zdim, LO
+      use domain,         only: dom
+      use grid_cont,      only: grid_container
+      use particle_types, only: particle
 
-     implicit none
+      implicit none
 
-     integer,                          intent(in)    :: n_part
-     type(grid_container),             intent(inout) :: cg
-     integer, dimension(n_part,ndims), intent(out)   :: cells
-     real,    dimension(n_part,ndims), intent(out)   :: dist
+      integer,                          intent(in)    :: n_part
+      type(grid_container),             intent(inout) :: cg
+      integer, dimension(n_part,ndims), intent(out)   :: cells
+      real,    dimension(n_part,ndims), intent(out)   :: dist
 
-     type(particle), pointer                         :: pset
-     integer                                         :: i, cdim
+      type(particle), pointer                         :: pset
+      integer                                         :: i, cdim
 
-     i=1
-     pset => cg%pset%first
-     do while (associated(pset))
-        call pset%pdata%is_outside()
-        do cdim = xdim, zdim
-           cells(i, cdim) = floor((pset%pdata%pos(cdim) - dom%edge(cdim,LO)) * cg%idl(cdim), kind=4)
-           dist(i, cdim)  = pset%pdata%pos(cdim) - ( dom%edge(cdim,LO) + cells(i,cdim) * cg%dl(cdim) )
-        enddo
-        pset => pset%nxt
-        i = i + 1
-     enddo
+      i=1
+      pset => cg%pset%first
+      do while (associated(pset))
+         call pset%pdata%is_outside()
+         do cdim = xdim, zdim
+            cells(i, cdim) = floor((pset%pdata%pos(cdim) - dom%edge(cdim,LO)) * cg%idl(cdim), kind=4)
+            dist(i, cdim)  = pset%pdata%pos(cdim) - ( dom%edge(cdim,LO) + cells(i,cdim) * cg%dl(cdim) )
+         enddo
+         pset => pset%nxt
+         i = i + 1
+      enddo
 
    end subroutine locate_particles_in_cells
 
@@ -314,7 +314,7 @@ contains
    end function find_Mtot
 
 !> \brief Determine potential energy in particle positions
-    subroutine update_particle_potential_energy(n_part, cg, cells, dist, Mtot)!, pdel)
+   subroutine update_particle_potential_energy(n_part, cg, cells, dist, Mtot)!, pdel)
 
       use constants,        only: gpot_n, ndims, half, two, xdim, ydim, zdim
       use grid_cont,        only: grid_container
@@ -519,9 +519,9 @@ contains
 
             part%acc(:) = half * axyz(:) * cg%idl(:)
 
-          end associate
-          pset => pset%nxt
-          p = p + 1
+         end associate
+         pset => pset%nxt
+         p = p + 1
       enddo
 
    end subroutine update_particle_acc_cic
@@ -550,7 +550,7 @@ contains
       real,    dimension(5)                        :: tmp
       real                                         :: weight, delta_x, weight_tmp
 
-       if (mask_gpot1b) then
+      if (mask_gpot1b) then
          ig = qna%ind(gp1b_n)
       else
          ig = qna%ind(gpot_n)
@@ -631,8 +631,8 @@ contains
                enddo
             enddo
             part%acc(:) = half * axyz(:) * cg%idl(:)
-          end associate
-          pset => pset%nxt
+         end associate
+         pset => pset%nxt
       enddo
 
    end subroutine update_particle_acc_tsc

@@ -175,9 +175,9 @@ contains
       use cr_data,        only: eCRSP, icr_H1, icr_C12, cr_table
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
-     use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
-     use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
-     use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff
+      use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
+      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
+      use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none

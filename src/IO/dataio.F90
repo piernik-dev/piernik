@@ -1146,8 +1146,7 @@ contains
 
       if (master) then
          call pop_vector(tsl_vars, [t, dt, tot_q(T_MASS)])
-         if (tsl_with_mom) &
-       & call pop_vector(tsl_vars, [tot_q(T_MOMX), tot_q(T_MOMY), tot_q(T_MOMZ)])
+         if (tsl_with_mom) call pop_vector(tsl_vars, [tot_q(T_MOMX), tot_q(T_MOMY), tot_q(T_MOMZ)])
          call pop_vector(tsl_vars, [tot_q(T_ENER), tot_q(T_EINT), tot_q(T_EKIN)])
 #ifdef GRAV
          call pop_vector(tsl_vars, [tot_q(T_EPOT)])

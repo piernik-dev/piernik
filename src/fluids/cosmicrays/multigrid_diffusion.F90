@@ -782,7 +782,7 @@ contains
 
 !      call leaves%check_dirty(def, "res def")
 
-     call ppp_main%stop(crr_label, PPP_MG + PPP_CR)
+      call ppp_main%stop(crr_label, PPP_MG + PPP_CR)
 
    end subroutine residual
 

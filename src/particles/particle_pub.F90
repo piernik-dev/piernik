@@ -37,6 +37,7 @@ module particle_pub
 ! pulled by NBODY
 
    implicit none
+
    private
    public :: init_particles, cleanup_particles
    public :: lf_c, ignore_dt_fluid
@@ -63,6 +64,7 @@ contains
       use particle_utils,   only: twodtscheme, dump_diagnose
 
       implicit none
+
       character(len=cbuff_len) :: time_integrator
       character(len=cbuff_len) :: interpolation_scheme
       character(len=cbuff_len), parameter :: default_ti = "none"
@@ -187,9 +189,9 @@ contains
 
    subroutine cleanup_particles
 
-     implicit none
+      implicit none
 
-     ! no need to do anything here
+      ! no need to do anything here
 
    end subroutine cleanup_particles
 

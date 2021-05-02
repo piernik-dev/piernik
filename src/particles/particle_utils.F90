@@ -228,8 +228,8 @@ contains
                L3 = part%pos(xdim) * part%vel(ydim) - part%pos(ydim) * part%vel(xdim)
                ang_momentum = ang_momentum + part%mass * sqrt(L1**2 + L2**2 + L3**2)
                total_energy = total_energy + part%energy
-             end associate
-             pset => pset%nxt
+            end associate
+            pset => pset%nxt
          enddo
 
          cgl => cgl%nxt
@@ -277,7 +277,7 @@ contains
          endif
       endif
 
-    end subroutine is_part_in_cg
+   end subroutine is_part_in_cg
 
    subroutine cg_outside_dom(pos, fbnd, phy)
 
@@ -349,7 +349,7 @@ contains
          enddo
       endif
 
-    end subroutine cg_outside_dom
+   end subroutine cg_outside_dom
 
    subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener)
 
@@ -542,7 +542,7 @@ contains
 
       call ppp_main%stop(ts_label, PPP_PART)
 
-    end subroutine part_leave_cg
+   end subroutine part_leave_cg
 
    function collect_single_part_fields(ind, p) result(pinfo)
 
@@ -634,8 +634,8 @@ contains
             associate( part => pset%pdata )
                call get_acc_model(part%pos, part%mass, acc2)
                write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, t, kdt, part%mass, part%pos, part%vel, part%acc, acc2(:), part%energy
-             end associate
-             pset => pset%nxt
+            end associate
+            pset => pset%nxt
          enddo
 
          cgl => cgl%nxt

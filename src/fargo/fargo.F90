@@ -96,7 +96,7 @@ contains
                  call die("[fargo:check_yref] Refinement steps are not allowed in azimuthal direction")
             cgl => cgl%nxt
          enddo
-        curl => curl%finer
+         curl => curl%finer
       enddo
 
    end subroutine check_yref

@@ -462,22 +462,22 @@ contains
       do i = 1, ncre                        ! if energy density is nonzero, so should be the number density
          i_cut(LO) = i - I_ONE
          if (cresp%e(i) > e_threshold(LO)) then
-           if (cresp%n(i) > zero) then
-              empty_cell = .false.
-              exit
-           endif
-        endif
-     enddo
+            if (cresp%n(i) > zero) then
+               empty_cell = .false.
+               exit
+            endif
+         endif
+      enddo
 
-     if (empty_cell) return   ! empty cell - nothing to do here!
+      if (empty_cell) return   ! empty cell - nothing to do here!
 
-     i_cut(HI) = ncre
-     do i = ncre, 1,-1
-        i_cut(HI) = i
-        if (cresp%e(i) > e_threshold(HI)) then   ! if energy density is nonzero, so should be the number density
-           if (cresp%n(i) > zero) exit
-        endif
-     enddo
+      i_cut(HI) = ncre
+      do i = ncre, 1,-1
+         i_cut(HI) = i
+         if (cresp%e(i) > e_threshold(HI)) then   ! if energy density is nonzero, so should be the number density
+            if (cresp%n(i) > zero) exit
+         endif
+      enddo
 
    end subroutine find_i_bound
 !-------------------------------------------------------------------------------------------------
@@ -1669,8 +1669,8 @@ contains
             endif
          else
             q(i) = zero
-        endif
-        if (exit_code) fail_count_comp_q(i) = fail_count_comp_q(i) + I_ONE
+         endif
+         if (exit_code) fail_count_comp_q(i) = fail_count_comp_q(i) + I_ONE
       enddo
 
    end subroutine ne_to_q

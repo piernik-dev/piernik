@@ -40,7 +40,7 @@ module cg_level_coarsest
    !> \brief The pointer of the coarsest refinement level and a method to add a coarser one
    type :: cg_level_coarsest_t
       type(cg_level_connected_t), pointer :: level !< lowest refinement level
-    contains
+   contains
       procedure :: add_coarser                  !< add one level below current coarsest level
       procedure :: delete_coarsest              !< delete coarsest level
       procedure :: delete_coarser_than_base     !< delete all levels below base level (multigrid levels)

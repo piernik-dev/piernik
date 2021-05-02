@@ -73,6 +73,8 @@ contains
 !<
 
    subroutine all_fluxes(n, flux, cfr, uu, bb, vx, cs_iso2)
+
+      use fluidindex,     only: flind, nmag
       use fluidtypes,     only: component_fluid
 #ifdef COSM_RAYS
       use fluxcosmicrays, only: flux_crs
@@ -81,7 +83,6 @@ contains
       use fluxtracer,     only: flux_tracer
       use inittracer,     only: trace_fluid
 #endif /* TRACER */
-      use fluidindex,     only: flind, nmag
 
       implicit none
 
@@ -177,12 +178,16 @@ contains
 !<
 !*/
    subroutine set_limiter(lname)
+
       use dataio_pub, only: msg, die
 #ifdef VERBOSE
       use dataio_pub, only: printinfo
 #endif /* VERBOSE */
+
       implicit none
+
       character(len=*), intent(in) :: lname
+
       if (associated(flimiter)) call die("[fluxes:set_limiter] flimiter already associated")
       select case (lname)
          case ('vanleer', 'VANLEER')
@@ -201,13 +206,17 @@ contains
       write(msg,'(2a)') "[fluxes:set_limiter] limiter set to ", lname
       call printinfo(msg)
 #endif /* VERBOSE */
+
    end subroutine set_limiter
 
    subroutine vanleer_limiter(f,a,b)
+
       implicit none
+
       real, dimension(:,:), intent(in)      :: a !< second order correction of left- or right- moving waves flux on the left cell boundary
       real, dimension(:,:), intent(in)      :: b !< second order correction of left- or right- moving waves flux on the right cell boundary
       real, dimension(:,:), intent(inout)   :: f !< second order flux correction for left- or right- moving waves
+
       ! locals
       real, dimension(size(a,1), size(a,2)) :: c !< a*b
 
@@ -220,34 +229,43 @@ contains
       where (c > 0.0)
          f = f+2.0*c/(a+b)
       endwhere
-      return
+
    end subroutine vanleer_limiter
 
    subroutine moncen_limiter(f,a,b)
+
       use constants, only: one, two, half
+
       implicit none
+
       real, dimension(:,:), intent(in)      :: a
       real, dimension(:,:), intent(in)      :: b
       real, dimension(:,:), intent(inout)   :: f
 
       f = f+(sign(one,a)+sign(one,b))*min(two*abs(a),two*abs(b),half*abs(a+b))*half  !> \todo OPTIMIZE ME
-      return
+
    end subroutine moncen_limiter
 
    subroutine minmod_limiter(f,a,b)
+
       use constants, only: one, half
+
       implicit none
+
       real, dimension(:,:), intent(in)      :: a
       real, dimension(:,:), intent(in)      :: b
       real, dimension(:,:), intent(inout)   :: f
 
       f = f+(sign(one,a)+sign(one,b))*min(abs(a),abs(b))*half                    !> \todo OPTIMIZE ME
-      return
+
    end subroutine minmod_limiter
 
    subroutine superbee_limiter(f,a,b)
+
       use constants, only: one, two, half
+
       implicit none
+
       real, dimension(:,:), intent(in)      :: a
       real, dimension(:,:), intent(in)      :: b
       real, dimension(:,:), intent(inout)   :: f
@@ -257,6 +275,7 @@ contains
       elsewhere
          f = f+(sign(one,a)+sign(one,b))*min(abs(two*a), abs(b))*half
       endwhere
-      return
+
    end subroutine superbee_limiter
+
 end module fluxes

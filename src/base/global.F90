@@ -467,12 +467,12 @@ contains
 #ifdef MAGNETIC
       if (master) then
          select case (divB_0_method)
-             case (DIVB_HDC)
-                call printinfo("    The div(B) constraint is maintaineded by Hyperbolic Cleaning (GLM).")
-             case (DIVB_CT)
-                call printinfo("    The div(B) constraint is maintaineded by Constrained Transport (2nd order).")
-             case default
-                call die("    The div(B) constraint is maintaineded by Uknown Something.")
+            case (DIVB_HDC)
+               call printinfo("    The div(B) constraint is maintaineded by Hyperbolic Cleaning (GLM).")
+            case (DIVB_CT)
+               call printinfo("    The div(B) constraint is maintaineded by Constrained Transport (2nd order).")
+            case default
+               call die("    The div(B) constraint is maintaineded by Uknown Something.")
          end select
 
          if (cc_mag) then
