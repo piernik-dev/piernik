@@ -51,7 +51,7 @@ contains
       use cresp_grid,            only: cresp_init_grid
 #endif /* COSM_RAY_ELECTRONS */
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
-      use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
+      use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, die, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
       use decomposition,         only: init_decomposition
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment
@@ -424,6 +424,8 @@ contains
          ! The use of mpirun options like "-map-by node" may defeat these efforts
          ! and significantly increase the amount of inter-node communication.
          if (.not. successive) call warn("[initpiernik:init_piernik] Non-successive MPI ranks on hosts detected. This may severely degrade the performance.")
+
+         if (any(pnames%hostindex < 0)) call die("[initpiernik:init_piernik] pnames%hostindex contains invalid data")
 
       end subroutine print_hostnames
 

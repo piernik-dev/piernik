@@ -57,7 +57,9 @@ module procnames
       type(ema_t), allocatable, dimension(:) :: speed                                !< estimated speed of MPI ranks
       logical, allocatable, dimension(:) :: exclude                                  !< When .true. then exclude given thread from computations
       type(nodeproc_t), allocatable, dimension(:) :: proc_on_node                    !< array of nodes and MPI ranks
-      integer(kind=4) :: maxnamelen
+      integer, allocatable, dimension(:) :: hostindex                                !< index in proc_on_node for each MPI rank
+      integer(kind=4) :: maxnamelen                                                  !< length of longest hostname
+      logical :: speed_avail                                                         !< .true. after host speeds were calculated at least once
    contains
       procedure :: init                !< Initialize the pnames structure
       procedure :: cleanup             !< Clean up the pnames structure
@@ -86,9 +88,12 @@ contains
       integer(kind=4) :: mynamelen
       character(len=MPI_MAX_PROCESSOR_NAME), allocatable, dimension(:) :: nodenames  !< aux array for unique node names
 
+      this%speed_avail = .false.
+
       allocate(this%procnames(FIRST:LAST), &
            &   this%speed    (FIRST:LAST), &
-           &   this%exclude  (FIRST:LAST))
+           &   this%exclude  (FIRST:LAST), &
+           &   this%hostindex(FIRST:LAST))
 
       call this%enable_all
       this%maxnamelen = I_ZERO
@@ -135,6 +140,8 @@ contains
 
       subroutine fill_proc_on_node
 
+         use constants, only: INVALID
+
          implicit none
 
          integer(kind=4) :: i, j
@@ -149,6 +156,14 @@ contains
             do i = lbound(this%procnames, 1, kind=4), ubound(this%procnames, 1, kind=4)
                if (this%procnames(i) == this%proc_on_node(j)%nodename) &
                     & this%proc_on_node(j)%proc = [ this%proc_on_node(j)%proc, i ]  ! lhs reallocation
+            enddo
+         enddo
+
+         ! Set up this%hostindex to be able to quickly refer to node properties knowing own MPI rank (mpisetup::proc)
+         this%hostindex = INVALID
+         do j = lbound(this%proc_on_node, 1, kind=4), ubound(this%proc_on_node, 1, kind=4)
+            do i = lbound(this%proc_on_node(j)%proc, 1, kind=4), ubound(this%proc_on_node(j)%proc, 1, kind=4)
+               this%hostindex(this%proc_on_node(j)%proc(i)) = j
             enddo
          enddo
 
@@ -175,6 +190,7 @@ contains
       deallocate(this%procnames)
       deallocate(this%speed)
       deallocate(this%exclude)
+      deallocate(this%hostindex)
 
    end subroutine cleanup
 
@@ -210,6 +226,8 @@ contains
             endif
          end associate
       enddo
+
+      this%speed_avail = .true.
 
    end subroutine calc_hostspeed
 
