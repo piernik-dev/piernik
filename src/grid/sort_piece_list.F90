@@ -46,15 +46,16 @@ module sort_piece_list
       integer(kind=4)                   :: cur_gid   !< current grid_id
       integer(kind=4)                   :: cur_proc  !< current process number
       integer(kind=4)                   :: dest_proc !< process number according to ideal ordering
-      real                              :: weight    !< an estimate of cg cost (unused yet)
-      real                              :: cweight   !< cumulative cost for id <= own id (unused yet)
+      real                              :: weight    !< an estimate of cg cost
+      real                              :: cweight   !< cumulative cost for id <= own id
    contains
       procedure :: set_gp                            !< Set the primary properties, initialize derived properties with safe defaults
    end type grid_piece
 
    type, extends(sortable_list_t) :: grid_piece_list
-      type(grid_piece), dimension(:), allocatable :: list !< the list itself
-      type(grid_piece) :: temp
+      type(grid_piece), dimension(:), allocatable :: list  !< the list itself
+      type(grid_piece) :: temp                             !< element used for swapping
+      real :: w_norm                                       !< normalization factor found by find_cweights
    contains
       ! override abstract interface routines
       procedure :: l_bound          !< Get lower bound of the list
@@ -74,16 +75,17 @@ contains
 
 !> \brief A shortcut for set_id + sort + find_cweights
 
-   subroutine set_sort_weight(this, off)
+   subroutine set_sort_weight(this, off, nw)
 
       implicit none
 
       class(grid_piece_list),            intent(inout) :: this  !< object invoking type-bound procedure
       integer(kind=8), dimension(ndims), intent(in)    :: off   !< offset of the level
+      logical,                           intent(in)    :: nw    !< normalize weights
 
       call this%set_id(off)
       call this%sort
-      call this%find_cweights
+      call this%find_cweights(nw)
 
    end subroutine set_sort_weight
 
@@ -119,7 +121,7 @@ contains
          ! the cost of processing a cg depends on its total number of cells,
          ! not just active cells.
       endif
-      this%cweight   = 0.
+      this%cweight = 0.
 
    end subroutine set_gp
 
@@ -170,20 +172,29 @@ contains
 
 !> \brief Compute this%list(:)%cweight
 
-   subroutine find_cweights(this)
+   subroutine find_cweights(this, nw)
 
       implicit none
 
       class(grid_piece_list), intent(inout) :: this  !< object invoking type-bound procedure
+      logical,                intent(in)    :: nw    !< normalize weights
 
       integer :: s
       real :: cml
+
+      this%w_norm = 1.
 
       cml = 0.
       do s = lbound(this%list, dim=1), ubound(this%list, dim=1)
          cml = cml + this%list(s)%weight
          this%list(s)%cweight = cml
       enddo
+
+      if (nw .and. cml > 0.) then
+         this%w_norm = cml
+         this%list(:)%weight  = this%list(:)%weight  / this%w_norm
+         this%list(:)%cweight = this%list(:)%cweight / this%w_norm
+      endif
 
    end subroutine find_cweights
 

@@ -155,7 +155,7 @@ contains
          if (all(pnames%exclude)) call die("[cg_list_balance:balance_fill_lowest] all threads excluded")
 
          ! apply unique numbers to the grids and sort the list
-         call gp%set_sort_weight(this%l%off)
+         call gp%set_sort_weight(this%l%off, .false.)
 
          !> compute destination process corrected for current imbalance of existing grids as much as possible
          !> \todo replace counting of blocks with counting of weights - it will be required for merged blocks

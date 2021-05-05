@@ -52,140 +52,37 @@ contains
 
    subroutine rebalance_old(this)
 
-      use cg_list,         only: cg_list_element
-      use cg_list_balance, only: I_N_B, I_OFF
       use cg_list_dataop,  only: expanded_domain
-      use constants,       only: LO, HI, I_ONE, pSUM, ndims, PPP_AMR, INVALID
-      use dataio_pub,      only: warn, msg, printinfo, die
+      use constants,       only: pSUM, PPP_AMR
+      use dataio_pub,      only: warn, msg
       use mpisetup,        only: master, FIRST, LAST, piernik_MPI_Bcast, piernik_MPI_Allreduce
       use ppp,             only: ppp_main
-      use procnames,       only: pnames
-      use refinement,      only: oop_thr
       use sort_piece_list, only: grid_piece_list
-#ifdef DEBUG
-      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, &
-           &                     MPI_Gather, MPI_Recv, MPI_Send
-      use mpisetup,        only: err_mpi
-#endif /* DEBUG */
 
       implicit none
 
       class(cg_list_rebalance_t), intent(inout) :: this
 
       integer(kind=4), dimension(FIRST:LAST) :: cnt_existing
+      real, dimension(FIRST:LAST) :: glob_costs
+      real, dimension(FIRST:LAST) :: speed, cumul  ! normalized thread speed and cumulative speed for all threads up to rank
       type(grid_piece_list) :: gp
-      type(cg_list_element), pointer :: cgl
-      integer :: s, from, to
-      integer(kind=4) :: i, p, act_proc
-      integer(kind=8), dimension(:,:), allocatable :: gptemp
-      enum, bind(C)
-         enumerator :: I_GID = I_N_B + ndims
-      end enum
-#ifdef DEBUG
-      integer(kind=4), parameter :: tag_gpt = 1
-#else /* !DEBUG */
-      integer(kind=4) :: ii
-#endif /* DEBUG */
+      integer :: hmts
+      integer(kind=4) :: p
+      logical :: invalid_speed
       character(len=*), parameter :: ro_label = "rebalance_old"
 
       call ppp_main%start(ro_label, PPP_AMR)
 
-      this%recently_changed = .false.
-      allocate(gptemp(I_OFF:I_GID, this%cnt))
-      i = 0
-      cgl => this%first
-      do while (associated(cgl))
-         i = i + I_ONE
-         gptemp(:, i) = [ cgl%cg%my_se(:, LO), int(cgl%cg%n_b, kind=8), int(cgl%cg%grid_id, kind=8) ]
-         cgl => cgl%nxt
-      enddo
-#ifdef DEBUG
-      ! Gather complete grid list and compare with this%dot%gse
-      call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
-      if (master) then
-         call gp%init(sum(cnt_existing))
-         do i = I_ONE, this%cnt
-            call gp%list(i)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), FIRST)
-            if (any(this%dot%gse(FIRST)%c(i)%se(:, LO) /= gp%list(i)%off) .or. gp%list(i)%cur_gid /= i .or. &
-                 any(this%dot%gse(FIRST)%c(i)%se(:, HI) - this%dot%gse(FIRST)%c(i)%se(:, LO) +1 /= gp%list(i)%n_b)) &
-                 call warn("cl:bo this%dot%gse(FIRST) /= gptemp")
-         enddo
-         deallocate(gptemp)
-         s = this%cnt
-         do p = FIRST + 1, LAST
-            if (cnt_existing(p) > 0) then
-               allocate(gptemp(I_OFF:I_GID, cnt_existing(p)))
-               call MPI_Recv(gptemp, size(gptemp, kind=4), MPI_INTEGER8, p, tag_gpt, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-               do i = I_ONE, cnt_existing(p)
-                  call gp%list(i+s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), p)
-                  if (any(this%dot%gse(p)%c(i)%se(:, LO) /= gp%list(i+s)%off) .or. gp%list(i+s)%cur_gid /= i .or. &
-                       any(this%dot%gse(p)%c(i)%se(:, HI) - this%dot%gse(p)%c(i)%se(:, LO) +1 /= gp%list(i+s)%n_b)) &
-                       call warn("cl:bo this%dot%gse(p) /= gptemp")
-               enddo
-               s = s + cnt_existing(p)
-               deallocate(gptemp)
-            endif
-         enddo
-      else
-         if (this%cnt > 0) call MPI_Send(gptemp, size(gptemp, kind=4), MPI_INTEGER8, FIRST, tag_gpt, MPI_COMM_WORLD, err_mpi)
-      endif
-#else /* !DEBUG */
-      ! Trust that this%dot%gse is updated
-      if (master) then
-         do p = FIRST, LAST
-            cnt_existing(p) = size(this%dot%gse(p)%c, kind=4)
-         enddo
-         call gp%init(sum(cnt_existing))
-         i = 0
-         do p = FIRST, LAST
-            ii = i
-            if (ii /= sum(cnt_existing(:p-1))) call warn("cl:bo ii /= sum(cnt_existing(:p-1))")
-            do s = lbound(this%dot%gse(p)%c, dim=1), ubound(this%dot%gse(p)%c, dim=1)
-               i = i + I_ONE
-               call gp%list(i)%set_gp(this%dot%gse(p)%c(s)%se(:, LO), int(this%dot%gse(p)%c(s)%se(:, HI) - this%dot%gse(p)%c(s)%se(:, LO) +1, kind=4), i - ii, p)
-            enddo
-         enddo
-      endif
-#endif /* DEBUG */
-      if (allocated(gptemp)) deallocate(gptemp)
+      call mk_global_level_list
 
-      s = 0
-      if (master .and. size(gp%list) > 0) then
-
-         if (all(pnames%exclude)) call die("[cg_list_rebalance:balance_old] all threads excluded")
-
-         call gp%set_sort_weight(this%l%off)
-
-         act_proc = count(.not. pnames%exclude, kind=4)
-         i = 0  ! counter for non-excluded processes
-         from = lbound(gp%list, 1)
-         gp%list(:)%dest_proc = INVALID
-         do p = FIRST, LAST
-            ! implicit weights here
-            if (.not. pnames%exclude(p)) then
-               to = merge( ubound(gp%list, 1), min(ubound(gp%list, 1), ((i+1)*size(gp%list))/act_proc), i + 1 >= act_proc)
-               if (to >=from) gp%list(from:to)%dest_proc = p
-               i = i + I_ONE
-               from = to + 1
-            endif
-         enddo
-         if (any(gp%list(:)%dest_proc == INVALID)) call die("[cg_list_rebalance:balance_old] not all dest_proc have been set")
-         s = count(gp%list(:)%cur_proc /= gp%list(:)%dest_proc)
-         ! if we exceed per-level threshold or any excluded thread has cg
-         if (s/real(size(gp%list)) > oop_thr .or. sum(cnt_existing, mask = pnames%exclude) /= 0) then
-            write(msg,'(a,i3,2(a,i6),a,f6.3,a)')"[cg_list_rebalance:balance_old] ^", this%l%id," Reshuffling OutOfPlace grids:",s, "/",size(gp%list)," (load balance: ",sum(cnt_existing)/real(maxval(cnt_existing)*size(cnt_existing)),")"
-            call printinfo(msg)
-         else
-            s = 0
-         endif
-      endif
-
-      call piernik_MPI_Bcast(s)
-      if (s>0) then
+      hmts = how_many_to_shuffle()
+      call piernik_MPI_Bcast(hmts)
+      if (hmts > 0) then
          p = expanded_domain%cnt
          call piernik_MPI_Allreduce(p, pSUM)
          if (p /= 0) then
-            write(msg,'(a,i5,a)')"[cg_list_rebalance:balance_old] Allreduce(expanded_domain%cnt) = ",p,", aborting reshuffling."
+            write(msg, '(a,i5,a)')"[cg_list_rebalance:balance_old] Allreduce(expanded_domain%cnt) = ", p, ", aborting reshuffling."
             if (master) call warn(msg)
             ! Unfortunately this will bypass thread exclusion
          else
@@ -196,6 +93,201 @@ contains
       if (master) call gp%cleanup
 
       call ppp_main%stop(ro_label, PPP_AMR)
+
+   contains
+
+      ! Collect cg costs over whole level
+      !
+      ! BEWARE: this is quite antiparallel approach
+      ! Collecting everything on the master process is way easier than trying to perform global weighted load balance.
+      ! In the future we may need to implement an alternative approach employing parallel sorting.
+
+      subroutine mk_global_level_list
+
+         use cg_list,         only: cg_list_element
+         use cg_list_balance, only: I_N_B, I_OFF
+         use cg_list_global,  only: all_cg
+         use constants,       only: LO, I_ONE, ndims
+         use load_balance,    only: balance_cg, balance_host, balance_thread
+         use mpisetup,        only: err_mpi, req, inflate_req
+         use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Gather, MPI_Recv, MPI_Isend
+         use procnames,       only: pnames
+         use ppp_mpi,         only: piernik_Waitall
+
+         implicit none
+
+         integer(kind=8), dimension(:,:), allocatable :: gptemp
+         real, allocatable, dimension(:) :: costs
+         type(cg_list_element), pointer :: cgl
+         integer(kind=4) :: i, ii
+         real :: speed
+         enum, bind(C)
+            enumerator :: I_GID = I_N_B + ndims
+         end enum
+         integer(kind=4), parameter :: tag_gpt = 1, tag_cost = tag_gpt + 1  ! also used as counters for requests
+         integer, parameter :: ALL_POS = 0
+
+         call inflate_req(tag_cost)
+
+         invalid_speed = .false.
+         this%recently_changed = .false.
+         allocate(gptemp(I_OFF:I_GID, this%cnt), costs(ALL_POS:this%cnt))
+
+         ! We have to use cgl%cg%old_costs because cgl%cg%costs was reset just before the call to refinement update
+         i = 0
+         cgl => this%first
+         do while (associated(cgl))
+            i = i + I_ONE
+            gptemp(:, i) = [ cgl%cg%my_se(:, LO), int(cgl%cg%n_b, kind=8), int(cgl%cg%grid_id, kind=8) ]
+            costs(i) = cgl%cg%old_costs%total()
+            cgl => cgl%nxt
+         enddo
+
+         costs(ALL_POS) = 0.
+         cgl => all_cg%first
+         do while (associated(cgl))
+            costs(ALL_POS) = costs(ALL_POS) + cgl%cg%old_costs%total()
+            cgl => cgl%nxt
+         enddo
+
+         call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
+         if (master) then
+            call gp%init(sum(cnt_existing))
+            ii = 0
+            do p = FIRST, LAST
+               if (cnt_existing(p) > 0) then
+                  if (p /= FIRST) then
+                     allocate(gptemp(I_OFF:I_GID, cnt_existing(p)), costs(ALL_POS:cnt_existing(p)))
+                     call MPI_Recv(gptemp, size(gptemp, kind=4), MPI_INTEGER8,         p, tag_gpt,  MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+                     call MPI_Recv(costs,  size(costs, kind=4),  MPI_DOUBLE_PRECISION, p, tag_cost, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+                  endif
+
+                  ! Apply host or thread speed coefficients to costs(:), if applicable
+                  if (balance_host > 0. .and. pnames%speed_avail) then
+                     speed = merge(pnames%speed(p)%avg, pnames%proc_on_node(pnames%hostindex(p))%speed%avg, balance_thread)
+                     if (speed < 0.) call warn("[cg_list_rebalance:rebalance_old:normalize_costs] speed < 0.")
+                     if (speed > 0.) then
+                        costs(:) = costs(:) / speed
+                     else
+                        invalid_speed = .true.
+                     endif
+                  endif
+
+                  do i = I_ONE, cnt_existing(p)
+                     if (balance_cg > 0.) then
+                        call gp%list(i+ii)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), p, costs(i))
+                     else
+                        call gp%list(i+ii)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), p)
+                     endif
+                  enddo
+                  ii = ii + cnt_existing(p)
+                  glob_costs(p) = costs(ALL_POS)
+               else
+                  glob_costs(p) = 0.
+               endif
+               if (allocated(gptemp)) deallocate(gptemp)
+               if (allocated(costs))  deallocate(costs)
+               ! if (p == FIRST .or. cnt_existing(p) > 0) deallocate(gptemp, costs)  ! should be correct but it is less defensive
+            enddo
+         else
+            if (this%cnt > 0) then
+               call MPI_Isend(gptemp, size(gptemp, kind=4), MPI_INTEGER8,         FIRST, tag_gpt,  MPI_COMM_WORLD, req(tag_gpt),  err_mpi)
+               call MPI_Isend(costs,  size(costs,  kind=4), MPI_DOUBLE_PRECISION, FIRST, tag_cost, MPI_COMM_WORLD, req(tag_cost), err_mpi)
+               call piernik_Waitall(tag_cost, "rebalance")
+               deallocate(gptemp, costs)
+            endif
+         endif
+
+      end subroutine mk_global_level_list
+
+      ! Count how many cg needs to be moved
+
+      integer function how_many_to_shuffle() result(s)
+
+         use constants,  only: INVALID, I_ONE
+         use dataio_pub, only: printinfo, die
+         use procnames,  only: pnames
+         use refinement, only: oop_thr
+
+         implicit none
+
+         integer :: i
+
+         if (master) then
+            if (size(gp%list) > 0) then
+
+               if (all(pnames%exclude)) call die("[cg_list_rebalance:balance_old] all threads excluded")
+
+               call gp%set_sort_weight(this%l%off, .true.)
+               call compute_speed_cumul
+
+               p = FIRST
+               do i = lbound(gp%list, 1), ubound(gp%list, 1)
+                  do while (gp%list(i)%cweight - .5 * gp%list(i)%weight > cumul(p))
+                     p = p + I_ONE
+                  enddo
+                  if (p > LAST) call die("[cg_list_rebalance:balance_old] p > LAST")
+                  gp%list(i)%dest_proc = p
+               enddo
+
+               if (any(gp%list(:)%dest_proc == INVALID)) call die("[cg_list_rebalance:balance_old] not all dest_proc have been set")
+               s = count(gp%list(:)%cur_proc /= gp%list(:)%dest_proc)
+               ! if we exceed per-level threshold or any excluded thread has cg
+               if (s/real(size(gp%list)) > oop_thr .or. sum(cnt_existing, mask = pnames%exclude) /= 0) then
+                  write(msg, '(a,i3,2(a,i6),a,f6.3,a)')"[cg_list_rebalance:balance_old] ^", this%l%id, " Reshuffling OutOfPlace grids:", &
+                       s, "/",size(gp%list), " (load balance: ", sum(cnt_existing) / real(maxval(cnt_existing) * size(cnt_existing)), ")"
+                  call printinfo(msg)
+               else
+                  s = 0
+               endif
+
+            endif
+         endif
+
+      end function how_many_to_shuffle
+
+      subroutine compute_speed_cumul
+
+         use load_balance, only: balance_host, balance_thread
+         use procnames,    only: pnames
+
+         implicit none
+
+         real :: cml
+
+         if (balance_host > 0. .and. pnames%speed_avail) then
+            if (balance_thread) then
+               speed(:) = pnames%speed(:)%avg
+            else
+               speed(:) = pnames%proc_on_node(pnames%hostindex(:))%speed%avg
+            endif
+            if (all(speed(:) > 0. .or. pnames%exclude(:))) then
+               where (speed(:) > 0.)
+                  speed(:) = 1. / speed(:)
+               elsewhere
+                  speed(:) = 0.
+               endwhere
+            else
+               speed(:) = 1.
+            endif
+         else
+            speed(:) = 1.
+         endif
+
+         ! ToDo here modify speed to account for over/underload on other levels
+
+         where (pnames%exclude(:)) speed(:) = 0.
+
+         cml = 0.
+         do p = FIRST, LAST
+            cml = cml + speed(p)
+            cumul(p) = cml
+         enddo
+
+         speed(:) = speed(:) / cml
+         cumul(:) = cumul(:) / cml
+
+      end subroutine compute_speed_cumul
 
    end subroutine rebalance_old
 
