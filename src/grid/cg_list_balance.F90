@@ -36,6 +36,7 @@ module cg_list_balance
    use dot,              only: dot_t
    use level_essentials, only: level_t
    use patch_list,       only: patch_list_t
+   use sort_piece_list,  only: grid_piece_list
 
    implicit none
 
@@ -51,10 +52,12 @@ module cg_list_balance
    !> An abstract type created to take out some load-balance related code from cg_level (new grids)
 
    type, extends(cg_list_bnd_t), abstract :: cg_list_balance_t
-      type(patch_list_t)                :: plist            !< list of patches that exist on the current level
-      type(dot_t)                       :: dot              !< depiction of topology
-      logical                           :: recently_changed !< .true. when anything was added to or deleted from this level
-      class(level_t), pointer           :: l                !< single place to store off, n_d and id
+      type(patch_list_t)                :: plist             !< list of patches that exist on the current level
+      type(dot_t)                       :: dot               !< depiction of topology
+      logical                           :: recently_changed  !< .true. when anything was added to or deleted from this level
+      class(level_t), pointer           :: l                 !< single place to store off, n_d and id
+      type(grid_piece_list)             :: gp                !< SFC-sortable structure for collecting cgs for rebalance
+      integer(kind=4), allocatable, dimension(:) :: cnt_all  !< block count for all threads (used in rebalance, only on master)
    contains
       procedure          :: balance_new          !< Routine selector for moving proposed grids between processes
       procedure, private :: balance_fill_lowest  !< Routine for moving proposed grids between processes: add load to lightly-loaded processes
@@ -136,7 +139,7 @@ contains
       type(grid_piece_list) :: gp
       integer :: i
       integer(kind=4), dimension(FIRST:LAST+1) :: from
-      integer(kind=4), dimension(FIRST:LAST) :: cnt_existing
+      integer(kind=4), dimension(FIRST:LAST) :: cnt_all
       integer(kind=4) :: ls, p, s
 
       ! count how many patches were requested on each process
@@ -148,7 +151,7 @@ contains
       if (master) call gp%init(s)
       call this%patches_to_list(gp, ls)
 
-      call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
+      call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_all, I_ONE, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
 
       if (master) then !> \warning Antiparallel
 
@@ -161,12 +164,12 @@ contains
          !> \todo replace counting of blocks with counting of weights - it will be required for merged blocks
 
          ! target number of cg per thread (ideal, level-balanced)
-         s = int((size(gp%list) + sum(cnt_existing))/real(count(.not. pnames%exclude)), kind=4)
+         s = int((size(gp%list) + sum(cnt_all))/real(count(.not. pnames%exclude)), kind=4)
 
          ! first estimate how to fill lowest-occupied threads
-         i = (size(gp%list) + sum(cnt_existing, mask=(cnt_existing <= s .and. .not. pnames%exclude))) / &
-              &               count(cnt_existing <= s .and. .not. pnames%exclude)
-         from(:) = [ lbound(gp%list, dim=1, kind=4), merge(I_ZERO, int(max(0, i - cnt_existing(:)), kind=4), pnames%exclude(:)) ]
+         i = (size(gp%list) + sum(cnt_all, mask=(cnt_all <= s .and. .not. pnames%exclude))) / &
+              &               count(cnt_all <= s .and. .not. pnames%exclude)
+         from(:) = [ lbound(gp%list, dim=1, kind=4), merge(I_ZERO, int(max(0, i - cnt_all(:)), kind=4), pnames%exclude(:)) ]
          i = size(gp%list) - sum(from(FIRST+1:LAST+1))
 
          if (i < 0) then

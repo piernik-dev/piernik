@@ -186,7 +186,7 @@ contains
          call collect_costs(curl)
          call rebalance_old(curl)
          call reshuffle(curl)
-         call gp_cleanup
+         call gp_cleanup(curl)
          curl => curl%coarser
       enddo
 

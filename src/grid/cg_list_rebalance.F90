@@ -31,16 +31,10 @@
 
 module cg_list_rebalance
 
-   use sort_piece_list, only: grid_piece_list
-
    implicit none
 
    private
    public :: collect_costs, rebalance_old, reshuffle, gp_cleanup
-
-   ! ToDo get rid of these global things
-   type(grid_piece_list) :: gp
-   integer(kind=4), allocatable, dimension(:) :: cnt_existing
 
 contains
 
@@ -88,7 +82,7 @@ contains
 
 !      invalid_speed = .false.
       this%recently_changed = .false.
-      allocate(gptemp(I_OFF:I_GID, this%cnt), costs(ALL_POS:this%cnt), cnt_existing(FIRST:LAST)) !, glob_costs(FIRST:LAST))
+      allocate(gptemp(I_OFF:I_GID, this%cnt), costs(ALL_POS:this%cnt), this%cnt_all(FIRST:LAST)) !, glob_costs(FIRST:LAST))
 
       ! We have to use cgl%cg%old_costs because cgl%cg%costs was reset just before the call to refinement update
       i = 0
@@ -107,14 +101,14 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
+      call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, this%cnt_all, I_ONE, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
       if (master) then
-         call gp%init(sum(cnt_existing))
+         call this%gp%init(sum(this%cnt_all))
          ii = 0
          do p = FIRST, LAST
-            if (cnt_existing(p) > 0) then
+            if (this%cnt_all(p) > 0) then
                if (p /= FIRST) then
-                  allocate(gptemp(I_OFF:I_GID, cnt_existing(p)), costs(ALL_POS:cnt_existing(p)))
+                  allocate(gptemp(I_OFF:I_GID, this%cnt_all(p)), costs(ALL_POS:this%cnt_all(p)))
                   call MPI_Recv(gptemp, size(gptemp, kind=4), MPI_INTEGER8,         p, tag_gpt,  MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                   call MPI_Recv(costs,  size(costs, kind=4),  MPI_DOUBLE_PRECISION, p, tag_cost, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                endif
@@ -130,21 +124,21 @@ contains
                   endif
                endif
 
-               do i = I_ONE, cnt_existing(p)
+               do i = I_ONE, this%cnt_all(p)
                   if (balance_cg > 0.) then
-                     call gp%list(i+ii)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), p, costs(i))
+                     call this%gp%list(i+ii)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), p, costs(i))
                   else
-                     call gp%list(i+ii)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), p)
+                     call this%gp%list(i+ii)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), p)
                   endif
                enddo
-               ii = ii + cnt_existing(p)
+               ii = ii + this%cnt_all(p)
 !               glob_costs(p) = costs(ALL_POS)
             else
 !               glob_costs(p) = 0.
             endif
             if (allocated(gptemp)) deallocate(gptemp)
             if (allocated(costs))  deallocate(costs)
-            ! if (p == FIRST .or. cnt_existing(p) > 0) deallocate(gptemp, costs)  ! should be correct but it is less defensive
+            ! if (p == FIRST .or. this%cnt_all(p) > 0) deallocate(gptemp, costs)  ! should be correct but it is less defensive
          enddo
       else
          if (this%cnt > 0) then
@@ -161,14 +155,17 @@ contains
 
    end subroutine collect_costs
 
-   subroutine gp_cleanup
+   subroutine gp_cleanup(this)
 
-      use mpisetup, only: master
+      use cg_list_balance, only: cg_list_balance_t
+      use mpisetup,        only: master
 
       implicit none
 
-      if (master) call gp%cleanup
-      deallocate(cnt_existing)
+      class(cg_list_balance_t), intent(inout) :: this
+
+      if (master) call this%gp%cleanup
+      deallocate(this%cnt_all)
 
    end subroutine gp_cleanup
 
@@ -203,7 +200,7 @@ contains
             write(msg, '(a,i5,a)')"[cg_list_rebalance:balance_old] Allreduce(expanded_domain%cnt) = ", p, ", aborting reshuffling."
             if (master) call warn(msg)
             ! Unfortunately this will bypass thread exclusion
-            gp%list(:)%dest_proc = gp%list(:)%cur_proc  ! disable reshuffle
+            this%gp%list(:)%dest_proc = this%gp%list(:)%cur_proc  ! disable reshuffle
          else
 !            call reshuffle(this, gp)
          endif
@@ -227,28 +224,28 @@ contains
          integer :: i
 
          if (master) then
-            if (size(gp%list) > 0) then
+            if (size(this%gp%list) > 0) then
 
                if (all(pnames%exclude)) call die("[cg_list_rebalance:balance_old] all threads excluded")
 
-               call gp%set_sort_weight(this%l%off, .true.)
+               call this%gp%set_sort_weight(this%l%off, .true.)
                call compute_speed_cumul
 
                p = FIRST
-               do i = lbound(gp%list, 1), ubound(gp%list, 1)
-                  do while (gp%list(i)%cweight - .5 * gp%list(i)%weight > cumul(p))
+               do i = lbound(this%gp%list, 1), ubound(this%gp%list, 1)
+                  do while (this%gp%list(i)%cweight - .5 * this%gp%list(i)%weight > cumul(p))
                      p = p + I_ONE
                   enddo
                   if (p > LAST) call die("[cg_list_rebalance:balance_old] p > LAST")
-                  gp%list(i)%dest_proc = p
+                  this%gp%list(i)%dest_proc = p
                enddo
 
-               if (any(gp%list(:)%dest_proc == INVALID)) call die("[cg_list_rebalance:balance_old] not all dest_proc have been set")
-               s = count(gp%list(:)%cur_proc /= gp%list(:)%dest_proc)
+               if (any(this%gp%list(:)%dest_proc == INVALID)) call die("[cg_list_rebalance:balance_old] not all dest_proc have been set")
+               s = count(this%gp%list(:)%cur_proc /= this%gp%list(:)%dest_proc)
                ! if we exceed per-level threshold or any excluded thread has cg
-               if (s/real(size(gp%list)) > oop_thr .or. sum(cnt_existing, mask = pnames%exclude) /= 0) then
+               if (s/real(size(this%gp%list)) > oop_thr .or. sum(this%cnt_all, mask = pnames%exclude) /= 0) then
                   write(msg, '(a,i3,2(a,i6),a,f6.3,a)')"[cg_list_rebalance:balance_old] ^", this%l%id, " Reshuffling OutOfPlace grids:", &
-                       s, "/",size(gp%list), " (load balance: ", sum(cnt_existing) / real(maxval(cnt_existing) * size(cnt_existing)), ")"
+                       s, "/",size(this%gp%list), " (load balance: ", sum(this%cnt_all) / real(maxval(this%cnt_all) * size(this%cnt_all)), ")"
                   call printinfo(msg)
                else
                   s = 0
@@ -367,16 +364,16 @@ contains
          enddo
       endif
       call piernik_MPI_Allreduce(totfld, pMAX)
-      ! communicate gp%list
-      if (master) s = count(gp%list(:)%cur_proc /= gp%list(:)%dest_proc)
+      ! communicate this%gp%list
+      if (master) s = count(this%gp%list(:)%cur_proc /= this%gp%list(:)%dest_proc)
       call piernik_MPI_Bcast(s)
       allocate(gptemp(I_OFF:I_D_P, s))
       if (master) then
          p = 0
-         do i = lbound(gp%list, dim=1, kind=4), ubound(gp%list, dim=1, kind=4)
-            if (gp%list(i)%cur_proc /= gp%list(i)%dest_proc) then
+         do i = lbound(this%gp%list, dim=1, kind=4), ubound(this%gp%list, dim=1, kind=4)
+            if (this%gp%list(i)%cur_proc /= this%gp%list(i)%dest_proc) then
                p = p + I_ONE
-               gptemp(:, p) = [ gp%list(i)%off, int( [ gp%list(i)%n_b, gp%list(i)%cur_gid, gp%list(i)%cur_proc, gp%list(i)%dest_proc ], kind=8) ]
+               gptemp(:, p) = [ this%gp%list(i)%off, int( [ this%gp%list(i)%n_b, this%gp%list(i)%cur_gid, this%gp%list(i)%cur_proc, this%gp%list(i)%dest_proc ], kind=8) ]
             endif
          enddo
       endif
