@@ -37,7 +37,7 @@ module types
    implicit none
 
    private
-   public :: value, ema_t
+   public :: value
 
    type :: value
       real                      :: val
@@ -46,40 +46,5 @@ module types
       integer, dimension(ndims) :: loc
       integer(kind=4)           :: proc
    end type value
-
-   ! exponential moving average and its variance
-   type ema_t
-      real          :: avg  !< exponential moving average
-      real          :: var  !< exponential moving variance
-      real, private :: fac  !< multiplier applied on each accumulation
-   contains
-      procedure     :: add  !< add next measurement
-   end type ema_t
-
-contains
-
-!< \brief Add next measurement to the ema_t. Use factor to (re)set this object.
-
-   subroutine add(this, x, factor)
-
-      implicit none
-
-      class(ema_t),   intent(inout) :: this    !< an object invoking the type-bound procedure
-      real,           intent(in)    :: x       !< data
-      real, optional, intent(in)    :: factor  !< moving average factor
-
-      real :: d
-
-      if (present(factor)) then  ! reset or initialize
-         this%avg = x
-         this%var = 0.
-         this%fac = factor
-      else
-         d = x - this%avg
-         this%avg = this%avg + this%fac * d
-         this%var = (1. - this%fac) * (this%var + this%fac * d**2)
-      endif
-
-   end subroutine add
 
 end module types

@@ -36,8 +36,7 @@
 
 module procnames
 
-   use MPIF,  only: MPI_MAX_PROCESSOR_NAME
-   use types, only: ema_t
+   use MPIF, only: MPI_MAX_PROCESSOR_NAME
 
    implicit none
 
@@ -48,13 +47,13 @@ module procnames
    type nodeproc_t
       character(len=MPI_MAX_PROCESSOR_NAME) :: nodename   !< local $HOSTNAME
       integer(kind=4), allocatable, dimension(:) :: proc  !< list of MPI ranks that belong to this%nodename
-      type(ema_t) :: speed                                !< estimated average speed of local MPI processes
+      real :: speed                                       !< estimated average speed of local MPI processes
    end type nodeproc_t
 
    ! all connections between MPI ranks and nodes
    type procnamelist_t
       character(len=MPI_MAX_PROCESSOR_NAME), allocatable, dimension(:) :: procnames  !< node names associated with MPI ranks
-      type(ema_t), allocatable, dimension(:) :: speed                                !< estimated speed of MPI ranks
+      real, allocatable, dimension(:) :: speed                                       !< estimated speed of MPI ranks
       logical, allocatable, dimension(:) :: exclude                                  !< When .true. then exclude given thread from computations
       type(nodeproc_t), allocatable, dimension(:) :: proc_on_node                    !< array of nodes and MPI ranks
       integer, allocatable, dimension(:) :: hostindex                                !< index in proc_on_node for each MPI rank
@@ -196,34 +195,20 @@ contains
 
 !< \brief Compute this%proc_on_node(:)%speed from this%speed
 
-   subroutine calc_hostspeed(this, factor)
-
-      use constants, only: one
+   subroutine calc_hostspeed(this)
 
       implicit none
 
       class(procnamelist_t), intent(inout) :: this    !< an object invoking the type-bound procedure
-      real, optional,        intent(in)    :: factor  !< if present then (re)initialize and set up the exponential moving average factor
 
       integer :: host
       real :: avg
 
       do host = lbound(this%proc_on_node, 1), ubound(this%proc_on_node, 1)
          associate (h => this%proc_on_node(host))
-            if (count(this%speed(h%proc(:))%avg > 0.) > 0) then
-               avg = sum(this%speed(h%proc(:))%avg) / count(this%speed(h%proc(:))%avg > 0.)  !don't average on unoccupied/excluded threads
-            else
-               avg = 0.
-            endif
-            if (present(factor)) then
-               call h%speed%add(avg, factor)
-            else
-               if (avg > 0.) then
-                  call h%speed%add(avg)
-               else
-                  call h%speed%add(avg, one)
-               endif
-            endif
+            avg = 0.  ! Don't average on unoccupied/excluded threads
+            if (count(this%speed(h%proc(:)) > 0.) > 0) avg = sum(this%speed(h%proc(:))) / count(this%speed(h%proc(:)) > 0.)
+            h%speed = avg
          end associate
       enddo
 
@@ -243,17 +228,17 @@ contains
       real, parameter :: fast_enough = 1.2  ! count slightly slower threads in the average but reject marauders
       real :: avg, fast_avg
 
-      if (count(.not. this%exclude .and. this%speed(:)%avg > 0.) <= 0) return  ! this may occur right after restart
+      if (count(.not. this%exclude .and. this%speed(:) > 0.) <= 0) return  ! this may occur right after restart
 
       ! average MHD cost per cg on active threads
-      avg = sum(this%speed(:)%avg, mask = .not. this%exclude .and. this%speed(:)%avg > 0.) / &
-           &                        count(.not. this%exclude .and. this%speed(:)%avg > 0.)
+      avg = sum(this%speed(:), mask = .not. this%exclude .and. this%speed(:) > 0.) / &
+           &                    count(.not. this%exclude .and. this%speed(:) > 0.)
 
       ! average MHD cost per cg on active threads that aren't lagging too much behind average
-      fast_avg = sum(this%speed(:)%avg, mask = (.not. this%exclude .and. this%speed(:)%avg > 0. .and. this%speed(:)%avg <= fast_enough * avg)) / &
-           &                              count(.not. this%exclude .and. this%speed(:)%avg > 0. .and. this%speed(:)%avg <= fast_enough * avg)
+      fast_avg = sum(this%speed(:), mask = (.not. this%exclude .and. this%speed(:) > 0. .and. this%speed(:) <= fast_enough * avg)) / &
+           &                          count(.not. this%exclude .and. this%speed(:) > 0. .and. this%speed(:) <= fast_enough * avg)
 
-      this%exclude = this%exclude .or. this%speed(:)%avg > fast_avg * threshold
+      this%exclude = this%exclude .or. this%speed(:) > fast_avg * threshold
 
    end subroutine mark_for_exclusion
 

@@ -58,7 +58,7 @@ contains
       use constants,     only: I_ONE, base_level_id, PPP_AMR
       use dataio_pub,    only: msg, warn
       use global,        only: nstep
-      use load_balance,  only: balance_cg, balance_host, enable_exclusion, avg_factor, exclusion_thr, &
+      use load_balance,  only: balance_cg, balance_host, enable_exclusion, exclusion_thr, &
            &                   verbosity, verbosity_nstep, V_NONE, V_SUMMARY, V_HOST, V_DETAILED, V_ELABORATE
       use mpisetup,      only: master, FIRST, LAST, err_mpi
       use MPIF,          only: MPI_COMM_WORLD, MPI_DOUBLE_PRECISION, MPI_Wtime, MPI_Gather
@@ -166,23 +166,14 @@ contains
             associate (cur_speed => all_proc_stats(I_AVG, I_MHD - lbound(cost_labels, 1) + I_ONE, p), &
                &       pspeed => pnames%speed(p))
                if (firstcall .or. cur_speed <= 0.) then  ! first call or depleted thread
-                  call pspeed%add(max(0., cur_speed), avg_factor)
+                  pspeed = max(0., cur_speed)
                else
-                  if (pnames%speed(p)%avg <= 0.) then  ! repopulated thread (e.g. after "unexclude" msg
-                     call pspeed%add(cur_speed, avg_factor)
-                  else
-                     call pspeed%add(cur_speed)
-                  endif
+                  pspeed = cur_speed
                endif
             end associate
          enddo
 
-         if (firstcall) then
-            call pnames%calc_hostspeed(avg_factor)
-         else
-            call pnames%calc_hostspeed
-         endif
-
+         call pnames%calc_hostspeed
          call pnames%mark_for_exclusion(exclusion_thr)
 
          firstcall = .false.
@@ -401,7 +392,7 @@ contains
          real :: mx
          integer, parameter :: mpl = 16, maxex = 128
 
-         mx = maxval(1./pnames%speed(:)%avg, mask=(pnames%speed(:)%avg > 0.))
+         mx = maxval(1./pnames%speed(:), mask=(pnames%speed(:) > 0.))
          dec = 3
          if (mx > 0.) dec = max(0, min(3, 3 - int(floor(log10(mx)))))
 
@@ -412,12 +403,12 @@ contains
                   associate (pb =>     lbound(ph%proc, 1) +  ln    * mpl, &
                        &     pe => min(lbound(ph%proc, 1) + (ln+1) * mpl - 1, ubound(ph%proc, 1)))
 
-                     if (ph%speed%avg > 0.) then
+                     if (ph%speed > 0.) then
                         write(fmt, *)"(3a,f6.", dec, ",a)"
-                        write(header, fmt) "@", ph%nodename(:pnames%maxnamelen), " <MHD speed> = ", 1./ph%speed%avg, " blk/s ["
+                        write(header, fmt) "@", ph%nodename(:pnames%maxnamelen), " <MHD speed> = ", 1./ph%speed, " blk/s ["
                         write(fmt,  *) "(a,", pe - pb + 1, "f6.", dec, ",a)"
                         write(msg, fmt) merge(trim(header), repeat(" ", len_trim(header)), ln == 0), &
-                             merge(1. / pnames%speed(ph%proc(pb:pe))%avg, 0., pnames%speed(ph%proc(pb:pe))%avg > 0.), &
+                             merge(1. / pnames%speed(ph%proc(pb:pe)), 0., pnames%speed(ph%proc(pb:pe)) > 0.), &
                              merge(" ]", "  ", ln == int((size(ph%proc) - 1)/ mpl))
                      else
                         write(msg, '(3a)') "@", ph%nodename(:pnames%maxnamelen), " <MHD speed> = N/A"

@@ -164,7 +164,7 @@ contains
 
                   ! Apply host or thread speed coefficients to costs(:), if applicable
                   if (balance_host > 0. .and. pnames%speed_avail) then
-                     speed = merge(pnames%speed(p)%avg, pnames%proc_on_node(pnames%hostindex(p))%speed%avg, balance_thread)
+                     speed = merge(pnames%speed(p), pnames%proc_on_node(pnames%hostindex(p))%speed, balance_thread)
                      if (speed < 0.) call warn("[cg_list_rebalance:rebalance_old:normalize_costs] speed < 0.")
                      if (speed > 0.) then
                         costs(:) = costs(:) / speed
@@ -257,9 +257,9 @@ contains
 
          if (balance_host > 0. .and. pnames%speed_avail) then
             if (balance_thread) then
-               speed(:) = pnames%speed(:)%avg
+               speed(:) = pnames%speed(:)
             else
-               speed(:) = pnames%proc_on_node(pnames%hostindex(:))%speed%avg
+               speed(:) = pnames%proc_on_node(pnames%hostindex(:))%speed
             endif
             if (all(speed(:) > 0. .or. pnames%exclude(:))) then
                where (speed(:) > 0.)

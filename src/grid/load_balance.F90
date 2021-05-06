@@ -48,7 +48,6 @@ module load_balance
    real,                     protected :: balance_host      !< Use averaged cg MHD costs to account for differing host speed. Value <=0 disables thread speed estimate (assume all hosts equally fast), use 1. for fully speed-weighted rebalance.
    logical,                  protected :: balance_thread    !< If .true. then use balance_host for each thread separately (CPU affinity has to be ensured outside of Piernik).
    character(len=cbuff_len), protected :: cost_to_balance   !< One of [ cg_cost_data:cost_labels, "all", "none" ], default: "MHD", ToDo: enable selected subset.
-   real,                     protected :: avg_factor        !< Exponential moving average factor
 
    !   verbosity
    integer(kind=4),          protected :: verbosity         !< Enumerated from 0: none, summary, detailed, elaborate
@@ -59,7 +58,7 @@ module load_balance
    character(len=cbuff_len), protected :: watch_cost        !< Which cg cost to watch? One of [ cg_cost_data:cost_labels, "all", "none" ], default: "MHD"
    real,                     protected :: exclusion_thr     !< Exclusion threshold
 
-   namelist /BALANCE/ balance_cg, balance_host, balance_thread, cost_to_balance, avg_factor, &
+   namelist /BALANCE/ balance_cg, balance_host, balance_thread, cost_to_balance, &
         &             verbosity, verbosity_nstep, &
         &             enable_exclusion, watch_cost, exclusion_thr
 
@@ -82,7 +81,6 @@ contains
 !!   <tr><td> balance_host     </td><td> 0.       </td><td> real        </td><td> \copydoc load_balance::balance_host     </td></tr>
 !!   <tr><td> balance_thread   </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::balance_thread   </td></tr>
 !!   <tr><td> cost_to_balance  </td><td> "MHD"    </td><td> character() </td><td> \copydoc load_balance::cost_to_balance  </td></tr>
-!!   <tr><td> avg_factor       </td><td> 0.2      </td><td> real        </td><td> \copydoc load_balance::avg_factor       </td></tr>
 !!   <tr><td> verbosity        </td><td> 2        </td><td> integer     </td><td> \copydoc load_balance::verbosity        </td></tr>
 !!   <tr><td> verbosity_nstep  </td><td> 20       </td><td> integer     </td><td> \copydoc load_balance::verbosity_nstep  </td></tr>
 !!   <tr><td> enable_exclusion </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::enable_exclusion </td></tr>
@@ -102,7 +100,6 @@ contains
 
       integer, parameter :: verbosity_nstep_default = 20
       real,    parameter :: intolerable_perf = 3.
-      real,    parameter :: default_ema = 0.2  ! Exponential moving average factor (1.0 => no tail, 0.0 => no update)
       integer            :: ind
 
       ! No code_progress dependencies apart from PIERNIK_INIT_MPI (obvious for our use of namelist)
@@ -112,7 +109,6 @@ contains
       balance_host     = 0.
       balance_thread   = .false.
       cost_to_balance  = "MHD"
-      avg_factor       = default_ema
       verbosity        = V_HOST
       verbosity_nstep  = verbosity_nstep_default
       enable_exclusion = .false.
@@ -146,10 +142,9 @@ contains
          lbuff(1) = balance_thread
          lbuff(2) = enable_exclusion
 
-         rbuff(1) = avg_factor
-         rbuff(2) = exclusion_thr
-         rbuff(3) = balance_cg
-         rbuff(4) = balance_host
+         rbuff(1) = exclusion_thr
+         rbuff(2) = balance_cg
+         rbuff(3) = balance_host
 
       endif
 
@@ -169,10 +164,9 @@ contains
          balance_thread   = lbuff(1)
          enable_exclusion = lbuff(2)
 
-         avg_factor       = rbuff(1)
-         exclusion_thr    = rbuff(2)
-         balance_cg       = rbuff(3)
-         balance_host     = rbuff(4)
+         exclusion_thr    = rbuff(1)
+         balance_cg       = rbuff(2)
+         balance_host     = rbuff(3)
 
       endif
 
@@ -196,11 +190,6 @@ contains
       if (verbosity_nstep <= 0) then
          if (master) call warn("[load_balance] verbosity_nstep <= 0 (disabling)")
          verbosity_nstep = huge(1_4)
-      endif
-
-      if (abs(avg_factor) > 1.) then
-         if (master) call warn("[load_balance] |avg_factor| > 1. (disabling)")
-         avg_factor = 0.
       endif
 
       if (master) then
