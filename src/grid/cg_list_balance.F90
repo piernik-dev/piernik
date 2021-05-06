@@ -169,11 +169,13 @@ contains
          from(:) = [ lbound(gp%list, dim=1, kind=4), merge(I_ZERO, int(max(0, i - cnt_existing(:)), kind=4), pnames%exclude(:)) ]
          i = size(gp%list) - sum(from(FIRST+1:LAST+1))
 
-         if (i < 0) then  ! this occurs rarely, if at all
+         if (i < 0) then
             p = FIRST
             do while (i < 0)
-               if (from(p+1) > 0) from(p+1) = from(p+1) - I_ONE
-               i = i + 1
+               if (from(p+1) > 0) then
+                  from(p+1) = from(p+1) - I_ONE
+                  i = i + 1
+               endif
                p = p + I_ONE
                if (p > LAST) p = FIRST
             enddo
