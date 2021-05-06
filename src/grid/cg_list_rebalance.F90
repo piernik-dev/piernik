@@ -31,20 +31,10 @@
 
 module cg_list_rebalance
 
-   use cg_list_balance, only: cg_list_balance_t
-
    implicit none
 
    private
-   public :: cg_list_rebalance_t
-
-   !> \brief An abstract type created to take out some load-balance related code from cg_level (old grids)
-
-   type, extends(cg_list_balance_t), abstract :: cg_list_rebalance_t
-   contains
-      procedure          :: rebalance_old  !< Routine for measuring disorder level in distribution of grids across processes
-      procedure, private :: reshuffle      !< Routine for moving existing grids between processes
-   end type cg_list_rebalance_t
+   public :: rebalance_old
 
 contains
 
@@ -52,6 +42,7 @@ contains
 
    subroutine rebalance_old(this)
 
+      use cg_list_balance, only: cg_list_balance_t
       use cg_list_dataop,  only: expanded_domain
       use constants,       only: pSUM, PPP_AMR
       use dataio_pub,      only: warn, msg
@@ -61,7 +52,7 @@ contains
 
       implicit none
 
-      class(cg_list_rebalance_t), intent(inout) :: this
+      class(cg_list_balance_t), intent(inout) :: this
 
       integer(kind=4), dimension(FIRST:LAST) :: cnt_existing
       real, dimension(FIRST:LAST) :: glob_costs
@@ -86,7 +77,7 @@ contains
             if (master) call warn(msg)
             ! Unfortunately this will bypass thread exclusion
          else
-            call this%reshuffle(gp)
+            call reshuffle(this, gp)
          endif
       endif
 
@@ -296,6 +287,7 @@ contains
    subroutine reshuffle(this, gp)
 
       use cg_list,            only: cg_list_element
+      use cg_list_balance,    only: cg_list_balance_t
       use cg_list_global,     only: all_cg
       use constants,          only: ndims, LO, HI, I_ZERO, I_ONE, xdim, ydim, zdim, pMAX, PPP_AMR
       use dataio_pub,         only: die
@@ -311,8 +303,8 @@ contains
 
       implicit none
 
-      class(cg_list_rebalance_t), intent(inout) :: this
-      type(grid_piece_list),      intent(in)    :: gp
+      class(cg_list_balance_t), intent(inout) :: this
+      type(grid_piece_list),    intent(in)    :: gp
 
       type(cg_list_element), pointer :: cgl
       integer :: s, n_gid, totfld
