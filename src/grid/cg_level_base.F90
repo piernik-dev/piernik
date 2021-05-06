@@ -68,10 +68,11 @@ contains
 
    subroutine set(this, n_d)
 
-      use constants,          only: base_level_id, ndims
-      use dataio_pub,         only: die
-      use domain,             only: dom
-      use list_of_cg_lists,   only: all_lists
+      use cg_list_dataop,   only: expanded_domain
+      use constants,        only: base_level_id, ndims
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use list_of_cg_lists, only: all_lists
 
       implicit none
 
@@ -94,6 +95,7 @@ contains
       call this%level%l%init(base_level_id, int(n_d, kind=8), dom%off)
 
       call all_lists%register(this%level, "Base level")
+      call all_lists%register(expanded_domain, "e-dom")
 
    end subroutine set
 
@@ -155,7 +157,6 @@ contains
       use constants,          only: xdim, zdim, LO, HI, BND_MPI, BND_FC, refinement_factor
       use dataio_pub,         only: die
       use domain,             only: dom
-      use list_of_cg_lists,   only: all_lists
       use mpisetup,           only: master
       use refinement,         only: emergency_fix, bsize
       use user_hooks,         only: late_initial_conditions
@@ -215,7 +216,6 @@ contains
       if (master) call this%level%add_patch(e_size, e_off)
       call this%level%init_all_new_cg
 
-      call all_lists%register(expanded_domain, "e-dom")
       cgl => this%level%first
       do while (associated(cgl))
          if (.not. cgl%cg%is_old) call expanded_domain%add(cgl%cg)

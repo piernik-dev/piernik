@@ -61,8 +61,8 @@ module cg_leaves
       procedure :: balance_and_update      !< Rebalance if required and update
       procedure :: leaf_arr3d_boundaries   !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays on leaves
       procedure :: leaf_arr4d_boundaries   !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays on leaves
-      procedure :: prioritized_cg          !< Returna a leaves list with different ordering of cg to optimize fine->coarse flux transfer
-      procedure :: leaf_only_cg            !< Returna a leaves list without fully covered cg
+      procedure :: prioritized_cg          !< Return a leaves list with different ordering of cg to optimize fine->coarse flux transfer
+      procedure :: leaf_only_cg            !< Return a leaves list without fully covered cg
 
    end type cg_leaves_t
 
@@ -168,7 +168,7 @@ contains
 
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_t
-      use cg_list_rebalance,  only: collect_costs, rebalance_old, reshuffle, gp_cleanup
+      use cg_list_rebalance,  only: rebalance_old
       use constants,          only: PPP_AMR
       use ppp,                only: ppp_main
 
@@ -181,17 +181,11 @@ contains
       character(len=*), parameter :: bu_label = "leaves_balance_and_update"
 
       call ppp_main%start(bu_label, PPP_AMR)
-      curl => finest%level
-      do while (associated(curl)) ! perhaps it is worth to limit to the base level
-         call collect_costs(curl)
-         call rebalance_old(curl)
-         call reshuffle(curl)
-         call gp_cleanup(curl)
-         curl => curl%coarser
-      enddo
+
+      call rebalance_old
 
       curl => finest%level
-      do while (associated(curl)) ! perhaps it is worth to limit to the base level
+      do while (associated(curl))
          call curl%check_update_all
          call curl%sync_ru  ! no need to update this%recently_changed here (was done in check_update_all)
          curl => curl%coarser
