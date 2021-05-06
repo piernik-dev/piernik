@@ -168,7 +168,7 @@ contains
 
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_t
-      use cg_list_rebalance,  only: rebalance_old
+      use cg_list_rebalance,  only: collect_costs, rebalance_old, reshuffle, gp_cleanup
       use constants,          only: PPP_AMR
       use ppp,                only: ppp_main
 
@@ -183,7 +183,10 @@ contains
       call ppp_main%start(bu_label, PPP_AMR)
       curl => finest%level
       do while (associated(curl)) ! perhaps it is worth to limit to the base level
+         call collect_costs(curl)
          call rebalance_old(curl)
+         call reshuffle(curl)
+         call gp_cleanup
          curl => curl%coarser
       enddo
 
