@@ -56,17 +56,17 @@ contains
 
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      real                           :: mxdeint
+      real                           :: mxdeint, min_tcool
 
       dt_coolheat = big
       if (.not.thermal_active) return
-
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         call maxdeint(cg, mxdeint)
-         dt_coolheat = min(dt_coolheat, cfl_coolheat*abs(1./(mxdeint+small)))
+         call maxdeint(cg, mxdeint, min_tcool)
+         !print *, 'TIMESTEP THERMAL', dt_coolheat,  cfl_coolheat*abs(1./(mxdeint+small)), min_tcool
+         dt_coolheat = min(dt_coolheat, cfl_coolheat*abs(1./(mxdeint+small)), min_tcool/100.0)
 
          cgl => cgl%nxt
       enddo

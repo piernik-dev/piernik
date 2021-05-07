@@ -47,7 +47,7 @@ module thermal
    logical                  :: thermal_active
    real                     :: alpha_cool, L0_cool, G0_heat, G1_heat, G2_heat, cfl_coolheat
    real                     :: Teql         !> temperature of cooling / heating equilibrium
-   integer(kind=4), protected    :: itemp = INVALID
+   integer(kind=4), protected    :: itemp = INVALID, ieis = INVALID
 
 contains
 
@@ -149,10 +149,10 @@ contains
       G2_heat = G2      * erg / sek / cm**3
       L0_cool = Lambda0 * erg / sek * cm**3 / mH**2 * x_ion**2
 
-      print *, G0_heat, G1_heat, G2_heat
-
       call all_cg%reg_var('Temperature')          ! Make it cleaner
       itemp = qna%ind('Temperature')
+      call all_cg%reg_var('Temp_EIS')          ! Make it cleaner
+      ieis = qna%ind('Temp_EIS')
 
    end subroutine init_thermal
 
@@ -207,6 +207,7 @@ contains
 
    subroutine cool_heat(gamma, n, dens, cg, i1, i2, sweep, eint, esrc, store)
 
+     
       use domain,     only: dom
       use global,     only: nstep, dt
       use grid_cont,  only: grid_container
@@ -223,29 +224,28 @@ contains
       logical,            intent(in)  :: store
       real, dimension(n), intent(out) :: esrc
       real, dimension(n)              :: cfunc, hfunc, temp, eint2
-      real, dimension(:),  pointer    :: ta
+      real, dimension(:),  pointer    :: ta, t_eis
 
       temp(:)  = 0.0
       cfunc(:) = 0.0
       hfunc(:) = 0.0
       esrc(:)  = 0.0
-      !first = .false.
-
       ta => cg%q(itemp)%get_sweep(sweep, i1, i2)
+      t_eis => cg%q(ieis)%get_sweep(sweep, i1, i2)
       if (nstep .eq. 0) then
          temp = (gamma-1) * mH / kboltz * eint / dens
-         ta = temp
       else
-         temp=ta
+         temp=t_eis
       endif
-      
+      !temp = (gamma-1) * mH / kboltz * eint / dens
       call cool(n, temp, cfunc)
-
+      !print *, 'cool', dens**2*cfunc
       call heat(n, dens, hfunc)
       esrc =  dens**2*cfunc + hfunc
       if (store) then
          eint2 = eint + 1./dom%eff_dim * esrc *dt
          ta = (gamma-1) * mH / kboltz * eint2 / dens
+         print *, 'esrc', esrc
       endif
 
 !      esrc = MIN(esrc, esrc_upper_lim * eint)
@@ -254,21 +254,22 @@ contains
     end subroutine cool_heat
    
 
-   subroutine maxdeint(cg, max_deint)
+   subroutine maxdeint(cg, max_deint, min_tcool)
 
       use constants,        only: xdim, ydim, zdim
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
       use func,             only: emag, ekin
       use grid_cont,        only: grid_container
+      use units,            only: kboltz, mH
 
       implicit none
 
       type(grid_container), pointer, intent(in)              :: cg
-      real,                          intent(out)             :: max_deint
+      real,                          intent(out)             :: max_deint, min_tcool
       integer                                                :: i, j, ifl
       class(component_fluid), pointer                        :: pfl
-      real, dimension(cg%ks:cg%ke)                           :: int_ener, kin_ener, mag_ener, eint_src
+      real, dimension(cg%ks:cg%ke)                           :: int_ener, kin_ener, mag_ener, eint_src, temp, tcool
       real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: deint
       logical                                                :: store
 
@@ -287,6 +288,8 @@ contains
                   endif
                endif
                call cool_heat(pfl%gam, cg%nzb, cg%u(pfl%idn,i,j,cg%ks:cg%ke), cg, i, j, 3, int_ener, eint_src, store)
+               temp = (pfl%gam-1) * mH / kboltz * int_ener / cg%u(pfl%idn,i,j,cg%ks:cg%ke)
+               tcool = - kboltz * temp / ((pfl%gam-1) * mH *  L0_cool * (temp/Teql)**(alpha_cool))
                deint(i,j,:) = eint_src/int_ener
                !if (maxval(abs(deint(i,j,:))) .gt. 1000000) then
                !   print *, i,j, 'OOOPS', maxval(eint_src), minval(int_ener)
@@ -295,6 +298,7 @@ contains
          enddo
       enddo
       max_deint = maxval(abs(deint))
+      min_tcool = minval(abs(tcool))
 
    end subroutine maxdeint
 
@@ -338,7 +342,7 @@ contains
       select case (heat_model)
         case ('G012')
            heatf =  G0_heat * dens**2 + G1_heat * dens + G2_heat
-           !print *, 'heat', G0_heat, G1_heat
+           !print *, 'heat', G0_heat, G1_heat, G2_heat, heatf
         case ('null')
           return
         case default
@@ -353,11 +357,10 @@ contains
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use domain,     only: dom
       use fluidindex, only: flind
       use grid_cont,  only: grid_container
       use named_array_list, only: wna
-      use units,      only: kboltz, mH
+!      use units,      only: kboltz, mH
 
       implicit none
 
@@ -368,7 +371,7 @@ contains
 !      real, dimension(n), intent(out) :: esrc
       !      real, dimension(n)              :: cfunc, hfunc, temp, T, Tn, eint2
       real, intent(in)                :: dt
-      real, dimension(:, :, :),  pointer    :: ta, T
+      real, dimension(:, :, :),  pointer    :: t_eis, ta, T
       real                            :: gamma
       real, dimension(:,:,:), pointer :: dens
 
@@ -379,22 +382,23 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         dens =>  cg%w(wna%fi)%span(flind%all_fluids(1)%fl%idn,cg%ijkse)
-         ta => cg%q(itemp)%span(cg%ijkse)
+         dens =>  cg%w(wna%fi)%span(flind%all_fluids(1)%fl%idn,cg%ijkse)!lh_out)
+         ta => cg%q(itemp)%span(cg%ijkse)!lh_out)
          !print *, 'TEMP1', ta
-         T => cg%q(itemp)%span(cg%ijkse)
+         t_eis => cg%q(ieis)%span(cg%ijkse)!lh_out)
+         T => cg%q(ieis)%span(cg%ijkse)!lh_out)
+         print *, 'temp0', ta(1,1,1), t_eis(1,1,1)
          !print *, 'DENS', dens
          call temp_EIS(dt, shape(ta), gamma, ta, dens, T)
          !print *, 'boltzman', kboltz, mH
          !print *, 'YOP'
-            
          !eint2 = eint + 1./dom%eff_dim * esrc *dt
          !Tn = (gamma-1) * mH / kboltz * eint2 / dens
-         ta = T
+         t_eis = T
+      
+         print *, 'TEMP_EIS', T(1,1,1)
          cgl => cgl%nxt
       enddo
-      
-      print *, 'TEMP', ta(1,1,1)
 
 
     end subroutine EIS
@@ -403,6 +407,7 @@ contains
    subroutine temp_EIS(dt, n, gamma, temp, dens, Tnew)
 
       use dataio_pub, only: msg, warn
+      use func,       only: operator(.equals.)
       use mpisetup,   only: master
       use units,      only: kboltz, mH
 
@@ -411,21 +416,23 @@ contains
       integer(kind=4), dimension(3),     intent(in)  :: n
       real,               intent(in)  :: gamma, dt
       real, dimension(n(1), n(2), n(3)), intent(in)  :: temp, dens
-      real, dimension(n(1), n(2), n(3))              :: TEF, Teql1
+      real, dimension(n(1), n(2), n(3))              :: TEF, Teql1, tcool
       real, dimension(n(1), n(2), n(3)), intent(out) :: Tnew
 
       Teql1(:,:,:)=Teql
       select case (cool_model)
       case ('power_law')
-            if (alpha_cool .eq. 1) then
+            if (alpha_cool .equals. 1.0) then
                TEF = log(Teql1/temp)
                !print *, 'TEF',  TEF + (gamma-1) * dens / kboltz * dt * coolf_pl(Teql1) * mH
                Tnew = invTEF_pl_a1( TEF + (gamma-1) * dens / kboltz * dt * coolf_pl(Teql1) * mH / Teql1)
                !print *, 'Tnew', Tnew
             else
                TEF= (1/(1-alpha_cool)) * (1 - (Teql/temp)**(alpha_cool-1) )
-               !print *, 'invTEF', TEF + (gamma-1) * dens / kboltz * dt * coolf_pl(Teql1) * mH / Teql1, dt, TEF
-               Tnew = invTEF_pl( TEF + (gamma-1) * dens / kboltz * dt * coolf_pl(Teql1) * mH / Teql1)
+               tcool = kboltz * temp / ((gamma-1) * mH * coolf_pl(Teql1))
+               print *, 'invTEF', tcool(1,1,1), dt!, gamma, (1-(1-alpha_cool)*dt/tcool)**(1/(1-alpha_cool))!TEF + (gamma-1) * dens / kboltz * dt * coolf_pl(Teql1) * mH / Teql1, dt, invTEF_pl(0.0*TEF), invTEF_pl(-1.0+TEF)
+               !Tnew = invTEF_pl( TEF + (gamma-1) * dens / kboltz * dt * coolf_pl(Teql1) * mH / Teql1)
+               Tnew = temp * (1 - (1-alpha_cool)*dt / tcool) **(1/(1-alpha_cool))
             endif
             !coolf = coolf_pl(Tnew)
             !coolf = -L0_cool * (temp/Teql)**(alpha_cool)
@@ -442,7 +449,7 @@ contains
             function coolf_pl(T) result(coolf)
               real, dimension(n(1), n(2), n(3)), intent(in) :: T
               real, dimension(n(1), n(2), n(3))             :: coolf
-              coolf = -L0_cool * (T/Teql1)**(alpha_cool)
+              coolf = L0_cool * (T/Teql1)**(alpha_cool)
             end function coolf_pl
             
             function invTEF_pl_a1(Y) result(T)
