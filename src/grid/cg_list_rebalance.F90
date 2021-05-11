@@ -388,8 +388,21 @@ contains
       character(len=*), parameter :: ISR_label = "reshuffle_Isend+Irecv", cp_label = "reshuffle_copy", gp_label = "reshuffle_gptemp"
 
 #ifdef NBODY
-      call die("[cg_list_rebalance:reshuffle] Particles aren't supported yet")
-#endif
+      logical :: has_particles
+
+      has_particles = .false.
+
+      curl => finest%level
+      do while (associated(curl))
+         cgl => curl%first
+         do while (associated(cgl))
+            if (associated(cgl%cg%pset%first)) has_particles = .true.
+            cgl => cgl%nxt
+         enddo
+         curl => curl%coarser
+      enddo
+      if (has_particles) call die("[cg_list_rebalance:reshuffle] Particles aren't supported yet")
+#endif /* NBODY */
 
       ! Count the number of fields on any of the top level cg
       totfld = 0
