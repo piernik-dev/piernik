@@ -208,8 +208,8 @@ contains
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS && IONIZED */
 #ifdef THERM
-      call src_thermal_exec(u, n, cg, i1, i2, sweep, bb, newsrc)
-      usrc(:,:) = usrc(:,:) + newsrc(:,:)
+      !call src_thermal_exec(u, n, cg, i1, i2, sweep, bb, newsrc)
+      !usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #endif /* THERM */
 
 ! --------------------------------------------------
@@ -273,7 +273,7 @@ contains
          dt = min(dt, timestep_interactions())
 #endif /* !BALSARA */
 #ifdef THERM
-         dt = min(dt, timestep_thermal())
+         !dt = min(dt, timestep_thermal())
 #endif /* THERM */
 
       return
