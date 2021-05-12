@@ -34,7 +34,7 @@ module cg_list_rebalance
    implicit none
 
    private
-   public :: rebalance_old
+   public :: rebalance
 
 contains
 
@@ -123,7 +123,7 @@ contains
                   ! Apply host or thread speed coefficients to costs(:), if applicable
                   if (balance_host > 0. .and. pnames%speed_avail) then
                      speed = merge(pnames%speed(p), pnames%proc_on_node(pnames%hostindex(p))%speed, balance_thread)
-                     if (speed < 0.) call warn("[cg_list_rebalance:rebalance_old:normalize_costs] speed < 0.")
+                     if (speed < 0.) call warn("[cg_list_rebalance:collect_costs] speed < 0.")
                      if (speed > 0.) then
                         costs(:) = costs(:) / speed
                         ! else
@@ -167,7 +167,7 @@ contains
 
 !> \brief Routine for measuring disorder level in distribution of grids across processes and restoring proper balance
 
-   subroutine rebalance_old
+   subroutine rebalance
 
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
@@ -183,7 +183,7 @@ contains
       real, dimension(FIRST:LAST) :: speed, cumul  ! normalized thread speed and cumulative speed for all threads up to rank
       integer :: hmts
       integer(kind=4) :: edc
-      character(len=*), parameter :: ro_label = "rebalance_old"
+      character(len=*), parameter :: ro_label = "rebalance"
 
       call ppp_main%start(ro_label, PPP_AMR)
 
@@ -196,7 +196,7 @@ contains
 
       if (hmts > 0) then
          if (edc /= 0) then
-            write(msg, '(a,i5,a)')"[cg_list_rebalance:balance_old] Allreduce(expanded_domain%cnt) = ", edc, ", aborting reshuffling."
+            write(msg, '(a,i5,a)')"[cg_list_rebalance:rebalance] Allreduce(expanded_domain%cnt) = ", edc, ", aborting reshuffling."
             if (master) call warn(msg)
             ! Unfortunately this will bypass thread exclusion
          else
@@ -243,7 +243,7 @@ contains
 
                if (size(curl%gp%list) > 0) then
 
-                  if (all(pnames%exclude)) call die("[cg_list_rebalance:balance_old] all threads excluded")
+                  if (all(pnames%exclude)) call die("[cg_list_rebalance:rebalance] all threads excluded")
 
                   call curl%gp%set_sort_weight(curl%l%off, .true.)
                   call compute_speed_cumul
@@ -253,16 +253,16 @@ contains
                      do while (curl%gp%list(i)%cweight - .5 * curl%gp%list(i)%weight > cumul(p))
                         p = p + I_ONE
                      enddo
-                     if (p > LAST) call die("[cg_list_rebalance:balance_old] p > LAST")
+                     if (p > LAST) call die("[cg_list_rebalance:rebalance] p > LAST")
                      curl%gp%list(i)%dest_proc = p
                   enddo
 
-                  if (any(curl%gp%list(:)%dest_proc == INVALID)) call die("[cg_list_rebalance:balance_old] not all dest_proc have been set")
+                  if (any(curl%gp%list(:)%dest_proc == INVALID)) call die("[cg_list_rebalance:rebalance] not all dest_proc have been set")
 
                   associate ( cnt_mov => count(curl%gp%list(:)%cur_proc /= curl%gp%list(:)%dest_proc))
                      s = s + cnt_mov
                      if (cnt_mov > 0) then
-                        write(msg, '(a,i3,2(a,i6))')"[cg_list_rebalance:balance_old] ^", curl%l%id, " OutOfPlace grids:", cnt_mov, "/",size(curl%gp%list)
+                        write(msg, '(a,i3,2(a,i6))')"[cg_list_rebalance:rebalance] ^", curl%l%id, " OutOfPlace grids:", cnt_mov, "/",size(curl%gp%list)
                         !a,f6.3,a , " (load balance: ", sum(curl%cnt_all) / real(maxval(curl%cnt_all) * size(curl%cnt_all)), ")"
                         call printinfo(msg)
                      endif
@@ -278,7 +278,7 @@ contains
 
             ! if we exceed per-level threshold or any excluded thread has cg
             if (rebalance_necessary) then
-               call printinfo("[cg_list_rebalance:balance_old] reshuffling OutOfPlace grids")
+               call printinfo("[cg_list_rebalance:rebalance] reshuffling OutOfPlace grids")
             else
                s = 0
             endif
@@ -333,7 +333,7 @@ contains
 
       end subroutine compute_speed_cumul
 
-   end subroutine rebalance_old
+   end subroutine rebalance
 
 !>
 !! \brief Routine for moving existing grids between processes
@@ -451,12 +451,12 @@ contains
       curl => finest%level
       do while (associated(curl))
 
-         if (ubound(gptemp, dim=2, kind=4) > tag_ub) call die("[cg_list_rebalance:balance_old] this MPI implementation has too low MPI_TAG_UB attribute")
+         if (ubound(gptemp, dim=2, kind=4) > tag_ub) call die("[cg_list_rebalance:reshuffle] this MPI implementation has too low MPI_TAG_UB attribute")
          do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
             if (gptemp(I_LEV, i) == curl%l%id) then
 
                cglepa(i)%p => null()
-               if (gptemp(I_C_P, i) == gptemp(I_D_P, i)) call die("[cg_list_rebalance:balance_old] can not send to self")
+               if (gptemp(I_C_P, i) == gptemp(I_D_P, i)) call die("[cg_list_rebalance:reshuffle] can not send to self")
                if (gptemp(I_C_P, i) == proc) then ! send
                   found = .false.
                   cgl => curl%first
@@ -484,7 +484,7 @@ contains
                      endif
                      cgl => cgl%nxt
                   enddo
-                  if (.not. found) call die("[cg_list_rebalance:balance_old] Grid id not found")
+                  if (.not. found) call die("[cg_list_rebalance:reshuffle] Grid id not found")
                   nr = nr + I_ONE
                   if (nr > size(req, dim=1)) call inflate_req
                   call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i, MPI_COMM_WORLD, req(nr), err_mpi)
