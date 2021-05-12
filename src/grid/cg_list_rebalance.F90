@@ -174,7 +174,7 @@ contains
       use cg_list_dataop,     only: expanded_domain
       use constants,          only: pSUM, PPP_AMR
       use dataio_pub,         only: warn, msg
-      use mpisetup,           only: master, FIRST, LAST, piernik_MPI_Allreduce
+      use mpisetup,           only: master, FIRST, LAST, piernik_MPI_Bcast, piernik_MPI_Allreduce
       use ppp,                only: ppp_main
 
       implicit none
@@ -192,7 +192,9 @@ contains
       edc = expanded_domain%cnt
       call piernik_MPI_Allreduce(edc, pSUM)
 
-      hmts = how_many_to_shuffle()
+      hmts = 0
+      if (master) hmts = how_many_to_shuffle()
+      call piernik_MPI_Bcast(hmts)
 
       if (hmts > 0) then
          if (edc /= 0) then
@@ -224,7 +226,7 @@ contains
 
          use constants,  only: INVALID, I_ONE
          use dataio_pub, only: printinfo, die
-         use mpisetup,   only: piernik_MPI_Bcast
+         use mpisetup,   only: slave
          use procnames,  only: pnames
          use refinement, only: oop_thr
 
@@ -234,58 +236,55 @@ contains
          integer(kind=4) :: p
          logical :: rebalance_necessary
 
+         if (slave) call die("[cg_list_rebalance:rebalance] slave in how_many_to_shuffle")
+
          rebalance_necessary = .false.
          s = 0
-         if (master) then
 
-            curl => finest%level
-            do while (associated(curl))
+         curl => finest%level
+         do while (associated(curl))
 
-               if (size(curl%gp%list) > 0) then
+            if (size(curl%gp%list) > 0) then
 
-                  if (all(pnames%exclude)) call die("[cg_list_rebalance:rebalance] all threads excluded")
+               if (all(pnames%exclude)) call die("[cg_list_rebalance:rebalance] all threads excluded")
 
-                  call curl%gp%set_sort_weight(curl%l%off, .true.)
-                  call compute_speed_cumul
+               call curl%gp%set_sort_weight(curl%l%off, .true.)
+               call compute_speed_cumul
 
-                  p = FIRST
-                  do i = lbound(curl%gp%list, 1), ubound(curl%gp%list, 1)
-                     do while (curl%gp%list(i)%cweight - .5 * curl%gp%list(i)%weight > cumul(p))
-                        p = p + I_ONE
-                     enddo
-                     if (p > LAST) call die("[cg_list_rebalance:rebalance] p > LAST")
-                     curl%gp%list(i)%dest_proc = p
+               p = FIRST
+               do i = lbound(curl%gp%list, 1), ubound(curl%gp%list, 1)
+                  do while (curl%gp%list(i)%cweight - .5 * curl%gp%list(i)%weight > cumul(p))
+                     p = p + I_ONE
                   enddo
+                  if (p > LAST) call die("[cg_list_rebalance:rebalance] p > LAST")
+                  curl%gp%list(i)%dest_proc = p
+               enddo
 
-                  if (any(curl%gp%list(:)%dest_proc == INVALID)) call die("[cg_list_rebalance:rebalance] not all dest_proc have been set")
+               if (any(curl%gp%list(:)%dest_proc == INVALID)) call die("[cg_list_rebalance:rebalance] not all dest_proc have been set")
 
-                  associate ( cnt_mov => count(curl%gp%list(:)%cur_proc /= curl%gp%list(:)%dest_proc))
-                     s = s + cnt_mov
-                     if (cnt_mov > 0) then
-                        write(msg, '(a,i3,2(a,i6))')"[cg_list_rebalance:rebalance] ^", curl%l%id, " OutOfPlace grids:", cnt_mov, "/",size(curl%gp%list)
-                        !a,f6.3,a , " (load balance: ", sum(curl%cnt_all) / real(maxval(curl%cnt_all) * size(curl%cnt_all)), ")"
-                        call printinfo(msg)
-                     endif
-                     if (cnt_mov/real(size(curl%gp%list)) > oop_thr) rebalance_necessary = .true.
-                  end associate
+               associate ( cnt_mov => count(curl%gp%list(:)%cur_proc /= curl%gp%list(:)%dest_proc))
+                  s = s + cnt_mov
+                  if (cnt_mov > 0) then
+                     write(msg, '(a,i3,2(a,i6))')"[cg_list_rebalance:rebalance] ^", curl%l%id, " OutOfPlace grids:", cnt_mov, "/",size(curl%gp%list)
+                     !a,f6.3,a , " (load balance: ", sum(curl%cnt_all) / real(maxval(curl%cnt_all) * size(curl%cnt_all)), ")"
+                     call printinfo(msg)
+                  endif
+                  if (cnt_mov/real(size(curl%gp%list)) > oop_thr) rebalance_necessary = .true.
+               end associate
 
-               endif
-
-               if (sum(curl%cnt_all, mask = pnames%exclude) /= 0) rebalance_necessary = .true.
-
-               curl => curl%coarser
-            enddo
-
-            ! if we exceed per-level threshold or any excluded thread has cg
-            if (rebalance_necessary) then
-               call printinfo("[cg_list_rebalance:rebalance] reshuffling OutOfPlace grids")
-            else
-               s = 0
             endif
 
-         endif
+            if (sum(curl%cnt_all, mask = pnames%exclude) /= 0) rebalance_necessary = .true.
 
-         call piernik_MPI_Bcast(s)
+            curl => curl%coarser
+         enddo
+
+         ! if we exceed per-level threshold or any excluded thread has cg
+         if (rebalance_necessary) then
+            call printinfo("[cg_list_rebalance:rebalance] reshuffling OutOfPlace grids")
+         else
+            s = 0
+         endif
 
       end function how_many_to_shuffle
 
