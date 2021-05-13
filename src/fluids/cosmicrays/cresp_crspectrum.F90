@@ -102,9 +102,9 @@ contains
 
 !----- main subroutine -----
 
-   subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, p_out)
+   subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, p_out, substeps)
 
-      use constants,      only: zero, one, I_ONE
+      use constants,      only: zero, one, I_ZERO, I_ONE
 #ifdef CRESP_VERBOSED
       use dataio_pub,     only: msg, printinfo
 #endif /* CRESP_VERBOSED */
@@ -120,6 +120,8 @@ contains
       logical,                        intent(inout) :: cfl_cresp_violation
       real, dimension(1:2), optional, intent(inout) :: p_out
       logical                                       :: solve_fail_lo, solve_fail_up, empty_cell
+      integer, optional                             :: substeps
+      integer                                       :: i_sub, n_substep
 
       e = zero; n = zero; edt = zero; ndt = zero
       solve_fail_lo = .false.
@@ -130,10 +132,17 @@ contains
       approx_p = e_small_approx_p
 
       p_cut_next = zero
+      n_substep  = 1
 
       r = zero
       f = zero
       q = zero
+
+      if (present(substeps)) then
+         n_substep = substeps
+      else
+         n_substep = 1
+      endif
 
       if (present(p_out)) then
          p_cut    = p_out
@@ -225,41 +234,74 @@ contains
          return
       endif
 
-      call cresp_update_bin_index(sptab%ub*dt, sptab%ud*dt, p_cut, p_cut_next, cfl_cresp_violation)
-      if (cfl_cresp_violation) then
-         approx_p = e_small_approx_p         !< restore approximation after momenta computed
-         call deallocate_active_arrays
+      do i_sub = 1, n_substep                   !< if one substep, all is done the classic way
+! Compute momentum changes in after time period [t,t+dt]
+         call cresp_update_bin_index(sptab%ub*dt, sptab%ud*dt, p_cut, p_cut_next, cfl_cresp_violation)
+
+         if (cfl_cresp_violation) then
+            approx_p = e_small_approx_p         !< restore approximation after momenta computed
+            call deallocate_active_arrays
 #ifdef CRESP_VERBOSED
-         write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
+            write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
 #endif /* CRESP_VERBOSED */
-         return
-      endif
+            return                              !< returns with cfl_cresp_violation = T
+         endif
 ! Compute fluxes through fixed edges in time period [t,t+dt], using f, q, p_cut(LO) and p_cut(HI) at [t]
 ! Note that new [t+dt] values of p_cut(LO) and p_cut(HI) in case new fixed edges appear or disappear.
 ! fill new bins
-      call cresp_compute_fluxes(cooling_edges_next,heating_edges_next)
+         call cresp_compute_fluxes(cooling_edges_next,heating_edges_next)
 
 ! Computing e and n at [t+dt]
 
-      ndt(1:ncre) = n(1:ncre)  - (nflux(1:ncre) - nflux(0:ncre-1))
-      edt(1:ncre) = e(1:ncre)  - (eflux(1:ncre) - eflux(0:ncre-1))
+         ndt(1:ncre) = n(1:ncre)  - (nflux(1:ncre) - nflux(0:ncre-1))
+         edt(1:ncre) = e(1:ncre)  - (eflux(1:ncre) - eflux(0:ncre-1))
 
 ! edt(1:ncre) = e(1:ncre) *(one-0.5*dt*r(1:ncre)) - (eflux(1:ncre) - eflux(0:ncre-1))/(one+0.5*dt*r(1:ncre))   !!! oryginalnie u Miniatiego
 ! Compute coefficients R_i needed to find energy in [t,t+dt]
-      call cresp_compute_r(sptab%ub, sptab%ud, p_next, active_bins_next)                 ! new active bins already received some particles, Ri is needed for those bins too
+         call cresp_compute_r(sptab%ub, sptab%ud, p_next, active_bins_next)                 ! new active bins already received some particles, Ri is needed for those bins too
 
-      edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
+         edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
 
-      if ((del_i(HI) == 0) .and. (approx_p(HI) > 0) .and. (i_cut_next(HI)-1 > 0)) then
-         if (.not. assert_active_bin_via_nei(ndt(i_cut_next(HI)), edt(i_cut_next(HI)), i_cut_next(HI))) then
-            call manually_deactivate_bin_via_transfer(i_cut_next(HI), -I_ONE, ndt, edt)
+         if ((del_i(HI) == 0) .and. (approx_p(HI) > 0) .and. (i_cut_next(HI)-1 > 0)) then
+            if (.not. assert_active_bin_via_nei(ndt(i_cut_next(HI)), edt(i_cut_next(HI)), i_cut_next(HI))) then
+               call manually_deactivate_bin_via_transfer(i_cut_next(HI), -I_ONE, ndt, edt)
+            endif
          endif
-      endif
-      if ((del_i(LO) == 0) .and. (approx_p(LO) > 0) .and. (i_cut_next(LO)+2 <= ncre)) then
-         if (.not. assert_active_bin_via_nei(ndt(i_cut_next(LO)+1), edt(i_cut_next(LO)+1), i_cut_next(LO))) then
-            call manually_deactivate_bin_via_transfer(i_cut_next(LO) + I_ONE, I_ONE, ndt, edt)
+         if ((del_i(LO) == 0) .and. (approx_p(LO) > 0) .and. (i_cut_next(LO)+2 <= ncre)) then
+            if (.not. assert_active_bin_via_nei(ndt(i_cut_next(LO)+1), edt(i_cut_next(LO)+1), i_cut_next(LO))) then
+               call manually_deactivate_bin_via_transfer(i_cut_next(LO) + I_ONE, I_ONE, ndt, edt)
+            endif
          endif
-      endif
+
+         if (i_sub .ne. n_substep) then         !< proceed with end of substep
+            p_cut = p_cut_next                  !< append changes for cutoffs
+            i_cut = i_cut_next                  !< -//-
+            p     = p_fix                       !< restore p
+            p(i_cut_next(LO)) = p_cut_next(LO)  !< update cutoff p
+            p(i_cut_next(HI)) = p_cut_next(HI)  !< update cutoff p
+
+            e     = edt                         !< append changes for e
+            n     = ndt                         !< append changes for e
+            approx_p = [I_ZERO, I_ZERO]         !< switch off cutoff approximation
+
+            deallocate(active_bins_next)        !< must be deallocated, reallocation in upcoming substep (update_bin_index)
+            deallocate(cooling_edges_next)      !< -//-
+            deallocate(heating_edges_next)      !< -//-
+
+            call cresp_detect_negative_content(cfl_cresp_violation)
+            if (cfl_cresp_violation) then
+               call deallocate_active_arrays
+#ifdef CRESP_VERBOSED
+               write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
+#endif /* CRESP_VERBOSED */
+               return
+            endif
+
+            call ne_to_q(n, e, q, active_bins)  !< begins new step
+            f = nq_to_f(p(0:ncre-1), p(1:ncre), n(1:ncre), q(1:ncre), active_bins)  !< Compute values of distribution function in the new step
+         endif
+
+      enddo
 
       approx_p = e_small_approx_p         !< restore approximation after momenta computed
 
@@ -298,7 +340,6 @@ contains
          call deallocate_active_arrays
 #ifdef CRESP_VERBOSED
          write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
-         call printinfo(msg)
 #endif /* CRESP_VERBOSED */
          return
       endif
@@ -421,22 +462,22 @@ contains
       do i = 1, ncre                        ! if energy density is nonzero, so should be the number density
          i_cut(LO) = i - I_ONE
          if (cresp%e(i) > e_threshold(LO)) then
-           if (cresp%n(i) > zero) then
-              empty_cell = .false.
-              exit
-           endif
-        endif
-     enddo
+            if (cresp%n(i) > zero) then
+               empty_cell = .false.
+               exit
+            endif
+         endif
+      enddo
 
-     if (empty_cell) return   ! empty cell - nothing to do here!
+      if (empty_cell) return   ! empty cell - nothing to do here!
 
-     i_cut(HI) = ncre
-     do i = ncre, 1,-1
-        i_cut(HI) = i
-        if (cresp%e(i) > e_threshold(HI)) then   ! if energy density is nonzero, so should be the number density
-           if (cresp%n(i) > zero) exit
-        endif
-     enddo
+      i_cut(HI) = ncre
+      do i = ncre, 1,-1
+         i_cut(HI) = i
+         if (cresp%e(i) > e_threshold(HI)) then   ! if energy density is nonzero, so should be the number density
+            if (cresp%n(i) > zero) exit
+         endif
+      enddo
 
    end subroutine find_i_bound
 !-------------------------------------------------------------------------------------------------
@@ -692,7 +733,7 @@ contains
 
 !-----------------------------------------------------------------------
 
-   subroutine cresp_detect_negative_content(location) ! Diagnostic measure - negative values should not show up:
+   subroutine cresp_detect_negative_content(negatives_found, location) ! Diagnostic measure - negative values should not show up:
 
       use constants,      only: zero, ndims
       use dataio_pub,     only: warn, msg
@@ -702,6 +743,7 @@ contains
 
       integer, dimension(ndims),optional :: location
       integer                            :: i
+      logical, intent(inout)             :: negatives_found
 
       do i = 1, ncre
          if (e(i) < zero .or. n(i) < zero .or. edt(i) < zero .or. ndt(i) < zero) then
@@ -709,9 +751,10 @@ contains
                write(msg,'(A81,3I3,A7,I4,A9,E18.9,A9,E18.9)') '[cresp_crspectrum:cresp_detect_negative_content] Negative values @ (i j k ) = (', &
                            location, '): i=', i,': n(i)=', n(i), ', e(i)=',e(i)
             else
-               write(msg,'(A66,A7,I4,A9,E18.9,A9,E18.9,A3,A9,I4,A9,E18.9,A9,E18.9)') '[cresp_crspectrum:cresp_detect_negative_content] Negative values:',  &
+               write(msg,'(A66,A7,I4,A9,E18.9,A9,E18.9,A3,A9,I4,A9,E18.9,A9,E18.9,I2)') '[cresp_crspectrum:cresp_detect_negative_content] Negative values:',  &
                            'i=', i,': n(i)=', n(i), ', e(i)=',e(i), "|", 'i=', i,': ndt(i)=', ndt(i), ', edt(i)=',edt(i)
             endif
+            negatives_found = .true. ! TODO usage with substep might prevent crash
             call warn(msg)
          endif
       enddo
@@ -1562,6 +1605,11 @@ contains
 
       r = zero
 
+      ! Found here an FPE occuring in mcrwind/mcrwind_cresp
+      ! bins = [ 11, 12, 13, 14, 15 ]
+      ! q = [ 0, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, 4.922038984459582, -30 ]
+      ! five-q(bins) = 35, that seems to be a bit high power to apply carelessly
+
       where (abs(q(bins) - five) > eps)
          r_num = (p(bins)**(five-q(bins)) - p(bins-1)**(five-q(bins)))/(five - q(bins))
       elsewhere
@@ -1589,6 +1637,7 @@ contains
    subroutine ne_to_q(n, e, q, bins)
 
       use constants,       only: zero, I_ONE
+      use dataio_pub,      only: warn
       use cresp_NR_method, only: compute_q
       use cresp_variables, only: clight_cresp
       use initcosmicrays,  only: ncre
@@ -1609,6 +1658,9 @@ contains
          i = bins(i_active)
          if (e(i) > e_small .and. p(i-1) > zero) then
             exit_code = .true.
+            if (abs(n(i)) < 1e-300) call warn("[cresp_crspectrum:ne_to_q] 1/|n(i)| > 1e300")
+            ! n(i) of order 1e-100 does happen sometimes, but extreme values like 4.2346894890376292e-312 tend to create FPE in the line below
+            ! these could be uninitialized values
             alpha_in = e(i)/(n(i)*p(i-1)*clight_cresp)
             if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boudary case, when momenta are not approximated
                q(i) = compute_q(alpha_in, exit_code, p(i)/p(i-1))
@@ -1617,8 +1669,8 @@ contains
             endif
          else
             q(i) = zero
-        endif
-        if (exit_code) fail_count_comp_q(i) = fail_count_comp_q(i) + I_ONE
+         endif
+         if (exit_code) fail_count_comp_q(i) = fail_count_comp_q(i) + I_ONE
       enddo
 
    end subroutine ne_to_q
@@ -1860,7 +1912,7 @@ contains
             call die(msg)
       end select
    end subroutine p_rch_init
-!====================================================================================================
+!----------------------------------------------------------------------------------------------------
    subroutine transfer_quantities(take_from, give_to)
 
       use constants, only: zero

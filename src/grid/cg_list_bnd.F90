@@ -1064,64 +1064,64 @@ contains
 
       call ppp_main%stop(bb_label)
 
-      contains
+   contains
 
-         subroutine outflow_b(cg, dir, side)
+      subroutine outflow_b(cg, dir, side)
 
-            ! use global,                only: cc_mag
-            use grid_cont,             only: grid_container
+         ! use global,                only: cc_mag
+         use grid_cont,             only: grid_container
 
-            implicit none
+         implicit none
 
-            type(grid_container), pointer    :: cg
-            integer(kind=4),      intent(in) :: dir
-            integer(kind=4),      intent(in) :: side
+         type(grid_container), pointer    :: cg
+         integer(kind=4),      intent(in) :: dir
+         integer(kind=4),      intent(in) :: side
 
-            integer :: i, it
-            integer :: pm_one   !< +1 for LO and -1 for HI
-            integer :: pm_two   !< +2 for LO and -2 for HI
+         integer :: i, it
+         integer :: pm_one   !< +1 for LO and -1 for HI
+         integer :: pm_two   !< +2 for LO and -2 for HI
 
-            pm_one = I_THREE - I_TWO * side
-            pm_two = 2 * pm_one
+         pm_one = I_THREE - I_TWO * side
+         pm_two = 2 * pm_one
 
-            ! Apparently this is already written for cell-centered magnetic field.
+         ! Apparently this is already written for cell-centered magnetic field.
 
-            ! Simulations with Constrained Transport may exhibit slight assymetries because
-            ! rightmost face is reset here while leftmost is not. Use expressions like
-            !
-            !   it = cg%ijkse(dir, side) - pm_one * i + (side - LO)
-            !
-            ! when cc_mag is .false. in evaluation of dir-component of magnetic field
-            ! for more strict external boundary treatment.
+         ! Simulations with Constrained Transport may exhibit slight assymetries because
+         ! rightmost face is reset here while leftmost is not. Use expressions like
+         !
+         !   it = cg%ijkse(dir, side) - pm_one * i + (side - LO)
+         !
+         ! when cc_mag is .false. in evaluation of dir-component of magnetic field
+         ! for more strict external boundary treatment.
 
-            ! BEWARE: this kind of boundaries does not guarantee div(B) == 0 .
-            ! Expect div(B) growing proportionally to the distance from the domain boundary.
+         ! BEWARE: this kind of boundaries does not guarantee div(B) == 0 .
+         ! Expect div(B) growing proportionally to the distance from the domain boundary.
 
-            select case (dir)
-               case (xdim)
-                  do i = 1, dom%nb
-                     it = cg%ijkse(dir, side) - pm_one * i
-                     cg%b(xdim, it, :, :) = 2.0 * cg%b(xdim, it + pm_one, :, :) - cg%b(xdim, it + pm_two, :, :)
-                     cg%b(ydim, it, :, :) = cg%b(ydim, it + pm_one, :, :)
-                     cg%b(zdim, it, :, :) = cg%b(zdim, it + pm_one, :, :)
-                  enddo
-               case (ydim)
-                  do i = 1, dom%nb
-                     it = cg%ijkse(dir, side) - pm_one * i
-                     cg%b(ydim, :, it, :) = 2.0 * cg%b(ydim, :, it + pm_one, :) - cg%b(ydim, :, it + pm_two, :)
-                     cg%b(xdim, :, it, :) = cg%b(xdim, :, it + pm_one, :)
-                     cg%b(zdim, :, it, :) = cg%b(zdim, :, it + pm_one, :)
-                  enddo
-               case (zdim)
-                  do i = 1, dom%nb
-                     it = cg%ijkse(dir, side) - pm_one * i
-                     cg%b(zdim, :, :, it) = 2.0 * cg%b(zdim, :, :, it + pm_one) - cg%b(zdim, :, :, it + pm_two)
-                     cg%b(xdim, :, :, it) = cg%b(xdim, :, :, it + pm_one)
-                     cg%b(ydim, :, :, it) = cg%b(ydim, :, :, it + pm_one)
-                  enddo
-            end select
+         select case (dir)
+            case (xdim)
+               do i = 1, dom%nb
+                  it = cg%ijkse(dir, side) - pm_one * i
+                  cg%b(xdim, it, :, :) = 2.0 * cg%b(xdim, it + pm_one, :, :) - cg%b(xdim, it + pm_two, :, :)
+                  cg%b(ydim, it, :, :) = cg%b(ydim, it + pm_one, :, :)
+                  cg%b(zdim, it, :, :) = cg%b(zdim, it + pm_one, :, :)
+               enddo
+            case (ydim)
+               do i = 1, dom%nb
+                  it = cg%ijkse(dir, side) - pm_one * i
+                  cg%b(ydim, :, it, :) = 2.0 * cg%b(ydim, :, it + pm_one, :) - cg%b(ydim, :, it + pm_two, :)
+                  cg%b(xdim, :, it, :) = cg%b(xdim, :, it + pm_one, :)
+                  cg%b(zdim, :, it, :) = cg%b(zdim, :, it + pm_one, :)
+               enddo
+            case (zdim)
+               do i = 1, dom%nb
+                  it = cg%ijkse(dir, side) - pm_one * i
+                  cg%b(zdim, :, :, it) = 2.0 * cg%b(zdim, :, :, it + pm_one) - cg%b(zdim, :, :, it + pm_two)
+                  cg%b(xdim, :, :, it) = cg%b(xdim, :, :, it + pm_one)
+                  cg%b(ydim, :, :, it) = cg%b(ydim, :, :, it + pm_one)
+               enddo
+         end select
 
-         end subroutine outflow_b
+      end subroutine outflow_b
 
    end subroutine bnd_b
 

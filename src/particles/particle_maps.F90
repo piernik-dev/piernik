@@ -187,8 +187,8 @@ contains
                   enddo
                enddo
 
-             end associate
-             pset => pset%nxt
+            end associate
+            pset => pset%nxt
          enddo
 
          cgl => cgl%nxt
@@ -259,9 +259,9 @@ contains
                       enddo
                   enddo
                enddo
-             end associate
-             pset => pset%nxt
-          enddo
+            end associate
+            pset => pset%nxt
+         enddo
          cgl => cgl%nxt
       enddo
 
@@ -273,7 +273,7 @@ contains
 !>
 !! \brief Quadratic spline interpolation
 !<
-    function quadratic_spline(f, dp, ijkp) result(gp)
+   function quadratic_spline(f, dp, ijkp) result(gp)
 
       use constants, only: xdim, ydim, zdim, IM, I0, IP, ndims
       use domain,    only: dom
@@ -334,6 +334,7 @@ contains
                                             f(ijkp(xdim)+dom%D_(xdim),ijkp(ydim)-dom%D_(ydim),ijkp(zdim)             ,:)*fac(ydim, IM) ) + &
               fac(zdim, I0)*fac(xdim, IM)*( f(ijkp(xdim)-dom%D_(xdim),ijkp(ydim)+dom%D_(ydim),ijkp(zdim)             ,:)*fac(ydim, IP) + &
                                             f(ijkp(xdim)-dom%D_(xdim),ijkp(ydim)-dom%D_(ydim),ijkp(zdim)             ,:)*fac(ydim, IM) )
-    end function quadratic_spline
+
+   end function quadratic_spline
 
 end module particle_maps

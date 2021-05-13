@@ -189,184 +189,204 @@ module fluidtypes
 
 contains
 
-      subroutine update_adiabatic_index(this,new_gamma)
-         use dataio_pub, only: warn
-         implicit none
-         class(component_fluid) :: this
-         real, intent(in)       :: new_gamma
+   subroutine update_adiabatic_index(this,new_gamma)
 
-         if (.not.this%has_energy) then
-            call warn("Fluid does not have energy component")
-            call warn("Updating gamma does not make much sense o.O")
-         endif
-         this%gam   = new_gamma
-         this%gam_1 = new_gamma-1.0
-      end subroutine update_adiabatic_index
+      use dataio_pub, only: warn
 
-      subroutine update_freezing_speed(this, new_c)
-         implicit none
-         class(component_fluid) :: this
-         real, intent(in)       :: new_c
+      implicit none
 
-         this%c_old = this%c
-         this%c     = new_c
-      end subroutine update_freezing_speed
+      class(component_fluid) :: this
+      real, intent(in)       :: new_gamma
 
-      subroutine reset_freezing_speed(this)
-         implicit none
-         class(component_fluid) :: this
+      if (.not.this%has_energy) then
+         call warn("Fluid does not have energy component")
+         call warn("Updating gamma does not make much sense o.O")
+      endif
+      this%gam   = new_gamma
+      this%gam_1 = new_gamma-1.0
 
-         this%c     = this%c_old
-      end subroutine reset_freezing_speed
+   end subroutine update_adiabatic_index
 
-      subroutine update_sound_speed(this,new_cs)
-         implicit none
-         class(component_fluid) :: this
-         real, intent(in)       :: new_cs
+   subroutine update_freezing_speed(this, new_c)
 
-         this%cs  = new_cs
-         this%cs2 = new_cs**2
-      end subroutine update_sound_speed
+      implicit none
 
-      subroutine printinfo_component_fluid(this)
-         use dataio_pub,  only: msg, printinfo
-         implicit none
-         class(component_fluid), intent(in) :: this
+      class(component_fluid) :: this
+      real, intent(in)       :: new_c
 
-         write(msg,*) "idn   = ", this%idn;     call printinfo(msg)
-         write(msg,*) "imx   = ", this%imx;     call printinfo(msg)
-         write(msg,*) "imy   = ", this%imy;     call printinfo(msg)
-         write(msg,*) "imz   = ", this%imz;     call printinfo(msg)
-         write(msg,*) "ien   = ", this%ien;     call printinfo(msg)
+      this%c_old = this%c
+      this%c     = new_c
 
-         write(msg,*) "cs    = ", this%cs;      call printinfo(msg)
-         write(msg,*) "cs2   = ", this%cs2;     call printinfo(msg)
-         write(msg,*) "gam   = ", this%gam;     call printinfo(msg)
-         write(msg,*) "gam_1 = ", this%gam_1;   call printinfo(msg)
+   end subroutine update_freezing_speed
 
-         if (this%is_selfgrav) then
-            write(msg,*) "Fluid is selfgravitating"; call printinfo(msg)
-         endif
-         if (this%is_magnetized) then
-            write(msg,*) "Fluid is magnetized";      call printinfo(msg)
-         endif
-         if (this%has_energy) then
-            write(msg,*) "Fluid has energy";         call printinfo(msg)
-         endif
-         write(msg,*) "TAG   = ", this%tag;     call printinfo(msg)
+   subroutine reset_freezing_speed(this)
 
-      end subroutine printinfo_component_fluid
+      implicit none
+
+      class(component_fluid) :: this
+
+      this%c     = this%c_old
+
+   end subroutine reset_freezing_speed
+
+   subroutine update_sound_speed(this,new_cs)
+
+      implicit none
+
+      class(component_fluid) :: this
+      real, intent(in)       :: new_cs
+
+      this%cs  = new_cs
+      this%cs2 = new_cs**2
+
+   end subroutine update_sound_speed
+
+   subroutine printinfo_component_fluid(this)
+
+      use dataio_pub,  only: msg, printinfo
+
+      implicit none
+
+      class(component_fluid), intent(in) :: this
+
+      write(msg,*) "idn   = ", this%idn;     call printinfo(msg)
+      write(msg,*) "imx   = ", this%imx;     call printinfo(msg)
+      write(msg,*) "imy   = ", this%imy;     call printinfo(msg)
+      write(msg,*) "imz   = ", this%imz;     call printinfo(msg)
+      write(msg,*) "ien   = ", this%ien;     call printinfo(msg)
+
+      write(msg,*) "cs    = ", this%cs;      call printinfo(msg)
+      write(msg,*) "cs2   = ", this%cs2;     call printinfo(msg)
+      write(msg,*) "gam   = ", this%gam;     call printinfo(msg)
+      write(msg,*) "gam_1 = ", this%gam_1;   call printinfo(msg)
+
+      if (this%is_selfgrav) then
+         write(msg,*) "Fluid is selfgravitating"; call printinfo(msg)
+      endif
+      if (this%is_magnetized) then
+         write(msg,*) "Fluid is magnetized";      call printinfo(msg)
+      endif
+      if (this%has_energy) then
+         write(msg,*) "Fluid has energy";         call printinfo(msg)
+      endif
+      write(msg,*) "TAG   = ", this%tag;     call printinfo(msg)
+
+   end subroutine printinfo_component_fluid
 
 !>
 !! \deprecated repeated magic integers
 !<
-      subroutine set_fluid_index(this, flind, is_magnetized, is_selfgrav, has_energy, cs_iso, gamma_, tag)
+   subroutine set_fluid_index(this, flind, is_magnetized, is_selfgrav, has_energy, cs_iso, gamma_, tag)
 
-         use constants,   only: xdim, ydim, zdim, ndims, I_ONE, ION, NEU, DST, cbuff_len
-         use dataio_pub,  only: msg, printinfo
-         use diagnostics, only: ma1d, ma2d, my_allocate
-         use mpisetup,    only: master
+      use constants,   only: xdim, ydim, zdim, ndims, I_ONE, ION, NEU, DST, cbuff_len
+      use dataio_pub,  only: msg, printinfo
+      use diagnostics, only: ma1d, ma2d, my_allocate
+      use mpisetup,    only: master
 
-         implicit none
+      implicit none
 
-         class(component_fluid), intent(inout) :: this
-         type(var_numbers),      intent(inout) :: flind
+      class(component_fluid), intent(inout) :: this
+      type(var_numbers),      intent(inout) :: flind
 
-         logical,                intent(in)    :: is_selfgrav, is_magnetized, has_energy
-         real,                   intent(in)    :: cs_iso, gamma_
-         integer(kind=4)                       :: tag
-         character(len=cbuff_len)              :: aux
+      logical,                intent(in)    :: is_selfgrav, is_magnetized, has_energy
+      real,                   intent(in)    :: cs_iso, gamma_
+      integer(kind=4)                       :: tag
+      character(len=cbuff_len)              :: aux
 
-         this%beg    = flind%all + I_ONE
+      this%beg    = flind%all + I_ONE
 
-         this%idn = this%beg
-         this%imx = this%idn + I_ONE
-         this%imy = this%imx + I_ONE
-         this%imz = this%imy + I_ONE
+      this%idn = this%beg
+      this%imx = this%idn + I_ONE
+      this%imy = this%imx + I_ONE
+      this%imz = this%imy + I_ONE
 
-         this%all  = 4
-         flind%all      = this%imz
-         if (has_energy) then
-            flind%all = flind%all + I_ONE
+      this%all  = 4
+      flind%all      = this%imz
+      if (has_energy) then
+         flind%all = flind%all + I_ONE
 
-            this%ien  = this%imz + I_ONE
-            this%all  = this%all + I_ONE
-         endif
+         this%ien  = this%imz + I_ONE
+         this%all  = this%all + I_ONE
+      endif
 
-         ma1d = [this%all]
-         call my_allocate(this%iarr,     ma1d)
-         ma2d = [ndims, this%all]
-         call my_allocate(this%iarr_swp, ma2d)
+      ma1d = [this%all]
+      call my_allocate(this%iarr,     ma1d)
+      ma2d = [ndims, this%all]
+      call my_allocate(this%iarr_swp, ma2d)
 
-         this%iarr(1:4)           = [this%idn, this%imx, this%imy, this%imz]
-         this%iarr_swp(xdim, 1:4) = [this%idn, this%imx, this%imy, this%imz]
-         this%iarr_swp(ydim, 1:4) = [this%idn, this%imy, this%imx, this%imz]
-         this%iarr_swp(zdim, 1:4) = [this%idn, this%imz, this%imy, this%imx]
+      this%iarr(1:4)           = [this%idn, this%imx, this%imy, this%imz]
+      this%iarr_swp(xdim, 1:4) = [this%idn, this%imx, this%imy, this%imz]
+      this%iarr_swp(ydim, 1:4) = [this%idn, this%imy, this%imx, this%imz]
+      this%iarr_swp(zdim, 1:4) = [this%idn, this%imz, this%imy, this%imx]
 
-         if (has_energy) then
-            this%iarr(5)       = this%ien
-            this%iarr_swp(:,5) = this%ien
+      if (has_energy) then
+         this%iarr(5)       = this%ien
+         this%iarr_swp(:,5) = this%ien
 
-            flind%energ = flind%energ + I_ONE
-         endif
+         flind%energ = flind%energ + I_ONE
+      endif
 
-         this%end    = flind%all
-         flind%components = flind%components + I_ONE
-         flind%fluids     = flind%fluids + I_ONE
-         this%pos    = flind%components
-         if (is_selfgrav)  flind%fluids_sg = flind%fluids_sg + I_ONE
+      this%end    = flind%all
+      flind%components = flind%components + I_ONE
+      flind%fluids     = flind%fluids + I_ONE
+      this%pos    = flind%components
+      if (is_selfgrav)  flind%fluids_sg = flind%fluids_sg + I_ONE
 
-         this%gam   = gamma_
-         this%gam_1 = gamma_ - 1.0
-         this%cs    = cs_iso
-         this%cs2   = cs_iso**2
-         this%tag   = tag
+      this%gam   = gamma_
+      this%gam_1 = gamma_ - 1.0
+      this%cs    = cs_iso
+      this%cs2   = cs_iso**2
+      this%tag   = tag
 
-         this%has_energy    = has_energy
-         this%is_selfgrav   = is_selfgrav
-         this%is_magnetized = is_magnetized
+      this%has_energy    = has_energy
+      this%is_selfgrav   = is_selfgrav
+      this%is_magnetized = is_magnetized
 
-         msg = "Registered"
-         select case (tag)
-            case (ION)
-               msg = trim(msg) // " ionized"
-            case (NEU)
-               msg = trim(msg) // " neutral"
-            case (DST)
-               msg = trim(msg) // " dust"
-            case default
-               msg = trim(msg) // " unknown"
-         end select
-         msg = trim(msg) // " fluid:"
-         write(aux, '(A,F7.4)') " gamma = ", gamma_
+      msg = "Registered"
+      select case (tag)
+         case (ION)
+            msg = trim(msg) // " ionized"
+         case (NEU)
+            msg = trim(msg) // " neutral"
+         case (DST)
+            msg = trim(msg) // " dust"
+         case default
+            msg = trim(msg) // " unknown"
+      end select
+      msg = trim(msg) // " fluid:"
+      write(aux, '(A,F7.4)') " gamma = ", gamma_
+      msg = trim(msg) // aux
+      if (is_magnetized) msg = trim(msg) // ", magnetized"
+      if (is_selfgrav) msg = trim(msg) // ", selfgravitating"
+      if (has_energy) then
+         msg = trim(msg) // ", with energy"
+      else
+         msg = trim(msg) // ", isothermal with c_sound = "
+         write(aux, '(G10.2)') cs_iso
          msg = trim(msg) // aux
-         if (is_magnetized) msg = trim(msg) // ", magnetized"
-         if (is_selfgrav) msg = trim(msg) // ", selfgravitating"
-         if (has_energy) then
-            msg = trim(msg) // ", with energy"
-         else
-            msg = trim(msg) // ", isothermal with c_sound = "
-            write(aux, '(G10.2)') cs_iso
-            msg = trim(msg) // aux
-         endif
+      endif
 
-         if (master) call printinfo(msg)
+      if (master) call printinfo(msg)
 
-      end subroutine set_fluid_index
+   end subroutine set_fluid_index
 
 !>
 !! \brief returns True value if any fluid is selfgravitating
 !<
-      function any_fluid_is_selfgrav(this) result(tf)
-         implicit none
-         class(var_numbers), intent(in) :: this
-         logical :: tf
-         integer :: ifl
+   function any_fluid_is_selfgrav(this) result(tf)
 
-         tf = .false.
-         do ifl = lbound(this%all_fluids, 1), ubound(this%all_fluids, 1)
-            tf = tf .or. this%all_fluids(ifl)%fl%is_selfgrav
-         enddo
-      end function any_fluid_is_selfgrav
+      implicit none
+
+      class(var_numbers), intent(in) :: this
+
+      logical :: tf
+      integer :: ifl
+
+      tf = .false.
+      do ifl = lbound(this%all_fluids, 1), ubound(this%all_fluids, 1)
+         tf = tf .or. this%all_fluids(ifl)%fl%is_selfgrav
+      enddo
+
+   end function any_fluid_is_selfgrav
 
 end module fluidtypes

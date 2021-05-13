@@ -45,7 +45,7 @@ module cg_level_connected
       integer(kind=4)                     :: ord_prolong_set  !< Number of boundary cells for prolongation used in last update of cg_level_connected_t%vertical_prep
       logical, private                    :: need_vb_update   !< If .true. then execute vertical_b_prep
 
-    contains
+   contains
 
       ! Level management
       procedure :: init_level                 !< common initialization for base level and other levels
@@ -817,28 +817,28 @@ contains
          enddo
       endif
 
-    contains
+   contains
 
       integer function guess_dir(se) result(dir)
 
-        use constants,  only: LO, HI, xdim, zdim, INVALID
-        use dataio_pub, only: die
-        use domain,     only: dom
+         use constants,  only: LO, HI, xdim, zdim, INVALID
+         use dataio_pub, only: die
+         use domain,     only: dom
 
-        implicit none
+         implicit none
 
-        integer(kind=8), dimension(xdim:zdim, LO:HI) :: se
+         integer(kind=8), dimension(xdim:zdim, LO:HI) :: se
 
-        integer :: d
+         integer :: d
 
-        dir = INVALID
-        do d = xdim, zdim
-           if (dom%has_dir(d) .and. se(d, HI) == se(d, LO)) then
-              if (dir /= INVALID) call die("[cg_level_connected:vertical_bf_prep:guess_dir] point-like?")
-              dir = d
-           endif
-        enddo
-        if (dir == INVALID) call die("[cg_level_connected:vertical_bf_prep:guess_dir] undefined direction?")
+         dir = INVALID
+         do d = xdim, zdim
+            if (dom%has_dir(d) .and. se(d, HI) == se(d, LO)) then
+               if (dir /= INVALID) call die("[cg_level_connected:vertical_bf_prep:guess_dir] point-like?")
+               dir = d
+            endif
+         enddo
+         if (dir == INVALID) call die("[cg_level_connected:vertical_bf_prep:guess_dir] undefined direction?")
 
       end function guess_dir
 

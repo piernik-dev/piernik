@@ -454,7 +454,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-    end subroutine q_lin_comb
+   end subroutine q_lin_comb
 
 !>
 !! \brief Compute the average value over a list and subtract it

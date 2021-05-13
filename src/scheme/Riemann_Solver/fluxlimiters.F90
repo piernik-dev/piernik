@@ -209,6 +209,6 @@ contains
               merge(min(abs(dlft), abs(two*drgt)), min(abs(two*dlft), abs(drgt)), abs(dlft) > abs(drgt))
       enddo
 
-    end function slope_limiter_superbee
+   end function slope_limiter_superbee
 
 end module fluxlimiters

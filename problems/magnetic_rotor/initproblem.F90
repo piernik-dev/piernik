@@ -55,44 +55,44 @@
 
 module initproblem
 
-  implicit none
+   implicit none
 
-  private
-  public :: read_problem_par, problem_initial_conditions, problem_pointers
+   private
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-  real   :: omega, r0, r1, uni_pres, Bx
+   real   :: omega, r0, r1, uni_pres, Bx
 
-  namelist /PROBLEM_CONTROL/ omega, r0, r1, uni_pres, Bx
+   namelist /PROBLEM_CONTROL/ omega, r0, r1, uni_pres, Bx
 
 contains
 
 !-------------------------------------------------------------------------------------------
 
-  subroutine problem_pointers
+   subroutine problem_pointers
 
-    implicit none
+      implicit none
 
-  end subroutine problem_pointers
+   end subroutine problem_pointers
 
 !-------------------------------------------------------------------------------------------
 
-  subroutine read_problem_par
+   subroutine read_problem_par
 
-    use dataio_pub, only: nh
-    use mpisetup,  only: rbuff, master, slave, PIERNIK_MPI_Bcast
-    use constants,  only: pi
+      use dataio_pub, only: nh
+      use mpisetup,  only: rbuff, master, slave, PIERNIK_MPI_Bcast
+      use constants,  only: pi
 
-    implicit none
+      implicit none
 
-    omega    = 20.0
-    r0       = 0.1
-    r1       = 0.115
-    uni_pres = 1.0
-    Bx       = 5.0/sqrt(4.0*pi)
+      omega    = 20.0
+      r0       = 0.1
+      r1       = 0.115
+      uni_pres = 1.0
+      Bx       = 5.0/sqrt(4.0*pi)
 
-    if (master) then
+      if (master) then
 
-       if (.not.nh%initialized) call nh%init()
+         if (.not.nh%initialized) call nh%init()
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
          write(nh%lun,nml=PROBLEM_CONTROL)
          close(nh%lun)
@@ -114,109 +114,109 @@ contains
          rbuff(4) = uni_pres
          rbuff(5) = Bx
 
-    endif
+      endif
 
-    call piernik_MPI_Bcast(rbuff)
+      call piernik_MPI_Bcast(rbuff)
 
-    if (slave) then
+      if (slave) then
 
-       omega    = rbuff(1)
-       r0       = rbuff(2)
-       r1       = rbuff(3)
-       uni_pres = rbuff(4)
-       Bx       = rbuff(5)
+         omega    = rbuff(1)
+         r0       = rbuff(2)
+         r1       = rbuff(3)
+         uni_pres = rbuff(4)
+         Bx       = rbuff(5)
 
-    endif
+      endif
 
-  end subroutine read_problem_par
+   end subroutine read_problem_par
 
 !-------------------------------------------------------------------------------------------
 
-  subroutine problem_initial_conditions
+   subroutine problem_initial_conditions
 
-    use cg_leaves,   only: leaves
-    use cg_list,     only: cg_list_element
-    use constants,   only: xdim, ydim, zdim, one, zero
-    use grid_cont,   only: grid_container
-    use fluidindex,  only: flind
-    use fluidtypes,  only: component_fluid
-    use func,        only: ekin, emag
+      use cg_leaves,   only: leaves
+      use cg_list,     only: cg_list_element
+      use constants,   only: xdim, ydim, zdim, one, zero
+      use grid_cont,   only: grid_container
+      use fluidindex,  only: flind
+      use fluidtypes,  only: component_fluid
+      use func,        only: ekin, emag
 !    use global,      only: cc_mag
 
-    implicit none
+      implicit none
 
-    type(cg_list_element),  pointer :: cgl
-    type(grid_container),   pointer :: cg
-    class(component_fluid), pointer :: fl
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
+      class(component_fluid), pointer :: fl
 
-    integer                         :: i,j,k
-    real                            :: f_taper, r0_r
+      integer                         :: i,j,k
+      real                            :: f_taper, r0_r
 
-    fl  => flind%ion
-    cgl => leaves%first
-    do while (associated(cgl))
-       cg => cgl%cg
+      fl  => flind%ion
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
 
-       call cg%set_constant_b_field([0., 0., 0.])
+         call cg%set_constant_b_field([0., 0., 0.])
 
-       do k = cg%ks, cg%ke
-          do j = cg%js, cg%je
-             do i = cg%is, cg%ie
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
 
-                ! r = sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) )
+                  ! r = sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) )
 
-                f_taper = ( r1 - sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) ) )/( r1 - r0 )
-                r0_r    = r0/sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) )
+                  f_taper = ( r1 - sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) ) )/( r1 - r0 )
+                  r0_r    = r0/sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) )
 
-                if ( sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) ) <= r0 ) then ! r <= r0
+                  if ( sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) ) <= r0 ) then ! r <= r0
 
-                   ! Density
-                   cg%u(fl%idn,i,j,k) = 10.0
-                   ! Velocity
-                   cg%u(fl%imx,i,j,k) = -omega*cg%y(j) * cg%u(fl%idn,i,j,k)
-                   cg%u(fl%imy,i,j,k) =  omega*cg%x(i) * cg%u(fl%idn,i,j,k)
-                   cg%u(fl%imz,i,j,k) = zero
+                     ! Density
+                     cg%u(fl%idn,i,j,k) = 10.0
+                     ! Velocity
+                     cg%u(fl%imx,i,j,k) = -omega*cg%y(j) * cg%u(fl%idn,i,j,k)
+                     cg%u(fl%imy,i,j,k) =  omega*cg%x(i) * cg%u(fl%idn,i,j,k)
+                     cg%u(fl%imz,i,j,k) = zero
 
-                else if ( sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) ) < r1 ) then ! r< r1
+                  else if ( sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) ) < r1 ) then ! r< r1
 
-                   ! Density
-                   cg%u(fl%idn,i,j,k) = one + 9.0*f_taper
-                   ! Velocity
-                   cg%u(fl%imx,i,j,k) = -f_taper*omega*cg%y(j)*r0_r * cg%u(fl%idn,i,j,k)
-                   cg%u(fl%imy,i,j,k) =  f_taper*omega*cg%x(i)*r0_r * cg%u(fl%idn,i,j,k)
-                   cg%u(fl%imz,i,j,k) = zero
+                     ! Density
+                     cg%u(fl%idn,i,j,k) = one + 9.0*f_taper
+                     ! Velocity
+                     cg%u(fl%imx,i,j,k) = -f_taper*omega*cg%y(j)*r0_r * cg%u(fl%idn,i,j,k)
+                     cg%u(fl%imy,i,j,k) =  f_taper*omega*cg%x(i)*r0_r * cg%u(fl%idn,i,j,k)
+                     cg%u(fl%imz,i,j,k) = zero
 
-                else ! r > r1
+                  else ! r > r1
 
-                   ! Density
-                   cg%u(fl%idn,i,j,k) = 1.0
-                   ! Velocity
-                   cg%u(fl%imx,i,j,k) = zero
-                   cg%u(fl%imy,i,j,k) = zero
-                   cg%u(fl%imz,i,j,k) = zero
+                     ! Density
+                     cg%u(fl%idn,i,j,k) = 1.0
+                     ! Velocity
+                     cg%u(fl%imx,i,j,k) = zero
+                     cg%u(fl%imy,i,j,k) = zero
+                     cg%u(fl%imz,i,j,k) = zero
 
-                endif
+                  endif
 
-                ! Pressure/Energy
-                cg%u(fl%ien,i,j,k) = uni_pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
-                                             emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+                  ! Pressure/Energy
+                  cg%u(fl%ien,i,j,k) = uni_pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
+                       &               emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 
-                !if (cc_mag) then
+                  !if (cc_mag) then
 
-                    cg%b(xdim,i,j,k) = Bx
-                    cg%b(ydim,i,j,k) = zero
-                    cg%b(zdim,i,j,k) = zero
+                  cg%b(xdim,i,j,k) = Bx
+                  cg%b(ydim,i,j,k) = zero
+                  cg%b(zdim,i,j,k) = zero
 
-                !endif
-                ! For CT, with face-centered A_{z} = Bx*y
+                  !endif
+                  ! For CT, with face-centered A_{z} = Bx*y
 
-             enddo
-          enddo
-       enddo
+               enddo
+            enddo
+         enddo
 
-       cgl => cgl%nxt
-    enddo
+         cgl => cgl%nxt
+      enddo
 
-  end subroutine problem_initial_conditions
+   end subroutine problem_initial_conditions
 
 end module initproblem

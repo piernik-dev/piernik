@@ -81,7 +81,7 @@ module domain
       integer                   :: eff_dim      !< effective dimensionality of the simulation (count(has_dir))
       integer(kind=8), dimension(ndims) :: off  !< offset of the base level
 
-    contains
+   contains
 
       procedure :: translate_bnds_to_ints     !< Convert strings to integer-coded boundary types
       procedure :: print_me                   !< Print computational domain details
@@ -181,9 +181,9 @@ contains
    subroutine init_domain
 
       use constants,  only: xdim, zdim, ndims, LO, HI, PIERNIK_INIT_MPI, I_ONE, I_ZERO, INVALID
-      use dataio_pub, only: die,  code_progress
-      use dataio_pub, only: nh  ! QA_WARN required for diff_nml
+      use dataio_pub, only: die,  code_progress, nh
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
+
       implicit none
 
       real, dimension(ndims, LO:HI)     :: edges

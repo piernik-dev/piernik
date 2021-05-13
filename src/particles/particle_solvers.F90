@@ -155,35 +155,34 @@ contains
       return
       if (forward) return ! suppress compiler warnings
 
-      contains
+   contains
 
-         subroutine write_diagnostics(mass, pos, vel, acc, jerk, n, t, epot, nsteps, einit, init_flag)
+      subroutine write_diagnostics(mass, pos, vel, acc, jerk, n, t, epot, nsteps, einit, init_flag)
 
-            implicit none
+         implicit none
 
-            integer,                   intent(in)    :: n, nsteps
-            real, dimension(n),        intent(in)    :: mass
-            real, dimension(n, ndims), intent(in)    :: pos, vel, acc, jerk
-            real,                      intent(in)    :: t, epot
-            real,                      intent(inout) :: einit
-            logical,                   intent(in)    :: init_flag
+         integer,                   intent(in)    :: n, nsteps
+         real, dimension(n),        intent(in)    :: mass
+         real, dimension(n, ndims), intent(in)    :: pos, vel, acc, jerk
+         real,                      intent(in)    :: t, epot
+         real,                      intent(inout) :: einit
+         logical,                   intent(in)    :: init_flag
 
-            real :: ekin, etot
+         real :: ekin, etot
 
-            ekin = sum(0.5 * mass(:) * sum(vel(:,:)**2, dim=2))
-            etot = ekin + epot
+         ekin = sum(0.5 * mass(:) * sum(vel(:,:)**2, dim=2))
+         etot = ekin + epot
 
-            if (init_flag) einit = etot  ! at first pass, pass the initial energy back to the calling function
+         if (init_flag) einit = etot  ! at first pass, pass the initial energy back to the calling function
 
-            write(lun_err, *) "at time t = ", t, " , after ", nsteps, " steps :"
-            write(lun_err, *) " E_kin = ", ekin, " , E_pot = ", epot, &
-               & " , E_tot = ", etot
-            write(lun_err, *) "                absolute energy error: E_tot - E_init = ", etot - einit
-            write(lun_err, *) "                relative energy error: (E_tot - E_init) / E_init = ", (etot - einit) / einit
+         write(lun_err, *) "at time t = ", t, " , after ", nsteps, " steps :"
+         write(lun_err, *) " E_kin = ", ekin, " , E_pot = ", epot, " , E_tot = ", etot
+         write(lun_err, *) "                absolute energy error: E_tot - E_init = ", etot - einit
+         write(lun_err, *) "                relative energy error: (E_tot - E_init) / E_init = ", (etot - einit) / einit
 
-            if (.false.) write(lun_err, *) pos, acc, jerk ! suppress compiler warnings
+         if (.false.) write(lun_err, *) pos, acc, jerk ! suppress compiler warnings
 
-         end subroutine write_diagnostics
+      end subroutine write_diagnostics
 
    end subroutine hermit_4ord
 
@@ -213,48 +212,49 @@ contains
 
       t = t + dt
 
-      contains
+   contains
 
-         subroutine predict_step(pos, vel, acc, jerk, n, dt)
+      subroutine predict_step(pos, vel, acc, jerk, n, dt)
 
-            use constants, only: half, onesth
+         use constants, only: half, onesth
 
-            implicit none
+         implicit none
 
-            integer,                   intent(in)  :: n
-            real, dimension(n, ndims), intent(out) :: pos, vel
-            real, dimension(n, ndims), intent(in)  :: acc, jerk
-            real,                      intent(in)  :: dt
+         integer,                   intent(in)  :: n
+         real, dimension(n, ndims), intent(out) :: pos, vel
+         real, dimension(n, ndims), intent(in)  :: acc, jerk
+         real,                      intent(in)  :: dt
 
-            real                                   :: hdt, hdt2
+         real                                   :: hdt, hdt2
 
-            hdt  = half   * dt**2
-            hdt2 = onesth * dt**3
+         hdt  = half   * dt**2
+         hdt2 = onesth * dt**3
 
-            pos(:,:) = pos(:,:) + vel(:,:)*dt + acc(:,:)*hdt + jerk(:,:)*hdt2
-            vel(:,:) = vel(:,:) + acc(:,:)*dt + jerk(:,:)*hdt
+         pos(:,:) = pos(:,:) + vel(:,:)*dt + acc(:,:)*hdt + jerk(:,:)*hdt2
+         vel(:,:) = vel(:,:) + acc(:,:)*dt + jerk(:,:)*hdt
 
-         end subroutine predict_step
+      end subroutine predict_step
 
-         subroutine correct_step(pos, vel, acc, jerk, old_pos, old_vel, old_acc, old_jerk, n, dt)
+      subroutine correct_step(pos, vel, acc, jerk, old_pos, old_vel, old_acc, old_jerk, n, dt)
 
-            use constants, only: half, onet
+         use constants, only: half, onet
 
-            implicit none
+         implicit none
 
-            integer,                   intent(in)  :: n
-            real, dimension(n, ndims), intent(out) :: pos, vel
-            real, dimension(n, ndims), intent(in)  :: acc, jerk, old_pos, old_vel, old_acc, old_jerk
-            real,                      intent(in)  :: dt
+         integer,                   intent(in)  :: n
+         real, dimension(n, ndims), intent(out) :: pos, vel
+         real, dimension(n, ndims), intent(in)  :: acc, jerk, old_pos, old_vel, old_acc, old_jerk
+         real,                      intent(in)  :: dt
 
-            real                                   :: hdt, hdt2
+         real                                   :: hdt, hdt2
 
-            hdt  = half * dt
-            hdt2 = onet * hdt**2
+         hdt  = half * dt
+         hdt2 = onet * hdt**2
 
-            vel(:,:) = old_vel(:,:) + (old_acc(:,:) + acc(:,:))*hdt + (old_jerk(:,:) - jerk(:,:)) * hdt2
-            pos(:,:) = old_pos(:,:) + (old_vel(:,:) + vel(:,:))*hdt + (old_acc(:,:)  - acc(:,:) ) * hdt2
-         end subroutine correct_step
+         vel(:,:) = old_vel(:,:) + (old_acc(:,:) + acc(:,:))*hdt + (old_jerk(:,:) - jerk(:,:)) * hdt2
+         pos(:,:) = old_pos(:,:) + (old_vel(:,:) + vel(:,:))*hdt + (old_acc(:,:)  - acc(:,:) ) * hdt2
+
+      end subroutine correct_step
 
    end subroutine evolve_step
 
@@ -349,7 +349,7 @@ contains
             call update_particle_gravpot_and_acc
             call kick(dt)                        !3. kick
             call update_particle_kinetic_energy
-            call particle_diagnostics
+            call particle_diagnostics(.true.)
          endif
       else
          dt_kick = dt * half
@@ -358,69 +358,69 @@ contains
          call update_particle_gravpot_and_acc
          call kick(dt_kick)                   !3. kick
          call update_particle_kinetic_energy
-         call particle_diagnostics
+         call particle_diagnostics(.true.)
       endif
 
-      contains
+   contains
 
-         subroutine kick(kdt)
+      subroutine kick(kdt)
 
-            use particle_types, only: particle
+         use particle_types, only: particle
 
-            implicit none
+         implicit none
 
-            real, intent(in) :: kdt
-            type(particle), pointer        :: pset
+         real, intent(in) :: kdt
+         type(particle), pointer        :: pset
 
-            cgl => leaves%first
-            do while (associated(cgl))
-               pset => cgl%cg%pset%first
-               do while (associated(pset))
-                  pset%pdata%vel = pset%pdata%vel + pset%pdata%acc * kdt
-                  pset => pset%nxt
-               enddo
-               cgl => cgl%nxt
+         cgl => leaves%first
+         do while (associated(cgl))
+            pset => cgl%cg%pset%first
+            do while (associated(pset))
+               pset%pdata%vel = pset%pdata%vel + pset%pdata%acc * kdt
+               pset => pset%nxt
             enddo
+            cgl => cgl%nxt
+         enddo
 
-         end subroutine kick
+      end subroutine kick
 
-         subroutine drift(ddt)
+      subroutine drift(ddt)
 
-            use constants,      only: PPP_PART
-            use particle_utils, only: part_leave_cg, is_part_in_cg
-            use particle_types, only: particle
-            use ppp,            only: ppp_main
+         use constants,      only: PPP_PART
+         use particle_utils, only: part_leave_cg, is_part_in_cg
+         use particle_types, only: particle
+         use ppp,            only: ppp_main
 
-            implicit none
+         implicit none
 
-            real, intent(in)                  :: ddt
+         real, intent(in)                  :: ddt
 
-            type(particle), pointer        :: pset, pset2
-            character(len=*), parameter :: d_label = "part_drift"
+         type(particle), pointer        :: pset, pset2
+         character(len=*), parameter :: d_label = "part_drift"
 
-            call ppp_main%start(d_label, PPP_PART)
-            cgl => leaves%first
-            do while (associated(cgl))
-               pset => cgl%cg%pset%first
-               do while (associated(pset))
-                  !Remove ghosts
-                  if (.not. pset%pdata%phy) then
-                     pset2 => pset%nxt
-                     call cgl%cg%pset%remove(pset)
-                     pset => pset2
-                     cycle
-                  endif
-                  pset%pdata%pos = pset%pdata%pos + pset%pdata%vel * ddt
-                  call is_part_in_cg(cgl%cg, pset%pdata%pos, pset%pdata%in, pset%pdata%phy, pset%pdata%out)
-                  pset => pset%nxt
-               enddo
-               cgl => cgl%nxt
+         call ppp_main%start(d_label, PPP_PART)
+         cgl => leaves%first
+         do while (associated(cgl))
+            pset => cgl%cg%pset%first
+            do while (associated(pset))
+               !Remove ghosts
+               if (.not. pset%pdata%phy) then
+                  pset2 => pset%nxt
+                  call cgl%cg%pset%remove(pset)
+                  pset => pset2
+                  cycle
+               endif
+               pset%pdata%pos = pset%pdata%pos + pset%pdata%vel * ddt
+               call is_part_in_cg(cgl%cg, pset%pdata%pos, pset%pdata%in, pset%pdata%phy, pset%pdata%out)
+               pset => pset%nxt
             enddo
-            call ppp_main%stop(d_label, PPP_PART)
+            cgl => cgl%nxt
+         enddo
+         call ppp_main%stop(d_label, PPP_PART)
 
-            call part_leave_cg()
+         call part_leave_cg()
 
-         end subroutine drift
+      end subroutine drift
 
    end subroutine leapfrog_2ord
 

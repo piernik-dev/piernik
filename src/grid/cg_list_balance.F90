@@ -109,6 +109,9 @@ contains
 !! of few processes that were initially heavily loaded.
 !! The load is counted only on current level, so the load imbalance may add up across several levels.
 !!
+!! As it is hard to predict future cg cost, we better refrain from sophisticated
+!! load balancing here and wait until some performnce data is collected.
+!!
 !! Note that this routine is not intended for moving existing blocks between processes.
 !! A separate routine, called from cg_leaves::update will do that task when allowed and found worth the effort.
 !!
@@ -228,7 +231,7 @@ contains
       integer :: i
       integer(kind=4) :: p, ss, rls
       integer(kind=4), parameter :: nreq = 1
-      integer(kind=4), parameter :: tag_ls = 1, tag_gpt = tag_ls+1
+      integer(kind=4), parameter :: tag_ls = 1, tag_gpt = tag_ls + 1
 
       call inflate_req(nreq)
 

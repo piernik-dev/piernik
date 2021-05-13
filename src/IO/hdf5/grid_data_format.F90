@@ -1,5 +1,5 @@
 !
-! PIERNIK Code Copyright (C) 2006-2012 Michal Hanasz
+! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
 !    This file is part of PIERNIK code.
 !
@@ -50,7 +50,7 @@ module gdf
 
    ! grid geometry type
    enum, bind(C)
-       enumerator :: GDF_CARTESIAN = 0, GDF_POLAR, GDF_CYLINDRICAL, GDF_SPHERICAL
+      enumerator :: GDF_CARTESIAN = 0, GDF_POLAR, GDF_CYLINDRICAL, GDF_SPHERICAL
    end enum
 
    type :: gdf_parameters_t

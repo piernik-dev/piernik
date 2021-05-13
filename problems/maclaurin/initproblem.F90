@@ -88,8 +88,7 @@ contains
 
       use cg_list_global,        only: all_cg
       use constants,             only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
-      use dataio_pub,            only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,            only: die, warn, msg, printinfo
+      use dataio_pub,            only: die, warn, msg, printinfo, nh
       use domain,                only: dom
       use fluidindex,            only: iarr_all_dn
       use func,                  only: operator(.equals.)

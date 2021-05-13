@@ -106,8 +106,7 @@ contains
 
       use cg_list_global,   only: all_cg
       use constants,        only: BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF, xdim, ydim, zdim, GEO_XYZ, half, zero, one, VAR_CENTER, VAR_XFACE, VAR_YFACE, VAR_ZFACE, I_ONE
-      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,       only: die, warn, msg
+      use dataio_pub,       only: die, warn, msg, nh
       use domain,           only: dom
       use fluidindex,       only: flind
       use func,             only: operator(.notequals.)
@@ -788,7 +787,7 @@ contains
 
 !      call leaves%check_dirty(def, "res def")
 
-     call ppp_main%stop(crr_label, PPP_MG + PPP_CR)
+      call ppp_main%stop(crr_label, PPP_MG + PPP_CR)
 
    end subroutine residual
 

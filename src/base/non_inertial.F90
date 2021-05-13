@@ -47,11 +47,10 @@ contains
 
    subroutine init_non_inertial
 
-      use dataio_pub, only: nh    ! QA_WARN required for diff_nml
-      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
       use constants,  only: PIERNIK_INIT_GRID, GEO_XYZ
-      use dataio_pub, only: die, code_progress
+      use dataio_pub, only: die, code_progress, nh
       use domain,     only: dom
+      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
 #ifdef VERBOSE
       use dataio_pub, only: printinfo
 #endif /* VERBOSE */

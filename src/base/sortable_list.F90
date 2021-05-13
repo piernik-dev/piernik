@@ -105,19 +105,12 @@ contains
 
    subroutine sort(this)
 
-#ifdef DEBUG
-      use dataio_pub, only: msg, warn, die
-#endif /* DEBUG */
-
       implicit none
 
       class(sortable_list_t), intent(inout) :: this
 
       integer :: g, i, j
       integer :: lb, ub
-#ifdef DEBUG
-      logical :: fail
-#endif /* DEBUG */
 
       lb = this%l_bound()
       ub = this%u_bound()
@@ -146,15 +139,7 @@ contains
       enddo
 
 #ifdef DEBUG
-      fail = .false.
-      do i = lb, ub - 1
-         if (this%compare_elements(i, i+1)) then
-            write(msg,*)"this%list(",i+1,") < this%list(",i,")%id"
-            call warn(msg)
-            fail = .true.
-         endif
-      enddo
-      if (fail) call die("[sortable_list:sort] failed")
+      call check
 #endif /* DEBUG */
 
    contains
@@ -174,6 +159,28 @@ contains
          tokuda = ceiling(0.8 * (2.25**k - 1.)) ! == ceiling((9**k-4**k)/(5.*4**(k-1)))
 
       end function tokuda
+
+      !> \brief Check if our sorting was performed correctly
+
+      subroutine check
+
+         use dataio_pub, only: msg, warn, die
+
+         implicit none
+
+         logical :: fail
+
+         fail = .false.
+         do i = this%l_bound(), this%u_bound() - 1
+            if (this%compare_elements(i, i+1)) then
+               write(msg,*)"this%list(", i+1, ") < this%list(", i, ")%id"
+               call warn(msg)
+               fail = .true.
+            endif
+         enddo
+         if (fail) call die("[sortable_list:sort] failed")
+
+      end subroutine check
 
    end subroutine sort
 

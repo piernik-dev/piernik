@@ -103,7 +103,7 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: AT_NO_B
-      use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,     only: nh
       use mpisetup,       only: rbuff, cbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none

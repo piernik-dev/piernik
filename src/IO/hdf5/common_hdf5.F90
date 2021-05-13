@@ -430,7 +430,7 @@ contains
                endif
             case default
                call warn("[common_hdf5:common_shortcuts] cannot assign fluid to '" // trim(var) // "'")
-        end select
+         end select
       endif
 
       i_xyz = huge(1_INT4)
@@ -716,11 +716,16 @@ contains
 
 !> \brief Generate numbered cg group name
    function n_cg_name(g)
+
       use constants, only: dsetnamelen
+
       implicit none
+
       integer(kind=4), intent(in) :: g !< group number
       character(len=dsetnamelen) :: n_cg_name
+
       write(n_cg_name,'(2a,i10.10)')trim(cg_gname), "_", g-1
+
    end function n_cg_name
 
 !> \brief find a n-th grid container on the cg_all list
@@ -763,44 +768,44 @@ contains
 
       use dataio_pub, only: enable_compression, gzip_level, die, h5_64bit
       use hdf5,       only: HID_T, HSIZE_T, H5P_DATASET_CREATE_F, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, &
-         &                  h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, &
-         &                  h5pset_shuffle_f, h5pset_chunk_f
+           &                h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, &
+           &                h5pset_shuffle_f, h5pset_chunk_f
 
-     implicit none
+      implicit none
 
-     integer(HID_T),                 intent(in) :: cg_g_id !< group id where to create the dataset
-     character(len=*),               intent(in) :: name    !< name
-     integer(HSIZE_T), dimension(:), intent(in) :: ddims   !< dimensionality
-     logical(kind=4),                intent(in) :: Z_avail !< can use compression?
-     integer(kind=4),                intent(in) :: otype   !< output type
+      integer(HID_T),                 intent(in) :: cg_g_id !< group id where to create the dataset
+      character(len=*),               intent(in) :: name    !< name
+      integer(HSIZE_T), dimension(:), intent(in) :: ddims   !< dimensionality
+      logical(kind=4),                intent(in) :: Z_avail !< can use compression?
+      integer(kind=4),                intent(in) :: otype   !< output type
 
-     integer(HID_T)                             :: prp_id, filespace, dset_id, dtype
-     integer(kind=4)                            :: error   !< error perhaps should be of type integer(HID_T)
+      integer(HID_T)                             :: prp_id, filespace, dset_id, dtype
+      integer(kind=4)                            :: error   !< error perhaps should be of type integer(HID_T)
 
-     call h5pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
-     if (enable_compression .and. Z_avail) then
-        call h5pset_shuffle_f(prp_id, error)
-        call h5pset_deflate_f(prp_id, gzip_level, error)
-        call h5pset_chunk_f(prp_id, size(ddims, kind=4), ddims, error)
-     endif
+      call h5pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
+      if (enable_compression .and. Z_avail) then
+         call h5pset_shuffle_f(prp_id, error)
+         call h5pset_deflate_f(prp_id, gzip_level, error)
+         call h5pset_chunk_f(prp_id, size(ddims, kind=4), ddims, error)
+      endif
 
-     if (otype == O_RES) then
-        dtype = H5T_NATIVE_DOUBLE
-     else if (otype == O_OUT) then
-        if (h5_64bit) then
-           dtype = H5T_NATIVE_DOUBLE
-        else
-           dtype = H5T_NATIVE_REAL
-        endif
-     else
-        call die("[common_hdf5:create_empty_cg_dataset] Unknown output time")
-     endif
+      if (otype == O_RES) then
+         dtype = H5T_NATIVE_DOUBLE
+      else if (otype == O_OUT) then
+         if (h5_64bit) then
+            dtype = H5T_NATIVE_DOUBLE
+         else
+            dtype = H5T_NATIVE_REAL
+         endif
+      else
+         call die("[common_hdf5:create_empty_cg_dataset] Unknown output time")
+      endif
 
-     call h5screate_simple_f(size(ddims, kind=4), ddims, filespace, error)
-     call h5dcreate_f(cg_g_id, name, dtype, filespace, dset_id, error, dcpl_id = prp_id)
-     call h5dclose_f(dset_id, error)
-     call h5sclose_f(filespace, error)
-     call h5pclose_f(prp_id, error)
+      call h5screate_simple_f(size(ddims, kind=4), ddims, filespace, error)
+      call h5dcreate_f(cg_g_id, name, dtype, filespace, dset_id, error, dcpl_id = prp_id)
+      call h5dclose_f(dset_id, error)
+      call h5sclose_f(filespace, error)
+      call h5pclose_f(prp_id, error)
 
    end subroutine create_empty_cg_dataset
 

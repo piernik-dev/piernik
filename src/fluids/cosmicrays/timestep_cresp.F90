@@ -36,9 +36,9 @@ module timestep_cresp
    implicit none
 
    private
-   public :: dt_cre, cresp_timestep, dt_cre_synch, dt_cre_adiab, dt_cre_K
+   public :: dt_cre, cresp_timestep, dt_cre_synch, dt_cre_adiab, dt_cre_K, dt_spectrum, cresp_reaction_to_redo_step, dt_cresp_bck, cresp_timestep_cell
 
-   real :: dt_cre, dt_cre_synch, dt_cre_adiab, dt_cre_K
+   real :: dt_cre, dt_cre_synch, dt_cre_adiab, dt_cre_K, dt_spectrum, dt_cresp_bck
 
 contains
 
@@ -48,14 +48,14 @@ contains
       use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, half, zero, big, pMIN
+      use constants,        only: xdim, ydim, zdim, half, zero, big, pMIN, I_ONE
       use cresp_crspectrum, only: cresp_find_prepare_spectrum
       use crhelpers,        only: div_v, divv_i
       use fluidindex,       only: flind
       use func,             only: emag
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep, n_substeps_max
       use mpisetup,         only: piernik_MPI_Allreduce
 
       implicit none
@@ -71,6 +71,7 @@ contains
       dt_cre_K     = big
       dt_cre_synch = big
       dt_cre_adiab = big
+      dt_spectrum  = big
 
       if (.not. use_cresp_evol) return
 
@@ -126,7 +127,16 @@ contains
       call piernik_MPI_Allreduce(dt_cre_adiab, pMIN)
       call piernik_MPI_Allreduce(dt_cre_synch, pMIN)
       call piernik_MPI_Allreduce(dt_cre_K,     pMIN)
-      dt_cre = min(dt_cre_adiab, dt_cre_synch, dt_cre_K)       ! dt comes in to cresp_crspectrum with factor * 2
+
+      dt_spectrum = min(dt_cre_adiab, dt_cre_synch)
+
+      if (cresp_substep) then
+      ! with cresp_substep enabled, dt_cre_adiab and dt_cre_synch are used only within CRESP module for substepping
+      ! half * dt_spectrum * n_substeps_max tries to prevent number of substeps from exceeding n_substeps_max limit
+         dt_cre = min(dt_spectrum * max(n_substeps_max-I_ONE, I_ONE), dt_cre_K)  ! number of substeps with dt_spectrum limited by n_substeps_max
+      else
+         dt_cre = min(dt_spectrum, dt_cre_K)                   ! dt comes in to cresp_crspectrum with factor * 2
+      endif
 
    end subroutine cresp_timestep
 
@@ -157,13 +167,79 @@ contains
       integer(kind=4), intent(in) :: i_up_cell
       real                        :: dt_cre_ub
 
- ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
+      ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
       if (u_b > zero) then
          dt_cre_ub = def_dtsynch / (assume_p_up(i_up_cell) * u_b)
          dt_cre_synch = min(dt_cre_ub, dt_cre_synch)    ! remember to max dt_cre_synch at the beginning of the search
       endif
 
    end subroutine cresp_timestep_synchrotron
+
+!----------------------------------------------------------------------------------------------------
+
+   subroutine cresp_reaction_to_redo_step
+
+      use dataio_pub,      only: msg, warn
+      use global,          only: cfl_violated, dt_shrink, repeat_step, tstep_attempt
+      use initcrspectrum,  only: cresp_substep
+      use mpisetup,        only: master
+
+      implicit none
+
+      if (.not. repeat_step) return
+
+      if (cfl_violated) then
+         if (cresp_substep) then
+            dt_spectrum = dt_spectrum * (dt_shrink ** tstep_attempt) ! If dt is repeated, dt_spectrum should follow, this way seems legit
+
+            if (master) then
+               write (msg, "(A72,E14.7)") "[timestep_cresp:cresp_reaction_to_redo_step] (repeat step) shrinking dt_spectrum = ", dt_spectrum
+               call warn(msg)
+            endif
+
+         else
+            return   !< if .not. cresp_substep, no other than default reactions necessary
+         endif
+      else
+         return      !< no action necessary if CFL not violated
+      endif
+
+   end subroutine cresp_reaction_to_redo_step
+
+!----------------------------------------------------------------------------------------------------
+!! \brief This subroutine returns timestep for cell at (i,j,k) position, with already prepared u_b and u_d values.
+
+   subroutine cresp_timestep_cell(b, dt_cell, empty_cell)
+
+      use initcrspectrum,     only: adiab_active, cresp, synch_active, spec_mod_trms
+      use cresp_crspectrum,   only: cresp_find_prepare_spectrum
+      use constants,          only: big
+
+      implicit none
+
+      type(spec_mod_trms), intent(in) :: b
+      real,               intent(out) :: dt_cell
+      logical,            intent(out) :: empty_cell
+      integer(kind=4)                 :: i_up_cell
+
+      dt_cell = big
+      dt_cre_adiab = big
+      dt_cre_synch = big
+
+      empty_cell = .false.
+
+      call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_cell) ! needed for synchrotron timestep
+
+      if (.not. empty_cell) then
+         if (synch_active) call cresp_timestep_synchrotron(b%ub, i_up_cell)
+         if (adiab_active) call cresp_timestep_adiabatic(b%ud)
+      else
+         return
+      endif
+
+      dt_cell = min(dt_cre_adiab, dt_cre_synch)
+
+   end subroutine cresp_timestep_cell
 
 !----------------------------------------------------------------------------------------------------
 

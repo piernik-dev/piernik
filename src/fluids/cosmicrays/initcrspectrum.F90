@@ -41,7 +41,7 @@ module initcrspectrum
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active, &
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,        &
            & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,       &
-           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps
+           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -92,6 +92,10 @@ module initcrspectrum
    logical         :: synch_active                !< TEST feature - turns on / off synchrotron cooling @ CRESP
    logical         :: adiab_active                !< TEST feature - turns on / off adiabatic   cooling @ CRESP
    real            :: cre_active                  !< electron contribution to Pcr
+
+! substepping parameters
+   logical         :: cresp_substep               !< turns on / off usage of substepping for each cell independently
+   integer(kind=4) :: n_substeps_max              !< maximal allowed number of substeps
 
 ! NR parameters
    real            :: tol_f                       !< tolerance for f abs. error in NR algorithm
@@ -156,7 +160,7 @@ module initcrspectrum
 
 !====================================================================================================
 !
- contains
+contains
 !
 !====================================================================================================
    subroutine init_cresp
@@ -181,7 +185,7 @@ module initcrspectrum
       &                         NR_iter_limit, max_p_ratio, synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init,             &
       &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf, b_max_db,      &
       &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up, p_diff,&
-      &                         q_eps, NR_smap_file
+      &                         q_eps, NR_smap_file, cresp_substep, n_substeps_max
 
 ! Default values
       use_cresp         = .true.
@@ -240,6 +244,9 @@ module initcrspectrum
       arr_dim_q = 500
       q_eps     = eps
 
+      cresp_substep           = .false.
+      n_substeps_max          = 100
+
       if (master) then
          if (.not.nh%initialized) call nh%init()
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
@@ -271,6 +278,8 @@ module initcrspectrum
          ibuff(6)  =  arr_dim
          ibuff(7)  =  arr_dim_q
 
+         ibuff(8)  =  n_substeps_max
+
          lbuff(1)  =  use_cresp
          lbuff(2)  =  use_cresp_evol
          lbuff(3)  =  allow_source_spectrum_break
@@ -284,6 +293,8 @@ module initcrspectrum
          lbuff(11) =  nullify_empty_bins
          lbuff(12) =  approx_cutoffs
          lbuff(13) =  NR_allow_old_smaps
+
+         lbuff(14) =  cresp_substep
 
          rbuff(1)  = cfl_cre
          rbuff(2)  = cre_eff
@@ -339,6 +350,8 @@ module initcrspectrum
          arr_dim                     = int(ibuff(6),kind=4)
          arr_dim_q                   = int(ibuff(7),kind=4)
 
+         n_substeps_max              = int(ibuff(8),kind=4)
+
          use_cresp                   = lbuff(1)
          use_cresp_evol              = lbuff(2)
          allow_source_spectrum_break = lbuff(3)
@@ -352,6 +365,8 @@ module initcrspectrum
          nullify_empty_bins          = lbuff(11)
          approx_cutoffs              = lbuff(12)
          NR_allow_old_smaps          = lbuff(13)
+
+         cresp_substep               = lbuff(14)
 
          cfl_cre                     = rbuff(1)
          cre_eff                     = rbuff(2)
@@ -574,6 +589,15 @@ module initcrspectrum
       if (master)  call warn(msg)
       write (msg, "(A,ES12.5,A,ES15.8,A,ES15.8)") "[initcrspectrum:init_cresp] dt_synch(p_max_fix = ",p_max_fix,", u_b_max = ",u_b_max,") = ", def_dtsynch / (p_max_fix* u_b_max)
       if (master)  call warn(msg)
+
+      if (cresp_substep) then
+         if (master) then
+            write(msg,"(A, I4)") "[initcrspectrum:init_cresp] Substep for CRESP for each cell is ON, max. substeps: ", n_substeps_max
+            call printinfo(msg)
+         endif
+      else
+         n_substeps_max = 1            !< for sanity assuming 1 substep if cresp_substep = .false.
+      endif
 
       if ((q_init < three) .and. any(e_small_approx_p == I_ONE)) then
          call warn("[initcrspectrum:init_cresp] Initial parameters: q_init < 3.0 and approximation of outer momenta is on, approximation of outer momenta with hard energy spectrum might not work.")

@@ -169,7 +169,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-    end subroutine residual2
+   end subroutine residual2
 
 !>
 !! \brief Red-Black Gauss-Seidel relaxation for Laplace operator implemented in residual2

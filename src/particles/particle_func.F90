@@ -37,6 +37,7 @@ module particle_func
    public :: particle_in_area, check_ord, df_d_p, d2f_d2_p, d2f_dd_p, df_d_o2, d2f_d2_o2, d2f_dd_o2
 
    interface
+
       function dxi(cell, cg, ig, dir)
          use constants, only: ndims
          use grid_cont, only: grid_container
@@ -95,7 +96,7 @@ contains
 
       implicit none
 
-      integer, intent(in)    :: order
+      integer, intent(in) :: order
 
       if (order == 2) then
          df_d_p   => df_d_o2

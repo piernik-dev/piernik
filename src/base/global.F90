@@ -164,8 +164,7 @@ contains
       use constants,  only: big_float, PIERNIK_INIT_DOMAIN, INVALID, DIVB_CT, DIVB_HDC, &
            &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO, O_INJ, O_LIN, O_I2, INVALID, &
            &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, GEO_XYZ
-      use dataio_pub, only: die, msg, warn, code_progress, printinfo
-      use dataio_pub, only: nh  ! QA_WARN required for diff_nml
+      use dataio_pub, only: die, msg, warn, code_progress, printinfo, nh
       use domain,     only: dom
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
@@ -468,12 +467,12 @@ contains
 #ifdef MAGNETIC
       if (master) then
          select case (divB_0_method)
-             case (DIVB_HDC)
-                call printinfo("    The div(B) constraint is maintaineded by Hyperbolic Cleaning (GLM).")
-             case (DIVB_CT)
-                call printinfo("    The div(B) constraint is maintaineded by Constrained Transport (2nd order).")
-             case default
-                call die("    The div(B) constraint is maintaineded by Uknown Something.")
+            case (DIVB_HDC)
+               call printinfo("    The div(B) constraint is maintaineded by Hyperbolic Cleaning (GLM).")
+            case (DIVB_CT)
+               call printinfo("    The div(B) constraint is maintaineded by Constrained Transport (2nd order).")
+            case default
+               call die("    The div(B) constraint is maintaineded by Uknown Something.")
          end select
 
          if (cc_mag) then

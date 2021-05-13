@@ -237,7 +237,8 @@ contains
          cnt = cnt - 1
          cur => cur%prv
       enddo
-    end subroutine print_list
+
+   end subroutine print_list
 
 ! unused
 !!$!>

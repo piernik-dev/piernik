@@ -59,42 +59,42 @@
 
 module initproblem
 
-  implicit none
+   implicit none
 
-  private
-  public :: read_problem_par, problem_initial_conditions, problem_pointers
+   private
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-  real   :: uni_dens, uni_pres, vx, vy, A0, R
+   real   :: uni_dens, uni_pres, vx, vy, A0, R
 
-  namelist /PROBLEM_CONTROL/ uni_dens, uni_pres, vx, vy, A0, R
+   namelist /PROBLEM_CONTROL/ uni_dens, uni_pres, vx, vy, A0, R
 
 contains
 
 !----------------------------------------------------------------------------------------------
 
-  subroutine problem_pointers
+   subroutine problem_pointers
 
-    implicit none
+      implicit none
 
-  end subroutine problem_pointers
+   end subroutine problem_pointers
 
 !----------------------------------------------------------------------------------------------
 
-  subroutine read_problem_par
+   subroutine read_problem_par
 
-    use dataio_pub, only: nh
-    use mpisetup, only: rbuff, master, slave, PIERNIK_MPI_Bcast
+      use dataio_pub, only: nh
+      use mpisetup, only: rbuff, master, slave, PIERNIK_MPI_Bcast
 
-    implicit none
+      implicit none
 
-    uni_dens = 1.0
-    uni_pres = 1.0
-    vx       = 2.
-    vy       = 1.
-    A0       = 1.e-3
-    R        = 0.3
+      uni_dens = 1.0
+      uni_pres = 1.0
+      vx       = 2.
+      vy       = 1.
+      A0       = 1.e-3
+      R        = 0.3
 
-    if (master) then
+      if (master) then
 
          if (.not.nh%initialized) call nh%init()
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
@@ -134,72 +134,72 @@ contains
 
       endif
 
-  end subroutine read_problem_par
+   end subroutine read_problem_par
 
 !-------------------------------------------------------------------------------------------------------
 
-  subroutine problem_initial_conditions
+   subroutine problem_initial_conditions
 
-    use cg_leaves,   only: leaves
-    use cg_list,     only: cg_list_element
-    use constants,   only: xdim, ydim, zdim, zero, LEFT
-    use grid_cont,   only: grid_container
-    use fluidindex,  only: flind
-    use fluidtypes,  only: component_fluid
-    use func,        only: ekin, emag
-    use global,      only: cc_mag
+      use cg_leaves,   only: leaves
+      use cg_list,     only: cg_list_element
+      use constants,   only: xdim, ydim, zdim, zero, LEFT
+      use grid_cont,   only: grid_container
+      use fluidindex,  only: flind
+      use fluidtypes,  only: component_fluid
+      use func,        only: ekin, emag
+      use global,      only: cc_mag
 
-    implicit none
+      implicit none
 
-    type(cg_list_element),  pointer :: cgl
-    type(grid_container),   pointer :: cg
-    class(component_fluid), pointer :: fl
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
+      class(component_fluid), pointer :: fl
 
-    integer :: i, j, k
-    real :: r2
+      integer :: i, j, k
+      real :: r2
 
-    fl => flind%ion
-    cgl => leaves%first
-    do while (associated(cgl))
-       cg => cgl%cg
+      fl => flind%ion
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
 
-       call cg%set_constant_b_field([0., 0., 0.])
+         call cg%set_constant_b_field([0., 0., 0.])
 
-       do k = cg%ks, cg%ke
-          do j = cg%js, cg%je
-             do i = cg%is, cg%ie
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
 
-                ! Density
-                cg%u(fl%idn,i,j,k) = uni_dens
-                ! Velocity
-                cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
-                cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
-                cg%u(fl%imz,i,j,k) = zero
-                ! Mangetic field
-                if (cc_mag) then
-                   if ( sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) ) .le. R ) then
-                      cg%b(xdim,i,j,k) = -A0*cg%y(j)/(sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) )) !  dA_z/dy
-                      cg%b(ydim,i,j,k) =  A0*cg%x(i)/(sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) )) ! -dA_z/dx
-                   endif
-                else  ! face-centered components
-                   r2 = sum([cg%coord(LEFT, xdim)%r(i), cg%y(j)]**2)
-                   if (r2 <= R**2) cg%b(xdim, i, j, k) = -A0 * cg%y(j) / sqrt(r2) !  dA_z/dy
-                   r2 = sum([cg%x(i), cg%coord(LEFT, ydim)%r(j)]**2)
-                   if (r2 <= R**2) cg%b(ydim, i, j, k) =  A0 * cg%x(i) / sqrt(r2) ! -dA_z/dx
-                endif
+                  ! Density
+                  cg%u(fl%idn,i,j,k) = uni_dens
+                  ! Velocity
+                  cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
+                  cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
+                  cg%u(fl%imz,i,j,k) = zero
+                  ! Mangetic field
+                  if (cc_mag) then
+                     if ( sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) ) .le. R ) then
+                        cg%b(xdim,i,j,k) = -A0*cg%y(j)/(sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) )) !  dA_z/dy
+                        cg%b(ydim,i,j,k) =  A0*cg%x(i)/(sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) )) ! -dA_z/dx
+                     endif
+                  else  ! face-centered components
+                     r2 = sum([cg%coord(LEFT, xdim)%r(i), cg%y(j)]**2)
+                     if (r2 <= R**2) cg%b(xdim, i, j, k) = -A0 * cg%y(j) / sqrt(r2) !  dA_z/dy
+                     r2 = sum([cg%x(i), cg%coord(LEFT, ydim)%r(j)]**2)
+                     if (r2 <= R**2) cg%b(ydim, i, j, k) =  A0 * cg%x(i) / sqrt(r2) ! -dA_z/dx
+                  endif
 
-                ! Pressure/Energy
-                cg%u(fl%ien,i,j,k) = uni_pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
-                                             emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+                  ! Pressure/Energy
+                  cg%u(fl%ien,i,j,k) = uni_pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
+                       &               emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 
-             enddo
-          enddo
-       enddo
+               enddo
+            enddo
+         enddo
 
-       cgl => cgl%nxt
-    enddo
+         cgl => cgl%nxt
+      enddo
 
-  end subroutine problem_initial_conditions
+   end subroutine problem_initial_conditions
 
 !-------------------------------------------------------------------------------------------------------------------------------------
 end module initproblem
