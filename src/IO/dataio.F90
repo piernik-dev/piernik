@@ -47,7 +47,6 @@ module dataio
 
    integer, parameter       :: nvarsmx = 20          !< maximum number of variables to dump in hdf files
    character(len=cbuff_len) :: restart               !< choice of restart %file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if something else is set: "nrestart" value is fixing
-   logical                  :: mag_center            !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders, unused)
    integer(kind=4)          :: resdel                !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
    real                     :: dt_hdf                !< time between successive hdf dumps
    real                     :: dt_res                !< simulation time between successive restart file dumps
@@ -107,7 +106,7 @@ module dataio
    namelist /END_CONTROL/     nend, tend, wend
    namelist /RESTART_CONTROL/ restart, res_id, nrestart, resdel
    namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
-                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
+                              domain_dump, vars, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
                               use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict, h5_64bit
 
 contains
@@ -152,7 +151,6 @@ contains
 !! <tr><td>domain_dump        </td><td>'phys_domain'      </td><td>'phys_domain' or 'full_domain'                       </td><td>\copydoc dataio_pub::domain_dump</td></tr>
 !! <tr><td>vars               </td><td>''                 </td><td>'dens', 'velx', 'vely', 'velz', 'ener' and some more </td><td>\copydoc dataio::vars  </td></tr>
 !! <tr><td>pvars              </td><td>''                 </td><td>'ppos', 'pvel', 'pacc', 'mass', 'ener' and some more </td><td>\copydoc dataio::pvars </td></tr>
-!! <tr><td>mag_center         </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio::mag_center       </td></tr>
 !! <tr><td>vizit              </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::vizit        </td></tr>
 !! <tr><td>fmin               </td><td>                   </td><td>real      </td><td>\copydoc dataio_pub::fmin         </td></tr>
 !! <tr><td>fmax               </td><td>                   </td><td>real      </td><td>\copydoc dataio_pub::fmax         </td></tr>
@@ -296,7 +294,6 @@ contains
 #ifdef NBODY
       pvars(:)      = (/ 'ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz' /)
 #endif /* NBODY */
-      mag_center    = .false.
       write(user_message_file,'(a,"/msg")') trim(wd_rd)
       system_message_file = "/tmp/piernik_msg"
 
@@ -395,7 +392,7 @@ contains
          ibuff(21) = resdel
 
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
-!                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
+!                              domain_dump, vars, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
 !                              use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict, h5_64bit
          ibuff(43) = nproc_io
          ibuff(44) = gzip_level
@@ -411,7 +408,6 @@ contains
          lbuff(1)  = vizit
          lbuff(2)  = multiple_h5files
          lbuff(3)  = use_v2_io
-         lbuff(4)  = mag_center
          lbuff(5)  = init_hdf_dump
          lbuff(6)  = init_res_dump
          lbuff(7)  = tsl_with_mom
@@ -454,7 +450,7 @@ contains
          resdel              = ibuff(21)
 
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
-!                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
+!                              domain_dump, vars, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
 !                              use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict
 
          nproc_io            = int(ibuff(43), kind=4)
@@ -471,7 +467,6 @@ contains
          vizit               = lbuff(1)
          multiple_h5files    = lbuff(2)
          use_v2_io           = lbuff(3)
-         mag_center          = lbuff(4)
          init_hdf_dump       = lbuff(5)
          init_res_dump       = lbuff(6)
          tsl_with_mom        = lbuff(7)
@@ -1548,12 +1543,13 @@ contains
       use constants,          only: MINL
 #endif /* COSM_RAYS || MAGNETIC */
 #ifdef MAGNETIC
-      use constants,          only: DIVB_HDC, RIEMANN_SPLIT
+      use all_boundaries,     only: all_mag_boundaries
+      use constants,          only: DIVB_HDC, RIEMANN_SPLIT, I_TWO
       use dataio_pub,         only: msg
+      use div_B,              only: divB, idivB
       use func,               only: sq_sum3
       use global,             only: cfl, divB_0_method, which_solver
       use hdc,                only: map_chspeed
-      use named_array_list,   only: wna
 #endif /* MAGNETIC */
 #ifdef RESISTIVE
       use resistivity,        only: etamax, cu2max, eta1_active
@@ -1593,9 +1589,11 @@ contains
       type(value)                                :: gpxmax, gpymax, gpzmax
       integer                                    :: var_i
 #endif /* VARIABLE_GP */
+#if defined VARIABLE_GP || defined COSM_RAY_ELECTRONS
+      real, dimension(:,:,:), pointer            :: p
+#endif /* VARIABLE_GP || COSM_RAY_ELECTRONS */
 #if defined VARIABLE_GP || defined MAGNETIC
       integer(kind=4), dimension(ndims,ndims,HI) :: D
-      real, dimension(:,:,:), pointer            :: p
 #endif /* VARIABLE_GP || MAGNETIC */
       character(len=idlen)                       :: id
       character(len=*), parameter :: log_label = "write_log"
@@ -1668,21 +1666,9 @@ contains
 #endif /* VARIABLE_GP */
 
 #ifdef MAGNETIC
-      cgl => leaves%first
-      do while (associated(cgl))
-         p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
-         p = (cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse+D(xdim,:,:)) - cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse))*cgl%cg%dy*cgl%cg%dz &
-            +(cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse+D(ydim,:,:)) - cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dz &
-            +(cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse+D(zdim,:,:)) - cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dy
-         cgl%cg%wa = abs(cgl%cg%wa)
-
-         cgl%cg%wa(cgl%cg%ie,:,:) = cgl%cg%wa(cgl%cg%ie-dom%D_x,:,:)
-         cgl%cg%wa(:,cgl%cg%je,:) = cgl%cg%wa(:,cgl%cg%je-dom%D_y,:)
-         cgl%cg%wa(:,:,cgl%cg%ke) = cgl%cg%wa(:,:,cgl%cg%ke-dom%D_z)
-
-         cgl => cgl%nxt ; NULLIFY(p)
-      enddo
-      call leaves%get_extremum(qna%wai, MAXL, divb_max)
+      call all_mag_boundaries  ! ToDo: check if it is really necessary
+      call divB(I_TWO)
+      call leaves%get_extremum(idivB, MAXL, divb_max)
 
       call map_chspeed
       call leaves%get_extremum(qna%wai, MAXL, ch_max)
