@@ -63,10 +63,9 @@ contains
 
    subroutine read_problem_par
 
-      use constants,             only: PIERNIK_INIT_MPI, xdim, zdim
-      use dataio_pub,            only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,            only: code_progress, die
-      use mpisetup,              only: master, slave, ibuff, lbuff, rbuff, piernik_MPI_Bcast
+      use constants,  only: PIERNIK_INIT_MPI, xdim, zdim
+      use dataio_pub, only: code_progress, die, nh
+      use mpisetup,   only: master, slave, ibuff, lbuff, rbuff, piernik_MPI_Bcast
 
       implicit none
 
@@ -390,9 +389,9 @@ contains
          n = n + 1
       else
 #ifdef HDF5
-        call write_hdf5
+         call write_hdf5
 #else /* !HDF5 */
-        call warn("[initproblem:find_non_0_or_write_hdf5] no HDF5 available")
+         call warn("[initproblem:find_non_0_or_write_hdf5] no HDF5 available")
 #endif /* !HDF5 */
       endif
 

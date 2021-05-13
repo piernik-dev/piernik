@@ -136,7 +136,7 @@ for pthfilen in files_list:
     else:
         varlist = ['part']
         prp = 'particles only'
-    print('Going to read '+prp+prd)
+    print('Going to read ' + prp + prd)
 
     for var in varlist:
         if (not draw_data or var in list(h5f['field_types'].keys())):

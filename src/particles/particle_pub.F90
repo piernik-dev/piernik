@@ -37,6 +37,7 @@ module particle_pub
 ! pulled by NBODY
 
    implicit none
+
    private
    public :: init_particles, cleanup_particles
    public :: lf_c, ignore_dt_fluid
@@ -51,8 +52,7 @@ contains
    subroutine init_particles
 
       use constants,        only: cbuff_len, I_NGP, I_CIC, I_TSC
-      use dataio_pub,       only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,       only: msg, die
+      use dataio_pub,       only: msg, die, nh
       use mpisetup,         only: master, slave, cbuff, piernik_mpi_bcast
       use particle_solvers, only: hermit_4ord, psolver
       use particle_maps,    only: set_map
@@ -64,6 +64,7 @@ contains
       use particle_utils,   only: twodtscheme, dump_diagnose
 
       implicit none
+
       character(len=cbuff_len) :: time_integrator
       character(len=cbuff_len) :: interpolation_scheme
       character(len=cbuff_len), parameter :: default_ti = "none"
@@ -188,9 +189,9 @@ contains
 
    subroutine cleanup_particles
 
-     implicit none
+      implicit none
 
-     ! no need to do anything here
+      ! no need to do anything here
 
    end subroutine cleanup_particles
 

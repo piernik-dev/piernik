@@ -44,16 +44,16 @@ module particle_types
    !<
 
    type :: particle_data
-     integer(kind=4)        :: pid        !< particle ID
-     real                   :: mass       !< mass of the particle
-     real, dimension(ndims) :: pos        !< physical position
-     real, dimension(ndims) :: vel        !< particle velocity
-     real, dimension(ndims) :: acc        !< acceleration of the particle
-     real                   :: energy     !< total energy of particle
-     logical                :: in, phy, out !< Flags to locate particle in the inner part of the domain or the outer part
-     logical                :: outside    !< this flag is true if the particle is outside the domain
+      integer(kind=4)        :: pid        !< particle ID
+      real                   :: mass       !< mass of the particle
+      real, dimension(ndims) :: pos        !< physical position
+      real, dimension(ndims) :: vel        !< particle velocity
+      real, dimension(ndims) :: acc        !< acceleration of the particle
+      real                   :: energy     !< total energy of particle
+      logical                :: in, phy, out !< Flags to locate particle in the inner part of the domain or the outer part
+      logical                :: outside    !< this flag is true if the particle is outside the domain
    contains
-     procedure :: is_outside              !< compute the outside flag
+      procedure :: is_outside              !< compute the outside flag
    end type particle_data
 
    type :: particle
@@ -194,12 +194,12 @@ contains
          call this%remove(pp) ! cannot just pass this%last because it will change after un_link and wrong element will be deallocated
       enddo
 
-    end subroutine cleanup
+   end subroutine cleanup
 
 !> \brief Add a particle to the list
 
 
-    subroutine add_part_list(this, pid, mass, pos, vel, acc, energy, in, phy, out)
+   subroutine add_part_list(this, pid, mass, pos, vel, acc, energy, in, phy, out)
 
       use constants,  only: I_ONE
       use dataio_pub, only: die
@@ -244,8 +244,7 @@ contains
       this%last => new
       this%cnt = this%cnt + I_ONE
 
-    end subroutine add_part_list
-
+   end subroutine add_part_list
 
 !> \brief Remove a particle number id from the list
 
@@ -269,6 +268,7 @@ contains
       deallocate(pset%pdata)
       deallocate(pset)
       this%cnt = this%cnt - I_ONE
+
    end subroutine remove
 
 !>

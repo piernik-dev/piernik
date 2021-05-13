@@ -35,11 +35,11 @@
 !<
 module piernikcl
 ! pulled by PIERNIK_OPENCL
-   use cl,           only: cl_context, cl_command_queue, cl_device_id
+   use cl, only: cl_context, cl_command_queue, cl_device_id
 
    implicit none
    private
-   public  :: init_opencl, cleanup_opencl, context, command_queue, device
+   public :: init_opencl, cleanup_opencl, context, command_queue, device
 
    integer :: ierr
    type(cl_context)       :: context
@@ -50,7 +50,7 @@ contains
 
    subroutine init_opencl
 
-      use cl,        only: clCreateContext, clCreateCommandQueue, CL_QUEUE_PROFILING_ENABLE, cl_platform_id
+      use cl, only: clCreateContext, clCreateCommandQueue, CL_QUEUE_PROFILING_ENABLE, cl_platform_id
 
       implicit none
 
@@ -66,7 +66,7 @@ contains
 
    subroutine cleanup_opencl
 
-      use cl,         only: clReleaseCommandQueue, clReleaseContext
+      use cl, only: clReleaseCommandQueue, clReleaseContext
 
       implicit none
 
@@ -78,6 +78,7 @@ contains
    end subroutine cleanup_opencl
 
    subroutine clerr(ierr,msg)
+
       use cl,         only: CL_SUCCESS
       use dataio_pub, only: die
 
@@ -91,8 +92,9 @@ contains
    end subroutine clerr
 
    subroutine piernikCL_build_kernel(kernel_file, kernel_name, device, context, kernel)
+
       use cl,         only: cl_device_id, cl_context, cl_program, cl_kernel, clCreateProgramWithSource, clBuildProgram, &
-                        &   clCreateKernel, clCreateProgramWithSource, clReleaseProgram!, clGetProgramBuildInfo, CL_PROGRAM_BUILD_LOG
+           &                clCreateKernel, clCreateProgramWithSource, clReleaseProgram!, clGetProgramBuildInfo, CL_PROGRAM_BUILD_LOG
       use dataio_pub, only: msg, die
 
       implicit none
@@ -141,14 +143,14 @@ contains
       ! finally get the kernel and release the program
       kernel = clCreateKernel(prog, kernel_name, ierr)
       call clReleaseProgram(prog, ierr)
-      return
+
    end subroutine piernikCL_build_kernel
 
    subroutine piernikCL_get_suitable_gpu(platform,device)
 
       use cl,         only: cl_platform_id, cl_device_id, clGetPlatformIDs, clGetPlatformIDs, clGetDeviceIDs, &
-                       &   CL_DEVICE_TYPE_GPU, clGetPlatformInfo, CL_PLATFORM_NAME, CL_PLATFORM_VERSION, &
-                       &   CL_DEVICE_NAME, clGetDeviceInfo
+           &                CL_DEVICE_TYPE_GPU, clGetPlatformInfo, CL_PLATFORM_NAME, CL_PLATFORM_VERSION, &
+           &                CL_DEVICE_NAME, clGetDeviceInfo
       use dataio_pub, only: printinfo, msg, msglen
 
       implicit none
@@ -198,7 +200,6 @@ contains
       write(msg, '(2a)') "CL device : ", trim(clinfo)
       call printinfo(msg)
 
-      return
-  end subroutine piernikCL_get_suitable_gpu
+   end subroutine piernikCL_get_suitable_gpu
 
 end module piernikcl

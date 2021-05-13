@@ -177,7 +177,7 @@ contains
 #endif /* !__INTEL_COMPILER */
    end function piernik_fnum
 
-!> \brief Expand given integer array by one and store the value i ni the last cell
+!> \brief Expand given integer array by one and store the value i in the last cell
 
    subroutine append_int_to_array(arr, i)
 

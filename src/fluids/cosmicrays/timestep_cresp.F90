@@ -164,7 +164,7 @@ contains
       integer(kind=4), intent(in) :: i_up_cell
       real                        :: dt_cre_ub
 
- ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
+      ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
       if (u_b > zero) then
          dt_cre_ub = def_dtsynch / (assume_p_up(i_up_cell) * u_b)
          dt_cre_synch = min(dt_cre_ub, dt_cre_synch)    ! remember to max dt_cre_synch at the beginning of the search
@@ -217,7 +217,7 @@ contains
       type(spec_mod_trms), intent(in) :: b
       real,               intent(out) :: dt_cell
       logical,            intent(out) :: empty_cell
-      integer                         :: i_up_cell
+      integer(kind=4)                 :: i_up_cell
 
       dt_cell = big
       dt_cre_adiab = big

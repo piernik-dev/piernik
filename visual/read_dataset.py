@@ -42,36 +42,36 @@ def convert_units(infile, toplot):
     pc_au = 206264.806248712
     pc_cm = pc_au * au_cm
     if infile == 'pc':
-        cm = 1.0/pc_cm
+        cm = 1.0 / pc_cm
         pc = 1.0
     elif infile == 'au':
-        cm = 1.0/au_cm
-        pc = pc_cm*cm
+        cm = 1.0 / au_cm
+        pc = pc_cm * cm
     elif infile == 'kpc':
-        cm = 1.0/(1.0e3*pc_cm)
+        cm = 1.0 / (1.0e3 * pc_cm)
         pc = 0.001
     elif infile == 'm':
-        cm = 1.0/1.0e2
-        pc = pc_cm*cm
+        cm = 1.0 / 1.0e2
+        pc = pc_cm * cm
     else:
         return 1., False
 
     if toplot == 'cm':
         return cm, True
     elif toplot == 'metr':
-        return 1.0e2*cm, True
+        return 1.0e2 * cm, True
     elif toplot == 'km':
-        return 1.0e5*cm, True
+        return 1.0e5 * cm, True
     elif toplot == 'au':
-        return au_cm*cm, True
+        return au_cm * cm, True
     elif toplot == 'pc':
         return pc, True
     elif toplot == 'kpc':
-        return 1.0e3*pc, True
+        return 1.0e3 * pc, True
     elif toplot == 'Mpc':
-        return 1.0e6*pc, True
+        return 1.0e6 * pc, True
     elif toplot == 'lyr':
-        return 9.4605e17*cm, True
+        return 9.4605e17 * cm, True
     else:
         return 1., False
 

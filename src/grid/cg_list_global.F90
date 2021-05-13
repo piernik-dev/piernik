@@ -57,10 +57,8 @@ module cg_list_global
    !! for their data (and additional routine for coupling the two grid sets).
    !<
    type, extends(cg_list_bnd_t) :: cg_list_global_t
-
-      integer(kind=4) :: ord_prolong_nb                !< Maximum number of boundary cells required for prolongation
-
-    contains
+      integer(kind=4) :: ord_prolong_nb  !< Maximum number of boundary cells required for prolongation
+   contains
       procedure :: init              !< Initialize
       procedure :: reg_var           !< Add a variable (cg%q or cg%w) to all grid containers
       procedure :: register_fluids   !< Register all crucial fields, which we cannot live without

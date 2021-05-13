@@ -105,6 +105,7 @@ contains
    end subroutine cleanup_diagnostics
 
    subroutine check_environment
+
       implicit none
 
       call check_lhs_realloc
@@ -121,8 +122,11 @@ contains
 !! \n     * supported by both gcc and intel
 !<
    subroutine check_lhs_realloc
+
       use dataio_pub,   only: die
+
       implicit none
+
       integer, dimension(:), allocatable :: ivec
       integer, parameter :: n = 1
       integer :: i, nsize
@@ -354,7 +358,9 @@ contains
    ! GOD I NEED TEMPLATES IN FORTRAN!!!!
 
    subroutine deallocate_array_1D_int4(array)
+
       implicit none
+
       integer(kind=4), dimension(:), allocatable, intent(inout)  :: array !< array that will be deallocated
 
       used_memory = used_memory - size(array)*i4_s
@@ -363,7 +369,9 @@ contains
    end subroutine deallocate_array_1D_int4
 
    subroutine deallocate_array_2D_int4(array)
+
       implicit none
+
       integer(kind=4), dimension(:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
       used_memory = used_memory - size(array)*i4_s
@@ -372,7 +380,9 @@ contains
    end subroutine deallocate_array_2D_int4
 
    subroutine deallocate_array_3D_int4(array)
+
       implicit none
+
       integer(kind=4), dimension(:,:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
       used_memory = used_memory - size(array)*i4_s
@@ -381,7 +391,9 @@ contains
    end subroutine deallocate_array_3D_int4
 
    subroutine deallocate_array_1D_real(array)
+
       implicit none
+
       real, dimension(:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
       used_memory = used_memory - size(array)*r8_s
@@ -390,7 +402,9 @@ contains
    end subroutine deallocate_array_1D_real
 
    subroutine deallocate_array_2D_real(array)
+
       implicit none
+
       real, dimension(:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
       used_memory = used_memory - size(array)*r8_s
@@ -399,7 +413,9 @@ contains
    end subroutine deallocate_array_2D_real
 
    subroutine deallocate_array_3D_real(array)
+
       implicit none
+
       real, dimension(:,:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
       used_memory = used_memory - size(array)*r8_s
@@ -408,7 +424,9 @@ contains
    end subroutine deallocate_array_3D_real
 
    subroutine deallocate_array_4D_real(array)
+
       implicit none
+
       real, dimension(:,:,:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
       used_memory = used_memory - size(array)*r8_s
@@ -417,7 +435,9 @@ contains
    end subroutine deallocate_array_4D_real
 
    subroutine deallocate_array_5D_real(array)
+
       implicit none
+
       real, dimension(:,:,:,:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
       used_memory = used_memory - size(array)*r8_s
@@ -426,7 +446,9 @@ contains
    end subroutine deallocate_array_5D_real
 
    subroutine deallocate_array_1D_logical(array)
+
       implicit none
+
       logical, dimension(:), allocatable, intent(inout) :: array
 
       if (allocated(array)) deallocate(array)
@@ -587,33 +609,43 @@ contains
 
    ! Dropping usage of keep_track_of_arrays for now, as the names are not usually provided
    subroutine allocate_1D_arr_w_ind_int4(array, as, a_ind_beg)
+
       implicit none
+
       integer(kind=4), allocatable, dimension(:), intent(inout) :: array
       integer(kind=4),                            intent(in)    :: as
       integer(kind=4),                  optional, intent(in)    :: a_ind_beg
+
       if (.not. allocated(array)) allocate(array(a_ind_beg:as))
       used_memory = used_memory + size(array)*i4_s
-  end subroutine allocate_1D_arr_w_ind_int4
+
+   end subroutine allocate_1D_arr_w_ind_int4
 
 !----------------------------------------------------------------------------------------------------
    subroutine allocate_1D_arr_w_ind_real8(array, as, a_ind_beg)
+
       implicit none
+
       real(kind=8), allocatable, dimension(:), intent(inout) :: array
       integer(kind=4),                         intent(in)    :: as
       integer(kind=4),               optional, intent(in)    :: a_ind_beg
 
       if (.not. allocated(array)) allocate(array(a_ind_beg:as))
       used_memory = used_memory + size(array)*i4_s
-  end subroutine allocate_1D_arr_w_ind_real8
+
+   end subroutine allocate_1D_arr_w_ind_real8
 !----------------------------------------------------------------------------------------------------
    subroutine allocate_1D_arr_w_ind_logical(array,as,a_ind_beg)
+
       implicit none
+
       logical, allocatable, dimension(:), intent(inout) :: array
       integer(kind=4),                    intent(in)    :: as
       integer(kind=4),          optional, intent(in)    :: a_ind_beg
 
       if (.not. allocated(array)) allocate(array(a_ind_beg:as))
       used_memory = used_memory + size(array)*bool_s
-  end subroutine allocate_1D_arr_w_ind_logical
+
+   end subroutine allocate_1D_arr_w_ind_logical
 
 end module diagnostics

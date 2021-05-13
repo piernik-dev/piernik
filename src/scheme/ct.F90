@@ -183,7 +183,7 @@ contains
          if (dwm * dwp > 0.0) dw = 2.0 * dwm * dwp / (dwm + dwp)
          vibj(i) = (w + dw) * dt
       enddo
-      return
+
    end subroutine tvdb
 
 !-------------------------------------------------------------------------------------------------------------------
@@ -236,7 +236,7 @@ contains
 !! \todo remove workaround for http://gcc.gnu.org/bugzilla/show_bug.cgi?id=48955
 !<
 
-  subroutine advectb(bdir, vdir)
+   subroutine advectb(bdir, vdir)
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
@@ -424,7 +424,6 @@ contains
          call warn('[ct:pshift]: Dim ill defined in pshift!')
       endif
 
-      return
    end function pshift
 
 !>
@@ -465,7 +464,6 @@ contains
          call warn('[ct:mshift]: Dim ill defined in mshift!')
       endif
 
-      return
    end function mshift
 
 end module ct

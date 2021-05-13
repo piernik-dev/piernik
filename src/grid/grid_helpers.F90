@@ -29,7 +29,9 @@
 !> \brief Module containing hepler functions that didn't fit elsewhere
 
 module grid_helpers
+
    implicit none
+
    private
    public :: c2f, c2f_o, f2c, f2c_o
 

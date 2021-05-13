@@ -83,8 +83,7 @@ contains
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
       use constants,        only: PIERNIK_INIT_GRID, zdim, xdim, ydim, wcu_n
-      use dataio_pub,       only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,       only: die, code_progress
+      use dataio_pub,       only: die, code_progress, nh
       use domain,           only: dom
       use func,             only: operator(.equals.)
       use mpisetup,         only: rbuff, ibuff, master, slave, piernik_MPI_Bcast

@@ -29,14 +29,12 @@
 module particles_io_hdf5
 ! pulled by NBODY && HDF5
 
-
    implicit none
 
    private
    public  :: write_nbody_hdf5, read_nbody_hdf5
 
-   contains
-
+contains
 
    subroutine write_nbody_hdf5(fname)
 
@@ -79,10 +77,10 @@ module particles_io_hdf5
          call printinfo(msg, .true.)
       endif
 
-    end subroutine write_nbody_hdf5
+   end subroutine write_nbody_hdf5
 
 
-    subroutine set_nbody_attributes(file_id)
+   subroutine set_nbody_attributes(file_id)
 
       use dataio_pub,         only: require_problem_IC, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
          &                          last_res_time, last_log_time, last_tsl_time, nres, nhdf, domain_dump
@@ -119,7 +117,7 @@ module particles_io_hdf5
       call set_attr(file_id, "domain",       [trim(domain_dump) ]) !rr2
       call set_attr(file_id, "run_id",       [trim(run_id)      ]) !rr2
 
-end subroutine set_nbody_attributes
+   end subroutine set_nbody_attributes
 
    subroutine read_nbody_hdf5(fname, table, n)
 

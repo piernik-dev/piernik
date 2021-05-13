@@ -75,8 +75,7 @@ contains
 
       use cg_list_global,      only: all_cg
       use constants,           only: PIERNIK_INIT_DOMAIN, O_LIN, O_D3
-      use dataio_pub,          only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,          only: warn, die, code_progress
+      use dataio_pub,          only: warn, die, code_progress, nh
       use domain,              only: dom
       use global,              only: dirty_debug, do_ascii_dump, show_n_dirtys !< \warning: alien variables go to local namelist
       use mpisetup,            only: master, slave, nproc, ibuff, lbuff, piernik_MPI_Bcast

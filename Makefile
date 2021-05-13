@@ -85,7 +85,7 @@ qa:
 	./bin/qa.py $$( find src problems -name "*.F90" )
 
 QA:
-	make -k  chk_err_msg pycodestyle qa
+	make -k  chk_err_msg chk_lic_hdr pycodestyle qa
 
 pep8: pycodestyle
 
@@ -96,6 +96,9 @@ pycodestyle:
 chk_err_msg:
 	echo Check filenames in error messages
 	./bin/checkmessages.sh
+
+chk_lic_hdr:
+	./bin/check_license_headers.sh
 
 gold:
 	./jenkins/gold_test_list.sh

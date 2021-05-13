@@ -149,8 +149,8 @@ module constants
 
    ! grid geometry type
    enum, bind(C)
-       enumerator :: GEO_XYZ, GEO_RPZ                    !! Cartesian (0) or cylindrical (1) grid with uniform cell spacing
-       enumerator :: GEO_INVALID = GEO_XYZ - 1           !! non-recognized grid geometry (-1)
+      enumerator :: GEO_XYZ, GEO_RPZ                    !! Cartesian (0) or cylindrical (1) grid with uniform cell spacing
+      enumerator :: GEO_INVALID = GEO_XYZ - 1           !! non-recognized grid geometry (-1)
    end enum
 
    ! boundary conditions type

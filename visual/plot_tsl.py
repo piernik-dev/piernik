@@ -24,7 +24,7 @@ if len(args.files) < 1:
 def print_header(fn, header):
     print("There are following fields available in %s" % fn)
     for ii, he in enumerate(header):
-        print(ii+1, he)
+        print(ii + 1, he)
 
 
 data = []
@@ -74,7 +74,7 @@ if args.ylim is not None:
 
 for i, fn in enumerate(data):
     for ii, ff in enumerate(fls[i][0]):
-        ax.plot(fn[:, xno], fn[:, ff], label=fls[i][1][ii]+' '+args.files[i])
+        ax.plot(fn[:, xno], fn[:, ff], label=fls[i][1][ii] + ' ' + args.files[i])
 
 ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), fancybox=True, fontsize='small', ncol=2)
 print('Y axis range: ', ax.get_ylim())

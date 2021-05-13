@@ -263,8 +263,7 @@ contains
    subroutine dataio_par_io
 
       use constants,  only: idlen, cbuff_len, INT4
-      use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn, h5_64bit
-      use dataio_pub, only: nh, set_colors  ! QA_WARN required for diff_nml
+      use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn, h5_64bit, nh, set_colors
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
 
       implicit none
@@ -1147,8 +1146,7 @@ contains
 
       if (master) then
          call pop_vector(tsl_vars, [t, dt, tot_q(T_MASS)])
-         if (tsl_with_mom) &
-       & call pop_vector(tsl_vars, [tot_q(T_MOMX), tot_q(T_MOMY), tot_q(T_MOMZ)])
+         if (tsl_with_mom) call pop_vector(tsl_vars, [tot_q(T_MOMX), tot_q(T_MOMY), tot_q(T_MOMZ)])
          call pop_vector(tsl_vars, [tot_q(T_ENER), tot_q(T_EINT), tot_q(T_EKIN)])
 #ifdef GRAV
          call pop_vector(tsl_vars, [tot_q(T_EPOT)])

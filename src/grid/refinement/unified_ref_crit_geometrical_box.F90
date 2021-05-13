@@ -14,7 +14,7 @@
 !    GNU General Public License for more details.
 !
 !    You should have received a copy of the GNU General Public License
-!    along with PIERNIK.  If not, see http://www.gnu.org/licenses/.
+!    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implementation of PIERNIK code was based on TVD split MHD code by
 !    Ue-Li Pen
@@ -81,7 +81,7 @@ contains
       this%ijk_lo = uninit
       this%ijk_hi = uninit
       if (master) then
-         write(msg, '(a,3g13.5,a,3g13.5,a)')"[URC box]   Initializing refinement at box: [ ", this%coords(:, LO), " ]..[ ", this%coords(:, HI), " ]"
+         write(msg, '(a,3g13.5,a,3g13.5,a,i3)')"[URC box]   Initializing refinement at box: [ ", this%coords(:, LO), " ]..[ ", this%coords(:, HI), " ] at level ", this%level
          call printinfo(msg)
       endif
 

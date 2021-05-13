@@ -139,8 +139,7 @@ contains
 !<
    subroutine init_crsources(ncrn, crness)
 
-      use dataio_pub,      only: nh   ! QA_WARN required for diff_nml
-      use dataio_pub,      only: msg, printinfo, die
+      use dataio_pub,      only: msg, printinfo, die, nh
       use mpisetup,        only: lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none

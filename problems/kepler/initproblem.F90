@@ -53,8 +53,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
 
-      use dataio_pub,            only: nh      ! QA_WARN required for diff_nml
-      use mpisetup,              only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
+      use dataio_pub, only: nh
+      use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
