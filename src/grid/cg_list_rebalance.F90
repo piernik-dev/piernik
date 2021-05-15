@@ -185,7 +185,6 @@ contains
          if (edc /= 0) then
             write(msg, '(a,i5,a)')"[cg_list_rebalance:rebalance] Allreduce(expanded_domain%cnt) = ", edc, ", aborting reshuffling."
             if (master) call warn(msg)
-            ! Unfortunately this will bypass thread exclusion
          else
             call reshuffle
          endif
@@ -209,32 +208,32 @@ contains
 
       integer function how_many_to_shuffle() result(s)
 
-         use constants,  only: INVALID, I_ONE
-         use dataio_pub, only: printinfo, die
-         use mpisetup,   only: slave
-         use procnames,  only: pnames
-         use refinement, only: oop_thr
+         use cg_level_coarsest, only: coarsest
+         use constants,         only: fmt_len, INVALID, I_ONE
+         use dataio_pub,        only: printinfo, die
+         use mpisetup,          only: slave
+         use procnames,         only: pnames
+         use refinement,        only: oop_thr
 
          implicit none
 
          integer :: i
          integer(kind=4) :: p
          logical :: rebalance_necessary
+         integer, dimension(coarsest%level%l%id:finest%level%l%id) :: cnt_mv, cnt_gp
+         character(len=fmt_len) :: fmt
 
          if (slave) call die("[cg_list_rebalance:rebalance] slave in how_many_to_shuffle")
+         if (all(pnames%exclude)) call die("[cg_list_rebalance:rebalance] all threads excluded")
 
-         rebalance_necessary = .false.
-         s = 0
+         call compute_speed_cumul
 
          curl => finest%level
          do while (associated(curl))
 
             if (size(curl%gp%list) > 0) then
 
-               if (all(pnames%exclude)) call die("[cg_list_rebalance:rebalance] all threads excluded")
-
                call curl%gp%set_sort_weight(curl%l%off, .true.)
-               call compute_speed_cumul
 
                p = FIRST
                do i = lbound(curl%gp%list, 1), ubound(curl%gp%list, 1)
@@ -246,32 +245,36 @@ contains
                enddo
 
                if (any(curl%gp%list(:)%dest_proc == INVALID)) call die("[cg_list_rebalance:rebalance] not all dest_proc have been set")
-
-               associate ( cnt_mov => count(curl%gp%list(:)%cur_proc /= curl%gp%list(:)%dest_proc))
-                  s = s + cnt_mov
-                  if (cnt_mov > 0) then
-                     write(msg, '(a,i3,2(a,i6))')"[cg_list_rebalance:rebalance] ^", curl%l%id, " OutOfPlace grids:", cnt_mov, "/",size(curl%gp%list)
-                     !a,f6.3,a , " (load balance: ", sum(curl%cnt_all) / real(maxval(curl%cnt_all) * size(curl%cnt_all)), ")"
-                     call printinfo(msg)
-                  endif
-                  if (cnt_mov/real(size(curl%gp%list)) > oop_thr) rebalance_necessary = .true.
-               end associate
-
             endif
-
-            if (sum(curl%cnt_all, mask = pnames%exclude) /= 0) rebalance_necessary = .true.
 
             curl => curl%coarser
          enddo
 
-         ! if we exceed per-level threshold or any excluded thread has cg
-         if (rebalance_necessary) then
-            call printinfo("[cg_list_rebalance:rebalance] reshuffling OutOfPlace grids")
-         else
-            s = 0
+         rebalance_necessary = .false.
+         cnt_mv(:) = 0
+         curl => finest%level
+         do while (associated(curl))
+            cnt_gp(curl%l%id) = size(curl%gp%list)
+            if (size(curl%gp%list) > 0) cnt_mv(curl%l%id) = count(curl%gp%list(:)%cur_proc /= curl%gp%list(:)%dest_proc)
+            if (sum(curl%cnt_all, mask = pnames%exclude) /= 0) rebalance_necessary = .true.
+            curl => curl%coarser
+         enddo
+
+         s = sum(cnt_mv)
+         if (s / real(sum(cnt_gp)) > oop_thr) rebalance_necessary = .true.
+         if (s > 0) then
+            write(fmt, *)"(2(a,i2),a,", size(cnt_mv), "i", int(log10(real(maxval([cnt_mv, 1]))))+3, ",a,", &
+                 &                      size(cnt_gp), "i", int(log10(real(maxval([cnt_gp, 1]))))+3, ",2a)"
+            write(msg, fmt)"Rebalance: ^", lbound(cnt_gp, 1), " .. ", ubound(cnt_gp, 1), " OutOfPlace grids = [", cnt_mv, " ] / [ ", cnt_gp, " ] ", &
+                 trim(merge("(reshuffling)       ", "(skipping reshuffle)", rebalance_necessary))
+            call printinfo(msg)
          endif
 
+         if (.not. rebalance_necessary) s = 0.
+
       end function how_many_to_shuffle
+
+      !> \brief Find the effective thread speed and calculate its cumulative distribution
 
       subroutine compute_speed_cumul
 
@@ -283,6 +286,7 @@ contains
          real :: cml
          integer(kind=4) :: p
 
+         ! Find the speed
          if (balance_host > 0. .and. pnames%speed_avail) then
             if (balance_thread) then
                speed(:) = pnames%wtime(:)
@@ -301,17 +305,17 @@ contains
          else
             speed(:) = 1.
          endif
-
-         ! ToDo here modify speed to account for over/underload on other levels
-
          where (pnames%exclude(:)) speed(:) = 0.
 
+         ! Compute cumulative speed distribution: threat speed as a bin width.
+         ! Faster threads/nodes will have wider bins, excluded threads will have 0-sized bins.
          cml = 0.
          do p = FIRST, LAST
             cml = cml + speed(p)
             cumul(p) = cml
          enddo
 
+         ! Normalize
          speed(:) = speed(:) / cml
          cumul(:) = cumul(:) / cml
 
