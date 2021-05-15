@@ -52,7 +52,6 @@ contains
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
       use cg_list_balance,    only: I_N_B, I_OFF
-      use cg_list_global,     only: all_cg
       use constants,          only: LO, I_ONE, ndims, PPP_AMR
       use dataio_pub,         only: warn
       use load_balance,       only: balance_cg, balance_host, balance_thread
@@ -72,12 +71,10 @@ contains
       integer(kind=4) :: p, i, ii
       real :: speed
 !      logical :: invalid_speed
-!   real, allocatable, dimension(:) :: glob_costs
       enum, bind(C)
          enumerator :: I_GID = I_N_B + ndims
       end enum
       integer(kind=4), parameter :: tag_gpt = 1, tag_cost = tag_gpt + 1  ! also used as counters for requests
-      integer, parameter :: ALL_POS = 0
       character(len=*), parameter :: cc_label = "collect_costs"
 
       call ppp_main%start(cc_label, PPP_AMR)
@@ -89,7 +86,7 @@ contains
 
          ! invalid_speed = .false.
          curl%recently_changed = .false.
-         allocate(gptemp(I_OFF:I_GID, curl%cnt), costs(ALL_POS:curl%cnt), curl%cnt_all(FIRST:LAST)) !, glob_costs(FIRST:LAST))
+         allocate(gptemp(I_OFF:I_GID, curl%cnt), costs(curl%cnt), curl%cnt_all(FIRST:LAST))
 
          ! We have to use cgl%cg%old_costs because cgl%cg%costs was reset just before the call to refinement update
          i = 0
@@ -101,13 +98,6 @@ contains
             cgl => cgl%nxt
          enddo
 
-         costs(ALL_POS) = 0.
-         cgl => all_cg%first
-         do while (associated(cgl))
-            costs(ALL_POS) = costs(ALL_POS) + cgl%cg%old_costs%total()
-            cgl => cgl%nxt
-         enddo
-
          call MPI_Gather(curl%cnt, I_ONE, MPI_INTEGER, curl%cnt_all, I_ONE, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
          if (master) then
             call curl%gp%init(sum(curl%cnt_all))
@@ -115,7 +105,7 @@ contains
             do p = FIRST, LAST
                if (curl%cnt_all(p) > 0) then
                   if (p /= FIRST) then
-                     allocate(gptemp(I_OFF:I_GID, curl%cnt_all(p)), costs(ALL_POS:curl%cnt_all(p)))
+                     allocate(gptemp(I_OFF:I_GID, curl%cnt_all(p)), costs(curl%cnt_all(p)))
                      call MPI_Recv(gptemp, size(gptemp, kind=4), MPI_INTEGER8,         p, tag_gpt,  MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                      call MPI_Recv(costs,  size(costs, kind=4),  MPI_DOUBLE_PRECISION, p, tag_cost, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                   endif
@@ -139,9 +129,6 @@ contains
                      endif
                   enddo
                   ii = ii + curl%cnt_all(p)
-                  ! glob_costs(p) = costs(ALL_POS)
-               else
-                  ! glob_costs(p) = 0.
                endif
                if (allocated(gptemp)) deallocate(gptemp)
                if (allocated(costs))  deallocate(costs)
@@ -155,8 +142,6 @@ contains
             endif
             deallocate(gptemp, costs)
          endif
-
-         ! deallocate(glob_costs)
 
          curl => curl%coarser
       enddo
