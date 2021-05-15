@@ -47,13 +47,13 @@ module procnames
    type nodeproc_t
       character(len=MPI_MAX_PROCESSOR_NAME) :: nodename   !< local $HOSTNAME
       integer(kind=4), allocatable, dimension(:) :: proc  !< list of MPI ranks that belong to this%nodename
-      real :: speed                                       !< estimated average speed of local MPI processes
+      real :: wtime                                       !< estimated average execution time per cg of group of local MPI processes
    end type nodeproc_t
 
    ! all connections between MPI ranks and nodes
    type procnamelist_t
       character(len=MPI_MAX_PROCESSOR_NAME), allocatable, dimension(:) :: procnames  !< node names associated with MPI ranks
-      real, allocatable, dimension(:) :: speed                                       !< estimated speed of MPI ranks
+      real, allocatable, dimension(:) :: wtime                                       !< estimated execution time per cg of MPI ranks
       logical, allocatable, dimension(:) :: exclude                                  !< When .true. then exclude given thread from computations
       type(nodeproc_t), allocatable, dimension(:) :: proc_on_node                    !< array of nodes and MPI ranks
       integer, allocatable, dimension(:) :: hostindex                                !< index in proc_on_node for each MPI rank
@@ -62,7 +62,7 @@ module procnames
    contains
       procedure :: init                !< Initialize the pnames structure
       procedure :: cleanup             !< Clean up the pnames structure
-      procedure :: calc_hostspeed      !< Compute this%proc_on_node(:)%speed from this%speed
+      procedure :: calc_hostspeed      !< Compute this%proc_on_node(:)%wtime from this%wtime
       procedure :: mark_for_exclusion  !< Mark underperforming processes for exclusion
       procedure :: enable_all          !< Unmark any exclusions
    end type procnamelist_t
@@ -90,7 +90,7 @@ contains
       this%speed_avail = .false.
 
       allocate(this%procnames(FIRST:LAST), &
-           &   this%speed    (FIRST:LAST), &
+           &   this%wtime    (FIRST:LAST), &
            &   this%exclude  (FIRST:LAST), &
            &   this%hostindex(FIRST:LAST))
 
@@ -187,13 +187,13 @@ contains
       enddo
       deallocate(this%proc_on_node)
       deallocate(this%procnames)
-      deallocate(this%speed)
+      deallocate(this%wtime)
       deallocate(this%exclude)
       deallocate(this%hostindex)
 
    end subroutine cleanup
 
-!< \brief Compute this%proc_on_node(:)%speed from this%speed
+!< \brief Compute this%proc_on_node(:)%wtime from this%wtime
 
    subroutine calc_hostspeed(this)
 
@@ -207,8 +207,8 @@ contains
       do host = lbound(this%proc_on_node, 1), ubound(this%proc_on_node, 1)
          associate (h => this%proc_on_node(host))
             avg = 0.  ! Don't average on unoccupied/excluded threads
-            if (count(this%speed(h%proc(:)) > 0.) > 0) avg = sum(this%speed(h%proc(:))) / count(this%speed(h%proc(:)) > 0.)
-            h%speed = avg
+            if (count(this%wtime(h%proc(:)) > 0.) > 0) avg = sum(this%wtime(h%proc(:))) / count(this%wtime(h%proc(:)) > 0.)
+            h%wtime = avg
          end associate
       enddo
 
@@ -228,17 +228,17 @@ contains
       real, parameter :: fast_enough = 1.2  ! count slightly slower threads in the average but reject marauders
       real :: avg, fast_avg
 
-      if (count(.not. this%exclude .and. this%speed(:) > 0.) <= 0) return  ! this may occur right after restart
+      if (count(.not. this%exclude .and. this%wtime(:) > 0.) <= 0) return  ! this may occur right after restart
 
       ! average MHD cost per cg on active threads
-      avg = sum(this%speed(:), mask = .not. this%exclude .and. this%speed(:) > 0.) / &
-           &                    count(.not. this%exclude .and. this%speed(:) > 0.)
+      avg = sum(this%wtime(:), mask = .not. this%exclude .and. this%wtime(:) > 0.) / &
+           &                    count(.not. this%exclude .and. this%wtime(:) > 0.)
 
       ! average MHD cost per cg on active threads that aren't lagging too much behind average
-      fast_avg = sum(this%speed(:), mask = (.not. this%exclude .and. this%speed(:) > 0. .and. this%speed(:) <= fast_enough * avg)) / &
-           &                          count(.not. this%exclude .and. this%speed(:) > 0. .and. this%speed(:) <= fast_enough * avg)
+      fast_avg = sum(this%wtime(:), mask = (.not. this%exclude .and. this%wtime(:) > 0. .and. this%wtime(:) <= fast_enough * avg)) / &
+           &                          count(.not. this%exclude .and. this%wtime(:) > 0. .and. this%wtime(:) <= fast_enough * avg)
 
-      this%exclude = this%exclude .or. this%speed(:) > fast_avg * threshold
+      this%exclude = this%exclude .or. this%wtime(:) > fast_avg * threshold
 
    end subroutine mark_for_exclusion
 

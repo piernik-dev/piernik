@@ -164,7 +164,7 @@ contains
 
          do p = FIRST, LAST
             associate (cur_speed => all_proc_stats(I_AVG, I_MHD - lbound(cost_labels, 1) + I_ONE, p), &
-               &       pspeed => pnames%speed(p))
+               &       pspeed => pnames%wtime(p))
                if (firstcall .or. cur_speed <= 0.) then  ! first call or depleted thread
                   pspeed = max(0., cur_speed)
                else
@@ -392,7 +392,7 @@ contains
          real :: mx
          integer, parameter :: mpl = 16, maxex = 128
 
-         mx = maxval(1./pnames%speed(:), mask=(pnames%speed(:) > 0.))
+         mx = maxval(1./pnames%wtime(:), mask=(pnames%wtime(:) > 0.))
          dec = 3
          if (mx > 0.) dec = max(0, min(3, 3 - int(floor(log10(mx)))))
 
@@ -403,12 +403,12 @@ contains
                   associate (pb =>     lbound(ph%proc, 1) +  ln    * mpl, &
                        &     pe => min(lbound(ph%proc, 1) + (ln+1) * mpl - 1, ubound(ph%proc, 1)))
 
-                     if (ph%speed > 0.) then
+                     if (ph%wtime > 0.) then
                         write(fmt, *)"(3a,f6.", dec, ",a)"
-                        write(header, fmt) "@", ph%nodename(:pnames%maxnamelen), " <MHD speed> = ", 1./ph%speed, " blk/s ["
+                        write(header, fmt) "@", ph%nodename(:pnames%maxnamelen), " <MHD speed> = ", 1./ph%wtime, " blk/s ["
                         write(fmt,  *) "(a,", pe - pb + 1, "f6.", dec, ",a)"
                         write(msg, fmt) merge(trim(header), repeat(" ", len_trim(header)), ln == 0), &
-                             merge(1. / pnames%speed(ph%proc(pb:pe)), 0., pnames%speed(ph%proc(pb:pe)) > 0.), &
+                             merge(1. / pnames%wtime(ph%proc(pb:pe)), 0., pnames%wtime(ph%proc(pb:pe)) > 0.), &
                              merge(" ]", "  ", ln == int((size(ph%proc) - 1)/ mpl))
                      else
                         write(msg, '(3a)') "@", ph%nodename(:pnames%maxnamelen), " <MHD speed> = N/A"

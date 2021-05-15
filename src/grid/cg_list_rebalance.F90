@@ -69,7 +69,7 @@ contains
       real, allocatable, dimension(:) :: costs
       type(cg_list_element), pointer :: cgl
       integer(kind=4) :: p, i, ii
-      real :: speed
+      real :: wtime
 !      logical :: invalid_speed
       enum, bind(C)
          enumerator :: I_GID = I_N_B + ndims
@@ -112,10 +112,10 @@ contains
 
                   ! Apply host or thread speed coefficients to costs(:), if applicable
                   if (balance_host > 0. .and. pnames%speed_avail) then
-                     speed = merge(pnames%speed(p), pnames%proc_on_node(pnames%hostindex(p))%speed, balance_thread)
-                     if (speed < 0.) call warn("[cg_list_rebalance:collect_costs] speed < 0.")
-                     if (speed > 0.) then
-                        costs(:) = costs(:) / speed
+                     wtime = merge(pnames%wtime(p), pnames%proc_on_node(pnames%hostindex(p))%wtime, balance_thread)
+                     if (wtime < 0.) call warn("[cg_list_rebalance:collect_costs] wtime < 0.")
+                     if (wtime > 0.) then
+                        costs(:) = costs(:) / wtime
                         ! else
                         ! invalid_speed = .true.
                      endif
@@ -285,9 +285,9 @@ contains
 
          if (balance_host > 0. .and. pnames%speed_avail) then
             if (balance_thread) then
-               speed(:) = pnames%speed(:)
+               speed(:) = pnames%wtime(:)
             else
-               speed(:) = pnames%proc_on_node(pnames%hostindex(:))%speed
+               speed(:) = pnames%proc_on_node(pnames%hostindex(:))%wtime
             endif
             if (all(speed(:) > 0. .or. pnames%exclude(:))) then
                where (speed(:) > 0.)
