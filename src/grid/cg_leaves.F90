@@ -141,7 +141,7 @@ contains
       enddo
       g_cnt = leaves%cnt
       call piernik_MPI_Allreduce(g_cnt, pSUM)
-      write(msg(len_trim(msg)+1:), '(a,i7,a,f6.3)')", Sum: ",g_cnt, ", load balance: ",g_cnt/real(sum_max)
+      write(msg(len_trim(msg)+1:), '(a,i7,a,f6.3)')", Sum: ",g_cnt, ", cg load balance: ",g_cnt/real(sum_max)
       is = len_trim(msg)
       write(msg(len_trim(msg)+1:), '(a,f7.3)') ", dt_wall= ", set_timer(tmr_amr)
       if (finest%level%l%id > base_level_id) then

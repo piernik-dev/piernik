@@ -122,7 +122,7 @@ contains
                   endif
 
                   do i = I_ONE, curl%cnt_all(p)
-                     if (balance_cg > 0.) then
+                     if (balance_cg > 0. .and. pnames%speed_avail) then
                         call curl%gp%list(i+ii)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), p, costs(i))
                      else
                         call curl%gp%list(i+ii)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), p)
@@ -165,7 +165,7 @@ contains
       implicit none
 
       type(cg_level_connected_t), pointer :: curl
-      real, dimension(FIRST:LAST) :: speed, cumul  ! normalized thread speed and cumulative speed for all threads up to rank
+      real, dimension(FIRST:LAST) :: speed, cumul, load_fac  ! normalized thread speed and cumulative speed for all threads up to rank
       integer :: hmts
       integer(kind=4) :: edc
       character(len=*), parameter :: ro_label = "rebalance"
@@ -221,12 +221,16 @@ contains
          integer(kind=4) :: p
          logical :: rebalance_necessary
          integer, dimension(coarsest%level%l%id:finest%level%l%id) :: cnt_mv, cnt_gp
+         real, dimension(FIRST:LAST) :: costs_above
+         real :: global_costs_above
          character(len=fmt_len) :: fmt
 
          if (slave) call die("[cg_list_rebalance:rebalance] slave in how_many_to_shuffle")
          if (all(pnames%exclude)) call die("[cg_list_rebalance:rebalance] all threads excluded")
 
-         call compute_speed_cumul
+         call compute_speed
+         costs_above(:) = 0.
+         global_costs_above = 0.
 
          curl => finest%level
          do while (associated(curl))
@@ -234,6 +238,13 @@ contains
             if (size(curl%gp%list) > 0) then
 
                call curl%gp%set_sort_weight(curl%l%off, .true.)
+               global_costs_above = global_costs_above + curl%gp%w_norm
+               where (speed(:) > 0.)
+                  load_fac(:) = max(0., 1. - costs_above(:) / (global_costs_above * speed(:)))
+               elsewhere
+                  load_fac(:) = 0.
+               endwhere
+               call compute_cumul
 
                p = FIRST
                do i = lbound(curl%gp%list, 1), ubound(curl%gp%list, 1)
@@ -242,9 +253,11 @@ contains
                   enddo
                   if (p > LAST) call die("[cg_list_rebalance:rebalance] p > LAST")
                   curl%gp%list(i)%dest_proc = p
+                  costs_above(p) = costs_above(p) + curl%gp%list(i)%weight * curl%gp%w_norm
                enddo
 
                if (any(curl%gp%list(:)%dest_proc == INVALID)) call die("[cg_list_rebalance:rebalance] not all dest_proc have been set")
+
             endif
 
             curl => curl%coarser
@@ -276,7 +289,7 @@ contains
 
       !> \brief Find the effective thread speed and calculate its cumulative distribution
 
-      subroutine compute_speed_cumul
+      subroutine compute_speed
 
          use load_balance, only: balance_host, balance_thread
          use procnames,    only: pnames
@@ -284,7 +297,6 @@ contains
          implicit none
 
          real :: cml
-         integer(kind=4) :: p
 
          ! Find the speed
          if (balance_host > 0. .and. pnames%speed_avail) then
@@ -307,19 +319,34 @@ contains
          endif
          where (pnames%exclude(:)) speed(:) = 0.
 
-         ! Compute cumulative speed distribution: threat speed as a bin width.
-         ! Faster threads/nodes will have wider bins, excluded threads will have 0-sized bins.
+         ! Normalize: speed(p) = 0.1 means that p-th MPI rank has capability to do 0.1 of sum of work of all ranks.
+         cml = sum(speed(:))
+         speed(:) = speed(:) / cml
+
+      end subroutine compute_speed
+
+      !>
+      !! \brief Compute cumulative speed distribution: treat speed as a bin width.
+      !! Faster threads/nodes will have wider bins, excluded threads will have 0-sized bins.
+      !<
+
+      subroutine compute_cumul
+
+         implicit none
+
+         integer(kind=4) :: p
+         real :: cml
+
          cml = 0.
          do p = FIRST, LAST
-            cml = cml + speed(p)
+            cml = cml + speed(p) * load_fac(p)
             cumul(p) = cml
          enddo
 
          ! Normalize
-         speed(:) = speed(:) / cml
          cumul(:) = cumul(:) / cml
 
-      end subroutine compute_speed_cumul
+      end subroutine compute_cumul
 
    end subroutine rebalance
 
