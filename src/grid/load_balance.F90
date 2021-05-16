@@ -48,6 +48,7 @@ module load_balance
    real,                     protected :: balance_host      !< Use averaged cg MHD costs to account for differing host speed. Value <=0 disables thread speed estimate (assume all hosts equally fast), use 1. for fully speed-weighted rebalance.
    logical,                  protected :: balance_thread    !< If .true. then use balance_host for each thread separately (CPU affinity has to be ensured outside of Piernik).
    character(len=cbuff_len), protected :: cost_to_balance   !< One of [ cg_cost_data:cost_labels, "all", "none" ], default: "MHD", ToDo: enable selected subset.
+   real,                     protected :: balance_levels    !< If 1. then prioritize intra-level balancing for multigrid
 
    !   verbosity
    integer(kind=4),          protected :: verbosity         !< Enumerated from 0: none, summary, detailed, elaborate
@@ -58,7 +59,7 @@ module load_balance
    character(len=cbuff_len), protected :: watch_cost        !< Which cg cost to watch? One of [ cg_cost_data:cost_labels, "all", "none" ], default: "MHD"
    real,                     protected :: exclusion_thr     !< Exclusion threshold
 
-   namelist /BALANCE/ balance_cg, balance_host, balance_thread, cost_to_balance, &
+   namelist /BALANCE/ balance_cg, balance_host, balance_thread, cost_to_balance, balance_levels, &
         &             verbosity, verbosity_nstep, &
         &             enable_exclusion, watch_cost, exclusion_thr
 
@@ -81,6 +82,7 @@ contains
 !!   <tr><td> balance_host     </td><td> 0.       </td><td> real        </td><td> \copydoc load_balance::balance_host     </td></tr>
 !!   <tr><td> balance_thread   </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::balance_thread   </td></tr>
 !!   <tr><td> cost_to_balance  </td><td> "MHD"    </td><td> character() </td><td> \copydoc load_balance::cost_to_balance  </td></tr>
+!!   <tr><td> balance_levels   </td><td> 0.       </td><td> real        </td><td> \copydoc load_balance::balance_levels   </td></tr>
 !!   <tr><td> verbosity        </td><td> 2        </td><td> integer     </td><td> \copydoc load_balance::verbosity        </td></tr>
 !!   <tr><td> verbosity_nstep  </td><td> 20       </td><td> integer     </td><td> \copydoc load_balance::verbosity_nstep  </td></tr>
 !!   <tr><td> enable_exclusion </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::enable_exclusion </td></tr>
@@ -99,7 +101,7 @@ contains
       implicit none
 
       integer, parameter :: verbosity_nstep_default = 20
-      real,    parameter :: intolerable_perf = 3.
+      real,    parameter :: intolerable_perf = 3., insane_factor = 2.
       integer            :: ind
 
       ! No code_progress dependencies apart from PIERNIK_INIT_MPI (obvious for our use of namelist)
@@ -107,6 +109,7 @@ contains
       ! Namelist defaults
       balance_cg       = 0.
       balance_host     = 0.
+      balance_levels   = 0.
       balance_thread   = .false.
       cost_to_balance  = "MHD"
       verbosity        = V_HOST
@@ -145,6 +148,7 @@ contains
          rbuff(1) = exclusion_thr
          rbuff(2) = balance_cg
          rbuff(3) = balance_host
+         rbuff(4) = balance_levels
 
       endif
 
@@ -167,6 +171,7 @@ contains
          exclusion_thr    = rbuff(1)
          balance_cg       = rbuff(2)
          balance_host     = rbuff(3)
+         balance_levels   = rbuff(4)
 
       endif
 
@@ -192,8 +197,42 @@ contains
          verbosity_nstep = huge(1_4)
       endif
 
+      if (balance_host > 1.) then
+         if (balance_host > insane_factor) then
+            if (master) call warn("[load_balance] balance_host >> 1. (reducing to 1.)")
+            balance_host = 1.
+         else
+            if (master) call warn("[load_balance] balance_host > 1. may lead to unexpected behavior of load balancer")
+         endif
+      endif
+
+      if (balance_cg > 1.) then
+         if (balance_cg > insane_factor) then
+            if (master) call warn("[load_balance] balance_cg >> 1. (reducing to 1.)")
+            balance_cg = 1.
+         else
+            if (master) call warn("[load_balance] balance_cg > 1. may lead to unexpected behavior of load balancer")
+         endif
+      endif
+
+      if (balance_levels > 1.) then
+         if (balance_levels > insane_factor) then
+            if (master) call warn("[load_balance] balance_levels >> 1. (reducing to 1.)")
+            balance_levels = 1.
+         else
+            if (master) call warn("[load_balance] balance_levels > 1. may lead to unexpected behavior of load balancer")
+         endif
+      endif
+
+
       if (master) then
-         if (any(cost_mask) .and. (balance_cg > 0. .or. balance_host > 0.)) call printinfo("[load_balance] Auto-balance enabled")
+         if (any(cost_mask) .and. (balance_cg > 0. .or. balance_host > 0.)) then
+            write(msg, '(a)')"[load_balance] Auto-balance enabled: "
+            if (balance_host > 0.) write(msg, '(2a,f5.2,a)') &
+                 trim(msg), " balance_host = ", balance_host, " (" // trim(merge("thread", "host  ", balance_thread)) // "-based)"
+            if (balance_cg > 0.) write(msg, '(2a,f5.2)') trim(msg), " balance_cg = ", balance_cg
+            call printinfo(msg)
+         endif
          if (watch_ind /= INVALID .and. enable_exclusion) then
             write(msg, '(a,f4.1,a)')"[load_balance] Thread exclusion enabled (threshold = ", exclusion_thr, ")"
             call printinfo(msg)

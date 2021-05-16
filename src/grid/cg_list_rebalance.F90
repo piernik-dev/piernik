@@ -211,6 +211,7 @@ contains
          use cg_level_coarsest, only: coarsest
          use constants,         only: fmt_len, INVALID, I_ONE
          use dataio_pub,        only: printinfo, die
+         use load_balance,      only: balance_cg, balance_levels
          use mpisetup,          only: slave
          use procnames,         only: pnames
          use refinement,        only: oop_thr
@@ -237,10 +238,17 @@ contains
 
             if (size(curl%gp%list) > 0) then
 
-               call curl%gp%set_sort_weight(curl%l%off, .true.)
+               if (balance_cg > 0.) then
+                  call curl%gp%set_sort_weight(curl%l%off, .true., balance_cg)
+               else
+                  call curl%gp%set_sort_weight(curl%l%off, .true.)
+               endif
                global_costs_above = global_costs_above + curl%gp%w_norm
                where (speed(:) > 0.)
-                  load_fac(:) = max(0., 1. - costs_above(:) / (global_costs_above * speed(:)))
+                  ! Increasing balance_levels towards 1. may improve the multigrid performance when few top consecutive levels have less blocks than there are MPI ranks.
+                  ! An example of the problem is [8, 8] cg on 12 threads, where current algorithm will put two base-level cg on each thread unoccupied on finest level.
+                  ! If this ever becomes an issue then add a postprocessing stage that will try to make some performance-neutral moves between consecutive threads.
+                  load_fac(:) = max(0., 1. - (1. - max(0., balance_levels)) * costs_above(:) / (global_costs_above * speed(:)))
                elsewhere
                   load_fac(:) = 0.
                endwhere
@@ -250,8 +258,8 @@ contains
                do i = lbound(curl%gp%list, 1), ubound(curl%gp%list, 1)
                   do while (curl%gp%list(i)%cweight - .5 * curl%gp%list(i)%weight > cumul(p))
                      p = p + I_ONE
+                     if (p > LAST) call die("[cg_list_rebalance:rebalance] p > LAST")
                   enddo
-                  if (p > LAST) call die("[cg_list_rebalance:rebalance] p > LAST")
                   curl%gp%list(i)%dest_proc = p
                   costs_above(p) = costs_above(p) + curl%gp%list(i)%weight * curl%gp%w_norm
                enddo
@@ -322,6 +330,11 @@ contains
          ! Normalize: speed(p) = 0.1 means that p-th MPI rank has capability to do 0.1 of sum of work of all ranks.
          cml = sum(speed(:))
          speed(:) = speed(:) / cml
+
+         ! If balance_host is between 0. and 1. we will limit the feedback from the measured speed.
+         if (balance_host > 0.) then
+            where (speed(:) > 0.) speed(:) = balance_host * speed(:) + (1. - balance_host) / count(speed(:) > 0.)
+         endif
 
       end subroutine compute_speed
 

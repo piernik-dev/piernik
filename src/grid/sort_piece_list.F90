@@ -75,17 +75,17 @@ contains
 
 !> \brief A shortcut for set_id + sort + find_cweights
 
-   subroutine set_sort_weight(this, off, nw)
+   subroutine set_sort_weight(this, off, nw, strength)
 
       implicit none
 
-      class(grid_piece_list),            intent(inout) :: this  !< object invoking type-bound procedure
-      integer(kind=8), dimension(ndims), intent(in)    :: off   !< offset of the level
-      logical,                           intent(in)    :: nw    !< normalize weights
-
+      class(grid_piece_list),            intent(inout) :: this      !< object invoking type-bound procedure
+      integer(kind=8), dimension(ndims), intent(in)    :: off       !< offset of the level
+      logical,                           intent(in)    :: nw        !< normalize weights
+      real, optional,                    intent(in)    :: strength  !< strength of weighting
       call this%set_id(off)
       call this%sort
-      call this%find_cweights(nw)
+      call this%find_cweights(nw, strength)
 
    end subroutine set_sort_weight
 
@@ -172,20 +172,27 @@ contains
 
 !> \brief Compute this%list(:)%cweight
 
-   subroutine find_cweights(this, nw)
+   subroutine find_cweights(this, nw, strength)
 
       implicit none
 
-      class(grid_piece_list), intent(inout) :: this  !< object invoking type-bound procedure
-      logical,                intent(in)    :: nw    !< normalize weights
+      class(grid_piece_list), intent(inout) :: this      !< object invoking type-bound procedure
+      logical,                intent(in)    :: nw        !< normalize weights
+      real, optional,         intent(in)    :: strength  !< 1. for normal weights differentiation,
+                                                         !! 0. for equalizing all weights,
+                                                         !! other values to get linear mix of these
 
       integer :: s
       real :: cml
 
       this%w_norm = 1.
 
+      if (present(strength)) this%list(:)%weight = strength * this%list(:)%weight + &
+           (1. - strength) * sum(this%list(:)%weight) / size(this%list)
+
       cml = 0.
       do s = lbound(this%list, dim=1), ubound(this%list, dim=1)
+         if (this%list(s)%weight < 0.) this%list(s)%weight = 0.  ! it may happen when strength >> 1.
          cml = cml + this%list(s)%weight
          this%list(s)%cweight = cml
       enddo
