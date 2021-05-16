@@ -167,7 +167,7 @@ contains
 
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_t
-      use cg_list_rebalance,  only: rebalance
+      use rebalance,          only: rebalance_all
       use constants,          only: PPP_AMR
       use ppp,                only: ppp_main
 
@@ -181,7 +181,7 @@ contains
 
       call ppp_main%start(bu_label, PPP_AMR)
 
-      call rebalance
+      call rebalance_all
 
       curl => finest%level
       do while (associated(curl))

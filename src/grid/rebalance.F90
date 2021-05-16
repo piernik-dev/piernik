@@ -29,12 +29,12 @@
 
 !> \brief A module with routines for computing load balance and performing necessary cg moves.
 
-module cg_list_rebalance
+module rebalance
 
    implicit none
 
    private
-   public :: rebalance
+   public :: rebalance_all
 
 contains
 
@@ -113,7 +113,7 @@ contains
                   ! Apply host or thread speed coefficients to costs(:), if applicable
                   if (balance_host > 0. .and. pnames%speed_avail) then
                      wtime = merge(pnames%wtime(p), pnames%proc_on_node(pnames%hostindex(p))%wtime, balance_thread)
-                     if (wtime < 0.) call warn("[cg_list_rebalance:collect_costs] wtime < 0.")
+                     if (wtime < 0.) call warn("[rebalance:collect_costs] wtime < 0.")
                      if (wtime > 0.) then
                         costs(:) = costs(:) / wtime
                         ! else
@@ -152,7 +152,7 @@ contains
 
 !> \brief Routine for measuring disorder level in distribution of grids across processes and restoring proper balance
 
-   subroutine rebalance
+   subroutine rebalance_all
 
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
@@ -183,7 +183,7 @@ contains
 
       if (hmts > 0) then
          if (edc /= 0) then
-            write(msg, '(a,i5,a)')"[cg_list_rebalance:rebalance] Allreduce(expanded_domain%cnt) = ", edc, ", aborting reshuffling."
+            write(msg, '(a,i5,a)')"[rebalance:rebalance_all] Allreduce(expanded_domain%cnt) = ", edc, ", aborting reshuffling."
             if (master) call warn(msg)
          else
             call reshuffle
@@ -226,8 +226,8 @@ contains
          real :: global_costs_above
          character(len=fmt_len) :: fmt
 
-         if (slave) call die("[cg_list_rebalance:rebalance] slave in how_many_to_shuffle")
-         if (all(pnames%exclude)) call die("[cg_list_rebalance:rebalance] all threads excluded")
+         if (slave) call die("[rebalance:rebalance_all] slave in how_many_to_shuffle")
+         if (all(pnames%exclude)) call die("[rebalance:rebalance_all] all threads excluded")
 
          call compute_speed
          costs_above(:) = 0.
@@ -258,13 +258,13 @@ contains
                do i = lbound(curl%gp%list, 1), ubound(curl%gp%list, 1)
                   do while (curl%gp%list(i)%cweight - .5 * curl%gp%list(i)%weight > cumul(p))
                      p = p + I_ONE
-                     if (p > LAST) call die("[cg_list_rebalance:rebalance] p > LAST")
+                     if (p > LAST) call die("[rebalance:rebalance_all] p > LAST")
                   enddo
                   curl%gp%list(i)%dest_proc = p
                   costs_above(p) = costs_above(p) + curl%gp%list(i)%weight * curl%gp%w_norm
                enddo
 
-               if (any(curl%gp%list(:)%dest_proc == INVALID)) call die("[cg_list_rebalance:rebalance] not all dest_proc have been set")
+               if (any(curl%gp%list(:)%dest_proc == INVALID)) call die("[rebalance:rebalance_all] not all dest_proc have been set")
 
             endif
 
@@ -361,7 +361,7 @@ contains
 
       end subroutine compute_cumul
 
-   end subroutine rebalance
+   end subroutine rebalance_all
 
 !>
 !! \brief Routine for moving existing grids between processes
@@ -429,7 +429,7 @@ contains
          enddo
          curl => curl%coarser
       enddo
-      if (has_particles) call die("[cg_list_rebalance:reshuffle] Particles aren't supported yet")
+      if (has_particles) call die("[rebalance:reshuffle] Particles aren't supported yet")
 #endif /* NBODY */
 
       ! Count the number of fields on any of the top level cg
@@ -479,12 +479,12 @@ contains
       curl => finest%level
       do while (associated(curl))
 
-         if (ubound(gptemp, dim=2, kind=4) > tag_ub) call die("[cg_list_rebalance:reshuffle] this MPI implementation has too low MPI_TAG_UB attribute")
+         if (ubound(gptemp, dim=2, kind=4) > tag_ub) call die("[rebalance:reshuffle] this MPI implementation has too low MPI_TAG_UB attribute")
          do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
             if (gptemp(I_LEV, i) == curl%l%id) then
 
                cglepa(i)%p => null()
-               if (gptemp(I_C_P, i) == gptemp(I_D_P, i)) call die("[cg_list_rebalance:reshuffle] can not send to self")
+               if (gptemp(I_C_P, i) == gptemp(I_D_P, i)) call die("[rebalance:reshuffle] can not send to self")
                if (gptemp(I_C_P, i) == proc) then ! send
                   found = .false.
                   cgl => curl%first
@@ -512,7 +512,7 @@ contains
                      endif
                      cgl => cgl%nxt
                   enddo
-                  if (.not. found) call die("[cg_list_rebalance:reshuffle] Grid id not found")
+                  if (.not. found) call die("[rebalance:reshuffle] Grid id not found")
                   nr = nr + I_ONE
                   if (nr > size(req, dim=1)) call inflate_req
                   call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i, MPI_COMM_WORLD, req(nr), err_mpi)
@@ -591,4 +591,4 @@ contains
 
    end subroutine reshuffle
 
-end module cg_list_rebalance
+end module rebalance
