@@ -952,7 +952,11 @@ contains
 
       call ppp_main%start(pq1_label, PPP_AMR)
 
-      position = qna%lst(iv)%position(I_ONE)
+      if (d4) then
+         position = wna%lst(iv)%position(I_ONE)
+      else
+         position = qna%lst(iv)%position(I_ONE)
+      endif
       if (present(pos)) position = pos
       if (position /= VAR_CENTER .and. .not. warned) then
          if (master) call warn("[cg_level_connected:prolong_1var] Only cell-centered interpolation scheme is implemented. Expect inaccurate results for variables that are placed on faces or corners")
