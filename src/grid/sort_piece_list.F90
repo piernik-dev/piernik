@@ -174,6 +174,8 @@ contains
 
    subroutine find_cweights(this, nw, strength)
 
+      use dataio_pub, only: warn
+
       implicit none
 
       class(grid_piece_list), intent(inout) :: this      !< object invoking type-bound procedure
@@ -189,6 +191,11 @@ contains
 
       if (present(strength)) this%list(:)%weight = strength * this%list(:)%weight + &
            (1. - strength) * sum(this%list(:)%weight) / size(this%list)
+
+      if (count(this%list(:)%weight > 0.) == 0) then
+         this%list(:)%weight = 1.
+         call warn("[sort_piece_list:find_cweights] All weights == 0. on current level. Unused timer?")
+      endif
 
       cml = 0.
       do s = lbound(this%list, dim=1), ubound(this%list, dim=1)

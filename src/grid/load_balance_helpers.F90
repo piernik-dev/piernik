@@ -151,10 +151,13 @@ contains
 
    contains
 
+      ! It seems that most reliable mark of host speed is the MHD timer because of most even load there.
+
       subroutine update_costs
 
-         use cg_cost_data,  only: cost_labels, I_MHD  ! Hardcoded MHD cost as the most reliable measure. ToDo: give some choice.
+         use cg_cost_data,  only: cost_labels
          use cg_cost_stats, only: I_AVG
+         use load_balance,  only: watch_ind
          use procnames,     only: pnames
 
          implicit none
@@ -163,7 +166,7 @@ contains
          integer :: p
 
          do p = FIRST, LAST
-            associate (cur_speed => all_proc_stats(I_AVG, I_MHD - lbound(cost_labels, 1) + I_ONE, p), &
+            associate (cur_speed => all_proc_stats(I_AVG, watch_ind - lbound(cost_labels, 1) + I_ONE, p), &
                &       pspeed => pnames%wtime(p))
                if (firstcall .or. cur_speed <= 0.) then  ! first call or depleted thread
                   pspeed = max(0., cur_speed)

@@ -54,7 +54,7 @@ contains
       use cg_list_balance,    only: I_N_B, I_OFF
       use constants,          only: LO, I_ONE, ndims, PPP_AMR
       use dataio_pub,         only: warn
-      use load_balance,       only: balance_cg, balance_host, balance_thread
+      use load_balance,       only: balance_cg, balance_host, balance_thread, cost_mask
       use mpisetup,           only: err_mpi, req, inflate_req, master, FIRST, LAST
       use MPIF,               only: MPI_INTEGER, MPI_INTEGER8, MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Gather, MPI_Recv, MPI_Isend
       use procnames,          only: pnames
@@ -94,7 +94,7 @@ contains
          do while (associated(cgl))
             i = i + I_ONE
             gptemp(:, i) = [ cgl%cg%my_se(:, LO), int(cgl%cg%n_b, kind=8), int(cgl%cg%grid_id, kind=8) ]
-            costs(i) = cgl%cg%old_costs%total()
+            costs(i) = sum(cgl%cg%old_costs%wtime, mask=cost_mask(:))
             cgl => cgl%nxt
          enddo
 

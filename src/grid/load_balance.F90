@@ -81,7 +81,7 @@ contains
 !!   <tr><td> balance_cg       </td><td> 0.       </td><td> real        </td><td> \copydoc load_balance::balance_cg       </td></tr>
 !!   <tr><td> balance_host     </td><td> 0.       </td><td> real        </td><td> \copydoc load_balance::balance_host     </td></tr>
 !!   <tr><td> balance_thread   </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::balance_thread   </td></tr>
-!!   <tr><td> cost_to_balance  </td><td> "MHD"    </td><td> character() </td><td> \copydoc load_balance::cost_to_balance  </td></tr>
+!!   <tr><td> cost_to_balance  </td><td> "all"    </td><td> character() </td><td> \copydoc load_balance::cost_to_balance  </td></tr>
 !!   <tr><td> balance_levels   </td><td> 0.       </td><td> real        </td><td> \copydoc load_balance::balance_levels   </td></tr>
 !!   <tr><td> verbosity        </td><td> 2        </td><td> integer     </td><td> \copydoc load_balance::verbosity        </td></tr>
 !!   <tr><td> verbosity_nstep  </td><td> 20       </td><td> integer     </td><td> \copydoc load_balance::verbosity_nstep  </td></tr>
@@ -111,7 +111,7 @@ contains
       balance_host     = 0.
       balance_levels   = 0.
       balance_thread   = .false.
-      cost_to_balance  = "MHD"
+      cost_to_balance  = "all"
       verbosity        = V_HOST
       verbosity_nstep  = verbosity_nstep_default
       enable_exclusion = .false.
