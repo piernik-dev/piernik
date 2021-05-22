@@ -404,7 +404,7 @@ contains
       use cg_cost_data,   only: I_REFINE
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
-      use constants,      only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, ndims, INVALID
+      use constants,      only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, ndims, INVALID, base_level_id
       use dataio_pub,     only: warn, msg, die
       use domain,         only: dom
       use grid_cont,      only: grid_container
@@ -466,7 +466,11 @@ contains
       coarse => this%coarser
       if (.not. associated(coarse)) then
          this%need_vb_update = .false.
-         return ! check if some null allocations are required
+         return
+      endif
+      if (coarse%l%id < base_level_id) then  ! no need to calculate f/c below base level
+         this%need_vb_update = .false.
+         return
       endif
 
       ! Unfortunately we can't use finest%level%l%id

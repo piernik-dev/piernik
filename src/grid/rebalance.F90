@@ -209,7 +209,7 @@ contains
       integer function how_many_to_shuffle() result(s)
 
          use cg_level_coarsest, only: coarsest
-         use constants,         only: fmt_len, INVALID, I_ONE
+         use constants,         only: fmt_len, INVALID, I_ONE, base_level_id
          use dataio_pub,        only: printinfo, die
          use load_balance,      only: balance_cg, balance_levels
          use mpisetup,          only: slave
@@ -254,18 +254,29 @@ contains
                endwhere
                call compute_cumul
 
-               p = FIRST
-               do i = lbound(curl%gp%list, 1), ubound(curl%gp%list, 1)
-                  do while (curl%gp%list(i)%cweight - .5 * curl%gp%list(i)%weight > cumul(p))
-                     p = p + I_ONE
-                     if (p > LAST) call die("[rebalance:rebalance_all] p > LAST")
+               if (curl%l%id >= base_level_id) then
+                  p = FIRST
+                  do i = lbound(curl%gp%list, 1), ubound(curl%gp%list, 1)
+                     do while (curl%gp%list(i)%cweight - .5 * curl%gp%list(i)%weight > cumul(p))
+                        p = p + I_ONE
+                        if (p > LAST) call die("[rebalance:rebalance_all] p > LAST")
+                     enddo
+                     curl%gp%list(i)%dest_proc = p
+                     costs_above(p) = costs_above(p) + curl%gp%list(i)%weight * curl%gp%w_norm
                   enddo
-                  curl%gp%list(i)%dest_proc = p
-                  costs_above(p) = costs_above(p) + curl%gp%list(i)%weight * curl%gp%w_norm
-               enddo
+               else
+                  ! Skip balancing the multigrid levels (levels below the base level)
+                  ! because of unresolved problems with transfer of non-blocky levels.
+
+                  ! ToDo: put the estimated costs of below-base levels in costs_above(:)
+                  ! and global_costs_above before processing the finest level.
+
+                  ! This unfortunately means that these grids will not be
+                  ! evacuated from excluded threads.
+                  curl%gp%list(:)%dest_proc = curl%gp%list(:)%cur_proc
+               endif
 
                if (any(curl%gp%list(:)%dest_proc == INVALID)) call die("[rebalance:rebalance_all] not all dest_proc have been set")
-
             endif
 
             curl => curl%coarser
