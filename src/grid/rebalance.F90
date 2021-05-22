@@ -208,6 +208,7 @@ contains
 
       integer function how_many_to_shuffle() result(s)
 
+         use cg_level_base,     only: base
          use cg_level_coarsest, only: coarsest
          use constants,         only: fmt_len, INVALID, I_ONE, base_level_id
          use dataio_pub,        only: printinfo, die
@@ -220,7 +221,7 @@ contains
 
          integer :: i
          integer(kind=4) :: p
-         logical :: rebalance_necessary
+         logical :: rebalance_necessary, fine_processed
          integer, dimension(coarsest%level%l%id:finest%level%l%id) :: cnt_mv, cnt_gp
          real, dimension(FIRST:LAST) :: costs_above
          real :: global_costs_above
@@ -233,7 +234,13 @@ contains
          costs_above(:) = 0.
          global_costs_above = 0.
 
-         curl => finest%level
+         ! Use the following sequence of levels
+         !     -1, ..., coarsest, finest, ..., base
+         ! to be able to gather their costs while it is not allowed to  move them around.
+         fine_processed = .false.
+         curl => base%level%coarser
+         if (.not. associated(curl)) curl => finest%level
+
          do while (associated(curl))
 
             if (size(curl%gp%list) > 0) then
@@ -255,6 +262,7 @@ contains
                call compute_cumul
 
                if (curl%l%id >= base_level_id) then
+                  fine_processed = .true.
                   p = FIRST
                   do i = lbound(curl%gp%list, 1), ubound(curl%gp%list, 1)
                      do while (curl%gp%list(i)%cweight - .5 * curl%gp%list(i)%weight > cumul(p))
@@ -268,9 +276,6 @@ contains
                   ! Skip balancing the multigrid levels (levels below the base level)
                   ! because of unresolved problems with transfer of non-blocky levels.
 
-                  ! ToDo: put the estimated costs of below-base levels in costs_above(:)
-                  ! and global_costs_above before processing the finest level.
-
                   ! This unfortunately means that these grids will not be
                   ! evacuated from excluded threads.
                   curl%gp%list(:)%dest_proc = curl%gp%list(:)%cur_proc
@@ -280,6 +285,7 @@ contains
             endif
 
             curl => curl%coarser
+            if (.not. associated(curl) .and. .not. fine_processed) curl => finest%level
          enddo
 
          rebalance_necessary = .false.
