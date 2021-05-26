@@ -115,8 +115,8 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-            if (cg%dxmn < sqrt(big)/dt_cre_K) min_dt = min(min_dt, dt_cre_K * cg%dxmn**2)
-            cgl=>cgl%nxt
+            if (cg%dxmn * dt_cre_K < sqrt(big)) min_dt = min(min_dt, dt_cre_K * cg%dxmn2)
+            cgl => cgl%nxt
          enddo
          dt_cre_K = min_dt
       endif

@@ -89,7 +89,7 @@ contains
             cg => cgl%cg
 
             dt_thiscg = def_dtcrs
-            if (cg%dxmn * def_dtcrs < sqrt(big)) dt_thiscg = def_dtcrs * cg%dxmn**2
+            if (cg%dxmn * def_dtcrs < sqrt(big)) dt_thiscg = def_dtcrs * cg%dxmn2
             dt_crs = min(dt_crs, dt_thiscg)
 
             cgl => cgl%nxt
