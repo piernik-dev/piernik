@@ -1297,7 +1297,6 @@ contains
       use constants,        only: ION, half
 #endif /* MAGNETIC */
       use constants,        only: DST, I_ZERO
-      use global,           only: smallp
 #endif /* !ISO */
 
       implicit none
@@ -1508,6 +1507,7 @@ contains
 
 #else /* !ISO */
       if (fl%tag /= DST) then
+         ! wa: none -> pressure
          cgl => leaves%first
          do while (associated(cgl))
             call cgl%cg%costs%start
@@ -1516,7 +1516,7 @@ contains
 #ifdef MAGNETIC
             if (fl%tag == ION) cgl%cg%wa(:,:,:) = cgl%cg%wa(:,:,:) - half*(sum(cgl%cg%b(:,:,:,:)**2,dim=1))
 #endif /* MAGNETIC */
-            cgl%cg%wa(:,:,:) = max(fl%gam_1*cgl%cg%wa(:,:,:),smallp)  ! pres
+            cgl%cg%wa(:,:,:) = fl%gam_1*cgl%cg%wa(:,:,:)
 
             call cgl%cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
@@ -1524,11 +1524,12 @@ contains
          call leaves%get_extremum(qna%wai, MAXL, pr%pres_max)
          call leaves%get_extremum(qna%wai, MINL, pr%pres_min)
 
+         ! wa: pressure -> sound speed squared
          cgl => leaves%first
          do while (associated(cgl))
             call cgl%cg%costs%start
 
-            cgl%cg%wa(:,:,:) = fl%gam*cgl%cg%wa(:,:,:)/cgl%cg%u(fl%idn,:,:,:) ! sound speed squared
+            cgl%cg%wa(:,:,:) = fl%gam*cgl%cg%wa(:,:,:)/cgl%cg%u(fl%idn,:,:,:)
 
             call cgl%cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
@@ -1537,23 +1538,7 @@ contains
          pr%cs_max%val = sqrt(pr%cs_max%val)
          if (master) pr%cs_max%assoc = cfl * pr%cs_max%assoc / (pr%cs_max%val + small)
 
-         cgl => leaves%first
-         do while (associated(cgl))
-            call cgl%cg%costs%start
-
-            if (cgl%cg%dxmn >= sqrt(huge(1.0))) then
-               dxmn_safe = sqrt(huge(1.0))
-            else
-               dxmn_safe = cgl%cg%dxmn
-            endif
-            cgl%cg%wa = (cfl * dxmn_safe)**2 / (cgl%cg%wa + small)
-
-            call cgl%cg%costs%stop(I_OTHER)
-            cgl => cgl%nxt
-         enddo
-         call leaves%get_extremum(qna%wai, MINL, pr%dtcs_min)
-         if (pr%dtcs_min%val >= 0.) pr%dtcs_min%val = sqrt(pr%dtcs_min%val)
-
+         ! wa: sound speed squared -> temperature
          cgl => leaves%first
          do while (associated(cgl))
             call cgl%cg%costs%start
@@ -1565,6 +1550,25 @@ contains
          enddo
          call leaves%get_extremum(qna%wai, MAXL, pr%temp_max)
          call leaves%get_extremum(qna%wai, MINL, pr%temp_min)
+
+         ! wa: temperature -> (sound speed squared) -> sound time accross one cell
+         cgl => leaves%first
+         do while (associated(cgl))
+            call cgl%cg%costs%start
+
+            if (cgl%cg%dxmn >= sqrt(huge(1.0))) then
+               dxmn_safe = sqrt(huge(1.0))
+            else
+               dxmn_safe = cgl%cg%dxmn
+            endif
+            cgl%cg%wa = cgl%cg%wa * (kboltz * fl%gam)/mH
+            cgl%cg%wa = (cfl * dxmn_safe)**2 / (cgl%cg%wa + small)
+
+            call cgl%cg%costs%stop(I_OTHER)
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(qna%wai, MINL, pr%dtcs_min)
+         if (pr%dtcs_min%val >= 0.) pr%dtcs_min%val = sqrt(pr%dtcs_min%val)
 
       endif
 #endif /* !ISO */
