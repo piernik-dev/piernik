@@ -1286,7 +1286,6 @@ contains
       use constants,        only: ION, half
 #endif /* MAGNETIC */
       use constants,        only: DST, I_ZERO
-      use global,           only: smallp
 #endif /* !ISO */
 
       implicit none
@@ -1467,7 +1466,7 @@ contains
 #ifdef MAGNETIC
             if (fl%tag == ION) cgl%cg%wa(:,:,:) = cgl%cg%wa(:,:,:) - half*(sum(cgl%cg%b(:,:,:,:)**2,dim=1))
 #endif /* MAGNETIC */
-            cgl%cg%wa(:,:,:) = max(fl%gam_1*cgl%cg%wa(:,:,:),smallp)  ! pres
+            cgl%cg%wa(:,:,:) = fl%gam_1*cgl%cg%wa(:,:,:)  ! pres
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MAXL, pr%pres_max)
