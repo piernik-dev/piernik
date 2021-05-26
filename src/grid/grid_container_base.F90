@@ -286,12 +286,8 @@ contains
 
       call this%set_coords
 
-      this%dxmn = minval(this%dl(:), mask=dom%has_dir(:))
-      if (this%dxmn >= sqrt(huge(1.0))) then
-         this%dxmn2 = sqrt(huge(1.0))
-      else
-         this%dxmn2  = (this%dxmn)**2
-      endif
+      this%dxmn  = minval(this%dl(:), mask=dom%has_dir(:))
+      this%dxmn2 = (this%dxmn)**2
 
       ! some shortcuts for convenience
       this%idl(:) = 1./this%dl(:)
