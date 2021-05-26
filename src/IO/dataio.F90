@@ -1282,10 +1282,10 @@ contains
       use constants,        only: pMIN, pMAX
       use mpisetup,         only: piernik_MPI_Allreduce
 #else /* !ISO */
+      use constants,        only: DST, I_ZERO
 #ifdef MAGNETIC
       use constants,        only: ION, half
 #endif /* MAGNETIC */
-      use constants,        only: DST, I_ZERO
 #endif /* !ISO */
 
       implicit none
@@ -1294,11 +1294,8 @@ contains
 
       type(phys_prop),       pointer :: pr
       type(cg_list_element), pointer :: cgl
-      integer :: i, j, k
-      real :: omega_mean
-#ifndef ISO
-      real :: dxmn_safe
-#endif /* !ISO */
+      integer                        :: i, j, k
+      real                           :: omega_mean
 
       pr => fl%snap
       cgl => leaves%first
@@ -1486,7 +1483,7 @@ contains
          ! wa: sound speed squared -> temperature
          cgl => leaves%first
          do while (associated(cgl))
-            cgl%cg%wa(:,:,:) = (mH * cgl%cg%wa(:,:,:))/ (kboltz * fl%gam) ! temperature
+            cgl%cg%wa(:,:,:) = (mH * cgl%cg%wa(:,:,:))/ (kboltz * fl%gam)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MAXL, pr%temp_max)
@@ -1495,13 +1492,8 @@ contains
          ! wa: temperature -> (sound speed squared) -> sound time accross one cell
          cgl => leaves%first
          do while (associated(cgl))
-            if (cgl%cg%dxmn >= sqrt(huge(1.0))) then
-               dxmn_safe = sqrt(huge(1.0))
-            else
-               dxmn_safe = cgl%cg%dxmn
-            endif
-            cgl%cg%wa = cgl%cg%wa * (kboltz * fl%gam)/mH
-            cgl%cg%wa = (cfl * dxmn_safe)**2 / (cgl%cg%wa + small)
+            cgl%cg%wa = cgl%cg%wa * (kboltz * fl%gam) / mH ! temperature -> sound speed squared
+            cgl%cg%wa = cfl**2 * cgl%cg%dxmn2 / (cgl%cg%wa + small)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MINL, pr%dtcs_min)
