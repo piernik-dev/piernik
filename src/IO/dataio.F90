@@ -1626,8 +1626,8 @@ contains
             cgl%cg%wa(:,:,:)  = cgl%cg%wa(:,:,:) / sqrt(cgl%cg%u(flind%ion%idn,:,:,:))
             cgl => cgl%nxt
          enddo
-         call leaves%get_extremum(qna%wai, MAXL, vai_max)
-         vai_max%assoc = cfl*dxmn_safe/(vai_max%val+small)
+         call leaves%get_extremum(qna%wai, MAXL, vai_max, I_ZERO)
+         if (master) vai_max%assoc = cfl * vai_max%assoc / (vai_max%val + small)
          cfi_max%val   = sqrt(flind%ion%snap%cs_max%val**2+vai_max%val**2)
          cfi_max%assoc = cfl*dxmn_safe/sqrt(cfi_max%val**2+small)
       endif
