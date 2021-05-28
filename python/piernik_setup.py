@@ -68,13 +68,14 @@ define ECHO_CC
 endef
 endif
 
-CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null && echo -DMPIF08 || echo -DNO_MPIF08_AVAILABLE)
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null && echo -DMPIF08 || echo -DNO_MPIF08_AVAILABLE)
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90 2> /dev/null || echo -DNO_ALL_MPI_FUNCTIONS_AVAILABLE)
 
 all: env.dat print_setup $(PROG)
 
 check_mpi:
-\t@$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null  || (\
-$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90 2> /dev/null || echo -e "\033[91mWarning: current MPI fortran compiler may not be capable of 'mpi_f90' or sufficiently modern 'mpi' interface\033[0m" )
+\t@$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90
+\t@$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90
 
 $(PROG): $(OBJS) check_mpi
 ifeq ("$(SILENT)","1")

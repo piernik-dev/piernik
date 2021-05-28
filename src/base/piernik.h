@@ -51,6 +51,14 @@
 
 #ifdef MPIF08
 #  define MPIF mpi_f08
-#else
+#  define MPIFUN mpi_f08
+#else /* !MPIF08 */
 #  define MPIF mpi
-#endif
+#  ifdef NO_ALL_MPI_FUNCTIONS_AVAILABLE
+/* Ignore the rest of list to avoid import errors for MPICH and the old Fortran interface.
+   One may also import something harmless like MPI_OP_NULL at a cost of some more warnings. */
+#    define MPIFUN mpi !
+#  else /* !NO_ALL_MPI_FUNCTIONS_AVAILABLE */
+#    define MPIFUN mpi
+#  endif /* !NO_ALL_MPI_FUNCTIONS_AVAILABLE */
+#endif /* !MPIF08 */

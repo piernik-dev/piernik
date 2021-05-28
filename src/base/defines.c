@@ -94,3 +94,23 @@
 #ifdef USER_RULES
 #  include "user_rules.h"
 #endif /* USER_RULES */
+
+/*
+  MPI + Fortran sanity
+*/
+
+#ifdef MPIF08
+
+#  ifdef NO_MPIF08_AVAILABLE
+#    error Both NO_MPIF08_AVAILABLE and MPIF08 are not allowed
+#  endif
+
+#  ifdef NO_ALL_MPI_FUNCTIONS_AVAILABLE
+#    error NO_ALL_MPI_FUNCTIONS_AVAILABLE contradicts the use of mpi_f08 interface
+#  endif
+
+#  ifdef FORBID_F08
+#    error FORBID_F08 got ignored somehow
+#  endif
+
+#endif
