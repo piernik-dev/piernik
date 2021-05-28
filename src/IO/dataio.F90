@@ -1293,10 +1293,11 @@ contains
       use constants,        only: pMIN, pMAX
       use mpisetup,         only: piernik_MPI_Allreduce
 #else /* !ISO */
-#ifdef MAGNETIC
-      use constants,        only: ION, half
-#endif /* MAGNETIC */
       use constants,        only: DST, I_ZERO
+#ifdef MAGNETIC
+      use constants,        only: ION
+      use func,             only: emag
+#endif /* MAGNETIC */
 #endif /* !ISO */
 
       implicit none
@@ -1305,11 +1306,8 @@ contains
 
       type(phys_prop),       pointer :: pr
       type(cg_list_element), pointer :: cgl
-      integer :: i, j, k
-      real :: omega_mean
-#ifndef ISO
-      real :: dxmn_safe
-#endif /* !ISO */
+      integer                        :: i, j, k
+      real                           :: omega_mean
 
       pr => fl%snap
       cgl => leaves%first
@@ -1514,7 +1512,7 @@ contains
 
             cgl%cg%wa(:,:,:) = cgl%cg%u(fl%ien,:,:,:) - ekin(cgl%cg%u(fl%imx,:,:,:), cgl%cg%u(fl%imy,:,:,:), cgl%cg%u(fl%imz,:,:,:), cgl%cg%u(fl%idn,:,:,:)) ! eint
 #ifdef MAGNETIC
-            if (fl%tag == ION) cgl%cg%wa(:,:,:) = cgl%cg%wa(:,:,:) - half*(sum(cgl%cg%b(:,:,:,:)**2,dim=1))
+            if (fl%tag == ION) cgl%cg%wa(:,:,:) = cgl%cg%wa(:,:,:) - emag(cgl%cg%b(xdim,:,:,:), cgl%cg%b(ydim,:,:,:), cgl%cg%b(zdim,:,:,:))
 #endif /* MAGNETIC */
             cgl%cg%wa(:,:,:) = fl%gam_1*cgl%cg%wa(:,:,:)
 
@@ -1543,7 +1541,7 @@ contains
          do while (associated(cgl))
             call cgl%cg%costs%start
 
-            cgl%cg%wa(:,:,:) = (mH * cgl%cg%wa(:,:,:))/ (kboltz * fl%gam) ! temperature
+            cgl%cg%wa(:,:,:) = (mH * cgl%cg%wa(:,:,:))/ (kboltz * fl%gam)
 
             call cgl%cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
@@ -1556,13 +1554,8 @@ contains
          do while (associated(cgl))
             call cgl%cg%costs%start
 
-            if (cgl%cg%dxmn >= sqrt(huge(1.0))) then
-               dxmn_safe = sqrt(huge(1.0))
-            else
-               dxmn_safe = cgl%cg%dxmn
-            endif
-            cgl%cg%wa = cgl%cg%wa * (kboltz * fl%gam)/mH
-            cgl%cg%wa = (cfl * dxmn_safe)**2 / (cgl%cg%wa + small)
+            cgl%cg%wa = cgl%cg%wa * (kboltz * fl%gam) / mH ! temperature -> sound speed squared
+            cgl%cg%wa = cfl**2 * cgl%cg%dxmn2 / (cgl%cg%wa + small)
 
             call cgl%cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
@@ -1616,12 +1609,16 @@ contains
       use constants,          only: MINL
 #endif /* COSM_RAYS || MAGNETIC */
 #ifdef MAGNETIC
-      use constants,          only: DIVB_HDC, RIEMANN_SPLIT
+      use constants,          only: DIVB_HDC, I_ZERO, RIEMANN_SPLIT
       use dataio_pub,         only: msg
       use func,               only: sq_sum3
       use global,             only: cfl, divB_0_method, which_solver
       use hdc,                only: map_chspeed
       use named_array_list,   only: wna
+#ifndef ISO
+      use constants,          only: half
+      use func,               only: ekin
+#endif /* !ISO */
 #endif /* MAGNETIC */
 #ifdef RESISTIVE
       use resistivity,        only: etamax, cu2max, eta1_active
@@ -1633,7 +1630,7 @@ contains
       use constants,          only: gpot_n
 #endif /* VARIABLE_GP */
 #if defined VARIABLE_GP || defined MAGNETIC
-      use constants,          only: xdim, ydim, zdim, HI, idm, ndims
+      use constants,          only: xdim, ydim, zdim
       use domain,             only: dom
 #endif /* VARIABLE_GP || MAGNETIC */
 #ifdef NBODY
@@ -1642,31 +1639,29 @@ contains
 
       implicit none
 
-      type(tsl_container), optional              :: tsl
-      type(cg_list_element), pointer             :: cgl
-      type(value)                                :: drag
+      type(tsl_container), optional   :: tsl
+      type(cg_list_element), pointer  :: cgl
+      type(value)                     :: drag
 #ifdef MAGNETIC
-      type(value)                                :: b_min, b_max, divb_max, vai_max, cfi_max, ch_max
-      real                                       :: dxmn_safe
+      type(value)                     :: b_min, b_max, divb_max, vai_max, cfi_max, ch_max
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-      type(value)                                :: encr_min, encr_max
+      type(value)                     :: encr_min, encr_max
 #endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
-      type(value)                       :: cren_min, cren_max !< values of cre density
-      type(value)                       :: cree_min, cree_max !< values of cre energy
-      type(value)                       :: divv_min, divv_max !< values of div_v
+      type(value)                     :: cren_min, cren_max !< values of cre density
+      type(value)                     :: cree_min, cree_max !< values of cre energy
+      type(value)                     :: divv_min, divv_max !< values of div_v
 #endif /* COSM_RAY_ELECTRONS */
 #ifdef VARIABLE_GP
-      type(value)                                :: gpxmax, gpymax, gpzmax
-      integer                                    :: var_i
+      type(value)                     :: gpxmax, gpymax, gpzmax
+      integer                         :: var_i
 #endif /* VARIABLE_GP */
 #if defined VARIABLE_GP || defined MAGNETIC
-      integer(kind=4), dimension(ndims,ndims,HI) :: D
-      real, dimension(:,:,:), pointer            :: p
+      real, dimension(:,:,:), pointer :: p
 #endif /* VARIABLE_GP || MAGNETIC */
-      character(len=idlen)                       :: id
-      character(len=*), parameter :: log_label = "write_log"
+      character(len=idlen)            :: id
+      character(len=*), parameter     :: log_label = "write_log"
 
       call ppp_main%start(log_label, PPP_IO)
 
@@ -1678,12 +1673,10 @@ contains
       if (has_dst) call get_common_vars(flind%dst)
 
 #ifdef MAGNETIC
-      dxmn_safe = sqrt(huge(1.0))
       cgl => leaves%first
       do while (associated(cgl))
          call cgl%cg%costs%start
 
-         dxmn_safe = min(dxmn_safe, cgl%cg%dxmn)
          cgl%cg%wa(:,:,:) = sqrt(sq_sum3(cgl%cg%b(xdim,:,:,:), cgl%cg%b(ydim,:,:,:), cgl%cg%b(zdim,:,:,:)))
 
          call cgl%cg%costs%stop(I_OTHER)
@@ -1706,64 +1699,38 @@ contains
             call cgl%cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
          enddo
-         call leaves%get_extremum(qna%wai, MAXL, vai_max)
-         vai_max%assoc = cfl*dxmn_safe/(vai_max%val+small)
-         cfi_max%val   = sqrt(flind%ion%snap%cs_max%val**2+vai_max%val**2)
-         cfi_max%assoc = cfl*dxmn_safe/sqrt(cfi_max%val**2+small)
+         call leaves%get_extremum(qna%wai, MAXL, vai_max, I_ZERO)
+         if (master) vai_max%assoc = cfl * vai_max%assoc / (vai_max%val + small)
+
+         cgl => leaves%first
+         do while (associated(cgl))
+            call cgl%cg%costs%start
+
+#ifdef ISO
+            cgl%cg%wa(:,:,:) = sqrt(cgl%cg%wa(:,:,:)**2 + flind%ion%cs2)
+#else /* !ISO */
+            cgl%cg%wa(:,:,:) = (1. / flind%ion%gam_1 / flind%ion%gam - half) * cgl%cg%wa(:,:,:)**2
+            cgl%cg%wa(:,:,:) = cgl%cg%wa(:,:,:) + flind%ion%gam_1 * flind%ion%gam * (cgl%cg%u(flind%ion%ien,:,:,:)    &
+               & - ekin(cgl%cg%u(flind%ion%imx,:,:,:), cgl%cg%u(flind%ion%imy,:,:,:), cgl%cg%u(flind%ion%imz,:,:,:), &
+               &        cgl%cg%u(flind%ion%idn,:,:,:)))/cgl%cg%u(flind%ion%idn,:,:,:)
+            cgl%cg%wa(:,:,:) = sqrt(cgl%cg%wa(:,:,:))
+#endif /* !ISO */
+
+            call cgl%cg%costs%stop(I_OTHER)
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(qna%wai, MAXL, cfi_max, I_ZERO)
+         if (master) cfi_max%assoc = cfl * cfi_max%assoc / (cfi_max%val + small)
       endif
-#endif /* MAGNETIC */
-
-#if defined VARIABLE_GP || defined MAGNETIC
-      D = spread(reshape([dom%D_*idm(xdim,:),dom%D_*idm(ydim,:),dom%D_*idm(zdim,:)],[ndims,ndims]),ndims,HI)
-#endif /* VARIABLE_GP || MAGNETIC */
-#ifdef VARIABLE_GP
-      var_i = qna%ind(gpot_n)
-      cgl => leaves%first
-      do while (associated(cgl))
-         call cgl%cg%costs%start
-
-         p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
-         p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+D(xdim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idx)
-
-         call cgl%cg%costs%stop(I_OTHER)
-         cgl => cgl%nxt ; NULLIFY(p)
-      enddo
-      call leaves%get_extremum(qna%wai, MAXL, gpxmax)
 
       cgl => leaves%first
       do while (associated(cgl))
          call cgl%cg%costs%start
 
          p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
-         p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+D(ydim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idy)
-
-         call cgl%cg%costs%stop(I_OTHER)
-         cgl => cgl%nxt ; NULLIFY(p)
-      enddo
-      call leaves%get_extremum(qna%wai, MAXL, gpymax)
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         call cgl%cg%costs%start
-
-         p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
-         p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+D(zdim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idz)
-
-         call cgl%cg%costs%stop(I_OTHER)
-         cgl => cgl%nxt ; NULLIFY(p)
-      enddo
-      call leaves%get_extremum(qna%wai, MAXL, gpzmax)
-#endif /* VARIABLE_GP */
-
-#ifdef MAGNETIC
-      cgl => leaves%first
-      do while (associated(cgl))
-         call cgl%cg%costs%start
-
-         p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
-         p = (cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse+D(xdim,:,:)) - cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse))*cgl%cg%dy*cgl%cg%dz &
-            +(cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse+D(ydim,:,:)) - cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dz &
-            +(cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse+D(zdim,:,:)) - cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dy
+         p = (cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse+dom%D2a(xdim,:,:)) - cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse))*cgl%cg%dy*cgl%cg%dz &
+            +(cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse+dom%D2a(ydim,:,:)) - cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dz &
+            +(cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse+dom%D2a(zdim,:,:)) - cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dy
          cgl%cg%wa = abs(cgl%cg%wa)
 
          cgl%cg%wa(cgl%cg%ie,:,:) = cgl%cg%wa(cgl%cg%ie-dom%D_x,:,:)
@@ -1778,6 +1745,45 @@ contains
       call map_chspeed
       call leaves%get_extremum(qna%wai, MAXL, ch_max)
 #endif /* MAGNETIC */
+
+#ifdef VARIABLE_GP
+      var_i = qna%ind(gpot_n)
+      cgl => leaves%first
+      do while (associated(cgl))
+         call cgl%cg%costs%start
+
+         p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
+         p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+dom%D2a(xdim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idx)
+
+         call cgl%cg%costs%stop(I_OTHER)
+         cgl => cgl%nxt ; NULLIFY(p)
+      enddo
+      call leaves%get_extremum(qna%wai, MAXL, gpxmax)
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         call cgl%cg%costs%start
+
+         p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
+         p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+dom%D2a(ydim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idy)
+
+         call cgl%cg%costs%stop(I_OTHER)
+         cgl => cgl%nxt ; NULLIFY(p)
+      enddo
+      call leaves%get_extremum(qna%wai, MAXL, gpymax)
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         call cgl%cg%costs%start
+
+         p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
+         p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+dom%D2a(zdim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idz)
+
+         call cgl%cg%costs%stop(I_OTHER)
+         cgl => cgl%nxt ; NULLIFY(p)
+      enddo
+      call leaves%get_extremum(qna%wai, MAXL, gpzmax)
+#endif /* VARIABLE_GP */
 
 #ifdef COSM_RAYS
       cgl => leaves%first
