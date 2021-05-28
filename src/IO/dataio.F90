@@ -1544,12 +1544,16 @@ contains
       use constants,          only: MINL
 #endif /* COSM_RAYS || MAGNETIC */
 #ifdef MAGNETIC
-      use constants,          only: DIVB_HDC, RIEMANN_SPLIT
+      use constants,          only: DIVB_HDC, I_ZERO, RIEMANN_SPLIT
       use dataio_pub,         only: msg
       use func,               only: sq_sum3
       use global,             only: cfl, divB_0_method, which_solver
       use hdc,                only: map_chspeed
       use named_array_list,   only: wna
+#ifndef ISO
+      use constants,          only: half
+      use func,               only: ekin
+#endif /* !ISO */
 #endif /* MAGNETIC */
 #ifdef RESISTIVE
       use resistivity,        only: etamax, cu2max, eta1_active
@@ -1575,7 +1579,6 @@ contains
       type(value)                                :: drag
 #ifdef MAGNETIC
       type(value)                                :: b_min, b_max, divb_max, vai_max, cfi_max, ch_max
-      real                                       :: dxmn_safe
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
       type(value)                                :: encr_min, encr_max
@@ -1606,10 +1609,8 @@ contains
       if (has_dst) call get_common_vars(flind%dst)
 
 #ifdef MAGNETIC
-      dxmn_safe = sqrt(huge(1.0))
       cgl => leaves%first
       do while (associated(cgl))
-         dxmn_safe = min(dxmn_safe, cgl%cg%dxmn)
          cgl%cg%wa(:,:,:) = sqrt(sq_sum3(cgl%cg%b(xdim,:,:,:), cgl%cg%b(ydim,:,:,:), cgl%cg%b(zdim,:,:,:)))
          cgl => cgl%nxt
       enddo
@@ -1628,8 +1629,22 @@ contains
          enddo
          call leaves%get_extremum(qna%wai, MAXL, vai_max, I_ZERO)
          if (master) vai_max%assoc = cfl * vai_max%assoc / (vai_max%val + small)
-         cfi_max%val   = sqrt(flind%ion%snap%cs_max%val**2+vai_max%val**2)
-         cfi_max%assoc = cfl*dxmn_safe/sqrt(cfi_max%val**2+small)
+
+         cgl => leaves%first
+         do while (associated(cgl))
+#ifdef ISO
+            cgl%cg%wa(:,:,:) = sqrt(cgl%cg%wa(:,:,:)**2 + flind%ion%cs2)
+#else /* !ISO */
+            cgl%cg%wa(:,:,:) = (1. / flind%ion%gam_1 / flind%ion%gam - half) * cgl%cg%wa(:,:,:)**2
+            cgl%cg%wa(:,:,:) = cgl%cg%wa(:,:,:) + flind%ion%gam_1 * flind%ion%gam * (cgl%cg%u(flind%ion%ien,:,:,:)    &
+               & - ekin(cgl%cg%u(flind%ion%imx,:,:,:), cgl%cg%u(flind%ion%imy,:,:,:), cgl%cg%u(flind%ion%imz,:,:,:), &
+               &        cgl%cg%u(flind%ion%idn,:,:,:)))/cgl%cg%u(flind%ion%idn,:,:,:)
+            cgl%cg%wa(:,:,:) = sqrt(cgl%cg%wa(:,:,:))
+#endif /* !ISO */
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(qna%wai, MAXL, cfi_max, I_ZERO)
+         if (master) cfi_max%assoc = cfl * cfi_max%assoc / (cfi_max%val + small)
       endif
 #endif /* MAGNETIC */
 
