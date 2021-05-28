@@ -52,7 +52,6 @@ contains
       use cg_list,             only: cg_list_element
       use constants,           only: big, pMIN
       use domain,              only: is_multicg
-      use grid_cont,           only: grid_container
       use initcosmicrays,      only: def_dtcrs, K_crs_valid
       use mpisetup,            only: piernik_MPI_Allreduce
 #ifdef MULTIGRID
@@ -67,7 +66,6 @@ contains
 
       real, intent(inout)            :: dt
       type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
 
       logical, save                  :: frun = .true.
 
