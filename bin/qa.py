@@ -356,9 +356,13 @@ def qa_false_refs(lines, name, store, fname):
     uses = list(filter(has_use.search, temp))
 
     for item in uses:
-        to_check = [f.strip() for f in item.split("only:")[1].split(',')]
-        to_check = [re.sub('&', '', f).lstrip(
-        ) for f in to_check]     # additional sanitization
+        try:
+            to_check = [f.strip() for f in item.split("only:")[1].split(',')]
+        except IndexError:
+            to_check = []
+            store.append(give_warn("QA:  ") + "'" + item + "' without ONLY clause in [%s:%s]" %
+                         (fname, name))
+        to_check = [re.sub('&', '', f).lstrip() for f in to_check]  # additional sanitization
         # remove operator keyword from import
         for ino, item in enumerate(to_check):
             try:
