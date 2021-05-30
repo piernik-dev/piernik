@@ -52,7 +52,6 @@ contains
       use cg_list,             only: cg_list_element
       use constants,           only: big, pMIN
       use domain,              only: is_multicg
-      use grid_cont,           only: grid_container
       use initcosmicrays,      only: def_dtcrs, K_crs_valid
       use mpisetup,            only: piernik_MPI_Allreduce
 #ifdef MULTIGRID
@@ -67,10 +66,8 @@ contains
 
       real, intent(inout)            :: dt
       type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
 
       logical, save                  :: frun = .true.
-      real                           :: dt_thiscg
 
 #ifdef COSM_RAY_ELECTRONS
       call cresp_timestep
@@ -86,12 +83,7 @@ contains
          dt_crs = big
          cgl => leaves%first
          do while (associated(cgl))
-            cg => cgl%cg
-
-            dt_thiscg = def_dtcrs
-            if (cg%dxmn * def_dtcrs < sqrt(big)) dt_thiscg = def_dtcrs * cg%dxmn**2
-            dt_crs = min(dt_crs, dt_thiscg)
-
+            dt_crs = min(dt_crs, def_dtcrs * cgl%cg%dxmn2)
             cgl => cgl%nxt
          enddo
 
