@@ -99,7 +99,7 @@ module dataio_pub
    integer, parameter          :: maxparfilelen   = 500          !< max length of line in problem.par file
    integer, parameter          :: maxparfilelines = 256          !< max number of lines in problem.par
    integer(kind=4), parameter  :: bufferlines = 128              !< max number of lines in the log buffer
-   character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
+   character(len=maxparfilelen), allocatable, dimension(:) :: parfile !< contents of the parameter file
    character(len=msglen), allocatable, dimension(:) :: logbuffer !< buffer for log I/O
    integer, save               :: parfilelines = 0               !< number of lines in the parameter file
 
@@ -351,8 +351,18 @@ contains
       implicit none
 
       if (.not. allocated(logbuffer)) allocate(logbuffer(bufferlines))
+      if (.not. allocated(parfile)) allocate(parfile(maxparfilelines))
 
    end subroutine allocate_text_buffers
+!-----------------------------------------------------------------------------
+   subroutine cleanup_text_buffers
+
+      implicit none
+
+      if (allocated(logbuffer)) deallocate(logbuffer)
+      if (allocated(parfile)) deallocate(parfile)
+
+   end subroutine cleanup_text_buffers
 !-----------------------------------------------------------------------------
    subroutine printinfo(nm, to_stdout)
 
