@@ -37,16 +37,9 @@ module cg_level_base
    private
    public :: base
 
-   abstract interface
-      subroutine no_args
-         implicit none
-      end subroutine no_args
-   end interface
-
    !! \brief The pointer of the base level and a method to initialize it
    type :: cg_level_base_t
       type(cg_level_connected_t), pointer :: level            !< The base level
-      procedure(no_args), nopass, pointer :: init_multigrid   !< a pointer to multigrid:init_multigrid or null()
    contains
       procedure          :: set                               !< initialize the base level
    end type cg_level_base_t
@@ -79,7 +72,6 @@ contains
       if (any(n_d(:) < 1)) call die("[cg_level_base:set] non-positive base grid sizes")
       if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_level_base:set] base grid size incompatible with has_dir masks")
 
-      this%init_multigrid => null()  ! it will be set by init_multigrid, if it is included and called
       allocate(this%level)
       call this%level%init_level
 
