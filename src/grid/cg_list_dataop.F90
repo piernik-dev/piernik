@@ -104,7 +104,7 @@ contains
       use types,       only: value
 #ifdef MPIF08
       use MPIF,      only: MPI_Op
-#endif
+#endif /* MPIF08 */
 
       implicit none
 
