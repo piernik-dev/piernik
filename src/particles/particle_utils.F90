@@ -390,7 +390,8 @@ contains
       use dataio_pub,    only: die
       use domain,        only: dom, is_refined
       use grid_cont,     only: grid_container
-      use MPIF,          only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD, MPI_Alltoall, MPI_Alltoallv
+      use MPIF,          only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD
+      use MPIFUN,        only: MPI_Alltoall, MPI_Alltoallv
       use mpisetup,      only: proc, err_mpi, FIRST, LAST
       use ppp,           only: ppp_main
       use particle_func, only: particle_in_area

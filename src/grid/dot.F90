@@ -107,7 +107,8 @@ contains
       use cg_list,    only: cg_list_element
       use constants,  only: I_ZERO, I_ONE, ndims, LO, HI
       use dataio_pub, only: die
-      use MPIF,       only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER, MPI_COMM_WORLD, MPI_Allgather, MPI_Allgatherv
+      use MPIF,       only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER, MPI_COMM_WORLD
+      use MPIFUN,     only: MPI_Allgather, MPI_Allgatherv
       use mpisetup,   only: FIRST, LAST, proc, err_mpi
       use ordering,   only: SFC_order
 
@@ -270,7 +271,8 @@ contains
    subroutine check_blocky(this)
 
       use constants,  only: ndims, LO, HI, pLAND, I_ONE
-      use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
+      use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_COMM_WORLD
+      use MPIFUN,     only: MPI_Irecv, MPI_Isend
       use mpisetup,   only: proc, req, err_mpi, LAST, inflate_req, slave, piernik_MPI_Allreduce
       use ppp_mpi,    only: piernik_Waitall
 
@@ -323,7 +325,8 @@ contains
 
       use constants,  only: LO, HI, ndims, I_ONE
       use dataio_pub, only: die
-      use MPIF,       only: MPI_INTEGER8, MPI_COMM_WORLD, MPI_Allgather
+      use MPIF,       only: MPI_INTEGER8, MPI_COMM_WORLD
+      use MPIFUN,     only: MPI_Allgather
       use mpisetup,   only: FIRST, LAST, proc, err_mpi
       use ordering,   only: SFC_order
 
