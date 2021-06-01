@@ -61,7 +61,8 @@ contains
       use load_balance,  only: balance_cg, balance_host, enable_exclusion, exclusion_thr, &
            &                   verbosity, verbosity_nstep, V_NONE, V_SUMMARY, V_HOST, V_DETAILED, V_ELABORATE
       use mpisetup,      only: master, FIRST, LAST, err_mpi
-      use MPIF,          only: MPI_COMM_WORLD, MPI_DOUBLE_PRECISION, MPI_Wtime, MPI_Gather
+      use MPIF,          only: MPI_COMM_WORLD, MPI_DOUBLE_PRECISION, MPI_Wtime
+      use MPIFUN,        only: MPI_Gather
       use ppp,           only: ppp_main
 
       implicit none

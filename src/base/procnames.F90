@@ -77,7 +77,8 @@ contains
 
       use constants, only: I_ZERO
       use mpisetup,  only: FIRST, LAST, err_mpi
-      use MPIF,      only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_Get_processor_name, MPI_Allgather
+      use MPIF,      only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_Get_processor_name
+      use MPIFUN,    only: MPI_Allgather
 
       implicit none
 

@@ -56,7 +56,8 @@ contains
       use dataio_pub,         only: warn
       use load_balance,       only: balance_cg, balance_host, balance_thread, cost_mask
       use mpisetup,           only: err_mpi, req, inflate_req, master, FIRST, LAST
-      use MPIF,               only: MPI_INTEGER, MPI_INTEGER8, MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Gather, MPI_Recv, MPI_Isend
+      use MPIF,               only: MPI_INTEGER, MPI_INTEGER8, MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,             only: MPI_Gather, MPI_Recv, MPI_Isend
       use procnames,          only: pnames
       use ppp,                only: ppp_main
       use ppp_mpi,            only: piernik_Waitall
@@ -399,7 +400,8 @@ contains
       use grid_cont,          only: grid_container
       use grid_container_ext, only: cg_extptrs
       use list_of_cg_lists,   only: all_lists
-      use MPIF,               only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Isend, MPI_Irecv
+      use MPIF,               only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN,             only: MPI_Isend, MPI_Irecv
       use mpisetup,           only: master, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, err_mpi, req, inflate_req, tag_ub
       use named_array_list,   only: qna, wna
       use ppp,                only: ppp_main
