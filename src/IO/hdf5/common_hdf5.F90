@@ -845,8 +845,8 @@ contains
          &                    h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, h5pclose_f, &
          &                    h5zfilter_avail_f
       use helpers_hdf5, only: create_attribute!, create_corefile
-      use MPIF,         only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8, MPI_COMM_WORLD, &
-           &                  MPI_Allgather, MPI_Recv, MPI_Send
+      use MPIF,         only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8, MPI_COMM_WORLD
+      use MPIFUN,       only: MPI_Allgather, MPI_Recv, MPI_Send
       use mpisetup,     only: FIRST, LAST, master, err_mpi, piernik_MPI_Bcast
 #ifdef NBODY_1FILE
       use constants,      only: I_FIVE

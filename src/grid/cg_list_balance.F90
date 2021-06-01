@@ -130,9 +130,11 @@ contains
 
       use constants,       only: pSUM, I_ZERO, I_ONE
       use dataio_pub,      only: die
-      use MPIF,            only: MPI_INTEGER, MPI_COMM_WORLD, MPI_Gather
+      use MPIF,            only: MPI_INTEGER, MPI_COMM_WORLD
+      use MPIFUN,          only: MPI_Gather
       use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, err_mpi
       use procnames,       only: pnames
+
       use sort_piece_list, only: grid_piece_list
 
       implicit none
@@ -216,8 +218,8 @@ contains
    subroutine patches_to_list(this, gp, ls)
 
       use constants,       only: ndims, INVALID, I_ONE
-      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, &
-           &                     MPI_Isend, MPI_Send, MPI_Recv, MPI_Wait
+      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Wait
+      use MPIFUN,          only: MPI_Isend, MPI_Send, MPI_Recv
       use mpisetup,        only: master, slave, FIRST, LAST, req, err_mpi, inflate_req
       use sort_piece_list, only: grid_piece_list
 
@@ -281,8 +283,8 @@ contains
    subroutine distribute_patches(this, gp, from)
 
       use constants,       only: ndims, I_ONE
-      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, &
-           &                     MPI_Send, MPI_Recv
+      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,          only: MPI_Send, MPI_Recv
       use mpisetup,        only: master, FIRST, LAST, err_mpi
       use sort_piece_list, only: grid_piece_list
 

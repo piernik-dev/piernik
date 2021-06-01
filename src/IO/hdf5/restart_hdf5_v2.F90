@@ -208,7 +208,8 @@ contains
       use dataio_pub,       only: die, nproc_io, can_i_write
       use grid_cont,        only: grid_container
       use hdf5,             only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,           only: MPI_Recv, MPI_Send
       use mpisetup,         only: master, FIRST, proc, err_mpi, tag_ub
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main

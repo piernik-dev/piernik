@@ -410,7 +410,8 @@ contains
       use grid_cont,      only: grid_container
       use grid_helpers,   only: f2c
       use mergebox,       only: wmap  ! this is the last place that uses this module
-      use MPIF,           only: MPI_INTEGER, MPI_INTEGER8, MPI_COMM_WORLD, MPI_Alltoall, MPI_Alltoallv
+      use MPIF,           only: MPI_INTEGER, MPI_INTEGER8, MPI_COMM_WORLD
+      use MPIFUN,         only: MPI_Alltoall, MPI_Alltoallv
       use mpisetup,       only: FIRST, LAST, err_mpi, proc
       use overlap,        only: is_overlap
       use tag_pool,       only: t_pool
@@ -924,7 +925,8 @@ contains
       use grid_cont,        only: grid_container
       use grid_helpers,     only: f2c, c2f
       use mpisetup,         only: err_mpi, req, inflate_req, master
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN,           only: MPI_Irecv, MPI_Isend
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
       use ppp_mpi,          only: piernik_Waitall
@@ -1159,7 +1161,8 @@ contains
       use domain,           only: dom
       use grid_cont,        only: grid_container
       use grid_helpers,     only: c2f
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN,           only: MPI_Irecv, MPI_Isend
       use mpisetup,         only: err_mpi, req, inflate_req, master
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
@@ -1483,7 +1486,8 @@ contains
       use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
       use mpisetup,         only: err_mpi, req, inflate_req, master
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN,           only: MPI_Irecv, MPI_Isend
       use named_array,      only: p3, p4
       use named_array_list, only: qna, wna
       use ppp_mpi,          only: piernik_Waitall

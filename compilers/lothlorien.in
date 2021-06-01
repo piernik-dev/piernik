@@ -22,15 +22,17 @@ F90FLAGS += -fcheck=all
 # ToDo: Find out why.
 F90FLAGS += -frecursive
 
-# for gfortran >= 10.0 the use mpi_f08 interface is strongly encouraged
+# For gfortran >= 10.0 the use mpi_f08 interface is strongly encouraged
 F90FLAGS += -pedantic
+
+# Hack for old MPI interface when gfortran >= 10.
+ifneq (filter("-DNO_MPIF08_AVAILABLE",$(CPPFLAGS)),)
+F90FLAGS := $(filter-out -pedantic -pedantic-errors, $(F90FLAGS)) -fallow-argument-mismatch
+endif
 
 # For gfortran 10.x some optimisations implied by -O2 are known to lead to
 # wrong evaluation of the code
 F90FLAGS += -fno-inline-small-functions -fno-tree-pre
-
-# Ugly hack for old MPI interface
-# F90FLAGS += -fallow-argument-mismatch
 
 ifdef I64
   F90FLAGS += -fdefault-integer-8

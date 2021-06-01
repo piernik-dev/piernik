@@ -67,7 +67,8 @@ contains
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
       use constants,    only: LO, HI, I_ONE
-      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv
+      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN,       only: MPI_Irecv
       use mpisetup,     only: err_mpi, req, inflate_req
 
       implicit none
@@ -182,7 +183,8 @@ contains
       use domain,       only: dom
       use grid_cont,    only: grid_container
       use grid_helpers, only: f2c_o
-      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Isend
+      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN,       only: MPI_Isend
       use mpisetup,     only: err_mpi, req, inflate_req
       use ppp,          only: ppp_main
 
@@ -308,7 +310,8 @@ contains
       use dataio_pub,       only: die
       use global,           only: integration_order, use_fargo, which_solver
       use grid_cont,        only: grid_container
-      use MPIF,             only: MPI_STATUS_IGNORE, MPI_Waitany
+      use MPIF,             only: MPI_STATUS_IGNORE
+      use MPIFUN,           only: MPI_Waitany
       use mpisetup,         only: err_mpi, req
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main

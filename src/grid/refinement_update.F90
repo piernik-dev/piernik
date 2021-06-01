@@ -264,8 +264,8 @@ contains
       use constants,          only: xdim, zdim, LO, HI, I_ONE, I_ZERO
       use dataio_pub,         only: die, warn
       use domain,             only: dom
-      use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD, &
-           &                        MPI_Alltoall, MPI_Isend, MPI_Recv
+      use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,             only: MPI_Alltoall, MPI_Isend, MPI_Recv
       use mpisetup,           only: FIRST, LAST, err_mpi, proc, req, inflate_req
       use ppp_mpi,            only: piernik_Waitall
 
