@@ -298,7 +298,8 @@ contains
       use constants,        only: xdim, ydim, zdim, cor_dim, I_ONE, LO, HI
       use dataio_pub,       only: die
       use merge_segments,   only: IN, OUT
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN,           only: MPI_Irecv, MPI_Isend
       use mpisetup,         only: FIRST, LAST, proc, err_mpi, req, req2, inflate_req, nproc
       use named_array_list, only: wna
       use ppp_mpi,          only: piernik_Waitall
@@ -458,7 +459,8 @@ contains
       use grid_cont,        only: grid_container
       use grid_cont_bnd,    only: segment
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_ORDER_FORTRAN, &
-           &                      MPI_Irecv, MPI_Isend, MPI_Type_create_subarray, MPI_Type_commit, MPI_Type_free
+           &                      MPI_Type_create_subarray, MPI_Type_commit, MPI_Type_free
+      use MPIFUN,           only: MPI_Irecv, MPI_Isend
       use mpisetup,         only: err_mpi, req, inflate_req
       use named_array_list, only: wna
       use ppp_mpi,          only: piernik_Waitall

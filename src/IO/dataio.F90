@@ -1877,7 +1877,8 @@ contains
          use constants,    only: I_ONE, INVALID
          use dataio_pub,   only: msg, printinfo
          use memory_usage, only: system_mem_usage
-         use MPIF,         only: MPI_INTEGER, MPI_COMM_WORLD, MPI_Gather
+         use MPIF,         only: MPI_INTEGER, MPI_COMM_WORLD
+         use MPIFUN,       only: MPI_Gather
          use mpisetup,     only: master, FIRST, LAST, err_mpi
 
          implicit none
