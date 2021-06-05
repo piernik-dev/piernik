@@ -410,6 +410,8 @@ contains
                t_eis = T
 
                call cool_heat2(dt_cool, cg, shape(ta), T, pfl, ta, init)
+
+               !print *, T(32,32,1), ta(32,32,1)
                t1 = t1 + dt_cool
             enddo
          enddo
@@ -545,8 +547,7 @@ contains
                !print *, 'Tnew', Tnew
             else
                !TEF= (1/(1-alpha_cool)) * (1 - (Teql/temp)**(alpha_cool-1) )
-               TEF= (1/(2-alpha_cool)) * (1 - (Teql/temp)**(alpha_cool-2) )
-               tcool = kboltz * temp / ((gamma-1) * mH * coolf_pl(Teql1))
+               tcool = kboltz * temp / ((gamma-1) * mH * coolf_pl(temp))
                !print *, 'invTEF', tcool, dt!, gamma, (1-(1-alpha_cool)*dt/tcool)**(1/(1-alpha_cool))!TEF + (gamma-1) * dens / kboltz * dt * coolf_pl(Teql1) * mH / Teql1, dt, invTEF_pl(0.0*TEF), invTEF_pl(-1.0+TEF)
                !Tnew = invTEF_pl( TEF + (gamma-1) / gamma * dens / kboltz * dt * coolf_pl(Teql1) * mH  *temp / Teql1**2)
                Tnew = temp * (1 - (2-alpha_cool)*dt / tcool / gamma) **(1/(2-alpha_cool))
