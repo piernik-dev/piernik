@@ -540,18 +540,19 @@ contains
       Teql1(:,:,:)=Teql
       select case (cool_model)
       case ('power_law')
+            tcool = kboltz * temp / ((gamma-1) * mH * coolf_pl(temp))
             if (alpha_cool .equals. 1.0) then
-               TEF = log(Teql1/temp)
-               !print *, 'TEF',  TEF + (gamma-1) * dens / kboltz * dt * coolf_pl(Teql1) * mH
-               Tnew = invTEF_pl_a1( TEF + (gamma-1) * dens / kboltz * dt * coolf_pl(Teql1) * mH / Teql1)
-               !print *, 'Tnew', Tnew
+               !TEF = log(Teql1/temp)
+               !Tnew = invTEF_pl_a1( TEF + (gamma-1) * dens / kboltz * dt * coolf_pl(Teql1) * mH / Teql1)
+
+               Tnew = temp * exp(-dt/tcool)                 !isochoric
+               !Tnew = temp * (1 - 1/gamma * dt/tcool)      !isobar
             else
                !TEF= (1/(1-alpha_cool)) * (1 - (Teql/temp)**(alpha_cool-1) )
-               tcool = kboltz * temp / ((gamma-1) * mH * coolf_pl(temp))
-               !print *, 'invTEF', tcool, dt!, gamma, (1-(1-alpha_cool)*dt/tcool)**(1/(1-alpha_cool))!TEF + (gamma-1) * dens / kboltz * dt * coolf_pl(Teql1) * mH / Teql1, dt, invTEF_pl(0.0*TEF), invTEF_pl(-1.0+TEF)
                !Tnew = invTEF_pl( TEF + (gamma-1) / gamma * dens / kboltz * dt * coolf_pl(Teql1) * mH  *temp / Teql1**2)
-               Tnew = temp * (1 - (2-alpha_cool)*dt / tcool / gamma) **(1/(2-alpha_cool))
-               !Tnew = temp * (1 - (1-alpha_cool)*dt / tcool) **(1/(1-alpha_cool))
+
+               Tnew = temp * (1 - (1-alpha_cool)*dt / tcool) **(1/(1-alpha_cool))             !isochoric
+               !Tnew = temp * (1 - (2-alpha_cool)*dt / tcool / gamma) **(1/(2-alpha_cool))    !isobar
             endif
             !coolf = coolf_pl(Tnew)
             !coolf = -L0_cool * (temp/Teql)**(alpha_cool)
@@ -571,17 +572,18 @@ contains
               coolf = L0_cool * (T/Teql1)**(alpha_cool)
             end function coolf_pl
             
-            function invTEF_pl_a1(Y) result(T)  ! to correct for isobar
+            function invTEF_pl_a1(Y) result(T)   ! Warning : here Teql is used instead of Tref
               real, dimension(n(1), n(2), n(3)), intent(in) :: Y
               real, dimension(n(1), n(2), n(3))             :: T
-              T = Teql * exp(-Y)
+              T = Teql * exp(-Y)       !isochoric
+              !T = Teql * (1 - Y)      ! isobar
             end function invTEF_pl_a1
             
-            function invTEF_pl(Y) result(T)
+            function invTEF_pl(Y) result(T)   ! Warning : here Teql is used instead of Tref
               real, dimension(n(1), n(2), n(3)), intent(in) :: Y
               real, dimension(n(1), n(2), n(3))             :: T
-              !T = Teql * (1 - (1-alpha_cool)*Y) ** (1/(1-alpha_cool))
-              T = Teql * (1 - (2-alpha_cool)*Y) ** (1/(2-alpha_cool))
+              T = Teql * (1 - (1-alpha_cool)*Y) ** (1/(1-alpha_cool))       !isochoric 
+              !T = Teql * (1 - (2-alpha_cool)*Y) ** (1/(2-alpha_cool))      !isobar
             end function invTEF_pl
 
    end subroutine temp_EIS
