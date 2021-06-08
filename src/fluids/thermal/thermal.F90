@@ -404,7 +404,8 @@ contains
 
             t1=0.0
             init=.false.
-            do while(t1<dt)
+            do while(t1 .lt. dt)
+               
                call temp_EIS(dt_cool, shape(ta), gamma, ta, dens, T)
          
                t_eis = T
@@ -413,10 +414,13 @@ contains
 
                !print *, T(32,32,1), ta(32,32,1)
                t1 = t1 + dt_cool
+               if (t1+dt_cool .gt. dt) then
+                  dt_cool = dt - t1
+               endif
             enddo
          enddo
 
-         print *, 'dt', dt, dt_cool
+         print *, 'dt', dt, tcool
          !print *, 'EIS', T
          !print *, 'out', ta
          cgl => cgl%nxt
@@ -465,6 +469,7 @@ contains
 
       call cool2(n, T, cfunc)
       call heat2(n, dens, hfunc)
+      hfunc=0
       esrc =  dens**2*cfunc + hfunc
       eint2 = int_ener + esrc *dt
       cg%u(pfl%ien,:,:,:) = cg%u(pfl%ien,:,:,:) + esrc * dt
@@ -541,6 +546,7 @@ contains
       select case (cool_model)
       case ('power_law')
             tcool = kboltz * temp / ((gamma-1) * mH * coolf_pl(temp))
+            !tcool = kboltz * Teql / ((gamma-1) * mH * L0_cool)
             if (alpha_cool .equals. 1.0) then
                !TEF = log(Teql1/temp)
                !Tnew = invTEF_pl_a1( TEF + (gamma-1) * dens / kboltz * dt * coolf_pl(Teql1) * mH / Teql1)
@@ -551,11 +557,9 @@ contains
                !TEF= (1/(1-alpha_cool)) * (1 - (Teql/temp)**(alpha_cool-1) )
                !Tnew = invTEF_pl( TEF + (gamma-1) / gamma * dens / kboltz * dt * coolf_pl(Teql1) * mH  *temp / Teql1**2)
 
-               Tnew = temp * (1 - (1-alpha_cool)*dt / tcool) **(1/(1-alpha_cool))             !isochoric
+               Tnew = temp * (1 - (1-alpha_cool) * dt / tcool) **(1.0/(1-alpha_cool))             !isochoric
                !Tnew = temp * (1 - (2-alpha_cool)*dt / tcool / gamma) **(1/(2-alpha_cool))    !isobar
             endif
-            !coolf = coolf_pl(Tnew)
-            !coolf = -L0_cool * (temp/Teql)**(alpha_cool)
          case ('null')
             return
          case default
