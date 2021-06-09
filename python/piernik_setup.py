@@ -68,14 +68,16 @@ define ECHO_CC
 endef
 endif
 
-CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 -o F08 2> /dev/null && rm ./F08 && echo -DMPIF08 || echo -DNO_MPIF08_AVAILABLE)
-CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(F90FLAGS) ../compilers/tests/Get_bug.F90 -o Get_bug && ./Get_bug > /dev/null 2>&1 || echo -DNO_MPI2 ; rm ./Get_bug*)
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_allgatherv_bug.F90 && $(F90) $(LDFLAGS) -o mpi_allgatherv_bug mpi_allgatherv_bug.o $(LIBS) && ./mpi_allgatherv_bug 2> /dev/null || echo -DFORBID_F08)
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null && echo -DMPIF08 || echo -DNO_MPIF08_AVAILABLE)
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90 2> /dev/null || echo -DNO_ALL_MPI_FUNCTIONS_AVAILABLE)
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/Get_bug.F90 -o Get_bug && ./Get_bug > /dev/null 2>&1 || echo -DNO_MPI2)
 
 all: env.dat print_setup $(PROG)
 
 check_mpi:
-\t@$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 -o MPI 2> /dev/null && rm ./MPI || (\
-$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90 -o MPI 2> /dev/null && rm ./MPI || echo -e "\033[91mWarning: current MPI fortran compiler may not be capable of 'mpi_f90' or sufficiently modern 'mpi' interface\033[0m" )
+\t@$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90
+\t@$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90
 
 $(PROG): $(OBJS) check_mpi
 ifeq ("$(SILENT)","1")
@@ -84,8 +86,8 @@ ifeq ("$(SILENT)","1")
 endif
 \t@$(ECHO) $(F90) $(LDFLAGS) -o $@ '*.o' $(LIBS)
 \t@$(F90) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
-\t@touch mpi_f08.o mpi.o
-\t@$(RM) mpi_f08.o mpi.o
+\t@touch mpi_f08.o mpi.o a.out mpi_allgatherv_bug mpi_allgatherv_bug.o Get_bug Get_bug.o
+\t@$(RM) mpi_f08.o mpi.o a.out mpi_allgatherv_bug mpi_allgatherv_bug.o Get_bug Get_bug.o
 \t@AO1=`mktemp _ao_XXXXXX`;\\
 \tAO2=`mktemp _ao_XXXXXX`;\\
 \t$(ECHO) $(OBJS) | tr ' ' '\\n' | sort > $$AO1;\\
@@ -397,6 +399,7 @@ def setup_piernik(data=None):
         print(our_defs)
 
     files = ['src/base/defines.c']
+
     uses = [[]]
     incl = ['']
     module = dict()
@@ -487,6 +490,13 @@ def setup_piernik(data=None):
                 print("Possible duplicate link or a name clash :", f)
                 raise
 
+    if (options.hard_copy):
+        otdir = objdir + "/tests/"
+        os.mkdir(otdir)
+        ctdir = "compilers/tests/"
+        for f in os.listdir(ctdir):
+            shutil.copy(ctdir + f, otdir)
+
     if(options.param != 'problem.par'):
         os.symlink(options.param, objdir + '/' + 'problem.par')
 
@@ -536,13 +546,10 @@ def setup_piernik(data=None):
     if("PIERNIK_OPENCL" in our_defs):
         m.write("LIBS += $(shell pkg-config --libs fortrancl)\n")
         m.write("F90FLAGS += $(shell pkg-config --cflags fortrancl)\n")
-    if(options.laconic):
-        m.write("SILENT = 1\n\n")
-    else:
-        m.write("SILENT = 0\n\n")
-    m.write(head_block1)
-    m.write(
-        "\t@( $(ECHO) \"%s\"; \\" % ("./setup " + " ".join(all_args)))
+
+    m.write("SILENT = %d\n\n" % (1 if options.laconic else 0))
+    m.write(head_block1.replace("./compilers", "") if options.hard_copy else head_block1)
+    m.write("\t@( $(ECHO) \"%s\"; \\" % ("./setup " + " ".join(all_args)))
     m.write(head_block2)
 
     for i in range(0, len(files_to_build)):

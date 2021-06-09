@@ -50,7 +50,6 @@ contains
 
 !> \brief Routine for measuring disorder level in distribution of grids across processes
 
-!#define DEBUG
    subroutine rebalance_old(this)
 
       use cg_list,         only: cg_list_element
@@ -63,8 +62,8 @@ contains
       use refinement,      only: oop_thr
       use sort_piece_list, only: grid_piece_list
 #ifdef DEBUG
-      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, &
-           &                     MPI_Gather, MPI_Recv, MPI_Send
+      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,          only: MPI_Gather, MPI_Recv, MPI_Send
       use mpisetup,        only: err_mpi
 #endif /* DEBUG */
 
@@ -191,15 +190,17 @@ contains
 
       use cg_list,            only: cg_list_element
       use cg_list_global,     only: all_cg
-      use constants,          only: ndims, LO, HI, I_ZERO, I_ONE, xdim, ydim, zdim, pMAX, PPP_AMR, PPP_MPI
+      use constants,          only: ndims, LO, HI, I_ZERO, I_ONE, xdim, ydim, zdim, pMAX, PPP_AMR
       use dataio_pub,         only: die
       use grid_cont,          only: grid_container
       use grid_container_ext, only: cg_extptrs
       use list_of_cg_lists,   only: all_lists
-      use MPIF,               only: MPI_DOUBLE_PRECISION, MPI_STATUSES_IGNORE, MPI_COMM_WORLD, MPI_Isend, MPI_Irecv, MPI_Waitall
+      use MPIF,               only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN,             only: MPI_Isend, MPI_Irecv
       use mpisetup,           only: master, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, err_mpi, req, inflate_req, tag_ub
       use named_array_list,   only: qna, wna
       use ppp,                only: ppp_main
+      use ppp_mpi,            only: piernik_Waitall
       use sort_piece_list,    only: grid_piece_list
 
       implicit none
@@ -228,7 +229,7 @@ contains
          enumerator :: I_C_P = I_GID + I_ONE
          enumerator :: I_D_P = I_C_P + I_ONE
       end enum
-      character(len=*), parameter :: Wall_label = "reshuffle_Waitall", ISR_label = "reshuffle_Isend+Irecv"
+      character(len=*), parameter :: ISR_label = "reshuffle_Isend+Irecv"
 
       totfld = 0
       cgl => this%first
@@ -323,9 +324,7 @@ contains
       enddo
       call ppp_main%stop(ISR_label, PPP_AMR)
 
-      call ppp_main%start(Wall_label, PPP_AMR + PPP_MPI)
-      if (nr > 0) call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
-      call ppp_main%stop(Wall_label, PPP_AMR + PPP_MPI)
+      call piernik_Waitall(nr, "reshuffle", PPP_AMR)
 
       do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
          cgl => cglepa(i)%p

@@ -1,0 +1,109 @@
+ $BASE_DOMAIN
+    n_d = 3*64
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+    xmin   = -2.
+    xmax   =  2.
+    ymin   = -2.
+    ymax   =  2.
+    zmin   = -2.
+    zmax   =  2.
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+ !units_set = "PSM"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+   tend   = 3.0
+    !nend = 4
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='leapfrog'
+    run_id =  'ts3'
+    dt_hdf  = 0.1
+    dt_res  = 0.0
+    dt_log  = 0.0
+    dt_tsl  = 0.0
+    vars(1:) = "gpot", "nbdn", "apot", "errp", "relerr"
+!, "sgp", "source", "solution"
+    pvars(1:) = 'ppos', 'pvel', 'pacc', 'mass', 'ener'
+ /
+
+ $FLUID_IONIZED
+ /
+
+ $FLUID_NEUTRAL
+ !cs_iso = 0.01
+ !cs_iso = 0.01
+ !cs_iso = 0.001
+ !selfgrav = .true.
+ !selfgrav = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.8
+    smalld = 1.e-3
+    smallei= 1.e-5
+    integration_order = 2
+    limiter= 'vanleer'
+    !cflcontrol = 'none'
+    skip_sweep = .true., .true., .true.
+   dt_max = 0.2
+ /
+
+ $GRAVITY
+ !external_gp = 'ptmass'
+ !ptmass = 10.0
+ /
+
+ $MULTIGRID_GRAVITY
+    grav_bnd_str  = "isolated"
+ mpole_solver = "3D"
+ level_3D = -1 ! use first coarsened level for the 3D multipole solver
+! lmax= 32
+
+ ! linear interpolation in the radial direction for multipole moments
+ interp_pt2mom = T
+ interp_mom2pot = T
+/
+
+ $PROBLEM_CONTROL
+   vel = 0., 1., 1.
+ /
+
+ $MULTIGRID_SOLVER
+    stdout    = .true.
+    dirty_debug = .true.
+ /
+
+ $INTERACTIONS
+ /
+
+ $FLUID_TRACER
+ /
+
+ $AMR
+ /
+
+ $PARTICLES
+   time_integrator      = 'leapfrog2'
+   interpolation_scheme = 'tsc'
+   acc_interp_method    = 'tsc'
+   lf_c                 = 1.0
+   ignore_dt_fluid      = .true.
+ /

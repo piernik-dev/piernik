@@ -56,8 +56,11 @@ module constants
    real, parameter :: zero       = 0.0                   !< zero
    real, parameter :: one        = 1.0                   !< one
    real, parameter :: two        = 2.0                   !< two
+   real, parameter :: three      = 3.0                   !< three
    real, parameter :: four       = 4.0                   !< four
+   real, parameter :: five       = 5.0
    real, parameter :: eight      = 8.0                   !< eight
+   real, parameter :: ten        = 10.0
    real, parameter :: half       = 0.5                   !< a half
    real, parameter :: onet       = 1./3.                 !< one third
    real, parameter :: twot       = 2./3.                 !< two thirds
@@ -65,6 +68,7 @@ module constants
    real, parameter :: thrq       = 3./4.                 !< three fourths
    real, parameter :: onesth     = 1./6.                 !< one sixth
    real, parameter :: oneeig     = 1./8.                 !< one eighth
+   real, parameter :: logten     = log(ten)              !< natural logarithm of ten
 
    enum, bind(C)
       enumerator :: idn = 1, imx, imy, imz, ien
@@ -145,8 +149,8 @@ module constants
 
    ! grid geometry type
    enum, bind(C)
-       enumerator :: GEO_XYZ, GEO_RPZ                    !! Cartesian (0) or cylindrical (1) grid with uniform cell spacing
-       enumerator :: GEO_INVALID = GEO_XYZ - 1           !! non-recognized grid geometry (-1)
+      enumerator :: GEO_XYZ, GEO_RPZ                    !! Cartesian (0) or cylindrical (1) grid with uniform cell spacing
+      enumerator :: GEO_INVALID = GEO_XYZ - 1           !! non-recognized grid geometry (-1)
    end enum
 
    ! boundary conditions type
@@ -205,6 +209,14 @@ module constants
    character(len=dsetnamelen), parameter :: sgpm_n  = "sgpm"    !< previous field from self-gravity
    character(len=dsetnamelen), parameter :: gpot_n  = "gpot"    !< current sum of fields
    character(len=dsetnamelen), parameter :: hgpot_n = "hgpot"   !< sum of fields for half-step values
+#ifdef NBODY
+#ifdef NBODY_GRIDDIRECT
+   character(len=dsetnamelen), parameter :: nbgp_n  = "nbgp"    !< current gravity field from nbody
+#endif /* NBODY_GRIDDIRECT */
+   character(len=dsetnamelen), parameter :: gp1b_n  = "gp1b"    !< current gravity field from 1 body
+   character(len=dsetnamelen), parameter :: nbdn_n  = "nbdn"    !< density from particles
+   character(len=dsetnamelen), parameter :: prth_n  = "prth"    !< histogram of particles on the grid
+#endif /* NBODY */
    ! misc
    character(len=dsetnamelen), parameter :: wcu_n   = "wcu"     !< (resistivity) COMMENT ME
    character(len=dsetnamelen), parameter :: cs_i2_n = "cs_iso2" !< map of imposed isothermal sound speed

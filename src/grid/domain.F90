@@ -75,13 +75,14 @@ module domain
       integer(kind=4) :: D_x                    !< set to 1 when x-direction exists, 0 otherwise
       integer(kind=4) :: D_y                    !< set to 1 when y-direction exists, 0 otherwise.
       integer(kind=4) :: D_z                    !< set to 1 when z-direction exists, 0 otherwise.
-      integer(kind=4), dimension(ndims) :: D_   !< == [D_x, D_y, D_z], Useful for dimensionally-safe indices for difference operators on arrays,
+      integer(kind=4), dimension(ndims) :: D_   !< == [D_x, D_y, D_z], Useful for dimensionally-safe indices for difference operators on arrays
+      integer(kind=4), dimension(ndims, ndims, HI) :: D2a !< auxiliary variantion of D_
 
       logical, dimension(ndims) :: has_dir      !< .true. when direction exists (domain has >1 cell there)
       integer                   :: eff_dim      !< effective dimensionality of the simulation (count(has_dir))
       integer(kind=8), dimension(ndims) :: off  !< offset of the base level
 
-    contains
+   contains
 
       procedure :: translate_bnds_to_ints     !< Convert strings to integer-coded boundary types
       procedure :: print_me                   !< Print computational domain details
@@ -181,9 +182,9 @@ contains
    subroutine init_domain
 
       use constants,  only: xdim, zdim, ndims, LO, HI, PIERNIK_INIT_MPI, I_ONE, I_ZERO, INVALID
-      use dataio_pub, only: die,  code_progress
-      use dataio_pub, only: nh  ! QA_WARN required for diff_nml
+      use dataio_pub, only: die,  code_progress, nh
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
+
       implicit none
 
       real, dimension(ndims, LO:HI)     :: edges
@@ -454,7 +455,7 @@ contains
 
    subroutine init(this, nb, n_d, bnds, edges, geometry, off)
 
-      use constants,  only: ndims, LO, HI, big_float, dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, BND_SHE, I_ONE, I_TWO
+      use constants,  only: idm, ndims, LO, HI, big_float, dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, BND_SHE, I_ONE, I_TWO
       use dataio_pub, only: die, warn, msg
       use func,       only: operator(.notequals.)
       use mpisetup,   only: master
@@ -488,6 +489,7 @@ contains
       this%D_x = this%D_(xdim)
       this%D_y = this%D_(ydim)
       this%D_z = this%D_(zdim)
+      this%D2a = spread(reshape([this%D_*idm(xdim,:), this%D_*idm(ydim,:), this%D_*idm(zdim,:)],[ndims,ndims]),ndims,HI)
 
       this%total_ncells = product(int(this%n_d(:), kind=8))
       if (any(this%total_ncells < this%n_d(:))) call die("[domain:init_domain] Integer overflow: too many cells")

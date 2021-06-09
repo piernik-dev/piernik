@@ -66,7 +66,8 @@ contains
       use constants, only: LO, HI, I_ONE
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
-      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv
+      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN,    only: MPI_Irecv
       use mpisetup,  only: err_mpi, req, inflate_req
 
       implicit none
@@ -176,7 +177,8 @@ contains
       use domain,       only: dom
       use grid_cont,    only: grid_container
       use grid_helpers, only: f2c_o
-      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Isend
+      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN,       only: MPI_Isend
       use mpisetup,     only: err_mpi, req, inflate_req
       use ppp,          only: ppp_main
 
@@ -259,12 +261,6 @@ contains
       integer(kind=4), intent(in) :: cdim
       integer,         intent(in) :: istep
 
-      if (divB_0_method == DIVB_HDC) then
-#ifdef MAGNETIC
-         call all_mag_boundaries ! ToDo: take care of psi boundaries
-#endif /* MAGNETIC */
-      endif
-
       if (dom%has_dir(cdim)) then
          if (sweeps_mgu) then
             if (istep == first_stage(integration_order)) then
@@ -273,12 +269,21 @@ contains
                call all_fluid_boundaries(nocorners = .true.)
             endif
          else
+            ! nocorners and dir = cdim can be used safely only when ord_fluid_prolong == 0 .and. cc_mag
+            ! essential speedups here are possible but it requires c/f boundary prolongation that does not require corners
+
             ! if (istep == first_stage(integration_order)) then
-            !    call all_fluid_boundaries(nocorners = .true.) ! nocorners was doing something bad to periodic boundaries in Riemann with CT
+            !    call all_fluid_boundaries(nocorners = .true.)
             ! else
-               call all_fluid_boundaries
+               call all_fluid_boundaries !(nocorners = .true., dir = cdim)
             ! endif
          endif
+      endif
+
+      if (divB_0_method == DIVB_HDC) then
+#ifdef MAGNETIC
+         call all_mag_boundaries ! ToDo: take care of psi boundaries
+#endif /* MAGNETIC */
       endif
 
    end subroutine update_boundaries
@@ -292,15 +297,18 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
+      use cg_list_dataop,   only: cg_list_dataop_t
       use constants,        only: ydim, ndims, first_stage, last_stage, uh_n, magh_n, psih_n, psi_n, INVALID, &
            &                      RTVD_SPLIT, RIEMANN_SPLIT, PPP_CG
       use dataio_pub,       only: die
       use global,           only: integration_order, use_fargo, which_solver
       use grid_cont,        only: grid_container
-      use MPIF,             only: MPI_STATUSES_IGNORE, MPI_STATUS_IGNORE, MPI_Waitany, MPI_Waitall
+      use MPIF,             only: MPI_STATUS_IGNORE
+      use MPIFUN,           only: MPI_Waitany
       use mpisetup,         only: err_mpi, req
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
+      use ppp_mpi,          only: piernik_Waitall
       use solvecg_rtvd,     only: solve_cg_rtvd
       use solvecg_riemann,  only: solve_cg_riemann
       use sources,          only: prepare_sources
@@ -330,13 +338,14 @@ contains
       integer                        :: istep
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      type(cg_list_dataop_t), pointer :: sl
       logical                        :: all_processed, all_received
       integer                        :: blocks_done
       integer(kind=4)                :: g, nr, nr_recv
       integer                        :: uhi, bhi, psii, psihi
       procedure(solve_cg_sub), pointer :: solve_cg => null()
       character(len=*), dimension(ndims), parameter :: sweep_label = [ "sweep_x", "sweep_y", "sweep_z" ]
-      character(len=*), parameter :: solve_cgs_label = "solve_bunch_of_cg", cg_label = "solve_cg"
+      character(len=*), parameter :: solve_cgs_label = "solve_bunch_of_cg", cg_label = "solve_cg", init_src_label = "init_src"
 
       call ppp_main%start(sweep_label(cdim))
 
@@ -368,15 +377,20 @@ contains
          psihi = qna%ind(psih_n)
       endif
 
+      sl => leaves%prioritized_cg(cdim, covered_too = .true.)
+      ! We can't just skip the covered cg because it affects divvel (or
+      ! other things that rely on data computed on coarse cells and are not
+      ! restricted from fine blocks).
+!      sl => leaves%leaf_only_cg()
+
+      call ppp_main%start(init_src_label)
       ! for use with GLM divergence cleaning we also make a copy of b and psi fields
       cgl => leaves%first
       do while (associated(cgl))
          call prepare_sources(cgl%cg)
-         cgl%cg%w(uhi)%arr = cgl%cg%u
-         if (bhi  > INVALID) cgl%cg%w(bhi)%arr = cgl%cg%b
-         if (psii > INVALID) cgl%cg%q(psihi)%arr = cgl%cg%q(psii)%arr
          cgl => cgl%nxt
       enddo
+      call ppp_main%stop(init_src_label)
 
       ! This is the loop over Runge-Kutta stages
       do istep = first_stage(integration_order), last_stage(integration_order)
@@ -388,7 +402,7 @@ contains
             all_processed = .true.
             blocks_done = 0
             ! OPT this loop should probably go from finest to coarsest for better compute-communicate overlap.
-            cgl => leaves%first
+            cgl => sl%first
 
             call ppp_main%start(solve_cgs_label)
             do while (associated(cgl))
@@ -418,10 +432,14 @@ contains
             endif
          enddo
 
-         if (nr > 0) call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
+         call piernik_Waitall(nr, "sweeps")
 
          call update_boundaries(cdim, istep)
       enddo
+
+      call sl%delete
+      deallocate(sl)
+
       call ppp_main%stop(sweep_label(cdim))
 
    end subroutine sweep

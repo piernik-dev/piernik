@@ -81,8 +81,7 @@ contains
    subroutine read_problem_par
 
       use constants,        only: I_ONE, xdim, zdim
-      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,       only: warn, die
+      use dataio_pub,       only: warn, die, nh
       use domain,           only: dom
       use fluidindex,       only: iarr_all_dn
       use global,           only: smalld

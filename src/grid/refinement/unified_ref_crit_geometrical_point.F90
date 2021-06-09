@@ -14,7 +14,7 @@
 !    GNU General Public License for more details.
 !
 !    You should have received a copy of the GNU General Public License
-!    along with PIERNIK.  If not, see http://www.gnu.org/licenses/.
+!    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implementation of PIERNIK code was based on TVD split MHD code by
 !    Ue-Li Pen
@@ -78,7 +78,7 @@ contains
       allocate(this%ijk(base_level_id:this%level, ndims))
       this%ijk = uninit
       if (master) then
-         write(msg, '(a,3g13.5,a)')"[URC point] Initializing refinement at point: [ ", this%coords, " ]"
+         write(msg, '(a,3g13.5,a,i3)')"[URC point] Initializing refinement at point: [ ", this%coords, " ] at level ", this%level
          call printinfo(msg)
       endif
 
@@ -105,7 +105,8 @@ contains
 
       if (.not. allocated(this%ijk)) call die("[unified_ref_crit_geometrical_point:mark_point] ijk not allocated")
 
-      if (any(this%ijk(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appeared in the meantime
+      ! Did some new levels of refinement appeared in the meantime?
+      if (any(this%ijk(cg%l%id, :) == uninit)) call this%init_lev
 
       if (all(this%ijk(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk(cg%l%id, :) <= cg%ijkse(:, HI))) &
            call cg%flag%set(this%ijk(cg%l%id, :))

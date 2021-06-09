@@ -63,10 +63,9 @@ contains
 
    subroutine read_problem_par
 
-      use constants,             only: PIERNIK_INIT_MPI, xdim, zdim
-      use dataio_pub,            only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,            only: code_progress, die
-      use mpisetup,              only: master, slave, ibuff, lbuff, rbuff, piernik_MPI_Bcast
+      use constants,  only: PIERNIK_INIT_MPI, xdim, zdim
+      use dataio_pub, only: code_progress, die, nh
+      use mpisetup,   only: master, slave, ibuff, lbuff, rbuff, piernik_MPI_Bcast
 
       implicit none
 
@@ -193,7 +192,7 @@ contains
             if (master) call warn(msg)
             return
          endif
-         call curl%restrict_q_1var(qna%ind(fld_n))
+         call curl%restrict_1var(qna%ind(fld_n))
          call clear_lev(curl)
          if (point) then
             write(msg,*)"ip:pf restricted ^",curl%l%id
@@ -205,7 +204,7 @@ contains
 
       do while (associated(curl))
          if (associated(curl%finer)) then
-            call curl%prolong_q_1var(qna%ind(fld_n))
+            call curl%prolong_1var(qna%ind(fld_n))
             call clear_lev(curl)
             if (point) then
                write(msg,*)"ip:pf prolonged ^",curl%l%id, " @", proc
@@ -390,9 +389,9 @@ contains
          n = n + 1
       else
 #ifdef HDF5
-        call write_hdf5
+         call write_hdf5
 #else /* !HDF5 */
-        call warn("[initproblem:find_non_0_or_write_hdf5] no HDF5 available")
+         call warn("[initproblem:find_non_0_or_write_hdf5] no HDF5 available")
 #endif /* !HDF5 */
       endif
 

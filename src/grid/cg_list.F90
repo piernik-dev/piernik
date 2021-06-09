@@ -149,7 +149,7 @@ contains
 
       do while (associated(this%first))
          cgl => this%last
-         call this%delete(cgl) ! cannot just pass this%last because if will change after un_link and wrong element will be deallocated
+         call this%delete(cgl) ! cannot just pass this%last because it will change after un_link and wrong element will be deallocated
       enddo
 
       if (this%cnt > 0) call die("[cg_list:del_lst] The list is still not empty")
@@ -248,7 +248,8 @@ contains
          cnt = cnt - 1
          cur => cur%prv
       enddo
-    end subroutine print_list
+
+   end subroutine print_list
 
 !> \brief Construct name of emergency ASCII dump
 

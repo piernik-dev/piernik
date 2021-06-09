@@ -83,8 +83,7 @@ contains
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
       use constants,        only: PIERNIK_INIT_GRID, zdim, xdim, ydim, wcu_n
-      use dataio_pub,       only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,       only: die, code_progress
+      use dataio_pub,       only: die, code_progress, nh
       use domain,           only: dom
       use func,             only: operator(.equals.)
       use mpisetup,         only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
@@ -300,6 +299,7 @@ contains
       use func,             only: operator(.notequals.)
       use mpisetup,         only: piernik_MPI_Allreduce, piernik_MPI_Bcast
       use named_array_list, only: qna
+      use types,            only: value
 #ifndef ISO
       use constants,        only: MINL
 #ifdef IONIZED
@@ -325,14 +325,18 @@ contains
       call compute_resist
       call leaves%get_extremum(qna%ind(eta_n), MAXL, etamax)
       call piernik_MPI_Bcast(etamax%val)
-      call leaves%get_extremum(qna%ind(wb_n), MAXL, cu2max)
+      if (eta1_active) then
+         call leaves%get_extremum(qna%ind(wb_n), MAXL, cu2max)
+      else
+         cu2max = value(0., 0., [0., 0., 0.], [0, 0, 0], 0_4)
+      endif
       call piernik_MPI_Bcast(cu2max%val)
 
       if (etamax%val .notequals. zero) then
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-            dt_eta = min(dt_eta, cfl_resist * cg%dxmn**2 / (2. * etamax%val))
+            dt_eta = min(dt_eta, cfl_resist * cg%dxmn2 / (2. * etamax%val))
 #ifndef ISO
 #ifdef IONIZED
             eta => cg%q(qna%ind(eta_n))%span(cg%ijkse)

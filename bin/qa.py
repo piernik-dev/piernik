@@ -274,7 +274,7 @@ def qa_checks(files, options):
 
 
 def qa_have_priv_pub(lines, name, warns, fname):
-    if(not filter(have_privpub.search, lines)):
+    if(len(list(filter(have_privpub.search, lines))) < 1):
         warns.append(give_warn("QA:  ") + "module [%s:%s] lacks public/private keywords." %
                      (fname, name))
     else:
@@ -330,7 +330,7 @@ def qa_depreciated_syntax(lines, rname, store, fname):
 
 
 def qa_have_implicit(lines, name, store, fname):
-    if(not filter(have_implicit.search, lines)):
+    if(len(list(filter(have_implicit.search, lines))) < 1):
         store.append(give_err("missing 'implicit none'      ") + "[%s:%s]" % (fname, name))
 
 
@@ -356,9 +356,13 @@ def qa_false_refs(lines, name, store, fname):
     uses = list(filter(has_use.search, temp))
 
     for item in uses:
-        to_check = [f.strip() for f in item.split("only:")[1].split(',')]
-        to_check = [re.sub('&', '', f).lstrip(
-        ) for f in to_check]     # additional sanitization
+        try:
+            to_check = [f.strip() for f in item.split("only:")[1].split(',')]
+        except IndexError:
+            to_check = []
+            store.append(give_warn("QA:  ") + "'" + item + "' without ONLY clause in [%s:%s]" %
+                         (fname, name))
+        to_check = [re.sub('&', '', f).lstrip() for f in to_check]  # additional sanitization
         # remove operator keyword from import
         for ino, item in enumerate(to_check):
             try:

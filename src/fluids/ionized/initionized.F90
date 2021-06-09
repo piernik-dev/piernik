@@ -49,21 +49,24 @@ module initionized
    logical :: selfgrav    !< true if ionized gas is selfgravitating
 
    type, extends(component_fluid) :: ion_fluid
-      contains
-         procedure, nopass :: get_tag
-         procedure, pass   :: get_cs => ion_cs
-         procedure, pass   :: get_mach => ion_mach
-         procedure, pass   :: compute_flux => flux_ion
-         procedure, pass   :: compute_pres => pres_ion
-         procedure, pass   :: initialize_indices => initialize_ion_indices
+   contains
+      procedure, nopass :: get_tag
+      procedure, pass   :: get_cs => ion_cs
+      procedure, pass   :: get_mach => ion_mach
+      procedure, pass   :: compute_flux => flux_ion
+      procedure, pass   :: compute_pres => pres_ion
+      procedure, pass   :: initialize_indices => initialize_ion_indices
    end type ion_fluid
 
 contains
 
    subroutine initialize_ion_indices(this, flind)
+
       use constants,  only: ION
       use fluidtypes, only: var_numbers
+
       implicit none
+
       class(ion_fluid),     intent(inout) :: this
       type(var_numbers),    intent(inout) :: flind
 
@@ -84,6 +87,7 @@ contains
    end subroutine initialize_ion_indices
 
    real function ion_cs(this, i, j, k, u, b, cs_iso2)
+
       use constants, only: two
 #ifndef ISO
       use func,      only: ekin
@@ -92,12 +96,13 @@ contains
       use constants, only: xdim, ydim, zdim, half
       use domain,    only: dom
       use func,      only: emag
-      use global,    only: force_cc_mag
+      use global,    only: cc_mag
 #else /* !MAGNETIC */
       use constants, only: zero
 #endif /* !MAGNETIC */
 
       implicit none
+
       class(ion_fluid),                  intent(in) :: this
       integer,                           intent(in) :: i, j, k
       real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
@@ -110,7 +115,7 @@ contains
       real :: pmag, p, ps
 
 #ifdef MAGNETIC
-      if (force_cc_mag) then
+      if (cc_mag) then
          pmag = emag(b(xdim,i,j,k), b(ydim,i,j,k), b(zdim,i,j,k))
       else
          bx = half*(b(xdim,i,j,k) + b(xdim, i+dom%D_x, j,         k        ))
@@ -136,6 +141,7 @@ contains
       ion_cs = sqrt(abs((two * pmag + this%gam * p) / u(this%idn, i, j, k)))
 #endif /* !ISO */
       if (.false.) print *, u(:, i, j, k), b(:, i, j, k), cs_iso2(i, j, k), this%cs
+
    end function ion_cs
 
 !>
@@ -147,22 +153,31 @@ contains
 !<
 
    real function ion_mach(this, i, j, k, u, b, cs_iso2)
+
       use func, only: sq_sum3
+
       implicit none
+
       class(ion_fluid),                  intent(in) :: this
       integer,                           intent(in) :: i, j, k
       real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
       real, dimension(:,:,:,:), pointer, intent(in) :: b       !< pointer to array of magnetic fields (used for ionized fluid with MAGNETIC #defined)
       real, dimension(:,:,:),   pointer, intent(in) :: cs_iso2 !< pointer to array of isothermal sound speeds (used when ISO was #defined)
+
       ion_mach = sqrt(sq_sum3(u(this%imx, i, j, k), u(this%imy, i, j, k), u(this%imz, i, j, k)))/u(this%idn, i, j, k) / this%get_cs(i, j, k, u, b, cs_iso2)
+
    end function ion_mach
 
    function get_tag() result(tag)
+
       use constants, only: idlen
+
       implicit none
+
       character(len=idlen) :: tag
 
       tag = "ION"
+
    end function get_tag
 
 !>
@@ -182,7 +197,7 @@ contains
 !<
    subroutine init_ionized
 
-      use dataio_pub, only: nh ! QA_WARN required for diff_nml
+      use dataio_pub, only: nh
       use mpisetup,   only: rbuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none

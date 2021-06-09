@@ -63,15 +63,18 @@ contains
 #ifdef MULTIGRID
       use multigrid,             only: cleanup_multigrid
 #endif /* MULTIGRID */
-#ifdef GRAV
+#if defined(GRAV) && defined(NBODY)
       use particle_pub,          only: cleanup_particles
-#endif /* GRAV */
+#endif /* GRAV && NBODY */
 #ifdef PIERNIK_OPENCL
       use piernikcl,             only: cleanup_opencl
 #endif /* PIERNIK_OPENCL */
 #ifdef RESISTIVE
       use resistivity,           only: cleanup_resistivity
 #endif /* RESISTIVE */
+#ifdef COSM_RAYS_SOURCES
+      use cr_data,               only: cleanup_crsources
+#endif /* COSM_RAYS_SOURCES */
 
       implicit none
 
@@ -90,9 +93,9 @@ contains
 #endif /* MULTIGRID */
       call cleanup_sortable_list;  call nextdot
       call cleanup_fluids;         call nextdot
-#ifdef GRAV
+#if defined(GRAV) && defined(NBODY)
       call cleanup_particles;      call nextdot
-#endif /* GRAV */
+#endif /* GRAV && NBODY */
       call cleanup_global;         call nextdot
       call cleanup_decomposition;  call nextdot
       call cleanup_domain;         call nextdot
@@ -106,6 +109,9 @@ contains
 #ifdef RANDOMIZE
       call cleanup_randomization;  call nextdot
 #endif /* RANDOMIZE */
+#ifdef COSM_RAYS_SOURCES
+      call cleanup_crsources;      call nextdot
+#endif /* COSM_RAYS_SOURCES */
 
    end subroutine cleanup_piernik
 

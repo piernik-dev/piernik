@@ -103,7 +103,7 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: AT_NO_B
-      use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,     only: nh
       use mpisetup,       only: rbuff, cbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
@@ -230,7 +230,8 @@ contains
       use dataio_pub,  only: msg, die
       use func,        only: operator(.notequals.)
       use grid_cont,   only: grid_container
-      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Send, MPI_Recv
+      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,      only: MPI_Send, MPI_Recv
       use mpisetup,    only: proc, master, FIRST, LAST, err_mpi
 
       implicit none

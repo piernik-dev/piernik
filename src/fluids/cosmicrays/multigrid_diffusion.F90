@@ -106,12 +106,11 @@ contains
 
       use cg_list_global,   only: all_cg
       use constants,        only: BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF, xdim, ydim, zdim, GEO_XYZ, half, zero, one, VAR_CENTER, VAR_XFACE, VAR_YFACE, VAR_ZFACE, I_ONE
-      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,       only: die, warn, msg
+      use dataio_pub,       only: die, warn, msg, nh
       use domain,           only: dom
       use fluidindex,       only: flind
       use func,             only: operator(.notequals.)
-      use global,           only: force_cc_mag
+      use global,           only: cc_mag
       use mpisetup,         only: master, slave, nproc, ibuff, rbuff, lbuff, cbuff, piernik_MPI_Bcast
       use multigridvars,    only: single_base
       use named_array_list, only: qna
@@ -247,9 +246,9 @@ contains
 
       !> \todo consider adding multigrid = .true. to the b-field (re-register it?)
       pia => pos
-      pos = merge(VAR_CENTER, VAR_XFACE, force_cc_mag) ; call all_cg%reg_var(diff_bx_n, multigrid = .true., position = pia)
-      pos = merge(VAR_CENTER, VAR_YFACE, force_cc_mag) ; call all_cg%reg_var(diff_by_n, multigrid = .true., position = pia)
-      pos = merge(VAR_CENTER, VAR_ZFACE, force_cc_mag) ; call all_cg%reg_var(diff_bz_n, multigrid = .true., position = pia)
+      pos = merge(VAR_CENTER, VAR_XFACE, cc_mag) ; call all_cg%reg_var(diff_bx_n, multigrid = .true., position = pia)
+      pos = merge(VAR_CENTER, VAR_YFACE, cc_mag) ; call all_cg%reg_var(diff_by_n, multigrid = .true., position = pia)
+      pos = merge(VAR_CENTER, VAR_ZFACE, cc_mag) ; call all_cg%reg_var(diff_bz_n, multigrid = .true., position = pia)
       idiffb(xdim) = qna%ind(diff_bx_n)
       idiffb(ydim) = qna%ind(diff_by_n)
       idiffb(zdim) = qna%ind(diff_bz_n)
@@ -333,7 +332,7 @@ contains
             call init_source(cr_id)
             if (vstat%norm_rhs .notequals. zero) then
                if (norm_was_zero(cr_id) .and. master) then
-                  write(msg,'(a,i2,a)')"[multigrid_diffusion:multigrid_solve_diff] CR-fluid #",cr_id," is now available in measurable quantities."
+                  write(msg,'(a,i2.2,a)')"[multigrid_diffusion:multigrid_solve_diff] CR-fluid #", cr_id, " is now available in measurable quantities."
                   call printinfo(msg)
                endif
                norm_was_zero(cr_id) = .false.
@@ -344,7 +343,7 @@ contains
                ! enddo
             else
                if (.not. norm_was_zero(cr_id) .and. master) then
-                  write(msg,'(a,i2,a)')"[multigrid_diffusion:multigrid_solve_diff] Source norm of CR-fluid #",cr_id," == 0., skipping."
+                  write(msg,'(a,i2.2,a)')"[multigrid_diffusion:multigrid_solve_diff] Source norm of CR-fluid #", cr_id, " == 0., skipping."
                   call warn(msg)
                endif
                norm_was_zero(cr_id) = .true.
@@ -392,7 +391,7 @@ contains
       call leaves%q_lin_comb( [ ind_val(qna%wai, (1. -1./diff_theta)) ], correction)
       call leaves%q_lin_comb( [ ind_val(qna%wai,     -1./diff_theta ) ], defect)
       call residual(defect, correction, source, cr_id)
-      write(dirty_label, '(a,i2)')"init source#", cr_id
+      write(dirty_label, '(a,i2.2)')"init source#", cr_id
       call leaves%check_dirty(source, dirty_label)
 
       vstat%norm_rhs = leaves%norm_sq(source)
@@ -528,8 +527,8 @@ contains
 
       call ppp_main%start(crmgv_label, PPP_MG + PPP_CR)
 
-      write(vstat%cprefix,'("C",i1,"-")') cr_id !> \deprecated BEWARE: this is another place with 0 <= cr_id <= 9 limit
-      write(dirty_label, '("md_",i1,"_dump")')  cr_id
+      write(vstat%cprefix,'("C",i2.2)') cr_id
+      write(dirty_label, '("md_",i2.2,"_dump")')  cr_id
 
 #ifdef DEBUG
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
@@ -585,7 +584,7 @@ contains
          curl => coarsest%level
          do while (associated(curl))
             call approximate_solution(curl, defect, correction, cr_id)
-            if (.not. associated(curl, finest%level)) call curl%prolong_q_1var(correction) ! In case of problems, consider enforcing bnd_type
+            if (.not. associated(curl, finest%level)) call curl%prolong_1var(correction) ! In case of problems, consider enforcing bnd_type
             curl => curl%finer
          enddo
 
@@ -638,7 +637,11 @@ contains
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use func,           only: operator(.notequals.)
+#ifdef COSM_RAY_ELECTRONS
+      use initcosmicrays, only: K_crn_perp, K_crn_paral
+#else /* !COSM_RAY_ELECTRONS */
       use initcosmicrays, only: K_crs_perp, K_crs_paral
+#endif /* !COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -662,14 +665,22 @@ contains
 
       ! Assumes dom%has_dir(crdim)
       !> \warning *cg%idl(crdim) makes a difference
-      d_par = (cg%q(soln)%point(im) - cg%q(soln)%point(ilm)) * cg%idl(crdim)
+      d_par = (cg%q(soln)%arr(im(xdim), im(ydim), im(zdim)) - &
+           &   cg%q(soln)%arr(ilm(xdim), ilm(ydim), ilm(zdim))) * cg%idl(crdim)
+#ifdef COSM_RAY_ELECTRONS
+      fcrdif = K_crn_perp(cr_id) * d_par
+      if (present(Keff)) Keff = K_crn_perp(cr_id)
+
+      if (K_crn_paral(cr_id) .notequals. zero) then
+#else /* !COSM_RAY_ELECTRONS */
       fcrdif = K_crs_perp(cr_id) * d_par
       if (present(Keff)) Keff = K_crs_perp(cr_id)
 
       if (K_crs_paral(cr_id) .notequals. zero) then
+#endif /* !COSM_RAY_ELECTRONS */
 
          b_perp = 0.
-         b_par = cg%q(idiffb(crdim))%point(im)
+         b_par = cg%q(idiffb(crdim))%arr(im(xdim), im(ydim), im(zdim))
          db = d_par * b_par
          magb = b_par**2
 
@@ -680,12 +691,20 @@ contains
                b_perp = sum(cg%q(idiffb(idir))%span(int(ilm, kind=4), int(imp, kind=4)))*oneq
                magb = magb + b_perp**2
                !> \warning *cg%idl(crdim) makes a difference
-               db = db + b_perp*((cg%q(soln)%point(ilmp) + cg%q(soln)%point(imp)) - (cg%q(soln)%point(ilmm) + cg%q(soln)%point(imm))) * oneq * cg%idl(idir)
+               !db = db + b_perp*((cg%q(soln)%point(ilmp) + cg%q(soln)%point(imp)) - (cg%q(soln)%point(ilmm) + cg%q(soln)%point(imm))) * oneq * cg%idl(idir)
+               db = db + b_perp*((cg%q(soln)%arr(ilmp(xdim), ilmp(ydim), ilmp(zdim))  + &
+                    &             cg%q(soln)%arr(imp(xdim),  imp(ydim),  imp(zdim)))  - &
+                    &            (cg%q(soln)%arr(ilmm(xdim), ilmm(ydim), ilmm(zdim))  + &
+                    &             cg%q(soln)%arr(imm(xdim),  imm(ydim),  imm(zdim)))) * oneq * cg%idl(idir)
             endif
          enddo
 
          if (magb .notequals. zero) then
+#ifdef COSM_RAY_ELECTRONS
+            kbm = K_crn_paral(cr_id) * b_par / magb
+#else /* !COSM_RAY_ELECTRONS */
             kbm = K_crs_paral(cr_id) * b_par / magb
+#endif /* !COSM_RAY_ELECTRONS */
             fcrdif = fcrdif + kbm * db
             if (present(Keff)) Keff = Keff + kbm * b_par
          endif
@@ -763,7 +782,7 @@ contains
 
 !      call leaves%check_dirty(def, "res def")
 
-     call ppp_main%stop(crr_label, PPP_MG + PPP_CR)
+      call ppp_main%stop(crr_label, PPP_MG + PPP_CR)
 
    end subroutine residual
 
@@ -856,7 +875,7 @@ contains
                            call diff_flux(idir, im, soln, cg, cr_id, Keff1)
                            call diff_flux(idir, ih, soln, cg, cr_id, Keff2)
 
-                           temp = temp - (cg%q(qna%wai)%point(ih) - cg%wa(i, j, k)) * diff_theta * dt * cg%idl(idir)
+                           temp = temp - (cg%q(qna%wai)%arr(ih(xdim), ih(ydim), ih(zdim)) - cg%wa(i, j, k)) * diff_theta * dt * cg%idl(idir)
                            dLdu = dLdu - 2 * (Keff1 + Keff2) * cg%idl2(idir)
 
                         endif

@@ -47,7 +47,7 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: level_id         !< level number (relative to base level)
+      integer(kind=4), intent(in) :: level_id  !< level number (relative to base level)
 
       type(cg_level_connected_t), pointer :: lev_p, curl
 
@@ -75,4 +75,4 @@ contains
 
    end function find_level
 
-end module
+end module find_lev

@@ -30,7 +30,7 @@
 
 module refinement
 
-   use constants,          only: ndims, LO, HI, cbuff_len
+   use constants, only: ndims, LO, HI, cbuff_len
 
    implicit none
 
@@ -112,15 +112,15 @@ contains
    subroutine init_refinement
 
       use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, LO, HI, cbuff_len, refinement_factor
-      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub, only: die, code_progress, warn, msg, printinfo
+      use dataio_pub, only: die, code_progress, warn, msg, printinfo, nh
       use domain,     only: dom
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
-      integer :: d
+      integer :: d, level_crit
       logical :: do_refine
+      integer(kind=4), save :: level_insane = 64  ! That's absolute limit for 1D and current implementation of ordering::Morton_id based on 8-bit integers
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[refinement:init_refinement] Domain not initialized.")
 
@@ -157,7 +157,6 @@ contains
          write(nh%lun,nml=AMR)
          close(nh%lun)
          call nh%compare_namelist()
-
 
          if (any(bsize(:) > 0 .and. bsize(:) < dom%nb .and. dom%has_dir(:))) call die("[refinement:init_refinement] bsize(:) is too small.")
 
@@ -299,8 +298,18 @@ contains
          do_refine = .false.
       endif
 
+      level_crit = (63 - int(log(maxval(dom%n_d)-1.)/log(2.)+1)*dom%eff_dim)/dom%eff_dim  ! these are the limits of ordering::Morton_id
+
       ! Such large refinements may require additional work in I/O routines, visualization, computing MPI tags and so on.
-      if (level_max > 40) call warn("[refinement:init_refinement] BEWARE: At such large refinements, integer overflows may happen under certain conditions.")
+      if (level_max >  level_crit) then
+         write(msg, '(a,i2,a)')"[refinement:init_refinement] BEWARE: Refinement levels above ", level_crit, " may lead to integer overflows in this run under certain conditions."
+         if (master) call warn(msg)
+      endif
+      if (level_max > level_insane) then
+         write(msg, '(a,i8,a)')"[refinement:init_refinement] level_max = ", level_max, " is way too much. Reducing. Expect failure somewhat earlier anyway."
+         level_max = level_insane
+         if (master) call warn(msg)
+      endif
 
       if (.not. do_refine) bsize = I_ZERO
 

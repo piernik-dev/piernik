@@ -41,7 +41,7 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, init_terms_grav, grav_accel, source_terms_grav, grav_src_exec, grav_pot_3d, grav_type, get_gprofs, compute_h_gpot, update_gp
+   public :: init_grav, init_terms_grav, grav_accel, source_terms_grav, grav_src_exec, grav_pot_3d, grav_type, get_gprofs, compute_h_gpot, update_gp, need_update
    public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x, variable_gp
 
    integer, parameter         :: gp_stat_len   = 9
@@ -70,6 +70,11 @@ module gravity
    logical                    :: user_grav             !< use user defined grav_pot_3d
    logical                    :: variable_gp           !< if .true. then cg%gp is evaluated at every step
    logical                    :: restart_gpot, restart_hgpot, restart_gp, restart_sgp, restart_sgpm !< if .true. then write this grav part to the restart files
+   logical                    :: need_update           !< a flag to indicate that source_terms_grav needs to be called (e.g. because psolver skipped this)
+
+#ifdef SELF_GRAV
+   integer(kind=4) :: i_sgp, i_sgpm
+#endif /* SELF_GRAV */
 
    interface
 
@@ -161,17 +166,23 @@ contains
 !<
    subroutine init_grav
 
-      use cg_list_global, only: all_cg
-      use constants,      only: PIERNIK_INIT_MPI, gp_n, gpot_n, hgpot_n, O_I2, O_I4
-      use dataio_pub,     only: nh    ! QA_WARN required for diff_nml
-      use dataio_pub,     only: printinfo, warn, die, code_progress
-      use mpisetup,       only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
-      use units,          only: newtong
+      use cg_list_global,   only: all_cg
+      use constants,        only: PIERNIK_INIT_MPI, gp_n, gpot_n, hgpot_n, O_I2, O_I4
+      use dataio_pub,       only: printinfo, warn, die, code_progress, nh
+      use mpisetup,         only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
+      use units,            only: newtong
 #ifdef SELF_GRAV
-      use constants,      only: sgp_n, sgpm_n
+      use constants,        only: sgp_n, sgpm_n
+      use named_array_list, only: qna
 #endif /* SELF_GRAV */
+#ifdef NBODY
+      use constants,        only: gp1b_n, nbdn_n, prth_n
+#ifdef NBODY_GRIDDIRECT
+      use constants,        only: nbgp_n
+#endif /* NBODY_GRIDDIRECT */
+#endif /* NBODY */
 #ifdef CORIOLIS
-      use coriolis,       only: set_omega
+      use coriolis,         only: set_omega
 #endif /* CORIOLIS */
 
       implicit none
@@ -317,7 +328,17 @@ contains
 #ifdef SELF_GRAV
       call all_cg%reg_var(sgp_n,   restart_mode = res_at(restart_sgp)  )
       call all_cg%reg_var(sgpm_n,  restart_mode = res_at(restart_sgpm) )
+      i_sgp  = qna%ind(sgp_n)
+      i_sgpm = qna%ind(sgpm_n)
 #endif /* SELF_GRAV */
+#ifdef NBODY
+      call all_cg%reg_var(prth_n)
+      call all_cg%reg_var(nbdn_n)
+      call all_cg%reg_var(gp1b_n)
+#ifdef NBODY_GRIDDIRECT
+      call all_cg%reg_var(nbgp_n)
+#endif /* NBODY_GRIDDIRECT */
+#endif /* NBODY */
 
       if (.not.user_grav) then
          grav_pot_3d => default_grav_pot_3d
@@ -336,6 +357,8 @@ contains
       end select
 
       call init_grav_ext
+
+      need_update = .false.
 
    end subroutine init_grav
 
@@ -375,9 +398,12 @@ contains
       use constants,        only: gp_n, gpot_n, hgpot_n, base_level_id
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
-#ifdef SELF_GRAV
-      use constants,        only: sgp_n, sgpm_n
-#endif /* SELF_GRAV */
+#ifdef NBODY
+      use constants,        only: gp1b_n, nbdn_n, prth_n
+#ifdef NBODY_GRIDDIRECT
+      use constants,        only: nbgp_n
+#endif /* NBODY_GRIDDIRECT */
+#endif /* NBODY */
 
       implicit none
 
@@ -391,9 +417,17 @@ contains
          cg%gp(:,:,:) = 0.0
          !> \todo move the following to multigrid?
 #ifdef SELF_GRAV
-         cg%sgp   => cg%q(qna%ind(  sgp_n))%arr
-         cg%sgpm  => cg%q(qna%ind( sgpm_n))%arr
+         cg%sgp   => cg%q(i_sgp)%arr
+         cg%sgpm  => cg%q(i_sgpm)%arr
 #endif /* SELF_GRAV */
+#ifdef NBODY
+         cg%prth  => cg%q(qna%ind( prth_n))%arr
+         cg%nbdn  => cg%q(qna%ind( nbdn_n))%arr
+         cg%gp1b  => cg%q(qna%ind( gp1b_n))%arr
+#ifdef NBODY_GRIDDIRECT
+         cg%nbgp  => cg%q(qna%ind( nbgp_n))%arr
+#endif /* NBODY_GRIDDIRECT */
+#endif /* NBODY */
 
       endif
 
@@ -420,6 +454,8 @@ contains
 
    end subroutine init_terms_grav
 
+!> \brief Recover or update self-gravity potential, update other potential if needed
+
    subroutine source_terms_grav
 
       use constants,         only: PPP_GRAV
@@ -427,12 +463,10 @@ contains
 #ifdef SELF_GRAV
       use cg_leaves,         only: leaves
       use cg_list_dataop,    only: expanded_domain
-      use constants,         only: sgp_n, sgpm_n
       use dataio_pub,        only: warn, die, restarted_sim
       use fluidindex,        only: iarr_all_sg
       use mpisetup,          only: master
       use multigrid_gravity, only: multigrid_solve_grav, recover_sgpm, recover_sgp
-      use named_array_list,  only: qna
 #endif /* SELF_GRAV */
 
       implicit none
@@ -440,34 +474,37 @@ contains
       character(len=*), parameter :: grav_label = "source_terms_grav"
 #ifdef SELF_GRAV
       logical, save :: frun = .true.
-      logical :: initialized
+      logical :: sgpm_initialized
 #endif /* SELF_GRAV */
 
       call ppp_main%start(grav_label, PPP_GRAV)
 
+      need_update = .false.
+
 #ifdef SELF_GRAV
-      initialized = .true.
+
+      sgpm_initialized = .true.
       if (frun) then
-         initialized = recover_sgpm() ! try to recover sgpm from old soln
+         sgpm_initialized = recover_sgpm() ! try to recover sgpm from old soln
       else
-         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
+         call leaves%q_copy(i_sgp, i_sgpm)
       endif
 
       if (frun .and. restarted_sim) then
          if (.not. recover_sgp()) call die("[gravity:source_terms_grav] cannot recover sgp")
-         ! Reproducibility f restarts strongly depends on avaability of multigrid history in the restart file.
+         ! Reproducibility of restarts strongly depends on avaability of multigrid history in the restart file.
          ! ToDo: simplify the management of various histories of potential.
       else
          call multigrid_solve_grav(iarr_all_sg)
       endif
       frun = .false.
 
-      call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n)) !, nocorners=.true.)
-      ! No solvers should requires corner values for the potential. Unfortunately some problems may relay on it indirectly (e.g. streaming_instability).
+      call leaves%leaf_arr3d_boundaries(i_sgp) !, nocorners=.true.)
+      ! No solvers should require corner values for the potential. Unfortunately some problems may relay on it indirectly (e.g. streaming_instability).
       !> \todo OPT: identify what relies on corner values of the potential and change it to work without corners. Then enable nocorners in the above call for some speedup.
 
-      if (.not. initialized) then
-         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n)) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain was created
+      if (.not. sgpm_initialized) then
+         call leaves%q_copy(i_sgp, i_sgpm) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain was created
          !> Restarted runs will be slightly affected as the previous selfgravitating potential was forgotten
          !> First step in highly dynamical setups will behave as the potential was frozen before first timestep
          !> Solution? Take one step backwards just for calculating old potential? Sounds complicated.
@@ -475,7 +512,7 @@ contains
          if (master) call warn("[gravity:source_terms_grav] assigned sgpm = sgp")
       endif
 
-      call expanded_domain%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n)) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain expanded
+      call expanded_domain%q_copy(i_sgp, i_sgpm) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain expanded
 #endif /* SELF_GRAV */
       if (variable_gp) call grav_pot_3d
 
@@ -516,11 +553,16 @@ contains
       use constants,        only: gp_n, gpot_n, hgpot_n
       use named_array_list, only: qna
 #ifdef SELF_GRAV
-      use cg_list_dataop,   only: ind_val
-      use constants,        only: one, half, sgp_n, sgpm_n, zero
+      use constants,        only: one, half, zero
       use func,             only: operator(.notequals.)
       use global,           only: dt, dtm
 #endif /* SELF_GRAV */
+#if defined(SELF_GRAV) || defined(NBODY_GRIDDIRECT)
+      use cg_list_dataop,   only: ind_val
+#endif /* SELF_GRAV || NBODY_GRIDDIRECT */
+#ifdef NBODY_GRIDDIRECT
+      use constants,        only: nbgp_n
+#endif /* NBODY_GRIDDIRECT */
 
       implicit none
 
@@ -533,13 +575,25 @@ contains
          h = 0.0
       endif
 
-      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+h),      ind_val(qna%ind(sgpm_n), -h)     ], qna%ind(gpot_n))
-      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+half*h), ind_val(qna%ind(sgpm_n), -half*h)], qna%ind(hgpot_n))
+#ifdef NBODY_GRIDDIRECT
+      !> \todo correct it
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.), ind_val(i_sgp, one+h),      ind_val(i_sgpm, -h)     ], qna%ind(gpot_n))
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.), ind_val(i_sgp, one+half*h), ind_val(i_sgpm, -half*h)], qna%ind(hgpot_n))
+#else /* !NBODY_GRIDDIRECT */
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(i_sgp, one+h),      ind_val(i_sgpm, -h)     ], qna%ind(gpot_n))
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(i_sgp, one+half*h), ind_val(i_sgpm, -half*h)], qna%ind(hgpot_n))
+#endif /* !NBODY_GRIDDIRECT */
 
 #else /* !SELF_GRAV */
       !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
+#ifdef NBODY_GRIDDIRECT
+      !> \todo correct it
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.)], qna%ind(gpot_n))
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.)], qna%ind(hgpot_n))
+#else /* !NBODY_GRIDDIRECT */
       call leaves%q_copy(qna%ind(gp_n), qna%ind(gpot_n))
       call leaves%q_copy(qna%ind(gp_n), qna%ind(hgpot_n))
+#endif /* !NBODY_GRIDDIRECT */
 #endif /* !SELF_GRAV */
 
    end subroutine compute_h_gpot

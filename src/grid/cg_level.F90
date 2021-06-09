@@ -264,10 +264,12 @@ contains
    subroutine create(this)
 
       use cg_list_global,     only: all_cg
+      use constants,          only: PPP_AMR
       use grid_cont,          only: grid_container
       use grid_container_ext, only: cg_extptrs
       use dataio_pub,         only: die
       use mpisetup,           only: proc
+      use ppp,                only: ppp_main
 
       implicit none
 
@@ -276,12 +278,14 @@ contains
       integer                       :: i, p, ep
       integer(kind=8)               :: s
       type(grid_container), pointer :: cg
+      character(len=*), parameter   :: gc_label = "init_gc"
 
       ! Find how many pieces are to be added and recreate local gse and make room for new pieces in the gse array
       call this%dot%update_local(this%first, int(this%cnt + this%plist%p_count(), kind=4))
 
       call this%dot%is_consitent(this%first) ! check local consistency
 
+      call ppp_main%start(gc_label, PPP_AMR)
       ! create the new grid pieces
       i = this%cnt
       if (allocated(this%plist%patches)) then
@@ -301,6 +305,7 @@ contains
          enddo
          call this%plist%p_deallocate
       endif
+      call ppp_main%stop(gc_label, PPP_AMR)
 
       call this%sort_SFC
 
