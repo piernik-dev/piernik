@@ -110,15 +110,15 @@ for word in sys.argv[1:]:
     iw += 1
 
 cli_params(sys.argv[iw:])
-options = zmin, zmax, cmap, pcolor, sctype, cu, cx, cy, cz, draw_data, draw_part, nbins, uaxes
-if not os.path.exists(plotdir):
-    os.makedirs(plotdir)
-
 if pcolor == 'default':
     if nbins > 1:
        pcolor = 'viridis'
     else:
        pcolor = '#1f77b4'
+options = zmin, zmax, cmap, pcolor, sctype, cu, cx, cy, cz, draw_data, draw_part, nbins, uaxes
+if not os.path.exists(plotdir):
+    os.makedirs(plotdir)
+
 
 files_list = sys.argv[1:iw]
 for pthfilen in files_list:
