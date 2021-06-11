@@ -10,20 +10,22 @@ import plot_utils as pu
 import read_dataset as rd
 matplotlib.use('cairo')      # choose output format
 
-def draw_particles(ax, p1, p2, pm, nbins, min1, max1, min2, max2, drawd, pcolor):
+def draw_particles(ax, p1, p2, pm, nbins, min1, max1, min2, max2, drawd, pcolor, psize):
     if nbins > 1:
         ax.hist2d(p1, p2, nbins, weights=pm, range=[[min1, max1], [min2, max2]], norm=matplotlib.colors.LogNorm(), cmap=pcolor)
         if not drawd:
             ax.set_facecolor('xkcd:black')
     else:
-        ax.scatter(p1, p2, c=pcolor, marker=".")
+        if psize <= 0:
+            psize = matplotlib.rcParams['lines.markersize']**2
+        ax.scatter(p1, p2, c=pcolor, marker=".", s=psize)
         ax.set_xlim(min1, max1)
         ax.set_ylim(min2, max2)
     return ax
 
 
 def plotcompose(pthfilen, var, output, options):
-    umin, umax, cmap, pcolor, sctype, cu, cx, cy, cz, drawd, drawp, nbins, uaxes = options
+    umin, umax, cmap, pcolor, psize, sctype, cu, cx, cy, cz, drawd, drawp, nbins, uaxes = options
     h5f = h5py.File(pthfilen, 'r')
     time = h5f.attrs['time'][0]
     utim = h5f['dataset_units']['time_unit'].attrs['unit']
@@ -84,7 +86,7 @@ def plotcompose(pthfilen, var, output, options):
     if drawd:
         a = ax.imshow(xz, origin="lower", extent=[xmin, xmax, zmin, zmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
-        ax = draw_particles(ax, px, pz, pm, nbins, xmin, xmax, zmin, zmax, drawd, pcolor)
+        ax = draw_particles(ax, px, pz, pm, nbins, xmin, xmax, zmin, zmax, drawd, pcolor, psize)
     ax.set_xlabel("x [%s]" % pu.labelx()(ulen))
     ax.set_ylabel("z [%s]" % pu.labelx()(ulen))
 
@@ -92,7 +94,7 @@ def plotcompose(pthfilen, var, output, options):
     if drawd:
         a = ax.imshow(xy, origin="lower", extent=[ymin, ymax, xmin, xmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
-        ax = draw_particles(ax, py, px, pm, nbins, ymin, ymax, xmin, xmax, drawd, pcolor)
+        ax = draw_particles(ax, py, px, pm, nbins, ymin, ymax, xmin, xmax, drawd, pcolor, psize)
     ax.set_ylabel("x [%s]" % pu.labelx()(ulen))
     ax.set_xlabel("y [%s]" % pu.labelx()(ulen))
     ax.set_title(timep)
@@ -101,7 +103,7 @@ def plotcompose(pthfilen, var, output, options):
     if drawd:
         a = ax.imshow(yz, origin="lower", extent=[ymin, ymax, zmin, zmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
-        ax = draw_particles(ax, py, pz, pm, nbins, ymin, ymax, zmin, zmax, drawd, pcolor)
+        ax = draw_particles(ax, py, pz, pm, nbins, ymin, ymax, zmin, zmax, drawd, pcolor, psize)
     ax.set_xlabel("y [%s]" % pu.labelx()(ulen))
     ax.set_ylabel("z [%s]" % pu.labelx()(ulen))
 

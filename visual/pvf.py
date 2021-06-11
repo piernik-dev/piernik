@@ -18,6 +18,7 @@ draw_data = False
 dnames = ''
 uaxes = ''
 nbins = 1
+psize = 0
 
 print('PIERNIK VISUALIZATION FACILITY')
 
@@ -36,12 +37,13 @@ def print_usage():
     print(' -o OUTPUT, \t--output OUTPUT \tdump plot files into OUTPUT directory [default: frames]')
     print(' -p,\t\t--particles\t\tscatter particles onto slices [default: switched-off]')
     print(' -P,\t\t--particle-color\tuse color for particles scattering or colormap for particles histogram plot [default: #1f77b4 (blue) or viridis]')
+    print(' -s,\t\t--particle-sizes\tmarker sizes for scattering particles onto slices [default: switched-off]')
     print(' -z ZMIN,ZMAX, \t--zlim ZMIN,ZMAX \tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]')
 
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:d:D:hl:o:pP:z:", ["help", "axes=", "bins=", "center=", "colormap=", "dataset=", "output=", "particles", "particle-color=", "scale=", "zlim="])
+        opts, args = getopt.getopt(argv, "a:b:c:d:D:hl:o:pP:s:z:", ["help", "axes=", "bins=", "center=", "colormap=", "dataset=", "output=", "particles", "particle-color=", "particle-sizes=", "scale=", "zlim="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -91,6 +93,10 @@ def cli_params(argv):
             global pcolor
             pcolor = str(arg)
 
+        elif opt in ("-s", "--particle-sizes"):
+            global psize
+            psize = float(arg)
+
         elif opt in ("-z", "--zlim"):
             global zmin, zmax
             zmin, zmax = arg.split(',')
@@ -115,7 +121,7 @@ if pcolor == 'default':
        pcolor = 'viridis'
     else:
        pcolor = '#1f77b4'
-options = zmin, zmax, cmap, pcolor, sctype, cu, cx, cy, cz, draw_data, draw_part, nbins, uaxes
+options = zmin, zmax, cmap, pcolor, psize, sctype, cu, cx, cy, cz, draw_data, draw_part, nbins, uaxes
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 
