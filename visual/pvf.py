@@ -31,17 +31,17 @@ def print_usage():
     print(' -b BINS, \t--bins BINS \t\tmake a 2D histogram plot using BINS number instead of scattering particles [default: 1, which leads to scattering]')
     print(' -c CX,CY,CZ, \t--center CX,CY,CZ \tplot cuts across given point coordinates CX, CY, CZ [default: computed domain center]')
     print(' -d VAR[,VAR2], --dataset VAR[,VAR2] \tspecify one or more datafield(s) to plot [default: print available datafields; all or _all_ to plot all available datafields]')
+    print(' -D COLORMAP, \t--colormap COLORMAP \tuse COLORMAP palette [default: viridis]')
     print(' -l SCALETYPE, \t--scale SCALETYPE \tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: linear]')
     print(' -o OUTPUT, \t--output OUTPUT \tdump plot files into OUTPUT directory [default: frames]')
     print(' -p,\t\t--particles\t\tscatter particles onto slices [default: switched-off]')
-    print(' -P,\t\t--particles-color\tuse color for particles scattering or colormap for particles histogram plot [default: #1f77b4 (blue) or viridis]')
-    print(' -r COLORMAP, \t--colormap COLORMAP \tuse COLORMAP palette [default: viridis]')
+    print(' -P,\t\t--particle-color\tuse color for particles scattering or colormap for particles histogram plot [default: #1f77b4 (blue) or viridis]')
     print(' -z ZMIN,ZMAX, \t--zlim ZMIN,ZMAX \tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]')
 
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:d:hl:o:pP:r:z:", ["help", "axes=", "bins=", "center=", "colormap=", "dataset=", "output=", "particles", "particles-color=", "scale=", "zlim="])
+        opts, args = getopt.getopt(argv, "a:b:c:d:D:hl:o:pP:z:", ["help", "axes=", "bins=", "center=", "colormap=", "dataset=", "output=", "particles", "particle-color=", "scale=", "zlim="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -70,6 +70,10 @@ def cli_params(argv):
             dnames = str(arg)
             draw_data = True
 
+        elif opt in ("-D", "--colormap"):
+            global cmap
+            cmap = str(arg)
+
         elif opt in ("-l", "--scale"):
             global sctype
             sctype = str(arg)
@@ -79,15 +83,11 @@ def cli_params(argv):
             plotdir = str(arg)
             print('PLOTDIR: ', plotdir)
 
-        elif opt in ("-r", "--colormap"):
-            global cmap
-            cmap = str(arg)
-
         elif opt in ("-p", "--particles"):
             global draw_part
             draw_part = True
 
-        elif opt in ("-P", "--particles-color"):
+        elif opt in ("-P", "--particle-color"):
             global pcolor
             pcolor = str(arg)
 
