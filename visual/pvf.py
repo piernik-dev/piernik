@@ -13,7 +13,7 @@ sctype = 'linear'
 cu, cx, cy, cz = False, 0.0, 0.0, 0.0
 zmin, zmax = 0.0, 0.0
 draw_part = False
-draw_data = True
+draw_data = False
 dnames = ''
 uaxes = ''
 nbins = 1
@@ -33,14 +33,13 @@ def print_usage():
     print(' -l SCALETYPE, \t--scale SCALETYPE \tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: linear]')
     print(' -o OUTPUT, \t--output OUTPUT \tdump plot files into OUTPUT directory [default: frames]')
     print(' -p,\t\t--particles\t\tscatter particles onto slices [default: switched-off]')
-    print(' -P,\t\t--particles-only\tscatter particles without slices of any grid dataset')
     print(' -r COLORMAP, \t--colormap COLORMAP \tuse COLORMAP palette [default: viridis]')
     print(' -z ZMIN,ZMAX, \t--zlim ZMIN,ZMAX \tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]')
 
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:d:hl:o:pPr:z:", ["help", "axes=", "bins=", "center=", "colormap=", "dataset=", "output=", "particles", "particles-only", "scale=", "zlim="])
+        opts, args = getopt.getopt(argv, "a:b:c:d:hl:o:pr:z:", ["help", "axes=", "bins=", "center=", "colormap=", "dataset=", "output=", "particles", "scale=", "zlim="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -65,7 +64,9 @@ def cli_params(argv):
 
         elif opt in ("-d", "--dataset"):
             global dnames
+            global draw_data
             dnames = str(arg)
+            draw_data = True
 
         elif opt in ("-l", "--scale"):
             global sctype
@@ -83,11 +84,6 @@ def cli_params(argv):
         elif opt in ("-p", "--particles"):
             global draw_part
             draw_part = True
-
-        elif opt in ("-P", "--particles-only"):
-            global draw_data
-            draw_part = True
-            draw_data = False
 
         elif opt in ("-z", "--zlim"):
             global zmin, zmax
@@ -123,8 +119,11 @@ for pthfilen in files_list:
         h5f = h5py.File(pthfilen, 'r')
     else:
         continue
-    if draw_data and dnames == '':
-        print('Available datafields in the file %s: \n' % pthfilen, list(h5f['field_types'].keys()))
+    if not (draw_data or draw_part) or (draw_data and dnames == ''):
+        partincl = ''
+        if 'particle_types' in list(h5f):
+            partincl = 'and particles'
+        print('Available datafields in the file %s: \n' % pthfilen, list(h5f['field_types'].keys()), partincl)
         h5f.close()
         continue
     filen = pthfilen.split('/')[-1]
