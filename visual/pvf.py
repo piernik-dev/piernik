@@ -8,6 +8,7 @@ import sys
 import plot_compose as pc
 
 cmap = 'viridis'
+pcolor = 'default'
 plotdir = 'frames'
 sctype = 'linear'
 cu, cx, cy, cz = False, 0.0, 0.0, 0.0
@@ -33,13 +34,14 @@ def print_usage():
     print(' -l SCALETYPE, \t--scale SCALETYPE \tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: linear]')
     print(' -o OUTPUT, \t--output OUTPUT \tdump plot files into OUTPUT directory [default: frames]')
     print(' -p,\t\t--particles\t\tscatter particles onto slices [default: switched-off]')
+    print(' -P,\t\t--particles-color\tuse color for particles scattering or colormap for particles histogram plot [default: #1f77b4 (blue) or viridis]')
     print(' -r COLORMAP, \t--colormap COLORMAP \tuse COLORMAP palette [default: viridis]')
     print(' -z ZMIN,ZMAX, \t--zlim ZMIN,ZMAX \tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]')
 
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:d:hl:o:pr:z:", ["help", "axes=", "bins=", "center=", "colormap=", "dataset=", "output=", "particles", "scale=", "zlim="])
+        opts, args = getopt.getopt(argv, "a:b:c:d:hl:o:pP:r:z:", ["help", "axes=", "bins=", "center=", "colormap=", "dataset=", "output=", "particles", "particles-color=", "scale=", "zlim="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -85,6 +87,10 @@ def cli_params(argv):
             global draw_part
             draw_part = True
 
+        elif opt in ("-P", "--particles-color"):
+            global pcolor
+            pcolor = str(arg)
+
         elif opt in ("-z", "--zlim"):
             global zmin, zmax
             zmin, zmax = arg.split(',')
@@ -104,9 +110,15 @@ for word in sys.argv[1:]:
     iw += 1
 
 cli_params(sys.argv[iw:])
-options = zmin, zmax, cmap, sctype, cu, cx, cy, cz, draw_data, draw_part, nbins, uaxes
+options = zmin, zmax, cmap, pcolor, sctype, cu, cx, cy, cz, draw_data, draw_part, nbins, uaxes
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
+
+if pcolor == 'default':
+    if nbins > 1:
+       pcolor = 'viridis'
+    else:
+       pcolor = '#1f77b4'
 
 files_list = sys.argv[1:iw]
 for pthfilen in files_list:
