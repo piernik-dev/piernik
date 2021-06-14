@@ -56,3 +56,13 @@ def scale_manage(sctype, xy, xz, yz, umin, umax, d2min, d2max):
 
 def labelx():
     return lambda var: '$' + str(var)[2:-1].replace('**', '^') + '$'
+
+
+def color_axes(wax, color):
+    wax.spines['top'].set_color(color)
+    wax.spines['bottom'].set_color(color)
+    wax.spines['left'].set_color(color)
+    wax.spines['right'].set_color(color)
+    wax.tick_params(axis='x', colors=color)
+    wax.tick_params(axis='y', colors=color)
+    return

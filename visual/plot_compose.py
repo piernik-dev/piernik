@@ -10,6 +10,7 @@ import plot_utils as pu
 import read_dataset as rd
 matplotlib.use('cairo')      # choose output format
 
+
 def draw_particles(ax, p1, p2, pm, nbins, min1, max1, min2, max2, drawd, pcolor, psize):
     if nbins > 1:
         ah = ax.hist2d(p1, p2, nbins, weights=pm, range=[[min1, max1], [min2, max2]], norm=matplotlib.colors.LogNorm(), cmap=pcolor)
@@ -24,10 +25,12 @@ def draw_particles(ax, p1, p2, pm, nbins, min1, max1, min2, max2, drawd, pcolor,
         ax.set_ylim(min2, max2)
     return ax, ah
 
+
 def add_cbar(cbar_mode, grid, ab, fr, clab):
     if cbar_mode == 'none':
         bar = grid[1]
-        cbarh = P.colorbar(ab, ax=bar, format='%.1e', drawedges=False, shrink=0.467, fraction=fr, anchor=(0.0,0.96))
+        pu.color_axes(bar, 'white')
+        cbarh = P.colorbar(ab, ax=bar, format='%.1e', drawedges=False, shrink=0.4668, fraction=fr, anchor=(0.0, 0.961))
     else:
         bar = grid.cbar_axes[0]
         bar.axis["right"].toggle(all=True)
