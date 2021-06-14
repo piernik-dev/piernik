@@ -19,6 +19,7 @@ dnames = ''
 uaxes = ''
 nbins = 1
 psize = 0
+exten = '.png'
 
 print('PIERNIK VISUALIZATION FACILITY')
 
@@ -33,6 +34,7 @@ def print_usage():
     print(' -c CX,CY,CZ, \t--center CX,CY,CZ \tplot cuts across given point coordinates CX, CY, CZ [default: computed domain center]')
     print(' -d VAR[,VAR2], --dataset VAR[,VAR2] \tspecify one or more datafield(s) to plot [default: print available datafields; all or _all_ to plot all available datafields]')
     print(' -D COLORMAP, \t--colormap COLORMAP \tuse COLORMAP palette [default: viridis]')
+    print(' -e EXTENSION, \t--extension EXTENSION \tsave plot in file using filename extension EXTENSION [default: png]')
     print(' -l SCALETYPE, \t--scale SCALETYPE \tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: linear]')
     print(' -o OUTPUT, \t--output OUTPUT \tdump plot files into OUTPUT directory [default: frames]')
     print(' -p,\t\t--particles\t\tscatter particles onto slices [default: switched-off]')
@@ -43,7 +45,7 @@ def print_usage():
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:d:D:hl:o:pP:s:z:", ["help", "axes=", "bins=", "center=", "colormap=", "dataset=", "output=", "particles", "particle-color=", "particle-sizes=", "scale=", "zlim="])
+        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:hl:o:pP:s:z:", ["help", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "output=", "particles", "particle-color=", "particle-sizes=", "scale=", "zlim="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -75,6 +77,11 @@ def cli_params(argv):
         elif opt in ("-D", "--colormap"):
             global cmap
             cmap = str(arg)
+
+        elif opt in ("-e", "--extension"):
+            global exten
+            exten = '.' + str(arg)
+            print(exten)
 
         elif opt in ("-l", "--scale"):
             global sctype
@@ -118,9 +125,9 @@ for word in sys.argv[1:]:
 cli_params(sys.argv[iw:])
 if pcolor == 'default':
     if nbins > 1:
-       pcolor = 'viridis'
+        pcolor = 'viridis'
     else:
-       pcolor = '#1f77b4'
+        pcolor = '#1f77b4'
 options = zmin, zmax, cmap, pcolor, psize, sctype, cu, cx, cy, cz, draw_data, draw_part, nbins, uaxes
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
@@ -165,7 +172,7 @@ for pthfilen in files_list:
         if (not draw_data or var in list(h5f['field_types'].keys())):
             # output = plotdir+'/'+filen.split('/')[-1].replace('.h5',"_%s.png" % var)
             fnl = filen.split('/')[-1]
-            output = plotdir + '/' + '_'.join(fnl.split('_')[:-1]) + '_' + var + '_' + fnl.split('_')[-1].replace('.h5', ".png")
+            output = plotdir + '/' + '_'.join(fnl.split('_')[:-1]) + '_' + var + '_' + fnl.split('_')[-1].replace('.h5', exten)
             pc.plotcompose(pthfilen, var, output, options)
         else:
             print(var, ' is not available in the file ', pthfilen)
