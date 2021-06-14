@@ -24,6 +24,19 @@ def draw_particles(ax, p1, p2, pm, nbins, min1, max1, min2, max2, drawd, pcolor,
         ax.set_ylim(min2, max2)
     return ax, ah
 
+def add_cbar(cbar_mode, grid, ab, fr, clab):
+    if cbar_mode == 'none':
+        bar = grid[1]
+        cbarh = P.colorbar(ab, ax=bar, format='%.1e', drawedges=False, shrink=0.467, fraction=fr, anchor=(0.0,0.96))
+    else:
+        bar = grid.cbar_axes[0]
+        bar.axis["right"].toggle(all=True)
+        cbarh = P.colorbar(ab, cax=bar, format='%.1e', drawedges=False)
+        cbarh = P.colorbar(ab, cax=bar, format='%.1e', drawedges=False)
+    cbarh.ax.set_ylabel(clab)
+    if cbar_mode == 'none':
+        cbarh.ax.yaxis.set_label_coords(-1.5, 0.5)
+
 
 def plotcompose(pthfilen, var, output, options):
     umin, umax, cmap, pcolor, psize, sctype, cu, cx, cy, cz, drawd, drawp, nbins, uaxes = options
@@ -114,28 +127,10 @@ def plotcompose(pthfilen, var, output, options):
     ax.set_ylabel("z [%s]" % pu.labelx()(ulen))
 
     if drawh:
-        if cbar_mode == 'none':
-            bar = grid[1]
-            cbarh = P.colorbar(ah[3], ax=bar, format='%.1e', drawedges=False, shrink=0.467, fraction=0.17, anchor=(0.0,0.96))
-        else:
-            bar = grid.cbar_axes[0]
-            bar.axis["right"].toggle(all=True)
-            cbarh = P.colorbar(ah[3], cax=bar, format='%.1e', drawedges=False)
-        cbarh.ax.set_ylabel('particle mass histogram' + " [%s]" % pu.labelx()(umass))
-        if cbar_mode == 'none':
-            cbarh.ax.yaxis.set_label_coords(-1.5, 0.5)
+        add_cbar(cbar_mode, grid, ah[3], 0.17, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
 
     if drawd:
-        if cbar_mode == 'none':
-            bar = grid[1]
-            cbar = P.colorbar(a, ax=bar, format='%.1e', drawedges=False, shrink=0.467, fraction=0.23, anchor=(0.0,0.96))
-        else:
-            bar = grid.cbar_axes[0]
-            bar.axis["right"].toggle(all=True)
-            cbar = P.colorbar(a, cax=bar, format='%.1e', drawedges=False)
-        cbar.ax.set_ylabel(var + " [%s]" % pu.labelx()(uvar))
-        if cbar_mode == 'none':
-            cbar.ax.yaxis.set_label_coords(-1.5, 0.5)
+        add_cbar(cbar_mode, grid, a, 0.23, var + " [%s]" % pu.labelx()(uvar))
 
     P.draw()
     P.savefig(output, facecolor='white')
