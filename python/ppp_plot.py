@@ -4,7 +4,7 @@ import sys
 import argparse
 
 
-t_bias = 10  # I'd prefer to reduce the timers initially to 0, but sometimes slaves start before master
+t_bias = 1.e-6  # For global bigbang thih may need to be increased to some large values. For per-thread bigbang it can be some small posityve value.
 
 
 class PPP_Node:
@@ -49,7 +49,8 @@ class PPP_Node:
             if label == self.label:
                 self._set_time(time)
             else:
-                sys.stderr.write("Warning: unfinished for '" + self.path() + "' " + str(time) + "\n")
+                sys.stderr.write("Warning: unfinished for '" + self.path() +
+                                 "' '" + str(label) + "' " + str(time) + "\n")
             return self.parent  # most likely won't recover properly
 
     def path(self):
@@ -161,11 +162,12 @@ class PPP:
         file = open(self.name, 'r')
         for line in file:
             ln = line.split()
+            if int(ln[0]) >= self.nthr:
+                self.nthr = int(ln[0]) + 1
+                self.bigbang = None  # force per-thread bigbang
             if self.bigbang is None:
                 self.bigbang = float(ln[1]) - t_bias
             self._add(int(ln[0]), line[line.index(ln[2]):].strip(), float(ln[1]) + self.bigbang * (-1. if float(ln[1]) > 0. else 1.))  # proc, label, time
-            if int(ln[0]) >= self.nthr:
-                self.nthr = int(ln[0]) + 1
         self.descr = "'%s' (%d thread%s)" % (self.name, self.nthr, "s" if self.nthr > 1 else "")
 
     def _add(self, proc, label, time):
@@ -203,7 +205,6 @@ class PPPset:
     """A collection of event trees from one or many Piernik runs"""
 
     def __init__(self, fnamelist):
-        """Let's focus on ASCII decoding for a while. Don't bother with HDF5 until we implement such type of PPP dump"""
         self.run = {}
         for fname in fnamelist:
             self.run[fname] = PPP(fname)
@@ -232,7 +233,7 @@ class PPPset:
             print("ARGS: ", args)
             for f in self.run:
                 ed = {}
-                print("\n## File: '%s', %d threads, bigbang = %.7f" % (self.run[f].name, self.run[f].nthr, self.run[f].bigbang))
+                print("\n## File: '%s', %d threads" % (self.run[f].name, self.run[f].nthr))
                 for p in self.run[f].trees:
                     for e in self.run[f].trees[p].root.get_all_ev():
                         e_base = e[0].split('/')[-1]
@@ -360,14 +361,14 @@ examples:
 
 plot profile of 64th step from file.ascii with gnuplot (hopefully in the interactive mode):
     ppp_plot.py file.ascii -r 'step 64'| gnuplot
-    ppp_plot.py file.ascii -r 'step 64'-o file.gnu; gnuplot file.gnu
+    ppp_plot.py file.ascii -r 'step 64' -o file.gnu; gnuplot file.gnu
 
 when gnuplot fails to set up desired teminal by default, try to set $GNUTERM (qt or x11 are recommended):
     ppp_plot.py file.ascii | GNUTERM=qt gnuplot
 
-print list of top-lefel timers (steps) present in file.ascii:
+print list of top-level timers (steps) present in file.ascii:
     ppp_plot.py file.ascii -t -d 1
-(the atep names are followed by their time offset and length)
+(the step names are followed by their time offset and length)
 
 find most time-consuming timers:
     ppp_plot.py file.ascii -s
@@ -397,4 +398,9 @@ args = parser.parse_args()
 all_events = PPPset(args.filename)
 all_events.print(args.otype)
 
-# for j  in *.ppprofile.ascii ; do for i in `awk '{print $2}' $j |  sort |  uniq` ; do in=`grep "$i *  -" $j | wc -l` ; out=`grep "$i *  [1-9]" $j | wc -l` ; [ $in != $out ] && echo $j $i $in $out ; done |  column -t ; done
+# An attempt to find unbalanced timers:
+# for j  in *.ppprofile.ascii ; do for i in `awk '{print $1}' $j |  sort |  uniq` ; do in=`grep "$i *  -" $j | wc -l` ; out=`grep "$i *  [1-9]" $j | wc -l` ; [ $in != $out ] && echo $j $i $in $out ; done |  column -t ; done
+# No output is good
+# An output in the form:
+#     filename thread_number closed_timers opened_timers
+# means that something bad happened and the data is truncated or corrupted in some other way

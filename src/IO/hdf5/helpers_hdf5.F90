@@ -1,5 +1,5 @@
 !
-! PIERNIK Code Copyright (C) 2006-2012 Michal Hanasz
+! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
 !    This file is part of PIERNIK code.
 !
@@ -68,6 +68,7 @@ module helpers_hdf5
       module procedure create_dataset_int4_dim1
       module procedure create_dataset_int8_dim1
       module procedure create_dataset_real_scalar
+      module procedure create_dataset_real8_dim2
    end interface
 
 contains
@@ -88,7 +89,7 @@ contains
       integer(hid_t)                             :: faplist_id
       integer(kind=SIZE_T)                       :: increment
       logical(kind=4)                            :: backing_store
-      integer(kind=4)                            :: hdferr
+      integer(kind=4)                            :: hdferr  !< hdferr perhaps should be of type integer(HID_T)
 
       increment = default_increment
       backing_store = default_backing_store
@@ -128,7 +129,7 @@ contains
       integer(kind=4), dimension(:,:), pointer, intent(in) :: ddata !< data used to create dataset
 
       integer(HID_T)                                       :: dset, space, mem_type
-      integer(kind=4)                                      :: hdferr
+      integer(kind=4)                                      :: hdferr  !< hdferr perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(2)                       :: dims
       type(c_ptr)                                          :: f_ptr
 
@@ -159,7 +160,7 @@ contains
       integer(kind=8), dimension(:,:), pointer, intent(in) :: ddata !< data used to create dataset
 
       integer(HID_T)                                       :: dset, space, mem_type
-      integer(kind=4)                                      :: hdferr
+      integer(kind=4)                                      :: hdferr !< hdferr perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(2)                       :: dims
       type(c_ptr)                                          :: f_ptr
 
@@ -190,7 +191,7 @@ contains
       integer(kind=4), dimension(:), pointer, intent(in) :: ddata !< data used to create dataset
 
       integer(HID_T)                                     :: dset, space, mem_type
-      integer(kind=4)                                    :: hdferr
+      integer(kind=4)                                    :: hdferr !< hdferr perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(1)                     :: dims
       type(c_ptr)                                        :: f_ptr
 
@@ -221,7 +222,7 @@ contains
       integer(kind=8), dimension(:), pointer, intent(in) :: ddata !< data used to create dataset
 
       integer(HID_T)                                     :: dset, space, mem_type
-      integer(kind=4)                                    :: hdferr
+      integer(kind=4)                                    :: hdferr !< hdferr perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(1)                     :: dims
       type(c_ptr)                                        :: f_ptr
 
@@ -251,7 +252,7 @@ contains
       real(kind=8),                           intent(in) :: ddata !< data used to create dataset
 
       integer(HID_T)                                     :: dset, space
-      integer(kind=4)                                    :: hdferr
+      integer(kind=4)                                    :: hdferr !< hdferr perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(1)                     :: dims
 
       dims(1) = -99
@@ -262,6 +263,37 @@ contains
       call h5sclose_f(space, hdferr)
 
    end subroutine create_dataset_real_scalar
+
+!> \brief Create double precision dataset (rank-2 array) in the given place_id.
+!
+   subroutine create_dataset_real8_dim2(place, dname, ddata)
+
+      use constants,     only: I_TWO
+      use hdf5,          only: h5dcreate_f, h5dclose_f, h5sclose_f, h5screate_simple_f, &
+          &                    h5dwrite_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
+      use iso_c_binding, only: c_ptr, c_loc
+
+      implicit none
+
+      integer(HID_T),                intent(in) :: place !< object id where dataset will be created
+      character(len=*),              intent(in) :: dname !< name of dataset
+      real, pointer, dimension(:,:), intent(in) :: ddata !< data used to create dataset
+
+      integer(HID_T)                            :: dset, space!, mem_type
+      integer(kind=4)                           :: hdferr
+      integer(HSIZE_T), dimension(2)            :: dims
+      type(c_ptr)                               :: f_ptr
+
+      dims = shape(ddata)
+      call h5screate_simple_f(I_TWO, dims, space, hdferr)
+      call h5dcreate_f(place, dname, H5T_NATIVE_DOUBLE, space, dset, hdferr)
+      f_ptr = c_loc(ddata(1,1))
+      call h5dwrite_f(dset, H5T_NATIVE_DOUBLE, f_ptr, hdferr)
+      call h5dclose_f(dset,  hdferr)
+      call h5sclose_f(space, hdferr)
+
+   end subroutine create_dataset_real8_dim2
+
 
 !> \brief Attach an 32-bit integer attribute (scalar or rank-1 small array) to the given group.
 !
@@ -277,7 +309,7 @@ contains
       integer(kind=4), dimension(:), intent(in) :: int_array !< the data
 
       integer(HID_T)                            :: aspace_id, attr_id
-      integer(kind=4)                           :: error
+      integer(kind=4)                           :: error     !< error perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(I_ONE)        :: dims
 
       dims(I_ONE) = size(int_array, kind=HSIZE_T)
@@ -304,7 +336,7 @@ contains
       integer(kind=8), dimension(:), pointer, intent(in) :: int_array !< the data
 
       integer(HID_T)                                     :: attr, space, mem_type
-      integer(kind=4)                                    :: hdferr
+      integer(kind=4)                                    :: hdferr    !< hdferr perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(I_ONE)                 :: dims
       type(c_ptr)                                        :: f_ptr
 
@@ -333,7 +365,7 @@ contains
       real(kind=8), dimension(:), intent(in) :: real_array !< the data
 
       integer(HID_T)                         :: aspace_id, attr_id
-      integer(kind=4)                        :: error
+      integer(kind=4)                        :: error      !< error perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(I_ONE)     :: dims
 
       dims = shape(real_array)
@@ -359,7 +391,7 @@ contains
       real(kind=8),               intent(in) :: real_data !< the data
 
       integer(HID_T)                         :: aspace_id, attr_id
-      integer(kind=4)                        :: error
+      integer(kind=4)                        :: error      !< error perhaps should be of type integer(HID_T)
       integer(HSIZE_T), dimension(I_ONE)     :: dims
 
       dims = -99
@@ -387,7 +419,7 @@ contains
       character(len=*), intent(in), pointer :: data !< the data
 
       integer(HID_T)                        :: space, attr_id, memtype, filetype
-      integer(kind=4)                       :: error
+      integer(kind=4)                       :: error !< error perhaps should be of type integer(HID_T)
       type(c_ptr)                           :: f_ptr
       integer(HSIZE_T), dimension(I_ONE)    :: dims
 

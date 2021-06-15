@@ -254,14 +254,18 @@ contains
             ! With CoM or when it is known than CoM is close to the domain center one may try to save some CPU time by lowering mmax.
             call Q%reset
             call img_mass2moments
+#ifdef NBODY
             call particles2moments
+#endif /* NBODY */
             call Q%red_int_norm
             ! OPT: automagically reduce lmax for a couple of steps if higher multipoles fall below some thershold
             call moments2bnd_potential
          case (THREEDIM)
             call Q%reset
             call domain2moments
+#ifdef NBODY
             call particles2moments
+#endif /* NBODY */
             call Q%red_int_norm
             ! OPT: automagically reduce lmax for a couple of steps if higher multipoles fall below some thershold
             call moments2bnd_potential
@@ -455,8 +459,9 @@ contains
    subroutine domain2moments
 
       use cg_leaves,          only: leaves
+      use cg_level_base,      only: base
       use cg_level_finest,    only: finest
-      use cg_level_connected, only: cg_level_connected_t, base_level
+      use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: xdim, zdim, GEO_XYZ, zero, base_level_id, PPP_GRAV
       use dataio_pub,         only: die, msg, warn
@@ -485,11 +490,11 @@ contains
          level => finest%find_finest_bnd()
          cgl => level%first
       else if (mpole_level <= base_level_id) then
-         level => base_level
+         level => base%level
          call finest%level%restrict_to_base_q_1var(source)
          do while (level%l%id > mpole_level)
             if (associated(level%coarser)) then
-               call level%restrict_q_1var(source)
+               call level%restrict_1var(source)
                level => level%coarser
             else
                write(msg, '(2(a,i3))')"[multigridmultipole:domain2moments] Coarsest level reached. Will use level ", level%l%id, " instead of ", mpole_level
@@ -501,7 +506,7 @@ contains
       else
          level => finest%level
          do while (level%l%id > mpole_level)
-            call level%restrict_q_1var(source)
+            call level%restrict_1var(source)
             level => level%coarser
             if (.not. associated(level)) call die("[multigridmultipole:domain2moments] Coarsest level reached for mpole_level > base_level_id")
          enddo
@@ -529,28 +534,55 @@ contains
 
 !> \brief Compute multipole moments for the particles
 
+#ifdef NBODY
    subroutine particles2moments
 
-      use constants,    only: xdim, ydim, zdim, PPP_GRAV, PPP_PART
-      use particle_pub, only: pset
-      use ppp,          only: ppp_main
-      use units,        only: fpiG
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, PPP_GRAV, PPP_PART
+      use grid_cont,      only: grid_container
+      use ppp,            only: ppp_main
+      use units,          only: fpiG
+      use particle_types, only: particle
 
       implicit none
 
-      integer :: i
-      character(len=*), parameter :: p2m_label = "multipole_part2mom"
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer  :: cg
+      type(particle), pointer        :: pset
+      character(len=*), parameter    :: p2m_label = "multipole_part2mom"
 
-      if (size(pset%p) > 0) call ppp_main%start(p2m_label, PPP_GRAV + PPP_PART)
+      call ppp_main%start(p2m_label, PPP_GRAV + PPP_PART)
 
       ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
-      do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
-         if (pset%p(i)%outside) call Q%point2moments(fpiG*pset%p(i)%mass, pset%p(i)%pos(xdim), pset%p(i)%pos(ydim), pset%p(i)%pos(zdim))
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         pset => cg%pset%first
+         do while (associated(pset))
+            if (pset%pdata%outside) call Q%point2moments(fpiG*pset%pdata%mass, pset%pdata%pos(xdim), pset%pdata%pos(ydim), pset%pdata%pos(zdim))
+
+               ! WARNING: Particles that are too close to the outer boundary aren't fully mapped onto the grid.
+               ! This may cause huge errors in the potential, even for "3D" solver because their mass is counted
+               ! only partially in the mapping routine and the rest is ignored here.
+               !
+               ! Suggested fix: set up some buffer at the boundaries (at least one cell wide, few cells are advised)
+               ! and make a "not_mapped" flag instead of "outside". The transition between mapped and not mapped
+               ! particles may be smooth (with partial mappings allowed) but it must not allow for
+               ! particle mappings extending beyond domain boundaries.
+               !
+               ! BUG: Sometimes particles that are outside computational domain don't have the "outside" flag set up.
+            ! A "not_mapped" flag set in the mapping routine would fix this issue.
+
+            pset => pset%nxt
+         enddo
+         cgl => cgl%nxt
       enddo
 
-      if (size(pset%p) > 0) call ppp_main%stop(p2m_label, PPP_GRAV + PPP_PART)
+      call ppp_main%stop(p2m_label, PPP_GRAV + PPP_PART)
 
    end subroutine particles2moments
+#endif /* NBODY */
 
 !>
 !! \brief Compute infinite-boundary potential from multipole moments

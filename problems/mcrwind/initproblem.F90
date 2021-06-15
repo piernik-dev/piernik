@@ -72,7 +72,7 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub, only: nh
       use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
 #ifdef GRAV
       use gravity,    only: grav_pot_3d, user_grav
@@ -146,7 +146,6 @@ contains
       b_n    = [bxn, byn, bzn]
 
 #ifdef GRAV
-!      if (user_grav) grav_pot_3d => my_grav_pot_3d
       if (user_grav) grav_pot_3d => galactic_grav_pot_3d
 #endif /* GRAV */
 #ifdef CR_SN
@@ -291,28 +290,6 @@ contains
    end subroutine supernovae_wrapper
 
 #ifdef GRAV
-   subroutine my_grav_pot_3d
-
-      use dataio_pub, only: die, warn
-      use gravity,    only: grav_accel, grav_accel2pot
-      use mpisetup,   only: master
-
-      implicit none
-
-      logical, save  :: frun = .true.
-
-      if (.not.frun) return
-
-      if (associated(grav_accel)) then
-         if (master) call warn("[initproblem:my_grav_pot_3d]: using 'grav_accel' defined by user")
-         call grav_accel2pot
-      else
-         call die("[initproblem:my_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")
-      endif
-      frun = .false.
-
-   end subroutine my_grav_pot_3d
-
 !--------------------------------------------------------------------------
 !>
 !! \brief Routine that compute values of gravitational acceleration
@@ -350,10 +327,10 @@ contains
 
       if (sweep == zdim) then
          grav = 3.23e8 * (  &
-           (-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * xsw/sqrt(xsw**2+(0.2*kpc)**2)) &
-           -( 1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*xsw/kpc) )
-!          -Om*(Om+G) * Z * (kpc ?) ! in the transition region between rigid
-!                                   ! and flat rotation F'98: eq.(36)
+              (-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * xsw/sqrt(xsw**2+(0.2*kpc)**2)) &
+              -( 1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*xsw/kpc) )
+!            -Om*(Om+G) * Z * (kpc ?) ! in the transition region between rigid
+!                                    ! and flat rotation F'98: eq.(36)
       else
          grav=0.0
       endif
@@ -432,5 +409,7 @@ contains
       if (.false. .and. present(flatten)) k = 0 ! suppress compiler warnings
 
    end subroutine galactic_grav_pot
+
 #endif /* GRAV */
+
 end module initproblem

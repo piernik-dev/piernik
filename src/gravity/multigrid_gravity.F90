@@ -80,6 +80,7 @@ module multigrid_gravity
 
    ! miscellaneous
    type(vcycle_stats) :: vstat                                        !< V-cycle statistics
+   logical            :: something_in_particles                       !< A flag indicating that some mass may be hidden in particles wandering outside the computational domain
 
    enum, bind(C)
       enumerator :: SGP, SGPM
@@ -127,8 +128,7 @@ contains
    subroutine multigrid_grav_par
 
       use constants,          only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_I2, O_D4, I_ONE, INVALID
-      use dataio_pub,         only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,         only: msg, die, warn
+      use dataio_pub,         only: msg, die, warn, nh
       use domain,             only: dom, is_multicg !, is_uneven
       use func,               only: operator(.notequals.)
       use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff, piernik_MPI_Bcast
@@ -367,10 +367,8 @@ contains
       ! solution recycling
       ord_time_extrap = min(nold_max-I_ONE, max(-I_ONE, ord_time_extrap))
       associate (nold => ord_time_extrap + 1)
-      if (nold > 0) then
          call inner%init_history(nold, "i")
          if (grav_bnd == bnd_isolated .and. .not. singlepass) call outer%init_history(nold, "o")
-      endif
       end associate
 
       call vstat%init(max_cycles)
@@ -523,9 +521,10 @@ contains
 
    subroutine mgg_cg_init(cg)
 
-      use cg_level_connected, only: cg_level_connected_t, find_level
+      use cg_level_connected, only: cg_level_connected_t
       use constants,          only: fft_none
       use dataio_pub,         only: die
+      use find_lev,           only: find_level
       use func,               only: operator(.notequals.)
       use grid_cont,          only: grid_container
       use multigridvars,      only: overrelax
@@ -668,6 +667,9 @@ contains
 !!
 !! \details Typically i_sg_dens is a copy of fluidindex::iarr_all_sg.
 !! Passing this as an argument allows for independent computation of the potential for several density fields if necessary.
+!! Pass an empty array when there are no selfgravitating fluids but we have particles
+!! Omit i_sg_dens when calculating "outer potential" for isolated gravity boundaries.
+!!
 !! \todo compact the following more (if possible)
 !<
 
@@ -683,16 +685,18 @@ contains
       use grid_cont,         only: grid_container
       use multigridvars,     only: source, bnd_periodic, bnd_dirichlet, bnd_givenval, grav_bnd
       use multigrid_Laplace, only: ord_laplacian_outer
-      use particle_pub,      only: pset
       use ppp,               only: ppp_main
       use units,             only: fpiG
 #ifdef JEANS_PROBLEM
-      use problem_pub,    only: jeans_d0, jeans_mode ! hack for tests
+      use problem_pub,       only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
+#ifdef NBODY_MULTIGRID
+      use particle_maps,     only: map_particles
+#endif /* NBODY_MULTIGRID */
 
       implicit none
 
-      integer(kind=4), dimension(:), intent(in) :: i_sg_dens !< indices to selfgravitating fluids
+      integer(kind=4), dimension(:), optional, intent(in) :: i_sg_dens !< indices to selfgravitating fluids
 
       real                           :: fac
       integer                        :: i, side
@@ -704,17 +708,26 @@ contains
       call ppp_main%start(mgi_label, PPP_GRAV + PPP_MG)
 
       call all_cg%set_dirty(source, 0.979*dirtyH1)
+      something_in_particles = .false.
 
-      if (size(i_sg_dens) > 0) then
-         cgl => leaves%first
-         do while (associated(cgl))
-            cg => cgl%cg
-            cgl%cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_sg_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
-            cgl => cgl%nxt
-         enddo
-         call pset%map(source, fpiG)
+      if (present(i_sg_dens)) then
+         if (size(i_sg_dens) > 0) then
+            cgl => leaves%first
+            do while (associated(cgl))
+               cg => cgl%cg
+               cgl%cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_sg_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
+               cgl => cgl%nxt
+            enddo
+         else
+            call leaves%set_q_value(source, 0.)  ! no selfgravitating fluids => vacuum unless we have particles
+         endif
+
+#ifdef NBODY_MULTIGRID
+         call map_particles(source, fpiG)
+         something_in_particles = .true.
+#endif /* NBODY_MULTIGRID */
       else
-         call leaves%set_q_value(source, 0.)
+         call leaves%set_q_value(source, 0.)  ! empty domain for "outer potential" calculation
       endif
 
       select case (grav_bnd)
@@ -807,7 +820,6 @@ contains
       integer(kind=4), dimension(:), intent(in) :: i_sg_dens !< indices to selfgravitating fluids
 
       integer :: grav_bnd_global
-      integer(kind=4), dimension(0) :: empty_array !< trick to avoid compiler warnings on possibly uninitialized i_sg_dens.0 in init_source
 
       ts =  set_timer(tmr_mg, .true.)
 
@@ -847,7 +859,7 @@ contains
 
          vstat%cprefix = "Go-"
          call multipole_solver
-         call init_source(empty_array)
+         call init_source
 
          call poisson_solver(outer)
 
@@ -889,11 +901,10 @@ contains
 
 !> \brief Recover a potential field from history
 
-   function recover_sg(ind, how_old) result(initialized)
+   logical function recover_sg(ind, how_old) result(initialized)
 
       use cg_leaves,     only: leaves
-      use constants,     only: INVALID
-      use dataio_pub,    only: warn, die
+      use dataio_pub,    only: warn
       use global,        only: nstep
       use mpisetup,      only: master
       use multigridvars, only: grav_bnd, bnd_isolated
@@ -904,43 +915,16 @@ contains
       integer(kind=4), intent(in) :: ind
       integer(kind=4), intent(in) :: how_old
 
-      logical :: initialized
       integer(kind=4) :: i_hist
 
       initialized = .false.
       if (associated(inner%old%latest)) then
-         select case (how_old)
-            case (SGP)
-               i_hist = inner%old%latest%i_hist
-            case (SGPM)
-               if (associated(inner%old%latest%earlier)) then
-                  i_hist = inner%old%latest%earlier%i_hist
-               else
-                  i_hist = inner%old%latest%i_hist
-                  call warn("[multigrid_gravity:recover_sg] not enough historic fields for inner SGPM, using latest")
-               endif
-            case default
-               call die("[multigrid_gravity:recover_sg] such old inner history not implemented yet")
-               i_hist = INVALID
-         end select
+         i_hist = which_history(inner)
          call leaves%q_copy(i_hist, ind)
          initialized = .true.
          if (grav_bnd == bnd_isolated .and. .not. singlepass) then
             if (associated(outer%old%latest)) then
-               select case (how_old)
-                  case (SGP)
-                     i_hist = outer%old%latest%i_hist
-                  case (SGPM)
-                     if (associated(outer%old%latest%earlier)) then
-                        i_hist = outer%old%latest%earlier%i_hist
-                     else
-                        i_hist = outer%old%latest%i_hist
-                        call warn("[multigrid_gravity:recover_sg] not enough historic fields for outer SGPM, using latest")
-                     endif
-                  case default
-                     call die("[multigrid_gravity:recover_sg] such old outer history not implemented yet")
-                     i_hist = INVALID
-               end select
+               i_hist = which_history(outer)
                call leaves%q_add(i_hist, ind)
             else
                initialized = .false.
@@ -951,6 +935,34 @@ contains
          if (master .and. nstep > 0) call warn("[multigrid_gravity:recover_sg] no i-history available")
       endif
       call leaves%leaf_arr3d_boundaries(ind)
+
+   contains
+
+      integer(kind=4) function which_history(hist) result(ih)
+
+         use constants,  only: INVALID
+         use dataio_pub, only: die
+
+         implicit none
+
+         type(soln_history) :: hist
+
+         select case (how_old)
+            case (SGP)
+               ih = hist%old%latest%i_hist
+            case (SGPM)
+               if (associated(hist%old%latest%earlier)) then
+                  ih = hist%old%latest%earlier%i_hist
+               else
+                  ih = hist%old%latest%i_hist
+                  call warn("[multigrid_gravity:recover_sg:which_history] not enough historic fields for  SGPM, using latest")
+               endif
+            case default
+               call die("[multigrid_gravity:recover_sg:which_history] such old history not implemented yet")
+               ih = INVALID
+         end select
+
+      end function which_history
 
    end function recover_sg
 
@@ -1068,8 +1080,10 @@ contains
          norm_was_zero = .false.
       else
          call leaves%set_q_value(solution, 0.)
-         if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
-         norm_was_zero = .true.
+         if (.not. something_in_particles) then
+            if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
+            norm_was_zero = .true.
+         endif
          call ppp_main%stop(mgv_label, PPP_GRAV + PPP_MG)
          return
       endif
@@ -1191,13 +1205,14 @@ contains
 
       use hdf5,          only: HID_T
       use multigridvars, only: grav_bnd, bnd_isolated
+      use multipole,     only: singlepass
 
       implicit none
 
       integer(HID_T), intent(in) :: file_id  !< File identifier
 
       call inner%mark_and_create_attribute(file_id)
-      if (grav_bnd == bnd_isolated) call outer%mark_and_create_attribute(file_id)
+      if (grav_bnd == bnd_isolated .and. .not. singlepass) call outer%mark_and_create_attribute(file_id)
 
    end subroutine write_oldsoln_to_restart
 

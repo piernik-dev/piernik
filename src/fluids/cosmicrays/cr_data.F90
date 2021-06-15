@@ -139,8 +139,7 @@ contains
 !<
    subroutine init_crsources(ncrn, crness)
 
-      use dataio_pub,      only: nh   ! QA_WARN required for diff_nml
-      use dataio_pub,      only: msg, printinfo, die
+      use dataio_pub,      only: msg, printinfo, die, nh
       use mpisetup,        only: lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
@@ -264,6 +263,16 @@ contains
 
 
    end subroutine init_crsources
+
+!> \brief cleanup routine
+
+   subroutine cleanup_crsources
+
+      implicit none
+
+      deallocate(cr_names, cr_table, cr_sigma, cr_tau, cr_primary, cr_mass)
+
+   end subroutine cleanup_crsources
 
 end module cr_data
 

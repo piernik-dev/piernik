@@ -50,13 +50,14 @@ contains
    subroutine solve_cg_rtvd(cg, cdim, istep, fargo_vel)
 
       use bfc_bcc,            only: interpolate_mag_field
-      use cg_level_connected, only: cg_level_connected_t, find_level
-      use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim, rk_coef
+      use cg_level_connected, only: cg_level_connected_t
+      use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim, rk_coef, first_stage
       use dataio_pub,         only: die
       use domain,             only: dom
+      use find_lev,           only: find_level
       use fluidindex,         only: flind, iarr_all_swp, nmag, iarr_all_dn, iarr_all_mx
       use fluxtypes,          only: ext_fluxes
-      use global,             only: dt, use_fargo
+      use global,             only: dt, use_fargo, integration_order
       use grid_cont,          only: grid_container
       use gridgeometry,       only: set_geo_coeffs
       use named_array_list,   only: qna, wna
@@ -121,6 +122,10 @@ contains
             if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim,i1,i2)
 
             u (:, iarr_all_swp(cdim,:)) = transpose(pu (:,:))
+
+            if (istep == first_stage(integration_order)) pu0 = pu
+            ! such copy is a bit faster than whole copy of u and we don't have to modify all the source routines
+
             u0(:, iarr_all_swp(cdim,:)) = transpose(pu0(:,:))
             if (use_fargo .and. cdim == ydim) then
                if (fargo_vel == VEL_RES) then
@@ -157,10 +162,9 @@ contains
             ! istep is important only for balsara and selfgravity
 
             call care_for_positives(cg%n_(cdim), u1, b, cg, cdim, i1, i2)
-            u(:,:) = u1(:,:)
             call cg%save_outfluxes(cdim, i1, i2, eflx)
 
-            pu(:,:) = transpose(u(:, iarr_all_swp(cdim,:)))
+            pu(:,:) = transpose(u1(:, iarr_all_swp(cdim,:)))
             nullify(pu,pu0,cs2)
          enddo
       enddo

@@ -183,7 +183,7 @@ contains
          if (dwm * dwp > 0.0) dw = 2.0 * dwm * dwp / (dwm + dwp)
          vibj(i) = (w + dw) * dt
       enddo
-      return
+
    end subroutine tvdb
 
 !-------------------------------------------------------------------------------------------------------------------
@@ -192,7 +192,7 @@ contains
 
       use constants,   only: ndims, I_ONE
       use dataio_pub,  only: die
-      use global,      only: force_cc_mag
+      use global,      only: cc_mag
 #ifdef RESISTIVE
       use resistivity, only: diffuseb
 #endif /* RESISTIVE */
@@ -203,7 +203,7 @@ contains
 
       integer(kind=4)             :: bdir, dstep
 
-      if (force_cc_mag) call die("[ct:magfield] forcing cell-centered magnetic field is not allowed for constrained transport")
+      if (cc_mag) call die("[ct:magfield] cell-centered magnetic field is not allowed for constrained transport")
 
       do dstep = 0, 1
          bdir  = I_ONE + mod(dir+dstep,ndims)
@@ -236,7 +236,7 @@ contains
 !! \todo remove workaround for http://gcc.gnu.org/bugzilla/show_bug.cgi?id=48955
 !<
 
-  subroutine advectb(bdir, vdir)
+   subroutine advectb(bdir, vdir)
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
@@ -330,7 +330,7 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use dataio_pub,       only: die
-      use global,           only: force_cc_mag
+      use global,           only: cc_mag
       use grid_cont,        only: grid_container
       use all_boundaries,   only: all_mag_boundaries
       use user_hooks,       only: custom_emf_bnd
@@ -351,7 +351,7 @@ contains
       real, dimension(:,:,:), pointer :: wcu
 #endif /* RESISTIVE */
 
-      if (force_cc_mag) call die("[ct:mag_add] forcing cell-centered magnetic field is not allowed for constrained transport")
+      if (cc_mag) call die("[ct:mag_add] cell-centered magnetic field is not allowed for constrained transport")
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -424,7 +424,6 @@ contains
          call warn('[ct:pshift]: Dim ill defined in pshift!')
       endif
 
-      return
    end function pshift
 
 !>
@@ -465,7 +464,6 @@ contains
          call warn('[ct:mshift]: Dim ill defined in mshift!')
       endif
 
-      return
    end function mshift
 
 end module ct

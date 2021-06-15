@@ -29,8 +29,6 @@
 !>
 !! \brief Initialization of the neutral fluid
 !!
-!!
-!!
 !! In this module following namelist of parameters is specified:
 !! \copydetails initneutral::init_neutral
 !! \deprecated This module should not export any variables
@@ -49,21 +47,24 @@ module initneutral
    logical :: selfgrav          !< true if neutral gas is selfgravitating
 
    type, extends(component_fluid) :: neutral_fluid
-      contains
-         procedure, nopass :: get_tag
-         procedure, pass   :: get_cs => neu_cs
-         procedure, pass   :: get_mach => neu_mach
-         procedure, pass   :: compute_flux => flux_neu
-         procedure, pass   :: compute_pres => pres_neu
-         procedure, pass   :: initialize_indices => initialize_neu_indices
+   contains
+      procedure, nopass :: get_tag
+      procedure, pass   :: get_cs => neu_cs
+      procedure, pass   :: get_mach => neu_mach
+      procedure, pass   :: compute_flux => flux_neu
+      procedure, pass   :: compute_pres => pres_neu
+      procedure, pass   :: initialize_indices => initialize_neu_indices
    end type neutral_fluid
 
 contains
 
    subroutine initialize_neu_indices(this, flind)
+
       use constants,  only: NEU
       use fluidtypes, only: var_numbers
+
       implicit none
+
       class(neutral_fluid), intent(inout) :: this
       type(var_numbers),    intent(inout) :: flind
 
@@ -79,10 +80,13 @@ contains
    end subroutine initialize_neu_indices
 
    real function neu_cs(this, i, j, k, u, b, cs_iso2)
+
 #ifndef ISO
-      use func,      only: ekin
+      use func, only: ekin
 #endif /* !ISO */
+
       implicit none
+
       class(neutral_fluid),              intent(in) :: this
       integer,                           intent(in) :: i, j, k
       real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
@@ -90,6 +94,7 @@ contains
       real, dimension(:,:,:),   pointer, intent(in) :: cs_iso2 !< pointer to array of isothermal sound speeds (used when ISO was #defined)
 
       real :: p
+
 #ifdef ISO
       p  = cs_iso2(i, j, k) * u(this%idn, i, j, k)
       neu_cs = sqrt(cs_iso2(i, j, k))
@@ -100,6 +105,7 @@ contains
       neu_cs = sqrt(abs((this%gam * p) / u(this%idn, i, j, k)))
 #endif /* !ISO */
       if (.false.) print *, u(:, i, j, k), b(:, i, j, k), cs_iso2(i, j, k), this%cs
+
    end function neu_cs
 
 !>
@@ -109,22 +115,31 @@ contains
 !<
 
    real function neu_mach(this, i, j, k, u, b, cs_iso2)
+
       use func, only: sq_sum3
+
       implicit none
+
       class(neutral_fluid),              intent(in) :: this
       integer,                           intent(in) :: i, j, k
       real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
       real, dimension(:,:,:,:), pointer, intent(in) :: b       !< pointer to array of magnetic fields (used for ionized fluid with MAGNETIC #defined)
       real, dimension(:,:,:),   pointer, intent(in) :: cs_iso2 !< pointer to array of isothermal sound speeds (used when ISO was #defined)
+
       neu_mach = sqrt(sq_sum3(u(this%imx, i, j, k), u(this%imy, i, j, k), u(this%imz, i, j, k)))/u(this%idn, i, j, k) / this%get_cs(i, j, k, u, b, cs_iso2)
+
    end function neu_mach
 
    function get_tag() result(tag)
+
       use constants, only: idlen
+
       implicit none
+
       character(len=idlen) :: tag
 
       tag = "NEU"
+
    end function get_tag
 
 !>
@@ -144,7 +159,7 @@ contains
 !<
    subroutine init_neutral
 
-      use dataio_pub, only: nh ! QA_WARN required for diff_nml
+      use dataio_pub, only: nh
       use mpisetup,   only: rbuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none

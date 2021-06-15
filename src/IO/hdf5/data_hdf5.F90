@@ -36,7 +36,7 @@ module data_hdf5
    implicit none
 
    private
-   public :: init_data, write_hdf5
+   public :: init_data, write_hdf5, gdf_translate
 
    interface
       subroutine h5_write
@@ -108,9 +108,28 @@ contains
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek * cm)
          case ("magdir")
             f%fu = "\rm{radians}"
+#ifdef COSM_RAYS
          case ("cr01" : "cr99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
+#ifdef COSM_RAY_ELECTRONS
+         case ("cren01" : "cren99")
+            f%fu = "1/\rm{cm}^3"
+            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+         case ("cree01" : "cree99")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+         case ("cref01" : "cref99")
+            f%fu = "\rm{s}^3/\rm{g}^2\rm{cm}^6"
+            f%f2cgs = sek**3 / gram**2 / cm**6
+         case ("crep01" : "crep02")     ! dimensionless, p treated as Lorentz's gamma
+            f%fu = ""
+            f%f2cgs = 1.0
+         case ("creq01" : "creq99")
+            f%fu = ""                   ! dimensionless q
+            f%f2cgs = 1.0
+#endif /* COSM_RAY_ELECTRONS */
+#endif /* COSM_RAYS */
          case ("gpot", "sgpt")
             f%fu = "\rm{cm}^2 / \rm{s}^2"
             f%f2cgs = 1.0 / (cm**2 / sek**2)
@@ -172,6 +191,30 @@ contains
 #else /* !MAGNETIC */
                newname = "Mach_number"
 #endif /* MAGNETIC */
+#ifdef NBODY
+            case ("ppid")
+               newname="id"
+            case ("ener")
+               newname="energy"
+            case ("posx")
+               newname="position_x"
+            case ("posy")
+               newname="position_y"
+            case ("posz")
+               newname="position_z"
+            case ("velx")
+               newname="velocity_x"
+            case ("vely")
+               newname="velocity_y"
+            case ("velz")
+               newname="velocity_z"
+            case ("accx")
+               newname="acceleration_x"
+            case ("accy")
+               newname="acceleration_y"
+            case ("accz")
+               newname="acceleration_z"
+#endif /* NBODY */
             case default
                write(newname, '(A)') trim(var)
          end select
@@ -192,7 +235,7 @@ contains
 
       integer(HID_T), intent(in)             :: gid
       integer(HID_T)                         :: dset_id
-      integer(kind=4)                        :: error, i, ip
+      integer(kind=4)                        :: error, i, ip  !< error perhaps should be of type integer(HID_T)
       character(len=cbuff_len), pointer      :: ssbuf
       character(len=units_len), pointer      :: sbuf
       character(len=units_len), target       :: s_unit
@@ -234,7 +277,7 @@ contains
       integer(HID_T), intent(in)             :: place
 
       integer                                :: i, ip
-      integer(kind=4)                        :: error
+      integer(kind=4)                        :: error  !< error perhaps should be of type integer(HID_T)
       integer(HID_T)                         :: g_id
       type(gdf_field_type), target           :: f
       integer(kind=8), pointer, dimension(:) :: ibuf
@@ -275,8 +318,12 @@ contains
       use constants,   only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX, I_EIGHT
       use div_B,       only: divB_c_IO
       use domain,      only: dom
-      use global,      only: force_cc_mag
+      use global,      only: cc_mag
 #endif /* MAGNETIC */
+#ifdef COSM_RAY_ELECTRONS
+      use initcrspectrum,   only: dfpq
+      use named_array_list, only: wna
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -307,7 +354,7 @@ contains
            &                    emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
            &                         half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
            &                         half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))), &
-           &                    force_cc_mag))  ! fortran way of constructing ternary operators
+           &                    cc_mag))  ! fortran way of constructing ternary operators
 #else /* !MAGNETIC */
       associate(emag_c => 0.)
 #endif /* !MAGNETIC */
@@ -315,7 +362,28 @@ contains
 #ifdef COSM_RAYS
          case ("cr01" : "cr99")
             read(var,'(A2,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+#ifdef COSM_RAY_ELECTRONS
+            tab(:,:,:) = cg%u(flind%crn%beg+i-1, RNG)
+#else /* ! COSM_RAY_ELECTRONS */
             tab(:,:,:) = cg%u(flind%crs%beg+i-1, RNG)
+#endif /* !COSM_RAY_ELECTRONS */
+#ifdef COSM_RAY_ELECTRONS
+         case ("cren01" : "cren99")
+            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = cg%u(flind%cre%nbeg+i-1, RNG)
+         case ("cree01" : "cree99")
+            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = cg%u(flind%cre%ebeg+i-1, RNG)
+         case ("cref01" : "cref99")
+            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = cg%w(wna%ind(dfpq%f_nam))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
+         case ("crep01" : "crep02")
+            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = cg%w(wna%ind(dfpq%p_nam))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
+         case ("creq01" : "creq99")
+            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = cg%w(wna%ind(dfpq%q_nam))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
 #ifdef TRACER
          case ("trcr")
@@ -349,7 +417,7 @@ contains
                  &       emag_c)
 #endif /* IONIZED */
 #endif /* !ISO */
-        case ("ethn")
+         case ("ethn")
 #ifndef ISO
             tab(:,:,:) = (cg%u(flind%neu%ien, RNG) - &
                  &       ekin(cg%u(flind%neu%imx, RNG), cg%u(flind%neu%imy, RNG), cg%u(flind%neu%imz, RNG), cg%u(flind%neu%idn, RNG))) /         &
@@ -370,7 +438,7 @@ contains
             tab(:,:,:) =  merge(atan2(cg%b(ydim, RNG), cg%b(xdim, RNG)), &
                  &              atan2(cg%b(ydim, RNG) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ), &
                  &                    cg%b(xdim, RNG) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )),  &
-                 &              force_cc_mag)
+                 &              cc_mag)
             ! ToDo: magi - inclination
             ! ToDo: curlb - nabla x B
 !! ToDo: autodetect centering, add option for dumping both just in case
@@ -462,17 +530,20 @@ contains
 !
    subroutine h5_write_to_single_file
 
-      use common_hdf5, only: set_common_attributes
-      use constants,   only: cwdlen, I_ONE, tmr_hdf, PPP_IO
-      use dataio_pub,  only: printio, printinfo, nhdf, thdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
-         &                   msg, run_id, problem_name, use_v2_io, last_hdf_time
-      use mpisetup,    only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
-      use mpisignals,  only: sig
-      use ppp,         only: ppp_main
-      use timer,       only: set_timer
+      use common_hdf5,     only: set_common_attributes
+      use constants,       only: cwdlen, I_ONE, tmr_hdf, PPP_IO
+      use dataio_pub,      only: printio, printinfo, nhdf, thdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
+         &                       msg, run_id, problem_name, use_v2_io, last_hdf_time
+      use mpisetup,        only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
+      use piernik_mpi_sig, only: sig
+      use ppp,             only: ppp_main
+      use timer,           only: set_timer
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: unmark_oldsoln
 #endif /* MULTIGRID && SELF_GRAV */
+#ifdef NBODY_1FILE
+!      use particles_io_hdf5, only: write_nbody_hdf5
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -510,6 +581,10 @@ contains
       endif
       call report_to_master(sig%hdf_written, only_master=.True.)
       call report_string_to_master(fname, only_master=.True.)
+#ifdef NBODY_1FILE
+!      call write_nbody_hdf5(fname)
+#endif /* NBODY_1FILE */
+
       call ppp_main%stop(wrd_label, PPP_IO)
 
    end subroutine h5_write_to_single_file
@@ -553,9 +628,17 @@ contains
       use global,      only: nstep
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_Recv, MPI_Send
-      use mpisetup,    only: master, FIRST, proc, comm, mpi_err
+      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,      only: MPI_Recv, MPI_Send
+      use mpisetup,    only: master, FIRST, proc, err_mpi, tag_ub
       use ppp,         only: ppp_main
+#ifdef NBODY_1FILE
+      use cg_particles_io, only: pdsets, nbody_datafields
+      use domain,          only: is_multicg
+      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8
+      use mpisetup,        only: LAST
+      use particle_utils,  only: count_all_particles
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -565,7 +648,7 @@ contains
       integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_o  !< all cg sizes, expanded by external boundaries
 
       integer(HID_T)                                       :: filespace_id, memspace_id
-      integer(kind=4)                                      :: error
+      integer(kind=4)                                      :: error       !< error perhaps should be of type integer(HID_T)
       integer(kind=4), parameter                           :: rank = 3
       integer(HSIZE_T), dimension(:), allocatable          :: dims
       integer(kind=4)                                      :: i, ncg, n
@@ -574,13 +657,22 @@ contains
       type(cg_list_element),           pointer             :: cgl
       real, dimension(:,:,:),          pointer             :: data_dbl ! double precision buffer (internal default, single precision buffer is the plotfile output default, overridable by h5_64bit)
       type(cg_output)                                      :: cg_desc
+#ifdef NBODY_1FILE
+      integer(kind=4)                                      :: n_part
+      integer(HID_T)                                       :: id
+      integer(HID_T), dimension(LAST+1)                    :: tmp
+#endif /* NBODY_1FILE */
       character(len=*), parameter :: wrdc_label = "IO_write_data_v2_cg", wrdc1s_label = "IO_write_data_v2_1cg_(serial)", wrdc1p_label = "IO_write_data_v2_1cg_(parallel)"
 
       call ppp_main%start(wrdc_label, PPP_IO)
 
       if (nstep - nstep_start < 1) call enable_all_hdf_var  ! just in case things have changed meanwhile
 
+#ifdef NBODY_1FILE
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(pack(hdf_vars, hdf_vars_avail)), gdf_translate(pdsets))
+#else
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(pack(hdf_vars, hdf_vars_avail)))
+#endif /* NBODY_1FILE */
 
       if (cg_desc%tot_cg_n < 1) call die("[data_hdf5:write_cg_to_output] no cg available!")
 
@@ -591,6 +683,7 @@ contains
 
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
+         if (cg_desc%tot_cg_n *(ubound(hdf_vars,1, kind=4) + I_ONE) > tag_ub) call die("[data_hdf5:write_cg_to_output] this MPI implementation has too low MPI_TAG_UB attribute")
          do ncg = 1, cg_desc%tot_cg_n
             call ppp_main%start(wrdc1s_label, PPP_IO + PPP_CG)
             dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
@@ -607,7 +700,7 @@ contains
                      cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                      call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                   else
-                     call MPI_Recv(data_dbl(1,1,1), size(data_dbl, kind=4), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
+                     call MPI_Recv(data_dbl(1,1,1), size(data_dbl, kind=4), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                   endif
                   if (.not.hdf_vars_avail(i)) cycle
                   if (h5_64bit) then
@@ -623,12 +716,38 @@ contains
                   do i = lbound(hdf_vars,1, kind=4), ubound(hdf_vars,1, kind=4)
                      if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                      if (.not.hdf_vars_avail(i)) cycle
-                     call MPI_Send(data_dbl(1,1,1), size(data_dbl, kind=4), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, mpi_err)
+                     call MPI_Send(data_dbl(1,1,1), size(data_dbl, kind=4), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, MPI_COMM_WORLD, err_mpi)
                   enddo
                endif
             endif
+            !Serial write for particles
             call ppp_main%stop(wrdc1s_label, PPP_IO + PPP_CG)
          enddo
+#ifdef NBODY_1FILE
+         n_part = count_all_particles()
+         if (n_part .gt. 0) then
+            if (is_multicg) call die("[data_hdf5:write_cg_to_output] multicg is not implemented for NBODY_1FILE")
+            do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
+               tmp(:) = 0
+               id=0
+               if (master) then
+                  tmp(:) = cg_desc%pdset_id(:, i)
+               endif
+               if (kind(id) == 4) then
+                  call MPI_Scatter(tmp, 1, MPI_INTEGER, id, 1, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
+               else if (kind(id) == 8) then
+                  call MPI_Scatter(tmp, 1, MPI_INTEGER8, id, 1, MPI_INTEGER8, FIRST, MPI_COMM_WORLD, err_mpi)
+               else
+                  call die("[data_hdf5:write_cg_to_output] no recognized kind of HID_T")
+               endif
+               if (master) then
+                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
+               else
+                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
+               endif
+            enddo
+         endif
+#endif /* NBODY_1FILE */
       else ! perform parallel write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
          if (can_i_write) then
@@ -655,6 +774,15 @@ contains
                      call h5dwrite_f(cg_desc%dset_id(ncg, ip), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, xfer_prp = cg_desc%xfer_prp)
                   endif
                enddo
+
+#ifdef NBODY_1FILE
+               n_part = count_all_particles()
+               if (n_part .gt. 0) then
+                  do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
+                     call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), n_part)
+                  enddo
+               endif
+#endif /* NBODY_1FILE */
 
                cgl => cgl%nxt
                call ppp_main%stop(wrdc1p_label, PPP_IO + PPP_CG)
@@ -722,26 +850,29 @@ contains
 
       if (.false.) i = size(cg_all_n_o, kind=4) ! suppress compiler warning
 
-      contains
-         !>
-         !! Try to avoid pointless data reallocation for every cg if shape doesn't change
-         !<
-         subroutine recycle_data(dims, cg_all_n_b, i, data)
-            use constants, only: xdim, ydim, zdim
-            use hdf5,      only: HSIZE_T
-            implicit none
-            integer(HSIZE_T), dimension(:)                          :: dims        !< shape of current cg
-            integer(kind=4), dimension(:,:), pointer, intent(in)    :: cg_all_n_b  !< all cg sizes
-            integer(kind=4),                          intent(in)    :: i           !< no. of cg
-            real, dimension(:,:,:), pointer,          intent(inout) :: data        !< temporary storage array used for I/O
+   contains
+      !>
+      !! Try to avoid pointless data reallocation for every cg if shape doesn't change
+      !<
+      subroutine recycle_data(dims, cg_all_n_b, i, data)
 
-            if (associated(data)) then
-               if ( any(dims /= shape(data)) ) then
-                  deallocate(data)
-                  allocate(data(cg_all_n_b(xdim, i), cg_all_n_b(ydim, i), cg_all_n_b(zdim, i)))
-               endif
+         use constants, only: xdim, ydim, zdim
+         use hdf5,      only: HSIZE_T
+
+         implicit none
+
+         integer(HSIZE_T), dimension(:)                          :: dims        !< shape of current cg
+         integer(kind=4), dimension(:,:), pointer, intent(in)    :: cg_all_n_b  !< all cg sizes
+         integer(kind=4),                          intent(in)    :: i           !< no. of cg
+         real, dimension(:,:,:), pointer,          intent(inout) :: data        !< temporary storage array used for I/O
+
+         if (associated(data)) then
+            if ( any(dims /= shape(data)) ) then
+               deallocate(data)
+               allocate(data(cg_all_n_b(xdim, i), cg_all_n_b(ydim, i), cg_all_n_b(zdim, i)))
             endif
-         end subroutine recycle_data
+         endif
+      end subroutine recycle_data
 
    end subroutine write_cg_to_output
 
@@ -789,10 +920,17 @@ contains
 
    end subroutine get_data_from_cg
 
+#ifdef NBODY_1FILE
+   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)
+#else
    subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail)
+#endif /* NBODY_1FILE */
 
       use common_hdf5, only: create_empty_cg_dataset, hdf_vars, hdf_vars_avail, O_OUT
       use hdf5,        only: HID_T, HSIZE_T
+#ifdef NBODY_1FILE
+      use cg_particles_io, only: pdsets
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -802,6 +940,10 @@ contains
       logical(kind=4),               intent(in) :: Z_avail
 
       integer :: i
+#ifdef NBODY_1FILE
+      integer(kind=8)                           :: n_part
+      integer(HID_T),                intent(in) :: st_g_id
+#endif /* NBODY_1FILE */
 
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
          if (.not.hdf_vars_avail(i)) cycle
@@ -809,6 +951,12 @@ contains
       enddo
 
       if (.false.) i = size(cg_n_o) ! suppress compiler warning
+
+#ifdef NBODY_1FILE
+      do i = lbound(pdsets,1), ubound(pdsets,1)
+         call create_empty_cg_dataset(st_g_id, gdf_translate(pdsets(i)), (/n_part/), Z_avail, O_OUT)
+      enddo
+#endif /* NBODY_1FILE */
 
    end subroutine create_empty_cg_datasets_in_output
 
@@ -825,8 +973,7 @@ contains
            &                     H5S_SELECT_SET_F, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, &
            &                     h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5sclose_f, h5dget_space_f, h5sselect_hyperslab_f, &
            &                     h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
-      use mpisetup,        only: comm
-      use MPIF,            only: MPI_INFO_NULL
+      use MPIF,            only: MPI_INFO_NULL, MPI_COMM_WORLD
 
       implicit none
 
@@ -834,7 +981,7 @@ contains
       integer(HID_T)                    :: file_id                 !< File identifier
       integer(HID_T)                    :: plist_id, plist_idf     !< Property list identifier
       integer                           :: i
-      integer(kind=4)                   :: error
+      integer(kind=4)                   :: error                   !< error perhaps should be of type integer(HID_T)
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
       real, pointer                     :: data (:,:,:)            !< Data to write
@@ -853,9 +1000,9 @@ contains
       !
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_idf, error)
 #ifdef MPIF08
-      call h5pset_fapl_mpio_f(plist_idf, comm%mpi_val, MPI_INFO_NULL%mpi_val, error)
+      call h5pset_fapl_mpio_f(plist_idf, MPI_COMM_WORLD%mpi_val, MPI_INFO_NULL%mpi_val, error)
 #else /* !MPIF08 */
-      call h5pset_fapl_mpio_f(plist_idf, comm, MPI_INFO_NULL, error)
+      call h5pset_fapl_mpio_f(plist_idf, MPI_COMM_WORLD, MPI_INFO_NULL, error)
 #endif /* !MPIF08 */
       !
       ! Create the file collectively.
@@ -965,7 +1112,7 @@ contains
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
       integer(kind=4), parameter        :: rank = 3
-      integer(kind=4)                   :: error, i
+      integer(kind=4)                   :: error, i         !< error perhaps should be of type integer(HID_T)
       integer(HID_T)                    :: file_id, grp_id
       integer(kind=8)                   :: ngc              !< current grid index
       integer(HSIZE_T), dimension(rank) :: dims

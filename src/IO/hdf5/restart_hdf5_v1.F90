@@ -36,7 +36,7 @@ module restart_hdf5_v1
    implicit none
 
    private
-   public :: read_restart_hdf5_v1, write_restart_hdf5_v1
+   public :: read_restart_hdf5_v1, write_restart_hdf5_v1, read_arr_from_restart
 
 contains
 
@@ -138,8 +138,7 @@ contains
 
       use constants,        only: cwdlen
       use hdf5,             only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
-      use MPIF,             only: MPI_INFO_NULL
-      use mpisetup,         only: comm
+      use MPIF,             only: MPI_INFO_NULL, MPI_COMM_WORLD
       use named_array_list, only: qna, wna
 
       implicit none
@@ -148,15 +147,15 @@ contains
       integer(kind=4)                   :: i
       integer(HID_T)                    :: file_id       !< File identifier
       integer(HID_T)                    :: plist_id      !< Property list identifier
-      integer(kind=4)                   :: error
+      integer(kind=4)                   :: error         !< error perhaps should be of type integer(HID_T)
 
       ! Set up a new HDF5 file for parallel write
       call h5open_f(error)
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
 #ifdef MPIF08
-      call h5pset_fapl_mpio_f(plist_id, comm%mpi_val, MPI_INFO_NULL%mpi_val, error)
+      call h5pset_fapl_mpio_f(plist_id, MPI_COMM_WORLD%mpi_val, MPI_INFO_NULL%mpi_val, error)
 #else /* !MPIF08 */
-      call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
+      call h5pset_fapl_mpio_f(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL, error)
 #endif /* !MPIF08 */
       call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error, access_prp = plist_id)
 
@@ -219,7 +218,7 @@ contains
       integer(kind=4), dimension(ndims)  :: lleft, lright
       integer(kind=8), dimension(ndims)  :: loffs
       integer(HSIZE_T), dimension(rank4) :: cnt, offset, stride
-      integer(kind=4)                    :: rank, error, area_type
+      integer(kind=4)                    :: rank, error, area_type    !< error perhaps should be of type integer(HID_T)
       integer                            :: ir, dim1
       type(cg_list_element), pointer     :: cgl
       type(grid_container),  pointer     :: cg
@@ -359,7 +358,7 @@ contains
       integer, dimension(ndims)              :: area, chnk
       integer(kind=4), dimension(ndims)      :: lleft, lright
       integer(kind=8),  dimension(ndims)     :: loffs
-      integer(kind=4)                        :: rank, rankf, error, area_type
+      integer(kind=4)                        :: rank, rankf, error, area_type !< error perhaps should be of type integer(HID_T)
       integer                                :: ir, dim1
       type(cg_list_element), pointer         :: cgl
       type(grid_container),  pointer         :: cg
@@ -480,8 +479,8 @@ contains
            &                      h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
       use h5lt,             only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use mass_defect,      only: magic_mass
-      use MPIF,             only: MPI_INFO_NULL
-      use mpisetup,         only: comm, master, piernik_MPI_Bcast, ibuff, rbuff, cbuff, slave
+      use MPIF,             only: MPI_INFO_NULL, MPI_COMM_WORLD
+      use mpisetup,         only: master, piernik_MPI_Bcast, ibuff, rbuff, cbuff, slave
       use named_array_list, only: qna, wna
       use timestep_pub,     only: c_all_old, cfl_c, stepcfl
 #ifdef RANDOMIZE
@@ -490,6 +489,9 @@ contains
 #ifdef SN_SRC
       use snsources,        only: nsn
 #endif /* SN_SRC */
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_NR_method, only: cresp_read_smaps_from_hdf
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -500,7 +502,7 @@ contains
       integer(HID_T)                           :: file_id       !< File identifier
       integer(HID_T)                           :: plist_id      !< Property list identifier
 
-      integer(kind=4)                          :: error
+      integer(kind=4)                          :: error         !< error perhaps should be of type integer(HID_T)
       logical                                  :: file_exist
 
       real,            dimension(1)            :: rbuf
@@ -576,13 +578,17 @@ contains
 
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
 #ifdef MPIF08
-      call h5pset_fapl_mpio_f(plist_id, comm%mpi_val, MPI_INFO_NULL%mpi_val, error)
+      call h5pset_fapl_mpio_f(plist_id, MPI_COMM_WORLD%mpi_val, MPI_INFO_NULL%mpi_val, error)
 #else /* !MPIF08 */
-      call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
+      call h5pset_fapl_mpio_f(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL, error)
 #endif /* !MPIF08 */
 
       call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error, access_prp = plist_id)
       call h5pclose_f(plist_id, error)
+
+#ifdef COSM_RAY_ELECTRONS
+      call cresp_read_smaps_from_hdf(file_id)
+#endif /* COSM_RAY_ELECTRONS */
 
       ! set up things such as register user rank-3 and rank-4 arrays to be read by read_arr_from_restart. Read also anything that is not read by all read_arr_from_restart calls
       if (associated(user_attrs_rd)) call user_attrs_rd(file_id)

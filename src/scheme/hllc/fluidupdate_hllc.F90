@@ -33,9 +33,9 @@
 module fluidupdate_hllc   ! SPLIT MUSCL HANCOCK
 ! pulled by ANY
 
-  implicit none
-  private
-  public :: fluid_update_simple
+   implicit none
+   private
+   public :: fluid_update_simple
 
 contains
 
@@ -456,25 +456,25 @@ contains
 
       ! Sample the solution at x/t=0
       where (SL>zero)
-        ro=rl
-        uo=ul
-        Ptoto=Ptotl
-        etoto=etotl
+         ro=rl
+         uo=ul
+         Ptoto=Ptotl
+         etoto=etotl
       elsewhere (ustar>zero)
-        ro=rstarl
-        uo=ustar
-        Ptoto=Ptotstar
-        etoto=etotstarl
+         ro=rstarl
+         uo=ustar
+         Ptoto=Ptotstar
+         etoto=etotstarl
       elsewhere (SR>zero)
-        ro=rstarr
-        uo=ustar
-        Ptoto=Ptotstar
-        etoto=etotstarr
+         ro=rstarr
+         uo=ustar
+         Ptoto=Ptotstar
+         etoto=etotstarr
       elsewhere
-        ro=rr
-        uo=ur
-        Ptoto=Ptotr
-        etoto=etotr
+         ro=rr
+         uo=ur
+         Ptoto=Ptotr
+         etoto=etotr
       endwhere
 
       ! Compute the Godunov flux
@@ -488,19 +488,19 @@ contains
 
       ! BEWARE the version with WHERE had huge, unexplained memory leaks when compiled with some Intel compilers
 #ifndef __INTEL_COMPILER
-          where (fgdnv(idn,:)>zero)
-             fgdnv(ivar,:) = fgdnv(idn,:)*qleft (ivar,:)
-          elsewhere
-             fgdnv(ivar,:) = fgdnv(idn,:)*qright(ivar,:)
-          endwhere
+         where (fgdnv(idn,:)>zero)
+            fgdnv(ivar,:) = fgdnv(idn,:)*qleft (ivar,:)
+         elsewhere
+            fgdnv(ivar,:) = fgdnv(idn,:)*qright(ivar,:)
+         endwhere
 #else /* !__INTEL_COMPILER */
-          do i = lbound(fgdnv(:,:),2), ubound(fgdnv(:,:),2)
-             if (fgdnv(idn,i)>zero) then
-                fgdnv(ivar,i) = fgdnv(idn,i)*qleft (ivar,i)
-             else
-                fgdnv(ivar,i) = fgdnv(idn,i)*qright(ivar,i)
-             endif
-          enddo
+         do i = lbound(fgdnv(:,:),2), ubound(fgdnv(:,:),2)
+            if (fgdnv(idn,i)>zero) then
+               fgdnv(ivar,i) = fgdnv(idn,i)*qleft (ivar,i)
+            else
+               fgdnv(ivar,i) = fgdnv(idn,i)*qright(ivar,i)
+            endif
+         enddo
 #endif /* !__INTEL_COMPILER */
       enddo
       return

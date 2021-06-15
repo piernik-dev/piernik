@@ -64,8 +64,7 @@ contains
    subroutine read_problem_par
 
       use constants,             only: DST
-      use dataio_pub,            only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,            only: msg, printinfo, die
+      use dataio_pub,            only: msg, printinfo, die, nh
       use domain,                only: dom
       use fluidindex,            only: flind
       use mpisetup,              only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
@@ -271,6 +270,7 @@ contains
          enddo
 
 #ifdef TRACER
+#error Check this code and move into loop over cg above
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)

@@ -623,7 +623,7 @@ contains
       use dataio_pub, only: die
       use gcpa,       only: gcpa_t
       use global,     only: do_external_corners
-      use mpisetup,   only: FIRST, LAST, proc
+      use mpisetup,   only: FIRST, LAST, proc, tag_ub
       use overlap,    only: is_overlap
 
       implicit none
@@ -643,6 +643,7 @@ contains
       call l_pse%init(this)
 
       m_tag = max_tag(this)
+      if (m_tag > tag_ub) call die("[cg_list_neighbors:find_ext_neighbors_bruteforce] this MPI implementation has too low MPI_TAG_UB attribute")
 
       whole_level(:, LO) = this%l%off
       whole_level(:, HI) = this%l%off + this%l%n_d - I_ONE

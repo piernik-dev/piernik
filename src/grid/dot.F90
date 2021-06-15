@@ -32,6 +32,8 @@
 !!
 !! \details The structure that contains most important information of all blocks on all processes on a given level
 !! and information on decomposition as well.
+!!
+!! OPT: consider converting gse to oct-tree for faster and morre natural searching.
 !<
 
 module dot
@@ -62,6 +64,7 @@ module dot
       integer                                      :: tot_se        !< global number of grids on the level
       logical                                      :: is_blocky     !< .true. when all grid pieces on this level on all processes have same shape and size
       logical                                      :: is_strict_SFC !< .true. when all grid pieces are distributd along SFC curve
+!      logical                                      :: is_complete   !< .true. but in the future allow incomplete dot for really large simulations containing only neighbor data
    contains
       procedure :: cleanup              !< Deallocate everything
       procedure :: update_global        !< Gather updated information about the level and overwrite it to this%gse
@@ -104,8 +107,9 @@ contains
       use cg_list,    only: cg_list_element
       use constants,  only: I_ZERO, I_ONE, ndims, LO, HI
       use dataio_pub, only: die
-      use MPIF,       only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER, MPI_Allgather, MPI_Allgatherv
-      use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
+      use MPIF,       only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER, MPI_COMM_WORLD
+      use MPIFUN,     only: MPI_Allgather, MPI_Allgatherv
+      use mpisetup,   only: FIRST, LAST, proc, err_mpi
       use ordering,   only: SFC_order
 
       implicit none
@@ -122,11 +126,12 @@ contains
       integer, parameter :: ncub = ndims*HI ! the number of integers in each cuboid
       integer(kind=8) :: prev_id, cur_id
 
+!      this%is_complete = .true.
       ! get the count of grid pieces on each process
       ! Beware: int(this%cnt, kind=4) is not properly updated after calling this%distribute.
       ! Use size(this%dot%gse(proc)%c) if you want to propagate gse before the grid containers are actually added to the level
       ! OPT: this call can be quite long to complete
-      call MPI_Allgather(cnt, I_ONE, MPI_INTEGER, allcnt, I_ONE, MPI_INTEGER, comm, mpi_err)
+      call MPI_Allgather(cnt, I_ONE, MPI_INTEGER, allcnt, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
 
       ! compute offsets for  a composite table of all grid pieces
       alloff(FIRST) = I_ZERO
@@ -151,7 +156,7 @@ contains
       ! First use of MPI_Allgatherv in the Piernik Code!
       ncub_allcnt(:) = int(ncub * allcnt(:), kind=4)
       ncub_alloff(:) = int(ncub * alloff(:), kind=4)
-      call MPI_Allgatherv(MPI_IN_PLACE, I_ZERO, MPI_DATATYPE_NULL, allse, ncub_allcnt, ncub_alloff, MPI_INTEGER, comm, mpi_err)
+      call MPI_Allgatherv(MPI_IN_PLACE, I_ZERO, MPI_DATATYPE_NULL, allse, ncub_allcnt, ncub_alloff, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
 
       ! Rewrite the gse array, forget about past.
       if (.not. allocated(this%gse)) allocate(this%gse(FIRST:LAST))
@@ -192,6 +197,7 @@ contains
       integer                        :: i
       type(cg_list_element), pointer :: cgl
 
+!      this%is_complete = .true.
       if (.not. allocated(this%gse)) allocate(this%gse(FIRST:LAST))
       if (allocated(this%gse(proc)%c)) deallocate(this%gse(proc)%c)
       allocate(this%gse(proc)%c(cnt))
@@ -266,8 +272,10 @@ contains
 
       use constants,  only: ndims, LO, HI, pLAND, I_ONE
       use dataio_pub, only: msg, warn
-      use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_Waitall, MPI_Irecv, MPI_Isend
-      use mpisetup,   only: proc, req, status, comm, mpi_err, LAST, inflate_req, slave, piernik_MPI_Allreduce
+      use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_COMM_WORLD
+      use MPIFUN,     only: MPI_Irecv, MPI_Isend
+      use mpisetup,   only: proc, req, err_mpi, LAST, inflate_req, slave, piernik_MPI_Allreduce
+      use ppp_mpi,    only: piernik_Waitall
 
       implicit none
 
@@ -295,18 +303,15 @@ contains
          endif
       endif
       req = MPI_REQUEST_NULL
-      if (slave)     call MPI_Irecv(shape1, size(shape1, kind=4), MPI_INTEGER, proc-I_ONE, sh_tag, comm, req(1 ), mpi_err)
-      if (proc<LAST) call MPI_Isend(shape,  size(shape, kind=4),  MPI_INTEGER, proc+I_ONE, sh_tag, comm, req(nr), mpi_err)
-#ifdef MPIF08
-      call MPI_Waitall(nr, req(:nr), status(:nr), mpi_err)
-#else /* !MPIF08 */
-      call MPI_Waitall(nr, req(:nr), status(:, :nr), mpi_err)
-#endif /* !MPIF08 */
-
 
       ! Try this with the default Maclaurin config (or anything with blocky decomposition)
       ! If your compiler works correctly, no writes would be executed.
       ! If it is not a gfortran bug then it is a really weird data race in MPI. Any ideas?
+
+      if (slave)     call MPI_Irecv(shape1, size(shape1, kind=4), MPI_INTEGER, proc-I_ONE, sh_tag, MPI_COMM_WORLD, req(1 ), err_mpi)
+      if (proc<LAST) call MPI_Isend(shape,  size(shape, kind=4),  MPI_INTEGER, proc+I_ONE, sh_tag, MPI_COMM_WORLD, req(nr), err_mpi)
+
+      call piernik_Waitall(nr, "dot:chk_blocky")
 
       if (any(shape /= 0) .and. any(shape1 /= 0)) then
          if (any(shape /= shape1)) then
@@ -315,7 +320,7 @@ contains
                if (shape(i) /= shape1(i)) then
                   this%is_blocky = .false.
                   write(*,*)"dot: i=",i, ": ",shape(i), "/=", shape1(i), " ??? ", shape(i) /= shape1(i)
-               end if
+               endif
             enddo
             if (this%is_blocky) then
                write(msg, '(a,2(3i5,a))') "Buggy compiler? [", shape, "] /= [", shape1, "] ??? Reducing optimization level may help."
@@ -342,8 +347,9 @@ contains
 
       use constants,  only: LO, HI, ndims, I_ONE
       use dataio_pub, only: die
-      use MPIF,       only: MPI_INTEGER8, MPI_Allgather
-      use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
+      use MPIF,       only: MPI_INTEGER8, MPI_COMM_WORLD
+      use MPIFUN,     only: MPI_Allgather
+      use mpisetup,   only: FIRST, LAST, proc, err_mpi
       use ordering,   only: SFC_order
 
       implicit none
@@ -373,7 +379,8 @@ contains
       endif
 
       allocate(id_buf(size(this%SFC_id_range)))
-      call MPI_Allgather(this%SFC_id_range(proc, :), HI-LO+I_ONE, MPI_INTEGER8, id_buf, HI-LO+I_ONE, MPI_INTEGER8, comm, mpi_err)
+      call MPI_Allgather([this%SFC_id_range(proc, LO), this%SFC_id_range(proc, HI)], HI-LO+I_ONE, MPI_INTEGER8, &
+           &             id_buf, HI-LO+I_ONE, MPI_INTEGER8, MPI_COMM_WORLD, err_mpi)
       this%SFC_id_range(:, LO) = id_buf(1::2)
       this%SFC_id_range(:, HI) = id_buf(2::2)
 

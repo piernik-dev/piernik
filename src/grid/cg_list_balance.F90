@@ -200,6 +200,9 @@ contains
 !! of few processes that were initially heavily loaded.
 !! The load is counted only on current level, so the load imbalance may add up across several levels.
 !!
+!! As it is hard to predict future cg cost, we better refrain from sophisticated
+!! load balancing here and wait until some performnce data is collected.
+!!
 !! Note that this routine is not intended for moving existing blocks between processes.
 !! A separate routine, called from cg_leaves::update will do that task when allowed and found worth the effort.
 !!
@@ -218,8 +221,9 @@ contains
 
       use constants,       only: pSUM, I_ONE
       use dataio_pub,      only: die
-      use MPIF,            only: MPI_INTEGER, MPI_Gather
-      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, comm, mpi_err, nproc
+      use MPIF,            only: MPI_INTEGER, MPI_COMM_WORLD
+      use MPIFUN,          only:  MPI_Gather
+      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, err_mpi, nproc
       use sort_piece_list, only: grid_piece_list
 
       implicit none
@@ -241,7 +245,7 @@ contains
       if (master) call gp%init(s)
       call this%patches_to_list(gp, ls)
 
-      call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
+      call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
 
       if (master) then !> \warning Antiparallel
          ! apply unique numbers to the grids and sort the list
@@ -301,9 +305,9 @@ contains
    subroutine patches_to_list(this, gp, ls)
 
       use constants,       only: ndims, INVALID, I_ONE
-      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, &
-           &                     MPI_Isend, MPI_Send, MPI_Recv, MPI_Wait
-      use mpisetup,        only: master, slave, FIRST, LAST, comm, req, mpi_err, status, inflate_req
+      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Wait
+      use MPIFUN,          only: MPI_Isend, MPI_Send, MPI_Recv
+      use mpisetup,        only: master, slave, FIRST, LAST, req, err_mpi, inflate_req
       use sort_piece_list, only: grid_piece_list
 
       implicit none
@@ -316,12 +320,12 @@ contains
       integer :: i
       integer(kind=4) :: p, ss, rls
       integer(kind=4), parameter :: nreq = 1
-      integer(kind=4), parameter :: tag_ls = 1, tag_gpt = tag_ls+1
+      integer(kind=4), parameter :: tag_ls = 1, tag_gpt = tag_ls + 1
 
       call inflate_req(nreq)
 
       ! copy the patches data to a temporary array to be sent to the master
-      if (slave) call MPI_Isend(ls, I_ONE, MPI_INTEGER, FIRST, tag_ls, comm, req(nreq), mpi_err)
+      if (slave) call MPI_Isend(ls, I_ONE, MPI_INTEGER, FIRST, tag_ls, MPI_COMM_WORLD, req(nreq), err_mpi)
 
       allocate(gptemp(I_OFF:I_END, ls))
       call this%plist%p2a(gptemp)
@@ -335,10 +339,10 @@ contains
          i = ls
          deallocate(gptemp)
          do p = FIRST + 1, LAST
-            call MPI_Recv(rls, I_ONE, MPI_INTEGER, p, tag_ls, comm, MPI_STATUS_IGNORE, mpi_err)
+            call MPI_Recv(rls, I_ONE, MPI_INTEGER, p, tag_ls, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
             if (rls > 0) then
                allocate(gptemp(I_OFF:I_END, rls))
-               call MPI_Recv(gptemp, size(gptemp, kind=4), MPI_INTEGER8, p, tag_gpt, comm, MPI_STATUS_IGNORE, mpi_err)
+               call MPI_Recv(gptemp, size(gptemp, kind=4), MPI_INTEGER8, p, tag_gpt, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                do ss = 1, rls
                   call gp%list(i+ss)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, ss), int(gptemp(I_N_B:I_N_B+ndims-1, ss), kind=4), INVALID, p)
                enddo
@@ -349,12 +353,8 @@ contains
       else
 
          ! send patches to master
-#ifdef MPIF08
-         call MPI_Wait(req(nreq), status(nreq), mpi_err)
-#else /* !MPIF08 */
-         call MPI_Wait(req(nreq), status(:, nreq), mpi_err)
-#endif /* !MPIF08 */
-         if (ls > 0) call MPI_Send(gptemp, size(gptemp, kind=4), MPI_INTEGER8, FIRST, tag_gpt, comm, mpi_err)
+         call MPI_Wait(req(nreq), MPI_STATUS_IGNORE, err_mpi)
+         if (ls > 0) call MPI_Send(gptemp, size(gptemp, kind=4), MPI_INTEGER8, FIRST, tag_gpt, MPI_COMM_WORLD, err_mpi)
          deallocate(gptemp)
 
       endif
@@ -370,9 +370,9 @@ contains
    subroutine distribute_patches(this, gp, from)
 
       use constants,       only: ndims, I_ONE
-      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, &
-           &                     MPI_Send, MPI_Recv
-      use mpisetup,        only: master, FIRST, LAST, comm, mpi_err
+      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,          only: MPI_Send, MPI_Recv
+      use mpisetup,        only: master, FIRST, LAST, err_mpi
       use sort_piece_list, only: grid_piece_list
 
       implicit none
@@ -394,22 +394,22 @@ contains
          ! distribute proposed grids according to limits computed above
          do p = FIRST + I_ONE, LAST
             ls = int(from(p+1) - from(p), kind=4)
-            call MPI_Send(ls, I_ONE, MPI_INTEGER, p, tag_lsR, comm, mpi_err)
+            call MPI_Send(ls, I_ONE, MPI_INTEGER, p, tag_lsR, MPI_COMM_WORLD, err_mpi)
             if (ls>0) then
                allocate(gptemp(I_OFF:I_END,from(p):from(p+1)-1))
                do s = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
                   gptemp(:, s) = [ gp%list(s)%off, int(gp%list(s)%n_b, kind=8) ]
                enddo
-               call MPI_Send(gptemp, size(gptemp, kind=4), MPI_INTEGER8, p, tag_gptR, comm, mpi_err)
+               call MPI_Send(gptemp, size(gptemp, kind=4), MPI_INTEGER8, p, tag_gptR, MPI_COMM_WORLD, err_mpi)
                deallocate(gptemp)
             endif
          enddo
       else
          ! receive new, perhaps more balanced patches
-         call MPI_Recv(ls, I_ONE, MPI_INTEGER, FIRST, tag_lsR, comm, MPI_STATUS_IGNORE, mpi_err)
+         call MPI_Recv(ls, I_ONE, MPI_INTEGER, FIRST, tag_lsR, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
          if (ls>0) then
             allocate(gptemp(I_OFF:I_END,ls))
-            call MPI_Recv(gptemp, size(gptemp, kind=4), MPI_INTEGER8, FIRST, tag_gptR, comm, MPI_STATUS_IGNORE, mpi_err)
+            call MPI_Recv(gptemp, size(gptemp, kind=4), MPI_INTEGER8, FIRST, tag_gptR, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
             do s = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
                call this%add_patch_one_piece(gptemp(I_N_B:I_N_B+ndims-1, s), gptemp(I_OFF:I_OFF+ndims-1, s))
             enddo

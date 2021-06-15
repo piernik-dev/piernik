@@ -33,6 +33,7 @@ module level_essentials
    use constants, only: ndims, LONG, INT4
 
    implicit none
+
    private
    public :: level_t
 
@@ -81,7 +82,7 @@ contains
 
       call this%write(id, n_d, off)
 
-      write(msg, '(a,i4,a,3i8,a)')"[level_essentials] Initializing level", this%id, ", size=[", this%n_d, "], "
+      write(msg, '(a,i4,a,3i11,a)')"[level_essentials] Initializing level", this%id, ", size=[", this%n_d, "], "
       if (any(dom%has_dir .and. (this%off /= 0))) then
          write(msg, '(2a,3i8,a)')trim(msg)," offset=[", this%off, "]"
       else

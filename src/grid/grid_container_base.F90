@@ -144,6 +144,7 @@ module grid_cont_base
       type(mg_arr), pointer :: mg                                !< multigrid arrays
       real :: vol                                                !< volume of the grid; BEWARE: for cylindrical geometry it needs to be integrated over x(:) to get real volume
       real :: dxmn                                               !< the smallest length of the %grid cell (among dx, dy, and dz)
+      real :: dxmn2                                              !< squared dxmn
       integer(kind=4) :: maxxyz                                  !< maximum number of %grid cells in any direction
       integer :: grid_id                                         !< index of own segment in own level decomposition, e.g. my_se(:,:) = base%level%dot%gse(proc)%c(grid_id)%se(:,:)
       logical :: has_previous_timestep                           !< used to prevent timestep retries on freshly created blocks
@@ -285,7 +286,8 @@ contains
 
       call this%set_coords
 
-      this%dxmn = minval(this%dl(:), mask=dom%has_dir(:))
+      this%dxmn  = minval(this%dl(:), mask=dom%has_dir(:))
+      this%dxmn2 = (this%dxmn)**2
 
       ! some shortcuts for convenience
       this%idl(:) = 1./this%dl(:)

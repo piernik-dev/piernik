@@ -30,7 +30,7 @@
 
 module list_of_cg_lists
 
-   use cg_list,   only: cg_list_t
+   use cg_list, only: cg_list_t
 
    implicit none
 
@@ -44,11 +44,11 @@ module list_of_cg_lists
    type :: all_cg_lists
       type(cg_list_pointer), dimension(:), allocatable :: entries
    contains
-      procedure :: print      !< Print all cg lists for diagnostic purposes
-      procedure :: register   !< Reset (initialize) the given list and add it to the table if unique
-      procedure :: unregister !< Remove given list
-      procedure :: forget     !< Erase given cg from all known lists
-      procedure :: delete     !< Delete all lists
+      procedure :: print       !< Print all cg lists for diagnostic purposes
+      procedure :: register    !< Reset (initialize) the given list and add it to the table if unique
+      procedure :: unregister  !< Remove given list
+      procedure :: forget      !< Erase given cg from all known lists
+      procedure :: delete      !< Delete all lists
    end type all_cg_lists
 
    type(all_cg_lists) :: all_lists
@@ -157,7 +157,13 @@ contains
 
    end subroutine unregister
 
-!> \brief Erase given cg from all known lists
+!>
+!! \brief Erase given cg from all known lists
+!!
+!! \warning This routine becomes very expensive when there are thousands of cg on one process.
+!! It is called mostly from cleanup_piernik -> cleanup_grid -> delete_all .
+!! Consider implicit freeing or add a list of pointers to entries in lists for faster processing
+!<
 
    subroutine forget(this, cg)
 

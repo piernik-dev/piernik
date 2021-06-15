@@ -52,22 +52,27 @@ contains
       use cg_list,             only: cg_list_element
       use constants,           only: big, pMIN
       use domain,              only: is_multicg
-      use grid_cont,           only: grid_container
       use initcosmicrays,      only: def_dtcrs, K_crs_valid
       use mpisetup,            only: piernik_MPI_Allreduce
 #ifdef MULTIGRID
       use initcosmicrays,      only: use_CRsplit
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
 #endif /* MULTIGRID */
+#ifdef COSM_RAY_ELECTRONS
+      use timestep_cresp,      only: dt_cre, cresp_timestep
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
       real, intent(inout)            :: dt
       type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
 
       logical, save                  :: frun = .true.
-      real                           :: dt_thiscg
+
+#ifdef COSM_RAY_ELECTRONS
+      call cresp_timestep
+      dt = min(dt, dt_cre)
+#endif /* COSM_RAY_ELECTRONS */
 
       if (.not.K_crs_valid) return
 
@@ -78,12 +83,7 @@ contains
          dt_crs = big
          cgl => leaves%first
          do while (associated(cgl))
-            cg => cgl%cg
-
-            dt_thiscg = def_dtcrs
-            if (cg%dxmn * def_dtcrs < sqrt(big)) dt_thiscg = def_dtcrs * cg%dxmn**2
-            dt_crs = min(dt_crs, dt_thiscg)
-
+            dt_crs = min(dt_crs, def_dtcrs * cgl%cg%dxmn2)
             cgl => cgl%nxt
          enddo
 

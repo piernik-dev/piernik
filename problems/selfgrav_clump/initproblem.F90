@@ -78,8 +78,7 @@ contains
    subroutine read_problem_par
 
       use constants,  only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim
-      use dataio_pub, only: nh   ! QA_WARN required for diff_nml
-      use dataio_pub, only: die, warn
+      use dataio_pub, only: die, warn, nh
       use domain,     only: dom
       use func,       only: operator(.notequals.)
       use mpisetup,   only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
@@ -883,6 +882,7 @@ contains
 
    end subroutine sg_dist_to_edge
 
+#ifdef HDF5
 !> \brief Write dmax to the restart file
 
    subroutine sg_attrs_wr(file_id)
@@ -986,5 +986,6 @@ contains
       end select
 
    end subroutine sg_vars
+#endif /* HDF5 */
 
 end module initproblem

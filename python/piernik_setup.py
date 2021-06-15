@@ -33,36 +33,6 @@ have_inc = re.compile(r"^#include\s", re.IGNORECASE).search
 have_mod = re.compile(r"^\s*module\s+(?!procedure)", re.IGNORECASE).search
 cpp_junk = re.compile("(?!#define\s_)", re.IGNORECASE)
 
-desc = '''
-EXAMPLE:
-> cd obj
-> ./newcompiler <settingsname>
-> make
-then copy files to your run directory (optional), e.g.
-> cp {piernik,problem.par} ../runs/<problem>
-> cd ../runs/<problem>
-
-to run PIERNIK:
-edit problem.par as appropriate, e.g.
-* add var names for visualisation => var(<number>)='<name>'
-* change domain dimensions/resolution => DOMAIN_SIZES
-* change domain divisions for parallel processing => MPI_BLOCKS
-* change frequency of data dumps => dt_* entries
-* etc.
-execute
-> ./piernik
-or for <np> parallel processes
-> mpirun -n <np> ./piernik
-
-HEALTH WARNINGS:
-* the contents of \'./obj\' and \'./runs/<problem>\' are overwritten
-  each time setup <problem>\' is run, unless you specify -obj <postfix>
-  in which case the contents of runs/<problem>_<postfix> will be only updated
-* by default PIERNIK will read the configuration file \'problem.par\' from the
-working directory, to use alternative configurations execute
-\'./piernik <directory with an alternative problem.par>\'
-Enjoy your work with the Piernik Code!
-'''
 
 head_block1 = '''ifneq (,$(findstring h5pfc, $(F90)))
 LIBS += ${STATIC} -lz ${DYNAMIC}
@@ -98,15 +68,25 @@ define ECHO_CC
 endef
 endif
 
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_allgatherv_bug.F90 && $(F90) $(LDFLAGS) -o mpi_allgatherv_bug mpi_allgatherv_bug.o $(LIBS) && ./mpi_allgatherv_bug 2> /dev/null || echo -DFORBID_F08)
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null && echo -DMPIF08 || echo -DNO_MPIF08_AVAILABLE)
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90 2> /dev/null || echo -DNO_ALL_MPI_FUNCTIONS_AVAILABLE)
+
 all: env.dat print_setup $(PROG)
 
-$(PROG): $(OBJS)
+check_mpi:
+\t@$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90
+\t@$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90
+
+$(PROG): $(OBJS) check_mpi
 ifeq ("$(SILENT)","1")
 \t@$(ECHO) $(PNAME)FC = $(F90) $(CPPFLAGS) $(F90FLAGS) -c
 \t@$(ECHO) $(PNAME)CC = $(CC) $(CPPFLAGS) $(CFLAGS) -c
 endif
 \t@$(ECHO) $(F90) $(LDFLAGS) -o $@ '*.o' $(LIBS)
 \t@$(F90) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+\t@touch mpi_f08.o mpi.o a.out mpi_allgatherv_bug mpi_allgatherv_bug.o
+\t@$(RM) mpi_f08.o mpi.o a.out mpi_allgatherv_bug mpi_allgatherv_bug.o
 \t@AO1=`mktemp _ao_XXXXXX`;\\
 \tAO2=`mktemp _ao_XXXXXX`;\\
 \t$(ECHO) $(OBJS) | tr ' ' '\\n' | sort > $$AO1;\\
@@ -150,7 +130,7 @@ version.F90: env.dat
 \t$(ECHO) "   implicit none"; \\
 \t$(ECHO) "   public"; \\
 \twc -l env.dat | awk '{print "   integer, parameter :: nenv = "$$1"+0"}'; \\
-\tawk '{if (length($0)>s) s=length($0)} END {print "   character(len="s"), dimension(nenv) :: env\\ncontains\\n   subroutine init_version\\n      implicit none"}' env.dat; \\
+\tawk '{if (length($0)>s) s=length($0)} END {print "   character(len="s+10"), dimension(nenv) :: env\\ncontains\\n   subroutine init_version\\n      implicit none"}' env.dat; \\
 \tawk '{printf("      env(%i) = \\"%s\\"\\n",NR,$$0)}' env.dat; \\
 \t$(ECHO) "   end subroutine init_version"; \\
 \t$(ECHO) "end module version" ) > version_.F90; \\
@@ -418,6 +398,7 @@ def setup_piernik(data=None):
         print(our_defs)
 
     files = ['src/base/defines.c']
+
     uses = [[]]
     incl = ['']
     module = dict()
@@ -508,6 +489,13 @@ def setup_piernik(data=None):
                 print("Possible duplicate link or a name clash :", f)
                 raise
 
+    if (options.hard_copy):
+        otdir = objdir + "/tests/"
+        os.mkdir(otdir)
+        ctdir = "compilers/tests/"
+        for f in os.listdir(ctdir):
+            shutil.copy(ctdir + f, otdir)
+
     if(options.param != 'problem.par'):
         os.symlink(options.param, objdir + '/' + 'problem.par')
 
@@ -557,13 +545,10 @@ def setup_piernik(data=None):
     if("PIERNIK_OPENCL" in our_defs):
         m.write("LIBS += $(shell pkg-config --libs fortrancl)\n")
         m.write("F90FLAGS += $(shell pkg-config --cflags fortrancl)\n")
-    if(options.laconic):
-        m.write("SILENT = 1\n\n")
-    else:
-        m.write("SILENT = 0\n\n")
-    m.write(head_block1)
-    m.write(
-        "\t@( $(ECHO) \"%s\"; \\" % ("./setup " + " ".join(all_args)))
+
+    m.write("SILENT = %d\n\n" % (1 if options.laconic else 0))
+    m.write(head_block1.replace("./compilers", "") if options.hard_copy else head_block1)
+    m.write("\t@( $(ECHO) \"%s\"; \\" % ("./setup " + " ".join(all_args)))
     m.write(head_block2)
 
     for i in range(0, len(files_to_build)):

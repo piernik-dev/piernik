@@ -14,7 +14,7 @@
 !    GNU General Public License for more details.
 !
 !    You should have received a copy of the GNU General Public License
-!    along with PIERNIK.  If not, see http://www.gnu.org/licenses/.
+!    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implementation of PIERNIK code was based on TVD split MHD code by
 !    Ue-Li Pen
@@ -447,7 +447,8 @@ contains
    subroutine plot_mark(this, first)
 
       use cg_list,   only: cg_list_element
-      use constants, only: INVALID
+      use constants, only: INVALID, PPP_AMR, PPP_IO
+      use ppp,       only: ppp_main
 
       implicit none
 
@@ -456,15 +457,18 @@ contains
 
       type(cg_list_element), pointer :: cgl
       class(urc), pointer :: p
+      character(len=*), parameter :: plot_label = "URC_map_plot"
 
       p => this%first
       do while (associated(p))
          if (p%iplot > INVALID) then
+            call ppp_main%start(plot_label, PPP_AMR + PPP_IO)
             cgl => first
             do while (associated(cgl))
                call p%mark(cgl%cg)
                cgl => cgl%nxt
             enddo
+            call ppp_main%stop(plot_label, PPP_AMR + PPP_IO)
          endif
          p => p%next
       enddo

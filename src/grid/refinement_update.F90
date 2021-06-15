@@ -92,6 +92,9 @@ contains
          call piernik_MPI_Allreduce(cnt(URC), pSUM)
       endif
 
+      ! ToDo: exploit dot for making corrections
+      ! if dot is complete then correction can be done in one step
+
       ! Transform refinement requests on non-leaf parts of the grid into derefinement inhibitions on child grids to avoid refinement flickering
       call parents_prevent_derefinement
       call sanitize_ref_flags  ! it can be converted to URC routine but it must be guaranteed that it goes after all refinement mark routines
@@ -241,12 +244,10 @@ contains
       use constants,          only: xdim, zdim, LO, HI, I_ONE, I_ZERO
       use dataio_pub,         only: die, warn
       use domain,             only: dom
-      use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE, &
-           &                        MPI_Alltoall, MPI_Isend, MPI_Recv, MPI_Waitall
-      use mpisetup,           only: FIRST, LAST, comm, mpi_err, proc, req, status, inflate_req
-#ifdef MPIF08
-      use MPIF,               only: MPI_Status
-#endif
+      use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,             only: MPI_Alltoall, MPI_Isend, MPI_Recv
+      use mpisetup,           only: FIRST, LAST, err_mpi, proc, req, inflate_req
+      use ppp_mpi,            only: piernik_Waitall
 
       implicit none
 
@@ -265,11 +266,6 @@ contains
       type(pt), dimension(:), allocatable :: pt_list
       integer(kind=4) :: pt_cnt
       integer(kind=4) :: rtag
-#ifdef MPIF08
-      type(MPI_Status), dimension(:), pointer :: mpistatus
-#else /* !MPIF08 */
-      integer(kind=4), dimension(:,:), pointer :: mpistatus
-#endif /* !MPIF08 */
 
       if (perimeter > dom%nb) call die("[refinement_update:parents_prevent_derefinement_lev] perimeter > dom%nb")
       if (.not. associated(lev%finer)) then
@@ -316,7 +312,7 @@ contains
       enddo
 
       ! communicate how many ids to which threads
-      call MPI_Alltoall(gscnt, I_ONE, MPI_INTEGER, grcnt, I_ONE, MPI_INTEGER, comm, mpi_err)
+      call MPI_Alltoall(gscnt, I_ONE, MPI_INTEGER, grcnt, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
 
       ! Apparently gscnt/grcnt represent quite sparse matrix, so we better do nonblocking point-to-point than MPI_AlltoAllv
       nr = 0
@@ -324,7 +320,7 @@ contains
          do g = lbound(pt_list, dim=1, kind=4), pt_cnt
             nr = nr + I_ONE
             if (nr > size(req, dim=1)) call inflate_req
-            call MPI_Isend(pt_list(g)%tag, I_ONE, MPI_INTEGER, pt_list(g)%proc, I_ZERO, comm, req(nr), mpi_err)
+            call MPI_Isend(pt_list(g)%tag, I_ONE, MPI_INTEGER, pt_list(g)%proc, I_ZERO, MPI_COMM_WORLD, req(nr), err_mpi)
             ! OPT: Perhaps it will be more efficient to allocate arrays according to gscnt and send tags in bunches
          enddo
       endif
@@ -333,20 +329,13 @@ contains
          if (grcnt(g) /= 0) then
             if (g == proc) call die("[refinement_update:parents_prevent_derefinement] MPI_Recv from self")  ! this is not an error but it should've been handled as local thing
             do i = 1, grcnt(g)
-               call MPI_Recv(rtag, I_ONE, MPI_INTEGER, g, I_ZERO, comm, MPI_STATUS_IGNORE, mpi_err)
+               call MPI_Recv(rtag, I_ONE, MPI_INTEGER, g, I_ZERO, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                call disable_derefine_by_tag(lev%finer, rtag)  ! beware: O(leaves%cnt^2)
             enddo
          endif
       enddo
 
-      if (nr > 0) then
-#ifdef MPIF08
-         mpistatus => status(:nr)
-#else /* !MPIF08 */
-         mpistatus => status(:, :nr)
-#endif /* !MPIF08 */
-         call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
-      endif
+      call piernik_Waitall(nr, "prevent_derefinement")
 
       deallocate(pt_list)
 
@@ -413,8 +402,6 @@ contains
 
 !> \brief Update the refinement topology
 
-!#define DEBUG_DUMPS
-
    subroutine update_refinement_wrapped(act_count, refinement_fixup_only)
 
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
@@ -424,8 +411,8 @@ contains
       use cg_level_connected,    only: cg_level_connected_t
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
-      use constants,             only: pLOR, pLAND, pSUM, tmr_amr, PPP_AMR, PPP_IO
-      use dataio_pub,            only: warn, die
+      use constants,             only: pLOR, pLAND, pSUM, pMAX, tmr_amr, PPP_AMR
+      use dataio_pub,            only: die
       use global,                only: nstep
       use grid_cont,             only: grid_container
       use list_of_cg_lists,      only: all_lists
@@ -437,24 +424,21 @@ contains
 #ifdef GRAV
       use gravity,               only: update_gp
 #endif /* GRAV */
-#ifdef DEBUG_DUMPS
-      use data_hdf5,             only: write_hdf5
-#endif /* DEBUG_DUMPS */
 
       implicit none
 
       integer, optional, intent(out) :: act_count             !< counts number of blocks refined or deleted
       logical, optional, intent(in)  :: refinement_fixup_only !< When present and .true. then do not check refinement criteria, do only correction, if necessary.
 
-      integer :: nciter
+      integer :: nciter, top_level
       integer, parameter :: nciter_max = 100 ! should be more than refinement levels
-      logical :: some_refined, derefined
+      logical :: some_refined, derefined, ctop_exists, fu
       type(cg_list_element), pointer :: cgl, aux
       type(cg_level_connected_t), pointer :: curl
       type(grid_container),  pointer :: cg
       logical :: correct, full_update
       real :: ts  !< time for runtime profiling
-      character(len=*), parameter :: newref_label = "refine", deref_label = "derefinement", plot_label = "URC_map"
+      character(len=*), parameter :: newref_label = "refine", deref_label = "derefinement", prol_label = "prolong_new"
 
       ts =  set_timer(tmr_amr, .true.)
 
@@ -482,12 +466,18 @@ contains
          curl => curl%coarser
       enddo
 
+      ! Maybe a bit overkill
+      fu = full_update
+      call piernik_MPI_Allreduce(fu, pLAND)
+      if (fu .neqv. full_update) call die("[refinement_update:update_refinement] inconsistent full_update")
+
       if (full_update) then
          call scan_for_refinements
 
          ! do the refinements first
          curl => base%level
          do while (associated(curl))
+
             cgl => curl%first
             do while (associated(cgl))
                if (any(cgl%cg%leafmap)) then
@@ -501,6 +491,11 @@ contains
 
             call finest%equalize
 
+            top_level = finest%level%l%id
+            call piernik_MPI_Allreduce(top_level, pMAX)
+            if (top_level /= finest%level%l%id) call die("[refinement_update:update_refinement] inconsistent top level (r)")
+
+            call ppp_main%start(prol_label, PPP_AMR)
             !> \todo merge small blocks into larger ones
             if (associated(curl%finer)) then
                call curl%finer%init_all_new_cg
@@ -508,6 +503,7 @@ contains
                call curl%finer%sync_ru
                call curl%prolong
             endif
+            call ppp_main%stop(prol_label, PPP_AMR)
 
             curl => curl%finer
          enddo
@@ -524,6 +520,9 @@ contains
       call piernik_MPI_Allreduce(correct, pLAND)
       nciter = 0
       do while (.not. correct)
+         ! exploit dot and iterate only when dot is not complete
+         ! perform quick dot-based checks instead of wa workaround
+         ! warn if dot%is_complete and any corrections were required
 
          call all_cg%prevent_prolong
 
@@ -534,33 +533,45 @@ contains
          enddo
 
          call ppp_main%start(newref_label, PPP_AMR)
+
+         ! Maybe a bit overkill - call finest%equalize should've take care of that
+         top_level = finest%level%l%id
+         call piernik_MPI_Allreduce(top_level, pMAX)
+         if (top_level /= finest%level%l%id) call die("[refinement_update:update_refinement] inconsistent top level (c)")
+
          curl => finest%level%coarser
-         do while (associated(curl) .and. curl%l%id >= base%level%l%id)
+         ctop_exists = associated(curl)
+         call piernik_MPI_Allreduce(ctop_exists, pLAND)
+         if (ctop_exists .neqv. associated(curl)) call die("[refinement_update:update_refinement] inconsistent coarser than top level")
 
-            some_refined = .false.
-            cgl => curl%first
-            do while (associated(cgl))
-               if (cgl%cg%flag%pending_blocks()) then
-                  if (finest%level%l%id <= cgl%cg%l%id) call warn("[refinement_update:update_refinement] growing too fast!")
-                  if (associated(curl%finer)) then
-                     call refine_one_grid(curl, cgl)
-                     if (present(act_count)) act_count = act_count + 1
-                     some_refined = .true.
-                  else
-                     call warn("[refinement_update:update_refinement] nowhere to add!")
+         do while (associated(curl))
+            if (curl%l%id >= base%level%l%id) then
+
+               some_refined = .false.
+               cgl => curl%first
+               do while (associated(cgl))
+                  if (cgl%cg%flag%pending_blocks()) then
+                     if (finest%level%l%id <= cgl%cg%l%id) call die("[refinement_update:update_refinement] growing too fast!")
+                     if (associated(curl%finer)) then
+                        call refine_one_grid(curl, cgl)
+                        if (present(act_count)) act_count = act_count + 1
+                        some_refined = .true.
+                     else
+                        call die("[refinement_update:update_refinement] nowhere to add!")
+                     endif
                   endif
-               endif
-               cgl => cgl%nxt
-            enddo
+                  cgl => cgl%nxt
+               enddo
 
-            call piernik_MPI_Allreduce(some_refined, pLOR)
-            if (some_refined) then
-               call curl%finer%init_all_new_cg
-               call curl%finer%sync_ru
-               call curl%deallocate_patches
-               !call finest%equalize
-               call curl%prolong
-               call all_cg%mark_orphans
+               call piernik_MPI_Allreduce(some_refined, pLOR)
+               if (some_refined) then
+                  call curl%finer%init_all_new_cg
+                  call curl%finer%sync_ru
+                  call curl%deallocate_patches
+                  !call finest%equalize
+                  call curl%prolong
+                  call all_cg%mark_orphans
+               endif
             endif
 
             curl => curl%coarser
@@ -582,7 +593,7 @@ contains
       ! Now try to derefine any excess of refinement.
       ! Derefinement saves memory and CPU usage, but it is of lowest priority.
       ! Just go through derefinement stage once and don't try to do too much here at once.
-      ! Any excess of refinement will be handled in next call to this routine anyway.
+      ! Any excess of refinement will be handled in the next call to this routine anyway.
       if (full_update) then
 
          call ppp_main%start(deref_label, PPP_AMR)
@@ -623,9 +634,7 @@ contains
 
       call all_bnd
 
-      call ppp_main%start(plot_label, PPP_AMR + PPP_IO)
       call urc_list%plot_mark(leaves%first)
-      call ppp_main%stop(plot_label, PPP_AMR + PPP_IO)
 
       !> \todo call the update of cs_i2 and other vital variables if and only if something has changed
       !> \todo add another flag to named_array_list::na_var so the user can also specify fields that need boundary updates on fine/coarse boundaries
@@ -636,10 +645,6 @@ contains
 
       call all_cg%enable_prolong
       if (present(act_count)) call piernik_MPI_Allreduce(act_count, pSUM)
-
-#ifdef DEBUG_DUMPS
-      call write_hdf5
-#endif /* DEBUG_DUMPS */
 
       emergency_fix = .false.
 
@@ -763,15 +768,6 @@ contains
 
       call ppp_main%start(frp_label, PPP_AMR)
       call finest%level%restrict_to_base_q_1var(qna%wai)
-
-!!$      curl => base%level
-!!$      do while (associated(curl))
-!!$         call curl%clear_boundaries(ind, value=10.)
-!!$         call curl%prolong_bnd_from_coarser(ind)
-!!$         call curl%level_3d_boundaries(ind, nb, area_type, bnd_type, corners)
-!!$!         call curl%arr3d_boundaries(ind, nb, area_type, bnd_type, corners)
-!!$         curl => curl%finer
-!!$      enddo
       call leaves%leaf_arr3d_boundaries(qna%wai)
       call ppp_main%stop(frp_label, PPP_AMR)
 
