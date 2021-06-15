@@ -25,16 +25,18 @@ def collect_dataset(filen, dset_name):
     return dset
 
 
-def collect_particles(filen):
+def collect_particles(filen, nbins):
     print('Reading particles')
-    px, py, pz = np.array([]), np.array([]), np.array([])
+    px, py, pz, pm = np.array([]), np.array([]), np.array([]), np.array([])
     h5f = h5.File(filen, 'r')
     for gn in h5f['data']:
         px = np.concatenate((px, h5f['data'][gn]['particles']['stars']['position_x'][:]))
         py = np.concatenate((py, h5f['data'][gn]['particles']['stars']['position_y'][:]))
         pz = np.concatenate((pz, h5f['data'][gn]['particles']['stars']['position_z'][:]))
+        if nbins > 1:
+            pm = np.concatenate((pm, h5f['data'][gn]['particles']['stars']['mass'][:]))
     h5f.close()
-    return px, py, pz
+    return px, py, pz, pm
 
 
 def convert_units(infile, toplot):
