@@ -11,6 +11,14 @@ import read_dataset as rd
 matplotlib.use('cairo')      # choose output format
 
 
+def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
+    ax.set_xlim(min1, max1)
+    ax.set_ylim(min2, max2)
+    ax.set_xlabel("%s [%s]" % (l1, pu.labelx()(ulen)))
+    ax.set_ylabel("%s [%s]" % (l2, pu.labelx()(ulen)))
+    return ax
+
+
 def draw_particles(ax, p1, p2, pm, nbins, min1, max1, min2, max2, drawd, pcolor, psize):
     if nbins > 1:
         ah = ax.hist2d(p1, p2, nbins, weights=pm, range=[[min1, max1], [min2, max2]], norm=matplotlib.colors.LogNorm(), cmap=pcolor)
@@ -21,8 +29,6 @@ def draw_particles(ax, p1, p2, pm, nbins, min1, max1, min2, max2, drawd, pcolor,
         if psize <= 0:
             psize = matplotlib.rcParams['lines.markersize']**2
         ax.scatter(p1, p2, c=pcolor, marker=".", s=psize)
-        ax.set_xlim(min1, max1)
-        ax.set_ylim(min2, max2)
     return ax, ah
 
 
@@ -42,7 +48,7 @@ def add_cbar(cbar_mode, grid, ab, fr, clab):
 
 
 def plotcompose(pthfilen, var, output, options):
-    umin, umax, cmap, pcolor, psize, sctype, cu, cx, cy, cz, drawd, drawp, nbins, uaxes = options
+    umin, umax, cmap, pcolor, psize, sctype, cu, cx, cy, cz, drawd, drawp, nbins, uaxes, zoom = options
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
     time = h5f.attrs['time'][0]
@@ -102,6 +108,9 @@ def plotcompose(pthfilen, var, output, options):
     else:
         cbar_mode = 'none'
 
+    if not zoom[0]:
+        zoom = False, xmin, xmax, ymin, ymax, zmin, zmax
+
     grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
 
     ax = grid[3]
@@ -109,16 +118,14 @@ def plotcompose(pthfilen, var, output, options):
         a = ax.imshow(xz, origin="lower", extent=[xmin, xmax, zmin, zmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
         ax, ah = draw_particles(ax, px, pz, pm, nbins, xmin, xmax, zmin, zmax, drawd, pcolor, psize)
-    ax.set_xlabel("x [%s]" % pu.labelx()(ulen))
-    ax.set_ylabel("z [%s]" % pu.labelx()(ulen))
+    ax = plot_axes(ax, ulen, "x", zoom[1], zoom[2], "z", zoom[5], zoom[6])
 
     ax = grid[0]
     if drawd:
         a = ax.imshow(xy, origin="lower", extent=[ymin, ymax, xmin, xmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
         ax, ah = draw_particles(ax, py, px, pm, nbins, ymin, ymax, xmin, xmax, drawd, pcolor, psize)
-    ax.set_ylabel("x [%s]" % pu.labelx()(ulen))
-    ax.set_xlabel("y [%s]" % pu.labelx()(ulen))
+    ax = plot_axes(ax, ulen, "y", zoom[3], zoom[4], "x", zoom[1], zoom[2])
     ax.set_title(timep)
 
     ax = grid[2]
@@ -126,8 +133,7 @@ def plotcompose(pthfilen, var, output, options):
         a = ax.imshow(yz, origin="lower", extent=[ymin, ymax, zmin, zmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
         ax, ah = draw_particles(ax, py, pz, pm, nbins, ymin, ymax, zmin, zmax, drawd, pcolor, psize)
-    ax.set_xlabel("y [%s]" % pu.labelx()(ulen))
-    ax.set_ylabel("z [%s]" % pu.labelx()(ulen))
+    ax = plot_axes(ax, ulen, "y", zoom[3], zoom[4], "z", zoom[5], zoom[6])
 
     if drawh:
         add_cbar(cbar_mode, grid, ah[3], 0.17, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))

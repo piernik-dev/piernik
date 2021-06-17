@@ -12,6 +12,7 @@ pcolor = 'default'
 plotdir = 'frames'
 sctype = 'linear'
 cu, cx, cy, cz = False, 0.0, 0.0, 0.0
+zoom = False, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 zmin, zmax = 0.0, 0.0
 draw_part = False
 draw_data = False
@@ -41,11 +42,12 @@ def print_usage():
     print(' -P,\t\t--particle-color\tuse color for particles scattering or colormap for particles histogram plot [default: #1f77b4 (blue) or viridis]')
     print(' -s,\t\t--particle-sizes\tmarker sizes for scattering particles onto slices [default: switched-off]')
     print(' -z ZMIN,ZMAX, \t--zlim ZMIN,ZMAX \tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]')
+    print(' --zoom XMIN,XMAX,YMIN,YMAX,ZMIN,ZMAX \tset plot axes ranges [default: domain edges]')
 
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:hl:o:pP:s:z:", ["help", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "output=", "particles", "particle-color=", "particle-sizes=", "scale=", "zlim="])
+        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:hl:o:pP:s:z:", ["help", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "output=", "particles", "particle-color=", "particle-sizes=", "scale=", "zlim=", "zoom="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -111,6 +113,12 @@ def cli_params(argv):
             zmax = float(zmax)
             print("zmin, zmax = ", zmin, zmax)
 
+        elif opt in ("--zoom",):
+            global zoom
+            aux = arg.split(',')
+            zoom = True, float(aux[0]), float(aux[1]), float(aux[2]), float(aux[3]), float(aux[4]), float(aux[5])
+            print("ZOOM: xmin, xmax = ", zoom[1], zoom[2], 'ymin, ymax = ', zoom[3], zoom[4], 'zmin, zmax = ', zoom[5], zoom[6])
+
 
 if (len(sys.argv) < 2):
     print_usage()
@@ -128,7 +136,7 @@ if pcolor == 'default':
         pcolor = 'viridis'
     else:
         pcolor = '#1f77b4'
-options = zmin, zmax, cmap, pcolor, psize, sctype, cu, cx, cy, cz, draw_data, draw_part, nbins, uaxes
+options = zmin, zmax, cmap, pcolor, psize, sctype, cu, cx, cy, cz, draw_data, draw_part, nbins, uaxes, zoom
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 
