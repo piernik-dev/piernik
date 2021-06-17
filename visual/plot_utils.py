@@ -66,3 +66,24 @@ def color_axes(wax, color):
     wax.tick_params(axis='x', colors=color)
     wax.tick_params(axis='y', colors=color)
     return
+
+
+def detindex(nd, cxyz, smin, smax):
+    return int(np.floor(nd * (cxyz - smin) / (smax - smin)))
+
+
+def ind_limits(nd, cxyz, smin, smax):
+    return int(min(nd - 1, max(0, detindex(nd, cxyz, smin, smax))))
+
+
+def isinbox(cxyz, smin, smax, warn, cc):
+    isin = (cxyz >= smin and cxyz <= smax)
+    if not isin and warn:
+        print('Domain edges %s %s used to plot as the plot center %s coordinate (%s) is outside the domain.' % (smin, smax, cc, cxyz))
+    return isin
+
+
+def find_indices(nd, cxyz, smin, smax, warn):
+    inb = isinbox(cxyz[0], smin[0], smax[0], warn, 'CX'), isinbox(cxyz[1], smin[1], smax[1], warn, 'CY'), isinbox(cxyz[2], smin[2], smax[2], warn, 'CZ')
+    icc = ind_limits(nd[0], cxyz[0], smin[0], smax[0]), ind_limits(nd[1], cxyz[1], smin[1], smax[1]), ind_limits(nd[2], cxyz[2], smin[2], smax[2])
+    return inb, icc

@@ -78,14 +78,13 @@ def plotcompose(pthfilen, var, output, options):
     if drawd:
         dset = rd.collect_dataset(pthfilen, var)
 
-        ix = int(nx / 2 - 1)
-        iy = int(ny / 2 - 1)
-        iz = int(nz / 2 - 1)
         if cu:
-            ix = int(min(nx - 1, max(0, np.floor(nx * (cx - xmin) / (xmax - xmin)))))
-            iy = int(min(ny - 1, max(0, np.floor(ny * (cy - ymin) / (ymax - ymin)))))
-            iz = int(min(nz - 1, max(0, np.floor(nz * (cz - zmin) / (zmax - zmin)))))
+            inb, ind = pu.find_indices([nx, ny, nz], [cx, cy, cz], [xmin, ymin, zmin], [xmax, ymax, zmax], True)
+            ix, iy, iz = ind
             print('Ordered plot center', cx, cy, cz, ' gives following uniform grid indices:', ix, iy, iz)
+        else:
+            ix, iy, iz = int(nx / 2), int(ny / 2), int(nz / 2)
+            cx, cy, cz = (xmax + xmin) / 2.0, (ymax + ymin) / 2.0, (zmax + zmin) / 2.0
 
         xy = dset[:, :, iz]
         xz = dset[:, iy, :].swapaxes(0, 1)
