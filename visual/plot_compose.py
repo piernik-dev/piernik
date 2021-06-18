@@ -65,6 +65,9 @@ def plotcompose(pthfilen, var, output, options):
     if uupd:
         xmin, ymin, zmin = xmin / usc, ymin / usc, zmin / usc
         xmax, ymax, zmax = xmax / usc, ymax / usc, zmax / usc
+    cgcount = int(h5f['data'].attrs['cg_count'])
+    glevels = h5f['grid_level'][:]
+    maxglev = max(glevels)
     h5f.close()
 
     timep = "time = %5.2f %s" % (time, pu.labelx()(utim))
@@ -89,15 +92,26 @@ def plotcompose(pthfilen, var, output, options):
         xy = dset[:, :, iz]
         xz = dset[:, iy, :].swapaxes(0, 1)
         yz = dset[ix, :, :].swapaxes(0, 1)
+
         d3min, d3max = np.min(dset), np.max(dset)
         d2max = max(np.max(xz), np.max(xy), np.max(yz))
         d2min = min(np.min(xz), np.min(xy), np.min(yz))
+
+        refis = []
+        for iref in range(maxglev + 1):
+            print('REFINEMENT ', iref)
+            blks = []
+            for ib in range(cgcount):
+                block = rd.read_block(pthfilen, var, ib, iref, [cx, cy, cz], usc)
+                blks.append(block)
+            refis.append(blks)
 
         xy, xz, yz, vmin, vmax = pu.scale_manage(sctype, xy, xz, yz, umin, umax, d2min, d2max)
 
         print('3D data value range: ', d3min, d3max)
         print('Slices  value range: ', d2min, d2max)
         print('Plotted value range: ', vmin, vmax)
+
     fig = P.figure(1, figsize=(10, 10.5))
 
     if drawd and drawh:
@@ -115,6 +129,11 @@ def plotcompose(pthfilen, var, output, options):
     ax = grid[3]
     if drawd:
         a = ax.imshow(xz, origin="lower", extent=[xmin, xmax, zmin, zmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+        for blks in refis:
+            for bl in blks:
+                binb, bxy, bxz, byz, ble, bre = bl
+                if binb[1]:
+                    a = ax.imshow(bxz, origin="lower", extent=[ble[0], bre[0], ble[2], bre[2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
         ax, ah = draw_particles(ax, px, pz, pm, nbins, xmin, xmax, zmin, zmax, drawd, pcolor, psize)
     ax = plot_axes(ax, ulen, "x", zoom[1], zoom[2], "z", zoom[5], zoom[6])
@@ -122,6 +141,11 @@ def plotcompose(pthfilen, var, output, options):
     ax = grid[0]
     if drawd:
         a = ax.imshow(xy, origin="lower", extent=[ymin, ymax, xmin, xmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+        for blks in refis:
+            for bl in blks:
+                binb, bxy, bxz, byz, ble, bre = bl
+                if binb[2]:
+                    a = ax.imshow(bxy, origin="lower", extent=[ble[1], bre[1], ble[0], bre[0]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
         ax, ah = draw_particles(ax, py, px, pm, nbins, ymin, ymax, xmin, xmax, drawd, pcolor, psize)
     ax = plot_axes(ax, ulen, "y", zoom[3], zoom[4], "x", zoom[1], zoom[2])
@@ -130,6 +154,11 @@ def plotcompose(pthfilen, var, output, options):
     ax = grid[2]
     if drawd:
         a = ax.imshow(yz, origin="lower", extent=[ymin, ymax, zmin, zmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+        for blks in refis:
+            for bl in blks:
+                binb, bxy, bxz, byz, ble, bre = bl
+                if binb[0]:
+                    a = ax.imshow(byz, origin="lower", extent=[ble[1], bre[1], ble[2], bre[2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
         ax, ah = draw_particles(ax, py, pz, pm, nbins, ymin, ymax, zmin, zmax, drawd, pcolor, psize)
     ax = plot_axes(ax, ulen, "y", zoom[3], zoom[4], "z", zoom[5], zoom[6])

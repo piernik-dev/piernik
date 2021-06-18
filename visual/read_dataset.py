@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import h5py as h5
 import numpy as np
+import plot_utils as pu
 
 
 def collect_dataset(filen, dset_name):
@@ -23,6 +24,32 @@ def collect_dataset(filen, dset_name):
 
     h5f.close()
     return dset
+
+
+def read_block(filen, dset_name, ig, olev, oc, usc):
+    h5f = h5.File(filen, 'r')
+    h5g = h5f['data']['grid_' + str(ig).zfill(10)]
+    level = h5g.attrs['level']
+    ledge = h5g.attrs['left_edge']
+    redge = h5g.attrs['right_edge']
+    ngb = h5g.attrs['n_b']
+    levok = (level == olev)
+    inb, ind = pu.find_indices(ngb, oc, ledge, redge, False)
+
+    clen = h5g.attrs['dl']
+    off = h5g.attrs['off']
+    n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
+    ce = n_b + off
+    dset = h5g[dset_name][:, :, :].swapaxes(0, 2)
+    xy = dset[:, :, ind[2]]
+    xz = dset[:, ind[1], :].swapaxes(0, 1)
+    yz = dset[ind[0], :, :].swapaxes(0, 1)
+    d3min, d3max = np.min(dset), np.max(dset)
+    d2max = max(np.max(xz), np.max(xy), np.max(yz))
+    d2min = min(np.min(xz), np.min(xy), np.min(yz))
+
+    h5f.close()
+    return inb, xy, xz, yz, ledge / usc, redge / usc
 
 
 def collect_particles(filen, nbins):
