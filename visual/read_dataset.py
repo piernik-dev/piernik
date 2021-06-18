@@ -4,6 +4,25 @@ import numpy as np
 import plot_utils as pu
 
 
+def reconstruct_uniform(pthfilen, var, cu, center, nd, smin, smax):
+    dset = collect_dataset(pthfilen, var)
+
+    if cu:
+        inb, ind = pu.find_indices(nd, center, smin, smax, True)
+        print('Ordered plot center', center[0], center[1], center[2], ' gives following uniform grid indices:', ind[0], ind[1], ind[2])
+    else:
+        ind = int(nd[0] / 2), int(nd[1] / 2), int(nd[2] / 2)
+
+    xy = dset[:, :, ind[2]]
+    xz = dset[:, ind[1], :].swapaxes(0, 1)
+    yz = dset[ind[0], :, :].swapaxes(0, 1)
+
+    d3min, d3max = np.min(dset), np.max(dset)
+    d2max = max(np.max(xz), np.max(xy), np.max(yz))
+    d2min = min(np.min(xz), np.min(xy), np.min(yz))
+    return xy, xz, yz, [d2min, d2max, d3min, d3max]
+
+
 def collect_dataset(filen, dset_name):
     print('Reading', dset_name)
     h5f = h5.File(filen, 'r')

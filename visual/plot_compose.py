@@ -59,7 +59,7 @@ def plotcompose(pthfilen, var, output, options):
         uvar = h5f['dataset_units'][var].attrs['unit']
     if drawh:
         umass = h5f['dataset_units']['mass_unit'].attrs['unit']
-    nx, ny, nz = h5f['simulation_parameters'].attrs['domain_dimensions']
+    nd = h5f['simulation_parameters'].attrs['domain_dimensions']
     xmin, ymin, zmin = h5f['simulation_parameters'].attrs['domain_left_edge']
     xmax, ymax, zmax = h5f['simulation_parameters'].attrs['domain_right_edge']
     if uupd:
@@ -79,22 +79,12 @@ def plotcompose(pthfilen, var, output, options):
             px, py, pz = px / usc, py / usc, pz / usc
 
     if drawd:
-        dset = rd.collect_dataset(pthfilen, var)
-
-        if cu:
-            inb, ind = pu.find_indices([nx, ny, nz], center, [xmin, ymin, zmin], [xmax, ymax, zmax], True)
-            print('Ordered plot center', center[0], center[1], center[2], ' gives following uniform grid indices:', ind[0], ind[1], ind[2])
-        else:
-            ind = int(nx / 2), int(ny / 2), int(nz / 2)
+        if not cu:
             center = (xmax + xmin) / 2.0, (ymax + ymin) / 2.0, (zmax + zmin) / 2.0
 
-        xy = dset[:, :, ind[2]]
-        xz = dset[:, ind[1], :].swapaxes(0, 1)
-        yz = dset[ind[0], :, :].swapaxes(0, 1)
-
-        d3min, d3max = np.min(dset), np.max(dset)
-        d2max = max(np.max(xz), np.max(xy), np.max(yz))
-        d2min = min(np.min(xz), np.min(xy), np.min(yz))
+        xy, xz, yz, extr = rd.reconstruct_uniform(pthfilen, var, cu, center, nd, [xmin, ymin, zmin], [xmax, ymax, zmax])
+        d2min, d2max, d3min, d3max = extr
+        dset = rd.collect_dataset(pthfilen, var)
 
         refis = []
         for iref in range(maxglev + 1):
