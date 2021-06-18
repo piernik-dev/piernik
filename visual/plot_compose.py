@@ -48,7 +48,7 @@ def add_cbar(cbar_mode, grid, ab, fr, clab):
 
 
 def plotcompose(pthfilen, var, output, options):
-    umin, umax, cmap, pcolor, psize, sctype, cu, cx, cy, cz, drawd, drawp, nbins, uaxes, zoom = options
+    umin, umax, cmap, pcolor, psize, sctype, cu, center, drawd, drawp, nbins, uaxes, zoom = options
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
     time = h5f.attrs['time'][0]
@@ -82,16 +82,15 @@ def plotcompose(pthfilen, var, output, options):
         dset = rd.collect_dataset(pthfilen, var)
 
         if cu:
-            inb, ind = pu.find_indices([nx, ny, nz], [cx, cy, cz], [xmin, ymin, zmin], [xmax, ymax, zmax], True)
-            ix, iy, iz = ind
-            print('Ordered plot center', cx, cy, cz, ' gives following uniform grid indices:', ix, iy, iz)
+            inb, ind = pu.find_indices([nx, ny, nz], center, [xmin, ymin, zmin], [xmax, ymax, zmax], True)
+            print('Ordered plot center', center[0], center[1], center[2], ' gives following uniform grid indices:', ind[0], ind[1], ind[2])
         else:
-            ix, iy, iz = int(nx / 2), int(ny / 2), int(nz / 2)
-            cx, cy, cz = (xmax + xmin) / 2.0, (ymax + ymin) / 2.0, (zmax + zmin) / 2.0
+            ind = int(nx / 2), int(ny / 2), int(nz / 2)
+            center = (xmax + xmin) / 2.0, (ymax + ymin) / 2.0, (zmax + zmin) / 2.0
 
-        xy = dset[:, :, iz]
-        xz = dset[:, iy, :].swapaxes(0, 1)
-        yz = dset[ix, :, :].swapaxes(0, 1)
+        xy = dset[:, :, ind[2]]
+        xz = dset[:, ind[1], :].swapaxes(0, 1)
+        yz = dset[ind[0], :, :].swapaxes(0, 1)
 
         d3min, d3max = np.min(dset), np.max(dset)
         d2max = max(np.max(xz), np.max(xy), np.max(yz))
@@ -102,7 +101,7 @@ def plotcompose(pthfilen, var, output, options):
             print('REFINEMENT ', iref)
             blks = []
             for ib in range(cgcount):
-                block = rd.read_block(pthfilen, var, ib, iref, [cx, cy, cz], usc)
+                block = rd.read_block(pthfilen, var, ib, iref, center, usc)
                 blks.append(block)
             refis.append(blks)
 

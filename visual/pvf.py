@@ -11,7 +11,7 @@ cmap = 'viridis'
 pcolor = 'default'
 plotdir = 'frames'
 sctype = 'linear'
-cu, cx, cy, cz = False, 0.0, 0.0, 0.0
+cu, center = False, [0.0, 0.0, 0.0]
 zoom = False, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 zmin, zmax = 0.0, 0.0
 draw_part = False
@@ -66,9 +66,9 @@ def cli_params(argv):
             nbins = int(arg)
 
         elif opt in ("-c", "--center"):
-            global cx, cy, cz, cu
+            global center, cu
             cx, cy, cz = arg.split(',')
-            cu, cx, cy, cz = True, float(cx), float(cy), float(cz)
+            cu, center = True, [float(cx), float(cy), float(cz)]
 
         elif opt in ("-d", "--dataset"):
             global dnames
@@ -136,7 +136,7 @@ if pcolor == 'default':
         pcolor = 'viridis'
     else:
         pcolor = '#1f77b4'
-options = zmin, zmax, cmap, pcolor, psize, sctype, cu, cx, cy, cz, draw_data, draw_part, nbins, uaxes, zoom
+options = zmin, zmax, cmap, pcolor, psize, sctype, cu, center, draw_data, draw_part, nbins, uaxes, zoom
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 
