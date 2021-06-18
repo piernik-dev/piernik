@@ -45,6 +45,18 @@ def collect_dataset(filen, dset_name):
     return dset
 
 
+def collect_gridlevels(pthfilen, var, maxglev, cgcount, center, usc):
+    refis = []
+    for iref in range(maxglev + 1):
+        print('REFINEMENT ', iref)
+        blks = []
+        for ib in range(cgcount):
+            block = read_block(pthfilen, var, ib, iref, center, usc)
+            blks.append(block)
+        refis.append(blks)
+    return refis
+
+
 def read_block(filen, dset_name, ig, olev, oc, usc):
     h5f = h5.File(filen, 'r')
     h5g = h5f['data']['grid_' + str(ig).zfill(10)]

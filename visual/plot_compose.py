@@ -84,16 +84,8 @@ def plotcompose(pthfilen, var, output, options):
 
         xy, xz, yz, extr = rd.reconstruct_uniform(pthfilen, var, cu, center, nd, [xmin, ymin, zmin], [xmax, ymax, zmax])
         d2min, d2max, d3min, d3max = extr
-        dset = rd.collect_dataset(pthfilen, var)
 
-        refis = []
-        for iref in range(maxglev + 1):
-            print('REFINEMENT ', iref)
-            blks = []
-            for ib in range(cgcount):
-                block = rd.read_block(pthfilen, var, ib, iref, center, usc)
-                blks.append(block)
-            refis.append(blks)
+        refis = rd.collect_gridlevels(pthfilen, var, maxglev, cgcount, center, usc)
 
         xy, xz, yz, vmin, vmax = pu.scale_manage(sctype, xy, xz, yz, umin, umax, d2min, d2max)
 
