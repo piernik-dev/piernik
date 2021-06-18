@@ -95,12 +95,7 @@ def plotcompose(pthfilen, var, output, options):
 
     fig = P.figure(1, figsize=(10, 10.5))
 
-    if drawd and drawh:
-        cbar_mode = 'none'
-    elif drawd or drawh:
-        cbar_mode = 'single'
-    else:
-        cbar_mode = 'none'
+    cbar_mode = pu.colorbar_mode(drawd, drawh)
 
     if not zoom[0]:
         zoom = False, xmin, xmax, ymin, ymax, zmin, zmax

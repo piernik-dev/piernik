@@ -58,6 +58,16 @@ def labelx():
     return lambda var: '$' + str(var)[2:-1].replace('**', '^') + '$'
 
 
+def colorbar_mode(drawd, drawh):
+    if drawd and drawh:
+        cbar_mode = 'none'
+    elif drawd or drawh:
+        cbar_mode = 'single'
+    else:
+        cbar_mode = 'none'
+    return cbar_mode
+
+
 def color_axes(wax, color):
     wax.spines['top'].set_color(color)
     wax.spines['bottom'].set_color(color)
@@ -79,7 +89,7 @@ def ind_limits(nd, cxyz, smin, smax):
 def isinbox(cxyz, smin, smax, warn, cc):
     isin = (cxyz >= smin and cxyz <= smax)
     if not isin and warn:
-        print('Domain edges %s %s used to plot as the plot center %s coordinate (%s) is outside the domain.' % (smin, smax, cc, cxyz))
+        print('Domain edges %s %s used to plot as the given plot center %s coordinate (%s) is outside the domain.' % (smin, smax, cc, cxyz))
     return isin
 
 
