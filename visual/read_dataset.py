@@ -4,8 +4,8 @@ import numpy as np
 import plot_utils as pu
 
 
-def reconstruct_uniform(pthfilen, var, cu, center, nd, smin, smax):
-    dset = collect_dataset(pthfilen, var)
+def reconstruct_uniform(h5f, var, cu, center, nd, smin, smax):
+    dset = collect_dataset(h5f, var)
 
     if cu:
         inb, ind = pu.find_indices(nd, center, smin, smax, True)
@@ -23,9 +23,8 @@ def reconstruct_uniform(pthfilen, var, cu, center, nd, smin, smax):
     return xy, xz, yz, [d2min, d2max, d3min, d3max]
 
 
-def collect_dataset(filen, dset_name):
+def collect_dataset(h5f, dset_name):
     print('Reading', dset_name)
-    h5f = h5.File(filen, 'r')
     attrs = h5f['domains']['base'].attrs
     nxd, nyd, nzd = attrs['n_d'][0:3]
     dset = np.zeros((nxd, nyd, nzd))
@@ -41,24 +40,22 @@ def collect_dataset(filen, dset_name):
             ce = n_b + off
             dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name][:, :, :].swapaxes(0, 2)
 
-    h5f.close()
     return dset
 
 
-def collect_gridlevels(pthfilen, var, maxglev, cgcount, center, usc):
+def collect_gridlevels(h5f, var, maxglev, cgcount, center, usc):
     refis = []
     for iref in range(maxglev + 1):
         print('REFINEMENT ', iref)
         blks = []
         for ib in range(cgcount):
-            block = read_block(pthfilen, var, ib, iref, center, usc)
+            block = read_block(h5f, var, ib, iref, center, usc)
             blks.append(block)
         refis.append(blks)
     return refis
 
 
-def read_block(filen, dset_name, ig, olev, oc, usc):
-    h5f = h5.File(filen, 'r')
+def read_block(h5f, dset_name, ig, olev, oc, usc):
     h5g = h5f['data']['grid_' + str(ig).zfill(10)]
     level = h5g.attrs['level']
     ledge = h5g.attrs['left_edge']
@@ -79,21 +76,18 @@ def read_block(filen, dset_name, ig, olev, oc, usc):
     d2max = max(np.max(xz), np.max(xy), np.max(yz))
     d2min = min(np.min(xz), np.min(xy), np.min(yz))
 
-    h5f.close()
     return inb, xy, xz, yz, ledge / usc, redge / usc
 
 
-def collect_particles(filen, nbins):
+def collect_particles(h5f, nbins):
     print('Reading particles')
     px, py, pz, pm = np.array([]), np.array([]), np.array([]), np.array([])
-    h5f = h5.File(filen, 'r')
     for gn in h5f['data']:
         px = np.concatenate((px, h5f['data'][gn]['particles']['stars']['position_x'][:]))
         py = np.concatenate((py, h5f['data'][gn]['particles']['stars']['position_y'][:]))
         pz = np.concatenate((pz, h5f['data'][gn]['particles']['stars']['position_z'][:]))
         if nbins > 1:
             pm = np.concatenate((pm, h5f['data'][gn]['particles']['stars']['mass'][:]))
-    h5f.close()
     return px, py, pz, pm
 
 
