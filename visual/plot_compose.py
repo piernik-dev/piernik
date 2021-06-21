@@ -55,7 +55,7 @@ def plotcompose(pthfilen, var, output, options):
     time = h5f.attrs['time'][0]
     utim = h5f['dataset_units']['time_unit'].attrs['unit']
     ulenf = h5f['dataset_units']['length_unit'].attrs['unit']
-    usc, ulen, uupd = rd.change_units(ulenf, uaxes)
+    usc, ulen, uupd = pu.change_units(ulenf, uaxes)
     if drawd:
         uvar = h5f['dataset_units'][var].attrs['unit']
     if drawh:
