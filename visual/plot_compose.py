@@ -20,9 +20,9 @@ def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
     return ax
 
 
-def draw_particles(ax, p1, p2, pm, nbins, min1, max1, min2, max2, drawd, pcolor, psize):
+def draw_particles(ax, p1, p2, pm, nbins, ranges, drawd, pcolor, psize):
     if nbins > 1:
-        ah = ax.hist2d(p1, p2, nbins, weights=pm, range=[[min1, max1], [min2, max2]], norm=matplotlib.colors.LogNorm(), cmap=pcolor)
+        ah = ax.hist2d(p1, p2, nbins, weights=pm, range=[ranges[0:2], ranges[2:4]], norm=matplotlib.colors.LogNorm(), cmap=pcolor)
         if not drawd:
             ax.set_facecolor('xkcd:black')
     else:
@@ -61,11 +61,11 @@ def plotcompose(pthfilen, var, output, options):
     if drawh:
         umass = h5f['dataset_units']['mass_unit'].attrs['unit']
     nd = h5f['simulation_parameters'].attrs['domain_dimensions']
-    xmin, ymin, zmin = h5f['simulation_parameters'].attrs['domain_left_edge']
-    xmax, ymax, zmax = h5f['simulation_parameters'].attrs['domain_right_edge']
+    smin = h5f['simulation_parameters'].attrs['domain_left_edge']
+    smax = h5f['simulation_parameters'].attrs['domain_right_edge']
     if uupd:
-        xmin, ymin, zmin = xmin / usc, ymin / usc, zmin / usc
-        xmax, ymax, zmax = xmax / usc, ymax / usc, zmax / usc
+        smin = pu.list3_division(smin, usc)
+        smax = pu.list3_division(smax, usc)
     cgcount = int(h5f['data'].attrs['cg_count'])
     glevels = h5f['grid_level'][:]
     maxglev = max(glevels)
@@ -80,9 +80,9 @@ def plotcompose(pthfilen, var, output, options):
 
     if drawd:
         if not cu:
-            center = (xmax + xmin) / 2.0, (ymax + ymin) / 2.0, (zmax + zmin) / 2.0
+            center = (smax[0] + smin[0]) / 2.0, (smax[1] + smin[1]) / 2.0, (smax[2] + smin[2]) / 2.0
 
-        xy, xz, yz, extr = rd.reconstruct_uniform(h5f, var, cu, center, nd, [xmin, ymin, zmin], [xmax, ymax, zmax])
+        xy, xz, yz, extr = rd.reconstruct_uniform(h5f, var, cu, center, nd, smin, smax)
         d2min, d2max, d3min, d3max = extr
 
         refis = rd.collect_gridlevels(h5f, var, maxglev, cgcount, center, usc)
@@ -100,46 +100,49 @@ def plotcompose(pthfilen, var, output, options):
     cbar_mode = pu.colorbar_mode(drawd, drawh)
 
     if not zoom[0]:
-        zoom = False, xmin, xmax, ymin, ymax, zmin, zmax
+        zoom = False, smin, smax
 
     grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
 
     ax = grid[3]
+    extent = [smin[0], smax[0], smin[2], smax[2]]
     if drawd:
-        a = ax.imshow(xz, origin="lower", extent=[xmin, xmax, zmin, zmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+        a = ax.imshow(xz, origin="lower", extent=extent, vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
         for blks in refis:
             for bl in blks:
                 binb, bxy, bxz, byz, ble, bre = bl
                 if binb[1]:
                     a = ax.imshow(bxz, origin="lower", extent=[ble[0], bre[0], ble[2], bre[2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
-        ax, ah = draw_particles(ax, px, pz, pm, nbins, xmin, xmax, zmin, zmax, drawd, pcolor, psize)
-    ax = plot_axes(ax, ulen, "x", zoom[1], zoom[2], "z", zoom[5], zoom[6])
+        ax, ah = draw_particles(ax, px, pz, pm, nbins, extent, drawd, pcolor, psize)
+    ax = plot_axes(ax, ulen, "x", zoom[1][0], zoom[2][0], "z", zoom[1][2], zoom[2][2])
 
     ax = grid[0]
+    extent = [smin[1], smax[1], smin[0], smax[0]]
     if drawd:
-        a = ax.imshow(xy, origin="lower", extent=[ymin, ymax, xmin, xmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+        a = ax.imshow(xy, origin="lower", extent=extent, vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
         for blks in refis:
             for bl in blks:
                 binb, bxy, bxz, byz, ble, bre = bl
                 if binb[2]:
                     a = ax.imshow(bxy, origin="lower", extent=[ble[1], bre[1], ble[0], bre[0]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
-        ax, ah = draw_particles(ax, py, px, pm, nbins, ymin, ymax, xmin, xmax, drawd, pcolor, psize)
-    ax = plot_axes(ax, ulen, "y", zoom[3], zoom[4], "x", zoom[1], zoom[2])
+        ax, ah = draw_particles(ax, py, px, pm, nbins, extent, drawd, pcolor, psize)
+    ax = plot_axes(ax, ulen, "y", zoom[1][1], zoom[2][1], "x", zoom[1][0], zoom[2][0])
     ax.set_title(timep)
 
     ax = grid[2]
+    extent = [smin[1], smax[1], smin[2], smax[2]]
     if drawd:
-        a = ax.imshow(yz, origin="lower", extent=[ymin, ymax, zmin, zmax], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+        a = ax.imshow(yz, origin="lower", extent=extent, vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
         for blks in refis:
             for bl in blks:
                 binb, bxy, bxz, byz, ble, bre = bl
                 if binb[0]:
                     a = ax.imshow(byz, origin="lower", extent=[ble[1], bre[1], ble[2], bre[2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
-        ax, ah = draw_particles(ax, py, pz, pm, nbins, ymin, ymax, zmin, zmax, drawd, pcolor, psize)
-    ax = plot_axes(ax, ulen, "y", zoom[3], zoom[4], "z", zoom[5], zoom[6])
+        ax, ah = draw_particles(ax, py, pz, pm, nbins, extent, drawd, pcolor, psize)
+    ax = plot_axes(ax, ulen, "y", zoom[1][1], zoom[2][1], "z", zoom[1][2], zoom[2][2])
 
     if drawh:
         add_cbar(cbar_mode, grid, ah[3], 0.17, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))

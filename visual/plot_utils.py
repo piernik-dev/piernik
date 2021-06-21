@@ -54,6 +54,10 @@ def scale_manage(sctype, xy, xz, yz, umin, umax, d2min, d2max):
     return xy, xz, yz, vmin, vmax
 
 
+def list3_division(l3, divisor):
+    return l3[0] / divisor, l3[1] / divisor, l3[2] / divisor
+
+
 def labelx():
     return lambda var: '$' + str(var)[2:-1].replace('**', '^') + '$'
 

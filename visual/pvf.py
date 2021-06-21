@@ -12,7 +12,7 @@ pcolor = 'default'
 plotdir = 'frames'
 sctype = 'linear'
 cu, center = False, [0.0, 0.0, 0.0]
-zoom = False, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+zoom = False, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]
 zmin, zmax = 0.0, 0.0
 draw_part = False
 draw_data = False
@@ -116,8 +116,8 @@ def cli_params(argv):
         elif opt in ("--zoom",):
             global zoom
             aux = arg.split(',')
-            zoom = True, float(aux[0]), float(aux[1]), float(aux[2]), float(aux[3]), float(aux[4]), float(aux[5])
-            print("ZOOM: xmin, xmax = ", zoom[1], zoom[2], 'ymin, ymax = ', zoom[3], zoom[4], 'zmin, zmax = ', zoom[5], zoom[6])
+            zoom = True, [float(aux[0]), float(aux[2]), float(aux[4])], [float(aux[1]), float(aux[3]), float(aux[5])]
+            print("ZOOM: xmin, xmax = ", zoom[1][0], zoom[2][0], 'ymin, ymax = ', zoom[1][1], zoom[2][1], 'zmin, zmax = ', zoom[1][2], zoom[2][2])
 
 
 if (len(sys.argv) < 2):
