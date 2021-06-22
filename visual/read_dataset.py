@@ -76,7 +76,7 @@ def read_block(h5f, dset_name, ig, olev, oc, usc):
     d2max = max(np.max(xz), np.max(xy), np.max(yz))
     d2min = min(np.min(xz), np.min(xy), np.min(yz))
 
-    return inb, xy, xz, yz, ledge / usc, redge / usc
+    return inb, [xy, xz, yz], ledge / usc, redge / usc
 
 
 def collect_particles(h5f, nbins):

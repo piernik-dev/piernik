@@ -84,6 +84,8 @@ def plotcompose(pthfilen, var, output, options):
 
         xy, xz, yz, extr = rd.reconstruct_uniform(h5f, var, cu, center, nd, smin, smax)
         d2min, d2max, d3min, d3max = extr
+        block = [True, True, True], [xy, xz, yz], smin, smax
+        refis = [[block, ], ]
 
         refis = rd.collect_gridlevels(h5f, var, maxglev, cgcount, center, usc)
 
@@ -105,42 +107,39 @@ def plotcompose(pthfilen, var, output, options):
     grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
 
     ax = grid[3]
-    extent = [smin[0], smax[0], smin[2], smax[2]]
     if drawd:
-        a = ax.imshow(xz, origin="lower", extent=extent, vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
         for blks in refis:
             for bl in blks:
-                binb, bxy, bxz, byz, ble, bre = bl
+                binb, bxyz, ble, bre = bl
                 if binb[1]:
-                    a = ax.imshow(bxz, origin="lower", extent=[ble[0], bre[0], ble[2], bre[2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+                    a = ax.imshow(bxyz[1], origin="lower", extent=[ble[0], bre[0], ble[2], bre[2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
+        extent = [smin[0], smax[0], smin[2], smax[2]]
         ax, ah = draw_particles(ax, px, pz, pm, nbins, extent, drawd, pcolor, psize)
     ax = plot_axes(ax, ulen, "x", zoom[1][0], zoom[2][0], "z", zoom[1][2], zoom[2][2])
 
     ax = grid[0]
-    extent = [smin[1], smax[1], smin[0], smax[0]]
     if drawd:
-        a = ax.imshow(xy, origin="lower", extent=extent, vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
         for blks in refis:
             for bl in blks:
-                binb, bxy, bxz, byz, ble, bre = bl
+                binb, bxyz, ble, bre = bl
                 if binb[2]:
-                    a = ax.imshow(bxy, origin="lower", extent=[ble[1], bre[1], ble[0], bre[0]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+                    a = ax.imshow(bxyz[0], origin="lower", extent=[ble[1], bre[1], ble[0], bre[0]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
+        extent = [smin[1], smax[1], smin[0], smax[0]]
         ax, ah = draw_particles(ax, py, px, pm, nbins, extent, drawd, pcolor, psize)
     ax = plot_axes(ax, ulen, "y", zoom[1][1], zoom[2][1], "x", zoom[1][0], zoom[2][0])
     ax.set_title(timep)
 
     ax = grid[2]
-    extent = [smin[1], smax[1], smin[2], smax[2]]
     if drawd:
-        a = ax.imshow(yz, origin="lower", extent=extent, vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
         for blks in refis:
             for bl in blks:
-                binb, bxy, bxz, byz, ble, bre = bl
+                binb, bxyz, ble, bre = bl
                 if binb[0]:
-                    a = ax.imshow(byz, origin="lower", extent=[ble[1], bre[1], ble[2], bre[2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+                    a = ax.imshow(bxyz[2], origin="lower", extent=[ble[1], bre[1], ble[2], bre[2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
+        extent = [smin[1], smax[1], smin[2], smax[2]]
         ax, ah = draw_particles(ax, py, pz, pm, nbins, extent, drawd, pcolor, psize)
     ax = plot_axes(ax, ulen, "y", zoom[1][1], zoom[2][1], "z", zoom[1][2], zoom[2][2])
 
