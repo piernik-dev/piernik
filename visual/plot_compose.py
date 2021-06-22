@@ -20,14 +20,19 @@ def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
     return ax
 
 
-def draw_plotcomponent(ax, refis, drawd, smin, smax, vmin, vmax, cmap, ncut, n1, n2):
+def draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, vmin, vmax, cmap, ncut, n1, n2):
+    ag, ah = [], []
     if drawd:
         for blks in refis:
             for bl in blks:
                 binb, bxyz, ble, bre = bl
                 if binb[ncut]:
                     ag = ax.imshow(bxyz[ncut], origin="lower", extent=[ble[n1], bre[n1], ble[n2], bre[n2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
-    return ax, ag
+    if drawp:
+        pxyz, pm, nbins, pcolor, psize = parts
+        ax, ah = draw_particles(ax, pxyz[n1], pxyz[n2], pm, nbins, [smin[n1], smax[n1], smin[n2], smax[n2]], drawd, pcolor, psize)
+    return ax, ag, ah
+
 
 def draw_particles(ax, p1, p2, pm, nbins, ranges, drawd, pcolor, psize):
     if nbins > 1:
@@ -86,6 +91,7 @@ def plotcompose(pthfilen, var, output, options):
         pxyz, pm = rd.collect_particles(h5f, nbins)
         if uupd:
             pxyz = pu.list3_division(pxyz, usc)
+        parts = pxyz, pm, nbins, pcolor, psize
 
     if drawd:
         if not cu:
@@ -116,25 +122,16 @@ def plotcompose(pthfilen, var, output, options):
     grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
 
     ax = grid[3]
-    ax, ag = draw_plotcomponent(ax, refis, drawd, smin, smax, vmin, vmax, cmap, 1, 0, 2)
-    if drawp:
-        extent = [smin[0], smax[0], smin[2], smax[2]]
-        ax, ah = draw_particles(ax, pxyz[0], pxyz[2], pm, nbins, extent, drawd, pcolor, psize)
+    ax, ag, ah = draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, vmin, vmax, cmap, 1, 0, 2)
     ax = plot_axes(ax, ulen, "x", zoom[1][0], zoom[2][0], "z", zoom[1][2], zoom[2][2])
 
     ax = grid[0]
-    ax, ag = draw_plotcomponent(ax, refis, drawd, smin, smax, vmin, vmax, cmap, 2, 1, 0)
-    if drawp:
-        extent = [smin[1], smax[1], smin[0], smax[0]]
-        ax, ah = draw_particles(ax, pxyz[1], pxyz[0], pm, nbins, extent, drawd, pcolor, psize)
+    ax, ag, ah = draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, vmin, vmax, cmap, 2, 1, 0)
     ax = plot_axes(ax, ulen, "y", zoom[1][1], zoom[2][1], "x", zoom[1][0], zoom[2][0])
     ax.set_title(timep)
 
     ax = grid[2]
-    ax, ag = draw_plotcomponent(ax, refis, drawd, smin, smax, vmin, vmax, cmap, 0, 1, 2)
-    if drawp:
-        extent = [smin[1], smax[1], smin[2], smax[2]]
-        ax, ah = draw_particles(ax, pxyz[1], pxyz[2], pm, nbins, extent, drawd, pcolor, psize)
+    ax, ag, ah = draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, vmin, vmax, cmap, 0, 1, 2)
     ax = plot_axes(ax, ulen, "y", zoom[1][1], zoom[2][1], "z", zoom[1][2], zoom[2][2])
 
     if drawh:
