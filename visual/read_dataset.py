@@ -44,15 +44,19 @@ def collect_dataset(h5f, dset_name):
 
 
 def collect_gridlevels(h5f, var, maxglev, cgcount, center, usc):
-    refis = []
+    refis, l2, h2, l3, h3 = [], [], [], [], []
     for iref in range(maxglev + 1):
         print('REFINEMENT ', iref)
         blks = []
         for ib in range(cgcount):
-            block = read_block(h5f, var, ib, iref, center, usc)
+            block, extr = read_block(h5f, var, ib, iref, center, usc)
             blks.append(block)
+            l2.append(extr[0])
+            h2.append(extr[1])
+            l3.append(extr[2])
+            h3.append(extr[3])
         refis.append(blks)
-    return refis
+    return refis, [min(l2), max(h2), min(l3), max(h3)]
 
 
 def read_block(h5f, dset_name, ig, olev, oc, usc):
@@ -76,7 +80,7 @@ def read_block(h5f, dset_name, ig, olev, oc, usc):
     d2max = max(np.max(xz), np.max(xy), np.max(yz))
     d2min = min(np.min(xz), np.min(xy), np.min(yz))
 
-    return inb, [yz, xz, xy], ledge / usc, redge / usc
+    return [inb, [yz, xz, xy], ledge / usc, redge / usc], [d2min, d2max, d3min, d3max]
 
 
 def collect_particles(h5f, nbins):

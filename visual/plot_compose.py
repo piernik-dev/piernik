@@ -102,12 +102,12 @@ def plotcompose(pthfilen, var, output, options):
             center = (smax[0] + smin[0]) / 2.0, (smax[1] + smin[1]) / 2.0, (smax[2] + smin[2]) / 2.0
 
         xy, xz, yz, extr = rd.reconstruct_uniform(h5f, var, cu, center, nd, smin, smax)
-        d2min, d2max, d3min, d3max = extr
         block = [True, True, True], [yz, xz, xy], smin, smax
         refis = [[block, ], ]
 
-        refis = rd.collect_gridlevels(h5f, var, maxglev, cgcount, center, usc)
+        refis, extr = rd.collect_gridlevels(h5f, var, maxglev, cgcount, center, usc)
 
+        d2min, d2max, d3min, d3max = extr
         xy, xz, yz, vmin, vmax = pu.scale_manage(sctype, xy, xz, yz, umin, umax, d2min, d2max)
 
         print('3D data value range: ', d3min, d3max)
