@@ -48,6 +48,8 @@ module thermal
    real                     :: alpha_cool, L0_cool, G0_heat, G1_heat, G2_heat, cfl_coolheat
    real                     :: Teql         !> temperature of cooling / heating equilibrium
    integer(kind=4), protected    :: itemp = INVALID, ieis = INVALID
+   real :: x_ion      !> ionization degree
+
 
 contains
 
@@ -65,10 +67,9 @@ contains
       implicit none
 
       real :: G0, G1, G2 !> standard heating model coefficients in cgs units
-      real :: Lambda0    !> power law cooling model coefficient in cgs units
-      real :: x_ion      !> ionization degree
+      real :: Lambda_0    !> power law cooling model coefficient in cgs units
 
-      namelist /THERMAL/ thermal_active, cool_model, heat_model, Lambda0, alpha_cool, Teql, G0, G1, G2, x_ion, cfl_coolheat
+      namelist /THERMAL/ thermal_active, cool_model, heat_model, Lambda_0, alpha_cool, Teql, G0, G1, G2, x_ion, cfl_coolheat
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[thermal:init_thermal] mpi not initialized.")
 
@@ -81,7 +82,7 @@ contains
       heat_model     = 'G012'
       alpha_cool     = 1.0
       Teql           = 1000.0
-      Lambda0        = 1.0e-25
+      Lambda_0        = 1.0e-25
       G0             = 1.0e-25
       G1             = 1.0e-25
       G2             = 1.0e-27
@@ -106,7 +107,7 @@ contains
          close(nh%lun)
          call nh%compare_namelist()
 
-         rbuff(1) = Lambda0
+         rbuff(1) = Lambda_0
          rbuff(2) = alpha_cool
          rbuff(3) = Teql
          rbuff(4) = G0
@@ -133,7 +134,7 @@ contains
 
          thermal_active = lbuff(1)
 
-         Lambda0        = rbuff(1)
+         Lambda_0        = rbuff(1)
          alpha_cool     = rbuff(2)
          Teql           = rbuff(3)
          G0             = rbuff(4)
@@ -147,7 +148,7 @@ contains
       G0_heat = G0      * erg / sek * cm**3 / mH**2 * x_ion**2
       G1_heat = G1      * erg / sek         / mH    * x_ion
       G2_heat = G2      * erg / sek / cm**3
-      L0_cool = Lambda0 * erg / sek * cm**3 / mH**2 * x_ion**2
+      L0_cool = Lambda_0 * erg / sek * cm**3 / mH**2 * x_ion**2
 
       call all_cg%reg_var('Temperature')          ! Make it cleaner
       itemp = qna%ind('Temperature')
@@ -362,6 +363,7 @@ contains
       use func,             only: ekin, emag
       use global,           only: nstep
       use grid_cont,        only: grid_container
+      use initproblem,      only: lambda0, Tref, nfuncs, alpha
       use named_array_list, only: wna
       use units,            only: kboltz, mH
 
@@ -373,10 +375,12 @@ contains
 
       real, intent(in)                                   :: dt
       real, dimension(:, :, :), pointer                  :: t_eis, ta, T, u
-      real                                               :: gamma, tcool, dt_cool, t1
+      real, dimension(:,:,:), allocatable                :: tcool
+      real                                               :: gamma, dt_cool, t1, dtcool
       real, dimension(:,:,:), pointer                    :: dens
-      integer                                            :: ifl
+      integer                                            :: ifl, i, x, y, z
       logical                                            :: init
+      integer, dimension(3)                              :: n
 
 
 
@@ -399,28 +403,54 @@ contains
                call cool_heat2(dt_cool, cg, shape(ta), T, pfl, ta, init)
             endif
 
-            tcool = minval( kboltz * ta / ((pfl%gam-1) * mH *  L0_cool * (ta/Teql)**(alpha_cool)))
-            dt_cool = min(dt, tcool/100.0)
+            n = shape(ta)
+            allocate(tcool(n(1),n(2),n(3)))
+            do x = 1, n(1)
+               do y = 1, n(2)
+                  do z = 1, n(3)
+                     do i=1, nfuncs
+                        if (i .eq. nfuncs) then
+                           if (ta(x,y,z) .ge. Tref(i)) then
+                              tcool(x,y,z) = kboltz * ta(x,y,z) / ((pfl%gam-1) * mH *  abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
+                           endif
+                        else if (i .eq. 1) then
+                           if (ta(x,y,z) .le. Tref(i+1)) then
+                              tcool(x,y,z) = kboltz * ta(x,y,z) / ((pfl%gam-1) * mH *  abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
+                           endif
+                        else
+                           if ((ta(x,y,z) .ge. Tref(i)) .and. (ta(x,y,z) .le. Tref(i+1))) then
+                              tcool(x,y,z) = kboltz * ta(x,y,z) / ((pfl%gam-1) * mH *  abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
+                           endif
+                        endif
+                     enddo
+                  enddo
+               enddo
+            enddo
+            dtcool=minval(tcool/100.0)
+            !tcool = minval( kboltz * ta / ((pfl%gam-1) * mH *  lambdam * (ta/Trefmin)**alpham))
+            dt_cool = min(dt, dtcool)
+            print *, dt_cool
+            !dt_cool =0.000001
 
             t1=0.0
             init=.false.
             do while(t1 .lt. dt)
                
                call temp_EIS(dt_cool, shape(ta), gamma, ta, dens, T)
-         
+               print *, 'temp_EIS', T(2,2,1)
                t_eis = T
 
                call cool_heat2(dt_cool, cg, shape(ta), T, pfl, ta, init)
 
-               !print *, T(32,32,1), ta(32,32,1)
+               print *, 'temp_coolheat', ta(2,2,1)
                t1 = t1 + dt_cool
                if (t1+dt_cool .gt. dt) then
                   dt_cool = dt - t1
                endif
             enddo
          enddo
-
-         print *, 'dt', dt, tcool
+         print *, 'dt', dt, dtcool
+         deallocate(tcool)
          !print *, 'EIS', T
          !print *, 'out', ta
          cgl => cgl%nxt
@@ -480,20 +510,45 @@ contains
 
    subroutine cool2(n, temp, coolf)
 
-      use dataio_pub, only: msg, warn
-      use mpisetup,   only: master
+      use dataio_pub,  only: msg, warn
+      use mpisetup,    only: master
+      use initproblem, only: Tref, alpha, lambda0, nfuncs
+      use units,            only: cm, erg, sek, mH
 
       implicit none
 
       integer, dimension(3), intent(in)            :: n
       real, dimension(n(1),n(2),n(3)), intent(in)  :: temp
       real, dimension(n(1),n(2),n(3)), intent(out) :: coolf
-
+      integer                                      :: x,y,z,i
 
       select case (cool_model)
          case ('power_law')
             coolf = -L0_cool * (temp/Teql)**(alpha_cool)
             !print *, 'L0_cool', L0_cool, alpha_cool
+         case('piecewise_power_law')
+            do x = 1, n(1)
+               do y = 1, n(2)
+                  do z = 1, n(3)
+                     coolf(x,y,z) = 0.0
+                     do i = 1, nfuncs
+                        if (i .eq. nfuncs) then
+                           if (temp(x,y,z) .ge. Tref(i)) then
+                              coolf(x,y,z) = - lambda0(i) * (temp(x,y,z)/Tref(i))**alpha(i)
+                           endif
+                        else if (i .eq. 1) then
+                           if (temp(x,y,z) .le. Tref(i+1)) then
+                              coolf(x,y,z) = - lambda0(i) * (temp(x,y,z)/Tref(i))**alpha(i)
+                           endif
+                        else
+                           if ((temp(x,y,z) .ge. Tref(i)) .and. (temp(x,y,z) .le. Tref(i+1))) then
+                              coolf(x,y,z) = - lambda0(i) * (temp(x,y,z)/Tref(i))**alpha(i)
+                           endif
+                        endif
+                     enddo
+                  enddo
+               enddo
+            enddo
          case ('null')
             return
         case default
@@ -529,18 +584,22 @@ contains
     
    subroutine temp_EIS(dt, n, gamma, temp, dens, Tnew)
 
-      use dataio_pub, only: msg, warn
-      use func,       only: operator(.equals.)
-      use mpisetup,   only: master
-      use units,      only: kboltz, mH
+      use dataio_pub,  only: msg, warn
+      use initproblem, only: Tref, alpha, lambda0, nfuncs
+      use func,        only: operator(.equals.)
+      use mpisetup,    only: master
+      use units,       only: kboltz, mH, cm, erg, sek
 
       implicit none
 
       integer(kind=4), dimension(3),     intent(in)  :: n
-      real,               intent(in)  :: gamma, dt
+      real,               intent(in)   :: gamma, dt
       real, dimension(n(1), n(2), n(3)), intent(in)  :: temp, dens
       real, dimension(n(1), n(2), n(3))              :: TEF, Teql1, tcool
       real, dimension(n(1), n(2), n(3)), intent(out) :: Tnew
+      real                                           :: lambda1, T0, alpha0, Y0, tcool2, TN
+      integer                                        :: ix,iy,iz, i
+      real, dimension(nfuncs)                        :: Y
 
       Teql1(:,:,:)=Teql
       select case (cool_model)
@@ -560,6 +619,81 @@ contains
                Tnew = temp * (1 - (1-alpha_cool) * dt / tcool) **(1.0/(1-alpha_cool))             !isochoric
                !Tnew = temp * (1 - (2-alpha_cool)*dt / tcool / gamma) **(1/(2-alpha_cool))    !isobar
             endif
+         case('piecewise_power_law')
+            TN = 10**8
+            Y = 0.0
+            Y(nfuncs) = - 1 / (1-alpha(nfuncs)) * (TN/Tref(nfuncs))**(alpha(nfuncs)-1) * (1 - (Tref(nfuncs)/TN)**(alpha(nfuncs)-1))
+            do i=nfuncs-1, 1, -1
+               Y(i) = Y(i+1) - 1 / (1-alpha(i)) * abs(lambda0(nfuncs)/lambda0(i)) * (TN/Tref(nfuncs))**alpha(nfuncs) * Tref(i)/TN * (1 - (Tref(i)/Tref(i+1))**(alpha(i)-1))
+            enddo
+            do ix = 1, n(1)
+               do iy = 1, n(2)
+                  do iz = 1, n(3)
+                     do i=1, nfuncs
+                        if (i .eq. nfuncs) then
+                           if ((temp(ix,iy,iz) .ge. Tref(i))) then
+                              Y0 = Y(i) + 1/(1-alpha(i)) * abs(lambda0(nfuncs)/lambda0(i)) * (TN/Tref(nfuncs))**alpha(nfuncs) * Tref(i)/TN * (1 - (Tref(i)/temp(ix,iy,iz))**(alpha(i)-1))
+                              T0 = Tref(i)
+                              alpha0=alpha(i)
+                              lambda1=lambda0(i)
+                           endif
+                        else if (i .eq. 1) then
+                           if (temp(ix,iy,iz) .le. Tref(i+1)) then
+                              Y0 = Y(i) + 1/(1-alpha(i)) * abs(lambda0(nfuncs)/lambda0(i)) * (TN/Tref(nfuncs))**alpha(nfuncs) * Tref(i)/TN * (1 - (Tref(i)/temp(ix,iy,iz))**(alpha(i)-1))
+                              T0=Tref(i)
+                              alpha0=alpha(i)
+                              lambda1=lambda0(i)
+                           endif
+                        else
+                           if ((temp(ix,iy,iz) .ge. Tref(i)) .and. (temp(ix,iy,iz) .le. Tref(i+1))) then
+                              Y0 = Y(i) + 1/(1-alpha(i)) * abs(lambda0(nfuncs)/lambda0(i)) * (TN/Tref(nfuncs))**alpha(nfuncs) * Tref(i)/TN * (1 - (Tref(i)/temp(ix,iy,iz))**(alpha(i)-1))
+                              T0=Tref(i)
+                              alpha0=alpha(i)
+                              lambda1=lambda0(i)
+                           endif
+                        endif
+                     enddo
+
+                     tcool2 = kboltz * temp(ix,iy,iz) / ((gamma-1) * mH * (temp(ix,iy,iz)/T0)**alpha0)
+                     Y0 = Y0 + temp(ix,iy,iz)/TN * abs(lambda0(nfuncs)/lambda1) * (TN/Tref(nfuncs))**alpha(nfuncs) * (T0/temp(ix,iy,iz))**alpha0 * dt/tcool2
+                     !print *, 'Y0', Y0
+                     !print *, 'Y', Y
+                     if (Y(3) .gt. Y(2)) then
+                        do i=1, nfuncs
+                           if (i .eq. nfuncs) then
+                              if ((Y0 .ge. Y(i))) then
+                                 Tnew(ix,iy,iz) = Tref(i) * (1 - (1-alpha(i)) * abs(lambda0(i)/lambda0(nfuncs)) * (Tref(nfuncs)/TN)**alpha(nfuncs) * TN/Tref(i) * (Y0 - Y(i)) )**(1/(1-alpha(i)))
+                              endif
+                           else if (i .eq. 1) then
+                              if (Y0 .le. Y(i+1)) then
+                                 Tnew(ix,iy,iz) = Tref(i) * (1 - (1-alpha(i)) * abs(lambda0(i)/lambda0(nfuncs)) * (Tref(nfuncs)/TN)**alpha(nfuncs) * TN/Tref(i) * (Y0 - Y(i)) )**(1/(1-alpha(i)))
+                              endif
+                           else
+                              if ((Y0 .ge. Y(i)) .and. (Y0 .le. Y(i+1))) then
+                                 Tnew(ix,iy,iz) = Tref(i) * (1 - (1-alpha(i)) * abs(lambda0(i)/lambda0(nfuncs)) * (Tref(nfuncs)/TN)**alpha(nfuncs) * TN/Tref(i) * (Y0 - Y(i)) )**(1/(1-alpha(i)))
+                              endif
+                           endif
+                        enddo
+                     else
+                        do i=1, nfuncs
+                           if (i .eq. nfuncs) then
+                              if ((Y0 .le. Y(i))) then
+                                 Tnew(ix,iy,iz) = Tref(i) * (1 - (1-alpha(i)) * abs(lambda0(i)/lambda0(nfuncs)) * (Tref(nfuncs)/TN)**alpha(nfuncs) * TN/Tref(i) * (Y0 - Y(i)) )**(1/(1-alpha(i)))
+                              endif
+                           else if (i .eq. 1) then
+                              if (Y0 .ge. Y(i+1)) then
+                                 Tnew(ix,iy,iz) = Tref(i) * (1 - (1-alpha(i)) * abs(lambda0(i)/lambda0(nfuncs)) * (Tref(nfuncs)/TN)**alpha(nfuncs) * TN/Tref(i) * (Y0 - Y(i)) )**(1/(1-alpha(i)))
+                              endif
+                           else
+                              if ((Y0 .le. Y(i)) .and. (Y0 .ge. Y(i+1))) then
+                                 Tnew(ix,iy,iz) = Tref(i) * (1 - (1-alpha(i)) * abs(lambda0(i)/lambda0(nfuncs)) * (Tref(nfuncs)/TN)**alpha(nfuncs) * TN/Tref(i) * (Y0 - Y(i)) )**(1/(1-alpha(i)))
+                              endif
+                           endif
+                        enddo
+                     endif
+                  enddo
+               enddo
+            enddo 
          case ('null')
             return
          case default
