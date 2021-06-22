@@ -84,10 +84,10 @@ def plotcompose(pthfilen, var, output, options):
 
         xy, xz, yz, extr = rd.reconstruct_uniform(h5f, var, cu, center, nd, smin, smax)
         d2min, d2max, d3min, d3max = extr
-        block = [True, True, True], [xy, xz, yz], smin, smax
+        block = [True, True, True], [yz, xz, xy], smin, smax
         refis = [[block, ], ]
 
-        refis = rd.collect_gridlevels(h5f, var, maxglev, cgcount, center, usc)
+        #refis = rd.collect_gridlevels(h5f, var, maxglev, cgcount, center, usc)
 
         xy, xz, yz, vmin, vmax = pu.scale_manage(sctype, xy, xz, yz, umin, umax, d2min, d2max)
 
@@ -124,7 +124,7 @@ def plotcompose(pthfilen, var, output, options):
             for bl in blks:
                 binb, bxyz, ble, bre = bl
                 if binb[2]:
-                    a = ax.imshow(bxyz[0], origin="lower", extent=[ble[1], bre[1], ble[0], bre[0]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+                    a = ax.imshow(bxyz[2], origin="lower", extent=[ble[1], bre[1], ble[0], bre[0]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
         extent = [smin[1], smax[1], smin[0], smax[0]]
         ax, ah = draw_particles(ax, py, px, pm, nbins, extent, drawd, pcolor, psize)
@@ -137,7 +137,7 @@ def plotcompose(pthfilen, var, output, options):
             for bl in blks:
                 binb, bxyz, ble, bre = bl
                 if binb[0]:
-                    a = ax.imshow(bxyz[2], origin="lower", extent=[ble[1], bre[1], ble[2], bre[2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+                    a = ax.imshow(bxyz[0], origin="lower", extent=[ble[1], bre[1], ble[2], bre[2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if drawp:
         extent = [smin[1], smax[1], smin[2], smax[2]]
         ax, ah = draw_particles(ax, py, pz, pm, nbins, extent, drawd, pcolor, psize)
