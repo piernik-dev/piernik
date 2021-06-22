@@ -88,4 +88,4 @@ def collect_particles(h5f, nbins):
         pz = np.concatenate((pz, h5f['data'][gn]['particles']['stars']['position_z'][:]))
         if nbins > 1:
             pm = np.concatenate((pm, h5f['data'][gn]['particles']['stars']['mass'][:]))
-    return px, py, pz, pm
+    return [px, py, pz], pm

@@ -83,9 +83,9 @@ def plotcompose(pthfilen, var, output, options):
     print(timep)
 
     if drawp:
-        px, py, pz, pm = rd.collect_particles(h5f, nbins)
+        pxyz, pm = rd.collect_particles(h5f, nbins)
         if uupd:
-            px, py, pz = px / usc, py / usc, pz / usc
+            pxyz = pu.list3_division(pxyz, usc)
 
     if drawd:
         if not cu:
@@ -119,14 +119,14 @@ def plotcompose(pthfilen, var, output, options):
     ax, ag = draw_plotcomponent(ax, refis, drawd, smin, smax, vmin, vmax, cmap, 1, 0, 2)
     if drawp:
         extent = [smin[0], smax[0], smin[2], smax[2]]
-        ax, ah = draw_particles(ax, px, pz, pm, nbins, extent, drawd, pcolor, psize)
+        ax, ah = draw_particles(ax, pxyz[0], pxyz[2], pm, nbins, extent, drawd, pcolor, psize)
     ax = plot_axes(ax, ulen, "x", zoom[1][0], zoom[2][0], "z", zoom[1][2], zoom[2][2])
 
     ax = grid[0]
     ax, ag = draw_plotcomponent(ax, refis, drawd, smin, smax, vmin, vmax, cmap, 2, 1, 0)
     if drawp:
         extent = [smin[1], smax[1], smin[0], smax[0]]
-        ax, ah = draw_particles(ax, py, px, pm, nbins, extent, drawd, pcolor, psize)
+        ax, ah = draw_particles(ax, pxyz[1], pxyz[0], pm, nbins, extent, drawd, pcolor, psize)
     ax = plot_axes(ax, ulen, "y", zoom[1][1], zoom[2][1], "x", zoom[1][0], zoom[2][0])
     ax.set_title(timep)
 
@@ -134,7 +134,7 @@ def plotcompose(pthfilen, var, output, options):
     ax, ag = draw_plotcomponent(ax, refis, drawd, smin, smax, vmin, vmax, cmap, 0, 1, 2)
     if drawp:
         extent = [smin[1], smax[1], smin[2], smax[2]]
-        ax, ah = draw_particles(ax, py, pz, pm, nbins, extent, drawd, pcolor, psize)
+        ax, ah = draw_particles(ax, pxyz[1], pxyz[2], pm, nbins, extent, drawd, pcolor, psize)
     ax = plot_axes(ax, ulen, "y", zoom[1][1], zoom[2][1], "z", zoom[1][2], zoom[2][2])
 
     if drawh:
