@@ -20,6 +20,15 @@ def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
     return ax
 
 
+def draw_plotcomponent(ax, refis, drawd, smin, smax, vmin, vmax, cmap, ncut, n1, n2):
+    if drawd:
+        for blks in refis:
+            for bl in blks:
+                binb, bxyz, ble, bre = bl
+                if binb[ncut]:
+                    ag = ax.imshow(bxyz[ncut], origin="lower", extent=[ble[n1], bre[n1], ble[n2], bre[n2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+    return ax, ag
+
 def draw_particles(ax, p1, p2, pm, nbins, ranges, drawd, pcolor, psize):
     if nbins > 1:
         ah = ax.hist2d(p1, p2, nbins, weights=pm, range=[ranges[0:2], ranges[2:4]], norm=matplotlib.colors.LogNorm(), cmap=pcolor)
@@ -87,7 +96,7 @@ def plotcompose(pthfilen, var, output, options):
         block = [True, True, True], [yz, xz, xy], smin, smax
         refis = [[block, ], ]
 
-        #refis = rd.collect_gridlevels(h5f, var, maxglev, cgcount, center, usc)
+        refis = rd.collect_gridlevels(h5f, var, maxglev, cgcount, center, usc)
 
         xy, xz, yz, vmin, vmax = pu.scale_manage(sctype, xy, xz, yz, umin, umax, d2min, d2max)
 
@@ -107,24 +116,14 @@ def plotcompose(pthfilen, var, output, options):
     grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
 
     ax = grid[3]
-    if drawd:
-        for blks in refis:
-            for bl in blks:
-                binb, bxyz, ble, bre = bl
-                if binb[1]:
-                    a = ax.imshow(bxyz[1], origin="lower", extent=[ble[0], bre[0], ble[2], bre[2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+    ax, ag = draw_plotcomponent(ax, refis, drawd, smin, smax, vmin, vmax, cmap, 1, 0, 2)
     if drawp:
         extent = [smin[0], smax[0], smin[2], smax[2]]
         ax, ah = draw_particles(ax, px, pz, pm, nbins, extent, drawd, pcolor, psize)
     ax = plot_axes(ax, ulen, "x", zoom[1][0], zoom[2][0], "z", zoom[1][2], zoom[2][2])
 
     ax = grid[0]
-    if drawd:
-        for blks in refis:
-            for bl in blks:
-                binb, bxyz, ble, bre = bl
-                if binb[2]:
-                    a = ax.imshow(bxyz[2], origin="lower", extent=[ble[1], bre[1], ble[0], bre[0]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+    ax, ag = draw_plotcomponent(ax, refis, drawd, smin, smax, vmin, vmax, cmap, 2, 1, 0)
     if drawp:
         extent = [smin[1], smax[1], smin[0], smax[0]]
         ax, ah = draw_particles(ax, py, px, pm, nbins, extent, drawd, pcolor, psize)
@@ -132,12 +131,7 @@ def plotcompose(pthfilen, var, output, options):
     ax.set_title(timep)
 
     ax = grid[2]
-    if drawd:
-        for blks in refis:
-            for bl in blks:
-                binb, bxyz, ble, bre = bl
-                if binb[0]:
-                    a = ax.imshow(bxyz[0], origin="lower", extent=[ble[1], bre[1], ble[2], bre[2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+    ax, ag = draw_plotcomponent(ax, refis, drawd, smin, smax, vmin, vmax, cmap, 0, 1, 2)
     if drawp:
         extent = [smin[1], smax[1], smin[2], smax[2]]
         ax, ah = draw_particles(ax, py, pz, pm, nbins, extent, drawd, pcolor, psize)
@@ -147,7 +141,7 @@ def plotcompose(pthfilen, var, output, options):
         add_cbar(cbar_mode, grid, ah[3], 0.17, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
 
     if drawd:
-        add_cbar(cbar_mode, grid, a, 0.23, var + " [%s]" % pu.labelx()(uvar))
+        add_cbar(cbar_mode, grid, ag, 0.23, var + " [%s]" % pu.labelx()(uvar))
 
     P.draw()
     P.savefig(output, facecolor='white')
