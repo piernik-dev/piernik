@@ -20,17 +20,18 @@ def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
     return ax
 
 
-def draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, zoom, vmin, vmax, ulen, cmap, ncut, n1, n2):
+def draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, ncut, n1, n2):
     ag, ah = [], []
-    if drawd:
+    if dgrid[0]:
+        vmin, vmax, cmap, refis = dgrid[1:]
         for blks in refis:
             for bl in blks:
                 binb, bxyz, ble, bre = bl
                 if binb[ncut]:
                     ag = ax.imshow(bxyz[ncut], origin="lower", extent=[ble[n1], bre[n1], ble[n2], bre[n2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
-    if drawp:
-        pxyz, pm, nbins, pcolor, psize = parts
-        ax, ah = draw_particles(ax, pxyz[n1], pxyz[n2], pm, nbins, [smin[n1], smax[n1], smin[n2], smax[n2]], drawd, pcolor, psize)
+    if parts[0]:
+        pxyz, pm, nbins, pcolor, psize = parts[1:]
+        ax, ah = draw_particles(ax, pxyz[n1], pxyz[n2], pm, nbins, [smin[n1], smax[n1], smin[n2], smax[n2]], dgrid[0], pcolor, psize)
     ax = plot_axes(ax, ulen, "xyz"[n1], zoom[1][n1], zoom[2][n1], "xyz"[n2], zoom[1][n2], zoom[2][n2])
     return ax, ag, ah
 
@@ -88,11 +89,13 @@ def plotcompose(pthfilen, var, output, options):
     timep = "time = %5.2f %s" % (time, pu.labelx()(utim))
     print(timep)
 
+    parts, dgrid = [drawp, ], [drawd, ]
+
     if drawp:
         pxyz, pm = rd.collect_particles(h5f, nbins)
         if uupd:
             pxyz = pu.list3_division(pxyz, usc)
-        parts = pxyz, pm, nbins, pcolor, psize
+        parts = drawp, pxyz, pm, nbins, pcolor, psize
 
     if drawd:
         if not cu:
@@ -110,6 +113,7 @@ def plotcompose(pthfilen, var, output, options):
         print('3D data value range: ', d3min, d3max)
         print('Slices  value range: ', d2min, d2max)
         print('Plotted value range: ', vmin, vmax)
+        dgrid = drawd, vmin, vmax, cmap, refis
 
     h5f.close()
 
@@ -123,14 +127,14 @@ def plotcompose(pthfilen, var, output, options):
     grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
 
     ax = grid[3]
-    ax, ag, ah = draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, zoom, vmin, vmax, ulen, cmap, 1, 0, 2)
+    ax, ag, ah = draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, 1, 0, 2)
 
     ax = grid[0]
-    ax, ag, ah = draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, zoom, vmin, vmax, ulen, cmap, 2, 1, 0)
+    ax, ag, ah = draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, 2, 1, 0)
     ax.set_title(timep)
 
     ax = grid[2]
-    ax, ag, ah = draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, zoom, vmin, vmax, ulen, cmap, 0, 1, 2)
+    ax, ag, ah = draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, 0, 1, 2)
 
     if drawh:
         add_cbar(cbar_mode, grid, ah[3], 0.17, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
