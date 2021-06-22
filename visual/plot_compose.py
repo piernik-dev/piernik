@@ -20,7 +20,7 @@ def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
     return ax
 
 
-def draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, vmin, vmax, cmap, ncut, n1, n2):
+def draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, zoom, vmin, vmax, ulen, cmap, ncut, n1, n2):
     ag, ah = [], []
     if drawd:
         for blks in refis:
@@ -31,6 +31,7 @@ def draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, vmin, vmax, c
     if drawp:
         pxyz, pm, nbins, pcolor, psize = parts
         ax, ah = draw_particles(ax, pxyz[n1], pxyz[n2], pm, nbins, [smin[n1], smax[n1], smin[n2], smax[n2]], drawd, pcolor, psize)
+    ax = plot_axes(ax, ulen, "xyz"[n1], zoom[1][n1], zoom[2][n1], "xyz"[n2], zoom[1][n2], zoom[2][n2])
     return ax, ag, ah
 
 
@@ -122,17 +123,14 @@ def plotcompose(pthfilen, var, output, options):
     grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
 
     ax = grid[3]
-    ax, ag, ah = draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, vmin, vmax, cmap, 1, 0, 2)
-    ax = plot_axes(ax, ulen, "x", zoom[1][0], zoom[2][0], "z", zoom[1][2], zoom[2][2])
+    ax, ag, ah = draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, zoom, vmin, vmax, ulen, cmap, 1, 0, 2)
 
     ax = grid[0]
-    ax, ag, ah = draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, vmin, vmax, cmap, 2, 1, 0)
-    ax = plot_axes(ax, ulen, "y", zoom[1][1], zoom[2][1], "x", zoom[1][0], zoom[2][0])
+    ax, ag, ah = draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, zoom, vmin, vmax, ulen, cmap, 2, 1, 0)
     ax.set_title(timep)
 
     ax = grid[2]
-    ax, ag, ah = draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, vmin, vmax, cmap, 0, 1, 2)
-    ax = plot_axes(ax, ulen, "y", zoom[1][1], zoom[2][1], "z", zoom[1][2], zoom[2][2])
+    ax, ag, ah = draw_plotcomponent(ax, refis, drawd, parts, drawp, smin, smax, zoom, vmin, vmax, ulen, cmap, 0, 1, 2)
 
     if drawh:
         add_cbar(cbar_mode, grid, ah[3], 0.17, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
