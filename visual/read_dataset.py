@@ -4,8 +4,10 @@ import numpy as np
 import plot_utils as pu
 
 
-def reconstruct_uniform(h5f, var, cu, center, nd, smin, smax):
-    dset = collect_dataset(h5f, var)
+def reconstruct_uniform(h5f, var, level, cu, center, smin, smax):
+    dset, nd, levelmet = collect_dataset(h5f, var, level)
+    if not levelmet:
+        return [], []
 
     if cu:
         inb, ind = pu.find_indices(nd, center, smin, smax, True)
@@ -20,31 +22,36 @@ def reconstruct_uniform(h5f, var, cu, center, nd, smin, smax):
     d3min, d3max = np.min(dset), np.max(dset)
     d2max = max(np.max(xz), np.max(xy), np.max(yz))
     d2min = min(np.min(xz), np.min(xy), np.min(yz))
-    return xy, xz, yz, [d2min, d2max, d3min, d3max]
+    block = [True, True, True], [yz, xz, xy], smin, smax
+
+    return [[block, ], ], [[d2min], [d2max], [d3min], [d3max]]
 
 
-def collect_dataset(h5f, dset_name):
+def collect_dataset(h5f, dset_name, level):
     print('Reading', dset_name)
     attrs = h5f['domains']['base'].attrs
+    nd = [i * 2**level for i in attrs['n_d']]
     nxd, nyd, nzd = attrs['n_d'][0:3]
-    dset = np.zeros((nxd, nyd, nzd))
+    dset = np.zeros((nd[0], nd[1], nd[2]))
 
     print('Reconstructing domain from cg parts')
     grid = h5f['grid_dimensions']
+    levelmet = False
     for ig in range(grid.shape[0]):
         h5g = h5f['data']['grid_' + str(ig).zfill(10)]
-        if h5g.attrs['level'] == 0:
+        if h5g.attrs['level'] == level:
+            levelmet = True
             off = h5g.attrs['off']
             ngb = h5g.attrs['n_b']
             n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
             ce = n_b + off
             dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name][:, :, :].swapaxes(0, 2)
 
-    return dset
+    return dset, nd, levelmet
 
 
-def collect_gridlevels(h5f, var, refis, maxglev, plotlevels, cgcount, center, usc):
-    l2, h2, l3, h3 = [], [], [], []
+def collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, cgcount, center, usc):
+    l2, h2, l3, h3 = extr
     for iref in range(maxglev + 1):
         if iref in plotlevels:
             print('REFINEMENT ', iref)
@@ -58,7 +65,7 @@ def collect_gridlevels(h5f, var, refis, maxglev, plotlevels, cgcount, center, us
                     l3.append(extr[2])
                     h3.append(extr[3])
             refis.append(blks)
-    return refis, [min(l2), max(h2), min(l3), max(h3)]
+    return refis, [l2, h2, l3, h3]
 
 
 def read_block(h5f, dset_name, ig, olev, oc, usc):

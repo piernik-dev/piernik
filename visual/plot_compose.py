@@ -77,7 +77,6 @@ def plotcompose(pthfilen, var, output, options):
         uvar = h5f['dataset_units'][var].attrs['unit']
     if drawh:
         umass = h5f['dataset_units']['mass_unit'].attrs['unit']
-    nd = h5f['simulation_parameters'].attrs['domain_dimensions']
     smin = h5f['simulation_parameters'].attrs['domain_left_edge']
     smax = h5f['simulation_parameters'].attrs['domain_right_edge']
     if uupd:
@@ -116,24 +115,32 @@ def plotcompose(pthfilen, var, output, options):
         print('LEVELS TO plot: ', plotlevels)
 
         refis = []
-        if drawu and (0 in plotlevels):
-            print('Plotting base level 0')
-            xy, xz, yz, extr = rd.reconstruct_uniform(h5f, var, cu, center, nd, smin, smax)
-            block = [True, True, True], [yz, xz, xy], smin, smax
-            refis = [[block, ], ]
+        extr = [], [], [], []
+        if drawu:
+            if len(plotlevels) > 1:
+                print('For uniform grid plotting only the firs given level!')
+            print('Plotting base level %s' % plotlevels[0])
+            refis, extr = rd.reconstruct_uniform(h5f, var, plotlevels[0], cu, center, smin, smax)
 
         if drawa:
-            refis, extr = rd.collect_gridlevels(h5f, var, refis, maxglev, plotlevels, cgcount, center, usc)
+            refis, extr = rd.collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, cgcount, center, usc)
 
-        d2min, d2max, d3min, d3max = extr
-        vmin, vmax, symmin = pu.scale_manage(sctype, refis, umin, umax, d2min, d2max)
+        if refis == []:
+            drawd = False
+        else:
+            d2min, d2max, d3min, d3max = min(extr[0]), max(extr[1]), min(extr[2]), max(extr[3])
+            vmin, vmax, symmin = pu.scale_manage(sctype, refis, umin, umax, d2min, d2max)
 
-        print('3D data value range: ', d3min, d3max)
-        print('Slices  value range: ', d2min, d2max)
-        print('Plotted value range: ', vmin, vmax)
-        dgrid = drawd, vmin, vmax, sctype, symmin, cmap, refis
+            print('3D data value range: ', d3min, d3max)
+            print('Slices  value range: ', d2min, d2max)
+            print('Plotted value range: ', vmin, vmax)
+            dgrid = drawd, vmin, vmax, sctype, symmin, cmap, refis
 
     h5f.close()
+
+    if not (drawp or drawd):
+        print('No particles or levels to plot. Exiting.')
+        return
 
     fig = P.figure(1, figsize=(10, 10.5))
 
