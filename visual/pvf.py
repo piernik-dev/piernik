@@ -38,11 +38,11 @@ def print_usage():
     print(' -d VAR[,VAR2], --dataset VAR[,VAR2] \t\tspecify one or more datafield(s) to plot [default: print available datafields; all or _all_ to plot all available datafields]')
     print(' -D COLORMAP, \t--colormap COLORMAP \t\tuse COLORMAP palette [default: viridis]')
     print(' -e EXTENSION, \t--extension EXTENSION \t\tsave plot in file using filename extension EXTENSION [default: png]')
-    print(' -l SCALETYPE, \t--scale SCALETYPE \t\tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: linear]')
     print(' -o OUTPUT, \t--output OUTPUT \t\tdump plot files into OUTPUT directory [default: frames]')
     print(' -p,\t\t--particles\t\t\tscatter particles onto slices [default: switched-off]')
     print(' -P,\t\t--particle-color\t\tuse color for particles scattering or colormap for particles histogram plot [default: #1f77b4 (blue) or viridis]')
     print(' -s,\t\t--particle-sizes\t\tmarker sizes for scattering particles onto slices [default: switched-off]')
+    print(' -t SCALETYPE, \t--scale SCALETYPE \t\tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: linear]')
     print('\t\t--uniform\t\t\treconstruct uniform grid to plot [default: True while no AMR refinement level structure exists]')
     print(' -z ZMIN,ZMAX, \t--zlim ZMIN,ZMAX \t\tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]')
     print('\t\t--zoom XL,XR,YL,YR,ZL,ZR \tset plot axes ranges [default: domain edges]')
@@ -50,7 +50,7 @@ def print_usage():
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:hl:o:pP:s:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "output=", "particles", "particle-color=", "particle-sizes=", "scale=", "uniform", "zlim=", "zoom="])
+        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:ho:pP:s:t:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "output=", "particles", "particle-color=", "particle-sizes=", "scale=", "uniform", "zlim=", "zoom="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -88,10 +88,6 @@ def cli_params(argv):
             exten = '.' + str(arg)
             print(exten)
 
-        elif opt in ("-l", "--scale"):
-            global sctype
-            sctype = str(arg)
-
         elif opt in ("-o", "--output"):
             global plotdir
             plotdir = str(arg)
@@ -108,6 +104,10 @@ def cli_params(argv):
         elif opt in ("-s", "--particle-sizes"):
             global psize
             psize = float(arg)
+
+        elif opt in ("-t", "--scale"):
+            global sctype
+            sctype = str(arg)
 
         elif opt in ("-z", "--zlim"):
             global zmin, zmax
