@@ -43,31 +43,35 @@ def collect_dataset(h5f, dset_name):
     return dset
 
 
-def collect_gridlevels(h5f, var, refis, maxglev, cgcount, center, usc):
+def collect_gridlevels(h5f, var, refis, maxglev, plotlevels, cgcount, center, usc):
     l2, h2, l3, h3 = [], [], [], []
     for iref in range(maxglev + 1):
-        print('REFINEMENT ', iref)
-        blks = []
-        for ib in range(cgcount):
-            block, extr = read_block(h5f, var, ib, iref, center, usc)
-            blks.append(block)
-            l2.append(extr[0])
-            h2.append(extr[1])
-            l3.append(extr[2])
-            h3.append(extr[3])
-        refis.append(blks)
+        if iref in plotlevels:
+            print('REFINEMENT ', iref)
+            blks = []
+            for ib in range(cgcount):
+                levok, block, extr = read_block(h5f, var, ib, iref, center, usc)
+                if levok:
+                    blks.append(block)
+                    l2.append(extr[0])
+                    h2.append(extr[1])
+                    l3.append(extr[2])
+                    h3.append(extr[3])
+            refis.append(blks)
     return refis, [min(l2), max(h2), min(l3), max(h3)]
 
 
 def read_block(h5f, dset_name, ig, olev, oc, usc):
     h5g = h5f['data']['grid_' + str(ig).zfill(10)]
     level = h5g.attrs['level']
+    levok = (level == olev)
+    if not levok:
+        return levok, [], []
+
     ledge = h5g.attrs['left_edge']
     redge = h5g.attrs['right_edge']
     ngb = h5g.attrs['n_b']
-    levok = (level == olev)
     inb, ind = pu.find_indices(ngb, oc, ledge, redge, False)
-
     clen = h5g.attrs['dl']
     off = h5g.attrs['off']
     n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
@@ -80,7 +84,7 @@ def read_block(h5f, dset_name, ig, olev, oc, usc):
     d2max = max(np.max(xz), np.max(xy), np.max(yz))
     d2min = min(np.min(xz), np.min(xy), np.min(yz))
 
-    return [inb, [yz, xz, xy], ledge / usc, redge / usc], [d2min, d2max, d3min, d3max]
+    return levok, [inb, [yz, xz, xy], ledge / usc, redge / usc], [d2min, d2max, d3min, d3max]
 
 
 def collect_particles(h5f, nbins):

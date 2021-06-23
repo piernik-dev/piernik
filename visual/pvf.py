@@ -17,6 +17,7 @@ zmin, zmax = 0.0, 0.0
 draw_part = False
 draw_data = False
 draw_uni, draw_amr = False, False
+plotlevels = ''
 dnames = ''
 uaxes = ''
 nbins = 1
@@ -38,6 +39,7 @@ def print_usage():
     print(' -d VAR[,VAR2], --dataset VAR[,VAR2] \t\tspecify one or more datafield(s) to plot [default: print available datafields; all or _all_ to plot all available datafields]')
     print(' -D COLORMAP, \t--colormap COLORMAP \t\tuse COLORMAP palette [default: viridis]')
     print(' -e EXTENSION, \t--extension EXTENSION \t\tsave plot in file using filename extension EXTENSION [default: png]')
+    print(' -l LEVEL1[,LEVEL2], \t--level LEVEL1[,LEVEL2] \t\tplot only requested grid levels [default: 0 for --uniform, all for --amr]')
     print(' -o OUTPUT, \t--output OUTPUT \t\tdump plot files into OUTPUT directory [default: frames]')
     print(' -p,\t\t--particles\t\t\tscatter particles onto slices [default: switched-off]')
     print(' -P,\t\t--particle-color\t\tuse color for particles scattering or colormap for particles histogram plot [default: #1f77b4 (blue) or viridis]')
@@ -50,7 +52,7 @@ def print_usage():
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:ho:pP:s:t:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "output=", "particles", "particle-color=", "particle-sizes=", "scale=", "uniform", "zlim=", "zoom="])
+        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:hl:o:pP:s:t:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "level=", "output=", "particles", "particle-color=", "particle-sizes=", "scale=", "uniform", "zlim=", "zoom="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -87,6 +89,10 @@ def cli_params(argv):
             global exten
             exten = '.' + str(arg)
             print(exten)
+
+        elif opt in ("-l", "--level"):
+            global plotlevels
+            plotlevels = [int(i) for i in arg.split(',')]
 
         elif opt in ("-o", "--output"):
             global plotdir
@@ -148,7 +154,7 @@ if pcolor == 'default':
     else:
         pcolor = '#1f77b4'
 
-options = zmin, zmax, cmap, pcolor, psize, sctype, cu, center, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom
+options = zmin, zmax, cmap, pcolor, psize, sctype, cu, center, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 

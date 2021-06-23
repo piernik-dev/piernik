@@ -66,7 +66,7 @@ def add_cbar(cbar_mode, grid, ab, fr, clab):
 
 
 def plotcompose(pthfilen, var, output, options):
-    umin, umax, cmap, pcolor, psize, sctype, cu, center, drawd, drawu, drawa, drawp, nbins, uaxes, zoom = options
+    umin, umax, cmap, pcolor, psize, sctype, cu, center, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels = options
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
     time = h5f.attrs['time'][0]
@@ -108,16 +108,22 @@ def plotcompose(pthfilen, var, output, options):
             else:
                 drawa = True
 
+        if plotlevels == '':
+            if drawa:
+                plotlevels = range(maxglev + 1)
+            else:
+                plotlevels = 0,
+        print('LEVELS TO plot: ', plotlevels)
+
         refis = []
-        if drawu:
+        if drawu and (0 in plotlevels):
             print('Plotting base level 0')
             xy, xz, yz, extr = rd.reconstruct_uniform(h5f, var, cu, center, nd, smin, smax)
             block = [True, True, True], [yz, xz, xy], smin, smax
             refis = [[block, ], ]
 
         if drawa:
-            print('Plotting all levels')
-            refis, extr = rd.collect_gridlevels(h5f, var, refis, maxglev, cgcount, center, usc)
+            refis, extr = rd.collect_gridlevels(h5f, var, refis, maxglev, plotlevels, cgcount, center, usc)
 
         d2min, d2max, d3min, d3max = extr
         vmin, vmax, symmin = pu.scale_manage(sctype, refis, umin, umax, d2min, d2max)
