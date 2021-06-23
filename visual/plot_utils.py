@@ -11,8 +11,9 @@ def fsym(vmin, vmax):
     return vmn, vmx
 
 
-def scale_manage(sctype, xy, xz, yz, umin, umax, d2min, d2max):
+def scale_manage(sctype, refis, umin, umax, d2min, d2max):
 
+    symmin = 1.0
     if (umin == 0.0 and umax == 0.0):
         vmin, vmax = d2min, d2max
     else:
@@ -25,14 +26,11 @@ def scale_manage(sctype, xy, xz, yz, umin, umax, d2min, d2max):
         if (vmin > 0.0):
             vmin = np.log10(vmin)
         else:
-            vmin = np.log10(min(np.min(xz, initial=np.inf, where=(xz > 0.0)), np.min(xy, initial=np.inf, where=(xy > 0.0)), np.min(yz, initial=np.inf, where=(yz > 0.0))))
+            vmin = np.log10(check_minimum_data(refis, False)[0])
         if (vmax > 0.0):
             vmax = np.log10(vmax)
         else:
             vmax = -1.
-        xy = np.log10(xy)
-        xz = np.log10(xz)
-        yz = np.log10(yz)
     elif (sctype == '3' or sctype == 'symlog'):
         if (umin > 0.0 and umax > 0.0):
             symmin = umin
@@ -42,16 +40,34 @@ def scale_manage(sctype, xy, xz, yz, umin, umax, d2min, d2max):
             if (d2min * d2max > 0.0):
                 smin, smax = d2min, d2max
             else:
-                smin = min(np.min(xz, initial=np.inf, where=(xz > 0.0)), np.min(xy, initial=np.inf, where=(xy > 0.0)), np.min(yz, initial=np.inf, where=(yz > 0.0)))
-                smax = max(np.min(xz, initial=-np.inf, where=(xz < 0.0)), np.max(xy, initial=-np.inf, where=(xy < 0.0)), np.max(yz, initial=-np.inf, where=(yz < 0.0)))
+                smin, smax = check_minimum_data(refis, True)
             symmin = min(np.abs(smin), np.abs(smax))
             vmax = np.log10(max(np.abs(smin), np.abs(smax)) / symmin)
         vmin = -vmax
-        xy = np.sign(xy) * np.log10(np.maximum(np.abs(xy) / symmin, 1.0))
-        xz = np.sign(xz) * np.log10(np.maximum(np.abs(xz) / symmin, 1.0))
-        yz = np.sign(yz) * np.log10(np.maximum(np.abs(yz) / symmin, 1.0))
+        print('SYMMIN value for SYMLOG scaletype: %s' % symmin)
 
-    return xy, xz, yz, vmin, vmax
+    return vmin, vmax, symmin
+
+
+def check_minimum_data(refis, extended):
+    cmdmin, cmdmax = np.inf, -np.inf
+    for blks in refis:
+        for bl in blks:
+            binb, bxyz = bl[0:2]
+            for ncut in range(3):
+                if binb[ncut]:
+                    cmdmin = min(cmdmin, np.min(bxyz[ncut], initial=np.inf, where=(bxyz[ncut] > 0.0)))
+                    if extended:
+                        cmdmax = max(cmdmax, np.max(bxyz[ncut], initial=-np.inf, where=(bxyz[ncut] < 0.0)))
+    return cmdmin, cmdmax
+
+
+def scale_plotarray(pa, sctype, symmin):
+    if (sctype == '2' or sctype == 'log'):
+        pa = np.log10(pa)
+    elif (sctype == '3' or sctype == 'symlog'):
+        pa = np.sign(pa) * np.log10(np.maximum(np.abs(pa) / symmin, 1.0))
+    return pa
 
 
 def list3_division(l3, divisor):

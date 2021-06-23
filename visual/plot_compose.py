@@ -23,12 +23,13 @@ def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
 def draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, ncut, n1, n2):
     ag, ah = [], []
     if dgrid[0]:
-        vmin, vmax, cmap, refis = dgrid[1:]
+        vmin, vmax, sctype, symmin, cmap, refis = dgrid[1:]
         for blks in refis:
             for bl in blks:
                 binb, bxyz, ble, bre = bl
                 if binb[ncut]:
-                    ag = ax.imshow(bxyz[ncut], origin="lower", extent=[ble[n1], bre[n1], ble[n2], bre[n2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+                    bplot = pu.scale_plotarray(bxyz[ncut], sctype, symmin)
+                    ag = ax.imshow(bplot, origin="lower", extent=[ble[n1], bre[n1], ble[n2], bre[n2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
     if parts[0]:
         pxyz, pm, nbins, pcolor, psize = parts[1:]
         ax, ah = draw_particles(ax, pxyz[n1], pxyz[n2], pm, nbins, [smin[n1], smax[n1], smin[n2], smax[n2]], dgrid[0], pcolor, psize)
@@ -117,15 +118,14 @@ def plotcompose(pthfilen, var, output, options):
         if drawa:
             print('Plotting all levels')
             refis, extr = rd.collect_gridlevels(h5f, var, refis, maxglev, cgcount, center, usc)
-            xy, xz, yz = [], [], []
 
         d2min, d2max, d3min, d3max = extr
-        xy, xz, yz, vmin, vmax = pu.scale_manage(sctype, xy, xz, yz, umin, umax, d2min, d2max)
+        vmin, vmax, symmin = pu.scale_manage(sctype, refis, umin, umax, d2min, d2max)
 
         print('3D data value range: ', d3min, d3max)
         print('Slices  value range: ', d2min, d2max)
         print('Plotted value range: ', vmin, vmax)
-        dgrid = drawd, vmin, vmax, cmap, refis
+        dgrid = drawd, vmin, vmax, sctype, symmin, cmap, refis
 
     h5f.close()
 
