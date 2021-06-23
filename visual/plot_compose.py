@@ -107,6 +107,7 @@ def plotcompose(pthfilen, var, output, options):
             else:
                 drawa = True
 
+        refis = []
         if drawu:
             print('Plotting base level 0')
             xy, xz, yz, extr = rd.reconstruct_uniform(h5f, var, cu, center, nd, smin, smax)
@@ -115,7 +116,7 @@ def plotcompose(pthfilen, var, output, options):
 
         if drawa:
             print('Plotting all levels')
-            refis, extr = rd.collect_gridlevels(h5f, var, maxglev, cgcount, center, usc)
+            refis, extr = rd.collect_gridlevels(h5f, var, refis, maxglev, cgcount, center, usc)
             xy, xz, yz = [], [], []
 
         d2min, d2max, d3min, d3max = extr

@@ -43,8 +43,8 @@ def collect_dataset(h5f, dset_name):
     return dset
 
 
-def collect_gridlevels(h5f, var, maxglev, cgcount, center, usc):
-    refis, l2, h2, l3, h3 = [], [], [], [], []
+def collect_gridlevels(h5f, var, refis, maxglev, cgcount, center, usc):
+    l2, h2, l3, h3 = [], [], [], []
     for iref in range(maxglev + 1):
         print('REFINEMENT ', iref)
         blks = []
