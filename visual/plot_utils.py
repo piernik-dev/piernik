@@ -78,6 +78,13 @@ def labelx():
     return lambda var: '$' + str(var)[2:-1].replace('**', '^') + '$'
 
 
+def take_nonempty(lst):
+    for it in lst:
+        if it != []:
+            return it
+    return []
+
+
 def colorbar_mode(drawd, drawh):
     if drawd and drawh:
         cbar_mode = 'none'

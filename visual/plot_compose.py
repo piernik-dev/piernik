@@ -164,20 +164,20 @@ def plotcompose(pthfilen, var, output, options):
     grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
 
     ax = grid[3]
-    ax, ag, ah = draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, 1, 0, 2)
+    ax, ag3, ah = draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, 1, 0, 2)
 
     ax = grid[0]
-    ax, ag, ah = draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, 2, 1, 0)
+    ax, ag0, ah = draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, 2, 1, 0)
     ax.set_title(timep)
 
     ax = grid[2]
-    ax, ag, ah = draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, 0, 1, 2)
+    ax, ag2, ah = draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, 0, 1, 2)
 
     if drawh:
         add_cbar(cbar_mode, grid, ah[3], 0.17, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
 
     if drawd:
-        add_cbar(cbar_mode, grid, ag, 0.23, var + " [%s]" % pu.labelx()(uvar))
+        add_cbar(cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 0.23, var + " [%s]" % pu.labelx()(uvar))
 
     P.draw()
     P.savefig(output, facecolor='white')
