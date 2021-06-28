@@ -66,7 +66,7 @@ def add_cbar(cbar_mode, grid, ab, fr, clab):
 
 
 def plotcompose(pthfilen, var, output, options):
-    umin, umax, cmap, pcolor, psize, sctype, cu, center, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels = options
+    umin, umax, cmap, pcolor, psize, sctype, cu, center, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist = options
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
     time = h5f.attrs['time'][0]
@@ -102,7 +102,7 @@ def plotcompose(pthfilen, var, output, options):
             center = (smax[0] + smin[0]) / 2.0, (smax[1] + smin[1]) / 2.0, (smax[2] + smin[2]) / 2.0
 
         if not (drawa or drawu):
-            if maxglev == 0:
+            if maxglev == 0 and gridlist == '':
                 drawu = True
             else:
                 drawa = True
@@ -114,16 +114,28 @@ def plotcompose(pthfilen, var, output, options):
                 plotlevels = 0,
         print('LEVELS TO plot: ', plotlevels)
 
+        if gridlist == '':
+            gridlist = range(cgcount)
+        else:
+            grdl = []
+            for ig in gridlist:
+                if ig >= 0 and ig < cgcount:
+                    grdl.append(ig)
+                else:
+                    print('Grid block %s does not exist.' % str(ig))
+            gridlist = grdl
+            print('GRIDLIST: ', gridlist)
+
         refis = []
         extr = [], [], [], []
         if drawu:
             if len(plotlevels) > 1:
                 print('For uniform grid plotting only the firs given level!')
             print('Plotting base level %s' % plotlevels[0])
-            refis, extr = rd.reconstruct_uniform(h5f, var, plotlevels[0], cu, center, smin, smax)
+            refis, extr = rd.reconstruct_uniform(h5f, var, plotlevels[0], gridlist, cu, center, smin, smax)
 
         if drawa:
-            refis, extr = rd.collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, cgcount, center, usc)
+            refis, extr = rd.collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc)
 
         if refis == []:
             drawd = False

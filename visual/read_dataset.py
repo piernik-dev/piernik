@@ -4,8 +4,8 @@ import numpy as np
 import plot_utils as pu
 
 
-def reconstruct_uniform(h5f, var, level, cu, center, smin, smax):
-    dset, nd, levelmet = collect_dataset(h5f, var, level)
+def reconstruct_uniform(h5f, var, level, gridlist, cu, center, smin, smax):
+    dset, nd, levelmet = collect_dataset(h5f, var, level, gridlist)
     if not levelmet:
         return [], []
 
@@ -27,7 +27,7 @@ def reconstruct_uniform(h5f, var, level, cu, center, smin, smax):
     return [[block, ], ], [[d2min], [d2max], [d3min], [d3max]]
 
 
-def collect_dataset(h5f, dset_name, level):
+def collect_dataset(h5f, dset_name, level, gridlist):
     print('Reading', dset_name)
     attrs = h5f['domains']['base'].attrs
     nd = [i * 2**level for i in attrs['n_d']]
@@ -35,9 +35,8 @@ def collect_dataset(h5f, dset_name, level):
     dset = np.zeros((nd[0], nd[1], nd[2]))
 
     print('Reconstructing domain from cg parts')
-    grid = h5f['grid_dimensions']
     levelmet = False
-    for ig in range(grid.shape[0]):
+    for ig in gridlist:
         h5g = h5f['data']['grid_' + str(ig).zfill(10)]
         if h5g.attrs['level'] == level:
             levelmet = True
@@ -50,13 +49,13 @@ def collect_dataset(h5f, dset_name, level):
     return dset, nd, levelmet
 
 
-def collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, cgcount, center, usc):
+def collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc):
     l2, h2, l3, h3 = extr
     for iref in range(maxglev + 1):
         if iref in plotlevels:
             print('REFINEMENT ', iref)
             blks = []
-            for ib in range(cgcount):
+            for ib in gridlist:
                 levok, block, extr = read_block(h5f, var, ib, iref, center, usc)
                 if levok:
                     blks.append(block)
@@ -64,7 +63,8 @@ def collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, cgcount, cent
                     h2.append(extr[1])
                     l3.append(extr[2])
                     h3.append(extr[3])
-            refis.append(blks)
+            if blks != []:
+                refis.append(blks)
     return refis, [l2, h2, l3, h3]
 
 
@@ -79,6 +79,8 @@ def read_block(h5f, dset_name, ig, olev, oc, usc):
     redge = h5g.attrs['right_edge']
     ngb = h5g.attrs['n_b']
     inb, ind = pu.find_indices(ngb, oc, ledge, redge, False)
+    if not any(inb):
+        return False, [], []
     clen = h5g.attrs['dl']
     off = h5g.attrs['off']
     n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
