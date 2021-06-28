@@ -173,12 +173,16 @@ for pthfilen in files_list:
         continue
     if pthfilen.split('.')[-1] == 'h5':
         h5f = h5py.File(pthfilen, 'r')
+        particles_in_file = 'particle_types' in list(h5f)
     else:
         continue
-    if not (draw_data or draw_part) or (draw_data and dnames == ''):
+    if not (draw_data or draw_part) or (draw_data and dnames == '') or (not draw_data and draw_part and not part_in_file):
         partincl = ''
-        if 'particle_types' in list(h5f):
+        if particles_in_file:
             partincl = 'and particles'
+        else:
+            if draw_part:
+                print('Particles not available in the file!')
         print('Available datafields in the file %s: \n' % pthfilen, list(h5f['field_types'].keys()), partincl)
         h5f.close()
         continue
@@ -193,11 +197,18 @@ for pthfilen in files_list:
             varlist = dnames.split(',')
         prd = 'datasets: %s' % varlist
         if draw_part:
-            prp = 'particles and '
+            if particles_in_file:
+                prp = 'particles and '
+            else:
+                print('Particles not available in the file!')
     else:
-        varlist = ['part']
-        prp = 'particles only'
-    print('Going to read ' + prp + prd)
+        if particles_in_file:
+            varlist = ['part']
+            prp = 'particles only'
+        else:
+            varlist = []
+    if varlist != []:
+        print('Going to read ' + prp + prd)
 
     for var in varlist:
         if (not draw_data or var in list(h5f['field_types'].keys())):

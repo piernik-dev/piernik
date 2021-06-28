@@ -96,7 +96,9 @@ def read_block(h5f, dset_name, ig, olev, oc, usc):
     return levok, [inb, [yz, xz, xy], ledge / usc, redge / usc], [d2min, d2max, d3min, d3max]
 
 
-def collect_particles(h5f, nbins):
+def collect_particles(h5f, nbins, uupd, usc):
+    if 'particle_types' not in list(h5f):
+        return False, [], []
     print('Reading particles')
     px, py, pz, pm = np.array([]), np.array([]), np.array([]), np.array([])
     for gn in h5f['data']:
@@ -105,4 +107,8 @@ def collect_particles(h5f, nbins):
         pz = np.concatenate((pz, h5f['data'][gn]['particles']['stars']['position_z'][:]))
         if nbins > 1:
             pm = np.concatenate((pm, h5f['data'][gn]['particles']['stars']['mass'][:]))
-    return [px, py, pz], pm
+
+    if uupd:
+        return True, pu.list3_division([px, py, pz], usc), pm
+
+    return True, [px, py, pz], pm

@@ -92,10 +92,9 @@ def plotcompose(pthfilen, var, output, options):
     parts, dgrid = [drawp, ], [drawd, ]
 
     if drawp:
-        pxyz, pm = rd.collect_particles(h5f, nbins)
-        if uupd:
-            pxyz = pu.list3_division(pxyz, usc)
-        parts = drawp, pxyz, pm, nbins, pcolor, psize
+        pinfile, pxyz, pm = rd.collect_particles(h5f, nbins, uupd, usc)
+        parts = pinfile, pxyz, pm, nbins, pcolor, psize
+        drawh = drawh and pinfile
 
     if drawd:
         if not cu:
@@ -150,8 +149,8 @@ def plotcompose(pthfilen, var, output, options):
 
     h5f.close()
 
-    if not (drawp or drawd):
-        print('No particles or levels to plot. Exiting.')
+    if not (parts[0] or drawd):
+        print('No particles or levels to plot. Skipping.')
         return
 
     fig = P.figure(1, figsize=(10, 10.5))
