@@ -6,6 +6,7 @@ import matplotlib
 import numpy as np
 import pylab as P
 from mpl_toolkits.axes_grid1 import AxesGrid
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import plot_utils as pu
 import read_dataset as rd
 import time as timer
@@ -52,9 +53,10 @@ def draw_particles(ax, p1, p2, pm, nbins, ranges, drawd, pcolor, psize):
 
 def add_cbar(cbar_mode, grid, ab, fr, clab):
     if cbar_mode == 'none':
-        bar = grid[1]
-        pu.color_axes(bar, 'white')
-        cbarh = P.colorbar(ab, ax=bar, format='%.1e', drawedges=False, shrink=0.4668, fraction=fr, anchor=(0.0, 0.961))
+        axg = grid[1]
+        pu.color_axes(axg, 'white')
+        bar = inset_axes(axg, width='100%', height='100%', bbox_to_anchor=(fr, 0.0, 0.06, 1.0), bbox_transform=axg.transAxes, loc=2, borderpad=0)
+        cbarh = P.colorbar(ab, cax=bar, format='%.1e', drawedges=False)
     else:
         bar = grid.cbar_axes[0]
         bar.axis["right"].toggle(all=True)
@@ -173,10 +175,10 @@ def plotcompose(pthfilen, var, output, options):
     ax, ag2, ah = draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, 0, 1, 2)
 
     if drawh:
-        add_cbar(cbar_mode, grid, ah[3], 0.17, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
+        add_cbar(cbar_mode, grid, ah[3], 0.7, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
 
     if drawd:
-        add_cbar(cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 0.23, var + " [%s]" % pu.labelx()(uvar))
+        add_cbar(cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 0.1, var + " [%s]" % pu.labelx()(uvar))
 
     P.draw()
     P.savefig(output, facecolor='white')
