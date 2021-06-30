@@ -9,6 +9,7 @@ import plot_compose as pc
 
 cmap = 'viridis'
 pcolor = 'default'
+gcolor = ''
 plotdir = 'frames'
 sctype = 'linear'
 cu, center = False, [0.0, 0.0, 0.0]
@@ -39,6 +40,7 @@ def print_usage():
     print(' -d VAR[,VAR2], \t--dataset VAR[,VAR2] \t\tspecify one or more datafield(s) to plot [default: print available datafields; all or _all_ to plot all available datafields]')
     print(' -D COLORMAP, \t\t--colormap COLORMAP \t\tuse COLORMAP palette [default: viridis]')
     print(' -e EXTENSION, \t\t--extension EXTENSION \t\tsave plot in file using filename extension EXTENSION [default: png]')
+    print(' -g COLOR, \t\t--gridcolor COLOR \t\tshow grids in color COLOR [default: none]')
     print('\t\t\t--grid-list GRID1[,GRID2] \tplot only selected numbered grid blocks [default: all existing blocks]')
     print(' -l LEVEL1[,LEVEL2], \t--level LEVEL1[,LEVEL2] \tplot only requested grid levels [default: 0 for --uniform, all for --amr]')
     print(' -o OUTPUT, \t\t--output OUTPUT \t\tdump plot files into OUTPUT directory [default: frames]')
@@ -53,7 +55,7 @@ def print_usage():
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:hl:o:pP:s:t:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "grid-list=", "level=", "output=", "particles", "particle-color=", "particle-sizes=", "scale=", "uniform", "zlim=", "zoom="])
+        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:g:hl:o:pP:s:t:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "output=", "particles", "particle-color=", "particle-sizes=", "scale=", "uniform", "zlim=", "zoom="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -90,6 +92,10 @@ def cli_params(argv):
             global exten
             exten = '.' + str(arg)
             print(exten)
+
+        elif opt in ("-g", "--gridcolor"):
+            global gcolor
+            gcolor = str(arg)
 
         elif opt in ("-l", "--level"):
             global plotlevels
@@ -159,7 +165,7 @@ if pcolor == 'default':
     else:
         pcolor = '#1f77b4'
 
-options = zmin, zmax, cmap, pcolor, psize, sctype, cu, center, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist
+options = zmin, zmax, cmap, pcolor, psize, sctype, cu, center, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 

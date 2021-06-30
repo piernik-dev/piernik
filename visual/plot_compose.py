@@ -21,7 +21,7 @@ def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
     return ax
 
 
-def draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, ncut, n1, n2):
+def draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, gcolor, ncut, n1, n2):
     ag, ah = [], []
     if dgrid[0]:
         vmin, vmax, sctype, symmin, cmap, refis = dgrid[1:]
@@ -31,6 +31,8 @@ def draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, ncut, n1, n2):
                 if binb[ncut]:
                     bplot = pu.scale_plotarray(bxyz[ncut], sctype, symmin)
                     ag = ax.imshow(bplot, origin="lower", extent=[ble[n1], bre[n1], ble[n2], bre[n2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+                    if gcolor != '':
+                        ax.plot([ble[n1], ble[n1], bre[n1], bre[n1], ble[n1]], [ble[n2], bre[n2], bre[n2], ble[n2], ble[n2]], '-', linewidth=0.5, alpha=0.1, color=gcolor, zorder=4)
     if parts[0]:
         pxyz, pm, nbins, pcolor, psize = parts[1:]
         ax, ah = draw_particles(ax, pxyz[n1], pxyz[n2], pm, nbins, [smin[n1], smax[n1], smin[n2], smax[n2]], dgrid[0], pcolor, psize)
@@ -68,7 +70,7 @@ def add_cbar(cbar_mode, grid, ab, fr, clab):
 
 
 def plotcompose(pthfilen, var, output, options):
-    umin, umax, cmap, pcolor, psize, sctype, cu, center, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist = options
+    umin, umax, cmap, pcolor, psize, sctype, cu, center, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor = options
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
     time = h5f.attrs['time'][0]
@@ -165,14 +167,14 @@ def plotcompose(pthfilen, var, output, options):
     grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
 
     ax = grid[3]
-    ax, ag3, ah = draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, 1, 0, 2)
+    ax, ag3, ah = draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, gcolor, 1, 0, 2)
 
     ax = grid[0]
-    ax, ag0, ah = draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, 2, 1, 0)
+    ax, ag0, ah = draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, gcolor, 2, 1, 0)
     ax.set_title(timep)
 
     ax = grid[2]
-    ax, ag2, ah = draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, 0, 1, 2)
+    ax, ag2, ah = draw_plotcomponent(ax, dgrid, parts, smin, smax, zoom, ulen, gcolor, 0, 1, 2)
 
     if drawh:
         add_cbar(cbar_mode, grid, ah[3], 0.7, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
