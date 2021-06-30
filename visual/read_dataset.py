@@ -49,26 +49,27 @@ def collect_dataset(h5f, dset_name, level, gridlist):
     return dset, nd, levelmet
 
 
-def collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc):
+def collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, getmap):
     l2, h2, l3, h3 = extr
     for iref in range(maxglev + 1):
         if iref in plotlevels:
             print('REFINEMENT ', iref)
             blks = []
             for ib in gridlist:
-                levok, block, extr = read_block(h5f, var, ib, iref, center, usc)
+                levok, block, extr = read_block(h5f, var, ib, iref, center, usc, getmap)
                 if levok:
                     blks.append(block)
-                    l2.append(extr[0])
-                    h2.append(extr[1])
-                    l3.append(extr[2])
-                    h3.append(extr[3])
+                    if getmap:
+                        l2.append(extr[0])
+                        h2.append(extr[1])
+                        l3.append(extr[2])
+                        h3.append(extr[3])
             if blks != []:
                 refis.append(blks)
     return refis, [l2, h2, l3, h3]
 
 
-def read_block(h5f, dset_name, ig, olev, oc, usc):
+def read_block(h5f, dset_name, ig, olev, oc, usc, getmap):
     h5g = h5f['data']['grid_' + str(ig).zfill(10)]
     level = h5g.attrs['level']
     levok = (level == olev)
@@ -81,6 +82,8 @@ def read_block(h5f, dset_name, ig, olev, oc, usc):
     inb, ind = pu.find_indices(ngb, oc, ledge, redge, False)
     if not any(inb):
         return False, [], []
+    if not getmap:
+        return levok, [inb, [], ledge / usc, redge / usc], []
     clen = h5g.attrs['dl']
     off = h5g.attrs['off']
     n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
