@@ -41,7 +41,7 @@ def print_usage():
     print(' -d VAR[,VAR2], \t--dataset VAR[,VAR2] \t\tspecify one or more datafield(s) to plot [default: print available datafields; all or _all_ to plot all available datafields]')
     print(' -D COLORMAP, \t\t--colormap COLORMAP \t\tuse COLORMAP palette [default: viridis]')
     print(' -e EXTENSION, \t\t--extension EXTENSION \t\tsave plot in file using filename extension EXTENSION [default: png]')
-    print(' -g COLOR, \t\t--gridcolor COLOR \t\tshow grids in color COLOR [default: none]')
+    print(' -g COLOR, \t\t--gridcolor COLOR \t\tshow grids in color COLOR; possible list of colors for different grid refinement levels [default: none]')
     print('\t\t\t--grid-list GRID1[,GRID2] \tplot only selected numbered grid blocks [default: all existing blocks]')
     print(' -l LEVEL1[,LEVEL2], \t--level LEVEL1[,LEVEL2] \tplot only requested grid levels [default: 0 for --uniform, all for --amr]')
     print(' -o OUTPUT, \t\t--output OUTPUT \t\tdump plot files into OUTPUT directory [default: frames]')

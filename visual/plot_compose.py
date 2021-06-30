@@ -28,13 +28,13 @@ def draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, gcolor, 
             vmin, vmax, sctype, symmin, cmap = dgrid[1:]
         for blks in refis:
             for bl in blks:
-                binb, bxyz, ble, bre = bl
+                binb, bxyz, ble, bre, level = bl
                 if binb[ncut]:
                     if bxyz != []:
                         bplot = pu.scale_plotarray(bxyz[ncut], sctype, symmin)
                         ag = ax.imshow(bplot, origin="lower", extent=[ble[n1], bre[n1], ble[n2], bre[n2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
                     if gcolor != '':
-                        ax.plot([ble[n1], ble[n1], bre[n1], bre[n1], ble[n1]], [ble[n2], bre[n2], bre[n2], ble[n2], ble[n2]], '-', linewidth=0.5, alpha=0.1, color=gcolor, zorder=4)
+                        ax.plot([ble[n1], ble[n1], bre[n1], bre[n1], ble[n1]], [ble[n2], bre[n2], bre[n2], ble[n2], ble[n2]], '-', linewidth=0.5, alpha=0.1 * float(level + 1), color=gcolor[level], zorder=4)
     if parts[0]:
         pxyz, pm, nbins, pcolor, psize, center, player = parts[1:]
         if player[0] and player[ncut + 1] != '0':
@@ -122,6 +122,19 @@ def plotcompose(pthfilen, var, output, options):
             plotlevels = 0,
     print('LEVELS TO plot: ', plotlevels)
 
+    if gcolor != '':
+        gaux1 = gcolor.split(',')
+        maxgc = len(gaux1)
+        gaux2 = []
+        ail = 0
+        for il in plotlevels:
+            if il in plotlevels:
+                gaux2.append(gaux1[ail % maxgc])
+                ail += 1
+            else:
+                gaux2.append('none')
+        gcolor = gaux2
+
     if gridlist == '':
         gridlist = range(cgcount)
     else:
@@ -139,8 +152,8 @@ def plotcompose(pthfilen, var, output, options):
         parts = pinfile, pxyz, pm, nbins, pcolor, psize, center, player
         drawh = drawh and pinfile
 
+    refis = []
     if drawd or gcolor != '':
-        refis = []
         extr = [], [], [], []
         if drawu:
             if len(plotlevels) > 1:
