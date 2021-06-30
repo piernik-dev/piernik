@@ -182,7 +182,7 @@ for pthfilen in files_list:
         particles_in_file = 'particle_types' in list(h5f)
     else:
         continue
-    if not (draw_data or draw_part) or (draw_data and dnames == '') or (not draw_data and draw_part and not part_in_file):
+    if not (draw_data or draw_part) or (draw_data and dnames == '') or (not draw_data and draw_part and not particles_in_file):
         partincl = ''
         if particles_in_file:
             partincl = 'and particles'
