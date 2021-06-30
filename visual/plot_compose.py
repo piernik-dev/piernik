@@ -36,8 +36,17 @@ def draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, gcolor, 
                     if gcolor != '':
                         ax.plot([ble[n1], ble[n1], bre[n1], bre[n1], ble[n1]], [ble[n2], bre[n2], bre[n2], ble[n2], ble[n2]], '-', linewidth=0.5, alpha=0.1, color=gcolor, zorder=4)
     if parts[0]:
-        pxyz, pm, nbins, pcolor, psize = parts[1:]
-        ax, ah = draw_particles(ax, pxyz[n1], pxyz[n2], pm, nbins, [smin[n1], smax[n1], smin[n2], smax[n2]], dgrid[0], pcolor, psize)
+        pxyz, pm, nbins, pcolor, psize, center, player = parts[1:]
+        if player[0] and player[ncut + 1] != '0':
+            pmask = np.abs(pxyz[ncut] - center[ncut]) <= float(player[ncut + 1])
+            pn1, pn2 = pxyz[n1][pmask], pxyz[n2][pmask]
+            if nbins > 1:
+                pmm = pm[pmask]
+            else:
+                pmm = pm
+        else:
+            pn1, pn2, pmm = pxyz[n1], pxyz[n2], pm
+        ax, ah = draw_particles(ax, pn1, pn2, pmm, nbins, [smin[n1], smax[n1], smin[n2], smax[n2]], dgrid[0], pcolor, psize)
     ax = plot_axes(ax, ulen, "xyz"[n1], zoom[1][n1], zoom[2][n1], "xyz"[n2], zoom[1][n2], zoom[2][n2])
     return ax, ag, ah
 
@@ -72,7 +81,7 @@ def add_cbar(cbar_mode, grid, ab, fr, clab):
 
 
 def plotcompose(pthfilen, var, output, options):
-    umin, umax, cmap, pcolor, psize, sctype, cu, center, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor = options
+    umin, umax, cmap, pcolor, player, psize, sctype, cu, center, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor = options
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
     time = h5f.attrs['time'][0]
@@ -126,8 +135,8 @@ def plotcompose(pthfilen, var, output, options):
         print('GRIDLIST: ', gridlist)
 
     if drawp:
-        pinfile, pxyz, pm = rd.collect_particles(h5f, drawh, uupd, usc, plotlevels, gridlist)
-        parts = pinfile, pxyz, pm, nbins, pcolor, psize
+        pinfile, pxyz, pm = rd.collect_particles(h5f, drawh, center, player, uupd, usc, plotlevels, gridlist)
+        parts = pinfile, pxyz, pm, nbins, pcolor, psize, center, player
         drawh = drawh and pinfile
 
     if drawd or gcolor != '':

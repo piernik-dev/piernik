@@ -22,6 +22,7 @@ plotlevels, gridlist = '', ''
 dnames = ''
 uaxes = ''
 nbins = 1
+player = True, '0', '0', '0'
 psize = 0
 exten = '.png'
 
@@ -46,6 +47,8 @@ def print_usage():
     print(' -o OUTPUT, \t\t--output OUTPUT \t\tdump plot files into OUTPUT directory [default: frames]')
     print(' -p,\t\t\t--particles\t\t\tscatter particles onto slices [default: switched-off]')
     print(' -P,\t\t\t--particle-color\t\tuse color for particles scattering or colormap for particles histogram plot [default: #1f77b4 (blue) or viridis]')
+    print(' -r W1[,W2,W3],\t\t--particle-slice W1[,W2,W3]\tread particles from layers +/-W1 around center; uses different widths for different projections if W1,W2,W3 requested [default: all particles]')
+    print(' -R W1[,W2,W3],\t\t--particle-space W1[,W2,W3]\tread particles from square +/-W1 around center or cuboid if W1,W2,W3 requested [default: no limits]')
     print(' -s,\t\t\t--particle-sizes\t\tmarker sizes for scattering particles onto slices [default: switched-off]')
     print(' -t SCALETYPE, \t\t--scale SCALETYPE \t\tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: linear]')
     print('\t\t\t--uniform\t\t\treconstruct uniform grid to plot [default: True while no AMR refinement level structure exists]')
@@ -55,7 +58,7 @@ def print_usage():
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:g:hl:o:pP:s:t:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "output=", "particles", "particle-color=", "particle-sizes=", "scale=", "uniform", "zlim=", "zoom="])
+        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:g:hl:o:pP:r:R:s:t:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "output=", "particles", "particle-color=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "uniform", "zlim=", "zoom="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -114,6 +117,21 @@ def cli_params(argv):
             global pcolor
             pcolor = str(arg)
 
+        elif opt in ("-r", "--particle-slice"):
+            global player
+            aux = arg.split(',')
+            if len(aux) >= 3:
+                player = True, aux[0], aux[1], aux[2]
+            else:
+                player = True, aux[0], aux[0], aux[0]
+
+        elif opt in ("-R", "--particle-space"):
+            aux = arg.split(',')
+            if len(aux) >= 3:
+                player = False, aux[0], aux[1], aux[2]
+            else:
+                player = False, aux[0], aux[0], aux[0]
+
         elif opt in ("-s", "--particle-sizes"):
             global psize
             psize = float(arg)
@@ -165,7 +183,7 @@ if pcolor == 'default':
     else:
         pcolor = '#1f77b4'
 
-options = zmin, zmax, cmap, pcolor, psize, sctype, cu, center, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor
+options = zmin, zmax, cmap, pcolor, player, psize, sctype, cu, center, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 

@@ -99,18 +99,38 @@ def read_block(h5f, dset_name, ig, olev, oc, usc, getmap):
     return levok, [inb, [yz, xz, xy], ledge / usc, redge / usc], [d2min, d2max, d3min, d3max]
 
 
-def collect_particles(h5f, drawh, uupd, usc, plotlevels, gridlist):
+def collect_particles(h5f, drawh, center, player, uupd, usc, plotlevels, gridlist):
     if 'particle_types' not in list(h5f):
         return False, [], []
     print('Reading particles')
     px, py, pz, pm = np.array([]), np.array([]), np.array([]), np.array([])
     for gn in h5f['data']:
         if h5f['data'][gn].attrs['level'] in plotlevels and int(gn.split('grid_')[-1]) in gridlist:
-            px = np.concatenate((px, h5f['data'][gn]['particles']['stars']['position_x'][:]))
-            py = np.concatenate((py, h5f['data'][gn]['particles']['stars']['position_y'][:]))
-            pz = np.concatenate((pz, h5f['data'][gn]['particles']['stars']['position_z'][:]))
-            if drawh:
-                pm = np.concatenate((pm, h5f['data'][gn]['particles']['stars']['mass'][:]))
+            if str(player[1]) == '0' and str(player[2]) == '0' and str(player[3]) == '0':
+                px = np.concatenate((px, h5f['data'][gn]['particles']['stars']['position_x'][:]))
+                py = np.concatenate((py, h5f['data'][gn]['particles']['stars']['position_y'][:]))
+                pz = np.concatenate((pz, h5f['data'][gn]['particles']['stars']['position_z'][:]))
+                if drawh:
+                    pm = np.concatenate((pm, h5f['data'][gn]['particles']['stars']['mass'][:]))
+            else:
+                apx = h5f['data'][gn]['particles']['stars']['position_x'][:]
+                apy = h5f['data'][gn]['particles']['stars']['position_y'][:]
+                apz = h5f['data'][gn]['particles']['stars']['position_z'][:]
+                maskx = np.abs(apx - center[0]) <= float(player[1])
+                masky = np.abs(apy - center[1]) <= float(player[2])
+                maskz = np.abs(apz - center[2]) <= float(player[3])
+                if player[0]:
+                    auxm = str(player[1]) == '0' or str(player[2]) == '0' or str(player[3]) == '0'
+                    for i in range(np.size(maskx)):
+                        maskx[i] = maskx[i] or masky[i] or maskz[i] or auxm
+                else:
+                    for i in range(np.size(maskx)):
+                        maskx[i] = maskx[i] and masky[i] and maskz[i]
+                px = np.concatenate((px, apx[maskx]))
+                py = np.concatenate((py, apy[maskx]))
+                pz = np.concatenate((pz, apz[maskx]))
+                if drawh:
+                    pm = np.concatenate((pm, h5f['data'][gn]['particles']['stars']['mass'][maskx]))
 
     if px.size == 0:
         return False, [], []
