@@ -97,40 +97,40 @@ def plotcompose(pthfilen, var, output, options):
 
     parts, dgrid = [drawp, ], [drawd, ]
 
+    if not cu:
+        center = (smax[0] + smin[0]) / 2.0, (smax[1] + smin[1]) / 2.0, (smax[2] + smin[2]) / 2.0
+
+    if drawd and not (drawa or drawu):
+        if maxglev == 0 and gridlist == '':
+            drawu = True
+        else:
+            drawa = True
+
+    if plotlevels == '':
+        if drawa:
+            plotlevels = range(maxglev + 1)
+        else:
+            plotlevels = 0,
+    print('LEVELS TO plot: ', plotlevels)
+
+    if gridlist == '':
+        gridlist = range(cgcount)
+    else:
+        grdl = []
+        for ig in gridlist:
+            if ig >= 0 and ig < cgcount:
+                grdl.append(ig)
+            else:
+                print('Grid block %s does not exist.' % str(ig))
+        gridlist = grdl
+        print('GRIDLIST: ', gridlist)
+
     if drawp:
-        pinfile, pxyz, pm = rd.collect_particles(h5f, nbins, uupd, usc)
+        pinfile, pxyz, pm = rd.collect_particles(h5f, drawh, uupd, usc, plotlevels, gridlist)
         parts = pinfile, pxyz, pm, nbins, pcolor, psize
         drawh = drawh and pinfile
 
     if drawd or gcolor != '':
-        if not cu:
-            center = (smax[0] + smin[0]) / 2.0, (smax[1] + smin[1]) / 2.0, (smax[2] + smin[2]) / 2.0
-
-        if drawd and not (drawa or drawu):
-            if maxglev == 0 and gridlist == '':
-                drawu = True
-            else:
-                drawa = True
-
-        if plotlevels == '':
-            if drawa:
-                plotlevels = range(maxglev + 1)
-            else:
-                plotlevels = 0,
-        print('LEVELS TO plot: ', plotlevels)
-
-        if gridlist == '':
-            gridlist = range(cgcount)
-        else:
-            grdl = []
-            for ig in gridlist:
-                if ig >= 0 and ig < cgcount:
-                    grdl.append(ig)
-                else:
-                    print('Grid block %s does not exist.' % str(ig))
-            gridlist = grdl
-            print('GRIDLIST: ', gridlist)
-
         refis = []
         extr = [], [], [], []
         if drawu:

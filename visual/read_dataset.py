@@ -99,18 +99,21 @@ def read_block(h5f, dset_name, ig, olev, oc, usc, getmap):
     return levok, [inb, [yz, xz, xy], ledge / usc, redge / usc], [d2min, d2max, d3min, d3max]
 
 
-def collect_particles(h5f, nbins, uupd, usc):
+def collect_particles(h5f, drawh, uupd, usc, plotlevels, gridlist):
     if 'particle_types' not in list(h5f):
         return False, [], []
     print('Reading particles')
     px, py, pz, pm = np.array([]), np.array([]), np.array([]), np.array([])
     for gn in h5f['data']:
-        px = np.concatenate((px, h5f['data'][gn]['particles']['stars']['position_x'][:]))
-        py = np.concatenate((py, h5f['data'][gn]['particles']['stars']['position_y'][:]))
-        pz = np.concatenate((pz, h5f['data'][gn]['particles']['stars']['position_z'][:]))
-        if nbins > 1:
-            pm = np.concatenate((pm, h5f['data'][gn]['particles']['stars']['mass'][:]))
+        if h5f['data'][gn].attrs['level'] in plotlevels and int(gn.split('grid_')[-1]) in gridlist:
+            px = np.concatenate((px, h5f['data'][gn]['particles']['stars']['position_x'][:]))
+            py = np.concatenate((py, h5f['data'][gn]['particles']['stars']['position_y'][:]))
+            pz = np.concatenate((pz, h5f['data'][gn]['particles']['stars']['position_z'][:]))
+            if drawh:
+                pm = np.concatenate((pm, h5f['data'][gn]['particles']['stars']['mass'][:]))
 
+    if px.size == 0:
+        return False, [], []
     if uupd:
         return True, pu.list3_division([px, py, pz], usc), pm
 
