@@ -21,9 +21,9 @@ def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
     return ax
 
 
-def draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, gcolor, ncut, n1, n2):
+def draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, drawg, gcolor, ncut, n1, n2):
     ag, ah = [], []
-    if dgrid[0] or gcolor != '':
+    if dgrid[0] or drawg:
         if dgrid[0]:
             vmin, vmax, sctype, symmin, cmap = dgrid[1:]
         for blks in refis:
@@ -33,7 +33,7 @@ def draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, gcolor, 
                     if bxyz != []:
                         bplot = pu.scale_plotarray(bxyz[ncut], sctype, symmin)
                         ag = ax.imshow(bplot, origin="lower", extent=[ble[n1], bre[n1], ble[n2], bre[n2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
-                    if gcolor != '':
+                    if drawg:
                         ax.plot([ble[n1], ble[n1], bre[n1], bre[n1], ble[n1]], [ble[n2], bre[n2], bre[n2], ble[n2], ble[n2]], '-', linewidth=0.5, alpha=0.1 * float(level + 1), color=gcolor[level], zorder=4)
     if parts[0]:
         pxyz, pm, nbins, pcolor, psize, center, player = parts[1:]
@@ -81,7 +81,7 @@ def add_cbar(cbar_mode, grid, ab, fr, clab):
 
 
 def plotcompose(pthfilen, var, output, options):
-    umin, umax, cmap, pcolor, player, psize, sctype, cu, center, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor = options
+    umin, umax, cmap, pcolor, player, psize, sctype, cu, center, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor = options
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
     time = h5f.attrs['time'][0]
@@ -109,7 +109,7 @@ def plotcompose(pthfilen, var, output, options):
     if not cu:
         center = (smax[0] + smin[0]) / 2.0, (smax[1] + smin[1]) / 2.0, (smax[2] + smin[2]) / 2.0
 
-    if drawd and not (drawa or drawu):
+    if (drawd or (drawg and not drawp)) and not (drawa or drawu):
         if maxglev == 0 and gridlist == '':
             drawu = True
         else:
@@ -122,7 +122,7 @@ def plotcompose(pthfilen, var, output, options):
             plotlevels = 0,
     print('LEVELS TO plot: ', plotlevels)
 
-    if gcolor != '':
+    if drawg:
         gaux1 = gcolor.split(',')
         maxgc = len(gaux1)
         gaux2 = []
@@ -153,7 +153,7 @@ def plotcompose(pthfilen, var, output, options):
         drawh = drawh and pinfile
 
     refis = []
-    if drawd or gcolor != '':
+    if drawd or drawg:
         extr = [], [], [], []
         if drawu:
             if len(plotlevels) > 1:
@@ -161,8 +161,8 @@ def plotcompose(pthfilen, var, output, options):
             print('Plotting base level %s' % plotlevels[0])
             refis, extr = rd.reconstruct_uniform(h5f, var, plotlevels[0], gridlist, cu, center, smin, smax)
 
-        if drawa or gcolor != '':
-            refis, extr = rd.collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, drawa)
+        if drawa or drawg:
+            refis, extr = rd.collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, drawd)
 
         if refis == []:
             drawd = False
@@ -178,7 +178,7 @@ def plotcompose(pthfilen, var, output, options):
 
     h5f.close()
 
-    if not (parts[0] or drawd):
+    if not (parts[0] or drawd or drawg):
         print('No particles or levels to plot. Skipping.')
         return
 
@@ -192,14 +192,14 @@ def plotcompose(pthfilen, var, output, options):
     grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
 
     ax = grid[3]
-    ax, ag3, ah = draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, gcolor, 1, 0, 2)
+    ax, ag3, ah = draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, drawg, gcolor, 1, 0, 2)
 
     ax = grid[0]
-    ax, ag0, ah = draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, gcolor, 2, 1, 0)
+    ax, ag0, ah = draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, drawg, gcolor, 2, 1, 0)
     ax.set_title(timep)
 
     ax = grid[2]
-    ax, ag2, ah = draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, gcolor, 0, 1, 2)
+    ax, ag2, ah = draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, drawg, gcolor, 0, 1, 2)
 
     if drawh:
         add_cbar(cbar_mode, grid, ah[3], 0.7, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))

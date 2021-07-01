@@ -17,6 +17,7 @@ zoom = False, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]
 zmin, zmax = 0.0, 0.0
 draw_part = False
 draw_data = False
+draw_grid = False
 draw_uni, draw_amr = False, False
 plotlevels, gridlist = '', ''
 dnames = ''
@@ -97,8 +98,9 @@ def cli_params(argv):
             print(exten)
 
         elif opt in ("-g", "--gridcolor"):
-            global gcolor
+            global gcolor, draw_grid
             gcolor = str(arg)
+            draw_grid = True
 
         elif opt in ("-l", "--level"):
             global plotlevels
@@ -183,7 +185,7 @@ if pcolor == 'default':
     else:
         pcolor = '#1f77b4'
 
-options = zmin, zmax, cmap, pcolor, player, psize, sctype, cu, center, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor
+options = zmin, zmax, cmap, pcolor, player, psize, sctype, cu, center, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 
@@ -200,7 +202,7 @@ for pthfilen in files_list:
         particles_in_file = 'particle_types' in list(h5f)
     else:
         continue
-    if not (draw_data or draw_part) or (draw_data and dnames == '') or (not draw_data and draw_part and not particles_in_file):
+    if not (draw_data or draw_part or draw_grid) or (draw_data and dnames == '') or (not draw_data and not draw_grid and draw_part and not particles_in_file):
         partincl = ''
         if particles_in_file:
             partincl = 'and particles'
@@ -213,7 +215,7 @@ for pthfilen in files_list:
     filen = pthfilen.split('/')[-1]
 
     print("Reading file: %s" % pthfilen)
-    prd, prp = '', '',
+    prd, prp, prg = '', '', ''
     if draw_data:
         if dnames == "_all_" or dnames == "all":
             varlist = h5f['field_types'].keys()
@@ -225,14 +227,16 @@ for pthfilen in files_list:
                 prp = 'particles and '
             else:
                 print('Particles not available in the file!')
+    elif particles_in_file:
+        varlist = ['part']
+        prp = 'particles only'
+    elif draw_grid:
+        varlist = ['grid']
+        prg = 'grid only'
     else:
-        if particles_in_file:
-            varlist = ['part']
-            prp = 'particles only'
-        else:
-            varlist = []
+        varlist = []
     if varlist != []:
-        print('Going to read ' + prp + prd)
+        print('Going to read ' + prp + prd + prg)
 
     for var in varlist:
         if (not draw_data or var in list(h5f['field_types'].keys())):
