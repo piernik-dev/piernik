@@ -31,7 +31,11 @@ print('PIERNIK VISUALIZATION FACILITY')
 
 
 def print_usage():
-    print('Usage: ./pvf.py <file> [options]')
+    print('Usage: ./pvf.py <HDF5 files> [options]')
+    print('')
+    print('Usage for grid structure:  ./pvf.py <HDF5 files> -g COLORS [options]')
+    print('Usage for grid datafields: ./pvf.py <HDF5 files> -d VARS [options]')
+    print('Usage for particles:       ./pvf.py <HDF5 files> -p [options]')
     print('')
     print('Options:')
     print(' -h, \t\t\t--help \t\t\t\tprint this help')
@@ -172,13 +176,19 @@ if (len(sys.argv) < 2):
     print_usage()
     exit()
 
-iw = 1
+files_list = []
+optilist = []
 for word in sys.argv[1:]:
-    if word[0] == '-':
-        break
-    iw += 1
+    if word.split('.')[-1] == 'h5':
+        files_list.append(word)
+    else:
+        optilist.append(word)
 
-cli_params(sys.argv[iw:])
+if files_list == []:
+    print('No h5 files selected. See ./pvf.py -h for help.')
+
+cli_params(optilist)
+
 if pcolor == 'default':
     if nbins > 1:
         pcolor = 'viridis'
@@ -190,18 +200,14 @@ if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 
 
-files_list = sys.argv[1:iw]
 for pthfilen in files_list:
     print('')
     file_exists = os.path.exists(pthfilen)
     if not file_exists:
         print('The file %s does not exist!' % pthfilen)
         continue
-    if pthfilen.split('.')[-1] == 'h5':
-        h5f = h5py.File(pthfilen, 'r')
-        particles_in_file = 'particle_types' in list(h5f)
-    else:
-        continue
+    h5f = h5py.File(pthfilen, 'r')
+    particles_in_file = 'particle_types' in list(h5f)
     if not (draw_data or draw_part or draw_grid) or (draw_data and dnames == '') or (not draw_data and not draw_grid and draw_part and not particles_in_file):
         partincl = ''
         if particles_in_file:
