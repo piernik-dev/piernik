@@ -15,7 +15,7 @@ def reconstruct_uniform(h5f, var, level, gridlist, cu, center, smin, smax):
     else:
         ind = int(nd[0] / 2), int(nd[1] / 2), int(nd[2] / 2)
 
-    xy = dset[:, :, ind[2]]
+    xy = dset[:, :, ind[2]].swapaxes(0, 1)
     xz = dset[:, ind[1], :].swapaxes(0, 1)
     yz = dset[ind[0], :, :].swapaxes(0, 1)
 
@@ -89,7 +89,7 @@ def read_block(h5f, dset_name, ig, olev, oc, usc, getmap):
     n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
     ce = n_b + off
     dset = h5g[dset_name][:, :, :].swapaxes(0, 2)
-    xy = dset[:, :, ind[2]]
+    xy = dset[:, :, ind[2]].swapaxes(0, 1)
     xz = dset[:, ind[1], :].swapaxes(0, 1)
     yz = dset[ind[0], :, :].swapaxes(0, 1)
     d3min, d3max = np.min(dset), np.max(dset)

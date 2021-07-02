@@ -199,14 +199,14 @@ def plotcompose(pthfilen, var, output, options):
     grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
 
     ax = grid[3]
-    ax, ag3, ah = draw_plotcomponent(ax, refis, field, parts, equip, 1, 0, 2)
+    ax, ag3, ah = draw_plotcomponent(ax, refis, field, parts, equip, 0, 1, 2)
 
     ax = grid[0]
-    ax, ag0, ah = draw_plotcomponent(ax, refis, field, parts, equip, 2, 1, 0)
+    ax, ag0, ah = draw_plotcomponent(ax, refis, field, parts, equip, 2, 0, 1)
     ax.set_title(timep)
 
     ax = grid[2]
-    ax, ag2, ah = draw_plotcomponent(ax, refis, field, parts, equip, 0, 1, 2)
+    ax, ag2, ah = draw_plotcomponent(ax, refis, field, parts, equip, 1, 0, 2)
 
     if drawh:
         add_cbar(cbar_mode, grid, ah[3], 0.7, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
