@@ -21,7 +21,7 @@ def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
     return ax
 
 
-def draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, drawg, gcolor, ncut, n1, n2):
+def draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, center, ulen, drawg, gcolor, ncut, n1, n2):
     ag, ah = [], []
     if dgrid[0] or drawg:
         if dgrid[0]:
@@ -36,7 +36,7 @@ def draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, drawg, g
                     if drawg:
                         ax.plot([ble[n1], ble[n1], bre[n1], bre[n1], ble[n1]], [ble[n2], bre[n2], bre[n2], ble[n2], ble[n2]], '-', linewidth=0.5, alpha=0.1 * float(level + 1), color=gcolor[level], zorder=4)
     if parts[0]:
-        pxyz, pm, nbins, pcolor, psize, center, player = parts[1:]
+        pxyz, pm, nbins, pcolor, psize, player = parts[1:]
         if player[0] and player[ncut + 1] != '0':
             pmask = np.abs(pxyz[ncut] - center[ncut]) <= float(player[ncut + 1])
             pn1, pn2 = pxyz[n1][pmask], pxyz[n2][pmask]
@@ -48,6 +48,10 @@ def draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, drawg, g
             pn1, pn2, pmm = pxyz[n1], pxyz[n2], pm
         ax, ah = draw_particles(ax, pn1, pn2, pmm, nbins, [smin[n1], smax[n1], smin[n2], smax[n2]], dgrid[0], pcolor, psize)
     ax = plot_axes(ax, ulen, "xyz"[n1], zoom[1][n1], zoom[2][n1], "xyz"[n2], zoom[1][n2], zoom[2][n2])
+    ax.set_xticks([center[n1]], minor=True)
+    ax.set_yticks([center[n2]], minor=True)
+    ax.tick_params(axis='x', which='minor', color='silver', bottom='on', top='on', width=2., length=6.)
+    ax.tick_params(axis='y', which='minor', color='silver', left='on', right='on', width=2., length=6.)
     return ax, ag, ah
 
 
@@ -149,7 +153,7 @@ def plotcompose(pthfilen, var, output, options):
 
     if drawp:
         pinfile, pxyz, pm = rd.collect_particles(h5f, drawh, center, player, uupd, usc, plotlevels, gridlist)
-        parts = pinfile, pxyz, pm, nbins, pcolor, psize, center, player
+        parts = pinfile, pxyz, pm, nbins, pcolor, psize, player
         drawh = drawh and pinfile
 
     refis = []
@@ -192,14 +196,14 @@ def plotcompose(pthfilen, var, output, options):
     grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
 
     ax = grid[3]
-    ax, ag3, ah = draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, drawg, gcolor, 1, 0, 2)
+    ax, ag3, ah = draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, center, ulen, drawg, gcolor, 1, 0, 2)
 
     ax = grid[0]
-    ax, ag0, ah = draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, drawg, gcolor, 2, 1, 0)
+    ax, ag0, ah = draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, center, ulen, drawg, gcolor, 2, 1, 0)
     ax.set_title(timep)
 
     ax = grid[2]
-    ax, ag2, ah = draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, ulen, drawg, gcolor, 0, 1, 2)
+    ax, ag2, ah = draw_plotcomponent(ax, refis, dgrid, parts, smin, smax, zoom, center, ulen, drawg, gcolor, 0, 1, 2)
 
     if drawh:
         add_cbar(cbar_mode, grid, ah[3], 0.7, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
