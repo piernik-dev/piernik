@@ -151,6 +151,8 @@ contains
 !! <tr><td>tune_zeq     </td><td>1.0    </td><td>real             </td><td>\copydoc gravity::tune_zeq     </td></tr>
 !! <tr><td>tune_zeq_bnd </td><td>1.0    </td><td>real             </td><td>\copydoc gravity::tune_zeq_bnd </td></tr>
 !! <tr><td>r_grav       </td><td>1.e6   </td><td>real             </td><td>\copydoc gravity::r_grav       </td></tr>
+!! <tr><td>ptmass2      </td><td>0.0    </td><td>non-negative real</td><td>\copydoc gravity::ptmass2      </td></tr>
+!! <tr><td>ptm2_x       </td><td>0.0    </td><td>real             </td><td>\copydoc gravity::ptm2_x       </td></tr>
 !! <tr><td>n_gravr      </td><td>0      </td><td>real             </td><td>\copydoc gravity::n_gravr      </td></tr>
 !! <tr><td>user_grav    </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::user_grav    </td></tr>
 !! <tr><td>variable_gp  </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::variable_gp  </td></tr>
@@ -785,7 +787,7 @@ contains
    subroutine grav_roche(gp, ax, lhn, flatten)
 
       use axes_M,     only: axes
-      use constants,  only: ndims, LO, HI, ydim, zdim, half, GEO_XYZ
+      use constants,  only: ndims, LO, HI, ydim, zdim, half, GEO_XYZ, GEO_RPZ
       use dataio_pub, only: die
       use domain,     only: dom
       use units,      only: newtong
@@ -799,21 +801,32 @@ contains
       integer                                             :: j, k
       real                                                :: GM1, GM2, z2, yz2, r_smooth2
 
-      if (dom%geometry_type /= GEO_XYZ) call die("[gravity:grav_roche] Non-cartesian geometry is not implemented yet.")
+      if (dom%geometry_type /= GEO_XYZ .and. dom%geometry_type /= GEO_RPZ) call die("[gravity:grav_roche] geometry is not implemented yet.")
 
       r_smooth2 = r_smooth**2
       GM1 =  newtong * ptmass
       GM2 =  newtong * ptmass2
 
-      do k = lhn(zdim,LO), lhn(zdim,HI)
-         z2 = ax%z(k)**2
-         do j = lhn(ydim,LO), lhn(ydim,HI)
-            yz2 = ax%y(j)**2 + z2
-            gp(:,j,k) =  - GM1 / sqrt((ax%x(:) - ptm_x)**2  + yz2 + r_smooth2) &
-                 &       - GM2 / sqrt((ax%x(:) - ptm2_x)**2 + yz2 + r_smooth2) &
-                 &       - half * Omega**2 * ((ax%x(:) - cmass_x)**2 + yz2)
-         enddo
-      enddo
+      select case (dom%geometry_type)
+         case (GEO_XYZ)
+            do k = lhn(zdim,LO), lhn(zdim,HI)
+               z2 = ax%z(k)**2
+               do j = lhn(ydim,LO), lhn(ydim,HI)
+                  yz2 = ax%y(j)**2 + z2
+                  gp(:,j,k) =  - GM1 / sqrt((ax%x(:) - ptm_x)**2  + yz2 + r_smooth2) &
+                       &       - GM2 / sqrt((ax%x(:) - ptm2_x)**2 + yz2 + r_smooth2) &
+                       &       - half * Omega**2 * ((ax%x(:) - cmass_x)**2 + yz2)
+               enddo
+            enddo
+         case (GEO_RPZ)
+            do k = lhn(zdim,LO), lhn(zdim,HI)
+               do j = lhn(ydim,LO), lhn(ydim,HI)
+                  gp(:,j,k) =  - GM1 / sqrt((ax%x(:) - ptm_x)**2 + r_smooth2) &
+                       &       - GM2 / sqrt((ax%x(:) - ptm2_x)**2 + r_smooth2) &
+                       &       - half * Omega**2 * ((ax%x(:) - cmass_x)**2)
+               enddo
+            enddo
+      endselect
 
       if (.false. .and. flatten) j=0 ! suppress compiler warnings on unused arguments
 
