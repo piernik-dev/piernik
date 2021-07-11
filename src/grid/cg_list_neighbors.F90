@@ -307,14 +307,14 @@ contains
                            tag = cart_uniq_tag([-ix, -iy, -iz], n_grid_id)
                            overlap(:, LO) = max(cg%lhn(:, LO), cg%ijkse(:, LO) + [ ix, iy, iz ] * cg%n_b)
                            overlap(:, HI) = min(cg%lhn(:, HI), cg%ijkse(:, HI) + [ ix, iy, iz ] * cg%n_b)
-                           call cg%i_bnd(n_dd)%add_seg(n_p, overlap, tag)
+                           call cg%i_bnd(n_dd)%add_seg(n_p, overlap, tag, n_grid_id)
                            if (n_p == proc) cg%i_bnd(n_dd)%seg(ubound(cg%i_bnd(n_dd)%seg, dim=1))%local => l_pse%l_pse(n_grid_id)%p
 
                            ! outgoing part:
                            tag = cart_uniq_tag([ix, iy, iz], cg%grid_id)
                            overlap(:, LO) = max(cg%ijkse(:, LO), cg%lhn(:, LO) + [ ix, iy, iz ] * cg%n_b)
                            overlap(:, HI) = min(cg%ijkse(:, HI), cg%lhn(:, HI) + [ ix, iy, iz ] * cg%n_b)
-                           call cg%o_bnd(n_dd)%add_seg(n_p, overlap, tag)
+                           call cg%o_bnd(n_dd)%add_seg(n_p, overlap, tag, n_grid_id)
 
                         endif
                      endif
@@ -514,7 +514,7 @@ contains
                                                 else
                                                    dd = cor_dim
                                                 endif
-                                                call cg%i_bnd(dd)%add_seg(j, poff, tag)
+                                                call cg%i_bnd(dd)%add_seg(j, poff, tag, b)
                                                 if (j == proc) cg%i_bnd(dd)%seg(ubound(cg%i_bnd(dd)%seg, dim=1))%local => l_pse%l_pse(b)%p
                                              endif
                                           endif
@@ -559,7 +559,7 @@ contains
                                                 else
                                                    dd = cor_dim
                                                 endif
-                                                call cg%o_bnd(dd)%add_seg(j, poff, tag)
+                                                call cg%o_bnd(dd)%add_seg(j, poff, tag, b)
                                              endif
                                           endif
                                        enddo
@@ -708,7 +708,7 @@ contains
                                                       if (is_overlap(e_guard, poff)) then
                                                          aux(:, LO) = max(e_guard(:, LO), poff(:, LO))
                                                          aux(:, HI) = min(e_guard(:, HI), poff(:, HI))
-                                                         call cgl%cg%o_bnd(cor_dim)%add_seg(j, aux, m_tag + uniq_tag(this%dot%gse(j)%c(b)%se, aux, cgl%cg%grid_id))
+                                                         call cgl%cg%o_bnd(cor_dim)%add_seg(j, aux, m_tag + uniq_tag(this%dot%gse(j)%c(b)%se, aux, cgl%cg%grid_id), b)
                                                       endif
 
                                                       poff(:, LO) = box_narrow(:, LO) + [ ix, iy, iz ] * per(:)
@@ -716,7 +716,7 @@ contains
                                                       if (is_overlap(e_guard_wide, poff)) then
                                                          aux(:, LO) = max(e_guard_wide(:, LO), poff(:, LO))
                                                          aux(:, HI) = min(e_guard_wide(:, HI), poff(:, HI))
-                                                         call cgl%cg%i_bnd(cor_dim)%add_seg(j, aux, m_tag + uniq_tag(cgl%cg%my_se, aux, b))
+                                                         call cgl%cg%i_bnd(cor_dim)%add_seg(j, aux, m_tag + uniq_tag(cgl%cg%my_se, aux, b), b)
                                                          if (j == proc) cgl%cg%i_bnd(cor_dim)%seg(ubound(cgl%cg%i_bnd(cor_dim)%seg, dim=1))%local => l_pse%l_pse(b)%p
                                                       endif
                                                    endif

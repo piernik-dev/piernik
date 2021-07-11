@@ -62,6 +62,7 @@ module grid_cont_bnd
 
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se2  !< auxiliary range, used in cg_level_connected:vertical_bf_prep
       class(grid_container_bnd_t), pointer :: local        !< set this pointer to non-null when the exchange is local
+      integer :: r_grid_id                                 !< grid_id on target process
    end type segment
 
    !> \brief Array of boundary segments to exchange
@@ -178,7 +179,7 @@ contains
 
 !> \brief Add a new segment, reallocate if necessary
 
-   subroutine add_seg(this, proc, se, tag)
+   subroutine add_seg(this, proc, se, tag, gid)
 
       use dataio_pub, only: die
 
@@ -188,6 +189,7 @@ contains
       integer(kind=4),                              intent(in)    :: proc !< process to be communicated
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: se   !< segment definition
       integer(kind=4),                              intent(in)    :: tag  !< tag for MPI calls
+      integer,                                      intent(in)    :: gid  !< grid_id on proc
 
       type(segment), dimension(:), allocatable :: tmp
       integer :: g
@@ -207,6 +209,7 @@ contains
       this%seg(g)%proc = proc
       this%seg(g)%se = se
       this%seg(g)%tag = tag
+      this%seg(g)%r_grid_id = gid
       nullify(this%seg(g)%local)
 
    end subroutine add_seg
