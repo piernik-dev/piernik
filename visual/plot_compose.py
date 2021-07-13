@@ -10,7 +10,7 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import plot_utils as pu
 import read_dataset as rd
 import time as timer
-matplotlib.use('cairo')      # choose output format
+# matplotlib.use('cairo')      # choose output format
 
 
 def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
@@ -21,8 +21,41 @@ def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
     return ax
 
 
+def plot1d(refis, field, parts, equip, ncut, n1, n2):
+    markers = [':', '--', '-']
+    drawg, gcolor, smin, smax, zoom, center, ulen, output, labf, timep, autsc = equip
+    vmin, vmax, sctype, symmin, cmap = field[1:]
+    fig1d = P.figure(ncut + 2, figsize=(10, 8))
+
+    ax = fig1d.add_subplot(111)
+    P.xlim(zoom[1][ncut], zoom[2][ncut])
+    if not autsc:
+        P.ylim(vmin, vmax)
+
+    for blks in refis:
+        for bl in blks:
+            binb, ble, bre, level, b1d = bl[1:]
+            if binb[n1] and binb[n2]:
+                if b1d != []:
+                    bplot = pu.scale_plotarray(b1d[ncut], sctype, symmin)
+                    dxh = (bre[ncut] - ble[ncut]) / float(len(b1d[ncut])) / 2.0
+                    vax = np.linspace(ble[ncut] + dxh, bre[ncut] - dxh, len(b1d[ncut]))
+                    ax.plot(vax, bplot, linestyle=markers[level], color='k')
+
+    axis = "xyz"[ncut]
+    P.ylabel(labf)
+    P.xlabel("%s [%s]" % (axis, pu.labelx()(ulen)))
+    P.title(timep)
+    P.tight_layout()
+    P.draw()
+    out1d = output[1] + axis + '_' + output[2]
+    fig1d.savefig(out1d, facecolor='white')
+    print(out1d, "written to disk")
+    P.clf()
+
+
 def draw_plotcomponent(ax, refis, field, parts, equip, ncut, n1, n2):
-    drawg, gcolor, smin, smax, zoom, center, ulen = equip
+    drawg, gcolor, smin, smax, zoom, center, ulen = equip[:-4]
     ag, ah = [], []
     if field[0] or drawg:
         if field[0]:
@@ -174,7 +207,7 @@ def plotcompose(pthfilen, var, output, options):
         else:
             if drawd:
                 d2min, d2max, d3min, d3max = min(extr[0]), max(extr[1]), min(extr[2]), max(extr[3])
-                vmin, vmax, symmin = pu.scale_manage(sctype, refis, umin, umax, d2min, d2max)
+                vmin, vmax, symmin, autsc = pu.scale_manage(sctype, refis, umin, umax, d2min, d2max)
 
                 print('3D data value range: ', d3min, d3max)
                 print('Slices  value range: ', d2min, d2max)
@@ -187,14 +220,19 @@ def plotcompose(pthfilen, var, output, options):
         print('No particles or levels to plot. Skipping.')
         return
 
-    fig = P.figure(1, figsize=(10, 10.5))
-
     cbar_mode = pu.colorbar_mode(drawd, drawh)
 
     if not zoom[0]:
         zoom = False, smin, smax
 
-    equip = drawg, gcolor, smin, smax, zoom, center, ulen
+    vlab = var + " [%s]" % pu.labelx()(uvar)
+    equip = drawg, gcolor, smin, smax, zoom, center, ulen, output, vlab, timep, autsc
+
+    plot1d(refis, field, parts, equip, 0, 1, 2)
+    plot1d(refis, field, parts, equip, 1, 0, 2)
+    plot1d(refis, field, parts, equip, 2, 0, 1)
+
+    fig = P.figure(1, figsize=(10, 10.5))
 
     grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
 
@@ -212,7 +250,7 @@ def plotcompose(pthfilen, var, output, options):
         add_cbar(cbar_mode, grid, ah[3], 0.7, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
 
     if drawd:
-        add_cbar(cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 0.1, var + " [%s]" % pu.labelx()(uvar))
+        add_cbar(cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 0.1, vlab)
 
     P.draw()
     P.savefig(output[0], facecolor='white')

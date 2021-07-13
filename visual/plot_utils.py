@@ -14,8 +14,10 @@ def fsym(vmin, vmax):
 def scale_manage(sctype, refis, umin, umax, d2min, d2max):
 
     symmin = 1.0
+    autoscale = False
     if (umin == 0.0 and umax == 0.0):
         vmin, vmax = d2min, d2max
+        autoscale = True
     else:
         vmin, vmax = umin, umax
 
@@ -46,7 +48,7 @@ def scale_manage(sctype, refis, umin, umax, d2min, d2max):
         vmin = -vmax
         print('SYMMIN value for SYMLOG scaletype: %s' % symmin)
 
-    return vmin, vmax, symmin
+    return vmin, vmax, symmin, autoscale
 
 
 def check_minimum_data(refis, extended):
