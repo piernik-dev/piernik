@@ -12,6 +12,7 @@ pcolor = 'default'
 gcolor = ''
 plotdir = 'frames'
 sctype = 'linear'
+axcuts = 'default'
 cu, center = False, [0.0, 0.0, 0.0]
 zoom = False, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]
 zmin, zmax = 0.0, 0.0
@@ -39,6 +40,7 @@ def print_usage():
     print('')
     print('Options:')
     print(' -h, \t\t\t--help \t\t\t\tprint this help')
+    print(' -a CUT1[,CUT2], \t--axes CUT1[,CUT2] \t\tselect plot cuts from the following: 1x, 1y, 1z, xy, xz, yz, 1D, 2D [default: all 2D cuts, otherwise all 1D]')
     print('\t\t\t--amr\t\t\t\tcollect all refinement levels of grid to plot [default: True while AMR refinement level structure exists]')
     print(' -b BINS, \t\t--bins BINS \t\t\tmake a 2D histogram plot using BINS number instead of scattering particles [default: 1, which leads to scattering]')
     print(' -c CX,CY,CZ, \t\t--center CX,CY,CZ \t\tplot cuts across given point coordinates CX, CY, CZ [default: computed domain center]')
@@ -63,7 +65,7 @@ def print_usage():
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "b:c:d:D:e:g:hl:o:pP:r:R:s:t:u:z:", ["help", "amr", "bins=", "center=", "colormap=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "output=", "particles", "particle-color=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "uniform", "units=", "zlim=", "zoom="])
+        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:g:hl:o:pP:r:R:s:t:u:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "output=", "particles", "particle-color=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "uniform", "units=", "zlim=", "zoom="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -72,6 +74,10 @@ def cli_params(argv):
         if opt in ("-h", "--help"):
             print_usage()
             sys.exit()
+
+        elif opt in ("-a", "--axes"):
+            global axcuts
+            axcuts = arg.split(',')
 
         elif opt in ("-b", "--bins"):
             global nbins
@@ -195,7 +201,27 @@ if pcolor == 'default':
     else:
         pcolor = '#1f77b4'
 
-options = zmin, zmax, cmap, pcolor, player, psize, sctype, cu, center, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor
+p1x, p1y, p1z, p2xy, p2xz, p2yz, p2 = False, False, False, False, False, False, False
+if 'all' in axcuts:
+    p1x, p1y, p1z, p2xy, p2xz, p2yz, p2 = True, True, True, True, True, True, True
+if 'default' in axcuts or '2D' in axcuts:
+    p2xy, p2xz, p2yz, p2 = True, True, True, True
+if 'xy' in axcuts:
+    p2, p2xy = True, True
+if 'xz' in axcuts:
+    p2, p2xz = True, True
+if 'yz' in axcuts:
+    p2, p2yz = True, True
+if '1D' in axcuts:
+    p1x, p1y, p1z = True, True, True
+if '1x' in axcuts:
+    p1x = True
+if '1y' in axcuts:
+    p1y = True
+if '1z' in axcuts:
+    p1z = True
+axc = p1x, p1y, p1z, p2xy, p2xz, p2yz, p2
+options = axc, zmin, zmax, cmap, pcolor, player, psize, sctype, cu, center, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 

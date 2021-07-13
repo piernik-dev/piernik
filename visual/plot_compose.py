@@ -119,7 +119,7 @@ def add_cbar(cbar_mode, grid, ab, fr, clab):
 
 
 def plotcompose(pthfilen, var, output, options):
-    umin, umax, cmap, pcolor, player, psize, sctype, cu, center, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor = options
+    axc, umin, umax, cmap, pcolor, player, psize, sctype, cu, center, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor = options
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
     time = h5f.attrs['time'][0]
@@ -228,31 +228,40 @@ def plotcompose(pthfilen, var, output, options):
     vlab = var + " [%s]" % pu.labelx()(uvar)
     equip = drawg, gcolor, smin, smax, zoom, center, ulen, output, vlab, timep, autsc
 
-    plot1d(refis, field, parts, equip, 0, 1, 2)
-    plot1d(refis, field, parts, equip, 1, 0, 2)
-    plot1d(refis, field, parts, equip, 2, 0, 1)
+    p1x, p1y, p1z, p2xy, p2xz, p2yz, p2 = axc
+    if p1x:
+        plot1d(refis, field, parts, equip, 0, 1, 2)
+    if p1y:
+        plot1d(refis, field, parts, equip, 1, 0, 2)
+    if p1z:
+        plot1d(refis, field, parts, equip, 2, 0, 1)
 
-    fig = P.figure(1, figsize=(10, 10.5))
+    if p2:
+        fig = P.figure(1, figsize=(10, 10.5))
 
-    grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
+        grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
+        ag0, ag2, ag3 = [], [], []
 
-    ax = grid[3]
-    ax, ag3, ah = draw_plotcomponent(ax, refis, field, parts, equip, 0, 1, 2)
+        if p2yz:
+            ax = grid[3]
+            ax, ag3, ah = draw_plotcomponent(ax, refis, field, parts, equip, 0, 1, 2)
 
-    ax = grid[0]
-    ax, ag0, ah = draw_plotcomponent(ax, refis, field, parts, equip, 2, 0, 1)
-    ax.set_title(timep)
+        if p2xz:
+            ax = grid[2]
+            ax, ag2, ah = draw_plotcomponent(ax, refis, field, parts, equip, 1, 0, 2)
 
-    ax = grid[2]
-    ax, ag2, ah = draw_plotcomponent(ax, refis, field, parts, equip, 1, 0, 2)
+        if p2xy:
+            ax = grid[0]
+            ax, ag0, ah = draw_plotcomponent(ax, refis, field, parts, equip, 2, 0, 1)
+        ax.set_title(timep)
 
-    if drawh:
-        add_cbar(cbar_mode, grid, ah[3], 0.7, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
+        if drawh:
+            add_cbar(cbar_mode, grid, ah[3], 0.7, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
 
-    if drawd:
-        add_cbar(cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 0.1, vlab)
+        if drawd:
+            add_cbar(cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 0.1, vlab)
 
-    P.draw()
-    P.savefig(output[0], facecolor='white')
-    print(output[0], "written to disk")
-    P.clf()
+        P.draw()
+        P.savefig(output[0], facecolor='white')
+        print(output[0], "written to disk")
+        P.clf()
