@@ -19,10 +19,14 @@ def reconstruct_uniform(h5f, var, level, gridlist, cu, center, smin, smax):
     xz = dset[:, ind[1], :].swapaxes(0, 1)
     yz = dset[ind[0], :, :].swapaxes(0, 1)
 
+    fx = dset[:, ind[1], ind[2]]
+    fy = dset[ind[0], :, ind[2]]
+    fz = dset[ind[0], ind[1], :]
+
     d3min, d3max = np.min(dset), np.max(dset)
     d2max = max(np.max(xz), np.max(xy), np.max(yz))
     d2min = min(np.min(xz), np.min(xy), np.min(yz))
-    block = [True, True, True], [yz, xz, xy], smin, smax, level
+    block = [yz, xz, xy], [True, True, True], smin, smax, level, [fx, fy, fz]
 
     return [[block, ], ], [[d2min], [d2max], [d3min], [d3max]]
 
@@ -83,7 +87,7 @@ def read_block(h5f, dset_name, ig, olev, oc, usc, getmap):
     if not any(inb):
         return False, [], []
     if not getmap:
-        return levok, [inb, [], ledge / usc, redge / usc, olev], []
+        return levok, [inb, [], [], ledge / usc, redge / usc, olev], []
     clen = h5g.attrs['dl']
     off = h5g.attrs['off']
     n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
@@ -96,7 +100,11 @@ def read_block(h5f, dset_name, ig, olev, oc, usc, getmap):
     d2max = max(np.max(xz), np.max(xy), np.max(yz))
     d2min = min(np.min(xz), np.min(xy), np.min(yz))
 
-    return levok, [inb, [yz, xz, xy], ledge / usc, redge / usc, olev], [d2min, d2max, d3min, d3max]
+    fx = dset[:, ind[1], ind[2]]
+    fy = dset[ind[0], :, ind[2]]
+    fz = dset[ind[0], ind[1], :]
+
+    return levok, [[yz, xz, xy], inb, ledge / usc, redge / usc, olev, [fx, fy, fz]], [d2min, d2max, d3min, d3max]
 
 
 def collect_particles(h5f, drawh, center, player, uupd, usc, plotlevels, gridlist):

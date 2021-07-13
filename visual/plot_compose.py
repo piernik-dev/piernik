@@ -29,7 +29,7 @@ def draw_plotcomponent(ax, refis, field, parts, equip, ncut, n1, n2):
             vmin, vmax, sctype, symmin, cmap = field[1:]
         for blks in refis:
             for bl in blks:
-                binb, bxyz, ble, bre, level = bl
+                bxyz, binb, ble, bre, level = bl[:-1]
                 if binb[ncut]:
                     if bxyz != []:
                         bplot = pu.scale_plotarray(bxyz[ncut], sctype, symmin)
