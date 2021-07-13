@@ -215,6 +215,6 @@ def plotcompose(pthfilen, var, output, options):
         add_cbar(cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 0.1, var + " [%s]" % pu.labelx()(uvar))
 
     P.draw()
-    P.savefig(output, facecolor='white')
-    print(output, "written to disk")
+    P.savefig(output[0], facecolor='white')
+    print(output[0], "written to disk")
     P.clf()
