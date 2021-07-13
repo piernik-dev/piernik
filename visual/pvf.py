@@ -40,7 +40,6 @@ def print_usage():
     print('Options:')
     print(' -h, \t\t\t--help \t\t\t\tprint this help')
     print('\t\t\t--amr\t\t\t\tcollect all refinement levels of grid to plot [default: True while AMR refinement level structure exists]')
-    print(' -a UNIT, \t\t--axes UNIT \t\t\tscale plot axes with UNIT [default: dataset units]')
     print(' -b BINS, \t\t--bins BINS \t\t\tmake a 2D histogram plot using BINS number instead of scattering particles [default: 1, which leads to scattering]')
     print(' -c CX,CY,CZ, \t\t--center CX,CY,CZ \t\tplot cuts across given point coordinates CX, CY, CZ [default: computed domain center]')
     print(' -d VAR[,VAR2], \t--dataset VAR[,VAR2] \t\tspecify one or more datafield(s) to plot [default: print available datafields; all or _all_ to plot all available datafields]')
@@ -56,6 +55,7 @@ def print_usage():
     print(' -R W1[,W2,W3],\t\t--particle-space W1[,W2,W3]\tread particles from square +/-W1 around center or cuboid if W1,W2,W3 requested [default: no limits]')
     print(' -s,\t\t\t--particle-sizes\t\tmarker sizes for scattering particles onto slices [default: switched-off]')
     print(' -t SCALETYPE, \t\t--scale SCALETYPE \t\tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: linear]')
+    print(' -u UNIT, \t\t--units UNIT \t\t\tscale plot axes with UNIT [default: dataset units]')
     print('\t\t\t--uniform\t\t\treconstruct uniform grid to plot [default: True while no AMR refinement level structure exists]')
     print(' -z ZMIN,ZMAX, \t\t--zlim ZMIN,ZMAX \t\tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]')
     print('\t\t\t--zoom XL,XR,YL,YR,ZL,ZR \tset plot axes ranges [default: domain edges]')
@@ -63,7 +63,7 @@ def print_usage():
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:g:hl:o:pP:r:R:s:t:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "output=", "particles", "particle-color=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "uniform", "zlim=", "zoom="])
+        opts, args = getopt.getopt(argv, "b:c:d:D:e:g:hl:o:pP:r:R:s:t:u:z:", ["help", "amr", "bins=", "center=", "colormap=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "output=", "particles", "particle-color=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "uniform", "units=", "zlim=", "zoom="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -72,10 +72,6 @@ def cli_params(argv):
         if opt in ("-h", "--help"):
             print_usage()
             sys.exit()
-
-        elif opt in ("-a", "--axes"):
-            global uaxes
-            uaxes = str(arg)
 
         elif opt in ("-b", "--bins"):
             global nbins
@@ -145,6 +141,10 @@ def cli_params(argv):
         elif opt in ("-t", "--scale"):
             global sctype
             sctype = str(arg)
+
+        elif opt in ("-u", "--units"):
+            global uaxes
+            uaxes = str(arg)
 
         elif opt in ("-z", "--zlim"):
             global zmin, zmax
