@@ -132,7 +132,7 @@ def plotcompose(pthfilen, var, output, options):
         maxgc = len(gaux1)
         gaux2 = []
         ail = 0
-        for il in plotlevels:
+        for il in range(maxglev + 1):
             if il in plotlevels:
                 gaux2.append(gaux1[ail % maxgc])
                 ail += 1
