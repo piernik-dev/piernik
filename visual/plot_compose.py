@@ -21,8 +21,8 @@ def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
     return ax
 
 
-def plot1d(refis, field, parts, equip, ncut, n1, n2):
-    drawg, gcolor, smin, smax, zoom, center, ulen, output, labf, timep, autsc, linstyl = equip
+def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
+    zoom, ulen, autsc, linstyl, output, labf, timep = equip1d
     vmin, vmax, sctype, symmin, cmap = field[1:]
     fig1d = P.figure(ncut + 2, figsize=(10, 8))
 
@@ -53,8 +53,8 @@ def plot1d(refis, field, parts, equip, ncut, n1, n2):
     P.clf()
 
 
-def draw_plotcomponent(ax, refis, field, parts, equip, ncut, n1, n2):
-    drawg, gcolor, smin, smax, zoom, center, ulen = equip[:-5]
+def draw_plotcomponent(ax, refis, field, parts, equip2d, ncut, n1, n2):
+    drawg, gcolor, smin, smax, zoom, center, ulen = equip2d
     ag, ah = [], []
     if field[0] or drawg:
         if field[0]:
@@ -101,7 +101,8 @@ def draw_particles(ax, p1, p2, pm, nbins, ranges, drawd, pcolor, psize):
     return ax, ah
 
 
-def add_cbar(figmode, cbar_mode, grid, ab, icb, fr, clab):
+def add_cbar(figmode, cbar_mode, grid, ab, ic, fr, clab):
+    icb = pu.cbsplace[figmode][ic]
     if cbar_mode == 'none':
         axg = grid[icb]
         if figmode == 4 or figmode == 5:
@@ -202,14 +203,15 @@ def plotcompose(pthfilen, var, output, options):
         zoom = False, smin, smax
 
     vlab = var + " [%s]" % pu.labelx()(uvar)
-    equip = drawg, gcolor, smin, smax, zoom, center, ulen, output, vlab, timep, autsc, linstyl
+    equip1d = zoom, ulen, autsc, linstyl, output, vlab, timep
+    equip2d = drawg, gcolor, smin, smax, zoom, center, ulen
 
     if draw1D[0]:
-        plot1d(refis, field, parts, equip, 0, 1, 2)
+        plot1d(refis, field, parts, equip1d, 0, 1, 2)
     if draw1D[1]:
-        plot1d(refis, field, parts, equip, 1, 0, 2)
+        plot1d(refis, field, parts, equip1d, 1, 0, 2)
     if draw1D[2]:
-        plot1d(refis, field, parts, equip, 2, 0, 1)
+        plot1d(refis, field, parts, equip1d, 2, 0, 1)
 
     if any(draw2D):
         fig = P.figure(1, figsize=pu.figsizes[figmode])
@@ -219,22 +221,22 @@ def plotcompose(pthfilen, var, output, options):
 
         if draw2D[0]:
             ax = grid[pu.figplace[figmode][0]]
-            ax, ag3, ah = draw_plotcomponent(ax, refis, field, parts, equip, 0, 1, 2)
+            ax, ag3, ah = draw_plotcomponent(ax, refis, field, parts, equip2d, 0, 1, 2)
 
         if draw2D[1]:
             ax = grid[pu.figplace[figmode][1]]
-            ax, ag2, ah = draw_plotcomponent(ax, refis, field, parts, equip, 1, 0, 2)
+            ax, ag2, ah = draw_plotcomponent(ax, refis, field, parts, equip2d, 1, 0, 2)
 
         if draw2D[2]:
             ax = grid[pu.figplace[figmode][2]]
-            ax, ag0, ah = draw_plotcomponent(ax, refis, field, parts, equip, 2, 0, 1)
+            ax, ag0, ah = draw_plotcomponent(ax, refis, field, parts, equip2d, 2, 0, 1)
         ax.set_title(timep)
 
         if drawh:
-            add_cbar(figmode, cbar_mode, grid, ah[3], pu.cbsplace[figmode][0], 0.7, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
+            add_cbar(figmode, cbar_mode, grid, ah[3], 0, 0.7, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
 
         if drawd:
-            add_cbar(figmode, cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), pu.cbsplace[figmode][1], 0.1, vlab)
+            add_cbar(figmode, cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 1, 0.1, vlab)
 
         P.draw()
         out2d = output[0] + pu.plane_in_outputname(figmode, draw2D) + output[1]
