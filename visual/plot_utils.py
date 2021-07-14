@@ -128,6 +128,21 @@ def find_indices(nd, cxyz, smin, smax, warn):
     return inb, icc
 
 
+def sanitize_gridlist(gridlist, cgcount):
+    if gridlist == '':
+        gridlist = range(cgcount)
+    else:
+        grdl = []
+        for ig in gridlist:
+            if ig >= 0 and ig < cgcount:
+                grdl.append(ig)
+            else:
+                print('Grid block %s does not exist.' % str(ig))
+        gridlist = grdl
+        print('GRIDLIST: ', gridlist)
+    return gridlist
+
+
 def convert_units(infile, toplot):
     au_cm = 1.49597870700e13
     pc_au = 206264.806248712

@@ -173,17 +173,7 @@ def plotcompose(pthfilen, var, output, options):
                 gaux2.append('none')
         gcolor = gaux2
 
-    if gridlist == '':
-        gridlist = range(cgcount)
-    else:
-        grdl = []
-        for ig in gridlist:
-            if ig >= 0 and ig < cgcount:
-                grdl.append(ig)
-            else:
-                print('Grid block %s does not exist.' % str(ig))
-        gridlist = grdl
-        print('GRIDLIST: ', gridlist)
+    gridlist = pu.sanitize_gridlist(gridlist, cgcount)
 
     if drawp:
         pinfile, pxyz, pm = rd.collect_particles(h5f, drawh, center, player, uupd, usc, plotlevels, gridlist)
