@@ -143,6 +143,20 @@ def sanitize_gridlist(gridlist, cgcount):
     return gridlist
 
 
+def reorder_gridcolorlist(gcolor, maxglev, plotlevels):
+    gaux1 = gcolor.split(',')
+    maxgc = len(gaux1)
+    gaux2 = []
+    ail = 0
+    for il in range(maxglev + 1):
+        if il in plotlevels:
+            gaux2.append(gaux1[ail % maxgc])
+            ail += 1
+        else:
+            gaux2.append('none')
+    return gaux2
+
+
 def convert_units(infile, toplot):
     au_cm = 1.49597870700e13
     pc_au = 206264.806248712

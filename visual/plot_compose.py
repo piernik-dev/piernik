@@ -161,17 +161,7 @@ def plotcompose(pthfilen, var, output, options):
     print('LEVELS TO plot: ', plotlevels)
 
     if drawg:
-        gaux1 = gcolor.split(',')
-        maxgc = len(gaux1)
-        gaux2 = []
-        ail = 0
-        for il in range(maxglev + 1):
-            if il in plotlevels:
-                gaux2.append(gaux1[ail % maxgc])
-                ail += 1
-            else:
-                gaux2.append('none')
-        gcolor = gaux2
+        gcolor = pu.reorder_gridcolorlist(gcolor, maxglev, plotlevels)
 
     gridlist = pu.sanitize_gridlist(gridlist, cgcount)
 
