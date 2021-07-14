@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 import numpy as np
 
-figsizes = [(10, 10.5), (10, 10.5), (10, 6.5), (8, 10.5)]
-figrwcls = [(2, 2), (1, 1), (1, 2), (2, 1)]
-figplace = [(3, 2, 0), (0, 0, 0), (1, 0, 0), (0, 1, 0)]
+figsizes = [(10, 10.5), (10, 10.5), (10, 6.5), (8, 10.5), (10, 6.5), (14, 6.5)]
+figrwcls = [(2, 2), (1, 1), (1, 2), (2, 1), (1, 2), (1, 3)]
+figplace = [(3, 2, 0), (0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 0), (1, 0, 0)]
+cbsplace = [(1, 1), (-1, -1), (2, 2), (0, 1), (1, 1), (2, 2)]
 
 
 def plane_in_outputname(figmode, draw2D):
     to_insert = ''
-    if figmode == 1:
+    if figmode == 1 or figmode == 4:
         if draw2D[0]:
             to_insert = 'yz_'
         elif draw2D[1]:
@@ -104,10 +105,10 @@ def take_nonempty(lst):
 
 
 def colorbar_mode(drawd, drawh, figmode):
-    if drawd and drawh and figmode == 0:
+    if drawd and drawh and figmode == 3:
+        cbar_mode = 'each'
+    elif drawd and drawh and figmode != 3:
         cbar_mode = 'none'
-    elif drawd and drawh and figmode != 0:
-        cbar_mode = 'single'
     elif drawd or drawh:
         cbar_mode = 'single'
     else:
@@ -210,7 +211,7 @@ def choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist):
     return drawa, drawu
 
 
-def check_1D2Ddefaults(axc, n_d):
+def check_1D2Ddefaults(axc, n_d, double_cbar):
     draw1D, draw2D = axc
     if not (any(draw1D) or any(draw2D)):
         if sum(n_d) - 2 == n_d[0] * n_d[1] * n_d[2]:
@@ -225,6 +226,8 @@ def check_1D2Ddefaults(axc, n_d):
             figmode = 2
         elif draw2D[2] and draw2D[1] and not draw2D[0]:
             figmode = 3
+    if double_cbar and (figmode == 1 or figmode == 2):
+        figmode = figmode + 3
     return draw1D, draw2D, figmode
 
 

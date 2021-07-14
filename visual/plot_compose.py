@@ -101,14 +101,19 @@ def draw_particles(ax, p1, p2, pm, nbins, ranges, drawd, pcolor, psize):
     return ax, ah
 
 
-def add_cbar(cbar_mode, grid, ab, fr, clab):
+def add_cbar(figmode, cbar_mode, grid, ab, icb, fr, clab):
     if cbar_mode == 'none':
-        axg = grid[1]
+        axg = grid[icb]
+        if figmode == 4 or figmode == 5:
+            axg.set_xlim((grid[icb - 1].get_xlim()[0] / 2., grid[icb - 1].get_xlim()[1] / 2.))
         pu.color_axes(axg, 'white')
         bar = inset_axes(axg, width='100%', height='100%', bbox_to_anchor=(fr, 0.0, 0.06, 1.0), bbox_transform=axg.transAxes, loc=2, borderpad=0)
         cbarh = P.colorbar(ab, cax=bar, format='%.1e', drawedges=False)
     else:
-        bar = grid.cbar_axes[0]
+        if cbar_mode == 'each':
+            bar = grid.cbar_axes[icb]
+        elif cbar_mode == 'single':
+            bar = grid.cbar_axes[0]
         bar.axis["right"].toggle(all=True)
         cbarh = P.colorbar(ab, cax=bar, format='%.1e', drawedges=False)
         cbarh = P.colorbar(ab, cax=bar, format='%.1e', drawedges=False)
@@ -148,7 +153,6 @@ def plotcompose(pthfilen, var, output, options):
         center = (smax[0] + smin[0]) / 2.0, (smax[1] + smin[1]) / 2.0, (smax[2] + smin[2]) / 2.0
 
     drawa, drawu = pu.choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist)
-    draw1D, draw2D, figmode = pu.check_1D2Ddefaults(axc, n_d)
     plotlevels = pu.check_plotlevels(plotlevels, maxglev, drawa)
     linstyl = pu.linestyles(linstyl, maxglev, plotlevels)
     if drawg:
@@ -159,6 +163,8 @@ def plotcompose(pthfilen, var, output, options):
         pinfile, pxyz, pm = rd.collect_particles(h5f, drawh, center, player, uupd, usc, plotlevels, gridlist)
         parts = pinfile, pxyz, pm, nbins, pcolor, psize, player
         drawh = drawh and pinfile
+
+    draw1D, draw2D, figmode = pu.check_1D2Ddefaults(axc, n_d, drawd and drawh)
 
     refis = []
     if drawd or drawg:
@@ -225,10 +231,10 @@ def plotcompose(pthfilen, var, output, options):
         ax.set_title(timep)
 
         if drawh:
-            add_cbar(cbar_mode, grid, ah[3], 0.7, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
+            add_cbar(figmode, cbar_mode, grid, ah[3], pu.cbsplace[figmode][0], 0.7, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
 
         if drawd:
-            add_cbar(cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 0.1, vlab)
+            add_cbar(figmode, cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), pu.cbsplace[figmode][1], 0.1, vlab)
 
         P.draw()
         out2d = output[0] + pu.plane_in_outputname(figmode, draw2D) + output[1]
