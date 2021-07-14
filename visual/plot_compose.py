@@ -118,7 +118,7 @@ def add_cbar(cbar_mode, grid, ab, fr, clab):
 
 
 def plotcompose(pthfilen, var, output, options):
-    axc, umin, umax, cmap, pcolor, player, psize, sctype, cu, center, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor = options
+    axc, umin, umax, cmap, pcolor, player, psize, sctype, cu, center, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl = options
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
     time = h5f.attrs['time'][0]
@@ -150,7 +150,7 @@ def plotcompose(pthfilen, var, output, options):
     drawa, drawu = pu.choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist)
     draw1D, draw2D = pu.check_1D2Ddefaults(axc, n_d)
     plotlevels = pu.check_plotlevels(plotlevels, maxglev, drawa)
-    linstyl = pu.linestyles(maxglev, plotlevels)
+    linstyl = pu.linestyles(linstyl, maxglev, plotlevels)
     if drawg:
         gcolor = pu.reorder_gridcolorlist(gcolor, maxglev, plotlevels)
     gridlist = pu.sanitize_gridlist(gridlist, cgcount)

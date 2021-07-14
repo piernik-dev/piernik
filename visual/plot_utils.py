@@ -167,17 +167,19 @@ def reorder_gridcolorlist(gcolor, maxglev, plotlevels):
     return gaux2
 
 
-def linestyles(maxglev, plotlevels):
-    markers = [':', '--', '-']
+def linestyles(markers, maxglev, plotlevels):
+    if markers == '':
+        markers = ['-', '--', ':']
+    marknum = len(markers)
     linstyl = []
     for il in range(maxglev + 1):
         if il in plotlevels:
-            linstyl.append(markers[0])
+            linstyl.append(markers[-1])
         else:
             linstyl.append('none')
-    linstyl[plotlevels[-1]] = markers[2]
-    if len(plotlevels) > 1:
-        linstyl[plotlevels[-2]] = markers[1]
+    for im in range(marknum):
+        if len(plotlevels) > im:
+            linstyl[plotlevels[-(im + 1)]] = markers[im]
     return linstyl
 
 

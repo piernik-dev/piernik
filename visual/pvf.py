@@ -10,6 +10,7 @@ import plot_compose as pc
 cmap = 'viridis'
 pcolor = 'default'
 gcolor = ''
+linstyl = ''
 plotdir = 'frames'
 sctype = 'linear'
 axcuts = 'default'
@@ -50,6 +51,7 @@ def print_usage():
     print(' -g COLOR, \t\t--gridcolor COLOR \t\tshow grids in color COLOR; possible list of colors for different grid refinement levels [default: none]')
     print('\t\t\t--grid-list GRID1[,GRID2] \tplot only selected numbered grid blocks [default: all existing blocks]')
     print(' -l LEVEL1[,LEVEL2], \t--level LEVEL1[,LEVEL2] \tplot only requested grid levels [default: 0 for --uniform, all for --amr]')
+    print('\t\t\t--linestyle STYLELIST \tline styles list for different refinement levels in 1D plots [default: solid, dashed and dotted]')
     print(' -o OUTPUT, \t\t--output OUTPUT \t\tdump plot files into OUTPUT directory [default: frames]')
     print(' -p,\t\t\t--particles\t\t\tscatter particles onto slices [default: switched-off]')
     print(' -P,\t\t\t--particle-color\t\tuse color for particles scattering or colormap for particles histogram plot [default: #1f77b4 (blue) or viridis]')
@@ -65,7 +67,7 @@ def print_usage():
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:g:hl:o:pP:r:R:s:t:u:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "output=", "particles", "particle-color=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "uniform", "units=", "zlim=", "zoom="])
+        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:g:hl:o:pP:r:R:s:t:u:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "linestyle=", "output=", "particles", "particle-color=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "uniform", "units=", "zlim=", "zoom="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -111,6 +113,10 @@ def cli_params(argv):
         elif opt in ("-l", "--level"):
             global plotlevels
             plotlevels = [int(i) for i in arg.split(',')]
+
+        elif opt in ("--linestyle"):
+            global linstyl
+            linstyl = arg.split(',')
 
         elif opt in ("-o", "--output"):
             global plotdir
@@ -222,7 +228,7 @@ if '1z' in axcuts:
     p1z = True
 axc = [p1x, p1y, p1z], [p2yz, p2xz, p2xy]
 
-options = axc, zmin, zmax, cmap, pcolor, player, psize, sctype, cu, center, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor
+options = axc, zmin, zmax, cmap, pcolor, player, psize, sctype, cu, center, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 
