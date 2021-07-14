@@ -167,6 +167,20 @@ def reorder_gridcolorlist(gcolor, maxglev, plotlevels):
     return gaux2
 
 
+def linestyles(maxglev, plotlevels):
+    markers = [':', '--', '-']
+    linstyl = []
+    for il in range(maxglev + 1):
+        if il in plotlevels:
+            linstyl.append(markers[0])
+        else:
+            linstyl.append('none')
+    linstyl[plotlevels[-1]] = markers[2]
+    if len(plotlevels) > 1:
+        linstyl[plotlevels[-2]] = markers[1]
+    return linstyl
+
+
 def choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist):
     if (drawd or (drawg and not drawp)) and not (drawa or drawu):
         if maxglev == 0 and gridlist == '':

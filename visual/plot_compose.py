@@ -22,8 +22,7 @@ def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
 
 
 def plot1d(refis, field, parts, equip, ncut, n1, n2):
-    markers = [':', '--', '-']
-    drawg, gcolor, smin, smax, zoom, center, ulen, output, labf, timep, autsc = equip
+    drawg, gcolor, smin, smax, zoom, center, ulen, output, labf, timep, autsc, linstyl = equip
     vmin, vmax, sctype, symmin, cmap = field[1:]
     fig1d = P.figure(ncut + 2, figsize=(10, 8))
 
@@ -40,7 +39,7 @@ def plot1d(refis, field, parts, equip, ncut, n1, n2):
                     bplot = pu.scale_plotarray(b1d[ncut], sctype, symmin)
                     dxh = (bre[ncut] - ble[ncut]) / float(len(b1d[ncut])) / 2.0
                     vax = np.linspace(ble[ncut] + dxh, bre[ncut] - dxh, len(b1d[ncut]))
-                    ax.plot(vax, bplot, linestyle=markers[level], color='k')
+                    ax.plot(vax, bplot, linestyle=linstyl[level], color='k')
 
     axis = "xyz"[ncut]
     P.ylabel(labf)
@@ -55,7 +54,7 @@ def plot1d(refis, field, parts, equip, ncut, n1, n2):
 
 
 def draw_plotcomponent(ax, refis, field, parts, equip, ncut, n1, n2):
-    drawg, gcolor, smin, smax, zoom, center, ulen = equip[:-4]
+    drawg, gcolor, smin, smax, zoom, center, ulen = equip[:-5]
     ag, ah = [], []
     if field[0] or drawg:
         if field[0]:
@@ -149,6 +148,7 @@ def plotcompose(pthfilen, var, output, options):
 
     drawa, drawu = pu.choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist)
     plotlevels = pu.check_plotlevels(plotlevels, maxglev, drawa)
+    linstyl = pu.linestyles(maxglev, plotlevels)
     if drawg:
         gcolor = pu.reorder_gridcolorlist(gcolor, maxglev, plotlevels)
     gridlist = pu.sanitize_gridlist(gridlist, cgcount)
@@ -194,7 +194,7 @@ def plotcompose(pthfilen, var, output, options):
         zoom = False, smin, smax
 
     vlab = var + " [%s]" % pu.labelx()(uvar)
-    equip = drawg, gcolor, smin, smax, zoom, center, ulen, output, vlab, timep, autsc
+    equip = drawg, gcolor, smin, smax, zoom, center, ulen, output, vlab, timep, autsc, linstyl
 
     p1x, p1y, p1z, p2xy, p2xz, p2yz, p2 = axc
     if p1x:
