@@ -51,7 +51,7 @@ def print_usage():
     print(' -g COLOR, \t\t--gridcolor COLOR \t\tshow grids in color COLOR; possible list of colors for different grid refinement levels [default: none]')
     print('\t\t\t--grid-list GRID1[,GRID2] \tplot only selected numbered grid blocks [default: all existing blocks]')
     print(' -l LEVEL1[,LEVEL2], \t--level LEVEL1[,LEVEL2] \tplot only requested grid levels [default: 0 for --uniform, all for --amr]')
-    print('\t\t\t--linestyle STYLELIST \tline styles list for different refinement levels in 1D plots [default: solid, dashed and dotted]')
+    print('\t\t\t--linestyle STYLELIST \t\tline styles list for different refinement levels in 1D plots [default: solid, dashed and dotted]')
     print(' -o OUTPUT, \t\t--output OUTPUT \t\tdump plot files into OUTPUT directory [default: frames]')
     print(' -p,\t\t\t--particles\t\t\tscatter particles onto slices [default: switched-off]')
     print(' -P,\t\t\t--particle-color\t\tuse color for particles scattering or colormap for particles histogram plot [default: #1f77b4 (blue) or viridis]')

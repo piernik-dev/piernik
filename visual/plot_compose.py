@@ -39,7 +39,7 @@ def plot1d(refis, field, parts, equip, ncut, n1, n2):
                     bplot = pu.scale_plotarray(b1d[ncut], sctype, symmin)
                     dxh = (bre[ncut] - ble[ncut]) / float(len(b1d[ncut])) / 2.0
                     vax = np.linspace(ble[ncut] + dxh, bre[ncut] - dxh, len(b1d[ncut]))
-                    ax.plot(vax, bplot, linestyle=linstyl[level], color='k')
+                    ax.plot(vax, bplot, linstyl[level], color='k')
 
     axis = "xyz"[ncut]
     P.ylabel(labf)
