@@ -28,12 +28,15 @@ def fsym(vmin, vmax):
     return vmn, vmx
 
 
-def scale_manage(sctype, refis, umin, umax, d2min, d2max):
-
+def scale_manage(sctype, refis, umin, umax, d2, minmax):
     symmin = 1.0
     autoscale = False
+    if d2:
+        dmin, dmax = minmax[2], minmax[3]
+    else:
+        dmin, dmax = minmax[0], minmax[1]
     if (umin == 0.0 and umax == 0.0):
-        vmin, vmax = d2min, d2max
+        vmin, vmax = dmin, dmax
         autoscale = True
     else:
         vmin, vmax = umin, umax
@@ -56,8 +59,8 @@ def scale_manage(sctype, refis, umin, umax, d2min, d2max):
             vmax = np.log10(umax / umin)
             vmin = np.log10(vmax)
         else:
-            if (d2min * d2max > 0.0):
-                smin, smax = d2min, d2max
+            if (dmin * dmax > 0.0):
+                smin, smax = dmin, dmax
             else:
                 smin, smax = check_minimum_data(refis, True)
             symmin = min(np.abs(smin), np.abs(smax))

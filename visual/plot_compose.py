@@ -169,25 +169,28 @@ def plotcompose(pthfilen, var, output, options):
 
     refis = []
     if drawd or drawg:
-        extr = [], [], [], []
+        extr = [], [], [], [], [], []
         if drawu:
             if len(plotlevels) > 1:
                 print('For uniform grid plotting only the firs given level!')
             print('Plotting base level %s' % plotlevels[0])
-            refis, extr = rd.reconstruct_uniform(h5f, var, plotlevels[0], gridlist, cu, center, smin, smax)
+            refis, extr = rd.reconstruct_uniform(h5f, var, plotlevels[0], gridlist, cu, center, smin, smax, draw1D, draw2D)
 
         if drawa or drawg:
-            refis, extr = rd.collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, drawd)
+            refis, extr = rd.collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, drawd, draw1D, draw2D)
 
         if refis == []:
             drawd = False
         else:
             if drawd:
-                d2min, d2max, d3min, d3max = min(extr[0]), max(extr[1]), min(extr[2]), max(extr[3])
-                vmin, vmax, symmin, autsc = pu.scale_manage(sctype, refis, umin, umax, d2min, d2max)
+                d1min, d1max, d2min, d2max, d3min, d3max = min(extr[0]), max(extr[1]), min(extr[2]), max(extr[3]), min(extr[4]), max(extr[5])
+                vmin, vmax, symmin, autsc = pu.scale_manage(sctype, refis, umin, umax, any(draw2D), [d1min, d1max, d2min, d2max])
 
                 print('3D data value range: ', d3min, d3max)
-                print('Slices  value range: ', d2min, d2max)
+                if any(draw2D):
+                    print('Slices  value range: ', d2min, d2max)
+                if any(draw1D):
+                    print('1D data value range: ', d1min, d1max)
                 print('Plotted value range: ', vmin, vmax)
                 field = drawd, vmin, vmax, sctype, symmin, cmap
 
