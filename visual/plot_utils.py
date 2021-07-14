@@ -1,6 +1,22 @@
 #!/usr/bin/env python
 import numpy as np
 
+figsizes = [(10, 10.5), (10, 10.5), (10, 6.5), (8, 10.5)]
+figrwcls = [(2, 2), (1, 1), (1, 2), (2, 1)]
+figplace = [(3, 2, 0), (0, 0, 0), (1, 0, 0), (0, 1, 0)]
+
+
+def plane_in_outputname(figmode, draw2D):
+    to_insert = ''
+    if figmode == 1:
+        if draw2D[0]:
+            to_insert = 'yz_'
+        elif draw2D[1]:
+            to_insert = 'xz_'
+        elif draw2D[2]:
+            to_insert = 'xy_'
+    return to_insert
+
 
 def fsym(vmin, vmax):
     vmx = np.max([np.abs(vmin), np.abs(vmax)])
@@ -87,9 +103,11 @@ def take_nonempty(lst):
     return []
 
 
-def colorbar_mode(drawd, drawh):
-    if drawd and drawh:
+def colorbar_mode(drawd, drawh, figmode):
+    if drawd and drawh and figmode == 0:
         cbar_mode = 'none'
+    elif drawd and drawh and figmode != 0:
+        cbar_mode = 'single'
     elif drawd or drawh:
         cbar_mode = 'single'
     else:
@@ -199,7 +217,15 @@ def check_1D2Ddefaults(axc, n_d):
             draw1D = True, True, True
         else:
             draw2D = True, True, True
-    return draw1D, draw2D
+    figmode = 1
+    if any(draw2D):
+        if all(draw2D) or (draw2D[0] and draw2D[2] and not draw2D[1]):
+            figmode = 0
+        elif draw2D[0] and draw2D[1] and not draw2D[2]:
+            figmode = 2
+        elif draw2D[2] and draw2D[1] and not draw2D[0]:
+            figmode = 3
+    return draw1D, draw2D, figmode
 
 
 def convert_units(infile, toplot):

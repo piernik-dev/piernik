@@ -280,9 +280,7 @@ for pthfilen in files_list:
         if (not draw_data or var in list(h5f['field_types'].keys())):
             # output = plotdir+'/'+filen.split('/')[-1].replace('.h5',"_%s.png" % var)
             fnl = filen.split('/')[-1]
-            o1 = plotdir + '/' + '_'.join(fnl.split('_')[:-1]) + '_' + var + '_'
-            o2 = fnl.split('_')[-1].replace('.h5', exten)
-            output = [o1 + o2, o1, o2]
+            output = [plotdir + '/' + '_'.join(fnl.split('_')[:-1]) + '_' + var + '_', fnl.split('_')[-1].replace('.h5', exten)]
             pc.plotcompose(pthfilen, var, output, options)
         else:
             print(var, ' is not available in the file ', pthfilen)

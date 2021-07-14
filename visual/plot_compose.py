@@ -47,7 +47,7 @@ def plot1d(refis, field, parts, equip, ncut, n1, n2):
     P.title(timep)
     P.tight_layout()
     P.draw()
-    out1d = output[1] + axis + '_' + output[2]
+    out1d = output[0] + axis + '_' + output[1]
     fig1d.savefig(out1d, facecolor='white')
     print(out1d, "written to disk")
     P.clf()
@@ -148,7 +148,7 @@ def plotcompose(pthfilen, var, output, options):
         center = (smax[0] + smin[0]) / 2.0, (smax[1] + smin[1]) / 2.0, (smax[2] + smin[2]) / 2.0
 
     drawa, drawu = pu.choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist)
-    draw1D, draw2D = pu.check_1D2Ddefaults(axc, n_d)
+    draw1D, draw2D, figmode = pu.check_1D2Ddefaults(axc, n_d)
     plotlevels = pu.check_plotlevels(plotlevels, maxglev, drawa)
     linstyl = pu.linestyles(linstyl, maxglev, plotlevels)
     if drawg:
@@ -190,7 +190,7 @@ def plotcompose(pthfilen, var, output, options):
         print('No particles or levels to plot. Skipping.')
         return
 
-    cbar_mode = pu.colorbar_mode(drawd, drawh)
+    cbar_mode = pu.colorbar_mode(drawd, drawh, figmode)
 
     if not zoom[0]:
         zoom = False, smin, smax
@@ -206,21 +206,21 @@ def plotcompose(pthfilen, var, output, options):
         plot1d(refis, field, parts, equip, 2, 0, 1)
 
     if any(draw2D):
-        fig = P.figure(1, figsize=(10, 10.5))
+        fig = P.figure(1, figsize=pu.figsizes[figmode])
 
-        grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
+        grid = AxesGrid(fig, 111, nrows_ncols=pu.figrwcls[figmode], axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
         ag0, ag2, ag3 = [], [], []
 
         if draw2D[0]:
-            ax = grid[3]
+            ax = grid[pu.figplace[figmode][0]]
             ax, ag3, ah = draw_plotcomponent(ax, refis, field, parts, equip, 0, 1, 2)
 
         if draw2D[1]:
-            ax = grid[2]
+            ax = grid[pu.figplace[figmode][1]]
             ax, ag2, ah = draw_plotcomponent(ax, refis, field, parts, equip, 1, 0, 2)
 
         if draw2D[2]:
-            ax = grid[0]
+            ax = grid[pu.figplace[figmode][2]]
             ax, ag0, ah = draw_plotcomponent(ax, refis, field, parts, equip, 2, 0, 1)
         ax.set_title(timep)
 
@@ -231,6 +231,7 @@ def plotcompose(pthfilen, var, output, options):
             add_cbar(cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 0.1, vlab)
 
         P.draw()
-        P.savefig(output[0], facecolor='white')
-        print(output[0], "written to disk")
+        out2d = output[0] + pu.plane_in_outputname(figmode, draw2D) + output[1]
+        P.savefig(out2d, facecolor='white')
+        print(out2d, "written to disk")
         P.clf()
