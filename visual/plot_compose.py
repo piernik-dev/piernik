@@ -153,16 +153,9 @@ def plotcompose(pthfilen, var, output, options):
         else:
             drawa = True
 
-    if plotlevels == '':
-        if drawa:
-            plotlevels = range(maxglev + 1)
-        else:
-            plotlevels = 0,
-    print('LEVELS TO plot: ', plotlevels)
-
+    plotlevels = pu.check_plotlevels(plotlevels, maxglev, drawa)
     if drawg:
         gcolor = pu.reorder_gridcolorlist(gcolor, maxglev, plotlevels)
-
     gridlist = pu.sanitize_gridlist(gridlist, cgcount)
 
     if drawp:

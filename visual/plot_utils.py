@@ -128,6 +128,16 @@ def find_indices(nd, cxyz, smin, smax, warn):
     return inb, icc
 
 
+def check_plotlevels(plotlevels, maxglev, drawa):
+    if plotlevels == '':
+        if drawa:
+            plotlevels = range(maxglev + 1)
+        else:
+            plotlevels = 0,
+    print('LEVELS TO plot: ', plotlevels)
+    return plotlevels
+
+
 def sanitize_gridlist(gridlist, cgcount):
     if gridlist == '':
         gridlist = range(cgcount)
