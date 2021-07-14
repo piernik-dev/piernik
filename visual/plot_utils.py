@@ -167,6 +167,15 @@ def reorder_gridcolorlist(gcolor, maxglev, plotlevels):
     return gaux2
 
 
+def choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist):
+    if (drawd or (drawg and not drawp)) and not (drawa or drawu):
+        if maxglev == 0 and gridlist == '':
+            drawu = True
+        else:
+            drawa = True
+    return drawa, drawu
+
+
 def convert_units(infile, toplot):
     au_cm = 1.49597870700e13
     pc_au = 206264.806248712

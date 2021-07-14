@@ -147,12 +147,7 @@ def plotcompose(pthfilen, var, output, options):
     if not cu:
         center = (smax[0] + smin[0]) / 2.0, (smax[1] + smin[1]) / 2.0, (smax[2] + smin[2]) / 2.0
 
-    if (drawd or (drawg and not drawp)) and not (drawa or drawu):
-        if maxglev == 0 and gridlist == '':
-            drawu = True
-        else:
-            drawa = True
-
+    drawa, drawu = pu.choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist)
     plotlevels = pu.check_plotlevels(plotlevels, maxglev, drawa)
     if drawg:
         gcolor = pu.reorder_gridcolorlist(gcolor, maxglev, plotlevels)
