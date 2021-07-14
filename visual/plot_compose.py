@@ -131,6 +131,7 @@ def plotcompose(pthfilen, var, output, options):
         umass = h5f['dataset_units']['mass_unit'].attrs['unit']
     smin = h5f['simulation_parameters'].attrs['domain_left_edge']
     smax = h5f['simulation_parameters'].attrs['domain_right_edge']
+    n_d = h5f['simulation_parameters'].attrs['domain_dimensions']
     if uupd:
         smin = pu.list3_division(smin, usc)
         smax = pu.list3_division(smax, usc)
@@ -147,6 +148,7 @@ def plotcompose(pthfilen, var, output, options):
         center = (smax[0] + smin[0]) / 2.0, (smax[1] + smin[1]) / 2.0, (smax[2] + smin[2]) / 2.0
 
     drawa, drawu = pu.choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist)
+    draw1D, draw2D = pu.check_1D2Ddefaults(axc, n_d)
     plotlevels = pu.check_plotlevels(plotlevels, maxglev, drawa)
     linstyl = pu.linestyles(maxglev, plotlevels)
     if drawg:
@@ -196,29 +198,28 @@ def plotcompose(pthfilen, var, output, options):
     vlab = var + " [%s]" % pu.labelx()(uvar)
     equip = drawg, gcolor, smin, smax, zoom, center, ulen, output, vlab, timep, autsc, linstyl
 
-    p1x, p1y, p1z, p2xy, p2xz, p2yz, p2 = axc
-    if p1x:
+    if draw1D[0]:
         plot1d(refis, field, parts, equip, 0, 1, 2)
-    if p1y:
+    if draw1D[1]:
         plot1d(refis, field, parts, equip, 1, 0, 2)
-    if p1z:
+    if draw1D[2]:
         plot1d(refis, field, parts, equip, 2, 0, 1)
 
-    if p2:
+    if any(draw2D):
         fig = P.figure(1, figsize=(10, 10.5))
 
         grid = AxesGrid(fig, 111, nrows_ncols=(2, 2), axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
         ag0, ag2, ag3 = [], [], []
 
-        if p2yz:
+        if draw2D[0]:
             ax = grid[3]
             ax, ag3, ah = draw_plotcomponent(ax, refis, field, parts, equip, 0, 1, 2)
 
-        if p2xz:
+        if draw2D[1]:
             ax = grid[2]
             ax, ag2, ah = draw_plotcomponent(ax, refis, field, parts, equip, 1, 0, 2)
 
-        if p2xy:
+        if draw2D[2]:
             ax = grid[0]
             ax, ag0, ah = draw_plotcomponent(ax, refis, field, parts, equip, 2, 0, 1)
         ax.set_title(timep)

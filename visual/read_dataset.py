@@ -35,7 +35,6 @@ def collect_dataset(h5f, dset_name, level, gridlist):
     print('Reading', dset_name)
     attrs = h5f['domains']['base'].attrs
     nd = [i * 2**level for i in attrs['n_d']]
-    nxd, nyd, nzd = attrs['n_d'][0:3]
     dset = np.zeros((nd[0], nd[1], nd[2]))
 
     print('Reconstructing domain from cg parts')

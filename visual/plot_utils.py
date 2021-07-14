@@ -190,6 +190,16 @@ def choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist):
     return drawa, drawu
 
 
+def check_1D2Ddefaults(axc, n_d):
+    draw1D, draw2D = axc
+    if not (any(draw1D) or any(draw2D)):
+        if sum(n_d) - 2 == n_d[0] * n_d[1] * n_d[2]:
+            draw1D = True, True, True
+        else:
+            draw2D = True, True, True
+    return draw1D, draw2D
+
+
 def convert_units(infile, toplot):
     au_cm = 1.49597870700e13
     pc_au = 206264.806248712

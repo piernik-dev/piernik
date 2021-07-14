@@ -201,17 +201,17 @@ if pcolor == 'default':
     else:
         pcolor = '#1f77b4'
 
-p1x, p1y, p1z, p2xy, p2xz, p2yz, p2 = False, False, False, False, False, False, False
+p1x, p1y, p1z, p2xy, p2xz, p2yz = False, False, False, False, False, False
 if 'all' in axcuts:
-    p1x, p1y, p1z, p2xy, p2xz, p2yz, p2 = True, True, True, True, True, True, True
-if 'default' in axcuts or '2D' in axcuts:
-    p2xy, p2xz, p2yz, p2 = True, True, True, True
+    p1x, p1y, p1z, p2xy, p2xz, p2yz = True, True, True, True, True, True
+if '2D' in axcuts:
+    p2xy, p2xz, p2yz = True, True, True
 if 'xy' in axcuts:
-    p2, p2xy = True, True
+    p2xy = True
 if 'xz' in axcuts:
-    p2, p2xz = True, True
+    p2xz = True
 if 'yz' in axcuts:
-    p2, p2yz = True, True
+    p2yz = True
 if '1D' in axcuts:
     p1x, p1y, p1z = True, True, True
 if '1x' in axcuts:
@@ -220,11 +220,11 @@ if '1y' in axcuts:
     p1y = True
 if '1z' in axcuts:
     p1z = True
-axc = p1x, p1y, p1z, p2xy, p2xz, p2yz, p2
+axc = [p1x, p1y, p1z], [p2yz, p2xz, p2xy]
+
 options = axc, zmin, zmax, cmap, pcolor, player, psize, sctype, cu, center, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
-
 
 for pthfilen in files_list:
     print('')
