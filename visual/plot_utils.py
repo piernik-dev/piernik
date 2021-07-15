@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
+import pvf_settings as ps
 
 figsizes = [(10, 10.5), (10, 10.5), (10, 6.5), (8, 10.5), (10, 6.5), (14, 6.5)]
 figrwcls = [(2, 2), (1, 1), (1, 2), (2, 1), (1, 2), (1, 3)]
@@ -191,7 +192,7 @@ def reorder_gridcolorlist(gcolor, maxglev, plotlevels):
 
 def linestyles(markers, maxglev, plotlevels):
     if markers == '':
-        markers = ['-', '--', ':']
+        markers = ps.plot1d_linestyle
     marknum = len(markers)
     linstyl = []
     for il in range(maxglev + 1):

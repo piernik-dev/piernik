@@ -6,13 +6,16 @@ import h5py
 import os
 import sys
 import plot_compose as pc
+import pvf_settings as ps
 
-cmap = 'viridis'
+exten = ps.f_exten
+plotdir = ps.f_plotdir
+cmap = ps.plot2d_colormap
+sctype = ps.plot2d_sctype
+psize = ps.particles_size
 pcolor = 'default'
 gcolor = ''
 linstyl = ''
-plotdir = 'frames'
-sctype = 'linear'
 axcuts = 'default'
 cu, center = False, [0.0, 0.0, 0.0]
 zoom = False, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]
@@ -26,8 +29,6 @@ dnames = ''
 uaxes = ''
 nbins = 1
 player = True, '0', '0', '0'
-psize = 0
-exten = '.png'
 
 print('PIERNIK VISUALIZATION FACILITY')
 
@@ -203,9 +204,9 @@ cli_params(optilist)
 
 if pcolor == 'default':
     if nbins > 1:
-        pcolor = 'viridis'
+        pcolor = ps.hist2d_colormap
     else:
-        pcolor = '#1f77b4'
+        pcolor = ps.particles_color
 
 p1x, p1y, p1z, p2xy, p2xz, p2yz = False, False, False, False, False, False
 if 'all' in axcuts:
@@ -266,10 +267,10 @@ for pthfilen in files_list:
             else:
                 print('Particles not available in the file!')
     elif particles_in_file:
-        varlist = ['part']
+        varlist = [ps.particles_output]
         prp = 'particles only'
     elif draw_grid:
-        varlist = ['grid']
+        varlist = [ps.grid_output]
         prg = 'grid only'
     else:
         varlist = []

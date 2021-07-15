@@ -2,6 +2,7 @@
 import h5py as h5
 import numpy as np
 import plot_utils as pu
+import pvf_settings as ps
 
 
 def reconstruct_uniform(h5f, var, level, gridlist, cu, center, smin, smax, draw1D, draw2D):
@@ -138,15 +139,15 @@ def collect_particles(h5f, drawh, center, player, uupd, usc, plotlevels, gridlis
     for gn in h5f['data']:
         if h5f['data'][gn].attrs['level'] in plotlevels and int(gn.split('grid_')[-1]) in gridlist:
             if str(player[1]) == '0' and str(player[2]) == '0' and str(player[3]) == '0':
-                px = np.concatenate((px, h5f['data'][gn]['particles']['stars']['position_x'][:]))
-                py = np.concatenate((py, h5f['data'][gn]['particles']['stars']['position_y'][:]))
-                pz = np.concatenate((pz, h5f['data'][gn]['particles']['stars']['position_z'][:]))
+                px = np.concatenate((px, h5f['data'][gn]['particles'][ps.particles_group]['position_x'][:]))
+                py = np.concatenate((py, h5f['data'][gn]['particles'][ps.particles_group]['position_y'][:]))
+                pz = np.concatenate((pz, h5f['data'][gn]['particles'][ps.particles_group]['position_z'][:]))
                 if drawh:
-                    pm = np.concatenate((pm, h5f['data'][gn]['particles']['stars']['mass'][:]))
+                    pm = np.concatenate((pm, h5f['data'][gn]['particles'][ps.particles_group]['mass'][:]))
             else:
-                apx = h5f['data'][gn]['particles']['stars']['position_x'][:]
-                apy = h5f['data'][gn]['particles']['stars']['position_y'][:]
-                apz = h5f['data'][gn]['particles']['stars']['position_z'][:]
+                apx = h5f['data'][gn]['particles'][ps.particles_group]['position_x'][:]
+                apy = h5f['data'][gn]['particles'][ps.particles_group]['position_y'][:]
+                apz = h5f['data'][gn]['particles'][ps.particles_group]['position_z'][:]
                 maskx = np.abs(apx - center[0]) <= float(player[1])
                 masky = np.abs(apy - center[1]) <= float(player[2])
                 maskz = np.abs(apz - center[2]) <= float(player[3])
@@ -161,7 +162,7 @@ def collect_particles(h5f, drawh, center, player, uupd, usc, plotlevels, gridlis
                 py = np.concatenate((py, apy[maskx]))
                 pz = np.concatenate((pz, apz[maskx]))
                 if drawh:
-                    pm = np.concatenate((pm, h5f['data'][gn]['particles']['stars']['mass'][maskx]))
+                    pm = np.concatenate((pm, h5f['data'][gn]['particles'][ps.particles_group]['mass'][maskx]))
 
     if px.size == 0:
         return False, [], []

@@ -8,6 +8,7 @@ import pylab as P
 from mpl_toolkits.axes_grid1 import AxesGrid
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import plot_utils as pu
+import pvf_settings as ps
 import read_dataset as rd
 import time as timer
 # matplotlib.use('cairo')      # choose output format
@@ -39,7 +40,7 @@ def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
                     bplot = pu.scale_plotarray(b1d[ncut], sctype, symmin)
                     dxh = (bre[ncut] - ble[ncut]) / float(len(b1d[ncut])) / 2.0
                     vax = np.linspace(ble[ncut] + dxh, bre[ncut] - dxh, len(b1d[ncut]))
-                    ax.plot(vax, bplot, linstyl[level], color='k')
+                    ax.plot(vax, bplot, linstyl[level], color=ps.plot1d_linecolor)
 
     axis = "xyz"[ncut]
     P.ylabel(labf)
@@ -48,7 +49,7 @@ def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
     P.tight_layout()
     P.draw()
     out1d = output[0] + axis + '_' + output[1]
-    fig1d.savefig(out1d, facecolor='white')
+    fig1d.savefig(out1d, facecolor=ps.f_facecolor)
     print(out1d, "written to disk")
     P.clf()
 
@@ -67,7 +68,7 @@ def draw_plotcomponent(ax, refis, field, parts, equip2d, ncut, n1, n2):
                         bplot = pu.scale_plotarray(bxyz[ncut], sctype, symmin)
                         ag = ax.imshow(bplot, origin="lower", extent=[ble[n1], bre[n1], ble[n2], bre[n2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
                     if drawg:
-                        ax.plot([ble[n1], ble[n1], bre[n1], bre[n1], ble[n1]], [ble[n2], bre[n2], bre[n2], ble[n2], ble[n2]], '-', linewidth=0.5, alpha=0.1 * float(level + 1), color=gcolor[level], zorder=4)
+                        ax.plot([ble[n1], ble[n1], bre[n1], bre[n1], ble[n1]], [ble[n2], bre[n2], bre[n2], ble[n2], ble[n2]], '-', linewidth=ps.grid_linewidth, alpha=0.1 * float(level + 1), color=gcolor[level], zorder=4)
     if parts[0]:
         pxyz, pm, nbins, pcolor, psize, player = parts[1:]
         if player[0] and player[ncut + 1] != '0':
@@ -83,16 +84,16 @@ def draw_plotcomponent(ax, refis, field, parts, equip2d, ncut, n1, n2):
     ax = plot_axes(ax, ulen, "xyz"[n1], zoom[1][n1], zoom[2][n1], "xyz"[n2], zoom[1][n2], zoom[2][n2])
     ax.set_xticks([center[n1]], minor=True)
     ax.set_yticks([center[n2]], minor=True)
-    ax.tick_params(axis='x', which='minor', color='silver', bottom='on', top='on', width=2., length=6.)
-    ax.tick_params(axis='y', which='minor', color='silver', left='on', right='on', width=2., length=6.)
+    ax.tick_params(axis='x', which='minor', color=ps.centertick_color, bottom='on', top='on', width=ps.centertick_width, length=ps.centertick_length)
+    ax.tick_params(axis='y', which='minor', color=ps.centertick_color, left='on', right='on', width=ps.centertick_width, length=ps.centertick_length)
     return ax, ag, ah
 
 
 def draw_particles(ax, p1, p2, pm, nbins, ranges, drawd, pcolor, psize):
     if nbins > 1:
-        ah = ax.hist2d(p1, p2, nbins, weights=pm, range=[ranges[0:2], ranges[2:4]], norm=matplotlib.colors.LogNorm(), cmap=pcolor)
+        ah = ax.hist2d(p1, p2, nbins, weights=pm, range=[ranges[0:2], ranges[2:4]], norm=matplotlib.colors.LogNorm(), cmap=pcolor, alpha=ps.hist2d_alpha)
         if not drawd:
-            ax.set_facecolor('xkcd:black')
+            ax.set_facecolor(ps.hist2d_facecolor)
     else:
         ah = []
         if psize <= 0:
@@ -101,26 +102,27 @@ def draw_particles(ax, p1, p2, pm, nbins, ranges, drawd, pcolor, psize):
     return ax, ah
 
 
-def add_cbar(figmode, cbar_mode, grid, ab, ic, fr, clab):
+def add_cbar(figmode, cbar_mode, grid, ab, ic, clab):
     icb = pu.cbsplace[figmode][ic]
+    clf = [ps.cbar_hist2d_label_format, ps.cbar_plot2d_label_format][ic]
     if cbar_mode == 'none':
         axg = grid[icb]
         if figmode == 4 or figmode == 5:
             axg.set_xlim((grid[icb - 1].get_xlim()[0] / 2., grid[icb - 1].get_xlim()[1] / 2.))
         pu.color_axes(axg, 'white')
-        bar = inset_axes(axg, width='100%', height='100%', bbox_to_anchor=(fr, 0.0, 0.06, 1.0), bbox_transform=axg.transAxes, loc=2, borderpad=0)
-        cbarh = P.colorbar(ab, cax=bar, format='%.1e', drawedges=False)
+        fr = [ps.cbar_hist2d_shift, ps.cbar_plot2d_shift]
+        bar = inset_axes(axg, width='100%', height='100%', bbox_to_anchor=(fr[ic], 0.0, 0.06, 1.0), bbox_transform=axg.transAxes, loc=2, borderpad=0)
+        cbarh = P.colorbar(ab, cax=bar, format=clf, drawedges=False)
     else:
         if cbar_mode == 'each':
             bar = grid.cbar_axes[icb]
         elif cbar_mode == 'single':
             bar = grid.cbar_axes[0]
         bar.axis["right"].toggle(all=True)
-        cbarh = P.colorbar(ab, cax=bar, format='%.1e', drawedges=False)
-        cbarh = P.colorbar(ab, cax=bar, format='%.1e', drawedges=False)
+        cbarh = P.colorbar(ab, cax=bar, format=clf, drawedges=False)
     cbarh.ax.set_ylabel(clab)
     if cbar_mode == 'none':
-        cbarh.ax.yaxis.set_label_coords(-1.5, 0.5)
+        cbarh.ax.yaxis.set_label_coords(ps.cbar_label_coords[0], ps.cbar_label_coords[1])
 
 
 def plotcompose(pthfilen, var, output, options):
@@ -219,7 +221,7 @@ def plotcompose(pthfilen, var, output, options):
     if any(draw2D):
         fig = P.figure(1, figsize=pu.figsizes[figmode])
 
-        grid = AxesGrid(fig, 111, nrows_ncols=pu.figrwcls[figmode], axes_pad=0.2, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
+        grid = AxesGrid(fig, 111, nrows_ncols=pu.figrwcls[figmode], axes_pad=ps.plot2d_axes_pad, aspect=True, cbar_mode=cbar_mode, label_mode="L",)
         ag0, ag2, ag3 = [], [], []
 
         if draw2D[0]:
@@ -236,13 +238,13 @@ def plotcompose(pthfilen, var, output, options):
         ax.set_title(timep)
 
         if drawh:
-            add_cbar(figmode, cbar_mode, grid, ah[3], 0, 0.7, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
+            add_cbar(figmode, cbar_mode, grid, ah[3], 0, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
 
         if drawd:
-            add_cbar(figmode, cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 1, 0.1, vlab)
+            add_cbar(figmode, cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 1, vlab)
 
         P.draw()
         out2d = output[0] + pu.plane_in_outputname(figmode, draw2D) + output[1]
-        P.savefig(out2d, facecolor='white')
+        P.savefig(out2d, facecolor=ps.f_facecolor)
         print(out2d, "written to disk")
         P.clf()
