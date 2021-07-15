@@ -37,7 +37,7 @@ module crdiffusion
    implicit none
 
    private
-   public :: cr_diff, init_crdiffusion
+   public :: cr_diff3, init_crdiffusion
 
    logical :: has_cr
 
@@ -74,7 +74,6 @@ contains
    subroutine all_wcr_boundaries
 
       use cg_leaves,        only: leaves
-      use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
       use constants,        only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n, PPP_CR
       use dataio_pub,       only: die
@@ -90,13 +89,27 @@ contains
       real, dimension(:,:,:,:), pointer       :: wcr
       type(cg_list_element),    pointer       :: cgl
       type(grid_container),     pointer       :: cg
-      character(len=*), parameter :: awb_label = "all_wcr_boundaries"
+      character(len=*), parameter             :: awb_label = "all_wcr_boundaries"
 
       if (.not. has_cr) return
 
-
       call ppp_main%start(awb_label, PPP_CR)
-      call finest%level%restrict_to_base_w_1var(wna%ind(wcr_n))
+
+      ! Since wcr was computed using valid data, it should not be necessary to do
+      ! restriction here. Additionally, wcr is face-centered thing, so it should
+      ! not go through regular restriction. Either a specialized scheme should be
+      ! employed (taking into account current diffusion direction) or we should
+      ! use flux exchange routines here to match fine-coarse boundaries in a fully
+      ! conservative way.
+
+      ! Since we don't exchange f/c fluxes, we don't want to prolong anything to
+      ! fine guardsells. Unfortunately, this is still required for avoiding crashes.
+      !
+      ! ToDo: find out why.
+      !
+      ! Technically we have enough guardcells to avoid local boundary updates of
+      ! wcr at all and the call below should not be necessary. It may be worthwhile
+      ! to implement the diffusion in an unsplit manner.
       call leaves%leaf_arr4d_boundaries(wna%ind(wcr_n))
 
       ! do the external boundaries
@@ -133,6 +146,74 @@ contains
 
    end subroutine all_wcr_boundaries
 
+!> \brief A wrapper for calling consecutive diffusion sweeps in forward or backward order
+
+   subroutine cr_diff3(forward)
+
+      use all_boundaries,  only: all_bnd
+      use cg_level_finest, only: finest
+      use constants,       only: xdim, zdim, I_ONE
+      use global,          only: skip_sweep
+
+      implicit none
+
+      logical, intent(in) :: forward
+
+      integer(kind=4) :: s, sFRST, sLAST, sCHNG
+
+      if (forward) then
+         sFRST = xdim ; sLAST = zdim ; sCHNG = I_ONE
+      else
+         sFRST = zdim ; sLAST = xdim ; sCHNG = -I_ONE
+      endif
+
+      ! The difference in mcrtest with AMR between previous implementation
+      ! (restrict and all_bnd in each cr_diff) and current one (only single
+      ! call prior to all three cr_diff calls) comes from the fact that we
+      ! don't treat the wcr fluxes really as fluxes on fine-coarse boundaries.
+
+      ! Calling the restriction between diffusion sweeps will change CR values
+      ! in covered areas, which will have some effect on wcr on coarse side of
+      ! f/c boundary computed in subsequent sweeps.
+
+      ! Calling all_bnd between diffusion sweeps will apply external boundaries
+      ! (and use modified CR). It will also propagate restricted changes to
+      ! coarse guardcells. It will update fine guardcells at f/c boundaries
+      ! as well (propagating modified values from coarse to fine grids).
+
+      ! Ideally:
+      ! * Restriction shoudn't be required.
+      ! * All boundaries should be applied only to CR components and B components
+      !   (density, momentum, energy, psi and other "vital" fields can be skipped).
+      ! * The f/c boundaries of wcr should be treated as fluxes, like the conservative
+      !   approach in sweeps.
+      ! * Calculating wcr on covered areas should be skipped.
+
+      ! Until we don't have the ideal implementation outlined above, changes in the
+      ! routines in this module may result in changes of results in problems like
+      ! mcrtest with AMR. It don't necessarily means an error or mistake or even
+      ! degraded accuracy.
+
+      ! All the above assumes cell-centered magnetic field.
+
+      call finest%level%restrict_to_base
+      call all_bnd
+      ! slight overkill: all_bnd updates also psi field, which is not necessary.
+      ! It also updates non-CR components of cg%u, which is also not needed.
+
+      do s = sFRST, sLAST, sCHNG
+         if (.not.skip_sweep(s)) call cr_diff(s)
+      enddo
+
+      ! Adding the calls below do influence results a bit in mcrtest with AMR.
+      ! This means that most likely some source terms don't update boundaries
+      ! despite of depending on them.
+
+      ! call finest%level%restrict_to_base
+      ! call all_bnd
+
+   end subroutine cr_diff3
+
 !>
 !! \brief Diffusive transport of ecr in crdim/ibdir-direction
 !!
@@ -142,9 +223,7 @@ contains
 !<
    subroutine cr_diff(crdim)
 
-      use all_boundaries,   only: all_bnd
       use cg_leaves,        only: leaves
-      use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR
       use dataio_pub,       only: die
@@ -188,9 +267,6 @@ contains
       decr(:,:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.dom%has_dir(dim) .and. (dim /= crdim) )
       present_not_crdim = dom%has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
       wcri = wna%ind(wcr_n)
-
-      call finest%level%restrict_to_base ! overkill
-      call all_bnd ! overkill
 
       cgl => leaves%first
       do while (associated(cgl))
