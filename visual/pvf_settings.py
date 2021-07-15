@@ -32,7 +32,9 @@ cbar_label_coords = (-1.5, 0.5)
 # particles
 particles_output = 'part'
 particles_group = 'stars'
+particles_label = 'particles'
 particles_color = '#1f77b4'
+particles_marker = '.'
 particles_size = 0
 hist2d_colormap = 'viridis'
 hist2d_alpha = 1.0

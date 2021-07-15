@@ -23,27 +23,40 @@ def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
 
 
 def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
-    zoom, ulen, autsc, linstyl, output, labf, timep = equip1d
-    vmin, vmax, sctype, symmin, cmap = field[1:]
+    smin, smax, zoom, ulen, umin, umax, linstyl, output, timep = equip1d
     fig1d = P.figure(ncut + 2, figsize=(10, 8))
-
     ax = fig1d.add_subplot(111)
     P.xlim(zoom[1][ncut], zoom[2][ncut])
-    if not autsc:
-        P.ylim(vmin, vmax)
-
-    for blks in refis:
-        for bl in blks:
-            binb, ble, bre, level, b1d = bl[1:]
-            if binb[n1] and binb[n2]:
-                if b1d != []:
-                    bplot = pu.scale_plotarray(b1d[ncut], sctype, symmin)
-                    dxh = (bre[ncut] - ble[ncut]) / float(len(b1d[ncut])) / 2.0
-                    vax = np.linspace(ble[ncut] + dxh, bre[ncut] - dxh, len(b1d[ncut]))
-                    ax.plot(vax, bplot, linstyl[level], color=ps.plot1d_linecolor)
-
+    label = []
     axis = "xyz"[ncut]
-    P.ylabel(labf)
+
+    if field[0]:
+        vmin, vmax, sctype, symmin, cmap, autsc, labf = field[1:]
+        label.append(labf)
+        if not autsc:
+            P.ylim(vmin, vmax)
+
+        for blks in refis:
+            for bl in blks:
+                binb, ble, bre, level, b1d = bl[1:]
+                if binb[n1] and binb[n2]:
+                    if b1d != []:
+                        bplot = pu.scale_plotarray(b1d[ncut], sctype, symmin)
+                        dxh = (bre[ncut] - ble[ncut]) / float(len(b1d[ncut])) / 2.0
+                        vax = np.linspace(ble[ncut] + dxh, bre[ncut] - dxh, len(b1d[ncut]))
+                        ax.plot(vax, bplot, linstyl[level], color=ps.plot1d_linecolor)
+
+    if parts[0]:
+        pxyz, pm, nbins, pcolor, psize, player, labh = parts[1:]
+        pn1, pmm = pxyz[ncut], pm
+        ax = plot1d_particles(ax, pn1, pmm, nbins, [smin[ncut], smax[ncut]], pcolor, psize)
+        label.append(labh)
+
+    if not field[0]:
+        if umin != umax:
+            P.ylim(umin, umax)
+
+    P.ylabel('  |  '.join(label))
     P.xlabel("%s [%s]" % (axis, pu.labelx()(ulen)))
     P.title(timep)
     P.tight_layout()
@@ -55,11 +68,11 @@ def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
 
 
 def draw_plotcomponent(ax, refis, field, parts, equip2d, ncut, n1, n2):
-    drawg, gcolor, smin, smax, zoom, center, ulen = equip2d
+    smin, smax, zoom, ulen, drawg, gcolor, center = equip2d
     ag, ah = [], []
     if field[0] or drawg:
         if field[0]:
-            vmin, vmax, sctype, symmin, cmap = field[1:]
+            vmin, vmax, sctype, symmin, cmap = field[1:-2]
         for blks in refis:
             for bl in blks:
                 bxyz, binb, ble, bre, level = bl[:-1]
@@ -70,7 +83,7 @@ def draw_plotcomponent(ax, refis, field, parts, equip2d, ncut, n1, n2):
                     if drawg:
                         ax.plot([ble[n1], ble[n1], bre[n1], bre[n1], ble[n1]], [ble[n2], bre[n2], bre[n2], ble[n2], ble[n2]], '-', linewidth=ps.grid_linewidth, alpha=0.1 * float(level + 1), color=gcolor[level], zorder=4)
     if parts[0]:
-        pxyz, pm, nbins, pcolor, psize, player = parts[1:]
+        pxyz, pm, nbins, pcolor, psize, player = parts[1:-1]
         if player[0] and player[ncut + 1] != '0':
             pmask = np.abs(pxyz[ncut] - center[ncut]) <= float(player[ncut + 1])
             pn1, pn2 = pxyz[n1][pmask], pxyz[n2][pmask]
@@ -98,8 +111,18 @@ def draw_particles(ax, p1, p2, pm, nbins, ranges, drawd, pcolor, psize):
         ah = []
         if psize <= 0:
             psize = matplotlib.rcParams['lines.markersize']**2
-        ax.scatter(p1, p2, c=pcolor, marker=".", s=psize)
+        ax.scatter(p1, p2, c=pcolor, marker=ps.particles_marker, s=psize)
     return ax, ah
+
+
+def plot1d_particles(ax, p1, pm, nbins, ranges, pcolor, psize):
+    if nbins > 1:
+        ax.hist(p1, nbins, weights=pm, range=ranges, color=ps.particles_color, alpha=ps.hist2d_alpha)
+    else:
+        if psize <= 0:
+            psize = matplotlib.rcParams['lines.markersize']**2
+        ax.scatter(p1, p1 * 0., c=pcolor, marker=ps.particles_marker, s=psize)
+    return ax
 
 
 def add_cbar(figmode, cbar_mode, grid, ab, ic, clab):
@@ -137,6 +160,9 @@ def plotcompose(pthfilen, var, output, options):
         uvar = h5f['dataset_units'][var].attrs['unit']
     if drawh:
         umass = h5f['dataset_units']['mass_unit'].attrs['unit']
+        labh = 'particle mass histogram' + " [%s]" % pu.labelx()(umass)
+    else:
+        labh = ps.particles_label
     smin = h5f['simulation_parameters'].attrs['domain_left_edge']
     smax = h5f['simulation_parameters'].attrs['domain_right_edge']
     n_d = h5f['simulation_parameters'].attrs['domain_dimensions']
@@ -164,7 +190,7 @@ def plotcompose(pthfilen, var, output, options):
 
     if drawp:
         pinfile, pxyz, pm = rd.collect_particles(h5f, drawh, center, player, uupd, usc, plotlevels, gridlist)
-        parts = pinfile, pxyz, pm, nbins, pcolor, psize, player
+        parts = pinfile, pxyz, pm, nbins, pcolor, psize, player, labh
         drawh = drawh and pinfile
 
     draw1D, draw2D, figmode = pu.check_1D2Ddefaults(axc, n_d, drawd and drawh)
@@ -194,7 +220,8 @@ def plotcompose(pthfilen, var, output, options):
                 if any(draw1D):
                     print('1D data value range: ', d1min, d1max)
                 print('Plotted value range: ', vmin, vmax)
-                field = drawd, vmin, vmax, sctype, symmin, cmap
+                vlab = var + " [%s]" % pu.labelx()(uvar)
+                field = drawd, vmin, vmax, sctype, symmin, cmap, autsc, vlab
 
     h5f.close()
 
@@ -207,9 +234,8 @@ def plotcompose(pthfilen, var, output, options):
     if not zoom[0]:
         zoom = False, smin, smax
 
-    vlab = var + " [%s]" % pu.labelx()(uvar)
-    equip1d = zoom, ulen, autsc, linstyl, output, vlab, timep
-    equip2d = drawg, gcolor, smin, smax, zoom, center, ulen
+    equip1d = smin, smax, zoom, ulen, umin, umax, linstyl, output, timep
+    equip2d = smin, smax, zoom, ulen, drawg, gcolor, center
 
     if draw1D[0]:
         plot1d(refis, field, parts, equip1d, 0, 1, 2)
@@ -238,7 +264,7 @@ def plotcompose(pthfilen, var, output, options):
         ax.set_title(timep)
 
         if drawh:
-            add_cbar(figmode, cbar_mode, grid, ah[3], 0, 'particle mass histogram' + " [%s]" % pu.labelx()(umass))
+            add_cbar(figmode, cbar_mode, grid, ah[3], 0, labh)
 
         if drawd:
             add_cbar(figmode, cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 1, vlab)
