@@ -130,7 +130,6 @@ contains
             call this%add_na(qna%lst(i)%multigrid)
          enddo
       endif
-      call check_mem_usage
 
       if (allocated(wna%lst)) then
          do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)

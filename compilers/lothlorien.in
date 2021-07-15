@@ -18,10 +18,6 @@ F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -Wno-unused-fun
 F90FLAGS += -fbacktrace -ggdb
 F90FLAGS += -fcheck=all
 
-# Since gfortran >= 10.0 -frecursive was adviced by the compiler.
-# ToDo: Find out why.
-F90FLAGS += -frecursive
-
 # For gfortran >= 10.0 the use mpi_f08 interface is strongly encouraged
 F90FLAGS += -pedantic
 

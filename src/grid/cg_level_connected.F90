@@ -414,7 +414,6 @@ contains
 
       class(cg_level_connected_t), intent(inout), target :: this !< the list on which to update connectivity data for fine-coarse boundary exchange
 
-      class(cg_level_connected_t), pointer :: curl
       type(cg_level_connected_t), pointer :: coarse
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
@@ -451,7 +450,6 @@ contains
       type(wmap) :: cgmap
       integer(kind=8), dimension(ndims, LO:HI)  :: box_8   !< temporary storage
       logical :: found_flux
-      integer :: max_level
       integer, parameter :: initial_size = 16 ! for seglist
       real, parameter :: grow_ratio = 2.      ! for seglist
       integer(kind=4) :: isl                          ! current position in seglist
@@ -463,13 +461,6 @@ contains
          this%need_vb_update = .false.
          return ! check if some null allocations are required
       endif
-
-      ! Unfortunately we can't use finest%level%l%id
-      curl => this
-      do while (associated(curl))
-         max_level = curl%l%id
-         curl => curl%finer
-      enddo
 
       ext_buf = dom%D_ * all_cg%ord_prolong_nb ! extension of the buffers due to stencil range
 
