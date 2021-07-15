@@ -196,25 +196,26 @@ def compare_data(ds1, ds2):
         return 0.
 
 
-def collect_dataset(h5f, dset_name):
+def collect_dataset(h5f, dset_name, level):
     import h5py as h5
     import numpy as np
 
     attrs = h5f['domains']['base'].attrs
-    nxd, nyd, nzd = attrs['n_d'][0:3]
-    dset = np.zeros((nxd, nyd, nzd))
+    nd = [i * 2**level for i in attrs['n_d']]
+    dset = np.zeros((nd[0], nd[1], nd[2]))
 
-    grid = h5f['grid_dimensions']
-    for ig in range(grid.shape[0]):
+    levelmet = False
+    for ig in range(int(h5f['data'].attrs['cg_count'])):
         h5g = h5f['data']['grid_' + str(ig).zfill(10)]
-        if h5g.attrs['level'] == 0:
+        if h5g.attrs['level'] == level:
+            levelmet = True
             off = h5g.attrs['off']
             ngb = h5g.attrs['n_b']
             n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
             ce = n_b + off
             dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name][:, :, :].swapaxes(0, 2)
 
-    return dset
+    return dset, nd, levelmet
 
 
 def get_particles(h5f):
@@ -301,7 +302,7 @@ def compare_particles(h5f1, h5f2):
     return pn
 
 
-def piernik_gdf_compare(fname1, fname2):
+def piernik_gdf_compare(fname1, fname2, level1, level2):
     import h5py
     norms = {}
     h5f1 = h5py.File(fname1, "r")
@@ -336,8 +337,19 @@ def piernik_gdf_compare(fname1, fname2):
         if (norms["domains"] == 0 and norms["resolution"] == 0):
             tot_datanorm = 0.
             for f in common_fields:
-                ds1 = collect_dataset(h5f1, f)
-                ds2 = collect_dataset(h5f2, f)
+                ds1, nd1, levok1 = collect_dataset(h5f1, f, level1)
+                ds2, nd2, levok2 = collect_dataset(h5f2, f, level2)
+                if not levok1:
+                    print('Level %s not met in %s.' % (level1, fname1))
+                    exit(51)
+                if not levok2:
+                    print('Level %s not met in %s.' % (level2, fname2))
+                    exit(52)
+                if nd1[0] != nd2[0] or nd1[1] != nd2[1] or nd1[2] != nd2[2]:
+                    print('Domain shape for %s level %s: %s' % (fname1, level1, nd1))
+                    print('Domain shape for %s level %s: %s' % (fname2, level2, nd2))
+                    print('Arrays cannot be compered.')
+                    exit(53)
                 norm = compare_data(ds1, ds2)
                 norms["datafield `" + f + "'"] = norm
                 tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
@@ -356,12 +368,13 @@ if __name__ == "__main__":
     import sys
     if (len(sys.argv) < 3):
         sys.stderr.write("Error: too few arguments.\nUsage: " +
-                         sys.argv[0] + " piernik_data_hdf_file1 piernik_data_hdf_file2 [piernik_data_hdf_file3]\n")
+                         sys.argv[0] + " piernik_data_hdf_file1 piernik_data_hdf_file2 [piernik_data_hdf_file3]\n" + "or     " +
+                         sys.argv[0] + " piernik_data_hdf_file1 piernik_data_hdf_file2 level1 level2\n")
         exit(1)
 
     if (len(sys.argv) == 3):
         if (is_comparable(sys.argv[1], sys.argv[2])):
-            norms = piernik_gdf_compare(sys.argv[1], sys.argv[2])
+            norms = piernik_gdf_compare(sys.argv[1], sys.argv[2], 0, 0)
             tot_norm = 0.
             failed = False
             longestkey = len(max(norms, key=len))
@@ -387,9 +400,9 @@ if __name__ == "__main__":
             exit(2)
     elif (len(sys.argv) == 4):
         if (is_comparable(sys.argv[1], sys.argv[2]) and is_comparable(sys.argv[1], sys.argv[3])):
-            norms12 = piernik_gdf_compare(sys.argv[1], sys.argv[2])
-            norms13 = piernik_gdf_compare(sys.argv[1], sys.argv[3])
-            norms23 = piernik_gdf_compare(sys.argv[2], sys.argv[3])
+            norms12 = piernik_gdf_compare(sys.argv[1], sys.argv[2], 0, 0)
+            norms13 = piernik_gdf_compare(sys.argv[1], sys.argv[3], 0, 0)
+            norms23 = piernik_gdf_compare(sys.argv[2], sys.argv[3], 0, 0)
             norms = dict(norms12)
             norms.update(norms13)
             norms.update(norms23)
@@ -429,6 +442,32 @@ if __name__ == "__main__":
             print("Cannot compare files `%s', `%s' and `%s'" %
                   (sys.argv[1], sys.argv[2], sys.argv[3]))
             exit(3)
+    elif (len(sys.argv) == 5):
+        if (is_comparable(sys.argv[1], sys.argv[2])):
+            norms = piernik_gdf_compare(sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]))
+            tot_norm = 0.
+            failed = False
+            longestkey = len(max(norms, key=len))
+            for i in sorted(norms.keys()):
+                if (norms[i] >= 0. and norms[i] <= 1. + 1e-12):
+                    print("Difference of %-*s: %g" % (longestkey + 1, i, norms[i]))
+                    # tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
+                    tot_norm += (1. - tot_norm) * norms[i]
+                else:
+                    print("Difference measure `%s` out of [0,1] range: %g" %
+                          (i, norms[i]))
+                    failed = True
+            if (failed):
+                print("Comparison of `%s' and `%s' failed" %
+                      (sys.argv[1], sys.argv[2]))
+                exit(3)
+            else:
+                print("Total difference between `%s' and `%s': %g" %
+                      (sys.argv[1], sys.argv[2], tot_norm))
+        else:
+            print("Cannot compare files `%s' and `%s'" %
+                  (sys.argv[1], sys.argv[2]))
+            exit(2)
     else:
         print("Too many arguments:", sys.argv)
         exit(4)
