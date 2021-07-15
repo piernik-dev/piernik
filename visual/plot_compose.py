@@ -150,6 +150,7 @@ def add_cbar(figmode, cbar_mode, grid, ab, ic, clab):
 
 def plotcompose(pthfilen, var, output, options):
     axc, umin, umax, cmap, pcolor, player, psize, sctype, cu, center, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl = options
+    labh = ps.particles_label
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
     time = h5f.attrs['time'][0]
@@ -160,9 +161,7 @@ def plotcompose(pthfilen, var, output, options):
         uvar = h5f['dataset_units'][var].attrs['unit']
     if drawh:
         umass = h5f['dataset_units']['mass_unit'].attrs['unit']
-        labh = 'particle mass histogram' + " [%s]" % pu.labelx()(umass)
-    else:
-        labh = ps.particles_label
+        labh = labh[:-1] + ' mass histogram' + " [%s]" % pu.labelx()(umass)
     smin = h5f['simulation_parameters'].attrs['domain_left_edge']
     smax = h5f['simulation_parameters'].attrs['domain_right_edge']
     n_d = h5f['simulation_parameters'].attrs['domain_dimensions']
