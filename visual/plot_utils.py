@@ -1,5 +1,23 @@
 #!/usr/bin/env python
 import numpy as np
+import pvf_settings as ps
+
+figsizes = [(10, 10.5), (10, 10.5), (10, 6.5), (8, 10.5), (10, 6.5), (14, 6.5)]
+figrwcls = [(2, 2), (1, 1), (1, 2), (2, 1), (1, 2), (1, 3)]
+figplace = [(3, 2, 0), (0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 0), (1, 0, 0)]
+cbsplace = [(1, 1), (-1, -1), (2, 2), (0, 1), (1, 1), (2, 2)]
+
+
+def plane_in_outputname(figmode, draw2D):
+    to_insert = ''
+    if figmode == 1 or figmode == 4:
+        if draw2D[0]:
+            to_insert = 'yz_'
+        elif draw2D[1]:
+            to_insert = 'xz_'
+        elif draw2D[2]:
+            to_insert = 'xy_'
+    return to_insert
 
 
 def fsym(vmin, vmax):
@@ -11,11 +29,16 @@ def fsym(vmin, vmax):
     return vmn, vmx
 
 
-def scale_manage(sctype, refis, umin, umax, d2min, d2max):
-
+def scale_manage(sctype, refis, umin, umax, d2, minmax):
     symmin = 1.0
+    autoscale = False
+    if d2:
+        dmin, dmax = minmax[2], minmax[3]
+    else:
+        dmin, dmax = minmax[0], minmax[1]
     if (umin == 0.0 and umax == 0.0):
-        vmin, vmax = d2min, d2max
+        vmin, vmax = dmin, dmax
+        autoscale = True
     else:
         vmin, vmax = umin, umax
 
@@ -37,8 +60,8 @@ def scale_manage(sctype, refis, umin, umax, d2min, d2max):
             vmax = np.log10(umax / umin)
             vmin = np.log10(vmax)
         else:
-            if (d2min * d2max > 0.0):
-                smin, smax = d2min, d2max
+            if (dmin * dmax > 0.0):
+                smin, smax = dmin, dmax
             else:
                 smin, smax = check_minimum_data(refis, True)
             symmin = min(np.abs(smin), np.abs(smax))
@@ -46,7 +69,7 @@ def scale_manage(sctype, refis, umin, umax, d2min, d2max):
         vmin = -vmax
         print('SYMMIN value for SYMLOG scaletype: %s' % symmin)
 
-    return vmin, vmax, symmin
+    return vmin, vmax, symmin, autoscale
 
 
 def check_minimum_data(refis, extended):
@@ -85,8 +108,10 @@ def take_nonempty(lst):
     return []
 
 
-def colorbar_mode(drawd, drawh):
-    if drawd and drawh:
+def colorbar_mode(drawd, drawh, figmode):
+    if drawd and drawh and figmode == 3:
+        cbar_mode = 'each'
+    elif drawd and drawh and figmode != 3:
         cbar_mode = 'none'
     elif drawd or drawh:
         cbar_mode = 'single'
@@ -124,6 +149,90 @@ def find_indices(nd, cxyz, smin, smax, warn):
     inb = isinbox(cxyz[0], smin[0], smax[0], warn, 'CX'), isinbox(cxyz[1], smin[1], smax[1], warn, 'CY'), isinbox(cxyz[2], smin[2], smax[2], warn, 'CZ')
     icc = ind_limits(nd[0], cxyz[0], smin[0], smax[0]), ind_limits(nd[1], cxyz[1], smin[1], smax[1]), ind_limits(nd[2], cxyz[2], smin[2], smax[2])
     return inb, icc
+
+
+def check_plotlevels(plotlevels, maxglev, drawa):
+    if plotlevels == '':
+        if drawa:
+            plotlevels = range(maxglev + 1)
+        else:
+            plotlevels = 0,
+    print('LEVELS TO plot: ', plotlevels)
+    return plotlevels
+
+
+def sanitize_gridlist(gridlist, cgcount):
+    if gridlist == '':
+        gridlist = range(cgcount)
+    else:
+        grdl = []
+        for ig in gridlist:
+            if ig >= 0 and ig < cgcount:
+                grdl.append(ig)
+            else:
+                print('Grid block %s does not exist.' % str(ig))
+        gridlist = grdl
+        print('GRIDLIST: ', gridlist)
+    return gridlist
+
+
+def reorder_gridcolorlist(gcolor, maxglev, plotlevels):
+    gaux1 = gcolor.split(',')
+    maxgc = len(gaux1)
+    gaux2 = []
+    ail = 0
+    for il in range(maxglev + 1):
+        if il in plotlevels:
+            gaux2.append(gaux1[ail % maxgc])
+            ail += 1
+        else:
+            gaux2.append('none')
+    return gaux2
+
+
+def linestyles(markers, maxglev, plotlevels):
+    if markers == '':
+        markers = ps.plot1d_linestyle
+    marknum = len(markers)
+    linstyl = []
+    for il in range(maxglev + 1):
+        if il in plotlevels:
+            linstyl.append(markers[-1])
+        else:
+            linstyl.append('none')
+    for im in range(marknum):
+        if len(plotlevels) > im:
+            linstyl[plotlevels[-(im + 1)]] = markers[im]
+    return linstyl
+
+
+def choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist):
+    if (drawd or (drawg and not drawp)) and not (drawa or drawu):
+        if maxglev == 0 and gridlist == '':
+            drawu = True
+        else:
+            drawa = True
+    return drawa, drawu
+
+
+def check_1D2Ddefaults(axc, n_d, double_cbar):
+    draw1D, draw2D = axc
+    if not (any(draw1D) or any(draw2D)):
+        if sum(n_d) - 2 == n_d[0] * n_d[1] * n_d[2]:
+            draw1D = True, True, True
+        else:
+            draw2D = True, True, True
+    figmode = 1
+    if any(draw2D):
+        if all(draw2D) or (draw2D[0] and draw2D[2] and not draw2D[1]):
+            figmode = 0
+        elif draw2D[0] and draw2D[1] and not draw2D[2]:
+            figmode = 2
+        elif draw2D[2] and draw2D[1] and not draw2D[0]:
+            figmode = 3
+    if double_cbar and (figmode == 1 or figmode == 2):
+        figmode = figmode + 3
+    return draw1D, draw2D, figmode
 
 
 def convert_units(infile, toplot):

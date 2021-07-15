@@ -2,9 +2,10 @@
 import h5py as h5
 import numpy as np
 import plot_utils as pu
+import pvf_settings as ps
 
 
-def reconstruct_uniform(h5f, var, level, gridlist, cu, center, smin, smax):
+def reconstruct_uniform(h5f, var, level, gridlist, cu, center, smin, smax, draw1D, draw2D):
     dset, nd, levelmet = collect_dataset(h5f, var, level, gridlist)
     if not levelmet:
         return [], []
@@ -15,23 +16,16 @@ def reconstruct_uniform(h5f, var, level, gridlist, cu, center, smin, smax):
     else:
         ind = int(nd[0] / 2), int(nd[1] / 2), int(nd[2] / 2)
 
-    xy = dset[:, :, ind[2]].swapaxes(0, 1)
-    xz = dset[:, ind[1], :].swapaxes(0, 1)
-    yz = dset[ind[0], :, :].swapaxes(0, 1)
+    b2d, b1d, d1min, d1max, d2min, d2max, d3min, d3max = take_cuts_and_lines(dset, ind, draw1D, draw2D)
+    block = b2d, [True, True, True], smin, smax, level, b1d
 
-    d3min, d3max = np.min(dset), np.max(dset)
-    d2max = max(np.max(xz), np.max(xy), np.max(yz))
-    d2min = min(np.min(xz), np.min(xy), np.min(yz))
-    block = [True, True, True], [yz, xz, xy], smin, smax, level
-
-    return [[block, ], ], [[d2min], [d2max], [d3min], [d3max]]
+    return [[block, ], ], [[d1min], [d1max], [d2min], [d2max], [d3min], [d3max]]
 
 
 def collect_dataset(h5f, dset_name, level, gridlist):
     print('Reading', dset_name)
     attrs = h5f['domains']['base'].attrs
     nd = [i * 2**level for i in attrs['n_d']]
-    nxd, nyd, nzd = attrs['n_d'][0:3]
     dset = np.zeros((nd[0], nd[1], nd[2]))
 
     print('Reconstructing domain from cg parts')
@@ -49,27 +43,29 @@ def collect_dataset(h5f, dset_name, level, gridlist):
     return dset, nd, levelmet
 
 
-def collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, getmap):
-    l2, h2, l3, h3 = extr
+def collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, getmap, draw1D, draw2D):
+    l1, h1, l2, h2, l3, h3 = extr
     for iref in range(maxglev + 1):
         if iref in plotlevels:
             print('REFINEMENT ', iref)
             blks = []
             for ib in gridlist:
-                levok, block, extr = read_block(h5f, var, ib, iref, center, usc, getmap)
+                levok, block, extr = read_block(h5f, var, ib, iref, center, usc, getmap, draw1D, draw2D)
                 if levok:
                     blks.append(block)
                     if getmap:
-                        l2.append(extr[0])
-                        h2.append(extr[1])
-                        l3.append(extr[2])
-                        h3.append(extr[3])
+                        l1.append(extr[0])
+                        h1.append(extr[1])
+                        l2.append(extr[2])
+                        h2.append(extr[3])
+                        l3.append(extr[4])
+                        h3.append(extr[5])
             if blks != []:
                 refis.append(blks)
-    return refis, [l2, h2, l3, h3]
+    return refis, [l1, h1, l2, h2, l3, h3]
 
 
-def read_block(h5f, dset_name, ig, olev, oc, usc, getmap):
+def read_block(h5f, dset_name, ig, olev, oc, usc, getmap, draw1D, draw2D):
     h5g = h5f['data']['grid_' + str(ig).zfill(10)]
     level = h5g.attrs['level']
     levok = (level == olev)
@@ -83,20 +79,56 @@ def read_block(h5f, dset_name, ig, olev, oc, usc, getmap):
     if not any(inb):
         return False, [], []
     if not getmap:
-        return levok, [inb, [], ledge / usc, redge / usc, olev], []
+        return levok, [inb, [], [], ledge / usc, redge / usc, olev], []
     clen = h5g.attrs['dl']
     off = h5g.attrs['off']
     n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
     ce = n_b + off
     dset = h5g[dset_name][:, :, :].swapaxes(0, 2)
-    xy = dset[:, :, ind[2]].swapaxes(0, 1)
-    xz = dset[:, ind[1], :].swapaxes(0, 1)
-    yz = dset[ind[0], :, :].swapaxes(0, 1)
-    d3min, d3max = np.min(dset), np.max(dset)
-    d2max = max(np.max(xz), np.max(xy), np.max(yz))
-    d2min = min(np.min(xz), np.min(xy), np.min(yz))
 
-    return levok, [inb, [yz, xz, xy], ledge / usc, redge / usc, olev], [d2min, d2max, d3min, d3max]
+    b2d, b1d, d1min, d1max, d2min, d2max, d3min, d3max = take_cuts_and_lines(dset, ind, draw1D, draw2D)
+
+    return levok, [b2d, inb, ledge / usc, redge / usc, olev, b1d], [d1min, d1max, d2min, d2max, d3min, d3max]
+
+
+def take_cuts_and_lines(dset, ind, draw1D, draw2D):
+    xy, xz, yz, d2min, d2max = [], [], [], [], []
+    if draw2D[2]:
+        xy = dset[:, :, ind[2]].swapaxes(0, 1)
+        d2min.append(np.min(xy))
+        d2max.append(np.max(xy))
+    if draw2D[1]:
+        xz = dset[:, ind[1], :].swapaxes(0, 1)
+        d2min.append(np.min(xz))
+        d2max.append(np.max(xz))
+    if draw2D[0]:
+        yz = dset[ind[0], :, :].swapaxes(0, 1)
+        d2min.append(np.min(yz))
+        d2max.append(np.max(yz))
+
+    fx, fy, fz, d1min, d1max = [], [], [], [], []
+    if draw1D[0]:
+        fx = dset[:, ind[1], ind[2]]
+        d1min.append(np.min(fx))
+        d1max.append(np.max(fx))
+    if draw1D[1]:
+        fy = dset[ind[0], :, ind[2]]
+        d1min.append(np.min(fy))
+        d1max.append(np.max(fy))
+    if draw1D[2]:
+        fz = dset[ind[0], ind[1], :]
+        d1min.append(np.min(fz))
+        d1max.append(np.max(fz))
+
+    d3min, d3max = np.min(dset), np.max(dset)
+    if any(draw2D):
+        d2max = max(d2max)
+        d2min = min(d2min)
+    if any(draw1D):
+        d1max = max(d1max)
+        d1min = min(d1min)
+
+    return [yz, xz, xy], [fx, fy, fz], d1min, d1max, d2min, d2max, d3min, d3max
 
 
 def collect_particles(h5f, drawh, center, player, uupd, usc, plotlevels, gridlist):
@@ -107,15 +139,15 @@ def collect_particles(h5f, drawh, center, player, uupd, usc, plotlevels, gridlis
     for gn in h5f['data']:
         if h5f['data'][gn].attrs['level'] in plotlevels and int(gn.split('grid_')[-1]) in gridlist:
             if str(player[1]) == '0' and str(player[2]) == '0' and str(player[3]) == '0':
-                px = np.concatenate((px, h5f['data'][gn]['particles']['stars']['position_x'][:]))
-                py = np.concatenate((py, h5f['data'][gn]['particles']['stars']['position_y'][:]))
-                pz = np.concatenate((pz, h5f['data'][gn]['particles']['stars']['position_z'][:]))
+                px = np.concatenate((px, h5f['data'][gn]['particles'][ps.particles_group]['position_x'][:]))
+                py = np.concatenate((py, h5f['data'][gn]['particles'][ps.particles_group]['position_y'][:]))
+                pz = np.concatenate((pz, h5f['data'][gn]['particles'][ps.particles_group]['position_z'][:]))
                 if drawh:
-                    pm = np.concatenate((pm, h5f['data'][gn]['particles']['stars']['mass'][:]))
+                    pm = np.concatenate((pm, h5f['data'][gn]['particles'][ps.particles_group]['mass'][:]))
             else:
-                apx = h5f['data'][gn]['particles']['stars']['position_x'][:]
-                apy = h5f['data'][gn]['particles']['stars']['position_y'][:]
-                apz = h5f['data'][gn]['particles']['stars']['position_z'][:]
+                apx = h5f['data'][gn]['particles'][ps.particles_group]['position_x'][:]
+                apy = h5f['data'][gn]['particles'][ps.particles_group]['position_y'][:]
+                apz = h5f['data'][gn]['particles'][ps.particles_group]['position_z'][:]
                 maskx = np.abs(apx - center[0]) <= float(player[1])
                 masky = np.abs(apy - center[1]) <= float(player[2])
                 maskz = np.abs(apz - center[2]) <= float(player[3])
@@ -130,7 +162,7 @@ def collect_particles(h5f, drawh, center, player, uupd, usc, plotlevels, gridlis
                 py = np.concatenate((py, apy[maskx]))
                 pz = np.concatenate((pz, apz[maskx]))
                 if drawh:
-                    pm = np.concatenate((pm, h5f['data'][gn]['particles']['stars']['mass'][maskx]))
+                    pm = np.concatenate((pm, h5f['data'][gn]['particles'][ps.particles_group]['mass'][maskx]))
 
     if px.size == 0:
         return False, [], []

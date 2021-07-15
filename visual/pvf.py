@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import getopt
@@ -6,12 +6,17 @@ import h5py
 import os
 import sys
 import plot_compose as pc
+import pvf_settings as ps
 
-cmap = 'viridis'
+exten = ps.f_exten
+plotdir = ps.f_plotdir
+cmap = ps.plot2d_colormap
+sctype = ps.plot2d_sctype
+psize = ps.particles_size
 pcolor = 'default'
 gcolor = ''
-plotdir = 'frames'
-sctype = 'linear'
+linstyl = ''
+axcuts = 'default'
 cu, center = False, [0.0, 0.0, 0.0]
 zoom = False, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]
 zmin, zmax = 0.0, 0.0
@@ -24,8 +29,6 @@ dnames = ''
 uaxes = ''
 nbins = 1
 player = True, '0', '0', '0'
-psize = 0
-exten = '.png'
 
 print('PIERNIK VISUALIZATION FACILITY')
 
@@ -39,23 +42,25 @@ def print_usage():
     print('')
     print('Options:')
     print(' -h, \t\t\t--help \t\t\t\tprint this help')
+    print(' -a CUT1[,CUT2], \t--axes CUT1[,CUT2] \t\tselect plot cuts from the following: 1x, 1y, 1z, xy, xz, yz, 1D, 2D [default: all 2D cuts, otherwise all 1D]')
     print('\t\t\t--amr\t\t\t\tcollect all refinement levels of grid to plot [default: True while AMR refinement level structure exists]')
-    print(' -a UNIT, \t\t--axes UNIT \t\t\tscale plot axes with UNIT [default: dataset units]')
     print(' -b BINS, \t\t--bins BINS \t\t\tmake a 2D histogram plot using BINS number instead of scattering particles [default: 1, which leads to scattering]')
     print(' -c CX,CY,CZ, \t\t--center CX,CY,CZ \t\tplot cuts across given point coordinates CX, CY, CZ [default: computed domain center]')
     print(' -d VAR[,VAR2], \t--dataset VAR[,VAR2] \t\tspecify one or more datafield(s) to plot [default: print available datafields; all or _all_ to plot all available datafields]')
-    print(' -D COLORMAP, \t\t--colormap COLORMAP \t\tuse COLORMAP palette [default: viridis]')
-    print(' -e EXTENSION, \t\t--extension EXTENSION \t\tsave plot in file using filename extension EXTENSION [default: png]')
+    print(' -D COLORMAP, \t\t--colormap COLORMAP \t\tuse COLORMAP palette [default: %s]' % ps.plot2d_colormap)
+    print(' -e EXTENSION, \t\t--extension EXTENSION \t\tsave plot in file using filename extension EXTENSION [default: %s]' % ps.f_exten[1:])
     print(' -g COLOR, \t\t--gridcolor COLOR \t\tshow grids in color COLOR; possible list of colors for different grid refinement levels [default: none]')
     print('\t\t\t--grid-list GRID1[,GRID2] \tplot only selected numbered grid blocks [default: all existing blocks]')
     print(' -l LEVEL1[,LEVEL2], \t--level LEVEL1[,LEVEL2] \tplot only requested grid levels [default: 0 for --uniform, all for --amr]')
-    print(' -o OUTPUT, \t\t--output OUTPUT \t\tdump plot files into OUTPUT directory [default: frames]')
+    print('\t\t\t--linestyle STYLELIST \t\tline styles list for different refinement levels in 1D plots [default: %s]' % ps.plot1d_linestyle)
+    print(' -o OUTPUT, \t\t--output OUTPUT \t\tdump plot files into OUTPUT directory [default: %s]' % ps.f_plotdir)
     print(' -p,\t\t\t--particles\t\t\tscatter particles onto slices [default: switched-off]')
-    print(' -P,\t\t\t--particle-color\t\tuse color for particles scattering or colormap for particles histogram plot [default: #1f77b4 (blue) or viridis]')
+    print(' -P,\t\t\t--particle-color\t\tuse color for particles scattering or colormap for particles histogram plot [default: %s or %s]' % (ps.particles_color, ps.hist2d_colormap))
     print(' -r W1[,W2,W3],\t\t--particle-slice W1[,W2,W3]\tread particles from layers +/-W1 around center; uses different widths for different projections if W1,W2,W3 requested [default: all particles]')
     print(' -R W1[,W2,W3],\t\t--particle-space W1[,W2,W3]\tread particles from square +/-W1 around center or cuboid if W1,W2,W3 requested [default: no limits]')
     print(' -s,\t\t\t--particle-sizes\t\tmarker sizes for scattering particles onto slices [default: switched-off]')
-    print(' -t SCALETYPE, \t\t--scale SCALETYPE \t\tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: linear]')
+    print(' -t SCALETYPE, \t\t--scale SCALETYPE \t\tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: %s]' % ps.plot2d_sctype)
+    print(' -u UNIT, \t\t--units UNIT \t\t\tscale plot axes with UNIT [default: dataset units]')
     print('\t\t\t--uniform\t\t\treconstruct uniform grid to plot [default: True while no AMR refinement level structure exists]')
     print(' -z ZMIN,ZMAX, \t\t--zlim ZMIN,ZMAX \t\tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]')
     print('\t\t\t--zoom XL,XR,YL,YR,ZL,ZR \tset plot axes ranges [default: domain edges]')
@@ -63,7 +68,7 @@ def print_usage():
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:g:hl:o:pP:r:R:s:t:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "output=", "particles", "particle-color=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "uniform", "zlim=", "zoom="])
+        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:g:hl:o:pP:r:R:s:t:u:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "linestyle=", "output=", "particles", "particle-color=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "uniform", "units=", "zlim=", "zoom="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -74,8 +79,8 @@ def cli_params(argv):
             sys.exit()
 
         elif opt in ("-a", "--axes"):
-            global uaxes
-            uaxes = str(arg)
+            global axcuts
+            axcuts = arg.split(',')
 
         elif opt in ("-b", "--bins"):
             global nbins
@@ -109,6 +114,10 @@ def cli_params(argv):
         elif opt in ("-l", "--level"):
             global plotlevels
             plotlevels = [int(i) for i in arg.split(',')]
+
+        elif opt in ("--linestyle"):
+            global linstyl
+            linstyl = arg.split(',')
 
         elif opt in ("-o", "--output"):
             global plotdir
@@ -145,6 +154,10 @@ def cli_params(argv):
         elif opt in ("-t", "--scale"):
             global sctype
             sctype = str(arg)
+
+        elif opt in ("-u", "--units"):
+            global uaxes
+            uaxes = str(arg)
 
         elif opt in ("-z", "--zlim"):
             global zmin, zmax
@@ -191,14 +204,34 @@ cli_params(optilist)
 
 if pcolor == 'default':
     if nbins > 1:
-        pcolor = 'viridis'
+        pcolor = ps.hist2d_colormap
     else:
-        pcolor = '#1f77b4'
+        pcolor = ps.particles_color
 
-options = zmin, zmax, cmap, pcolor, player, psize, sctype, cu, center, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor
+p1x, p1y, p1z, p2xy, p2xz, p2yz = False, False, False, False, False, False
+if 'all' in axcuts:
+    p1x, p1y, p1z, p2xy, p2xz, p2yz = True, True, True, True, True, True
+if '2D' in axcuts:
+    p2xy, p2xz, p2yz = True, True, True
+if 'xy' in axcuts:
+    p2xy = True
+if 'xz' in axcuts:
+    p2xz = True
+if 'yz' in axcuts:
+    p2yz = True
+if '1D' in axcuts:
+    p1x, p1y, p1z = True, True, True
+if '1x' in axcuts:
+    p1x = True
+if '1y' in axcuts:
+    p1y = True
+if '1z' in axcuts:
+    p1z = True
+axc = [p1x, p1y, p1z], [p2yz, p2xz, p2xy]
+
+options = axc, zmin, zmax, cmap, pcolor, player, psize, sctype, cu, center, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
-
 
 for pthfilen in files_list:
     print('')
@@ -234,10 +267,10 @@ for pthfilen in files_list:
             else:
                 print('Particles not available in the file!')
     elif particles_in_file:
-        varlist = ['part']
+        varlist = [ps.particles_output]
         prp = 'particles only'
     elif draw_grid:
-        varlist = ['grid']
+        varlist = [ps.grid_output]
         prg = 'grid only'
     else:
         varlist = []
@@ -248,7 +281,7 @@ for pthfilen in files_list:
         if (not draw_data or var in list(h5f['field_types'].keys())):
             # output = plotdir+'/'+filen.split('/')[-1].replace('.h5',"_%s.png" % var)
             fnl = filen.split('/')[-1]
-            output = plotdir + '/' + '_'.join(fnl.split('_')[:-1]) + '_' + var + '_' + fnl.split('_')[-1].replace('.h5', exten)
+            output = [plotdir + '/' + '_'.join(fnl.split('_')[:-1]) + '_' + var + '_', fnl.split('_')[-1].replace('.h5', exten)]
             pc.plotcompose(pthfilen, var, output, options)
         else:
             print(var, ' is not available in the file ', pthfilen)
