@@ -1,6 +1,6 @@
-#define IONIZED
+#define NEUTRAL
 
-#define ISO
+#undef ISO
 
 
 #if !defined GLOBAL_FR_SPEED
@@ -8,7 +8,8 @@
 #endif
 #undef  MAGNETIC
 
-#define NON_INERTIAL
+#undef NON_INERTIAL
+#define CORIOLIS
 
 #define GRAV
 

@@ -46,10 +46,14 @@ contains
    subroutine problem_pointers
 
       use user_hooks, only: problem_customize_solution
+      use constants,  only: GEO_XYZ, GEO_RPZ
+      use domain,     only: dom
+      use fluidboundaries_funcs, only: user_fluidbnd
 
       implicit none
 
-      problem_customize_solution => problem_customize_solution_wind
+      if (dom%geometry_type == GEO_XYZ) problem_customize_solution => problem_customize_solution_wind
+      if (dom%geometry_type == GEO_RPZ) user_fluidbnd => user_fluidbnd_wind
 
    end subroutine problem_pointers
 
@@ -74,9 +78,9 @@ contains
 
       if (master) then
 
-         if (.not.nh%initialized) call nh%init()
+         if (.not. nh%initialized) call nh%init()
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
-         write(nh%lun,nml=PROBLEM_CONTROL)
+         write(nh%lun, nml=PROBLEM_CONTROL)
          close(nh%lun)
          open(newunit=nh%lun, file=nh%par_file)
          nh%errstr=""
@@ -126,7 +130,7 @@ contains
    ! velocity and density profiles for isothermal wind
 
       use fluidindex, only: flind
-      use constants,  only: fpi ! four*pi
+      use constants,  only: fpi ! 4*pi
       use units,      only: newtong
 
       implicit none
@@ -135,12 +139,12 @@ contains
       real              :: r_c, vel0
 
       ! r_c = G*M/2/c_s**2
-      r_c = newtong*mstar/2./flind%ion%cs2
-      vel = 2. * vel_scale/(1 + exp(2*(1 - r/r_c))) * flind%ion%cs
+      r_c = newtong*mstar/2./flind%neu%cs2
+      vel = 2. * vel_scale/(1 + exp(2*(1 - r/r_c))) * flind%neu%cs
       if (r > rin) then
          dens = mdot/fpi/r**2/vel
       else
-         vel0 = 2. * vel_scale/(1 + exp(2*(1 - rin/r_c))) * flind%ion%cs
+         vel0 = 2. * vel_scale/(1 + exp(2*(1 - rin/r_c))) * flind%neu%cs
          dens = mdot/fpi/rin**2/vel0
       endif
 
@@ -152,11 +156,12 @@ contains
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use constants,   only: xdim, ydim, zdim, LO, HI
+      use constants,   only: xdim, ydim, zdim, LO, HI, GEO_XYZ, GEO_RPZ
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use global,      only: smalld
       use grid_cont,   only: grid_container
+      use domain,      only: dom
 
       implicit none
 
@@ -167,7 +172,7 @@ contains
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
 
-      fl => flind%ion
+      fl => flind%neu
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -179,27 +184,40 @@ contains
                yj = cg%y(j)
                do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                   zk = cg%z(k)
-                  rc = sqrt(xi**2 + yj**2 + zk**2)
+                  select case (dom%geometry_type)
+                     case (GEO_XYZ)
+                        rc = sqrt(xi**2 + yj**2 + zk**2)
 
-                  call wind_profile(rc, vel, dens)
+                        call wind_profile(rc, vel, dens)
 
-                  cg%u(fl%idn,i,j,k) = max(dens, smalld)
+                        cg%u(fl%idn,i,j,k) = max(dens, smalld)
+
+                        phi = atan2(yj, xi)
+                        theta = acos(zk/rc)
+                        vx = vel*sin(theta)*cos(phi)
+                        vy = vel*sin(theta)*sin(phi)
+                        vz = vel*cos(theta)
+
+                        cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
+                        cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
+                        cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
+                     case (GEO_RPZ)
+                        call wind_profile(xi, vel, dens)
+
+                        cg%u(fl%idn,i,j,k) = max(dens, smalld)
+
+                        theta = acos(zk/xi)
+                        vx = vel*sin(theta)
+                        vz = vel*cos(theta)
+
+                        cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
+                        cg%u(fl%imy,i,j,k) = 0.
+                        cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
+                  end select
                   if (fl%ien > 1) then
                      cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u(fl%idn,i,j,k)
                      cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*vel**2*cg%u(fl%idn,i,j,k)
                   endif
-
-
-                  phi = atan2(yj, xi)
-                  theta = acos(zk/rc)
-                  vx = vel*sin(theta)*cos(phi)
-                  vy = vel*sin(theta)*sin(phi)
-                  vz = vel*cos(theta)
-
-                  cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
-                  cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
-                  cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
-
                enddo
             enddo
          enddo
@@ -220,6 +238,7 @@ contains
       use all_boundaries,   only: all_fluid_boundaries
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
+      use domain,           only: dom
 
       implicit none
 
@@ -231,7 +250,7 @@ contains
       real                            :: xi, yj, vx, vy, vz, zk, rc, vel,&
                                        dens, phi, theta
 
-      fl => flind%ion
+      fl => flind%neu
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -278,5 +297,55 @@ contains
       if (forward) i = j ! suppress compiler warnings on unused arguments
 
    end subroutine problem_customize_solution_wind
+
+
+   subroutine user_fluidbnd_wind(dir, side, cg, wn, qn, emfdir)
+      ! impose wind inflow after sweeps and modify the fluid data
+
+      use grid_cont,  only: grid_container
+      use dataio_pub, only: die
+      use constants,  only: xdim, ydim, zdim, LO, HI
+      use fluidtypes, only: component_fluid
+      use global,     only: smalld
+
+      implicit none
+
+      class(component_fluid), pointer              :: fl
+      integer(kind=4),               intent(in)    :: dir, side
+      type(grid_container), pointer, intent(inout) :: cg
+      integer(kind=4),     optional, intent(in)    :: wn, qn, emfdir
+      integer                                      :: i, j, k
+      real                                         :: xi, zk, vx, vz, vel, dens, theta
+
+      if (dir /= xdim) return
+
+      do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+         xi = cg%x(i)
+         do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+            do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+               zk = cg%z(k)
+               call wind_profile(xi, vel, dens)
+
+               cg%u(fl%idn,i,j,k) = max(dens, smalld)
+
+               theta = acos(zk/xi)
+               vx = vel*sin(theta)
+               vz = vel*cos(theta)
+
+               cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
+               cg%u(fl%imy,i,j,k) = 0.
+               cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
+               if (fl%ien > 1) then
+                  cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u(fl%idn,i,j,k)
+                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*vel**2*cg%u(fl%idn,i,j,k)
+               endif
+            enddo
+         enddo
+      enddo
+
+      if (.true. .or. cg%grid_id*dir*side >=0) return ! suppress compiler warnings
+      if (present(wn) .or. present(qn) .or. present(emfdir)) return ! suppress compiler warning
+
+   end subroutine user_fluidbnd_wind
 
 end module initproblem
