@@ -252,7 +252,7 @@ contains
       use dataio_pub,   only: printinfo, msg
       use MPIF,         only: MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
       use MPIFUN,       only: MPI_Isend, MPI_Recv, MPI_Waitall
-      use mpisetup,     only: proc, master, slave, err_mpi, FIRST, LAST, req, inflate_req
+      use mpisetup,     only: proc, master, slave, err_mpi, FIRST, LAST, req, inflate_req, piernik_MPI_Barrier, extra_barriers
 
       implicit none
 
@@ -330,6 +330,8 @@ contains
          call MPI_Waitall(t, req(:t), MPI_STATUSES_IGNORE, err_mpi)
          deallocate(buflabel, buftime)
       endif
+
+      if (extra_barriers) call piernik_MPI_Barrier
 
       call this%cleanup
 
