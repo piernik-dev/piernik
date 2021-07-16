@@ -207,11 +207,12 @@ contains
 
    subroutine divB_c(ord, ccB)
 
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: I_ONE, I_TWO
-      use dataio_pub, only: die
-      use func,       only: operator(.notequals.)
+      use cg_cost_data, only: I_OTHER
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use constants,    only: I_ONE, I_TWO
+      use dataio_pub,   only: die
+      use func,         only: operator(.notequals.)
 
       implicit none
 
@@ -233,11 +234,15 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          cgl%cg%q(idivB)%arr(                                cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = sixpoint(cgl%cg, coeff(I_ONE), I_ONE, ccB)
          do i = I_TWO, max_c
             if (coeff(i) .notequals. 0.) cgl%cg%q(idivB)%arr(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = &
                  &                       cgl%cg%q(idivB)%arr(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) + sixpoint(cgl%cg, coeff(i),     i,     ccB)
          enddo
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 

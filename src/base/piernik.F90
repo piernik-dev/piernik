@@ -44,6 +44,7 @@ program piernik
    use func,              only: operator(.equals.)
    use global,            only: t, nstep, dt, dtm, cfl_violated, print_divB, repeat_step, tstep_attempt
    use initpiernik,       only: init_piernik
+   use lb_helpers,        only: costs_maintenance
    use list_of_cg_lists,  only: all_lists
    use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast, cleanup_mpi
    use named_array_list,  only: qna, wna
@@ -154,6 +155,7 @@ program piernik
       if ((t .equals. tlast) .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
 
       call piernik_MPI_Barrier
+      call costs_maintenance
 
       if (.not.cfl_violated) then
          call ppp_main%start('write_data', PPP_IO)

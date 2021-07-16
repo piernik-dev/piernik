@@ -65,6 +65,7 @@ contains
 
    subroutine residual4(cg_llst, src, soln, def)
 
+      use cg_cost_data,       only: I_MULTIGRID
       use cg_leaves,          only: cg_leaves_t
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
@@ -121,6 +122,7 @@ contains
       cgl => cg_llst%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          Lx1 = c41 * cg%idx2
          Ly1 = c41 * cg%idy2
@@ -163,6 +165,8 @@ contains
                enddo
             enddo
          endif
+
+         call cg%costs%stop(I_MULTIGRID)
          cgl => cgl%nxt
       enddo
 

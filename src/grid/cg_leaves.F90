@@ -61,8 +61,8 @@ module cg_leaves
       procedure :: balance_and_update      !< Rebalance if required and update
       procedure :: leaf_arr3d_boundaries   !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays on leaves
       procedure :: leaf_arr4d_boundaries   !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays on leaves
-      procedure :: prioritized_cg          !< Returna a leaves list with different ordering of cg to optimize fine->coarse flux transfer
-      procedure :: leaf_only_cg            !< Returna a leaves list without fully covered cg
+      procedure :: prioritized_cg          !< Return a leaves list with different ordering of cg to optimize fine->coarse flux transfer
+      procedure :: leaf_only_cg            !< Return a leaves list without fully covered cg
    end type cg_leaves_t
 
    !>
@@ -141,7 +141,7 @@ contains
       enddo
       g_cnt = leaves%cnt
       call piernik_MPI_Allreduce(g_cnt, pSUM)
-      write(msg(len_trim(msg)+1:), '(a,i7,a,f6.3)')", Sum: ",g_cnt, ", load balance: ",g_cnt/real(sum_max)
+      write(msg(len_trim(msg)+1:), '(a,i7,a,f6.3)')", Sum: ",g_cnt, ", cg load balance: ",g_cnt/real(sum_max)
       is = len_trim(msg)
       write(msg(len_trim(msg)+1:), '(a,f7.3)') ", dt_wall= ", set_timer(tmr_amr)
       if (finest%level%l%id > base_level_id) then
@@ -167,6 +167,7 @@ contains
 
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_t
+      use rebalance,          only: rebalance_all
       use constants,          only: PPP_AMR
       use ppp,                only: ppp_main
 
@@ -179,10 +180,13 @@ contains
       character(len=*), parameter :: bu_label = "leaves_balance_and_update"
 
       call ppp_main%start(bu_label, PPP_AMR)
+
+      call rebalance_all
+
       curl => finest%level
-      do while (associated(curl)) ! perhaps it is worth to limit to the base level
-         call curl%balance_old
-         call curl%sync_ru
+      do while (associated(curl))
+         call curl%check_update_all
+         call curl%sync_ru  ! no need to update this%recently_changed here (was done in check_update_all)
          curl => curl%coarser
       enddo
 

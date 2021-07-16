@@ -600,6 +600,7 @@ contains
       use dataio_pub,   only: msg, printinfo, warn
       use mpisetup,     only: master, piernik_MPI_Bcast
       use ppp,          only: umsg_request
+      use procnames,    only: pnames
       use timer,        only: walltime_end
 #ifdef HDF5
       use data_hdf5,    only: write_hdf5
@@ -663,21 +664,27 @@ contains
                call sleep(tsleep)
             case ('stop')
                end_sim = .true.
+            case ('unexclude')
+               call pnames%enable_all
+               ! manual excluding may be helpful too, but we need to pass a list, like "exclude 2,7-9,32769", and process it safely
             case ('help')
                if (master) then
-                  write(msg,*) "[dataio:user_msg_handler] Recognized messages:",char(10),&
-                  &"  help     - prints this information",char(10),&
-                  &"  stop     - finish the simulation",char(10),&
-                  &"  res      - immediately dumps a restart file",char(10),&
-                  &"  dump     - immediately dumps a restart file of full domain for all blocks",char(10),&
-                  &"  hdf      - dumps a plotfile",char(10),&
-                  &"  log      - update logfile",char(10),&
-                  &"  tsl      - write a timeslice",char(10),&
-                  &"  ppp [N]  - start ppp_main profiling for N timesteps (default 1)",char(10),&
-                  &"  wleft    - show how much walltime is left",char(10),&
-                  &"  wresleft - show how much walltime is left till next restart",char(10),&
-                  &"  sleep <number> - wait <number> seconds",char(10),&
-                  &"  wend|wdtres|tend|nend|dtres|dthdf|dtlog|dttsl <value> - update specified parameter with <value>",char(10),&
+                  write(msg,*) "[dataio:user_msg_handler] Recognized messages:", char(10), &
+                  &"  help      - prints this information", char(10), &
+                  &"  stop      - finish the simulation", char(10), &
+#ifdef HDF5
+                  &"  res       - immediately dumps a restart file", char(10), &
+                  &"  dump      - immediately dumps a restart file of full domain for all blocks", char(10), &
+                  &"  hdf       - dumps a plotfile", char(10), &
+#endif /* HDF5 */
+                  &"  log       - update logfile", char(10), &
+                  &"  tsl       - write a timeslice", char(10), &
+                  &"  ppp [N]   - start ppp_main profiling for N timesteps (default 1)", char(10), &
+                  &"  unexclude - reset thread exclusion mask", char(10), &
+                  &"  wleft     - show how much walltime is left", char(10), &
+                  &"  wresleft  - show how much walltime is left till next restart", char(10), &
+                  &"  sleep <number> - wait <number> seconds", char(10), &
+                  &"  wend|wdtres|tend|nend|dtres|dthdf|dtlog|dttsl <value> - update specified parameter with <value>", char(10), &
                   &"Note that only one line at a time is read."
                   call printinfo(msg)
                endif
@@ -878,6 +885,7 @@ contains
 
    subroutine write_timeslice
 
+      use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE, INVALID, PPP_IO
@@ -1041,6 +1049,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          pu => cg%w(wna%fi)%span(cg%ijkse)
          if (wna%bi > INVALID) pb => cg%w(wna%bi)%span(cg%ijkse)
@@ -1125,6 +1134,7 @@ contains
 
          end select
 
+         call cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 
@@ -1271,6 +1281,7 @@ contains
    subroutine get_common_vars(fl)
 
       use types,            only: value                          !QA_WARN: used by get_extremum (intel compiler)
+      use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: MINL, MAXL, small, xdim, ydim, zdim, GEO_RPZ
@@ -1304,7 +1315,11 @@ contains
       pr => fl%snap
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          cgl%cg%wa = cgl%cg%u(fl%idn,:,:,:)
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, pr%dens_max)
@@ -1312,11 +1327,15 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          where (cgl%cg%u(fl%idn,:, :, :) > 0.0)
             cgl%cg%wa = abs(cgl%cg%u(fl%imx,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
          elsewhere
             cgl%cg%wa = 0.
          endwhere
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, pr%velx_max, xdim)
@@ -1325,7 +1344,11 @@ contains
       if (is_multicg) then
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
+
             cgl%cg%wa = cfl * cgl%cg%dx / (cgl%cg%wa + small)
+
+            call cgl%cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MINL, pr%dtvx_min, xdim)
@@ -1336,6 +1359,8 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          if (use_fargo) then
             do i = cgl%cg%is, cgl%cg%ie
                omega_mean = sum(cgl%cg%u(fl%imy, i, :, :) / cgl%cg%u(fl%idn, i, :, :) / cgl%cg%x(i)) / size(cgl%cg%u(fl%idn, i, :, :))
@@ -1355,6 +1380,8 @@ contains
                cgl%cg%wa = 0.
             endwhere
          endif
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, pr%vely_max, ydim)
@@ -1365,6 +1392,8 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          if (is_multicg) cgl%cg%wa = cfl * cgl%cg%dy / (cgl%cg%wa + small)
          if (use_fargo) then
             cgl%cg%wa = cgl%cg%dy / (cgl%cg%wa + small)
@@ -1374,6 +1403,8 @@ contains
                enddo
             endif
          endif
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MINL, pr%dtvy_min, ydim)
@@ -1386,11 +1417,15 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          where (cgl%cg%u(fl%idn,:, :, :) > 0.0)
             cgl%cg%wa = abs(cgl%cg%u(fl%imz,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
          elsewhere
             cgl%cg%wa = 0.
          endwhere
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, pr%velz_max, zdim)
@@ -1399,6 +1434,8 @@ contains
       if (use_fargo) then
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
+
             do i = cgl%cg%is, cgl%cg%ie
                cgl%cg%wa(i, : ,:) = &
                   abs( &
@@ -1406,6 +1443,8 @@ contains
                      cgl%cg%u(fl%imy, i-1, :, :) / cgl%cg%u(fl%idn, i-1, :, :) / cgl%cg%x(i-1)   &
                   )
             enddo
+
+            call cgl%cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MAXL, pr%shear_max, ydim)
@@ -1415,7 +1454,11 @@ contains
       if (is_multicg) then
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
+
             cgl%cg%wa = cfl * cgl%cg%dz / (cgl%cg%wa + small)
+
+            call cgl%cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MINL, pr%dtvz_min, zdim)
@@ -1447,8 +1490,12 @@ contains
       pr%dtcs_min%val    = huge(1.)
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          pr%dtcs_min%val   = min(pr%dtcs_min%val,   (cfl * cgl%cg%dxmn) / (max(fl%cs, maxval(cgl%cg%cs_iso2(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap)) + small))
          pr%dtcs_min%assoc = max(pr%dtcs_min%assoc, max(fl%cs, maxval(cgl%cg%cs_iso2(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap)))
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
       call piernik_MPI_Allreduce(pr%dtcs_min%val,   pMIN)
@@ -1464,11 +1511,15 @@ contains
          ! wa: none -> pressure
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
+
             cgl%cg%wa(:,:,:) = cgl%cg%u(fl%ien,:,:,:) - ekin(cgl%cg%u(fl%imx,:,:,:), cgl%cg%u(fl%imy,:,:,:), cgl%cg%u(fl%imz,:,:,:), cgl%cg%u(fl%idn,:,:,:)) ! eint
 #ifdef MAGNETIC
             if (fl%tag == ION) cgl%cg%wa(:,:,:) = cgl%cg%wa(:,:,:) - emag(cgl%cg%b(xdim,:,:,:), cgl%cg%b(ydim,:,:,:), cgl%cg%b(zdim,:,:,:))
 #endif /* MAGNETIC */
             cgl%cg%wa(:,:,:) = fl%gam_1*cgl%cg%wa(:,:,:)
+
+            call cgl%cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MAXL, pr%pres_max)
@@ -1477,7 +1528,11 @@ contains
          ! wa: pressure -> sound speed squared
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
+
             cgl%cg%wa(:,:,:) = fl%gam*cgl%cg%wa(:,:,:)/cgl%cg%u(fl%idn,:,:,:)
+
+            call cgl%cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MAXL, pr%cs_max, I_ZERO)
@@ -1487,7 +1542,11 @@ contains
          ! wa: sound speed squared -> temperature
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
+
             cgl%cg%wa(:,:,:) = (mH * cgl%cg%wa(:,:,:))/ (kboltz * fl%gam)
+
+            call cgl%cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MAXL, pr%temp_max)
@@ -1496,8 +1555,12 @@ contains
          ! wa: temperature -> (sound speed squared) -> sound time accross one cell
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
+
             cgl%cg%wa = cgl%cg%wa * (kboltz * fl%gam) / mH ! temperature -> sound speed squared
             cgl%cg%wa = cfl**2 * cgl%cg%dxmn2 / (cgl%cg%wa + small)
+
+            call cgl%cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MINL, pr%dtcs_min)
@@ -1517,6 +1580,7 @@ contains
 !
    subroutine  write_log(tsl)
 
+      use cg_cost_data,       only: I_OTHER
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
       use constants,          only: idlen, small, MAXL, PPP_IO
@@ -1614,7 +1678,11 @@ contains
 #ifdef MAGNETIC
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          cgl%cg%wa(:,:,:) = sqrt(sq_sum3(cgl%cg%b(xdim,:,:,:), cgl%cg%b(ydim,:,:,:), cgl%cg%b(zdim,:,:,:)))
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, b_max)
@@ -1627,7 +1695,11 @@ contains
       if (has_ion) then
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
+
             cgl%cg%wa(:,:,:)  = cgl%cg%wa(:,:,:) / sqrt(cgl%cg%u(flind%ion%idn,:,:,:))
+
+            call cgl%cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MAXL, vai_max, I_ZERO)
@@ -1635,6 +1707,8 @@ contains
 
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
+
 #ifdef ISO
             cgl%cg%wa(:,:,:) = sqrt(cgl%cg%wa(:,:,:)**2 + flind%ion%cs2)
 #else /* !ISO */
@@ -1644,6 +1718,8 @@ contains
                &        cgl%cg%u(flind%ion%idn,:,:,:)))/cgl%cg%u(flind%ion%idn,:,:,:)
             cgl%cg%wa(:,:,:) = sqrt(cgl%cg%wa(:,:,:))
 #endif /* !ISO */
+
+            call cgl%cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MAXL, cfi_max, I_ZERO)
@@ -1652,6 +1728,8 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
          p = (cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse+dom%D2a(xdim,:,:)) - cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse))*cgl%cg%dy*cgl%cg%dz &
             +(cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse+dom%D2a(ydim,:,:)) - cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dz &
@@ -1662,6 +1740,7 @@ contains
          cgl%cg%wa(:,cgl%cg%je,:) = cgl%cg%wa(:,cgl%cg%je-dom%D_y,:)
          cgl%cg%wa(:,:,cgl%cg%ke) = cgl%cg%wa(:,:,cgl%cg%ke-dom%D_z)
 
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt ; NULLIFY(p)
       enddo
       call leaves%get_extremum(qna%wai, MAXL, divb_max)
@@ -1674,24 +1753,36 @@ contains
       var_i = qna%ind(gpot_n)
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
          p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+dom%D2a(xdim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idx)
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt ; NULLIFY(p)
       enddo
       call leaves%get_extremum(qna%wai, MAXL, gpxmax)
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
          p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+dom%D2a(ydim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idy)
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt ; NULLIFY(p)
       enddo
       call leaves%get_extremum(qna%wai, MAXL, gpymax)
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
          p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+dom%D2a(zdim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idz)
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt ; NULLIFY(p)
       enddo
       call leaves%get_extremum(qna%wai, MAXL, gpzmax)
@@ -1700,11 +1791,15 @@ contains
 #ifdef COSM_RAYS
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
 #ifdef COSM_RAY_ELECTRONS
          cgl%cg%wa        = sum(cgl%cg%u(iarr_all_crn,:,:,:),1)
 #else /* !COSM_RAY_ELECTRONS */
          cgl%cg%wa        = sum(cgl%cg%u(iarr_all_crs,:,:,:),1)
 #endif /* !COSM_RAY_ELECTRONS */
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, encr_max)
@@ -1714,7 +1809,11 @@ contains
 #ifdef COSM_RAY_ELECTRONS
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          cgl%cg%wa = sum(cgl%cg%u(iarr_cre_n,:,:,:),1)
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, cren_max)
@@ -1722,7 +1821,11 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          cgl%cg%wa = sum(cgl%cg%u(iarr_cre_e,:,:,:),1)
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, cree_max)
@@ -1732,6 +1835,8 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
          p =   (cgl%cg%u(flind%ion%imx, cgl%cg%is+dom%D_x:cgl%cg%ie+dom%D_x, cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ) / &
                 cgl%cg%u(flind%ion%idn, cgl%cg%is+dom%D_x:cgl%cg%ie+dom%D_x, cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ) - &
@@ -1749,6 +1854,8 @@ contains
          cgl%cg%wa(cgl%cg%ie,:,:) = cgl%cg%wa(cgl%cg%ie-dom%D_x,:,:)
          cgl%cg%wa(:,cgl%cg%je,:) = cgl%cg%wa(:,cgl%cg%je-dom%D_y,:)
          cgl%cg%wa(:,:,cgl%cg%ke) = cgl%cg%wa(:,:,cgl%cg%ke-dom%D_z)
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt ; NULLIFY(p)
       enddo
       call leaves%get_extremum(qna%wai, MINL, divv_min)
@@ -1761,7 +1868,11 @@ contains
       if (has_interactions) then
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
+
             cgl%cg%wa = L2norm(cgl%cg%u(flind%dst%imx,:,:,:),cgl%cg%u(flind%dst%imy,:,:,:),cgl%cg%u(flind%dst%imz,:,:,:),cgl%cg%u(flind%neu%imx,:,:,:),cgl%cg%u(flind%neu%imy,:,:,:),cgl%cg%u(flind%neu%imz,:,:,:) ) * cgl%cg%u(flind%dst%idn,:,:,:)
+
+            call cgl%cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MAXL, drag)

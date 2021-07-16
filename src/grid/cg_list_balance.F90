@@ -36,6 +36,7 @@ module cg_list_balance
    use dot,              only: dot_t
    use level_essentials, only: level_t
    use patch_list,       only: patch_list_t
+   use sort_piece_list,  only: grid_piece_list
 
    implicit none
 
@@ -51,13 +52,14 @@ module cg_list_balance
    !> An abstract type created to take out some load-balance related code from cg_level (new grids)
 
    type, extends(cg_list_bnd_t), abstract :: cg_list_balance_t
-      type(patch_list_t)                :: plist            !< list of patches that exist on the current level
-      type(dot_t)                       :: dot              !< depiction of topology
-      logical                           :: recently_changed !< .true. when anything was added to or deleted from this level
-      class(level_t), pointer           :: l                !< single place to store off, n_d and id
+      type(patch_list_t)                :: plist             !< list of patches that exist on the current level
+      type(dot_t)                       :: dot               !< depiction of topology
+      logical                           :: recently_changed  !< .true. when anything was added to or deleted from this level
+      class(level_t), pointer           :: l                 !< single place to store off, n_d and id
+      type(grid_piece_list)             :: gp                !< SFC-sortable structure for collecting cgs for rebalance
+      integer(kind=4), allocatable, dimension(:) :: cnt_all  !< block count for all threads (used in rebalance, only on master)
    contains
       procedure          :: balance_new          !< Routine selector for moving proposed grids between processes
-      procedure, private :: balance_strict_SFC   !< Routine for moving proposed grids between processes: keep strict SFC ordering
       procedure, private :: balance_fill_lowest  !< Routine for moving proposed grids between processes: add load to lightly-loaded processes
       procedure, private :: patches_to_list      !< Collect local proposed patches into an array on the master process
       procedure, private :: distribute_patches   !< Send balanced set patches from master to slaves and re-register them
@@ -71,121 +73,28 @@ contains
 !! \brief Routine selector for moving proposed grids between processes
 !!
 !! There are several strategies that can be implemented:
-!! * Local refinements go to local process. It is very simple, but for most simulations will build up load imbalance. Suitable for tests and global refinement.
-!! * Local refinements can be assigned to remote processes, existing blocks stays in place. Should keep good load balance, but the amount of inter-process
-!!   internal boundaries may grow significantly with time. Suitable for minor refinement updates and base level decomposition. This is the current implementation of balance_fill_lowest.
-!! * All blocks (existing and new) have recalculated assignment and can be migrated to other processes. Most advanced. Should be used after reading restart data.
+!! * Local refinements go to local process. It is very simple, but for most
+!!   simulations will build up load imbalance. Suitable for tests and global
+!!   refinement. Removed.
+!! * Local refinements can be assigned to remote processes, existing blocks
+!!   stays in place. Should keep good load balance, but the amount of inter-process
+!!   internal boundaries may grow significantly with time. Suitable for minor
+!!   refinement updates and base level decomposition. This is the current
+!!   implementation in balance_fill_lowest.
+!! * All blocks (existing and new) have recalculated assignment and can be
+!!   migrated to other processes. Most advanced. Should be used after reading
+!!   restart data. ToDo.
 !<
 
    subroutine balance_new(this)
 
-      use refinement, only: strict_SFC_ordering
-
       implicit none
 
       class(cg_list_balance_t), intent(inout) :: this
 
-      ! The only available strategy ATM
-      if (strict_SFC_ordering) then
-         call this%balance_strict_SFC
-      else
-         call this%balance_fill_lowest ! never rebalances
-      endif
+      call this%balance_fill_lowest ! never rebalances
 
    end subroutine balance_new
-
-!>
-!! \brief Routine for moving proposed grids between processes: keep strict SFC ordering
-!!
-!! \details Starts with list of already allocated blocks and list of patches which are not yet turned into blocks
-!! on a given level. Assume that the existing blocks are distributed according to Space-Filling curve ordering:
-!! maximum id for process p is always lower than minimum id for process p+1. Add new grids in a way that keeps the
-!! strict SFC ordering property even if it may introduce imbalance.
-!!
-!! \todo Do a global rebalance if it is allowed and worth the effort.
-!<
-
-   subroutine balance_strict_SFC(this)
-
-      use constants,       only: pSUM, LO, HI, I_ONE
-      use dataio_pub,      only: warn
-      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, nproc
-      use sort_piece_list, only: grid_piece_list
-
-      implicit none
-
-      class(cg_list_balance_t), intent(inout) :: this
-
-      type(grid_piece_list) :: gp
-      integer(kind=4) :: ls, s, i, p
-      integer(kind=4), dimension(FIRST:LAST+1) :: from
-
-      call this%dot%update_SFC_id_range(this%l%off)
-      if (.not. this%dot%is_strict_SFC) then
-!!$         ! call reshuffle
-!!$         call die("[cg_list_balance:balance_strict_SFC] reshuffling not implemented.")
-         if (master) call warn("[cg_list_balance:balance_strict_SFC] non-SFC ordering!") ! May happen after resizing domain on the left sides
-      endif
-
-      ! gather patches id
-      s = int(this%plist%p_count(), kind=4)
-      ls = int(s, kind=4)
-      call piernik_MPI_Allreduce(s, pSUM) !> \warning overkill: MPI_reduce is enough here
-      if (s==0) return ! nihil novi
-
-      if (master) call gp%init(s)
-      call this%patches_to_list(gp, ls)
-
-      ! sort id
-      if (master) then !> \warning Antiparallel
-         ! apply unique numbers to the grids and sort the list
-         call gp%set_id(this%l%off)
-         call gp%sort
-
-         ! calculate patch distribution
-         if (all(this%dot%SFC_id_range(:, HI) < this%dot%SFC_id_range(:, LO))) then !special case: empty level, huge values in this%dot%SFC_id_range(:,:)
-            do p = FIRST, LAST
-               from(p) = int(lbound(gp%list, dim=1) + (p*size(gp%list))/nproc, kind=4)
-            enddo
-            from(LAST+1) = ubound(gp%list, dim=1, kind=4) + I_ONE
-!!$            do p = FIRST, LAST
-!!$               gp%list(from(p):from(p+1)-1)%dest_proc = p
-!!$            enddo
-         else
-            ! just keep SFC ordering, no attempts to balance things here
-            !> \todo OPT try to do as much balance as possible
-            p = FIRST
-            do i = lbound(gp%list, dim=1, kind=4), ubound(gp%list, dim=1, kind=4)
-               do while (this%dot%SFC_id_range(p, HI) < this%dot%SFC_id_range(p, LO)) ! skip processes with no grids for the sake of simplicity
-                  p = p + I_ONE
-                  if (p > LAST) exit
-               enddo
-               if (p > LAST) p = LAST
-               do while (gp%list(i)%id > this%dot%SFC_id_range(p, HI) .and. p < LAST)
-                  p = p + I_ONE
-                  if (p > LAST) exit
-               enddo
-               gp%list(i)%dest_proc = p
-            enddo
-
-            p = FIRST
-            from(FIRST)  = lbound(gp%list, dim=1, kind=4)
-            from(FIRST+1:LAST+1) = ubound(gp%list, dim=1, kind=4) + I_ONE
-            do i = lbound(gp%list, dim=1, kind=4), ubound(gp%list, dim=1, kind=4)
-               if (gp%list(i)%dest_proc /= p) then
-                  from(p+1:gp%list(i)%dest_proc) = i
-                  p = gp%list(i)%dest_proc
-               endif
-            enddo
-         endif
-      endif
-
-      ! send to slaves
-      call this%distribute_patches(gp, from)
-
-      if (master) call gp%cleanup
-
-   end subroutine balance_strict_SFC
 
 !>
 !! \brief Routine for moving proposed grids between processes: add load to lightly-loaded processes
@@ -219,11 +128,13 @@ contains
 
    subroutine balance_fill_lowest(this)
 
-      use constants,       only: pSUM, I_ONE
+      use constants,       only: pSUM, I_ZERO, I_ONE
       use dataio_pub,      only: die
       use MPIF,            only: MPI_INTEGER, MPI_COMM_WORLD
-      use MPIFUN,          only:  MPI_Gather
-      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, err_mpi, nproc
+      use MPIFUN,          only: MPI_Gather
+      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, err_mpi
+      use procnames,       only: pnames
+
       use sort_piece_list, only: grid_piece_list
 
       implicit none
@@ -233,7 +144,7 @@ contains
       type(grid_piece_list) :: gp
       integer :: i
       integer(kind=4), dimension(FIRST:LAST+1) :: from
-      integer(kind=4), dimension(FIRST:LAST) :: cnt_existing
+      integer(kind=4), dimension(FIRST:LAST) :: cnt_all
       integer(kind=4) :: ls, p, s
 
       ! count how many patches were requested on each process
@@ -245,43 +156,52 @@ contains
       if (master) call gp%init(s)
       call this%patches_to_list(gp, ls)
 
-      call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
+      call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_all, I_ONE, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
 
       if (master) then !> \warning Antiparallel
-         ! apply unique numbers to the grids and sort the list
-         call gp%set_id(this%l%off)
-         call gp%sort
 
-         ! measure their weight (unused yet)
-         ! call gp%set_weights
+         if (all(pnames%exclude)) call die("[cg_list_balance:balance_fill_lowest] all threads excluded")
+
+         ! apply unique numbers to the grids and sort the list
+         call gp%set_sort_weight(this%l%off, .false.)
 
          !> compute destination process corrected for current imbalance of existing grids as much as possible
          !> \todo replace counting of blocks with counting of weights - it will be required for merged blocks
-         s = int((size(gp%list) + sum(cnt_existing))/real(nproc), kind=4)
-         i = (size(gp%list) + sum(cnt_existing, mask=(cnt_existing <= s)))/(nproc - count(cnt_existing > s))
-         from(FIRST) = lbound(gp%list, dim=1, kind=4)
-         do p = FIRST, LAST
-            from(p+1) = int(max(0, i - cnt_existing(p)), kind=4)
-         enddo
+
+         ! target number of cg per thread (ideal, level-balanced)
+         s = int((size(gp%list) + sum(cnt_all))/real(count(.not. pnames%exclude)), kind=4)
+
+         ! first estimate how to fill lowest-occupied threads
+         i = (size(gp%list) + sum(cnt_all, mask=(cnt_all <= s .and. .not. pnames%exclude))) / &
+              &               count(cnt_all <= s .and. .not. pnames%exclude)
+         from(:) = [ lbound(gp%list, dim=1, kind=4), merge(I_ZERO, int(max(0, i - cnt_all(:)), kind=4), pnames%exclude(:)) ]
          i = size(gp%list) - sum(from(FIRST+1:LAST+1))
-         p = LAST
-         do while (p >= FIRST .and. i /= 0)
-            if (i<0) then
-               do while (from(p+1)>0 .and. i<0)
+
+         if (i < 0) then
+            p = FIRST
+            do while (i < 0)
+               if (from(p+1) > 0) then
                   from(p+1) = from(p+1) - I_ONE
                   i = i + 1
-               enddo
-            else if (i>0) then
-               !> \deprecated this approach may result in building a small imbalance in favour of process with low id.
-               if (cnt_existing(p) <= s) then
+               endif
+               p = p + I_ONE
+               if (p > LAST) p = FIRST
+            enddo
+         else if (i > 0) then  ! this is the dominating case
+            p = LAST
+            do while (i > 0)
+               ! here we tend to overload last processes on each level independently
+               ! ToDo involve all_cg%cnt and try to improve global balancing
+               if (.not. pnames%exclude(p)) then
                   from(p+1) = from(p+1) + I_ONE
                   i = i - 1
                endif
-            endif
-            p = p - I_ONE
-         enddo
-         i = size(gp%list) - sum(from(FIRST+1:LAST+1))
-         if (i /= 0) call die("[cg_list_balance:balance_fill_lowest] i /= 0")
+               p = p - I_ONE
+               if (p < FIRST) p = LAST
+            enddo
+         endif
+
+         if (size(gp%list) - sum(from(FIRST+1:LAST+1)) /= 0) call die("[cg_list_balance:balance_fill_lowest] i /= 0")
          do p = FIRST, LAST
             from(p+1) = from(p+1) + from(p)
          enddo
@@ -290,13 +210,6 @@ contains
       call this%distribute_patches(gp, from)
 
       if (master) call gp%cleanup
-
-!!$      allocate(area(1:lmax))
-!!$      area = 0
-!!$      do i = lbound(cg_res(:), dim=1), ubound(cg_res(:), dim=1)
-!!$         if (cg_res(i)%level >= 1) area(cg_res(i)%level) = area(cg_res(i)%level) + product(cg_res(i)%n_b)
-!!$      enddo
-!!$      deallocate(area)
 
    end subroutine balance_fill_lowest
 

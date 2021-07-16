@@ -31,7 +31,7 @@
 
 module cg_list_neighbors
 
-   use cg_list_rebalance, only: cg_list_rebalance_t
+   use cg_list_balance, only: cg_list_balance_t
 
    implicit none
 
@@ -63,7 +63,7 @@ module cg_list_neighbors
    !! searching grid pieces covering specified position.
    !<
 
-   type, extends(cg_list_rebalance_t), abstract :: cg_list_neighbors_t
+   type, extends(cg_list_balance_t), abstract :: cg_list_neighbors_t
    contains
       procedure          :: find_neighbors                 !< Choose between more general and fast routine for neighbor searching.
       procedure, private :: find_neighbors_SFC             !< Make full description of intra-level communication with neighbors. Approach exploiting strict SFC distribution.

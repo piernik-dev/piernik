@@ -89,13 +89,14 @@ contains
 
    subroutine update_chspeed()
 
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ, pMAX, small, DIVB_HDC, RIEMANN_SPLIT
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use global,     only: use_fargo, cfl_glm, ch_grid, dt, divB_0_method, which_solver
-      use mpisetup,   only: piernik_MPI_Allreduce
+      use cg_cost_data, only: I_MHD
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use constants,    only: GEO_XYZ, pMAX, small, DIVB_HDC, RIEMANN_SPLIT
+      use dataio_pub,   only: die
+      use domain,       only: dom
+      use global,       only: use_fargo, cfl_glm, ch_grid, dt, divB_0_method, which_solver
+      use mpisetup,     only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -112,6 +113,8 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          if (ch_grid) then
             ! Rely only on grid properties. Psi is an artificial field and psi waves have to propagate as fast as stability permits.
             ! It leads to very bad values when time step drops suddenly (like on last timestep)
@@ -126,6 +129,8 @@ contains
                enddo
             enddo
          endif
+
+         call cgl%cg%costs%stop(I_MHD)
          cgl => cgl%nxt
       enddo
 
@@ -137,12 +142,13 @@ contains
 
    subroutine map_chspeed
 
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use global,     only: cfl_glm, ch_grid, dt
+      use cg_cost_data, only: I_MHD
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use constants,    only: GEO_XYZ
+      use dataio_pub,   only: die
+      use domain,       only: dom
+      use global,       only: cfl_glm, ch_grid, dt
 
       implicit none
 
@@ -154,6 +160,8 @@ contains
       if (dom%geometry_type /= GEO_XYZ) call die("[hdc:update_chspeed] non-cartesian geometry not implemented yet.")
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          if (ch_grid) then
             ! Rely only on grid properties. Psi is an artificial field and psi waves have to propagate as fast as stability permits.
             ! It leads to very bad values when time step drops suddenly (like on last timestep)
@@ -168,6 +176,8 @@ contains
                enddo
             enddo
          endif
+
+         call cgl%cg%costs%stop(I_MHD)
          cgl => cgl%nxt
       enddo
 
@@ -273,20 +283,19 @@ contains
 !<
    subroutine glmdamping
 
+      use cg_cost_data,     only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: psi_n, DIVB_HDC, pMIN, RIEMANN_SPLIT
       use dataio_pub,       only: die
       use domain,           only: dom
       use global,           only: glm_alpha, dt, divB_0_method, which_solver
-      use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use mpisetup,         only: piernik_MPI_Allreduce
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
 
       real :: fac
 
@@ -298,8 +307,11 @@ contains
          fac = 0.
          cgl => leaves%first
          do while (associated(cgl))
-            cg => cgl%cg
-            fac = max(fac, glm_alpha*chspeed/(minval(cg%dl, mask=dom%has_dir)/dt))
+            call cgl%cg%costs%start
+
+            fac = max(fac, glm_alpha*chspeed/(minval(cgl%cg%dl, mask=dom%has_dir)/dt))
+
+            call cgl%cg%costs%stop(I_MHD)
             cgl => cgl%nxt
          enddo
          fac = exp(-fac)
@@ -307,8 +319,11 @@ contains
 
          cgl => leaves%first
          do while (associated(cgl))
-            cg => cgl%cg
+            call cgl%cg%costs%start
+
             cgl%cg%q(qna%ind(psi_n))%arr =  cgl%cg%q(qna%ind(psi_n))%arr * fac
+
+            call cgl%cg%costs%stop(I_MHD)
             cgl => cgl%nxt
          enddo
       endif

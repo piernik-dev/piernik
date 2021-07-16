@@ -796,12 +796,12 @@ contains
 
    subroutine sg_dist_to_edge
 
-      use cg_leaves,     only: leaves
-      use cg_level_base, only: base
-      use cg_list,       only: cg_list_element
-      use constants,     only: xdim, ydim, zdim, LO, HI
-      use domain,        only: dom
-      use fluidindex,    only: iarr_all_dn
+      use cg_leaves,      only: leaves
+      use cg_expand_base, only: expand_base
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, LO, HI
+      use domain,         only: dom
+      use fluidindex,     only: iarr_all_dn
 
       implicit none
 
@@ -878,7 +878,7 @@ contains
       enddo
 
       !> \todo shrink the domain in the direction opposite to expansion (shift the domain in given direction)
-      call base%expand(ddist(:,:) < iprox)
+      call expand_base(ddist(:,:) < iprox)
 
    end subroutine sg_dist_to_edge
 

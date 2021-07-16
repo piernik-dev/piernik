@@ -75,7 +75,7 @@ module cg_level
       procedure, private :: add_patch_detailed                                   !< Add a new piece of grid to the list of patches
       procedure          :: deallocate_patches                                   !< Throw out patches list
       procedure, private :: update_everything                                    !< Update all information on refinement structure and intra-level communication
-      procedure          :: balance_old                                          !< Wrapper for rebalance_old
+      procedure          :: check_update_all                                     !< Check if it is necessary to call update_everything
       procedure          :: refresh_SFC_id                                       !< Recalculate SFC_id for grids, useful after domain expansion
 
    end type cg_level_t
@@ -378,9 +378,9 @@ contains
 
    end subroutine add_patch_detailed
 
-!> \brief Wrapper for cg_list_rebalance%balance_old
+!> \brief Check if it is necessary to call update_everything
 
-   subroutine balance_old(this)
+   subroutine check_update_all(this)
 
       use constants, only: pLOR
       use mpisetup,  only: piernik_MPI_Allreduce
@@ -389,12 +389,11 @@ contains
 
       class(cg_level_t), intent(inout) :: this
 
-      call this%rebalance_old
       ! OPT: call this%update_gse inside this%update_everything can be quite long to complete
       call piernik_MPI_Allreduce(this%recently_changed, pLOR)
       if (this%recently_changed) call this%update_everything
 
-   end subroutine balance_old
+   end subroutine check_update_all
 
 !> \brief Recalculate SFC_id for grids, useful after domain expansion
 

@@ -38,7 +38,7 @@
 module multigridvars
 ! pulled by MULTIGRID
 
-   use constants,   only: dsetnamelen
+   use constants, only: dsetnamelen
 
    implicit none
 
@@ -67,6 +67,8 @@ module multigridvars
    real             :: overrelax         !< overrealaxation factor (if < 1. then works as underrelaxation), provided for tests
    real             :: coarsest_tol      !< criterion for automagic coarsest level relaxation
    real, parameter  :: nc_growth = 1.3   !< how much ncheck grows between checks in relaxation
+
+   character(len=dsetnamelen) :: dirty_label !< buffer for label for check_dirty subroutine
 
    ! constants for enumerating multigrid boundary types
    enum, bind(C)

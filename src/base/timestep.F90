@@ -100,6 +100,7 @@ contains
 !<
    subroutine time_step(dt, flind)
 
+      use cg_cost_data,       only: I_OTHER
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
       use cmp_1D_mpi,         only: compare_array1D
@@ -151,6 +152,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
             call timestep_fluid(cg, flind%all_fluids(ifl)%fl, dt_, c_)
@@ -158,6 +160,7 @@ contains
             c_all = max(c_all, c_)
          enddo
 
+         call cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 
