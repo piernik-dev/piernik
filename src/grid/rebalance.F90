@@ -401,11 +401,14 @@ contains
       use grid_container_ext, only: cg_extptrs
       use list_of_cg_lists,   only: all_lists
       use MPIF,               only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
-      use MPIFUN,             only: MPI_Isend, MPI_Irecv
+      use MPIFUN,             only: MPI_Isend, MPI_Irecv, MPI_Comm_dup, MPI_Comm_free
       use mpisetup,           only: master, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, err_mpi, req, inflate_req, tag_ub
       use named_array_list,   only: qna, wna
       use ppp,                only: ppp_main
       use ppp_mpi,            only: piernik_Waitall
+#ifdef MPIF08
+      use MPIF,               only: MPI_Comm
+#endif /* MPIF08 */
 
       implicit none
 
@@ -433,6 +436,11 @@ contains
          enumerator :: I_D_P
       end enum
       character(len=*), parameter :: ISR_label = "reshuffle_Isend+Irecv", cp_label = "reshuffle_copy", gp_label = "reshuffle_gptemp"
+#ifdef MPIF08
+      type(MPI_Comm)  :: shuff_comm
+#else /* !MPIF08 */
+      integer(kind=4) :: shuff_comm
+#endif /* !MPIF08 */
 
 #ifdef NBODY
       logical :: has_particles
@@ -493,6 +501,7 @@ contains
       call ppp_main%stop(gp_label, PPP_AMR)
 
       ! Irecv & Isend
+      call MPI_Comm_dup(MPI_COMM_WORLD, shuff_comm, err_mpi)
       call ppp_main%start(ISR_label, PPP_AMR)
       nr = I_ZERO
       curl => finest%level
@@ -534,7 +543,7 @@ contains
                   if (.not. found) call die("[rebalance:reshuffle] Grid id not found")
                   nr = nr + I_ONE
                   if (nr > size(req, dim=1)) call inflate_req
-                  call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i, MPI_COMM_WORLD, req(nr), err_mpi)
+                  call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i, shuff_comm, req(nr), err_mpi)
                endif
                if (gptemp(I_D_P, i) == proc) then ! receive
                   n_gid = 1
@@ -553,7 +562,7 @@ contains
                   call all_cg%add(curl%last%cg)
                   nr = nr + I_ONE
                   if (nr > size(req, dim=1)) call inflate_req
-                  call MPI_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), i, MPI_COMM_WORLD, req(nr), err_mpi)
+                  call MPI_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), i, shuff_comm, req(nr), err_mpi)
                endif
             endif
          enddo
@@ -563,6 +572,7 @@ contains
       call ppp_main%stop(ISR_label, PPP_AMR)
 
       call piernik_Waitall(nr, "reshuffle", PPP_AMR)
+      call MPI_Comm_free(shuff_comm, err_mpi)
 
       call ppp_main%start(cp_label, PPP_AMR)
       curl => finest%level

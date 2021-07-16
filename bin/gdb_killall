@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# This is potentially dangerous as we ignore PIDs and use only hostnames to
+# kill every Piernik process.
+
+# ToDo implement more selective killing.
+
+HLIST=$(
+    for i in $( ls -1 bt_*_[1-9][0-9]* 2> /dev/null ) ; do
+        echo $i | sed 's/^bt_//;s/_[1-9][0-9]*//'
+    done | sort | uniq
+)
+
+if [ $( echo $HLIST | wc -w ) -lt 1 ] ; then
+    echo "No backtrace files to guess hostnames from them"
+    exit 1
+fi
+
+PR="Kill all piernik processes on hosts: "$( for h in $HLIST ; do echo -n $h" " ; done )"? [y/n] "
+read -p "${PR}" k
+
+if [ $k == "y" ] ; then
+    for h in $HLIST ; do
+        ssh $h killall piernik
+    done
+fi

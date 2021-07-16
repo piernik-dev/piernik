@@ -20,7 +20,7 @@ program Allgatherv_bug
    allocate(cnt(0:nproc-1), off(0:nproc-1))
    cnt(:) = 1
    o = 0
-   do i = lbound(cnt, 1), ubound(cnt, 1)
+   do i = lbound(cnt, 1, kind=MPI_INTEGER_KIND), ubound(cnt, 1, kind=MPI_INTEGER_KIND)
       off(i) = o
       o = o + cnt(i)
    end do

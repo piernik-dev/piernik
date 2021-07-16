@@ -38,9 +38,10 @@ module memory_usage
    private
    public :: init_memory, system_mem_usage, check_mem_usage
 
-   integer(kind=4) :: max_mem  !< Maximum allowed RSS memory per thread (in kiB)
+   integer(kind=4) :: max_mem    !< Maximum allowed RSS memory per thread (in kiB)
+   real            :: warnlevel  !< Fraction of max_mem at which warnings should start to appear
 
-   namelist /MEMORY/ max_mem
+   namelist /MEMORY/ max_mem, warnlevel
 
 contains
 
@@ -53,18 +54,20 @@ contains
 !! \n \n
 !! <table border="+1">
 !!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!!   <tr><td>max_mem          </td><td>huge(1)</td><td>integer value                        </td><td>\copydoc global::max_mem          </td></tr>
+!!   <tr><td>max_mem   </td><td>huge(1) </td><td>integer value </td><td>\copydoc memory_usage::max_mem   </td></tr>
+!!   <tr><td>warnlevel </td><td>0.8     </td><td>real value    </td><td>\copydoc memory_usage::warnlevel </td></tr>
 !! </table>
 !! \n \n
 !<
    subroutine init_memory
 
-      use dataio_pub, only: nh
-      use mpisetup,   only: ibuff, master, slave, piernik_MPI_Bcast
+      use dataio_pub, only: nh, warn
+      use mpisetup,   only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
-      max_mem     = huge(1_4)
+      max_mem   = huge(1_4)
+      warnlevel = 0.8
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -85,14 +88,24 @@ contains
 
          ibuff(1) = max_mem
 
+         rbuff(1) = warnlevel
+
       endif
 
       call piernik_MPI_Bcast(ibuff)
+      call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
 
-         max_mem = ibuff(1)
+         max_mem   = ibuff(1)
 
+         warnlevel = rbuff(1)
+
+      endif
+
+      if (warnlevel < 0. .or. warnlevel > 1.) then
+         warnlevel = 1.
+         if (master) call warn("[memory_usage:init_memory] warnlevel outside < 0. or > 1. Memory usage warnings disabled")
       endif
 
    end subroutine init_memory
@@ -135,7 +148,7 @@ contains
             return
          case default
             if (.not. warned_os) then
-               if (master) call warn("[memory_usage:system_mem_usage] Memory monitoring not implemented for unidentified OS!")
+               if (master) call warn("[memory_usage:system_mem_usage] Memory monitoring not implemented for an unidentified OS!")
                warned_os = .true.
             endif
             return
@@ -182,7 +195,6 @@ contains
       implicit none
 
       integer :: rss
-      real, parameter :: warnlevel = 0.95
       integer, save :: nextwarn = 1, warncnt = 0
 
       rss = system_mem_usage()

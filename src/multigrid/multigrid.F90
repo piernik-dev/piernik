@@ -95,10 +95,10 @@ contains
 
       namelist /MULTIGRID_SOLVER/ level_depth, ord_prolong, stdout, verbose_vcycle, do_ascii_dump, dirty_debug, show_n_dirtys
 
-      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized")
+      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[multigrid:multigrid_par] grid, geometry, constants or arrays not initialized")
       ! This check is too weak (geometry), arrays are required only for multigrid_gravity
 
-      if (.not.frun) call die("[multigrid:init_multigrid] Called more than once.")
+      if (.not.frun) call die("[multigrid:multigrid_par] Called more than once.")
       frun = .false.
 
       ! Default values for namelist variables
@@ -160,8 +160,8 @@ contains
 
       single_base = (nproc == 1)
 
-      if (dirty_debug .and. master) call warn("[multigrid:init_multigrid] dirty_debug is supposed to be set only in debugging runs. Remember to disable it in production runs")
-      if (dom%eff_dim < 1 .or. dom%eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
+      if (dirty_debug .and. master) call warn("[multigrid:multigrid_par] dirty_debug is supposed to be set only in debugging runs. Remember to disable it in production runs")
+      if (dom%eff_dim < 1 .or. dom%eff_dim > 3) call die("[multigrid:multigrid_par] Unsupported number of dimensions.")
 
 !! \todo Make an array of subroutine pointers
 #ifdef SELF_GRAV

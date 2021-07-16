@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# This is a simple gdb wrapper for Piernik.  It is intended for catching
+# exact place of a deadlock in a massively parallel run.  You may run it as
+# you normally run Piernik, e.g.:
+#
+#     mpirun -host host1:,host2: ../../bin/gdb_wrap
+#
+# from the runs/problem directory where the "./piernik" executable is
+# placed.  Each started gdb-wrapped piernik process leaves a text file named
+# according to the template: bt_<hostname>_<pid>.  Then you have to wait
+# till you notice that the parallel run is deadlocked, i.e.  the log files
+# aren't progressing for more that few typical walltime intervals for steps.
+#
+# Once you realize that the deadlock occured hou have to kill all piernik
+# processes that belong to your job without killing their gdb.  You can use
+# accompanying script bin/gdb_killall to kill all piernik processes on all
+# hosts pointed by the bt_*_* files.  This requires that all the bt_*_*
+# files are stored in local run directory and you can execute ssh commant to
+# the remote hosts.  This is also potentially dangerous as the
+# bin/gdb_killall script attempts to kill ALL piernik processes, regardless
+# of their PID.
+#
+# After you succesfully kill all the piernik processes from the deadlocked
+# task (and hopefully nothing else), you may inspect all the bt_*_* files,
+# which now should contain the backtrace from the point where the processes
+# were killed.  A deadlock typically occurs when some processes have to wait
+# for some other processes, while these are waiting for yet something else. 
+# Typically this can be identified in the backtraces as a partially
+# divergent call stacks: some processes have completed certain procedures
+# and went ahead while other processes are stuck few lines earlier for some
+# reason.
+#
+# Good luck!
+
+gdb -q -ex "set logging file bt_${HOSTNAME}_$$" -ex "set logging on" -ex "r" -ex "bt" -ex "quit" ./piernik

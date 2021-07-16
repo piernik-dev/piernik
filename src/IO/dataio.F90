@@ -582,11 +582,14 @@ contains
    end subroutine init_dataio
 
    subroutine cleanup_dataio
+
+      use dataio_pub, only: cleanup_text_buffers
 #ifdef HDF5
       use common_hdf5, only: cleanup_hdf5
 #endif /* HDF5 */
       implicit none
 
+      call cleanup_text_buffers
 #ifdef HDF5
       call cleanup_hdf5
 #endif /* HDF5 */
