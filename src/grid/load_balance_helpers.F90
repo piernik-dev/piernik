@@ -43,31 +43,30 @@ contains
 
       implicit none
 
-      call print_costs(all_cg)
+      call print_costs
       call all_cg%reset_costs
 
    end subroutine costs_maintenance
 
 !> \brief Report the measured costs
 
-   subroutine print_costs(cglist)
+   subroutine print_costs
 
-      use cg_cost_data,  only: cost_labels
-      use cg_cost_stats, only: cg_stats_t, stat_labels, I_MAX
-      use cg_list,       only: cg_list_t, cg_list_element
-      use constants,     only: I_ONE, base_level_id, PPP_AMR
-      use dataio_pub,    only: msg, warn
-      use global,        only: nstep
-      use load_balance,  only: balance_cg, balance_host, enable_exclusion, exclusion_thr, &
-           &                   verbosity, verbosity_nstep, V_NONE, V_SUMMARY, V_HOST, V_DETAILED, V_ELABORATE
-      use mpisetup,      only: master, FIRST, LAST, err_mpi
-      use MPIF,          only: MPI_COMM_WORLD, MPI_DOUBLE_PRECISION, MPI_Wtime
-      use MPIFUN,        only: MPI_Gather
-      use ppp,           only: ppp_main
+      use cg_cost_data,   only: cost_labels
+      use cg_cost_stats,  only: cg_stats_t, stat_labels, I_MAX
+      use cg_list,        only: cg_list_element
+      use cg_list_global, only: all_cg
+      use constants,      only: I_ONE, base_level_id, PPP_AMR
+      use dataio_pub,     only: msg, warn
+      use global,         only: nstep
+      use load_balance,   only: balance_cg, balance_host, enable_exclusion, exclusion_thr, &
+           &                    verbosity, verbosity_nstep, V_NONE, V_SUMMARY, V_HOST, V_DETAILED, V_ELABORATE
+      use mpisetup,       only: master, FIRST, LAST, err_mpi
+      use MPIF,           only: MPI_COMM_WORLD, MPI_DOUBLE_PRECISION, MPI_Wtime
+      use MPIFUN,         only: MPI_Gather
+      use ppp,            only: ppp_main
 
       implicit none
-
-      class(cg_list_t), intent(in) :: cglist
 
       type(cg_list_element), pointer :: cgl
       type(cg_stats_t) :: leaves_stats, all_stats
@@ -85,7 +84,7 @@ contains
       ! gather mean, standard deviation and extrema for the costs
       call leaves_stats%reset
       call all_stats%reset
-      cgl => cglist%first
+      cgl => all_cg%first
       do while (associated(cgl))
          if (cgl%cg%l%id >= base_level_id) call leaves_stats%add(cgl%cg%costs)
          call all_stats%add(cgl%cg%costs)
