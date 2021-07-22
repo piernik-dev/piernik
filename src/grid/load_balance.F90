@@ -85,7 +85,7 @@ contains
 !!   <tr><td> cost_to_balance  </td><td> "all"    </td><td> character() </td><td> \copydoc load_balance::cost_to_balance  </td></tr>
 !!   <tr><td> balance_levels   </td><td> 0.       </td><td> real        </td><td> \copydoc load_balance::balance_levels   </td></tr>
 !!   <tr><td> verbosity        </td><td> 2        </td><td> integer     </td><td> \copydoc load_balance::verbosity        </td></tr>
-!!   <tr><td> verbosity_nstep  </td><td> 20       </td><td> integer     </td><td> \copydoc load_balance::verbosity_nstep  </td></tr>
+!!   <tr><td> verbosity_nstep  </td><td> 0        </td><td> integer     </td><td> \copydoc load_balance::verbosity_nstep  </td></tr>
 !!   <tr><td> enable_exclusion </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::enable_exclusion </td></tr>
 !!   <tr><td> watch_cost       </td><td> "MHD"    </td><td> character() </td><td> \copydoc load_balance::watch_cost       </td></tr>
 !!   <tr><td> exclusion_thr    </td><td> 3.       </td><td> real        </td><td> \copydoc load_balance::exclusion_thr    </td></tr>
@@ -101,7 +101,6 @@ contains
 
       implicit none
 
-      integer, parameter :: verbosity_nstep_default = 20
       real,    parameter :: intolerable_perf = 3., insane_factor = 2.
       integer            :: ind
 
@@ -114,7 +113,7 @@ contains
       balance_thread   = .false.
       cost_to_balance  = "all"
       verbosity        = V_HOST
-      verbosity_nstep  = verbosity_nstep_default
+      verbosity_nstep  = 0
       enable_exclusion = .false.
       watch_cost       = "MHD"
       exclusion_thr    = intolerable_perf
