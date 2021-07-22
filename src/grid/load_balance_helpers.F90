@@ -60,7 +60,8 @@ contains
       use dataio_pub,     only: msg, warn
       use global,         only: nstep
       use load_balance,   only: balance_cg, balance_host, enable_exclusion, exclusion_thr, &
-           &                    verbosity, verbosity_nstep, V_NONE, V_SUMMARY, V_HOST, V_DETAILED, V_ELABORATE
+           &                    verbosity, verbosity_nstep, umsg_verbosity, &
+           &                    V_NONE, V_SUMMARY, V_HOST, V_DETAILED, V_ELABORATE
       use mpisetup,       only: master, FIRST, LAST, err_mpi
       use MPIF,           only: MPI_COMM_WORLD, MPI_DOUBLE_PRECISION, MPI_Wtime
       use MPIFUN,         only: MPI_Gather
@@ -70,7 +71,7 @@ contains
 
       type(cg_list_element), pointer :: cgl
       type(cg_stats_t) :: leaves_stats, all_stats
-      integer(kind=4) :: i
+      integer(kind=4) :: i, v
       real :: maxv, mul
       character(len=I_ONE) :: prefix
       real, save :: prev_time = -huge(1.)
@@ -109,7 +110,8 @@ contains
 
          if (nstep >= 1) call update_costs
 
-         if ((verbosity > V_NONE) .and. ((nstep <= 0 .and. verbosity_nstep <= 1) .or. (nstep > 0 .and. mod(nstep, verbosity_nstep) == 0))) then
+         if (((verbosity > V_NONE) .and. ((nstep <= 0 .and. verbosity_nstep <= 1) .or. (nstep > 0 .and. mod(nstep, verbosity_nstep) == 0))) &
+              .or. (umsg_verbosity > V_NONE)) then
 
             ! Choose between s and ms.
             maxv = maxval(all_proc_stats(:, I_MAX - lbound(stat_labels) + I_ONE, :))
@@ -127,7 +129,13 @@ contains
                   call warn(msg)
                endif
             else
-               select case (verbosity)
+               v = verbosity
+               if (umsg_verbosity > V_NONE) then
+                  v = min(V_ELABORATE, umsg_verbosity)
+                  umsg_verbosity = V_NONE
+                  ! Intentionally the reset occurs only when umsg_verbosity triggers printing (maxv has to be > 0.)
+               endif
+               select case (v)
                   case (V_ELABORATE:)
                      call log_elaborate
                   case (V_DETAILED)
@@ -135,8 +143,8 @@ contains
                   case (V_HOST)
                   case (V_SUMMARY)
                end select
-               if (verbosity >= V_HOST) call log_host
-               if (verbosity >= V_SUMMARY) call log_summary
+               if (v >= V_HOST) call log_host
+               if (v >= V_SUMMARY) call log_summary
                if ((balance_cg > 0. .or. balance_host > 0. .or. enable_exclusion) .and. (nstep >= 1)) call log_speed
             endif
 

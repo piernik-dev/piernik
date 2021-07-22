@@ -598,6 +598,7 @@ contains
    subroutine user_msg_handler(end_sim)
 
       use dataio_pub,   only: msg, printinfo, warn
+      use load_balance, only: umsg_verbosity, V_HOST
       use mpisetup,     only: master, piernik_MPI_Bcast
       use ppp,          only: umsg_request
       use procnames,    only: pnames
@@ -634,9 +635,20 @@ contains
             case ('tsl')
                call write_timeslice
             case ('ppp')
-               umsg_request = max(1, int(umsg_param))
-               write(msg,'(a,i8,a)') "[dataio:user_msg_handler] enable PPP for ", umsg_request, " step" // trim(merge("s", " ", umsg_request == 1))
-               if (master) call printinfo(msg)
+               if (abs(umsg_param) < huge(1)) then
+                  umsg_request = max(1, int(umsg_param))
+                  write(msg,'(a,i10,a)') "[dataio:user_msg_handler] enable PPP for ", umsg_request, " step(s)" // trim(merge("s", " ", umsg_request == 1))
+                  if (master) call printinfo(msg)
+               else
+                  if (master) call warn("[dataio:user_msg_handler] Cannot convert the parameter to integer")
+               endif
+            case ('perf')
+               if (umsg_param <= 0.) umsg_param = V_HOST
+               if (abs(umsg_param) < huge(1_4)) then
+                  umsg_verbosity = int(umsg_param)
+               else
+                  if (master) call warn("[dataio:user_msg_handler] Cannot convert the parameter to integer")
+               endif
             case ('wend')
                wend = umsg_param
                if (master) tn = walltime_end%time_left(wend)
@@ -681,6 +693,7 @@ contains
                   &"  tsl       - write a timeslice", char(10), &
                   &"  ppp [N]   - start ppp_main profiling for N timesteps (default 1)", char(10), &
                   &"  unexclude - reset thread exclusion mask", char(10), &
+                  &"  perf [N]  - print performance data with verbosity N (default V_HOST)", char(10), &
                   &"  wleft     - show how much walltime is left", char(10), &
                   &"  wresleft  - show how much walltime is left till next restart", char(10), &
                   &"  sleep <number> - wait <number> seconds", char(10), &
