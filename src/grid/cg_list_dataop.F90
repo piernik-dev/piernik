@@ -27,7 +27,7 @@
 #include "piernik.h"
 
 !>
-!! \brief This module contains grid container list methods to manipulate field data contained in cg
+!! \brief This module contains grid container list methods to manipulate field data contained in cg.
 !! Non-field operations should be implemented in cg_list_misc_t.
 !<
 
@@ -148,7 +148,6 @@ contains
       nullify(cg_x)
       if (associated(this%first)) then
          cgl => this%first
-
          if (ind > ubound(cgl%cg%q(:), dim=1) .or. ind < lbound(cgl%cg%q(:), dim=1)) call die("[cg_list_dataop:get_extremum] Wrong index")
          do while (associated(cgl))
             call cgl%cg%costs%start

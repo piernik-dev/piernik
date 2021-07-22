@@ -165,8 +165,8 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          call cgl%cg%costs%start
-         ! No need to take care of any cgl%cg%q arrays as long as gravity is extrapolated from the previous timestep.
 
+         ! No need to take care of any cgl%cg%q arrays as long as gravity is extrapolated from the previous timestep.
          ! error checking should've been done in restart_arrays, called few lines earlier
          do j = lbound(na_lists, dim=1), ubound(na_lists, dim=1)
             associate (na => na_lists(j)%p)

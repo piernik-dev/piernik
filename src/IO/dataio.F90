@@ -29,14 +29,15 @@
 !>
 !! \brief Module containing all main routines  responsible for data output
 !!
-!!
 !! In this module following namelists of parameters are specified:
 !! \copydetails dataio::init_dataio
 !<
 
 module dataio
 
-   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, res_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, gdf_strict, h5_64bit
+   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, res_id, &
+        &                nrestart, problem_name, run_id, multiple_h5files, use_v2_io, &
+        &                nproc_io, enable_compression, gzip_level, gdf_strict, h5_64bit
    use constants,  only: cwdlen, fmt_len, cbuff_len, dsetnamelen, RES, TSL
    use timer,      only: wallclock
 
@@ -637,7 +638,8 @@ contains
             case ('ppp')
                if (abs(umsg_param) < huge(1)) then
                   umsg_request = max(1, int(umsg_param))
-                  write(msg,'(a,i10,a)') "[dataio:user_msg_handler] enable PPP for ", umsg_request, " step(s)" // trim(merge("s", " ", umsg_request == 1))
+                  write(msg,'(a,i10,a)') "[dataio:user_msg_handler] enable PPP for ", umsg_request, &
+                       " step(s)" // trim(merge("s", " ", umsg_request == 1))
                   if (master) call printinfo(msg)
                else
                   if (master) call warn("[dataio:user_msg_handler] Cannot convert the parameter to integer")
@@ -2124,15 +2126,15 @@ contains
                rewind(msg_lun)
                read(msg_lun, *, iostat=io) umsg
                if (io/=0) then
-                  write(msg, '(5a)'   )"[dataio:read_file_msg] ",trim(msg_origin(i))," message: '",trim(umsg),"'"
+                  write(msg, '(5a)')"[dataio:read_file_msg] ", trim(msg_origin(i)), " message: '", trim(umsg), "'."
                else
-                  write(msg, '(3a)'   )"[dataio:read_file_msg] No value provided in ",trim(msg_origin(i))," message."
+                  write(msg, '(5a)')"[dataio:read_file_msg] No value provided in ", trim(msg_origin(i)), " message '", trim(umsg), "'."
                   call warn(msg)
                   msg=''
                endif
             else
                msg_param_read = .true.
-               write(msg, '(5a,g15.7)')"[dataio:read_file_msg] ",trim(msg_origin(i))," message: '",trim(umsg),"', with parameter = ", umsg_param
+               write(msg, '(5a,g15.7)')"[dataio:read_file_msg] ", trim(msg_origin(i)), " message: '", trim(umsg), "', with parameter = ", umsg_param
             endif
             close(msg_lun)
 

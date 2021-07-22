@@ -902,6 +902,7 @@ contains
                enddo
                call cg%refinemap2SFC_list
             endif
+
             call cg%costs%stop(I_REFINE)
          end associate
 

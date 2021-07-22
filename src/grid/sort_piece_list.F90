@@ -83,6 +83,7 @@ contains
       integer(kind=8), dimension(ndims), intent(in)    :: off       !< offset of the level
       logical,                           intent(in)    :: nw        !< normalize weights
       real, optional,                    intent(in)    :: strength  !< strength of weighting
+
       call this%set_id(off)
       call this%sort
       call this%find_cweights(nw, strength)

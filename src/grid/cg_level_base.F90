@@ -39,12 +39,12 @@ module cg_level_base
 
    !! \brief The pointer of the base level and a method to initialize it
    type :: cg_level_base_t
-      type(cg_level_connected_t), pointer :: level            !< The base level
+      type(cg_level_connected_t), pointer :: level  !< The base level
    contains
-      procedure          :: set                               !< initialize the base level
+      procedure :: set                              !< initialize the base level
    end type cg_level_base_t
 
-   type(cg_level_base_t), pointer :: base                     !< base level grid containers
+   type(cg_level_base_t), pointer :: base  !< base level grid containers
 
 contains
 

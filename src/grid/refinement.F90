@@ -82,9 +82,8 @@ module refinement
 
    logical :: emergency_fix                                                    !< set to .true. if you want to call update_refinement ASAP
 
-   namelist /AMR/ level_min, level_max, bsize, n_updAMR, &
-        &         prefer_n_bruteforce, oop_thr, refine_points, refine_boxes, refine_zcyls, refine_vars, &
-        &         jeans_ref, jeans_plot
+   namelist /AMR/ level_min, level_max, bsize, n_updAMR, prefer_n_bruteforce, oop_thr, &
+        &         refine_points, refine_boxes, refine_zcyls, refine_vars, jeans_ref, jeans_plot
 
 contains
 
@@ -173,8 +172,8 @@ contains
          ibuff(11+2*nshapes:10+3*nshapes) = refine_zcyls (:)%level
 
          lbuff(1) = jeans_plot
-         lbuff(3) = prefer_n_bruteforce
-         lbuff(4:3+n_ref_auto_param) = refine_vars(:)%plotfield
+         lbuff(2) = prefer_n_bruteforce
+         lbuff(3:2+n_ref_auto_param) = refine_vars(:)%plotfield
 
          rbuff(1) = oop_thr
          rbuff(2) = jeans_ref
@@ -223,8 +222,8 @@ contains
          refine_zcyls (:)%level = ibuff(11+2*nshapes:10+3*nshapes)
 
          jeans_plot               = lbuff(1)
-         prefer_n_bruteforce      = lbuff(3)
-         refine_vars(:)%plotfield = lbuff(4:3+n_ref_auto_param)
+         prefer_n_bruteforce      = lbuff(2)
+         refine_vars(:)%plotfield = lbuff(3:2+n_ref_auto_param)
 
          oop_thr   = rbuff(1)
          jeans_ref = rbuff(2)

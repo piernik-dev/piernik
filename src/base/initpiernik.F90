@@ -46,12 +46,15 @@ contains
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
-      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, INCEPTIVE, tmr_fu, cbuff_len, PPP_PROB
+      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, &
+           &                           PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, &
+           &                           INCEPTIVE, tmr_fu, cbuff_len, PPP_PROB
 #ifdef COSM_RAY_ELECTRONS
       use cresp_grid,            only: cresp_init_grid
 #endif /* COSM_RAY_ELECTRONS */
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
-      use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, die, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
+      use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, &
+           &                           warn, die, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
       use decomposition,         only: init_decomposition
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment

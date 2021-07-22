@@ -224,7 +224,6 @@ contains
          endif
       endif
 
-
       if (master) then
          if (any(cost_mask) .and. (balance_cg > 0. .or. balance_host > 0.)) then
             write(msg, '(a)')"[load_balance] Auto-balance enabled: "

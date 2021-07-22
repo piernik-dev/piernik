@@ -343,7 +343,6 @@ contains
             call cg%costs%start
 
             dt_eta = min(dt_eta, cfl_resist * cg%dxmn2 / (2. * etamax%val))
-
 #ifndef ISO
 #ifdef IONIZED
             eta => cg%q(qna%ind(eta_n))%span(cg%ijkse)

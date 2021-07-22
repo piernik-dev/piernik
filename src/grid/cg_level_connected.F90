@@ -767,7 +767,6 @@ contains
       coarse => this%coarser
       if (associated(coarse)) then
          cgl => coarse%first
-
          do while (associated(cgl))
             call cgl%cg%costs%start
 

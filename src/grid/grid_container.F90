@@ -72,12 +72,12 @@ module grid_cont
 #endif /* GRAV && NBODY */
 
       ! Misc
-      integer(kind=8) :: SFC_id       !< position of the grid on space-filling curve
-      integer :: membership           !< How many cg lists use this grid piece?
-      logical :: ignore_prolongation  !< When .true. do not upgrade interior with incoming prolonged values
-      logical :: is_old               !< .true. if a given grid existed prior to  upgrade_refinement call
-      logical :: processed            !< for use in sweeps.F90
-      type(cg_cost_t) :: costs        !< accumulate cg costs here for better work balance
+      integer(kind=8) :: SFC_id          !< position of the grid on space-filling curve
+      integer :: membership              !< How many cg lists use this grid piece?
+      logical :: ignore_prolongation     !< When .true. do not upgrade interior with incoming prolonged values
+      logical :: is_old                  !< .true. if a given grid existed prior to  upgrade_refinement call
+      logical :: processed               !< for use in sweeps.F90
+      type(cg_cost_t) :: costs           !< accumulate cg costs here for better work balance
       type(cg_cost_data_t) :: old_costs  !< accumulated cg costs from previous step for better work balance
 
    contains
