@@ -1636,12 +1636,12 @@ contains
 
    subroutine ne_to_q(n, e, q, bins)
 
-      use constants,       only: zero, I_ONE
+      use constants,       only: zero, I_ONE, one
       use dataio_pub,      only: warn
       use cresp_NR_method, only: compute_q
       use cresp_variables, only: clight_cresp
       use initcosmicrays,  only: ncre
-      use initcrspectrum,  only: e_small
+      use initcrspectrum,  only: e_small, q_lim_err
 
       implicit none
 
@@ -1667,6 +1667,7 @@ contains
             else
                q(i) = compute_q(alpha_in, exit_code)
             endif
+            if (exit_code) q(i) = sign(one, q(i)) * q_lim_err  ! limit maximal amplitude of q to q_lim_err instead of q_big
          else
             q(i) = zero
          endif
