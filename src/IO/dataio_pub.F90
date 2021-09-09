@@ -335,7 +335,7 @@ contains
       implicit none
       integer :: line
 
-      call allocate_text_buffers
+      if (.not. allocated(logbuffer)) return
 
       do line = 1, min(cbline, size(logbuffer, kind=4))
          write(log_lun, '(a)') trim(logbuffer(line)) !> \todo reconstruct asynchronous writing to log files
@@ -356,6 +356,8 @@ contains
    subroutine cleanup_text_buffers
 
       implicit none
+
+      if (cbline > 0) call flush_to_log
 
       if (allocated(logbuffer)) deallocate(logbuffer)
       if (allocated(parfile)) deallocate(parfile)

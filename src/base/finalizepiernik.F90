@@ -41,7 +41,6 @@ contains
 !<
    subroutine cleanup_piernik
 
-      use dataio,                only: cleanup_dataio
       use dataio_pub,            only: flush_to_log
       use decomposition,         only: cleanup_decomposition
       use diagnostics,           only: cleanup_diagnostics
@@ -85,7 +84,6 @@ contains
       call urc_list%cleanup;       call nextdot
       call t_pool%cleanup;         call nextdot
       call cleanup_interactions;   call nextdot
-      call cleanup_dataio;         call nextdot
       call cleanup_fargo;          call nextdot
 #ifdef RESISTIVE
       call cleanup_resistivity;    call nextdot
