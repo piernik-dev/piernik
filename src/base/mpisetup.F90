@@ -347,7 +347,6 @@ contains
    subroutine cleanup_mpi
 
       use dataio_pub,      only: printinfo, close_logs
-      use dataio,          only: cleanup_dataio
       use MPIF,            only: MPI_COMM_WORLD, MPI_Barrier, MPI_Comm_disconnect, MPI_Finalize
       use piernik_mpi_sig, only: sig
 
@@ -364,7 +363,6 @@ contains
          call MPI_Comm_disconnect(intercomm, err_mpi)
       endif
       call close_logs
-      call cleanup_dataio
       call MPI_Finalize(err_mpi)
 
    end subroutine cleanup_mpi
