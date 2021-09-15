@@ -35,16 +35,16 @@ module initproblem
    implicit none
 
    private
-   public  :: read_problem_par, problem_initial_conditions, problem_pointers
+   public  :: read_problem_par, problem_initial_conditions, problem_pointers, cool_model
 
    real                              :: d0, T0, bx0, by0, bz0, pertamp
-   character(len=cbuff_len)          :: cool_file
-   integer(kind=4), parameter        :: nfuncs = 227 ! to extend for other values of nfuncs
-   real, dimension(nfuncs)           :: Tref, alpha, lambda0
+   character(len=cbuff_len)          :: cool_model, cool_file
+   integer(kind=4)                   :: nfuncs
+   real, dimension(:), allocatable   :: Tref, alpha, lambda0
 
-   public  :: Tref, alpha, lambda0, nfuncs
+   public  :: nfuncs, T0, Tref, alpha, lambda0
 
-   namelist /PROBLEM_CONTROL/ d0, T0, bx0, by0, bz0, pertamp, cool_file
+   namelist /PROBLEM_CONTROL/ d0, T0, bx0, by0, bz0, pertamp, cool_model, cool_file
 
 contains
 
@@ -81,6 +81,7 @@ contains
       by0     = 0.
       bz0     = 0.
       pertamp = 0.
+      cool_model = 'power_law'
       cool_file = ''
 
       if (master) then
@@ -110,7 +111,8 @@ contains
          rbuff(5) = bz0
          rbuff(6) = pertamp
 
-         cbuff(1) = cool_file
+         cbuff(1) = cool_model
+         cbuff(2) = cool_file
 
       endif
 
@@ -126,7 +128,8 @@ contains
          by0          = rbuff(4)
          bz0          = rbuff(5)
          pertamp      = rbuff(6)
-         cool_file    = cbuff(1)
+         cool_model    = cbuff(1)
+         cool_file    = cbuff(2)
 
       endif
 
@@ -137,20 +140,31 @@ contains
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
       use constants,  only: ION, xdim, ydim, zdim, LO, HI, pi
+      use dataio_pub, only: msg, printio
       use domain,     only: dom
       use fluidindex, only: flind
       use grid_cont,  only: grid_container
+      use mpisetup,   only: master
       use units,      only: kboltz, mH
 
       implicit none
 
       integer                         :: i, j, k, p
+      integer, parameter              :: coolfile = 1
       real                            :: cs, p0, kx, ky, kz
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       complex                         :: im
 
-      call read_cool()
+      if ((cool_model .eq. 'piecewise_power_law') .and. (size(Tref) .lt. 2)) then
+         open(unit=coolfile, file=cool_file, action='read', status='old')
+         read(coolfile,*) nfuncs
+         if (master) then
+            write(msg,'(3a,i8,a)') 'Reading ', trim(cool_file), ' file with ', nfuncs, ' piecewise functions'
+            call printio(msg)
+         endif
+         call read_cool(nfuncs, coolfile)
+      endif
 
       im = (0,1)
       kx = 2.*pi/dom%L_(xdim) !* 0.0
@@ -182,7 +196,7 @@ contains
                      cg%u(fl%imx,i,j,k) = cg%u(fl%imx,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*sin(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*cos(2.*pi*cg%z(k)/dom%L_(zdim))
                      cg%u(fl%imy,i,j,k) = cg%u(fl%imy,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*cos(2.*pi*cg%x(i)/dom%L_(xdim))*sin(2.*pi*cg%y(j)/dom%L_(ydim))*cos(2.*pi*cg%z(k)/dom%L_(zdim))
                      cg%u(fl%imz,i,j,k) = cg%u(fl%imz,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*cos(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*sin(2.*pi*cg%z(k)/dom%L_(zdim))
-                     cg%u(fl%idn,i,j,k) = cg%u(fl%idn,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cos(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*sin(2.*pi*cg%z(k)/dom%L_(zdim))
+                     !cg%u(fl%idn,i,j,k) = cg%u(fl%idn,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cos(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*sin(2.*pi*cg%z(k)/dom%L_(zdim))
 
                      !cg%u(fl%idn,i,j,k) = cg%u(fl%idn,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)      * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
                      !cg%u(fl%imx,i,j,k) = cg%u(fl%imx,i,j,k) + pertamp*cg%u(fl%idn,i,j,k) * cs * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
@@ -190,7 +204,7 @@ contains
                      !cg%u(fl%imz,i,j,k) = cg%u(fl%imz,i,j,k) + pertamp*cg%u(fl%idn,i,j,k) * cs * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
                      
                      !cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + pertamp*cg%u(fl%ien,i,j,k)      * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
-                     !cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*(cg%u(fl%imx,i,j,k)**2 +cg%u(fl%imy,i,j,k)**2 + cg%u(fl%imz,i,j,k)**2)/cg%u(fl%idn,i,j,k)
+                     cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*(cg%u(fl%imx,i,j,k)**2 +cg%u(fl%imy,i,j,k)**2 + cg%u(fl%imz,i,j,k)**2)/cg%u(fl%idn,i,j,k)
                      
                   enddo
                enddo
@@ -273,7 +287,7 @@ contains
             endif
       endif
 
-      temp = (pfl%gam-1)*mH/kboltz*eint/cg%w(wna%fi)%span(pfl%idn,cg%ijkse)
+      temp = (pfl%gam-1)*mH/kboltz*eint/cg%w(wna%fi)%span(pfl%idn,cg%ijkse) ! this is where the dumped temperature is computed throughout
 
       ierrh = 0
       select case (trim(var))
@@ -286,26 +300,19 @@ contains
     end subroutine crtest_analytic_ecr1
 
 !-----------------------------------------------------------------------------
-    subroutine read_cool()
 
-      use dataio_pub,     only: msg, printio
-      use mpisetup,       only: master
+subroutine read_cool(nfuncs, coolfile)
+
       use units,          only: cm, erg, sek, mH
 
       implicit none
       
-      integer, parameter                :: coolfile = 1
-      integer(kind=4)                   :: nfuncs2 ! To improve
       integer                           :: i
+      integer, intent(in)               :: coolfile, nfuncs
       real                              :: x_ion
-
-      open(unit=coolfile, file=cool_file, action='read', status='old')
-      read(coolfile,*) nfuncs2
-      if (master) then
-         write(msg,'(3a,i8,a)') 'Reading ', trim(cool_file), ' file with ', nfuncs2, ' piecewise functions'
-         call printio(msg)
-      endif
-
+      
+      allocate(Tref(nfuncs), alpha(nfuncs), lambda0(nfuncs))
+      print *, 'Tref init', size(Tref)
       do i=1, nfuncs
          read(coolfile,*) Tref(i), alpha(i), lambda0(i)
       end do
@@ -315,7 +322,5 @@ contains
       close(coolfile)
 
     end subroutine read_cool
-    
-    
 
 end module initproblem
