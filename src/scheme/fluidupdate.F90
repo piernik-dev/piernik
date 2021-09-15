@@ -98,7 +98,7 @@ contains
       use mass_defect,    only: update_magic_mass
       use timestep_retry, only: repeat_fluidstep
 #ifdef THERM
-      use thermal,        only: EIS
+      use thermal,        only: thermal_substep
 #endif /* THERM */
       implicit none
 
@@ -109,7 +109,7 @@ contains
       t = t + dt
 #ifdef THERM
       !if (nstep .gt. 0) then
-      call EIS(dt)
+      call thermal_substep(dt)
       !endif
 #endif /* THERM */
       call make_3sweeps(.true.) ! X -> Y -> Z
@@ -119,7 +119,7 @@ contains
       t = t + dt
       dtm = dt
 #ifdef THERM
-      call EIS(dt)
+      call thermal_substep(dt)
 #endif /* THERM */
       call make_3sweeps(.false.) ! Z -> Y -> X
       call update_magic_mass

@@ -201,6 +201,7 @@ contains
       endif
 
       dt = min(min(dt, dt_max), (half*(tend-t)) + (two*epsilon(one)*((tend-t))))
+      dt=0.001
 #ifdef DEBUG
       ! We still need all above for c_all
       if (has_const_dt) then
