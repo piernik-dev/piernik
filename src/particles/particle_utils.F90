@@ -47,7 +47,7 @@ module particle_utils
    real    :: d_angmom             !< error of angular momentum in succeeding timensteps
    logical :: twodtscheme
    logical :: dump_diagnose        !< dump diagnose for each particle to a seperate log file
-   integer(kind=4), parameter :: npf = 12  !< number of single particle fields
+   integer(kind=4), parameter :: npf = 14  !< number of single particle fields
 
 contains
 
@@ -351,7 +351,7 @@ contains
 
    end subroutine cg_outside_dom
 
-   subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener)
+   subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn)
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
@@ -363,7 +363,7 @@ contains
       real, dimension(ndims), intent(in) :: pos, vel
       real, dimension(ndims), intent(in) :: acc
       real,                   intent(in) :: ener
-      real,                   intent(in) :: mass
+      real,                   intent(in) :: mass, tform, tdyn
       type(cg_list_element), pointer     :: cgl
       logical                            :: in,phy,out
 
@@ -371,7 +371,7 @@ contains
       do while (associated(cgl))
          call is_part_in_cg(cgl%cg, pos, in, phy, out)
          if (phy .or. out) then
-            call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out)
+            call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform, tdyn)
             return
          endif
 
@@ -404,7 +404,7 @@ contains
       integer(kind=4)                    :: pid
       real, dimension(ndims)             :: pos, vel, acc
       real, dimension(:), allocatable    :: part_info, part_info2
-      real                               :: mass, ener
+      real                               :: mass, ener, tform, tdyn
       type(cg_list_element), pointer     :: cgl
       type(grid_container),  pointer     :: cg
       type(particle), pointer            :: pset, pset2
@@ -528,7 +528,9 @@ contains
                         vel  = part_info2(ind+5:ind+7)
                         acc  = part_info2(ind+8:ind+10)
                         ener = part_info2(ind+11)
-                        call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out)
+                        tform= part_info2(ind+12)
+                        tdyn = part_info2(ind+13)
+                        call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform, tdyn)
                      endif
                      ind = ind + npf
                   enddo
@@ -562,6 +564,8 @@ contains
       pinfo(6:8)  = p%vel
       pinfo(9:11) = p%acc
       pinfo(12)   = p%energy
+      pinfo(13)   = p%tform
+      pinfo(14)   = p%tdyn
 
       ind = ind + npf
 

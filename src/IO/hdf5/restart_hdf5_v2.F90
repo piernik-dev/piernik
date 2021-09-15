@@ -1048,10 +1048,10 @@ contains
       integer(HSIZE_T), dimension(1)               :: n_part
       integer(kind=4),   dimension(:), allocatable :: ibuf
       integer(kind=4), allocatable, dimension(:)   :: pid
-      real, allocatable, dimension(:)              :: mass, ener
+      real, allocatable, dimension(:)              :: mass, ener, tform, tdyn
       real, allocatable, dimension(:, :)           :: pos, vel, acc
       real, dimension(ndims)                       :: pos1, vel1, acc1
-      real                                         :: mass1, ener1
+      real                                         :: mass1, ener1, tform1, tdyn1
       type(particle), pointer                      :: pset
 #endif /* NBODY_1FILE */
 
@@ -1138,7 +1138,7 @@ contains
       call read_attribute(st_g_id, "n_part", ibuf)
       n_part = ibuf(:)
       deallocate(ibuf)
-      allocate(pid(n_part(1)), mass(n_part(1)), ener(n_part(1)))
+      allocate(pid(n_part(1)), mass(n_part(1)), ener(n_part(1)), tform(n_part(1)), tdyn(n_part(1)))
       allocate(pos(n_part(1), ndims), vel(n_part(1), ndims), acc(n_part(1), ndims))
       do i = lbound(pdsets, dim=1), ubound(pdsets, dim=1)
          call h5dopen_f(st_g_id, gdf_translate(pdsets(i)), pdset_id, error)
@@ -1170,6 +1170,10 @@ contains
                   acc(j, ydim) = a1d(j)
                case ('accz')
                   acc(j, zdim) = a1d(j)
+               case('tform')
+                  tform(j) = a1d(j)
+               case('tdyn')
+                  tdyn(j) = a1d(j)
                case default
             end select
          enddo
@@ -1183,7 +1187,9 @@ contains
          pos1=pos(j,:)
          vel1=vel(j,:)
          acc1=acc(j,:)
-         call add_part_in_proper_cg(pid1, mass1, pos1, vel1, acc1, ener1)
+         tform1=tform(j)
+         tdyn1=tdyn(j)
+         call add_part_in_proper_cg(pid1, mass1, pos1, vel1, acc1, ener1, tform1, tdyn1)
       enddo
       call part_leave_cg()
 
@@ -1193,7 +1199,7 @@ contains
          pset => pset%nxt
       enddo
 
-      deallocate(pid, mass, ener)
+      deallocate(pid, mass, ener, tform, tdyn)
       deallocate(pos, vel, acc)
       call h5gclose_f(st_g_id, error)
       call h5gclose_f(part_g_id, error)
