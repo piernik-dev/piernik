@@ -849,8 +849,9 @@ contains
       use MPIFUN,       only: MPI_Allgather, MPI_Recv, MPI_Send
       use mpisetup,     only: FIRST, LAST, master, err_mpi, piernik_MPI_Bcast
 #ifdef NBODY_1FILE
-      use constants,      only: I_FIVE
+      use constants,      only: I_FIVE, I_SIX
       use particle_utils, only: count_all_particles
+      use star_formation, only: pid_gen
 #else /* !NBODY_1FILE */
       use constants,      only: I_ZERO
 #endif /* NBODY_1FILE */
@@ -916,7 +917,7 @@ contains
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_o           !< list of grid dimnsions with external guardcells from all cgs/procs
       integer(kind=8),  dimension(:,:), pointer     :: cg_off           !< list of offsets from all cgs/procs
 #ifdef NBODY_1FILE
-      integer(kind=8),  pointer                      :: cg_npart
+      integer(kind=8),  pointer                      :: cg_npart, cg_pid_max
 #endif /* NBODY_1FILE */
 
       !>
@@ -932,7 +933,7 @@ contains
       type(gdf_root_datasets_t)                     :: rd
       type(gdf_parameters_t)                        :: gdf_sp
 #ifdef NBODY_1FILE
-      integer(kind=8)                               :: n_part
+      integer(kind=8)                               :: n_part, pid_max
 #endif /* NBODY_1FILE */
 
       ! Create a new file and initialize it
@@ -1012,6 +1013,8 @@ contains
                call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
 #ifdef NBODY_1FILE
                n_part = count_all_particles()
+               pid_max = pid_gen
+               print *, 'pid_max master', pid_max, pid_gen
 #endif /* NBODY_1FILE */
             else
                call MPI_Recv(cg_rl,  size(cg_rl, kind=4),  MPI_INTEGER,  p, tag,         MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
@@ -1023,6 +1026,7 @@ contains
                     & call MPI_Recv(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  p, tag+I_FOUR,  MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
 #ifdef NBODY_1FILE
                call MPI_Recv(n_part, I_ONE, MPI_INTEGER, p, tag+I_FIVE, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               call MPI_Recv(pid_max, I_ONE, MPI_INTEGER, p, tag+I_SIX, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
 #endif /* NBODY_1FILE */
             endif
 
@@ -1034,11 +1038,16 @@ contains
                call h5gcreate_f(part_g_id, st_gname, st_g_id, error) ! create "/data/grid_%08d/particles/stars"
                allocate(cg_npart)
                cg_npart = n_part
+               allocate(cg_pid_max)
+               cg_pid_max = pid_max
+               print *, 'pid_max write', pid_max, pid_gen
 
                if (int(cg_npart, kind=4) /= cg_npart) call die("[common_hdf5:write_to_hdf5_v2] cg_npart needs to be 64-bit")
+               if (int(cg_pid_max, kind=4) /= pid_max) call die("[common_hdf5:write_to_hdf5_v2] pid_max needs to be 64-bit")
 
                call create_attribute(st_g_id, "n_part", [ int(cg_npart, kind=4) ])  ! create "/data/grid_%08d/particles/stars/stars/n_part"
-               deallocate(cg_npart)
+               call create_attribute(st_g_id, "pid_max", [ int(cg_pid_max, kind=4) ])  ! create "/data/grid_%08d/particles/stars/stars/pid_max"
+               deallocate(cg_npart, cg_pid_max)
 #endif /* NBODY_1FILE */
 
                call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                ! create "/data/grid_%08d/level"
@@ -1145,6 +1154,9 @@ contains
 #ifdef NBODY_1FILE
          n_part = count_all_particles()
          call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, tag+I_FIVE, MPI_COMM_WORLD, err_mpi)
+         pid_max = pid_gen
+         print *, 'pid_max slaves', pid_max, pid_gen
+         call MPI_Send(pid_max, I_ONE, MPI_INTEGER, FIRST, tag+I_SIX, MPI_COMM_WORLD, err_mpi)
 #endif /* NBODY_1FILE */
          deallocate(cg_rl, cg_n_b, cg_off)
          if (associated(dbuf)) deallocate(dbuf)

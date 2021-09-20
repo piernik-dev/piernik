@@ -59,7 +59,7 @@ module dataio
    integer                  :: iv                    !< work index to count successive variables to dump in hdf files
    character(len=dsetnamelen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
 #ifdef NBODY
-   character(len=dsetnamelen), dimension(12) :: pvars !< array of 4-character strings standing for variables to dump in particle hdf files
+   character(len=dsetnamelen), dimension(14) :: pvars !< array of 4-character strings standing for variables to dump in particle hdf files
 #endif /* NBODY */
 #ifdef HDF5
    integer                  :: nhdf_start            !< number of hdf file for the first hdf dump in simulation run
@@ -294,7 +294,7 @@ contains
       domain_dump   = 'phys_domain'
       vars(:)       = ''
 #ifdef NBODY
-      pvars(:)      = (/ 'ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz' /)
+      pvars(:)      = (/ 'ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz', 'tfor', 'tdyn' /)
 #endif /* NBODY */
       mag_center    = .false.
       write(user_message_file,'(a,"/msg")') trim(wd_rd)

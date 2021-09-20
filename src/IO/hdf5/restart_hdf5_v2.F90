@@ -1013,6 +1013,7 @@ contains
       use read_attr,        only: read_attribute
       use particle_types,   only: particle
       use particle_utils,   only: add_part_in_proper_cg, part_leave_cg
+      use star_formation,   only: pid_gen
 #endif /* NBODY_1FILE */
 
       implicit none
@@ -1045,7 +1046,7 @@ contains
       integer(kind=8)                              :: j
       integer(kind=4)                              :: pid1
       real, dimension(:), allocatable              :: a1d
-      integer(HSIZE_T), dimension(1)               :: n_part
+      integer(HSIZE_T), dimension(1)               :: n_part, pid_max
       integer(kind=4),   dimension(:), allocatable :: ibuf
       integer(kind=4), allocatable, dimension(:)   :: pid
       real, allocatable, dimension(:)              :: mass, ener, tform, tdyn
@@ -1138,6 +1139,11 @@ contains
       call read_attribute(st_g_id, "n_part", ibuf)
       n_part = ibuf(:)
       deallocate(ibuf)
+      allocate(ibuf(1))
+      call read_attribute(st_g_id, "pid_max", ibuf)
+      pid_max = ibuf(:)
+      deallocate(ibuf)
+      pid_gen = pid_max(1)
       allocate(pid(n_part(1)), mass(n_part(1)), ener(n_part(1)), tform(n_part(1)), tdyn(n_part(1)))
       allocate(pos(n_part(1), ndims), vel(n_part(1), ndims), acc(n_part(1), ndims))
       do i = lbound(pdsets, dim=1), ubound(pdsets, dim=1)
@@ -1170,7 +1176,7 @@ contains
                   acc(j, ydim) = a1d(j)
                case ('accz')
                   acc(j, zdim) = a1d(j)
-               case('tform')
+               case('tfor')
                   tform(j) = a1d(j)
                case('tdyn')
                   tdyn(j) = a1d(j)
