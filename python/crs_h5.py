@@ -458,7 +458,28 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
 
     # i_lo = max(i_lo,1) # temporarily do not display the leftmost bin # FIXME
 
-    prtinfo("\033[44mTime = %6.2f |  i_lo = %2d, i_up = %2d %s" % (time, i_lo if not empty_cell else 0, i_up if not empty_cell else 0, '(empty cell)' if empty_cell else ' '))
+    if (verbosity_1):   # Display number density and energy density before exiting
+        ncrs1e3 = []
+        for item in ncrs:
+            ncrs1e3.append(float('%1.3e' % item))
+        prtinfo("n = " + str(ncrs1e3))
+        ecrs1e3 = []
+        for item in ecrs:
+            ecrs1e3.append(float('%1.3e' % item))
+        prtinfo("e = " + str(ecrs1e3))
+
+    prtinfo("\033[44mTime = %6.2f |  i_lo = %2d, i_up = %2d %s" % (time, i_lo if not empty_cell else 0, i_up if not empty_cell else 0, '(empty cell / failed to construct spectrum)' if empty_cell else ' '))
+
+    if (verbosity_1):   # Display number density and energy density before exiting
+        ncrs1e3 = []
+        for item in ncrs:
+            ncrs1e3.append(float('%1.3e' % item))
+        prtinfo("n = " + str(ncrs1e3))
+        ecrs1e3 = []
+        for item in ecrs:
+            ecrs1e3.append(float('%1.3e' % item))
+        prtinfo("e = " + str(ecrs1e3))
+
     if (empty_cell):
         return plt.subplot(122), empty_cell
 
@@ -536,14 +557,6 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
     q_nr[-1] = sign(q_nr[-1]) * min(abs(q_nr[-1]), q_big)
 
     if (verbosity_1):
-        ncrs1e3 = []
-        for item in ncrs:
-            ncrs1e3.append(float('%1.3e' % item))
-        prtinfo("n = " + str(ncrs1e3))
-        ecrs1e3 = []
-        for item in ecrs:
-            ecrs1e3.append(float('%1.3e' % item))
-        prtinfo("e = " + str(ecrs1e3))
         prtinfo("q = " + str(around(q_nr, 3)))
         fln1e3 = []
         for item in fln:
@@ -633,7 +646,7 @@ def crs_plot_main_fpq(parameter_names, parameter_values, plot_var, fcrs, qcrs, p
     prn[-1] = pcrs[-1]
     plot = False  # dummy variable until plot is made
 
-    prtinfo("\033[44mTime = %6.2f |  i_lo = %2d, i_up = %2d %s" % (time, i_lo + i_cor if not empty_cell else 0, i_up if not empty_cell else 0, '(empty cell)' if empty_cell else ' '))
+    prtinfo("\033[44mTime = %6.2f |  i_lo = %2d, i_up = %2d %s" % (time, i_lo + i_cor if not empty_cell else 0, i_up if not empty_cell else 0, '(empty cell / failed to construct spectrum)' if empty_cell else ' '))
     if (i_lo == ncre or i_up == 0):
         empty_cell = True
         return plot, empty_cell
