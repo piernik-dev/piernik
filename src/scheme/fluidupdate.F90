@@ -159,7 +159,6 @@ contains
       use gravity,             only: source_terms_grav, compute_h_gpot, need_update
 #ifdef NBODY
       use particle_solvers,    only: psolver
-      use star_formation,      only: SF
 #endif /* NBODY */
 #endif /* GRAV */
 #ifdef COSM_RAYS
@@ -228,7 +227,6 @@ contains
 #if defined(GRAV)
       need_update = .true.
 #if defined(NBODY)
-      call SF()
       if (associated(psolver)) call psolver(forward)  ! this will clear need_update it it would call source_terms_grav
 #endif /* NBODY */
       if (need_update) call source_terms_grav
