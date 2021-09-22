@@ -328,7 +328,7 @@ contains
 
       if (sreq <= 0) call die("[mpisetup:doublesize_req] req or req2 is a 0-sized array")
 
-      write(msg, '(2(a,i6))')"[mpisetup:doublesize_req] Emergency doubling size of req or req2 from ",sreq," to ",2*sreq
+      write(msg, '(2(a,i6))')"[mpisetup:doublesize_req] Emergency doubling size of req or req2 from ", sreq, " to ", 2 * sreq
       if (master) call warn(msg)
       allocate(new_req(2*sreq))
 

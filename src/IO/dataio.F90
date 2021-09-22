@@ -581,6 +581,12 @@ contains
 
    end subroutine init_dataio
 
+!>
+!! \brief Deallocate dataio data
+!!
+!! No MPI calls are allowed here!
+!<
+
    subroutine cleanup_dataio
 
       use dataio_pub, only: cleanup_text_buffers
