@@ -15,21 +15,22 @@ from colored_io import prtinfo, prtwarn, read_var, die
 e_small = 1.e-6
 eps = 1.0e-15
 ncre = 45
-p_min_fix = 0.4e0
-p_max_fix = 1.65e4
+p_min_fix = 1.0
+p_max_fix = 1.0e6
 cre_eff = 0.01
 q_big = 30.
 f_init = 0.00235  # 0.019# 0.025 # 1.0
 q_init = 4.1
 
-arr_dim = 200
-helper_arr_dim = int(arr_dim / 4)
+q_eps     = 0.001
+arr_dim_q = 1000
+helper_arr_dim = int(arr_dim_q / 20)
 
 c = 1.0  # PSM -> 0.3066067E+06, SI -> 0.2997925E+09
 
 first_run = True
 got_q_tabs = False
-q_explicit = True
+q_explicit = False #True
 interpolate_cutoffs = True
 highlighted = False
 plotted_init_slope = False
@@ -61,7 +62,7 @@ par_plot_legend = True
 par_plot_e3 = False
 par_plotted_src = False
 par_plot_init_slope = True
-par_legend_loc = (0.150, 0.925)  # (0.220+index_t*0.24,0.85)#(0.350,0.965- 0.0525*index_t*1.5)# 0.867 (0.490,0.925 )
+par_legend_loc = (-2, -2) #(0.150, 0.925)  # (0.220+index_t*0.24,0.85)#(0.350,0.965- 0.0525*index_t*1.5)# 0.867 (0.490,0.925 )
 default_legend_loc = 1
 par_test_name = ""
 highlight_bins = []  # [1,3,5,7,9,11,13,15] #[10,16]
@@ -70,7 +71,7 @@ tightened = False
 hide_axes = False
 
 fontsize_axlabels = 18
-fontsize_legend = 15
+fontsize_legend = 10
 
 
 def set_plot_color(plot_color, index, color_list):
@@ -120,11 +121,10 @@ def nr_get_q(q_start, alpha, p_ratio, exit_code):
 
 # function used to find q: ----------------------
 
-
 def fun(x, alpha, p_ratio):
-    if abs(x - 3.0) < 1.0e-3:
+    if abs(x - 3.0) < q_eps:
         fun = -alpha + (-1.0 + p_ratio) / log(p_ratio)
-    elif abs(x - 4.0) < 1.0e-3:
+    elif abs(x - 4.0) < q_eps:
         fun = -alpha + p_ratio * log(p_ratio) / (p_ratio - 1.0)
     else:
         fun = -alpha + ((3.0 - x) / (4.0 - x)) * ((p_ratio**(4.0 - x) - 1.0) / (p_ratio**(3.0 - x) - 1.0))
@@ -133,11 +133,11 @@ def fun(x, alpha, p_ratio):
 
 def prepare_q_tabs():
     global alpha_tab_q, q_grid, q_big, q_space
-    q_grid = zeros(arr_dim)  # for later interpolation
+    q_grid = zeros(arr_dim_q)  # for later interpolation
     q_space = zeros(helper_arr_dim)  # for start values
 
     q_grid[:] = q_big
-    q_grid[int(arr_dim / 2):] = -q_big
+    q_grid[int(arr_dim_q / 2):] = -q_big
 
     def ln_eval_array_val(i, arr_min, arr_max, min_i, max_i):
         b = (log(float(max_i)) - log(float(min_i))) / (arr_max - arr_min)
@@ -150,26 +150,26 @@ def prepare_q_tabs():
     for i in range(0, int(0.5 * helper_arr_dim) + 1):
         q_space[int(0.5 * helper_arr_dim) + i - 1] = -q_space[int(0.5 * helper_arr_dim) - i]
 
-    a_max_q = 10.  # * p_fix_ratio# / clight
+    a_max_q = (1.0 + 0.1) * p_fix_ratio
     a_min_q = 1.00000005
-    alpha_tab_q = zeros(arr_dim)
+    alpha_tab_q = zeros(arr_dim_q)
     alpha_tab_q[:] = a_min_q
 
-    j = arr_dim - int(arr_dim / (arr_dim / 10.))
-    while (q_grid[j] <= (-q_big) and (q_grid[arr_dim - 1] <= (-q_big))):
+    j = arr_dim_q - int(arr_dim_q / (arr_dim_q / 10.))
+    while (q_grid[j] <= (-q_big) and (q_grid[arr_dim_q - 1] <= (-q_big))):
         a_max_q = a_max_q * 0.95
-        for i in range(0, arr_dim):
-            alpha_tab_q[i] = a_min_q * 10.0**((log10(a_max_q / a_min_q)) / float(arr_dim) * float(i))
+        for i in range(0, arr_dim_q):
+            alpha_tab_q[i] = a_min_q * 10.0**((log10(a_max_q / a_min_q)) / float(arr_dim_q) * float(i))
         fill_q_grid()  # computing q_grid takes so little time, that saving the grid is not necessary.
     return
 
 
 def fill_q_grid():
-    global q_grid, alpha_tab_q, p_fix_ratio, arr_dim, helper_arr_dim, q_space
+    global q_grid, alpha_tab_q, p_fix_ratio, arr_dim_q, helper_arr_dim, q_space
     previous_solution = q_grid[int(len(q_grid) / 2)]
     exit_code = True
     x = previous_solution
-    for i in range(1, arr_dim, 1):
+    for i in range(1, arr_dim_q, 1):
         x, exit_code = nr_get_q(previous_solution, alpha_tab_q[i], p_fix_ratio, exit_code)
         if exit_code is True:
             for j in range(1, helper_arr_dim, 1):
@@ -185,10 +185,10 @@ def fill_q_grid():
 
 
 def interpolate_q(alpha):
-    global arr_dim, alpha_tab_q, q_grid
-    index = int((log10(alpha / alpha_tab_q[0]) / log10(alpha_tab_q[-1] / alpha_tab_q[0])) * (arr_dim - 1))  # + 1
-    if (index < 0 or index > arr_dim - 1):
-        index = max(0, min(arr_dim - 1, index))
+    global arr_dim_q, alpha_tab_q, q_grid
+    index = int((log10(alpha / alpha_tab_q[0]) / log10(alpha_tab_q[-1] / alpha_tab_q[0])) * (arr_dim_q - 1))  # + 1
+    if (index < 0 or index > arr_dim_q - 1):
+        index = max(0, min(arr_dim_q - 1, index))
         q_out = q_grid[index]
     else:
         index2 = index + 1
@@ -452,21 +452,15 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
     active_bins = []
     empty_cell = True
 
+    if (got_q_tabs == False and not q_explicit):
+       prepare_q_tabs()
+       got_q_tabs = True
+
     active_bins, i_lo, i_up = detect_active_bins_new(ncrs, ecrs)
     if (num_active_bins > 1):
         empty_cell = False
 
     # i_lo = max(i_lo,1) # temporarily do not display the leftmost bin # FIXME
-
-    if (verbosity_1):   # Display number density and energy density before exiting
-        ncrs1e3 = []
-        for item in ncrs:
-            ncrs1e3.append(float('%1.3e' % item))
-        prtinfo("n = " + str(ncrs1e3))
-        ecrs1e3 = []
-        for item in ecrs:
-            ecrs1e3.append(float('%1.3e' % item))
-        prtinfo("e = " + str(ecrs1e3))
 
     prtinfo("\033[44mTime = %6.2f |  i_lo = %2d, i_up = %2d %s" % (time, i_lo if not empty_cell else 0, i_up if not empty_cell else 0, '(empty cell / failed to construct spectrum)' if empty_cell else ' '))
 
@@ -520,9 +514,6 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
     if (not q_explicit):
         if (verbosity_2):
             prtinfo("Spectral indices q will be interpolated")
-        if (not got_q_tabs):
-            prepare_q_tabs()
-            got_q_tabs = True
     else:
         if (verbosity_2):
             prtinfo("Spectral indices q will be obtained explicitly")
