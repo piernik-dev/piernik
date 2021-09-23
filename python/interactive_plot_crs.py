@@ -140,7 +140,7 @@ def copy_field(field, data):
 
 def add_cren_tot_to(h5_dataset):
     try:
-        if (h5ds.all_data()["cren01"].units is "dimensionless"):
+        if (h5ds.all_data()["cren01"].units == "dimensionless"):
             h5ds.add_field(("gdf", "cren_tot"), units="", function=_total_cren, display_name="Total CR electron number density", sampling_type="cell")
         else:
             h5ds.add_field(("gdf", "cren_tot"), units="1/(pc**3)", function=_total_cren, display_name="Total CR electron number density", dimensions=dimensions.energy / dimensions.volume, sampling_type="cell", take_log=True)
@@ -151,7 +151,7 @@ def add_cren_tot_to(h5_dataset):
 
 def add_cree_tot_to(h5_dataset):
     try:
-        if (h5ds.all_data()["cree01"].units is "dimensionless"):
+        if (h5ds.all_data()["cree01"].units == "dimensionless"):
             h5ds.add_field(("gdf", "cree_tot"), units="", function=_total_cree, display_name="Total CR electron energy density", sampling_type="cell")
         else:
             h5ds.add_field(("gdf", "cree_tot"), units="Msun/(Myr**2*pc)", function=_total_cree, display_name="Total CR electron energy density", dimensions=dimensions.energy / dimensions.volume, sampling_type="cell")
@@ -268,7 +268,7 @@ if f_run is True:
 
     if (plot_field[0:-2] == "en_ratio"):
         try:
-            if str(dsSlice["cren01"].units) is "dimensionless":  # DEPRECATED
+            if str(dsSlice["cren01"].units) == "dimensionless":  # DEPRECATED
                 h5ds.add_field(("gdf", plot_field), units="", function=en_ratio, display_name="Ratio e/n in %i-th bin" % int(plot_field[-2:]), sampling_type="cell")
             else:
                 h5ds.add_field(("gdf", plot_field), units="Msun*pc**2/Myr**2", function=en_ratio, display_name="Ratio e/n in %i-th bin" % int(plot_field[-2:]), dimensions=dimensions.energy, sampling_type="cell", take_log=True)
