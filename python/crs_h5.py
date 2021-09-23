@@ -390,7 +390,7 @@ def detect_active_bins_new(n_in, e_in):
         f_gt_zero.append(nq2f(n_in[i + i_lo_tmp], q_gt_zero[-1], pln[i], prn[i]))
         e_ampl_l.append(4 * pi * c**2 * f_gt_zero[-1] * pln[i]**3)
         e_ampl_r.append(4 * pi * c**2 * f_gt_zero[-1] * ((prn[i] / pln[i])**(q_tmp)) ** 3)
-        if (e_ampl_l[-1] > e_small or e_ampl_r[-1] > e_small):
+        if ((e_ampl_l[-1] > e_small or e_ampl_r[-1] > e_small) and e_in[i] > e_small):
             if not (abs(q_gt_zero[-1]) >= q_big):      # outermost bins usually exceed q_big if inactive
                 active_bins_new.append(ne_gt_zero[i - 1] + 1)
                 num_active_bins = num_active_bins + 1
@@ -398,7 +398,7 @@ def detect_active_bins_new(n_in, e_in):
     if num_active_bins == 0:
         return active_bins_new, i_lo_tmp, i_up_tmp
     i_lo_tmp = max(active_bins_new[0] - 1, 0)
-    i_up_tmp = min(active_bins_new[-1] + 2, ncre)  # temporary fix FIXME
+    i_up_tmp = min(active_bins_new[-1] , ncre)
 
     prtinfo("Active_bins: " + str(active_bins_new))
     return active_bins_new, i_lo_tmp, i_up_tmp
