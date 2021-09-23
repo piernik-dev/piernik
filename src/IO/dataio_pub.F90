@@ -321,10 +321,7 @@ contains
             cbline = cbline + I_ONE
             write(logbuffer(cbline), '(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
          endif
-         if (cbline >= size(logbuffer)) then
-            call flush_to_log
-            cbline = 0
-         endif
+         if (cbline >= size(logbuffer)) call flush_to_log
          if (mode == T_ERR) call flush_to_log
          if (.not. log_file_initialized) close(log_lun)
       else
@@ -338,11 +335,12 @@ contains
       implicit none
       integer :: line
 
-      call allocate_text_buffers
+      if (.not. allocated(logbuffer)) return
 
       do line = 1, min(cbline, size(logbuffer, kind=4))
          write(log_lun, '(a)') trim(logbuffer(line)) !> \todo reconstruct asynchronous writing to log files
       enddo
+      cbline = 0
 
    end subroutine flush_to_log
 !-----------------------------------------------------------------------------
@@ -358,6 +356,8 @@ contains
    subroutine cleanup_text_buffers
 
       implicit none
+
+      if (cbline > 0) call flush_to_log
 
       if (allocated(logbuffer)) deallocate(logbuffer)
       if (allocated(parfile)) deallocate(parfile)
