@@ -41,7 +41,7 @@ parser.add_option("-a", "--average", "--avg", dest="avg_layer", default=False, h
 parser.add_option("-O", "--overlap", dest="overlap_layer", default=False, help=u"Overlap all spectra at pointed layer at ordinate axis", action="store_true")
 parser.add_option("", "--verbose", dest="yt_verbose", default=40, help=u"Append yt verbosity (value from 10 [high] to 50 [low])")
 parser.add_option("-q", "--quiet", dest="py_quiet", default=False, help=u"Suppress ALL python warnings (not advised)", action="store_true")
-parser.add_option("-c", "--coords", dest="coords_dflt", default=("x", "y", "z"), help=u"Provides coordinates for the first plot (non-clickable)", nargs=3, metavar="xc yc zc")
+parser.add_option("-c", "--coords", dest="coords_dflt", default="", help=u"Provides coordinates for the first plots", nargs=1, metavar="x1,y1,z1:x2,y2,z2:...")
 parser.add_option("-k", "--keep", dest="clean_plot", default=True, help=u"Keep spectrum plot (do not clean spectrum field)", action="store_false")
 parser.add_option("", "--fontsize", dest="fontsize", default=18, help=u"Set fontsize for SlicePlot (default is 18)")
 parser.add_option("", "--noxlabels", dest="no_xlabels", default=False, help=u"Do not show labels of X axis on resulting SlicePlot", action="store_true")
@@ -78,10 +78,13 @@ plot_layer = options.avg_layer
 plot_ovlp = options.overlap_layer
 options.fontsize = int(options.fontsize)
 display_bin_no = False
-user_coords_provided = ((options.coords_dflt[0] != "x") and (options.coords_dflt[1] != "y") and (options.coords_dflt[2] != "z"))
+user_coords_provided = not options.coords_dflt == ""
 if user_coords_provided:
     try:
-        user_coords = [float(options.coords_dflt[0]), float(options.coords_dflt[1]), float(options.coords_dflt[2])]
+        user_coords = []
+        aux = options.coords_dflt.split(":")
+        for auxi in aux:
+            user_coords.append(list(float(item) for item in auxi.split(",")))
     except:
         die("Got spectrum coordinates %s, but failed to convert it to float." % str(options.coords_dflt))
 
@@ -552,8 +555,9 @@ if f_run is True:
         mark_plot_save(coords_in)
 
     if (user_coords_provided):
-        prtinfo("Provided coordintates %s (clickable map will not be shown) , processing image." % str(user_coords))
-        plot_with_coords_provided(user_coords)
+        for cindex in range(len(user_coords)):
+            prtinfo("Provided coordintates %s (clickable map will not be shown), processing image." % str(user_coords[cindex][:]))
+            plot_with_coords_provided(user_coords[cindex][:])
     else:
         prtinfo("\033[44mClick LMB on the colormap to display spectrum ('q' to exit)")
         cid = s.canvas.mpl_connect('button_press_event', read_click_and_plot)
