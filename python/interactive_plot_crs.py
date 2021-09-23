@@ -543,8 +543,9 @@ if f_run is True:
 # ------------- saving just the spectrum
             if (save_spectrum):
                 extent = fig2.get_window_extent().transformed(s.dpi_scale_trans.inverted())
-                s.savefig('results/' + filename_nam + '_' + 'slice_' + slice_ax + '_' + plot_var + '_spec_%03d.pdf' % image_number, transparent='True', bbox_inches="tight", dpi=150)  # bbox not working in py27 FIXME
-                prtinfo("  --->  Saved plot to: %s.\n\033[44mPress 'q' to quit and save yt.SlicePlot with marked coordinates." % str('results/' + filename_nam + '_' + 'slice_' + slice_ax + '_' + plot_var + '_spectrum_%04d.pdf' % image_number))
+                spectrum_file_out = str('results/' + filename_nam + '_' + 'slice_' + slice_ax + '_' + plot_var + '_spec_%03d.pdf' % image_number)
+                s.savefig(spectrum_file_out, transparent='True', bbox_inches="tight", dpi=150)  # bbox not working in py27 FIXME
+                prtinfo("  --->  Saved plot to: %s.\n\033[44mPress 'q' to quit and save yt.SlicePlot with marked coordinates." %spectrum_file_out)
         else:
             prtwarn("Empty cell - not saving.")
 
