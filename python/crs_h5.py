@@ -165,9 +165,9 @@ def prepare_q_tabs():
     alpha_tab_q = zeros(arr_dim_q)
     alpha_tab_q[:] = a_min_q
 
-    j = arr_dim_q - int(arr_dim_q / (arr_dim_q / 10.))
+    j = min(arr_dim_q - int(arr_dim_q / (arr_dim_q / 100.)), arr_dim_q - 1)
     while (q_grid[j] <= (-q_big) and (q_grid[arr_dim_q - 1] <= (-q_big))):
-        a_max_q = a_max_q * 0.95
+        a_max_q = a_max_q - a_max_q * 0.005
         for i in range(0, arr_dim_q):
             alpha_tab_q[i] = a_min_q * \
                 10.0**((log10(a_max_q / a_min_q)) /
