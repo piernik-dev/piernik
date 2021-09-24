@@ -22,7 +22,7 @@ q_big = 30.
 f_init = 0.00235  # 0.019# 0.025 # 1.0
 q_init = 4.1
 
-q_eps     = 0.001
+q_eps = 0.001
 arr_dim_q = 1000
 helper_arr_dim = int(arr_dim_q / 20)
 
@@ -30,7 +30,7 @@ c = 1.0  # PSM -> 0.3066067E+06, SI -> 0.2997925E+09
 
 first_run = True
 got_q_tabs = False
-q_explicit = False #True
+q_explicit = False
 interpolate_cutoffs = True
 highlighted = False
 plotted_init_slope = False
@@ -62,7 +62,7 @@ par_plot_legend = True
 par_plot_e3 = False
 par_plotted_src = False
 par_plot_init_slope = True
-par_legend_loc = (-2, -2) #(0.150, 0.925)  # (0.220+index_t*0.24,0.85)#(0.350,0.965- 0.0525*index_t*1.5)# 0.867 (0.490,0.925 )
+par_legend_loc = (-2, -2)  # (0.150, 0.925)  # (0.220+index_t*0.24,0.85)#(0.350,0.965- 0.0525*index_t*1.5)# 0.867 (0.490,0.925 )
 default_legend_loc = 1
 par_test_name = ""
 highlight_bins = []  # [1,3,5,7,9,11,13,15] #[10,16]
@@ -120,6 +120,7 @@ def nr_get_q(q_start, alpha, p_ratio, exit_code):
     return nr_get_q, exit_code
 
 # function used to find q: ----------------------
+
 
 def fun(x, alpha, p_ratio):
     if abs(x - 3.0) < q_eps:
@@ -397,8 +398,9 @@ def detect_active_bins_new(n_in, e_in):
 
     if num_active_bins == 0:
         return active_bins_new, i_lo_tmp, i_up_tmp
+
     i_lo_tmp = max(active_bins_new[0] - 1, 0)
-    i_up_tmp = min(active_bins_new[-1] , ncre)
+    i_up_tmp = min(active_bins_new[-1], ncre)
 
     prtinfo("Active_bins: " + str(active_bins_new))
     return active_bins_new, i_lo_tmp, i_up_tmp
@@ -452,9 +454,9 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
     active_bins = []
     empty_cell = True
 
-    if (got_q_tabs == False and not q_explicit):
-       prepare_q_tabs()
-       got_q_tabs = True
+    if (not got_q_tabs and not q_explicit):
+        prepare_q_tabs()
+        got_q_tabs = True
 
     active_bins, i_lo, i_up = detect_active_bins_new(ncrs, ecrs)
     if (num_active_bins > 1):
