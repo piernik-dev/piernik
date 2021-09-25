@@ -451,8 +451,9 @@ contains
 
       logical, dimension(:), allocatable, intent(inout) :: array
 
-      if (allocated(array)) deallocate(array)
       used_memory = used_memory - size(array)*bool_s
+      if (allocated(array)) deallocate(array)
+
    end subroutine deallocate_array_1D_logical
 
    subroutine allocate_array_1D_int4(array, as, aname)
