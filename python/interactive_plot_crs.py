@@ -218,7 +218,7 @@ if (filename_ext != 'h5'):
 
 if f_run:
     output_path = path.realpath(
-        "./"+filename.strip(filename_trimmed)+"/") + "/results"
+        "./" + filename.strip(filename_trimmed) + "/") + "/results"
     if not path.exists(output_path):
         makedirs(output_path)
         prtinfo("Output directory created: %s" % output_path)
