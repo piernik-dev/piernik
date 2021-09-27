@@ -217,9 +217,11 @@ if (filename_ext != 'h5'):
     die("Script requires a (list of) hdf5 file(s) on input")
 
 if f_run:
-    if not path.exists('results'):
-        makedirs('results')
-        prtinfo("Output directory created: %s" % (getcwd() + '/results'))
+    output_path = path.realpath(
+        "./"+filename.strip(filename_trimmed)+"/") + "/results"
+    if not path.exists(output_path):
+        makedirs(output_path)
+        prtinfo("Output directory created: %s" % output_path)
 
 var_array = []
 if f_run is True:
@@ -611,9 +613,6 @@ if f_run is True:
                 # plot point if cell not empty
                 point = s1.plot(coords[avail_dim[0]], coords[avail_dim[1]],
                                 marker=marker_l[marker_index], color="red")
-            s.savefig('results/' + filename_nam + '_' + plot_var +
-                      '_%04d.png' % image_number, transparent='True')
-            # prtinfo("  --->  Saved plot to: %s " %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
 
             if (plot_layer is True):  # Mark averaged level
                 yt_data_plot.annotate_line([coords[0], dom_l[avail_dim[0]], coords[2]], [
@@ -637,7 +636,7 @@ if f_run is True:
 # ------------- saving just the spectrum
             if (save_spectrum):
                 extent = fig2.get_window_extent().transformed(s.dpi_scale_trans.inverted())
-                spectrum_file_out = str('results/' + filename_nam + '_' + 'slice_' +
+                spectrum_file_out = str(output_path + '/' + filename_nam + '_' + 'slice_' +
                                         slice_ax + '_' + plot_var + '_spec_%03d.pdf' % image_number)
                 # bbox not working in py27 FIXME
                 s.savefig(spectrum_file_out, transparent='True',
@@ -686,7 +685,9 @@ if f_run is True:
         yt_data_plot.hide_axes()
 
     # save image (spectrum already saved) when finished.
-    yt_data_plot.save('results/' + filename_nam + '_' +
-                      plot_field + '_sliceplot_' + slice_ax + '.pdf')
+    yt_plot_file_out = str(output_path + "/" + filename_nam + '_' +
+                           plot_field + '_sliceplot_' + slice_ax + '.pdf')
+    yt_data_plot.save(yt_plot_file_out)
+
     if (not user_coords_provided):
         s.canvas.mpl_disconnect(cid)
