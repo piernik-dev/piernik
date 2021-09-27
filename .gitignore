@@ -11,3 +11,4 @@ dep.png
 *.ignore
 jenkins/goldexec/
 doc/latex/
+results/
