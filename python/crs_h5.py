@@ -521,6 +521,11 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
         for item in ecrs:
             ecrs1e3.append(float('%1.3e' % item))
         prtinfo("e = " + str(ecrs1e3))
+        enpc1e3 = []
+        for i in range(len(ecrs)):
+           enpc1e3.append(float('%1.3e' %(ecrs[i] / (ncrs[i] * p_fix[i]))))
+        prtinfo("e/(npc) = " + str(enpc1e3))
+
 
     if (empty_cell):
         return plt.subplot(122), empty_cell
