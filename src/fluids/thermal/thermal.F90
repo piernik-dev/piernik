@@ -130,6 +130,7 @@ contains
       call piernik_MPI_Bcast(cbuff, cbuff_len)
       call piernik_MPI_Bcast(lbuff)
       call piernik_MPI_Bcast(rbuff)
+      call piernik_MPI_Bcast(ibuff)
 
       if (slave) then
 
@@ -356,16 +357,17 @@ contains
 
      subroutine thermal_substep(dt)
 
+      use constants,        only: xdim, ydim, zdim
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use dataio_pub,       only: msg, warn !, nrestart
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
-      use func,             only: ekin, emag
+      use func,             only: ekin, emag, operator(.equals.)
       use global,           only: nstep
       use grid_cont,        only: grid_container
       use initproblem,      only: T0, nfuncs, Tref, alpha, lambda0, cool_model
-      use mpisetup,         only: master
+      use mpisetup,         only: master, proc
       use named_array_list, only: wna
       use units,            only: kboltz, mH
 
@@ -377,11 +379,11 @@ contains
 
       real, intent(in)                                   :: dt
       real, dimension(:, :, :), pointer                  :: ta
-      real, dimension(:,:,:), allocatable                :: tcool, T
-      real                                               :: gamma, dt_cool, t1, dtcool
+      real, dimension(:,:,:), allocatable                :: T, int_ener, kin_ener, mag_ener, cfunc, hfunc, esrc, dens1, hfunc1
+      real                                               :: gamma, dt_cool, t1, tcool
       real, dimension(:,:,:), pointer                    :: dens, ener
       integer                                            :: ifl, i, x, y, z
-      integer, dimension(3)                              :: n
+      integer, dimension(3)                              :: n, n1
 
 
 
@@ -393,88 +395,126 @@ contains
             pfl => flind%all_fluids(ifl)%fl
             gamma = pfl%gam
 
-            dens =>  cg%w(wna%fi)%span(pfl%idn,cg%lh_out)
-            ener => cg%w(wna%fi)%span(pfl%ien,cg%lh_out)
-            ta => cg%q(itemp)%span(cg%lh_out)
-            
-            !t_eis => cg%q(ieis)%span(cg%lh_out)
-            !T => cg%q(ieis)%span(cg%lh_out)
+            dens =>  cg%w(wna%fi)%span(pfl%idn,cg%ijkse)   ! cg%lh_out?
+            ener => cg%w(wna%fi)%span(pfl%ien,cg%ijkse)
+            ta => cg%q(itemp)%span(cg%ijkse)
  
             if ((abs(nstep) .lt. 0.1) .and. (ta(1,1,1) .gt. 10**(5))) then
                ta = T0
             endif
 
-            ! Compute the cooling time
-            if (scheme .eq. 'Explicit') then
-               dt_cool = dt
-            else
-               n = shape(ta)
-               allocate(tcool(n(1),n(2),n(3)))
+            
+            n = shape(ta)
+            allocate(int_ener(n(1),n(2),n(3))) 
+            int_ener=0.0
+            if (pfl%has_energy) then
+               allocate(kin_ener(n(1),n(2),n(3)), mag_ener(n(1),n(2),n(3)))
+               mag_ener = 0.0
+               kin_ener = ekin(cg%w(wna%fi)%span(pfl%imx,cg%lh_out), cg%w(wna%fi)%span(pfl%imy,cg%lh_out), cg%w(wna%fi)%span(pfl%imz,cg%lh_out), dens)
+               if (pfl%is_magnetized) then
+                  mag_ener = emag(cg%w(wna%bi)%span(xdim,cg%lh_out), cg%w(wna%bi)%span(ydim,cg%lh_out), cg%w(wna%bi)%span(zdim,cg%lh_out))
+                  int_ener = ener - kin_ener - mag_ener
+               else
+                  int_ener = ener - kin_ener
+               endif
+            endif
+
+            select case(scheme)
+
+            case('Explicit')
+               if (cool_model .eq. 'piecewise_power_law') then
+                  write(msg,'(3a)') 'Warning: Make sure you are not using the heating in the cooling curve.'
+                  if (master) call warn(msg)
+               endif
+               allocate(cfunc(n(1), n(2), n(3)))
+               allocate(hfunc(n(1), n(2), n(3)))
+               allocate(esrc(n(1), n(2), n(3)))
+               
+               call cool2(shape(ta), ta, cfunc)
+               call heat2(shape(ta), dens, hfunc)
+               esrc = dens**2*cfunc + hfunc
+               int_ener = int_ener + esrc * dt
+               ener = ener + esrc * dt
+               ta = (pfl%gam-1) * mH / kboltz * int_ener / dens
+               deallocate(cfunc, hfunc, esrc)
+
+            case('EIS')
                allocate(T(n(1),n(2),n(3)))
                do x = 1, n(1)
                   do y = 1, n(2)
                      do z = 1, n(3)
                         do i=1, nfuncs
                            if (i .eq. nfuncs) then
-                              if (ta(x,y,z) .ge. Tref(i))   tcool(x,y,z) = kboltz * ta(x,y,z) / ((pfl%gam-1) * mH * dens(x,y,z) * abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
+                              if (ta(x,y,z) .ge. Tref(i))   tcool = kboltz * ta(x,y,z) / ((pfl%gam-1) * mH * dens(x,y,z) * abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
                            else if (i .eq. 1) then
-                              if (ta(x,y,z) .le. Tref(i+1)) tcool(x,y,z) = kboltz * ta(x,y,z) / ((pfl%gam-1) * mH * dens(x,y,z) * abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
+                              if (ta(x,y,z) .le. Tref(i+1)) tcool = kboltz * ta(x,y,z) / ((pfl%gam-1) * mH * dens(x,y,z) * abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
                            else if ((ta(x,y,z) .ge. Tref(i)) .and. (ta(x,y,z) .le. Tref(i+1))) then
-                              if (alpha(i) .eq. 0.0) then
-                                 tcool(x,y,z) = kboltz * ta(x,y,z) / ((gamma-1) * mH * abs(lambda0(i) * (ta(x,y,z) - Teql)) * dens(x,y,z))
-                                 !print *, tcool(x,y,z)
+                              if (alpha(i) .equals. 0.0) then
+                                 tcool = kboltz * ta(x,y,z) / ((gamma-1) * mH * abs(lambda0(i) * (ta(x,y,z) - Teql)) * dens(x,y,z))
                               else
-                                 tcool(x,y,z) = kboltz * ta(x,y,z) / ((pfl%gam-1) * mH * dens(x,y,z) * abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
+                                 tcool = kboltz * ta(x,y,z) / ((pfl%gam-1) * mH * dens(x,y,z) * abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
                               endif
+                           endif
+                        enddo
+                        dt_cool = min(dt, tcool/10.0)
+                        t1=0.0
+                        do while(t1 .lt. dt)
+                           ta(x,y,z) = int_ener(x,y,z) * (pfl%gam-1) * mH / (dens(x,y,z) * kboltz)
+                           call temp_EIS(tcool, dt_cool, gamma, ta(x,y,z), dens(x,y,z), T(x,y,z))
+                           int_ener(x,y,z) = dens(x,y,z) * kboltz * T(x,y,z) / ((pfl%gam-1) * mH)
+                           ener(x,y,z) = kin_ener(x,y,z) + mag_ener(x,y,z) + int_ener(x,y,z)
+                           !if (x==16 .and. y==16) print *, 'temp', dt_cool, dt, ta(x,y,z), T(x,y,z), dens(x,y,z), kin_ener(x,y,z), mag_ener(x,y,z)
+
+                           t1 = t1 + dt_cool
+                           if (t1+dt_cool .gt. dt) then
+                              dt_cool = dt - t1
                            endif
                         enddo
                      enddo
                   enddo
                enddo
-               dtcool=minval(tcool/10.0)
-               !tcool = minval( kboltz * ta / ((pfl%gam-1) * mH *  lambdam * (ta/Trefmin)**alpham))
-               dt_cool = min(dt, dtcool)
-               print *, minval(tcool), dt, dt_cool
-            endif
-
-            !dt_cool=0.0001
-
-            t1=0.0
-            do while(t1 .lt. dt)
-               select case(scheme)
-               case('EIS') ! exact integration scheme
-                     ta = ener * (pfl%gam-1) * mH / (dens * kboltz)
-                     call temp_EIS(dt_cool, shape(ta), gamma, ta, dens, T)
-                     !t_eis = T
-                     !dens = cg%u(pfl%idn,:,:,:)
-                     ener = dens * kboltz * T / ((pfl%gam-1) * mH)
-                     !ta = T
-                  case('Explicit') ! explicit scheme
-                     if (cool_model .eq. 'piecewise_power_law') then
-                        write(msg,'(3a)') 'Warning: Make sure you are not using the heating in the cooling curve.'
-                        if (master) call warn(msg)
-                     endif
-                     call cool_heat2(dt_cool, cg, shape(ta), ta, pfl, ta)
-                  case('EE') ! explicit (heating) + exact integration (cooling) schemes
-                     if (cool_model .eq. 'piecewise_power_law') then
-                        write(msg,'(3a)') 'Warning: Make sure you are not using the heating in both the explicit and EI schemes.'
-                        if (master) call warn(msg)
-                     endif
-                     call temp_EIS(dt_cool, shape(ta), gamma, ta, dens, T)
-                     ener = dens * kboltz * T / ((pfl%gam-1) * mH)
-                     call cool_heat2(dt_cool, cg, shape(ta), T, pfl, ta)
-                  case default
-                     write(msg,'(3a)') 'scheme: ',scheme,' not implemented'
-                     if (master) call warn(msg)
-                  end select
-
-               !print *, 'temp_final', ta(16,8,1), dens(16,8,1)!, ta(16,32,1)
-               t1 = t1 + dt_cool
-               if (t1+dt_cool .gt. dt) then
-                  dt_cool = dt - t1
+               deallocate(T)
+            case('EE')
+               if (cool_model .eq. 'piecewise_power_law') then
+                  write(msg,'(3a)') 'Warning: Make sure you are not using the heating in both the explicit and EI schemes.'
+                  if (master) call warn(msg)
                endif
-            enddo
-            if (scheme .ne. 'Explicit') deallocate(tcool, T)
+               n1=1
+               allocate(T(n(1),n(2),n(3)))
+               allocate(dens1(n1(1), n1(2), n1(3)))
+               allocate(hfunc1(n1(1), n1(2), n1(3)))
+               do x = 1, n(1)
+                  do y = 1, n(2)
+                     do z = 1, n(3)
+                        tcool = kboltz * ta(x,y,z) / ((pfl%gam-1) * mH * dens(x,y,z) * abs(L0_cool) * (ta(x,y,z)/Teql)**alpha_cool)
+                        dt_cool = min(dt, tcool/10.0)
+                        t1=0.0
+                        do while(t1 .lt. dt)
+                           ta(x,y,z) = int_ener(x,y,z) * (pfl%gam-1) * mH / (dens(x,y,z) * kboltz)
+                           call temp_EIS(tcool, dt_cool, gamma, ta(x,y,z), dens(x,y,z), T(x,y,z))
+                           !if (x==10 .and. y==10) print *, proc, cg%ijkse(x,y), ta(x,y,z), T(x,y,z), ta(x,y,z)*(1 - (1-alpha_cool) * dt_cool / tcool) **(1.0/(1-alpha_cool)), iso
+                           int_ener(x,y,z) = dens(x,y,z) * kboltz * T(x,y,z) / ((pfl%gam-1) * mH)
+                           ener(x,y,z) = kin_ener(x,y,z) + mag_ener(x,y,z) + int_ener(x,y,z)
+
+                           dens1 = dens(x,y,z)
+                           call heat2(n1, dens1, hfunc1)
+                           int_ener(x,y,z) = int_ener(x,y,z) + hfunc1(n1(1), n1(2), n1(3)) * dt_cool
+                           ener(x,y,z)     = ener(x,y,z)     + hfunc1(n1(1), n1(2), n1(3)) * dt_cool
+
+                           t1 = t1 + dt_cool
+                           if (t1+dt_cool .gt. dt) then
+                              dt_cool = dt - t1
+                           endif
+                        enddo
+                     enddo
+                  enddo
+               enddo
+               deallocate(T, hfunc1, dens1)
+            case default
+               write(msg,'(3a)') 'scheme: ',scheme,' not implemented'
+               if (master) call warn(msg)
+            end select
+            deallocate(int_ener, kin_ener, mag_ener)
          enddo
          cgl => cgl%nxt
       enddo
@@ -482,56 +522,6 @@ contains
 
     end subroutine thermal_substep
 
-
-    
-    subroutine cool_heat2(dt, cg, n, T, pfl, T_out)
-
-      use constants,  only: xdim, ydim, zdim, half
-      use domain, only: dom
-      use fluidtypes, only: component_fluid
-      use grid_cont,  only: grid_container
-      use units,      only: kboltz, mH
-
-      implicit none
-
-      type(grid_container), pointer,  intent(in)  :: cg                 !< current grid piece
-      class(component_fluid), pointer, intent(in) :: pfl
-      integer(kind=4), dimension(3),  intent(in)  :: n
-      real, dimension(n(1),n(2),n(3)),intent(in)  :: T
-      real, dimension(n(1),n(2),n(3)),intent(out) :: T_out
-      real,                           intent(in)  :: dt
-      real, dimension(n(1),n(2),n(3))              :: int_ener, kin_ener, mag_ener, cfunc, hfunc, dens, esrc, eint2
-
-
-      dens = cg%u(pfl%idn,:,:,:)
-      if (pfl%has_energy) then
-         kin_ener = half * (cg%u(pfl%imx,:,:,:)**2 + cg%u(pfl%imy,:,:,:)**2 + cg%u(pfl%imz,:,:,:)**2 ) / dens
-         if (pfl%is_magnetized) then
-            mag_ener = half * (cg%b(xdim,:,:,:)**2 + cg%b(ydim,:,:,:)**2 + cg%b(zdim,:,:,:)**2 )
-            int_ener = cg%u(pfl%ien,:,:,:) - kin_ener - mag_ener
-         else
-            int_ener = cg%u(pfl%ien,:,:,:) - kin_ener
-         endif
-      endif
-
-      cfunc=0
-      if (scheme .eq. 'Explicit') then
-      !   T1=(pfl%gam-1) * mH / kboltz * int_ener / dens
-         call cool2(n, T, cfunc)
-      endif
-      call heat2(n, dens, hfunc)
-      esrc =  dens**2*cfunc + hfunc
-      eint2 = int_ener + esrc *dt
-
-      cg%u(pfl%ien,:,:,:) = cg%u(pfl%ien,:,:,:) + esrc * dt !* 1./dom%eff_dim
-
-      !if (scheme .ne. 'Explicit') then
-      T_out = (pfl%gam-1) * mH / kboltz * eint2 / dens
-         
-      !endif
-      !print *, T_out(16,16,1)
-
-    end subroutine cool_heat2
 
    subroutine cool2(n, temp, coolf)
 
@@ -604,30 +594,28 @@ contains
       end select
 
     end subroutine heat2
-    
-   subroutine temp_EIS(dt, n, gamma, temp, dens, Tnew)
+
+   subroutine temp_EIS(tcool, dt, gamma, temp, dens, Tnew)
 
       use dataio_pub,  only: msg, warn
       use initproblem, only: nfuncs, cool_model, Tref, alpha, lambda0
       use func,        only: operator(.equals.)
+      use grid_cont,   only: grid_container
       use mpisetup,    only: master
       use units,       only: kboltz, mH, cm, sek
 
       implicit none
 
-      integer(kind=4), dimension(3),     intent(in)  :: n
-      real,               intent(in)   :: gamma, dt
-      real, dimension(n(1), n(2), n(3)), intent(in)  :: temp, dens
-      real, dimension(n(1), n(2), n(3))              :: Teql1, tcool
-      real, dimension(n(1), n(2), n(3)), intent(out) :: Tnew
+      real, intent(in)                               :: tcool, dt
+      real, intent(in)                               :: temp, dens
+      real, intent(in)                               :: gamma
+      real, intent(out)                              :: Tnew
       real                                           :: lambda1, T1, alpha0, Y0, tcool2, TN, iso2, diff
-      integer                                        :: ix,iy,iz, i, sign
+      integer                                        :: i, sign
       real, dimension(nfuncs)                        :: Y
 
-      Teql1(:,:,:)=Teql
       select case (cool_model)
       case ('power_law')
-         tcool = kboltz * temp / ((gamma-1) * mH * dens * coolf_pl(temp))
             if (alpha_cool .equals. 1.0) then
                if (iso==1) then
                   Tnew = temp * exp(-dt/tcool)                 !isochoric
@@ -635,7 +623,6 @@ contains
                   Tnew = temp * (1 - 1/gamma * dt/tcool)      !isobar
                endif
                !Tnew = Tnew + dt * (gamma-1) * mH * G0_heat / kboltz  !heating
-               
             else
                if (iso==1) then
                   Tnew = temp * (1 - (1-alpha_cool) * dt / tcool) **(1.0/(1-alpha_cool))             !isochoric
@@ -660,84 +647,71 @@ contains
                   Y(i) = Y(i+1) - 1 / (iso-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**iso * (1 - (Tref(i)/Tref(i+1))**(alpha(i)-iso))
                endif
             enddo
-            do ix = 1, n(1)
-               do iy = 1, n(2)
-                  do iz = 1, n(3)
-                     do i=1, nfuncs
-                        if (i .eq. nfuncs) then
-                           if ((temp(ix,iy,iz) .ge. Tref(i))) then
-                              Y0 = Y(i) + 1/(iso-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**iso * (1 - (Tref(i)/temp(ix,iy,iz))**(alpha(i)-iso))
-                              T1 = Tref(i)
-                              alpha0=alpha(i)
-                              lambda1=lambda0(i)
-                           endif
-                        else if (i .eq. 1) then
-                           if (temp(ix,iy,iz) .le. Tref(i+1)) then
-                              Y0 = Y(i) + 1/(iso-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**iso * (1 - (Tref(i)/temp(ix,iy,iz))**(alpha(i)-iso))
-                              T1=Tref(i)
-                              lambda1 = lambda0(i)
-                              alpha0=alpha(i)
-                           endif
-                        else
-                           if ((temp(ix,iy,iz) .ge. Tref(i)) .and. (temp(ix,iy,iz) .le. Tref(i+1))) then
-                              if (alpha(i) .equals. 0.0) then
-                                 diff = MAX(abs(temp(ix,iy,iz)-Teql), 0.000001)
-                                 print *, abs(temp(ix,iy,iz)-Teql), 0.000001, diff
-                                 Y0 = Y(i) + lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) / TN * log((Teql - Tref(i)) / diff)
-                              else
-                                 Y0 = Y(i) + 1/(iso-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**iso * (1 - (Tref(i)/temp(ix,iy,iz))**(alpha(i)-iso))
-                              endif
-                              T1=Tref(i)
-                              alpha0=alpha(i)
-                              lambda1=lambda0(i)
-                              !if ((ix .eq. 16) .and. (iy .eq. 8) .and. (iz .eq. 1)) then
-                              !   print *, 'EIS ref temp', i, T1, temp(ix,iy,iz), dens(ix,iy,iz)
-                              !endif
-                           endif
-                        endif
-                     enddo
-                     if (alpha0 .equals. 0.0) then
-                        tcool2 = kboltz * temp(ix,iy,iz) / ((gamma-1) * mH * lambda1 * diff * dens(ix,iy,iz))
-                        tcool2 = min(tcool2, 1.0*10**6)
-                        Y0 = Y0 + (temp(ix,iy,iz)/TN) * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) / diff * dt/tcool2
+            do i=1, nfuncs
+               if (i .eq. nfuncs) then
+                  if ((temp .ge. Tref(i))) then
+                     Y0 = Y(i) + 1/(iso-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**iso * (1 - (Tref(i)/temp)**(alpha(i)-iso))
+                     T1 = Tref(i)
+                     alpha0=alpha(i)
+                     lambda1=lambda0(i)
+                  endif
+               else if (i .eq. 1) then
+                  if (temp .le. Tref(i+1)) then
+                     Y0 = Y(i) + 1/(iso-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**iso * (1 - (Tref(i)/temp)**(alpha(i)-iso))
+                     T1=Tref(i)
+                     lambda1 = lambda0(i)
+                     alpha0=alpha(i)
+                  endif
+               else
+                  if ((temp .ge. Tref(i)) .and. (temp .le. Tref(i+1))) then
+                     if (alpha(i) .equals. 0.0) then
+                        diff = MAX(abs(temp-Teql), 0.000001)
+                        Y0 = Y(i) + lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) / TN * log((Teql - Tref(i)) / diff)
                      else
-                        tcool2 = kboltz * temp(ix,iy,iz) / ((gamma-1) * mH * lambda1 * (temp(ix,iy,iz)/T1)**alpha0 * dens(ix,iy,iz))
-                        Y0 = Y0 + (temp(ix,iy,iz)/TN)**iso * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) * (T1/temp(ix,iy,iz))**alpha0 * dt/tcool2 * iso2
+                        Y0 = Y(i) + 1/(iso-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**iso * (1 - (Tref(i)/temp)**(alpha(i)-iso))
                      endif
-                     !print *, 'Y', Y
-                     do i=1, nfuncs
-                        if (i .eq. nfuncs) then
-                           if ((temp(ix,iy,iz) .ge. Tref(i))) then
-                              Tnew(ix,iy,iz) = Tref(i) * (1 - (iso-alpha(i)) * lambda0(i)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(i))**iso * (Y0 - Y(i)) )**(1/(iso-alpha(i)))
-                           endif
-                        else if (i .eq. 1) then
-                           if (temp(ix,iy,iz) .le. Tref(i+1)) then
-                              Tnew(ix,iy,iz) = Tref(i) * (1 - (iso-alpha(i)) * lambda0(i)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(i))**iso * (Y0 - Y(i)) )**(1/(iso-alpha(i)))
-                           endif
-                        else 
-                           if ((temp(ix,iy,iz) .ge. Tref(i)) .and. (temp(ix,iy,iz) .le. Tref(i+1))) then
-                              if (alpha0 .equals. 0.0) then
-                                 if (temp(ix,iy,iz) .gt. Teql) then
-                                    sign = 1
-                                 else
-                                    sign = -1
-                                 endif
-                                 Tnew(ix,iy,iz) = Teql + sign * (Teql-Tref(i)) * exp(-TN * (Tref(nfuncs)/TN)**alpha(nfuncs) * lambda0(i)/lambda0(nfuncs) * (Y0 - Y(i)))
-                              else
-                                 Tnew(ix,iy,iz) = Tref(i) * (1 - (iso-alpha(i)) * lambda0(i)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(i))**iso * (Y0 - Y(i)) )**(1/(iso-alpha(i)))
-                              endif
-                              !if ((ix .eq. 32) .and. (iy .eq. 32) .and. (iz .eq. 1)) then
-                              !   print *, 'EIS new temp', i, Tref(i), Tnew(ix,iy,iz), tcool2, Y0,  Y(i), lambda0(i)
-                              !endif
-                           endif
-                        endif
-                     enddo
-                     if (Tnew(ix,iy,iz) .lt. 100.0) then
-                        Tnew(ix,iy,iz) = 100.0
-                     endif
-                  enddo
-               enddo
+                     T1=Tref(i)
+                     alpha0=alpha(i)
+                     lambda1=lambda0(i)
+                  endif
+               endif
             enddo
+            if (alpha0 .equals. 0.0) then
+               tcool2 = kboltz * temp / ((gamma-1) * mH * lambda1 * diff * dens)
+               tcool2 = min(tcool2, 1.0*10**6)
+               Y0 = Y0 + (temp/TN) * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) / diff * dt/tcool2
+            else
+               tcool2 = kboltz * temp / ((gamma-1) * mH * lambda1 * (temp/T1)**alpha0 * dens)
+               Y0 = Y0 + (temp/TN)**iso * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) * (T1/temp)**alpha0 * dt/tcool2 * iso2
+            endif
+            !print *, 'Y', Y
+            do i=1, nfuncs
+               if (i .eq. nfuncs) then
+                  if ((temp .ge. Tref(i))) then
+                     Tnew = Tref(i) * (1 - (iso-alpha(i)) * lambda0(i)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(i))**iso * (Y0 - Y(i)) )**(1/(iso-alpha(i)))
+                  endif
+               else if (i .eq. 1) then
+                  if (temp .le. Tref(i+1)) then
+                     Tnew = Tref(i) * (1 - (iso-alpha(i)) * lambda0(i)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(i))**iso * (Y0 - Y(i)) )**(1/(iso-alpha(i)))
+                  endif
+               else 
+                  if ((temp .ge. Tref(i)) .and. (temp .le. Tref(i+1))) then
+                     if (alpha0 .equals. 0.0) then
+                        if (temp .gt. Teql) then
+                           sign = 1
+                        else
+                           sign = -1
+                        endif
+                        Tnew = Teql + sign * (Teql-Tref(i)) * exp(-TN * (Tref(nfuncs)/TN)**alpha(nfuncs) * lambda0(i)/lambda0(nfuncs) * (Y0 - Y(i)))
+                     else
+                        Tnew = Tref(i) * (1 - (iso-alpha(i)) * lambda0(i)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(i))**iso * (Y0 - Y(i)) )**(1/(iso-alpha(i)))
+                     endif
+                  endif
+               endif
+            enddo
+            if (Tnew .lt. 100.0) then
+               Tnew = 100.0
+            endif
          case ('null')
             return
          case default
@@ -745,17 +719,8 @@ contains
             if (master) call warn(msg)  
        end select
 
-     contains
-       
-            function coolf_pl(T) result(coolf)
-              real, dimension(n(1), n(2), n(3)), intent(in) :: T
-              real, dimension(n(1), n(2), n(3))             :: coolf
-              coolf = L0_cool * (T/Teql1)**(alpha_cool)
-            end function coolf_pl
- 
 
    end subroutine temp_EIS
-
 !--------------------------------------------------------------------------
 
 end module thermal
