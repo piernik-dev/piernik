@@ -428,14 +428,12 @@ def detect_active_bins_new(n_in, e_in):
             q_tmp = interpolate_q(
                 e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * c * pln[i]))
 
-        q_tmp, exit_code = nr_get_q(
-            q_tmp, e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * c * pln[i]), prn[i] / pln[i], exit_code)
         q_gt_zero.append(q_tmp)
         f_gt_zero.append(
             nq2f(n_in[i + i_lo_tmp], q_gt_zero[-1], pln[i], prn[i]))
         e_ampl_l.append(4 * pi * c**2 * f_gt_zero[-1] * pln[i]**3)
         e_ampl_r.append(
-            4 * pi * c**2 * f_gt_zero[-1] * ((prn[i] / pln[i])**(q_tmp)) ** 3)
+            4 * pi * c**2 * f_gt_zero[-1] * ((prn[i] / pln[i])**(-q_tmp)) * prn[i] ** 3)
         if ((e_ampl_l[-1] > e_small or e_ampl_r[-1] > e_small) and e_in[i] > e_small):
             # outermost bins usually exceed q_big if inactive
             if not (abs(q_gt_zero[-1]) >= q_big):
