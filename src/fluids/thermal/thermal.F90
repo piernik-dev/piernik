@@ -357,7 +357,7 @@ contains
 
      subroutine thermal_substep(dt)
 
-      use constants,        only: xdim, ydim, zdim
+      use constants,        only: xdim, ydim, zdim, small
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use dataio_pub,       only: msg, warn !, nrestart
@@ -379,11 +379,11 @@ contains
 
       real, intent(in)                                   :: dt
       real, dimension(:, :, :), pointer                  :: ta
-      real, dimension(:,:,:), allocatable                :: T, int_ener, kin_ener, mag_ener, cfunc, hfunc, esrc, dens1, hfunc1
-      real                                               :: gamma, dt_cool, t1, tcool
+      real, dimension(:,:,:), allocatable                :: T, int_ener, kin_ener, mag_ener
+      real                                               :: gamma, dt_cool, t1, tcool, cfunc, hfunc, esrc
       real, dimension(:,:,:), pointer                    :: dens, ener
       integer                                            :: ifl, i, x, y, z
-      integer, dimension(3)                              :: n, n1
+      integer, dimension(3)                              :: n
 
 
 
@@ -395,30 +395,28 @@ contains
             pfl => flind%all_fluids(ifl)%fl
             gamma = pfl%gam
 
-            dens =>  cg%w(wna%fi)%span(pfl%idn,cg%ijkse)   ! cg%lh_out?
-            ener => cg%w(wna%fi)%span(pfl%ien,cg%ijkse)
-            ta => cg%q(itemp)%span(cg%ijkse)
+            dens =>  cg%w(wna%fi)%span(pfl%idn,cg%lhn)!lh_out)!ijkse)!   ! cg%lh_out?
+            ener => cg%w(wna%fi)%span(pfl%ien,cg%lhn)!lh_out)!ijkse)!
+            ta => cg%q(itemp)%span(cg%lhn)!lh_out)!ijkse)
  
             if ((abs(nstep) .lt. 0.1) .and. (ta(1,1,1) .gt. 10**(5))) then
                ta = T0
             endif
 
-            
             n = shape(ta)
-            allocate(int_ener(n(1),n(2),n(3))) 
+            allocate(int_ener(n(1),n(2),n(3)))
             int_ener=0.0
             if (pfl%has_energy) then
                allocate(kin_ener(n(1),n(2),n(3)), mag_ener(n(1),n(2),n(3)))
                mag_ener = 0.0
-               kin_ener = ekin(cg%w(wna%fi)%span(pfl%imx,cg%lh_out), cg%w(wna%fi)%span(pfl%imy,cg%lh_out), cg%w(wna%fi)%span(pfl%imz,cg%lh_out), dens)
+               kin_ener = ekin(cg%w(wna%fi)%span(pfl%imx,cg%lhn), cg%w(wna%fi)%span(pfl%imy,cg%lhn), cg%w(wna%fi)%span(pfl%imz,cg%lhn), dens)
                if (pfl%is_magnetized) then
-                  mag_ener = emag(cg%w(wna%bi)%span(xdim,cg%lh_out), cg%w(wna%bi)%span(ydim,cg%lh_out), cg%w(wna%bi)%span(zdim,cg%lh_out))
+                  mag_ener = emag(cg%w(wna%bi)%span(xdim,cg%lhn), cg%w(wna%bi)%span(ydim,cg%lhn), cg%w(wna%bi)%span(zdim,cg%lhn))
                   int_ener = ener - kin_ener - mag_ener
                else
                   int_ener = ener - kin_ener
                endif
             endif
-
             select case(scheme)
 
             case('Explicit')
@@ -426,17 +424,33 @@ contains
                   write(msg,'(3a)') 'Warning: Make sure you are not using the heating in the cooling curve.'
                   if (master) call warn(msg)
                endif
-               allocate(cfunc(n(1), n(2), n(3)))
-               allocate(hfunc(n(1), n(2), n(3)))
-               allocate(esrc(n(1), n(2), n(3)))
-               
-               call cool2(shape(ta), ta, cfunc)
-               call heat2(shape(ta), dens, hfunc)
-               esrc = dens**2*cfunc + hfunc
-               int_ener = int_ener + esrc * dt
-               ener = ener + esrc * dt
-               ta = (pfl%gam-1) * mH / kboltz * int_ener / dens
-               deallocate(cfunc, hfunc, esrc)
+               do x = 1, n(1)
+                  do y = 1, n(2)
+                     do z = 1, n(3)
+                        dens(x,y,z) = 1.0
+                        call cool2(ta(x,y,z), cfunc)
+                        call heat2(dens(x,y,z), hfunc)
+                        esrc = dens(x,y,z)**2*cfunc + hfunc
+                        dt_cool = min(dt, cfl_coolheat*abs(1./(esrc/int_ener(x,y,z)))/10)
+                        !if (x==10 .and. y==10) print *, esrc, dt_cool, int_ener(x,y,z), abs(1./(esrc/int_ener(x,y,z))), cfl_coolheat, cfl_coolheat*abs(1./(esrc/int_ener(x,y,z)))
+                        t1=0.0
+                        do while(t1 .lt. dt)
+                           call cool2(ta(x,y,z), cfunc)
+                           esrc = dens(x,y,z)**2*cfunc + hfunc
+                           int_ener(x,y,z) = int_ener(x,y,z) + esrc * dt_cool
+                           ener(x,y,z) = ener(x,y,z) + esrc * dt_cool
+                           ta(x,y,z) = (pfl%gam-1) * mH / kboltz * int_ener(x,y,z) / dens(x,y,z)
+                           !if (x==10 .and. y==10) print *, proc, '10', t1, dt_cool, dt, ta(x,y,z), dens(x,y,z), esrc, int_ener(x,y,z), ener(x,y,z)
+                           !if (x==20 .and. y==20) print *, proc, '20', t1, dt_cool, dt, ta(x,y,z), dens(x,y,z), esrc, int_ener(x,y,z), ener(x,y,z)
+
+                           t1 = t1 + dt_cool
+                           if (t1+dt_cool .gt. dt) then
+                              dt_cool = dt - t1
+                           endif
+                        enddo
+                     enddo
+                  enddo
+               enddo
 
             case('EIS')
                allocate(T(n(1),n(2),n(3)))
@@ -479,10 +493,7 @@ contains
                   write(msg,'(3a)') 'Warning: Make sure you are not using the heating in both the explicit and EI schemes.'
                   if (master) call warn(msg)
                endif
-               n1=1
                allocate(T(n(1),n(2),n(3)))
-               allocate(dens1(n1(1), n1(2), n1(3)))
-               allocate(hfunc1(n1(1), n1(2), n1(3)))
                do x = 1, n(1)
                   do y = 1, n(2)
                      do z = 1, n(3)
@@ -496,10 +507,9 @@ contains
                            int_ener(x,y,z) = dens(x,y,z) * kboltz * T(x,y,z) / ((pfl%gam-1) * mH)
                            ener(x,y,z) = kin_ener(x,y,z) + mag_ener(x,y,z) + int_ener(x,y,z)
 
-                           dens1 = dens(x,y,z)
-                           call heat2(n1, dens1, hfunc1)
-                           int_ener(x,y,z) = int_ener(x,y,z) + hfunc1(n1(1), n1(2), n1(3)) * dt_cool
-                           ener(x,y,z)     = ener(x,y,z)     + hfunc1(n1(1), n1(2), n1(3)) * dt_cool
+                           call heat2(dens(x,y,z), hfunc)
+                           int_ener(x,y,z) = int_ener(x,y,z) + hfunc * dt_cool
+                           ener(x,y,z)     = ener(x,y,z)     + hfunc * dt_cool
 
                            t1 = t1 + dt_cool
                            if (t1+dt_cool .gt. dt) then
@@ -509,7 +519,7 @@ contains
                      enddo
                   enddo
                enddo
-               deallocate(T, hfunc1, dens1)
+               deallocate(T)
             case default
                write(msg,'(3a)') 'scheme: ',scheme,' not implemented'
                if (master) call warn(msg)
@@ -523,7 +533,7 @@ contains
     end subroutine thermal_substep
 
 
-   subroutine cool2(n, temp, coolf)
+   subroutine cool2(temp, coolf)
 
       use dataio_pub,  only: msg, warn
       use mpisetup,    only: master
@@ -532,36 +542,29 @@ contains
 
       implicit none
 
-      integer, dimension(3), intent(in)            :: n
-      real, dimension(n(1),n(2),n(3)), intent(in)  :: temp
-      real, dimension(n(1),n(2),n(3)), intent(out) :: coolf
-      integer                                      :: x,y,z,i
+      real, intent(in)                             :: temp
+      real, intent(out)                            :: coolf
+      integer                                      :: i
 
       select case (cool_model)
          case ('power_law')
             coolf = -L0_cool * (temp/Teql)**(alpha_cool)
          case('piecewise_power_law')
-            do x = 1, n(1)
-               do y = 1, n(2)
-                  do z = 1, n(3)
-                     coolf(x,y,z) = 0.0
-                     do i = 1, nfuncs
-                        if (i .eq. nfuncs) then
-                           if (temp(x,y,z) .ge. Tref(i)) then
-                              coolf(x,y,z) = - lambda0(i) * (temp(x,y,z)/Tref(i))**alpha(i)
-                           endif
-                        else if (i .eq. 1) then
-                           if (temp(x,y,z) .le. Tref(i+1)) then
-                              coolf(x,y,z) = - lambda0(i) * (temp(x,y,z)/Tref(i))**alpha(i)
-                           endif
-                        else
-                           if ((temp(x,y,z) .ge. Tref(i)) .and. (temp(x,y,z) .le. Tref(i+1))) then
-                              coolf(x,y,z) = - lambda0(i) * (temp(x,y,z)/Tref(i))**alpha(i)
-                           endif
-                        endif
-                     enddo
-                  enddo
-               enddo
+            coolf = 0.0
+            do i = 1, nfuncs
+               if (i .eq. nfuncs) then
+                  if (temp .ge. Tref(i)) then
+                     coolf = - lambda0(i) * (temp/Tref(i))**alpha(i)
+                  endif
+               else if (i .eq. 1) then
+                  if (temp .le. Tref(i+1)) then
+                     coolf = - lambda0(i) * (temp/Tref(i))**alpha(i)
+                  endif
+               else
+                  if ((temp .ge. Tref(i)) .and. (temp .le. Tref(i+1))) then
+                     coolf = - lambda0(i) * (temp/Tref(i))**alpha(i)
+                  endif
+               endif
             enddo
          case ('null')
             return
@@ -572,16 +575,15 @@ contains
 
     end subroutine cool2
     
-    subroutine heat2(n, dens, heatf)
+    subroutine heat2(dens, heatf)
 
       use dataio_pub, only: msg, warn
       use mpisetup,   only: master
 
       implicit none
 
-      integer, dimension(3), intent(in)            :: n
-      real, dimension(n(1),n(2),n(3)), intent(in)  :: dens
-      real, dimension(n(1),n(2),n(3)), intent(out) :: heatf
+      real, intent(in)  :: dens
+      real, intent(out) :: heatf
 
       select case (heat_model)
         case ('G012')
