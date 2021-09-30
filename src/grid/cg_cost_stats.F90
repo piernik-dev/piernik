@@ -152,7 +152,7 @@ contains
       class(cg_stats_t), intent(in) :: this
 
       if (this%n /= 0) then
-         get_sigma%wtime = sqrt(this%w_sum2%wtime / this%n - (this%w_sum%wtime / this%n)**2)
+         get_sigma%wtime = sqrt(abs(this%w_sum2%wtime / this%n - (this%w_sum%wtime / this%n)**2))  ! abs() is required for safety
       else
          get_sigma%wtime = 0.  ! this should be safe value
       endif
@@ -178,7 +178,7 @@ contains
             get = [ this%min%wtime(ind), &
                  &  this%max%wtime(ind), &
                  &  this%w_sum%wtime(ind) / this%n, &
-                 &  sqrt(this%w_sum2%wtime(ind) / this%n - (this%w_sum%wtime(ind) / this%n)**2), &
+                 &  sqrt(abs(this%w_sum2%wtime(ind) / this%n - (this%w_sum%wtime(ind) / this%n)**2)), &  ! abs() is required for safety
                  &  this%w_sum%wtime(ind) , &
                  &  this%w_sum2%wtime(ind) ]
          else
