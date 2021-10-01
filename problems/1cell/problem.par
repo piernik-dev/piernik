@@ -1,0 +1,145 @@
+$BASE_DOMAIN
+    n_d = 4, 4, 4
+    nb  = 4
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+    xmin   =-500.0
+    xmax   = 500.0
+    ymin   =-500.0
+    ymax   = 500.0
+    zmin   =-500.0
+    zmax   = 500.0
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+    units_set = "PSM"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 250.0
+    nend   = 100000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'emulate-isolated'
+    run_id = 'ts1'
+    dt_hdf  = 0.0
+    dt_res  = 0.0
+    dt_log  = 1.0e-2
+    dt_tsl  = 1.0e-3
+    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'encr', 'velx', 'vely', 'velz', 'cree', 'cren', 'cref', 'creq', 'crep'
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.5
+    smalld = 1.e-3
+    smallei= 1.e-5
+    integration_order = 2
+    limiter= 'vanleer'
+    solver_str = "RTVD"
+    skip_sweep(1:3) = .false., .true., .true.
+    repeat_step = .false.
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.66666666666666666
+ /
+
+ $COSMIC_RAYS
+    cfl_cr      = 0.9
+    cr_active   = 0.0
+    ncrn        = 1
+    ncre        = 26    ! number of spectrum bins (including cutoff bins)
+    gamma_crn(1)   = 1.333333
+    gamma_crn(2)   = 1.333333
+    gamma_crn(3)   = 1.333333
+    K_crn_paral(1) = 1.0 ! anisotropic
+    K_crn_perp(1)  = 0.1    ! isotropic
+    cre_gpcr_ess   = .false.
+    use_CRsplit    = .true.
+!    divv_scheme = '6lp'
+ /
+
+ $COSMIC_RAY_SPECTRUM
+    cfl_cre           = 0.01
+    cre_eff           = 0.01
+    p_min_fix         = 1.e0    ! < momentum fixed grid
+    p_max_fix         = 1.e6    ! < momentum fixed grid
+    p_lo_init         = 1.e0   ! < initial lower cut momentum
+    p_up_init         = 3.0e5   ! < initial upper cut momentum
+    p_br_init_lo      = 7.0e1   ! < initial lower momentum break
+    p_br_init_up      = 1.0e5   ! < iniital upper momentum break
+    expan_order       = 3
+    f_init            = 1.e-6 !1.e-10
+    q_init            = 4.1     ! < initial value of power law coefficient in cre enrgy spectrum
+    q_big             = 30.0
+    p_diff            = 20000.  ! Ee ~ 10 GeV, set so as e- of this energy have the same K as protons of 10GeV ! default 1.e4
+    e_small           = 1.0e-8 ! lower energy cutoff for energy-approximated cutoff momenta
+    initial_spectrum  = 'plpc'  !'brpg' ! 'powl', 'brpl', 'bump', 'symf', 'syme', 'plpc'
+    NR_iter_limit     = 50
+    synch_active      = .true.
+    adiab_active      = .true.
+    use_cresp_evol    = .true.
+    approx_cutoffs    = .true.
+    q_eps             = 0.001  ! optimal: 0.001
+    arr_dim_q         = 1000   ! optimal: 1000
+    NR_refine_solution_q = .false.
+    b_max_db      = 100. ! microgauss
+    cresp_substep = .false.
+    n_substeps_max  = 100
+    NR_smap_file    = 'smaps_NRe8.h5'
+ /
+
+ $MULTIGRID_SOLVER
+ /
+
+ $MULTIGRID_DIFFUSION
+ /
+
+ $PROBLEM_CONTROL
+    d0        = 1.0 ! when COSM_RAYS_SOURCES are defined, the density somehow scales the result of sourcecosmicrays.F90 and values like 1e5 quickly lead to FP overflow. This must be a bug.
+    p0        = 1.0
+    bx0       = 0.0
+    by0       = 0.0
+    bz0       = 0.0
+    x0        = 0.0
+    y0        = 0.0
+    z0        = 0.0
+    beta_cr   = 0.0
+    amp_cr1   = 1.0
+ /
+
+ $PIERNIK_DEBUG
+    constant_dt = 0.01
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+ /
+
+ $CRESP_ISOLATED
+     u_b0     = 0.0 ! 3.0228e-3    ! initial magnetic energy-density
+     u_d0     = 0.0 !25 ! 0.25 ! 3.765e-4     ! initial magnitude of div_v
+     div_v0   = -0.2 ! velocity field divergence, periodic, sums up with u_d0
+     ub_ampl  = 0.0   ! amplitude of synchrotron cooling coefficient with time
+     omega_d  = 0.157079633 ! omega_d parameter for test with periodic adiabatic compression: u_d0 = u_d0 + div_v * cos(omega_d * t)
+     omega_b  = 0.0   ! omega_b parameter for periodic variation of u_b: u_b = u_b0 + ub_ampl * cos(omega_b * t)
+     Btot     = 0. ! 30.
+     u_d_t    = 0.
+     outfile  = 'crs-per.dat'
+ /
