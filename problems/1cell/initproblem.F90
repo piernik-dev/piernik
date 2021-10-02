@@ -230,7 +230,7 @@ contains
 
       if (adiab_active) then
          repeat_step = .false.
-         write (*, msg) "Parameter 'adiab_active' is TRUE, due to possible large variations of div(V) CFL warnings may show up: changing 'repeat_step' to FALSE (hard coded)"
+         write (msg, *) "Parameter 'adiab_active' is TRUE, due to possible large variations of div(V) CFL warnings may show up: changing 'repeat_step' to FALSE (hard coded)"
          call printinfo(msg)
       endif
 
@@ -371,7 +371,7 @@ contains
          endif
 
 #ifdef CRESP_VERBOSED
-         write (*,msg) "Got values: u_d(numerical)", cg%q(divv_i)%point([i,j,k]), "u_d(t, set):", u_d0 + div_v0 * cos_omega_t
+         write (msg, *) "Got values: u_d(numerical)", cg%q(divv_i)%point([i,j,k]), "u_d(t, set):", u_d0 + div_v0 * cos_omega_t
          if (adiab_active) call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
