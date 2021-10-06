@@ -321,7 +321,7 @@ contains
 
       use cg_leaves,       only: leaves
       use cg_list,         only: cg_list_element
-      use constants,       only: zero
+      use constants,       only: LO, HI, onet, xdim, ydim, zdim, zero
       use crhelpers,       only: divv_i, div_v
       use domain,          only: dom
       use dataio_pub,      only: msg, printinfo
@@ -354,27 +354,25 @@ contains
             cos_omega_t = cos(omega_d * t)
             if (set_tabs_for_cresp .eqv. .true.) then
 
-               do k = cg%ks, cg%ke
-                  do j = cg%js, cg%je
-                     do i = cg%is, cg%ie
-                           cg%u(flind%ion%imx,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%x(i) * (u_d0 + div_v0 * cos_omega_t) * denom_dims
-                           cg%u(flind%ion%imy,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%y(j) * (u_d0 + div_v0 * cos_omega_t) * denom_dims
-                           cg%u(flind%ion%imz,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%z(k) * (u_d0 + div_v0 * cos_omega_t) * denom_dims
-
+               do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
+                  do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
+                     do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+                        cg%u(flind%ion%imx,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%x(i) * (u_d0 + div_v0 * cos_omega_t) / onet
+                        cg%u(flind%ion%imy,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%y(j) * (u_d0 + div_v0 * cos_omega_t) / onet
+                        cg%u(flind%ion%imz,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%z(k) * (u_d0 + div_v0 * cos_omega_t) / onet
                      enddo
                   enddo
                enddo
 
                call div_v(flind%ion%pos, cg)
 
-            endif
-         endif
-
 #ifdef CRESP_VERBOSED
-         write (msg, *) "Got values: u_d(numerical)", cg%q(divv_i)%point([i,j,k]), "u_d(t, set):", u_d0 + div_v0 * cos_omega_t
-         if (adiab_active) call printinfo(msg)
+               write (msg, "(A,F10.7,A,F10.7)") "Got values (1, 0, 0): u_d(numerical) = ", cg%q(divv_i)%point([1,0,0]) * onet, " | u_d(t, set) = ", u_d0 + div_v0 * cos_omega_t
+               if (adiab_active) call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
+            endif
+         endif
          cgl => cgl%nxt
       enddo
 
