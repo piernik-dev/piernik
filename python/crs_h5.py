@@ -444,6 +444,9 @@ def detect_active_bins_new(n_in, e_in):
     i_lo_tmp = max(active_bins_new[0], 0)
     i_up_tmp = min(active_bins_new[-1] , ncre)
 
+    active_bins_new = [i for i in range(i_lo_tmp, i_up_tmp+1)]
+    num_active_bins = len(active_bins_new)
+
     prtinfo("Active_bins: " + str(active_bins_new))
     return active_bins_new, i_lo_tmp, i_up_tmp
 
