@@ -413,7 +413,7 @@ def detect_active_bins_new(n_in, e_in):
 
     i_lo_tmp = max(ne_gt_zero[0], 0)
     i_up_tmp = min(ne_gt_zero[-1], ncre)
-    pln = p_fix[0:ncre-1]
+    pln = p_fix[0:ncre - 1]
     prn = p_fix[1:ncre]
     num_active_bins = 0
 
@@ -444,7 +444,7 @@ def detect_active_bins_new(n_in, e_in):
     i_lo_tmp = max(active_bins_new[0], 0)
     i_up_tmp = min(active_bins_new[-1], ncre)
 
-    active_bins_new = [i for i in range(i_lo_tmp, i_up_tmp+1)]
+    active_bins_new = [i for i in range(i_lo_tmp, i_up_tmp + 1)]
     num_active_bins = len(active_bins_new)
 
     prtinfo("Active_bins: " + str(active_bins_new))
@@ -544,7 +544,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
         pf_ratio_up, exit_code_up = crs_pf.get_interpolated_ratios("up", ecrs[i_up] / (
             ncrs[i_up] * c * p_fix[i_up - 1]), ncrs[i_up], exit_code_up, verbose=verbosity_2)
 
-    pln = p_fix[0:ncre-1]
+    pln = p_fix[0:ncre - 1]
     prn = p_fix[1:ncre]
     pln = array(pln)
     prn = array(prn)
@@ -564,8 +564,8 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
                 prtwarn("Failed to extract boundary (up) p and f from e, n: pf_ratio_up = %.6f. Assuming p_fix value." %
                         pf_ratio_up[0])  # p_fix assumed
         else:
-            prn[i_up+1] = p_fix[i_up] * pf_ratio_up[0]
-        fr_up = crs_pf.e_small_2_f(e_small, prn[i_up+1])
+            prn[i_up + 1] = p_fix[i_up] * pf_ratio_up[0]
+        fr_up = crs_pf.e_small_2_f(e_small, prn[i_up + 1])
         fl_up = fr_up / pf_ratio_up[1]
 
     if (not q_explicit):
@@ -578,7 +578,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
     q_nr = []
     fln = []
     frn = []
-    for i in range(0, i_up - i_lo+1):
+    for i in range(0, i_up - i_lo + 1):
         if (q_explicit is True):
             q_tmp = 3.5
             exit_code = False
@@ -596,7 +596,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
     q_nr = array(q_nr)
     fln = array(fln)
     frn = array(fln)
-    frn = frn * (prn[i_lo:i_up+1] / pln[i_lo:i_up+1]) ** (-q_nr)
+    frn = frn * (prn[i_lo:i_up + 1] / pln[i_lo:i_up + 1]) ** (-q_nr)
     plot = False
 
     # retrieve slopes and f values for cutoffs
@@ -618,7 +618,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
 
     if (verbosity_1):
         prtinfo("Cutoff indices obtained (lo, up): %i, %i || momenta (lo, up): %f, %f " % (
-            i_lo, i_up, pln[i_lo], prn[i_up+1]))
+            i_lo, i_up, pln[i_lo], prn[i_up + 1]))
 
     if (verbosity_2):
         dummyCRSfile = open("crs.dat", "a")
@@ -637,7 +637,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
         dummyCRSfile.close()
 
     if empty_cell is not True:
-        plot = plot_data(plot_var, pln[i_lo:i_up+1], prn[i_lo:i_up+1], fln, frn,
+        plot = plot_data(plot_var, pln[i_lo:i_up + 1], prn[i_lo:i_up + 1], fln, frn,
                          q_nr, time, location, i_lo, i_up)
         i_plot = i_plot + 1
 
