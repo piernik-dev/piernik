@@ -35,16 +35,13 @@ module initproblem
    implicit none
 
    private
-   public  :: read_problem_par, problem_initial_conditions, problem_pointers, cool_model
+   public  :: read_problem_par, problem_initial_conditions, problem_pointers
 
    real                              :: d0, T0, bx0, by0, bz0, pertamp
-   character(len=cbuff_len)          :: cool_model, cool_file
-   integer(kind=4)                   :: nfuncs
-   real, dimension(:), allocatable   :: Tref, alpha, lambda0
 
-   public  :: nfuncs, T0, Tref, alpha, lambda0
+   public  :: T0, d0
 
-   namelist /PROBLEM_CONTROL/ d0, T0, bx0, by0, bz0, pertamp, cool_model, cool_file
+   namelist /PROBLEM_CONTROL/ d0, T0, bx0, by0, bz0, pertamp
 
 contains
 
@@ -81,8 +78,6 @@ contains
       by0     = 0.
       bz0     = 0.
       pertamp = 0.
-      cool_model = 'power_law'
-      cool_file = ''
 
       if (master) then
 
@@ -111,9 +106,6 @@ contains
          rbuff(5) = bz0
          rbuff(6) = pertamp
 
-         cbuff(1) = cool_model
-         cbuff(2) = cool_file
-
       endif
 
       call piernik_MPI_Bcast(ibuff)
@@ -128,10 +120,9 @@ contains
          by0          = rbuff(4)
          bz0          = rbuff(5)
          pertamp      = rbuff(6)
-         cool_model    = cbuff(1)
-         cool_file    = cbuff(2)
 
       endif
+
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
@@ -150,21 +141,10 @@ contains
       implicit none
 
       integer                         :: i, j, k, p
-      integer, parameter              :: coolfile = 1
       real                            :: cs, p0, kx, ky, kz
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       complex                         :: im
-
-      if ((cool_model .eq. 'piecewise_power_law') .and. (size(Tref) .lt. 2)) then
-         open(unit=coolfile, file=cool_file, action='read', status='old')
-         read(coolfile,*) nfuncs
-         if (master) then
-            write(msg,'(3a,i8,a)') 'Reading ', trim(cool_file), ' file with ', nfuncs, ' piecewise functions'
-            call printio(msg)
-         endif
-         call read_cool(nfuncs, coolfile)
-      endif
 
       im = (0,1)
       kx = 2.*pi/dom%L_(xdim) !* 0.0
@@ -300,27 +280,6 @@ contains
     end subroutine crtest_analytic_ecr1
 
 !-----------------------------------------------------------------------------
-
-subroutine read_cool(nfuncs, coolfile)
-
-      use units,          only: cm, erg, sek, mH
-
-      implicit none
       
-      integer                           :: i
-      integer, intent(in)               :: coolfile, nfuncs
-      real                              :: x_ion
-      
-      allocate(Tref(nfuncs), alpha(nfuncs), lambda0(nfuncs))
-      print *, 'Tref init', size(Tref)
-      do i=1, nfuncs
-         read(coolfile,*) Tref(i), alpha(i), lambda0(i)
-      end do
-
-      x_ion = 1.0
-      lambda0 = lambda0 * erg / sek * cm**3 / mH**2 * x_ion**2
-      close(coolfile)
-
-    end subroutine read_cool
 
 end module initproblem

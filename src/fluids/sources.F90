@@ -150,9 +150,6 @@ contains
 #ifdef SHEAR
       use shear,            only: shear_acc
 #endif /* SHEAR */
-#ifdef THERM
-      use thermal,          only: src_thermal_exec
-#endif /* THERM */
 
       implicit none
 
@@ -261,9 +258,6 @@ contains
 #ifndef BALSARA
       use timestepinteractions, only: timestep_interactions
 #endif /* !BALSARA */
-#ifdef THERM
-      use timestepthermal,      only: timestep_thermal
-#endif /* THERM */
 
       implicit none
 
