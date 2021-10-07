@@ -198,7 +198,7 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
-      use constants,          only: xdim, ydim, zdim, LO, HI, zero
+      use constants,          only: xdim, ydim, zdim, LO, HI, zero, two
       use domain,             only: dom
       use dataio_pub,         only: msg, printinfo
       use fluidindex,         only: flind
@@ -211,7 +211,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS
       use cresp_crspectrum,   only: cresp_get_scaled_init_spectrum
       use initcosmicrays,     only: iarr_cre_e, iarr_cre_n
-      use initcrspectrum,     only: smallcree, cresp, cre_eff, use_cresp, adiab_active
+      use initcrspectrum,     only: smallcree, cresp, cre_eff, use_cresp, adiab_active, fsynchr
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -239,16 +239,12 @@ contains
       fl => flind%ion
 
       cs_iso = sqrt(p0/d0)
-! NOTICE: Btot is preferred over bx0, by0 and bz0 if these are set as well and overwrites them
-      if (Btot .gt. 0.) then  ! Distribute Btot evenly over all available directions
-         if (dom%has_dir(xdim)) bx0 = sqrt(Btot**2) / (dom%D_x + dom%D_y + dom%D_z)
-         if (dom%has_dir(ydim)) by0 = sqrt(Btot**2) / (dom%D_x + dom%D_y + dom%D_z)
-         if (dom%has_dir(zdim)) bz0 = sqrt(Btot**2) / (dom%D_x + dom%D_y + dom%D_z)
+! NOTICE: Btot is preferred over bx0, by0 and bz0 if these are set as well and overwrites them, B field in nonexistent direction is ignored.
+      if (Btot .gt. zero .or. u_b0 .gt. zero) then  ! Distribute Btot evenly over all available directions
+         if (dom%has_dir(xdim)) bx0 = sqrt(Btot**2) / (dom%D_x + dom%D_y + dom%D_z) + sqrt(two * u_b0 / fsynchr) / (dom%D_x + dom%D_y + dom%D_z)
+         if (dom%has_dir(ydim)) by0 = sqrt(Btot**2) / (dom%D_x + dom%D_y + dom%D_z) + sqrt(two * u_b0 / fsynchr) / (dom%D_x + dom%D_y + dom%D_z)
+         if (dom%has_dir(zdim)) bz0 = sqrt(Btot**2) / (dom%D_x + dom%D_y + dom%D_z) + sqrt(two * u_b0 / fsynchr) / (dom%D_x + dom%D_y + dom%D_z)
       endif
-! ignore B field in nonexistent direction
-      if (.not.dom%has_dir(xdim)) bx0 = zero
-      if (.not.dom%has_dir(ydim)) by0 = zero
-      if (.not.dom%has_dir(zdim)) bz0 = zero
 
       cgl => leaves%first
       do while (associated(cgl))
