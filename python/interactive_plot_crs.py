@@ -305,7 +305,8 @@ if f_run is True:
                   grid_dim[avail_dim[1]] * 2**h5ds.max_level]
 
 # --------- Preparing clickable image
-    s = plt.figure("Displayed file: %s at %s %s of axis %s" %(filename, str(slice_coord), length_unit, slice_ax), figsize=(12, 8), dpi=100)
+    s = plt.figure("Displayed file: %s at %s %s of axis %s" % (
+        filename, str(slice_coord), length_unit, slice_ax), figsize=(12, 8), dpi=100)
     s1 = plt.subplot(121)
     dsSlice = h5ds.slice(slice_ax, slice_coord)
 

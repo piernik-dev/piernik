@@ -422,27 +422,27 @@ def detect_active_bins_new(n_in, e_in):
         exit_code = False
         if (q_explicit is True):
             q_tmp, exit_code = nr_get_q(
-                q_tmp, e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * c * pln[i+ i_lo_tmp]), prn[i+ i_lo_tmp] / pln[i+ i_lo_tmp], exit_code)
+                q_tmp, e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * c * pln[i + i_lo_tmp]), prn[i + i_lo_tmp] / pln[i + i_lo_tmp], exit_code)
         else:
             # this instruction is duplicated, TODO return it via detect_active_bins_new()
             q_tmp = interpolate_q(
-                e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * c * pln[i+ i_lo_tmp]))
+                e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * c * pln[i + i_lo_tmp]))
 
         q_gt_zero.append(q_tmp)
         f_gt_zero.append(
-            nq2f(n_in[i + i_lo_tmp], q_gt_zero[-1], pln[i+ i_lo_tmp], prn[i+ i_lo_tmp]))
-        e_ampl_l.append(4 * pi * c**2 * f_gt_zero[-1] * pln[i+ i_lo_tmp]**3)
+            nq2f(n_in[i + i_lo_tmp], q_gt_zero[-1], pln[i + i_lo_tmp], prn[i + i_lo_tmp]))
+        e_ampl_l.append(4 * pi * c**2 * f_gt_zero[-1] * pln[i + i_lo_tmp]**3)
         e_ampl_r.append(
-            4 * pi * c**2 * f_gt_zero[-1] * ((prn[i+ i_lo_tmp] / pln[i+ i_lo_tmp])**(-q_tmp)) * prn[i+ i_lo_tmp] ** 3)
-        if ((e_ampl_l[-1] > e_small or e_ampl_r[-1] > e_small) and e_in[i+ i_lo_tmp] > e_small):
-            active_bins_new.append(ne_gt_zero[i] )
+            4 * pi * c**2 * f_gt_zero[-1] * ((prn[i + i_lo_tmp] / pln[i + i_lo_tmp])**(-q_tmp)) * prn[i + i_lo_tmp] ** 3)
+        if ((e_ampl_l[-1] > e_small or e_ampl_r[-1] > e_small) and e_in[i + i_lo_tmp] > e_small):
+            active_bins_new.append(ne_gt_zero[i])
             num_active_bins = num_active_bins + 1
 
     if num_active_bins == 0:
         return active_bins_new, i_lo_tmp, i_up_tmp
 
     i_lo_tmp = max(active_bins_new[0], 0)
-    i_up_tmp = min(active_bins_new[-1] , ncre)
+    i_up_tmp = min(active_bins_new[-1], ncre)
 
     active_bins_new = [i for i in range(i_lo_tmp, i_up_tmp+1)]
     num_active_bins = len(active_bins_new)
@@ -524,9 +524,8 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
         prtinfo("e = " + str(ecrs1e3))
         enpc1e3 = []
         for i in range(len(ecrs)):
-           enpc1e3.append(float('%1.3e' %(ecrs[i] / (ncrs[i] * p_fix[i]))))
+            enpc1e3.append(float('%1.3e' % (ecrs[i] / (ncrs[i] * p_fix[i]))))
         prtinfo("e/(npc) = " + str(enpc1e3))
-
 
     if (empty_cell):
         return plt.subplot(122), empty_cell
@@ -542,8 +541,6 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
         pf_ratio_up = [0., 0.]
         if (i_up == ncre):
             i_up = i_up - 1
-        #pf_ratio_up, exit_code_up = crs_pf.get_interpolated_ratios("up", ecrs[i_up - 1] / (
-            #ncrs[i_up - 1] * c * p_fix[i_up - 1]), ncrs[i_up - 1], exit_code_up, verbose=verbosity_2)
         pf_ratio_up, exit_code_up = crs_pf.get_interpolated_ratios("up", ecrs[i_up] / (
             ncrs[i_up] * c * p_fix[i_up - 1]), ncrs[i_up], exit_code_up, verbose=verbosity_2)
 
@@ -587,13 +584,14 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
             exit_code = False
             # this instruction is duplicated, TODO return it via detect_active_bins_new()
             q_tmp, exit_code = nr_get_q(
-                q_tmp, ecrs[i + i_lo] / (ncrs[i + i_lo] * c * pln[i+ i_lo]), prn[i+ i_lo] / pln[i+ i_lo], exit_code)
+                q_tmp, ecrs[i + i_lo] / (ncrs[i + i_lo] * c * pln[i + i_lo]), prn[i + i_lo] / pln[i + i_lo], exit_code)
         else:
             # this instruction is duplicated, TODO return it via detect_active_bins_new()
             q_tmp = interpolate_q(
-                ecrs[i + i_lo] / (ncrs[i + i_lo] * c * pln[i+ i_lo]))
+                ecrs[i + i_lo] / (ncrs[i + i_lo] * c * pln[i + i_lo]))
         q_nr.append(q_tmp)
-        fln.append(nq2f(ncrs[i + i_lo], q_nr[-1], pln[i+ i_lo], prn[i+ i_lo]))
+        fln.append(nq2f(ncrs[i + i_lo], q_nr[-1],
+                   pln[i + i_lo], prn[i + i_lo]))
 
     q_nr = array(q_nr)
     fln = array(fln)
