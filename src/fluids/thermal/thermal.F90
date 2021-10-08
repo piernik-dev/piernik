@@ -264,7 +264,7 @@ contains
       use func,              only: operator(.equals.)
 
       integer, intent(in)                  :: nbins
-      real, dimension(nbins), intent(in)   :: logT, lambda
+      real, dimension(nbins), intent(inout):: logT, lambda
       integer                              :: i, j, k
       real                                 :: a, b, meanL, stdL, meanT, stdT, r, rlim, x_ion
       real, dimension(nbins)               :: fit, loglambda
@@ -276,26 +276,26 @@ contains
       i=1
       k=0
       do j = 2, nbins
-         if (logT(j) .equals. log10(Teql)) then
+         if (logT(j) .equals. log10(Teql)) then                                       ! log(lambda) goes to -inf at T=Teql
             cycle
-         else if ((logT(j-1) .le. log10(Teql)) .and. logT(j) .gt. log10(Teql)) then   !3.01
-            if (iso .eq. 1) then
-               a = - lambda(i) / (logT(j) - logT(i))
+         else if ((logT(j-1) .le. log10(Teql)) .and. logT(j) .gt. log10(Teql)) then   ! Look for the point right after Teql
+            if (iso .eq. 1) then                                                      ! Linear fit of lambda between right before Teql, and 0
+               a =  - lambda(i)/ (log10(Teql) - logT(i))
                b = 0.0
                k=k+1
                Tref(k) = 10**logT(i)
                alpha(k) = b
                lambda0(k) = a/log(10.0)/Teql
+               lambda(j+1) = a * logT(j+1)                                            ! Reassign lambda after Teql to match the linear function
+               loglambda(j+1) = log10(abs(a * logT(j+1)))
                !print *, Tref(k), alpha(k), lambda0(k)
             endif
             i=j
          else
             a = (loglambda(j) - loglambda(i)) / (logT(j) - logT(i))
-            !print *, a
             b = loglambda(j) - a*logT(j)
             fit(:) = a*logT + b
             r = sum( abs((loglambda(i:j) - fit(i:j))/fit(i:j)) ) / (j-i+1)
-            !print *, logT(j), r, lambda(j), fit(j)
             if ((r .gt. rlim) .or. (logT(j+1) .ge. log10(Teql) .and. logT(j) .lt. log10(Teql))) then
                k=k+1
                if (k .gt. nfuncs) call die('[init_thermal]: too many piecewise functions')
