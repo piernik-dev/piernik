@@ -185,6 +185,8 @@ contains
       use mpisetup,        only: master
       use units,           only: cm, erg, sek, mH
 
+      implicit none
+
       integer                                     :: nbins
       integer, parameter                          :: coolfile = 1
       real(kind=8), dimension(:), allocatable     :: logT, lambda, cool, heat
@@ -216,16 +218,16 @@ contains
       do i = 1, nbins
          T = 10**logT(i)
 
-         select case(cool_curve)
-         case('power_law')
+         select case (cool_curve)
+         case ('power_law')
             cool(i)   = L0_cool * (T / Teq )**alpha_cool
-         case('Heintz')
+         case ('Heintz')
             if ((master) .and. (i .eq. 1)) call printinfo('[thermal] Heintz cooling function used. Cooling power law parameters not used.')
             cool(i) = (7.3 * 10.0**(-21) * exp(-118400/(T+1500)) + 7.9 * 10.0**(-27) * exp(-92/T) ) * erg / sek * cm**3 / mH**2 * x_ion**2
-         case('tabulated')
+         case ('tabulated')
             cool(i) = cool(i) * erg / sek * cm**3 / mH**2 * x_ion**2
          case default
-            call die('[init_thermal] Cooling curve function not implemented')              
+            call die('[init_thermal] Cooling curve function not implemented')
          end select
 
          if (iso .eq. 1) then
@@ -253,7 +255,7 @@ contains
       call fit_proc(nbins, logT, lambda)       ! Perform fit
 
       deallocate(logT, lambda, cool, heat)
-      
+
     end subroutine fit_cooling_curve
 
 
@@ -262,6 +264,8 @@ contains
 
       use dataio_pub,        only: die
       use func,              only: operator(.equals.)
+
+      implicit none
 
       integer, intent(in)                  :: nbins
       real, dimension(nbins), intent(inout):: logT, lambda
@@ -272,7 +276,7 @@ contains
       rlim = 10.0**(-6)
       loglambda = log10(abs(lambda))
       allocate(Tref(nfuncs), alpha(nfuncs), lambda0(nfuncs))
-      
+
       i=1
       k=0
       do j = 2, nbins
@@ -310,9 +314,9 @@ contains
             endif
          endif
       enddo
-         
+
       nfuncs = k
-      
+
     end subroutine fit_proc
 
 
@@ -328,7 +332,7 @@ contains
       use global,           only: nstep
       use grid_cont,        only: grid_container
       use initproblem,      only: T0
-      use mpisetup,         only: master, proc
+      use mpisetup,         only: master
       use named_array_list, only: wna
       use units,            only: kboltz, mH
 
@@ -359,7 +363,7 @@ contains
             dens =>  cg%w(wna%fi)%span(pfl%idn,cg%lhn)!lh_out)!ijkse)!   ! cg%lh_out?
             ener => cg%w(wna%fi)%span(pfl%ien,cg%lhn)!lh_out)!ijkse)!
             ta => cg%q(itemp)%span(cg%lhn)!lh_out)!ijkse)
- 
+
             if ((abs(nstep) .lt. 0.1) .and. (ta(1,1,1) .gt. 10**(5))) then
                ta = T0
             endif
@@ -378,9 +382,9 @@ contains
                   int_ener = ener - kin_ener
                endif
             endif
-            select case(scheme)
+            select case (scheme)
 
-            case('Explicit')
+            case ('Explicit')
                if (cool_model .eq. 'piecewise_power_law') then
                   write(msg,'(3a)') 'Warning: Make sure you are not using the heating in the cooling curve.'
                   if (master) call warn(msg)
@@ -390,15 +394,15 @@ contains
                do x = 1, n(1)
                   do y = 1, n(2)
                      do z = 1, n(3)
-                        call cool2(ta(x,y,z), cfunc)
-                        call heat2(dens(x,y,z), hfunc)
+                        call cool(ta(x,y,z), cfunc)
+                        call heat(dens(x,y,z), hfunc)
                         esrc = dens(x,y,z)**2*cfunc + hfunc
                         dt_cool = min(dt, cfl_coolheat*abs(1./(esrc/int_ener(x,y,z))))
                         !dt_cool=0.01
                         !if (x==10 .and. y==10) print *, esrc, dt_cool, int_ener(x,y,z), abs(1./(esrc/int_ener(x,y,z))), cfl_coolheat, cfl_coolheat*abs(1./(esrc/int_ener(x,y,z)))
                         t1=0.0
-                        do while(t1 .lt. dt)
-                           call cool2(ta(x,y,z), cfunc)
+                        do while (t1 .lt. dt)
+                           call cool(ta(x,y,z), cfunc)
                            esrc = dens(x,y,z)**2*cfunc + hfunc
                            int_ener(x,y,z) = int_ener(x,y,z) + esrc * dt_cool
                            ener(x,y,z) = ener(x,y,z) + esrc * dt_cool
@@ -415,7 +419,7 @@ contains
                   enddo
                enddo
 
-            case('EIS')
+            case ('EIS')
                allocate(T(n(1),n(2),n(3)))
                do x = 1, n(1)
                   do y = 1, n(2)
@@ -436,7 +440,7 @@ contains
                         dt_cool = min(dt, tcool/100.0)
                         !print *, 'dt_cool', dt_cool, dt
                         t1=0.0
-                        do while(t1 .lt. dt)
+                        do while (t1 .lt. dt)
                            ta(x,y,z) = int_ener(x,y,z) * (pfl%gam-1) * mH / (dens(x,y,z) * kboltz)
                            call temp_EIS(tcool, dt_cool, gamma, ta(x,y,z), dens(x,y,z), T(x,y,z))
                            int_ener(x,y,z) = dens(x,y,z) * kboltz * T(x,y,z) / ((pfl%gam-1) * mH)
@@ -452,7 +456,7 @@ contains
                   enddo
                enddo
                deallocate(T)
-            case('EE')
+            case ('EE')
                if (cool_model .eq. 'piecewise_power_law') then
                   write(msg,'(3a)') 'Warning: Make sure you are not using the heating in both the explicit and EI schemes.'
                   if (master) call warn(msg)
@@ -464,14 +468,14 @@ contains
                         tcool = kboltz * ta(x,y,z) / ((pfl%gam-1) * mH * dens(x,y,z) * abs(L0_cool) * (ta(x,y,z)/Teq)**alpha_cool)
                         dt_cool = min(dt, tcool/100.0)
                         t1=0.0
-                        do while(t1 .lt. dt)
+                        do while (t1 .lt. dt)
                            ta(x,y,z) = int_ener(x,y,z) * (pfl%gam-1) * mH / (dens(x,y,z) * kboltz)
                            call temp_EIS(tcool, dt_cool, gamma, ta(x,y,z), dens(x,y,z), T(x,y,z))
                            !if (x==10 .and. y==10) print *, proc, cg%ijkse(x,y), ta(x,y,z), T(x,y,z), ta(x,y,z)*(1 - (1-alpha_cool) * dt_cool / tcool) **(1.0/(1-alpha_cool)), iso
                            int_ener(x,y,z) = dens(x,y,z) * kboltz * T(x,y,z) / ((pfl%gam-1) * mH)
                            ener(x,y,z) = kin_ener(x,y,z) + mag_ener(x,y,z) + int_ener(x,y,z)
 
-                           call heat2(dens(x,y,z), hfunc)
+                           call heat(dens(x,y,z), hfunc)
                            int_ener(x,y,z) = int_ener(x,y,z) + hfunc * dt_cool
                            ener(x,y,z)     = ener(x,y,z)     + hfunc * dt_cool
 
@@ -497,11 +501,10 @@ contains
     end subroutine thermal_substep
 
 
-   subroutine cool2(temp, coolf)
+   subroutine cool(temp, coolf)
 
       use dataio_pub,  only: msg, warn
       use mpisetup,    only: master
-      use units,       only: cm, sek
 
       implicit none
 
@@ -512,7 +515,7 @@ contains
       select case (cool_model)
          case ('power_law')
             coolf = -L0_cool * (temp/Teq)**(alpha_cool)
-         case('piecewise_power_law')
+         case ('piecewise_power_law')
             coolf = 0.0
             do i = 1, nfuncs
                if (i .eq. nfuncs) then
@@ -536,9 +539,9 @@ contains
           if (master) call warn(msg)
       end select
 
-    end subroutine cool2
-    
-    subroutine heat2(dens, heatf)
+    end subroutine cool
+
+    subroutine heat(dens, heatf)
 
       use dataio_pub, only: msg, warn
       use mpisetup,   only: master
@@ -558,15 +561,14 @@ contains
            if (master) call warn(msg)
       end select
 
-    end subroutine heat2
+    end subroutine heat
 
    subroutine temp_EIS(tcool, dt, gamma, temp, dens, Tnew)
 
-      use dataio_pub,  only: msg, warn, die
+      use dataio_pub,  only: msg, warn
       use func,        only: operator(.equals.)
-      use grid_cont,   only: grid_container
       use mpisetup,    only: master
-      use units,       only: kboltz, mH, cm, sek
+      use units,       only: kboltz, mH
 
       implicit none
 
@@ -596,7 +598,7 @@ contains
                !Tnew = Tnew + dt * (gamma-1) * mH * G0_heat / kboltz   ! isochoric heating
                !Tnew = Tnew * sqrt(1 + 2 * dt * (gamma-1) * mH * G0_heat *dens / kboltz / Tnew / gamma)  ! isobar heating
             endif
-         case('piecewise_power_law')
+         case ('piecewise_power_law')
             iso2 = 1.0
             if (iso .eq. 2) then
                iso2 = 1.0/gamma
@@ -663,7 +665,7 @@ contains
                   if (temp .le. Tref(i+1)) then
                      Tnew = Tref(i) * (1 - (iso-alpha(i)) * lambda0(i)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(i))**iso * (Y0 - Y(i)) )**(1/(iso-alpha(i)))
                   endif
-               else 
+               else
                   if ((temp .ge. Tref(i)) .and. (temp .le. Tref(i+1))) then
                      if (alpha0 .equals. 0.0) then
                         Tnew = Teql + sign * (Teql-Tref(i)) * exp(-TN * (Tref(nfuncs)/TN)**alpha(nfuncs) * lambda0(i)/lambda0(nfuncs) * (Y0 - Y(i)))
@@ -682,7 +684,7 @@ contains
             return
          case default
             write(msg,'(3a)') 'Cool model: ',cool_model,' not implemented'
-            if (master) call warn(msg)  
+            if (master) call warn(msg)
        end select
 
 

@@ -30,7 +30,6 @@ module initproblem
 ! Initial condition for Sedov-Taylor explosion
 ! Written by: M. Hanasz, March 2006
 
-   use constants, only : cbuff_len
 
    implicit none
 
@@ -68,7 +67,7 @@ contains
    subroutine read_problem_par
 
       use dataio_pub, only: nh
-      use mpisetup,   only: ibuff, rbuff, cbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -110,7 +109,6 @@ contains
 
       call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(rbuff)
-      call piernik_MPI_Bcast(cbuff, cbuff_len)
 
       if (slave) then
 
@@ -131,11 +129,9 @@ contains
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
       use constants,  only: ION, xdim, ydim, zdim, LO, HI, pi
-      use dataio_pub, only: msg, printio
       use domain,     only: dom
       use fluidindex, only: flind
       use grid_cont,  only: grid_container
-      use mpisetup,   only: master
       use units,      only: kboltz, mH
 
       implicit none
@@ -182,10 +178,10 @@ contains
                      !cg%u(fl%imx,i,j,k) = cg%u(fl%imx,i,j,k) + pertamp*cg%u(fl%idn,i,j,k) * cs * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
                      !cg%u(fl%imy,i,j,k) = cg%u(fl%imy,i,j,k) + pertamp*cg%u(fl%idn,i,j,k) * cs * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
                      !cg%u(fl%imz,i,j,k) = cg%u(fl%imz,i,j,k) + pertamp*cg%u(fl%idn,i,j,k) * cs * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
-                     
+
                      !cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + pertamp*cg%u(fl%ien,i,j,k)      * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
                      cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*(cg%u(fl%imx,i,j,k)**2 +cg%u(fl%imy,i,j,k)**2 + cg%u(fl%imz,i,j,k)**2)/cg%u(fl%idn,i,j,k)
-                     
+
                   enddo
                enddo
             enddo
@@ -280,6 +276,6 @@ contains
     end subroutine crtest_analytic_ecr1
 
 !-----------------------------------------------------------------------------
-      
+
 
 end module initproblem
