@@ -46,12 +46,12 @@ module initproblem
 
    integer(kind=4)    :: norm_step
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, beta_cr, amp_cr1
-   real               :: u_d0, u_b0, div_v0, ub_ampl, omega_d, omega_b, Btot, u_d_t
+   real               :: u_d0, u_b0, u_d_ampl, ub_ampl, omega_d, omega_b, Btot, u_d_t
    character(len=fnamelen) :: outfile
 
    namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, beta_cr, amp_cr1
 
-   namelist /CRESP_ISOLATED/ u_d0, u_b0, div_v0, ub_ampl, omega_d, omega_b, Btot, u_d_t, outfile
+   namelist /CRESP_ISOLATED/ u_d0, u_b0, u_d_ampl, ub_ampl, omega_d, omega_b, Btot, u_d_t, outfile
 contains
 
 !-----------------------------------------------------------------------------
@@ -155,7 +155,7 @@ contains
 
          rbuff(1)  = u_d0
          rbuff(2)  = u_b0
-         rbuff(3)  = div_v0
+         rbuff(3)  = u_d_ampl
          rbuff(4)  = ub_ampl
          rbuff(5)  = omega_d
          rbuff(6)  = omega_b
@@ -173,7 +173,7 @@ contains
 
          u_d0      = rbuff(1)
          u_b0      = rbuff(2)
-         div_v0     = rbuff(3)
+         u_d_ampl  = rbuff(3)
          ub_ampl   = rbuff(4)
          omega_d   = rbuff(5)
          omega_b   = rbuff(6)
@@ -354,9 +354,9 @@ contains
                do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
                   do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
                      do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-                        cg%u(flind%ion%imx,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%x(i) * (u_d0 + div_v0 * cos_omega_t) / onet * denom_dims
-                        cg%u(flind%ion%imy,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%y(j) * (u_d0 + div_v0 * cos_omega_t) / onet * denom_dims
-                        cg%u(flind%ion%imz,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%z(k) * (u_d0 + div_v0 * cos_omega_t) / onet * denom_dims
+                        cg%u(flind%ion%imx,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%x(i) * (u_d0 + u_d_ampl * cos_omega_t) / onet * denom_dims
+                        cg%u(flind%ion%imy,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%y(j) * (u_d0 + u_d_ampl * cos_omega_t) / onet * denom_dims
+                        cg%u(flind%ion%imz,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%z(k) * (u_d0 + u_d_ampl * cos_omega_t) / onet * denom_dims
                      enddo
                   enddo
                enddo
@@ -364,7 +364,7 @@ contains
                call div_v(flind%ion%pos, cg)
 
 #ifdef CRESP_VERBOSED
-               write (msg, "(A,F10.7,A,F10.7)") "Adiabatic process: got u_d(1, 0, 0) values : u_d(numerical) = ", cg%q(divv_i)%point([1,0,0]) * onet, " | u_d(t, set) = ", u_d0 + div_v0 * cos_omega_t
+               write (msg, "(A,F10.7,A,F10.7)") "Adiabatic process: got u_d(1, 0, 0) values : u_d(numerical) = ", cg%q(divv_i)%point([1,0,0]) * onet, " | u_d(t, set) = ", u_d0 + u_d_ampl * cos_omega_t
                call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
