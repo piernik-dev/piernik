@@ -58,8 +58,7 @@ contains
    subroutine read_problem_par
 
       use constants,  only: I_TEN
-      use dataio_pub, only: nh ! QA_WARN required for diff_nml
-      use dataio_pub, only: die
+      use dataio_pub, only: die, nh
       use domain,     only: dom
       use func,       only: operator(.equals.)
       use mpisetup,   only: ibuff, rbuff, master, slave, piernik_MPI_Bcast

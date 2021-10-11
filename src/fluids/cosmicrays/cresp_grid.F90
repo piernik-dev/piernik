@@ -40,7 +40,7 @@ module cresp_grid
 
    logical :: cfl_cresp_violation
 
-   contains
+contains
 
 !----------------------------------------------------------------------------------------------------
 

@@ -95,7 +95,7 @@ module initcrspectrum
 
 ! substepping parameters
    logical         :: cresp_substep               !< turns on / off usage of substepping for each cell independently
-   integer         :: n_substeps_max              !< maximal allowed number of substeps
+   integer(kind=4) :: n_substeps_max              !< maximal allowed number of substeps
 
 ! NR parameters
    real            :: tol_f                       !< tolerance for f abs. error in NR algorithm
@@ -160,7 +160,7 @@ module initcrspectrum
 
 !====================================================================================================
 !
- contains
+contains
 !
 !====================================================================================================
    subroutine init_cresp

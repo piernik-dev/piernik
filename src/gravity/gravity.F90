@@ -168,8 +168,7 @@ contains
 
       use cg_list_global,   only: all_cg
       use constants,        only: PIERNIK_INIT_MPI, gp_n, gpot_n, hgpot_n, O_I2, O_I4
-      use dataio_pub,       only: nh    ! QA_WARN required for diff_nml
-      use dataio_pub,       only: printinfo, warn, die, code_progress
+      use dataio_pub,       only: printinfo, warn, die, code_progress, nh
       use mpisetup,         only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
       use units,            only: newtong
 #ifdef SELF_GRAV
@@ -177,9 +176,9 @@ contains
       use named_array_list, only: qna
 #endif /* SELF_GRAV */
 #ifdef NBODY
-      use constants,      only: gp1b_n, nbdn_n, prth_n
+      use constants,        only: gp1b_n, nbdn_n, prth_n
 #ifdef NBODY_GRIDDIRECT
-      use constants,      only: nbgp_n
+      use constants,        only: nbgp_n
 #endif /* NBODY_GRIDDIRECT */
 #endif /* NBODY */
 #ifdef CORIOLIS

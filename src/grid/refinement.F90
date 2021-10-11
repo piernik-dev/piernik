@@ -112,8 +112,7 @@ contains
    subroutine init_refinement
 
       use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, LO, HI, cbuff_len, refinement_factor
-      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub, only: die, code_progress, warn, msg, printinfo
+      use dataio_pub, only: die, code_progress, warn, msg, printinfo, nh
       use domain,     only: dom
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 

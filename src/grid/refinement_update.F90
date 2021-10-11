@@ -244,10 +244,13 @@ contains
       use constants,          only: xdim, zdim, LO, HI, I_ONE, I_ZERO
       use dataio_pub,         only: die, warn
       use domain,             only: dom
-      use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD, &
-           &                        MPI_Alltoall, MPI_Isend, MPI_Recv
+      use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,             only: MPI_Alltoall, MPI_Isend, MPI_Recv, MPI_Comm_dup, MPI_Comm_free
       use mpisetup,           only: FIRST, LAST, err_mpi, proc, req, inflate_req
       use ppp_mpi,            only: piernik_Waitall
+#ifdef MPIF08
+      use MPIF,       only: MPI_Comm
+#endif /* MPIF08 */
 
       implicit none
 
@@ -266,6 +269,11 @@ contains
       type(pt), dimension(:), allocatable :: pt_list
       integer(kind=4) :: pt_cnt
       integer(kind=4) :: rtag
+#ifdef MPIF08
+      type(MPI_Comm)  :: ref_comm
+#else /* !MPIF08 */
+      integer(kind=4) :: ref_comm
+#endif /* !MPIF08 */
 
       if (perimeter > dom%nb) call die("[refinement_update:parents_prevent_derefinement_lev] perimeter > dom%nb")
       if (.not. associated(lev%finer)) then
@@ -315,12 +323,13 @@ contains
       call MPI_Alltoall(gscnt, I_ONE, MPI_INTEGER, grcnt, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
 
       ! Apparently gscnt/grcnt represent quite sparse matrix, so we better do nonblocking point-to-point than MPI_AlltoAllv
+      call MPI_Comm_dup(MPI_COMM_WORLD, ref_comm, err_mpi)
       nr = 0
       if (pt_cnt > 0) then
          do g = lbound(pt_list, dim=1, kind=4), pt_cnt
             nr = nr + I_ONE
             if (nr > size(req, dim=1)) call inflate_req
-            call MPI_Isend(pt_list(g)%tag, I_ONE, MPI_INTEGER, pt_list(g)%proc, I_ZERO, MPI_COMM_WORLD, req(nr), err_mpi)
+            call MPI_Isend(pt_list(g)%tag, I_ONE, MPI_INTEGER, pt_list(g)%proc, I_ZERO, ref_comm, req(nr), err_mpi)
             ! OPT: Perhaps it will be more efficient to allocate arrays according to gscnt and send tags in bunches
          enddo
       endif
@@ -329,13 +338,14 @@ contains
          if (grcnt(g) /= 0) then
             if (g == proc) call die("[refinement_update:parents_prevent_derefinement] MPI_Recv from self")  ! this is not an error but it should've been handled as local thing
             do i = 1, grcnt(g)
-               call MPI_Recv(rtag, I_ONE, MPI_INTEGER, g, I_ZERO, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               call MPI_Recv(rtag, I_ONE, MPI_INTEGER, g, I_ZERO, ref_comm, MPI_STATUS_IGNORE, err_mpi)
                call disable_derefine_by_tag(lev%finer, rtag)  ! beware: O(leaves%cnt^2)
             enddo
          endif
       enddo
 
       call piernik_Waitall(nr, "prevent_derefinement")
+      call MPI_Comm_free(ref_comm, err_mpi)
 
       deallocate(pt_list)
 
@@ -654,6 +664,8 @@ contains
          call print_time("[refinement_update] Finishing (fixup only)")
       endif
 
+      call log_req
+
    contains
 
       !>
@@ -676,6 +688,34 @@ contains
          if (master) call printinfo(msg)
 
       end subroutine print_time
+
+      !> \brief Notify when the size of the req arrays has increased
+
+      subroutine log_req
+
+         use constants,  only: pMAX
+         use dataio_pub, only: printinfo, msg
+         use mpisetup,   only: master, req, req2, piernik_MPI_Allreduce
+
+         implicit none
+
+         integer, save :: oldsize = 0
+         integer :: cursize
+
+         cursize = 0
+         if (allocated(req)) cursize = cursize + size(req)
+         if (allocated(req2)) cursize = cursize + size(req2)
+
+         call piernik_MPI_Allreduce(cursize, pMAX)
+         if (cursize > oldsize) then
+            if (master) then
+               write(msg, *) cursize
+               call printinfo("[refinement_update] Total number of simultaneous nonblocking MPI requests increased to " // trim(adjustl(msg)))
+            endif
+            oldsize = cursize
+         endif
+
+      end subroutine log_req
 
    end subroutine update_refinement_wrapped
 

@@ -81,8 +81,7 @@ contains
    subroutine init_snsources
 
       use constants,      only: PIERNIK_INIT_GRID, xdim, ydim, zdim, pi, I_ONE
-      use dataio_pub,     only: nh                  ! QA_WARN required for diff_nml
-      use dataio_pub,     only: die, code_progress
+      use dataio_pub,     only: die, code_progress, nh
       use domain,         only: dom
       use mpisetup,       only: rbuff, master, slave, piernik_MPI_Bcast
       use units,          only: erg, kpc, Myr

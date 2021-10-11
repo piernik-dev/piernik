@@ -46,7 +46,7 @@ module multigrid_old_soln
    type :: soln_history                       !< container for a set of several old potential solutions
       type(os_list_undef_t) :: invalid        !< a list of invalid slots ready to use
       type(os_list_t) :: old                  !< indices and time points of stored solutions
-    contains
+   contains
       procedure :: init_history               !< Allocate arrays, register fields
       procedure :: cleanup_history            !< Deallocate arrays
       procedure :: init_solution              !< Construct first guess of potential based on previously obtained solution, if any.

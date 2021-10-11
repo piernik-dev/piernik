@@ -104,7 +104,7 @@ contains
 
    subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, p_out, substeps)
 
-      use constants,      only: zero, one, I_ONE
+      use constants,      only: zero, one, I_ZERO, I_ONE
 #ifdef CRESP_VERBOSED
       use dataio_pub,     only: msg, printinfo
 #endif /* CRESP_VERBOSED */
@@ -282,7 +282,7 @@ contains
 
             e     = edt                         !< append changes for e
             n     = ndt                         !< append changes for e
-            approx_p = [0, 0]                   !< switch off cutoff approximation
+            approx_p = [I_ZERO, I_ZERO]         !< switch off cutoff approximation
 
             deallocate(active_bins_next)        !< must be deallocated, reallocation in upcoming substep (update_bin_index)
             deallocate(cooling_edges_next)      !< -//-
@@ -462,22 +462,22 @@ contains
       do i = 1, ncre                        ! if energy density is nonzero, so should be the number density
          i_cut(LO) = i - I_ONE
          if (cresp%e(i) > e_threshold(LO)) then
-           if (cresp%n(i) > zero) then
-              empty_cell = .false.
-              exit
-           endif
-        endif
-     enddo
+            if (cresp%n(i) > zero) then
+               empty_cell = .false.
+               exit
+            endif
+         endif
+      enddo
 
-     if (empty_cell) return   ! empty cell - nothing to do here!
+      if (empty_cell) return   ! empty cell - nothing to do here!
 
-     i_cut(HI) = ncre
-     do i = ncre, 1,-1
-        i_cut(HI) = i
-        if (cresp%e(i) > e_threshold(HI)) then   ! if energy density is nonzero, so should be the number density
-           if (cresp%n(i) > zero) exit
-        endif
-     enddo
+      i_cut(HI) = ncre
+      do i = ncre, 1,-1
+         i_cut(HI) = i
+         if (cresp%e(i) > e_threshold(HI)) then   ! if energy density is nonzero, so should be the number density
+            if (cresp%n(i) > zero) exit
+         endif
+      enddo
 
    end subroutine find_i_bound
 !-------------------------------------------------------------------------------------------------
@@ -1669,8 +1669,8 @@ contains
             endif
          else
             q(i) = zero
-        endif
-        if (exit_code) fail_count_comp_q(i) = fail_count_comp_q(i) + I_ONE
+         endif
+         if (exit_code) fail_count_comp_q(i) = fail_count_comp_q(i) + I_ONE
       enddo
 
    end subroutine ne_to_q

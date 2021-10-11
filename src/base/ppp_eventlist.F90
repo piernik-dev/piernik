@@ -250,9 +250,9 @@ contains
 
       use constants,    only: I_ZERO, I_ONE
       use dataio_pub,   only: printinfo, msg
-      use MPIF,         only: MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, &
-           &                  MPI_Isend, MPI_Recv, MPI_Waitall
-      use mpisetup,     only: proc, master, slave, err_mpi, FIRST, LAST, req, inflate_req
+      use MPIF,         only: MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN,       only: MPI_Isend, MPI_Recv, MPI_Waitall
+      use mpisetup,     only: proc, master, slave, err_mpi, FIRST, LAST, req, inflate_req, piernik_MPI_Barrier, extra_barriers
 
       implicit none
 
@@ -317,19 +317,21 @@ contains
 
          ! receive
          do p = FIRST + I_ONE, LAST
-             call MPI_Recv(ne, I_ONE, MPI_INTEGER, p, TAG_CNT, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-             if (ne /= 0) then
-                allocate(buflabel(ne), buftime(ne))
-                call MPI_Recv(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        p, TAG_ARR_L, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-                call MPI_Recv(buftime,  size(buftime, kind=4),                           MPI_DOUBLE_PRECISION, p, TAG_ARR_T, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-                call publish_buffers(p, buflabel, buftime)
-                deallocate(buflabel, buftime)
-             endif
+            call MPI_Recv(ne, I_ONE, MPI_INTEGER, p, TAG_CNT, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+            if (ne /= 0) then
+               allocate(buflabel(ne), buftime(ne))
+               call MPI_Recv(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        p, TAG_ARR_L, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               call MPI_Recv(buftime,  size(buftime, kind=4),                           MPI_DOUBLE_PRECISION, p, TAG_ARR_T, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               call publish_buffers(p, buflabel, buftime)
+               deallocate(buflabel, buftime)
+            endif
          enddo
       else
          call MPI_Waitall(t, req(:t), MPI_STATUSES_IGNORE, err_mpi)
          deallocate(buflabel, buftime)
       endif
+
+      if (extra_barriers) call piernik_MPI_Barrier
 
       call this%cleanup
 

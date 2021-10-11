@@ -38,13 +38,21 @@ module ppp_mpi
 
 contains
 
-!> \brief a PPP wrapper for MPI_Waitall
+!>
+!! \brief a PPP wrapper for MPI_Waitall
+!!
+!! This routine may sometimes be called only by a subset of MPI ranks.
+!! Do not insert MPI_Barrier and do not assume equal call count ovel all ranks.
+!! This may result in differing count of associated PPP timer on different processes.
+!<
+
 
    subroutine piernik_Waitall(nr, ppp_label, x_mask, use_req2)
 
       use constants, only: PPP_MPI
-      use mpisetup,  only: err_mpi, req, req2
-      use MPIF,      only: MPI_STATUSES_IGNORE, MPI_Waitall
+      use mpisetup,  only: err_mpi, req, req2, piernik_MPI_Barrier, extra_barriers
+      use MPIF,      only: MPI_STATUSES_IGNORE
+      use MPIFUN,    only: MPI_Waitall
       use ppp,       only: ppp_main
 
       implicit none
@@ -74,6 +82,8 @@ contains
 
          call ppp_main%stop(mpiw // ppp_label, mask)
       endif
+
+      if (extra_barriers) call piernik_MPI_Barrier
 
    end subroutine piernik_Waitall
 

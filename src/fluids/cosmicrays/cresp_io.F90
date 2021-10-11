@@ -33,8 +33,6 @@ module cresp_io
 
 ! pulled by COSM_RAY_ELECTRONS
 
-   use constants, only: LO, HI
-
    implicit none
 
    private
@@ -42,11 +40,11 @@ module cresp_io
             &  read_cresp_smap_fields, create_cresp_smap_fields, read_real_arr2d_dset, read_smap_header_h5, &
             &  save_NR_smap, check_NR_smap_header, read_NR_smap, read_NR_smap_header
 
-   contains
+contains
 
 !> \brief Create fields containing parameters of cresp solution maps, which are saved later in these groups.
 !
-      subroutine create_cresp_smap_fields(file_id)
+   subroutine create_cresp_smap_fields(file_id)
 
       use constants,       only: LO, HI
       use cresp_helpers,   only: n_g_cresp, n_g_smaps, n_a_dims, n_a_esmall, n_a_max_p_r, &

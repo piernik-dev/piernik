@@ -17,9 +17,11 @@ endif
 # safe optimization choice
 F90FLAGS += -O2 -fno-stack-arrays
 
+# Fixes for known problematic gfortran flags that are implied by optimization
+F90FLAGS += -fno-inline-small-functions -fno-tree-pre
+
 GFORTRAN := $(shell gfortran -dumpversion | cut -f1 -d.)
-#ifeq ($(shell expr $(GFORTRAN) \>= 10), 1)
-ifeq ($(GFORTRAN),10)
+ifeq ($(shell expr $(GFORTRAN) \>= 10), 1)
   # Ugly hack for old MPI interface
   F90FLAGS += -fallow-argument-mismatch -frecursive
 else ifeq ($(PIERNIK_DEBUG), 1)

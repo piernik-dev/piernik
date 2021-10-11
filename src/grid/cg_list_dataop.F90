@@ -97,14 +97,14 @@ contains
       use domain,      only: dom
       use grid_cont,   only: grid_container
       use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_2DOUBLE_PRECISION, &
-           &                 MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE, &
-           &                 MPI_Allreduce, MPI_Send, MPI_Recv
+           &                 MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
+      use MPIFUN,      only: MPI_Allreduce, MPI_Send, MPI_Recv
       use mpisetup,    only: err_mpi, master, proc, FIRST
 !      use named_array_list, only: qna
       use types,       only: value
 #ifdef MPIF08
       use MPIF,      only: MPI_Op
-#endif
+#endif /* MPIF08 */
 
       implicit none
 
@@ -415,7 +415,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-    end subroutine q_lin_comb
+   end subroutine q_lin_comb
 
 !>
 !! \brief Compute the average value over a list and subtract it

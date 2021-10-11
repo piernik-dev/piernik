@@ -229,7 +229,7 @@ contains
       ! Initial conditions are read here from a restart file if possible
 
 #ifdef COSM_RAY_ELECTRONS
-     call cresp_init_grid                    ! depends on cg
+      call cresp_init_grid                   ! depends on cg
 #endif /* COSM_RAY_ELECTRONS */
 
 #ifdef GRAV

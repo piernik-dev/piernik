@@ -63,7 +63,6 @@ module cg_leaves
       procedure :: leaf_arr4d_boundaries   !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays on leaves
       procedure :: prioritized_cg          !< Returna a leaves list with different ordering of cg to optimize fine->coarse flux transfer
       procedure :: leaf_only_cg            !< Returna a leaves list without fully covered cg
-
    end type cg_leaves_t
 
    !>
@@ -346,7 +345,7 @@ contains
             if (cgl%cg%has_leaves()) then
                call sorted_leaves%add(cgl%cg)
                cgl%cg%processed = .true.
-           endif
+            endif
          endif
          cgl => cgl%nxt
       enddo

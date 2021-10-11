@@ -29,17 +29,18 @@
 module cg_particles_io
 ! pulled by NBODY && HDF5
 
-  use constants, only: dsetnamelen
-  implicit none
+   use constants, only: dsetnamelen
 
-  private
-  public :: dump_cg_particles, init_nbody_hdf5, pdsets, nbody_datafields
+   implicit none
+
+   private
+   public :: dump_cg_particles, init_nbody_hdf5, pdsets, nbody_datafields
 
    character(len=dsetnamelen), dimension(*), parameter  :: pvarn = ['ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz']
    logical,                    dimension(size(pvarn))   :: pvarl = .false.
    character(len=dsetnamelen), allocatable, dimension(:) ::pdsets
 
-   contains
+contains
 
    subroutine init_nbody_hdf5(pvars)
 
@@ -81,42 +82,44 @@ module cg_particles_io
       enddo
 #endif /* NBODY_1FILE */
 
-    end subroutine init_nbody_hdf5
+   end subroutine init_nbody_hdf5
 
-  subroutine dump_cg_particles(group_id)
+   subroutine dump_cg_particles(group_id)
 
-    use particle_utils, only: count_all_particles
-    use hdf5, only: HID_T
+      use particle_utils, only: count_all_particles
+      use hdf5, only: HID_T
 
-    implicit none
-    integer(HID_T), intent(in)    :: group_id
-    integer(kind=4)               :: n_part
+      implicit none
 
-    n_part = count_all_particles()
-    call nbody_datasets(n_part, group_id)
+      integer(HID_T), intent(in)    :: group_id
+      integer(kind=4)               :: n_part
 
-  end subroutine dump_cg_particles
+      n_part = count_all_particles()
+      call nbody_datasets(n_part, group_id)
 
-  subroutine nbody_datasets(n_part, group_id)
-     use hdf5, only: HID_T
+   end subroutine dump_cg_particles
 
-     implicit none
+   subroutine nbody_datasets(n_part, group_id)
 
-     integer(HID_T)              :: group_id       !< File identifier
-     integer(kind=4), intent(in) :: n_part
-     integer                     :: i
+      use hdf5, only: HID_T
 
-     do i = lbound(pvarl, 1), ubound(pvarl, 1)
-        if (pvarl(i)) then
-           call nbody_datafields(group_id, trim(pvarn(i)), n_part)
-        endif
-     enddo
+      implicit none
+
+      integer(HID_T)              :: group_id       !< File identifier
+      integer(kind=4), intent(in) :: n_part
+      integer                     :: i
+
+      do i = lbound(pvarl, 1), ubound(pvarl, 1)
+         if (pvarl(i)) then
+            call nbody_datafields(group_id, trim(pvarn(i)), n_part)
+         endif
+      enddo
 
    end subroutine nbody_datasets
 
    subroutine nbody_datafields(group_id, pvar, n_part)
 
-     use hdf5, only: HID_T
+      use hdf5, only: HID_T
 
       implicit none
 
@@ -141,7 +144,8 @@ module cg_particles_io
       use dataio_pub,     only: nproc_io, can_i_write, die
       use domain,         only: is_multicg
       use hdf5,           only: HID_T
-      use MPIF,           only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
+      use MPIF,           only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,         only: MPI_Recv, MPI_Send
       use mpisetup,       only: master, FIRST, LAST, proc, err_mpi
       use particle_types, only: particle
 
@@ -226,7 +230,8 @@ module cg_particles_io
       use dataio_pub,     only: nproc_io, can_i_write, die
       use domain,         only: is_multicg
       use hdf5,           only: HID_T
-      use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Recv, MPI_Send
+      use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,         only: MPI_Recv, MPI_Send
       use mpisetup,       only: master, FIRST, LAST, proc, err_mpi
       use particle_types, only: particle
 
@@ -371,7 +376,7 @@ module cg_particles_io
 
    subroutine write_nbody_h5_rank1(group_id, vvar, tab)
 
-     use hdf5, only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
+      use hdf5, only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
 
       implicit none
 
@@ -403,7 +408,6 @@ module cg_particles_io
 #endif /* NBODY_1FILE */
 
    end subroutine write_nbody_h5_rank1
-
 
 end module cg_particles_io
 

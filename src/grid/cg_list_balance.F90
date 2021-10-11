@@ -200,6 +200,9 @@ contains
 !! of few processes that were initially heavily loaded.
 !! The load is counted only on current level, so the load imbalance may add up across several levels.
 !!
+!! As it is hard to predict future cg cost, we better refrain from sophisticated
+!! load balancing here and wait until some performnce data is collected.
+!!
 !! Note that this routine is not intended for moving existing blocks between processes.
 !! A separate routine, called from cg_leaves::update will do that task when allowed and found worth the effort.
 !!
@@ -218,7 +221,8 @@ contains
 
       use constants,       only: pSUM, I_ONE
       use dataio_pub,      only: die
-      use MPIF,            only: MPI_INTEGER, MPI_COMM_WORLD, MPI_Gather
+      use MPIF,            only: MPI_INTEGER, MPI_COMM_WORLD
+      use MPIFUN,          only:  MPI_Gather
       use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, err_mpi, nproc
       use sort_piece_list, only: grid_piece_list
 
@@ -301,8 +305,8 @@ contains
    subroutine patches_to_list(this, gp, ls)
 
       use constants,       only: ndims, INVALID, I_ONE
-      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, &
-           &                     MPI_Isend, MPI_Send, MPI_Recv, MPI_Wait
+      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Wait
+      use MPIFUN,          only: MPI_Isend, MPI_Send, MPI_Recv
       use mpisetup,        only: master, slave, FIRST, LAST, req, err_mpi, inflate_req
       use sort_piece_list, only: grid_piece_list
 
@@ -316,7 +320,7 @@ contains
       integer :: i
       integer(kind=4) :: p, ss, rls
       integer(kind=4), parameter :: nreq = 1
-      integer(kind=4), parameter :: tag_ls = 1, tag_gpt = tag_ls+1
+      integer(kind=4), parameter :: tag_ls = 1, tag_gpt = tag_ls + 1
 
       call inflate_req(nreq)
 
@@ -366,8 +370,8 @@ contains
    subroutine distribute_patches(this, gp, from)
 
       use constants,       only: ndims, I_ONE
-      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, &
-           &                     MPI_Send, MPI_Recv
+      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,          only: MPI_Send, MPI_Recv
       use mpisetup,        only: master, FIRST, LAST, err_mpi
       use sort_piece_list, only: grid_piece_list
 

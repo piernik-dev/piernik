@@ -46,7 +46,7 @@ module mpisetup
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, req2, err_mpi, tag_ub, &
         &    master, slave, nproc, proc, FIRST, LAST, have_mpi, is_spawned, &
         &    piernik_MPI_Allreduce, piernik_MPI_Barrier, piernik_MPI_Bcast, report_to_master, &
-        &    report_string_to_master
+        &    report_string_to_master, extra_barriers
 
    integer(kind=4), protected :: nproc          !< number of processes
    integer(kind=4), protected :: proc           !< rank of my process
@@ -62,6 +62,8 @@ module mpisetup
    logical, protected :: slave       !< .True. if proc != FIRST
    logical, protected :: have_mpi    !< .True. when run on more than one processor
    logical, protected :: is_spawned  !< .True. if Piernik was run via MPI_Spawn
+
+   logical, save :: extra_barriers = .false.  !< when changed to .true. additional MPI_Barriers will be called.
 
 #ifdef MPIF08
    type(MPI_Request), allocatable, dimension(:), target :: req        !< request array for MPI_Waitall
@@ -143,8 +145,9 @@ contains
       use constants,     only: cwdlen, I_ONE
       use MPIF,          only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL, &
            &                   MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND, MPI_TAG_UB, &
-           &                   MPI_Wtime, MPI_Gather, MPI_Init, &
-           &                   MPI_Comm_get_parent, MPI_Comm_rank, MPI_Comm_size, MPI_Comm_get_attr
+           &                   MPI_Wtime, MPI_Init, MPI_Comm_get_parent, &
+           &                   MPI_Comm_rank, MPI_Comm_size
+      use MPIFUN,        only: MPI_Gather, MPI_Comm_get_attr
       use dataio_pub,    only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
       use dataio_pub,    only: par_file, lun
       use signalhandler, only: SIGINT, register_sighandler
@@ -325,7 +328,7 @@ contains
 
       if (sreq <= 0) call die("[mpisetup:doublesize_req] req or req2 is a 0-sized array")
 
-      write(msg, '(2(a,i6))')"[mpisetup:doublesize_req] Emergency doubling size of req or req2 from ",sreq," to ",2*sreq
+      write(msg, '(2(a,i6))')"[mpisetup:doublesize_req] Emergency doubling size of req or req2 from ", sreq, " to ", 2 * sreq
       if (master) call warn(msg)
       allocate(new_req(2*sreq))
 
@@ -387,7 +390,8 @@ contains
    subroutine MPI_Bcast_single_logical(lvar)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_LOGICAL, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,      only: MPI_LOGICAL, MPI_COMM_WORLD
+      use MPIFUN,    only: MPI_Bcast
 
       implicit none
 
@@ -404,7 +408,8 @@ contains
 !<
    subroutine MPI_Bcast_vec_logical(lvar)
 
-      use MPIF, only: MPI_LOGICAL, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,   only: MPI_LOGICAL, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Bcast
 
       implicit none
 
@@ -421,7 +426,8 @@ contains
 !<
    subroutine MPI_Bcast_single_string(cvar, clen)
 
-      use MPIF, only: MPI_CHARACTER, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,   only: MPI_CHARACTER, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Bcast
 
       implicit none
 
@@ -439,7 +445,8 @@ contains
 !<
    subroutine MPI_Bcast_vec_string(cvar, clen)
 
-      use MPIF, only: MPI_CHARACTER, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,   only: MPI_CHARACTER, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Bcast
 
       implicit none
 
@@ -458,7 +465,8 @@ contains
    subroutine MPI_Bcast_single_int4(ivar4)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_INTEGER, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,      only: MPI_INTEGER, MPI_COMM_WORLD
+      use MPIFUN,    only: MPI_Bcast
 
       implicit none
 
@@ -476,7 +484,8 @@ contains
    subroutine MPI_Bcast_single_int8(ivar8)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_INTEGER8, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,      only: MPI_INTEGER8, MPI_COMM_WORLD
+      use MPIFUN,    only: MPI_Bcast
 
       implicit none
 
@@ -494,7 +503,8 @@ contains
    subroutine MPI_Bcast_single_real4(rvar4)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_REAL, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,      only: MPI_REAL, MPI_COMM_WORLD
+      use MPIFUN,    only: MPI_Bcast
 
       implicit none
 
@@ -512,7 +522,8 @@ contains
    subroutine MPI_Bcast_single_real8(rvar8)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN,    only: MPI_Bcast
 
       implicit none
 
@@ -529,7 +540,8 @@ contains
 !<
    subroutine MPI_Bcast_vec_real4(rvar4)
 
-      use MPIF, only: MPI_REAL, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,   only: MPI_REAL, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Bcast
 
       implicit none
 
@@ -546,7 +558,8 @@ contains
 !<
    subroutine MPI_Bcast_vec_real8(rvar8)
 
-      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,   only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Bcast
 
       implicit none
 
@@ -563,7 +576,8 @@ contains
 !<
    subroutine MPI_Bcast_vec_int4(ivar4)
 
-      use MPIF, only: MPI_INTEGER, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,   only: MPI_INTEGER, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Bcast
 
       implicit none
 
@@ -580,7 +594,8 @@ contains
 !<
    subroutine MPI_Bcast_vec_int8(ivar8)
 
-      use MPIF, only: MPI_INTEGER8, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,   only: MPI_INTEGER8, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Bcast
 
       implicit none
 
@@ -597,7 +612,8 @@ contains
 !<
    subroutine MPI_Bcast_arr2d_real4(rvar4)
 
-      use MPIF, only: MPI_REAL, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,   only: MPI_REAL, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Bcast
 
       implicit none
 
@@ -614,7 +630,8 @@ contains
 !<
    subroutine MPI_Bcast_arr2d_real8(rvar8)
 
-      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,   only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Bcast
 
       implicit none
 
@@ -631,7 +648,8 @@ contains
 !<
    subroutine MPI_Bcast_arr2d_int4(ivar4)
 
-      use MPIF, only: MPI_INTEGER, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,   only: MPI_INTEGER, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Bcast
 
       implicit none
 
@@ -648,7 +666,8 @@ contains
 !<
    subroutine MPI_Bcast_arr2d_int8(ivar8)
 
-      use MPIF, only: MPI_INTEGER8, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,   only: MPI_INTEGER8, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Bcast
 
       implicit none
 
@@ -665,7 +684,8 @@ contains
 !<
    subroutine MPI_Bcast_arr3d_real4(rvar4)
 
-      use MPIF, only: MPI_REAL, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,   only: MPI_REAL, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Bcast
 
       implicit none
 
@@ -682,7 +702,8 @@ contains
 !<
    subroutine MPI_Bcast_arr3d_real8(rvar8)
 
-      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,   only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Bcast
 
       implicit none
 
@@ -699,7 +720,8 @@ contains
 !<
    subroutine MPI_Bcast_arr3d_int4(ivar4)
 
-      use MPIF, only: MPI_INTEGER, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,   only: MPI_INTEGER, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Bcast
 
       implicit none
 
@@ -716,7 +738,8 @@ contains
 !<
    subroutine MPI_Bcast_arr3d_int8(ivar8)
 
-      use MPIF, only: MPI_INTEGER8, MPI_COMM_WORLD, MPI_Bcast
+      use MPIF,   only: MPI_INTEGER8, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Bcast
 
       implicit none
 
@@ -733,7 +756,8 @@ contains
    subroutine MPI_Allreduce_single_logical(lvar, reduction)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_LOGICAL, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
+      use MPIF,      only: MPI_LOGICAL, MPI_IN_PLACE, MPI_COMM_WORLD
+      use MPIFUN,    only: MPI_Allreduce
 
       implicit none
 
@@ -751,7 +775,8 @@ contains
    subroutine MPI_Allreduce_single_int4(ivar4, reduction)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_INTEGER, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
+      use MPIF,      only: MPI_INTEGER, MPI_IN_PLACE, MPI_COMM_WORLD
+      use MPIFUN,    only: MPI_Allreduce
 
       implicit none
 
@@ -769,7 +794,8 @@ contains
    subroutine MPI_Allreduce_single_int8(ivar8, reduction)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_INTEGER8, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
+      use MPIF,      only: MPI_INTEGER8, MPI_IN_PLACE, MPI_COMM_WORLD
+      use MPIFUN,    only: MPI_Allreduce
 
       implicit none
 
@@ -786,7 +812,8 @@ contains
 !<
    subroutine MPI_Allreduce_vec_int4(ivar4, reduction)
 
-      use MPIF, only: MPI_INTEGER, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
+      use MPIF,   only: MPI_INTEGER, MPI_IN_PLACE, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Allreduce
 
       implicit none
 
@@ -803,7 +830,8 @@ contains
 !<
    subroutine MPI_Allreduce_vec_int8(ivar8, reduction)
 
-      use MPIF, only: MPI_INTEGER8, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
+      use MPIF,   only: MPI_INTEGER8, MPI_IN_PLACE, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Allreduce
 
       implicit none
 
@@ -821,7 +849,8 @@ contains
    subroutine MPI_Allreduce_single_real4(rvar4, reduction)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_REAL, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
+      use MPIF,      only: MPI_REAL, MPI_IN_PLACE, MPI_COMM_WORLD
+      use MPIFUN,    only: MPI_Allreduce
 
       implicit none
 
@@ -839,7 +868,8 @@ contains
    subroutine MPI_Allreduce_single_real8(rvar8, reduction)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
+      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_COMM_WORLD
+      use MPIFUN,    only: MPI_Allreduce
 
       implicit none
 
@@ -856,7 +886,8 @@ contains
 !<
    subroutine MPI_Allreduce_vec_real4(rvar4, reduction)
 
-      use MPIF,      only: MPI_REAL, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
+      use MPIF,   only: MPI_REAL, MPI_IN_PLACE, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Allreduce
 
       implicit none
 
@@ -873,7 +904,8 @@ contains
 !<
    subroutine MPI_Allreduce_vec_real8(rvar8, reduction)
 
-      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
+      use MPIF,   only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Allreduce
 
       implicit none
 
@@ -890,7 +922,8 @@ contains
 !<
    subroutine MPI_Allreduce_arr3d_real8(rvar8, reduction)
 
-      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
+      use MPIF,   only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Allreduce
 
       implicit none
 
@@ -907,7 +940,8 @@ contains
 !<
    subroutine MPI_Allreduce_arr2d_real8(rvar8, reduction)
 
-      use MPIF, only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
+      use MPIF,   only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Allreduce
 
       implicit none
 
@@ -924,7 +958,8 @@ contains
 !<
    subroutine MPI_Allreduce_arr2d_real4(rvar4, reduction)
 
-      use MPIF, only: MPI_REAL, MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Allreduce
+      use MPIF,   only: MPI_REAL, MPI_IN_PLACE, MPI_COMM_WORLD
+      use MPIFUN, only: MPI_Allreduce
 
       implicit none
 
@@ -941,7 +976,8 @@ contains
    subroutine report_to_master(ivar4, only_master)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_INTEGER, MPI_Send
+      use MPIF,      only: MPI_INTEGER
+      use MPIFUN,    only: MPI_Send
 
       implicit none
 
@@ -967,7 +1003,8 @@ contains
    subroutine report_string_to_master(str, only_master)
 
       use constants, only: I_ONE
-      use MPIF,      only: MPI_INTEGER, MPI_CHARACTER, MPI_Send
+      use MPIF,      only: MPI_INTEGER, MPI_CHARACTER
+      use MPIFUN,    only: MPI_Send
 
       implicit none
       character(len=*),  intent(in) :: str

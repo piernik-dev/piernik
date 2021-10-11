@@ -107,7 +107,8 @@ contains
       use cg_list,    only: cg_list_element
       use constants,  only: I_ZERO, I_ONE, ndims, LO, HI
       use dataio_pub, only: die
-      use MPIF,       only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER, MPI_COMM_WORLD, MPI_Allgather, MPI_Allgatherv
+      use MPIF,       only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER, MPI_COMM_WORLD
+      use MPIFUN,     only: MPI_Allgather, MPI_Allgatherv
       use mpisetup,   only: FIRST, LAST, proc, err_mpi
       use ordering,   only: SFC_order
 
@@ -270,9 +271,13 @@ contains
    subroutine check_blocky(this)
 
       use constants,  only: ndims, LO, HI, pLAND, I_ONE
-      use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_COMM_WORLD, MPI_Irecv, MPI_Isend
+      use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_COMM_WORLD
+      use MPIFUN,     only: MPI_Irecv, MPI_Isend, MPI_Comm_dup, MPI_Comm_free
       use mpisetup,   only: proc, req, err_mpi, LAST, inflate_req, slave, piernik_MPI_Allreduce
       use ppp_mpi,    only: piernik_Waitall
+#ifdef MPIF08
+      use MPIF,       only: MPI_Comm
+#endif /* MPIF08 */
 
       implicit none
 
@@ -282,6 +287,11 @@ contains
       integer(kind=4), parameter :: sh_tag = 7
       integer(kind=4), parameter :: nr = 2
       integer :: i
+#ifdef MPIF08
+      type(MPI_Comm)  :: dot_comm
+#else /* !MPIF08 */
+      integer(kind=4) :: dot_comm
+#endif /* !MPIF08 */
 
       call inflate_req(nr)
       this%is_blocky = .true.
@@ -298,11 +308,14 @@ contains
             enddo
          endif
       endif
+
+      call MPI_Comm_dup(MPI_COMM_WORLD, dot_comm, err_mpi)
       req = MPI_REQUEST_NULL
-      if (slave)     call MPI_Irecv(shape1, size(shape1, kind=4), MPI_INTEGER, proc-I_ONE, sh_tag, MPI_COMM_WORLD, req(1 ), err_mpi)
-      if (proc<LAST) call MPI_Isend(shape,  size(shape, kind=4),  MPI_INTEGER, proc+I_ONE, sh_tag, MPI_COMM_WORLD, req(nr), err_mpi)
+      if (slave)     call MPI_Irecv(shape1, size(shape1, kind=4), MPI_INTEGER, proc-I_ONE, sh_tag, dot_comm, req(1 ), err_mpi)
+      if (proc<LAST) call MPI_Isend(shape,  size(shape, kind=4),  MPI_INTEGER, proc+I_ONE, sh_tag, dot_comm, req(nr), err_mpi)
 
       call piernik_Waitall(nr, "dot:chk_blocky")
+      call MPI_Comm_free(dot_comm, err_mpi)
 
       if (any(shape /= 0) .and. any(shape1 /= 0)) then
          if (any(shape /= shape1)) this%is_blocky = .false.
@@ -323,7 +336,8 @@ contains
 
       use constants,  only: LO, HI, ndims, I_ONE
       use dataio_pub, only: die
-      use MPIF,       only: MPI_INTEGER8, MPI_COMM_WORLD, MPI_Allgather
+      use MPIF,       only: MPI_INTEGER8, MPI_COMM_WORLD
+      use MPIFUN,     only: MPI_Allgather
       use mpisetup,   only: FIRST, LAST, proc, err_mpi
       use ordering,   only: SFC_order
 

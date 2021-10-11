@@ -75,8 +75,7 @@ contains
 
       use cg_list_global,      only: all_cg
       use constants,           only: PIERNIK_INIT_DOMAIN, O_LIN, O_D3
-      use dataio_pub,          only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,          only: warn, die, code_progress
+      use dataio_pub,          only: warn, die, code_progress, nh
       use domain,              only: dom
       use global,              only: dirty_debug, do_ascii_dump, show_n_dirtys !< \warning: alien variables go to local namelist
       use mpisetup,            only: master, slave, nproc, ibuff, lbuff, piernik_MPI_Bcast
@@ -96,10 +95,10 @@ contains
 
       namelist /MULTIGRID_SOLVER/ level_depth, ord_prolong, stdout, verbose_vcycle, do_ascii_dump, dirty_debug, show_n_dirtys
 
-      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized")
+      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[multigrid:multigrid_par] grid, geometry, constants or arrays not initialized")
       ! This check is too weak (geometry), arrays are required only for multigrid_gravity
 
-      if (.not.frun) call die("[multigrid:init_multigrid] Called more than once.")
+      if (.not.frun) call die("[multigrid:multigrid_par] Called more than once.")
       frun = .false.
 
       ! Default values for namelist variables
@@ -161,8 +160,8 @@ contains
 
       single_base = (nproc == 1)
 
-      if (dirty_debug .and. master) call warn("[multigrid:init_multigrid] dirty_debug is supposed to be set only in debugging runs. Remember to disable it in production runs")
-      if (dom%eff_dim < 1 .or. dom%eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
+      if (dirty_debug .and. master) call warn("[multigrid:multigrid_par] dirty_debug is supposed to be set only in debugging runs. Remember to disable it in production runs")
+      if (dom%eff_dim < 1 .or. dom%eff_dim > 3) call die("[multigrid:multigrid_par] Unsupported number of dimensions.")
 
 !! \todo Make an array of subroutine pointers
 #ifdef SELF_GRAV
@@ -358,7 +357,8 @@ contains
 
       use constants,           only: I_ONE
       use dataio_pub,          only: msg, printinfo
-      use MPIF,                only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Gather
+      use MPIF,                only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN,              only: MPI_Gather
       use mpisetup,            only: master, nproc, FIRST, LAST, err_mpi
       use multigridvars,       only: tot_ts
 #ifdef SELF_GRAV

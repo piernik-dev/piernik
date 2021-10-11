@@ -37,7 +37,7 @@ module dataio_pub
    public  ! QA_WARN most variables are not secrets here
    private :: err_mpi, colormessage, T_PLAIN, T_ERR, T_WARN, T_INFO, T_IO, T_SILENT, & ! QA_WARN no need to use these symbols outside dataio_pub
         &     ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, & ! QA_WARN
-        &     namelist_handler_t                                                       ! QA_WARN
+        &     namelist_handler_t, logbuffer                                            ! QA_WARN
    private :: cbuff_len, domlen, idlen, cwdlen ! QA_WARN prevent re-exporting
    !mpisetup uses: ansi_white and ansi_black
 
@@ -99,8 +99,8 @@ module dataio_pub
    integer, parameter          :: maxparfilelen   = 500          !< max length of line in problem.par file
    integer, parameter          :: maxparfilelines = 256          !< max number of lines in problem.par
    integer(kind=4), parameter  :: bufferlines = 128              !< max number of lines in the log buffer
-   character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
-   character(len=msglen), dimension(bufferlines) :: logbuffer    !< buffer for log I/O
+   character(len=maxparfilelen), allocatable, dimension(:) :: parfile !< contents of the parameter file
+   character(len=msglen), allocatable, dimension(:) :: logbuffer !< buffer for log I/O
    integer, save               :: parfilelines = 0               !< number of lines in the parameter file
 
    logical, save               :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
@@ -316,14 +316,12 @@ contains
 #endif /* !__INTEL_COMPILER */
          endif
          if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
+         call allocate_text_buffers
          if (cbline < size(logbuffer)) then
             cbline = cbline + I_ONE
             write(logbuffer(cbline), '(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
          endif
-         if (cbline >= size(logbuffer)) then
-            call flush_to_log
-            cbline = 0
-         endif
+         if (cbline >= size(logbuffer)) call flush_to_log
          if (mode == T_ERR) call flush_to_log
          if (.not. log_file_initialized) close(log_lun)
       else
@@ -337,11 +335,34 @@ contains
       implicit none
       integer :: line
 
+      if (.not. allocated(logbuffer)) return
+
       do line = 1, min(cbline, size(logbuffer, kind=4))
          write(log_lun, '(a)') trim(logbuffer(line)) !> \todo reconstruct asynchronous writing to log files
       enddo
+      cbline = 0
 
    end subroutine flush_to_log
+!-----------------------------------------------------------------------------
+   subroutine allocate_text_buffers
+
+      implicit none
+
+      if (.not. allocated(logbuffer)) allocate(logbuffer(bufferlines))
+      if (.not. allocated(parfile)) allocate(parfile(maxparfilelines))
+
+   end subroutine allocate_text_buffers
+!-----------------------------------------------------------------------------
+   subroutine cleanup_text_buffers
+
+      implicit none
+
+      if (cbline > 0) call flush_to_log
+
+      if (allocated(logbuffer)) deallocate(logbuffer)
+      if (allocated(parfile)) deallocate(parfile)
+
+   end subroutine cleanup_text_buffers
 !-----------------------------------------------------------------------------
    subroutine printinfo(nm, to_stdout)
 

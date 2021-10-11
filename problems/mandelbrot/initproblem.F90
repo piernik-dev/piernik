@@ -91,8 +91,7 @@ contains
    subroutine read_problem_par
 
       use constants,  only: ydim, LO, HI, dpi
-      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub, only: warn, die
+      use dataio_pub, only: warn, die, nh
       use domain,     only: dom
       use mpisetup,   only: lbuff, ibuff, rbuff, master, slave, piernik_MPI_Bcast
 

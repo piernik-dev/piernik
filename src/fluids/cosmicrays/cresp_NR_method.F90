@@ -372,7 +372,7 @@ contains
                           p_space(min(i,helper_arr_dim))**(-q_space(min(i,helper_arr_dim)))
          else
             print *,i,"|",  alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i)
-        endif
+         endif
       enddo
       print *, "-----------"
 #endif /* CRESP_VERBOSED */
@@ -755,7 +755,7 @@ contains
 
    end subroutine refine_ij
 
- !----------------------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------------------
 
    logical function check_dimm(ind, irange)
 
@@ -774,7 +774,7 @@ contains
 
    end function check_dimm
 
- !----------------------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------------------
 
    subroutine step_extr(p3, f3, arg, exit_code)
 
@@ -787,7 +787,8 @@ contains
       logical,              intent(out)   :: exit_code
       real, dimension(1:2)                :: x_vec_0, x_vec, delta, x_in
       integer(kind=4)                     :: nsubstep = 100, k
-!         alpha and n are set !
+
+      ! alpha and n are set !
 
       if (minval(p3(1:2)) > tiny(zero) .and. p3(3) <= zero) then ! sometimes NaNs and numbers of order e-317 appear; must be looked into
          x_vec_0 = [p3(2), f3(2)]
@@ -922,7 +923,8 @@ contains
       logical,              intent(inout) :: exit_code
       real, dimension(1:2)                :: x_vec, x_step
       integer(kind=4)                             :: ii, jj, nssstep = 3
-!    alpha and n are set !
+
+      ! alpha and n are set !
 
       if (exit_code) then
          do ii = 0, nssstep
@@ -1015,7 +1017,7 @@ contains
       endif
 
    end subroutine q_control
- !----------------------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------------------
    real function alpha_to_q(x) ! this one (as of now) is only usable with fixed p_ratio_4_q bins (middle ones)
 
       use constants,      only: one, three
@@ -1060,7 +1062,7 @@ contains
       endif
 
    end subroutine prepare_indices
- !----------------------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------------------
    real function q_ratios(f_ratio, p_ratio)
 
       implicit none
@@ -1262,7 +1264,7 @@ contains
 
    end function lin_extrapol_1D
 !----------------------------------------------------------------------------------------------------
-  function intpol_pf_from_NR_grids(a_val, n_val, successful) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.4
+   function intpol_pf_from_NR_grids(a_val, n_val, successful) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.4
 
       use constants, only: I_ONE
 
@@ -1701,4 +1703,5 @@ contains
       endif
 
    end subroutine add_dot
+
 end module cresp_NR_method

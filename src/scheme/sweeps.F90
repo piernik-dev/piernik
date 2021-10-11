@@ -49,11 +49,20 @@
 module sweeps
 
 ! pulled by ANY
+#ifdef MPIF08
+   use MPIF, only: MPI_Comm
+#endif /* MPIF08 */
 
    implicit none
 
    private
    public  :: sweep
+
+#ifdef MPIF08
+   type(MPI_Comm)  :: sweeps_comm
+#else /* !MPIF08 */
+   integer(kind=4) :: sweeps_comm
+#endif /* !MPIF08 */
 
 contains
 
@@ -66,7 +75,8 @@ contains
       use constants, only: LO, HI, I_ONE
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
-      use MPIF,      only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Irecv
+      use MPIF,      only: MPI_DOUBLE_PRECISION
+      use MPIFUN,    only: MPI_Irecv
       use mpisetup,  only: err_mpi, req, inflate_req
 
       implicit none
@@ -92,7 +102,7 @@ contains
                   if (jc(LO) == jc(HI)) then
                      nr = nr + I_ONE
                      if (nr > size(req, dim=1)) call inflate_req
-                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, sweeps_comm, req(nr), err_mpi)
                      seg(g)%req => req(nr)
                   endif
                enddo
@@ -176,7 +186,8 @@ contains
       use domain,       only: dom
       use grid_cont,    only: grid_container
       use grid_helpers, only: f2c_o
-      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_Isend
+      use MPIF,         only: MPI_DOUBLE_PRECISION
+      use MPIFUN,       only: MPI_Isend
       use mpisetup,     only: err_mpi, req, inflate_req
       use ppp,          only: ppp_main
 
@@ -223,7 +234,7 @@ contains
 
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, MPI_COMM_WORLD, req(nr), err_mpi)
+               call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, sweeps_comm, req(nr), err_mpi)
                seg(g)%req => req(nr)
             endif
          enddo
@@ -301,7 +312,8 @@ contains
       use dataio_pub,       only: die
       use global,           only: integration_order, use_fargo, which_solver
       use grid_cont,        only: grid_container
-      use MPIF,             only: MPI_STATUS_IGNORE, MPI_Waitany
+      use MPIF,             only: MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,           only: MPI_Waitany
       use mpisetup,         only: err_mpi, req
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
@@ -391,6 +403,8 @@ contains
 
       ! This is the loop over Runge-Kutta stages
       do istep = first_stage(integration_order), last_stage(integration_order)
+
+         call MPI_Comm_dup(MPI_COMM_WORLD, sweeps_comm, err_mpi)
          nr_recv = compute_nr_recv(cdim)
          nr = nr_recv
          all_processed = .false.
@@ -430,6 +444,7 @@ contains
          enddo
 
          call piernik_Waitall(nr, "sweeps")
+         call MPI_Comm_free(sweeps_comm, err_mpi)
 
          call update_boundaries(cdim, istep)
       enddo

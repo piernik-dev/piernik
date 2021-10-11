@@ -34,6 +34,7 @@
 module global
 
    use constants, only: cbuff_len, xdim, zdim
+   use mpisetup,  only: extra_barriers
 
    implicit none
 
@@ -106,11 +107,14 @@ module global
    integer(kind=4)               :: ord_fluid_prolong !< prolongation order for u
    logical                       :: do_external_corners  !< when .true. then perform boundary exchanges inside external guardcells
    character(len=cbuff_len)      :: solver_str        !< allow to switch between RIEMANN and RTVD without recompilation
-   logical                       :: prefer_merged_MPI !< prefer internal_boundaries_MPI_merged over internal_boundaries_MPI_1by1
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, disallow_negatives, disallow_CRnegatives, cfl_max, use_smalld, use_smallei, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
-        &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, prefer_merged_MPI, &
+        &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
         &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong, ord_fluid_prolong, do_external_corners, solver_str
+
+   logical                       :: prefer_merged_MPI !< prefer internal_boundaries_MPI_merged over internal_boundaries_MPI_1by1
+
+   namelist /PARALLEL_SETUP/ extra_barriers, prefer_merged_MPI
 
 contains
 
@@ -155,17 +159,25 @@ contains
 !!   <tr><td>ord_mag_prolong  </td><td>2      </td><td>integer                              </td><td>\copydoc global::ord_mag_prolong  </td></tr>
 !!   <tr><td>ord_fluid_prolong </td><td>0     </td><td>integer                              </td><td>\copydoc global::ord_fluid_prolong </td></tr>
 !!   <tr><td>do_external_corners </td><td>.false.</td><td>logical                           </td><td>\copydoc global::do_external_corners </td></tr>
-!!   <tr><td>prefer_merged_MPI </td><td>.true.</td><td>logical                              </td><td>\copydoc global::prefer_merged_MPI </td></tr>
 !! </table>
 !! \n \n
+!! \n \n
+!! @b PARALLEL_SETUP
+!! \n \n
+!! <table border="+1">
+!!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!!   <tr><td>prefer_merged_MPI </td><td>.true.  </td><td>logical </td><td>\copydoc global::prefer_merged_MPI </td></tr>
+!!   <tr><td>extra_barriers    </td><td>.false. </td><td>logical </td><td>\copydoc mpisetup::extra_barriers  </td></tr>
+!! </table>
+!! \n \n
+
 !<
    subroutine init_global
 
       use constants,  only: big_float, PIERNIK_INIT_DOMAIN, INVALID, DIVB_CT, DIVB_HDC, &
            &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO, O_INJ, O_LIN, O_I2, INVALID, &
            &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, GEO_XYZ
-      use dataio_pub, only: die, msg, warn, code_progress, printinfo
-      use dataio_pub, only: nh  ! QA_WARN required for diff_nml
+      use dataio_pub, only: die, msg, warn, code_progress, printinfo, nh
       use domain,     only: dom
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
@@ -237,10 +249,13 @@ contains
       ord_fluid_prolong = O_INJ        !< O_INJ and O_LIN ensure monotoniciy and nonnegative density and energy
       do_external_corners =.false.
       solver_str = ""
-      prefer_merged_MPI = .false.  ! non-merged MPI in internal_boundaries are implemented without buffers, which is faster
+
+      prefer_merged_MPI = .false.  ! non-merged MPI in internal_boundaries are implemented without buffers, which often is faster
 
       if (master) then
+
          if (.not.nh%initialized) call nh%init()
+
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
          write(nh%lun,nml=NUMERICAL_SETUP)
          close(nh%lun)
@@ -253,6 +268,21 @@ contains
          call nh%namelist_errh(nh%ierrh, "NUMERICAL_SETUP", .true.)
          open(newunit=nh%lun, file=nh%tmp2, status="unknown")
          write(nh%lun,nml=NUMERICAL_SETUP)
+         close(nh%lun)
+         call nh%compare_namelist()
+
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=PARALLEL_SETUP)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=PARALLEL_SETUP, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "PARALLEL_SETUP")
+         read(nh%cmdl_nml,nml=PARALLEL_SETUP, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "PARALLEL_SETUP", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=PARALLEL_SETUP)
          close(nh%lun)
          call nh%compare_namelist()
 
@@ -314,6 +344,7 @@ contains
          lbuff(14)  = disallow_negatives
          lbuff(15)  = disallow_CRnegatives
          lbuff(16)  = prefer_merged_MPI
+         lbuff(17)  = extra_barriers
 
       endif
 
@@ -337,6 +368,7 @@ contains
          disallow_negatives   = lbuff(14)
          disallow_CRnegatives = lbuff(15)
          prefer_merged_MPI    = lbuff(16)
+         extra_barriers       = lbuff(17)
 
          smalld               = rbuff( 1)
          smallc               = rbuff( 2)
@@ -468,12 +500,12 @@ contains
 #ifdef MAGNETIC
       if (master) then
          select case (divB_0_method)
-             case (DIVB_HDC)
-                call printinfo("    The div(B) constraint is maintaineded by Hyperbolic Cleaning (GLM).")
-             case (DIVB_CT)
-                call printinfo("    The div(B) constraint is maintaineded by Constrained Transport (2nd order).")
-             case default
-                call die("    The div(B) constraint is maintaineded by Uknown Something.")
+            case (DIVB_HDC)
+               call printinfo("    The div(B) constraint is maintaineded by Hyperbolic Cleaning (GLM).")
+            case (DIVB_CT)
+               call printinfo("    The div(B) constraint is maintaineded by Constrained Transport (2nd order).")
+            case default
+               call die("    The div(B) constraint is maintaineded by Uknown Something.")
          end select
 
          if (cc_mag) then
