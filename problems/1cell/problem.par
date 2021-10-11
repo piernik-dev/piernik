@@ -133,12 +133,10 @@ $BASE_DOMAIN
  /
 
  $CRESP_ISOLATED
-     u_b0     = 0.0         ! initial magnetic energy-density ! NOTICE - currently not used
+     u_b0     = 0.0         ! initial magnetic energy-density
      u_d0     = 0.0         ! initial magnitude of div_v
      u_d_ampl =-0.2         ! amplitude of variable u_d component (periodic), sums up with u_d0 to u_d
-     ub_ampl  = 0.0         ! amplitude of synchrotron cooling coefficient with time
      omega_d  = 0.157079633 ! omega_d parameter for test with periodic adiabatic compression: u_d(t) = u_d0 + u_d_ampl * cos(omega_d * t)
-     omega_b  = 0.0         ! omega_b parameter for periodic variation of u_b: u_b = u_b0 + ub_ampl * cos(omega_b * t) ! NOTICE - currently not used
      Btot     = 0. ! 30.    ! Total amplitude of MF in micro Gauss
      outfile  = 'crs-per.dat' !
  /
