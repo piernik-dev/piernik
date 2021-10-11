@@ -354,9 +354,9 @@ contains
                do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
                   do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
                      do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-                        cg%u(flind%ion%imx,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%x(i) * (u_d0 + div_v0 * cos_omega_t) / onet
-                        cg%u(flind%ion%imy,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%y(j) * (u_d0 + div_v0 * cos_omega_t) / onet
-                        cg%u(flind%ion%imz,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%z(k) * (u_d0 + div_v0 * cos_omega_t) / onet
+                        cg%u(flind%ion%imx,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%x(i) * (u_d0 + div_v0 * cos_omega_t) / onet * denom_dims
+                        cg%u(flind%ion%imy,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%y(j) * (u_d0 + div_v0 * cos_omega_t) / onet * denom_dims
+                        cg%u(flind%ion%imz,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%z(k) * (u_d0 + div_v0 * cos_omega_t) / onet * denom_dims
                      enddo
                   enddo
                enddo
