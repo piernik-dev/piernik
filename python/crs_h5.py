@@ -542,7 +542,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
         if (i_up == ncre):
             i_up = i_up - 1
         pf_ratio_up, exit_code_up = crs_pf.get_interpolated_ratios("up", ecrs[i_up] / (
-            ncrs[i_up] * c * p_fix[i_up - 1]), ncrs[i_up], exit_code_up, verbose=verbosity_2)
+            ncrs[i_up] * c * p_fix[i_up]), ncrs[i_up], exit_code_up, verbose=verbosity_2)
 
     pln = p_fix[0:ncre - 1]
     prn = p_fix[1:ncre]
@@ -564,8 +564,8 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
                 prtwarn("Failed to extract boundary (up) p and f from e, n: pf_ratio_up = %.6f. Assuming p_fix value." %
                         pf_ratio_up[0])  # p_fix assumed
         else:
-            prn[i_up + 1] = p_fix[i_up] * pf_ratio_up[0]
-        fr_up = crs_pf.e_small_2_f(e_small, prn[i_up + 1])
+            prn[i_up] = p_fix[i_up] * pf_ratio_up[0]
+        fr_up = crs_pf.e_small_2_f(e_small, prn[i_up])
         fl_up = fr_up / pf_ratio_up[1]
 
     if (not q_explicit):
@@ -618,7 +618,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
 
     if (verbosity_1):
         prtinfo("Cutoff indices obtained (lo, up): %i, %i || momenta (lo, up): %f, %f " % (
-            i_lo, i_up, pln[i_lo], prn[i_up + 1]))
+            i_lo, i_up, pln[i_lo], prn[i_up]))
 
     if (verbosity_2):
         dummyCRSfile = open("crs.dat", "a")
