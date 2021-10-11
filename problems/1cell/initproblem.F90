@@ -46,12 +46,12 @@ module initproblem
 
    integer(kind=4)    :: norm_step
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, beta_cr, amp_cr1
-   real               :: u_d0, u_b0, u_d_ampl, ub_ampl, omega_d, omega_b, Btot, u_d_t
+   real               :: u_d0, u_b0, u_d_ampl, ub_ampl, omega_d, omega_b, Btot
    character(len=fnamelen) :: outfile
 
    namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, beta_cr, amp_cr1
 
-   namelist /CRESP_ISOLATED/ u_d0, u_b0, u_d_ampl, ub_ampl, omega_d, omega_b, Btot, u_d_t, outfile
+   namelist /CRESP_ISOLATED/ u_d0, u_b0, u_d_ampl, ub_ampl, omega_d, omega_b, Btot, outfile
 contains
 
 !-----------------------------------------------------------------------------
@@ -160,7 +160,6 @@ contains
          rbuff(5)  = omega_d
          rbuff(6)  = omega_b
          rbuff(7)  = Btot
-         rbuff(8)  = u_d_t
 
          cbuff(1)  = outfile
 
@@ -178,7 +177,6 @@ contains
          omega_d   = rbuff(5)
          omega_b   = rbuff(6)
          Btot      = rbuff(7)
-         u_d_t     = rbuff(8)
 
          outfile   = trim(cbuff(1))
 

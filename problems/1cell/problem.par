@@ -140,6 +140,5 @@ $BASE_DOMAIN
      omega_d  = 0.157079633 ! omega_d parameter for test with periodic adiabatic compression: u_d(t) = u_d0 + u_d_ampl * cos(omega_d * t)
      omega_b  = 0.0         ! omega_b parameter for periodic variation of u_b: u_b = u_b0 + ub_ampl * cos(omega_b * t) ! NOTICE - currently not used
      Btot     = 0. ! 30.    ! Total amplitude of MF in micro Gauss
-     u_d_t    = 0.          ! Linearly increasing u_d ! NOTICE - currently not used
      outfile  = 'crs-per.dat' !
  /
