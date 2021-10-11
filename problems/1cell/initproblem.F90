@@ -241,9 +241,9 @@ contains
       cs_iso = sqrt(p0/d0)
 ! NOTICE: Btot is preferred over bx0, by0 and bz0 if these are set as well and overwrites them, B field in nonexistent direction is ignored.
       if (Btot .gt. zero .or. u_b0 .gt. zero) then  ! Distribute Btot evenly over all available directions
-         if (dom%has_dir(xdim)) bx0 = sqrt(Btot**2) / (dom%D_x + dom%D_y + dom%D_z) + sqrt(two * u_b0 / fsynchr) / (dom%D_x + dom%D_y + dom%D_z)
-         if (dom%has_dir(ydim)) by0 = sqrt(Btot**2) / (dom%D_x + dom%D_y + dom%D_z) + sqrt(two * u_b0 / fsynchr) / (dom%D_x + dom%D_y + dom%D_z)
-         if (dom%has_dir(zdim)) bz0 = sqrt(Btot**2) / (dom%D_x + dom%D_y + dom%D_z) + sqrt(two * u_b0 / fsynchr) / (dom%D_x + dom%D_y + dom%D_z)
+         if (dom%has_dir(xdim)) bx0 = sqrt(Btot**2 / (dom%D_x + dom%D_y + dom%D_z) ) + sqrt(two * u_b0 / fsynchr / (dom%D_x + dom%D_y + dom%D_z) )
+         if (dom%has_dir(ydim)) by0 = sqrt(Btot**2 / (dom%D_x + dom%D_y + dom%D_z) ) + sqrt(two * u_b0 / fsynchr / (dom%D_x + dom%D_y + dom%D_z) )
+         if (dom%has_dir(zdim)) bz0 = sqrt(Btot**2 / (dom%D_x + dom%D_y + dom%D_z) ) + sqrt(two * u_b0 / fsynchr / (dom%D_x + dom%D_y + dom%D_z) )
       endif
 
       cgl => leaves%first
