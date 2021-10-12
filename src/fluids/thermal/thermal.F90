@@ -191,7 +191,7 @@ contains
       integer, parameter                          :: coolfile = 1
       real(kind=8), dimension(:), allocatable     :: logT, lambda, cool, heat
       integer                                     :: i
-      real                                        :: T
+      real                                        :: T, d1
 
       call printinfo('[thermal] Cooling & heating handled with a single cool - heat curve fitted with a piecewise power law function')
 
@@ -214,6 +214,7 @@ contains
          enddo
       endif
 
+      d1 = 0.0
       Teql = 0.0
       do i = 1, nbins
          T = 10**logT(i)
@@ -231,16 +232,16 @@ contains
          end select
 
          if (iso .eq. 1) then
-            d0 = 1.0
-            heat(i)   = G0_heat * d0**2 + G1_heat * d0 + G2_heat
+            d1 = d0
+            heat(i)   = G0_heat * d1**2 + G1_heat * d1 + G2_heat
          else if (iso .eq. 2) then
             write(msg,'(3a)') 'isobaric case is not working well around equilibrium temperature'
             if ((master) .and. (i .eq. 1)) call warn(msg)
-            d0 = Teq / 10**logT(i)
-            heat(i)   = G0_heat * d0**2 + G1_heat * d0 + G2_heat
+            d1 = Teq / 10**logT(i)
+            heat(i)   = G0_heat * d1**2 + G1_heat * d1 + G2_heat
          endif
 
-         lambda(i) = cool(i) - heat(i)/d0**2
+         lambda(i) = cool(i) - heat(i)/d1**2
          if (i .gt. 1) then
             if ((lambda(i-1) * lambda(i) .le. 0.0) .and. (Teql .equals. 0.0)) Teql = T
             if ((T .gt. Teql) .and. (Teql .gt. 0.0) .and. (lambda(i-1) * lambda(i) .lt. 0.0)) call die('[init_thermal] More than 1 Teql')
