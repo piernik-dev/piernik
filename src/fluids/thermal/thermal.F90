@@ -268,7 +268,7 @@ contains
 
     subroutine fit_proc(nbins, logT, lambda)
 
-
+      use constants,         only: big
       use dataio_pub,        only: die
       use func,              only: operator(.equals.)
 
@@ -282,7 +282,13 @@ contains
       logical                              :: eq_point
 
       rlim = 10.0**(-6)
-      loglambda = log10(abs(lambda))
+      do i = 1, nbins
+         if (lambda(i) .equals. 0.0) then
+            loglambda(i) = -big
+         else
+            loglambda(i) = log10(abs(lambda(i)))
+         endif
+      enddo
       allocate(Tref(nfuncs), alpha(nfuncs), lambda0(nfuncs))
 
       i=1
@@ -443,7 +449,7 @@ contains
                               endif
                            endif
                         enddo
-                        dt_cool = min(dt, tcool/100.0)
+                        dt_cool = min(dt, tcool/10.0)
                         t1=0.0
                         do while (t1 .lt. dt)
                            ta(x,y,z) = int_ener(x,y,z) * (pfl%gam-1) * mH / (dens(x,y,z) * kboltz)
