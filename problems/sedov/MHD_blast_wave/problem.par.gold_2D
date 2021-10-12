@@ -40,7 +40,7 @@
  /
 
  $END_CONTROL
-    tend   = 0.5
+    tend   = 0.2
  /
 
  $OUTPUT_CONTROL
