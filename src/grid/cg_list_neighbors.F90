@@ -160,7 +160,7 @@ contains
       call ppp_main%stop(fn_label, PPP_AMR)
 
 #ifdef DEBUG
-      call this%print_bnd_list
+!      call this%print_bnd_list
 #endif /* DEBUG */
 
    end subroutine find_neighbors
