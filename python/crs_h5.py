@@ -411,42 +411,41 @@ def detect_active_bins_new(n_in, e_in):
     if num_active_bins == 0:
         return active_bins_new, ncre, 0
 
-    i_lo_tmp = max(ne_gt_zero[0] - 2, 0)           # edge number
-    i_up_tmp = ne_gt_zero[num_active_bins - 1]     # edge number
-    pln = p_fix[i_lo_tmp:i_up_tmp]
-    prn = p_fix[i_lo_tmp + 1:i_up_tmp + 1]
+    i_lo_tmp = max(ne_gt_zero[0], 0)
+    i_up_tmp = min(ne_gt_zero[-1], ncre)
+    pln = p_fix[0:ncre - 1]
+    prn = p_fix[1:ncre]
     num_active_bins = 0
 
-    for i in range(1, i_up_tmp - i_lo_tmp - 1):   # range(HI-1)
+    for i in range(0, i_up_tmp - i_lo_tmp + 1):
         q_tmp = 3.5
         exit_code = False
         if (q_explicit is True):
             q_tmp, exit_code = nr_get_q(
-                q_tmp, e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * c * pln[i]), prn[i] / pln[i], exit_code)
+                q_tmp, e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * c * pln[i + i_lo_tmp]), prn[i + i_lo_tmp] / pln[i + i_lo_tmp], exit_code)
         else:
             # this instruction is duplicated, TODO return it via detect_active_bins_new()
             q_tmp = interpolate_q(
-                e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * c * pln[i]))
+                e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * c * pln[i + i_lo_tmp]))
 
-        q_tmp, exit_code = nr_get_q(
-            q_tmp, e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * c * pln[i]), prn[i] / pln[i], exit_code)
         q_gt_zero.append(q_tmp)
         f_gt_zero.append(
-            nq2f(n_in[i + i_lo_tmp], q_gt_zero[-1], pln[i], prn[i]))
-        e_ampl_l.append(4 * pi * c**2 * f_gt_zero[-1] * pln[i]**3)
+            nq2f(n_in[i + i_lo_tmp], q_gt_zero[-1], pln[i + i_lo_tmp], prn[i + i_lo_tmp]))
+        e_ampl_l.append(4 * pi * c**2 * f_gt_zero[-1] * pln[i + i_lo_tmp]**3)
         e_ampl_r.append(
-            4 * pi * c**2 * f_gt_zero[-1] * ((prn[i] / pln[i])**(q_tmp)) ** 3)
-        if ((e_ampl_l[-1] > e_small or e_ampl_r[-1] > e_small) and e_in[i] > e_small):
-            # outermost bins usually exceed q_big if inactive
-            if not (abs(q_gt_zero[-1]) >= q_big):
-                active_bins_new.append(ne_gt_zero[i - 1] + 1)
-                num_active_bins = num_active_bins + 1
+            4 * pi * c**2 * f_gt_zero[-1] * ((prn[i + i_lo_tmp] / pln[i + i_lo_tmp])**(-q_tmp)) * prn[i + i_lo_tmp] ** 3)
+        if ((e_ampl_l[-1] > e_small or e_ampl_r[-1] > e_small) and e_in[i + i_lo_tmp] > e_small):
+            active_bins_new.append(ne_gt_zero[i])
+            num_active_bins = num_active_bins + 1
 
     if num_active_bins == 0:
         return active_bins_new, i_lo_tmp, i_up_tmp
 
-    i_lo_tmp = max(active_bins_new[0] - 1, 0)
+    i_lo_tmp = max(active_bins_new[0], 0)
     i_up_tmp = min(active_bins_new[-1], ncre)
+
+    active_bins_new = [i for i in range(i_lo_tmp, i_up_tmp + 1)]
+    num_active_bins = len(active_bins_new)
 
     prtinfo("Active_bins: " + str(active_bins_new))
     return active_bins_new, i_lo_tmp, i_up_tmp
@@ -523,6 +522,10 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
         for item in ecrs:
             ecrs1e3.append(float('%1.3e' % item))
         prtinfo("e = " + str(ecrs1e3))
+        enpc1e3 = []
+        for i in range(len(ecrs)):
+            enpc1e3.append(float('%1.3e' % (ecrs[i] / (ncrs[i] * p_fix[i]))))
+        prtinfo("e/(npc) = " + str(enpc1e3))
 
     if (empty_cell):
         return plt.subplot(122), empty_cell
@@ -538,11 +541,11 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
         pf_ratio_up = [0., 0.]
         if (i_up == ncre):
             i_up = i_up - 1
-        pf_ratio_up, exit_code_up = crs_pf.get_interpolated_ratios("up", ecrs[i_up - 1] / (
-            ncrs[i_up - 1] * c * p_fix[i_up - 1]), ncrs[i_up - 1], exit_code_up, verbose=verbosity_2)
+        pf_ratio_up, exit_code_up = crs_pf.get_interpolated_ratios("up", ecrs[i_up] / (
+            ncrs[i_up] * c * p_fix[i_up]), ncrs[i_up], exit_code_up, verbose=verbosity_2)
 
-    pln = p_fix[i_lo:i_up]
-    prn = p_fix[i_lo + 1:i_up + 1]
+    pln = p_fix[0:ncre - 1]
+    prn = p_fix[1:ncre]
     pln = array(pln)
     prn = array(prn)
 
@@ -553,7 +556,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
                         pf_ratio_lo[0])  # p_fix assumed
         else:
             pln[0] = p_fix[i_lo + 1] / pf_ratio_lo[0]
-        fl_lo = crs_pf.e_small_2_f(e_small, pln[0])
+        fl_lo = crs_pf.e_small_2_f(e_small, pln[i_lo])
         fr_lo = fl_lo * pf_ratio_lo[1]
 
         if exit_code_up is True:
@@ -561,8 +564,8 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
                 prtwarn("Failed to extract boundary (up) p and f from e, n: pf_ratio_up = %.6f. Assuming p_fix value." %
                         pf_ratio_up[0])  # p_fix assumed
         else:
-            prn[-1] = p_fix[i_up - 1] * pf_ratio_up[0]
-        fr_up = crs_pf.e_small_2_f(e_small, prn[-1])
+            prn[i_up] = p_fix[i_up] * pf_ratio_up[0]
+        fr_up = crs_pf.e_small_2_f(e_small, prn[i_up])
         fl_up = fr_up / pf_ratio_up[1]
 
     if (not q_explicit):
@@ -575,24 +578,25 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
     q_nr = []
     fln = []
     frn = []
-    for i in range(0, i_up - i_lo):
+    for i in range(0, i_up - i_lo + 1):
         if (q_explicit is True):
             q_tmp = 3.5
             exit_code = False
             # this instruction is duplicated, TODO return it via detect_active_bins_new()
             q_tmp, exit_code = nr_get_q(
-                q_tmp, ecrs[i + i_lo] / (ncrs[i + i_lo] * c * pln[i]), prn[i] / pln[i], exit_code)
+                q_tmp, ecrs[i + i_lo] / (ncrs[i + i_lo] * c * pln[i + i_lo]), prn[i + i_lo] / pln[i + i_lo], exit_code)
         else:
             # this instruction is duplicated, TODO return it via detect_active_bins_new()
             q_tmp = interpolate_q(
-                ecrs[i + i_lo] / (ncrs[i + i_lo] * c * pln[i]))
+                ecrs[i + i_lo] / (ncrs[i + i_lo] * c * pln[i + i_lo]))
         q_nr.append(q_tmp)
-        fln.append(nq2f(ncrs[i + i_lo], q_nr[-1], pln[i], prn[i]))
+        fln.append(nq2f(ncrs[i + i_lo], q_nr[-1],
+                   pln[i + i_lo], prn[i + i_lo]))
 
     q_nr = array(q_nr)
     fln = array(fln)
     frn = array(fln)
-    frn = frn * (prn / pln) ** (-q_nr)
+    frn = frn * (prn[i_lo:i_up + 1] / pln[i_lo:i_up + 1]) ** (-q_nr)
     plot = False
 
     # retrieve slopes and f values for cutoffs
@@ -614,7 +618,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
 
     if (verbosity_1):
         prtinfo("Cutoff indices obtained (lo, up): %i, %i || momenta (lo, up): %f, %f " % (
-            i_lo, i_up, pln[0], prn[-1]))
+            i_lo, i_up, pln[i_lo], prn[i_up]))
 
     if (verbosity_2):
         dummyCRSfile = open("crs.dat", "a")
@@ -633,7 +637,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
         dummyCRSfile.close()
 
     if empty_cell is not True:
-        plot = plot_data(plot_var, pln, prn, fln, frn,
+        plot = plot_data(plot_var, pln[i_lo:i_up + 1], prn[i_lo:i_up + 1], fln, frn,
                          q_nr, time, location, i_lo, i_up)
         i_plot = i_plot + 1
 

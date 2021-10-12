@@ -119,12 +119,14 @@ def initialize_pf_arrays(h5fname, pf_initialized=False):
 
 
 def ind_to_flog(ind, min_in, max_in, length):
-    ind_to_flog = min_in * 10.0 ** (((log10(max_in / min_in)) / float(length - 1)) * float(ind))
+    ind_to_flog = min_in * \
+        10.0 ** (((log10(max_in / min_in)) / float(length - 1)) * float(ind))
     return ind_to_flog
 
 
 def inverse_f_to_ind(value, min_in, max_in, length):
-    inverse_f_to_ind = (log10(value / min_in) / log10(max_in / min_in)) * (length)
+    inverse_f_to_ind = (log10(value / min_in) /
+                        log10(max_in / min_in)) * (length)
     try:
         inverse_f_to_ind = int(inverse_f_to_ind)
     except:
@@ -134,7 +136,8 @@ def inverse_f_to_ind(value, min_in, max_in, length):
 
 def bilin_interpol(y11, y12, y21, y22, t, u):
     #  y11, y12, y21, y22, t, u ! y** - tabularized values of interpolated function, t, u - coefficients
-    bilin_interpol = (1.0 - t) * (1.0 - u) * y11 + t * (1.0 - u) * y12 + (1.0 - t) * u * y21 + t * u * y22
+    bilin_interpol = (1.0 - t) * (1.0 - u) * y11 + t * \
+        (1.0 - u) * y12 + (1.0 - t) * u * y21 + t * u * y22
     return bilin_interpol
 
 
@@ -166,12 +169,13 @@ def get_interpolated_ratios(bnd, alpha_val, n_val, interpolation_error, **kwargs
     loc1[0] = inverse_f_to_ind(n_val, p_n[0], p_n[size - 1], size - 1)
     loc1[1] = inverse_f_to_ind(alpha_val, p_a[0], p_a[size - 1], size - 1)
 
-    if min(loc1[:]) > 0 and max(loc1[:]) <= size - 1:
+    if ((min(loc1[:]) > 0 and max(loc1[:]) <= size - 1) and (max(loc1[:]) + 1 <= size - 1)):
         loc2[0] = loc1[0] + 1
         loc2[1] = loc1[1] + 1
     else:
         if (verbose):
-            prtwarn("(ERROR) Obtained indices (%s): [%i, %i] -> [%f, %f]" % (bnd, loc1[0], loc1[1], pf_ratio[0], pf_ratio[1]))
+            prtwarn("(ERROR) Obtained indices (%s): [%i, %i] -> [%f, %f]" % (
+                bnd, loc1[0], loc1[1], pf_ratio[0], pf_ratio[1]))
         interpolation_error = True
         return pf_ratio, interpolation_error
 
@@ -183,11 +187,13 @@ def get_interpolated_ratios(bnd, alpha_val, n_val, interpolation_error, **kwargs
 
     if min(pf_ratio[:]) <= 0.0:
         if (verbose):
-            prtwarn("(ERROR) Obtained p & f (%s) ratios: [%f, %f]" % (bnd, pf_ratio[0], pf_ratio[1]))
+            prtwarn("(ERROR) Obtained p & f (%s) ratios: [%f, %f]" % (
+                bnd, pf_ratio[0], pf_ratio[1]))
         return pf_ratio, interpolation_error
     else:
         if (verbose):
-            prtinfo("        Obtained indices (%s): [%i, %i] -> [%f, %f]" % (bnd, loc1[0], loc1[1], pf_ratio[0], pf_ratio[1]))
+            prtinfo("        Obtained indices (%s): [%i, %i] -> [%f, %f]" % (
+                bnd, loc1[0], loc1[1], pf_ratio[0], pf_ratio[1]))
         interpolation_error = False
 
     return pf_ratio, interpolation_error
