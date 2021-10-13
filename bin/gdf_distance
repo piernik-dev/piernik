@@ -353,7 +353,11 @@ def piernik_gdf_compare(fname1, fname2, level1, level2):
                 norm = compare_data(ds1, ds2)
                 norms["datafield `" + f + "'"] = norm
                 tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
-            print("All datafield difference: %g" % tot_datanorm)
+            if level1 == level2:
+                lev = str(level1)
+            else:
+                lev = str(level1) + ' vs. ' + str(level2)
+            print("All datafield difference on grid level %s: %g" % (lev, tot_datanorm))
         else:
             print("Comparing domains of different size or resolution is not implemented yet")
             exit(31)
@@ -362,6 +366,23 @@ def piernik_gdf_compare(fname1, fname2, level1, level2):
     h5f2.close()
 
     return norms
+
+
+def piernik_gdf_compare_alllevels(fname1, fname2):
+    import h5py
+    h5f1 = h5py.File(fname1, "r")
+    maxlev1 = max(h5f1['grid_level'])
+    h5f1.close()
+    h5f2 = h5py.File(fname2, "r")
+    maxlev2 = max(h5f2['grid_level'])
+    h5f2.close()
+
+    normsl = []
+    nlev = range(min(maxlev1, maxlev2) + 1)
+    for lev in nlev:
+        normsl.append(piernik_gdf_compare(fname1, fname2, lev, lev))
+
+    return normsl, nlev
 
 
 if __name__ == "__main__":
@@ -374,19 +395,23 @@ if __name__ == "__main__":
 
     if (len(sys.argv) == 3):
         if (is_comparable(sys.argv[1], sys.argv[2])):
-            norms = piernik_gdf_compare(sys.argv[1], sys.argv[2], 0, 0)
+            normsl, nlev = piernik_gdf_compare_alllevels(sys.argv[1], sys.argv[2])
             tot_norm = 0.
             failed = False
-            longestkey = len(max(norms, key=len))
-            for i in sorted(norms.keys()):
-                if (norms[i] >= 0. and norms[i] <= 1. + 1e-12):
-                    print("Difference of %-*s: %g" % (longestkey + 1, i, norms[i]))
-                    # tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
-                    tot_norm += (1. - tot_norm) * norms[i]
-                else:
-                    print("Difference measure `%s` out of [0,1] range: %g" %
-                          (i, norms[i]))
-                    failed = True
+            longestkey = len(max(normsl[0], key=len))
+            for i in sorted(normsl[0].keys()):
+                toprint = "Difference of %-*s:" % (longestkey + 1, i)
+                for lev in nlev:
+                    if (normsl[lev][i] >= 0. and normsl[lev][i] <= 1. + 1e-12):
+                        toprint = toprint + "   %8.6g" % normsl[lev][i]
+                        # tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
+                        tot_norm += (1. - tot_norm) * normsl[lev][i]
+                    else:
+                        print("Difference measure `%s` out of [0,1] range: %g" %
+                              (i, normsl[lev][i]))
+                        failed = True
+                if not failed:
+                    print(toprint)
             if (failed):
                 print("Comparison of `%s' and `%s' failed" %
                       (sys.argv[1], sys.argv[2]))
