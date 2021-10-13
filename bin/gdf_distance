@@ -403,7 +403,7 @@ if __name__ == "__main__":
                 toprint = "Difference of %-*s:" % (longestkey + 1, i)
                 for lev in nlev:
                     if (normsl[lev][i] >= 0. and normsl[lev][i] <= 1. + 1e-12):
-                        toprint = toprint + "   %8.6g" % normsl[lev][i]
+                        toprint = toprint + "   %14g" % normsl[lev][i]
                         # tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
                         tot_norm += (1. - tot_norm) * normsl[lev][i]
                     else:
