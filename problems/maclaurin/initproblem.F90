@@ -245,6 +245,7 @@ contains
 
    subroutine problem_initial_conditions
 
+      use cg_cost_data,      only: I_IC
       use cg_leaves,         only: leaves
       use cg_list,           only: cg_list_element
       use constants,         only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim, LO, HI
@@ -271,6 +272,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          if (a1 > 0.) then
             do k = cg%ks, cg%ke
@@ -326,6 +328,7 @@ contains
          call cg%set_constant_b_field([0., 0., 0.])
 #endif /* MAGNETIC */
 
+         call cg%costs%stop(I_IC)
          cgl => cgl%nxt
       enddo
 

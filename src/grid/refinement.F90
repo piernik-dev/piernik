@@ -36,10 +36,9 @@ module refinement
 
    private
    public :: n_updAMR, oop_thr, ref_point, refine_points, ref_auto_param, refine_vars, level_min, level_max, inactive_name, bsize, &
-        &    ref_box, refine_boxes, refine_zcyls, init_refinement, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce, jeans_ref, jeans_plot
+        &    ref_box, refine_boxes, refine_zcyls, init_refinement, emergency_fix, set_n_updAMR, prefer_n_bruteforce, jeans_ref, jeans_plot
 
    integer(kind=4), protected :: n_updAMR            !< How often to update the refinement structure
-   logical,         protected :: strict_SFC_ordering !< Enforce strict SFC ordering to allow for optimized neighbour search
    real,            protected :: oop_thr             !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
    logical,         protected :: prefer_n_bruteforce !< If .false. then try SFC algorithms for neighbor searches
    integer(kind=4), protected :: level_min           !< Minimum allowed refinement, base level by default.
@@ -83,9 +82,8 @@ module refinement
 
    logical :: emergency_fix                                                    !< set to .true. if you want to call update_refinement ASAP
 
-   namelist /AMR/ level_min, level_max, bsize, n_updAMR, strict_SFC_ordering, &
-        &         prefer_n_bruteforce, oop_thr, refine_points, refine_boxes, refine_zcyls, refine_vars, &
-        &         jeans_ref, jeans_plot
+   namelist /AMR/ level_min, level_max, bsize, n_updAMR, prefer_n_bruteforce, oop_thr, &
+        &         refine_points, refine_boxes, refine_zcyls, refine_vars, jeans_ref, jeans_plot
 
 contains
 
@@ -105,7 +103,6 @@ contains
 !!   <tr><td> refine_zcyls(10)    </td><td> none    </td><td> integer, 6*real  </td><td> \copydoc refinement::refine_zcyls        </td></tr>
 !!   <tr><td> refine_vars(10)     </td><td> none    </td><td> 2*string, 3*real </td><td> \copydoc refinement::refine_vars         </td></tr>
 !!   <tr><td> prefer_n_bruteforce </td><td> .false. </td><td> logical          </td><td> \copydoc refinement::prefer_n_bruteforce </td></tr>
-!!   <tr><td> strict_SFC_ordering </td><td> .false. </td><td> logical          </td><td> \copydoc refinement::strict_SFC_ordering </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -128,7 +125,6 @@ contains
       level_max = level_min
       bsize(:)  = I_ZERO
       n_updAMR  = huge(I_ONE)
-      strict_SFC_ordering = .false.
       prefer_n_bruteforce = .false.
       oop_thr = 0.1
       refine_points(:) = ref_point(base_level_id-1, [ 0., 0., 0.] )
@@ -176,9 +172,8 @@ contains
          ibuff(11+2*nshapes:10+3*nshapes) = refine_zcyls (:)%level
 
          lbuff(1) = jeans_plot
-         lbuff(2) = strict_SFC_ordering
-         lbuff(3) = prefer_n_bruteforce
-         lbuff(4:3+n_ref_auto_param) = refine_vars(:)%plotfield
+         lbuff(2) = prefer_n_bruteforce
+         lbuff(3:2+n_ref_auto_param) = refine_vars(:)%plotfield
 
          rbuff(1) = oop_thr
          rbuff(2) = jeans_ref
@@ -227,9 +222,8 @@ contains
          refine_zcyls (:)%level = ibuff(11+2*nshapes:10+3*nshapes)
 
          jeans_plot               = lbuff(1)
-         strict_SFC_ordering      = lbuff(2)
-         prefer_n_bruteforce      = lbuff(3)
-         refine_vars(:)%plotfield = lbuff(4:3+n_ref_auto_param)
+         prefer_n_bruteforce      = lbuff(2)
+         refine_vars(:)%plotfield = lbuff(3:2+n_ref_auto_param)
 
          oop_thr   = rbuff(1)
          jeans_ref = rbuff(2)

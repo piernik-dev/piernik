@@ -52,6 +52,7 @@ contains
       use grid_container_ext,    only: cg_extptrs
       use initfluids,            only: cleanup_fluids
       use interactions,          only: cleanup_interactions
+      use procnames,             only: pnames
       use sortable_list,         only: cleanup_sortable_list
       use tag_pool,              only: t_pool
       use timer,                 only: cleanup_timers
@@ -104,6 +105,7 @@ contains
       call cleanup_timers;         call nextdot
       call cleanup_diagnostics;    call nextdot
       call cg_extptrs%epa_cleanup; call nextdot
+      call pnames%cleanup;         call nextdot
 #ifdef PIERNIK_OPENCL
       call cleanup_opencl;         call nextdot
 #endif /* PIERNIK_OPENCL */

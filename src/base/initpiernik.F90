@@ -46,12 +46,15 @@ contains
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
-      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, INCEPTIVE, tmr_fu, cbuff_len, PPP_PROB
+      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, &
+           &                           PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, &
+           &                           INCEPTIVE, tmr_fu, cbuff_len, PPP_PROB
 #ifdef COSM_RAY_ELECTRONS
       use cresp_grid,            only: cresp_init_grid
 #endif /* COSM_RAY_ELECTRONS */
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
-      use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
+      use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, &
+           &                           warn, die, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
       use decomposition,         only: init_decomposition
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment
@@ -65,9 +68,12 @@ contains
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
       use interpolations,        only: set_interpolations
+      use lb_helpers,            only: costs_maintenance
+      use load_balance,          only: init_load_balance
       use memory_usage,          only: init_memory
       use mpisetup,              only: init_mpi, master
       use ppp,                   only: init_profiling, ppp_main
+      use procnames,             only: pnames
       use refinement,            only: init_refinement, level_max
       use refinement_update,     only: update_refinement
       use sources,               only: init_sources
@@ -149,6 +155,9 @@ contains
       call cg_extptrs%epa_init
 
       call init_dataio_parameters            ! Required very early to call colormessage without side-effects
+
+      call pnames%init ; call print_hostnames
+      call init_load_balance
       call init_memory
       call init_profiling                    ! May require init_dataio_parameters and memory_usage set up
       call ppp_main%set_bb(ip_label)         ! can't call tst_cnt%start("init_piernik") before init_mpi
@@ -285,6 +294,8 @@ contains
          call update_particle_kinetic_energy
 #endif /* NBODY */
 
+         call costs_maintenance
+
          do while (.not. finished)
             write(label, '(i8)') nit + 1
             call ppp_main%start(iter_label // adjustl(label), PPP_PROB)
@@ -305,6 +316,7 @@ contains
             write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%l%id,", time elapsed: ",set_timer(tmr_fu)
             if (master) call printinfo(msg)
             call ppp_main%stop(iter_label // adjustl(label), PPP_PROB)
+            call costs_maintenance
          enddo
 #ifdef GRAV
          call cleanup_hydrostatic
@@ -337,12 +349,88 @@ contains
 #ifdef VERBOSE
       call diagnose_arrays                   ! may depend on everything
 #endif /* VERBOSE */
+      call costs_maintenance
 
       call write_data(output=INCEPTIVE)
 
       call sanitize_smallx_checks            ! depends on problem_initial_conditions || init_dataio/read_restart_hdf5
 
       call ppp_main%stop(ip_label)
+
+   contains
+
+      !>
+      !! \brief Print the list of hostnames in use and associated MPI ranks
+      !!
+      !! It was intentionally moved outside procnames module because of dataio_pub dependencies.
+      !<
+
+      subroutine print_hostnames
+
+         use constants,  only: fmt_len
+         use dataio_pub, only: msg, printinfo
+         use mpisetup,   only: slave, nproc
+         use procnames,  only: pnames
+
+         implicit none
+
+         integer :: h, hl
+         integer, parameter :: mpl = 16  ! maximum ranks per line to be printed (in non-consecutive case)
+         character(len=*), parameter :: rah_o = "Ranks at host '", rah_c = "' :"
+         character(len=fmt_len) :: fmtl, fmtr, fmt1, header
+         logical :: successive, succ
+
+         if (slave) return
+
+         associate (intlen => int(log10(real(max(1, nproc-1)))) + 2)
+
+            write(fmtl, *)"(a,", mpl, "i", intlen, ")"
+            write(fmtr, *)"(a,i", intlen, ",' ..',i", intlen, ")"
+            write(fmt1, *)"(a,i", intlen, ")"
+
+         end associate
+
+         successive = .true.
+         do h = lbound(pnames%proc_on_node, 1), ubound(pnames%proc_on_node, 1)
+            associate (p => pnames%proc_on_node(h))
+
+               header = rah_o // p%nodename(:pnames%maxnamelen) // rah_c
+
+               succ = .true.
+               if (size(p%proc) > 1) succ = all(p%proc(:ubound(p%proc, 1)-1) + 1 == p%proc(lbound(p%proc, 1)+1:))
+               successive = successive .and. succ
+
+               if (succ) then
+
+                  if (size(p%proc) > 1) then
+                     write(msg, fmtr) trim(header), p%proc(lbound(p%proc, 1)), p%proc(ubound(p%proc, 1))
+                  else
+                     write(msg, fmt1) trim(header), p%proc(lbound(p%proc, 1))
+                  endif
+                  call printinfo(msg)
+
+               else
+
+                  do hl = 0, int((ubound(p%proc, 1) - 1)/ mpl)
+                     write(msg, fmtl) merge(repeat(" ", len_trim(header)), trim(header), hl>0), p%proc(hl*mpl+1:min((hl+1)*mpl, ubound(p%proc, 1)))
+                     call printinfo(msg)
+                  enddo
+
+               endif
+
+            end associate
+         enddo
+
+         ! The load balance and cg distribution routines are designed to use
+         ! space-filling curve that is placing spatially adjacent cgs closely
+         ! on the block list in most cases.
+         ! The use of mpirun options like "-map-by node" may defeat these efforts
+         ! and significantly increase the amount of inter-node communication.
+         if (.not. successive) call warn("[initpiernik:init_piernik] Non-successive MPI ranks on hosts detected. This may severely degrade the performance.")
+
+         if (any(pnames%hostindex < 0)) call die("[initpiernik:init_piernik] pnames%hostindex contains invalid data")
+
+      end subroutine print_hostnames
 
    end subroutine init_piernik
 !-----------------------------------------------------------------------------

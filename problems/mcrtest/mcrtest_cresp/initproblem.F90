@@ -160,6 +160,7 @@ contains
 
    subroutine problem_initial_conditions
 
+      use cg_cost_data,   only: I_IC
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: ndims, xdim, ydim, zdim, LO, HI, pMAX, BND_PER
@@ -216,6 +217,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          call cg%set_constant_b_field([bx0, by0, bz0])  ! this acts only inside cg%ijkse box
          cg%u(fl%idn,:,:,:) = d0
@@ -297,6 +299,7 @@ contains
             enddo
          enddo
 
+         call cg%costs%stop(I_IC)
          cgl => cgl%nxt
       enddo
 
@@ -305,7 +308,11 @@ contains
          maxv = - huge(1.)
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
+
             maxv = max(maxv, maxval(cgl%cg%u(iarr_crs(icr),:,:,:)))
+
+            call cgl%cg%costs%stop(I_IC)
             cgl => cgl%nxt
          enddo
 

@@ -179,13 +179,14 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_initial_conditions
 
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: ION, xdim, ydim, zdim, LO, HI, pi, ndims
-      use domain,     only: dom
-      use fluidindex, only: flind
-      use func,       only: operator(.notequals.)
-      use grid_cont,  only: grid_container
+      use cg_cost_data, only: I_IC
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use constants,    only: ION, xdim, ydim, zdim, LO, HI, pi, ndims
+      use domain,       only: dom
+      use fluidindex,   only: flind
+      use func,         only: operator(.notequals.)
+      use grid_cont,    only: grid_container
 
       implicit none
 
@@ -207,6 +208,7 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
+            call cg%costs%start
 
             do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
@@ -266,6 +268,7 @@ contains
                enddo
             endif
 
+            call cg%costs%stop(I_IC)
             cgl => cgl%nxt
          enddo
 
@@ -316,12 +319,12 @@ contains
 
    subroutine sedov_dist_to_edge
 
-      use cg_leaves,     only: leaves
-      use cg_level_base, only: base
-      use cg_list,       only: cg_list_element
-      use constants,     only: xdim, ydim, zdim, LO, HI
-      use domain,        only: dom
-      use fluidindex,    only: iarr_all_dn
+      use cg_leaves,      only: leaves
+      use cg_expand_base, only: expand_base
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, LO, HI
+      use domain,         only: dom
+      use fluidindex,     only: iarr_all_dn
 
       implicit none
 
@@ -397,7 +400,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call base%expand(ddist(:,:) < iprox)
+      call expand_base(ddist(:,:) < iprox)
 
    end subroutine sedov_dist_to_edge
 
