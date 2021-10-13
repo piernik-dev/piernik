@@ -193,7 +193,7 @@ contains
       integer                                     :: i
       real                                        :: T, d1
 
-      call printinfo('[thermal] Cooling & heating handled with a single cool - heat curve fitted with a piecewise power law function')
+      if (master) call printinfo('[thermal] Cooling & heating handled with a single cool - heat curve fitted with a piecewise power law function')
 
       if (cool_curve .eq. 'tabulated') then
          open(unit=coolfile, file=cool_file, action='read', status='old')
