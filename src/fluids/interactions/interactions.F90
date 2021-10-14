@@ -433,7 +433,7 @@ contains
             call die("[interactions:balsara_based_interactions_function] Unsupported substep")
          end select
       enddo
-      ! usrc should be used to update u1 in all_sources procedure: u1 = u1 + rk2factror*usrc*dt
+      ! usrc should be used to update u1 in internal_sources procedure: u1 = u1 + rk2factror*usrc*dt
       return
    end function balsara_based_interactions_function
 

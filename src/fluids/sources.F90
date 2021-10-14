@@ -33,7 +33,7 @@ module sources
    implicit none
 
    private
-   public :: external_sources, all_sources, care_for_positives, init_sources, prepare_sources, timestep_sources
+   public :: external_sources, internal_sources, care_for_positives, init_sources, prepare_sources, timestep_sources
 
 contains
 
@@ -138,7 +138,7 @@ contains
 !! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
 !<
 !*/
-   subroutine all_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, coeffdt, vel_sweep)
+   subroutine internal_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, coeffdt, vel_sweep)
 
       use fluidindex,       only: flind, nmag
       use grid_cont,        only: grid_container
@@ -235,7 +235,7 @@ contains
       return
       if (.false.) write(0,*) bb, istep
 
-   end subroutine all_sources
+   end subroutine internal_sources
 
 !/*
 !>
