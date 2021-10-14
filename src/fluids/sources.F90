@@ -33,7 +33,7 @@ module sources
    implicit none
 
    private
-   public :: all_sources, care_for_positives, init_sources, prepare_sources, timestep_sources
+   public :: external_sources, all_sources, care_for_positives, init_sources, prepare_sources, timestep_sources
 
 contains
 
@@ -88,6 +88,22 @@ contains
 #endif /* THERM */
 
    end subroutine init_sources
+
+!/*
+!>
+!! \brief Subroutine to add sources out of used scheme integration
+!! \details By default double timestep dt and forward condition should be used here
+!<
+!*/
+   subroutine external_sources(forward)
+
+      implicit none
+
+      logical, intent(in) :: forward
+
+      if (forward) return
+
+   end subroutine external_sources
 
 !/*
 !>
