@@ -110,7 +110,7 @@ contains
          type is (cg_level_connected_t)
             call cg_llst%arr3d_boundaries(soln, bnd_type=BND_NEGREF, nocorners=.true.)
          class default
-             call die("[multigrid_Laplace4:residual4] Unknown type")
+            call die("[multigrid_Laplace4:residual4] Unknown type")
       end select
 
       c21 = 1.

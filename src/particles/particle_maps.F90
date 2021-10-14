@@ -155,10 +155,10 @@ contains
          do while (associated(pset))
             associate( field => cgl%cg%q(iv)%arr, part => pset%pdata, cg => cgl%cg )
 
-              if (part%outside) then
-                 pset => pset%nxt
-                 cycle
-              endif
+               if (part%outside) then
+                  pset => pset%nxt
+                  cycle
+               endif
 
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
@@ -180,10 +180,10 @@ contains
                         cur_ind(:) = [i, j, k]
                         do cdim = xdim, zdim
                            if (dom%has_dir(cdim)) &
-                              weight = weight*( 1.0 - abs(part%pos(cdim) - cg%coord(CENTER, cdim)%r(cur_ind(cdim)))*cg%idl(cdim) )
+                                weight = weight*( 1.0 - abs(part%pos(cdim) - cg%coord(CENTER, cdim)%r(cur_ind(cdim)))*cg%idl(cdim) )
                         enddo
                         field(i,j,k) = field(i,j,k) +  weight
-                      enddo
+                     enddo
                   enddo
                enddo
 
@@ -223,10 +223,10 @@ contains
          pset => cgl%cg%pset%first
          do while (associated(pset))
             associate( field => cgl%cg%q(iv)%arr, part => pset%pdata, cg => cgl%cg )
-              if (part%outside) then
-                 pset => pset%nxt
-                 cycle
-              endif
+               if (part%outside) then
+                  pset => pset%nxt
+                  cycle
+               endif
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
                      ijkp(cdim, I0) = floor((part%pos(cdim) - dom%edge(cdim,LO)) *cg%idl(cdim), kind=4)
@@ -256,7 +256,7 @@ contains
                            weight = weight_tmp * weight
                         enddo
                         field(i, j, k) = field(i, j, k) + factor * (part%mass / cg%dvol) * weight
-                      enddo
+                     enddo
                   enddo
                enddo
             end associate

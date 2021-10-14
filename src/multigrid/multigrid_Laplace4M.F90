@@ -118,7 +118,7 @@ contains
             call cg_llst%arr3d_boundaries(soln, bnd_type=BND_NEGREF)
             if (src_lapl.notequals.zero) call cg_llst%arr3d_boundaries(src, bnd_type=BND_NEGREF, nocorners=.true.)
          class default
-             call die("[multigrid_Laplace4M:residual_Mehrstellen] Unknown type")
+            call die("[multigrid_Laplace4M:residual_Mehrstellen] Unknown type")
       end select
 
       idm = 0
