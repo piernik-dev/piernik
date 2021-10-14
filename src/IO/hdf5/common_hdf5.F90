@@ -865,9 +865,9 @@ contains
          !<
 #ifdef NBODY_1FILE
          subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)
-#else
+#else /* !NBODY_1FILE */
          subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, cg_n_o, Z_avail)
-#endif /* NBODY_1FILE */
+#endif /* !NBODY_1FILE */
             use hdf5, only: HID_T
             implicit none
             integer(HID_T),                intent(in) :: cgl_g_id
@@ -1078,9 +1078,9 @@ contains
                call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail, n_part, st_g_id) !!!!!
                call h5gclose_f(st_g_id, error)
                call h5gclose_f(part_g_id, error)
-#else
+#else /* !NBODY_1FILE */
                call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail) !!!!!
-#endif /* NBODY_1FILE */
+#endif /* !NBODY_1FILE */
 
                call h5gclose_f(cg_g_id, error)
             enddo
@@ -1305,9 +1305,9 @@ contains
 
 #ifdef NBODY_1FILE
    subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets, pdsets)
-#else
+#else /* !NBODY_1FILE */
    subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets)
-#endif /* NBODY_1FILE */
+#endif /* !NBODY_1FILE */
 
       use constants,  only: dsetnamelen, I_ONE
       use dataio_pub, only: can_i_write
