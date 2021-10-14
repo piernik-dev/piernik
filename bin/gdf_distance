@@ -326,7 +326,7 @@ def base_compare(h5f1, h5f2):
     return norms, common_fields
 
 
-def compare_datafields_by_level(h5f1, h5f2, levels, common_fields, print_fname):
+def compare_datafields_by_level(h5f1, h5f2, levels, common_fields, fname1, fname2, print_fname):
     lnorm = {}
     # No error checking here, fail in ugly way when is_comparable does not
     # prevent attempt to open these files.
@@ -365,16 +365,15 @@ def piernik_gdf_compare(fname1, fname2, levels, print_fname=False):
     h5f2 = h5.File(fname2, "r")
 
     normsl = []
-    
     norms, common_fields = base_compare(h5f1, h5f2)
     if levels == []:
         maxlev1 = max(h5f1['grid_level'])
         maxlev2 = max(h5f2['grid_level'])
         nlev = range(min(maxlev1, maxlev2) + 1)
         for lev in nlev:
-            normsl.append(compare_datafields_by_level(h5f1, h5f2, (lev, lev), common_fields, print_fname))
+            normsl.append(compare_datafields_by_level(h5f1, h5f2, (lev, lev), common_fields, fname1, fname2, print_fname))
     else:
-        normsl.append(compare_datafields_by_level(h5f1, h5f2, levels, common_fields, print_fname))
+        normsl.append(compare_datafields_by_level(h5f1, h5f2, levels, common_fields, fname1, fname2, print_fname))
         nlev = range(1)
 
     h5f1.close()
@@ -382,14 +381,17 @@ def piernik_gdf_compare(fname1, fname2, levels, print_fname=False):
     return norms, normsl, nlev
 
 
-def n_reduce(norms, nlev):
+def n_reduce(args):
+    norms, normsl, nlev = args
     n = {}
-    for i in sorted(norms[0].keys()):
+    for i in sorted(norms.keys()):
+        n[i] = norms[i]
+    for i in sorted(normsl[0].keys()):
         for lev in nlev:
             if i in n:
-                n[i] += (1. - n[i]) * norms[lev][i]
+                n[i] += (1. - n[i]) * normsl[lev][i]
             else:
-                n[i] = norms[lev][i]
+                n[i] = normsl[lev][i]
 
     return n
 
@@ -448,17 +450,20 @@ if __name__ == "__main__":
             print("Cannot compare files `%s' and `%s'" %
                   (sys.argv[1], sys.argv[2]))
             exit(2)
-    elif (len(sys.argv) == 4):
+    elif (len(sys.argv) == 4) or (len(sys.argv) == 7):
         if (is_comparable(sys.argv[1], sys.argv[2]) and is_comparable(sys.argv[1], sys.argv[3])):
-            norms12, nlev12 = piernik_gdf_compare(sys.argv[1], sys.argv[2], print_fname=True)
+            if (len(sys.argv) == 7):
+                l12 = [int(sys.argv[4]), int(sys.argv[5])]
+                l13 = [int(sys.argv[4]), int(sys.argv[6])]
+                l23 = [int(sys.argv[5]), int(sys.argv[6])]
+            else:
+                l12, l13, l23 = [], [], []
+            n12 = n_reduce(piernik_gdf_compare(sys.argv[1], sys.argv[2], l12, print_fname=True))
             print("")
-            norms13, nlev13 = piernik_gdf_compare(sys.argv[1], sys.argv[3], print_fname=True)
+            n13 = n_reduce(piernik_gdf_compare(sys.argv[1], sys.argv[3], l13, print_fname=True))
             print("")
-            norms23, nlev23 = piernik_gdf_compare(sys.argv[2], sys.argv[3], print_fname=True)
+            n23 = n_reduce(piernik_gdf_compare(sys.argv[2], sys.argv[3], l23, print_fname=True))
             print("")
-            n12 = n_reduce(norms12, nlev12)
-            n13 = n_reduce(norms13, nlev13)
-            n23 = n_reduce(norms23, nlev23)
             norms = dict(n12)
             norms.update(n13)
             norms.update(n23)
@@ -471,7 +476,7 @@ if __name__ == "__main__":
             c_green = '\033[92m'
             c_reset = '\033[0m'
             c_gray = '\033[90m'
-            for i in sorted(norms.keys()):
+            for i in norms.keys():
                 line = "Difference of %-*s: " % (longestkey + 1, i)
                 comment = ""
                 curnorm = []
