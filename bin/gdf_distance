@@ -326,33 +326,33 @@ def base_compare(h5f1, h5f2):
     return norms, common_fields
 
 
-def piernik_gdf_compare(h5f1, h5f2, level1, level2, common_fields, print_fname):
+def compare_datafields_by_level(h5f1, h5f2, levels, common_fields, print_fname):
     lnorm = {}
     # No error checking here, fail in ugly way when is_comparable does not
     # prevent attempt to open these files.
 
     tot_datanorm = 0.
     for f in common_fields:
-        ds1, nd1, levok1 = collect_dataset(h5f1, f, level1)
-        ds2, nd2, levok2 = collect_dataset(h5f2, f, level2)
+        ds1, nd1, levok1 = collect_dataset(h5f1, f, levels[0])
+        ds2, nd2, levok2 = collect_dataset(h5f2, f, levels[1])
         if not levok1:
-            print('Level %s not met in %s.' % (level1, fname1))
+            print('Level %s not met in %s.' % (levels[0], fname1))
             exit(51)
         if not levok2:
-            print('Level %s not met in %s.' % (level2, fname2))
+            print('Level %s not met in %s.' % (levels[1], fname2))
             exit(52)
         if nd1[0] != nd2[0] or nd1[1] != nd2[1] or nd1[2] != nd2[2]:
-            print('Domain shape for %s level %s: %s' % (fname1, level1, nd1))
-            print('Domain shape for %s level %s: %s' % (fname2, level2, nd2))
+            print('Domain shape for %s level %s: %s' % (fname1, levels[0], nd1))
+            print('Domain shape for %s level %s: %s' % (fname2, levels[1], nd2))
             print('Arrays cannot be compered.')
             exit(53)
         norm = compare_data(ds1, ds2)
         lnorm["datafield `" + f + "'"] = norm
         tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
-    if level1 == level2:
-        lev = str(level1)
+    if levels[0] == levels[1]:
+        lev = str(levels[0])
     else:
-        lev = str(level1) + ' vs. ' + str(level2)
+        lev = str(levels[0]) + ' vs. ' + str(levels[1])
     print("All datafield difference%s on grid level %s: %g" % (
         (" between '%s' and '%s'" % (fname1, fname2)) if print_fname else "",
         lev, tot_datanorm))
@@ -360,19 +360,22 @@ def piernik_gdf_compare(h5f1, h5f2, level1, level2, common_fields, print_fname):
     return lnorm
 
 
-def piernik_gdf_compare_alllevels(fname1, fname2, print_fname=False):
+def piernik_gdf_compare(fname1, fname2, levels, print_fname=False):
     h5f1 = h5.File(fname1, "r")
     h5f2 = h5.File(fname2, "r")
-    maxlev1 = max(h5f1['grid_level'])
-    maxlev2 = max(h5f2['grid_level'])
 
     normsl = []
     
     norms, common_fields = base_compare(h5f1, h5f2)
-    nlev = range(min(maxlev1, maxlev2) + 1)
-    for lev in nlev:
-        lnorm = piernik_gdf_compare(h5f1, h5f2, lev, lev, common_fields, print_fname)
-        normsl.append(lnorm)
+    if levels == []:
+        maxlev1 = max(h5f1['grid_level'])
+        maxlev2 = max(h5f2['grid_level'])
+        nlev = range(min(maxlev1, maxlev2) + 1)
+        for lev in nlev:
+            normsl.append(compare_datafields_by_level(h5f1, h5f2, (lev, lev), common_fields, print_fname))
+    else:
+        normsl.append(compare_datafields_by_level(h5f1, h5f2, levels, common_fields, print_fname))
+        nlev = range(1)
 
     h5f1.close()
     h5f2.close()
@@ -399,9 +402,13 @@ if __name__ == "__main__":
                          sys.argv[0] + " piernik_data_hdf_file1 piernik_data_hdf_file2 level1 level2\n")
         exit(1)
 
-    if (len(sys.argv) == 3):
+    if (len(sys.argv) == 3) or (len(sys.argv) == 5):
         if (is_comparable(sys.argv[1], sys.argv[2])):
-            norms, normsl, nlev = piernik_gdf_compare_alllevels(sys.argv[1], sys.argv[2])
+            if (len(sys.argv) == 5):
+                levels = [int(sys.argv[3]), int(sys.argv[4])]
+            else:
+                levels = []
+            norms, normsl, nlev = piernik_gdf_compare(sys.argv[1], sys.argv[2], levels)
             tot_norm = 0.
             failed = False
             longestkey = max(len(max(norms, key=len)), len(max(normsl[0], key=len)))
@@ -443,11 +450,11 @@ if __name__ == "__main__":
             exit(2)
     elif (len(sys.argv) == 4):
         if (is_comparable(sys.argv[1], sys.argv[2]) and is_comparable(sys.argv[1], sys.argv[3])):
-            norms12, nlev12 = piernik_gdf_compare_alllevels(sys.argv[1], sys.argv[2], print_fname=True)
+            norms12, nlev12 = piernik_gdf_compare(sys.argv[1], sys.argv[2], print_fname=True)
             print("")
-            norms13, nlev13 = piernik_gdf_compare_alllevels(sys.argv[1], sys.argv[3], print_fname=True)
+            norms13, nlev13 = piernik_gdf_compare(sys.argv[1], sys.argv[3], print_fname=True)
             print("")
-            norms23, nlev23 = piernik_gdf_compare_alllevels(sys.argv[2], sys.argv[3], print_fname=True)
+            norms23, nlev23 = piernik_gdf_compare(sys.argv[2], sys.argv[3], print_fname=True)
             print("")
             n12 = n_reduce(norms12, nlev12)
             n13 = n_reduce(norms13, nlev13)
@@ -491,32 +498,6 @@ if __name__ == "__main__":
             print("Cannot compare files `%s', `%s' and `%s'" %
                   (sys.argv[1], sys.argv[2], sys.argv[3]))
             exit(3)
-    elif (len(sys.argv) == 5):
-        if (is_comparable(sys.argv[1], sys.argv[2])):
-            norms = piernik_gdf_compare(sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), print_fname=False)
-            tot_norm = 0.
-            failed = False
-            longestkey = len(max(norms, key=len))
-            for i in sorted(norms.keys()):
-                if (norms[i] >= 0. and norms[i] <= 1. + 1e-12):
-                    print("Difference of %-*s: %g" % (longestkey + 1, i, norms[i]))
-                    # tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
-                    tot_norm += (1. - tot_norm) * norms[i]
-                else:
-                    print("Difference measure `%s` out of [0,1] range: %g" %
-                          (i, norms[i]))
-                    failed = True
-            if (failed):
-                print("Comparison of `%s' and `%s' failed" %
-                      (sys.argv[1], sys.argv[2]))
-                exit(3)
-            else:
-                print("Total difference between `%s' and `%s': %g" %
-                      (sys.argv[1], sys.argv[2], tot_norm))
-        else:
-            print("Cannot compare files `%s' and `%s'" %
-                  (sys.argv[1], sys.argv[2]))
-            exit(2)
     else:
         print("Too many arguments:", sys.argv)
         exit(4)
