@@ -97,19 +97,21 @@ contains
 !*/
    subroutine external_sources(forward)
 
-     use global,          only: dt
 #ifdef THERM
-     use thermal,         only: thermal_sources
+      use global,  only: dt
+      use thermal, only: thermal_sources
 #endif /* THERM */
 
-     implicit none
+      implicit none
 
       logical, intent(in) :: forward
 
+      if (forward) then
 #ifdef THERM
-      call thermal_sources(2*dt)
+         call thermal_sources(2*dt)
 #endif /* THERM */
-      if (forward) return
+         return
+      endif
 
    end subroutine external_sources
 
