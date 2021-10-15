@@ -113,9 +113,6 @@ contains
       use crhelpers,             only: init_div_v
 #endif /* COSM_RAYS */
 #endif /* __INTEL_COMPILER */
-#ifdef THERM
-      use thermal,      only: init_thermal
-#endif /* THERM */
 
       implicit none
 
@@ -276,10 +273,6 @@ contains
          call ppp_main%start(prob_label)
          call problem_initial_conditions ! may depend on anything
          call ppp_main%stop(prob_label)
-
-#ifdef THERM
-         call init_thermal
-#endif /* THERM */
 
          call init_psi ! initialize the auxiliary field for divergence cleaning when needed
 

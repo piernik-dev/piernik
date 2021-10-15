@@ -132,6 +132,7 @@ contains
       use domain,     only: dom
       use fluidindex, only: flind
       use grid_cont,  only: grid_container
+      use thermal,    only: itemp, fit_cooling_curve
       use units,      only: kboltz, mH
 
       implicit none
@@ -168,6 +169,7 @@ contains
                      cg%u(fl%imy,i,j,k) = 0.0
                      cg%u(fl%imz,i,j,k) = 0.0
                      cg%u(fl%ien,i,j,k) = p0/(fl%gam_1)
+                     cg%q(itemp)%arr(i,j,k) = T0
 ! Perturbation
                      cg%u(fl%imx,i,j,k) = cg%u(fl%imx,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*sin(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*cos(2.*pi*cg%z(k)/dom%L_(zdim))
                      cg%u(fl%imy,i,j,k) = cg%u(fl%imy,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*cos(2.*pi*cg%x(i)/dom%L_(xdim))*sin(2.*pi*cg%y(j)/dom%L_(ydim))*cos(2.*pi*cg%z(k)/dom%L_(zdim))
@@ -204,6 +206,8 @@ contains
 
          end associate
       enddo
+
+      call fit_cooling_curve()
 
    end subroutine problem_initial_conditions
 !-----------------------------------------------------------------------------

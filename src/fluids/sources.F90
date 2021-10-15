@@ -59,6 +59,9 @@ contains
 #ifdef SN_SRC
       use snsources,    only: init_snsources
 #endif /* SN_SRC */
+#ifdef THERM
+      use thermal,      only: init_thermal
+#endif /* THERM */
 
       implicit none
 
@@ -80,8 +83,11 @@ contains
       call init_snsources                    ! depends on grid and fluids/cosmicrays
 #endif /* SN_SRC */
 
+#ifdef THERM
+      call init_thermal
+#endif /* THERM */
 
-   end subroutine init_sources
+    end subroutine init_sources
 
 !/*
 !>

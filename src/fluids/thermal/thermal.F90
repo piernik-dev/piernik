@@ -41,7 +41,7 @@ module thermal
    implicit none
 
    private
-   public ::  init_thermal, thermal_active, cfl_coolheat, thermal_substep
+   public ::  init_thermal, thermal_active, cfl_coolheat, thermal_substep, itemp, fit_cooling_curve
 
    character(len=cbuff_len)        :: cool_model, cool_curve, heat_model, scheme, cool_file
    logical                         :: thermal_active
@@ -50,7 +50,8 @@ module thermal
    real                            :: Teql         !> temperature of cooling / heating equilibrium
    integer(kind=4), protected      :: itemp = INVALID
    real                            :: x_ion        !> ionization degree
-   integer                         :: iso          !> 1 for isochoric, 2 for isobaric
+   integer                         :: isochoric    !> 1 for isochoric, 0 for isobaric
+   real                            :: d_isochoric  ! constant density used in isochoric case
    real, dimension(:), allocatable :: Tref, alpha, lambda0
    integer                         :: nfuncs
 
@@ -70,7 +71,7 @@ contains
       real :: G0, G1, G2  !> standard heating model coefficients in cgs units
       real :: Lambda_0    !> power law cooling model coefficient in cgs units
 
-      namelist /THERMAL/ thermal_active, heat_model, Lambda_0, alpha_cool, Teq, G0, G1, G2, x_ion, cfl_coolheat, iso, scheme, cool_model, cool_curve, cool_file
+      namelist /THERMAL/ thermal_active, heat_model, Lambda_0, alpha_cool, Teq, G0, G1, G2, x_ion, cfl_coolheat, isochoric, scheme, cool_model, cool_curve, cool_file, d_isochoric
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[thermal:init_thermal] mpi not initialized.")
 
@@ -91,7 +92,8 @@ contains
       G1             = 1.0e-25
       G2             = 1.0e-27
       x_ion          = 1.0
-      iso            = 1
+      isochoric      = 1
+      d_isochoric    = 1.0
       cfl_coolheat   = 0.1
 
       if (master) then
@@ -120,6 +122,7 @@ contains
          rbuff(6) = G2
          rbuff(7) = x_ion
          rbuff(8) = cfl_coolheat
+         rbuff(9) = d_isochoric
 
          lbuff(1) = thermal_active
 
@@ -129,7 +132,7 @@ contains
          cbuff(4) = heat_model
          cbuff(5) = scheme
 
-         ibuff(1) = iso
+         ibuff(1) = isochoric
 
       endif
 
@@ -156,8 +159,9 @@ contains
          G2             = rbuff(6)
          x_ion          = rbuff(7)
          cfl_coolheat   = rbuff(8)
+         d_isochoric    = rbuff(9)
 
-         iso            = ibuff(1)
+         isochoric      = ibuff(1)
 
       endif
 
@@ -165,8 +169,6 @@ contains
       G1_heat = G1       * erg / sek         / mH    * x_ion
       G2_heat = G2       * erg / sek / cm**3
       L0_cool = Lambda_0 * erg / sek * cm**3 / mH**2 * x_ion**2
-
-      if (cool_model .eq. 'piecewise_power_law') call fit_cooling_curve()
 
       call all_cg%reg_var('Temperature')          ! Make it cleaner
       itemp = qna%ind('Temperature')
@@ -177,7 +179,6 @@ contains
 
       use dataio_pub,  only: msg, warn, die, printinfo
       use func,        only: operator(.equals.)
-      use initproblem, only: d0
       use mpisetup,    only: master
       use units,       only: cm, erg, sek, mH
 
@@ -189,6 +190,7 @@ contains
       integer                                 :: i
       real                                    :: T, d1
 
+      if (cool_model .ne. 'piecewise_power_law') return
       if (master) call printinfo('[thermal] Cooling & heating handled with a single cool - heat curve fitted with a piecewise power law function')
 
       if (cool_curve .eq. 'tabulated') then
@@ -227,10 +229,10 @@ contains
                call die('[init_thermal] Cooling curve function not implemented')
          end select
 
-         if (iso .eq. 1) then
-            d1 = d0
+         if (isochoric .eq. 1) then
+            d1 = d_isochoric
             heat(i) = G0_heat * d1**2 + G1_heat * d1 + G2_heat
-         else if (iso .eq. 2) then
+         else if (isochoric .eq. 2) then
             write(msg,'(3a)') 'isobaric case is not working well around equilibrium temperature'
             if ((master) .and. (i .eq. 1)) call warn(msg)
             d1 = Teq / 10**logT(i)
@@ -284,6 +286,7 @@ contains
             loglambda(i) = log10(abs(lambda(i)))
          endif
       enddo
+      if (allocated(Tref)) deallocate(Tref,alpha,lambda0)
       allocate(Tref(nfuncs), alpha(nfuncs), lambda0(nfuncs))
 
       i = 1
@@ -292,7 +295,7 @@ contains
          if (logT(j) .equals. log10(Teql)) then                                       ! log(lambda) goes to -inf at T=Teql
             cycle
          else if ((logT(j-1) .le. log10(Teql)) .and. logT(j) .gt. log10(Teql)) then   ! Look for the point right after Teql
-            if (iso .eq. 1) then                                                      ! Linear fit of lambda between the point right before Teql, and 0
+            if (isochoric .eq. 1) then                                                      ! Linear fit of lambda between the point right before Teql, and 0
                a =  - lambda(i)/ (log10(Teql) - logT(i))
                b = 0.0
                k = k + 1
@@ -317,7 +320,7 @@ contains
                if (k .gt. nfuncs) call die('[init_thermal]: too many piecewise functions')
                Tref(k) = 10**logT(i)
                if (i .gt. 1) then
-                  if ((iso .eq. 2) .and. ((logT(i-1) .le. log10(Teql)) .and. logT(i) .gt. log10(Teql))) Tref(k) = Teql
+                  if ((isochoric .eq. 2) .and. ((logT(i-1) .le. log10(Teql)) .and. logT(i) .gt. log10(Teql))) Tref(k) = Teql
                endif
                alpha(k) = a
                lambda0(k) = lambda(j)/abs(lambda(j)) * 10**(b+a*logT(i))
@@ -339,9 +342,7 @@ contains
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
       use func,             only: ekin, emag, operator(.equals.)
-      use global,           only: nstep
       use grid_cont,        only: grid_container
-      use initproblem,      only: T0
       use mpisetup,         only: master
       use named_array_list, only: wna
       use units,            only: kboltz, mH
@@ -370,10 +371,6 @@ contains
             dens => cg%w(wna%fi)%span(pfl%idn,cg%lhn)
             ener => cg%w(wna%fi)%span(pfl%ien,cg%lhn)
             ta   => cg%q(itemp)%span(cg%lhn)
-
-            if ((abs(nstep) .lt. 0.1) .and. (ta(1,1,1) .gt. 10**(5))) then
-               ta = T0
-            endif
 
             n = shape(ta)
             allocate(int_ener(n(1),n(2),n(3)))
@@ -585,17 +582,17 @@ contains
 
          case ('power_law')
             if (alpha_cool .equals. 1.0) then
-               if (iso == 1) then
+               if (isochoric == 1) then
                   Tnew = temp * exp(-dt/tcool)                 !isochoric
                else
                   Tnew = temp * (1 - 1/gamma * dt/tcool)      !isobar
                endif
                !Tnew = Tnew + dt * (gamma-1) * mH * G0_heat / kboltz  !heating
             else
-               if (iso == 1) then
+               if (isochoric == 1) then
                   Tnew = temp * (1 - (1-alpha_cool) * dt / tcool) **(1.0/(1-alpha_cool))             !isochoric
                else
-                  Tnew = temp * (1 - (iso-alpha_cool)*dt / tcool / gamma) **(1/(iso-alpha_cool))    !isobar
+                  Tnew = temp * (1 - (isochoric-alpha_cool)*dt / tcool / gamma) **(1/(isochoric-alpha_cool))    !isobar
                endif
                !Tnew = Tnew + dt * (gamma-1) * mH * G0_heat / kboltz   ! isochoric heating
                !Tnew = Tnew * sqrt(1 + 2 * dt * (gamma-1) * mH * G0_heat *dens / kboltz / Tnew / gamma)  ! isobar heating
@@ -603,7 +600,7 @@ contains
 
          case ('piecewise_power_law')
             iso2 = 1.0
-            if (iso .eq. 2) then
+            if (isochoric .eq. 2) then
                iso2 = 1.0/gamma
             endif
             TN = 10**8
@@ -613,25 +610,25 @@ contains
             lambda1 = 0.0
             diff = 0.0
             Y0 = 0.0
-            Y(nfuncs) = - 1 / (iso-alpha(nfuncs)) * (TN/Tref(nfuncs))**(alpha(nfuncs)-iso) * (1 - (Tref(nfuncs)/TN)**(alpha(nfuncs)-iso))
+            Y(nfuncs) = - 1 / (isochoric-alpha(nfuncs)) * (TN/Tref(nfuncs))**(alpha(nfuncs)-isochoric) * (1 - (Tref(nfuncs)/TN)**(alpha(nfuncs)-isochoric))
             do i = nfuncs-1, 1, -1
                if (alpha(i) .equals. 0.0) then
                   Y(i) = Y(i+1) - lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) / TN * log((Teql - Tref(i)) / (Tref(i+1)-Teql))
                else
-                  Y(i) = Y(i+1) - 1 / (iso-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**iso * (1 - (Tref(i)/Tref(i+1))**(alpha(i)-iso))
+                  Y(i) = Y(i+1) - 1 / (isochoric-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**isochoric * (1 - (Tref(i)/Tref(i+1))**(alpha(i)-isochoric))
                endif
             enddo
             do i = 1, nfuncs
                if (i .eq. nfuncs) then
                   if ((temp .ge. Tref(i))) then
-                     Y0 = Y(i) + 1/(iso-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**iso * (1 - (Tref(i)/temp)**(alpha(i)-iso))
+                     Y0 = Y(i) + 1/(isochoric-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**isochoric * (1 - (Tref(i)/temp)**(alpha(i)-isochoric))
                      T1 = Tref(i)
                      alpha0 = alpha(i)
                      lambda1 = lambda0(i)
                   endif
                else if (i .eq. 1) then
                   if (temp .le. Tref(i+1)) then
-                     Y0 = Y(i) + 1/(iso-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**iso * (1 - (Tref(i)/temp)**(alpha(i)-iso))
+                     Y0 = Y(i) + 1/(isochoric-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**isochoric * (1 - (Tref(i)/temp)**(alpha(i)-isochoric))
                      T1 = Tref(i)
                      lambda1 = lambda0(i)
                      alpha0 = alpha(i)
@@ -647,7 +644,7 @@ contains
                         diff = MAX(abs(temp-Teql), 0.000001)
                         Y0 = Y(i) + lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) / TN * log((abs(Teql - Tref(i)) / diff))
                      else
-                        Y0 = Y(i) + 1/(iso-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**iso * (1 - (Tref(i)/temp)**(alpha(i)-iso))
+                        Y0 = Y(i) + 1/(isochoric-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**isochoric * (1 - (Tref(i)/temp)**(alpha(i)-isochoric))
                      endif
                      T1 = Tref(i)
                      alpha0 = alpha(i)
@@ -661,23 +658,23 @@ contains
                Y0 = Y0 + (temp/TN) * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) / diff * dt/tcool2
             else
                tcool2 = kboltz * temp / ((gamma-1) * mH * lambda1 * (temp/T1)**alpha0 * dens)
-               Y0 = Y0 + (temp/TN)**iso * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) * (T1/temp)**alpha0 * dt/tcool2 * iso2
+               Y0 = Y0 + (temp/TN)**isochoric * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) * (T1/temp)**alpha0 * dt/tcool2 * iso2
             endif
             do i = 1, nfuncs
                if (i .eq. nfuncs) then
                   if ((temp .ge. Tref(i))) then
-                     Tnew = Tref(i) * (1 - (iso-alpha(i)) * lambda0(i)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(i))**iso * (Y0 - Y(i)) )**(1/(iso-alpha(i)))
+                     Tnew = Tref(i) * (1 - (isochoric-alpha(i)) * lambda0(i)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(i))**isochoric * (Y0 - Y(i)) )**(1/(isochoric-alpha(i)))
                   endif
                else if (i .eq. 1) then
                   if (temp .le. Tref(i+1)) then
-                     Tnew = Tref(i) * (1 - (iso-alpha(i)) * lambda0(i)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(i))**iso * (Y0 - Y(i)) )**(1/(iso-alpha(i)))
+                     Tnew = Tref(i) * (1 - (isochoric-alpha(i)) * lambda0(i)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(i))**isochoric * (Y0 - Y(i)) )**(1/(isochoric-alpha(i)))
                   endif
                else
                   if ((temp .ge. Tref(i)) .and. (temp .le. Tref(i+1))) then
                      if (alpha0 .equals. 0.0) then
                         Tnew = Teql + sign * (Teql-Tref(i)) * exp(-TN * (Tref(nfuncs)/TN)**alpha(nfuncs) * lambda0(i)/lambda0(nfuncs) * (Y0 - Y(i)))
                      else
-                        Tnew = Tref(i) * (1 - (iso-alpha(i)) * lambda0(i)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(i))**iso * (Y0 - Y(i)) )**(1/(iso-alpha(i)))
+                        Tnew = Tref(i) * (1 - (isochoric-alpha(i)) * lambda0(i)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(i))**isochoric * (Y0 - Y(i)) )**(1/(isochoric-alpha(i)))
                      endif
                   endif
                endif
