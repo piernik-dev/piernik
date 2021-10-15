@@ -351,7 +351,7 @@ contains
 
       real,                    intent(in) :: dt
       real, dimension(:, :, :), pointer   :: ta, dens, ener
-      real, dimension(:,:,:), allocatable :: T, int_ener, kin_ener, mag_ener
+      real, dimension(:,:,:), allocatable :: T, int_ener, kinmag_ener
       real                                :: gamma, dt_cool, t1, tcool, cfunc, hfunc, esrc, diff
       integer                             :: ifl, i, x, y, z
       integer, dimension(3)               :: n
@@ -373,18 +373,14 @@ contains
             ta   => cg%q(itemp)%span(cg%lhn)
 
             n = shape(ta)
-            allocate(int_ener(n(1),n(2),n(3)))
+            allocate(int_ener(n(1),n(2),n(3)), kinmag_ener(n(1),n(2),n(3)))
             int_ener = 0.0
-            allocate(kin_ener(n(1),n(2),n(3)), mag_ener(n(1),n(2),n(3)))
-            mag_ener = 0.0
             if (pfl%has_energy) then
-               kin_ener = ekin(cg%w(wna%fi)%span(pfl%imx,cg%lhn), cg%w(wna%fi)%span(pfl%imy,cg%lhn), cg%w(wna%fi)%span(pfl%imz,cg%lhn), dens)
+               kinmag_ener = ekin(cg%w(wna%fi)%span(pfl%imx,cg%lhn), cg%w(wna%fi)%span(pfl%imy,cg%lhn), cg%w(wna%fi)%span(pfl%imz,cg%lhn), dens)
                if (pfl%is_magnetized) then
-                  mag_ener = emag(cg%w(wna%bi)%span(xdim,cg%lhn), cg%w(wna%bi)%span(ydim,cg%lhn), cg%w(wna%bi)%span(zdim,cg%lhn))
-                  int_ener = ener - kin_ener - mag_ener
-               else
-                  int_ener = ener - kin_ener
+                  kinmag_ener = kinmag_ener + emag(cg%w(wna%bi)%span(xdim,cg%lhn), cg%w(wna%bi)%span(ydim,cg%lhn), cg%w(wna%bi)%span(zdim,cg%lhn))
                endif
+               int_ener = ener - kinmag_ener
             endif
 
             select case (scheme)
@@ -444,7 +440,7 @@ contains
                               ta(x,y,z) = int_ener(x,y,z) * (pfl%gam-1) * mH / (dens(x,y,z) * kboltz)
                               call temp_EIS(tcool, dt_cool, gamma, ta(x,y,z), dens(x,y,z), T(x,y,z))
                               int_ener(x,y,z) = dens(x,y,z) * kboltz * T(x,y,z) / ((pfl%gam-1) * mH)
-                              ener(x,y,z) = kin_ener(x,y,z) + mag_ener(x,y,z) + int_ener(x,y,z)
+                              ener(x,y,z) = kinmag_ener(x,y,z) + int_ener(x,y,z)
 
                               t1 = t1 + dt_cool
                               if (t1 + dt_cool .gt. dt) then
@@ -472,7 +468,7 @@ contains
                               ta(x,y,z) = int_ener(x,y,z) * (pfl%gam-1) * mH / (dens(x,y,z) * kboltz)
                               call temp_EIS(tcool, dt_cool, gamma, ta(x,y,z), dens(x,y,z), T(x,y,z))
                               int_ener(x,y,z) = dens(x,y,z) * kboltz * T(x,y,z) / ((pfl%gam-1) * mH)
-                              ener(x,y,z) = kin_ener(x,y,z) + mag_ener(x,y,z) + int_ener(x,y,z)
+                              ener(x,y,z) = kinmag_ener(x,y,z) + int_ener(x,y,z)
 
                               call heat(dens(x,y,z), hfunc)
                               int_ener(x,y,z) = int_ener(x,y,z) + hfunc * dt_cool
@@ -494,7 +490,7 @@ contains
 
             end select
 
-            deallocate(int_ener, kin_ener, mag_ener)
+            deallocate(int_ener, kinmag_ener)
          enddo
          cgl => cgl%nxt
       enddo
