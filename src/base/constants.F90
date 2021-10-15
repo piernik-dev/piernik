@@ -80,7 +80,7 @@ module constants
 
    ! enumerator for length/mass/time/velocity/magnetic field units
    enum, bind(C)
-      enumerator :: U_LEN = 1, U_MASS, U_TIME, U_VEL, U_MAG, U_ENER
+      enumerator :: U_LEN = 1, U_MASS, U_TIME, U_VEL, U_MAG, U_TEMP, U_ENER
    end enum
 
    ! irrational number approximations
