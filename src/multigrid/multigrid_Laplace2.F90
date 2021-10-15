@@ -54,6 +54,7 @@ contains
 
    subroutine residual2(cg_llst, src, soln, def)
 
+      use cg_cost_data,       only: I_MULTIGRID
       use cg_leaves,          only: cg_leaves_t
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
@@ -91,6 +92,7 @@ contains
       cgl => cg_llst%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          ! Coefficients for a simplest 3-point Laplacian operator: [ 1, -2, 1 ]
          ! for 2D and 1D setups appropriate elements of [ Lx, Ly, Lz ] should be == 0.
@@ -162,6 +164,8 @@ contains
             case default
                call die("[multigrid_Laplace2:residual2] Unsupported geometry.")
          end select
+
+         call cg%costs%stop(I_MULTIGRID)
          cgl => cgl%nxt
       enddo
 
@@ -176,10 +180,10 @@ contains
 
    subroutine approximate_solution_rbgs2(curl, src, soln, nsmoo)
 
+      use cg_cost_data,       only: I_MULTIGRID
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
-      use cg_list_dataop,     only: dirty_label
       use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, BND_NEGREF, LO, pMAX, zero
       use dataio_pub,         only: die, warn
       use domain,             only: dom
@@ -188,7 +192,7 @@ contains
       use func,               only: operator(.notequals.)
       use mpisetup,           only: piernik_MPI_Allreduce, master
       use multigrid_helpers,  only: set_relax_boundaries, copy_and_max
-      use multigridvars,      only: multidim_code_3D, overrelax, coarsest_tol, nc_growth
+      use multigridvars,      only: multidim_code_3D, overrelax, coarsest_tol, nc_growth, dirty_label
 
       implicit none
 
@@ -237,6 +241,8 @@ contains
          cgl => curl%first
          do while (associated(cgl))
             cg => cgl%cg
+            call cg%costs%start
+
             if (dom%geometry_type == GEO_RPZ) then
                deallocate(crx, crx1, cry, crz, cr)
                is = lbound(cg%x, dim=1)
@@ -348,6 +354,7 @@ contains
             if (associated(curl, coarsest%level) .and. n == ncheck) &
                  max_out = max(max_out, maxval(abs(cg%prolong_xyz( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%q(soln)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))))
 
+            call cg%costs%stop(I_MULTIGRID)
             cgl => cgl%nxt
          enddo
 

@@ -33,7 +33,7 @@ module sources
    implicit none
 
    private
-   public :: all_sources, care_for_positives, init_sources, prepare_sources, timestep_sources
+   public :: external_sources, internal_sources, care_for_positives, init_sources, prepare_sources, timestep_sources
 
 contains
 
@@ -91,6 +91,22 @@ contains
 
 !/*
 !>
+!! \brief Subroutine to add sources out of used scheme integration
+!! \details By default double timestep dt and forward condition should be used here
+!<
+!*/
+   subroutine external_sources(forward)
+
+      implicit none
+
+      logical, intent(in) :: forward
+
+      if (forward) return
+
+   end subroutine external_sources
+
+!/*
+!>
 !! \brief Subroutine computes any scheme sources (yet, now it is based on rtvd scheme)
 !!
 !! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
@@ -122,7 +138,7 @@ contains
 !! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
 !<
 !*/
-   subroutine all_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, coeffdt, vel_sweep)
+   subroutine internal_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, coeffdt, vel_sweep)
 
       use fluidindex,       only: flind, nmag
       use grid_cont,        only: grid_container
@@ -212,7 +228,7 @@ contains
       return
       if (.false.) write(0,*) bb, istep
 
-   end subroutine all_sources
+   end subroutine internal_sources
 
 !/*
 !>

@@ -159,7 +159,7 @@ contains
 !! Note that some of them were never used.
 !! \todo Try to define MPI_types for communication right before MPI_Isend/MPI_Irecv calls and release just after use. Then compare performance.
 !!
-!! For other suggestions on performance optimisation see description of cg_level::mpi_bnd_types.
+!! For other suggestions on performance optimisation see description of cg_list_neighbors::find_neighbors_bruteforce
 !!
 !! \warning this == leaves could be unsafe: need to figure out how to handle unneeded edges; this == all_cg or base%level or other concatenation of whole levels should work well
 !<
@@ -219,11 +219,12 @@ contains
 
    subroutine internal_boundaries_local(this, ind, tgt3d, dmask)
 
-      use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, LO, HI, cor_dim, INVALID
-      use dataio_pub,       only: die
-      use grid_cont,        only: grid_container
-      use grid_cont_bnd,    only: segment
+      use cg_cost_data,  only: I_OTHER
+      use cg_list,       only: cg_list_element
+      use constants,     only: xdim, ydim, zdim, LO, HI, cor_dim, INVALID
+      use dataio_pub,    only: die
+      use grid_cont,     only: grid_container
+      use grid_cont_bnd, only: segment
 
       implicit none
 
@@ -242,6 +243,7 @@ contains
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          do d = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
             if (dmask(d) .and. is_active(cg, ind, tgt3d)) then
@@ -284,6 +286,7 @@ contains
             endif
          enddo
 
+         call cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 
@@ -463,6 +466,7 @@ contains
 
    subroutine internal_boundaries_MPI_1by1(this, ind, tgt3d, dmask)
 
+      use cg_cost_data,     only: I_OTHER
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, cor_dim, LO, HI, I_ONE, I_TWO, I_THREE, I_FOUR
       use dataio_pub,       only: die
@@ -505,6 +509,7 @@ contains
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          ! exclude non-multigrid variables below base level
          if (tgt3d) then
@@ -567,6 +572,7 @@ contains
             endif
          enddo
 
+         call cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 
@@ -576,6 +582,7 @@ contains
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          do d = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
             if (dmask(d) .and. is_active(cg, ind, tgt3d)) then
@@ -589,6 +596,7 @@ contains
             endif
          enddo
 
+         call cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 
@@ -686,12 +694,13 @@ contains
 
    subroutine external_boundaries(this, ind, area_type, bnd_type)
 
-      use cg_list,    only: cg_list_element
-      use constants,  only: ndims, xdim, ydim, zdim, LO, HI, AT_NO_B, I_ONE, I_TWO, I_THREE, &
-           &                BND_PER, BND_MPI, BND_FC, BND_MPI_FC, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
+      use constants,    only: ndims, xdim, ydim, zdim, LO, HI, AT_NO_B, I_ONE, I_TWO, I_THREE, &
+           &                  BND_PER, BND_MPI, BND_FC, BND_MPI_FC, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
+      use dataio_pub,   only: die
+      use domain,       only: dom
+      use grid_cont,    only: grid_container
 
       implicit none
 
@@ -710,6 +719,7 @@ contains
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          if (ind > ubound(cg%q(:), dim=1) .or. ind < lbound(cg%q(:), dim=1)) call die("[cg_list_bnd:external_boundaries] wrong 3d index")
          pa3d => cg%q(ind)%arr
@@ -774,6 +784,7 @@ contains
             endif
          enddo
 
+         call cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 
@@ -783,6 +794,7 @@ contains
 
    subroutine bnd_u(this, dir)
 
+      use cg_cost_data,          only: I_OTHER
       use cg_list,               only: cg_list_element
       use constants,             only: ndims, xdim, ydim, zdim, LO, HI, INT4, I_ONE, &
            &                           BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_USER
@@ -799,7 +811,7 @@ contains
       use initcrspectrum,        only: smallcree, smallcren
       use initcosmicrays,        only: iarr_cre_e, iarr_cre_n
       use fluidindex,            only: iarr_all_crn
-#else  /* !COSM_RAY_ELECTRONS */
+#else /* !COSM_RAY_ELECTRONS */
       use fluidindex,            only: iarr_all_crs
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
@@ -833,6 +845,8 @@ contains
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          l = cg%lhn ; r = l
          do side = LO, HI
 
@@ -899,6 +913,8 @@ contains
             end select
 
          enddo
+
+         call cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 
@@ -991,6 +1007,7 @@ contains
 
    subroutine bnd_b(this, dir)
 
+      use cg_cost_data,          only: I_OTHER
       use cg_list,               only: cg_list_element
       use constants,             only: ndims, xdim, ydim, zdim, LO, HI, I_TWO, I_THREE, &
            &                           BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER
@@ -1031,6 +1048,8 @@ contains
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          l = cg%lhn ; r = l
 
          do side = LO, HI
@@ -1060,6 +1079,8 @@ contains
                   if (master) call warn(msg)
             end select
          enddo
+
+         call cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 

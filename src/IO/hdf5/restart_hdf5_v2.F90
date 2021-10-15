@@ -126,9 +126,9 @@ contains
 !> \brief create empty datasets for each cg to store restart data
 #ifdef NBODY_1FILE
    subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)
-#else
+#else /* !NBODY_1FILE */
    subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, cg_n_o, Z_avail)
-#endif /* NBODY_1FILE */
+#endif /* !NBODY_1FILE */
 
       use common_hdf5,      only: create_empty_cg_dataset, O_RES
       use constants,        only: AT_IGNORE, AT_OUT_B, I_ONE, PPP_IO, PPP_CG
@@ -273,9 +273,9 @@ contains
       endif
 #ifdef NBODY_1FILE
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets, gdf_translate(pdsets))
-#else
+#else /* !NBODY_1FILE */
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets)
-#endif /* NBODY_1FILE */
+#endif /* !NBODY_1FILE */
 
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one

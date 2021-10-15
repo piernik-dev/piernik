@@ -76,6 +76,7 @@ contains
 
    subroutine residual_Mehrstellen(cg_llst, src, soln, def)
 
+      use cg_cost_data,       only: I_MULTIGRID
       use cg_leaves,          only: cg_leaves_t
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
@@ -117,7 +118,7 @@ contains
             call cg_llst%arr3d_boundaries(soln, bnd_type=BND_NEGREF)
             if (src_lapl.notequals.zero) call cg_llst%arr3d_boundaries(src, bnd_type=BND_NEGREF, nocorners=.true.)
          class default
-             call die("[multigrid_Laplace4M:residual_Mehrstellen] Unknown type")
+            call die("[multigrid_Laplace4M:residual_Mehrstellen] Unknown type")
       end select
 
       idm = 0
@@ -128,6 +129,7 @@ contains
       cgl => cg_llst%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          Lxy = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) Lxy = (cg%idx2 + cg%idy2) / 12.
          Lxz = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) Lxz = (cg%idx2 + cg%idz2) / 12.
@@ -176,6 +178,8 @@ contains
                  + Lyz * (cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)+idm(ydim,:,:)) + &
                  &        cg%q(soln)%span(cg%ijkse+idm(zdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(zdim,:,:)+idm(ydim,:,:)) )
          endif
+
+         call cg%costs%stop(I_MULTIGRID)
          cgl => cgl%nxt
       enddo
 
@@ -185,10 +189,10 @@ contains
 
    subroutine approximate_solution_relax4M(curl, src, soln, nsmoo)
 
+      use cg_cost_data,       only: I_MULTIGRID
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
-      use cg_list_dataop,     only: dirty_label
       use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, BND_NEGREF, pMAX, zero
       use dataio_pub,         only: die, warn
       use domain,             only: dom
@@ -197,7 +201,7 @@ contains
       use func,               only: operator(.notequals.)
       use mpisetup,           only: piernik_MPI_Allreduce, master
       use multigrid_helpers,  only: set_relax_boundaries, copy_and_max
-      use multigridvars,      only: multidim_code_3D, coarsest_tol, nc_growth
+      use multigridvars,      only: multidim_code_3D, coarsest_tol, nc_growth, dirty_label
       use named_array_list,   only: qna
 
       implicit none
@@ -245,6 +249,7 @@ contains
          cgl => curl%first
          do while (associated(cgl))
             cg => cgl%cg
+            call cg%costs%start
 
             Lxy = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) Lxy = (cg%idx2 + cg%idy2) / 12.
             Lxz = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) Lxz = (cg%idx2 + cg%idz2) / 12.
@@ -317,6 +322,7 @@ contains
             if (associated(curl, coarsest%level) .and. n == ncheck) &
                  max_out = max(max_out, maxval(abs(cg%prolong_xyz( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))))
 
+            call cg%costs%stop(I_MULTIGRID)
             cgl => cgl%nxt
          enddo
          call curl%q_copy(qna%wai, soln)

@@ -181,6 +181,7 @@ contains
 
    subroutine vertical_prep(this)
 
+      use cg_cost_data,   only: I_REFINE
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
       use constants,      only: xdim, ydim, zdim, LO, HI, PPP_AMR
@@ -226,6 +227,7 @@ contains
          cgl => this%first
          do while (associated(cgl))
             cg => cgl%cg
+            call cg%costs%start
 
             if (allocated(ps)) call die("cll:vp f a ps")
             fmax = 0
@@ -293,6 +295,7 @@ contains
 
             call cg%update_leafmap
 
+            call cg%costs%stop(I_REFINE)
             cgl => cgl%nxt
          enddo
       endif
@@ -307,6 +310,7 @@ contains
          cgl => this%first
          do while (associated(cgl))
             cg => cgl%cg
+            call cg%costs%start
 
             if (allocated(ps)) call die("cll:vp c a ps")
             fmax = 0
@@ -370,6 +374,7 @@ contains
 
             if (allocated(ps)) deallocate(ps)
 
+            call cg%costs%stop(I_REFINE)
             cgl => cgl%nxt
          enddo
       endif
@@ -396,9 +401,10 @@ contains
 
    subroutine vertical_b_prep(this)
 
+      use cg_cost_data,   only: I_REFINE
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
-      use constants,      only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, ndims, INVALID
+      use constants,      only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, ndims, INVALID, base_level_id
       use dataio_pub,     only: warn, msg, die
       use domain,         only: dom
       use grid_cont,      only: grid_container
@@ -459,7 +465,11 @@ contains
       coarse => this%coarser
       if (.not. associated(coarse)) then
          this%need_vb_update = .false.
-         return ! check if some null allocations are required
+         return
+      endif
+      if (coarse%l%id < base_level_id) then  ! no need to calculate f/c below base level
+         this%need_vb_update = .false.
+         return
       endif
 
       ext_buf = dom%D_ * all_cg%ord_prolong_nb ! extension of the buffers due to stencil range
@@ -477,6 +487,7 @@ contains
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cgl%cg%costs%start
 
          ls = isl
 
@@ -577,6 +588,7 @@ contains
 
          call cgmap%cleanup
 
+         call cgl%cg%costs%stop(I_REFINE)
          cgl => cgl%nxt
       enddo
       if (mpifc_cnt > 0) call warn("[cg_level_connected:vertical_b_prep] mixed MPI and fine-coarse boundary will be treated as FC here and then fixed in intenal_boundaries")
@@ -681,6 +693,7 @@ contains
 
    subroutine vertical_bf_prep(this)
 
+      use cg_cost_data,     only: I_REFINE
       use cg_list,          only: cg_list_element
       use constants,        only: LO, HI, pdims, ORTHO1, ORTHO2, xdim, zdim, psidim, mag_n
       use dataio_pub,       only: die
@@ -704,6 +717,8 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          associate ( seg => cgl%cg%pib_tgt%seg )
          if (allocated(cgl%cg%rof_tgt%seg)) deallocate(cgl%cg%rof_tgt%seg)
          do dd = xdim, zdim
@@ -744,6 +759,8 @@ contains
             enddo
          endif
          end associate
+
+         call cgl%cg%costs%stop(I_REFINE)
          cgl => cgl%nxt
       enddo
 
@@ -751,6 +768,8 @@ contains
       if (associated(coarse)) then
          cgl => coarse%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
+
             if (allocated(cgl%cg%rif_tgt%seg)) deallocate(cgl%cg%rif_tgt%seg)
             do dd = xdim, zdim
                cgl%cg%finebnd(dd, LO)%index(:, :) = cgl%cg%ijkse(dd, LO) - 1
@@ -787,6 +806,8 @@ contains
                enddo
             endif
             end associate
+
+            call cgl%cg%costs%stop(I_REFINE)
             cgl => cgl%nxt
          enddo
       endif
@@ -887,6 +908,7 @@ contains
 
    subroutine prolong_1var(this, iv, pos, bnd_type, dim4)
 
+      use cg_cost_data,     only: I_REFINE
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_ZERO, VAR_CENTER, ndims, PPP_AMR  !, dirtyH1
       use dataio_pub,       only: msg, warn
@@ -934,7 +956,11 @@ contains
 
       call ppp_main%start(pq1_label, PPP_AMR)
 
-      position = qna%lst(iv)%position(I_ONE)
+      if (d4) then
+         position = wna%lst(iv)%position(I_ONE)
+      else
+         position = qna%lst(iv)%position(I_ONE)
+      endif
       if (present(pos)) position = pos
       if (position /= VAR_CENTER .and. .not. warned) then
          if (master) call warn("[cg_level_connected:prolong_1var] Only cell-centered interpolation scheme is implemented. Expect inaccurate results for variables that are placed on faces or corners")
@@ -975,6 +1001,8 @@ contains
       cgl => fine%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          associate( seg => cg%pi_tgt%seg )
          if (allocated(cg%pi_tgt%seg)) then
             do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
@@ -989,6 +1017,8 @@ contains
             enddo
          endif
          end associate
+
+         call cg%costs%stop(I_REFINE)
          cgl => cgl%nxt
       enddo
 
@@ -996,6 +1026,8 @@ contains
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          associate( seg => cg%po_tgt%seg )
          do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
 
@@ -1014,6 +1046,8 @@ contains
             endif
          enddo
          end associate
+
+         call cg%costs%stop(I_REFINE)
          cgl => cgl%nxt
       enddo
 
@@ -1024,6 +1058,8 @@ contains
       cgl => fine%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          if (allocated(cg%pi_tgt%seg) .and. .not. cg%ignore_prolongation) then
 
             box_8 = int(cg%ijkse, kind=8)
@@ -1061,6 +1097,8 @@ contains
             endif
 
          endif
+
+         call cg%costs%stop(I_REFINE)
          cgl => cgl%nxt
       enddo
       call ppp_main%stop(pq1_label, PPP_AMR)
@@ -1115,6 +1153,7 @@ contains
 
    subroutine prolong_bnd_from_coarser(this, ind, arr4d, dir, nocorners)
 
+      use cg_cost_data,     only: I_REFINE
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
       use constants,        only: I_ONE, xdim, ydim, zdim, LO, HI, base_level_id, PPP_AMR  !, dirtyH1
@@ -1187,6 +1226,8 @@ contains
       ! be ready to receive everything into right buffers
       cgl => this%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          associate ( seg => cgl%cg%pib_tgt%seg )
          if (allocated(cgl%cg%pib_tgt%seg)) then
             do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
@@ -1202,12 +1243,16 @@ contains
             enddo
          endif
          end associate
+
+         call cgl%cg%costs%stop(I_REFINE)
          cgl => cgl%nxt
       enddo
 
       ! send coarse data
       cgl => coarse%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          associate( seg => cgl%cg%pob_tgt%seg )
          if (allocated(cgl%cg%pob_tgt%seg)) then
             do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
@@ -1230,6 +1275,8 @@ contains
             enddo
          endif
          end associate
+
+         call cgl%cg%costs%stop(I_REFINE)
          cgl => cgl%nxt
       enddo
 
@@ -1243,6 +1290,7 @@ contains
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          associate ( seg => cg%pib_tgt%seg )
          if (allocated(cg%pib_tgt%seg)) then
@@ -1295,6 +1343,8 @@ contains
             endif
          endif
          end associate
+
+         call cg%costs%stop(I_REFINE)
          cgl => cgl%nxt
       enddo
 
@@ -1440,6 +1490,7 @@ contains
 
    subroutine restrict_1var(this, iv, pos, dim4)
 
+      use cg_cost_data,     only: I_REFINE
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, I_ONE, refinement_factor, VAR_CENTER, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: msg, warn, die
       use domain,           only: dom
@@ -1508,6 +1559,8 @@ contains
       cgl => coarse%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          if (allocated(cg%ri_tgt%seg)) then
             do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
                nr = nr + I_ONE
@@ -1522,6 +1575,8 @@ contains
                end associate
             enddo
          endif
+
+         call cg%costs%stop(I_REFINE)
          cgl => cgl%nxt
       enddo
 
@@ -1530,6 +1585,8 @@ contains
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          do g = lbound(cg%ro_tgt%seg(:), dim=1), ubound(cg%ro_tgt%seg(:), dim=1)
 
             associate (seg => cg%ro_tgt%seg(g))
@@ -1623,6 +1680,8 @@ contains
                endif
             end associate
          enddo
+
+         call cg%costs%stop(I_REFINE)
          cgl => cgl%nxt
       enddo
 
@@ -1633,6 +1692,8 @@ contains
       cgl => coarse%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          if (allocated(cg%ri_tgt%seg)) then
 
             ! disables check_dirty
@@ -1666,6 +1727,8 @@ contains
                endif
             enddo
          endif
+
+         call cg%costs%stop(I_REFINE)
          cgl => cgl%nxt
       enddo
 

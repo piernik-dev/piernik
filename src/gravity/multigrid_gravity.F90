@@ -675,6 +675,7 @@ contains
 
    subroutine init_source(i_sg_dens)
 
+      use cg_cost_data,      only: I_MULTIGRID
       use cg_leaves,         only: leaves
       use cg_list,           only: cg_list_element
       use cg_list_global,    only: all_cg
@@ -715,7 +716,11 @@ contains
             cgl => leaves%first
             do while (associated(cgl))
                cg => cgl%cg
+               call cg%costs%start
+
                cgl%cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_sg_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
+
+               call cg%costs%stop(I_MULTIGRID)
                cgl => cgl%nxt
             enddo
          else
@@ -1060,7 +1065,7 @@ contains
 #ifdef DEBUG
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
       inquire(file = "_dump_result_", EXIST=dump_result)
-#else  /* !DEBUG */
+#else /* !DEBUG */
       dump_every_step = .false.
       dump_result = .false.
 #endif /* DEBUG */

@@ -42,6 +42,7 @@ contains
    subroutine scan_for_refinements
 
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
+      use cg_cost_data,          only: I_REFINE
       use cg_leaves,             only: leaves
       use cg_list,               only: cg_list_element
       use constants,             only: I_ONE, pSUM, PPP_AMR, PPP_PROB
@@ -111,7 +112,11 @@ contains
       ! it can be converted to URC routine but it must be guaranteed that it goes after parents_prevent_derefinement because it modifies cg%flag%map
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          call cgl%cg%refinemap2SFC_list
+
+         call cgl%cg%costs%stop(I_REFINE)
          cgl => cgl%nxt
       enddo
       call ppp_main%stop(scan_ref_label, PPP_AMR)
@@ -122,6 +127,7 @@ contains
 
       subroutine prepare_ref
 
+         use cg_cost_data,       only: I_REFINE
          use cg_level_connected, only: cg_level_connected_t
          use cg_level_finest,    only: finest
          use cg_list,            only: cg_list_element
@@ -138,12 +144,15 @@ contains
             ! formerly cg_list::clear_ref_flags
             cgl => curl%first
             do while (associated(cgl))
+               call cgl%cg%costs%start
+
                call cgl%cg%flag%init
 
                ! Mark everything for derefinement by default.
                ! It requires correct propagation of refinement requests from parent blocks as derefinement inhibitions on their appropriate children later
                cgl%cg%flag%derefine = .true.
 
+               call cgl%cg%costs%stop(I_REFINE)
                cgl => cgl%nxt
             enddo
 
@@ -156,9 +165,10 @@ contains
 
       subroutine sanitize_ref_flags
 
-         use cg_leaves,  only: leaves
-         use cg_list,    only: cg_list_element
-         use refinement, only: level_min, level_max
+         use cg_cost_data, only: I_REFINE
+         use cg_leaves,    only: leaves
+         use cg_list,      only: cg_list_element
+         use refinement,   only: level_min, level_max
 
          implicit none
 
@@ -166,6 +176,8 @@ contains
 
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
+
             associate (cg => cgl%cg)
                if (cg%flag%get(int(cg%ijkse, kind=8), cg%leafmap)) cg%flag%derefine = .false.
                if (cg%l%id >= level_max) call cg%flag%clear
@@ -173,6 +185,8 @@ contains
                if (cg%l%id >  level_max) cg%flag%derefine = .true.
                if (cg%l%id <= level_min) cg%flag%derefine = .false.
             end associate
+
+            call cgl%cg%costs%stop(I_REFINE)
             cgl => cgl%nxt
          enddo
 
@@ -182,8 +196,9 @@ contains
 
       integer function count_ref_flags() result(cnt)
 
-         use cg_leaves, only: leaves
-         use cg_list,   only: cg_list_element
+         use cg_cost_data, only: I_REFINE
+         use cg_leaves,    only: leaves
+         use cg_list,      only: cg_list_element
 
          implicit none
 
@@ -194,7 +209,11 @@ contains
          cnt = 0
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
+
             if (cgl%cg%flag%get(int(cgl%cg%ijkse, kind=8), cgl%cg%leafmap)) cnt = cnt + 1
+
+            call cgl%cg%costs%stop(I_REFINE)
             cgl => cgl%nxt
          enddo
 
@@ -239,6 +258,7 @@ contains
 
    subroutine parents_prevent_derefinement_lev(lev)
 
+      use cg_cost_data,       only: I_REFINE
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: xdim, zdim, LO, HI, I_ONE, I_ZERO
@@ -287,6 +307,8 @@ contains
       cgl => lev%first
       do while (associated(cgl))
          associate (cg => cgl%cg)
+            call cg%costs%start
+
             if (cg%flag%get()) then
                if (allocated(cg%ri_tgt%seg)) then
                   do g = lbound(cg%ri_tgt%seg(:), dim=1, kind=4), ubound(cg%ri_tgt%seg(:), dim=1, kind=4)
@@ -314,6 +336,8 @@ contains
                   enddo
                endif
             endif
+
+            call cg%costs%stop(I_REFINE)
          end associate
          cgl => cgl%nxt
 
@@ -723,6 +747,7 @@ contains
 
    subroutine refine_one_grid(curl, cgl)
 
+      use cg_cost_data,       only: I_REFINE
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
@@ -742,6 +767,8 @@ contains
       endif
 
       if (.not. associated(curl%finer)) call finest%add_finer
+
+      call cgl%cg%costs%start
       associate (flag => cgl%cg%flag)
          if (flag%pending_blocks()) then
             do b = lbound(flag%SFC_refine_list, dim=1), ubound(flag%SFC_refine_list, dim=1)
@@ -757,6 +784,7 @@ contains
             call die("[refinement_update:refine_one_grid] populating flag%SFC_refine_list before refining a grid is required")
          endif
       end associate
+      call cgl%cg%costs%stop(I_REFINE)
 
    end subroutine refine_one_grid
 
@@ -770,6 +798,7 @@ contains
 
    logical function fix_refinement() result(correct)
 
+      use cg_cost_data,     only: I_REFINE
       use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
 !      use cg_list_global,   only: all_cg
@@ -802,7 +831,11 @@ contains
       ! Put a level number to the working array, restrict it and exchange internal boundaries
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          cgl%cg%wa = cgl%cg%l%id
+
+         call cgl%cg%costs%stop(I_REFINE)
          cgl => cgl%nxt
       enddo
 
@@ -821,6 +854,8 @@ contains
       do while (associated(cgl))
 
          associate (cg => cgl%cg)
+            call cg%costs%start
+
             call cg%flag%reset_blocks
             call cg%flag%clear
 
@@ -897,6 +932,8 @@ contains
                enddo
                call cg%refinemap2SFC_list
             endif
+
+            call cg%costs%stop(I_REFINE)
          end associate
 
          cgl => cgl%nxt

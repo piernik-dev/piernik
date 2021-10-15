@@ -421,7 +421,8 @@ contains
 
    subroutine all_mark(this, first)
 
-      use cg_list, only: cg_list_element
+      use cg_cost_data, only: I_REFINE
+      use cg_list,      only: cg_list_element
 
       implicit none
 
@@ -432,7 +433,11 @@ contains
 
       cgl => first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          call this%mark(cgl%cg)
+
+         call cgl%cg%costs%stop(I_REFINE)
          cgl => cgl%nxt
       enddo
 
@@ -446,9 +451,10 @@ contains
 
    subroutine plot_mark(this, first)
 
-      use cg_list,   only: cg_list_element
-      use constants, only: INVALID, PPP_AMR, PPP_IO
-      use ppp,       only: ppp_main
+      use cg_cost_data, only: I_REFINE
+      use cg_list,      only: cg_list_element
+      use constants,    only: INVALID, PPP_AMR, PPP_IO
+      use ppp,          only: ppp_main
 
       implicit none
 
@@ -465,7 +471,11 @@ contains
             call ppp_main%start(plot_label, PPP_AMR + PPP_IO)
             cgl => first
             do while (associated(cgl))
+               call cgl%cg%costs%start
+
                call p%mark(cgl%cg)
+
+               call cgl%cg%costs%stop(I_REFINE)
                cgl => cgl%nxt
             enddo
             call ppp_main%stop(plot_label, PPP_AMR + PPP_IO)

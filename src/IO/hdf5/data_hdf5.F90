@@ -670,9 +670,9 @@ contains
 
 #ifdef NBODY_1FILE
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(pack(hdf_vars, hdf_vars_avail)), gdf_translate(pdsets))
-#else
+#else /* !NBODY_1FILE */
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(pack(hdf_vars, hdf_vars_avail)))
-#endif /* NBODY_1FILE */
+#endif /* !NBODY_1FILE */
 
       if (cg_desc%tot_cg_n < 1) call die("[data_hdf5:write_cg_to_output] no cg available!")
 
@@ -922,9 +922,9 @@ contains
 
 #ifdef NBODY_1FILE
    subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)
-#else
+#else /* !NBODY_1FILE */
    subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail)
-#endif /* NBODY_1FILE */
+#endif /* !NBODY_1FILE */
 
       use common_hdf5, only: create_empty_cg_dataset, hdf_vars, hdf_vars_avail, O_OUT
       use hdf5,        only: HID_T, HSIZE_T
