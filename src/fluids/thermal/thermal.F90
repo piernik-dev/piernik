@@ -50,7 +50,7 @@ module thermal
    real                            :: Teql         !> temperature of cooling / heating equilibrium
    integer(kind=4), protected      :: itemp = INVALID
    real                            :: x_ion        !> ionization degree
-   integer                         :: isochoric    !> 1 for isochoric, 0 for isobaric
+   integer                         :: isochoric    !> 1 for isochoric, 2 for isobaric
    real                            :: d_isochoric  ! constant density used in isochoric case
    real, dimension(:), allocatable :: Tref, alpha, lambda0
    integer                         :: nfuncs
@@ -408,9 +408,7 @@ contains
                               ener(x,y,z) = ener(x,y,z) + esrc * dt_cool
                               ta(x,y,z) = ikbgmh * int_ener(x,y,z) / dens(x,y,z)
                               t1 = t1 + dt_cool
-                              if (t1 + dt_cool .gt. dt) then
-                                 dt_cool = dt - t1
-                              endif
+                              if (t1 + dt_cool .gt. dt) dt_cool = dt - t1
                            enddo
                         enddo
                      enddo
@@ -443,9 +441,7 @@ contains
                               ener(x,y,z) = kinmag_ener(x,y,z) + int_ener(x,y,z)
 
                               t1 = t1 + dt_cool
-                              if (t1 + dt_cool .gt. dt) then
-                                 dt_cool = dt - t1
-                              endif
+                              if (t1 + dt_cool .gt. dt) dt_cool = dt - t1
                            enddo
                         enddo
                      enddo
@@ -473,9 +469,7 @@ contains
                               ener(x,y,z)     = ener(x,y,z)     + hfunc * dt_cool
 
                               t1 = t1 + dt_cool
-                              if (t1 + dt_cool .gt. dt) then
-                                 dt_cool = dt - t1
-                              endif
+                              if (t1 + dt_cool .gt. dt) dt_cool = dt - t1
                            enddo
                         enddo
                      enddo
