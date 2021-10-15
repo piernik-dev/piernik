@@ -87,7 +87,7 @@ contains
       call init_thermal
 #endif /* THERM */
 
-   end subroutine init_sources
+    end subroutine init_sources
 
 !/*
 !>
@@ -97,11 +97,21 @@ contains
 !*/
    subroutine external_sources(forward)
 
+#ifdef THERM
+      use global,  only: dt
+      use thermal, only: thermal_sources
+#endif /* THERM */
+
       implicit none
 
       logical, intent(in) :: forward
 
-      if (forward) return
+      if (forward) then
+#ifdef THERM
+         call thermal_sources(2*dt)
+#endif /* THERM */
+         return
+      endif
 
    end subroutine external_sources
 
@@ -166,9 +176,6 @@ contains
 #ifdef SHEAR
       use shear,            only: shear_acc
 #endif /* SHEAR */
-#ifdef THERM
-      use thermal,          only: src_thermal_exec
-#endif /* THERM */
 
       implicit none
 
@@ -223,10 +230,6 @@ contains
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS && IONIZED */
-#ifdef THERM
-      call src_thermal_exec(u, n, bb, newsrc)
-      usrc(:,:) = usrc(:,:) + newsrc(:,:)
-#endif /* THERM */
 
 ! --------------------------------------------------
 
@@ -277,9 +280,6 @@ contains
 #ifndef BALSARA
       use timestepinteractions, only: timestep_interactions
 #endif /* !BALSARA */
-#ifdef THERM
-      use timestepthermal,      only: timestep_thermal
-#endif /* THERM */
 
       implicit none
 
@@ -288,9 +288,6 @@ contains
 #ifndef BALSARA
          dt = min(dt, timestep_interactions())
 #endif /* !BALSARA */
-#ifdef THERM
-         dt = min(dt, timestep_thermal())
-#endif /* THERM */
 
       return
       if (.false. .and. dt < 0) return

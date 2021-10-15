@@ -116,6 +116,7 @@ contains
 
       halfstep = .false.
       t = t + dt
+
       call make_3sweeps(.true.) ! X -> Y -> Z
 
 ! Sources should be hooked to problem_customize_solution with forward argument
@@ -132,6 +133,7 @@ contains
       halfstep = .true.
       t = t + dt
       dtm = dt
+
       call make_3sweeps(.false.) ! Z -> Y -> X
       call update_magic_mass
 #ifdef COSM_RAY_ELECTRONS
