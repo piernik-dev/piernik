@@ -30,15 +30,12 @@ module initproblem
 ! Initial condition for Sedov-Taylor explosion
 ! Written by: M. Hanasz, March 2006
 
-
    implicit none
 
    private
    public  :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real                              :: d0, T0, bx0, by0, bz0, pertamp
-
-   public  :: T0, d0
+   real :: d0, T0, bx0, by0, bz0, pertamp
 
    namelist /PROBLEM_CONTROL/ d0, T0, bx0, by0, bz0, pertamp
 
@@ -57,7 +54,7 @@ contains
 
       user_tsl       => thermal_tsl
 #ifdef HDF5
-      user_vars_hdf5 => crtest_analytic_ecr1
+      user_vars_hdf5 => therm_inst_vars_hdf5
 #endif /* HDF5 */
 
    end subroutine problem_pointers
@@ -121,7 +118,6 @@ contains
 
       endif
 
-
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
    subroutine problem_initial_conditions
@@ -144,9 +140,9 @@ contains
       complex                         :: im
 
       im = (0,1)
-      kx = 2.*pi/dom%L_(xdim) !* 0.0
-      ky = 2.*pi/dom%L_(ydim) !* 0.0
-      kz = 2.*pi/dom%L_(zdim) !* 0.0
+      kx = 2.*pi/dom%L_(xdim)
+      ky = 2.*pi/dom%L_(ydim)
+      kz = 2.*pi/dom%L_(zdim)
       do p = 1, flind%energ
          associate(fl => flind%all_fluids(p)%fl)
 
@@ -183,7 +179,6 @@ contains
 
                      !cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + pertamp*cg%u(fl%ien,i,j,k)      * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
                      cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*(cg%u(fl%imx,i,j,k)**2 +cg%u(fl%imy,i,j,k)**2 + cg%u(fl%imz,i,j,k)**2)/cg%u(fl%idn,i,j,k)
-
                   enddo
                enddo
             enddo
@@ -236,7 +231,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine crtest_analytic_ecr1(var, tab, ierrh, cg)
+   subroutine therm_inst_vars_hdf5(var, tab, ierrh, cg)
 
       use constants,        only: xdim, ydim, zdim
       use fluidindex,       only: flind
@@ -277,9 +272,6 @@ contains
             ierrh = -1
       end select
 
-    end subroutine crtest_analytic_ecr1
-
-!-----------------------------------------------------------------------------
-
+    end subroutine therm_inst_vars_hdf5
 
 end module initproblem
