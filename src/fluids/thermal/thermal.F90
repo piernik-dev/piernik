@@ -351,8 +351,8 @@ contains
 
       real,                    intent(in) :: dt
       real, dimension(:, :, :), pointer   :: ta, dens, ener
-      real, dimension(:,:,:), allocatable :: T, int_ener, kinmag_ener
-      real                                :: dt_cool, t1, tcool, cfunc, hfunc, esrc, diff, kbgmh, ikbgmh
+      real, dimension(:,:,:), allocatable :: int_ener, kinmag_ener
+      real                                :: dt_cool, t1, tcool, cfunc, hfunc, esrc, diff, kbgmh, ikbgmh, Tnew
       integer                             :: ifl, i, x, y, z
       integer, dimension(3)               :: n
 
@@ -417,7 +417,6 @@ contains
                   enddo
 
                case ('EIS')
-                  allocate(T(n(1),n(2),n(3)))
                   do x = 1, n(1)
                      do y = 1, n(2)
                         do z = 1, n(3)
@@ -439,8 +438,8 @@ contains
                            t1 = 0.0
                            do while (t1 .lt. dt)
                               ta(x,y,z) = int_ener(x,y,z) * ikbgmh / dens(x,y,z)
-                              call temp_EIS(tcool, dt_cool, pfl%gam, kbgmh, ta(x,y,z), dens(x,y,z), T(x,y,z))
-                              int_ener(x,y,z) = dens(x,y,z) * kbgmh * T(x,y,z)
+                              call temp_EIS(tcool, dt_cool, pfl%gam, kbgmh, ta(x,y,z), dens(x,y,z), Tnew)
+                              int_ener(x,y,z) = dens(x,y,z) * kbgmh * Tnew
                               ener(x,y,z) = kinmag_ener(x,y,z) + int_ener(x,y,z)
 
                               t1 = t1 + dt_cool
@@ -451,14 +450,12 @@ contains
                         enddo
                      enddo
                   enddo
-                  deallocate(T)
 
                case ('EE')
                   if (cool_model .eq. 'piecewise_power_law') then
                      write(msg,'(3a)') 'Warning: Make sure you are not using the heating in both the explicit and EI schemes.'
                      if (master) call warn(msg)
                   endif
-                  allocate(T(n(1),n(2),n(3)))
                   do x = 1, n(1)
                      do y = 1, n(2)
                         do z = 1, n(3)
@@ -467,8 +464,8 @@ contains
                            t1 = 0.0
                            do while (t1 .lt. dt)
                               ta(x,y,z) = int_ener(x,y,z) * ikbgmh / dens(x,y,z)
-                              call temp_EIS(tcool, dt_cool, pfl%gam, kbgmh, ta(x,y,z), dens(x,y,z), T(x,y,z))
-                              int_ener(x,y,z) = dens(x,y,z) * kbgmh * T(x,y,z)
+                              call temp_EIS(tcool, dt_cool, pfl%gam, kbgmh, ta(x,y,z), dens(x,y,z), Tnew)
+                              int_ener(x,y,z) = dens(x,y,z) * kbgmh * Tnew
                               ener(x,y,z) = kinmag_ener(x,y,z) + int_ener(x,y,z)
 
                               call heat(dens(x,y,z), hfunc)
@@ -483,7 +480,6 @@ contains
                         enddo
                      enddo
                   enddo
-                  deallocate(T)
 
                case default
                   write(msg,'(3a)') 'scheme: ',scheme,' not implemented'
