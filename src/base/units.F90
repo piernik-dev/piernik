@@ -68,7 +68,7 @@
 !<
 module units
 
-   use constants, only: cbuff_len, U_LEN, U_MAG, U_TEMP, U_ENER
+   use constants, only: cbuff_len, U_LEN, U_MAG, U_ENER
 
    implicit none
 
@@ -174,7 +174,7 @@ contains
 !<
    subroutine init_units
 
-      use constants,  only: pi, fpi, dirtyL, PIERNIK_INIT_MPI
+      use constants,  only: pi, fpi, dirtyL, PIERNIK_INIT_MPI, U_TEMP
       use dataio_pub, only: warn, printinfo, msg, die, code_progress
       use func,       only: operator(.equals.)
       use mpisetup,   only: master

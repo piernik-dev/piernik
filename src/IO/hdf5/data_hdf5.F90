@@ -99,6 +99,9 @@ contains
          case ("pren", "prei")
             f%fu = "\rm{g}/\rm{cm}/\rm{s}^2"
             f%f2cgs = 1.0 / (gram/cm/sek**2)
+         case ("temn", "temi")
+            f%fu = "\rm{K}"
+            f%f2cgs = 1.0
          case ("magx", "magy", "magz", "magB")
             f%fu = "\rm{Gs}"
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek)
@@ -161,6 +164,8 @@ contains
                newname = "specific_energy"
             case ("pren", "prei")
                newname = "pressure"
+            case ("temn", "temi")
+               newname = "temperature"
             case ("magx", "magy", "magz")
                write(newname, '("mag_field_",A1)') var(4:4)
             case ("divbc", "divbf")
@@ -306,24 +311,27 @@ contains
 !<
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
-      use common_hdf5, only: common_shortcuts
-      use constants,   only: dsetnamelen, I_ONE
-      use fluids_pub,  only: has_ion, has_neu, has_dst
-      use fluidindex,  only: flind
-      use fluidtypes,  only: component_fluid
-      use func,        only: ekin, emag, sq_sum3
-      use grid_cont,   only: grid_container
-      use mpisetup,    only: proc
+      use common_hdf5,      only: common_shortcuts
+      use constants,        only: dsetnamelen, I_ONE
+      use fluids_pub,       only: has_ion, has_neu, has_dst
+      use fluidindex,       only: flind
+      use fluidtypes,       only: component_fluid
+      use func,             only: ekin, emag, sq_sum3
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: proc
 #ifdef MAGNETIC
-      use constants,   only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX, I_EIGHT
-      use div_B,       only: divB_c_IO
-      use domain,      only: dom
-      use global,      only: cc_mag
+      use constants,        only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX, I_EIGHT
+      use div_B,            only: divB_c_IO
+      use domain,           only: dom
+      use global,           only: cc_mag
 #endif /* MAGNETIC */
 #ifdef COSM_RAY_ELECTRONS
       use initcrspectrum,   only: dfpq
       use named_array_list, only: wna
 #endif /* COSM_RAY_ELECTRONS */
+#ifndef ISO
+      use units,            only: kboltz, mH
+#endif /* !ISO */
 
       implicit none
 
@@ -426,6 +434,18 @@ contains
          case ("ethi")
 #ifndef ISO
             tab(:,:,:) = (cg%u(flind%ion%ien, RNG) - &
+                 &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) -          &
+                 &       emag_c) / cg%u(flind%ion%idn, RNG)
+#endif /* !ISO */
+         case ("temn")
+#ifndef ISO
+            tab(:,:,:) = flind%neu%gam_1 * mH / kboltz * (cg%u(flind%neu%ien, RNG) - &
+                 &       ekin(cg%u(flind%neu%imx, RNG), cg%u(flind%neu%imy, RNG), cg%u(flind%neu%imz, RNG), cg%u(flind%neu%idn, RNG))) /         &
+                 &       cg%u(flind%neu%idn, RNG)
+#endif /* !ISO */
+         case ("temi")
+#ifndef ISO
+            tab(:,:,:) = flind%ion%gam_1 * mH / kboltz * (cg%u(flind%ion%ien, RNG) - &
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) -          &
                  &       emag_c) / cg%u(flind%ion%idn, RNG)
 #endif /* !ISO */
