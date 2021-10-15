@@ -1014,7 +1014,6 @@ contains
 #ifdef NBODY_1FILE
                n_part = count_all_particles()
                pid_max = pid_gen
-               print *, 'pid_max master', pid_max, pid_gen
 #endif /* NBODY_1FILE */
             else
                call MPI_Recv(cg_rl,  size(cg_rl, kind=4),  MPI_INTEGER,  p, tag,         MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
@@ -1040,7 +1039,6 @@ contains
                cg_npart = n_part
                allocate(cg_pid_max)
                cg_pid_max = pid_max
-               print *, 'pid_max write', pid_max, pid_gen
 
                if (int(cg_npart, kind=4) /= cg_npart) call die("[common_hdf5:write_to_hdf5_v2] cg_npart needs to be 64-bit")
                if (int(cg_pid_max, kind=4) /= pid_max) call die("[common_hdf5:write_to_hdf5_v2] pid_max needs to be 64-bit")
@@ -1155,7 +1153,6 @@ contains
          n_part = count_all_particles()
          call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, tag+I_FIVE, MPI_COMM_WORLD, err_mpi)
          pid_max = pid_gen
-         print *, 'pid_max slaves', pid_max, pid_gen
          call MPI_Send(pid_max, I_ONE, MPI_INTEGER, FIRST, tag+I_SIX, MPI_COMM_WORLD, err_mpi)
 #endif /* NBODY_1FILE */
          deallocate(cg_rl, cg_n_b, cg_off)
