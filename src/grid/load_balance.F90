@@ -53,7 +53,7 @@ module load_balance
    !   verbosity
    integer(kind=4),          protected :: verbosity         !< Enumerated from 0: none, summary, detailed, elaborate
    integer(kind=4),          protected :: verbosity_nstep   !< How often to inform about cg costs
-   integer                             :: umsg_verbosity    !< Verbosity level requested by user msg
+   integer(kind=4)                     :: umsg_verbosity    !< Verbosity level requested by user msg
 
    !   thread exclusion
    logical,                  protected :: enable_exclusion  !< When .true. then threads detected as underperforming will be excluded for load balancing

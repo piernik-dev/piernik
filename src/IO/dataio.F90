@@ -642,7 +642,7 @@ contains
             case ('tsl')
                call write_timeslice
             case ('ppp')
-               if (abs(umsg_param) < huge(1)) then
+               if (abs(umsg_param) < huge(1_4)) then
                   umsg_request = max(1, int(umsg_param))
                   write(msg,'(a,i10,a)') "[dataio:user_msg_handler] enable PPP for ", umsg_request, &
                        " step(s)" // trim(merge("s", " ", umsg_request == 1))
@@ -653,7 +653,7 @@ contains
             case ('perf')
                if (umsg_param <= 0.) umsg_param = V_HOST
                if (abs(umsg_param) < huge(1_4)) then
-                  umsg_verbosity = int(umsg_param)
+                  umsg_verbosity = int(umsg_param, kind=4)
                else
                   if (master) call warn("[dataio:user_msg_handler] Cannot convert the parameter to integer")
                endif

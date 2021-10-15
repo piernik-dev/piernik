@@ -516,6 +516,15 @@ contains
       endif
 #endif /* MAGNETIC */
 
+#ifdef DEBUG
+      if (master) &
+#  ifdef MPIF08
+           call printinfo("    use mpi_f08 (modern interface)")
+#  else /* !MPIF08 */
+           call printinfo("    use mpi (old interface)")
+#  endif /* !MPIF08 */
+#endif /* DEBUG */
+
       if (all(ord_fluid_prolong /= [O_INJ, O_LIN])) then
          write(msg, '(a,i3,a)')"[global:init_global] Prolongation order ", ord_fluid_prolong, " is not positive-definite and thus not allowed for density and energy. Degrading to injection (0)"
          if (master) call warn(msg)
