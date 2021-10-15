@@ -45,17 +45,7 @@ contains
 
    subroutine problem_pointers
 
-#ifdef HDF5
-      use dataio_user, only: user_vars_hdf5
-#endif /* HDF5 */
-      use dataio_user, only: user_tsl
-
       implicit none
-
-      user_tsl       => thermal_tsl
-#ifdef HDF5
-      user_vars_hdf5 => therm_inst_vars_hdf5
-#endif /* HDF5 */
 
    end subroutine problem_pointers
 
@@ -205,73 +195,5 @@ contains
       call fit_cooling_curve()
 
    end subroutine problem_initial_conditions
-!-----------------------------------------------------------------------------
-   subroutine thermal_tsl(user_vars, tsl_names)
-
-      use constants,   only: pSUM
-      use diagnostics, only: pop_vector
-      use mpisetup,    only: proc, master, piernik_MPI_Allreduce
-
-      implicit none
-
-      real, dimension(:), intent(inout), allocatable                       :: user_vars
-      character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
-      real :: output
-
-      if (present(tsl_names)) then
-         call pop_vector(tsl_names, len(tsl_names(1)), ["foobar_thermal"])    !   add to header
-      else
-         ! do mpi stuff here...
-         output = real(proc,8)
-         call piernik_MPI_Allreduce(output, pSUM)
-         if (master) call pop_vector(user_vars,[output])                 !   pop value
-      endif
-
-   end subroutine thermal_tsl
-
-!-----------------------------------------------------------------------------
-
-   subroutine therm_inst_vars_hdf5(var, tab, ierrh, cg)
-
-      use constants,        only: xdim, ydim, zdim
-      use fluidindex,       only: flind
-      use fluidtypes,       only: component_fluid
-      use func,             only: emag, ekin
-      use grid_cont,        only: grid_container
-      use named_array_list, only: wna
-      use units,            only: kboltz, mH
-
-      implicit none
-
-      character(len=*),               intent(in)             :: var
-      real, dimension(:,:,:),         intent(inout)          :: tab
-      integer,                        intent(inout)          :: ierrh
-      type(grid_container), pointer,  intent(in)             :: cg
-      real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: eint, kin_ener, mag_ener, temp
-      class(component_fluid), pointer                        :: pfl
-
-      !> \warning ONLY ONE FLUID IS USED!!!
-      pfl => flind%all_fluids(1)%fl
-      if (pfl%has_energy) then
-            kin_ener = ekin(cg%w(wna%fi)%span(pfl%imx,cg%ijkse), cg%w(wna%fi)%span(pfl%imy,cg%ijkse), cg%w(wna%fi)%span(pfl%imz,cg%ijkse), cg%w(wna%fi)%span(pfl%idn,cg%ijkse))
-            if (pfl%is_magnetized) then
-               mag_ener = emag(cg%w(wna%bi)%span(xdim,cg%ijkse), cg%w(wna%bi)%span(ydim,cg%ijkse), cg%w(wna%bi)%span(zdim,cg%ijkse))
-               eint = cg%w(wna%fi)%span(pfl%ien,cg%ijkse) - kin_ener - mag_ener
-            else
-               eint = cg%w(wna%fi)%span(pfl%ien,cg%ijkse) - kin_ener
-            endif
-      endif
-
-      temp = (pfl%gam-1)*mH/kboltz*eint/cg%w(wna%fi)%span(pfl%idn,cg%ijkse) ! this is where the dumped temperature is computed throughout
-
-      ierrh = 0
-      select case (trim(var))
-         case ("temp")
-            tab(:,:,:) = real(temp, 4)
-         case default
-            ierrh = -1
-      end select
-
-    end subroutine therm_inst_vars_hdf5
 
 end module initproblem
