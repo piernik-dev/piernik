@@ -41,7 +41,7 @@ module thermal
    implicit none
 
    private
-   public ::  init_thermal, thermal_active, cfl_coolheat, thermal_substep, itemp, fit_cooling_curve
+   public ::  init_thermal, thermal_active, cfl_coolheat, thermal_sources, itemp, fit_cooling_curve
 
    character(len=cbuff_len)        :: cool_model, cool_curve, heat_model, scheme, cool_file
    logical                         :: thermal_active
@@ -333,7 +333,7 @@ contains
 
    end subroutine fit_proc
 
-   subroutine thermal_substep(dt)
+   subroutine thermal_sources(dt)
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
@@ -499,7 +499,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine thermal_substep
+   end subroutine thermal_sources
 
    subroutine cool(temp, coolf)
 

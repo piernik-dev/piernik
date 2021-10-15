@@ -104,9 +104,6 @@ contains
       use initcrspectrum, only: use_cresp_evol
       use ppp,            only: ppp_main
 #endif /* COSM_RAY_ELECTRONS */
-#ifdef THERM
-      use thermal,        only: thermal_substep
-#endif /* THERM */
 
       implicit none
 
@@ -119,9 +116,7 @@ contains
 
       halfstep = .false.
       t = t + dt
-#ifdef THERM
-      call thermal_substep(dt)
-#endif /* THERM */
+
       call make_3sweeps(.true.) ! X -> Y -> Z
 
 ! Sources should be hooked to problem_customize_solution with forward argument
@@ -138,9 +133,7 @@ contains
       halfstep = .true.
       t = t + dt
       dtm = dt
-#ifdef THERM
-      call thermal_substep(dt)
-#endif /* THERM */
+
       call make_3sweeps(.false.) ! Z -> Y -> X
       call update_magic_mass
 #ifdef COSM_RAY_ELECTRONS
