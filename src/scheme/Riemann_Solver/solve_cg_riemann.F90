@@ -125,7 +125,7 @@ contains
       use global,           only: dt, cc_mag, integration_order
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
-      use sources,          only: all_sources, care_for_positives
+      use sources,          only: internal_sources, care_for_positives
 
       implicit none
 
@@ -218,7 +218,7 @@ contains
                call solve(u0, b0(:, xdim:zdim), u1, b1(:, xdim:zdim), cs2, rk_coef(istep) * dt/cg%dl(ddim), eflx)
             endif
 
-            call all_sources(size(u, 1, kind=4), u, u1, b, cg, istep, ddim, i1, i2, rk_coef(istep) * dt, vx)
+            call internal_sources(size(u, 1, kind=4), u, u1, b, cg, istep, ddim, i1, i2, rk_coef(istep) * dt, vx)
             ! See the results of Jeans test with RTVD and RIEMANN for estimate of accuracy.
 
             call care_for_positives(size(u, 1, kind=4), u1, b, cg, ddim, i1, i2)
@@ -248,7 +248,7 @@ contains
       use global,           only: dt, integration_order
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
-      use sources,          only: all_sources, care_for_positives
+      use sources,          only: internal_sources, care_for_positives
 
       implicit none
 
@@ -296,7 +296,7 @@ contains
 
             call solve_u(u0, u1, cs2, rk_coef(istep) * dt/cg%dl(ddim), eflx)
 
-            call all_sources(size(u, 1, kind=4), u, u1, b, cg, istep, ddim, i1, i2, rk_coef(istep) * dt, vx)
+            call internal_sources(size(u, 1, kind=4), u, u1, b, cg, istep, ddim, i1, i2, rk_coef(istep) * dt, vx)
             ! See the results of Jeans test with RTVD and RIEMANN for estimate of accuracy.
 
             call care_for_positives(size(u, 1, kind=4), u1, b, cg, ddim, i1, i2)

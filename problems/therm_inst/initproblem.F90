@@ -35,7 +35,7 @@ module initproblem
    private
    public  :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real    :: d0, T0, bx0, by0, bz0, pertamp
+   real :: d0, T0, bx0, by0, bz0, pertamp
 
    namelist /PROBLEM_CONTROL/ d0, T0, bx0, by0, bz0, pertamp
 
@@ -54,7 +54,7 @@ contains
 
       user_tsl       => thermal_tsl
 #ifdef HDF5
-      user_vars_hdf5 => crtest_analytic_ecr1
+      user_vars_hdf5 => therm_inst_vars_hdf5
 #endif /* HDF5 */
 
    end subroutine problem_pointers
@@ -114,7 +114,7 @@ contains
          bx0          = rbuff(3)
          by0          = rbuff(4)
          bz0          = rbuff(5)
-         pertamp = rbuff(6)
+         pertamp      = rbuff(6)
 
       endif
 
@@ -128,15 +128,21 @@ contains
       use domain,     only: dom
       use fluidindex, only: flind
       use grid_cont,  only: grid_container
+      use thermal,    only: itemp, fit_cooling_curve
       use units,      only: kboltz, mH
 
       implicit none
 
       integer                         :: i, j, k, p
-      real                            :: cs, p0
+      real                            :: cs, p0, kx, ky, kz
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
+      complex                         :: im
 
+      im = (0,1)
+      kx = 2.*pi/dom%L_(xdim)
+      ky = 2.*pi/dom%L_(ydim)
+      kz = 2.*pi/dom%L_(zdim)
       do p = 1, flind%energ
          associate(fl => flind%all_fluids(p)%fl)
 
@@ -159,12 +165,19 @@ contains
                      cg%u(fl%imy,i,j,k) = 0.0
                      cg%u(fl%imz,i,j,k) = 0.0
                      cg%u(fl%ien,i,j,k) = p0/(fl%gam_1)
+                     cg%q(itemp)%arr(i,j,k) = T0
 ! Perturbation
-
                      cg%u(fl%imx,i,j,k) = cg%u(fl%imx,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*sin(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*cos(2.*pi*cg%z(k)/dom%L_(zdim))
                      cg%u(fl%imy,i,j,k) = cg%u(fl%imy,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*cos(2.*pi*cg%x(i)/dom%L_(xdim))*sin(2.*pi*cg%y(j)/dom%L_(ydim))*cos(2.*pi*cg%z(k)/dom%L_(zdim))
                      cg%u(fl%imz,i,j,k) = cg%u(fl%imz,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*cos(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*sin(2.*pi*cg%z(k)/dom%L_(zdim))
+                     !cg%u(fl%idn,i,j,k) = cg%u(fl%idn,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cos(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*sin(2.*pi*cg%z(k)/dom%L_(zdim))
 
+                     !cg%u(fl%idn,i,j,k) = cg%u(fl%idn,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)      * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
+                     !cg%u(fl%imx,i,j,k) = cg%u(fl%imx,i,j,k) + pertamp*cg%u(fl%idn,i,j,k) * cs * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
+                     !cg%u(fl%imy,i,j,k) = cg%u(fl%imy,i,j,k) + pertamp*cg%u(fl%idn,i,j,k) * cs * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
+                     !cg%u(fl%imz,i,j,k) = cg%u(fl%imz,i,j,k) + pertamp*cg%u(fl%idn,i,j,k) * cs * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
+
+                     !cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + pertamp*cg%u(fl%ien,i,j,k)      * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
                      cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*(cg%u(fl%imx,i,j,k)**2 +cg%u(fl%imy,i,j,k)**2 + cg%u(fl%imz,i,j,k)**2)/cg%u(fl%idn,i,j,k)
                   enddo
                enddo
@@ -188,6 +201,8 @@ contains
 
          end associate
       enddo
+
+      call fit_cooling_curve()
 
    end subroutine problem_initial_conditions
 !-----------------------------------------------------------------------------
@@ -216,7 +231,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine crtest_analytic_ecr1(var, tab, ierrh, cg)
+   subroutine therm_inst_vars_hdf5(var, tab, ierrh, cg)
 
       use constants,        only: xdim, ydim, zdim
       use fluidindex,       only: flind
@@ -247,7 +262,7 @@ contains
             endif
       endif
 
-      temp = (pfl%gam-1)*mH/kboltz*eint/cg%w(wna%fi)%span(pfl%idn,cg%ijkse)
+      temp = (pfl%gam-1)*mH/kboltz*eint/cg%w(wna%fi)%span(pfl%idn,cg%ijkse) ! this is where the dumped temperature is computed throughout
 
       ierrh = 0
       select case (trim(var))
@@ -257,6 +272,6 @@ contains
             ierrh = -1
       end select
 
-   end subroutine crtest_analytic_ecr1
+    end subroutine therm_inst_vars_hdf5
 
 end module initproblem

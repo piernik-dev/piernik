@@ -35,7 +35,7 @@ program piernik
    use cg_leaves,         only: leaves
    use cg_list_global,    only: all_cg
    use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP, cbuff_len, PPP_IO, PPP_MPI
-   use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump
+   use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump, cleanup_dataio
    use dataio_pub,        only: nend, tend, msg, printinfo, warn, die, code_progress
    use div_B,             only: print_divB_norm
    use finalizepiernik,   only: cleanup_piernik
@@ -44,6 +44,7 @@ program piernik
    use func,              only: operator(.equals.)
    use global,            only: t, nstep, dt, dtm, cfl_violated, print_divB, repeat_step, tstep_attempt
    use initpiernik,       only: init_piernik
+   use lb_helpers,        only: costs_maintenance
    use list_of_cg_lists,  only: all_lists
    use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast, cleanup_mpi
    use named_array_list,  only: qna, wna
@@ -154,6 +155,7 @@ program piernik
       if ((t .equals. tlast) .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
 
       call piernik_MPI_Barrier
+      call costs_maintenance
 
       if (.not.cfl_violated) then
          call ppp_main%start('write_data', PPP_IO)
@@ -252,6 +254,8 @@ program piernik
    call ppp_main%publish  ! we can use HDF5 here because we don't rely on anything that is affected by cleanup_hdf5
    call cleanup_profiling
    call cleanup_mpi
+   call cleanup_dataio
+
    if (master) write(stdout,'(a)')"#"
 
 contains

@@ -62,7 +62,7 @@ contains
       use gridgeometry,       only: set_geo_coeffs
       use named_array_list,   only: qna, wna
       use rtvd,               only: relaxing_tvd
-      use sources,            only: all_sources, care_for_positives
+      use sources,            only: internal_sources, care_for_positives
 #ifdef MAGNETIC
       use fluidindex,         only: iarr_mag_swp
 #endif /* MAGNETIC */
@@ -158,7 +158,7 @@ contains
             call relaxing_tvd(cg%n_(cdim), u0, u1, vx, b, cs2, istep, rk_coef(istep) * dt / cg%dl(cdim), eflx)
             ! RTVD needs istep only to do something in 2nd stage of RK2
 ! Source terms -------------------------------------
-            if (apply_sources) call all_sources(cg%n_(cdim), u, u1, b, cg, istep, cdim, i1, i2, rk_coef(istep) * dt, vx)
+            if (apply_sources) call internal_sources(cg%n_(cdim), u, u1, b, cg, istep, cdim, i1, i2, rk_coef(istep) * dt, vx)
             ! istep is important only for balsara and selfgravity
 
             call care_for_positives(cg%n_(cdim), u1, b, cg, cdim, i1, i2)

@@ -25,35 +25,63 @@ if (version[0:3] != "2.7"):
 else:
     not_py27 = False
 # ------- Parse arguments
-parser = OptionParser("Usage: %prog FILE [options] [args] or %prog [options] [args] -F FILENAME")
-parser.add_option("-F", "--file", dest="filename", default="None", help=u"File to use", type="str")
-parser.add_option("-v", "--var", dest="var_name", default="e", help=u"Variable to plot the spectrum (default: e)")
-parser.add_option("-f", "--field", dest="fieldname", default="cree_tot", help=u"DS fieldname to image (default:cree_tot)")
-parser.add_option("-z", "--zlim", dest="plot_range", default=("x", "y"), help=u"Plot image with this range", nargs=2, metavar="ZMIN ZMAX")
-parser.add_option("-s", "--slice", dest="slice_info", default=("a", "Nan"), help=u"DS slice coords to image (default:cree_tot)", metavar="AX COORDINATE", nargs=2)
-parser.add_option("-d", "--def", dest="default_range", default=False, help=u"Use min/max on yt.ds(fieldname) for clickable image", action="store_true")
-parser.add_option("-l", "--lin", dest="use_linscale", default=False, help=u"Use linear scale for clickable plot (default: log)", action="store_true")
-parser.add_option("-V", "--vel", dest="plot_vel", default=False, help=u"Plot velocity field vectors ", action="store_true")
-parser.add_option("-m", "--mag", dest="plot_mag", default=False, help=u"Plot magnetic field vectors ", action="store_true")
-parser.add_option("-t", "--time", dest="annotate_time", default=False, help=u"Annotate time on resulting DS plot", action="store_true")
-parser.add_option("", "--nosave", dest="not_save_spec", default=False, help=u"Do not save output spectrum ", action="store_true")
-parser.add_option("-a", "--average", "--avg", dest="avg_layer", default=False, help=u"Plot mean spectrum at pointed layer at ordinate axis", action="store_true")
-parser.add_option("-O", "--overlap", dest="overlap_layer", default=False, help=u"Overlap all spectra at pointed layer at ordinate axis", action="store_true")
-parser.add_option("", "--verbose", dest="yt_verbose", default=40, help=u"Append yt verbosity (value from 10 [high] to 50 [low])")
-parser.add_option("-q", "--quiet", dest="py_quiet", default=False, help=u"Suppress ALL python warnings (not advised)", action="store_true")
-parser.add_option("-c", "--coords", dest="coords_dflt", default=("x", "y", "z"), help=u"Provides coordinates for the first plot (non-clickable)", nargs=3, metavar="xc yc zc")
-parser.add_option("-k", "--keep", dest="clean_plot", default=True, help=u"Keep spectrum plot (do not clean spectrum field)", action="store_false")
-parser.add_option("", "--fontsize", dest="fontsize", default=18, help=u"Set fontsize for SlicePlot (default is 18)")
-parser.add_option("", "--noxlabels", dest="no_xlabels", default=False, help=u"Do not show labels of X axis on resulting SlicePlot", action="store_true")
-parser.add_option("", "--noylabels", dest="no_ylabels", default=False, help=u"Do not show labels of Y axis on resulting SlicePlot", action="store_true")
-parser.add_option("", "--nocbar", dest="no_cbar", default=False, help=u"Do not show colorbar on the resulting SlicePlot", action="store_true")
-parser.add_option("", "--noaxes", dest="no_axes", default=False, help=u"Hide axes on the spectrum plot (useful when combining spectra)", action="store_true")
-parser.add_option("", "--rectangle", dest="annotate_rect", default=False, help=u"Annotate and average over width/height rectangle surface", action="store_true")
-parser.add_option("", "--width", dest="usr_width", default=0., help=u"Set custom frb width")
-parser.add_option("", "--height", dest="usr_height", default=0., help=u"Set custom frb width")
-parser.add_option("", "--center", dest="usr_center", default=(0., 0.), help=u"Set custom frb center", nargs=2, metavar="XC YC")
+parser = OptionParser(
+    "Usage: %prog FILE [options] [args] or %prog [options] [args] -F FILENAME")
+parser.add_option("-F", "--file", dest="filename",
+                  default="None", help=u"File to use", type="str")
+parser.add_option("-v", "--var", dest="var_name", default="e",
+                  help=u"Variable to plot the spectrum (default: e)")
+parser.add_option("-f", "--field", dest="fieldname", default="cree_tot",
+                  help=u"DS fieldname to image (default:cree_tot)")
+parser.add_option("-z", "--zlim", dest="plot_range", default=("x", "y"),
+                  help=u"Plot image with this range", nargs=2, metavar="ZMIN ZMAX")
+parser.add_option("-s", "--slice", dest="slice_info", default=("a", "Nan"),
+                  help=u"DS slice coords to image (default:cree_tot)", metavar="AX COORDINATE", nargs=2)
+parser.add_option("-d", "--def", dest="default_range", default=False,
+                  help=u"Use min/max on yt.ds(fieldname) for clickable image", action="store_true")
+parser.add_option("-l", "--lin", dest="use_linscale", default=False,
+                  help=u"Use linear scale for clickable plot (default: log)", action="store_true")
+parser.add_option("-V", "--vel", dest="plot_vel", default=False,
+                  help=u"Plot velocity field vectors ", action="store_true")
+parser.add_option("-m", "--mag", dest="plot_mag", default=False,
+                  help=u"Plot magnetic field vectors ", action="store_true")
+parser.add_option("-t", "--time", dest="annotate_time", default=False,
+                  help=u"Annotate time on resulting DS plot", action="store_true")
+parser.add_option("", "--nosave", dest="not_save_spec", default=False,
+                  help=u"Do not save output spectrum ", action="store_true")
+parser.add_option("-a", "--average", "--avg", dest="avg_layer", default=False,
+                  help=u"Plot mean spectrum at pointed layer at ordinate axis", action="store_true")
+parser.add_option("-O", "--overlap", dest="overlap_layer", default=False,
+                  help=u"Overlap all spectra at pointed layer at ordinate axis", action="store_true")
+parser.add_option("", "--verbose", dest="yt_verbose", default=40,
+                  help=u"Append yt verbosity (value from 10 [high] to 50 [low])")
+parser.add_option("-q", "--quiet", dest="py_quiet", default=False,
+                  help=u"Suppress ALL python warnings (not advised)", action="store_true")
+parser.add_option("-c", "--coords", dest="coords_dflt", default="",
+                  help=u"Provides coordinates for the first plots", nargs=1, metavar="x1,y1,z1:x2,y2,z2:...")
+parser.add_option("-k", "--keep", dest="clean_plot", default=True,
+                  help=u"Keep spectrum plot (do not clean spectrum field)", action="store_false")
+parser.add_option("", "--fontsize", dest="fontsize", default=18,
+                  help=u"Set fontsize for SlicePlot (default is 18)")
+parser.add_option("", "--noxlabels", dest="no_xlabels", default=False,
+                  help=u"Do not show labels of X axis on resulting SlicePlot", action="store_true")
+parser.add_option("", "--noylabels", dest="no_ylabels", default=False,
+                  help=u"Do not show labels of Y axis on resulting SlicePlot", action="store_true")
+parser.add_option("", "--nocbar", dest="no_cbar", default=False,
+                  help=u"Do not show colorbar on the resulting SlicePlot", action="store_true")
+parser.add_option("", "--noaxes", dest="no_axes", default=False,
+                  help=u"Hide axes on the spectrum plot (useful when combining spectra)", action="store_true")
+parser.add_option("", "--rectangle", dest="annotate_rect", default=False,
+                  help=u"Annotate and average over width/height rectangle surface", action="store_true")
+parser.add_option("", "--width", dest="usr_width",
+                  default=0., help=u"Set custom frb width")
+parser.add_option("", "--height", dest="usr_height",
+                  default=0., help=u"Set custom frb width")
+parser.add_option("", "--center", dest="usr_center", default=(0., 0.),
+                  help=u"Set custom frb center", nargs=2, metavar="XC YC")
 (options, args) = parser.parse_args(argv[1:])  # argv[1] is filename
-yt.mylog.setLevel(int(options.yt_verbose))    # Reduces the output to desired level, 50 - least output
+# Reduces the output to desired level, 50 - least output
+yt.mylog.setLevel(int(options.yt_verbose))
 if (options.py_quiet is True):
     simplefilter(action='ignore', category=FutureWarning)
     simplefilter(action='ignore', category=Warning)
@@ -78,12 +106,16 @@ plot_layer = options.avg_layer
 plot_ovlp = options.overlap_layer
 options.fontsize = int(options.fontsize)
 display_bin_no = False
-user_coords_provided = ((options.coords_dflt[0] != "x") and (options.coords_dflt[1] != "y") and (options.coords_dflt[2] != "z"))
+user_coords_provided = not options.coords_dflt == ""
 if user_coords_provided:
     try:
-        user_coords = [float(options.coords_dflt[0]), float(options.coords_dflt[1]), float(options.coords_dflt[2])]
+        user_coords = []
+        aux = options.coords_dflt.split(":")
+        for auxi in aux:
+            user_coords.append(list(float(item) for item in auxi.split(",")))
     except:
-        die("Got spectrum coordinates %s, but failed to convert it to float." % str(options.coords_dflt))
+        die("Got spectrum coordinates %s, but failed to convert it to float." %
+            str(options.coords_dflt))
 
 #####################################
 # ------- Parameters ----------------
@@ -117,7 +149,8 @@ def _total_cren(field, data):
 
 
 def _total_B(field, data):
-    b_tot = 2.85 * (data["mag_field_x"]**2 + data["mag_field_y"]**2 + data["mag_field_y"]**2)**0.5
+    b_tot = 2.85 * (data["mag_field_x"]**2 +
+                    data["mag_field_y"]**2 + data["mag_field_y"]**2)**0.5
     return b_tot
 
 
@@ -126,7 +159,8 @@ def en_ratio(field, data):  # DEPRECATED (?)
     for element in h5ds.field_list:
         if search("cree" + str(bin_nr.zfill(2)), str(element[1])):
             cren_data = data["cren" + str(bin_nr.zfill(2))]
-            cren_data[cren_data <= par_epsilon**2] = par_epsilon  # necessary to avoid FPEs
+            # necessary to avoid FPEs
+            cren_data[cren_data <= par_epsilon**2] = par_epsilon
             cree_data = data["cree" + str(bin_nr.zfill(2))]
             en_ratio = cree_data / cren_data
     return en_ratio
@@ -140,10 +174,12 @@ def copy_field(field, data):
 
 def add_cren_tot_to(h5_dataset):
     try:
-        if (h5ds.all_data()["cren01"].units is "dimensionless"):
-            h5ds.add_field(("gdf", "cren_tot"), units="", function=_total_cren, display_name="Total CR electron number density", sampling_type="cell")
+        if (h5ds.all_data()["cren01"].units == "dimensionless"):
+            h5ds.add_field(("gdf", "cren_tot"), units="", function=_total_cren,
+                           display_name="Total CR electron number density", sampling_type="cell")
         else:
-            h5ds.add_field(("gdf", "cren_tot"), units="1/(pc**3)", function=_total_cren, display_name="Total CR electron number density", dimensions=dimensions.energy / dimensions.volume, sampling_type="cell", take_log=True)
+            h5ds.add_field(("gdf", "cren_tot"), units="1/(pc**3)", function=_total_cren, display_name="Total CR electron number density",
+                           dimensions=dimensions.energy / dimensions.volume, sampling_type="cell", take_log=True)
     except:
         die("Failed to construct field 'cren_tot'")
     return h5_dataset
@@ -151,10 +187,12 @@ def add_cren_tot_to(h5_dataset):
 
 def add_cree_tot_to(h5_dataset):
     try:
-        if (h5ds.all_data()["cree01"].units is "dimensionless"):
-            h5ds.add_field(("gdf", "cree_tot"), units="", function=_total_cree, display_name="Total CR electron energy density", sampling_type="cell")
+        if (h5ds.all_data()["cree01"].units == "dimensionless"):
+            h5ds.add_field(("gdf", "cree_tot"), units="", function=_total_cree,
+                           display_name="Total CR electron energy density", sampling_type="cell")
         else:
-            h5ds.add_field(("gdf", "cree_tot"), units="Msun/(Myr**2*pc)", function=_total_cree, display_name="Total CR electron energy density", dimensions=dimensions.energy / dimensions.volume, sampling_type="cell")
+            h5ds.add_field(("gdf", "cree_tot"), units="Msun/(Myr**2*pc)", function=_total_cree,
+                           display_name="Total CR electron energy density", dimensions=dimensions.energy / dimensions.volume, sampling_type="cell")
     except:
         die("Failed to construct field 'cree_tot'")
     return h5_dataset
@@ -179,17 +217,21 @@ if (filename_ext != 'h5'):
     die("Script requires a (list of) hdf5 file(s) on input")
 
 if f_run:
-    if not path.exists('results'):
-        makedirs('results')
-        prtinfo("Output directory created: %s" % (getcwd() + '/results'))
+    output_path = path.realpath(
+        "./" + filename.strip(filename_trimmed) + "/") + "/results"
+    if not path.exists(output_path):
+        makedirs(output_path)
+        prtinfo("Output directory created: %s" % output_path)
 
 var_array = []
 if f_run is True:
     var_names = []
-    var_names = ["ncre", "p_min_fix", "p_max_fix", "e_small", "cre_eff", "q_big"]
+    var_names = ["ncre", "p_min_fix", "p_max_fix",
+                 "e_small", "cre_eff", "q_big"]
     var_def = [20, 10., 1.e5, 1.e-6, 0.01, 30., ]
     if len(var_names) == 0:
-        prtwarn("Empty list of parameter names provided: enter names of parameters to read")
+        prtwarn(
+            "Empty list of parameter names provided: enter names of parameters to read")
         var_names = input_names_array()
 
     var_array = read_par(filename, var_names, var_def)
@@ -198,7 +240,8 @@ if f_run is True:
 
     prtinfo("\n*** Values read from problem.par@hdf5 file: *** \n")
     for i in range(len(var_names)):
-        prtinfo(" %15s =  %10s ( %15s  ) " % (var_names[i], var_array[i], type(var_array[i])))
+        prtinfo(" %15s =  %10s ( %15s  ) " %
+                (var_names[i], var_array[i], type(var_array[i])))
 
 # ---------- Open file
     h5ds = yt.load(filename)
@@ -219,12 +262,15 @@ if f_run is True:
         plot_user_min = float(options.plot_range[0])
         plot_user_max = float(options.plot_range[1])
     except:
-        prtwarn("No provided ZLIM or failed to convert it into float -- using default (min/max of ds(field) )")
+        prtwarn(
+            "No provided ZLIM or failed to convert it into float -- using default (min/max of ds(field) )")
         user_limits = False
 # ------------ Organizing domain data
     length_unit = 'pc'
-    prtinfo("Domain shape of in provided file            (i, j, k): [%i, %i, %i] \033[0m" % (grid_dim[0], grid_dim[1], grid_dim[2]))
-    prtinfo("Domain physical dimensions in provided file (x, y, z): [%9.3f,%9.3f,%9.3f]:[%9.3f,%9.3f,%9.3f] %s \033[0m" % (dom_l[0], dom_l[1], dom_l[2], dom_r[0], dom_r[1], dom_r[2], length_unit))
+    prtinfo("Domain shape of in provided file            (i, j, k): [%i, %i, %i] \033[0m" % (
+        grid_dim[0], grid_dim[1], grid_dim[2]))
+    prtinfo("Domain physical dimensions in provided file (x, y, z): [%9.3f,%9.3f,%9.3f]:[%9.3f,%9.3f,%9.3f] %s \033[0m" % (
+        dom_l[0], dom_l[1], dom_l[2], dom_r[0], dom_r[1], dom_r[2], length_unit))
 
     avail_dim = [0, 1, 2]
     avail_dims_by_slice = [[1, 2], [0, 2], [0, 1]]
@@ -234,12 +280,16 @@ if f_run is True:
         slice_coord = float(options.slice_info[1])
         while slice_ax not in dim_map.keys():
             slice_ax = read_var("Choose slice ax (x, y, z)      : ")
-        while (slice_coord < dom_l[dim_map[slice_ax]]) or (slice_coord > dom_r[dim_map[slice_ax]] or isnan(slice_coord) is True):  # or slice_coord < -10000:
+        # or slice_coord < -10000:
+        while (slice_coord < dom_l[dim_map[slice_ax]]) or (slice_coord > dom_r[dim_map[slice_ax]] or isnan(slice_coord) is True):
             try:
-                slice_coord = float(read_var("Choose slice coordinate (%d:%d %s ) (if empty, middle is assumed): \033[0m" % (dom_l[dim_map[slice_ax]], dom_r[dim_map[slice_ax]], length_unit)))
+                slice_coord = float(read_var("Choose slice coordinate (%d:%d %s ) (if empty, middle is assumed): \033[0m" % (
+                    dom_l[dim_map[slice_ax]], dom_r[dim_map[slice_ax]], length_unit)))
             except:
-                slice_coord = (dom_l[dim_map[slice_ax]] + dom_r[dim_map[slice_ax]]) / 2.
-                prtwarn(" (empty / incorrect input): Setting slice coordinate to %s %s.\033[0m" % (slice_coord, length_unit))
+                slice_coord = (dom_l[dim_map[slice_ax]] +
+                               dom_r[dim_map[slice_ax]]) / 2.
+                prtwarn(
+                    " (empty / incorrect input): Setting slice coordinate to %s %s.\033[0m" % (slice_coord, length_unit))
     elif min(grid_dim) == 1:
         slice_coord = 0.0
         if grid_dim[0] == 1:
@@ -249,11 +299,14 @@ if f_run is True:
         else:
             slice_ax = 'z'
     avail_dim = avail_dims_by_slice[dim_map[slice_ax]]
-    prtinfo("Slice ax set to %s, coordinate = %f %s \033[0m" % (slice_ax, slice_coord, length_unit))
-    resolution = [grid_dim[avail_dim[0]] * 2**h5ds.max_level, grid_dim[avail_dim[1]] * 2**h5ds.max_level]
+    prtinfo("Slice ax set to %s, coordinate = %f %s \033[0m" % (
+        slice_ax, slice_coord, length_unit))
+    resolution = [grid_dim[avail_dim[0]] * 2**h5ds.max_level,
+                  grid_dim[avail_dim[1]] * 2**h5ds.max_level]
 
 # --------- Preparing clickable image
-    s = plt.figure(figsize=(12, 8), dpi=100)
+    s = plt.figure("Displayed file: %s at %s %s of axis %s" % (
+        filename, str(slice_coord), length_unit, slice_ax), figsize=(12, 8), dpi=100)
     s1 = plt.subplot(121)
     dsSlice = h5ds.slice(slice_ax, slice_coord)
 
@@ -262,16 +315,19 @@ if f_run is True:
 
     if (plot_field == "b_tot"):
         try:
-            h5ds.add_field(("gdf", plot_field), dimensions=dimensions.magnetic_field, units="", function=_total_B, display_name="Total magnetic field ($\mu$G)", sampling_type="cell")
+            h5ds.add_field(("gdf", plot_field), dimensions=dimensions.magnetic_field, units="",
+                           function=_total_B, display_name="Total magnetic field ($\mu$G)", sampling_type="cell")
         except:
             die("Failed to construct field %s" % plot_field)
 
     if (plot_field[0:-2] == "en_ratio"):
         try:
-            if str(dsSlice["cren01"].units) is "dimensionless":  # DEPRECATED
-                h5ds.add_field(("gdf", plot_field), units="", function=en_ratio, display_name="Ratio e/n in %i-th bin" % int(plot_field[-2:]), sampling_type="cell")
+            if str(dsSlice["cren01"].units) == "dimensionless":  # DEPRECATED
+                h5ds.add_field(("gdf", plot_field), units="", function=en_ratio,
+                               display_name="Ratio e/n in %i-th bin" % int(plot_field[-2:]), sampling_type="cell")
             else:
-                h5ds.add_field(("gdf", plot_field), units="Msun*pc**2/Myr**2", function=en_ratio, display_name="Ratio e/n in %i-th bin" % int(plot_field[-2:]), dimensions=dimensions.energy, sampling_type="cell", take_log=True)
+                h5ds.add_field(("gdf", plot_field), units="Msun*pc**2/Myr**2", function=en_ratio, display_name="Ratio e/n in %i-th bin" %
+                               int(plot_field[-2:]), dimensions=dimensions.energy, sampling_type="cell", take_log=True)
         except:
             die("Failed to construct field %s" % plot_field)
 
@@ -287,18 +343,22 @@ if f_run is True:
             new_field_dimensions = 1. / dimensions.volume
         prtinfo("Adding display name: %s density" % disp_name)
         if (display_bin_no):
-            disp_name = "CR electron %s density (bin %2i)" % (disp_name, int(plot_field[-2:]))
+            disp_name = "CR electron %s density (bin %2i)" % (
+                disp_name, int(plot_field[-2:]))
         else:
             disp_name = "CR electron %s density" % (disp_name)
         new_field = str(plot_field + "_updated")
         new_field_units = dsSlice[plot_field].units
-        h5ds.add_field(("gdf", new_field), units=new_field_units, function=copy_field, display_name=disp_name, dimensions=new_field_dimensions, sampling_type="cell")
+        h5ds.add_field(("gdf", new_field), units=new_field_units, function=copy_field,
+                       display_name=disp_name, dimensions=new_field_dimensions, sampling_type="cell")
         plot_field = new_field
 
     try:
-        field_max = h5ds.find_max("cr01")[0].v  # WARNING - this makes field_max unitless
+        # WARNING - this makes field_max unitless
+        field_max = h5ds.find_max("cr01")[0].v
     except:
-        field_max = h5ds.find_max("cr1")[0].v  # WARNING - this makes field_max unitless
+        # WARNING - this makes field_max unitless
+        field_max = h5ds.find_max("cr1")[0].v
 
 # prepare limits for framebuffer
     # if (options.usr_width == 0.):
@@ -329,10 +389,12 @@ if f_run is True:
 
 # construct framebuffer
     if (slice_ax == "y"):
-        frb = np_array(dsSlice.to_frb(width=frb_h, resolution=resolution, center=slice_center, height=frb_w)[plot_field])
+        frb = np_array(dsSlice.to_frb(width=frb_h, resolution=resolution,
+                       center=slice_center, height=frb_w)[plot_field])
         frb = rot90(frb)
     else:
-        frb = np_array(dsSlice.to_frb(width=frb_w, resolution=resolution, center=slice_center, height=frb_h, periodic=False)[plot_field])
+        frb = np_array(dsSlice.to_frb(width=frb_w, resolution=resolution,
+                       center=slice_center, height=frb_h, periodic=False)[plot_field])
     if (not user_limits):
         plot_max = h5ds.find_max(plot_field)[0]
     if (not user_limits):
@@ -344,16 +406,22 @@ if f_run is True:
         plot_max = plot_user_max
 
     if (not_py27):
-        plt.xlabel("Domain cooridnates " + list(dim_map.keys())[list(dim_map.values()).index(avail_dim[0])] + " (" + length_unit + ")")
-        plt.ylabel("Domain cooridnates " + list(dim_map.keys())[list(dim_map.values()).index(avail_dim[1])] + " (" + length_unit + ")")
+        plt.xlabel("Domain cooridnates " + list(dim_map.keys())
+                   [list(dim_map.values()).index(avail_dim[0])] + " (" + length_unit + ")")
+        plt.ylabel("Domain cooridnates " + list(dim_map.keys())
+                   [list(dim_map.values()).index(avail_dim[1])] + " (" + length_unit + ")")
     else:
-        plt.xlabel("Domain cooridnates " + dim_map.keys()[dim_map.values().index(avail_dim[0])] + " (" + length_unit + ")")
-        plt.ylabel("Domain cooridnates " + dim_map.keys()[dim_map.values().index(avail_dim[1])] + " (" + length_unit + ")")
+        plt.xlabel("Domain cooridnates " + dim_map.keys()
+                   [dim_map.values().index(avail_dim[0])] + " (" + length_unit + ")")
+        plt.ylabel("Domain cooridnates " + dim_map.keys()
+                   [dim_map.values().index(avail_dim[1])] + " (" + length_unit + ")")
 
     if (options.annotate_rect):
-        yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field, width=(dom_r[avail_dim[0]] + abs(dom_l[avail_dim[0]]), dom_r[avail_dim[1]] + abs(dom_l[avail_dim[1]])), center=slice_center)
+        yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field, width=(dom_r[avail_dim[0]] + abs(
+            dom_l[avail_dim[0]]), dom_r[avail_dim[1]] + abs(dom_l[avail_dim[1]])), center=slice_center)
     else:
-        yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field, width=(frb_w, frb_h), center=slice_center)
+        yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field, width=(
+            frb_w, frb_h), center=slice_center)
     yt_data_plot.set_font({'size': options.fontsize})
 
     encountered_nans = False
@@ -368,9 +436,11 @@ if f_run is True:
 
     im_orig = "lower"
     if (use_logscale):
-        plt.imshow(frb, extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]]], origin=im_orig, cmap=colormap_my, norm=LogNorm(vmin=plot_min, vmax=plot_max) if (encountered_nans is False) else LogNorm())
+        plt.imshow(frb, extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]]], origin=im_orig,
+                   cmap=colormap_my, norm=LogNorm(vmin=plot_min, vmax=plot_max) if (encountered_nans is False) else LogNorm())
     elif (use_linscale):
-        plt.imshow(frb, extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]]], origin=im_orig, cmap=colormap_my)
+        plt.imshow(frb, extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]],
+                   dom_l[avail_dim[1]], dom_r[avail_dim[1]]], origin=im_orig, cmap=colormap_my)
 
     plt.title("Component: " + plot_field + " | t = %9.3f Myr" % time)
 
@@ -381,7 +451,8 @@ if f_run is True:
 
     if (user_annot_line is True):
         prtinfo("Marking line on yt.plot at (0 0 0) : (500 500 0)")
-        yt_data_plot.annotate_line((0., 0., 0.), (500., 500.0, 0), plot_args={'color': 'white', "lw": 2.0})
+        yt_data_plot.annotate_line((0., 0., 0.), (500., 500.0, 0), plot_args={
+                                   'color': 'white', "lw": 2.0})
 
     if (plot_vel):
         yt_data_plot.annotate_velocity(factor=32, scale=3e7)
@@ -433,12 +504,17 @@ if f_run is True:
 # ------------ preparing data and passing -------------------------
         position = h5ds.r[coords:coords]
         if (plot_field[0:-2] != "en_ratio"):
-            prtinfo(">>>>>>>>>>>>>>>>>>> Value of %s at point [%f, %f, %f] = %f " % (plot_field, coords[0], coords[1], coords[2], position[plot_field]))
+            prtinfo(">>>>>>>>>>>>>>>>>>> Value of %s at point [%f, %f, %f] = %f " % (
+                plot_field, coords[0], coords[1], coords[2], position[plot_field]))
         else:
-            prtinfo("Value of %s at point [%f, %f, %f] = %f " % (plot_field, coords[0], coords[1], coords[2], position["cree" + str(plot_field[-2:])] / position["cren" + str(plot_field[-2:])]))
-            plot_max = h5ds.find_max("cre" + plot_var + str(plot_field[-2:]))[0]  # once again appended - needed as ylimit for the plot
+            prtinfo("Value of %s at point [%f, %f, %f] = %f " % (plot_field, coords[0], coords[1],
+                    coords[2], position["cree" + str(plot_field[-2:])] / position["cren" + str(plot_field[-2:])]))
+            # once again appended - needed as ylimit for the plot
+            plot_max = h5ds.find_max(
+                "cre" + plot_var + str(plot_field[-2:]))[0]
 
-        btot = (position["mag_field_x"].v**2 + position["mag_field_y"].v**2 + position["mag_field_z"].v**2)**0.5
+        btot = (position["mag_field_x"].v**2 + position["mag_field_y"].v **
+                2 + position["mag_field_z"].v**2)**0.5
         btot_uG = 2.85 * btot  # WARNING magic number @btot - conversion factor
         prtinfo("B_tot = %f = %f (uG)" % (btot, btot_uG))
         if (True):   # TODO DEPRECATED save_fqp
@@ -447,18 +523,22 @@ if f_run is True:
             if (plot_ovlp is not True):  # overwrites position
                 if (plot_layer is True):
                     prtinfo("Plotting layer...")
-                    position = h5ds.r[[coords[0], dom_l[avail_dim[0]], coords[2]]: [coords[0], dom_r[avail_dim[0]], coords[2]]]
+                    position = h5ds.r[[coords[0], dom_l[avail_dim[0]], coords[2]]: [
+                        coords[0], dom_r[avail_dim[0]], coords[2]]]
 
                 elif (options.annotate_rect):
                     # define borders of the selected region (plane)
                     usr_w = float(options.usr_width)
                     usr_h = float(options.usr_height)
                     usr_c = [0, 0]
-                    usr_c[:] = [float(options.usr_center[0]), float(options.usr_center[1])]
+                    usr_c[:] = [float(options.usr_center[0]),
+                                float(options.usr_center[1])]
                     lb = [0, 0, 0]
                     lb[avail_dim[0]] = usr_c[0] - usr_w * 0.5
                     lb[avail_dim[1]] = usr_c[1] - usr_h * 0.5
-                    lb[dim_map[slice_ax]] = slice_coord - (dom_r[avail_dim[0]] - dom_l[avail_dim[0]]) / int(h5ds.domain_dimensions[avail_dim[0]])
+                    lb[dim_map[slice_ax]] = slice_coord - \
+                        (dom_r[avail_dim[0]] - dom_l[avail_dim[0]]) / \
+                        int(h5ds.domain_dimensions[avail_dim[0]])
                     rb = [0, 0, 0]
                     rb[avail_dim[0]] = usr_c[0] + usr_w * 0.5
                     rb[avail_dim[1]] = usr_c[1] - usr_h * 0.5
@@ -470,29 +550,37 @@ if f_run is True:
                     rt = [0, 0, 0]
                     rt[avail_dim[0]] = usr_c[0] + usr_w * 0.5
                     rt[avail_dim[1]] = usr_c[1] + usr_h * 0.5
-                    rt[dim_map[slice_ax]] = slice_coord + (dom_r[avail_dim[0]] - dom_l[avail_dim[0]]) / int(h5ds.domain_dimensions[avail_dim[0]])
+                    rt[dim_map[slice_ax]] = slice_coord + \
+                        (dom_r[avail_dim[0]] - dom_l[avail_dim[0]]) / \
+                        int(h5ds.domain_dimensions[avail_dim[0]])
 
                     # select region as plane spreading between lb and rt corners
-                    position = yt.data_objects.selection_data_containers.YTRegion(left_edge=lb, right_edge=rt, center=usr_c, ds=h5ds)  # (center, left_edge, right_edge
+                    position = yt.data_objects.selection_data_containers.YTRegion(
+                        left_edge=lb, right_edge=rt, center=usr_c, ds=h5ds)  # (center, left_edge, right_edge
                     coords[avail_dim[0]:avail_dim[1]] = usr_c[:]
                     coords[dim_map[slice_ax]] = slice_coord
 
                 for ind in range(1, ncre + 1):
-                    ecrs.append(float(mean(position['cree' + str(ind).zfill(2)][0].v)))
-                    ncrs.append(float(mean(position['cren' + str(ind).zfill(2)][0].v)))
+                    ecrs.append(
+                        float(mean(position['cree' + str(ind).zfill(2)][0].v)))
+                    ncrs.append(
+                        float(mean(position['cren' + str(ind).zfill(2)][0].v)))
 
-                fig2, exit_code = crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot, hide_axes=options.no_axes)
+                fig2, exit_code = crs_plot_main(
+                    plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot, hide_axes=options.no_axes)
 
             elif (plot_ovlp is True):  # for overlap_layer
                 prtinfo("Plotting layer with overlap...")
                 dnum = int(h5ds.domain_dimensions[avail_dim[0]])
                 dl = (dom_r[avail_dim[0]] - dom_l[avail_dim[0]]) / float(dnum)
                 for j in range(dnum):
-                    position = position = h5ds.r[[coords[0], dom_l[avail_dim[0]] + dl * j, coords[2]]: [coords[0], dom_l[avail_dim[0]] + dl * j, coords[2]]]
+                    position = position = h5ds.r[[coords[0], dom_l[avail_dim[0]] + dl * j, coords[2]]: [
+                        coords[0], dom_l[avail_dim[0]] + dl * j, coords[2]]]
                     for ind in range(1, ncre + 1):
                         ecrs.append(position['cree' + str(ind).zfill(2)][0].v)
                         ncrs.append(position['cren' + str(ind).zfill(2)][0].v)
-                    fig2, exit_code_tmp = crs_plot_main(plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], i_plot=image_number, clean_plot=options.clean_plot, hide_axes=options.no_axes)
+                    fig2, exit_code_tmp = crs_plot_main(
+                        plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], i_plot=image_number, clean_plot=options.clean_plot, hide_axes=options.no_axes)
                     if (exit_code_tmp is False):
                         exit_code = exit_code_tmp  # Just one plot is allright
                     ecrs = []
@@ -514,34 +602,48 @@ if f_run is True:
                 qcrs.append(float(position['creq' + str(ind).zfill(2)][0].v))
             pcut[:] = [position['crep01'][0].v, position['crep02'][0].v]
 
-            fig2, exit_code = crs_plot_main_fpq(var_names, var_array, plot_var, fcrs, qcrs, pcut, field_max, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot)
+            fig2, exit_code = crs_plot_main_fpq(var_names, var_array, plot_var, fcrs, qcrs, pcut,
+                                                field_max, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot)
 
         if (exit_code is not True):
             if ((plot_layer is True) or (plot_ovlp is True)):
-                line = s1.plot([dom_l[avail_dim[0]], dom_r[avail_dim[0]]], [coords[2], coords[2]], color="white")    # plot line (layer) if cell not empty WARNING - for now only works with mcrwind
+                # plot line (layer) if cell not empty WARNING - for now only works with mcrwind
+                line = s1.plot([dom_l[avail_dim[0]], dom_r[avail_dim[0]]], [
+                               coords[2], coords[2]], color="white")
             else:
-                point = s1.plot(coords[avail_dim[0]], coords[avail_dim[1]], marker=marker_l[marker_index], color="red")  # plot point if cell not empty
-            s.savefig('results/' + filename_nam + '_' + plot_var + '_%04d.png' % image_number, transparent='True')
-            # prtinfo("  --->  Saved plot to: %s " %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
+                # plot point if cell not empty
+                point = s1.plot(coords[avail_dim[0]], coords[avail_dim[1]],
+                                marker=marker_l[marker_index], color="red")
 
             if (plot_layer is True):  # Mark averaged level
-                yt_data_plot.annotate_line([coords[0], dom_l[avail_dim[0]], coords[2]], [coords[0], dom_r[avail_dim[0]], coords[2]], plot_args={'color': 'white', "lw": 10.0})
+                yt_data_plot.annotate_line([coords[0], dom_l[avail_dim[0]], coords[2]], [
+                                           coords[0], dom_r[avail_dim[0]], coords[2]], plot_args={'color': 'white', "lw": 10.0})
             else:
                 if (not options.annotate_rect and marker_index > 0):
-                    yt_data_plot.annotate_marker(coords, marker=marker_l[marker_index - 1], plot_args={'color': 'red', 's': m_size_l[marker_index - 1], "lw": 4.5})  # cumulatively annotate all clicked coordinates
+                    yt_data_plot.annotate_marker(coords, marker=marker_l[marker_index - 1], plot_args={
+                                                 'color': 'red', 's': m_size_l[marker_index - 1], "lw": 4.5})  # cumulatively annotate all clicked coordinates
             if (options.annotate_rect):
-                yt_data_plot.annotate_line(lb, lt, plot_args={'color': 'white', "lw": 2.0})
-                yt_data_plot.annotate_line(lt, rt, plot_args={'color': 'white', "lw": 2.0})
-                yt_data_plot.annotate_line(rt, rb, plot_args={'color': 'white', "lw": 2.0})
-                yt_data_plot.annotate_line(rb, lb, plot_args={'color': 'white', "lw": 2.0})
+                yt_data_plot.annotate_line(
+                    lb, lt, plot_args={'color': 'white', "lw": 2.0})
+                yt_data_plot.annotate_line(
+                    lt, rt, plot_args={'color': 'white', "lw": 2.0})
+                yt_data_plot.annotate_line(
+                    rt, rb, plot_args={'color': 'white', "lw": 2.0})
+                yt_data_plot.annotate_line(
+                    rb, lb, plot_args={'color': 'white', "lw": 2.0})
 
             marker_index = marker_index + 1
             image_number = image_number + 1
 # ------------- saving just the spectrum
             if (save_spectrum):
                 extent = fig2.get_window_extent().transformed(s.dpi_scale_trans.inverted())
-                s.savefig('results/' + filename_nam + '_' + 'slice_' + slice_ax + '_' + plot_var + '_spec_%03d.pdf' % image_number, transparent='True', bbox_inches="tight", dpi=150)  # bbox not working in py27 FIXME
-                prtinfo("  --->  Saved plot to: %s.\n\033[44mPress 'q' to quit and save yt.SlicePlot with marked coordinates." % str('results/' + filename_nam + '_' + 'slice_' + slice_ax + '_' + plot_var + '_spectrum_%04d.pdf' % image_number))
+                spectrum_file_out = str(output_path + '/' + filename_nam + '_' + 'slice_' +
+                                        slice_ax + '_' + plot_var + '_spec_%03d.pdf' % image_number)
+                # bbox not working in py27 FIXME
+                s.savefig(spectrum_file_out, transparent='True',
+                          bbox_inches="tight", dpi=150)
+                prtinfo(
+                    "  --->  Saved plot to: %s. \n\033[44mPress 'q' to quit and save yt.SlicePlot with marked coordinates." % spectrum_file_out)
         else:
             prtwarn("Empty cell - not saving.")
 
@@ -552,10 +654,13 @@ if f_run is True:
         mark_plot_save(coords_in)
 
     if (user_coords_provided):
-        prtinfo("Provided coordintates %s (clickable map will not be shown) , processing image." % str(user_coords))
-        plot_with_coords_provided(user_coords)
+        for cindex in range(len(user_coords)):
+            prtinfo("Provided coordintates %s (clickable map will not be shown), processing image." % str(
+                user_coords[cindex][:]))
+            plot_with_coords_provided(user_coords[cindex][:])
     else:
-        prtinfo("\033[44mClick LMB on the colormap to display spectrum ('q' to exit)")
+        prtinfo(
+            "\033[44mClick LMB on the colormap to display spectrum ('q' to exit)")
         cid = s.canvas.mpl_connect('button_press_event', read_click_and_plot)
         plt.show()
 
@@ -567,16 +672,23 @@ if f_run is True:
 
     if (user_annot_time):
         if (user_draw_timebox is True):
-            yt_data_plot.annotate_text(text_coords, 'T = {:0.2f} Myr'.format(float(t.in_units('Myr'))), text_args={'fontsize': options.fontsize, 'color': 'white', 'alpha': '0.0'}, inset_box_args={'boxstyle': 'round', 'pad': 0.2, 'alpha': 0.8})
+            yt_data_plot.annotate_text(text_coords, 'T = {:0.2f} Myr'.format(float(t.in_units('Myr'))), text_args={
+                                       'fontsize': options.fontsize, 'color': 'white', 'alpha': '0.0'}, inset_box_args={'boxstyle': 'round', 'pad': 0.2, 'alpha': 0.8})
         else:
-            prtinfo("Not marking line on yt.plot (user_draw_timebox = %s)" % (user_draw_timebox))
-            yt_data_plot.annotate_title('T = {:0.2f} Myr'.format(float(t.in_units('Myr'))))
+            prtinfo("Not marking line on yt.plot (user_draw_timebox = %s)" %
+                    (user_draw_timebox))
+            yt_data_plot.annotate_title(
+                'T = {:0.2f} Myr'.format(float(t.in_units('Myr'))))
 
     if (options.no_cbar):
         yt_data_plot.hide_colorbar()
     if (options.no_xlabels and options.no_ylabels):
         yt_data_plot.hide_axes()
 
-    yt_data_plot.save('results/' + filename_nam + '_' + plot_field + '_sliceplot_' + slice_ax + '.pdf')  # save image (spectrum already saved) when finished.
+    # save image (spectrum already saved) when finished.
+    yt_plot_file_out = str(output_path + "/" + filename_nam + '_' +
+                           plot_field + '_sliceplot_' + slice_ax + '.pdf')
+    yt_data_plot.save(yt_plot_file_out)
+
     if (not user_coords_provided):
         s.canvas.mpl_disconnect(cid)

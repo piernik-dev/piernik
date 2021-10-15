@@ -116,6 +116,7 @@ contains
 
       halfstep = .false.
       t = t + dt
+
       call make_3sweeps(.true.) ! X -> Y -> Z
 
 ! Sources should be hooked to problem_customize_solution with forward argument
@@ -132,6 +133,7 @@ contains
       halfstep = .true.
       t = t + dt
       dtm = dt
+
       call make_3sweeps(.false.) ! Z -> Y -> X
       call update_magic_mass
 #ifdef COSM_RAY_ELECTRONS
@@ -153,6 +155,7 @@ contains
       use global,              only: skip_sweep, use_fargo
       use hdc,                 only: glmdamping, eglm
       use ppp,                 only: ppp_main
+      use sources,             only: external_sources
       use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
@@ -232,6 +235,7 @@ contains
       if (need_update) call source_terms_grav
 #endif /* GRAV */
 
+      call external_sources(forward)
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
       call eglm

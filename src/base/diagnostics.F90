@@ -363,8 +363,10 @@ contains
 
       integer(kind=4), dimension(:), allocatable, intent(inout)  :: array !< array that will be deallocated
 
-      used_memory = used_memory - size(array)*i4_s
-      if (allocated(array)) deallocate(array)
+      if (allocated(array)) then
+         used_memory = used_memory - size(array)*i4_s
+         deallocate(array)
+      endif
 
    end subroutine deallocate_array_1D_int4
 
@@ -374,8 +376,10 @@ contains
 
       integer(kind=4), dimension(:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
-      used_memory = used_memory - size(array)*i4_s
-      if (allocated(array)) deallocate(array)
+      if (allocated(array)) then
+         used_memory = used_memory - size(array)*i4_s
+         deallocate(array)
+      endif
 
    end subroutine deallocate_array_2D_int4
 
@@ -385,8 +389,10 @@ contains
 
       integer(kind=4), dimension(:,:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
-      used_memory = used_memory - size(array)*i4_s
-      if (allocated(array)) deallocate(array)
+      if (allocated(array)) then
+         used_memory = used_memory - size(array)*i4_s
+         deallocate(array)
+      endif
 
    end subroutine deallocate_array_3D_int4
 
@@ -396,8 +402,10 @@ contains
 
       real, dimension(:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
-      used_memory = used_memory - size(array)*r8_s
-      if (allocated(array)) deallocate(array)
+      if (allocated(array)) then
+         used_memory = used_memory - size(array)*r8_s
+         deallocate(array)
+      endif
 
    end subroutine deallocate_array_1D_real
 
@@ -407,8 +415,10 @@ contains
 
       real, dimension(:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
-      used_memory = used_memory - size(array)*r8_s
-      if (allocated(array)) deallocate(array)
+      if (allocated(array)) then
+         used_memory = used_memory - size(array)*r8_s
+         deallocate(array)
+      endif
 
    end subroutine deallocate_array_2D_real
 
@@ -418,8 +428,10 @@ contains
 
       real, dimension(:,:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
-      used_memory = used_memory - size(array)*r8_s
-      if (allocated(array)) deallocate(array)
+      if (allocated(array)) then
+         used_memory = used_memory - size(array)*r8_s
+         deallocate(array)
+      endif
 
    end subroutine deallocate_array_3D_real
 
@@ -429,8 +441,10 @@ contains
 
       real, dimension(:,:,:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
-      used_memory = used_memory - size(array)*r8_s
-      if (allocated(array)) deallocate(array)
+      if (allocated(array)) then
+         used_memory = used_memory - size(array)*r8_s
+         deallocate(array)
+      endif
 
    end subroutine deallocate_array_4D_real
 
@@ -440,8 +454,10 @@ contains
 
       real, dimension(:,:,:,:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
-      used_memory = used_memory - size(array)*r8_s
-      if (allocated(array)) deallocate(array)
+      if (allocated(array)) then
+         used_memory = used_memory - size(array)*r8_s
+         deallocate(array)
+      endif
 
    end subroutine deallocate_array_5D_real
 
@@ -451,8 +467,11 @@ contains
 
       logical, dimension(:), allocatable, intent(inout) :: array
 
-      if (allocated(array)) deallocate(array)
-      used_memory = used_memory - size(array)*bool_s
+      if (allocated(array)) then
+         used_memory = used_memory - size(array)*bool_s
+         deallocate(array)
+      endif
+
    end subroutine deallocate_array_1D_logical
 
    subroutine allocate_array_1D_int4(array, as, aname)

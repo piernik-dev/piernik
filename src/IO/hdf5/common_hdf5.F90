@@ -201,42 +201,42 @@ contains
             case ('cren') !< CRESP number density fields
                do k = 1, ncre
                   if (k<=99) then
-                    write(aux,'(A4,I2.2)') 'cren', k
-                    call append_var(aux)
+                     write(aux,'(A4,I2.2)') 'cren', k
+                     call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP number density component #", k
                      call warn(msg)
                   endif
                enddo
                do k = lbound(vars, 1), ubound(vars, 1)
-                    if (vars(k) .eq. 'cree') exit
-                    if (k .eq. ubound(vars, 1)) then
-                        write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cren' field created, but 'cree' not defined: reconstruction of spectrum from hdf files requires both."
-                        call warn(msg)
-                    endif
+                  if (vars(k) .eq. 'cree') exit
+                  if (k .eq. ubound(vars, 1)) then
+                     write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cren' field created, but 'cree' not defined: reconstruction of spectrum from hdf files requires both."
+                     call warn(msg)
+                  endif
                enddo
             case ('cree') !< CRESP energy density fields
                do k = 1, ncre
                   if (k<=99) then
-                    write(aux,'(A4,I2.2)') 'cree', k
-                    call append_var(aux)
+                     write(aux,'(A4,I2.2)') 'cree', k
+                     call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP energy density component #", k
                      call warn(msg)
                   endif
                enddo
                do k = lbound(vars, 1), ubound(vars, 1)
-                    if (vars(k) .eq. 'cren') exit
-                    if (k .eq. ubound(vars, 1)) then
-                        write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cree' field created, but 'cren' not defined: reconstruction of spectrum from hdf files requires both."
-                        call warn(msg)
-                    endif
+                  if (vars(k) .eq. 'cren') exit
+                  if (k .eq. ubound(vars, 1)) then
+                     write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cree' field created, but 'cren' not defined: reconstruction of spectrum from hdf files requires both."
+                     call warn(msg)
+                  endif
                enddo
             case ('cref') !< CRESP distribution function
                do k = 1, ncre+1
                   if (k<=99) then
-                    write(aux,'(A4,I2.2)') 'cref', k
-                    call append_var(aux)
+                     write(aux,'(A4,I2.2)') 'cref', k
+                     call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP distribution function component #", k
                      call warn(msg)
@@ -245,8 +245,8 @@ contains
             case ('crep') !< CRESP cutoff momenta
                do k = 1, 2
                   if (k<=99) then
-                    write(aux,'(A4,I2.2)') 'crep', k
-                    call append_var(aux)
+                     write(aux,'(A4,I2.2)') 'crep', k
+                     call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP cutoff momentum component #", k
                      call warn(msg)
@@ -255,8 +255,8 @@ contains
             case ('creq') !< CRESP spectrum index
                do k = 1, ncre
                   if (k<=99) then
-                    write(aux,'(A4,I2.2)') 'creq', k
-                    call append_var(aux)
+                     write(aux,'(A4,I2.2)') 'creq', k
+                     call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP spectrum index component #", k
                      call warn(msg)
@@ -866,9 +866,9 @@ contains
          !<
 #ifdef NBODY_1FILE
          subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)
-#else
+#else /* !NBODY_1FILE */
          subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, cg_n_o, Z_avail)
-#endif /* NBODY_1FILE */
+#endif /* !NBODY_1FILE */
             use hdf5, only: HID_T
             implicit none
             integer(HID_T),                intent(in) :: cgl_g_id
@@ -1085,9 +1085,9 @@ contains
                call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail, n_part, st_g_id) !!!!!
                call h5gclose_f(st_g_id, error)
                call h5gclose_f(part_g_id, error)
-#else
+#else /* !NBODY_1FILE */
                call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail) !!!!!
-#endif /* NBODY_1FILE */
+#endif /* !NBODY_1FILE */
 
                call h5gclose_f(cg_g_id, error)
             enddo
@@ -1314,9 +1314,9 @@ contains
 
 #ifdef NBODY_1FILE
    subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets, pdsets)
-#else
+#else /* !NBODY_1FILE */
    subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets)
-#endif /* NBODY_1FILE */
+#endif /* !NBODY_1FILE */
 
       use constants,  only: dsetnamelen, I_ONE
       use dataio_pub, only: can_i_write

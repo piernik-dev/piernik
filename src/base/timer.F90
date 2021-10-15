@@ -323,8 +323,7 @@ contains
 
       cpuhours =  int ( cputot / 3600.0 )
       cpumins  =  int ( cputot / 60.0   ) - 60   * cpuhours
-      cpusecs  =  int ( cputot + half   ) - 3600 * cpuhours &
-                                        - 60   * cpumins
+      cpusecs  =  int ( cputot + half   ) - 3600 * cpuhours - 60 * cpumins
 
       call MPI_Reduce(cputot, cpuallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, MPI_COMM_WORLD, err_mpi)
 

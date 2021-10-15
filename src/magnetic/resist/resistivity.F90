@@ -191,6 +191,7 @@ contains
 
    subroutine compute_resist
 
+      use cg_cost_data,     only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, zero, oneq, LO, HI, GEO_XYZ
@@ -212,6 +213,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          eta => cg%q(qna%ind(eta_n))%arr
          dbx => cg%q(qna%ind(dbx_n))%arr
@@ -283,6 +285,7 @@ contains
 
          where (eta > eta_0) eta = eh
 
+         call cg%costs%stop(I_MHD)
          cgl => cgl%nxt
       enddo
 
@@ -292,6 +295,7 @@ contains
 
    subroutine timestep_resist(dt)
 
+      use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: big, zero, pMIN, MAXL
@@ -336,6 +340,8 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
+            call cg%costs%start
+
             dt_eta = min(dt_eta, cfl_resist * cg%dxmn2 / (2. * etamax%val))
 #ifndef ISO
 #ifdef IONIZED
@@ -349,6 +355,8 @@ contains
             dt_eint = min(dt_eint, deint_max * abs(minval(eh)))
 #endif /* IONIZED */
 #endif /* !ISO */
+
+            call cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
          enddo
       endif
@@ -426,6 +434,7 @@ contains
 
    subroutine diffuseb(ibdir, sdir)
 
+      use cg_cost_data,     only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, ndims, half, I_ONE, wcu_n, idm, INT4, LO, HI
@@ -454,6 +463,8 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          wcu_i = qna%ind(wcu_n)
          eta_i = qna%ind(eta_n)
 
@@ -470,15 +481,20 @@ contains
             enddo
          enddo
 
+         call cg%costs%stop(I_MHD)
          cgl => cgl%nxt
       enddo
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cg%costs%start
+
          do dir = xdim, zdim
             emf = idm(etadir,dir) + 2_INT4
             if (dom%has_dir(dir)) call bnd_emf(wcu_i, emf, dir, cgl%cg)
          enddo
+
+         call cg%costs%stop(I_MHD)
          cgl => cgl%nxt
       enddo
 

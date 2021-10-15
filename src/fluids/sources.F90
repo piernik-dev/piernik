@@ -33,7 +33,7 @@ module sources
    implicit none
 
    private
-   public :: all_sources, care_for_positives, init_sources, prepare_sources, timestep_sources
+   public :: external_sources, internal_sources, care_for_positives, init_sources, prepare_sources, timestep_sources
 
 contains
 
@@ -87,7 +87,33 @@ contains
       call init_thermal
 #endif /* THERM */
 
-   end subroutine init_sources
+    end subroutine init_sources
+
+!/*
+!>
+!! \brief Subroutine to add sources out of used scheme integration
+!! \details By default double timestep dt and forward condition should be used here
+!<
+!*/
+   subroutine external_sources(forward)
+
+#ifdef THERM
+      use global,  only: dt
+      use thermal, only: thermal_sources
+#endif /* THERM */
+
+      implicit none
+
+      logical, intent(in) :: forward
+
+      if (forward) then
+#ifdef THERM
+         call thermal_sources(2*dt)
+#endif /* THERM */
+         return
+      endif
+
+   end subroutine external_sources
 
 !/*
 !>
@@ -122,7 +148,7 @@ contains
 !! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
 !<
 !*/
-   subroutine all_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, coeffdt, vel_sweep)
+   subroutine internal_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, coeffdt, vel_sweep)
 
       use fluidindex,       only: flind, nmag
       use grid_cont,        only: grid_container
@@ -150,9 +176,6 @@ contains
 #ifdef SHEAR
       use shear,            only: shear_acc
 #endif /* SHEAR */
-#ifdef THERM
-      use thermal,          only: src_thermal_exec
-#endif /* THERM */
 
       implicit none
 
@@ -207,10 +230,6 @@ contains
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS && IONIZED */
-#ifdef THERM
-      call src_thermal_exec(u, n, bb, newsrc)
-      usrc(:,:) = usrc(:,:) + newsrc(:,:)
-#endif /* THERM */
 
 ! --------------------------------------------------
 
@@ -219,7 +238,7 @@ contains
       return
       if (.false.) write(0,*) bb, istep
 
-   end subroutine all_sources
+   end subroutine internal_sources
 
 !/*
 !>
@@ -261,9 +280,6 @@ contains
 #ifndef BALSARA
       use timestepinteractions, only: timestep_interactions
 #endif /* !BALSARA */
-#ifdef THERM
-      use timestepthermal,      only: timestep_thermal
-#endif /* THERM */
 
       implicit none
 
@@ -272,9 +288,6 @@ contains
 #ifndef BALSARA
          dt = min(dt, timestep_interactions())
 #endif /* !BALSARA */
-#ifdef THERM
-         dt = min(dt, timestep_thermal())
-#endif /* THERM */
 
       return
       if (.false. .and. dt < 0) return

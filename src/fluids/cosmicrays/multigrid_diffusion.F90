@@ -364,13 +364,13 @@ contains
    subroutine init_source(cr_id)
 
       use cg_leaves,        only: leaves
-      use cg_list_dataop,   only: ind_val, dirty_label
+      use cg_list_dataop,   only: ind_val
       use cg_list_global,   only: all_cg
       use constants,        only: zero, dirtyH1, PPP_MG, PPP_CR
       use dataio_pub,       only: die
       use func,             only: operator(.equals.)
       use initcosmicrays,   only: iarr_crs
-      use multigridvars,    only: source, defect, correction
+      use multigridvars,    only: source, defect, correction, dirty_label
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 
@@ -441,11 +441,11 @@ contains
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
-      use cg_list_dataop,     only: dirty_label
       use cg_list_global,     only: all_cg
       use constants,          only: xdim, zdim, HI, LO, BND_REF, dirtyH1
       use domain,             only: dom
       use grid_cont,          only: grid_container
+      use multigridvars,      only: dirty_label
       use named_array,        only: p3, p4
       use named_array_list,   only: wna
 
@@ -467,10 +467,10 @@ contains
             p3 = p4(ib,:,:,:)
             cgl => cgl%nxt
          enddo
-#else
+#else /* !1 */
          ! This works well but copies all guardcells, which is not necessary
          call leaves%wq_copy(wna%bi, ib, idiffb(ib))
-#endif
+#endif /* !1 */
          call finest%level%restrict_to_floor_q_1var(idiffb(ib))             ! Implement correct restriction (and probably also separate inter-process communication) routines
 
          curl => coarsest%level
@@ -499,7 +499,7 @@ contains
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
-      use cg_list_dataop,     only: ind_val, dirty_label
+      use cg_list_dataop,     only: ind_val
       use cg_list_global,     only: all_cg
       use constants,          only: zero, tmr_mgd, dirtyH1, cbuff_len, PPP_MG, PPP_CR
       use dataio_pub,         only: msg, warn
@@ -507,7 +507,7 @@ contains
       use func,               only: operator(.notequals.)
       use initcosmicrays,     only: iarr_crs
       use mpisetup,           only: master
-      use multigridvars,      only: source, defect, solution, correction, ts, tot_ts
+      use multigridvars,      only: source, defect, solution, correction, ts, tot_ts, dirty_label
       use named_array_list,   only: wna
       use ppp,                only: ppp_main
       use timer,              only: set_timer
@@ -532,7 +532,7 @@ contains
 
 #ifdef DEBUG
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
-#else  /* !DEBUG */
+#else /* !DEBUG */
       dump_every_step = .false.
 #endif /* DEBUG */
       do_ascii_dump = do_ascii_dump .or. dump_every_step
@@ -724,6 +724,7 @@ contains
 
    subroutine residual(src, soln, def, cr_id)
 
+      use cg_cost_data,      only: I_DIFFUSE
       use constants,         only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ, PPP_MG, PPP_CR
       use dataio_pub,        only: die
       use domain,            only: dom
@@ -761,6 +762,8 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          do idir = xdim, zdim
             if (dom%has_dir(idir)) then
                imh = cg%ijkse(:,HI) ; imh(idir) = imh(idir) + 1
@@ -777,6 +780,8 @@ contains
                p3 = p3 - (cg%q(qna%wai)%span(int(iml, kind=4), int(imh, kind=4)) - cg%q(qna%wai)%span(cg%ijkse) ) * diff_theta * dt * cg%idl(idir)
             endif
          enddo
+
+         call cg%costs%stop(I_DIFFUSE)
          cgl => cgl%nxt
       enddo
 
@@ -797,6 +802,7 @@ contains
 
    subroutine approximate_solution(curl, src, soln, cr_id)
 
+      use cg_cost_data,       only: I_DIFFUSE
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
       use constants,          only: xdim, ydim, zdim, one, half, ndims, LO, GEO_XYZ, PPP_MG, PPP_CR
@@ -842,6 +848,7 @@ contains
          cgl => curl%first
          do while (associated(cgl))
             cg => cgl%cg
+            call cg%costs%start
 
             i1 = cg%is; id = 1 ! mv to multigridvars, init_multigrid
             j1 = cg%js; jd = 1
@@ -887,6 +894,8 @@ contains
                   enddo
                enddo
             enddo
+
+            call cg%costs%stop(I_DIFFUSE)
             cgl => cgl%nxt
          enddo
       enddo

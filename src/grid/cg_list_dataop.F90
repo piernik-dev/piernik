@@ -26,19 +26,22 @@
 !
 #include "piernik.h"
 
-!> \brief This module contains grid container list and some methods to manipulate data contained in cg
+!>
+!! \brief This module contains grid container list methods to manipulate field data contained in cg.
+!! Non-field operations should be implemented in cg_list_misc_t.
+!<
 
 module cg_list_dataop
 
-   use cg_list, only: cg_list_t
+   use cg_list_misc, only: cg_list_misc_t
 
    implicit none
 
    private
-   public :: cg_list_dataop_t, ind_val, dirty_label, expanded_domain
+   public :: cg_list_dataop_t, ind_val, expanded_domain
 
    !> \brief Arbitrary list of grid containers
-   type, extends(cg_list_t) :: cg_list_dataop_t
+   type, extends(cg_list_misc_t) :: cg_list_dataop_t
    contains
 
       ! Misc
@@ -67,7 +70,6 @@ module cg_list_dataop
       generic,   public  :: reset_boundaries => zero_boundaries, dirty_mg_boundaries
       procedure, private :: zero_boundaries                   !< Clear boundary values
       procedure, private :: dirty_mg_boundaries               !< Set boundary values
-!> \todo merge lists
 
    end type cg_list_dataop_t
 
@@ -76,9 +78,6 @@ module cg_list_dataop
       integer :: ind  !< index in cg%q
       real    :: val  !< value for multiplication
    end type ind_val
-
-   integer, parameter    :: dl_len = 64 !< length of label buffer
-   character(len=dl_len) :: dirty_label !< buffer for label for check_dirty subroutine
 
    type(cg_list_dataop_t):: expanded_domain !< grid pieces that were created in the area, where computational domain was recently expanded
 
@@ -91,19 +90,20 @@ contains
 !<
    subroutine get_extremum(this, ind, minmax, prop, dir)
 
-      use cg_list,     only: cg_list_element
-      use constants,   only: MINL, MAXL, I_ZERO, I_ONE, ndims, xdim, ydim, zdim, big_float, LO
-      use dataio_pub,  only: msg, warn, die
-      use domain,      only: dom
-      use grid_cont,   only: grid_container
-      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_2DOUBLE_PRECISION, &
-           &                 MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
-      use MPIFUN,      only: MPI_Allreduce, MPI_Send, MPI_Recv
-      use mpisetup,    only: err_mpi, master, proc, FIRST
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
+      use constants,    only: MINL, MAXL, I_ZERO, I_ONE, ndims, xdim, ydim, zdim, big_float, LO
+      use dataio_pub,   only: msg, warn, die
+      use domain,       only: dom
+      use grid_cont,    only: grid_container
+      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_2DOUBLE_PRECISION, &
+           &                  MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
+      use MPIFUN,       only: MPI_Allreduce, MPI_Send, MPI_Recv
+      use mpisetup,     only: err_mpi, master, proc, FIRST
 !      use named_array_list, only: qna
-      use types,       only: value
+      use types,        only: value
 #ifdef MPIF08
-      use MPIF,      only: MPI_Op
+      use MPIF,         only: MPI_Op
 #endif /* MPIF08 */
 
       implicit none
@@ -150,6 +150,7 @@ contains
          cgl => this%first
          if (ind > ubound(cgl%cg%q(:), dim=1) .or. ind < lbound(cgl%cg%q(:), dim=1)) call die("[cg_list_dataop:get_extremum] Wrong index")
          do while (associated(cgl))
+            call cgl%cg%costs%start
 
             tab => cgl%cg%q(ind)%span(cgl%cg%ijkse)
             select case (minmax)
@@ -167,6 +168,8 @@ contains
                      cg_x => cgl%cg
                   endif
             end select
+
+            call cgl%cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
          enddo
          v_red(I_V) = prop%val;
@@ -219,7 +222,8 @@ contains
 
    subroutine set_q_value(this, ind, val)
 
-      use cg_list, only: cg_list_element
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
 
       implicit none
 
@@ -231,7 +235,11 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          cgl%cg%q(ind)%arr(:, :, :) = val
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 
@@ -245,7 +253,8 @@ contains
 
    subroutine q_copy(this, i_from, i_to)
 
-      use cg_list, only: cg_list_element
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
 
       implicit none
 
@@ -257,7 +266,11 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          cgl%cg%q(i_to)%arr(:, :, :) = cgl%cg%q(i_from)%arr(:, :, :)
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 
@@ -267,9 +280,10 @@ contains
 
    subroutine qw_copy(this, q_from, w_to, w_ind)
 
-      use cg_list,   only: cg_list_element
-      use constants, only: PPP_AMR
-      use ppp,       only: ppp_main
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
+      use constants,    only: PPP_AMR
+      use ppp,          only: ppp_main
 
       implicit none
 
@@ -284,7 +298,11 @@ contains
       call ppp_main%start(qwc_label, PPP_AMR)
       cgl => this%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          cgl%cg%w(w_to)%arr(w_ind, :, :, :) = cgl%cg%q(q_from)%arr(:, :, :)
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
       call ppp_main%stop(qwc_label, PPP_AMR)
@@ -295,9 +313,10 @@ contains
 
    subroutine wq_copy(this, w_from, w_ind, q_to)
 
-      use cg_list,   only: cg_list_element
-      use constants, only: PPP_AMR
-      use ppp,       only: ppp_main
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
+      use constants,    only: PPP_AMR
+      use ppp,          only: ppp_main
 
       implicit none
 
@@ -312,7 +331,11 @@ contains
       call ppp_main%start(wqc_label, PPP_AMR)
       cgl => this%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          cgl%cg%q(q_to)%arr(:, :, :) = cgl%cg%w(w_from)%arr(w_ind, :, :, :)
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
       call ppp_main%stop(wqc_label, PPP_AMR)
@@ -323,7 +346,8 @@ contains
 
    subroutine q_add(this, i_add, i_to)
 
-      use cg_list, only: cg_list_element
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
 
       implicit none
 
@@ -336,7 +360,11 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          cgl%cg%q(i_to)%arr(:, :, :) = cgl%cg%q(i_to)%arr(:, :, :) + cgl%cg%q(i_add)%arr(:, :, :)
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 
@@ -346,7 +374,8 @@ contains
 
    subroutine q_add_val(this, i_add, val)
 
-      use cg_list, only: cg_list_element
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
 
       implicit none
 
@@ -359,7 +388,11 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          cgl%cg%q(i_add)%arr(:, :, :) = cgl%cg%q(i_add)%arr(:, :, :) + val
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 
@@ -375,8 +408,9 @@ contains
 
    subroutine q_lin_comb(this, iv, ind)
 
-      use cg_list,    only: cg_list_element
-      use dataio_pub, only: die, warn
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
+      use dataio_pub,   only: die, warn
 
       implicit none
 
@@ -408,10 +442,14 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          cgl%cg%q(ind)%arr(:, :, :) = iv_safe(lbound(iv_safe, dim=1))%val * cgl%cg%q(iv_safe(lbound(iv_safe, dim=1))%ind)%arr(:, :, :)
          do i = lbound(iv_safe, dim=1)+1, ubound(iv_safe, dim=1)
             cgl%cg%q(ind)%arr(:, :, :) = cgl%cg%q(ind)%arr(:, :, :) + iv_safe(i)%val * cgl%cg%q(iv_safe(i)%ind)%arr(:, :, :)
          enddo
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 
@@ -425,6 +463,7 @@ contains
 
    subroutine subtract_average(this, iv)
 
+      use cg_cost_data,     only: I_OTHER
       use cg_list,          only: cg_list_element
       use constants,        only: GEO_XYZ, GEO_RPZ, pSUM
       use dataio_pub,       only: die
@@ -452,6 +491,8 @@ contains
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          select case (dom%geometry_type)
             case (GEO_XYZ)
                avg = avg + sum(cg%q(iv)%span(cg%ijkse), mask=cg%leafmap) * cg%dvol
@@ -464,6 +505,8 @@ contains
             case default
                call die("[cg_list_dataop:subtract_average] Unsupported geometry.")
          end select
+
+         call cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
       call piernik_MPI_Allreduce(avg, pSUM)
@@ -491,12 +534,13 @@ contains
 
    real function norm_sq(this, iv, nomask) result (norm)
 
-      use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ, GEO_RPZ, pSUM
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: piernik_MPI_Allreduce
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
+      use constants,    only: GEO_XYZ, GEO_RPZ, pSUM
+      use dataio_pub,   only: die
+      use domain,       only: dom
+      use grid_cont,    only: grid_container
+      use mpisetup,     only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -518,6 +562,8 @@ contains
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          select case (dom%geometry_type)
             case (GEO_XYZ)
                if (mask) then
@@ -536,6 +582,8 @@ contains
             case default
                call die("[cg_list_dataop:norm_sq] Unsupported geometry.")
          end select
+
+         call cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
       call piernik_MPI_Allreduce(norm, pSUM)
@@ -547,9 +595,10 @@ contains
 
    real function scalar_product(this, var1, var2)
 
-      use cg_list,    only: cg_list_element
-      use constants,  only: pSUM
-      use mpisetup,   only: piernik_MPI_Allreduce
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
+      use constants,    only: pSUM
+      use mpisetup,     only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -563,8 +612,12 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          scalar_product = scalar_product + sum(cgl%cg%q(var1)%span(cgl%cg%ijkse)*cgl%cg%q(var2)%span(cgl%cg%ijkse), mask=cgl%cg%leafmap)
          ! do we need any weighting by volume of elements?
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
       call piernik_MPI_Allreduce(scalar_product, pSUM)
@@ -575,7 +628,8 @@ contains
 
    subroutine mul_by_r(this, ind)
 
-      use cg_list,   only: cg_list_element
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
 
       implicit none
 
@@ -587,9 +641,13 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          do i = lbound(cgl%cg%q(ind)%arr, dim=1), ubound(cgl%cg%q(ind)%arr, dim=1)
             cgl%cg%q(ind)%arr(i, :, :) = cgl%cg%q(ind)%arr(i, :, :) * cgl%cg%x(i)
          enddo
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 
@@ -599,10 +657,11 @@ contains
 
    subroutine div_by_r(this, ind)
 
-      use cg_list,    only: cg_list_element
-      use constants,  only: zero
-      use dataio_pub, only: die
-      use func,       only: operator(.equals.)
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
+      use constants,    only: zero
+      use dataio_pub,   only: die
+      use func,         only: operator(.equals.)
 
       implicit none
 
@@ -614,10 +673,14 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          do i = lbound(cgl%cg%q(ind)%arr, dim=1), ubound(cgl%cg%q(ind)%arr, dim=1)
             if (cgl%cg%x(i).equals.zero) call die("[cg_list_dataop:div_by_r] cannot divide by radius == 0")
             cgl%cg%q(ind)%arr(i, :, :) = cgl%cg%q(ind)%arr(i, :, :) / cgl%cg%x(i)
          enddo
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 
@@ -639,7 +702,8 @@ contains
 
    subroutine dirty_mg_boundaries(this, value)
 
-      use cg_list, only: cg_list_element
+      use cg_cost_data, only: I_OTHER
+      use cg_list,      only: cg_list_element
 
       implicit none
 
@@ -650,9 +714,13 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          cgl%cg%mg%bnd_x(:,:,:) = value
          cgl%cg%mg%bnd_y(:,:,:) = value
          cgl%cg%mg%bnd_z(:,:,:) = value
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 
