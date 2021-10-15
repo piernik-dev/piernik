@@ -352,7 +352,7 @@ contains
       real,                    intent(in) :: dt
       real, dimension(:, :, :), pointer   :: ta, dens, ener
       real, dimension(:,:,:), allocatable :: T, int_ener, kinmag_ener
-      real                                :: gamma, dt_cool, t1, tcool, cfunc, hfunc, esrc, diff
+      real                                :: dt_cool, t1, tcool, cfunc, hfunc, esrc, diff, kbgmh, ikbgmh
       integer                             :: ifl, i, x, y, z
       integer, dimension(3)               :: n
 
@@ -366,7 +366,8 @@ contains
 
          do ifl = 1, flind%fluids
             pfl => flind%all_fluids(ifl)%fl
-            gamma = pfl%gam
+            kbgmh  = kboltz / (pfl%gam_1 * mH)
+            ikbgmh = pfl%gam_1 * mH / kboltz
 
             dens => cg%w(wna%fi)%span(pfl%idn,cg%lhn)
             ener => cg%w(wna%fi)%span(pfl%ien,cg%lhn)
@@ -405,7 +406,7 @@ contains
                               esrc = dens(x,y,z)**2*cfunc + hfunc
                               int_ener(x,y,z) = int_ener(x,y,z) + esrc * dt_cool
                               ener(x,y,z) = ener(x,y,z) + esrc * dt_cool
-                              ta(x,y,z) = (pfl%gam-1) * mH / kboltz * int_ener(x,y,z) / dens(x,y,z)
+                              ta(x,y,z) = ikbgmh * int_ener(x,y,z) / dens(x,y,z)
                               t1 = t1 + dt_cool
                               if (t1 + dt_cool .gt. dt) then
                                  dt_cool = dt - t1
@@ -422,24 +423,24 @@ contains
                         do z = 1, n(3)
                            do i = 1, nfuncs
                               if (i .eq. nfuncs) then
-                                 if (ta(x,y,z) .ge. Tref(i))   tcool = kboltz * ta(x,y,z) / ((pfl%gam-1) * mH * dens(x,y,z) * abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
+                                 if (ta(x,y,z) .ge. Tref(i))   tcool = kbgmh * ta(x,y,z) / (dens(x,y,z) * abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
                               else if (i .eq. 1) then
-                                 if (ta(x,y,z) .le. Tref(i+1)) tcool = kboltz * ta(x,y,z) / ((pfl%gam-1) * mH * dens(x,y,z) * abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
+                                 if (ta(x,y,z) .le. Tref(i+1)) tcool = kbgmh * ta(x,y,z) / (dens(x,y,z) * abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
                               else if ((ta(x,y,z) .ge. Tref(i)) .and. (ta(x,y,z) .le. Tref(i+1))) then
                                  if (alpha(i) .equals. 0.0) then
                                     diff = MAX(abs(ta(x,y,z) - Teql), 0.000001)
-                                    tcool = kboltz * ta(x,y,z) / ((gamma-1) * mH * abs(lambda0(i)) * diff * dens(x,y,z))
+                                    tcool = kbgmh * ta(x,y,z) / (abs(lambda0(i)) * diff * dens(x,y,z))
                                  else
-                                    tcool = kboltz * ta(x,y,z) / ((pfl%gam-1) * mH * dens(x,y,z) * abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
+                                    tcool = kbgmh * ta(x,y,z) / (dens(x,y,z) * abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
                                  endif
                               endif
                            enddo
                            dt_cool = min(dt, tcool/10.0)
                            t1 = 0.0
                            do while (t1 .lt. dt)
-                              ta(x,y,z) = int_ener(x,y,z) * (pfl%gam-1) * mH / (dens(x,y,z) * kboltz)
-                              call temp_EIS(tcool, dt_cool, gamma, ta(x,y,z), dens(x,y,z), T(x,y,z))
-                              int_ener(x,y,z) = dens(x,y,z) * kboltz * T(x,y,z) / ((pfl%gam-1) * mH)
+                              ta(x,y,z) = int_ener(x,y,z) * ikbgmh / dens(x,y,z)
+                              call temp_EIS(tcool, dt_cool, pfl%gam, kbgmh, ta(x,y,z), dens(x,y,z), T(x,y,z))
+                              int_ener(x,y,z) = dens(x,y,z) * kbgmh * T(x,y,z)
                               ener(x,y,z) = kinmag_ener(x,y,z) + int_ener(x,y,z)
 
                               t1 = t1 + dt_cool
@@ -461,13 +462,13 @@ contains
                   do x = 1, n(1)
                      do y = 1, n(2)
                         do z = 1, n(3)
-                           tcool = kboltz * ta(x,y,z) / ((pfl%gam-1) * mH * dens(x,y,z) * abs(L0_cool) * (ta(x,y,z)/Teq)**alpha_cool)
+                           tcool = kbgmh * ta(x,y,z) / (dens(x,y,z) * abs(L0_cool) * (ta(x,y,z)/Teq)**alpha_cool)
                            dt_cool = min(dt, tcool/100.0)
                            t1 = 0.0
                            do while (t1 .lt. dt)
-                              ta(x,y,z) = int_ener(x,y,z) * (pfl%gam-1) * mH / (dens(x,y,z) * kboltz)
-                              call temp_EIS(tcool, dt_cool, gamma, ta(x,y,z), dens(x,y,z), T(x,y,z))
-                              int_ener(x,y,z) = dens(x,y,z) * kboltz * T(x,y,z) / ((pfl%gam-1) * mH)
+                              ta(x,y,z) = int_ener(x,y,z) * ikbgmh / dens(x,y,z)
+                              call temp_EIS(tcool, dt_cool, pfl%gam, kbgmh, ta(x,y,z), dens(x,y,z), T(x,y,z))
+                              int_ener(x,y,z) = dens(x,y,z) * kbgmh * T(x,y,z)
                               ener(x,y,z) = kinmag_ener(x,y,z) + int_ener(x,y,z)
 
                               call heat(dens(x,y,z), hfunc)
@@ -559,16 +560,15 @@ contains
 
    end subroutine heat
 
-   subroutine temp_EIS(tcool, dt, gamma, temp, dens, Tnew)
+   subroutine temp_EIS(tcool, dt, gamma, kbgmh, temp, dens, Tnew)
 
       use dataio_pub, only: msg, warn
       use func,       only: operator(.equals.)
       use mpisetup,   only: master
-      use units,      only: kboltz, mH
 
       implicit none
 
-      real, intent(in)        :: tcool, dt, gamma, temp, dens
+      real, intent(in)        :: tcool, dt, gamma, temp, dens, kbgmh
       real, intent(out)       :: Tnew
       real                    :: lambda1, T1, alpha0, Y0, tcool2, TN, iso2, diff
       integer                 :: i, sign
@@ -649,11 +649,11 @@ contains
                endif
             enddo
             if (alpha0 .equals. 0.0) then
-               tcool2 = kboltz * temp / ((gamma-1) * mH * lambda1 * diff * dens)
+               tcool2 = kbgmh * temp / (lambda1 * diff * dens)
                tcool2 = min(tcool2, 1.0*10**6)
                Y0 = Y0 + (temp/TN) * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) / diff * dt/tcool2
             else
-               tcool2 = kboltz * temp / ((gamma-1) * mH * lambda1 * (temp/T1)**alpha0 * dens)
+               tcool2 = kbgmh * temp / (lambda1 * (temp/T1)**alpha0 * dens)
                Y0 = Y0 + (temp/TN)**isochoric * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) * (T1/temp)**alpha0 * dt/tcool2 * iso2
             endif
             do i = 1, nfuncs
