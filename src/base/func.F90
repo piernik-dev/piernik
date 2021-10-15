@@ -155,7 +155,7 @@ contains
          x2 = x2**2
       enddo
    end function crude_cosh
-#endif
+#endif /* 0 */
 
 !>
 !! \brief Returns the file descriptor associated with a specified unit.

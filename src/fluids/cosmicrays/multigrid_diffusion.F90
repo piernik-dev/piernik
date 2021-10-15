@@ -467,10 +467,10 @@ contains
             p3 = p4(ib,:,:,:)
             cgl => cgl%nxt
          enddo
-#else
+#else /* !1 */
          ! This works well but copies all guardcells, which is not necessary
          call leaves%wq_copy(wna%bi, ib, idiffb(ib))
-#endif
+#endif /* !1 */
          call finest%level%restrict_to_floor_q_1var(idiffb(ib))             ! Implement correct restriction (and probably also separate inter-process communication) routines
 
          curl => coarsest%level
@@ -532,7 +532,7 @@ contains
 
 #ifdef DEBUG
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
-#else  /* !DEBUG */
+#else /* !DEBUG */
       dump_every_step = .false.
 #endif /* DEBUG */
       do_ascii_dump = do_ascii_dump .or. dump_every_step

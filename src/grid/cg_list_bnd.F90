@@ -811,7 +811,7 @@ contains
       use initcrspectrum,        only: smallcree, smallcren
       use initcosmicrays,        only: iarr_cre_e, iarr_cre_n
       use fluidindex,            only: iarr_all_crn
-#else  /* !COSM_RAY_ELECTRONS */
+#else /* !COSM_RAY_ELECTRONS */
       use fluidindex,            only: iarr_all_crs
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */

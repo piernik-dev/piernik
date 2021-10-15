@@ -1098,7 +1098,7 @@ contains
 
 !--------------------------------------------------------------------------
 !>
-!! \brief Routine that is an interface between grav_pot2accel and all_sources
+!! \brief Routine that is an interface between grav_pot2accel and internal_sources
 !<
    subroutine grav_src_exec(n, u, cg, sweep, i1, i2, istep, gravsrc)
 

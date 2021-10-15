@@ -1065,7 +1065,7 @@ contains
 #ifdef DEBUG
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
       inquire(file = "_dump_result_", EXIST=dump_result)
-#else  /* !DEBUG */
+#else /* !DEBUG */
       dump_every_step = .false.
       dump_result = .false.
 #endif /* DEBUG */
