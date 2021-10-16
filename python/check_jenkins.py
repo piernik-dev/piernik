@@ -29,20 +29,24 @@ c_green = '\033[92m'
 c_yellow = '\033[93m'
 c_reset = '\033[0m'
 
-fmt = "%-*s %40s %4s %30s %s"
+fmt = "%s%-*s %40s %4s %30s %s"
 base_job = "https://jenkins.camk.edu.pl"
 gold = "user_gold%20CI"
 
 jobs = []
 longestkey = 0
+w_str = "Waiting (%d/%d) ..."
+w_len = len(w_str % (10, 10)) + 1
+
 for i in ("3-body%20CI", "64-bit%20int%20CR%20test%20CI", "dep.png%20CI", "IO%20v2%20CI",
           "Jeans%20CI", "Maclaurin%20CI", "mergeable%20benchmarking%20CI", "noHDF5%20CI",
           "PEP8%20CI", "Piernik%20CI", "python3%20CI", "QA%20CI", gold):
     jobs.append({"name": i, "finished": False})
     longestkey = max(longestkey, len(i.replace("%20", " ")))
 
-print((c_white + fmt + c_reset) % (longestkey, "Test", "SHA1", "PR#", "branch", "status"))
+print((c_white + fmt + c_reset) % (" " * w_len, longestkey, "Test", "SHA1", "PR#", "branch", "status"))
 
+waiting = False
 all_finished = False
 while not all_finished:
     all_finished = True
@@ -72,7 +76,8 @@ while not all_finished:
             if j["finished"]:
                 anything_new = True
                 j["status"] = (data['result'] == "SUCCESS")
-                print(fmt % (longestkey, j["name"].replace("%20", " "), j["sha1"], j["pr"], j["br"], (c_green if j["status"] else c_red) + data["result"] + c_reset))
+                print(fmt % (("" if waiting else " " * w_len), longestkey, j["name"].replace("%20", " "), j["sha1"], j["pr"], j["br"], (c_green if j["status"] else c_red) + data["result"] + c_reset))
+                waiting = False
                 if not j["status"]:
                     if j["name"] == gold:
                         gold_url = base_job + "/job/" + j["name"] + "/lastBuild/artifact/jenkins/goldexec/gold.txt"
@@ -87,7 +92,8 @@ while not all_finished:
             for j in jobs:
                 if j["finished"]:
                     n_finished += 1
-            print("Waiting (%d/%d) ..." % (n_finished, len(jobs)))
+            print("%-*s" % (w_len, w_str % (n_finished, len(jobs))), end="", flush=True)
+            waiting = True
         time.sleep(10)
 
 exit_stat = 0
