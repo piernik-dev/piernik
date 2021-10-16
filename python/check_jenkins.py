@@ -27,6 +27,7 @@ print((c_white + fmt + c_reset) % (longestkey, "Test", "SHA1", "status"))
 all_finished = False
 while not all_finished:
     all_finished = True
+    anything_new = False
     for j in jobs:
         if not j["finished"]:
             try:
@@ -34,16 +35,14 @@ while not all_finished:
                 data = requests.get(url).json()
                 # pprint.pp(data)
                 if data['building']:
-                    print("Waiting ...")
                     j["finished"] = False
                 else:
                     j["finished"] = True
+                all_finished = all_finished and j["finished"]
 
             except Exception as e:
                 print(str(e))
-                exit(-2)
-
-                all_finished = all_finished and j["finished"]
+                exit(-1)
 
             j["sha1"] = ""
             for ia in data["actions"]:
@@ -56,6 +55,7 @@ while not all_finished:
             # print("Testing commit " + j["sha1"] + " in '" + j["name"].replace("%20", " ") + "'")
 
             if j["finished"]:
+                anything_new = True
                 j["status"] = (data['result'] == "SUCCESS")
                 print(fmt % (longestkey, j["name"].replace("%20", " "), j["sha1"], (c_green if j["status"] else c_red) + data["result"] + c_reset))
                 if not j["status"]:
@@ -65,6 +65,12 @@ while not all_finished:
                         print(gold_out.text)
 
     if not all_finished:
+        if anything_new:
+            n_finished = 0
+            for j in jobs:
+                if j["finished"]:
+                    n_finished += 1
+            print("Waiting (%d/%d) ..." % (n_finished, len(jobs)))
         time.sleep(10)
 
 exit_stat = 0
