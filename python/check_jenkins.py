@@ -8,11 +8,24 @@ import pprint
 c_white = '\033[1m'
 c_red = '\033[91m'
 c_green = '\033[92m'
+c_yellow = '\033[93m'
 c_reset = '\033[0m'
 
 fmt = "%-*s %-40s %s"
 base_job = "https://jenkins.camk.edu.pl"
 gold = "user_gold%20CI"
+
+
+def find_sha1(data):
+    sha1 = ""
+    for ia in data["actions"]:
+        for ja in ia:
+            if ja == "parameters":
+                for k in ia[ja]:
+                    if k["name"] == "ghprbActualCommit":
+                        sha1 = k["value"]
+    return sha1
+
 
 jobs = []
 longestkey = 0
@@ -29,30 +42,26 @@ while not all_finished:
     all_finished = True
     anything_new = False
     for j in jobs:
+        url = base_job + "/job/" + j["name"] + "/lastBuild/api/json"
+        try:
+            data = requests.get(url).json()
+            # pprint.pp(data)
+        except Exception as e:
+            print(str(e))
+            exit(-1)
+
+        if j["finished"]:
+            if find_sha1(data) != j["sha1"]:
+                print(c_yellow + "SHA1 has changed in the meanwhile for '%s'." % j["name"].replace("%20", " ") + c_reset)
+                j["finished"] = False
+
         if not j["finished"]:
-            try:
-                url = base_job + "/job/" + j["name"] + "/lastBuild/api/json"
-                data = requests.get(url).json()
-                # pprint.pp(data)
-                if data['building']:
-                    j["finished"] = False
-                else:
-                    j["finished"] = True
-                all_finished = all_finished and j["finished"]
+            if data['building']:
+                j["finished"] = False
+            else:
+                j["finished"] = True
 
-            except Exception as e:
-                print(str(e))
-                exit(-1)
-
-            j["sha1"] = ""
-            for ia in data["actions"]:
-                for ja in ia:
-                    if ja == "parameters":
-                        for k in ia[ja]:
-                            if k["name"] == "ghprbActualCommit":
-                                j["sha1"] = k["value"]
-
-            # print("Testing commit " + j["sha1"] + " in '" + j["name"].replace("%20", " ") + "'")
+            j["sha1"] = find_sha1(data)
 
             if j["finished"]:
                 anything_new = True
@@ -63,6 +72,8 @@ while not all_finished:
                         gold_url = base_job + "/job/" + j["name"] + "/lastBuild/artifact/jenkins/goldexec/gold.txt"
                         gold_out = requests.get(gold_url)
                         print(gold_out.text)
+
+        all_finished = all_finished and j["finished"]
 
     if not all_finished:
         if anything_new:
