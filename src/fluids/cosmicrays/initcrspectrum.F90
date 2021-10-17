@@ -243,8 +243,8 @@ contains
       tol_f_1D = 1.0e-14
       tol_x_1D = 1.0e-14
       arr_dim  = 200
-      arr_dim_q = 500
-      q_eps     = eps
+      arr_dim_q = 1000
+      q_eps     = 0.001
 
       cresp_substep           = .false.
       n_substeps_max          = 100
