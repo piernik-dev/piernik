@@ -497,30 +497,26 @@ contains
 
       real, intent(in)  :: temp
       real, intent(out) :: coolf
-      integer           :: i
+      integer           :: i, ii
 
       select case (cool_model)
          case ('power_law')
-            coolf = -L0_cool * (temp/Teq)**(alpha_cool)
+            coolf = -L0_cool * (temp/Teq)**alpha_cool
          case ('piecewise_power_law')
             coolf = 0.0
-            do i = 1, nfuncs
-               if (i .eq. nfuncs) then
-                  if (temp .ge. Tref(i)) then
-                     coolf = - lambda0(i) * (temp/Tref(i))**alpha(i)
-                  endif
-               else if (i .eq. 1) then
-                  if (temp .le. Tref(i+1)) then
-                     coolf = - lambda0(i) * (temp/Tref(i))**alpha(i)
-                  endif
-               else
-                  if ((temp .ge. Tref(i)) .and. (temp .le. Tref(i+1))) then
-                     coolf = - lambda0(i) * (temp/Tref(i))**alpha(i)
-                  endif
-               endif
-            enddo
+            ii = 0
+            if (temp >= Tref(nfuncs)) then
+               ii = nfuncs
+            else if (temp < Tref(2)) then
+               ii = 1
+            else
+               do i = 2, nfuncs - 1
+                  if ((temp >= Tref(i)) .and. (temp < Tref(i+1))) ii = i
+               enddo
+            endif
+            if (ii /= 0) coolf = - lambda0(ii) * (temp/Tref(ii))**alpha(ii)
          case ('null')
-            return
+            coolf = 0.0
          case default
             write(msg,'(3a)') 'Cool model: ',cool_model,' not implemented'
             if (master) call warn(msg)
