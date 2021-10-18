@@ -1,0 +1,102 @@
+
+$BASE_DOMAIN
+    n_d = 32, 32, 1
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   =-1.0
+    xmax   = 1.0
+    ymin   =-1.0
+    ymax   = 1.0
+    zmin   =-1.0
+    zmax   = 1.0
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+    units_set = 'PSM'
+ /
+
+ $RESTART_CONTROL
+ restart=''
+ /
+
+ $END_CONTROL
+    tend   = 0.05
+ /
+
+ $OUTPUT_CONTROL
+    colormode = .false.
+    problem_name = 'thermal'
+    run_id =  'jen'
+    dt_hdf  = 1.0e-1
+    dt_res  = 0.0
+    dt_log  = 1.0e-5
+    dt_tsl  = 1.0e-5
+    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz', 'temp'
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.666666666
+ /
+
+ $FLUID_NEUTRAL
+    gamma = 1.666666666
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.5
+    smallp= 1.e-8
+    smalld = 1.e-5
+    smallei= 1.e-5
+    limiter= 'vanleer'
+    disallow_negatives = .false.
+    solver_str = "riemann"
+ /
+
+ $GRAVITY
+ /
+ $THERMAL
+    thermal_active = .TRUE.
+    cool_model     = 'piecewise_power_law'
+    cool_curve     = 'power_law'
+    cool_file      = ''
+    heat_model     = 'G012'
+    scheme         = 'EIS'
+    alpha_cool     = 1.5
+    Teq            = 1000.0
+    Lambda_0       = 1.0e-25
+    G0             = 1.0e-25
+    G1             = 0.0e-25 !40.44e-25
+    G2             = 0.0e-27
+    x_ion          = 1.0
+    cfl_coolheat   = 0.000001
+    isochoric      = 1
+    d_isochoric    = 1.0
+ /
+ $PROBLEM_CONTROL
+    d0     = 1.0
+    T0     = 100000.0
+    bx0    = 0.0
+    by0    = 0.0
+    bz0    = 0.0
+    pertamp = 0.0e-3
+ /
+
+ $MULTIGRID_SOLVER
+ /
+
+ $INTERACTIONS
+ /
+
+
+ $FLUID_TRACER
+ /
+
+ $AMR
+ /
