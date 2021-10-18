@@ -256,7 +256,7 @@ contains
          write(msg, '(a,i4)') '[thermal] fit nfuncs = ', nfuncs
          call printinfo(msg)
       endif
-      deallocate(Tref, alpha,lambda0)
+      deallocate(Tref, alpha, lambda0)
       call fit_proc(nbins, logT, lambda)       ! Perform fit
 
       deallocate(logT, lambda, cool, heat)
@@ -286,7 +286,7 @@ contains
             loglambda(i) = log10(abs(lambda(i)))
          endif
       enddo
-      if (allocated(Tref)) deallocate(Tref,alpha,lambda0)
+      if (allocated(Tref)) deallocate(Tref, alpha, lambda0)
       allocate(Tref(nfuncs), alpha(nfuncs), lambda0(nfuncs))
 
       i = 1
@@ -432,7 +432,7 @@ contains
                            t1 = 0.0
                            do while (t1 .lt. dt)
                               ta(x,y,z) = int_ener(x,y,z) * ikbgmh / dens(x,y,z)
-                              call temp_EIS(tcool, dt_cool, pfl%gam, kbgmh, ta(x,y,z), dens(x,y,z), Tnew)
+                              call temp_EIS(tcool, dt_cool, igamma(pfl%gam), kbgmh, ta(x,y,z), dens(x,y,z), Tnew)
                               int_ener(x,y,z) = dens(x,y,z) * kbgmh * Tnew
                               ener(x,y,z) = kinmag_ener(x,y,z) + int_ener(x,y,z)
 
@@ -456,7 +456,7 @@ contains
                            t1 = 0.0
                            do while (t1 .lt. dt)
                               ta(x,y,z) = int_ener(x,y,z) * ikbgmh / dens(x,y,z)
-                              call temp_EIS(tcool, dt_cool, pfl%gam, kbgmh, ta(x,y,z), dens(x,y,z), Tnew)
+                              call temp_EIS(tcool, dt_cool, igamma(pfl%gam), kbgmh, ta(x,y,z), dens(x,y,z), Tnew)
                               int_ener(x,y,z) = dens(x,y,z) * kbgmh * Tnew
                               ener(x,y,z) = kinmag_ener(x,y,z) + int_ener(x,y,z)
 
@@ -483,6 +483,17 @@ contains
       enddo
 
    end subroutine thermal_sources
+
+   real function igamma(gam) result(fiso)
+
+      implicit none
+
+      real, intent(in) :: gam
+
+      fiso = 1.0
+      if (isochoric == 2) fiso = 1.0/gam
+
+   end function igamma
 
    subroutine find_temp_bin(temp, ii, found, outer)
 
@@ -560,7 +571,7 @@ contains
 
    end subroutine heat
 
-   subroutine temp_EIS(tcool, dt, gamma, kbgmh, temp, dens, Tnew)
+   subroutine temp_EIS(tcool, dt, fiso, kbgmh, temp, dens, Tnew)
 
       use dataio_pub, only: msg, warn
       use func,       only: operator(.equals.)
@@ -568,9 +579,9 @@ contains
 
       implicit none
 
-      real, intent(in)        :: tcool, dt, gamma, temp, dens, kbgmh
+      real, intent(in)        :: tcool, dt, fiso, temp, dens, kbgmh
       real, intent(out)       :: Tnew
-      real                    :: lambda1, T1, alpha0, Y0, tcool2, TN, iso2, diff
+      real                    :: lambda1, T1, alpha0, Y0, tcool2, TN, diff
       integer                 :: i, ii, sign
       logical                 :: bin_found, outer_bin
       real, dimension(nfuncs) :: Y
@@ -580,26 +591,18 @@ contains
          case ('power_law')
             if (alpha_cool .equals. 1.0) then
                if (isochoric == 1) then
-                  Tnew = temp * exp(-dt/tcool)                 !isochoric
+                  Tnew = temp * exp(-dt/tcool)             !isochoric
                else
-                  Tnew = temp * (1 - 1/gamma * dt/tcool)      !isobar
+                  Tnew = temp * (1 - fiso * dt/tcool)      !isobar
                endif
                !Tnew = Tnew + dt * (gamma-1) * mH * G0_heat / kboltz  !heating
             else
-               if (isochoric == 1) then
-                  Tnew = temp * (1 - (1-alpha_cool) * dt / tcool) **(1.0/(1-alpha_cool))             !isochoric
-               else
-                  Tnew = temp * (1 - (isochoric-alpha_cool)*dt / tcool / gamma) **(1/(isochoric-alpha_cool))    !isobar
-               endif
+               Tnew = temp * (1 - (isochoric-alpha_cool) * dt / tcool * fiso)**(1.0/(isochoric-alpha_cool))
                !Tnew = Tnew + dt * (gamma-1) * mH * G0_heat / kboltz   ! isochoric heating
                !Tnew = Tnew * sqrt(1 + 2 * dt * (gamma-1) * mH * G0_heat *dens / kboltz / Tnew / gamma)  ! isobar heating
             endif
 
          case ('piecewise_power_law')
-            iso2 = 1.0
-            if (isochoric .eq. 2) then
-               iso2 = 1.0/gamma
-            endif
             TN = 10**8
             Y = 0.0
             T1 = 0.0
@@ -640,7 +643,7 @@ contains
                Y0 = Y0 + (temp/TN) * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) / diff * dt/tcool2
             else
                tcool2 = kbgmh * temp / (lambda1 * (temp/T1)**alpha0 * dens)
-               Y0 = Y0 + (temp/TN)**isochoric * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) * (T1/temp)**alpha0 * dt/tcool2 * iso2
+               Y0 = Y0 + (temp/TN)**isochoric * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) * (T1/temp)**alpha0 * dt/tcool2 * fiso
             endif
 
             if (bin_found) then
