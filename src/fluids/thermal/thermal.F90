@@ -353,7 +353,8 @@ contains
       real, dimension(:, :, :), pointer   :: ta, dens, ener
       real, dimension(:,:,:), allocatable :: int_ener, kinmag_ener
       real                                :: dt_cool, t1, tcool, cfunc, hfunc, esrc, diff, kbgmh, ikbgmh, Tnew
-      integer                             :: ifl, i, x, y, z
+      integer                             :: ifl, ii, x, y, z
+      logical                             :: bin_found, outer_bin
       integer, dimension(3)               :: n
 
       type(cg_list_element),  pointer     :: cgl
@@ -418,20 +419,15 @@ contains
                   do x = 1, n(1)
                      do y = 1, n(2)
                         do z = 1, n(3)
-                           do i = 1, nfuncs
-                              if (i .eq. nfuncs) then
-                                 if (ta(x,y,z) .ge. Tref(i))   tcool = kbgmh * ta(x,y,z) / (dens(x,y,z) * abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
-                              else if (i .eq. 1) then
-                                 if (ta(x,y,z) .le. Tref(i+1)) tcool = kbgmh * ta(x,y,z) / (dens(x,y,z) * abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
-                              else if ((ta(x,y,z) .ge. Tref(i)) .and. (ta(x,y,z) .le. Tref(i+1))) then
-                                 if (alpha(i) .equals. 0.0) then
-                                    diff = MAX(abs(ta(x,y,z) - Teql), 0.000001)
-                                    tcool = kbgmh * ta(x,y,z) / (abs(lambda0(i)) * diff * dens(x,y,z))
-                                 else
-                                    tcool = kbgmh * ta(x,y,z) / (dens(x,y,z) * abs(lambda0(i)) * (ta(x,y,z)/Tref(i))**alpha(i))
-                                 endif
+                           call find_temp_bin(ta(x,y,z), ii, bin_found, outer_bin)
+                           if (bin_found) then
+                              if ( .not. outer_bin .and. (alpha(ii) .equals. 0.0) ) then
+                                 diff = MAX(abs(ta(x,y,z) - Teql), 0.000001)
+                                 tcool = kbgmh * ta(x,y,z) / (abs(lambda0(ii)) * diff * dens(x,y,z))
+                              else
+                                 tcool = kbgmh * ta(x,y,z) / (dens(x,y,z) * abs(lambda0(ii)) * (ta(x,y,z)/Tref(ii))**alpha(ii))
                               endif
-                           enddo
+                           endif
                            dt_cool = min(dt, tcool/10.0)
                            t1 = 0.0
                            do while (t1 .lt. dt)
@@ -488,24 +484,29 @@ contains
 
    end subroutine thermal_sources
 
-   subroutine find_temp_bin(temp, ii)
+   subroutine find_temp_bin(temp, ii, found, outer)
 
       implicit none
 
       real,    intent(in)  :: temp
       integer, intent(out) :: ii
+      logical, intent(out) :: found, outer
       integer              :: i
 
       ii = 0
       if (temp >= Tref(nfuncs)) then
          ii = nfuncs
+         outer = .true.
       else if (temp < Tref(2)) then
          ii = 1
+         outer = .true.
       else
          do i = 2, nfuncs - 1
             if ((temp >= Tref(i)) .and. (temp < Tref(i+1))) ii = i
          enddo
+         outer = .false.
       endif
+      found = (ii /= 0)
 
    end subroutine find_temp_bin
 
@@ -519,14 +520,15 @@ contains
       real, intent(in)  :: temp
       real, intent(out) :: coolf
       integer           :: ii
+      logical           :: bf, ou
 
       select case (cool_model)
          case ('power_law')
             coolf = -L0_cool * (temp/Teq)**alpha_cool
          case ('piecewise_power_law')
             coolf = 0.0
-            call find_temp_bin(temp, ii)
-            if (ii /= 0) coolf = - lambda0(ii) * (temp/Tref(ii))**alpha(ii)
+            call find_temp_bin(temp, ii, bf, ou)
+            if (bf) coolf = - lambda0(ii) * (temp/Tref(ii))**alpha(ii)
          case ('null')
             coolf = 0.0
          case default
@@ -570,6 +572,7 @@ contains
       real, intent(out)       :: Tnew
       real                    :: lambda1, T1, alpha0, Y0, tcool2, TN, iso2, diff
       integer                 :: i, ii, sign
+      logical                 :: bin_found, outer_bin
       real, dimension(nfuncs) :: Y
 
       select case (cool_model)
@@ -613,9 +616,9 @@ contains
                endif
             enddo
 
-            call find_temp_bin(temp, ii)
-            if (ii /= 0) then
-               if ( (ii /= 1) .and. (ii /= nfuncs) .and. (alpha(ii) .equals. 0.0) ) then
+            call find_temp_bin(temp, ii, bin_found, outer_bin)
+            if (bin_found) then
+               if ( .not. outer_bin .and. (alpha(ii) .equals. 0.0) ) then
                   if (temp .gt. Teql) then
                      sign = 1
                   else
@@ -640,8 +643,8 @@ contains
                Y0 = Y0 + (temp/TN)**isochoric * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) * (T1/temp)**alpha0 * dt/tcool2 * iso2
             endif
 
-            if (ii /= 0) then
-               if ( (ii /= 1) .and. (ii /= nfuncs) .and. (alpha0 .equals. 0.0) ) then
+            if (bin_found) then
+               if ( .not. outer_bin .and. (alpha0 .equals. 0.0) ) then
                   Tnew = Teql + sign * (Teql-Tref(ii)) * exp(-TN * (Tref(nfuncs)/TN)**alpha(nfuncs) * lambda0(ii)/lambda0(nfuncs) * (Y0 - Y(ii)))
                else
                   Tnew = Tref(ii) * (1 - (isochoric-alpha(ii)) * lambda0(ii)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(ii))**isochoric * (Y0 - Y(ii)) )**(1/(isochoric-alpha(ii)))
