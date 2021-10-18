@@ -640,7 +640,6 @@ contains
                Y0 = Y0 + (temp/TN)**isochoric * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) * (T1/temp)**alpha0 * dt/tcool2 * iso2
             endif
 
-            call find_temp_bin(temp, ii)
             if (ii /= 0) then
                if ( (ii /= 1) .and. (ii /= nfuncs) .and. (alpha0 .equals. 0.0) ) then
                   Tnew = Teql + sign * (Teql-Tref(ii)) * exp(-TN * (Tref(nfuncs)/TN)**alpha(nfuncs) * lambda0(ii)/lambda0(nfuncs) * (Y0 - Y(ii)))
