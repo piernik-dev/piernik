@@ -582,7 +582,7 @@ contains
       real, intent(in)        :: tcool, dt, fiso, temp, dens, kbgmh
       real, intent(out)       :: Tnew
       real                    :: lambda1, T1, alpha0, Y0, tcool2, TN, diff
-      integer                 :: i, ii, sign
+      integer                 :: i, ii
       logical                 :: bin_found, outer_bin
       real, dimension(nfuncs) :: Y
 
@@ -606,7 +606,6 @@ contains
             TN = 10**8
             Y = 0.0
             T1 = 0.0
-            sign = 0.0
             lambda1 = 0.0
             diff = 0.0
             Y0 = 0.0
@@ -622,11 +621,6 @@ contains
             call find_temp_bin(temp, ii, bin_found, outer_bin)
             if (bin_found) then
                if ( .not. outer_bin .and. (alpha(ii) .equals. 0.0) ) then
-                  if (temp .gt. Teql) then
-                     sign = 1
-                  else
-                     sign = -1
-                  endif
                   diff = MAX(abs(temp-Teql), 0.000001)
                   Y0 = Y(ii) + lambda0(nfuncs)/lambda0(ii) * (TN/Tref(nfuncs))**alpha(nfuncs) / TN * log((abs(Teql - Tref(ii)) / diff))
                else
@@ -648,7 +642,7 @@ contains
 
             if (bin_found) then
                if ( .not. outer_bin .and. (alpha0 .equals. 0.0) ) then
-                  Tnew = Teql + sign * (Teql-Tref(ii)) * exp(-TN * (Tref(nfuncs)/TN)**alpha(nfuncs) * lambda0(ii)/lambda0(nfuncs) * (Y0 - Y(ii)))
+                  Tnew = Teql - sign(1.0, Teql - temp) * (Teql-Tref(ii)) * exp(-TN * (Tref(nfuncs)/TN)**alpha(nfuncs) * lambda0(ii)/lambda0(nfuncs) * (Y0 - Y(ii)))
                else
                   Tnew = Tref(ii) * (1 - (isochoric-alpha(ii)) * lambda0(ii)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(ii))**isochoric * (Y0 - Y(ii)) )**(1/(isochoric-alpha(ii)))
                endif
