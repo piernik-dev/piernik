@@ -27,14 +27,14 @@ $BASE_DOMAIN
  /
 
  $END_CONTROL
-    tend   = 0.05
+    tend   = 0.01
  /
 
  $OUTPUT_CONTROL
     colormode = .false.
     problem_name = 'thermal'
     run_id =  'jen'
-    dt_hdf  = 1.0e-1
+    dt_hdf  = 1.0e-2
     dt_res  = 0.0
     dt_log  = 1.0e-5
     dt_tsl  = 1.0e-5
