@@ -488,6 +488,27 @@ contains
 
    end subroutine thermal_sources
 
+   subroutine find_temp_bin(temp, ii)
+
+      implicit none
+
+      real,    intent(in)  :: temp
+      integer, intent(out) :: ii
+      integer              :: i
+
+      ii = 0
+      if (temp >= Tref(nfuncs)) then
+         ii = nfuncs
+      else if (temp < Tref(2)) then
+         ii = 1
+      else
+         do i = 2, nfuncs - 1
+            if ((temp >= Tref(i)) .and. (temp < Tref(i+1))) ii = i
+         enddo
+      endif
+
+   end subroutine find_temp_bin
+
    subroutine cool(temp, coolf)
 
       use dataio_pub, only: msg, warn
@@ -497,23 +518,14 @@ contains
 
       real, intent(in)  :: temp
       real, intent(out) :: coolf
-      integer           :: i, ii
+      integer           :: ii
 
       select case (cool_model)
          case ('power_law')
             coolf = -L0_cool * (temp/Teq)**alpha_cool
          case ('piecewise_power_law')
             coolf = 0.0
-            ii = 0
-            if (temp >= Tref(nfuncs)) then
-               ii = nfuncs
-            else if (temp < Tref(2)) then
-               ii = 1
-            else
-               do i = 2, nfuncs - 1
-                  if ((temp >= Tref(i)) .and. (temp < Tref(i+1))) ii = i
-               enddo
-            endif
+            call find_temp_bin(temp, ii)
             if (ii /= 0) coolf = - lambda0(ii) * (temp/Tref(ii))**alpha(ii)
          case ('null')
             coolf = 0.0
@@ -557,7 +569,7 @@ contains
       real, intent(in)        :: tcool, dt, gamma, temp, dens, kbgmh
       real, intent(out)       :: Tnew
       real                    :: lambda1, T1, alpha0, Y0, tcool2, TN, iso2, diff
-      integer                 :: i, sign
+      integer                 :: i, ii, sign
       real, dimension(nfuncs) :: Y
 
       select case (cool_model)
@@ -600,40 +612,25 @@ contains
                   Y(i) = Y(i+1) - 1 / (isochoric-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**isochoric * (1 - (Tref(i)/Tref(i+1))**(alpha(i)-isochoric))
                endif
             enddo
-            do i = 1, nfuncs
-               if (i .eq. nfuncs) then
-                  if ((temp .ge. Tref(i))) then
-                     Y0 = Y(i) + 1/(isochoric-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**isochoric * (1 - (Tref(i)/temp)**(alpha(i)-isochoric))
-                     T1 = Tref(i)
-                     alpha0 = alpha(i)
-                     lambda1 = lambda0(i)
+
+            call find_temp_bin(temp, ii)
+            if (ii /= 0) then
+               if ( (ii /= 1) .and. (ii /= nfuncs) .and. (alpha(ii) .equals. 0.0) ) then
+                  if (temp .gt. Teql) then
+                     sign = 1
+                  else
+                     sign = -1
                   endif
-               else if (i .eq. 1) then
-                  if (temp .le. Tref(i+1)) then
-                     Y0 = Y(i) + 1/(isochoric-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**isochoric * (1 - (Tref(i)/temp)**(alpha(i)-isochoric))
-                     T1 = Tref(i)
-                     lambda1 = lambda0(i)
-                     alpha0 = alpha(i)
-                  endif
+                  diff = MAX(abs(temp-Teql), 0.000001)
+                  Y0 = Y(ii) + lambda0(nfuncs)/lambda0(ii) * (TN/Tref(nfuncs))**alpha(nfuncs) / TN * log((abs(Teql - Tref(ii)) / diff))
                else
-                  if ((temp .ge. Tref(i)) .and. (temp .le. Tref(i+1))) then
-                     if (alpha(i) .equals. 0.0) then
-                        if (temp .gt. Teql) then
-                           sign = 1
-                        else
-                           sign = -1
-                        endif
-                        diff = MAX(abs(temp-Teql), 0.000001)
-                        Y0 = Y(i) + lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) / TN * log((abs(Teql - Tref(i)) / diff))
-                     else
-                        Y0 = Y(i) + 1/(isochoric-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**isochoric * (1 - (Tref(i)/temp)**(alpha(i)-isochoric))
-                     endif
-                     T1 = Tref(i)
-                     alpha0 = alpha(i)
-                     lambda1 = lambda0(i)
-                  endif
+                  Y0 = Y(ii) + 1/(isochoric-alpha(ii)) * lambda0(nfuncs)/lambda0(ii) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(ii)/TN)**isochoric * (1 - (Tref(ii)/temp)**(alpha(ii)-isochoric))
                endif
-            enddo
+               T1 = Tref(ii)
+               alpha0 = alpha(ii)
+               lambda1 = lambda0(ii)
+            endif
+
             if (alpha0 .equals. 0.0) then
                tcool2 = kbgmh * temp / (lambda1 * diff * dens)
                tcool2 = min(tcool2, 1.0*10**6)
@@ -642,28 +639,17 @@ contains
                tcool2 = kbgmh * temp / (lambda1 * (temp/T1)**alpha0 * dens)
                Y0 = Y0 + (temp/TN)**isochoric * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) * (T1/temp)**alpha0 * dt/tcool2 * iso2
             endif
-            do i = 1, nfuncs
-               if (i .eq. nfuncs) then
-                  if ((temp .ge. Tref(i))) then
-                     Tnew = Tref(i) * (1 - (isochoric-alpha(i)) * lambda0(i)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(i))**isochoric * (Y0 - Y(i)) )**(1/(isochoric-alpha(i)))
-                  endif
-               else if (i .eq. 1) then
-                  if (temp .le. Tref(i+1)) then
-                     Tnew = Tref(i) * (1 - (isochoric-alpha(i)) * lambda0(i)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(i))**isochoric * (Y0 - Y(i)) )**(1/(isochoric-alpha(i)))
-                  endif
+
+            call find_temp_bin(temp, ii)
+            if (ii /= 0) then
+               if ( (ii /= 1) .and. (ii /= nfuncs) .and. (alpha0 .equals. 0.0) ) then
+                  Tnew = Teql + sign * (Teql-Tref(ii)) * exp(-TN * (Tref(nfuncs)/TN)**alpha(nfuncs) * lambda0(ii)/lambda0(nfuncs) * (Y0 - Y(ii)))
                else
-                  if ((temp .ge. Tref(i)) .and. (temp .le. Tref(i+1))) then
-                     if (alpha0 .equals. 0.0) then
-                        Tnew = Teql + sign * (Teql-Tref(i)) * exp(-TN * (Tref(nfuncs)/TN)**alpha(nfuncs) * lambda0(i)/lambda0(nfuncs) * (Y0 - Y(i)))
-                     else
-                        Tnew = Tref(i) * (1 - (isochoric-alpha(i)) * lambda0(i)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(i))**isochoric * (Y0 - Y(i)) )**(1/(isochoric-alpha(i)))
-                     endif
-                  endif
+                  Tnew = Tref(ii) * (1 - (isochoric-alpha(ii)) * lambda0(ii)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(ii))**isochoric * (Y0 - Y(ii)) )**(1/(isochoric-alpha(ii)))
                endif
-            enddo
-            if (Tnew .lt. 100.0) then
-               Tnew = 100.0                        ! To improve
             endif
+
+            if (Tnew .lt. 100.0) Tnew = 100.0                        ! To improve
 
          case ('null')
             return
