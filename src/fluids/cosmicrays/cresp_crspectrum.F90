@@ -110,7 +110,7 @@ contains
 #endif /* CRESP_VERBOSED */
       use diagnostics,    only: decr_vec
       use initcosmicrays, only: ncre
-      use initcrspectrum, only: spec_mod_trms, e_small_approx_p, dfpq, crel, p_mid_fix, nullify_empty_bins, p_fix
+      use initcrspectrum, only: allow_unnatural_transfer, crel, dfpq, e_small_approx_p, nullify_empty_bins, p_mid_fix, p_fix, spec_mod_trms
 
       implicit none
 
@@ -187,7 +187,7 @@ contains
 
          if (solve_fail_up) then                               !< exit_code support
             if (i_cut(HI) < ncre) then
-               call manually_deactivate_bin_via_transfer(i_cut(HI), -I_ONE, n, e)
+               if (allow_unnatural_transfer) call manually_deactivate_bin_via_transfer(i_cut(HI), -I_ONE, n, e)
                call decr_vec(active_bins, num_active_bins)
                call decr_vec(active_edges, num_active_edges)
                is_active_bin(i_cut(HI))  = .false.
@@ -213,7 +213,7 @@ contains
 
          if (solve_fail_lo) then                               !< exit_code support
             if (i_cut(LO) > 0) then
-               call manually_deactivate_bin_via_transfer(i_cut(LO) + I_ONE, I_ONE, n, e)
+               if (allow_unnatural_transfer)  call manually_deactivate_bin_via_transfer(i_cut(LO) + I_ONE, I_ONE, n, e)
                call decr_vec(active_bins, 1)
                call decr_vec(active_edges, 1)
                is_active_bin(i_cut(LO)+1) = .false.
@@ -262,14 +262,16 @@ contains
 
          edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
 
-         if ((del_i(HI) == 0) .and. (approx_p(HI) > 0) .and. (i_cut_next(HI)-1 > 0)) then
-            if (.not. assert_active_bin_via_nei(ndt(i_cut_next(HI)), edt(i_cut_next(HI)), i_cut_next(HI))) then
-               call manually_deactivate_bin_via_transfer(i_cut_next(HI), -I_ONE, ndt, edt)
+         if (allow_unnatural_transfer) then
+            if ((del_i(HI) == 0) .and. (approx_p(HI) > 0) .and. (i_cut_next(HI)-1 > 0)) then
+               if (.not. assert_active_bin_via_nei(ndt(i_cut_next(HI)), edt(i_cut_next(HI)), i_cut_next(HI))) then
+                  call manually_deactivate_bin_via_transfer(i_cut_next(HI), -I_ONE, ndt, edt)
+               endif
             endif
-         endif
-         if ((del_i(LO) == 0) .and. (approx_p(LO) > 0) .and. (i_cut_next(LO)+2 <= ncre)) then
-            if (.not. assert_active_bin_via_nei(ndt(i_cut_next(LO)+1), edt(i_cut_next(LO)+1), i_cut_next(LO))) then
-               call manually_deactivate_bin_via_transfer(i_cut_next(LO) + I_ONE, I_ONE, ndt, edt)
+            if ((del_i(LO) == 0) .and. (approx_p(LO) > 0) .and. (i_cut_next(LO)+2 <= ncre)) then
+               if (.not. assert_active_bin_via_nei(ndt(i_cut_next(LO)+1), edt(i_cut_next(LO)+1), i_cut_next(LO))) then
+                  call manually_deactivate_bin_via_transfer(i_cut_next(LO) + I_ONE, I_ONE, ndt, edt)
+               endif
             endif
          endif
 
