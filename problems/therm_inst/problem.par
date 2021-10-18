@@ -27,7 +27,7 @@ $BASE_DOMAIN
  /
 
  $END_CONTROL
-    tend   = 0.1
+    tend   = 0.05
  /
 
  $OUTPUT_CONTROL
@@ -76,11 +76,12 @@ $BASE_DOMAIN
     G2             = 0.0e-27
     x_ion          = 1.0
     cfl_coolheat   = 0.000001
-    iso            = 1
+    isochoric      = 1
+    d_isochoric    = 1.0
  /
  $PROBLEM_CONTROL
     d0     = 1.0
-    T0     = 20000.0
+    T0     = 100000.0
     bx0    = 0.0
     by0    = 0.0
     bz0    = 0.0
