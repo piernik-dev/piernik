@@ -383,8 +383,8 @@ contains
 
       real,                    intent(in) :: dt
       real, dimension(:, :, :), pointer   :: ta, dens, ener
-      real, dimension(:,:,:), allocatable :: int_ener, kinmag_ener
-      real                                :: dt_cool, t1, tcool, cfunc, hfunc, esrc, diff, kbgmh, ikbgmh, Tnew
+      real, dimension(:,:,:), allocatable :: kinmag_ener
+      real                                :: dt_cool, t1, tcool, cfunc, hfunc, esrc, diff, kbgmh, ikbgmh, Tnew, int_ener
       integer                             :: ifl, ii, i, j, k
       logical                             :: bin_found, outer_bin
       integer, dimension(3)               :: n
@@ -409,14 +409,12 @@ contains
             ta   => cg%q(itemp)%arr(:,:,:)
 
             n = shape(ta)
-            allocate(int_ener(n(xdim),n(ydim),n(zdim)), kinmag_ener(n(xdim),n(ydim),n(zdim)))
-            int_ener = 0.0
+            allocate(kinmag_ener(n(xdim),n(ydim),n(zdim)))
             if (pfl%has_energy) then
                kinmag_ener = ekin(cg%u(pfl%imx,:,:,:), cg%u(pfl%imy,:,:,:), cg%u(pfl%imz,:,:,:), dens)
                if (pfl%is_magnetized) then
                   kinmag_ener = kinmag_ener + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))
                endif
-               int_ener = ener - kinmag_ener
             endif
 
             select case (scheme)
@@ -425,17 +423,18 @@ contains
                   do i = 1, n(xdim)
                      do j = 1, n(ydim)
                         do k = 1, n(zdim)
+                           int_ener = ener(i,j,k) - kinmag_ener(i,j,k)
                            call cool(ta(i,j,k), cfunc)
                            call heat(dens(i,j,k), hfunc)
                            esrc = dens(i,j,k)**2*cfunc + hfunc
-                           dt_cool = min(dt, cfl_coolheat*abs(1./(esrc/int_ener(i,j,k))))
+                           dt_cool = min(dt, cfl_coolheat*abs(1./(esrc/int_ener)))
                            t1 = 0.0
                            do while (t1 < dt)
                               call cool(ta(i,j,k), cfunc)
                               esrc = dens(i,j,k)**2*cfunc + hfunc
-                              int_ener(i,j,k) = int_ener(i,j,k) + esrc * dt_cool
+                              int_ener = int_ener + esrc * dt_cool
                               ener(i,j,k) = ener(i,j,k) + esrc * dt_cool
-                              ta(i,j,k) = ikbgmh * int_ener(i,j,k) / dens(i,j,k)
+                              ta(i,j,k) = ikbgmh * int_ener / dens(i,j,k)
                               t1 = t1 + dt_cool
                               if (t1 + dt_cool > dt) dt_cool = dt - t1
                            enddo
@@ -447,6 +446,7 @@ contains
                   do i = 1, n(xdim)
                      do j = 1, n(ydim)
                         do k = 1, n(zdim)
+                           int_ener = ener(i,j,k) - kinmag_ener(i,j,k)
                            call find_temp_bin(ta(i,j,k), ii, bin_found, outer_bin)
                            if (bin_found) then
                               if ( .not. outer_bin .and. (alpha(ii) .equals. 0.0) ) then
@@ -459,10 +459,10 @@ contains
                            dt_cool = min(dt, tcool/10.0)
                            t1 = 0.0
                            do while (t1 < dt)
-                              ta(i,j,k) = int_ener(i,j,k) * ikbgmh / dens(i,j,k)
+                              ta(i,j,k) = int_ener * ikbgmh / dens(i,j,k)
                               call temp_EIS(tcool, dt_cool, igamma(pfl%gam), kbgmh, ta(i,j,k), dens(i,j,k), Tnew)
-                              int_ener(i,j,k) = dens(i,j,k) * kbgmh * Tnew
-                              ener(i,j,k) = kinmag_ener(i,j,k) + int_ener(i,j,k)
+                              int_ener    = dens(i,j,k) * kbgmh * Tnew
+                              ener(i,j,k) = kinmag_ener(i,j,k) + int_ener
 
                               t1 = t1 + dt_cool
                               if (t1 + dt_cool > dt) dt_cool = dt - t1
@@ -475,18 +475,19 @@ contains
                   do i = 1, n(xdim)
                      do j = 1, n(ydim)
                         do k = 1, n(zdim)
-                           tcool = kbgmh * ta(i,j,k) / (dens(i,j,k) * abs(L0_cool) * (ta(i,j,k)/Teq)**alpha_cool)
-                           dt_cool = min(dt, tcool/100.0)
+                           int_ener = ener(i,j,k) - kinmag_ener(i,j,k)
+                           tcool    = kbgmh * ta(i,j,k) / (dens(i,j,k) * abs(L0_cool) * (ta(i,j,k)/Teq)**alpha_cool)
+                           dt_cool  = min(dt, tcool/100.0)
                            t1 = 0.0
                            do while (t1 < dt)
-                              ta(i,j,k) = int_ener(i,j,k) * ikbgmh / dens(i,j,k)
+                              ta(i,j,k) = int_ener * ikbgmh / dens(i,j,k)
                               call temp_EIS(tcool, dt_cool, igamma(pfl%gam), kbgmh, ta(i,j,k), dens(i,j,k), Tnew)
-                              int_ener(i,j,k) = dens(i,j,k) * kbgmh * Tnew
-                              ener(i,j,k) = kinmag_ener(i,j,k) + int_ener(i,j,k)
+                              int_ener    = dens(i,j,k) * kbgmh * Tnew
+                              ener(i,j,k) = kinmag_ener(i,j,k) + int_ener
 
                               call heat(dens(i,j,k), hfunc)
-                              int_ener(i,j,k) = int_ener(i,j,k) + hfunc * dt_cool
-                              ener(i,j,k)     = ener(i,j,k)     + hfunc * dt_cool
+                              int_ener    = int_ener    + hfunc * dt_cool
+                              ener(i,j,k) = ener(i,j,k) + hfunc * dt_cool
 
                               t1 = t1 + dt_cool
                               if (t1 + dt_cool > dt) dt_cool = dt - t1
@@ -501,7 +502,7 @@ contains
 
             end select
 
-            deallocate(int_ener, kinmag_ener)
+            deallocate(kinmag_ener)
          enddo
          cgl => cgl%nxt
       enddo
