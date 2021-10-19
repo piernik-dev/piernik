@@ -61,7 +61,7 @@ contains
 
       use cg_list_global,   only: all_cg
       use constants,        only: PIERNIK_INIT_MPI
-      use dataio_pub,       only: code_progress, die, nh, printinfo
+      use dataio_pub,       only: code_progress, die, nh, printinfo, warn
       use mpisetup,         only: cbuff, lbuff, rbuff,ibuff,  master, slave, piernik_MPI_Bcast
       use named_array_list, only: qna
       use units,            only: cm, erg, sek, mH
@@ -177,6 +177,8 @@ contains
 
       call fit_cooling_curve()
 
+      if (scheme == 'Explicit') call warn('[thermal:init_thermal][scheme: Explicit] Warning: substepping with a different timestep for every cell in the Explicit scheme leads to perturbations. Take a very small cfl_coolheat (~10^-6) or use a constant timestep.')
+
    end subroutine init_thermal
 
    subroutine fit_cooling_curve
@@ -194,10 +196,14 @@ contains
       integer                                 :: i
       real                                    :: T, d1
 
-      if (cool_model .ne. 'piecewise_power_law') return
-      if (master) call printinfo('[thermal] Cooling & heating handled with a single cool - heat curve fitted with a piecewise power law function')
+      if (cool_model /= 'piecewise_power_law') return
+      if (master) then
+         call printinfo('[thermal:fit_cooling_curve] Cooling & heating handled with a single cool - heat curve fitted with a piecewise power law function')
+         if (scheme == 'Explicit') call warn('[thermal:fit_cooling_curve][scheme: Explicit] Warning: Make sure you are not using the heating in the cooling curve.')
+         if (scheme == 'EE')       call warn('[thermal:fit_cooling_curve][scheme: EE] Warning: Make sure you are not using the heating in both the explicit and EI schemes.')
+      endif
 
-      if (cool_curve .eq. 'tabulated') then
+      if (cool_curve == 'tabulated') then
          open(unit=coolfile, file=cool_file, action='read', status='old')
          read(coolfile,*) nbins
          if (master) then
@@ -225,7 +231,7 @@ contains
             case ('power_law')
                cool(i)   = L0_cool * (T / Teq )**alpha_cool
             case ('Heintz')
-               if ((master) .and. (i .eq. 1)) call printinfo('[thermal] Heintz cooling function used. Cooling power law parameters not used.')
+               if ((master) .and. (i == 1)) call printinfo('[thermal:fit_cooling_curve] Heintz cooling function used. Cooling power law parameters not used.')
                cool(i) = (7.3 * 10.0**(-21) * exp(-118400/(T+1500)) + 7.9 * 10.0**(-27) * exp(-92/T) ) * erg / sek * cm**3 / mH**2 * x_ion**2
             case ('tabulated')
                cool(i) = cool(i) * erg / sek * cm**3 / mH**2 * x_ion**2
@@ -233,20 +239,20 @@ contains
                call die('[init_thermal] Cooling curve function not implemented')
          end select
 
-         if (isochoric .eq. 1) then
+         if (isochoric == 1) then
             d1 = d_isochoric
             heat(i) = G0_heat * d1**2 + G1_heat * d1 + G2_heat
-         else if (isochoric .eq. 2) then
+         else if (isochoric == 2) then
             write(msg,'(3a)') 'isobaric case is not working well around equilibrium temperature'
-            if ((master) .and. (i .eq. 1)) call warn(msg)
+            if ((master) .and. (i == 1)) call warn(msg)
             d1 = Teq / 10**logT(i)
             heat(i) = G0_heat * d1**2 + G1_heat * d1 + G2_heat
          endif
 
          lambda(i) = cool(i) - heat(i)/d1**2
-         if (i .gt. 1) then
-            if ((lambda(i-1) * lambda(i) .le. 0.0) .and. (Teql .equals. 0.0)) Teql = T
-            if ((T .gt. Teql) .and. (Teql .gt. 0.0) .and. (lambda(i-1) * lambda(i) .lt. 0.0)) call die('[init_thermal] More than 1 Teql')
+         if (i > 1) then
+            if ((lambda(i-1) * lambda(i) <= 0.0) .and. (Teql .equals. 0.0)) Teql = T
+            if ((T > Teql) .and. (Teql > 0.0) .and. (lambda(i-1) * lambda(i) < 0.0)) call die('[thermal:fit_cooling_curve] More than 1 Teql')
          endif
       enddo
       if (master) then
@@ -294,8 +300,8 @@ contains
          do j = 2, nbins
             if (logT(j) .equals. log10(Teql)) then                                       ! log(lambda) goes to -inf at T=Teql
                cycle
-            else if ((logT(j-1) .le. log10(Teql)) .and. logT(j) .gt. log10(Teql)) then   ! Look for the point right after Teql
-               if (isochoric .eq. 1) then                                                      ! Linear fit of lambda between the point right before Teql, and 0
+            else if ((logT(j-1) <= log10(Teql)) .and. logT(j) > log10(Teql)) then   ! Look for the point right after Teql
+               if (isochoric == 1) then                                                      ! Linear fit of lambda between the point right before Teql, and 0
                   a =  - lambda(i)/ (log10(Teql) - logT(i))
                   b = 0.0
                   k = k + 1
@@ -314,16 +320,16 @@ contains
                fit(:) = a*logT + b
                r = sum( abs((loglambda(i:j) - fit(i:j))/fit(i:j)) ) / (j-i+1)
                eq_point = .false.
-               if (j .lt. nbins) then
-                  if (logT(j+1) .ge. log10(Teql) .and. logT(j) .lt. log10(Teql)) eq_point = .true.
+               if (j < nbins) then
+                  if (logT(j+1) >= log10(Teql) .and. logT(j) < log10(Teql)) eq_point = .true.
                endif
-               if ((r .gt. rlim) .or. (eq_point)) then
+               if ((r > rlim) .or. (eq_point)) then
                   k = k + 1
-                  !if (k .gt. nfuncs) call die('[init_thermal]: too many piecewise functions')
+                  !if (k > nfuncs) call die('[init_thermal]: too many piecewise functions')
                   if (fill_array) then
                      Tref(k) = 10**logT(i)
-                     if (i .gt. 1) then
-                        if ((isochoric .eq. 2) .and. ((logT(i-1) .le. log10(Teql)) .and. logT(i) .gt. log10(Teql))) Tref(k) = Teql
+                     if (i > 1) then
+                        if ((isochoric == 2) .and. ((logT(i-1) <= log10(Teql)) .and. logT(i) > log10(Teql))) Tref(k) = Teql
                      endif
                      alpha(k) = a
                      lambda0(k) = lambda(j)/abs(lambda(j)) * 10**(b+a*logT(i))
@@ -401,12 +407,6 @@ contains
             select case (scheme)
 
                case ('Explicit')
-                  if (cool_model .eq. 'piecewise_power_law') then
-                     write(msg,'(3a)') 'Warning: Make sure you are not using the heating in the cooling curve.'
-                     if (master) call warn(msg)
-                  endif
-                  write(msg,'(3a)') 'Warning: substepping with a different timestep for every cell in the Explicit scheme leads to perturbations. Take a very small cfl_coolheat (~10^-6) or use a constant timestep.'
-                  if (master) call warn(msg)
                   do x = 1, n(1)
                      do y = 1, n(2)
                         do z = 1, n(3)
@@ -415,14 +415,14 @@ contains
                            esrc = dens(x,y,z)**2*cfunc + hfunc
                            dt_cool = min(dt, cfl_coolheat*abs(1./(esrc/int_ener(x,y,z))))
                            t1 = 0.0
-                           do while (t1 .lt. dt)
+                           do while (t1 < dt)
                               call cool(ta(x,y,z), cfunc)
                               esrc = dens(x,y,z)**2*cfunc + hfunc
                               int_ener(x,y,z) = int_ener(x,y,z) + esrc * dt_cool
                               ener(x,y,z) = ener(x,y,z) + esrc * dt_cool
                               ta(x,y,z) = ikbgmh * int_ener(x,y,z) / dens(x,y,z)
                               t1 = t1 + dt_cool
-                              if (t1 + dt_cool .gt. dt) dt_cool = dt - t1
+                              if (t1 + dt_cool > dt) dt_cool = dt - t1
                            enddo
                         enddo
                      enddo
@@ -443,31 +443,27 @@ contains
                            endif
                            dt_cool = min(dt, tcool/10.0)
                            t1 = 0.0
-                           do while (t1 .lt. dt)
+                           do while (t1 < dt)
                               ta(x,y,z) = int_ener(x,y,z) * ikbgmh / dens(x,y,z)
                               call temp_EIS(tcool, dt_cool, igamma(pfl%gam), kbgmh, ta(x,y,z), dens(x,y,z), Tnew)
                               int_ener(x,y,z) = dens(x,y,z) * kbgmh * Tnew
                               ener(x,y,z) = kinmag_ener(x,y,z) + int_ener(x,y,z)
 
                               t1 = t1 + dt_cool
-                              if (t1 + dt_cool .gt. dt) dt_cool = dt - t1
+                              if (t1 + dt_cool > dt) dt_cool = dt - t1
                            enddo
                         enddo
                      enddo
                   enddo
 
                case ('EE')
-                  if (cool_model .eq. 'piecewise_power_law') then
-                     write(msg,'(3a)') 'Warning: Make sure you are not using the heating in both the explicit and EI schemes.'
-                     if (master) call warn(msg)
-                  endif
                   do x = 1, n(1)
                      do y = 1, n(2)
                         do z = 1, n(3)
                            tcool = kbgmh * ta(x,y,z) / (dens(x,y,z) * abs(L0_cool) * (ta(x,y,z)/Teq)**alpha_cool)
                            dt_cool = min(dt, tcool/100.0)
                            t1 = 0.0
-                           do while (t1 .lt. dt)
+                           do while (t1 < dt)
                               ta(x,y,z) = int_ener(x,y,z) * ikbgmh / dens(x,y,z)
                               call temp_EIS(tcool, dt_cool, igamma(pfl%gam), kbgmh, ta(x,y,z), dens(x,y,z), Tnew)
                               int_ener(x,y,z) = dens(x,y,z) * kbgmh * Tnew
@@ -478,7 +474,7 @@ contains
                               ener(x,y,z)     = ener(x,y,z)     + hfunc * dt_cool
 
                               t1 = t1 + dt_cool
-                              if (t1 + dt_cool .gt. dt) dt_cool = dt - t1
+                              if (t1 + dt_cool > dt) dt_cool = dt - t1
                            enddo
                         enddo
                      enddo
@@ -661,7 +657,7 @@ contains
                endif
             endif
 
-            if (Tnew .lt. 100.0) Tnew = 100.0                        ! To improve
+            if (Tnew < 100.0) Tnew = 100.0                        ! To improve
 
          case ('null')
             return
