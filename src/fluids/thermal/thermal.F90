@@ -252,15 +252,7 @@ contains
          call printinfo(msg)
       endif
 
-      nfuncs = 1000
-      call fit_proc(nbins, logT, lambda)   ! Find nfuncs
-      if (master) then
-         write(msg, '(a,i4)') '[thermal] fit nfuncs = ', nfuncs
-         call printinfo(msg)
-      endif
-      deallocate(Tref, alpha, lambda0)
-      call fit_proc(nbins, logT, lambda)       ! Perform fit
-
+      call fit_proc(nbins, logT, lambda)   ! Find nfuncs and Perform fit
       deallocate(logT, lambda, cool, heat)
 
    end subroutine fit_cooling_curve
@@ -268,17 +260,18 @@ contains
    subroutine fit_proc(nbins, logT, lambda)
 
       use constants,  only: big
-      use dataio_pub, only: die
+      use dataio_pub, only: msg, printinfo !,die
       use func,       only: operator(.equals.)
+      use mpisetup,   only: master
 
       implicit none
 
       integer,                intent(in)    :: nbins
       real, dimension(nbins), intent(inout) :: logT, lambda
-      integer                               :: i, j, k
+      integer                               :: i, j, k, iter
       real                                  :: a, b, r, rlim
       real, dimension(nbins)                :: fit, loglambda
-      logical                               :: eq_point
+      logical                               :: eq_point, set_nfuncs, fill_array
 
       rlim = 10.0**(-6)
       do i = 1, nbins
@@ -288,50 +281,64 @@ contains
             loglambda(i) = log10(abs(lambda(i)))
          endif
       enddo
-      if (allocated(Tref)) deallocate(Tref, alpha, lambda0)
-      allocate(Tref(nfuncs), alpha(nfuncs), lambda0(nfuncs))
 
-      i = 1
-      k = 0
-      do j = 2, nbins
-         if (logT(j) .equals. log10(Teql)) then                                       ! log(lambda) goes to -inf at T=Teql
-            cycle
-         else if ((logT(j-1) .le. log10(Teql)) .and. logT(j) .gt. log10(Teql)) then   ! Look for the point right after Teql
-            if (isochoric .eq. 1) then                                                      ! Linear fit of lambda between the point right before Teql, and 0
-               a =  - lambda(i)/ (log10(Teql) - logT(i))
-               b = 0.0
-               k = k + 1
-               Tref(k) = 10**logT(i)
-               alpha(k) = b
-               lambda0(k) = a/log(10.0)/Teql
-               lambda(j+1) = a * logT(j+1)                                            ! Reassign lambda after Teql to match the linear function
-               loglambda(j+1) = log10(abs(a * logT(j+1)))
-            endif
-            i = j
-         else
-            a = (loglambda(j) - loglambda(i)) / (logT(j) - logT(i))
-            b = loglambda(j) - a*logT(j)
-            fit(:) = a*logT + b
-            r = sum( abs((loglambda(i:j) - fit(i:j))/fit(i:j)) ) / (j-i+1)
-            eq_point = .false.
-            if (j .lt. nbins) then
-               if (logT(j+1) .ge. log10(Teql) .and. logT(j) .lt. log10(Teql)) eq_point = .true.
-            endif
-            if ((r .gt. rlim) .or. (eq_point)) then
-               k = k + 1
-               if (k .gt. nfuncs) call die('[init_thermal]: too many piecewise functions')
-               Tref(k) = 10**logT(i)
-               if (i .gt. 1) then
-                  if ((isochoric .eq. 2) .and. ((logT(i-1) .le. log10(Teql)) .and. logT(i) .gt. log10(Teql))) Tref(k) = Teql
+      do iter = 1, 2
+         set_nfuncs = (iter == 1)
+         fill_array = (iter == 2)
+         if (fill_array) allocate(Tref(nfuncs), alpha(nfuncs), lambda0(nfuncs))
+
+         i = 1
+         k = 0
+         do j = 2, nbins
+            if (logT(j) .equals. log10(Teql)) then                                       ! log(lambda) goes to -inf at T=Teql
+               cycle
+            else if ((logT(j-1) .le. log10(Teql)) .and. logT(j) .gt. log10(Teql)) then   ! Look for the point right after Teql
+               if (isochoric .eq. 1) then                                                      ! Linear fit of lambda between the point right before Teql, and 0
+                  a =  - lambda(i)/ (log10(Teql) - logT(i))
+                  b = 0.0
+                  k = k + 1
+                  if (fill_array) then
+                     Tref(k) = 10**logT(i)
+                     alpha(k) = b
+                     lambda0(k) = a/log(10.0)/Teql
+                  endif
+                  lambda(j+1) = a * logT(j+1)                                            ! Reassign lambda after Teql to match the linear function
+                  loglambda(j+1) = log10(abs(a * logT(j+1)))
                endif
-               alpha(k) = a
-               lambda0(k) = lambda(j)/abs(lambda(j)) * 10**(b+a*logT(i))
                i = j
+            else
+               a = (loglambda(j) - loglambda(i)) / (logT(j) - logT(i))
+               b = loglambda(j) - a*logT(j)
+               fit(:) = a*logT + b
+               r = sum( abs((loglambda(i:j) - fit(i:j))/fit(i:j)) ) / (j-i+1)
+               eq_point = .false.
+               if (j .lt. nbins) then
+                  if (logT(j+1) .ge. log10(Teql) .and. logT(j) .lt. log10(Teql)) eq_point = .true.
+               endif
+               if ((r .gt. rlim) .or. (eq_point)) then
+                  k = k + 1
+                  !if (k .gt. nfuncs) call die('[init_thermal]: too many piecewise functions')
+                  if (fill_array) then
+                     Tref(k) = 10**logT(i)
+                     if (i .gt. 1) then
+                        if ((isochoric .eq. 2) .and. ((logT(i-1) .le. log10(Teql)) .and. logT(i) .gt. log10(Teql))) Tref(k) = Teql
+                     endif
+                     alpha(k) = a
+                     lambda0(k) = lambda(j)/abs(lambda(j)) * 10**(b+a*logT(i))
+                  endif
+                  i = j
+               endif
+            endif
+         enddo
+
+         if (set_nfuncs) then
+            nfuncs = k
+            if (master) then
+               write(msg, '(a,i4)') '[thermal] fit nfuncs = ', nfuncs
+               call printinfo(msg)
             endif
          endif
       enddo
-
-      nfuncs = k
 
    end subroutine fit_proc
 
