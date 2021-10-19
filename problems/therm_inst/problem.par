@@ -23,7 +23,7 @@ $BASE_DOMAIN
  /
 
  $RESTART_CONTROL
- restart=''
+    restart = 'last'
  /
 
  $END_CONTROL
