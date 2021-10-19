@@ -173,6 +173,8 @@ contains
       call all_cg%reg_var('Temperature')          ! Make it cleaner
       itemp = qna%ind('Temperature')
 
+      call fit_cooling_curve()
+
    end subroutine init_thermal
 
    subroutine fit_cooling_curve

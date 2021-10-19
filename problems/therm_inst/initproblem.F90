@@ -118,7 +118,7 @@ contains
       use domain,     only: dom
       use fluidindex, only: flind
       use grid_cont,  only: grid_container
-      use thermal,    only: itemp, fit_cooling_curve
+      use thermal,    only: itemp
       use units,      only: kboltz, mH
 
       implicit none
@@ -191,8 +191,6 @@ contains
 
          end associate
       enddo
-
-      call fit_cooling_curve()
 
    end subroutine problem_initial_conditions
 
