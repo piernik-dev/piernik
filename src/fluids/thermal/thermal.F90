@@ -590,7 +590,7 @@ contains
 
       real, intent(in)        :: tcool, dt, fiso, temp, dens, kbgmh
       real, intent(out)       :: Tnew
-      real                    :: lambda1, T1, alpha0, Y0, tcool2, TN, diff
+      real                    :: lambda1, T1, alpha0, Y0, tcool2, TN, diff, tntrna
       integer                 :: i, ii
       logical                 :: bin_found, outer_bin
       real, dimension(nfuncs) :: Y
@@ -618,43 +618,44 @@ contains
             lambda1 = 0.0
             diff = 0.0
             Y0 = 0.0
-            Y(nfuncs) = - 1 / (isochoric-alpha(nfuncs)) * (TN/Tref(nfuncs))**(alpha(nfuncs)-isochoric) * (1 - (Tref(nfuncs)/TN)**(alpha(nfuncs)-isochoric))
+            tntrna = (TN/Tref(nfuncs))**alpha(nfuncs)
+            Y(nfuncs) = - 1 / (isochoric-alpha(nfuncs)) * ((TN/Tref(nfuncs))**(alpha(nfuncs)-isochoric) - 1)
             do i = nfuncs-1, 1, -1
                if (alpha(i) .equals. 0.0) then
-                  Y(i) = Y(i+1) - lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) / TN * log((Teql - Tref(i)) / (Tref(i+1)-Teql))
+                  Y(i) = Y(i+1) - lambda0(nfuncs)/lambda0(i) * tntrna / TN * log((Teql - Tref(i)) / (Tref(i+1)-Teql))
                else
-                  Y(i) = Y(i+1) - 1 / (isochoric-alpha(i)) * lambda0(nfuncs)/lambda0(i) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(i)/TN)**isochoric * (1 - (Tref(i)/Tref(i+1))**(alpha(i)-isochoric))
+                  Y(i) = Y(i+1) - 1 / (isochoric-alpha(i)) * lambda0(nfuncs)/lambda0(i) * tntrna * (Tref(i)/TN)**isochoric * (1 - (Tref(i)/Tref(i+1))**(alpha(i)-isochoric))
                endif
             enddo
 
             call find_temp_bin(temp, ii, bin_found, outer_bin)
             if (bin_found) then
-               if ( .not. outer_bin .and. (alpha(ii) .equals. 0.0) ) then
-                  diff = MAX(abs(temp-Teql), 0.000001)
-                  Y0 = Y(ii) + lambda0(nfuncs)/lambda0(ii) * (TN/Tref(nfuncs))**alpha(nfuncs) / TN * log((abs(Teql - Tref(ii)) / diff))
-               else
-                  Y0 = Y(ii) + 1/(isochoric-alpha(ii)) * lambda0(nfuncs)/lambda0(ii) * (TN/Tref(nfuncs))**alpha(nfuncs) * (Tref(ii)/TN)**isochoric * (1 - (Tref(ii)/temp)**(alpha(ii)-isochoric))
-               endif
                T1 = Tref(ii)
                alpha0 = alpha(ii)
                lambda1 = lambda0(ii)
+               if ( .not. outer_bin .and. (alpha0 .equals. 0.0) ) then
+                  diff = MAX(abs(temp-Teql), 0.000001)
+                  Y0 = Y(ii) + lambda0(nfuncs)/lambda1 * tntrna / TN * log((abs(Teql - T1) / diff))
+               else
+                  Y0 = Y(ii) + 1/(isochoric-alpha0) * lambda0(nfuncs)/lambda1 * tntrna * (T1/TN)**isochoric * (1 - (T1/temp)**(alpha0-isochoric))
+               endif
             endif
 
             if (alpha0 .equals. 0.0) then
                tcool2 = kbgmh * temp / (lambda1 * diff * dens)
                tcool2 = min(tcool2, 1.0*10**6)
-               Y0 = Y0 + (temp/TN) * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) / diff * dt/tcool2
+               Y0 = Y0 + (temp/TN) * lambda0(nfuncs)/lambda1 * tntrna / diff * dt/tcool2
             else
                !tcool2 = kbgmh * temp / (lambda1 * (temp/T1)**alpha0 * dens)
-               !Y0 = Y0 + (temp/TN)**isochoric * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) * (T1/temp)**alpha0 * dt/tcool2 * fiso
-               Y0 = Y0 + (temp/TN)**isochoric * lambda0(nfuncs) * (TN/Tref(nfuncs))** alpha(nfuncs) * dt * fiso * dens / (kbgmh * temp)
+               !Y0 = Y0 + (temp/TN)**isochoric * lambda0(nfuncs)/lambda1 * tntrna * (T1/temp)**alpha0 * dt/tcool2 * fiso
+               Y0 = Y0 + (temp/TN)**isochoric * lambda0(nfuncs) * tntrna * dt * fiso * dens / (kbgmh * temp)
             endif
 
             if (bin_found) then
                if ( .not. outer_bin .and. (alpha0 .equals. 0.0) ) then
-                  Tnew = Teql - sign(1.0, Teql - temp) * (Teql-Tref(ii)) * exp(-TN * (Tref(nfuncs)/TN)**alpha(nfuncs) * lambda0(ii)/lambda0(nfuncs) * (Y0 - Y(ii)))
+                  Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-TN * (Tref(nfuncs)/TN)**alpha(nfuncs) * lambda1/lambda0(nfuncs) * (Y0 - Y(ii)))
                else
-                  Tnew = Tref(ii) * (1 - (isochoric-alpha(ii)) * lambda0(ii)/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/Tref(ii))**isochoric * (Y0 - Y(ii)) )**(1/(isochoric-alpha(ii)))
+                  Tnew = T1 * (1 - (isochoric-alpha0) * lambda1/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/T1)**isochoric * (Y0 - Y(ii)) )**(1/(isochoric-alpha0))
                endif
             endif
 
