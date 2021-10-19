@@ -386,7 +386,6 @@ contains
       real, dimension(:,:,:), allocatable :: kinmag_ener
       real                                :: dt_cool, t1, tcool, cfunc, hfunc, esrc, diff, kbgmh, ikbgmh, Tnew, int_ener
       integer                             :: ifl, ii, i, j, k
-      logical                             :: outer_bin
       integer, dimension(3)               :: n
 
       type(cg_list_element),  pointer     :: cgl
@@ -447,8 +446,8 @@ contains
                      do j = 1, n(ydim)
                         do k = 1, n(zdim)
                            int_ener = ener(i,j,k) - kinmag_ener(i,j,k)
-                           call find_temp_bin(ta(i,j,k), ii, outer_bin)
-                           if ( .not. outer_bin .and. (alpha(ii) .equals. 0.0) ) then
+                           call find_temp_bin(ta(i,j,k), ii)
+                           if (alpha(ii) .equals. 0.0) then
                               diff = MAX(abs(ta(i,j,k) - Teql), 0.000001)
                               tcool = kbgmh * ta(i,j,k) / (abs(lambda0(ii)) * diff * dens(i,j,k))
                            else
@@ -518,27 +517,23 @@ contains
 
    end function igamma
 
-   subroutine find_temp_bin(temp, ii, outer)
+   subroutine find_temp_bin(temp, ii)
 
       implicit none
 
       real,    intent(in)  :: temp
       integer, intent(out) :: ii
-      logical, intent(out) :: outer
       integer              :: i
 
       ii = 0
       if (temp >= Tref(nfuncs)) then
          ii = nfuncs
-         outer = .true.
       else if (temp < Tref(2)) then
          ii = 1
-         outer = .true.
       else
          do i = 2, nfuncs - 1
             if ((temp >= Tref(i)) .and. (temp < Tref(i+1))) ii = i
          enddo
-         outer = .false.
       endif
 
    end subroutine find_temp_bin
@@ -553,14 +548,13 @@ contains
       real, intent(in)  :: temp
       real, intent(out) :: coolf
       integer           :: ii
-      logical           :: ou
 
       select case (cool_model)
          case ('power_law')
             coolf = -L0_cool * (temp/Teq)**alpha_cool
          case ('piecewise_power_law')
             coolf = 0.0
-            call find_temp_bin(temp, ii, ou)
+            call find_temp_bin(temp, ii)
             coolf = - lambda0(ii) * (temp/Tref(ii))**alpha(ii)
          case ('null')
             coolf = 0.0
@@ -605,7 +599,6 @@ contains
       real, intent(out)       :: Tnew
       real                    :: lambda1, T1, alpha0, Y0, tcool2, diff
       integer                 :: ii
-      logical                 :: outer_bin
 
       select case (cool_model)
 
@@ -629,11 +622,11 @@ contains
             diff = 0.0
             Y0 = 0.0
 
-            call find_temp_bin(temp, ii, outer_bin)
+            call find_temp_bin(temp, ii)
             T1 = Tref(ii)
             alpha0 = alpha(ii)
             lambda1 = lambda0(ii)
-            if ( .not. outer_bin .and. (alpha0 .equals. 0.0) ) then
+            if (alpha0 .equals. 0.0) then
                diff = max(abs(temp-Teql), 0.000001)
                Y0 = Y(ii) + ltntrna / lambda1 / TN * log((abs(Teql - T1) / diff))
             else
@@ -650,7 +643,7 @@ contains
                Y0 = Y0 + (temp/TN)**isochoric * ltntrna * dt * fiso * dens / (kbgmh * temp)
             endif
 
-            if ( .not. outer_bin .and. (alpha0 .equals. 0.0) ) then
+            if (alpha0 .equals. 0.0) then
                Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-TN * lambda1 / ltntrna * (Y0 - Y(ii)))
             else
                Tnew = T1 * (1 - (isochoric-alpha0) * lambda1 / ltntrna * (TN/T1)**isochoric * (Y0 - Y(ii)) )**(1/(isochoric-alpha0))
