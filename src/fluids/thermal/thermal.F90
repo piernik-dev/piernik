@@ -386,7 +386,7 @@ contains
       real, dimension(:,:,:), allocatable :: kinmag_ener
       real                                :: dt_cool, t1, tcool, cfunc, hfunc, esrc, diff, kbgmh, ikbgmh, Tnew, int_ener
       integer                             :: ifl, ii, i, j, k
-      logical                             :: bin_found, outer_bin
+      logical                             :: outer_bin
       integer, dimension(3)               :: n
 
       type(cg_list_element),  pointer     :: cgl
@@ -447,14 +447,12 @@ contains
                      do j = 1, n(ydim)
                         do k = 1, n(zdim)
                            int_ener = ener(i,j,k) - kinmag_ener(i,j,k)
-                           call find_temp_bin(ta(i,j,k), ii, bin_found, outer_bin)
-                           if (bin_found) then
-                              if ( .not. outer_bin .and. (alpha(ii) .equals. 0.0) ) then
-                                 diff = MAX(abs(ta(i,j,k) - Teql), 0.000001)
-                                 tcool = kbgmh * ta(i,j,k) / (abs(lambda0(ii)) * diff * dens(i,j,k))
-                              else
-                                 tcool = kbgmh * ta(i,j,k) / (dens(i,j,k) * abs(lambda0(ii)) * (ta(i,j,k)/Tref(ii))**alpha(ii))
-                              endif
+                           call find_temp_bin(ta(i,j,k), ii, outer_bin)
+                           if ( .not. outer_bin .and. (alpha(ii) .equals. 0.0) ) then
+                              diff = MAX(abs(ta(i,j,k) - Teql), 0.000001)
+                              tcool = kbgmh * ta(i,j,k) / (abs(lambda0(ii)) * diff * dens(i,j,k))
+                           else
+                              tcool = kbgmh * ta(i,j,k) / (dens(i,j,k) * abs(lambda0(ii)) * (ta(i,j,k)/Tref(ii))**alpha(ii))
                            endif
                            dt_cool = min(dt, tcool/10.0)
                            t1 = 0.0
@@ -520,13 +518,13 @@ contains
 
    end function igamma
 
-   subroutine find_temp_bin(temp, ii, found, outer)
+   subroutine find_temp_bin(temp, ii, outer)
 
       implicit none
 
       real,    intent(in)  :: temp
       integer, intent(out) :: ii
-      logical, intent(out) :: found, outer
+      logical, intent(out) :: outer
       integer              :: i
 
       ii = 0
@@ -542,7 +540,6 @@ contains
          enddo
          outer = .false.
       endif
-      found = (ii /= 0)
 
    end subroutine find_temp_bin
 
@@ -556,15 +553,15 @@ contains
       real, intent(in)  :: temp
       real, intent(out) :: coolf
       integer           :: ii
-      logical           :: bf, ou
+      logical           :: ou
 
       select case (cool_model)
          case ('power_law')
             coolf = -L0_cool * (temp/Teq)**alpha_cool
          case ('piecewise_power_law')
             coolf = 0.0
-            call find_temp_bin(temp, ii, bf, ou)
-            if (bf) coolf = - lambda0(ii) * (temp/Tref(ii))**alpha(ii)
+            call find_temp_bin(temp, ii, ou)
+            coolf = - lambda0(ii) * (temp/Tref(ii))**alpha(ii)
          case ('null')
             coolf = 0.0
          case default
@@ -608,7 +605,7 @@ contains
       real, intent(out)       :: Tnew
       real                    :: lambda1, T1, alpha0, Y0, tcool2, diff
       integer                 :: ii
-      logical                 :: bin_found, outer_bin
+      logical                 :: outer_bin
 
       select case (cool_model)
 
@@ -632,17 +629,15 @@ contains
             diff = 0.0
             Y0 = 0.0
 
-            call find_temp_bin(temp, ii, bin_found, outer_bin)
-            if (bin_found) then
-               T1 = Tref(ii)
-               alpha0 = alpha(ii)
-               lambda1 = lambda0(ii)
-               if ( .not. outer_bin .and. (alpha0 .equals. 0.0) ) then
-                  diff = max(abs(temp-Teql), 0.000001)
-                  Y0 = Y(ii) + ltntrna / lambda1 / TN * log((abs(Teql - T1) / diff))
-               else
-                  Y0 = Y(ii) + 1/(isochoric-alpha0) * ltntrna / lambda1 * (T1/TN)**isochoric * (1 - (T1/temp)**(alpha0-isochoric))
-               endif
+            call find_temp_bin(temp, ii, outer_bin)
+            T1 = Tref(ii)
+            alpha0 = alpha(ii)
+            lambda1 = lambda0(ii)
+            if ( .not. outer_bin .and. (alpha0 .equals. 0.0) ) then
+               diff = max(abs(temp-Teql), 0.000001)
+               Y0 = Y(ii) + ltntrna / lambda1 / TN * log((abs(Teql - T1) / diff))
+            else
+               Y0 = Y(ii) + 1/(isochoric-alpha0) * ltntrna / lambda1 * (T1/TN)**isochoric * (1 - (T1/temp)**(alpha0-isochoric))
             endif
 
             if (alpha0 .equals. 0.0) then
@@ -655,12 +650,10 @@ contains
                Y0 = Y0 + (temp/TN)**isochoric * ltntrna * dt * fiso * dens / (kbgmh * temp)
             endif
 
-            if (bin_found) then
-               if ( .not. outer_bin .and. (alpha0 .equals. 0.0) ) then
-                  Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-TN * lambda1 / ltntrna * (Y0 - Y(ii)))
-               else
-                  Tnew = T1 * (1 - (isochoric-alpha0) * lambda1 / ltntrna * (TN/T1)**isochoric * (Y0 - Y(ii)) )**(1/(isochoric-alpha0))
-               endif
+            if ( .not. outer_bin .and. (alpha0 .equals. 0.0) ) then
+               Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-TN * lambda1 / ltntrna * (Y0 - Y(ii)))
+            else
+               Tnew = T1 * (1 - (isochoric-alpha0) * lambda1 / ltntrna * (TN/T1)**isochoric * (Y0 - Y(ii)) )**(1/(isochoric-alpha0))
             endif
 
             if (Tnew < 100.0) Tnew = 100.0                        ! To improve
