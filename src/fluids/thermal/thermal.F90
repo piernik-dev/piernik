@@ -52,7 +52,8 @@ module thermal
    real                            :: x_ion        !> ionization degree
    integer                         :: isochoric    !> 1 for isochoric, 2 for isobaric
    real                            :: d_isochoric  ! constant density used in isochoric case
-   real, dimension(:), allocatable :: Tref, alpha, lambda0
+   real                            :: TN, tntrna
+   real, dimension(:), allocatable :: Tref, alpha, lambda0, Y
    integer                         :: nfuncs
 
 contains
@@ -293,7 +294,7 @@ contains
       do iter = 1, 2
          set_nfuncs = (iter == 1)
          fill_array = (iter == 2)
-         if (fill_array) allocate(Tref(nfuncs), alpha(nfuncs), lambda0(nfuncs))
+         if (fill_array) allocate(Tref(nfuncs), alpha(nfuncs), lambda0(nfuncs), Y(nfuncs))
 
          i = 1
          k = 0
@@ -345,6 +346,20 @@ contains
                write(msg, '(a,i4)') '[thermal] fit nfuncs = ', nfuncs
                call printinfo(msg)
             endif
+         endif
+
+         if (fill_array) then
+            TN = 10**8
+            tntrna = (TN/Tref(nfuncs))**alpha(nfuncs)
+
+            Y(nfuncs) = - 1 / (isochoric-alpha(nfuncs)) * ((TN/Tref(nfuncs))**(alpha(nfuncs)-isochoric) - 1)
+            do i = nfuncs-1, 1, -1
+               if (alpha(i) .equals. 0.0) then
+                  Y(i) = Y(i+1) - lambda0(nfuncs)/lambda0(i) * tntrna / TN * log((Teql - Tref(i)) / (Tref(i+1)-Teql))
+               else
+                  Y(i) = Y(i+1) - lambda0(nfuncs)/lambda0(i) * tntrna / (isochoric-alpha(i)) * (Tref(i)/TN)**isochoric * (1 - (Tref(i)/Tref(i+1))**(alpha(i)-isochoric))
+               endif
+            enddo
          endif
       enddo
 
@@ -590,10 +605,9 @@ contains
 
       real, intent(in)        :: tcool, dt, fiso, temp, dens, kbgmh
       real, intent(out)       :: Tnew
-      real                    :: lambda1, T1, alpha0, Y0, tcool2, TN, diff, tntrna
-      integer                 :: i, ii
+      real                    :: lambda1, T1, alpha0, Y0, tcool2, diff
+      integer                 :: ii
       logical                 :: bin_found, outer_bin
-      real, dimension(nfuncs) :: Y
 
       select case (cool_model)
 
@@ -612,21 +626,11 @@ contains
             endif
 
          case ('piecewise_power_law')
-            TN = 10**8
             Y = 0.0
             T1 = 0.0
             lambda1 = 0.0
             diff = 0.0
             Y0 = 0.0
-            tntrna = (TN/Tref(nfuncs))**alpha(nfuncs)
-            Y(nfuncs) = - 1 / (isochoric-alpha(nfuncs)) * ((TN/Tref(nfuncs))**(alpha(nfuncs)-isochoric) - 1)
-            do i = nfuncs-1, 1, -1
-               if (alpha(i) .equals. 0.0) then
-                  Y(i) = Y(i+1) - lambda0(nfuncs)/lambda0(i) * tntrna / TN * log((Teql - Tref(i)) / (Tref(i+1)-Teql))
-               else
-                  Y(i) = Y(i+1) - 1 / (isochoric-alpha(i)) * lambda0(nfuncs)/lambda0(i) * tntrna * (Tref(i)/TN)**isochoric * (1 - (Tref(i)/Tref(i+1))**(alpha(i)-isochoric))
-               endif
-            enddo
 
             call find_temp_bin(temp, ii, bin_found, outer_bin)
             if (bin_found) then
@@ -634,7 +638,7 @@ contains
                alpha0 = alpha(ii)
                lambda1 = lambda0(ii)
                if ( .not. outer_bin .and. (alpha0 .equals. 0.0) ) then
-                  diff = MAX(abs(temp-Teql), 0.000001)
+                  diff = max(abs(temp-Teql), 0.000001)
                   Y0 = Y(ii) + lambda0(nfuncs)/lambda1 * tntrna / TN * log((abs(Teql - T1) / diff))
                else
                   Y0 = Y(ii) + 1/(isochoric-alpha0) * lambda0(nfuncs)/lambda1 * tntrna * (T1/TN)**isochoric * (1 - (T1/temp)**(alpha0-isochoric))
