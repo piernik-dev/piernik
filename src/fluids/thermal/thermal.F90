@@ -52,7 +52,7 @@ module thermal
    real                            :: x_ion        !> ionization degree
    integer                         :: isochoric    !> 1 for isochoric, 2 for isobaric
    real                            :: d_isochoric  ! constant density used in isochoric case
-   real                            :: TN, tntrna
+   real                            :: TN, ltntrna
    real, dimension(:), allocatable :: Tref, alpha, lambda0, Y
    integer                         :: nfuncs
 
@@ -350,14 +350,15 @@ contains
 
          if (fill_array) then
             TN = 10**8
-            tntrna = (TN/Tref(nfuncs))**alpha(nfuncs)
+            Y = 0.0
+            ltntrna = lambda0(nfuncs) * (TN/Tref(nfuncs))**alpha(nfuncs)
 
             Y(nfuncs) = - 1 / (isochoric-alpha(nfuncs)) * ((TN/Tref(nfuncs))**(alpha(nfuncs)-isochoric) - 1)
             do i = nfuncs-1, 1, -1
                if (alpha(i) .equals. 0.0) then
-                  Y(i) = Y(i+1) - lambda0(nfuncs)/lambda0(i) * tntrna / TN * log((Teql - Tref(i)) / (Tref(i+1)-Teql))
+                  Y(i) = Y(i+1) - ltntrna / lambda0(i) / TN * log((Teql - Tref(i)) / (Tref(i+1)-Teql))
                else
-                  Y(i) = Y(i+1) - lambda0(nfuncs)/lambda0(i) * tntrna / (isochoric-alpha(i)) * (Tref(i)/TN)**isochoric * (1 - (Tref(i)/Tref(i+1))**(alpha(i)-isochoric))
+                  Y(i) = Y(i+1) - ltntrna / lambda0(i) / (isochoric-alpha(i)) * (Tref(i)/TN)**isochoric * (1 - (Tref(i)/Tref(i+1))**(alpha(i)-isochoric))
                endif
             enddo
          endif
@@ -626,7 +627,6 @@ contains
             endif
 
          case ('piecewise_power_law')
-            Y = 0.0
             T1 = 0.0
             lambda1 = 0.0
             diff = 0.0
@@ -639,27 +639,27 @@ contains
                lambda1 = lambda0(ii)
                if ( .not. outer_bin .and. (alpha0 .equals. 0.0) ) then
                   diff = max(abs(temp-Teql), 0.000001)
-                  Y0 = Y(ii) + lambda0(nfuncs)/lambda1 * tntrna / TN * log((abs(Teql - T1) / diff))
+                  Y0 = Y(ii) + ltntrna / lambda1 / TN * log((abs(Teql - T1) / diff))
                else
-                  Y0 = Y(ii) + 1/(isochoric-alpha0) * lambda0(nfuncs)/lambda1 * tntrna * (T1/TN)**isochoric * (1 - (T1/temp)**(alpha0-isochoric))
+                  Y0 = Y(ii) + 1/(isochoric-alpha0) * ltntrna / lambda1 * (T1/TN)**isochoric * (1 - (T1/temp)**(alpha0-isochoric))
                endif
             endif
 
             if (alpha0 .equals. 0.0) then
                tcool2 = kbgmh * temp / (lambda1 * diff * dens)
                tcool2 = min(tcool2, 1.0*10**6)
-               Y0 = Y0 + (temp/TN) * lambda0(nfuncs)/lambda1 * tntrna / diff * dt/tcool2
+               Y0 = Y0 + (temp/TN) * ltntrna / lambda1 / diff * dt/tcool2
             else
                !tcool2 = kbgmh * temp / (lambda1 * (temp/T1)**alpha0 * dens)
-               !Y0 = Y0 + (temp/TN)**isochoric * lambda0(nfuncs)/lambda1 * tntrna * (T1/temp)**alpha0 * dt/tcool2 * fiso
-               Y0 = Y0 + (temp/TN)**isochoric * lambda0(nfuncs) * tntrna * dt * fiso * dens / (kbgmh * temp)
+               !Y0 = Y0 + (temp/TN)**isochoric * ltntrna / lambda1 * (T1/temp)**alpha0 * dt/tcool2 * fiso
+               Y0 = Y0 + (temp/TN)**isochoric * ltntrna * dt * fiso * dens / (kbgmh * temp)
             endif
 
             if (bin_found) then
                if ( .not. outer_bin .and. (alpha0 .equals. 0.0) ) then
-                  Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-TN * (Tref(nfuncs)/TN)**alpha(nfuncs) * lambda1/lambda0(nfuncs) * (Y0 - Y(ii)))
+                  Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-TN * lambda1 / ltntrna * (Y0 - Y(ii)))
                else
-                  Tnew = T1 * (1 - (isochoric-alpha0) * lambda1/lambda0(nfuncs) * (Tref(nfuncs)/TN)**alpha(nfuncs) * (TN/T1)**isochoric * (Y0 - Y(ii)) )**(1/(isochoric-alpha0))
+                  Tnew = T1 * (1 - (isochoric-alpha0) * lambda1 / ltntrna * (TN/T1)**isochoric * (Y0 - Y(ii)) )**(1/(isochoric-alpha0))
                endif
             endif
 
