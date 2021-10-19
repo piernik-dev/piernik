@@ -645,8 +645,9 @@ contains
                tcool2 = min(tcool2, 1.0*10**6)
                Y0 = Y0 + (temp/TN) * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) / diff * dt/tcool2
             else
-               tcool2 = kbgmh * temp / (lambda1 * (temp/T1)**alpha0 * dens)
-               Y0 = Y0 + (temp/TN)**isochoric * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) * (T1/temp)**alpha0 * dt/tcool2 * fiso
+               !tcool2 = kbgmh * temp / (lambda1 * (temp/T1)**alpha0 * dens)
+               !Y0 = Y0 + (temp/TN)**isochoric * lambda0(nfuncs)/lambda1 * (TN/Tref(nfuncs))**alpha(nfuncs) * (T1/temp)**alpha0 * dt/tcool2 * fiso
+               Y0 = Y0 + (temp/TN)**isochoric * lambda0(nfuncs) * (TN/Tref(nfuncs))** alpha(nfuncs) * dt * fiso * dens / (kbgmh * temp)
             endif
 
             if (bin_found) then
