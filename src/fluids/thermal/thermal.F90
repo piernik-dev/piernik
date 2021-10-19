@@ -79,7 +79,7 @@ contains
       if (master) call printinfo("[thermal:init_thermal] Commencing thermal module initialization")
 #endif /* VERBOSE */
 
-      thermal_active = .True.
+      thermal_active = .true.
       cool_model     = 'power_law'
       cool_curve     = 'power_law'
       cool_file      = ''
@@ -164,6 +164,8 @@ contains
          isochoric      = ibuff(1)
 
       endif
+
+      if (.not. thermal_active) return
 
       G0_heat = G0       * erg / sek * cm**3 / mH**2 * x_ion**2
       G1_heat = G1       * erg / sek         / mH    * x_ion
@@ -369,6 +371,8 @@ contains
       type(cg_list_element),  pointer     :: cgl
       type(grid_container),   pointer     :: cg
       class(component_fluid), pointer     :: pfl
+
+      if (.not. thermal_active) return
 
       cgl => leaves%first
       do while (associated(cgl))
