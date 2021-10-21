@@ -136,8 +136,8 @@ contains
       do p = 1, flind%energ
          associate(fl => flind%all_fluids(p)%fl)
 
-         p0 = d0/mH*kboltz*T0
-         cs = sqrt(fl%gam*T0*kboltz/mH)
+         p0 = d0 * T0 * kboltz / mH
+         cs = sqrt(fl%gam * T0 * kboltz / mH)
 
 ! Uniform equilibrium state
 
@@ -184,8 +184,6 @@ contains
                   enddo
                enddo
             endif
-
-! Add perturbation
 
             cgl => cgl%nxt
          enddo
