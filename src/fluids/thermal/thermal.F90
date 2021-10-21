@@ -448,8 +448,8 @@ contains
                            int_ener = ener(i,j,k) - kinmag_ener(i,j,k)
                            call find_temp_bin(ta(i,j,k), ii)
                            if (alpha(ii) .equals. 0.0) then
-                              diff = MAX(abs(ta(i,j,k) - Teql), 0.000001)
-                              tcool = kbgmh * ta(i,j,k) / (abs(lambda0(ii)) * diff * dens(i,j,k))
+                              diff = max(abs(ta(i,j,k) - Teql), 0.000001)
+                              tcool = kbgmh * ta(i,j,k) / (dens(i,j,k) * abs(lambda0(ii)) * diff)
                            else
                               tcool = kbgmh * ta(i,j,k) / (dens(i,j,k) * abs(lambda0(ii)) * (ta(i,j,k)/Tref(ii))**alpha(ii))
                            endif
@@ -597,7 +597,7 @@ contains
 
       real, intent(in)  :: tcool, dt, fiso, temp, dens, kbgmh
       real, intent(out) :: Tnew
-      real              :: lambda1, T1, alpha0, Y0, tcool2, diff
+      real              :: lambda1, T1, alpha0, Y0f, tcool2, diff
       integer           :: ii
 
       select case (cool_model)
@@ -624,20 +624,20 @@ contains
             if (alpha0 .equals. 0.0) then
                diff = max(abs(temp-Teql), 0.000001)
                !Y0 = Y(ii) + ltntrna / lambda1 / TN * log((abs(Teql - T1) / diff))
-               Y0 = ltntrna / lambda1 / TN * log((abs(Teql - T1) / diff))
+               Y0f = log((abs(Teql - T1) / diff)) / lambda1
                tcool2 = kbgmh * temp / (lambda1 * diff * dens)
-               tcool2 = min(tcool2, 1.0*10**6)
-               Y0 = Y0 + (temp/TN) * ltntrna / lambda1 / diff * dt/tcool2
+               tcool2 = min(tcool2, 1.0e6 * TN / ltntrna)
+               Y0f = Y0f + temp / lambda1 / diff * dt/tcool2
                !Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-TN * lambda1 / ltntrna * (Y0 - Y(ii)))
-               Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-TN * lambda1 / ltntrna * Y0)
+               Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-lambda1 * Y0f)
             else
                !Y0 = Y(ii) + 1/(isochoric-alpha0) * ltntrna / lambda1 * (T1/TN)**isochoric * (1 - (T1/temp)**(alpha0-isochoric))
-               Y0 = 1.0/(isochoric-alpha0) * ltntrna / lambda1 * (T1/TN)**isochoric * (1 - (T1/temp)**(alpha0-isochoric))
+               Y0f = 1.0/(isochoric-alpha0) / lambda1 * T1**isochoric * (1 - (T1/temp)**(alpha0-isochoric))
                !tcool2 = kbgmh * temp / (lambda1 * (temp/T1)**alpha0 * dens)
                !Y0 = Y0 + (temp/TN)**isochoric * ltntrna / lambda1 * (T1/temp)**alpha0 * dt/tcool2 * fiso
-               Y0 = Y0 + (temp/TN)**isochoric * ltntrna * dt * fiso * dens / (kbgmh * temp)
+               Y0f = Y0f + (temp)**isochoric * dt * fiso * dens / (kbgmh * temp)
                !Tnew = T1 * (1 - (isochoric-alpha0) * lambda1 / ltntrna * (TN/T1)**isochoric * (Y0 - Y(ii)) )**(1.0/(isochoric-alpha0))
-               Tnew = T1 * (1 - (isochoric-alpha0) * lambda1 / ltntrna * (TN/T1)**isochoric * Y0 )**(1.0/(isochoric-alpha0))
+               Tnew = T1 * (1 - (isochoric-alpha0) * lambda1 / T1**isochoric * Y0f)**(1.0/(isochoric-alpha0))
             endif
 
             if (Tnew < 100.0) Tnew = 100.0                        ! To improve
