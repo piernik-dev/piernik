@@ -41,7 +41,7 @@ module thermal
    implicit none
 
    private
-   public ::  init_thermal, thermal_active, cfl_coolheat, thermal_sources, itemp, fit_cooling_curve
+   public ::  init_thermal, thermal_active, cfl_coolheat, thermal_sources, itemp, fit_cooling_curve, cleanup_thermal
 
    character(len=cbuff_len)        :: cool_model, cool_curve, heat_model, scheme, cool_file
    logical                         :: thermal_active
@@ -402,8 +402,8 @@ contains
          cg => cgl%cg
 
          do ifl = 1, flind%fluids
-            if (.not. pfl%has_energy) cycle
             pfl => flind%all_fluids(ifl)%fl
+            if (.not. pfl%has_energy) cycle
             kbgmh  = kboltz / (pfl%gam_1 * mH)
             ikbgmh = pfl%gam_1 * mH / kboltz
 
@@ -652,5 +652,16 @@ contains
        end select
 
    end subroutine temp_EIS
+
+   subroutine cleanup_thermal
+
+      implicit none
+
+      if (allocated(Tref))    deallocate(Tref)
+      if (allocated(alpha))   deallocate(alpha)
+      if (allocated(lambda0)) deallocate(lambda0)
+      if (allocated(Y))       deallocate(Y)
+
+   end subroutine cleanup_thermal
 
 end module thermal

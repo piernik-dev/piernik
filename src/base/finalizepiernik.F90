@@ -76,6 +76,9 @@ contains
 #ifdef COSM_RAYS_SOURCES
       use cr_data,               only: cleanup_crsources
 #endif /* COSM_RAYS_SOURCES */
+#ifdef THERM
+      use thermal,               only: cleanup_thermal
+#endif /* THERM */
 
       implicit none
 
@@ -115,6 +118,9 @@ contains
 #ifdef COSM_RAYS_SOURCES
       call cleanup_crsources;      call nextdot
 #endif /* COSM_RAYS_SOURCES */
+#ifdef THERM
+     call cleanup_thermal;         call nextdot
+#endif /* THERM */
 
    end subroutine cleanup_piernik
 
