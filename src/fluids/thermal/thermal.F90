@@ -294,7 +294,7 @@ contains
       do iter = 1, 2
          set_nfuncs = (iter == 1)
          fill_array = (iter == 2)
-         if (fill_array) allocate(Tref(nfuncs), alpha(nfuncs), lambda0(nfuncs), Y(nfuncs))
+         if (fill_array) allocate(Tref(nfuncs), alpha(nfuncs), lambda0(nfuncs))
 
          i = 1
          k = 0
@@ -350,17 +350,20 @@ contains
 
          if (fill_array) then
             TN = 10**8
-            Y = 0.0
             ltntrna = lambda0(nfuncs) * (TN/Tref(nfuncs))**alpha(nfuncs)
 
-            Y(nfuncs) = - 1 / (isochoric-alpha(nfuncs)) * ((TN/Tref(nfuncs))**(alpha(nfuncs)-isochoric) - 1)
-            do i = nfuncs-1, 1, -1
-               if (alpha(i) .equals. 0.0) then
-                  Y(i) = Y(i+1) - ltntrna / lambda0(i) / TN * log((Teql - Tref(i)) / (Tref(i+1)-Teql))
-               else
-                  Y(i) = Y(i+1) - ltntrna / lambda0(i) / (isochoric-alpha(i)) * (Tref(i)/TN)**isochoric * (1 - (Tref(i)/Tref(i+1))**(alpha(i)-isochoric))
-               endif
-            enddo
+            if (.false.) then ! this might be used in some future implementation
+               allocate(Y(nfuncs))
+               Y = 0.0
+               Y(nfuncs) = - 1 / (isochoric-alpha(nfuncs)) * ((TN/Tref(nfuncs))**(alpha(nfuncs)-isochoric) - 1)
+               do i = nfuncs-1, 1, -1
+                  if (alpha(i) .equals. 0.0) then
+                     Y(i) = Y(i+1) - ltntrna / lambda0(i) / TN * log((Teql - Tref(i)) / (Tref(i+1)-Teql))
+                  else
+                     Y(i) = Y(i+1) - ltntrna / lambda0(i) / (isochoric-alpha(i)) * (Tref(i)/TN)**isochoric * (1 - (Tref(i)/Tref(i+1))**(alpha(i)-isochoric))
+                  endif
+               enddo
+            endif
          endif
       enddo
 
@@ -595,10 +598,10 @@ contains
 
       implicit none
 
-      real, intent(in)        :: tcool, dt, fiso, temp, dens, kbgmh
-      real, intent(out)       :: Tnew
-      real                    :: lambda1, T1, alpha0, Y0, tcool2, diff
-      integer                 :: ii
+      real, intent(in)  :: tcool, dt, fiso, temp, dens, kbgmh
+      real, intent(out) :: Tnew
+      real              :: lambda1, T1, alpha0, Y0, tcool2, diff
+      integer           :: ii
 
       select case (cool_model)
 
@@ -623,17 +626,21 @@ contains
             lambda1 = lambda0(ii)
             if (alpha0 .equals. 0.0) then
                diff = max(abs(temp-Teql), 0.000001)
-               Y0 = Y(ii) + ltntrna / lambda1 / TN * log((abs(Teql - T1) / diff))
+               !Y0 = Y(ii) + ltntrna / lambda1 / TN * log((abs(Teql - T1) / diff))
+               Y0 = ltntrna / lambda1 / TN * log((abs(Teql - T1) / diff))
                tcool2 = kbgmh * temp / (lambda1 * diff * dens)
                tcool2 = min(tcool2, 1.0*10**6)
                Y0 = Y0 + (temp/TN) * ltntrna / lambda1 / diff * dt/tcool2
-               Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-TN * lambda1 / ltntrna * (Y0 - Y(ii)))
+               !Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-TN * lambda1 / ltntrna * (Y0 - Y(ii)))
+               Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-TN * lambda1 / ltntrna * Y0)
             else
-               Y0 = Y(ii) + 1/(isochoric-alpha0) * ltntrna / lambda1 * (T1/TN)**isochoric * (1 - (T1/temp)**(alpha0-isochoric))
+               !Y0 = Y(ii) + 1/(isochoric-alpha0) * ltntrna / lambda1 * (T1/TN)**isochoric * (1 - (T1/temp)**(alpha0-isochoric))
+               Y0 = 1.0/(isochoric-alpha0) * ltntrna / lambda1 * (T1/TN)**isochoric * (1 - (T1/temp)**(alpha0-isochoric))
                !tcool2 = kbgmh * temp / (lambda1 * (temp/T1)**alpha0 * dens)
                !Y0 = Y0 + (temp/TN)**isochoric * ltntrna / lambda1 * (T1/temp)**alpha0 * dt/tcool2 * fiso
                Y0 = Y0 + (temp/TN)**isochoric * ltntrna * dt * fiso * dens / (kbgmh * temp)
-               Tnew = T1 * (1 - (isochoric-alpha0) * lambda1 / ltntrna * (TN/T1)**isochoric * (Y0 - Y(ii)) )**(1/(isochoric-alpha0))
+               !Tnew = T1 * (1 - (isochoric-alpha0) * lambda1 / ltntrna * (TN/T1)**isochoric * (Y0 - Y(ii)) )**(1.0/(isochoric-alpha0))
+               Tnew = T1 * (1 - (isochoric-alpha0) * lambda1 / ltntrna * (TN/T1)**isochoric * Y0 )**(1.0/(isochoric-alpha0))
             endif
 
             if (Tnew < 100.0) Tnew = 100.0                        ! To improve
