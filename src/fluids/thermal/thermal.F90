@@ -425,12 +425,12 @@ contains
                            int_ener = ener(i,j,k) - kinmag_ener(i,j,k)
                            call cool(ta(i,j,k), cfunc)
                            call heat(dens(i,j,k), hfunc)
-                           esrc = dens(i,j,k)**2*cfunc + hfunc
+                           esrc = dens(i,j,k)**2 * cfunc + hfunc
                            dt_cool = min(dt, cfl_coolheat*abs(1./(esrc/int_ener)))
                            t1 = 0.0
                            do while (t1 < dt)
                               call cool(ta(i,j,k), cfunc)
-                              esrc = dens(i,j,k)**2*cfunc + hfunc
+                              esrc = dens(i,j,k)**2 * cfunc + hfunc
                               int_ener = int_ener + esrc * dt_cool
                               ener(i,j,k) = ener(i,j,k) + esrc * dt_cool
                               ta(i,j,k) = ikbgmh * int_ener / dens(i,j,k)
@@ -579,7 +579,7 @@ contains
          case ('G012')
             heatf =  G0_heat * dens**2 + G1_heat * dens + G2_heat
          case ('null')
-            return
+            heatf = 0.0
          case default
             write(msg,'(3a)') 'Heat model: ',heat_model,' not implemented'
             if (master) call warn(msg)
