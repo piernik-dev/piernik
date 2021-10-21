@@ -402,6 +402,7 @@ contains
          cg => cgl%cg
 
          do ifl = 1, flind%fluids
+            if (.not. pfl%has_energy) cycle
             pfl => flind%all_fluids(ifl)%fl
             kbgmh  = kboltz / (pfl%gam_1 * mH)
             ikbgmh = pfl%gam_1 * mH / kboltz
@@ -412,12 +413,8 @@ contains
 
             n = shape(ta)
             allocate(kinmag_ener(n(xdim),n(ydim),n(zdim)))
-            if (pfl%has_energy) then
-               kinmag_ener = ekin(cg%u(pfl%imx,:,:,:), cg%u(pfl%imy,:,:,:), cg%u(pfl%imz,:,:,:), dens)
-               if (pfl%is_magnetized) then
-                  kinmag_ener = kinmag_ener + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))
-               endif
-            endif
+            kinmag_ener = ekin(cg%u(pfl%imx,:,:,:), cg%u(pfl%imy,:,:,:), cg%u(pfl%imz,:,:,:), dens)
+            if (pfl%is_magnetized) kinmag_ener = kinmag_ener + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))
 
             select case (scheme)
 
