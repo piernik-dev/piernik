@@ -143,6 +143,8 @@ def compare_resolution(h5f1, h5f2):
 
 
 def compare_dlists(h5f1, h5f2):
+    import re
+
     d_key = '/data'
     g0_key = 'grid_0000000000'  # trick: GDF has to contain this grid id
     failed = False
@@ -160,6 +162,43 @@ def compare_dlists(h5f1, h5f2):
         print("Fields unique for `", h5f1.filename, "': ", list(set(f1) ^ set(fc)))
     if (len(fc) != len(f2)):
         print("Fields unique for `", h5f2.filename, "': ", list(set(f2) ^ set(fc)))
+
+    digit = re.compile("[0-9]").search
+    digit2 = re.compile("[0-9][0-9]").search
+    v0 = []
+    for f in fc:
+        if (f[-1] == 'x') or (f[-2:] == '01'):
+            v0.append(f)
+
+    vec = []
+    for v in v0:
+        vv = []
+        if v[-1] == 'x':
+            vv = [v]
+            for f in fc:
+                for i in ('y', 'z'):
+                    if f == v[:-1] + i:
+                        vv.append(f)
+        elif v[-2:] == '01':
+            digit2 = re.compile(v[:-2] + "[0-9][0-9]").search
+            for f in fc:
+                if bool(digit2(f)):
+                    vv.append(f)
+        else:
+            print("Unsupported case ", v)
+            exit(40)
+
+        if len(vv) > 1:
+            vec.append(vv)
+
+    b = []
+    for v in vec:
+        b += v
+    if len(vec) > 0:
+        print("Possible vectors:")
+        for v in vec:
+            print("    ", sorted(v))
+        print("Remaining fields:\n    ", list(set(fc) ^ set(b)))
 
     return 1. - len(fc) / float(len(f1) + len(f2) - len(fc)), fc
 
