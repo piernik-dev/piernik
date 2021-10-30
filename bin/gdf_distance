@@ -4,6 +4,7 @@ import numpy as np
 
 sp_key = 'simulation_parameters'
 pkeys = ['acceleration_x', 'acceleration_y', 'acceleration_z', 'energy', 'mass', 'position_x', 'position_y', 'position_z', 'velocity_x', 'velocity_y', 'velocity_z']
+auto_vectors = True  # False
 
 
 def is_comparable(fname1, fname2):
@@ -200,7 +201,15 @@ def compare_dlists(h5f1, h5f2):
             print("    ", sorted(v))
         print("Remaining fields:\n    ", list(set(fc) ^ set(b)))
 
-    return 1. - len(fc) / float(len(f1) + len(f2) - len(fc)), fc
+    if auto_vectors:
+        for v in list(set(fc) ^ set(b)):
+            vec.append([v])
+    else:
+        vec = []
+        for v in fc:
+            vec.append([v])
+
+    return 1. - len(fc) / float(len(f1) + len(f2) - len(fc)), vec
 
 
 def compare_time(h5f1, h5f2):
@@ -223,6 +232,8 @@ def compare_data(ds1, ds2):
     #   1. when one field is proportional to the other but with negative coefficient
     #   epsilon/2 when difference between fields is epsilon
 
+    # When np.shape(ds1)[0] > 1 (the data is vector, not scalar), the formula doesn't change because we use the default, Frobenius norm.
+
     n1 = np.linalg.norm(ds1)
     n2 = np.linalg.norm(ds2)
     nd = np.linalg.norm(ds1 - ds2)
@@ -236,7 +247,7 @@ def compare_data(ds1, ds2):
 def collect_dataset(h5f, dset_name, level):
     attrs = h5f['domains']['base'].attrs
     nd = [i * 2**level for i in attrs['n_d']]
-    dset = np.zeros((nd[0], nd[1], nd[2]))
+    dset = np.zeros((len(dset_name), nd[0], nd[1], nd[2]))
 
     levelmet = False
     for ig in range(int(h5f['data'].attrs['cg_count'])):
@@ -247,7 +258,8 @@ def collect_dataset(h5f, dset_name, level):
             ngb = h5g.attrs['n_b']
             n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
             ce = n_b + off
-            dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name][:, :, :].swapaxes(0, 2)
+            for i in range(len(dset_name)):
+                dset[i, off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name[i]][:, :, :].swapaxes(0, 2)
 
     return dset, nd, levelmet
 
@@ -317,6 +329,8 @@ def compare_particles(h5f1, h5f2):
         if id not in pp2:
             del pp1[id]
 
+    if auto_vectors:
+        print("ToDo: vectorize particle data")
     tot_datanorm = 0.
     for k in pkeys:
         ds1 = np.zeros((n_comm_p))
@@ -386,7 +400,16 @@ def compare_datafields_by_level(h5f1, h5f2, levels, common_fields, fname1, fname
             print('Arrays cannot be compered.')
             exit(53)
         norm = compare_data(ds1, ds2)
-        lnorm["datafield `" + f + "'"] = norm
+        if len(f) == 1:
+            fld_name = f[0]
+        else:
+            if sorted(f)[0][-1] == 'x':
+                fld_name = sorted(f)[0][:-1] + '[x..' + sorted(f)[-1][-1] + ']'
+            elif sorted(f)[0][-2:] == '01':
+                fld_name = sorted(f)[0][:-2] + '[01..' + sorted(f)[-1][-2:] + ']'
+            else:
+                fld_name = '[' + sorted(f)[0] + ".." + sorted(f)[-1] + ']'
+        lnorm["datafield `" + fld_name + "'"] = norm
         tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
     if levels[0] == levels[1]:
         lev = str(levels[0])
