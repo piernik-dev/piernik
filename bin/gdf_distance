@@ -460,6 +460,13 @@ def n_reduce(args):
 
 if __name__ == "__main__":
     import sys
+
+    # Ugly. ToDo: rewrite and use argparse.
+    novec = "--novec"
+    if novec in sys.argv:
+        sys.argv.remove(novec)
+        auto_vectors = False
+        sys.stderr.write("Switched to nondetection of vectors\n")
     if (len(sys.argv) < 3):
         sys.stderr.write("Error: too few arguments.\nUsage: " +
                          sys.argv[0] + " piernik_data_hdf_file1 piernik_data_hdf_file2 [piernik_data_hdf_file3]\n" + "or     " +
