@@ -4,6 +4,7 @@ import numpy as np
 
 sp_key = 'simulation_parameters'
 pkeys = ['acceleration_x', 'acceleration_y', 'acceleration_z', 'energy', 'mass', 'position_x', 'position_y', 'position_z', 'velocity_x', 'velocity_y', 'velocity_z']
+auto_vectors = True  # False
 
 
 def is_comparable(fname1, fname2):
@@ -143,6 +144,8 @@ def compare_resolution(h5f1, h5f2):
 
 
 def compare_dlists(h5f1, h5f2):
+    import re
+
     d_key = '/data'
     g0_key = 'grid_0000000000'  # trick: GDF has to contain this grid id
     failed = False
@@ -161,7 +164,52 @@ def compare_dlists(h5f1, h5f2):
     if (len(fc) != len(f2)):
         print("Fields unique for `", h5f2.filename, "': ", list(set(f2) ^ set(fc)))
 
-    return 1. - len(fc) / float(len(f1) + len(f2) - len(fc)), fc
+    digit = re.compile("[0-9]").search
+    digit2 = re.compile("[0-9][0-9]").search
+    v0 = []
+    for f in fc:
+        if (f[-1] == 'x') or (f[-2:] == '01'):
+            v0.append(f)
+
+    vec = []
+    for v in v0:
+        vv = []
+        if v[-1] == 'x':
+            vv = [v]
+            for f in fc:
+                for i in ('y', 'z'):
+                    if f == v[:-1] + i:
+                        vv.append(f)
+        elif v[-2:] == '01':
+            digit2 = re.compile(v[:-2] + "[0-9][0-9]").search
+            for f in fc:
+                if bool(digit2(f)):
+                    vv.append(f)
+        else:
+            print("Unsupported case ", v)
+            exit(40)
+
+        if len(vv) > 1:
+            vec.append(vv)
+
+    b = []
+    for v in vec:
+        b += v
+    if len(vec) > 0:
+        print("Possible vectors:")
+        for v in vec:
+            print("    ", sorted(v))
+        print("Remaining fields:\n    ", list(set(fc) ^ set(b)))
+
+    if auto_vectors:
+        for v in list(set(fc) ^ set(b)):
+            vec.append([v])
+    else:
+        vec = []
+        for v in fc:
+            vec.append([v])
+
+    return 1. - len(fc) / float(len(f1) + len(f2) - len(fc)), vec
 
 
 def compare_time(h5f1, h5f2):
@@ -184,6 +232,8 @@ def compare_data(ds1, ds2):
     #   1. when one field is proportional to the other but with negative coefficient
     #   epsilon/2 when difference between fields is epsilon
 
+    # When np.shape(ds1)[0] > 1 (the data is vector, not scalar), the formula doesn't change because we use the default, Frobenius norm.
+
     n1 = np.linalg.norm(ds1)
     n2 = np.linalg.norm(ds2)
     nd = np.linalg.norm(ds1 - ds2)
@@ -197,7 +247,7 @@ def compare_data(ds1, ds2):
 def collect_dataset(h5f, dset_name, level):
     attrs = h5f['domains']['base'].attrs
     nd = [i * 2**level for i in attrs['n_d']]
-    dset = np.zeros((nd[0], nd[1], nd[2]))
+    dset = np.zeros((len(dset_name), nd[0], nd[1], nd[2]))
 
     levelmet = False
     for ig in range(int(h5f['data'].attrs['cg_count'])):
@@ -208,7 +258,8 @@ def collect_dataset(h5f, dset_name, level):
             ngb = h5g.attrs['n_b']
             n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
             ce = n_b + off
-            dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name][:, :, :].swapaxes(0, 2)
+            for i in range(len(dset_name)):
+                dset[i, off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name[i]][:, :, :].swapaxes(0, 2)
 
     return dset, nd, levelmet
 
@@ -278,6 +329,8 @@ def compare_particles(h5f1, h5f2):
         if id not in pp2:
             del pp1[id]
 
+    if auto_vectors:
+        print("ToDo: vectorize particle data")
     tot_datanorm = 0.
     for k in pkeys:
         ds1 = np.zeros((n_comm_p))
@@ -347,7 +400,16 @@ def compare_datafields_by_level(h5f1, h5f2, levels, common_fields, fname1, fname
             print('Arrays cannot be compered.')
             exit(53)
         norm = compare_data(ds1, ds2)
-        lnorm["datafield `" + f + "'"] = norm
+        if len(f) == 1:
+            fld_name = f[0]
+        else:
+            if sorted(f)[0][-1] == 'x':
+                fld_name = sorted(f)[0][:-1] + '[x..' + sorted(f)[-1][-1] + ']'
+            elif sorted(f)[0][-2:] == '01':
+                fld_name = sorted(f)[0][:-2] + '[01..' + sorted(f)[-1][-2:] + ']'
+            else:
+                fld_name = '[' + sorted(f)[0] + ".." + sorted(f)[-1] + ']'
+        lnorm["datafield `" + fld_name + "'"] = norm
         tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
     if levels[0] == levels[1]:
         lev = str(levels[0])
@@ -398,6 +460,13 @@ def n_reduce(args):
 
 if __name__ == "__main__":
     import sys
+
+    # Ugly. ToDo: rewrite and use argparse.
+    novec = "--novec"
+    if novec in sys.argv:
+        sys.argv.remove(novec)
+        auto_vectors = False
+        sys.stderr.write("Switched to nondetection of vectors\n")
     if (len(sys.argv) < 3):
         sys.stderr.write("Error: too few arguments.\nUsage: " +
                          sys.argv[0] + " piernik_data_hdf_file1 piernik_data_hdf_file2 [piernik_data_hdf_file3]\n" + "or     " +
