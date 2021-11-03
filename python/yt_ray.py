@@ -42,14 +42,14 @@ def print_ray(fname, startpoint, endpoint):
     print("Columns: ", labels, file=sys.stderr)
 
     print("#", end='')
-    for l in labels:
-        print("{:<20} ".format(l), end='')
+    for ll in labels:
+        print("{:<20} ".format(ll), end='')
     print()
 
     dlen = len(line[labels[0]].v)
     for i in range(dlen):
-        for l in labels:
-            print("{:<20.12g} ".format(line[l].v[i]), end='')
+        for ll in labels:
+            print("{:<20.12g} ".format(line[ll].v[i]), end='')
         print()
 
 

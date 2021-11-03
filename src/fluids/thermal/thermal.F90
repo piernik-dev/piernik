@@ -50,7 +50,7 @@ module thermal
    real                            :: Teql         !> temperature of cooling / heating equilibrium
    integer(kind=4), protected      :: itemp = INVALID
    real                            :: x_ion        !> ionization degree
-   integer                         :: isochoric    !> 1 for isochoric, 0 for isobaric
+   integer(kind=4)                 :: isochoric    !> 1 for isochoric, 0 for isobaric
    real                            :: d_isochoric  ! constant density used in isochoric case
    real, dimension(:), allocatable :: Tref, alpha, lambda0
    integer                         :: nfuncs
