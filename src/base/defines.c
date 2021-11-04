@@ -75,6 +75,12 @@
 #  error None of { IONIZED DUST NEUTRAL } were defined.
 #endif /* !FLUID */
 
+#ifdef THERM
+#  ifdef ISO
+#    error THERM cannot work with ISO
+#  endif /* ISO */
+#endif /* THERM */
+
 #ifdef NOMAGNETICNORESIST
 # warning MAGNETIC is not defined, then RESISTIVE is also cancelled
 #endif /* NOMAGNETICNORESIST */

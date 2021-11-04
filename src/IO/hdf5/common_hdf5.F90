@@ -167,6 +167,12 @@ contains
             case ('ethr')
                if (has_neu) call append_var('ethn')
                if (has_ion) call append_var('ethi')
+            case ('pres')
+               if (has_neu) call append_var('pren')
+               if (has_ion) call append_var('prei')
+            case ('temp')
+               if (has_neu) call append_var('temn')
+               if (has_ion) call append_var('temi')
             case ("divb", "divB")
                if (cc_mag) then
                   call append_var("divbc")
@@ -264,9 +270,6 @@ contains
                enddo
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
-            case ('pres')
-               if (has_neu) call append_var('pren')
-               if (has_ion) call append_var('prei')
             case default
                if (.not. has_ion .and. (any(trim(vars(i)) == ["deni", "vlxi", "vlyi", "vlzi", "enei", "ethi", "prei"]) .or. any(trim(vars(i)) == ["momxi", "momyi", "momzi"]))) then
                   if (master) call warn("[common_hdf5:init_hdf5] Cannot safely use plot variable '" // trim(vars(i)) // "' without ionized fluid")
