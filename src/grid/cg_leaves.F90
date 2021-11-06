@@ -41,6 +41,7 @@ module cg_leaves
    use cg_list,            only: cg_list_t   ! QA_WARN intel
 #endif /* __INTEL_COMPILER */
    use cg_level_connected, only: cg_level_connected_t
+   use cg_list,            only: cg_list_element_ptr
    use cg_list_bnd,        only: cg_list_bnd_t
 
    implicit none
@@ -55,7 +56,8 @@ module cg_leaves
    !<
 
    type, extends(cg_list_bnd_t) :: cg_leaves_t ! cg_list_bnd_t is required for calling bnd_u and bnd_b
-      type(cg_level_connected_t), private, pointer :: coarsest_leaves
+      type(cg_level_connected_t), private, pointer         :: coarsest_leaves  !< For optimization
+      type(cg_list_element_ptr), dimension(:), allocatable :: up_to_level      !< An array of pointers to get cg leaves no finer than a given level
    contains
       procedure :: update                  !< Select grids that should be included on leaves list
       procedure :: balance_and_update      !< Rebalance if required and update
@@ -63,6 +65,8 @@ module cg_leaves
       procedure :: leaf_arr4d_boundaries   !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays on leaves
       procedure :: prioritized_cg          !< Return a leaves list with different ordering of cg to optimize fine->coarse flux transfer
       procedure :: leaf_only_cg            !< Return a leaves list without fully covered cg
+
+      procedure, private :: set_up_to      !< Sort this and set up this%up_to_level
    end type cg_leaves_t
 
    !>
@@ -115,20 +119,31 @@ contains
       if (present(str)) msg(len_trim(msg)+1:) = str
       ih = len_trim(msg) + 1
 
-      sum_max = 0
       curl => finest%level
       do while (associated(curl))
-         if (curl%l%id == base_level_id) this%coarsest_leaves => curl !> \todo Find first not fully covered level
+         if (curl%l%id == base_level_id) this%coarsest_leaves => curl  !> \todo Find first not fully covered level
          curl => curl%coarser
       enddo
-      b_cnt = INVALID
-      curl => this%coarsest_leaves  ! base%level
+
+      ! Create leaves sorted from finest to coarser levels to easily obtain pointers to
+      ! cg subsets that doesn't contain cgs finer than given level
+      curl => finest%level
       do while (associated(curl))
          cgl => curl%first
          do while (associated(cgl))
             call this%add(cgl%cg)
             cgl => cgl%nxt
          enddo
+         curl => curl%coarser
+         if (associated(curl)) then
+            if (curl%l%id < this%coarsest_leaves%l%id) nullify(curl)
+         endif
+      enddo
+
+      sum_max = 0
+      b_cnt = INVALID
+      curl => this%coarsest_leaves  ! base%level
+      do while (associated(curl))
          g_max = curl%cnt
          call piernik_MPI_Allreduce(g_max, pMAX)
          sum_max = sum_max + g_max * nproc
@@ -139,6 +154,7 @@ contains
          call curl%vertical_prep  ! is it necessary here?
          curl => curl%finer
       enddo
+
       g_cnt = leaves%cnt
       call piernik_MPI_Allreduce(g_cnt, pSUM)
       write(msg(len_trim(msg)+1:), '(a,i7,a,f6.3)')", Sum: ",g_cnt, ", cg load balance: ",g_cnt/real(sum_max)
@@ -157,9 +173,33 @@ contains
       prev_msg = msg
       prev_is = is
 
+      call this%set_up_to
+
       call ppp_main%stop(leaves_label, PPP_AMR)
 
    end subroutine update
+
+!< \brief Sort this and set up this%up_to_level
+
+   subroutine set_up_to(this)
+
+      use constants, only: PPP_AMR
+      use ppp,       only: ppp_main
+
+      implicit none
+
+      class(cg_leaves_t), intent(inout) :: this  !< object invoking type-bound procedure
+
+      character(len=*), parameter :: sut_label = "leaves_set_up_to"
+
+      call ppp_main%start(sut_label, PPP_AMR)
+
+      ! Currently leaves are set up from bottom to tom, we want other sorting
+      ! Other sorting will require to rearrange printing
+
+      call ppp_main%stop(sut_label, PPP_AMR)
+
+   end subroutine set_up_to
 
 !> \brief Rebalance if required and update.
 
