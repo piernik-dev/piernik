@@ -728,7 +728,11 @@ contains
 
    end function n_cg_name
 
-!> \brief find a n-th grid container on the cg_all list
+!>
+!! \brief Find a n-th grid container mentioned in cg_desc structure.
+!!
+!! The loop here has to match the loop in collect_cg_data!
+!<
 
    function get_nth_cg(n) result(cg)
 
@@ -744,7 +748,7 @@ contains
       type(grid_container),  pointer :: cg
       type(cg_list_element), pointer :: cgl
 
-      integer                        :: i
+      integer :: i
 
       nullify(cg)
       i = 1
@@ -1177,12 +1181,17 @@ contains
 
    end subroutine write_to_hdf5_v2
 
+!>
+!! \brief Collect data to fill cg_desc structure
+!!
+!! The loop here has to match the loop in get_nth_cg!
+!>
+
    subroutine collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
 
-      use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_t
-      use cg_list,            only: cg_list_element
-      use constants,          only: LO, HI, I_ONE
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use constants, only: LO, HI, I_ONE
 
       implicit none
 
@@ -1193,28 +1202,23 @@ contains
       real(kind=8),    dimension(:,:,:), pointer, intent(inout) :: dbuf
       integer(kind=4),                            intent(in)    :: otype            !< Output type (restart, data)
 
-      type(cg_level_connected_t), pointer :: curl
       type(cg_list_element), pointer :: cgl
       integer :: g
 
       g = 1
-      curl => base%level
-      do while (associated(curl))
-         cgl => curl%first
-         do while (associated(cgl))
-            cg_rl (g   ) = int(cgl%cg%l%id, kind=4)
-            cg_n_b(g, :) = cgl%cg%n_b(:)
-            cg_off(g, :) = cgl%cg%my_se(:, LO) - curl%l%off(:)
-            if (otype == O_OUT) then
-               dbuf(cg_le, g, :)  = cgl%cg%fbnd(:, LO)
-               dbuf(cg_re, g, :)  = cgl%cg%fbnd(:, HI)
-               dbuf(cg_dl, g, :)  = cgl%cg%dl
-            endif
-            if (otype == O_RES) cg_n_o(g, :) = cgl%cg%lh_out(:, HI) - cgl%cg%lh_out(:, LO) + I_ONE
-            g = g + 1
-            cgl => cgl%nxt
-         enddo
-         curl => curl%finer
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg_rl (g   ) = int(cgl%cg%l%id, kind=4)
+         cg_n_b(g, :) = cgl%cg%n_b(:)
+         cg_off(g, :) = cgl%cg%my_se(:, LO) - cgl%cg%l%off(:)
+         if (otype == O_OUT) then
+            dbuf(cg_le, g, :)  = cgl%cg%fbnd(:, LO)
+            dbuf(cg_re, g, :)  = cgl%cg%fbnd(:, HI)
+            dbuf(cg_dl, g, :)  = cgl%cg%dl
+         endif
+         if (otype == O_RES) cg_n_o(g, :) = cgl%cg%lh_out(:, HI) - cgl%cg%lh_out(:, LO) + I_ONE
+         g = g + 1
+         cgl => cgl%nxt
       enddo
 
    end subroutine collect_cg_data
