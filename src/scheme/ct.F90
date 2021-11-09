@@ -238,6 +238,7 @@ contains
 
    subroutine advectb(bdir, vdir)
 
+      use cg_cost_data,     only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, LO, HI, ndims, INT4
@@ -280,6 +281,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          if (any([allocated(vv), allocated(vv0)])) call die("[ct:advectb] vv or vv0 already allocated")
          allocate(vv(cg%n_(vdir)), vv0(cg%n_(vdir)))
@@ -315,6 +317,7 @@ contains
 
          deallocate(vv, vv0)
 
+         call cg%costs%stop(I_MHD)
          cgl => cgl%nxt
       enddo
       NULLIFY(i1, i1m, i2, i2m)
@@ -327,6 +330,7 @@ contains
 #if defined(IONIZED) || defined(RESISTIVE)
    subroutine mag_add(dim1, dim2)
 
+      use cg_cost_data,     only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use dataio_pub,       only: die
@@ -356,6 +360,8 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
          wcu => cg%q(qna%ind(wcu_n))%arr
@@ -376,6 +382,8 @@ contains
          cg%wa = pshift(cg%wa,dim2)
          cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) + cg%wa*cg%idl(dim2)
 #endif /* IONIZED */
+
+         call cg%costs%stop(I_MHD)
          cgl => cgl%nxt
       enddo
 

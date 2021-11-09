@@ -420,12 +420,12 @@ contains
       ! strange FPExceptions here with gfortran 4.8.3 20140911 (Red Hat 4.8.3-7) when gamma*Pl/rl = -1.e-9 and there is -O3 (switching to -O2 fixes it)
       cfastl=sqrt(max(gamma*Pl/rl,smallc**2))
       cfastr=sqrt(max(gamma*Pr/rr,smallc**2))
-#else
+#else /* !0 */
       cfastl=max(gamma*Pl/rl,smallc**2)
       cfastl=sqrt(cfastl)
       cfastr=max(gamma*Pr/rr,smallc**2)
       cfastr=sqrt(cfastr)
-#endif
+#endif /* !0 */
 
       ! Compute HLL wave speed
       SL=min(ul,ur)-max(cfastl,cfastr)

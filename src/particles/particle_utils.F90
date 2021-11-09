@@ -432,10 +432,10 @@ contains
                if (.not. pset%pdata%in) then
                   ! TO CHECK: PARTICLES CHANGING CG OUTSIDE DOMAIN?
                   associate ( gsej => base%level%dot%gse(j) )
-                    do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
-                       if (particle_in_area(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO)*cg%dl(:)])) then
-                          nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
-                       else if (pset%pdata%outside) then
+                     do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
+                        if (particle_in_area(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO)*cg%dl(:)])) then
+                           nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
+                        else if (pset%pdata%outside) then
                            call cg_outside_dom(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2.) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_ONE) * cg%dl(:)], phy_out)
                            if (phy_out) nsend(j) = nsend(j) + I_ONE
                         endif
@@ -466,7 +466,7 @@ contains
                   endif
                   if (.not. pset%pdata%in) then
                      associate ( gsej => base%level%dot%gse(j) )
-                       do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
+                        do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
                            if (particle_in_area(pset%pdata%pos, [(gsej%c(b)%se(:,LO) - dom%n_d(:)/2. - I_ONE) * cg%dl(:), (gsej%c(b)%se(:,HI) - dom%n_d(:)/2. + I_TWO)*cg%dl(:)])) then
                               part_info(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
                            else if (pset%pdata%outside) then

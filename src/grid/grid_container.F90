@@ -30,6 +30,8 @@
 
 module grid_cont
 
+   use cg_cost,           only: cg_cost_t
+   use cg_cost_data,      only: cg_cost_data_t
    use constants,         only: LO, HI
    use grid_cont_bnd,     only: segment
    use grid_cont_prolong, only: grid_container_prolong_t
@@ -70,11 +72,13 @@ module grid_cont
 #endif /* GRAV && NBODY */
 
       ! Misc
-      integer(kind=8) :: SFC_id       !< position of the grid on space-filling curve
-      integer :: membership           !< How many cg lists use this grid piece?
-      logical :: ignore_prolongation  !< When .true. do not upgrade interior with incoming prolonged values
-      logical :: is_old               !< .true. if a given grid existed prior to  upgrade_refinement call
-      logical :: processed            !< for use in sweeps.F90
+      integer(kind=8) :: SFC_id          !< position of the grid on space-filling curve
+      integer :: membership              !< How many cg lists use this grid piece?
+      logical :: ignore_prolongation     !< When .true. do not upgrade interior with incoming prolonged values
+      logical :: is_old                  !< .true. if a given grid existed prior to  upgrade_refinement call
+      logical :: processed               !< for use in sweeps.F90
+      type(cg_cost_t) :: costs           !< accumulate cg costs here for better work balance
+      type(cg_cost_data_t) :: old_costs  !< accumulated cg costs from previous step for better work balance
 
    contains
 
@@ -131,6 +135,9 @@ contains
       this%ignore_prolongation = .false.
       this%is_old = .false.
       this%has_previous_timestep = .false.
+
+      call this%costs%reset
+      call this%old_costs%init
 
    end subroutine init_gc
 

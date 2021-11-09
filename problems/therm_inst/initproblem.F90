@@ -35,7 +35,7 @@ module initproblem
    private
    public  :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real    :: d0, T0, bx0, by0, bz0, pertamp
+   real :: d0, T0, bx0, by0, bz0, pertamp
 
    namelist /PROBLEM_CONTROL/ d0, T0, bx0, by0, bz0, pertamp
 
@@ -45,17 +45,7 @@ contains
 
    subroutine problem_pointers
 
-#ifdef HDF5
-      use dataio_user, only: user_vars_hdf5
-#endif /* HDF5 */
-      use dataio_user, only: user_tsl
-
       implicit none
-
-      user_tsl       => thermal_tsl
-#ifdef HDF5
-      user_vars_hdf5 => crtest_analytic_ecr1
-#endif /* HDF5 */
 
    end subroutine problem_pointers
 
@@ -114,7 +104,7 @@ contains
          bx0          = rbuff(3)
          by0          = rbuff(4)
          bz0          = rbuff(5)
-         pertamp = rbuff(6)
+         pertamp      = rbuff(6)
 
       endif
 
@@ -128,20 +118,26 @@ contains
       use domain,     only: dom
       use fluidindex, only: flind
       use grid_cont,  only: grid_container
+      use thermal,    only: itemp, thermal_active
       use units,      only: kboltz, mH
 
       implicit none
 
       integer                         :: i, j, k, p
-      real                            :: cs, p0
+      real                            :: cs, p0, kx, ky, kz
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
+      complex                         :: im
 
+      im = (0,1)
+      kx = 2.*pi/dom%L_(xdim)
+      ky = 2.*pi/dom%L_(ydim)
+      kz = 2.*pi/dom%L_(zdim)
       do p = 1, flind%energ
          associate(fl => flind%all_fluids(p)%fl)
 
-         p0 = d0/mH*kboltz*T0
-         cs = sqrt(fl%gam*T0*kboltz/mH)
+         p0 = d0 * T0 * kboltz / mH
+         cs = sqrt(fl%gam * T0 * kboltz / mH)
 
 ! Uniform equilibrium state
 
@@ -160,15 +156,23 @@ contains
                      cg%u(fl%imz,i,j,k) = 0.0
                      cg%u(fl%ien,i,j,k) = p0/(fl%gam_1)
 ! Perturbation
-
                      cg%u(fl%imx,i,j,k) = cg%u(fl%imx,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*sin(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*cos(2.*pi*cg%z(k)/dom%L_(zdim))
                      cg%u(fl%imy,i,j,k) = cg%u(fl%imy,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*cos(2.*pi*cg%x(i)/dom%L_(xdim))*sin(2.*pi*cg%y(j)/dom%L_(ydim))*cos(2.*pi*cg%z(k)/dom%L_(zdim))
                      cg%u(fl%imz,i,j,k) = cg%u(fl%imz,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*cos(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*sin(2.*pi*cg%z(k)/dom%L_(zdim))
+                     !cg%u(fl%idn,i,j,k) = cg%u(fl%idn,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cos(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*sin(2.*pi*cg%z(k)/dom%L_(zdim))
 
+                     !cg%u(fl%idn,i,j,k) = cg%u(fl%idn,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)      * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
+                     !cg%u(fl%imx,i,j,k) = cg%u(fl%imx,i,j,k) + pertamp*cg%u(fl%idn,i,j,k) * cs * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
+                     !cg%u(fl%imy,i,j,k) = cg%u(fl%imy,i,j,k) + pertamp*cg%u(fl%idn,i,j,k) * cs * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
+                     !cg%u(fl%imz,i,j,k) = cg%u(fl%imz,i,j,k) + pertamp*cg%u(fl%idn,i,j,k) * cs * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
+
+                     !cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + pertamp*cg%u(fl%ien,i,j,k)      * exp(im*(kx*cg%x(i)+ky*cg%y(j)+kz*cg%z(k)))
                      cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*(cg%u(fl%imx,i,j,k)**2 +cg%u(fl%imy,i,j,k)**2 + cg%u(fl%imz,i,j,k)**2)/cg%u(fl%idn,i,j,k)
                   enddo
                enddo
             enddo
+
+            if (thermal_active) cg%q(itemp)%arr(:,:,:) = T0
 
             if (fl%tag == ION) then
                call cg%set_constant_b_field([bx0, by0, bz0])
@@ -181,8 +185,6 @@ contains
                enddo
             endif
 
-! Add perturbation
-
             cgl => cgl%nxt
          enddo
 
@@ -190,73 +192,5 @@ contains
       enddo
 
    end subroutine problem_initial_conditions
-!-----------------------------------------------------------------------------
-   subroutine thermal_tsl(user_vars, tsl_names)
-
-      use constants,   only: pSUM
-      use diagnostics, only: pop_vector
-      use mpisetup,    only: proc, master, piernik_MPI_Allreduce
-
-      implicit none
-
-      real, dimension(:), intent(inout), allocatable                       :: user_vars
-      character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
-      real :: output
-
-      if (present(tsl_names)) then
-         call pop_vector(tsl_names, len(tsl_names(1)), ["foobar_thermal"])    !   add to header
-      else
-         ! do mpi stuff here...
-         output = real(proc,8)
-         call piernik_MPI_Allreduce(output, pSUM)
-         if (master) call pop_vector(user_vars,[output])                 !   pop value
-      endif
-
-   end subroutine thermal_tsl
-
-!-----------------------------------------------------------------------------
-
-   subroutine crtest_analytic_ecr1(var, tab, ierrh, cg)
-
-      use constants,        only: xdim, ydim, zdim
-      use fluidindex,       only: flind
-      use fluidtypes,       only: component_fluid
-      use func,             only: emag, ekin
-      use grid_cont,        only: grid_container
-      use named_array_list, only: wna
-      use units,            only: kboltz, mH
-
-      implicit none
-
-      character(len=*),               intent(in)             :: var
-      real, dimension(:,:,:),         intent(inout)          :: tab
-      integer,                        intent(inout)          :: ierrh
-      type(grid_container), pointer,  intent(in)             :: cg
-      real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: eint, kin_ener, mag_ener, temp
-      class(component_fluid), pointer                        :: pfl
-
-      !> \warning ONLY ONE FLUID IS USED!!!
-      pfl => flind%all_fluids(1)%fl
-      if (pfl%has_energy) then
-            kin_ener = ekin(cg%w(wna%fi)%span(pfl%imx,cg%ijkse), cg%w(wna%fi)%span(pfl%imy,cg%ijkse), cg%w(wna%fi)%span(pfl%imz,cg%ijkse), cg%w(wna%fi)%span(pfl%idn,cg%ijkse))
-            if (pfl%is_magnetized) then
-               mag_ener = emag(cg%w(wna%bi)%span(xdim,cg%ijkse), cg%w(wna%bi)%span(ydim,cg%ijkse), cg%w(wna%bi)%span(zdim,cg%ijkse))
-               eint = cg%w(wna%fi)%span(pfl%ien,cg%ijkse) - kin_ener - mag_ener
-            else
-               eint = cg%w(wna%fi)%span(pfl%ien,cg%ijkse) - kin_ener
-            endif
-      endif
-
-      temp = (pfl%gam-1)*mH/kboltz*eint/cg%w(wna%fi)%span(pfl%idn,cg%ijkse)
-
-      ierrh = 0
-      select case (trim(var))
-         case ("temp")
-            tab(:,:,:) = real(temp, 4)
-         case default
-            ierrh = -1
-      end select
-
-   end subroutine crtest_analytic_ecr1
 
 end module initproblem
