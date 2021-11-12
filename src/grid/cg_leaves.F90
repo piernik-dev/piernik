@@ -65,8 +65,6 @@ module cg_leaves
       procedure :: leaf_arr4d_boundaries   !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays on leaves
       procedure :: prioritized_cg          !< Return a leaves list with different ordering of cg to optimize fine->coarse flux transfer
       procedure :: leaf_only_cg            !< Return a leaves list without fully covered cg
-
-      procedure, private :: set_up_to      !< Sort this and set up this%up_to_level
    end type cg_leaves_t
 
    !>
@@ -121,17 +119,23 @@ contains
 
       curl => finest%level
       do while (associated(curl))
-         if (curl%l%id == base_level_id) this%coarsest_leaves => curl  !> \todo Find first not fully covered level
+         if (curl%l%id == base_level_id) this%coarsest_leaves => curl
+         !> \todo Find first not fully covered level, but current IO implementation depends on leaves
+         !! as a complete set of cg from base level to finest level, so be careful.
          curl => curl%coarser
       enddo
 
       ! Create leaves sorted from finest to coarser levels to easily obtain pointers to
       ! cg subsets that doesn't contain cgs finer than given level
+      if (allocated(this%up_to_level)) deallocate(this%up_to_level)
+      allocate(this%up_to_level(base_level_id:finest%level%l%id))
       curl => finest%level
       do while (associated(curl))
+         nullify(this%up_to_level(curl%l%id)%p)
          cgl => curl%first
          do while (associated(cgl))
             call this%add(cgl%cg)
+            if (associated(curl%first%cg, this%last%cg)) this%up_to_level(curl%l%id)%p => this%last
             cgl => cgl%nxt
          enddo
          curl => curl%coarser
@@ -173,33 +177,9 @@ contains
       prev_msg = msg
       prev_is = is
 
-      call this%set_up_to
-
       call ppp_main%stop(leaves_label, PPP_AMR)
 
    end subroutine update
-
-!< \brief Sort this and set up this%up_to_level
-
-   subroutine set_up_to(this)
-
-      use constants, only: PPP_AMR
-      use ppp,       only: ppp_main
-
-      implicit none
-
-      class(cg_leaves_t), intent(inout) :: this  !< object invoking type-bound procedure
-
-      character(len=*), parameter :: sut_label = "leaves_set_up_to"
-
-      call ppp_main%start(sut_label, PPP_AMR)
-
-      ! Currently leaves are set up from bottom to tom, we want other sorting
-      ! Other sorting will require to rearrange printing
-
-      call ppp_main%stop(sut_label, PPP_AMR)
-
-   end subroutine set_up_to
 
 !> \brief Rebalance if required and update.
 
