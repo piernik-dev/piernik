@@ -85,6 +85,9 @@ module initcosmicrays
    real                                :: def_dtcrs    !< default dt limitation due to diffusion
    logical                             :: K_crs_valid  !< condition to use dt_crs
 
+   integer(kind=4)                     :: diff_max_lev !< when set, restrict diffusion to be computed only up to specified level to avoid shortening of timestep
+   integer(kind=4)                     :: diff_prolong !< order of prolongation used to transfer data from diff_max_lev to finer grids
+
 contains
 
 !>
@@ -111,13 +114,15 @@ contains
 !! <tr><td>divv_scheme </td><td>''    </td><td>string    </td><td>\copydoc initcosmicrays::divv_scheme</td></tr>
 !! <tr><td>crn_gpcr_ess</td><td>(1): .true.; (>2):.false.</td><td>logical</td><td>\copydoc initcosmicrays::crn_gpcr_ess</td></tr>
 !! <tr><td>cre_gpcr_ess</td><td>.false.                  </td><td>logical</td><td>\copydoc initcosmicrays::cre_gpcr_ess</td></tr>
+!! <tr><td>diff_max_lev</td><td>huge(1)</td><td>integer   </td><td>\copydoc initcosmicrays::diff_max_lev</td></tr>
+!! <tr><td>diff_prolong</td><td>O_I3   </td><td>integer   </td><td>\copydoc initcosmicrays::diff_prolong</td></tr>
 !! </table>
 !! The list is active while \b "COSM_RAYS" is defined.
 !! \n \n
 !<
    subroutine init_cosmicrays
 
-      use constants,       only: cbuff_len, I_ONE, half, big
+      use constants,       only: cbuff_len, I_ONE, half, big, O_I3, base_level_id
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: die, warn, nh
       use func,            only: operator(.notequals.)
@@ -140,7 +145,8 @@ contains
 #endif /* !COSM_RAY_ELECTRONS */
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
            &                 ncre, &
-           &                 divv_scheme, crn_gpcr_ess, cre_gpcr_ess
+           &                 divv_scheme, crn_gpcr_ess, cre_gpcr_ess, &
+           &                 diff_max_lev, diff_prolong
 
       cfl_cr     = 0.9
       smallecr   = 0.0
@@ -167,6 +173,9 @@ contains
       cre_gpcr_ess    = .false.
 
       divv_scheme = ''
+
+      diff_max_lev = huge(1_4)
+      diff_prolong = O_I3
 
       if (master) then
 
@@ -198,6 +207,8 @@ contains
 
          ibuff(1) = ncrn
          ibuff(2) = ncre
+         ibuff(3) = diff_max_lev
+         ibuff(4) = diff_prolong
 
          rbuff(1) = cfl_cr
          rbuff(2) = smallecr
@@ -244,6 +255,8 @@ contains
 
          ncrn         = int(ibuff(1), kind=4)
          ncre         = int(ibuff(2), kind=4)
+         diff_max_lev = ibuff(3)
+         diff_prolong = ibuff(4)
 
          cfl_cr       = rbuff(1)
          smallecr     = rbuff(2)
@@ -278,6 +291,8 @@ contains
          endif
 
       endif
+
+      if (diff_max_lev < base_level_id) call die("[initcosmicrays:init_cosmicrays] diff_max_lev < base_level_id")
 
       ncrs = ncre + ncrn
 #ifdef COSM_RAY_ELECTRONS
