@@ -73,40 +73,70 @@ contains
 !<
    subroutine all_wcr_boundaries
 
-      use cg_cost_data,     only: I_DIFFUSE
-      use cg_leaves,        only: leaves
-      use cg_level_finest,  only: finest
-      use cg_list,          only: cg_list_element
-      use constants,        only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n, PPP_CR
-      use dataio_pub,       only: die
-      use domain,           only: dom
-      use grid_cont,        only: grid_container
-      use named_array_list, only: wna
-      use ppp,              only: ppp_main
+      use cg_cost_data,       only: I_DIFFUSE
+      use cg_leaves,          only: leaves
+      use cg_level_connected, only: cg_level_connected_t
+      use cg_level_finest,    only: finest
+      use cg_list,            only: cg_list_element
+      use constants,          only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n, PPP_CR
+      use dataio_pub,         only: die
+      use domain,             only: dom
+      use grid_cont,          only: grid_container
+      use initcosmicrays,     only: diff_max_lev, diff_prolong
+      use named_array_list,   only: wna
+      use ppp,                only: ppp_main
 
       implicit none
 
-      integer(kind=4)                         :: i, d, lh
-      integer(kind=4), dimension(ndims,LO:HI) :: l, r
-      real, dimension(:,:,:,:), pointer       :: wcr
-      type(cg_list_element),    pointer       :: cgl
-      type(grid_container),     pointer       :: cg
+      integer(kind=4)                          :: i, d, lh, wcri
+      integer(kind=4), dimension(ndims, LO:HI) :: l, r
+      real, dimension(:,:,:,:),   pointer      :: wcr
+      type(cg_list_element),      pointer      :: cgl
+      type(grid_container),       pointer      :: cg
+      type(cg_level_connected_t), pointer      :: diffl, curl
       character(len=*), parameter :: awb_label = "all_wcr_boundaries"
 
       if (.not. has_cr) return
 
+      wcri = wna%ind(wcr_n)
 
       call ppp_main%start(awb_label, PPP_CR)
-      call finest%level%restrict_to_base_w_1var(wna%ind(wcr_n))
-      call leaves%leaf_arr4d_boundaries(wna%ind(wcr_n))
+      if (diff_max_lev >= finest%level%l%id) then  ! do the old way
+         call finest%level%restrict_to_base_w_1var(wcri)
+         call leaves%leaf_arr4d_boundaries(wcri)
+      else
+         diffl => finest%level
+         do while (associated(diffl))
+            if (diffl%l%id == diff_max_lev) exit
+            diffl => diffl%coarser
+         enddo
+         if (.not. associated(diffl)) call die("[crdiffusion:all_wcr_boundaries] .not. associated(diffl)")
+         if (diffl%l%id /= diff_max_lev) call die("[crdiffusion:all_wcr_boundaries] diffl%l%id /= diff_max_lev")
+         call diffl%restrict_to_base_w_1var(wcri)
+
+         ! slightly modified copy of cg_leaves::leaf_arr4d_boundaries
+         curl => diffl
+         do while (associated(curl))
+            call curl%level_4d_boundaries(wcri)
+            curl => curl%coarser
+         enddo
+
+         curl => diffl
+         do while (associated(curl))
+            call curl%prolong_bnd_from_coarser(wcri, arr4d=.true., nocorners=.false.)
+            ! corners are required on all levels except for finest anyway if prolongation order is greater than injection
+            curl => curl%coarser
+         enddo
+
+      endif
 
       ! do the external boundaries
-      cgl => leaves%first
+      cgl => leaves%up_to_level(min(diff_max_lev, finest%level%l%id))%p
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
 
-         wcr => cg%w(wna%ind(wcr_n))%arr
+         wcr => cg%w(wcri)%arr
          if (.not. associated(wcr)) call die("[crdiffusion:all_wcr_boundaries] cannot get wcr")
 
          do d = xdim, zdim
@@ -157,7 +187,7 @@ contains
       use fluidindex,       only: flind
       use global,           only: dt
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crs, K_crs_paral, K_crs_perp
+      use initcosmicrays,   only: iarr_crs, K_crs_paral, K_crs_perp, diff_max_lev
       use named_array,      only: p4
       use named_array_list, only: wna
       use ppp,              only: ppp_main
@@ -197,7 +227,7 @@ contains
       call finest%level%restrict_to_base ! overkill
       call all_bnd ! overkill
 
-      cgl => leaves%first
+      cgl => leaves%up_to_level(min(diff_max_lev, finest%level%l%id))%p
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
@@ -260,9 +290,17 @@ contains
          cgl => cgl%nxt
       enddo
 
+      ! As one can see in crtest with refinements, the current implementation of f/c boundary is not too accurate for diffusion.
+      ! The diffusion from fine to coarse goes too fast, leading to elevated accuracy error on f/c interface (on oth sides).
+      ! ToDo: Improve this:
+      ! * Check if improved interpolation levels and better fcoarse-to-fine reconstruction helps.
+      ! * Check whether handling f/c fluxes in wcr can help
+      ! * Other ideas?
+      ! Current implementation may result in better accuracy when the diffusion is restricted to base or first than unrestricted config.
+
       call all_wcr_boundaries
 
-      cgl => leaves%first
+      cgl => leaves%up_to_level(min(diff_max_lev, finest%level%l%id))%p
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
@@ -278,8 +316,54 @@ contains
          cgl => cgl%nxt
       enddo
 
+      call prolong_crs
+
       call ppp_main%stop(crd_label(crdim), PPP_CR)
 
    end subroutine cr_diff
+
+   subroutine prolong_crs
+
+      use cg_level_connected, only: cg_level_connected_t
+      use cg_level_finest,    only: finest
+      use constants,          only: GEO_XYZ, O_INJ
+      use dataio_pub,         only: die
+      use domain,             only: dom
+      use initcosmicrays,     only: diff_max_lev, diff_prolong, iarr_crs
+      use named_array_list,   only: wna, qna
+
+      implicit none
+
+      type(cg_level_connected_t), pointer :: diffl, curl
+      integer(kind=4) :: i
+
+      if (diff_max_lev >= finest%level%l%id) return
+      if (dom%geometry_type /= GEO_XYZ) call die("[crdiffusion:prolong_crs] Only cartesian geometry is supported by diff_max_lev right now")
+
+      diffl => finest%level
+      do while (associated(diffl))
+         if (diffl%l%id == diff_max_lev) exit
+         diffl => diffl%coarser
+      enddo
+      if (.not. associated(diffl)) call die("[crdiffusion:prolong_crs] .not. associated(diffl)")
+      if (diffl%l%id /= diff_max_lev) call die("[crdiffusion:prolong_crs] diffl%l%id /= diff_max_lev")
+
+      qna%lst(qna%wai)%ord_prolong = diff_prolong
+      curl => diffl
+      do while (associated(curl))
+         if (associated(curl%finer)) then
+            if (diff_prolong /= O_INJ) call curl%level_4d_boundaries(wna%fi)
+            do i = lbound(iarr_crs, dim=1, kind=4), ubound(iarr_crs, dim=1, kind=4)
+               call curl%wq_copy(wna%fi, iarr_crs(i), qna%wai)
+               call curl%finer%wq_copy(wna%fi, iarr_crs(i), qna%wai)  ! a bit of overkill, but current implementation may need some of this data
+               call curl%prolong_1var(qna%wai)
+               call curl%finer%qw_copy(qna%wai, wna%fi, iarr_crs(i))
+            enddo
+            call curl%prolong_bnd_from_coarser(wna%fi, nocorners=.false.)
+         endif
+         curl => curl%finer
+      enddo
+
+   end subroutine prolong_crs
 
 end module crdiffusion

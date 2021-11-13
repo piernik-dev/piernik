@@ -505,7 +505,7 @@ contains
       use dataio_pub,         only: msg, warn
       use global,             only: do_ascii_dump
       use func,               only: operator(.notequals.)
-      use initcosmicrays,     only: iarr_crs
+      use initcosmicrays,     only: iarr_crs, diff_max_lev
       use mpisetup,           only: master
       use multigridvars,      only: source, defect, solution, correction, ts, tot_ts, dirty_label
       use named_array_list,   only: wna
@@ -524,8 +524,18 @@ contains
       type(cg_level_connected_t), pointer :: curl
       character(len=*), parameter :: crmgv_label = "CR:MG_V-cycles", crmgc_label = "CR:V-cycle "
       character(len=cbuff_len)    :: label
+      logical, save      :: warned = .false.
 
       call ppp_main%start(crmgv_label, PPP_MG + PPP_CR)
+
+      if (finest%level%l%id > diff_max_lev) then
+         if (.not. warned) then
+            write(msg, '(a,i7,a)')"[multigrid_diffusion:vcycle_hg] finest%level%l%id > diff_max_lev, so diff_tstep_fac may effectively be ", &
+                 &                2**(2*(finest%level%l%id - diff_max_lev)), " higher than you think"
+            if (master) call warn(msg)
+            warned = .true.
+         endif
+      endif
 
       write(vstat%cprefix,'("C",i2.2)') cr_id
       write(dirty_label, '("md_",i2.2,"_dump")')  cr_id

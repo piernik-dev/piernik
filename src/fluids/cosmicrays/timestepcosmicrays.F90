@@ -52,7 +52,7 @@ contains
       use cg_list,             only: cg_list_element
       use constants,           only: big, pMIN
       use domain,              only: is_multicg
-      use initcosmicrays,      only: def_dtcrs, K_crs_valid
+      use initcosmicrays,      only: def_dtcrs, K_crs_valid, diff_max_lev
       use mpisetup,            only: piernik_MPI_Allreduce
 #ifdef MULTIGRID
       use initcosmicrays,      only: use_CRsplit
@@ -83,7 +83,8 @@ contains
          dt_crs = big
          cgl => leaves%first
          do while (associated(cgl))
-            dt_crs = min(dt_crs, def_dtcrs * cgl%cg%dxmn2)
+            if (cgl%cg%l%id <= diff_max_lev) &
+                 dt_crs = min(dt_crs, def_dtcrs * cgl%cg%dxmn2)
             cgl => cgl%nxt
          enddo
 
