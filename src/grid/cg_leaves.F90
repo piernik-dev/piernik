@@ -102,7 +102,7 @@ contains
       type(cg_level_connected_t), pointer :: curl
       type(cg_list_element),      pointer :: cgl
 
-      integer :: g_cnt, g_max, sum_max, ih, is, b_cnt
+      integer :: g_cnt, g_max, sum_max, ih, is, b_cnt, i
       integer, save :: prev_is = 0
       character(len=len(msg)), save :: prev_msg
       real :: lf
@@ -136,6 +136,7 @@ contains
          do while (associated(cgl))
             call this%add(cgl%cg)
             if (associated(curl%first%cg, this%last%cg)) this%up_to_level(curl%l%id)%p => this%last
+            ! On top levels it will be unassociated if proc doesn't have that fine cg, fixed below
             cgl => cgl%nxt
          enddo
          curl => curl%coarser
@@ -143,6 +144,10 @@ contains
             if (curl%l%id < this%coarsest_leaves%l%id) nullify(curl)
          endif
       enddo
+      do i = lbound(this%up_to_level, dim=1) + 1, ubound(this%up_to_level, dim=1)
+         ! Set up pointers for top levels in case ihese weren't associated due to lack of that fine cgs
+         if (.not. associated(this%up_to_level(i)%p)) this%up_to_level(i)%p => this%up_to_level(i-1)%p
+      end do
 
       sum_max = 0
       b_cnt = INVALID
