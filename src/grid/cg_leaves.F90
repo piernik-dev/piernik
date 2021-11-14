@@ -147,7 +147,7 @@ contains
       do i = lbound(this%up_to_level, dim=1) + 1, ubound(this%up_to_level, dim=1)
          ! Set up pointers for top levels in case ihese weren't associated due to lack of that fine cgs
          if (.not. associated(this%up_to_level(i)%p)) this%up_to_level(i)%p => this%up_to_level(i-1)%p
-      end do
+      enddo
 
       sum_max = 0
       b_cnt = INVALID

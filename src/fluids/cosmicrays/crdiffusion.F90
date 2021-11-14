@@ -82,7 +82,7 @@ contains
       use dataio_pub,         only: die
       use domain,             only: dom
       use grid_cont,          only: grid_container
-      use initcosmicrays,     only: diff_max_lev, diff_prolong
+      use initcosmicrays,     only: diff_max_lev
       use named_array_list,   only: wna
       use ppp,                only: ppp_main
 
