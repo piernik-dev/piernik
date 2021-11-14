@@ -50,6 +50,7 @@ contains
       use crhelpers,        only: divv_i, divv_n
       use dataio_pub,       only: warn
       use fluidindex,       only: flind
+      use initcosmicrays,   only: diff_prolong
       use named_array_list, only: qna
 
       implicit none
@@ -57,7 +58,7 @@ contains
       has_cr = (flind%crs%all > 0)
 
       if (has_cr) then
-         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all) !, ord_prolong = 2)  ! Smooth prolongation may help with interpolation from coarse grid to fine boundary
+         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all, ord_prolong = diff_prolong)
       else
          call warn("[crdiffusion:init_crdiffusion] No CR species to diffuse")
       endif
@@ -198,6 +199,7 @@ contains
       implicit none
 
       integer(kind=4), intent(in)          :: crdim
+
       integer                              :: i, j, k, il, ih, jl, jh, kl, kh, ild, jld, kld
       integer, dimension(ndims)            :: idm, ndm, hdm, ldm
       real                                 :: bb, f1, f2
@@ -326,10 +328,10 @@ contains
 
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
-      use constants,          only: GEO_XYZ, O_INJ
+      use constants,          only: GEO_XYZ, O_INJ, wcr_n
       use dataio_pub,         only: die
       use domain,             only: dom
-      use initcosmicrays,     only: diff_max_lev, diff_prolong, iarr_crs
+      use initcosmicrays,     only: diff_max_lev, iarr_crs
       use named_array_list,   only: wna, qna
 
       implicit none
@@ -348,11 +350,11 @@ contains
       if (.not. associated(diffl)) call die("[crdiffusion:prolong_crs] .not. associated(diffl)")
       if (diffl%l%id /= diff_max_lev) call die("[crdiffusion:prolong_crs] diffl%l%id /= diff_max_lev")
 
-      qna%lst(qna%wai)%ord_prolong = diff_prolong
+      qna%lst(qna%wai)%ord_prolong = wna%lst(wna%ind(wcr_n))%ord_prolong
       curl => diffl
       do while (associated(curl))
          if (associated(curl%finer)) then
-            if (diff_prolong /= O_INJ) call curl%level_4d_boundaries(wna%fi)
+            if (qna%lst(qna%wai)%ord_prolong /= O_INJ) call curl%level_4d_boundaries(wna%fi)  ! overkill: only iarr_crs are needed
             do i = lbound(iarr_crs, dim=1, kind=4), ubound(iarr_crs, dim=1, kind=4)
                call curl%wq_copy(wna%fi, iarr_crs(i), qna%wai)
                call curl%finer%wq_copy(wna%fi, iarr_crs(i), qna%wai)  ! a bit of overkill, but current implementation may need some of this data

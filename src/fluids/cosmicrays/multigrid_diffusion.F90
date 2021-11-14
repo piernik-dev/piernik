@@ -529,6 +529,7 @@ contains
       call ppp_main%start(crmgv_label, PPP_MG + PPP_CR)
 
       if (finest%level%l%id > diff_max_lev) then
+         ! It is relatively easy to implement level-restricted variant of implicit scheme in a similar way to explicit diffusion
          if (.not. warned) then
             write(msg, '(a,i7,a)')"[multigrid_diffusion:vcycle_hg] finest%level%l%id > diff_max_lev, so diff_tstep_fac may effectively be ", &
                  &                2**(2*(finest%level%l%id - diff_max_lev)), " higher than you think"
