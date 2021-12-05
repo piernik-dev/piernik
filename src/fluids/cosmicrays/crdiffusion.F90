@@ -50,7 +50,6 @@ contains
       use crhelpers,        only: divv_i, divv_n
       use dataio_pub,       only: warn
       use fluidindex,       only: flind
-      use initcosmicrays,   only: diff_prolong
       use named_array_list, only: qna
 
       implicit none
@@ -58,7 +57,8 @@ contains
       has_cr = (flind%crs%all > 0)
 
       if (has_cr) then
-         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all, ord_prolong = diff_prolong)
+         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all)
+         ! ord_prolong should be left at 0 as we're not ready to prolong flux-type quantities in a reasonable way yet
       else
          call warn("[crdiffusion:init_crdiffusion] No CR species to diffuse")
       endif
@@ -328,10 +328,10 @@ contains
 
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
-      use constants,          only: GEO_XYZ, O_INJ, wcr_n
+      use constants,          only: GEO_XYZ, O_INJ
       use dataio_pub,         only: die
       use domain,             only: dom
-      use initcosmicrays,     only: diff_max_lev, iarr_crs
+      use initcosmicrays,     only: diff_max_lev, diff_prolong, iarr_crs
       use named_array_list,   only: wna, qna
 
       implicit none
@@ -350,7 +350,7 @@ contains
       if (.not. associated(diffl)) call die("[crdiffusion:prolong_crs] .not. associated(diffl)")
       if (diffl%l%id /= diff_max_lev) call die("[crdiffusion:prolong_crs] diffl%l%id /= diff_max_lev")
 
-      qna%lst(qna%wai)%ord_prolong = wna%lst(wna%ind(wcr_n))%ord_prolong
+      qna%lst(qna%wai)%ord_prolong = diff_prolong
       curl => diffl
       do while (associated(curl))
          if (associated(curl%finer)) then
