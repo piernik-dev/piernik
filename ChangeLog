@@ -4178,7 +4178,7 @@
 
 	* trunk: removed obsolete svnci.sh script
 	* [source:piernik/trunk trunk]: . -m user and system messages are
-	  reported on stdout, implementeded help message
+	  reported on stdout, implemented help message
 	* trunk: cosmetics of stdout
 
 2010-05-12  Kacper Kowalik <xarthisius.kk@gmail.com>
