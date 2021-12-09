@@ -46,18 +46,21 @@ contains
    subroutine init_crdiffusion
 
       use cg_list_global,   only: all_cg
-      use constants,        only: wcr_n
+      use constants,        only: wcr_n, I_ZERO
       use crhelpers,        only: divv_i, divv_n
       use dataio_pub,       only: warn
       use fluidindex,       only: flind
-      use named_array_list, only: qna
+      use initcosmicrays,   only: diff_prolong
+      use named_array_list, only: qna, wna
 
       implicit none
 
       has_cr = (flind%crs%all > 0)
 
       if (has_cr) then
-         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all)
+         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all, ord_prolong = diff_prolong)
+         wna%lst(wna%ind(wcr_n))%ord_prolong = I_ZERO
+         ! QUIRKY: enforce proper all_cg%ord_prolong_nb, which will be later required for qna%wai, but ...
          ! ord_prolong should be left at 0 as we're not ready to prolong flux-type quantities in a reasonable way yet
       else
          call warn("[crdiffusion:init_crdiffusion] No CR species to diffuse")
