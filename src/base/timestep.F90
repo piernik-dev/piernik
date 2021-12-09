@@ -297,28 +297,28 @@ contains
 
    subroutine cfl_warn
 
-      use dataio_pub,   only: msg, warn
-      use global,       only: cfl, cfl_max, cfl_violated, unwanted_negatives
-      use mpisetup,     only: piernik_MPI_Bcast, master
-      use timestep_pub, only: c_all, c_all_old, stepcfl
+      use dataio_pub,     only: msg, warn
+      use global,         only: cfl, cfl_max, cfl_violated, dt_shrink, tstep_attempt, unwanted_negatives
+      use mpisetup,       only: piernik_MPI_Bcast, master
+      use timestep_pub,   only: c_all, c_all_old, stepcfl
 #ifdef COSM_RAY_ELECTRONS
-      use cresp_grid,   only: cfl_cresp_violation
+      use cresp_grid,     only: cfl_cresp_violation
       use initcrspectrum, only: cfl_cre
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
-      stepcfl = cfl
-      if (c_all_old > 0.) stepcfl = c_all/c_all_old*cfl
+      stepcfl = cfl * dt_shrink**tstep_attempt
+      if (c_all_old > 0.) stepcfl = c_all / c_all_old * cfl * dt_shrink**tstep_attempt
 
       if (master) then
          msg = ''
          cfl_violated = unwanted_negatives ! \> information about unwanted_negatives from the previous step if disallow_negatives
          if (stepcfl > cfl_max) then
-            write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL: ",stepcfl
+            write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL: ", stepcfl
             cfl_violated = .true.
 #ifdef COSM_RAY_ELECTRONS
-         else if ( cfl_cresp_violation ) then
+         else if (cfl_cresp_violation) then
             write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL @ CRESP module:", cfl_cre
             cfl_violated = .true.
 #endif /* COSM_RAY_ELECTRONS */
