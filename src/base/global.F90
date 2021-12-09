@@ -41,7 +41,7 @@ module global
    private
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, disallow_negatives, disallow_CRnegatives, unwanted_negatives, dn_negative, ei_negative, cr_negative, tstep_attempt, &
-        &    dt, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
+        &    dt, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, max_redostep_attempts, &
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, do_external_corners, prefer_merged_MPI, &
@@ -73,6 +73,7 @@ module global
    real    :: dt_max                   !< maximum allowed timestep
    real    :: cfl                      !< desired Courant–Friedrichs–Lewy number
    real    :: cfl_max                  !< warning threshold for the effective CFL number achieved
+   integer :: max_redostep_attempts    !< limitation for a number of redoing step attempts (Note: Something might be terribly wrong if a single step requires too many reductions)
    logical :: use_smalld               !< correct density when it gets lower than smalld
    logical :: use_smallei              !< correct internal energy density when it gets lower then smallei
    logical :: geometry25D              !< include source terms in reduced dimension for 2D simulations
@@ -109,7 +110,7 @@ module global
    character(len=cbuff_len)      :: solver_str        !< allow to switch between RIEMANN and RTVD without recompilation
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, disallow_negatives, disallow_CRnegatives, cfl_max, use_smalld, use_smallei, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
-        &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
+        &                     repeat_step, max_redostep_attempts, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
         &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong, ord_fluid_prolong, do_external_corners, solver_str
 
    logical                       :: prefer_merged_MPI !< prefer internal_boundaries_MPI_merged over internal_boundaries_MPI_1by1
@@ -127,38 +128,39 @@ contains
 !! \n \n
 !! <table border="+1">
 !!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!!   <tr><td>cfl              </td><td>0.7    </td><td>real value between 0.0 and 1.0       </td><td>\copydoc global::cfl              </td></tr>
-!!   <tr><td>cfl_max          </td><td>0.9    </td><td>real value between cfl and 1.0       </td><td>\copydoc global::cfl_max          </td></tr>
-!!   <tr><td>cflcontrol       </td><td>warn   </td><td>string                               </td><td>\copydoc global::cflcontrol       </td></tr>
-!!   <tr><td>repeat_step      </td><td>.true. </td><td>logical value                        </td><td>\copydoc global::use_smalld       </td></tr>
-!!   <tr><td>smallp           </td><td>1.e-10 </td><td>real value                           </td><td>\copydoc global::smallp           </td></tr>
-!!   <tr><td>smalld           </td><td>1.e-10 </td><td>real value                           </td><td>\copydoc global::smalld           </td></tr>
-!!   <tr><td>use_smalld       </td><td>.true. </td><td>logical value                        </td><td>\copydoc global::use_smalld       </td></tr>
-!!   <tr><td>smallei          </td><td>1.e-10 </td><td>real value                           </td><td>\copydoc global::smallei          </td></tr>
-!!   <tr><td>smallc           </td><td>1.e-10 </td><td>real value                           </td><td>\copydoc global::smallc           </td></tr>
-!!   <tr><td>integration_order</td><td>2      </td><td>1 or 2                               </td><td>\copydoc global::integration_order</td></tr>
-!!   <tr><td>cfr_smooth       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::cfr_smooth       </td></tr>
-!!   <tr><td>dt_initial       </td><td>-1.    </td><td>positive real value or -1. .. 0.     </td><td>\copydoc global::dt_initial       </td></tr>
-!!   <tr><td>dt_max_grow      </td><td>2.     </td><td>real value, should be > 1.           </td><td>\copydoc global::dt_max_grow      </td></tr>
-!!   <tr><td>dt_shrink        </td><td>0.5    </td><td>real value, should be < 1.           </td><td>\copydoc global::dt_shrink        </td></tr>
-!!   <tr><td>dt_min           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_min           </td></tr>
-!!   <tr><td>dt_max           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_max           </td></tr>
-!!   <tr><td>limiter          </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter          </td></tr>
-!!   <tr><td>limiter_b        </td><td>moncen </td><td>string                               </td><td>\copydoc global::limiter_b        </td></tr>
-!!   <tr><td>relax_time       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::relax_time       </td></tr>
-!!   <tr><td>skip_sweep       </td><td>F, F, F</td><td>logical array                        </td><td>\copydoc global::skip_sweep       </td></tr>
-!!   <tr><td>geometry25D      </td><td>F      </td><td>logical value                        </td><td>\copydoc global::geometry25d      </td></tr>
-!!   <tr><td>sweeps_mgu       </td><td>F      </td><td>logical value                        </td><td>\copydoc global::sweeps_mgu       </td></tr>
-!!   <tr><td>divB_0           </td><td>CT     </td><td>string                               </td><td>\copydoc global::divB_0           </td></tr>
-!!   <tr><td>glm_alpha        </td><td>0.1    </td><td>real value                           </td><td>\copydoc global::glm_alpha        </td></tr>
-!!   <tr><td>use_eglm         </td><td>false  </td><td>logical value                        </td><td>\copydoc global::use_eglm         </td></tr>
-!!   <tr><td>print_divB       </td><td>100    </td><td>integer value                        </td><td>\copydoc global::print_divB       </td></tr>
-!!   <tr><td>ch_grid          </td><td>false  </td><td>logical value                        </td><td>\copydoc global::ch_grid          </td></tr>
-!!   <tr><td>w_epsilon        </td><td>1e-10  </td><td>real                                 </td><td>\copydoc global::w_epsilon        </td></tr>
-!!   <tr><td>psi_bnd_str      </td><td>"default" </td><td>string                            </td><td>\copydoc global::psi_bnd_str      </td></tr>
-!!   <tr><td>ord_mag_prolong  </td><td>2      </td><td>integer                              </td><td>\copydoc global::ord_mag_prolong  </td></tr>
-!!   <tr><td>ord_fluid_prolong </td><td>0     </td><td>integer                              </td><td>\copydoc global::ord_fluid_prolong </td></tr>
-!!   <tr><td>do_external_corners </td><td>.false.</td><td>logical                           </td><td>\copydoc global::do_external_corners </td></tr>
+!!   <tr><td>cfl                  </td><td>0.7      </td><td>real value between 0.0 and 1.0       </td><td>\copydoc global::cfl                  </td></tr>
+!!   <tr><td>cfl_max              </td><td>0.9      </td><td>real value between cfl and 1.0       </td><td>\copydoc global::cfl_max              </td></tr>
+!!   <tr><td>cflcontrol           </td><td>warn     </td><td>string                               </td><td>\copydoc global::cflcontrol           </td></tr>
+!!   <tr><td>repeat_step          </td><td>.true.   </td><td>logical value                        </td><td>\copydoc global::use_smalld           </td></tr>
+!!   <tr><td>max_redostep_attempts</td><td>10       </td><td>integer                              </td><td>\copydoc global::max_redostep_attempts</td></tr>
+!!   <tr><td>smallp               </td><td>1.e-10   </td><td>real value                           </td><td>\copydoc global::smallp               </td></tr>
+!!   <tr><td>smalld               </td><td>1.e-10   </td><td>real value                           </td><td>\copydoc global::smalld               </td></tr>
+!!   <tr><td>use_smalld           </td><td>.true.   </td><td>logical value                        </td><td>\copydoc global::use_smalld           </td></tr>
+!!   <tr><td>smallei              </td><td>1.e-10   </td><td>real value                           </td><td>\copydoc global::smallei              </td></tr>
+!!   <tr><td>smallc               </td><td>1.e-10   </td><td>real value                           </td><td>\copydoc global::smallc               </td></tr>
+!!   <tr><td>integration_order    </td><td>2        </td><td>1 or 2                               </td><td>\copydoc global::integration_order    </td></tr>
+!!   <tr><td>cfr_smooth           </td><td>0.0      </td><td>real value                           </td><td>\copydoc global::cfr_smooth           </td></tr>
+!!   <tr><td>dt_initial           </td><td>-1.      </td><td>positive real value or -1. .. 0.     </td><td>\copydoc global::dt_initial           </td></tr>
+!!   <tr><td>dt_max_grow          </td><td>2.       </td><td>real value, should be > 1.           </td><td>\copydoc global::dt_max_grow          </td></tr>
+!!   <tr><td>dt_shrink            </td><td>0.5      </td><td>real value, should be < 1.           </td><td>\copydoc global::dt_shrink            </td></tr>
+!!   <tr><td>dt_min               </td><td>0.       </td><td>positive real value                  </td><td>\copydoc global::dt_min               </td></tr>
+!!   <tr><td>dt_max               </td><td>0.       </td><td>positive real value                  </td><td>\copydoc global::dt_max               </td></tr>
+!!   <tr><td>limiter              </td><td>vanleer  </td><td>string                               </td><td>\copydoc global::limiter              </td></tr>
+!!   <tr><td>limiter_b            </td><td>moncen   </td><td>string                               </td><td>\copydoc global::limiter_b            </td></tr>
+!!   <tr><td>relax_time           </td><td>0.0      </td><td>real value                           </td><td>\copydoc global::relax_time           </td></tr>
+!!   <tr><td>skip_sweep           </td><td>F, F, F  </td><td>logical array                        </td><td>\copydoc global::skip_sweep           </td></tr>
+!!   <tr><td>geometry25D          </td><td>F        </td><td>logical value                        </td><td>\copydoc global::geometry25d          </td></tr>
+!!   <tr><td>sweeps_mgu           </td><td>F        </td><td>logical value                        </td><td>\copydoc global::sweeps_mgu           </td></tr>
+!!   <tr><td>divB_0               </td><td>CT       </td><td>string                               </td><td>\copydoc global::divB_0               </td></tr>
+!!   <tr><td>glm_alpha            </td><td>0.1      </td><td>real value                           </td><td>\copydoc global::glm_alpha            </td></tr>
+!!   <tr><td>use_eglm             </td><td>false    </td><td>logical value                        </td><td>\copydoc global::use_eglm             </td></tr>
+!!   <tr><td>print_divB           </td><td>100      </td><td>integer value                        </td><td>\copydoc global::print_divB           </td></tr>
+!!   <tr><td>ch_grid              </td><td>false    </td><td>logical value                        </td><td>\copydoc global::ch_grid              </td></tr>
+!!   <tr><td>w_epsilon            </td><td>1e-10    </td><td>real                                 </td><td>\copydoc global::w_epsilon            </td></tr>
+!!   <tr><td>psi_bnd_str          </td><td>"default"</td><td>string                               </td><td>\copydoc global::psi_bnd_str          </td></tr>
+!!   <tr><td>ord_mag_prolong      </td><td>2        </td><td>integer                              </td><td>\copydoc global::ord_mag_prolong      </td></tr>
+!!   <tr><td>ord_fluid_prolong    </td><td>0        </td><td>integer                              </td><td>\copydoc global::ord_fluid_prolong    </td></tr>
+!!   <tr><td>do_external_corners  </td><td>.false.  </td><td>logical                              </td><td>\copydoc global::do_external_corners  </td></tr>
 !! </table>
 !! \n \n
 !! \n \n
@@ -245,6 +247,7 @@ contains
       w_epsilon   = 1e-10
       psi_bnd_str = "default"
       integration_order  = 2
+      max_redostep_attempts = 10
       ord_mag_prolong = O_I2           !< it looks like most f/c artifacts are gone just with cubic prolongation of magnetic guardcells
       ord_fluid_prolong = O_INJ        !< O_INJ and O_LIN ensure monotoniciy and nonnegative density and energy
       do_external_corners =.false.
@@ -313,6 +316,7 @@ contains
          ibuff(2) = print_divB
          ibuff(3) = ord_mag_prolong
          ibuff(4) = ord_fluid_prolong
+         ibuff(5) = max_redostep_attempts
 
          rbuff( 1) = smalld
          rbuff( 2) = smallc
@@ -355,50 +359,51 @@ contains
 
       if (slave) then
 
-         use_smalld           = lbuff(1)
-         use_smallei          = lbuff(2)
-         repeat_step          = lbuff(3)
-         skip_sweep           = lbuff(4:6)
-         geometry25D          = lbuff(7)
-         sweeps_mgu           = lbuff(8)
-         use_fargo            = lbuff(9)
-         use_eglm             = lbuff(10)
-         ch_grid              = lbuff(11)
-         do_external_corners  = lbuff(13)
-         disallow_negatives   = lbuff(14)
-         disallow_CRnegatives = lbuff(15)
-         prefer_merged_MPI    = lbuff(16)
-         extra_barriers       = lbuff(17)
+         use_smalld            = lbuff(1)
+         use_smallei           = lbuff(2)
+         repeat_step           = lbuff(3)
+         skip_sweep            = lbuff(4:6)
+         geometry25D           = lbuff(7)
+         sweeps_mgu            = lbuff(8)
+         use_fargo             = lbuff(9)
+         use_eglm              = lbuff(10)
+         ch_grid               = lbuff(11)
+         do_external_corners   = lbuff(13)
+         disallow_negatives    = lbuff(14)
+         disallow_CRnegatives  = lbuff(15)
+         prefer_merged_MPI     = lbuff(16)
+         extra_barriers        = lbuff(17)
 
-         smalld               = rbuff( 1)
-         smallc               = rbuff( 2)
-         smallp               = rbuff( 3)
-         smallei              = rbuff( 4)
-         cfl                  = rbuff( 5)
-         cfr_smooth           = rbuff( 6)
-         dt_initial           = rbuff( 7)
-         dt_max_grow          = rbuff( 8)
-         dt_min               = rbuff( 9)
-         dt_max               = rbuff(10)
-         cfl_max              = rbuff(11)
-         relax_time           = rbuff(12)
-         glm_alpha            = rbuff(13)
-         cfl_glm              = rbuff(14)
-         w_epsilon            = rbuff(15)
-         dt_shrink            = rbuff(16)
+         smalld                = rbuff( 1)
+         smallc                = rbuff( 2)
+         smallp                = rbuff( 3)
+         smallei               = rbuff( 4)
+         cfl                   = rbuff( 5)
+         cfr_smooth            = rbuff( 6)
+         dt_initial            = rbuff( 7)
+         dt_max_grow           = rbuff( 8)
+         dt_min                = rbuff( 9)
+         dt_max                = rbuff(10)
+         cfl_max               = rbuff(11)
+         relax_time            = rbuff(12)
+         glm_alpha             = rbuff(13)
+         cfl_glm               = rbuff(14)
+         w_epsilon             = rbuff(15)
+         dt_shrink             = rbuff(16)
 
-         limiter              = cbuff(1)
-         limiter_b            = cbuff(2)
-         cflcontrol           = cbuff(3)
-         divB_0               = cbuff(5)
-         interpol_str         = cbuff(6)
-         psi_bnd_str          = cbuff(7)
-         solver_str           = cbuff(8)
+         limiter               = cbuff(1)
+         limiter_b             = cbuff(2)
+         cflcontrol            = cbuff(3)
+         divB_0                = cbuff(5)
+         interpol_str          = cbuff(6)
+         psi_bnd_str           = cbuff(7)
+         solver_str            = cbuff(8)
 
-         integration_order    = ibuff(1)
-         print_divB           = ibuff(2)
-         ord_mag_prolong      = ibuff(3)
-         ord_fluid_prolong    = ibuff(4)
+         integration_order     = ibuff(1)
+         print_divB            = ibuff(2)
+         ord_mag_prolong       = ibuff(3)
+         ord_fluid_prolong     = ibuff(4)
+         max_redostep_attempts = ibuff(5)
 
       endif
 

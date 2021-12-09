@@ -88,7 +88,7 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: pSUM, I_ZERO, I_ONE, dsetnamelen, AT_IGNORE, INVALID
       use dataio_pub,       only: warn, msg, die
-      use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_shrink, repeat_step, tstep_attempt
+      use global,           only: dt, dtm, t, t_saved, cfl_violated, max_redostep_attempts, nstep, nstep_saved, dt_shrink, repeat_step, tstep_attempt
       use mass_defect,      only: downgrade_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna, wna, na_var_list_q, na_var_list_w
@@ -104,7 +104,6 @@ contains
       integer(kind=4)                :: no_hist_count
       integer                        :: i, j
       character(len=dsetnamelen)     :: rname
-      integer, parameter             :: max_attempts = 10  !< Something is terribly wrong if a single step requires too many reductions
       character(len=*), parameter :: rs_label = "repeat_step_"
 
       if (.not.repeat_step) return
@@ -113,8 +112,8 @@ contains
 
       if (cfl_violated) then
          tstep_attempt = tstep_attempt + I_ONE
-         if (tstep_attempt > max_attempts) then
-            write(msg, '(a,i2,a)')"[timestep_retry:repeat_fluidstep] tstep_attempt > ", max_attempts, " (hardcoded limit)"
+         if (tstep_attempt > max_redostep_attempts) then
+            write(msg, '(a,i2,a)')"[timestep_retry:repeat_fluidstep] tstep_attempt > ", max_redostep_attempts, " (max_redostep_attempts)"
             call die(msg)
          endif
          write(msg, '(a,i2,a)') "[timestep_retry:repeat_fluidstep] Redoing previous step (", tstep_attempt, ")"
