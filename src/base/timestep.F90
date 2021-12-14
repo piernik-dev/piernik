@@ -236,6 +236,7 @@ contains
       use global,         only: cr_negative, disallow_CRnegatives
 #endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
+      use cresp_grid,     only: cfl_cresp_violation
       use initcrspectrum, only: cresp_substep
       use timestep_cresp, only: dt_spectrum, dt_cresp_bck
 #endif /* COSM_RAY_ELECTRONS */
@@ -254,9 +255,9 @@ contains
       bck = [dt_old, c_all_old, c_all]
 
 #ifdef COSM_RAY_ELECTRONS
-      if (cresp_substep) dt_cresp_bck = dt_spectrum !< backup necessary if cresp_substep is active
+      if (cresp_substep) dt_cresp_bck = dt_spectrum !< backup necessary (before preforming time_step) if cresp_substep is active
+      call piernik_MPI_Allreduce(cfl_cresp_violation, pLOR) ! check cg if cfl_cresp_violation anywhere
 #endif /* COSM_RAY_ELECTRONS */
-
       unwanted_negatives = .false.
       call time_step(checkdt, flind)
       call piernik_MPI_Allreduce(dn_negative, pLOR)
@@ -279,6 +280,10 @@ contains
          if (disallow_negatives) unwanted_negatives = .true.
          ei_negative  = .false.
       endif
+
+#ifdef COSM_RAY_ELECTRONS
+      cfl_violated = cfl_violated .or. cfl_cresp_violation
+#endif /* COSM_RAY_ELECTRONS */
       cfl_violated = cfl_violated .or. unwanted_negatives
       if (cfl_violated) call reset_freezing_speed
 
