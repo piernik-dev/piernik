@@ -238,7 +238,6 @@ contains
 #ifdef COSM_RAY_ELECTRONS
       use cresp_grid,     only: cfl_cresp_violation
       use initcrspectrum, only: cresp_substep
-      use timestep_cresp, only: dt_spectrum, dt_cresp_bck
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -254,15 +253,18 @@ contains
 
       bck = [dt_old, c_all_old, c_all]
 
-#ifdef COSM_RAY_ELECTRONS
-      if (cresp_substep) dt_cresp_bck = dt_spectrum !< backup necessary (before preforming time_step) if cresp_substep is active
-      call piernik_MPI_Allreduce(cfl_cresp_violation, pLOR) ! check cg if cfl_cresp_violation anywhere
-#endif /* COSM_RAY_ELECTRONS */
       unwanted_negatives = .false.
       call time_step(checkdt, flind)
       call piernik_MPI_Allreduce(dn_negative, pLOR)
       call piernik_MPI_Allreduce(ei_negative, pLOR)
 #ifdef COSM_RAYS
+#ifdef COSM_RAY_ELECTRONS
+      call piernik_MPI_Allreduce(cfl_cresp_violation, pLOR) ! check cg if cfl_cresp_violation anywhere
+      if (cfl_cresp_violation) then
+         if (master) call warn("[timestep:cfl_warn] Possible violation of CFL in CRESP module")
+         unwanted_negatives = .true.
+      endif
+#endif /* COSM_RAY_ELECTRONS */
       call piernik_MPI_Allreduce(cr_negative, pLOR)
       if (cr_negative .and. disallow_CRnegatives) then
          if (master) call warn('[timestep:check_cfl_violation] Possible violation of CFL: negatives in CRS')
@@ -281,17 +283,10 @@ contains
          ei_negative  = .false.
       endif
 
-#ifdef COSM_RAY_ELECTRONS
-      cfl_violated = cfl_violated .or. cfl_cresp_violation
-#endif /* COSM_RAY_ELECTRONS */
       cfl_violated = cfl_violated .or. unwanted_negatives
       if (cfl_violated) call reset_freezing_speed
 
       dt_old = bck(1) ; c_all_old = bck(2) ; c_all = bck(3) !> \todo check if this backup is necessary
-
-#ifdef COSM_RAY_ELECTRONS
-      if (cresp_substep) dt_spectrum = dt_cresp_bck !< backup necessary if cresp_substep is active
-#endif /* COSM_RAY_ELECTRONS */
 
    end subroutine check_cfl_violation
 
@@ -322,11 +317,6 @@ contains
          if (stepcfl > cfl_max) then
             write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL: ",stepcfl
             cfl_violated = .true.
-#ifdef COSM_RAY_ELECTRONS
-         else if ( cfl_cresp_violation ) then
-            write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL @ CRESP module:", cfl_cre
-            cfl_violated = .true.
-#endif /* COSM_RAY_ELECTRONS */
          else if (stepcfl < 2*cfl - cfl_max) then
             write(msg,'(2(a,g10.3))') "[timestep:cfl_warn] Low CFL: ", stepcfl, " << ", cfl
          endif
