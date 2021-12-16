@@ -201,14 +201,12 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-#define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
 #define RNG1 1+cg%is:1+cg%ie, 1+cg%js:1+cg%je, 1+cg%ks:1+cg%ke
          cg%u(fl%idn, RNG) = data(1, RNG1)
          do f = fl%imx, fl%imz
             cg%u(f, RNG) = sek/km * data(2+f-fl%imx, RNG1) * cg%u(fl%idn, RNG)
          enddo
          cg%u(fl%ien, RNG) = data(5, RNG1) * cg%u(fl%idn, RNG)+ekin(cg%u(fl%imx, RNG), cg%u(fl%imy, RNG), cg%u(fl%imz, RNG), cg%u(fl%idn, RNG))
-#undef RNG
 #undef RNG1
          cgl => cgl%nxt
       enddo

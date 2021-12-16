@@ -348,7 +348,6 @@ contains
       integer, parameter                          :: auxlen = dsetnamelen - 1
       character(len=auxlen)                       :: aux
 #endif /* COSM_RAYS */
-#define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
 
       call common_shortcuts(var, fl_dni, i_xyz)
       if (.not. associated(fl_dni)) tab = -huge(1.)
@@ -541,7 +540,6 @@ contains
             ierrh = -1
       end select
       end associate
-#undef RNG
 
    end subroutine datafields_hdf5
 
