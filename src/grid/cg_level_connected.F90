@@ -1699,10 +1699,10 @@ contains
             ! disables check_dirty
             if (d4) then
                do g = 1, wna%lst(iv)%dim4
-                  where (.not. cg%leafmap(:,:,:)) cg%w(iv)%arr(g, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
+                  where (.not. cg%leafmap(:,:,:)) cg%w(iv)%arr(g, RNG) = 0.
                enddo
             else
-               where (.not. cg%leafmap(:,:,:)) cg%q(iv)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
+               where (.not. cg%leafmap(:,:,:)) cg%q(iv)%arr(RNG) = 0.
             endif
 
             do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)

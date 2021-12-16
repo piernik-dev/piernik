@@ -378,10 +378,10 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-            m_clump = m_clump + cg%dvol * sum(cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
-                 &                    mask = (cg%leafmap(         cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) .and. &
-                 &                            cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) > rho_thr .and. &
-                 &                            cg%u(flind%neu%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) < T_thr))
+            m_clump = m_clump + cg%dvol * sum(cg%u(flind%neu%idn, RNG), &
+                 &                    mask = (cg%leafmap(         RNG) .and. &
+                 &                            cg%u(flind%neu%idn, RNG) > rho_thr .and. &
+                 &                            cg%u(flind%neu%ien, RNG) < T_thr))
             cgl => cgl%nxt
          enddo
 
