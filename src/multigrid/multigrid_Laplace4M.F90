@@ -144,8 +144,7 @@ contains
          if (dom%eff_dim == ndims .and. .not. multidim_code_3D) then
             ! There's small speed up vs multidim_code_3D
             fac = (1.0 - src_lapl * 2.0 * dom%eff_dim)
-            cg%q(def)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
-               fac * cg%q(src)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + L0 * cg%q(soln)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + &
+            cg%q(def)%arr(RNG) = fac * cg%q(src)%arr(RNG) + L0 * cg%q(soln)%arr(RNG) + &
                     (cg%q(src)%arr(cg%is-1:cg%ie-1, cg%js:cg%je,     cg%ks:cg%ke    ) +  cg%q(src)%arr(cg%is+1:cg%ie+1, cg%js:cg%je,     cg%ks:cg%ke    )) * src_lapl  &
                  + (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js:cg%je,     cg%ks:cg%ke    ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js:cg%je,     cg%ks:cg%ke    )) * Lx        &
                  +  (cg%q(src)%arr(cg%is:cg%ie,     cg%js-1:cg%je-1, cg%ks:cg%ke    ) +  cg%q(src)%arr(cg%is:cg%ie,     cg%js+1:cg%je+1, cg%ks:cg%ke    )) * src_lapl  &
@@ -320,7 +319,7 @@ contains
             endif
 
             if (associated(curl, coarsest%level) .and. n == ncheck) &
-                 max_out = max(max_out, maxval(abs(cg%prolong_xyz( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))))
+                 max_out = max(max_out, maxval(abs(cg%prolong_xyz(RNG) - cg%wa(RNG))))
 
             call cg%costs%stop(I_MULTIGRID)
             cgl => cgl%nxt

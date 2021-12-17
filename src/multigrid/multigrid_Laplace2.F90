@@ -351,8 +351,7 @@ contains
                end select
             endif
 
-            if (associated(curl, coarsest%level) .and. n == ncheck) &
-                 max_out = max(max_out, maxval(abs(cg%prolong_xyz( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%q(soln)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))))
+            if (associated(curl, coarsest%level) .and. n == ncheck) max_out = max(max_out, maxval(abs(cg%prolong_xyz(RNG) - cg%q(soln)%arr(RNG))))
 
             call cg%costs%stop(I_MULTIGRID)
             cgl => cgl%nxt

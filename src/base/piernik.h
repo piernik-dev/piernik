@@ -7,6 +7,8 @@
 
 #include "piernik.def"
 
+#define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
+
 #ifdef IONIZED
 #  ifndef NONMAGNETIC
 #    ifndef MAGNETIC
