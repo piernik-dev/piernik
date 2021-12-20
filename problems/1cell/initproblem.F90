@@ -205,7 +205,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS
       use cresp_crspectrum,   only: cresp_get_scaled_init_spectrum
       use initcosmicrays,     only: iarr_cre_e, iarr_cre_n
-      use initcrspectrum,     only: smallcree, cresp, cre_eff, use_cresp, adiab_active, fsynchr
+      use initcrspectrum,     only: smallcree, cresp, cre_eff, use_cresp, adiab_active, fsynchr, crel, total_init_cree
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -289,6 +289,9 @@ contains
       enddo
 
       call append_cooling_terms(.true.)
+
+      crel%f = crel%f * e_tot / total_init_cree ! Scale f before saving initial spectrum
+      call printer ! Save initial spectrum; CRESP is initialized at this point.
 
    end subroutine problem_initial_conditions
 
