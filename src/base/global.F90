@@ -52,6 +52,7 @@ module global
    logical         :: ei_negative = .false.
    logical         :: cr_negative = .false.
    logical         :: disallow_negatives, disallow_CRnegatives, unwanted_negatives = .false.
+   logical         :: repeat_step              !< repeat fluid step if cfl condition is violated
    logical         :: dirty_debug              !< Allow initializing arrays with some insane values and checking if these values can propagate
    integer(kind=4) :: show_n_dirtys            !< use to limit the amount of printed messages on dirty values found
    logical         :: do_ascii_dump            !< to dump, or not to dump: that is a question (ascii)
@@ -90,11 +91,10 @@ module global
    integer(kind=4), protected    :: integration_order !< Runge-Kutta time integration order (1 - 1st order (Euler), 2 - 2nd order (RK2))
    character(len=cbuff_len)      :: limiter           !< type of flux limiter
    character(len=cbuff_len)      :: limiter_b         !< type of flux limiter for magnetic field in the Riemann solver
-   character(len=cbuff_len)      :: cflcontrol        !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
+   character(len=cbuff_len)      :: cflcontrol        !< type of cfl control just before/after each sweep (possibilities: 'none', 'warn', 'redo', 'auto')
    character(len=cbuff_len)      :: interpol_str      !< type of interpolation
    character(len=cbuff_len)      :: divB_0            !< human-readable method of making div(B) = 0 (currently CT or HDC)
    character(len=cbuff_len)      :: psi_bnd_str       !< "default" for general boundaries or override ith something special
-   logical                       :: repeat_step       !< repeat fluid step if cfl condition is violated (significantly increases mem usage)
    logical, dimension(xdim:zdim) :: skip_sweep        !< allows to skip sweep in chosen direction
    logical                       :: sweeps_mgu        !< Mimimal Guardcell Update in sweeps
    logical                       :: use_fargo         !< use Fast Eulerian Transport for differentially rotating disks
@@ -110,7 +110,7 @@ module global
    character(len=cbuff_len)      :: solver_str        !< allow to switch between RIEMANN and RTVD without recompilation
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, disallow_negatives, disallow_CRnegatives, cfl_max, use_smalld, use_smallei, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
-        &                     repeat_step, max_redostep_attempts, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
+        &                     max_redostep_attempts, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
         &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong, ord_fluid_prolong, do_external_corners, solver_str
 
    logical                       :: prefer_merged_MPI !< prefer internal_boundaries_MPI_merged over internal_boundaries_MPI_1by1
@@ -130,8 +130,7 @@ contains
 !!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !!   <tr><td>cfl                  </td><td>0.7      </td><td>real value between 0.0 and 1.0       </td><td>\copydoc global::cfl                  </td></tr>
 !!   <tr><td>cfl_max              </td><td>0.9      </td><td>real value between cfl and 1.0       </td><td>\copydoc global::cfl_max              </td></tr>
-!!   <tr><td>cflcontrol           </td><td>warn     </td><td>string                               </td><td>\copydoc global::cflcontrol           </td></tr>
-!!   <tr><td>repeat_step          </td><td>.true.   </td><td>logical value                        </td><td>\copydoc global::use_smalld           </td></tr>
+!!   <tr><td>cflcontrol           </td><td>redo     </td><td>string                               </td><td>\copydoc global::cflcontrol           </td></tr>
 !!   <tr><td>max_redostep_attempts</td><td>10       </td><td>integer                              </td><td>\copydoc global::max_redostep_attempts</td></tr>
 !!   <tr><td>smallp               </td><td>1.e-10   </td><td>real value                           </td><td>\copydoc global::smallp               </td></tr>
 !!   <tr><td>smalld               </td><td>1.e-10   </td><td>real value                           </td><td>\copydoc global::smalld               </td></tr>
@@ -187,6 +186,7 @@ contains
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[global:init_global] MPI not initialized.")
 
+      repeat_step = .false.
       dirty_debug = .false.
       dt_old = -1.
       t = 0.
@@ -203,14 +203,13 @@ contains
       limiter     = 'vanleer'
       limiter_b   = limiter
 
+#ifdef NBODY
       cflcontrol  = 'warn'
+#else /* !NBODY */
+      cflcontrol  = 'redo'
+#endif /* !NBODY */
       interpol_str = 'linear'
 
-#ifdef NBODY
-      repeat_step = .false.
-#else /* !NBODY */
-      repeat_step = .true.
-#endif /* !NBODY */
       geometry25D = .false.
       no_dirty_checks = .false.
 #ifdef MAGNETIC
@@ -337,18 +336,17 @@ contains
 
          lbuff(1)   = use_smalld
          lbuff(2)   = use_smallei
-         lbuff(3)   = repeat_step
-         lbuff(4:6) = skip_sweep
-         lbuff(7)   = geometry25D
-         lbuff(8)   = sweeps_mgu
-         lbuff(9)   = use_fargo
-         lbuff(10)  = use_eglm
-         lbuff(11)  = ch_grid
-         lbuff(13)  = do_external_corners
-         lbuff(14)  = disallow_negatives
-         lbuff(15)  = disallow_CRnegatives
-         lbuff(16)  = prefer_merged_MPI
-         lbuff(17)  = extra_barriers
+         lbuff(3:5) = skip_sweep
+         lbuff(6)   = geometry25D
+         lbuff(7)   = sweeps_mgu
+         lbuff(8)   = use_fargo
+         lbuff(9)  = use_eglm
+         lbuff(10)  = ch_grid
+         lbuff(11)  = do_external_corners
+         lbuff(12)  = disallow_negatives
+         lbuff(13)  = disallow_CRnegatives
+         lbuff(14)  = prefer_merged_MPI
+         lbuff(15)  = extra_barriers
 
       endif
 
@@ -361,18 +359,17 @@ contains
 
          use_smalld            = lbuff(1)
          use_smallei           = lbuff(2)
-         repeat_step           = lbuff(3)
-         skip_sweep            = lbuff(4:6)
-         geometry25D           = lbuff(7)
-         sweeps_mgu            = lbuff(8)
-         use_fargo             = lbuff(9)
-         use_eglm              = lbuff(10)
-         ch_grid               = lbuff(11)
-         do_external_corners   = lbuff(13)
-         disallow_negatives    = lbuff(14)
-         disallow_CRnegatives  = lbuff(15)
-         prefer_merged_MPI     = lbuff(16)
-         extra_barriers        = lbuff(17)
+         skip_sweep            = lbuff(3:5)
+         geometry25D           = lbuff(6)
+         sweeps_mgu            = lbuff(7)
+         use_fargo             = lbuff(8)
+         use_eglm              = lbuff(9)
+         ch_grid               = lbuff(10)
+         do_external_corners   = lbuff(11)
+         disallow_negatives    = lbuff(12)
+         disallow_CRnegatives  = lbuff(13)
+         prefer_merged_MPI     = lbuff(14)
+         extra_barriers        = lbuff(15)
 
          smalld                = rbuff( 1)
          smallc                = rbuff( 2)
@@ -408,7 +405,7 @@ contains
       endif
 
 #ifdef NBODY
-      if (master .and. repeat_step) call warn("[global:init_global] repeat_step unsupported by NBODY (particles aren't implemented yet).")
+      if (master .and. cflcontrol == 'redo') call warn("[global:init_global] step repeating (clfcontrol == 'redo') unsupported by NBODY (particles aren't implemented yet).")
 #endif /* NBODY */
 
       select case (solver_str)

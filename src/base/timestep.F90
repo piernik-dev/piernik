@@ -62,7 +62,7 @@ contains
 
       use constants,  only: PIERNIK_INIT_GLOBAL
       use dataio_pub, only: msg, die, warn, code_progress
-      use global,     only: cflcontrol
+      use global,     only: cflcontrol, repeat_step
 
       implicit none
 
@@ -71,6 +71,9 @@ contains
       select case (cflcontrol)
          case ('warn')
             cfl_manager => cfl_warn
+         case ('redo', 'repeat')
+            cfl_manager => cfl_warn
+            repeat_step = .true.
          case ('auto', 'adaptive')
             cfl_manager => cfl_auto
          case ('none', '')
@@ -247,7 +250,7 @@ contains
       real                          :: checkdt   !< checked dt after fluid_update
       real                          :: c_all_bck !< backup for timestep sensitive variables
 
-      if (cflcontrol /= 'warn') return
+      if (cflcontrol /= 'warn' .and. cflcontrol /= 'redo' .and. cflcontrol /= 'repeat') return
 
 
 #ifdef COSM_RAY_ELECTRONS
