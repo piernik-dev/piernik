@@ -237,7 +237,6 @@ contains
 #endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
       use cresp_grid,     only: cfl_cresp_violation
-      use initcrspectrum, only: cresp_substep
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -301,10 +300,6 @@ contains
       use global,       only: cfl, cfl_max, cfl_violated, unwanted_negatives
       use mpisetup,     only: piernik_MPI_Bcast, master
       use timestep_pub, only: c_all, c_all_old, stepcfl
-#ifdef COSM_RAY_ELECTRONS
-      use cresp_grid,   only: cfl_cresp_violation
-      use initcrspectrum, only: cfl_cre
-#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
