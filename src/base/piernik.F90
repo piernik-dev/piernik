@@ -135,7 +135,7 @@ program piernik
       call all_cg%check_na
       !call all_cg%check_for_dirt
 
-      call time_step(dt, flind)
+      call time_step(dt, flind, .true.)
       call grace_period
 
       if (.not.cfl_violated) then
@@ -150,7 +150,7 @@ program piernik
       call fluid_update
       nstep = nstep + I_ONE
       call print_progress(nstep)
-      call check_cfl_violation(dt, flind)
+      call check_cfl_violation(flind)
 
       if ((t .equals. tlast) .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
 

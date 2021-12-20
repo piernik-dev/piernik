@@ -98,7 +98,7 @@ contains
 !! These routines return limit for timestep due to various physical and numerical conditions.
 !! At the end the timestep is checked against remaining simulation time, minimum, and maximum allowed values etc.
 !<
-   subroutine time_step(dt, flind)
+   subroutine time_step(dt, flind, main_call)
 
       use cg_cost_data,       only: I_OTHER
       use cg_leaves,          only: leaves
@@ -131,8 +131,9 @@ contains
 
       implicit none
 
-      real,              intent(inout) :: dt    !< the timestep
-      type(var_numbers), intent(in)    :: flind !< the structure with all fluid indices
+      real,              intent(inout) :: dt        !< the timestep
+      type(var_numbers), intent(in)    :: flind     !< the structure with all fluid indices
+      logical,           intent(in)    :: main_call !< .true. for the main call at the beginning of the step, .false. for checking cfl violation
 
       type(cg_list_element), pointer   :: cgl
       type(grid_container),  pointer   :: cg
@@ -144,7 +145,7 @@ contains
 
 ! Timestep computation
 
-      dt_old = dt
+      if (main_call) dt_old = dt
 
       c_all = zero
       dt = huge(1.)
@@ -193,7 +194,7 @@ contains
       endif
 
       if (associated(cfl_manager)) call cfl_manager
-      if (.not.cfl_violated) c_all_old = c_all
+      if (main_call .and. .not.cfl_violated) c_all_old = c_all
 
       if (dt < dt_min) then ! something nasty had happened
          if (master) then
@@ -207,7 +208,7 @@ contains
 #ifdef DEBUG
       ! We still need all above for c_all
       if (has_const_dt) then
-         dt    = constant_dt
+         dt = constant_dt
          write(msg,*) "[timestep:time_step]: (constant_dt) c_all = ", c_all
          call printinfo(msg)
       endif
@@ -223,14 +224,14 @@ contains
 !!
 !! \details This routine calls is important while step redoing due to cfl violation is activated and prevent to dump h5 and restart files until cfl-violated step is succesfully redone.
 !<
-   subroutine check_cfl_violation(dt, flind)
+   subroutine check_cfl_violation(flind)
 
       use constants,      only: pLOR
       use dataio_pub,     only: warn
       use fluidtypes,     only: var_numbers
-      use global,         only: cflcontrol, cfl_violated, dt_old, dn_negative, ei_negative, disallow_negatives, unwanted_negatives
+      use global,         only: cflcontrol, cfl_violated, dn_negative, ei_negative, disallow_negatives, unwanted_negatives
       use mpisetup,       only: piernik_MPI_Allreduce, master
-      use timestep_pub,   only: c_all, c_all_old
+      use timestep_pub,   only: c_all
       use timestep_retry, only: reset_freezing_speed
 #ifdef COSM_RAYS
       use global,         only: cr_negative, disallow_CRnegatives
@@ -242,23 +243,22 @@ contains
 
       implicit none
 
-      real,              intent(in) :: dt    !< the timestep
-      type(var_numbers), intent(in) :: flind !< the structure with all fluid indices
-      real                          :: checkdt
-      real, dimension(3)            :: bck   !< backup for timestep sensitive variables
+      type(var_numbers), intent(in) :: flind     !< the structure with all fluid indices
+      real                          :: checkdt   !< checked dt after fluid_update
+      real                          :: c_all_bck !< backup for timestep sensitive variables
 
       if (cflcontrol /= 'warn') return
 
-      checkdt = dt
-
-      bck = [dt_old, c_all_old, c_all]
 
 #ifdef COSM_RAY_ELECTRONS
       if (cresp_substep) dt_cresp_bck = dt_spectrum !< backup necessary if cresp_substep is active
 #endif /* COSM_RAY_ELECTRONS */
 
       unwanted_negatives = .false.
-      call time_step(checkdt, flind)
+      c_all_bck = c_all
+      call time_step(checkdt, flind, .false.)
+      c_all = c_all_bck
+
       call piernik_MPI_Allreduce(dn_negative, pLOR)
       call piernik_MPI_Allreduce(ei_negative, pLOR)
 #ifdef COSM_RAYS
@@ -281,8 +281,6 @@ contains
       endif
       cfl_violated = cfl_violated .or. unwanted_negatives
       if (cfl_violated) call reset_freezing_speed
-
-      dt_old = bck(1) ; c_all_old = bck(2) ; c_all = bck(3) !> \todo check if this backup is necessary
 
 #ifdef COSM_RAY_ELECTRONS
       if (cresp_substep) dt_spectrum = dt_cresp_bck !< backup necessary if cresp_substep is active
