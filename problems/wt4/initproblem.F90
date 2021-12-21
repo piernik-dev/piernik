@@ -358,11 +358,11 @@ contains
          endif
 
          if (fake_ic) then
-            cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 1.
-            cg%u(fl%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
-            cg%u(fl%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
-            cg%u(fl%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
-            cg%cs_iso2(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 1e-2
+            cg%u(fl%idn, RNG) = 1.
+            cg%u(fl%imx, RNG) = 0.
+            cg%u(fl%imy, RNG) = 0.
+            cg%u(fl%imz, RNG) = 0.
+            cg%cs_iso2(RNG) = 1e-2
          else
             do k = cg%ks, cg%ke
                kic = nint((cg%z(k) + ic_zsize/2.)/ic_dx)
@@ -544,13 +544,13 @@ contains
             case (0)                                                                                ! skip modifications (for testing only)
             case (1)                                                                                ! crude
                if (dom%geometry_type /= GEO_XYZ) call die("[initproblem:problem_customize_solution_wt4] Non-cartesian geometry not supported (divine_intervention_type=1).")! remapping required
-               where (cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) < ambient_density)
-                  cg%u(fl%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u(fl%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-                  cg%u(fl%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u(fl%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-                  cg%u(fl%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u(fl%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-                  cg%cs_iso2(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = mincs2
+               where (cg%u(fl%idn, RNG) < ambient_density)
+                  cg%u(fl%imx, RNG) = (1. - damp_factor) * cg%u(fl%imx, RNG)
+                  cg%u(fl%imy, RNG) = (1. - damp_factor) * cg%u(fl%imy, RNG)
+                  cg%u(fl%imz, RNG) = (1. - damp_factor) * cg%u(fl%imz, RNG)
+                  cg%cs_iso2(RNG) = mincs2
                elsewhere
-                  cg%cs_iso2(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = maxcs2
+                  cg%cs_iso2(RNG) = maxcs2
                endwhere
             case (2)                                                                                ! smooth
                if (dom%geometry_type /= GEO_XYZ) call die("[initproblem:problem_customize_solution_wt4] Non-cartesian geometry not supported (divine_intervention_type=2).")

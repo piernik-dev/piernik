@@ -58,9 +58,12 @@ module initdust
 contains
 
    subroutine initialize_dust_indices(this, flind)
+
       use constants,  only: DST
       use fluidtypes, only: var_numbers
+
       implicit none
+
       class(dust_fluid), intent(inout) :: this
       type(var_numbers), intent(inout) :: flind
 
@@ -69,18 +72,24 @@ contains
    end subroutine initialize_dust_indices
 
    real function dust_cs(this, i, j, k, u, b, cs_iso2)
+
       implicit none
+
       class(dust_fluid),                 intent(in) :: this
       integer,                           intent(in) :: i, j, k
       real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
       real, dimension(:,:,:,:), pointer, intent(in) :: b       !< pointer to array of magnetic fields (used for ionized fluid with MAGNETIC #defined)
       real, dimension(:,:,:),   pointer, intent(in) :: cs_iso2 !< pointer to array of isothermal sound speeds (used when ISO was #defined)
+
       dust_cs = 0.0
       if (.false.) print *, u(:, i, j, k), b(:, i, j, k), cs_iso2(i, j, k), this%cs
+
    end function dust_cs
 
    real function dust_mach(this, i, j, k, u, b, cs_iso2)
+
       implicit none
+
       class(dust_fluid),                 intent(in) :: this
       integer,                           intent(in) :: i, j, k
       real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
@@ -88,14 +97,19 @@ contains
       real, dimension(:,:,:),   pointer, intent(in) :: cs_iso2 !< pointer to array of isothermal sound speeds (used when ISO was #defined)
       dust_mach = 0.0
       if (.false.) print *, u(:, i, j, k), b(:, i, j, k), cs_iso2(i, j, k), this%cs
+
    end function dust_mach
 
    function get_tag() result(tag)
+
       use constants, only: idlen
+
       implicit none
+
       character(len=idlen) :: tag
 
       tag = "DST"
+
    end function get_tag
 
 !>
@@ -140,7 +154,7 @@ contains
          close(nh%lun)
          call nh%compare_namelist()
 
-         lbuff(1)   = selfgrav
+         lbuff(1) = selfgrav
 
       endif
 
@@ -148,7 +162,7 @@ contains
 
       if (slave) then
 
-         selfgrav    = lbuff(1)
+         selfgrav = lbuff(1)
 
       endif
 
@@ -160,7 +174,7 @@ contains
 
    end subroutine cleanup_dust
 
-#define RNG 2:nm
+#define RNG2 2:nm
 !/*
 !>
 !! \brief Computation of %fluxes for the dust fluid
@@ -203,14 +217,14 @@ contains
 #endif /* GLOBAL_FR_SPEED */
 
       implicit none
-      class(dust_fluid), intent(in)                :: this
-      integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
-      real, dimension(:,:), intent(out),   pointer :: flux      !< flux of dust
-      real, dimension(:,:), intent(out),   pointer :: cfr       !< freezing speed for dust
-      real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for dust
-      real, dimension(:),   intent(in),    pointer :: vx        !< velocity of dust fluid for current sweep
-      real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
-      real, dimension(:),   intent(in),    pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
+      class(dust_fluid), intent(in)              :: this
+      integer(kind=4),   intent(in)              :: n         !< number of cells in the current sweep
+      real, dimension(:,:), intent(out), pointer :: flux      !< flux of dust
+      real, dimension(:,:), intent(out), pointer :: cfr       !< freezing speed for dust
+      real, dimension(:,:), intent(in),  pointer :: uu        !< part of u for dust
+      real, dimension(:),   intent(in),  pointer :: vx        !< velocity of dust fluid for current sweep
+      real, dimension(:,:), intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),  pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
 
       ! locals
 !      real               :: minvx, maxvx, amp
@@ -221,10 +235,10 @@ contains
 
       nm = n-1
 
-      flux(RNG, idn)=uu(RNG, idn)*vx(RNG)
-      flux(RNG, imx)=uu(RNG, imx)*vx(RNG)
-      flux(RNG, imy)=uu(RNG, imy)*vx(RNG)
-      flux(RNG, imz)=uu(RNG, imz)*vx(RNG)
+      flux(RNG2, idn) = uu(RNG2, idn) * vx(RNG2)
+      flux(RNG2, imx) = uu(RNG2, imx) * vx(RNG2)
+      flux(RNG2, imy) = uu(RNG2, imy) * vx(RNG2)
+      flux(RNG2, imz) = uu(RNG2, imz) * vx(RNG2)
 
       flux(1, :) = flux(2, :); flux(n, :) = flux(nm, :)
 
@@ -233,12 +247,12 @@ contains
       ! The freezing speed is now computed locally (in each cell)
       !  as in Trac & Pen (2003). This ensures much sharper shocks,
       !  but sometimes may lead to numerical instabilities
-!     minvx = minval(vx(RNG))
-!     maxvx = maxval(vx(RNG))
+!     minvx = minval(vx(RNG2))
+!     maxvx = maxval(vx(RNG2))
 !     amp   = (maxvx-minvx)*half
-!      cfr(RNG, 1) = max(sqrt(vx(RNG)**2+cfr_smooth*amp),small)
+!      cfr(RNG2, 1) = max(sqrt(vx(RNG2)**2+cfr_smooth*amp),small)
       absvx = abs(vx)
-      cfr(RNG, idn) = max( absvx(1:n-2), absvx(2:nm), absvx(3:n) )
+      cfr(RNG2, idn) = max( absvx(1:n-2), absvx(2:nm), absvx(3:n) )
 
       cfr(1, idn) = cfr(2, idn); cfr(n, idn) = cfr(nm, idn)
 
@@ -259,6 +273,7 @@ contains
       if (.false.) write(0,*) bb, cs_iso2, this%all
 
    end subroutine flux_dust
+#undef RNG2
 
    subroutine pres_dust(this, n, uu, bb, cs_iso2, ps)
 

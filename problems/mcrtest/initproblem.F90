@@ -213,13 +213,13 @@ contains
          enddo
 #endif /* !ISO */
 
-         cg%u(iarr_crn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+         cg%u(iarr_crn, RNG) = 0.0
 #ifdef COSM_RAYS_SOURCES
-         if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = beta_cr*fl%cs2 * cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/(gamma_crn(cr_table(icr_H1 ))-1.0)
-         if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = beta_cr*fl%cs2 * cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/(gamma_crn(cr_table(icr_C12))-1.0)
+         if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(cr_table(icr_H1 ))-1.0)
+         if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(cr_table(icr_C12))-1.0)
 #else /* !COSM_RAYS_SOURCES */
-         cg%u(iarr_crn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = beta_cr*fl%cs2 * cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/(gamma_crn(1)-1.0)
-         cg%u(iarr_crn(2), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = beta_cr*fl%cs2 * cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/(gamma_crn(2)-1.0)
+         cg%u(iarr_crn(1), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(1)-1.0)
+         cg%u(iarr_crn(2), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(2)-1.0)
 #endif /* !COSM_RAYS_SOURCES */
 
 ! Explosions
@@ -255,7 +255,7 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             associate (cg => cgl%cg)
-               maxv = max(maxv, maxval(cg%u(iarr_crs(icr), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
+               maxv = max(maxv, maxval(cg%u(iarr_crs(icr), RNG)))
             end associate
             cgl => cgl%nxt
          enddo
