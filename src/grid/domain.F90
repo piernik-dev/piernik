@@ -50,7 +50,7 @@ module domain
 
    private
    public :: cleanup_domain, init_domain, translate_ints_to_bnds, domain_container, dom, is_uneven, is_mpi_noncart, is_refined, is_multicg, &
-        &    psize, minsize, allow_noncart, allow_uneven, dd_unif_quality, dd_rect_quality! temporary export
+        &    psize, minsize, allow_noncart, allow_uneven, vel_outd, dd_unif_quality, dd_rect_quality! temporary export
 
    type :: domain_container
       ! primary parameters, read from /DOMAIN_SIZES/, /BOUNDARIES/ and /DOMAIN_LIMITS/ namelists
@@ -110,6 +110,7 @@ module domain
    logical :: allow_noncart                       !< allows more than one neighbour on a boundary
    real    :: dd_unif_quality                     !< uniform domain decomposition may be rejected it its quality is below this threshold (e.g. very elongated local domains are found), nonuniform cartesian decomposition is then tried
    real    :: dd_rect_quality                     !< rectilinear domain decomposition may be rejected it its quality is below this threshold, noncartesian decomposition is then tried (it still may find cartesian decomposition as optimum)
+   real    :: vel_outd                            !< velocity minimum used in OUTD boundary conditions
    !! \todo Implement maximum size of a cg (in cells) for use with GPGPU kernels. The minimum size id nb**dom%eff_dim
 
    namelist /MPI_BLOCKS/ psize, minsize, allow_uneven, allow_noncart, dd_unif_quality, dd_rect_quality
@@ -187,7 +188,7 @@ contains
 
       implicit none
 
-      real, dimension(ndims, LO:HI)     :: edges
+      real, dimension(ndims, LO:HI) :: edges
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[domain:init_domain] MPI not initialized.")
 
@@ -216,6 +217,7 @@ contains
 
       dd_unif_quality = 0.9
       dd_rect_quality = 0.9
+      vel_outd        = 0.0
 
       if (master) then
          if (.not. nh%initialized) call nh%init()
@@ -272,6 +274,7 @@ contains
          rbuff(6) = zmax
          rbuff(7) = dd_unif_quality
          rbuff(8) = dd_rect_quality
+         rbuff(9) = vel_outd
 
          lbuff(1) = allow_uneven
          lbuff(2) = allow_noncart
@@ -296,6 +299,7 @@ contains
          zmax            = rbuff(6)
          dd_unif_quality = rbuff(7)
          dd_rect_quality = rbuff(8)
+         vel_outd        = rbuff(9)
 
          bnd_xl     = cbuff(1)
          bnd_xr     = cbuff(2)
