@@ -113,7 +113,7 @@ contains
       use dataio_pub,         only: tend, msg, warn
       use fargo,              only: timestep_fargo
       use fluidtypes,         only: var_numbers
-      use global,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, cfl_violated
+      use global,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, repeat_step
       use grid_cont,          only: grid_container
       use mpisetup,           only: master, piernik_MPI_Allreduce
       use ppp,                only: ppp_main
@@ -198,7 +198,7 @@ contains
       endif
 
       if (associated(cfl_manager)) call cfl_manager
-      if (main_call .and. .not.cfl_violated) c_all_old = c_all
+      if (main_call .and. .not. repeat_step) c_all_old = c_all
 
       if (dt < dt_min) then ! something nasty had happened
          if (master) then
@@ -233,7 +233,7 @@ contains
       use constants,      only: pLOR
       use dataio_pub,     only: warn
       use fluidtypes,     only: var_numbers
-      use global,         only: cflcontrol, cfl_violated, dn_negative, ei_negative, disallow_negatives, unwanted_negatives
+      use global,         only: cflcontrol, dn_negative, ei_negative, disallow_negatives, repeat_step, unwanted_negatives
       use mpisetup,       only: piernik_MPI_Allreduce, master
       use timestep_pub,   only: c_all
       use timestep_retry, only: reset_freezing_speed
@@ -286,8 +286,8 @@ contains
          ei_negative  = .false.
       endif
 
-      cfl_violated = cfl_violated .or. unwanted_negatives
-      if (cfl_violated) call reset_freezing_speed
+      repeat_step = repeat_step .or. unwanted_negatives
+      if (repeat_step) call reset_freezing_speed
 
    end subroutine check_cfl_violation
 
@@ -298,8 +298,8 @@ contains
 
    subroutine cfl_warn
 
-      use dataio_pub,    only: msg, warn
-      use global,       only: cfl, cfl_max, cfl_violated, dt_shrink, tstep_attempt, unwanted_negatives
+      use dataio_pub,   only: msg, warn
+      use global,       only: cfl, cfl_max, dt_shrink, tstep_attempt, repeat_step, unwanted_negatives
       use mpisetup,     only: piernik_MPI_Bcast, master
       use timestep_pub, only: c_all, c_all_old, stepcfl
 
@@ -310,17 +310,17 @@ contains
 
       if (master) then
          msg = ''
-         cfl_violated = unwanted_negatives ! \> information about unwanted_negatives from the previous step if disallow_negatives
+         repeat_step = unwanted_negatives ! \> information about unwanted_negatives from the previous step if disallow_negatives
          if (stepcfl > cfl_max) then
             write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL: ", stepcfl
-            cfl_violated = .true.
+            repeat_step = .true.
          else if (stepcfl < 2*cfl - cfl_max) then
             write(msg,'(2(a,g10.3))') "[timestep:cfl_warn] Low CFL: ", stepcfl, " << ", cfl
          endif
          if (len_trim(msg) > 0) call warn(msg)
       endif
 
-      call piernik_MPI_Bcast(cfl_violated)
+      call piernik_MPI_Bcast(repeat_step)
 
    end subroutine cfl_warn
 

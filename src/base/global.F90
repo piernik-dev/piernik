@@ -40,17 +40,17 @@ module global
 
    private
    public :: cleanup_global, init_global, &
-        &    cfl, cfl_max, cflcontrol, cfl_violated, disallow_negatives, disallow_CRnegatives, unwanted_negatives, dn_negative, ei_negative, cr_negative, tstep_attempt, &
+        &    cfl, cfl_max, cflcontrol, disallow_negatives, disallow_CRnegatives, unwanted_negatives, dn_negative, ei_negative, cr_negative, tstep_attempt, &
         &    dt, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, max_redostep_attempts, repetitive_steps, &
-        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
+        &    repeat_step, integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, do_external_corners, prefer_merged_MPI, &
         &    divB_0_method, cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fluid_prolong, which_solver
 
-   logical         :: cfl_violated             !< True when cfl condition is violated
    logical         :: dn_negative = .false.
    logical         :: ei_negative = .false.
    logical         :: cr_negative = .false.
+   logical         :: repeat_step = .false.     !< order to repeat fluid step
    logical         :: disallow_negatives, disallow_CRnegatives, unwanted_negatives = .false.
    logical         :: repetitive_steps         !< epetitve fluid step if cfl condition is violated (significantly increases mem usage)
    logical         :: dirty_debug              !< Allow initializing arrays with some insane values and checking if these values can propagate
