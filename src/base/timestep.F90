@@ -113,7 +113,7 @@ contains
       use dataio_pub,         only: tend, msg, warn
       use fargo,              only: timestep_fargo
       use fluidtypes,         only: var_numbers
-      use global,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, repeat_step
+      use global,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, repeat_step, repetitive_steps
       use grid_cont,          only: grid_container
       use mpisetup,           only: master, piernik_MPI_Allreduce
       use ppp,                only: ppp_main
@@ -197,7 +197,7 @@ contains
          if (dt_old > zero) dt = min(dt, dt_old*dt_max_grow)
       endif
 
-      if (associated(cfl_manager)) call cfl_manager
+      if (associated(cfl_manager) .and. (main_call .neqv. repetitive_steps)) call cfl_manager
       if (main_call .and. .not. repeat_step) c_all_old = c_all
 
       if (dt < dt_min) then ! something nasty had happened
@@ -239,10 +239,10 @@ contains
       use timestep_retry, only: reset_freezing_speed
 #ifdef COSM_RAYS
       use global,         only: cr_negative, disallow_CRnegatives
-#endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
       use cresp_grid,     only: cfl_cresp_violation
 #endif /* COSM_RAY_ELECTRONS */
+#endif /* COSM_RAYS */
 
       implicit none
 
@@ -250,8 +250,7 @@ contains
       real                          :: checkdt   !< checked dt after fluid_update
       real                          :: c_all_bck !< backup for timestep sensitive variables
 
-      if (cflcontrol /= 'warn' .and. cflcontrol /= 'redo' .and. cflcontrol /= 'repeat') return
-
+      if (cflcontrol /= 'redo' .and. cflcontrol /= 'repeat') return
 
       unwanted_negatives = .false.
       c_all_bck = c_all
@@ -299,7 +298,7 @@ contains
    subroutine cfl_warn
 
       use dataio_pub,   only: msg, warn
-      use global,       only: cfl, cfl_max, dt_shrink, tstep_attempt, repeat_step, unwanted_negatives
+      use global,       only: cfl, cfl_max, dt_shrink, repeat_step, repetitive_steps, tstep_attempt, unwanted_negatives
       use mpisetup,     only: piernik_MPI_Bcast, master
       use timestep_pub, only: c_all, c_all_old, stepcfl
 
@@ -320,7 +319,7 @@ contains
          if (len_trim(msg) > 0) call warn(msg)
       endif
 
-      call piernik_MPI_Bcast(repeat_step)
+      if (repetitive_steps) call piernik_MPI_Bcast(repeat_step)
 
    end subroutine cfl_warn
 
