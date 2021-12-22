@@ -88,7 +88,7 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: pSUM, I_ZERO, I_ONE, dsetnamelen, AT_IGNORE, INVALID
       use dataio_pub,       only: warn, msg, die
-      use global,           only: dt, dtm, t, t_saved, cfl_violated, max_redostep_attempts, nstep, nstep_saved, dt_shrink, repeat_step, tstep_attempt
+      use global,           only: dt, dtm, t, t_saved, cfl_violated, max_redostep_attempts, nstep, nstep_saved, dt_shrink, repetitive_steps, tstep_attempt
       use mass_defect,      only: downgrade_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna, wna, na_var_list_q, na_var_list_w
@@ -106,7 +106,7 @@ contains
       character(len=dsetnamelen)     :: rname
       character(len=*), parameter :: rs_label = "repeat_step_"
 
-      if (.not.repeat_step) return
+      if (.not. repetitive_steps) return
 
       call restart_arrays
 

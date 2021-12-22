@@ -42,7 +42,7 @@ program piernik
    use fluidindex,        only: flind
    use fluidupdate,       only: fluid_update
    use func,              only: operator(.equals.)
-   use global,            only: t, nstep, dt, dtm, cfl_violated, print_divB, repeat_step, tstep_attempt
+   use global,            only: t, nstep, dt, dtm, cfl_violated, print_divB, repetitive_steps, tstep_attempt
    use initpiernik,       only: init_piernik
    use lb_helpers,        only: costs_maintenance
    use list_of_cg_lists,  only: all_lists
@@ -114,7 +114,7 @@ program piernik
    call print_progress(nstep)
    if (print_divB > 0) call print_divB_norm
 
-   do while (t < tend .and. nstep < nend .and. .not.(end_sim) .or. (cfl_violated .and. repeat_step)) ! main loop
+   do while (t < tend .and. nstep < nend .and. .not.(end_sim) .or. (cfl_violated .and. repetitive_steps)) ! main loop
 
       write(buf, '(i10)') nstep
       label = "step " // adjustl(trim(buf))

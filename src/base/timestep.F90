@@ -62,18 +62,19 @@ contains
 
       use constants,  only: PIERNIK_INIT_GLOBAL
       use dataio_pub, only: msg, die, warn, code_progress
-      use global,     only: cflcontrol, repeat_step
+      use global,     only: cflcontrol, repetitive_steps
 
       implicit none
 
       if (code_progress < PIERNIK_INIT_GLOBAL) call die("[timestep:init_time_step] globals not initialized.")
 
+      repetitive_steps = .false.
       select case (cflcontrol)
          case ('warn')
             cfl_manager => cfl_warn
          case ('redo', 'repeat')
             cfl_manager => cfl_warn
-            repeat_step = .true.
+            repetitive_steps = .true.
          case ('auto', 'adaptive')
             cfl_manager => cfl_auto
          case ('none', '')

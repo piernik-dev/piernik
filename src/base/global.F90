@@ -41,9 +41,9 @@ module global
    private
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, disallow_negatives, disallow_CRnegatives, unwanted_negatives, dn_negative, ei_negative, cr_negative, tstep_attempt, &
-        &    dt, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, max_redostep_attempts, &
+        &    dt, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, max_redostep_attempts, repetitive_steps, &
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
-        &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
+        &    relax_time, grace_period_passed, cfr_smooth, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, do_external_corners, prefer_merged_MPI, &
         &    divB_0_method, cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fluid_prolong, which_solver
 
@@ -52,7 +52,7 @@ module global
    logical         :: ei_negative = .false.
    logical         :: cr_negative = .false.
    logical         :: disallow_negatives, disallow_CRnegatives, unwanted_negatives = .false.
-   logical         :: repeat_step              !< repeat fluid step if cfl condition is violated
+   logical         :: repetitive_steps         !< epetitve fluid step if cfl condition is violated (significantly increases mem usage)
    logical         :: dirty_debug              !< Allow initializing arrays with some insane values and checking if these values can propagate
    integer(kind=4) :: show_n_dirtys            !< use to limit the amount of printed messages on dirty values found
    logical         :: do_ascii_dump            !< to dump, or not to dump: that is a question (ascii)
@@ -186,10 +186,9 @@ contains
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[global:init_global] MPI not initialized.")
 
-      repeat_step = .false.
       dirty_debug = .false.
-      dt_old = -1.
-      t = 0.
+      dt_old      = -1.
+      t           = 0.
 
       ! Begin processing of namelist parameters
 
