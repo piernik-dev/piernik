@@ -54,7 +54,7 @@ contains
       use fluidindex,       only: flind
       use func,             only: emag
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n
+      use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n, diff_max_lev
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep, n_substeps_max
       use mpisetup,         only: piernik_MPI_Allreduce
 
@@ -116,7 +116,7 @@ contains
          dt_aux = cfl_cr * half / K_cre_max_sum                    ! We use cfl_cr here (CFL number for diffusive CR transport), cfl_cre used only for spectrum evolution
          cgl => leaves%first
          do while (associated(cgl))
-            dt_cre_K = min(dt_cre_K, dt_aux * cgl%cg%dxmn2)
+            if (cgl%cg%l%id <= diff_max_lev) dt_cre_K = min(dt_cre_K, dt_aux * cgl%cg%dxmn2)
             cgl => cgl%nxt
          enddo
       endif
