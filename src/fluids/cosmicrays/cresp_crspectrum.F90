@@ -193,6 +193,8 @@ contains
                is_active_bin(i_cut(HI))  = .false.
                is_active_edge(i_cut(HI)) = .false.
                num_active_bins = num_active_bins - I_ONE
+               f(i_cut(HI)-I_ONE:) = zero
+               q(i_cut(HI))        = zero
                i_cut(HI) = i_cut(HI) - I_ONE
                p_cut(HI) = p_fix(i_cut(HI))
             else
@@ -219,6 +221,8 @@ contains
                is_active_bin(i_cut(LO)+1) = .false.
                is_active_edge(i_cut(LO))  = .false.
                num_active_bins = num_active_bins - I_ONE
+               f(i_cut(LO):)      = zero
+               q(i_cut(LO)+I_ONE) = zero
                i_cut(LO) = i_cut(LO) + I_ONE
                p_cut(LO) = p_fix(i_cut(LO))
             else
