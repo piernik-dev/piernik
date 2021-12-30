@@ -294,7 +294,7 @@ contains
             deallocate(cooling_edges_next)      !< -//-
             deallocate(heating_edges_next)      !< -//-
 
-            if (cresp_disallow_negatives) then  !< cresp_disallow_negatives = .false. lets the program ignore negatives of n/e that arose in CRESP
+            if (cresp_disallow_negatives) then  !< cresp_disallow_negatives = .false. lets the program ignore negative n,e that show in CRESP
                call cresp_detect_negative_content(cfl_cresp_violation)  !< thus no point checking/returning cfl_cresp_violation here
                if (cfl_cresp_violation) then
                   call deallocate_active_arrays
@@ -341,10 +341,9 @@ contains
       call cresp_detect_negative_content
 #endif /* CRESP_VERBOSED */
 
-      call check_cutoff_ne(ndt(i_cut_next(LO) + I_ONE), edt(i_cut_next(LO) + I_ONE), i_cut_next(LO) + I_ONE, cfl_cresp_violation)
-      call check_cutoff_ne(ndt(i_cut_next(HI)),         edt(i_cut_next(HI)),         i_cut_next(HI),         cfl_cresp_violation)
-
-      if (cresp_disallow_negatives) then
+      if (cresp_disallow_negatives) then  !< cresp_disallow_negatives = .false. lets the program ignore negative n,e that show in CRESP
+         call check_cutoff_ne(ndt(i_cut_next(LO) + I_ONE), edt(i_cut_next(LO) + I_ONE), i_cut_next(LO) + I_ONE, cfl_cresp_violation)
+         call check_cutoff_ne(ndt(i_cut_next(HI)),         edt(i_cut_next(HI)),         i_cut_next(HI),         cfl_cresp_violation)
          if (cfl_cresp_violation) then
             call deallocate_active_arrays
 #ifdef CRESP_VERBOSED
