@@ -172,7 +172,7 @@ contains
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index
       use func,            only: emag
-      use initcosmicrays,  only: ncrn, ncre, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp
+      use initcosmicrays,  only: ncrn, ncre, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp, use_smallecr
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use units,           only: clight, me, sigma_T
 
@@ -607,7 +607,14 @@ contains
          n_substeps_max = 1            !< for sanity assuming 1 substep if cresp_substep = .false.
       endif
 
-      if (cresp_disallow_negatives .eqv. .false.) call warn("[initcrspectrum:init_cresp] Detecting negative values of n,e in CRESP module and performing CFL violation action due to that problem is DISABLED.")
+      if (cresp_disallow_negatives .eqv. .false.) then
+         if (use_smallecr .eqv. .false.) then
+            call warn("[initcrspectrum:init_cresp] Detecting negative values of n,e in CRESP module & performing CFL violation actions related is DISABLED via cresp_disallow_negatives.")
+            call warn("[initcrspectrum:init_cresp] as is 'use_smallecr'; should negative values show in CRESP, they will not be fixed.")  ! FIXME die in this case?
+         else
+            call warn("[initcrspectrum:init_cresp] Detecting negative values of n,e in CRESP module & performing CFL violation actions related is DISABLED via cresp_disallow_negatives.")
+         endif
+      endif
 
       if ((q_init < three) .and. any(e_small_approx_p == I_ONE)) then
          call warn("[initcrspectrum:init_cresp] Initial parameters: q_init < 3.0 and approximation of outer momenta is on, approximation of outer momenta with hard energy spectrum might not work.")
