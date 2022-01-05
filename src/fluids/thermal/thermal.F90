@@ -41,7 +41,7 @@ module thermal
    implicit none
 
    private
-   public ::  init_thermal, thermal_active, cfl_coolheat, thermal_sources, itemp, fit_cooling_curve, cleanup_thermal
+   public ::  init_thermal, thermal_active, cfl_coolheat, thermal_sources, itemp, fit_cooling_curve, cleanup_thermal, calc_tcool
 
    character(len=cbuff_len)        :: cool_model, cool_curve, heat_model, scheme, cool_file
    logical                         :: thermal_active
@@ -451,23 +451,7 @@ contains
                            ta(i,j,k) = int_ener * ikbgmh / dens(i,j,k)
                            if (ta(i,j,k) .lt. 100.0) ta(i,j,k) = 100.0
                            if (ta(i,j,k) .gt. 10.0**9) ta(i,j,k) = 10.0**9
-                           if (cool_model == 'piecewise_power_law') then
-                              call find_temp_bin(ta(i,j,k), ii)
-                              alpha1  = alpha(ii)
-                              Tref1   = Tref(ii)
-                              lambda1 = lambda0(ii)
-                           else
-                              alpha1  = alpha_cool
-                              Tref1   = Teq
-                              lambda1 = L0_cool
-                           endif
-                              
-                           if (alpha1 .equals. 0.0) then
-                              diff = max(abs(ta(i,j,k) - Teql), 0.000001)
-                              tcool = kbgmh * ta(i,j,k) / (dens(i,j,k) * abs(lambda1) * diff)
-                           else
-                              tcool = kbgmh * ta(i,j,k) / (dens(i,j,k) * abs(lambda1) * (ta(i,j,k)/Tref1)**alpha1)
-                           endif
+                           call calc_tcool(ta(i,j,k), dens(i,j,k), kbgmh, tcool)
                            !tcool = 1.0
                            dt_cool = min(dt, tcool/10.0)
                            t1 = 0.0
@@ -552,7 +536,38 @@ contains
          enddo
       endif
 
-   end subroutine find_temp_bin
+    end subroutine find_temp_bin
+
+    subroutine calc_tcool(temp, dens, kbgmh, tcool)
+
+      use func,        only: operator(.equals.)
+
+      implicit none
+
+      real,    intent(in)  :: temp, dens, kbgmh
+      real,    intent(out) :: tcool
+      integer              :: ii
+      real                 :: alpha1, Tref1, lambda1, diff
+
+      if (cool_model == 'piecewise_power_law') then
+         call find_temp_bin(temp, ii)
+         alpha1  = alpha(ii)
+         Tref1   = Tref(ii)
+         lambda1 = lambda0(ii)
+      else
+         alpha1  = alpha_cool
+         Tref1   = Teq
+         lambda1 = L0_cool
+      endif
+
+      if (alpha1 .equals. 0.0) then
+         diff = max(abs(temp - Teql), 0.000001)
+         tcool = kbgmh * temp / (dens * abs(lambda1) * diff)
+      else
+         tcool = kbgmh * temp / (dens * abs(lambda1) * (temp/Tref1)**alpha1)
+      endif
+
+    end subroutine calc_tcool
 
    subroutine cool(temp, coolf)
 

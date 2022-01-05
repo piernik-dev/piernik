@@ -87,7 +87,8 @@ contains
           do i = cg%ijkse(xdim,LO), cg%ijkse(xdim,HI)
              do j = cg%ijkse(ydim,LO), cg%ijkse(ydim,HI)
                 do k = cg%ijkse(zdim,LO), cg%ijkse(zdim,HI)
-                   call SF_crit(pfl, cg, i, j, k, cond)
+                   tdyn = sqrt(3*pi/(32*G*(cg%w(wna%fi)%arr(pfl%idn,i,j,k))+cgl%cg%q(ig)%arr(i,j,k)))
+                   call SF_crit(pfl, cg, i, j, k, tdyn, cond)
                    if (cond) then
                       call attribute_id(pid)
                       pos(1) = cg%coord(CENTER, xdim)%r(i)
@@ -101,7 +102,6 @@ contains
                       ener = 0.0
                       call is_part_in_cg(cg, pos, in, phy, out)
                       !print *, 'SF!', cg%u(pfl%ien, i, j, k), 0.1 * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
-                      tdyn = sqrt(3*pi/(32*G*(cg%w(wna%fi)%arr(pfl%idn,i,j,k))+cgl%cg%q(ig)%arr(i,j,k)))
                       print *, proc, pid, tdyn
                       call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, t, tdyn)
                       cg%u(pfl%ien, i, j, k)          = cg%u(pfl%ien, i, j, k) - 0.1 * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k)) * 0.75
@@ -224,17 +224,19 @@ contains
   end subroutine feedback
 
 
-  subroutine SF_crit(pfl, cg, i, j, k, cond)
+  subroutine SF_crit(pfl, cg, i, j, k, tdyn, cond)
 
     use constants,             only: pi
     use crhelpers,             only: divv_i
     use fluidtypes,            only: component_fluid
     use grid_cont,             only: grid_container
     use named_array_list,      only: wna
-    use units,                 only: fpiG
+    use units,                 only: fpiG, kboltz, mH
+    use thermal,               only: calc_tcool, itemp
 
     logical, intent(out)                      :: cond
-    real                                      :: density_thr, G, RJ
+    real,    intent(in)                       :: tdyn
+    real                                      :: density_thr, G, RJ, tcool, kbgmh, temp
     integer, intent(in)                       :: i, j, k
     type(grid_container), pointer, intent(in) :: cg
     class(component_fluid), pointer           :: pfl
@@ -249,7 +251,11 @@ contains
     RJ = pfl%cs * sqrt(3*pi/(32*G*cg%w(wna%fi)%arr(pfl%idn,i,j,k)))
     !print *, 'Jeans mass', 4*pi/3 * RJ**3 * cg%w(wna%fi)%arr(pfl%idn,i,j,k), pi/6.0 * pfl%cs**3 / G**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5
     if (cg%w(wna%fi)%arr(pfl%idn,i,j,k) * cg%dvol .lt. 4*pi/3 * RJ**3 * cg%w(wna%fi)%arr(pfl%idn,i,j,k)) return  !pi/6.0 * pfl%cs**3 / G**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5 ) return    ! Jeans mass
-
+    kbgmh  = kboltz / (pfl%gam_1 * mH)
+    temp = cg%q(itemp)%arr(i,j,k)
+    call calc_tcool(temp, cg%w(wna%fi)%arr(pfl%idn,i,j,k), kbgmh, tcool)
+    print *, tcool, tdyn
+    if (tcool .gt. tdyn) return
     !print *, 'yay', cg%w(wna%fi)%arr(pfl%idn,i,j,k) * cg%dvol, pi/6.0 * pfl%cs**3 / fpiG**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5 * (4*pi)**(3.0/2)
     cond = .true.
     
