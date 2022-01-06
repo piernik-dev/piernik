@@ -119,8 +119,9 @@ contains
       type(spec_mod_trms),            intent(in)    :: sptab
       logical,                        intent(inout) :: cfl_cresp_violation
       real, dimension(1:2), optional, intent(inout) :: p_out
+      integer(kind=4), optional,      intent(in)    :: substeps
+
       logical                                       :: solve_fail_lo, solve_fail_up, empty_cell
-      integer, optional                             :: substeps
       integer                                       :: i_sub, n_substep
 
       e = zero; n = zero; edt = zero; ndt = zero
