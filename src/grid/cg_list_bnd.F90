@@ -799,7 +799,7 @@ contains
       use constants,             only: ndims, xdim, ydim, zdim, LO, HI, INT4, I_ONE, &
            &                           BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_USER
       use dataio_pub,            only: msg, warn, die
-      use domain,                only: dom
+      use domain,                only: dom, vel_outd
       use fluidboundaries_funcs, only: user_fluidbnd
       use fluidindex,            only: iarr_all_dn
       use grid_cont,             only: grid_container
@@ -897,9 +897,9 @@ contains
                   enddo
                   l(dir,:) = cg%ijkse(dir,side) - [dom%nb, 1_INT4] +(dom%nb+1_INT4)*(side-LO)
                   if (side == LO) then
-                     cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = min(cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)),0.0)
+                     cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = min(cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)),  vel_outd)
                   else
-                     cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = max(cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)),0.0)
+                     cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = max(cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)), -vel_outd)
                   endif
 #ifdef GRAV
                case (BND_OUTH)

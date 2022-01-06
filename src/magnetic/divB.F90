@@ -267,10 +267,9 @@ contains
       integer(kind=4),               intent(in) :: ord
       logical,                       intent(in) :: cell_centered
 
-      real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: divB_c_IO
-
-      integer(kind=4) :: o, i
-      real, dimension(max_c) :: coeff
+      real, dimension(RNG)                      :: divB_c_IO
+      integer(kind=4)                           :: o, i
+      real, dimension(max_c)                    :: coeff
 
       o = ord/I_TWO  ! BEWARE: tricky, assumed stencils on uniform grid
       if (o < I_ONE .or. o > max_c .or. I_TWO*o /= ord) call die("[divB:divB_c] cannot find coefficient") ! no odd order allowed here just in case
@@ -310,8 +309,8 @@ contains
       integer(kind=4),               intent(in) :: span
       logical,                       intent(in) :: cell_centered
 
-      real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: sixpoint
-      integer :: spm1
+      real, dimension(RNG)                      :: sixpoint
+      integer                                   :: spm1
 
       if ((coeff .equals. 0.) .or. span <=0 .or. span > dom%nb) call die("[divB:sixpoint] coeff == 0. or unacceptable span")
 
