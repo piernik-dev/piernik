@@ -94,7 +94,7 @@ module mpisetup
 
    !! \todo expand this wrapper to make it more general, unlimited polymorphism will render this obsolete
    !! Switching to pure mpi_f08 interface should allow for great simplification of these routines.
-   !! Meanwhile we keep that spaggetti to not break compatibility with systems where only mpi interface is available.
+   !! Meanwhile we keep that spaghetti to not break compatibility with systems where only mpi interface is available.
    interface piernik_MPI_Bcast
       module procedure MPI_Bcast_single_logical
       module procedure MPI_Bcast_single_string

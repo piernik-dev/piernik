@@ -68,7 +68,7 @@ contains
 
    end function enough_level
 
-   !> \brief convert cordinates to indices, perhaps it can go to some more general place
+   !> \brief convert coordinates to indices, perhaps it can go to some more general place
 
    pure function coord2ind(coords, l) result(ijk)
 

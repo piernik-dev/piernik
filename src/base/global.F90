@@ -246,7 +246,7 @@ contains
       psi_bnd_str = "default"
       integration_order  = 2
       ord_mag_prolong = O_I2           !< it looks like most f/c artifacts are gone just with cubic prolongation of magnetic guardcells
-      ord_fluid_prolong = O_INJ        !< O_INJ and O_LIN ensure monotoniciy and nonnegative density and energy
+      ord_fluid_prolong = O_INJ        !< O_INJ and O_LIN ensure monotonicity and nonnegative density and energy
       do_external_corners =.false.
       solver_str = ""
 

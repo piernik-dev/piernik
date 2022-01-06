@@ -322,7 +322,7 @@ contains
       integer                           :: jsn, jremap
       real                              :: dysn, epsi, epso
 
-      if (is_multicg) call die("[snsources:sn_shear] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
+      if (is_multicg) call die("[snsources:sn_shear] multiple grid pieces per processor not implemented yet") !nontrivial SHEAR
 
       jsn  = cg%js+int((ysnoi(2)-dom%edge(ydim, LO))*cg%idy)
       dysn  = mod(ysnoi(2), cg%dy)
@@ -349,7 +349,7 @@ contains
 !-----------------------------------------------------------------------
 
 !>
-!! \brief Function that generates values of normal distribution (from Numerical Recipies)
+!! \brief Function that generates values of normal distribution (from Numerical Recipes)
 !! \return x random value of uniform distribution
 !! \return y random value of uniform distribution
 !! \return @e real, random value of normal distribution

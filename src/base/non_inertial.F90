@@ -104,7 +104,7 @@ contains
 !>
 !! \brief Compute the non-inertial acceleration for a given row of cells.
 !!
-!! The equtions for the non-inertial acceleration in the x and y directions are given by:
+!! The equations for the non-inertial acceleration in the x and y directions are given by:
 !! \f{equation}
 !! acc_x = 2 * \Omega * v_y + \Omega^2 * x
 !! acc_y =  -2 * \Omega * v_x + \Omega^2 * y

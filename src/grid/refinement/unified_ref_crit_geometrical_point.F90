@@ -114,7 +114,7 @@ contains
    end subroutine mark_point
 
 !>
-!! \brief Initialize ths%ijk
+!! \brief Initialize this%ijk
 !!
 !! \details Initialize using available levels. If more refinements appear then call this again to reinitialize.
 !>

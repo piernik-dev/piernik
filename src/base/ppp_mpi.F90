@@ -42,7 +42,7 @@ contains
 !! \brief a PPP wrapper for MPI_Waitall
 !!
 !! This routine may sometimes be called only by a subset of MPI ranks.
-!! Do not insert MPI_Barrier and do not assume equal call count ovel all ranks.
+!! Do not insert MPI_Barrier and do not assume equal call count over all ranks.
 !! This may result in differing count of associated PPP timer on different processes.
 !<
 

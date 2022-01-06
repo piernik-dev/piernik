@@ -862,7 +862,7 @@ contains
       do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
          if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%l%id >= base_level_id)) call this%prolong_1var(i, bnd_type = bnd_type)
          ! Although we aren't worried too much by nonconservation of psi or multigrid fields here
-         ! but it will be worth checking if cnservative high-order prolongation can help.
+         ! but it will be worth checking if conservative high-order prolongation can help.
       enddo
       call ppp_main%stop(proq_label, PPP_AMR)
 
@@ -894,7 +894,7 @@ contains
    end subroutine prolong
 
 !>
-!! \brief Perform prolongation of one ramk-3 or rank-4 array.
+!! \brief Perform prolongation of one rank-3 or rank-4 array.
 !!
 !! \details This routine communicates selected named array from coarse to fine grid.
 !! The prolonged data is then copied to the destination if the cg%ignore_prolongation allows it.
@@ -1145,7 +1145,7 @@ contains
 !! * Interpolate the coarse data only
 !! * interpolate the coarse and fine data
 !! When the order of interpolation is 0 (injection) both methods degenerate into one.
-!! Both methods have their area of applicability amd both should be implemented.
+!! Both methods have their area of applicability and both should be implemented.
 !! \warning This routine does only the first approach.
 !!
 !! \todo implement local copies without MPI
@@ -1808,7 +1808,7 @@ contains
 !! order is higher than injection.
 !!
 !! Currently only multigrid solver use level-wise updates on rank-3 array,
-!! ande leaves%leaf_arr3d_boundaries can't be used instead there.
+!! and leaves%leaf_arr3d_boundaries can't be used instead there.
 !<
 
    subroutine arr3d_boundaries(this, ind, area_type, bnd_type, dir, nocorners)

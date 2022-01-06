@@ -106,7 +106,7 @@ contains
    end function init
 
 !>
-!! \brief Mark a z-oriented cylinted inside a specified box in the domain for refinement
+!! \brief Mark a z-oriented cylinder inside a specified box in the domain for refinement
 !!
 !! Please note that it uses grid topology, so in GEO_RPZ may result in funny shapes, especially for "cylinders" extended in angular direction.
 !!
@@ -158,7 +158,7 @@ contains
    end subroutine mark_zcyl
 
 !>
-!! \brief Initialize ths%ijk
+!! \brief Initialize this%ijk
 !!
 !! \details Initialize using available levels. If more refinements appear then call this again to reinitialize.
 !>

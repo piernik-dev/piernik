@@ -173,7 +173,7 @@
 
 2011-09-08  Dominik Woltanski <minikwolt@astri.umk.pl>
 
-	* trunk: [dataio_hdf5] workaround for unsuccesfull collective
+	* trunk: [dataio_hdf5] workaround for unsuccessfull collective
 	  dataset write (used when INDEPENDENT_ATOUTB is defined)
 
 2011-09-05  Artur Gawryszczak <gawrysz@gmail.com>
@@ -412,7 +412,7 @@
 	* trunk: [plot.py] add commandline options for setting figure size
 	* trunk: [streaming] include dust density in hydrostatic equil.
 	  calculation
-	* trunk: [interactions] seperate balsara implicit scheme
+	* trunk: [interactions] separate balsara implicit scheme
 	  initialization
 	* trunk: [plot.py] plot 1d data
 	* trunk: [streaming] udpate
@@ -1470,7 +1470,7 @@
 
 	* trunk: fixed cyclic dependency from r3953
 	* trunk: [cylindrical] ymin, ymax defaults to 0, 2*pi
-	* trunk: [interactions] supress spurious compiler warnings
+	* trunk: [interactions] suppress spurious compiler warnings
 
 2011-02-21  Kacper Kowalik <xarthisius.kk@gmail.com>
 
@@ -1481,7 +1481,7 @@
 
 2011-02-20  Artur Gawryszczak <gawrysz@gmail.com>
 
-	* trunk: Replaced string names of sweeps with integer equalt to one
+	* trunk: Replaced string names of sweeps with integer equal to one
 	  of mpisetup::[xyz]dim
 
 2011-02-17  Artur Gawryszczak <gawrysz@gmail.com>
@@ -2263,7 +2263,7 @@
 
 2010-12-15  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* trunk: [fluidboundaries] split cases from bnd_u into seperate
+	* trunk: [fluidboundaries] split cases from bnd_u into separate
 	  functions (xdim only)
 
 2010-12-15  Dominik Woltanski <minikwolt@astri.umk.pl>
@@ -2454,12 +2454,12 @@
 2010-12-02  Artur Gawryszczak <gawrysz@gmail.com>
 
 	* trunk: abort simulation when t + dt + dt does not change t
-	* trunk: removed occurences of (unused) cgrid%n[xyz]d
+	* trunk: removed occurrences of (unused) cgrid%n[xyz]d
 
 2010-12-02  Kacper Kowalik <xarthisius.kk@gmail.com>
 
 	* trunk: ''nyd''==''nyb'' if SHEAR
-	* trunk: removed last occurences of ''n[xyz]d'' outside of ''grid''
+	* trunk: removed last occurrences of ''n[xyz]d'' outside of ''grid''
 	  and ''mpisetup''
 	* trunk: [grid] calculate total number of cells in physical domain,
 	  [timer] use ''total_ncells'' instead of ''n[x,y,z]d''
@@ -3145,9 +3145,9 @@
 	* trunk: [problems] pass qa2.
 	* trunk: [macros] update comments
 	* trunk: [problems] add QA_WARN where needed
-	* trunk: [qa2] allow to supress warning for unnecessary uses,
+	* trunk: [qa2] allow to suppress warning for unnecessary uses,
 	  needed for ''diff_nml''
-	* trunk: [qa2] allow to supress warning for unnecessary uses,
+	* trunk: [qa2] allow to suppress warning for unnecessary uses,
 	  needed for ''diff_nml''
 
 2010-10-29  Artur Gawryszczak <gawrysz@gmail.com>
@@ -3638,7 +3638,7 @@
 
 	* trunk: Fix circular deps
 	* trunk: ''cwd'' moved to dataio_pub
-	* trunk: seperate macros.h from defines.c
+	* trunk: separate macros.h from defines.c
 
 2010-10-06  Artur Gawryszczak <gawrysz@gmail.com>
 
@@ -3718,7 +3718,7 @@
 2010-10-04  Artur Gawryszczak <gawrysz@gmail.com>
 
 	* trunk: use warn instead of crude write
-	* trunk: fixed format fiels widths
+	* trunk: fixed format field widths
 
 2010-10-04  Kacper Kowalik <xarthisius.kk@gmail.com>
 
@@ -4291,7 +4291,7 @@
 2010-04-23  Dominik Woltanski <minikwolt@astri.umk.pl>
 
 	* public: very basic corrections in initproblem of turbulence test
-	  case (just for being compiled succesfully)
+	  case (just for being compiled successfully)
 	* public: corrections for point mass gravity types in gravity
 	  module
 	* public: cosmetics in gravity module

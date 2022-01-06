@@ -76,7 +76,7 @@ module domain
       integer(kind=4) :: D_y                    !< set to 1 when y-direction exists, 0 otherwise.
       integer(kind=4) :: D_z                    !< set to 1 when z-direction exists, 0 otherwise.
       integer(kind=4), dimension(ndims) :: D_   !< == [D_x, D_y, D_z], Useful for dimensionally-safe indices for difference operators on arrays
-      integer(kind=4), dimension(ndims, ndims, HI) :: D2a !< auxiliary variantion of D_
+      integer(kind=4), dimension(ndims, ndims, HI) :: D2a !< auxiliary variant of D_
 
       logical, dimension(ndims) :: has_dir      !< .true. when direction exists (domain has >1 cell there)
       integer                   :: eff_dim      !< effective dimensionality of the simulation (count(has_dir))

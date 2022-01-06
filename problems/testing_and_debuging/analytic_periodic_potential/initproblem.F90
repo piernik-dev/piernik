@@ -48,7 +48,7 @@ module initproblem
 
    ! private data
    character(len=dsetnamelen), parameter :: apot_n = "apot" !< name of the analytical potential field
-   character(len=dsetnamelen), parameter :: asrc_n = "asrc" !< name of the source fiels used for "ares" calculation (auxiliary space)
+   character(len=dsetnamelen), parameter :: asrc_n = "asrc" !< name of the source field used for "ares" calculation (auxiliary space)
    character(len=dsetnamelen), parameter :: ares_n = "ares" !< name of the numerical residuum with respect to analytical potential field
 
    !< recognized types of potential
