@@ -27,7 +27,7 @@
 
 #include "piernik.h"
 
-!> \brief Unified refinement criterion for a single point
+!> \brief Unified refinement criterion for a single point.
 
 module unified_ref_crit_geometrical_point
 
@@ -57,7 +57,7 @@ module unified_ref_crit_geometrical_point
 
 contains
 
-!> \brief A simple constructor fed by parameters read from problem.par
+!> \brief A simple constructor fed by parameters read from problem.par.
 
    function init(rp) result(this)
 
@@ -85,9 +85,9 @@ contains
    end function init
 
 !>
-!! \brief Mark a single point in the domain for refinement
+!! \brief Mark a single point in the domain for refinement.
 !!
-!! \details this%iplot is ignored here as not very interesting
+!! \details this%iplot is ignored here because it is not very interesting.
 !<
 
    subroutine mark_point(this, cg)
@@ -105,7 +105,7 @@ contains
 
       if (.not. allocated(this%ijk)) call die("[unified_ref_crit_geometrical_point:mark_point] ijk not allocated")
 
-      ! Did some new levels of refinement appeared in the meantime?
+      ! Have some new levels of refinement appeared in the meantime?
       if (any(this%ijk(cg%l%id, :) == uninit)) call this%init_lev
 
       if (all(this%ijk(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk(cg%l%id, :) <= cg%ijkse(:, HI))) &
@@ -114,7 +114,7 @@ contains
    end subroutine mark_point
 
 !>
-!! \brief Initialize this%ijk
+!! \brief Initialize this%ijk.
 !!
 !! \details Initialize using available levels. If more refinements appear then call this again to reinitialize.
 !>

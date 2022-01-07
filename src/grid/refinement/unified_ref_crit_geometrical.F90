@@ -30,9 +30,8 @@
 !>
 !! \brief Unified refinement criteria for geometrical primitives
 !!
-!! \details Currently only points and boxes are implemented
-!!
-!! \todo Add sphere, shell, cylinder, etc.
+!! \details Currently there are points, boxes and vertical cylinders implemented.
+!! It should be relatively easy to add other shapes, like sphere or shell if needed.
 !<
 
 module unified_ref_crit_geometrical
@@ -44,18 +43,18 @@ module unified_ref_crit_geometrical
    private
    public :: urc_geom
 
-!> \brief Things that should be common for all refinement criteria based on geometrical primitives.
+   !> \brief Things that should be common for all refinement criteria based on geometrical primitives.
 
    type, abstract, extends(urc) :: urc_geom
       integer :: level  !< desired level of refinement
    contains
-      procedure :: enough_level
-      procedure, nopass :: coord2ind
+      procedure :: enough_level       !< Level check for all dependent types.
+      procedure, nopass :: coord2ind  !< Convert cordinates to indices.
    end type urc_geom
 
 contains
 
-   !> \brief one, uniform check for all dependent types
+   !> \brief Level check for all dependent types.
 
    pure logical function enough_level(this, lev)
 
@@ -68,7 +67,7 @@ contains
 
    end function enough_level
 
-   !> \brief convert coordinates to indices, perhaps it can go to some more general place
+   !> \brief Convert coordinates to indices, perhaps it can go to some more general place
 
    pure function coord2ind(coords, l) result(ijk)
 

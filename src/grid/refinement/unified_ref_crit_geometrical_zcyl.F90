@@ -28,9 +28,9 @@
 #include "piernik.h"
 
 !>
-!! \brief Unified refinement criterion for a cylinder with axis in the z-direction that fits to a simple box
+!! \brief Unified refinement criterion for a cylinder with axis in the z-direction that fits to a simple box.
 !!
-!! It is also a good starting point for anyone who wants to implement ellipsoidal geometrical refinement
+!! It is also a good starting point for anyone who wants to implement ellipsoidal geometrical refinement.
 !<
 
 module unified_ref_crit_geometrical_zcyl
@@ -43,7 +43,7 @@ module unified_ref_crit_geometrical_zcyl
    private
    public :: urc_zcyl
 
-!> \brief A type for box refinement
+!> \brief A type for z-cylinder refinement
 
    type, extends(urc_geom) :: urc_zcyl
       real, dimension(ndims, LO:HI)                          :: coords  !< coordinates of the box that contains the cylinder, where to refine
@@ -51,7 +51,7 @@ module unified_ref_crit_geometrical_zcyl
       real, dimension(ndims), private                        :: size    !< x- and y-radius (elliptical cylinders are allowed) and half-height
       integer(kind=8), allocatable, dimension(:, :), private :: ijk_lo  !< integer coordinates of "bottom left corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
       integer(kind=8), allocatable, dimension(:, :), private :: ijk_hi  !< integer coordinates of "top right corner" at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
-      integer(kind=8), allocatable, dimension(:, :), private :: ijk_c   !< integer coordinates of center at allowed levels; shape: [ base_level_id:this%level-1, ndims ]
+      integer(kind=8), allocatable, dimension(:, :), private :: ijk_c   !< integer coordinates of center at allowed levels; shape: [ base_level_id:this%level-1, ndims ], required for ultra small cylinders that could be lost between cells.
    contains
       procedure          :: mark => mark_zcyl
       procedure, private :: init_lev
@@ -65,7 +65,7 @@ module unified_ref_crit_geometrical_zcyl
 
 contains
 
-!> \brief A simple constructor fed by parameters read from problem.par
+!> \brief A simple constructor fed by parameters read from problem.par.
 
    function init(rp) result(this)
 
@@ -106,11 +106,11 @@ contains
    end function init
 
 !>
-!! \brief Mark a z-oriented cylinder inside a specified box in the domain for refinement
+!! \brief Mark a z-oriented cylinder inside a specified box in the domain for refinement.
 !!
 !! Please note that it uses grid topology, so in GEO_RPZ may result in funny shapes, especially for "cylinders" extended in angular direction.
 !!
-!! \details this%iplot is ignored here as not very interesting
+!! \details this%iplot is ignored here, maybe it isn't that uninteresting and should be handled.
 !<
 
    subroutine mark_zcyl(this, cg)
@@ -133,9 +133,10 @@ contains
       if (allocated(this%ijk_lo) .neqv. allocated(this%ijk_c))  call die("[unified_ref_crit_geometrical_zcyl:mark_zcyl] inconsistent alloc (lo|c)")
       if (.not. allocated(this%ijk_lo)) call die("[unified_ref_crit_geometrical_zcyl:mark_zcyl] ijk_{lo,hi,c} not allocated")
 
+      ! Have some new levels of refinement appeared in the meantime?
       if ( any(this%ijk_lo(cg%l%id, :) == uninit) .or. &
            any(this%ijk_hi(cg%l%id, :) == uninit) .or. &
-           any(this%ijk_c (cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appeared in the meantime
+           any(this%ijk_c (cg%l%id, :) == uninit)) call this%init_lev
 
       if (all(this%ijk_hi(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk_lo(cg%l%id, :) <= cg%ijkse(:, HI))) then
          do k = cg%ks, cg%ke
@@ -158,7 +159,7 @@ contains
    end subroutine mark_zcyl
 
 !>
-!! \brief Initialize this%ijk
+!! \brief Initialize this%ijk.
 !!
 !! \details Initialize using available levels. If more refinements appear then call this again to reinitialize.
 !>
