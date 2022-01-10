@@ -622,7 +622,7 @@ contains
 
    end function is_active
 
-!> \brief Set zero to all boundaries (will defeat any attemts of use of dirty checks on boundaries)
+!> \brief Set zero to all boundaries (will defeat any attempts of use of dirty checks on boundaries)
 
    subroutine clear_boundaries(this, ind, value)
 
@@ -745,7 +745,7 @@ contains
                         b_type = cg%bnd(d, lh)
                         if (present(bnd_type)) b_type = bnd_type
                         select case (b_type)
-                           case (BND_REF)  ! reflecting BC (e.g. homogeneous Neumamnn)
+                           case (BND_REF)  ! reflecting BC (e.g. homogeneous Neumann)
                               ! there will be special rules for vector fields (velocity, magnetic) perpendicular to the given boundary (like BND_NEGREF)
                               do i = 1, dom%nb
                                  l(d,:) = cg%ijkse(d,lh)   -i     *(I_THREE-I_TWO*lh)
@@ -758,7 +758,7 @@ contains
                                  r(d,:) = cg%ijkse(d,lh)+(i-I_ONE)*(I_THREE-I_TWO*lh)
                                  pa3d(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = - pa3d(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                               enddo
-                           case (BND_ZERO)  ! zero BC (e.g. homogenous Dirichlet BC with 0 at first layer of cells)
+                           case (BND_ZERO)  ! zero BC (e.g. homogeneous Dirichlet BC with 0 at first layer of cells)
                               clh = LO + HI - lh ; l(d,HI) = ubound(pa3d, dim=d, kind=4) ! restore after lh==LO case
                               l(d,clh) = cg%ijkse(d,lh)
                               pa3d(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = 0.
@@ -1108,7 +1108,7 @@ contains
 
          ! Apparently this is already written for cell-centered magnetic field.
 
-         ! Simulations with Constrained Transport may exhibit slight assymetries because
+         ! Simulations with Constrained Transport may exhibit slight asymmetries because
          ! rightmost face is reset here while leftmost is not. Use expressions like
          !
          !   it = cg%ijkse(dir, side) - pm_one * i + (side - LO)

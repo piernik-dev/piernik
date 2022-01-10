@@ -43,11 +43,11 @@
 !! It is possible, however, to compure is purely on base level or even coarser levels without much loss of accuracy.
 !!
 !! Another advantage of the 3D solver is that it usually doesn't benefit much from high-order multipoles so setting l_max to 8 or even 6 usually should be sufficient.
-!! In the same situation the image mass solver tends to produce long tails for high l on both small m and m cloce to m_max.
+!! In the same situation the image mass solver tends to produce long tails for high l on both small m and m close to m_max.
 !!
 !! ToDo
 !! * Automatic limiting of l_max based on relative strength w.r.t monopole contribution (1e-6 seems to be reasonable threshold).
-!! * (3D solver) Automatic choice of best level to integrate on, based on "distance" between Q calculated on differet levels.
+!! * (3D solver) Automatic choice of best level to integrate on, based on "distance" between Q calculated on different levels.
 !! * "True" given-value boundaries in multigrid, without differentiation.
 !<
 
@@ -98,7 +98,7 @@ contains
 !! \brief Initialization routine, called once, from init_multigrid
 !!
 !! Single-pass multigrid allowed only for user and 3D solvers as these doesn't depend on Dirichlet solution.
-!! BEWARE: if user solution decides to depend on Dirichlet solution, this chas to be changed.
+!! BEWARE: if user solution decides to depend on Dirichlet solution, this has to be changed.
 !<
 
    subroutine init_multipole
@@ -258,7 +258,7 @@ contains
             call particles2moments
 #endif /* NBODY */
             call Q%red_int_norm
-            ! OPT: automagically reduce lmax for a couple of steps if higher multipoles fall below some thershold
+            ! OPT: automagically reduce lmax for a couple of steps if higher multipoles fall below some threshold
             call moments2bnd_potential
          case (THREEDIM)
             call Q%reset
@@ -267,7 +267,7 @@ contains
             call particles2moments
 #endif /* NBODY */
             call Q%red_int_norm
-            ! OPT: automagically reduce lmax for a couple of steps if higher multipoles fall below some thershold
+            ! OPT: automagically reduce lmax for a couple of steps if higher multipoles fall below some threshold
             call moments2bnd_potential
          case default
             call die("[multigridmultipole:multipole_solver] unimplemented solver")
@@ -462,7 +462,7 @@ contains
 !! \brief Compute multipole moments for the whole domain
 !!
 !! \todo test with CoM (implement find_CoM)
-!! \todo implement Richarson extrapolation between coarsened levels
+!! \todo implement Richardson extrapolation between coarsened levels
 !<
 
    subroutine domain2moments

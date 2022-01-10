@@ -63,7 +63,7 @@ module interpolations
 contains
 
 !>
-!! \brief Convert a vector of conservarive variables to primitive ones.
+!! \brief Convert a vector of conservative variables to primitive ones.
 !<
 
    function utoq(u, b_cc) result(q)
@@ -324,7 +324,7 @@ contains
             ! WENO3 flux, Eq. 14, already shifted
             qr(i-1, v) = w0*flux0 + w1*flux1  ! similar as for left state, but weights are constructed from symmetric stencil
 
-            if (.false.) qr = f_limiter(q)  ! suppress compiler worning on argument needed for other interpolation scheme
+            if (.false.) qr = f_limiter(q)  ! suppress compiler warning on argument needed for other interpolation scheme
 
          enddo
       enddo

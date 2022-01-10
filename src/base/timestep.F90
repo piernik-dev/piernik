@@ -221,7 +221,7 @@ contains
 !>
 !! \brief Timestep prediction after fluidupdate
 !!
-!! \details This routine calls is important while step redoing due to cfl violation is activated and prevent to dump h5 and restart files until cfl-violated step is succesfully redone.
+!! \details This routine calls is important while step redoing due to cfl violation is activated and prevent to dump h5 and restart files until cfl-violated step is successfully redone.
 !<
    subroutine check_cfl_violation(dt, flind)
 

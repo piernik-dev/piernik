@@ -33,7 +33,7 @@
 !! \details The structure that contains most important information of all blocks on all processes on a given level
 !! and information on decomposition as well.
 !!
-!! OPT: consider converting gse to oct-tree for faster and morre natural searching.
+!! OPT: consider converting gse to oct-tree for faster and more natural searching.
 !<
 
 module dot
@@ -63,7 +63,7 @@ module dot
       integer(kind=8), dimension(:,:), allocatable :: SFC_id_range  !< min and max SFC id on processes
       integer                                      :: tot_se        !< global number of grids on the level
       logical                                      :: is_blocky     !< .true. when all grid pieces on this level on all processes have same shape and size
-      logical                                      :: is_strict_SFC !< .true. when all grid pieces are distributd along SFC curve
+      logical                                      :: is_strict_SFC !< .true. when all grid pieces are distributed along SFC curve
 !      logical                                      :: is_complete   !< .true. but in the future allow incomplete dot for really large simulations containing only neighbor data
    contains
       procedure :: cleanup              !< Deallocate everything

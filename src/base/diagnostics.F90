@@ -226,7 +226,7 @@ contains
 
       integer, intent(in) :: lensize  !< size of each element of vec
       character(len=*), intent(in), dimension(:) :: words  !< array that will be appended to vec
-      character(len=lensize), dimension(:), allocatable, intent(inout) :: vec   !< vector that will be incremeneted
+      character(len=lensize), dimension(:), allocatable, intent(inout) :: vec   !< vector that will be incremented
       integer :: old , i
 
       old = 0
@@ -246,7 +246,7 @@ contains
       implicit none
 
       real, intent(in), dimension(:) :: words !< array that will be appended to vec
-      real, dimension(:), allocatable, intent(inout) :: vec !< vector that will be incremeneted
+      real, dimension(:), allocatable, intent(inout) :: vec !< vector that will be incremented
 
       integer :: old
 
@@ -263,7 +263,7 @@ contains
 
       integer, intent(in) :: lensize !< size of each element of vec \todo get rid of lensize
       integer, intent(in) :: addlen  !< number of elements appended to vec
-      character(len=lensize), dimension(:), allocatable, intent(inout) :: vec !< vector that will be incremeneted
+      character(len=lensize), dimension(:), allocatable, intent(inout) :: vec !< vector that will be incremented
       character(len=lensize), dimension(:), allocatable :: temp
       integer :: old_size
 
@@ -288,7 +288,7 @@ contains
       implicit none
 
       integer, intent(in) :: addlen !< number of elements appended to vec
-      real, dimension(:), allocatable, intent(inout) :: vec !< vector that will be incremeneted
+      real, dimension(:), allocatable, intent(inout) :: vec !< vector that will be incremented
 
       real, dimension(:), allocatable :: temp
       integer :: old_size
@@ -313,7 +313,7 @@ contains
       implicit none
 
       integer, intent(in) :: addlen !< number of elements appended to vec
-      integer(kind=8), dimension(:), allocatable, intent(inout) :: vec !< vector that will be incremeneted
+      integer(kind=8), dimension(:), allocatable, intent(inout) :: vec !< vector that will be incremented
 
       integer(kind=8), dimension(:), allocatable :: temp
       integer :: old_size

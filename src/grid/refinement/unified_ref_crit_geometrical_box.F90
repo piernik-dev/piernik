@@ -27,7 +27,7 @@
 
 #include "piernik.h"
 
-!> \brief Unified refinement criterion for a single box
+!> \brief Unified refinement criterion for a single box.
 
 module unified_ref_crit_geometrical_box
 
@@ -58,7 +58,7 @@ module unified_ref_crit_geometrical_box
 
 contains
 
-!> \brief A simple constructor fed by parameters read from problem.par
+!> \brief A simple constructor fed by parameters read from problem.par.
 
    function init(rp) result(this)
 
@@ -88,9 +88,9 @@ contains
    end function init
 
 !>
-!! \brief Mark a single box in the domain for refinement
+!! \brief Mark a single box in the domain for refinement.
 !!
-!! \details this%iplot is ignored here as not very interesting
+!! \details this%iplot is ignored here because it is not very interesting.
 !<
 
    subroutine mark_box(this, cg)
@@ -111,8 +111,9 @@ contains
       if (allocated(this%ijk_lo) .neqv. allocated(this%ijk_hi)) call die("[unified_ref_crit_geometrical_box:mark_box] inconsistent alloc")
       if (.not. allocated(this%ijk_lo)) call die("[unified_ref_crit_geometrical_box:mark_box] ijk_{lo,hi} not allocated")
 
+      ! Have some new levels of refinement appeared in the meantime?
       if ( any(this%ijk_lo(cg%l%id, :) == uninit) .or. &
-           any(this%ijk_hi(cg%l%id, :) == uninit)) call this%init_lev  ! new levels of refinement have appeared in the meantime
+           any(this%ijk_hi(cg%l%id, :) == uninit)) call this%init_lev
 
       if (all(this%ijk_hi(cg%l%id, :) >= cg%ijkse(:, LO)) .and. all(this%ijk_lo(cg%l%id, :) <= cg%ijkse(:, HI))) then
          ijk(:, LO) = min(max(int(this%ijk_lo(cg%l%id, :), kind=4), cg%ijkse(:, LO)), cg%ijkse(:, HI))
@@ -124,7 +125,7 @@ contains
    end subroutine mark_box
 
 !>
-!! \brief Initialize ths%ijk
+!! \brief Initialize this%ijk.
 !!
 !! \details Initialize using available levels. If more refinements appear then call this again to reinitialize.
 !>

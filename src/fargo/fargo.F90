@@ -70,7 +70,7 @@ contains
       implicit none
    end subroutine cleanup_fargo
 
-!> \brief Check for azimuthar refinement steps and die if any have been detected
+!> \brief Check for azimuthal refinement steps and die if any have been detected
 
    subroutine check_yref
 

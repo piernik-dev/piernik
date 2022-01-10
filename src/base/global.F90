@@ -246,7 +246,7 @@ contains
       psi_bnd_str = "default"
       integration_order  = 2
       ord_mag_prolong = O_I2           !< it looks like most f/c artifacts are gone just with cubic prolongation of magnetic guardcells
-      ord_fluid_prolong = O_INJ        !< O_INJ and O_LIN ensure monotoniciy and nonnegative density and energy
+      ord_fluid_prolong = O_INJ        !< O_INJ and O_LIN ensure monotonicity and nonnegative density and energy
       do_external_corners =.false.
       solver_str = ""
 
@@ -501,11 +501,11 @@ contains
       if (master) then
          select case (divB_0_method)
             case (DIVB_HDC)
-               call printinfo("    The div(B) constraint is maintaineded by Hyperbolic Cleaning (GLM).")
+               call printinfo("    The div(B) constraint is maintained by Hyperbolic Cleaning (GLM).")
             case (DIVB_CT)
-               call printinfo("    The div(B) constraint is maintaineded by Constrained Transport (2nd order).")
+               call printinfo("    The div(B) constraint is maintained by Constrained Transport (2nd order).")
             case default
-               call die("    The div(B) constraint is maintaineded by Uknown Something.")
+               call die("    The div(B) constraint is maintained by Uknown Something.")
          end select
 
          if (cc_mag) then

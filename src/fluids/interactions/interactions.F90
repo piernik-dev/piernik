@@ -46,7 +46,7 @@ module interactions
    real, allocatable, dimension(:,:)          :: collfaq            !< flind%fluids x flind%fluids array of collision factors
    real                                       :: collision_factor   !< collision factor
    real                                       :: cfl_interact       !< Courant factor for %interactions
-   real                                       :: dragc_gas_dust     !< Drag cooefficient \deprecated remove me
+   real                                       :: dragc_gas_dust     !< Drag coefficient \deprecated remove me
    real                                       :: grain_size         !< size of dust grains in cm
    real                                       :: grain_dens         !< density of dust grains in g/cm^3
    real                                       :: grain_dens_x_size  !< size times density of dust grains in g/cm^2

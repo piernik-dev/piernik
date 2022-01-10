@@ -100,7 +100,7 @@ contains
       implicit none
 
       integer(HID_T),            intent(in) :: file !< File identifier
-      type(gdf_root_datasets_t), intent(in) :: rd   !< cointainer for root datasets
+      type(gdf_root_datasets_t), intent(in) :: rd   !< container for root datasets
 
       call create_dataset(file, 'grid_dimensions', rd%grid_dimensions)
       call create_dataset(file, 'grid_left_index', rd%grid_left_index)

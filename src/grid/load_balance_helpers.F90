@@ -354,7 +354,7 @@ contains
                      call printinfo(msg)
                   else
                      lines = ceiling(real(size(ph%proc)) / max_per_line)
-                     per_line = ceiling(real(size(ph%proc)) / lines)  ! or max_per_line for extremely heterogenous set of nodes
+                     per_line = ceiling(real(size(ph%proc)) / lines)  ! or max_per_line for extremely heterogeneous set of nodes
                      do l = 1, lines
                         if (l > I_ONE) write(msg, '(2a)') repeat(" ", pnames%maxnamelen + 1), " : "
                         do p =   lbound(ph%proc, 1) + per_line * (l - 1), &

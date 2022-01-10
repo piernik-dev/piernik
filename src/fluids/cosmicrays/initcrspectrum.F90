@@ -61,9 +61,9 @@ module initcrspectrum
    real            :: q_big                       !< maximal amplitude of q
    real            :: cfl_cre                     !< CFL parameter  for cr electrons
    real            :: cre_eff                     !< fraction of energy passed to cr-electrons by nucleons (mainly protons)
-   real            :: K_cre_paral_1               !< maximal parallell diffusion coefficient value
+   real            :: K_cre_paral_1               !< maximal parallel diffusion coefficient value
    real            :: K_cre_perp_1                !< maximal perpendicular diffusion coefficient value
-   real            :: K_cre_pow                   !< exponent for power law-like diffusion-energy dependance
+   real            :: K_cre_pow                   !< exponent for power law-like diffusion-energy dependence
    real            :: p_diff                      !< momentum to which diffusion coefficients refer to
    integer(kind=4) :: expan_order                 !< 1,2,3 order of Taylor expansion for p_update (cresp_crspectrum)
    real            :: e_small                     !< lower energy cutoff for energy-approximated cutoff momenta
@@ -587,7 +587,7 @@ contains
 
       if (master) call printinfo(msg)
 
-      u_b_max = fsynchr * emag(b_max_db, 0., 0.)   !< initializes factor for comparising u_b with u_b_max
+      u_b_max = fsynchr * emag(b_max_db, 0., 0.)   !< initializes factor for comparing u_b with u_b_max
 
       write (msg, "(A,F10.4,A,ES12.5)") "[initcrspectrum:init_cresp] Maximal B_tot =",b_max_db, "mGs, u_b_max = ", u_b_max
       if (master)  call warn(msg)

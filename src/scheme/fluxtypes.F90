@@ -51,7 +51,7 @@ module fluxtypes
       procedure :: fpcleanup                   !< Deallocate flux vector
    end type fluxpoint
 
-   !> \brief Structure that may contain pointers to fluxes to be passed to or obtained from the rtvd routine. Unassociated pointer means that no aperation is required.
+   !> \brief Structure that may contain pointers to fluxes to be passed to or obtained from the rtvd routine. Unassociated pointer means that no operation is required.
 
    type :: ext_fluxes
       type(fluxpoint), pointer :: li  !< incoming from the left (low index)

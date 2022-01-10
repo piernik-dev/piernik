@@ -34,7 +34,7 @@
 !!
 !! When a given block has any boundary with the coarse region, all flux data
 !! that has to be sent right after calculation is finished. When a given block
-!! has any boundary with the finer region, its calculation is delayed untill all
+!! has any boundary with the finer region, its calculation is delayed until all
 !! fine flux data is delivered. All communication is done quite asynchronously
 !! in hope that it will nicely overlap with calculations. In some pessimistic cases
 !! long stalls still may occur.
@@ -182,7 +182,7 @@ contains
    end subroutine recv_cg_finebnd
 
 !>
-!! \brief Do a non-blocking MPI Send of fluxes tfor coarse neighbors.
+!! \brief Do a non-blocking MPI Send of fluxes for coarse neighbors.
 !<
 
    subroutine send_cg_coarsebnd(cdim, cg, nr)
@@ -382,7 +382,7 @@ contains
 
       ! Despite of its name, cg%w(uhi) here contains unaltered fluid state right at
       ! the beginning of the timestep, not at half-step.
-      ! For RK2, when istep==2, cg%u temporalily contains the state at half timestep.
+      ! For RK2, when istep==2, cg%u temporarily contains the state at half timestep.
       uhi = wna%ind(uh_n)
       bhi = INVALID
       if (wna%exists(magh_n)) bhi = wna%ind(magh_n)
@@ -435,7 +435,7 @@ contains
                      call cg%costs%stop(I_REFINE)
                      ! The recv_cg_finebnd and send_cg_coarsebnd aren't MHD, so we should count them separately.
                      ! The tricky part is that we need to fit all the switching inside the conditional part
-                     ! adn don't mess pairing and don't let them to nest.
+                     ! and don't mess pairing and don't let them to nest.
 
                      call cg%costs%start
                      call solve_cg(cg, cdim, istep, fargo_vel)
