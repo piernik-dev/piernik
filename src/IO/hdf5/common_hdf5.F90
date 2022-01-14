@@ -167,6 +167,12 @@ contains
             case ('ethr')
                if (has_neu) call append_var('ethn')
                if (has_ion) call append_var('ethi')
+            case ('pres')
+               if (has_neu) call append_var('pren')
+               if (has_ion) call append_var('prei')
+            case ('temp')
+               if (has_neu) call append_var('temn')
+               if (has_ion) call append_var('temi')
             case ("divb", "divB")
                if (cc_mag) then
                   call append_var("divbc")
@@ -264,9 +270,6 @@ contains
                enddo
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
-            case ('pres')
-               if (has_neu) call append_var('pren')
-               if (has_ion) call append_var('prei')
             case default
                if (.not. has_ion .and. (any(trim(vars(i)) == ["deni", "vlxi", "vlyi", "vlzi", "enei", "ethi", "prei"]) .or. any(trim(vars(i)) == ["momxi", "momyi", "momzi"]))) then
                   if (master) call warn("[common_hdf5:init_hdf5] Cannot safely use plot variable '" // trim(vars(i)) // "' without ionized fluid")
@@ -914,7 +917,7 @@ contains
       integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_o       !< sizes of all cg, expanded by external boundaries
       integer(kind=4),  dimension(:),   pointer     :: cg_rl            !< list of refinement levels from all cgs/procs
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_b           !< list of n_b from all cgs/procs
-      integer(kind=4),  dimension(:,:), pointer     :: cg_n_o           !< list of grid dimnsions with external guardcells from all cgs/procs
+      integer(kind=4),  dimension(:,:), pointer     :: cg_n_o           !< list of grid dimensions with external guardcells from all cgs/procs
       integer(kind=8),  dimension(:,:), pointer     :: cg_off           !< list of offsets from all cgs/procs
 #ifdef NBODY_1FILE
       integer(kind=8),  pointer                      :: cg_npart, cg_pid_max

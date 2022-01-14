@@ -226,10 +226,10 @@ contains
          close(nh%lun)
          call nh%compare_namelist()
 
-         lbuff(1)  = selfgrav
+         lbuff(1) = selfgrav
 
-         rbuff(1)  = gamma
-         rbuff(2)  = cs_iso
+         rbuff(1) = gamma
+         rbuff(2) = cs_iso
 
       endif
 
@@ -291,7 +291,7 @@ contains
 !!while \f$e_{th}\f$ is thermal energy density and  \f$e_{mag} = B^2/2\f$ is the magnetic energy density.
 !<
 !*/
-#define RNG 2:nm
+#define RNG2 2:nm
    subroutine flux_ion(this, flux, cfr, uu, n, vx, bb, cs_iso2)
 
       use constants, only: idn, imx, imy, imz
@@ -334,21 +334,21 @@ contains
       pps => ps
       call all_pres_ion(uu, n, bb, cs_iso2, this%gam, this%gam_1, pmag, p, pps)
 
-      flux(RNG, idn)=uu(RNG, idn)*vx(RNG)
+      flux(RNG2, idn) = uu(RNG2, idn) * vx(RNG2)
 #ifdef MAGNETIC
-      flux(RNG, imx)=uu(RNG, imx)*vx(RNG)+ps(RNG) - bb(RNG, xdim)**2
-      flux(RNG, imy)=uu(RNG, imy)*vx(RNG)-bb(RNG, ydim)*bb(RNG, xdim)
-      flux(RNG, imz)=uu(RNG, imz)*vx(RNG)-bb(RNG, zdim)*bb(RNG, xdim)
+      flux(RNG2, imx) = uu(RNG2, imx) * vx(RNG2) + ps(RNG2) - bb(RNG2, xdim)**2
+      flux(RNG2, imy) = uu(RNG2, imy) * vx(RNG2) - bb(RNG2, ydim) * bb(RNG2, xdim)
+      flux(RNG2, imz) = uu(RNG2, imz) * vx(RNG2) - bb(RNG2, zdim) * bb(RNG2, xdim)
 #ifndef ISO
-      flux(RNG, ien)=(uu(RNG, ien)+ps(RNG))*vx(RNG)-bb(RNG, xdim)*(bb(RNG, xdim)*uu(RNG, imx) &
-                +bb(RNG, ydim)*uu(RNG, imy)+bb(RNG, zdim)*uu(RNG, imz))/uu(RNG, idn)
+      flux(RNG2, ien) = (uu(RNG2, ien) + ps(RNG2)) * vx(RNG2) - bb(RNG2, xdim) * (bb(RNG2, xdim) * uu(RNG2, imx) &
+                                               + bb(RNG2, ydim) * uu(RNG2, imy) + bb(RNG2, zdim) * uu(RNG2, imz)) / uu(RNG2, idn)
 #endif /* !ISO */
 #else /* !MAGNETIC */
-      flux(RNG, imx)=uu(RNG, imx)*vx(RNG)+ps(RNG)
-      flux(RNG, imy)=uu(RNG, imy)*vx(RNG)
-      flux(RNG, imz)=uu(RNG, imz)*vx(RNG)
+      flux(RNG2, imx) = uu(RNG2, imx) * vx(RNG2) + ps(RNG2)
+      flux(RNG2, imy) = uu(RNG2, imy) * vx(RNG2)
+      flux(RNG2, imz) = uu(RNG2, imz) * vx(RNG2)
 #ifndef ISO
-      flux(RNG, ien)=(uu(RNG, ien)+ps(RNG))*vx(RNG)
+      flux(RNG2, ien) = (uu(RNG2, ien) + ps(RNG2)) * vx(RNG2)
 #endif /* !ISO */
 #endif /* !MAGNETIC */
       flux(1, :) = flux(2, :) ; flux(n, :) = flux(nm, :)
@@ -358,13 +358,13 @@ contains
       ! The freezing speed is now computed locally (in each cell)
       !  as in Trac & Pen (2003). This ensures much sharper shocks,
       !  but sometimes may lead to numerical instabilities
-      minvx = minval(vx(RNG))
-      maxvx = maxval(vx(RNG))
-      amp   = half*(maxvx-minvx)
+      minvx = minval(vx(RNG2))
+      maxvx = maxval(vx(RNG2))
+      amp   = half * (maxvx - minvx)
 #ifdef ISO
-      cfr(RNG, 1) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +          p(RNG))/uu(RNG, idn)),small)
+      cfr(RNG2, 1) = sqrt(vx(RNG2)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG2) +          p(RNG2))/uu(RNG2, idn)),small)
 #else /* !ISO */
-      cfr(RNG, 1) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) + this%gam*p(RNG))/uu(RNG, idn)),small)
+      cfr(RNG2, 1) = sqrt(vx(RNG2)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG2) + this%gam*p(RNG2))/uu(RNG2, idn)),small)
 #endif /* !ISO */
       !> \deprecated BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
       !>
@@ -419,19 +419,18 @@ contains
 
       nm = n-1
 #ifdef MAGNETIC
-      pmag(RNG)= emag(bb(RNG, xdim), bb(RNG, ydim), bb(RNG, zdim));  pmag(1) = pmag(2); pmag(n) = pmag(nm)
+      pmag(RNG2) = emag(bb(RNG2, xdim), bb(RNG2, ydim), bb(RNG2, zdim));  pmag(1) = pmag(2); pmag(n) = pmag(nm)
 #else /* !MAGNETIC */
       pmag(:) = 0.0
 #endif /* !MAGNETIC */
 
 #ifdef ISO
-      p(RNG)  = cs_iso2(RNG) * uu(RNG, idn)
-      ps(RNG) = p(RNG) + pmag(RNG)
+      p(RNG2)  = cs_iso2(RNG2) * uu(RNG2, idn)
+      ps(RNG2) = p(RNG2) + pmag(RNG2)
 #else /* !ISO */
       if (associated(cs_iso2)) call die("[initionized:all_pres_ion] cs_iso2 should not be associated")
-      ps(RNG) = (uu(RNG, ien) - ekin(uu(RNG, imx),uu(RNG, imy),uu(RNG, imz),uu(RNG, idn)) )*(gam1) &
-           & + (2.0 - gam)*pmag(RNG)
-      p(RNG) = ps(RNG)- pmag(RNG);  p(1) = p(2); p(n) = p(nm)
+      ps(RNG2) = (uu(RNG2, ien) - ekin(uu(RNG2, imx),uu(RNG2, imy),uu(RNG2, imz),uu(RNG2, idn)) )*(gam1) + (2.0 - gam)*pmag(RNG2)
+      p(RNG2) = ps(RNG2)- pmag(RNG2);  p(1) = p(2); p(n) = p(nm)
 #endif /* !ISO */
       ps(1) = ps(2); ps(n) = ps(nm)
 
@@ -444,6 +443,7 @@ contains
 #endif /* ISO */
 
    end subroutine all_pres_ion
+#undef RNG2
 
    subroutine pres_ion(this, n, uu, bb, cs_iso2, ps)
 

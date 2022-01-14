@@ -36,7 +36,7 @@ def pretty_format(list, col):
 
 if __name__ == "__main__":
     from optparse import OptionParser
-    usage = "usage: %prog module_name line_lenght FILES\n\nExample: bin/generate_public.py grid 140 $(find . -name \"*F90\")"
+    usage = "usage: %prog module_name line_length FILES\n\nExample: bin/generate_public.py grid 140 $(find . -name \"*F90\")"
     parser = OptionParser(usage=usage)
     parser.add_option("-v", "--verbose",
                       action="store_true", dest="verbose", default=False,

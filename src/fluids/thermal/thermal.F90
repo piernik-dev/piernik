@@ -50,7 +50,7 @@ module thermal
    real                            :: Teql         !> temperature of cooling / heating equilibrium
    integer(kind=4), protected      :: itemp = INVALID
    real                            :: x_ion        !> ionization degree
-   integer                         :: isochoric    !> 1 for isochoric, 2 for isobaric
+   integer(kind=4)                 :: isochoric    !> 1 for isochoric, 2 for isobaric
    real                            :: d_isochoric  ! constant density used in isochoric case
    real                            :: TN, ltntrna
    real, dimension(:), allocatable :: Tref, alpha, lambda0, Y
@@ -168,7 +168,6 @@ contains
 
       call all_cg%reg_var('Temperature')          ! Make it cleaner
       itemp = qna%ind('Temperature')
-
       if (.not. thermal_active) return
 
       G0_heat = G0       * erg / sek * cm**3 / mH**2 * x_ion**2
@@ -176,6 +175,10 @@ contains
       G2_heat = G2       * erg / sek / cm**3
       L0_cool = Lambda_0 * erg / sek * cm**3 / mH**2 * x_ion**2
 
+
+      call fit_cooling_curve()
+
+      if (scheme == 'Explicit') call warn('[thermal:init_thermal][scheme: Explicit] Warning: substepping with a different timestep for every cell in the Explicit scheme leads to perturbations. Take a very small cfl_coolheat (~10^-6) or use a constant timestep.')
 
       call fit_cooling_curve()
 
@@ -670,6 +673,8 @@ contains
                !Tnew = T1 * (1 - (isochoric-alpha0) * lambda1 / T1**isochoric * Y0f)**(1.0/(isochoric-alpha0))
                Tnew = temp * (1 - (isochoric-alpha0) * fiso * dt / tcool)**(1.0/(isochoric-alpha0))
             endif
+
+            if (Tnew < 100.0) Tnew = 100.0                        ! To improve
 
          case ('null')
             return

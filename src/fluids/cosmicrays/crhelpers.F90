@@ -127,10 +127,10 @@ contains
 !! The computed value is valid in one layer of guardcells.
 !!
 !! The divergence of velocity computed with the aid of 6-th order finite
-!! differencing based on the Lagendre Polynomial interpolation.
+!! differencing based on the Legendre Polynomial interpolation.
 !!
 !! \todo Should be moved to a dedicated module containing general purpose interpolation
-!! and derivation routines, and placed together with the other useful scheems described
+!! and derivation routines, and placed together with the other useful schemes described
 !! in particular in http://turbulence.pha.jhu.edu/Database-functions.pdf
 !<
    subroutine div_v_6th_lp(ifluid, cg)

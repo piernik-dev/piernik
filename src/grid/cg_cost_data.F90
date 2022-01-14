@@ -43,7 +43,7 @@ module cg_cost_data
         [ "MHD       ", &  ! Riemann, RTVD, CT, divB cleaning
         & "multigrid ", &  ! self-gravity multigrid relaxation, residuals
         & "multipole ", &  ! multipole moments <=> potential conversions, not the costs of Q array manipulation
-        & "diffusion ", &  ! explicit and multigrid diffussion costs
+        & "diffusion ", &  ! explicit and multigrid diffusion costs
         & "particles ", &  ! particles in cg
         & "refines   ", &  ! prolongation, restriction, marking criteria
         & "init.cond.", &  ! for use only in the initproblems

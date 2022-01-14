@@ -39,7 +39,7 @@ module ppp_eventlist
    private
    public :: eventlist, use_profiling, disable_mask, profile_file, profile_lun
 
-   ! namelist parametrs
+   ! namelist parameters
    logical :: use_profiling  !< control whether to do any PPProfiling or not
 
    character(len=cwdlen) :: profile_file  !< file name for the profile data

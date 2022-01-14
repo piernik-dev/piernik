@@ -166,10 +166,10 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("errp")
-            tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(RNG)
          case ("relerr")
             where (cg%q(qna%ind(apot_n))%span(cg%ijkse) .notequals. 0.)
-               tab(:,:,:) = cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1.
+               tab(:,:,:) = cg%sgp(RNG)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1.
             elsewhere
                tab(:,:,:) = 0.
             endwhere

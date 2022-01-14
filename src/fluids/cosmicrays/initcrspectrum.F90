@@ -41,7 +41,7 @@ module initcrspectrum
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active, &
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,        &
            & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,       &
-           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max
+           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -61,9 +61,9 @@ module initcrspectrum
    real            :: q_big                       !< maximal amplitude of q
    real            :: cfl_cre                     !< CFL parameter  for cr electrons
    real            :: cre_eff                     !< fraction of energy passed to cr-electrons by nucleons (mainly protons)
-   real            :: K_cre_paral_1               !< maximal parallell diffusion coefficient value
+   real            :: K_cre_paral_1               !< maximal parallel diffusion coefficient value
    real            :: K_cre_perp_1                !< maximal perpendicular diffusion coefficient value
-   real            :: K_cre_pow                   !< exponent for power law-like diffusion-energy dependance
+   real            :: K_cre_pow                   !< exponent for power law-like diffusion-energy dependence
    real            :: p_diff                      !< momentum to which diffusion coefficients refer to
    integer(kind=4) :: expan_order                 !< 1,2,3 order of Taylor expansion for p_update (cresp_crspectrum)
    real            :: e_small                     !< lower energy cutoff for energy-approximated cutoff momenta
@@ -89,6 +89,7 @@ module initcrspectrum
 
    logical         :: nullify_empty_bins          !< nullifies empty bins when entering CRESP module / exiting empty cell.
    logical         :: allow_source_spectrum_break !< allow extension of spectrum to adjacent bins if momenta found exceed set p_fix
+   logical         :: allow_unnatural_transfer    !< allows unnatural transfer of n & e with 'manually_deactivate_bins_via_transfer'
    logical         :: synch_active                !< TEST feature - turns on / off synchrotron cooling @ CRESP
    logical         :: adiab_active                !< TEST feature - turns on / off adiabatic   cooling @ CRESP
    real            :: cre_active                  !< electron contribution to Pcr
@@ -185,7 +186,7 @@ contains
       &                         NR_iter_limit, max_p_ratio, synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init,             &
       &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf, b_max_db,      &
       &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up, p_diff,&
-      &                         q_eps, NR_smap_file, cresp_substep, n_substeps_max
+      &                         q_eps, NR_smap_file, cresp_substep, n_substeps_max, allow_unnatural_transfer
 
 ! Default values
       use_cresp         = .true.
@@ -231,6 +232,7 @@ contains
       smallcren            = 0.0
       smallcree            = 0.0
       allow_source_spectrum_break  = .false.
+      allow_unnatural_transfer     = .false.
       synch_active         = .true.
       adiab_active         = .true.
       cre_active           = 0.0
@@ -241,8 +243,8 @@ contains
       tol_f_1D = 1.0e-14
       tol_x_1D = 1.0e-14
       arr_dim  = 200
-      arr_dim_q = 500
-      q_eps     = eps
+      arr_dim_q = 1000
+      q_eps     = 0.001
 
       cresp_substep           = .false.
       n_substeps_max          = 100
@@ -295,6 +297,7 @@ contains
          lbuff(13) =  NR_allow_old_smaps
 
          lbuff(14) =  cresp_substep
+         lbuff(15) =  allow_unnatural_transfer
 
          rbuff(1)  = cfl_cre
          rbuff(2)  = cre_eff
@@ -367,6 +370,7 @@ contains
          NR_allow_old_smaps          = lbuff(13)
 
          cresp_substep               = lbuff(14)
+         allow_unnatural_transfer    = lbuff(15)
 
          cfl_cre                     = rbuff(1)
          cre_eff                     = rbuff(2)
@@ -583,7 +587,7 @@ contains
 
       if (master) call printinfo(msg)
 
-      u_b_max = fsynchr * emag(b_max_db, 0., 0.)   !< initializes factor for comparising u_b with u_b_max
+      u_b_max = fsynchr * emag(b_max_db, 0., 0.)   !< initializes factor for comparing u_b with u_b_max
 
       write (msg, "(A,F10.4,A,ES12.5)") "[initcrspectrum:init_cresp] Maximal B_tot =",b_max_db, "mGs, u_b_max = ", u_b_max
       if (master)  call warn(msg)

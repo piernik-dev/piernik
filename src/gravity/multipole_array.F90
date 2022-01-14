@@ -65,7 +65,7 @@ module multipole_array
       real, dimension(:),     allocatable, private :: rn      !< 0..l_max sized array of positive powers of r
       real, dimension(:),     allocatable, private :: irn     !< 0..l_max sized array of negative powers of r
       real, dimension(:),     allocatable, private :: i_r     !< rqbin sized array of radial bins
-      logical,                             private :: pr_log  !< when .true. then print radial discretisation to the log file
+      logical,                             private :: pr_log  !< when .true. then print radial discretization to the log file
 
    contains
 
@@ -215,7 +215,7 @@ contains
       ! Current implementation does allow for limited radial resolution of multipole distribution
       ! also outside the computational domain.
       !
-      ! The simulation with significant mass outside that radiuss (or even outside the domain) seems to be
+      ! The simulation with significant mass outside that radius (or even outside the domain) seems to be
       ! a bit pathological anyway.
       !
       ! ToDo: on each call integrate mass outside the domain and call warn() or even die()

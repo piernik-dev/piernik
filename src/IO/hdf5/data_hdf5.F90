@@ -99,6 +99,9 @@ contains
          case ("pren", "prei")
             f%fu = "\rm{g}/\rm{cm}/\rm{s}^2"
             f%f2cgs = 1.0 / (gram/cm/sek**2)
+         case ("temn", "temi")
+            f%fu = "\rm{K}"
+            f%f2cgs = 1.0
          case ("magx", "magy", "magz", "magB")
             f%fu = "\rm{Gs}"
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek)
@@ -161,6 +164,8 @@ contains
                newname = "specific_energy"
             case ("pren", "prei")
                newname = "pressure"
+            case ("temn", "temi")
+               newname = "temperature"
             case ("magx", "magy", "magz")
                write(newname, '("mag_field_",A1)') var(4:4)
             case ("divbc", "divbf")
@@ -310,24 +315,27 @@ contains
 !<
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
-      use common_hdf5, only: common_shortcuts
-      use constants,   only: dsetnamelen, I_ONE
-      use fluids_pub,  only: has_ion, has_neu, has_dst
-      use fluidindex,  only: flind
-      use fluidtypes,  only: component_fluid
-      use func,        only: ekin, emag, sq_sum3
-      use grid_cont,   only: grid_container
-      use mpisetup,    only: proc
+      use common_hdf5,      only: common_shortcuts
+      use constants,        only: dsetnamelen, I_ONE
+      use fluids_pub,       only: has_ion, has_neu, has_dst
+      use fluidindex,       only: flind
+      use fluidtypes,       only: component_fluid
+      use func,             only: ekin, emag, sq_sum3
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: proc
 #ifdef MAGNETIC
-      use constants,   only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX, I_EIGHT
-      use div_B,       only: divB_c_IO
-      use domain,      only: dom
-      use global,      only: cc_mag
+      use constants,        only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX, I_EIGHT
+      use div_B,            only: divB_c_IO
+      use domain,           only: dom
+      use global,           only: cc_mag
 #endif /* MAGNETIC */
 #ifdef COSM_RAY_ELECTRONS
       use initcrspectrum,   only: dfpq
       use named_array_list, only: wna
 #endif /* COSM_RAY_ELECTRONS */
+#ifndef ISO
+      use units,            only: kboltz, mH
+#endif /* !ISO */
 
       implicit none
 
@@ -344,7 +352,6 @@ contains
       integer, parameter                          :: auxlen = dsetnamelen - 1
       character(len=auxlen)                       :: aux
 #endif /* COSM_RAYS */
-#define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
 
       call common_shortcuts(var, fl_dni, i_xyz)
       if (.not. associated(fl_dni)) tab = -huge(1.)
@@ -352,12 +359,10 @@ contains
       tab = 0.0
 
 #ifdef MAGNETIC
-      associate(emag_c => merge(emag(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
-           &                         cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
-           &                         cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)), &
-           &                    emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
-           &                         half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
-           &                         half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))), &
+      associate(emag_c => merge(emag(cg%b(xdim, RNG), cg%b(ydim, RNG),  cg%b(zdim, RNG)), &
+           &                    emag(half*(cg%b(xdim, RNG) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
+           &                         half*(cg%b(ydim, RNG) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
+           &                         half*(cg%b(zdim, RNG) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))), &
            &                    cc_mag))  ! fortran way of constructing ternary operators
 #else /* !MAGNETIC */
       associate(emag_c => 0.)
@@ -433,6 +438,18 @@ contains
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) -          &
                  &       emag_c) / cg%u(flind%ion%idn, RNG)
 #endif /* !ISO */
+         case ("temn")
+#ifndef ISO
+            tab(:,:,:) = flind%neu%gam_1 * mH / kboltz * (cg%u(flind%neu%ien, RNG) - &
+                 &       ekin(cg%u(flind%neu%imx, RNG), cg%u(flind%neu%imy, RNG), cg%u(flind%neu%imz, RNG), cg%u(flind%neu%idn, RNG))) /         &
+                 &       cg%u(flind%neu%idn, RNG)
+#endif /* !ISO */
+         case ("temi")
+#ifndef ISO
+            tab(:,:,:) = flind%ion%gam_1 * mH / kboltz * (cg%u(flind%ion%ien, RNG) - &
+                 &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) -          &
+                 &       emag_c) / cg%u(flind%ion%idn, RNG)
+#endif /* !ISO */
 #ifdef MAGNETIC
          case ("magx", "magy", "magz")
             tab(:,:,:) = cg%b(xdim + i_xyz, RNG) ! beware: these are "raw", face-centered. Use them with care when you process plotfiles
@@ -455,7 +472,7 @@ contains
             tab(:,:,:) = divB_c_IO(cg, I_SIX,  .false.)
          case ("divbf8")
             tab(:,:,:) = divB_c_IO(cg, I_EIGHT,.false.)
-!! cell-centered div(B): RIEMANN dith divergence cleaning
+!! cell-centered div(B): RIEMANN with divergence cleaning
          case ("divbc")
             tab(:,:,:) = divB_c_IO(cg, I_TWO,  .true.)
          case ("divbc4")
@@ -465,7 +482,7 @@ contains
          case ("divbc8")
             tab(:,:,:) = divB_c_IO(cg, I_EIGHT,.true.)
 #endif /* MAGNETIC */
-         case ("v") ! perhaps this should be expanded to vi, vd or vd, depending on fluids present
+         case ("v") ! perhaps this should be expanded to vi, vn or vd, depending on fluids present
             nullify(fl_mach)
             if (has_ion) then
                fl_mach => flind%ion
@@ -525,7 +542,6 @@ contains
             ierrh = -1
       end select
       end associate
-#undef RNG
 
    end subroutine datafields_hdf5
 
@@ -817,13 +833,13 @@ contains
                   ip = ip + 1
                   ! It is crashing due to FPE when there are more processes than blocks
                   ! because data_dbl contains too large values for single precision.
-                  ! If a process doesn't have a block, data_dbl serves justa as
-                  ! a placeholder to complete colective HDF5 calls.
+                  ! If a process doesn't have a block, data_dbl serves just as
+                  ! a placeholder to complete collective HDF5 calls.
                   !
                   ! Yes, something stinks here.
                   !
                   ! On uniform grid a process without a cg means that the user made an error and assigned too many processes for too little task.
-                  ! In AMR such situation may occur when in a large sumulation a massive derefinement happens.
+                  ! In AMR such situation may occur when in a large simulation a massive derefinement happens.
                   ! Usually it will mean that there is something wrong with refinement criteria but still the user
                   ! deserves to get the files, not a FPE crash.
                   if (h5_64bit .or. n < 1) then
@@ -902,11 +918,11 @@ contains
       ! Try some default names first
       call datafields_hdf5(hdf_var, tab, ierrh, cg)
 
-      ! Call user routines for user variables or quantites computed in user routines
+      ! Call user routines for user variables or quantities computed in user routines
       if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_var, tab, ierrh, cg)
 
       ! Check if a given name was registered in named arrays. This is lowest-priority identification.
-      if (ierrh /= 0) then  ! All simple scalar named arrays shoud be handled here
+      if (ierrh /= 0) then  ! All simple scalar named arrays should be handled here
          if (qna%exists(hdf_var)) then
             tab(:,:,:) = real(cg%q(qna%ind(hdf_var))%span(cg%ijkse), kind(tab))
             ierrh = 0

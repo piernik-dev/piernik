@@ -73,7 +73,7 @@ module cresp_crspectrum
 ! power-law
    real,    dimension(LO:HI)       :: p_cut_next, p_cut
    integer(kind=4), dimension(LO:HI) :: i_cut, i_cut_next
-   real, allocatable, dimension(:) :: p                                   !> momentum table for piecewise power-law spectru intervals
+   real, allocatable, dimension(:) :: p                                   !> momentum table for piecewise power-law spectrum intervals
    real, allocatable, dimension(:) :: f                                   !> distribution function for piecewise power-law spectrum
    real, allocatable, dimension(:) :: p_next, p_upw , nflux, eflux        !> predicted and upwind momenta, number density / energy density fluxes
    real                            :: n_tot, n_tot0, e_tot, e_tot0        !> precision control for energy / number density transport and dissipation of energy
@@ -110,7 +110,7 @@ contains
 #endif /* CRESP_VERBOSED */
       use diagnostics,    only: decr_vec
       use initcosmicrays, only: ncre
-      use initcrspectrum, only: spec_mod_trms, e_small_approx_p, dfpq, crel, p_mid_fix, nullify_empty_bins, p_fix
+      use initcrspectrum, only: allow_unnatural_transfer, crel, dfpq, e_small_approx_p, nullify_empty_bins, p_mid_fix, p_fix, spec_mod_trms
 
       implicit none
 
@@ -119,8 +119,9 @@ contains
       type(spec_mod_trms),            intent(in)    :: sptab
       logical,                        intent(inout) :: cfl_cresp_violation
       real, dimension(1:2), optional, intent(inout) :: p_out
+      integer(kind=4), optional,      intent(in)    :: substeps
+
       logical                                       :: solve_fail_lo, solve_fail_up, empty_cell
-      integer, optional                             :: substeps
       integer                                       :: i_sub, n_substep
 
       e = zero; n = zero; edt = zero; ndt = zero
@@ -187,7 +188,7 @@ contains
 
          if (solve_fail_up) then                               !< exit_code support
             if (i_cut(HI) < ncre) then
-               call manually_deactivate_bin_via_transfer(i_cut(HI), -I_ONE, n, e)
+               if (allow_unnatural_transfer) call manually_deactivate_bin_via_transfer(i_cut(HI), -I_ONE, n, e)
                call decr_vec(active_bins, num_active_bins)
                call decr_vec(active_edges, num_active_edges)
                is_active_bin(i_cut(HI))  = .false.
@@ -213,7 +214,7 @@ contains
 
          if (solve_fail_lo) then                               !< exit_code support
             if (i_cut(LO) > 0) then
-               call manually_deactivate_bin_via_transfer(i_cut(LO) + I_ONE, I_ONE, n, e)
+               if (allow_unnatural_transfer)  call manually_deactivate_bin_via_transfer(i_cut(LO) + I_ONE, I_ONE, n, e)
                call decr_vec(active_bins, 1)
                call decr_vec(active_edges, 1)
                is_active_bin(i_cut(LO)+1) = .false.
@@ -262,14 +263,16 @@ contains
 
          edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
 
-         if ((del_i(HI) == 0) .and. (approx_p(HI) > 0) .and. (i_cut_next(HI)-1 > 0)) then
-            if (.not. assert_active_bin_via_nei(ndt(i_cut_next(HI)), edt(i_cut_next(HI)), i_cut_next(HI))) then
-               call manually_deactivate_bin_via_transfer(i_cut_next(HI), -I_ONE, ndt, edt)
+         if (allow_unnatural_transfer) then
+            if ((del_i(HI) == 0) .and. (approx_p(HI) > 0) .and. (i_cut_next(HI)-1 > 0)) then
+               if (.not. assert_active_bin_via_nei(ndt(i_cut_next(HI)), edt(i_cut_next(HI)), i_cut_next(HI))) then
+                  call manually_deactivate_bin_via_transfer(i_cut_next(HI), -I_ONE, ndt, edt)
+               endif
             endif
-         endif
-         if ((del_i(LO) == 0) .and. (approx_p(LO) > 0) .and. (i_cut_next(LO)+2 <= ncre)) then
-            if (.not. assert_active_bin_via_nei(ndt(i_cut_next(LO)+1), edt(i_cut_next(LO)+1), i_cut_next(LO))) then
-               call manually_deactivate_bin_via_transfer(i_cut_next(LO) + I_ONE, I_ONE, ndt, edt)
+            if ((del_i(LO) == 0) .and. (approx_p(LO) > 0) .and. (i_cut_next(LO)+2 <= ncre)) then
+               if (.not. assert_active_bin_via_nei(ndt(i_cut_next(LO)+1), edt(i_cut_next(LO)+1), i_cut_next(LO))) then
+                  call manually_deactivate_bin_via_transfer(i_cut_next(LO) + I_ONE, I_ONE, ndt, edt)
+               endif
             endif
          endif
 
@@ -648,7 +651,7 @@ contains
          active_bins = I_ZERO
          active_bins = pack(cresp_all_bins, is_active_bin)
 
-! Construct index arrays for fixed edges betwen p_cut(LO) and p_cut(HI), active edges
+! Construct index arrays for fixed edges between p_cut(LO) and p_cut(HI), active edges
 ! before timestep
 
          call arrange_assoc_active_edge_arrays(fixed_edges,  is_fixed_edge,  num_fixed_edges,  i_cut+pm)
@@ -825,7 +828,7 @@ contains
 ! Detect changes in positions of lower an upper cut-ofs
       del_i = i_cut_next - i_cut
 
-! Construct index arrays for fixed edges betwen p_cut(LO) and p_cut(HI), active edges after timestep
+! Construct index arrays for fixed edges between p_cut(LO) and p_cut(HI), active edges after timestep
       call arrange_assoc_active_edge_arrays(fixed_edges_next,  is_fixed_edge_next,  num_fixed_edges_next,  [i_cut_next(LO) + I_ONE, i_cut_next(HI) - I_ONE])
       call arrange_assoc_active_edge_arrays(active_edges_next, is_active_edge_next, num_active_edges_next, [i_cut_next(LO),         i_cut_next(HI)])
 
@@ -1547,7 +1550,7 @@ contains
 
 ! filling empty empty bin - switch of upper boundary, condition is checked only once per flux computation and is very rarely satisfied.
       if (nflux(i_cut(HI)) > zero) then             ! If flux is greater than zero it will go through right edge, activating next bin in the next timestep.
-         if (cresp_all_bins(i_cut(HI)+1) == i_cut(HI)+1) then  ! But it shuld only happen if there is bin with index i_up+1
+         if (cresp_all_bins(i_cut(HI)+1) == i_cut(HI)+1) then  ! But it should only happen if there is bin with index i_up+1
             ndt(i_cut(HI)+1) = nflux(i_cut(HI))
             edt(i_cut(HI)+1) = eflux(i_cut(HI))
             del_i(HI) = +1
@@ -1605,7 +1608,7 @@ contains
 
       r = zero
 
-      ! Found here an FPE occuring in mcrwind/mcrwind_cresp
+      ! Found here an FPE occurring in mcrwind/mcrwind_cresp
       ! bins = [ 11, 12, 13, 14, 15 ]
       ! q = [ 0, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, 4.922038984459582, -30 ]
       ! five-q(bins) = 35, that seems to be a bit high power to apply carelessly
@@ -1662,7 +1665,7 @@ contains
             ! n(i) of order 1e-100 does happen sometimes, but extreme values like 4.2346894890376292e-312 tend to create FPE in the line below
             ! these could be uninitialized values
             alpha_in = e(i)/(n(i)*p(i-1)*clight_cresp)
-            if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boudary case, when momenta are not approximated
+            if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boundary case, when momenta are not approximated
                q(i) = compute_q(alpha_in, exit_code, p(i)/p(i-1))
             else
                q(i) = compute_q(alpha_in, exit_code)
@@ -1780,7 +1783,7 @@ contains
 
    end subroutine src_gpcresp
 !---------------------------------------------------------------------------------------------------
-! Preparation and computatuon of boundary momenta and and boundary
+! Preparation and computation of boundary momenta and and boundary
 ! distribution function amplitudes value on left bin edge, computing q for indicated cutoff bin (returns f, p, q)
 !---------------------------------------------------------------------------------------------------
    subroutine get_fqp_cutoff(cutoff, exit_code)

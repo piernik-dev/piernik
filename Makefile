@@ -91,7 +91,7 @@ pep8: pycodestyle
 
 pycodestyle:
 	echo 'Pycodestyle check (--ignore=E501,E722,W504,W605)'
-	pycodestyle `find src problems bin python visual -name "*py"` bin/gdf_distance --ignore=E501,E722,W504,W605
+	pycodestyle `find src problems bin python visual -name "*py"` bin/gdf_distance bin/ask_jenkins --ignore=E501,E722,W504,W605
 
 chk_err_msg:
 	echo Check filenames in error messages

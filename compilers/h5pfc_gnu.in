@@ -1,5 +1,5 @@
 # This is currently the default compiler configuration.
-# It requires HDF5 package to be installed with full support for parralel Fortran 90.
+# It requires HDF5 package to be installed with full support for parallel Fortran 90.
 # This file should work for at least Fedora and Ubuntu installations if one
 # followed the instructions in the INSTALL file.
 

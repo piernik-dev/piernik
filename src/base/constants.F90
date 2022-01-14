@@ -39,7 +39,7 @@ module constants
    public                                                ! QA_WARN no secrets are kept here
 
    ! precision
-   integer, parameter :: FP_REAL   = selected_real_kind(5)   ! this should be 32-bit single presicion
+   integer, parameter :: FP_REAL   = selected_real_kind(5)   ! this should be 32-bit single precision
    integer, parameter :: FP_DOUBLE = selected_real_kind(12)  ! this should be 64-bit double precision
    integer, parameter :: FP_EXT    = selected_real_kind(17)  ! this should be 80-bit extended precision
    integer, parameter :: FP_QUAD   = selected_real_kind(30)  ! this should be 128-bit quad precision (don't expect hardware support in CPU)
@@ -80,7 +80,7 @@ module constants
 
    ! enumerator for length/mass/time/velocity/magnetic field units
    enum, bind(C)
-      enumerator :: U_LEN = 1, U_MASS, U_TIME, U_VEL, U_MAG, U_ENER
+      enumerator :: U_LEN = 1, U_MASS, U_TIME, U_VEL, U_MAG, U_TEMP, U_ENER
    end enum
 
    ! irrational number approximations
@@ -110,8 +110,8 @@ module constants
    !<
    enum, bind(C)
       enumerator :: NORMAL = 1    ! Normal direction
-      enumerator :: ORTHO1        ! First othogonal to the NORMAL (x -> y -> z -> x cycle)
-      enumerator :: ORTHO2        ! Second othogonal to the NORMAL
+      enumerator :: ORTHO1        ! First orthogonal to the NORMAL (x -> y -> z -> x cycle)
+      enumerator :: ORTHO2        ! Second orthogonal to the NORMAL
    end enum
    integer(kind=4), dimension(xdim:zdim, NORMAL:ORTHO2) :: pdims = &
       reshape([xdim, ydim, zdim, ydim, zdim, xdim, zdim, xdim, ydim], [ndims, ndims])

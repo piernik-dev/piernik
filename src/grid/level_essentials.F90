@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 
-!> \brief Module containing most basic properties ofgrid levels. Created to avoid circular dependencies between grid_container and cg_level_t
+!> \brief Module containing most basic properties of grid levels. Created to avoid circular dependencies between grid_container and cg_level_t
 
 module level_essentials
 

@@ -44,7 +44,7 @@ module particle_utils
    real    :: tot_angmom           !< angular momentum of set of the particles
    real    :: tot_energy           !< total energy of set of the particles
    real    :: d_energy             !< error of energy of set of the particles in succeeding timesteps
-   real    :: d_angmom             !< error of angular momentum in succeeding timensteps
+   real    :: d_angmom             !< error of angular momentum in succeeding timesteps
    logical :: twodtscheme
    logical :: dump_diagnose        !< dump diagnose for each particle to a seperate log file
    integer(kind=4), parameter :: npf = 14  !< number of single particle fields

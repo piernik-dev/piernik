@@ -55,7 +55,7 @@ module unified_ref_crit
 
    type, abstract :: urc
       integer             :: iplot = INVALID  !< field index for storing the refinement criterion value
-      class(urc), pointer :: next  => null()  !< next refinement ctiterion or null() (for unidirectional list)
+      class(urc), pointer :: next  => null()  !< next refinement criterion or null() (for unidirectional list)
    contains
       procedure(mark_urc), deferred :: mark   !< a routine that takes a cg and leaves suggestions on refining
    end type urc

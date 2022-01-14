@@ -338,8 +338,8 @@ contains
             cg%hgpot = cg%gpot
             cg%gpot  = cg%sgp
 
-            Cint = [ min(Cint(LOW),  minval(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap)), &
-                 &   max(Cint(HIGH), maxval(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap)) ] ! rotation will modify this
+            Cint = [ min(Cint(LOW),  minval(cg%sgp(RNG), mask=cg%leafmap)), &
+                 &   max(Cint(HIGH), maxval(cg%sgp(RNG), mask=cg%leafmap)) ] ! rotation will modify this
             end associate
             cgl => cgl%nxt
          enddo
@@ -503,7 +503,7 @@ contains
             enddo
          enddo
 
-         dmax = max(dmax, maxval(cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         dmax = max(dmax, maxval(cg%u(fl%idn, RNG), mask=cg%leafmap))
 
          end associate
          cgl => cgl%nxt
@@ -607,9 +607,9 @@ contains
       if (vc > tol .and. grav_bnd == bnd_isolated) then
          if (master) then
             if (3*abs(TWP(3)) < abs(TWP(2))) then
-               call warn("[initproblem:virialCheck] Virial imbalance occured because the clump is not resolved.")
+               call warn("[initproblem:virialCheck] Virial imbalance occurred because the clump is not resolved.")
             else
-               call warn("[initproblem:virialCheck] Virial imbalance occured because the clump overfills the domain.")
+               call warn("[initproblem:virialCheck] Virial imbalance occurred because the clump overfills the domain.")
             endif
          endif
          if (crashNotConv) call die("[initproblem:virialCheck] Virial defect too high.")
