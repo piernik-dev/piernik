@@ -443,7 +443,6 @@ contains
                   enddo
 
                case ('EIS')
-                  print *, 'EIS'
                   do i = 1, n(xdim)
                      do j = 1, n(ydim)
                         do k = 1, n(zdim)
