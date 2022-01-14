@@ -335,7 +335,7 @@ contains
       enddo
 #ifdef COSM_RAY_ELECTRONS
       write(msg,*) '[initproblem:problem_initial_conditions]: Taylor_exp._ord. (cresp)    = ', expan_order
-      call printinfo(msg)
+      if (master) call printinfo(msg)
 #endif /* COSM_RAY_ELECTRONS */
 
    end subroutine problem_initial_conditions
