@@ -419,7 +419,7 @@ contains
 ! Input parameters check
       if (use_cresp .and. ncre <= I_ZERO)  then
          write (msg,"(A,I4,A)") '[initcrspectrum:init_cresp] ncre   = ', ncre, '; cr-electrons NOT initnialized. Switching CRESP module off.'
-         call warn(msg)
+         if (master) call warn(msg)
          use_cresp      = .false.
          use_cresp_evol = .false.
          ncre           = 0
