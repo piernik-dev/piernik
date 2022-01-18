@@ -136,7 +136,7 @@ module domain
    ! testing and debugging
    integer(kind=8), dimension(ndims) :: offset            !< offset of the base level
 
-   namelist /BASE_DOMAIN/ n_d, nb, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, xmin, xmax, ymin, ymax, zmin, zmax, geometry, offset
+   namelist /BASE_DOMAIN/ n_d, nb, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, xmin, xmax, ymin, ymax, zmin, zmax, geometry, offset, vel_outd
 
 contains
 

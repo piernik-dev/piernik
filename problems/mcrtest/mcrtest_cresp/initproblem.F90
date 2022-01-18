@@ -178,7 +178,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff
+      use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff, use_cresp
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -288,7 +288,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS
 ! Explosions @CRESP independent of cr nucleons
                   e_tot = amp_cr1 * cre_eff * decr
-                  if (e_tot > smallcree) then
+                  if (e_tot > smallcree .and. use_cresp) then
                      cresp%n = 0.0 ;  cresp%e = 0.0
                      call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot)
                      cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
@@ -335,7 +335,7 @@ contains
       enddo
 #ifdef COSM_RAY_ELECTRONS
       write(msg,*) '[initproblem:problem_initial_conditions]: Taylor_exp._ord. (cresp)    = ', expan_order
-      call printinfo(msg)
+      if (master) call printinfo(msg)
 #endif /* COSM_RAY_ELECTRONS */
 
    end subroutine problem_initial_conditions
