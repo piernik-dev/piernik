@@ -113,7 +113,7 @@ contains
       use dataio_pub,         only: tend, msg, warn
       use fargo,              only: timestep_fargo
       use fluidtypes,         only: var_numbers
-      use global,             only: t, dt_old, dt_full, dt_max_grow, dt_initial, dt_min, dt_max, nstep, repeat_step, repetitive_steps
+      use global,             only: t, dt_old, dt_full, dt_max_grow, dt_initial, dt_min, dt_max, nstep, repetitive_steps
       use grid_cont,          only: grid_container
       use mpisetup,           only: master, piernik_MPI_Allreduce
       use ppp,                only: ppp_main
@@ -144,8 +144,6 @@ contains
       real                             :: c_, dt_
       integer                          :: ifl
       character(len=*), parameter :: ts_label = "timestep"
-
-      if (main_call .and. repeat_step) return
 
       call ppp_main%start(ts_label)
 
@@ -200,7 +198,7 @@ contains
       endif
 
       if (associated(cfl_manager) .and. (main_call .neqv. repetitive_steps)) call cfl_manager
-      if (main_call .and. .not. repeat_step) c_all_old = c_all
+      if (main_call) c_all_old = c_all
 
       if (dt < dt_min) then ! something nasty had happened
          if (master) then
@@ -220,7 +218,7 @@ contains
       endif
 #endif /* DEBUG */
       call compare_array1D([dt])  ! just in case
-      if (main_call .and. .not. repeat_step) dt_full = dt
+      if (main_call) dt_full = dt
 
       call ppp_main%stop(ts_label)
 

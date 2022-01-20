@@ -135,7 +135,7 @@ program piernik
       call all_cg%check_na
       !call all_cg%check_for_dirt
 
-      call time_step(dt, flind, .true.)
+      if (.not. repeat_step) call time_step(dt, flind, .true.)
       call grace_period
 
       if (.not. repeat_step) then
