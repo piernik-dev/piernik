@@ -88,7 +88,7 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: pSUM, I_ZERO, I_ONE, dsetnamelen, AT_IGNORE, INVALID
       use dataio_pub,       only: warn, msg, die
-      use global,           only: dt, dtm, t, t_saved, max_redostep_attempts, nstep, nstep_saved, dt_shrink, repeat_step, repetitive_steps, tstep_attempt
+      use global,           only: dt, dt_full, t, t_saved, max_redostep_attempts, nstep, nstep_saved, dt_cur_shrink, repeat_step, repetitive_steps, tstep_attempt
       use mass_defect,      only: downgrade_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna, wna, na_var_list_q, na_var_list_w
@@ -120,7 +120,7 @@ contains
          if (master) call warn(msg)
          t = t_saved
          nstep = nstep_saved
-         dt = dtm * dt_shrink
+         dt = dt_full * dt_cur_shrink
          call reset_freezing_speed
          call downgrade_magic_mass
          if (associated(user_reaction_to_redo_step)) call user_reaction_to_redo_step

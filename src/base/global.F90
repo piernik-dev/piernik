@@ -41,8 +41,8 @@ module global
    private
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, disallow_negatives, disallow_CRnegatives, unwanted_negatives, dn_negative, ei_negative, cr_negative, tstep_attempt, &
-        &    dt, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, max_redostep_attempts, repetitive_steps, &
-        &    repeat_step, integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
+        &    dt, dt_initial, dt_max_grow, dt_shrink, dt_cur_shrink, dt_min, dt_max, dt_old, dt_full, dtm, t, t_saved, nstep, nstep_saved, max_redostep_attempts, &
+        &    repeat_step, repetitive_steps, integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, do_external_corners, prefer_merged_MPI, &
         &    divB_0_method, cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fluid_prolong, which_solver
@@ -59,6 +59,8 @@ module global
    logical         :: no_dirty_checks          !< Temporarily disable dirty checks
    integer(kind=4) :: nstep, nstep_saved
    real            :: t, dt, dt_old, dtm, t_saved
+   real            :: dt_full                  !< timestep value which is a subject of shrinking while repeating step
+   real            :: dt_cur_shrink            !< currently used dt and CFL number shrinking (used while redoing step)
    integer         :: divB_0_method            !< encoded method of making div(B) = 0 (currently DIVB_CT or DIVB_HDC)
    logical         :: cc_mag                   !< use cell-centered magnetic field
    integer(kind=4) :: psi_bnd                  !< BND_INVALID or enforce some other psi boundary
@@ -175,7 +177,7 @@ contains
 !<
    subroutine init_global
 
-      use constants,  only: big_float, PIERNIK_INIT_DOMAIN, INVALID, DIVB_CT, DIVB_HDC, &
+      use constants,  only: big_float, one, PIERNIK_INIT_DOMAIN, INVALID, DIVB_CT, DIVB_HDC, &
            &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO, O_INJ, O_LIN, O_I2, INVALID, &
            &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, GEO_XYZ
       use dataio_pub, only: die, msg, warn, code_progress, printinfo, nh
@@ -536,6 +538,7 @@ contains
       if (master .and. ord_fluid_prolong /= O_INJ) call warn("[global:init_global] Linear prolongation of fluid in AMR is experimental.")
 
       tstep_attempt = I_ZERO
+      dt_cur_shrink = one
 
    end subroutine init_global
 

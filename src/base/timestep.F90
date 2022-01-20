@@ -113,7 +113,7 @@ contains
       use dataio_pub,         only: tend, msg, warn
       use fargo,              only: timestep_fargo
       use fluidtypes,         only: var_numbers
-      use global,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, repeat_step, repetitive_steps
+      use global,             only: t, dt_old, dt_full, dt_max_grow, dt_initial, dt_min, dt_max, nstep, repeat_step, repetitive_steps
       use grid_cont,          only: grid_container
       use mpisetup,           only: master, piernik_MPI_Allreduce
       use ppp,                only: ppp_main
@@ -144,6 +144,8 @@ contains
       real                             :: c_, dt_
       integer                          :: ifl
       character(len=*), parameter :: ts_label = "timestep"
+
+      if (main_call .and. repeat_step) return
 
       call ppp_main%start(ts_label)
 
@@ -218,6 +220,7 @@ contains
       endif
 #endif /* DEBUG */
       call compare_array1D([dt])  ! just in case
+      if (main_call .and. .not. repeat_step) dt_full = dt
 
       call ppp_main%stop(ts_label)
 
@@ -297,15 +300,16 @@ contains
 
    subroutine cfl_warn
 
+      use constants,    only: I_ONE, one
       use dataio_pub,   only: msg, warn
-      use global,       only: cfl, cfl_max, dt_shrink, repeat_step, repetitive_steps, tstep_attempt, unwanted_negatives
+      use global,       only: cfl, cfl_max, dt_cur_shrink, dt_shrink, repeat_step, repetitive_steps, tstep_attempt, unwanted_negatives
       use mpisetup,     only: piernik_MPI_Bcast, master
       use timestep_pub, only: c_all, c_all_old, stepcfl
 
       implicit none
 
-      stepcfl = cfl * dt_shrink**tstep_attempt
-      if (c_all_old > 0.) stepcfl = c_all / c_all_old * cfl * dt_shrink**tstep_attempt
+      stepcfl = cfl * dt_cur_shrink
+      if (c_all_old > 0.) stepcfl = c_all / c_all_old * cfl * dt_cur_shrink
 
       if (master) then
          msg = ''
@@ -319,7 +323,14 @@ contains
          if (len_trim(msg) > 0) call warn(msg)
       endif
 
-      if (repetitive_steps) call piernik_MPI_Bcast(repeat_step)
+      if (repetitive_steps) then
+         call piernik_MPI_Bcast(repeat_step)
+         if (repeat_step) then
+            dt_cur_shrink = dt_shrink**(tstep_attempt + I_ONE)
+         else
+            dt_cur_shrink = one
+         endif
+      endif
 
    end subroutine cfl_warn
 
