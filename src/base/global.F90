@@ -405,10 +405,6 @@ contains
 
       endif
 
-#ifdef NBODY
-      if (master .and. any(cflcontrol == ['redo', 'repeat', 'flex', 'flexible'])) call warn("[global:init_global] step repeating (clfcontrol == 'redo' or 'flex') unsupported by NBODY (particles aren't implemented yet).")
-#endif /* NBODY */
-
       select case (solver_str)
          case ("")  ! leave the default
          case ("rtvd", "RTVD")
