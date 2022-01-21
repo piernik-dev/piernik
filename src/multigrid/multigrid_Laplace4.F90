@@ -178,7 +178,7 @@ contains
 !! \warning For optimal convergence this Laplace operator requires specific relaxation scheme.
 !!
 !! \details Call relaxation for the residual2 operator while specific relaxation scheme is not implemented and expect severely limited convergence.
-!! It is not planned to be implemented anytime soon because 4th order Mehrstellen operator is much better.
+!! It is not planned to be implemented any time soon because 4th order Mehrstellen operator is much better.
 !<
 
    subroutine approximate_solution_relax4(curl, src, soln, nsmoo)

@@ -348,7 +348,6 @@ contains
       integer, parameter                          :: auxlen = dsetnamelen - 1
       character(len=auxlen)                       :: aux
 #endif /* COSM_RAYS */
-#define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
 
       call common_shortcuts(var, fl_dni, i_xyz)
       if (.not. associated(fl_dni)) tab = -huge(1.)
@@ -356,12 +355,10 @@ contains
       tab = 0.0
 
 #ifdef MAGNETIC
-      associate(emag_c => merge(emag(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
-           &                         cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
-           &                         cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)), &
-           &                    emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
-           &                         half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
-           &                         half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))), &
+      associate(emag_c => merge(emag(cg%b(xdim, RNG), cg%b(ydim, RNG),  cg%b(zdim, RNG)), &
+           &                    emag(half*(cg%b(xdim, RNG) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
+           &                         half*(cg%b(ydim, RNG) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
+           &                         half*(cg%b(zdim, RNG) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))), &
            &                    cc_mag))  ! fortran way of constructing ternary operators
 #else /* !MAGNETIC */
       associate(emag_c => 0.)
@@ -471,7 +468,7 @@ contains
             tab(:,:,:) = divB_c_IO(cg, I_SIX,  .false.)
          case ("divbf8")
             tab(:,:,:) = divB_c_IO(cg, I_EIGHT,.false.)
-!! cell-centered div(B): RIEMANN dith divergence cleaning
+!! cell-centered div(B): RIEMANN with divergence cleaning
          case ("divbc")
             tab(:,:,:) = divB_c_IO(cg, I_TWO,  .true.)
          case ("divbc4")
@@ -481,7 +478,7 @@ contains
          case ("divbc8")
             tab(:,:,:) = divB_c_IO(cg, I_EIGHT,.true.)
 #endif /* MAGNETIC */
-         case ("v") ! perhaps this should be expanded to vi, vd or vd, depending on fluids present
+         case ("v") ! perhaps this should be expanded to vi, vn or vd, depending on fluids present
             nullify(fl_mach)
             if (has_ion) then
                fl_mach => flind%ion
@@ -541,7 +538,6 @@ contains
             ierrh = -1
       end select
       end associate
-#undef RNG
 
    end subroutine datafields_hdf5
 
@@ -833,13 +829,13 @@ contains
                   ip = ip + 1
                   ! It is crashing due to FPE when there are more processes than blocks
                   ! because data_dbl contains too large values for single precision.
-                  ! If a process doesn't have a block, data_dbl serves justa as
-                  ! a placeholder to complete colective HDF5 calls.
+                  ! If a process doesn't have a block, data_dbl serves just as
+                  ! a placeholder to complete collective HDF5 calls.
                   !
                   ! Yes, something stinks here.
                   !
                   ! On uniform grid a process without a cg means that the user made an error and assigned too many processes for too little task.
-                  ! In AMR such situation may occur when in a large sumulation a massive derefinement happens.
+                  ! In AMR such situation may occur when in a large simulation a massive derefinement happens.
                   ! Usually it will mean that there is something wrong with refinement criteria but still the user
                   ! deserves to get the files, not a FPE crash.
                   if (h5_64bit .or. n < 1) then
@@ -918,11 +914,11 @@ contains
       ! Try some default names first
       call datafields_hdf5(hdf_var, tab, ierrh, cg)
 
-      ! Call user routines for user variables or quantites computed in user routines
+      ! Call user routines for user variables or quantities computed in user routines
       if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_var, tab, ierrh, cg)
 
       ! Check if a given name was registered in named arrays. This is lowest-priority identification.
-      if (ierrh /= 0) then  ! All simple scalar named arrays shoud be handled here
+      if (ierrh /= 0) then  ! All simple scalar named arrays should be handled here
          if (qna%exists(hdf_var)) then
             tab(:,:,:) = real(cg%q(qna%ind(hdf_var))%span(cg%ijkse), kind(tab))
             ierrh = 0

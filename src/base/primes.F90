@@ -40,7 +40,7 @@ module primes_utils
       integer(kind=4), allocatable, dimension(:) :: tab !< table of prime numbers
       integer, private :: max                           !< max number to which the search was performed
    contains
-      procedure :: sieve                                !< routine used to initialize (and extendif necessary) the table of prime numbers
+      procedure :: sieve                                !< routine used to initialize (and extend if necessary) the table of prime numbers
       procedure :: erase                                !< restore initial state
       procedure, private :: print                       !< print what was found
    end type primes_t

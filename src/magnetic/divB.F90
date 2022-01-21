@@ -267,10 +267,9 @@ contains
       integer(kind=4),               intent(in) :: ord
       logical,                       intent(in) :: cell_centered
 
-      real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: divB_c_IO
-
-      integer(kind=4) :: o, i
-      real, dimension(max_c) :: coeff
+      real, dimension(RNG)                      :: divB_c_IO
+      integer(kind=4)                           :: o, i
+      real, dimension(max_c)                    :: coeff
 
       o = ord/I_TWO  ! BEWARE: tricky, assumed stencils on uniform grid
       if (o < I_ONE .or. o > max_c .or. I_TWO*o /= ord) call die("[divB:divB_c] cannot find coefficient") ! no odd order allowed here just in case
@@ -289,7 +288,7 @@ contains
    end function divB_c_IO
 
 !>
-!! \brief Return estimate of derivative taken at given span (in cells) nad multiplied by given coefficient for a given grid container.
+!! \brief Return estimate of derivative taken at given span (in cells) and multiplied by given coefficient for a given grid container.
 !! This is a basic piece useful to construct various order derivatives and takes the advantage of stencil symmetry on an uniform grid.
 !!
 !! OPT: this may not be the best approach performance-wise but it is compact and we don't expect to evaluate it foo often.
@@ -310,8 +309,8 @@ contains
       integer(kind=4),               intent(in) :: span
       logical,                       intent(in) :: cell_centered
 
-      real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: sixpoint
-      integer :: spm1
+      real, dimension(RNG)                      :: sixpoint
+      integer                                   :: spm1
 
       if ((coeff .equals. 0.) .or. span <=0 .or. span > dom%nb) call die("[divB:sixpoint] coeff == 0. or unacceptable span")
 

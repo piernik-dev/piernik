@@ -178,7 +178,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff
+      use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff, use_cresp
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -238,9 +238,9 @@ contains
                enddo
             enddo
          else
-            cg%u(flind%ion%imx,:,:,:) = vxd0 * cg%u(flind%ion%idn,:,:,:)
-            cg%u(flind%ion%imy,:,:,:) = vyd0 * cg%u(flind%ion%idn,:,:,:)
-            cg%u(flind%ion%imz,:,:,:) = vzd0 * cg%u(flind%ion%idn,:,:,:)
+            cg%u(flind%ion%imx, RNG) = vxd0 * cg%u(flind%ion%idn, RNG)
+            cg%u(flind%ion%imy, RNG) = vyd0 * cg%u(flind%ion%idn, RNG)
+            cg%u(flind%ion%imz, RNG) = vzd0 * cg%u(flind%ion%idn, RNG)
          endif
 #endif /* IONIZED */
 
@@ -256,13 +256,13 @@ contains
          enddo
 #endif /* !ISO */
 
-         cg%u(iarr_crs,:,:,:) = 0.0
+         cg%u(iarr_crs, RNG) = 0.0
 #ifdef COSM_RAYS_SOURCES
-         if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(cr_table(icr_H1 ))-1.0)
-         if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(cr_table(icr_C12))-1.0)
+         if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(cr_table(icr_H1 ))-1.0)
+         if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(cr_table(icr_C12))-1.0)
 #else /* !COSM_RAYS_SOURCES */
-         cg%u(iarr_crn(1),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(1)-1.0)
-         cg%u(iarr_crn(2),:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crn(2)-1.0)
+         cg%u(iarr_crn(1), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(1)-1.0)
+         cg%u(iarr_crn(2), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(2)-1.0)
 #endif /* !COSM_RAYS_SOURCES */
 
 ! Explosions
@@ -288,7 +288,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS
 ! Explosions @CRESP independent of cr nucleons
                   e_tot = amp_cr1 * cre_eff * decr
-                  if (e_tot > smallcree) then
+                  if (e_tot > smallcree .and. use_cresp) then
                      cresp%n = 0.0 ;  cresp%e = 0.0
                      call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot)
                      cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
@@ -309,9 +309,9 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             call cgl%cg%costs%start
-
-            maxv = max(maxv, maxval(cgl%cg%u(iarr_crs(icr),:,:,:)))
-
+            associate (cg => cgl%cg)
+               maxv = max(maxv, maxval(cg%u(iarr_crs(icr), RNG)))
+            end associate
             call cgl%cg%costs%stop(I_IC)
             cgl => cgl%nxt
          enddo
@@ -335,7 +335,7 @@ contains
       enddo
 #ifdef COSM_RAY_ELECTRONS
       write(msg,*) '[initproblem:problem_initial_conditions]: Taylor_exp._ord. (cresp)    = ', expan_order
-      call printinfo(msg)
+      if (master) call printinfo(msg)
 #endif /* COSM_RAY_ELECTRONS */
 
    end subroutine problem_initial_conditions

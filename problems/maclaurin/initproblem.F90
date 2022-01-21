@@ -317,12 +317,12 @@ contains
                enddo
             enddo
          else
-            cg%u(iarr_all_dn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+            cg%u(iarr_all_dn, RNG) = 0.0
          endif
 
-         cg%u(iarr_all_mx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
-         cg%u(iarr_all_my, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
-         cg%u(iarr_all_mz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+         cg%u(iarr_all_mx, RNG) = 0.0
+         cg%u(iarr_all_my, RNG) = 0.0
+         cg%u(iarr_all_mz, RNG) = 0.0
 
 #ifdef MAGNETIC
          call cg%set_constant_b_field([0., 0., 0.])
@@ -337,12 +337,12 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
          if (dirty_debug .and. .not. no_dirty_checks) then
-            cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(apot_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            cg%wa(RNG) = cg%q(qna%ind(apot_n))%arr(RNG)
             cg%q(qna%ind(apot_n))%arr = huge(1.)
-            cg%q(qna%ind(apot_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            cg%q(qna%ind(apot_n))%arr(RNG) = cg%wa(RNG)
             cg%q(qna%ind(asrc_n))%arr = huge(1.)
          endif
-         cg%q(qna%ind(asrc_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(iarr_all_dn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
+         cg%q(qna%ind(asrc_n))%arr(RNG) = fpiG * sum(cg%u(iarr_all_dn, RNG), dim=1)
          cgl => cgl%nxt
       enddo
 
@@ -667,10 +667,10 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("errp")
-            tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(RNG)
          case ("relerr")
             where (cg%q(qna%ind(apot_n))%span(cg%ijkse) .notequals. 0.)
-               tab(:,:,:) = cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1.
+               tab(:,:,:) = cg%sgp(RNG)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1.
             elsewhere
                tab(:,:,:) = 0.
             endwhere

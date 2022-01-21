@@ -338,7 +338,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
+         if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per processor not implemented yet") !nontrivial kmid, allocate
 
          sqr_gm = sqrt(newtong*ptmass)
          do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
@@ -558,7 +558,7 @@ contains
       type(cg_list_element), pointer          :: cgl
       type(grid_container),  pointer          :: cg
 
-      if (is_multicg) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per procesor not implemented yet") !nontrivial
+      if (is_multicg) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per processor not implemented yet") !nontrivial
 
       max_vx = -HUGE(1.0)
       cgl => leaves%first

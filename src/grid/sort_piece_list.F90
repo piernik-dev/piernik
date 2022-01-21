@@ -61,7 +61,7 @@ module sort_piece_list
       procedure :: l_bound          !< Get lower bound of the list
       procedure :: u_bound          !< Get upper bound of the list
       procedure :: assign_element   !< Make an assignment
-      procedure :: compare_elements !< Make a comparision
+      procedure :: compare_elements !< Make a comparison
 
       ! own routines
       procedure :: init                    !< Allocate the list
@@ -232,7 +232,7 @@ contains
          return
       endif
 
-      if (b == temp_index) then ! this is the only case occuring in sortable_list::sort
+      if (b == temp_index) then ! this is the only case occurring in sortable_list::sort
          compare_elements = this%list(a)%id > this%temp%id
       else if (a == temp_index) then
          compare_elements = this%temp%id > this%list(b)%id

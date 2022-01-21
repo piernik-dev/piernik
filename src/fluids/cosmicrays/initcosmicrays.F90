@@ -51,7 +51,7 @@ module initcosmicrays
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
    real                                :: cr_eff       !< conversion rate of SN explosion energy to CR energy (default = 0.1)
-   logical                             :: use_CRsplit  !< apply all diffusion operators at once (.false.) or use directional splittiong (.true.)
+   logical                             :: use_CRsplit  !< apply all diffusion operators at once (.false.) or use directional splitting (.true.)
    logical                             :: use_smallecr !< correct CR energy density when it gets lower than smallecr
    real, dimension(ncr_max)            :: gamma_crn    !< array containing adiabatic indexes of all CR nuclear components
    real, dimension(ncr_max)            :: K_crn_paral  !< array containing parallel diffusion coefficients of all CR nuclear components

@@ -462,10 +462,10 @@ contains
          if (cc_mag) then
             cg%u(fl%ien,:,:,:) = cg%u(fl%ien,:,:,:) + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))
          else
-            cg%u(fl%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%u(fl%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + &
-                 emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
-                 &    half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
-                 &    half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z)))
+            cg%u(fl%ien, RNG) = cg%u(fl%ien, RNG) + &
+                 emag(half*(cg%b(xdim, RNG) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
+                 &    half*(cg%b(ydim, RNG) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
+                 &    half*(cg%b(zdim, RNG) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z)))
          endif
 #endif  /* MAGNETIC && IONIZED */
 
@@ -590,18 +590,18 @@ contains
             return
          endif
 
-         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-         norm(N_D, GAS) = norm(N_D, GAS) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         norm(N_2, GAS) = norm(N_2, GAS) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         neg_err(GAS) = min(neg_err(GAS), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
-         pos_err(GAS) = max(pos_err(GAS), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         cg%wa(RNG) = inid(RNG) - cg%u(fl%idn, RNG)
+         norm(N_D, GAS) = norm(N_D, GAS) + sum(cg%wa(RNG)**2, mask=cg%leafmap)
+         norm(N_2, GAS) = norm(N_2, GAS) + sum(inid( RNG)**2, mask=cg%leafmap)
+         neg_err(GAS) = min(neg_err(GAS), minval(cg%wa(RNG), mask=cg%leafmap))
+         pos_err(GAS) = max(pos_err(GAS), maxval(cg%wa(RNG), mask=cg%leafmap))
 
          if (associated(flind%dst)) then
-            cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-            norm(N_D, DST) = norm(N_D, DST) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-            norm(N_2, DST) = norm(N_2, DST) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-            neg_err(DST) = min(neg_err(DST), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
-            pos_err(DST) = max(pos_err(DST), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+            cg%wa(RNG) = inid(RNG) - cg%u(flind%dst%idn, RNG)
+            norm(N_D, DST) = norm(N_D, DST) + sum(cg%wa(RNG)**2, mask=cg%leafmap)
+            norm(N_2, DST) = norm(N_2, DST) + sum(inid( RNG)**2, mask=cg%leafmap)
+            neg_err(DST) = min(neg_err(DST), minval(cg%wa(RNG), mask=cg%leafmap))
+            pos_err(DST) = max(pos_err(DST), maxval(cg%wa(RNG), mask=cg%leafmap))
          endif
 
          cgl => cgl%nxt

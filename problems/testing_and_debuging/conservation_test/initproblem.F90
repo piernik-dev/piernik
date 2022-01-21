@@ -221,7 +221,7 @@ contains
 
          call cg%set_constant_b_field([0., 0., 0.])
 
-         cg%u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         cg%u(flind%dst%idn, RNG) = cg%q(qna%ind(inid_n))%arr(RNG)
 
          select case (dom%geometry_type)
             case (GEO_XYZ)
@@ -345,11 +345,11 @@ contains
             return
          endif
 
-         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-         norm(N_D) = norm(N_D) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         norm(N_2) = norm(N_2) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         neg_err   = min(neg_err, minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
-         pos_err   = max(pos_err, maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         cg%wa(RNG) = inid(RNG) - cg%u(flind%dst%idn, RNG)
+         norm(N_D) = norm(N_D) + sum(cg%wa(RNG)**2, mask=cg%leafmap)
+         norm(N_2) = norm(N_2) + sum(inid( RNG)**2, mask=cg%leafmap)
+         neg_err   = min(neg_err, minval(cg%wa(RNG), mask=cg%leafmap))
+         pos_err   = max(pos_err, maxval(cg%wa(RNG), mask=cg%leafmap))
 
          cgl => cgl%nxt
       enddo
