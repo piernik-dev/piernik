@@ -93,7 +93,7 @@ module global
    integer(kind=4), protected    :: integration_order !< Runge-Kutta time integration order (1 - 1st order (Euler), 2 - 2nd order (RK2))
    character(len=cbuff_len)      :: limiter           !< type of flux limiter
    character(len=cbuff_len)      :: limiter_b         !< type of flux limiter for magnetic field in the Riemann solver
-   character(len=cbuff_len)      :: cflcontrol        !< type of cfl control just before/after each sweep (possibilities: 'none', 'warn', 'redo', 'auto')
+   character(len=cbuff_len)      :: cflcontrol        !< type of cfl control just before/after each sweep (possibilities: 'none', 'warn', 'redo', 'flex', 'auto')
    character(len=cbuff_len)      :: interpol_str      !< type of interpolation
    character(len=cbuff_len)      :: divB_0            !< human-readable method of making div(B) = 0 (currently CT or HDC)
    character(len=cbuff_len)      :: psi_bnd_str       !< "default" for general boundaries or override ith something special
@@ -406,7 +406,7 @@ contains
       endif
 
 #ifdef NBODY
-      if (master .and. cflcontrol == 'redo') call warn("[global:init_global] step repeating (clfcontrol == 'redo') unsupported by NBODY (particles aren't implemented yet).")
+      if (master .and. any(cflcontrol == ['redo', 'repeat', 'flex', 'flexible'])) call warn("[global:init_global] step repeating (clfcontrol == 'redo' or 'flex') unsupported by NBODY (particles aren't implemented yet).")
 #endif /* NBODY */
 
       select case (solver_str)

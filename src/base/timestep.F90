@@ -42,6 +42,7 @@ module timestep
    public :: init_time_step
 #endif /* __INTEL_COMPILER || _CRAYFTN */
 
+   logical :: flexible_shrink
 #if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
    !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
    procedure(), pointer :: cfl_manager
@@ -75,6 +76,11 @@ contains
          case ('redo', 'repeat')
             cfl_manager => cfl_warn
             repetitive_steps = .true.
+            flexible_shrink  = .false.
+         case ('flex', 'flexible')
+            cfl_manager => cfl_warn
+            repetitive_steps = .true.
+            flexible_shrink  = .true.
          case ('auto', 'adaptive')
             cfl_manager => cfl_auto
          case ('none', '')
@@ -234,7 +240,7 @@ contains
       use constants,      only: pLOR
       use dataio_pub,     only: warn
       use fluidtypes,     only: var_numbers
-      use global,         only: cflcontrol, dn_negative, ei_negative, disallow_negatives, repeat_step, unwanted_negatives
+      use global,         only: dn_negative, ei_negative, disallow_negatives, repeat_step, repetitive_steps, unwanted_negatives
       use mpisetup,       only: piernik_MPI_Allreduce, master
       use timestep_pub,   only: c_all
       use timestep_retry, only: reset_freezing_speed
@@ -251,7 +257,7 @@ contains
       real                          :: checkdt   !< checked dt after fluid_update
       real                          :: c_all_bck !< backup for timestep sensitive variables
 
-      if (cflcontrol /= 'redo' .and. cflcontrol /= 'repeat') return
+      if (.not. repetitive_steps) return
 
       unwanted_negatives = .false.
       c_all_bck = c_all
@@ -311,7 +317,7 @@ contains
 
       if (master) then
          msg = ''
-         repeat_step = unwanted_negatives ! \> information about unwanted_negatives from the previous step if disallow_negatives
+         repeat_step = unwanted_negatives ! \> information about unwanted_negatives from the last fluid_update call if disallow_negatives
          if (stepcfl > cfl_max) then
             write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL: ", stepcfl
             repeat_step = .true.
@@ -324,7 +330,12 @@ contains
       if (repetitive_steps) then
          call piernik_MPI_Bcast(repeat_step)
          if (repeat_step) then
-            dt_cur_shrink = dt_shrink**(tstep_attempt + I_ONE)
+            if (flexible_shrink) then
+               dt_cur_shrink = cfl_max / stepcfl
+               if (tstep_attempt >= I_ONE) dt_cur_shrink = dt_cur_shrink * dt_shrink
+            else
+               dt_cur_shrink = dt_shrink**(tstep_attempt + I_ONE)
+            endif
          else
             dt_cur_shrink = one
          endif
