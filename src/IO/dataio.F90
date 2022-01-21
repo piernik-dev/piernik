@@ -1815,9 +1815,9 @@ contains
          call cgl%cg%costs%start
 
 #ifdef COSM_RAY_ELECTRONS
-         cgl%cg%wa        = sum(cgl%cg%u(iarr_all_crn,:,:,:),1)
+         cgl%cg%wa = sum(cgl%cg%u(iarr_all_crn,:,:,:),1)
 #else /* !COSM_RAY_ELECTRONS */
-         cgl%cg%wa        = sum(cgl%cg%u(iarr_all_crs,:,:,:),1)
+         cgl%cg%wa = sum(cgl%cg%u(iarr_all_crs,:,:,:),1)
 #endif /* !COSM_RAY_ELECTRONS */
 
          call cgl%cg%costs%stop(I_OTHER)

@@ -126,7 +126,7 @@ contains
       integer                                              :: i
       character(len=singlechar)                            :: fc, ord
       character(len=dsetnamelen)                           :: aux
-#if defined COSM_RAYS
+#ifdef COSM_RAYS
       integer                                              :: k
 #endif /* COSM_RAYS */
 

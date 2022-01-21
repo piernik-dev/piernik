@@ -227,9 +227,9 @@ contains
       endif
       call ppp_main%stop(sw3_label)
 
-#if defined(GRAV)
+#ifdef GRAV
       need_update = .true.
-#if defined(NBODY)
+#ifdef NBODY
       if (associated(psolver)) call psolver(forward)  ! this will clear need_update it it would call source_terms_grav
 #endif /* NBODY */
       if (need_update) call source_terms_grav
@@ -268,7 +268,7 @@ contains
       integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
       logical,         intent(in) :: forward  !< if .false. then reverse operation order in the sweep
 
-#if defined(MAGNETIC)
+#ifdef MAGNETIC
       if ((which_solver == RTVD_SPLIT) .and. (divB_0_method /= DIVB_CT)) call die("[fluidupdate:make_sweep] only CT is implemented in RTVD")
 #endif /* MAGNETIC */
 
