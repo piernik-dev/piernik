@@ -104,9 +104,9 @@ contains
                       !print *, 'SF!', cg%u(pfl%ien, i, j, k), 0.1 * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
                       !print *, proc, pid, tdyn
                       call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, t, tdyn)
-                      cg%u(pfl%ien, i, j, k)          = cg%u(pfl%ien, i, j, k) - 0.1 * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k)) * 0.75
-                      cg%w(wna%fi)%arr(pfl%idn,i,j,k) = 0.925 * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
-                      cg%u(pfl%imx:pfl%imz, i, j, k)  = 0.925 * cg%u(pfl%imx:pfl%imz, i, j, k)
+                      cg%u(pfl%ien, i, j, k)          = cg%u(pfl%ien, i, j, k) - 0.1 * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))! * 0.75
+                      cg%w(wna%fi)%arr(pfl%idn,i,j,k) = 0.9 * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
+                      cg%u(pfl%imx:pfl%imz, i, j, k)  = 0.9 * cg%u(pfl%imx:pfl%imz, i, j, k)
                    endif
                 enddo
              enddo
@@ -200,10 +200,10 @@ contains
                                         !cg%u(pfl%ien,i,j,k)             = cg%u(pfl%ien,i,j,k)  + 0.00001 * msf / cg%dvol * clight**2 
                                      endif
                                      if ((t1-dt < 6.5) .and. ((t1+dt) .gt. 6.5)) then ! .and. (0==1)) then
-                                 !       cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + 0.000001 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2   ! adding SN energy
+                                        cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + 0.00001 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2 *(1 - 0.1*cr_active)  ! adding SN energy
                                         !print *, "SN ENERGY INJECTED!", 0.00001 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2, pset%pdata%mass + 0.25*msf
 #ifdef COSM_RAYS
-                                        if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + 0.1 * 0.000001 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2   ! adding CR
+                                        if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + 0.1 * 0.00001 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2   ! adding CR
 #endif /* COSM_RAYS */
                                      endif
                                   endif
@@ -249,7 +249,7 @@ contains
     if (cg%w(wna%fi)%arr(pfl%idn,i,j,k) .lt. density_thr) return   ! threshold density
     if (cg%q(divv_i)%arr(i,j,k) .ge. 0) return                     ! convergent flow
     !if (cg%w(wna%fi)%arr(pfl%idn,i,j,k) * cg%dvol .lt. 3.0 * 10**6) return   ! part mass > 3 10^5
-    RJ = pfl%cs * sqrt(3*pi/(32*G*cg%w(wna%fi)%arr(pfl%idn,i,j,k)))
+    !RJ = pfl%cs * sqrt(3*pi/(32*G*cg%w(wna%fi)%arr(pfl%idn,i,j,k)))
     !print *, 'Jeans mass', 4*pi/3 * RJ**3 * cg%w(wna%fi)%arr(pfl%idn,i,j,k), pi/6.0 * pfl%cs**3 / G**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5
     !if (cg%w(wna%fi)%arr(pfl%idn,i,j,k) * cg%dvol .lt. min(4*pi/3 * RJ**3 * cg%w(wna%fi)%arr(pfl%idn,i,j,k), pi/6.0 * pfl%cs**3 / G**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5)) return  !pi/6.0 * pfl%cs**3 / G**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5 ) return    ! Jeans mass
     !print *, cg%w(wna%fi)%arr(pfl%idn,i,j,k) * cg%dvol , 4*pi/3 * RJ**3 * cg%w(wna%fi)%arr(pfl%idn,i,j,k), pi/6.0 * pfl%cs**3 / G**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5
