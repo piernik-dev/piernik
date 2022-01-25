@@ -273,7 +273,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS
       call piernik_MPI_Allreduce(cfl_cresp_violation, pLOR) ! check cg if cfl_cresp_violation anywhere
       if (cfl_cresp_violation) then
-         if (master) call warn("[timestep:cfl_warn] Possible violation of CFL in CRESP module")
+         if (master) call warn("[timestep:check_cfl_violation] Possible violation of CFL in CRESP module")
          unwanted_negatives = .true.
       endif
 #endif /* COSM_RAY_ELECTRONS */

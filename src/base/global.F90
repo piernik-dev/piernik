@@ -52,7 +52,7 @@ module global
    logical         :: cr_negative = .false.
    logical         :: repeat_step = .false.     !< order to repeat fluid step
    logical         :: disallow_negatives, disallow_CRnegatives, unwanted_negatives = .false.
-   logical         :: repetitive_steps         !< epetitve fluid step if cfl condition is violated (significantly increases mem usage)
+   logical         :: repetitive_steps         !< repetitve fluid step if cfl condition is violated (significantly increases mem usage)
    logical         :: dirty_debug              !< Allow initializing arrays with some insane values and checking if these values can propagate
    integer(kind=4) :: show_n_dirtys            !< use to limit the amount of printed messages on dirty values found
    logical         :: do_ascii_dump            !< to dump, or not to dump: that is a question (ascii)
@@ -76,7 +76,7 @@ module global
    real    :: dt_max                   !< maximum allowed timestep
    real    :: cfl                      !< desired Courant–Friedrichs–Lewy number
    real    :: cfl_max                  !< warning threshold for the effective CFL number achieved
-   integer :: max_redostep_attempts    !< limitation for a number of redoing step attempts (Note: Something might be terribly wrong if a single step requires too many reductions)
+   integer(kind=4) :: max_redostep_attempts  !< limitation for a number of redoing step attempts (Note: Something might be terribly wrong if a single step requires too many reductions)
    logical :: use_smalld               !< correct density when it gets lower than smalld
    logical :: use_smallei              !< correct internal energy density when it gets lower then smallei
    logical :: geometry25D              !< include source terms in reduced dimension for 2D simulations
