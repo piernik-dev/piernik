@@ -42,7 +42,7 @@ program piernik
    use fluidindex,        only: flind
    use fluidupdate,       only: fluid_update
    use func,              only: operator(.equals.)
-   use global,            only: t, nstep, dt, dtm, cfl_violated, print_divB, repeat_step, tstep_attempt
+   use global,            only: t, nstep, dt, dtm, print_divB, repeat_step, tstep_attempt
    use initpiernik,       only: init_piernik
    use lb_helpers,        only: costs_maintenance
    use list_of_cg_lists,  only: all_lists
@@ -114,7 +114,7 @@ program piernik
    call print_progress(nstep)
    if (print_divB > 0) call print_divB_norm
 
-   do while (t < tend .and. nstep < nend .and. .not.(end_sim) .or. (cfl_violated .and. repeat_step)) ! main loop
+   do while (t < tend .and. nstep < nend .and. .not.(end_sim) .or. repeat_step) ! main loop
 
       write(buf, '(i10)') nstep
       label = "step " // adjustl(trim(buf))
@@ -135,10 +135,10 @@ program piernik
       call all_cg%check_na
       !call all_cg%check_for_dirt
 
-      call time_step(dt, flind)
-      call grace_period
+      if (.not. repeat_step) then
+         call time_step(dt, flind, .true.)
+         call grace_period
 
-      if (.not.cfl_violated) then
          dtm = dt
 
          call check_log
@@ -150,14 +150,14 @@ program piernik
       call fluid_update
       nstep = nstep + I_ONE
       call print_progress(nstep)
-      call check_cfl_violation(dt, flind)
+      call check_cfl_violation(flind)
 
-      if ((t .equals. tlast) .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
+      if ((t .equals. tlast) .and. .not. first_step .and. .not. repeat_step) call die("[piernik] timestep is too small: t == t + 2 * dt")
 
       call piernik_MPI_Barrier
       call costs_maintenance
 
-      if (.not.cfl_violated) then
+      if (.not. repeat_step) then
          call ppp_main%start('write_data', PPP_IO)
          call write_data(output=CHK)
          call ppp_main%stop('write_data', PPP_IO)
