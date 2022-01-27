@@ -46,8 +46,8 @@ contains
    subroutine write_restart_hdf5(sequential)
 
       use common_hdf5,     only: dump_announcement, dump_announce_time, set_common_attributes, output_fname
-      use constants,       only: I_ONE, cwdlen, WR, PPP_IO
-      use dataio_pub,      only: use_v2_io, nres, piernik_hdf5_version, piernik_hdf5_version2, last_res_time
+      use constants,       only: I_ONE, cwdlen, WR, PPP_IO, RES
+      use dataio_pub,      only: use_v2_io, nres, last_res_time
       use mpisetup,        only: piernik_MPI_Barrier
       use ppp,             only: ppp_main
       use restart_hdf5_v1, only: write_restart_hdf5_v1
@@ -60,17 +60,14 @@ contains
 
       logical,         intent(in) :: sequential
       character(len=cwdlen)       :: filename  ! File name
-      real                        :: phv
       character(len=*), parameter :: wrr_label = "IO_write_restart"
 
       call ppp_main%start(wrr_label, PPP_IO)
 
       nres = nres + I_ONE
 
-      phv = piernik_hdf5_version ; if (use_v2_io) phv = piernik_hdf5_version2
-
       filename = output_fname(WR,'.res', nres, bcast=.true.)
-      call dump_announcement('restart', filename, last_res_time, phv, sequential)
+      call dump_announcement(RES, filename, last_res_time, sequential)
       call set_common_attributes(filename)
 
       if (use_v2_io) then

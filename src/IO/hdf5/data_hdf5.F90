@@ -51,12 +51,14 @@ contains
 
    subroutine init_data
 
-      use dataio_pub, only: multiple_h5files
+      use dataio_pub, only: multiple_h5files, use_v2_io, warn
 
       implicit none
 
+      write(*,*) 'INIT_DATA: ', multiple_h5files, use_v2_io
       if (multiple_h5files) then
          write_hdf5 => h5_write_to_multiple_files
+         if (use_v2_io) call warn('[data_hdf5:init_data] v2 I/O format for multiple h5 files not available')
       else
          write_hdf5 => h5_write_to_single_file
       endif
@@ -548,9 +550,8 @@ contains
    subroutine h5_write_to_single_file(sequential)
 
       use common_hdf5,     only: dump_announcement, dump_announce_time, set_common_attributes
-      use constants,       only: cwdlen, I_ONE, PPP_IO
-      use dataio_pub,      only: nhdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
-         &                       run_id, problem_name, use_v2_io, last_hdf_time
+      use constants,       only: cwdlen, I_ONE, PPP_IO, HDF
+      use dataio_pub,      only: nhdf, wd_wr, run_id, problem_name, use_v2_io, last_hdf_time
       use mpisetup,        only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
       use piernik_mpi_sig, only: sig
       use ppp,             only: ppp_main
@@ -565,17 +566,15 @@ contains
 
       logical,         intent(in) :: sequential
       character(len=cwdlen)       :: fname
-      real                        :: phv
       character(len=*), parameter :: wrd_label = "IO_write_datafile_v1"
 
       call ppp_main%start(wrd_label, PPP_IO)
       nhdf = nhdf + I_ONE
       ! Initialize HDF5 library and Fortran interfaces.
       !
-      phv = piernik_hdf5_version ; if (use_v2_io) phv = piernik_hdf5_version2
       if (master) write(fname, '(2a,a1,a3,a1,i4.4,a3)') trim(wd_wr), trim(problem_name),"_", trim(run_id),"_", nhdf,".h5" !> \todo: merge with function restart_fname()
       call piernik_MPI_Bcast(fname, cwdlen)
-      call dump_announcement('datafile', fname, last_hdf_time, phv, sequential)
+      call dump_announcement(HDF, fname, last_hdf_time, sequential)
 
       call set_common_attributes(fname)
       if (use_v2_io) then
@@ -1108,8 +1107,8 @@ contains
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
       use common_hdf5, only: dump_announcement, dump_announce_time, hdf_vars, hdf_vars_avail
-      use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE
-      use dataio_pub,  only: last_hdf_time, piernik_hdf5_version
+      use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE, HDF
+      use dataio_pub,  only: last_hdf_time
       use grid_cont,   only: grid_container
       use h5lt,        only: h5ltmake_dataset_double_f
       use hdf5,        only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, h5gclose_f, HSIZE_T
@@ -1129,7 +1128,7 @@ contains
       real, pointer                     :: data (:,:,:)     !< Data to write
 
       fname = h5_filename()
-      call dump_announcement('datafile', fname, last_hdf_time, piernik_hdf5_version, sequential)
+      call dump_announcement(HDF, fname, last_hdf_time, sequential)
 
       call h5open_f(error)
       call h5fcreate_f(fname, H5F_ACC_TRUNC_F, file_id, error)

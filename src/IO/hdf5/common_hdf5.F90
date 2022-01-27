@@ -1309,30 +1309,34 @@ contains
 
    end function output_fname
 
-   subroutine dump_announcement(dumptype, fname, last_dump_time, phv, sequential)
+   subroutine dump_announcement(dumptype, fname, last_dump_time, sequential)
 
-      use constants,  only: fnamelen, tmr_hdf
-      use dataio_pub, only: msg, printio, thdf
+      use constants,  only: fnamelen, tmr_hdf, RES
+      use dataio_pub, only: msg, printio, thdf, multiple_h5files, piernik_hdf5_version, piernik_hdf5_version2, use_v2_io
       use global,     only: t
       use mpisetup,   only: master
       use timer,      only: set_timer
 
       implicit none
 
-      character(len=*),        intent(in) :: dumptype
-      character(len=fnamelen), intent(in) :: fname
-      real,                    intent(in) :: last_dump_time
-      real,                    intent(in) :: phv
-      logical,                 intent(in) :: sequential
+      integer(kind=4),               intent(in) :: dumptype
+      character(len=fnamelen),       intent(in) :: fname
+      real,                          intent(in) :: last_dump_time
+      logical,                       intent(in) :: sequential
+      character(len=7), dimension(2), parameter :: dumpname = ['restart', 'dataset']
+      real                                      :: phv
 
       thdf = set_timer(tmr_hdf,.true.)
 
       if (.not. master) return
 
+      phv = piernik_hdf5_version
+      if (use_v2_io .and. (dumptype == RES .or. .not. multiple_h5files)) phv = piernik_hdf5_version2
+
       if (sequential) then
-         write(msg,'(a,es23.16,a,a,a,f5.2,1x,2a)') 'ordered t ', last_dump_time, ': Writing ', dumptype, ' v', phv, trim(fname), " ... "
+         write(msg,'(a,es23.16,a,a,a,f5.2,1x,2a)') 'ordered t ', last_dump_time, ': Writing ', dumpname(dumptype), ' v', phv, trim(fname), " ... "
       else
-         write(msg,'(a,es23.16,a,a,a,f5.2,1x,2a)') 'requested at t ', t, ': Writing ', dumptype, ' v', phv, trim(fname), " ... "
+         write(msg,'(a,es23.16,a,a,a,f5.2,1x,2a)') 'requested at t ', t, ': Writing ', dumpname(dumptype), ' v', phv, trim(fname), " ... "
       endif
       call printio(msg, .true.)
 
