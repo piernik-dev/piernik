@@ -43,11 +43,12 @@ contains
 !! \brief Wrapper routine that writes a version 2.x or version 1.x restart file, depending on use_v2_io switch
 !<
 
-   subroutine write_restart_hdf5
+   subroutine write_restart_hdf5(sequential)
 
       use common_hdf5,     only: set_common_attributes, output_fname
       use constants,       only: I_ONE, cwdlen, WR, tmr_hdf, PPP_IO
       use dataio_pub,      only: msg, printio, printinfo, thdf, use_v2_io, nres, piernik_hdf5_version, piernik_hdf5_version2, last_res_time
+      use global,          only: t
       use mpisetup,        only: master, piernik_MPI_Barrier
       use ppp,             only: ppp_main
       use restart_hdf5_v1, only: write_restart_hdf5_v1
@@ -59,6 +60,7 @@ contains
 
       implicit none
 
+      logical,   intent(in) :: sequential
       character(len=cwdlen) :: filename  ! File name
       real                  :: phv
       character(len=*), parameter :: wrr_label = "IO_write_restart"
@@ -73,7 +75,11 @@ contains
 
       filename = output_fname(WR,'.res', nres, bcast=.true.)
       if (master) then
-         write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ',last_res_time,': Writing restart v', phv, trim(filename), " ... "
+         if (sequential) then
+            write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ', last_res_time,': Writing restart v', phv, trim(filename), " ... "
+         else
+            write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'requested at t ', t,': Writing restart v', phv, trim(filename), " ... "
+         endif
          call printio(msg, .true.)
       endif
       call set_common_attributes(filename)

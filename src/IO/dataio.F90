@@ -633,9 +633,9 @@ contains
          select case (trim(umsg))
 #ifdef HDF5
             case ('res', 'dump')
-               call write_restart_hdf5
+               call write_restart_hdf5(.false.)
             case ('hdf')
-               call write_hdf5
+               call write_hdf5(.false.)
 #endif /* HDF5 */
             case ('log')
                call write_log
@@ -775,20 +775,20 @@ contains
 #ifdef HDF5
       call determine_dump(dump(RES), last_res_time, dt_res, output, RES)
       call manage_hdf_dump(RES, dump(RES), output)
-      if (dump(RES)) call write_restart_hdf5
+      if (dump(RES)) call write_restart_hdf5(.true.)
 
       if (wdt_res > 0.0) then
          if (master) tleft = walltime_nextres%time_left()
          call piernik_MPI_Bcast(tleft)
          if (.not.tleft) then
-            call write_restart_hdf5
+            call write_restart_hdf5(.false.)
             if (master) tleft = walltime_nextres%time_left(wdt_res)
          endif
       endif
 
       call determine_dump(dump(HDF), last_hdf_time, dt_hdf, output, HDF)
       call manage_hdf_dump(HDF, dump(HDF), output)
-      if (dump(HDF)) call write_hdf5
+      if (dump(HDF)) call write_hdf5(.true.)
 #endif /* HDF5 */
       if (associated(user_post_write_data)) call user_post_write_data(output, dump)
 
