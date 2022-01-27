@@ -44,7 +44,8 @@ module common_hdf5
    public :: hdf_vars, hdf_vars_avail, cancel_hdf_var, d_gname, base_d_gname, d_fc_aname, d_size_aname, &
         d_edge_apname, d_bnd_apname, cg_gname, cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, &
         n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, cg_dl_aname, O_OUT, O_RES, STAT_OK, STAT_INV, &
-        create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output, enable_all_hdf_var, dump_announcement
+        create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output, enable_all_hdf_var, &
+        dump_announcement, dump_announce_time
 #ifdef NBODY_1FILE
    public ::  part_types_gname, part_gname, st_gname
 #endif /* NBODY_1FILE */
@@ -1310,10 +1311,11 @@ contains
 
    subroutine dump_announcement(dumptype, fname, last_dump_time, phv, sequential)
 
-      use constants,  only: fnamelen
-      use dataio_pub, only: msg, printio
+      use constants,  only: fnamelen, tmr_hdf
+      use dataio_pub, only: msg, printio, thdf
       use global,     only: t
       use mpisetup,   only: master
+      use timer,      only: set_timer
 
       implicit none
 
@@ -1322,6 +1324,8 @@ contains
       real,                    intent(in) :: last_dump_time
       real,                    intent(in) :: phv
       logical,                 intent(in) :: sequential
+
+      thdf = set_timer(tmr_hdf,.true.)
 
       if (.not. master) return
 
@@ -1333,6 +1337,23 @@ contains
       call printio(msg, .true.)
 
    end subroutine dump_announcement
+
+   subroutine dump_announce_time
+
+      use constants,  only: tmr_hdf
+      use dataio_pub, only: msg, printinfo, thdf
+      use mpisetup,   only: master
+      use timer,      only: set_timer
+
+      implicit none
+
+      thdf = set_timer(tmr_hdf)
+      if (master) then
+         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
+         call printinfo(msg, .true.)
+      endif
+
+   end subroutine dump_announce_time
 
 #ifdef NBODY_1FILE
    subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets, pdsets)

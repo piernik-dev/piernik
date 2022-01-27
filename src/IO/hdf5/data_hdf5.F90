@@ -547,14 +547,13 @@ contains
 !
    subroutine h5_write_to_single_file(sequential)
 
-      use common_hdf5,     only: dump_announcement, set_common_attributes
-      use constants,       only: cwdlen, I_ONE, tmr_hdf, PPP_IO
-      use dataio_pub,      only: printinfo, nhdf, thdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
-         &                       msg, run_id, problem_name, use_v2_io, last_hdf_time
+      use common_hdf5,     only: dump_announcement, dump_announce_time, set_common_attributes
+      use constants,       only: cwdlen, I_ONE, PPP_IO
+      use dataio_pub,      only: nhdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
+         &                       run_id, problem_name, use_v2_io, last_hdf_time
       use mpisetup,        only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
       use piernik_mpi_sig, only: sig
       use ppp,             only: ppp_main
-      use timer,           only: set_timer
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: unmark_oldsoln
 #endif /* MULTIGRID && SELF_GRAV */
@@ -570,7 +569,6 @@ contains
       character(len=*), parameter :: wrd_label = "IO_write_datafile_v1"
 
       call ppp_main%start(wrd_label, PPP_IO)
-      thdf = set_timer(tmr_hdf,.true.)
       nhdf = nhdf + I_ONE
       ! Initialize HDF5 library and Fortran interfaces.
       !
@@ -589,11 +587,7 @@ contains
       call unmark_oldsoln
 #endif /* MULTIGRID && SELF_GRAV */
 
-      thdf = set_timer(tmr_hdf)
-      if (master) then
-         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
-         call printinfo(msg, .true.)
-      endif
+      call dump_announce_time
       call report_to_master(sig%hdf_written, only_master=.True.)
       call report_string_to_master(fname, only_master=.True.)
 #ifdef NBODY_1FILE
@@ -1113,14 +1107,12 @@ contains
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use common_hdf5, only: dump_announcement, hdf_vars, hdf_vars_avail
-      use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE, tmr_hdf
-      use dataio_pub,  only: msg, printinfo, thdf, last_hdf_time, piernik_hdf5_version
+      use common_hdf5, only: dump_announcement, dump_announce_time, hdf_vars, hdf_vars_avail
+      use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE
+      use dataio_pub,  only: last_hdf_time, piernik_hdf5_version
       use grid_cont,   only: grid_container
       use h5lt,        only: h5ltmake_dataset_double_f
       use hdf5,        only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, h5gclose_f, HSIZE_T
-      use mpisetup,    only: master
-      use timer,       only: set_timer
 
       implicit none
 
@@ -1136,7 +1128,6 @@ contains
       character(len=fnamelen)           :: fname
       real, pointer                     :: data (:,:,:)     !< Data to write
 
-      thdf = set_timer(tmr_hdf,.true.)
       fname = h5_filename()
       call dump_announcement('datafile', fname, last_hdf_time, piernik_hdf5_version, sequential)
 
@@ -1168,11 +1159,7 @@ contains
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
-      thdf = set_timer(tmr_hdf)
-      if (master) then
-         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
-         call printinfo(msg, .true.)
-      endif
+      call dump_announce_time
 
    end subroutine h5_write_to_multiple_files
 
