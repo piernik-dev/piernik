@@ -547,11 +547,10 @@ contains
 !
    subroutine h5_write_to_single_file(sequential)
 
-      use common_hdf5,     only: set_common_attributes
+      use common_hdf5,     only: dump_announcement, set_common_attributes
       use constants,       only: cwdlen, I_ONE, tmr_hdf, PPP_IO
-      use dataio_pub,      only: printio, printinfo, nhdf, thdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
+      use dataio_pub,      only: printinfo, nhdf, thdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
          &                       msg, run_id, problem_name, use_v2_io, last_hdf_time
-      use global,          only: t
       use mpisetup,        only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
       use piernik_mpi_sig, only: sig
       use ppp,             only: ppp_main
@@ -576,16 +575,9 @@ contains
       ! Initialize HDF5 library and Fortran interfaces.
       !
       phv = piernik_hdf5_version ; if (use_v2_io) phv = piernik_hdf5_version2
-      if (master) then
-         write(fname, '(2a,a1,a3,a1,i4.4,a3)') trim(wd_wr), trim(problem_name),"_", trim(run_id),"_", nhdf,".h5" !> \todo: merge with function restart_fname()
-         if (sequential) then
-            write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ', last_hdf_time,': Writing datafile v', phv, trim(fname), " ... "
-         else
-            write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'requested at t ', t,': Writing datafile v', phv, trim(fname), " ... "
-         endif
-         call printio(msg, .true.)
-      endif
+      if (master) write(fname, '(2a,a1,a3,a1,i4.4,a3)') trim(wd_wr), trim(problem_name),"_", trim(run_id),"_", nhdf,".h5" !> \todo: merge with function restart_fname()
       call piernik_MPI_Bcast(fname, cwdlen)
+      call dump_announcement('datafile', fname, last_hdf_time, phv, sequential)
 
       call set_common_attributes(fname)
       if (use_v2_io) then
@@ -1121,10 +1113,9 @@ contains
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use common_hdf5, only: hdf_vars, hdf_vars_avail
+      use common_hdf5, only: dump_announcement, hdf_vars, hdf_vars_avail
       use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE, tmr_hdf
-      use dataio_pub,  only: msg, printio, printinfo, thdf, last_hdf_time, piernik_hdf5_version
-      use global,      only: t
+      use dataio_pub,  only: msg, printinfo, thdf, last_hdf_time, piernik_hdf5_version
       use grid_cont,   only: grid_container
       use h5lt,        only: h5ltmake_dataset_double_f
       use hdf5,        only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, h5gclose_f, HSIZE_T
@@ -1147,14 +1138,7 @@ contains
 
       thdf = set_timer(tmr_hdf,.true.)
       fname = h5_filename()
-      if (master) then
-         if (sequential) then
-            write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ', last_hdf_time,': Writing datafile v', piernik_hdf5_version, trim(fname), " ... "
-         else
-            write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'requested at t ', t,': Writing datafile v', piernik_hdf5_version, trim(fname), " ... "
-         endif
-         call printio(msg, .true.)
-      endif
+      call dump_announcement('datafile', fname, last_hdf_time, piernik_hdf5_version, sequential)
 
       call h5open_f(error)
       call h5fcreate_f(fname, H5F_ACC_TRUNC_F, file_id, error)
