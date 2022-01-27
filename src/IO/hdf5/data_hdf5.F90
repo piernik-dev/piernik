@@ -55,7 +55,6 @@ contains
 
       implicit none
 
-      write(*,*) 'INIT_DATA: ', multiple_h5files, use_v2_io
       if (multiple_h5files) then
          write_hdf5 => h5_write_to_multiple_files
          if (use_v2_io) call warn('[data_hdf5:init_data] v2 I/O format for multiple h5 files not available')
