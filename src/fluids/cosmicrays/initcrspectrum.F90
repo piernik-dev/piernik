@@ -426,6 +426,7 @@ contains
       endif
 
       if (.not. use_cresp) then
+         if (master) call warn("[initcrspectrum:init_cresp] Switching 'use_cresp_evol' off: superior 'use_cresp' is switched off.") ! TODO die instead?
          use_cresp_evol = .false.
          return
       endif
