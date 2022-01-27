@@ -52,12 +52,13 @@ contains
    subroutine init_data
 
       use dataio_pub, only: multiple_h5files, use_v2_io, warn
+      use mpisetup,   only: master
 
       implicit none
 
       if (multiple_h5files) then
          write_hdf5 => h5_write_to_multiple_files
-         if (use_v2_io) call warn('[data_hdf5:init_data] v2 I/O format for multiple h5 files not available')
+         if (use_v2_io .and. master) call warn('[data_hdf5:init_data] v2 I/O format for multiple h5 files not available')
       else
          write_hdf5 => h5_write_to_single_file
       endif
