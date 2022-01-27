@@ -338,18 +338,18 @@ contains
 
       implicit none
 
-      character(len=dsetnamelen),     intent(in)  :: var
-      real, dimension(:,:,:),         intent(out) :: tab
-      integer,                        intent(out) :: ierrh
-      type(grid_container),  pointer, intent(in)  :: cg
+      character(len=dsetnamelen),      intent(in)    :: var
+      real, dimension(:,:,:), pointer, intent(inout) :: tab
+      integer,                         intent(out)   :: ierrh
+      type(grid_container),   pointer, intent(in)    :: cg
 
-      class(component_fluid), pointer             :: fl_dni, fl_mach
-      integer(kind=4)                             :: i_xyz
-      integer                                     :: ii, jj, kk
+      class(component_fluid), pointer                :: fl_dni, fl_mach
+      integer(kind=4)                                :: i_xyz
+      integer                                        :: ii, jj, kk
 #ifdef COSM_RAYS
-      integer                                     :: i
-      integer, parameter                          :: auxlen = dsetnamelen - 1
-      character(len=auxlen)                       :: aux
+      integer                                        :: i
+      integer, parameter                             :: auxlen = dsetnamelen - 1
+      character(len=auxlen)                          :: aux
 #endif /* COSM_RAYS */
 
       call common_shortcuts(var, fl_dni, i_xyz)
@@ -992,7 +992,7 @@ contains
       integer(kind=4)                   :: error                   !< error perhaps should be of type integer(HID_T)
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
-      real, pointer                     :: data (:,:,:)            !< Data to write
+      real, dimension(:,:,:), pointer   :: data                    !< Data to write
       integer(kind=4), parameter        :: rank = ndims            !< Dataset rank = 3
       integer(HID_T)                    :: dset_id                 !< Dataset identifier
       integer(HID_T)                    :: filespace               !< Dataspace identifier in file
@@ -1099,7 +1099,8 @@ contains
       use mpisetup,   only: proc
       implicit none
       character(len=fnamelen) :: f
-      write(f, '(2a,"_",a3,i4.4,".cpu",i5.5,".h5")') trim(wd_wr), trim(problem_name), trim(run_id), nhdf, proc
+      nhdf = nhdf + 1
+      write(f, '(2a,"_",a3,"_",i4.4,".cpu",i5.5,".h5")') trim(wd_wr), trim(problem_name), trim(run_id), nhdf, proc
    end function h5_filename
 
    subroutine h5_write_to_multiple_files(sequential)
@@ -1125,7 +1126,7 @@ contains
       integer(HSIZE_T), dimension(rank) :: dims
       character(len=dsetnamelen)        :: gname
       character(len=fnamelen)           :: fname
-      real, pointer                     :: data (:,:,:)     !< Data to write
+      real, dimension(:,:,:), pointer   :: data             !< Data to write
 
       fname = h5_filename()
       call dump_announcement(HDF, fname, last_hdf_time, sequential)
@@ -1134,6 +1135,7 @@ contains
       call h5fcreate_f(fname, H5F_ACC_TRUNC_F, file_id, error)
       cgl => leaves%first
       ngc = 0
+      nullify(data)
       do while (associated(cgl))
          cg => cgl%cg
 
