@@ -425,7 +425,11 @@ contains
          ncre           = 0
       endif
 
-      if (.not. use_cresp) return
+      if (.not. use_cresp) then
+         if (master) call warn("[initcrspectrum:init_cresp] Switching 'use_cresp_evol' off: superior 'use_cresp' is switched off.")
+         use_cresp_evol = .false.
+         return
+      endif
 
       if (ncre < 3) call die("[initcrspectrum:init_cresp] CRESP algorithm currently requires at least 3 bins (ncre) in order to work properly, check your parameters.")
 
