@@ -1311,7 +1311,7 @@ contains
 
    subroutine dump_announcement(dumptype, fname, last_dump_time, sequential)
 
-      use constants,  only: fnamelen, tmr_hdf, RES
+      use constants,  only: fnamelen, tmr_hdf, I_SEVEN, RES
       use dataio_pub, only: msg, printio, thdf, multiple_h5files, piernik_hdf5_version, piernik_hdf5_version2, use_v2_io
       use global,     only: t
       use mpisetup,   only: master
@@ -1319,12 +1319,12 @@ contains
 
       implicit none
 
-      integer(kind=4),               intent(in) :: dumptype
-      character(len=fnamelen),       intent(in) :: fname
-      real,                          intent(in) :: last_dump_time
-      logical,                       intent(in) :: sequential
-      character(len=7), dimension(2), parameter :: dumpname = ['restart', 'dataset']
-      real                                      :: phv
+      integer(kind=4),                     intent(in) :: dumptype
+      character(len=fnamelen),             intent(in) :: fname
+      real,                                intent(in) :: last_dump_time
+      logical,                             intent(in) :: sequential
+      character(len=I_SEVEN), dimension(2), parameter :: dumpname = ['restart', 'dataset']
+      real                                            :: phv
 
       thdf = set_timer(tmr_hdf,.true.)
 
