@@ -1252,20 +1252,23 @@ contains
       endif
    end function set_h5_properties
 
-   function output_fname(wr_rd, ext, no, bcast, prefix) result(filename)
+   function output_fname(wr_rd, ext, no, allproc, bcast, prefix) result(filename)
 
-      use constants,  only: cwdlen, idlen, RD, WR, I_FOUR, fnamelen
+      use constants,  only: cwdlen, idlen, RD, WR, I_FOUR, domlen, fnamelen
       use dataio_pub, only: problem_name, run_id, res_id, wd_wr, wd_rd, warn, die, msg
-      use mpisetup,   only: master, piernik_MPI_Bcast
+      use mpisetup,   only: master, piernik_MPI_Bcast, proc
 
       implicit none
 
       integer(kind=4),       intent(in)           :: wr_rd, no
       character(len=I_FOUR), intent(in)           :: ext
+      logical,               intent(in), optional :: allproc
       logical,               intent(in), optional :: bcast
       character(len=*),      intent(in), optional :: prefix
       character(len=cwdlen)                       :: filename, temp  ! File name
+      character(len=domlen)                       :: fullext
       character(len=idlen)                        :: file_id
+      logical                                     :: exec_allproc
 
 
       ! Sanity checks go here
@@ -1287,11 +1290,20 @@ contains
          file_id = run_id
       endif
 
-      if (master) then
+      exec_allproc = .false.
+      fullext = ext
+      if (present(allproc)) then
+         if (allproc) then
+            exec_allproc = .true.
+            write(fullext,'(".cpu",i5.5,a)') proc, ext
+         endif
+      endif
+
+      if (master .or. exec_allproc) then
          if (present(prefix)) then
-            write(temp,'(2(a,"_"),a3,"_",i4.4,a4)') trim(prefix), trim(problem_name), file_id, no, ext
+            write(temp,'(2(a,"_"),a3,"_",i4.4,a)') trim(prefix), trim(problem_name), file_id, no, fullext
          else
-            write(temp,'(a,"_",a3,"_",i4.4,a4)') trim(problem_name), file_id, no, ext
+            write(temp,'(a,"_",a3,"_",i4.4,a)') trim(problem_name), file_id, no, fullext
          endif
          select case (wr_rd)
             case (RD)
@@ -1309,9 +1321,9 @@ contains
 
    end function output_fname
 
-   subroutine dump_announcement(dumptype, fname, last_dump_time, sequential)
+   subroutine dump_announcement(dumptype, nio, fname, last_dump_time, sequential)
 
-      use constants,  only: fnamelen, tmr_hdf, I_SEVEN, RES
+      use constants,  only: cwdlen, tmr_hdf, I_ONE, I_FOUR, I_SEVEN, RES, WR
       use dataio_pub, only: msg, printio, thdf, multiple_h5files, piernik_hdf5_version, piernik_hdf5_version2, use_v2_io
       use global,     only: t
       use mpisetup,   only: master
@@ -1319,19 +1331,27 @@ contains
 
       implicit none
 
-      integer(kind=4),                     intent(in) :: dumptype
-      character(len=fnamelen),             intent(in) :: fname
-      real,                                intent(in) :: last_dump_time
-      logical,                             intent(in) :: sequential
-      character(len=I_SEVEN), dimension(2), parameter :: dumpname = ['restart', 'dataset']
-      real                                            :: phv
+      integer(kind=4),                     intent(in)    :: dumptype
+      integer,                             intent(inout) :: nio
+      character(len=cwdlen),               intent(out)   :: fname
+      real,                                intent(in)    :: last_dump_time
+      logical,                             intent(in)    :: sequential
+      character(len=I_SEVEN), dimension(2), parameter    :: dumpname = ['restart', 'dataset']
+      character(len=I_FOUR),  dimension(2), parameter    :: extname  = ['.res', '.h5 ']
+      real                                               :: phv
+      logical                                            :: exec_mh5f
 
       thdf = set_timer(tmr_hdf,.true.)
+
+      nio = nio + I_ONE
+! restart
+      exec_mh5f = (multiple_h5files .and. dumptype /= RES)
+      fname = output_fname(WR, extname(dumptype), nio, allproc=exec_mh5f, bcast=(.not.exec_mh5f))
 
       if (.not. master) return
 
       phv = piernik_hdf5_version
-      if (use_v2_io .and. (dumptype == RES .or. .not. multiple_h5files)) phv = piernik_hdf5_version2
+      if (use_v2_io .and. .not. exec_mh5f) phv = piernik_hdf5_version2
 
       if (sequential) then
          write(msg,'(a,es23.16,a,a,a,f5.2,1x,2a)') 'ordered t ', last_dump_time, ': Writing ', dumpname(dumptype), ' v', phv, trim(fname), " ... "

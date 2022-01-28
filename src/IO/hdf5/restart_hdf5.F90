@@ -45,8 +45,8 @@ contains
 
    subroutine write_restart_hdf5(sequential)
 
-      use common_hdf5,     only: dump_announcement, dump_announce_time, set_common_attributes, output_fname
-      use constants,       only: I_ONE, cwdlen, WR, PPP_IO, RES
+      use common_hdf5,     only: dump_announcement, dump_announce_time, set_common_attributes
+      use constants,       only: cwdlen, PPP_IO, RES
       use dataio_pub,      only: use_v2_io, nres, last_res_time
       use mpisetup,        only: piernik_MPI_Barrier
       use ppp,             only: ppp_main
@@ -64,10 +64,8 @@ contains
 
       call ppp_main%start(wrr_label, PPP_IO)
 
-      nres = nres + I_ONE
+      call dump_announcement(RES, nres, filename, last_res_time, sequential)
 
-      filename = output_fname(WR,'.res', nres, bcast=.true.)
-      call dump_announcement(RES, filename, last_res_time, sequential)
       call set_common_attributes(filename)
 
       if (use_v2_io) then

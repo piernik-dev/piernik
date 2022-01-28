@@ -550,9 +550,9 @@ contains
    subroutine h5_write_to_single_file(sequential)
 
       use common_hdf5,     only: dump_announcement, dump_announce_time, set_common_attributes
-      use constants,       only: cwdlen, I_ONE, PPP_IO, HDF
-      use dataio_pub,      only: nhdf, wd_wr, run_id, problem_name, use_v2_io, last_hdf_time
-      use mpisetup,        only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
+      use constants,       only: cwdlen, PPP_IO, HDF
+      use dataio_pub,      only: nhdf, use_v2_io, last_hdf_time
+      use mpisetup,        only: report_to_master, report_string_to_master
       use piernik_mpi_sig, only: sig
       use ppp,             only: ppp_main
 #if defined(MULTIGRID) && defined(SELF_GRAV)
@@ -569,12 +569,9 @@ contains
       character(len=*), parameter :: wrd_label = "IO_write_datafile_v1"
 
       call ppp_main%start(wrd_label, PPP_IO)
-      nhdf = nhdf + I_ONE
       ! Initialize HDF5 library and Fortran interfaces.
       !
-      if (master) write(fname, '(2a,a1,a3,a1,i4.4,a3)') trim(wd_wr), trim(problem_name),"_", trim(run_id),"_", nhdf,".h5" !> \todo: merge with function restart_fname()
-      call piernik_MPI_Bcast(fname, cwdlen)
-      call dump_announcement(HDF, fname, last_hdf_time, sequential)
+      call dump_announcement(HDF, nhdf, fname, last_hdf_time, sequential)
 
       call set_common_attributes(fname)
       if (use_v2_io) then
@@ -1093,23 +1090,13 @@ contains
 
    end subroutine h5_write_to_single_file_v1
 
-   function h5_filename() result(f)
-      use constants,  only: fnamelen
-      use dataio_pub, only: problem_name, run_id, nhdf, wd_wr
-      use mpisetup,   only: proc
-      implicit none
-      character(len=fnamelen) :: f
-      nhdf = nhdf + 1
-      write(f, '(2a,"_",a3,"_",i4.4,".cpu",i5.5,".h5")') trim(wd_wr), trim(problem_name), trim(run_id), nhdf, proc
-   end function h5_filename
-
    subroutine h5_write_to_multiple_files(sequential)
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
       use common_hdf5, only: dump_announcement, dump_announce_time, hdf_vars, hdf_vars_avail
-      use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE, HDF
-      use dataio_pub,  only: last_hdf_time
+      use constants,   only: cwdlen, dsetnamelen, xdim, ydim, zdim, HDF, I_ONE
+      use dataio_pub,  only: last_hdf_time, nhdf
       use grid_cont,   only: grid_container
       use h5lt,        only: h5ltmake_dataset_double_f
       use hdf5,        only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, h5gclose_f, HSIZE_T
@@ -1125,11 +1112,10 @@ contains
       integer(kind=8)                   :: ngc              !< current grid index
       integer(HSIZE_T), dimension(rank) :: dims
       character(len=dsetnamelen)        :: gname
-      character(len=fnamelen)           :: fname
+      character(len=cwdlen)             :: fname
       real, dimension(:,:,:), pointer   :: data             !< Data to write
 
-      fname = h5_filename()
-      call dump_announcement(HDF, fname, last_hdf_time, sequential)
+      call dump_announcement(HDF, nhdf, fname, last_hdf_time, sequential)
 
       call h5open_f(error)
       call h5fcreate_f(fname, H5F_ACC_TRUNC_F, file_id, error)
