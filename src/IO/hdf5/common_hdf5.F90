@@ -1332,7 +1332,7 @@ contains
       implicit none
 
       integer(kind=4),                     intent(in)    :: dumptype
-      integer,                             intent(inout) :: nio
+      integer(kind=4),                     intent(inout) :: nio
       character(len=cwdlen),               intent(out)   :: fname
       real,                                intent(in)    :: last_dump_time
       logical,                             intent(in)    :: sequential
