@@ -30,7 +30,7 @@
 !!
 !! This module contains various constants used during communications with master
 !! process, when Piernik is launched via MPI_Spawn.
-!! After every change, please make sure that it\'s parsable by whatever external
+!! After every change, please make sure that it\'s parseable by whatever external
 !! scripts which uses it.
 !<
 module piernik_mpi_sig

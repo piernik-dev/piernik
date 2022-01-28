@@ -41,7 +41,7 @@ module sortable_list
    !!
    !! \details This type does not contain any actual array since it is too hard to extend it later to something
    !! usable. Every type that extends this one has to provide own sortable array and methods to allocate it,
-   !! deallocate it, get bounds, make assignments and comparisions based on integer indices.
+   !! deallocate it, get bounds, make assignments and comparisons based on integer indices.
    !! Note that we use special index (parameter temp_index) to denote temporary storage for swapping elements.
    !<
    type, abstract :: sortable_list_t
@@ -49,7 +49,7 @@ module sortable_list
       procedure(lubound_list), deferred :: l_bound          !< Get lower bound of the list
       procedure(lubound_list), deferred :: u_bound          !< Get upper bound of the list
       procedure(assign_list),  deferred :: assign_element   !< Make an assignment
-      procedure(compare_list), deferred :: compare_elements !< Make a comparision
+      procedure(compare_list), deferred :: compare_elements !< Make a comparison
       procedure                         :: sort             !< Sorting routine (currently shellsort)
    end type sortable_list_t
 

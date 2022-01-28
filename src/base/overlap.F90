@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 
-!> \brief Routine for calculatin whether two rectangular segments do overlap
+!> \brief Routine for calculating whether two rectangular segments do overlap
 
 module overlap
 

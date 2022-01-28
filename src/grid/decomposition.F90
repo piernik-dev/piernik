@@ -61,7 +61,7 @@ module decomposition
       procedure, private :: cartesian_tiling            !< Decomposes the box into a topologically cartesian grid
       procedure, private :: choppy_tiling               !< Less structured box decomposition
       procedure, private :: stamp_cg                    !< Divide the box into lots of identical blocks
-      procedure, private :: is_not_too_small            !< Prevent domain decompositions into pieces that are narrower than allowed mimimum size
+      procedure, private :: is_not_too_small            !< Prevent domain decompositions into pieces that are narrower than allowed minimum size
    end type box_t
 
    ! Private variables
@@ -240,7 +240,7 @@ contains
       enddo
       if (master) then
          write(msg,'(a,i3,a,3i4,a,f7.4)')"[decomposition:decompose_patch_int]        Level ",level_id,": grid divided to [",p_size(:), &
-              &                          " ] pieces, balance = ", product(p_size(:))/real(nproc) ! rough esitmate, this might be nonuniform decomposition
+              &                          " ] pieces, balance = ", product(p_size(:))/real(nproc) ! rough estimate, this might be nonuniform decomposition
          call printinfo(msg)
       endif
       call this%cartesian_tiling(p_size(:), product(p_size(:)), level_id)

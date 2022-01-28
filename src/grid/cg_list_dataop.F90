@@ -158,7 +158,7 @@ contains
                   if (minval(tab) < prop%val) then
                      prop%val = minval(tab)
                      prop%loc = minloc(tab) + cgl%cg%ijkse(:, LO) - 1
-                     ! it isn't too much intiutive that minloc and maxloc return values as the array indexing start from 1, but here tab does so anyway
+                     ! it isn't too much intuitive that minloc and maxloc return values as the array indexing start from 1, but here tab does so anyway
                      cg_x => cgl%cg
                   endif
                case (MAXL)
@@ -742,7 +742,7 @@ contains
 
       class(cg_list_dataop_t), intent(inout) :: this  !< list for which we want to apply pollution
       integer(kind=4),         intent(in)    :: iv    !< index of variable in cg%q(:) which we want to pollute
-      real, optional,          intent(in)    :: val   !< use alue to pollute the data, if provided, or dirtyH otherwise
+      real, optional,          intent(in)    :: val   !< use value to pollute the data, if provided, or dirtyH otherwise
 
       real :: v
 
@@ -922,7 +922,7 @@ contains
    end subroutine check_for_dirt
 
 !>
-!! \brief Cut out a cross in the middle of the grid block and move the data to shov what is stored in corners and partially in edges and faces as well.
+!! \brief Cut out a cross in the middle of the grid block and move the data to show what is stored in corners and partially in edges and faces as well.
 !! Put the result in cg%wa. Useful for debugging boundaries
 !<
 

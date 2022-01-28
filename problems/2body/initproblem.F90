@@ -208,7 +208,7 @@ contains
       real, dimension(ndims), intent(in) :: rel_pos
       real, dimension(ndims)             :: vel_2bodies
       real                               :: a        !< semi-major axis of initial elliptical orbit of particle
-      real                               :: r        !< lenght of radius vector
+      real                               :: r        !< length of radius vector
       real                               :: mu
 
       vel_2bodies = zero

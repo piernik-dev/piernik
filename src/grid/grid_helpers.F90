@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 
-!> \brief Module containing hepler functions that didn't fit elsewhere
+!> \brief Module containing helper functions that didn't fit elsewhere
 
 module grid_helpers
 

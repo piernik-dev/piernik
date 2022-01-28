@@ -137,7 +137,7 @@ contains
 #if defined(COSM_RAYS) && defined(IONIZED)
       call div_v(flind%ion%pos, cg)
 #endif /* COSM_RAYS && IONIZED */
-      if (.false. .and. cg%is_old) return ! to supress compiler warnings
+      if (.false. .and. cg%is_old) return ! to suppress compiler warnings
 
    end subroutine prepare_sources
 

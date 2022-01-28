@@ -359,7 +359,7 @@ contains
       ! allocatable is required to get proper bounds, as they were allocated
 
       if (any(lbound(mask) /= lbound(this%map)) .or. any(ubound(mask) /= ubound(this%map))) then
-         ! we expect a leafmap to be passed here, hence we don't calculate overlap (it would be easy, just more lenghty)
+         ! we expect a leafmap to be passed here, hence we don't calculate overlap (it would be easy, just more lengthy)
          this%map     (lbound(mask, dim=1):ubound(mask, dim=1), lbound(mask, dim=2):ubound(mask, dim=2), lbound(mask, dim=3):ubound(mask, dim=3)) = &
               this%map(lbound(mask, dim=1):ubound(mask, dim=1), lbound(mask, dim=2):ubound(mask, dim=2), lbound(mask, dim=3):ubound(mask, dim=3)) .and. mask
       else

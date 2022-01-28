@@ -33,7 +33,7 @@
 !! The Mandelbrot problem is intended for stress testing of the AMR
 !! subsystem. There are more efficient fractal generators around but
 !! one may consider some fun ideas:
-!! * Use some multipresicion or implement own fixed point, optimized for
+!! * Use some multiprecision or implement own fixed point, optimized for
 !!   these calculations.
 !! * Use speedup tricks like these in fast deep zoom programs.
 !! * Detect interior of minibrotsfor further speedups (already sort of works

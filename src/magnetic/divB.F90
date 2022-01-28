@@ -288,7 +288,7 @@ contains
    end function divB_c_IO
 
 !>
-!! \brief Return estimate of derivative taken at given span (in cells) nad multiplied by given coefficient for a given grid container.
+!! \brief Return estimate of derivative taken at given span (in cells) and multiplied by given coefficient for a given grid container.
 !! This is a basic piece useful to construct various order derivatives and takes the advantage of stencil symmetry on an uniform grid.
 !!
 !! OPT: this may not be the best approach performance-wise but it is compact and we don't expect to evaluate it foo often.

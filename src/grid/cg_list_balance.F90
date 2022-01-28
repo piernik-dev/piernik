@@ -103,14 +103,14 @@ contains
 !! Move the patches between processes to maintain best possible work balance.
 !!
 !! First, all planned patches are gathered in an array on the master process, and deallocated locally.
-!! Then, the patches are sorted according to Space-Filling Curve index and distributed among the prosesses.
+!! Then, the patches are sorted according to Space-Filling Curve index and distributed among the processes.
 !! The processes with least workload will get more patches.
 !! After the distribution most processes should have roughly equal number of patches (+/- 1) with the possible exception
 !! of few processes that were initially heavily loaded.
 !! The load is counted only on current level, so the load imbalance may add up across several levels.
 !!
 !! As it is hard to predict future cg cost, we better refrain from sophisticated
-!! load balancing here and wait until some performnce data is collected.
+!! load balancing here and wait until some performance data is collected.
 !!
 !! Note that this routine is not intended for moving existing blocks between processes.
 !! A separate routine, called from cg_leaves::update will do that task when allowed and found worth the effort.

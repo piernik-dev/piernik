@@ -128,7 +128,8 @@ contains
 
       implicit none
 
-      integer                        :: i, j, k, nssteps, nssteps_max
+      integer                        :: i, j, k, nssteps_max
+      integer(kind=4)                :: nssteps
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
       type(spec_mod_trms)            :: sptab
@@ -193,19 +194,20 @@ contains
 
    subroutine prepare_substep(dt_simulation, dt_process_short, dt_substep, n_substeps)
 
+      use initcrspectrum, only: n_substeps_max
 #ifdef CRESP_VERBOSED
-      use dataio_pub,         only: msg, warn
+      use dataio_pub,     only: msg, warn
+      use mpisetup,       only: master
 #endif /* CRESP_VERBOSED */
-      use initcrspectrum,     only: n_substeps_max
-      use mpisetup,           only: master
 
       implicit none
 
-      real,    intent(in)  :: dt_simulation, dt_process_short
-      real,    intent(out) :: dt_substep
-      integer, intent(out) :: n_substeps
+      real,            intent(in)  :: dt_simulation, dt_process_short
+      real,            intent(out) :: dt_substep
+      integer(kind=4), intent(out) :: n_substeps
 
-      n_substeps  = ceiling(dt_simulation / dt_process_short ) ! ceiling to assure resulting dt_substep .le. dt_process_short
+      n_substeps = ceiling(dt_simulation / dt_process_short, kind=4)  ! ceiling to assure resulting dt_substep .le. dt_process_short
+
 #ifdef CRESP_VERBOSED
       if (n_substeps > n_substeps_max .and. master) then
          write (msg,"(A42,I5, A14, I5)") "[cresp_grid:prepare_substep] n_substeps = ", n_substeps, " exceeds limit ", n_substeps_max
@@ -213,11 +215,9 @@ contains
       endif
 #endif /* CRESP_VERBOSED */
 
-
-      dt_substep  = dt_simulation / n_substeps
+      dt_substep = dt_simulation / n_substeps
 
    end subroutine prepare_substep
-
 
 !----------------------------------------------------------------------------------------------------
 

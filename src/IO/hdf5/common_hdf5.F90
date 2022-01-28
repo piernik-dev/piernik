@@ -470,7 +470,7 @@ contains
       use mpisetup,      only: master, slave
       use version,       only: env, nenv
 #ifdef COSM_RAY_ELECTRONS
-      use initcrspectrum,  only: write_cresp_to_restart
+      use initcrspectrum,  only: write_cresp_to_restart, use_cresp
       use cresp_io,        only: create_cresp_smap_fields
       use cresp_NR_method, only: cresp_write_smaps_to_hdf
 #endif /* COSM_RAY_ELECTRONS */
@@ -558,8 +558,10 @@ contains
       call write_snsources_to_restart(file_id)
 #endif /* SN_SRC */
 #ifdef COSM_RAY_ELECTRONS
-      call create_cresp_smap_fields(file_id) ! create "/cresp/smaps_{LO,UP}/..."
-      call cresp_write_smaps_to_hdf(file_id) ! create "/cresp/smaps_{LO,UP}/{p_f}_ratio"
+      if (use_cresp) then
+         call create_cresp_smap_fields(file_id) ! create "/cresp/smaps_{LO,UP}/..."
+         call cresp_write_smaps_to_hdf(file_id) ! create "/cresp/smaps_{LO,UP}/{p_f}_ratio"
+      endif
 #endif /* COSM_RAY_ELECTRONS */
       if (associated(user_attrs_wr)) call user_attrs_wr(file_id)
 
@@ -916,7 +918,7 @@ contains
       integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_o       !< sizes of all cg, expanded by external boundaries
       integer(kind=4),  dimension(:),   pointer     :: cg_rl            !< list of refinement levels from all cgs/procs
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_b           !< list of n_b from all cgs/procs
-      integer(kind=4),  dimension(:,:), pointer     :: cg_n_o           !< list of grid dimnsions with external guardcells from all cgs/procs
+      integer(kind=4),  dimension(:,:), pointer     :: cg_n_o           !< list of grid dimensions with external guardcells from all cgs/procs
       integer(kind=8),  dimension(:,:), pointer     :: cg_off           !< list of offsets from all cgs/procs
 #ifdef NBODY_1FILE
       integer(kind=8),  pointer                      :: cg_npart

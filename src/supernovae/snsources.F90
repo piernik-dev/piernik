@@ -159,14 +159,14 @@ contains
 !<
    subroutine random_sn
 
-      use global,    only: t, cfl_violated
+      use global, only: t, repeat_step
 
       implicit none
 
       real, dimension(ndims) :: snpos
       integer                :: isn, nsn_per_timestep
 
-      if (.not.cfl_violated) nsn_last = nsn
+      if (.not.repeat_step) nsn_last = nsn
 
       nsn = int(t * f_sn, kind=4)
       nsn_per_timestep = nsn - nsn_last
@@ -322,7 +322,7 @@ contains
       integer                           :: jsn, jremap
       real                              :: dysn, epsi, epso
 
-      if (is_multicg) call die("[snsources:sn_shear] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
+      if (is_multicg) call die("[snsources:sn_shear] multiple grid pieces per processor not implemented yet") !nontrivial SHEAR
 
       jsn  = cg%js+int((ysnoi(2)-dom%edge(ydim, LO))*cg%idy)
       dysn  = mod(ysnoi(2), cg%dy)
@@ -349,7 +349,7 @@ contains
 !-----------------------------------------------------------------------
 
 !>
-!! \brief Function that generates values of normal distribution (from Numerical Recipies)
+!! \brief Function that generates values of normal distribution (from Numerical Recipes)
 !! \return x random value of uniform distribution
 !! \return y random value of uniform distribution
 !! \return @e real, random value of normal distribution
