@@ -75,8 +75,8 @@ contains
 
       use cg_cost_data,     only: I_DIFFUSE
       use cg_leaves,        only: leaves
-      use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
+      use cg_list_global,   only: all_cg
       use constants,        only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n, PPP_CR
       use dataio_pub,       only: die
       use domain,           only: dom
@@ -95,10 +95,10 @@ contains
 
       if (.not. has_cr) return
 
-
       call ppp_main%start(awb_label, PPP_CR)
-      call finest%level%restrict_to_base_w_1var(wna%ind(wcr_n))
-      call leaves%leaf_arr4d_boundaries(wna%ind(wcr_n))
+
+      call all_cg%level_4d_boundaries(wna%ind(wcr_n)) !, dir=dir)
+      ! ToDo: override coarse fluxes with restricted fine fluxes
 
       ! do the external boundaries
       cgl => leaves%first
