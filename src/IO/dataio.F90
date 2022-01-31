@@ -175,7 +175,7 @@ contains
       use constants,  only: cwdlen, PIERNIK_INIT_MPI, INVALID
       use dataio_pub, only: nrestart, last_hdf_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
            &                tmp_log_file, printinfo, printio, warn, msg, die, code_progress, log_wr, restarted_sim, &
-           &                move_file, parfile, parfilelines, log_file, maxparfilelines, can_i_write, ierrh, par_file
+           &                move_file, parfile, parfilelines, log_file, maxparlen, maxparfilelines, can_i_write, ierrh, par_file
       use mpisetup,   only: master, nproc, proc, piernik_MPI_Bcast, piernik_MPI_Barrier, FIRST, LAST
 
       implicit none
@@ -208,6 +208,7 @@ contains
          enddo
          close(par_lun)
          if (parfilelines == maxparfilelines) call warn("[dataio:init_dataio_parameters] problem.par has too many lines. The copy in the logfile and HDF dumps can be truncated.")
+         maxparlen = int(maxval(len_trim(parfile(:parfilelines))), kind=4)
       endif
 
       ! For 1 /= nproc_io /= nproc there should be choice between two strategies : nproc < nproc_io and the current one
@@ -502,12 +503,12 @@ contains
    subroutine init_dataio
 
       use constants,    only: PIERNIK_INIT_IO_IC
-      use dataio_pub,   only: code_progress, die, nres, nrestart, printinfo, restarted_sim, warn
+      use dataio_pub,   only: code_progress, die, maxenvlen, nres, nrestart, printinfo, restarted_sim, warn
       use domain,       only: dom
       use mpisetup,     only: master
       use timer,        only: walltime_end
       use user_hooks,   only: user_vars_arr_in_restart
-      use version,      only: nenv,env, init_version
+      use version,      only: nenv, env, init_version
 #ifdef HDF5
       use common_hdf5,  only: init_hdf5
       use data_hdf5,    only: init_data
@@ -555,6 +556,7 @@ contains
             call printinfo(env(i), .false.)
          enddo
       endif
+      maxenvlen = int(maxval(len_trim(env(:nenv))), kind=4)
 
       if (associated(user_vars_arr_in_restart)) call user_vars_arr_in_restart
 

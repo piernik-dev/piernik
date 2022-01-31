@@ -449,6 +449,18 @@ contains
 
    end subroutine common_shortcuts
 
+   function tight_chararray(arrin, ndim, maxn) result(arrout)
+
+      implicit none
+
+      integer,                           intent(in) :: ndim
+      integer(kind=4),                   intent(in) :: maxn
+      character(len=*), dimension(ndim), intent(in) :: arrin
+      character(len=maxn), dimension(ndim)          :: arrout
+
+      arrout = arrin(:)(:maxn)
+
+   end function tight_chararray
 !>
 !! \brief This routine writes all attributes that are common to restart and output files.
 !!
@@ -462,7 +474,7 @@ contains
    subroutine set_common_attributes(filename)
 
       use constants,     only: I_ONE
-      use dataio_pub,    only: use_v2_io, parfile, parfilelines, gzip_level
+      use dataio_pub,    only: maxenvlen, maxparlen, use_v2_io, parfile, parfilelines, gzip_level
       use dataio_user,   only: user_attrs_wr, user_attrs_pre
       use hdf5,          only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, &
          & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
@@ -493,7 +505,6 @@ contains
       integer(HID_T)                 :: type_id, dspace_id, dset_id, prp_id
       integer(HSIZE_T), dimension(1) :: dimstr
       logical(kind=4)                :: Z_avail         !< Z_avail perhaps should be of type integer(HID_T)
-      integer(SIZE_T)                :: maxlen
       integer(kind=4)                :: error           !< error perhaps should be of type integer(HID_T)
 
       ! \ToDo Set up a stack of routines registered by appropriate modules
@@ -517,7 +528,6 @@ contains
       endif
 
       ! Store a compressed copy of the problem.par file.
-      maxlen = int(maxval(len_trim(parfile(:parfilelines))), kind=4)
       dimstr = [parfilelines]
       call H5Zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
       ! call H5Zget_filter_info_f ! everything should be always fine for gzip
@@ -527,22 +537,21 @@ contains
          call H5Pset_chunk_f(prp_id, I_ONE, dimstr, error)
       endif
       call H5Tcopy_f(H5T_NATIVE_CHARACTER, type_id, error)
-      call H5Tset_size_f(type_id, maxlen, error)
+      call H5Tset_size_f(type_id, int(maxparlen, SIZE_T), error)
       call H5Screate_simple_f(I_ONE, dimstr, dspace_id, error)
       call H5Dcreate_f(file_id, "problem.par", type_id,  dspace_id, dset_id, error, dcpl_id = prp_id)
-      call H5Dwrite_f(dset_id, type_id, parfile(:)(:maxlen), dimstr, error)
+      call H5Dwrite_f(dset_id, type_id, tight_chararray(parfile, parfilelines, maxparlen), dimstr, error)
       call H5Dclose_f(dset_id, error)
       call H5Sclose_f(dspace_id, error)
 
       ! Store a compressed copy of the piernik.def file and Id lines from source files.
       ! We recycle type_id and prp_id, so we don't close them yet.
-      maxlen = int(maxval(len_trim(env(:nenv))), kind=4)
       dimstr = [nenv]
       if (Z_avail) call H5Pset_chunk_f(prp_id, I_ONE, dimstr, error)
-      call H5Tset_size_f(type_id, maxlen, error)
+      call H5Tset_size_f(type_id, int(maxenvlen, SIZE_T), error)
       call H5Screate_simple_f(I_ONE, dimstr, dspace_id, error)
       call H5Dcreate_f(file_id, "env", type_id,  dspace_id, dset_id, error, dcpl_id = prp_id)
-      call H5Dwrite_f(dset_id, type_id, env(:)(:maxlen), dimstr, error)
+      call H5Dwrite_f(dset_id, type_id, tight_chararray(env, nenv, maxenvlen), dimstr, error)
       call H5Dclose_f(dset_id, error)
       call H5Sclose_f(dspace_id, error)
       call H5Tclose_f(type_id, error)
