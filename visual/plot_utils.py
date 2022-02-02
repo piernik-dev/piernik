@@ -122,6 +122,15 @@ def labelx():
     return lambda var: '$' + str(var)[2:-1].replace('**', '^') + '$'
 
 
+def labellog(sctype, symmin):
+    logname = ''
+    if (sctype == '2' or sctype == 'log'):
+        logname = 'log '
+    elif (sctype == '3' or sctype == 'symlog'):
+        logname = '{symmetry level = %8.3e} log ' % symmin
+    return logname
+
+
 def take_nonempty(lst):
     for it in lst:
         if it != []:

@@ -212,7 +212,7 @@ def plotcompose(pthfilen, var, output, options):
             if drawd:
                 vmin, vmax, symmin, autsc = pu.scale_manage(sctype, refis, umin, umax, any(draw1D), any(draw2D), extr)
 
-                vlab = var + " [%s]" % pu.labelx()(uvar)
+                vlab = pu.labellog(sctype, symmin) + var + " [%s]" % pu.labelx()(uvar)
                 field = drawd, vmin, vmax, sctype, symmin, cmap, autsc, vlab
 
     h5f.close()
