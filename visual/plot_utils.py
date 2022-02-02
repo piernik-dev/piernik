@@ -52,7 +52,9 @@ def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
         if (vmax > 0.0):
             vmax = np.log10(vmax)
         else:
-            vmax = -1.
+            vmax = fineqv
+        if (vmin == np.inf):
+            vmin = vmax - fineqv
     elif (sctype == '3' or sctype == 'symlog'):
         if (umin > 0.0 and umax > 0.0):
             symmin = umin
