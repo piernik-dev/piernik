@@ -7,6 +7,7 @@ figrwcls = [(2, 2), (1, 1), (1, 2), (2, 1), (1, 2), (1, 3)]
 figplace = [(3, 2, 0), (0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 0), (1, 0, 0)]
 cbsplace = [(1, 1), (-1, -1), (2, 2), (0, 1), (1, 1), (2, 2)]
 
+fineqv = 1.0
 
 def plane_in_outputname(figmode, draw2D):
     to_insert = ''
@@ -23,9 +24,6 @@ def plane_in_outputname(figmode, draw2D):
 def fsym(vmin, vmax):
     vmx = np.max([np.abs(vmin), np.abs(vmax)])
     vmn = -1.0 * vmx
-    if vmn == vmx:
-        vmn = vmn - 0.00001
-        vmx = vmx + 0.00001
     return vmn, vmx
 
 
@@ -69,6 +67,10 @@ def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
             vmax = np.log10(max(np.abs(smin), np.abs(smax)) / symmin)
         vmin = -vmax
         print('SYMMIN value for SYMLOG scaletype: %s' % symmin)
+
+    if vmin == vmax:
+        vmin = vmin - fineqv
+        vmax = vmax + fineqv
 
     print('3D data value range: ', d3min, d3max)
     if d2:
