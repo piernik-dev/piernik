@@ -210,15 +210,8 @@ def plotcompose(pthfilen, var, output, options):
             drawd = False
         else:
             if drawd:
-                d1min, d1max, d2min, d2max, d3min, d3max = min(extr[0]), max(extr[1]), min(extr[2]), max(extr[3]), min(extr[4]), max(extr[5])
-                vmin, vmax, symmin, autsc = pu.scale_manage(sctype, refis, umin, umax, any(draw2D), [d1min, d1max, d2min, d2max])
+                vmin, vmax, symmin, autsc = pu.scale_manage(sctype, refis, umin, umax, any(draw1D), any(draw2D), extr)
 
-                print('3D data value range: ', d3min, d3max)
-                if any(draw2D):
-                    print('Slices  value range: ', d2min, d2max)
-                if any(draw1D):
-                    print('1D data value range: ', d1min, d1max)
-                print('Plotted value range: ', vmin, vmax)
                 vlab = var + " [%s]" % pu.labelx()(uvar)
                 field = drawd, vmin, vmax, sctype, symmin, cmap, autsc, vlab
 

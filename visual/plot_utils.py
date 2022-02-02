@@ -29,13 +29,14 @@ def fsym(vmin, vmax):
     return vmn, vmx
 
 
-def scale_manage(sctype, refis, umin, umax, d2, minmax):
+def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
     symmin = 1.0
     autoscale = False
+    d1min, d1max, d2min, d2max, d3min, d3max = min(extr[0]), max(extr[1]), min(extr[2]), max(extr[3]), min(extr[4]), max(extr[5])
     if d2:
-        dmin, dmax = minmax[2], minmax[3]
+        dmin, dmax = d2min, d2max
     else:
-        dmin, dmax = minmax[0], minmax[1]
+        dmin, dmax = d1min, d1max
     if (umin == 0.0 and umax == 0.0):
         vmin, vmax = dmin, dmax
         autoscale = True
@@ -69,6 +70,12 @@ def scale_manage(sctype, refis, umin, umax, d2, minmax):
         vmin = -vmax
         print('SYMMIN value for SYMLOG scaletype: %s' % symmin)
 
+    print('3D data value range: ', d3min, d3max)
+    if d2:
+        print('Slices  value range: ', d2min, d2max)
+    if d1:
+        print('1D data value range: ', d1min, d1max)
+    print('Plotted value range: ', vmin, vmax)
     return vmin, vmax, symmin, autoscale
 
 
