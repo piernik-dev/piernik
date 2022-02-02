@@ -48,7 +48,7 @@ def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
         if (vmin > 0.0):
             vmin = np.log10(vmin)
         else:
-            vmin = np.log10(check_minimum_data(refis, False)[0])
+            vmin = np.log10(check_minimum_data(refis))
         if (vmax > 0.0):
             vmax = np.log10(vmax)
         else:
@@ -58,15 +58,16 @@ def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
     elif (sctype == '3' or sctype == 'symlog'):
         if (umin > 0.0 and umax > 0.0):
             symmin = umin
-            vmax = np.log10(umax / umin)
-            vmin = np.log10(vmax)
+            vmax = np.log10(umax / symmin)
         else:
             if (dmin * dmax > 0.0):
-                smin, smax = dmin, dmax
+                symmin, smax = sorted([np.abs(dmin), np.abs(dmax)])
             else:
-                smin, smax = check_minimum_data(refis, True)
-            symmin = min(np.abs(smin), np.abs(smax))
-            vmax = np.log10(max(np.abs(smin), np.abs(smax)) / symmin)
+                symmin, smax = check_extremes_absdata(refis)
+            if (smax == -np.inf or symmin == np.inf):
+                smax = 10.
+                symmin = 1.
+            vmax = np.log10(smax / symmin)
         vmin = -vmax
         print('SYMMIN value for SYMLOG scaletype: %s' % symmin)
 
@@ -83,16 +84,26 @@ def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
     return vmin, vmax, symmin, autoscale
 
 
-def check_minimum_data(refis, extended):
-    cmdmin, cmdmax = np.inf, -np.inf
+def check_minimum_data(refis):
+    cmdmin = np.inf
     for blks in refis:
         for bl in blks:
             bxyz, binb = bl[0:2]
             for ncut in range(3):
                 if binb[ncut]:
                     cmdmin = min(cmdmin, np.min(bxyz[ncut], initial=np.inf, where=(bxyz[ncut] > 0.0)))
-                    if extended:
-                        cmdmax = max(cmdmax, np.max(bxyz[ncut], initial=-np.inf, where=(bxyz[ncut] < 0.0)))
+    return cmdmin
+
+
+def check_extremes_absdata(refis):
+    cmdmin, cmdmax = np.inf, -np.inf
+    for blks in refis:
+        for bl in blks:
+            bxyz, binb = bl[0:2]
+            for ncut in range(3):
+                if binb[ncut]:
+                    cmdmin = min(cmdmin, np.min(np.abs(bxyz[ncut]), initial=np.inf, where=(np.abs(bxyz[ncut]) > 0.0)))
+                    cmdmax = max(cmdmax, np.max(np.abs(bxyz[ncut]), initial=-np.inf, where=(np.abs(bxyz[ncut]) > 0.0)))
     return cmdmin, cmdmax
 
 
