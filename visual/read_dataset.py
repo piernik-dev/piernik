@@ -79,7 +79,7 @@ def read_block(h5f, dset_name, ig, olev, oc, usc, getmap, draw1D, draw2D):
     if not any(inb):
         return False, [], []
     if not getmap:
-        return levok, [inb, [], [], ledge / usc, redge / usc, olev], []
+        return levok, [[], inb, ledge / usc, redge / usc, olev, []], []
     clen = h5g.attrs['dl']
     off = h5g.attrs['off']
     n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
