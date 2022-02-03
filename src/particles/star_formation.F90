@@ -57,6 +57,7 @@ contains
     use named_array_list,      only: wna, qna
     !use particle_types,        only: particle
     use particle_utils,        only: is_part_in_cg
+    !use sndistr,               only: sum_dmass_stars
     use units,                 only: fpiG
 
     logical, intent(in)                                :: forward
@@ -69,14 +70,16 @@ contains
     real                                               :: thresh, G
     integer(kind=4)                                    :: pid, ig
     real, dimension(ndims)                             :: pos, vel, acc
-    real                                               :: mass, ener, tdyn
+    real                                               :: mass, ener, tdyn, dmass_stars, frac
     logical                                            :: in, phy, out, cond
 
     
     if (.not. forward) return
     G = fpiG/(4*pi)
     ig = qna%ind(nbdn_n)
-    thresh = 0.005
+    !thresh = 0.005
+    frac = 0.1
+    dmass_stars = 0.0
     cgl => leaves%first
     do while (associated(cgl))
        cg => cgl%cg
@@ -92,9 +95,9 @@ contains
                    if (cond) then
                       call attribute_id(pid)
                       pos(1) = cg%coord(CENTER, xdim)%r(i)
-                      pos(2) = cg%coord(CENTER, xdim)%r(j)
-                      pos(3) = cg%coord(CENTER, xdim)%r(k)
-                      mass = 0.1 * cg%w(wna%fi)%arr(pfl%idn,i,j,k) * cg%dvol !* 0.75
+                      pos(2) = cg%coord(CENTER, ydim)%r(j)
+                      pos(3) = cg%coord(CENTER, zdim)%r(k)
+                      mass = frac * cg%w(wna%fi)%arr(pfl%idn,i,j,k) * cg%dvol !* 0.75
                       vel(1) = cg%u(pfl%imx, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
                       vel(2) = cg%u(pfl%imy, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
                       vel(3) = cg%u(pfl%imz, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
@@ -104,9 +107,10 @@ contains
                       !print *, 'SF!', cg%u(pfl%ien, i, j, k), 0.1 * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
                       !print *, proc, pid, tdyn
                       call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, t, tdyn)
-                      cg%u(pfl%ien, i, j, k)          = cg%u(pfl%ien, i, j, k) - 0.1 * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k)) * 0.75
-                      cg%w(wna%fi)%arr(pfl%idn,i,j,k) = 0.925 * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
-                      cg%u(pfl%imx:pfl%imz, i, j, k)  = 0.925 * cg%u(pfl%imx:pfl%imz, i, j, k)
+                      cg%u(pfl%ien, i, j, k)          = cg%u(pfl%ien, i, j, k) - frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))! * 0.75
+                      cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1-frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
+                      cg%u(pfl%imx:pfl%imz, i, j, k)  = (1-frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
+                      dmass_stars = dmass_stars + mass
                    endif
                 enddo
              enddo
@@ -114,7 +118,7 @@ contains
        enddo
        cgl => cgl%nxt
     enddo
-
+    !sum_dmass_stars = sum_dmass_stars + dmass_stars
     call feedback()
 
   end subroutine SF
@@ -159,7 +163,7 @@ contains
              t1 = t - pset%pdata%tform
              tdyn = pset%pdata%tdyn
              msf = 0.0
-             if (t1 .gt. 6.5) then
+             if (t1 .gt. -1*6.5) then
                 msf = pset%pdata%mass * ( (1+t1/tdyn) * exp(-t1/tdyn) - (1+(t1+2*dt)/tdyn) * exp(-(t1+2*dt)/tdyn))
                 !msf = pset%pdata%mass
                 pset%pdata%mass = pset%pdata%mass - 0.25*msf
@@ -183,7 +187,7 @@ contains
                                   else
                                      padd =  36000 * pset%pdata%mass/42 / cg%dvol / 26.0 * 2*dt/113.5     ! should use initial mass, not current mass
                                   endif
-                                  fact = 0.0
+                                  
                                   ! Momentum kick
                                   cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) - 0.5*(cg%u(pfl%imx,i,j,k)**2 +cg%u(pfl%imy,i,j,k)**2 + cg%u(pfl%imz,i,j,k)**2)/cg%u(pfl%idn,i,j,k)  ! remove ekin
                                   cg%u(pfl%imx,i,j,k) = cg%u(pfl%imx,i,j,k) + fact * i1 * padd
@@ -197,13 +201,14 @@ contains
                                         cg%w(wna%fi)%arr(pfl%idn,i,j,k) = cg%w(wna%fi)%arr(pfl%idn,i,j,k) + 0.25 * msf / cg%dvol                               ! adding mass
                                         cg%u(pfl%imx:pfl%imz, i, j, k)  = cg%u(pfl%imx:pfl%imz, i, j, k)  + 0.25 * msf / cg%dvol * pset%pdata%vel(:)           ! adding momentum
                                         cg%u(pfl%ien,i,j,k)             = cg%u(pfl%ien,i,j,k)             + 0.25 * msf / cg%dvol * sum(pset%pdata%vel(:)**2)   ! adding kinetic energy
-                                        !cg%u(pfl%ien,i,j,k)             = cg%u(pfl%ien,i,j,k)  + 0.00001 * msf / cg%dvol * clight**2 
+                                        cg%u(pfl%ien,i,j,k)             = cg%u(pfl%ien,i,j,k)  + 0.00001 * 0.25 * (1 - 0.9*cr_active) * msf / cg%dvol * clight**2 
+                                        if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + 0.1 * 0.00001 * 0.25 *  msf / cg%dvol * clight**2
                                      endif
-                                     if ((t1-dt < 6.5) .and. ((t1+dt) .gt. 6.5)) then ! .and. (0==1)) then
-                                 !       cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + 0.000001 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2   ! adding SN energy
+                                     if ((t1-dt < 6.5) .and. ((t1+dt) .gt. 6.5)) then
+                                        cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + 0.75 * 0.00001 * 0.25 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2   ! adding SN energy
                                         !print *, "SN ENERGY INJECTED!", 0.00001 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2, pset%pdata%mass + 0.25*msf
 #ifdef COSM_RAYS
-                                        if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + 0.1 * 0.000001 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2   ! adding CR
+                                        if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + 0.1 * 0.00001 * 0.25 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2   ! adding CR
 #endif /* COSM_RAYS */
                                      endif
                                   endif
@@ -246,13 +251,13 @@ contains
 
     G = fpiG/(4*pi)
     cond = .false.
+    if ((abs(cg%z(k)) > 7000) .or. ((cg%x(i)**2+cg%y(j)**2) > 20000**2)) return ! no SF in the stream
     if (cg%w(wna%fi)%arr(pfl%idn,i,j,k) .lt. density_thr) return   ! threshold density
     if (cg%q(divv_i)%arr(i,j,k) .ge. 0) return                     ! convergent flow
-    !if (cg%w(wna%fi)%arr(pfl%idn,i,j,k) * cg%dvol .lt. 3.0 * 10**6) return   ! part mass > 3 10^5
-    RJ = pfl%cs * sqrt(3*pi/(32*G*cg%w(wna%fi)%arr(pfl%idn,i,j,k)))
-    !print *, 'Jeans mass', 4*pi/3 * RJ**3 * cg%w(wna%fi)%arr(pfl%idn,i,j,k), pi/6.0 * pfl%cs**3 / G**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5
-    !if (cg%w(wna%fi)%arr(pfl%idn,i,j,k) * cg%dvol .lt. min(4*pi/3 * RJ**3 * cg%w(wna%fi)%arr(pfl%idn,i,j,k), pi/6.0 * pfl%cs**3 / G**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5)) return  !pi/6.0 * pfl%cs**3 / G**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5 ) return    ! Jeans mass
-    !print *, cg%w(wna%fi)%arr(pfl%idn,i,j,k) * cg%dvol , 4*pi/3 * RJ**3 * cg%w(wna%fi)%arr(pfl%idn,i,j,k), pi/6.0 * pfl%cs**3 / G**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5
+    if (cg%w(wna%fi)%arr(pfl%idn,i,j,k) * cg%dvol .lt. 1.2 * 10**6) return   ! part mass > 3 10^5
+    RJ = 2.8 * sqrt(temp/1000) * sqrt(3*pi/(32*G*cg%w(wna%fi)%arr(pfl%idn,i,j,k))) 
+    !print *, 'Jeans mass', 4*pi/3 * RJ**3 * cg%w(wna%fi)%arr(pfl%idn,i,j,k), pfl%cs, 2.8 * sqrt(temp/1000)!, pi/6.0 * pfl%cs**3 / G**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5
+    if (cg%w(wna%fi)%arr(pfl%idn,i,j,k) * cg%dvol .lt. 4*pi/3 * RJ**3 * cg%w(wna%fi)%arr(pfl%idn,i,j,k)) return !, pi/6.0 * pfl%cs**3 / G**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5)) return  !pi/6.0 * pfl%cs**3 / G**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5 ) return    ! Jeans mass
     kbgmh  = kboltz / (pfl%gam_1 * mH)
     temp = cg%q(itemp)%arr(i,j,k)
     call calc_tcool(temp, cg%w(wna%fi)%arr(pfl%idn,i,j,k), kbgmh, tcool)
