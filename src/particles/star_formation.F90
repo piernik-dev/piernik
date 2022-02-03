@@ -36,9 +36,9 @@ module star_formation
   implicit none
 
   private
-  public :: SF, initialize_id, attribute_id, pid_gen
+  public :: SF, initialize_id, attribute_id, pid_gen, dmass_stars
 
-  integer(kind=4)       :: pid_gen, maxpid, dpid
+  integer(kind=4)       :: pid_gen, maxpid, dpid, dmass_stars
 
 contains
 
@@ -57,7 +57,6 @@ contains
     use named_array_list,      only: wna, qna
     !use particle_types,        only: particle
     use particle_utils,        only: is_part_in_cg
-    !use sndistr,               only: sum_dmass_stars
     use units,                 only: fpiG
 
     logical, intent(in)                                :: forward
@@ -70,16 +69,15 @@ contains
     real                                               :: thresh, G
     integer(kind=4)                                    :: pid, ig
     real, dimension(ndims)                             :: pos, vel, acc
-    real                                               :: mass, ener, tdyn, dmass_stars, frac
+    real                                               :: mass, ener, tdyn, frac
     logical                                            :: in, phy, out, cond
 
-    
+    dmass_stars = 0.0
     if (.not. forward) return
     G = fpiG/(4*pi)
     ig = qna%ind(nbdn_n)
     !thresh = 0.005
     frac = 0.1
-    dmass_stars = 0.0
     cgl => leaves%first
     do while (associated(cgl))
        cg => cgl%cg
@@ -118,7 +116,6 @@ contains
        enddo
        cgl => cgl%nxt
     enddo
-    !sum_dmass_stars = sum_dmass_stars + dmass_stars
     call feedback()
 
   end subroutine SF
