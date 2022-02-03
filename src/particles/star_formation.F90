@@ -51,7 +51,7 @@ contains
     use fluidindex,            only: flind
     use fluidtypes,            only: component_fluid
     use func,                  only: ekin
-    use global,                only: nstep, t
+    use global,                only: nstep, t, dt
     use grid_cont,             only: grid_container
     use mpisetup,              only: proc
     use named_array_list,      only: wna, qna
@@ -109,6 +109,7 @@ contains
                       cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1-frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
                       cg%u(pfl%imx:pfl%imz, i, j, k)  = (1-frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
                       dmass_stars = dmass_stars + mass
+                      cg%q(qna%ind("SFR_n"))%arr(i,j,k) = mass / cg%dvol / (2*dt)
                    endif
                 enddo
              enddo
