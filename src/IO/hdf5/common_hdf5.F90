@@ -105,11 +105,11 @@ contains
 
    subroutine init_hdf5(vars)
 
-      use constants,  only: dsetnamelen, singlechar
-      use dataio_pub, only: warn
-      use fluids_pub, only: has_ion, has_dst, has_neu
-      use global,     only: cc_mag
-      use mpisetup,   only: master
+      use constants,      only: dsetnamelen, singlechar
+      use dataio_pub,     only: warn
+      use fluids_pub,     only: has_ion, has_dst, has_neu
+      use global,         only: cc_mag
+      use mpisetup,       only: master
 #ifdef COSM_RAYS
       use dataio_pub,     only: msg
 #ifdef COSM_RAY_ELECTRONS
@@ -118,6 +118,9 @@ contains
 #else /* !COSM_RAY_ELECTRONS */
       use fluidindex,     only: iarr_all_crs
 #endif /* !COSM_RAY_ELECTRONS */
+#ifdef COSM_RAYS_SOURCES
+      use cr_data,        only: cr_names
+#endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 
       implicit none
@@ -197,7 +200,15 @@ contains
                do k = 1, size(iarr_all_crs,1)
 #endif /* !COSM_RAY_ELECTRONS */
                   if (k<=99) then
+#ifdef COSM_RAYS_SOURCES
+                     if (len(trim(cr_names(k))) > 0) then
+                        write(aux,'(a3,a)') 'cr_', trim(cr_names(k))
+                     else
+#endif /* COSM_RAYS_SOURCES */
                      write(aux,'(A2,I2.2)') 'cr', k
+#ifdef COSM_RAYS_SOURCES
+                     endif
+#endif /* COSM_RAYS_SOURCES */
                      call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", k
