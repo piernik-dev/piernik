@@ -332,6 +332,10 @@ contains
       use initcrspectrum,   only: dfpq
       use named_array_list, only: wna
 #endif /* COSM_RAY_ELECTRONS */
+#ifdef COSM_RAYS_SOURCES
+      use cr_data,          only: cr_names
+      use initcosmicrays,   only: ncre
+#endif /* COSM_RAYS_SOURCES */
 #ifndef ISO
       use units,            only: kboltz, mH
 #endif /* !ISO */
@@ -375,6 +379,13 @@ contains
 #else /* ! COSM_RAY_ELECTRONS */
             tab(:,:,:) = cg%u(flind%crs%beg+i-1, RNG)
 #endif /* !COSM_RAY_ELECTRONS */
+#ifdef COSM_RAYS_SOURCES
+         case ('cr_A000' : 'cr_zz99')
+            do i = 1, ncre
+               if (var == trim('cr_' // cr_names(i))) exit
+            enddo
+            tab(:,:,:) = cg%u(flind%crn%beg+i-1, RNG)
+#endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
          case ("cren01" : "cren99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
