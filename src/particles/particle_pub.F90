@@ -42,8 +42,8 @@ module particle_pub
    public :: init_particles, cleanup_particles
    public :: lf_c, ignore_dt_fluid
 
-   real            :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
-   logical         :: ignore_dt_fluid    !< option to test only nbody part of the code, never true by default
+   real    :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
+   logical :: ignore_dt_fluid    !< option to test only nbody part of the code, never true by default
 
 contains
 

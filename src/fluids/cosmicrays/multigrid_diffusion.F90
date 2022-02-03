@@ -265,7 +265,6 @@ contains
 !>
 !! \brief Cleanup
 !<
-
    subroutine cleanup_multigrid_diff
 
       implicit none

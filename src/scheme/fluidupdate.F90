@@ -99,17 +99,10 @@ contains
       use mass_defect,    only: update_magic_mass
       use timestep_retry, only: repeat_fluidstep
 #ifdef COSM_RAY_ELECTRONS
-      use all_boundaries, only: all_fluid_boundaries
       use cresp_grid,     only: cresp_update_grid, cresp_clean_grid
-      use initcrspectrum, only: use_cresp_evol
-      use ppp,            only: ppp_main
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
-
-#ifdef COSM_RAY_ELECTRONS
-      character(len=*), parameter :: crug_label = "CRESP_upd_grid", crcg_label = "CRESP_clean_grid"
-#endif /* COSM_RAY_ELECTRONS */
 
       call repeat_fluidstep
       call update_chspeed
@@ -122,12 +115,7 @@ contains
 ! Sources should be hooked to problem_customize_solution with forward argument
 
 #ifdef COSM_RAY_ELECTRONS
-      if (use_cresp_evol) then
-         call ppp_main%start(crug_label)
-         call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module
-         call all_fluid_boundaries
-         call ppp_main%stop(crug_label)
-      endif
+      call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module
 #endif /* COSM_RAY_ELECTRONS */
 
       halfstep = .true.
@@ -137,9 +125,7 @@ contains
       call make_3sweeps(.false.) ! Z -> Y -> X
       call update_magic_mass
 #ifdef COSM_RAY_ELECTRONS
-      call ppp_main%start(crcg_label)
       call cresp_clean_grid ! BEWARE: due to diffusion some junk remains in the grid - this nullifies all inactive bins.
-      call ppp_main%stop(crcg_label)
 #endif /* COSM_RAY_ELECTRONS */
 
    end subroutine fluid_update_full
@@ -227,9 +213,9 @@ contains
       endif
       call ppp_main%stop(sw3_label)
 
-#if defined(GRAV)
+#ifdef GRAV
       need_update = .true.
-#if defined(NBODY)
+#ifdef NBODY
       if (associated(psolver)) call psolver(forward)  ! this will clear need_update it it would call source_terms_grav
 #endif /* NBODY */
       if (need_update) call source_terms_grav
@@ -268,7 +254,7 @@ contains
       integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
       logical,         intent(in) :: forward  !< if .false. then reverse operation order in the sweep
 
-#if defined(MAGNETIC)
+#ifdef MAGNETIC
       if ((which_solver == RTVD_SPLIT) .and. (divB_0_method /= DIVB_CT)) call die("[fluidupdate:make_sweep] only CT is implemented in RTVD")
 #endif /* MAGNETIC */
 
