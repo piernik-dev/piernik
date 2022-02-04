@@ -86,7 +86,6 @@
     K_crn_perp(1)  = 100.0 ! 10% of paral
     smallecr       = 0.e-2
     cre_gpcr_ess   = .false. 
-    use_CRsplit    = .false.
  /
 
  $COSMIC_RAY_SPECTRUM
