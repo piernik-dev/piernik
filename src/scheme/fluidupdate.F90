@@ -150,10 +150,13 @@ contains
       use particle_solvers,    only: psolver
 #endif /* NBODY */
 #endif /* GRAV */
-#if defined(COSM_RAYS) && defined(MULTIGRID)
-      use all_boundaries,      only: all_fluid_boundaries
-      use multigrid_diffusion, only: multigrid_solve_diff, worth_mg_diff
-#endif /* COSM_RAYS && MULTIGRID */
+#ifdef COSM_RAYS
+#ifdef MULTIGRID
+      use multigrid_diffusion, only: inworth_mg_diff
+#else /* !MULTIGRID */
+      use initcosmicrays,      only: use_CRdiff
+#endif /* !MULTIGRID */
+#endif /* COSM_RAYS */
 #ifdef SHEAR
       use shear,               only: shear_3sweeps
 #endif /* SHEAR */
@@ -181,17 +184,14 @@ contains
 
 #ifdef COSM_RAYS
 #ifdef MULTIGRID
-      if (worth_mg_diff()) then
-         call multigrid_solve_diff
-         call all_fluid_boundaries
-      else
-#endif /* MULTIGRID */
+      if (inworth_mg_diff()) then
+#else /* !MULTIGRID */
+      if (use_CRdiff) then
+#endif /* !MULTIGRID */
          do s = sFRST, sLAST, sCHNG
             if (.not.skip_sweep(s)) call make_diff_sweep(s)
          enddo
-#ifdef MULTIGRID
       endif
-#endif /* MULTIGRID */
 #endif /* COSM_RAYS */
 
       ! At this point everything should be initialized after domain expansion and we no longer need this list.

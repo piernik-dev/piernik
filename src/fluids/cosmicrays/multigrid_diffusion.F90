@@ -45,7 +45,7 @@ module multigrid_diffusion
    implicit none
 
    private
-   public :: multigrid_diff_par, cleanup_multigrid_diff, multigrid_solve_diff, worth_mg_diff
+   public :: multigrid_diff_par, cleanup_multigrid_diff, inworth_mg_diff
    public :: diff_tstep_fac, diff_explicit, diff_dt_crs_orig
 
    ! namelist parameters
@@ -274,32 +274,39 @@ contains
 
    end subroutine cleanup_multigrid_diff
 
-   logical function worth_mg_diff() result(do_mg)
+   logical function inworth_mg_diff() result(exec_outside)
 
-      use dataio_pub,    only: halfstep, msg, printinfo, warn
-      use global,        only: dt
-      use mpisetup,      only: master
-      use multigridvars, only: stdout
+      use all_boundaries, only: all_fluid_boundaries
+      use dataio_pub,     only: halfstep, msg, printinfo, warn
+      use global,         only: dt
+      use initcosmicrays, only: use_CRdiff
+      use mpisetup,       only: master
+      use multigridvars,  only: stdout
 
       implicit none
 
       logical, save :: frun = .true.
 
-      do_mg = .not. (diff_explicit .or. (allow_explicit .and. dt / diff_dt_crs_orig < 1))
+      exec_outside = .false.
+      if (.not. use_CRdiff) return
 
-      if (do_mg) then
-         if (dt < 0.99999 * diff_dt_crs_orig * diff_tstep_fac .and. .not. halfstep .and. master) then
-            write(msg,'(a,f8.3,a)')"[multigrid_diffusion:worth_mg_diff] Timestep limited somewhere else: dt = ", dt / diff_dt_crs_orig, " of explicit dt_crs."
-            call printinfo(msg, stdout)
-         endif
-      else
+      exec_outside = (diff_explicit .or. (allow_explicit .and. dt / diff_dt_crs_orig < 1))
+
+      if (exec_outside) then
          if (frun) then
             if (master .and. diff_explicit) call warn("[multigrid_diffusion:worth_mg_diff] Multigrid was initialized but is not used")
             frun = .false.
          endif
+      else
+         if (dt < 0.99999 * diff_dt_crs_orig * diff_tstep_fac .and. .not. halfstep .and. master) then
+            write(msg,'(a,f8.3,a)')"[multigrid_diffusion:worth_mg_diff] Timestep limited somewhere else: dt = ", dt / diff_dt_crs_orig, " of explicit dt_crs."
+            call printinfo(msg, stdout)
+         endif
+         call multigrid_solve_diff
+         call all_fluid_boundaries
       endif
 
-   end function worth_mg_diff
+   end function inworth_mg_diff
 
 !!$ ============================================================================
 !>
