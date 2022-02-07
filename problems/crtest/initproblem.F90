@@ -57,8 +57,8 @@ contains
 
       implicit none
 
-      problem_customize_solution => check_norm_wrapper
       finalize_problem           => check_norm
+      problem_customize_solution => check_norm_wrapper
 #ifdef HDF5
       user_vars_hdf5             => crtest_analytic_ecr1
 #endif /* HDF5 */
@@ -312,11 +312,15 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine check_norm_wrapper(forward)
+
+      use global, only: nstep
+
       implicit none
+
       logical, intent(in) :: forward
-      call check_norm
-      return
-      if (.false. .and. forward) d0 = 0.0 ! suppress compiler warnings on unused arguments
+
+      if (forward .and. mod(nstep, norm_step) == 0) call check_norm
+
    end subroutine check_norm_wrapper
 
 !-----------------------------------------------------------------------------
@@ -324,10 +328,9 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX
-      use dataio_pub,       only: code_progress, halfstep, msg, die, printinfo
+      use constants,        only: pSUM, pMIN, pMAX
+      use dataio_pub,       only: msg, die, printinfo
       use func,             only: operator(.notequals.)
-      use global,           only: nstep
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crs, ncrn, ncre
       use mpisetup,         only: master, piernik_MPI_Allreduce
@@ -349,8 +352,6 @@ contains
       else
          call die("[initproblem:check_norm] No CR components defined.")
       endif
-
-      if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /=0 .or. halfstep)) return
 
       call compute_analytic_ecr1
 

@@ -531,11 +531,15 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine calculate_error_norm_wrapper(forward)
+
+      use global, only: nstep
+
       implicit none
+
       logical, intent(in) :: forward
-      call calculate_error_norm
-      return
-      if (.false. .and. forward) pulse_size = 0.0 ! suppress compiler warnings on unused arguments
+
+      if (forward .and. mod(nstep, norm_step) == 0) call calculate_error_norm
+
    end subroutine calculate_error_norm_wrapper
 
 !-----------------------------------------------------------------------------
@@ -544,11 +548,11 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX, idlen
-      use dataio_pub,       only: code_progress, halfstep, msg, printinfo, warn
+      use constants,        only: pSUM, pMIN, pMAX, idlen
+      use dataio_pub,       only: msg, printinfo, warn
       use fluidindex,       only: flind
       use func,             only: operator(.notequals.)
-      use global,           only: t, nstep
+      use global,           only: t
       use grid_cont,        only: grid_container
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna
@@ -571,8 +575,6 @@ contains
       real, dimension(:,:,:), pointer   :: inid
       integer                           :: i, j
       character(len=idlen)              :: descr
-
-      if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /= 0 .or. halfstep)) return
 
       norm = 0.
       neg_err = huge(1.0)
