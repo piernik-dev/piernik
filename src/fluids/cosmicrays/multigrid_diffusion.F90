@@ -294,12 +294,12 @@ contains
 
       if (exec_outside) then
          if (frun) then
-            if (master .and. diff_explicit) call warn("[multigrid_diffusion:worth_mg_diff] Multigrid was initialized but is not used")
+            if (master .and. diff_explicit) call warn("[multigrid_diffusion:inworth_mg_diff] Multigrid was initialized but is not used")
             frun = .false.
          endif
       else
          if (dt < 0.99999 * diff_dt_crs_orig * diff_tstep_fac .and. .not. halfstep .and. master) then
-            write(msg,'(a,f8.3,a)')"[multigrid_diffusion:worth_mg_diff] Timestep limited somewhere else: dt = ", dt / diff_dt_crs_orig, " of explicit dt_crs."
+            write(msg,'(a,f8.3,a)')"[multigrid_diffusion:inworth_mg_diff] Timestep limited somewhere else: dt = ", dt / diff_dt_crs_orig, " of explicit dt_crs."
             call printinfo(msg, stdout)
          endif
          call multigrid_solve_diff
