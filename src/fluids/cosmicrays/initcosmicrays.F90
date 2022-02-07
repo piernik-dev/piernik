@@ -46,6 +46,7 @@ module initcosmicrays
    ! namelist parameters
    integer(kind=4)                     :: ncrn         !< number of CR nuclear  components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
    integer(kind=4)                     :: ncre         !< number of CR electron components or number of bins for COSM_RAY_ELECTRONS
+   integer(kind=4)                     :: ncra         !< ncre by default and 2*ncre for COSM_RAY_ELECTRONS
    integer(kind=4)                     :: ncrs         !< number of all CR components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
    real                                :: smallecr     !< floor value for CR energy density
@@ -131,6 +132,7 @@ contains
 
       integer(kind=4) :: nn, icr, jcr
       integer         :: ne
+      real            :: maxKcrs
 
       namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRdiff, divv_scheme, &
 #ifndef COSM_RAY_ELECTRONS
@@ -216,8 +218,8 @@ contains
 #ifdef COSM_RAY_ELECTRONS
             lbuff(ncrn+2)                = cre_gpcr_ess
 #else /* !COSM_RAY_ELECTRONS */
-            rbuff(ne+1       :ne+ncre) = K_cre_paral(1:ncre)  !< K_cre_paral explicitly defined & broadcasted if CRESP not in use
-            rbuff(ne+1+ncre:ne+2*ncre) = K_cre_perp (1:ncre)  !< K_cre_perp explicitly defined & broadcasted if CRESP not in use
+            rbuff(ne+1       :ne+ncre)   = K_cre_paral(1:ncre)  !< K_cre_paral explicitly defined & broadcasted if CRESP not in use
+            rbuff(ne+1+ncre:ne+2*ncre)   = K_cre_perp (1:ncre)  !< K_cre_perp explicitly defined & broadcasted if CRESP not in use
             rbuff(ne+2*ncre+1:ne+3*ncre) = gamma_cre(1:ncre)  ! gamma_cre used only if CRESP module not used
             lbuff(ncrn+2:ncrn+ncre+1)    = cre_gpcr_ess(1:ncre)
 #endif /* !COSM_RAY_ELECTRONS */
@@ -269,13 +271,14 @@ contains
 
       endif
 
-      ncrs = ncre + ncrn
+      ncra = ncre
 #ifdef COSM_RAY_ELECTRONS
-      ncrs = ncrs + ncre ! ncrn + 2 * ncre overall
+      ncra = I_TWO * ncre
 #endif /* COSM_RAY_ELECTRONS */
+      ncrs = ncra + ncrn
 
       if (any([ncrn, ncre] > ncr_max) .or. any([ncrn, ncre] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
-      if (ncrs ==0) call warn("[initcosmicrays:init_cosmicrays] ncrs == 0; no cr components specified")
+      if (ncrs == 0) call warn("[initcosmicrays:init_cosmicrays] ncrs == 0; no cr components specified")
 
       ma1d = [ncrs]
       call my_allocate(gamma_crs,   ma1d)
@@ -298,11 +301,7 @@ contains
       if (ncre .le. 0) then
          ma1d = 0
       else
-#ifdef COSM_RAY_ELECTRONS
-         ma1d = [I_TWO * ncre]
-#else /* !COSM_RAY_ELECTRONS */
-         ma1d = ncre
-#endif /* !COSM_RAY_ELECTRONS */
+         ma1d = [ncra]
       endif
       call my_allocate(iarr_cre, ma1d) ! < iarr_cre will point: (1:ncre) - cre number per bin, (ncre+1:2*ncre) - cre energy per bin
 
@@ -342,53 +341,39 @@ contains
 
       def_dtcrs = big
 #ifdef COSM_RAY_ELECTRONS
-      K_crs_valid = (maxval(K_crn_paral+K_crn_perp) > 0)
-      if (maxval(K_crn_paral+K_crn_perp) .notequals. 0.) &
-           def_dtcrs = cfl_cr * half/maxval(K_crn_paral+K_crn_perp)
+      maxKcrs = maxval(K_crn_paral + K_crn_perp)
 #else /* !COSM_RAY_ELECTRONS */
-      K_crs_valid = (maxval(K_crs_paral+K_crs_perp) > 0)
-      if (maxval(K_crs_paral+K_crs_perp) .notequals. 0.) &
-           def_dtcrs = cfl_cr * half/maxval(K_crs_paral+K_crs_perp)
+      maxKcrs = maxval(K_crs_paral + K_crs_perp)
 #endif /* !COSM_RAY_ELECTRONS */
+      K_crs_valid = (maxKcrs > 0)
+      if (maxKcrs .notequals. 0.) def_dtcrs = cfl_cr * half / maxKcrs
 
    end subroutine init_cosmicrays
 
    subroutine cosmicray_index(flind)
 
-      use constants,    only: I_ONE
-      use fluidtypes,   only: var_numbers
-#ifdef COSM_RAY_ELECTRONS
-      use constants,    only: I_TWO
-#endif /* COSM_RAY_ELECTRONS */
+      use constants,  only: I_ONE
+      use fluidtypes, only: var_numbers
 
       implicit none
 
       type(var_numbers), intent(inout) :: flind
-      integer(kind=4) :: icr
+      integer(kind=4)                  :: icr
 
-      flind%crn%beg    = flind%all + I_ONE
-      flind%crs%beg    = flind%crn%beg
+      flind%crn%beg = flind%all + I_ONE
+      flind%crs%beg = flind%crn%beg
 
-      flind%crn%all  = ncrn
+      flind%crn%all = ncrn
+      flind%cre%all = ncra
 
-#ifdef COSM_RAY_ELECTRONS
-      flind%cre%all  = I_TWO * ncre
-#else /* !COSM_RAY_ELECTRONS */
-      flind%cre%all  = ncre
-#endif /* !COSM_RAY_ELECTRONS */
-
-      flind%crs%all  = flind%crn%all + flind%cre%all
+      flind%crs%all = flind%crn%all + flind%cre%all
       do icr = 1, ncrn
-         iarr_crn(icr)      = flind%all + icr
-         iarr_crs(icr)      = flind%all + icr
+         iarr_crn(icr) = flind%all + icr
+         iarr_crs(icr) = flind%all + icr
       enddo
       flind%all = flind%all + flind%crn%all
 
-#ifdef COSM_RAY_ELECTRONS
-      do icr = I_ONE, I_TWO * ncre
-#else /* !COSM_RAY_ELECTRONS */
-      do icr = I_ONE, ncre
-#endif /* !COSM_RAY_ELECTRONS */
+      do icr = I_ONE, ncra
          iarr_cre(icr)        = flind%all + icr
          iarr_crs(ncrn + icr) = flind%all + icr
       enddo
