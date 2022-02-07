@@ -149,26 +149,31 @@ contains
     class(component_fluid), pointer                    :: pfl
     integer                                            :: ifl, i, j, k, i1, j1, k1
     real                                               :: thresh
-    integer(kind=4)                                    :: pid
+    integer(kind=4)                                    :: pid, fact_time
     real, dimension(ndims)                             :: pos, vel, acc
-    real                                               :: mass, ener, t1, tdyn, msf, fact, padd
+    real                                               :: mass, ener, t1, tdyn, msf, fact, padd, tot_t
 
 
+    scheme = 'Agertz' !'Butsky'
+    if (scheme .eq. 'Butsky') then
+       fact_time = -1
+       tot_t     = 120.0   ! 12*pset%pdata%tdyn?
+    else:
+       fact_time = 1
+       tot_t     = 40.0 
+    endif
     cgl => leaves%first
     do while (associated(cgl))
        cg => cgl%cg
 
        pset => cg%pset%first
        do while (associated(pset))
-          !print*, pset%pdata%pid,  pset%pdata%tform
-          !cycle
-          if (t .lt. pset%pdata%tform + 120.0) then ! + 12*pset%pdata%tdyn?
+          if (t .lt. pset%pdata%tform + tot_t) then  
              t1 = t - pset%pdata%tform
              tdyn = pset%pdata%tdyn
              msf = 0.0
-             if (t1 .gt. -6.5) then
+             if (t1 .gt. fact_time*6.5) then
                 msf = pset%pdata%mass * ( (1+t1/tdyn) * exp(-t1/tdyn) - (1+(t1+2*dt)/tdyn) * exp(-(t1+2*dt)/tdyn))
-                !msf = pset%pdata%mass
                 pset%pdata%mass = pset%pdata%mass - 0.25*msf
              endif
              do ifl = 1, flind%fluids
@@ -179,43 +184,43 @@ contains
                          if (cg%coord(LO,ydim)%r(j) .lt. pset%pdata%pos(2)+cg%dy .and. cg%coord(HI,ydim)%r(j) .gt. pset%pdata%pos(2)-cg%dy) then
                             do k = cg%ijkse(zdim,LO), cg%ijkse(zdim,HI)
                                if (cg%coord(LO,zdim)%r(k) .lt. pset%pdata%pos(3)+cg%dz .and. cg%coord(HI,zdim)%r(k) .gt. pset%pdata%pos(3)-cg%dz) then
-                                  ! Agertz
                                   i1 = (pset%pdata%pos(1)-cg%coord(CENTER,xdim)%r(i)) / cg%dx
                                   j1 = (pset%pdata%pos(2)-cg%coord(CENTER,ydim)%r(j)) / cg%dy
                                   k1 = (pset%pdata%pos(3)-cg%coord(CENTER,zdim)%r(k)) / cg%dz
-                                  !print *, pset%pdata%pos(1), cg%coord(CENTER,xdim)%r(i), i, i1
-                                  if (abs(i1)+abs(j1)+abs(k1) .gt. 0.0) fact = 1.0 / sqrt(real(abs(i1) + abs(j1) + abs(k1)))
-                                  if (t1 .lt. 6.5) then
-                                     padd = pset%pdata%mass * 2.0 * 10.0**40 *gram * cm /sek / cg%dvol / 26.0 * 2*dt/6.5
-                                  else
-                                     padd =  36000 * pset%pdata%mass/42 / cg%dvol / 26.0 * 2*dt/113.5     ! should use initial mass, not current mass
-                                  endif
+                                  if (scheme .eq. 'Agertz') then   ! Agertz kick
+                                     if (abs(i1)+abs(j1)+abs(k1) .gt. 0.0) fact = 1.0 / sqrt(real(abs(i1) + abs(j1) + abs(k1)))
+                                     if (t1 .lt. 6.5) then
+                                        padd = pset%pdata%mass * 1.8 * 10.0**40 *gram * cm /sek * (1/0.5)**0.38 *2*dt/6.5 / cg%dvol / 26  ! see Agertz+2013
+                                     else
+                                        padd = 3.6 * 10**4 * pset%pdata%mass/200 * 2*dt/40.0 / cg%dvol / 26    ! should use initial mass, not current mass
+                                     endif
                                   
-                                  ! Momentum kick
-                                  cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) - 0.5*(cg%u(pfl%imx,i,j,k)**2 +cg%u(pfl%imy,i,j,k)**2 + cg%u(pfl%imz,i,j,k)**2)/cg%u(pfl%idn,i,j,k)  ! remove ekin
-                                  cg%u(pfl%imx,i,j,k) = cg%u(pfl%imx,i,j,k) + fact * i1 * padd
-                                  cg%u(pfl%imy,i,j,k) = cg%u(pfl%imy,i,j,k) + fact * j1 * padd
-                                  cg%u(pfl%imz,i,j,k) = cg%u(pfl%imz,i,j,k) + fact * k1 * padd
-                                  cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) + 0.5*(cg%u(pfl%imx,i,j,k)**2 +cg%u(pfl%imy,i,j,k)**2 + cg%u(pfl%imz,i,j,k)**2)/cg%u(pfl%idn,i,j,k)  ! add new ekin
+                                     ! Momentum kick
+                                     cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) - 0.5*(cg%u(pfl%imx,i,j,k)**2 +cg%u(pfl%imy,i,j,k)**2 + cg%u(pfl%imz,i,j,k)**2)/cg%u(pfl%idn,i,j,k)  ! remove ekin
+                                     cg%u(pfl%imx,i,j,k) = cg%u(pfl%imx,i,j,k) + fact * i1 * padd
+                                     cg%u(pfl%imy,i,j,k) = cg%u(pfl%imy,i,j,k) + fact * j1 * padd
+                                     cg%u(pfl%imz,i,j,k) = cg%u(pfl%imz,i,j,k) + fact * k1 * padd
+                                     cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) + 0.5*(cg%u(pfl%imx,i,j,k)**2 +cg%u(pfl%imy,i,j,k)**2 + cg%u(pfl%imz,i,j,k)**2)/cg%u(pfl%idn,i,j,k)  ! add new ekin
+                                  endif
 
-                                  !Butsky
                                   if (abs(i1) + abs(j1) + abs(k1) == 0) then
-                                     if (t1 .gt. 6.5) then
+                                     if (scheme .eq. 'Butsky') then                                  ! Butsky
                                         cg%w(wna%fi)%arr(pfl%idn,i,j,k) = cg%w(wna%fi)%arr(pfl%idn,i,j,k) + 0.25 * msf / cg%dvol                               ! adding mass
                                         cg%u(pfl%imx:pfl%imz, i, j, k)  = cg%u(pfl%imx:pfl%imz, i, j, k)  + 0.25 * msf / cg%dvol * pset%pdata%vel(:)           ! adding momentum
                                         cg%u(pfl%ien,i,j,k)             = cg%u(pfl%ien,i,j,k)             + 0.25 * msf / cg%dvol * sum(pset%pdata%vel(:)**2)   ! adding kinetic energy
-                                        cg%u(pfl%ien,i,j,k)             = cg%u(pfl%ien,i,j,k)  + 0.00001 * 0.25 * (1 - 0.9*cr_active) * msf / cg%dvol * clight**2 
-                                        if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + 0.1 * 0.00001 * 0.25 *  msf / cg%dvol * clight**2
-                                     endif
-                                     if ((t1-dt < 6.5) .and. ((t1+dt) .gt. 6.5)) then
-                                        cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + 0.75 * 0.00001 * 0.25 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2   ! adding SN energy
-                                        !print *, "SN ENERGY INJECTED!", 0.00001 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2, pset%pdata%mass + 0.25*msf
+                                        cg%u(pfl%ien,i,j,k)             = cg%u(pfl%ien,i,j,k)  + 0.00001 * 0.25 * (1 - 0.1*cr_active) * msf / cg%dvol * clight**2
 #ifdef COSM_RAYS
-                                        if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + 0.1 * 0.00001 * 0.25 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2   ! adding CR
+                                        if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + 0.1 * 0.00001 * 0.25 *  msf / cg%dvol * clight**2
 #endif /* COSM_RAYS */
+                                     else
+                                        if ((t1-dt < 6.5) .and. ((t1+dt) .gt. 6.5)) then    ! Instantaneous injection Agertz
+                                           cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + 0.75 * 0.00001 * 0.25 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2   ! adding SN energy
+#ifdef COSM_RAYS
+                                           if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + 0.1 * 0.00001 * 0.25 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2   ! adding CR
+#endif /* COSM_RAYS */
+                                        endif
                                      endif
                                   endif
-                                  !print *, 'Feedbacking!', pset%pdata%tform
                                endif
                             enddo
                          endif
