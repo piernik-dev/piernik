@@ -47,7 +47,6 @@ contains
 
     use cg_leaves,             only: leaves
     use cg_list,               only: cg_list_element
-    use common_hdf5,           only: hdf_vars
     use constants,             only: ndims, xdim, ydim, zdim, LO, HI, CENTER, pi, nbdn_n
     use fluidindex,            only: flind
     use fluidtypes,            only: component_fluid
@@ -56,7 +55,6 @@ contains
     use grid_cont,             only: grid_container
     use mpisetup,              only: proc
     use named_array_list,      only: wna, qna
-    !use particle_types,        only: particle
     use particle_utils,        only: is_part_in_cg
     use units,                 only: fpiG
 
@@ -110,11 +108,9 @@ contains
                       cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1-frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
                       cg%u(pfl%imx:pfl%imz, i, j, k)  = (1-frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
                       dmass_stars = dmass_stars + mass
-                      if (any(hdf_vars == 'sfrl')) cg%q(qna%ind("SFR_n"))%arr(i,j,k)  = mass / cg%dvol / (2*dt)
-                      if (any(hdf_vars == 'sfrh')) then
-                         cg%q(qna%ind("SFRh_n"))%arr(i,j,k) = cg%q(qna%ind("SFRh_n"))%arr(i,j,k) + mass
-                         cg%q(qna%ind("SFRp_n"))%arr(i,j,k) = cg%q(qna%ind("SFRp_n"))%arr(i,j,k) + mass
-                      endif
+                      cg%q(qna%ind("SFR_n"))%arr(i,j,k)  = mass / cg%dvol / (2*dt)
+                      cg%q(qna%ind("SFRh_n"))%arr(i,j,k) = cg%q(qna%ind("SFRh_n"))%arr(i,j,k) + mass
+                      cg%q(qna%ind("SFRp_n"))%arr(i,j,k) = cg%q(qna%ind("SFRp_n"))%arr(i,j,k) + mass
                    endif
                 enddo
              enddo
