@@ -67,7 +67,6 @@
     K_crn_perp(2)  = 0
     K_crn_perp(3)  = 0
     ncre           = 0
-    use_CRsplit    = .false.
  /
 
  $CR_SPECIES
@@ -78,7 +77,7 @@
  /
 
  $MULTIGRID_DIFFUSION
-!    diff_explicit = .true.
+    diff_explicit = .false.
     diff_theta     = 0.5
     diff_tstep_fac = 91.0222223 !45.511112
     norm_tol = 1e-5

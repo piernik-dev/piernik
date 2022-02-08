@@ -151,11 +151,11 @@ contains
 #endif /* NBODY */
 #endif /* GRAV */
 #ifdef COSM_RAYS
-      use all_boundaries,      only: all_fluid_boundaries
-      use initcosmicrays,      only: use_CRsplit
 #ifdef MULTIGRID
-      use multigrid_diffusion, only: multigrid_solve_diff
-#endif /* MULTIGRID */
+      use multigrid_diffusion, only: inworth_mg_diff
+#else /* !MULTIGRID */
+      use initcosmicrays,      only: use_CRdiff
+#endif /* !MULTIGRID */
 #endif /* COSM_RAYS */
 #ifdef SHEAR
       use shear,               only: shear_3sweeps
@@ -183,13 +183,11 @@ contains
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
-      if (.not. use_CRsplit) then
 #ifdef MULTIGRID
-         call multigrid_solve_diff
-         call all_fluid_boundaries
-#endif /* MULTIGRID */
-
-      else
+      if (inworth_mg_diff()) then
+#else /* !MULTIGRID */
+      if (use_CRdiff) then
+#endif /* !MULTIGRID */
          do s = sFRST, sLAST, sCHNG
             if (.not.skip_sweep(s)) call make_diff_sweep(s)
          enddo
