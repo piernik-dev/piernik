@@ -38,7 +38,6 @@ module initproblem
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    integer(kind=4)    :: norm_step
-   real               :: t_sn
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr1, amp_cr2, vxd0, vyd0, vzd0, expansion_cnst
 
    namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, vxd0, vyd0, vzd0, beta_cr, amp_cr1, amp_cr2, norm_step, expansion_cnst
@@ -64,8 +63,6 @@ contains
       use mpisetup,   only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
-
-      t_sn = 0.0
 
       d0             = 1.0e5       !< density
       p0             = 1.0         !< pressure

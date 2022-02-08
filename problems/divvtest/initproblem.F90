@@ -37,7 +37,6 @@ module initproblem
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    integer(kind=4) :: norm_step
-   real            :: t_sn
    real            :: d0, p0, r0, beta_cr, amp_cr
    real, dimension(ndims) :: c_exp, c_rot, b0, sn_pos
 
@@ -61,18 +60,16 @@ contains
 
       implicit none
 
-      t_sn = 0.0
+      d0        = 1.0e5     !< density
+      p0        = 1.0       !< pressure
+      b0        = [ 0., 0., 0. ] !< Magnetic field
+      sn_pos    = [ 0., 0., 0. ] !< position of blob
+      r0        = 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))  !< radius of the blob
 
-      d0           = 1.0e5     !< density
-      p0           = 1.0       !< pressure
-      b0           = [ 0., 0., 0. ] !< Magnetic field
-      sn_pos       = [ 0., 0., 0. ] !< position of blob
-      r0           = 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))  !< radius of the blob
+      beta_cr   = 0.0       !< ambient level
+      amp_cr    = 1.0       !< amplitude of the blob
 
-      beta_cr      = 0.0       !< ambient level
-      amp_cr       = 1.0       !< amplitude of the blob
-
-      norm_step    = 10        !< how often to compute the norm (in steps)
+      norm_step = 10        !< how often to compute the norm (in steps)
 
       c_exp = [ 0.0, 0.0, 0.0 ]
       c_rot = [ 0.0, 0.0, 0.0 ]
@@ -180,8 +177,8 @@ contains
          cg => cgl%cg
 
          call cg%set_constant_b_field(b0)
-         cg%u(fl%idn, :, :, :) = d0
-         cg%u(fl%imx:fl%imz, :, :, :) = 0.0
+         cg%u(fl%idn,:,:,:) = d0
+         cg%u(fl%imx:fl%imz,:,:,:) = 0.0
 
          do k = lbound(cg%u, zdim+I_ONE), ubound(cg%u, zdim+I_ONE)
             do j = lbound(cg%u, ydim+I_ONE), ubound(cg%u, ydim+I_ONE)
@@ -209,7 +206,7 @@ contains
 
 #ifdef COSM_RAYS
          do icr = lbound(iarr_crs, 1), ubound(iarr_crs, 1)
-            cg%u(iarr_crs(icr), :, :, :) =  beta_cr*fl%cs2 * cg%u(fl%idn, :, :, :) / (gamma_crn(icr)-1.0)
+            cg%u(iarr_crs(icr),:,:,:) =  beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:) / (gamma_crn(icr)-1.0)
          enddo
 
 ! Explosions
@@ -225,11 +222,11 @@ contains
                                  & (cg%y(j) - sn_pos(ydim) + real(jpm) * dom%L_(ydim))**2 + &
                                  & (cg%z(k) - sn_pos(zdim) + real(kpm) * dom%L_(zdim))**2
                               if (icr == cr_table(icr_H1)) then
-                                 cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
+                                 cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + amp_cr*exp(-r2/r0**2)
                               elseif (icr == cr_table(icr_C12)) then
-                                 cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
+                                 cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
                               else
-                                 cg%u(iarr_crn(icr), i, j, k) = 0.0
+                                 cg%u(iarr_crn(icr),i,j,k) = 0.0
                               endif
 
                            enddo
