@@ -208,8 +208,8 @@ contains
          call cg%costs%start
 
          call cg%set_constant_b_field([bx0, by0, bz0])  ! this acts only inside cg%ijkse box
-         cg%u(fl%idn,:,:,:) = d0
-         cg%u(fl%imx:fl%imz,:,:,:) = 0.0
+         cg%u(fl%idn,RNG) = d0
+         cg%u(fl%imx:fl%imz,RNG) = 0.0
 #ifdef IONIZED
 ! Velocity field
          if (expansion_cnst .notequals. 0.0 ) then ! adiabatic expansion / compression
@@ -233,15 +233,8 @@ contains
 #endif /* IONIZED */
 
 #ifndef ISO
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-                  cg%u(fl%ien,i,j,k) = p0/fl%gam_1 + &
-                       &               ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
-                       &               emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
-               enddo
-            enddo
-         enddo
+         cg%u(fl%ien,RNG) = p0/fl%gam_1 + ekin(cg%u(fl%imx,RNG), cg%u(fl%imy,RNG), cg%u(fl%imz,RNG), cg%u(fl%idn,RNG)) + &
+              &             emag(cg%b(xdim,RNG), cg%b(ydim,RNG), cg%b(zdim,RNG))
 #endif /* !ISO */
 
          cg%u(iarr_crs, RNG) = 0.0

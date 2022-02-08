@@ -121,10 +121,10 @@ contains
          associate(cg => cgl%cg)
             do p = 1, flind%fluids
                associate(fl => flind%all_fluids(p)%fl)
-                  cg%u(fl%idn,:,:,:) = 0.0
-                  cg%u(fl%imx,:,:,:) = 0.0
-                  cg%u(fl%imy,:,:,:) = 0.0
-                  cg%u(fl%imz,:,:,:) = 0.0
+                  cg%u(fl%idn,RNG) = 0.0
+                  cg%u(fl%imx,RNG) = 0.0
+                  cg%u(fl%imy,RNG) = 0.0
+                  cg%u(fl%imz,RNG) = 0.0
                end associate
             enddo
          end associate

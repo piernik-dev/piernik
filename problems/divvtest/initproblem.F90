@@ -171,8 +171,8 @@ contains
          cg => cgl%cg
 
          call cg%set_constant_b_field(b0)
-         cg%u(fl%idn,:,:,:) = d0
-         cg%u(fl%imx:fl%imz,:,:,:) = 0.0
+         cg%u(fl%idn,RNG) = d0
+         cg%u(fl%imx:fl%imz,RNG) = 0.0
 
          do k = lbound(cg%u, zdim+I_ONE), ubound(cg%u, zdim+I_ONE)
             do j = lbound(cg%u, ydim+I_ONE), ubound(cg%u, ydim+I_ONE)
@@ -200,7 +200,7 @@ contains
 
 #ifdef COSM_RAYS
          do icr = lbound(iarr_crs, 1), ubound(iarr_crs, 1)
-            cg%u(iarr_crs(icr),:,:,:) =  beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:) / (gamma_crn(icr)-1.0)
+            cg%u(iarr_crs(icr),RNG) =  beta_cr*fl%cs2 * cg%u(fl%idn,RNG) / (gamma_crn(icr)-1.0)
          enddo
 
 ! Explosions

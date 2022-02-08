@@ -206,16 +206,16 @@ contains
          cg => cgl%cg
 
          call cg%set_constant_b_field([bx0, by0, bz0])
-         cg%u(fl%idn, :, :, :) = d0
-         cg%u(fl%imx:fl%imz, :, :, :) = 0.0
+         cg%u(fl%idn,RNG) = d0
+         cg%u(fl%imx:fl%imz,RNG) = 0.0
 
 #ifndef ISO
-         cg%u(fl%ien,:,:,:) = p0/fl%gam_1 + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)) + &
-              &               ekin(cg%u(fl%imx,:,:,:), cg%u(fl%imy,:,:,:), cg%u(fl%imz,:,:,:), cg%u(fl%idn,:,:,:))
+         cg%u(fl%ien,RNG) = p0/fl%gam_1 + ekin(cg%u(fl%imx,RNG), cg%u(fl%imy,RNG), cg%u(fl%imz,RNG), cg%u(fl%idn,RNG)) + &
+              &             emag(cg%b(xdim,RNG), cg%b(ydim,RNG), cg%b(zdim,RNG))
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-         cg%u(iecr,:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crs(icr)-1.0)
+         cg%u(iecr,RNG) = beta_cr*fl%cs2 * cg%u(fl%idn,RNG)/(gamma_crs(icr)-1.0)
 
 ! Explosions
          do k = cg%ks, cg%ke
@@ -223,7 +223,7 @@ contains
                do i = cg%is, cg%ie
                   r2 = (cg%x(i)-x0)**2+(cg%y(j)-y0)**2+(cg%z(k)-z0)**2
                   if (cg%x(i)> 2*x0-dom%edge(xdim, HI) .and. cg%y(j) > 2*y0-dom%edge(ydim, HI)) &
-                       cg%u(iecr, i, j, k)= cg%u(iecr, i, j, k) + amp_cr*exp(-r2/r0**2)
+                       cg%u(iecr,i,j,k)= cg%u(iecr,i,j,k) + amp_cr*exp(-r2/r0**2)
                enddo
             enddo
          enddo
@@ -445,14 +445,14 @@ contains
          if (cgl%cg%is_old) call die("[initproblem:cr_late_init] Old piece on a new list")
          associate (fl => flind%ion)
          call cgl%cg%set_constant_b_field([bx0, by0, bz0])
-         cgl%cg%u(fl%idn, :, :, :) = d0
-         cgl%cg%u(fl%imx:fl%imz, :, :, :) = 0.0
+         cgl%cg%u(fl%idn,RNG) = d0
+         cgl%cg%u(fl%imx:fl%imz,RNG) = 0.0
 #ifndef ISO
-         cgl%cg%u(fl%ien,:,:,:) = p0/fl%gam_1 + emag(cgl%cg%b(xdim,:,:,:), cgl%cg%b(ydim,:,:,:), cgl%cg%b(zdim,:,:,:)) + &
-              &                   ekin(cgl%cg%u(fl%imx,:,:,:), cgl%cg%u(fl%imy,:,:,:), cgl%cg%u(fl%imz,:,:,:), cgl%cg%u(fl%idn,:,:,:))
+         cgl%cg%u(fl%ien,RNG) = p0/fl%gam_1 + emag(cgl%cg%b(xdim,RNG), cgl%cg%b(ydim,RNG), cgl%cg%b(zdim,RNG)) + &
+              &                 ekin(cgl%cg%u(fl%imx,RNG), cgl%cg%u(fl%imy,RNG), cgl%cg%u(fl%imz,RNG), cgl%cg%u(fl%idn,RNG))
 #endif /* !ISO */
 #ifdef COSM_RAYS
-         cgl%cg%u(iarr_crs(icr),:,:,:) = beta_cr*fl%cs2 * cgl%cg%u(fl%idn,:,:,:)/(gamma_crs(icr)-1.0)
+         cgl%cg%u(iarr_crs(icr),RNG) = beta_cr*fl%cs2 * cgl%cg%u(fl%idn,RNG)/(gamma_crs(icr)-1.0)
 #endif /* COSM_RAYS */
          end associate
          cgl => cgl%nxt

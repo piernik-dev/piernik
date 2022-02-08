@@ -456,11 +456,11 @@ contains
          end select
 
          ! Set up the internal energy
-         cg%u(fl%ien,:,:,:) = max(smallei, pulse_pres / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,:,:,:)**2,1) / cg%u(fl%idn,:,:,:))
+         cg%u(fl%ien,RNG) = max(smallei, pulse_pres / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,RNG)**2,1) / cg%u(fl%idn,RNG))
 
 #if defined MAGNETIC && defined IONIZED
          if (cc_mag) then
-            cg%u(fl%ien,:,:,:) = cg%u(fl%ien,:,:,:) + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))
+            cg%u(fl%ien,RNG) = cg%u(fl%ien,RNG) + emag(cg%b(xdim,RNG), cg%b(ydim,RNG), cg%b(zdim,RNG))
          else
             cg%u(fl%ien, RNG) = cg%u(fl%ien, RNG) + &
                  emag(half*(cg%b(xdim, RNG) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
