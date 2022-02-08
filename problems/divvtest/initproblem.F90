@@ -36,12 +36,11 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   integer(kind=4) :: norm_step
-   real            :: d0, p0, r0, beta_cr, amp_cr
+   real                   :: d0, p0, r0, beta_cr, amp_cr
    real, dimension(ndims) :: c_exp, c_rot, b0, sn_pos
 
 
-   namelist /PROBLEM_CONTROL/  d0, p0, b0, sn_pos, r0, beta_cr, amp_cr, norm_step, c_exp, c_rot
+   namelist /PROBLEM_CONTROL/ d0, p0, b0, sn_pos, r0, beta_cr, amp_cr, c_exp, c_rot
 
 contains
 !-----------------------------------------------------------------------------
@@ -56,7 +55,7 @@ contains
       use dataio_pub, only: die, nh
       use domain,     only: dom
       use func,       only: operator(.equals.)
-      use mpisetup,   only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -68,8 +67,6 @@ contains
 
       beta_cr   = 0.0       !< ambient level
       amp_cr    = 1.0       !< amplitude of the blob
-
-      norm_step = 10        !< how often to compute the norm (in steps)
 
       c_exp = [ 0.0, 0.0, 0.0 ]
       c_rot = [ 0.0, 0.0, 0.0 ]
@@ -102,10 +99,8 @@ contains
          rbuff(12:14) = c_exp
          rbuff(15:17) = c_rot
 
-         ibuff(1) = norm_step
       endif
 
-      call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
@@ -120,7 +115,6 @@ contains
          c_exp        = rbuff(12:14)
          c_rot        = rbuff(15:17)
 
-         norm_step = int(ibuff(1), kind=4)
       endif
 
       if (r0 .equals. 0.0) call die("[initproblem:read_problem_par] r0 == 0")

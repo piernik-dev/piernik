@@ -37,10 +37,9 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   integer(kind=4)    :: norm_step
-   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr1, amp_cr2, vxd0, vyd0, vzd0, expansion_cnst
+   real :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr1, amp_cr2, vxd0, vyd0, vzd0, expansion_cnst
 
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, vxd0, vyd0, vzd0, beta_cr, amp_cr1, amp_cr2, norm_step, expansion_cnst
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, vxd0, vyd0, vzd0, beta_cr, amp_cr1, amp_cr2, expansion_cnst
 
 contains
 
@@ -56,11 +55,10 @@ contains
 
    subroutine read_problem_par
 
-      use constants,  only: I_TEN
       use dataio_pub, only: die, nh
       use domain,     only: dom
       use func,       only: operator(.equals.)
-      use mpisetup,   only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -81,8 +79,6 @@ contains
       beta_cr        = 0.0         !< ambient level
       amp_cr1        = 1.0         !< amplitude of the blob
       amp_cr2        = 0.1*amp_cr1 !< amplitude for the second species
-
-      norm_step      = I_TEN       !< how often to compute the norm (in steps)
 
       if (master) then
 
@@ -119,11 +115,8 @@ contains
          rbuff(15) = vzd0
          rbuff(16) = expansion_cnst
 
-         ibuff(1)  = norm_step
-
       endif
 
-      call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
@@ -144,8 +137,6 @@ contains
          vyd0      = rbuff(14)
          vzd0      = rbuff(15)
          expansion_cnst = rbuff(16)
-
-         norm_step = int(ibuff(1), kind=4)
 
       endif
 
