@@ -71,7 +71,6 @@
     K_crn_perp(2)  = 0
 !    K_crn_perp(3)  = 0
     cre_gpcr_ess   = .false.
-    use_CRsplit    = .true.
  /
 
  $COSMIC_RAY_SPECTRUM

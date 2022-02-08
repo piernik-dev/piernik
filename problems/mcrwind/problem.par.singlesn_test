@@ -52,7 +52,7 @@
     cfl          = 0.9
     smalld       = 1.e-5
     smallei      = 1.e-4
-    limiter      = "vanleer"
+    limiter      = 'vanleer'
   /
 
  $GRAVITY
@@ -84,7 +84,6 @@
     K_crn_paral(7) = 10000.0
     K_crn_perp(1)  = 0
     smallecr       = 0.e-2
-    use_CRsplit    = .false.
  /
 
  $CR_SPECIES
@@ -118,7 +117,7 @@
  /
 
  $MULTIGRID_DIFFUSION
-!    diff_explicit = .true.
+    diff_explicit = .false.
     diff_theta     = 0.6
     diff_tstep_fac = 30
     norm_tol = 1e-4
