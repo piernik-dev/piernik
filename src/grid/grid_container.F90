@@ -85,7 +85,7 @@ module grid_cont
       procedure :: init_gc               !< Initialization
       procedure :: cleanup               !< Deallocate all internals
       procedure :: update_leafmap        !< Check if the grid container has any parts covered by finer grids and update appropriate map
-      procedure :: print_tgt             !< Print all tht_lists (for debugging only)
+      procedure :: print_tgt             !< Print all tgt_lists (for debugging only)
       procedure :: is_sending_fc_flux    !< Returns .true. if this block has fine hydro flux to be sent to some coarse block in specified direction
       procedure :: is_receiving_fc_flux  !< Returns .true. if this block expects fine hydro flux to be received from some fine block in specified direction
 
@@ -253,7 +253,7 @@ contains
 
    end function is_receiving_fc_flux
 
-!> \brief Print all tht_lists (for debugging only)
+!> \brief Print all tgt_lists (for debugging only)
 
    subroutine print_tgt(this)
 

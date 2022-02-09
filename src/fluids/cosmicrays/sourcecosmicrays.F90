@@ -175,7 +175,7 @@ contains
 
       integer(kind=4),                   intent(in)  :: n
       real, dimension(n, flind%all),     intent(in)  :: uu
-      real,                              intent(in)  :: rk_coeff   !< coeffecient used in RK step, while computing source term
+      real,                              intent(in)  :: rk_coeff   !< coefficient used in RK step, while computing source term
       real, dimension(n, flind%crn%all), intent(out) :: decrn
 
 ! locals
@@ -235,7 +235,7 @@ contains
 
       integer(kind=4),               intent(in)  :: n
       real, dimension(n, flind%all), intent(in)  :: uu
-      real,                          intent(in)  :: rk_coeff   !< coeffecient used in RK step, while computing source term
+      real,                          intent(in)  :: rk_coeff   !< coefficient used in RK step, while computing source term
       real, dimension(n, flind%all), intent(out) :: usrc       !< u array update component for sources
 !locals
       real, dimension(n, flind%crn%all)          :: srccrn

@@ -129,7 +129,7 @@ contains
 ! this function is not used anywhere
 
 !>
-!! \brief Calculate first 4 terms of taylor expansion of cosh
+!! \brief Calculate first 4 terms of Taylor expansion of cosh
 !!
 !! We often need to calculate cosh for very large numbers, which may lead to FPEs. Most of the time, we are
 !! not actually interested in the exact values, but rather the approximate shape of the function.

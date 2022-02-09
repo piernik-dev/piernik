@@ -128,9 +128,9 @@ contains
 
       implicit none
 
-      integer                          :: i
+      integer :: i
 
-      i_sg        = 0
+      i_sg = 0
 
       if (has_ion) then
          !  Compute indexes for the ionized fluid and update counters

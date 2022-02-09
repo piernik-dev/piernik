@@ -148,8 +148,8 @@ contains
 !! <tr><td>wdt_res            </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::wdt_res          </td></tr>
 !! <tr><td>dt_tsl             </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::dt_tsl           </td></tr>
 !! <tr><td>dt_log             </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::dt_log           </td></tr>
-!! <tr><td>tsl_with_mom       </td><td>.true.             </td><td>logical   </td><td>\copydoc dataio::plt_with_mom     </td></tr>
-!! <tr><td>tsl_with_ptc       </td><td>if ISO .false. else .true.</td><td>logical   </td><td>\copydoc dataio::plt_with_ptc      </td></tr>
+!! <tr><td>tsl_with_mom       </td><td>.true.             </td><td>logical   </td><td>\copydoc dataio::tsl_with_mom     </td></tr>
+!! <tr><td>tsl_with_ptc       </td><td>if ISO .false. else .true.</td><td>logical   </td><td>\copydoc dataio::tsl_with_ptc      </td></tr>
 !! <tr><td>domain_dump        </td><td>'phys_domain'      </td><td>'phys_domain' or 'full_domain'                       </td><td>\copydoc dataio_pub::domain_dump</td></tr>
 !! <tr><td>vars               </td><td>''                 </td><td>'dens', 'velx', 'vely', 'velz', 'ener' and some more </td><td>\copydoc dataio::vars  </td></tr>
 !! <tr><td>pvars              </td><td>''                 </td><td>'ppos', 'pvel', 'pacc', 'mass', 'ener' and some more </td><td>\copydoc dataio::pvars </td></tr>
@@ -175,7 +175,7 @@ contains
       use constants,  only: cwdlen, PIERNIK_INIT_MPI, INVALID
       use dataio_pub, only: nrestart, last_hdf_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
            &                tmp_log_file, printinfo, printio, warn, msg, die, code_progress, log_wr, restarted_sim, &
-           &                move_file, parfile, parfilelines, log_file, maxparfilelines, can_i_write, ierrh, par_file
+           &                move_file, parfile, parfilelines, log_file, maxparlen, maxparfilelines, can_i_write, ierrh, par_file
       use mpisetup,   only: master, nproc, proc, piernik_MPI_Bcast, piernik_MPI_Barrier, FIRST, LAST
 
       implicit none
@@ -208,6 +208,7 @@ contains
          enddo
          close(par_lun)
          if (parfilelines == maxparfilelines) call warn("[dataio:init_dataio_parameters] problem.par has too many lines. The copy in the logfile and HDF dumps can be truncated.")
+         maxparlen = int(maxval(len_trim(parfile(:parfilelines))), kind=4)
       endif
 
       ! For 1 /= nproc_io /= nproc there should be choice between two strategies : nproc < nproc_io and the current one
@@ -371,7 +372,7 @@ contains
 
             if (nproc_io /= 1 .and. nproc_io /= nproc) then
                nproc_io = nproc
-               call warn("[dataio:init_dataio_parameters] nproc_io /= nproc not implemented yed. Defaulting to fully parrallel write.")
+               call warn("[dataio:init_dataio_parameters] nproc_io /= nproc not implemented yed. Defaulting to fully parallel write.")
             endif
 
          endif
@@ -502,12 +503,12 @@ contains
    subroutine init_dataio
 
       use constants,    only: PIERNIK_INIT_IO_IC
-      use dataio_pub,   only: code_progress, die, nres, nrestart, printinfo, restarted_sim, warn
+      use dataio_pub,   only: code_progress, die, maxenvlen, nres, nrestart, printinfo, restarted_sim, warn
       use domain,       only: dom
       use mpisetup,     only: master
       use timer,        only: walltime_end
       use user_hooks,   only: user_vars_arr_in_restart
-      use version,      only: nenv,env, init_version
+      use version,      only: nenv, env, init_version
 #ifdef HDF5
       use common_hdf5,  only: init_hdf5
       use data_hdf5,    only: init_data
@@ -555,6 +556,7 @@ contains
             call printinfo(env(i), .false.)
          enddo
       endif
+      maxenvlen = int(maxval(len_trim(env(:nenv))), kind=4)
 
       if (associated(user_vars_arr_in_restart)) call user_vars_arr_in_restart
 
@@ -633,9 +635,9 @@ contains
          select case (trim(umsg))
 #ifdef HDF5
             case ('res', 'dump')
-               call write_restart_hdf5
+               call write_restart_hdf5(.false.)
             case ('hdf')
-               call write_hdf5
+               call write_hdf5(.false.)
 #endif /* HDF5 */
             case ('log')
                call write_log
@@ -775,20 +777,20 @@ contains
 #ifdef HDF5
       call determine_dump(dump(RES), last_res_time, dt_res, output, RES)
       call manage_hdf_dump(RES, dump(RES), output)
-      if (dump(RES)) call write_restart_hdf5
+      if (dump(RES)) call write_restart_hdf5(.true.)
 
       if (wdt_res > 0.0) then
          if (master) tleft = walltime_nextres%time_left()
          call piernik_MPI_Bcast(tleft)
          if (.not.tleft) then
-            call write_restart_hdf5
+            call write_restart_hdf5(.false.)
             if (master) tleft = walltime_nextres%time_left(wdt_res)
          endif
       endif
 
       call determine_dump(dump(HDF), last_hdf_time, dt_hdf, output, HDF)
       call manage_hdf_dump(HDF, dump(HDF), output)
-      if (dump(HDF)) call write_hdf5
+      if (dump(HDF)) call write_hdf5(.true.)
 #endif /* HDF5 */
       if (associated(user_post_write_data)) call user_post_write_data(output, dump)
 
@@ -1573,7 +1575,7 @@ contains
          call leaves%get_extremum(qna%wai, MAXL, pr%temp_max)
          call leaves%get_extremum(qna%wai, MINL, pr%temp_min)
 
-         ! wa: temperature -> (sound speed squared) -> sound time accross one cell
+         ! wa: temperature -> (sound speed squared) -> sound time across one cell
          cgl => leaves%first
          do while (associated(cgl))
             call cgl%cg%costs%start
@@ -1815,9 +1817,9 @@ contains
          call cgl%cg%costs%start
 
 #ifdef COSM_RAY_ELECTRONS
-         cgl%cg%wa        = sum(cgl%cg%u(iarr_all_crn,:,:,:),1)
+         cgl%cg%wa = sum(cgl%cg%u(iarr_all_crn,:,:,:),1)
 #else /* !COSM_RAY_ELECTRONS */
-         cgl%cg%wa        = sum(cgl%cg%u(iarr_all_crs,:,:,:),1)
+         cgl%cg%wa = sum(cgl%cg%u(iarr_all_crs,:,:,:),1)
 #endif /* !COSM_RAY_ELECTRONS */
 
          call cgl%cg%costs%stop(I_OTHER)

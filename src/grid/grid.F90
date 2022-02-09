@@ -41,7 +41,7 @@ module grid
 
 contains
 
-!> \brief Routine that prepares base level and most importand cg lists
+!> \brief Routine that prepares base level and most important cg lists
 
    subroutine init_grid
 
@@ -75,7 +75,7 @@ contains
       if (master) call base%level%add_patch
       call base%level%init_all_new_cg
 
-      ! Refinement lists will be added by iterating the initproblem::problem_initial_conditions routine, in restart_hdf5::read_restart_hdf5 or in not_yet_implemented::refinement_update
+      ! Refinement lists will be added by iterating the initproblem::problem_initial_conditions routine, in restart_hdf5::read_restart_hdf5 or in refinement_update
       ! Underground levels will be added in multigrid::init_multigrid
 
       call leaves%update(" (base level) ")

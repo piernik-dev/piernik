@@ -438,7 +438,7 @@ contains
 
       use constants,  only: stdout, cwdlen
       use dataio_pub, only: cmdl_nml, wd_rd, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, log_wr
-      use version,    only: nenv,env, init_version
+      use version,    only: nenv, env, init_version
 
       implicit none
 

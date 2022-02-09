@@ -88,7 +88,7 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: pSUM, I_ZERO, I_ONE, dsetnamelen, AT_IGNORE, INVALID
       use dataio_pub,       only: warn, msg, die
-      use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_shrink, repeat_step, tstep_attempt
+      use global,           only: dt, dt_full, t, t_saved, max_redostep_attempts, nstep, nstep_saved, dt_cur_shrink, repeat_step, repetitive_steps, tstep_attempt
       use mass_defect,      only: downgrade_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna, wna, na_var_list_q, na_var_list_w
@@ -104,24 +104,23 @@ contains
       integer(kind=4)                :: no_hist_count
       integer                        :: i, j
       character(len=dsetnamelen)     :: rname
-      integer, parameter             :: max_attempts = 10  !< Something is terribly wrong if a single step requires too many reductions
       character(len=*), parameter :: rs_label = "repeat_step_"
 
-      if (.not.repeat_step) return
+      if (.not. repetitive_steps) return
 
       call restart_arrays
 
-      if (cfl_violated) then
+      if (repeat_step) then
          tstep_attempt = tstep_attempt + I_ONE
-         if (tstep_attempt > max_attempts) then
-            write(msg, '(a,i2,a)')"[timestep_retry:repeat_fluidstep] tstep_attempt > ", max_attempts, " (hardcoded limit)"
+         if (tstep_attempt > max_redostep_attempts) then
+            write(msg, '(a,i2,a)')"[timestep_retry:repeat_fluidstep] tstep_attempt > ", max_redostep_attempts, " (max_redostep_attempts)"
             call die(msg)
          endif
          write(msg, '(a,i2,a)') "[timestep_retry:repeat_fluidstep] Redoing previous step (", tstep_attempt, ")"
          if (master) call warn(msg)
          t = t_saved
          nstep = nstep_saved
-         dt = dtm * dt_shrink
+         dt = dt_full * dt_cur_shrink
          call reset_freezing_speed
          call downgrade_magic_mass
          if (associated(user_reaction_to_redo_step)) call user_reaction_to_redo_step
@@ -131,7 +130,7 @@ contains
          t_saved = t
       endif
 #ifdef RANDOMIZE
-      call randoms_redostep(cfl_violated)
+      call randoms_redostep(repeat_step)
 #endif /* RANDOMIZE */
 
       ! refresh na_lists(:)%indices
@@ -156,7 +155,7 @@ contains
          end associate
       enddo
 
-      if (cfl_violated) then
+      if (repeat_step) then
          call ppp_main%start(rs_label // "reverting")
       else
          call ppp_main%start(rs_label // "saving")
@@ -173,7 +172,7 @@ contains
                do i = lbound(na%lst(:), dim=1), ubound(na%lst(:), dim=1)
                   if (na%lst(i)%restart_mode > AT_IGNORE) then
                      rname = get_rname(na%lst(i)%name)
-                     if (cfl_violated) then
+                     if (repeat_step) then
                         if (cgl%cg%has_previous_timestep) then
                            select type(na)  !! ToDo: unify qna and wna somehow at least in the grid_container
                               type is (na_var_list_q)
@@ -205,7 +204,7 @@ contains
          call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
-      if (cfl_violated) then
+      if (repeat_step) then
          call ppp_main%stop(rs_label // "reverting")
       else
          call ppp_main%stop(rs_label // "saving")

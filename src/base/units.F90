@@ -174,7 +174,7 @@ contains
 !<
    subroutine init_units
 
-      use constants,  only: pi, fpi, dirtyL, PIERNIK_INIT_MPI
+      use constants,  only: pi, fpi, dirtyL, PIERNIK_INIT_MPI, U_TEMP
       use dataio_pub, only: warn, printinfo, msg, die, code_progress
       use func,       only: operator(.equals.)
       use mpisetup,   only: master
@@ -197,114 +197,114 @@ contains
       select case (trim(units_set))
          case ("PSM", "psm")
             ! PSM  uses: length --> pc,     mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
-            cm         = 1.0/pc_cm            !< centimetre, length unit
-            sek        = 1.0/(1.0e6*yr_s)     !< second, time unit
-            gram       = 1.0/msun_g           !< gram, mass unit
+            cm       = 1.0/pc_cm            !< centimetre, length unit
+            sek      = 1.0/(1.0e6*yr_s)     !< second, time unit
+            gram     = 1.0/msun_g           !< gram, mass unit
             s_len_u  = ' [pc]'
             s_time_u = ' [Myr]'
             s_mass_u = ' [M_sun]'
             lmtvB    = [1.0, 1.0, 1.0, 1.0, 1.0]
-            s_lmtvB(U_LEN:U_MAG)  = ["pc      ", "Msun    ", "Myr     ", "pc / Myr", "gauss   "]
+            s_lmtvB(U_LEN:U_TEMP) = ["pc      ", "Msun    ", "Myr     ", "pc / Myr", "gauss   ", "K       "]
 
          case ("PLN", "pln")
             ! PLN  uses: length --> AU,     mass --> Mjup,        time --> yr,         miu0 --> 4*pi,    temperature --> kelvin
-            cm         = 1.0/au_cm            !< centimetre, length unit
-            sek        = 1.0/yr_s             !< second, time unit
-            gram       = 1.0/mjup_g           !< gram, mass unit
+            cm       = 1.0/au_cm            !< centimetre, length unit
+            sek      = 1.0/yr_s             !< second, time unit
+            gram     = 1.0/mjup_g           !< gram, mass unit
             s_len_u  = ' [AU]'
             s_time_u = ' [yr]'
             s_mass_u = ' [M_jup]'
             lmtvB    = [1.0, 1.0, 1.0, 1.0, 1.0]
-            s_lmtvB(U_LEN:U_MAG)  = ["au     ", "Mjup   ", "yr     ", "au / yr", "gauss  "]
+            s_lmtvB(U_LEN:U_TEMP) = ["au     ", "Mjup   ", "yr     ", "au / yr", "gauss  ", "K      "]
 
          case ("BIN", "bin")
             ! BIN  uses: length --> AU,     mass --> Msun,        time --> yr,         miu0 --> 4*pi,    temperature --> kelvin
-            cm         = 1.0/au_cm            !< centimetre, length unit
-            sek        = 1.0/yr_s             !< second, time unit
-            gram       = 1.0/msun_g           !< gram, mass unit
+            cm       = 1.0/au_cm            !< centimetre, length unit
+            sek      = 1.0/yr_s             !< second, time unit
+            gram     = 1.0/msun_g           !< gram, mass unit
             s_len_u  = ' [AU]'
             s_time_u = ' [yr]'
             s_mass_u = ' [M_sun]'
             lmtvB    = [1.0, 1.0, 1.0, 1.0, 1.0]
-            s_lmtvB(U_LEN:U_MAG)  = ["au     ", "Msun   ", "yr     ", "au / yr", "gauss  "]
+            s_lmtvB(U_LEN:U_TEMP) = ["au     ", "Msun   ", "yr     ", "au / yr", "gauss  ", "K      "]
 
          case ("KSG", "ksg")
             ! KSG  uses: length --> kpc,    mass --> 10^6*Msun,   time --> Gyr,        miu0 --> 4*pi,    temperature --> kelvin
-            cm         = 1.0/(1.0e3*pc_cm)    !< centimetre, length unit
-            sek        = 1.0/(1.0e9*yr_s)     !< second, time unit
-            gram       = 1.0/(1.0e6*msun_g)   !< gram, mass unit
+            cm       = 1.0/(1.0e3*pc_cm)    !< centimetre, length unit
+            sek      = 1.0/(1.0e9*yr_s)     !< second, time unit
+            gram     = 1.0/(1.0e6*msun_g)   !< gram, mass unit
             s_len_u  = ' [kpc]'
             s_time_u = ' [Gyr]'
             s_mass_u = ' [10^6 M_sun]'
             lmtvB    = [1.0, 1.0e6, 1.0, 1.0, 1.0]
-            s_lmtvB(U_LEN:U_MAG)  = ["kpc      ", "Msun     ", "Gyr      ", "kpc / Gyr", "gauss    "]
+            s_lmtvB(U_LEN:U_TEMP) = ["kpc      ", "Msun     ", "Gyr      ", "kpc / Gyr", "gauss    ", "K        "]
 
          case ("KSM", "ksm")
             ! KSM  uses: length --> kpc,    mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
-            cm =         1.0/(1.0e3*pc_cm)    !< centimetre, length unit
-            sek =        1.0/(1.0e6*yr_s)     !< second, time unit
-            gram =       1.0/msun_g           !< gram, mass unit
+            cm       = 1.0/(1.0e3*pc_cm)    !< centimetre, length unit
+            sek      = 1.0/(1.0e6*yr_s)     !< second, time unit
+            gram     = 1.0/msun_g           !< gram, mass unit
             s_len_u  = ' [kpc]'
             s_time_u = ' [Myr]'
             s_mass_u = ' [M_sun]'
             lmtvB    = [1.0, 1.0, 1.0, 1.0, 1.0]
-            s_lmtvB(U_LEN:U_MAG)  = ["kpc      ", "Msun     ", "Myr      ", "kpc / Myr", "gauss    "]
+            s_lmtvB(U_LEN:U_TEMP) = ["kpc      ", "Msun     ", "Myr      ", "kpc / Myr", "gauss    ", "K        "]
 
          case ("PGM", "pgm")
             ! PGM  uses: length --> pc,     newtong --> 1.0,      time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
-            cm         = 1.0/pc_cm            !< centimetre, length unit
-            sek        = 1.0/(1.0e6*yr_s)     !< second, time unit
-            gram       = newton_cgs*cm**3/1.0/sek**2      !< gram, mass unit  G = 1.0
+            cm       = 1.0/pc_cm            !< centimetre, length unit
+            sek      = 1.0/(1.0e6*yr_s)     !< second, time unit
+            gram     = newton_cgs*cm**3/1.0/sek**2      !< gram, mass unit  G = 1.0
             s_len_u  = ' [pc]'
             s_time_u = ' [Myr]'
             s_mass_u = ' [-> G=1]'
             lmtvB    = [1.0, 1.0 / gram, 1.0, 1.0, 1.0]
-            s_lmtvB(U_LEN:U_MAG)  = ["pc      ", "g       ", "Myr     ", "pc / Myr", "gauss   "]   ! FIXME
+            s_lmtvB(U_LEN:U_TEMP) = ["pc      ", "g       ", "Myr     ", "pc / Myr", "gauss   ", "K       "]   ! FIXME
 
          case ("SSY", "ssy")
             ! SSY  uses: length --> 10^16 cm,  mass --> Msun,     time --> year,       miu0 --> 4*pi,    temperature --> kelvin
-            cm         = 1.0/1.0e16           !< centimetre, length unit
-            sek        = 1.0/yr_s             !< second, time unit
-            gram       = 1.0/msun_g           !< gram, mass unit
+            cm       = 1.0/1.0e16           !< centimetre, length unit
+            sek      = 1.0/yr_s             !< second, time unit
+            gram     = 1.0/msun_g           !< gram, mass unit
             s_len_u  = ' [10^16 cm]'
             s_time_u = ' [yr]'
             s_mass_u = ' [M_sun]'
             lmtvB    = [1.0e16, 1.0, 1.0, 1.0e16, 1.0]
-            s_lmtvB(U_LEN:U_MAG)  = ["cm     ", "Msun   ", "yr     ", "cm / yr", "gauss  "]
+            s_lmtvB(U_LEN:U_TEMP) = ["cm     ", "Msun   ", "yr     ", "cm / yr", "gauss  ", "K      "]
 
          case ("SI", "si")
             ! SI   uses: length --> metr,   mass --> kg,          time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
-            cm         = 1.0/1.0e2            !< centimetre, length unit
-            sek        = 1.0                  !< second, time unit
-            gram       = 1.0/1.0e3            !< gram, mass unit
+            cm       = 1.0/1.0e2            !< centimetre, length unit
+            sek      = 1.0                  !< second, time unit
+            gram     = 1.0/1.0e3            !< gram, mass unit
             s_len_u  = ' [m]'
             s_time_u = ' [s]'
             s_mass_u = ' [kg]'
             lmtvB    = [1.0, 1.0, 1.0, 1.0, 1.0]
-            s_lmtvB  = ["m    ", "kg   ", "s    ", "m / s", "T    ", "J    "]    ! FIXME is tesla right?
+            s_lmtvB  = ["m    ", "kg   ", "s    ", "m / s", "T    ", "K    ", "J    "]    ! FIXME is tesla right?
 
          case ("CGS", "cgs")
             ! CGS  uses: length --> cm,     mass --> gram,        time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
-            cm         = 1.0                  !< centimetre, length unit
-            sek        = 1.0                  !< second, time unit
-            gram       = 1.0                  !< gram, mass unit
+            cm       = 1.0                  !< centimetre, length unit
+            sek      = 1.0                  !< second, time unit
+            gram     = 1.0                  !< gram, mass unit
             s_len_u  = ' [cm]'
             s_time_u = ' [s]'
             s_mass_u = ' [g]'
             lmtvB    = [1.0, 1.0, 1.0, 1.0, 1.0]
-            s_lmtvB  = ["cm    ", "g     ", "s     ", "cm / s", "gauss ", "erg   "]
+            s_lmtvB  = ["cm    ", "g     ", "s     ", "cm / s", "gauss ", "K     ", "erg   "]
 
          case ("WT4", "wt4")
             ! WT4  uses: length --> 6.25AU, mass --> 0.1 M_sun,   time --> 2.5**3.5 /pi years (=> G \approx 1. in Wengen Test #4),
-            cm          = 1./(6.25*au_cm)     !< centimetre, length unit
+            cm       = 1./(6.25*au_cm)     !< centimetre, length unit
             ! It's really weird that use of 2.5**3.5 here can cause Internal Compiler Error at multigridmultipole.F90:827
-            sek         = 1./(24.7052942200655/pi * yr_s) !< year, time unit; 24.7052942200655 = 2.5**3.5
-            gram        = 1/(0.1*msun_g)      !< gram, mass unit
+            sek      = 1./(24.7052942200655/pi * yr_s) !< year, time unit; 24.7052942200655 = 2.5**3.5
+            gram     = 1/(0.1*msun_g)      !< gram, mass unit
             s_len_u  = ' [6.25 AU]'
             s_time_u = ' [2.5**3.5 /pi years]'
             s_mass_u = ' [0.1 M_sun]'
             lmtvB    = [6.25, 0.1, 24.7052942200655 / pi, 6.25 * pi / 24.7052942200655, 1.0]
-            s_lmtvB(U_LEN:U_MAG)  = ["au     ", "Msun   ", "yr     ", "au / yr", "gauss  "]
+            s_lmtvB(U_LEN:U_TEMP)  = ["au     ", "Msun   ", "yr     ", "au / yr", "gauss  ", "K      "]
 
          case ("USER", "user")
             if (master) call warn("[units:init_units] PIERNIK will use 'cm', 'sek', 'gram' defined in problem.par")
@@ -316,7 +316,7 @@ contains
             if (trim(s_mass_u) == ' undefined') s_mass_u  = ' [user unit]'
             lmtvB    = [1.0, 1.0, 1.0, 1.0, 1.0]
             s_lmtvB  = ["dimensionless", "dimensionless", "dimensionless", &
-                        "dimensionless", "dimensionless", "dimensionless"]  ! trick for yt
+                        "dimensionless", "dimensionless", "dimensionless", "dimensionless"]  ! trick for yt
 
          case default
             if (master) call warn("[units:init_units] you haven't chosen units set. That means physical vars taken from 'units' are worthless or equal 1")
@@ -327,7 +327,7 @@ contains
             scale_me = .true.
             lmtvB    = [1.0, 1.0, 1.0, 1.0, 1.0]
             s_lmtvB  = ["dimensionless", "dimensionless", "dimensionless", &
-                        "dimensionless", "dimensionless", "dimensionless"]
+                        "dimensionless", "dimensionless", "dimensionless", "dimensionless"]
 
       end select
 
@@ -485,7 +485,7 @@ contains
 
    subroutine get_unit(field, val, s_val)
 
-      use constants, only: U_LEN, U_MASS, U_TIME, U_VEL, U_MAG, units_len
+      use constants, only: U_LEN, U_MASS, U_TIME, U_VEL, U_MAG, U_TEMP, units_len
 
       implicit none
 
@@ -517,10 +517,13 @@ contains
          case ("pren", "prei", "pressure")
             val =  lmtvB(U_MASS) / lmtvB(U_LEN) / lmtvB(U_TIME) ** 2
             write(s_val, '(a, "/", a, "/",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
+         case ("temn", "temi", "temperature")
+            val =  1.0
+            write(s_val, '(a)') trim(s_lmtvB(U_TEMP))
          case ("magx", "magy", "magz")
             val = lmtvB(U_MAG)
             write(s_val, '(a)') trim(s_lmtvB(U_MAG))
-         case ("cr01" : "cr99")
+         case ("cr01" : "cr99", "cr_A000" : "cr_zz99", "cree01" : "cree99")
             val = lmtvB(U_MASS) / lmtvB(U_LEN) / lmtvB(U_TIME) ** 2
             if (trim(s_lmtvB(U_ENER)) /= "complex") then
                write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
@@ -531,13 +534,6 @@ contains
          case ("cren01" : "cren99")
             val = 1.0 / lmtvB(U_LEN)**3                             !< CRESP number density
             write(s_val, '( "1  /", a,"**3")') trim(s_lmtvB(U_LEN))
-         case ("cree01" : "cree99")
-            val = lmtvB(U_MASS) / lmtvB(U_LEN) / lmtvB(U_TIME) ** 2 !< CRESP energy density
-            if (trim(s_lmtvB(U_ENER)) /= "complex") then
-               write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
-            else
-               write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
-            endif
 #endif /* COSM_RAY_ELECTRONS */
          case ("gpot", "sgpt")
             val = lmtvB(U_VEL) ** 2

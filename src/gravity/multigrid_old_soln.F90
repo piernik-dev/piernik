@@ -455,7 +455,7 @@ contains
       call get_attr(file_id, trim(this%old%label) // "_times", timelist)
 
       if (associated(this%old%latest)) call die("[multigrid_old_soln:read_os_attribute] " // trim(this%old%label) // "nonempty")
-      do i = ubound(namelist, 1), lbound(namelist, 1), -1  ! it is stored with most recent entriest first
+      do i = ubound(namelist, 1), lbound(namelist, 1), -1  ! it is stored with most recent entries first
          if (qna%exists(trim(namelist(i)))) then
             os => this%invalid%pick(qna%ind(namelist(i)))
             if (associated(os)) then

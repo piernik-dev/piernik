@@ -70,7 +70,7 @@ module grid_cont_na
    contains
 
       procedure :: cleanup_na            !< Deallocate all internals
-      procedure :: add_all_na            !< Register all known named arrays for this cg, sey up shortcuts to the crucial fields
+      procedure :: add_all_na            !< Register all known named arrays for this cg, set up shortcuts to the crucial fields
       procedure :: set_constant_b_field  !< set constant magnetic field on whole block
 
       ! These should be private procedures but we need them in cg_list_global:reg_var
@@ -107,7 +107,7 @@ contains
 
    end subroutine cleanup_na
 
-!> \brief Register all known named arrays for this cg, sey up shortcuts to the crucial fields
+!> \brief Register all known named arrays for this cg, set up shortcuts to the crucial fields
 
    subroutine add_all_na(this)
 

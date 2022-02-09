@@ -149,7 +149,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
+         if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per processor not implemented yet") !nontrivial kmid, allocate
 
          sqr_gm = sqrt(newtong*ptmass)
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)

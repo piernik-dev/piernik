@@ -121,13 +121,13 @@ contains
 
       if (force_hdf5_dump) &
 #ifdef HDF5
-           call write_hdf5
+           call write_hdf5(.false.)
 #else /* !HDF5 */
            call warn("[io_debug:force_dumps] no HDF5 available (w)")
 #endif /* !HDF5 */
       if (force_res_dump) &
 #ifdef HDF5
-           call write_restart_hdf5
+           call write_restart_hdf5(.false.)
 #else /* !HDF5 */
            call warn("[io_debug:force_dumps] no HDF5 available (r)")
 #endif /* !HDF5 */

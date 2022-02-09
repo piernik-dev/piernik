@@ -178,9 +178,9 @@ contains
    end function system_mem_usage
 
 !>
-!! \brief Check if current memory usage doex not exceed the limit.
+!! \brief Check if current memory usage does not exceed the limit.
 !!
-!! \detailed This routine should be called after each potentially large allocaltion.
+!! \detailed This routine should be called after each potentially large allocation.
 !! This may be used to crash Piernik before running into swapped memory.
 !!
 !! Cannot make a clean exit and call a restart dump from here because

@@ -392,7 +392,7 @@ contains
 
    end function prioritized_cg
 
-!> \brief Returna a leaves list without fully covered cg
+!> \brief Return a leaves list without fully covered cg
 
    function leaf_only_cg(this) result(selected_leaves)
 

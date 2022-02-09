@@ -490,6 +490,7 @@ contains
       use snsources,        only: nsn
 #endif /* SN_SRC */
 #ifdef COSM_RAY_ELECTRONS
+      use initcrspectrum,  only: use_cresp
       use cresp_NR_method, only: cresp_read_smaps_from_hdf
 #endif /* COSM_RAY_ELECTRONS */
 
@@ -587,7 +588,7 @@ contains
       call h5pclose_f(plist_id, error)
 
 #ifdef COSM_RAY_ELECTRONS
-      call cresp_read_smaps_from_hdf(file_id)
+      if (use_cresp) call cresp_read_smaps_from_hdf(file_id)
 #endif /* COSM_RAY_ELECTRONS */
 
       ! set up things such as register user rank-3 and rank-4 arrays to be read by read_arr_from_restart. Read also anything that is not read by all read_arr_from_restart calls

@@ -433,7 +433,7 @@ contains
 
       ! OPT: to avoid these boundary exchanges one must provide div(B) and grad(psi) on bigger area and alter whole blocks.
       ! Thi may require extra guardcells
-      ! Beware: highre orders of div(B) and grad(psi) may require boundary update at the beginning too
+      ! Beware: higher orders of div(B) and grad(psi) may require boundary update at the beginning too
       call all_fluid_boundaries
       call leaves%leaf_arr3d_boundaries(ipsi)
 #ifdef MAGNETIC

@@ -67,7 +67,7 @@ contains
       ! Offset value equal to k*2**n, where k is odd will allow at most n levels of coarsening.
       ! Odd offsets or domain sizes prevent creation of coarse levels.
       !> \todo Find the limit that comes from multigrid: maximum refinement should not depend on base level offset
-      ! Offset of the base domain may change after the domain gets expanded, shrinked or resized.
+      ! Offset of the base domain may change after the domain gets expanded, shrank or resized.
 
       if (any(n_d(:) < 1)) call die("[cg_level_base:set] non-positive base grid sizes")
       if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_level_base:set] base grid size incompatible with has_dir masks")

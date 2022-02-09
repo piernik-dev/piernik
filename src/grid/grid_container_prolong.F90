@@ -161,7 +161,7 @@ contains
 !!\n  "scatter" approach: loop over coarse cells, each one contributes weighted values to 10**3 fine cells (1000*n_coarse multiplications, roughly equal to cost of gather)
 !!\n  "directionally split" approach: do the prolongation (either gather or scatter type) first in x direction (10*n_coarse multiplications -> 2*n_coarse intermediate cells
 !!                                  result), then in y direction (10*2*n_coarse multiplications -> 4*n_coarse intermediate cells result), then in z direction
-!!                                  (10*4*n_coarse multiplications -> 8*n_coarse = n_fine cells result). Looks like 70*n_coarse multiplications, alt least for large blocks
+!!                                  (10*4*n_coarse multiplications -> 8*n_coarse = n_fine cells result). Looks like 70*n_coarse multiplications, at least for large blocks
 !!                                  Will require two additional arrays for intermediate results.
 !!
 !! In 2D and 3d by using precomputed multidimensional stencils and by rearranging terms it is possible to reduce number of multiplications.
@@ -222,9 +222,9 @@ contains
       !
       ! The same coefficients may be obtained with a bit different generators, depending on details of cell numeration and the way how we handle the Taylor expansion.
       ! Here we assume that:
-      ! * Coarse cell C_i has width 4 and is centered at coordinare 4*i.
+      ! * Coarse cell C_i has width 4 and is centered at coordinate 4*i.
       ! * Fine cell F_i has width 2 and is centered at coordinate 2*i+1.
-      ! All taylor expansions are done wrt. coordinate = 0, which coincides with the center of C_0.
+      ! All Taylor expansions are done wrt. coordinate = 0, which coincides with the center of C_0.
       select case (qna%lst(ind)%ord_prolong)
          case (O_D6)
             P_3 = -231./65536. ; P_2 = 2002./65536.; P_1 = -9009./65536.; P0 = 60060./65536.; P1 = 15015./65536.; P2 = -2574./65536.; P3 = 273./65536.

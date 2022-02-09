@@ -718,7 +718,7 @@ contains
                cg => cgl%cg
                call cg%costs%start
 
-               cgl%cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_sg_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
+               cgl%cg%q(source)%arr(RNG) = fpiG * sum(cg%u(i_sg_dens, RNG), dim=1)
 
                call cg%costs%stop(I_MULTIGRID)
                cgl => cgl%nxt
@@ -750,7 +750,7 @@ contains
 
                apply_src_Mcorrection = any(cg%ext_bnd(:,:)) .and. (ord_laplacian_outer == -O_I4) ! an improvement for Mehrstellen Laplace operator
 
-               if (apply_src_Mcorrection) cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
+               if (apply_src_Mcorrection) cg%wa(RNG) = 0.
                do side = LO, HI
                   if (cg%ext_bnd(xdim, side)) then
                      fac = 2. * cg%idx2 / fpiG
@@ -787,10 +787,10 @@ contains
                   endif
                enddo
                if (apply_src_Mcorrection) then
-                  where (cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke).equals.2.0) &
-                       cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) * 5./6.
-                  where (cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke).equals.3.0) &
-                       cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) * 2./3.
+                  where (cg%wa(RNG).equals.2.0) &
+                       cg%q(source)%arr(RNG) = cg%q(source)%arr(RNG) * 5./6.
+                  where (cg%wa(RNG).equals.3.0) &
+                       cg%q(source)%arr(RNG) = cg%q(source)%arr(RNG) * 2./3.
                endif
                cgl => cgl%nxt
             enddo

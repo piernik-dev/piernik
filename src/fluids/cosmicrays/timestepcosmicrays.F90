@@ -55,7 +55,6 @@ contains
       use initcosmicrays,      only: def_dtcrs, K_crs_valid, diff_max_lev
       use mpisetup,            only: piernik_MPI_Allreduce
 #ifdef MULTIGRID
-      use initcosmicrays,      only: use_CRsplit
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
 #endif /* MULTIGRID */
 #ifdef COSM_RAY_ELECTRONS
@@ -90,7 +89,7 @@ contains
 
 #ifdef MULTIGRID
          diff_dt_crs_orig = dt_crs
-         if (.not. (use_CRsplit .or. diff_explicit)) dt_crs = dt_crs * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
+         if (.not. diff_explicit) dt_crs = dt_crs * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
 #endif /* MULTIGRID */
          call piernik_MPI_Allreduce(dt_crs, pMIN)
          frun = .false.
