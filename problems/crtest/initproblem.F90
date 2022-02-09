@@ -443,7 +443,7 @@ contains
       cgl => expanded_domain%first
       do while (associated(cgl))
          if (cgl%cg%is_old) call die("[initproblem:cr_late_init] Old piece on a new list")
-         associate (fl => flind%ion)
+         associate (fl => flind%ion, cg => cgl%cg)
          call cgl%cg%set_constant_b_field([bx0, by0, bz0])
          cgl%cg%u(fl%idn,RNG) = d0
          cgl%cg%u(fl%imx:fl%imz,RNG) = 0.0
