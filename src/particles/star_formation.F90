@@ -148,10 +148,10 @@ contains
     integer(kind=4)                                    :: pid, fact_time
     real, dimension(ndims)                             :: pos, vel, acc
     real                                               :: mass, ener, t1, tdyn, msf, fact, padd, tot_t
-    character                                          :: scheme
+    character(6)                                :: scheme
 
-    scheme = 'Agertz' !'Butsky'
-    if (scheme .eq. 'Butsky') then
+    scheme = "Agertz" !"Butsky"
+    if (scheme .eq. "Butsky") then
        fact_time = -1
        tot_t     = 120.0   ! 12*pset%pdata%tdyn?
     else
