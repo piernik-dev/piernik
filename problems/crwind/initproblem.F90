@@ -173,7 +173,6 @@ contains
       fl => flind%ion
 
       b0 = sqrt(2.*alpha*d0*fl%cs2)
-
       csim2 = fl%cs2*(1.0+alpha)
 
       cgl => leaves%first

@@ -1,14 +1,13 @@
-#define IONIZED
-#define COSM_RAYS
-
-#define COSM_RAYS_SOURCES
-
-#undef ISO
-
-
 #if !defined GLOBAL_FR_SPEED
 #  define LOCAL_FR_SPEED
 #endif
+
+#undef ISO
+
+#define IONIZED
+
+#define COSM_RAYS
+#define COSM_RAYS_SOURCES
 
 #define MAGNETIC
 

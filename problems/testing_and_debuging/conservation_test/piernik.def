@@ -1,12 +1,13 @@
-#undef IONIZED
-#undef MAGNETIC
-#undef NEUTRAL
-#define DUST
-
 #if !defined GLOBAL_FR_SPEED
 #  define LOCAL_FR_SPEED
 #endif
 
 #undef ISO
+
+#undef IONIZED
+#undef NEUTRAL
+#define DUST
+
+#undef MAGNETIC
 
 #undef GRAV
