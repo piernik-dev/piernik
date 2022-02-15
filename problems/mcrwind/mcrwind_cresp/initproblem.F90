@@ -208,8 +208,8 @@ contains
 !   Secondary parameters
       fl => flind%ion
 
-      b0 = sqrt(2.*alpha*d0*fl%cs2)
-      csim2 = fl%cs2*(1.0+alpha)
+      b0 = sqrt(2. * alpha * d0 * fl%cs2)
+      csim2 = fl%cs2 * (1.0 + alpha)
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -220,34 +220,38 @@ contains
          j = cg%lhn(ydim,LO)
          call hydrostatic_zeq_densmid(i, j, d0, csim2)
 
+         cg%u(fl%imx, RNG) = 0.0
+         cg%u(fl%imy, RNG) = 0.0
+         cg%u(fl%imz, RNG) = 0.0
+#ifdef COSM_RAYS
+         cg%u(iarr_crs, RNG)  = 0.0
+#endif /* COSM_RAYS */
+
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+            cg%u(fl%idn,:,:,k) = max(smalld, dprof(k))
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-                  cg%u(fl%idn,i,j,k) = max(smalld, dprof(k))
 
-                  cg%u(fl%imx,i,j,k) = 0.0
-                  cg%u(fl%imy,i,j,k) = 0.0
-                  cg%u(fl%imz,i,j,k) = 0.0
 #ifdef SHEAR
-                  cg%u(fl%imy,i,j,k) = -qshear*omega*cg%x(i)*cg%u(fl%idn,i,j,k)
+                  cg%u(fl%imy,i,j,k) = -qshear * omega * cg%x(i) * cg%u(fl%idn,i,j,k)
 #endif /* SHEAR */
-
+                  cg%b(:,i,j,k) = b0 * sqrt(cg%u(fl%idn,i,j,k) / d0) * b_n / sqrt(sum(b_n**2))
 #ifndef ISO
-                  cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1) * cg%u(fl%idn,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
+                  cg%u(fl%ien,i,j,k) = fl%cs2 / fl%gam_1 * cg%u(fl%idn,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
+                                     & emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                  cg%u(iarr_crs,i,j,k)  = 0.0
-                  cg%u(iarr_crn(1),i,j,k) = beta_cr*fl%cs2 * cg%u(fl%idn,i,j,k)/( gamma_crn(1) - 1.0 )
+                  cg%u(iarr_crn(1),i,j,k) = beta_cr * fl%cs2 * cg%u(fl%idn,i,j,k) / (gamma_crn(1) - 1.0)
 #ifdef SN_GALAXY
 ! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
                   if (any([eCRSP(icr_H1), eCRSP(icr_C12)])) then
-                     x1 = (cg%x(i)- x0)**2 ; x2 = (cg%x(i)-(x0+dom%L_(xdim)))**2
-                     y1 = (cg%y(j)- y0)**2 ; y2 = (cg%y(j)-(y0+dom%L_(ydim)))**2
-                     z1 = (cg%z(k)- z0)**2
+                     x1 = (cg%x(i) - x0)**2 ; x2 = (cg%x(i) - (x0+dom%L_(xdim)))**2
+                     y1 = (cg%y(j) - y0)**2 ; y2 = (cg%y(j) - (y0+dom%L_(ydim)))**2
+                     z1 = (cg%z(k) - z0)**2
                      decr = amp_cr * (exp(-(x1 + y1 + z1)/r_sn**2) + exp(-(x2 + y1 + z1)/r_sn**2) + exp(-(x1 + y2 + z1)/r_sn**2) + exp(-(x2 + y2 + z1)/r_sn**2))
                   endif
-                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k)= cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) +     decr
-                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k)= cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + 0.1*decr
+                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) +     decr
+                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + 0.1*decr
 #ifdef COSM_RAY_ELECTRONS
                   if (decr * cre_eff .gt. smallcree) then
                      cresp%n = 0.0 ;  cresp%e = 0.0
@@ -266,27 +270,8 @@ contains
       enddo
 
 #ifdef CR_SN
-      call cr_sn(sn_pos,amp_cr)
+      call cr_sn(sn_pos, amp_cr)
 #endif /* CR_SN */
-
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-
-         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-                  cg%b(:,i,j,k) = b0*sqrt(cg%u(fl%idn,i,j,k)/d0) * b_n/sqrt(sum(b_n**2))
-#ifndef ISO
-                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
-#endif /* !ISO */
-               enddo
-            enddo
-         enddo
-
-         cgl => cgl%nxt
-      enddo
 
    end subroutine problem_initial_conditions
 
