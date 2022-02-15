@@ -13,6 +13,5 @@
 
 #define GRAV
 
-#define GALAXY
 #define SN_SRC
 #define RANDOMIZE

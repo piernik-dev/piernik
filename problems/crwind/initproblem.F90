@@ -25,9 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#if defined GALAXY && defined SN_SRC
-#define SN_GALAXY
-#endif /* GALAXY && SN_SRC */
 
 module initproblem
 
@@ -47,7 +44,7 @@ module initproblem
    real :: x0, y0, z0                                                        !< parameters for a single supernova exploding at t=0
    real, dimension(ndims) :: b_n
 
-   namelist /PROBLEM_CONTROL/  d0, bxn, byn, bzn, x0, y0, z0, alpha, amp_cr, beta_cr
+   namelist /PROBLEM_CONTROL/ d0, bxn, byn, bzn, x0, y0, z0, alpha, amp_cr, beta_cr
 
 contains
 
@@ -72,16 +69,16 @@ contains
 
       implicit none
 
-      d0     = 1.0
-      bxn    = 0.0
-      byn    = 1.0
-      bzn    = 0.0
-      x0     = 0.0
-      y0     = 0.0
-      z0     = 0.0
-      alpha  = 0.0
-      amp_cr = 0.0
-      beta_cr= 0.0
+      d0      = 1.0
+      bxn     = 0.0
+      byn     = 1.0
+      bzn     = 0.0
+      x0      = 0.0
+      y0      = 0.0
+      z0      = 0.0
+      alpha   = 0.0
+      amp_cr  = 0.0
+      beta_cr = 0.0
 
       if (master) then
 
@@ -118,16 +115,16 @@ contains
 
       if (slave) then
 
-         d0        = rbuff(1)
-         bxn       = rbuff(2)
-         byn       = rbuff(3)
-         bzn       = rbuff(4)
-         x0        = rbuff(5)
-         y0        = rbuff(6)
-         z0        = rbuff(7)
-         amp_cr    = rbuff(8)
-         beta_cr   = rbuff(9)
-         alpha     = rbuff(10)
+         d0      = rbuff(1)
+         bxn     = rbuff(2)
+         byn     = rbuff(3)
+         bzn     = rbuff(4)
+         x0      = rbuff(5)
+         y0      = rbuff(6)
+         z0      = rbuff(7)
+         amp_cr  = rbuff(8)
+         beta_cr = rbuff(9)
+         alpha   = rbuff(10)
 
       endif
 
@@ -153,10 +150,10 @@ contains
 #endif /* SHEAR */
 #ifdef COSM_RAYS
       use initcosmicrays, only: gamma_crs, iarr_crs
-#ifdef SN_GALAXY
+#ifdef SN_SRC
       use domain,         only: dom
       use snsources,      only: r_sn
-#endif /* SN_GALAXY */
+#endif /* SN_SRC */
 #endif /* COSM_RAYS */
 
       implicit none
@@ -166,9 +163,9 @@ contains
       real                            :: b0, csim2
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-#ifdef SN_GALAXY
+#ifdef SN_SRC
       real                            :: decr, x1, x2, y1, y2, z1
-#endif /* SN_GALAXY */
+#endif /* SN_SRC */
 !   Secondary parameters
       fl => flind%ion
 
@@ -205,15 +202,15 @@ contains
 #endif /* !ISO */
 #ifdef COSM_RAYS
                   cg%u(iarr_crs,i,j,k) = beta_cr * fl%cs2 * cg%u(fl%idn,i,j,k) / (gamma_crs - 1.0)
-#ifdef SN_GALAXY
+#ifdef SN_SRC
 ! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
 
-                  x1 = (cg%x(i) - x0)**2 ; x2 = (cg%x(i) - (x0+dom%L_(xdim)))**2
-                  y1 = (cg%y(j) - y0)**2 ; y2 = (cg%y(j) - (y0+dom%L_(ydim)))**2
+                  x1 = (cg%x(i) - x0)**2 ; x2 = (cg%x(i) - (x0 + dom%L_(xdim)))**2
+                  y1 = (cg%y(j) - y0)**2 ; y2 = (cg%y(j) - (y0 + dom%L_(ydim)))**2
                   z1 = (cg%z(k) - z0)**2
                   decr = amp_cr * (exp(-(x1 + y1 + z1)/r_sn**2) + exp(-(x2 + y1 + z1)/r_sn**2) + exp(-(x1 + y2 + z1)/r_sn**2) + exp(-(x2 + y2 + z1)/r_sn**2))
                   cg%u(iarr_crs,i,j,k) = cg%u(iarr_crs,i,j,k) + decr
-#endif /* SN_GALAXY */
+#endif /* SN_SRC */
 #endif /* COSM_RAYS */
                enddo
             enddo
