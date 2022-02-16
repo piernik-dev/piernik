@@ -44,73 +44,102 @@ contains
 
   subroutine SF(forward)
 
-
     use cg_leaves,             only: leaves
     use cg_list,               only: cg_list_element
     use constants,             only: ndims, xdim, ydim, zdim, LO, HI, CENTER, pi, nbdn_n
+    use cr_data,               only: icr_H1, cr_table
     use fluidindex,            only: flind
     use fluidtypes,            only: component_fluid
-    use func,                  only: ekin
+    use func,                  only: operator(.equals.), ekin
     use global,                only: nstep, t, dt
     use grid_cont,             only: grid_container
+    use initcosmicrays,        only: iarr_crn, cr_active
     use mpisetup,              only: proc
     use named_array_list,      only: wna, qna
+    use particle_types,        only: particle
     use particle_utils,        only: is_part_in_cg
-    use units,                 only: fpiG
+    use thermal,               only: itemp
+    use units,                 only: newtong, erg
 
     logical, intent(in)                                :: forward
     type(cg_list_element), pointer                     :: cgl
     type(grid_container),  pointer                     :: cg
-    !type(particle), pointer                            :: pset
+    type(particle), pointer                            :: pset
     class(component_fluid), pointer                    :: pfl
-    !real, dimension(:,:,:), pointer                    :: dens
     integer                                            :: ifl, i, j, k
-    real                                               :: thresh, G
-    integer(kind=4)                                    :: pid, ig
+    real                                               :: dens_thr, sf_dens, c_tau_ff, eps_sf
+    logical                                            :: fed
+    integer(kind=4)                                    :: pid, ig, stage
     real, dimension(ndims)                             :: pos, vel, acc
-    real                                               :: mass, ener, tdyn, frac
+    real                                               :: mass, ener, tdyn
     logical                                            :: in, phy, out, cond
 
-    dmass_stars = 0.0
     if (.not. forward) return
-    G = fpiG/(4*pi)
+    dens_thr = 0.005
+    eps_sf = 0.1
     ig = qna%ind(nbdn_n)
-    !thresh = 0.005
-    frac = 0.1
     cgl => leaves%first
     do while (associated(cgl))
        cg => cgl%cg
-
        do ifl = 1, flind%fluids
           pfl => flind%all_fluids(ifl)%fl
-          !dens =>  cg%w(wna%fi)%span(pfl%idn,cg%ijkse)
           do i = cg%ijkse(xdim,LO), cg%ijkse(xdim,HI)
              do j = cg%ijkse(ydim,LO), cg%ijkse(ydim,HI)
                 do k = cg%ijkse(zdim,LO), cg%ijkse(zdim,HI)
-                   tdyn = sqrt(3*pi/(32*G*(cg%w(wna%fi)%arr(pfl%idn,i,j,k))+cgl%cg%q(ig)%arr(i,j,k)))
-                   call SF_crit(pfl, cg, i, j, k, tdyn, cond)
-                   if (cond) then
-                      call attribute_id(pid)
-                      pos(1) = cg%coord(CENTER, xdim)%r(i)
-                      pos(2) = cg%coord(CENTER, ydim)%r(j)
-                      pos(3) = cg%coord(CENTER, zdim)%r(k)
-                      mass = frac * cg%w(wna%fi)%arr(pfl%idn,i,j,k) * cg%dvol !* 0.75
-                      vel(1) = cg%u(pfl%imx, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
-                      vel(2) = cg%u(pfl%imy, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
-                      vel(3) = cg%u(pfl%imz, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
-                      acc(:)=0.0
-                      ener = 0.0
-                      call is_part_in_cg(cg, pos, in, phy, out)
-                      !print *, 'SF!', cg%u(pfl%ien, i, j, k), 0.1 * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
-                      !print *, proc, pid, tdyn
-                      call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, t, tdyn)
-                      cg%u(pfl%ien, i, j, k)          = cg%u(pfl%ien, i, j, k) - frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))! * 0.75
-                      cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1-frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
-                      cg%u(pfl%imx:pfl%imz, i, j, k)  = (1-frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
-                      dmass_stars = dmass_stars + mass
-                      cg%q(qna%ind("SFR_n"))%arr(i,j,k)  = mass / cg%dvol / (2*dt)
-                      cg%q(qna%ind("SFRh_n"))%arr(i,j,k) = cg%q(qna%ind("SFRh_n"))%arr(i,j,k) + mass
-                      cg%q(qna%ind("SFRp_n"))%arr(i,j,k) = cg%q(qna%ind("SFRp_n"))%arr(i,j,k) + mass
+                   if ((cg%u(pfl%idn,i,j,k) .gt. dens_thr) .and. (cg%q(itemp)%arr(i,j,k) .lt. 10**4)) then
+                      fed = .false.
+                      c_tau_ff = sqrt(3.*pi/(32.*newtong))
+                      sf_dens = eps_sf / c_tau_ff * cg%u(pfl%idn,i,j,k)**(3./2.)
+                      pset => cg%pset%first
+                      do while (associated(pset))
+                         if (cg%coord(LO,xdim)%r(i) .lt. pset%pdata%pos(1)+cg%dx .and. cg%coord(HI,xdim)%r(i) .gt. pset%pdata%pos(1)-cg%dx) then
+                            if (cg%coord(LO,ydim)%r(j) .lt. pset%pdata%pos(2)+cg%dy .and. cg%coord(HI,ydim)%r(j) .gt. pset%pdata%pos(2)-cg%dy) then
+                               if (cg%coord(LO,zdim)%r(k) .lt. pset%pdata%pos(3)+cg%dz .and. cg%coord(HI,zdim)%r(k) .gt. pset%pdata%pos(3)-cg%dz) then
+
+                                  if ((pset%pdata%tform .ge. 0.0) .and. (pset%pdata%mass .lt. 10**5)) then
+                                     stage = aint(pset%pdata%mass/100)
+                                     pset%pdata%mass = pset%pdata%mass + sf_dens * cg%dvol * 2*dt
+                                     print *, 'adding mass to particle, ', sf_dens * cg%dvol * 2*dt
+                                     cg%u(pfl%ien, i, j, k)          = cg%u(pfl%ien, i, j, k) - ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), sf_dens * 2*dt)
+                                     cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1 - sf_dens * 2*dt / cg%u(pfl%idn, i, j, k)) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
+                                     cg%u(pfl%imx:pfl%imz, i, j, k)  = (1 - sf_dens * 2*dt / cg%u(pfl%idn, i, j, k)) * cg%u(pfl%imx:pfl%imz, i, j, k)
+                                     if (aint(pset%pdata%mass/100) .gt. stage) then
+                                        cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + (aint(pset%pdata%mass/100) - stage) * (1-cr_active) * 10.0**51 * erg / cg%dvol ! adding SN energy
+#ifdef COSM_RAYS
+                                        if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + (aint(pset%pdata%mass/100) - stage) * 0.1 * 10.0**51 * erg / cg%dvol  ! adding CR
+#endif /* COSM_RAYS */
+                                        print *, 'releasing energy', (aint(pset%pdata%mass/100) - stage) * (1-cr_active) * 10.0**51 * erg / cg%dvol
+                                     endif
+                                     fed = .true.
+                                  endif
+                               endif
+                            endif
+                         endif
+                         pset => pset%nxt
+                      enddo
+                      if (.not. fed) then
+                         print *, 'creating particle! mass ', sf_dens * cg%dvol * 2*dt
+                         call attribute_id(pid)
+                         pos(1) = cg%coord(CENTER, xdim)%r(i)
+                         pos(2) = cg%coord(CENTER, ydim)%r(j)
+                         pos(3) = cg%coord(CENTER, zdim)%r(k)
+                         mass   = sf_dens * cg%dvol * 2*dt
+                         vel(1) = cg%u(pfl%imx, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
+                         vel(2) = cg%u(pfl%imy, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
+                         vel(3) = cg%u(pfl%imz, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
+                         acc(:)=0.0
+                         ener = 0.0
+                         tdyn = sqrt(3*pi/(32*newtong*(cg%w(wna%fi)%arr(pfl%idn,i,j,k))+cgl%cg%q(ig)%arr(i,j,k)))
+                         call is_part_in_cg(cg, pos, in, phy, out)
+                         call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, t, tdyn)
+                         if (mass .gt. 100.0) then
+                            cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + aint(mass/100.0) * (1-cr_active) * 10.0**51 * erg / cg%dvol ! adding SN energy
+#ifdef COSM_RAYS
+                            if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + aint(mass/100.0) * 0.1 * 10.0**51 * erg / cg%dvol  ! adding CR
+#endif /* COSM_RAYS */
+                            print *, 'releasing energy', aint(mass/100.0) * (1-cr_active) * 10.0**51 * erg / cg%dvol
+                         endif
+                      endif
                    endif
                 enddo
              enddo
@@ -118,120 +147,8 @@ contains
        enddo
        cgl => cgl%nxt
     enddo
-    call feedback()
-
-  end subroutine SF
-
-  subroutine feedback
-
-    use cg_leaves,             only: leaves
-    use cg_list,               only: cg_list_element
-    use constants,             only: ndims, xdim, ydim, zdim, LO, HI, CENTER
-    use cr_data,               only: icr_H1, cr_table
-    use fluidindex,            only: flind
-    use fluidtypes,            only: component_fluid
-    use func,                  only: operator(.equals.)
-    use global,                only: nstep, t, dt
-    use grid_cont,             only: grid_container
-    use initcosmicrays,        only: iarr_crn, cr_active
-    use mpisetup,              only: proc
-    use named_array_list,      only: wna
-    use particle_types,        only: particle
-    use units,                 only: clight, gram, cm, sek
-
-    type(cg_list_element), pointer                     :: cgl
-    type(grid_container),  pointer                     :: cg
-    type(particle), pointer                            :: pset
-    class(component_fluid), pointer                    :: pfl
-    integer                                            :: ifl, i, j, k, i1, j1, k1
-    real                                               :: thresh
-    integer(kind=4)                                    :: pid, fact_time
-    real, dimension(ndims)                             :: pos, vel, acc
-    real                                               :: mass, ener, t1, tdyn, msf, fact, padd, tot_t
-    character(6)                                :: scheme
-
-    scheme = "Agertz" !"Butsky"
-    if (scheme .eq. "Butsky") then
-       fact_time = -1
-       tot_t     = 120.0   ! 12*pset%pdata%tdyn?
-    else
-       fact_time = 1
-       tot_t     = 40.0 
-    endif
-    cgl => leaves%first
-    do while (associated(cgl))
-       cg => cgl%cg
-
-       pset => cg%pset%first
-       do while (associated(pset))
-          if (t .lt. pset%pdata%tform + tot_t) then  
-             t1 = t - pset%pdata%tform
-             tdyn = pset%pdata%tdyn
-             msf = 0.0
-             if (t1 .gt. fact_time*6.5) then
-                msf = pset%pdata%mass * ( (1+t1/tdyn) * exp(-t1/tdyn) - (1+(t1+2*dt)/tdyn) * exp(-(t1+2*dt)/tdyn))
-                pset%pdata%mass = pset%pdata%mass - 0.25*msf
-             endif
-             do ifl = 1, flind%fluids
-                pfl => flind%all_fluids(ifl)%fl
-                do i = cg%ijkse(xdim,LO), cg%ijkse(xdim,HI)
-                   if (cg%coord(LO,xdim)%r(i) .lt. pset%pdata%pos(1)+cg%dx .and. cg%coord(HI,xdim)%r(i) .gt. pset%pdata%pos(1)-cg%dx) then
-                      do j = cg%ijkse(ydim,LO), cg%ijkse(ydim,HI)
-                         if (cg%coord(LO,ydim)%r(j) .lt. pset%pdata%pos(2)+cg%dy .and. cg%coord(HI,ydim)%r(j) .gt. pset%pdata%pos(2)-cg%dy) then
-                            do k = cg%ijkse(zdim,LO), cg%ijkse(zdim,HI)
-                               if (cg%coord(LO,zdim)%r(k) .lt. pset%pdata%pos(3)+cg%dz .and. cg%coord(HI,zdim)%r(k) .gt. pset%pdata%pos(3)-cg%dz) then
-                                  i1 = (pset%pdata%pos(1)-cg%coord(CENTER,xdim)%r(i)) / cg%dx
-                                  j1 = (pset%pdata%pos(2)-cg%coord(CENTER,ydim)%r(j)) / cg%dy
-                                  k1 = (pset%pdata%pos(3)-cg%coord(CENTER,zdim)%r(k)) / cg%dz
-                                  if (scheme .eq. 'Agertz') then   ! Agertz kick
-                                     if (abs(i1)+abs(j1)+abs(k1) .gt. 0.0) fact = 1.0 / sqrt(real(abs(i1) + abs(j1) + abs(k1)))
-                                     if (t1 .lt. 6.5) then
-                                        padd = pset%pdata%mass * 1.8 * 10.0**40 *gram * cm /sek * (1/0.5)**0.38 *2*dt/6.5 / cg%dvol / 26  ! see Agertz+2013
-                                     else
-                                        padd = 3.6 * 10**4 * pset%pdata%mass/200 * 2*dt/40.0 / cg%dvol / 26    ! should use initial mass, not current mass
-                                     endif
-                                  
-                                     ! Momentum kick
-                                     cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) - 0.5*(cg%u(pfl%imx,i,j,k)**2 +cg%u(pfl%imy,i,j,k)**2 + cg%u(pfl%imz,i,j,k)**2)/cg%u(pfl%idn,i,j,k)  ! remove ekin
-                                     cg%u(pfl%imx,i,j,k) = cg%u(pfl%imx,i,j,k) + fact * i1 * padd
-                                     cg%u(pfl%imy,i,j,k) = cg%u(pfl%imy,i,j,k) + fact * j1 * padd
-                                     cg%u(pfl%imz,i,j,k) = cg%u(pfl%imz,i,j,k) + fact * k1 * padd
-                                     cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) + 0.5*(cg%u(pfl%imx,i,j,k)**2 +cg%u(pfl%imy,i,j,k)**2 + cg%u(pfl%imz,i,j,k)**2)/cg%u(pfl%idn,i,j,k)  ! add new ekin
-                                  endif
-
-                                  if (abs(i1) + abs(j1) + abs(k1) == 0) then
-                                     if (scheme .eq. 'Butsky') then                                  ! Butsky
-                                        cg%w(wna%fi)%arr(pfl%idn,i,j,k) = cg%w(wna%fi)%arr(pfl%idn,i,j,k) + 0.25 * msf / cg%dvol                               ! adding mass
-                                        cg%u(pfl%imx:pfl%imz, i, j, k)  = cg%u(pfl%imx:pfl%imz, i, j, k)  + 0.25 * msf / cg%dvol * pset%pdata%vel(:)           ! adding momentum
-                                        cg%u(pfl%ien,i,j,k)             = cg%u(pfl%ien,i,j,k)             + 0.25 * msf / cg%dvol * sum(pset%pdata%vel(:)**2)   ! adding kinetic energy
-                                        cg%u(pfl%ien,i,j,k)             = cg%u(pfl%ien,i,j,k)  + 0.00001 * 0.25 * (1 - 0.1*cr_active) * msf / cg%dvol * clight**2
-#ifdef COSM_RAYS
-                                        if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + 0.1 * 0.00001 * 0.25 *  msf / cg%dvol * clight**2
-#endif /* COSM_RAYS */
-                                     else
-                                        if ((t1-dt < 6.5) .and. ((t1+dt) .gt. 6.5)) then    ! Instantaneous injection Agertz
-                                           cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + 0.75 * 0.00001 * 0.25 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2   ! adding SN energy
-#ifdef COSM_RAYS
-                                           if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + 0.1 * 0.00001 * 0.25 * (pset%pdata%mass + 0.25*msf) / cg%dvol * clight**2   ! adding CR
-#endif /* COSM_RAYS */
-                                        endif
-                                     endif
-                                  endif
-                               endif
-                            enddo
-                         endif
-                      enddo
-                   endif
-                enddo
-             enddo
-          endif
-          pset => pset%nxt
-       enddo
-
-       cgl => cgl%nxt
-    enddo
     
-  end subroutine feedback
+  end subroutine SF
 
 
   subroutine SF_crit(pfl, cg, i, j, k, tdyn, cond)
