@@ -104,6 +104,8 @@ module cr_data
    real, parameter :: sigma_O16_Be9  =  4.5 * mbarn
    real, parameter :: sigma_O16_Be10 =  2   * mbarn
 
+   real, parameter :: sigma_P_P =  25.   * mbarn
+
 !<====Decay half live times from Garcia-Munoz 1987====>
 
    real, parameter :: tau_Be10 = 1.6 !< Myr \deprecated BEWARE: this line breaks unit consistency, move it to units.F90 and use scaling
