@@ -171,7 +171,7 @@ contains
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index
       use func,            only: emag
-      use initcosmicrays,  only: ncrn, ncre, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp
+      use initcosmicrays,  only: ncrn, ncre, ncra, ncrs, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use units,           only: clight, me, sigma_T
 
@@ -425,7 +425,11 @@ contains
          ncre           = 0
       endif
 
-      if (.not. use_cresp) return
+      if (.not. use_cresp) then
+         if (master) call warn("[initcrspectrum:init_cresp] Switching 'use_cresp_evol' off: superior 'use_cresp' is switched off.")
+         use_cresp_evol = .false.
+         return
+      endif
 
       if (ncre < 3) call die("[initcrspectrum:init_cresp] CRESP algorithm currently requires at least 3 bins (ncre) in order to work properly, check your parameters.")
 
@@ -566,7 +570,6 @@ contains
       call init_cresp_types
 
       K_cre_paral(1:ncre) = K_cre_paral_1 * (p_mid_fix(1:ncre) / p_diff)**K_cre_pow
-
       K_cre_perp(1:ncre)  = K_cre_perp_1  * (p_mid_fix(1:ncre) / p_diff)**K_cre_pow
 
 #ifdef VERBOSE
@@ -574,10 +577,10 @@ contains
       write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_perp = ",  K_cre_perp(1:ncre)  ; if (master) call printinfo(msg)
 #endif /* VERBOSE */
 
-      K_cre_paral(ncre+1:2*ncre)      = K_cre_paral(1:ncre)
-      K_cre_perp (ncre+1:2*ncre)      = K_cre_perp (1:ncre)
-      K_crs_paral(ncrn+1:ncrn+2*ncre) = K_cre_paral(1:2*ncre)
-      K_crs_perp (ncrn+1:ncrn+2*ncre) = K_cre_perp (1:2*ncre)
+      K_cre_paral(ncre+1:ncra) = K_cre_paral(1:ncre)
+      K_cre_perp (ncre+1:ncra) = K_cre_perp (1:ncre)
+      K_crs_paral(ncrn+1:ncrs) = K_cre_paral(1:ncra)
+      K_crs_perp (ncrn+1:ncrs) = K_cre_perp (1:ncra)
 
       fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
       write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr

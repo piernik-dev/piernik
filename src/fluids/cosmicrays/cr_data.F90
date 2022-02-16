@@ -212,7 +212,7 @@ contains
 
 #undef VS
 
-      eCRSP_names(1:7) = ['H1  ','C12 ','Be9 ','Be10','N14 ','O16 ','Li7 ']
+      eCRSP_names(1:7) = ['p+  ','C12 ','Be9 ','Be10','N14 ','O16 ','Li7 ']
       eCRSP_mass (1:7) = [m_H1, m_C12, m_Be9, m_Be10, m_N14, m_O16, m_Li7 ]
       eCRSP      (1:7) = [eH1(PRES), eC12(PRES), eBe9(PRES), eBe10(PRES), eN14(PRES), eO16(PRES), eLi7(PRES)]
       eCRSP_ess  (1:7) = [eH1(ESS) , eC12(ESS) , eBe9(ESS) , eBe10(ESS) , eN14(ESS) , eO16(ESS) , eLi7(ESS) ]
