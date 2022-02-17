@@ -57,7 +57,6 @@
     ncrn        =   1
     K_crn_paral =   0.0
     K_crn_perp  =   100.0
-    use_CRsplit = .false.
  /
 
  $MULTIGRID_SOLVER
@@ -66,7 +65,7 @@
  /
 
  $MULTIGRID_DIFFUSION
-!    diff_explicit = .true.
+    diff_explicit = .false.
     diff_tstep_fac = 30.0
     diff_theta     = 0.6
     norm_tol = 1e-13
