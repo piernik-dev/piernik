@@ -67,7 +67,7 @@ contains
     type(particle), pointer                            :: pset
     class(component_fluid), pointer                    :: pfl
     integer                                            :: ifl, i, j, k
-    real                                               :: dens_thr, sf_dens, c_tau_ff, eps_sf
+    real                                               :: dens_thr, sf_dens, c_tau_ff, eps_sf, frac
     logical                                            :: fed
     integer(kind=4)                                    :: pid, ig, stage
     real, dimension(ndims)                             :: pos, vel, acc
@@ -75,7 +75,7 @@ contains
     logical                                            :: in, phy, out, cond
 
     if (.not. forward) return
-    dens_thr = 0.005
+    dens_thr = 0.035
     eps_sf = 0.1
     ig = qna%ind(nbdn_n)
     cgl => leaves%first
@@ -99,16 +99,15 @@ contains
                                   if ((pset%pdata%tform .ge. 0.0) .and. (pset%pdata%mass .lt. 10**5)) then
                                      stage = aint(pset%pdata%mass/100)
                                      pset%pdata%mass = pset%pdata%mass + sf_dens * cg%dvol * 2*dt
-                                     print *, 'adding mass to particle, ', sf_dens * cg%dvol * 2*dt
-                                     cg%u(pfl%ien, i, j, k)          = cg%u(pfl%ien, i, j, k) - ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), sf_dens * 2*dt)
-                                     cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1 - sf_dens * 2*dt / cg%u(pfl%idn, i, j, k)) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
-                                     cg%u(pfl%imx:pfl%imz, i, j, k)  = (1 - sf_dens * 2*dt / cg%u(pfl%idn, i, j, k)) * cg%u(pfl%imx:pfl%imz, i, j, k)
+                                     frac = sf_dens * 2*dt / cg%u(pfl%idn, i, j, k)
+                                     cg%u(pfl%ien, i, j, k)          = cg%u(pfl%ien, i, j, k) - frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn, i, j, k))
+                                     cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1 - frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
+                                     cg%u(pfl%imx:pfl%imz, i, j, k)  = (1 - frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
                                      if (aint(pset%pdata%mass/100) .gt. stage) then
-                                        cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + (aint(pset%pdata%mass/100) - stage) * (1-cr_active) * 10.0**51 * erg / cg%dvol ! adding SN energy
+                                        cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + (aint(pset%pdata%mass/100) - stage) * (1-0.1*cr_active) * 10.0**51 * erg / cg%dvol ! adding SN energy
 #ifdef COSM_RAYS
                                         if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + (aint(pset%pdata%mass/100) - stage) * 0.1 * 10.0**51 * erg / cg%dvol  ! adding CR
 #endif /* COSM_RAYS */
-                                        print *, 'releasing energy', (aint(pset%pdata%mass/100) - stage) * (1-cr_active) * 10.0**51 * erg / cg%dvol
                                      endif
                                      fed = .true.
                                   endif
@@ -118,12 +117,12 @@ contains
                          pset => pset%nxt
                       enddo
                       if (.not. fed) then
-                         print *, 'creating particle! mass ', sf_dens * cg%dvol * 2*dt
                          call attribute_id(pid)
                          pos(1) = cg%coord(CENTER, xdim)%r(i)
                          pos(2) = cg%coord(CENTER, ydim)%r(j)
                          pos(3) = cg%coord(CENTER, zdim)%r(k)
                          mass   = sf_dens * cg%dvol * 2*dt
+                         frac   = mass / cg%u(pfl%idn, i, j, k) / cg%dvol
                          vel(1) = cg%u(pfl%imx, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
                          vel(2) = cg%u(pfl%imy, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
                          vel(3) = cg%u(pfl%imz, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
@@ -132,12 +131,14 @@ contains
                          tdyn = sqrt(3*pi/(32*newtong*(cg%w(wna%fi)%arr(pfl%idn,i,j,k))+cgl%cg%q(ig)%arr(i,j,k)))
                          call is_part_in_cg(cg, pos, in, phy, out)
                          call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, t, tdyn)
+                         cg%u(pfl%ien, i, j, k)          = cg%u(pfl%ien, i, j, k) - frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn, i, j, k))
+                         cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1 - frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
+                         cg%u(pfl%imx:pfl%imz, i, j, k)  = (1 - frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
                          if (mass .gt. 100.0) then
-                            cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + aint(mass/100.0) * (1-cr_active) * 10.0**51 * erg / cg%dvol ! adding SN energy
+                            cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + aint(mass/100.0) * (1-0.1*cr_active) * 10.0**51 * erg / cg%dvol ! adding SN energy
 #ifdef COSM_RAYS
                             if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + aint(mass/100.0) * 0.1 * 10.0**51 * erg / cg%dvol  ! adding CR
 #endif /* COSM_RAYS */
-                            print *, 'releasing energy', aint(mass/100.0) * (1-cr_active) * 10.0**51 * erg / cg%dvol
                          endif
                       endif
                    endif
