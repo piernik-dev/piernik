@@ -614,7 +614,7 @@ contains
       if (cresp_disallow_negatives .eqv. .false.) then
          if (use_smallecr .eqv. .false.) then
             call warn("[initcrspectrum:init_cresp] Detecting negative values of n,e in CRESP module & performing CFL violation actions related is DISABLED via cresp_disallow_negatives.")
-            call warn("[initcrspectrum:init_cresp] as is 'use_smallecr'; should negative values show in CRESP, they will not be fixed.")  ! FIXME die in this case?
+            call warn("[initcrspectrum:init_cresp] as is 'use_smallecr'; should negative values show in CRESP, they will not be fixed.")
          else
             call warn("[initcrspectrum:init_cresp] Detecting negative values of n,e in CRESP module & performing CFL violation actions related is DISABLED via cresp_disallow_negatives.")
          endif
