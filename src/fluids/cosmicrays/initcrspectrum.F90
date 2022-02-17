@@ -610,8 +610,8 @@ contains
          n_substeps_max = 1            !< for sanity assuming 1 substep if cresp_substep = .false.
       endif
 
-      if (cresp_disallow_negatives .eqv. .false.) then
-         if (use_smallecr .eqv. .false.) then
+      if (.not. cresp_disallow_negatives) then
+         if (.not. use_smallecr) then
             call warn("[initcrspectrum:init_cresp] Detecting negative values of n,e in CRESP module & performing CFL violation actions related is DISABLED via cresp_disallow_negatives.")
             call warn("[initcrspectrum:init_cresp] as is 'use_smallecr'; should negative values show in CRESP, they will not be fixed.")
          else
