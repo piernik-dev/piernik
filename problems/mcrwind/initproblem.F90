@@ -52,12 +52,16 @@ contains
 
    subroutine problem_pointers
 
-!      use gravity,    only: grav_accel
+#ifdef GRAV
+      use gravity,    only: grav_pot_3d
+#endif /* GRAV */
       use user_hooks, only: problem_customize_solution
 
       implicit none
 
-!      grav_accel                 => galactic_grav_accel
+#ifdef GRAV
+      grav_pot_3d => galactic_grav_pot_3d
+#endif /* GRAV */
       problem_customize_solution => supernovae_wrapper
 
    end subroutine problem_pointers
@@ -68,9 +72,6 @@ contains
 
       use dataio_pub, only: nh
       use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
-#ifdef GRAV
-      use gravity,    only: grav_pot_3d, user_grav
-#endif /* GRAV */
 #if defined(COSM_RAYS) && defined(SN_SRC)
       use snsources,  only: amp_ecr_sn
 #endif /* COSM_RAYS && SN_SRC */
@@ -139,9 +140,6 @@ contains
       sn_pos = [x0,  y0,  z0 ]
       b_n    = [bxn, byn, bzn]
 
-#ifdef GRAV
-      if (user_grav) grav_pot_3d => galactic_grav_pot_3d
-#endif /* GRAV */
 #if defined(COSM_RAYS) && defined(SN_SRC)
       if (amp_cr < 0.) amp_cr = amp_ecr_sn
 #endif /* COSM_RAYS && SN_SRC */
@@ -170,9 +168,6 @@ contains
       use snsources,      only: cr_sn
 #endif /* SN_SRC */
 #endif /* COSM_RAYS */
-#ifdef GRAV
-      use gravity,        only: grav_pot_3d
-#endif /* GRAV */
 
       implicit none
 
@@ -181,10 +176,6 @@ contains
       real                            :: b0, csim2
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-
-#ifdef GRAV
-      call grav_pot_3d
-#endif /* GRAV */
 
 !   Secondary parameters
       fl => flind%ion
@@ -369,7 +360,6 @@ contains
       if (.false. .and. present(flatten)) k = 0 ! suppress compiler warnings
 
    end subroutine galactic_grav_pot
-
 #endif /* GRAV */
 
 end module initproblem
