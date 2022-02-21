@@ -417,7 +417,7 @@ def detect_active_bins_new(n_in, e_in):
     prn = p_fix[1:ncre]
     num_active_bins = 0
 
-    for i in range(0, i_up_tmp - i_lo_tmp + 1):
+    for i in range(0, min(i_up_tmp - i_lo_tmp + 1, ncre - 1)):
         q_tmp = 3.5
         exit_code = False
         if (q_explicit is True):

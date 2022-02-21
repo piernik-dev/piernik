@@ -110,7 +110,7 @@ contains
 #endif /* CRESP_VERBOSED */
       use diagnostics,    only: decr_vec
       use initcosmicrays, only: ncre
-      use initcrspectrum, only: allow_unnatural_transfer, crel, dfpq, e_small_approx_p, nullify_empty_bins, p_mid_fix, p_fix, spec_mod_trms
+      use initcrspectrum, only: allow_unnatural_transfer, crel, dfpq, e_small_approx_p, nullify_empty_bins, p_mid_fix, p_fix, spec_mod_trms, cresp_disallow_negatives
 
       implicit none
 
@@ -194,6 +194,8 @@ contains
                is_active_bin(i_cut(HI))  = .false.
                is_active_edge(i_cut(HI)) = .false.
                num_active_bins = num_active_bins - I_ONE
+               f(i_cut(HI)-I_ONE:) = zero
+               q(i_cut(HI))        = zero
                i_cut(HI) = i_cut(HI) - I_ONE
                p_cut(HI) = p_fix(i_cut(HI))
             else
@@ -220,6 +222,8 @@ contains
                is_active_bin(i_cut(LO)+1) = .false.
                is_active_edge(i_cut(LO))  = .false.
                num_active_bins = num_active_bins - I_ONE
+               f(i_cut(LO):)      = zero
+               q(i_cut(LO)+I_ONE) = zero
                i_cut(LO) = i_cut(LO) + I_ONE
                p_cut(LO) = p_fix(i_cut(LO))
             else
@@ -239,7 +243,7 @@ contains
 ! Compute momentum changes in after time period [t,t+dt]
          call cresp_update_bin_index(sptab%ub*dt, sptab%ud*dt, p_cut, p_cut_next, cfl_cresp_violation)
 
-         if (cfl_cresp_violation) then
+         if (cfl_cresp_violation) then !< cresp_disallow_negatives is not used here, as potential negatives do not appear in transfer of n,e but in p
             approx_p = e_small_approx_p         !< restore approximation after momenta computed
             call deallocate_active_arrays
 #ifdef CRESP_VERBOSED
@@ -291,13 +295,15 @@ contains
             deallocate(cooling_edges_next)      !< -//-
             deallocate(heating_edges_next)      !< -//-
 
-            call cresp_detect_negative_content(cfl_cresp_violation)
-            if (cfl_cresp_violation) then
-               call deallocate_active_arrays
+            if (cresp_disallow_negatives) then  !< cresp_disallow_negatives = .false. lets the program ignore negative n,e that show in CRESP
+               call cresp_detect_negative_content(cfl_cresp_violation)  !< thus no point checking/returning cfl_cresp_violation here
+               if (cfl_cresp_violation) then
+                  call deallocate_active_arrays
 #ifdef CRESP_VERBOSED
-               write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
+                  write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
 #endif /* CRESP_VERBOSED */
-               return
+                  return
+               endif
             endif
 
             call ne_to_q(n, e, q, active_bins)  !< begins new step
@@ -336,15 +342,16 @@ contains
       call cresp_detect_negative_content
 #endif /* CRESP_VERBOSED */
 
-      call check_cutoff_ne(ndt(i_cut_next(LO) + I_ONE), edt(i_cut_next(LO) + I_ONE), i_cut_next(LO) + I_ONE, cfl_cresp_violation)
-      call check_cutoff_ne(ndt(i_cut_next(HI)),         edt(i_cut_next(HI)),         i_cut_next(HI),         cfl_cresp_violation)
-
-      if (cfl_cresp_violation) then
-         call deallocate_active_arrays
+      if (cresp_disallow_negatives) then  !< cresp_disallow_negatives = .false. lets the program ignore negative n,e that show in CRESP
+         call check_cutoff_ne(ndt(i_cut_next(LO) + I_ONE), edt(i_cut_next(LO) + I_ONE), i_cut_next(LO) + I_ONE, cfl_cresp_violation)
+         call check_cutoff_ne(ndt(i_cut_next(HI)),         edt(i_cut_next(HI)),         i_cut_next(HI),         cfl_cresp_violation)
+         if (cfl_cresp_violation) then
+            call deallocate_active_arrays
 #ifdef CRESP_VERBOSED
-         write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
+            write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
 #endif /* CRESP_VERBOSED */
-         return
+            return
+         endif
       endif
 
       if (nullify_empty_bins) call nullify_inactive_bins(ndt, edt)
