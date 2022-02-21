@@ -42,7 +42,7 @@ module initproblem
 
    real :: d0, alpha, bxn, byn, bzn, amp_cr, beta_cr                         !< galactic disk specific parameters
    real :: x0, y0, z0                                                        !< parameters for a single supernova exploding at t=0
-   real, dimension(ndims) :: b_n
+   real, dimension(ndims) :: b_n, sn_pos
 
    namelist /PROBLEM_CONTROL/ d0, bxn, byn, bzn, x0, y0, z0, alpha, amp_cr, beta_cr
 
@@ -128,6 +128,7 @@ contains
 
       endif
 
+      sn_pos = [x0,  y0,  z0 ]
       b_n    = [bxn, byn, bzn]
 
    end subroutine read_problem_par
@@ -151,8 +152,7 @@ contains
 #ifdef COSM_RAYS
       use initcosmicrays, only: gamma_crs, iarr_crs
 #ifdef SN_SRC
-      use domain,         only: dom
-      use snsources,      only: r_sn
+      use snsources,      only: cr_sn
 #endif /* SN_SRC */
 #endif /* COSM_RAYS */
 
@@ -163,10 +163,7 @@ contains
       real                            :: b0, csim2
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-#ifdef SN_SRC
-      real                            :: decr, x1, x2, y1, y2, z1
-#endif /* SN_SRC */
-!   Secondary parameters
+
       fl => flind%ion
 
       b0 = sqrt(2. * alpha * d0 * fl%cs2)
@@ -202,15 +199,6 @@ contains
 #endif /* !ISO */
 #ifdef COSM_RAYS
                   cg%u(iarr_crs,i,j,k) = beta_cr * fl%cs2 * cg%u(fl%idn,i,j,k) / (gamma_crs - 1.0)
-#ifdef SN_SRC
-! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
-
-                  x1 = (cg%x(i) - x0)**2 ; x2 = (cg%x(i) - (x0 + dom%L_(xdim)))**2
-                  y1 = (cg%y(j) - y0)**2 ; y2 = (cg%y(j) - (y0 + dom%L_(ydim)))**2
-                  z1 = (cg%z(k) - z0)**2
-                  decr = amp_cr * (exp(-(x1 + y1 + z1)/r_sn**2) + exp(-(x2 + y1 + z1)/r_sn**2) + exp(-(x1 + y2 + z1)/r_sn**2) + exp(-(x2 + y2 + z1)/r_sn**2))
-                  cg%u(iarr_crs,i,j,k) = cg%u(iarr_crs,i,j,k) + decr
-#endif /* SN_SRC */
 #endif /* COSM_RAYS */
                enddo
             enddo
@@ -218,6 +206,10 @@ contains
 
          cgl => cgl%nxt
       enddo
+
+#if defined(COSM_RAYS) && defined(SN_SRC)
+      call cr_sn(sn_pos, amp_cr)
+#endif /* COSM_RAYS && SN_SRC */
 
    end subroutine problem_initial_conditions
 
