@@ -78,6 +78,7 @@ contains
     dens_thr = 0.035
     eps_sf = 0.1
     mass_SN = 100.0
+    dmass_stars = 0.0
     ig = qna%ind(nbdn_n)
     cgl => leaves%first
     do while (associated(cgl))
@@ -100,6 +101,8 @@ contains
                                   if ((pset%pdata%tform .ge. 0.0) .and. (pset%pdata%mass .lt. 10**5)) then
                                      stage = aint(pset%pdata%mass/mass_SN)
                                      pset%pdata%mass = pset%pdata%mass + sf_dens * cg%dvol * 2*dt
+                                     dmass_stars = dmass_stars + mass
+                                     cg%q(qna%ind("SFR_n"))%arr(i,j,k)  = cg%q(qna%ind("SFR_n"))%arr(i,j,k) + mass / cg%dvol / (2*dt)
                                      frac = sf_dens * 2*dt / cg%u(pfl%idn, i, j, k)
                                      cg%u(pfl%ien, i, j, k)          = cg%u(pfl%ien, i, j, k) - frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn, i, j, k))
                                      cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1 - frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
@@ -132,6 +135,8 @@ contains
                          tdyn = sqrt(3*pi/(32*newtong*(cg%w(wna%fi)%arr(pfl%idn,i,j,k))+cgl%cg%q(ig)%arr(i,j,k)))
                          call is_part_in_cg(cg, pos, in, phy, out)
                          call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, t, tdyn)
+                         dmass_stars = dmass_stars + mass
+                         cg%q(qna%ind("SFR_n"))%arr(i,j,k)  = cg%q(qna%ind("SFR_n"))%arr(i,j,k) + mass / cg%dvol / (2*dt)
                          cg%u(pfl%ien, i, j, k)          = cg%u(pfl%ien, i, j, k) - frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn, i, j, k))
                          cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1 - frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
                          cg%u(pfl%imx:pfl%imz, i, j, k)  = (1 - frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
