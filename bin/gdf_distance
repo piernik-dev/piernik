@@ -411,6 +411,8 @@ def compare_datafields_by_level(h5f1, h5f2, levels, common_fields, fname1, fname
         else:
             if sorted(f)[0][-1] == 'x':
                 fld_name = sorted(f)[0][:-1] + '[x..' + sorted(f)[-1][-1] + ']'
+            elif sorted(f)[0][-2] == 'x':
+                fld_name = sorted(f)[0][:-2] + '[x..' + sorted(f)[-1][-2] + ']' + sorted(f)[0][-1]
             elif sorted(f)[0][-2:] == '01':
                 fld_name = sorted(f)[0][:-2] + '[01..' + sorted(f)[-1][-2:] + ']'
             else:
