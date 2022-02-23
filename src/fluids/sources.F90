@@ -452,12 +452,12 @@ contains
 
       if (disallow_CRnegatives) cr_negative = cr_negative .or. (any(u1(:, iarr_crs(:)) < zero))
       if (use_smallecr) then
-#ifndef COSM_RAY_ELECTRONS
-         u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
-#else /* !COSM_RAY_ELECTRONS */
-         u1(:, iarr_crn(:)) = max(smallecr, u1(:, iarr_crn(:)))
+#ifdef COSM_RAY_ELECTRONS
          u1(:, iarr_cre_n(:)) = max(smallcren, u1(:, iarr_cre_n(:)))        !< \deprecated BEWARE - this line refers to CRESP number density component
          u1(:, iarr_cre_e(:)) = max(smallcree, u1(:, iarr_cre_e(:)))
+         u1(:, iarr_crn(:)) = max(smallecr, u1(:, iarr_crn(:)))
+#else /* !COSM_RAY_ELECTRONS */
+         u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
 #endif /* !COSM_RAY_ELECTRONS */
       endif
 

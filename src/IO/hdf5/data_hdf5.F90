@@ -118,6 +118,7 @@ contains
          case ("cr01" : "cr99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
+#endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
          case ("cren01" : "cren99")
             f%fu = "1/\rm{cm}^3"
@@ -135,7 +136,6 @@ contains
             f%fu = ""                   ! dimensionless q
             f%f2cgs = 1.0
 #endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
          case ("gpot", "sgpt")
             f%fu = "\rm{cm}^2 / \rm{s}^2"
             f%f2cgs = 1.0 / (cm**2 / sek**2)
@@ -379,6 +379,7 @@ contains
 #else /* ! COSM_RAY_ELECTRONS */
             tab(:,:,:) = cg%u(flind%crs%beg+i-1, RNG)
 #endif /* !COSM_RAY_ELECTRONS */
+#endif /* COSM_RAYS */
 #ifdef COSM_RAYS_SOURCES
          case ('cr_A000' : 'cr_zz99')
             do i = 1, ncre
@@ -403,7 +404,6 @@ contains
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = cg%w(wna%ind(dfpq%q_nam))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
 #endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
 #ifdef TRACER
          case ("trcr")
             tab(:,:,:) = cg%u(flind%trc%beg, RNG)

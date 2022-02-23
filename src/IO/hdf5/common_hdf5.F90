@@ -118,10 +118,10 @@ contains
 #else /* !COSM_RAY_ELECTRONS */
       use fluidindex,     only: iarr_all_crs
 #endif /* !COSM_RAY_ELECTRONS */
+#endif /* COSM_RAYS */
 #ifdef COSM_RAYS_SOURCES
       use cr_data,        only: cr_names
 #endif /* COSM_RAYS_SOURCES */
-#endif /* COSM_RAYS */
 
       implicit none
 

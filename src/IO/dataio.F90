@@ -88,12 +88,12 @@ module dataio
       logical :: dummy
 #ifdef COSM_RAYS
       real :: encr_min, encr_max
+#endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
       real :: cren_min, cren_max                     !< values of cre number density
       real :: cree_min, cree_max                     !< values of cre energy density
       real :: divv_min, divv_max                     !< vel. divergence values
 #endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
 #ifdef RESISTIVE
       real :: etamax
 #endif /* RESISTIVE */
@@ -977,11 +977,11 @@ contains
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
          enumerator :: T_ENCR                                  !< total CR energy
+#endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
          enumerator :: T_CREE                                  !< total CRE (electron component) energy
          enumerator :: T_CREN                                  !< total CRE (electron component) density
 #endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
          enumerator :: T_LAST                                  !< DO NOT place any index behind this one
       end enum
       real, dimension(T_MASS:T_LAST-1), save :: tot_q          !< array of total quantities
@@ -1026,12 +1026,12 @@ contains
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
             call pop_vector(tsl_names, field_len, ["encr_tot", "encr_min", "encr_max"])
+#endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
             call pop_vector(tsl_names, field_len, ["cren_tot", "cren_min", "cren_max" ])
             call pop_vector(tsl_names, field_len, ["cree_tot", "cree_min", "cree_max"])
             call pop_vector(tsl_names, field_len, ["divv_min", "divv_max" ])
 #endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
             ! \todo: replicated code, simplify me
             if (has_ion) then
                call pop_vector(tsl_names, field_len, ["deni_min", "deni_max", "vxi_max ", "vyi_max ", "vzi_max "])

@@ -17,6 +17,18 @@
 #  endif /* !NONMAGNETIC */
 #endif /* IONIZED */
 
+#ifdef COSM_RAYS_SOURCES
+#  ifndef COSM_RAYS
+#    define COSM_RAYS
+#  endif /* !COSM_RAYS */
+#endif /* COSM_RAYS_SOURCES */
+
+#ifdef COSM_RAY_ELECTRONS
+#  ifndef COSM_RAYS
+#    define COSM_RAYS
+#  endif /* !COSM_RAYS */
+#endif /* COSM_RAY_ELECTRONS */
+
 #if !defined(MAGNETIC) && defined(RESISTIVE)
 #define NOMAGNETICNORESIST
 #undef RESISTIVE

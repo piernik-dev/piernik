@@ -144,10 +144,10 @@ contains
       if (has_dst) call init_dust
 #ifdef COSM_RAYS
       call init_cosmicrays
+#endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
       call init_cresp
 #endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
 #ifdef TRACER
       call init_tracer
 #endif /* TRACER */
@@ -195,7 +195,6 @@ contains
 #ifdef COSM_RAYS
       call cleanup_cosmicrays
 #endif /* COSM_RAYS */
-
 #ifdef COSM_RAY_ELECTRONS
       call cleanup_cresp
       call cleanup_cresp_work_arrays

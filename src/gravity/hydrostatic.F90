@@ -463,9 +463,9 @@ contains
 #endif /* !ISO */
 #ifdef COSM_RAYS
 #ifdef COSM_RAY_ELECTRONS
-                     cg%u(iarr_all_crn,i,j,kk) = smallecr
                      cg%u(iarr_cre_n  ,i,j,kk) = smallcren     !< this line refers to CRESP number density component
                      cg%u(iarr_cre_e  ,i,j,kk) = smallcree     !< this line refers to CRESP energy density component
+                     cg%u(iarr_all_crn,i,j,kk) = smallecr
 #else /* !COSM_RAY_ELECTRONS */
                      cg%u(iarr_all_crs,i,j,kk) = smallecr
 #endif /* COSM_RAY_ELECTRONS */
