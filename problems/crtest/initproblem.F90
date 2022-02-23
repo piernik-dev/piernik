@@ -57,8 +57,8 @@ contains
 
       implicit none
 
-      problem_customize_solution => check_norm_wrapper
       finalize_problem           => check_norm
+      problem_customize_solution => check_norm_wrapper
 #ifdef HDF5
       user_vars_hdf5             => crtest_analytic_ecr1
 #endif /* HDF5 */
@@ -206,16 +206,16 @@ contains
          cg => cgl%cg
 
          call cg%set_constant_b_field([bx0, by0, bz0])
-         cg%u(fl%idn, :, :, :) = d0
-         cg%u(fl%imx:fl%imz, :, :, :) = 0.0
+         cg%u(fl%idn,RNG) = d0
+         cg%u(fl%imx:fl%imz,RNG) = 0.0
 
 #ifndef ISO
-         cg%u(fl%ien,:,:,:) = p0/fl%gam_1 + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)) + &
-              &               ekin(cg%u(fl%imx,:,:,:), cg%u(fl%imy,:,:,:), cg%u(fl%imz,:,:,:), cg%u(fl%idn,:,:,:))
+         cg%u(fl%ien,RNG) = p0/fl%gam_1 + ekin(cg%u(fl%imx,RNG), cg%u(fl%imy,RNG), cg%u(fl%imz,RNG), cg%u(fl%idn,RNG)) + &
+              &             emag(cg%b(xdim,RNG), cg%b(ydim,RNG), cg%b(zdim,RNG))
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-         cg%u(iecr,:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crs(icr)-1.0)
+         cg%u(iecr,RNG) = beta_cr*fl%cs2 * cg%u(fl%idn,RNG)/(gamma_crs(icr)-1.0)
 
 ! Explosions
          do k = cg%ks, cg%ke
@@ -223,7 +223,7 @@ contains
                do i = cg%is, cg%ie
                   r2 = (cg%x(i)-x0)**2+(cg%y(j)-y0)**2+(cg%z(k)-z0)**2
                   if (cg%x(i)> 2*x0-dom%edge(xdim, HI) .and. cg%y(j) > 2*y0-dom%edge(ydim, HI)) &
-                       cg%u(iecr, i, j, k)= cg%u(iecr, i, j, k) + amp_cr*exp(-r2/r0**2)
+                       cg%u(iecr,i,j,k)= cg%u(iecr,i,j,k) + amp_cr*exp(-r2/r0**2)
                enddo
             enddo
          enddo
@@ -312,11 +312,15 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine check_norm_wrapper(forward)
+
+      use global, only: nstep
+
       implicit none
+
       logical, intent(in) :: forward
-      call check_norm
-      return
-      if (.false. .and. forward) d0 = 0.0 ! suppress compiler warnings on unused arguments
+
+      if (forward .and. mod(nstep, norm_step) == 0) call check_norm
+
    end subroutine check_norm_wrapper
 
 !-----------------------------------------------------------------------------
@@ -324,10 +328,9 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX
-      use dataio_pub,       only: code_progress, halfstep, msg, die, printinfo
+      use constants,        only: pSUM, pMIN, pMAX
+      use dataio_pub,       only: msg, die, printinfo
       use func,             only: operator(.notequals.)
-      use global,           only: nstep
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crs, ncrn, ncre
       use mpisetup,         only: master, piernik_MPI_Allreduce
@@ -349,8 +352,6 @@ contains
       else
          call die("[initproblem:check_norm] No CR components defined.")
       endif
-
-      if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /=0 .or. halfstep)) return
 
       call compute_analytic_ecr1
 
@@ -442,16 +443,16 @@ contains
       cgl => expanded_domain%first
       do while (associated(cgl))
          if (cgl%cg%is_old) call die("[initproblem:cr_late_init] Old piece on a new list")
-         associate (fl => flind%ion)
+         associate (fl => flind%ion, cg => cgl%cg)
          call cgl%cg%set_constant_b_field([bx0, by0, bz0])
-         cgl%cg%u(fl%idn, :, :, :) = d0
-         cgl%cg%u(fl%imx:fl%imz, :, :, :) = 0.0
+         cgl%cg%u(fl%idn,RNG) = d0
+         cgl%cg%u(fl%imx:fl%imz,RNG) = 0.0
 #ifndef ISO
-         cgl%cg%u(fl%ien,:,:,:) = p0/fl%gam_1 + emag(cgl%cg%b(xdim,:,:,:), cgl%cg%b(ydim,:,:,:), cgl%cg%b(zdim,:,:,:)) + &
-              &                   ekin(cgl%cg%u(fl%imx,:,:,:), cgl%cg%u(fl%imy,:,:,:), cgl%cg%u(fl%imz,:,:,:), cgl%cg%u(fl%idn,:,:,:))
+         cgl%cg%u(fl%ien,RNG) = p0/fl%gam_1 + emag(cgl%cg%b(xdim,RNG), cgl%cg%b(ydim,RNG), cgl%cg%b(zdim,RNG)) + &
+              &                 ekin(cgl%cg%u(fl%imx,RNG), cgl%cg%u(fl%imy,RNG), cgl%cg%u(fl%imz,RNG), cgl%cg%u(fl%idn,RNG))
 #endif /* !ISO */
 #ifdef COSM_RAYS
-         cgl%cg%u(iarr_crs(icr),:,:,:) = beta_cr*fl%cs2 * cgl%cg%u(fl%idn,:,:,:)/(gamma_crs(icr)-1.0)
+         cgl%cg%u(iarr_crs(icr),RNG) = beta_cr*fl%cs2 * cgl%cg%u(fl%idn,RNG)/(gamma_crs(icr)-1.0)
 #endif /* COSM_RAYS */
          end associate
          cgl => cgl%nxt

@@ -37,11 +37,9 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   integer(kind=4)    :: norm_step
-   real               :: t_sn
-   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr1, amp_cr2
+   real :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr1, amp_cr2
 
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr1, amp_cr2, norm_step
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr1, amp_cr2
 
 contains
 
@@ -57,15 +55,12 @@ contains
 
    subroutine read_problem_par
 
-      use constants,  only: I_TEN
       use dataio_pub, only: die, nh
       use domain,     only: dom
       use func,       only: operator(.equals.)
-      use mpisetup,   only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
-
-      t_sn = 0.0
 
       d0             = 1.0e5       !< density
       p0             = 1.0         !< pressure
@@ -80,8 +75,6 @@ contains
       beta_cr        = 0.0         !< ambient level
       amp_cr1        = 1.0         !< amplitude of the blob
       amp_cr2        = 0.1*amp_cr1 !< amplitude for the second species
-
-      norm_step      = I_TEN       !< how often to compute the norm (in steps)
 
       if (master) then
 
@@ -114,11 +107,8 @@ contains
          rbuff(11) = amp_cr1
          rbuff(12) = amp_cr2
 
-         ibuff(1)  = norm_step
-
       endif
 
-      call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
@@ -135,8 +125,6 @@ contains
          beta_cr   = rbuff(10)
          amp_cr1   = rbuff(11)
          amp_cr2   = rbuff(12)
-
-         norm_step = int(ibuff(1), kind=4)
 
       endif
 
@@ -198,19 +186,12 @@ contains
          cg => cgl%cg
 
          call cg%set_constant_b_field([bx0, by0, bz0])
-         cg%u(fl%idn,:,:,:) = d0
-         cg%u(fl%imx:fl%imz,:,:,:) = 0.0
+         cg%u(fl%idn,RNG) = d0
+         cg%u(fl%imx:fl%imz,RNG) = 0.0
 
 #ifndef ISO
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-                  cg%u(fl%ien,i,j,k) = p0/fl%gam_1 + &
-                       &               ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
-                       &               emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
-               enddo
-            enddo
-         enddo
+         cg%u(fl%ien,RNG) = p0/fl%gam_1 + ekin(cg%u(fl%imx,RNG), cg%u(fl%imy,RNG), cg%u(fl%imz,RNG), cg%u(fl%idn,RNG)) + &
+              &             emag(cg%b(xdim,RNG), cg%b(ydim,RNG), cg%b(zdim,RNG))
 #endif /* !ISO */
 
          cg%u(iarr_crn, RNG) = 0.0

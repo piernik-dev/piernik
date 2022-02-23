@@ -100,7 +100,6 @@
     r0        = 64.0
     beta_cr   = 0.0
     amp_cr1   = 1000.0
-    norm_step = 1
  /
 
  $INTERACTIONS
