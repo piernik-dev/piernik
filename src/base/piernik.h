@@ -23,11 +23,11 @@
 #  endif /* !COSM_RAYS */
 #endif /* COSM_RAYS_SOURCES */
 
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
 #  ifndef COSM_RAYS
 #    define COSM_RAYS
 #  endif /* !COSM_RAYS */
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
 #if !defined(MAGNETIC) && defined(RESISTIVE)
 #define NOMAGNETICNORESIST

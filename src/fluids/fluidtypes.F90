@@ -62,12 +62,12 @@ module fluidtypes
       integer(kind=4) :: beg = 0   !< beginning number of variables in fluid/component
       integer(kind=4) :: end = 0   !< end number of variables in fluid/component
       integer(kind=4) :: pos = 0   !< index denoting position of the fluid in the row of fluids
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       integer(kind=4) :: nbeg= 0   !< beginning number of number density components for fluid/component (cre) !!!
       integer(kind=4) :: ebeg= 0   !< beginning number of energy density components for fluid/component (cre) !!!
       integer(kind=4) :: nend= 0   !< end number of number density components for fluid/component (cre)       !!!
       integer(kind=4) :: eend= 0   !< end number of energy density components for fluid/component (cre)       !!!
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
    end type component
 
    type, abstract, extends(component) :: component_fluid

@@ -31,7 +31,8 @@
 !<
 
 module initcrspectrum
-! pulled by COSM_RAY_ELECTRONS
+! pulled by CRESP
+
    use constants, only: cbuff_len, fnamelen
 
    implicit none

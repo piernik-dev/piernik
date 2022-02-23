@@ -643,11 +643,11 @@ contains
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use func,           only: operator(.notequals.)
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       use initcosmicrays, only: K_crn_perp, K_crn_paral
-#else /* !COSM_RAY_ELECTRONS */
+#else /* !CRESP */
       use initcosmicrays, only: K_crs_perp, K_crs_paral
-#endif /* !COSM_RAY_ELECTRONS */
+#endif /* !CRESP */
 
       implicit none
 
@@ -673,17 +673,17 @@ contains
       !> \warning *cg%idl(crdim) makes a difference
       d_par = (cg%q(soln)%arr(im(xdim), im(ydim), im(zdim)) - &
            &   cg%q(soln)%arr(ilm(xdim), ilm(ydim), ilm(zdim))) * cg%idl(crdim)
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       fcrdif = K_crn_perp(cr_id) * d_par
       if (present(Keff)) Keff = K_crn_perp(cr_id)
 
       if (K_crn_paral(cr_id) .notequals. zero) then
-#else /* !COSM_RAY_ELECTRONS */
+#else /* !CRESP */
       fcrdif = K_crs_perp(cr_id) * d_par
       if (present(Keff)) Keff = K_crs_perp(cr_id)
 
       if (K_crs_paral(cr_id) .notequals. zero) then
-#endif /* !COSM_RAY_ELECTRONS */
+#endif /* !CRESP */
 
          b_perp = 0.
          b_par = cg%q(idiffb(crdim))%arr(im(xdim), im(ydim), im(zdim))
@@ -706,11 +706,11 @@ contains
          enddo
 
          if (magb .notequals. zero) then
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
             kbm = K_crn_paral(cr_id) * b_par / magb
-#else /* !COSM_RAY_ELECTRONS */
+#else /* !CRESP */
             kbm = K_crs_paral(cr_id) * b_par / magb
-#endif /* !COSM_RAY_ELECTRONS */
+#endif /* !CRESP */
             fcrdif = fcrdif + kbm * db
             if (present(Keff)) Keff = Keff + kbm * b_par
          endif

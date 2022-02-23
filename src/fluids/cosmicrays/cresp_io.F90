@@ -30,8 +30,7 @@
 !! \brief This module contains I/O instructions and handlers for CRESP (NR) data.
 !<
 module cresp_io
-
-! pulled by COSM_RAY_ELECTRONS
+! pulled by CRESP
 
    implicit none
 

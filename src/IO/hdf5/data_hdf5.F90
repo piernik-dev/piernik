@@ -119,7 +119,7 @@ contains
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
 #endif /* COSM_RAYS */
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
          case ("cren01" : "cren99")
             f%fu = "1/\rm{cm}^3"
             f%f2cgs = 1.0 / (1.0/cm**3) ! number density
@@ -135,7 +135,7 @@ contains
          case ("creq01" : "creq99")
             f%fu = ""                   ! dimensionless q
             f%f2cgs = 1.0
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
          case ("gpot", "sgpt")
             f%fu = "\rm{cm}^2 / \rm{s}^2"
             f%f2cgs = 1.0 / (cm**2 / sek**2)
@@ -328,10 +328,10 @@ contains
       use domain,           only: dom
       use global,           only: cc_mag
 #endif /* MAGNETIC */
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       use initcrspectrum,   only: dfpq
       use named_array_list, only: wna
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 #ifdef COSM_RAYS_SOURCES
       use cr_data,          only: cr_names
       use initcosmicrays,   only: ncre
@@ -374,11 +374,11 @@ contains
 #ifdef COSM_RAYS
          case ("cr01" : "cr99")
             read(var,'(A2,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
             tab(:,:,:) = cg%u(flind%crn%beg+i-1, RNG)
-#else /* ! COSM_RAY_ELECTRONS */
+#else /* ! CRESP */
             tab(:,:,:) = cg%u(flind%crs%beg+i-1, RNG)
-#endif /* !COSM_RAY_ELECTRONS */
+#endif /* !CRESP */
 #endif /* COSM_RAYS */
 #ifdef COSM_RAYS_SOURCES
          case ('cr_A000' : 'cr_zz99')
@@ -387,7 +387,7 @@ contains
             enddo
             tab(:,:,:) = cg%u(flind%crn%beg+i-1, RNG)
 #endif /* COSM_RAYS_SOURCES */
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
          case ("cren01" : "cren99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = cg%u(flind%cre%nbeg+i-1, RNG)
@@ -403,7 +403,7 @@ contains
          case ("creq01" : "creq99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = cg%w(wna%ind(dfpq%q_nam))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 #ifdef TRACER
          case ("trcr")
             tab(:,:,:) = cg%u(flind%trc%beg, RNG)

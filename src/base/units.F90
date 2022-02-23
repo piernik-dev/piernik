@@ -530,11 +530,11 @@ contains
             else
                write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
             endif
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
          case ("cren01" : "cren99")
             val = 1.0 / lmtvB(U_LEN)**3                             !< CRESP number density
             write(s_val, '( "1  /", a,"**3")') trim(s_lmtvB(U_LEN))
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
          case ("gpot", "sgpt")
             val = lmtvB(U_VEL) ** 2
             write(s_val, '(a,"**2")') trim(s_lmtvB(U_VEL))

@@ -30,7 +30,7 @@
 !! \brief Core of Cosmic Ray Energy SPectrum (CRESP) algorithm
 !<
 module cresp_crspectrum
-! pulled by COSM_RAY_ELECTRONS
+! pulled by CRESP
 
    use constants, only: LO, HI, I_ZERO, I_ONE
 

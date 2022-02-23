@@ -163,11 +163,11 @@ contains
 #ifdef COSM_RAYS_SOURCES
       use cr_data,        only: eCRSP, icr_H1, icr_C12, cr_table
 #endif /* COSM_RAYS_SOURCES */
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff, use_cresp
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
       implicit none
 
@@ -177,9 +177,9 @@ contains
       real                            :: cs_iso, decr, r2, maxv
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       real                            :: e_tot
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
       fl => flind%ion
 
@@ -266,7 +266,7 @@ contains
 #else /* !COSM_RAYS_SOURCES */
                   cg%u(iarr_crn(1:2), i, j, k) = cg%u(iarr_crn(1:2), i, j, k) + [amp_cr1, amp_cr2]*decr
 #endif /* !COSM_RAYS_SOURCES */
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
 ! Explosions @CRESP independent of cr nucleons
                   e_tot = amp_cr1 * cre_eff * decr
                   if (e_tot > smallcree .and. use_cresp) then
@@ -275,7 +275,7 @@ contains
                      cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
                      cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
                   endif
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
                enddo
             enddo
          enddo
@@ -299,7 +299,7 @@ contains
 
          call piernik_MPI_Allreduce(maxv, pMAX)
          if (master) then
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
             if (iarr_crs(icr) < flind%cre%nbeg) then
                write(msg,*) '[initproblem:problem_initial_conditions] icr(nuc)  =',icr,' maxecr(nuc) =',maxv
             else if (iarr_crs(icr) < flind%cre%ebeg .and. iarr_crs(icr) >= flind%cre%nbeg) then
@@ -307,17 +307,17 @@ contains
             else
                write(msg,*) '[initproblem:problem_initial_conditions] icr(cre_e)=',icr,' maxecr(cre) =',maxv
             endif
-#else /* !COSM_RAY_ELECTRONS */
+#else /* !CRESP */
             write(msg,*) '[initproblem:problem_initial_conditions] icr=', icr, ' maxecr =', maxv
-#endif /* !COSM_RAY_ELECTRONS */
+#endif /* !CRESP */
             call printinfo(msg)
          endif
 
       enddo
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       write(msg,*) '[initproblem:problem_initial_conditions]: Taylor_exp._ord. (cresp)    = ', expan_order
       if (master) call printinfo(msg)
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
    end subroutine problem_initial_conditions
 

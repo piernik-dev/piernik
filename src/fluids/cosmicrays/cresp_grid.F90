@@ -31,7 +31,7 @@
 !<
 
 module cresp_grid
-! pulled by COSM_RAY_ELECTRONS
+! pulled by CRESP
 
    implicit none
 

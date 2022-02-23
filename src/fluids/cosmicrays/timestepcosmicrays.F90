@@ -57,9 +57,9 @@ contains
 #ifdef MULTIGRID
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
 #endif /* MULTIGRID */
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       use timestep_cresp,      only: dt_cre, cresp_timestep
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
       implicit none
 
@@ -68,10 +68,10 @@ contains
 
       logical, save                  :: frun = .true.
 
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       call cresp_timestep
       dt = min(dt, dt_cre)
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
       if (.not.K_crs_valid) return
 

@@ -440,10 +440,10 @@ contains
       use fluidindex,     only: flind
       use global,         only: cr_negative, disallow_CRnegatives
       use initcosmicrays, only: iarr_crs, smallecr, use_smallecr
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       use initcosmicrays, only: iarr_cre_e, iarr_cre_n, iarr_crn
       use initcrspectrum,   only: smallcree, smallcren
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
       implicit none
 
@@ -452,13 +452,13 @@ contains
 
       if (disallow_CRnegatives) cr_negative = cr_negative .or. (any(u1(:, iarr_crs(:)) < zero))
       if (use_smallecr) then
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
          u1(:, iarr_cre_n(:)) = max(smallcren, u1(:, iarr_cre_n(:)))        !< \deprecated BEWARE - this line refers to CRESP number density component
          u1(:, iarr_cre_e(:)) = max(smallcree, u1(:, iarr_cre_e(:)))
          u1(:, iarr_crn(:)) = max(smallecr, u1(:, iarr_crn(:)))
-#else /* !COSM_RAY_ELECTRONS */
+#else /* !CRESP */
          u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
-#endif /* !COSM_RAY_ELECTRONS */
+#endif /* !CRESP */
       endif
 
    end subroutine limit_minimal_ecr

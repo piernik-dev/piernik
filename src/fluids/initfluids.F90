@@ -119,9 +119,9 @@ contains
 #ifdef COSM_RAYS
       use initcosmicrays, only: init_cosmicrays
 #endif /* COSM_RAYS */
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       use initcrspectrum, only: init_cresp
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 #ifdef TRACER
       use inittracer,     only: init_tracer
 #endif /* TRACER */
@@ -145,9 +145,9 @@ contains
 #ifdef COSM_RAYS
       call init_cosmicrays
 #endif /* COSM_RAYS */
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       call init_cresp
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 #ifdef TRACER
       call init_tracer
 #endif /* TRACER */
@@ -183,11 +183,11 @@ contains
 #ifdef COSM_RAYS
       use initcosmicrays, only: cleanup_cosmicrays
 #endif /* COSM_RAYS */
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       use cresp_crspectrum, only: cleanup_cresp
       use initcrspectrum,   only: cleanup_cresp_work_arrays, cleanup_cresp_sp
       use cresp_NR_method,  only: deallocate_all_smaps
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
       implicit none
 
@@ -195,12 +195,12 @@ contains
 #ifdef COSM_RAYS
       call cleanup_cosmicrays
 #endif /* COSM_RAYS */
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       call cleanup_cresp
       call cleanup_cresp_work_arrays
       call deallocate_all_smaps
       call cleanup_cresp_sp
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
       call cleanup_magic_mass
 
    end subroutine cleanup_fluids

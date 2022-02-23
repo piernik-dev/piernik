@@ -112,12 +112,12 @@ contains
       use mpisetup,       only: master
 #ifdef COSM_RAYS
       use dataio_pub,     only: msg
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       use fluidindex,     only: iarr_all_crn
       use initcosmicrays, only: ncre
-#else /* !COSM_RAY_ELECTRONS */
+#else /* !CRESP */
       use fluidindex,     only: iarr_all_crs
-#endif /* !COSM_RAY_ELECTRONS */
+#endif /* !CRESP */
 #endif /* COSM_RAYS */
 #ifdef COSM_RAYS_SOURCES
       use cr_data,        only: cr_names
@@ -194,11 +194,11 @@ contains
                call append_var(aux)
 #ifdef COSM_RAYS
             case ('encr')
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
                do k = 1, size(iarr_all_crn,1)
-#else /* !COSM_RAY_ELECTRONS */
+#else /* !CRESP */
                do k = 1, size(iarr_all_crs,1)
-#endif /* !COSM_RAY_ELECTRONS */
+#endif /* !CRESP */
                   if (k<=99) then
 #ifdef COSM_RAYS_SOURCES
                      if (len(trim(cr_names(k))) > 0) then
@@ -215,7 +215,7 @@ contains
                      call warn(msg)
                   endif
                enddo
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
             case ('cren') !< CRESP number density fields
                do k = 1, ncre
                   if (k<=99) then
@@ -280,7 +280,7 @@ contains
                      call warn(msg)
                   endif
                enddo
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 #endif /* COSM_RAYS */
             case default
                if (.not. has_ion .and. (any(trim(vars(i)) == ["deni", "vlxi", "vlyi", "vlzi", "enei", "ethi", "prei"]) .or. any(trim(vars(i)) == ["momxi", "momyi", "momzi"]))) then
@@ -493,11 +493,11 @@ contains
          & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
       use mpisetup,      only: master, slave
       use version,       only: env, nenv
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       use initcrspectrum,  only: write_cresp_to_restart, use_cresp
       use cresp_io,        only: create_cresp_smap_fields
       use cresp_NR_method, only: cresp_write_smaps_to_hdf
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 #ifdef RANDOMIZE
       use randomization, only: write_current_seed_to_restart
 #endif /* RANDOMIZE */
@@ -569,21 +569,21 @@ contains
       call H5Pclose_f(prp_id, error)
 
       ! \ToDo Set up a stack of routines registered by appropriate modules
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       call write_cresp_to_restart(file_id)
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 #ifdef RANDOMIZE
       call write_current_seed_to_restart(file_id)
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
       call write_snsources_to_restart(file_id)
 #endif /* SN_SRC */
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       if (use_cresp) then
          call create_cresp_smap_fields(file_id) ! create "/cresp/smaps_{LO,UP}/..."
          call cresp_write_smaps_to_hdf(file_id) ! create "/cresp/smaps_{LO,UP}/{p_f}_ratio"
       endif
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
       if (associated(user_attrs_wr)) call user_attrs_wr(file_id)
 
       call h5fclose_f(file_id, error)

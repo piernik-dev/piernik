@@ -26,7 +26,7 @@
 !
 
 module cresp_variables ! & constants
-! pulled by COSM_RAY_ELECTRONS
+! pulled by CRESP
 
    use constants, only: fpi, three
 
