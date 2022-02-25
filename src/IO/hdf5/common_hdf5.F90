@@ -112,13 +112,11 @@ contains
       use mpisetup,       only: master
 #ifdef COSM_RAYS
       use dataio_pub,     only: msg
-#ifdef CRESP
       use fluidindex,     only: iarr_all_crn
-      use initcosmicrays, only: ncre
-#else /* !CRESP */
-      use fluidindex,     only: iarr_all_crs
-#endif /* !CRESP */
 #endif /* COSM_RAYS */
+#ifdef CRESP
+      use initcosmicrays, only: ncre
+#endif /* CRESP */
 #ifdef COSM_RAYS_SOURCES
       use cr_data,        only: cr_names
 #endif /* COSM_RAYS_SOURCES */
@@ -194,11 +192,7 @@ contains
                call append_var(aux)
 #ifdef COSM_RAYS
             case ('encr')
-#ifdef CRESP
                do k = 1, size(iarr_all_crn,1)
-#else /* !CRESP */
-               do k = 1, size(iarr_all_crs,1)
-#endif /* !CRESP */
                   if (k<=99) then
 #ifdef COSM_RAYS_SOURCES
                      if (len(trim(cr_names(k))) > 0) then
@@ -215,6 +209,7 @@ contains
                      call warn(msg)
                   endif
                enddo
+#endif /* COSM_RAYS */
 #ifdef CRESP
             case ('cren') !< CRESP number density fields
                do k = 1, ncre
@@ -281,7 +276,6 @@ contains
                   endif
                enddo
 #endif /* CRESP */
-#endif /* COSM_RAYS */
             case default
                if (.not. has_ion .and. (any(trim(vars(i)) == ["deni", "vlxi", "vlyi", "vlzi", "enei", "ethi", "prei"]) .or. any(trim(vars(i)) == ["momxi", "momyi", "momzi"]))) then
                   if (master) call warn("[common_hdf5:init_hdf5] Cannot safely use plot variable '" // trim(vars(i)) // "' without ionized fluid")
@@ -484,25 +478,24 @@ contains
 !<
    subroutine set_common_attributes(filename)
 
-      use constants,     only: I_ONE
-      use dataio_pub,    only: maxenvlen, maxparlen, use_v2_io, parfile, parfilelines, gzip_level
-      use dataio_user,   only: user_attrs_wr, user_attrs_pre
-      use hdf5,          only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, &
-         & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
-         & H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, &
-         & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
-      use mpisetup,      only: master, slave
-      use version,       only: env, nenv
+      use constants,         only: I_ONE
+      use dataio_pub,        only: maxenvlen, maxparlen, use_v2_io, parfile, parfilelines, gzip_level
+      use dataio_user,       only: user_attrs_wr, user_attrs_pre
+      use hdf5,              only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
+         & h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, &
+         & h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
+      use mpisetup,          only: master, slave
+      use version,           only: env, nenv
 #ifdef CRESP
-      use initcrspectrum,  only: write_cresp_to_restart, use_cresp
-      use cresp_io,        only: create_cresp_smap_fields
-      use cresp_NR_method, only: cresp_write_smaps_to_hdf
+      use initcrspectrum,    only: write_cresp_to_restart, use_cresp
+      use cresp_io,          only: create_cresp_smap_fields
+      use cresp_NR_method,   only: cresp_write_smaps_to_hdf
 #endif /* CRESP */
 #ifdef RANDOMIZE
-      use randomization, only: write_current_seed_to_restart
+      use randomization,     only: write_current_seed_to_restart
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
-      use snsources,     only: write_snsources_to_restart
+      use snsources,         only: write_snsources_to_restart
 #endif /* SN_SRC */
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: write_oldsoln_to_restart

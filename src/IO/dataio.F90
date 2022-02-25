@@ -937,13 +937,11 @@ contains
       use fluidindex,       only: iarr_all_en
 #endif /* !ISO */
 #ifdef COSM_RAYS
-#ifdef CRESP
       use fluidindex,       only: iarr_all_crn
-      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
-#else /* !CRESP */
-      use fluidindex,       only: iarr_all_crs
-#endif /* !CRESP */
 #endif /* COSM_RAYS */
+#ifdef CRESP
+      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
+#endif /* CRESP */
 #ifdef RESISTIVE
       use resistivity,      only: eta1_active
 #endif /* RESISTIVE */
@@ -1102,14 +1100,12 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-#ifdef CRESP
                tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * sum(sum(pu(iarr_all_crn,:,:,:), dim=1), mask=cg%leafmap)
+#ifdef CRESP
                tot_q(T_CREN) = tot_q(T_CREN) + cg%dvol * sum(sum(pu(iarr_cre_n,  :,:,:), dim=1), mask=cg%leafmap)
                tot_q(T_CREE) = tot_q(T_CREE) + cg%dvol * sum(sum(pu(iarr_cre_e,  :,:,:), dim=1), mask=cg%leafmap)
                tot_q(T_ENCR) = tot_q(T_ENCR) + tot_q(T_CREE)
-#else /* !CRESP */
-               tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * sum(sum(pu(iarr_all_crs,:,:,:), dim=1), mask=cg%leafmap)
-#endif /* !CRESP */
+#endif /* CRESP */
                tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
 #endif /* COSM_RAYS */
 
@@ -1143,14 +1139,12 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-#ifdef CRESP
                   tot_q(T_ENCR) = tot_q(T_ENCR) + drvol * sum(sum(pu(iarr_all_crn, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
+#ifdef CRESP
                   tot_q(T_CREN) = tot_q(T_CREN) + drvol * sum(sum(pu(iarr_cre_n,   ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
                   tot_q(T_CREE) = tot_q(T_CREE) + drvol * sum(sum(pu(iarr_cre_e,   ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
                   tot_q(T_ENCR) = tot_q(T_ENCR) + tot_q(T_CREE)
-#else /* !CRESP */
-                  tot_q(T_ENCR) = tot_q(T_ENCR) + drvol * sum(sum(pu(iarr_all_crs, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
-#endif /* !CRESP */
+#endif /* CRESP */
                   tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
 #endif /* COSM_RAYS */
                enddo
@@ -1618,19 +1612,17 @@ contains
       use types,              only: value
 #ifdef COSM_RAYS
       use constants,          only: pMIN
-#ifdef CRESP
       use fluidindex,         only: iarr_all_crn
+      use mpisetup,           only: piernik_MPI_Allreduce
+      use timestepcosmicrays, only: dt_crs
+#endif /* COSM_RAYS */
+#ifdef CRESP
       use initcosmicrays,     only: iarr_cre_e, iarr_cre_n
       use timestep_cresp,     only: dt_cre_adiab, dt_cre_K
 #ifdef MAGNETIC
       use timestep_cresp,     only: dt_cre_synch
 #endif /* MAGNETIC */
-#else /* !CRESP */
-      use fluidindex,         only: iarr_all_crs
-#endif /* !CRESP */
-      use mpisetup,           only: piernik_MPI_Allreduce
-      use timestepcosmicrays, only: dt_crs
-#endif /* COSM_RAYS */
+#endif /* CRESP */
 #if defined COSM_RAYS || defined MAGNETIC
       use constants,          only: MINL
 #endif /* COSM_RAYS || MAGNETIC */
@@ -1816,11 +1808,7 @@ contains
       do while (associated(cgl))
          call cgl%cg%costs%start
 
-#ifdef CRESP
          cgl%cg%wa = sum(cgl%cg%u(iarr_all_crn,:,:,:),1)
-#else /* !CRESP */
-         cgl%cg%wa = sum(cgl%cg%u(iarr_all_crs,:,:,:),1)
-#endif /* !CRESP */
 
          call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
@@ -1829,6 +1817,7 @@ contains
       call leaves%get_extremum(qna%wai, MINL, encr_min)
       encr_max%assoc = dt_crs
       call piernik_MPI_Allreduce(encr_max%assoc, pMIN)
+#endif /* COSM_RAYS */
 #ifdef CRESP
       cgl => leaves%first
       do while (associated(cgl))
@@ -1886,7 +1875,6 @@ contains
       divv_max%assoc = dt_cre_adiab
       call piernik_MPI_Allreduce(divv_max%assoc, pMIN)
 #endif /* CRESP */
-#endif /* COSM_RAYS */
 
       if (has_interactions) then
          cgl => leaves%first
@@ -1929,13 +1917,10 @@ contains
             if (has_dst) call common_shout(flind%dst%snap,'DST',.false.,.false.,.false.)
             if (has_interactions) call cmnlog_l(fmt_dtloc, 'max(drag)   ', "INT", drag)
 #ifdef COSM_RAYS
-#ifdef CRESP
             id = "CRN"
-#else /* !CRESP */
-            id = "CRS"
-#endif /* CRESP */
             call cmnlog_s(fmt_loc,   'min(encr)   ', id, encr_min)
             call cmnlog_l(fmt_dtloc, 'max(encr)   ', id, encr_max)
+#endif /* COSM_RAYS */
 #ifdef CRESP
             id = "CRE"
             call cmnlog_s(fmt_loc,   'min(cren)    ', id, cren_min)
@@ -1945,7 +1930,6 @@ contains
             call cmnlog_s(fmt_loc,   'min(div_v)   ', id, divv_min)
             call cmnlog_l(fmt_dtloc, 'max(div_v)   ', id, divv_max)
 #endif /* CRESP */
-#endif /* COSM_RAYS */
 #ifdef RESISTIVE
             if (eta1_active) then
                id = "RES"

@@ -374,11 +374,7 @@ contains
 #ifdef COSM_RAYS
          case ("cr01" : "cr99")
             read(var,'(A2,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-#ifdef CRESP
             tab(:,:,:) = cg%u(flind%crn%beg+i-1, RNG)
-#else /* ! CRESP */
-            tab(:,:,:) = cg%u(flind%crs%beg+i-1, RNG)
-#endif /* !CRESP */
 #endif /* COSM_RAYS */
 #ifdef COSM_RAYS_SOURCES
          case ('cr_A000' : 'cr_zz99')

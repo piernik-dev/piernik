@@ -806,15 +806,13 @@ contains
       use named_array_list,      only: wna
       use ppp,                   only: ppp_main
 #ifdef COSM_RAYS
+      use fluidindex,            only: iarr_all_crn
       use initcosmicrays,        only: smallecr
+#endif /* COSM_RAYS */
 #ifdef CRESP
       use initcrspectrum,        only: smallcree, smallcren
       use initcosmicrays,        only: iarr_cre_e, iarr_cre_n
-      use fluidindex,            only: iarr_all_crn
-#else /* !CRESP */
-      use fluidindex,            only: iarr_all_crs
 #endif /* CRESP */
-#endif /* COSM_RAYS */
 #ifdef GRAV
       use constants,             only: BND_OUTH, BND_OUTHD, I_ZERO
       use fluidboundaries_funcs, only: outh_fluidbnd
@@ -869,14 +867,12 @@ contains
                      l(dir,:) = cg%ijkse(dir,side)+ssign*ib
                      cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
 #ifdef COSM_RAYS
-#ifdef CRESP
-                     cg%u(iarr_all_crn,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
-                     cg%u(iarr_cre_n,  l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcren   !< CRESP number density component
-                     cg%u(iarr_cre_e,  l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcree   !< CRESP energy density component
-#else /* !CRESP */
-                     cg%u(iarr_all_crs,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
-#endif /* CRESP */
+                     cg%u(iarr_all_crn, l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
 #endif /* COSM_RAYS */
+#ifdef CRESP
+                     cg%u(iarr_cre_n,   l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcren   !< CRESP number density component
+                     cg%u(iarr_cre_e,   l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcree   !< CRESP energy density component
+#endif /* CRESP */
                   enddo
                case (BND_OUTD)
                   r(dir,:) = cg%ijkse(dir,side)
@@ -886,14 +882,12 @@ contains
                      cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                      !> \deprecated BEWARE: use of uninitialized value on first call (a side effect of r1726)
 #ifdef COSM_RAYS
-#ifdef CRESP
-                     cg%u(iarr_all_crn,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
-                     cg%u(iarr_cre_n,  l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcren   !< CRESP number density component
-                     cg%u(iarr_cre_e,  l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcree   !< CRESP energy density component
-#else /* !CRESP */
-                     cg%u(iarr_all_crs,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
-#endif /* CRESP */
+                     cg%u(iarr_all_crn, l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
 #endif /* COSM_RAYS */
+#ifdef CRESP
+                     cg%u(iarr_cre_n,   l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcren   !< CRESP number density component
+                     cg%u(iarr_cre_e,   l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcree   !< CRESP energy density component
+#endif /* CRESP */
                   enddo
                   l(dir,:) = cg%ijkse(dir,side) - [dom%nb, 1_INT4] +(dom%nb+1_INT4)*(side-LO)
                   if (side == LO) then

@@ -490,8 +490,8 @@ contains
       use snsources,        only: nsn
 #endif /* SN_SRC */
 #ifdef CRESP
-      use initcrspectrum,  only: use_cresp
-      use cresp_NR_method, only: cresp_read_smaps_from_hdf
+      use initcrspectrum,   only: use_cresp
+      use cresp_NR_method,  only: cresp_read_smaps_from_hdf
 #endif /* CRESP */
 
       implicit none

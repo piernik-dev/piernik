@@ -60,13 +60,8 @@ module initcosmicrays
    real, dimension(ncr_max)            :: K_cre_paral  !< array containing parallel diffusion coefficients of all CR electron components (number density and energy density)
    real, dimension(ncr_max)            :: K_cre_perp   !< array containing perpendicular diffusion coefficients of all CR electron components (number density and energy density)
    real, dimension(ncr_max)            :: gamma_crn    !< array containing adiabatic indexes of all CR nuclear components
-#ifndef CRESP
-   real, dimension(ncr_max)            :: gamma_cre    !< array containing adiabatic indexes of all CR electron components
-   logical, dimension(ncr_max)         :: cre_gpcr_ess !< if CRe species/energy-bin is essential for grad_pcr calculation
-#else /* CRESP */
-   logical                             :: cre_gpcr_ess !< if CRe species/energy-bin is essential for grad_pcr calculation
-#endif /* CRESP */
    logical, dimension(ncr_max)         :: crn_gpcr_ess !< if CRn species/energy-bin is essential for grad_pcr calculation
+   logical                             :: cre_gpcr_ess !< if CRe species/energy-bin is essential for grad_pcr calculation
    integer(kind=4), allocatable, dimension(:) :: gpcr_essential !< crs indexes of essentials for grad_pcr calculation
    ! public component data
    integer(kind=4), allocatable, dimension(:) :: iarr_crn !< array of indexes pointing to all CR nuclear components
@@ -102,7 +97,6 @@ contains
 !! <tr><td>ncrn        </td><td>0     </td><td>integer   </td><td>\copydoc initcosmicrays::ncrn       </td></tr>
 !! <tr><td>ncre        </td><td>0     </td><td>integer   </td><td>\copydoc initcosmicrays::ncre       </td></tr>
 !! <tr><td>gamma_crn   </td><td>4./3. </td><td>real array</td><td>\copydoc initcosmicrays::gamma_crn  </td></tr>
-!! <tr><td>gamma_cre   </td><td>4./3. </td><td>real array</td><td>\copydoc initcosmicrays::gamma_cre  </td></tr>
 !! <tr><td>K_crn_paral </td><td>0     </td><td>real array</td><td>\copydoc initcosmicrays::k_crn_paral</td></tr>
 !! <tr><td>K_crn_perp  </td><td>0     </td><td>real array</td><td>\copydoc initcosmicrays::k_crn_perp </td></tr>
 !! <tr><td>K_cre_paral </td><td>0     </td><td>real array</td><td>\copydoc initcosmicrays::k_cre_paral</td></tr>
@@ -116,14 +110,11 @@ contains
 !<
    subroutine init_cosmicrays
 
-      use constants,       only: cbuff_len, I_ONE, half, big
+      use constants,       only: cbuff_len, I_ONE, I_TWO, half, big
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: die, warn, nh
       use func,            only: operator(.notequals.)
       use mpisetup,        only: ibuff, rbuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
-#ifdef CRESP
-      use constants,       only: I_TWO
-#endif /* CRESP */
 #ifdef COSM_RAYS_SOURCES
       use cr_data,         only: init_crsources
 #endif /* COSM_RAYS_SOURCES */
@@ -135,9 +126,6 @@ contains
       real            :: maxKcrs
 
       namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRdiff, divv_scheme, &
-#ifndef CRESP
-           &                 gamma_cre, K_cre_paral, K_cre_perp, &
-#endif /* !CRESP */
            &                 gamma_crn, K_crn_paral, K_crn_perp, ncrn, ncre, crn_gpcr_ess, cre_gpcr_ess
 
       cfl_cr          = 0.9
@@ -153,9 +141,6 @@ contains
       gamma_crn(:)    = 4./3.
       K_crn_paral(:)  = 0.0
       K_crn_perp(:)   = 0.0
-#ifndef CRESP
-      gamma_cre(:)    = 4./3.
-#endif /* !CRESP */
       K_cre_paral(:)  = 0.0
       K_cre_perp(:)   = 0.0
 
@@ -198,6 +183,7 @@ contains
 
          lbuff(1) = use_CRdiff
          lbuff(2) = use_smallecr
+         lbuff(3) = cre_gpcr_ess
 
          cbuff(1) = divv_scheme
 
@@ -211,19 +197,9 @@ contains
             rbuff(nn+1+  ncrn:nn+2*ncrn) = K_crn_paral(1:ncrn)
             rbuff(nn+1+2*ncrn:nn+3*ncrn) = K_crn_perp (1:ncrn)
 
-            lbuff(3:ncrn+2) = crn_gpcr_ess(1:ncrn)
+            lbuff(4:ncrn+3) = crn_gpcr_ess(1:ncrn)
          endif
 
-         if (ncre > 0) then
-#ifdef CRESP
-            lbuff(ncrn+3)                = cre_gpcr_ess
-#else /* !CRESP */
-            rbuff(ne+1       :ne+ncre)   = K_cre_paral(1:ncre)  !< K_cre_paral explicitly defined & broadcasted if CRESP not in use
-            rbuff(ne+1+ncre:ne+2*ncre)   = K_cre_perp (1:ncre)  !< K_cre_perp explicitly defined & broadcasted if CRESP not in use
-            rbuff(ne+2*ncre+1:ne+3*ncre) = gamma_cre(1:ncre)  ! gamma_cre used only if CRESP module not used
-            lbuff(ncrn+3:ncrn+ncre+2)    = cre_gpcr_ess(1:ncre)
-#endif /* !CRESP */
-         endif
 
       endif
 
@@ -244,6 +220,7 @@ contains
 
          use_CRdiff   = lbuff(1)
          use_smallecr = lbuff(2)
+         cre_gpcr_ess = lbuff(3)
 
          nn           = ibuff(ubound(ibuff, 1))    ! this must match the last rbuff() index above
          ne           = nn + 3 * ncrn
@@ -255,26 +232,12 @@ contains
             K_crn_paral(1:ncrn) = rbuff(nn+1+  ncrn:nn+2*ncrn)
             K_crn_perp (1:ncrn) = rbuff(nn+1+2*ncrn:nn+3*ncrn)
 
-            crn_gpcr_ess(1:ncrn) = lbuff(3:ncrn+2)
-         endif
-
-         if (ncre > 0) then
-#ifdef CRESP
-            cre_gpcr_ess         = lbuff(ncrn+3)
-#else /* !CRESP */
-            K_cre_paral(1:ncre) = rbuff(ne+1       :ne+ncre)    !< K_cre_paral explicitly defined & broadcasted if CRESP not in use
-            K_cre_perp (1:ncre) = rbuff(ne+1+ncre:ne+2*ncre)    !< K_cre_perp explicitly defined & broadcasted if CRESP not in use
-            gamma_cre(1:ncre)    = rbuff(ne+2*ncre+1:ne+3*ncre) ! gamma_cre used only if CRESP module not used
-            cre_gpcr_ess(1:ncre) = lbuff(ncrn+3:ncrn+ncre+2)
-#endif /* !CRESP */
+            crn_gpcr_ess(1:ncrn) = lbuff(4:ncrn+3)
          endif
 
       endif
 
-      ncra = ncre
-#ifdef CRESP
       ncra = I_TWO * ncre
-#endif /* CRESP */
       ncrs = ncra + ncrn
 
       if (any([ncrn, ncre] > ncr_max) .or. any([ncrn, ncre] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
@@ -318,9 +281,6 @@ contains
 #endif /* COSM_RAYS_SOURCES */
 
       ma1d = [ int(count(crn_gpcr_ess), kind=4) ]
-#ifndef CRESP
-      ma1d = [ int(count(crn_gpcr_ess) + int(count(cre_gpcr_ess)), kind=4) ]
-#endif /* !CRESP */
 
       call my_allocate(gpcr_essential, ma1d)
       jcr = 0
@@ -330,21 +290,9 @@ contains
             gpcr_essential(jcr) = icr
          endif
       enddo
-#ifndef CRESP
-      do icr = 1, ncre
-         if (cre_gpcr_ess(icr)) then
-            jcr = jcr + I_ONE
-            gpcr_essential(jcr) = ncrn + I_ONE
-         endif
-      enddo
-#endif /* !CRESP */
 
       def_dtcrs = big
-#ifdef CRESP
       maxKcrs = maxval(K_crn_paral + K_crn_perp)
-#else /* !CRESP */
-      maxKcrs = maxval(K_crs_paral + K_crs_perp)
-#endif /* !CRESP */
       K_crs_valid = (maxKcrs > 0)
       if (maxKcrs .notequals. 0.) def_dtcrs = cfl_cr * half / maxKcrs
 
