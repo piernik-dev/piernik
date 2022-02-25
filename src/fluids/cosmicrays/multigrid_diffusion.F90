@@ -638,8 +638,7 @@ contains
 
    subroutine diff_flux(crdim, im, soln, cg, cr_id, Keff)
 
-      use constants,      only: xdim, ydim, zdim, ndims, oneq, GEO_XYZ, zero
-      use dataio_pub,     only: die
+      use constants,      only: xdim, ydim, zdim, ndims, oneq, zero
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use func,           only: operator(.notequals.)
@@ -663,8 +662,6 @@ contains
       integer, dimension(ndims)              :: ilm, imp, imm, ilmp, ilmm
       integer(kind=4)                        :: idir
       logical, dimension(ndims)              :: present_not_crdim
-
-      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_diffusion:diff_flux] Unsupported geometry")
 
       ilm(:) = im(:) ; ilm(crdim) = ilm(crdim) - 1
       present_not_crdim(:) = dom%has_dir(:) .and. ( [ xdim,ydim,zdim ] /= crdim )
@@ -731,8 +728,7 @@ contains
    subroutine residual(src, soln, def, cr_id)
 
       use cg_cost_data,      only: I_DIFFUSE
-      use constants,         only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ, PPP_MG, PPP_CR
-      use dataio_pub,        only: die
+      use constants,         only: xdim, ydim, zdim, ndims, LO, HI, PPP_MG, PPP_CR
       use domain,            only: dom
       use cg_list,           only: cg_list_element
       use cg_list_dataop,    only: ind_val
@@ -758,8 +754,6 @@ contains
       character(len=*), parameter :: crr_label = "CR:residual"
 
       call ppp_main%start(crr_label, PPP_MG + PPP_CR)
-
-      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_diffusion:diff_flux] Unsupported geometry")
 
       call leaves%leaf_arr3d_boundaries(soln, bnd_type = diff_extbnd)
 
@@ -811,8 +805,7 @@ contains
       use cg_cost_data,       only: I_DIFFUSE
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
-      use constants,          only: xdim, ydim, zdim, one, half, ndims, LO, GEO_XYZ, PPP_MG, PPP_CR
-      use dataio_pub,         only: die
+      use constants,          only: xdim, ydim, zdim, one, half, ndims, LO, PPP_MG, PPP_CR
       use domain,             only: dom
       use cg_list,            only: cg_list_element
       use global,             only: dt
@@ -839,8 +832,6 @@ contains
       character(len=*), parameter :: crs_label = "CR:approximate_solution"
 
       call ppp_main%start(crs_label, PPP_MG + PPP_CR)
-
-      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_diffusion:diff_flux] Unsupported geometry")
 
       if (associated(curl, coarsest%level)) then
          nsmoo = nsmoob
