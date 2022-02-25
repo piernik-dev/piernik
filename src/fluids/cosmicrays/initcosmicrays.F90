@@ -265,7 +265,7 @@ contains
             K_cre_paral(1:ncre) = rbuff(ne+1       :ne+ncre)    !< K_cre_paral explicitly defined & broadcasted if CRESP not in use
             K_cre_perp (1:ncre) = rbuff(ne+1+ncre:ne+2*ncre)    !< K_cre_perp explicitly defined & broadcasted if CRESP not in use
             gamma_cre(1:ncre)    = rbuff(ne+2*ncre+1:ne+3*ncre) ! gamma_cre used only if CRESP module not used
-            cre_gpcr_ess(1:ncre) = lbuff(ncrn+3:ncrn+ncre+)
+            cre_gpcr_ess(1:ncre) = lbuff(ncrn+3:ncrn+ncre+2)
 #endif /* !CRESP */
          endif
 
