@@ -27,9 +27,6 @@
 
 #include "piernik.h"
 
-#ifndef COSM_RAYS
-#error COSM_RAYS is required for mcrtest
-#endif /* COSM_RAYS */
 module initproblem
 
    implicit none
@@ -158,8 +155,9 @@ contains
       use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
-      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use mpisetup,       only: master, piernik_MPI_Allreduce
+#ifdef COSM_RAYS
+      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
 #ifdef COSM_RAYS_SOURCES
       use cr_data,        only: eCRSP, icr_H1, icr_C12, cr_table
 #endif /* COSM_RAYS_SOURCES */
@@ -168,6 +166,7 @@ contains
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff, use_cresp
 #endif /* CRESP */
+#endif /* COSM_RAYS */
 
       implicit none
 
@@ -191,11 +190,13 @@ contains
       if (.not.dom%has_dir(ydim)) by0 = 0.
       if (.not.dom%has_dir(zdim)) bz0 = 0.
 
+#ifdef COSM_RAYS
       if ((bx0**2 + by0**2 + bz0**2 .equals. 0.) .and. (any(K_crn_paral(:) .notequals. 0.) .or. any(K_crn_perp(:) .notequals. 0.))) then
          call warn("[initproblem:problem_initial_conditions] No magnetic field is set, K_crn_* also have to be 0.")
          K_crn_paral(:) = 0.
          K_crn_perp(:)  = 0.
       endif
+#endif /* COSM_RAYS */
 
       mantle = 0
       do i = xdim, zdim
@@ -237,6 +238,7 @@ contains
               &             emag(cg%b(xdim,RNG), cg%b(ydim,RNG), cg%b(zdim,RNG))
 #endif /* !ISO */
 
+#ifdef COSM_RAYS
          cg%u(iarr_crs, RNG) = 0.0
 #ifdef COSM_RAYS_SOURCES
          if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(cr_table(icr_H1 ))-1.0)
@@ -279,11 +281,12 @@ contains
                enddo
             enddo
          enddo
-
+#endif /* COSM_RAYS */
          call cg%costs%stop(I_IC)
          cgl => cgl%nxt
       enddo
 
+#ifdef COSM_RAYS
       do icr = 1, flind%crs%all
 
          maxv = - huge(1.)
@@ -318,6 +321,7 @@ contains
       write(msg,*) '[initproblem:problem_initial_conditions]: Taylor_exp._ord. (cresp)    = ', expan_order
       if (master) call printinfo(msg)
 #endif /* CRESP */
+#endif /* COSM_RAYS */
 
    end subroutine problem_initial_conditions
 
