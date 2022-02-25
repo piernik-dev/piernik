@@ -665,7 +665,6 @@ contains
       ! Assumes dom%has_dir(crdim)
       !> \warning *cg%idl(crdim) makes a difference
       d_par = (cg%q(soln)%arr(im(xdim), im(ydim), im(zdim)) - cg%q(soln)%arr(ilm(xdim), ilm(ydim), ilm(zdim))) * cg%idl(crdim)
-      write(*,*) 'DIFF_FLUX: ', cr_id, K_crs_perp
       fcrdif = K_crs_perp(cr_id) * d_par
       if (present(Keff)) Keff = K_crs_perp(cr_id)
 
