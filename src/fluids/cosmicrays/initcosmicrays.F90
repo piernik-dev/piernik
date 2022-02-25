@@ -211,17 +211,17 @@ contains
             rbuff(nn+1+  ncrn:nn+2*ncrn) = K_crn_paral(1:ncrn)
             rbuff(nn+1+2*ncrn:nn+3*ncrn) = K_crn_perp (1:ncrn)
 
-            lbuff(2:ncrn+1) = crn_gpcr_ess(1:ncrn)
+            lbuff(3:ncrn+2) = crn_gpcr_ess(1:ncrn)
          endif
 
          if (ncre > 0) then
 #ifdef CRESP
-            lbuff(ncrn+2)                = cre_gpcr_ess
+            lbuff(ncrn+3)                = cre_gpcr_ess
 #else /* !CRESP */
             rbuff(ne+1       :ne+ncre)   = K_cre_paral(1:ncre)  !< K_cre_paral explicitly defined & broadcasted if CRESP not in use
             rbuff(ne+1+ncre:ne+2*ncre)   = K_cre_perp (1:ncre)  !< K_cre_perp explicitly defined & broadcasted if CRESP not in use
             rbuff(ne+2*ncre+1:ne+3*ncre) = gamma_cre(1:ncre)  ! gamma_cre used only if CRESP module not used
-            lbuff(ncrn+2:ncrn+ncre+1)    = cre_gpcr_ess(1:ncre)
+            lbuff(ncrn+3:ncrn+ncre+2)    = cre_gpcr_ess(1:ncre)
 #endif /* !CRESP */
          endif
 
@@ -255,17 +255,17 @@ contains
             K_crn_paral(1:ncrn) = rbuff(nn+1+  ncrn:nn+2*ncrn)
             K_crn_perp (1:ncrn) = rbuff(nn+1+2*ncrn:nn+3*ncrn)
 
-            crn_gpcr_ess(1:ncrn) = lbuff(2:ncrn+1)
+            crn_gpcr_ess(1:ncrn) = lbuff(3:ncrn+2)
          endif
 
          if (ncre > 0) then
 #ifdef CRESP
-            cre_gpcr_ess         = lbuff(ncrn+2)
+            cre_gpcr_ess         = lbuff(ncrn+3)
 #else /* !CRESP */
             K_cre_paral(1:ncre) = rbuff(ne+1       :ne+ncre)    !< K_cre_paral explicitly defined & broadcasted if CRESP not in use
             K_cre_perp (1:ncre) = rbuff(ne+1+ncre:ne+2*ncre)    !< K_cre_perp explicitly defined & broadcasted if CRESP not in use
             gamma_cre(1:ncre)    = rbuff(ne+2*ncre+1:ne+3*ncre) ! gamma_cre used only if CRESP module not used
-            cre_gpcr_ess(1:ncre) = lbuff(ncrn+2:ncrn+ncre+1)
+            cre_gpcr_ess(1:ncre) = lbuff(ncrn+3:ncrn+ncre+)
 #endif /* !CRESP */
          endif
 
