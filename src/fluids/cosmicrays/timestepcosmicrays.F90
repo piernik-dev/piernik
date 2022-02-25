@@ -73,7 +73,7 @@ contains
       dt = min(dt, dt_cre)
 #endif /* CRESP */
 
-      if (.not.K_crs_valid) return
+      if (.not. K_crs_valid) return
 
       if ((is_multicg .or. frun)) then
       ! with multiple cg% there are few cg%dxmn to be checked
@@ -85,12 +85,12 @@ contains
             dt_crs = min(dt_crs, def_dtcrs * cgl%cg%dxmn2)
             cgl => cgl%nxt
          enddo
+         call piernik_MPI_Allreduce(dt_crs, pMIN)
 
 #ifdef MULTIGRID
          diff_dt_crs_orig = dt_crs
          if (.not. diff_explicit) dt_crs = dt_crs * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
 #endif /* MULTIGRID */
-         call piernik_MPI_Allreduce(dt_crs, pMIN)
          frun = .false.
       endif
 
