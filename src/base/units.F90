@@ -145,6 +145,7 @@ module units
    real, protected :: r_gc_sun                              !< Sun distance from the Galaxy Center
    real, protected :: vsun                                  !< velocity value of Sun in the Galaxy
    real, protected :: sunradius                             !< radius of Sun
+   real, protected :: u_CMB                                 !< Cosmic Microwave Background energy density at current epoch
    real, protected :: Lsun                                  !< luminosity of Sun
    real, protected :: Mearth                                !< mass of Earth
    real, protected :: earthradius                           !< radius of Earth
@@ -388,6 +389,7 @@ contains
       r_gc_sun   = 8.5*kpc                  !< Sun distance from the Galaxy Center
       vsun       = 220.0*km/sek             !< velocity value of Sun in the Galaxy
       sunradius  = 6.9598e10*cm             !< radius of Sun
+      u_CMB      = 0.260*eV/cm**3           !< Cosmic Microwave Background energy density at current epoch (from Particle Data Group, 2020)
       Lsun       = 3.826e33*erg/sek         !< luminosity of Sun
       Mearth     = 5.977e27*gram            !< mass of Earth
       earthradius= 6378.17*km               !< radius of Earth
