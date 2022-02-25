@@ -119,7 +119,7 @@ contains
       use global,           only: dt
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max, use_cresp_evol
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, icomp_active, cresp, crel, dfpq, fsynchr, u_b_max, use_cresp_evol
       use initcrspectrum,   only: cresp_substep, n_substeps_max
       use named_array_list, only: wna
       use ppp,              only: ppp_main
@@ -163,6 +163,7 @@ contains
                   cresp%e = cg%u(iarr_cre_e, i, j, k)
                   if (synch_active) sptab%ub = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr, u_b_max)    !< WARNING assusmes that b is in mGs
                   if (adiab_active) sptab%ud = cg%q(divv_i)%point([i,j,k]) * onet
+                  if (icomp_active) sptab%ucmb = enden_CMB(0.)
 
                   if (cresp_substep) then !< prepare substep timestep for each cell
                      call cresp_timestep_cell(sptab, dt_cresp, inactive_cell)
@@ -229,6 +230,19 @@ contains
       dt_substep = dt_simulation / n_substeps
 
    end subroutine prepare_substep
+
+!> \brief Calculate energy density of Cosmic Microwave Background at given epoch
+
+   elemental real function enden_CMB(z)
+      use units,     only: u_CMB
+      use constants, only: one, four
+      implicit none
+
+      real, intent(in)  :: z
+
+      enden_CMB = u_CMB * (one + z)**four
+
+   end function enden_CMB
 
 !----------------------------------------------------------------------------------------------------
 
