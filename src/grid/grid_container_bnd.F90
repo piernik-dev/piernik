@@ -32,7 +32,8 @@ module grid_cont_bnd
 
    use constants,       only: xdim, zdim, LO, HI
    use grid_cont_na,    only: grid_container_na_t
-   use fluxtypes,       only: fluxarray, fluxpoint
+   use fluxtypes,       only: fluxpoint
+   use flx_arr,         only: fluxarray
    use refinement_flag, only: ref_flag_t
 #ifdef MPIF08
    use MPIF,            only: MPI_Request, MPI_Datatype

@@ -1,0 +1,145 @@
+!
+! PIERNIK Code Copyright (C) 2006 Michal Hanasz
+!
+!    This file is part of PIERNIK code.
+!
+!    PIERNIK is free software: you can redistribute it and/or modify
+!    it under the terms of the GNU General Public License as published by
+!    the Free Software Foundation, either version 3 of the License, or
+!    (at your option) any later version.
+!
+!    PIERNIK is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!    GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License
+!    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
+!
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
+!    Ue-Li Pen
+!        see: Pen, Arras & Wong (2003) for algorithm and
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
+!    For full list of developers see $PIERNIK_HOME/license/pdt.txt
+!
+
+#include "piernik.h"
+
+!> \brief This module contains fluxarray type useful for flux enforcing and exchange in (M)HD solvers at f/c boundary.
+
+module flx_arr
+
+   implicit none
+
+   private
+   public  :: fluxarray
+
+   !> \brief Structure that contains u-flux at a single face of a grid container
+
+   type :: fluxarray
+      real,    dimension(:,:,:), allocatable :: uflx  !< u-fluxes, shape (flind%all, n_b(dir1), n_b(dir2))
+      real,    dimension(:,:,:), allocatable :: bflx  !< b-fluxes, shape (psidim,    n_b(dir1), n_b(dir2)) (magnetic field components + psi)
+      integer, dimension(:,:),   allocatable :: index !< Index where the flux has to be applied, shape (n_b(dir1), n_b(dir2))
+   contains
+      procedure :: fainit                      !< Allocate flux array
+      procedure :: facleanup                   !< Deallocate flux array
+      procedure :: fa2fp                       !< Pick a point flux
+      procedure :: fp2fa                       !< Store a point flux
+   end type fluxarray
+
+contains
+
+!> \brief Allocate flux array
+
+   subroutine fainit(this, i1, i2)
+
+      use constants,  only: LO, HI, psidim, has_B
+      use dataio_pub, only: die
+      use fluidindex, only: flind
+
+      implicit none
+
+      class(fluxarray),                  intent(inout) :: this !< object invoking type bound procedure
+      integer(kind=4), dimension(LO:HI), intent(in)    :: i1 !< 1st range
+      integer(kind=4), dimension(LO:HI), intent(in)    :: i2 !< 2nd range
+
+      if (allocated(this%index) .or. allocated(this%uflx)) call die("[fluxtypes:fainit] already allocated")
+      allocate(this%index(          i1(LO):i1(HI), i2(LO):i2(HI)), &
+           &   this%uflx(flind%all, i1(LO):i1(HI), i2(LO):i2(HI)))
+      if (has_B) allocate(this%bflx(psidim,    i1(LO):i1(HI), i2(LO):i2(HI)))
+
+   end subroutine fainit
+
+!> \brief Deallocate flux array
+
+   subroutine facleanup(this)
+
+      implicit none
+
+      class(fluxarray), intent(inout) :: this
+
+      if (allocated(this%index)) deallocate(this%index)
+      if (allocated(this%uflx))  deallocate(this%uflx)
+      if (allocated(this%bflx))  deallocate(this%bflx)
+
+   end subroutine facleanup
+
+!> \brief Pick a point flux
+
+   function fa2fp(this, i1, i2) result(fp)
+
+      use constants,  only: has_B
+      use dataio_pub, only: die
+      use fluxtypes,  only: fluxpoint
+
+      implicit none
+
+      class(fluxarray), intent(in) :: this !< object invoking type bound procedure
+      integer,          intent(in) :: i1 !< 1st index
+      integer,          intent(in) :: i2 !< 2nd index
+
+      type(fluxpoint) :: fp
+
+      fp%index = this%index(   i1, i2)
+
+      ! It looks like a bogus detection of -Wmaybe-uninitialized that occurs only with -O0.
+
+      if (allocated(this%uflx)) then
+         fp%uflx  = this%uflx (:, i1, i2)
+      else
+         call die("[fluxtypes:fa2fp] .not. allocated(this%uflx)")
+      endif
+      if (has_B) then
+         if (allocated(this%bflx)) then
+            fp%bflx  = this%bflx (:, i1, i2)
+         else
+            call die("[fluxtypes:fa2fp] .not. allocated(this%bflx)")
+         endif
+      endif
+
+   end function fa2fp
+
+!> \brief Store a point flux
+
+   subroutine fp2fa(this, fp, i1, i2)
+
+      use constants,  only: has_B
+      use dataio_pub, only: die
+      use fluxtypes,  only: fluxpoint
+
+      implicit none
+
+      class(fluxarray), intent(inout) :: this !< object invoking type bound procedure
+      type(fluxpoint),  intent(in)    :: fp !< point flux
+      integer,          intent(in)    :: i1 !< 1st index
+      integer,          intent(in)    :: i2 !< 2nd index
+
+      if (this%index(i1, i2) /= fp%index) call die("[fluxtypes:fp2fa] inconsistent index")
+      this%uflx (:, i1, i2) = fp%uflx
+      if (has_B) this%bflx (:, i1, i2) = fp%bflx
+
+   end subroutine fp2fa
+
+end module flx_arr
