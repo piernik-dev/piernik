@@ -51,11 +51,12 @@ contains
       use constants,        only: xdim, ydim, zdim, half, zero, big, pMIN, I_ONE
       use cresp_crspectrum, only: cresp_find_prepare_spectrum
       use crhelpers,        only: div_v, divv_i
+      use cresp_helpers,    only: enden_CMB
       use fluidindex,       only: flind
       use func,             only: emag
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep, n_substeps_max
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, icomp_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep, n_substeps_max, redshift
       use mpisetup,         only: piernik_MPI_Allreduce
 
       implicit none
@@ -79,6 +80,9 @@ contains
       i_up_max_tmp = 1
       if (adiab_active) call all_fluid_boundaries()
 
+      sptab%ucmb = zero
+      if (icomp_active) sptab%ucmb = enden_CMB(redshift) ! NOTICE redshift is hard-coded to zero (current epoch)
+
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -92,14 +96,14 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  sptab%ud = zero ; sptab%ub = zero ; sptab%ucmb = zero ; empty_cell = .false.
+                  sptab%ud = zero ; sptab%ub = zero ; empty_cell = .false.
                   sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr
                   cresp%n = cg%u(iarr_cre_n, i, j, k)
                   cresp%e = cg%u(iarr_cre_e, i, j, k)
                   call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_max_tmp) ! needed for synchrotron timestep
                   i_up_max = max(i_up_max, i_up_max_tmp)
 
-                  if (.not. empty_cell .and. synch_active) call cresp_timestep_synchrotron(min(sptab%ub, u_b_max), i_up_max_tmp)
+                  if (.not. empty_cell .and. synch_active) call cresp_timestep_synchrotron(min(sptab%ub + sptab%ucmb, u_b_max), i_up_max_tmp)
                enddo
             enddo
          enddo
@@ -176,7 +180,7 @@ contains
 
    subroutine cresp_timestep_cell(p_loss_terms, dt_cell, empty_cell)
 
-      use initcrspectrum,     only: adiab_active, cresp, synch_active, spec_mod_trms
+      use initcrspectrum,     only: adiab_active, cresp, icomp_active, synch_active, spec_mod_trms
       use cresp_crspectrum,   only: cresp_find_prepare_spectrum
       use constants,          only: big
 
@@ -196,7 +200,7 @@ contains
       call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_cell) ! needed for synchrotron timestep
 
       if (.not. empty_cell) then
-         if (synch_active) call cresp_timestep_synchrotron(p_loss_terms%ub, i_up_cell)
+         if (synch_active) call cresp_timestep_synchrotron(p_loss_terms%ub + p_loss_terms%ucmb, i_up_cell)
          if (adiab_active) call cresp_timestep_adiabatic(p_loss_terms%ud)
       else
          return
