@@ -276,8 +276,9 @@ contains
          bzn = 0.0
       endif
 
-      r0_par2  = r0**2 + 4 * (K_crn_paral(icr) + K_crn_perp(icr)) * t
       r0_perp2 = r0**2 + 4 * K_crn_perp(icr) * t
+      r0_par2 = r0_perp2
+      if (magb > 0.) r0_par2 = r0_par2 + 4 * K_crn_paral(icr) * t
 
       if ((r0_par2 .equals. 0.) .or. (r0_perp2 .equals. 0.)) call die("[initproblem:compute_analytic_ecr1] r0_par2 == 0. .or. r0_perp2 == 0.")
 
