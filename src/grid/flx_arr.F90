@@ -36,17 +36,17 @@ module flx_arr
    private
    public  :: fluxarray
 
-   !> \brief Structure that contains u-flux at a single face of a grid container
+   !> \brief Structure that contains u- or b-flux at a single face of a grid container
 
    type :: fluxarray
-      real,    dimension(:,:,:), allocatable :: uflx  !< u-fluxes, shape (flind%all, n_b(dir1), n_b(dir2))
-      real,    dimension(:,:,:), allocatable :: bflx  !< b-fluxes, shape (psidim,    n_b(dir1), n_b(dir2)) (magnetic field components + psi)
-      integer, dimension(:,:),   allocatable :: index !< Index where the flux has to be applied, shape (n_b(dir1), n_b(dir2))
+      real,    dimension(:,:,:), allocatable :: uflx   !< u-fluxes, shape (flind%all, n_b(dir1), n_b(dir2))
+      real,    dimension(:,:,:), allocatable :: bflx   !< b-fluxes, shape (psidim,    n_b(dir1), n_b(dir2)) (magnetic field components + psi)
+      integer, dimension(:,:),   allocatable :: index  !< Index where the flux has to be applied, shape (n_b(dir1), n_b(dir2))
    contains
-      procedure :: fainit                      !< Allocate flux array
-      procedure :: facleanup                   !< Deallocate flux array
-      procedure :: fa2fp                       !< Pick a point flux
-      procedure :: fp2fa                       !< Store a point flux
+      procedure :: fainit     !< Allocate flux array
+      procedure :: facleanup  !< Deallocate flux array
+      procedure :: fa2fp      !< Pick a point flux
+      procedure :: fp2fa      !< Store a point flux
    end type fluxarray
 
 contains
@@ -61,14 +61,14 @@ contains
 
       implicit none
 
-      class(fluxarray),                  intent(inout) :: this !< object invoking type bound procedure
-      integer(kind=4), dimension(LO:HI), intent(in)    :: i1 !< 1st range
-      integer(kind=4), dimension(LO:HI), intent(in)    :: i2 !< 2nd range
+      class(fluxarray),                  intent(inout) :: this  !< object invoking type bound procedure
+      integer(kind=4), dimension(LO:HI), intent(in)    :: i1    !< 1st range
+      integer(kind=4), dimension(LO:HI), intent(in)    :: i2    !< 2nd range
 
-      if (allocated(this%index) .or. allocated(this%uflx)) call die("[fluxtypes:fainit] already allocated")
-      allocate(this%index(          i1(LO):i1(HI), i2(LO):i2(HI)), &
-           &   this%uflx(flind%all, i1(LO):i1(HI), i2(LO):i2(HI)))
-      if (has_B) allocate(this%bflx(psidim,    i1(LO):i1(HI), i2(LO):i2(HI)))
+      if (allocated(this%index) .or. allocated(this%uflx)) call die("[flx_arr:fainit] already allocated")
+      allocate(           this%index(           i1(LO):i1(HI), i2(LO):i2(HI)), &
+           &              this%uflx (flind%all, i1(LO):i1(HI), i2(LO):i2(HI)))
+      if (has_B) allocate(this%bflx (psidim,    i1(LO):i1(HI), i2(LO):i2(HI)))
 
    end subroutine fainit
 
@@ -78,7 +78,7 @@ contains
 
       implicit none
 
-      class(fluxarray), intent(inout) :: this
+      class(fluxarray), intent(inout) :: this  !< object invoking type bound procedure
 
       if (allocated(this%index)) deallocate(this%index)
       if (allocated(this%uflx))  deallocate(this%uflx)
@@ -92,13 +92,13 @@ contains
 
       use constants,  only: has_B
       use dataio_pub, only: die
-      use fluxtypes,  only: fluxpoint
+      use flx_cell,   only: fluxpoint
 
       implicit none
 
-      class(fluxarray), intent(in) :: this !< object invoking type bound procedure
-      integer,          intent(in) :: i1 !< 1st index
-      integer,          intent(in) :: i2 !< 2nd index
+      class(fluxarray), intent(in) :: this  !< object invoking type bound procedure
+      integer,          intent(in) :: i1    !< 1st index
+      integer,          intent(in) :: i2    !< 2nd index
 
       type(fluxpoint) :: fp
 
@@ -106,17 +106,12 @@ contains
 
       ! It looks like a bogus detection of -Wmaybe-uninitialized that occurs only with -O0.
 
-      if (allocated(this%uflx)) then
-         fp%uflx  = this%uflx (:, i1, i2)
-      else
-         call die("[fluxtypes:fa2fp] .not. allocated(this%uflx)")
-      endif
+      if (.not. allocated(this%uflx)) call die("[flx_arr:fa2fp] .not. allocated(this%uflx)")
+      fp%uflx = this%uflx (:, i1, i2)
+
       if (has_B) then
-         if (allocated(this%bflx)) then
-            fp%bflx  = this%bflx (:, i1, i2)
-         else
-            call die("[fluxtypes:fa2fp] .not. allocated(this%bflx)")
-         endif
+         if (.not. allocated(this%bflx)) call die("[flx_arr:fa2fp] .not. allocated(this%bflx)")
+         fp%bflx = this%bflx (:, i1, i2)
       endif
 
    end function fa2fp
@@ -127,16 +122,16 @@ contains
 
       use constants,  only: has_B
       use dataio_pub, only: die
-      use fluxtypes,  only: fluxpoint
+      use flx_cell,   only: fluxpoint
 
       implicit none
 
-      class(fluxarray), intent(inout) :: this !< object invoking type bound procedure
-      type(fluxpoint),  intent(in)    :: fp !< point flux
-      integer,          intent(in)    :: i1 !< 1st index
-      integer,          intent(in)    :: i2 !< 2nd index
+      class(fluxarray), intent(inout) :: this  !< object invoking type bound procedure
+      type(fluxpoint),  intent(in)    :: fp    !< point flux
+      integer,          intent(in)    :: i1    !< 1st index
+      integer,          intent(in)    :: i2    !< 2nd index
 
-      if (this%index(i1, i2) /= fp%index) call die("[fluxtypes:fp2fa] inconsistent index")
+      if (this%index(i1, i2) /= fp%index) call die("[flx_arr:fp2fa] inconsistent index")
       this%uflx (:, i1, i2) = fp%uflx
       if (has_B) this%bflx (:, i1, i2) = fp%bflx
 

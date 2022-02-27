@@ -32,7 +32,7 @@ module grid_cont_bnd
 
    use constants,       only: xdim, zdim, LO, HI
    use grid_cont_na,    only: grid_container_na_t
-   use fluxtypes,       only: fluxpoint
+   use flx_cell,        only: fluxpoint
    use flx_arr,         only: fluxarray
    use refinement_flag, only: ref_flag_t
 #ifdef MPIF08
@@ -312,7 +312,7 @@ contains
          use constants,  only: ydim, zdim, GEO_RPZ
          use domain,     only: dom
          use fluidindex, only: iarr_all_mx, iarr_all_my
-         use fluxtypes,  only: fluxpoint
+         use flx_cell,   only: fluxpoint
 
          implicit none
 

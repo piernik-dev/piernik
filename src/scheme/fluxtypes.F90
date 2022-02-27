@@ -27,31 +27,19 @@
 
 #include "piernik.h"
 
-!>
-!! \brief This module contains types useful for flux enforcing and exchange in (M)HD solvers
-!!
-!! \todo This can be split into 2 separate modules (fluxpoint, ext_fluxes).
-!<
+!> \brief This module contains ext_fluxes type useful for flux enforcing and exchange in 1D (M)HD solvers
 
 module fluxtypes
+
+   use flx_cell, only: fluxpoint
 
    implicit none
 
    private
-   public  :: fluxpoint, ext_fluxes
+   public  :: ext_fluxes
 
-   !> \brief Structure that contains u-flux at a single cell index.
-
-   type :: fluxpoint
-      real, dimension(:), allocatable :: uflx  !< u-flux
-      real, dimension(:), allocatable :: bflx  !< (b,psi)-flux
-      integer                         :: index !< Index where the flux has to be applied
-   contains
-      procedure :: fpinit                      !< Allocate flux vector
-      procedure :: fpcleanup                   !< Deallocate flux vector
-   end type fluxpoint
-
-   !> \brief Structure that may contain pointers to fluxes to be passed to or obtained from the rtvd routine. Unassociated pointer means that no operation is required.
+   !> \brief Structure that may contain pointers to fluxes to be passed to or obtained from the RTVD/Riemann routine.
+   !! Unassociated pointer means that no operation is required.
 
    type :: ext_fluxes
       type(fluxpoint), pointer :: li  !< incoming from the left (low index)
@@ -64,44 +52,13 @@ module fluxtypes
 
 contains
 
-!> \brief Allocate flux vector
-
-   subroutine fpinit(this)
-
-      use constants,  only: psidim, has_B
-      use dataio_pub, only: die
-      use fluidindex, only: flind
-
-      implicit none
-
-      class(fluxpoint), intent(inout) :: this
-
-      if (allocated(this%uflx)) call die("[fluxtypes:fpinit] uflx already allocated")
-      allocate(this%uflx(flind%all))
-      if (has_B) allocate(this%bflx(psidim))
-
-   end subroutine fpinit
-
-!> \brief Deallocate flux vector
-
-   subroutine fpcleanup(this)
-
-      implicit none
-
-      class(fluxpoint), intent(inout) :: this
-
-      if (allocated(this%uflx)) deallocate(this%uflx)
-      if (allocated(this%bflx)) deallocate(this%bflx)
-
-   end subroutine fpcleanup
-
 !> \brief Nullify point flux pointers
 
    subroutine init(this)
 
       implicit none
 
-      class(ext_fluxes), intent(out) :: this
+      class(ext_fluxes), intent(out) :: this  !< object invoking type bound procedure
 
       this%li => null()
       this%lo => null()
