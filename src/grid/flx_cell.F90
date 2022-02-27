@@ -43,15 +43,15 @@ module flx_cell
       real, dimension(:), allocatable :: bflx   !< (b,psi)-flux
       integer                         :: index  !< Index where the flux has to be applied
    contains
-      procedure :: fpinit     !< Allocate flux vector
-      procedure :: fpcleanup  !< Deallocate flux vector
+      procedure :: init     !< Allocate flux vector
+      procedure :: cleanup  !< Deallocate flux vector
    end type fluxpoint
 
 contains
 
 !> \brief Allocate flux vector
 
-   subroutine fpinit(this)
+   subroutine init(this)
 
       use constants,  only: psidim, has_B
       use dataio_pub, only: die
@@ -61,15 +61,15 @@ contains
 
       class(fluxpoint), intent(inout) :: this  !< object invoking type bound procedure
 
-      if (allocated(this%uflx)) call die("[flx_cell:fpinit] uflx already allocated")
+      if (allocated(this%uflx)) call die("[flx_cell:init] uflx already allocated")
       allocate(this%uflx(flind%all))
       if (has_B) allocate(this%bflx(psidim))
 
-   end subroutine fpinit
+   end subroutine init
 
 !> \brief Deallocate flux vector
 
-   subroutine fpcleanup(this)
+   subroutine cleanup(this)
 
       implicit none
 
@@ -78,6 +78,6 @@ contains
       if (allocated(this%uflx)) deallocate(this%uflx)
       if (allocated(this%bflx)) deallocate(this%bflx)
 
-   end subroutine fpcleanup
+   end subroutine cleanup
 
 end module flx_cell

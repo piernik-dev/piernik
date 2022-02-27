@@ -43,17 +43,17 @@ module flx_arr
       real,    dimension(:,:,:), allocatable :: bflx   !< b-fluxes, shape (psidim,    n_b(dir1), n_b(dir2)) (magnetic field components + psi)
       integer, dimension(:,:),   allocatable :: index  !< Index where the flux has to be applied, shape (n_b(dir1), n_b(dir2))
    contains
-      procedure :: fainit     !< Allocate flux array
-      procedure :: facleanup  !< Deallocate flux array
-      procedure :: fa2fp      !< Pick a point flux
-      procedure :: fp2fa      !< Store a point flux
+      procedure :: init     !< Allocate flux array
+      procedure :: cleanup  !< Deallocate flux array
+      procedure :: fa2fp    !< Pick a point flux
+      procedure :: fp2fa    !< Store a point flux
    end type fluxarray
 
 contains
 
-!> \brief Allocate flux array
+!> \brief Allocate the flux array for a f/c face
 
-   subroutine fainit(this, i1, i2)
+   subroutine init(this, i1, i2)
 
       use constants,  only: LO, HI, psidim, has_B
       use dataio_pub, only: die
@@ -65,16 +65,16 @@ contains
       integer(kind=4), dimension(LO:HI), intent(in)    :: i1    !< 1st range
       integer(kind=4), dimension(LO:HI), intent(in)    :: i2    !< 2nd range
 
-      if (allocated(this%index) .or. allocated(this%uflx)) call die("[flx_arr:fainit] already allocated")
+      if (allocated(this%index) .or. allocated(this%uflx)) call die("[flx_arr:init] already allocated")
       allocate(           this%index(           i1(LO):i1(HI), i2(LO):i2(HI)), &
            &              this%uflx (flind%all, i1(LO):i1(HI), i2(LO):i2(HI)))
       if (has_B) allocate(this%bflx (psidim,    i1(LO):i1(HI), i2(LO):i2(HI)))
 
-   end subroutine fainit
+   end subroutine init
 
-!> \brief Deallocate flux array
+!> \brief Deallocate flux arrays
 
-   subroutine facleanup(this)
+   subroutine cleanup(this)
 
       implicit none
 
@@ -84,7 +84,7 @@ contains
       if (allocated(this%uflx))  deallocate(this%uflx)
       if (allocated(this%bflx))  deallocate(this%bflx)
 
-   end subroutine facleanup
+   end subroutine cleanup
 
 !> \brief Pick a point flux
 

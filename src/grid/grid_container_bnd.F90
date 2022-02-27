@@ -114,12 +114,12 @@ contains
       integer :: i
 
       do i = LO, HI
-         call this%finebnd  (xdim, i)%fainit([ this%js, this%je ], [ this%ks, this%ke ])
-         call this%finebnd  (ydim, i)%fainit([ this%ks, this%ke ], [ this%is, this%ie ])
-         call this%finebnd  (zdim, i)%fainit([ this%is, this%ie ], [ this%js, this%je ])
-         call this%coarsebnd(xdim, i)%fainit([ this%js, this%je ], [ this%ks, this%ke ])
-         call this%coarsebnd(ydim, i)%fainit([ this%ks, this%ke ], [ this%is, this%ie ])
-         call this%coarsebnd(zdim, i)%fainit([ this%is, this%ie ], [ this%js, this%je ])
+         call this%finebnd  (xdim, i)%init([ this%js, this%je ], [ this%ks, this%ke ])
+         call this%finebnd  (ydim, i)%init([ this%ks, this%ke ], [ this%is, this%ie ])
+         call this%finebnd  (zdim, i)%init([ this%is, this%ie ], [ this%js, this%je ])
+         call this%coarsebnd(xdim, i)%init([ this%js, this%je ], [ this%ks, this%ke ])
+         call this%coarsebnd(ydim, i)%init([ this%ks, this%ke ], [ this%is, this%ie ])
+         call this%coarsebnd(zdim, i)%init([ this%is, this%ie ], [ this%js, this%je ])
       enddo
       do i = xdim, zdim
          this%finebnd  (i, LO)%index = this%lhn(i, LO) - 1
@@ -162,18 +162,18 @@ contains
 
       do d = xdim, zdim
          do g = LO, HI
-            call this%finebnd  (d, g)%facleanup
-            call this%coarsebnd(d, g)%facleanup
+            call this%finebnd  (d, g)%cleanup
+            call this%coarsebnd(d, g)%cleanup
          enddo
       enddo
 
-      call fpl%fpcleanup
-      call fpr%fpcleanup
-      call cpl%fpcleanup
-      call cpr%fpcleanup
+      call fpl%cleanup
+      call fpr%cleanup
+      call cpl%cleanup
+      call cpr%cleanup
 
       ! arrays not handled through named_array feature
-      if (allocated(this%leafmap))   deallocate(this%leafmap)
+      if (allocated(this%leafmap)) deallocate(this%leafmap)
 
    end subroutine cleanup_bnd
 
@@ -231,7 +231,7 @@ contains
 
       if (this%finebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
          fpl = this%finebnd(cdim, LO)%fa2fp(i1, i2)
-         if (.not. allocated(fpl%uflx)) call fpl%fpinit
+         if (.not. allocated(fpl%uflx)) call fpl%init
          eflx%li => fpl
          eflx%li%index = eflx%li%index - this%lhn(cdim, LO) + 1
       else
@@ -239,7 +239,7 @@ contains
       endif
       if (this%finebnd(cdim, HI)%index(i1, i2) <= this%ijkse(cdim, HI)) then
          fpr = this%finebnd(cdim, HI)%fa2fp(i1, i2)
-         if (.not. allocated(fpr%uflx)) call fpr%fpinit
+         if (.not. allocated(fpr%uflx)) call fpr%init
          eflx%ri => fpr
          eflx%ri%index = eflx%ri%index - this%lhn(cdim, LO)
       else
@@ -261,7 +261,7 @@ contains
 
       if (this%coarsebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
          cpl%index = this%coarsebnd(cdim, LO)%index(i1, i2)
-         if (.not. allocated(cpl%uflx)) call cpl%fpinit
+         if (.not. allocated(cpl%uflx)) call cpl%init
          eflx%lo => cpl
          eflx%lo%index = eflx%lo%index - this%lhn(cdim, LO)
       else
@@ -269,7 +269,7 @@ contains
       endif
       if (this%coarsebnd(cdim, HI)%index(i1, i2) <= this%ijkse(cdim, HI)) then
          cpr%index = this%coarsebnd(cdim, HI)%index(i1, i2)
-         if (.not. allocated(cpr%uflx)) call cpr%fpinit
+         if (.not. allocated(cpr%uflx)) call cpr%init
          eflx%ro => cpr
          eflx%ro%index = eflx%ro%index - this%lhn(cdim, LO) + 1
       else
