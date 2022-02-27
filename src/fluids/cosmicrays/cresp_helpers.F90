@@ -40,7 +40,7 @@ module cresp_helpers
    private
    public   :: hdr_io, map_header, n_g_cresp, n_g_smaps, n_a_dims, n_a_esmall, n_a_max_p_r, n_a_clight,     &
       &  n_a_qbig, n_a_amin, n_a_amax, n_a_nmin, n_a_nmax, real_attrs, int_attrs, extension, flen,          &
-      &  bound_name, dset_attrs
+      &  bound_name, dset_attrs, enden_CMB
 
    character(len=*), parameter, dimension(LO:HI)      ::  n_g_smaps = [ "cresp/smaps_LO", "cresp/smaps_UP" ]
    character(len=*), parameter :: n_g_cresp = "cresp", &
@@ -76,6 +76,21 @@ module cresp_helpers
    end type map_header
 
    type(map_header), dimension(LO:HI)  :: hdr_io
+
+   contains
+
+!> \brief Calculate energy density of Cosmic Microwave Background at given epoch
+
+   elemental real function enden_CMB(z)
+      use units,     only: u_CMB
+      use constants, only: one, four
+      implicit none
+
+      real, intent(in)  :: z
+
+      enden_CMB = u_CMB * (one + z)**four
+
+   end function enden_CMB
 
 
 end module cresp_helpers
