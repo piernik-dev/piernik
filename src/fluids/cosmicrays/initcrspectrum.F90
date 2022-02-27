@@ -41,7 +41,7 @@ module initcrspectrum
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active, &
            & icomp_active, allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio, &
            & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,       &
-           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer, cresp_disallow_negatives
+           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer, cresp_disallow_negatives, redshift
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -94,6 +94,7 @@ module initcrspectrum
    logical         :: synch_active                !< TEST feature - turns on / off synchrotron cooling @ CRESP
    logical         :: adiab_active                !< TEST feature - turns on / off adiabatic   cooling @ CRESP
    logical         :: icomp_active                !< TEST feature - turns on / off Inv-Compton cooling @ CRESP
+   real            :: redshift                    !< redshift for chosen epoch WARNING this remains constant
    real            :: cre_active                  !< electron contribution to Pcr
 
 ! substepping parameters
@@ -186,7 +187,7 @@ contains
       &                         cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, K_cre_pow, expan_order, e_small, use_cresp, use_cresp_evol, &
       &                         e_small_approx_init_cond, p_br_init_lo, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,   &
       &                         NR_iter_limit, max_p_ratio, synch_active, adiab_active, icomp_active, arr_dim, arr_dim_q, q_br_init, &
-      &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf, b_max_db,      &
+      &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf, b_max_db, redshift, &
       &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up, p_diff,&
       &                         q_eps, NR_smap_file, cresp_substep, n_substeps_max, allow_unnatural_transfer, cresp_disallow_negatives
 
@@ -241,6 +242,8 @@ contains
       icomp_active         = .true.
       cre_active           = 0.0
       b_max_db             = 10.  ! default value of B limiter
+      redshift             = 0.
+
 ! NR parameters
       tol_f    = 1.0e-11
       tol_x    = 1.0e-11
@@ -339,6 +342,8 @@ contains
          rbuff(28) = q_eps
          rbuff(29) = b_max_db
 
+         rbuff(30) = redshift
+
          cbuff(1)  = initial_spectrum
       endif
 
@@ -414,6 +419,8 @@ contains
 
          q_eps                       = rbuff(28)
          b_max_db                    = rbuff(29)
+         redshift                    = rbuff(30)
+
          initial_spectrum            = trim(cbuff(1))
 
       endif
