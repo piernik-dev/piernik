@@ -28,54 +28,47 @@
 
 !> \brief Module extending grid container type by structures required for boundary exchanges (same level and f/c)
 
-module grid_cont_bnd
+module grid_cont_fcflx
 
    use constants,       only: xdim, zdim, LO, HI
-   use grid_cont_bseg,  only: grid_container_bseg_t
+   use grid_cont_ref,   only: grid_container_ref_t
    use flx_cell,        only: fluxpoint
    use flx_arr,         only: fluxarray
-   use refinement_flag, only: ref_flag_t
 
    implicit none
 
    private
-   public :: grid_container_bnd_t
+   public :: grid_container_fcflx_t
 
    type(fluxpoint), target :: fpl, fpr, cpl, cpr
 
-   !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
-   type, extends(grid_container_bseg_t), abstract :: grid_container_bnd_t
+   !> \brief Buffers for f/c flux exchange
+   type, extends(grid_container_ref_t), abstract :: grid_container_fcflx_t
 
-      ! Internal boundaries
+      ! f/c boundaries
       type(fluxarray), dimension(xdim:zdim, LO:HI) :: finebnd    !< indices and flux arrays for fine/coarse flux updates on coarse side
       type(fluxarray), dimension(xdim:zdim, LO:HI) :: coarsebnd  !< indices and flux arrays for fine/coarse flux updates on fine side
 
-      ! Refinements
-      logical, allocatable, dimension(:,:,:) :: leafmap  !< .true. when a cell is not covered by finer cells, .false. otherwise
-      type(ref_flag_t) :: flag                           !< refine or derefine this grid container?
-
    contains
 
-      procedure :: init_gc_bnd         !< Initialization
-      procedure :: cleanup_bnd         !< Deallocate all internals
+      procedure :: init_gc_fcflx       !< Initialization
+      procedure :: cleanup_fcflx       !< Deallocate all internals
       procedure :: set_fluxpointers    !< Calculate fluxes incoming from fine grid for 1D solver
       procedure :: save_outfluxes      !< Collect outgoing fine fluxes, do curvilinear scaling and store in appropriate array
-      procedure :: refinemap2SFC_list  !< Create list of SFC indices to be created from refine flags
-      procedure :: has_leaves          !< Returns .true. if there are any non-covered cells on this
 
-   end type grid_container_bnd_t
+   end type grid_container_fcflx_t
 
 contains
 
 !> \brief Initialization of f/c fluxes for the grid container
 
-   subroutine init_gc_bnd(this)
+   subroutine init_gc_fcflx(this)
 
       use constants, only: xdim, ydim, zdim, LO, HI
 
       implicit none
 
-      class(grid_container_bnd_t), target, intent(inout) :: this  !< object invoking type-bound procedure
+      class(grid_container_fcflx_t), target, intent(inout) :: this  !< object invoking type-bound procedure
 
       integer :: i
 
@@ -94,22 +87,17 @@ contains
          this%coarsebnd(i, HI)%index = this%lhn(i, HI) + 1
       enddo
 
-      allocate(this%leafmap(this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)))
-
-      this%leafmap(:, :, :) = .true.
-      call this%flag%initmap(this%lhn)
-
-   end subroutine init_gc_bnd
+   end subroutine init_gc_fcflx
 
 !> \brief Routines that deallocates all internals of the grid container
 
-   subroutine cleanup_bnd(this)
+   subroutine cleanup_fcflx(this)
 
       use constants, only: xdim, zdim, LO, HI
 
       implicit none
 
-      class(grid_container_bnd_t), intent(inout) :: this  !< object invoking type-bound procedure
+      class(grid_container_fcflx_t), intent(inout) :: this  !< object invoking type-bound procedure
 
       integer :: d, g
 
@@ -125,10 +113,7 @@ contains
       call cpl%cleanup
       call cpr%cleanup
 
-      ! arrays not handled through named_array feature
-      if (allocated(this%leafmap)) deallocate(this%leafmap)
-
-   end subroutine cleanup_bnd
+   end subroutine cleanup_fcflx
 
 !> \brief Calculate fluxes incoming from fine grid for 1D solver
 
@@ -141,11 +126,11 @@ contains
 
       implicit none
 
-      class(grid_container_bnd_t), intent(in)    :: this    !< object invoking type-bound procedure
-      integer(kind=4),             intent(in)    :: cdim    !< direction of the flux
-      integer,                     intent(in)    :: i1      !< coordinate
-      integer,                     intent(in)    :: i2      !< coordinate
-      type(ext_fluxes),            intent(inout) :: eflx
+      class(grid_container_fcflx_t), intent(in)    :: this  !< object invoking type-bound procedure
+      integer(kind=4),               intent(in)    :: cdim  !< direction of the flux
+      integer,                       intent(in)    :: i1    !< coordinate
+      integer,                       intent(in)    :: i2    !< coordinate
+      type(ext_fluxes),              intent(inout) :: eflx
 
       if (this%finebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
          fpl = this%finebnd(cdim, LO)%fa2fp(i1, i2)
@@ -205,11 +190,11 @@ contains
 
       implicit none
 
-      class(grid_container_bnd_t), intent(inout) :: this    !< object invoking type-bound procedure
-      integer(kind=4),             intent(in)    :: cdim
-      integer,                     intent(in)    :: i1
-      integer,                     intent(in)    :: i2
-      type(ext_fluxes),            intent(inout) :: eflx
+      class(grid_container_fcflx_t), intent(inout) :: this  !< object invoking type-bound procedure
+      integer(kind=4),               intent(in)    :: cdim
+      integer,                       intent(in)    :: i1
+      integer,                       intent(in)    :: i2
+      type(ext_fluxes),              intent(inout) :: eflx
 
       if (associated(eflx%lo)) then
          eflx%lo%index = eflx%lo%index + this%lhn(cdim, LO)
@@ -250,62 +235,4 @@ contains
 
    end subroutine save_outfluxes
 
-!< \brief Create list of SFC indices to be created from refine flags
-
-   subroutine refinemap2SFC_list(this)
-
-      use constants,  only: refinement_factor, xdim, ydim, zdim, I_ONE
-      use domain,     only: dom
-      use refinement, only: bsize
-
-      implicit none
-
-      class(grid_container_bnd_t), intent(inout) :: this !< object invoking type-bound procedure
-
-      integer(kind=8) :: i, j, k, ifs, ife, jfs, jfe, kfs, kfe
-
-      call this%flag%clear(this%leafmap) ! no parent correction possible beyond this point
-
-      if (.not. this%flag%get()) return
-
-      if (any((bsize <= 0) .and. dom%has_dir)) return ! this routine works only with blocky AMR
-
-      !! ToDo: precompute refinement decomposition in this%init_gc and simplify the code below.
-      !! It should also simplify decomposition management and make it more flexible in case we decide to work on uneven AMR blocks
-
-      !! beware: consider dropping this%l%off feature for simplicity. It will require handling the shift due to domain expansion (some increase CPU cost)
-
-      associate( b_size => merge(bsize, huge(I_ONE), dom%has_dir))
-         do i = int(((this%is - this%l%off(xdim))*refinement_factor) / b_size(xdim)), int(((this%ie - this%l%off(xdim))*refinement_factor + I_ONE) / b_size(xdim))
-            ifs = max(int(this%is, kind=8), int(this%l%off(xdim)) + (i*b_size(xdim))/refinement_factor)
-            ife = min(int(this%ie, kind=8), int(this%l%off(xdim)) + ((i+I_ONE)*b_size(xdim)-I_ONE)/refinement_factor)
-
-            do j = int(((this%js - this%l%off(ydim))*refinement_factor) / b_size(ydim)), int(((this%je - this%l%off(ydim))*refinement_factor + I_ONE) / b_size(ydim))
-               jfs = max(int(this%js, kind=8), int(this%l%off(ydim)) + (j*b_size(ydim))/refinement_factor)
-               jfe = min(int(this%je, kind=8), int(this%l%off(ydim)) + ((j+I_ONE)*b_size(ydim)-I_ONE)/refinement_factor)
-
-               do k = int(((this%ks - this%l%off(zdim))*refinement_factor) / b_size(zdim)), int(((this%ke - this%l%off(zdim))*refinement_factor + I_ONE) / b_size(zdim))
-                  kfs = max(int(this%ks, kind=8), int(this%l%off(zdim)) + (k*b_size(zdim))/refinement_factor)
-                  kfe = min(int(this%ke, kind=8), int(this%l%off(zdim)) + ((k+I_ONE)*b_size(zdim)-I_ONE)/refinement_factor)
-                  if (this%flag%get(ifs, ife, jfs, jfe, kfs, kfe)) call this%flag%add(this%l%id+I_ONE, [i, j, k]*b_size + refinement_factor*this%l%off, refinement_factor*this%l%off)
-               enddo
-            enddo
-         enddo
-      end associate
-      call this%flag%clear
-
-   end subroutine refinemap2SFC_list
-
-!> \brief Returns .true. if there are any non-covered cells on this
-
-   pure logical function has_leaves(this)
-
-      implicit none
-
-      class(grid_container_bnd_t), intent(in) :: this
-
-      has_leaves = any(this%leafmap)
-
-   end function has_leaves
-
-end module grid_cont_bnd
+end module grid_cont_fcflx

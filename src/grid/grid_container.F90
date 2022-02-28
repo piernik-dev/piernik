@@ -112,7 +112,8 @@ contains
 
       call this%init_gc_base(my_se, grid_id, l)
 
-      call this%init_gc_bnd
+      call this%init_gc_ref
+      call this%init_gc_fcflx
 
       call ppp_main%start(na_label, PPP_AMR + PPP_CG)
       call this%add_all_na
@@ -151,7 +152,8 @@ contains
       call this%cleanup_base
       call this%cleanup_na
       call this%cleanup_bseg
-      call this%cleanup_bnd
+      call this%cleanup_ref
+      call this%cleanup_fcflx
       call this%cleanup_prolong
 #ifdef NBODY
       call this%pset%cleanup
