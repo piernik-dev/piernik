@@ -219,12 +219,12 @@ contains
 
    subroutine internal_boundaries_local(this, ind, tgt3d, dmask)
 
-      use cg_cost_data,  only: I_OTHER
-      use cg_list,       only: cg_list_element
-      use constants,     only: xdim, ydim, zdim, LO, HI, cor_dim, INVALID
-      use dataio_pub,    only: die
-      use grid_cont,     only: grid_container
-      use grid_cont_bnd, only: segment
+      use cg_cost_data,   only: I_OTHER
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, LO, HI, cor_dim, INVALID
+      use dataio_pub,     only: die
+      use grid_cont,      only: grid_container
+      use grid_cont_bseg, only: segment
 
       implicit none
 
@@ -471,7 +471,7 @@ contains
       use constants,        only: xdim, cor_dim, LO, HI, I_ONE, I_TWO, I_THREE, I_FOUR
       use dataio_pub,       only: die
       use grid_cont,        only: grid_container
-      use grid_cont_bnd,    only: segment
+      use grid_cont_bseg,   only: segment
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_ORDER_FORTRAN, &
            &                      MPI_Type_create_subarray, MPI_Type_commit, MPI_Type_free
       use MPIFUN,           only: MPI_Irecv, MPI_Isend, MPI_Comm_dup, MPI_Comm_free
