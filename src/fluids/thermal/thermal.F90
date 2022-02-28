@@ -659,10 +659,8 @@ contains
                !Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-TN * lambda1 / ltntrna * (Y0 - Y(ii)))
                Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-lambda1 * Y0f)
             else
-               Tnew = temp * (1 - (isochoric-alpha0) * fiso * dt / tcool)**(1.0/(isochoric-alpha0))
+               Tnew = temp * (1 - (isochoric-alpha0) * fiso * sign(1.0, lambda1) * dt / tcool)**(1.0/(isochoric-alpha0))
             endif
-
-            if (Tnew < 100.0) Tnew = 100.0                        ! To improve
 
          case ('null')
             return
@@ -673,7 +671,7 @@ contains
 
        end select
             
-       if (Tnew < 100.0) Tnew = 100.0                        ! To improve
+       if (Tnew < 10.0) Tnew = 10.0                        ! To improve
 
    end subroutine temp_EIS
 
