@@ -89,7 +89,10 @@ contains
 
 #ifdef MULTIGRID
          diff_dt_crs_orig = dt_crs
-         if (.not. diff_explicit) dt_crs = dt_crs * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
+#ifdef CRESP
+         diff_dt_crs_orig = min(dt_crs, dt_cre)
+#endif /* CRESP */
+         if (.not. diff_explicit) dt_crs = diff_dt_crs_orig * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
 #endif /* MULTIGRID */
          frun = .false.
       endif
