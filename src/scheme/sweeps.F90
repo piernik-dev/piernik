@@ -164,9 +164,6 @@ contains
                      call die("[sweeps:sweep] Cannot determine side (Recv)")
                      lh = INVALID
                   endif
-                  ! cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = &
-                  !     cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) + seg(g)%buf(:, :, :)
-                  ! for more general decompositions with odd-offset patches it might be necessary to do sum, but it need to be debugged first
                   cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:flind%all, :, :)
                   if (allocated(cg%finebnd(cdim, lh)%bflx)) cg%finebnd(cdim, lh)%bflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(flind%all+1:, :, :)
                else

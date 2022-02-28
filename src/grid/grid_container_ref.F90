@@ -45,6 +45,9 @@ module grid_cont_ref
       logical, allocatable, dimension(:,:,:) :: leafmap  !< .true. when a cell is not covered by finer cells, .false. otherwise
       type(ref_flag_t) :: flag                           !< refine or derefine this grid container?
 
+      ! Due to the memory cost, this%leafmap should be used only as a mask in array operations. It is safe but a bit too general performance-wise.
+      ! \todo Implement a smaller array for oct-tree indicators of children coverage.
+
    contains
 
       procedure :: init_gc_ref         !< Initialization
@@ -134,7 +137,14 @@ contains
 
    end subroutine refinemap2SFC_list
 
-!> \brief Returns .true. if there are any non-covered cells on this
+!>
+!! \brief Returns .true. if there are any non-covered cells on this
+!!
+!! \details This is quite general but expensive test. For an oct-tree
+!! (complete or incomplete) it would be enough to check only 8 values.
+!!
+!! \todo Implement cheaper variant together with more metadata in %dot or similar structures.
+!<
 
    pure logical function has_leaves(this)
 

@@ -102,16 +102,16 @@ contains
 
       type(fluxpoint) :: fp
 
-      fp%index = this%index(   i1, i2)
+      fp%index = this%index(i1, i2)
 
       ! It looks like a bogus detection of -Wmaybe-uninitialized that occurs only with -O0.
 
       if (.not. allocated(this%uflx)) call die("[flx_arr:fa2fp] .not. allocated(this%uflx)")
-      fp%uflx = this%uflx (:, i1, i2)
+      fp%uflx = this%uflx(:, i1, i2)
 
       if (has_B) then
          if (.not. allocated(this%bflx)) call die("[flx_arr:fa2fp] .not. allocated(this%bflx)")
-         fp%bflx = this%bflx (:, i1, i2)
+         fp%bflx = this%bflx(:, i1, i2)
       endif
 
    end function fa2fp
@@ -132,8 +132,8 @@ contains
       integer,          intent(in)    :: i2    !< 2nd index
 
       if (this%index(i1, i2) /= fp%index) call die("[flx_arr:fp2fa] inconsistent index")
-      this%uflx (:, i1, i2) = fp%uflx
-      if (has_B) this%bflx (:, i1, i2) = fp%bflx
+      this%uflx(:, i1, i2) = fp%uflx
+      if (has_B) this%bflx(:, i1, i2) = fp%bflx
 
    end subroutine fp2fa
 

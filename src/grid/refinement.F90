@@ -284,12 +284,12 @@ contains
       enddo
 
       if (any(dom%has_dir .and. modulo(bsize, refinement_factor) /= 0)) then
-         write(msg, '(a,3i5,a,i2)')"[refinement:init_refinement] bsize = [", bsize, "] not divisible by ",refinement_factor
+         write(msg, '(a,3i5,a,i2)')"[refinement:init_refinement] bsize = [", bsize, "] not divisible by ", refinement_factor
          call die(msg)
-         ! Formally we can implement blocky AMR with blocks of odd sizes, it is just easier to have even sizes, especially when our refinement factor is fixed at 2"
-         ! Odd bsize would be divided into even+odd blocks and all prolongation and restriction routines should be aware of the difference.
-         ! do_refine = .false. is there to make it safer to turn call die() into call warn()
-         do_refine = .false.
+         ! A block with odd bsize cannot be refined to blocks with odd bsizes because we prefer to allow for incomplete coverage.
+         ! Then partially refined block would have to handle fluxes in partially refined cells in some places.
+         ! A workaround for this would involve handling blocks with different bsize which is not worth the added complexity.
+         do_refine = .false.  ! just in case someone wants to experiment with odd bsize anyway
       endif
 
       level_crit = (63 - int(log(maxval(dom%n_d)-1.)/log(2.)+1)*dom%eff_dim)/dom%eff_dim  ! these are the limits of ordering::Morton_id

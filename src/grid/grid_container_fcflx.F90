@@ -40,7 +40,10 @@ module grid_cont_fcflx
    private
    public :: grid_container_fcflx_t
 
-   type(fluxpoint), target :: fpl, fpr, cpl, cpr
+   type(fluxpoint), target :: fpl, fpr, cpl, cpr  !< Auxiliary buffers for cell fluxes.
+   ! Use with care! Each call to save_outfluxes should be preceded by call to set_fluxpointers.
+   ! Do not make another call to set_fluxpointers before completion of save_outfluxes.
+   ! The routines set_fluxpointers/save_outfluxes were designed to wrap a 1D solver (line by line execution).
 
    !> \brief Buffers for f/c flux exchange
    type, extends(grid_container_ref_t), abstract :: grid_container_fcflx_t
@@ -72,6 +75,9 @@ contains
 
       integer :: i
 
+      ! For simplicity we allocate all possible buffers for f/c fluxes.
+      ! Some of this memory remains unused and may get swapped out.
+      ! Index values outside of the block mark no flux to process.
       do i = LO, HI
          call this%finebnd  (xdim, i)%init([ this%js, this%je ], [ this%ks, this%ke ])
          call this%finebnd  (ydim, i)%init([ this%ks, this%ke ], [ this%is, this%ie ])
@@ -115,7 +121,11 @@ contains
 
    end subroutine cleanup_fcflx
 
-!> \brief Calculate fluxes incoming from fine grid for 1D solver
+!>
+!! \brief Calculate fluxes incoming from fine grid for 1D solver
+!!
+!! Somewhat spaghetti style
+!<
 
    subroutine set_fluxpointers(this, cdim, i1, i2, eflx)
 
@@ -128,9 +138,9 @@ contains
 
       class(grid_container_fcflx_t), intent(in)    :: this  !< object invoking type-bound procedure
       integer(kind=4),               intent(in)    :: cdim  !< direction of the flux
-      integer,                       intent(in)    :: i1    !< coordinate
-      integer,                       intent(in)    :: i2    !< coordinate
-      type(ext_fluxes),              intent(inout) :: eflx
+      integer,                       intent(in)    :: i1    !< coordinate_1, perpendicular to the f/c face
+      integer,                       intent(in)    :: i2    !< coordinate_2, perpendicular to the f/c face
+      type(ext_fluxes),              intent(inout) :: eflx  !< fluxes stored for the selected cell
 
       if (this%finebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
          fpl = this%finebnd(cdim, LO)%fa2fp(i1, i2)
@@ -155,10 +165,14 @@ contains
             if (associated(eflx%li)) eflx%li%uflx(iarr_all_mx) = eflx%li%uflx(iarr_all_mx) / this%x(i2)
             if (associated(eflx%ri)) eflx%ri%uflx(iarr_all_mx) = eflx%ri%uflx(iarr_all_mx) / this%x(i2)
          else if (cdim == zdim) then
-            if (associated(eflx%li)) eflx%li%uflx = eflx%li%uflx / this%x(i1)
-            if (associated(eflx%li)) eflx%li%uflx(iarr_all_my) = eflx%li%uflx(iarr_all_my) / this%x(i1) ! that makes this%x(i1)**2
-            if (associated(eflx%ri)) eflx%ri%uflx = eflx%ri%uflx / this%x(i1)
-            if (associated(eflx%ri)) eflx%ri%uflx(iarr_all_my) = eflx%ri%uflx(iarr_all_my) / this%x(i1) ! that makes this%x(i1)**2
+            if (associated(eflx%li)) then
+               eflx%li%uflx = eflx%li%uflx / this%x(i1)
+               eflx%li%uflx(iarr_all_my) = eflx%li%uflx(iarr_all_my) / this%x(i1) ! that makes this%x(i1)**2
+            endif
+            if (associated(eflx%ri)) then
+               eflx%ri%uflx = eflx%ri%uflx / this%x(i1)
+               eflx%ri%uflx(iarr_all_my) = eflx%ri%uflx(iarr_all_my) / this%x(i1) ! that makes this%x(i1)**2
+            endif
          endif
       endif
 
@@ -191,10 +205,10 @@ contains
       implicit none
 
       class(grid_container_fcflx_t), intent(inout) :: this  !< object invoking type-bound procedure
-      integer(kind=4),               intent(in)    :: cdim
-      integer,                       intent(in)    :: i1
-      integer,                       intent(in)    :: i2
-      type(ext_fluxes),              intent(inout) :: eflx
+      integer(kind=4),               intent(in)    :: cdim  !< direction of the flux
+      integer,                       intent(in)    :: i1    !< coordinate_1, perpendicular to the f/c face
+      integer,                       intent(in)    :: i2    !< coordinate_2, perpendicular to the f/c face
+      type(ext_fluxes),              intent(inout) :: eflx  !< fluxes stored for the selected cell
 
       if (associated(eflx%lo)) then
          eflx%lo%index = eflx%lo%index + this%lhn(cdim, LO)
@@ -209,6 +223,9 @@ contains
       endif
 
    contains
+
+      ! It would be nice to have this routine as fluxpoint::cyl_scale() or inside fp2fa()
+      ! Unfortunately it requires cdim and this%x(i1) or this%x(i2)
 
       subroutine cyl_scale(fp)
 
