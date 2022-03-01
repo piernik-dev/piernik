@@ -121,7 +121,7 @@ contains
 
       implicit none
 
-      integer(kind=4) :: nn, icr, jcr
+      integer(kind=4) :: nn, icr, jcr, ncrsp, add_E
       integer         :: ne
       real            :: maxKcrs
 
@@ -276,8 +276,11 @@ contains
       ma1d = [ncrs]
       call my_allocate(iarr_crs, ma1d)
 
+      add_E = 0
+      if (ncre > 0) add_E = I_ONE
+      ncrsp = ncrn + add_E
 #ifdef COSM_RAYS_SOURCES
-      call init_crsources(ncrn, crn_gpcr_ess)
+      call init_crsources(ncrsp, ncrn, crn_gpcr_ess, cre_gpcr_ess)
 #endif /* COSM_RAYS_SOURCES */
 
       ma1d = [ int(count(crn_gpcr_ess), kind=4) ]

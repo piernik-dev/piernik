@@ -49,7 +49,8 @@ module cr_data
    ! Isotope list
    !> \deprecated BEWARE: changing the following order should not provide any differences, yet it does!
    enum, bind(C)
-      enumerator :: icr_H1 = 1
+      enumerator :: icr_E = 1
+      enumerator :: icr_H1
       enumerator :: icr_C12
       enumerator :: icr_Be9
       enumerator :: icr_Be10
@@ -65,6 +66,7 @@ module cr_data
 
    integer, parameter                                      :: nicr = icr_LAST - 1
 
+   logical, dimension(PRES:ESS)                            :: eE                 !< presence and grad_pcr essentiality of electrons
    logical, dimension(PRES:ESS)                            :: eH1                !< presence and grad_pcr essentiality of H1 isotope
    logical, dimension(PRES:ESS)                            :: eLi7               !< presence and grad_pcr essentiality of Li7 isotope
    logical, dimension(PRES:ESS)                            :: eBe9               !< presence and grad_pcr essentiality of Be9 isotope
@@ -137,25 +139,33 @@ contains
 !! The list is active while \b "COSM_RAYS_SOURCES" is defined.
 !! \n \n
 !<
-   subroutine init_crsources(ncrn, crness)
+   subroutine init_crsources(ncrsp, ncrn, crness, creess)
 
-      use dataio_pub,      only: msg, printinfo, die, nh
-      use mpisetup,        only: lbuff, master, slave, piernik_MPI_Bcast
+      use dataio_pub, only: msg, printinfo, die, nh
+      use mpisetup,   only: lbuff, master, slave, piernik_MPI_Bcast
+      use units,      only: me, mp
+
 
       implicit none
 
-      integer(kind=4),       intent(in)    :: ncrn
+      integer(kind=4),       intent(in)    :: ncrsp, ncrn
       logical, dimension(:), intent(inout) :: crness
+      logical,               intent(inout) :: creess
 
       integer                                    :: icr, i
       character(len=specieslen), dimension(nicr) :: eCRSP_names
       logical,                   dimension(nicr) :: eCRSP_ess
       real,                      dimension(nicr) :: eCRSP_mass
 
-      namelist /CR_SPECIES/ eH1, eLi7, eBe9, eBe10, eC12, eN14, eO16
+      namelist /CR_SPECIES/ eE, eH1, eLi7, eBe9, eBe10, eC12, eN14, eO16
 
       ! Only protons (p+) are dynamically important, we can neglect grad_pcr from heavier nuclei
       ! because of their lower abundancies: n(alpha) ~ 0.1 n(p+), other elements less abundant by orders of magnitude
+#ifdef CRESP
+      eE    = .true.
+#else /* !CRESP */
+      eE    = .false.
+#endif /* !CRESP */
       eH1   = .true.
       eLi7  = .false.
       eBe9  = [.true., .false.]
@@ -184,13 +194,14 @@ contains
          close(nh%lun)
          call nh%compare_namelist() ! Do not use one-line if here!
 
-         lbuff(icr_H1   VS icr_H1  )   = eH1
-         lbuff(icr_C12  VS icr_C12 )  = eC12
-         lbuff(icr_Be9  VS icr_Be9 )  = eBe9
+         lbuff(icr_E    VS icr_E   ) = eE
+         lbuff(icr_H1   VS icr_H1  ) = eH1
+         lbuff(icr_C12  VS icr_C12 ) = eC12
+         lbuff(icr_Be9  VS icr_Be9 ) = eBe9
          lbuff(icr_Be10 VS icr_Be10) = eBe10
-         lbuff(icr_N14  VS icr_N14 )  = eN14
-         lbuff(icr_O16  VS icr_O16 )  = eO16
-         lbuff(icr_Li7  VS icr_Li7 )  = eLi7
+         lbuff(icr_N14  VS icr_N14 ) = eN14
+         lbuff(icr_O16  VS icr_O16 ) = eO16
+         lbuff(icr_Li7  VS icr_Li7 ) = eLi7
 
       endif
 
@@ -198,6 +209,7 @@ contains
 
       if (slave) then
 
+         eE    = lbuff(icr_E    VS icr_E   )
          eH1   = lbuff(icr_H1   VS icr_H1  )
          eC12  = lbuff(icr_C12  VS icr_C12 )
          eBe9  = lbuff(icr_Be9  VS icr_Be9 )
@@ -210,10 +222,11 @@ contains
 
 #undef VS
 
-      eCRSP_names(1:7) = ['p+  ','C12 ','Be9 ','Be10','N14 ','O16 ','Li7 ']
-      eCRSP_mass (1:7) = [m_H1, m_C12, m_Be9, m_Be10, m_N14, m_O16, m_Li7 ]
-      eCRSP      (1:7) = [eH1(PRES), eC12(PRES), eBe9(PRES), eBe10(PRES), eN14(PRES), eO16(PRES), eLi7(PRES)]
-      eCRSP_ess  (1:7) = [eH1(ESS) , eC12(ESS) , eBe9(ESS) , eBe10(ESS) , eN14(ESS) , eO16(ESS) , eLi7(ESS) ]
+      eCRSP_names(1:nicr) = ['e-  ', 'p+  ', 'C12 ', 'Be9 ', 'Be10', 'N14 ', 'O16 ', 'Li7 ']
+      eCRSP_mass (1:nicr) = [me/mp,  m_H1,   m_C12,   m_Be9, m_Be10, m_N14,  m_O16,  m_Li7 ]
+      eCRSP      (1:nicr) = [eE(PRES), eH1(PRES), eC12(PRES), eBe9(PRES), eBe10(PRES), eN14(PRES), eO16(PRES), eLi7(PRES)]
+      eCRSP_ess  (1:nicr) = [eE(ESS) , eH1(ESS) , eC12(ESS) , eBe9(ESS) , eBe10(ESS) , eN14(ESS) , eO16(ESS) , eLi7(ESS) ]
+
       allocate(cr_names(ncrn), cr_table(nicr), cr_sigma(ncrn,ncrn), cr_tau(ncrn), cr_primary(ncrn), cr_mass(ncrn))
       cr_names(:)   = ''
       cr_table(:)   = 0
@@ -222,8 +235,9 @@ contains
       cr_primary(:) = 0.0
 
       icr = 0
-      if (count(eCRSP) > ncrn) call die("[cr_data:init_crsources] You have specified more CR species present than is set by ncrn. Check your CR_SPECIES and COSMIC_RAYS namelists parameters")
-      do i = 1, size(eCRSP)
+      if (count(eCRSP) > ncrsp) call die("[cr_data:init_crsources] You have specified more CR species present than is set by ncrsp. Check your CR_SPECIES and COSMIC_RAYS namelists parameters")
+      if (eCRSP(icr_E)) creess = eCRSP_ess(icr_E)
+      do i = icr_H1, size(eCRSP)
          if (eCRSP(i)) then
             icr = icr + 1
             cr_table(i)   = icr
