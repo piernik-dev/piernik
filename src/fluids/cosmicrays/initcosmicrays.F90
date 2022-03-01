@@ -116,7 +116,7 @@ contains
       use func,            only: operator(.notequals.)
       use mpisetup,        only: ibuff, rbuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
 #ifdef COSM_RAYS_SOURCES
-      use cr_data,         only: init_crsources
+      use cr_data,         only: init_cr_species
 #endif /* COSM_RAYS_SOURCES */
 
       implicit none
@@ -280,7 +280,7 @@ contains
       if (ncre > 0) add_E = I_ONE
       ncrsp = ncrn + add_E
 #ifdef COSM_RAYS_SOURCES
-      call init_crsources(ncrsp, ncrn, crn_gpcr_ess, cre_gpcr_ess)
+      call init_cr_species(ncrsp, ncrn, crn_gpcr_ess, cre_gpcr_ess)
 #endif /* COSM_RAYS_SOURCES */
 
       ma1d = [ int(count(crn_gpcr_ess), kind=4) ]

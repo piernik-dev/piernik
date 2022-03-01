@@ -139,7 +139,7 @@ contains
 !! The list is active while \b "COSM_RAYS_SOURCES" is defined.
 !! \n \n
 !<
-   subroutine init_crsources(ncrsp, ncrn, crness, creess)
+   subroutine init_cr_species(ncrsp, ncrn, crness, creess)
 
       use dataio_pub, only: msg, printinfo, die, nh
       use mpisetup,   only: lbuff, master, slave, piernik_MPI_Bcast
@@ -235,7 +235,7 @@ contains
       cr_primary(:) = 0.0
 
       icr = 0
-      if (count(eCRSP) > ncrsp) call die("[cr_data:init_crsources] You have specified more CR species present than is set by ncrsp. Check your CR_SPECIES and COSMIC_RAYS namelists parameters")
+      if (count(eCRSP) > ncrsp) call die("[cr_data:init_cr_species] You have specified more CR species present than is set by ncrsp. Check your CR_SPECIES and COSMIC_RAYS namelists parameters")
       if (eCRSP(icr_E)) creess = eCRSP_ess(icr_E)
       do i = icr_H1, size(eCRSP)
          if (eCRSP(i)) then
@@ -276,17 +276,17 @@ contains
       if (eCRSP(icr_Be10)) cr_tau(cr_table(icr_Be10)) = tau_Be10
 
 
-   end subroutine init_crsources
+   end subroutine init_cr_species
 
 !> \brief cleanup routine
 
-   subroutine cleanup_crsources
+   subroutine cleanup_cr_species
 
       implicit none
 
       deallocate(cr_names, cr_table, cr_sigma, cr_tau, cr_primary, cr_mass)
 
-   end subroutine cleanup_crsources
+   end subroutine cleanup_cr_species
 
 end module cr_data
 

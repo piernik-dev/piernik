@@ -74,7 +74,7 @@ contains
       use resistivity,           only: cleanup_resistivity
 #endif /* RESISTIVE */
 #ifdef COSM_RAYS_SOURCES
-      use cr_data,               only: cleanup_crsources
+      use cr_data,               only: cleanup_cr_species
 #endif /* COSM_RAYS_SOURCES */
 #ifdef THERM
       use thermal,               only: cleanup_thermal
@@ -116,7 +116,7 @@ contains
       call cleanup_randomization;  call nextdot
 #endif /* RANDOMIZE */
 #ifdef COSM_RAYS_SOURCES
-      call cleanup_crsources;      call nextdot
+      call cleanup_cr_species;     call nextdot
 #endif /* COSM_RAYS_SOURCES */
 #ifdef THERM
      call cleanup_thermal;         call nextdot
