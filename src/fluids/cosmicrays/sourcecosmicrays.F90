@@ -117,7 +117,7 @@ contains
       full_dim = nn > 1
 
       usrc = 0.0
-      if (.not.full_dim) return
+      if (.not. full_dim .or. flind%crn%all < 1) return
 
       call src_gpcr(uu, nn, decr, grad_pcr, sweep, i1, i2, cg)
       usrc(:, iarr_crn(:)) = decr
