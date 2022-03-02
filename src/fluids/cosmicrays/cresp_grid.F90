@@ -185,7 +185,14 @@ contains
 #ifdef DEBUG
                   call cresp_detect_negative_content(cfl_cresp_violation, [i, j, k])
 #endif /* DEBUG */
-                  if (cfl_cresp_violation) return ! nothing to do here!
+                  if (cfl_cresp_violation) then
+                     if (allow_loop_leave) then
+                        call cg%costs%stop(I_MHD)
+                        call ppp_main%stop(crug_label)
+                        return ! nothing to do here!
+                     endif
+                  endif
+
                   cg%u(iarr_cre_n, i, j, k) = cresp%n
                   cg%u(iarr_cre_e, i, j, k) = cresp%e
                   if (dfpq%any_dump) then
