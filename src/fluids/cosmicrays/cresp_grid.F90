@@ -144,7 +144,7 @@ contains
       type(grid_container), pointer  :: cg
       type(spec_mod_trms)            :: sptab
       real                           :: dt_crs_sstep, dt_cresp, dt_doubled
-      logical                        :: inactive_cell
+      logical                        :: inactive_cell, cfl_violation_step
       character(len=*), parameter    :: crug_label = "CRESP_upd_grid"
 
       if (.not. use_cresp_evol) return
@@ -153,6 +153,7 @@ contains
 
       cgl => leaves%first
       cfl_cresp_violation = .false.
+      cfl_violation_step  = .false.
       inactive_cell       = .false.
       dt_doubled  = 2 * dt       !< used always when cresp_substep is not performed
       dt_cresp    = dt_doubled   !< computed for each cell if cresp_substep, using dt_doubled
@@ -181,11 +182,12 @@ contains
 #ifdef CRESP_VERBOSED
                   print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* CRESP_VERBOSED */
-                  if (.not. inactive_cell) call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_cresp_violation, substeps = nssteps)
+                  if (.not. inactive_cell) call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_violation_step, substeps = nssteps)
 #ifdef DEBUG
-                  call cresp_detect_negative_content(cfl_cresp_violation, [i, j, k])
+                  call cresp_detect_negative_content(cfl_violation_step, [i, j, k])
 #endif /* DEBUG */
-                  if (cfl_cresp_violation) then
+                  if (cfl_violation_step) then
+                     cfl_cresp_violation = cfl_violation_step
                      if (allow_loop_leave) then
                         call cg%costs%stop(I_MHD)
                         call ppp_main%stop(crug_label)
