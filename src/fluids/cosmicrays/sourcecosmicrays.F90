@@ -36,61 +36,24 @@ module sourcecosmicrays
    implicit none
 
    private
-   public :: src_gpcr_exec
+   public :: src_gpcr
 #ifdef COSM_RAYS_SOURCES
    public :: src_cr_spallation_and_decay
 #endif /* COSM_RAYS_SOURCES */
 
 contains
 
-!>
-!! \brief Computation of Cosmic ray pressure gradient and pcr div v
-!<
-   subroutine src_gpcr(uu, nn, decr, grad_pcr, sweep, i1, i2, cg)
-
-      use crhelpers,      only: set_div_v1d
-      use domain,         only: dom
-      use fluidindex,     only: flind
-      use grid_cont,      only: grid_container
-      use initcosmicrays, only: cr_active, gpcr_essential
-      use initcosmicrays, only: iarr_crn, gamma_crn
-
-      implicit none
-
-      integer(kind=4),                    intent(in)  :: nn                 !< array size
-      real, dimension(nn, flind%all),     intent(in)  :: uu                 !< vector of conservative variables
-      real, dimension(nn),                intent(out) :: grad_pcr
-      real, dimension(nn, flind%crn%all), intent(out) :: decr
-      integer(kind=4),                    intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
-      integer,                            intent(in)  :: i1                 !< coordinate of sweep in the 1st remaining direction
-      integer,                            intent(in)  :: i2                 !< coordinate of sweep in the 2nd remaining direction
-      type(grid_container), pointer,      intent(in)  :: cg                 !< current grid piece
-      real, dimension(:), pointer                     :: divv               !< vector of velocity divergence used in cosmic ray advection
-      integer                                         :: icr, jcr
-
-      call set_div_v1d(divv, sweep, i1, i2, cg)
-      do icr = 1, flind%crn%all
-         ! 1/eff_dim is because we compute the p_cr*dv in every sweep (3 times in 3D, twice in 2D and once in 1D experiments)
-         decr(:, icr)      = -1. / real(dom%eff_dim) * (gamma_crn(icr)-1.0) * uu(:, iarr_crn(icr))*divv(:)
-      enddo
-      !< gpcr_essential includes electrons only if CRESP not defined and cre_gpcr_ess = .true.
-      grad_pcr(:) = 0.0
-      do icr = 1, size(gpcr_essential)
-         jcr = gpcr_essential(icr)
-         grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crn(jcr)-1.)*(uu(1:nn-2, iarr_crn(jcr)) - uu(3:nn, iarr_crn(jcr)))/(2.*cg%dl(sweep))
-      enddo
-      grad_pcr(1:2) = 0.0 ; grad_pcr(nn-1:nn) = 0.0
-
-   end subroutine src_gpcr
 
 !>
 !! \brief Computation of Cosmic ray pressure gradient and pcr div v
 !<
-   subroutine src_gpcr_exec(uu, nn, usrc, sweep, i1, i2, cg, vx)
+   subroutine src_gpcr(uu, nn, usrc, sweep, i1, i2, cg, vx)
 
+      use crhelpers,        only: set_div_v1d
+      use domain,           only: dom
       use fluidindex,       only: flind, iarr_all_mx, iarr_all_en
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crn
+      use initcosmicrays,   only: cr_active, gamma_crn, gpcr_essential, iarr_crn
 #ifdef CRESP
       use cresp_crspectrum, only: src_gpcresp
       use initcosmicrays,   only: iarr_cre_e
@@ -108,8 +71,9 @@ contains
       real, dimension(nn, flind%all), intent(out) :: usrc               !< u array update component for sources
 !locals
       logical                                     :: full_dim
+      integer                                     :: icr, jcr
+      real, dimension(:), pointer                 :: divv               !< vector of velocity divergence used in cosmic ray advection
       real, dimension(nn)                         :: grad_pcr
-      real, dimension(nn, flind%crn%all)          :: decr
 #ifdef CRESP
       real, dimension(nn)                         :: grad_pcr_cresp
 #endif /* CRESP */
@@ -119,8 +83,20 @@ contains
       usrc = 0.0
       if (.not. full_dim .or. flind%crn%all < 1) return
 
-      call src_gpcr(uu, nn, decr, grad_pcr, sweep, i1, i2, cg)
-      usrc(:, iarr_crn(:)) = decr
+      call set_div_v1d(divv, sweep, i1, i2, cg)
+      do icr = 1, flind%crn%all
+         ! 1/eff_dim is because we compute the p_cr*dv in every sweep (3 times in 3D, twice in 2D and once in 1D experiments)
+         usrc(:, iarr_crn(icr)) = -1. / real(dom%eff_dim) * (gamma_crn(icr)-1.0) * uu(:, iarr_crn(icr)) * divv(:)
+      enddo
+
+      !< gpcr_essential includes electrons only if CRESP not defined and cre_gpcr_ess = .true.
+      grad_pcr(:) = 0.0
+      do icr = 1, size(gpcr_essential)
+         jcr = gpcr_essential(icr)
+         grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active * (gamma_crn(jcr)-1.) * (uu(1:nn-2, iarr_crn(jcr)) - uu(3:nn, iarr_crn(jcr))) / (2. * cg%dl(sweep))
+      enddo
+      grad_pcr(1:2) = 0.0 ; grad_pcr(nn-1:nn) = 0.0
+
       usrc(:, iarr_all_mx(flind%ion%pos)) = grad_pcr
 #ifdef CRESP
       call src_gpcresp(uu(:,iarr_cre_e(:)), nn, cg%dl(sweep), grad_pcr_cresp)         !< cg%dl(sweep) = dx, contribution due to pressure acted upon spectrum components in CRESP via div_v
@@ -133,7 +109,7 @@ contains
       usrc(:, iarr_all_en(flind%ion%pos)) = usrc(:, iarr_all_en(flind%ion%pos)) + vx(:, flind%ion%pos) * grad_pcr_cresp !< BEWARE - check it
 #endif /* CRESP */
 
-   end subroutine src_gpcr_exec
+   end subroutine src_gpcr
 
 !==========================================================================================
 

@@ -162,7 +162,7 @@ contains
       use gravity,          only: grav_src_exec
 #endif /* GRAV */
 #if defined COSM_RAYS && defined IONIZED
-      use sourcecosmicrays, only: src_gpcr_exec
+      use sourcecosmicrays, only: src_gpcr
 #endif /* COSM_RAYS && IONIZED */
 #ifdef COSM_RAYS_SOURCES
       use sourcecosmicrays, only: src_cr_spallation_and_decay
@@ -223,7 +223,7 @@ contains
 #endif /* !GRAV */
 
 #if defined COSM_RAYS && defined IONIZED
-      call src_gpcr_exec(u, n, newsrc, sweep, i1, i2, cg, vx)
+      call src_gpcr(u, n, newsrc, sweep, i1, i2, cg, vx)
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #endif /* COSM_RAYS && IONIZED */
 #ifdef COSM_RAYS_SOURCES
