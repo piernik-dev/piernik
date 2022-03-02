@@ -126,6 +126,7 @@ contains
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, pi, I_ONE
+      use cr_data,        only: icr_H1, icr_C12, cr_table
       use crhelpers,      only: div_v
       use dataio_pub,     only: warn
       use domain,         only: dom
@@ -134,9 +135,6 @@ contains
       use func,           only: emag, ekin, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
-#ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: icr_H1, icr_C12, cr_table
-#endif /* COSM_RAYS_SOURCES */
 
       implicit none
 
@@ -145,10 +143,6 @@ contains
       real                             :: cs_iso, r, r2
       type(cg_list_element),  pointer  :: cgl
       type(grid_container),   pointer  :: cg
-#ifndef COSM_RAYS_SOURCES
-      integer, parameter               :: icr_H1 = 1, icr_C12 = 2
-      integer, parameter, dimension(2) :: cr_table = [1,2]
-#endif /* !COSM_RAYS_SOURCES */
 
       fl => flind%ion
 

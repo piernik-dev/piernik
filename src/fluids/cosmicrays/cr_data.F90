@@ -39,7 +39,7 @@
 !<
 module cr_data
 
-! pulled by COSM_RAYS_SOURCES
+! pulled by COSM_RAYS
 
    implicit none
 
@@ -136,7 +136,7 @@ contains
 !! <tr><td>eN14 </td><td>.false.          </td><td>2 logical values</td><td>\copydoc cr_data::en14 </td></tr>
 !! <tr><td>eO16 </td><td>.false.          </td><td>2 logical values</td><td>\copydoc cr_data::eo16 </td></tr>
 !! </table>
-!! The list is active while \b "COSM_RAYS_SOURCES" is defined.
+!! The list is active while \b "COSM_RAYS" is defined.
 !! \n \n
 !<
    subroutine init_cr_species(ncrsp, ncrn, crness, creess)

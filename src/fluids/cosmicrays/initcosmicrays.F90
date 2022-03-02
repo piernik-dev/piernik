@@ -111,13 +111,11 @@ contains
    subroutine init_cosmicrays
 
       use constants,       only: cbuff_len, I_ONE, I_TWO, half, big
+      use cr_data,         only: init_cr_species
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: die, warn, nh
       use func,            only: operator(.notequals.)
       use mpisetup,        only: ibuff, rbuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
-#ifdef COSM_RAYS_SOURCES
-      use cr_data,         only: init_cr_species
-#endif /* COSM_RAYS_SOURCES */
 
       implicit none
 
@@ -279,9 +277,7 @@ contains
       add_E = 0
       if (ncre > 0) add_E = I_ONE
       ncrsp = ncrn + add_E
-#ifdef COSM_RAYS_SOURCES
       call init_cr_species(ncrsp, ncrn, crn_gpcr_ess, cre_gpcr_ess)
-#endif /* COSM_RAYS_SOURCES */
 
       ma1d = [ int(count(crn_gpcr_ess), kind=4) ]
 

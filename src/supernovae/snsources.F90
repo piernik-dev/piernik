@@ -196,12 +196,8 @@ contains
       use constants,        only: xdim, ydim, zdim
       use domain,           only: dom
       use grid_cont,        only: grid_container
-#ifdef COSM_RAYS_SOURCES
       use cr_data,          only: cr_table, cr_mass, cr_primary, eCRSP, icr_H1, icr_C12, icr_N14, icr_O16
       use initcosmicrays,   only: iarr_crn
-#else /* !COSM_RAYS_SOURCES */
-      use initcosmicrays,   only: iarr_crs
-#endif /* !COSM_RAYS_SOURCES */
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
       use initcrspectrum,   only: cresp, cre_eff, smallcree, use_cresp
@@ -254,14 +250,10 @@ contains
                   enddo
                   decr = decr * ampl
 
-#ifdef COSM_RAYS_SOURCES
                   if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) + decr
                   if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12)) * cr_mass(cr_table(icr_C12)) * decr
                   if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14)) * cr_mass(cr_table(icr_N14)) * decr
                   if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16)) * cr_mass(cr_table(icr_O16)) * decr
-#else /* !COSM_RAYS_SOURCES */
-                  cg%u(iarr_crs,i,j,k) = cg%u(iarr_crs,i,j,k) + decr
-#endif /* !COSM_RAYS_SOURCES */
 
 #ifdef CRESP
                   if (use_cresp) then

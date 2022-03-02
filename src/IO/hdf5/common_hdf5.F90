@@ -111,15 +111,13 @@ contains
       use global,         only: cc_mag
       use mpisetup,       only: master
 #ifdef COSM_RAYS
+      use cr_data,        only: cr_names
       use dataio_pub,     only: msg
       use fluidindex,     only: iarr_all_crn
 #endif /* COSM_RAYS */
 #ifdef CRESP
       use initcosmicrays, only: ncre
 #endif /* CRESP */
-#ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: cr_names
-#endif /* COSM_RAYS_SOURCES */
 
       implicit none
 
@@ -194,15 +192,11 @@ contains
             case ('encr')
                do k = 1, size(iarr_all_crn,1)
                   if (k<=99) then
-#ifdef COSM_RAYS_SOURCES
                      if (len(trim(cr_names(k))) > 0) then
                         write(aux,'(a3,a)') 'cr_', trim(cr_names(k))
                      else
-#endif /* COSM_RAYS_SOURCES */
-                     write(aux,'(A2,I2.2)') 'cr', k
-#ifdef COSM_RAYS_SOURCES
+                        write(aux,'(A2,I2.2)') 'cr', k
                      endif
-#endif /* COSM_RAYS_SOURCES */
                      call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", k
