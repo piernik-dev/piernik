@@ -164,7 +164,7 @@ contains
 #ifdef COSM_RAYS
       use sourcecosmicrays, only: src_gpcr_exec
 #ifdef COSM_RAYS_SOURCES
-      use sourcecosmicrays, only: src_crn_exec
+      use sourcecosmicrays, only: src_cr_spallation_and_decay
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 #ifdef CORIOLIS
@@ -226,7 +226,7 @@ contains
       call src_gpcr_exec(u, n, newsrc, sweep, i1, i2, cg, vx)
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #ifdef COSM_RAYS_SOURCES
-      call src_crn_exec(u, n, newsrc, coeffdt) ! n safe
+      call src_cr_spallation_and_decay(u, n, newsrc, coeffdt) ! n safe
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS && IONIZED */
