@@ -120,9 +120,9 @@ contains
 !<
    subroutine src_cr_spallation_and_decay(uu, n, usrc, rk_coeff)
 
-      use cr_data,       only: eCRSP, cr_table, cr_tau, cr_sigma, icr_Be10, icrH, icrL
-      use fluids_pub,    only: has_ion, has_neu
-      use fluidindex,    only: flind
+      use cr_data,        only: eCRSP, cr_table, cr_tau, cr_sigma, icr_Be10, icrH, icrL
+      use fluids_pub,     only: has_ion, has_neu
+      use fluidindex,     only: flind
       use initcosmicrays, only: iarr_crn
 
       implicit none
@@ -133,49 +133,40 @@ contains
       real, dimension(n, flind%all), intent(out) :: usrc       !< u array update component for sources
 
 ! locals
-      real, dimension(n, flind%crn%all) :: decrn
-      real, dimension(n)                :: dgas, dcr
-      real,         parameter           :: gamma_lor = 10.0
-      real(kind=8), parameter           :: speed_of_light = 3e10*1e6*365.*24.*60.*60. !< cm/Myr \deprecated BEWARE: this line breaks unit consistency, move it to units.F90 and use scaling
-      real,         parameter           :: ndim = 2.0
-      real,         parameter           :: c_n = speed_of_light / ndim
-      real,         parameter           :: gn = 1.0 / gamma_lor / ndim
-      integer                           :: i, j
+      real, dimension(n)                         :: dgas, dcr
+      real, parameter                            :: gamma_lor = 10.0
+      real, parameter                            :: speed_of_light = 3e10*1e6*365.*24.*60.*60. !< cm/Myr \deprecated BEWARE: this line breaks unit consistency, move it to units.F90 and use scaling
+      real, parameter                            :: ndim = 2.0
+      real, parameter                            :: c_n = speed_of_light / ndim
+      real, parameter                            :: gn = 1.0 / gamma_lor / ndim
+      integer                                    :: i, j
 
       dgas = 0.0
       if (has_ion) dgas = dgas + uu(:, flind%ion%idn)
       if (has_neu) dgas = dgas + uu(:, flind%neu%idn)
-      dgas = c_n*dgas
+      dgas = c_n * dgas
 
-      decrn(:,:) = 0.0
-      usrc = 0.0
+      usrc(:,:) = 0.0
 
-      if (eCRSP(icr_Be10)) then
-         decrn(:, cr_table(icr_Be10)) = decrn(:, cr_table(icr_Be10)) - &
-            & gn * uu(:, flind%crn%beg - 1 + cr_table(icr_Be10)) / cr_tau(cr_table(icr_Be10))
-      endif
+      i = cr_table(icr_Be10) ; j = iarr_crn(i)
+      if (eCRSP(icr_Be10)) usrc(:, j) = usrc(:, j) - gn * uu(:, j) / cr_tau(i)
 
       do i = lbound(icrH, 1), ubound(icrH, 1)
-         associate( Hi => icrH(i) )
-            if (eCRSP(Hi)) then
+         associate( Hi => cr_table(icrH(i)) )
+            if (eCRSP(icrH(i))) then
                do j = lbound(icrL, 1), ubound(icrL, 1)
-               associate( &
-                  Lj => icrL(j), &
-                  idx => flind%crn%beg - 1 + cr_table(Hi) &
-               )
-                  if (eCRSP(Lj)) then
-                     dcr = cr_sigma(cr_table(Hi), cr_table(Lj)) * dgas * uu(:, idx)
-                     dcr = min(uu(:, idx)/rk_coeff, dcr)  ! Don't decay more elements than available
-                     decrn(:, cr_table(Hi)) = decrn(:, cr_table(Hi)) - dcr
-                     decrn(:, cr_table(Lj)) = decrn(:, cr_table(Lj)) + dcr
+               associate( Lj => cr_table(icrL(j)) )
+                  if (eCRSP(icrL(j))) then
+                     dcr = cr_sigma(Hi, Lj) * dgas * uu(:, iarr_crn(Hi))
+                     dcr = min(uu(:, iarr_crn(Hi))/rk_coeff, dcr)  ! Don't decay more elements than available
+                     usrc(:, iarr_crn(Hi)) = usrc(:, iarr_crn(Hi)) - dcr
+                     usrc(:, iarr_crn(Lj)) = usrc(:, iarr_crn(Lj)) + dcr
                   endif
                end associate
                enddo
          endif
          end associate
       enddo
-
-      usrc(:, iarr_crn) = decrn(:,:)
 
    end subroutine src_cr_spallation_and_decay
 #endif /* COSM_RAYS_SOURCES */
