@@ -161,12 +161,12 @@ contains
 #ifdef GRAV
       use gravity,          only: grav_src_exec
 #endif /* GRAV */
-#ifdef COSM_RAYS
+#if defined COSM_RAYS && defined IONIZED
       use sourcecosmicrays, only: src_gpcr_exec
+#endif /* COSM_RAYS && IONIZED */
 #ifdef COSM_RAYS_SOURCES
       use sourcecosmicrays, only: src_cr_spallation_and_decay
 #endif /* COSM_RAYS_SOURCES */
-#endif /* COSM_RAYS */
 #ifdef CORIOLIS
       use coriolis,         only: coriolis_force
 #endif /* CORIOLIS */
@@ -195,7 +195,7 @@ contains
       real, dimension(n, flind%all)                           :: usrc, newsrc       !< u array update from sources
       real, dimension(:,:), pointer                           :: vx
 
-      vx   => vel_sweep
+      vx => vel_sweep
 
       usrc = 0.0
 
@@ -225,18 +225,18 @@ contains
 #if defined COSM_RAYS && defined IONIZED
       call src_gpcr_exec(u, n, newsrc, sweep, i1, i2, cg, vx)
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
+#endif /* COSM_RAYS && IONIZED */
 #ifdef COSM_RAYS_SOURCES
       call src_cr_spallation_and_decay(u, n, newsrc, coeffdt) ! n safe
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #endif /* COSM_RAYS_SOURCES */
-#endif /* COSM_RAYS && IONIZED */
 
 ! --------------------------------------------------
 
       u1(:,:) = u1(:,:) + usrc(:,:) * coeffdt
 
       return
-      if (.false.) write(0,*) bb, istep
+      if (.false.) write(0,*) istep
 
    end subroutine internal_sources
 
