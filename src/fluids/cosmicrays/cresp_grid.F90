@@ -39,6 +39,7 @@ module cresp_grid
    public :: cresp_update_grid, cresp_init_grid, cfl_cresp_violation, cresp_clean_grid
 
    logical :: cfl_cresp_violation
+   logical :: allow_loop_leave
 
 contains
 
@@ -53,10 +54,11 @@ contains
       use cresp_crspectrum, only: cresp_allocate_all, cresp_init_state, p_rch_init
       use cresp_NR_method,  only: cresp_initialize_guess_grids
       use dataio,           only: vars
-      use dataio_pub,       only: printinfo, restarted_sim
+      use dataio_pub,       only: printinfo, restarted_sim, warn
+      use global,           only: repetitive_steps, cflcontrol, disallow_CRnegatives
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_n, iarr_cre_e, ncre
-      use initcrspectrum,   only: norm_init_spectrum, dfpq, check_if_dump_fpq, use_cresp
+      use initcrspectrum,   only: norm_init_spectrum, dfpq, check_if_dump_fpq, use_cresp, cresp_disallow_negatives
       use mpisetup,         only: master
       use named_array_list, only: wna
 
@@ -100,6 +102,12 @@ contains
       call p_rch_init               !< sets the right pointer for p_rch function, based on used Taylor expansion coefficient
 
       call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e)   !< initialize spectrum here, f_init should be 1.0
+
+      allow_loop_leave = (.not. cresp_disallow_negatives .and. repetitive_steps .and. cflcontrol /= "flex" .and. cflcontrol /= "flexible")
+
+      if (cresp_disallow_negatives .neqv. disallow_CRnegatives) then
+         if (master) call warn("[cresp_grid:cresp_init_grid] cresp_disallow_negatives /= disallow_CRnegatives - CFL handling may not be reliable.")
+      endif
 
       if (master) call printinfo(" [cresp_grid:cresp_init_grid] CRESP initialized")
 
