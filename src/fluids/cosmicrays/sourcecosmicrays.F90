@@ -121,6 +121,7 @@ contains
    subroutine src_cr_spallation_and_decay(uu, n, usrc, rk_coeff)
 
       use cr_data,        only: eCRSP, cr_table, cr_tau, cr_sigma, icr_Be10, icrH, icrL
+      use domain,         only: dom
       use fluids_pub,     only: has_ion, has_neu
       use fluidindex,     only: flind
       use initcosmicrays, only: iarr_crn
@@ -136,15 +137,15 @@ contains
       real, dimension(n)                         :: dgas, dcr
       real, parameter                            :: gamma_lor = 10.0
       real, parameter                            :: speed_of_light = 3e10*1e6*365.*24.*60.*60. !< cm/Myr \deprecated BEWARE: this line breaks unit consistency, move it to units.F90 and use scaling
-      real, parameter                            :: ndim = 2.0
-      real, parameter                            :: c_n = speed_of_light / ndim
-      real, parameter                            :: gn = 1.0 / gamma_lor / ndim
+      real                                       :: ndim, gn
       integer                                    :: i, j
 
+      ndim = count(dom%has_dir)
+      gn = 1.0 / ndim / gamma_lor
       dgas = 0.0
       if (has_ion) dgas = dgas + uu(:, flind%ion%idn)
       if (has_neu) dgas = dgas + uu(:, flind%neu%idn)
-      dgas = c_n * dgas
+      dgas = dgas * speed_of_light / ndim
 
       usrc(:,:) = 0.0
 
