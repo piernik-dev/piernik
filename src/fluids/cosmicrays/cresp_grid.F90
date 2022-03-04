@@ -152,22 +152,22 @@ contains
       nssteps     = 1
       nssteps_max = 1
 
-      sptab%ucmb  = 0.0
-      if (icomp_active) sptab%ucmb = enden_CMB(redshift) * fsynchr
-
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
 
+         sptab%ucmb  = 0.0
+         if (icomp_active) sptab%ucmb = enden_CMB(redshift) * fsynchr
+
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  sptab%ud = 0.0 ; sptab%ub = 0.0
+                  sptab%ud = 0.0 ; sptab%ub = 0.0; sptab%umag = 0.0
                   cresp%n = cg%u(iarr_cre_n, i, j, k)
                   cresp%e = cg%u(iarr_cre_e, i, j, k)
-                  if (synch_active) sptab%ub = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr, u_b_max)    !< WARNING assusmes that b is in mGs
-                  if (adiab_active) sptab%ud = cg%q(divv_i)%point([i,j,k]) * onet
-                  sptab%ub = sptab%ub + sptab%ucmb
+                  if (synch_active) sptab%umag = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr, u_b_max)    !< WARNING assusmes that b is in mGs
+                  if (adiab_active) sptab%ud   = cg%q(divv_i)%point([i,j,k]) * onet
+                  sptab%ub = sptab%umag + sptab%ucmb  ! prepare term for synchrotron + IC losses
 
                   if (cresp_substep) then !< prepare substep timestep for each cell
                      call cresp_timestep_cell(sptab, dt_cresp, inactive_cell)
