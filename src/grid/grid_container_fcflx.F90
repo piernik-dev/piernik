@@ -38,7 +38,7 @@ module grid_cont_fcflx
    implicit none
 
    private
-   public :: grid_container_fcflx_t
+   public :: grid_container_fcflx_t, cleanup_flxp
 
    type(fluxpoint), target :: fpl, fpr, cpl, cpr  !< Auxiliary buffers for cell fluxes.
    ! Use with care! Each call to save_outfluxes should be preceded by call to set_fluxpointers.
@@ -74,6 +74,7 @@ contains
       class(grid_container_fcflx_t), target, intent(inout) :: this  !< object invoking type-bound procedure
 
       integer :: i
+      logical, save :: firstcall = .true.
 
       ! For simplicity we allocate all possible buffers for f/c fluxes.
       ! Some of this memory remains unused and may get swapped out.
@@ -92,6 +93,15 @@ contains
          this%coarsebnd(i, LO)%index = this%lhn(i, LO) - 1
          this%coarsebnd(i, HI)%index = this%lhn(i, HI) + 1
       enddo
+
+      ! These pointers aren't thread-safe
+      if (firstcall) then
+         call fpl%init
+         call fpr%init
+         call cpl%init
+         call cpr%init
+         firstcall = .false.
+      endif
 
    end subroutine init_gc_fcflx
 
@@ -114,12 +124,18 @@ contains
          enddo
       enddo
 
+   end subroutine cleanup_fcflx
+
+   subroutine cleanup_flxp
+
+      implicit none
+
       call fpl%cleanup
       call fpr%cleanup
       call cpl%cleanup
       call cpr%cleanup
 
-   end subroutine cleanup_fcflx
+   end subroutine cleanup_flxp
 
 !>
 !! \brief Calculate fluxes incoming from fine grid for 1D solver
@@ -142,21 +158,17 @@ contains
       integer,                       intent(in)    :: i2    !< coordinate_2, perpendicular to the f/c face
       type(ext_fluxes),              intent(inout) :: eflx  !< fluxes stored for the selected cell
 
+      call eflx%init
+
       if (this%finebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
          fpl = this%finebnd(cdim, LO)%fa2fp(i1, i2)
-         if (.not. allocated(fpl%uflx)) call fpl%init
          eflx%li => fpl
          eflx%li%index = eflx%li%index - this%lhn(cdim, LO) + 1
-      else
-         nullify(eflx%li)
       endif
       if (this%finebnd(cdim, HI)%index(i1, i2) <= this%ijkse(cdim, HI)) then
          fpr = this%finebnd(cdim, HI)%fa2fp(i1, i2)
-         if (.not. allocated(fpr%uflx)) call fpr%init
          eflx%ri => fpr
          eflx%ri%index = eflx%ri%index - this%lhn(cdim, LO)
-      else
-         nullify(eflx%ri)
       endif
 
       if (dom%geometry_type == GEO_RPZ) then
@@ -178,19 +190,13 @@ contains
 
       if (this%coarsebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
          cpl%index = this%coarsebnd(cdim, LO)%index(i1, i2)
-         if (.not. allocated(cpl%uflx)) call cpl%init
          eflx%lo => cpl
          eflx%lo%index = eflx%lo%index - this%lhn(cdim, LO)
-      else
-         nullify(eflx%lo)
       endif
       if (this%coarsebnd(cdim, HI)%index(i1, i2) <= this%ijkse(cdim, HI)) then
          cpr%index = this%coarsebnd(cdim, HI)%index(i1, i2)
-         if (.not. allocated(cpr%uflx)) call cpr%init
          eflx%ro => cpr
          eflx%ro%index = eflx%ro%index - this%lhn(cdim, LO) + 1
-      else
-         nullify(eflx%ro)
       endif
 
    end subroutine set_fluxpointers

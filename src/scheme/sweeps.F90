@@ -151,11 +151,9 @@ contains
             jc = seg(g)%se(cdim, :)
             if (jc(LO) == jc(HI)) then
                call MPI_Test(seg(g)%req, received, MPI_STATUS_IGNORE, err_mpi)
-               if (received) then
-                  jc = seg(g)%se(cdim, :) !> \warning: partially duplicated code (see below)
+               if (received) then  !> \warning: partially duplicated code (see send_cg_coarsebnd())
                   j1 = seg(g)%se(pdims(cdim, ORTHO1), :)
                   j2 = seg(g)%se(pdims(cdim, ORTHO2), :)
-                  if (jc(LO) /= jc(HI)) call die("[sweeps:sweep] layer too thick (Recv)")
                   if (all(cg%finebnd(cdim, LO)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
                      lh = LO
                   else if (all(cg%finebnd(cdim, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
