@@ -66,7 +66,7 @@ contains
 
    integer(kind=4) function compute_nr_recv(cdim) result(nr)
 
-      use cg_cost_data, only: I_MHD
+      use cg_cost_data, only: I_MHD  ! ToDo: for explicit diffusion use I_DIFFUSE or I_REFINE
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
       use constants,    only: LO, HI, I_ONE

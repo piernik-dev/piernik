@@ -154,6 +154,7 @@ contains
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR
       use dataio_pub,       only: die
       use domain,           only: dom
+      use fc_fluxes,        only: compute_nr_recv, recv_cg_finebnd, send_cg_coarsebnd, finalize_fcflx
       use fluidindex,       only: flind
       use global,           only: dt
       use grid_cont,        only: grid_container
@@ -161,6 +162,7 @@ contains
       use named_array,      only: p4
       use named_array_list, only: wna
       use ppp,              only: ppp_main
+      use ppp_mpi,          only: piernik_Waitall
 #ifdef MAGNETIC
       use constants,        only: four
       use global,           only: cc_mag
@@ -169,6 +171,7 @@ contains
       implicit none
 
       integer(kind=4), intent(in)          :: crdim
+
       integer                              :: i, j, k, il, ih, jl, jh, kl, kh, ild, jld, kld
       integer, dimension(ndims)            :: idm, ndm, hdm, ldm
       real                                 :: bb, f1, f2
@@ -182,6 +185,8 @@ contains
       real, dimension(:,:,:,:), pointer    :: wcr
       integer                              :: wcri
       character(len=*), dimension(ndims), parameter :: crd_label = [ "cr_diff_X", "cr_diff_Y", "cr_diff_Z" ]
+      integer(kind=4) :: nr, nr_recv
+      logical :: all_received
 
       if (.not. has_cr) return
       if (.not.dom%has_dir(crdim)) return
@@ -197,6 +202,9 @@ contains
 
       call finest%level%restrict_to_base ! overkill
       call all_bnd ! overkill
+
+      nr_recv = compute_nr_recv(crdim)
+      nr = nr_recv
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -261,16 +269,28 @@ contains
             enddo
          enddo
 
+         ! cg%coarsebnd(cdim, LO)%uflx(:, :, :) = wcr(:, ?, ?, ?) ! with cg%coarsebnd(cdim, LO)%index(:,:) involved.
+         ! Similar thing for HI side.
+
+         call send_cg_coarsebnd(crdim, cg, nr)
+
          call cg%costs%stop(I_DIFFUSE)
          cgl => cgl%nxt
       enddo
 
       call all_wcr_boundaries
 
+      call piernik_Waitall(nr, "cr_diff")
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
+
+         call recv_cg_finebnd(crdim, cg, all_received)
+         if (.not. all_received) call die("[crdiffusion:cr_diff] incomplete fluxes")
+
+         ! wcr(:, ?, ?, ?) = cg%finebnd(cdim, LO)%uflx(:, :, :) ! with cg%coarsebnd(cdim, LO)%index(:,:) involved.
+         ! Similar thing for HI side.
 
          ndm = cg%lhn(:,HI) - idm
          hdm = cg%lhn(:,LO) ; hdm(crdim) = cg%lhn(crdim,HI)
@@ -282,6 +302,8 @@ contains
          call cg%costs%stop(I_DIFFUSE)
          cgl => cgl%nxt
       enddo
+
+      call finalize_fcflx
 
       call ppp_main%stop(crd_label(crdim), PPP_CR)
 
