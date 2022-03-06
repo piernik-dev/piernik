@@ -141,6 +141,8 @@ contains
 !! \brief Calculate fluxes incoming from fine grid for 1D solver
 !!
 !! Somewhat spaghetti style
+!!
+!! The index has to be corrected to match the way of allocation of flux arrays in the RTVD and Riemann solver.
 !<
 
    subroutine set_fluxpointers(this, cdim, i1, i2, eflx)
@@ -189,14 +191,12 @@ contains
       endif
 
       if (this%coarsebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
-         cpl%index = this%coarsebnd(cdim, LO)%index(i1, i2)
+         cpl%index = this%coarsebnd(cdim, LO)%index(i1, i2) - this%lhn(cdim, LO)
          eflx%lo => cpl
-         eflx%lo%index = eflx%lo%index - this%lhn(cdim, LO)
       endif
       if (this%coarsebnd(cdim, HI)%index(i1, i2) <= this%ijkse(cdim, HI)) then
-         cpr%index = this%coarsebnd(cdim, HI)%index(i1, i2)
+         cpr%index = this%coarsebnd(cdim, HI)%index(i1, i2) - this%lhn(cdim, LO) + 1
          eflx%ro => cpr
-         eflx%ro%index = eflx%ro%index - this%lhn(cdim, LO) + 1
       endif
 
    end subroutine set_fluxpointers
