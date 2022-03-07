@@ -109,8 +109,9 @@ contains
       use dataio_pub,     only: msg, printinfo
 #endif /* CRESP_VERBOSED */
       use diagnostics,    only: decr_vec
+      use global,         only: disallow_CRnegatives
       use initcosmicrays, only: ncre
-      use initcrspectrum, only: allow_unnatural_transfer, crel, dfpq, e_small_approx_p, nullify_empty_bins, p_mid_fix, p_fix, spec_mod_trms, cresp_disallow_negatives
+      use initcrspectrum, only: allow_unnatural_transfer, crel, dfpq, e_small_approx_p, nullify_empty_bins, p_mid_fix, p_fix, spec_mod_trms
 
       implicit none
 
@@ -243,7 +244,7 @@ contains
 ! Compute momentum changes in after time period [t,t+dt]
          call cresp_update_bin_index(sptab%ub*dt, sptab%ud*dt, p_cut, p_cut_next, cfl_cresp_violation)
 
-         if (cfl_cresp_violation) then !< cresp_disallow_negatives is not used here, as potential negatives do not appear in transfer of n,e but in p
+         if (cfl_cresp_violation) then !< disallow_CRnegatives is not used here, as potential negatives do not appear in transfer of n,e but in p
             approx_p = e_small_approx_p         !< restore approximation after momenta computed
             call deallocate_active_arrays
 #ifdef CRESP_VERBOSED
@@ -295,7 +296,7 @@ contains
             deallocate(cooling_edges_next)      !< -//-
             deallocate(heating_edges_next)      !< -//-
 
-            if (cresp_disallow_negatives) then  !< cresp_disallow_negatives = .false. lets the program ignore negative n,e that show in CRESP
+            if (disallow_CRnegatives) then  !< unless disallow_CRnegatives, negative n,e in CRESP are ignored
                call cresp_detect_negative_content(cfl_cresp_violation)  !< thus no point checking/returning cfl_cresp_violation here
                if (cfl_cresp_violation) then
                   call deallocate_active_arrays
@@ -339,10 +340,10 @@ contains
 
       if (sum(approx_p) > 0) call print_failcounts
 
-      call cresp_detect_negative_content
+      call cresp_detect_negative_content(cfl_cresp_violation)
 #endif /* CRESP_VERBOSED */
 
-      if (cresp_disallow_negatives) then  !< cresp_disallow_negatives = .false. lets the program ignore negative n,e that show in CRESP
+      if (disallow_CRnegatives) then   !< unless disallow_CRnegatives, negative n,e in CRESP are ignored
          call check_cutoff_ne(ndt(i_cut_next(LO) + I_ONE), edt(i_cut_next(LO) + I_ONE), i_cut_next(LO) + I_ONE, cfl_cresp_violation)
          call check_cutoff_ne(ndt(i_cut_next(HI)),         edt(i_cut_next(HI)),         i_cut_next(HI),         cfl_cresp_violation)
          if (cfl_cresp_violation) then
