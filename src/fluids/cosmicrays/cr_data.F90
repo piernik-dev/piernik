@@ -108,7 +108,7 @@ module cr_data
 
 !<====Decay half live times from Garcia-Munoz 1987====>
 
-   real, parameter :: tau_Be10 = 1.6 !< Myr \deprecated BEWARE: this line breaks unit consistency, move it to units.F90 and use scaling
+   real, parameter :: tau_Be10 = 1.6 !< Myr
 
 !<Initial source abundances (in numer density) relative to hydrogen (compare e.g. Longair)>
 
@@ -116,7 +116,7 @@ module cr_data
    real, parameter :: primary_N14  =  1.0e-3
    real, parameter :: primary_O16  =  4.0e-3
 
-   integer, dimension(3), parameter :: icrH = [icr_C12, icr_N14, icr_O16 ], icrL = [icr_Li7, icr_Be9, icr_Be10]
+   integer, dimension(3), parameter :: icrH = [icr_C12, icr_N14, icr_O16], icrL = [icr_Li7, icr_Be9, icr_Be10]
 
 contains
 
@@ -143,7 +143,7 @@ contains
 
       use dataio_pub, only: msg, printinfo, die, nh
       use mpisetup,   only: lbuff, master, slave, piernik_MPI_Bcast
-      use units,      only: me, mp
+      use units,      only: me, mp, myr
 
 
       implicit none
@@ -273,7 +273,7 @@ contains
          if (eCRSP(icr_Be9 )) cr_sigma(cr_table(icr_O16), cr_table(icr_Be9 )) = sigma_O16_Be9
          if (eCRSP(icr_Be10)) cr_sigma(cr_table(icr_O16), cr_table(icr_Be10)) = sigma_O16_Be10
       endif
-      if (eCRSP(icr_Be10)) cr_tau(cr_table(icr_Be10)) = tau_Be10
+      if (eCRSP(icr_Be10)) cr_tau(cr_table(icr_Be10)) = tau_Be10 * myr
 
 
    end subroutine init_cr_species
