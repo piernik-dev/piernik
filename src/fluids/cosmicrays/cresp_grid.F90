@@ -120,7 +120,7 @@ contains
       use global,           only: dt
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: adiab_active, synch_active, icomp_active, icomp_active, cresp, crel, dfpq, fsynchr, spec_mod_trms, u_b_max, use_cresp_evol
+      use initcrspectrum,   only: adiab_active, synch_active, icomp_active, icomp_active, cresp, crel, dfpq, f_synchIC, spec_mod_trms, u_b_max, use_cresp_evol
       use initcrspectrum,   only: cresp_substep, n_substeps_max, redshift
       use named_array_list, only: wna
       use ppp,              only: ppp_main
@@ -157,7 +157,7 @@ contains
          call cg%costs%start
 
          sptab%ucmb  = 0.0
-         if (icomp_active) sptab%ucmb = enden_CMB(redshift) * fsynchr
+         if (icomp_active) sptab%ucmb = enden_CMB(redshift) * f_synchIC
 
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
@@ -165,7 +165,7 @@ contains
                   sptab%ud = 0.0 ; sptab%ub = 0.0; sptab%umag = 0.0
                   cresp%n = cg%u(iarr_cre_n, i, j, k)
                   cresp%e = cg%u(iarr_cre_e, i, j, k)
-                  if (synch_active) sptab%umag = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr, u_b_max)    !< WARNING assusmes that b is in mGs
+                  if (synch_active) sptab%umag = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * f_synchIC, u_b_max) !< WARNING assusmes that b is in mGs
                   if (adiab_active) sptab%ud   = cg%q(divv_i)%point([i,j,k]) * onet
                   sptab%ub = sptab%umag + sptab%ucmb  ! prepare term for synchrotron + IC losses
 

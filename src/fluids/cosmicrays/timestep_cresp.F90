@@ -56,7 +56,7 @@ contains
       use func,             only: emag
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, icomp_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep, n_substeps_max, redshift
+      use initcrspectrum,   only: adiab_active,  icomp_active, synch_active, cresp,  cresp_substep, f_synchIC, spec_mod_trms, use_cresp_evol, u_b_max, n_substeps_max, redshift
       use mpisetup,         only: piernik_MPI_Allreduce
 
       implicit none
@@ -91,13 +91,13 @@ contains
          endif
 
          sptab%ucmb = zero
-         if (icomp_active) sptab%ucmb = enden_CMB(redshift) ! NOTICE redshift is hard-coded to zero (current epoch)
+         if (icomp_active) sptab%ucmb = enden_CMB(redshift) * f_synchIC ! NOTICE redshift is hard-coded to zero (current epoch)
 
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
                   sptab%ub = zero ; sptab%ud = zero ; sptab%umag = zero ; empty_cell = .false.
-                  if (synch_active) sptab%umag = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr
+                  if (synch_active) sptab%umag = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * f_synchIC
                   cresp%n = cg%u(iarr_cre_n, i, j, k)
                   cresp%e = cg%u(iarr_cre_e, i, j, k)
                   call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_max_tmp) ! needed for synchrotron timestep
@@ -160,7 +160,7 @@ contains
    subroutine cresp_timestep_synchrotron_IC(u_b, i_up_cell)
 
       use constants,      only: zero
-      use initcrspectrum, only: def_dtsynch
+      use initcrspectrum, only: def_dtsynchIC
 
       implicit none
 
@@ -170,7 +170,7 @@ contains
 
       ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
       if (u_b > zero) then
-         dt_cre_ub = def_dtsynch / (assume_p_up(i_up_cell) * u_b)
+         dt_cre_ub = def_dtsynchIC / (assume_p_up(i_up_cell) * u_b)
          dt_cre_synch = min(dt_cre_ub, dt_cre_synch)    ! remember to max dt_cre_synch at the beginning of the search
       endif
 
