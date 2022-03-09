@@ -36,7 +36,7 @@ module initproblem
    public  :: read_problem_par, problem_initial_conditions, problem_pointers
 
    integer(kind=4) :: n_sn
-   real            :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, smooth, dt_sn, r, t_sn, dtrig
+   real            :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, smooth, dt_sn, r, dtrig
    real :: ref_thr   !< refinement threshold
    real :: ref_eps   !< smoother filter
 
@@ -75,8 +75,6 @@ contains
       implicit none
 
       integer :: p, id
-
-      t_sn = 0.0
 
       d0      = 1.0
       dtrig   = -1.5

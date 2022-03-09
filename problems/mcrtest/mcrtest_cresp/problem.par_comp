@@ -142,7 +142,6 @@ $BASE_DOMAIN
     expansion_cnst = -5.0e-2
     beta_cr   = 0.0e-3
     amp_cr1   = 1000.0
-    norm_step = 1
  /
 
  $PIERNIK_DEBUG

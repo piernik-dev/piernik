@@ -1,21 +1,17 @@
-#define IONIZED
-#define COSM_RAYS
-
-#define COSM_RAYS_SOURCES
-
-#undef ISO
-
-#define COSM_RAY_ELECTRONS
-
-
 #if !defined GLOBAL_FR_SPEED
 #  define LOCAL_FR_SPEED
 #endif
+
+#undef ISO
+
+#define IONIZED
+
+#define COSM_RAYS
+#define COSM_RAYS_SOURCES
+#define COSM_RAY_ELECTRONS
 
 #define MAGNETIC
 
 #undef GRAV
 
 #undef MULTIGRID
-
-#define RTVD

@@ -41,7 +41,7 @@ module initcrspectrum
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active, &
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,        &
            & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,       &
-           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer, cresp_disallow_negatives
+           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -90,7 +90,6 @@ module initcrspectrum
    logical         :: nullify_empty_bins          !< nullifies empty bins when entering CRESP module / exiting empty cell.
    logical         :: allow_source_spectrum_break !< allow extension of spectrum to adjacent bins if momenta found exceed set p_fix
    logical         :: allow_unnatural_transfer    !< allows unnatural transfer of n & e with 'manually_deactivate_bins_via_transfer'
-   logical         :: cresp_disallow_negatives    !< disallows (by default) negative n,e in cresp_update_cell
    logical         :: synch_active                !< TEST feature - turns on / off synchrotron cooling @ CRESP
    logical         :: adiab_active                !< TEST feature - turns on / off adiabatic   cooling @ CRESP
    real            :: cre_active                  !< electron contribution to Pcr
@@ -171,6 +170,7 @@ contains
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index
+      use global,          only: disallow_CRnegatives
       use func,            only: emag
       use initcosmicrays,  only: ncrn, ncre, ncra, ncrs, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp, use_smallecr
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
@@ -187,7 +187,7 @@ contains
       &                         NR_iter_limit, max_p_ratio, synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init,             &
       &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf, b_max_db,      &
       &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up, p_diff,&
-      &                         q_eps, NR_smap_file, cresp_substep, n_substeps_max, allow_unnatural_transfer, cresp_disallow_negatives
+      &                         q_eps, NR_smap_file, cresp_substep, n_substeps_max, allow_unnatural_transfer
 
 ! Default values
       use_cresp         = .true.
@@ -234,7 +234,6 @@ contains
       smallcree            = 0.0
       allow_source_spectrum_break  = .false.
       allow_unnatural_transfer     = .false.
-      cresp_disallow_negatives     = .true.
       synch_active         = .true.
       adiab_active         = .true.
       cre_active           = 0.0
@@ -300,7 +299,6 @@ contains
 
          lbuff(14) =  cresp_substep
          lbuff(15) =  allow_unnatural_transfer
-         lbuff(16) =  cresp_disallow_negatives
 
          rbuff(1)  = cfl_cre
          rbuff(2)  = cre_eff
@@ -374,7 +372,6 @@ contains
 
          cresp_substep               = lbuff(14)
          allow_unnatural_transfer    = lbuff(15)
-         cresp_disallow_negatives    = lbuff(16)
 
          cfl_cre                     = rbuff(1)
          cre_eff                     = rbuff(2)
@@ -610,12 +607,12 @@ contains
          n_substeps_max = 1            !< for sanity assuming 1 substep if cresp_substep = .false.
       endif
 
-      if (.not. cresp_disallow_negatives) then
+      if (.not. disallow_CRnegatives) then
          if (.not. use_smallecr) then
-            call warn("[initcrspectrum:init_cresp] Detecting negative values of n,e in CRESP module & performing CFL violation actions related is DISABLED via cresp_disallow_negatives.")
-            call warn("[initcrspectrum:init_cresp] as is 'use_smallecr'; should negative values show in CRESP, they will not be fixed.")
+            if (master) call warn("[initcrspectrum:init_cresp] Detecting negative values of n,e in CRESP module & performing CFL violation actions related is DISABLED via disallow_CRnegatives.")
+            if (master) call warn("[initcrspectrum:init_cresp] as is 'use_smallecr'; should negative values show in CRESP, they will not be fixed.")
          else
-            call warn("[initcrspectrum:init_cresp] Detecting negative values of n,e in CRESP module & performing CFL violation actions related is DISABLED via cresp_disallow_negatives.")
+            if (master) call warn("[initcrspectrum:init_cresp] Detecting negative values of n,e in CRESP module & performing CFL violation actions related is DISABLED via disallow_CRnegatives.")
          endif
       endif
 
