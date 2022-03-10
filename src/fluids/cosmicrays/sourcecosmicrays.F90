@@ -116,7 +116,7 @@ contains
 #ifdef COSM_RAYS_SOURCES
 !>
 !! \brief Computation of Cosmic ray particles spallation and decay
-!! \deprecated BEWARE: several lines in this routine break unit consistency, move it to units.F90 and use scaling
+!! \warning multiplying by cr_sigma may cause underflow errors in some unit sets
 !<
    subroutine src_cr_spallation_and_decay(uu, n, usrc, rk_coeff)
 
@@ -125,6 +125,7 @@ contains
       use fluids_pub,     only: has_ion, has_neu
       use fluidindex,     only: flind
       use initcosmicrays, only: iarr_crn
+      use units,          only: clight, mH, mp
 
       implicit none
 
@@ -136,16 +137,15 @@ contains
 ! locals
       real, dimension(n)                         :: dgas, dcr
       real, parameter                            :: gamma_lor = 10.0
-      real, parameter                            :: speed_of_light = 3e10*1e6*365.*24.*60.*60. !< cm/Myr \deprecated BEWARE: this line breaks unit consistency, move it to units.F90 and use scaling
       real                                       :: ndim, gn
       integer                                    :: i, j
 
       ndim = count(dom%has_dir)
       gn = 1.0 / ndim / gamma_lor
       dgas = 0.0
-      if (has_ion) dgas = dgas + uu(:, flind%ion%idn)
-      if (has_neu) dgas = dgas + uu(:, flind%neu%idn)
-      dgas = dgas * speed_of_light / ndim
+      if (has_ion) dgas = dgas + uu(:, flind%ion%idn) / mp
+      if (has_neu) dgas = dgas + uu(:, flind%neu%idn) / mH
+      dgas = dgas * clight / ndim
 
       usrc(:,:) = 0.0
 
