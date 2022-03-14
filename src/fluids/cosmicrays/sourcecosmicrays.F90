@@ -136,7 +136,7 @@ contains
 
 ! locals
       real, dimension(n)                         :: dgas, dcr
-      real, parameter                            :: gamma_lor = 10.0
+      real, parameter                            :: gamma_lor = 10.0 !< \todo should taken from cosmic ray species settings
       real                                       :: ndim, gn
       integer                                    :: i, j
 
