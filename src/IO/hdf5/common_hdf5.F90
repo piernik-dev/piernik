@@ -116,7 +116,7 @@ contains
       use fluidindex,     only: iarr_all_crn
 #endif /* COSM_RAYS */
 #ifdef CRESP
-      use initcosmicrays, only: ncre
+      use initcosmicrays, only: ncrb
 #endif /* CRESP */
 
       implicit none
@@ -206,7 +206,7 @@ contains
 #endif /* COSM_RAYS */
 #ifdef CRESP
             case ('cren') !< CRESP number density fields
-               do k = 1, ncre
+               do k = 1, ncrb
                   if (k<=99) then
                      write(aux,'(A4,I2.2)') 'cren', k
                      call append_var(aux)
@@ -223,7 +223,7 @@ contains
                   endif
                enddo
             case ('cree') !< CRESP energy density fields
-               do k = 1, ncre
+               do k = 1, ncrb
                   if (k<=99) then
                      write(aux,'(A4,I2.2)') 'cree', k
                      call append_var(aux)
@@ -240,7 +240,7 @@ contains
                   endif
                enddo
             case ('cref') !< CRESP distribution function
-               do k = 1, ncre+1
+               do k = 1, ncrb+1
                   if (k<=99) then
                      write(aux,'(A4,I2.2)') 'cref', k
                      call append_var(aux)
@@ -260,7 +260,7 @@ contains
                   endif
                enddo
             case ('creq') !< CRESP spectrum index
-               do k = 1, ncre
+               do k = 1, ncrb
                   if (k<=99) then
                      write(aux,'(A4,I2.2)') 'creq', k
                      call append_var(aux)

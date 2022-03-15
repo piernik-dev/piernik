@@ -196,7 +196,7 @@ contains
       use constants,      only: HI
       use dataio_pub,     only: die
       use domain,         only: dom
-      use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre
+      use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncrb
 #endif /* COSM_RAYS */
 
       implicit none
@@ -211,7 +211,7 @@ contains
       real                            :: r2
 
       iecr = -1
-      if (ncrn+ncre >= icr) then
+      if (ncrn+ncrb >= icr) then
          iecr = iarr_crs(icr)
       else
          call die("[initproblem:problem_initial_conditions] No CR components defined.")
@@ -311,7 +311,7 @@ contains
       use func,             only: operator(.equals.)
       use global,           only: t
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
+      use initcosmicrays,   only: iarr_crs, ncrn, ncrb, K_crn_paral, K_crn_perp
       use named_array_list, only: qna
 
       implicit none
@@ -324,7 +324,7 @@ contains
 
       iecr = -1
 
-      if (ncrn+ncre >= icr) then
+      if (ncrn+ncrb >= icr) then
          iecr = iarr_crs(icr)
       else
          call die("[initproblem:compute_analytic_ecr1] No CR components defined.")
@@ -397,7 +397,7 @@ contains
       use dataio_pub,       only: msg, die, printinfo
       use func,             only: operator(.notequals.)
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crs, ncrn, ncre
+      use initcosmicrays,   only: iarr_crs, ncrn, ncrb
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna
 
@@ -412,7 +412,7 @@ contains
 
       iecr = -1
 
-      if (ncrn+ncre >= icr) then
+      if (ncrn+ncrb >= icr) then
          iecr = iarr_crs(icr)
       else
          call die("[initproblem:check_norm] No CR components defined.")

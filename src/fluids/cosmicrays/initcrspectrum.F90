@@ -173,7 +173,7 @@ contains
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index
       use func,            only: emag
-      use initcosmicrays,  only: ncrn, ncre, ncra, ncrs, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp, use_smallecr
+      use initcosmicrays,  only: ncra, ncrb, ncrn, ncrs, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp, use_smallecr
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use units,           only: clight, me, sigma_T
 
@@ -422,12 +422,12 @@ contains
       NR_refine_pf     = [NR_refine_pf_lo, NR_refine_pf_up]
 
 ! Input parameters check
-      if (use_cresp .and. ncre <= I_ZERO)  then
-         write (msg,"(A,I4,A)") '[initcrspectrum:init_cresp] ncre   = ', ncre, '; cr-electrons NOT initnialized. Switching CRESP module off.'
+      if (use_cresp .and. ncrb <= I_ZERO)  then
+         write (msg,"(A,I4,A)") '[initcrspectrum:init_cresp] ncrb   = ', ncrb, '; CR bins NOT initnialized. Switching CRESP module off.'
          if (master) call warn(msg)
          use_cresp      = .false.
          use_cresp_evol = .false.
-         ncre           = 0
+         ncrb           = 0
       endif
 
       if (.not. use_cresp) then
@@ -436,7 +436,7 @@ contains
          return
       endif
 
-      if (ncre < 3) call die("[initcrspectrum:init_cresp] CRESP algorithm currently requires at least 3 bins (ncre) in order to work properly, check your parameters.")
+      if (ncrb < 3) call die("[initcrspectrum:init_cresp] CRESP algorithm currently requires at least 3 bins (ncrb) in order to work properly, check your parameters.")
 
       if (approx_cutoffs) then
          e_small_approx_p = 1
@@ -462,47 +462,47 @@ contains
       if (e_small_approx_init_cond + sum(e_small_approx_p) == 0) e_small = zero                !< no threshold energy for bin activation necessary
 
 ! arrays initialization
-      call my_allocate_with_index(p_fix,           ncre, I_ZERO)
-      call my_allocate_with_index(p_mid_fix,       ncre, I_ONE )
-      call my_allocate_with_index(cresp_all_edges, ncre, I_ZERO)
-      call my_allocate_with_index(cresp_all_bins,  ncre, I_ONE )
-      call my_allocate_with_index(n_small_bin,     ncre, I_ONE )
+      call my_allocate_with_index(p_fix,            ncrb, I_ZERO)
+      call my_allocate_with_index(p_mid_fix,        ncrb, I_ONE )
+      call my_allocate_with_index(cresp_all_edges,  ncrb, I_ZERO)
+      call my_allocate_with_index(cresp_all_bins,   ncrb, I_ONE )
+      call my_allocate_with_index(n_small_bin,      ncrb, I_ONE )
 
-      call my_allocate_with_index(Gamma_fix,        ncre, I_ZERO)
-      call my_allocate_with_index(Gamma_mid_fix,    ncre, I_ONE )
-      call my_allocate_with_index(mom_cre_fix,      ncre, I_ZERO)
-      call my_allocate_with_index(mom_mid_cre_fix,  ncre, I_ONE )
-      call my_allocate_with_index(gamma_beta_c_fix, ncre, I_ZERO)
+      call my_allocate_with_index(Gamma_fix,        ncrb, I_ZERO)
+      call my_allocate_with_index(Gamma_mid_fix,    ncrb, I_ONE )
+      call my_allocate_with_index(mom_cre_fix,      ncrb, I_ZERO)
+      call my_allocate_with_index(mom_mid_cre_fix,  ncrb, I_ONE )
+      call my_allocate_with_index(gamma_beta_c_fix, ncrb, I_ZERO)
 
-      cresp_all_edges = [(i, i = I_ZERO, ncre)]
-      cresp_all_bins  = [(i, i = I_ONE,  ncre)]
+      cresp_all_edges = [(i, i = I_ZERO, ncrb)]
+      cresp_all_bins  = [(i, i = I_ONE,  ncrb)]
 
 !!\brief for now algorithm requires at least 3 bins
       p_fix = zero
-      w  = log10(p_max_fix/p_min_fix) / real(ncre-2)
-      p_fix(1:ncre-1) = p_min_fix*ten**(w*real(cresp_all_edges(1:ncre-1)-1))
+      w  = log10(p_max_fix/p_min_fix) / real(ncrb-2)
+      p_fix(1:ncrb-1) = p_min_fix*ten**(w*real(cresp_all_edges(1:ncrb-1)-1))
       p_fix(0)    = zero
-      p_fix(ncre) = zero
+      p_fix(ncrb) = zero
       p_fix_ratio = ten**w
 
       p_mid_fix = 0.0
-      p_mid_fix(2:ncre-1) = sqrt(p_fix(1:ncre-2)*p_fix(2:ncre-1))
+      p_mid_fix(2:ncrb-1) = sqrt(p_fix(1:ncrb-2)*p_fix(2:ncrb-1))
       p_mid_fix(1)    = p_mid_fix(2) / p_fix_ratio
-      p_mid_fix(ncre) = p_mid_fix(ncre-1) * p_fix_ratio
+      p_mid_fix(ncrb) = p_mid_fix(ncrb-1) * p_fix_ratio
 
 !> set Gamma arrays, analogically to p_fix arrays, that will be constructed using Gamma arrays
       Gamma_fix            = one             !< Gamma factor obviously cannot be lower than 1
-      G_w                  = log10(Gamma_max_fix/Gamma_min_fix) / real(ncre-2)
-      Gamma_fix(1:ncre-1)  = Gamma_min_fix * ten**(G_w * real(cresp_all_edges(1:ncre-1)-1))
+      G_w                  = log10(Gamma_max_fix/Gamma_min_fix) / real(ncrb-2)
+      Gamma_fix(1:ncrb-1)  = Gamma_min_fix * ten**(G_w * real(cresp_all_edges(1:ncrb-1)-1))
       Gamma_fix_ratio      = ten**w
 
       Gamma_mid_fix = one
-      Gamma_mid_fix(2:ncre-1) = sqrt( Gamma_fix(1:ncre-2)   * Gamma_fix(2:ncre-1) )
+      Gamma_mid_fix(2:ncrb-1) = sqrt( Gamma_fix(1:ncrb-2)   * Gamma_fix(2:ncrb-1) )
       Gamma_mid_fix(1)        = sqrt( Gamma_mid_fix(1)      * Gamma_mid_fix(2))
-      Gamma_mid_fix(ncre)     = sqrt( Gamma_mid_fix(ncre-1) * Gamma_mid_fix(ncre-1) * Gamma_fix_ratio )
+      Gamma_mid_fix(ncrb)     = sqrt( Gamma_mid_fix(ncrb-1) * Gamma_mid_fix(ncrb-1) * Gamma_fix_ratio )
 ! compute physical momenta of particles in given unit set
-      mom_cre_fix      = [(cresp_get_mom(Gamma_fix(i),me),     i = I_ZERO, ncre )]
-      mom_mid_cre_fix  = [(cresp_get_mom(Gamma_mid_fix(i),me), i = I_ONE,  ncre )]
+      mom_cre_fix      = [(cresp_get_mom(Gamma_fix(i),me),     i = I_ZERO, ncrb )]
+      mom_mid_cre_fix  = [(cresp_get_mom(Gamma_mid_fix(i),me), i = I_ONE,  ncrb )]
 
       gamma_beta_c_fix = mom_cre_fix / me
 
@@ -515,13 +515,13 @@ contains
          call printinfo(msg)
          write (msg,'(A, 50E15.7)') '[initcrspectrum:init_cresp] Bin p-width (log10): ', w
          call printinfo(msg)
-         write (msg,'(A, 50E15.7)') '[initcrspectrum:init_cresp] Fixed momentum grid (bin middle):   ',p_mid_fix(1:ncre)
+         write (msg,'(A, 50E15.7)') '[initcrspectrum:init_cresp] Fixed momentum grid (bin middle):   ',p_mid_fix(1:ncrb)
          call printinfo(msg)
          write (msg,'(A, 50F13.2)') '[initcrspectrum:init_cresp] Fixed Gamma      grid: ', Gamma_fix
          call printinfo(msg)
          write (msg,'(A, 50F10.5)') '[initcrspectrum:init_cresp] Gamma bin width(log10): ', G_w
          call printinfo(msg)
-         write (msg,'(A, 50F10.5)') '[initcrspectrum:init_cresp] Fixed mid-Gamma     : ', Gamma_mid_fix(1:ncre)
+         write (msg,'(A, 50F10.5)') '[initcrspectrum:init_cresp] Fixed mid-Gamma     : ', Gamma_mid_fix(1:ncrb)
          call printinfo(msg)
          write (msg,'(A, 50E15.7)') '[initcrspectrum:init_cresp] Fixed phys momentum : ', mom_cre_fix
          call printinfo(msg)
@@ -574,16 +574,16 @@ contains
 
       call init_cresp_types
 
-      K_cre_paral(1:ncre) = K_cre_paral_1 * (p_mid_fix(1:ncre) / p_diff)**K_cre_pow
-      K_cre_perp(1:ncre)  = K_cre_perp_1  * (p_mid_fix(1:ncre) / p_diff)**K_cre_pow
+      K_cre_paral(1:ncrb) = K_cre_paral_1 * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow
+      K_cre_perp(1:ncrb)  = K_cre_perp_1  * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow
 
 #ifdef VERBOSE
-      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_paral = ", K_cre_paral(1:ncre) ; if (master) call printinfo(msg)
-      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_perp = ",  K_cre_perp(1:ncre)  ; if (master) call printinfo(msg)
+      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_paral = ", K_cre_paral(1:ncrb) ; if (master) call printinfo(msg)
+      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_perp = ",  K_cre_perp(1:ncrb)  ; if (master) call printinfo(msg)
 #endif /* VERBOSE */
 
-      K_cre_paral(ncre+1:ncra) = K_cre_paral(1:ncre)
-      K_cre_perp (ncre+1:ncra) = K_cre_perp (1:ncre)
+      K_cre_paral(ncrb+1:ncra) = K_cre_paral(1:ncrb)
+      K_cre_perp (ncrb+1:ncra) = K_cre_perp (1:ncrb)
       K_crs_paral(ncrn+1:ncrs) = K_cre_paral(1:ncra)
       K_crs_perp (ncrn+1:ncrs) = K_cre_perp (1:ncra)
 
@@ -654,14 +654,14 @@ contains
 
       use constants,      only: zero, I_ONE
       use diagnostics,    only: my_allocate_with_index
-      use initcosmicrays, only: ncre
+      use initcosmicrays, only: ncrb
 
       implicit none
 
-      if (.not. allocated(cresp%n)) call my_allocate_with_index(cresp%n, ncre, I_ONE)
-      if (.not. allocated(cresp%e)) call my_allocate_with_index(cresp%e, ncre, I_ONE)
-      if (.not. allocated(norm_init_spectrum%n)) call my_allocate_with_index(norm_init_spectrum%n, ncre, I_ONE)
-      if (.not. allocated(norm_init_spectrum%e)) call my_allocate_with_index(norm_init_spectrum%e, ncre, I_ONE)
+      if (.not. allocated(cresp%n)) call my_allocate_with_index(cresp%n, ncrb, I_ONE)
+      if (.not. allocated(cresp%e)) call my_allocate_with_index(cresp%e, ncrb, I_ONE)
+      if (.not. allocated(norm_init_spectrum%n)) call my_allocate_with_index(norm_init_spectrum%n, ncrb, I_ONE)
+      if (.not. allocated(norm_init_spectrum%e)) call my_allocate_with_index(norm_init_spectrum%e, ncrb, I_ONE)
 
       cresp%e = zero
       cresp%n = zero
@@ -677,15 +677,15 @@ contains
 
       use constants,      only: zero, I_ZERO, I_ONE
       use diagnostics,    only: my_allocate_with_index
-      use initcosmicrays, only: ncre
+      use initcosmicrays, only: ncrb
 
       implicit none
 
-      if (.not. allocated(crel%p)) call my_allocate_with_index(crel%p, ncre, I_ZERO)
-      if (.not. allocated(crel%f)) call my_allocate_with_index(crel%f, ncre, I_ZERO)
-      if (.not. allocated(crel%q)) call my_allocate_with_index(crel%q, ncre, I_ONE )
-      if (.not. allocated(crel%n)) call my_allocate_with_index(crel%n, ncre, I_ONE )
-      if (.not. allocated(crel%e)) call my_allocate_with_index(crel%e, ncre, I_ONE )
+      if (.not. allocated(crel%p)) call my_allocate_with_index(crel%p, ncrb, I_ZERO)
+      if (.not. allocated(crel%f)) call my_allocate_with_index(crel%f, ncrb, I_ZERO)
+      if (.not. allocated(crel%q)) call my_allocate_with_index(crel%q, ncrb, I_ONE )
+      if (.not. allocated(crel%n)) call my_allocate_with_index(crel%n, ncrb, I_ONE )
+      if (.not. allocated(crel%e)) call my_allocate_with_index(crel%e, ncrb, I_ONE )
 
       crel%p = zero
       crel%q = zero
@@ -748,7 +748,7 @@ contains
 
       use hdf5,            only: HID_T, SIZE_T
       use h5lt,            only: h5ltset_attribute_int_f, h5ltset_attribute_double_f
-      use initcosmicrays,  only: ncre
+      use initcosmicrays,  only: ncrb
 
       implicit none
 
@@ -759,8 +759,8 @@ contains
       real,    dimension(1)      :: lnsnbuf_r
 
       bufsize = 1
-      lnsnbuf_i(bufsize) = ncre
-      call h5ltset_attribute_int_f(file_id,    "/", "ncre",      lnsnbuf_i, bufsize, error)
+      lnsnbuf_i(bufsize) = ncrb
+      call h5ltset_attribute_int_f(file_id,    "/", "ncrb",      lnsnbuf_i, bufsize, error)
 
       lnsnbuf_r(bufsize) = p_min_fix
       call h5ltset_attribute_double_f(file_id, "/", "p_min_fix", lnsnbuf_r, bufsize, error)

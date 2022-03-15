@@ -44,10 +44,10 @@ module initcosmicrays
 
    integer, parameter                  :: ncr_max = 102  !< maximum number of CR nuclear and electron components (\warning higher ncr_max limit would require changes in names of components in common_hdf5)
    ! namelist parameters
-   integer(kind=4)                     :: ncrn         !< number of CR nuclear  components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
-   integer(kind=4)                     :: ncre         !< number of CR electron components or number of bins for CRESP
-   integer(kind=4)                     :: ncra         !< ncre by default and 2*ncre for CRESP
-   integer(kind=4)                     :: ncrs         !< number of all CR components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
+   integer(kind=4)                     :: ncrn         !< number of CR nuclear  components \deprecated BEWARE: ncrs (sum of ncrn and ncrb) should not be higher than ncr_max = 102
+   integer(kind=4)                     :: ncrb         !< number of bins for CRESP
+   integer(kind=4)                     :: ncra         !< 2*ncrb for CRESP
+   integer(kind=4)                     :: ncrs         !< number of all CR components \deprecated BEWARE: ncrs (sum of ncrn and ncrb) should not be higher than ncr_max = 102
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
@@ -97,7 +97,7 @@ contains
 !! <tr><td>use_CRdiff  </td><td>.true. </td><td>logical   </td><td>\copydoc initcosmicrays::use_CRdiff </td></tr>
 !! <tr><td>use_CRdecay </td><td>.false.</td><td>logical   </td><td>\copydoc initcosmicrays::use_CRdecay</td></tr>
 !! <tr><td>ncrn        </td><td>0      </td><td>integer   </td><td>\copydoc initcosmicrays::ncrn       </td></tr>
-!! <tr><td>ncre        </td><td>0      </td><td>integer   </td><td>\copydoc initcosmicrays::ncre       </td></tr>
+!! <tr><td>ncrb        </td><td>0      </td><td>integer   </td><td>\copydoc initcosmicrays::ncrb       </td></tr>
 !! <tr><td>gamma_crn   </td><td>4./3.  </td><td>real array</td><td>\copydoc initcosmicrays::gamma_crn  </td></tr>
 !! <tr><td>K_crn_paral </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_crn_paral</td></tr>
 !! <tr><td>K_crn_perp  </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_crn_perp </td></tr>
@@ -126,18 +126,18 @@ contains
       real            :: maxKcrs
 
       namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRdiff, use_CRdecay, divv_scheme, &
-           &                 gamma_crn, K_crn_paral, K_crn_perp, ncrn, ncre, crn_gpcr_ess, cre_gpcr_ess
+           &                 gamma_crn, K_crn_paral, K_crn_perp, ncrn, ncrb, crn_gpcr_ess, cre_gpcr_ess
 
       cfl_cr          = 0.9
       smallecr        = 0.0
       cr_active       = 1.0
       cr_eff          = 0.1       !  canonical conversion rate of SN en.-> CR (e_sn=10**51 erg)
       ncrn            = 0
-      ncre            = 0
+      ncrb            = 0
 
       use_CRdiff      = .true.
-      use_smallecr    = .true.
       use_CRdecay     = .false.
+      use_smallecr    = .true.
 
       gamma_crn(:)    = 4./3.
       K_crn_paral(:)  = 0.0
@@ -175,7 +175,7 @@ contains
       if (master) then
 
          ibuff(1) = ncrn
-         ibuff(2) = ncre
+         ibuff(2) = ncrb
 
          rbuff(1) = cfl_cr
          rbuff(2) = smallecr
@@ -192,7 +192,7 @@ contains
          nn       = count(rbuff(:) < huge(1.), kind=4)    ! this must match the last rbuff() index above
          ibuff(ubound(ibuff, 1)) = nn
          ne       = nn + 3 * ncrn
-         if (ne + 3 * ncre > ubound(rbuff, 1)) call die("[initcosmicrays:init_cosmicrays] rbuff size exceeded.")
+         if (ne + 3 * ncrb > ubound(rbuff, 1)) call die("[initcosmicrays:init_cosmicrays] rbuff size exceeded.")
 
          if (ncrn > 0) then
             rbuff(nn+1       :nn+  ncrn) = gamma_crn  (1:ncrn)
@@ -213,7 +213,7 @@ contains
       if (slave) then
 
          ncrn         = int(ibuff(1), kind=4)
-         ncre         = int(ibuff(2), kind=4)
+         ncrb         = int(ibuff(2), kind=4)
 
          cfl_cr       = rbuff(1)
          smallecr     = rbuff(2)
@@ -240,10 +240,10 @@ contains
 
       endif
 
-      ncra = I_TWO * ncre
+      ncra = I_TWO * ncrb
       ncrs = ncra + ncrn
 
-      if (any([ncrn, ncre] > ncr_max) .or. any([ncrn, ncre] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
+      if (any([ncrn, ncrb] > ncr_max) .or. any([ncrn, ncrb] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
       if (ncrs == 0) call warn("[initcosmicrays:init_cosmicrays] ncrs == 0; no cr components specified")
 
       ma1d = [ncrs]
@@ -264,15 +264,15 @@ contains
       ma1d = [ncrn]
       call my_allocate(iarr_crn, ma1d)
 
-      if (ncre .le. 0) then
+      if (ncrb <= 0) then
          ma1d = 0
       else
          ma1d = [ncra]
       endif
-      call my_allocate(iarr_cre, ma1d) ! < iarr_cre will point: (1:ncre) - cre number per bin, (ncre+1:2*ncre) - cre energy per bin
+      call my_allocate(iarr_cre, ma1d) ! < iarr_cre will point: (1:ncrb) - cre number per bin, (ncrb+1:2*ncrb) - cre energy per bin
 
 #ifdef CRESP
-      ma1d = [ncre]
+      ma1d = [ncrb]
       call my_allocate(iarr_cre_e, ma1d)
       call my_allocate(iarr_cre_n, ma1d)
 #endif /* CRESP */
@@ -280,7 +280,7 @@ contains
       call my_allocate(iarr_crs, ma1d)
 
       add_E = 0
-      if (ncre > 0) add_E = I_ONE
+      if (ncrb > 0) add_E = I_ONE
       ncrsp = ncrn + add_E
       call init_cr_species(ncrsp, ncrn, crn_gpcr_ess, cre_gpcr_ess)
 
@@ -343,11 +343,11 @@ contains
 
 #ifdef CRESP
       flind%cre%nbeg = flind%crn%end + I_ONE
-      flind%cre%nend = flind%crn%end + ncre
+      flind%cre%nend = flind%crn%end + ncrb
       flind%cre%ebeg = flind%cre%nend + I_ONE
-      flind%cre%eend = flind%cre%nend + ncre
+      flind%cre%eend = flind%cre%nend + ncrb
 
-      do icr = 1, ncre
+      do icr = 1, ncrb
          iarr_cre_n(icr) = flind%cre%nbeg - I_ONE + icr
          iarr_cre_e(icr) = flind%cre%ebeg - I_ONE + icr
       enddo

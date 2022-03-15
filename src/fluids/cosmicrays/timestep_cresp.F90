@@ -210,15 +210,15 @@ contains
 
    real function assume_p_up(cell_i_up)
 
-      use initcosmicrays, only: ncre
+      use initcosmicrays, only: ncrb
       use initcrspectrum, only: p_fix, p_mid_fix
 
       implicit none
 
       integer(kind=4), intent(in) :: cell_i_up
 
-      if (cell_i_up == ncre) then
-         assume_p_up = p_mid_fix(ncre) ! for i = 0 & ncre p_fix(i) = 0.0
+      if (cell_i_up == ncrb) then
+         assume_p_up = p_mid_fix(ncrb) ! for i = 0 & ncrb p_fix(i) = 0.0
       else
          assume_p_up = p_fix(cell_i_up)
       endif

@@ -60,7 +60,7 @@ $BASE_DOMAIN
     cfl_cr      = 0.9
     cr_active   = 0.0
     ncrn        = 1
-    ncre        = 16 ! 23 ! number of spectrum bins (including cutoff bins)
+    ncrb        = 16 ! 23 ! number of spectrum bins (including cutoff bins)
     gamma_crn(1)   = 1.333333
     gamma_crn(2)   = 1.333333
     gamma_crn(3)   = 1.333333
