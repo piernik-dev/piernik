@@ -54,7 +54,7 @@
 
  $COSMIC_RAYS
     cfl_cr      =   0.9
-    ncrn        =   1
+    ncrsp       =   1
     K_crn_paral =   0.0
     K_crn_perp  =   100.0
  /

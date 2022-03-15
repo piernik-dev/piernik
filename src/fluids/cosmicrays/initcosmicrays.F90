@@ -44,10 +44,10 @@ module initcosmicrays
 
    integer, parameter                  :: ncr_max = 102  !< maximum number of CR nuclear and electron components (\warning higher ncr_max limit would require changes in names of components in common_hdf5)
    ! namelist parameters
-   integer(kind=4)                     :: ncrn         !< number of CR nuclear  components \deprecated BEWARE: ncrtot (sum of ncrn and ncr2b) should not be higher than ncr_max = 102
+   integer(kind=4)                     :: ncrsp        !< number of CR nuclear  components \deprecated BEWARE: ncrtot (sum of ncrsp and ncr2b) should not be higher than ncr_max = 102
    integer(kind=4)                     :: ncrb         !< number of bins for CRESP
    integer(kind=4)                     :: ncr2b        !< 2*ncrb for CRESP
-   integer(kind=4)                     :: ncrtot       !< number of all CR components \deprecated BEWARE: ncrtot (sum of ncrn and ncr2b) should not be higher than ncr_max = 102
+   integer(kind=4)                     :: ncrtot       !< number of all CR components \deprecated BEWARE: ncrtot (sum of ncrsp and ncr2b) should not be higher than ncr_max = 102
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
@@ -96,7 +96,7 @@ contains
 !! <tr><td>cr_eff      </td><td>0.1    </td><td>real value</td><td>\copydoc initcosmicrays::cr_eff     </td></tr>
 !! <tr><td>use_CRdiff  </td><td>.true. </td><td>logical   </td><td>\copydoc initcosmicrays::use_CRdiff </td></tr>
 !! <tr><td>use_CRdecay </td><td>.false.</td><td>logical   </td><td>\copydoc initcosmicrays::use_CRdecay</td></tr>
-!! <tr><td>ncrn        </td><td>0      </td><td>integer   </td><td>\copydoc initcosmicrays::ncrn       </td></tr>
+!! <tr><td>ncrsp       </td><td>0      </td><td>integer   </td><td>\copydoc initcosmicrays::ncrsp      </td></tr>
 !! <tr><td>ncrb        </td><td>0      </td><td>integer   </td><td>\copydoc initcosmicrays::ncrb       </td></tr>
 !! <tr><td>gamma_crn   </td><td>4./3.  </td><td>real array</td><td>\copydoc initcosmicrays::gamma_crn  </td></tr>
 !! <tr><td>K_crn_paral </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_crn_paral</td></tr>
@@ -126,13 +126,13 @@ contains
       real            :: maxKcrs
 
       namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRdiff, use_CRdecay, divv_scheme, &
-           &                 gamma_crn, K_crn_paral, K_crn_perp, ncrn, ncrb, crn_gpcr_ess, cre_gpcr_ess
+           &                 gamma_crn, K_crn_paral, K_crn_perp, ncrsp, ncrb, crn_gpcr_ess, cre_gpcr_ess
 
       cfl_cr          = 0.9
       smallecr        = 0.0
       cr_active       = 1.0
       cr_eff          = 0.1       !  canonical conversion rate of SN en.-> CR (e_sn=10**51 erg)
-      ncrn            = 0
+      ncrsp           = 0
       ncrb            = 0
 
       use_CRdiff      = .true.
@@ -174,7 +174,7 @@ contains
 
       if (master) then
 
-         ibuff(1) = ncrn
+         ibuff(1) = ncrsp
          ibuff(2) = ncrb
 
          rbuff(1) = cfl_cr
@@ -191,15 +191,15 @@ contains
 
          nn       = count(rbuff(:) < huge(1.), kind=4)    ! this must match the last rbuff() index above
          ibuff(ubound(ibuff, 1)) = nn
-         ne       = nn + 3 * ncrn
+         ne       = nn + 3 * ncrsp
          if (ne + 3 * ncrb > ubound(rbuff, 1)) call die("[initcosmicrays:init_cosmicrays] rbuff size exceeded.")
 
-         if (ncrn > 0) then
-            rbuff(nn+1       :nn+  ncrn) = gamma_crn  (1:ncrn)
-            rbuff(nn+1+  ncrn:nn+2*ncrn) = K_crn_paral(1:ncrn)
-            rbuff(nn+1+2*ncrn:nn+3*ncrn) = K_crn_perp (1:ncrn)
+         if (ncrsp > 0) then
+            rbuff(nn+1        :nn+  ncrsp) = gamma_crn  (1:ncrsp)
+            rbuff(nn+1+  ncrsp:nn+2*ncrsp) = K_crn_paral(1:ncrsp)
+            rbuff(nn+1+2*ncrsp:nn+3*ncrsp) = K_crn_perp (1:ncrsp)
 
-            lbuff(5:ncrn+4) = crn_gpcr_ess(1:ncrn)
+            lbuff(5:ncrsp+4) = crn_gpcr_ess(1:ncrsp)
          endif
 
 
@@ -212,7 +212,7 @@ contains
 
       if (slave) then
 
-         ncrn         = int(ibuff(1), kind=4)
+         ncrsp        = int(ibuff(1), kind=4)
          ncrb         = int(ibuff(2), kind=4)
 
          cfl_cr       = rbuff(1)
@@ -226,24 +226,24 @@ contains
          cre_gpcr_ess = lbuff(4)
 
          nn           = ibuff(ubound(ibuff, 1))    ! this must match the last rbuff() index above
-         ne           = nn + 3 * ncrn
+         ne           = nn + 3 * ncrsp
 
          divv_scheme  = cbuff(1)
 
-         if (ncrn > 0) then
-            gamma_crn  (1:ncrn) = rbuff(nn+1       :nn+  ncrn)
-            K_crn_paral(1:ncrn) = rbuff(nn+1+  ncrn:nn+2*ncrn)
-            K_crn_perp (1:ncrn) = rbuff(nn+1+2*ncrn:nn+3*ncrn)
+         if (ncrsp > 0) then
+            gamma_crn  (1:ncrsp) = rbuff(nn+1        :nn+  ncrsp)
+            K_crn_paral(1:ncrsp) = rbuff(nn+1+  ncrsp:nn+2*ncrsp)
+            K_crn_perp (1:ncrsp) = rbuff(nn+1+2*ncrsp:nn+3*ncrsp)
 
-            crn_gpcr_ess(1:ncrn) = lbuff(5:ncrn+4)
+            crn_gpcr_ess(1:ncrsp) = lbuff(5:ncrsp+4)
          endif
 
       endif
 
       ncr2b  = I_TWO * ncrb
-      ncrtot = ncr2b + ncrn
+      ncrtot = ncr2b + ncrsp
 
-      if (any([ncrn, ncrb] > ncr_max) .or. any([ncrn, ncrb] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
+      if (any([ncrsp, ncrb] > ncr_max) .or. any([ncrsp, ncrb] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
       if (ncrtot == 0) call warn("[initcosmicrays:init_cosmicrays] ncrtot == 0; no cr components specified")
 
       ma1d = [ncrtot]
@@ -255,13 +255,13 @@ contains
       K_crs_paral(:) = 0.0
       K_crs_perp (:) = 0.0
 
-      if (ncrn > 0) then
-         gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
-         K_crs_paral(1:ncrn) = K_crn_paral(1:ncrn)
-         K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
+      if (ncrsp > 0) then
+         gamma_crs  (1:ncrsp) = gamma_crn  (1:ncrsp)
+         K_crs_paral(1:ncrsp) = K_crn_paral(1:ncrsp)
+         K_crs_perp (1:ncrsp) = K_crn_perp (1:ncrsp)
       endif
 
-      ma1d = [ncrn]
+      ma1d = [ncrsp]
       call my_allocate(iarr_crn, ma1d)
 
       if (ncrb <= 0) then
@@ -281,14 +281,14 @@ contains
 
       add_E = 0
       if (ncrb > 0) add_E = I_ONE
-      ncrspe = ncrn + add_E
-      call init_cr_species(ncrspe, ncrn, crn_gpcr_ess, cre_gpcr_ess)
+      ncrspe = ncrsp + add_E
+      call init_cr_species(ncrspe, ncrsp, crn_gpcr_ess, cre_gpcr_ess)
 
       ma1d = [ int(count(crn_gpcr_ess), kind=4) ]
 
       call my_allocate(gpcr_essential, ma1d)
       jcr = 0
-      do icr = 1, ncrn
+      do icr = 1, ncrsp
          if (crn_gpcr_ess(icr)) then
             jcr = jcr + I_ONE
             gpcr_essential(jcr) = icr
@@ -315,19 +315,19 @@ contains
       flind%crn%beg = flind%all + I_ONE
       flind%crs%beg = flind%crn%beg
 
-      flind%crn%all = ncrn
+      flind%crn%all = ncrsp
       flind%cre%all = ncr2b
 
       flind%crs%all = flind%crn%all + flind%cre%all
-      do icr = 1, ncrn
+      do icr = 1, ncrsp
          iarr_crn(icr) = flind%all + icr
          iarr_crs(icr) = flind%all + icr
       enddo
       flind%all = flind%all + flind%crn%all
 
       do icr = I_ONE, ncr2b
-         iarr_cre(icr)        = flind%all + icr
-         iarr_crs(ncrn + icr) = flind%all + icr
+         iarr_cre(icr)         = flind%all + icr
+         iarr_crs(ncrsp + icr) = flind%all + icr
       enddo
 
       flind%all = flind%all + flind%cre%all
