@@ -60,7 +60,7 @@ module initcosmicrays
    real, dimension(ncr_max)            :: K_crn_perp   !< array containing perpendicular diffusion coefficients of all CR nuclear components
    real, dimension(ncr_max)            :: gamma_crn    !< array containing adiabatic indexes of all CR nuclear components
    logical, dimension(ncr_max)         :: crn_gpcr_ess !< if CRn species/energy-bin is essential for grad_pcr calculation
-   integer(kind=4), allocatable, dimension(:) :: gpcr_essential !< crs indexes of essentials for grad_pcr calculation
+   integer(kind=4), allocatable, dimension(:) :: gpcr_ess_noncresp !< indexes of essentials for grad_pcr calculation for non-CRESP components
    ! public component data
    integer(kind=4), allocatable, dimension(:) :: iarr_crn !< array of indexes pointing to all CR nuclear components
    integer(kind=4), allocatable, dimension(:) :: iarr_cre !< array of indexes pointing to all CR electron components
@@ -275,12 +275,12 @@ contains
 
       ma1d = [ int(count(crn_gpcr_ess), kind=4) ]
 
-      call my_allocate(gpcr_essential, ma1d)
+      call my_allocate(gpcr_ess_noncresp, ma1d)
       jcr = 0
       do icr = 1, ncrsp
          if (crn_gpcr_ess(icr)) then
             jcr = jcr + I_ONE
-            gpcr_essential(jcr) = icr
+            gpcr_ess_noncresp(jcr) = icr
          endif
       enddo
 
@@ -356,7 +356,7 @@ contains
       call my_deallocate(gamma_crs)
       call my_deallocate(K_crs_paral)
       call my_deallocate(K_crs_perp)
-      call my_deallocate(gpcr_essential)
+      call my_deallocate(gpcr_ess_noncresp)
 #ifdef CRESP
       call my_deallocate(iarr_cre_e)
       call my_deallocate(iarr_cre_n)
