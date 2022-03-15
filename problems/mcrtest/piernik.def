@@ -7,7 +7,6 @@
 #define IONIZED
 
 #define COSM_RAYS
-#define COSM_RAYS_SOURCES
 
 #define MAGNETIC
 

@@ -36,10 +36,7 @@ module sourcecosmicrays
    implicit none
 
    private
-   public :: src_gpcr
-#ifdef COSM_RAYS_SOURCES
-   public :: src_cr_spallation_and_decay
-#endif /* COSM_RAYS_SOURCES */
+   public :: src_gpcr, src_cr_spallation_and_decay
 
 contains
 
@@ -113,7 +110,6 @@ contains
 
 !==========================================================================================
 
-#ifdef COSM_RAYS_SOURCES
 !>
 !! \brief Computation of Cosmic ray particles spallation and decay
 !! \warning multiplying by cr_sigma may cause underflow errors in some unit sets
@@ -170,6 +166,5 @@ contains
       enddo
 
    end subroutine src_cr_spallation_and_decay
-#endif /* COSM_RAYS_SOURCES */
 
 end module sourcecosmicrays

@@ -17,12 +17,6 @@
 #  endif /* !NONMAGNETIC */
 #endif /* IONIZED */
 
-#ifdef COSM_RAYS_SOURCES
-#  ifndef COSM_RAYS
-#    define COSM_RAYS
-#  endif /* !COSM_RAYS */
-#endif /* COSM_RAYS_SOURCES */
-
 #ifdef CRESP
 #  ifndef COSM_RAYS
 #    define COSM_RAYS

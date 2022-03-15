@@ -53,6 +53,7 @@ module initcosmicrays
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
    real                                :: cr_eff       !< conversion rate of SN explosion energy to CR energy (default = 0.1)
    logical                             :: use_CRdiff   !< switch for diffusion of cosmic rays
+   logical                             :: use_CRdecay  !< switch for spallation and decay of cosmic rays
    logical                             :: use_smallecr !< correct CR energy density when it gets lower than smallecr
    character(len=cbuff_len)            :: divv_scheme  !< scheme used to calculate div(v), see crhelpers for more details
    real, dimension(ncr_max)            :: K_crn_paral  !< array containing parallel diffusion coefficients of all CR nuclear components
@@ -89,19 +90,20 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>cfl_cr      </td><td>0.9   </td><td>real value</td><td>\copydoc initcosmicrays::cfl_cr     </td></tr>
-!! <tr><td>smallecr    </td><td>0.0   </td><td>real value</td><td>\copydoc initcosmicrays::smallecr   </td></tr>
-!! <tr><td>cr_active   </td><td>1.0   </td><td>real value</td><td>\copydoc initcosmicrays::cr_active  </td></tr>
-!! <tr><td>cr_eff      </td><td>0.1   </td><td>real value</td><td>\copydoc initcosmicrays::cr_eff     </td></tr>
-!! <tr><td>use_CRdiff  </td><td>.true.</td><td>logical   </td><td>\copydoc initcosmicrays::use_CRdiff </td></tr>
-!! <tr><td>ncrn        </td><td>0     </td><td>integer   </td><td>\copydoc initcosmicrays::ncrn       </td></tr>
-!! <tr><td>ncre        </td><td>0     </td><td>integer   </td><td>\copydoc initcosmicrays::ncre       </td></tr>
-!! <tr><td>gamma_crn   </td><td>4./3. </td><td>real array</td><td>\copydoc initcosmicrays::gamma_crn  </td></tr>
-!! <tr><td>K_crn_paral </td><td>0     </td><td>real array</td><td>\copydoc initcosmicrays::k_crn_paral</td></tr>
-!! <tr><td>K_crn_perp  </td><td>0     </td><td>real array</td><td>\copydoc initcosmicrays::k_crn_perp </td></tr>
-!! <tr><td>K_cre_paral </td><td>0     </td><td>real array</td><td>\copydoc initcosmicrays::k_cre_paral</td></tr>
-!! <tr><td>K_cre_perp  </td><td>0     </td><td>real array</td><td>\copydoc initcosmicrays::k_cre_perp </td></tr>
-!! <tr><td>divv_scheme </td><td>''    </td><td>string    </td><td>\copydoc initcosmicrays::divv_scheme</td></tr>
+!! <tr><td>cfl_cr      </td><td>0.9    </td><td>real value</td><td>\copydoc initcosmicrays::cfl_cr     </td></tr>
+!! <tr><td>smallecr    </td><td>0.0    </td><td>real value</td><td>\copydoc initcosmicrays::smallecr   </td></tr>
+!! <tr><td>cr_active   </td><td>1.0    </td><td>real value</td><td>\copydoc initcosmicrays::cr_active  </td></tr>
+!! <tr><td>cr_eff      </td><td>0.1    </td><td>real value</td><td>\copydoc initcosmicrays::cr_eff     </td></tr>
+!! <tr><td>use_CRdiff  </td><td>.true. </td><td>logical   </td><td>\copydoc initcosmicrays::use_CRdiff </td></tr>
+!! <tr><td>use_CRdecay </td><td>.false.</td><td>logical   </td><td>\copydoc initcosmicrays::use_CRdecay</td></tr>
+!! <tr><td>ncrn        </td><td>0      </td><td>integer   </td><td>\copydoc initcosmicrays::ncrn       </td></tr>
+!! <tr><td>ncre        </td><td>0      </td><td>integer   </td><td>\copydoc initcosmicrays::ncre       </td></tr>
+!! <tr><td>gamma_crn   </td><td>4./3.  </td><td>real array</td><td>\copydoc initcosmicrays::gamma_crn  </td></tr>
+!! <tr><td>K_crn_paral </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_crn_paral</td></tr>
+!! <tr><td>K_crn_perp  </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_crn_perp </td></tr>
+!! <tr><td>K_cre_paral </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_cre_paral</td></tr>
+!! <tr><td>K_cre_perp  </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_cre_perp </td></tr>
+!! <tr><td>divv_scheme </td><td>''     </td><td>string    </td><td>\copydoc initcosmicrays::divv_scheme</td></tr>
 !! <tr><td>crn_gpcr_ess</td><td>(1): .true.; (>2):.false.</td><td>logical</td><td>\copydoc initcosmicrays::crn_gpcr_ess</td></tr>
 !! <tr><td>cre_gpcr_ess</td><td>.false.                  </td><td>logical</td><td>\copydoc initcosmicrays::cre_gpcr_ess</td></tr>
 !! </table>
@@ -123,7 +125,7 @@ contains
       integer         :: ne
       real            :: maxKcrs
 
-      namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRdiff, divv_scheme, &
+      namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRdiff, use_CRdecay, divv_scheme, &
            &                 gamma_crn, K_crn_paral, K_crn_perp, ncrn, ncre, crn_gpcr_ess, cre_gpcr_ess
 
       cfl_cr          = 0.9
@@ -135,6 +137,7 @@ contains
 
       use_CRdiff      = .true.
       use_smallecr    = .true.
+      use_CRdecay     = .false.
 
       gamma_crn(:)    = 4./3.
       K_crn_paral(:)  = 0.0
@@ -180,8 +183,9 @@ contains
          rbuff(4) = cr_eff
 
          lbuff(1) = use_CRdiff
-         lbuff(2) = use_smallecr
-         lbuff(3) = cre_gpcr_ess
+         lbuff(2) = use_CRdecay
+         lbuff(3) = use_smallecr
+         lbuff(4) = cre_gpcr_ess
 
          cbuff(1) = divv_scheme
 
@@ -195,7 +199,7 @@ contains
             rbuff(nn+1+  ncrn:nn+2*ncrn) = K_crn_paral(1:ncrn)
             rbuff(nn+1+2*ncrn:nn+3*ncrn) = K_crn_perp (1:ncrn)
 
-            lbuff(4:ncrn+3) = crn_gpcr_ess(1:ncrn)
+            lbuff(5:ncrn+4) = crn_gpcr_ess(1:ncrn)
          endif
 
 
@@ -217,8 +221,9 @@ contains
          cr_eff       = rbuff(4)
 
          use_CRdiff   = lbuff(1)
-         use_smallecr = lbuff(2)
-         cre_gpcr_ess = lbuff(3)
+         use_CRdecay  = lbuff(2)
+         use_smallecr = lbuff(3)
+         cre_gpcr_ess = lbuff(4)
 
          nn           = ibuff(ubound(ibuff, 1))    ! this must match the last rbuff() index above
          ne           = nn + 3 * ncrn
@@ -230,7 +235,7 @@ contains
             K_crn_paral(1:ncrn) = rbuff(nn+1+  ncrn:nn+2*ncrn)
             K_crn_perp (1:ncrn) = rbuff(nn+1+2*ncrn:nn+3*ncrn)
 
-            crn_gpcr_ess(1:ncrn) = lbuff(4:ncrn+3)
+            crn_gpcr_ess(1:ncrn) = lbuff(5:ncrn+4)
          endif
 
       endif

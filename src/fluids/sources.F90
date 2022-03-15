@@ -161,12 +161,13 @@ contains
 #ifdef GRAV
       use gravity,          only: grav_src_exec
 #endif /* GRAV */
-#if defined COSM_RAYS && defined IONIZED
-      use sourcecosmicrays, only: src_gpcr
-#endif /* COSM_RAYS && IONIZED */
-#ifdef COSM_RAYS_SOURCES
+#ifdef COSM_RAYS
+      use initcosmicrays,   only: use_CRdecay
       use sourcecosmicrays, only: src_cr_spallation_and_decay
-#endif /* COSM_RAYS_SOURCES */
+#ifdef IONIZED
+      use sourcecosmicrays, only: src_gpcr
+#endif /* IONIZED */
+#endif /* COSM_RAYS */
 #ifdef CORIOLIS
       use coriolis,         only: coriolis_force
 #endif /* CORIOLIS */
@@ -222,14 +223,16 @@ contains
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #endif /* !GRAV */
 
-#if defined COSM_RAYS && defined IONIZED
+#ifdef COSM_RAYS
+#ifdef IONIZED
       call src_gpcr(u, n, newsrc, sweep, i1, i2, cg, vx)
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
-#endif /* COSM_RAYS && IONIZED */
-#ifdef COSM_RAYS_SOURCES
-      call src_cr_spallation_and_decay(u, n, newsrc, coeffdt) ! n safe
-      usrc(:,:) = usrc(:,:) + newsrc(:,:)
-#endif /* COSM_RAYS_SOURCES */
+#endif /* IONIZED */
+      if (use_CRdecay) then
+         call src_cr_spallation_and_decay(u, n, newsrc, coeffdt) ! n safe
+         usrc(:,:) = usrc(:,:) + newsrc(:,:)
+      endif
+#endif /* COSM_RAYS */
 
 ! --------------------------------------------------
 
