@@ -173,7 +173,7 @@ contains
       use diagnostics,     only: my_allocate_with_index
       use global,          only: disallow_CRnegatives
       use func,            only: emag
-      use initcosmicrays,  only: ncrb, ncr2b, ncrn, ncrs, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp, use_smallecr
+      use initcosmicrays,  only: ncrb, ncr2b, ncrn, ncrtot, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp, use_smallecr
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use units,           only: clight, me, sigma_T
 
@@ -579,10 +579,10 @@ contains
       write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_perp = ",  K_cre_perp(1:ncrb)  ; if (master) call printinfo(msg)
 #endif /* VERBOSE */
 
-      K_cre_paral(ncrb+1:ncr2b) = K_cre_paral(1:ncrb)
-      K_cre_perp (ncrb+1:ncr2b) = K_cre_perp (1:ncrb)
-      K_crs_paral(ncrn+1:ncrs)  = K_cre_paral(1:ncr2b)
-      K_crs_perp (ncrn+1:ncrs)  = K_cre_perp (1:ncr2b)
+      K_cre_paral(ncrb+1:ncr2b)  = K_cre_paral(1:ncrb)
+      K_cre_perp (ncrb+1:ncr2b)  = K_cre_perp (1:ncrb)
+      K_crs_paral(ncrn+1:ncrtot) = K_cre_paral(1:ncr2b)
+      K_crs_perp (ncrn+1:ncrtot) = K_cre_perp (1:ncr2b)
 
       fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
       write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr

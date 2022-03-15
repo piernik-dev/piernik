@@ -44,10 +44,10 @@ module initcosmicrays
 
    integer, parameter                  :: ncr_max = 102  !< maximum number of CR nuclear and electron components (\warning higher ncr_max limit would require changes in names of components in common_hdf5)
    ! namelist parameters
-   integer(kind=4)                     :: ncrn         !< number of CR nuclear  components \deprecated BEWARE: ncrs (sum of ncrn and ncrb) should not be higher than ncr_max = 102
+   integer(kind=4)                     :: ncrn         !< number of CR nuclear  components \deprecated BEWARE: ncrtot (sum of ncrn and ncr2b) should not be higher than ncr_max = 102
    integer(kind=4)                     :: ncrb         !< number of bins for CRESP
    integer(kind=4)                     :: ncr2b        !< 2*ncrb for CRESP
-   integer(kind=4)                     :: ncrs         !< number of all CR components \deprecated BEWARE: ncrs (sum of ncrn and ncrb) should not be higher than ncr_max = 102
+   integer(kind=4)                     :: ncrtot       !< number of all CR components \deprecated BEWARE: ncrtot (sum of ncrn and ncr2b) should not be higher than ncr_max = 102
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
@@ -240,13 +240,13 @@ contains
 
       endif
 
-      ncr2b = I_TWO * ncrb
-      ncrs  = ncr2b + ncrn
+      ncr2b  = I_TWO * ncrb
+      ncrtot = ncr2b + ncrn
 
       if (any([ncrn, ncrb] > ncr_max) .or. any([ncrn, ncrb] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
-      if (ncrs == 0) call warn("[initcosmicrays:init_cosmicrays] ncrs == 0; no cr components specified")
+      if (ncrtot == 0) call warn("[initcosmicrays:init_cosmicrays] ncrtot == 0; no cr components specified")
 
-      ma1d = [ncrs]
+      ma1d = [ncrtot]
       call my_allocate(gamma_crs,   ma1d)
       call my_allocate(K_crs_paral, ma1d)
       call my_allocate(K_crs_perp,  ma1d)
@@ -276,7 +276,7 @@ contains
       call my_allocate(iarr_cre_e, ma1d)
       call my_allocate(iarr_cre_n, ma1d)
 #endif /* CRESP */
-      ma1d = [ncrs]
+      ma1d = [ncrtot]
       call my_allocate(iarr_crs, ma1d)
 
       add_E = 0
