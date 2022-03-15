@@ -343,7 +343,7 @@ contains
             dt_cur_shrink = one
          endif
       else
-         repeat_step = repetitive_steps   ! overrides this flag if step is not meant to be repeated
+         repeat_step = repetitive_steps   ! overwrite this flag if step is not meant to be repeated
       endif
 
    end subroutine cfl_warn
