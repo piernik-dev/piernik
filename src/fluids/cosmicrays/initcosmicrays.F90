@@ -46,7 +46,7 @@ module initcosmicrays
    ! namelist parameters
    integer(kind=4)                     :: ncrn         !< number of CR nuclear  components \deprecated BEWARE: ncrs (sum of ncrn and ncrb) should not be higher than ncr_max = 102
    integer(kind=4)                     :: ncrb         !< number of bins for CRESP
-   integer(kind=4)                     :: ncra         !< 2*ncrb for CRESP
+   integer(kind=4)                     :: ncr2b        !< 2*ncrb for CRESP
    integer(kind=4)                     :: ncrs         !< number of all CR components \deprecated BEWARE: ncrs (sum of ncrn and ncrb) should not be higher than ncr_max = 102
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
    real                                :: smallecr     !< floor value for CR energy density
@@ -121,7 +121,7 @@ contains
 
       implicit none
 
-      integer(kind=4) :: nn, icr, jcr, ncrsp, add_E
+      integer(kind=4) :: nn, icr, jcr, ncrspe, add_E
       integer         :: ne
       real            :: maxKcrs
 
@@ -240,8 +240,8 @@ contains
 
       endif
 
-      ncra = I_TWO * ncrb
-      ncrs = ncra + ncrn
+      ncr2b = I_TWO * ncrb
+      ncrs  = ncr2b + ncrn
 
       if (any([ncrn, ncrb] > ncr_max) .or. any([ncrn, ncrb] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
       if (ncrs == 0) call warn("[initcosmicrays:init_cosmicrays] ncrs == 0; no cr components specified")
@@ -267,7 +267,7 @@ contains
       if (ncrb <= 0) then
          ma1d = 0
       else
-         ma1d = [ncra]
+         ma1d = [ncr2b]
       endif
       call my_allocate(iarr_cre, ma1d) ! < iarr_cre will point: (1:ncrb) - cre number per bin, (ncrb+1:2*ncrb) - cre energy per bin
 
@@ -281,8 +281,8 @@ contains
 
       add_E = 0
       if (ncrb > 0) add_E = I_ONE
-      ncrsp = ncrn + add_E
-      call init_cr_species(ncrsp, ncrn, crn_gpcr_ess, cre_gpcr_ess)
+      ncrspe = ncrn + add_E
+      call init_cr_species(ncrspe, ncrn, crn_gpcr_ess, cre_gpcr_ess)
 
       ma1d = [ int(count(crn_gpcr_ess), kind=4) ]
 
@@ -316,7 +316,7 @@ contains
       flind%crs%beg = flind%crn%beg
 
       flind%crn%all = ncrn
-      flind%cre%all = ncra
+      flind%cre%all = ncr2b
 
       flind%crs%all = flind%crn%all + flind%cre%all
       do icr = 1, ncrn
@@ -325,7 +325,7 @@ contains
       enddo
       flind%all = flind%all + flind%crn%all
 
-      do icr = I_ONE, ncra
+      do icr = I_ONE, ncr2b
          iarr_cre(icr)        = flind%all + icr
          iarr_crs(ncrn + icr) = flind%all + icr
       enddo

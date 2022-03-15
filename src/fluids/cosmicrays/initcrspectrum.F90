@@ -158,7 +158,7 @@ module initcrspectrum
    end type dump_fpq_type
    type(dump_fpq_type) :: dfpq
 
-   real    :: fsynchr, def_dtadiab, def_dtsynch
+   real :: fsynchr, def_dtadiab, def_dtsynch
 
 !====================================================================================================
 !
@@ -173,14 +173,14 @@ contains
       use diagnostics,     only: my_allocate_with_index
       use global,          only: disallow_CRnegatives
       use func,            only: emag
-      use initcosmicrays,  only: ncra, ncrb, ncrn, ncrs, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp, use_smallecr
+      use initcosmicrays,  only: ncrb, ncr2b, ncrn, ncrs, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp, use_smallecr
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use units,           only: clight, me, sigma_T
 
       implicit none
 
       integer(kind=4) :: i
-      real    :: p_br_def, q_br_def
+      real            :: p_br_def, q_br_def
 
       namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum, p_min_fix, p_max_fix, &
       &                         cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, K_cre_pow, expan_order, e_small, use_cresp, use_cresp_evol, &
@@ -579,10 +579,10 @@ contains
       write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_perp = ",  K_cre_perp(1:ncrb)  ; if (master) call printinfo(msg)
 #endif /* VERBOSE */
 
-      K_cre_paral(ncrb+1:ncra) = K_cre_paral(1:ncrb)
-      K_cre_perp (ncrb+1:ncra) = K_cre_perp (1:ncrb)
-      K_crs_paral(ncrn+1:ncrs) = K_cre_paral(1:ncra)
-      K_crs_perp (ncrn+1:ncrs) = K_cre_perp (1:ncra)
+      K_cre_paral(ncrb+1:ncr2b) = K_cre_paral(1:ncrb)
+      K_cre_perp (ncrb+1:ncr2b) = K_cre_perp (1:ncrb)
+      K_crs_paral(ncrn+1:ncrs)  = K_cre_paral(1:ncr2b)
+      K_crs_perp (ncrn+1:ncrs)  = K_cre_perp (1:ncr2b)
 
       fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
       write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr
