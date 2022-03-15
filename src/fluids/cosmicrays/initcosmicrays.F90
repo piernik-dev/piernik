@@ -58,8 +58,6 @@ module initcosmicrays
    character(len=cbuff_len)            :: divv_scheme  !< scheme used to calculate div(v), see crhelpers for more details
    real, dimension(ncr_max)            :: K_crn_paral  !< array containing parallel diffusion coefficients of all CR nuclear components
    real, dimension(ncr_max)            :: K_crn_perp   !< array containing perpendicular diffusion coefficients of all CR nuclear components
-   real, dimension(ncr_max)            :: K_cre_paral  !< array containing parallel diffusion coefficients of all CR electron components (number density and energy density)
-   real, dimension(ncr_max)            :: K_cre_perp   !< array containing perpendicular diffusion coefficients of all CR electron components (number density and energy density)
    real, dimension(ncr_max)            :: gamma_crn    !< array containing adiabatic indexes of all CR nuclear components
    logical, dimension(ncr_max)         :: crn_gpcr_ess !< if CRn species/energy-bin is essential for grad_pcr calculation
    integer(kind=4), allocatable, dimension(:) :: gpcr_essential !< crs indexes of essentials for grad_pcr calculation
@@ -100,8 +98,6 @@ contains
 !! <tr><td>gamma_crn   </td><td>4./3.  </td><td>real array</td><td>\copydoc initcosmicrays::gamma_crn  </td></tr>
 !! <tr><td>K_crn_paral </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_crn_paral</td></tr>
 !! <tr><td>K_crn_perp  </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_crn_perp </td></tr>
-!! <tr><td>K_cre_paral </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_cre_paral</td></tr>
-!! <tr><td>K_cre_perp  </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_cre_perp </td></tr>
 !! <tr><td>divv_scheme </td><td>''     </td><td>string    </td><td>\copydoc initcosmicrays::divv_scheme</td></tr>
 !! <tr><td>crn_gpcr_ess</td><td>(1): .true.; (>2):.false.</td><td>logical</td><td>\copydoc initcosmicrays::crn_gpcr_ess</td></tr>
 !! </table>
@@ -140,8 +136,6 @@ contains
       gamma_crn(:)    = 4./3.
       K_crn_paral(:)  = 0.0
       K_crn_perp(:)   = 0.0
-      K_cre_paral(:)  = 0.0
-      K_cre_perp(:)   = 0.0
 
       crn_gpcr_ess(:) = .false.
       crn_gpcr_ess(1) = .true.       ! in most cases protons are the first ingredient of CRs and they are essential

@@ -54,8 +54,8 @@ contains
       use fluidindex,       only: flind
       use func,             only: emag
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep, n_substeps_max
+      use initcosmicrays,   only: cfl_cr, iarr_cre_e, iarr_cre_n
+      use initcrspectrum,   only: K_cresp_paral, K_cresp_perp, spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep, n_substeps_max
       use mpisetup,         only: piernik_MPI_Allreduce
 
       implicit none
@@ -110,7 +110,7 @@ contains
 
       if (adiab_active) call cresp_timestep_adiabatic(abs_max_ud)
 
-      K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
+      K_cre_max_sum = K_cresp_paral(i_up_max) + K_cresp_perp(i_up_max) ! assumes the same K for energy and number density
       if (K_cre_max_sum > zero) then                               ! K_cre dependent on momentum - maximal for highest bin number
          dt_aux = cfl_cr * half / K_cre_max_sum                    ! We use cfl_cr here (CFL number for diffusive CR transport), cfl_cre used only for spectrum evolution
          cgl => leaves%first

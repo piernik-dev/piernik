@@ -62,6 +62,8 @@ module initcrspectrum
    real            :: q_big                       !< maximal amplitude of q
    real            :: cfl_cre                     !< CFL parameter  for cr electrons
    real            :: cre_eff                     !< fraction of energy passed to cr-electrons by nucleons (mainly protons)
+   real, dimension(:), allocatable :: K_cresp_paral !< array containing parallel diffusion coefficients of all CR CRESP components (number density and energy density)
+   real, dimension(:), allocatable :: K_cresp_perp  !< array containing perpendicular diffusion coefficients of all CR CRESP components (number density and energy density)
    real            :: K_cre_paral_1               !< maximal parallel diffusion coefficient value
    real            :: K_cre_perp_1                !< maximal perpendicular diffusion coefficient value
    real            :: K_cre_pow                   !< exponent for power law-like diffusion-energy dependence
@@ -173,7 +175,7 @@ contains
       use diagnostics,     only: my_allocate_with_index
       use global,          only: disallow_CRnegatives
       use func,            only: emag
-      use initcosmicrays,  only: ncrb, ncr2b, ncrsp, ncrtot, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp, use_smallecr
+      use initcosmicrays,  only: ncrb, ncr2b, ncrsp, ncrtot, K_crs_paral, K_crs_perp, use_smallecr
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use units,           only: clight, me, sigma_T
 
@@ -571,18 +573,20 @@ contains
 
       call init_cresp_types
 
-      K_cre_paral(1:ncrb) = K_cre_paral_1 * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow
-      K_cre_perp(1:ncrb)  = K_cre_perp_1  * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow
+      allocate(K_cresp_paral(ncr2b), K_cresp_perp(ncr2b))
+      K_cresp_paral(1:ncrb) = K_cre_paral_1 * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow
+      K_cresp_perp(1:ncrb)  = K_cre_perp_1  * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow
 
 #ifdef VERBOSE
       write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_paral = ", K_cre_paral(1:ncrb) ; if (master) call printinfo(msg)
       write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_perp = ",  K_cre_perp(1:ncrb)  ; if (master) call printinfo(msg)
 #endif /* VERBOSE */
 
-      K_cre_paral(ncrb+1:ncr2b)   = K_cre_paral(1:ncrb)
-      K_cre_perp (ncrb+1:ncr2b)   = K_cre_perp (1:ncrb)
-      K_crs_paral(ncrsp+1:ncrtot) = K_cre_paral(1:ncr2b)
-      K_crs_perp (ncrsp+1:ncrtot) = K_cre_perp (1:ncr2b)
+      K_cresp_paral(ncrb+1:ncr2b) = K_cresp_paral(1:ncrb)
+      K_cresp_perp (ncrb+1:ncr2b) = K_cresp_perp (1:ncrb)
+      K_crs_paral(ncrsp+1:ncrtot) = K_cresp_paral(1:ncr2b)
+      K_crs_perp (ncrsp+1:ncrtot) = K_cresp_perp (1:ncr2b)
+      deallocate(K_cresp_paral, K_cresp_perp)
 
       fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
       write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr
