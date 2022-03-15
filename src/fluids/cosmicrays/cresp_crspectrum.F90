@@ -1768,7 +1768,8 @@ contains
    subroutine src_gpcresp(u, n, dx, grad_pcresp)
 
       use constants,      only: onet
-      use initcosmicrays, only: ncrb, cre_gpcr_ess
+      use cr_data,        only: eE
+      use initcosmicrays, only: ncrb
       use initcrspectrum, only: cre_active
 
       implicit none
@@ -1780,7 +1781,7 @@ contains
       real, dimension(n)                      :: P_cresp_r, P_cresp_l
 
       grad_pcresp = 0.0
-      if (.not.cre_gpcr_ess) return
+      if (.not. eE(2)) return !< temporary usage instead of cre_gpcr_ess
 
       P_cresp_l = 0.0 ;  P_cresp_r = 0.0
 

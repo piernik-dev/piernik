@@ -70,7 +70,6 @@ $BASE_DOMAIN
     K_crn_perp(1)  = 1. ! 1.! 1000   ! isotropic
     K_crn_perp(2)  = 0
     K_crn_perp(3)  = 0
-    cre_gpcr_ess   = .false.
     divv_scheme    = "6lp"
  /
 

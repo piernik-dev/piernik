@@ -70,7 +70,6 @@
     K_crn_perp(1)  = 0     ! isotropic
     K_crn_perp(2)  = 0
 !    K_crn_perp(3)  = 0
-    use_split   = .false.
  /   
   
  $COSMIC_RAY_SPECTRUM

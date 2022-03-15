@@ -86,7 +86,7 @@ contains
          usrc(:, iarr_crn(icr)) = -1. / real(dom%eff_dim) * (gamma_crn(icr)-1.0) * uu(:, iarr_crn(icr)) * divv(:)
       enddo
 
-      !< gpcr_essential includes electrons only if CRESP not defined and cre_gpcr_ess = .true.
+      !< gpcr_essential includes species only for non-CRESP treatment and where crn_gpcr_ess = .true.
       grad_pcr(:) = 0.0
       do icr = 1, size(gpcr_essential)
          jcr = gpcr_essential(icr)

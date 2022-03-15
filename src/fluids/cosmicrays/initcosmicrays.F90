@@ -62,7 +62,6 @@ module initcosmicrays
    real, dimension(ncr_max)            :: K_cre_perp   !< array containing perpendicular diffusion coefficients of all CR electron components (number density and energy density)
    real, dimension(ncr_max)            :: gamma_crn    !< array containing adiabatic indexes of all CR nuclear components
    logical, dimension(ncr_max)         :: crn_gpcr_ess !< if CRn species/energy-bin is essential for grad_pcr calculation
-   logical                             :: cre_gpcr_ess !< if CRe species/energy-bin is essential for grad_pcr calculation
    integer(kind=4), allocatable, dimension(:) :: gpcr_essential !< crs indexes of essentials for grad_pcr calculation
    ! public component data
    integer(kind=4), allocatable, dimension(:) :: iarr_crn !< array of indexes pointing to all CR nuclear components
@@ -105,7 +104,6 @@ contains
 !! <tr><td>K_cre_perp  </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_cre_perp </td></tr>
 !! <tr><td>divv_scheme </td><td>''     </td><td>string    </td><td>\copydoc initcosmicrays::divv_scheme</td></tr>
 !! <tr><td>crn_gpcr_ess</td><td>(1): .true.; (>2):.false.</td><td>logical</td><td>\copydoc initcosmicrays::crn_gpcr_ess</td></tr>
-!! <tr><td>cre_gpcr_ess</td><td>.false.                  </td><td>logical</td><td>\copydoc initcosmicrays::cre_gpcr_ess</td></tr>
 !! </table>
 !! The list is active while \b "COSM_RAYS" is defined.
 !! \n \n
@@ -126,7 +124,7 @@ contains
       real            :: maxKcrs
 
       namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRdiff, use_CRdecay, divv_scheme, &
-           &                 gamma_crn, K_crn_paral, K_crn_perp, ncrsp, ncrb, crn_gpcr_ess, cre_gpcr_ess
+           &                 gamma_crn, K_crn_paral, K_crn_perp, ncrsp, ncrb, crn_gpcr_ess
 
       cfl_cr          = 0.9
       smallecr        = 0.0
@@ -147,7 +145,6 @@ contains
 
       crn_gpcr_ess(:) = .false.
       crn_gpcr_ess(1) = .true.       ! in most cases protons are the first ingredient of CRs and they are essential
-      cre_gpcr_ess    = .false.
 
       divv_scheme     = ''
 
@@ -185,7 +182,6 @@ contains
          lbuff(1) = use_CRdiff
          lbuff(2) = use_CRdecay
          lbuff(3) = use_smallecr
-         lbuff(4) = cre_gpcr_ess
 
          cbuff(1) = divv_scheme
 
@@ -199,7 +195,7 @@ contains
             rbuff(nn+1+  ncrsp:nn+2*ncrsp) = K_crn_paral(1:ncrsp)
             rbuff(nn+1+2*ncrsp:nn+3*ncrsp) = K_crn_perp (1:ncrsp)
 
-            lbuff(5:ncrsp+4) = crn_gpcr_ess(1:ncrsp)
+            lbuff(4:ncrsp+3) = crn_gpcr_ess(1:ncrsp)
          endif
 
 
@@ -223,7 +219,6 @@ contains
          use_CRdiff   = lbuff(1)
          use_CRdecay  = lbuff(2)
          use_smallecr = lbuff(3)
-         cre_gpcr_ess = lbuff(4)
 
          nn           = ibuff(ubound(ibuff, 1))    ! this must match the last rbuff() index above
          ne           = nn + 3 * ncrsp
@@ -235,7 +230,7 @@ contains
             K_crn_paral(1:ncrsp) = rbuff(nn+1+  ncrsp:nn+2*ncrsp)
             K_crn_perp (1:ncrsp) = rbuff(nn+1+2*ncrsp:nn+3*ncrsp)
 
-            crn_gpcr_ess(1:ncrsp) = lbuff(5:ncrsp+4)
+            crn_gpcr_ess(1:ncrsp) = lbuff(4:ncrsp+3)
          endif
 
       endif
@@ -282,7 +277,7 @@ contains
       add_E = 0
       if (ncrb > 0) add_E = I_ONE
       ncrspe = ncrsp + add_E
-      call init_cr_species(ncrspe, ncrsp, crn_gpcr_ess, cre_gpcr_ess)
+      call init_cr_species(ncrspe, ncrsp, crn_gpcr_ess)
 
       ma1d = [ int(count(crn_gpcr_ess), kind=4) ]
 

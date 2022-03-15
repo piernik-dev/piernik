@@ -136,7 +136,7 @@ contains
 !! The list is active while \b "COSM_RAYS" is defined.
 !! \n \n
 !<
-   subroutine init_cr_species(ncrsp, ncrn, crness, creess)
+   subroutine init_cr_species(ncrsp, ncrn, crness)
 
       use dataio_pub, only: msg, printinfo, die, nh
       use mpisetup,   only: lbuff, master, slave, piernik_MPI_Bcast
@@ -146,7 +146,6 @@ contains
 
       integer(kind=4),       intent(in)    :: ncrsp, ncrn
       logical, dimension(:), intent(inout) :: crness
-      logical,               intent(inout) :: creess
 
       integer                                    :: icr, i
       character(len=specieslen), dimension(nicr) :: eCRSP_names
@@ -158,7 +157,7 @@ contains
       ! Only protons (p+) are dynamically important, we can neglect grad_pcr from heavier nuclei
       ! because of their lower abundancies: n(alpha) ~ 0.1 n(p+), other elements less abundant by orders of magnitude
 #ifdef CRESP
-      eE    = .true.
+      eE    = [.true., .false.]
 #else /* !CRESP */
       eE    = .false.
 #endif /* !CRESP */
@@ -232,7 +231,7 @@ contains
 
       icr = 0
       if (count(eCRSP) > ncrsp) call die("[cr_data:init_cr_species] You have specified more CR species present than is set by ncrsp. Check your CR_SPECIES and COSMIC_RAYS namelists parameters")
-      if (eCRSP(icr_E)) creess = eCRSP_ess(icr_E)
+      ! electrons temporarily not included in the following lines
       do i = icr_H1, size(eCRSP)
          if (eCRSP(i)) then
             icr = icr + 1
