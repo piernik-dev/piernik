@@ -87,7 +87,7 @@
     K_crn_paral(7) = 10000.0
     K_crn_perp(1)  = 0
     use_CRdecay    = .true.
-    crn_gpcr_ess   = .true.
+    cr_gpcr_ess    = .true.
  /
 
  $CR_SPECIES

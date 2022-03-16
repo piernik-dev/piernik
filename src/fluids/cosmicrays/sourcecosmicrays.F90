@@ -86,7 +86,7 @@ contains
          usrc(:, iarr_crn(icr)) = -1. / real(dom%eff_dim) * (gamma_crn(icr)-1.0) * uu(:, iarr_crn(icr)) * divv(:)
       enddo
 
-      !< gpcr_ess_noncresp includes species only for non-CRESP treatment and where crn_gpcr_ess = .true.
+      !< gpcr_ess_noncresp includes species only for non-CRESP treatment and where cr_gpcr_ess = .true. for unnamed species and set in CR_SPECIES namelist for named species
       grad_pcr(:) = 0.0
       do icr = 1, size(gpcr_ess_noncresp)
          jcr = gpcr_ess_noncresp(icr)
