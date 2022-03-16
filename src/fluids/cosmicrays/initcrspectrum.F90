@@ -42,7 +42,7 @@ module initcrspectrum
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active, &
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,        &
            & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,       &
-           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer
+           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer, K_cresp_paral, K_cresp_perp
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -473,6 +473,9 @@ contains
       call my_allocate_with_index(mom_mid_cre_fix,  ncrb, I_ONE )
       call my_allocate_with_index(gamma_beta_c_fix, ncrb, I_ZERO)
 
+      call my_allocate_with_index(K_cresp_paral,    ncr2b, I_ONE)
+      call my_allocate_with_index(K_cresp_perp,     ncr2b, I_ONE)
+
       cresp_all_edges = [(i, i = I_ZERO, ncrb)]
       cresp_all_bins  = [(i, i = I_ONE,  ncrb)]
 
@@ -573,7 +576,6 @@ contains
 
       call init_cresp_types
 
-      allocate(K_cresp_paral(ncr2b), K_cresp_perp(ncr2b))
       K_cresp_paral(1:ncrb) = K_cre_paral_1 * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow
       K_cresp_perp(1:ncrb)  = K_cre_perp_1  * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow
 
@@ -586,7 +588,6 @@ contains
       K_cresp_perp (ncrb+1:ncr2b) = K_cresp_perp (1:ncrb)
       K_crs_paral(ncrsp+1:ncrtot) = K_cresp_paral(1:ncr2b)
       K_crs_perp (ncrsp+1:ncrtot) = K_cresp_perp (1:ncr2b)
-      deallocate(K_cresp_paral, K_cresp_perp)
 
       fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
       write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr
@@ -646,6 +647,9 @@ contains
       call my_deallocate(mom_cre_fix)
       call my_deallocate(mom_mid_cre_fix)
       call my_deallocate(gamma_beta_c_fix)
+
+      call my_deallocate(K_cresp_paral)
+      call my_deallocate(K_cresp_perp)
 
    end subroutine cleanup_cresp_sp
 
