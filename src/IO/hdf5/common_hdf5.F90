@@ -111,9 +111,8 @@ contains
       use global,         only: cc_mag
       use mpisetup,       only: master
 #ifdef COSM_RAYS
-      use cr_data,        only: cr_names
+      use cr_data,        only: cr_names, cr_spectral
       use dataio_pub,     only: msg
-      use fluidindex,     only: iarr_all_crn
 #endif /* COSM_RAYS */
 #ifdef CRESP
       use initcosmicrays, only: ncrb
@@ -127,7 +126,7 @@ contains
       character(len=singlechar)                            :: fc, ord
       character(len=dsetnamelen)                           :: aux
 #ifdef COSM_RAYS
-      integer                                              :: k
+      integer                                              :: k, ke
 #endif /* COSM_RAYS */
 
       do i = lbound(vars, 1), ubound(vars, 1)
@@ -190,17 +189,20 @@ contains
                call append_var(aux)
 #ifdef COSM_RAYS
             case ('encr')
-               do k = 1, size(iarr_all_crn,1)
-                  if (k<=99) then
-                     if (len(trim(cr_names(k))) > 0) then
-                        write(aux,'(a3,a)') 'cr_', trim(cr_names(k))
-                     else
-                        write(aux,'(A2,I2.2)') 'cr', k
-                     endif
+               do k = 1, size(cr_names)
+                  if (cr_spectral(k)) cycle
+                  if (len(trim(cr_names(k))) > 0) then
+                     write(aux,'(a3,a)') 'cr_', trim(cr_names(k))
                      call append_var(aux)
                   else
-                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", k
-                     call warn(msg)
+                     ke = k - count(cr_spectral)
+                     if (ke <= 99) then
+                        write(aux,'(A2,I2.2)') 'cr', ke
+                        call append_var(aux)
+                     else
+                        write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", ke
+                        call warn(msg)
+                     endif
                   endif
                enddo
 #endif /* COSM_RAYS */

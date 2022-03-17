@@ -126,7 +126,7 @@ contains
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, pi, I_ONE
-      use cr_data,        only: icr_H1, icr_C12, cr_table
+      use cr_data,        only: icr_H1, icr_C12, cr_index
       use crhelpers,      only: div_v
       use dataio_pub,     only: warn
       use domain,         only: dom
@@ -209,9 +209,9 @@ contains
                               r2 = (cg%x(i) - sn_pos(xdim) + real(ipm) * dom%L_(xdim))**2 + &
                                  & (cg%y(j) - sn_pos(ydim) + real(jpm) * dom%L_(ydim))**2 + &
                                  & (cg%z(k) - sn_pos(zdim) + real(kpm) * dom%L_(zdim))**2
-                              if (icr == cr_table(icr_H1)) then
+                              if (icr == cr_index(icr_H1)) then
                                  cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + amp_cr*exp(-r2/r0**2)
-                              elseif (icr == cr_table(icr_C12)) then
+                              elseif (icr == cr_index(icr_C12)) then
                                  cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
                               else
                                  cg%u(iarr_crn(icr),i,j,k) = 0.0

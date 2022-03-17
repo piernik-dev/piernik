@@ -375,7 +375,7 @@ contains
             read(var,'(A2,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = cg%u(flind%crn%beg+i-1, RNG)
          case ('cr_A000' : 'cr_zz99')
-            do i = 1, flind%crn%all
+            do i = 1, size(cr_names)
                if (var == trim('cr_' // cr_names(i))) exit
             enddo
             tab(:,:,:) = cg%u(flind%crn%beg+i-1, RNG)

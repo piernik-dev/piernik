@@ -157,7 +157,7 @@ contains
       use grid_cont,      only: grid_container
       use mpisetup,       only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS
-      use cr_data,        only: eCRSP, icr_H1, icr_C12, cr_table
+      use cr_data,        only: eCRSP, icr_H1, icr_C12, cr_index
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
@@ -238,8 +238,8 @@ contains
 
 #ifdef COSM_RAYS
          cg%u(iarr_crs, RNG) = 0.0
-         if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(cr_table(icr_H1 ))-1.0)
-         if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(cr_table(icr_C12))-1.0)
+         if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(cr_index(icr_H1 ))-1.0)
+         if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(cr_index(icr_C12))-1.0)
 
 ! Explosions
          do k = cg%ks, cg%ke
@@ -255,8 +255,8 @@ contains
                         enddo
                      enddo
                   enddo
-                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_table(icr_H1 )), i, j, k) + amp_cr1*decr
-                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_table(icr_C12)), i, j, k) + amp_cr2*decr
+                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) + amp_cr1*decr
+                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) + amp_cr2*decr
 #ifdef CRESP
 ! Explosions @CRESP independent of cr nucleons
                   e_tot = amp_cr1 * cre_eff * decr

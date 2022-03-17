@@ -78,11 +78,13 @@ module cr_data
    logical,                                dimension(nicr) :: eCRSP              !< table of all isotopes presences
    integer, parameter                                      :: specieslen = 6     !< length of species names
    character(len=specieslen), allocatable, dimension(:)    :: cr_names           !< table of species names
-   integer,                   allocatable, dimension(:)    :: cr_table           !< table of flind indices for CR species
+   integer,                   allocatable, dimension(:)    :: cr_table           !< table of cr_data indices for CR species
+   integer,                   allocatable, dimension(:)    :: cr_index           !< table of flind indices for CR species
    real,                      allocatable, dimension(:)    :: cr_mass            !< table of mass numbers for CR species
    real,                      allocatable, dimension(:,:)  :: cr_sigma           !< table of cross sections for spallation
    real,                      allocatable, dimension(:)    :: cr_tau             !< table of decay half live times
    real,                      allocatable, dimension(:)    :: cr_primary         !< table of initial source abundances
+   logical,                   allocatable, dimension(:)    :: cr_spectral        !< table of logicals about energy spectral treatment
 
    real, parameter :: m_H1   = 1.
    real, parameter :: m_Li7  = 7.
@@ -148,7 +150,7 @@ contains
       integer(kind=4),       intent(in)    :: ncrsp, ncrn
       logical, dimension(:), intent(inout) :: crness
 
-      integer                                    :: icr, i
+      integer                                    :: i, icr, jcr
       character(len=specieslen), dimension(nicr) :: eCRSP_names
       logical,                   dimension(nicr) :: eCRSP_ess, eCRSP_spec
       real,                      dimension(nicr) :: eCRSP_mass
@@ -224,32 +226,38 @@ contains
       eCRSP_ess  (1:nicr) = [eE(ESS) , eH1(ESS) , eC12(ESS) , eBe9(ESS) , eBe10(ESS) , eN14(ESS) , eO16(ESS) , eLi7(ESS) ]
       eCRSP_spec (1:nicr) = [eE(SPEC), eH1(SPEC), eC12(SPEC), eBe9(SPEC), eBe10(SPEC), eN14(SPEC), eO16(SPEC), eLi7(SPEC)]
 
-      allocate(cr_names(ncrn), cr_table(nicr), cr_sigma(ncrn,ncrn), cr_tau(ncrn), cr_primary(ncrn), cr_mass(ncrn))
-      cr_names(:)   = ''
-      cr_table(:)   = 0
-      cr_sigma(:,:) = 0.0
-      cr_tau(:)     = 1.0
-      cr_primary(:) = 0.0
+      allocate(cr_names(ncrsp), cr_table(nicr), cr_index(nicr), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp), cr_mass(ncrsp), cr_spectral(ncrsp))
+      cr_names(:)    = ''
+      cr_table(:)    = 0
+      cr_index(:)    = 0
+      cr_sigma(:,:)  = 0.0
+      cr_tau(:)      = 1.0
+      cr_primary(:)  = 0.0
+      cr_spectral(:) = .false.
 
-      icr = 0
+      icr = 0 ; jcr = 0
       if (count(eCRSP) > ncrsp) call die("[cr_data:init_cr_species] You have specified more CR species present than is set by ncrsp. Check your CR_SPECIES and COSMIC_RAYS namelists parameters")
-      ! electrons temporarily not included in the following lines
-      do i = icr_H1, size(eCRSP)
+      do i = icr_E, size(eCRSP)
          if (eCRSP(i)) then
             icr = icr + 1
-            cr_table(i)   = icr
-            cr_names(icr) = eCRSP_names(i)
-            crness(icr)   = eCRSP_ess(i)
-            cr_mass(icr)  = eCRSP_mass(i)
+            cr_table(i)      = icr
+            cr_names(icr)    = eCRSP_names(i)
+            cr_mass(icr)     = eCRSP_mass(i)
+            cr_spectral(icr) = eCRSP_spec(i)
+            if (.not. eCRSP_spec(i)) then
+               jcr = jcr + 1
+               cr_index(i) = jcr
+               crness(jcr) = eCRSP_ess(i)
+            endif
             if (master) then
-               write(msg,'(a,a,l2)') eCRSP_names(i), 'CR species is present; taken into account for grad_pcr: ', crness(icr)
+               write(msg,'(a,a,l2)') eCRSP_names(i), 'CR species is present; taken into account for grad_pcr: ', eCRSP_ess(i)
                call printinfo(msg)
             endif
          endif
       enddo
-      if (master .and. icr < ncrn) then
-         do i = icr+1, ncrn
-            write(msg,'(a,i2,a,l2)') 'user nucleon-based CR species no: ', i,' is present; taken into account for grad_pcr: ', crness(icr)
+      if (master .and. jcr < ncrn) then
+         do i = jcr+1, ncrn
+            write(msg,'(a,i2,a,l2)') 'user nucleon-based CR species no: ', i,' is present; taken into account for grad_pcr: ', crness(jcr)
             call printinfo(msg)
          enddo
       endif

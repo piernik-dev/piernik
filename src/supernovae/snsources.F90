@@ -196,7 +196,7 @@ contains
       use constants,        only: xdim, ydim, zdim
       use domain,           only: dom
       use grid_cont,        only: grid_container
-      use cr_data,          only: cr_table, cr_mass, cr_primary, eCRSP, icr_H1, icr_C12, icr_N14, icr_O16
+      use cr_data,          only: cr_index, cr_table, cr_mass, cr_primary, eCRSP, icr_H1, icr_C12, icr_N14, icr_O16
       use initcosmicrays,   only: iarr_crn
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
@@ -250,10 +250,10 @@ contains
                   enddo
                   decr = decr * ampl
 
-                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) + decr
-                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12)) * cr_mass(cr_table(icr_C12)) * decr
-                  if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14)) * cr_mass(cr_table(icr_N14)) * decr
-                  if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16)) * cr_mass(cr_table(icr_O16)) * decr
+                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_index(icr_H1 )),i,j,k) + decr
+                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_index(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12)) * cr_mass(cr_table(icr_C12)) * decr
+                  if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_index(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_index(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14)) * cr_mass(cr_table(icr_N14)) * decr
+                  if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_index(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_index(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16)) * cr_mass(cr_table(icr_O16)) * decr
 
 #ifdef CRESP
                   if (use_cresp) then
