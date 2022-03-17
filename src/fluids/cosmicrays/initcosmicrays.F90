@@ -45,6 +45,8 @@ module initcosmicrays
    integer, parameter                  :: ncr_max = 102  !< maximum number of CR nuclear and electron components (\warning higher ncr_max limit would require changes in names of components in common_hdf5)
    ! namelist parameters
    integer(kind=4)                     :: ncrsp        !< number of CR nuclear  components \deprecated BEWARE: ncrtot (sum of ncrsp and ncr2b) should not be higher than ncr_max = 102
+   integer(kind=4)                     :: ncrn         !< number of CR non-spectral components
+   integer(kind=4)                     :: nspc         !< number of CR spectral components
    integer(kind=4)                     :: ncrb         !< number of bins for CRESP
    integer(kind=4)                     :: ncr2b        !< 2*ncrb for CRESP
    integer(kind=4)                     :: ncrtot       !< number of all CR components \deprecated BEWARE: ncrtot (sum of ncrsp and ncr2b) should not be higher than ncr_max = 102
@@ -115,7 +117,7 @@ contains
 
       implicit none
 
-      integer(kind=4) :: nn, icr, jcr, ncrspe, add_E
+      integer(kind=4) :: nn, icr, jcr
       integer         :: ne
       real            :: maxKcrs
 
@@ -229,8 +231,10 @@ contains
 
       endif
 
+      call init_cr_species(ncrsp, nspc, ncrn, cr_gpcr_ess)
+
       ncr2b  = I_TWO * ncrb
-      ncrtot = ncr2b + ncrsp
+      ncrtot = ncr2b + ncrn
 
       if (any([ncrsp, ncrb] > ncr_max) .or. any([ncrsp, ncrb] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
       if (ncrtot == 0) call warn("[initcosmicrays:init_cosmicrays] ncrtot == 0; no cr components specified")
@@ -245,12 +249,12 @@ contains
       K_crs_perp (:) = 0.0
 
       if (ncrsp > 0) then
-         gamma_crs  (1:ncrsp) = gamma_crn  (1:ncrsp)
-         K_crs_paral(1:ncrsp) = K_crn_paral(1:ncrsp)
-         K_crs_perp (1:ncrsp) = K_crn_perp (1:ncrsp)
+         gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
+         K_crs_paral(1:ncrn) = K_crn_paral(1:ncrn)
+         K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
       endif
 
-      ma1d = [ncrsp]
+      ma1d = [ncrn]
       call my_allocate(iarr_crn, ma1d)
 
       if (ncrb <= 0) then
@@ -267,11 +271,6 @@ contains
 #endif /* CRESP */
       ma1d = [ncrtot]
       call my_allocate(iarr_crs, ma1d)
-
-      add_E = 0
-      if (ncrb > 0) add_E = I_ONE
-      ncrspe = ncrsp + add_E
-      call init_cr_species(ncrspe, ncrsp, cr_gpcr_ess)
 
       ma1d = [ int(count(cr_gpcr_ess), kind=4) ]
 
@@ -304,19 +303,19 @@ contains
       flind%crn%beg = flind%all + I_ONE
       flind%crs%beg = flind%crn%beg
 
-      flind%crn%all = ncrsp
+      flind%crn%all = ncrn
       flind%cre%all = ncr2b
 
       flind%crs%all = flind%crn%all + flind%cre%all
-      do icr = 1, ncrsp
+      do icr = 1, ncrn
          iarr_crn(icr) = flind%all + icr
          iarr_crs(icr) = flind%all + icr
       enddo
       flind%all = flind%all + flind%crn%all
 
       do icr = I_ONE, ncr2b
-         iarr_cre(icr)         = flind%all + icr
-         iarr_crs(ncrsp + icr) = flind%all + icr
+         iarr_cre(icr)        = flind%all + icr
+         iarr_crs(ncrn + icr) = flind%all + icr
       enddo
 
       flind%all = flind%all + flind%cre%all

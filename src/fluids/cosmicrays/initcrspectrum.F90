@@ -175,7 +175,7 @@ contains
       use diagnostics,     only: my_allocate_with_index
       use global,          only: disallow_CRnegatives
       use func,            only: emag
-      use initcosmicrays,  only: ncrb, ncr2b, ncrsp, ncrtot, K_crs_paral, K_crs_perp, use_smallecr
+      use initcosmicrays,  only: ncrb, ncr2b, ncrn, ncrtot, K_crs_paral, K_crs_perp, use_smallecr
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use units,           only: clight, me, sigma_T
 
@@ -586,8 +586,8 @@ contains
 
       K_cresp_paral(ncrb+1:ncr2b) = K_cresp_paral(1:ncrb)
       K_cresp_perp (ncrb+1:ncr2b) = K_cresp_perp (1:ncrb)
-      K_crs_paral(ncrsp+1:ncrtot) = K_cresp_paral(1:ncr2b)
-      K_crs_perp (ncrsp+1:ncrtot) = K_cresp_perp (1:ncr2b)
+      K_crs_paral(ncrn+1:ncrtot) = K_cresp_paral(1:ncr2b)
+      K_crs_perp (ncrn+1:ncrtot) = K_cresp_perp (1:ncr2b)
 
       fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
       write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr

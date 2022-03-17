@@ -139,7 +139,7 @@ contains
 !! The list is active while \b "COSM_RAYS" is defined.
 !! \n \n
 !<
-   subroutine init_cr_species(ncrsp, ncrn, crness)
+   subroutine init_cr_species(ncrsp, nspc, ncrn, crness)
 
       use dataio_pub, only: msg, printinfo, die, nh
       use mpisetup,   only: lbuff, master, slave, piernik_MPI_Bcast
@@ -147,7 +147,8 @@ contains
 
       implicit none
 
-      integer(kind=4),       intent(in)    :: ncrsp, ncrn
+      integer(kind=4),       intent(in)    :: ncrsp
+      integer(kind=4),       intent(out)   :: nspc, ncrn
       logical, dimension(:), intent(inout) :: crness
 
       integer                                    :: i, icr, jcr
@@ -260,6 +261,10 @@ contains
             endif
          endif
       enddo
+
+      nspc = count(cr_spectral)
+      ncrn = ncrsp - nspc
+
       if (master .and. jcr < ncrn) then
          do i = jcr+1, ncrn
             write(msg,'(a,i2,a,l2)') 'user nucleon-based CR species no: ', i,' is present; taken into account for grad_pcr: ', crness(jcr)
