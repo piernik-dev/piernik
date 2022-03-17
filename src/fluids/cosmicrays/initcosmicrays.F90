@@ -58,8 +58,8 @@ module initcosmicrays
    logical                             :: use_CRdecay  !< switch for spallation and decay of cosmic rays
    logical                             :: use_smallecr !< correct CR energy density when it gets lower than smallecr
    character(len=cbuff_len)            :: divv_scheme  !< scheme used to calculate div(v), see crhelpers for more details
-   real, dimension(ncr_max)            :: K_crn_paral  !< array containing parallel diffusion coefficients of all CR nuclear components
-   real, dimension(ncr_max)            :: K_crn_perp   !< array containing perpendicular diffusion coefficients of all CR nuclear components
+   real, dimension(ncr_max)            :: K_cr_paral   !< array containing parallel diffusion coefficients of all CR nuclear components
+   real, dimension(ncr_max)            :: K_cr_perp    !< array containing perpendicular diffusion coefficients of all CR nuclear components
    real, dimension(ncr_max)            :: gamma_crn    !< array containing adiabatic indexes of all CR nuclear components
    logical, dimension(ncr_max)         :: cr_gpcr_ess  !< if CRn species/energy-bin is essential for grad_pcr calculation
    integer(kind=4), allocatable, dimension(:) :: gpcr_ess_noncresp !< indexes of essentials for grad_pcr calculation for non-CRESP components
@@ -98,8 +98,8 @@ contains
 !! <tr><td>ncrsp       </td><td>0      </td><td>integer   </td><td>\copydoc initcosmicrays::ncrsp      </td></tr>
 !! <tr><td>ncrb        </td><td>0      </td><td>integer   </td><td>\copydoc initcosmicrays::ncrb       </td></tr>
 !! <tr><td>gamma_crn   </td><td>4./3.  </td><td>real array</td><td>\copydoc initcosmicrays::gamma_crn  </td></tr>
-!! <tr><td>K_crn_paral </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_crn_paral</td></tr>
-!! <tr><td>K_crn_perp  </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_crn_perp </td></tr>
+!! <tr><td>K_cr_paral  </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_cr_paral </td></tr>
+!! <tr><td>K_cr_perp   </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_cr_perp  </td></tr>
 !! <tr><td>divv_scheme </td><td>''     </td><td>string    </td><td>\copydoc initcosmicrays::divv_scheme</td></tr>
 !! <tr><td>cr_gpcr_ess</td><td>(1): .true.; (>2):.false.</td><td>logical</td><td>\copydoc initcosmicrays::cr_gpcr_ess</td></tr>
 !! </table>
@@ -109,7 +109,7 @@ contains
    subroutine init_cosmicrays
 
       use constants,       only: cbuff_len, I_ONE, I_TWO, half, big
-      use cr_data,         only: init_cr_species
+      use cr_data,         only: init_cr_species, cr_spectral
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: die, warn, nh
       use func,            only: operator(.notequals.)
@@ -122,27 +122,27 @@ contains
       real            :: maxKcrs
 
       namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRdiff, use_CRdecay, divv_scheme, &
-           &                 gamma_crn, K_crn_paral, K_crn_perp, ncrsp, ncrb, cr_gpcr_ess
+           &                 gamma_crn, K_cr_paral, K_cr_perp, ncrsp, ncrb, cr_gpcr_ess
 
-      cfl_cr          = 0.9
-      smallecr        = 0.0
-      cr_active       = 1.0
-      cr_eff          = 0.1       !  canonical conversion rate of SN en.-> CR (e_sn=10**51 erg)
-      ncrsp           = 0
-      ncrb            = 0
+      cfl_cr         = 0.9
+      smallecr       = 0.0
+      cr_active      = 1.0
+      cr_eff         = 0.1       !  canonical conversion rate of SN en.-> CR (e_sn=10**51 erg)
+      ncrsp          = 0
+      ncrb           = 0
 
-      use_CRdiff      = .true.
-      use_CRdecay     = .false.
-      use_smallecr    = .true.
+      use_CRdiff     = .true.
+      use_CRdecay    = .false.
+      use_smallecr   = .true.
 
-      gamma_crn(:)    = 4./3.
-      K_crn_paral(:)  = 0.0
-      K_crn_perp(:)   = 0.0
+      gamma_crn(:)   = 4./3.
+      K_cr_paral(:)  = 0.0
+      K_cr_perp(:)   = 0.0
 
-      cr_gpcr_ess(:)  = .false.
-      cr_gpcr_ess(1)  = .true.       ! in most cases protons are the first ingredient of CRs and they are essential
+      cr_gpcr_ess(:) = .false.
+      cr_gpcr_ess(1) = .true.       ! in most cases protons are the first ingredient of CRs and they are essential
 
-      divv_scheme     = ''
+      divv_scheme    = ''
 
       if (master) then
 
@@ -187,9 +187,9 @@ contains
          if (ne + 3 * ncrb > ubound(rbuff, 1)) call die("[initcosmicrays:init_cosmicrays] rbuff size exceeded.")
 
          if (ncrsp > 0) then
-            rbuff(nn+1        :nn+  ncrsp) = gamma_crn  (1:ncrsp)
-            rbuff(nn+1+  ncrsp:nn+2*ncrsp) = K_crn_paral(1:ncrsp)
-            rbuff(nn+1+2*ncrsp:nn+3*ncrsp) = K_crn_perp (1:ncrsp)
+            rbuff(nn+1        :nn+  ncrsp) = gamma_crn (1:ncrsp)
+            rbuff(nn+1+  ncrsp:nn+2*ncrsp) = K_cr_paral(1:ncrsp)
+            rbuff(nn+1+2*ncrsp:nn+3*ncrsp) = K_cr_perp (1:ncrsp)
 
             lbuff(4:ncrsp+3) = cr_gpcr_ess(1:ncrsp)
          endif
@@ -222,9 +222,9 @@ contains
          divv_scheme  = cbuff(1)
 
          if (ncrsp > 0) then
-            gamma_crn  (1:ncrsp) = rbuff(nn+1        :nn+  ncrsp)
-            K_crn_paral(1:ncrsp) = rbuff(nn+1+  ncrsp:nn+2*ncrsp)
-            K_crn_perp (1:ncrsp) = rbuff(nn+1+2*ncrsp:nn+3*ncrsp)
+            gamma_crn (1:ncrsp) = rbuff(nn+1        :nn+  ncrsp)
+            K_cr_paral(1:ncrsp) = rbuff(nn+1+  ncrsp:nn+2*ncrsp)
+            K_cr_perp (1:ncrsp) = rbuff(nn+1+2*ncrsp:nn+3*ncrsp)
 
             cr_gpcr_ess(1:ncrsp) = lbuff(4:ncrsp+3)
          endif
@@ -249,9 +249,9 @@ contains
       K_crs_perp (:) = 0.0
 
       if (ncrsp > 0) then
-         gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
-         K_crs_paral(1:ncrn) = K_crn_paral(1:ncrn)
-         K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
+         gamma_crs  (1:ncrn) = gamma_crn (1:ncrn)
+         K_crs_paral(1:ncrn) = pack(K_cr_paral(1:ncrsp), .not.cr_spectral)
+         K_crs_perp (1:ncrn) = pack(K_cr_perp (1:ncrsp), .not.cr_spectral)
       endif
 
       ma1d = [ncrn]
@@ -284,7 +284,7 @@ contains
       enddo
 
       def_dtcrs = big
-      maxKcrs = maxval(K_crn_paral + K_crn_perp)
+      maxKcrs = maxval(K_cr_paral(1:ncrsp) + K_cr_perp(1:ncrsp), mask=.not.cr_spectral)
       K_crs_valid = (maxKcrs > 0)
       if (maxKcrs .notequals. 0.) def_dtcrs = cfl_cr * half / maxKcrs
 

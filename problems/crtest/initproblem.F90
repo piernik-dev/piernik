@@ -311,7 +311,7 @@ contains
       use func,             only: operator(.equals.)
       use global,           only: t
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crs, ncrsp, ncrb, K_crn_paral, K_crn_perp
+      use initcosmicrays,   only: iarr_crs, ncrsp, ncrb, K_cr_paral, K_cr_perp
       use named_array_list, only: qna
 
       implicit none
@@ -341,8 +341,8 @@ contains
          bzn = 0.0
       endif
 
-      r0_par2  = r0**2 + 4 * (K_crn_paral(icr) + K_crn_perp(icr)) * t
-      r0_perp2 = r0**2 + 4 * K_crn_perp(icr) * t
+      r0_par2  = r0**2 + 4 * (K_cr_paral(icr) + K_cr_perp(icr)) * t
+      r0_perp2 = r0**2 + 4 * K_cr_perp(icr) * t
 
       if ((r0_par2 .equals. 0.) .or. (r0_perp2 .equals. 0.)) call die("[initproblem:compute_analytic_ecr1] r0_par2 == 0. .or. r0_perp2 == 0.")
 

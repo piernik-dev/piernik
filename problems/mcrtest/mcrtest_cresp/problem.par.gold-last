@@ -57,19 +57,13 @@ $BASE_DOMAIN
  /
 
  $COSMIC_RAYS
-    cfl_cr         = 0.9
-    cr_active      = 0.0
-    ncrsp          = 2
-    ncrb           = 23 ! number of spectrum bins (including cutoff bins)
-    gamma_crn(1)   = 1.333333
-    gamma_crn(2)   = 1.333333
-    gamma_crn(3)   = 1.333333
-    K_crn_paral(1) = 1000 ! anisotropic
-    K_crn_paral(2) = 0.0
-    K_crn_paral(3) = 0.0
-    K_crn_perp(1)  = 1. ! 1.! 1000   ! isotropic
-    K_crn_perp(2)  = 0
-    K_crn_perp(3)  = 0
+    cfl_cr        = 0.9
+    cr_active     = 0.0
+    ncrsp         = 2
+    ncrb          = 23 ! number of spectrum bins (including cutoff bins)
+    gamma_crn     = 1.333333
+    K_cr_paral(2) = 1000 ! anisotropic
+    K_cr_perp(2)  = 1. ! 1.! 1000   ! isotropic
     divv_scheme    = "6lp"
  /
 

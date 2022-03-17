@@ -134,7 +134,7 @@ contains
       use fluidtypes,     only: component_fluid
       use func,           only: emag, ekin, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
-      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
+      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_cr_paral, K_cr_perp
 
       implicit none
 
@@ -154,10 +154,10 @@ contains
          b0 = 0.0  ! ignore B field in nonexistent direction
       endwhere
 
-      if ((sum(b0**2) .equals. 0.) .and. (any(K_crn_paral(:) .notequals. 0.) .or. any(K_crn_perp(:) .notequals. 0.))) then
-         call warn("[initproblem:problem_initial_conditions] No magnetic field is set, K_crn_* also have to be 0.")
-         K_crn_paral(:) = 0.
-         K_crn_perp(:)  = 0.
+      if ((sum(b0**2) .equals. 0.) .and. (any(K_cr_paral(:) .notequals. 0.) .or. any(K_cr_perp(:) .notequals. 0.))) then
+         call warn("[initproblem:problem_initial_conditions] No magnetic field is set, K_cr_* also have to be 0.")
+         K_cr_paral(:) = 0.
+         K_cr_perp(:)  = 0.
       endif
 
       cgl => leaves%first

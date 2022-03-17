@@ -158,7 +158,7 @@ contains
       use mpisetup,       only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS
       use cr_data,        only: eCRSP, icr_H1, icr_C12, cr_index
-      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
+      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_cr_paral, K_cr_perp
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
@@ -189,10 +189,10 @@ contains
       if (.not.dom%has_dir(zdim)) bz0 = 0.
 
 #ifdef COSM_RAYS
-      if ((bx0**2 + by0**2 + bz0**2 .equals. 0.) .and. (any(K_crn_paral(:) .notequals. 0.) .or. any(K_crn_perp(:) .notequals. 0.))) then
-         call warn("[initproblem:problem_initial_conditions] No magnetic field is set, K_crn_* also have to be 0.")
-         K_crn_paral(:) = 0.
-         K_crn_perp(:)  = 0.
+      if ((bx0**2 + by0**2 + bz0**2 .equals. 0.) .and. (any(K_cr_paral(:) .notequals. 0.) .or. any(K_cr_perp(:) .notequals. 0.))) then
+         call warn("[initproblem:problem_initial_conditions] No magnetic field is set, K_cr_* also have to be 0.")
+         K_cr_paral(:) = 0.
+         K_cr_perp(:)  = 0.
       endif
 #endif /* COSM_RAYS */
 
