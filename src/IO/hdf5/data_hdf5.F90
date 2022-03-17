@@ -333,7 +333,7 @@ contains
       use named_array_list, only: wna
 #endif /* CRESP */
 #ifdef COSM_RAYS
-      use cr_data,          only: cr_names
+      use cr_data,          only: cr_names, cr_spectral
 #endif /* COSM_RAYS */
 #ifndef ISO
       use units,            only: kboltz, mH
@@ -378,7 +378,7 @@ contains
             do i = 1, size(cr_names)
                if (var == trim('cr_' // cr_names(i))) exit
             enddo
-            tab(:,:,:) = cg%u(flind%crn%beg+i-1, RNG)
+            tab(:,:,:) = cg%u(flind%crn%beg+i-1-count(cr_spectral), RNG)
 #endif /* COSM_RAYS */
 #ifdef CRESP
          case ("cren01" : "cren99")
