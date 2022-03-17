@@ -244,7 +244,12 @@ contains
             cr_names(icr)    = eCRSP_names(i)
             cr_mass(icr)     = eCRSP_mass(i)
             cr_spectral(icr) = eCRSP_spec(i)
-            if (.not. eCRSP_spec(i)) then
+            if (eCRSP_spec(i)) then
+               if (i /= icr_E) then
+                  write(msg, '(3a)') "[cr_data:init_cr_species] Energy spectral treatment for ", eCRSP_names(i), " CR component is not available"
+                  call die(msg)
+               endif
+            else
                jcr = jcr + 1
                cr_index(i) = jcr
                crness(jcr) = eCRSP_ess(i)
