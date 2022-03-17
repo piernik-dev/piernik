@@ -74,10 +74,10 @@
  /
 
  $CR_SPECIES
-    eH1   = .true., .true.
-    eC12  = .true., .true.
-    eBe9  = .true., .true.
-    eBe10 = .true., .true.
+    eH1   = .true., .true., .false.
+    eC12  = .true., .true., .false.
+    eBe9  = .true., .true., .false.
+    eBe10 = .true., .true., .false.
  /
 
  $MULTIGRID_SOLVER

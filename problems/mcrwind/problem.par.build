@@ -91,12 +91,12 @@
  /
 
  $CR_SPECIES
-    eH1   = .true., .true.
-    eC12  = .true., .true.
-    eBe9  = .true., .true.
-    eBe10 = .true., .true.
-    eN14  = .true., .true.
-    eO16  = .true., .true.
+    eH1   = .true., .true., .false.
+    eC12  = .true., .true., .false.
+    eBe9  = .true., .true., .false.
+    eBe10 = .true., .true., .false.
+    eN14  = .true., .true., .false.
+    eO16  = .true., .true., .false.
  /
 
  $SHEARING

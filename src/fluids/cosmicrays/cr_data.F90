@@ -60,20 +60,21 @@ module cr_data
       enumerator :: icr_LAST     !< should be used nowhere despite with nicr
    end enum
    enum, bind(C)
-      enumerator :: PRES = 1     !< index for presence of the isotope
-      enumerator :: ESS          !< index for grad_pcr essentiality of the isotope
+      enumerator :: PRES = 1     !< index for presence of the isotope/component
+      enumerator :: ESS          !< index for grad_pcr essentiality of the isotope/component
+      enumerator :: SPEC         !< index for energy spectrum treatment of the isotope/component
    end enum
 
    integer, parameter                                      :: nicr = icr_LAST - 1
 
-   logical, dimension(PRES:ESS)                            :: eE                 !< presence and grad_pcr essentiality of electrons
-   logical, dimension(PRES:ESS)                            :: eH1                !< presence and grad_pcr essentiality of H1 isotope
-   logical, dimension(PRES:ESS)                            :: eLi7               !< presence and grad_pcr essentiality of Li7 isotope
-   logical, dimension(PRES:ESS)                            :: eBe9               !< presence and grad_pcr essentiality of Be9 isotope
-   logical, dimension(PRES:ESS)                            :: eBe10              !< presence and grad_pcr essentiality of Be10 isotope
-   logical, dimension(PRES:ESS)                            :: eC12               !< presence and grad_pcr essentiality of C12 isotope
-   logical, dimension(PRES:ESS)                            :: eN14               !< presence and grad_pcr essentiality of N14 isotope
-   logical, dimension(PRES:ESS)                            :: eO16               !< presence and grad_pcr essentiality of O16 isotope
+   logical, dimension(PRES:SPEC)                            :: eE                 !< presence and grad_pcr essentiality of electrons
+   logical, dimension(PRES:SPEC)                            :: eH1                !< presence and grad_pcr essentiality of H1 isotope
+   logical, dimension(PRES:SPEC)                            :: eLi7               !< presence and grad_pcr essentiality of Li7 isotope
+   logical, dimension(PRES:SPEC)                            :: eBe9               !< presence and grad_pcr essentiality of Be9 isotope
+   logical, dimension(PRES:SPEC)                            :: eBe10              !< presence and grad_pcr essentiality of Be10 isotope
+   logical, dimension(PRES:SPEC)                            :: eC12               !< presence and grad_pcr essentiality of C12 isotope
+   logical, dimension(PRES:SPEC)                            :: eN14               !< presence and grad_pcr essentiality of N14 isotope
+   logical, dimension(PRES:SPEC)                            :: eO16               !< presence and grad_pcr essentiality of O16 isotope
    logical,                                dimension(nicr) :: eCRSP              !< table of all isotopes presences
    integer, parameter                                      :: specieslen = 6     !< length of species names
    character(len=specieslen), allocatable, dimension(:)    :: cr_names           !< table of species names
@@ -149,7 +150,7 @@ contains
 
       integer                                    :: icr, i
       character(len=specieslen), dimension(nicr) :: eCRSP_names
-      logical,                   dimension(nicr) :: eCRSP_ess
+      logical,                   dimension(nicr) :: eCRSP_ess, eCRSP_spec
       real,                      dimension(nicr) :: eCRSP_mass
 
       namelist /CR_SPECIES/ eE, eH1, eLi7, eBe9, eBe10, eC12, eN14, eO16
@@ -157,19 +158,19 @@ contains
       ! Only protons (p+) are dynamically important, we can neglect grad_pcr from heavier nuclei
       ! because of their lower abundancies: n(alpha) ~ 0.1 n(p+), other elements less abundant by orders of magnitude
 #ifdef CRESP
-      eE    = [.true., .false.]
+      eE    = [.true., .false., .true.]
 #else /* !CRESP */
       eE    = .false.
 #endif /* !CRESP */
-      eH1   = .true.
+      eH1   = [.true., .true., .false.]
       eLi7  = .false.
-      eBe9  = [.true., .false.]
-      eBe10 = [.true., .false.]
-      eC12  = [.true., .false.]
+      eBe9  = [.true., .false., .false.]
+      eBe10 = [.true., .false., .false.]
+      eC12  = [.true., .false., .false.]
       eN14  = .false.
       eO16  = .false.
 
-#define VS *2-1:2*
+#define VS *3-2:3*
 
       if (master) then
 
@@ -221,6 +222,7 @@ contains
       eCRSP_mass (1:nicr) = [me/mp,  m_H1,   m_C12,   m_Be9, m_Be10, m_N14,  m_O16,  m_Li7 ]
       eCRSP      (1:nicr) = [eE(PRES), eH1(PRES), eC12(PRES), eBe9(PRES), eBe10(PRES), eN14(PRES), eO16(PRES), eLi7(PRES)]
       eCRSP_ess  (1:nicr) = [eE(ESS) , eH1(ESS) , eC12(ESS) , eBe9(ESS) , eBe10(ESS) , eN14(ESS) , eO16(ESS) , eLi7(ESS) ]
+      eCRSP_spec (1:nicr) = [eE(SPEC), eH1(SPEC), eC12(SPEC), eBe9(SPEC), eBe10(SPEC), eN14(SPEC), eO16(SPEC), eLi7(SPEC)]
 
       allocate(cr_names(ncrn), cr_table(nicr), cr_sigma(ncrn,ncrn), cr_tau(ncrn), cr_primary(ncrn), cr_mass(ncrn))
       cr_names(:)   = ''
