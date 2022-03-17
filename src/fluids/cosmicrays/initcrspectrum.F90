@@ -64,8 +64,6 @@ module initcrspectrum
    real            :: cre_eff                     !< fraction of energy passed to cr-electrons by nucleons (mainly protons)
    real, dimension(:), allocatable :: K_cresp_paral !< array containing parallel diffusion coefficients of all CR CRESP components (number density and energy density)
    real, dimension(:), allocatable :: K_cresp_perp  !< array containing perpendicular diffusion coefficients of all CR CRESP components (number density and energy density)
-   real            :: K_cre_paral_1               !< maximal parallel diffusion coefficient value
-   real            :: K_cre_perp_1                !< maximal perpendicular diffusion coefficient value
    real            :: K_cre_pow                   !< exponent for power law-like diffusion-energy dependence
    real            :: p_diff                      !< momentum to which diffusion coefficients refer to
    integer(kind=4) :: expan_order                 !< 1,2,3 order of Taylor expansion for p_update (cresp_crspectrum)
@@ -170,12 +168,13 @@ contains
    subroutine init_cresp
 
       use constants,       only: cbuff_len, I_ZERO, I_ONE, zero, one, three, ten, half, logten, LO, HI
+      use cr_data,         only: cr_table, icr_E
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index
       use global,          only: disallow_CRnegatives
       use func,            only: emag
-      use initcosmicrays,  only: ncrb, ncr2b, ncrn, ncrtot, K_crs_paral, K_crs_perp, use_smallecr
+      use initcosmicrays,  only: ncrb, ncr2b, ncrn, ncrtot, K_cr_paral, K_cr_perp, K_crs_paral, K_crs_perp, use_smallecr
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use units,           only: clight, me, sigma_T
 
@@ -185,7 +184,7 @@ contains
       real            :: p_br_def, q_br_def
 
       namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum, p_min_fix, p_max_fix, &
-      &                         cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, K_cre_pow, expan_order, e_small, use_cresp, use_cresp_evol, &
+      &                         cre_eff, cre_active, K_cre_pow, expan_order, e_small, use_cresp, use_cresp_evol,                   &
       &                         e_small_approx_init_cond, p_br_init_lo, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,   &
       &                         NR_iter_limit, max_p_ratio, synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init,             &
       &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf, b_max_db,      &
@@ -211,8 +210,6 @@ contains
       p_diff            = 10000.0
       cfl_cre           = 0.1
       cre_eff           = 0.01
-      K_cre_paral_1     = 0.
-      K_cre_perp_1      = 0.
       K_cre_pow         = 0.
       expan_order       = 1
       Gamma_min_fix     = 2.5
@@ -315,27 +312,25 @@ contains
          rbuff(10) = q_big
          rbuff(11) = p_min_fix
          rbuff(12) = p_max_fix
-         rbuff(13) = K_cre_paral_1
-         rbuff(14) = K_cre_perp_1
-         rbuff(15) = K_cre_pow
+         rbuff(13) = K_cre_pow
 
-         rbuff(16) = e_small
-         rbuff(17) = max_p_ratio
+         rbuff(14) = e_small
+         rbuff(15) = max_p_ratio
 
-         rbuff(18) = tol_f
-         rbuff(19) = tol_x
-         rbuff(20) = tol_f_1D
-         rbuff(21) = tol_x_1D
+         rbuff(16) = tol_f
+         rbuff(17) = tol_x
+         rbuff(18) = tol_f_1D
+         rbuff(19) = tol_x_1D
 
-         rbuff(22) = Gamma_min_fix
-         rbuff(23) = Gamma_max_fix
+         rbuff(20) = Gamma_min_fix
+         rbuff(21) = Gamma_max_fix
 
-         rbuff(24) = p_br_init_lo
-         rbuff(25) = p_br_init_up
-         rbuff(26) = q_br_init
-         rbuff(27) = p_diff
-         rbuff(28) = q_eps
-         rbuff(29) = b_max_db
+         rbuff(22) = p_br_init_lo
+         rbuff(23) = p_br_init_up
+         rbuff(24) = q_br_init
+         rbuff(25) = p_diff
+         rbuff(26) = q_eps
+         rbuff(27) = b_max_db
 
          cbuff(1)  = initial_spectrum
       endif
@@ -388,28 +383,26 @@ contains
          q_big                       = rbuff(10)
          p_min_fix                   = rbuff(11)
          p_max_fix                   = rbuff(12)
-         K_cre_paral_1               = rbuff(13)
-         K_cre_perp_1                = rbuff(14)
-         K_cre_pow                   = rbuff(15)
+         K_cre_pow                   = rbuff(13)
 
-         e_small                     = rbuff(16)
-         max_p_ratio                 = rbuff(17)
+         e_small                     = rbuff(14)
+         max_p_ratio                 = rbuff(15)
 
-         tol_f                       = rbuff(18)
-         tol_x                       = rbuff(19)
-         tol_f_1D                    = rbuff(20)
-         tol_x_1D                    = rbuff(21)
+         tol_f                       = rbuff(16)
+         tol_x                       = rbuff(17)
+         tol_f_1D                    = rbuff(18)
+         tol_x_1D                    = rbuff(19)
 
-         Gamma_min_fix               = rbuff(22)
-         Gamma_max_fix               = rbuff(23)
+         Gamma_min_fix               = rbuff(20)
+         Gamma_max_fix               = rbuff(21)
 
-         p_br_init_lo                = rbuff(24)
-         p_br_init_up                = rbuff(25)
-         q_br_init                   = rbuff(26)
-         p_diff                      = rbuff(27)
+         p_br_init_lo                = rbuff(22)
+         p_br_init_up                = rbuff(23)
+         q_br_init                   = rbuff(24)
+         p_diff                      = rbuff(25)
 
-         q_eps                       = rbuff(28)
-         b_max_db                    = rbuff(29)
+         q_eps                       = rbuff(26)
+         b_max_db                    = rbuff(27)
          initial_spectrum            = trim(cbuff(1))
 
       endif
@@ -576,12 +569,12 @@ contains
 
       call init_cresp_types
 
-      K_cresp_paral(1:ncrb) = K_cre_paral_1 * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow
-      K_cresp_perp(1:ncrb)  = K_cre_perp_1  * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow
+      K_cresp_paral(1:ncrb) = K_cr_paral(cr_table(icr_E)) * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow
+      K_cresp_perp(1:ncrb)  = K_cr_perp(cr_table(icr_E))  * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow
 
 #ifdef VERBOSE
-      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_paral = ", K_cre_paral(1:ncrb) ; if (master) call printinfo(msg)
-      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_perp = ",  K_cre_perp(1:ncrb)  ; if (master) call printinfo(msg)
+      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cresp_paral = ", K_cresp_paral(1:ncrb) ; if (master) call printinfo(msg)
+      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cresp_perp = ",  K_cresp_perp(1:ncrb)  ; if (master) call printinfo(msg)
 #endif /* VERBOSE */
 
       K_cresp_paral(ncrb+1:ncr2b) = K_cresp_paral(1:ncrb)

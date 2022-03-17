@@ -62,9 +62,11 @@ $BASE_DOMAIN
     ncrsp         = 2
     ncrb          = 23 ! number of spectrum bins (including cutoff bins)
     gamma_crn     = 1.333333
+    K_cr_paral(1) = 1.e3
     K_cr_paral(2) = 1000 ! anisotropic
+    K_cr_perp(1)  = 1.
     K_cr_perp(2)  = 1. ! 1.! 1000   ! isotropic
-    divv_scheme    = "6lp"
+    divv_scheme   = "6lp"
  /
 
  $COSMIC_RAY_SPECTRUM
@@ -81,8 +83,6 @@ $BASE_DOMAIN
     q_big             = 30.0    ! < maximal allowed abs(q)
     p_br_init_lo      = 1.0e2   ! < initial lower momentum break
     p_br_init_up      = 5.0e5   ! < iniital upper momentum break
-    K_cre_paral_1     = 1.e3
-    K_cre_perp_1      = 1.
     K_cre_pow         = 0.5     ! < scaling factor for diffusion coefficients
     e_small           = 1.0e-10 ! < lower energy cutoff for energy-approximated cutoff momenta
     initial_spectrum  = 'plpc'  ! < one of setups: 'brpg', 'powl', 'brpl', 'bump', 'symf', 'syme', 'plpc'

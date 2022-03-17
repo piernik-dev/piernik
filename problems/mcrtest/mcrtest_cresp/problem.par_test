@@ -62,7 +62,9 @@
     ncrsp         = 2
     ncrb          = 0      ! number of fixed spectrum bins between
     gamma_crn     = 1.333333
+    K_cr_paral(1) = 0.0 !1.e3
     K_cr_paral(2) = 0.0 !10000.0 ! anisotropic
+    K_cr_perp(1)  = 0.0 !1.e1
     K_cr_perp(2)  = 0     ! isotropic
  /   
   
@@ -76,8 +78,6 @@
     q_init    = 4.2e0   ! < initial value of power law coefficient in cre enrgy spectrum
     p_min_fix = 1.0e2  ! momentum fixed grid
     p_max_fix = 1.0e3  ! momentum fixed grid
-    K_cre_paral_1 = 0.0 !1.e3
-    K_cre_perp_1  = 0.0 !1.e1
     K_cre_pow     = 0.0 !0.5
  /
 

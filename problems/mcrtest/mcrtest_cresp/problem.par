@@ -62,7 +62,9 @@ $BASE_DOMAIN
     ncrsp         = 2
     ncrb          = 15    ! number of spectrum bins (including cutoff bins)
     gamma_crn     = 1.333333
+    K_cr_paral(1) = 1.0e4 !1.0e3 ! upper limit K_cre_paral
     K_cr_paral(2) = 1000.0 ! anisotropic
+    K_cr_perp(1)  = 1.0e2 ! 1.e2 ! upper limit K_cre_perp
     K_cr_perp(2)  = 10.0    ! isotropic
  /
 
@@ -78,8 +80,6 @@ $BASE_DOMAIN
     f_init    = 1.0 !       ! < initial value of the normalization parameter in cre energy spectrum
     q_init    = 4.1 ! 3.6   ! < initial value of power law coefficient in cre enrgy spectrum
     q_big     = 30.e0       ! < limit value of power law coefficient in cre energy spectrum, do not set that value too high!
-    K_cre_paral_1 = 1.0e4 !1.0e3 ! upper limit K_cre_paral
-    K_cre_perp_1  = 1.0e2 ! 1.e2 ! upper limit K_cre_perp
     K_cre_pow     = 0.5 ! 0.5    !
     e_small     = 1.0e-6         ! lower energy cutoff for energy-approximated cutoff momenta
     initial_spectrum = 'powl' ! 'powl', 'brpl', 'bump', 'symf', 'syme'

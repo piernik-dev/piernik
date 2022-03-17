@@ -62,7 +62,9 @@ $BASE_DOMAIN
     ncrsp         = 2
     ncrb          = 30    ! number of spectrum bins (including cutoff bins)
     gamma_crn     = 1.333333
+    K_cr_paral(1) = 0.0e3 ! 1.e3
     K_cr_paral(2) = 1.0e3 !10000.0 ! anisotropic
+    K_cr_perp(1)  = 0.0e1 ! 1.e1
     K_cr_perp(2)  = 0     ! isotropic
  /
 
@@ -77,8 +79,6 @@ $BASE_DOMAIN
     f_init    = 1.0 !   ! < initial value of the normalization parameter in cre energy spectrum
     q_init    = 3.6 !   ! < initial value of power law coefficient in cre enrgy spectrum
     q_big     = 30.e0   ! < limit value of power law coefficient in cre energy spectrum, do not set that value too high!
-    K_cre_paral_1 = 0.0e3 ! 1.e3
-    K_cre_perp_1  = 0.0e1 ! 1.e1
     K_cre_pow     = 0.5 ! 0.5
     e_small     = 1.0e-5 ! 8.5e-3 ! 2.0e-4! 12.0e0
     initial_spectrum = 'powl' ! 'powl', 'brpl', 'bump', 'symf', 'syme'  !   powl - power-law, brpl - broken power-law, bump - bump-type spectrum, symf - symmetric distr. function spectrum, syme - symmetric energy distr. spectrum
