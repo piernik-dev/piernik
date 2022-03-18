@@ -61,7 +61,6 @@
     cr_active     = 0.0
     ncrsp         = 2
     ncrb          = 0      ! number of fixed spectrum bins between
-    gamma_crn     = 1.333333
     K_cr_paral(1) = 0.0 !1.e3
     K_cr_paral(2) = 0.0 !10000.0 ! anisotropic
     K_cr_perp(1)  = 0.0 !1.e1

@@ -196,7 +196,7 @@ contains
       use constants,      only: HI
       use dataio_pub,     only: die
       use domain,         only: dom
-      use initcosmicrays, only: gamma_crs, iarr_crs, ncrsp, ncrb
+      use initcosmicrays, only: gamma_cr_1, iarr_crs, ncrsp, ncrb
 #endif /* COSM_RAYS */
 
       implicit none
@@ -238,7 +238,7 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-         cg%u(iecr,RNG) = beta_cr*fl%cs2 * cg%u(fl%idn,RNG)/(gamma_crs(icr)-1.0)
+         cg%u(iecr,RNG) = beta_cr * fl%cs2 * cg%u(fl%idn,RNG) / gamma_cr_1
 
 ! Explosions
          do k = cg%ks, cg%ke
@@ -274,7 +274,7 @@ contains
       use func,           only: ekin, emag
 #endif /* !ISO */
 #ifdef COSM_RAYS
-      use initcosmicrays, only: gamma_crs, iarr_crs
+      use initcosmicrays, only: gamma_cr_1, iarr_crs
 #endif /* COSM_RAYS */
 
       implicit none
@@ -293,7 +293,7 @@ contains
               &                 ekin(cgl%cg%u(fl%imx,RNG), cgl%cg%u(fl%imy,RNG), cgl%cg%u(fl%imz,RNG), cgl%cg%u(fl%idn,RNG))
 #endif /* !ISO */
 #ifdef COSM_RAYS
-         cgl%cg%u(iarr_crs(icr),RNG) = beta_cr*fl%cs2 * cgl%cg%u(fl%idn,RNG)/(gamma_crs(icr)-1.0)
+         cgl%cg%u(iarr_crs(icr),RNG) = beta_cr * fl%cs2 * cgl%cg%u(fl%idn,RNG) / gamma_cr_1
 #endif /* COSM_RAYS */
          end associate
          cgl => cgl%nxt

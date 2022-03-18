@@ -61,7 +61,6 @@
     cr_active     = 0.0
     ncrsp         = 2
     ncrb          = 30          ! number of spectrum bins (including cutoff bins)
-    gamma_crn     = 1.333333
     K_cr_paral(1) = 1.0e3 ! 1.e3
     K_cr_paral(2) = 1.0e3 !10000.0 ! anisotropic
     K_cr_perp(1)  = 5.0e1 ! 1.e1

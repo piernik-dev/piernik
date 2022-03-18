@@ -158,7 +158,7 @@ contains
       use mpisetup,       only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS
       use cr_data,        only: eCRSP, icr_H1, icr_C12, cr_index
-      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_cr_paral, K_cr_perp
+      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
@@ -238,8 +238,8 @@ contains
 
 #ifdef COSM_RAYS
          cg%u(iarr_crs, RNG) = 0.0
-         if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(cr_index(icr_H1 ))-1.0)
-         if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(cr_index(icr_C12))-1.0)
+         if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
+         if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
 
 ! Explosions
          do k = cg%ks, cg%ke

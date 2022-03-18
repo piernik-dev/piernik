@@ -50,7 +50,7 @@ contains
       use domain,           only: dom
       use fluidindex,       only: flind, iarr_all_mx, iarr_all_en
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: cr_active, gamma_crn, gpcr_ess_noncresp, iarr_crn
+      use initcosmicrays,   only: cr_active, gamma_cr_1, gpcr_ess_noncresp, iarr_crn
 #ifdef CRESP
       use cresp_crspectrum, only: src_gpcresp
       use initcosmicrays,   only: iarr_cre_e
@@ -83,14 +83,14 @@ contains
       call set_div_v1d(divv, sweep, i1, i2, cg)
       do icr = 1, flind%crn%all
          ! 1/eff_dim is because we compute the p_cr*dv in every sweep (3 times in 3D, twice in 2D and once in 1D experiments)
-         usrc(:, iarr_crn(icr)) = -1. / real(dom%eff_dim) * (gamma_crn(icr)-1.0) * uu(:, iarr_crn(icr)) * divv(:)
+         usrc(:, iarr_crn(icr)) = -1. / real(dom%eff_dim) * gamma_cr_1 * uu(:, iarr_crn(icr)) * divv(:)
       enddo
 
       !< gpcr_ess_noncresp includes species only for non-CRESP treatment and where cr_gpcr_ess = .true. for unnamed species and set in CR_SPECIES namelist for named species
       grad_pcr(:) = 0.0
       do icr = 1, size(gpcr_ess_noncresp)
          jcr = gpcr_ess_noncresp(icr)
-         grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active * (gamma_crn(jcr)-1.) * (uu(1:nn-2, iarr_crn(jcr)) - uu(3:nn, iarr_crn(jcr))) / (2. * cg%dl(sweep))
+         grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active * gamma_cr_1 * (uu(1:nn-2, iarr_crn(jcr)) - uu(3:nn, iarr_crn(jcr))) / (2. * cg%dl(sweep))
       enddo
       grad_pcr(1:2) = 0.0 ; grad_pcr(nn-1:nn) = 0.0
 

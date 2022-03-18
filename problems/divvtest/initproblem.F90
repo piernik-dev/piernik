@@ -134,7 +134,7 @@ contains
       use fluidtypes,     only: component_fluid
       use func,           only: emag, ekin, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
-      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_cr_paral, K_cr_perp
+      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
 
       implicit none
 
@@ -194,7 +194,7 @@ contains
 
 #ifdef COSM_RAYS
          do icr = lbound(iarr_crs, 1), ubound(iarr_crs, 1)
-            cg%u(iarr_crs(icr),RNG) =  beta_cr*fl%cs2 * cg%u(fl%idn,RNG) / (gamma_crn(icr)-1.0)
+            cg%u(iarr_crs(icr),RNG) =  beta_cr * fl%cs2 * cg%u(fl%idn,RNG) / gamma_cr_1
          enddo
 
 ! Explosions
