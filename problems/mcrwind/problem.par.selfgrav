@@ -64,7 +64,7 @@
  /
 
  $RESISTIVITY
-    cfl_resist   =    0.9   ! Courant's number for resistiwity
+    cfl_resist   =    0.9   ! Courant's number for resistivity
     eta_0        =  100.0   ! uniform resistivity
     eta_1        =    0.0   ! anomalous resistivity, works above j_crit
     j_crit       = 1000.0   ! critical value of current
@@ -85,7 +85,6 @@
     K_crn_paral(7) = 10000.0
     K_crn_perp(1)  = 0
     smallecr       = 0.e-2
-    use_CRsplit    = .false.
  /
 
  $CR_SPECIES
@@ -96,7 +95,7 @@
  /
 
  $MULTIGRID_DIFFUSION
-!    diff_explicit = .true.
+    diff_explicit = .false.
     diff_theta     = 0.5
     diff_tstep_fac = 27.77777778
     norm_tol = 1e-5

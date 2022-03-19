@@ -170,8 +170,9 @@ contains
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index
+      use global,          only: disallow_CRnegatives
       use func,            only: emag
-      use initcosmicrays,  only: ncrn, ncre, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp
+      use initcosmicrays,  only: ncrn, ncre, ncra, ncrs, K_crs_paral, K_crs_perp, K_cre_paral, K_cre_perp, use_smallecr
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use units,           only: clight, me, sigma_T
 
@@ -570,7 +571,6 @@ contains
       call init_cresp_types
 
       K_cre_paral(1:ncre) = K_cre_paral_1 * (p_mid_fix(1:ncre) / p_diff)**K_cre_pow
-
       K_cre_perp(1:ncre)  = K_cre_perp_1  * (p_mid_fix(1:ncre) / p_diff)**K_cre_pow
 
 #ifdef VERBOSE
@@ -578,10 +578,10 @@ contains
       write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cre_perp = ",  K_cre_perp(1:ncre)  ; if (master) call printinfo(msg)
 #endif /* VERBOSE */
 
-      K_cre_paral(ncre+1:2*ncre)      = K_cre_paral(1:ncre)
-      K_cre_perp (ncre+1:2*ncre)      = K_cre_perp (1:ncre)
-      K_crs_paral(ncrn+1:ncrn+2*ncre) = K_cre_paral(1:2*ncre)
-      K_crs_perp (ncrn+1:ncrn+2*ncre) = K_cre_perp (1:2*ncre)
+      K_cre_paral(ncre+1:ncra) = K_cre_paral(1:ncre)
+      K_cre_perp (ncre+1:ncra) = K_cre_perp (1:ncre)
+      K_crs_paral(ncrn+1:ncrs) = K_cre_paral(1:ncra)
+      K_crs_perp (ncrn+1:ncrs) = K_cre_perp (1:ncra)
 
       fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
       write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr
@@ -605,6 +605,15 @@ contains
          endif
       else
          n_substeps_max = 1            !< for sanity assuming 1 substep if cresp_substep = .false.
+      endif
+
+      if (.not. disallow_CRnegatives) then
+         if (.not. use_smallecr) then
+            if (master) call warn("[initcrspectrum:init_cresp] Detecting negative values of n,e in CRESP module & performing CFL violation actions related is DISABLED via disallow_CRnegatives.")
+            if (master) call warn("[initcrspectrum:init_cresp] as is 'use_smallecr'; should negative values show in CRESP, they will not be fixed.")
+         else
+            if (master) call warn("[initcrspectrum:init_cresp] Detecting negative values of n,e in CRESP module & performing CFL violation actions related is DISABLED via disallow_CRnegatives.")
+         endif
       endif
 
       if ((q_init < three) .and. any(e_small_approx_p == I_ONE)) then

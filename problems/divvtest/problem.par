@@ -68,7 +68,6 @@
     K_crn_perp(2)  = 0.0
     K_crn_perp(3)  = 0.0
     ncre           = 0
-    use_CRsplit    = .true.
     divv_scheme    = "6lp"
  /
 
@@ -97,7 +96,6 @@
     r0     = 0.7
     beta_cr= 0.0
     amp_cr = 0.0
-    norm_step = 1
     c_exp = 0.0, 0.0, 0.0
     c_rot = 0.0, 0.0, 1.0
 

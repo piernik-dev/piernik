@@ -71,7 +71,6 @@ $BASE_DOMAIN
     K_crn_perp(2)  = 0
     K_crn_perp(3)  = 0
     cre_gpcr_ess   = .false.
-    use_CRsplit    = .true.
  /
 
  $COSMIC_RAY_SPECTRUM
@@ -137,7 +136,6 @@ $BASE_DOMAIN
     vzd0      = 0.0
     beta_cr   = 0.0
     amp_cr1   = 1000.0
-    norm_step = 1
     expansion_cnst = 0.0
  /
 

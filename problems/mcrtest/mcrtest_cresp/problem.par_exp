@@ -71,7 +71,6 @@
     K_crn_perp(2)  = 0
 !    K_crn_perp(3)  = 0
     cre_gpcr_ess   = .false.
-    use_CRsplit    = .true.
  /
 
  $COSMIC_RAY_SPECTRUM
@@ -143,7 +142,6 @@
     expansion_cnst = 0.5e-1
     beta_cr   = 0.0e-3
     amp_cr1   = 1000.0
-    norm_step = 1
  /
 
  $PIERNIK_DEBUG

@@ -63,7 +63,6 @@
     ncrn        = 1
     K_crn_paral = 200.0   ! anisotropic
 !    K_crn_perp = 200.0 ! isotropic
-    use_CRsplit = .false.
  /
 
  $MULTIGRID_SOLVER

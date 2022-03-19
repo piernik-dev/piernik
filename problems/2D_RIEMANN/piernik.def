@@ -6,11 +6,10 @@
 ! to your setup call if you want to play with magnetized 2D Riemann problem.
 #endif
 
-#if !defined IONIZED
-#  define  NEUTRAL
-#endif
-
-
 #if !defined GLOBAL_FR_SPEED
 #  define LOCAL_FR_SPEED
+#endif
+
+#if !defined IONIZED
+#  define  NEUTRAL
 #endif
