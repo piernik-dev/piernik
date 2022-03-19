@@ -48,6 +48,7 @@ contains
       use cg_list_global,   only: all_cg
       use constants,        only: wcr_n
       use crhelpers,        only: divv_i, divv_n
+      use initcosmicrays,   only: ord_cr_prolong
       use dataio_pub,       only: warn
       use fluidindex,       only: flind
       use named_array_list, only: qna
@@ -57,7 +58,9 @@ contains
       has_cr = (flind%crs%all > 0)
 
       if (has_cr) then
-         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all) !, ord_prolong = 2)  ! Smooth prolongation may help with interpolation from coarse grid to fine boundary
+         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all, ord_prolong = ord_cr_prolong)
+         ! Dirty trick: Ensure that all prolongation buffers are ready for ord_cr_prolong,
+         ! wcr_n itself doesn't need it.
       else
          call warn("[crdiffusion:init_crdiffusion] No CR species to diffuse")
       endif
@@ -157,7 +160,7 @@ contains
       use fluidindex,       only: flind
       use global,           only: dt
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crs, K_crs_paral, K_crs_perp
+      use initcosmicrays,   only: iarr_crs, K_crs_paral, K_crs_perp, ord_cr_prolong
       use named_array,      only: p4
       use named_array_list, only: wna
       use ppp,              only: ppp_main
@@ -186,6 +189,7 @@ contains
       character(len=*), dimension(ndims), parameter :: crd_label = [ "cr_diff_X", "cr_diff_Y", "cr_diff_Z" ]
       integer(kind=4) :: nr, nr_recv
       logical :: all_received
+      integer(kind=4) :: ord_save
 
       if (.not. has_cr) return
       if (.not.dom%has_dir(crdim)) return
@@ -199,8 +203,12 @@ contains
       present_not_crdim = dom%has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
       wcri = wna%ind(wcr_n)
 
+      ! Dirty trick: enforce prolongation order for CR in case someone wants smoother estimates for f/c ifnterpolation of cg%u(iarr_crs,:,:,:)
+      ord_save = wna%lst(wna%fi)%ord_prolong
+      wna%lst(wna%fi)%ord_prolong = ord_cr_prolong
       call finest%level%restrict_to_base ! overkill
       call all_bnd ! overkill
+      wna%lst(wna%fi)%ord_prolong = ord_save
 
       nr_recv = compute_nr_recv(crdim)
       nr = nr_recv

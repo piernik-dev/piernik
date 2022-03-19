@@ -47,6 +47,7 @@ module initcosmicrays
    integer(kind=4)                     :: ncrn         !< number of CR nuclear  components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
    integer(kind=4)                     :: ncre         !< number of CR electron components or number of bins for COSM_RAY_ELECTRONS
    integer(kind=4)                     :: ncrs         !< number of all CR components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
+   integer(kind=4)                     :: ord_cr_prolong  !< prolongation order used in cfdiffusion:cr_diff (may be higher than regular prolongation of fluid)
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
@@ -102,6 +103,7 @@ contains
 !! <tr><td>use_CRsplit </td><td>.true.</td><td>logical   </td><td>\copydoc initcosmicrays::use_CRsplit</td></tr>
 !! <tr><td>ncrn        </td><td>0     </td><td>integer   </td><td>\copydoc initcosmicrays::ncrn       </td></tr>
 !! <tr><td>ncre        </td><td>0     </td><td>integer   </td><td>\copydoc initcosmicrays::ncre       </td></tr>
+!! <tr><td>ord_cr_prolong </td><td>2  </td><td>integer   </td><td>\copydoc initcosmicrays::ord_cr_prolong </td></tr>
 !! <tr><td>gamma_crn   </td><td>4./3. </td><td>real array</td><td>\copydoc initcosmicrays::gamma_crn  </td></tr>
 !! <tr><td>gamma_cre   </td><td>4./3. </td><td>real array</td><td>\copydoc initcosmicrays::gamma_cre  </td></tr>
 !! <tr><td>K_crn_paral </td><td>0     </td><td>real array</td><td>\copydoc initcosmicrays::k_crn_paral</td></tr>
@@ -117,7 +119,7 @@ contains
 !<
    subroutine init_cosmicrays
 
-      use constants,       only: cbuff_len, I_ONE, half, big
+      use constants,       only: cbuff_len, I_ONE, half, big, O_I2
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: die, warn, nh
       use func,            only: operator(.notequals.)
@@ -134,7 +136,7 @@ contains
       integer(kind=4) :: nn, icr, jcr
       integer         :: ne
 
-      namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRsplit, &
+      namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRsplit, ord_cr_prolong, &
 #ifndef COSM_RAY_ELECTRONS
            &                 gamma_cre, K_cre_paral, K_cre_perp, &
 #endif /* !COSM_RAY_ELECTRONS */
@@ -142,13 +144,14 @@ contains
            &                 ncre, &
            &                 divv_scheme, crn_gpcr_ess, cre_gpcr_ess
 
-      cfl_cr     = 0.9
-      smallecr   = 0.0
-      cr_active  = 1.0
-      cr_eff     = 0.1       !  canonical conversion rate of SN en.-> CR
+      cfl_cr         = 0.9
+      smallecr       = 0.0
+      cr_active      = 1.0
+      cr_eff         = 0.1       !  canonical conversion rate of SN en.-> CR
       !  we fix E_SN=10**51 erg
-      ncrn       = 0
-      ncre       = 0
+      ncrn           = 0
+      ncre           = 0
+      ord_cr_prolong = O_I2
 
       use_CRsplit    = .true.
       use_smallecr   = .true.
@@ -198,6 +201,7 @@ contains
 
          ibuff(1) = ncrn
          ibuff(2) = ncre
+         ibuff(3) = ord_cr_prolong
 
          rbuff(1) = cfl_cr
          rbuff(2) = smallecr
@@ -242,8 +246,10 @@ contains
 
       if (slave) then
 
-         ncrn         = int(ibuff(1), kind=4)
-         ncre         = int(ibuff(2), kind=4)
+         ncrn           = int(ibuff(1), kind=4)
+         ncre           = int(ibuff(2), kind=4)
+         ord_cr_prolong = int(ibuff(3), kind=4)
+
 
          cfl_cr       = rbuff(1)
          smallecr     = rbuff(2)
