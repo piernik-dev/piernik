@@ -252,7 +252,7 @@ contains
 
 !> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-4 arrays on leaves.
 
-   subroutine leaf_arr4d_boundaries(this, ind, area_type, dir, nocorners)
+   subroutine leaf_arr4d_boundaries(this, ind, area_type, dir, nocorners, no_fc)
 
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
@@ -266,17 +266,21 @@ contains
       integer(kind=4),           intent(in) :: ind        !< index of cg%w(:) 4d array
       integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in) :: dir        !< select only this direction
-      logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
+      logical,         optional, intent(in) :: nocorners  !< when .true. then don't care about proper edge and corner update
+      logical,         optional, intent(in) :: no_fc      !< when .true. then skip prolong_bnd_from_coarser and do only intra-level internal boundaries
 
       type(cg_level_connected_t), pointer   :: curl
       character(len=*), parameter :: l4b_label = "leaf:arr4d_boundaries"
-      logical :: nc
+      logical :: nc, do_fc
 
       call ppp_main%start(l4b_label)
 
       nc = .false.
       if (present(nocorners)) nc=nocorners
       if (wna%lst(ind)%ord_prolong /= O_INJ) nc = .false.
+
+      do_fc = .true.
+      if (present(no_fc)) do_fc = .not. no_fc
 
       curl => finest%level
       do while (associated(curl))
@@ -285,12 +289,14 @@ contains
          curl => curl%coarser
       enddo
 
-      curl => this%coarsest_leaves
-      do while (associated(curl))
-         call curl%prolong_bnd_from_coarser(ind, arr4d=.true., dir=dir, nocorners=nc)
-         ! corners are required on all levels except for finest anyway if prolongation order is greater than injection
-         curl => curl%finer
-      enddo
+      if (do_fc) then
+         curl => this%coarsest_leaves
+         do while (associated(curl))
+            call curl%prolong_bnd_from_coarser(ind, arr4d=.true., dir=dir, nocorners=nc)
+            ! corners are required on all levels except for finest anyway if prolongation order is greater than injection
+            curl => curl%finer
+         enddo
+      endif
 
       call ppp_main%stop(l4b_label)
 

@@ -76,7 +76,6 @@ contains
       use cg_cost_data,     only: I_DIFFUSE
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use cg_list_global,   only: all_cg
       use constants,        only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n, PPP_CR
       use dataio_pub,       only: die
       use domain,           only: dom
@@ -97,7 +96,7 @@ contains
 
       call ppp_main%start(awb_label, PPP_CR)
 
-      call all_cg%level_4d_boundaries(wna%ind(wcr_n)) !, dir=dir)
+      call leaves%leaf_arr4d_boundaries(wna%ind(wcr_n), no_fc = .true.) !, dir=dir)  ! skip coarse-to-fine prolongation as it doesn't work well for fluxes
       ! ToDo: override coarse fluxes with restricted fine fluxes
 
       ! do the external boundaries
