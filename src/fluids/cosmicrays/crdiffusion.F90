@@ -153,7 +153,7 @@ contains
       use cg_leaves,        only: leaves
       use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR, half
       use dataio_pub,       only: die
       use domain,           only: dom
       use fc_fluxes,        only: compute_nr_recv, recv_cg_finebnd, send_cg_coarsebnd, finalize_fcflx
@@ -190,6 +190,7 @@ contains
       integer(kind=4) :: nr, nr_recv
       logical :: all_received
       integer(kind=4) :: ord_save
+      real, parameter :: flux_factor = half
 
       if (.not. has_cr) return
       if (.not.dom%has_dir(crdim)) return
@@ -276,8 +277,31 @@ contains
             enddo
          enddo
 
-         ! cg%coarsebnd(cdim, LO)%uflx(:, :, :) = wcr(:, ?, ?, ?) ! with cg%coarsebnd(cdim, LO)%index(:,:) involved.
-         ! Similar thing for HI side.
+         ! Very general, perhaps not very efficient approach
+         ! It can be optimized as there is either something to exchange or not (we're on fine side) and array assignment can be made
+         do j = lbound(cg%coarsebnd(crdim, LO)%uflx, dim=2), ubound(cg%coarsebnd(crdim, LO)%uflx, dim=2)  ! bounds for (crdim, HI) are the same
+            do k = lbound(cg%coarsebnd(crdim, LO)%uflx, dim=3), ubound(cg%coarsebnd(crdim, LO)%uflx, dim=3)
+               select case (crdim)
+                  case (xdim)
+                     if (cg%coarsebnd(crdim, LO)%index(j, k) >= cg%is) &
+                          cg%coarsebnd(crdim, LO)%uflx(:flind%crs%all, j, k) = wcr(:, cg%coarsebnd(crdim, LO)%index(j, k), j, k)
+                     if (cg%coarsebnd(crdim, HI)%index(j, k) <= cg%ie) &
+                          cg%coarsebnd(crdim, HI)%uflx(:flind%crs%all, j, k) = wcr(:, cg%coarsebnd(crdim, HI)%index(j, k)+1, j, k)
+                  case (ydim)
+                     if (cg%coarsebnd(crdim, LO)%index(j, k) >= cg%js) &
+                          cg%coarsebnd(crdim, LO)%uflx(:flind%crs%all, j, k) = wcr(:, k, cg%coarsebnd(crdim, LO)%index(j, k), j)
+                     if (cg%coarsebnd(crdim, HI)%index(j, k) <= cg%je) &
+                          cg%coarsebnd(crdim, HI)%uflx(:flind%crs%all, j, k) = wcr(:, k, cg%coarsebnd(crdim, HI)%index(j, k)+1, j)
+                  case (zdim)
+                     if (cg%coarsebnd(crdim, LO)%index(j, k) >= cg%ks) &
+                          cg%coarsebnd(crdim, LO)%uflx(:flind%crs%all, j, k) = wcr(:, j, k, cg%coarsebnd(crdim, LO)%index(j, k))
+                     if (cg%coarsebnd(crdim, HI)%index(j, k) <= cg%ke) &
+                          cg%coarsebnd(crdim, HI)%uflx(:flind%crs%all, j, k) = wcr(:, j, k, cg%coarsebnd(crdim, HI)%index(j, k)+1)
+                  case default
+                     call die("[crdiffusion:cr_diff] What to send?")
+               end select
+            enddo
+         enddo
 
          call send_cg_coarsebnd(crdim, cg, nr)
 
@@ -306,8 +330,34 @@ contains
          cg => cgl%cg
          call cg%costs%start
 
-         ! wcr(:, ?, ?, ?) = cg%finebnd(cdim, LO)%uflx(:, :, :) ! with cg%coarsebnd(cdim, LO)%index(:,:) involved.
-         ! Similar thing for HI side.
+         ! Very general, perhaps not very efficient approach, again
+         ! It can be optimized as there are at most four different regions to exchange (we're on coarse side) and array assignments can be made
+
+         ! To Do: Figure out where the flux factor value come from. And why it does not depend on dimensionality.
+         wcr => cg%w(wcri)%arr
+         do j = lbound(cg%finebnd(crdim, LO)%uflx, dim=2), ubound(cg%finebnd(crdim, LO)%uflx, dim=2)  ! bounds for (crdim, HI) are the same
+            do k = lbound(cg%finebnd(crdim, LO)%uflx, dim=3), ubound(cg%finebnd(crdim, LO)%uflx, dim=3)
+               select case (crdim)
+                  case (xdim)
+                     if (cg%finebnd(crdim, LO)%index(j, k) > cg%is) &
+                          wcr(:, cg%finebnd(crdim, LO)%index(j, k) + 1, j, k) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
+                     if (cg%finebnd(crdim, HI)%index(j, k) < cg%ie) &
+                          wcr(:, cg%finebnd(crdim, HI)%index(j, k), j, k) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
+                  case (ydim)
+                     if (cg%finebnd(crdim, LO)%index(j, k) >= cg%js) &
+                          wcr(:, k, cg%finebnd(crdim, LO)%index(j, k) + 1, j) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
+                     if (cg%finebnd(crdim, HI)%index(j, k) <= cg%je) &
+                          wcr(:, k, cg%finebnd(crdim, HI)%index(j, k), j) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
+                  case (zdim)
+                     if (cg%finebnd(crdim, LO)%index(j, k) >= cg%ks) &
+                          wcr(:, j, k, cg%finebnd(crdim, LO)%index(j, k) + 1) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
+                     if (cg%finebnd(crdim, HI)%index(j, k) <= cg%ke) &
+                          wcr(:, j, k, cg%finebnd(crdim, HI)%index(j, k)) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
+                  case default
+                     call die("[crdiffusion:cr_diff] What to receive?")
+               end select
+            enddo
+         enddo
 
          ndm = cg%lhn(:,HI) - idm
          hdm = cg%lhn(:,LO) ; hdm(crdim) = cg%lhn(crdim,HI)
