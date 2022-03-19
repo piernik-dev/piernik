@@ -285,8 +285,6 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call all_wcr_boundaries
-
       call piernik_Waitall(nr, "cr_diff")
       cgl => leaves%first
       do while (associated(cgl))
@@ -295,6 +293,18 @@ contains
 
          call recv_cg_finebnd(crdim, cg, all_received)
          if (.not. all_received) call die("[crdiffusion:cr_diff] incomplete fluxes")
+         call cg%costs%stop(I_DIFFUSE)
+         cgl => cgl%nxt
+      enddo
+
+      call finalize_fcflx
+
+      call all_wcr_boundaries
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         call cg%costs%start
 
          ! wcr(:, ?, ?, ?) = cg%finebnd(cdim, LO)%uflx(:, :, :) ! with cg%coarsebnd(cdim, LO)%index(:,:) involved.
          ! Similar thing for HI side.
@@ -309,8 +319,6 @@ contains
          call cg%costs%stop(I_DIFFUSE)
          cgl => cgl%nxt
       enddo
-
-      call finalize_fcflx
 
       call ppp_main%stop(crd_label(crdim), PPP_CR)
 
