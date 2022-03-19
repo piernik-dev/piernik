@@ -94,7 +94,6 @@ contains
       else
          i_cs_iso2 = -1
       endif
-      call eflx%init
       allocate( b(cg%n_(cdim), nmag), u(cg%n_(cdim), flind%all), u0(cg%n_(cdim), flind%all), u1(cg%n_(cdim), flind%all), vx(cg%n_(cdim), flind%fluids))
       !OPT for AMR it may be worthwhile to move it to global scope
 
