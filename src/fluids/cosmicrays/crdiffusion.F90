@@ -75,8 +75,9 @@ contains
 
    subroutine make_diff_sweeps(forward)
 
-      use constants, only: xdim, zdim, I_ONE
-      use global,    only: skip_sweep
+      use all_boundaries, only: all_fluid_boundaries
+      use constants,      only: xdim, zdim, I_ONE
+      use global,         only: skip_sweep
 
       implicit none
 
@@ -87,6 +88,10 @@ contains
       do s = merge(xdim, zdim, forward), merge(zdim, xdim, forward), merge(I_ONE, -I_ONE, forward)
          if (.not. skip_sweep(s)) call make_diff_sweep(s)
       enddo
+
+      ! This call prevents occurence of SIGFPE in the Riemann solver
+      ! Strange thing is that it is not fully deterministic and sometimes the code may work well without this call
+      call all_fluid_boundaries  ! overkill?
 
    contains
 
@@ -117,7 +122,7 @@ contains
 !! This procedure is a shameless copy of cg_list_bnd%arr3d_boundaries adapted for wcr
 !! \todo REMOVE ME, FIX ME, MERGE ME with cg_list_bnd%arr3d_boundaries or at least have a decency to make me more general
 !<
-   subroutine all_wcr_boundaries
+   subroutine all_wcr_boundaries(crdim)
 
       use cg_cost_data,     only: I_DIFFUSE
       use cg_leaves,        only: leaves
@@ -131,6 +136,8 @@ contains
 
       implicit none
 
+      integer(kind=4), intent(in)             :: crdim
+
       integer(kind=4)                         :: i, d, lh
       integer(kind=4), dimension(ndims,LO:HI) :: l, r
       real, dimension(:,:,:,:), pointer       :: wcr
@@ -142,7 +149,7 @@ contains
 
       call ppp_main%start(awb_label, PPP_CR)
 
-      call leaves%leaf_arr4d_boundaries(wna%ind(wcr_n), no_fc = .true.) !, dir=dir)  ! skip coarse-to-fine prolongation as it doesn't work well for fluxes
+      call leaves%leaf_arr4d_boundaries(wna%ind(wcr_n), no_fc = .true., dir=crdim)  ! skip coarse-to-fine prolongation as it doesn't work well for fluxes
       ! ToDo: override coarse fluxes with restricted fine fluxes
 
       ! do the external boundaries
@@ -366,7 +373,7 @@ contains
 
       call finalize_fcflx
 
-      call all_wcr_boundaries
+      call all_wcr_boundaries(crdim)
 
       cgl => leaves%first
       do while (associated(cgl))
