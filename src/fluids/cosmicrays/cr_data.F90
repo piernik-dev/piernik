@@ -262,7 +262,7 @@ contains
          endif
       enddo
 
-      nspc = count(cr_spectral)
+      nspc = count(cr_spectral, kind=4)
       ncrn = ncrsp - nspc
 
       if (master .and. jcr < ncrn) then
