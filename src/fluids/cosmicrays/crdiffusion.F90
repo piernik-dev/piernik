@@ -76,14 +76,18 @@ contains
    subroutine make_diff_sweeps(forward)
 
       use all_boundaries, only: all_fluid_boundaries, all_mag_boundaries
-      use constants,      only: xdim, zdim, I_ONE
+      use constants,      only: xdim, zdim, I_ONE, PPP_CR
       use global,         only: skip_sweep
+      use ppp,            only: ppp_main
 
       implicit none
 
       logical, intent(in) :: forward  !< order of sweeps: XYZ or ZYX
 
       integer(kind=4) :: s
+      character(len=*), parameter :: crdiff_label = "CR_diffusion"
+
+      call ppp_main%start(crdiff_label, PPP_CR)
 
       call all_mag_boundaries
 
@@ -94,6 +98,8 @@ contains
       ! This call prevents occurence of SIGFPE in the Riemann solver
       ! Strange thing is that it is not fully deterministic and sometimes the code may work well without this call
       call all_fluid_boundaries  ! overkill?
+
+      call ppp_main%stop(crdiff_label, PPP_CR)
 
    contains
 
