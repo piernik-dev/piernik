@@ -111,17 +111,12 @@ contains
       use global,         only: cc_mag
       use mpisetup,       only: master
 #ifdef COSM_RAYS
+      use cr_data,        only: cr_names, cr_spectral
       use dataio_pub,     only: msg
-#ifdef COSM_RAY_ELECTRONS
-      use fluidindex,     only: iarr_all_crn
-      use initcosmicrays, only: ncre
-#else /* !COSM_RAY_ELECTRONS */
-      use fluidindex,     only: iarr_all_crs
-#endif /* !COSM_RAY_ELECTRONS */
-#ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: cr_names
-#endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
+#ifdef CRESP
+      use initcosmicrays, only: ncrb
+#endif /* CRESP */
 
       implicit none
 
@@ -131,7 +126,7 @@ contains
       character(len=singlechar)                            :: fc, ord
       character(len=dsetnamelen)                           :: aux
 #ifdef COSM_RAYS
-      integer                                              :: k
+      integer                                              :: k, ke
 #endif /* COSM_RAYS */
 
       do i = lbound(vars, 1), ubound(vars, 1)
@@ -194,30 +189,26 @@ contains
                call append_var(aux)
 #ifdef COSM_RAYS
             case ('encr')
-#ifdef COSM_RAY_ELECTRONS
-               do k = 1, size(iarr_all_crn,1)
-#else /* !COSM_RAY_ELECTRONS */
-               do k = 1, size(iarr_all_crs,1)
-#endif /* !COSM_RAY_ELECTRONS */
-                  if (k<=99) then
-#ifdef COSM_RAYS_SOURCES
-                     if (len(trim(cr_names(k))) > 0) then
-                        write(aux,'(a3,a)') 'cr_', trim(cr_names(k))
-                     else
-#endif /* COSM_RAYS_SOURCES */
-                     write(aux,'(A2,I2.2)') 'cr', k
-#ifdef COSM_RAYS_SOURCES
-                     endif
-#endif /* COSM_RAYS_SOURCES */
+               do k = 1, size(cr_names)
+                  if (cr_spectral(k)) cycle
+                  if (len(trim(cr_names(k))) > 0) then
+                     write(aux,'(a3,a)') 'cr_', trim(cr_names(k))
                      call append_var(aux)
                   else
-                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", k
-                     call warn(msg)
+                     ke = k - count(cr_spectral)
+                     if (ke <= 99) then
+                        write(aux,'(A2,I2.2)') 'cr', ke
+                        call append_var(aux)
+                     else
+                        write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", ke
+                        call warn(msg)
+                     endif
                   endif
                enddo
-#ifdef COSM_RAY_ELECTRONS
+#endif /* COSM_RAYS */
+#ifdef CRESP
             case ('cren') !< CRESP number density fields
-               do k = 1, ncre
+               do k = 1, ncrb
                   if (k<=99) then
                      write(aux,'(A4,I2.2)') 'cren', k
                      call append_var(aux)
@@ -234,7 +225,7 @@ contains
                   endif
                enddo
             case ('cree') !< CRESP energy density fields
-               do k = 1, ncre
+               do k = 1, ncrb
                   if (k<=99) then
                      write(aux,'(A4,I2.2)') 'cree', k
                      call append_var(aux)
@@ -251,7 +242,7 @@ contains
                   endif
                enddo
             case ('cref') !< CRESP distribution function
-               do k = 1, ncre+1
+               do k = 1, ncrb+1
                   if (k<=99) then
                      write(aux,'(A4,I2.2)') 'cref', k
                      call append_var(aux)
@@ -271,7 +262,7 @@ contains
                   endif
                enddo
             case ('creq') !< CRESP spectrum index
-               do k = 1, ncre
+               do k = 1, ncrb
                   if (k<=99) then
                      write(aux,'(A4,I2.2)') 'creq', k
                      call append_var(aux)
@@ -280,8 +271,7 @@ contains
                      call warn(msg)
                   endif
                enddo
-#endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
+#endif /* CRESP */
             case default
                if (.not. has_ion .and. (any(trim(vars(i)) == ["deni", "vlxi", "vlyi", "vlzi", "enei", "ethi", "prei"]) .or. any(trim(vars(i)) == ["momxi", "momyi", "momzi"]))) then
                   if (master) call warn("[common_hdf5:init_hdf5] Cannot safely use plot variable '" // trim(vars(i)) // "' without ionized fluid")
@@ -484,25 +474,24 @@ contains
 !<
    subroutine set_common_attributes(filename)
 
-      use constants,     only: I_ONE
-      use dataio_pub,    only: maxenvlen, maxparlen, use_v2_io, parfile, parfilelines, gzip_level
-      use dataio_user,   only: user_attrs_wr, user_attrs_pre
-      use hdf5,          only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, &
-         & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
-         & H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, &
-         & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
-      use mpisetup,      only: master, slave
-      use version,       only: env, nenv
-#ifdef COSM_RAY_ELECTRONS
-      use initcrspectrum,  only: write_cresp_to_restart, use_cresp
-      use cresp_io,        only: create_cresp_smap_fields
-      use cresp_NR_method, only: cresp_write_smaps_to_hdf
-#endif /* COSM_RAY_ELECTRONS */
+      use constants,         only: I_ONE
+      use dataio_pub,        only: maxenvlen, maxparlen, use_v2_io, parfile, parfilelines, gzip_level
+      use dataio_user,       only: user_attrs_wr, user_attrs_pre
+      use hdf5,              only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
+         & h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, &
+         & h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
+      use mpisetup,          only: master, slave
+      use version,           only: env, nenv
+#ifdef CRESP
+      use initcrspectrum,    only: write_cresp_to_restart, use_cresp
+      use cresp_io,          only: create_cresp_smap_fields
+      use cresp_NR_method,   only: cresp_write_smaps_to_hdf
+#endif /* CRESP */
 #ifdef RANDOMIZE
-      use randomization, only: write_current_seed_to_restart
+      use randomization,     only: write_current_seed_to_restart
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
-      use snsources,     only: write_snsources_to_restart
+      use snsources,         only: write_snsources_to_restart
 #endif /* SN_SRC */
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: write_oldsoln_to_restart
@@ -569,21 +558,21 @@ contains
       call H5Pclose_f(prp_id, error)
 
       ! \ToDo Set up a stack of routines registered by appropriate modules
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       call write_cresp_to_restart(file_id)
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 #ifdef RANDOMIZE
       call write_current_seed_to_restart(file_id)
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
       call write_snsources_to_restart(file_id)
 #endif /* SN_SRC */
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       if (use_cresp) then
          call create_cresp_smap_fields(file_id) ! create "/cresp/smaps_{LO,UP}/..."
          call cresp_write_smaps_to_hdf(file_id) ! create "/cresp/smaps_{LO,UP}/{p_f}_ratio"
       endif
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
       if (associated(user_attrs_wr)) call user_attrs_wr(file_id)
 
       call h5fclose_f(file_id, error)

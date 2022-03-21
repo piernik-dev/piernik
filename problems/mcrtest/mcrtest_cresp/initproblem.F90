@@ -27,9 +27,6 @@
 
 #include "piernik.h"
 
-#ifndef COSM_RAYS
-#error COSM_RAYS is required for mcrtest
-#endif /* COSM_RAYS */
 module initproblem
 
    implicit none
@@ -158,16 +155,16 @@ contains
       use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
-      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use mpisetup,       only: master, piernik_MPI_Allreduce
-#ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: eCRSP, icr_H1, icr_C12, cr_table
-#endif /* COSM_RAYS_SOURCES */
-#ifdef COSM_RAY_ELECTRONS
+#ifdef COSM_RAYS
+      use cr_data,        only: eCRSP, icr_H1, icr_C12, cr_index
+      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
+#ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff, use_cresp
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
+#endif /* COSM_RAYS */
 
       implicit none
 
@@ -177,9 +174,9 @@ contains
       real                            :: cs_iso, decr, r2, maxv
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       real                            :: e_tot
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
       fl => flind%ion
 
@@ -191,11 +188,13 @@ contains
       if (.not.dom%has_dir(ydim)) by0 = 0.
       if (.not.dom%has_dir(zdim)) bz0 = 0.
 
-      if ((bx0**2 + by0**2 + bz0**2 .equals. 0.) .and. (any(K_crn_paral(:) .notequals. 0.) .or. any(K_crn_perp(:) .notequals. 0.))) then
-         call warn("[initproblem:problem_initial_conditions] No magnetic field is set, K_crn_* also have to be 0.")
-         K_crn_paral(:) = 0.
-         K_crn_perp(:)  = 0.
+#ifdef COSM_RAYS
+      if ((bx0**2 + by0**2 + bz0**2 .equals. 0.) .and. (any(K_cr_paral(:) .notequals. 0.) .or. any(K_cr_perp(:) .notequals. 0.))) then
+         call warn("[initproblem:problem_initial_conditions] No magnetic field is set, K_cr_* also have to be 0.")
+         K_cr_paral(:) = 0.
+         K_cr_perp(:)  = 0.
       endif
+#endif /* COSM_RAYS */
 
       mantle = 0
       do i = xdim, zdim
@@ -237,14 +236,10 @@ contains
               &             emag(cg%b(xdim,RNG), cg%b(ydim,RNG), cg%b(zdim,RNG))
 #endif /* !ISO */
 
+#ifdef COSM_RAYS
          cg%u(iarr_crs, RNG) = 0.0
-#ifdef COSM_RAYS_SOURCES
-         if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(cr_table(icr_H1 ))-1.0)
-         if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(cr_table(icr_C12))-1.0)
-#else /* !COSM_RAYS_SOURCES */
-         cg%u(iarr_crn(1), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(1)-1.0)
-         cg%u(iarr_crn(2), RNG) = beta_cr*fl%cs2 * cg%u(fl%idn, RNG)/(gamma_crn(2)-1.0)
-#endif /* !COSM_RAYS_SOURCES */
+         if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
+         if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
 
 ! Explosions
          do k = cg%ks, cg%ke
@@ -260,13 +255,9 @@ contains
                         enddo
                      enddo
                   enddo
-#ifdef COSM_RAYS_SOURCES
-                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_table(icr_H1 )), i, j, k) + amp_cr1*decr
-                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_table(icr_C12)), i, j, k) + amp_cr2*decr
-#else /* !COSM_RAYS_SOURCES */
-                  cg%u(iarr_crn(1:2), i, j, k) = cg%u(iarr_crn(1:2), i, j, k) + [amp_cr1, amp_cr2]*decr
-#endif /* !COSM_RAYS_SOURCES */
-#ifdef COSM_RAY_ELECTRONS
+                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) + amp_cr1*decr
+                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) + amp_cr2*decr
+#ifdef CRESP
 ! Explosions @CRESP independent of cr nucleons
                   e_tot = amp_cr1 * cre_eff * decr
                   if (e_tot > smallcree .and. use_cresp) then
@@ -275,15 +266,16 @@ contains
                      cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
                      cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
                   endif
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
                enddo
             enddo
          enddo
-
+#endif /* COSM_RAYS */
          call cg%costs%stop(I_IC)
          cgl => cgl%nxt
       enddo
 
+#ifdef COSM_RAYS
       do icr = 1, flind%crs%all
 
          maxv = - huge(1.)
@@ -299,7 +291,7 @@ contains
 
          call piernik_MPI_Allreduce(maxv, pMAX)
          if (master) then
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
             if (iarr_crs(icr) < flind%cre%nbeg) then
                write(msg,*) '[initproblem:problem_initial_conditions] icr(nuc)  =',icr,' maxecr(nuc) =',maxv
             else if (iarr_crs(icr) < flind%cre%ebeg .and. iarr_crs(icr) >= flind%cre%nbeg) then
@@ -307,17 +299,18 @@ contains
             else
                write(msg,*) '[initproblem:problem_initial_conditions] icr(cre_e)=',icr,' maxecr(cre) =',maxv
             endif
-#else /* !COSM_RAY_ELECTRONS */
+#else /* !CRESP */
             write(msg,*) '[initproblem:problem_initial_conditions] icr=', icr, ' maxecr =', maxv
-#endif /* !COSM_RAY_ELECTRONS */
+#endif /* !CRESP */
             call printinfo(msg)
          endif
 
       enddo
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       write(msg,*) '[initproblem:problem_initial_conditions]: Taylor_exp._ord. (cresp)    = ', expan_order
       if (master) call printinfo(msg)
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
+#endif /* COSM_RAYS */
 
    end subroutine problem_initial_conditions
 

@@ -126,6 +126,7 @@ contains
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, pi, I_ONE
+      use cr_data,        only: icr_H1, icr_C12, cr_index
       use crhelpers,      only: div_v
       use dataio_pub,     only: warn
       use domain,         only: dom
@@ -133,10 +134,7 @@ contains
       use fluidtypes,     only: component_fluid
       use func,           only: emag, ekin, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
-      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
-#ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: icr_H1, icr_C12, cr_table
-#endif /* COSM_RAYS_SOURCES */
+      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
 
       implicit none
 
@@ -145,10 +143,6 @@ contains
       real                             :: cs_iso, r, r2
       type(cg_list_element),  pointer  :: cgl
       type(grid_container),   pointer  :: cg
-#ifndef COSM_RAYS_SOURCES
-      integer, parameter               :: icr_H1 = 1, icr_C12 = 2
-      integer, parameter, dimension(2) :: cr_table = [1,2]
-#endif /* !COSM_RAYS_SOURCES */
 
       fl => flind%ion
 
@@ -160,10 +154,10 @@ contains
          b0 = 0.0  ! ignore B field in nonexistent direction
       endwhere
 
-      if ((sum(b0**2) .equals. 0.) .and. (any(K_crn_paral(:) .notequals. 0.) .or. any(K_crn_perp(:) .notequals. 0.))) then
-         call warn("[initproblem:problem_initial_conditions] No magnetic field is set, K_crn_* also have to be 0.")
-         K_crn_paral(:) = 0.
-         K_crn_perp(:)  = 0.
+      if ((sum(b0**2) .equals. 0.) .and. (any(K_cr_paral(:) .notequals. 0.) .or. any(K_cr_perp(:) .notequals. 0.))) then
+         call warn("[initproblem:problem_initial_conditions] No magnetic field is set, K_cr_* also have to be 0.")
+         K_cr_paral(:) = 0.
+         K_cr_perp(:)  = 0.
       endif
 
       cgl => leaves%first
@@ -200,7 +194,7 @@ contains
 
 #ifdef COSM_RAYS
          do icr = lbound(iarr_crs, 1), ubound(iarr_crs, 1)
-            cg%u(iarr_crs(icr),RNG) =  beta_cr*fl%cs2 * cg%u(fl%idn,RNG) / (gamma_crn(icr)-1.0)
+            cg%u(iarr_crs(icr),RNG) =  beta_cr * fl%cs2 * cg%u(fl%idn,RNG) / gamma_cr_1
          enddo
 
 ! Explosions
@@ -215,9 +209,9 @@ contains
                               r2 = (cg%x(i) - sn_pos(xdim) + real(ipm) * dom%L_(xdim))**2 + &
                                  & (cg%y(j) - sn_pos(ydim) + real(jpm) * dom%L_(ydim))**2 + &
                                  & (cg%z(k) - sn_pos(zdim) + real(kpm) * dom%L_(zdim))**2
-                              if (icr == cr_table(icr_H1)) then
+                              if (icr == cr_index(icr_H1)) then
                                  cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + amp_cr*exp(-r2/r0**2)
-                              elseif (icr == cr_table(icr_C12)) then
+                              elseif (icr == cr_index(icr_C12)) then
                                  cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
                               else
                                  cg%u(iarr_crn(icr),i,j,k) = 0.0

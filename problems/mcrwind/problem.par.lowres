@@ -80,6 +80,7 @@
     beta_cr      = 1.0      ! okresla wklad CR w poczatkowej rownowadze (podobnie jak alfa dla B)
     amp_cr       = 0.0      ! wybuch w problem_initial_conditionslem w x0,y0,z0
     smallecr     = 1.e-2    ! lower limit & outflow boundary value for ecr
+    use_CRdecay  = .true.
  /
 
  $CR_SPECIES

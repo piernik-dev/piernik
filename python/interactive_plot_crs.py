@@ -226,7 +226,7 @@ if f_run:
 var_array = []
 if f_run is True:
     var_names = []
-    var_names = ["ncre", "p_min_fix", "p_max_fix",
+    var_names = ["ncrb", "p_min_fix", "p_max_fix",
                  "e_small", "cre_eff", "q_big"]
     var_def = [20, 10., 1.e5, 1.e-6, 0.01, 30., ]
     if len(var_names) == 0:
@@ -560,7 +560,7 @@ if f_run is True:
                     coords[avail_dim[0]:avail_dim[1]] = usr_c[:]
                     coords[dim_map[slice_ax]] = slice_coord
 
-                for ind in range(1, ncre + 1):
+                for ind in range(1, ncrb + 1):
                     ecrs.append(
                         float(mean(position['cree' + str(ind).zfill(2)][0].v)))
                     ncrs.append(
@@ -576,7 +576,7 @@ if f_run is True:
                 for j in range(dnum):
                     position = position = h5ds.r[[coords[0], dom_l[avail_dim[0]] + dl * j, coords[2]]: [
                         coords[0], dom_l[avail_dim[0]] + dl * j, coords[2]]]
-                    for ind in range(1, ncre + 1):
+                    for ind in range(1, ncrb + 1):
                         ecrs.append(position['cree' + str(ind).zfill(2)][0].v)
                         ncrs.append(position['cren' + str(ind).zfill(2)][0].v)
                     fig2, exit_code_tmp = crs_plot_main(
@@ -592,13 +592,13 @@ if f_run is True:
             ecrs = []
             ncrs = []
 
-            for ind in range(1, ncre + 1):
+            for ind in range(1, ncrb + 1):
                 ecrs.append(float(position['cree' + str(ind).zfill(2)][0].v))
                 ncrs.append(float(position['cren' + str(ind).zfill(2)][0].v))
 
-            for ind in range(1, ncre + 2):
+            for ind in range(1, ncrb + 2):
                 fcrs.append(float(position['cref' + str(ind).zfill(2)][0].v))
-            for ind in range(1, ncre + 1):
+            for ind in range(1, ncrb + 1):
                 qcrs.append(float(position['creq' + str(ind).zfill(2)][0].v))
             pcut[:] = [position['crep01'][0].v, position['crep02'][0].v]
 
