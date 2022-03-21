@@ -53,10 +53,10 @@
  /
 
  $COSMIC_RAYS
-    cfl_cr      =   0.9
-    ncrn        =   1
-    K_crn_paral =   0.0
-    K_crn_perp  =   100.0
+    cfl_cr     = 0.9
+    ncrsp      = 1
+    K_cr_paral = 0.0
+    K_cr_perp  = 100.0
  /
 
  $MULTIGRID_SOLVER

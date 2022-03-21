@@ -98,9 +98,9 @@ contains
       use hdc,            only: update_chspeed
       use mass_defect,    only: update_magic_mass
       use timestep_retry, only: repeat_fluidstep
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       use cresp_grid,     only: cresp_update_grid, cresp_clean_grid
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
       implicit none
 
@@ -114,9 +114,9 @@ contains
 
 ! Sources should be hooked to problem_customize_solution with forward argument
 
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
       halfstep = .true.
       t = t + dt
@@ -124,9 +124,9 @@ contains
 
       call make_3sweeps(.false.) ! Z -> Y -> X
       call update_magic_mass
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       call cresp_clean_grid ! BEWARE: due to diffusion some junk remains in the grid - this nullifies all inactive bins.
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
    end subroutine fluid_update_full
 

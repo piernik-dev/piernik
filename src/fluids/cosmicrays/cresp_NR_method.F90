@@ -31,7 +31,7 @@
 !<
 
 module cresp_NR_method
-! pulled by COSM_RAY_ELECTRONS
+! pulled by CRESP
 
    use constants,     only: LO
    use cresp_helpers, only: map_header, bound_name

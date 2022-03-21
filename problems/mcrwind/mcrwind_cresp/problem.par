@@ -71,15 +71,15 @@
  /
 
   $COSMIC_RAYS
-    ncrn        =   1
-    ncre        =   16 ! 23 ! number of cr electron spectrum bins (including cutoff bins)
-    cfl_cr      =   0.9
-    cr_active   =   1.0
-    gamma_crn(1)   =  1.333333
-    K_crn_paral(1) = 10000.0
-    K_crn_perp(1)  = 100.0 ! 10% of paral
-    smallecr       = 0.e-2
-    cre_gpcr_ess   = .false.
+    ncrsp         =   2
+    ncrb          =   16 ! 23 ! number of cr electron spectrum bins (including cutoff bins)
+    cfl_cr        =   0.9
+    cr_active     =   1.0
+    K_cr_paral(1) = 1.e4 ! CRESP electrons
+    K_cr_paral(2) = 10000.0
+    K_cr_perp(1)  = 1.e3 ! CRESP electrons
+    K_cr_perp(2)  = 100.0 ! 10% of paral
+    smallecr      = 0.e-2
  /
 
  $COSMIC_RAY_SPECTRUM
@@ -96,8 +96,6 @@
     q_big             = 30.0    ! < maximal allowed abs(q)
     p_br_init_lo      = 4.0e2   ! < initial lower momentum break
     p_br_init_up      = 5.0e5   ! < iniital upper momentum break
-    K_cre_paral_1     = 1.e4
-    K_cre_perp_1      = 1.e3
     K_cre_pow         = 0.5     ! < scaling factor for diffusion coefficients
     e_small           = 1.0e-10 ! < lower energy cutoff for energy-approximated cutoff momenta
     initial_spectrum  = 'plpc'  ! < one of setups: 'brpg', 'powl', 'brpl', 'bump', 'symf', 'syme', 'plpc'
@@ -106,7 +104,7 @@
  /
 
  $CR_SPECIES
-    eH1 = .true.
+    eH1 = .true., .true., .false.
     eLi7 = .false.
     eBe9 = .false.
     eBe10 = .false.

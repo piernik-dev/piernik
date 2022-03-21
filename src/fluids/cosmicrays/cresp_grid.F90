@@ -31,7 +31,7 @@
 !<
 
 module cresp_grid
-! pulled by COSM_RAY_ELECTRONS
+! pulled by CRESP
 
    implicit none
 
@@ -57,7 +57,7 @@ contains
       use dataio_pub,       only: printinfo, restarted_sim
       use global,           only: repetitive_steps, cflcontrol, disallow_CRnegatives
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_cre_n, iarr_cre_e, ncre
+      use initcosmicrays,   only: iarr_cre_n, iarr_cre_e, ncrb
       use initcrspectrum,   only: norm_init_spectrum, dfpq, check_if_dump_fpq, use_cresp
       use mpisetup,         only: master
       use named_array_list, only: wna
@@ -75,9 +75,9 @@ contains
       call check_if_dump_fpq(vars)
 
       if (dfpq%any_dump) then
-         if (dfpq%dump_f) call all_cg%reg_var(dfpq%f_nam, dim4=ncre + I_ONE)
+         if (dfpq%dump_f) call all_cg%reg_var(dfpq%f_nam, dim4=ncrb + I_ONE)
          if (dfpq%dump_p) call all_cg%reg_var(dfpq%p_nam, dim4=I_TWO)
-         if (dfpq%dump_q) call all_cg%reg_var(dfpq%q_nam, dim4=ncre)
+         if (dfpq%dump_q) call all_cg%reg_var(dfpq%q_nam, dim4=ncrb)
       endif
 
       if (.not. restarted_sim) then
