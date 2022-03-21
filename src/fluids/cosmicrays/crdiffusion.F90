@@ -75,7 +75,7 @@ contains
 
    subroutine make_diff_sweeps(forward)
 
-      use all_boundaries, only: all_fluid_boundaries
+      use all_boundaries, only: all_fluid_boundaries, all_mag_boundaries
       use constants,      only: xdim, zdim, I_ONE
       use global,         only: skip_sweep
 
@@ -84,6 +84,8 @@ contains
       logical, intent(in) :: forward  !< order of sweeps: XYZ or ZYX
 
       integer(kind=4) :: s
+
+      call all_mag_boundaries
 
       do s = merge(xdim, zdim, forward), merge(zdim, xdim, forward), merge(I_ONE, -I_ONE, forward)
          if (.not. skip_sweep(s)) call make_diff_sweep(s)
@@ -198,7 +200,7 @@ contains
 !<
    subroutine cr_diff(crdim)
 
-      use all_boundaries,   only: all_bnd
+      use all_boundaries,   only: all_fluid_boundaries
       use cg_cost_data,     only: I_DIFFUSE
       use cg_leaves,        only: leaves
       use cg_level_finest,  only: finest
@@ -257,8 +259,8 @@ contains
       ! Dirty trick: enforce prolongation order for CR in case someone wants smoother estimates for f/c ifnterpolation of cg%u(iarr_crs,:,:,:)
       ord_save = wna%lst(wna%fi)%ord_prolong
       wna%lst(wna%fi)%ord_prolong = ord_cr_prolong
-      call finest%level%restrict_to_base ! overkill
-      call all_bnd ! overkill
+      call finest%level%restrict_to_base  ! overkill?
+      call all_fluid_boundaries  ! overkill?
       wna%lst(wna%fi)%ord_prolong = ord_save
 
       nr_recv = compute_nr_recv(crdim)
