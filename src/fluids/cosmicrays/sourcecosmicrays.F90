@@ -133,15 +133,14 @@ contains
 ! locals
       real, dimension(n)                         :: dgas, dcr
       real, parameter                            :: gamma_lor = 10.0 !< \todo should taken from cosmic ray species settings
-      real                                       :: ndim, gn
+      real                                       :: gn
       integer                                    :: i, j
 
-      ndim = count(dom%has_dir)
-      gn = 1.0 / ndim / gamma_lor
+      gn = 1.0 / dom%eff_dim / gamma_lor
       dgas = 0.0
       if (has_ion) dgas = dgas + uu(:, flind%ion%idn) / mp
       if (has_neu) dgas = dgas + uu(:, flind%neu%idn) / mH
-      dgas = dgas * clight / ndim
+      dgas = dgas * clight / dom%eff_dim
 
       usrc(:,:) = 0.0
 
