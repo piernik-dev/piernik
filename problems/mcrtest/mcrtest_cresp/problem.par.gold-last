@@ -93,13 +93,8 @@ $BASE_DOMAIN
 /
 
  $CR_SPECIES
+    eE  = .true., .false., .true.
     eH1 = .true., .true., .false.
-    eLi7 = .false.
-    eBe9 = .false.
-    eBe10 = .false.
-    eC12 = .false.
-    eN14 = .false.
-    eO16 = .false.
  /
 
  $MULTIGRID_SOLVER

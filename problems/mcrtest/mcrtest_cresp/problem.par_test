@@ -81,6 +81,8 @@
  /
 
  $CR_SPECIES
+    eE  = .true., .false., .true.
+    eH1 = .true., .true., .false.
  /
 
  $MULTIGRID_SOLVER

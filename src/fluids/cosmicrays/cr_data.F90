@@ -167,9 +167,9 @@ contains
 #endif /* !CRESP */
       eH1   = [.true., .true., .false.]
       eLi7  = .false.
-      eBe9  = [.true., .false., .false.]
-      eBe10 = [.true., .false., .false.]
-      eC12  = [.true., .false., .false.]
+      eBe9  = .false.
+      eBe10 = .false.
+      eC12  = .false.
       eN14  = .false.
       eO16  = .false.
 

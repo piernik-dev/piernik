@@ -68,6 +68,10 @@
  /
 
  $CR_SPECIES
+    eH1   = T,T,F
+    eBe9  = T,F,F
+    eBe10 = T,F,F
+    eC12  = T,F,F
  /
 
  $MULTIGRID_SOLVER
