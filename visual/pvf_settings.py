@@ -22,7 +22,7 @@ centertick_color = 'silver'
 centertick_width = 2.
 centertick_length = 6.
 
-#scaletypes
+# scaletypes
 fineqv = 1.0
 
 # colorbars
