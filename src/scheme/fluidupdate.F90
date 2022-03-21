@@ -156,6 +156,7 @@ contains
 #else /* !MULTIGRID */
       use initcosmicrays,      only: use_CRdiff
 #endif /* !MULTIGRID */
+      use crdiffusion,         only: make_diff_sweeps
 #endif /* COSM_RAYS */
 #ifdef SHEAR
       use shear,               only: shear_3sweeps
@@ -188,9 +189,7 @@ contains
 #else /* !MULTIGRID */
       if (use_CRdiff) then
 #endif /* !MULTIGRID */
-         do s = sFRST, sLAST, sCHNG
-            if (.not.skip_sweep(s)) call make_diff_sweep(s)
-         enddo
+         call make_diff_sweeps(forward)
       endif
 #endif /* COSM_RAYS */
 
@@ -282,29 +281,5 @@ contains
 #endif /* DEBUG */
 
    end subroutine make_adv_sweep
-
-#ifdef COSM_RAYS
-!>
-!! \brief Perform single diffusion sweep in forward or backward direction
-!<
-   subroutine make_diff_sweep(dir)
-
-      use crdiffusion,    only: cr_diff
-#ifdef DEBUG
-      use piernikiodebug, only: force_dumps
-#endif /* DEBUG */
-
-      implicit none
-
-      integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
-
-      call cr_diff(dir)
-
-#ifdef DEBUG
-      call force_dumps
-#endif /* DEBUG */
-
-   end subroutine make_diff_sweep
-#endif /* COSM_RAYS */
 
 end module fluidupdate

@@ -37,11 +37,13 @@ module crdiffusion
    implicit none
 
    private
-   public :: cr_diff, init_crdiffusion
+   public :: init_crdiffusion, make_diff_sweeps
 
    logical :: has_cr
 
 contains
+
+!> \brief Set up CR-specific auxiliary arrays
 
    subroutine init_crdiffusion
 
@@ -68,6 +70,47 @@ contains
       divv_i = qna%ind(divv_n)
 
    end subroutine init_crdiffusion
+
+!> \brief Execute diffusion
+
+   subroutine make_diff_sweeps(forward)
+
+      use constants, only: xdim, zdim, I_ONE
+      use global,    only: skip_sweep
+
+      implicit none
+
+      logical, intent(in) :: forward  !< order of sweeps: XYZ or ZYX
+
+      integer(kind=4) :: s
+
+      do s = merge(xdim, zdim, forward), merge(zdim, xdim, forward), merge(I_ONE, -I_ONE, forward)
+         if (.not. skip_sweep(s)) call make_diff_sweep(s)
+      enddo
+
+   contains
+
+      !> \brief Perform single diffusion sweep in forward or backward direction
+
+      subroutine make_diff_sweep(dir)
+
+#ifdef DEBUG
+         use piernikiodebug, only: force_dumps
+#endif /* DEBUG */
+
+         implicit none
+
+         integer(kind=4), intent(in) :: dir !< direction, one of xdim, ydim, zdim
+
+         call cr_diff(dir)
+
+#ifdef DEBUG
+         call force_dumps
+#endif /* DEBUG */
+
+      end subroutine make_diff_sweep
+
+   end subroutine make_diff_sweeps
 
 !>
 !! \brief boundaries for wcr
