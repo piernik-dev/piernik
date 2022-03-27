@@ -31,7 +31,7 @@
 !<
 
 module timestep_cresp
-! pulled by COSM_RAY_ELECTRONS
+! pulled by CRESP
 
    implicit none
 
@@ -55,8 +55,8 @@ contains
       use fluidindex,       only: flind
       use func,             only: emag
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: adiab_active,  icomp_active, synch_active, cresp,  cresp_substep, f_synchIC, spec_mod_trms, use_cresp_evol, u_b_max, n_substeps_max, redshift
+      use initcosmicrays,   only: cfl_cr, iarr_cre_e, iarr_cre_n
+      use initcrspectrum,   only: K_cresp_paral, K_cresp_perp, spec_mod_trms, synch_active, adiab_active, icomp_active, use_cresp_evol, cresp, f_synchIC, u_b_max, cresp_substep, n_substeps_max, redshift
       use mpisetup,         only: piernik_MPI_Allreduce
 
       implicit none
@@ -115,7 +115,7 @@ contains
 
       if (adiab_active) call cresp_timestep_adiabatic(abs_max_ud)
 
-      K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
+      K_cre_max_sum = K_cresp_paral(i_up_max) + K_cresp_perp(i_up_max) ! assumes the same K for energy and number density
       if (K_cre_max_sum > zero) then                               ! K_cre dependent on momentum - maximal for highest bin number
          dt_aux = cfl_cr * half / K_cre_max_sum                    ! We use cfl_cr here (CFL number for diffusive CR transport), cfl_cre used only for spectrum evolution
          cgl => leaves%first
@@ -215,15 +215,15 @@ contains
 
    real function assume_p_up(cell_i_up)
 
-      use initcosmicrays, only: ncre
+      use initcosmicrays, only: ncrb
       use initcrspectrum, only: p_fix, p_mid_fix
 
       implicit none
 
       integer(kind=4), intent(in) :: cell_i_up
 
-      if (cell_i_up == ncre) then
-         assume_p_up = p_mid_fix(ncre) ! for i = 0 & ncre p_fix(i) = 0.0
+      if (cell_i_up == ncrb) then
+         assume_p_up = p_mid_fix(ncrb) ! for i = 0 & ncrb p_fix(i) = 0.0
       else
          assume_p_up = p_fix(cell_i_up)
       endif

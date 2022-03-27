@@ -249,10 +249,10 @@ contains
       use timestep_retry, only: reset_freezing_speed
 #ifdef COSM_RAYS
       use global,         only: cr_negative, disallow_CRnegatives
-#ifdef COSM_RAY_ELECTRONS
-      use cresp_grid,     only: cfl_cresp_violation
-#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
+#ifdef CRESP
+      use cresp_grid,     only: cfl_cresp_violation
+#endif /* CRESP */
 
       implicit none
 
@@ -269,14 +269,14 @@ contains
 
       call piernik_MPI_Allreduce(dn_negative, pLOR)
       call piernik_MPI_Allreduce(ei_negative, pLOR)
-#ifdef COSM_RAYS
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       call piernik_MPI_Allreduce(cfl_cresp_violation, pLOR) ! check cg if cfl_cresp_violation anywhere
       if (cfl_cresp_violation) then
          if (master) call warn("[timestep:check_cfl_violation] Possible violation of CFL in CRESP module")
          unwanted_negatives = .true.
       endif
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
+#ifdef COSM_RAYS
       call piernik_MPI_Allreduce(cr_negative, pLOR)
       if (cr_negative .and. disallow_CRnegatives) then
          if (master) call warn('[timestep:check_cfl_violation] Possible violation of CFL: negatives in CRS')

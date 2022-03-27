@@ -59,27 +59,24 @@
  /
 
  $COSMIC_RAYS
-    cfl_cr      = 0.9
-    cr_active   = 1.0
-    ncrn        = 7
-    gamma_crn(1)   = 1.333333
-    gamma_crn(2)   = 1.333333
-    gamma_crn(3)   = 1.333333
-    K_crn_paral(1) = 200.0 ! anisotropic
-    K_crn_paral(2) = 200.0
-    K_crn_paral(3) = 0.0
-    K_crn_perp(1)  = 0     ! isotropic
-    K_crn_perp(2)  = 0
-    K_crn_perp(3)  = 0
-    ncre           = 0
-    crn_gpcr_ess   = .true.
+    cfl_cr        = 0.9
+    cr_active     = 1.0
+    ncrsp         = 7
+    K_cr_paral(1) = 200.0 ! anisotropic
+    K_cr_paral(2) = 200.0
+    K_cr_paral(3) = 0.0
+    K_cr_perp(1)  = 0     ! isotropic
+    K_cr_perp(2)  = 0
+    K_cr_perp(3)  = 0
+    use_CRdecay   = .true.
+    cr_gpcr_ess   = .true.
  /
 
  $CR_SPECIES
-    eH1   = .true., .true.
-    eC12  = .true., .true.
-    eBe9  = .true., .true.
-    eBe10 = .true., .true.
+    eH1   = .true., .true., .false.
+    eC12  = .true., .true., .false.
+    eBe9  = .true., .true., .false.
+    eBe10 = .true., .true., .false.
  /
 
  $MULTIGRID_SOLVER

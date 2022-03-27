@@ -8,7 +8,7 @@
 
 #define COSM_RAYS
 #define COSM_RAYS_SOURCES
-#define COSM_RAY_ELECTRONS
+#define CRESP
 
 #define MAGNETIC
 #define RESISTIVE
