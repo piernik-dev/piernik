@@ -42,6 +42,7 @@ module timestep
    public :: init_time_step
 #endif /* __INTEL_COMPILER || _CRAYFTN */
 
+   logical :: unwanted_negatives = .false.
    logical :: flexible_shrink
 #if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
    !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
@@ -243,7 +244,7 @@ contains
       use constants,      only: pLOR
       use dataio_pub,     only: warn
       use fluidtypes,     only: var_numbers
-      use global,         only: dn_negative, ei_negative, disallow_negatives, repeat_step, repetitive_steps, unwanted_negatives
+      use global,         only: dn_negative, ei_negative, disallow_negatives, repeat_step, repetitive_steps
       use mpisetup,       only: piernik_MPI_Allreduce, master
       use timestep_pub,   only: c_all
       use timestep_retry, only: reset_freezing_speed
@@ -309,7 +310,7 @@ contains
 
       use constants,    only: I_ONE, one
       use dataio_pub,   only: msg, warn
-      use global,       only: cfl, cfl_max, dt_cur_shrink, dt_shrink, repeat_step, repetitive_steps, tstep_attempt, unwanted_negatives
+      use global,       only: cfl, cfl_max, dt_cur_shrink, dt_shrink, repeat_step, repetitive_steps, tstep_attempt
       use mpisetup,     only: piernik_MPI_Bcast, master
       use timestep_pub, only: c_all, c_all_old, stepcfl
 
