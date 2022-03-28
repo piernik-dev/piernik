@@ -322,10 +322,10 @@ contains
       stepcfl = cfl * dt_cur_shrink
       if (c_all_old > 0.) stepcfl = c_all / c_all_old * cfl * dt_cur_shrink
 
-      call clear_repeat_step(.true.)
+      call clear_repeat_step
+      call set_repeat_step(unwanted_negatives)  ! \> information about unwanted_negatives from the last fluid_update call if disallow_negatives
       if (master) then
          msg = ''
-         call set_repeat_step(unwanted_negatives)  ! \> information about unwanted_negatives from the last fluid_update call if disallow_negatives
          if (stepcfl > cfl_max) then
             write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL: ", stepcfl
             call set_repeat_step(.true.)
