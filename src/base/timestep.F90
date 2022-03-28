@@ -244,8 +244,9 @@ contains
       use constants,      only: pLOR
       use dataio_pub,     only: warn
       use fluidtypes,     only: var_numbers
-      use global,         only: dn_negative, ei_negative, disallow_negatives, repeat_step, repetitive_steps
+      use global,         only: dn_negative, ei_negative, disallow_negatives, repetitive_steps
       use mpisetup,       only: piernik_MPI_Allreduce, master
+      use repeatstep,     only: repeat_step, set_repeat_step, sync_repeat_step
       use timestep_pub,   only: c_all
       use timestep_retry, only: reset_freezing_speed
 #ifdef COSM_RAYS
@@ -296,8 +297,9 @@ contains
          ei_negative  = .false.
       endif
 
-      repeat_step = repeat_step .or. unwanted_negatives
-      if (repeat_step) call reset_freezing_speed
+      call set_repeat_step(unwanted_negatives)
+      call sync_repeat_step
+      if (repeat_step()) call reset_freezing_speed
 
    end subroutine check_cfl_violation
 
@@ -310,8 +312,9 @@ contains
 
       use constants,    only: I_ONE, one
       use dataio_pub,   only: msg, warn
-      use global,       only: cfl, cfl_max, dt_cur_shrink, dt_shrink, repeat_step, repetitive_steps, tstep_attempt
-      use mpisetup,     only: piernik_MPI_Bcast, master
+      use global,       only: cfl, cfl_max, dt_cur_shrink, dt_shrink, repetitive_steps, tstep_attempt
+      use mpisetup,     only: master
+      use repeatstep,   only: repeat_step, set_repeat_step, sync_repeat_step, clear_repeat_step
       use timestep_pub, only: c_all, c_all_old, stepcfl
 
       implicit none
@@ -319,12 +322,13 @@ contains
       stepcfl = cfl * dt_cur_shrink
       if (c_all_old > 0.) stepcfl = c_all / c_all_old * cfl * dt_cur_shrink
 
+      call clear_repeat_step(.true.)
       if (master) then
          msg = ''
-         repeat_step = unwanted_negatives ! \> information about unwanted_negatives from the last fluid_update call if disallow_negatives
+         call set_repeat_step(unwanted_negatives)  ! \> information about unwanted_negatives from the last fluid_update call if disallow_negatives
          if (stepcfl > cfl_max) then
             write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL: ", stepcfl
-            repeat_step = .true.
+            call set_repeat_step(.true.)
          else if (stepcfl < 2*cfl - cfl_max) then
             write(msg,'(2(a,g10.3))') "[timestep:cfl_warn] Low CFL: ", stepcfl, " << ", cfl
          endif
@@ -332,8 +336,8 @@ contains
       endif
 
       if (repetitive_steps) then
-         call piernik_MPI_Bcast(repeat_step)
-         if (repeat_step) then
+         call sync_repeat_step
+         if (repeat_step()) then
             if (flexible_shrink) then
                dt_cur_shrink = cfl_max / stepcfl
                if (tstep_attempt >= I_ONE) dt_cur_shrink = dt_cur_shrink * dt_shrink
@@ -344,7 +348,7 @@ contains
             dt_cur_shrink = one
          endif
       else
-         repeat_step = repetitive_steps   ! overwrite this flag if step is not meant to be repeated
+         call clear_repeat_step(.true.)  ! ignore repeat flag if step is not meant to be repeated
       endif
 
    end subroutine cfl_warn
