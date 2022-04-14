@@ -159,14 +159,15 @@ contains
 !<
    subroutine random_sn
 
-      use global, only: t, repeat_step
+      use global,     only: t
+      use repeatstep, only: repeat_step
 
       implicit none
 
       real, dimension(ndims) :: snpos
       integer                :: isn, nsn_per_timestep
 
-      if (.not.repeat_step) nsn_last = nsn
+      if (.not. repeat_step()) nsn_last = nsn
 
       nsn = int(t * f_sn, kind=4)
       nsn_per_timestep = nsn - nsn_last
