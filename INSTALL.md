@@ -98,7 +98,7 @@ If you want to run so called `gold tests`, you will need Gnu Parallel (optional)
 
 or
 
-    apt install parallel python-h5py
+    apt install parallel python3-h5py
 
 (on Fedora or Ubuntu, respectively).
 
