@@ -42,7 +42,7 @@ program piernik
    use fluidindex,        only: flind
    use fluidupdate,       only: fluid_update
    use func,              only: operator(.equals.)
-   use global,            only: t, nstep, dt, dtm, print_divB, repeat_step, tstep_attempt
+   use global,            only: t, nstep, dt, dtm, print_divB, tstep_attempt
    use initpiernik,       only: init_piernik
    use lb_helpers,        only: costs_maintenance
    use list_of_cg_lists,  only: all_lists
@@ -51,6 +51,7 @@ program piernik
    use ppp,               only: cleanup_profiling, update_profiling, ppp_main
    use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
+   use repeatstep,        only: repeat_step
    use timer,             only: walltime_end
    use timestep,          only: time_step, check_cfl_violation
    use user_hooks,        only: finalize_problem, problem_domain_update
@@ -69,7 +70,7 @@ program piernik
    character(len=fplen) :: nstr, tstr
    logical, save        :: first_step = .true.
    real                 :: tlast
-   logical              :: try_rebalance
+   logical              :: try_rebalance, rs
 
    ! ppp-related
    character(len=cbuff_len)    :: label, buf
@@ -114,7 +115,8 @@ program piernik
    call print_progress(nstep)
    if (print_divB > 0) call print_divB_norm
 
-   do while (t < tend .and. nstep < nend .and. .not.(end_sim) .or. repeat_step) ! main loop
+   rs = repeat_step()  ! enforce function call
+   do while (t < tend .and. nstep < nend .and. .not.(end_sim) .or. rs) ! main loop
 
       write(buf, '(i10)') nstep
       label = "step " // adjustl(trim(buf))
@@ -135,7 +137,7 @@ program piernik
       call all_cg%check_na
       !call all_cg%check_for_dirt
 
-      if (.not. repeat_step) then
+      if (.not. repeat_step()) then
          call time_step(dt, flind, .true.)
          call grace_period
 
@@ -152,12 +154,13 @@ program piernik
       call print_progress(nstep)
       call check_cfl_violation(flind)
 
-      if ((t .equals. tlast) .and. .not. first_step .and. .not. repeat_step) call die("[piernik] timestep is too small: t == t + 2 * dt")
+      rs = repeat_step()  ! enforce function call
+      if ((t .equals. tlast) .and. .not. first_step .and. .not. rs) call die("[piernik] timestep is too small: t == t + 2 * dt")
 
       call piernik_MPI_Barrier
       call costs_maintenance
 
-      if (.not. repeat_step) then
+      if (.not. repeat_step()) then
          call ppp_main%start('write_data', PPP_IO)
          call write_data(output=CHK)
          call ppp_main%stop('write_data', PPP_IO)
@@ -190,6 +193,7 @@ program piernik
 
       call ppp_main%stop(label)
       call update_profiling
+      rs = repeat_step()  ! enforce function call
 
    enddo ! main loop
 
