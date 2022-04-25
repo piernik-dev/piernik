@@ -5,8 +5,8 @@ import plot_utils as pu
 import pvf_settings as ps
 
 
-def reconstruct_uniform(h5f, var, level, gridlist, cu, center, smin, smax, draw1D, draw2D):
-    dset, nd, levelmet = collect_dataset(h5f, var, level, gridlist)
+def reconstruct_uniform(h5f, var, cmpr, level, gridlist, cu, center, smin, smax, draw1D, draw2D):
+    dset, nd, levelmet = collect_dataset(h5f, var, cmpr, level, gridlist)
     if not levelmet:
         return [], []
 
@@ -22,7 +22,7 @@ def reconstruct_uniform(h5f, var, level, gridlist, cu, center, smin, smax, draw1
     return [[block, ], ], [[d1min], [d1max], [d2min], [d2max], [d3min], [d3max]]
 
 
-def collect_dataset(h5f, dset_name, level, gridlist):
+def collect_dataset(h5f, dset_name, cmpr, level, gridlist):
     print('Reading', dset_name)
     attrs = h5f['domains']['base'].attrs
     nd = [i * 2**level for i in attrs['n_d']]
@@ -39,18 +39,21 @@ def collect_dataset(h5f, dset_name, level, gridlist):
             n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
             ce = n_b + off
             dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name][:, :, :].swapaxes(0, 2)
+            cmpr0, h5c, cmprd = cmpr
+            if cmpr0:
+                dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] - h5c['data']['grid_' + str(ig).zfill(10)][dset_name][:, :, :].swapaxes(0, 2)
 
     return dset, nd, levelmet
 
 
-def collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, getmap, draw1D, draw2D):
+def collect_gridlevels(h5f, var, cmpr, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, getmap, draw1D, draw2D):
     l1, h1, l2, h2, l3, h3 = extr
     for iref in range(maxglev + 1):
         if iref in plotlevels:
             print('REFINEMENT ', iref)
             blks = []
             for ib in gridlist:
-                levok, block, extr = read_block(h5f, var, ib, iref, center, usc, getmap, draw1D, draw2D)
+                levok, block, extr = read_block(h5f, var, cmpr, ib, iref, center, usc, getmap, draw1D, draw2D)
                 if levok:
                     blks.append(block)
                     if getmap:
@@ -65,7 +68,7 @@ def collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, gridlist, cgc
     return refis, [l1, h1, l2, h2, l3, h3]
 
 
-def read_block(h5f, dset_name, ig, olev, oc, usc, getmap, draw1D, draw2D):
+def read_block(h5f, dset_name, cmpr, ig, olev, oc, usc, getmap, draw1D, draw2D):
     h5g = h5f['data']['grid_' + str(ig).zfill(10)]
     level = h5g.attrs['level']
     levok = (level == olev)
@@ -85,6 +88,9 @@ def read_block(h5f, dset_name, ig, olev, oc, usc, getmap, draw1D, draw2D):
     n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
     ce = n_b + off
     dset = h5g[dset_name][:, :, :].swapaxes(0, 2)
+    cmpr0, h5c, cmprd = cmpr
+    if cmpr0:
+        dset = dset - h5c['data']['grid_' + str(ig).zfill(10)][cmprd][:, :, :].swapaxes(0, 2)
 
     b2d, b1d, d1min, d1max, d2min, d2max, d3min, d3max = take_cuts_and_lines(dset, ind, draw1D, draw2D)
 
