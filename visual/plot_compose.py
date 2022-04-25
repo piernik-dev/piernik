@@ -153,15 +153,15 @@ def plotcompose(pthfilen, var, output, options):
     labh = ps.particles_label
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
-    cmpr0, cmprf, cmprd = cmpr
+    cmpr0, cmprf, cmprd, cmprt = cmpr
     if cmpr0:
         if cmprd == '':
             cmprd = var
         if cmprf == '':
-            cmpr = cmpr0, h5f, cmprd
+            cmpr = cmpr0, h5f, cmprd, cmprt
         else:
             h5c = h5py.File(cmprf+'.h5', 'r')
-            cmpr = cmpr0, h5c, cmprd
+            cmpr = cmpr0, h5c, cmprd, cmprt
     time = h5f.attrs['time'][0]
     utim = h5f['dataset_units']['time_unit'].attrs['unit']
     ulenf = h5f['dataset_units']['length_unit'].attrs['unit']

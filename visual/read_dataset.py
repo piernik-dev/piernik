@@ -39,9 +39,9 @@ def collect_dataset(h5f, dset_name, cmpr, level, gridlist):
             n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
             ce = n_b + off
             dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name][:, :, :].swapaxes(0, 2)
-            cmpr0, h5c, cmprd = cmpr
+            cmpr0, h5c, cmprd, cmprt = cmpr
             if cmpr0:
-                dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] - h5c['data']['grid_' + str(ig).zfill(10)][dset_name][:, :, :].swapaxes(0, 2)
+                dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = pu.execute_comparison(dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]], h5c['data']['grid_' + str(ig).zfill(10)][dset_name][:, :, :].swapaxes(0, 2), cmprt)
 
     return dset, nd, levelmet
 
@@ -88,9 +88,9 @@ def read_block(h5f, dset_name, cmpr, ig, olev, oc, usc, getmap, draw1D, draw2D):
     n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
     ce = n_b + off
     dset = h5g[dset_name][:, :, :].swapaxes(0, 2)
-    cmpr0, h5c, cmprd = cmpr
+    cmpr0, h5c, cmprd, cmprt = cmpr
     if cmpr0:
-        dset = dset - h5c['data']['grid_' + str(ig).zfill(10)][cmprd][:, :, :].swapaxes(0, 2)
+        dset = pu.execute_comparison(dset, h5c['data']['grid_' + str(ig).zfill(10)][cmprd][:, :, :].swapaxes(0, 2), cmprt)
 
     b2d, b1d, d1min, d1max, d2min, d2max, d3min, d3max = take_cuts_and_lines(dset, ind, draw1D, draw2D)
 

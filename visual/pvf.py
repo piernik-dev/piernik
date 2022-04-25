@@ -25,7 +25,7 @@ draw_data = False
 draw_grid = False
 draw_uni, draw_amr = False, False
 plotlevels, gridlist = '', ''
-cmpr, cmprf, cmprd, cmprn = False, '', '', ''
+cmpr, cmprf, cmprd, cmprn, cmprt = False, '', '', '', ps.plot2d_comparetype
 dnames = ''
 uaxes = ''
 nbins = 1
@@ -49,6 +49,7 @@ def print_usage():
     print(' -c CX,CY,CZ, \t\t--center CX,CY,CZ \t\tplot cuts across given point coordinates CX, CY, CZ [default: computed domain center]')
     print('\t\t\t--compare-datafield VAR \tcompare chosen datafields to another VAR')
     print('\t\t\t--compare-file FILE \t\tcompare chosen datafields to another FILE')
+    print('\t\t\t--compare-type TYPE \t\toperation executed as a comparison: 1 - subtraction, 2 - division, 3 - relative error [default: %s]' % ps.plot2d_comparetype)
     print(' -d VAR[,VAR2], \t--dataset VAR[,VAR2] \t\tspecify one or more datafield(s) to plot [default: print available datafields; all or _all_ to plot all available datafields]')
     print(' -D COLORMAP, \t\t--colormap COLORMAP \t\tuse COLORMAP palette [default: %s]' % ps.plot2d_colormap)
     print(' -e EXTENSION, \t\t--extension EXTENSION \t\tsave plot in file using filename extension EXTENSION [default: %s]' % ps.f_exten[1:])
@@ -71,7 +72,7 @@ def print_usage():
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:g:hl:o:pP:r:R:s:t:u:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "compare-datafield=", "compare-file=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "linestyle=", "output=", "particles", "particle-color=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "uniform", "units=", "zlim=", "zoom="])
+        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:g:hl:o:pP:r:R:s:t:u:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "compare-datafield=", "compare-file=", "compare-type=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "linestyle=", "output=", "particles", "particle-color=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "uniform", "units=", "zlim=", "zoom="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -119,6 +120,12 @@ def cli_params(argv):
             if cmprn == '':
                 cmprn = '_vs'
             cmprn = cmprn + '_' + cmprf.split('/')[-1]
+
+        elif opt in ("--compare-type"):
+            global cmprt
+            cmprt = int(arg)
+            if cmprt != 1 and cmprt != 2 and cmprt != 3:
+                print('Warning: Unrecognized type of comparison: %s. Taking 1 (subtraction).' % arg)
 
         elif opt in ("-e", "--extension"):
             global exten
@@ -248,7 +255,7 @@ if '1z' in axcuts:
     p1z = True
 axc = [p1x, p1y, p1z], [p2yz, p2xz, p2xy]
 
-compare = cmpr, cmprf, cmprd
+compare = cmpr, cmprf, cmprd, cmprt
 
 options = axc, zmin, zmax, cmap, pcolor, player, psize, sctype, cu, center, compare, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl
 if not os.path.exists(plotdir):
