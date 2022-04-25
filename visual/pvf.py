@@ -25,7 +25,7 @@ draw_data = False
 draw_grid = False
 draw_uni, draw_amr = False, False
 plotlevels, gridlist = '', ''
-cmpr, cmprf, cmprd = False, '', ''
+cmpr, cmprf, cmprd, cmprn = False, '', '', ''
 dnames = ''
 uaxes = ''
 nbins = 1
@@ -105,14 +105,20 @@ def cli_params(argv):
             cmap = str(arg)
 
         elif opt in ("--compare-datafield"):
-            global cmpr, cmprd
+            global cmpr, cmprd, cmprn
             cmpr = True
             cmprd = str(arg)
+            if cmprn == '':
+                cmprn = '_vs'
+            cmprn = cmprn + '_' + cmprd
 
         elif opt in ("--compare-file"):
             global cmprf
             cmpr = True
             cmprf = str(arg)
+            if cmprn == '':
+                cmprn = '_vs'
+            cmprn = cmprn + '_' + cmprf.split('/')[-1]
 
         elif opt in ("-e", "--extension"):
             global exten
@@ -296,7 +302,7 @@ for pthfilen in files_list:
         if (not draw_data or var in list(h5f['field_types'].keys())):
             # output = plotdir+'/'+filen.split('/')[-1].replace('.h5',"_%s.png" % var)
             fnl = filen.split('/')[-1]
-            output = [plotdir + '/' + '_'.join(fnl.split('_')[:-1]) + '_' + var + '_', fnl.split('_')[-1].replace('.h5', exten)]
+            output = [plotdir + '/' + '_'.join(fnl.split('_')[:-1]) + '_' + var + cmprn + '_', fnl.split('_')[-1].replace('.h5', exten)]
             pc.plotcompose(pthfilen, var, output, options)
         else:
             print(var, ' is not available in the file ', pthfilen)
