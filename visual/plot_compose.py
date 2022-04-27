@@ -160,7 +160,7 @@ def plotcompose(pthfilen, var, output, options):
         if cmprf == '':
             cmpr = cmpr0, h5f, cmprd, cmprt
         else:
-            h5c = h5py.File(cmprf+'.h5', 'r')
+            h5c = h5py.File(cmprf, 'r')
             cmpr = cmpr0, h5c, cmprd, cmprt
     time = h5f.attrs['time'][0]
     utim = h5f['dataset_units']['time_unit'].attrs['unit']

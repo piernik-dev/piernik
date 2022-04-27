@@ -120,6 +120,7 @@ def cli_params(argv):
             if cmprn == '':
                 cmprn = '_vs'
             cmprn = cmprn + '_' + cmprf.split('/')[-1]
+            cmprn = ''.join(cmprn.split('.')[:-1])
 
         elif opt in ("--compare-type"):
             global cmprt
@@ -217,11 +218,15 @@ if (len(sys.argv) < 2):
 
 files_list = []
 optilist = []
+opt_cmpf = False
 for word in sys.argv[1:]:
-    if word.split('.')[-1] == 'h5':
+    if word.split('.')[-1] == 'h5' and not opt_cmpf:
         files_list.append(word)
     else:
         optilist.append(word)
+    opt_cmpf = False
+    if word == '--compare-file':
+        opt_cmpf = True
 
 if files_list == []:
     print('No h5 files selected. See ./pvf.py -h for help.')
