@@ -11,3 +11,5 @@ ifeq ($(PIERNIK_DEBUG), 1)
 else
    F90FLAGS += -O2 -fno-stack-arrays
 endif
+
+F90FLAGS += -fno-inline-small-functions -fno-tree-pre
