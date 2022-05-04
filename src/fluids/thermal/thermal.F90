@@ -446,14 +446,15 @@ contains
                         do k = 1, n(zdim)
                            int_ener = ener(i,j,k) - kinmag_ener(i,j,k)
                            ta(i,j,k) = int_ener * ikbgmh / dens(i,j,k)
-                           if (ta(i,j,k) .lt. 100.0) ta(i,j,k) = 100.0
-                           if (ta(i,j,k) .gt. 10.0**9) ta(i,j,k) = 10.0**9
+                           if (ta(i,j,k) .lt. 10.0) ta(i,j,k) = 10.0
+                           if (ta(i,j,k) .gt. 10.0**8) ta(i,j,k) = 10.0**8
                            call calc_tcool(ta(i,j,k), dens(i,j,k), kbgmh, tcool)
                            !tcool = 1.0
                            dt_cool = min(dt, tcool/10.0)
                            t1 = 0.0
                            do while (t1 < dt)
                               call temp_EIS(tcool, dt_cool, igamma(pfl%gam), kbgmh, ta(i,j,k), dens(i,j,k), Tnew)
+                              !Tnew = ta(i,j,k)
                               int_ener    = dens(i,j,k) * kbgmh * Tnew
                               !if (int_ener .gt. 10.0) print *, 'wow!', i, j, k, int_ener, Tnew, ta(i,j,k), dens(i,j,k), tcool
                               ener(i,j,k) = kinmag_ener(i,j,k) + int_ener
@@ -659,9 +660,8 @@ contains
                !Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-TN * lambda1 / ltntrna * (Y0 - Y(ii)))
                Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-lambda1 * Y0f)
             else
-               Tnew = temp * (1 - (isochoric-alpha0) * fiso * sign(1.0, lambda1) * dt / tcool)**(1.0/(isochoric-alpha0))
+               Tnew = temp * (1 - (isochoric-alpha0) * sign(1.0,lambda1)* fiso * dt / tcool)**(1.0/(isochoric-alpha0))
             endif
-
          case ('null')
             return
 
