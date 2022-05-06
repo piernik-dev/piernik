@@ -134,10 +134,10 @@ contains
          associate(cg => cgl%cg)
             do p = 1, flind%fluids
                associate(fl => flind%all_fluids(p)%fl)
-                  cg%u(fl%idn,:,:,:) = fdens
-                  cg%u(fl%imx,:,:,:) = 0.0
-                  cg%u(fl%imy,:,:,:) = 0.0
-                  cg%u(fl%imz,:,:,:) = 0.0
+                  cg%u(fl%idn,RNG) = fdens
+                  cg%u(fl%imx,RNG) = 0.0
+                  cg%u(fl%imy,RNG) = 0.0
+                  cg%u(fl%imz,RNG) = 0.0
                end associate
             enddo
          end associate
@@ -185,7 +185,7 @@ contains
 
       do p = 1, 2
          write(msg,'(f8.5,a,3f8.5,a,3f8.5)') m(p), " @ ", init_pos_body(:,p), ", with ", init_vel_body(:,p) ; call printinfo(msg)
-         call add_part_in_proper_cg(p, m(p), init_pos_body(:,p), init_vel_body(:,p), [0.0, 0.0, 0.0], 0.0)
+         call add_part_in_proper_cg(p, m(p), init_pos_body(:,p), init_vel_body(:,p), [0.0, 0.0, 0.0], 0.0, 0.0, 0.0)
       enddo
 
    end subroutine twobodies
@@ -293,7 +293,7 @@ contains
             write(msg,'(i8,a)') i, ' particles read' ; call printio(msg)
          endif
 #endif /* VERBOSE */
-         call add_part_in_proper_cg(i, mass(i), pos(i,:), vel(i,:),[0.0, 0.0, 0.0], 0.0)
+         call add_part_in_proper_cg(i, mass(i), pos(i,:), vel(i,:),[0.0, 0.0, 0.0], 0.0, 0.0, 0.0)
       enddo
       ! ToDo: check whether all particles were added exactly once
       deallocate(mass,pos,vel)
