@@ -32,7 +32,7 @@
 !<
 
 module star_formation
-
+! pulled by NBODY
   implicit none
 
   private
@@ -47,18 +47,22 @@ contains
     use cg_leaves,             only: leaves
     use cg_list,               only: cg_list_element
     use constants,             only: ndims, xdim, ydim, zdim, LO, HI, CENTER, pi, nbdn_n
+#ifdef COSM_RAYS
     use cr_data,               only: icr_H1, cr_table
+    use initcosmicrays,        only: iarr_crn, cr_active
+#endif /* COSM_RAYS */
     use fluidindex,            only: flind
     use fluidtypes,            only: component_fluid
     use func,                  only: operator(.equals.), ekin
     use global,                only: nstep, t, dt
     use grid_cont,             only: grid_container
-    use initcosmicrays,        only: iarr_crn, cr_active
     use mpisetup,              only: proc
     use named_array_list,      only: wna, qna
     use particle_types,        only: particle
     use particle_utils,        only: is_part_in_cg
+#ifdef THERM
     use thermal,               only: itemp
+#endif /* THERM */
     use units,                 only: newtong, erg, cm, sek, gram
 
     logical, intent(in)                                :: forward
@@ -90,7 +94,10 @@ contains
           do i = cg%ijkse(xdim,LO), cg%ijkse(xdim,HI)
              do j = cg%ijkse(ydim,LO), cg%ijkse(ydim,HI)
                 do k = cg%ijkse(zdim,LO), cg%ijkse(zdim,HI)
-                   if ((cg%u(pfl%idn,i,j,k) .gt. dens_thr) .and. (cg%q(itemp)%arr(i,j,k) .lt. 10**4)) then
+                   if (cg%u(pfl%idn,i,j,k) .gt. dens_thr) then
+#ifdef THERM
+                      if (cg%q(itemp)%arr(i,j,k) .lt. 10**4)) then
+#endif /* THERM */
                       fed = .false.
                       c_tau_ff = sqrt(3.*pi/(32.*newtong))
                       sf_dens = eps_sf / c_tau_ff * cg%u(pfl%idn,i,j,k)**(3./2.)
@@ -111,10 +118,14 @@ contains
                                      cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1 - frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
                                      cg%u(pfl%imx:pfl%imz, i, j, k)  = (1 - frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
                                      if (aint(pset%pdata%mass/mass_SN) .gt. stage) then
-                             !           cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + (aint(pset%pdata%mass/mass_SN) - stage) * (1-0.1*cr_active) * n_SN * 10.0**51 * erg / cg%dvol ! adding SN energy
+                                        if (.not. kick) then
+#ifdef THERM
+                                           cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + (aint(pset%pdata%mass/mass_SN) - stage) * (1-0.1*cr_active) * n_SN * 10.0**51 * erg / cg%dvol ! adding SN energy
+#endif /* THERM */
 #ifdef COSM_RAYS
-                              !          if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + (aint(pset%pdata%mass/mass_SN) - stage) * 0.1 * n_SN * 10.0**51 * erg / cg%dvol  ! adding CR
+                                           if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + (aint(pset%pdata%mass/mass_SN) - stage) * 0.1 * n_SN * 10.0**51 * erg / cg%dvol  ! adding CR
 #endif /* COSM_RAYS */
+                                        endif
                                         pset%pdata%tform = t
                                         !print *, 'particle filled', pset%pdata%pid, aint(pset%pdata%mass/mass_SN) - stage
                                      endif
@@ -148,7 +159,9 @@ contains
                          tbirth = -10
                          if (mass .gt. mass_SN) then
                             if (.not. kick) then
+#ifdef THERM
                                cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + aint(mass/mass_SN) * (1-0.1*cr_active) * n_SN * 10.0**51 * erg / cg%dvol ! adding SN energy
+#endif /* THERM */
 #ifdef COSM_RAYS
                                if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + aint(mass/mass_SN) * 0.1 * n_SN * 10.0**51 * erg / cg%dvol  ! adding CR
 #endif /* COSM_RAYS */
@@ -196,8 +209,9 @@ contains
                                      endif
                                      if (abs(i1) + abs(j1) + abs(k1) == 0) then
                                         if ((t1-dt < 6.5) .and. ((t1+dt) .gt. 6.5)) then    ! Instantaneous injection Agertz
-                                           !      print *, 'SNe', proc, pset%pdata%pid, i, j, k, pset%pdata%pos(1), cg%coord(CENTER,xdim)%r(i), cg%dx, pset%pdata%mass, t, pset%pdata%tform
+#ifdef THERM
                                            cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + aint(pset%pdata%mass/mass_SN) * (1-0.1*cr_active) * n_SN * 10.0**51 * erg / cg%dvol  ! adding SN energy
+#endif /* THERM */
 #ifdef COSM_RAYS
                                            if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + aint(pset%pdata%mass/mass_SN) * 0.1 * n_SN * 10.0**51 * erg / cg%dvol  ! adding CR
 #endif /* COSM_RAYS */
@@ -220,43 +234,6 @@ contains
     
   end subroutine SF
 
-
-  subroutine SF_crit(pfl, cg, i, j, k, tdyn, cond)
-
-    use constants,             only: pi
-    use crhelpers,             only: divv_i
-    use fluidtypes,            only: component_fluid
-    use grid_cont,             only: grid_container
-    use named_array_list,      only: wna
-    use units,                 only: fpiG, kboltz, mH
-    use thermal,               only: calc_tcool, itemp
-
-    logical, intent(out)                      :: cond
-    real,    intent(in)                       :: tdyn
-    real                                      :: density_thr, G, RJ, tcool, kbgmh, temp
-    integer, intent(in)                       :: i, j, k
-    type(grid_container), pointer, intent(in) :: cg
-    class(component_fluid), pointer           :: pfl
-    
-    density_thr=0.035!004
-
-    G = fpiG/(4*pi)
-    cond = .false.
-    if ((abs(cg%z(k)) > 7000) .or. ((cg%x(i)**2+cg%y(j)**2) > 20000**2)) return ! no SF in the stream
-    if (cg%w(wna%fi)%arr(pfl%idn,i,j,k) .lt. density_thr) return   ! threshold density
-    if (cg%q(divv_i)%arr(i,j,k) .ge. 0) return                     ! convergent flow
-    if (cg%w(wna%fi)%arr(pfl%idn,i,j,k) * cg%dvol .lt. 1.2 * 10**6) return   ! part mass > 3 10^5
-    temp = cg%q(itemp)%arr(i,j,k)
-    RJ = 2.8 * sqrt(temp/1000) * sqrt(3*pi/(32*G*cg%w(wna%fi)%arr(pfl%idn,i,j,k)))
-    !print *, 'Jeans mass', RJ!4*pi/3 * RJ**3 * cg%w(wna%fi)%arr(pfl%idn,i,j,k), pfl%cs, 2.8 * sqrt(temp/1000)!, pi/6.0 * pfl%cs**3 / G**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5
-    if (cg%w(wna%fi)%arr(pfl%idn,i,j,k) * cg%dvol .lt. 4*pi/3 * RJ**3 * cg%w(wna%fi)%arr(pfl%idn,i,j,k)) return !, pi/6.0 * pfl%cs**3 / G**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5)) return  !pi/6.0 * pfl%cs**3 / G**(3.0/2) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)**0.5 ) return    ! Jeans mass
-    kbgmh  = kboltz / (pfl%gam_1 * mH)
-    call calc_tcool(temp, cg%w(wna%fi)%arr(pfl%idn,i,j,k), kbgmh, tcool)
-    !print *, tcool, tdyn
-    if (tcool .gt. tdyn) return
-    cond = .true.
-    
-  end subroutine SF_crit
 
   subroutine initialize_id()
 
