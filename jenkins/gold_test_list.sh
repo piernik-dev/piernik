@@ -4,6 +4,7 @@ OUT_DIR=jenkins/goldexec/
 [ ! -d $OUT_DIR ] && mkdir -p $OUT_DIR
 [ ! -d $OUT_DIR ] && exit 1
 
+# Execute all tests in serial or parallel mode
 [ -z ${SERIAL+x} ] && SERIAL=0
 which parallel > /dev/null 2>&1 || SERIAL=1
 
@@ -18,6 +19,7 @@ else
     parallel --load 70% --delay 10 eval "./jenkins/gold_test.sh {} > ${OUT_DIR}{/}'_gold_stdout'" ::: ./jenkins/gold_configs/*.config
 fi
 
+# Create the .csv file with norms for Jenkins
 for j in gold riem ; do
     case $j in
     	 ("gold") jj="gold" ;;
@@ -46,7 +48,7 @@ for j in gold riem ; do
      	sed 's/,$//' > ${OUT_DIR}all_${jj}.csv
 done
 
-# print the results
+# Print the results
 for i in ${OUT_DIR}*_gold_log ; do
      grep "You must make yt available somehow" $i || (
 	 gdist=$( tail -n 1 $i | awk '{print $NF}' )
@@ -58,7 +60,7 @@ for i in ${OUT_DIR}*_riem_log ; do
      grep "You must make yt available somehow" $i || printf "%-50s = %s\n" "[Riemann] Total difference for ${i/_riem_log/}" $( tail -n 1 $i | awk '{print $NF}' )
 done
 
-# fail if any gold dstance is not 0.
+# Fail if any gold distance is not 0.
 for i in ${OUT_DIR}*_gold_log ; do
     [ $( ( grep "^Total difference between" $i || echo 1 ) | awk '{print $NF}' ) == 0 ] || exit 1
 done
