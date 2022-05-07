@@ -305,7 +305,7 @@ contains
          fac(:, IP) = 0.0
       endwhere
 
-      ! Some computations can be avoided by spliting following statement into pieces
+      ! Some computations can be avoided by splitting following statement into pieces
       ! and using ifs
       gp(:) = fac(xdim, I0)*fac(ydim, I0)*fac(zdim, I0)*f(ijkp(xdim),ijkp(ydim),ijkp(zdim),:) + &
               fac(xdim, I0)*fac(ydim, I0)*( f(ijkp(xdim)             ,ijkp(ydim)             ,ijkp(zdim)+dom%D_(zdim),:)*fac(zdim, IP) + &

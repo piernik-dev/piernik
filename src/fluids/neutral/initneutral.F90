@@ -42,9 +42,9 @@ module initneutral
    private
    public :: init_neutral, cleanup_neutral, neutral_fluid
 
-   real    :: gamma             !< adiabatic index for the neutral gas component
-   real    :: cs_iso            !< isothermal sound speed (p = cs_iso<sup>2</sup>\f$\rho\f$), active only if neutral gas is \ref isothermal
-   logical :: selfgrav          !< true if neutral gas is selfgravitating
+   real    :: gamma       !< adiabatic index for the neutral gas component
+   real    :: cs_iso      !< isothermal sound speed (p = cs_iso<sup>2</sup>\f$\rho\f$), active only if neutral gas is \ref isothermal
+   logical :: selfgrav    !< true if neutral gas is selfgravitating
 
    type, extends(component_fluid) :: neutral_fluid
    contains
@@ -188,10 +188,10 @@ contains
          close(nh%lun)
          call nh%compare_namelist()
 
-         lbuff(1)  = selfgrav
+         lbuff(1) = selfgrav
 
-         rbuff(1)  = gamma
-         rbuff(2)  = cs_iso
+         rbuff(1) = gamma
+         rbuff(2) = cs_iso
 
       endif
 
@@ -218,7 +218,7 @@ contains
 !==========================================================================================
 !
 ! OPT: This routine may cost as much as 30% of rtvd. It seems that all the data fit well a 512kB L2 cache, but Ir:Dr:Dw is like 8:2:1
-! OPT: \todo Try an explicit loop over RNG to check if we're better than the compiler
+! OPT: \todo Try an explicit loop over RNG2 to check if we're better than the compiler
 ! OPT: similar treatment may be helpful for fluxionized.F90, fluxdust.F90 and fluxcosmicrays.F90
 !
 !/*
@@ -257,7 +257,7 @@ contains
 !!\f]
 !<
 !*/
-#define RNG 2:nm
+#define RNG2 2:nm
    subroutine flux_neu(this, flux, cfr, uu, n, vx, bb, cs_iso2)
 
       use constants,    only: idn, imx, imy, imz
@@ -297,12 +297,12 @@ contains
       pps => ps
       call pres_neu(this, n, uu, bb, cs_iso2, pps)
 
-      flux(RNG, idn)=uu(RNG, idn)*vx(RNG)
-      flux(RNG, imx)=uu(RNG, imx)*vx(RNG)+ps(RNG)
-      flux(RNG, imy)=uu(RNG, imy)*vx(RNG)
-      flux(RNG, imz)=uu(RNG, imz)*vx(RNG)
+      flux(RNG2, idn) = uu(RNG2, idn) * vx(RNG2)
+      flux(RNG2, imx) = uu(RNG2, imx) * vx(RNG2) + ps(RNG2)
+      flux(RNG2, imy) = uu(RNG2, imy) * vx(RNG2)
+      flux(RNG2, imz) = uu(RNG2, imz) * vx(RNG2)
 #ifndef ISO
-      flux(RNG, ien)=(uu(RNG, ien)+ps(RNG))*vx(RNG)
+      flux(RNG2, ien) = (uu(RNG2, ien) + ps(RNG2)) * vx(RNG2)
 #endif /* !ISO */
       flux(1, :) = flux(2, :) ; flux(n, :) = flux(nm, :)
 
@@ -311,14 +311,14 @@ contains
       ! The freezing speed is now computed locally (in each cell)
       !  as in Trac & Pen (2003). This ensures much sharper shocks,
       !  but sometimes may lead to numerical instabilities
-      minvx = minval(vx(RNG))
-      maxvx = maxval(vx(RNG))
-      amp   = half*(maxvx-minvx)
+      minvx = minval(vx(RNG2))
+      maxvx = maxval(vx(RNG2))
+      amp   = half * (maxvx - minvx)
       !    c_fr  = 0.0
 #ifdef ISO
-      cfr(RNG, 1) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(         ps(RNG))/uu(RNG, idn)),small)
+      cfr(RNG2, 1) = sqrt(vx(RNG2)**2+cfr_smooth*amp) + max(sqrt( abs(         ps(RNG2))/uu(RNG2, idn)),small)
 #else /* !ISO */
-      cfr(RNG, 1) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(this%gam*ps(RNG))/uu(RNG, idn)),small)
+      cfr(RNG2, 1) = sqrt(vx(RNG2)**2+cfr_smooth*amp) + max(sqrt( abs(this%gam*ps(RNG2))/uu(RNG2, idn)),small)
 #endif /* !ISO */
       !> \deprecated BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
       !>
@@ -373,11 +373,11 @@ contains
 
       nm = n-1
 #ifdef ISO
-      ps(RNG) = cs_iso2(RNG) * uu(RNG, idn) ; ps(1) = ps(2); ps(n) = ps(nm)
+      ps(RNG2) = cs_iso2(RNG2) * uu(RNG2, idn) ; ps(1) = ps(2); ps(n) = ps(nm)
 #else /* !ISO */
       if (associated(cs_iso2)) call die("[initneutral:pres_neu] cs_iso2 should not be associated")
-      ps(RNG) = (uu(RNG, ien) - ekin(uu(RNG, imx),uu(RNG, imy),uu(RNG, imz),uu(RNG, idn)) )*(this%gam_1)
-      ps(RNG) = max(ps(RNG), smallp)
+      ps(RNG2) = (uu(RNG2, ien) - ekin(uu(RNG2, imx),uu(RNG2, imy),uu(RNG2, imz),uu(RNG2, idn)) )*(this%gam_1)
+      ps(RNG2) = max(ps(RNG2), smallp)
 #endif /* !ISO */
 
       return
@@ -387,5 +387,6 @@ contains
 #endif /* ISO */
 
    end subroutine pres_neu
+#undef RNG2
 
 end module initneutral

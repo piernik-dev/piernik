@@ -102,6 +102,8 @@ module dataio_pub
    character(len=maxparfilelen), allocatable, dimension(:) :: parfile !< contents of the parameter file
    character(len=msglen), allocatable, dimension(:) :: logbuffer !< buffer for log I/O
    integer, save               :: parfilelines = 0               !< number of lines in the parameter file
+   integer(kind=4)             :: maxparlen                      !< max length of parfile lines
+   integer(kind=4)             :: maxenvlen                      !< max length of env array
 
    logical, save               :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
    logical, save               :: log_file_initialized = .false. !< logical to mark initialization of logfile

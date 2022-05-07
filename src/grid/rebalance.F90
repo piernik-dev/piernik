@@ -385,7 +385,7 @@ contains
 !! \brief Routine for moving existing grids between processes
 !!
 !! Warning: The allocates of cglepa(i)%tbuf can be pretty huge (totfld * product(cg%n_) * sum_od_incoming_and_outgoing_blocks * sizeof(double)).
-!! Pessimistically, the amount of allocated memory can be doubled here afor a brief period of time.
+!! Pessimistically, the amount of allocated memory can be doubled here for a brief period of time.
 !! ToDo: Make a check for available memory and implement also multi-pass variant of the exchange.
 !<
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import re
@@ -164,18 +164,18 @@ dep.png: dep.dot
 '''
 
 
-def striplist(l):
-    return([x.strip() for x in l])
+def striplist(ll):
+    return([x.strip() for x in ll])
 
 
-def strip_leading_path(l):
-    return([x.split('/')[-1] for x in l])
-#  return([x.rpartition('/')[2] for x in l])
+def strip_leading_path(ll):
+    return([x.split('/')[-1] for x in ll])
+#  return([x.rpartition('/')[2] for x in ll])
 
 
-def remove_suf(l):
-    return([x.split('.')[0] for x in l])
-#  return([x.partition('.')[0] for x in l])
+def remove_suf(ll):
+    return([x.split('.')[0] for x in ll])
+#  return([x.partition('.')[0] for x in ll])
 
 
 def pretty_format(fname, list, col):
@@ -226,8 +226,8 @@ def list_info(dir, indent):
     try:
         file = open(dir + "/info", "r")
         il = 0
-        for l in file:
-            tab.append([name if (il == 0) else "", l.strip()])
+        for ll in file:
+            tab.append([name if (il == 0) else "", ll.strip()])
             il += 1
         if (il == 0):
             tab.append([name, '\033[93m' + "empty info" + '\033[0m'])

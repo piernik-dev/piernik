@@ -44,7 +44,8 @@ module common_hdf5
    public :: hdf_vars, hdf_vars_avail, cancel_hdf_var, d_gname, base_d_gname, d_fc_aname, d_size_aname, &
         d_edge_apname, d_bnd_apname, cg_gname, cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, &
         n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, cg_dl_aname, O_OUT, O_RES, STAT_OK, STAT_INV, &
-        create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output, enable_all_hdf_var
+        create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output, enable_all_hdf_var, &
+        dump_announcement, dump_announce_time
 #ifdef NBODY_1FILE
    public ::  part_types_gname, part_gname, st_gname
 #endif /* NBODY_1FILE */
@@ -104,20 +105,18 @@ contains
 
    subroutine init_hdf5(vars)
 
-      use constants,  only: dsetnamelen, singlechar
-      use dataio_pub, only: warn
-      use fluids_pub, only: has_ion, has_dst, has_neu
-      use global,     only: cc_mag
-      use mpisetup,   only: master
+      use constants,      only: dsetnamelen, singlechar
+      use dataio_pub,     only: warn
+      use fluids_pub,     only: has_ion, has_dst, has_neu
+      use global,         only: cc_mag
+      use mpisetup,       only: master
 #ifdef COSM_RAYS
+      use cr_data,        only: cr_names, cr_spectral
       use dataio_pub,     only: msg
-#ifdef COSM_RAY_ELECTRONS
-      use fluidindex,     only: iarr_all_crn
-      use initcosmicrays, only: ncre
-#else /* !COSM_RAY_ELECTRONS */
-      use fluidindex,     only: iarr_all_crs
-#endif /* !COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
+#ifdef CRESP
+      use initcosmicrays, only: ncrb
+#endif /* CRESP */
 
       implicit none
 
@@ -126,8 +125,8 @@ contains
       integer                                              :: i
       character(len=singlechar)                            :: fc, ord
       character(len=dsetnamelen)                           :: aux
-#if defined COSM_RAYS
-      integer                                              :: k
+#ifdef COSM_RAYS
+      integer                                              :: k, ke
 #endif /* COSM_RAYS */
 
       do i = lbound(vars, 1), ubound(vars, 1)
@@ -167,6 +166,12 @@ contains
             case ('ethr')
                if (has_neu) call append_var('ethn')
                if (has_ion) call append_var('ethi')
+            case ('pres')
+               if (has_neu) call append_var('pren')
+               if (has_ion) call append_var('prei')
+            case ('temp')
+               if (has_neu) call append_var('temn')
+               if (has_ion) call append_var('temi')
             case ("divb", "divB")
                if (cc_mag) then
                   call append_var("divbc")
@@ -184,22 +189,26 @@ contains
                call append_var(aux)
 #ifdef COSM_RAYS
             case ('encr')
-#ifdef COSM_RAY_ELECTRONS
-               do k = 1, size(iarr_all_crn,1)
-#else /* !COSM_RAY_ELECTRONS */
-               do k = 1, size(iarr_all_crs,1)
-#endif /* !COSM_RAY_ELECTRONS */
-                  if (k<=99) then
-                     write(aux,'(A2,I2.2)') 'cr', k
+               do k = 1, size(cr_names)
+                  if (cr_spectral(k)) cycle
+                  if (len(trim(cr_names(k))) > 0) then
+                     write(aux,'(a3,a)') 'cr_', trim(cr_names(k))
                      call append_var(aux)
                   else
-                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", k
-                     call warn(msg)
+                     ke = k - count(cr_spectral)
+                     if (ke <= 99) then
+                        write(aux,'(A2,I2.2)') 'cr', ke
+                        call append_var(aux)
+                     else
+                        write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", ke
+                        call warn(msg)
+                     endif
                   endif
                enddo
-#ifdef COSM_RAY_ELECTRONS
+#endif /* COSM_RAYS */
+#ifdef CRESP
             case ('cren') !< CRESP number density fields
-               do k = 1, ncre
+               do k = 1, ncrb
                   if (k<=99) then
                      write(aux,'(A4,I2.2)') 'cren', k
                      call append_var(aux)
@@ -216,7 +225,7 @@ contains
                   endif
                enddo
             case ('cree') !< CRESP energy density fields
-               do k = 1, ncre
+               do k = 1, ncrb
                   if (k<=99) then
                      write(aux,'(A4,I2.2)') 'cree', k
                      call append_var(aux)
@@ -233,7 +242,7 @@ contains
                   endif
                enddo
             case ('cref') !< CRESP distribution function
-               do k = 1, ncre+1
+               do k = 1, ncrb+1
                   if (k<=99) then
                      write(aux,'(A4,I2.2)') 'cref', k
                      call append_var(aux)
@@ -253,7 +262,7 @@ contains
                   endif
                enddo
             case ('creq') !< CRESP spectrum index
-               do k = 1, ncre
+               do k = 1, ncrb
                   if (k<=99) then
                      write(aux,'(A4,I2.2)') 'creq', k
                      call append_var(aux)
@@ -262,11 +271,7 @@ contains
                      call warn(msg)
                   endif
                enddo
-#endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
-            case ('pres')
-               if (has_neu) call append_var('pren')
-               if (has_ion) call append_var('prei')
+#endif /* CRESP */
             case default
                if (.not. has_ion .and. (any(trim(vars(i)) == ["deni", "vlxi", "vlyi", "vlzi", "enei", "ethi", "prei"]) .or. any(trim(vars(i)) == ["momxi", "momyi", "momzi"]))) then
                   if (master) call warn("[common_hdf5:init_hdf5] Cannot safely use plot variable '" // trim(vars(i)) // "' without ionized fluid")
@@ -445,6 +450,18 @@ contains
 
    end subroutine common_shortcuts
 
+   function tight_chararray(arrin, ndim, maxn) result(arrout)
+
+      implicit none
+
+      integer,                           intent(in) :: ndim
+      integer(kind=4),                   intent(in) :: maxn
+      character(len=*), dimension(ndim), intent(in) :: arrin
+      character(len=maxn), dimension(ndim)          :: arrout
+
+      arrout = arrin(:)(:maxn)
+
+   end function tight_chararray
 !>
 !! \brief This routine writes all attributes that are common to restart and output files.
 !!
@@ -457,25 +474,24 @@ contains
 !<
    subroutine set_common_attributes(filename)
 
-      use constants,     only: I_ONE
-      use dataio_pub,    only: use_v2_io, parfile, parfilelines, gzip_level
-      use dataio_user,   only: user_attrs_wr, user_attrs_pre
-      use hdf5,          only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, &
-         & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
-         & H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, &
-         & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
-      use mpisetup,      only: master, slave
-      use version,       only: env, nenv
-#ifdef COSM_RAY_ELECTRONS
-      use initcrspectrum,  only: write_cresp_to_restart
-      use cresp_io,        only: create_cresp_smap_fields
-      use cresp_NR_method, only: cresp_write_smaps_to_hdf
-#endif /* COSM_RAY_ELECTRONS */
+      use constants,         only: I_ONE
+      use dataio_pub,        only: maxenvlen, maxparlen, use_v2_io, parfile, parfilelines, gzip_level
+      use dataio_user,       only: user_attrs_wr, user_attrs_pre
+      use hdf5,              only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
+         & h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, &
+         & h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
+      use mpisetup,          only: master, slave
+      use version,           only: env, nenv
+#ifdef CRESP
+      use initcrspectrum,    only: write_cresp_to_restart, use_cresp
+      use cresp_io,          only: create_cresp_smap_fields
+      use cresp_NR_method,   only: cresp_write_smaps_to_hdf
+#endif /* CRESP */
 #ifdef RANDOMIZE
-      use randomization, only: write_current_seed_to_restart
+      use randomization,     only: write_current_seed_to_restart
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
-      use snsources,     only: write_snsources_to_restart
+      use snsources,         only: write_snsources_to_restart
 #endif /* SN_SRC */
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: write_oldsoln_to_restart
@@ -489,7 +505,6 @@ contains
       integer(HID_T)                 :: type_id, dspace_id, dset_id, prp_id
       integer(HSIZE_T), dimension(1) :: dimstr
       logical(kind=4)                :: Z_avail         !< Z_avail perhaps should be of type integer(HID_T)
-      integer(SIZE_T)                :: maxlen
       integer(kind=4)                :: error           !< error perhaps should be of type integer(HID_T)
 
       ! \ToDo Set up a stack of routines registered by appropriate modules
@@ -513,7 +528,6 @@ contains
       endif
 
       ! Store a compressed copy of the problem.par file.
-      maxlen = int(maxval(len_trim(parfile(:parfilelines))), kind=4)
       dimstr = [parfilelines]
       call H5Zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
       ! call H5Zget_filter_info_f ! everything should be always fine for gzip
@@ -523,41 +537,42 @@ contains
          call H5Pset_chunk_f(prp_id, I_ONE, dimstr, error)
       endif
       call H5Tcopy_f(H5T_NATIVE_CHARACTER, type_id, error)
-      call H5Tset_size_f(type_id, maxlen, error)
+      call H5Tset_size_f(type_id, int(maxparlen, SIZE_T), error)
       call H5Screate_simple_f(I_ONE, dimstr, dspace_id, error)
       call H5Dcreate_f(file_id, "problem.par", type_id,  dspace_id, dset_id, error, dcpl_id = prp_id)
-      call H5Dwrite_f(dset_id, type_id, parfile(:)(:maxlen), dimstr, error)
+      call H5Dwrite_f(dset_id, type_id, tight_chararray(parfile, parfilelines, maxparlen), dimstr, error)
       call H5Dclose_f(dset_id, error)
       call H5Sclose_f(dspace_id, error)
 
       ! Store a compressed copy of the piernik.def file and Id lines from source files.
       ! We recycle type_id and prp_id, so we don't close them yet.
-      maxlen = int(maxval(len_trim(env(:nenv))), kind=4)
       dimstr = [nenv]
       if (Z_avail) call H5Pset_chunk_f(prp_id, I_ONE, dimstr, error)
-      call H5Tset_size_f(type_id, maxlen, error)
+      call H5Tset_size_f(type_id, int(maxenvlen, SIZE_T), error)
       call H5Screate_simple_f(I_ONE, dimstr, dspace_id, error)
       call H5Dcreate_f(file_id, "env", type_id,  dspace_id, dset_id, error, dcpl_id = prp_id)
-      call H5Dwrite_f(dset_id, type_id, env(:)(:maxlen), dimstr, error)
+      call H5Dwrite_f(dset_id, type_id, tight_chararray(env, nenv, maxenvlen), dimstr, error)
       call H5Dclose_f(dset_id, error)
       call H5Sclose_f(dspace_id, error)
       call H5Tclose_f(type_id, error)
       call H5Pclose_f(prp_id, error)
 
       ! \ToDo Set up a stack of routines registered by appropriate modules
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       call write_cresp_to_restart(file_id)
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 #ifdef RANDOMIZE
       call write_current_seed_to_restart(file_id)
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
       call write_snsources_to_restart(file_id)
 #endif /* SN_SRC */
-#ifdef COSM_RAY_ELECTRONS
-      call create_cresp_smap_fields(file_id) ! create "/cresp/smaps_{LO,UP}/..."
-      call cresp_write_smaps_to_hdf(file_id) ! create "/cresp/smaps_{LO,UP}/{p_f}_ratio"
-#endif /* COSM_RAY_ELECTRONS */
+#ifdef CRESP
+      if (use_cresp) then
+         call create_cresp_smap_fields(file_id) ! create "/cresp/smaps_{LO,UP}/..."
+         call cresp_write_smaps_to_hdf(file_id) ! create "/cresp/smaps_{LO,UP}/{p_f}_ratio"
+      endif
+#endif /* CRESP */
       if (associated(user_attrs_wr)) call user_attrs_wr(file_id)
 
       call h5fclose_f(file_id, error)
@@ -913,7 +928,7 @@ contains
       integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_o       !< sizes of all cg, expanded by external boundaries
       integer(kind=4),  dimension(:),   pointer     :: cg_rl            !< list of refinement levels from all cgs/procs
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_b           !< list of n_b from all cgs/procs
-      integer(kind=4),  dimension(:,:), pointer     :: cg_n_o           !< list of grid dimnsions with external guardcells from all cgs/procs
+      integer(kind=4),  dimension(:,:), pointer     :: cg_n_o           !< list of grid dimensions with external guardcells from all cgs/procs
       integer(kind=8),  dimension(:,:), pointer     :: cg_off           !< list of offsets from all cgs/procs
 #ifdef NBODY_1FILE
       integer(kind=8),  pointer                      :: cg_npart
@@ -1246,20 +1261,23 @@ contains
       endif
    end function set_h5_properties
 
-   function output_fname(wr_rd, ext, no, bcast, prefix) result(filename)
+   function output_fname(wr_rd, ext, no, allproc, bcast, prefix) result(filename)
 
-      use constants,  only: cwdlen, idlen, RD, WR, I_FOUR, fnamelen
+      use constants,  only: cwdlen, idlen, RD, WR, I_FOUR, domlen, fnamelen
       use dataio_pub, only: problem_name, run_id, res_id, wd_wr, wd_rd, warn, die, msg
-      use mpisetup,   only: master, piernik_MPI_Bcast
+      use mpisetup,   only: master, piernik_MPI_Bcast, proc
 
       implicit none
 
       integer(kind=4),       intent(in)           :: wr_rd, no
       character(len=I_FOUR), intent(in)           :: ext
+      logical,               intent(in), optional :: allproc
       logical,               intent(in), optional :: bcast
       character(len=*),      intent(in), optional :: prefix
       character(len=cwdlen)                       :: filename, temp  ! File name
+      character(len=domlen)                       :: fullext
       character(len=idlen)                        :: file_id
+      logical                                     :: exec_allproc
 
 
       ! Sanity checks go here
@@ -1281,11 +1299,20 @@ contains
          file_id = run_id
       endif
 
-      if (master) then
+      exec_allproc = .false.
+      fullext = ext
+      if (present(allproc)) then
+         if (allproc) then
+            exec_allproc = .true.
+            write(fullext,'(".cpu",i5.5,a)') proc, ext
+         endif
+      endif
+
+      if (master .or. exec_allproc) then
          if (present(prefix)) then
-            write(temp,'(2(a,"_"),a3,"_",i4.4,a4)') trim(prefix), trim(problem_name), file_id, no, ext
+            write(temp,'(2(a,"_"),a3,"_",i4.4,a)') trim(prefix), trim(problem_name), file_id, no, fullext
          else
-            write(temp,'(a,"_",a3,"_",i4.4,a4)') trim(problem_name), file_id, no, ext
+            write(temp,'(a,"_",a3,"_",i4.4,a)') trim(problem_name), file_id, no, fullext
          endif
          select case (wr_rd)
             case (RD)
@@ -1302,6 +1329,64 @@ contains
       endif
 
    end function output_fname
+
+   subroutine dump_announcement(dumptype, nio, fname, last_dump_time, sequential)
+
+      use constants,  only: cwdlen, tmr_hdf, I_ONE, I_FOUR, I_SEVEN, RES, WR
+      use dataio_pub, only: msg, printio, thdf, multiple_h5files, piernik_hdf5_version, piernik_hdf5_version2, use_v2_io
+      use global,     only: t
+      use mpisetup,   only: master
+      use timer,      only: set_timer
+
+      implicit none
+
+      integer(kind=4),                     intent(in)    :: dumptype
+      integer(kind=4),                     intent(inout) :: nio
+      character(len=cwdlen),               intent(out)   :: fname
+      real,                                intent(in)    :: last_dump_time
+      logical,                             intent(in)    :: sequential
+      character(len=I_SEVEN), dimension(2), parameter    :: dumpname = ['restart', 'dataset']
+      character(len=I_FOUR),  dimension(2), parameter    :: extname  = ['.res', '.h5 ']
+      real                                               :: phv
+      logical                                            :: exec_mh5f
+
+      thdf = set_timer(tmr_hdf,.true.)
+
+      nio = nio + I_ONE
+! restart
+      exec_mh5f = (multiple_h5files .and. dumptype /= RES)
+      fname = output_fname(WR, extname(dumptype), nio, allproc=exec_mh5f, bcast=(.not.exec_mh5f))
+
+      if (.not. master) return
+
+      phv = piernik_hdf5_version
+      if (use_v2_io .and. .not. exec_mh5f) phv = piernik_hdf5_version2
+
+      if (sequential) then
+         write(msg,'(a,es23.16,a,a,a,f5.2,1x,2a)') 'ordered t ', last_dump_time, ': Writing ', dumpname(dumptype), ' v', phv, trim(fname), " ... "
+      else
+         write(msg,'(a,es23.16,a,a,a,f5.2,1x,2a)') 'requested at t ', t, ': Writing ', dumpname(dumptype), ' v', phv, trim(fname), " ... "
+      endif
+      call printio(msg, .true.)
+
+   end subroutine dump_announcement
+
+   subroutine dump_announce_time
+
+      use constants,  only: tmr_hdf
+      use dataio_pub, only: msg, printinfo, thdf
+      use mpisetup,   only: master
+      use timer,      only: set_timer
+
+      implicit none
+
+      thdf = set_timer(tmr_hdf)
+      if (master) then
+         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
+         call printinfo(msg, .true.)
+      endif
+
+   end subroutine dump_announce_time
 
 #ifdef NBODY_1FILE
    subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets, pdsets)

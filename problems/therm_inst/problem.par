@@ -23,7 +23,7 @@ $BASE_DOMAIN
  /
 
  $RESTART_CONTROL
- restart=''
+    restart = 'last'
  /
 
  $END_CONTROL
@@ -38,7 +38,7 @@ $BASE_DOMAIN
     dt_res  = 0.0
     dt_log  = 1.0e-5
     dt_tsl  = 1.0e-5
-    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz', 'temp'
+    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz', 'temn'
  /
 
  $FLUID_IONIZED
@@ -77,7 +77,6 @@ $BASE_DOMAIN
     x_ion          = 1.0
     cfl_coolheat   = 0.000001
     isochoric      = 1
-    d_isochoric    = 1.0
  /
  $PROBLEM_CONTROL
     d0     = 1.0

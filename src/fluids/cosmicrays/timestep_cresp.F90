@@ -31,14 +31,14 @@
 !<
 
 module timestep_cresp
-! pulled by COSM_RAY_ELECTRONS
+! pulled by CRESP
 
    implicit none
 
    private
-   public :: dt_cre, cresp_timestep, dt_cre_synch, dt_cre_adiab, dt_cre_K, dt_spectrum, cresp_reaction_to_redo_step, dt_cresp_bck, cresp_timestep_cell
+   public :: dt_cre, cresp_timestep, dt_cre_synch, dt_cre_adiab, dt_cre_K, cresp_timestep_cell
 
-   real :: dt_cre, dt_cre_synch, dt_cre_adiab, dt_cre_K, dt_spectrum, dt_cresp_bck
+   real :: dt_cre, dt_cre_synch, dt_cre_adiab, dt_cre_K
 
 contains
 
@@ -54,8 +54,8 @@ contains
       use fluidindex,       only: flind
       use func,             only: emag
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep, n_substeps_max
+      use initcosmicrays,   only: cfl_cr, iarr_cre_e, iarr_cre_n
+      use initcrspectrum,   only: K_cresp_paral, K_cresp_perp, spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep, n_substeps_max
       use mpisetup,         only: piernik_MPI_Allreduce
 
       implicit none
@@ -71,7 +71,6 @@ contains
       dt_cre_K     = big
       dt_cre_synch = big
       dt_cre_adiab = big
-      dt_spectrum  = big
 
       if (.not. use_cresp_evol) return
 
@@ -111,7 +110,7 @@ contains
 
       if (adiab_active) call cresp_timestep_adiabatic(abs_max_ud)
 
-      K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
+      K_cre_max_sum = K_cresp_paral(i_up_max) + K_cresp_perp(i_up_max) ! assumes the same K for energy and number density
       if (K_cre_max_sum > zero) then                               ! K_cre dependent on momentum - maximal for highest bin number
          dt_aux = cfl_cr * half / K_cre_max_sum                    ! We use cfl_cr here (CFL number for diffusive CR transport), cfl_cre used only for spectrum evolution
          cgl => leaves%first
@@ -125,14 +124,14 @@ contains
       call piernik_MPI_Allreduce(dt_cre_synch, pMIN)
       call piernik_MPI_Allreduce(dt_cre_K,     pMIN)
 
-      dt_spectrum = min(dt_cre_adiab, dt_cre_synch)
+      dt_cre = min(dt_cre_adiab, dt_cre_synch)
 
       if (cresp_substep) then
       ! with cresp_substep enabled, dt_cre_adiab and dt_cre_synch are used only within CRESP module for substepping
       ! half * dt_spectrum * n_substeps_max tries to prevent number of substeps from exceeding n_substeps_max limit
-         dt_cre = min(dt_spectrum * max(n_substeps_max-I_ONE, I_ONE), dt_cre_K)  ! number of substeps with dt_spectrum limited by n_substeps_max
+         dt_cre = min(dt_cre * max(n_substeps_max-I_ONE, I_ONE), dt_cre_K)  ! number of substeps with dt_spectrum limited by n_substeps_max
       else
-         dt_cre = min(dt_spectrum, dt_cre_K)                   ! dt comes in to cresp_crspectrum with factor * 2
+         dt_cre = min(dt_cre, dt_cre_K)                   ! dt comes in to cresp_crspectrum with factor * 2
       endif
 
    end subroutine cresp_timestep
@@ -173,40 +172,9 @@ contains
    end subroutine cresp_timestep_synchrotron
 
 !----------------------------------------------------------------------------------------------------
-
-   subroutine cresp_reaction_to_redo_step
-
-      use dataio_pub,      only: msg, warn
-      use global,          only: cfl_violated, dt_shrink, repeat_step, tstep_attempt
-      use initcrspectrum,  only: cresp_substep
-      use mpisetup,        only: master
-
-      implicit none
-
-      if (.not. repeat_step) return
-
-      if (cfl_violated) then
-         if (cresp_substep) then
-            dt_spectrum = dt_spectrum * (dt_shrink ** tstep_attempt) ! If dt is repeated, dt_spectrum should follow, this way seems legit
-
-            if (master) then
-               write (msg, "(A72,E14.7)") "[timestep_cresp:cresp_reaction_to_redo_step] (repeat step) shrinking dt_spectrum = ", dt_spectrum
-               call warn(msg)
-            endif
-
-         else
-            return   !< if .not. cresp_substep, no other than default reactions necessary
-         endif
-      else
-         return      !< no action necessary if CFL not violated
-      endif
-
-   end subroutine cresp_reaction_to_redo_step
-
-!----------------------------------------------------------------------------------------------------
 !! \brief This subroutine returns timestep for cell at (i,j,k) position, with already prepared u_b and u_d values.
 
-   subroutine cresp_timestep_cell(b, dt_cell, empty_cell)
+   subroutine cresp_timestep_cell(p_loss_terms, dt_cell, empty_cell)
 
       use initcrspectrum,     only: adiab_active, cresp, synch_active, spec_mod_trms
       use cresp_crspectrum,   only: cresp_find_prepare_spectrum
@@ -214,7 +182,7 @@ contains
 
       implicit none
 
-      type(spec_mod_trms), intent(in) :: b
+      type(spec_mod_trms), intent(in) :: p_loss_terms
       real,               intent(out) :: dt_cell
       logical,            intent(out) :: empty_cell
       integer(kind=4)                 :: i_up_cell
@@ -228,8 +196,8 @@ contains
       call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_cell) ! needed for synchrotron timestep
 
       if (.not. empty_cell) then
-         if (synch_active) call cresp_timestep_synchrotron(b%ub, i_up_cell)
-         if (adiab_active) call cresp_timestep_adiabatic(b%ud)
+         if (synch_active) call cresp_timestep_synchrotron(p_loss_terms%ub, i_up_cell)
+         if (adiab_active) call cresp_timestep_adiabatic(p_loss_terms%ud)
       else
          return
       endif
@@ -242,15 +210,15 @@ contains
 
    real function assume_p_up(cell_i_up)
 
-      use initcosmicrays, only: ncre
+      use initcosmicrays, only: ncrb
       use initcrspectrum, only: p_fix, p_mid_fix
 
       implicit none
 
       integer(kind=4), intent(in) :: cell_i_up
 
-      if (cell_i_up == ncre) then
-         assume_p_up = p_mid_fix(ncre) ! for i = 0 & ncre p_fix(i) = 0.0
+      if (cell_i_up == ncrb) then
+         assume_p_up = p_mid_fix(ncrb) ! for i = 0 & ncrb p_fix(i) = 0.0
       else
          assume_p_up = p_fix(cell_i_up)
       endif

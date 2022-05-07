@@ -17,7 +17,7 @@ for i in $* ; do
 		fi
 		$H5DUMP -d "problem.par" "$i" |  grep ":" | sed 's/ *([0-9]*): "\(.*\)",*/\1/;s/ *$//' > "$o"
 		if [ -s "$o" ]; then
-			echo "Succesfully extracted parameters to '$o' file."
+			echo "Successfully extracted parameters to '$o' file."
 		else
 			rm "$o"
 		fi

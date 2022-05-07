@@ -55,12 +55,11 @@
  /
 
  $COSMIC_RAYS
-    cfl_cr      = 0.9
-    cr_active   = 1.0
-    ncrn        = 1
-    K_crn_paral = 200.0   ! anisotropic
-!    K_crn_perp = 200.0 ! isotropic
-    use_CRsplit = .false.
+    cfl_cr     = 0.9
+    cr_active  = 1.0
+    ncrsp      = 1
+    K_cr_paral = 200.0   ! anisotropic
+!    K_cr_perp = 200.0 ! isotropic
  /
 
  $MULTIGRID_SOLVER
@@ -69,7 +68,7 @@
  /
 
  $MULTIGRID_DIFFUSION
-!    diff_explicit = .true.
+    diff_explicit = .false.
     diff_theta     = 0.6
     diff_tstep_fac = 43.402777777777777777777777 !86.805555555555555 !91.0222223 !91.0222223 !45.511112 !22.7555556
     norm_tol = 1e-4

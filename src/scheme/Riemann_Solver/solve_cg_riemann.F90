@@ -330,9 +330,9 @@ contains
       implicit none
 
       real, dimension(:,:),        intent(in)    :: u0     !< cell-centered initial fluid states
-      real, dimension(:,:),        intent(in)    :: b0     !< cell-centered initial magnetic fiels states (including psi field when necessary)
+      real, dimension(:,:),        intent(in)    :: b0     !< cell-centered initial magnetic field states (including psi field when necessary)
       real, dimension(:,:),        intent(inout) :: u1     !< cell-centered intermediate fluid states
-      real, dimension(:,:),        intent(inout) :: b1     !< cell-centered intermediate magnetic fiels states (including psi field when necessary)
+      real, dimension(:,:),        intent(inout) :: b1     !< cell-centered intermediate magnetic field states (including psi field when necessary)
       real, dimension(:), pointer, intent(in)    :: cs2    !< square of local isothermal sound speed
       real,                        intent(in)    :: dtodx  !< timestep advance: RK-factor * timestep / cell length
       type(ext_fluxes),            intent(inout) :: eflx   !< external fluxes

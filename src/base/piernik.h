@@ -7,6 +7,8 @@
 
 #include "piernik.def"
 
+#define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
+
 #ifdef IONIZED
 #  ifndef NONMAGNETIC
 #    ifndef MAGNETIC
@@ -14,6 +16,12 @@
 #    endif /* !MAGNETIC */
 #  endif /* !NONMAGNETIC */
 #endif /* IONIZED */
+
+#ifdef CRESP
+#  ifndef COSM_RAYS
+#    define COSM_RAYS
+#  endif /* !COSM_RAYS */
+#endif /* CRESP */
 
 #if !defined(MAGNETIC) && defined(RESISTIVE)
 #define NOMAGNETICNORESIST

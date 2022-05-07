@@ -39,8 +39,9 @@ module data_hdf5
    public :: init_data, write_hdf5, gdf_translate
 
    interface
-      subroutine h5_write
+      subroutine h5_write(sequential)
          implicit none
+         logical, intent(in) :: sequential
       end subroutine h5_write
    end interface
 
@@ -50,12 +51,14 @@ contains
 
    subroutine init_data
 
-      use dataio_pub, only: multiple_h5files
+      use dataio_pub, only: multiple_h5files, use_v2_io, warn
+      use mpisetup,   only: master
 
       implicit none
 
       if (multiple_h5files) then
          write_hdf5 => h5_write_to_multiple_files
+         if (use_v2_io .and. master) call warn('[data_hdf5:init_data] v2 I/O format for multiple h5 files not available')
       else
          write_hdf5 => h5_write_to_single_file
       endif
@@ -99,6 +102,9 @@ contains
          case ("pren", "prei")
             f%fu = "\rm{g}/\rm{cm}/\rm{s}^2"
             f%f2cgs = 1.0 / (gram/cm/sek**2)
+         case ("temn", "temi")
+            f%fu = "\rm{K}"
+            f%f2cgs = 1.0
          case ("magx", "magy", "magz", "magB")
             f%fu = "\rm{Gs}"
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek)
@@ -112,7 +118,8 @@ contains
          case ("cr01" : "cr99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
-#ifdef COSM_RAY_ELECTRONS
+#endif /* COSM_RAYS */
+#ifdef CRESP
          case ("cren01" : "cren99")
             f%fu = "1/\rm{cm}^3"
             f%f2cgs = 1.0 / (1.0/cm**3) ! number density
@@ -128,8 +135,7 @@ contains
          case ("creq01" : "creq99")
             f%fu = ""                   ! dimensionless q
             f%f2cgs = 1.0
-#endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
+#endif /* CRESP */
          case ("gpot", "sgpt")
             f%fu = "\rm{cm}^2 / \rm{s}^2"
             f%f2cgs = 1.0 / (cm**2 / sek**2)
@@ -161,6 +167,8 @@ contains
                newname = "specific_energy"
             case ("pren", "prei")
                newname = "pressure"
+            case ("temn", "temi")
+               newname = "temperature"
             case ("magx", "magy", "magz")
                write(newname, '("mag_field_",A1)') var(4:4)
             case ("divbc", "divbf")
@@ -306,41 +314,46 @@ contains
 !<
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
-      use common_hdf5, only: common_shortcuts
-      use constants,   only: dsetnamelen, I_ONE
-      use fluids_pub,  only: has_ion, has_neu, has_dst
-      use fluidindex,  only: flind
-      use fluidtypes,  only: component_fluid
-      use func,        only: ekin, emag, sq_sum3
-      use grid_cont,   only: grid_container
-      use mpisetup,    only: proc
+      use common_hdf5,      only: common_shortcuts
+      use constants,        only: dsetnamelen, I_ONE
+      use fluids_pub,       only: has_ion, has_neu, has_dst
+      use fluidindex,       only: flind
+      use fluidtypes,       only: component_fluid
+      use func,             only: ekin, emag, sq_sum3
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: proc
 #ifdef MAGNETIC
-      use constants,   only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX, I_EIGHT
-      use div_B,       only: divB_c_IO
-      use domain,      only: dom
-      use global,      only: cc_mag
+      use constants,        only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX, I_EIGHT
+      use div_B,            only: divB_c_IO
+      use domain,           only: dom
+      use global,           only: cc_mag
 #endif /* MAGNETIC */
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       use initcrspectrum,   only: dfpq
       use named_array_list, only: wna
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
+#ifdef COSM_RAYS
+      use cr_data,          only: cr_names, cr_spectral
+#endif /* COSM_RAYS */
+#ifndef ISO
+      use units,            only: kboltz, mH
+#endif /* !ISO */
 
       implicit none
 
-      character(len=dsetnamelen),     intent(in)  :: var
-      real, dimension(:,:,:),         intent(out) :: tab
-      integer,                        intent(out) :: ierrh
-      type(grid_container),  pointer, intent(in)  :: cg
+      character(len=dsetnamelen),      intent(in)    :: var
+      real, dimension(:,:,:), pointer, intent(inout) :: tab
+      integer,                         intent(out)   :: ierrh
+      type(grid_container),   pointer, intent(in)    :: cg
 
-      class(component_fluid), pointer             :: fl_dni, fl_mach
-      integer(kind=4)                             :: i_xyz
-      integer                                     :: ii, jj, kk
+      class(component_fluid), pointer                :: fl_dni, fl_mach
+      integer(kind=4)                                :: i_xyz
+      integer                                        :: ii, jj, kk
 #ifdef COSM_RAYS
-      integer                                     :: i
-      integer, parameter                          :: auxlen = dsetnamelen - 1
-      character(len=auxlen)                       :: aux
+      integer                                        :: i
+      integer, parameter                             :: auxlen = dsetnamelen - 1
+      character(len=auxlen)                          :: aux
 #endif /* COSM_RAYS */
-#define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
 
       call common_shortcuts(var, fl_dni, i_xyz)
       if (.not. associated(fl_dni)) tab = -huge(1.)
@@ -348,12 +361,10 @@ contains
       tab = 0.0
 
 #ifdef MAGNETIC
-      associate(emag_c => merge(emag(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
-           &                         cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
-           &                         cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)), &
-           &                    emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
-           &                         half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
-           &                         half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))), &
+      associate(emag_c => merge(emag(cg%b(xdim, RNG), cg%b(ydim, RNG),  cg%b(zdim, RNG)), &
+           &                    emag(half*(cg%b(xdim, RNG) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
+           &                         half*(cg%b(ydim, RNG) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
+           &                         half*(cg%b(zdim, RNG) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))), &
            &                    cc_mag))  ! fortran way of constructing ternary operators
 #else /* !MAGNETIC */
       associate(emag_c => 0.)
@@ -362,12 +373,14 @@ contains
 #ifdef COSM_RAYS
          case ("cr01" : "cr99")
             read(var,'(A2,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-#ifdef COSM_RAY_ELECTRONS
             tab(:,:,:) = cg%u(flind%crn%beg+i-1, RNG)
-#else /* ! COSM_RAY_ELECTRONS */
-            tab(:,:,:) = cg%u(flind%crs%beg+i-1, RNG)
-#endif /* !COSM_RAY_ELECTRONS */
-#ifdef COSM_RAY_ELECTRONS
+         case ('cr_A000' : 'cr_zz99')
+            do i = 1, size(cr_names)
+               if (var == trim('cr_' // cr_names(i))) exit
+            enddo
+            tab(:,:,:) = cg%u(flind%crn%beg+i-1-count(cr_spectral), RNG)
+#endif /* COSM_RAYS */
+#ifdef CRESP
          case ("cren01" : "cren99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = cg%u(flind%cre%nbeg+i-1, RNG)
@@ -383,8 +396,7 @@ contains
          case ("creq01" : "creq99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = cg%w(wna%ind(dfpq%q_nam))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
-#endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
+#endif /* CRESP */
 #ifdef TRACER
          case ("trcr")
             tab(:,:,:) = cg%u(flind%trc%beg, RNG)
@@ -429,6 +441,18 @@ contains
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) -          &
                  &       emag_c) / cg%u(flind%ion%idn, RNG)
 #endif /* !ISO */
+         case ("temn")
+#ifndef ISO
+            tab(:,:,:) = flind%neu%gam_1 * mH / kboltz * (cg%u(flind%neu%ien, RNG) - &
+                 &       ekin(cg%u(flind%neu%imx, RNG), cg%u(flind%neu%imy, RNG), cg%u(flind%neu%imz, RNG), cg%u(flind%neu%idn, RNG))) /         &
+                 &       cg%u(flind%neu%idn, RNG)
+#endif /* !ISO */
+         case ("temi")
+#ifndef ISO
+            tab(:,:,:) = flind%ion%gam_1 * mH / kboltz * (cg%u(flind%ion%ien, RNG) - &
+                 &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) -          &
+                 &       emag_c) / cg%u(flind%ion%idn, RNG)
+#endif /* !ISO */
 #ifdef MAGNETIC
          case ("magx", "magy", "magz")
             tab(:,:,:) = cg%b(xdim + i_xyz, RNG) ! beware: these are "raw", face-centered. Use them with care when you process plotfiles
@@ -451,7 +475,7 @@ contains
             tab(:,:,:) = divB_c_IO(cg, I_SIX,  .false.)
          case ("divbf8")
             tab(:,:,:) = divB_c_IO(cg, I_EIGHT,.false.)
-!! cell-centered div(B): RIEMANN dith divergence cleaning
+!! cell-centered div(B): RIEMANN with divergence cleaning
          case ("divbc")
             tab(:,:,:) = divB_c_IO(cg, I_TWO,  .true.)
          case ("divbc4")
@@ -461,7 +485,7 @@ contains
          case ("divbc8")
             tab(:,:,:) = divB_c_IO(cg, I_EIGHT,.true.)
 #endif /* MAGNETIC */
-         case ("v") ! perhaps this should be expanded to vi, vd or vd, depending on fluids present
+         case ("v") ! perhaps this should be expanded to vi, vn or vd, depending on fluids present
             nullify(fl_mach)
             if (has_ion) then
                fl_mach => flind%ion
@@ -521,23 +545,20 @@ contains
             ierrh = -1
       end select
       end associate
-#undef RNG
 
    end subroutine datafields_hdf5
 
 !
 ! ------------------------------------------------------------------------------------
 !
-   subroutine h5_write_to_single_file
+   subroutine h5_write_to_single_file(sequential)
 
-      use common_hdf5,     only: set_common_attributes
-      use constants,       only: cwdlen, I_ONE, tmr_hdf, PPP_IO
-      use dataio_pub,      only: printio, printinfo, nhdf, thdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
-         &                       msg, run_id, problem_name, use_v2_io, last_hdf_time
-      use mpisetup,        only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
+      use common_hdf5,     only: dump_announcement, dump_announce_time, set_common_attributes
+      use constants,       only: cwdlen, PPP_IO, HDF
+      use dataio_pub,      only: nhdf, use_v2_io, last_hdf_time
+      use mpisetup,        only: report_to_master, report_string_to_master
       use piernik_mpi_sig, only: sig
       use ppp,             only: ppp_main
-      use timer,           only: set_timer
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: unmark_oldsoln
 #endif /* MULTIGRID && SELF_GRAV */
@@ -547,22 +568,14 @@ contains
 
       implicit none
 
+      logical,         intent(in) :: sequential
       character(len=cwdlen)       :: fname
-      real                        :: phv
       character(len=*), parameter :: wrd_label = "IO_write_datafile_v1"
 
       call ppp_main%start(wrd_label, PPP_IO)
-      thdf = set_timer(tmr_hdf,.true.)
-      nhdf = nhdf + I_ONE
       ! Initialize HDF5 library and Fortran interfaces.
       !
-      phv = piernik_hdf5_version ; if (use_v2_io) phv = piernik_hdf5_version2
-      if (master) then
-         write(fname, '(2a,a1,a3,a1,i4.4,a3)') trim(wd_wr), trim(problem_name),"_", trim(run_id),"_", nhdf,".h5" !> \todo: merge with function restart_fname()
-         write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ',last_hdf_time,': Writing datafile v', phv, trim(fname), " ... "
-         call printio(msg, .true.)
-      endif
-      call piernik_MPI_Bcast(fname, cwdlen)
+      call dump_announcement(HDF, nhdf, fname, last_hdf_time, sequential)
 
       call set_common_attributes(fname)
       if (use_v2_io) then
@@ -574,11 +587,7 @@ contains
       call unmark_oldsoln
 #endif /* MULTIGRID && SELF_GRAV */
 
-      thdf = set_timer(tmr_hdf)
-      if (master) then
-         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
-         call printinfo(msg, .true.)
-      endif
+      call dump_announce_time
       call report_to_master(sig%hdf_written, only_master=.True.)
       call report_string_to_master(fname, only_master=.True.)
 #ifdef NBODY_1FILE
@@ -813,13 +822,13 @@ contains
                   ip = ip + 1
                   ! It is crashing due to FPE when there are more processes than blocks
                   ! because data_dbl contains too large values for single precision.
-                  ! If a process doesn't have a block, data_dbl serves justa as
-                  ! a placeholder to complete colective HDF5 calls.
+                  ! If a process doesn't have a block, data_dbl serves just as
+                  ! a placeholder to complete collective HDF5 calls.
                   !
                   ! Yes, something stinks here.
                   !
                   ! On uniform grid a process without a cg means that the user made an error and assigned too many processes for too little task.
-                  ! In AMR such situation may occur when in a large sumulation a massive derefinement happens.
+                  ! In AMR such situation may occur when in a large simulation a massive derefinement happens.
                   ! Usually it will mean that there is something wrong with refinement criteria but still the user
                   ! deserves to get the files, not a FPE crash.
                   if (h5_64bit .or. n < 1) then
@@ -898,11 +907,11 @@ contains
       ! Try some default names first
       call datafields_hdf5(hdf_var, tab, ierrh, cg)
 
-      ! Call user routines for user variables or quantites computed in user routines
+      ! Call user routines for user variables or quantities computed in user routines
       if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_var, tab, ierrh, cg)
 
       ! Check if a given name was registered in named arrays. This is lowest-priority identification.
-      if (ierrh /= 0) then  ! All simple scalar named arrays shoud be handled here
+      if (ierrh /= 0) then  ! All simple scalar named arrays should be handled here
          if (qna%exists(hdf_var)) then
             tab(:,:,:) = real(cg%q(qna%ind(hdf_var))%span(cg%ijkse), kind(tab))
             ierrh = 0
@@ -984,7 +993,7 @@ contains
       integer(kind=4)                   :: error                   !< error perhaps should be of type integer(HID_T)
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
-      real, pointer                     :: data (:,:,:)            !< Data to write
+      real, dimension(:,:,:), pointer   :: data                    !< Data to write
       integer(kind=4), parameter        :: rank = ndims            !< Dataset rank = 3
       integer(HID_T)                    :: dset_id                 !< Dataset identifier
       integer(HID_T)                    :: filespace               !< Dataspace identifier in file
@@ -1085,30 +1094,20 @@ contains
 
    end subroutine h5_write_to_single_file_v1
 
-   function h5_filename() result(f)
-      use constants,  only: fnamelen
-      use dataio_pub, only: problem_name, run_id, nhdf, wd_wr
-      use mpisetup,   only: proc
-      implicit none
-      character(len=fnamelen) :: f
-      write(f, '(2a,"_",a3,i4.4,".cpu",i5.5,".h5")') trim(wd_wr), trim(problem_name), trim(run_id), nhdf, proc
-   end function h5_filename
-
-   subroutine h5_write_to_multiple_files
+   subroutine h5_write_to_multiple_files(sequential)
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use common_hdf5, only: hdf_vars, hdf_vars_avail
-      use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE, tmr_hdf
-      use dataio_pub,  only: msg, printio, printinfo, thdf, last_hdf_time, piernik_hdf5_version
+      use common_hdf5, only: dump_announcement, dump_announce_time, hdf_vars, hdf_vars_avail
+      use constants,   only: cwdlen, dsetnamelen, xdim, ydim, zdim, HDF, I_ONE
+      use dataio_pub,  only: last_hdf_time, nhdf
       use grid_cont,   only: grid_container
       use h5lt,        only: h5ltmake_dataset_double_f
       use hdf5,        only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, h5gclose_f, HSIZE_T
-      use mpisetup,    only: master
-      use timer,       only: set_timer
 
       implicit none
 
+      logical,               intent(in) :: sequential
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
       integer(kind=4), parameter        :: rank = 3
@@ -1117,20 +1116,16 @@ contains
       integer(kind=8)                   :: ngc              !< current grid index
       integer(HSIZE_T), dimension(rank) :: dims
       character(len=dsetnamelen)        :: gname
-      character(len=fnamelen)           :: fname
-      real, pointer                     :: data (:,:,:)     !< Data to write
+      character(len=cwdlen)             :: fname
+      real, dimension(:,:,:), pointer   :: data             !< Data to write
 
-      thdf = set_timer(tmr_hdf,.true.)
-      fname = h5_filename()
-      if (master) then
-         write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ',last_hdf_time,': Writing datafile v', piernik_hdf5_version, trim(fname), " ... "
-         call printio(msg, .true.)
-      endif
+      call dump_announcement(HDF, nhdf, fname, last_hdf_time, sequential)
 
       call h5open_f(error)
       call h5fcreate_f(fname, H5F_ACC_TRUNC_F, file_id, error)
       cgl => leaves%first
       ngc = 0
+      nullify(data)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -1155,11 +1150,7 @@ contains
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
-      thdf = set_timer(tmr_hdf)
-      if (master) then
-         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
-         call printinfo(msg, .true.)
-      endif
+      call dump_announce_time
 
    end subroutine h5_write_to_multiple_files
 

@@ -45,7 +45,7 @@ module multigrid_diffusion
    implicit none
 
    private
-   public :: multigrid_diff_par, cleanup_multigrid_diff, multigrid_solve_diff
+   public :: multigrid_diff_par, cleanup_multigrid_diff, inworth_mg_diff
    public :: diff_tstep_fac, diff_explicit, diff_dt_crs_orig
 
    ! namelist parameters
@@ -265,7 +265,6 @@ contains
 !>
 !! \brief Cleanup
 !<
-
    subroutine cleanup_multigrid_diff
 
       implicit none
@@ -275,6 +274,40 @@ contains
 
    end subroutine cleanup_multigrid_diff
 
+   logical function inworth_mg_diff() result(exec_outside)
+
+      use all_boundaries, only: all_fluid_boundaries
+      use dataio_pub,     only: halfstep, msg, printinfo, warn
+      use global,         only: dt
+      use initcosmicrays, only: use_CRdiff
+      use mpisetup,       only: master
+      use multigridvars,  only: stdout
+
+      implicit none
+
+      logical, save :: frun = .true.
+
+      exec_outside = .false.
+      if (.not. use_CRdiff) return
+
+      exec_outside = (diff_explicit .or. (allow_explicit .and. dt / diff_dt_crs_orig < 1))
+
+      if (exec_outside) then
+         if (frun) then
+            if (master .and. diff_explicit) call warn("[multigrid_diffusion:inworth_mg_diff] Multigrid was initialized but is not used")
+            frun = .false.
+         endif
+      else
+         if (dt < 0.99999 * diff_dt_crs_orig * diff_tstep_fac .and. .not. halfstep .and. master) then
+            write(msg,'(a,f8.3,a)')"[multigrid_diffusion:inworth_mg_diff] Timestep limited somewhere else: dt = ", dt / diff_dt_crs_orig, " of explicit dt_crs."
+            call printinfo(msg, stdout)
+         endif
+         call multigrid_solve_diff
+         call all_fluid_boundaries
+      endif
+
+   end function inworth_mg_diff
+
 !!$ ============================================================================
 !>
 !! \brief Multigrid diffusion driver. This is the only multigrid routine intended to be called from the fluidupdate module.
@@ -283,74 +316,47 @@ contains
 
    subroutine multigrid_solve_diff
 
-      use constants,         only: xdim, ydim, zdim, zero, tmr_mgd
-      use crdiffusion,       only: cr_diff
-      use dataio_pub,        only: halfstep, warn, printinfo, msg
+      use constants,         only: zero, tmr_mgd
+      use dataio_pub,        only: msg, printinfo, warn
       use fluidindex,        only: flind
-      use global,            only: dt
       use func,              only: operator(.notequals.)
       use mpisetup,          only: master
       use multigrid_helpers, only: all_dirty
-      use multigridvars,     only: ts, tot_ts, stdout
+      use multigridvars,     only: ts, tot_ts
       use timer,             only: set_timer
 
       implicit none
 
-      logical, save :: frun = .true.
-      integer       :: cr_id         ! maybe we should make this variable global in the module and do not pass it as an argument?
+      integer :: cr_id         ! maybe we should make this variable global in the module and do not pass it as an argument?
 
       ts =  set_timer(tmr_mgd, .true.)
       call all_dirty
 
-      if (diff_explicit .or. (allow_explicit .and. dt/diff_dt_crs_orig<1)) then
+      ! set diffBC
+      call init_b
 
-         if (frun) then
-            if (master .and. diff_explicit) call warn("[multigrid_diffusion:multigrid_solve_diff] Multigrid was initialized but is not used")
-            frun = .false.
-         endif
-         if (halfstep) then
-            call cr_diff(zdim)
-            call cr_diff(ydim)
-            call cr_diff(xdim)
-         else
-            call cr_diff(xdim)
-            call cr_diff(ydim)
-            call cr_diff(zdim)
-         endif
-
-      else
-
-         if (dt < 0.99999 * diff_dt_crs_orig * diff_tstep_fac .and. .not. halfstep .and. master) then
-            write(msg,'(a,f8.3,a)')"[multigrid_diffusion:multigrid_solve_diff] Timestep limited somewhere else: dt = ",dt/diff_dt_crs_orig, " of explicit dt_crs."
-            call printinfo(msg, stdout)
-         endif
-
-         ! set diffBC
-         call init_b
-
-         do cr_id = 1, flind%crs%all
-            call init_source(cr_id)
-            if (vstat%norm_rhs .notequals. zero) then
-               if (norm_was_zero(cr_id) .and. master) then
-                  write(msg,'(a,i2.2,a)')"[multigrid_diffusion:multigrid_solve_diff] CR-fluid #", cr_id, " is now available in measurable quantities."
-                  call printinfo(msg)
-               endif
-               norm_was_zero(cr_id) = .false.
-
-               call init_solution(cr_id)
-               ! do substepping
-               call vcycle_hg(cr_id)
-               ! enddo
-            else
-               if (.not. norm_was_zero(cr_id) .and. master) then
-                  write(msg,'(a,i2.2,a)')"[multigrid_diffusion:multigrid_solve_diff] Source norm of CR-fluid #", cr_id, " == 0., skipping."
-                  call warn(msg)
-               endif
-               norm_was_zero(cr_id) = .true.
+      do cr_id = 1, flind%crs%all
+         call init_source(cr_id)
+         if (vstat%norm_rhs .notequals. zero) then
+            if (norm_was_zero(cr_id) .and. master) then
+               write(msg,'(a,i2.2,a)')"[multigrid_diffusion:multigrid_solve_diff] CR-fluid #", cr_id, " is now available in measurable quantities."
+               call printinfo(msg)
             endif
-         enddo
+            norm_was_zero(cr_id) = .false.
 
-      endif
+            call init_solution(cr_id)
+            ! do substepping
+            call vcycle_hg(cr_id)
+            ! enddo
+         else
+            if (.not. norm_was_zero(cr_id) .and. master) then
+               write(msg,'(a,i2.2,a)')"[multigrid_diffusion:multigrid_solve_diff] Source norm of CR-fluid #", cr_id, " == 0., skipping."
+               call warn(msg)
+            endif
+            norm_was_zero(cr_id) = .true.
+         endif
+      enddo
+
       ts = set_timer(tmr_mgd)
       tot_ts = tot_ts + ts
 
@@ -632,16 +638,11 @@ contains
 
    subroutine diff_flux(crdim, im, soln, cg, cr_id, Keff)
 
-      use constants,      only: xdim, ydim, zdim, ndims, oneq, GEO_XYZ, zero
-      use dataio_pub,     only: die
+      use constants,      only: xdim, ydim, zdim, ndims, oneq, zero
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use func,           only: operator(.notequals.)
-#ifdef COSM_RAY_ELECTRONS
-      use initcosmicrays, only: K_crn_perp, K_crn_paral
-#else /* !COSM_RAY_ELECTRONS */
       use initcosmicrays, only: K_crs_perp, K_crs_paral
-#endif /* !COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -658,26 +659,16 @@ contains
       integer(kind=4)                        :: idir
       logical, dimension(ndims)              :: present_not_crdim
 
-      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_diffusion:diff_flux] Unsupported geometry")
-
       ilm(:) = im(:) ; ilm(crdim) = ilm(crdim) - 1
       present_not_crdim(:) = dom%has_dir(:) .and. ( [ xdim,ydim,zdim ] /= crdim )
 
       ! Assumes dom%has_dir(crdim)
       !> \warning *cg%idl(crdim) makes a difference
-      d_par = (cg%q(soln)%arr(im(xdim), im(ydim), im(zdim)) - &
-           &   cg%q(soln)%arr(ilm(xdim), ilm(ydim), ilm(zdim))) * cg%idl(crdim)
-#ifdef COSM_RAY_ELECTRONS
-      fcrdif = K_crn_perp(cr_id) * d_par
-      if (present(Keff)) Keff = K_crn_perp(cr_id)
-
-      if (K_crn_paral(cr_id) .notequals. zero) then
-#else /* !COSM_RAY_ELECTRONS */
+      d_par = (cg%q(soln)%arr(im(xdim), im(ydim), im(zdim)) - cg%q(soln)%arr(ilm(xdim), ilm(ydim), ilm(zdim))) * cg%idl(crdim)
       fcrdif = K_crs_perp(cr_id) * d_par
       if (present(Keff)) Keff = K_crs_perp(cr_id)
 
       if (K_crs_paral(cr_id) .notequals. zero) then
-#endif /* !COSM_RAY_ELECTRONS */
 
          b_perp = 0.
          b_par = cg%q(idiffb(crdim))%arr(im(xdim), im(ydim), im(zdim))
@@ -700,11 +691,7 @@ contains
          enddo
 
          if (magb .notequals. zero) then
-#ifdef COSM_RAY_ELECTRONS
-            kbm = K_crn_paral(cr_id) * b_par / magb
-#else /* !COSM_RAY_ELECTRONS */
             kbm = K_crs_paral(cr_id) * b_par / magb
-#endif /* !COSM_RAY_ELECTRONS */
             fcrdif = fcrdif + kbm * db
             if (present(Keff)) Keff = Keff + kbm * b_par
          endif
@@ -725,8 +712,7 @@ contains
    subroutine residual(src, soln, def, cr_id)
 
       use cg_cost_data,      only: I_DIFFUSE
-      use constants,         only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ, PPP_MG, PPP_CR
-      use dataio_pub,        only: die
+      use constants,         only: xdim, ydim, zdim, ndims, LO, HI, PPP_MG, PPP_CR
       use domain,            only: dom
       use cg_list,           only: cg_list_element
       use cg_list_dataop,    only: ind_val
@@ -752,8 +738,6 @@ contains
       character(len=*), parameter :: crr_label = "CR:residual"
 
       call ppp_main%start(crr_label, PPP_MG + PPP_CR)
-
-      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_diffusion:diff_flux] Unsupported geometry")
 
       call leaves%leaf_arr3d_boundaries(soln, bnd_type = diff_extbnd)
 
@@ -805,8 +789,7 @@ contains
       use cg_cost_data,       only: I_DIFFUSE
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
-      use constants,          only: xdim, ydim, zdim, one, half, ndims, LO, GEO_XYZ, PPP_MG, PPP_CR
-      use dataio_pub,         only: die
+      use constants,          only: xdim, ydim, zdim, one, half, ndims, LO, PPP_MG, PPP_CR
       use domain,             only: dom
       use cg_list,            only: cg_list_element
       use global,             only: dt
@@ -833,8 +816,6 @@ contains
       character(len=*), parameter :: crs_label = "CR:approximate_solution"
 
       call ppp_main%start(crs_label, PPP_MG + PPP_CR)
-
-      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_diffusion:diff_flux] Unsupported geometry")
 
       if (associated(curl, coarsest%level)) then
          nsmoo = nsmoob

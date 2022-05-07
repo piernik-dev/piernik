@@ -137,7 +137,7 @@ contains
 #if defined(COSM_RAYS) && defined(IONIZED)
       call div_v(flind%ion%pos, cg)
 #endif /* COSM_RAYS && IONIZED */
-      if (.false. .and. cg%is_old) return ! to supress compiler warnings
+      if (.false. .and. cg%is_old) return ! to suppress compiler warnings
 
    end subroutine prepare_sources
 
@@ -162,10 +162,11 @@ contains
       use gravity,          only: grav_src_exec
 #endif /* GRAV */
 #ifdef COSM_RAYS
-      use sourcecosmicrays, only: src_gpcr_exec
-#ifdef COSM_RAYS_SOURCES
-      use sourcecosmicrays, only: src_crn_exec
-#endif /* COSM_RAYS_SOURCES */
+      use initcosmicrays,   only: use_CRdecay
+      use sourcecosmicrays, only: src_cr_spallation_and_decay
+#ifdef IONIZED
+      use sourcecosmicrays, only: src_gpcr
+#endif /* IONIZED */
 #endif /* COSM_RAYS */
 #ifdef CORIOLIS
       use coriolis,         only: coriolis_force
@@ -195,7 +196,7 @@ contains
       real, dimension(n, flind%all)                           :: usrc, newsrc       !< u array update from sources
       real, dimension(:,:), pointer                           :: vx
 
-      vx   => vel_sweep
+      vx => vel_sweep
 
       usrc = 0.0
 
@@ -222,21 +223,23 @@ contains
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #endif /* !GRAV */
 
-#if defined COSM_RAYS && defined IONIZED
-      call src_gpcr_exec(u, n, newsrc, sweep, i1, i2, cg, vx)
+#ifdef COSM_RAYS
+#ifdef IONIZED
+      call src_gpcr(u, n, newsrc, sweep, i1, i2, cg, vx)
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
-#ifdef COSM_RAYS_SOURCES
-      call src_crn_exec(u, n, newsrc, coeffdt) ! n safe
-      usrc(:,:) = usrc(:,:) + newsrc(:,:)
-#endif /* COSM_RAYS_SOURCES */
-#endif /* COSM_RAYS && IONIZED */
+#endif /* IONIZED */
+      if (use_CRdecay) then
+         call src_cr_spallation_and_decay(u, n, newsrc, coeffdt) ! n safe
+         usrc(:,:) = usrc(:,:) + newsrc(:,:)
+      endif
+#endif /* COSM_RAYS */
 
 ! --------------------------------------------------
 
       u1(:,:) = u1(:,:) + usrc(:,:) * coeffdt
 
       return
-      if (.false.) write(0,*) bb, istep
+      if (.false.) write(0,*) istep
 
    end subroutine internal_sources
 
@@ -439,11 +442,11 @@ contains
       use constants,      only: zero
       use fluidindex,     only: flind
       use global,         only: cr_negative, disallow_CRnegatives
-      use initcosmicrays, only: iarr_crs, smallecr, use_smallecr
-#ifdef COSM_RAY_ELECTRONS
-      use initcosmicrays, only: iarr_cre_e, iarr_cre_n, iarr_crn
-      use initcrspectrum,   only: smallcree, smallcren
-#endif /* COSM_RAY_ELECTRONS */
+      use initcosmicrays, only: iarr_crs, iarr_crn, smallecr, use_smallecr
+#ifdef CRESP
+      use initcosmicrays, only: iarr_cre_e, iarr_cre_n
+      use initcrspectrum, only: smallcree, smallcren
+#endif /* CRESP */
 
       implicit none
 
@@ -452,13 +455,11 @@ contains
 
       if (disallow_CRnegatives) cr_negative = cr_negative .or. (any(u1(:, iarr_crs(:)) < zero))
       if (use_smallecr) then
-#ifndef COSM_RAY_ELECTRONS
-         u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
-#else /* !COSM_RAY_ELECTRONS */
-         u1(:, iarr_crn(:)) = max(smallecr, u1(:, iarr_crn(:)))
+#ifdef CRESP
          u1(:, iarr_cre_n(:)) = max(smallcren, u1(:, iarr_cre_n(:)))        !< \deprecated BEWARE - this line refers to CRESP number density component
          u1(:, iarr_cre_e(:)) = max(smallcree, u1(:, iarr_cre_e(:)))
-#endif /* !COSM_RAY_ELECTRONS */
+#endif /* CRESP */
+         u1(:, iarr_crn(:)) = max(smallecr, u1(:, iarr_crn(:)))
       endif
 
    end subroutine limit_minimal_ecr

@@ -54,7 +54,7 @@
 !!      echo ppp 10 > msg
 !!   to enable profiling for 10 steps.
 !! Interacting with PPP via msg file will override the choice for use_profiling
-!! namelist parameter and can be uset to stop profiling and flush the data to the
+!! namelist parameter and can be used to stop profiling and flush the data to the
 !! output file and continue the simulation without interrupting. The profiling may
 !! be later turned on when needed. For example:
 !!    ./piernik -n "&PROFILING use_profiling = T/" &\
@@ -84,12 +84,12 @@ module ppp
    private
    public :: init_profiling, cleanup_profiling, update_profiling, ppp_main, umsg_request
 
-   ! namelist parametrs
+   ! namelist parameters
    logical :: watch_io         !< watch timers related to I/O
    logical :: watch_multigrid  !< watch timers related to multigrid
    logical :: watch_gravity    !< watch timers related to gravity
    logical :: watch_cr         !< watch timers related to cosmic rays
-   logical :: watch_particles  !< watch timers related to partiles
+   logical :: watch_particles  !< watch timers related to particles
    logical :: watch_MPI        !< watch timers related to communication
    logical :: watch_AMR        !< watch timers related to refinements
    logical :: watch_cg         !< watch timers related to single-cg operations

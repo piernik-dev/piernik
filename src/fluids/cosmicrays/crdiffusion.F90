@@ -95,7 +95,6 @@ contains
 
       if (.not. has_cr) return
 
-
       call ppp_main%start(awb_label, PPP_CR)
       call finest%level%restrict_to_base_w_1var(wna%ind(wcr_n))
       call leaves%leaf_arr4d_boundaries(wna%ind(wcr_n))

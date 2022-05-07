@@ -121,10 +121,10 @@ contains
          associate(cg => cgl%cg)
             do p = 1, flind%fluids
                associate(fl => flind%all_fluids(p)%fl)
-                  cg%u(fl%idn,:,:,:) = 0.0
-                  cg%u(fl%imx,:,:,:) = 0.0
-                  cg%u(fl%imy,:,:,:) = 0.0
-                  cg%u(fl%imz,:,:,:) = 0.0
+                  cg%u(fl%idn,RNG) = 0.0
+                  cg%u(fl%imx,RNG) = 0.0
+                  cg%u(fl%imy,RNG) = 0.0
+                  cg%u(fl%imz,RNG) = 0.0
                end associate
             enddo
          end associate
@@ -166,10 +166,10 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("errp")
-            tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(RNG)
          case ("relerr")
             where (cg%q(qna%ind(apot_n))%span(cg%ijkse) .notequals. 0.)
-               tab(:,:,:) = cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1.
+               tab(:,:,:) = cg%sgp(RNG)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1.
             elsewhere
                tab(:,:,:) = 0.
             endwhere

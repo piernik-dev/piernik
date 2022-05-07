@@ -69,10 +69,10 @@ contains
       implicit none
 
       finalize_problem           => calculate_error_norm
+      problem_customize_solution => calculate_error_norm_wrapper
 #ifdef HDF5
       user_vars_hdf5             => inid_var_hdf5
 #endif /* HDF5 */
-      problem_customize_solution => calculate_error_norm_wrapper
 
    end subroutine problem_pointers
 
@@ -221,7 +221,7 @@ contains
 
          call cg%set_constant_b_field([0., 0., 0.])
 
-         cg%u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         cg%u(flind%dst%idn, RNG) = cg%q(qna%ind(inid_n))%arr(RNG)
 
          select case (dom%geometry_type)
             case (GEO_XYZ)
@@ -295,11 +295,15 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine calculate_error_norm_wrapper(forward)
+
+      use global, only: nstep
+
       implicit none
+
       logical, intent(in) :: forward
-      call calculate_error_norm
-      return
-      if (.false. .and. forward) pulse_size = 0.0 ! suppress compiler warnings on unused arguments
+
+      if (forward .and. mod(nstep, norm_step) == 0) call calculate_error_norm
+
    end subroutine calculate_error_norm_wrapper
 
 !-----------------------------------------------------------------------------
@@ -308,10 +312,10 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX
-      use dataio_pub,       only: code_progress, halfstep, msg, printinfo, warn
+      use constants,        only: pSUM, pMIN, pMAX
+      use dataio_pub,       only: msg, printinfo, warn
       use fluidindex,       only: flind
-      use global,           only: t, nstep
+      use global,           only: t
       use grid_cont,        only: grid_container
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna
@@ -326,8 +330,6 @@ contains
       type(cg_list_element),  pointer   :: cgl
       type(grid_container),   pointer   :: cg
       real, dimension(:,:,:), pointer   :: inid
-
-      if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /= 0 .or. halfstep)) return
 
       norm = 0.
       neg_err = huge(1.0)
@@ -345,11 +347,11 @@ contains
             return
          endif
 
-         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-         norm(N_D) = norm(N_D) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         norm(N_2) = norm(N_2) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         neg_err   = min(neg_err, minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
-         pos_err   = max(pos_err, maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         cg%wa(RNG) = inid(RNG) - cg%u(flind%dst%idn, RNG)
+         norm(N_D) = norm(N_D) + sum(cg%wa(RNG)**2, mask=cg%leafmap)
+         norm(N_2) = norm(N_2) + sum(inid( RNG)**2, mask=cg%leafmap)
+         neg_err   = min(neg_err, minval(cg%wa(RNG), mask=cg%leafmap))
+         pos_err   = max(pos_err, maxval(cg%wa(RNG), mask=cg%leafmap))
 
          cgl => cgl%nxt
       enddo

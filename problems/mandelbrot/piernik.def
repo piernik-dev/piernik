@@ -1,12 +1,11 @@
-
-#if !defined IONIZED
-#  define  NEUTRAL
-#endif
-
 #if !defined GLOBAL_FR_SPEED
 #  define LOCAL_FR_SPEED
 #endif
 
 #define ISO
+
+#if !defined IONIZED
+#  define  NEUTRAL
+#endif
 
 #undef GRAV

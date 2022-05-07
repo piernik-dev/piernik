@@ -25,12 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#if defined GALAXY && defined SN_SRC
-#define SN_GALAXY
-#endif /* GALAXY && SN_SRC */
-#if defined COSM_RAYS && defined SN_SRC
-#define CR_SN
-#endif /* COSM_RAYS && SN_SRC */
 
 module initproblem
 
@@ -58,12 +52,16 @@ contains
 
    subroutine problem_pointers
 
-!      use gravity,    only: grav_accel
+#ifdef GRAV
+      use gravity,    only: grav_pot_3d
+#endif /* GRAV */
       use user_hooks, only: problem_customize_solution
 
       implicit none
 
-!      grav_accel                 => galactic_grav_accel
+#ifdef GRAV
+      grav_pot_3d => galactic_grav_pot_3d
+#endif /* GRAV */
       problem_customize_solution => supernovae_wrapper
 
    end subroutine problem_pointers
@@ -74,25 +72,22 @@ contains
 
       use dataio_pub, only: nh
       use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
-#ifdef GRAV
-      use gravity,    only: grav_pot_3d, user_grav
-#endif /* GRAV */
-#ifdef CR_SN
+#if defined(COSM_RAYS) && defined(SN_SRC)
       use snsources,  only: amp_ecr_sn
-#endif /* CR_SN */
+#endif /* COSM_RAYS && SN_SRC */
 
       implicit none
 
-      d0     = 1.0
-      bxn    = 0.0
-      byn    = 1.0
-      bzn    = 0.0
-      x0     = 0.0
-      y0     = 0.0
-      z0     = 0.0
-      alpha  = 0.0
-      amp_cr = 0.0
-      beta_cr= 0.0
+      d0      = 1.0
+      bxn     = 0.0
+      byn     = 1.0
+      bzn     = 0.0
+      x0      = 0.0
+      y0      = 0.0
+      z0      = 0.0
+      alpha   = 0.0
+      amp_cr  = 0.0
+      beta_cr = 0.0
 
       if (master) then
 
@@ -145,12 +140,9 @@ contains
       sn_pos = [x0,  y0,  z0 ]
       b_n    = [bxn, byn, bzn]
 
-#ifdef GRAV
-      if (user_grav) grav_pot_3d => galactic_grav_pot_3d
-#endif /* GRAV */
-#ifdef CR_SN
+#if defined(COSM_RAYS) && defined(SN_SRC)
       if (amp_cr < 0.) amp_cr = amp_ecr_sn
-#endif /* CR_SN */
+#endif /* COSM_RAYS && SN_SRC */
 
    end subroutine read_problem_par
 
@@ -171,19 +163,11 @@ contains
       use shear,          only: qshear, omega
 #endif /* SHEAR */
 #ifdef COSM_RAYS
-      use initcosmicrays, only: gamma_crn, iarr_crn
-#ifdef SN_GALAXY
-      use cr_data,        only: eCRSP, cr_table, icr_H1, icr_C12
-      use domain,         only: dom
-      use snsources,      only: r_sn
-#endif /* SN_GALAXY */
-#ifdef CR_SN
+      use initcosmicrays, only: gamma_cr_1, iarr_crn, iarr_crs
+#ifdef SN_SRC
       use snsources,      only: cr_sn
-#endif /* CR_SN */
+#endif /* SN_SRC */
 #endif /* COSM_RAYS */
-#ifdef GRAV
-      use gravity,        only: grav_pot_3d
-#endif /* GRAV */
 
       implicit none
 
@@ -192,20 +176,13 @@ contains
       real                            :: b0, csim2
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-#ifdef SN_GALAXY
-      real                            :: decr, x1, x2, y1, y2, z1
-#endif /* SN_GALAXY */
-
-#ifdef GRAV
-      call grav_pot_3d
-#endif /* GRAV */
 
 !   Secondary parameters
       fl => flind%ion
 
-      b0 = sqrt(2.*alpha*d0*fl%cs2)
+      b0 = sqrt(2. * alpha * d0 * fl%cs2)
+      csim2 = fl%cs2 * (1.0 + alpha)
 
-      csim2 = fl%cs2*(1.0+alpha)
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -215,35 +192,28 @@ contains
          j = cg%lhn(ydim,LO)
          call hydrostatic_zeq_densmid(i, j, d0, csim2)
 
+         cg%u(fl%imx, RNG) = 0.0
+         cg%u(fl%imy, RNG) = 0.0
+         cg%u(fl%imz, RNG) = 0.0
+#ifdef COSM_RAYS
+         cg%u(iarr_crs, RNG)  = 0.0
+#endif /* COSM_RAYS */
+
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+            cg%u(fl%idn,:,:,k) = max(smalld, dprof(k))
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-                  cg%u(fl%idn,i,j,k) = max(smalld, dprof(k))
 
-                  cg%u(fl%imx,i,j,k) = 0.0
-                  cg%u(fl%imy,i,j,k) = 0.0
-                  cg%u(fl%imz,i,j,k) = 0.0
 #ifdef SHEAR
-                  cg%u(fl%imy,i,j,k) = -qshear*omega*cg%x(i)*cg%u(fl%idn,i,j,k)
+                  cg%u(fl%imy,i,j,k) = -qshear * omega * cg%x(i) * cg%u(fl%idn,i,j,k)
 #endif /* SHEAR */
-
+                  cg%b(:,i,j,k) = b0 * sqrt(cg%u(fl%idn,i,j,k) / d0) * b_n / sqrt(sum(b_n**2))
 #ifndef ISO
-                  cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1) * cg%u(fl%idn,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
+                  cg%u(fl%ien,i,j,k) = fl%cs2 / fl%gam_1 * cg%u(fl%idn,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
+                                     & emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                  cg%u(iarr_crn,i,j,k)  = 0.0
-                  cg%u(iarr_crn(1),i,j,k) = beta_cr*fl%cs2 * cg%u(fl%idn,i,j,k)/( gamma_crn(1) - 1.0 )
-#ifdef SN_GALAXY
-! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
-                  if (any([eCRSP(icr_H1), eCRSP(icr_C12)])) then
-                     x1 = (cg%x(i)- x0)**2 ; x2 = (cg%x(i)-(x0+dom%L_(xdim)))**2
-                     y1 = (cg%y(j)- y0)**2 ; y2 = (cg%y(j)-(y0+dom%L_(ydim)))**2
-                     z1 = (cg%z(k)- z0)**2
-                     decr = amp_cr * (exp(-(x1 + y1 + z1)/r_sn**2) + exp(-(x2 + y1 + z1)/r_sn**2) + exp(-(x1 + y2 + z1)/r_sn**2) + exp(-(x2 + y2 + z1)/r_sn**2))
-                  endif
-                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k)= cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) +     decr
-                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k)= cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + 0.1*decr
-#endif /* SN_GALAXY */
+                  cg%u(iarr_crn(1),i,j,k) = beta_cr * fl%cs2 * cg%u(fl%idn,i,j,k) / gamma_cr_1
 #endif /* COSM_RAYS */
                enddo
             enddo
@@ -252,28 +222,9 @@ contains
          cgl => cgl%nxt
       enddo
 
-#ifdef CR_SN
-      call cr_sn(sn_pos,amp_cr)
-#endif /* CR_SN */
-
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-
-         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-                  cg%b(:,i,j,k) = b0*sqrt(cg%u(fl%idn,i,j,k)/d0) * b_n/sqrt(sum(b_n**2))
-#ifndef ISO
-                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
-#endif /* !ISO */
-               enddo
-            enddo
-         enddo
-
-         cgl => cgl%nxt
-      enddo
+#if defined(COSM_RAYS) && defined(SN_SRC)
+      call cr_sn(sn_pos, amp_cr)
+#endif /* COSM_RAYS && SN_SRC */
 
    end subroutine problem_initial_conditions
 
@@ -409,7 +360,6 @@ contains
       if (.false. .and. present(flatten)) k = 0 ! suppress compiler warnings
 
    end subroutine galactic_grav_pot
-
 #endif /* GRAV */
 
 end module initproblem
