@@ -26,6 +26,15 @@ def fsym(vmin, vmax):
     return vmn, vmx
 
 
+def execute_comparison(orig, comp, ctype):
+    if ctype == 1:
+        return orig - comp
+    elif ctype == 2:
+        return orig / comp
+    elif ctype == 3:
+        return (orig / comp ) - 1
+
+
 def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
     symmin = 1.0
     autoscale = False
@@ -122,13 +131,16 @@ def labelx():
     return lambda var: '$' + str(var)[2:-1].replace('**', '^') + '$'
 
 
-def labellog(sctype, symmin):
+def labellog(sctype, symmin, cmpr0):
     logname = ''
+    compare = ''
+    if cmpr0:
+        compare = '(compared) '
     if (sctype == '2' or sctype == 'log'):
         logname = 'log '
     elif (sctype == '3' or sctype == 'symlog'):
         logname = '{symmetry level = %8.3e} log ' % symmin
-    return logname
+    return logname + compare
 
 
 def take_nonempty(lst):
