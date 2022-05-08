@@ -34,6 +34,7 @@ OBJ_PREFIX=obj_
 GOLD_OBJ=${FLAT_PROBLEM_NAME}_gold
 TEST_OBJ=${FLAT_PROBLEM_NAME}_test
 GOLD_LOG=${OUT_DIR}${FLAT_PROBLEM_NAME}_gold_log
+GOLD_CSV=${OUT_DIR}${FLAT_PROBLEM_NAME}_gold.csv
 RIEM_LOG=${OUT_DIR}${FLAT_PROBLEM_NAME}_riem_log
 RIEM_CSV=${OUT_DIR}${FLAT_PROBLEM_NAME}_riem.csv
 TMP_DIR=/tmp/jenkins_gold/
@@ -128,6 +129,11 @@ cd - > /dev/null
 wait
 
 ./bin/gdf_distance ${RUNS_DIR}/${FLAT_PROBLEM_NAME}_{${TEST_OBJ},${GOLD_OBJ}}/${OUTPUT} 2>&1 | tee $GOLD_LOG
+grep 'Difference of datafield `' $GOLD_LOG |\
+    sed 's/.*`\([^ ]*\)[^ ] *: \(.*\)/\1 \2/' |\
+    awk '{a[$1]=$2} END {for (i in a) printf("log10(%s),", i); print ""; for (i in a) printf("%s,", (a[i]>0.)?(log(a[i])/log(10.)):1.) ; print ""}' |\
+    sed 's/,$//' |\
+    tee $GOLD_CSV
 
 if [ $RIEMANN == 0 ] ; then
     # The tool gdf_distance distance is supposed to return values in [0..1] range
@@ -147,3 +153,6 @@ if [ $RIEMANN == 0 ] ; then
 	) | tee $RIEM_CSV
     fi
 fi
+
+# Fail if gold distance is not 0.
+[ $( ( grep "^Total difference between" $GOLD_LOG || echo 1 ) | awk '{print $NF}' ) == 0 ] || exit 1
