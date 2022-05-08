@@ -1,6 +1,9 @@
 #!/bin/bash
 
-OUT_DIR=jenkins/goldexec/
+CONF_DIR=./jenkins/gold_configs
+
+# Set up the workspace
+OUT_DIR=./jenkins/goldexec/
 [ ! -d $OUT_DIR ] && mkdir -p $OUT_DIR
 [ ! -d $OUT_DIR ] && exit 1
 
@@ -10,13 +13,13 @@ which parallel > /dev/null 2>&1 || SERIAL=1
 
 if [ $SERIAL -ne 0 ] ; then
     echo "serial-gold"
-    for i in ./jenkins/gold_configs/*.config; do
+    for i in ${CONF_DIR}/*.config; do
 	echo "  $i"
-	eval "./jenkins/gold_test.sh $i > ${OUT_DIR}$( basename $i)'_gold_stdout'"
+	eval "./jenkins/gold_test.sh $i > ${OUT_DIR}$(basename $i)'_gold_stdout'"
     done
 else
     echo "parallel-gold"
-    parallel --load 70% --delay 10 eval "./jenkins/gold_test.sh {} > ${OUT_DIR}{/}'_gold_stdout'" ::: ./jenkins/gold_configs/*.config
+    parallel --load 70% --delay 10 eval "./jenkins/gold_test.sh {} > ${OUT_DIR}{/}'_gold_stdout'" ::: ${CONF_DIR}/*.config
 fi
 
 # Create the .csv file with norms for Jenkins
@@ -26,7 +29,7 @@ for j in gold riem ; do
 	 ("riem") jj="Riemann" ;;
 	 (*) jj="___" ;;
     esac
-    for i in ./jenkins/gold_configs/*.config ; do
+    for i in ${CONF_DIR}/*.config ; do
     	eval $( grep PROBLEM_NAME $i )
 	PROBLEM_NAME=${PROBLEM_NAME//\//___}
 
@@ -50,14 +53,12 @@ done
 
 # Print the results
 for i in ${OUT_DIR}*_gold_log ; do
-     grep "You must make yt available somehow" $i || (
-	 gdist=$( tail -n 1 $i | awk '{print $NF}' )
-	 printf "%-50s = %s\n" "[GOLD] Total difference for ${i/_gold_log/}" $gdist
-	 [ ${gdist} != "0" ] && sed -n '/^Difference of /s/^Diff/    Diff/p' $i
-     )
+    gdist=$( tail -n 1 $i | awk '{print $NF}' )
+    printf "%-50s = %s\n" "[GOLD] Total difference for ${i/_gold_log/}" $gdist
+    [ ${gdist} != "0" ] && sed -n '/^Difference of /s/^Diff/    Diff/p' $i
 done
 for i in ${OUT_DIR}*_riem_log ; do
-     grep "You must make yt available somehow" $i || printf "%-50s = %s\n" "[Riemann] Total difference for ${i/_riem_log/}" $( tail -n 1 $i | awk '{print $NF}' )
+    printf "%-50s = %s\n" "[Riemann] Total difference for ${i/_riem_log/}" $( tail -n 1 $i | awk '{print $NF}' )
 done
 
 # Fail if any gold distance is not 0.
