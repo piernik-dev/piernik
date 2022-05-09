@@ -107,7 +107,7 @@ gold-serial:
 	SERIAL=1 ./jenkins/gold_test_list.sh
 
 gold-clean:
-	\rm -rf jenkins/goldexec/* /tmp/jenkins_gold/*
+	\rm -rf jenkins/workspace/*
 
 doxy:
 	doxygen piernik.doxy

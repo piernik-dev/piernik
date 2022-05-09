@@ -81,7 +81,7 @@ while not all_finished:
                 waiting = False
                 if not j["status"]:
                     if "gold%20CI" in j["name"]:
-                        gold_url = base_job + "/job/" + j["name"] + "/lastBuild/artifact/jenkins/goldexec/gold.txt"
+                        gold_url = base_job + "/job/" + j["name"] + "/lastBuild/artifact/jenkins/workspace/gold.txt"
                         gold_out = requests.get(gold_url)
                         if "HTTP ERROR 404" in gold_out.text:
                             print("Unable to retrieve GDF distances")

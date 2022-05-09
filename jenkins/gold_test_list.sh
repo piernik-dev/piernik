@@ -3,7 +3,7 @@
 CONF_DIR=./jenkins/gold_configs
 
 # Set up the workspace
-OUT_DIR=./jenkins/goldexec/
+OUT_DIR=./jenkins/workspace/
 [ ! -d $OUT_DIR ] && mkdir -p $OUT_DIR
 [ ! -d $OUT_DIR ] && exit 1
 
@@ -33,7 +33,7 @@ for j in gold riem ; do
     	eval $( grep PROBLEM_NAME $i )
 	PROBLEM_NAME=${PROBLEM_NAME//\//___}
 
-    	LOG=${OUT_DIR}${PROBLEM_NAME}_${j}_log
+	LOG=${OUT_DIR}${PROBLEM_NAME}/${j}_log
 	if [ -e $LOG ] ; then
            echo ${PROBLEM_NAME}_${jj}" "$( tail -n 1 $LOG | awk '{print $NF}' )
     	else
@@ -52,16 +52,16 @@ for j in gold riem ; do
 done
 
 # Print the results
-for i in ${OUT_DIR}*_gold_log ; do
+for i in ${OUT_DIR}*/gold_log ; do
     gdist=$( tail -n 1 $i | awk '{print $NF}' )
     printf "%-50s = %s\n" "[GOLD] Total difference for ${i/_gold_log/}" $gdist
     [ ${gdist} != "0" ] && sed -n '/^Difference of /s/^Diff/    Diff/p' $i
 done
-for i in ${OUT_DIR}*_riem_log ; do
+for i in ${OUT_DIR}*/riem_log ; do
     printf "%-50s = %s\n" "[Riemann] Total difference for ${i/_riem_log/}" $( tail -n 1 $i | awk '{print $NF}' )
 done
 
 # Fail if any gold distance is not 0.
-for i in ${OUT_DIR}*_gold_log ; do
+for i in ${OUT_DIR}*/gold_log ; do
     [ $( ( grep "^Total difference between" $i || echo 1 ) | awk '{print $NF}' ) == 0 ] || exit 1
 done
