@@ -45,6 +45,14 @@ for i in ("3-body%20CI", "64-bit%20int%20CR%20test%20CI", "dep.png%20CI", "IO%20
     jobs.append({"name": i, "finished": False})
     longestkey = max(longestkey, len(i.replace("%20", " ")))
 
+problem_dirs = {"streaming%20instability%20gold%20CI": "streaming_global",
+                "resist%20gold%20CI": "tearing",
+                "CRESP%20gold%20CI": "mcrtest___mcrtest_cresp",
+                "MHD%20sedov%20AMR%20gold%20CI": "sedov___MHD_blast_wave",
+                "mcrwind%20gold%20CI": "mcrwind",
+                "mcrtest%20gold%20CI": "mcrtest"}
+# "user_gold%20CI" is not very predictable, so we don't handle it here
+
 print((c_white + fmt + c_reset) % (" " * w_len, longestkey, "Test", "SHA1", "PR#", "branch", "status"))
 
 waiting = False
@@ -81,12 +89,15 @@ while not all_finished:
                 waiting = False
                 if not j["status"]:
                     if "gold%20CI" in j["name"]:
-                        gold_url = base_job + "/job/" + j["name"] + "/lastBuild/artifact/jenkins/workspace/gold.txt"
-                        gold_out = requests.get(gold_url)
-                        if "HTTP ERROR 404" in gold_out.text:
-                            print("Unable to retrieve GDF distances")
-                        else:
-                            print(gold_out.text)
+                        try:
+                            gold_url = base_job + "/job/" + j["name"] + "/lastBuild/artifact/jenkins/workspace/" + problem_dirs[j["name"]] + "/gold_log"
+                            gold_out = requests.get(gold_url)
+                            if "HTTP ERROR 404" in gold_out.text:
+                                print("Unable to retrieve GDF distances")
+                            else:
+                                print(gold_out.text)
+                        except KeyError:
+                            print("Problems with 'user gold CI' must be inspected manually")
 
         all_finished = all_finished and j["finished"]
 
