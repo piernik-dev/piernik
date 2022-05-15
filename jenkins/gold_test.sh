@@ -96,7 +96,7 @@ mkdir -p $TEST_DIR
 
 # Prepare object from current files (including any uncommited or untracked changes)
 python setup $PROBLEM_NAME $SETUP_PARAMS -o $FLAT_PROBLEM_NAME  # prepares $OBJ in $BASE_DIR
-cp -a ${OBJ} ${TEST_DIR}
+mv ${OBJ} ${TEST_DIR}
 # OPT: By careful updating ${TEST_DIR}${OBJ} one can achieve some speedups on compilation
 
 # Copy whole directories from appropriate runs directories in case there is something more than piernik and problem.par
