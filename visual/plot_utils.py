@@ -32,7 +32,7 @@ def execute_comparison(orig, comp, ctype):
     elif ctype == 2:
         return orig / comp
     elif ctype == 3:
-        return (orig / comp ) - 1
+        return (orig / comp) - 1
 
 
 def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
