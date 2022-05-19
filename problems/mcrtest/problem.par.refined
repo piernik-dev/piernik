@@ -1,4 +1,4 @@
-! based on problem.par.build2
+! based on problem.par.gold
 
  $BASE_DOMAIN
     n_d = 32, 32, 1

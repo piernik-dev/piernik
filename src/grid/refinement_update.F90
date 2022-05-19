@@ -514,7 +514,7 @@ contains
 
             cgl => curl%first
             do while (associated(cgl))
-               if (any(cgl%cg%leafmap)) then
+               if (cgl%cg%has_leaves()) then
                   if (cgl%cg%flag%pending_blocks()) then
                      call refine_one_grid(curl, cgl)
                      if (present(act_count)) act_count = act_count + 1
@@ -761,7 +761,7 @@ contains
 
       integer :: b
 
-      if (.not. any(cgl%cg%leafmap)) then
+      if (.not. cgl%cg%has_leaves()) then
          call warn("[refinement_update:refine_one_grid] Attempting to refine a grid that is completely refined")
          return
       endif
@@ -859,7 +859,7 @@ contains
             call cg%flag%reset_blocks
             call cg%flag%clear
 
-            if (any(cg%leafmap)) then
+            if (cg%has_leaves()) then
                cg%prolong_xyz = OUTSIDE
                lleaf = -huge(1)
 

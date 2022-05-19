@@ -90,6 +90,8 @@ $BASE_DOMAIN
     synch_active      = .true.
     adiab_active      = .true.
     force_init_NR     = .true.	! < force solving for new solution maps, regardless of detecting existing ones
+
+    arr_dim = 100  ! < approx. 20× faster initialization than the default
 /
 
  $CR_SPECIES
