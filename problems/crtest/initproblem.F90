@@ -202,7 +202,6 @@ contains
       implicit none
 
       class(component_fluid), pointer :: fl
-      !real                            :: cs_iso
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
 
@@ -221,8 +220,6 @@ contains
       fl => flind%ion
 
 ! Uniform equilibrium state
-
-      !cs_iso = sqrt(p0/d0)
 
       cgl => leaves%first
       do while (associated(cgl))

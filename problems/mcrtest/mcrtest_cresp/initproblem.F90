@@ -59,23 +59,23 @@ contains
 
       implicit none
 
-      d0             = 1.0e5       !< density
-      p0             = 1.0         !< pressure
-      bx0            =   0.        !< Magnetic field component x
-      by0            =   0.        !< Magnetic field component y
-      bz0            =   0.        !< Magnetic field component z
-      x0             = 0.0         !< x-position of the blob
-      y0             = 0.0         !< y-position of the blob
-      z0             = 0.0         !< z-position of the blob
+      d0             = 1.0e5         !< density
+      p0             = 1.0           !< pressure
+      bx0            =   0.          !< Magnetic field component x
+      by0            =   0.          !< Magnetic field component y
+      bz0            =   0.          !< Magnetic field component z
+      x0             = 0.0           !< x-position of the blob
+      y0             = 0.0           !< y-position of the blob
+      z0             = 0.0           !< z-position of the blob
       r0             = 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))  !< radius of the blob
-      vxd0           = 0.0         !< initial velocity_x, refers to whole domain
-      vyd0           = 0.0         !< initial velocity_y, refers to whole domain
-      vzd0           = 0.0         !< initial velocity_z, refers to whole domain
+      vxd0           = 0.0           !< initial velocity_x, refers to whole domain
+      vyd0           = 0.0           !< initial velocity_y, refers to whole domain
+      vzd0           = 0.0           !< initial velocity_z, refers to whole domain
       expansion_cnst = 0.0
 
-      beta_cr        = 0.0         !< ambient level
-      amp_cr1        = 1.0         !< amplitude of the blob
-      amp_cr2        = 0.1*amp_cr1 !< amplitude for the second species
+      beta_cr        = 0.0           !< ambient level
+      amp_cr1        = 1.0           !< amplitude of the blob
+      amp_cr2        = 0.1 * amp_cr1 !< amplitude for the second species
 
       if (master) then
 
@@ -171,7 +171,7 @@ contains
       class(component_fluid), pointer :: fl
       integer                         :: i, j, k, icr, ipm, jpm, kpm
       integer, dimension(ndims,LO:HI) :: mantle
-      real                            :: cs_iso, decr, r2, maxv
+      real                            :: decr, r2, maxv
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
 #ifdef CRESP
@@ -181,8 +181,6 @@ contains
       fl => flind%ion
 
 ! Uniform equilibrium state
-
-      cs_iso = sqrt(p0/d0)
 
       if (.not.dom%has_dir(xdim)) bx0 = 0. ! ignore B field in nonexistent direction
       if (.not.dom%has_dir(ydim)) by0 = 0.
@@ -255,8 +253,8 @@ contains
                         enddo
                      enddo
                   enddo
-                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) + amp_cr1*decr
-                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) + amp_cr2*decr
+                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) + amp_cr1 * decr
+                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) + amp_cr2 * decr
 #ifdef CRESP
 ! Explosions @CRESP independent of cr nucleons
                   e_tot = amp_cr1 * cre_eff * decr

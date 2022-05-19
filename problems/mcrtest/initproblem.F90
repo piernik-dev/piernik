@@ -59,19 +59,19 @@ contains
 
       implicit none
 
-      d0             = 1.0e5       !< density
-      p0             = 1.0         !< pressure
-      bx0            =   0.        !< Magnetic field component x
-      by0            =   0.        !< Magnetic field component y
-      bz0            =   0.        !< Magnetic field component z
-      x0             = 0.0         !< x-position of the blob
-      y0             = 0.0         !< y-position of the blob
-      z0             = 0.0         !< z-position of the blob
+      d0             = 1.0e5         !< density
+      p0             = 1.0           !< pressure
+      bx0            =   0.          !< Magnetic field component x
+      by0            =   0.          !< Magnetic field component y
+      bz0            =   0.          !< Magnetic field component z
+      x0             = 0.0           !< x-position of the blob
+      y0             = 0.0           !< y-position of the blob
+      z0             = 0.0           !< z-position of the blob
       r0             = 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))  !< radius of the blob
 
-      beta_cr        = 0.0         !< ambient level
-      amp_cr1        = 1.0         !< amplitude of the blob
-      amp_cr2        = 0.1*amp_cr1 !< amplitude for the second species
+      beta_cr        = 0.0           !< ambient level
+      amp_cr1        = 1.0           !< amplitude of the blob
+      amp_cr2        = 0.1 * amp_cr1 !< amplitude for the second species
 
       if (master) then
 
@@ -165,8 +165,6 @@ contains
 
 ! Uniform equilibrium state
 
-      !cs_iso = sqrt(p0/d0)
-
       if (.not.dom%has_dir(xdim)) bx0 = 0. ! ignore B field in nonexistent direction
       if (.not.dom%has_dir(ydim)) by0 = 0.
       if (.not.dom%has_dir(zdim)) bz0 = 0.
@@ -216,8 +214,8 @@ contains
                         enddo
                      enddo
                   enddo
-                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) + amp_cr1*decr
-                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) + amp_cr2*decr
+                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) + amp_cr1 * decr
+                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) + amp_cr2 * decr
                enddo
             enddo
          enddo
