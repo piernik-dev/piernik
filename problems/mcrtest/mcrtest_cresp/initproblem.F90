@@ -148,17 +148,20 @@ contains
       use cg_cost_data,   only: I_IC
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: ndims, xdim, ydim, zdim, LO, HI, pMAX, BND_PER
-      use dataio_pub,     only: msg, warn, printinfo
+      use constants,      only: xdim, ydim, zdim
+      use dataio_pub,     only: msg, printinfo
       use domain,         only: dom
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
-      use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
+      use func,           only: ekin, emag
       use grid_cont,      only: grid_container
-      use mpisetup,       only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS
+      use constants,      only: ndims, LO, HI, pMAX, BND_PER
       use cr_data,        only: eCRSP, icr_H1, icr_C12, cr_index
+      use dataio_pub,     only: warn
+      use func,           only: operator(.equals.), operator(.notequals.)
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
+      use mpisetup,       only: master, piernik_MPI_Allreduce
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
@@ -169,11 +172,13 @@ contains
       implicit none
 
       class(component_fluid), pointer :: fl
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
+#ifdef COSM_RAYS
       integer                         :: i, j, k, icr, ipm, jpm, kpm
       integer, dimension(ndims,LO:HI) :: mantle
       real                            :: decr, r2, maxv
-      type(cg_list_element),  pointer :: cgl
-      type(grid_container),   pointer :: cg
+#endif /* COSM_RAYS */
 #ifdef CRESP
       real                            :: e_tot
 #endif /* CRESP */
@@ -192,12 +197,12 @@ contains
          K_cr_paral(:) = 0.
          K_cr_perp(:)  = 0.
       endif
-#endif /* COSM_RAYS */
 
       mantle = 0
       do i = xdim, zdim
          if (any(dom%bnd(i,:) == BND_PER)) mantle(i,:) = [-1,1] !> for periodic boundary conditions
       enddo
+#endif /* COSM_RAYS */
 
       cgl => leaves%first
       do while (associated(cgl))

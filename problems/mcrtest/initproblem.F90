@@ -153,13 +153,13 @@ contains
       implicit none
 
       class(component_fluid), pointer :: fl
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 #ifdef COSM_RAYS
       integer                         :: i, j, k, icr, ipm, jpm, kpm
       integer, dimension(ndims,LO:HI) :: mantle
       real                            :: decr, r2, maxv
 #endif /* COSM_RAYS */
-      type(cg_list_element),  pointer :: cgl
-      type(grid_container),   pointer :: cg
 
       fl => flind%ion
 
