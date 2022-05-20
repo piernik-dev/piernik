@@ -282,6 +282,13 @@ contains
          enddo
       endif
 
+      if (master) then
+         write(msg, '(a,i3)') 'Total amount of CR species: ', ncrsp
+         if (count(cr_spectral) > 0) write(msg, '(a,a,i3,a)') trim(msg), ' | ', count(cr_spectral), ' spectral component(s)'
+         if (ncrsp - ncrsp_auto > 0) write(msg, '(a,a,i3,a)') trim(msg), ' | ', ncrsp - ncrsp_auto, ' user component(s).'
+         call printinfo(msg)
+      endif
+
       if (eCRSP(icr_C12)) then
          cr_primary(cr_table(icr_C12)) = primary_C12
          if (eCRSP(icr_Li7 )) cr_sigma(cr_table(icr_C12), cr_table(icr_Li7 )) = sigma_C12_Li7
