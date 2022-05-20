@@ -268,7 +268,7 @@ contains
             endif
             cr_gpess(icr)    = eCRSP_ess(i)
             if (master) then
-               write(msg,'(a,a,l2)') eCRSP_names(i), 'CR species is present; taken into account for grad_pcr: ', eCRSP_ess(i)
+               write(msg,'(a,a,a,l2)') spectral_or_not(cr_spectral(icr)), eCRSP_names(i), 'CR species is present; taken into account for grad_pcr: ', eCRSP_ess(i)
                call printinfo(msg)
             endif
          endif
@@ -277,7 +277,7 @@ contains
       if (ncrsp_auto < ncrsp) then
          cr_gpess(ncrsp_auto+1:ncrsp) = crness
          do i = ncrsp_auto+1, ncrsp
-            write(msg,'(a,i2,a,l2)') 'user CR species no: ', i,' is present; taken into account for grad_pcr: ', cr_gpess(i)
+            write(msg,'(a,a,i2,a,l2)') spectral_or_not(cr_spectral(i)), 'user CR species no: ', i,' is present; taken into account for grad_pcr: ', cr_gpess(i)
             if (master) call printinfo(msg)
          enddo
       endif
@@ -302,6 +302,22 @@ contains
       if (eCRSP(icr_Be10)) cr_tau(cr_table(icr_Be10)) = tau_Be10 * myr
 
    end subroutine cr_species_tables
+
+   function spectral_or_not(sp) result(wr)
+
+      implicit none
+
+      logical, intent(in) :: sp
+      integer, parameter  :: spl = 13
+      character(len=spl)  :: wr
+
+      if (sp) then
+         wr = '    spectral '
+      else
+         wr = 'non-spectral '
+      endif
+
+   end function spectral_or_not
 
 !> \brief cleanup routine
 
