@@ -44,7 +44,7 @@ module initcosmicrays
 
    integer, parameter                  :: ncr_max = 102  !< maximum number of CR nuclear and electron components (\warning higher ncr_max limit would require changes in names of components in common_hdf5)
    ! namelist parameters
-   integer(kind=4)                     :: ncrsp        !< number of CR nuclear  components \deprecated BEWARE: ncrtot (sum of ncrsp and ncr2b) should not be higher than ncr_max = 102
+   integer(kind=4)                     :: ncrsp        !< number of CR components \deprecated BEWARE: ncrtot (sum of ncrsp and ncr2b) should not be higher than ncr_max = 102
    integer(kind=4)                     :: ncrn         !< number of CR non-spectral components
    integer(kind=4)                     :: nspc         !< number of CR spectral components
    integer(kind=4)                     :: ncrb         !< number of bins for CRESP
@@ -109,7 +109,7 @@ contains
    subroutine init_cosmicrays
 
       use constants,       only: cbuff_len, I_ONE, I_TWO, half, big
-      use cr_data,         only: init_cr_species, cr_spectral
+      use cr_data,         only: init_cr_species, cr_species_tables, cr_spectral
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: die, warn, nh
       use func,            only: operator(.notequals.)
@@ -122,6 +122,8 @@ contains
 
       namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRdiff, use_CRdecay, divv_scheme, &
            &                 gamma_cr, K_cr_paral, K_cr_perp, ncrsp, ncrb, cr_gpcr_ess
+
+      call init_cr_species
 
       cfl_cr         = 0.9
       smallecr       = 0.0
@@ -234,7 +236,7 @@ contains
 
       gamma_cr_1 = gamma_cr - 1.0
 
-      call init_cr_species(ncrsp, nspc, ncrn, cr_gpcr_ess)
+      call cr_species_tables(ncrsp, nspc, ncrn, cr_gpcr_ess)
 
       ncr2b  = I_TWO * ncrb
       ncrtot = ncr2b + ncrn

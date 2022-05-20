@@ -139,22 +139,12 @@ contains
 !! The list is active while \b "COSM_RAYS" is defined.
 !! \n \n
 !<
-   subroutine init_cr_species(ncrsp, nspc, ncrn, crness)
+   subroutine init_cr_species
 
-      use dataio_pub, only: msg, printinfo, die, nh
+      use dataio_pub, only: nh
       use mpisetup,   only: lbuff, master, slave, piernik_MPI_Bcast
-      use units,      only: me, mp, myr, mbarn
 
       implicit none
-
-      integer(kind=4),       intent(in)    :: ncrsp
-      integer(kind=4),       intent(out)   :: nspc, ncrn
-      logical, dimension(:), intent(inout) :: crness
-
-      integer                                    :: i, icr, jcr
-      character(len=specieslen), dimension(nicr) :: eCRSP_names
-      logical,                   dimension(nicr) :: eCRSP_ess, eCRSP_spec
-      real,                      dimension(nicr) :: eCRSP_mass
 
       namelist /CR_SPECIES/ eE, eH1, eLi7, eBe9, eBe10, eC12, eN14, eO16
 
@@ -221,9 +211,29 @@ contains
 
 #undef VS
 
+      eCRSP(1:nicr) = [eE(PRES), eH1(PRES), eC12(PRES), eBe9(PRES), eBe10(PRES), eN14(PRES), eO16(PRES), eLi7(PRES)]
+
+   end subroutine init_cr_species
+
+   subroutine cr_species_tables(ncrsp, nspc, ncrn, crness)
+
+      use dataio_pub, only: msg, printinfo, die, nh
+      use mpisetup,   only: master
+      use units,      only: me, mp, myr, mbarn
+
+      implicit none
+
+      integer(kind=4),       intent(in)    :: ncrsp
+      integer(kind=4),       intent(out)   :: nspc, ncrn
+      logical, dimension(:), intent(inout) :: crness
+
+      integer                                    :: i, icr, jcr
+      character(len=specieslen), dimension(nicr) :: eCRSP_names
+      logical,                   dimension(nicr) :: eCRSP_ess, eCRSP_spec
+      real,                      dimension(nicr) :: eCRSP_mass
+
       eCRSP_names(1:nicr) = ['e-  ', 'p+  ', 'C12 ', 'Be9 ', 'Be10', 'N14 ', 'O16 ', 'Li7 ']
       eCRSP_mass (1:nicr) = [me/mp,  m_H1,   m_C12,   m_Be9, m_Be10, m_N14,  m_O16,  m_Li7 ]
-      eCRSP      (1:nicr) = [eE(PRES), eH1(PRES), eC12(PRES), eBe9(PRES), eBe10(PRES), eN14(PRES), eO16(PRES), eLi7(PRES)]
       eCRSP_ess  (1:nicr) = [eE(ESS) , eH1(ESS) , eC12(ESS) , eBe9(ESS) , eBe10(ESS) , eN14(ESS) , eO16(ESS) , eLi7(ESS) ]
       eCRSP_spec (1:nicr) = [eE(SPEC), eH1(SPEC), eC12(SPEC), eBe9(SPEC), eBe10(SPEC), eN14(SPEC), eO16(SPEC), eLi7(SPEC)]
 
@@ -291,7 +301,7 @@ contains
       cr_sigma = cr_sigma * mbarn
       if (eCRSP(icr_Be10)) cr_tau(cr_table(icr_Be10)) = tau_Be10 * myr
 
-   end subroutine init_cr_species
+   end subroutine cr_species_tables
 
 !> \brief cleanup routine
 
