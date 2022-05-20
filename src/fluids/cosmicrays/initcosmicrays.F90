@@ -283,7 +283,7 @@ contains
 
       ma1d = [ int(count(cr_gpess .and. .not.cr_spectral), kind=4) ]
       call my_allocate(gpcr_ess_noncresp, ma1d)
-      gpcr_ess_noncresp = pack([(icr, icr = I_ONE, ncrsp)], mask=(cr_gpess .and. .not.cr_spectral))
+      gpcr_ess_noncresp = pack([(icr, icr = I_ONE, count(.not.cr_spectral))], mask=(pack(cr_gpess, mask=(.not.cr_spectral))))
 
       def_dtcrs = big
       maxKcrs = maxval(K_cr_paral(1:ncrsp) + K_cr_perp(1:ncrsp), mask=.not.cr_spectral)
