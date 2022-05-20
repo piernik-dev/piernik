@@ -217,7 +217,7 @@ contains
 
    subroutine cr_species_tables(ncrsp, nspc, ncrn, crness)
 
-      use dataio_pub, only: msg, printinfo, die, nh
+      use dataio_pub, only: msg, printinfo, die
       use mpisetup,   only: master
       use units,      only: me, mp, myr, mbarn
 
@@ -247,7 +247,6 @@ contains
       cr_spectral(:) = .false.
 
       icr = 0 ; jcr = 0
-      if (count(eCRSP) > ncrsp) call die("[cr_data:init_cr_species] You have specified more CR species present than is set by ncrsp. Check your CR_SPECIES and COSMIC_RAYS namelists parameters")
       do i = icr_E, size(eCRSP)
          if (eCRSP(i)) then
             icr = icr + 1
