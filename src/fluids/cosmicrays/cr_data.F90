@@ -218,7 +218,7 @@ contains
 
    end subroutine init_cr_species
 
-   subroutine cr_species_tables(ncrsp, nspc, ncrn, crness)
+   subroutine cr_species_tables(ncrsp, crness)
 
       use dataio_pub, only: msg, printinfo, die
       use mpisetup,   only: master
@@ -227,7 +227,6 @@ contains
       implicit none
 
       integer(kind=4),       intent(in)    :: ncrsp
-      integer(kind=4),       intent(out)   :: nspc, ncrn
       logical, dimension(:), intent(inout) :: crness
 
       integer                                    :: i, icr, jcr
@@ -282,9 +281,6 @@ contains
             if (master) call printinfo(msg)
          enddo
       endif
-
-      nspc = count(cr_spectral, kind=4)
-      ncrn = ncrsp - nspc
 
       if (eCRSP(icr_C12)) then
          cr_primary(cr_table(icr_C12)) = primary_C12

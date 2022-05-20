@@ -240,7 +240,10 @@ contains
 
       gamma_cr_1 = gamma_cr - 1.0
 
-      call cr_species_tables(ncrsp, nspc, ncrn, gpcr_ess_user(1:ncr_user))
+      call cr_species_tables(ncrsp, gpcr_ess_user(1:ncr_user))
+
+      nspc = count(cr_spectral, kind=4)
+      ncrn = ncrsp - nspc
 
       ncr2b  = I_TWO * ncrb
       ncrtot = ncr2b + ncrn
