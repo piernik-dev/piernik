@@ -117,8 +117,7 @@ contains
 
       implicit none
 
-      integer(kind=4) :: nn, icr, jcr
-      integer         :: ne
+      integer(kind=4) :: nl, nn, icr, jcr
       real            :: maxKcrs
 
       namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRdiff, use_CRdecay, divv_scheme, &
@@ -167,6 +166,8 @@ contains
 
       if (master) then
 
+         cbuff(1) = divv_scheme
+
          ibuff(1) = ncrsp
          ibuff(2) = ncrb
 
@@ -180,18 +181,18 @@ contains
          lbuff(2) = use_CRdecay
          lbuff(3) = use_smallecr
 
-         cbuff(1) = divv_scheme
-
+         nl       = 3                                     ! this must match the last lbuff() index above
          nn       = count(rbuff(:) < huge(1.), kind=4)    ! this must match the last rbuff() index above
-         ibuff(ubound(ibuff, 1)) = nn
-         ne       = nn + 2 * ncrsp
-         if (ne + 3 * ncrb > ubound(rbuff, 1)) call die("[initcosmicrays:init_cosmicrays] rbuff size exceeded.")
+         ibuff(ubound(ibuff, 1)    ) = nn
+         ibuff(ubound(ibuff, 1) - 1) = nl
+         if (nn + 2 * ncrsp > ubound(rbuff, 1)) call die("[initcosmicrays:init_cosmicrays] rbuff size exceeded.")
+         if (nl + ncrsp     > ubound(lbuff, 1)) call die("[initcosmicrays:init_cosmicrays] lbuff size exceeded.")
 
          if (ncrsp > 0) then
             rbuff(nn+1      :nn+  ncrsp) = K_cr_paral(1:ncrsp)
             rbuff(nn+1+ncrsp:nn+2*ncrsp) = K_cr_perp (1:ncrsp)
 
-            lbuff(4:ncrsp+3) = cr_gpcr_ess(1:ncrsp)
+            lbuff(nl+1:nl+ncrsp) = cr_gpcr_ess(1:ncrsp)
          endif
 
 
@@ -203,6 +204,8 @@ contains
       call piernik_MPI_Bcast(cbuff, cbuff_len)
 
       if (slave) then
+
+         divv_scheme  = cbuff(1)
 
          ncrsp        = int(ibuff(1), kind=4)
          ncrb         = int(ibuff(2), kind=4)
@@ -217,16 +220,14 @@ contains
          use_CRdecay  = lbuff(2)
          use_smallecr = lbuff(3)
 
-         nn           = ibuff(ubound(ibuff, 1))    ! this must match the last rbuff() index above
-         ne           = nn + 3 * ncrsp
-
-         divv_scheme  = cbuff(1)
+         nn           = ibuff(ubound(ibuff, 1)    )    ! this must match the last rbuff() index above
+         nl           = ibuff(ubound(ibuff, 1) - 1)    ! this must match the last lbuff() index above
 
          if (ncrsp > 0) then
             K_cr_paral(1:ncrsp) = rbuff(nn+1      :nn+  ncrsp)
             K_cr_perp (1:ncrsp) = rbuff(nn+1+ncrsp:nn+2*ncrsp)
 
-            cr_gpcr_ess(1:ncrsp) = lbuff(4:ncrsp+3)
+            cr_gpcr_ess(1:ncrsp) = lbuff(nl+1:nl+ncrsp)
          endif
 
       endif
