@@ -66,15 +66,16 @@ module cr_data
    end enum
 
    integer, parameter                                      :: nicr = icr_LAST - 1
+   integer                                                 :: ncrsp_auto
 
-   logical, dimension(PRES:SPEC)                            :: eE                 !< presence and grad_pcr essentiality of electrons
-   logical, dimension(PRES:SPEC)                            :: eH1                !< presence and grad_pcr essentiality of H1 isotope
-   logical, dimension(PRES:SPEC)                            :: eLi7               !< presence and grad_pcr essentiality of Li7 isotope
-   logical, dimension(PRES:SPEC)                            :: eBe9               !< presence and grad_pcr essentiality of Be9 isotope
-   logical, dimension(PRES:SPEC)                            :: eBe10              !< presence and grad_pcr essentiality of Be10 isotope
-   logical, dimension(PRES:SPEC)                            :: eC12               !< presence and grad_pcr essentiality of C12 isotope
-   logical, dimension(PRES:SPEC)                            :: eN14               !< presence and grad_pcr essentiality of N14 isotope
-   logical, dimension(PRES:SPEC)                            :: eO16               !< presence and grad_pcr essentiality of O16 isotope
+   logical, dimension(PRES:SPEC)                           :: eE                 !< presence and grad_pcr essentiality of electrons
+   logical, dimension(PRES:SPEC)                           :: eH1                !< presence and grad_pcr essentiality of H1 isotope
+   logical, dimension(PRES:SPEC)                           :: eLi7               !< presence and grad_pcr essentiality of Li7 isotope
+   logical, dimension(PRES:SPEC)                           :: eBe9               !< presence and grad_pcr essentiality of Be9 isotope
+   logical, dimension(PRES:SPEC)                           :: eBe10              !< presence and grad_pcr essentiality of Be10 isotope
+   logical, dimension(PRES:SPEC)                           :: eC12               !< presence and grad_pcr essentiality of C12 isotope
+   logical, dimension(PRES:SPEC)                           :: eN14               !< presence and grad_pcr essentiality of N14 isotope
+   logical, dimension(PRES:SPEC)                           :: eO16               !< presence and grad_pcr essentiality of O16 isotope
    logical,                                dimension(nicr) :: eCRSP              !< table of all isotopes presences
    integer, parameter                                      :: specieslen = 6     !< length of species names
    character(len=specieslen), allocatable, dimension(:)    :: cr_names           !< table of species names
@@ -85,6 +86,7 @@ module cr_data
    real,                      allocatable, dimension(:)    :: cr_tau             !< table of decay half live times
    real,                      allocatable, dimension(:)    :: cr_primary         !< table of initial source abundances
    logical,                   allocatable, dimension(:)    :: cr_spectral        !< table of logicals about energy spectral treatment
+   logical,                   allocatable, dimension(:)    :: cr_gpess           !< table of essentiality for grad_pcr calculation
 
    real, parameter :: m_H1   = 1.
    real, parameter :: m_Li7  = 7.
@@ -212,6 +214,7 @@ contains
 #undef VS
 
       eCRSP(1:nicr) = [eE(PRES), eH1(PRES), eC12(PRES), eBe9(PRES), eBe10(PRES), eN14(PRES), eO16(PRES), eLi7(PRES)]
+      ncrsp_auto = count(eCRSP)
 
    end subroutine init_cr_species
 
@@ -237,7 +240,7 @@ contains
       eCRSP_ess  (1:nicr) = [eE(ESS) , eH1(ESS) , eC12(ESS) , eBe9(ESS) , eBe10(ESS) , eN14(ESS) , eO16(ESS) , eLi7(ESS) ]
       eCRSP_spec (1:nicr) = [eE(SPEC), eH1(SPEC), eC12(SPEC), eBe9(SPEC), eBe10(SPEC), eN14(SPEC), eO16(SPEC), eLi7(SPEC)]
 
-      allocate(cr_names(ncrsp), cr_table(nicr), cr_index(nicr), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp), cr_mass(ncrsp), cr_spectral(ncrsp))
+      allocate(cr_names(ncrsp), cr_table(nicr), cr_index(nicr), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp), cr_mass(ncrsp), cr_spectral(ncrsp), cr_gpess(ncrsp))
       cr_names(:)    = ''
       cr_table(:)    = 0
       cr_index(:)    = 0
@@ -245,6 +248,7 @@ contains
       cr_tau(:)      = 1.0
       cr_primary(:)  = 0.0
       cr_spectral(:) = .false.
+      cr_gpess(:)    = .false.
 
       icr = 0 ; jcr = 0
       do i = icr_E, size(eCRSP)
@@ -262,8 +266,8 @@ contains
             else
                jcr = jcr + 1
                cr_index(i) = jcr
-               crness(jcr) = eCRSP_ess(i)
             endif
+            cr_gpess(icr)    = eCRSP_ess(i)
             if (master) then
                write(msg,'(a,a,l2)') eCRSP_names(i), 'CR species is present; taken into account for grad_pcr: ', eCRSP_ess(i)
                call printinfo(msg)
@@ -271,15 +275,16 @@ contains
          endif
       enddo
 
-      nspc = count(cr_spectral, kind=4)
-      ncrn = ncrsp - nspc
-
-      if (master .and. jcr < ncrn) then
-         do i = jcr+1, ncrn
-            write(msg,'(a,i2,a,l2)') 'user nucleon-based CR species no: ', i,' is present; taken into account for grad_pcr: ', crness(jcr)
-            call printinfo(msg)
+      if (ncrsp_auto < ncrsp) then
+         cr_gpess(ncrsp_auto+1:ncrsp) = crness
+         do i = ncrsp_auto+1, ncrsp
+            write(msg,'(a,i2,a,l2)') 'user CR species no: ', i,' is present; taken into account for grad_pcr: ', cr_gpess(i)
+            if (master) call printinfo(msg)
          enddo
       endif
+
+      nspc = count(cr_spectral, kind=4)
+      ncrn = ncrsp - nspc
 
       if (eCRSP(icr_C12)) then
          cr_primary(cr_table(icr_C12)) = primary_C12

@@ -69,7 +69,6 @@
     K_cr_perp(2)  = 0
     K_cr_perp(3)  = 0
     use_CRdecay   = .true.
-    cr_gpcr_ess   = .true.
  /
 
  $CR_SPECIES
