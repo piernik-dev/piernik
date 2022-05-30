@@ -670,7 +670,7 @@ contains
             if (master) call warn(msg)
 
        end select
-            
+
        if (Tnew < 10.0) Tnew = 10.0                        ! To improve
 
    end subroutine temp_EIS
