@@ -295,10 +295,10 @@ contains
                   case ('acceleration_z')
                      tabr1(recnp+cgnp) = pset%pdata%acc(zdim)
                      i=12
-                  case('formation_time')
+                  case ('formation_time')
                      tabr1(recnp+cgnp) = pset%pdata%tform
                      i=13
-                  case('dynamical_time')
+                  case ('dynamical_time')
                      tabr1(recnp+cgnp) = pset%pdata%tdyn
                      i=14
                   case default
