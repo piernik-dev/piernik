@@ -1177,9 +1177,9 @@ contains
                   acc(j, ydim) = a1d(j)
                case ('accz')
                   acc(j, zdim) = a1d(j)
-               case('tfor')
+               case ('tfor')
                   tform(j) = a1d(j)
-               case('tdyn')
+               case ('tdyn')
                   tdyn(j) = a1d(j)
                case default
             end select
