@@ -39,6 +39,7 @@ module star_formation
   public :: SF, initialize_id, attribute_id, pid_gen, dmass_stars
 
   integer(kind=4)       :: pid_gen, maxpid, dpid
+  real                  :: dmass_stars
 
 contains
 
@@ -74,7 +75,7 @@ contains
     logical                                            :: fed, kick
     integer(kind=4)                                    :: pid, ig, stage, n_SN
     real, dimension(ndims)                             :: pos, vel, acc
-    real                                               :: dmass_stars, mass, ener, tdyn, tbirth, padd, t1, fact
+    real                                               :: mass, ener, tdyn, tbirth, padd, t1, fact
     logical                                            :: in, phy, out
 
     if (.not. forward) return
