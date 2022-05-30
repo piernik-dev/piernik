@@ -54,7 +54,6 @@ contains
 #endif /* COSM_RAYS */
     use fluidindex,            only: flind
     use fluidtypes,            only: component_fluid
-    use func,                  only: operator(.equals.), ekin
     use global,                only: t, dt
     use grid_cont,             only: grid_container
     use named_array_list,      only: wna, qna
@@ -64,6 +63,8 @@ contains
     use thermal,               only: itemp
 #endif /* THERM */
     use units,                 only: newtong, erg, cm, sek, gram
+
+    implicit none
 
     logical, intent(in)                                :: forward
     type(cg_list_element), pointer                     :: cgl
@@ -179,7 +180,7 @@ contains
        if (kick) then
           pset => cg%pset%first
           do while (associated(pset))
-             if (t .lt. pset%pdata%tform + 10) then  
+             if (t .lt. pset%pdata%tform + 10) then
                 t1 = t - pset%pdata%tform
                 do ifl = 1, flind%fluids
                    pfl => flind%all_fluids(ifl)%fl
@@ -231,7 +232,7 @@ contains
 
        cgl => cgl%nxt
     enddo
-    
+
   end subroutine SF
 
 
@@ -239,16 +240,20 @@ contains
 
     use mpisetup,             only: proc, nproc
 
+    implicit none
+
     dpid = int(1000000000/nproc)
     pid_gen =  proc * dpid
     !maxpid = (proc+1) * dpid
     !print *, proc, pid_gen, maxpid, dpid
-    
+
   end subroutine initialize_id
 
   subroutine attribute_id(pid)
 
     use mpisetup,             only: proc, nproc
+
+    implicit none
 
     integer, intent(out)    :: pid
 
@@ -265,8 +270,8 @@ contains
        maxpid = (proc+1) * dpid + 1000000000
     endif
     pid     = pid_gen
-    
-    
+
+
   end subroutine attribute_id
 
 end module star_formation
