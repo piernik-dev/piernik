@@ -31,7 +31,7 @@
 !<
 
 module cresp_grid
-! pulled by COSM_RAY_ELECTRONS
+! pulled by CRESP
 
    implicit none
 
@@ -39,6 +39,7 @@ module cresp_grid
    public :: cresp_update_grid, cresp_init_grid, cfl_cresp_violation, cresp_clean_grid
 
    logical :: cfl_cresp_violation
+   logical :: allow_loop_leave
 
 contains
 
@@ -54,8 +55,9 @@ contains
       use cresp_NR_method,  only: cresp_initialize_guess_grids
       use dataio,           only: vars
       use dataio_pub,       only: printinfo, restarted_sim
+      use global,           only: repetitive_steps, cflcontrol, disallow_CRnegatives
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_cre_n, iarr_cre_e, ncre
+      use initcosmicrays,   only: iarr_cre_n, iarr_cre_e, ncrb
       use initcrspectrum,   only: norm_init_spectrum, dfpq, check_if_dump_fpq, use_cresp
       use mpisetup,         only: master
       use named_array_list, only: wna
@@ -73,9 +75,9 @@ contains
       call check_if_dump_fpq(vars)
 
       if (dfpq%any_dump) then
-         if (dfpq%dump_f) call all_cg%reg_var(dfpq%f_nam, dim4=ncre + I_ONE)
+         if (dfpq%dump_f) call all_cg%reg_var(dfpq%f_nam, dim4=ncrb + I_ONE)
          if (dfpq%dump_p) call all_cg%reg_var(dfpq%p_nam, dim4=I_TWO)
-         if (dfpq%dump_q) call all_cg%reg_var(dfpq%q_nam, dim4=ncre)
+         if (dfpq%dump_q) call all_cg%reg_var(dfpq%q_nam, dim4=ncrb)
       endif
 
       if (.not. restarted_sim) then
@@ -101,12 +103,15 @@ contains
 
       call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e)   !< initialize spectrum here, f_init should be 1.0
 
+      allow_loop_leave = (disallow_CRnegatives .and. repetitive_steps .and. cflcontrol /= "flex" .and. cflcontrol /= "flexible")
+
       if (master) call printinfo(" [cresp_grid:cresp_init_grid] CRESP initialized")
 
    end subroutine cresp_init_grid
 
    subroutine cresp_update_grid
 
+      use all_boundaries, only: all_fluid_boundaries
       use cg_cost_data,     only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
@@ -118,9 +123,10 @@ contains
       use global,           only: dt
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max, use_cresp_evol
       use initcrspectrum,   only: cresp_substep, n_substeps_max
       use named_array_list, only: wna
+      use ppp,              only: ppp_main
       use timestep_cresp,   only: cresp_timestep_cell
 #ifdef DEBUG
       use cresp_crspectrum, only: cresp_detect_negative_content
@@ -134,10 +140,16 @@ contains
       type(grid_container), pointer  :: cg
       type(spec_mod_trms)            :: sptab
       real                           :: dt_crs_sstep, dt_cresp, dt_doubled
-      logical                        :: inactive_cell
+      logical                        :: inactive_cell, cfl_violation_step
+      character(len=*), parameter    :: crug_label = "CRESP_upd_grid"
+
+      if (.not. use_cresp_evol) return
+
+      call ppp_main%start(crug_label)
 
       cgl => leaves%first
       cfl_cresp_violation = .false.
+      cfl_violation_step  = .false.
       inactive_cell       = .false.
       dt_doubled  = 2 * dt       !< used always when cresp_substep is not performed
       dt_cresp    = dt_doubled   !< computed for each cell if cresp_substep, using dt_doubled
@@ -166,11 +178,19 @@ contains
 #ifdef CRESP_VERBOSED
                   print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* CRESP_VERBOSED */
-                  if (.not. inactive_cell) call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_cresp_violation, substeps = nssteps)
+                  if (.not. inactive_cell) call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_violation_step, substeps = nssteps)
 #ifdef DEBUG
-                  call cresp_detect_negative_content(cfl_cresp_violation, [i, j, k])
+                  call cresp_detect_negative_content(cfl_violation_step, [i, j, k])
 #endif /* DEBUG */
-                  if (cfl_cresp_violation) return ! nothing to do here!
+                  if (cfl_violation_step) then
+                     cfl_cresp_violation = cfl_violation_step
+                     if (allow_loop_leave) then
+                        call cg%costs%stop(I_MHD)
+                        call ppp_main%stop(crug_label)
+                        return ! nothing to do here!
+                     endif
+                  endif
+
                   cg%u(iarr_cre_n, i, j, k) = cresp%n
                   cg%u(iarr_cre_e, i, j, k) = cresp%e
                   if (dfpq%any_dump) then
@@ -189,6 +209,10 @@ contains
          write (msg,"(A50,I5, A27, I5)") "[cresp_grid:cresp_update_grid] max(n_substeps) = ", nssteps_max, " in this cg exceeds limit ", n_substeps_max
          call warn(msg)
       endif
+
+      call all_fluid_boundaries
+
+      call ppp_main%stop(crug_label)
 
    end subroutine cresp_update_grid
 
@@ -230,14 +254,18 @@ contains
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: cresp, nullify_empty_bins
+      use ppp,              only: ppp_main
 
       implicit none
 
       integer                        :: i, j, k
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      character(len=*), parameter    :: crcg_label = "CRESP_clean_grid"
 
       if (.not.nullify_empty_bins) return
+
+      call ppp_main%start(crcg_label)
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -261,6 +289,8 @@ contains
          call cg%costs%stop(I_MHD)
          cgl=>cgl%nxt
       enddo
+
+      call ppp_main%stop(crcg_label)
 
    end subroutine cresp_clean_grid
 

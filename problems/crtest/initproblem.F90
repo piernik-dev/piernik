@@ -38,9 +38,10 @@ module initproblem
 
    integer(kind=4)    :: norm_step
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, dtrig
+#ifdef COSM_RAYS
    character(len=dsetnamelen), parameter :: aecr1_n = "aecr"
-
    integer, parameter :: icr = 1 !< Only first CR component is used in this test
+#endif /* COSM_RAYS */
 
    namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, norm_step, dtrig
 
@@ -50,20 +51,25 @@ contains
 
    subroutine problem_pointers
 
+      use user_hooks,  only: late_initial_conditions
+#ifdef COSM_RAYS
 #ifdef HDF5
       use dataio_user, only: user_vars_hdf5
 #endif /* HDF5 */
-      use user_hooks,  only: problem_customize_solution, finalize_problem, late_initial_conditions, problem_domain_update
+      use user_hooks,  only: problem_customize_solution, finalize_problem, problem_domain_update
+#endif /* COSM_RAYS */
 
       implicit none
 
-      problem_customize_solution => check_norm_wrapper
+      late_initial_conditions    => cr_late_init
+#ifdef COSM_RAYS
+      problem_domain_update      => cr_dist_to_edge
       finalize_problem           => check_norm
+      problem_customize_solution => check_norm_wrapper
 #ifdef HDF5
       user_vars_hdf5             => crtest_analytic_ecr1
 #endif /* HDF5 */
-      late_initial_conditions    => cr_late_init
-      problem_domain_update      => cr_dist_to_edge
+#endif /* COSM_RAYS */
 
    end subroutine problem_pointers
 
@@ -71,12 +77,15 @@ contains
 
    subroutine read_problem_par
 
-      use cg_list_global, only: all_cg
-      use constants,      only: xdim, ydim, zdim, I_ONE, I_TEN, AT_NO_B
+      use constants,      only: xdim, ydim, zdim, I_ONE, I_TEN
       use dataio_pub,     only: die, nh
       use domain,         only: dom
       use func,           only: operator(.equals.)
       use mpisetup,       only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
+#ifdef COSM_RAYS
+      use constants,      only: AT_NO_B
+      use cg_list_global, only: all_cg
+#endif /* COSM_RAYS */
 
       implicit none
 
@@ -159,7 +168,9 @@ contains
 
       if (r0 .equals. 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
+#ifdef COSM_RAYS
       call all_cg%reg_var(aecr1_n, restart_mode = AT_NO_B)
+#endif /* COSM_RAYS */
 
       if (norm_step <= 0) norm_step = huge(I_ONE)
 
@@ -171,51 +182,63 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, HI
-      use dataio_pub,     only: die
-      use domain,         only: dom
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag
       use grid_cont,      only: grid_container
-      use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre
+#ifndef ISO
+      use constants,      only: zdim
+#endif /* !ISO */
+#if defined(COSM_RAYS) || !defined(ISO)
+      use constants,      only: xdim, ydim
+#endif /* COSM_RAYS || !ISO */
+#ifdef COSM_RAYS
+      use constants,      only: HI
+      use dataio_pub,     only: die
+      use domain,         only: dom
+      use initcosmicrays, only: gamma_cr_1, iarr_crs, ncrsp, ncrb
+#endif /* COSM_RAYS */
 
       implicit none
 
       class(component_fluid), pointer :: fl
-      integer                         :: i, j, k, iecr
-      real                            :: cs_iso, r2
+      !real                            :: cs_iso
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
 
-      fl => flind%ion
+#ifdef COSM_RAYS
+      integer                         :: i, j, k, iecr
+      real                            :: r2
 
       iecr = -1
-      if (ncrn+ncre >= icr) then
+      if (ncrsp+ncrb >= icr) then
          iecr = iarr_crs(icr)
       else
          call die("[initproblem:problem_initial_conditions] No CR components defined.")
       endif
+#endif /* COSM_RAYS */
+
+      fl => flind%ion
 
 ! Uniform equilibrium state
 
-      cs_iso = sqrt(p0/d0)
+      !cs_iso = sqrt(p0/d0)
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
          call cg%set_constant_b_field([bx0, by0, bz0])
-         cg%u(fl%idn, :, :, :) = d0
-         cg%u(fl%imx:fl%imz, :, :, :) = 0.0
+         cg%u(fl%idn,RNG) = d0
+         cg%u(fl%imx:fl%imz,RNG) = 0.0
 
 #ifndef ISO
-         cg%u(fl%ien,:,:,:) = p0/fl%gam_1 + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)) + &
-              &               ekin(cg%u(fl%imx,:,:,:), cg%u(fl%imy,:,:,:), cg%u(fl%imz,:,:,:), cg%u(fl%idn,:,:,:))
+         cg%u(fl%ien,RNG) = p0/fl%gam_1 + ekin(cg%u(fl%imx,RNG), cg%u(fl%imy,RNG), cg%u(fl%imz,RNG), cg%u(fl%idn,RNG)) + &
+              &             emag(cg%b(xdim,RNG), cg%b(ydim,RNG), cg%b(zdim,RNG))
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-         cg%u(iecr,:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crs(icr)-1.0)
+         cg%u(iecr,RNG) = beta_cr * fl%cs2 * cg%u(fl%idn,RNG) / gamma_cr_1
 
 ! Explosions
          do k = cg%ks, cg%ke
@@ -223,7 +246,7 @@ contains
                do i = cg%is, cg%ie
                   r2 = (cg%x(i)-x0)**2+(cg%y(j)-y0)**2+(cg%z(k)-z0)**2
                   if (cg%x(i)> 2*x0-dom%edge(xdim, HI) .and. cg%y(j) > 2*y0-dom%edge(ydim, HI)) &
-                       cg%u(iecr, i, j, k)= cg%u(iecr, i, j, k) + amp_cr*exp(-r2/r0**2)
+                       cg%u(iecr,i,j,k)= cg%u(iecr,i,j,k) + amp_cr*exp(-r2/r0**2)
                enddo
             enddo
          enddo
@@ -232,12 +255,54 @@ contains
          cgl => cgl%nxt
       enddo
 
+#ifdef COSM_RAYS
       call check_norm
+#endif /* COSM_RAYS */
 
    end subroutine problem_initial_conditions
 
-!-----------------------------------------------------------------------------
+!> \brief Performa late initialization of the cg added after domain expansion
 
+   subroutine cr_late_init
+
+      use cg_list,        only: cg_list_element
+      use cg_list_dataop, only: expanded_domain
+      use dataio_pub,     only: die
+      use fluidindex,     only: flind
+#ifndef ISO
+      use constants,      only: xdim, ydim, zdim
+      use func,           only: ekin, emag
+#endif /* !ISO */
+#ifdef COSM_RAYS
+      use initcosmicrays, only: gamma_cr_1, iarr_crs
+#endif /* COSM_RAYS */
+
+      implicit none
+
+      type(cg_list_element),  pointer :: cgl
+
+      cgl => expanded_domain%first
+      do while (associated(cgl))
+         if (cgl%cg%is_old) call die("[initproblem:cr_late_init] Old piece on a new list")
+         associate (fl => flind%ion, cg => cgl%cg)
+         call cgl%cg%set_constant_b_field([bx0, by0, bz0])
+         cgl%cg%u(fl%idn,RNG) = d0
+         cgl%cg%u(fl%imx:fl%imz,RNG) = 0.0
+#ifndef ISO
+         cgl%cg%u(fl%ien,RNG) = p0/fl%gam_1 + emag(cgl%cg%b(xdim,RNG), cgl%cg%b(ydim,RNG), cgl%cg%b(zdim,RNG)) + &
+              &                 ekin(cgl%cg%u(fl%imx,RNG), cgl%cg%u(fl%imy,RNG), cgl%cg%u(fl%imz,RNG), cgl%cg%u(fl%idn,RNG))
+#endif /* !ISO */
+#ifdef COSM_RAYS
+         cgl%cg%u(iarr_crs(icr),RNG) = beta_cr * fl%cs2 * cgl%cg%u(fl%idn,RNG) / gamma_cr_1
+#endif /* COSM_RAYS */
+         end associate
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine cr_late_init
+
+!-----------------------------------------------------------------------------
+#ifdef COSM_RAYS
    subroutine compute_analytic_ecr1
 
       use cg_leaves,        only: leaves
@@ -246,7 +311,7 @@ contains
       use func,             only: operator(.equals.)
       use global,           only: t
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
+      use initcosmicrays,   only: iarr_crs, ncrsp, ncrb, K_cr_paral, K_cr_perp
       use named_array_list, only: qna
 
       implicit none
@@ -259,7 +324,7 @@ contains
 
       iecr = -1
 
-      if (ncrn+ncre >= icr) then
+      if (ncrsp+ncrb >= icr) then
          iecr = iarr_crs(icr)
       else
          call die("[initproblem:compute_analytic_ecr1] No CR components defined.")
@@ -276,8 +341,8 @@ contains
          bzn = 0.0
       endif
 
-      r0_par2  = r0**2 + 4 * (K_crn_paral(icr) + K_crn_perp(icr)) * t
-      r0_perp2 = r0**2 + 4 * K_crn_perp(icr) * t
+      r0_par2  = r0**2 + 4 * (K_cr_paral(icr) + K_cr_perp(icr)) * t
+      r0_perp2 = r0**2 + 4 * K_cr_perp(icr) * t
 
       if ((r0_par2 .equals. 0.) .or. (r0_perp2 .equals. 0.)) call die("[initproblem:compute_analytic_ecr1] r0_par2 == 0. .or. r0_perp2 == 0.")
 
@@ -312,11 +377,15 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine check_norm_wrapper(forward)
+
+      use global, only: nstep
+
       implicit none
+
       logical, intent(in) :: forward
-      call check_norm
-      return
-      if (.false. .and. forward) d0 = 0.0 ! suppress compiler warnings on unused arguments
+
+      if (forward .and. mod(nstep, norm_step) == 0) call check_norm
+
    end subroutine check_norm_wrapper
 
 !-----------------------------------------------------------------------------
@@ -324,12 +393,11 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX
-      use dataio_pub,       only: code_progress, halfstep, msg, die, printinfo
+      use constants,        only: pSUM, pMIN, pMAX
+      use dataio_pub,       only: msg, die, printinfo
       use func,             only: operator(.notequals.)
-      use global,           only: nstep
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crs, ncrn, ncre
+      use initcosmicrays,   only: iarr_crs, ncrsp, ncrb
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna
 
@@ -344,13 +412,11 @@ contains
 
       iecr = -1
 
-      if (ncrn+ncre >= icr) then
+      if (ncrsp+ncrb >= icr) then
          iecr = iarr_crs(icr)
       else
          call die("[initproblem:check_norm] No CR components defined.")
       endif
-
-      if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /=0 .or. halfstep)) return
 
       call compute_analytic_ecr1
 
@@ -423,43 +489,7 @@ contains
 
    end subroutine crtest_analytic_ecr1
 
-!> \brief Performa late initialization of the cg added after domain expansion
-
-   subroutine cr_late_init
-
-      use cg_list,        only: cg_list_element
-      use cg_list_dataop, only: expanded_domain
-      use constants,      only: xdim, ydim, zdim
-      use dataio_pub,     only: die
-      use fluidindex,     only: flind
-      use func,           only: ekin, emag
-      use initcosmicrays, only: gamma_crs, iarr_crs
-
-      implicit none
-
-      type(cg_list_element),  pointer :: cgl
-
-      cgl => expanded_domain%first
-      do while (associated(cgl))
-         if (cgl%cg%is_old) call die("[initproblem:cr_late_init] Old piece on a new list")
-         associate (fl => flind%ion)
-         call cgl%cg%set_constant_b_field([bx0, by0, bz0])
-         cgl%cg%u(fl%idn, :, :, :) = d0
-         cgl%cg%u(fl%imx:fl%imz, :, :, :) = 0.0
-#ifndef ISO
-         cgl%cg%u(fl%ien,:,:,:) = p0/fl%gam_1 + emag(cgl%cg%b(xdim,:,:,:), cgl%cg%b(ydim,:,:,:), cgl%cg%b(zdim,:,:,:)) + &
-              &                   ekin(cgl%cg%u(fl%imx,:,:,:), cgl%cg%u(fl%imy,:,:,:), cgl%cg%u(fl%imz,:,:,:), cgl%cg%u(fl%idn,:,:,:))
-#endif /* !ISO */
-#ifdef COSM_RAYS
-         cgl%cg%u(iarr_crs(icr),:,:,:) = beta_cr*fl%cs2 * cgl%cg%u(fl%idn,:,:,:)/(gamma_crs(icr)-1.0)
-#endif /* COSM_RAYS */
-         end associate
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine cr_late_init
-
-!> \brief Find hov close it the clump to the external edges and call expansion routine if necessary
+!> \brief Find how close is the clump to the external edges and call expansion routine if necessary
 
    subroutine cr_dist_to_edge
 
@@ -473,11 +503,11 @@ contains
 
       implicit none
 
-      type(cg_list_element),  pointer :: cgl
+      type(cg_list_element),  pointer   :: cgl
       real, dimension(xdim:zdim, LO:HI) :: ddist
-      integer :: i
-      integer, parameter :: iprox = 2
-      real :: cmax
+      integer                           :: i
+      integer, parameter                :: iprox = 2
+      real                              :: cmax
 
       if (dtrig < 0.) return
 
@@ -557,5 +587,6 @@ contains
       call expand_base(ddist(:,:) < iprox)
 
    end subroutine cr_dist_to_edge
+#endif /* COSM_RAYS */
 
 end module initproblem

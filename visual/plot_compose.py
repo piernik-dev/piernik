@@ -149,10 +149,19 @@ def add_cbar(figmode, cbar_mode, grid, ab, ic, clab):
 
 
 def plotcompose(pthfilen, var, output, options):
-    axc, umin, umax, cmap, pcolor, player, psize, sctype, cu, center, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl = options
+    axc, umin, umax, cmap, pcolor, player, psize, sctype, cu, center, cmpr, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl = options
     labh = ps.particles_label
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
+    cmpr0, cmprf, cmprd, cmprt = cmpr
+    if cmpr0:
+        if cmprd == '':
+            cmprd = var
+        if cmprf == '':
+            cmpr = cmpr0, h5f, cmprd, cmprt
+        else:
+            h5c = h5py.File(cmprf, 'r')
+            cmpr = cmpr0, h5c, cmprd, cmprt
     time = h5f.attrs['time'][0]
     utim = h5f['dataset_units']['time_unit'].attrs['unit']
     ulenf = h5f['dataset_units']['length_unit'].attrs['unit']
@@ -201,28 +210,23 @@ def plotcompose(pthfilen, var, output, options):
             if len(plotlevels) > 1:
                 print('For uniform grid plotting only the firs given level!')
             print('Plotting base level %s' % plotlevels[0])
-            refis, extr = rd.reconstruct_uniform(h5f, var, plotlevels[0], gridlist, cu, center, smin, smax, draw1D, draw2D)
+            refis, extr = rd.reconstruct_uniform(h5f, var, cmpr, plotlevels[0], gridlist, cu, center, smin, smax, draw1D, draw2D)
 
         if drawa or drawg:
-            refis, extr = rd.collect_gridlevels(h5f, var, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, drawd, draw1D, draw2D)
+            refis, extr = rd.collect_gridlevels(h5f, var, cmpr, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, drawd, draw1D, draw2D)
 
         if refis == []:
             drawd = False
         else:
             if drawd:
-                d1min, d1max, d2min, d2max, d3min, d3max = min(extr[0]), max(extr[1]), min(extr[2]), max(extr[3]), min(extr[4]), max(extr[5])
-                vmin, vmax, symmin, autsc = pu.scale_manage(sctype, refis, umin, umax, any(draw2D), [d1min, d1max, d2min, d2max])
+                vmin, vmax, symmin, autsc = pu.scale_manage(sctype, refis, umin, umax, any(draw1D), any(draw2D), extr)
 
-                print('3D data value range: ', d3min, d3max)
-                if any(draw2D):
-                    print('Slices  value range: ', d2min, d2max)
-                if any(draw1D):
-                    print('1D data value range: ', d1min, d1max)
-                print('Plotted value range: ', vmin, vmax)
-                vlab = var + " [%s]" % pu.labelx()(uvar)
+                vlab = pu.labellog(sctype, symmin, cmpr0) + var + " [%s]" % pu.labelx()(uvar)
                 field = drawd, vmin, vmax, sctype, symmin, cmap, autsc, vlab
 
     h5f.close()
+    if cmpr0:
+        h5c.close()
 
     if not (parts[0] or drawd or drawg):
         print('No particles or levels to plot. Skipping.')

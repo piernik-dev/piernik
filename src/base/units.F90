@@ -127,6 +127,9 @@ module units
    real, protected :: joul                                  !< 1J (SI energy unit)
    real, protected :: erg                                   !< 1 erg (cgs energy unit)
    real, protected :: eV                                    !< 1 eV
+! area (cross section) units:
+   real, protected :: barn                                  !< barn (cross section unit)
+   real, protected :: mbarn                                 !< milibarn (cross section unit)
 ! density units:
    real, protected :: ppcm3                                 !< spatial density unit
    real, protected :: ppcm2                                 !< column density unit
@@ -368,6 +371,9 @@ contains
       joul       = kg*metr**2/sek**2        !< 1J (SI energy unit)
       erg        = gram*cm**2/sek**2        !< 1 erg (cgs energy unit)
       eV         = 1.6022e-12*erg           !< 1 eV
+! area (cross section) units:
+      barn       = 1.0e-28 * metr**2        !< barn (cross section unit)
+      mbarn      = 1.0e-3 * barn            !< milibarn (cross section unit)
 ! density units:
       ppcm3      = 1.36 * mp / cm**3        !< spatial density unit
       ppcm2      = 1.36 * mp / cm**2        !< column density unit
@@ -523,25 +529,18 @@ contains
          case ("magx", "magy", "magz")
             val = lmtvB(U_MAG)
             write(s_val, '(a)') trim(s_lmtvB(U_MAG))
-         case ("cr01" : "cr99")
+         case ("cr01" : "cr99", "cr_A000" : "cr_zz99", "cree01" : "cree99")
             val = lmtvB(U_MASS) / lmtvB(U_LEN) / lmtvB(U_TIME) ** 2
             if (trim(s_lmtvB(U_ENER)) /= "complex") then
                write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
             else
                write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
             endif
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
          case ("cren01" : "cren99")
             val = 1.0 / lmtvB(U_LEN)**3                             !< CRESP number density
             write(s_val, '( "1  /", a,"**3")') trim(s_lmtvB(U_LEN))
-         case ("cree01" : "cree99")
-            val = lmtvB(U_MASS) / lmtvB(U_LEN) / lmtvB(U_TIME) ** 2 !< CRESP energy density
-            if (trim(s_lmtvB(U_ENER)) /= "complex") then
-               write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
-            else
-               write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
-            endif
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
          case ("gpot", "sgpt")
             val = lmtvB(U_VEL) ** 2
             write(s_val, '(a,"**2")') trim(s_lmtvB(U_VEL))

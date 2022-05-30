@@ -23,19 +23,26 @@ def plane_in_outputname(figmode, draw2D):
 def fsym(vmin, vmax):
     vmx = np.max([np.abs(vmin), np.abs(vmax)])
     vmn = -1.0 * vmx
-    if vmn == vmx:
-        vmn = vmn - 0.00001
-        vmx = vmx + 0.00001
     return vmn, vmx
 
 
-def scale_manage(sctype, refis, umin, umax, d2, minmax):
+def execute_comparison(orig, comp, ctype):
+    if ctype == 1:
+        return orig - comp
+    elif ctype == 2:
+        return orig / comp
+    elif ctype == 3:
+        return (orig / comp) - 1
+
+
+def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
     symmin = 1.0
     autoscale = False
+    d1min, d1max, d2min, d2max, d3min, d3max = min(extr[0]), max(extr[1]), min(extr[2]), max(extr[3]), min(extr[4]), max(extr[5])
     if d2:
-        dmin, dmax = minmax[2], minmax[3]
+        dmin, dmax = d2min, d2max
     else:
-        dmin, dmax = minmax[0], minmax[1]
+        dmin, dmax = d1min, d1max
     if (umin == 0.0 and umax == 0.0):
         vmin, vmax = dmin, dmax
         autoscale = True
@@ -49,39 +56,62 @@ def scale_manage(sctype, refis, umin, umax, d2, minmax):
         if (vmin > 0.0):
             vmin = np.log10(vmin)
         else:
-            vmin = np.log10(check_minimum_data(refis, False)[0])
+            vmin = np.log10(check_minimum_data(refis))
         if (vmax > 0.0):
             vmax = np.log10(vmax)
         else:
-            vmax = -1.
+            vmax = ps.fineqv
+        if (vmin == np.inf):
+            vmin = vmax - ps.fineqv
     elif (sctype == '3' or sctype == 'symlog'):
         if (umin > 0.0 and umax > 0.0):
             symmin = umin
-            vmax = np.log10(umax / umin)
-            vmin = np.log10(vmax)
+            vmax = np.log10(umax / symmin)
         else:
             if (dmin * dmax > 0.0):
-                smin, smax = dmin, dmax
+                symmin, smax = sorted([np.abs(dmin), np.abs(dmax)])
             else:
-                smin, smax = check_minimum_data(refis, True)
-            symmin = min(np.abs(smin), np.abs(smax))
-            vmax = np.log10(max(np.abs(smin), np.abs(smax)) / symmin)
+                symmin, smax = check_extremes_absdata(refis)
+            if (smax == -np.inf or symmin == np.inf):
+                smax = 10.
+                symmin = 1.
+            vmax = np.log10(smax / symmin)
         vmin = -vmax
         print('SYMMIN value for SYMLOG scaletype: %s' % symmin)
 
+    if vmin == vmax:
+        vmin = vmin - ps.fineqv
+        vmax = vmax + ps.fineqv
+
+    print('3D data value range: ', d3min, d3max)
+    if d2:
+        print('Slices  value range: ', d2min, d2max)
+    if d1:
+        print('1D data value range: ', d1min, d1max)
+    print('Plotted value range: ', vmin, vmax)
     return vmin, vmax, symmin, autoscale
 
 
-def check_minimum_data(refis, extended):
-    cmdmin, cmdmax = np.inf, -np.inf
+def check_minimum_data(refis):
+    cmdmin = np.inf
     for blks in refis:
         for bl in blks:
-            binb, bxyz = bl[0:2]
+            bxyz, binb = bl[0:2]
             for ncut in range(3):
                 if binb[ncut]:
                     cmdmin = min(cmdmin, np.min(bxyz[ncut], initial=np.inf, where=(bxyz[ncut] > 0.0)))
-                    if extended:
-                        cmdmax = max(cmdmax, np.max(bxyz[ncut], initial=-np.inf, where=(bxyz[ncut] < 0.0)))
+    return cmdmin
+
+
+def check_extremes_absdata(refis):
+    cmdmin, cmdmax = np.inf, -np.inf
+    for blks in refis:
+        for bl in blks:
+            bxyz, binb = bl[0:2]
+            for ncut in range(3):
+                if binb[ncut]:
+                    cmdmin = min(cmdmin, np.min(np.abs(bxyz[ncut]), initial=np.inf, where=(np.abs(bxyz[ncut]) > 0.0)))
+                    cmdmax = max(cmdmax, np.max(np.abs(bxyz[ncut]), initial=-np.inf, where=(np.abs(bxyz[ncut]) > 0.0)))
     return cmdmin, cmdmax
 
 
@@ -99,6 +129,18 @@ def list3_division(l3, divisor):
 
 def labelx():
     return lambda var: '$' + str(var)[2:-1].replace('**', '^') + '$'
+
+
+def labellog(sctype, symmin, cmpr0):
+    logname = ''
+    compare = ''
+    if cmpr0:
+        compare = '(compared) '
+    if (sctype == '2' or sctype == 'log'):
+        logname = 'log '
+    elif (sctype == '3' or sctype == 'symlog'):
+        logname = '{symmetry level = %8.3e} log ' % symmin
+    return logname + compare
 
 
 def take_nonempty(lst):
