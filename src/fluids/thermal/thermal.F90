@@ -376,7 +376,7 @@ contains
       use dataio_pub, only: msg, warn
       use fluidindex, only: flind
       use fluidtypes, only: component_fluid
-      use func,       only: ekin, emag, operator(.equals.)
+      use func,       only: ekin, emag
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
       use units,      only: kboltz, mH
