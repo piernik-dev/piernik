@@ -204,7 +204,7 @@ contains
       endif
 
 #ifdef NBODY
-      if (a1 .equals. 0.) call add_part_in_proper_cg(I_ONE, d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
+      if (a1 .equals. 0.) call add_part_in_proper_cg(I_ONE, d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0, 0.0, 0.0)
 #endif /* NBODY */
 
       if (master) then
