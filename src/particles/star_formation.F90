@@ -38,7 +38,7 @@ module star_formation
   private
   public :: SF, initialize_id, attribute_id, pid_gen, dmass_stars
 
-  integer(kind=4)       :: pid_gen, maxpid, dpid, dmass_stars
+  integer(kind=4)       :: pid_gen, maxpid, dpid
 
 contains
 
@@ -54,9 +54,8 @@ contains
     use fluidindex,            only: flind
     use fluidtypes,            only: component_fluid
     use func,                  only: operator(.equals.), ekin
-    use global,                only: nstep, t, dt
+    use global,                only: t, dt
     use grid_cont,             only: grid_container
-    use mpisetup,              only: proc
     use named_array_list,      only: wna, qna
     use particle_types,        only: particle
     use particle_utils,        only: is_part_in_cg
@@ -75,8 +74,8 @@ contains
     logical                                            :: fed, kick
     integer(kind=4)                                    :: pid, ig, stage, n_SN
     real, dimension(ndims)                             :: pos, vel, acc
-    real                                               :: mass, ener, tdyn, tbirth, padd, t1, fact
-    logical                                            :: in, phy, out, cond
+    real                                               :: dmass_stars, mass, ener, tdyn, tbirth, padd, t1, fact
+    logical                                            :: in, phy, out
 
     if (.not. forward) return
     dens_thr = 0.035
