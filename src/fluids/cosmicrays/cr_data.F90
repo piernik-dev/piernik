@@ -66,7 +66,7 @@ module cr_data
    end enum
 
    integer, parameter                                      :: nicr = icr_LAST - 1
-   integer                                                 :: ncrsp_auto
+   integer(kind=4)                                         :: ncrsp_auto
 
    logical, dimension(PRES:SPEC)                           :: eE                 !< presence and grad_pcr essentiality of electrons
    logical, dimension(PRES:SPEC)                           :: eH1                !< presence and grad_pcr essentiality of H1 isotope
@@ -214,7 +214,7 @@ contains
 #undef VS
 
       eCRSP(1:nicr) = [eE(PRES), eH1(PRES), eC12(PRES), eBe9(PRES), eBe10(PRES), eN14(PRES), eO16(PRES), eLi7(PRES)]
-      ncrsp_auto = count(eCRSP)
+      ncrsp_auto = count(eCRSP, kind=4)
 
    end subroutine init_cr_species
 
