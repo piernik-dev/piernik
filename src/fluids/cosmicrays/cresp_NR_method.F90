@@ -33,14 +33,12 @@
 module cresp_NR_method
 ! pulled by CRESP
 
-   use constants,     only: LO
-   use cresp_helpers, only: map_header, bound_name
+   use cresp_helpers, only: map_header
 
    implicit none
 
    private
-   public :: alpha, assoc_pointers, bound_name, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, & !WARNING element abuse in group public
-         &   cresp_write_smaps_to_hdf, cresp_read_smaps_from_hdf, deallocate_all_smaps
+   public :: alpha, assoc_pointers, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, cresp_write_smaps_to_hdf, cresp_read_smaps_from_hdf, deallocate_all_smaps
 
    integer, parameter                        :: ndim = 2
    real, allocatable, dimension(:)           :: p_space, q_space
@@ -274,7 +272,7 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine init_smap_array_values(hdr_init)
 
-      use constants,       only: zero, half, one, three, I_ONE, big, small, HI
+      use constants,       only: zero, half, one, three, I_ONE, big, small, LO, HI
       use cresp_helpers,   only: map_header
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: die
@@ -394,7 +392,7 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine fill_refine_smap(i)
 
-      use constants,      only: HI
+      use constants,      only: LO, HI
       use dataio_pub,     only: die
       use initcrspectrum, only: NR_run_refine_pf
 
@@ -463,8 +461,9 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine refine_all_directions(bound_case)
 
-      use constants,  only: I_ONE
-      use dataio_pub, only: die, msg, printinfo
+      use constants,     only: I_ONE
+      use cresp_helpers, only: bound_name
+      use dataio_pub,    only: die, msg, printinfo
 
       implicit none
 
@@ -505,7 +504,7 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine assoc_pointers(bound_case)
 
-      use constants, only: HI
+      use constants, only: LO, HI
 
       implicit none
 
@@ -543,6 +542,7 @@ contains
    subroutine fill_boundary_grid(bound_case, fill_p, fill_f)
 
       use constants,      only: zero, I_ONE, I_TWO
+      use cresp_helpers,  only: bound_name
       use dataio_pub,     only: msg, printinfo
       use initcrspectrum, only: arr_dim_a, arr_dim_n, eps
 
@@ -1148,7 +1148,7 @@ contains
 !----------------------------------------------------------------------------------------------------
    function fvec_lo(x)
 
-      use constants, only: one, three
+      use constants, only: LO, one, three
 
       implicit none
 
@@ -1166,7 +1166,7 @@ contains
 !---------------------------------------------------------------------------------------------------
    real function encp_func_2_zero(side, p_ratio, alpha_cnst, q_in3) ! from eqn. 29
 
-      use constants,      only: one
+      use constants,      only: LO, one
       use initcrspectrum, only: eps
 
       implicit none
@@ -1256,7 +1256,10 @@ contains
 !----------------------------------------------------------------------------------------------------
    function intpol_pf_from_NR_grids(a_val, n_val, successful) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.4
 
-      use constants, only: I_ONE
+      use constants,     only: I_ONE
+#ifdef CRESP_VERBOSED
+      use cresp_helpers, only: bound_name
+#endif /* CRESP_VERBOSED */
 
       implicit none
 
@@ -1399,6 +1402,8 @@ contains
 #ifdef CRESP_VERBOSED
    subroutine save_loc(bound_case, loc1, loc2)
 
+      use cresp_helpers, only: bound_name, extension
+
       implicit none
 
       integer(kind=4),                 intent(in) :: bound_case
@@ -1483,8 +1488,8 @@ contains
 !<
    subroutine get_smap_filename(var_name, bc, fname_no_ext)
 
-      use cresp_helpers,   only: extension, flen
-      use dataio_pub,      only: msg, printinfo
+      use cresp_helpers, only: bound_name, extension, flen
+      use dataio_pub,    only: msg, printinfo
 
       implicit none
 

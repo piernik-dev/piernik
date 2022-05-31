@@ -915,13 +915,13 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_init_state(init_n, init_e)
 
-      use constants,       only: zero, I_ZERO, I_ONE
-      use cresp_NR_method, only: bound_name
-      use dataio_pub,      only: warn, msg, die, printinfo
-      use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel,   &
-                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins
-      use mpisetup,        only: master
+      use constants,      only: zero, I_ZERO, I_ONE
+      use cresp_helpers,  only: bound_name
+      use dataio_pub,     only: warn, msg, die, printinfo
+      use initcosmicrays, only: ncrb
+      use initcrspectrum, only: q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel,   &
+                             &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins
+      use mpisetup,       only: master
 
       implicit none
 
@@ -1455,7 +1455,7 @@ contains
    subroutine check_init_spectrum
 
       use constants,       only: one, I_ONE
-      use cresp_NR_method, only: bound_name
+      use cresp_helpers,   only: bound_name
       use dataio_pub,      only: msg, warn, printinfo
       use initcrspectrum,  only: e_small, e_small_approx_p, p_init
 
@@ -1801,7 +1801,7 @@ contains
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, q_ratios, assoc_pointers
       use cresp_variables, only: clight_cresp
 #ifdef CRESP_VERBOSED
-      use cresp_NR_method, only: bound_name
+      use cresp_helpers,   only: bound_name
       use dataio_pub,      only: msg, printinfo
 #endif /* CRESP_VERBOSED */
       use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf
