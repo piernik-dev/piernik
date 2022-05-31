@@ -43,13 +43,14 @@ module cresp_NR_method
    integer, parameter                        :: ndim = 2
    real, allocatable, dimension(:)           :: p_space, q_space
    real                                      :: alpha, p_ratio_4_q, n_in
-   real, allocatable, dimension(:),   target :: alpha_tab_lo, alpha_tab_up, n_tab_lo, n_tab_up, alpha_tab_q, q_grid
+   real, allocatable, dimension(:),   target :: alpha_tab_q, q_grid
    real, allocatable, dimension(:,:), target :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
+   real, allocatable, dimension(:,:)         :: alpha_tab, n_tab
    integer(kind=4)                           :: helper_arr_dim
    real, pointer, dimension(:)               :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
    real, pointer, dimension(:,:)             :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
 #ifdef CRESP_VERBOSED
-   integer(kind=4)                           :: current_bound, sought_by
+   integer(kind=4)                           :: sought_by
    integer(kind=4), parameter                :: SLV = 1, RFN = 2
 #endif /* CRESP_VERBOSED */
    logical, save                             :: got_smaps_from_restart = .false.
@@ -326,12 +327,12 @@ contains
 !       n_max(HI) = 1000.0
 
       do i = 1, arr_dim_a
-         alpha_tab_lo(i) = ind_to_flog(i, a_min(LO), a_max(LO), arr_dim_a) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim_a-1)*real(i-1))
-         alpha_tab_up(i) = ind_to_flog(i, a_min(HI), a_max(HI), arr_dim_a) ! a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim_a-1)*real(i-1))
+         alpha_tab(LO, i) = ind_to_flog(i, a_min(LO), a_max(LO), arr_dim_a) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim_a-1)*real(i-1))
+         alpha_tab(HI, i) = ind_to_flog(i, a_min(HI), a_max(HI), arr_dim_a) ! a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim_a-1)*real(i-1))
       enddo
       do i = 1, arr_dim_n
-         n_tab_lo(i)     = ind_to_flog(i, n_min(LO), n_max(LO), arr_dim_n) ! n_min_lo * ten**((log10(n_max_lo/n_min_lo))/real(arr_dim_n-1)*real(i-1))
-         n_tab_up(i)     = ind_to_flog(i, n_min(HI), n_max(HI), arr_dim_n) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim_n-1)*real(i-1))
+         n_tab(LO, i)     = ind_to_flog(i, n_min(LO), n_max(LO), arr_dim_n) ! n_min_lo * ten**((log10(n_max_lo/n_min_lo))/real(arr_dim_n-1)*real(i-1))
+         n_tab(HI, i)     = ind_to_flog(i, n_min(HI), n_max(HI), arr_dim_n) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim_n-1)*real(i-1))
       enddo
 
 
@@ -359,11 +360,11 @@ contains
       print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i)  |       p_space(i),     q_space(i)"
       do i = 1, min(arr_dim_a, arr_dim_n)
          if (i <= helper_arr_dim) then
-            print *,i,"|",  alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i), "| i = ", &
+            print *,i,"|",  alpha_tab(LO,i), alpha_tab(HI,i), n_tab(LO,i), n_tab(HI,i), alpha_tab_q(i), "| i = ", &
                           min(i,helper_arr_dim), p_space(min(i,helper_arr_dim)), q_space(min(i,helper_arr_dim)), &
                           p_space(min(i,helper_arr_dim))**(-q_space(min(i,helper_arr_dim)))
          else
-            print *,i,"|",  alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i)
+            print *,i,"|",  alpha_tab(LO,i), alpha_tab(HI,i), n_tab(LO,i), n_tab(HI,i), alpha_tab_q(i)
          endif
       enddo
       print *, "-----------"
@@ -376,15 +377,15 @@ contains
       hdr_init(:)%s_pr     = max_p_ratio
       hdr_init(:)%s_c      = clight_cresp
 
-      hdr_init(1)%s_amin = alpha_tab_lo(1)
-      hdr_init(1)%s_amax = alpha_tab_lo(arr_dim_a)
-      hdr_init(1)%s_nmin = n_tab_lo(1)
-      hdr_init(1)%s_nmax = n_tab_lo(arr_dim_n)
+      hdr_init(1)%s_amin = alpha_tab(LO,1)
+      hdr_init(1)%s_amax = alpha_tab(LO,arr_dim_a)
+      hdr_init(1)%s_nmin = n_tab(LO,1)
+      hdr_init(1)%s_nmax = n_tab(LO,arr_dim_n)
 
-      hdr_init(2)%s_amin = alpha_tab_up(1)
-      hdr_init(2)%s_amax = alpha_tab_up(arr_dim_a)
-      hdr_init(2)%s_nmin = n_tab_up(1)
-      hdr_init(2)%s_nmax = n_tab_up(arr_dim_n)
+      hdr_init(2)%s_amin = alpha_tab(HI,1)
+      hdr_init(2)%s_amax = alpha_tab(HI,arr_dim_a)
+      hdr_init(2)%s_nmin = n_tab(HI,1)
+      hdr_init(2)%s_nmax = n_tab(HI,arr_dim_n)
 
 
    end subroutine init_smap_array_values
@@ -477,14 +478,14 @@ contains
       call printinfo(msg)
       if (.not. allocated(p_space) .or. .not. allocated(q_space)) call die("[cresp_NR_method:refine_all_directions] refine_grids called after array deallocation, stopping")
 
-      call refine_ij(p_p, p_f,  I_ONE, -I_ONE)
-      call refine_ji(p_p, p_f,  I_ONE, -I_ONE)
-      call refine_ij(p_p, p_f, -I_ONE, -I_ONE)
-      call refine_ji(p_p, p_f, -I_ONE, -I_ONE)
-      call refine_ij(p_p, p_f,  I_ONE,  I_ONE)
-      call refine_ji(p_p, p_f,  I_ONE,  I_ONE)
-      call refine_ij(p_p, p_f, -I_ONE,  I_ONE)
-      call refine_ji(p_p, p_f, -I_ONE,  I_ONE)
+      call refine_ij(bound_case, p_p, p_f,  I_ONE, -I_ONE)
+      call refine_ji(bound_case, p_p, p_f,  I_ONE, -I_ONE)
+      call refine_ij(bound_case, p_p, p_f, -I_ONE, -I_ONE)
+      call refine_ji(bound_case, p_p, p_f, -I_ONE, -I_ONE)
+      call refine_ij(bound_case, p_p, p_f,  I_ONE,  I_ONE)
+      call refine_ji(bound_case, p_p, p_f,  I_ONE,  I_ONE)
+      call refine_ij(bound_case, p_p, p_f, -I_ONE,  I_ONE)
+      call refine_ji(bound_case, p_p, p_f, -I_ONE,  I_ONE)
 
    end subroutine refine_all_directions
 
@@ -511,23 +512,15 @@ contains
       integer(kind=4), intent(in) :: bound_case
 
       if (bound_case == LO) then
-         p_a => alpha_tab_lo
-         p_n => n_tab_lo
          p_p => p_ratios_lo
          p_f => f_ratios_lo
          selected_function_2D => fvec_lo
       endif
       if (bound_case == HI) then
-         p_a => alpha_tab_up
-         p_n => n_tab_up
          p_p => p_ratios_up
          p_f => f_ratios_up
          selected_function_2D => fvec_up
       endif
-
-#ifdef CRESP_VERBOSED
-      current_bound = bound_case
-#endif /* CRESP_VERBOSED */
 
    end subroutine assoc_pointers
 
@@ -576,8 +569,8 @@ contains
          new_line = .true.
          prev_solution = prev_solution_1 ! easier to find when not searching from the top
          do j = 1, arr_dim_n
-            alpha = p_a(i)
-            n_in  = p_n(j)
+            alpha = alpha_tab(bound_case, i)
+            n_in  = n_tab(bound_case, j)
 #ifdef CRESP_VERBOSED
             write(*,"(A14,A2,A2,2I4,A9,I4,I4,A1)",advance="no") "Now solving (",bound_name(bound_case),") ",i,j,", sized ",arr_dim_a, arr_dim_n," "  ! QA_WARN debug
 #endif /* CRESP_VERBOSED */
@@ -594,7 +587,7 @@ contains
                if (check_dimm(jm, arr_dim_n)) then
                   pfp => fill_p(i,jm:j)
                   pff => fill_f(i,jm:j)
-                  call step_extr(pfp, pff, p_n(jm:j), exit_code)
+                  call step_extr(pfp, pff, n_tab(bound_case, jm:j), exit_code)
                endif
                if (j >= 2) then
                   jm = j - I_ONE
@@ -675,7 +668,7 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   subroutine refine_ji(ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
+   subroutine refine_ji(co, ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
 
       use constants,      only: zero, I_TWO
       use initcrspectrum, only: arr_dim_a, arr_dim_n
@@ -683,7 +676,7 @@ contains
       implicit none
 
       real, dimension(:,:), intent(inout) :: ref_p, ref_f
-      integer(kind=4),      intent(in)    :: i_incr, j_incr
+      integer(kind=4),      intent(in)    :: co, i_incr, j_incr
       integer(kind=4)                     :: i, j, i_beg, i_end, j_beg, j_end, i1m, i2m, i1p
       real, dimension(1:2)                :: prev_solution
       logical                             :: exit_code
@@ -694,8 +687,8 @@ contains
       call prepare_indices(arr_dim_n, j_incr, j_beg, j_end)
       do j = j_beg, j_end, j_incr
          do i = i_beg, i_end, i_incr
-            alpha = p_a(i)
-            n_in  = p_n(j)
+            alpha = alpha_tab(co, i)
+            n_in  =     n_tab(co, j)
             if (ref_p(i,j) > zero .and. ref_f(i,j) > zero) then
                prev_solution(1) = ref_p(i,j)
                prev_solution(2) = ref_f(i,j)
@@ -703,8 +696,8 @@ contains
                call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, exit_code) ! works for most cases
                if (exit_code) then
                   i1m = i-i_incr ; i2m = i - I_TWO * i_incr ; i1p = i+i_incr
-                  if (check_dimm(i2m, arr_dim_a)                                 ) call step_extr(ref_p(i2m:i  :i_incr,j), ref_f(i2m:i  :i_incr,j),         p_a(i2m:i  :i_incr), exit_code)
-                  if (check_dimm(i1m, arr_dim_a) .and. check_dimm(i1p, arr_dim_a)) call step_inpl(ref_p(i1m:i1p:i_incr,j), ref_f(i1m:i1p:i_incr,j), i_incr, p_a(i1m:i1p:i_incr), exit_code)
+                  if (check_dimm(i2m, arr_dim_a)                                 ) call step_extr(ref_p(i2m:i  :i_incr,j), ref_f(i2m:i  :i_incr,j),         alpha_tab(co, i2m:i  :i_incr), exit_code)
+                  if (check_dimm(i1m, arr_dim_a) .and. check_dimm(i1p, arr_dim_a)) call step_inpl(ref_p(i1m:i1p:i_incr,j), ref_f(i1m:i1p:i_incr,j), i_incr, alpha_tab(co, i1m:i1p:i_incr), exit_code)
                endif
             endif
          enddo
@@ -714,7 +707,7 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   subroutine refine_ij(ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
+   subroutine refine_ij(co, ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
 
       use constants,      only: zero, I_TWO
       use initcrspectrum, only: arr_dim_a, arr_dim_n
@@ -722,7 +715,7 @@ contains
       implicit none
 
       real, dimension(:,:), intent(inout) :: ref_p, ref_f
-      integer(kind=4),      intent(in)    :: i_incr, j_incr
+      integer(kind=4),      intent(in)    :: co, i_incr, j_incr
       integer(kind=4)                     :: i, j, i_beg, i_end, j_beg, j_end, j1m, j2m, j1p
       real, dimension(1:2)                :: prev_solution
       logical                             :: exit_code
@@ -733,8 +726,8 @@ contains
       call prepare_indices(arr_dim_n, j_incr, j_beg, j_end)
       do i = i_beg, i_end, i_incr
          do j = j_beg, j_end, j_incr
-            alpha = p_a(i)
-            n_in  = p_n(j)
+            alpha = alpha_tab(co, i)
+            n_in  =     n_tab(co, j)
             if (ref_p(i,j) > zero .and. ref_f(i,j) > zero) then
                prev_solution(1) = ref_p(i,j)
                prev_solution(2) = ref_f(i,j)
@@ -742,8 +735,8 @@ contains
                call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, exit_code) ! works for most cases
                if (exit_code) then
                   j1m = j-j_incr ; j2m = j - I_TWO * j_incr ; j1p = j+j_incr
-                  if (check_dimm(j2m, arr_dim_n)                                 ) call step_extr(ref_p(i,j2m:j  :j_incr), ref_f(i,j2m:j  :j_incr),         p_n(j2m:j  :j_incr), exit_code)
-                  if (check_dimm(j1m, arr_dim_n) .and. check_dimm(j1p, arr_dim_n)) call step_inpl(ref_p(i,j1m:j1p:j_incr), ref_f(i,j1m:j1p:j_incr), j_incr, p_n(j1m:j1p:j_incr), exit_code)
+                  if (check_dimm(j2m, arr_dim_n)                                 ) call step_extr(ref_p(i,j2m:j  :j_incr), ref_f(i,j2m:j  :j_incr),         n_tab(co, j2m:j  :j_incr), exit_code)
+                  if (check_dimm(j1m, arr_dim_n) .and. check_dimm(j1p, arr_dim_n)) call step_inpl(ref_p(i,j1m:j1p:j_incr), ref_f(i,j1m:j1p:j_incr), j_incr, n_tab(co, j1m:j1p:j_incr), exit_code)
                endif
             endif
          enddo
@@ -1254,7 +1247,7 @@ contains
 
    end function lin_extrapol_1D
 !----------------------------------------------------------------------------------------------------
-   function intpol_pf_from_NR_grids(a_val, n_val, successful) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.4
+   function intpol_pf_from_NR_grids(co, a_val, n_val, successful) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.4
 
       use constants,     only: I_ONE
 #ifdef CRESP_VERBOSED
@@ -1263,26 +1256,27 @@ contains
 
       implicit none
 
-      real,    intent(in)             :: a_val, n_val  ! ratios arrays (p,f: lo and up), for which solutions have been obtained. loc_no_ip (changed to l1) - in case when interpolation is not possible,
-      logical, intent(out)            :: successful
+      integer(kind=4), intent(in)     :: co
+      real,            intent(in)     :: a_val, n_val  ! ratios arrays (p,f: lo and up), for which solutions have been obtained. loc_no_ip (changed to l1) - in case when interpolation is not possible,
+      logical,         intent(out)    :: successful
       real, dimension(2)              :: intpol_pf_from_NR_grids ! indexes with best match and having solutions are chosen.
       real                            :: blin_a, blin_n
       integer(kind=4), dimension(1:2) :: l1, l2 ! indexes that points where alpha_tab_ and up and n_tab_ and up are closest in value to a_val and n_val - indexes point to
 
 #ifdef CRESP_VERBOSED
-      write (*,"(A30,A2,A4)",advance="no") "Determining indices for case: ", bound_name(current_bound), "... "  ! QA_WARN debug
+      write (*,"(A30,A2,A4)",advance="no") "Determining indices for case: ", bound_name(co), "... "  ! QA_WARN debug
 #endif /* CRESP_VERBOSED */
-      call determine_loc(a_val, n_val, l1, successful)
+      call determine_loc(co, a_val, n_val, l1, successful)
       l2 = l1 + I_ONE
 
 #ifdef CRESP_VERBOSED
       if (successful) write(*,"(A19, 2I8, A3, 2I8)") "Obtained indices:", l1, " | ", l2  ! QA_WARN debug
-      call save_loc(current_bound, l1, l2)
+      call save_loc(co, l1, l2)
 #endif /* CRESP_VERBOSED */
 
       if (successful) then
-         blin_a = bl_in_tu(p_a(l1(1)), a_val, p_a(l2(1)))
-         blin_n = bl_in_tu(p_n(l1(2)), n_val, p_n(l2(2)))
+         blin_a = bl_in_tu(alpha_tab(co, l1(1)), a_val, alpha_tab(co, l2(1)))
+         blin_n = bl_in_tu(    n_tab(co, l1(2)), n_val,     n_tab(co, l2(2)))
          intpol_pf_from_NR_grids(1) = bl_interpol(p_p(l1(1),l1(2)), p_p(l1(1),l2(2)), p_p(l2(1),l1(2)), p_p(l2(1),l2(2)), blin_a, blin_n)
          intpol_pf_from_NR_grids(2) = bl_interpol(p_f(l1(1),l1(2)), p_f(l1(1),l2(2)), p_f(l2(1),l1(2)), p_f(l2(1),l2(2)), blin_a, blin_n)
       else ! interpolation won't work in this case, choosing closest values that have solutions.
@@ -1292,21 +1286,22 @@ contains
 
    end function intpol_pf_from_NR_grids
 !----------------------------------------------------------------------------------------------------
-   subroutine determine_loc(a_val, n_val, loc1, successful)
+   subroutine determine_loc(co, a_val, n_val, loc1, successful)
 
       use constants,      only: zero, I_ONE
       use initcrspectrum, only: arr_dim_a, arr_dim_n
 
       implicit none
 
+      integer(kind=4),                 intent(in)  :: co
       real,                            intent(in)  :: a_val, n_val
       integer(kind=4), dimension(1:2), intent(out) :: loc1
       logical,                         intent(out) :: successful
       logical                                      :: hit_zero
 
       hit_zero  = .false.
-      loc1(1) = inverse_f_to_ind(a_val, p_a(1), p_a(arr_dim_a), arr_dim_a)
-      loc1(2) = inverse_f_to_ind(n_val, p_n(1), p_n(arr_dim_n), arr_dim_n)
+      loc1(1) = inverse_f_to_ind(a_val, alpha_tab(co, 1), alpha_tab(co, arr_dim_a), arr_dim_a)
+      loc1(2) = inverse_f_to_ind(n_val,     n_tab(co, 1),     n_tab(co, arr_dim_n), arr_dim_n)
 
       if ((minval(loc1) >= 1 .and. maxval(loc1) <= arr_dim_a-1)) then ! only need to test loc1
          if (p_p(loc1(1), loc1(2)) > zero) then
@@ -1461,10 +1456,8 @@ contains
       call piernik_MPI_Bcast(f_ratios_lo)
       call piernik_MPI_Bcast(f_ratios_up)
       call piernik_MPI_Bcast(q_grid)
-      call piernik_MPI_Bcast(n_tab_lo)
-      call piernik_MPI_Bcast(n_tab_up)
-      call piernik_MPI_Bcast(alpha_tab_up)
-      call piernik_MPI_Bcast(alpha_tab_lo)
+      call piernik_MPI_Bcast(n_tab)
+      call piernik_MPI_Bcast(alpha_tab)
       call piernik_MPI_Bcast(alpha_tab_q)
 
       do i = LO, HI
@@ -1517,21 +1510,40 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine allocate_all_smap_arrays
 
-      use constants,      only: I_ONE
-      use diagnostics,    only: my_allocate_with_index, my_allocate
+      use constants,      only: HI, I_ONE
+      use diagnostics,    only: ma2d, my_allocate, my_allocate_with_index
       use initcrspectrum, only: arr_dim_a, arr_dim_n, arr_dim_q
 
       implicit none
 
-      if (.not. allocated(alpha_tab_lo)) call my_allocate_with_index(alpha_tab_lo, arr_dim_a, I_ONE)
-      if (.not. allocated(alpha_tab_up)) call my_allocate_with_index(alpha_tab_up, arr_dim_a, I_ONE)
-      if (.not. allocated(n_tab_lo))     call my_allocate_with_index(n_tab_lo, arr_dim_n, I_ONE)
-      if (.not. allocated(n_tab_up))     call my_allocate_with_index(n_tab_up, arr_dim_n, I_ONE)
-      if (.not. allocated(alpha_tab_q))  call my_allocate_with_index(alpha_tab_q, arr_dim_q, I_ONE)
-      if (.not. allocated(q_grid))       call my_allocate_with_index(q_grid,      arr_dim_q, I_ONE)
+      if (.not. allocated(alpha_tab_q)) call my_allocate_with_index(alpha_tab_q, arr_dim_q, I_ONE)
+      if (.not. allocated(q_grid))      call my_allocate_with_index(q_grid,      arr_dim_q, I_ONE)
+
+      ma2d = [HI, arr_dim_a]
+      if (.not. allocated(alpha_tab))   call my_allocate(alpha_tab, ma2d)
+
+      ma2d = [HI, arr_dim_n]
+      if (.not. allocated(n_tab))       call my_allocate(n_tab, ma2d)
+
       call allocate_smaps(arr_dim_a, arr_dim_n)
 
    end subroutine allocate_all_smap_arrays
+!----------------------------------------------------------------------------------------------------
+   subroutine allocate_smaps(dim1, dim2)
+
+      use diagnostics, only: ma2d, my_allocate
+
+      implicit none
+
+      integer(kind=4), intent(in) :: dim1, dim2
+
+      ma2d = [dim1, dim2]
+      if (.not. allocated(p_ratios_lo)) call my_allocate(p_ratios_lo, ma2d )
+      if (.not. allocated(f_ratios_lo)) call my_allocate(f_ratios_lo, ma2d )
+      if (.not. allocated(p_ratios_up)) call my_allocate(p_ratios_up, ma2d )
+      if (.not. allocated(f_ratios_up)) call my_allocate(f_ratios_up, ma2d )
+
+   end subroutine allocate_smaps
 !----------------------------------------------------------------------------------------------------
    subroutine deallocate_all_smaps
 
@@ -1539,12 +1551,10 @@ contains
 
       implicit none
 
-      call my_deallocate(alpha_tab_lo)
-      call my_deallocate(alpha_tab_up)
-      call my_deallocate(n_tab_lo)
-      call my_deallocate(n_tab_up)
       call my_deallocate(alpha_tab_q)
       call my_deallocate(q_grid)
+      call my_deallocate(alpha_tab)
+      call my_deallocate(n_tab)
       call deallocate_smaps
 
    end subroutine deallocate_all_smaps
@@ -1561,24 +1571,6 @@ contains
       call my_deallocate(f_ratios_up)
 
    end subroutine deallocate_smaps
-!----------------------------------------------------------------------------------------------------
-   subroutine allocate_smaps(dim1, dim2)
-
-      use diagnostics,  only: my_allocate, ma2d
-
-      implicit none
-
-      integer(kind=4), intent(in) :: dim1, dim2
-
-      ma2d = [dim1, dim2]
-
-      if ( .not. allocated(p_ratios_lo) ) call my_allocate(p_ratios_lo, ma2d )
-      if ( .not. allocated(f_ratios_lo) ) call my_allocate(f_ratios_lo, ma2d )
-      if ( .not. allocated(p_ratios_up) ) call my_allocate(p_ratios_up, ma2d )
-      if ( .not. allocated(f_ratios_up) ) call my_allocate(f_ratios_up, ma2d )
-
-   end subroutine allocate_smaps
-
 !----------------------------------------------------------------------------------------------------
    subroutine cresp_write_smaps_to_hdf(file_id)
 

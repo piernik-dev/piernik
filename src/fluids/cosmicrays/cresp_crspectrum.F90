@@ -1820,7 +1820,7 @@ contains
 
       alpha = e(qi)/(n(qi) * p_fix(ipfix) * clight_cresp)
       n_in  = n(qi)
-      x_NR = intpol_pf_from_NR_grids(alpha, n_in, interpolated)
+      x_NR = intpol_pf_from_NR_grids(cutoff, alpha, n_in, interpolated)
       if (.not. interpolated) then
          exit_code = .true.
          fail_count_interpol(cutoff) = fail_count_interpol(cutoff) + 1
