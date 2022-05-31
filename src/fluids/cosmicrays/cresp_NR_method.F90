@@ -43,11 +43,10 @@ module cresp_NR_method
    integer, parameter                        :: ndim = 2
    real, allocatable, dimension(:)           :: p_space, q_space
    real                                      :: alpha, p_ratio_4_q, n_in
-   real, allocatable, dimension(:),   target :: alpha_tab_q, q_grid
+   real, allocatable, dimension(:)           :: alpha_tab_q, q_grid
    real, allocatable, dimension(:,:), target :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
    real, allocatable, dimension(:,:)         :: alpha_tab, n_tab
    integer(kind=4)                           :: helper_arr_dim
-   real, pointer, dimension(:)               :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
    real, pointer, dimension(:,:)             :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
 #ifdef CRESP_VERBOSED
    integer(kind=4)                           :: sought_by
@@ -196,12 +195,12 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine cresp_initialize_guess_grids
 
-      use constants,       only: zero, I_FOUR, LO, HI
-      use cresp_helpers,   only: map_header, hdr_io
-      use cresp_io,        only: check_NR_smap_header, save_NR_smap
-      use dataio_pub,      only: warn
-      use initcrspectrum,  only: arr_dim_a, force_init_NR, e_small_approx_init_cond, NR_allow_old_smaps, NR_smap_file
-      use mpisetup,        only: master
+      use constants,      only: zero, I_FOUR, LO, HI
+      use cresp_helpers,  only: map_header, hdr_io
+      use cresp_io,       only: check_NR_smap_header, save_NR_smap
+      use dataio_pub,     only: warn
+      use initcrspectrum, only: arr_dim_a, force_init_NR, e_small_approx_init_cond, NR_allow_old_smaps, NR_smap_file
+      use mpisetup,       only: master
 
       implicit none
 
@@ -1225,14 +1224,13 @@ contains
 
    end function bl_in_tu
 !----------------------------------------------------------------------------------------------------
-   real function lin_interpol_1D(loc_1, loc_2, val)
+   real function lin_interpol_1D(a1, a2, n1, n2, val)
 
       implicit none
 
-      integer(kind=4), intent(in) :: loc_1, loc_2
-      real,            intent(in) :: val
+      real, intent(in) :: a1, a2, n1, n2, val
 
-      lin_interpol_1D = p_n(loc_1) + (val - p_a(loc_1)) * ( p_n(loc_1) - p_n(loc_2) ) / (p_a(loc_1) - p_a(loc_2)) ! WARNING - uses p_a and p_n, that are usually used to point alpha and n arrays.
+      lin_interpol_1D = n1 + (val - a1) * ( n1 - n2 ) / (a1 - a2)
 
    end function lin_interpol_1D
 !----------------------------------------------------------------------------------------------------
@@ -1360,9 +1358,6 @@ contains
       real, optional, intent(in)    :: outer_p_ratio
       integer(kind=4)               :: loc_1, loc_2
 
-      p_a => alpha_tab_q
-      p_n => q_grid
-
       compute_q = zero
       if (present(outer_p_ratio)) then
          p_ratio_4_q = outer_p_ratio
@@ -1382,7 +1377,7 @@ contains
       endif
 
       loc_2 = loc_1 + I_ONE
-      compute_q = lin_interpol_1D(loc_1, loc_2, alpha_in)
+      compute_q = lin_interpol_1D(alpha_tab_q(loc_1), alpha_tab_q(loc_2), q_grid(loc_1), q_grid(loc_2), alpha_in)
 
       if (NR_refine_solution_q) then
          alpha = alpha_in
