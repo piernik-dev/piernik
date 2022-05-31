@@ -238,11 +238,7 @@ contains
                ! if header not in agreement, try to load backup, e.g., "NR_smap_file". If additionally user declared "NR_allow_old_smaps", read dat files
                call try_read_user_h5(NR_smap_file, hdr, solve_new_smaps)
                if (NR_allow_old_smaps) call try_read_old_smap_files(hdr, solve_new_smaps)
-               if (solve_new_smaps .or. force_init_NR) then
-                  do icut = LO, HI
-                     call fill_refine_smap(icut)
-                  enddo
-               endif
+               if (solve_new_smaps .or. force_init_NR) call fill_refine_smap
             endif
          endif
 
@@ -390,29 +386,21 @@ contains
    end subroutine init_smap_array_values
 
 !----------------------------------------------------------------------------------------------------
-   subroutine fill_refine_smap(i)
+   subroutine fill_refine_smap
 
       use constants,      only: LO, HI
-      use dataio_pub,     only: die
       use initcrspectrum, only: NR_run_refine_pf
 
       implicit none
 
-      integer(kind=4), intent(in) :: i
+      integer(kind=4) :: i
 
-      select case (i)
-         case (LO)
-            call fill_boundary_grid(LO, p_ratios_lo, f_ratios_lo)
-         case (HI)
-            call fill_boundary_grid(HI, p_ratios_up, f_ratios_up)
-         case default
-            call die("[cresp_NR_method:fill_guess_grid] Boundary not supported.")
-      end select
-
-      if (NR_run_refine_pf) then
+      do i = LO, HI
          call assoc_pointers(i)
-         call refine_all_directions(i)
-      endif
+         call fill_boundary_grid(i)
+
+         if (NR_run_refine_pf) call refine_all_directions(i)
+      enddo
 
    end subroutine fill_refine_smap
 
@@ -531,7 +519,7 @@ contains
 ! Parallelization may help with doubling arr_dim but anything more than that require change
 ! of the algorithm to decrease exponent to arr_dim.
 
-   subroutine fill_boundary_grid(bound_case, fill_p, fill_f)
+   subroutine fill_boundary_grid(bound_case)
 
       use constants,      only: zero, I_ONE, I_TWO
       use cresp_helpers,  only: bound_name
@@ -541,7 +529,6 @@ contains
       implicit none
 
       integer(kind=4), intent(in) :: bound_case
-      real, dimension(:,:), target :: fill_p, fill_f
       real, dimension(:), pointer :: pfp, pff
       real, dimension(1:2)        :: x_vec, prev_solution, prev_solution_1, x_step
       integer(kind=4)             :: i, j, is, js, jm
@@ -558,7 +545,7 @@ contains
 
       call assoc_pointers(bound_case)
 
-      fill_p = zero ; fill_f = zero
+      p_p = zero ; p_f = zero
       x_step = zero
       write(msg, "(A,A2,A,I3,A,I3)") "[cresp_NR_method:fill_boundary_grid] Solving solution maps for cutoff case (",bound_name(bound_case),"): DIM=",arr_dim_a, ' x ', arr_dim_n
       call printinfo(msg)
@@ -574,7 +561,7 @@ contains
             write(*,"(A14,A2,A2,2I4,A9,I4,I4,A1)",advance="no") "Now solving (",bound_name(bound_case),") ",i,j,", sized ",arr_dim_a, arr_dim_n," "  ! QA_WARN debug
 #endif /* CRESP_VERBOSED */
 
-            call seek_solution_prev(fill_p(i,j), fill_f(i,j), prev_solution, exit_code)
+            call seek_solution_prev(p_p(i,j), p_f(i,j), prev_solution, exit_code)
 
             if (.not. exit_code .and. new_line) then
                prev_solution_1 = prev_solution
@@ -584,13 +571,13 @@ contains
             if (exit_code) then
                jm = j - I_TWO
                if (check_dimm(jm, arr_dim_n)) then
-                  pfp => fill_p(i,jm:j)
-                  pff => fill_f(i,jm:j)
+                  pfp => p_p(i,jm:j)
+                  pff => p_f(i,jm:j)
                   call step_extr(pfp, pff, n_tab(bound_case, jm:j), exit_code)
                endif
                if (j >= 2) then
                   jm = j - I_ONE
-                  if (fill_p(i,jm) > zero) call seek_solution_step(fill_p(i,j), fill_f(i,j), prev_solution, i, jm, exit_code)
+                  if (p_p(i,jm) > zero) call seek_solution_step(p_p(i,j), p_f(i,j), prev_solution, i, jm, exit_code)
                endif
             endif
             if (exit_code) then !still...
@@ -604,8 +591,8 @@ contains
                      if (exit_code) then
                         call NR_algorithm(x_vec, exit_code)
                         if (.not. exit_code) then
-                           fill_p(i,j) = x_vec(1) ! i index - alpha, j index - n_in
-                           fill_f(i,j) = x_vec(2)
+                           p_p(i,j) = x_vec(1) ! i index - alpha, j index - n_in
+                           p_f(i,j) = x_vec(2)
                            prev_solution = x_vec
 #ifdef CRESP_VERBOSED
                            call msg_success("    ", x_in, x_vec)
@@ -621,8 +608,8 @@ contains
                else if (prev_solution(2) <= eps) then
                   prev_solution(2) = prev_solution_1(2)
                else
-                  prev_solution(1) = fill_p(i,j)
-                  prev_solution(2) = fill_f(i,j)
+                  prev_solution(1) = p_p(i,j)
+                  prev_solution(2) = p_f(i,j)
                endif
             endif
 #ifdef CRESP_VERBOSED
@@ -631,8 +618,8 @@ contains
          enddo
       enddo
 
-      fill_p = abs(fill_p)
-      fill_f = abs(fill_f)
+      p_p = abs(p_p)
+      p_f = abs(p_f)
 
 #ifdef CRESP_VERBOSED
       print *,""
