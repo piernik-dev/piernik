@@ -97,80 +97,83 @@ contains
                 do k = cg%ijkse(zdim,LO), cg%ijkse(zdim,HI)
                    if (cg%u(pfl%idn,i,j,k) .gt. dens_thr) then
 #ifdef THERM
-                      if (cg%q(itemp)%arr(i,j,k) .lt. 10**4)) then
+                      if (cg%q(itemp)%arr(i,j,k) .lt. 10**4) then
 #endif /* THERM */
-                      fed = .false.
-                      c_tau_ff = sqrt(3.*pi/(32.*newtong))
-                      sf_dens = eps_sf / c_tau_ff * cg%u(pfl%idn,i,j,k)**(3./2.)
-                      pset => cg%pset%first
-                      do while (associated(pset))
-                         if (cg%coord(LO,xdim)%r(i) .lt. pset%pdata%pos(1)+cg%dx .and. cg%coord(HI,xdim)%r(i) .gt. pset%pdata%pos(1)-cg%dx) then
-                            if (cg%coord(LO,ydim)%r(j) .lt. pset%pdata%pos(2)+cg%dy .and. cg%coord(HI,ydim)%r(j) .gt. pset%pdata%pos(2)-cg%dy) then
-                               if (cg%coord(LO,zdim)%r(k) .lt. pset%pdata%pos(3)+cg%dz .and. cg%coord(HI,zdim)%r(k) .gt. pset%pdata%pos(3)-cg%dz) then
+                         fed = .false.
+                         c_tau_ff = sqrt(3.*pi/(32.*newtong))
+                         sf_dens = eps_sf / c_tau_ff * cg%u(pfl%idn,i,j,k)**(3./2.)
+                         pset => cg%pset%first
+                         do while (associated(pset))
+                            if (cg%coord(LO,xdim)%r(i) .lt. pset%pdata%pos(1)+cg%dx .and. cg%coord(HI,xdim)%r(i) .gt. pset%pdata%pos(1)-cg%dx) then
+                               if (cg%coord(LO,ydim)%r(j) .lt. pset%pdata%pos(2)+cg%dy .and. cg%coord(HI,ydim)%r(j) .gt. pset%pdata%pos(2)-cg%dy) then
+                                  if (cg%coord(LO,zdim)%r(k) .lt. pset%pdata%pos(3)+cg%dz .and. cg%coord(HI,zdim)%r(k) .gt. pset%pdata%pos(3)-cg%dz) then
 
-                                  if ((pset%pdata%tform .ge. -10.0) .and. (pset%pdata%mass .lt. mass_SN)) then
-                                     stage = aint(pset%pdata%mass/mass_SN)
-                                     frac = sf_dens * 2*dt / cg%u(pfl%idn, i, j, k)
-                                     pset%pdata%vel(1:3) = (pset%pdata%mass *pset%pdata%vel(1:3) + frac * cg%u(pfl%imx:pfl%imz,i,j,k) * cg%dvol) / (pset%pdata%mass + sf_dens * cg%dvol * 2*dt)
-                                     pset%pdata%mass     =  pset%pdata%mass + sf_dens * cg%dvol * 2*dt
-                                     dmass_stars = dmass_stars + sf_dens * cg%dvol * 2*dt
-                                     cg%q(qna%ind("SFR_n"))%arr(i,j,k)  = cg%q(qna%ind("SFR_n"))%arr(i,j,k) + sf_dens * cg%dvol * 2*dt
-                                     cg%u(pfl%ien, i, j, k)          = (1-frac) * cg%u(pfl%ien, i, j, k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn, i, j, k))
-                                     cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1 - frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
-                                     cg%u(pfl%imx:pfl%imz, i, j, k)  = (1 - frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
-                                     if (aint(pset%pdata%mass/mass_SN) .gt. stage) then
-                                        if (.not. kick) then
+                                     if ((pset%pdata%tform .ge. -10.0) .and. (pset%pdata%mass .lt. mass_SN)) then
+                                        stage = aint(pset%pdata%mass/mass_SN)
+                                        frac = sf_dens * 2*dt / cg%u(pfl%idn, i, j, k)
+                                        pset%pdata%vel(1:3) = (pset%pdata%mass *pset%pdata%vel(1:3) + frac * cg%u(pfl%imx:pfl%imz,i,j,k) * cg%dvol) / (pset%pdata%mass + sf_dens * cg%dvol * 2*dt)
+                                        pset%pdata%mass     =  pset%pdata%mass + sf_dens * cg%dvol * 2*dt
+                                        dmass_stars = dmass_stars + sf_dens * cg%dvol * 2*dt
+                                        cg%q(qna%ind("SFR_n"))%arr(i,j,k)  = cg%q(qna%ind("SFR_n"))%arr(i,j,k) + sf_dens * cg%dvol * 2*dt
+                                        cg%u(pfl%ien, i, j, k)          = (1-frac) * cg%u(pfl%ien, i, j, k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn, i, j, k))
+                                        cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1 - frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
+                                        cg%u(pfl%imx:pfl%imz, i, j, k)  = (1 - frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
+                                        if (aint(pset%pdata%mass/mass_SN) .gt. stage) then
+                                           if (.not. kick) then
 #ifdef THERM
-                                           cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + (aint(pset%pdata%mass/mass_SN) - stage) * (1-0.1*cr_active) * n_SN * 10.0**51 * erg / cg%dvol ! adding SN energy
+                                              cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + (aint(pset%pdata%mass/mass_SN) - stage) * (1-0.1*cr_active) * n_SN * 10.0**51 * erg / cg%dvol ! adding SN energy
 #endif /* THERM */
 #ifdef COSM_RAYS
-                                           if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + (aint(pset%pdata%mass/mass_SN) - stage) * 0.1 * n_SN * 10.0**51 * erg / cg%dvol  ! adding CR
+                                              if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + (aint(pset%pdata%mass/mass_SN) - stage) * 0.1 * n_SN * 10.0**51 * erg / cg%dvol  ! adding CR
 #endif /* COSM_RAYS */
+                                           endif
+                                           pset%pdata%tform = t
+                                           !print *, 'particle filled', pset%pdata%pid, aint(pset%pdata%mass/mass_SN) - stage
                                         endif
-                                        pset%pdata%tform = t
-                                        !print *, 'particle filled', pset%pdata%pid, aint(pset%pdata%mass/mass_SN) - stage
+                                        fed = .true.
+                                        exit
                                      endif
-                                     fed = .true.
-                                     exit
                                   endif
                                endif
                             endif
-                         endif
-                         pset => pset%nxt
-                      enddo
-                      if (.not. fed) then
-                         call attribute_id(pid)
-                         pos(1) = cg%coord(CENTER, xdim)%r(i)
-                         pos(2) = cg%coord(CENTER, ydim)%r(j)
-                         pos(3) = cg%coord(CENTER, zdim)%r(k)
-                         mass   = sf_dens * cg%dvol * 2*dt
-                         frac   = mass / cg%u(pfl%idn, i, j, k) / cg%dvol
-                         vel(1) = cg%u(pfl%imx, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
-                         vel(2) = cg%u(pfl%imy, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
-                         vel(3) = cg%u(pfl%imz, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
-                         acc(:)=0.0
-                         ener = 0.0
-                         tdyn = sqrt(3*pi/(32*newtong*(cg%w(wna%fi)%arr(pfl%idn,i,j,k))+cgl%cg%q(ig)%arr(i,j,k)))
-                         call is_part_in_cg(cg, pos, in, phy, out)
-                         dmass_stars = dmass_stars + mass
-                         cg%q(qna%ind("SFR_n"))%arr(i,j,k)  = cg%q(qna%ind("SFR_n"))%arr(i,j,k) + sf_dens* cg%dvol * 2*dt
-                         cg%u(pfl%ien, i, j, k)          = (1-frac) * cg%u(pfl%ien, i, j, k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn, i, j, k))
-                         cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1 - frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
-                         cg%u(pfl%imx:pfl%imz, i, j, k)  = (1 - frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
-                         tbirth = -10
-                         if (mass .gt. mass_SN) then
-                            if (.not. kick) then
+                            pset => pset%nxt
+                         enddo
+                         if (.not. fed) then
+                            call attribute_id(pid)
+                            pos(1) = cg%coord(CENTER, xdim)%r(i)
+                            pos(2) = cg%coord(CENTER, ydim)%r(j)
+                            pos(3) = cg%coord(CENTER, zdim)%r(k)
+                            mass   = sf_dens * cg%dvol * 2*dt
+                            frac   = mass / cg%u(pfl%idn, i, j, k) / cg%dvol
+                            vel(1) = cg%u(pfl%imx, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
+                            vel(2) = cg%u(pfl%imy, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
+                            vel(3) = cg%u(pfl%imz, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
+                            acc(:)=0.0
+                            ener = 0.0
+                            tdyn = sqrt(3*pi/(32*newtong*(cg%w(wna%fi)%arr(pfl%idn,i,j,k))+cgl%cg%q(ig)%arr(i,j,k)))
+                            call is_part_in_cg(cg, pos, in, phy, out)
+                            dmass_stars = dmass_stars + mass
+                            cg%q(qna%ind("SFR_n"))%arr(i,j,k)  = cg%q(qna%ind("SFR_n"))%arr(i,j,k) + sf_dens* cg%dvol * 2*dt
+                            cg%u(pfl%ien, i, j, k)          = (1-frac) * cg%u(pfl%ien, i, j, k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn, i, j, k))
+                            cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1 - frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
+                            cg%u(pfl%imx:pfl%imz, i, j, k)  = (1 - frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
+                            tbirth = -10
+                            if (mass .gt. mass_SN) then
+                               if (.not. kick) then
 #ifdef THERM
-                               cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + aint(mass/mass_SN) * (1-0.1*cr_active) * n_SN * 10.0**51 * erg / cg%dvol ! adding SN energy
+                                  cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + aint(mass/mass_SN) * (1-0.1*cr_active) * n_SN * 10.0**51 * erg / cg%dvol ! adding SN energy
 #endif /* THERM */
 #ifdef COSM_RAYS
-                               if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + aint(mass/mass_SN) * 0.1 * n_SN * 10.0**51 * erg / cg%dvol  ! adding CR
+                                  if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + aint(mass/mass_SN) * 0.1 * n_SN * 10.0**51 * erg / cg%dvol  ! adding CR
 #endif /* COSM_RAYS */
+                               endif
+                               tbirth = t
                             endif
-                            tbirth = t
+                            call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tbirth, tdyn)
                          endif
-                         call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tbirth, tdyn)
+#ifdef THERM
                       endif
+#endif /* THERM */
                    endif
                 enddo
              enddo
