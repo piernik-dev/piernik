@@ -50,22 +50,22 @@ module initcrspectrum
    logical         :: use_cresp_evol              !< determines whether CRESP update is called by fluidupdate
    real            :: p_min_fix                   !< fixed momentum grid lower cutoff
    real            :: p_max_fix                   !< fixed momentum grid upper cutoff
-   real            :: p_lo_init                   !< initial lower cutoff momentum
-   real            :: p_up_init                   !< initial upper cutoff momentum
-   real, dimension(2) :: p_init                   !< vector to store p_lo_init and p_up_init
+   real, dimension(:), allocatable :: p_lo_init                   !< initial lower cutoff momentum
+   real, dimension(:), allocatable :: p_up_init                   !< initial upper cutoff momentum
+   real, dimension(:,:), allocatable :: p_init                   !< vector to store p_lo_init and p_up_init
    character(len=cbuff_len) :: initial_spectrum   !< available types: bump, powl, brpl, symf, syme. Description below.
-   real            :: p_br_init_lo, p_br_init_up  !< initial low energy break
-   real, dimension(2) :: p_br_init                !< vector to store p_br_init_lo and p_br_init_up
-   real            :: f_init                      !< initial value of distr. func. for isolated case
-   real            :: q_init                      !< initial value of power law-like spectrum exponent
-   real            :: q_br_init                   !< initial q for low energy break
+   real, dimension(:), allocatable :: p_br_init_lo, p_br_init_up  !< initial low energy break
+   real, dimension(:,:), allocatable :: p_br_init                !< vector to store p_br_init_lo and p_br_init_up
+   real, dimension(:), allocatable :: f_init                      !< initial value of distr. func. for isolated case
+   real, dimension(:), allocatable :: q_init                      !< initial value of power law-like spectrum exponent
+   real, dimension(:), allocatable :: q_br_init                   !< initial q for low energy break
    real            :: q_big                       !< maximal amplitude of q
-   real            :: cfl_cre                     !< CFL parameter  for cr electrons
-   real            :: cre_eff                     !< fraction of energy passed to cr-electrons by nucleons (mainly protons)
-   real, dimension(:), allocatable :: K_cresp_paral !< array containing parallel diffusion coefficients of all CR CRESP components (number density and energy density)
-   real, dimension(:), allocatable :: K_cresp_perp  !< array containing perpendicular diffusion coefficients of all CR CRESP components (number density and energy density)
-   real            :: K_cre_pow                   !< exponent for power law-like diffusion-energy dependence
-   real            :: p_diff                      !< momentum to which diffusion coefficients refer to
+   real, dimension(:),   allocatable :: cfl_cre                     !< CFL parameter  for CR spectrally resolved components! TODO FIXME RENAME ME PLEASE!!!!
+   real, dimension(:),   allocatable :: cre_eff                     !< fraction of energy passed to CR spectrally resolved components by nucleons (mainly protons) ! TODO wat do with cr_eff now?! TODO FIXME RENAME ME PLEASE!!!!
+   real, dimension(:,:), allocatable :: K_cresp_paral !< array containing parallel diffusion coefficients of all CR CRESP components (number density and energy density)
+   real, dimension(:,:), allocatable :: K_cresp_perp  !< array containing perpendicular diffusion coefficients of all CR CRESP components (number density and energy density)
+   real, dimension(:),   allocatable :: K_cre_pow   !< exponent for power law-like diffusion-energy dependence ! TODO FIXME RENAME ME PLEASE!!!!
+   real, dimension(:),   allocatable :: p_diff                      !< momentum to which diffusion coefficients refer to
    integer(kind=4) :: expan_order                 !< 1,2,3 order of Taylor expansion for p_update (cresp_crspectrum)
    real            :: e_small                     !< lower energy cutoff for energy-approximated cutoff momenta
    logical         :: approx_cutoffs              !< T,F - turns off/on all approximating terms
@@ -73,8 +73,8 @@ module initcrspectrum
    integer(kind=4) :: e_small_approx_p_lo         !< 0,1 - turns off/on energy (e_small) approximated lower cutoff momentum in isolated case
    integer(kind=4) :: e_small_approx_p_up         !< 0,1 - turns off/on energy (e_small) approximated upper cutoff momentum in isolated case
    integer(kind=1) :: e_small_approx_init_cond    !< 0,1 - turns off/on energy (e_small) approximated momenta at initialization
-   real            :: smallcren                   !< floor value for CRESP number density
-   real            :: smallcree                   !< floor value for CRESP energy density
+   real            :: smallcren                   !< floor value for CRESP number density ! TODO FIXME RENAME ME PLEASE!!!!   MULTIDIMENSIONALITY OPTIONAL
+   real            :: smallcree                   !< floor value for CRESP energy density ! TODO FIXME RENAME ME PLEASE!!!!   MULTIDIMENSIONALITY OPTIONAL
    real            :: Gamma_min_fix               ! < min of Lorentzs' Gamma factor, lower range of CRESP fixed grid
    real            :: Gamma_max_fix               ! < max of Lorentzs' Gamma factor, upper range of CRESP fixed grid
    real            :: max_p_ratio                 !< maximal ratio of momenta for solution grids resolved at initialization via cresp_NR_method
@@ -93,7 +93,7 @@ module initcrspectrum
    logical         :: allow_unnatural_transfer    !< allows unnatural transfer of n & e with 'manually_deactivate_bins_via_transfer'
    logical         :: synch_active                !< TEST feature - turns on / off synchrotron cooling @ CRESP
    logical         :: adiab_active                !< TEST feature - turns on / off adiabatic   cooling @ CRESP
-   real            :: cre_active                  !< electron contribution to Pcr
+   real            :: cre_active                  !< electron contribution to Pcr ! TODO FIXME RENAME ME PLEASE!!!!   MULTIDIMENSIONALITY OPTIONAL
 
 ! substepping parameters
    logical         :: cresp_substep               !< turns on / off usage of substepping for each cell independently
@@ -622,6 +622,18 @@ contains
    end subroutine init_cresp
 
 !----------------------------------------------------------------------------------------------------
+
+   subroutine cresp_components_counter(nsp) ! TODO expand me
+
+     use cr_data, only : cr_spectral
+
+     implicit none
+
+     integer, intent(out) :: nsp
+
+     nsp = count(cr_spectral)
+
+   end subroutine  cresp_components_counter
 
    subroutine cleanup_cresp_sp
 
