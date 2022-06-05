@@ -13,6 +13,7 @@ plot1d_linestyle = ['-', '--', ':']
 # 2D plots
 plot2d_colormap = 'viridis'
 plot2d_sctype = 'linear'
+plot2d_comparetype = 1
 plot2d_axes_pad = 0.2
 
 # grid lines

@@ -545,7 +545,14 @@ contains
    end subroutine assoc_pointers
 
 !----------------------------------------------------------------------------------------------------
-   subroutine fill_boundary_grid(bound_case, fill_p, fill_f, sml) ! TODO FIXME to be parallelized
+! TODO FIXME to be parallelized
+!
+! The cost of this routine theoretically depends as O(arr_dim**4), which may be a severe limitation
+! if we ever need finer arrays. Practically the exponent is a bit higher, around 4.5  to 5.0.
+! Parallelization may help with doubling arr_dim but anything more than that require change
+! of the algorithm to decrease exponent to arr_dim.
+
+   subroutine fill_boundary_grid(bound_case, fill_p, fill_f, sml)
 
       use constants,      only: zero, I_ONE, I_TWO
       use dataio_pub,     only: msg, printinfo
@@ -609,7 +616,7 @@ contains
             endif
             if (exit_code) then !still...
                do is = I_ONE, helper_arr_dim
-                  do js = 1, helper_arr_dim
+                  do js = 1, helper_arr_dim  ! WARNING: here comes O(arr_dim**4)
                      x_vec(1) = p_space(is)
                      x_vec(2) = p_space(is)**(-q_space(js))
 #ifdef CRESP_VERBOSED
