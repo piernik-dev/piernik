@@ -4,7 +4,7 @@ import sys
 import argparse
 
 
-t_bias = 1.e-6  # For global bigbang thih may need to be increased to some large values. For per-thread bigbang it can be some small posityve value.
+t_bias = 1.e-6  # For global bigbang this may need to be increased to some large values. For per-thread bigbang it can be some small positive value.
 
 
 class PPP_Node:
@@ -229,7 +229,7 @@ class PPPset:
                 ofile.write(self.out)
                 ofile.close()
         elif otype == "summary":
-            # ToDo: add own time, %time and "called from"
+            # ToDo: add "called from"
             print("ARGS: ", args)
             for f in self.run:
                 ed = {}
@@ -376,7 +376,7 @@ find most time-consuming timers:
 
 plot profile without the identified too-often called timer (e.g. "Loechner_mark") that makes interactive gnuplot to choke:
     ppp_plot.py file.ascii -e Loechner_mark | gnuplot
-same as above but don't filter out timers that are contributing less than 0.1%%:
+same as above but don't filter out timers that are contributing less than 0.1%:
     ppp_plot.py file.ascii -e Loechner_mark -% 0 | gnuplot
 """)
 
