@@ -14,7 +14,7 @@ COUNT=$( md5_head | awk '{print $1}' | sort | uniq -c | wc -l )
 if [ $COUNT == 1 ]; then
     echo "All $NL-line license headers are the same"
 else
-    DOMINATING=$( md5_head | awk '{print $1}' | sort | uniq -c | head -n 1 | awk '{print $2}' )
+    DOMINATING=$( md5_head | awk '{print $1}' | sort | uniq -c | sort -n | tail -n 1 | awk '{print $2}' )
     echo "Exceptional headers found in:"
     md5_head | grep -v $DOMINATING
     exit 1
