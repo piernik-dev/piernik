@@ -5,6 +5,33 @@ import argparse
 
 
 t_bias = 1.e-6  # For global bigbang this may need to be increased to some large values. For per-thread bigbang it can be some small positive value.
+included_threads = []  # The list of threads to analyze (same for each file); all enabled when list is empty.
+
+
+def niceprint_set(s):
+    outstr = ""
+    prev = None
+    first = None
+    for p in sorted(s):
+        if first is None:
+            first = p
+            outstr += str(p)
+        else:
+            if p - prev > 1:
+                if prev != first:
+                    outstr += "-" + str(prev)
+                first = p
+                outstr += "," + str(p)
+        prev = p
+    if prev != first:
+        outstr += "-" + str(prev)
+    if len(outstr) < 1:
+        outstr = "None"
+    return outstr
+
+
+def plural(n):
+    return "" if n == 1 else "s"
 
 
 class PPP_Node:
@@ -168,12 +195,17 @@ class PPP:
             if self.bigbang is None:
                 self.bigbang = float(ln[1]) - t_bias
             self._add(int(ln[0]), line[line.index(ln[2]):].strip(), float(ln[1]) + self.bigbang * (-1. if float(ln[1]) > 0. else 1.))  # proc, label, time
-        self.descr = "'%s' (%d thread%s)" % (self.name, self.nthr, "s" if self.nthr > 1 else "")
+        self.sel_proc = []
+        for p in self.trees:
+            self.sel_proc.append(p)
+        outof_str = " (%d out of %d thread%s)" % (len(set(self.sel_proc)), self.nthr, plural(self.nthr)) if self.nthr != len(set(self.sel_proc)) else ""
+        self.descr = "'%s', thread%s %s" % (self.name, plural(set(self.sel_proc)), niceprint_set(self.sel_proc)) + outof_str
 
     def _add(self, proc, label, time):
-        if proc not in self.trees:
-            self.trees[proc] = PPP_Tree(proc)
-        self.trees[proc]._add(label, time)
+        if (len(included_threads) == 0) or (proc in included_threads):
+            if proc not in self.trees:
+                self.trees[proc] = PPP_Tree(proc)
+            self.trees[proc]._add(label, time)
 
     def calculate_time(self):
         self.total_time = 0.
@@ -232,8 +264,8 @@ class PPPset:
             # ToDo: add "called from"
             print("ARGS: ", args)
             for f in self.run:
+                print("\n## File: " + self.run[f].descr)
                 ed = {}
-                print("\n## File: '%s', %d threads" % (self.run[f].name, self.run[f].nthr))
                 for p in self.run[f].trees:
                     for e in self.run[f].trees[p].root.get_all_ev():
                         e_base = e[0].split('/')[-1]
@@ -248,16 +280,17 @@ class PPPset:
                 skip_cnt, skip_val = 0, 0.
                 for e in sorted(ed.items(), key=lambda x: x[1][1] - x[1][2], reverse=True):
                     if (e[1][1] - e[1][2]) / self.run[f].total_time > args.cutsmall[0] / 100.:
-                        print("%-*s %20.6f %8s %15d%s \033[97m%20.6f\033[0m %10.2f" % (ml, e[0], e[1][1] / self.run[f].nthr,
+                        print("%-*s %20.6f %8s %15d%s \033[97m%20.6f\033[0m %10.2f" % (ml, e[0], e[1][1] / len(set(self.run[f].sel_proc)),
                                                                                        ("" if e[1][2] == 0. else "%8.2f" % ((100 * e[1][2] / e[1][1]) if e[1][1] > 0. else 0.)),
-                                                                                       e[1][0] / self.run[f].nthr,
-                                                                                       " " if e[1][0] % self.run[f].nthr == 0 else "+",
-                                                                                       (e[1][1] - e[1][2]) / self.run[f].nthr, 100. * (e[1][1] - e[1][2]) / self.run[f].total_time))
+                                                                                       e[1][0] / len(set(self.run[f].sel_proc)),
+                                                                                       " " if e[1][0] % len(set(self.run[f].sel_proc)) == 0 else "+",
+                                                                                       (e[1][1] - e[1][2]) / len(set(self.run[f].sel_proc)),
+                                                                                       100. * (e[1][1] - e[1][2]) / self.run[f].total_time))
                     else:
                         skip_cnt += 1
-                        skip_val += (e[1][1] - e[1][2]) / self.run[f].nthr
+                        skip_val += e[1][1] - e[1][2]
                 if skip_cnt > 0:
-                    print("# (skipped %d timers that contributed %.6f seconds of non-child time = %.2f%% of total time)" % (skip_cnt, skip_val, 100. * self.run[f].nthr * skip_val / self.run[f].total_time))
+                    print("# (skipped %d timers that contributed %.6f seconds of non-child time = %.2f%% of total time)" % (skip_cnt, skip_val / len(set(self.run[f].sel_proc)), 100. * skip_val / self.run[f].total_time))
 
     def print_gnuplot(self):
         self.descr = ""
@@ -266,17 +299,19 @@ class PPPset:
         gcnt = 0
         gomit = 0
         for f in self.run:
+            pcnt = 0
             for p in self.run[f].trees:
                 evlist = self.run[f].trees[p].root.get_all_ev()
                 for e in evlist:
                     e_base = e[0].split('/')[-1].split()[0]
                     if e_base not in ev:
                         ev[e_base] = {}
-                    if p + peff not in ev[e_base]:
-                        ev[e_base][p + peff] = []
-                    if e[3] > args.cutsmall[0] / 100. * self.run[f].total_time / self.run[f].nthr:
-                        ev[e_base][p + peff].append(e)
-            peff = peff + self.run[f].nthr + (1 if len(self.run) > 1 else 0)  # spacing only when we have multiple files
+                    if pcnt + peff not in ev[e_base]:
+                        ev[e_base][pcnt + peff] = []
+                    if e[3] > args.cutsmall[0] / 100. * self.run[f].total_time / len(set(self.run[f].sel_proc)):
+                        ev[e_base][pcnt + peff].append(e)
+                pcnt += 1
+            peff = peff + len(set(self.run[f].sel_proc)) + (1 if len(self.run) > 1 else 0)  # spacing only when we have multiple files
             self.descr = self.run[f].descr + ("\\n" if len(self.descr) > 0 else "") + self.descr
 
         ndel = []
@@ -387,6 +422,7 @@ parser.add_argument("-e", "--exclude", nargs='+', help="do not show EXCLUDEd tim
 parser.add_argument("-r", "--root", nargs='+', help="show only ROOT and their children")
 parser.add_argument("-d", "--maxdepth", type=int, help="limit output to MAXDEPTH")
 parser.add_argument("-m", "--maxoutput", nargs=1, default=[50000], type=int, help="limit output to MAXOUTPUT enries (gnuplot only, default = 50000)")
+parser.add_argument("-p", "--processes", nargs=1, help="list of threads to display in each file, syntax example: 1,3,7-10, default = all")
 # parser.add_argument("-c", "--check", help="do a formal check only")
 
 pgroup = parser.add_mutually_exclusive_group()
@@ -395,6 +431,24 @@ pgroup.add_argument("-t", "--tree", action="store_const", dest="otype", const="t
 pgroup.add_argument("-s", "--summary", action="store_const", dest="otype", const="summary", help="short summary")
 
 args = parser.parse_args()
+
+# Process --processes
+if args.processes is not None:
+    for p in args.processes[0].split(','):
+        pp = p.split('-')
+        if len(pp) == 1:
+            included_threads.append(int(pp[0]))
+        elif len(pp) == 2:
+            if int(pp[1]) >= int(pp[0]):  # ValueError will occur here if you try to use negative process numbers
+                included_threads.extend(range(int(pp[0]), int(pp[1]) + 1))
+            else:
+                print("Reversed process order: ", pp[0], " > ", pp[1])
+                raise ValueError
+        else:
+            print("I don't know how to interpret '" + p + "'")
+            raise ValueError
+included_threads = set(included_threads)
+
 all_events = PPPset(args.filename)
 all_events.print(args.otype)
 
