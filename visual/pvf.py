@@ -260,7 +260,7 @@ if '1z' in axcuts:
     p1z = True
 axc = [p1x, p1y, p1z], [p2yz, p2xz, p2xy]
 
-compare = cmpr, cmprf, cmprd, cmprt
+compare = cmpr, cmprf, cmprd, cmprt, False
 
 options = axc, zmin, zmax, cmap, pcolor, player, psize, sctype, cu, center, compare, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl
 if not os.path.exists(plotdir):

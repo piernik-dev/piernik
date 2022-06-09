@@ -5,10 +5,49 @@ import plot_utils as pu
 import pvf_settings as ps
 
 
+def manage_compare(cmpr, h5f, var, maxglev, plotlevels, gridlist, drawa, drawu, drawg):
+    cmpr0, cmprf, cmprd, cmprt, diff_struct = cmpr
+    if cmpr0:
+        if cmprd == '':
+            cmprd = var
+        if cmprf == '':
+            cmpr = cmpr0, h5f, cmprd, cmprt, diff_struct
+        else:
+            h5c = h5.File(cmprf, 'r')
+            diff_struct = compare_grids(h5f, h5c, maxglev, plotlevels, gridlist)
+            if diff_struct:
+                print('Difference in h5 files structure')
+                drawa, drawu, drawg = False, True, False
+            cmpr = cmpr0, h5c, cmprd, cmprt, diff_struct
+    return cmpr, drawa, drawu, drawg
+
+
+def compare_grids(h1, h2, maxglev, plotlevels, gridlist):
+    if maxglev != max(h2['grid_level'][:]):
+        return True
+    for level in range(maxglev + 1):
+        if level in plotlevels:
+            for ig in gridlist:
+                h5g1 = h1['data']['grid_' + str(ig).zfill(10)]
+                h5g2 = h2['data']['grid_' + str(ig).zfill(10)]
+                if h5g1.attrs['level'] == level:
+                    if h5g2.attrs['level'] != level:
+                        return True
+                    if any(h5g1.attrs['off'] != h5g2.attrs['off']):
+                        return True
+                    if any(h5g1.attrs['n_b'] != h5g2.attrs['n_b']):
+                        return True
+    return False
+
 def reconstruct_uniform(h5f, var, cmpr, level, gridlist, cu, center, smin, smax, draw1D, draw2D):
     dset, nd, levelmet = collect_dataset(h5f, var, cmpr, level, gridlist)
     if not levelmet:
         return [], []
+    cmpr0, h5c, cmprd, cmprt, diff_struct = cmpr
+    if diff_struct:
+        dc, ndc, lmc = collect_dataset(h5c, cmprd, cmpr, level, range(int(h5c['data'].attrs['cg_count'])))
+        if nd == ndc and lmc:
+            dset = pu.execute_comparison(dset, dc, cmprt)
 
     if cu:
         inb, ind = pu.find_indices(nd, center, smin, smax, True)
@@ -39,9 +78,9 @@ def collect_dataset(h5f, dset_name, cmpr, level, gridlist):
             n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
             ce = n_b + off
             dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name][:, :, :].swapaxes(0, 2)
-            cmpr0, h5c, cmprd, cmprt = cmpr
-            if cmpr0:
-                dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = pu.execute_comparison(dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]], h5c['data']['grid_' + str(ig).zfill(10)][dset_name][:, :, :].swapaxes(0, 2), cmprt)
+            cmpr0, h5c, cmprd, cmprt, diff_struct = cmpr
+            if cmpr0 and not diff_struct:
+                dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = pu.execute_comparison(dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]], h5c['data']['grid_' + str(ig).zfill(10)][cmprd][:, :, :].swapaxes(0, 2), cmprt)
 
     return dset, nd, levelmet
 
@@ -88,7 +127,7 @@ def read_block(h5f, dset_name, cmpr, ig, olev, oc, usc, getmap, draw1D, draw2D):
     n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
     ce = n_b + off
     dset = h5g[dset_name][:, :, :].swapaxes(0, 2)
-    cmpr0, h5c, cmprd, cmprt = cmpr
+    cmpr0, h5c, cmprd, cmprt, diff_struct = cmpr
     if cmpr0:
         dset = pu.execute_comparison(dset, h5c['data']['grid_' + str(ig).zfill(10)][cmprd][:, :, :].swapaxes(0, 2), cmprt)
 
