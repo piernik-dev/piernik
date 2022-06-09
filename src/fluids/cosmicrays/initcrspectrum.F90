@@ -302,37 +302,37 @@ contains
          lbuff(14) =  cresp_substep
          lbuff(15) =  allow_unnatural_transfer
 
-         rbuff(1)  = cfl_cre
-         rbuff(2)  = cre_eff
-         rbuff(3)  = smallcren
-         rbuff(4)  = smallcree
-         rbuff(5)  = cre_active
-         rbuff(6)  = p_lo_init
-         rbuff(7)  = p_up_init
-         rbuff(8)  = f_init
-         rbuff(9)  = q_init
-         rbuff(10) = q_big
-         rbuff(11) = p_min_fix
-         rbuff(12) = p_max_fix
-         rbuff(13) = K_cre_pow
+         rbuff(1:nspc)        = cfl_cre(1:nspc)
+         rbuff(1+nspc:2*nspc) = cre_eff(1:nspc)
+         rbuff(2*nspc+1)      = smallcren
+         rbuff(2*nspc+2)      = smallcree
+         rbuff(2*nspc+3)      = cre_active
+         rbuff(2*nspc+4:3*nspc+3)  = p_lo_init(1:nspc)
+         rbuff(3*nspc+4:4*nspc+3)  = p_up_init(1:nspc)
+         rbuff(4*nspc+4:5*nspc+3)  = f_init(1:nspc)
+         rbuff(5*nspc+4:6*nspc+3)  = q_init(1:nspc)
+         rbuff(6*nspc+4)      = q_big
+         rbuff(6*nspc+5)      = p_min_fix
+         rbuff(6*nspc+6)      = p_max_fix
+         rbuff(6*nspc+7:7*nspc+6) = K_cre_pow(1:nspc)
 
-         rbuff(14) = e_small
-         rbuff(15) = max_p_ratio
+         rbuff(7*nspc+7)  = e_small
+         rbuff(7*nspc+8)  = max_p_ratio
 
-         rbuff(16) = tol_f
-         rbuff(17) = tol_x
-         rbuff(18) = tol_f_1D
-         rbuff(19) = tol_x_1D
+         rbuff(7*nspc+9)  = tol_f
+         rbuff(7*nspc+10) = tol_x
+         rbuff(7*nspc+11) = tol_f_1D
+         rbuff(7*nspc+12) = tol_x_1D
 
-         rbuff(20) = Gamma_min_fix
-         rbuff(21) = Gamma_max_fix
+         rbuff(7*nspc+13) = Gamma_min_fix
+         rbuff(7*nspc+14) = Gamma_max_fix
 
-         rbuff(22) = p_br_init_lo
-         rbuff(23) = p_br_init_up
-         rbuff(24) = q_br_init
-         rbuff(25) = p_diff
-         rbuff(26) = q_eps
-         rbuff(27) = b_max_db
+         rbuff(7*nspc+15:8*nspc+14)   = p_br_init_lo(1:nspc)
+         rbuff(8*nspc+15:9*nspc+14)   = p_br_init_up(1:nspc)
+         rbuff(9*nspc+15:10*nspc+14)  = q_br_init(1:nspc)
+         rbuff(10*nspc+15:11*nspc+14) = p_diff(1:nspc)
+         rbuff(11*nspc+14) = q_eps
+         rbuff(11*nspc+15) = b_max_db
 
          cbuff(1)  = initial_spectrum
       endif
@@ -373,46 +373,46 @@ contains
          cresp_substep               = lbuff(14)
          allow_unnatural_transfer    = lbuff(15)
 
-         cfl_cre                     = rbuff(1)
-         cre_eff                     = rbuff(2)
-         smallcren                   = rbuff(3)
-         smallcree                   = rbuff(4)
-         cre_active                  = rbuff(5)
-         p_lo_init                   = rbuff(6)
-         p_up_init                   = rbuff(7)
-         f_init                      = rbuff(8)
-         q_init                      = rbuff(9)
-         q_big                       = rbuff(10)
-         p_min_fix                   = rbuff(11)
-         p_max_fix                   = rbuff(12)
-         K_cre_pow                   = rbuff(13)
+         cfl_cre(1:nspc)      =  rbuff(1:nspc)
+         cre_eff(1:nspc)      =  rbuff(1+nspc:2*nspc)
+         smallcren            =  rbuff(2*nspc+1)
+         smallcree            =  rbuff(2*nspc+2)
+         cre_active           =  rbuff(2*nspc+3)
+         p_lo_init(1:nspc)    =  rbuff(2*nspc+4:3*nspc+3)
+         p_up_init(1:nspc)    =  rbuff(3*nspc+4:4*nspc+3)
+         f_init(1:nspc)       =  rbuff(4*nspc+4:5*nspc+3)
+         q_init(1:nspc)       =  rbuff(5*nspc+4:6*nspc+3)
+         q_big                =  rbuff(6*nspc+4)
+         p_min_fix            =  rbuff(6*nspc+5)
+         p_max_fix            =  rbuff(6*nspc+6)
+         K_cre_pow(1:nspc)    =  rbuff(6*nspc+7:7*nspc+6)
 
-         e_small                     = rbuff(14)
-         max_p_ratio                 = rbuff(15)
+         e_small              =  rbuff(7*nspc+7)
+         max_p_ratio          =  rbuff(7*nspc+8)
 
-         tol_f                       = rbuff(16)
-         tol_x                       = rbuff(17)
-         tol_f_1D                    = rbuff(18)
-         tol_x_1D                    = rbuff(19)
+         tol_f                =  rbuff(7*nspc+9)
+         tol_x                =  rbuff(7*nspc+10)
+         tol_f_1D             =  rbuff(7*nspc+11)
+         tol_x_1D             =  rbuff(7*nspc+12)
 
-         Gamma_min_fix               = rbuff(20)
-         Gamma_max_fix               = rbuff(21)
+         Gamma_min_fix        =  rbuff(7*nspc+13)
+         Gamma_max_fix        =  rbuff(7*nspc+14)
 
-         p_br_init_lo                = rbuff(22)
-         p_br_init_up                = rbuff(23)
-         q_br_init                   = rbuff(24)
-         p_diff                      = rbuff(25)
+         p_br_init_lo(1:nspc) =  rbuff(7*nspc+15:8*nspc+14)
+         p_br_init_up(1:nspc) =  rbuff(8*nspc+15:9*nspc+14)
+         q_br_init(1:nspc)    =  rbuff(9*nspc+15:10*nspc+14)
+         p_diff(1:nspc)       =  rbuff(10*nspc+15:11*nspc+14)
+         q_eps                =  rbuff(11*nspc+14)
+         b_max_db             =  rbuff(11*nspc+15)
 
-         q_eps                       = rbuff(26)
-         b_max_db                    = rbuff(27)
          initial_spectrum            = trim(cbuff(1))
 
       endif
 
       ! since now use only e_small_approx_p, p_init and p_br_init
       e_small_approx_p = [e_small_approx_p_lo, e_small_approx_p_up]
-      p_init           = [p_lo_init, p_up_init]
-      p_br_init        = [p_br_init_lo, p_br_init_up]
+      p_init(1,:)      = p_lo_init(:) ;      p_init(2,:)      = p_up_init(:)
+      p_br_init(1,:)   = p_br_init_lo(:) ;   p_br_init(2,:)   = p_br_init_up(:)
       NR_refine_pf     = [NR_refine_pf_lo, NR_refine_pf_up]
 
 ! Input parameters check
@@ -830,7 +830,7 @@ contains
       call my_allocate(K_cresp_paral, ma2d)
       call my_allocate(K_cresp_perp, ma2d)
 
-      ma2d = [nsp, 2]
+      ma2d = [2, nsp]
       call my_allocate(p_init, ma2d)
       call my_allocate(p_br_init, ma2d)
 
