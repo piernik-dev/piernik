@@ -623,18 +623,6 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   subroutine cresp_components_counter(nsp) ! TODO expand me
-
-     use cr_data, only : cr_spectral
-
-     implicit none
-
-     integer, intent(out) :: nsp
-
-     nsp = count(cr_spectral)
-
-   end subroutine  cresp_components_counter
-
    subroutine cleanup_cresp_sp
 
       use diagnostics, only: my_deallocate
