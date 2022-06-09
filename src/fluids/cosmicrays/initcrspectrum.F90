@@ -174,7 +174,7 @@ contains
       use diagnostics,     only: my_allocate_with_index
       use global,          only: disallow_CRnegatives
       use func,            only: emag
-      use initcosmicrays,  only: ncrb, ncr2b, ncrn, ncrtot, K_cr_paral, K_cr_perp, K_crs_paral, K_crs_perp, use_smallecr
+      use initcosmicrays,  only: ncrb, ncr2b, ncrn, nspc, ncrtot, K_cr_paral, K_cr_perp, K_crs_paral, K_crs_perp, use_smallecr
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use units,           only: clight, me, sigma_T
 
@@ -190,6 +190,8 @@ contains
       &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf, b_max_db,      &
       &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up, p_diff,&
       &                         q_eps, NR_smap_file, cresp_substep, n_substeps_max, allow_unnatural_transfer
+
+      call allocate_spectral_CRspecies_arrays(nspc, ncrb)
 
 ! Default values
       use_cresp         = .true.
@@ -802,5 +804,36 @@ contains
    end subroutine cleanup_cresp_work_arrays
 
 !----------------------------------------------------------------------------------------------------
+   subroutine allocate_spectral_CRspecies_arrays(nsp, nb)  ! Allocate arrays for spectrally resolved CR species
+
+      use diagnostics,  only: my_allocate, ma1d, ma2d
+
+      implicit none
+
+      integer, intent(in)  :: nsp, nb
+
+      ma1d = [nsp]
+
+      call my_allocate(p_lo_init, ma1d)
+      call my_allocate(p_up_init, ma1d)
+      call my_allocate(p_br_init_lo, ma1d)
+      call my_allocate(p_br_init_up, ma1d)
+      call my_allocate(f_init, ma1d)
+      call my_allocate(q_init, ma1d)
+      call my_allocate(q_br_init, ma1d)
+      call my_allocate(cfl_cre, ma1d)
+      call my_allocate(cre_eff, ma1d)
+      call my_allocate(K_cre_pow, ma1d)
+      call my_allocate(p_diff, ma1d)
+
+      ma2d = [nsp, nb]
+      call my_allocate(K_cresp_paral, ma2d)
+      call my_allocate(K_cresp_perp, ma2d)
+
+      ma2d = [nsp, 2]
+      call my_allocate(p_init, ma2d)
+      call my_allocate(p_br_init, ma2d)
+
+   end subroutine allocate_spectral_CRspecies_arrays
 
 end module initcrspectrum
