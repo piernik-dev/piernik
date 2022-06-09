@@ -181,7 +181,7 @@ contains
       implicit none
 
       integer(kind=4) :: i
-      real            :: p_br_def, q_br_def
+      real, dimension(:), allocatable ::  p_br_def, q_br_def
 
       namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum, p_min_fix, p_max_fix, &
       &                         cre_eff, cre_active, K_cre_pow, expan_order, e_small, use_cresp, use_cresp_evol,                   &
@@ -198,21 +198,21 @@ contains
       use_cresp_evol    = .true.
       p_min_fix         = 1.5e1
       p_max_fix         = 1.65e4
-      p_lo_init         = 1.5e1
-      p_up_init         = 7.5e2
-      p_br_def          = p_lo_init
+      p_lo_init(:)      = 1.5e1
+      p_up_init(:)      = 7.5e2
+      p_br_def(:)       = p_lo_init(:)
       initial_spectrum  = "powl"
-      f_init            = 1.0
-      q_init            = 4.1
-      q_br_def          = q_init
+      f_init(:)         = 1.0
+      q_init(:)         = 4.1
+      q_br_def(:)       = q_init(:)
       q_big             = 30.0d0
-      p_br_init_lo      = p_br_def ! < in case it was not provided "powl" can be assumed
-      p_br_init_up      = p_br_def ! < in case it was not provided "powl" can be assumed
-      q_br_init         = q_br_def ! < in case it was not provided "powl" can be assumed
-      p_diff            = 10000.0
-      cfl_cre           = 0.1
-      cre_eff           = 0.01
-      K_cre_pow         = 0.
+      p_br_init_lo(:)   = p_br_def(:) ! < in case it was not provided "powl" can be assumed
+      p_br_init_up(:)   = p_br_def(:) ! < in case it was not provided "powl" can be assumed
+      q_br_init(:)      = q_br_def(:) ! < in case it was not provided "powl" can be assumed
+      p_diff(:)         = 10000.0
+      cfl_cre(:)        = 0.1
+      cre_eff(:)        = 0.01
+      K_cre_pow(:)      = 0.
       expan_order       = 1
       Gamma_min_fix     = 2.5
       Gamma_max_fix     = 1000.0
