@@ -191,6 +191,10 @@ def plotcompose(pthfilen, var, output, options):
 
     drawa, drawu = pu.choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist)
     plotlevels = pu.check_plotlevels(plotlevels, maxglev, drawa)
+    if len(plotlevels) == 0:
+        print('No levels found. Skipping.')
+        return
+
     linstyl = pu.linestyles(linstyl, maxglev, plotlevels)
     if drawg:
         gcolor = pu.reorder_gridcolorlist(gcolor, maxglev, plotlevels)
@@ -229,7 +233,7 @@ def plotcompose(pthfilen, var, output, options):
         h5c.close()
 
     if not (parts[0] or drawd or drawg):
-        print('No particles or levels to plot. Skipping.')
+        print('No particles or datafields or grids to plot. Skipping.')
         return
 
     cbar_mode = pu.colorbar_mode(drawd, drawh, figmode)

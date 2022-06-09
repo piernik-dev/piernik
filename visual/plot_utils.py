@@ -199,6 +199,14 @@ def check_plotlevels(plotlevels, maxglev, drawa):
             plotlevels = range(maxglev + 1)
         else:
             plotlevels = 0,
+    else:
+        npl = []
+        for il in plotlevels:
+            if il in range(maxglev + 1):
+                npl.append(il)
+            else:
+                print('LEVEL %s not met in the file!' % str(il))
+        plotlevels = npl
     print('LEVELS TO plot: ', plotlevels)
     return plotlevels
 
