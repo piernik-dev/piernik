@@ -245,7 +245,7 @@ class PPPset:
                 ml = len(max(ed, key=len)) if len(ed) > 0 else 0
                 print("# %-*s %20s %8s %15s \033[97m%20s\033[0m %10s" % (ml - 2, "label", "avg. CPU time (s)", "%time", "avg. occurred", "avg. non-child", "% of total"))
                 print("# %-*s %20s %8s %15s \033[97m%20s\033[0m %10s" % (ml - 2, "", "(per thread)", "in child", "(per thread)", "time (s)", "time"))
-                skipped = [0, 0.]
+                skip_cnt, skip_val = 0, 0.
                 for e in sorted(ed.items(), key=lambda x: x[1][1] - x[1][2], reverse=True):
                     if (e[1][1] - e[1][2]) / self.run[f].total_time > args.cutsmall[0] / 100.:
                         print("%-*s %20.6f %8s %15d%s \033[97m%20.6f\033[0m %10.2f" % (ml, e[0], e[1][1] / self.run[f].nthr,
@@ -254,10 +254,10 @@ class PPPset:
                                                                                        " " if e[1][0] % self.run[f].nthr == 0 else "+",
                                                                                        (e[1][1] - e[1][2]) / self.run[f].nthr, 100. * (e[1][1] - e[1][2]) / self.run[f].total_time))
                     else:
-                        skipped[0] += 1
-                        skipped[1] += (e[1][1] - e[1][2]) / self.run[f].nthr
-                if skipped[0] > 0:
-                    print("# (skipped %d timers that contributed %.6f seconds of non-child time = %.2f%% of total time)" % (skipped[0], skipped[1], 100. * self.run[f].nthr * skipped[1] / self.run[f].total_time))
+                        skip_cnt += 1
+                        skip_val += (e[1][1] - e[1][2]) / self.run[f].nthr
+                if skip_cnt > 0:
+                    print("# (skipped %d timers that contributed %.6f seconds of non-child time = %.2f%% of total time)" % (skip_cnt, skip_val, 100. * self.run[f].nthr * skip_val / self.run[f].total_time))
 
     def print_gnuplot(self):
         self.descr = ""
