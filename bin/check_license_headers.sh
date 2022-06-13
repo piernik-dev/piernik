@@ -3,7 +3,7 @@
 NL=26
 
 md5_head() {
-    for i in $( find src problems  -name *.F90 ) doc/general/new_source_file.F90 ; do
+    for i in $( git ls-files | grep -vE "^(compilers/tests|doc/general)" | grep "\.F90$" ) doc/general/new_source_file.F90 ; do
 	echo -n $i " "
 	head -n $NL $i | md5sum
     done | awk '{print $2,$1}'
