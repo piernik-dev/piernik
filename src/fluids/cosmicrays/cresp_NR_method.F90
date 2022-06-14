@@ -300,15 +300,15 @@ contains
             q_in3 = three - q_space(j)
             pq_cmplx = p_space(i)**q_in3
 
-            a_min(LO) = min(a_min(LO), abs(encp_func_2_zero(LO, p_space(i),           zero, q_in3)))
-            n_min(LO) = min(n_min(LO), abs(   n_func_2_zero(    p_space(i), one,      zero, q_in3)))
-            a_min(HI) = min(a_min(HI), abs(encp_func_2_zero(HI, p_space(i),           zero, q_in3)))
-            n_min(HI) = min(n_min(HI), abs(   n_func_2_zero(    p_space(i), pq_cmplx, zero, q_in3)))
+            a_min(LO) = min(a_min(LO), abs(encp_func_2_zero(LO, p_space(i),           q_in3)))
+            n_min(LO) = min(n_min(LO), abs(   n_func_2_zero(    p_space(i), one,      q_in3)))
+            a_min(HI) = min(a_min(HI), abs(encp_func_2_zero(HI, p_space(i),           q_in3)))
+            n_min(HI) = min(n_min(HI), abs(   n_func_2_zero(    p_space(i), pq_cmplx, q_in3)))
 
-            a_max(LO) = max(a_max(LO), abs(encp_func_2_zero(LO, p_space(i),           zero, q_in3)))
-            n_max(LO) = max(n_max(LO), abs(   n_func_2_zero(    p_space(i), one,      zero, q_in3)))
-            a_max(HI) = max(a_max(HI), abs(encp_func_2_zero(HI, p_space(i),           zero, q_in3)))
-            n_max(HI) = max(n_max(HI), abs(   n_func_2_zero(    p_space(i), pq_cmplx, zero, q_in3)))
+            a_max(LO) = max(a_max(LO), abs(encp_func_2_zero(LO, p_space(i),           q_in3)))
+            n_max(LO) = max(n_max(LO), abs(   n_func_2_zero(    p_space(i), one,      q_in3)))
+            a_max(HI) = max(a_max(HI), abs(encp_func_2_zero(HI, p_space(i),           q_in3)))
+            n_max(HI) = max(n_max(HI), abs(   n_func_2_zero(    p_space(i), pq_cmplx, q_in3)))
          enddo
       enddo
 
@@ -1119,8 +1119,8 @@ contains
 
       x = abs(x)
       q_in3      = three - q_ratios(x(2), x(1))
-      fvec_up(1) = encp_func_2_zero(HI, x(1),                  alpha, q_in3)
-      fvec_up(2) =    n_func_2_zero(    x(1), x(2)*x(1)**three, n_in, q_in3)
+      fvec_up(1) = encp_func_2_zero(HI, x(1),                   q_in3) - alpha
+      fvec_up(2) =    n_func_2_zero(    x(1), x(2)*x(1)**three, q_in3) - n_in
 
    end function fvec_up
 
@@ -1137,13 +1137,13 @@ contains
 
       x = abs(x)
       q_in3      = three - q_ratios(x(2), x(1))
-      fvec_lo(1) = encp_func_2_zero(LO, x(1),     alpha, q_in3)
-      fvec_lo(2) =    n_func_2_zero(    x(1), one, n_in, q_in3)
+      fvec_lo(1) = encp_func_2_zero(LO, x(1),      q_in3) - alpha
+      fvec_lo(2) =    n_func_2_zero(    x(1), one, q_in3) - n_in
 
    end function fvec_lo
 
 !---------------------------------------------------------------------------------------------------
-   real function encp_func_2_zero(side, p_ratio, alpha_cnst, q_in3) ! from eqn. 29
+   real function encp_func_2_zero(side, p_ratio, q_in3) ! from eqn. 29
 
       use constants,      only: LO, one
       use initcrspectrum, only: eps
@@ -1151,7 +1151,7 @@ contains
       implicit none
 
       integer(kind=4), intent(in) :: side
-      real,            intent(in) :: p_ratio, alpha_cnst, q_in3
+      real,            intent(in) :: p_ratio, q_in3
       real                        :: q_in4
 
       q_in4 = one + q_in3
@@ -1163,12 +1163,11 @@ contains
          encp_func_2_zero = q_in3/q_in4*(p_ratio**q_in4 - one) / (p_ratio**q_in3 - one)
       endif
       if (side == LO) encp_func_2_zero = encp_func_2_zero / p_ratio
-      encp_func_2_zero = encp_func_2_zero - alpha_cnst
 
    end function encp_func_2_zero
 
 !----------------------------------------------------------------------------------------------------
-   real function n_func_2_zero(p_ratio, fp_cmplx, n_cnst, q_in3) ! from eqn. 9
+   real function n_func_2_zero(p_ratio, fp_cmplx, q_in3) ! from eqn. 9
 
       use constants,       only: one
       use cresp_variables, only: clight_cresp
@@ -1176,7 +1175,7 @@ contains
 
       implicit none
 
-      real, intent(in) :: p_ratio, fp_cmplx, n_cnst, q_in3
+      real, intent(in) :: p_ratio, fp_cmplx, q_in3
 
       n_func_2_zero = e_small / (clight_cresp * fp_cmplx)
       if (abs(q_in3) < eps) then
@@ -1184,7 +1183,6 @@ contains
       else
          n_func_2_zero = n_func_2_zero * (p_ratio**q_in3 - one)/q_in3
       endif
-      n_func_2_zero = n_func_2_zero - n_cnst
 
    end function n_func_2_zero
 
