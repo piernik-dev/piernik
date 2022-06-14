@@ -111,8 +111,8 @@ contains
          endif
          fun_vec_inv_jac = invert_2d_matrix(fun_vec_jac,det)
 
-         cor(1) = fun_vec_inv_jac(1,1) * fun_vec_value(1) + fun_vec_inv_jac(1,2) * fun_vec_value(2)
-         cor(2) = fun_vec_inv_jac(2,1) * fun_vec_value(1) + fun_vec_inv_jac(2,2) * fun_vec_value(2)
+         cor(1) = sum(fun_vec_inv_jac(1,:) * fun_vec_value(:))
+         cor(2) = sum(fun_vec_inv_jac(2,:) * fun_vec_value(:))
          x = x+cor
          if (maxval(abs(cor)) < err_x) then                 ! For convergence via value of correction (cor) table.
 #ifdef CRESP_VERBOSED
