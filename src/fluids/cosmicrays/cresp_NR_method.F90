@@ -86,7 +86,7 @@ contains
       err_x = tol_x
       exit_code = .true.
 
-      fun_vec_value = selected_function_2D(x)
+      fun_vec_value = selected_function_2D(x) - [alpha, n_in]
       if (maxval(abs(fun_vec_value)) < 0.01 * err_f) then ! in case when f converges at initialization
          exit_code = .false.
          return
@@ -101,7 +101,7 @@ contains
             return
          endif
 
-         fun_vec_value = selected_function_2D(x)
+         fun_vec_value = selected_function_2D(x) - [alpha, n_in]
          fun_vec_jac = jac_fin_diff(x)                    ! function vector already explicitly provided to jac_fin_diff (finite difference method)
 
          det = determinant_2d_real(fun_vec_jac)           ! WARNING - algorithm is used for ndim = 2. For more dimensions LU or other methods should be implemented.
@@ -145,7 +145,7 @@ contains
       func_check = .false.
 
       do i = 1, NR_iter_limit
-         fun1D_val = alpha_to_q(x)
+         fun1D_val = alpha_to_q(x) - alpha
          if ((abs(fun1D_val) <= tol_f_1D) .and. (abs(delta) <= tol_f_1D)) then ! delta <= tol_f acceptable as in case of f convergence we must only check if the algorithm hasn't wandered astray
             exit_code = .false.
             return
@@ -858,7 +858,7 @@ contains
       integer, parameter                      :: slen = 6
       character(len=slen), dimension(SLV:RFN) :: sought = ['Solve ', 'Refine']
 
-      write (*, "(A6,A13,2E16.9)",advance="no") sought(sought_by)," (alpha, n): ",alpha,n_in  ! QA_WARN debug
+      write (*, "(A6,A13,2E16.9)",advance="no") sought(sought_by)," (alpha, n): ", alpha, n_in  ! QA_WARN debug
       write (*, "(A5,A4,A42, 2E19.10e3)",advance="no") " -> (",met_name,") solution obtained, (p_ratio, f_ratio) = ", x_out  ! QA_WARN debug
       write (*, "(A21, 2E17.10)",advance="no") ", provided input:", x_in ; print *,""  ! QA_WARN debug
 
@@ -968,7 +968,7 @@ contains
             do j = 1, helper_arr_dim
                if (exit_code) then
                   x = q_space(j)
-                  call NR_algorithm_1D(x,exit_code)
+                  call NR_algorithm_1D(x, exit_code)
                   if (.not. exit_code) then
                      q_grid(i) = x
                      prev_solution = x
@@ -1028,7 +1028,6 @@ contains
       else
          alpha_to_q = q_in3/q_in4 * (p_ratio_4_q**q_in4 - one)/(p_ratio_4_q**q_in3 - one)
       endif
-      alpha_to_q = alpha_to_q - alpha
 
    end function alpha_to_q
 !----------------------------------------------------------------------------------------------------
@@ -1119,8 +1118,8 @@ contains
 
       x = abs(x)
       q_in3      = three - q_ratios(x(2), x(1))
-      fvec_up(1) = encp_func_2_zero(HI, x(1),                   q_in3) - alpha
-      fvec_up(2) =    n_func_2_zero(    x(1), x(2)*x(1)**three, q_in3) - n_in
+      fvec_up(1) = encp_func_2_zero(HI, x(1),                   q_in3)
+      fvec_up(2) =    n_func_2_zero(    x(1), x(2)*x(1)**three, q_in3)
 
    end function fvec_up
 
@@ -1137,8 +1136,8 @@ contains
 
       x = abs(x)
       q_in3      = three - q_ratios(x(2), x(1))
-      fvec_lo(1) = encp_func_2_zero(LO, x(1),      q_in3) - alpha
-      fvec_lo(2) =    n_func_2_zero(    x(1), one, q_in3) - n_in
+      fvec_lo(1) = encp_func_2_zero(LO, x(1),      q_in3)
+      fvec_lo(2) =    n_func_2_zero(    x(1), one, q_in3)
 
    end function fvec_lo
 
