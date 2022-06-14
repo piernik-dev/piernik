@@ -407,9 +407,9 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine try_read_old_smap_files(hdr_init, solve_new_smap)
 
-      use constants,       only: LO, HI
-      use cresp_helpers,   only: extension, flen, map_header
-      use cresp_io,        only: read_NR_smap, read_NR_smap_header, check_NR_smap_header
+      use constants,     only: LO, HI
+      use cresp_helpers, only: extension, flen, map_header
+      use cresp_io,      only: read_NR_smap, read_NR_smap_header, check_NR_smap_header
 
       implicit none
 
@@ -1425,8 +1425,8 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine cresp_NR_mpi_exchange(hdr_share)
 
-      use constants,       only: LO, HI
-      use mpisetup,        only: piernik_MPI_Bcast
+      use constants, only: LO, HI
+      use mpisetup,  only: piernik_MPI_Bcast
 
       implicit none
 
@@ -1468,10 +1468,10 @@ contains
 
       implicit none
 
-      integer(kind=4),     intent(in)                 :: bc
+      character(len=*),                   intent(in)  :: var_name
+      integer(kind=4),                    intent(in)  :: bc
       character(len=flen-len(extension)), intent(out) :: fname_no_ext
       character(len=flen-len(extension))              :: fname_no_ext_work
-      character(len=*),    intent(in)                 :: var_name
       logical                                         :: file_exists
 
       fname_no_ext_work = var_name // bound_name(bc)
@@ -1556,10 +1556,10 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine cresp_write_smaps_to_hdf(file_id)
 
-      use constants,       only: LO, HI
-      use cresp_io,        only: save_smap_to_open
-      use cresp_helpers,   only: n_g_smaps, dset_attrs
-      use hdf5,            only: HID_T
+      use constants,     only: LO, HI
+      use cresp_helpers, only: n_g_smaps, dset_attrs
+      use cresp_io,      only: save_smap_to_open
+      use hdf5,          only: HID_T
 
       implicit none
 
@@ -1574,15 +1574,15 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine cresp_read_smaps_from_hdf(file_id)
 
-      use constants,       only: LO, HI, I_ZERO
-      use cresp_io,        only: read_real_arr2d_dset, read_smap_header_h5
-      use cresp_helpers,   only: map_header, dset_attrs, n_g_smaps
-      use dataio_pub,      only: warn
-      use hdf5,            only: HID_T
+      use constants,     only: LO, HI, I_ZERO
+      use cresp_io,      only: read_real_arr2d_dset, read_smap_header_h5
+      use cresp_helpers, only: map_header, dset_attrs, n_g_smaps
+      use dataio_pub,    only: warn
+      use hdf5,          only: HID_T
 
       implicit none
 
-      integer(HID_T),             intent(in) :: file_id
+      integer(HID_T), intent(in) :: file_id
 
       call read_smap_header_h5(file_id, hdr_res)
 
@@ -1606,11 +1606,11 @@ contains
 !
    subroutine try_read_user_h5(filename, hdr_init, unable_to_read)
 
-      use constants,       only: LO, HI
-      use cresp_helpers,   only: map_header
-      use cresp_io,        only: check_file_group, check_NR_smap_header
-      use dataio_pub,      only: warn, printinfo
-      use hdf5,            only: HID_T, h5close_f, h5open_f, h5fclose_f, h5fopen_f, H5F_ACC_RDONLY_F
+      use constants,     only: LO, HI
+      use cresp_helpers, only: map_header
+      use cresp_io,      only: check_file_group, check_NR_smap_header
+      use dataio_pub,    only: warn, printinfo
+      use hdf5,          only: HID_T, h5close_f, h5open_f, h5fclose_f, h5fopen_f, H5F_ACC_RDONLY_F
 
       implicit none
 
@@ -1621,11 +1621,11 @@ contains
       logical, dimension(2)                         :: hdr_match
       type(map_header), dimension(2), intent(inout) :: hdr_init
       integer, parameter                            :: min_fnamelen = 4 ! at least "?.h5"
-      logical,                          intent(out) :: unable_to_read
+      logical,                        intent(out)   :: unable_to_read
 
       unable_to_read = .true.
 
-      if (len(filename) .le. min_fnamelen) return
+      if (len(filename) <= min_fnamelen) return
 
       call check_file_group(filename, "/cresp", file_exists, file_has_data)
 
@@ -1644,10 +1644,10 @@ contains
       call h5close_f(error)
       unable_to_read = (.not. hdr_match(LO)) .and. (.not. hdr_match(HI))
 
-      if (unable_to_read .eqv. .false.) then
-         call printinfo("[cresp_NR_method:try_read_user_h5] Successfully read data from provided file "//trim(filename))
-      else
+      if (unable_to_read) then
          call warn("[cresp_NR_method:try_read_user_h5] File provided as 'NR_smap_file' "//trim(filename)//" does not contain usable data.")
+      else
+         call printinfo("[cresp_NR_method:try_read_user_h5] Successfully read data from provided file "//trim(filename))
       endif
 
    end subroutine try_read_user_h5
@@ -1659,13 +1659,13 @@ contains
 
       implicit none
 
-      logical   ::  is_finishing
+      logical :: is_finishing
 
       if (master) then
-         if (.not. is_finishing) then
-            write(stdout,'(a)',advance='no')"."
+         if (is_finishing) then
+            write(stdout,'(a)', advance='yes')"."
          else
-            write(stdout,'(a)',advance='yes')"."
+            write(stdout,'(a)', advance='no')"."
          endif
       endif
 
