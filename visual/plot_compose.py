@@ -181,16 +181,16 @@ def plotcompose(pthfilen, var, output, options):
         center = (smax[0] + smin[0]) / 2.0, (smax[1] + smin[1]) / 2.0, (smax[2] + smin[2]) / 2.0
 
     drawa, drawu = pu.choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist)
-    plotlevels = pu.check_plotlevels(plotlevels, maxglev, drawa)
-    if len(plotlevels) == 0:
+    plotlevels = pu.check_plotlevels(plotlevels, maxglev, drawa, True)
+    gridlist = pu.sanitize_gridlist(gridlist, cgcount)
+    unavail, cmpr, drawa, drawu, drawg = rd.manage_compare(cmpr, h5f, var, plotlevels, gridlist, drawa, drawu, drawg)
+    if len(plotlevels) == 0 or unavail:
         print('No levels found. Skipping.')
         return
 
     linstyl = pu.linestyles(linstyl, maxglev, plotlevels)
     if drawg:
         gcolor = pu.reorder_gridcolorlist(gcolor, maxglev, plotlevels)
-    gridlist = pu.sanitize_gridlist(gridlist, cgcount)
-    cmpr, drawa, drawu, drawg = rd.manage_compare(cmpr, h5f, var, maxglev, plotlevels, gridlist, drawa, drawu, drawg)
 
     if drawp:
         pinfile, pxyz, pm = rd.collect_particles(h5f, drawh, center, player, uupd, usc, plotlevels, gridlist)
