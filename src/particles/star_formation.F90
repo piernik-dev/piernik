@@ -41,6 +41,8 @@ module star_formation
   integer(kind=4)       :: pid_gen, maxpid, dpid
   real                  :: dmass_stars
 
+  integer(kind=4), parameter :: giga = 1000000000
+
 contains
 
   subroutine SF(forward)
@@ -62,7 +64,10 @@ contains
 #ifdef THERM
     use thermal,               only: itemp
 #endif /* THERM */
-    use units,                 only: newtong, erg, cm, sek, gram
+    use units,                 only: newtong, cm, sek, gram
+#if defined(THERM) || defined(COSM_RAYS)
+    use units,                 only: erg
+#endif /* defined(THERM) || defined(COSM_RAYS) */
 
     implicit none
 
@@ -74,9 +79,9 @@ contains
     integer                                            :: ifl, i, j, k, i1, j1, k1
     real                                               :: dens_thr, sf_dens, c_tau_ff, eps_sf, frac, mass_SN
     logical                                            :: fed, kick
-    integer(kind=4)                                    :: pid, ig, stage, n_SN
+    integer(kind=4)                                    :: pid, ig, n_SN
     real, dimension(ndims)                             :: pos, vel, acc
-    real                                               :: mass, ener, tdyn, tbirth, padd, t1, fact
+    real                                               :: mass, ener, tdyn, tbirth, padd, t1, fact, stage
     logical                                            :: in, phy, out
 
     if (.not. forward) return
@@ -245,7 +250,7 @@ contains
 
     implicit none
 
-    dpid = int(1000000000/nproc)
+    dpid = int(giga/nproc, kind=4)
     pid_gen =  proc * dpid
     !maxpid = (proc+1) * dpid
     !print *, proc, pid_gen, maxpid, dpid
@@ -254,23 +259,24 @@ contains
 
   subroutine attribute_id(pid)
 
+    use constants,            only: I_ONE
     use mpisetup,             only: proc, nproc
 
     implicit none
 
-    integer, intent(out)    :: pid
+    integer(kind=4), intent(out)    :: pid
 
-    dpid = int(1000000000/nproc)
-    maxpid = (proc+1) * dpid
+    dpid = int(giga/nproc, kind=4)
+    maxpid = (proc+I_ONE) * dpid
     if (pid_gen .gt. maxpid) then
-       maxpid = (proc+1) * dpid + 1000000000
+       maxpid = (proc+I_ONE) * dpid + giga
     endif
 
-    pid_gen = pid_gen+1
+    pid_gen = pid_gen+I_ONE
     if (pid_gen .ge. maxpid) then
        print *, 'pool of pid full for proc ', proc, pid_gen, maxpid
-       pid_gen = proc * dpid + 1000000000
-       maxpid = (proc+1) * dpid + 1000000000
+       pid_gen = proc * dpid + giga
+       maxpid = (proc+I_ONE) * dpid + giga
     endif
     pid     = pid_gen
 

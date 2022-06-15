@@ -1047,7 +1047,8 @@ contains
       integer(kind=8)                              :: j
       integer(kind=4)                              :: pid1
       real, dimension(:), allocatable              :: a1d
-      integer(HSIZE_T), dimension(1)               :: n_part, pid_max
+      integer(HSIZE_T), dimension(1)               :: n_part
+      integer(kind=4), dimension(1)                :: pid_max
       integer(kind=4),   dimension(:), allocatable :: ibuf
       integer(kind=4), allocatable, dimension(:)   :: pid
       real, allocatable, dimension(:)              :: mass, ener, tform, tdyn
