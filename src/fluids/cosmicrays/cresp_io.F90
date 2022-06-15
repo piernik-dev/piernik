@@ -37,7 +37,7 @@ module cresp_io
    private
    public   :: check_file_group, file_has_group, file_has_dataset, save_smap_to_open, save_cresp_smap_h5,   &
             &  read_cresp_smap_fields, create_cresp_smap_fields, read_real_arr2d_dset, read_smap_header_h5, &
-            &  save_NR_smap, check_NR_smap_header, read_NR_smap, read_NR_smap_header
+            &  save_NR_smap, check_NR_smaps_headers, read_NR_smap, read_NR_smap_header
 
 contains
 
@@ -270,10 +270,10 @@ contains
 !
    subroutine check_NR_smap_header(hdr, hdr_std, hdr_equal)
 
-      use constants,       only: zero
-      use cresp_helpers,   only: map_header
-      use dataio_pub,      only: msg, printinfo, warn
-      use func,            only: operator(.equals.)
+      use constants,     only: zero
+      use cresp_helpers, only: map_header
+      use dataio_pub,    only: msg, printinfo, warn
+      use func,          only: operator(.equals.)
 
       implicit none
 
@@ -295,15 +295,30 @@ contains
       hdr_equal = hdr_equal .and. ((hdr%s_nmin .equals. hdr_std%s_nmin) .or. (hdr%s_nmin .equals. zero))
       hdr_equal = hdr_equal .and. ((hdr%s_nmax .equals. hdr_std%s_nmax) .or. (hdr%s_nmax .equals. zero))
 
-      if (.not. hdr_equal) then
-         write(msg,"(A110)") "[cresp_io:check_NR_smap_header] Headers differ (provided in ratios files vs. values resulting from parameters)"
-         call warn(msg)
-      else
+      if (hdr_equal) then
          write(msg,"(A109)") "[cresp_io:check_NR_smap_header] Headers match (provided in ratios files vs. values resulting from parameters)"
          call printinfo(msg)
+      else
+         write(msg,"(A110)") "[cresp_io:check_NR_smap_header] Headers differ (provided in ratios files vs. values resulting from parameters)"
+         call warn(msg)
       endif
 
    end subroutine check_NR_smap_header
+
+   subroutine check_NR_smaps_headers(hdr_res, hdr, hdr_match_res)
+
+      use constants,     only: LO, HI
+      use cresp_helpers, only: map_header
+
+      implicit none
+
+      type(map_header), dimension(2), intent(in)  :: hdr_res, hdr
+      logical,          dimension(2), intent(out) :: hdr_match_res
+
+      call check_NR_smap_header(hdr_res(LO), hdr(LO), hdr_match_res(LO))
+      call check_NR_smap_header(hdr_res(HI), hdr(HI), hdr_match_res(HI))
+
+   end subroutine check_NR_smaps_headers
 
 !---------------------------------------------------------------------------------------------------
 !> \brief Prepare and read cresp solution map fields from hdf5 file. !DEPRECATED

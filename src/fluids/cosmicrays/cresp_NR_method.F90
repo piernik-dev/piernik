@@ -113,7 +113,7 @@ contains
 
          cor(1) = sum(fun_vec_inv_jac(1,:) * fun_vec_value(:))
          cor(2) = sum(fun_vec_inv_jac(2,:) * fun_vec_value(:))
-         x = x+cor
+         x = x + cor
          if (maxval(abs(cor)) < err_x) then                 ! For convergence via value of correction (cor) table.
 #ifdef CRESP_VERBOSED
             write(*,"(A47,I4,A12)",advance="no") "Convergence via value of cor array     after ",i," iterations."  ! QA_WARN debug
@@ -197,14 +197,13 @@ contains
 
       use constants,      only: zero, I_FOUR, LO, HI
       use cresp_helpers,  only: map_header, hdr_io
-      use cresp_io,       only: check_NR_smap_header, save_NR_smap
+      use cresp_io,       only: check_NR_smaps_headers, save_NR_smap
       use dataio_pub,     only: warn
       use initcrspectrum, only: arr_dim_a, force_init_NR, e_small_approx_init_cond, NR_allow_old_smaps, NR_smap_file
       use mpisetup,       only: master
 
       implicit none
 
-      integer(kind=4)                :: icut
       logical                        :: first_run = .true., solve_new_smaps
       logical, dimension(2)          :: hdr_match_res
       type(map_header), dimension(2) :: hdr
@@ -226,10 +225,8 @@ contains
          solve_new_smaps = .not. got_smaps_from_restart
          if (got_smaps_from_restart) then
          ! if restart file loaded, check the header
-            do icut = LO, HI
-               call check_NR_smap_header(hdr_res(icut), hdr(icut), hdr_match_res(icut))
-            enddo
-            solve_new_smaps = .not. (hdr_match_res(LO) .and. hdr_match_res(HI))
+               call check_NR_smaps_headers(hdr_res, hdr, hdr_match_res)
+            solve_new_smaps = .not. all(hdr_match_res)
          endif
 
          if ( .not. got_smaps_from_restart .or. (hdr_match_res(LO) .eqv. .false. .or. hdr_match_res(HI) .eqv. .false.) ) then
@@ -409,14 +406,14 @@ contains
 
       use constants,     only: LO, HI
       use cresp_helpers, only: extension, flen, map_header
-      use cresp_io,      only: read_NR_smap, read_NR_smap_header, check_NR_smap_header
+      use cresp_io,      only: read_NR_smap, read_NR_smap_header, check_NR_smaps_headers
 
       implicit none
 
       character(len=flen-len(extension))         :: filename_read_lo, filename_read_up
       type(map_header), dimension(2), intent(in) :: hdr_init
       type(map_header), dimension(2)             :: hdr_read
-      logical, dimension(2)                      :: read_error, hdr_match !, read_error_f, read_error_p, hdr_match
+      logical, dimension(2)                      :: read_error, hdr_match
       logical,                       intent(out) :: solve_new_smap
 
       call get_smap_filename("p_ratios_", LO, filename_read_lo)
@@ -428,9 +425,8 @@ contains
 
       if (.not. (read_error(LO) .and. read_error(HI)) ) then
 
-         call check_NR_smap_header(hdr_read(LO), hdr_init(LO), hdr_match(LO))
-         call check_NR_smap_header(hdr_read(HI), hdr_init(HI), hdr_match(HI))
-         if (hdr_match(LO) .and. hdr_match(HI)) then
+         call check_NR_smaps_headers(hdr_read, hdr_init, hdr_match)
+         if (all(hdr_match)) then
             call read_NR_smap(p_ratios_lo, "p"//filename_read_lo(2:9), LO, read_error(LO))
             call read_NR_smap(f_ratios_lo, "f"//filename_read_lo(2:9), LO, read_error(HI))
 
@@ -1603,15 +1599,14 @@ contains
 !
    subroutine try_read_user_h5(filename, hdr_init, unable_to_read)
 
-      use constants,     only: LO, HI
       use cresp_helpers, only: map_header
-      use cresp_io,      only: check_file_group, check_NR_smap_header
+      use cresp_io,      only: check_file_group, check_NR_smaps_headers
       use dataio_pub,    only: warn, printinfo
       use hdf5,          only: HID_T, h5close_f, h5open_f, h5fclose_f, h5fopen_f, H5F_ACC_RDONLY_F
 
       implicit none
 
-      integer(kind=4)                               :: error, i
+      integer(kind=4)                               :: error
       character(len=*)                              :: filename
       integer(HID_T)                                :: file_id
       logical                                       :: file_exists, file_has_data
@@ -1633,13 +1628,11 @@ contains
       call h5open_f(error)
       call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
       call cresp_read_smaps_from_hdf(file_id)   ! loads ratios and hdr_res
-      do i = LO, HI
-         call check_NR_smap_header(hdr_res(i), hdr_init(i), hdr_match(i))
-      enddo
+      call check_NR_smaps_headers(hdr_res, hdr_init, hdr_match)
 
       call h5fclose_f(file_id, error)
       call h5close_f(error)
-      unable_to_read = (.not. hdr_match(LO)) .and. (.not. hdr_match(HI))
+      unable_to_read = .not. any(hdr_match)
 
       if (unable_to_read) then
          call warn("[cresp_NR_method:try_read_user_h5] File provided as 'NR_smap_file' "//trim(filename)//" does not contain usable data.")
