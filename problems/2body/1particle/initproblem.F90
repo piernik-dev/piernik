@@ -141,7 +141,7 @@ contains
 
       implicit none
 
-      call add_part_in_proper_cg(I_ONE, 1., dom%C_, vel, [0.0, 0.0, 0.0], 0.0)
+      call add_part_in_proper_cg(I_ONE, 1., dom%C_, vel, [0.0, 0.0, 0.0], 0.0, 0., 0.)
 
    end subroutine problem_initial_nbody
 
