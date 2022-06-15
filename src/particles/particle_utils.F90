@@ -38,7 +38,7 @@ module particle_utils
    implicit none
 
    private
-   public :: max_pvel_1d, add_part_in_proper_cg, print_all_particles, is_part_in_cg
+   public :: max_pvel_1d, add_part_in_proper_cg, print_all_particles, is_part_in_cg, npf
    public :: max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom, count_all_particles, global_count_all_particles, part_leave_cg
 
    real    :: tot_angmom           !< angular momentum of set of the particles
