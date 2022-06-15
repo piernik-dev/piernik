@@ -386,8 +386,8 @@ contains
       real,                    intent(in) :: dt
       real, dimension(:, :, :), pointer   :: ta, dens, ener
       real, dimension(:,:,:), allocatable :: kinmag_ener
-      real                                :: dt_cool, t1, tcool, cfunc, hfunc, esrc, diff, kbgmh, ikbgmh, Tnew, int_ener, alpha1, lambda1, Tref1
-      integer                             :: ifl, ii, i, j, k
+      real                                :: dt_cool, t1, tcool, cfunc, hfunc, esrc, kbgmh, ikbgmh, Tnew, int_ener
+      integer                             :: ifl, i, j, k
       integer, dimension(3)               :: n
 
       type(cg_list_element),  pointer     :: cgl
