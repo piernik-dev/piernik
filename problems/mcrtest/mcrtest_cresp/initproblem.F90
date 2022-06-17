@@ -161,7 +161,7 @@ contains
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
-      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
+      use initcosmicrays,   only: iarr_crspc_e, iarr_crspc_n
       use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff, use_cresp
 #endif /* CRESP */
 #endif /* COSM_RAYS */
@@ -263,8 +263,8 @@ contains
                   if (e_tot > smallcree .and. use_cresp) then
                      cresp%n = 0.0 ;  cresp%e = 0.0
                      call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot)
-                     cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
-                     cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
+                     cg%u(iarr_crspc_n,i,j,k) = cg%u(iarr_crspc_n,i,j,k) + cresp%n
+                     cg%u(iarr_crspc_e,i,j,k) = cg%u(iarr_crspc_e,i,j,k) + cresp%e
                   endif
 #endif /* CRESP */
                enddo
@@ -292,9 +292,9 @@ contains
          call piernik_MPI_Allreduce(maxv, pMAX)
          if (master) then
 #ifdef CRESP
-            if (iarr_crs(icr) < flind%cre%nbeg) then
+            if (iarr_crs(icr) < flind%crspc%nbeg) then
                write(msg,*) '[initproblem:problem_initial_conditions] icr(nuc)  =',icr,' maxecr(nuc) =',maxv
-            else if (iarr_crs(icr) < flind%cre%ebeg .and. iarr_crs(icr) >= flind%cre%nbeg) then
+            else if (iarr_crs(icr) < flind%crspc%ebeg .and. iarr_crs(icr) >= flind%crspc%nbeg) then
                write(msg,*) '[initproblem:problem_initial_conditions] icr(cre_n)=',icr,' maxncr(cre) =',maxv
             else
                write(msg,*) '[initproblem:problem_initial_conditions] icr(cre_e)=',icr,' maxecr(cre) =',maxv

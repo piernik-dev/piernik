@@ -940,7 +940,7 @@ contains
       use fluidindex,       only: iarr_all_crn
 #endif /* COSM_RAYS */
 #ifdef CRESP
-      use initcosmicrays,   only: iarr_crspc_e, iarr_crspc_n
+      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
 #endif /* CRESP */
 #ifdef RESISTIVE
       use resistivity,      only: eta1_active
@@ -1102,8 +1102,8 @@ contains
 #ifdef COSM_RAYS
                tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * sum(sum(pu(iarr_all_crn,:,:,:), dim=1), mask=cg%leafmap)
 #ifdef CRESP
-               tot_q(T_CREN) = tot_q(T_CREN) + cg%dvol * sum(sum(pu(iarr_crspc_n,  :,:,:), dim=1), mask=cg%leafmap)
-               tot_q(T_CREE) = tot_q(T_CREE) + cg%dvol * sum(sum(pu(iarr_crspc_e,  :,:,:), dim=1), mask=cg%leafmap)
+               tot_q(T_CREN) = tot_q(T_CREN) + cg%dvol * sum(sum(pu(iarr_cre_n,  :,:,:), dim=1), mask=cg%leafmap)
+               tot_q(T_CREE) = tot_q(T_CREE) + cg%dvol * sum(sum(pu(iarr_cre_e,  :,:,:), dim=1), mask=cg%leafmap)
                tot_q(T_ENCR) = tot_q(T_ENCR) + tot_q(T_CREE)
 #endif /* CRESP */
                tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
@@ -1141,8 +1141,8 @@ contains
 #ifdef COSM_RAYS
                   tot_q(T_ENCR) = tot_q(T_ENCR) + drvol * sum(sum(pu(iarr_all_crn, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
 #ifdef CRESP
-                  tot_q(T_CREN) = tot_q(T_CREN) + drvol * sum(sum(pu(iarr_crspc_n,   ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
-                  tot_q(T_CREE) = tot_q(T_CREE) + drvol * sum(sum(pu(iarr_crspc_e,   ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
+                  tot_q(T_CREN) = tot_q(T_CREN) + drvol * sum(sum(pu(iarr_cre_n,   ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
+                  tot_q(T_CREE) = tot_q(T_CREE) + drvol * sum(sum(pu(iarr_cre_e,   ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
                   tot_q(T_ENCR) = tot_q(T_ENCR) + tot_q(T_CREE)
 #endif /* CRESP */
                   tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
@@ -1617,7 +1617,7 @@ contains
       use timestepcosmicrays, only: dt_crs
 #endif /* COSM_RAYS */
 #ifdef CRESP
-      use initcosmicrays,     only: iarr_crspc_e, iarr_crspc_n
+      use initcosmicrays,     only: iarr_cre_e, iarr_cre_n
       use timestep_cresp,     only: dt_cre_adiab, dt_cre_K
 #ifdef MAGNETIC
       use timestep_cresp,     only: dt_cre_synch
@@ -1823,7 +1823,7 @@ contains
       do while (associated(cgl))
          call cgl%cg%costs%start
 
-         cgl%cg%wa = sum(cgl%cg%u(iarr_crspc_n,:,:,:),1)
+         cgl%cg%wa = sum(cgl%cg%u(iarr_cre_n,:,:,:),1)
 
          call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
@@ -1835,7 +1835,7 @@ contains
       do while (associated(cgl))
          call cgl%cg%costs%start
 
-         cgl%cg%wa = sum(cgl%cg%u(iarr_crspc_e,:,:,:),1)
+         cgl%cg%wa = sum(cgl%cg%u(iarr_cre_e,:,:,:),1)
 
          call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt

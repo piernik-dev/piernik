@@ -132,7 +132,7 @@ module fluidtypes
       type(component) :: trc         !< numbers of tracer fluids
       type(component) :: crs         !< numbers of variables in all cosmic ray components
       type(component) :: crn         !< numbers of variables in cosmic ray nuclear components
-      type(component) :: cre         !< numbers of variables in cosmic ray electron components
+      type(component) :: crspc         !< numbers of variables in cosmic ray electron components
    contains
       procedure :: any_fluid_is_selfgrav
    end type var_numbers

@@ -57,7 +57,7 @@ contains
       use dataio_pub,       only: printinfo, restarted_sim
       use global,           only: repetitive_steps, cflcontrol, disallow_CRnegatives
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crspc_n, iarr_crspc_e, ncrb
+      use initcosmicrays,   only: iarr_cre_n, iarr_cre_e, ncrb
       use initcrspectrum,   only: norm_init_spectrum, dfpq, check_if_dump_fpq, use_cresp
       use mpisetup,         only: master
       use named_array_list, only: wna
@@ -85,8 +85,8 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            cg%u(iarr_crspc_n,:,:,:)  = 0.0
-            cg%u(iarr_crspc_e,:,:,:)  = 0.0
+            cg%u(iarr_cre_n,:,:,:)  = 0.0
+            cg%u(iarr_cre_e,:,:,:)  = 0.0
 
             if (dfpq%any_dump) then
                if (dfpq%dump_f) cg%w(wna%ind(dfpq%f_nam))%arr = 0.0
@@ -122,7 +122,7 @@ contains
       use func,             only: emag
       use global,           only: dt
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crspc_e, iarr_crspc_n
+      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max, use_cresp_evol
       use initcrspectrum,   only: cresp_substep, n_substeps_max
       use named_array_list, only: wna
@@ -164,8 +164,8 @@ contains
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
                   sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
-                  cresp%n = cg%u(iarr_crspc_n, i, j, k)
-                  cresp%e = cg%u(iarr_crspc_e, i, j, k)
+                  cresp%n = cg%u(iarr_cre_n, i, j, k)
+                  cresp%e = cg%u(iarr_cre_e, i, j, k)
                   if (synch_active) sptab%ub = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr, u_b_max)    !< WARNING assusmes that b is in mGs
                   if (adiab_active) sptab%ud = cg%q(divv_i)%point([i,j,k]) * onet
 
@@ -191,8 +191,8 @@ contains
                      endif
                   endif
 
-                  cg%u(iarr_crspc_n, i, j, k) = cresp%n
-                  cg%u(iarr_crspc_e, i, j, k) = cresp%e
+                  cg%u(iarr_cre_n, i, j, k) = cresp%n
+                  cg%u(iarr_cre_e, i, j, k) = cresp%e
                   if (dfpq%any_dump) then
                      if (dfpq%dump_f) cg%w(wna%ind(dfpq%f_nam))%arr(:, i, j, k) = crel%f
                      if (dfpq%dump_p) cg%w(wna%ind(dfpq%p_nam))%arr(:, i, j, k) = crel%p(crel%i_cut)
@@ -252,7 +252,7 @@ contains
       use cg_list,          only: cg_list_element
       use cresp_crspectrum, only: detect_clean_spectrum
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crspc_e, iarr_crspc_n
+      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: cresp, nullify_empty_bins
       use ppp,              only: ppp_main
 
@@ -275,13 +275,13 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  cresp%n = cg%u(iarr_crspc_n, i, j, k)
-                  cresp%e = cg%U(iarr_crspc_e, i, j, k)
+                  cresp%n = cg%u(iarr_cre_n, i, j, k)
+                  cresp%e = cg%U(iarr_cre_e, i, j, k)
 
                   call detect_clean_spectrum
 
-                  cg%u(iarr_crspc_n, i, j, k) = cresp%n
-                  cg%u(iarr_crspc_e, i, j, k) = cresp%e
+                  cg%u(iarr_cre_n, i, j, k) = cresp%n
+                  cg%u(iarr_cre_e, i, j, k) = cresp%e
                enddo
             enddo
          enddo

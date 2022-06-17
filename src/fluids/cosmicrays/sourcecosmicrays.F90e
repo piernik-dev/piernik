@@ -53,7 +53,7 @@ contains
       use initcosmicrays,   only: cr_active, gamma_cr_1, gpcr_ess_noncresp, iarr_crn
 #ifdef CRESP
       use cresp_crspectrum, only: src_gpcresp
-      use initcosmicrays,   only: iarr_crspc_e
+      use initcosmicrays,   only: iarr_cre_e
 #endif /* CRESP */
 
       implicit none
@@ -96,7 +96,7 @@ contains
 
       usrc(:, iarr_all_mx(flind%ion%pos)) = grad_pcr
 #ifdef CRESP
-      call src_gpcresp(uu(:,iarr_crspc_e(:)), nn, cg%dl(sweep), grad_pcr_cresp)         !< cg%dl(sweep) = dx, contribution due to pressure acted upon spectrum components in CRESP via div_v
+      call src_gpcresp(uu(:,iarr_cre_e(:)), nn, cg%dl(sweep), grad_pcr_cresp)         !< cg%dl(sweep) = dx, contribution due to pressure acted upon spectrum components in CRESP via div_v
 #endif /* CRESP */
 #ifdef ISO
       return

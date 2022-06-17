@@ -383,19 +383,19 @@ contains
 #ifdef CRESP
          case ("cren01" : "cren99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = cg%u(flind%crspc%nbeg+i-1, RNG)
+            tab(:,:,:) = cg%u(flind%_crspc_%nbeg+i-1, RNG)
          case ("cree01" : "cree99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = cg%u(flind%crspc%ebeg+i-1, RNG)
+            tab(:,:,:) = cg%u(flind%_crspc_%ebeg+i-1, RNG)
          case ("cref01" : "cref99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = cg%w(wna%ind(dfpq%f_nam))%arr(i,RNG)  !flind%crspc%fbeg+i-1, RNG)
+            tab(:,:,:) = cg%w(wna%ind(dfpq%f_nam))%arr(i,RNG)  !flind%_crspc_%fbeg+i-1, RNG)
          case ("crep01" : "crep02")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = cg%w(wna%ind(dfpq%p_nam))%arr(i,RNG)  !flind%crspc%fbeg+i-1, RNG)
+            tab(:,:,:) = cg%w(wna%ind(dfpq%p_nam))%arr(i,RNG)  !flind%_crspc_%fbeg+i-1, RNG)
          case ("creq01" : "creq99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = cg%w(wna%ind(dfpq%q_nam))%arr(i,RNG)  !flind%crspc%fbeg+i-1, RNG)
+            tab(:,:,:) = cg%w(wna%ind(dfpq%q_nam))%arr(i,RNG)  !flind%_crspc_%fbeg+i-1, RNG)
 #endif /* CRESP */
 #ifdef TRACER
          case ("trcr")
