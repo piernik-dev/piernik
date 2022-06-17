@@ -46,7 +46,7 @@ def compare_grids(h1, h2, plotlevels, cmprl, gridlist):
                     return True
     return False
 
-def reconstruct_uniform(h5f, var, cmpr, level, gridlist, cu, center, smin, smax, draw1D, draw2D):
+def reconstruct_uniform(h5f, var, cmpr, level, gridlist, center, smin, smax, draw1D, draw2D):
     dset, nd, levelmet = collect_dataset(h5f, var, cmpr, level, gridlist)
     if not levelmet:
         return [], []
@@ -59,11 +59,8 @@ def reconstruct_uniform(h5f, var, cmpr, level, gridlist, cu, center, smin, smax,
             print('Comparison not available due to unmet resolution constraints.')
             return [], []
 
-    if cu:
-        inb, ind = pu.find_indices(nd, center, smin, smax, True)
-        print('Ordered plot center', center[0], center[1], center[2], ' gives following uniform grid indices:', ind[0], ind[1], ind[2])
-    else:
-        ind = int(nd[0] / 2), int(nd[1] / 2), int(nd[2] / 2)
+    inb, ind = pu.find_indices(nd, center, smin, smax, True)
+    print('Plot center', center[0], center[1], center[2], 'gives indices:', ind[0], ind[1], ind[2], 'for uniform grid level', level)
 
     b2d, b1d, d1min, d1max, d2min, d2max, d3min, d3max = take_cuts_and_lines(dset, ind, draw1D, draw2D)
     block = b2d, [True, True, True], smin, smax, level, b1d
@@ -85,6 +82,7 @@ def collect_dataset(h5f, dset_name, cmpr, level, gridlist):
             levelmet = True
             off = h5g.attrs['off']
             ngb = h5g.attrs['n_b']
+
             n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
             ce = n_b + off
             dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name][:, :, :].swapaxes(0, 2)

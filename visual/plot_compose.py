@@ -204,9 +204,9 @@ def plotcompose(pthfilen, var, output, options):
         extr = [], [], [], [], [], []
         if drawu:
             if len(plotlevels) > 1:
-                print('For uniform grid plotting only the firs given level!')
+                print('For uniform grid plotting only the first given level!')
             print('Plotting base level %s' % plotlevels[0])
-            refis, extr = rd.reconstruct_uniform(h5f, var, cmpr, plotlevels[0], gridlist, cu, center, smin, smax, draw1D, draw2D)
+            refis, extr = rd.reconstruct_uniform(h5f, var, cmpr, plotlevels[0], gridlist, center, smin, smax, draw1D, draw2D)
 
         if drawa or drawg:
             refis, extr = rd.collect_gridlevels(h5f, var, cmpr, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, drawd, draw1D, draw2D)
