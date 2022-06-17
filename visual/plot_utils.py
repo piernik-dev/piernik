@@ -123,6 +123,10 @@ def scale_plotarray(pa, sctype, symmin):
     return pa
 
 
+def list3_subtraction(l3, s3):
+    return l3[0] - s3[0], l3[1] - s3[1], l3[2] - s3[2]
+
+
 def list3_division(l3, divisor):
     return l3[0] / divisor, l3[1] / divisor, l3[2] / divisor
 

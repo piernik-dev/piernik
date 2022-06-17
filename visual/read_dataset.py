@@ -47,42 +47,44 @@ def compare_grids(h1, h2, plotlevels, cmprl, gridlist):
     return False
 
 def reconstruct_uniform(h5f, var, cmpr, level, gridlist, center, smin, smax, draw1D, draw2D):
-    dset, nd, levelmet = collect_dataset(h5f, var, cmpr, level, gridlist)
+    dset, nd, ledg, redg, levelmet = collect_dataset(h5f, var, cmpr, level, gridlist)
     if not levelmet:
         return [], []
     cmpr0, h5c, cmprd, cmprl, cmprt, diff_struct = cmpr
     if diff_struct:
-        dc, ndc, lmc = collect_dataset(h5c, cmprd, cmpr, cmprl[0], range(int(h5c['data'].attrs['cg_count'])))
+        dc, ndc, lec, rec, lmc = collect_dataset(h5c, cmprd, cmpr, cmprl[0], range(int(h5c['data'].attrs['cg_count'])))
         if nd == ndc and lmc:
             dset = pu.execute_comparison(dset, dc, cmprt)
+            if ledg != lec or redg != rec:
+                print('WARNING: Edges for level %s: %s %s are different than for level %s: %s %s. Consider excluding levels.' % (level, ledg, redg, cmprl[0], lec, rec))
         else:
-            print('Comparison not available due to unmet resolution constraints.')
+            print('Comparison for levels: %s and %s not available due to unmet resolution constraints.' % (level, cmprl[0]))
             return [], []
 
-    inb, ind = pu.find_indices(nd, center, smin, smax, True)
+    inb, ind = pu.find_indices(nd, center, ledg, redg, True)
     print('Plot center', center[0], center[1], center[2], 'gives indices:', ind[0], ind[1], ind[2], 'for uniform grid level', level)
 
     b2d, b1d, d1min, d1max, d2min, d2max, d3min, d3max = take_cuts_and_lines(dset, ind, draw1D, draw2D)
-    block = b2d, [True, True, True], smin, smax, level, b1d
+    block = b2d, [True, True, True], ledg, redg, level, b1d
 
     return [[block, ], ], [[d1min], [d1max], [d2min], [d2max], [d3min], [d3max]]
 
 
 def collect_dataset(h5f, dset_name, cmpr, level, gridlist):
     print('Reading', dset_name)
-    attrs = h5f['domains']['base'].attrs
-    nd = [i * 2**level for i in attrs['n_d']]
+    #attrs = h5f['domains']['base'].attrs
+    #nd = [i * 2**level for i in attrs['n_d']]
+    nd, loff, ledg, redg, levelmet = frame_level(h5f, level, gridlist)
+    if not levelmet:
+        return [], [], [], [], False
     dset = np.zeros((nd[0], nd[1], nd[2]))
 
     print('Reconstructing domain from cg parts')
-    levelmet = False
     for ig in gridlist:
         h5g = h5f['data']['grid_' + str(ig).zfill(10)]
         if h5g.attrs['level'] == level:
-            levelmet = True
-            off = h5g.attrs['off']
+            off = h5g.attrs['off'] - loff
             ngb = h5g.attrs['n_b']
-
             n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
             ce = n_b + off
             dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name][:, :, :].swapaxes(0, 2)
@@ -90,7 +92,39 @@ def collect_dataset(h5f, dset_name, cmpr, level, gridlist):
             if cmpr0 and not diff_struct:
                 dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = pu.execute_comparison(dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]], h5c['data']['grid_' + str(ig).zfill(10)][cmprd][:, :, :].swapaxes(0, 2), cmprt)
 
-    return dset, nd, levelmet
+    return dset, nd, ledg, redg, levelmet
+
+
+def frame_level(h5f, level, gridlist):
+    levelmet = False
+    off_started = False
+    for ig in gridlist:
+        h5g = h5f['data']['grid_' + str(ig).zfill(10)]
+        if h5g.attrs['level'] == level:
+            levelmet = True
+            off = h5g.attrs['off']
+            ngb = h5g.attrs['n_b']
+            lft = h5g.attrs['left_edge']
+            rht = h5g.attrs['right_edge']
+
+            n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
+            ce = n_b + off
+            if off_started:
+                lind = [min(lind[0], off[0]), min(lind[1], off[1]), min(lind[2], off[2])]
+                rind = [max(rind[0],  ce[0]), max(rind[1],  ce[1]), max(rind[2],  ce[2])]
+                ledg = [min(ledg[0], lft[0]), min(ledg[1], lft[1]), min(ledg[2], lft[2])]
+                redg = [max(redg[0], rht[0]), max(redg[1], rht[1]), max(redg[2], rht[2])]
+            else:
+                lind = off
+                rind = ce
+                ledg = lft
+                redg = rht
+                off_started = True
+    nd = pu.list3_subtraction(rind, lind)
+    if levelmet:
+        return nd, lind, ledg, redg, levelmet
+    else:
+        return [], [], [], [], False
 
 
 def collect_gridlevels(h5f, var, cmpr, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, getmap, draw1D, draw2D):
