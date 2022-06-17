@@ -110,10 +110,10 @@ def frame_level(h5f, level, gridlist):
             n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
             ce = n_b + off
             if off_started:
-                lind = [min(lind[0], off[0]), min(lind[1], off[1]), min(lind[2], off[2])]
-                rind = [max(rind[0],  ce[0]), max(rind[1],  ce[1]), max(rind[2],  ce[2])]
-                ledg = [min(ledg[0], lft[0]), min(ledg[1], lft[1]), min(ledg[2], lft[2])]
-                redg = [max(redg[0], rht[0]), max(redg[1], rht[1]), max(redg[2], rht[2])]
+                lind = pu.list3_min(lind, off)
+                rind = pu.list3_max(rind, ce)
+                ledg = pu.list3_min(ledg, lft)
+                redg = pu.list3_max(redg, rht)
             else:
                 lind = off
                 rind = ce

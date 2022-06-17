@@ -131,6 +131,14 @@ def list3_division(l3, divisor):
     return l3[0] / divisor, l3[1] / divisor, l3[2] / divisor
 
 
+def list3_max(l3, r3):
+    return [max(l3[0], r3[0]), max(l3[1], r3[1]), max(l3[2], r3[2])]
+
+
+def list3_min(l3, r3):
+    return [min(l3[0], r3[0]), min(l3[1], r3[1]), min(l3[2], r3[2])]
+
+
 def labelx():
     return lambda var: '$' + str(var)[2:-1].replace('**', '^') + '$'
 
