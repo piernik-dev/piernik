@@ -5,7 +5,7 @@ import plot_utils as pu
 import pvf_settings as ps
 
 
-def manage_compare(cmpr, h5f, var, plotlevels, gridlist, drawa, drawu, drawg):
+def manage_compare(cmpr, h5f, var, plotlevels, gridlist, drawa, drawu):
     cmpr0, cmprf, cmprd, cmprl, cmprt, diff_struct = cmpr
     cunavail = False
     if cmpr0:
@@ -22,9 +22,9 @@ def manage_compare(cmpr, h5f, var, plotlevels, gridlist, drawa, drawu, drawg):
             cunavail = (cmprl == [])
             if diff_struct:
                 print('Difference in h5 files structure')
-                drawa, drawu, drawg = False, True, False
+                drawa, drawu = False, True
             cmpr = cmpr0, h5c, cmprd, cmprl, cmprt, diff_struct
-    return cunavail, cmpr, drawa, drawu, drawg
+    return cunavail, cmpr, drawa, drawu
 
 
 def compare_grids(h1, h2, plotlevels, cmprl, gridlist):
@@ -163,10 +163,10 @@ def collect_gridlevels(h5f, var, cmpr, refis, maxglev, plotlevels, gridlist, cgc
 
             if drawa or drawg:
                 for ib in gridlist:
-                    levok, block, extr = read_block(h5f, var, cmpr, ib, iref, center, usc, getmap, draw1D, draw2D)
+                    levok, block, extr = read_block(h5f, var, cmpr, ib, iref, center, usc, (getmap and drawa), draw1D, draw2D)
                     if levok:
                         blks.append(block)
-                        if getmap:
+                        if getmap and drawa:
                             l1.append(extr[0])
                             h1.append(extr[1])
                             l2.append(extr[2])

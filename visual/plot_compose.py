@@ -183,7 +183,7 @@ def plotcompose(pthfilen, var, output, options):
     drawa, drawu = pu.choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist)
     plotlevels = pu.check_plotlevels(plotlevels, maxglev, True)
     gridlist = pu.sanitize_gridlist(gridlist, cgcount)
-    unavail, cmpr, drawa, drawu, drawg = rd.manage_compare(cmpr, h5f, var, plotlevels, gridlist, drawa, drawu, drawg)
+    unavail, cmpr, drawa, drawu = rd.manage_compare(cmpr, h5f, var, plotlevels, gridlist, drawa, drawu)
     if len(plotlevels) == 0 or unavail:
         print('No levels found. Skipping.')
         return
