@@ -127,6 +127,19 @@ def frame_level(h5f, level, gridlist):
         return [], [], [], [], False
 
 
+def level_zoom(h5f, gridlist, zoom, smin, smax):
+    if zoom[0]:
+        if len(zoom) == 2:
+            nd, loff, ledg, redg, levelmet = frame_level(h5f, zoom[1], gridlist)
+            if levelmet:
+                zoom = True, ledg, redg
+            else:
+                zoom = False,
+    if not zoom[0]:
+        zoom = False, smin, smax
+    return zoom
+
+
 def collect_gridlevels(h5f, var, cmpr, refis, maxglev, plotlevels, gridlist, cgcount, center, usc, getmap, drawu, drawa, drawg, draw1D, draw2D):
     l1, h1, l2, h2, l3, h3 = [], [], [], [], [], []
     lev_num = -1

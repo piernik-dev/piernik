@@ -68,7 +68,7 @@ def print_usage():
     print(' -u UNIT, \t\t--units UNIT \t\t\tscale plot axes with UNIT [default: dataset units]')
     print('\t\t\t--uniform\t\t\treconstruct uniform grid to plot [default: True while no AMR refinement level structure exists]')
     print(' -z ZMIN,ZMAX, \t\t--zlim ZMIN,ZMAX \t\tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]')
-    print('\t\t\t--zoom XL,XR,YL,YR,ZL,ZR \tset plot axes ranges [default: domain edges]')
+    print('\t\t\t--zoom XL,XR,YL,YR,ZL,ZR | LEVEL \tset plot axes ranges or take ranges from LEVEL [default: domain edges | 0]')
 
 
 def cli_params(argv):
@@ -213,8 +213,11 @@ def cli_params(argv):
         elif opt in ("--zoom",):
             global zoom
             aux = arg.split(',')
-            zoom = True, [float(aux[0]), float(aux[2]), float(aux[4])], [float(aux[1]), float(aux[3]), float(aux[5])]
-            print("ZOOM: xmin, xmax = ", zoom[1][0], zoom[2][0], 'ymin, ymax = ', zoom[1][1], zoom[2][1], 'zmin, zmax = ', zoom[1][2], zoom[2][2])
+            if len(aux) > 1:
+                zoom = True, [float(aux[0]), float(aux[2]), float(aux[4])], [float(aux[1]), float(aux[3]), float(aux[5])]
+                print("ZOOM: xmin, xmax = ", zoom[1][0], zoom[2][0], 'ymin, ymax = ', zoom[1][1], zoom[2][1], 'zmin, zmax = ', zoom[1][2], zoom[2][2])
+            else:
+                zoom = True, int(aux[0])
 
 
 if (len(sys.argv) < 2):

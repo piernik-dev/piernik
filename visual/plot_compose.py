@@ -212,6 +212,8 @@ def plotcompose(pthfilen, var, output, options):
                 vlab = pu.labellog(sctype, symmin, cmpr[0]) + var + " [%s]" % pu.labelx()(uvar)
                 field = drawd, vmin, vmax, sctype, symmin, cmap, autsc, vlab
 
+    zoom = rd.level_zoom(h5f, gridlist, zoom, smin, smax)
+
     h5f.close()
     if cmpr[0]:
         cmpr[1].close()
@@ -221,9 +223,6 @@ def plotcompose(pthfilen, var, output, options):
         return
 
     cbar_mode = pu.colorbar_mode(drawd, drawh, figmode)
-
-    if not zoom[0]:
-        zoom = False, smin, smax
 
     equip1d = smin, smax, zoom, ulen, umin, umax, linstyl, output, timep
     equip2d = smin, smax, zoom, ulen, drawg, gcolor, center
