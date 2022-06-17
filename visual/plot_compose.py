@@ -181,7 +181,7 @@ def plotcompose(pthfilen, var, output, options):
         center = (smax[0] + smin[0]) / 2.0, (smax[1] + smin[1]) / 2.0, (smax[2] + smin[2]) / 2.0
 
     drawa, drawu = pu.choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist)
-    plotlevels = pu.check_plotlevels(plotlevels, maxglev, drawa, True)
+    plotlevels = pu.check_plotlevels(plotlevels, maxglev, True)
     gridlist = pu.sanitize_gridlist(gridlist, cgcount)
     unavail, cmpr, drawa, drawu, drawg = rd.manage_compare(cmpr, h5f, var, plotlevels, gridlist, drawa, drawu, drawg)
     if len(plotlevels) == 0 or unavail:
@@ -201,15 +201,7 @@ def plotcompose(pthfilen, var, output, options):
 
     refis = []
     if drawd or drawg:
-        extr = [], [], [], [], [], []
-        if drawu:
-            if len(plotlevels) > 1:
-                print('For uniform grid plotting only the first given level!')
-            print('Plotting base level %s' % plotlevels[0])
-            refis, extr = rd.reconstruct_uniform(h5f, var, cmpr, plotlevels[0], gridlist, center, smin, smax, draw1D, draw2D)
-
-        if drawa or drawg:
-            refis, extr = rd.collect_gridlevels(h5f, var, cmpr, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, drawd, draw1D, draw2D)
+        refis, extr = rd.collect_gridlevels(h5f, var, cmpr, refis, maxglev, plotlevels, gridlist, cgcount, center, usc, drawd, drawu, drawa, drawg, draw1D, draw2D)
 
         if refis == []:
             drawd = False

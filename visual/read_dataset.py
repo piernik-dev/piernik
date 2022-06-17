@@ -17,7 +17,7 @@ def manage_compare(cmpr, h5f, var, plotlevels, gridlist, drawa, drawu, drawg):
             cmpr = cmpr0, h5f, cmprd, plotlevels, cmprt, diff_struct
         else:
             h5c = h5.File(cmprf, 'r')
-            cmprl = pu.check_plotlevels(cmprl, max(h5c['grid_level'][:]), drawa, False)
+            cmprl = pu.check_plotlevels(cmprl, max(h5c['grid_level'][:]), False)
             diff_struct = compare_grids(h5f, h5c, plotlevels, cmprl, gridlist)
             cunavail = (cmprl == [])
             if diff_struct:
@@ -46,28 +46,28 @@ def compare_grids(h1, h2, plotlevels, cmprl, gridlist):
                     return True
     return False
 
-def reconstruct_uniform(h5f, var, cmpr, level, gridlist, center, smin, smax, draw1D, draw2D):
+def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, draw1D, draw2D):
     dset, nd, ledg, redg, levelmet = collect_dataset(h5f, var, cmpr, level, gridlist)
     if not levelmet:
-        return [], []
+        return False, [], []
     cmpr0, h5c, cmprd, cmprl, cmprt, diff_struct = cmpr
     if diff_struct:
-        dc, ndc, lec, rec, lmc = collect_dataset(h5c, cmprd, cmpr, cmprl[0], range(int(h5c['data'].attrs['cg_count'])))
+        dc, ndc, lec, rec, lmc = collect_dataset(h5c, cmprd, cmpr, cmprl[levnum], range(int(h5c['data'].attrs['cg_count'])))
         if nd == ndc and lmc:
             dset = pu.execute_comparison(dset, dc, cmprt)
             if ledg != lec or redg != rec:
-                print('WARNING: Edges for level %s: %s %s are different than for level %s: %s %s. Consider excluding levels.' % (level, ledg, redg, cmprl[0], lec, rec))
+                print('WARNING: Edges for level %s: %s %s are different than for level %s: %s %s. Consider excluding levels.' % (level, ledg, redg, cmprl[levnum], lec, rec))
         else:
-            print('Comparison for levels: %s and %s not available due to unmet resolution constraints.' % (level, cmprl[0]))
-            return [], []
+            print('Comparison for levels: %s and %s not available due to unmet resolution constraints.' % (level, cmprl[levnum]))
+            return False, [], []
 
     inb, ind = pu.find_indices(nd, center, ledg, redg, True)
     print('Plot center', center[0], center[1], center[2], 'gives indices:', ind[0], ind[1], ind[2], 'for uniform grid level', level)
 
     b2d, b1d, d1min, d1max, d2min, d2max, d3min, d3max = take_cuts_and_lines(dset, ind, draw1D, draw2D)
-    block = b2d, [True, True, True], ledg, redg, level, b1d
+    block = b2d, [True, True, True], pu.list3_division(ledg, usc), pu.list3_division(redg, usc), level, b1d
 
-    return [[block, ], ], [[d1min], [d1max], [d2min], [d2max], [d3min], [d3max]]
+    return levelmet, block, [d1min, d1max, d2min, d2max, d3min, d3max]
 
 
 def collect_dataset(h5f, dset_name, cmpr, level, gridlist):
@@ -127,14 +127,17 @@ def frame_level(h5f, level, gridlist):
         return [], [], [], [], False
 
 
-def collect_gridlevels(h5f, var, cmpr, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, getmap, draw1D, draw2D):
-    l1, h1, l2, h2, l3, h3 = extr
+def collect_gridlevels(h5f, var, cmpr, refis, maxglev, plotlevels, gridlist, cgcount, center, usc, getmap, drawu, drawa, drawg, draw1D, draw2D):
+    l1, h1, l2, h2, l3, h3 = [], [], [], [], [], []
+    lev_num = -1
     for iref in range(maxglev + 1):
         if iref in plotlevels:
+            lev_num += 1
             print('REFINEMENT ', iref)
             blks = []
-            for ib in gridlist:
-                levok, block, extr = read_block(h5f, var, cmpr, ib, iref, center, usc, getmap, draw1D, draw2D)
+
+            if drawu:
+                levok, block, extr = reconstruct_uniform(h5f, var, cmpr, lev_num, iref, gridlist, center, usc, draw1D, draw2D)
                 if levok:
                     blks.append(block)
                     if getmap:
@@ -144,6 +147,19 @@ def collect_gridlevels(h5f, var, cmpr, refis, extr, maxglev, plotlevels, gridlis
                         h2.append(extr[3])
                         l3.append(extr[4])
                         h3.append(extr[5])
+
+            if drawa or drawg:
+                for ib in gridlist:
+                    levok, block, extr = read_block(h5f, var, cmpr, ib, iref, center, usc, getmap, draw1D, draw2D)
+                    if levok:
+                        blks.append(block)
+                        if getmap:
+                            l1.append(extr[0])
+                            h1.append(extr[1])
+                            l2.append(extr[2])
+                            h2.append(extr[3])
+                            l3.append(extr[4])
+                            h3.append(extr[5])
             if blks != []:
                 refis.append(blks)
     return refis, [l1, h1, l2, h2, l3, h3]
@@ -164,7 +180,6 @@ def read_block(h5f, dset_name, cmpr, ig, olev, oc, usc, getmap, draw1D, draw2D):
         return False, [], []
     if not getmap:
         return levok, [[], inb, ledge / usc, redge / usc, olev, []], []
-    clen = h5g.attrs['dl']
     off = h5g.attrs['off']
     n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
     ce = n_b + off

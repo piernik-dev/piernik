@@ -205,12 +205,9 @@ def find_indices(nd, cxyz, smin, smax, warn):
     return inb, icc
 
 
-def check_plotlevels(plotlevels, maxglev, drawa, toplot):
+def check_plotlevels(plotlevels, maxglev, toplot):
     if plotlevels == '':
-        if drawa:
-            plotlevels = range(maxglev + 1)
-        else:
-            plotlevels = 0,
+        plotlevels = range(maxglev + 1)
     else:
         npl = []
         for il in plotlevels:
