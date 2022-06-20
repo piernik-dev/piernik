@@ -79,34 +79,34 @@ def cli_params(argv):
         print_usage()
         sys.exit(2)
     for opt, arg in opts:
-        if opt in ("-h", "--help"):
+        if recognize_opt(opt, ("-h", "--help")):
             print_usage()
             sys.exit()
 
-        elif opt in ("-a", "--axes"):
+        elif recognize_opt(opt, ("-a", "--axes")):
             global axcuts
             axcuts = arg.split(',')
 
-        elif opt in ("-b", "--bins"):
+        elif recognize_opt(opt, ("-b", "--bins")):
             global nbins
             nbins = int(arg)
 
-        elif opt in ("-c", "--center"):
+        elif recognize_opt(opt, ("-c", "--center")):
             global center, cu
             cx, cy, cz = arg.split(',')
             cu, center = True, [float(cx), float(cy), float(cz)]
 
-        elif opt in ("-d", "--dataset"):
+        elif recognize_opt(opt, ("-d", "--dataset")):
             global dnames
             global draw_data
             dnames = str(arg)
             draw_data = True
 
-        elif opt in ("-D", "--colormap"):
+        elif recognize_opt(opt, ("-D", "--colormap")):
             global cmap
             cmap = str(arg)
 
-        elif opt in ("--compare-datafield"):
+        elif recognize_opt(opt, ("--compare-datafield")):
             global cmpr, cmprd, cmprn
             cmpr = True
             cmprd = str(arg)
@@ -114,7 +114,7 @@ def cli_params(argv):
                 cmprn = '_vs'
             cmprn = cmprn + '_' + cmprd
 
-        elif opt in ("--compare-file"):
+        elif recognize_opt(opt, ("--compare-file")):
             global cmprf
             cmpr = True
             cmprf = str(arg)
@@ -123,48 +123,48 @@ def cli_params(argv):
             cmprn = cmprn + '_' + cmprf.split('/')[-1]
             cmprn = ''.join(cmprn.split('.')[:-1])
 
-        elif opt in ("--compare-type"):
+        elif recognize_opt(opt, ("--compare-type")):
             global cmprt
             cmprt = int(arg)
             if cmprt != 1 and cmprt != 2 and cmprt != 3:
                 print('Warning: Unrecognized type of comparison: %s. Taking 1 (subtraction).' % arg)
 
-        elif opt in ("-e", "--extension"):
+        elif recognize_opt(opt, ("-e", "--extension")):
             global exten
             exten = '.' + str(arg)
             print(exten)
 
-        elif opt in ("-g", "--gridcolor"):
+        elif recognize_opt(opt, ("-g", "--gridcolor")):
             global gcolor, draw_grid
             gcolor = str(arg)
             draw_grid = True
 
-        elif opt in ("-l", "--level"):
+        elif recognize_opt(opt, ("-l", "--level")):
             global plotlevels
             plotlevels = [int(i) for i in arg.split(',')]
 
-        elif opt in ("--compare-level"):
+        elif recognize_opt(opt, ("--compare-level")):
             global cmprl
             cmprl = [int(i) for i in arg.split(',')]
 
-        elif opt in ("--linestyle"):
+        elif recognize_opt(opt, ("--linestyle")):
             global linstyl
             linstyl = arg.split(',')
 
-        elif opt in ("-o", "--output"):
+        elif recognize_opt(opt, ("-o", "--output")):
             global plotdir
             plotdir = str(arg)
             print('PLOTDIR: ', plotdir)
 
-        elif opt in ("-p", "--particles"):
+        elif recognize_opt(opt, ("-p", "--particles")):
             global draw_part
             draw_part = True
 
-        elif opt in ("-P", "--particle-color"):
+        elif recognize_opt(opt, ("-P", "--particle-color")):
             global pcolor
             pcolor = str(arg)
 
-        elif opt in ("-r", "--particle-slice"):
+        elif recognize_opt(opt, ("-r", "--particle-slice")):
             global player
             aux = arg.split(',')
             if len(aux) >= 3:
@@ -172,45 +172,45 @@ def cli_params(argv):
             else:
                 player = True, aux[0], aux[0], aux[0]
 
-        elif opt in ("-R", "--particle-space"):
+        elif recognize_opt(opt, ("-R", "--particle-space")):
             aux = arg.split(',')
             if len(aux) >= 3:
                 player = False, aux[0], aux[1], aux[2]
             else:
                 player = False, aux[0], aux[0], aux[0]
 
-        elif opt in ("-s", "--particle-sizes"):
+        elif recognize_opt(opt, ("-s", "--particle-sizes")):
             global psize
             psize = float(arg)
 
-        elif opt in ("-t", "--scale"):
+        elif recognize_opt(opt, ("-t", "--scale")):
             global sctype
             sctype = str(arg)
 
-        elif opt in ("-u", "--units"):
+        elif recognize_opt(opt, ("-u", "--units")):
             global uaxes
             uaxes = str(arg)
 
-        elif opt in ("-z", "--zlim"):
+        elif recognize_opt(opt, ("-z", "--zlim")):
             global zmin, zmax
             zmin, zmax = arg.split(',')
             zmin = float(zmin)
             zmax = float(zmax)
             print("zmin, zmax = ", zmin, zmax)
 
-        elif opt in ("--amr",):
+        elif recognize_opt(opt, ("--amr",)):
             global draw_amr
             draw_amr = True
 
-        elif opt in ("--grid-list",):
+        elif recognize_opt(opt, ("--grid-list",)):
             global gridlist
             gridlist = [int(i) for i in arg.split(',')]
 
-        elif opt in ("--uniform",):
+        elif recognize_opt(opt, ("--uniform",)):
             global draw_uni
             draw_uni = True
 
-        elif opt in ("--zoom",):
+        elif recognize_opt(opt, ("--zoom",)):
             global zoom
             aux = arg.split(',')
             if len(aux) > 1:
@@ -218,6 +218,13 @@ def cli_params(argv):
                 print("ZOOM: xmin, xmax = ", zoom[1][0], zoom[2][0], 'ymin, ymax = ', zoom[1][1], zoom[2][1], 'zmin, zmax = ', zoom[1][2], zoom[2][2])
             else:
                 zoom = True, int(aux[0])
+
+
+def recognize_opt(cur, lopt):
+    for op in lopt:
+        if cur == op:
+            return True
+    return False
 
 
 if (len(sys.argv) < 2):
