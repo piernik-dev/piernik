@@ -44,7 +44,8 @@ module initcosmicrays
 
    integer, parameter                  :: ncr_max = 102  !< maximum number of CR nuclear and electron components (\warning higher ncr_max limit would require changes in names of components in common_hdf5)
    ! namelist parameters
-   integer(kind=4)                     :: ncrsp        !< number of CR nuclear  components \deprecated BEWARE: ncrtot (sum of ncrsp and ncr2b) should not be higher than ncr_max = 102
+   integer(kind=4)                     :: ncrsp        !< number of CR components \deprecated BEWARE: ncrtot (sum of ncrsp and ncr2b) should not be higher than ncr_max = 102
+   integer(kind=4)                     :: ncr_user     !< number of CR components supplementary in respect of listed in CR_SPECIES
    integer(kind=4)                     :: ncrn         !< number of CR non-spectral components
    integer(kind=4)                     :: nspc         !< number of CR spectral components
    integer(kind=4)                     :: ncrb         !< number of bins for CRESP
@@ -62,7 +63,7 @@ module initcosmicrays
    character(len=cbuff_len)            :: divv_scheme  !< scheme used to calculate div(v), see crhelpers for more details
    real, dimension(ncr_max)            :: K_cr_paral   !< array containing parallel diffusion coefficients of all CR nuclear components or maximal parallel diffusion coefficient value for CRESP
    real, dimension(ncr_max)            :: K_cr_perp    !< array containing perpendicular diffusion coefficients of all CR nuclear components or maximal perpendicular diffusion coefficient value for CRESP
-   logical, dimension(ncr_max)         :: cr_gpcr_ess  !< if CRn species/energy-bin is essential for grad_pcr calculation
+   logical, dimension(ncr_max)         :: gpcr_ess_user !< if user CR species is essential for grad_pcr calculation
    integer(kind=4), allocatable, dimension(:) :: gpcr_ess_noncresp !< indexes of essentials for grad_pcr calculation for non-CRESP components
    ! public component data
    integer(kind=4), allocatable, dimension(:) :: iarr_crn !< array of indexes pointing to all CR nuclear components
@@ -95,13 +96,13 @@ contains
 !! <tr><td>cr_eff      </td><td>0.1    </td><td>real value</td><td>\copydoc initcosmicrays::cr_eff     </td></tr>
 !! <tr><td>use_CRdiff  </td><td>.true. </td><td>logical   </td><td>\copydoc initcosmicrays::use_CRdiff </td></tr>
 !! <tr><td>use_CRdecay </td><td>.false.</td><td>logical   </td><td>\copydoc initcosmicrays::use_CRdecay</td></tr>
-!! <tr><td>ncrsp       </td><td>0      </td><td>integer   </td><td>\copydoc initcosmicrays::ncrsp      </td></tr>
+!! <tr><td>ncr_user    </td><td>0      </td><td>integer   </td><td>\copydoc initcosmicrays::ncr_user   </td></tr>
 !! <tr><td>ncrb        </td><td>0      </td><td>integer   </td><td>\copydoc initcosmicrays::ncrb       </td></tr>
 !! <tr><td>gamma_cr    </td><td>4./3.  </td><td>real array</td><td>\copydoc initcosmicrays::gamma_cr   </td></tr>
 !! <tr><td>K_cr_paral  </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_cr_paral </td></tr>
 !! <tr><td>K_cr_perp   </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_cr_perp  </td></tr>
 !! <tr><td>divv_scheme </td><td>''     </td><td>string    </td><td>\copydoc initcosmicrays::divv_scheme</td></tr>
-!! <tr><td>cr_gpcr_ess</td><td>(1): .true.; (>2):.false.</td><td>logical</td><td>\copydoc initcosmicrays::cr_gpcr_ess</td></tr>
+!! <tr><td>gpcr_ess_user</td><td>.false.</td><td>logical array</td><td>\copydoc initcosmicrays::gpcr_ess_user</td></tr>
 !! </table>
 !! The list is active while \b "COSM_RAYS" is defined.
 !! \n \n
@@ -109,7 +110,7 @@ contains
    subroutine init_cosmicrays
 
       use constants,       only: cbuff_len, I_ONE, I_TWO, half, big
-      use cr_data,         only: init_cr_species, cr_spectral
+      use cr_data,         only: init_cr_species, cr_species_tables, cr_gpess, cr_spectral, ncrsp_auto
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: die, warn, nh
       use func,            only: operator(.notequals.)
@@ -117,18 +118,20 @@ contains
 
       implicit none
 
-      integer(kind=4) :: nn, icr, jcr
-      integer         :: ne
+      integer(kind=4) :: nl, nn, icr
       real            :: maxKcrs
 
       namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRdiff, use_CRdecay, divv_scheme, &
-           &                 gamma_cr, K_cr_paral, K_cr_perp, ncrsp, ncrb, cr_gpcr_ess
+           &                 gamma_cr, K_cr_paral, K_cr_perp, ncr_user, ncrb, gpcr_ess_user
+
+      call init_cr_species
 
       cfl_cr         = 0.9
       smallecr       = 0.0
       cr_active      = 1.0
       cr_eff         = 0.1       !  canonical conversion rate of SN en.-> CR (e_sn=10**51 erg)
-      ncrsp          = 0
+      ncrsp          = ncrsp_auto
+      ncr_user       = 0
       ncrb           = 0
 
       use_CRdiff     = .true.
@@ -139,8 +142,7 @@ contains
       K_cr_paral(:)  = 0.0
       K_cr_perp(:)   = 0.0
 
-      cr_gpcr_ess(:) = .false.
-      cr_gpcr_ess(1) = .true.       ! in most cases protons are the first ingredient of CRs and they are essential
+      gpcr_ess_user  = .false.
 
       divv_scheme    = ''
 
@@ -167,7 +169,9 @@ contains
 
       if (master) then
 
-         ibuff(1) = ncrsp
+         cbuff(1) = divv_scheme
+
+         ibuff(1) = ncr_user
          ibuff(2) = ncrb
 
          rbuff(1) = cfl_cr
@@ -180,18 +184,20 @@ contains
          lbuff(2) = use_CRdecay
          lbuff(3) = use_smallecr
 
-         cbuff(1) = divv_scheme
-
+         ncrsp    = ncrsp + ncr_user
+         nl       = 3                                     ! this must match the last lbuff() index above
          nn       = count(rbuff(:) < huge(1.), kind=4)    ! this must match the last rbuff() index above
-         ibuff(ubound(ibuff, 1)) = nn
-         ne       = nn + 2 * ncrsp
-         if (ne + 3 * ncrb > ubound(rbuff, 1)) call die("[initcosmicrays:init_cosmicrays] rbuff size exceeded.")
+         ibuff(ubound(ibuff, 1)    ) = nn
+         ibuff(ubound(ibuff, 1) - 1) = nl
+
+         if (nn + 2 * ncrsp > ubound(rbuff, 1)) call die("[initcosmicrays:init_cosmicrays] rbuff size exceeded.")
+         if (nl + ncr_user  > ubound(lbuff, 1)) call die("[initcosmicrays:init_cosmicrays] lbuff size exceeded.")
 
          if (ncrsp > 0) then
             rbuff(nn+1      :nn+  ncrsp) = K_cr_paral(1:ncrsp)
             rbuff(nn+1+ncrsp:nn+2*ncrsp) = K_cr_perp (1:ncrsp)
 
-            lbuff(4:ncrsp+3) = cr_gpcr_ess(1:ncrsp)
+            lbuff(nl+1:nl+ncr_user) = gpcr_ess_user(1:ncr_user)
          endif
 
 
@@ -204,7 +210,9 @@ contains
 
       if (slave) then
 
-         ncrsp        = int(ibuff(1), kind=4)
+         divv_scheme  = cbuff(1)
+
+         ncr_user     = int(ibuff(1), kind=4)
          ncrb         = int(ibuff(2), kind=4)
 
          cfl_cr       = rbuff(1)
@@ -217,23 +225,25 @@ contains
          use_CRdecay  = lbuff(2)
          use_smallecr = lbuff(3)
 
-         nn           = ibuff(ubound(ibuff, 1))    ! this must match the last rbuff() index above
-         ne           = nn + 3 * ncrsp
-
-         divv_scheme  = cbuff(1)
+         ncrsp        = ncrsp + ncr_user
+         nn           = ibuff(ubound(ibuff, 1)    )    ! this must match the last rbuff() index above
+         nl           = ibuff(ubound(ibuff, 1) - 1)    ! this must match the last lbuff() index above
 
          if (ncrsp > 0) then
             K_cr_paral(1:ncrsp) = rbuff(nn+1      :nn+  ncrsp)
             K_cr_perp (1:ncrsp) = rbuff(nn+1+ncrsp:nn+2*ncrsp)
 
-            cr_gpcr_ess(1:ncrsp) = lbuff(4:ncrsp+3)
+            gpcr_ess_user(1:ncr_user) = lbuff(nl+1:nl+ncr_user)
          endif
 
       endif
 
       gamma_cr_1 = gamma_cr - 1.0
 
-      call init_cr_species(ncrsp, nspc, ncrn, cr_gpcr_ess)
+      call cr_species_tables(ncrsp, gpcr_ess_user(1:ncr_user))
+
+      nspc = count(cr_spectral, kind=4)
+      ncrn = ncrsp - nspc
 
       ncr2b  = I_TWO * ncrb
       ncrtot = ncr2b + ncrn
@@ -271,16 +281,9 @@ contains
       ma1d = [ncrtot]
       call my_allocate(iarr_crs, ma1d)
 
-      ma1d = [ int(count(cr_gpcr_ess), kind=4) ]
-
+      ma1d = [ int(count(cr_gpess .and. .not.cr_spectral), kind=4) ]
       call my_allocate(gpcr_ess_noncresp, ma1d)
-      jcr = 0
-      do icr = 1, ncrsp
-         if (cr_gpcr_ess(icr)) then
-            jcr = jcr + I_ONE
-            gpcr_ess_noncresp(jcr) = icr
-         endif
-      enddo
+      gpcr_ess_noncresp = pack([(icr, icr = I_ONE, count(.not.cr_spectral, kind=4))], mask=(pack(cr_gpess, mask=(.not.cr_spectral))))
 
       def_dtcrs = big
       maxKcrs = maxval(K_cr_paral(1:ncrsp) + K_cr_perp(1:ncrsp), mask=.not.cr_spectral)
