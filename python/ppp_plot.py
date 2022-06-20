@@ -422,7 +422,7 @@ when gnuplot fails to set up desired teminal by default, try to set $GNUTERM (qt
     ppp_plot.py file.ascii | GNUTERM=qt gnuplot
 
 print list of top-level timers (steps) present in file.ascii:
-    ppp_plot.py file.ascii -t -d 1
+    ppp_plot.py file.ascii -t -d 1 -p 0
 (the step names are followed by their time offset and length)
 
 find most time-consuming timers:
@@ -433,6 +433,11 @@ plot profile without the identified too-often called timer (e.g. "Loechner_mark"
     ppp_plot.py file.ascii -e Loechner_mark | gnuplot
 same as above but don't filter out timers that are contributing less than 0.1%:
     ppp_plot.py file.ascii -e Loechner_mark -% 0 | gnuplot
+
+For massively parallel runs first try to plot only some processes (to avoid slowdowns due to large number of elements shown):
+    ppp_plot.py file.ascii -p 0-3,128,255
+then it is easier to apply filters like -r or -e and you may also narrow down the output to specified time interval:
+    ppp_plot.py file.ascii -T 1.3 2.5 -p 0-12,255 -r "step 3" -e MPI_Waitall:restrict_1v
 """)
 
 parser.add_argument("filename", nargs='+', help="PPP ascii file(s) to process")
