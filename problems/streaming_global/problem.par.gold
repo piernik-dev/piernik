@@ -45,7 +45,7 @@
     problem_name = 'si'
     run_id  =  'gld'
     dt_hdf  = 50.0
-    dt_res  = 50.0
+    dt_res  =  0.0
     dt_log  = 10.0
     dt_tsl  = 10.0
     vars(1:) = 'dens', 'velx', 'vely', 'velz'

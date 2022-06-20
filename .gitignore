@@ -9,6 +9,6 @@ runs/
 html/
 dep.png
 *.ignore
-jenkins/goldexec/
+jenkins/workspace/
 doc/latex/
 results/

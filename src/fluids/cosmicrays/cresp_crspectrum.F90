@@ -1768,7 +1768,7 @@ contains
    subroutine src_gpcresp(u, n, dx, grad_pcresp)
 
       use constants,      only: onet
-      use cr_data,        only: eE
+      use cr_data,        only: cr_gpess, cr_spectral, cr_table, icr_E
       use initcosmicrays, only: ncrb
       use initcrspectrum, only: cre_active
 
@@ -1781,7 +1781,7 @@ contains
       real, dimension(n)                      :: P_cresp_r, P_cresp_l
 
       grad_pcresp = 0.0
-      if (.not. eE(2)) return !< temporary usage instead of cre_gpcr_ess
+      if (.not. cr_spectral(cr_table(icr_E)) .or. .not. cr_gpess(cr_table(icr_E))) return !< spectral mode implemented only for electrons
 
       P_cresp_l = 0.0 ;  P_cresp_r = 0.0
 

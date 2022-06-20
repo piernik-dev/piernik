@@ -156,7 +156,7 @@ contains
 #ifdef COSM_RAYS
       integer                         :: i, j, k, icr, ipm, jpm, kpm
       integer, dimension(ndims,LO:HI) :: mantle
-      real                            :: cs_iso, decr, r2, maxv
+      real                            :: decr, r2, maxv
 #endif /* COSM_RAYS */
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
