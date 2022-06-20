@@ -6,6 +6,7 @@ import argparse
 
 t_bias = 1.e-6  # For global bigbang this may need to be increased to some large values. For per-thread bigbang it can be some small positive value.
 included_threads = []  # The list of threads to analyze (same for each file); all enabled when list is empty.
+t_min, t_max = -sys.float_info.max, sys.float_info.max  # "Infinite" time interval by default
 
 
 def niceprint_set(s):
@@ -124,6 +125,20 @@ class PPP_Node:
         for _ in self.children:
             self.children[_].apply_exclusions()
 
+    def time_filter(self):
+        for _ in self.children:
+            for i in reversed(range(len(self.children[_].start))):
+                if (self.children[_].start[i] > t_max) or (self.children[_].stop[i] < t_min):
+                    self.children[_].start.pop(i)
+                    self.children[_].stop.pop(i)
+
+        for _ in list(self.children.keys()):
+            if len(self.children[_].start) < 1:  # clean up empty entries that may occur when using -T option
+                del self.children[_]
+
+        for _ in self.children:
+            self.children[_].time_filter()
+
     def root_matches(self):
         if self.label in args.root:
             return [self]
@@ -232,6 +247,10 @@ class PPP:
                 for p in self.trees:
                     self.trees[p].root.shift_time(earliest - t_bias)
 
+    def apply_time_window(self):
+        for p in self.trees:
+            self.trees[p].root.time_filter()
+
 
 class PPPset:
     """A collection of event trees from one or many Piernik runs"""
@@ -244,6 +263,7 @@ class PPPset:
             self.run[_]._decode_text()
             self.run[_].apply_exclusions()
             self.run[_].rebase_root()
+            self.run[_].apply_time_window()  # has to be called after shift_time was applied
             self.run[_].calculate_time()
 
     def print(self, otype):
@@ -423,6 +443,7 @@ parser.add_argument("-r", "--root", nargs='+', help="show only ROOT and their ch
 parser.add_argument("-d", "--maxdepth", type=int, help="limit output to MAXDEPTH")
 parser.add_argument("-m", "--maxoutput", nargs=1, default=[50000], type=int, help="limit output to MAXOUTPUT enries (gnuplot only, default = 50000)")
 parser.add_argument("-p", "--processes", nargs=1, help="list of threads to display in each file, syntax example: 1,3,7-10, default = all")
+parser.add_argument("-T", "--timerange", nargs=2, help="show only events overlapping with specified time interval")
 # parser.add_argument("-c", "--check", help="do a formal check only")
 
 pgroup = parser.add_mutually_exclusive_group()
@@ -448,6 +469,13 @@ if args.processes is not None:
             print("I don't know how to interpret '" + p + "'")
             raise ValueError
 included_threads = set(included_threads)
+
+if args.timerange is not None:
+    t_min = float(args.timerange[0])
+    t_max = float(args.timerange[1])
+    if t_min > t_max:
+        print("t_min > t_max makes an empty interval")
+        raise ValueError
 
 all_events = PPPset(args.filename)
 all_events.print(args.otype)
