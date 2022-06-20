@@ -363,15 +363,28 @@ contains
       real, dimension(ndims), intent(in) :: pos, vel
       real, dimension(ndims), intent(in) :: acc
       real,                   intent(in) :: ener
-      real,                   intent(in) :: mass, tform, tdyn
+      real,                   intent(in) :: mass
+      real, optional,         intent(in) :: tform
+      real, optional,         intent(in) :: tdyn
       type(cg_list_element), pointer     :: cgl
       logical                            :: in,phy,out
+      real                               :: tform1, tdyn1
 
       cgl => leaves%first
       do while (associated(cgl))
          call is_part_in_cg(cgl%cg, pos, in, phy, out)
          if (phy .or. out) then
-            call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform, tdyn)
+            if (present(tform)) then
+               tform1 = tform
+            else
+               tform1 = 0.0
+            endif
+            if (present(tdyn)) then
+               tdyn1 = tdyn
+            else
+               tdyn1 = 0.0
+            endif
+            call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform1, tdyn1)
             return
          endif
 

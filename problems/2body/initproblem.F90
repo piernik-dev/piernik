@@ -185,7 +185,7 @@ contains
 
       do p = 1, 2
          write(msg,'(f8.5,a,3f8.5,a,3f8.5)') m(p), " @ ", init_pos_body(:,p), ", with ", init_vel_body(:,p) ; call printinfo(msg)
-         call add_part_in_proper_cg(p, m(p), init_pos_body(:,p), init_vel_body(:,p), [0.0, 0.0, 0.0], 0.0, 0.0, 0.0)
+         call add_part_in_proper_cg(p, m(p), init_pos_body(:,p), init_vel_body(:,p), [0.0, 0.0, 0.0], 0.0)
       enddo
 
    end subroutine twobodies
@@ -293,7 +293,7 @@ contains
             write(msg,'(i8,a)') i, ' particles read' ; call printio(msg)
          endif
 #endif /* VERBOSE */
-         call add_part_in_proper_cg(i, mass(i), pos(i,:), vel(i,:),[0.0, 0.0, 0.0], 0.0, 0.0, 0.0)
+         call add_part_in_proper_cg(i, mass(i), pos(i,:), vel(i,:),[0.0, 0.0, 0.0], 0.0)
       enddo
       ! ToDo: check whether all particles were added exactly once
       deallocate(mass,pos,vel)
