@@ -88,9 +88,9 @@ def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
         vmax = vmax + ps.fineqv
 
     print('3D data value range: ', d3min, d3max)
-    if d2:
+    if any(d2):
         print('Slices  value range: ', d2min, d2max)
-    if d1:
+    if any(d1):
         print('1D data value range: ', d1min, d1max)
     print('Plotted value range: ', vmin, vmax)
     return vmin, vmax, symmin, autoscale
@@ -127,12 +127,9 @@ def check_extremes_absdata(refis, d1, d2):
 
 
 def scale_plotarray(pa, sctype, symmin):
-    print('moze zrobie log: ', sctype, symmin)
     if (sctype == '2' or sctype == 'log'):
-        print('robie log')
         pa = np.log10(pa)
     elif (sctype == '3' or sctype == 'symlog'):
-        print('robie symlog')
         pa = np.sign(pa) * np.log10(np.maximum(np.abs(pa) / symmin, 1.0))
     return pa
 
