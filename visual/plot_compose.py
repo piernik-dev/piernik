@@ -207,7 +207,7 @@ def plotcompose(pthfilen, var, output, options):
             drawd = False
         else:
             if drawd:
-                vmin, vmax, symmin, autsc = pu.scale_manage(sctype, refis, umin, umax, any(draw1D), any(draw2D), extr)
+                vmin, vmax, symmin, autsc = pu.scale_manage(sctype, refis, umin, umax, draw1D, draw2D, extr)
 
                 vlab = pu.labellog(sctype, symmin, cmpr[0]) + var + " [%s]" % pu.labelx()(uvar)
                 field = drawd, vmin, vmax, sctype, symmin, cmap, autsc, vlab

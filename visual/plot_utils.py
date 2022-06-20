@@ -39,10 +39,14 @@ def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
     symmin = 1.0
     autoscale = False
     d1min, d1max, d2min, d2max, d3min, d3max = min(extr[0]), max(extr[1]), min(extr[2]), max(extr[3]), min(extr[4]), max(extr[5])
-    if d2:
+    if any(d1) and any(d2):
+        dmin, dmax = min(d1min, d2min), max(d1max, d2max)
+    elif any(d2):
         dmin, dmax = d2min, d2max
-    else:
+    elif any(d1):
         dmin, dmax = d1min, d1max
+    else:
+        dmin, dmax = -1.0, 1.0
     if (umin == 0.0 and umax == 0.0):
         vmin, vmax = dmin, dmax
         autoscale = True
@@ -56,7 +60,7 @@ def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
         if (vmin > 0.0):
             vmin = np.log10(vmin)
         else:
-            vmin = np.log10(check_minimum_data(refis))
+            vmin = np.log10(check_minimum_data(refis, d1, d2))
         if (vmax > 0.0):
             vmax = np.log10(vmax)
         else:
@@ -71,7 +75,7 @@ def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
             if (dmin * dmax > 0.0):
                 symmin, smax = sorted([np.abs(dmin), np.abs(dmax)])
             else:
-                symmin, smax = check_extremes_absdata(refis)
+                symmin, smax = check_extremes_absdata(refis, d1, d2)
             if (smax == -np.inf or symmin == np.inf):
                 smax = 10.
                 symmin = 1.
@@ -92,33 +96,43 @@ def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
     return vmin, vmax, symmin, autoscale
 
 
-def check_minimum_data(refis):
+def check_minimum_data(refis, d1, d2):
     cmdmin = np.inf
     for blks in refis:
         for bl in blks:
-            bxyz, binb = bl[0:2]
+            bxyz, binb, b1 = bl[0], bl[1], bl[5]
             for ncut in range(3):
                 if binb[ncut]:
-                    cmdmin = min(cmdmin, np.min(bxyz[ncut], initial=np.inf, where=(bxyz[ncut] > 0.0)))
+                    if d1[ncut]:
+                        cmdmin = min(cmdmin, np.min(b1[ncut], initial=np.inf, where=(b1[ncut] > 0.0)))
+                    if d2[ncut]:
+                        cmdmin = min(cmdmin, np.min(bxyz[ncut], initial=np.inf, where=(bxyz[ncut] > 0.0)))
     return cmdmin
 
 
-def check_extremes_absdata(refis):
+def check_extremes_absdata(refis, d1, d2):
     cmdmin, cmdmax = np.inf, -np.inf
     for blks in refis:
         for bl in blks:
-            bxyz, binb = bl[0:2]
+            bxyz, binb, b1 = bl[0], bl[1], bl[5]
             for ncut in range(3):
                 if binb[ncut]:
-                    cmdmin = min(cmdmin, np.min(np.abs(bxyz[ncut]), initial=np.inf, where=(np.abs(bxyz[ncut]) > 0.0)))
-                    cmdmax = max(cmdmax, np.max(np.abs(bxyz[ncut]), initial=-np.inf, where=(np.abs(bxyz[ncut]) > 0.0)))
+                    if d1[ncut]:
+                        cmdmin = min(cmdmin, np.min(np.abs(b1[ncut]), initial=np.inf, where=(np.abs(b1[ncut]) > 0.0)))
+                        cmdmax = max(cmdmax, np.max(np.abs(b1[ncut]), initial=-np.inf, where=(np.abs(b1[ncut]) > 0.0)))
+                    if d2[ncut]:
+                        cmdmin = min(cmdmin, np.min(np.abs(bxyz[ncut]), initial=np.inf, where=(np.abs(bxyz[ncut]) > 0.0)))
+                        cmdmax = max(cmdmax, np.max(np.abs(bxyz[ncut]), initial=-np.inf, where=(np.abs(bxyz[ncut]) > 0.0)))
     return cmdmin, cmdmax
 
 
 def scale_plotarray(pa, sctype, symmin):
+    print('moze zrobie log: ', sctype, symmin)
     if (sctype == '2' or sctype == 'log'):
+        print('robie log')
         pa = np.log10(pa)
     elif (sctype == '3' or sctype == 'symlog'):
+        print('robie symlog')
         pa = np.sign(pa) * np.log10(np.maximum(np.abs(pa) / symmin, 1.0))
     return pa
 
@@ -137,6 +151,25 @@ def list3_max(l3, r3):
 
 def list3_min(l3, r3):
     return [min(l3[0], r3[0]), min(l3[1], r3[1]), min(l3[2], r3[2])]
+
+
+def list3_and(l3, r3):
+    return [l3[0] and r3[0], l3[1] and r3[1], l3[2] and r3[2]]
+
+
+def list3_or(l3, r3):
+    return [l3[0] or r3[0], l3[1] or r3[1], l3[2] or r3[2]]
+
+
+def list3_other(l3, r3):
+    ans = [False, False, False]
+    if r3[0]:
+        ans = list3_or(ans, list3_and(l3, [False, True, True]))
+    if r3[1]:
+        ans = list3_or(ans, list3_and(l3, [True, False, True]))
+    if r3[2]:
+        ans = list3_or(ans, list3_and(l3, [True, True, False]))
+    return ans
 
 
 def labelx():
@@ -199,8 +232,9 @@ def isinbox(cxyz, smin, smax, warn, cc):
     return isin
 
 
-def find_indices(nd, cxyz, smin, smax, warn):
+def find_indices(nd, cxyz, smin, smax, draw1D, draw2D, warn):
     inb = isinbox(cxyz[0], smin[0], smax[0], warn, 'CX'), isinbox(cxyz[1], smin[1], smax[1], warn, 'CY'), isinbox(cxyz[2], smin[2], smax[2], warn, 'CZ')
+    inb = list3_or(list3_and(inb, draw2D), list3_other(inb, draw1D))
     icc = ind_limits(nd[0], cxyz[0], smin[0], smax[0]), ind_limits(nd[1], cxyz[1], smin[1], smax[1]), ind_limits(nd[2], cxyz[2], smin[2], smax[2])
     return inb, icc
 
