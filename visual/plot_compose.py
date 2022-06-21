@@ -23,17 +23,20 @@ def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
 
 
 def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
-    smin, smax, zoom, ulen, umin, umax, linstyl, output, timep = equip1d
+    smin, smax, zoom, ulen, umin, umax, linstyl, output, timep, sctype = equip1d
     fig1d = P.figure(ncut + 2, figsize=(10, 8))
     ax = fig1d.add_subplot(111)
     P.xlim(zoom[1][ncut], zoom[2][ncut])
     label = []
     axis = "xyz"[ncut]
+    hybrid_plot = False
+    if field[0] and parts[0]:
+        hybrid_plot = (parts[3] > 1)
 
     if field[0]:
         vmin, vmax, sctype, symmin, cmap, autsc, labf = field[1:]
         label.append(labf)
-        if not autsc:
+        if not autsc and not hybrid_plot:
             P.ylim(vmin, vmax)
 
         for blks in refis:
@@ -41,20 +44,35 @@ def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
                 binb, ble, bre, level, b1d = bl[1:]
                 if binb[n1] and binb[n2]:
                     if b1d != []:
-                        bplot = pu.scale_plotarray(b1d[ncut], sctype, symmin)
+                        if hybrid_plot:
+                            bplot = b1d[ncut]
+                        else:
+                            bplot = pu.scale_plotarray(b1d[ncut], sctype, symmin)
                         dxh = (bre[ncut] - ble[ncut]) / float(len(b1d[ncut])) / 2.0
                         vax = np.linspace(ble[ncut] + dxh, bre[ncut] - dxh, len(b1d[ncut]))
                         ax.plot(vax, bplot, linstyl[level], color=ps.plot1d_linecolor)
+
+    if hybrid_plot:
+        hl = pu.scale_translate(sctype, vmin, vmax, symmin, True)
+    if not field[0]:
+        autsc = (umin == umax)
+        hl = pu.scale_translate(sctype, umin, umax, np.abs(umin), False)
+    if hybrid_plot or not field[0]:
+        if hl[0] == 3:
+            if hl[3] > 0.:
+                ax.set_yscale('symlog', linthresh=hl[3])
+            else:
+                ax.set_yscale('symlog')
+        elif hl[0] == 2:
+            ax.set_yscale('log')
+        if not autsc:
+            P.ylim(hl[1], hl[2])
 
     if parts[0]:
         pxyz, pm, nbins, pcolor, psize, player, labh = parts[1:]
         pn1, pmm = pxyz[ncut], pm
         ax = plot1d_particles(ax, pn1, pmm, nbins, [smin[ncut], smax[ncut]], pcolor, psize)
         label.append(labh)
-
-    if not field[0]:
-        if umin != umax:
-            P.ylim(umin, umax)
 
     P.ylabel('  |  '.join(label))
     P.xlabel("%s [%s]" % (axis, pu.labelx()(ulen)))
@@ -224,7 +242,7 @@ def plotcompose(pthfilen, var, output, options):
 
     cbar_mode = pu.colorbar_mode(drawd, drawh, figmode)
 
-    equip1d = smin, smax, zoom, ulen, umin, umax, linstyl, output, timep
+    equip1d = smin, smax, zoom, ulen, umin, umax, linstyl, output, timep, sctype
     equip2d = smin, smax, zoom, ulen, drawg, gcolor, center
 
     if draw1D[0]:

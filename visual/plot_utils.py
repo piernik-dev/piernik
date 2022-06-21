@@ -35,6 +35,25 @@ def execute_comparison(orig, comp, ctype):
         return (orig / comp) - 1
 
 
+def scale_translate(sctype, vmn, vmx, sm, hbd):
+    if (sctype == '0' or sctype == 'linear'):
+        return 0, vmn, vmx
+    elif (sctype == '1' or sctype == 'symlin'):
+        vmin, vmax = fsym(vmn, vmx)
+        return 1, vmin, vmax
+    elif (sctype == '2' or sctype == 'log'):
+        if hbd:
+            return 2, 10.**vmn, 10.**vmx
+        else:
+            return 2, vmn, vmx
+    elif (sctype == '3' or sctype == 'symlog'):
+        if hbd:
+            return 3, -1.*10.**np.abs(vmn), 10.**np.abs(vmx) * sm, sm
+        else:
+            return 3, -1.*vmx, vmx, sm
+    return 0, vmn, vmx
+
+
 def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
     symmin = 1.0
     autoscale = False
