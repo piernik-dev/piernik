@@ -188,15 +188,11 @@ def cli_params(argv):
         elif recognize_opt(opt, ("-T", "--particle-h2d-scale")):
             global pstype
             aux = arg.split(',')
-            print(len(aux))
             if len(aux) > 2:
-                print('sa 3 argumenty')
                 pstype = aux[0], aux[1], aux[2]
             elif len(aux) > 1:
-                print('sa 2 argumenty')
                 pstype = aux[0], aux[1], pstype[2]
             elif len(aux) > 0:
-                print('jest jeden argument')
                 pstype = aux[0], pstype[1], pstype[2]
             l1 = aux[0].lower() in ("yes", "true", "t", "1")
             l2, l3 = pstype[1:3]
