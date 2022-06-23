@@ -177,6 +177,20 @@ def list3_or(l3, r3):
     return [l3[0] or r3[0], l3[1] or r3[1], l3[2] or r3[2]]
 
 
+def list_any(lst, strg):
+    for l in lst:
+        if l == strg:
+            return True
+    return False
+
+
+def list_all(lst, strg):
+    for l in lst:
+        if l != strg:
+            return False
+    return True
+
+
 def list3_other(l3, r3):
     ans = [False, False, False]
     if r3[0]:

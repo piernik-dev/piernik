@@ -225,8 +225,9 @@ def plotcompose(pthfilen, var, output, options):
     if drawd or drawg:
         refis, extr = rd.collect_gridlevels(h5f, var, cmpr, refis, maxglev, plotlevels, gridlist, cgcount, center, usc, drawd, drawu, drawa, drawg, draw1D, draw2D)
 
-        if refis == []:
+        if refis == [] or pu.list_any(extr, []):
             drawd = False
+            field = [drawd, ]
         else:
             if drawd:
                 vmin, vmax, symmin, autsc = pu.scale_manage(sctype, refis, umin, umax, draw1D, draw2D, extr)

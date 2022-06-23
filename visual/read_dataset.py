@@ -58,7 +58,7 @@ def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, dr
             if ledg != lec or redg != rec:
                 print('WARNING: Edges for level %s: %s %s are different than for level %s: %s %s. Consider excluding levels.' % (level, ledg, redg, cmprl[levnum], lec, rec))
         else:
-            print('Comparison for levels: %s and %s not available due to unmet resolution constraints.' % (level, cmprl[levnum]))
+            print('Comparison for levels: %s and %s not available due to unmet resolution constraints. Dimensions do not match.' % (level, cmprl[levnum]))
             return False, [], []
 
     inb, ind = pu.find_indices(nd, center, ledg, redg, draw1D, draw2D, True)
