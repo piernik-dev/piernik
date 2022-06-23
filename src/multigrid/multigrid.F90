@@ -44,8 +44,8 @@ module multigrid
    private
    public :: multigrid_par, init_multigrid, cleanup_multigrid, init_multigrid_ext
 
-   integer, parameter    :: level_incredible = 50  !< Increase this value only if your base domain contains much more than 10^15 cells in any active direction ;-)
-   integer(kind=4)       :: level_depth            !< Maximum allowed levels of base grid coarsening
+   integer(kind=4), parameter :: level_incredible = 50  !< Should be enough for up to 10^15 cells in any active direction ;-)
+   integer(kind=4)            :: level_depth            !< Maximum allowed levels of base grid coarsening
 
 contains
 
@@ -74,7 +74,7 @@ contains
    subroutine multigrid_par
 
       use cg_list_global,      only: all_cg
-      use constants,           only: PIERNIK_INIT_DOMAIN, O_LIN, O_D3
+      use constants,           only: PIERNIK_INIT_DOMAIN, O_LIN, O_D3, I_ZERO
       use dataio_pub,          only: warn, die, code_progress, nh
       use domain,              only: dom
       use global,              only: dirty_debug, do_ascii_dump, show_n_dirtys !< \warning: alien variables go to local namelist
@@ -102,7 +102,7 @@ contains
       frun = .false.
 
       ! Default values for namelist variables
-      level_depth           = level_incredible
+      level_depth           = merge(level_incredible, I_ZERO, dom%eff_dim /= 0)
       ord_prolong           = O_D3
       show_n_dirtys         = 16
       ! May all the logical parameters be .false. by default
@@ -161,7 +161,7 @@ contains
       single_base = (nproc == 1)
 
       if (dirty_debug .and. master) call warn("[multigrid:multigrid_par] dirty_debug is supposed to be set only in debugging runs. Remember to disable it in production runs")
-      if (dom%eff_dim < 1 .or. dom%eff_dim > 3) call die("[multigrid:multigrid_par] Unsupported number of dimensions.")
+      if (dom%eff_dim < 0 .or. dom%eff_dim > 3) call die("[multigrid:multigrid_par] Unsupported number of dimensions.")
 
 !! \todo Make an array of subroutine pointers
 #ifdef SELF_GRAV

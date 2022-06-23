@@ -282,11 +282,19 @@ contains
             this%dvol = product(this%dl(:), mask=(dom%has_dir(:) .or. [.false., .true., .false.])) ! multiply by actual radius to get true cell volume
       end select
 
-      this%maxxyz = maxval(this%n_(:), mask=dom%has_dir(:))
+      if (dom%eff_dim == 0) then
+         this%maxxyz = 1
+      else
+         this%maxxyz = maxval(this%n_(:), mask=dom%has_dir(:))
+      endif
 
       call this%set_coords
 
-      this%dxmn  = minval(this%dl(:), mask=dom%has_dir(:))
+      if (dom%eff_dim == 0) then
+         this%dxmn  = minval(dom%L_(:))
+      else
+         this%dxmn  = minval(this%dl(:), mask=dom%has_dir(:))
+      endif
       this%dxmn2 = (this%dxmn)**2
 
       ! some shortcuts for convenience
