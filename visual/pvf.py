@@ -108,7 +108,7 @@ def cli_params(argv):
             global cmap
             cmap = str(arg)
 
-        elif recognize_opt(opt, ("--compare-datafield")):
+        elif recognize_opt(opt, ("--compare-datafield",)):
             global cmpr, cmprd, cmprn
             cmpr = True
             cmprd = str(arg)
@@ -116,7 +116,8 @@ def cli_params(argv):
                 cmprn = '_vs'
             cmprn = cmprn + '_' + cmprd
 
-        elif recognize_opt(opt, ("--compare-file")):
+        elif recognize_opt(opt, ("--compare-file",)):
+            print('rozpoznalem opcje')
             global cmprf
             cmpr = True
             cmprf = str(arg)
@@ -125,7 +126,7 @@ def cli_params(argv):
             cmprn = cmprn + '_' + cmprf.split('/')[-1]
             cmprn = ''.join(cmprn.split('.')[:-1])
 
-        elif recognize_opt(opt, ("--compare-type")):
+        elif recognize_opt(opt, ("--compare-type",)):
             global cmprt
             cmprt = int(arg)
             if cmprt != 1 and cmprt != 2 and cmprt != 3:
@@ -145,11 +146,11 @@ def cli_params(argv):
             global plotlevels
             plotlevels = [int(i) for i in arg.split(',')]
 
-        elif recognize_opt(opt, ("--compare-level")):
+        elif recognize_opt(opt, ("--compare-level",)):
             global cmprl
             cmprl = [int(i) for i in arg.split(',')]
 
-        elif recognize_opt(opt, ("--linestyle")):
+        elif recognize_opt(opt, ("--linestyle",)):
             global linstyl
             linstyl = arg.split(',')
 
