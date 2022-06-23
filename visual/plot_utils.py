@@ -153,8 +153,20 @@ def scale_plotarray(pa, sctype, symmin):
     return pa
 
 
+def list3_add(l3, s3):
+    return l3[0] + s3[0], l3[1] + s3[1], l3[2] + s3[2]
+
+
 def list3_subtraction(l3, s3):
     return l3[0] - s3[0], l3[1] - s3[1], l3[2] - s3[2]
+
+
+def list3_mult(l3, r3):
+    return l3[0] * r3[0], l3[1] * r3[1], l3[2] * r3[2]
+
+
+def list3_div(l3, r3):
+    return l3[0] / r3[0], l3[1] / r3[1], l3[2] / r3[2]
 
 
 def list3_division(l3, divisor):
@@ -175,6 +187,10 @@ def list3_and(l3, r3):
 
 def list3_or(l3, r3):
     return [l3[0] or r3[0], l3[1] or r3[1], l3[2] or r3[2]]
+
+
+def list3_alleq(l3, r3):
+    return [l3[0] == r3[0] and l3[1] == r3[1] and l3[2] == r3[2]]
 
 
 def list_any(lst, strg):

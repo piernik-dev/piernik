@@ -239,7 +239,7 @@ def plotcompose(pthfilen, var, output, options):
 
     h5f.close()
     if cmpr[0]:
-        cmpr[1].close()
+        cmpr[2].close()
 
     if not (parts[0] or drawd or drawg):
         print('No particles or datafields or grids to plot. Skipping.')
