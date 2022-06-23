@@ -148,6 +148,7 @@ def cli_params(argv):
 
         elif recognize_opt(opt, ("--compare-level",)):
             global cmprl
+            cmpr = True
             cmprl = [int(i) for i in arg.split(',')]
 
         elif recognize_opt(opt, ("--linestyle",)):

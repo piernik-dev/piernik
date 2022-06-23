@@ -13,17 +13,17 @@ def manage_compare(cmpr, h5f, var, plotlevels, gridlist, drawa, drawu):
             cmprd = var
         if cmprf == '':
             if cmprl != plotlevels:
-                print('Levels to compare in the same file cannot be different. Ignoring.')
-            cmpr = cmpr0, h5f, cmprd, plotlevels, cmprt, diff_struct
+                print('Different levels to compare in the same file. Might be weird.')
+            h5c = h5f
         else:
             h5c = h5.File(cmprf, 'r')
-            cmprl = pu.check_plotlevels(cmprl, max(h5c['grid_level'][:]), False)
-            diff_struct = compare_grids(h5f, h5c, plotlevels, cmprl, gridlist)
-            cunavail = (cmprl == [])
-            if diff_struct:
-                print('Difference in h5 files structure')
-                drawa, drawu = False, True
-            cmpr = cmpr0, h5c, cmprd, cmprl, cmprt, diff_struct
+        cmprl = pu.check_plotlevels(cmprl, max(h5c['grid_level'][:]), False)
+        diff_struct = compare_grids(h5f, h5c, plotlevels, cmprl, gridlist)
+        cunavail = (cmprl == [])
+        if diff_struct:
+            print('Difference in datafields structure or not matching levels.')
+            drawa, drawu = False, True
+        cmpr = cmpr0, h5c, cmprd, cmprl, cmprt, diff_struct
     return cunavail, cmpr, drawa, drawu
 
 
