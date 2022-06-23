@@ -118,7 +118,6 @@ def cli_params(argv):
             cmprn = cmprn + '_' + cmprd
 
         elif recognize_opt(opt, ("--compare-file",)):
-            print('rozpoznalem opcje')
             global cmprf
             cmpr = True
             cmprf = str(arg)
