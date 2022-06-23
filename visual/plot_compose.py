@@ -23,7 +23,7 @@ def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
 
 
 def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
-    smin, smax, zoom, ulen, umin, umax, linstyl, output, timep, sctype = equip1d
+    smin, smax, zoom, ulen, sctype, umin, umax, linstyl, output, timep = equip1d
     fig1d = P.figure(ncut + 2, figsize=(10, 8))
     ax = fig1d.add_subplot(111)
     P.xlim(zoom[1][ncut], zoom[2][ncut])
@@ -34,7 +34,7 @@ def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
         hybrid_plot = (parts[3] > 1)
 
     if field[0]:
-        vmin, vmax, sctype, symmin, cmap, autsc, labf = field[1:]
+        vmin, vmax, symmin, cmap, autsc, labf = field[1:]
         label.append(labf)
         if not autsc and not hybrid_plot:
             P.ylim(vmin, vmax)
@@ -86,11 +86,11 @@ def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
 
 
 def draw_plotcomponent(ax, refis, field, parts, equip2d, ncut, n1, n2):
-    smin, smax, zoom, ulen, drawg, gcolor, center, sctype = equip2d
+    smin, smax, zoom, ulen, sctype, drawg, gcolor, center = equip2d
     ag, ah = [], []
     if field[0] or drawg:
         if field[0]:
-            vmin, vmax, sctype, symmin, cmap = field[1:-2]
+            vmin, vmax, symmin, cmap = field[1:-2]
         for blks in refis:
             for bl in blks:
                 bxyz, binb, ble, bre, level = bl[:-1]
@@ -232,7 +232,7 @@ def plotcompose(pthfilen, var, output, options):
                 vmin, vmax, symmin, autsc = pu.scale_manage(sctype, refis, umin, umax, draw1D, draw2D, extr)
 
                 vlab = pu.labellog(sctype, symmin, cmpr[0]) + var + " [%s]" % pu.labelx()(uvar)
-                field = drawd, vmin, vmax, sctype, symmin, cmap, autsc, vlab
+                field = drawd, vmin, vmax, symmin, cmap, autsc, vlab
 
     zoom = rd.level_zoom(h5f, gridlist, zoom, smin, smax)
 
@@ -246,8 +246,8 @@ def plotcompose(pthfilen, var, output, options):
 
     cbar_mode = pu.colorbar_mode(drawd, drawh, figmode)
 
-    equip1d = smin, smax, zoom, ulen, umin, umax, linstyl, output, timep, sctype
-    equip2d = smin, smax, zoom, ulen, drawg, gcolor, center, sctype
+    equip1d = smin, smax, zoom, ulen, sctype, umin, umax, linstyl, output, timep
+    equip2d = smin, smax, zoom, ulen, sctype, drawg, gcolor, center
 
     if draw1D[0]:
         plot1d(refis, field, parts, equip1d, 0, 1, 2)
