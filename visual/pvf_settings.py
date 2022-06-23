@@ -29,6 +29,7 @@ fineqv = 1.0
 #units
 #dimensionless_print = b'dimensionless'
 dimensionless_print = ''
+set_as_unexist = 0.
 
 # colorbars
 cbar_hist2d_shift = 0.7

@@ -107,7 +107,7 @@ def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, dr
 
 def collect_dataset(h5f, dset_name, cmpr, level, gridlist, nd, loff):
     print('Reading', dset_name)
-    dset = np.empty((nd[0], nd[1], nd[2]))
+    dset = np.full((nd[0], nd[1], nd[2]), np.nan)
 
     print('Reconstructing domain from cg parts')
     for ig in gridlist:

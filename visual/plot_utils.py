@@ -28,11 +28,14 @@ def fsym(vmin, vmax):
 
 def execute_comparison(orig, comp, ctype):
     if ctype == 1:
-        return orig - comp
+        maa = orig - comp
     elif ctype == 2:
-        return orig / comp
+        maa = orig / comp
     elif ctype == 3:
-        return (orig / comp) - 1
+        maa = (orig / comp) - 1
+    else:
+        maa = orig
+    return np.where(np.isnan(maa), ps.set_as_unexist, maa)
 
 
 def scale_translate(sctype, vmn, vmx, sm, hbd):
