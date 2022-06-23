@@ -199,7 +199,7 @@ contains
       use fluidtypes,         only: component_fluid
       use func,               only: ekin, emag
       use grid_cont,          only: grid_container
-      use global,             only: skip_sweep, repeat_step
+      use global,             only: skip_sweep, repetitive_steps
       use initcosmicrays,     only: iarr_crn, iarr_crs
       use user_hooks,         only: problem_customize_solution
 #ifdef CRESP
@@ -223,8 +223,8 @@ contains
       skip_sweep  = [.true., .true., .true.]
 
       if (adiab_active) then
-         repeat_step = .false.
-         write (msg, *) "Parameter 'adiab_active' is TRUE, due to possible large variations of div(V) CFL warnings may show up: changing 'repeat_step' to FALSE (hard coded)"
+         repetitive_steps = .false.
+         write (msg, *) "Parameter 'adiab_active' is TRUE, due to possible large variations of div(V) CFL warnings may show up: changing 'repetitive_steps' to FALSE (hard coded)"
          call printinfo(msg)
       endif
 
@@ -376,18 +376,19 @@ contains
    subroutine printer
 
       use constants,       only: LO, HI
+      use cresp_grid,      only: cfl_cresp_violation
       use dataio_pub,      only: nh
-      use global,          only: t, dt, repeat_step, cfl_violated
-      use initcosmicrays,  only: ncre
+      use global,          only: t, dt, repetitive_steps
+      use initcosmicrays,  only: nspc
       use initcrspectrum,  only: crel
 
       implicit none
 
       open(newunit=nh%lun, file=outfile, status="unknown", position="append")
-      if (repeat_step .and. cfl_violated) then
+      if (repetitive_steps .and. cfl_cresp_violation) then  ! FIXME beware - other instances (though unlikely) of CFL violation should be included
          backspace(nh%lun)  ! rewind one line if step is repeated in order to keep consistent order of the data in crs file
       endif
-      write(nh%lun, '(2e16.9, 3(1x,i8), 600(1x,ES18.9E3))') t, dt, ncre, crel%i_cut(LO), crel%i_cut(HI), crel%p, crel%f, crel%q
+      write(nh%lun, '(2e16.9, 3(1x,i8), 600(1x,ES18.9E3))') t, dt, nspc, crel%i_cut(LO), crel%i_cut(HI), crel%p, crel%f, crel%q
       close(nh%lun)
 
    end subroutine printer
