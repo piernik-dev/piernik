@@ -72,6 +72,8 @@ module initcosmicrays
 #ifdef CRESP
    integer(kind=4), allocatable, dimension(:) :: iarr_crspc_e !< array of indexes pointing to all CR electron energy components
    integer(kind=4), allocatable, dimension(:) :: iarr_crspc_n !< array of indexes pointing to all CR electron number density components
+   integer(kind=4), allocatable, dimension(:,:) :: iarr_crspc2_e !< 2D iterable array of indexes pointing to spectrally resolved CR components' energy density
+   integer(kind=4), allocatable, dimension(:,:) :: iarr_crspc2_n !< 2D iterable array of indexes pointing to spectrally resolved CR components' number density
 #endif /* CRESP */
 
    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
@@ -111,7 +113,7 @@ contains
 
       use constants,       only: cbuff_len, I_ONE, I_TWO, half, big
       use cr_data,         only: init_cr_species, cr_species_tables, cr_gpess, cr_spectral, ncrsp_auto
-      use diagnostics,     only: ma1d, my_allocate
+      use diagnostics,     only: ma1d, ma2d, my_allocate
       use dataio_pub,      only: die, warn, nh
       use func,            only: operator(.notequals.)
       use mpisetup,        only: ibuff, rbuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
@@ -246,7 +248,7 @@ contains
       ncrn = ncrsp - nspc
 
       ncr2b  = I_TWO * ncrb
-      ncrtot = ncr2b + ncrn
+      ncrtot = ncr2b * nspc + ncrn
 
       if (any([ncrsp, ncrb] > ncr_max) .or. any([ncrsp, ncrb] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
       if (ncrtot == 0) call warn("[initcosmicrays:init_cosmicrays] ncrtot == 0; no cr components specified")
@@ -269,14 +271,17 @@ contains
       if (ncrb <= 0) then
          ma1d = 0
       else
-         ma1d = [ncr2b]
+         ma1d = [ncr2b * nspc]
       endif
       call my_allocate(iarr_crspc, ma1d) ! < iarr_crspc will point: (1:ncrb) - cre number per bin, (ncrb+1:2*ncrb) - cre energy per bin
 
 #ifdef CRESP
-      ma1d = [ncrb]
+      ma1d = [ncrb * nspc]
       call my_allocate(iarr_crspc_e, ma1d)
       call my_allocate(iarr_crspc_n, ma1d)
+      ma2d = [nspc, ncrb]
+      call my_allocate(iarr_crspc2_e, ma2d)
+      call my_allocate(iarr_crspc2_n, ma2d)
 #endif /* CRESP */
       ma1d = [ncrtot]
       call my_allocate(iarr_crs, ma1d)
@@ -300,13 +305,13 @@ contains
       implicit none
 
       type(var_numbers), intent(inout) :: flind
-      integer(kind=4)                  :: icr
+      integer(kind=4)                  :: icr, jnb
 
       flind%crn%beg = flind%all + I_ONE
       flind%crs%beg = flind%crn%beg
 
-      flind%crn%all = ncrn
-      flind%crspc%all = ncr2b
+      flind%crn%all   = ncrn
+      flind%crspc%all = ncr2b * nspc
 
       flind%crs%all = flind%crn%all + flind%crspc%all
       do icr = 1, ncrn
@@ -315,14 +320,14 @@ contains
       enddo
       flind%all = flind%all + flind%crn%all
 
-      do icr = I_ONE, ncr2b
-         iarr_crspc(icr)        = flind%all + icr
+      do icr = I_ONE, ncr2b * nspc
+         iarr_crspc(icr)      = flind%all + icr
          iarr_crs(ncrn + icr) = flind%all + icr
       enddo
 
       flind%all = flind%all + flind%crspc%all
 
-      flind%crn%end = flind%crn%beg + flind%crn%all - I_ONE
+      flind%crn%end   = flind%crn%beg + flind%crn%all - I_ONE
       flind%crspc%beg = flind%crn%end + I_ONE
       flind%crspc%end = flind%all
       flind%crs%end = flind%crspc%end
@@ -333,13 +338,20 @@ contains
 
 #ifdef CRESP
       flind%crspc%nbeg = flind%crn%end + I_ONE
-      flind%crspc%nend = flind%crn%end + ncrb
+      flind%crspc%nend = flind%crn%end + ncrb * nspc
       flind%crspc%ebeg = flind%crspc%nend + I_ONE
-      flind%crspc%eend = flind%crspc%nend + ncrb
+      flind%crspc%eend = flind%crspc%nend + ncrb * nspc
 
       do icr = 1, ncrb
          iarr_crspc_n(icr) = flind%crspc%nbeg - I_ONE + icr
          iarr_crspc_e(icr) = flind%crspc%ebeg - I_ONE + icr
+      enddo
+
+      do icr = 1, nspc        !< Arrange iterable indexes for each spectral species separately; first indexes for n, then e.
+         do jnb = 1, ncrb
+            iarr_crspc2_n(icr, jnb) = flind%crn%end + I_ONE + (icr - I_ONE) * ncrb + jnb
+            iarr_crspc2_e(icr, jnb) = flind%crn%end + I_ONE + nspc * ncrb + (icr - I_ONE) * ncrb + jnb
+         enddo
       enddo
 #endif /* CRESP */
 
