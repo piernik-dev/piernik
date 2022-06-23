@@ -134,10 +134,10 @@ contains
          associate(cg => cgl%cg)
             do p = 1, flind%fluids
                associate(fl => flind%all_fluids(p)%fl)
-                  cg%u(fl%idn,:,:,:) = fdens
-                  cg%u(fl%imx,:,:,:) = 0.0
-                  cg%u(fl%imy,:,:,:) = 0.0
-                  cg%u(fl%imz,:,:,:) = 0.0
+                  cg%u(fl%idn,RNG) = fdens
+                  cg%u(fl%imx,RNG) = 0.0
+                  cg%u(fl%imy,RNG) = 0.0
+                  cg%u(fl%imz,RNG) = 0.0
                end associate
             enddo
          end associate
@@ -208,7 +208,7 @@ contains
       real, dimension(ndims), intent(in) :: rel_pos
       real, dimension(ndims)             :: vel_2bodies
       real                               :: a        !< semi-major axis of initial elliptical orbit of particle
-      real                               :: r        !< lenght of radius vector
+      real                               :: r        !< length of radius vector
       real                               :: mu
 
       vel_2bodies = zero

@@ -72,13 +72,13 @@ module refinement
       logical :: plotfield              !< create a 3D array to keep the value of refinement criterion when set to .true.
    end type ref_auto_param
    integer, parameter :: n_ref_auto_param = 10                                 !< number of automatic refinement criteria available to user
-   type(ref_auto_param), dimension(n_ref_auto_param), protected :: refine_vars !< Definitions of user-supplied automatic refinement criteria: refinement vatiable, refinement algorithm, refinement threshold, derefinement threshold, auxiliary parameter
+   type(ref_auto_param), dimension(n_ref_auto_param), protected :: refine_vars !< Definitions of user-supplied automatic refinement criteria: refinement variable, refinement algorithm, refinement threshold, derefinement threshold, auxiliary parameter
 
    ! \brief Parameters of Jeans length based refinement
    real    :: jeans_ref   !< minimum resolution in cells per Jeans wavelengths
    logical :: jeans_plot  !<create a 3D array to keep the value of Jeans resolution
 
-   character(len=cbuff_len), parameter :: inactive_name = "none"               !< placeholder for inactive refinement criterium
+   character(len=cbuff_len), parameter :: inactive_name = "none"               !< placeholder for inactive refinement criterion
 
    logical :: emergency_fix                                                    !< set to .true. if you want to call update_refinement ASAP
 
@@ -315,7 +315,7 @@ contains
       else
          if (level_max > base_level_id .and. master) call warn("[refinement] refinements were requested but are disabled by sanity checks")
          msg = "[refinement] No static or adaptive refinement"
-         ! switch off efinement options
+         ! switch off refinement options
          level_min = base_level_id
          level_max = base_level_id
          n_updAMR  = huge(I_ONE)
@@ -364,7 +364,7 @@ contains
       b2 = b1
 
       ! start with size that results with roughly one block per process on highest full level, but don't go below 16 cells per dimension
-      ! also divide each dmension to at least 4 pieces even for low thread count
+      ! also divide each dimension to at least 4 pieces even for low thread count
       sq = max(not_too_small, int(((product(dom%n_d, mask=dom%has_dir) * refinement_factor**(dom%eff_dim * level_min))/max(nproc, int((2*refinement_factor)**dom%eff_dim, kind=4)))**(1./dom%eff_dim), kind=4))
       if (mod(sq, I_TWO) == I_ONE) sq = sq + I_ONE
       ! find divisible values in each dim in the range [nb .. dom%n_d] starting from sq in both directions
@@ -397,7 +397,7 @@ contains
             endif
          enddo
 
-         ! pick the best one somehow: a bit longer block in x-direction usually doesn't hurt, sometimes gives good performace
+         ! pick the best one somehow: a bit longer block in x-direction usually doesn't hurt, sometimes gives good performance
          where (b1 == INVALID) b1 = b2
          where (b2 == INVALID) b2 = b1
          bsize = [ b1(xdim), b2(ydim:zdim) ]

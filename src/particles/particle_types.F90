@@ -283,7 +283,7 @@ contains
 
 !      class(particle_set), intent(inout) :: this !< an object invoking the type-bound procedure
 !      integer,             intent(in)    :: id1  !< position of the first particle in the array of particles (particle to be replaced by the merger)
-!      integer,             intent(in)    :: id2  !< position of the second partilce in the array of particles (particle to be removed)
+!      integer,             intent(in)    :: id2  !< position of the second particle in the array of particles (particle to be removed)
 !
 !      type(particle) :: merger
 !

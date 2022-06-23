@@ -39,7 +39,7 @@
 !<
 module cr_data
 
-! pulled by COSM_RAYS_SOURCES
+! pulled by COSM_RAYS
 
    implicit none
 
@@ -49,7 +49,8 @@ module cr_data
    ! Isotope list
    !> \deprecated BEWARE: changing the following order should not provide any differences, yet it does!
    enum, bind(C)
-      enumerator :: icr_H1 = 1
+      enumerator :: icr_E = 1
+      enumerator :: icr_H1
       enumerator :: icr_C12
       enumerator :: icr_Be9
       enumerator :: icr_Be10
@@ -59,27 +60,33 @@ module cr_data
       enumerator :: icr_LAST     !< should be used nowhere despite with nicr
    end enum
    enum, bind(C)
-      enumerator :: PRES = 1     !< index for presence of the isotope
-      enumerator :: ESS          !< index for grad_pcr essentiality of the isotope
+      enumerator :: PRES = 1     !< index for presence of the isotope/component
+      enumerator :: ESS          !< index for grad_pcr essentiality of the isotope/component
+      enumerator :: SPEC         !< index for energy spectrum treatment of the isotope/component
    end enum
 
    integer, parameter                                      :: nicr = icr_LAST - 1
+   integer(kind=4)                                         :: ncrsp_auto
 
-   logical, dimension(PRES:ESS)                            :: eH1                !< presence and grad_pcr essentiality of H1 isotope
-   logical, dimension(PRES:ESS)                            :: eLi7               !< presence and grad_pcr essentiality of Li7 isotope
-   logical, dimension(PRES:ESS)                            :: eBe9               !< presence and grad_pcr essentiality of Be9 isotope
-   logical, dimension(PRES:ESS)                            :: eBe10              !< presence and grad_pcr essentiality of Be10 isotope
-   logical, dimension(PRES:ESS)                            :: eC12               !< presence and grad_pcr essentiality of C12 isotope
-   logical, dimension(PRES:ESS)                            :: eN14               !< presence and grad_pcr essentiality of N14 isotope
-   logical, dimension(PRES:ESS)                            :: eO16               !< presence and grad_pcr essentiality of O16 isotope
+   logical, dimension(PRES:SPEC)                           :: eE                 !< presence and grad_pcr essentiality of electrons
+   logical, dimension(PRES:SPEC)                           :: eH1                !< presence and grad_pcr essentiality of H1 isotope
+   logical, dimension(PRES:SPEC)                           :: eLi7               !< presence and grad_pcr essentiality of Li7 isotope
+   logical, dimension(PRES:SPEC)                           :: eBe9               !< presence and grad_pcr essentiality of Be9 isotope
+   logical, dimension(PRES:SPEC)                           :: eBe10              !< presence and grad_pcr essentiality of Be10 isotope
+   logical, dimension(PRES:SPEC)                           :: eC12               !< presence and grad_pcr essentiality of C12 isotope
+   logical, dimension(PRES:SPEC)                           :: eN14               !< presence and grad_pcr essentiality of N14 isotope
+   logical, dimension(PRES:SPEC)                           :: eO16               !< presence and grad_pcr essentiality of O16 isotope
    logical,                                dimension(nicr) :: eCRSP              !< table of all isotopes presences
    integer, parameter                                      :: specieslen = 6     !< length of species names
    character(len=specieslen), allocatable, dimension(:)    :: cr_names           !< table of species names
-   integer,                   allocatable, dimension(:)    :: cr_table           !< table of flind indices for CR species
+   integer,                   allocatable, dimension(:)    :: cr_table           !< table of cr_data indices for CR species
+   integer,                   allocatable, dimension(:)    :: cr_index           !< table of flind indices for CR species
    real,                      allocatable, dimension(:)    :: cr_mass            !< table of mass numbers for CR species
    real,                      allocatable, dimension(:,:)  :: cr_sigma           !< table of cross sections for spallation
    real,                      allocatable, dimension(:)    :: cr_tau             !< table of decay half live times
    real,                      allocatable, dimension(:)    :: cr_primary         !< table of initial source abundances
+   logical,                   allocatable, dimension(:)    :: cr_spectral        !< table of logicals about energy spectral treatment
+   logical,                   allocatable, dimension(:)    :: cr_gpess           !< table of essentiality for grad_pcr calculation
 
    real, parameter :: m_H1   = 1.
    real, parameter :: m_Li7  = 7.
@@ -91,22 +98,19 @@ module cr_data
 
 !<====Cross sections for spallation from Garcia-Munoz 1987 (see also Longair)====>
 
-   real, parameter :: Myear = 1d6*365*24*60*60 !< s     \deprecated BEWARE: this line breaks unit consistency, move it to units.F90 and use scaling
-   real, parameter :: mbarn = 1e-27            !< cm2   \deprecated BEWARE: this line breaks unit consistency, move it to units.F90 and use scaling
+   real, parameter :: sigma_C12_Li7  = 10   !< mbarn
+   real, parameter :: sigma_C12_Be9  =  6   !< mbarn
+   real, parameter :: sigma_C12_Be10 =  3.5 !< mbarn
 
-   real, parameter :: sigma_C12_Li7  = 10   * mbarn
-   real, parameter :: sigma_C12_Be9  =  6   * mbarn
-   real, parameter :: sigma_C12_Be10 =  3.5 * mbarn
+   real, parameter :: sigma_N14_Li7  =  9.5 !< mbarn
 
-   real, parameter :: sigma_N14_Li7  =  9.5 * mbarn
-
-   real, parameter :: sigma_O16_Li7  =  9.5 * mbarn
-   real, parameter :: sigma_O16_Be9  =  4.5 * mbarn
-   real, parameter :: sigma_O16_Be10 =  2   * mbarn
+   real, parameter :: sigma_O16_Li7  =  9.5 !< mbarn
+   real, parameter :: sigma_O16_Be9  =  4.5 !< mbarn
+   real, parameter :: sigma_O16_Be10 =  2   !< mbarn
 
 !<====Decay half live times from Garcia-Munoz 1987====>
 
-   real, parameter :: tau_Be10 = 1.6 !< Myr \deprecated BEWARE: this line breaks unit consistency, move it to units.F90 and use scaling
+   real, parameter :: tau_Be10 = 1.6 !< Myr
 
 !<Initial source abundances (in numer density) relative to hydrogen (compare e.g. Longair)>
 
@@ -114,7 +118,7 @@ module cr_data
    real, parameter :: primary_N14  =  1.0e-3
    real, parameter :: primary_O16  =  4.0e-3
 
-   integer, dimension(3), parameter :: icrH = [icr_C12, icr_N14, icr_O16 ], icrL = [icr_Li7, icr_Be9, icr_Be10]
+   integer, dimension(3), parameter :: icrH = [icr_C12, icr_N14, icr_O16], icrL = [icr_Li7, icr_Be9, icr_Be10]
 
 contains
 
@@ -134,37 +138,34 @@ contains
 !! <tr><td>eN14 </td><td>.false.          </td><td>2 logical values</td><td>\copydoc cr_data::en14 </td></tr>
 !! <tr><td>eO16 </td><td>.false.          </td><td>2 logical values</td><td>\copydoc cr_data::eo16 </td></tr>
 !! </table>
-!! The list is active while \b "COSM_RAYS_SOURCES" is defined.
+!! The list is active while \b "COSM_RAYS" is defined.
 !! \n \n
 !<
-   subroutine init_crsources(ncrn, crness)
+   subroutine init_cr_species
 
-      use dataio_pub,      only: msg, printinfo, die, nh
-      use mpisetup,        only: lbuff, master, slave, piernik_MPI_Bcast
+      use dataio_pub, only: nh
+      use mpisetup,   only: lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
-      integer(kind=4),       intent(in)    :: ncrn
-      logical, dimension(:), intent(inout) :: crness
-
-      integer                                    :: icr, i
-      character(len=specieslen), dimension(nicr) :: eCRSP_names
-      logical,                   dimension(nicr) :: eCRSP_ess
-      real,                      dimension(nicr) :: eCRSP_mass
-
-      namelist /CR_SPECIES/ eH1, eLi7, eBe9, eBe10, eC12, eN14, eO16
+      namelist /CR_SPECIES/ eE, eH1, eLi7, eBe9, eBe10, eC12, eN14, eO16
 
       ! Only protons (p+) are dynamically important, we can neglect grad_pcr from heavier nuclei
       ! because of their lower abundancies: n(alpha) ~ 0.1 n(p+), other elements less abundant by orders of magnitude
-      eH1   = .true.
+#ifdef CRESP
+      eE    = [.true., .false., .true.]
+#else /* !CRESP */
+      eE    = .false.
+#endif /* !CRESP */
+      eH1   = [.true., .true., .false.]
       eLi7  = .false.
-      eBe9  = [.true., .false.]
-      eBe10 = [.true., .false.]
-      eC12  = [.true., .false.]
+      eBe9  = .false.
+      eBe10 = .false.
+      eC12  = .false.
       eN14  = .false.
       eO16  = .false.
 
-#define VS *2-1:2*
+#define VS *3-2:3*
 
       if (master) then
 
@@ -184,13 +185,14 @@ contains
          close(nh%lun)
          call nh%compare_namelist() ! Do not use one-line if here!
 
-         lbuff(icr_H1   VS icr_H1  )   = eH1
-         lbuff(icr_C12  VS icr_C12 )  = eC12
-         lbuff(icr_Be9  VS icr_Be9 )  = eBe9
+         lbuff(icr_E    VS icr_E   ) = eE
+         lbuff(icr_H1   VS icr_H1  ) = eH1
+         lbuff(icr_C12  VS icr_C12 ) = eC12
+         lbuff(icr_Be9  VS icr_Be9 ) = eBe9
          lbuff(icr_Be10 VS icr_Be10) = eBe10
-         lbuff(icr_N14  VS icr_N14 )  = eN14
-         lbuff(icr_O16  VS icr_O16 )  = eO16
-         lbuff(icr_Li7  VS icr_Li7 )  = eLi7
+         lbuff(icr_N14  VS icr_N14 ) = eN14
+         lbuff(icr_O16  VS icr_O16 ) = eO16
+         lbuff(icr_Li7  VS icr_Li7 ) = eLi7
 
       endif
 
@@ -198,6 +200,7 @@ contains
 
       if (slave) then
 
+         eE    = lbuff(icr_E    VS icr_E   )
          eH1   = lbuff(icr_H1   VS icr_H1  )
          eC12  = lbuff(icr_C12  VS icr_C12 )
          eBe9  = lbuff(icr_Be9  VS icr_Be9 )
@@ -210,37 +213,80 @@ contains
 
 #undef VS
 
-      eCRSP_names(1:7) = ['H1  ','C12 ','Be9 ','Be10','N14 ','O16 ','Li7 ']
-      eCRSP_mass (1:7) = [m_H1, m_C12, m_Be9, m_Be10, m_N14, m_O16, m_Li7 ]
-      eCRSP      (1:7) = [eH1(PRES), eC12(PRES), eBe9(PRES), eBe10(PRES), eN14(PRES), eO16(PRES), eLi7(PRES)]
-      eCRSP_ess  (1:7) = [eH1(ESS) , eC12(ESS) , eBe9(ESS) , eBe10(ESS) , eN14(ESS) , eO16(ESS) , eLi7(ESS) ]
-      allocate(cr_names(ncrn), cr_table(nicr), cr_sigma(ncrn,ncrn), cr_tau(ncrn), cr_primary(ncrn), cr_mass(ncrn))
-      cr_names(:)   = ''
-      cr_table(:)   = 0
-      cr_sigma(:,:) = 0.0
-      cr_tau(:)     = 1.0
-      cr_primary(:) = 0.0
+      eCRSP(1:nicr) = [eE(PRES), eH1(PRES), eC12(PRES), eBe9(PRES), eBe10(PRES), eN14(PRES), eO16(PRES), eLi7(PRES)]
+      ncrsp_auto = count(eCRSP, kind=4)
 
-      icr = 0
-      if (count(eCRSP) > ncrn) call die("[cr_data:init_crsources] You have specified more CR species present than is set by ncrn. Check your CR_SPECIES and COSMIC_RAYS namelists parameters")
-      do i = 1, size(eCRSP)
+   end subroutine init_cr_species
+
+   subroutine cr_species_tables(ncrsp, crness)
+
+      use dataio_pub, only: msg, printinfo, die
+      use mpisetup,   only: master
+      use units,      only: me, mp, myr, mbarn
+
+      implicit none
+
+      integer(kind=4),       intent(in)    :: ncrsp
+      logical, dimension(:), intent(inout) :: crness
+
+      integer                                    :: i, icr, jcr
+      character(len=specieslen), dimension(nicr) :: eCRSP_names
+      logical,                   dimension(nicr) :: eCRSP_ess, eCRSP_spec
+      real,                      dimension(nicr) :: eCRSP_mass
+
+      eCRSP_names(1:nicr) = ['e-  ', 'p+  ', 'C12 ', 'Be9 ', 'Be10', 'N14 ', 'O16 ', 'Li7 ']
+      eCRSP_mass (1:nicr) = [me/mp,  m_H1,   m_C12,   m_Be9, m_Be10, m_N14,  m_O16,  m_Li7 ]
+      eCRSP_ess  (1:nicr) = [eE(ESS) , eH1(ESS) , eC12(ESS) , eBe9(ESS) , eBe10(ESS) , eN14(ESS) , eO16(ESS) , eLi7(ESS) ]
+      eCRSP_spec (1:nicr) = [eE(SPEC), eH1(SPEC), eC12(SPEC), eBe9(SPEC), eBe10(SPEC), eN14(SPEC), eO16(SPEC), eLi7(SPEC)]
+
+      allocate(cr_names(ncrsp), cr_table(nicr), cr_index(nicr), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp), cr_mass(ncrsp), cr_spectral(ncrsp), cr_gpess(ncrsp))
+      cr_names(:)    = ''
+      cr_table(:)    = 0
+      cr_index(:)    = 0
+      cr_sigma(:,:)  = 0.0
+      cr_tau(:)      = 1.0
+      cr_primary(:)  = 0.0
+      cr_spectral(:) = .false.
+      cr_gpess(:)    = .false.
+
+      icr = 0 ; jcr = 0
+      do i = icr_E, size(eCRSP)
          if (eCRSP(i)) then
             icr = icr + 1
-            cr_table(i)   = icr
-            cr_names(icr) = eCRSP_names(i)
-            crness(icr)   = eCRSP_ess(i)
-            cr_mass(icr)  = eCRSP_mass(i)
+            cr_table(i)      = icr
+            cr_names(icr)    = eCRSP_names(i)
+            cr_mass(icr)     = eCRSP_mass(i)
+            cr_spectral(icr) = eCRSP_spec(i)
+            if (eCRSP_spec(i)) then
+               if (i /= icr_E) then
+                  write(msg, '(3a)') "[cr_data:init_cr_species] Energy spectral treatment for ", eCRSP_names(i), " CR component is not available"
+                  call die(msg)
+               endif
+            else
+               jcr = jcr + 1
+               cr_index(i) = jcr
+            endif
+            cr_gpess(icr)    = eCRSP_ess(i)
             if (master) then
-               write(msg,'(a,a,l2)') eCRSP_names(i), 'CR species is present; taken into account for grad_pcr: ', crness(icr)
+               write(msg,'(a,a,a,l2)') spectral_or_not(cr_spectral(icr)), eCRSP_names(i), 'CR species is present; taken into account for grad_pcr: ', eCRSP_ess(i)
                call printinfo(msg)
             endif
          endif
       enddo
-      if (master .and. icr < ncrn) then
-         do i = icr+1, ncrn
-            write(msg,'(a,i2,a,l2)') 'user nucleon-based CR species no: ', i,' is present; taken into account for grad_pcr: ', crness(icr)
-            call printinfo(msg)
+
+      if (ncrsp_auto < ncrsp) then
+         cr_gpess(ncrsp_auto+1:ncrsp) = crness
+         do i = ncrsp_auto+1, ncrsp
+            write(msg,'(a,a,i2,a,l2)') spectral_or_not(cr_spectral(i)), 'user CR species no: ', i,' is present; taken into account for grad_pcr: ', cr_gpess(i)
+            if (master) call printinfo(msg)
          enddo
+      endif
+
+      if (master) then
+         write(msg, '(a,i3)') 'Total amount of CR species: ', ncrsp
+         if (count(cr_spectral) > 0) write(msg, '(a,a,i3,a)') trim(msg), ' | ', count(cr_spectral), ' spectral component(s)'
+         if (ncrsp - ncrsp_auto > 0) write(msg, '(a,a,i3,a)') trim(msg), ' | ', ncrsp - ncrsp_auto, ' user component(s).'
+         call printinfo(msg)
       endif
 
       if (eCRSP(icr_C12)) then
@@ -259,20 +305,36 @@ contains
          if (eCRSP(icr_Be9 )) cr_sigma(cr_table(icr_O16), cr_table(icr_Be9 )) = sigma_O16_Be9
          if (eCRSP(icr_Be10)) cr_sigma(cr_table(icr_O16), cr_table(icr_Be10)) = sigma_O16_Be10
       endif
-      if (eCRSP(icr_Be10)) cr_tau(cr_table(icr_Be10)) = tau_Be10
+      cr_sigma = cr_sigma * mbarn
+      if (eCRSP(icr_Be10)) cr_tau(cr_table(icr_Be10)) = tau_Be10 * myr
 
+   end subroutine cr_species_tables
 
-   end subroutine init_crsources
+   function spectral_or_not(sp) result(wr)
+
+      implicit none
+
+      logical, intent(in) :: sp
+      integer, parameter  :: spl = 13
+      character(len=spl)  :: wr
+
+      if (sp) then
+         wr = '    spectral '
+      else
+         wr = 'non-spectral '
+      endif
+
+   end function spectral_or_not
 
 !> \brief cleanup routine
 
-   subroutine cleanup_crsources
+   subroutine cleanup_cr_species
 
       implicit none
 
       deallocate(cr_names, cr_table, cr_sigma, cr_tau, cr_primary, cr_mass)
 
-   end subroutine cleanup_crsources
+   end subroutine cleanup_cr_species
 
 end module cr_data
 

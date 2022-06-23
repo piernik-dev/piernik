@@ -13,6 +13,7 @@ plot1d_linestyle = ['-', '--', ':']
 # 2D plots
 plot2d_colormap = 'viridis'
 plot2d_sctype = 'linear'
+plot2d_comparetype = 1
 plot2d_axes_pad = 0.2
 
 # grid lines
@@ -21,6 +22,9 @@ grid_linewidth = 0.5
 centertick_color = 'silver'
 centertick_width = 2.
 centertick_length = 6.
+
+# scaletypes
+fineqv = 1.0
 
 # colorbars
 cbar_hist2d_shift = 0.7

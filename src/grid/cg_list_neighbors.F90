@@ -111,12 +111,12 @@ contains
 !!   Isend Z-faces, Irecv Z-faces, Irecv Other_corners, Waitall.
 !!
 !! Any upgrades of these procedures must correctly cover the following cases
-!! * single block on single process with partial or full periodic boundaaries
+!! * single block on single process with partial or full periodic boundaries
 !! * noncartesian base-level decomposition
 !! * cartesian decompositions (both equal and non-equal sizes)
 !! * AMR "blocky" decompositions with complex patterns of refinement, including
 !!     * concave fine/coarse boundary,
-!!     * fine blocks touching each othes only at the corner or edge
+!!     * fine blocks touching each other only at the corner or edge
 !!     * the above cases happening through any periodic boundary
 !! Non-convex domains aren't perhaps difficult but we never needed or tested them.
 !<
@@ -336,7 +336,7 @@ contains
       !! \details If we put a constraint that a grid piece can not be smaller
       !! than dom%nb, then total number of neighbours that affect local
       !! guardcells is exactly 3 for AMR, cartesian decomposition with
-      !! equal-size blocks. Thus, in each direction we can describe realtive
+      !! equal-size blocks. Thus, in each direction we can describe relative
       !! position as one of three cases:
       !! * LEFT, RIGHT - corner neighbours
       !! * FACE        - face neighbour
@@ -606,7 +606,7 @@ contains
 !! \details The chunks here could be find by find_neighbors_bruteforce as well
 !! but that would complicate an already not-too-clear routine.
 !!
-!! This is O(n^2)-class algorithm but in a massively parralel runs we don't
+!! This is O(n^2)-class algorithm but in a massively parallel runs we don't
 !! expect significant cost here because:
 !! * either only small subset of base level may be touching external boundary
 !!   or base level is split to just few blocks
@@ -796,7 +796,7 @@ contains
    !! * more   for AMR with consolidated blocks (unimplemented yet, not
    !!          compatible with current approach)
    !!
-   !! Thus, in each direction we can describe realtive position as one of
+   !! Thus, in each direction we can describe relative position as one of
    !! four cases, or a bit easier one of five cases:
    !! * FAR_LEFT, FAR_RIGHT - corner neighbours, either touching corner or
    !!                         a bit further away
@@ -804,7 +804,7 @@ contains
    !! * FACE                - face neighbour (may cover also some corners)
    !!
    !! This version can correctly handle noncartesian decompositions and should
-   !! also be correct on cartesia and blocy decompositions.
+   !! also be correct on cartesian and blocky decompositions.
    !<
 
    pure function uniq_tag(se, nb_se, grid_id)

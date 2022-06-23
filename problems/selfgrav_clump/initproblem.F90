@@ -607,9 +607,9 @@ contains
       if (vc > tol .and. grav_bnd == bnd_isolated) then
          if (master) then
             if (3*abs(TWP(3)) < abs(TWP(2))) then
-               call warn("[initproblem:virialCheck] Virial imbalance occured because the clump is not resolved.")
+               call warn("[initproblem:virialCheck] Virial imbalance occurred because the clump is not resolved.")
             else
-               call warn("[initproblem:virialCheck] Virial imbalance occured because the clump overfills the domain.")
+               call warn("[initproblem:virialCheck] Virial imbalance occurred because the clump overfills the domain.")
             endif
          endif
          if (crashNotConv) call die("[initproblem:virialCheck] Virial defect too high.")

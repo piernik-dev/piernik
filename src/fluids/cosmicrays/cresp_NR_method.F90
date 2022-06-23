@@ -27,11 +27,11 @@
 #include "piernik.h"
 
 !>
-!! \brief This module contains Newton-Raphson 1,2-dim alhorithms, functions for use with these and used by CRESP.
+!! \brief This module contains Newton-Raphson 1,2-dim algorithms, functions for use with these and used by CRESP.
 !<
 
 module cresp_NR_method
-! pulled by COSM_RAY_ELECTRONS
+! pulled by CRESP
 
    use constants,     only: LO
    use cresp_helpers, only: map_header, bound_name
@@ -245,7 +245,7 @@ contains
          if ( .not. got_smaps_from_restart .or. (hdr_match_res(LO) .eqv. .false. .or. hdr_match_res(HI) .eqv. .false.) ) then
             if (e_small_approx_init_cond == 1) then   ! implies solution maps will be needed at leas once. ! TODO make imports from initcrspectrum more readable
                call warn("[cresp_NR_method] Different smap parameters in restart or restart unavailable. Trying harder...")
-               ! if header not in agreement, try to load backup, e.g., "NR_smap_file". If additionaly user declared "NR_allow_old_smaps", read dat files
+               ! if header not in agreement, try to load backup, e.g., "NR_smap_file". If additionally user declared "NR_allow_old_smaps", read dat files
                call try_read_user_h5(NR_smap_file, hdr, solve_new_smaps)
                if (NR_allow_old_smaps) call try_read_old_smap_files(hdr, solve_new_smaps)
                if (solve_new_smaps .or. force_init_NR) then
@@ -545,7 +545,14 @@ contains
    end subroutine assoc_pointers
 
 !----------------------------------------------------------------------------------------------------
-   subroutine fill_boundary_grid(bound_case, fill_p, fill_f, sml) ! TODO FIXME to be paralelized
+! TODO FIXME to be parallelized
+!
+! The cost of this routine theoretically depends as O(arr_dim**4), which may be a severe limitation
+! if we ever need finer arrays. Practically the exponent is a bit higher, around 4.5  to 5.0.
+! Parallelization may help with doubling arr_dim but anything more than that require change
+! of the algorithm to decrease exponent to arr_dim.
+
+   subroutine fill_boundary_grid(bound_case, fill_p, fill_f, sml)
 
       use constants,      only: zero, I_ONE, I_TWO
       use dataio_pub,     only: msg, printinfo
@@ -609,7 +616,7 @@ contains
             endif
             if (exit_code) then !still...
                do is = I_ONE, helper_arr_dim
-                  do js = 1, helper_arr_dim
+                  do js = 1, helper_arr_dim  ! WARNING: here comes O(arr_dim**4)
                      x_vec(1) = p_space(is)
                      x_vec(2) = p_space(is)**(-q_space(js))
 #ifdef CRESP_VERBOSED
@@ -1074,7 +1081,7 @@ contains
    end function q_ratios
 
 !>
-!! \brief Function estimating values of jacobian via finite difference method
+!! \brief Function estimating values of Jacobian via finite difference method
 !! \todo allow user to tune dx_par
 !<
    function jac_fin_diff(x)
@@ -1274,7 +1281,7 @@ contains
       logical, intent(out)            :: successful
       real, dimension(2)              :: intpol_pf_from_NR_grids ! indexes with best match and having solutions are chosen.
       real                            :: blin_a, blin_n
-      integer(kind=4), dimension(1:2) :: l1, l2 ! indexes that points where alpha_tab_ and up nad n_tab_ and up are closest in value to a_val and n_val - indexes point to
+      integer(kind=4), dimension(1:2) :: l1, l2 ! indexes that points where alpha_tab_ and up and n_tab_ and up are closest in value to a_val and n_val - indexes point to
 
 #ifdef CRESP_VERBOSED
       write (*,"(A30,A2,A4)",advance="no") "Determining indices for case: ", bound_name(current_bound), "... "  ! QA_WARN debug
@@ -1390,7 +1397,7 @@ contains
          else
             compute_q = -q_big         !< should be consistent with q_grid(arr_dim_q)
          endif
-         return                        ! < returns compute_q withh exit_code = .true.
+         return                        ! < returns compute_q with exit_code = .true.
       endif
 
       loc_2 = loc_1 + I_ONE

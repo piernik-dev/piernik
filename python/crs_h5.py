@@ -14,7 +14,7 @@ from colored_io import prtinfo, prtwarn, read_var, die
 # TODO - treat these as default, but try to read from problem par
 e_small = 1.e-6
 eps = 1.0e-15
-ncre = 45
+ncrb = 45
 p_min_fix = 1.0
 p_max_fix = 1.0e6
 cre_eff = 0.01
@@ -401,23 +401,23 @@ def detect_active_bins_new(n_in, e_in):
     pln = []
     prn = []
     i_lo_tmp = 0
-    i_up_tmp = ncre
+    i_up_tmp = ncrb
 
-    for i in range(0, ncre):
+    for i in range(0, ncrb):
         # returns nonzero bin numbers reduced by one compared to CRESP fortran
         if (n_in[i] > 0.0 and e_in[i] > 0.0):
             ne_gt_zero.append(i)
             num_active_bins = num_active_bins + 1
     if num_active_bins == 0:
-        return active_bins_new, ncre, 0
+        return active_bins_new, ncrb, 0
 
     i_lo_tmp = max(ne_gt_zero[0], 0)
-    i_up_tmp = min(ne_gt_zero[-1], ncre)
-    pln = p_fix[0:ncre - 1]
-    prn = p_fix[1:ncre]
+    i_up_tmp = min(ne_gt_zero[-1], ncrb)
+    pln = p_fix[0:ncrb - 1]
+    prn = p_fix[1:ncrb]
     num_active_bins = 0
 
-    for i in range(0, i_up_tmp - i_lo_tmp + 1):
+    for i in range(0, min(i_up_tmp - i_lo_tmp + 1, ncrb - 1)):
         q_tmp = 3.5
         exit_code = False
         if (q_explicit is True):
@@ -442,7 +442,7 @@ def detect_active_bins_new(n_in, e_in):
         return active_bins_new, i_lo_tmp, i_up_tmp
 
     i_lo_tmp = max(active_bins_new[0], 0)
-    i_up_tmp = min(active_bins_new[-1], ncre)
+    i_up_tmp = min(active_bins_new[-1], ncrb)
 
     active_bins_new = [i for i in range(i_lo_tmp, i_up_tmp + 1)]
     num_active_bins = len(active_bins_new)
@@ -466,20 +466,20 @@ def crs_initialize(parameter_names, parameter_values):
 
     edges = []
     p_fix = []
-    edges[0:ncre] = range(0, ncre + 1, 1)
-    p_fix[0:ncre] = zeros(ncre + 1)
-    log_width = (log10(p_max_fix / p_min_fix)) / (ncre - 2.0)
-    for i in range(0, ncre - 1):
+    edges[0:ncrb] = range(0, ncrb + 1, 1)
+    p_fix[0:ncrb] = zeros(ncrb + 1)
+    log_width = (log10(p_max_fix / p_min_fix)) / (ncrb - 2.0)
+    for i in range(0, ncrb - 1):
         p_fix[i + 1] = p_min_fix * 10.0**(log_width * edges[i])
         p_fix_ratio = 10.0 ** log_width
         p_fix[0] = (sqrt(p_fix[1] * p_fix[2])) / p_fix_ratio
-        p_fix[ncre] = (sqrt(p_fix[ncre - 2] * p_fix[ncre - 1])) * p_fix_ratio
+        p_fix[ncrb] = (sqrt(p_fix[ncrb - 2] * p_fix[ncrb - 1])) * p_fix_ratio
         p_fix = asfarray(p_fix)
 
-    p_mid_fix = zeros(ncre)
-    p_mid_fix[1:ncre - 1] = sqrt(p_fix[1:ncre - 1] * p_fix[2:ncre])
+    p_mid_fix = zeros(ncrb)
+    p_mid_fix[1:ncrb - 1] = sqrt(p_fix[1:ncrb - 1] * p_fix[2:ncrb])
     p_mid_fix[0] = p_mid_fix[1] / p_fix_ratio
-    p_mid_fix[ncre - 1] = p_mid_fix[ncre - 2] * p_fix_ratio
+    p_mid_fix[ncrb - 1] = p_mid_fix[ncrb - 2] * p_fix_ratio
     p_mid_fix = asfarray(p_mid_fix)
 
     p_fix = tuple(p_fix)
@@ -489,14 +489,14 @@ def crs_initialize(parameter_names, parameter_values):
 
 
 def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
-    global first_run, got_q_tabs, e_small, p_min_fix, p_max_fix, ncre, cre_eff, i_plot, marker, clean_plot, hide_axes
+    global first_run, got_q_tabs, e_small, p_min_fix, p_max_fix, ncrb, cre_eff, i_plot, marker, clean_plot, hide_axes
 
     marker = kwargs.get("marker", "x")
     clean_plot = kwargs.get("clean_plot", "True")
     hide_axes = kwargs.get("hide_axes", False)
 
     i_lo = 0
-    i_up = ncre
+    i_up = ncrb
     active_bins = []
     empty_cell = True
 
@@ -539,13 +539,13 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
 
         exit_code_up = True
         pf_ratio_up = [0., 0.]
-        if (i_up == ncre):
+        if (i_up == ncrb):
             i_up = i_up - 1
         pf_ratio_up, exit_code_up = crs_pf.get_interpolated_ratios("up", ecrs[i_up] / (
             ncrs[i_up] * c * p_fix[i_up]), ncrs[i_up], exit_code_up, verbose=verbosity_2)
 
-    pln = p_fix[0:ncre - 1]
-    prn = p_fix[1:ncre]
+    pln = p_fix[0:ncrb - 1]
+    prn = p_fix[1:ncrb]
     pln = array(pln)
     prn = array(prn)
 
@@ -625,11 +625,11 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
         p_all = list(p_fix)    # fixes list binding problem - appending p_fix
         p_all[i_lo] = pln[0]
         p_all[i_up] = prn[-1]
-        q_all = zeros(ncre)
+        q_all = zeros(ncrb)
         q_all[i_lo:i_up] = q_nr
-        f_all = zeros(ncre + 1)
+        f_all = zeros(ncrb + 1)
         f_all[i_lo:i_up] = fln
-        string = "%15.3e %4.2f %2d %2d %2d" % (time, 0.0, ncre, i_lo, i_up)
+        string = "%15.3e %4.2f %2d %2d %2d" % (time, 0.0, ncrb, i_lo, i_up)
         string = string + " " + str(p_all).strip("[").strip("]") + " " + str(
             f_all).strip("[").strip("]") + " " + str(q_all).strip("[").strip("]")
         dummyCRSfile.write("%s " % string.replace(
@@ -645,7 +645,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
 
 
 def crs_plot_main_fpq(parameter_names, parameter_values, plot_var, fcrs, qcrs, pcrs, field_max, time, location, **kwargs):
-    global first_run, got_q_tabs, e_small, p_min_fix, p_max_fix, ncre, cre_eff, i_plot, marker, par_plotted_src
+    global first_run, got_q_tabs, e_small, p_min_fix, p_max_fix, ncrb, cre_eff, i_plot, marker, par_plotted_src
 
     marker = kwargs.get("marker", "x")
     i_plot = kwargs.get("i_plot", 0)
@@ -668,27 +668,27 @@ def crs_plot_main_fpq(parameter_names, parameter_values, plot_var, fcrs, qcrs, p
         dummyCRSfile.close()
         p_fix = []
         edges = []
-        edges[0:ncre] = range(0, ncre + 1, 1)
-        p_fix[0:ncre] = zeros(ncre + 1)
-        log_width = (log10(p_max_fix / p_min_fix)) / (ncre - 2.0)
-        for i in range(0, ncre - 1):  # organize p_fix
+        edges[0:ncrb] = range(0, ncrb + 1, 1)
+        p_fix[0:ncrb] = zeros(ncrb + 1)
+        log_width = (log10(p_max_fix / p_min_fix)) / (ncrb - 2.0)
+        for i in range(0, ncrb - 1):  # organize p_fix
             p_fix[i + 1] = p_min_fix * 10.0**(log_width * edges[i])
             p_fix_ratio = 10.0 ** log_width
             p_fix[0] = (sqrt(p_fix[1] * p_fix[2])) / p_fix_ratio
-            p_fix[ncre] = (
-                sqrt(p_fix[ncre - 2] * p_fix[ncre - 1])) * p_fix_ratio
+            p_fix[ncrb] = (
+                sqrt(p_fix[ncrb - 2] * p_fix[ncrb - 1])) * p_fix_ratio
             p_fix = asfarray(p_fix)
 
     i_lo = 0
-    i_up = ncre
+    i_up = ncrb
     empty_cell = True
 
-    for i in range(ncre):
+    for i in range(ncrb):
         if fcrs[i] > 0.0:
             i_lo = i - 2
             empty_cell = False
             break
-    for i in range(ncre, 1, -1):
+    for i in range(ncrb, 1, -1):
         if fcrs[i] > 0.0:
             i_up = max(0, i + 1)
             break
@@ -707,7 +707,7 @@ def crs_plot_main_fpq(parameter_names, parameter_values, plot_var, fcrs, qcrs, p
 
     prtinfo("\033[44mTime = %6.2f |  i_lo = %2d, i_up = %2d %s" % (time, i_lo + i_cor if not empty_cell else 0,
             i_up if not empty_cell else 0, '(empty cell / failed to construct spectrum)' if empty_cell else ' '))
-    if (i_lo == ncre or i_up == 0):
+    if (i_lo == ncrb or i_up == 0):
         empty_cell = True
         return plot, empty_cell
 

@@ -382,7 +382,7 @@ contains
             this%coord(INV_CENTER, d)%r(:) = zero
          endwhere
 
-         ! Generally nobody should substract one cell coordinate from another in code solvers. One should use cell sizes instead.
+         ! Generally nobody should subtract one cell coordinate from another in code solvers. One should use cell sizes instead.
          ! The problem may arise when initial conditions are comparing coordinates to set something on the left or right side of some line.
          ! When the cell size is too small compared to the coordinates, such line cannot be properly calculated
          ! Note that since we force real kind=8, we can use a named constant instead of epsilon

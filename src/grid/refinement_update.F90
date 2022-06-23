@@ -83,7 +83,7 @@ contains
          call piernik_MPI_Allreduce(cnt(PROBLEM), pSUM)
       endif
 
-      ! Apply all Unified Refinement Criteria (everythinng that works locally, cg-wise)
+      ! Apply all Unified Refinement Criteria (everything that works locally, cg-wise)
       call ppp_main%start(urc_label, PPP_AMR)
       call urc_list%all_mark(leaves%first)
       call ppp_main%stop(urc_label, PPP_AMR)
@@ -414,7 +414,7 @@ contains
 
    end subroutine parents_prevent_derefinement_lev
 
-!> \brief PPPP-aware wrapper for update the refinement topology
+!> \brief PPP-aware wrapper for update the refinement topology
 
    subroutine update_refinement(act_count, refinement_fixup_only)
 
@@ -514,7 +514,7 @@ contains
 
             cgl => curl%first
             do while (associated(cgl))
-               if (any(cgl%cg%leafmap)) then
+               if (cgl%cg%has_leaves()) then
                   if (cgl%cg%flag%pending_blocks()) then
                      call refine_one_grid(curl, cgl)
                      if (present(act_count)) act_count = act_count + 1
@@ -761,7 +761,7 @@ contains
 
       integer :: b
 
-      if (.not. any(cgl%cg%leafmap)) then
+      if (.not. cgl%cg%has_leaves()) then
          call warn("[refinement_update:refine_one_grid] Attempting to refine a grid that is completely refined")
          return
       endif
@@ -859,7 +859,7 @@ contains
             call cg%flag%reset_blocks
             call cg%flag%clear
 
-            if (any(cg%leafmap)) then
+            if (cg%has_leaves()) then
                cg%prolong_xyz = OUTSIDE
                lleaf = -huge(1)
 
@@ -901,7 +901,7 @@ contains
                   enddo
                enddo
 
-               !find highest refinement level witin a "range" cells from the border of the leaf map
+               !find highest refinement level within a "range" cells from the border of the leaf map
 ! dirty check
 !!$            if (maxval(cg%wa) > 10) then
 !!$               do k = lbound(cg%wa, dim=3), ubound(cg%wa, dim=3)

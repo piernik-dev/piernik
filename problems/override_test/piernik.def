@@ -2,11 +2,11 @@
   Define only the minimum required by sanitizing tests
 #endif
 
+#if !defined GLOBAL_FR_SPEED
+#  define LOCAL_FR_SPEED
+#endif
+
 #if !defined NEUTRAL && !defined DUST
 #  define IONIZED
 #endif
 
-
-#if !defined GLOBAL_FR_SPEED
-#  define LOCAL_FR_SPEED
-#endif

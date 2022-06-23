@@ -492,7 +492,7 @@ contains
 
       if (frun .and. restarted_sim) then
          if (.not. recover_sgp()) call die("[gravity:source_terms_grav] cannot recover sgp")
-         ! Reproducibility of restarts strongly depends on avaability of multigrid history in the restart file.
+         ! Reproducibility of restarts strongly depends on avalability of multigrid history in the restart file.
          ! ToDo: simplify the management of various histories of potential.
       else
          call multigrid_solve_grav(iarr_all_sg)
