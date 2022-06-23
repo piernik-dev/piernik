@@ -2,7 +2,7 @@
 
 #define COSM_RAYS
 
-#define COSM_RAY_ELECTRONS
+#define CRESP
 
 #if !defined GLOBAL_FR_SPEED
 #  define LOCAL_FR_SPEED

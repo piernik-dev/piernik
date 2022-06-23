@@ -31,9 +31,9 @@
 #error COSM_RAYS is required for 1cell
 #endif /* COSM_RAYS */
 
-#ifndef COSM_RAY_ELECTRONS
-#error COSM_RAY_ELECTRONS is required for 1cell
-#endif /* COSM_RAY_ELECTRONS */
+#ifndef CRESP
+#error CRESP is required for 1cell
+#endif /* CRESP */
 
 module initproblem
 
@@ -202,20 +202,20 @@ contains
       use global,             only: skip_sweep, repeat_step
       use initcosmicrays,     only: iarr_crn, iarr_crs
       use user_hooks,         only: problem_customize_solution
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       use cresp_crspectrum,   only: cresp_get_scaled_init_spectrum
       use initcosmicrays,     only: iarr_cre_e, iarr_cre_n
       use initcrspectrum,     only: smallcree, cresp, cre_eff, use_cresp, adiab_active, fsynchr, crel, total_init_cree
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
       implicit none
 
       real                            :: cs_iso, decr
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       real                            :: e_tot
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
       class(component_fluid), pointer :: fl
       integer                         :: i, j, k, icr, ipm, jpm, kpm
 
@@ -270,7 +270,7 @@ contains
                   decr = amp_cr1
 
                   cg%u(iarr_crn(1), i, j, k) = cg%u(iarr_crn(1), i, j, k) + amp_cr1 * decr
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
                   if (use_cresp) then
                      e_tot = cre_eff * decr
                      if (e_tot > smallcree) then
@@ -280,7 +280,7 @@ contains
                         cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
                      endif
                   endif
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
                enddo
             enddo
          enddo
