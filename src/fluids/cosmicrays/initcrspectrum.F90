@@ -171,7 +171,7 @@ contains
       use cr_data,         only: cr_table, icr_E
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: printinfo, warn, msg, die, nh
-      use diagnostics,     only: my_allocate_with_index
+      use diagnostics,     only: my_allocate_with_index, my_allocate, ma1d
       use global,          only: disallow_CRnegatives
       use func,            only: emag
       use initcosmicrays,  only: ncrb, ncr2b, ncrn, nspc, ncrtot, K_cr_paral, K_cr_perp, K_crs_paral, K_crs_perp, use_smallecr
@@ -192,6 +192,9 @@ contains
       &                         q_eps, NR_smap_file, cresp_substep, n_substeps_max, allow_unnatural_transfer
 
       call allocate_spectral_CRspecies_arrays(nspc, ncrb)
+      ma1d = [nspc]
+      call my_allocate(p_br_def, ma1d)
+      call my_allocate(q_br_def, ma1d)
 
 ! Default values
       use_cresp         = .true.
@@ -468,8 +471,8 @@ contains
       call my_allocate_with_index(mom_mid_cre_fix,  ncrb, I_ONE )
       call my_allocate_with_index(gamma_beta_c_fix, ncrb, I_ZERO)
 
-      call my_allocate(K_cresp_paral,    ncr2b, I_ONE)
-      call my_allocate(K_cresp_perp,     ncr2b, I_ONE)
+      call my_allocate_with_index(K_cresp_paral,    ncr2b, I_ONE)
+      call my_allocate_with_index(K_cresp_perp,     ncr2b, I_ONE)
 
       cresp_all_edges = [(i, i = I_ZERO, ncrb)]
       cresp_all_bins  = [(i, i = I_ONE,  ncrb)]
@@ -567,11 +570,15 @@ contains
               write (msg,"(A,I2,A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_up was set, but should be equal to one of p_fix (component ", j,"). Assuming p_br_init_up =", p_fix(i),"."
               p_br_init(HI, j) = p_fix(i)
               if (master) call warn(msg)
+
+              fsynchr(j) =  (4. / 3. ) * sigma_T / (me * clight) !TODO FIXME please !!! (I only work for electrons :( )
+              write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr(j)
+              if (master) call printinfo(msg)
            endif
         endif
 
-        K_cresp_paral(1:nspc*ncrb) = K_cr_paral(cr_table(icr_E)) * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow
-        K_cresp_perp(1:nspc*ncrb)  = K_cr_perp(cr_table(icr_E))  * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow
+        K_cresp_paral(1:nspc*ncrb) = K_cr_paral(cr_table(icr_E)) * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow !TODO FIXME please !!! improper values
+        K_cresp_perp(1:nspc*ncrb)  = K_cr_perp(cr_table(icr_E))  * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow !TODO FIXME please !!! improper values
 
       end do
 
@@ -587,13 +594,8 @@ contains
       K_crs_paral(ncrn+1:ncrtot) = K_cresp_paral(1:ncr2b)
       K_crs_perp (ncrn+1:ncrtot) = K_cresp_perp (1:ncr2b)
 
-      fsynchr =  (4. / 3. ) * sigma_T / (me * clight)
-      write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr
-
       def_dtadiab = cfl_cre * half * three * logten * w
       def_dtsynch = cfl_cre * half * w
-
-      if (master) call printinfo(msg)
 
       u_b_max = maxval(fsynchr(:)) * emag(b_max_db, 0., 0.)   !< initializes factor for comparing u_b with u_b_max
 
@@ -828,6 +830,7 @@ contains
       call my_allocate(cre_eff, ma1d)
       call my_allocate(K_cre_pow, ma1d)
       call my_allocate(p_diff, ma1d)
+      call my_allocate(fsynchr, ma1d)
 
       ma2d = [nsp, nb]
       call my_allocate(K_cresp_paral, ma2d)
