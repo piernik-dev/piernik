@@ -86,7 +86,6 @@ def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, dr
                 nd, ndc = ndgg, ndgg
                 loff, loc = lofg, lofg
         else:
-            print('offsety: ', loff, loc, roff, roc)
             print('Comparison for levels: %s and %s not available due to unmet resolution constraints. Dimensions %s and %s do not match.' % (level, cmprl[levnum], nd, ndc))
             return False, [], []
 
