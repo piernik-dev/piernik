@@ -26,6 +26,10 @@ centertick_length = 6.
 # scaletypes
 fineqv = 1.0
 
+#units
+#dimensionless_print = b'dimensionless'
+dimensionless_print = ''
+
 # colorbars
 cbar_hist2d_shift = 0.7
 cbar_plot2d_shift = 0.1

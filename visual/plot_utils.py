@@ -188,10 +188,6 @@ def list3_other(l3, r3):
     return ans
 
 
-def labelx():
-    return lambda var: '$' + str(var)[2:-1].replace('**', '^') + '$'
-
-
 def labellog(sctype, symmin, cmpr0):
     logname = ''
     compare = ''
@@ -345,6 +341,16 @@ def check_1D2Ddefaults(axc, n_d, double_cbar):
     if double_cbar and (figmode == 1 or figmode == 2):
         figmode = figmode + 3
     return draw1D, draw2D, figmode
+
+
+def manage_units(var):
+    if var == b'dimensionless' and ps.dimensionless_print == '':
+        return ps.dimensionless_print
+    return " [%s]" % labelx()(var)
+
+
+def labelx():
+    return lambda var: '$' + str(var)[2:-1].replace('**', '^') + '$'
 
 
 def convert_units(infile, toplot):
