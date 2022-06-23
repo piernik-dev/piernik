@@ -86,7 +86,7 @@ def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
 
 
 def draw_plotcomponent(ax, refis, field, parts, equip2d, ncut, n1, n2):
-    smin, smax, zoom, ulen, drawg, gcolor, center = equip2d
+    smin, smax, zoom, ulen, drawg, gcolor, center, sctype = equip2d
     ag, ah = [], []
     if field[0] or drawg:
         if field[0]:
@@ -101,7 +101,7 @@ def draw_plotcomponent(ax, refis, field, parts, equip2d, ncut, n1, n2):
                     if drawg:
                         ax.plot([ble[n1], ble[n1], bre[n1], bre[n1], ble[n1]], [ble[n2], bre[n2], bre[n2], ble[n2], ble[n2]], '-', linewidth=ps.grid_linewidth, alpha=0.1 * float(level + 1), color=gcolor[level], zorder=4)
     if parts[0]:
-        pxyz, pm, nbins, pcolor, psize, player = parts[1:-1]
+        pxyz, pm, nbins, pcolor, psize, player, pstype = parts[1:-1]
         if player[0] and player[ncut + 1] != '0':
             pmask = np.abs(pxyz[ncut] - center[ncut]) <= float(player[ncut + 1])
             pn1, pn2 = pxyz[n1][pmask], pxyz[n2][pmask]
@@ -111,7 +111,7 @@ def draw_plotcomponent(ax, refis, field, parts, equip2d, ncut, n1, n2):
                 pmm = pm
         else:
             pn1, pn2, pmm = pxyz[n1], pxyz[n2], pm
-        ax, ah = draw_particles(ax, pn1, pn2, pmm, nbins, [smin[n1], smax[n1], smin[n2], smax[n2]], field[0], pcolor, psize)
+        ax, ah = draw_particles(ax, pn1, pn2, pmm, nbins, [smin[n1], smax[n1], smin[n2], smax[n2]], field[0], pcolor, psize, pstype)
     ax = plot_axes(ax, ulen, "xyz"[n1], zoom[1][n1], zoom[2][n1], "xyz"[n2], zoom[1][n2], zoom[2][n2])
     ax.set_xticks([center[n1]], minor=True)
     ax.set_yticks([center[n2]], minor=True)
@@ -120,9 +120,13 @@ def draw_plotcomponent(ax, refis, field, parts, equip2d, ncut, n1, n2):
     return ax, ag, ah
 
 
-def draw_particles(ax, p1, p2, pm, nbins, ranges, drawd, pcolor, psize):
+def draw_particles(ax, p1, p2, pm, nbins, ranges, drawd, pcolor, psize, pstype):
     if nbins > 1:
-        ah = ax.hist2d(p1, p2, nbins, weights=pm, range=[ranges[0:2], ranges[2:4]], norm=matplotlib.colors.LogNorm(), cmap=pcolor, alpha=ps.hist2d_alpha)
+        if pstype[0]:
+            norm = matplotlib.colors.LogNorm(vmin=pstype[1], vmax=pstype[2])
+        else:
+            norm = matplotlib.colors.Normalize(vmin=pstype[1], vmax=pstype[2])
+        ah = ax.hist2d(p1, p2, nbins, weights=pm, range=[ranges[0:2], ranges[2:4]], norm=norm, cmap=pcolor, alpha=ps.hist2d_alpha)
         if not drawd:
             ax.set_facecolor(ps.hist2d_facecolor)
     else:
@@ -167,7 +171,7 @@ def add_cbar(figmode, cbar_mode, grid, ab, ic, clab):
 
 
 def plotcompose(pthfilen, var, output, options):
-    axc, umin, umax, cmap, pcolor, player, psize, sctype, cu, center, cmpr, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl = options
+    axc, umin, umax, cmap, pcolor, player, psize, sctype, pstype, cu, center, cmpr, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl = options
     labh = ps.particles_label
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
@@ -212,7 +216,7 @@ def plotcompose(pthfilen, var, output, options):
 
     if drawp:
         pinfile, pxyz, pm = rd.collect_particles(h5f, drawh, center, player, uupd, usc, plotlevels, gridlist)
-        parts = pinfile, pxyz, pm, nbins, pcolor, psize, player, labh
+        parts = pinfile, pxyz, pm, nbins, pcolor, psize, player, pstype, labh
         drawh = drawh and pinfile
 
     draw1D, draw2D, figmode = pu.check_1D2Ddefaults(axc, n_d, drawd and drawh)
@@ -243,7 +247,7 @@ def plotcompose(pthfilen, var, output, options):
     cbar_mode = pu.colorbar_mode(drawd, drawh, figmode)
 
     equip1d = smin, smax, zoom, ulen, umin, umax, linstyl, output, timep, sctype
-    equip2d = smin, smax, zoom, ulen, drawg, gcolor, center
+    equip2d = smin, smax, zoom, ulen, drawg, gcolor, center, sctype
 
     if draw1D[0]:
         plot1d(refis, field, parts, equip1d, 0, 1, 2)

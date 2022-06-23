@@ -43,3 +43,4 @@ particles_size = 0
 hist2d_colormap = 'viridis'
 hist2d_alpha = 1.0
 hist2d_facecolor = 'xkcd:black'
+hist2d_sctype = True, 'auto', 'auto'

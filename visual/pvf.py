@@ -12,6 +12,7 @@ exten = ps.f_exten
 plotdir = ps.f_plotdir
 cmap = ps.plot2d_colormap
 sctype = ps.plot2d_sctype
+pstype = ps.hist2d_sctype
 psize = ps.particles_size
 pcolor = 'default'
 gcolor = ''
@@ -42,38 +43,39 @@ def print_usage():
     print('Usage for particles:       ./pvf.py <HDF5 files> -p [options]')
     print('')
     print('Options:')
-    print(' -h, \t\t\t--help \t\t\t\tprint this help')
-    print(' -a CUT1[,CUT2], \t--axes CUT1[,CUT2] \t\tselect plot cuts from the following: 1x, 1y, 1z, xy, xz, yz, 1D, 2D [default: all 2D cuts, otherwise all 1D]')
-    print('\t\t\t--amr\t\t\t\tcollect all refinement levels of grid to plot [default: True while AMR refinement level structure exists]')
-    print(' -b BINS, \t\t--bins BINS \t\t\tmake a 2D histogram plot using BINS number instead of scattering particles [default: 1, which leads to scattering]')
-    print(' -c CX,CY,CZ, \t\t--center CX,CY,CZ \t\tplot cuts across given point coordinates CX, CY, CZ [default: computed domain center]')
-    print('\t\t\t--compare-datafield VAR \tcompare chosen datafields to another VAR')
-    print('\t\t\t--compare-file FILE \t\tcompare chosen datafields to another FILE')
+    print(' -h, \t\t\t--help \t\t\t\t\tprint this help')
+    print(' -a CUT1[,CUT2], \t--axes CUT1[,CUT2] \t\t\tselect plot cuts from the following: 1x, 1y, 1z, xy, xz, yz, 1D, 2D [default: all 2D cuts, otherwise all 1D]')
+    print('\t\t\t--amr\t\t\t\t\tcollect all refinement levels of grid to plot [default: True while AMR refinement level structure exists]')
+    print(' -b BINS, \t\t--bins BINS \t\t\t\tmake a 2D histogram plot using BINS number instead of scattering particles [default: 1, which leads to scattering]')
+    print(' -c CX,CY,CZ, \t\t--center CX,CY,CZ \t\t\tplot cuts across given point coordinates CX, CY, CZ [default: computed domain center]')
+    print('\t\t\t--compare-datafield VAR \t\tcompare chosen datafields to another VAR')
+    print('\t\t\t--compare-file FILE \t\t\tcompare chosen datafields to another FILE')
     print('\t\t\t--compare-level LEVEL1[,LEVEL2] \tspecify different grid levels to compare accross files [default: the same levels]')
-    print('\t\t\t--compare-type TYPE \t\toperation executed as a comparison: 1 - subtraction, 2 - division, 3 - relative error [default: %s]' % ps.plot2d_comparetype)
-    print(' -d VAR[,VAR2], \t--dataset VAR[,VAR2] \t\tspecify one or more datafield(s) to plot [default: print available datafields; all or _all_ to plot all available datafields]')
-    print(' -D COLORMAP, \t\t--colormap COLORMAP \t\tuse COLORMAP palette [default: %s]' % ps.plot2d_colormap)
-    print(' -e EXTENSION, \t\t--extension EXTENSION \t\tsave plot in file using filename extension EXTENSION [default: %s]' % ps.f_exten[1:])
-    print(' -g COLOR, \t\t--gridcolor COLOR \t\tshow grids in color COLOR; possible list of colors for different grid refinement levels [default: none]')
-    print('\t\t\t--grid-list GRID1[,GRID2] \tplot only selected numbered grid blocks [default: all existing blocks]')
-    print(' -l LEVEL1[,LEVEL2], \t--level LEVEL1[,LEVEL2] \tplot only requested grid levels [default: 0 for --uniform, all for --amr]')
-    print('\t\t\t--linestyle STYLELIST \t\tline styles list for different refinement levels in 1D plots [default: %s]' % ps.plot1d_linestyle)
-    print(' -o OUTPUT, \t\t--output OUTPUT \t\tdump plot files into OUTPUT directory [default: %s]' % ps.f_plotdir)
-    print(' -p,\t\t\t--particles\t\t\tscatter particles onto slices [default: switched-off]')
-    print(' -P,\t\t\t--particle-color\t\tuse color for particles scattering or colormap for particles histogram plot [default: %s or %s]' % (ps.particles_color, ps.hist2d_colormap))
-    print(' -r W1[,W2,W3],\t\t--particle-slice W1[,W2,W3]\tread particles from layers +/-W1 around center; uses different widths for different projections if W1,W2,W3 requested [default: all particles]')
-    print(' -R W1[,W2,W3],\t\t--particle-space W1[,W2,W3]\tread particles from square +/-W1 around center or cuboid if W1,W2,W3 requested [default: no limits]')
-    print(' -s,\t\t\t--particle-sizes\t\tmarker sizes for scattering particles onto slices [default: switched-off]')
-    print(' -t SCALETYPE, \t\t--scale SCALETYPE \t\tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: %s]' % ps.plot2d_sctype)
-    print(' -u UNIT, \t\t--units UNIT \t\t\tscale plot axes with UNIT [default: dataset units]')
-    print('\t\t\t--uniform\t\t\treconstruct uniform grid to plot [default: True while no AMR refinement level structure exists]')
-    print(' -z ZMIN,ZMAX, \t\t--zlim ZMIN,ZMAX \t\tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]')
+    print('\t\t\t--compare-type TYPE \t\t\toperation executed as a comparison: 1 - subtraction, 2 - division, 3 - relative error [default: %s]' % ps.plot2d_comparetype)
+    print(' -d VAR[,VAR2], \t--dataset VAR[,VAR2] \t\t\tspecify one or more datafield(s) to plot [default: print available datafields; all or _all_ to plot all available datafields]')
+    print(' -D COLORMAP, \t\t--colormap COLORMAP \t\t\tuse COLORMAP palette [default: %s]' % ps.plot2d_colormap)
+    print(' -e EXTENSION, \t\t--extension EXTENSION \t\t\tsave plot in file using filename extension EXTENSION [default: %s]' % ps.f_exten[1:])
+    print(' -g COLOR, \t\t--gridcolor COLOR \t\t\tshow grids in color COLOR; possible list of colors for different grid refinement levels [default: none]')
+    print('\t\t\t--grid-list GRID1[,GRID2] \t\tplot only selected numbered grid blocks [default: all existing blocks]')
+    print(' -l LEVEL1[,LEVEL2], \t--level LEVEL1[,LEVEL2] \t\tplot only requested grid levels [default: 0 for --uniform, all for --amr]')
+    print('\t\t\t--linestyle STYLELIST \t\t\tline styles list for different refinement levels in 1D plots [default: %s]' % ps.plot1d_linestyle)
+    print(' -o OUTPUT, \t\t--output OUTPUT \t\t\tdump plot files into OUTPUT directory [default: %s]' % ps.f_plotdir)
+    print(' -p,\t\t\t--particles\t\t\t\tscatter particles onto slices [default: switched-off]')
+    print(' -P,\t\t\t--particle-color\t\t\tuse color for particles scattering or colormap for particles histogram plot [default: %s or %s]' % (ps.particles_color, ps.hist2d_colormap))
+    print(' -r W1[,W2,W3],\t\t--particle-slice W1[,W2,W3]\t\tread particles from layers +/-W1 around center; uses different widths for different projections if W1,W2,W3 requested [default: all particles]')
+    print(' -R W1[,W2,W3],\t\t--particle-space W1[,W2,W3]\t\tread particles from square +/-W1 around center or cuboid if W1,W2,W3 requested [default: no limits]')
+    print(' -s,\t\t\t--particle-sizes\t\t\tmarker sizes for scattering particles onto slices [default: switched-off]')
+    print(' -T LOG[,MIN,MAX]\t--particle-h2d-scale LOG[,MIN,MAX]\tscaling particle 2D histogram [default: %s %s %s]' % ps.hist2d_sctype)
+    print(' -t SCALETYPE, \t\t--scale SCALETYPE \t\t\tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: %s]' % ps.plot2d_sctype)
+    print(' -u UNIT, \t\t--units UNIT \t\t\t\tscale plot axes with UNIT [default: dataset units]')
+    print('\t\t\t--uniform\t\t\t\treconstruct uniform grid to plot [default: True while no AMR refinement level structure exists]')
+    print(' -z ZMIN,ZMAX, \t\t--zlim ZMIN,ZMAX \t\t\tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]')
     print('\t\t\t--zoom XL,XR,YL,YR,ZL,ZR | LEVEL \tset plot axes ranges or take ranges from LEVEL [default: domain edges | 0]')
 
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:g:hl:o:pP:r:R:s:t:u:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "compare-datafield=", "compare-file=", "compare-level=", "compare-type=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "linestyle=", "output=", "particles", "particle-color=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "uniform", "units=", "zlim=", "zoom="])
+        opts, args = getopt.getopt(argv, "a:b:c:d:D:e:g:hl:o:pP:r:R:s:t:T:u:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "compare-datafield=", "compare-file=", "compare-level=", "compare-type=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "linestyle=", "output=", "particles", "particle-color=", "particle-h2d-scale=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "uniform", "units=", "zlim=", "zoom="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -183,6 +185,27 @@ def cli_params(argv):
             global psize
             psize = float(arg)
 
+        elif recognize_opt(opt, ("-T", "--particle-h2d-scale")):
+            global pstype
+            aux = arg.split(',')
+            print(len(aux))
+            if len(aux) > 2:
+                print('sa 3 argumenty')
+                pstype = aux[0], aux[1], aux[2]
+            elif len(aux) > 1:
+                print('sa 2 argumenty')
+                pstype = aux[0], aux[1], pstype[2]
+            elif len(aux) > 0:
+                print('jest jeden argument')
+                pstype = aux[0], pstype[1], pstype[2]
+            l1 = aux[0].lower() in ("yes", "true", "t", "1")
+            l2, l3 = pstype[1:3]
+            if l2 == 'auto':
+                l2 = None
+            if l3 == 'auto':
+                l3 = None
+            pstype = l1, l2, l3
+
         elif recognize_opt(opt, ("-t", "--scale")):
             global sctype
             sctype = str(arg)
@@ -277,7 +300,7 @@ axc = [p1x, p1y, p1z], [p2yz, p2xz, p2xy]
 
 compare = cmpr, cmprf, cmprd, cmprl, cmprt, False
 
-options = axc, zmin, zmax, cmap, pcolor, player, psize, sctype, cu, center, compare, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl
+options = axc, zmin, zmax, cmap, pcolor, player, psize, sctype, pstype, cu, center, compare, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 
