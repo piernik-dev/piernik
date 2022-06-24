@@ -78,9 +78,9 @@ def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, dr
                 dlf = pu.list3_div(pu.list3_subtraction(redg, ledg), nd)
                 dlc = pu.list3_div(pu.list3_subtraction(rec, lec), ndc)
                 redg = pu.list3_add(redg, pu.list3_mult(pu.list3_subtraction(rofg, roff), dlf))
-                ledg = pu.list3_add(ledg, pu.list3_mult(pu.list3_subtraction(loff, lofg), dlf))
+                ledg = pu.list3_add(ledg, pu.list3_mult(pu.list3_subtraction(lofg, loff), dlf))
                 rec = pu.list3_add(rec, pu.list3_mult(pu.list3_subtraction(rofg, roc), dlc))
-                lec = pu.list3_add(lec, pu.list3_mult(pu.list3_subtraction(loc, lofg), dlc))
+                lec = pu.list3_add(lec, pu.list3_mult(pu.list3_subtraction(lofg, loc), dlc))
 
                 ndgg = pu.list3_subtraction(rofg, lofg)
                 nd, ndc = ndgg, ndgg
