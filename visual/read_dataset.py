@@ -56,6 +56,9 @@ def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, dr
         return False, [], []
     cmpr0, cmprb, h5c, cmprd, cmprl, cmprt, diff_struct = cmpr
     if diff_struct:
+        if len(cmprl) <= levnum:
+            print('Level to compare not found. Consider more detailed requirement for level comparison.')
+            return False, [], []
         ndc, loc, roc, lec, rec, lmc = frame_level(h5c, cmprl[levnum], range(int(h5c['data'].attrs['cg_count'])))
         if not lmc:
             return False, [], []
