@@ -168,7 +168,7 @@ contains
    subroutine init_cresp
 
       use constants,       only: cbuff_len, I_ZERO, I_ONE, zero, one, three, ten, half, logten, LO, HI
-      use cr_data,         only: cr_table, cr_spectral
+      use cr_data,         only: cr_table, cr_spectral, cr_mass
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index, my_allocate, ma1d
@@ -176,7 +176,7 @@ contains
       use func,            only: emag
       use initcosmicrays,  only: ncrb, ncr2b, ncrn, nspc, K_cr_paral, K_cr_perp, K_crs_paral, K_crs_perp, use_smallecr
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
-      use units,           only: clight, me, sigma_T
+      use units,           only: clight, me, sigma_T, amu
 
       implicit none
 
@@ -570,7 +570,8 @@ contains
               if (master) call warn(msg)
            endif
         endif
-        fsynchr(j) =  (4. / 3. ) * sigma_T / (me * clight) !TODO FIXME please !!! (I only work for electrons :( )
+        fsynchr(j) =  (4. / 3. ) * sigma_T / (cr_mass(i_spc(j)) * amu * clight)
+
         write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr(j)
         if (master) call printinfo(msg)
 
@@ -582,7 +583,7 @@ contains
 
         K_crs_paral(ncrn + 1 + (j - 1) * ncr2b : ncrn + ncr2b * j) = K_cresp_paral(j, 1:ncr2b)
         K_crs_perp (ncrn + 1 + (j - 1) * ncr2b : ncrn + ncr2b * j) = K_cresp_perp (j, 1:ncr2b)
-      end do
+      enddo
 
       call init_cresp_types
 
