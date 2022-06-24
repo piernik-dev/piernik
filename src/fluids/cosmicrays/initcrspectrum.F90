@@ -62,8 +62,8 @@ module initcrspectrum
    real            :: q_big                       !< maximal amplitude of q
    real, dimension(:), allocatable :: cfl_cre                     !< CFL parameter  for CR spectrally resolved components! TODO FIXME RENAME ME PLEASE!!!!
    real, dimension(:), allocatable :: cre_eff                     !< fraction of energy passed to CR spectrally resolved components by nucleons (mainly protons) ! TODO wat do with cr_eff now?! TODO FIXME RENAME ME PLEASE!!!!
-   real, dimension(:), allocatable :: K_cresp_paral !< array containing parallel diffusion coefficients of all CR CRESP components (number density and energy density)
-   real, dimension(:), allocatable :: K_cresp_perp  !< array containing perpendicular diffusion coefficients of all CR CRESP components (number density and energy density)
+   real, dimension(:,:), allocatable :: K_cresp_paral !< array containing parallel diffusion coefficients of all CR CRESP components (number density and energy density)
+   real, dimension(:,:), allocatable :: K_cresp_perp  !< array containing perpendicular diffusion coefficients of all CR CRESP components (number density and energy density)
    real, dimension(:), allocatable :: K_cre_pow   !< exponent for power law-like diffusion-energy dependence ! TODO FIXME RENAME ME PLEASE!!!!
    real, dimension(:), allocatable :: p_diff                      !< momentum to which diffusion coefficients refer to
    integer(kind=4) :: expan_order                 !< 1,2,3 order of Taylor expansion for p_update (cresp_crspectrum)
@@ -168,19 +168,20 @@ contains
    subroutine init_cresp
 
       use constants,       only: cbuff_len, I_ZERO, I_ONE, zero, one, three, ten, half, logten, LO, HI
-      use cr_data,         only: cr_table, icr_E
+      use cr_data,         only: cr_table, cr_spectral
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index, my_allocate, ma1d
       use global,          only: disallow_CRnegatives
       use func,            only: emag
-      use initcosmicrays,  only: ncrb, ncr2b, ncrn, nspc, ncrtot, K_cr_paral, K_cr_perp, K_crs_paral, K_crs_perp, use_smallecr
+      use initcosmicrays,  only: ncrb, ncr2b, ncrn, nspc, K_cr_paral, K_cr_perp, K_crs_paral, K_crs_perp, use_smallecr
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use units,           only: clight, me, sigma_T
 
       implicit none
 
       integer(kind=4) :: i, j
+      integer, dimension(nspc)   :: i_spc
       real, dimension(:), allocatable ::  p_br_def, q_br_def
 
       namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum, p_min_fix, p_max_fix, &
@@ -195,7 +196,7 @@ contains
       ma1d = [nspc]
       call my_allocate(p_br_def, ma1d)
       call my_allocate(q_br_def, ma1d)
-
+      i_spc = pack(cr_table, cr_spectral)
 ! Default values
       use_cresp         = .true.
       use_cresp_evol    = .true.
@@ -471,9 +472,6 @@ contains
       call my_allocate_with_index(mom_mid_cre_fix,  ncrb, I_ONE )
       call my_allocate_with_index(gamma_beta_c_fix, ncrb, I_ZERO)
 
-      call my_allocate_with_index(K_cresp_paral,    ncr2b, I_ONE)
-      call my_allocate_with_index(K_cresp_perp,     ncr2b, I_ONE)
-
       cresp_all_edges = [(i, i = I_ZERO, ncrb)]
       cresp_all_bins  = [(i, i = I_ONE,  ncrb)]
 
@@ -570,16 +568,20 @@ contains
               write (msg,"(A,I2,A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init_up was set, but should be equal to one of p_fix (component ", j,"). Assuming p_br_init_up =", p_fix(i),"."
               p_br_init(HI, j) = p_fix(i)
               if (master) call warn(msg)
-
-              fsynchr(j) =  (4. / 3. ) * sigma_T / (me * clight) !TODO FIXME please !!! (I only work for electrons :( )
-              write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr(j)
-              if (master) call printinfo(msg)
            endif
         endif
+        fsynchr(j) =  (4. / 3. ) * sigma_T / (me * clight) !TODO FIXME please !!! (I only work for electrons :( )
+        write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr(j)
+        if (master) call printinfo(msg)
 
-        K_cresp_paral(1:nspc*ncrb) = K_cr_paral(cr_table(icr_E)) * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow !TODO FIXME please !!! improper values
-        K_cresp_perp(1:nspc*ncrb)  = K_cr_perp(cr_table(icr_E))  * (p_mid_fix(1:ncrb) / p_diff)**K_cre_pow !TODO FIXME please !!! improper values
+        K_cresp_paral(j, 1:ncrb) = K_cr_paral(i_spc(j)) * (p_mid_fix(1:ncrb) / p_diff(j))**K_cre_pow(j)
+        K_cresp_perp(j,  1:ncrb) = K_cr_perp(i_spc(j))  * (p_mid_fix(1:ncrb) / p_diff(j))**K_cre_pow(j)
 
+        K_cresp_paral(j, ncrb+1:ncr2b) = K_cresp_paral(j, 1:ncrb)
+        K_cresp_perp (j, ncrb+1:ncr2b) = K_cresp_perp (j, 1:ncrb)
+
+        K_crs_paral(ncrn + 1 + (j - 1) * ncr2b : ncrn + ncr2b * j) = K_cresp_paral(j, 1:ncr2b)
+        K_crs_perp (ncrn + 1 + (j - 1) * ncr2b : ncrn + ncr2b * j) = K_cresp_perp (j, 1:ncr2b)
       end do
 
       call init_cresp_types
@@ -589,11 +591,6 @@ contains
       write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cresp_perp = ",  K_cresp_perp(1:ncrb)  ; if (master) call printinfo(msg)
 #endif /* VERBOSE */
 
-      K_cresp_paral(ncrb+1:ncr2b) = K_cresp_paral(1:ncrb)
-      K_cresp_perp (ncrb+1:ncr2b) = K_cresp_perp (1:ncrb)
-      K_crs_paral(ncrn+1:ncrtot) = K_cresp_paral(1:ncr2b)
-      K_crs_perp (ncrn+1:ncrtot) = K_cresp_perp (1:ncr2b)
-
       def_dtadiab = cfl_cre * half * three * logten * w
       def_dtsynch = cfl_cre * half * w
 
@@ -601,7 +598,7 @@ contains
 
       write (msg, "(A,F10.4,A,ES12.5)") "[initcrspectrum:init_cresp] Maximal B_tot =",b_max_db, "mGs, u_b_max = ", u_b_max
       if (master)  call warn(msg)
-      write (msg, "(A,ES12.5,A,ES15.8,A,ES15.8)") "[initcrspectrum:init_cresp] dt_synch(p_max_fix = ",p_max_fix,", u_b_max = ",u_b_max,") = ", def_dtsynch / (p_max_fix* u_b_max)
+      write (msg, "(A,ES12.5,A,ES15.8,A,ES15.8)") "[initcrspectrum:init_cresp] dt_synch(p_max_fix = ",p_max_fix,", u_b_max = ",u_b_max,") = ", def_dtsynch / (p_max_fix* u_b_max)   ! TODO FIXME - I am not working properly for multiple spectral CR species!
       if (master)  call warn(msg)
 
       if (cresp_substep) then
@@ -625,6 +622,8 @@ contains
       if ( (minval(q_init(:) - three) < eps) .and. any(e_small_approx_p == I_ONE)) then
          call warn("[initcrspectrum:init_cresp] Initial parameters: q_init < 3.0 and approximation of outer momenta is on, approximation of outer momenta with hard energy spectrum might not work.")
       endif
+
+      ! TODO (OPTIONAL) make a clenaup of redundant arrays after initialization
 
    end subroutine init_cresp
 
@@ -832,7 +831,7 @@ contains
       call my_allocate(p_diff, ma1d)
       call my_allocate(fsynchr, ma1d)
 
-      ma2d = [nsp, nb]
+      ma2d = [nsp, nb * 2]
       call my_allocate(K_cresp_paral, ma2d)
       call my_allocate(K_cresp_perp, ma2d)
 
