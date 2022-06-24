@@ -168,7 +168,7 @@ contains
    subroutine init_cresp
 
       use constants,       only: cbuff_len, I_ZERO, I_ONE, zero, one, three, ten, half, logten, LO, HI
-      use cr_data,         only: cr_table, cr_spectral, cr_mass
+      use cr_data,         only: cr_table, cr_spectral, cr_mass, cr_sigma_N, cr_names
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index, my_allocate, ma1d
@@ -176,7 +176,7 @@ contains
       use func,            only: emag
       use initcosmicrays,  only: ncrb, ncr2b, ncrn, nspc, K_cr_paral, K_cr_perp, K_crs_paral, K_crs_perp, use_smallecr
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
-      use units,           only: clight, me, sigma_T, amu
+      use units,           only: clight, me, amu
 
       implicit none
 
@@ -570,9 +570,9 @@ contains
               if (master) call warn(msg)
            endif
         endif
-        fsynchr(j) =  (4. / 3. ) * sigma_T / (cr_mass(i_spc(j)) * amu * clight)
+        fsynchr(j) =  (4. / 3. ) * cr_sigma_N(i_spc(j)) / (cr_mass(i_spc(j)) * amu * clight)
 
-        write (msg, *) "[initcrspectrum:init_cresp] 4/3 * sigma_T / ( me * c ) = ", fsynchr(j)
+        write (msg, *) "[initcrspectrum:init_cresp] CR ", cr_names(i_spc(j)), ": 4/3 * sigma_N / ( m * c ) = ", fsynchr(j)
         if (master) call printinfo(msg)
 
         K_cresp_paral(j, 1:ncrb) = K_cr_paral(i_spc(j)) * (p_mid_fix(1:ncrb) / p_diff(j))**K_cre_pow(j)
