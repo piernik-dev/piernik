@@ -85,8 +85,10 @@ module cr_data
    real,                      allocatable, dimension(:,:)  :: cr_sigma           !< table of cross sections for spallation
    real,                      allocatable, dimension(:)    :: cr_tau             !< table of decay half live times
    real,                      allocatable, dimension(:)    :: cr_primary         !< table of initial source abundances
+   real,                      allocatable, dimension(:)    :: cr_Z               !< table of atomic numbers
    logical,                   allocatable, dimension(:)    :: cr_spectral        !< table of logicals about energy spectral treatment
    logical,                   allocatable, dimension(:)    :: cr_gpess           !< table of essentiality for grad_pcr calculation
+!<====Mass number and atomic number of nuclei species====>
 
    real, parameter :: m_H1   = 1.
    real, parameter :: m_Li7  = 7.
@@ -95,6 +97,14 @@ module cr_data
    real, parameter :: m_C12  = 12.
    real, parameter :: m_N14  = 14.
    real, parameter :: m_O16  = 16.
+
+   real, parameter :: Z_H1   = 1.
+   real, parameter :: Z_Li7  = 3.
+   real, parameter :: Z_Be9  = 4.
+   real, parameter :: Z_Be10 = 4.
+   real, parameter :: Z_C12  = 6.
+   real, parameter :: Z_N14  = 7.
+   real, parameter :: Z_O16  = 8.
 
 !<====Cross sections for spallation from Garcia-Munoz 1987 (see also Longair)====>
 
@@ -234,14 +244,15 @@ contains
       integer                                    :: i, icr, jcr
       character(len=specieslen), dimension(nicr) :: eCRSP_names
       logical,                   dimension(nicr) :: eCRSP_ess, eCRSP_spec
-      real,                      dimension(nicr) :: eCRSP_mass
+      real,                      dimension(nicr) :: eCRSP_mass, eCRSP_Z
 
       eCRSP_names(1:nicr) = ['e-  ', 'p+  ', 'C12 ', 'Be9 ', 'Be10', 'N14 ', 'O16 ', 'Li7 ']
       eCRSP_mass (1:nicr) = [me/mp,  m_H1,   m_C12,   m_Be9, m_Be10, m_N14,  m_O16,  m_Li7 ]
+      eCRSP_Z    (1:nicr) = [   0.,  Z_H1,   Z_C12,   Z_Be9, Z_Be10, Z_N14,  Z_O16,  Z_Li7 ]
       eCRSP_ess  (1:nicr) = [eE(ESS) , eH1(ESS) , eC12(ESS) , eBe9(ESS) , eBe10(ESS) , eN14(ESS) , eO16(ESS) , eLi7(ESS) ]
       eCRSP_spec (1:nicr) = [eE(SPEC), eH1(SPEC), eC12(SPEC), eBe9(SPEC), eBe10(SPEC), eN14(SPEC), eO16(SPEC), eLi7(SPEC)]
 
-      allocate(cr_names(ncrsp), cr_table(nicr), cr_index(nicr), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp), cr_mass(ncrsp), cr_spectral(ncrsp), cr_gpess(ncrsp))
+      allocate(cr_names(ncrsp), cr_table(nicr), cr_index(nicr), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp), cr_mass(ncrsp), cr_Z(nicr), cr_spectral(ncrsp), cr_gpess(ncrsp))
       cr_names(:)    = ''
       cr_table(:)    = 0
       cr_index(:)    = 0
@@ -258,6 +269,7 @@ contains
             cr_table(i)      = icr
             cr_names(icr)    = eCRSP_names(i)
             cr_mass(icr)     = eCRSP_mass(i)
+            cr_Z(icr)        = eCRSP_Z(i)
             cr_spectral(icr) = eCRSP_spec(i)
             if (eCRSP_spec(i)) then
                if (i /= icr_E) then
