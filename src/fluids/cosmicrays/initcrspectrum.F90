@@ -592,14 +592,14 @@ contains
       write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cresp_perp = ",  K_cresp_perp(1:ncrb)  ; if (master) call printinfo(msg)
 #endif /* VERBOSE */
 
-      def_dtadiab = cfl_cre * half * three * logten * w
-      def_dtsynch = cfl_cre * half * w
+      def_dtadiab(:) = cfl_cre(:) * half * three * logten * w
+      def_dtsynch(:) = cfl_cre(:) * half * w
 
       u_b_max = maxval(fsynchr(:)) * emag(b_max_db, 0., 0.)   !< initializes factor for comparing u_b with u_b_max
 
       write (msg, "(A,F10.4,A,ES12.5)") "[initcrspectrum:init_cresp] Maximal B_tot =",b_max_db, "mGs, u_b_max = ", u_b_max
       if (master)  call warn(msg)
-      write (msg, "(A,ES12.5,A,ES15.8,A,ES15.8)") "[initcrspectrum:init_cresp] dt_synch(p_max_fix = ",p_max_fix,", u_b_max = ",u_b_max,") = ", def_dtsynch / (p_max_fix* u_b_max)   ! TODO FIXME - I am not working properly for multiple spectral CR species!
+      write (msg, "(A,ES12.5,A,ES15.8,A,ES15.8)") "[initcrspectrum:init_cresp] Minimal dt_synch(p_max_fix = ",p_max_fix,", u_b_max = ",u_b_max,") = ", minval(def_dtsynch) / (p_max_fix* u_b_max)
       if (master)  call warn(msg)
 
       if (cresp_substep) then
@@ -831,6 +831,8 @@ contains
       call my_allocate(K_cre_pow, ma1d)
       call my_allocate(p_diff, ma1d)
       call my_allocate(fsynchr, ma1d)
+      call my_allocate(def_dtadiab, ma1d)
+      call my_allocate(def_dtsynch, ma1d)
 
       ma2d = [nsp, nb * 2]
       call my_allocate(K_cresp_paral, ma2d)
