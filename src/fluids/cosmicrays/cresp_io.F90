@@ -37,9 +37,7 @@ module cresp_io
    private
    public   :: save_smap_to_open, save_cresp_smap_h5, write_cresp_to_restart, &
             &  read_cresp_smap_fields, create_cresp_smap_fields, read_real_arr2d_dset, read_smap_header_h5, &
-            &  save_NR_smap, check_NR_smaps_headers, read_NR_smap, read_NR_smap_header, cresp_gname
-
-   character(len=*), parameter :: cresp_gname = "/cresp"
+            &  save_NR_smap, check_NR_smaps_headers, read_NR_smap, read_NR_smap_header
 
 contains
 
@@ -116,7 +114,7 @@ contains
    subroutine save_cresp_smap_h5(smap_data, bound, dsname, filename)
 
       use constants,     only: I_ZERO, I_ONE
-      use cresp_helpers, only: n_g_smaps
+      use cresp_helpers, only: n_g_smaps, cresp_gname
       use dataio_pub,    only: msg, printinfo
       use hdf5,          only: h5open_f, h5close_f, h5fcreate_f, h5fopen_f, h5fclose_f, h5dopen_f, h5dclose_f, h5eset_auto_f, h5gopen_f, h5gclose_f, &
            &                   HID_T, H5F_ACC_RDWR_F, H5F_ACC_TRUNC_F, H5F_ACC_RDONLY_F

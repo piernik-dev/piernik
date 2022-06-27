@@ -1600,8 +1600,8 @@ contains
    subroutine try_read_user_h5(filename, hdr_init, unable_to_read)
 
       use constants,     only: I_ZERO, I_ONE
-      use cresp_helpers, only: map_header
-      use cresp_io,      only: check_NR_smaps_headers, cresp_gname
+      use cresp_helpers, only: map_header, cresp_gname
+      use cresp_io,      only: check_NR_smaps_headers
       use dataio_pub,    only: warn, printinfo
       use hdf5,          only: h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f, h5eset_auto_f, HID_T, H5F_ACC_RDONLY_F
 

@@ -40,10 +40,10 @@ module cresp_helpers
    private
    public   :: hdr_io, map_header, n_g_cresp, n_g_smaps, n_a_dims, n_a_esmall, n_a_max_p_r, n_a_clight,     &
       &  n_a_qbig, n_a_amin, n_a_amax, n_a_nmin, n_a_nmax, real_attrs, int_attrs, extension, flen,          &
-      &  bound_name, dset_attrs
+      &  bound_name, dset_attrs, cresp_gname
 
    character(len=*), parameter, dimension(LO:HI)      ::  n_g_smaps = [ "cresp/smaps_LO", "cresp/smaps_UP" ]
-   character(len=*), parameter :: n_g_cresp = "cresp", &
+   character(len=*), parameter :: n_g_cresp = "cresp", cresp_gname = "/cresp", &
       &  n_a_dims = "dims", n_a_esmall = "e_small", n_a_max_p_r = "max_p_ratio", n_a_clight = "used_clight", &
       &  n_a_qbig = "q_big",  n_a_amin = "a_min", n_a_amax = "a_max", n_a_nmin = "n_min", n_a_nmax = "n_max"
    character(len=cbuff_len), parameter, dimension(8)  :: real_attrs = [ "e_small    ",  &
