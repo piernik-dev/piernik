@@ -36,7 +36,7 @@ module cresp_io
 
    private
    public   :: save_smap_to_open, save_cresp_smap_h5, write_cresp_to_restart, cresp_read_smaps_from_hdf, &
-            &  read_cresp_smap_fields, read_real_arr2d_dset, read_smap_header_h5, &
+            &  read_cresp_smap_fields, read_real_arr2d_dset, read_smap_header_h5, try_read_user_h5, &
             &  save_NR_smap, check_NR_smaps_headers, read_NR_smap, read_NR_smap_header, got_smaps_from_restart
 
    logical :: got_smaps_from_restart = .false.
@@ -147,7 +147,7 @@ contains
       call read_smap_header_h5(file_id, hdr_res)
 
       if (hdr_res(1)%s_dim1 .eq. I_ZERO .or. hdr_res(1)%s_dim2 .eq. I_ZERO) then
-         call warn("[cresp_NR_method:cresp_read_smaps_from_hdf] Got solution map dimension = 0. Will solve for new maps.")
+         call warn("[cresp_io:cresp_read_smaps_from_hdf] Got solution map dimension = 0. Will solve for new maps.")
       else
          call deallocate_smaps ! TODO just in case. Reading should be called before "fill_guess_grids"
 
@@ -487,12 +487,12 @@ contains
 !
    subroutine read_smap_header_h5(file_id, hdr_out)
 
-      use constants,          only: LO, HI
-      use cresp_helpers,      only: hdr_io, map_header, n_g_smaps, n_a_clight, n_a_dims, n_a_esmall, &
+      use constants,     only: LO, HI
+      use cresp_helpers, only: hdr_io, map_header, n_g_smaps, n_a_clight, n_a_dims, n_a_esmall, &
             &  n_a_max_p_r, n_a_qbig, n_a_amax, n_a_amin, n_a_nmax, n_a_nmin, real_attrs, int_attrs
-      use dataio_pub,         only: die
-      use hdf5,               only: HID_T
-      use h5lt,               only: h5ltget_attribute_double_f, h5ltget_attribute_int_f
+      use dataio_pub,    only: die
+      use hdf5,          only: HID_T
+      use h5lt,          only: h5ltget_attribute_double_f, h5ltget_attribute_int_f
 
       implicit none
 
@@ -517,21 +517,21 @@ contains
             call h5ltget_attribute_double_f(file_id, n_g_smaps(i), trim(real_attrs(ia)), rbuf, error)
             select case (real_attrs(ia))
                case (n_a_esmall)
-                  hdr_io(i)%s_es      = rbuf(1)
+                  hdr_io(i)%s_es   = rbuf(1)
                case (n_a_max_p_r)
-                  hdr_io(i)%s_pr      = rbuf(1)
+                  hdr_io(i)%s_pr   = rbuf(1)
                case (n_a_qbig)
-                  hdr_io(i)%s_qbig    = rbuf(1)
+                  hdr_io(i)%s_qbig = rbuf(1)
                case (n_a_clight)
-                  hdr_io(i)%s_c       = rbuf(1)
+                  hdr_io(i)%s_c    = rbuf(1)
                case (n_a_amin)
-                  hdr_io(i)%s_amin    = rbuf(1)
+                  hdr_io(i)%s_amin = rbuf(1)
                case (n_a_amax)
-                  hdr_io(i)%s_amax    = rbuf(1)
+                  hdr_io(i)%s_amax = rbuf(1)
                case (n_a_nmin)
-                  hdr_io(i)%s_nmin    = rbuf(1)
+                  hdr_io(i)%s_nmin = rbuf(1)
                case (n_a_nmax)
-                  hdr_io(i)%s_nmax    = rbuf(1)
+                  hdr_io(i)%s_nmax = rbuf(1)
                case default
                   call die("[cresp_io:read_cresp_smap_fields] Non-recognized area_type.")
             end select
@@ -548,8 +548,7 @@ contains
 !
    subroutine read_real_arr2d_dset(file_id, dsetname, dsdata)
 
-      use hdf5,      only: HID_T, h5dopen_f, h5dread_f, h5dopen_f, &
-                     &  h5dclose_f, H5T_NATIVE_DOUBLE, HSIZE_T
+      use hdf5, only: HID_T, h5dopen_f, h5dread_f, h5dopen_f, h5dclose_f, H5T_NATIVE_DOUBLE, HSIZE_T
       implicit none
 
       real, dimension(:,:), target, intent(in) :: dsdata
@@ -573,6 +572,58 @@ contains
    end subroutine read_real_arr2d_dset
 
 !---------------------------------------------------------------------------------------------------
+!> /brief Check if file of given name exists and contains readable solution maps. If describing parameters match, load data and proceed.
+!
+   subroutine try_read_user_h5(filename, hdr_init, unable_to_read)
 
+      use constants,     only: I_ZERO, I_ONE
+      use cresp_helpers, only: map_header, cresp_gname, hdr_res
+      use dataio_pub,    only: warn, printinfo
+      use hdf5,          only: h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f, h5eset_auto_f, HID_T, H5F_ACC_RDONLY_F
+
+      implicit none
+
+      character(len=*),               intent(in)    :: filename
+      type(map_header), dimension(2), intent(inout) :: hdr_init
+      logical,                        intent(out)   :: unable_to_read
+      integer, parameter                            :: min_fnamelen = 4 ! at least "?.h5"
+      integer(kind=4)                               :: error
+      integer(HID_T)                                :: file_id, group_id
+      logical                                       :: file_exists, file_has_data
+      logical, dimension(2)                         :: hdr_match
+
+      unable_to_read = .true.
+      if (len(filename) <= min_fnamelen) return
+
+      inquire(file = trim(filename), exist = file_exists)    ! check if file "filename" exists
+
+      if (file_exists) then
+         file_has_data = .false.
+
+         call h5open_f(error)
+         call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
+
+         call h5eset_auto_f(I_ZERO, error)   ! Turn off printing messages
+         call h5gopen_f(file_id, cresp_gname, group_id, error)
+
+         unable_to_read = (error /= 0)
+
+         call h5eset_auto_f(I_ONE, error)    ! Turn on  printing messages
+         call h5gclose_f(group_id, error)
+
+         if (.not. unable_to_read) then
+            call cresp_read_smaps_from_hdf(file_id)   ! loads ratios and hdr_res
+            call check_NR_smaps_headers(hdr_res, hdr_init, hdr_match)
+            unable_to_read = .not. any(hdr_match)
+            if (any(hdr_match)) call printinfo("[cresp_io:try_read_user_h5] Successfully read data from provided file "//trim(filename))
+         endif
+
+         call h5fclose_f(file_id, error)
+         call h5close_f(error)
+      endif
+
+      if (unable_to_read) call warn("[cresp_io:try_read_user_h5] File provided as 'NR_smap_file' "//trim(filename)//" does not contain usable data.")
+
+   end subroutine try_read_user_h5
 
 end module cresp_io

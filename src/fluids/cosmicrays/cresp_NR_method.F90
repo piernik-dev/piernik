@@ -192,7 +192,7 @@ contains
 
       use constants,      only: zero, I_FOUR, LO, HI
       use cresp_helpers,  only: map_header, hdr_io, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, hdr_res
-      use cresp_io,       only: check_NR_smaps_headers, save_NR_smap, got_smaps_from_restart
+      use cresp_io,       only: check_NR_smaps_headers, save_NR_smap, got_smaps_from_restart, try_read_user_h5
       use dataio_pub,     only: warn
       use initcrspectrum, only: arr_dim_a, force_init_NR, e_small_approx_init_cond, NR_allow_old_smaps, NR_smap_file
       use mpisetup,       only: master
@@ -1516,61 +1516,6 @@ contains
       call deallocate_smaps
 
    end subroutine deallocate_all_smaps
-!----------------------------------------------------------------------------------------------------
-!> /brief Check if file of given name exists and contains readable solution maps. If describing parameters match, load data and proceed.
-!
-   subroutine try_read_user_h5(filename, hdr_init, unable_to_read)
-
-      use constants,     only: I_ZERO, I_ONE
-      use cresp_helpers, only: map_header, cresp_gname, hdr_res
-      use cresp_io,      only: check_NR_smaps_headers, cresp_read_smaps_from_hdf
-      use dataio_pub,    only: warn, printinfo
-      use hdf5,          only: h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f, h5eset_auto_f, HID_T, H5F_ACC_RDONLY_F
-
-      implicit none
-
-      character(len=*),               intent(in)    :: filename
-      type(map_header), dimension(2), intent(inout) :: hdr_init
-      logical,                        intent(out)   :: unable_to_read
-      integer, parameter                            :: min_fnamelen = 4 ! at least "?.h5"
-      integer(kind=4)                               :: error
-      integer(HID_T)                                :: file_id, group_id
-      logical                                       :: file_exists, file_has_data
-      logical, dimension(2)                         :: hdr_match
-
-      unable_to_read = .true.
-      if (len(filename) <= min_fnamelen) return
-
-      inquire(file = trim(filename), exist = file_exists)    ! check if file "filename" exists
-
-      if (file_exists) then
-         file_has_data = .false.
-
-         call h5open_f(error)
-         call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
-
-         call h5eset_auto_f(I_ZERO, error)   ! Turn off printing messages
-         call h5gopen_f(file_id, cresp_gname, group_id, error)
-
-         unable_to_read = (error /= 0)
-
-         call h5eset_auto_f(I_ONE, error)    ! Turn on  printing messages
-         call h5gclose_f(group_id, error)
-
-         if (.not. unable_to_read) then
-            call cresp_read_smaps_from_hdf(file_id)   ! loads ratios and hdr_res
-            call check_NR_smaps_headers(hdr_res, hdr_init, hdr_match)
-            unable_to_read = .not. any(hdr_match)
-            if (any(hdr_match)) call printinfo("[cresp_NR_method:try_read_user_h5] Successfully read data from provided file "//trim(filename))
-         endif
-
-         call h5fclose_f(file_id, error)
-         call h5close_f(error)
-      endif
-
-      if (unable_to_read) call warn("[cresp_NR_method:try_read_user_h5] File provided as 'NR_smap_file' "//trim(filename)//" does not contain usable data.")
-
-   end subroutine try_read_user_h5
 !----------------------------------------------------------------------------------------------------
    subroutine add_dot(is_finishing)
 
