@@ -349,8 +349,8 @@ contains
          iarr_crspc2_n(icr, :) = [(jnb, jnb = flind%crspcs(icr)%nbeg, flind%crspcs(icr)%nend)]
          iarr_crspc2_e(icr, :) = [(jnb, jnb = flind%crspcs(icr)%ebeg, flind%crspcs(icr)%eend)] ! iarr_crspc_e(I_ONE + (icr - I_ONE) * ncrb: ncrb + (icr - I_ONE) * ncrb)
 
-         iarr_crspc_n(1 + (icr - I_ONE) * ncrb: ncrb + icr * ncrb) = iarr_crspc2_n(icr, :)
-         iarr_crspc_e(1 + (icr - I_ONE) * ncrb: ncrb + icr * ncrb) = iarr_crspc2_e(icr, :)
+         iarr_crspc_n(1 + (icr - I_ONE) * ncrb: icr * ncrb) = iarr_crspc2_n(icr, :)
+         iarr_crspc_e(1 + (icr - I_ONE) * ncrb: icr * ncrb) = iarr_crspc2_e(icr, :)
       enddo
 
       flind%crspcs(:)%all = ncr2b
