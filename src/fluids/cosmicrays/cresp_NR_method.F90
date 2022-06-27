@@ -1487,6 +1487,7 @@ contains
    subroutine allocate_all_smap_arrays
 
       use constants,      only: HI, I_ONE
+      use cresp_helpers,  only: allocate_smaps
       use diagnostics,    only: ma2d, my_allocate, my_allocate_with_index
       use initcrspectrum, only: arr_dim_a, arr_dim_n, arr_dim_q
 
@@ -1505,26 +1506,10 @@ contains
 
    end subroutine allocate_all_smap_arrays
 !----------------------------------------------------------------------------------------------------
-   subroutine allocate_smaps(dim1, dim2)
-
-      use diagnostics,   only: ma2d, my_allocate
-      use cresp_helpers, only: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
-
-      implicit none
-
-      integer(kind=4), intent(in) :: dim1, dim2
-
-      ma2d = [dim1, dim2]
-      if (.not. allocated(p_ratios_lo)) call my_allocate(p_ratios_lo, ma2d )
-      if (.not. allocated(f_ratios_lo)) call my_allocate(f_ratios_lo, ma2d )
-      if (.not. allocated(p_ratios_up)) call my_allocate(p_ratios_up, ma2d )
-      if (.not. allocated(f_ratios_up)) call my_allocate(f_ratios_up, ma2d )
-
-   end subroutine allocate_smaps
-!----------------------------------------------------------------------------------------------------
    subroutine deallocate_all_smaps
 
-      use diagnostics, only: my_deallocate
+      use cresp_helpers, only: deallocate_smaps
+      use diagnostics,   only: my_deallocate
 
       implicit none
 
@@ -1535,20 +1520,6 @@ contains
       call deallocate_smaps
 
    end subroutine deallocate_all_smaps
-!----------------------------------------------------------------------------------------------------
-   subroutine deallocate_smaps
-
-      use diagnostics,   only: my_deallocate
-      use cresp_helpers, only: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
-
-      implicit none
-
-      call my_deallocate(p_ratios_lo)
-      call my_deallocate(f_ratios_lo)
-      call my_deallocate(p_ratios_up)
-      call my_deallocate(f_ratios_up)
-
-   end subroutine deallocate_smaps
 !----------------------------------------------------------------------------------------------------
    subroutine cresp_write_smaps_to_hdf(file_id)
 
