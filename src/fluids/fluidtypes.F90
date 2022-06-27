@@ -36,6 +36,9 @@ module fluidtypes
 
    private
    public :: component, component_fluid, phys_prop, var_numbers
+#ifdef CRESP
+   public :: component_spectral
+#endif /* CRESP */
 
    type :: phys_prop
       type(value) :: dens_min
@@ -62,13 +65,16 @@ module fluidtypes
       integer(kind=4) :: beg = 0   !< beginning number of variables in fluid/component
       integer(kind=4) :: end = 0   !< end number of variables in fluid/component
       integer(kind=4) :: pos = 0   !< index denoting position of the fluid in the row of fluids
+   end type component
+
 #ifdef CRESP
+   type, extends(component) :: component_spectral
       integer(kind=4) :: nbeg = 0  !< beginning number of number density components for fluid/component (cre) !!!
       integer(kind=4) :: ebeg = 0  !< beginning number of energy density components for fluid/component (cre) !!!
       integer(kind=4) :: nend = 0  !< end number of number density components for fluid/component (cre)       !!!
       integer(kind=4) :: eend = 0  !< end number of energy density components for fluid/component (cre)       !!!
+   end type component_spectral
 #endif /* CRESP */
-   end type component
 
    type, abstract, extends(component) :: component_fluid
       integer(kind=4) :: idn = -1      !< index denoting position of the fluid density in array arrays::u
@@ -132,7 +138,10 @@ module fluidtypes
       type(component) :: trc         !< numbers of tracer fluids
       type(component) :: crs         !< numbers of variables in all cosmic ray components
       type(component) :: crn         !< numbers of variables in cosmic ray nuclear components
-      type(component) :: crspc         !< numbers of variables in cosmic ray electron components
+#ifdef CRESP
+      type(component_spectral) :: crspc                            !< variables in cosmic ray spectral components
+      type(component_spectral),dimension(:),allocatable :: crspcs  !< variables in cosmic ray spectral components
+#endif /* CRESP */
    contains
       procedure :: any_fluid_is_selfgrav
    end type var_numbers
