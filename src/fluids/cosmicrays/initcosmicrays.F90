@@ -305,7 +305,7 @@ contains
       implicit none
 
       type(var_numbers), intent(inout) :: flind
-      integer(kind=4)                  :: icr, jnb
+      integer(kind=4)                  :: icr
 
       flind%crn%beg = flind%all + I_ONE
       flind%crs%beg = flind%crn%beg
@@ -342,16 +342,14 @@ contains
       flind%crspc%ebeg = flind%crspc%nend + I_ONE
       flind%crspc%eend = flind%crspc%nend + ncrb * nspc
 
-      do icr = 1, ncrb
+      do icr = 1, ncr2b
          iarr_crspc_n(icr) = flind%crspc%nbeg - I_ONE + icr
          iarr_crspc_e(icr) = flind%crspc%ebeg - I_ONE + icr
       enddo
 
       do icr = 1, nspc        !< Arrange iterable indexes for each spectral species separately; first indexes for n, then e.
-         do jnb = 1, ncrb
-            iarr_crspc2_n(icr, jnb) = flind%crn%end + I_ONE + (icr - I_ONE) * ncrb + jnb
-            iarr_crspc2_e(icr, jnb) = flind%crn%end + I_ONE + nspc * ncrb + (icr - I_ONE) * ncrb + jnb
-         enddo
+         iarr_crspc2_n(icr, :) = iarr_crspc_n(I_ONE + (icr - I_ONE) * ncrb: ncrb + (icr - I_ONE) * ncrb)
+         iarr_crspc2_e(icr, :) = iarr_crspc_e(I_ONE + (icr - I_ONE) * ncrb: ncrb + (icr - I_ONE) * ncrb)
       enddo
 #endif /* CRESP */
 
