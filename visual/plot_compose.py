@@ -168,7 +168,7 @@ def add_cbar(figmode, cbar_mode, grid, ab, ic, clab, sct, field):
     cbarh.ax.set_ylabel(clab)
     if cbar_mode == 'none':
         cbarh.ax.yaxis.set_label_coords(ps.cbar_label_coords[0], ps.cbar_label_coords[1])
-    if ic == 1 and pu.recognize_opt(sct, ('3', 'symlog')):
+    if ic == 1 and pu.whether_symlog(sct):
         slticks, sltlabs = [], []
         for tick in cbarh.get_ticks():
             if tick >= field[1] and tick <= field[2]:
