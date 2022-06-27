@@ -125,9 +125,9 @@ def check_minimum_data(refis, d1, d2):
             bxyz, binb, b1 = bl[0], bl[1], bl[5]
             for ncut in range(3):
                 if binb[ncut]:
-                    if d1[ncut]:
+                    if d1[ncut] and b1 != []:
                         cmdmin = min(cmdmin, np.min(b1[ncut], initial=np.inf, where=(b1[ncut] > 0.0)))
-                    if d2[ncut]:
+                    if d2[ncut] and bxyz != []:
                         cmdmin = min(cmdmin, np.min(bxyz[ncut], initial=np.inf, where=(bxyz[ncut] > 0.0)))
     return cmdmin
 
@@ -139,10 +139,10 @@ def check_extremes_absdata(refis, d1, d2):
             bxyz, binb, b1 = bl[0], bl[1], bl[5]
             for ncut in range(3):
                 if binb[ncut]:
-                    if d1[ncut]:
+                    if d1[ncut] and b1 != []:
                         cmdmin = min(cmdmin, np.min(np.abs(b1[ncut]), initial=np.inf, where=(np.abs(b1[ncut]) > 0.0)))
                         cmdmax = max(cmdmax, np.max(np.abs(b1[ncut]), initial=-np.inf, where=(np.abs(b1[ncut]) > 0.0)))
-                    if d2[ncut]:
+                    if d2[ncut] and bxyz != []:
                         cmdmin = min(cmdmin, np.min(np.abs(bxyz[ncut]), initial=np.inf, where=(np.abs(bxyz[ncut]) > 0.0)))
                         cmdmax = max(cmdmax, np.max(np.abs(bxyz[ncut]), initial=-np.inf, where=(np.abs(bxyz[ncut]) > 0.0)))
     return cmdmin, cmdmax
