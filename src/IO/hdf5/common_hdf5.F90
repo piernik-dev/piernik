@@ -483,8 +483,8 @@ contains
       use mpisetup,          only: master, slave
       use version,           only: env, nenv
 #ifdef CRESP
-      use initcrspectrum,    only: write_cresp_to_restart, use_cresp
-      use cresp_io,          only: create_cresp_smap_fields
+      use initcrspectrum,    only: use_cresp
+      use cresp_io,          only: create_cresp_smap_fields, write_cresp_to_restart
       use cresp_NR_method,   only: cresp_write_smaps_to_hdf
 #endif /* CRESP */
 #ifdef RANDOMIZE

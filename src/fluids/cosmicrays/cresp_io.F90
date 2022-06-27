@@ -35,7 +35,7 @@ module cresp_io
    implicit none
 
    private
-   public   :: save_smap_to_open, save_cresp_smap_h5,   &
+   public   :: save_smap_to_open, save_cresp_smap_h5, write_cresp_to_restart, &
             &  read_cresp_smap_fields, create_cresp_smap_fields, read_real_arr2d_dset, read_smap_header_h5, &
             &  save_NR_smap, check_NR_smaps_headers, read_NR_smap, read_NR_smap_header, cresp_gname
 
@@ -43,6 +43,40 @@ module cresp_io
 
 contains
 
+   subroutine write_cresp_to_restart(file_id)
+
+      use hdf5,           only: HID_T, SIZE_T
+      use h5lt,           only: h5ltset_attribute_int_f, h5ltset_attribute_double_f
+      use initcosmicrays, only: ncrb
+      use initcrspectrum, only: e_small, p_min_fix, p_max_fix, q_big
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id
+      integer(SIZE_T)            :: bufsize
+      integer(kind=4)            :: error
+      integer(kind=4), dimension(1) :: lnsnbuf_i
+      real,    dimension(1)      :: lnsnbuf_r
+
+      bufsize = 1
+      lnsnbuf_i(bufsize) = ncrb
+      call h5ltset_attribute_int_f(file_id,    "/", "ncrb",      lnsnbuf_i, bufsize, error)
+
+      lnsnbuf_r(bufsize) = p_min_fix
+      call h5ltset_attribute_double_f(file_id, "/", "p_min_fix", lnsnbuf_r, bufsize, error)
+
+      lnsnbuf_r(bufsize) = p_max_fix
+      call h5ltset_attribute_double_f(file_id, "/", "p_max_fix", lnsnbuf_r, bufsize, error)
+
+      lnsnbuf_r(bufsize) = q_big
+      call h5ltset_attribute_double_f(file_id, "/", "q_big",     lnsnbuf_r, bufsize, error)
+
+      lnsnbuf_r(bufsize) = e_small
+      call h5ltset_attribute_double_f(file_id, "/", "e_small",   lnsnbuf_r, bufsize, error)
+
+   end subroutine write_cresp_to_restart
+
+!----------------------------------------------------------------------------------------------------
 !> \brief Create fields containing parameters of cresp solution maps, which are saved later in these groups.
 !
    subroutine create_cresp_smap_fields(file_id)
