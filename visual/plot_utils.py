@@ -8,6 +8,13 @@ figplace = [(3, 2, 0), (0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 0), (1, 0, 0)]
 cbsplace = [(1, 1), (-1, -1), (2, 2), (0, 1), (1, 1), (2, 2)]
 
 
+def recognize_opt(cur, lopt):
+    for op in lopt:
+        if cur == op:
+            return True
+    return False
+
+
 def plane_in_outputname(figmode, draw2D):
     to_insert = ''
     if figmode == 1 or figmode == 4:
@@ -39,17 +46,17 @@ def execute_comparison(orig, comp, ctype):
 
 
 def scale_translate(sctype, vmn, vmx, sm, hbd):
-    if (sctype == '0' or sctype == 'linear'):
+    if recognize_opt(sctype, ('0', 'linear')):
         return 0, vmn, vmx
-    elif (sctype == '1' or sctype == 'symlin'):
+    elif recognize_opt(sctype, ('1', 'symlin')):
         vmin, vmax = fsym(vmn, vmx)
         return 1, vmin, vmax
-    elif (sctype == '2' or sctype == 'log'):
+    elif recognize_opt(sctype, ('2', 'log')):
         if hbd:
             return 2, 10.**vmn, 10.**vmx
         else:
             return 2, vmn, vmx
-    elif (sctype == '3' or sctype == 'symlog'):
+    elif recognize_opt(sctype, ('3', 'symlog')):
         if hbd:
             return 3, -1.*10.**np.abs(vmn), 10.**np.abs(vmx) * sm, sm
         else:
@@ -75,10 +82,10 @@ def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
     else:
         vmin, vmax = umin, umax
 
-    if (sctype == '1' or sctype == 'symlin'):
+    if recognize_opt(sctype, ('1', 'symlin')):
         vmin, vmax = fsym(vmin, vmax)
 
-    elif (sctype == '2' or sctype == 'log'):
+    elif recognize_opt(sctype, ('2', 'log')):
         if (vmin > 0.0):
             vmin = np.log10(vmin)
         else:
@@ -89,7 +96,7 @@ def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
             vmax = ps.fineqv
         if (vmin == np.inf):
             vmin = vmax - ps.fineqv
-    elif (sctype == '3' or sctype == 'symlog'):
+    elif recognize_opt(sctype, ('3', 'symlog')):
         if (umin > 0.0 and umax > 0.0):
             symmin = umin
             vmax = np.log10(umax / symmin)
@@ -149,9 +156,9 @@ def check_extremes_absdata(refis, d1, d2):
 
 
 def scale_plotarray(pa, sctype, symmin):
-    if (sctype == '2' or sctype == 'log'):
+    if recognize_opt(sctype, ('2', 'log')):
         pa = np.log10(pa)
-    elif (sctype == '3' or sctype == 'symlog'):
+    elif recognize_opt(sctype, ('3', 'symlog')):
         pa = np.sign(pa) * np.log10(np.maximum(np.abs(pa) / symmin, 1.0))
     return pa
 
@@ -226,9 +233,9 @@ def labellog(sctype, symmin, cmpr0):
     compare = ''
     if cmpr0:
         compare = '(compared) '
-    if (sctype == '2' or sctype == 'log'):
+    if recognize_opt(sctype, ('2', 'log')):
         logname = 'log '
-    elif (sctype == '3' or sctype == 'symlog'):
+    elif recognize_opt(sctype, ('3', 'symlog')):
         logname = '{symmetry level = %8.3e} log ' % symmin
     return logname + compare
 

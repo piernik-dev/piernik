@@ -7,6 +7,7 @@ import os
 import sys
 import plot_compose as pc
 import pvf_settings as ps
+import plot_utils as pu
 
 exten = ps.f_exten
 plotdir = ps.f_plotdir
@@ -82,34 +83,34 @@ def cli_params(argv):
         print_usage()
         sys.exit(2)
     for opt, arg in opts:
-        if recognize_opt(opt, ("-h", "--help")):
+        if pu.recognize_opt(opt, ("-h", "--help")):
             print_usage()
             sys.exit()
 
-        elif recognize_opt(opt, ("-a", "--axes")):
+        elif pu.recognize_opt(opt, ("-a", "--axes")):
             global axcuts
             axcuts = arg.split(',')
 
-        elif recognize_opt(opt, ("-b", "--bins")):
+        elif pu.recognize_opt(opt, ("-b", "--bins")):
             global nbins
             nbins = int(arg)
 
-        elif recognize_opt(opt, ("-c", "--center")):
+        elif pu.recognize_opt(opt, ("-c", "--center")):
             global center, cu
             cx, cy, cz = arg.split(',')
             cu, center = True, [float(cx), float(cy), float(cz)]
 
-        elif recognize_opt(opt, ("-d", "--dataset")):
+        elif pu.recognize_opt(opt, ("-d", "--dataset")):
             global dnames
             global draw_data
             dnames = str(arg)
             draw_data = True
 
-        elif recognize_opt(opt, ("-D", "--colormap")):
+        elif pu.recognize_opt(opt, ("-D", "--colormap")):
             global cmap
             cmap = str(arg)
 
-        elif recognize_opt(opt, ("--compare-datafield",)):
+        elif pu.recognize_opt(opt, ("--compare-datafield",)):
             global cmpr, cmprd, cmprn
             cmpr = True
             cmprd = str(arg)
@@ -117,7 +118,7 @@ def cli_params(argv):
                 cmprn = '_vs'
             cmprn = cmprn + '_' + cmprd
 
-        elif recognize_opt(opt, ("--compare-file",)):
+        elif pu.recognize_opt(opt, ("--compare-file",)):
             global cmprf
             cmpr = True
             cmprf = str(arg)
@@ -126,53 +127,53 @@ def cli_params(argv):
             cmprn = cmprn + '_' + cmprf.split('/')[-1]
             cmprn = ''.join(cmprn.split('.')[:-1])
 
-        elif recognize_opt(opt, ("--compare-frame",)):
+        elif pu.recognize_opt(opt, ("--compare-frame",)):
             global cmprb
             cmprb = True
 
-        elif recognize_opt(opt, ("--compare-type",)):
+        elif pu.recognize_opt(opt, ("--compare-type",)):
             global cmprt
             cmprt = int(arg)
             if cmprt != 1 and cmprt != 2 and cmprt != 3:
                 print('Warning: Unrecognized type of comparison: %s. Taking 1 (subtraction).' % arg)
 
-        elif recognize_opt(opt, ("-e", "--extension")):
+        elif pu.recognize_opt(opt, ("-e", "--extension")):
             global exten
             exten = '.' + str(arg)
             print(exten)
 
-        elif recognize_opt(opt, ("-g", "--gridcolor")):
+        elif pu.recognize_opt(opt, ("-g", "--gridcolor")):
             global gcolor, draw_grid
             gcolor = str(arg)
             draw_grid = True
 
-        elif recognize_opt(opt, ("-l", "--level")):
+        elif pu.recognize_opt(opt, ("-l", "--level")):
             global plotlevels
             plotlevels = [int(i) for i in arg.split(',')]
 
-        elif recognize_opt(opt, ("--compare-level",)):
+        elif pu.recognize_opt(opt, ("--compare-level",)):
             global cmprl
             cmpr = True
             cmprl = [int(i) for i in arg.split(',')]
 
-        elif recognize_opt(opt, ("--linestyle",)):
+        elif pu.recognize_opt(opt, ("--linestyle",)):
             global linstyl
             linstyl = arg.split(',')
 
-        elif recognize_opt(opt, ("-o", "--output")):
+        elif pu.recognize_opt(opt, ("-o", "--output")):
             global plotdir
             plotdir = str(arg)
             print('PLOTDIR: ', plotdir)
 
-        elif recognize_opt(opt, ("-p", "--particles")):
+        elif pu.recognize_opt(opt, ("-p", "--particles")):
             global draw_part
             draw_part = True
 
-        elif recognize_opt(opt, ("-P", "--particle-color")):
+        elif pu.recognize_opt(opt, ("-P", "--particle-color")):
             global pcolor
             pcolor = str(arg)
 
-        elif recognize_opt(opt, ("-r", "--particle-slice")):
+        elif pu.recognize_opt(opt, ("-r", "--particle-slice")):
             global player
             aux = arg.split(',')
             if len(aux) >= 3:
@@ -180,18 +181,18 @@ def cli_params(argv):
             else:
                 player = True, aux[0], aux[0], aux[0]
 
-        elif recognize_opt(opt, ("-R", "--particle-space")):
+        elif pu.recognize_opt(opt, ("-R", "--particle-space")):
             aux = arg.split(',')
             if len(aux) >= 3:
                 player = False, aux[0], aux[1], aux[2]
             else:
                 player = False, aux[0], aux[0], aux[0]
 
-        elif recognize_opt(opt, ("-s", "--particle-sizes")):
+        elif pu.recognize_opt(opt, ("-s", "--particle-sizes")):
             global psize
             psize = float(arg)
 
-        elif recognize_opt(opt, ("-T", "--particle-h2d-scale")):
+        elif pu.recognize_opt(opt, ("-T", "--particle-h2d-scale")):
             global pstype
             aux = arg.split(',')
             if len(aux) > 2:
@@ -208,34 +209,34 @@ def cli_params(argv):
                 l3 = None
             pstype = l1, l2, l3
 
-        elif recognize_opt(opt, ("-t", "--scale")):
+        elif pu.recognize_opt(opt, ("-t", "--scale")):
             global sctype
             sctype = str(arg)
 
-        elif recognize_opt(opt, ("-u", "--units")):
+        elif pu.recognize_opt(opt, ("-u", "--units")):
             global uaxes
             uaxes = str(arg)
 
-        elif recognize_opt(opt, ("-z", "--zlim")):
+        elif pu.recognize_opt(opt, ("-z", "--zlim")):
             global zmin, zmax
             zmin, zmax = arg.split(',')
             zmin = float(zmin)
             zmax = float(zmax)
             print("zmin, zmax = ", zmin, zmax)
 
-        elif recognize_opt(opt, ("--amr",)):
+        elif pu.recognize_opt(opt, ("--amr",)):
             global draw_amr
             draw_amr = True
 
-        elif recognize_opt(opt, ("--grid-list",)):
+        elif pu.recognize_opt(opt, ("--grid-list",)):
             global gridlist
             gridlist = [int(i) for i in arg.split(',')]
 
-        elif recognize_opt(opt, ("--uniform",)):
+        elif pu.recognize_opt(opt, ("--uniform",)):
             global draw_uni
             draw_uni = True
 
-        elif recognize_opt(opt, ("--zoom",)):
+        elif pu.recognize_opt(opt, ("--zoom",)):
             global zoom
             aux = arg.split(',')
             if len(aux) > 1:
@@ -243,13 +244,6 @@ def cli_params(argv):
                 print("ZOOM: xmin, xmax = ", zoom[1][0], zoom[2][0], 'ymin, ymax = ', zoom[1][1], zoom[2][1], 'zmin, zmax = ', zoom[1][2], zoom[2][2])
             else:
                 zoom = True, int(aux[0])
-
-
-def recognize_opt(cur, lopt):
-    for op in lopt:
-        if cur == op:
-            return True
-    return False
 
 
 if (len(sys.argv) < 2):
@@ -329,7 +323,7 @@ for pthfilen in files_list:
     print("Reading file: %s" % pthfilen)
     prd, prp, prg = '', '', ''
     if draw_data:
-        if dnames == "_all_" or dnames == "all":
+        if pu.recognize_opt(dnames, ("_all_", "all")):
             varlist = h5f['field_types'].keys()
         else:
             varlist = dnames.split(',')
