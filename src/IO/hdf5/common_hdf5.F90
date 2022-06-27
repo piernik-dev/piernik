@@ -483,9 +483,7 @@ contains
       use mpisetup,          only: master, slave
       use version,           only: env, nenv
 #ifdef CRESP
-      use initcrspectrum,    only: use_cresp
-      use cresp_io,          only: create_cresp_smap_fields, write_cresp_to_restart
-      use cresp_NR_method,   only: cresp_write_smaps_to_hdf
+      use cresp_io,          only: write_cresp_to_restart
 #endif /* CRESP */
 #ifdef RANDOMIZE
       use randomization,     only: write_current_seed_to_restart
@@ -567,12 +565,6 @@ contains
 #ifdef SN_SRC
       call write_snsources_to_restart(file_id)
 #endif /* SN_SRC */
-#ifdef CRESP
-      if (use_cresp) then
-         call create_cresp_smap_fields(file_id) ! create "/cresp/smaps_{LO,UP}/..."
-         call cresp_write_smaps_to_hdf(file_id) ! create "/cresp/smaps_{LO,UP}/{p_f}_ratio"
-      endif
-#endif /* CRESP */
       if (associated(user_attrs_wr)) call user_attrs_wr(file_id)
 
       call h5fclose_f(file_id, error)

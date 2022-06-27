@@ -33,12 +33,10 @@
 module cresp_NR_method
 ! pulled by CRESP
 
-   use cresp_helpers, only: map_header
-
    implicit none
 
    private
-   public :: alpha, assoc_pointers, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, cresp_write_smaps_to_hdf, cresp_read_smaps_from_hdf, deallocate_all_smaps
+   public :: alpha, assoc_pointers, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, deallocate_all_smaps
 
    integer, parameter                        :: ndim = 2
    real, allocatable, dimension(:)           :: p_space, q_space
@@ -51,8 +49,6 @@ module cresp_NR_method
    integer(kind=4)                           :: sought_by
    integer(kind=4), parameter                :: SLV = 1, RFN = 2
 #endif /* CRESP_VERBOSED */
-   logical, save                             :: got_smaps_from_restart = .false.
-   type(map_header), dimension(2)            :: hdr_res
 
    abstract interface
       function function_pointer_2D(z)
@@ -195,8 +191,8 @@ contains
    subroutine cresp_initialize_guess_grids
 
       use constants,      only: zero, I_FOUR, LO, HI
-      use cresp_helpers,  only: map_header, hdr_io, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
-      use cresp_io,       only: check_NR_smaps_headers, save_NR_smap
+      use cresp_helpers,  only: map_header, hdr_io, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, hdr_res
+      use cresp_io,       only: check_NR_smaps_headers, save_NR_smap, got_smaps_from_restart
       use dataio_pub,     only: warn
       use initcrspectrum, only: arr_dim_a, force_init_NR, e_small_approx_init_cond, NR_allow_old_smaps, NR_smap_file
       use mpisetup,       only: master
@@ -1419,7 +1415,7 @@ contains
    subroutine cresp_NR_mpi_exchange(hdr_share)
 
       use constants,     only: LO, HI
-      use cresp_helpers, only: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
+      use cresp_helpers, only: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, map_header
       use mpisetup,      only: piernik_MPI_Bcast
 
       implicit none
@@ -1521,61 +1517,13 @@ contains
 
    end subroutine deallocate_all_smaps
 !----------------------------------------------------------------------------------------------------
-   subroutine cresp_write_smaps_to_hdf(file_id)
-
-      use constants,     only: LO, HI
-      use cresp_helpers, only: n_g_smaps, dset_attrs, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
-      use cresp_io,      only: save_smap_to_open
-      use hdf5,          only: HID_T
-
-      implicit none
-
-      integer(HID_T), intent(in) :: file_id
-
-      call save_smap_to_open(file_id, n_g_smaps(LO), dset_attrs(1), p_ratios_lo)
-      call save_smap_to_open(file_id, n_g_smaps(LO), dset_attrs(2), f_ratios_lo)
-      call save_smap_to_open(file_id, n_g_smaps(HI), dset_attrs(1), p_ratios_up)
-      call save_smap_to_open(file_id, n_g_smaps(HI), dset_attrs(2), f_ratios_up)
-
-   end subroutine cresp_write_smaps_to_hdf
-!----------------------------------------------------------------------------------------------------
-   subroutine cresp_read_smaps_from_hdf(file_id)
-
-      use constants,     only: LO, HI, I_ZERO
-      use cresp_io,      only: read_real_arr2d_dset, read_smap_header_h5
-      use cresp_helpers, only: map_header, dset_attrs, n_g_smaps, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
-      use dataio_pub,    only: warn
-      use hdf5,          only: HID_T
-
-      implicit none
-
-      integer(HID_T), intent(in) :: file_id
-
-      call read_smap_header_h5(file_id, hdr_res)
-
-      if (hdr_res(1)%s_dim1 .eq. I_ZERO .or. hdr_res(1)%s_dim2 .eq. I_ZERO) then
-         call warn("[cresp_NR_method:cresp_read_smaps_from_hdf] Got solution map dimension = 0. Will solve for new maps.")
-      else
-         call deallocate_smaps ! TODO just in case. Reading should be called before "fill_guess_grids"
-
-         call allocate_smaps(hdr_res(1)%s_dim1, hdr_res(1)%s_dim2) ! TODO decide whether the same dim is forced onto all maps (rather so)
-
-         call read_real_arr2d_dset(file_id, n_g_smaps(LO)//"/"//dset_attrs(1), p_ratios_lo)
-         call read_real_arr2d_dset(file_id, n_g_smaps(LO)//"/"//dset_attrs(2), f_ratios_lo)
-         call read_real_arr2d_dset(file_id, n_g_smaps(HI)//"/"//dset_attrs(1), p_ratios_up)
-         call read_real_arr2d_dset(file_id, n_g_smaps(HI)//"/"//dset_attrs(2), f_ratios_up)
-         got_smaps_from_restart = .true.
-      endif
-
-   end subroutine cresp_read_smaps_from_hdf
-!----------------------------------------------------------------------------------------------------
 !> /brief Check if file of given name exists and contains readable solution maps. If describing parameters match, load data and proceed.
 !
    subroutine try_read_user_h5(filename, hdr_init, unable_to_read)
 
       use constants,     only: I_ZERO, I_ONE
-      use cresp_helpers, only: map_header, cresp_gname
-      use cresp_io,      only: check_NR_smaps_headers
+      use cresp_helpers, only: map_header, cresp_gname, hdr_res
+      use cresp_io,      only: check_NR_smaps_headers, cresp_read_smaps_from_hdf
       use dataio_pub,    only: warn, printinfo
       use hdf5,          only: h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f, h5eset_auto_f, HID_T, H5F_ACC_RDONLY_F
 

@@ -35,9 +35,11 @@ module cresp_io
    implicit none
 
    private
-   public   :: save_smap_to_open, save_cresp_smap_h5, write_cresp_to_restart, &
-            &  read_cresp_smap_fields, create_cresp_smap_fields, read_real_arr2d_dset, read_smap_header_h5, &
-            &  save_NR_smap, check_NR_smaps_headers, read_NR_smap, read_NR_smap_header
+   public   :: save_smap_to_open, save_cresp_smap_h5, write_cresp_to_restart, cresp_read_smaps_from_hdf, &
+            &  read_cresp_smap_fields, read_real_arr2d_dset, read_smap_header_h5, &
+            &  save_NR_smap, check_NR_smaps_headers, read_NR_smap, read_NR_smap_header, got_smaps_from_restart
+
+   logical :: got_smaps_from_restart = .false.
 
 contains
 
@@ -46,7 +48,7 @@ contains
       use hdf5,           only: HID_T, SIZE_T
       use h5lt,           only: h5ltset_attribute_int_f, h5ltset_attribute_double_f
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: e_small, p_min_fix, p_max_fix, q_big
+      use initcrspectrum, only: e_small, p_min_fix, p_max_fix, q_big, use_cresp
 
       implicit none
 
@@ -72,8 +74,30 @@ contains
       lnsnbuf_r(bufsize) = e_small
       call h5ltset_attribute_double_f(file_id, "/", "e_small",   lnsnbuf_r, bufsize, error)
 
+      if (use_cresp) then
+         call create_cresp_smap_fields(file_id) ! create "/cresp/smaps_{LO,UP}/..."
+         call cresp_write_smaps_to_hdf(file_id) ! create "/cresp/smaps_{LO,UP}/{p_f}_ratio"
+      endif
+
    end subroutine write_cresp_to_restart
 
+!----------------------------------------------------------------------------------------------------
+   subroutine cresp_write_smaps_to_hdf(file_id)
+
+      use constants,     only: LO, HI
+      use cresp_helpers, only: n_g_smaps, dset_attrs, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
+      use hdf5,          only: HID_T
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id
+
+      call save_smap_to_open(file_id, n_g_smaps(LO), dset_attrs(1), p_ratios_lo)
+      call save_smap_to_open(file_id, n_g_smaps(LO), dset_attrs(2), f_ratios_lo)
+      call save_smap_to_open(file_id, n_g_smaps(HI), dset_attrs(1), p_ratios_up)
+      call save_smap_to_open(file_id, n_g_smaps(HI), dset_attrs(2), f_ratios_up)
+
+   end subroutine cresp_write_smaps_to_hdf
 !----------------------------------------------------------------------------------------------------
 !> \brief Create fields containing parameters of cresp solution maps, which are saved later in these groups.
 !
@@ -109,6 +133,35 @@ contains
 
    end subroutine create_cresp_smap_fields
 !---------------------------------------------------------------------------------------------------
+   subroutine cresp_read_smaps_from_hdf(file_id)
+
+      use constants,     only: LO, HI, I_ZERO
+      use cresp_helpers, only: map_header, dset_attrs, n_g_smaps, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, hdr_res, allocate_smaps, deallocate_smaps
+      use dataio_pub,    only: warn
+      use hdf5,          only: HID_T
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id
+
+      call read_smap_header_h5(file_id, hdr_res)
+
+      if (hdr_res(1)%s_dim1 .eq. I_ZERO .or. hdr_res(1)%s_dim2 .eq. I_ZERO) then
+         call warn("[cresp_NR_method:cresp_read_smaps_from_hdf] Got solution map dimension = 0. Will solve for new maps.")
+      else
+         call deallocate_smaps ! TODO just in case. Reading should be called before "fill_guess_grids"
+
+         call allocate_smaps(hdr_res(1)%s_dim1, hdr_res(1)%s_dim2) ! TODO decide whether the same dim is forced onto all maps (rather so)
+
+         call read_real_arr2d_dset(file_id, n_g_smaps(LO)//"/"//dset_attrs(1), p_ratios_lo)
+         call read_real_arr2d_dset(file_id, n_g_smaps(LO)//"/"//dset_attrs(2), f_ratios_lo)
+         call read_real_arr2d_dset(file_id, n_g_smaps(HI)//"/"//dset_attrs(1), p_ratios_up)
+         call read_real_arr2d_dset(file_id, n_g_smaps(HI)//"/"//dset_attrs(2), f_ratios_up)
+         got_smaps_from_restart = .true.
+      endif
+
+   end subroutine cresp_read_smaps_from_hdf
+!----------------------------------------------------------------------------------------------------
 !> \brief Create an external file to save ONLY cresp solution maps, optional, WIP TODO, FIXME
 !
    subroutine save_cresp_smap_h5(smap_data, bound, dsname, filename)

@@ -612,7 +612,7 @@ contains
 #endif /* MULTIGRID && SELF_GRAV */
 #ifdef CRESP
       use initcrspectrum,     only: use_cresp
-      use cresp_NR_method,    only: cresp_read_smaps_from_hdf
+      use cresp_io,           only: cresp_read_smaps_from_hdf
 #endif /* CRESP */
 
       implicit none
