@@ -305,7 +305,7 @@ contains
       implicit none
 
       type(var_numbers), intent(inout) :: flind
-      integer(kind=4)                  :: icr
+      integer(kind=4)                  :: icr, jnb
 
       flind%crn%beg = flind%all + I_ONE
       flind%crs%beg = flind%crn%beg
@@ -337,20 +337,24 @@ contains
       flind%crspc%pos = flind%components
 
 #ifdef CRESP
-      flind%crspc%nbeg = flind%crn%end + I_ONE
-      flind%crspc%nend = flind%crn%end + ncrb * nspc
-      flind%crspc%ebeg = flind%crspc%nend + I_ONE
-      flind%crspc%eend = flind%crspc%nend + ncrb * nspc
-
-      do icr = 1, ncr2b
-         iarr_crspc_n(icr) = flind%crspc%nbeg - I_ONE + icr
-         iarr_crspc_e(icr) = flind%crspc%ebeg - I_ONE + icr
-      enddo
+      if (.not. allocated(flind%crspcs)) allocate(flind%crspcs(nspc))
+!     flind%crspc%nbeg, flind%crspc%nend, flind%crspc%ebeg, flind%crspc%eend are not used in this approach
 
       do icr = 1, nspc        !< Arrange iterable indexes for each spectral species separately; first indexes for n, then e.
-         iarr_crspc2_n(icr, :) = iarr_crspc_n(I_ONE + (icr - I_ONE) * ncrb: ncrb + (icr - I_ONE) * ncrb)
-         iarr_crspc2_e(icr, :) = iarr_crspc_e(I_ONE + (icr - I_ONE) * ncrb: ncrb + (icr - I_ONE) * ncrb)
+         flind%crspcs(icr)%nbeg = flind%crn%end + I_ONE + (icr - I_ONE) * ncr2b  !< Arrange flind indexes too!
+         flind%crspcs(icr)%nend = flind%crspcs(icr)%nbeg + ncrb
+         flind%crspcs(icr)%ebeg = flind%crspcs(icr)%nend
+         flind%crspcs(icr)%eend = flind%crspcs(icr)%ebeg + ncrb
+
+         iarr_crspc2_n(icr, :) = [(jnb, jnb = flind%crspcs(icr)%nbeg, flind%crspcs(icr)%nend)]
+         iarr_crspc2_e(icr, :) = [(jnb, jnb = flind%crspcs(icr)%ebeg, flind%crspcs(icr)%eend)] ! iarr_crspc_e(I_ONE + (icr - I_ONE) * ncrb: ncrb + (icr - I_ONE) * ncrb)
+
+         iarr_crspc_n(1 + (icr - I_ONE) * ncrb: ncrb + icr * ncrb) = iarr_crspc2_n(icr, :)
+         iarr_crspc_e(1 + (icr - I_ONE) * ncrb: ncrb + icr * ncrb) = iarr_crspc2_e(icr, :)
       enddo
+
+      flind%crspcs(:)%all = ncr2b
+      flind%crspc%all = ncr2b * nspc
 #endif /* CRESP */
 
    end subroutine cosmicray_index
