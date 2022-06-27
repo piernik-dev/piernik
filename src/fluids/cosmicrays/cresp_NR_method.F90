@@ -1599,46 +1599,54 @@ contains
 !
    subroutine try_read_user_h5(filename, hdr_init, unable_to_read)
 
+      use constants,     only: I_ZERO, I_ONE
       use cresp_helpers, only: map_header
-      use cresp_io,      only: check_file_group, check_NR_smaps_headers
+      use cresp_io,      only: check_NR_smaps_headers, cresp_gname
       use dataio_pub,    only: warn, printinfo
-      use hdf5,          only: HID_T, h5close_f, h5open_f, h5fclose_f, h5fopen_f, H5F_ACC_RDONLY_F
+      use hdf5,          only: h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f, h5eset_auto_f, HID_T, H5F_ACC_RDONLY_F
 
       implicit none
 
+      character(len=*),               intent(in)    :: filename
+      type(map_header), dimension(2), intent(inout) :: hdr_init
+      logical,                        intent(out)   :: unable_to_read
+      integer, parameter                            :: min_fnamelen = 4 ! at least "?.h5"
       integer(kind=4)                               :: error
-      character(len=*)                              :: filename
-      integer(HID_T)                                :: file_id
+      integer(HID_T)                                :: file_id, group_id
       logical                                       :: file_exists, file_has_data
       logical, dimension(2)                         :: hdr_match
-      type(map_header), dimension(2), intent(inout) :: hdr_init
-      integer, parameter                            :: min_fnamelen = 4 ! at least "?.h5"
-      logical,                        intent(out)   :: unable_to_read
 
       unable_to_read = .true.
-
       if (len(filename) <= min_fnamelen) return
 
-      call check_file_group(filename, "/cresp", file_exists, file_has_data)
+      inquire(file = trim(filename), exist = file_exists)    ! check if file "filename" exists
 
-      if (.not. file_exists) call warn("[cresp_NR_method:try_read_user_h5] File provided as 'NR_smap_file' "//trim(filename)//" does not contain usable data.")
-      unable_to_read = (.not. file_exists) .and. (.not. file_has_data)
-      if (unable_to_read) return
+      if (file_exists) then
+         file_has_data = .false.
 
-      call h5open_f(error)
-      call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
-      call cresp_read_smaps_from_hdf(file_id)   ! loads ratios and hdr_res
-      call check_NR_smaps_headers(hdr_res, hdr_init, hdr_match)
+         call h5open_f(error)
+         call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
 
-      call h5fclose_f(file_id, error)
-      call h5close_f(error)
-      unable_to_read = .not. any(hdr_match)
+         call h5eset_auto_f(I_ZERO, error)   ! Turn off printing messages
+         call h5gopen_f(file_id, cresp_gname, group_id, error)
 
-      if (unable_to_read) then
-         call warn("[cresp_NR_method:try_read_user_h5] File provided as 'NR_smap_file' "//trim(filename)//" does not contain usable data.")
-      else
-         call printinfo("[cresp_NR_method:try_read_user_h5] Successfully read data from provided file "//trim(filename))
+         unable_to_read = (error /= 0)
+
+         call h5eset_auto_f(I_ONE, error)    ! Turn on  printing messages
+         call h5gclose_f(group_id, error)
+
+         if (.not. unable_to_read) then
+            call cresp_read_smaps_from_hdf(file_id)   ! loads ratios and hdr_res
+            call check_NR_smaps_headers(hdr_res, hdr_init, hdr_match)
+            unable_to_read = .not. any(hdr_match)
+            if (any(hdr_match)) call printinfo("[cresp_NR_method:try_read_user_h5] Successfully read data from provided file "//trim(filename))
+         endif
+
+         call h5fclose_f(file_id, error)
+         call h5close_f(error)
       endif
+
+      if (unable_to_read) call warn("[cresp_NR_method:try_read_user_h5] File provided as 'NR_smap_file' "//trim(filename)//" does not contain usable data.")
 
    end subroutine try_read_user_h5
 !----------------------------------------------------------------------------------------------------

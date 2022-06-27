@@ -35,9 +35,11 @@ module cresp_io
    implicit none
 
    private
-   public   :: check_file_group, file_has_group, file_has_dataset, save_smap_to_open, save_cresp_smap_h5,   &
+   public   :: save_smap_to_open, save_cresp_smap_h5,   &
             &  read_cresp_smap_fields, create_cresp_smap_fields, read_real_arr2d_dset, read_smap_header_h5, &
-            &  save_NR_smap, check_NR_smaps_headers, read_NR_smap, read_NR_smap_header
+            &  save_NR_smap, check_NR_smaps_headers, read_NR_smap, read_NR_smap_header, cresp_gname
+
+   character(len=*), parameter :: cresp_gname = "/cresp"
 
 contains
 
@@ -79,24 +81,40 @@ contains
 !
    subroutine save_cresp_smap_h5(smap_data, bound, dsname, filename)
 
+      use constants,     only: I_ZERO, I_ONE
       use cresp_helpers, only: n_g_smaps
       use dataio_pub,    only: msg, printinfo
-      use hdf5,          only: HID_T, h5close_f, h5fclose_f, h5fcreate_f, h5fopen_f, &
-           &                   h5open_f, H5F_ACC_RDWR_F, H5F_ACC_TRUNC_F
+      use hdf5,          only: h5open_f, h5close_f, h5fcreate_f, h5fopen_f, h5fclose_f, h5dopen_f, h5dclose_f, h5eset_auto_f, h5gopen_f, h5gclose_f, &
+           &                   HID_T, H5F_ACC_RDWR_F, H5F_ACC_TRUNC_F, H5F_ACC_RDONLY_F
 
       implicit none
 
-      integer,                      intent(in) :: bound
-      character(len=*),             intent(in) :: dsname
-      logical                                  :: file_exist, has_group, has_dset
-      integer(HID_T)                           :: file_id
-      character(len=*),             intent(in) :: filename
-      integer(kind=4)                          :: error
       real, dimension(:,:), target, intent(inout) :: smap_data
+      integer,                      intent(in)    :: bound
+      character(len=*),             intent(in)    :: dsname
+      character(len=*),             intent(in)    :: filename
+      logical                                     :: file_exist, has_group, has_dset
+      integer(HID_T)                              :: file_id, dset_id, group_id
+      integer(kind=4)                             :: error
 
-      call check_file_group(filename, "/cresp", file_exist, has_group) ! Assumption: if H5 file has "/cresp" group, other fields should be present
+      file_exist = .false.
+      has_group  = .false.
 
-      if (.not. file_exist) then
+      inquire(file = trim(filename), exist = file_exist)    ! check if file "filename" exists
+
+      if (file_exist) then
+         has_group = .false.
+
+         call h5open_f(error)
+         call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
+         call h5eset_auto_f(I_ZERO, error)   ! Turn off printing messages
+         call h5gopen_f(file_id, cresp_gname, group_id, error)
+         if (error .eq. 0) has_group = .true.
+         call h5eset_auto_f(I_ONE, error)    ! Turn on  printing messages
+         call h5gclose_f(group_id, error)
+         call h5fclose_f(file_id, error)
+         call h5close_f(error)
+      else
          write(msg,"(A,A,A)") "[cresp_io:save_cresp_smap_h5] File '", trim(filename),"' does not exist; must be created and initialized."
          call printinfo(msg)
 
@@ -114,7 +132,17 @@ contains
          call h5close_f(error)
       endif
 
-      has_dset = file_has_dataset(filename, "/"//n_g_smaps(bound)//"/"//dsname)
+      has_dset = .false.
+
+      call h5open_f(error)
+      call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
+      call h5eset_auto_f(I_ZERO, error)   ! Turn off printing messages
+      call h5dopen_f(file_id, "/"//n_g_smaps(bound)//"/"//dsname, dset_id, error)
+      if (error .eq. 0) has_dset = .true.
+      call h5dclose_f(dset_id, error)
+      call h5eset_auto_f(I_ONE, error)    ! Turn on  printing messages
+      call h5fclose_f(file_id, error)
+      call h5close_f(error)
 
       if (.not. has_dset) then
          call h5open_f(error)
@@ -459,84 +487,6 @@ contains
 
    end subroutine read_real_arr2d_dset
 
-!---------------------------------------------------------------------------------------------------
-!> \brief Check if file "filename" exists and has group "groupname".
-!
-   subroutine check_file_group(filename, groupname, file_exist, has_group)
-
-      implicit none
-
-      character(len=*)             :: filename
-      logical,       intent(inout) :: file_exist, has_group
-      character(len=*), intent(in) :: groupname
-
-      file_exist = .false.
-      has_group  = .false.
-
-      inquire(file = trim(filename), exist = file_exist)    ! check if file "filename" exists
-
-
-      if (file_exist) then
-         has_group = file_has_group(filename, groupname)
-      endif
-
-   end subroutine check_file_group
-!---------------------------------------------------------------------------------------------------
-!
-!> \brief Check if HDF5 file "filename" has group "groupname" by trying to open it
-!
-   logical function file_has_group(filename, groupname) result (has_group)   ! WARNING may be slow!
-
-      use constants,    only: I_ZERO, I_ONE
-      use hdf5,         only: HID_T, H5F_ACC_RDONLY_F, h5close_f, h5fclose_f, h5fopen_f, &
-                        &     h5gclose_f, h5gopen_f, h5eset_auto_f, h5open_f
-      implicit none
-
-      integer(kind=4)               :: error
-      integer(HID_T)                :: file_id, group_id
-      character(len=*), intent(in)  :: filename, groupname
-
-      has_group = .false.
-
-      call h5open_f(error)
-      call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
-      call h5eset_auto_f(I_ZERO, error)   ! Turn off printing messages
-      call h5gopen_f(file_id, groupname, group_id, error)
-      if (error .eq. 0) has_group = .true.
-      call h5eset_auto_f(I_ONE, error)    ! Turn on  printing messages
-      call h5gclose_f(group_id, error)
-      call h5fclose_f(file_id, error)
-      call h5close_f(error)
-
-   end function file_has_group
-!---------------------------------------------------------------------------------------------------
-!
-!> \brief Check if HDF5 file "filename" has dataset "dsname" by trying to open it
-!
-   logical function file_has_dataset(filename, dsname) result (has_dset)   ! WARNING may be slow!
-
-      use constants,    only: I_ZERO, I_ONE
-      use hdf5,         only: HID_T, H5F_ACC_RDONLY_F, h5close_f, h5dopen_f, h5fclose_f, &
-                        &  h5fopen_f, h5dclose_f, h5eset_auto_f, h5open_f
-      implicit none
-
-      integer(kind=4)               :: error
-      integer(HID_T)                :: file_id, dset_id
-      character(len=*), intent(in)  :: filename, dsname
-
-      has_dset = .false.
-
-      call h5open_f(error)
-      call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
-      call h5eset_auto_f(I_ZERO, error)   ! Turn off printing messages
-      call h5dopen_f(file_id, dsname, dset_id, error)
-      if (error .eq. 0) has_dset = .true.
-      call h5dclose_f(dset_id, error)
-      call h5eset_auto_f(I_ONE, error)    ! Turn on  printing messages
-      call h5fclose_f(file_id, error)
-      call h5close_f(error)
-
-   end function file_has_dataset
 !---------------------------------------------------------------------------------------------------
 
 
