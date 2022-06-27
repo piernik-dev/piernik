@@ -147,7 +147,7 @@ def plot1d_particles(ax, p1, pm, nbins, ranges, pcolor, psize):
     return ax
 
 
-def add_cbar(figmode, cbar_mode, grid, ab, ic, clab):
+def add_cbar(figmode, cbar_mode, grid, ab, ic, clab, sct, field):
     icb = pu.cbsplace[figmode][ic]
     clf = [ps.cbar_hist2d_label_format, ps.cbar_plot2d_label_format][ic]
     if cbar_mode == 'none':
@@ -168,6 +168,13 @@ def add_cbar(figmode, cbar_mode, grid, ab, ic, clab):
     cbarh.ax.set_ylabel(clab)
     if cbar_mode == 'none':
         cbarh.ax.yaxis.set_label_coords(ps.cbar_label_coords[0], ps.cbar_label_coords[1])
+    if ic == 1 and (sct == '3' or sct == 'symlog'):
+        slticks, sltlabs = [], []
+        for tick in cbarh.get_ticks():
+            if tick >= field[1] and tick <= field[2]:
+                slticks.append(tick)
+                sltlabs.append(clf % (np.sign(tick) * 10.**(np.abs(tick)) * field[3]))
+        cbarh.set_ticks(slticks, labels=sltlabs)
 
 
 def plotcompose(pthfilen, var, output, options):
@@ -277,10 +284,10 @@ def plotcompose(pthfilen, var, output, options):
         ax.set_title(timep)
 
         if drawh:
-            add_cbar(figmode, cbar_mode, grid, ah[3], 0, labh)
+            add_cbar(figmode, cbar_mode, grid, ah[3], 0, labh, sctype, field)
 
         if drawd:
-            add_cbar(figmode, cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 1, vlab)
+            add_cbar(figmode, cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 1, vlab, sctype, field)
 
         P.draw()
         out2d = output[0] + pu.plane_in_outputname(figmode, draw2D) + output[1]
