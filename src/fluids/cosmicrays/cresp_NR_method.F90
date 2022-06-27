@@ -210,22 +210,21 @@ contains
          if (.not. allocated(p_space)) allocate(p_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
          if (.not. allocated(q_space)) allocate(q_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
 
-         if (.not. got_smaps_from_restart) then
-            p_ratios_up = zero ; f_ratios_up = zero
-            p_ratios_lo = zero ; f_ratios_lo = zero
-         endif
-
          call init_smap_array_values(hdr)
+
          ! now check if restart file was loaded
          solve_new_smaps = .not. got_smaps_from_restart
-         if (got_smaps_from_restart) then
+         if (solve_new_smaps) then
+            p_ratios_up = zero ; f_ratios_up = zero
+            p_ratios_lo = zero ; f_ratios_lo = zero
+         else
          ! if restart file loaded, check the header
-               call check_NR_smaps_headers(hdr_res, hdr, hdr_match_res)
+            call check_NR_smaps_headers(hdr_res, hdr, hdr_match_res)
             solve_new_smaps = .not. all(hdr_match_res)
          endif
 
-         if ( .not. got_smaps_from_restart .or. (hdr_match_res(LO) .eqv. .false. .or. hdr_match_res(HI) .eqv. .false.) ) then
-            if (e_small_approx_init_cond == 1) then   ! implies solution maps will be needed at leas once. ! TODO make imports from initcrspectrum more readable
+         if (solve_new_smaps) then
+            if (e_small_approx_init_cond == 1) then   ! implies solution maps will be needed at least once. ! TODO make imports from initcrspectrum more readable
                call warn("[cresp_NR_method] Different smap parameters in restart or restart unavailable. Trying harder...")
                ! if header not in agreement, try to load backup, e.g., "NR_smap_file". If additionally user declared "NR_allow_old_smaps", read dat files
                call try_read_user_h5(NR_smap_file, hdr, solve_new_smaps)
@@ -414,24 +413,23 @@ contains
       call get_smap_filename("p_ratios_", HI, filename_read_up)
       call read_NR_smap_header(filename_read_up, hdr_read(HI), read_error(HI))
 
-      solve_new_smap = read_error(LO) .and. read_error(HI)
+      solve_new_smap = all(read_error)
 
-      if (.not. (read_error(LO) .and. read_error(HI)) ) then
+      if (solve_new_smap) return
 
-         call check_NR_smaps_headers(hdr_read, hdr_init, hdr_match)
-         if (all(hdr_match)) then
-            call read_NR_smap(p_ratios_lo, "p"//filename_read_lo(2:9), LO, read_error(LO))
-            call read_NR_smap(f_ratios_lo, "f"//filename_read_lo(2:9), LO, read_error(HI))
+      call check_NR_smaps_headers(hdr_read, hdr_init, hdr_match)
+      if (all(hdr_match)) then
+         call read_NR_smap(p_ratios_lo, "p"//filename_read_lo(2:9), LO, read_error(LO))
+         call read_NR_smap(f_ratios_lo, "f"//filename_read_lo(2:9), LO, read_error(HI))
 
-            solve_new_smap = solve_new_smap .and. (read_error(LO) .and. read_error(HI))
+         solve_new_smap = solve_new_smap .and. all(read_error)
 
-            call read_NR_smap(p_ratios_up, "p"//filename_read_up(2:9), HI, read_error(LO))
-            call read_NR_smap(f_ratios_up, "f"//filename_read_up(2:9), HI, read_error(HI))
+         call read_NR_smap(p_ratios_up, "p"//filename_read_up(2:9), HI, read_error(LO))
+         call read_NR_smap(f_ratios_up, "f"//filename_read_up(2:9), HI, read_error(HI))
 
-            solve_new_smap = solve_new_smap .and. (read_error(LO) .and. read_error(HI))
-         else
-            solve_new_smap = .true.
-         endif
+         solve_new_smap = solve_new_smap .and. all(read_error)
+      else
+         solve_new_smap = .true.
       endif
 
    end subroutine try_read_old_smap_files
