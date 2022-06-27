@@ -199,12 +199,12 @@ contains
 
       implicit none
 
-      logical                        :: first_run = .true., solve_new_smaps
+      logical                        :: solve_new_smaps
       logical, dimension(2)          :: hdr_match_res
       type(map_header), dimension(2) :: hdr
 
       call allocate_all_smap_arrays
-      if (master .and. first_run) then
+      if (master) then
          helper_arr_dim = int(arr_dim_a/I_FOUR, kind=4)
 
          if (.not. allocated(p_space)) allocate(p_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
@@ -247,8 +247,6 @@ contains
 
          if (allocated(p_space)) deallocate(p_space) ! only needed at initialization
          if (allocated(q_space)) deallocate(q_space)
-
-         first_run = .false.
       endif
 
       call cresp_NR_mpi_exchange(hdr)
