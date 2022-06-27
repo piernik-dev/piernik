@@ -44,7 +44,6 @@ module cresp_NR_method
    real, allocatable, dimension(:)           :: p_space, q_space
    real                                      :: alpha, p_ratio_4_q, n_in
    real, allocatable, dimension(:)           :: alpha_tab_q, q_grid
-   real, allocatable, dimension(:,:), target :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
    real, allocatable, dimension(:,:)         :: alpha_tab, n_tab
    integer(kind=4)                           :: helper_arr_dim
    real, pointer, dimension(:,:)             :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
@@ -196,7 +195,7 @@ contains
    subroutine cresp_initialize_guess_grids
 
       use constants,      only: zero, I_FOUR, LO, HI
-      use cresp_helpers,  only: map_header, hdr_io
+      use cresp_helpers,  only: map_header, hdr_io, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
       use cresp_io,       only: check_NR_smaps_headers, save_NR_smap
       use dataio_pub,     only: warn
       use initcrspectrum, only: arr_dim_a, force_init_NR, e_small_approx_init_cond, NR_allow_old_smaps, NR_smap_file
@@ -405,7 +404,7 @@ contains
    subroutine try_read_old_smap_files(hdr_init, solve_new_smap)
 
       use constants,     only: LO, HI
-      use cresp_helpers, only: extension, flen, map_header
+      use cresp_helpers, only: extension, flen, map_header, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
       use cresp_io,      only: read_NR_smap, read_NR_smap_header, check_NR_smaps_headers
 
       implicit none
@@ -488,7 +487,8 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine assoc_pointers(bound_case)
 
-      use constants, only: LO, HI
+      use constants,     only: LO, HI
+      use cresp_helpers, only: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
 
       implicit none
 
@@ -1418,8 +1418,9 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine cresp_NR_mpi_exchange(hdr_share)
 
-      use constants, only: LO, HI
-      use mpisetup,  only: piernik_MPI_Bcast
+      use constants,     only: LO, HI
+      use cresp_helpers, only: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
+      use mpisetup,      only: piernik_MPI_Bcast
 
       implicit none
 
@@ -1506,7 +1507,8 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine allocate_smaps(dim1, dim2)
 
-      use diagnostics, only: ma2d, my_allocate
+      use diagnostics,   only: ma2d, my_allocate
+      use cresp_helpers, only: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
 
       implicit none
 
@@ -1536,7 +1538,8 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine deallocate_smaps
 
-      use diagnostics, only: my_deallocate
+      use diagnostics,   only: my_deallocate
+      use cresp_helpers, only: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
 
       implicit none
 
@@ -1550,7 +1553,7 @@ contains
    subroutine cresp_write_smaps_to_hdf(file_id)
 
       use constants,     only: LO, HI
-      use cresp_helpers, only: n_g_smaps, dset_attrs
+      use cresp_helpers, only: n_g_smaps, dset_attrs, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
       use cresp_io,      only: save_smap_to_open
       use hdf5,          only: HID_T
 
@@ -1569,7 +1572,7 @@ contains
 
       use constants,     only: LO, HI, I_ZERO
       use cresp_io,      only: read_real_arr2d_dset, read_smap_header_h5
-      use cresp_helpers, only: map_header, dset_attrs, n_g_smaps
+      use cresp_helpers, only: map_header, dset_attrs, n_g_smaps, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
       use dataio_pub,    only: warn
       use hdf5,          only: HID_T
 
