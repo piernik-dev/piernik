@@ -41,8 +41,9 @@ module initcrspectrum
    public :: use_cresp, use_cresp_evol, p_init, initial_spectrum, p_br_init, f_init, q_init, q_br_init, q_big, cfl_cre, cre_eff, expan_order, e_small, e_small_approx_p, e_small_approx_init_cond,  &
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active, &
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,        &
-           & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, fsynchr, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,       &
-           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer, K_cresp_paral, K_cresp_perp
+           & spec_mod_trms, cresp_all_edges, cresp_all_bins, cresp, crel, dfpq, fsynchr, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,       &
+           & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer, K_cresp_paral, &
+           & K_cresp_perp, norm_init_spectrum_n, norm_init_spectrum_e
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -134,7 +135,8 @@ module initcrspectrum
    end type cr_spectrum
 
    type(cr_spectrum) :: cresp
-   type(cr_spectrum) :: norm_init_spectrum
+   real, dimension(:,:), allocatable :: norm_init_spectrum_n !TODO FIXME change me back into type(cr_spectrum)
+   real, dimension(:,:), allocatable :: norm_init_spectrum_e !TODO FIXME change me back into type(cr_spectrum)
    type(bin_old)     :: crel
 ! For passing terms to compute energy sources / sinks
 
@@ -144,7 +146,7 @@ module initcrspectrum
       real :: ucmb
    end type spec_mod_trms
 
-   real :: total_init_cree
+   real, dimension(:), allocatable :: total_init_cree
    real :: p_fix_ratio
    integer(kind=4), allocatable, dimension(:) :: cresp_all_edges, cresp_all_bins
 
@@ -665,14 +667,12 @@ contains
 
       if (.not. allocated(cresp%n)) call my_allocate_with_index(cresp%n, ncrb, I_ONE)
       if (.not. allocated(cresp%e)) call my_allocate_with_index(cresp%e, ncrb, I_ONE)
-      if (.not. allocated(norm_init_spectrum%n)) call my_allocate_with_index(norm_init_spectrum%n, ncrb, I_ONE)
-      if (.not. allocated(norm_init_spectrum%e)) call my_allocate_with_index(norm_init_spectrum%e, ncrb, I_ONE)
 
       cresp%e = zero
       cresp%n = zero
 
-      norm_init_spectrum%n = zero
-      norm_init_spectrum%e = zero
+      norm_init_spectrum_n(:,:) = zero
+      norm_init_spectrum_e(:,:) = zero
 
    end subroutine init_cresp_types
 
@@ -790,8 +790,8 @@ contains
 
       if (allocated(cresp%n))   call my_deallocate(cresp%n)
       if (allocated(cresp%e))   call my_deallocate(cresp%e)
-      if (allocated(norm_init_spectrum%n))   call my_deallocate(norm_init_spectrum%n)
-      if (allocated(norm_init_spectrum%e))   call my_deallocate(norm_init_spectrum%e)
+      if (allocated(norm_init_spectrum_n))   deallocate(norm_init_spectrum_n)
+      if (allocated(norm_init_spectrum_e))   deallocate(norm_init_spectrum_e)
 
       if (allocated(p_fix)) call my_deallocate(p_fix)
       if (allocated(p_mid_fix)) call my_deallocate(p_mid_fix)
@@ -818,7 +818,6 @@ contains
       integer, intent(in)  :: nsp, nb
 
       ma1d = [nsp]
-
       call my_allocate(p_lo_init, ma1d)
       call my_allocate(p_up_init, ma1d)
       call my_allocate(p_br_init_lo, ma1d)
@@ -833,6 +832,7 @@ contains
       call my_allocate(fsynchr, ma1d)
       call my_allocate(def_dtadiab, ma1d)
       call my_allocate(def_dtsynch, ma1d)
+      call my_allocate(total_init_cree, ma1d)
 
       ma2d = [nsp, nb * 2]
       call my_allocate(K_cresp_paral, ma2d)
@@ -841,6 +841,10 @@ contains
       ma2d = [2, nsp]
       call my_allocate(p_init, ma2d)
       call my_allocate(p_br_init, ma2d)
+
+      ma2d = [nsp, nb]
+      if (.not. allocated(norm_init_spectrum_n)) call my_allocate(norm_init_spectrum_n, ma2d)
+      if (.not. allocated(norm_init_spectrum_e)) call my_allocate(norm_init_spectrum_e, ma2d)
 
    end subroutine allocate_spectral_CRspecies_arrays
 
