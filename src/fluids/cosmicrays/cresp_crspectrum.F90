@@ -918,15 +918,15 @@ contains
       use constants,       only: zero, I_ZERO, I_ONE
       use cresp_NR_method, only: bound_name
       use dataio_pub,      only: warn, msg, die, printinfo
-      use initcosmicrays,  only: ncrb
+      use initcosmicrays,  only: ncrb, nspc
       use initcrspectrum,  only: q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel,   &
                               &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins
       use mpisetup,        only: master
 
       implicit none
 
-      real, dimension(I_ONE:ncrb), intent(out) :: init_n, init_e
-      integer                                  :: i, k
+      real, dimension(I_ONE:nspc,I_ONE:ncrb), intent(out) :: init_n, init_e
+      integer                                  :: i, k, i_spc
       integer(kind=4)                          :: co
       integer(kind=4), dimension(LO:HI)        :: i_ch
       real                                     :: c
@@ -942,140 +942,140 @@ contains
 
       init_e = zero
       init_n = zero
-
-      f = zero ; q = zero ; p = zero ; n = zero ; e = zero
-
-      q = q_init
+      
+      do i_spc = 1, nspc
+        f = zero ; q = zero ; p = zero ; n = zero ; e = zero
+        
 ! reading initial values of p_cut
-      p_cut = p_init
+        p_cut = p_init(i_spc,:)
 
-      p         = p_fix       ! actual array of p including free edges, p_fix shared via initcrspectrum
-      p(max_ic) = p_cut
+        p         = p_fix       ! actual array of p including free edges, p_fix shared via initcrspectrum
+        p(max_ic) = p_cut
 
 ! Sorting bin edges - arbitrary chosen p_cut may need to be sorted to appear in growing order
-      do k = ncrb, 1, -1
-         do i = 0, k-1
-            if (p(i) > p(i+1)) then
-               c = p(i)
-               p(i) = p(i+1)
-               p(i+1) = c
-            endif
-         enddo
-      enddo
+        do k = ncrb, 1, -1
+            do i = 0, k-1
+                if (p(i) > p(i+1)) then
+                c = p(i)
+                p(i) = p(i+1)
+                p(i+1) = c
+                endif
+            enddo
+        enddo
 
-      i_cut = max_ic
+        i_cut = max_ic
 
 ! we only need cresp_init_state to derive (n, e) from initial (f, p_cut). For this purpose only 'active bins', i_cut are needed.
 
-      i_cut = get_i_cut(p_cut)
+        i_cut = get_i_cut(p_cut)
 
-      do co = LO, HI
-         if (abs(p_init(co) - p_fix(i_cut(co)+oz(co)-1)) <= eps ) then
-            write(msg, *) "[cresp_crspectrum:cresp_init_state] p_init(",bound_name(co),") = p_fix(i_cut(",bound_name(co),"): (in/dec)crementing i_cut(",bound_name(co),") index to avoid FPE"
-            if (master) call warn(msg)
-            i_cut(co) = i_cut(co) + pm(co)
-         endif
-      enddo
+        do co = LO, HI
+            if (abs(p_init(co,i_spc) - p_fix(i_cut(co)+oz(co)-1)) <= eps ) then
+                write(msg, *) "[cresp_crspectrum:cresp_init_state] p_init(",bound_name(co),") = p_fix(i_cut(",bound_name(co),"): (in/dec)crementing i_cut(",bound_name(co),") index to avoid FPE"
+                if (master) call warn(msg)
+                i_cut(co) = i_cut(co) + pm(co)
+            endif
+        enddo
 
-      is_active_bin = .false.
-      is_active_bin(i_cut(LO)+1:i_cut(HI)) = .true.
-      num_active_bins = count(is_active_bin)
-      allocate(active_bins(num_active_bins))
-      active_bins = pack(cresp_all_bins, is_active_bin)
+        is_active_bin = .false.
+        is_active_bin(i_cut(LO)+1:i_cut(HI)) = .true.
+        num_active_bins = count(is_active_bin)
+        allocate(active_bins(num_active_bins))
+        active_bins = pack(cresp_all_bins, is_active_bin)
 
 ! Pure power law spectrum initial condition (default case)
-      q = q_init
-      f = zero
-      f = f_init * (p/p_init(LO))**(-q_init)
+        q = q_init(i_spc)
+        f = f_init(i_spc) * (p/p_init(LO, i_spc))**(-q_init(i_spc))
 
-      select case (initial_spectrum)
-         case ('powl')
-            call cresp_init_powl_spectrum
-         case ('brpg')
-            call cresp_init_brpg_spectrum
-         case ('plpc')
-            call cresp_init_plpc_spectrum
-         case ('brpl')
-            call cresp_init_brpl_spectrum
-         case ('symf')
-            call cresp_init_symf_spectrum
-         case ('syme')
-            call cresp_init_syme_spectrum
-         case ('bump')
-            call cresp_init_bump_spectrum
-         case default
-            write(msg,"(A,A,A)") "[cresp_crspectrum:cresp_init_state] Provided unrecognized initial_spectrum (",initial_spectrum,"). Make sure that value is correctly provided."
-            call die(msg)
-      end select
+        select case (initial_spectrum)
+            case ('powl')
+                call cresp_init_powl_spectrum(i_spc)
+            case ('brpg')
+                call cresp_init_brpg_spectrum(i_spc)
+            case ('plpc')
+                call cresp_init_plpc_spectrum(i_spc)
+            case ('brpl')
+                call cresp_init_brpl_spectrum(i_spc)
+            case ('symf')
+                call cresp_init_symf_spectrum(i_spc)
+            case ('syme')
+                call cresp_init_syme_spectrum(i_spc)
+            case ('bump')
+                call cresp_init_bump_spectrum(i_spc)
+            case default
+                write(msg,"(A,A,A)") "[cresp_crspectrum:cresp_init_state] Provided unrecognized initial_spectrum (",initial_spectrum,"). Make sure that value is correctly provided."
+                call die(msg)
+        end select
 
-      if (e_small_approx_init_cond > 0) then
-         do co = LO, HI
-            call get_fqp_cutoff(co, exit_code)
-            if (exit_code) then
-               write(msg,*) "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but solution for initial spectrum ",bound_name(co)," cutoff not found, exiting! "
-               call die(msg)
-            endif
-         enddo
-
-         if (allow_source_spectrum_break) then
-
-            i_ch = get_i_cut(p_cut)
-
-            p(i_ch)     = p_cut
-            q(i_ch+oz)  = q(i_cut+oz)
-            f(i_ch(LO)) = e_small_to_f(p_cut(LO))
-            f(i_ch(HI)) = e_small_to_f(p_cut(HI))
-
-            do i = i_ch(LO)+1, i_cut(LO)
-               p(i) = p_fix(i)
-               f(i) = f(i_ch(LO)) * (p_fix(i)/p(i_ch(LO)))**(-q(i_ch(LO)+1))
-               q(i+1) = q(i_ch(LO)+1)
+        if (e_small_approx_init_cond > 0) then
+            do co = LO, HI
+                call get_fqp_cutoff(co, exit_code)
+                if (exit_code) then
+                write(msg,*) "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but solution for initial spectrum ",bound_name(co)," cutoff not found, exiting! "
+                call die(msg)
+                endif
             enddo
 
-            do i = i_cut(HI), i_ch(HI)-1
-               p(i) = p_fix(i)
-               f(i) = f(i_cut(HI)-1)* (p_fix(i)/p_fix(i_cut(HI)-1))**(-q(i_cut(HI)))
-               q(i) = q(i_cut(HI))
-            enddo
+            if (allow_source_spectrum_break) then
+
+                i_ch = get_i_cut(p_cut)
+
+                p(i_ch)     = p_cut
+                q(i_ch+oz)  = q(i_cut+oz)
+                f(i_ch(LO)) = e_small_to_f(p_cut(LO))
+                f(i_ch(HI)) = e_small_to_f(p_cut(HI))
+
+                do i = i_ch(LO)+1, i_cut(LO)
+                p(i) = p_fix(i)
+                f(i) = f(i_ch(LO)) * (p_fix(i)/p(i_ch(LO)))**(-q(i_ch(LO)+1))
+                q(i+1) = q(i_ch(LO)+1)
+                enddo
+
+                do i = i_cut(HI), i_ch(HI)-1
+                p(i) = p_fix(i)
+                f(i) = f(i_cut(HI)-1)* (p_fix(i)/p_fix(i_cut(HI)-1))**(-q(i_cut(HI)))
+                q(i) = q(i_cut(HI))
+                enddo
 #ifdef CRESP_VERBOSED
-            write (msg,"(A,2I3,A,2I3)") "Boundary bins now (i_lo_new i_lo | i_up_new i_up)",  i_ch(LO), i_cut(LO), ' |', i_ch(HI), i_cut(HI)     ; call printinfo(msg)
+                write (msg,"(A,2I3,A,2I3)") "Boundary bins now (i_lo_new i_lo | i_up_new i_up)",  i_ch(LO), i_cut(LO), ' |', i_ch(HI), i_cut(HI)     ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
-            i_cut = i_ch
-            p(i_cut(HI)) = p_cut(HI)
+                i_cut = i_ch
+                p(i_cut(HI)) = p_cut(HI)
 
-            is_active_bin = .false.
-            is_active_bin(i_cut(LO)+1:i_cut(HI)) = .true.
-            num_active_bins = count(is_active_bin) ! active arrays must be reevaluated - number of active bins and edges might have changed
-            if (allocated(active_bins)) deallocate(active_bins)
-            allocate(active_bins(num_active_bins)) ! active arrays must be reevaluated - number of active bins and edges might have changed
-            active_bins = pack(cresp_all_bins, is_active_bin)
+                is_active_bin = .false.
+                is_active_bin(i_cut(LO)+1:i_cut(HI)) = .true.
+                num_active_bins = count(is_active_bin) ! active arrays must be reevaluated - number of active bins and edges might have changed
+                if (allocated(active_bins)) deallocate(active_bins)
+                allocate(active_bins(num_active_bins)) ! active arrays must be reevaluated - number of active bins and edges might have changed
+                active_bins = pack(cresp_all_bins, is_active_bin)
 
-            e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins) ! once again we must count n and e
-            n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
-         endif
-      endif
+                e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins) ! once again we must count n and e
+                n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
+            endif
+        endif
 
-      if (dfpq%any_dump) then
-         crel%p = p
-         crel%f = f
-         crel%q = q
-         crel%e = e
-         crel%n = n
-         crel%i_cut = i_cut
-      endif
+        if (dfpq%any_dump) then
+            crel%p = p
+            crel%f = f
+            crel%q = q
+            crel%e = e
+            crel%n = n
+            crel%i_cut = i_cut
+        endif
 
-      if (master) call check_init_spectrum
+        if (master) call check_init_spectrum(i_spc)
 
-      n_tot0 = sum(n)
-      e_tot0 = sum(e)
+        !n_tot0 = sum(n)
+        !e_tot0 = sum(e)
 
-      init_n = n
-      init_e = e
+        init_n(i_spc,:) = n(:)
+        init_e(i_spc,:) = e(:)
 
-      total_init_cree = sum(e) !< total_init_cree value is used for initial spectrum scaling when spectrum is injected by source.
-      call deallocate_active_arrays
-
+        total_init_cree(i_spc) = sum(e) !< total_init_cree value is used for initial spectrum scaling when spectrum is injected by source.
+        call deallocate_active_arrays
+    enddo
+    
    end subroutine cresp_init_state
 
 !>
@@ -1098,7 +1098,7 @@ contains
 !>
 !! \brief Assumes power-law spectrum, without breaks. In principle the same thing is done in cresp_init_state, but init_state cannot be called from "outside".
 !<
-   subroutine cresp_init_powl_spectrum
+   subroutine cresp_init_powl_spectrum(i_spc)
 
       use constants,      only: zero
       use diagnostics,    only: my_deallocate
@@ -1110,20 +1110,21 @@ contains
       real, dimension(0:ncrb)                    :: p_range_add
       integer(kind=4), allocatable, dimension(:) :: act_bins, act_edges
       integer(kind=4), dimension(LO:HI)          :: ic
+      integer,                        intent(in) :: i_spc
 
       p_range_add = zero
       ic = get_i_cut(p_init)
 
       p_range_add(ic(LO):ic(HI)) = p_fix(ic(LO):ic(HI))
-      p_range_add(ic(LO)) = p_init(LO)
-      p_range_add(ic(HI)) = p_init(HI)
+      p_range_add(ic(LO)) = p_init(LO, i_spc)
+      p_range_add(ic(HI)) = p_init(HI, i_spc)
       if (.not.allocated(act_edges)) allocate(act_edges(ic(HI) - ic(LO)  ))
       if (.not.allocated(act_bins )) allocate( act_bins(ic(HI) - ic(LO)+1))
       act_edges = cresp_all_edges(ic(LO)  :ic(HI))
       act_bins  = cresp_all_bins (ic(LO)+1:ic(HI))
-      q(act_bins) = q_init
+      q(act_bins) = q_init(i_spc)
 
-      f(act_edges) = f_init * (p_range_add(act_edges)/p_init(LO))**(-q_init)
+      f(act_edges) = f_init(i_spc) * (p_range_add(act_edges)/p_init(LO, i_spc))**(-q_init(i_spc))
 
       n = n + fq_to_n(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), q(1:ncrb), act_bins)
       e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), q(1:ncrb), act_bins)
@@ -1138,7 +1139,7 @@ contains
 !! \details In this case initial spectrum with a break at p_min_fix is assumed, the initial slope is parabolic
 !! in ranges (p_init(LO); p_br_init(LO)) and (p_br_init(HI); p_init(HI)) and reaches e_small imposed value at cutoffs.
 !<
-   subroutine cresp_init_plpc_spectrum
+   subroutine cresp_init_plpc_spectrum(i_spc)
 
       use constants,       only: zero, one, two, three, ten, I_ONE
       use cresp_variables, only: fpcc
@@ -1153,26 +1154,27 @@ contains
       integer(kind=4), allocatable, dimension(:) :: act_bins
       integer(kind=4), dimension(LO:HI)          :: ic
       integer(kind=4)                            :: i_br, i
+      integer,                        intent(in) :: i_spc
 
       p_range_add(:) = zero
-      i_br = int(minloc(abs(p_fix - p_br_init(LO)), dim=1), kind=4) - I_ONE
+      i_br = int(minloc(abs(p_fix - p_br_init(LO, i_spc)), dim=1), kind=4) - I_ONE
       ic = get_i_cut(p_init)
 
       p_range_add(ic(LO):ic(HI)) = p_fix(ic(LO):ic(HI))
-      p_range_add(ic)            = p_init
+      p_range_add(ic)            = p_init(i_spc,:)
 
-      f(ic(LO):ic(HI)) = f_init * (p_range_add(ic(LO):ic(HI))/p_br_init(LO))**(-q_init)
-      q(ic(LO):ic(HI)) = q_init
+      f(ic(LO):ic(HI)) = f_init(i_spc) * (p_range_add(ic(LO):ic(HI))/p_br_init(LO, i_spc))**(-q_init(i_spc))
+      q(ic(LO):ic(HI)) = q_init(i_spc)
 
       if (.not.allocated(act_bins )) allocate( act_bins(ic(HI) - ic(LO)+1))
       act_bins = cresp_all_bins(ic(LO)+1:ic(HI))
 
-      lpl = log10(p_init(LO))
-      lpb = log10(p_br_init(LO))
+      lpl = log10(p_init(LO, i_spc))
+      lpb = log10(p_br_init(LO, i_spc))
       lp_lpb = lpl / lpb
 
-      a = -q_init
-      b = log10(f_init * p_br_init(LO)**q_init)
+      a = -q_init(i_spc)
+      b = log10(f_init(i_spc) * p_br_init(LO, i_spc)**q_init(i_spc))
 
       c_3 =  (-three * lpl + log10(e_small / fpcc) + b * lp_lpb - a * lpl - two * b * lp_lpb ) / (lp_lpb - one)**two
       c_1 =  (c_3 - b) / lpb**two
@@ -1185,10 +1187,10 @@ contains
       enddo
 
 ! HIGH ENERGY CUTOFF; a and b remain unchanged
-      i_br = int(minloc(abs(p_fix - p_br_init(HI)), dim=1), kind=4)
+      i_br = int(minloc(abs(p_fix - p_br_init(HI, i_spc)), dim=1), kind=4)
 
-      lpu = log10(p_init(HI))
-      lpb = log10(p_br_init(HI))
+      lpu = log10(p_init(HI, i_spc))
+      lpb = log10(p_br_init(HI, i_spc))
       lp_lpb = lpu / lpb
 
       c_3 =  (-three * lpu + log10(e_small / fpcc) + b * lp_lpb - a * lpu - two * b * lp_lpb) / (lp_lpb - one)**two
@@ -1212,7 +1214,7 @@ contains
 !! \brief Power-law like spectrum with break at p_br_init_lo
 !! \details In this case initial spectrum with a break at p_min_fix is assumed, the initial slope on the left side of the break is gaussian. q_br_init scales FWHM.
 !<
-   subroutine cresp_init_brpg_spectrum
+   subroutine cresp_init_brpg_spectrum(i_spc)
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
@@ -1220,10 +1222,11 @@ contains
 
       implicit none
 
-      integer(kind=4) :: i, i_br
+      integer(kind=4)     :: i, i_br
+      integer, intent(in) :: i_spc
 
-      i_br = int(minloc(abs(p_fix - p_br_init(LO)), dim=1), kind=4) - I_ONE
-      f(i_cut(LO):i_br-1) = f(i_br-1) * exp(-(q_br_init*log(2.0) * log(p(i_cut(LO):i_br-1)/sqrt(p_init(LO) * p(i_br)))**2))
+      i_br = int(minloc(abs(p_fix - p_br_init(LO, i_spc)), dim=1), kind=4) - I_ONE
+      f(i_cut(LO):i_br-1) = f(i_br-1) * exp(-(q_br_init(i_spc)*log(2.0) * log(p(i_cut(LO):i_br-1)/sqrt(p_init(LO, i_spc) * p(i_br)))**2))
       do i = 1, i_br
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
       enddo
@@ -1236,7 +1239,7 @@ contains
 !! \brief Power-law like spectrum with break at p_br_init_lo
 !! \details In this case initial spectrum with a break at p_min_fix is assumed, the initial slope on the left side of the break is q_br_init.
 !<
-   subroutine cresp_init_brpl_spectrum
+   subroutine cresp_init_brpl_spectrum(i_spc)
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
@@ -1244,11 +1247,12 @@ contains
 
       implicit none
 
-      integer(kind=4) :: i_br
+      integer(kind=4)     :: i_br
+      integer, intent(in) :: i_spc
 
-      i_br = int(minloc(abs(p_fix - p_br_init(LO)), dim=1), kind=4) - I_ONE
-      q(:i_br) = q_br_init ; q(i_br+1:) = q_init
-      f(i_cut(LO):i_br-1) = f(i_br) * (p(i_cut(LO):i_br-1) / p(i_br))**(-q_br_init)
+      i_br = int(minloc(abs(p_fix - p_br_init(LO, i_spc)), dim=1), kind=4) - I_ONE
+      q(:i_br) = q_br_init(i_spc) ; q(i_br+1:) = q_init(i_spc)
+      f(i_cut(LO):i_br-1) = f(i_br) * (p(i_cut(LO):i_br-1) / p(i_br))**(-q_br_init(i_spc))
       e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
@@ -1257,7 +1261,7 @@ contains
 !>
 !!\brief symf - similar to syme, but symmetric in distribution function
 !<
-   subroutine cresp_init_symf_spectrum
+   subroutine cresp_init_symf_spectrum(i_spc)
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
@@ -1265,10 +1269,11 @@ contains
 
       implicit none
 
-      integer(kind=4) :: i, i_br
+      integer(kind=4)     :: i, i_br
+      integer, intent(in) :: i_spc
 
       i_br = int(sum(i_cut)/2, kind=4)
-      q(i_cut(LO)+1:i_br) = -q_init
+      q(i_cut(LO)+1:i_br) = -q_init(i_spc)
       f(i_br) = f(i_br+1)*(p(i_br+1)/p(i_br))**(-q(i_br))
 
       do i = 1, i_br-i_cut(LO)
@@ -1285,7 +1290,7 @@ contains
 !>
 !!\brief syme - symmetric energy distribution relative to the middle of the initial spectrum
 !<
-   subroutine cresp_init_syme_spectrum
+   subroutine cresp_init_syme_spectrum(i_spc)
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
@@ -1293,10 +1298,11 @@ contains
 
       implicit none
 
-      integer(kind=4) :: i, i_br
+      integer(kind=4)     :: i, i_br
+      integer, intent(in) :: i_spc
 
       i_br = int(sum(i_cut)/2, kind=4)
-      q(i_cut(LO)+1:i_br) = q_init-2.2
+      q(i_cut(LO)+1:i_br) = q_init(i_spc)-2.2
       do i = 1, i_br-i_cut(LO)
          f(i_br-i) = f(i_br)*(p(i_br)/p(i_br-i))**(q(i_br-i+1))
       enddo
@@ -1311,7 +1317,7 @@ contains
 !! \brief Gaussian bump-type initial condition for energy distribution
 !! \todo @cresp_grid energy normalization and integral to scale cosmic ray electrons with nucleon energy density!
 !<
-   subroutine cresp_init_bump_spectrum
+   subroutine cresp_init_bump_spectrum(i_spc)
 
       use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncrb
@@ -1319,9 +1325,10 @@ contains
 
       implicit none
 
-      integer(kind=4) :: i
+      integer(kind=4)     :: i
+      integer, intent(in) :: i_spc
 
-      f = f_init * exp(-(4*log(2.0)*log(p/sqrt(p_init(LO)*p_init(HI)/1.))**2)) ! FWHM
+      f = f_init(i_spc) * exp(-(4.*log(2.0)*log(p/sqrt(p_init(LO, i_spc)*p_init(HI, i_spc))/1.))**2) ! FWHM
       f(0:ncrb-1) = f(0:ncrb-1) / (fpcc * p(0:ncrb-1)**3) ! without this spectrum is gaussian for distribution function
       do i = 1, ncrb
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i)) !-log(f(i)/f(i-1))/log(p(i)/p(i-1))
@@ -1333,18 +1340,19 @@ contains
 
 !-------------------------------------------------------------------------------------------------
 
-   subroutine cresp_get_scaled_init_spectrum(n_inout, e_inout, e_in_total) !< Using n,e spectrum obtained at initialization, obtain injected spectrum at given cell
+   subroutine cresp_get_scaled_init_spectrum(n_inout, e_inout, e_in_total, i_spc) !< Using n,e spectrum obtained at initialization, obtain injected spectrum at given cell
 
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: norm_init_spectrum, total_init_cree
+      use initcrspectrum, only: norm_init_spectrum_e, norm_init_spectrum_n, total_init_cree
 
       implicit none
 
       real, dimension(1:ncrb), intent(inout) :: n_inout, e_inout
       real,                    intent(in)    :: e_in_total
+      integer,                 intent(in)    :: i_spc
 
-      n_inout = norm_init_spectrum%n * e_in_total / total_init_cree
-      e_inout = norm_init_spectrum%e * e_in_total / total_init_cree
+      n_inout(:) = norm_init_spectrum_n(i_spc,:) * e_in_total / total_init_cree
+      e_inout(:) = norm_init_spectrum_e(i_spc,:) * e_in_total / total_init_cree
 
    end subroutine cresp_get_scaled_init_spectrum
 
@@ -1452,7 +1460,7 @@ contains
 
 !---------------------------------------------------------------------------------------------------
 
-   subroutine check_init_spectrum
+   subroutine check_init_spectrum(i_spc)
 
       use constants,       only: one, I_ONE
       use cresp_NR_method, only: bound_name
@@ -1464,12 +1472,13 @@ contains
       real                   :: e_small_safe, rel_cut
       real, dimension(LO:HI) :: ec
       integer                :: co
+      integer,    intent(in) :: i_spc
 
       e_small_safe = max(e_small, epsilon(e_small))
 
       do co = LO, HI
          ec = e_small_safe
-         ec(co) = fp_to_e_ampl(p_init(co), f(i_cut(co)-1+oz(co)))
+         ec(co) = fp_to_e_ampl(p_init(co, i_spc), f(i_cut(co)-1+oz(co)))
 
          write(msg,*) "[cresp_crspectrum:check_init_spectrum] Amplitude of ", bound_name(co), " energy spectrum cutoff:", ec(co)
          call printinfo(msg)

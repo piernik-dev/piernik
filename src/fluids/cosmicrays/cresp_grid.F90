@@ -58,7 +58,7 @@ contains
       use global,           only: repetitive_steps, cflcontrol, disallow_CRnegatives
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crspc_n, iarr_crspc_e, ncrb
-      use initcrspectrum,   only: norm_init_spectrum, dfpq, check_if_dump_fpq, use_cresp
+      use initcrspectrum,   only: norm_init_spectrum_n, norm_init_spectrum_e, dfpq, check_if_dump_fpq, use_cresp
       use mpisetup,         only: master
       use named_array_list, only: wna
 
@@ -101,7 +101,7 @@ contains
 
       call p_rch_init               !< sets the right pointer for p_rch function, based on used Taylor expansion coefficient
 
-      call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e)   !< initialize spectrum here, f_init should be 1.0
+      call cresp_init_state(norm_init_spectrum_n, norm_init_spectrum_e)   !< initialize spectrum here, f_init should be 1.0
 
       allow_loop_leave = (disallow_CRnegatives .and. repetitive_steps .and. cflcontrol /= "flex" .and. cflcontrol /= "flexible")
 
