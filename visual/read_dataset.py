@@ -64,7 +64,7 @@ def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, dr
             return False, [], []
         if nd == ndc and not cmprb:
             if ledg != lec or redg != rec:
-                print('WARNING: Edges for level %s: %s %s are different than for level %s: %s %s. Consider excluding levels.' % (level, ledg, redg, cmprl[levnum], lec, rec))
+                print('WARNING: Edges for level %s: %s %s are different than for level %s: %s %s. Consider excluding levels or -C / --compare-adjusted-grids option.' % (level, ledg, redg, cmprl[levnum], lec, rec))
         elif cmprb:
             if (nd, ledg, redg) != (ndc, lec, rec):
                 sfmin = h5f['simulation_parameters'].attrs['domain_left_edge']
