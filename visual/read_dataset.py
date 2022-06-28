@@ -73,7 +73,7 @@ def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, dr
                 scmax = h5c['simulation_parameters'].attrs['domain_right_edge']
                 sfdom = sfmin, sfmax
                 scdom = scmin, scmax
-                if not pu.list3_alleq(sfmin, sfmax) or pu.list3_alleq(sfmax, scmax):
+                if not pu.list3_alleq(sfmin, sfmax) or not pu.list3_alleq(sfmax, scmax):
                     print('Framing levels from domains of different edges! %svs. %s' % (sfdom, scdom))
                 lofg = pu.list3_min(loff, loc)
                 rofg = pu.list3_max(roff, roc)
