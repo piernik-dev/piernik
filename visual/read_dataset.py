@@ -48,9 +48,10 @@ def compare_grids(h1, h2, plotlevels, cmprl, gridlist):
                     return True
     return False
 
+
 def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, draw1D, draw2D):
-    #attrs = h5f['domains']['base'].attrs
-    #nd = [i * 2**level for i in attrs['n_d']]
+    # attrs = h5f['domains']['base'].attrs
+    # nd = [i * 2**level for i in attrs['n_d']]
     nd, loff, roff, ledg, redg, levelmet = frame_level(h5f, level, gridlist)
     if not levelmet:
         return False, [], []

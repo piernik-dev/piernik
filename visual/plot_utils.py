@@ -74,9 +74,9 @@ def scale_translate(sctype, vmn, vmx, sm, hbd):
             return 2, vmn, vmx
     elif whether_symlog(sctype):
         if hbd:
-            return 3, -1.*10.**np.abs(vmn), 10.**np.abs(vmx) * sm, sm
+            return 3, -1. * 10.**np.abs(vmn), 10.**np.abs(vmx) * sm, sm
         else:
-            return 3, -1.*vmx, vmx, sm
+            return 3, -1. * vmx, vmx, sm
     return 0, vmn, vmx
 
 
@@ -220,15 +220,15 @@ def list3_alleq(l3, r3):
 
 
 def list_any(lst, strg):
-    for l in lst:
-        if l == strg:
+    for ll in lst:
+        if ll == strg:
             return True
     return False
 
 
 def list_all(lst, strg):
-    for l in lst:
-        if l != strg:
+    for ll in lst:
+        if ll != strg:
             return False
     return True
 
