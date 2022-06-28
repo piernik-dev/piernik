@@ -174,7 +174,11 @@ def add_cbar(figmode, cbar_mode, grid, ab, ic, clab, sct, field):
             if tick >= field[1] and tick <= field[2]:
                 slticks.append(tick)
                 sltlabs.append(clf % (np.sign(tick) * 10.**(np.abs(tick)) * field[3]))
-        cbarh.set_ticks(slticks, labels=sltlabs)
+        if (matplotlib.__version__ >= '3.5.0'):
+            cbarh.set_ticks(slticks, labels=sltlabs)
+        else:
+            cbarh.set_ticks(slticks)
+            cbarh.set_ticklabels(sltlabs)
 
 
 def plotcompose(pthfilen, var, output, options):
