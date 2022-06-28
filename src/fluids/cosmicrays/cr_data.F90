@@ -233,7 +233,7 @@ contains
 
    subroutine cr_species_tables(ncrsp, crness)
 
-      use dataio_pub, only: msg, printinfo, die
+      use dataio_pub, only: msg, printinfo, warn
       use mpisetup,   only: master
       use units,      only: me, mp, myr, mbarn, sigma_T
 
@@ -273,11 +273,11 @@ contains
             cr_Z(icr)        = eCRSP_Z(i)
             cr_spectral(icr) = eCRSP_spec(i)
             cr_sigma_N(icr)  = (cr_Z(icr))**4/(cr_mass(icr)**2)*(me/mp)**2*sigma_T ! Schlickeiser, Cosmic ray astrophysics (2002), formula p.105
-            if (icr == icr_E)  cr_sigma_N(icr) = sigma_T 
+            if (icr == icr_E)  cr_sigma_N(icr) = sigma_T
             if (eCRSP_spec(i)) then
                if (i /= icr_E) then
-                  write(msg, '(3a)') "[cr_data:init_cr_species] Energy spectral treatment for ", eCRSP_names(i), " CR component is not available"
-                  call die(msg)
+                  write(msg, '(3a)') "[cr_data:init_cr_species] Energy spectral treatment for ", eCRSP_names(i), " under development, results will not be reliable."
+                  call warn(msg)
                endif
             else
                jcr = jcr + 1
