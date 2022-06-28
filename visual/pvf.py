@@ -59,7 +59,7 @@ def print_usage():
     print(' -e EXTENSION, \t\t--extension EXTENSION \t\t\tsave plot in file using filename extension EXTENSION [default: %s]' % ps.f_exten[1:])
     print(' -g COLOR, \t\t--gridcolor COLOR \t\t\tshow grids in color COLOR; possible list of colors for different grid refinement levels [default: none]')
     print('\t\t\t--grid-list GRID1[,GRID2] \t\tplot only selected numbered grid blocks [default: all existing blocks]')
-    print(' -l LEVEL1[,LEVEL2], \t--level LEVEL1[,LEVEL2] \t\tplot only requested grid levels [default: 0 for --uniform, all for --amr]')
+    print(' -l LEVEL1[,LEVEL2], \t--level LEVEL1[,LEVEL2] \t\tplot only requested grid levels [default: all]')
     print('\t\t\t--linestyle STYLELIST \t\t\tline styles list for different refinement levels in 1D plots [default: %s]' % ps.plot1d_linestyle)
     print(' -o OUTPUT, \t\t--output OUTPUT \t\t\tdump plot files into OUTPUT directory [default: %s]' % ps.f_plotdir)
     print(' -p,\t\t\t--particles\t\t\t\tscatter particles onto slices [default: switched-off]')
