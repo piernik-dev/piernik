@@ -90,7 +90,8 @@ module constants
    real, parameter :: e          = 2.718281828459045235  !< Napier's constant (base of Natural logarithm)
 
    ! some numerical representation extrema
-   real, parameter :: big        = huge(real(1.0,4))     !< a constant used as the upper limit number
+   real, parameter :: big        = huge(real(1.0,4))     !< a constant used as the upper limit number.
+   !> Warning: this value is causing numerical problems with domains bigger than ~1e42.
    real, parameter :: big_float  = huge(real(1.0,4))     !< replicated temporarily 'big' for compatibility \todo choose one and convert occurrences of the other one
    real, parameter :: dirtyH     = big                   !< If dirty_debug then pollute arrays with this insane value
    real, parameter :: dirtyH1    = 10.**int(log10(big))  !< this "round" dirty value makes it easier to detect which call contaminated the data
