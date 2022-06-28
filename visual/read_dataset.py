@@ -63,7 +63,7 @@ def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, dr
         if not lmc:
             return False, [], []
         if nd == ndc and not cmprb:
-            if ledg != lec or redg != rec:
+            if (ledg != lec).any() or (redg != rec).any():
                 print('WARNING: Edges for level %s: %s %s are different than for level %s: %s %s. Consider excluding levels or -C / --compare-adjusted-grids option.' % (level, ledg, redg, cmprl[levnum], lec, rec))
         elif cmprb:
             if (nd, ledg, redg) != (ndc, lec, rec):
