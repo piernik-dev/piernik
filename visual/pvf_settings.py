@@ -26,6 +26,11 @@ centertick_length = 6.
 # scaletypes
 fineqv = 1.0
 
+#units
+#dimensionless_print = b'dimensionless'
+dimensionless_print = ''
+set_as_unexist = 0.
+
 # colorbars
 cbar_hist2d_shift = 0.7
 cbar_plot2d_shift = 0.1
@@ -43,3 +48,4 @@ particles_size = 0
 hist2d_colormap = 'viridis'
 hist2d_alpha = 1.0
 hist2d_facecolor = 'xkcd:black'
+hist2d_sctype = True, 'auto', 'auto'
