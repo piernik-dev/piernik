@@ -38,7 +38,7 @@ module particle_utils
    implicit none
 
    private
-   public :: max_pvel_1d, add_part_in_proper_cg, print_all_particles, is_part_in_cg
+   public :: max_pvel_1d, add_part_in_proper_cg, print_all_particles, is_part_in_cg, npf
    public :: max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom, count_all_particles, global_count_all_particles, part_leave_cg
 
    real    :: tot_angmom           !< angular momentum of set of the particles
@@ -46,8 +46,8 @@ module particle_utils
    real    :: d_energy             !< error of energy of set of the particles in succeeding timesteps
    real    :: d_angmom             !< error of angular momentum in succeeding timesteps
    logical :: twodtscheme
-   logical :: dump_diagnose        !< dump diagnose for each particle to a separate log file
-   integer(kind=4), parameter :: npf = 12  !< number of single particle fields
+   logical :: dump_diagnose        !< dump diagnose for each particle to a seperate log file
+   integer(kind=4), parameter :: npf = 14  !< number of single particle fields
 
 contains
 
@@ -351,7 +351,7 @@ contains
 
    end subroutine cg_outside_dom
 
-   subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener)
+   subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn)
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
@@ -364,14 +364,27 @@ contains
       real, dimension(ndims), intent(in) :: acc
       real,                   intent(in) :: ener
       real,                   intent(in) :: mass
+      real, optional,         intent(in) :: tform
+      real, optional,         intent(in) :: tdyn
       type(cg_list_element), pointer     :: cgl
       logical                            :: in,phy,out
+      real                               :: tform1, tdyn1
 
       cgl => leaves%first
       do while (associated(cgl))
          call is_part_in_cg(cgl%cg, pos, in, phy, out)
          if (phy .or. out) then
-            call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out)
+            if (present(tform)) then
+               tform1 = tform
+            else
+               tform1 = 0.0
+            endif
+            if (present(tdyn)) then
+               tdyn1 = tdyn
+            else
+               tdyn1 = 0.0
+            endif
+            call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform1, tdyn1)
             return
          endif
 
@@ -404,7 +417,7 @@ contains
       integer(kind=4)                    :: pid
       real, dimension(ndims)             :: pos, vel, acc
       real, dimension(:), allocatable    :: part_info, part_info2
-      real                               :: mass, ener
+      real                               :: mass, ener, tform, tdyn
       type(cg_list_element), pointer     :: cgl
       type(grid_container),  pointer     :: cg
       type(particle), pointer            :: pset, pset2
@@ -528,7 +541,9 @@ contains
                         vel  = part_info2(ind+5:ind+7)
                         acc  = part_info2(ind+8:ind+10)
                         ener = part_info2(ind+11)
-                        call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out)
+                        tform= part_info2(ind+12)
+                        tdyn = part_info2(ind+13)
+                        call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform, tdyn)
                      endif
                      ind = ind + npf
                   enddo
@@ -562,6 +577,8 @@ contains
       pinfo(6:8)  = p%vel
       pinfo(9:11) = p%acc
       pinfo(12)   = p%energy
+      pinfo(13)   = p%tform
+      pinfo(14)   = p%tdyn
 
       ind = ind + npf
 

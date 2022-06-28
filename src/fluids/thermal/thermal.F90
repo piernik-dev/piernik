@@ -41,7 +41,7 @@ module thermal
    implicit none
 
    private
-   public ::  init_thermal, thermal_active, cfl_coolheat, thermal_sources, itemp, fit_cooling_curve, cleanup_thermal
+   public ::  init_thermal, thermal_active, cfl_coolheat, thermal_sources, itemp, fit_cooling_curve, cleanup_thermal, calc_tcool
 
    character(len=cbuff_len)        :: cool_model, cool_curve, heat_model, scheme, cool_file
    logical                         :: thermal_active
@@ -166,15 +166,14 @@ contains
 
       endif
 
+      call all_cg%reg_var('Temperature')          ! Make it cleaner
+      itemp = qna%ind('Temperature')
       if (.not. thermal_active) return
 
       G0_heat = G0       * erg / sek * cm**3 / mH**2 * x_ion**2
       G1_heat = G1       * erg / sek         / mH    * x_ion
       G2_heat = G2       * erg / sek / cm**3
       L0_cool = Lambda_0 * erg / sek * cm**3 / mH**2 * x_ion**2
-
-      call all_cg%reg_var('Temperature')          ! Make it cleaner
-      itemp = qna%ind('Temperature')
 
       call fit_cooling_curve()
 
@@ -377,7 +376,7 @@ contains
       use dataio_pub, only: msg, warn
       use fluidindex, only: flind
       use fluidtypes, only: component_fluid
-      use func,       only: ekin, emag, operator(.equals.)
+      use func,       only: ekin, emag
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
       use units,      only: kboltz, mH
@@ -387,8 +386,8 @@ contains
       real,                    intent(in) :: dt
       real, dimension(:, :, :), pointer   :: ta, dens, ener
       real, dimension(:,:,:), allocatable :: kinmag_ener
-      real                                :: dt_cool, t1, tcool, cfunc, hfunc, esrc, diff, kbgmh, ikbgmh, Tnew, int_ener
-      integer                             :: ifl, ii, i, j, k
+      real                                :: dt_cool, t1, tcool, cfunc, hfunc, esrc, kbgmh, ikbgmh, Tnew, int_ener
+      integer                             :: ifl, i, j, k
       integer, dimension(3)               :: n
 
       type(cg_list_element),  pointer     :: cgl
@@ -446,21 +445,20 @@ contains
                      do j = 1, n(ydim)
                         do k = 1, n(zdim)
                            int_ener = ener(i,j,k) - kinmag_ener(i,j,k)
-                           call find_temp_bin(ta(i,j,k), ii)
-                           if (alpha(ii) .equals. 0.0) then
-                              diff = max(abs(ta(i,j,k) - Teql), 0.000001)
-                              tcool = kbgmh * ta(i,j,k) / (dens(i,j,k) * abs(lambda0(ii)) * diff)
-                           else
-                              tcool = kbgmh * ta(i,j,k) / (dens(i,j,k) * abs(lambda0(ii)) * (ta(i,j,k)/Tref(ii))**alpha(ii))
-                           endif
+                           ta(i,j,k) = int_ener * ikbgmh / dens(i,j,k)
+                           if (ta(i,j,k) .lt. 10.0) ta(i,j,k) = 10.0
+                           if (ta(i,j,k) .gt. 10.0**8) ta(i,j,k) = 10.0**8
+                           call calc_tcool(ta(i,j,k), dens(i,j,k), kbgmh, tcool)
+                           !tcool = 1.0
                            dt_cool = min(dt, tcool/10.0)
                            t1 = 0.0
                            do while (t1 < dt)
-                              ta(i,j,k) = int_ener * ikbgmh / dens(i,j,k)
                               call temp_EIS(tcool, dt_cool, igamma(pfl%gam), kbgmh, ta(i,j,k), dens(i,j,k), Tnew)
+                              !Tnew = ta(i,j,k)
                               int_ener    = dens(i,j,k) * kbgmh * Tnew
+                              !if (int_ener .gt. 10.0) print *, 'wow!', i, j, k, int_ener, Tnew, ta(i,j,k), dens(i,j,k), tcool
                               ener(i,j,k) = kinmag_ener(i,j,k) + int_ener
-
+                              ta(i,j,k) = Tnew
                               t1 = t1 + dt_cool
                               if (t1 + dt_cool > dt) dt_cool = dt - t1
                            enddo
@@ -536,7 +534,38 @@ contains
          enddo
       endif
 
-   end subroutine find_temp_bin
+    end subroutine find_temp_bin
+
+    subroutine calc_tcool(temp, dens, kbgmh, tcool)
+
+      use func,        only: operator(.equals.)
+
+      implicit none
+
+      real,    intent(in)  :: temp, dens, kbgmh
+      real,    intent(out) :: tcool
+      integer              :: ii
+      real                 :: alpha1, Tref1, lambda1, diff
+
+      if (cool_model == 'piecewise_power_law') then
+         call find_temp_bin(temp, ii)
+         alpha1  = alpha(ii)
+         Tref1   = Tref(ii)
+         lambda1 = lambda0(ii)
+      else
+         alpha1  = alpha_cool
+         Tref1   = Teq
+         lambda1 = L0_cool
+      endif
+
+      if (alpha1 .equals. 0.0) then
+         diff = max(abs(temp - Teql), 0.000001)
+         tcool = kbgmh * temp / (dens * abs(lambda1) * diff)
+      else
+         tcool = kbgmh * temp / (dens * abs(lambda1) * (temp/Tref1)**alpha1)
+      endif
+
+    end subroutine calc_tcool
 
    subroutine cool(temp, coolf)
 
@@ -631,17 +660,8 @@ contains
                !Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-TN * lambda1 / ltntrna * (Y0 - Y(ii)))
                Tnew = Teql - sign(1.0, Teql - temp) * (Teql-T1) * exp(-lambda1 * Y0f)
             else
-               !Y0 = Y(ii) + 1/(isochoric-alpha0) * ltntrna / lambda1 * (T1/TN)**isochoric * (1 - (T1/temp)**(alpha0-isochoric))
-               Y0f = 1.0/(isochoric-alpha0) / lambda1 * T1**isochoric * (1 - (T1/temp)**(alpha0-isochoric))
-               !tcool2 = kbgmh * temp / (lambda1 * (temp/T1)**alpha0 * dens)
-               !Y0 = Y0 + (temp/TN)**isochoric * ltntrna / lambda1 * (T1/temp)**alpha0 * dt/tcool2 * fiso
-               Y0f = Y0f + (temp)**isochoric * dt * fiso * dens / (kbgmh * temp)
-               !Tnew = T1 * (1 - (isochoric-alpha0) * lambda1 / ltntrna * (TN/T1)**isochoric * (Y0 - Y(ii)) )**(1.0/(isochoric-alpha0))
-               Tnew = T1 * (1 - (isochoric-alpha0) * lambda1 / T1**isochoric * Y0f)**(1.0/(isochoric-alpha0))
+               Tnew = temp * (1 - (isochoric-alpha0) * sign(1.0,lambda1)* fiso * dt / tcool)**(1.0/(isochoric-alpha0))
             endif
-
-            if (Tnew < 100.0) Tnew = 100.0                        ! To improve
-
          case ('null')
             return
 
@@ -650,6 +670,8 @@ contains
             if (master) call warn(msg)
 
        end select
+
+       if (Tnew < 10.0) Tnew = 10.0                        ! To improve
 
    end subroutine temp_EIS
 
