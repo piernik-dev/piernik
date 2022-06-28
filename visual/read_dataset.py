@@ -71,10 +71,8 @@ def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, dr
                 sfmax = h5f['simulation_parameters'].attrs['domain_right_edge']
                 scmin = h5c['simulation_parameters'].attrs['domain_left_edge']
                 scmax = h5c['simulation_parameters'].attrs['domain_right_edge']
-                sfdom = sfmin, sfmax
-                scdom = scmin, scmax
-                if not pu.list3_alleq(sfmin, sfmax) or not pu.list3_alleq(sfmax, scmax):
-                    print('Framing levels from domains of different edges! %svs. %s' % (sfdom, scdom))
+                if not pu.list3_alleq(sfmin, scmin) or not pu.list3_alleq(sfmax, scmax):
+                    print('Framing levels from domains of different edges! %s %s vs. %s %s' % (sfmin, sfmax, scmin, scmax))
                 lofg = pu.list3_min(loff, loc)
                 rofg = pu.list3_max(roff, roc)
 
@@ -84,6 +82,8 @@ def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, dr
                 ledg = pu.list3_add(ledg, pu.list3_mult(pu.list3_subtraction(lofg, loff), dlf))
                 rec = pu.list3_add(rec, pu.list3_mult(pu.list3_subtraction(rofg, roc), dlc))
                 lec = pu.list3_add(lec, pu.list3_mult(pu.list3_subtraction(lofg, loc), dlc))
+                if not pu.list3_alleq(dlf, dlc):
+                    print('Comparison for %s and %s may give weird results as cell sizes are different: %s %s' % (level, cmprl[levnum], dlf, dlc))
 
                 ndgg = pu.list3_subtraction(rofg, lofg)
                 nd, ndc = ndgg, ndgg

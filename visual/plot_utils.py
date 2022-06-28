@@ -216,7 +216,7 @@ def list3_or(l3, r3):
 
 
 def list3_alleq(l3, r3):
-    return [l3[0] == r3[0] and l3[1] == r3[1] and l3[2] == r3[2]]
+    return l3[0] == r3[0] and l3[1] == r3[1] and l3[2] == r3[2]
 
 
 def list_any(lst, strg):
