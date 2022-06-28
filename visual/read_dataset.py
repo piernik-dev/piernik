@@ -162,7 +162,7 @@ def frame_level(h5f, level, gridlist):
 def level_zoom(h5f, gridlist, zoom, smin, smax):
     if zoom[0]:
         if len(zoom) == 2:
-            nd, loff, ledg, redg, levelmet = frame_level(h5f, zoom[1], gridlist)
+            nd, loff, roff, ledg, redg, levelmet = frame_level(h5f, zoom[1], gridlist)
             if levelmet:
                 zoom = True, ledg, redg
             else:
