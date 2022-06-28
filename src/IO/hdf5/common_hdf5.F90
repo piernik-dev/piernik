@@ -115,7 +115,7 @@ contains
       use dataio_pub,     only: msg
 #endif /* COSM_RAYS */
 #ifdef CRESP
-      use initcosmicrays, only: ncrb
+      use initcosmicrays, only: ncrb, nspc
 #endif /* CRESP */
 
       implicit none
@@ -126,7 +126,7 @@ contains
       character(len=singlechar)                            :: fc, ord
       character(len=dsetnamelen)                           :: aux
 #ifdef COSM_RAYS
-      integer                                              :: k, ke
+      integer                                              :: k, ke, ks
 #endif /* COSM_RAYS */
 
       do i = lbound(vars, 1), ubound(vars, 1)
@@ -207,39 +207,43 @@ contains
                enddo
 #endif /* COSM_RAYS */
 #ifdef CRESP
-            case ('cren') !< CRESP number density fields
-               do k = 1, ncrb
-                  if (k<=99) then
-                     write(aux,'(A4,I2.2)') 'cren', k
-                     call append_var(aux)
-                  else
-                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP number density component #", k
-                     call warn(msg)
-                  endif
+            case ('cren') !< CRESP number density fields ! TODO change labels, allow saving just the picked species
+               do ks = 1, nspc
+                  do k = 1, ncrb
+                     if (k<=99) then
+                        write(aux,'(A3,a,A1,I2.2)') 'cr_', trim(cr_names(ks)), 'n', k
+                        call append_var(aux)
+                     else
+                        write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP number density component #", k
+                        call warn(msg)
+                     endif
+                  enddo
+                  do k = lbound(vars, 1), ubound(vars, 1)
+                     if (vars(k) .eq. 'cree') exit
+                     if (k .eq. ubound(vars, 1)) then
+                        write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cren' field created, but 'cree' not defined: reconstruction of spectrum from hdf files requires both."
+                        call warn(msg)
+                     endif
+                  enddo
                enddo
-               do k = lbound(vars, 1), ubound(vars, 1)
-                  if (vars(k) .eq. 'cree') exit
-                  if (k .eq. ubound(vars, 1)) then
-                     write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cren' field created, but 'cree' not defined: reconstruction of spectrum from hdf files requires both."
-                     call warn(msg)
-                  endif
-               enddo
-            case ('cree') !< CRESP energy density fields
-               do k = 1, ncrb
-                  if (k<=99) then
-                     write(aux,'(A4,I2.2)') 'cree', k
-                     call append_var(aux)
-                  else
-                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP energy density component #", k
-                     call warn(msg)
-                  endif
-               enddo
-               do k = lbound(vars, 1), ubound(vars, 1)
-                  if (vars(k) .eq. 'cren') exit
-                  if (k .eq. ubound(vars, 1)) then
-                     write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cree' field created, but 'cren' not defined: reconstruction of spectrum from hdf files requires both."
-                     call warn(msg)
-                  endif
+            case ('cree') !< CRESP energy density fields ! TODO change labels, allow saving just the picked species
+               do ks = 1, nspc
+                  do k = 1, ncrb
+                     if (k<=99) then
+                        write(aux,'(A3,a,A1,I2.2)') 'cr_', trim(cr_names(ks)), 'e', k
+                        call append_var(aux)
+                     else
+                        write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP energy density component #", k
+                        call warn(msg)
+                     endif
+                  enddo
+                  do k = lbound(vars, 1), ubound(vars, 1)
+                     if (vars(k) .eq. 'cren') exit
+                     if (k .eq. ubound(vars, 1)) then
+                        write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cree' field created, but 'cren' not defined: reconstruction of spectrum from hdf files requires both."
+                        call warn(msg)
+                     endif
+                  enddo
                enddo
             case ('cref') !< CRESP distribution function
                do k = 1, ncrb+1
