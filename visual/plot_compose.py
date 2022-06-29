@@ -214,11 +214,10 @@ def plotcompose(pthfilen, var, output, options):
         center = (smax[0] + smin[0]) / 2.0, (smax[1] + smin[1]) / 2.0, (smax[2] + smin[2]) / 2.0
 
     drawa, drawu = pu.choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist)
-    plotlevels = pu.check_plotlevels(plotlevels, maxglev, True)
+    plotlevels = pu.check_plotlevels(plotlevels, maxglev, pthfilen, True)
     gridlist = pu.sanitize_gridlist(gridlist, cgcount)
-    unavail, cmpr, drawa, drawu = rd.manage_compare(cmpr, h5f, var, plotlevels, gridlist, drawa, drawu)
+    unavail, cmpr, drawa, drawu = rd.manage_compare(cmpr, pthfilen, h5f, var, plotlevels, gridlist, drawa, drawu)
     if len(plotlevels) == 0 or unavail:
-        print('No levels found. Skipping.')
         return
 
     linstyl = pu.linestyles(linstyl, maxglev, plotlevels)

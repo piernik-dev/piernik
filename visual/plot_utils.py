@@ -307,7 +307,7 @@ def find_indices(nd, cxyz, smin, smax, draw1D, draw2D, warn):
     return inb, icc
 
 
-def check_plotlevels(plotlevels, maxglev, toplot):
+def check_plotlevels(plotlevels, maxglev, filen, toplot):
     if plotlevels == '':
         plotlevels = range(maxglev + 1)
     else:
@@ -316,12 +316,18 @@ def check_plotlevels(plotlevels, maxglev, toplot):
             if il in range(maxglev + 1):
                 npl.append(il)
             else:
-                print('LEVEL %s not met in the file!' % str(il))
+                print('LEVEL %s not met in the file %s' % (str(il), filen))
         plotlevels = npl
     if toplot:
-        print('Levels to plot: ', plotlevels)
+        if plotlevels == []:
+            print('No levels found.')
+        else:
+            print('Levels to plot: ', plotlevels)
     else:
-        print('Compare levels: ', plotlevels)
+        if plotlevels == []:
+            print('No levels to compare.')
+        else:
+            print('Compare levels: ', plotlevels)
     return plotlevels
 
 
