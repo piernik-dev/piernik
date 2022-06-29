@@ -122,6 +122,9 @@ def cli_params(argv):
             global cmprf
             cmpr = True
             cmprf = str(arg)
+            if not os.path.exists(cmprf):
+                print('The compare file %s does not exist!' % cmprf)
+                sys.exit()
             if cmprn == '':
                 cmprn = '_vs'
             cmprn = cmprn + '_' + cmprf.split('/')[-1]

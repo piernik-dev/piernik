@@ -26,8 +26,8 @@ centertick_length = 6.
 # scaletypes
 fineqv = 1.0
 
-#units
-#dimensionless_print = b'dimensionless'
+# units
+# dimensionless_print = b'dimensionless'
 dimensionless_print = ''
 set_as_unexist = 0.
 

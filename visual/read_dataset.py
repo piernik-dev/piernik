@@ -5,28 +5,34 @@ import plot_utils as pu
 import pvf_settings as ps
 
 
-def manage_compare(cmpr, h5f, var, plotlevels, gridlist, drawa, drawu):
+def manage_compare(cmpr, pthfilen, h5f, var, plotlevels, gridlist, drawa, drawu):
     cmpr0, cmprb, cmprf, cmprd, cmprl, cmprt, diff_struct = cmpr
-    cunavail = False
     if cmpr0:
         if cmprd == '':
             cmprd = var
         if cmprl == '':
             cmprl = plotlevels
         if cmprf == '':
+            cmprf = pthfilen
             if cmprl != plotlevels:
                 print('Different levels to compare in the same file. Might be weird.')
             h5c = h5f
         else:
             h5c = h5.File(cmprf, 'r')
-        cmprl = pu.check_plotlevels(cmprl, max(h5c['grid_level'][:]), False)
+
+        if (cmprd not in list(h5c['field_types'].keys())):
+            print(cmprd, ' is not available in the compare file ', cmprf, '. No data to compare.')
+            return True, cmpr, drawa, drawu
+
+        cmprl = pu.check_plotlevels(cmprl, max(h5c['grid_level'][:]), cmprf, False)
         diff_struct = compare_grids(h5f, h5c, plotlevels, cmprl, gridlist)
-        cunavail = (cmprl == [])
+        if cmprl == []:
+            return True, cmpr, drawa, drawu
         if diff_struct:
             print('Difference in datafields structure or not matching levels.')
             drawa, drawu = False, True
         cmpr = cmpr0, cmprb, h5c, cmprd, cmprl, cmprt, diff_struct
-    return cunavail, cmpr, drawa, drawu
+    return False, cmpr, drawa, drawu
 
 
 def compare_grids(h1, h2, plotlevels, cmprl, gridlist):
@@ -48,9 +54,10 @@ def compare_grids(h1, h2, plotlevels, cmprl, gridlist):
                     return True
     return False
 
+
 def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, draw1D, draw2D):
-    #attrs = h5f['domains']['base'].attrs
-    #nd = [i * 2**level for i in attrs['n_d']]
+    # attrs = h5f['domains']['base'].attrs
+    # nd = [i * 2**level for i in attrs['n_d']]
     nd, loff, roff, ledg, redg, levelmet = frame_level(h5f, level, gridlist)
     if not levelmet:
         return False, [], []
@@ -63,7 +70,7 @@ def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, dr
         if not lmc:
             return False, [], []
         if nd == ndc and not cmprb:
-            if ledg != lec or redg != rec:
+            if not pu.list3_alleq(ledg, lec) or not pu.list3_alleq(redg, rec):
                 print('WARNING: Edges for level %s: %s %s are different than for level %s: %s %s. Consider excluding levels or -C / --compare-adjusted-grids option.' % (level, ledg, redg, cmprl[levnum], lec, rec))
         elif cmprb:
             if (nd, ledg, redg) != (ndc, lec, rec):
