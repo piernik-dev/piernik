@@ -206,10 +206,6 @@ def cli_params(argv):
                 pstype = aux[0], pstype[1], pstype[2]
             l1 = aux[0].lower() in ("yes", "true", "t", "1")
             l2, l3 = pstype[1:3]
-            if l2 == 'auto':
-                l2 = None
-            if l3 == 'auto':
-                l3 = None
             pstype = l1, l2, l3
 
         elif pu.recognize_opt(opt, ("-t", "--scale")):
@@ -275,6 +271,11 @@ if pcolor == 'default':
         pcolor = ps.hist2d_colormap
     else:
         pcolor = ps.particles_color
+
+if pstype[1] == 'auto':
+    pstype = pstype[0], None, pstype[2]
+if pstype[2] == 'auto':
+    pstype = pstype[0], pstype[1], None
 
 p1x, p1y, p1z, p2xy, p2xz, p2yz = False, False, False, False, False, False
 if 'all' in axcuts:
