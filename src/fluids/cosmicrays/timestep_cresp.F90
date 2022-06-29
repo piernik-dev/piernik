@@ -110,7 +110,7 @@ contains
 
       if (adiab_active) call cresp_timestep_adiabatic(abs_max_ud)
 
-      K_cre_max_sum = K_cresp_paral(i_up_max) + K_cresp_perp(i_up_max) ! assumes the same K for energy and number density
+      K_cre_max_sum = maxval(K_cresp_paral(i_up_max,:) + K_cresp_perp(i_up_max,:)) ! assumes the same K for energy and number density
       if (K_cre_max_sum > zero) then                               ! K_cre dependent on momentum - maximal for highest bin number
          dt_aux = cfl_cr * half / K_cre_max_sum                    ! We use cfl_cr here (CFL number for diffusive CR transport), cfl_cre used only for spectrum evolution
          cgl => leaves%first
@@ -146,7 +146,7 @@ contains
 
       real, intent(in) :: u_d_abs    ! assumes that u_d > 0 always
 
-      if (u_d_abs > eps) dt_cre_adiab = def_dtadiab / u_d_abs
+      if (u_d_abs > eps) dt_cre_adiab = minval(def_dtadiab(:)) / u_d_abs
 
    end subroutine cresp_timestep_adiabatic
 
@@ -165,7 +165,7 @@ contains
 
       ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
       if (u_b > zero) then
-         dt_cre_ub = def_dtsynch / (assume_p_up(i_up_cell) * u_b)
+         dt_cre_ub = minval(def_dtsynch(:)) / (assume_p_up(i_up_cell) * u_b)
          dt_cre_synch = min(dt_cre_ub, dt_cre_synch)    ! remember to max dt_cre_synch at the beginning of the search
       endif
 
