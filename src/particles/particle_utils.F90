@@ -150,10 +150,9 @@ contains
 
       if (dump_diagnose .and. regular) call dump_particles_to_textfile
 
-#ifdef VERBOSE
-      regular = .false.
-#endif /* VERBOSE */
+#ifndef VERBOSE
       if (regular) return
+#endif /* !VERBOSE */
 
       call get_angmom_totener(tot_angmom, tot_energy)
 
