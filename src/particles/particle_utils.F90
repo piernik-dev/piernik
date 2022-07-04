@@ -251,19 +251,18 @@ contains
       type(grid_container), pointer, intent(in)  :: cg
       real, dimension(ndims),        intent(in)  :: pos
       logical,                       intent(out) :: in, phy, out
-      real, dimension(ndims,2)                   :: bnd1, bnd2
+      real, dimension(ndims,2)                   :: bnd_in, bnd_out
 
       !There is probably a better way to write this
-      bnd1(:,LO) = [cg%coord(LEFT, xdim)%r(cg%lh1(xdim,LO)), cg%coord(LEFT, ydim)%r(cg%lh1(ydim,LO)), cg%coord(LEFT, zdim)%r(cg%lh1(zdim,LO))]
-      bnd1(:,HI) = [cg%coord(RIGHT,xdim)%r(cg%lh1(xdim,HI)), cg%coord(RIGHT,ydim)%r(cg%lh1(ydim,HI)), cg%coord(RIGHT,zdim)%r(cg%lh1(zdim,HI))]
+      bnd_out(:,LO) = [cg%coord(LEFT, xdim)%r(cg%lh1(xdim,LO)), cg%coord(LEFT, ydim)%r(cg%lh1(ydim,LO)), cg%coord(LEFT, zdim)%r(cg%lh1(zdim,LO))]
+      bnd_out(:,HI) = [cg%coord(RIGHT,xdim)%r(cg%lh1(xdim,HI)), cg%coord(RIGHT,ydim)%r(cg%lh1(ydim,HI)), cg%coord(RIGHT,zdim)%r(cg%lh1(zdim,HI))]
 
-      bnd2(:,LO) = [cg%coord(LEFT, xdim)%r(cg%ijkse(xdim,LO)+I_ONE), cg%coord(LEFT, ydim)%r(cg%ijkse(ydim,LO)+I_ONE), cg%coord(LEFT, zdim)%r(cg%ijkse(zdim,LO)+I_ONE)]
-      bnd2(:,HI) = [cg%coord(RIGHT,xdim)%r(cg%ijkse(xdim,HI)-I_ONE), cg%coord(RIGHT,ydim)%r(cg%ijkse(ydim,HI)-I_ONE), cg%coord(RIGHT,zdim)%r(cg%ijkse(zdim,HI)-I_ONE)]
+      bnd_in(:,LO)  = [cg%coord(LEFT, xdim)%r(cg%ijkse(xdim,LO)+I_ONE), cg%coord(LEFT, ydim)%r(cg%ijkse(ydim,LO)+I_ONE), cg%coord(LEFT, zdim)%r(cg%ijkse(zdim,LO)+I_ONE)]
+      bnd_in(:,HI)  = [cg%coord(RIGHT,xdim)%r(cg%ijkse(xdim,HI)-I_ONE), cg%coord(RIGHT,ydim)%r(cg%ijkse(ydim,HI)-I_ONE), cg%coord(RIGHT,zdim)%r(cg%ijkse(zdim,HI)-I_ONE)]
 
-      in  = particle_in_area(pos, bnd2)
+      in  = particle_in_area(pos, bnd_in)
       phy = particle_in_area(pos, cg%fbnd)
-      !Ghost particle
-      out = particle_in_area(pos,bnd1)
+      out = particle_in_area(pos, bnd_out)   ! Ghost particle
 
       if (particle_in_area(pos, dom%edge)) return
 
