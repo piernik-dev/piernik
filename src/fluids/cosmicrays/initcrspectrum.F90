@@ -92,8 +92,8 @@ module initcrspectrum
    logical         :: nullify_empty_bins          !< nullifies empty bins when entering CRESP module / exiting empty cell.
    logical         :: allow_source_spectrum_break !< allow extension of spectrum to adjacent bins if momenta found exceed set p_fix
    logical         :: allow_unnatural_transfer    !< allows unnatural transfer of n & e with 'manually_deactivate_bins_via_transfer'
-   logical         :: synch_active                !< TEST feature - turns on / off synchrotron cooling @ CRESP
-   logical         :: adiab_active                !< TEST feature - turns on / off adiabatic   cooling @ CRESP
+   logical, dimension(:), allocatable :: synch_active !< TEST feature - turns on / off synchrotron cooling @ CRESP
+   logical, dimension(:), allocatable :: adiab_active !< TEST feature - turns on / off adiabatic   cooling @ CRESP
    real            :: cre_active                  !< electron contribution to Pcr ! TODO FIXME RENAME ME PLEASE!!!!   MULTIDIMENSIONALITY OPTIONAL
 
 ! substepping parameters
@@ -242,9 +242,12 @@ contains
       smallcree            = 0.0
       allow_source_spectrum_break  = .false.
       allow_unnatural_transfer     = .false.
-      synch_active         = .true.
-      adiab_active         = .true.
+      synch_active(:)      = .true.
+      adiab_active(:)      = .true.
       cre_active           = 0.0
+
+      if(size(synch_active) > 1) synch_active(2:) = .false. ! non relevant for hadronic species by default
+
       b_max_db             = 10.  ! default value of B limiter
 ! NR parameters
       tol_f    = 1.0e-11
@@ -294,19 +297,19 @@ contains
          lbuff(1)  =  use_cresp
          lbuff(2)  =  use_cresp_evol
          lbuff(3)  =  allow_source_spectrum_break
-         lbuff(4)  =  synch_active
-         lbuff(5)  =  adiab_active
-         lbuff(6)  =  force_init_NR
-         lbuff(7)  =  NR_run_refine_pf
-         lbuff(8)  =  NR_refine_solution_q
-         lbuff(9)  =  NR_refine_pf_lo
-         lbuff(10) =  NR_refine_pf_up
-         lbuff(11) =  nullify_empty_bins
-         lbuff(12) =  approx_cutoffs
-         lbuff(13) =  NR_allow_old_smaps
+         lbuff(4:3+nspc)        = synch_active(:)
+         lbuff(4+nspc:3+2*nspc) = adiab_active(:)
+         lbuff(4+2*nspc)        = force_init_NR
+         lbuff(5+2*nspc)        = NR_run_refine_pf
+         lbuff(6+2*nspc)        = NR_refine_solution_q
+         lbuff(7+2*nspc)        = NR_refine_pf_lo
+         lbuff(8+2*nspc)        = NR_refine_pf_up
+         lbuff(9+2*nspc)        = nullify_empty_bins
+         lbuff(10+2*nspc)       = approx_cutoffs
+         lbuff(11+2*nspc)       = NR_allow_old_smaps
 
-         lbuff(14) =  cresp_substep
-         lbuff(15) =  allow_unnatural_transfer
+         lbuff(12+2*nspc)       = cresp_substep
+         lbuff(13+2*nspc)       = allow_unnatural_transfer
 
          rbuff(1:nspc)        = cfl_cre(1:nspc)
          rbuff(1+nspc:2*nspc) = cre_eff(1:nspc)
@@ -365,19 +368,19 @@ contains
          use_cresp                   = lbuff(1)
          use_cresp_evol              = lbuff(2)
          allow_source_spectrum_break = lbuff(3)
-         synch_active                = lbuff(4)
-         adiab_active                = lbuff(5)
-         force_init_NR               = lbuff(6)
-         NR_run_refine_pf            = lbuff(7)
-         NR_refine_solution_q        = lbuff(8)
-         NR_refine_pf_lo             = lbuff(9)
-         NR_refine_pf_up             = lbuff(10)
-         nullify_empty_bins          = lbuff(11)
-         approx_cutoffs              = lbuff(12)
-         NR_allow_old_smaps          = lbuff(13)
+         synch_active                = lbuff(4:3+nspc)
+         adiab_active                = lbuff(4+nspc:3+2*nspc)
+         force_init_NR               = lbuff(4+2*nspc)
+         NR_run_refine_pf            = lbuff(5+2*nspc)
+         NR_refine_solution_q        = lbuff(6+2*nspc)
+         NR_refine_pf_lo             = lbuff(7+2*nspc)
+         NR_refine_pf_up             = lbuff(8+2*nspc)
+         nullify_empty_bins          = lbuff(9+2*nspc)
+         approx_cutoffs              = lbuff(10+2*nspc)
+         NR_allow_old_smaps          = lbuff(11+2*nspc)
 
-         cresp_substep               = lbuff(14)
-         allow_unnatural_transfer    = lbuff(15)
+         cresp_substep               = lbuff(12+2*nspc)
+         allow_unnatural_transfer    = lbuff(13+2*nspc)
 
          cfl_cre(1:nspc)      =  rbuff(1:nspc)  !TODO check if i'm correct :)
          cre_eff(1:nspc)      =  rbuff(1+nspc:2*nspc)
@@ -811,7 +814,7 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine allocate_spectral_CRspecies_arrays(nsp, nb)  ! Allocate arrays for spectrally resolved CR species
 
-      use diagnostics,  only: my_allocate, ma1d, ma2d
+      use diagnostics,  only: my_allocate, my_allocate_with_index, ma1d, ma2d
 
       implicit none
 
@@ -833,6 +836,8 @@ contains
       call my_allocate(def_dtadiab, ma1d)
       call my_allocate(def_dtsynch, ma1d)
       call my_allocate(total_init_cree, ma1d)
+      call my_allocate_with_index(synch_active, 1, nsp)
+      call my_allocate_with_index(adiab_active, 1, nsp)
 
       ma2d = [nsp, nb * 2]
       call my_allocate(K_cresp_paral, ma2d)
