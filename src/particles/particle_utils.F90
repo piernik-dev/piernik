@@ -253,27 +253,24 @@ contains
       logical,                       intent(out) :: in, phy, out
       real, dimension(ndims,2)                   :: bnd1, bnd2
 
-      in  = .false.
-      phy = .false.
-      out = .false.
-
       !There is probably a better way to write this
-      bnd1(:,1) = [cg%coord(LEFT, xdim)%r(cg%lh1(xdim,LO)), cg%coord(LEFT, ydim)%r(cg%lh1(ydim,LO)), cg%coord(LEFT, zdim)%r(cg%lh1(zdim,LO))]
-      bnd1(:,2) = [cg%coord(RIGHT,xdim)%r(cg%lh1(xdim,HI)), cg%coord(RIGHT,ydim)%r(cg%lh1(ydim,HI)), cg%coord(RIGHT,zdim)%r(cg%lh1(zdim,HI))]
+      bnd1(:,LO) = [cg%coord(LEFT, xdim)%r(cg%lh1(xdim,LO)), cg%coord(LEFT, ydim)%r(cg%lh1(ydim,LO)), cg%coord(LEFT, zdim)%r(cg%lh1(zdim,LO))]
+      bnd1(:,HI) = [cg%coord(RIGHT,xdim)%r(cg%lh1(xdim,HI)), cg%coord(RIGHT,ydim)%r(cg%lh1(ydim,HI)), cg%coord(RIGHT,zdim)%r(cg%lh1(zdim,HI))]
 
-      bnd2(:,1) = [cg%coord(LEFT, xdim)%r(cg%ijkse(xdim,LO)+I_ONE), cg%coord(LEFT, ydim)%r(cg%ijkse(ydim,LO)+I_ONE), cg%coord(LEFT, zdim)%r(cg%ijkse(zdim,LO)+I_ONE)]
-      bnd2(:,2) = [cg%coord(RIGHT,xdim)%r(cg%ijkse(xdim,HI)-I_ONE), cg%coord(RIGHT,ydim)%r(cg%ijkse(ydim,HI)-I_ONE), cg%coord(RIGHT,zdim)%r(cg%ijkse(zdim,HI)-I_ONE)]
+      bnd2(:,LO) = [cg%coord(LEFT, xdim)%r(cg%ijkse(xdim,LO)+I_ONE), cg%coord(LEFT, ydim)%r(cg%ijkse(ydim,LO)+I_ONE), cg%coord(LEFT, zdim)%r(cg%ijkse(zdim,LO)+I_ONE)]
+      bnd2(:,HI) = [cg%coord(RIGHT,xdim)%r(cg%ijkse(xdim,HI)-I_ONE), cg%coord(RIGHT,ydim)%r(cg%ijkse(ydim,HI)-I_ONE), cg%coord(RIGHT,zdim)%r(cg%ijkse(zdim,HI)-I_ONE)]
 
-      if (particle_in_area(pos, bnd2))    in  = .true.
-      if (particle_in_area(pos, cg%fbnd)) phy = .true.
+      in  = particle_in_area(pos, bnd2)
+      phy = particle_in_area(pos, cg%fbnd)
       !Ghost particle
-      if (particle_in_area(pos,bnd1))     out = .true.
-      if (.not. particle_in_area(pos, dom%edge)) then
-         call cg_outside_dom(pos, cg%fbnd, phy)
-         if (phy) then
-            in  = .true.
-            out = .true.
-         endif
+      out = particle_in_area(pos,bnd1)
+
+      if (particle_in_area(pos, dom%edge)) return
+
+      call cg_outside_dom(pos, cg%fbnd, phy)
+      if (phy) then
+         in  = .true.
+         out = .true.
       endif
 
    end subroutine is_part_in_cg
