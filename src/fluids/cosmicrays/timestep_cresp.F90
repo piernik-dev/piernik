@@ -54,13 +54,13 @@ contains
       use fluidindex,       only: flind
       use func,             only: emag
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: cfl_cr, iarr_crspc_e, iarr_crspc_n
+      use initcosmicrays,   only: cfl_cr, iarr_crspc2_e, iarr_crspc2_n, nspc
       use initcrspectrum,   only: K_cresp_paral, K_cresp_perp, spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep, n_substeps_max
       use mpisetup,         only: piernik_MPI_Allreduce
 
       implicit none
 
-      integer(kind=4)                :: i, j, k, i_up_max_tmp, i_up_max
+      integer(kind=4)                :: i, j, k, i_up_max_tmp, i_up_max, i_spc ! NOTE i_up_max might be vectorised
       type(grid_container),  pointer :: cg
       type(cg_list_element), pointer :: cgl
       type(spec_mod_trms)            :: sptab
@@ -77,38 +77,38 @@ contains
       abs_max_ud   = zero
       i_up_max     = 1
       i_up_max_tmp = 1
-      if (adiab_active) call all_fluid_boundaries()
+      if (any(adiab_active(:))) call all_fluid_boundaries()
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
 
-         if (adiab_active) then
+         if (any(adiab_active(:))) then
             call div_v(flind%ion%pos, cg)
             abs_max_ud = max(abs_max_ud, maxval(abs(cg%q(divv_i)%span(cg%ijkse))))
          endif
 
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-                  sptab%ud = zero ; sptab%ub = zero ; sptab%ucmb = zero ; empty_cell = .false.
-                  sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr
-                  cresp%n = cg%u(iarr_crspc_n, i, j, k)
-                  cresp%e = cg%u(iarr_crspc_e, i, j, k)
-                  call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_max_tmp) ! needed for synchrotron timestep
-                  i_up_max = max(i_up_max, i_up_max_tmp)
+         do i_spc = 1, nspc
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     sptab%ud = zero ; sptab%ub = zero ; sptab%ucmb = zero ; empty_cell = .false.
+                     sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr(i_spc)
+                     cresp%n = cg%u(iarr_crspc2_n(i_spc,:), i, j, k)
+                     cresp%e = cg%u(iarr_crspc2_e(i_spc,:), i, j, k)
+                     call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_max_tmp) ! needed for synchrotron timestep
+                     i_up_max = max(i_up_max, i_up_max_tmp)
 
-                  if (.not. empty_cell .and. synch_active) dt_cre_synch = min(cresp_dt_synch_species(min(sptab%ub, u_b_max), i_up_max_tmp, 1), dt_cre_synch)
+                     if (.not. empty_cell .and. synch_active(i_spc)) dt_cre_synch = min(cresp_dt_synch_species(min(sptab%ub, u_b_max), i_up_max_tmp, i_spc), dt_cre_synch)
+                  enddo
                enddo
             enddo
+            if (adiab_active(i_spc)) dt_cre_adiab = min(cresp_dt_adiab(abs_max_ud), dt_cre_adiab)
          enddo
-
          call cg%costs%stop(I_OTHER)
          cgl=>cgl%nxt
       enddo
-
-      if (adiab_active) dt_cre_adiab = cresp_dt_adiab(abs_max_ud)
 
       K_cre_max_sum = maxval(K_cresp_paral(i_up_max,:) + K_cresp_perp(i_up_max,:)) ! assumes the same K for energy and number density
       if (K_cre_max_sum > zero) then                               ! K_cre dependent on momentum - maximal for highest bin number
@@ -138,7 +138,7 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   real function cresp_dt_adiab(u_d_abs)
+   real function cresp_dt_adiab(u_d_abs) ! DEPRECATED
 
       use initcrspectrum, only: def_dtadiab, eps
 
