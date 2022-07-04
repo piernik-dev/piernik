@@ -99,7 +99,7 @@ contains
                   call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_max_tmp) ! needed for synchrotron timestep
                   i_up_max = max(i_up_max, i_up_max_tmp)
 
-                  if (.not. empty_cell .and. synch_active) call cresp_timestep_synchrotron(min(sptab%ub, u_b_max), i_up_max_tmp)
+                  if (.not. empty_cell .and. synch_active) dt_cre_synch = min(cresp_dt_synch_species(min(sptab%ub, u_b_max), i_up_max_tmp, 1), dt_cre_synch)
                enddo
             enddo
          enddo
@@ -168,24 +168,24 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   subroutine cresp_timestep_synchrotron(u_b, i_up_cell)
+   real function cresp_dt_synch_species(u_b, i_up_cell, i_spc)
 
-      use constants,      only: zero
+      use constants,      only: zero, big
       use initcrspectrum, only: def_dtsynch
 
       implicit none
 
       real,            intent(in) :: u_b
-      integer(kind=4), intent(in) :: i_up_cell
+      integer(kind=4), intent(in) :: i_up_cell, i_spc
       real                        :: dt_cre_ub
 
       ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
+      cresp_dt_synch_species = big
       if (u_b > zero) then
-         dt_cre_ub = minval(def_dtsynch(:)) / (assume_p_up(i_up_cell) * u_b)
-         dt_cre_synch = min(dt_cre_ub, dt_cre_synch)    ! remember to max dt_cre_synch at the beginning of the search
+         cresp_dt_synch_species = (def_dtsynch(i_spc)) / (assume_p_up(i_up_cell) * u_b)
       endif
 
-   end subroutine cresp_timestep_synchrotron
+   end function cresp_dt_synch_species
 
 !----------------------------------------------------------------------------------------------------
 !! \brief This subroutine returns timestep for cell at (i,j,k) position, with already prepared u_b and u_d values.
