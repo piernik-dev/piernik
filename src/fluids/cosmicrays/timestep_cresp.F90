@@ -108,7 +108,7 @@ contains
          cgl=>cgl%nxt
       enddo
 
-      if (adiab_active) call cresp_timestep_adiabatic(abs_max_ud)
+      if (adiab_active) dt_cre_adiab = cresp_dt_adiab(abs_max_ud)
 
       K_cre_max_sum = maxval(K_cresp_paral(i_up_max,:) + K_cresp_perp(i_up_max,:)) ! assumes the same K for energy and number density
       if (K_cre_max_sum > zero) then                               ! K_cre dependent on momentum - maximal for highest bin number
@@ -138,7 +138,7 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   subroutine cresp_timestep_adiabatic(u_d_abs)
+   real function cresp_dt_adiab(u_d_abs)
 
       use initcrspectrum, only: def_dtadiab, eps
 
@@ -146,9 +146,25 @@ contains
 
       real, intent(in) :: u_d_abs    ! assumes that u_d > 0 always
 
-      if (u_d_abs > eps) dt_cre_adiab = minval(def_dtadiab(:)) / u_d_abs
+      if (u_d_abs > eps) cresp_dt_adiab = minval(def_dtadiab(:)) / u_d_abs
 
-   end subroutine cresp_timestep_adiabatic
+   end function cresp_dt_adiab
+
+!----------------------------------------------------------------------------------------------------
+
+   real function cresp_dt_adiab_species(u_d_abs, i_spc)
+
+      use initcrspectrum, only: def_dtadiab, eps
+
+      implicit none
+
+      real,    intent(in) :: u_d_abs    ! assumes that u_d > 0 always
+      integer, intent(in) :: i_spc
+
+      if (u_d_abs > eps) cresp_dt_adiab_species = def_dtadiab(i_spc) / u_d_abs
+
+   end function cresp_dt_adiab_species
+
 
 !----------------------------------------------------------------------------------------------------
 
