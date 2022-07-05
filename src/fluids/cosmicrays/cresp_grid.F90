@@ -122,7 +122,7 @@ contains
       use func,             only: emag
       use global,           only: dt
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crspc_e, iarr_crspc_n
+      use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max, use_cresp_evol
       use initcrspectrum,   only: cresp_substep, n_substeps_max
       use named_array_list, only: wna
@@ -135,7 +135,7 @@ contains
       implicit none
 
       integer                        :: i, j, k, nssteps_max
-      integer(kind=4)                :: nssteps
+      integer(kind=4)                :: nssteps, i_spc
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
       type(spec_mod_trms)            :: sptab
@@ -160,44 +160,46 @@ contains
          cg => cgl%cg
          call cg%costs%start
 
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-                  sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
-                  cresp%n = cg%u(iarr_crspc_n, i, j, k)
-                  cresp%e = cg%u(iarr_crspc_e, i, j, k)
-                  if (synch_active) sptab%ub = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr, u_b_max)    !< WARNING assusmes that b is in mGs
-                  if (adiab_active) sptab%ud = cg%q(divv_i)%point([i,j,k]) * onet
+         do i_spc = 1, nspc
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
+                     cresp%n = cg%u(iarr_crspc2_n(i_spc,:), i, j, k)  !TODO OPTIMIZE ME PLEASE !!
+                     cresp%e = cg%u(iarr_crspc2_e(i_spc,:), i, j, k)
+                     if (synch_active(i_spc)) sptab%ub = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr(i_spc), u_b_max)    !< WARNING assusmes that b is in mGs
+                     if (adiab_active(i_spc)) sptab%ud = cg%q(divv_i)%point([i,j,k]) * onet
 
-                  if (cresp_substep) then !< prepare substep timestep for each cell
-                     call cresp_timestep_cell(cresp%n, cresp%e, sptab, dt_cresp, inactive_cell)
-                     call prepare_substep(dt_doubled, dt_cresp, dt_crs_sstep, nssteps)
-                     dt_cresp = dt_crs_sstep    !< 2 * dt is equal to nssteps * dt_crs_sstep
-                     nssteps_max = max(n_substeps_max, nssteps)
-                  endif
-#ifdef CRESP_VERBOSED
-                  print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
-#endif /* CRESP_VERBOSED */
-                  if (.not. inactive_cell) call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_violation_step, substeps = nssteps)
-#ifdef DEBUG
-                  call cresp_detect_negative_content(cfl_violation_step, [i, j, k])
-#endif /* DEBUG */
-                  if (cfl_violation_step) then
-                     cfl_cresp_violation = cfl_violation_step
-                     if (allow_loop_leave) then
-                        call cg%costs%stop(I_MHD)
-                        call ppp_main%stop(crug_label)
-                        return ! nothing to do here!
+                     if (cresp_substep) then !< prepare substep timestep for each cell
+                        call cresp_timestep_cell(cresp%n, cresp%e, sptab, dt_cresp, i_spc, inactive_cell)
+                        call prepare_substep(dt_doubled, dt_cresp, dt_crs_sstep, nssteps)
+                        dt_cresp = dt_crs_sstep    !< 2 * dt is equal to nssteps * dt_crs_sstep
+                        nssteps_max = max(n_substeps_max, nssteps)
                      endif
-                  endif
+#ifdef CRESP_VERBOSED
+                     print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
+#endif /* CRESP_VERBOSED */
+                     if (.not. inactive_cell) call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_violation_step, substeps = nssteps)
+#ifdef DEBUG
+                     call cresp_detect_negative_content(cfl_violation_step, [i, j, k])
+#endif /* DEBUG */
+                     if (cfl_violation_step) then
+                        cfl_cresp_violation = cfl_violation_step
+                        if (allow_loop_leave) then
+                           call cg%costs%stop(I_MHD)
+                           call ppp_main%stop(crug_label)
+                           return ! nothing to do here!
+                        endif
+                     endif
 
-                  cg%u(iarr_crspc_n, i, j, k) = cresp%n
-                  cg%u(iarr_crspc_e, i, j, k) = cresp%e
-                  if (dfpq%any_dump) then
-                     if (dfpq%dump_f) cg%w(wna%ind(dfpq%f_nam))%arr(:, i, j, k) = crel%f
-                     if (dfpq%dump_p) cg%w(wna%ind(dfpq%p_nam))%arr(:, i, j, k) = crel%p(crel%i_cut)
-                     if (dfpq%dump_q) cg%w(wna%ind(dfpq%q_nam))%arr(:, i, j, k) = crel%q
-                  endif
+                     cg%u(iarr_crspc2_n(i_spc,:), i, j, k) = cresp%n
+                     cg%u(iarr_crspc2_e(i_spc,:), i, j, k) = cresp%e
+                     if (dfpq%any_dump) then
+                        if (dfpq%dump_f) cg%w(wna%ind(dfpq%f_nam))%arr(:, i, j, k) = crel%f
+                        if (dfpq%dump_p) cg%w(wna%ind(dfpq%p_nam))%arr(:, i, j, k) = crel%p(crel%i_cut)
+                        if (dfpq%dump_q) cg%w(wna%ind(dfpq%q_nam))%arr(:, i, j, k) = crel%q
+                     endif
+                  enddo
                enddo
             enddo
          enddo
