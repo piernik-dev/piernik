@@ -104,7 +104,7 @@ contains
                   enddo
                enddo
             enddo
-            if (adiab_active(i_spc)) dt_cre_adiab = min(cresp_dt_adiab(abs_max_ud), dt_cre_adiab)
+            if (adiab_active(i_spc)) dt_cre_adiab = min(cresp_dt_adiab_species(abs_max_ud, i_spc), dt_cre_adiab)
          enddo
          call cg%costs%stop(I_OTHER)
          cgl=>cgl%nxt
@@ -154,17 +154,18 @@ contains
 
    real function cresp_dt_adiab_species(u_d_abs, i_spc)
 
-      use initcrspectrum, only: def_dtadiab, eps
+      use constants,      only: big
+      use initcrspectrum, only: def_dtadiab, eps   ! TODO Compare with something different than eps
 
       implicit none
 
       real,    intent(in) :: u_d_abs    ! assumes that u_d > 0 always
       integer, intent(in) :: i_spc
 
+      cresp_dt_adiab_species = big
       if (u_d_abs > eps) cresp_dt_adiab_species = def_dtadiab(i_spc) / u_d_abs
 
    end function cresp_dt_adiab_species
-
 
 !----------------------------------------------------------------------------------------------------
 
@@ -177,7 +178,6 @@ contains
 
       real,            intent(in) :: u_b
       integer(kind=4), intent(in) :: i_up_cell, i_spc
-      real                        :: dt_cre_ub
 
       ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
       cresp_dt_synch_species = big
@@ -190,7 +190,7 @@ contains
 !----------------------------------------------------------------------------------------------------
 !! \brief This subroutine returns timestep for cell at (i,j,k) position, with already prepared u_b and u_d values.
 
-   subroutine cresp_timestep_cell(p_loss_terms, dt_cell, empty_cell)
+   subroutine cresp_timestep_cell(p_loss_terms, cresp_dt_cell, i_spc, empty_cell)
 
       use initcrspectrum,     only: adiab_active, cresp, synch_active, spec_mod_trms
       use cresp_crspectrum,   only: cresp_find_prepare_spectrum
@@ -198,27 +198,29 @@ contains
 
       implicit none
 
+      real,               intent(out) :: cresp_dt_cell
       type(spec_mod_trms), intent(in) :: p_loss_terms
-      real,               intent(out) :: dt_cell
       logical,            intent(out) :: empty_cell
       integer(kind=4)                 :: i_up_cell
+      integer(kind=4),    intent(in)  :: i_spc
+      real                            :: dt_cre_adiab_cell, dt_cre_synch_cell
 
-      dt_cell = big
       dt_cre_adiab = big
       dt_cre_synch = big
+      cresp_dt_cell = big
 
       empty_cell = .false.
 
       call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_cell) ! needed for synchrotron timestep
 
       if (.not. empty_cell) then
-         if (synch_active) call cresp_timestep_synchrotron(p_loss_terms%ub, i_up_cell)
-         if (adiab_active) call cresp_timestep_adiabatic(p_loss_terms%ud)
+         if (synch_active(i_spc)) dt_cre_synch_cell = cresp_dt_synch_species(p_loss_terms%ub, i_up_cell, i_spc)
+         if (adiab_active(i_spc)) dt_cre_adiab_cell = cresp_dt_adiab_species(p_loss_terms%ud, i_spc)
       else
          return
       endif
 
-      dt_cell = min(dt_cre_adiab, dt_cre_synch)
+      cresp_dt_cell = min(dt_cre_adiab, dt_cre_synch)
 
    end subroutine cresp_timestep_cell
 
