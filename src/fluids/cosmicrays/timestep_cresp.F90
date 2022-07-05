@@ -190,9 +190,10 @@ contains
 !----------------------------------------------------------------------------------------------------
 !! \brief This subroutine returns timestep for cell at (i,j,k) position, with already prepared u_b and u_d values.
 
-   subroutine cresp_timestep_cell(p_loss_terms, cresp_dt_cell, i_spc, empty_cell)
+   subroutine cresp_timestep_cell(cresp_n, cresp_e, p_loss_terms, cresp_dt_cell, i_spc, empty_cell)
 
-      use initcrspectrum,     only: adiab_active, cresp, synch_active, spec_mod_trms
+      use initcrspectrum,     only: adiab_active, synch_active, spec_mod_trms
+      use initcosmicrays,     only: ncrb
       use cresp_crspectrum,   only: cresp_find_prepare_spectrum
       use constants,          only: big
 
@@ -204,6 +205,7 @@ contains
       integer(kind=4)                 :: i_up_cell
       integer(kind=4),    intent(in)  :: i_spc
       real                            :: dt_cre_adiab_cell, dt_cre_synch_cell
+      real, dimension(1:ncrb), intent(inout) :: cresp_n, cresp_e
 
       dt_cre_adiab = big
       dt_cre_synch = big
@@ -211,7 +213,7 @@ contains
 
       empty_cell = .false.
 
-      call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_cell) ! needed for synchrotron timestep
+      call cresp_find_prepare_spectrum(cresp_n, cresp_e, empty_cell, i_up_cell) ! needed for synchrotron timestep
 
       if (.not. empty_cell) then
          if (synch_active(i_spc)) dt_cre_synch_cell = cresp_dt_synch_species(p_loss_terms%ub, i_up_cell, i_spc)
