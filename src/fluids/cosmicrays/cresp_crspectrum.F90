@@ -942,10 +942,10 @@ contains
 
       init_e = zero
       init_n = zero
-      
+
       do i_spc = 1, nspc
         f = zero ; q = zero ; p = zero ; n = zero ; e = zero
-        
+
 ! reading initial values of p_cut
         p_cut = p_init(:,i_spc)
 
@@ -1113,7 +1113,7 @@ contains
       integer,                        intent(in) :: i_spc
 
       p_range_add = zero
-      ic = get_i_cut(p_init)
+      ic = get_i_cut(p_init(:,i_spc))
 
       p_range_add(ic(LO):ic(HI)) = p_fix(ic(LO):ic(HI))
       p_range_add(ic(LO)) = p_init(LO, i_spc)
