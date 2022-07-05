@@ -35,6 +35,7 @@ module common_hdf5
 ! pulled by HDF5
 
    use constants, only: singlechar, ndims, dsetnamelen
+   use cr_data,   only: icr_spc
    use hdf5,      only: HID_T
 
    implicit none
@@ -211,7 +212,7 @@ contains
                do ks = 1, nspc
                   do k = 1, ncrb
                      if (k<=99) then
-                        write(aux,'(A3,a,A1,I2.2)') 'cr_', trim(cr_names(ks)), 'n', k
+                        write(aux,'(A3,a,A1,I2.2)') 'cr_', trim(cr_names(icr_spc(ks))), 'n', k
                         call append_var(aux)
                      else
                         write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP number density component #", k
@@ -230,7 +231,7 @@ contains
                do ks = 1, nspc
                   do k = 1, ncrb
                      if (k<=99) then
-                        write(aux,'(A3,a,A1,I2.2)') 'cr_', trim(cr_names(ks)), 'e', k
+                        write(aux,'(A3,a,A1,I2.2)') 'cr_', trim(cr_names(icr_spc(ks))), 'e', k
                         call append_var(aux)
                      else
                         write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP energy density component #", k
