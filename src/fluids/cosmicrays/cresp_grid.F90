@@ -170,7 +170,7 @@ contains
                   if (adiab_active) sptab%ud = cg%q(divv_i)%point([i,j,k]) * onet
 
                   if (cresp_substep) then !< prepare substep timestep for each cell
-                     call cresp_timestep_cell(sptab, dt_cresp, inactive_cell)
+                     call cresp_timestep_cell(cresp%n, cresp%e, sptab, dt_cresp, inactive_cell)
                      call prepare_substep(dt_doubled, dt_cresp, dt_crs_sstep, nssteps)
                      dt_cresp = dt_crs_sstep    !< 2 * dt is equal to nssteps * dt_crs_sstep
                      nssteps_max = max(n_substeps_max, nssteps)
