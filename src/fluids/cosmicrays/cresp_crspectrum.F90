@@ -947,7 +947,7 @@ contains
         f = zero ; q = zero ; p = zero ; n = zero ; e = zero
         
 ! reading initial values of p_cut
-        p_cut = p_init(i_spc,:)
+        p_cut = p_init(:,i_spc)
 
         p         = p_fix       ! actual array of p including free edges, p_fix shared via initcrspectrum
         p(max_ic) = p_cut
@@ -1075,7 +1075,7 @@ contains
         total_init_cree(i_spc) = sum(e) !< total_init_cree value is used for initial spectrum scaling when spectrum is injected by source.
         call deallocate_active_arrays
     enddo
-    
+
    end subroutine cresp_init_state
 
 !>
@@ -1158,10 +1158,10 @@ contains
 
       p_range_add(:) = zero
       i_br = int(minloc(abs(p_fix - p_br_init(LO, i_spc)), dim=1), kind=4) - I_ONE
-      ic = get_i_cut(p_init)
+      ic = get_i_cut(p_init(:,i_spc))
 
       p_range_add(ic(LO):ic(HI)) = p_fix(ic(LO):ic(HI))
-      p_range_add(ic)            = p_init(i_spc,:)
+      p_range_add(ic)            = p_init(:,i_spc)
 
       f(ic(LO):ic(HI)) = f_init(i_spc) * (p_range_add(ic(LO):ic(HI))/p_br_init(LO, i_spc))**(-q_init(i_spc))
       q(ic(LO):ic(HI)) = q_init(i_spc)
