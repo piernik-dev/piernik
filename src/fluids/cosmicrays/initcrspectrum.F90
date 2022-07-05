@@ -170,7 +170,7 @@ contains
    subroutine init_cresp
 
       use constants,       only: cbuff_len, I_ZERO, I_ONE, zero, one, three, ten, half, logten, LO, HI
-      use cr_data,         only: cr_table, cr_spectral, cr_mass, cr_sigma_N, cr_names
+      use cr_data,         only: cr_mass, cr_sigma_N, cr_names, icr_spc
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index, my_allocate, ma1d
@@ -183,7 +183,6 @@ contains
       implicit none
 
       integer(kind=4) :: i, j
-      integer, dimension(nspc)   :: i_spc
       real, dimension(:), allocatable ::  p_br_def, q_br_def
 
       namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum, p_min_fix, p_max_fix, &
@@ -198,7 +197,6 @@ contains
       ma1d = [nspc]
       call my_allocate(p_br_def, ma1d)
       call my_allocate(q_br_def, ma1d)
-      i_spc = pack(cr_table, cr_spectral)
 ! Default values
       use_cresp         = .true.
       use_cresp_evol    = .true.
@@ -575,13 +573,13 @@ contains
               if (master) call warn(msg)
            endif
         endif
-        fsynchr(j) =  (4. / 3. ) * cr_sigma_N(i_spc(j)) / (cr_mass(i_spc(j)) * amu * clight)
+        fsynchr(j) =  (4. / 3. ) * cr_sigma_N(icr_spc(j)) / (cr_mass(icr_spc(j)) * amu * clight)
 
-        write (msg, *) "[initcrspectrum:init_cresp] CR ", cr_names(i_spc(j)), ": 4/3 * sigma_N / ( m * c ) = ", fsynchr(j)
+        write (msg, *) "[initcrspectrum:init_cresp] CR ", cr_names(icr_spc(j)), ": 4/3 * sigma_N / ( m * c ) = ", fsynchr(j)
         if (master) call printinfo(msg)
 
-        K_cresp_paral(j, 1:ncrb) = K_cr_paral(i_spc(j)) * (p_mid_fix(1:ncrb) / p_diff(j))**K_cre_pow(j)
-        K_cresp_perp(j,  1:ncrb) = K_cr_perp(i_spc(j))  * (p_mid_fix(1:ncrb) / p_diff(j))**K_cre_pow(j)
+        K_cresp_paral(j, 1:ncrb) = K_cr_paral(icr_spc(j)) * (p_mid_fix(1:ncrb) / p_diff(j))**K_cre_pow(j)
+        K_cresp_perp(j,  1:ncrb) = K_cr_perp(icr_spc(j))  * (p_mid_fix(1:ncrb) / p_diff(j))**K_cre_pow(j)
 
         K_cresp_paral(j, ncrb+1:ncr2b) = K_cresp_paral(j, 1:ncrb)
         K_cresp_perp (j, ncrb+1:ncr2b) = K_cresp_perp (j, 1:ncrb)
