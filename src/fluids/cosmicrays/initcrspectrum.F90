@@ -836,8 +836,8 @@ contains
       call my_allocate(def_dtadiab, ma1d)
       call my_allocate(def_dtsynch, ma1d)
       call my_allocate(total_init_cree, ma1d)
-      call my_allocate_with_index(synch_active, 1, nsp)
-      call my_allocate_with_index(adiab_active, 1, nsp)
+      call my_allocate_with_index(synch_active, nsp, 1)
+      call my_allocate_with_index(adiab_active, nsp, 1)
 
       ma2d = [nsp, nb * 2]
       call my_allocate(K_cresp_paral, ma2d)
