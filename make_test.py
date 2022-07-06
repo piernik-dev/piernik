@@ -74,5 +74,6 @@ def main(argv):
     t = MakeTest(test)
     t.output()
 
+
 if __name__ == "__main__":
     main(sys.argv[1:])

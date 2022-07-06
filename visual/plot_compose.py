@@ -23,17 +23,20 @@ def plot_axes(ax, ulen, l1, min1, max1, l2, min2, max2):
 
 
 def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
-    smin, smax, zoom, ulen, umin, umax, linstyl, output, timep = equip1d
+    smin, smax, zoom, ulen, sctype, umin, umax, linstyl, output, timep = equip1d
     fig1d = P.figure(ncut + 2, figsize=(10, 8))
     ax = fig1d.add_subplot(111)
     P.xlim(zoom[1][ncut], zoom[2][ncut])
     label = []
     axis = "xyz"[ncut]
+    hybrid_plot = False
+    if field[0] and parts[0]:
+        hybrid_plot = (parts[3] > 1)
 
     if field[0]:
-        vmin, vmax, sctype, symmin, cmap, autsc, labf = field[1:]
+        vmin, vmax, symmin, cmap, autsc, labf = field[1:]
         label.append(labf)
-        if not autsc:
+        if not autsc and not hybrid_plot:
             P.ylim(vmin, vmax)
 
         for blks in refis:
@@ -41,20 +44,35 @@ def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
                 binb, ble, bre, level, b1d = bl[1:]
                 if binb[n1] and binb[n2]:
                     if b1d != []:
-                        bplot = pu.scale_plotarray(b1d[ncut], sctype, symmin)
+                        if hybrid_plot:
+                            bplot = b1d[ncut]
+                        else:
+                            bplot = pu.scale_plotarray(b1d[ncut], sctype, symmin)
                         dxh = (bre[ncut] - ble[ncut]) / float(len(b1d[ncut])) / 2.0
                         vax = np.linspace(ble[ncut] + dxh, bre[ncut] - dxh, len(b1d[ncut]))
                         ax.plot(vax, bplot, linstyl[level], color=ps.plot1d_linecolor)
+
+    if hybrid_plot:
+        hl = pu.scale_translate(sctype, vmin, vmax, symmin, True)
+    if not field[0]:
+        autsc = (umin == umax)
+        hl = pu.scale_translate(sctype, umin, umax, np.abs(umin), False)
+    if hybrid_plot or not field[0]:
+        if hl[0] == 3:
+            if hl[3] > 0.:
+                ax.set_yscale('symlog', linthresh=hl[3])
+            else:
+                ax.set_yscale('symlog')
+        elif hl[0] == 2:
+            ax.set_yscale('log')
+        if not autsc:
+            P.ylim(hl[1], hl[2])
 
     if parts[0]:
         pxyz, pm, nbins, pcolor, psize, player, labh = parts[1:]
         pn1, pmm = pxyz[ncut], pm
         ax = plot1d_particles(ax, pn1, pmm, nbins, [smin[ncut], smax[ncut]], pcolor, psize)
         label.append(labh)
-
-    if not field[0]:
-        if umin != umax:
-            P.ylim(umin, umax)
 
     P.ylabel('  |  '.join(label))
     P.xlabel("%s [%s]" % (axis, pu.labelx()(ulen)))
@@ -68,11 +86,11 @@ def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
 
 
 def draw_plotcomponent(ax, refis, field, parts, equip2d, ncut, n1, n2):
-    smin, smax, zoom, ulen, drawg, gcolor, center = equip2d
+    smin, smax, zoom, ulen, sctype, drawg, gcolor, center = equip2d
     ag, ah = [], []
     if field[0] or drawg:
         if field[0]:
-            vmin, vmax, sctype, symmin, cmap = field[1:-2]
+            vmin, vmax, symmin, cmap = field[1:-2]
         for blks in refis:
             for bl in blks:
                 bxyz, binb, ble, bre, level = bl[:-1]
@@ -83,7 +101,7 @@ def draw_plotcomponent(ax, refis, field, parts, equip2d, ncut, n1, n2):
                     if drawg:
                         ax.plot([ble[n1], ble[n1], bre[n1], bre[n1], ble[n1]], [ble[n2], bre[n2], bre[n2], ble[n2], ble[n2]], '-', linewidth=ps.grid_linewidth, alpha=0.1 * float(level + 1), color=gcolor[level], zorder=4)
     if parts[0]:
-        pxyz, pm, nbins, pcolor, psize, player = parts[1:-1]
+        pxyz, pm, nbins, pcolor, psize, player, pstype = parts[1:-1]
         if player[0] and player[ncut + 1] != '0':
             pmask = np.abs(pxyz[ncut] - center[ncut]) <= float(player[ncut + 1])
             pn1, pn2 = pxyz[n1][pmask], pxyz[n2][pmask]
@@ -93,7 +111,7 @@ def draw_plotcomponent(ax, refis, field, parts, equip2d, ncut, n1, n2):
                 pmm = pm
         else:
             pn1, pn2, pmm = pxyz[n1], pxyz[n2], pm
-        ax, ah = draw_particles(ax, pn1, pn2, pmm, nbins, [smin[n1], smax[n1], smin[n2], smax[n2]], field[0], pcolor, psize)
+        ax, ah = draw_particles(ax, pn1, pn2, pmm, nbins, [smin[n1], smax[n1], smin[n2], smax[n2]], field[0], pcolor, psize, pstype)
     ax = plot_axes(ax, ulen, "xyz"[n1], zoom[1][n1], zoom[2][n1], "xyz"[n2], zoom[1][n2], zoom[2][n2])
     ax.set_xticks([center[n1]], minor=True)
     ax.set_yticks([center[n2]], minor=True)
@@ -102,9 +120,13 @@ def draw_plotcomponent(ax, refis, field, parts, equip2d, ncut, n1, n2):
     return ax, ag, ah
 
 
-def draw_particles(ax, p1, p2, pm, nbins, ranges, drawd, pcolor, psize):
+def draw_particles(ax, p1, p2, pm, nbins, ranges, drawd, pcolor, psize, pstype):
     if nbins > 1:
-        ah = ax.hist2d(p1, p2, nbins, weights=pm, range=[ranges[0:2], ranges[2:4]], norm=matplotlib.colors.LogNorm(), cmap=pcolor, alpha=ps.hist2d_alpha)
+        if pstype[0]:
+            norm = matplotlib.colors.LogNorm(vmin=pstype[1], vmax=pstype[2])
+        else:
+            norm = matplotlib.colors.Normalize(vmin=pstype[1], vmax=pstype[2])
+        ah = ax.hist2d(p1, p2, nbins, weights=pm, range=[ranges[0:2], ranges[2:4]], norm=norm, cmap=pcolor, alpha=ps.hist2d_alpha)
         if not drawd:
             ax.set_facecolor(ps.hist2d_facecolor)
     else:
@@ -125,7 +147,7 @@ def plot1d_particles(ax, p1, pm, nbins, ranges, pcolor, psize):
     return ax
 
 
-def add_cbar(figmode, cbar_mode, grid, ab, ic, clab):
+def add_cbar(figmode, cbar_mode, grid, ab, ic, clab, sct, field):
     icb = pu.cbsplace[figmode][ic]
     clf = [ps.cbar_hist2d_label_format, ps.cbar_plot2d_label_format][ic]
     if cbar_mode == 'none':
@@ -146,22 +168,24 @@ def add_cbar(figmode, cbar_mode, grid, ab, ic, clab):
     cbarh.ax.set_ylabel(clab)
     if cbar_mode == 'none':
         cbarh.ax.yaxis.set_label_coords(ps.cbar_label_coords[0], ps.cbar_label_coords[1])
+    if ic == 1 and pu.whether_symlog(sct):
+        slticks, sltlabs = [], []
+        for tick in cbarh.get_ticks():
+            if tick >= field[1] and tick <= field[2]:
+                slticks.append(tick)
+                sltlabs.append(clf % (np.sign(tick) * 10.**(np.abs(tick)) * field[3]))
+        if (matplotlib.__version__ >= '3.5.0'):
+            cbarh.set_ticks(slticks, labels=sltlabs)
+        else:
+            cbarh.set_ticks(slticks)
+            cbarh.set_ticklabels(sltlabs)
 
 
 def plotcompose(pthfilen, var, output, options):
-    axc, umin, umax, cmap, pcolor, player, psize, sctype, cu, center, cmpr, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl = options
+    axc, umin, umax, cmap, pcolor, player, psize, sctype, pstype, cu, center, cmpr, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl = options
     labh = ps.particles_label
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
-    cmpr0, cmprf, cmprd, cmprt = cmpr
-    if cmpr0:
-        if cmprd == '':
-            cmprd = var
-        if cmprf == '':
-            cmpr = cmpr0, h5f, cmprd, cmprt
-        else:
-            h5c = h5py.File(cmprf, 'r')
-            cmpr = cmpr0, h5c, cmprd, cmprt
     time = h5f.attrs['time'][0]
     utim = h5f['dataset_units']['time_unit'].attrs['unit']
     ulenf = h5f['dataset_units']['length_unit'].attrs['unit']
@@ -190,55 +214,51 @@ def plotcompose(pthfilen, var, output, options):
         center = (smax[0] + smin[0]) / 2.0, (smax[1] + smin[1]) / 2.0, (smax[2] + smin[2]) / 2.0
 
     drawa, drawu = pu.choose_amr_or_uniform(drawa, drawu, drawd, drawg, drawp, maxglev, gridlist)
-    plotlevels = pu.check_plotlevels(plotlevels, maxglev, drawa)
+    plotlevels = pu.check_plotlevels(plotlevels, maxglev, pthfilen, True)
+    gridlist = pu.sanitize_gridlist(gridlist, cgcount)
+    unavail, cmpr, drawa, drawu = rd.manage_compare(cmpr, pthfilen, h5f, var, plotlevels, gridlist, drawa, drawu)
+    if len(plotlevels) == 0 or unavail:
+        return
+
     linstyl = pu.linestyles(linstyl, maxglev, plotlevels)
     if drawg:
         gcolor = pu.reorder_gridcolorlist(gcolor, maxglev, plotlevels)
-    gridlist = pu.sanitize_gridlist(gridlist, cgcount)
 
     if drawp:
         pinfile, pxyz, pm = rd.collect_particles(h5f, drawh, center, player, uupd, usc, plotlevels, gridlist)
-        parts = pinfile, pxyz, pm, nbins, pcolor, psize, player, labh
+        parts = pinfile, pxyz, pm, nbins, pcolor, psize, player, pstype, labh
         drawh = drawh and pinfile
 
     draw1D, draw2D, figmode = pu.check_1D2Ddefaults(axc, n_d, drawd and drawh)
 
     refis = []
     if drawd or drawg:
-        extr = [], [], [], [], [], []
-        if drawu:
-            if len(plotlevels) > 1:
-                print('For uniform grid plotting only the firs given level!')
-            print('Plotting base level %s' % plotlevels[0])
-            refis, extr = rd.reconstruct_uniform(h5f, var, cmpr, plotlevels[0], gridlist, cu, center, smin, smax, draw1D, draw2D)
+        refis, extr = rd.collect_gridlevels(h5f, var, cmpr, refis, maxglev, plotlevels, gridlist, cgcount, center, usc, drawd, drawu, drawa, drawg, draw1D, draw2D)
 
-        if drawa or drawg:
-            refis, extr = rd.collect_gridlevels(h5f, var, cmpr, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, drawd, draw1D, draw2D)
-
-        if refis == []:
+        if refis == [] or pu.list_any(extr, []):
             drawd = False
+            field = [drawd, ]
         else:
             if drawd:
-                vmin, vmax, symmin, autsc = pu.scale_manage(sctype, refis, umin, umax, any(draw1D), any(draw2D), extr)
+                vmin, vmax, symmin, autsc = pu.scale_manage(sctype, refis, umin, umax, draw1D, draw2D, extr)
 
-                vlab = pu.labellog(sctype, symmin, cmpr0) + var + " [%s]" % pu.labelx()(uvar)
-                field = drawd, vmin, vmax, sctype, symmin, cmap, autsc, vlab
+                vlab = pu.labellog(sctype, symmin, cmpr[0]) + var + pu.manage_units(uvar)
+                field = drawd, vmin, vmax, symmin, cmap, autsc, vlab
+
+    zoom = rd.level_zoom(h5f, gridlist, zoom, smin, smax)
 
     h5f.close()
-    if cmpr0:
-        h5c.close()
+    if cmpr[0]:
+        cmpr[2].close()
 
     if not (parts[0] or drawd or drawg):
-        print('No particles or levels to plot. Skipping.')
+        print('No particles or datafields or grids to plot. Skipping.')
         return
 
     cbar_mode = pu.colorbar_mode(drawd, drawh, figmode)
 
-    if not zoom[0]:
-        zoom = False, smin, smax
-
-    equip1d = smin, smax, zoom, ulen, umin, umax, linstyl, output, timep
-    equip2d = smin, smax, zoom, ulen, drawg, gcolor, center
+    equip1d = smin, smax, zoom, ulen, sctype, umin, umax, linstyl, output, timep
+    equip2d = smin, smax, zoom, ulen, sctype, drawg, gcolor, center
 
     if draw1D[0]:
         plot1d(refis, field, parts, equip1d, 0, 1, 2)
@@ -267,10 +287,10 @@ def plotcompose(pthfilen, var, output, options):
         ax.set_title(timep)
 
         if drawh:
-            add_cbar(figmode, cbar_mode, grid, ah[3], 0, labh)
+            add_cbar(figmode, cbar_mode, grid, ah[3], 0, labh, sctype, field)
 
         if drawd:
-            add_cbar(figmode, cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 1, vlab)
+            add_cbar(figmode, cbar_mode, grid, pu.take_nonempty([ag0, ag2, ag3]), 1, vlab, sctype, field)
 
         P.draw()
         out2d = output[0] + pu.plane_in_outputname(figmode, draw2D) + output[1]

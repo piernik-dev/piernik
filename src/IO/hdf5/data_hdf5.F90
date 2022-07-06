@@ -222,6 +222,10 @@ contains
                newname="acceleration_y"
             case ("accz")
                newname="acceleration_z"
+            case ("tfor")
+               newname="formation_time"
+            case ("tdyn")
+               newname="dynamical_time"
 #endif /* NBODY */
             case default
                write(newname, '(A)') trim(var)
