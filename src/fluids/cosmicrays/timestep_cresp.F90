@@ -110,7 +110,7 @@ contains
          cgl=>cgl%nxt
       enddo
 
-      K_cre_max_sum = maxval(K_cresp_paral(i_up_max,:) + K_cresp_perp(i_up_max,:)) ! assumes the same K for energy and number density
+      K_cre_max_sum = maxval(K_cresp_paral(:, i_up_max) + K_cresp_perp(:, i_up_max)) ! assumes the same K for energy and number density
       if (K_cre_max_sum > zero) then                               ! K_cre dependent on momentum - maximal for highest bin number
          dt_aux = cfl_cr * half / K_cre_max_sum                    ! We use cfl_cr here (CFL number for diffusive CR transport), cfl_cre used only for spectrum evolution
          cgl => leaves%first
