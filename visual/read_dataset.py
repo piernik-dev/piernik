@@ -5,55 +5,191 @@ import plot_utils as pu
 import pvf_settings as ps
 
 
-def reconstruct_uniform(h5f, var, cmpr, level, gridlist, cu, center, smin, smax, draw1D, draw2D):
-    dset, nd, levelmet = collect_dataset(h5f, var, cmpr, level, gridlist)
-    if not levelmet:
-        return [], []
+def manage_compare(cmpr, pthfilen, h5f, var, plotlevels, gridlist, drawa, drawu):
+    cmpr0, cmprb, cmprf, cmprd, cmprl, cmprt, diff_struct = cmpr
+    if cmpr0:
+        if cmprd == '':
+            cmprd = var
+        if cmprl == '':
+            cmprl = plotlevels
+        if cmprf == '':
+            cmprf = pthfilen
+            if cmprl != plotlevels:
+                print('Different levels to compare in the same file. Might be weird.')
+            h5c = h5f
+        else:
+            h5c = h5.File(cmprf, 'r')
 
-    if cu:
-        inb, ind = pu.find_indices(nd, center, smin, smax, True)
-        print('Ordered plot center', center[0], center[1], center[2], ' gives following uniform grid indices:', ind[0], ind[1], ind[2])
-    else:
-        ind = int(nd[0] / 2), int(nd[1] / 2), int(nd[2] / 2)
+        if (cmprd not in list(h5c['field_types'].keys())):
+            print(cmprd, ' is not available in the compare file ', cmprf, '. No data to compare.')
+            return True, cmpr, drawa, drawu
+
+        cmprl = pu.check_plotlevels(cmprl, max(h5c['grid_level'][:]), cmprf, False)
+        diff_struct = compare_grids(h5f, h5c, plotlevels, cmprl, gridlist)
+        if cmprl == []:
+            return True, cmpr, drawa, drawu
+        if diff_struct:
+            print('Difference in datafields structure or not matching levels.')
+            drawa, drawu = False, True
+        cmpr = cmpr0, cmprb, h5c, cmprd, cmprl, cmprt, diff_struct
+    return False, cmpr, drawa, drawu
+
+
+def compare_grids(h1, h2, plotlevels, cmprl, gridlist):
+    if len(plotlevels) != len(cmprl):
+        return True
+    cgcnt2 = cgcount = int(h2['data'].attrs['cg_count'])
+    for il in range(len(plotlevels)):
+        for ig in gridlist:
+            h5g1 = h1['data']['grid_' + str(ig).zfill(10)]
+            if ig >= cgcnt2:
+                return True
+            h5g2 = h2['data']['grid_' + str(ig).zfill(10)]
+            if h5g1.attrs['level'] == plotlevels[il]:
+                if h5g2.attrs['level'] != cmprl[il]:
+                    return True
+                if any(h5g1.attrs['off'] != h5g2.attrs['off']):
+                    return True
+                if any(h5g1.attrs['n_b'] != h5g2.attrs['n_b']):
+                    return True
+    return False
+
+
+def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, draw1D, draw2D):
+    # attrs = h5f['domains']['base'].attrs
+    # nd = [i * 2**level for i in attrs['n_d']]
+    nd, loff, roff, ledg, redg, levelmet = frame_level(h5f, level, gridlist)
+    if not levelmet:
+        return False, [], []
+    cmpr0, cmprb, h5c, cmprd, cmprl, cmprt, diff_struct = cmpr
+    if diff_struct:
+        if len(cmprl) <= levnum:
+            print('Level to compare not found. Consider more detailed requirement for level comparison.')
+            return False, [], []
+        ndc, loc, roc, lec, rec, lmc = frame_level(h5c, cmprl[levnum], range(int(h5c['data'].attrs['cg_count'])))
+        if not lmc:
+            return False, [], []
+        if nd == ndc and not cmprb:
+            if not pu.list3_alleq(ledg, lec) or not pu.list3_alleq(redg, rec):
+                print('WARNING: Edges for level %s: %s %s are different than for level %s: %s %s. Consider excluding levels or -C / --compare-adjusted-grids option.' % (level, ledg, redg, cmprl[levnum], lec, rec))
+        elif cmprb:
+            if (nd, ledg, redg) != (ndc, lec, rec):
+                sfmin = h5f['simulation_parameters'].attrs['domain_left_edge']
+                sfmax = h5f['simulation_parameters'].attrs['domain_right_edge']
+                scmin = h5c['simulation_parameters'].attrs['domain_left_edge']
+                scmax = h5c['simulation_parameters'].attrs['domain_right_edge']
+                if not pu.list3_alleq(sfmin, scmin) or not pu.list3_alleq(sfmax, scmax):
+                    print('Framing levels from domains of different edges! %s %s vs. %s %s' % (sfmin, sfmax, scmin, scmax))
+                lofg = pu.list3_min(loff, loc)
+                rofg = pu.list3_max(roff, roc)
+
+                dlf = pu.list3_div(pu.list3_subtraction(redg, ledg), nd)
+                dlc = pu.list3_div(pu.list3_subtraction(rec, lec), ndc)
+                redg = pu.list3_add(redg, pu.list3_mult(pu.list3_subtraction(rofg, roff), dlf))
+                ledg = pu.list3_add(ledg, pu.list3_mult(pu.list3_subtraction(lofg, loff), dlf))
+                rec = pu.list3_add(rec, pu.list3_mult(pu.list3_subtraction(rofg, roc), dlc))
+                lec = pu.list3_add(lec, pu.list3_mult(pu.list3_subtraction(lofg, loc), dlc))
+                if not pu.list3_alleq(dlf, dlc):
+                    print('Comparison for %s and %s may give weird results as cell sizes are different: %s %s' % (level, cmprl[levnum], dlf, dlc))
+
+                ndgg = pu.list3_subtraction(rofg, lofg)
+                nd, ndc = ndgg, ndgg
+                loff, loc = lofg, lofg
+        else:
+            print('Comparison for levels: %s and %s not available due to unmet resolution constraints. Dimensions %s and %s do not match.' % (level, cmprl[levnum], nd, ndc))
+            return False, [], []
+
+    dset = collect_dataset(h5f, var, cmpr, level, gridlist, nd, loff)
+    if diff_struct:
+        dc = collect_dataset(h5c, cmprd, cmpr, cmprl[levnum], range(int(h5c['data'].attrs['cg_count'])), ndc, loc)
+        if nd == ndc:
+            dset = pu.execute_comparison(dset, dc, cmprt)
+
+    inb, ind = pu.find_indices(nd, center, ledg, redg, draw1D, draw2D, True)
+    print('Plot center', center[0], center[1], center[2], 'gives indices:', ind[0], ind[1], ind[2], 'for uniform grid level', level)
 
     b2d, b1d, d1min, d1max, d2min, d2max, d3min, d3max = take_cuts_and_lines(dset, ind, draw1D, draw2D)
-    block = b2d, [True, True, True], smin, smax, level, b1d
+    block = b2d, inb, pu.list3_division(ledg, usc), pu.list3_division(redg, usc), level, b1d
 
-    return [[block, ], ], [[d1min], [d1max], [d2min], [d2max], [d3min], [d3max]]
+    return levelmet, block, [d1min, d1max, d2min, d2max, d3min, d3max]
 
 
-def collect_dataset(h5f, dset_name, cmpr, level, gridlist):
+def collect_dataset(h5f, dset_name, cmpr, level, gridlist, nd, loff):
     print('Reading', dset_name)
-    attrs = h5f['domains']['base'].attrs
-    nd = [i * 2**level for i in attrs['n_d']]
-    dset = np.zeros((nd[0], nd[1], nd[2]))
+    dset = np.full((nd[0], nd[1], nd[2]), np.nan)
 
     print('Reconstructing domain from cg parts')
+    for ig in gridlist:
+        h5g = h5f['data']['grid_' + str(ig).zfill(10)]
+        if h5g.attrs['level'] == level:
+            off = h5g.attrs['off'] - loff
+            ngb = h5g.attrs['n_b']
+            n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
+            ce = n_b + off
+            dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name][:, :, :].swapaxes(0, 2)
+            cmpr0, cmprb, h5c, cmprd, cmprl, cmprt, diff_struct = cmpr
+            if cmpr0 and not diff_struct:
+                dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = pu.execute_comparison(dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]], h5c['data']['grid_' + str(ig).zfill(10)][cmprd][:, :, :].swapaxes(0, 2), cmprt)
+
+    return dset
+
+
+def frame_level(h5f, level, gridlist):
     levelmet = False
+    off_started = False
     for ig in gridlist:
         h5g = h5f['data']['grid_' + str(ig).zfill(10)]
         if h5g.attrs['level'] == level:
             levelmet = True
             off = h5g.attrs['off']
             ngb = h5g.attrs['n_b']
+            lft = h5g.attrs['left_edge']
+            rht = h5g.attrs['right_edge']
+
             n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
             ce = n_b + off
-            dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name][:, :, :].swapaxes(0, 2)
-            cmpr0, h5c, cmprd, cmprt = cmpr
-            if cmpr0:
-                dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = pu.execute_comparison(dset[off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]], h5c['data']['grid_' + str(ig).zfill(10)][dset_name][:, :, :].swapaxes(0, 2), cmprt)
+            if off_started:
+                lind = pu.list3_min(lind, off)
+                rind = pu.list3_max(rind, ce)
+                ledg = pu.list3_min(ledg, lft)
+                redg = pu.list3_max(redg, rht)
+            else:
+                lind = off
+                rind = ce
+                ledg = lft
+                redg = rht
+                off_started = True
+    nd = pu.list3_subtraction(rind, lind)
+    if levelmet:
+        return nd, lind, rind, ledg, redg, levelmet
+    else:
+        return [], [], [], [], [], False
 
-    return dset, nd, levelmet
+
+def level_zoom(h5f, gridlist, zoom, smin, smax):
+    if zoom[0]:
+        if len(zoom) == 2:
+            nd, loff, roff, ledg, redg, levelmet = frame_level(h5f, zoom[1], gridlist)
+            if levelmet:
+                zoom = True, ledg, redg
+            else:
+                zoom = False,
+    if not zoom[0]:
+        zoom = False, smin, smax
+    return zoom
 
 
-def collect_gridlevels(h5f, var, cmpr, refis, extr, maxglev, plotlevels, gridlist, cgcount, center, usc, getmap, draw1D, draw2D):
-    l1, h1, l2, h2, l3, h3 = extr
+def collect_gridlevels(h5f, var, cmpr, refis, maxglev, plotlevels, gridlist, cgcount, center, usc, getmap, drawu, drawa, drawg, draw1D, draw2D):
+    l1, h1, l2, h2, l3, h3 = [], [], [], [], [], []
+    lev_num = -1
     for iref in range(maxglev + 1):
         if iref in plotlevels:
+            lev_num += 1
             print('REFINEMENT ', iref)
             blks = []
-            for ib in gridlist:
-                levok, block, extr = read_block(h5f, var, cmpr, ib, iref, center, usc, getmap, draw1D, draw2D)
+
+            if drawu:
+                levok, block, extr = reconstruct_uniform(h5f, var, cmpr, lev_num, iref, gridlist, center, usc, draw1D, draw2D)
                 if levok:
                     blks.append(block)
                     if getmap:
@@ -63,6 +199,19 @@ def collect_gridlevels(h5f, var, cmpr, refis, extr, maxglev, plotlevels, gridlis
                         h2.append(extr[3])
                         l3.append(extr[4])
                         h3.append(extr[5])
+
+            if drawa or drawg:
+                for ib in gridlist:
+                    levok, block, extr = read_block(h5f, var, cmpr, ib, iref, center, usc, (getmap and drawa), draw1D, draw2D)
+                    if levok:
+                        blks.append(block)
+                        if getmap and drawa:
+                            l1.append(extr[0])
+                            h1.append(extr[1])
+                            l2.append(extr[2])
+                            h2.append(extr[3])
+                            l3.append(extr[4])
+                            h3.append(extr[5])
             if blks != []:
                 refis.append(blks)
     return refis, [l1, h1, l2, h2, l3, h3]
@@ -78,17 +227,16 @@ def read_block(h5f, dset_name, cmpr, ig, olev, oc, usc, getmap, draw1D, draw2D):
     ledge = h5g.attrs['left_edge']
     redge = h5g.attrs['right_edge']
     ngb = h5g.attrs['n_b']
-    inb, ind = pu.find_indices(ngb, oc, ledge, redge, False)
+    inb, ind = pu.find_indices(ngb, oc, ledge, redge, draw1D, draw2D, False)
     if not any(inb):
         return False, [], []
     if not getmap:
         return levok, [[], inb, ledge / usc, redge / usc, olev, []], []
-    clen = h5g.attrs['dl']
     off = h5g.attrs['off']
     n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
     ce = n_b + off
     dset = h5g[dset_name][:, :, :].swapaxes(0, 2)
-    cmpr0, h5c, cmprd, cmprt = cmpr
+    cmpr0, cmprb, h5c, cmprd, cmprl, cmprt, diff_struct = cmpr
     if cmpr0:
         dset = pu.execute_comparison(dset, h5c['data']['grid_' + str(ig).zfill(10)][cmprd][:, :, :].swapaxes(0, 2), cmprt)
 

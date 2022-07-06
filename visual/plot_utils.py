@@ -8,6 +8,29 @@ figplace = [(3, 2, 0), (0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 0), (1, 0, 0)]
 cbsplace = [(1, 1), (-1, -1), (2, 2), (0, 1), (1, 1), (2, 2)]
 
 
+def recognize_opt(cur, lopt):
+    for op in lopt:
+        if cur == op:
+            return True
+    return False
+
+
+def whether_linear(sct):
+    return recognize_opt(sct, ('0', 'linear'))
+
+
+def whether_symlin(sct):
+    return recognize_opt(sct, ('1', 'symlin'))
+
+
+def whether_log(sct):
+    return recognize_opt(sct, ('2', 'log'))
+
+
+def whether_symlog(sct):
+    return recognize_opt(sct, ('3', 'symlog'))
+
+
 def plane_in_outputname(figmode, draw2D):
     to_insert = ''
     if figmode == 1 or figmode == 4:
@@ -28,42 +51,68 @@ def fsym(vmin, vmax):
 
 def execute_comparison(orig, comp, ctype):
     if ctype == 1:
-        return orig - comp
+        maa = orig - comp
     elif ctype == 2:
-        return orig / comp
+        maa = orig / comp
     elif ctype == 3:
-        return (orig / comp) - 1
+        maa = (orig / comp) - 1
+    else:
+        maa = orig
+    return np.where(np.isnan(maa), ps.set_as_unexist, maa)
+
+
+def scale_translate(sctype, vmn, vmx, sm, hbd):
+    if whether_linear(sctype):
+        return 0, vmn, vmx
+    elif whether_symlin(sctype):
+        vmin, vmax = fsym(vmn, vmx)
+        return 1, vmin, vmax
+    elif whether_log(sctype):
+        if hbd:
+            return 2, 10.**vmn, 10.**vmx
+        else:
+            return 2, vmn, vmx
+    elif whether_symlog(sctype):
+        if hbd:
+            return 3, -1. * 10.**np.abs(vmn), 10.**np.abs(vmx) * sm, sm
+        else:
+            return 3, -1. * vmx, vmx, sm
+    return 0, vmn, vmx
 
 
 def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
     symmin = 1.0
     autoscale = False
     d1min, d1max, d2min, d2max, d3min, d3max = min(extr[0]), max(extr[1]), min(extr[2]), max(extr[3]), min(extr[4]), max(extr[5])
-    if d2:
+    if any(d1) and any(d2):
+        dmin, dmax = min(d1min, d2min), max(d1max, d2max)
+    elif any(d2):
         dmin, dmax = d2min, d2max
-    else:
+    elif any(d1):
         dmin, dmax = d1min, d1max
+    else:
+        dmin, dmax = -1.0, 1.0
     if (umin == 0.0 and umax == 0.0):
         vmin, vmax = dmin, dmax
         autoscale = True
     else:
         vmin, vmax = umin, umax
 
-    if (sctype == '1' or sctype == 'symlin'):
+    if whether_symlin(sctype):
         vmin, vmax = fsym(vmin, vmax)
 
-    elif (sctype == '2' or sctype == 'log'):
+    elif whether_log(sctype):
         if (vmin > 0.0):
             vmin = np.log10(vmin)
         else:
-            vmin = np.log10(check_minimum_data(refis))
+            vmin = np.log10(check_minimum_data(refis, d1, d2))
         if (vmax > 0.0):
             vmax = np.log10(vmax)
         else:
             vmax = ps.fineqv
         if (vmin == np.inf):
             vmin = vmax - ps.fineqv
-    elif (sctype == '3' or sctype == 'symlog'):
+    elif whether_symlog(sctype):
         if (umin > 0.0 and umax > 0.0):
             symmin = umin
             vmax = np.log10(umax / symmin)
@@ -71,7 +120,7 @@ def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
             if (dmin * dmax > 0.0):
                 symmin, smax = sorted([np.abs(dmin), np.abs(dmax)])
             else:
-                symmin, smax = check_extremes_absdata(refis)
+                symmin, smax = check_extremes_absdata(refis, d1, d2)
             if (smax == -np.inf or symmin == np.inf):
                 smax = 10.
                 symmin = 1.
@@ -84,51 +133,115 @@ def scale_manage(sctype, refis, umin, umax, d1, d2, extr):
         vmax = vmax + ps.fineqv
 
     print('3D data value range: ', d3min, d3max)
-    if d2:
+    if any(d2):
         print('Slices  value range: ', d2min, d2max)
-    if d1:
+    if any(d1):
         print('1D data value range: ', d1min, d1max)
     print('Plotted value range: ', vmin, vmax)
     return vmin, vmax, symmin, autoscale
 
 
-def check_minimum_data(refis):
+def check_minimum_data(refis, d1, d2):
     cmdmin = np.inf
     for blks in refis:
         for bl in blks:
-            bxyz, binb = bl[0:2]
+            bxyz, binb, b1 = bl[0], bl[1], bl[5]
             for ncut in range(3):
                 if binb[ncut]:
-                    cmdmin = min(cmdmin, np.min(bxyz[ncut], initial=np.inf, where=(bxyz[ncut] > 0.0)))
+                    if d1[ncut] and b1 != []:
+                        cmdmin = min(cmdmin, np.min(b1[ncut], initial=np.inf, where=(b1[ncut] > 0.0)))
+                    if d2[ncut] and bxyz != []:
+                        cmdmin = min(cmdmin, np.min(bxyz[ncut], initial=np.inf, where=(bxyz[ncut] > 0.0)))
     return cmdmin
 
 
-def check_extremes_absdata(refis):
+def check_extremes_absdata(refis, d1, d2):
     cmdmin, cmdmax = np.inf, -np.inf
     for blks in refis:
         for bl in blks:
-            bxyz, binb = bl[0:2]
+            bxyz, binb, b1 = bl[0], bl[1], bl[5]
             for ncut in range(3):
                 if binb[ncut]:
-                    cmdmin = min(cmdmin, np.min(np.abs(bxyz[ncut]), initial=np.inf, where=(np.abs(bxyz[ncut]) > 0.0)))
-                    cmdmax = max(cmdmax, np.max(np.abs(bxyz[ncut]), initial=-np.inf, where=(np.abs(bxyz[ncut]) > 0.0)))
+                    if d1[ncut] and b1 != []:
+                        cmdmin = min(cmdmin, np.min(np.abs(b1[ncut]), initial=np.inf, where=(np.abs(b1[ncut]) > 0.0)))
+                        cmdmax = max(cmdmax, np.max(np.abs(b1[ncut]), initial=-np.inf, where=(np.abs(b1[ncut]) > 0.0)))
+                    if d2[ncut] and bxyz != []:
+                        cmdmin = min(cmdmin, np.min(np.abs(bxyz[ncut]), initial=np.inf, where=(np.abs(bxyz[ncut]) > 0.0)))
+                        cmdmax = max(cmdmax, np.max(np.abs(bxyz[ncut]), initial=-np.inf, where=(np.abs(bxyz[ncut]) > 0.0)))
     return cmdmin, cmdmax
 
 
 def scale_plotarray(pa, sctype, symmin):
-    if (sctype == '2' or sctype == 'log'):
+    if whether_log(sctype):
         pa = np.log10(pa)
-    elif (sctype == '3' or sctype == 'symlog'):
+    elif whether_symlog(sctype):
         pa = np.sign(pa) * np.log10(np.maximum(np.abs(pa) / symmin, 1.0))
     return pa
+
+
+def list3_add(l3, s3):
+    return l3[0] + s3[0], l3[1] + s3[1], l3[2] + s3[2]
+
+
+def list3_subtraction(l3, s3):
+    return l3[0] - s3[0], l3[1] - s3[1], l3[2] - s3[2]
+
+
+def list3_mult(l3, r3):
+    return l3[0] * r3[0], l3[1] * r3[1], l3[2] * r3[2]
+
+
+def list3_div(l3, r3):
+    return l3[0] / r3[0], l3[1] / r3[1], l3[2] / r3[2]
 
 
 def list3_division(l3, divisor):
     return l3[0] / divisor, l3[1] / divisor, l3[2] / divisor
 
 
-def labelx():
-    return lambda var: '$' + str(var)[2:-1].replace('**', '^') + '$'
+def list3_max(l3, r3):
+    return [max(l3[0], r3[0]), max(l3[1], r3[1]), max(l3[2], r3[2])]
+
+
+def list3_min(l3, r3):
+    return [min(l3[0], r3[0]), min(l3[1], r3[1]), min(l3[2], r3[2])]
+
+
+def list3_and(l3, r3):
+    return [l3[0] and r3[0], l3[1] and r3[1], l3[2] and r3[2]]
+
+
+def list3_or(l3, r3):
+    return [l3[0] or r3[0], l3[1] or r3[1], l3[2] or r3[2]]
+
+
+def list3_alleq(l3, r3):
+    return l3[0] == r3[0] and l3[1] == r3[1] and l3[2] == r3[2]
+
+
+def list_any(lst, strg):
+    for ll in lst:
+        if ll == strg:
+            return True
+    return False
+
+
+def list_all(lst, strg):
+    for ll in lst:
+        if ll != strg:
+            return False
+    return True
+
+
+def list3_other(l3, r3):
+    ans = [False, False, False]
+    if r3[0]:
+        ans = list3_or(ans, list3_and(l3, [False, True, True]))
+    if r3[1]:
+        ans = list3_or(ans, list3_and(l3, [True, False, True]))
+    if r3[2]:
+        ans = list3_or(ans, list3_and(l3, [True, True, False]))
+    return ans
 
 
 def labellog(sctype, symmin, cmpr0):
@@ -136,9 +249,9 @@ def labellog(sctype, symmin, cmpr0):
     compare = ''
     if cmpr0:
         compare = '(compared) '
-    if (sctype == '2' or sctype == 'log'):
+    if whether_log(sctype):
         logname = 'log '
-    elif (sctype == '3' or sctype == 'symlog'):
+    elif whether_symlog(sctype):
         logname = '{symmetry level = %8.3e} log ' % symmin
     return logname + compare
 
@@ -187,19 +300,34 @@ def isinbox(cxyz, smin, smax, warn, cc):
     return isin
 
 
-def find_indices(nd, cxyz, smin, smax, warn):
+def find_indices(nd, cxyz, smin, smax, draw1D, draw2D, warn):
     inb = isinbox(cxyz[0], smin[0], smax[0], warn, 'CX'), isinbox(cxyz[1], smin[1], smax[1], warn, 'CY'), isinbox(cxyz[2], smin[2], smax[2], warn, 'CZ')
+    inb = list3_or(list3_and(inb, draw2D), list3_other(inb, draw1D))
     icc = ind_limits(nd[0], cxyz[0], smin[0], smax[0]), ind_limits(nd[1], cxyz[1], smin[1], smax[1]), ind_limits(nd[2], cxyz[2], smin[2], smax[2])
     return inb, icc
 
 
-def check_plotlevels(plotlevels, maxglev, drawa):
+def check_plotlevels(plotlevels, maxglev, filen, toplot):
     if plotlevels == '':
-        if drawa:
-            plotlevels = range(maxglev + 1)
+        plotlevels = range(maxglev + 1)
+    else:
+        npl = []
+        for il in plotlevels:
+            if il in range(maxglev + 1):
+                npl.append(il)
+            else:
+                print('LEVEL %s not met in the file %s' % (str(il), filen))
+        plotlevels = npl
+    if toplot:
+        if plotlevels == []:
+            print('No levels found.')
         else:
-            plotlevels = 0,
-    print('LEVELS TO plot: ', plotlevels)
+            print('Levels to plot: ', plotlevels)
+    else:
+        if plotlevels == []:
+            print('No levels to compare.')
+        else:
+            print('Compare levels: ', plotlevels)
     return plotlevels
 
 
@@ -275,6 +403,16 @@ def check_1D2Ddefaults(axc, n_d, double_cbar):
     if double_cbar and (figmode == 1 or figmode == 2):
         figmode = figmode + 3
     return draw1D, draw2D, figmode
+
+
+def manage_units(var):
+    if var == b'dimensionless' and ps.dimensionless_print == '':
+        return ps.dimensionless_print
+    return " [%s]" % labelx()(var)
+
+
+def labelx():
+    return lambda var: '$' + str(var)[2:-1].replace('**', '^') + '$'
 
 
 def convert_units(infile, toplot):
