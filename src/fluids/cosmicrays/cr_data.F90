@@ -90,6 +90,7 @@ module cr_data
    logical,                   allocatable, dimension(:)    :: cr_spectral        !< table of logicals about energy spectral treatment
    logical,                   allocatable, dimension(:)    :: cr_gpess           !< table of essentiality for grad_pcr calculation
    integer,                   allocatable, dimension(:)    :: icr_spc            !< table of cr_data indices for spectrally resolved CR species
+   integer,                   allocatable, dimension(:)    :: iarr_spc           !< table of indices allowing to find spectrally resolved via icr_* (helpful for iarr_crspc)
 !<====Mass number and atomic number of nuclei species====>
 
    real, parameter :: m_H1   = 1.
@@ -254,11 +255,12 @@ contains
       eCRSP_ess  (1:nicr) = [eE(ESS) , eH1(ESS) , eC12(ESS) , eBe9(ESS) , eBe10(ESS) , eN14(ESS) , eO16(ESS) , eLi7(ESS) ]
       eCRSP_spec (1:nicr) = [eE(SPEC), eH1(SPEC), eC12(SPEC), eBe9(SPEC), eBe10(SPEC), eN14(SPEC), eO16(SPEC), eLi7(SPEC)]
 
-      allocate(cr_names(ncrsp), cr_table(nicr), cr_index(nicr), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp), cr_mass(ncrsp), cr_Z(nicr), cr_spectral(ncrsp), cr_gpess(ncrsp),cr_sigma_N(nicr), icr_spc(count(eCRSP_spec .and. eCRSP)))
+      allocate(cr_names(ncrsp), cr_table(nicr), cr_index(nicr), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp), cr_mass(ncrsp), cr_Z(nicr), cr_spectral(ncrsp), cr_gpess(ncrsp),cr_sigma_N(nicr), icr_spc(count(eCRSP_spec .and. eCRSP)), iarr_spc(nicr))
       cr_names(:)    = ''
       cr_table(:)    = 0
       cr_index(:)    = 0
       icr_spc(:)     = 0
+      iarr_spc(:)    = 0
       cr_sigma(:,:)  = 0.0
       cr_tau(:)      = 1.0
       cr_primary(:)  = 0.0
@@ -277,6 +279,7 @@ contains
             if (eCRSP_spec(i)) then
                kcr = kcr + 1
                icr_spc(kcr) = cr_table(i)
+               iarr_spc(i)  = kcr
             endif
             cr_sigma_N(icr)  = (cr_Z(icr))**4/(cr_mass(icr)**2)*(me/mp)**2*sigma_T ! Schlickeiser, Cosmic ray astrophysics (2002), formula p.105
             if (icr == icr_E)  cr_sigma_N(icr) = sigma_T
