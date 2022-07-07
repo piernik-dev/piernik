@@ -52,8 +52,9 @@ contains
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: cr_active, gamma_cr_1, gpcr_ess_noncresp, iarr_crn
 #ifdef CRESP
+      use cr_data,          only: cr_gpess, cr_spectral, cr_table, icr_H1, iarr_spc
       use cresp_crspectrum, only: src_gpcresp
-      use initcosmicrays,   only: iarr_crspc_e
+      use initcosmicrays,   only: iarr_crspc2_e
 #endif /* CRESP */
 
       implicit none
@@ -96,7 +97,9 @@ contains
 
       usrc(:, iarr_all_mx(flind%ion%pos)) = grad_pcr
 #ifdef CRESP
-      call src_gpcresp(uu(:,iarr_crspc_e(:)), nn, cg%dl(sweep), grad_pcr_cresp)         !< cg%dl(sweep) = dx, contribution due to pressure acted upon spectrum components in CRESP via div_v
+      if (.not. cr_spectral(cr_table(icr_H1)) .or. .not. cr_gpess(cr_table(icr_H1))) then !< Primarily treat protons as the source of GPCR !TODO expand me for other CR spectral species (optional)
+         call src_gpcresp(uu(:,iarr_crspc2_e(iarr_spc(icr_H1), :)), nn, cg%dl(sweep), grad_pcr_cresp, iarr_spc(icr_H1))         !< cg%dl(sweep) = dx, contribution due to pressure acted upon spectral components in CRESP via div_v
+      endif
 #endif /* CRESP */
 #ifdef ISO
       return
