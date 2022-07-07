@@ -94,7 +94,7 @@ module initcrspectrum
    logical         :: allow_unnatural_transfer    !< allows unnatural transfer of n & e with 'manually_deactivate_bins_via_transfer'
    logical, dimension(:), allocatable :: synch_active !< TEST feature - turns on / off synchrotron cooling @ CRESP
    logical, dimension(:), allocatable :: adiab_active !< TEST feature - turns on / off adiabatic   cooling @ CRESP
-   real            :: cre_active                  !< electron contribution to Pcr ! TODO FIXME RENAME ME PLEASE!!!!   MULTIDIMENSIONALITY OPTIONAL
+   real,    dimension(:), allocatable :: cre_active   !< electron contribution to Pcr ! TODO FIXME RENAME ME PLEASE!!!!
 
 ! substepping parameters
    logical         :: cresp_substep               !< turns on / off usage of substepping for each cell independently
@@ -170,7 +170,7 @@ contains
    subroutine init_cresp
 
       use constants,       only: cbuff_len, I_ZERO, I_ONE, zero, one, three, ten, half, logten, LO, HI
-      use cr_data,         only: cr_mass, cr_sigma_N, cr_names, icr_spc
+      use cr_data,         only: cr_mass, cr_sigma_N, cr_names, icr_spc, icr_H1, cr_spectral
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index, my_allocate, ma1d
@@ -242,7 +242,9 @@ contains
       allow_unnatural_transfer     = .false.
       synch_active(:)      = .true.
       adiab_active(:)      = .true.
-      cre_active           = 0.0
+      cre_active(:)        = 0.0
+
+      if(cr_spectral(icr_H1)) cre_active(findloc(icr_spc, icr_H1)) = 1.0
 
       if(size(synch_active) > 1) synch_active(2:) = .false. ! non relevant for hadronic species by default
 
@@ -313,33 +315,33 @@ contains
          rbuff(1+nspc:2*nspc) = cre_eff(1:nspc)
          rbuff(2*nspc+1)      = smallcren
          rbuff(2*nspc+2)      = smallcree
-         rbuff(2*nspc+3)      = cre_active
-         rbuff(2*nspc+4:3*nspc+3)  = p_lo_init(1:nspc)
-         rbuff(3*nspc+4:4*nspc+3)  = p_up_init(1:nspc)
-         rbuff(4*nspc+4:5*nspc+3)  = f_init(1:nspc)
-         rbuff(5*nspc+4:6*nspc+3)  = q_init(1:nspc)
-         rbuff(6*nspc+4)      = q_big
-         rbuff(6*nspc+5)      = p_min_fix
-         rbuff(6*nspc+6)      = p_max_fix
-         rbuff(6*nspc+7:7*nspc+6) = K_cre_pow(1:nspc)
+         rbuff(2*nspc+3:3*nspc+2)      = cre_active
+         rbuff(3*nspc+3:4*nspc+2)  = p_lo_init(1:nspc)
+         rbuff(4*nspc+3:5*nspc+2)  = p_up_init(1:nspc)
+         rbuff(5*nspc+3:6*nspc+2)  = f_init(1:nspc)
+         rbuff(6*nspc+3:7*nspc+2)  = q_init(1:nspc)
+         rbuff(7*nspc+3)      = q_big
+         rbuff(7*nspc+4)      = p_min_fix
+         rbuff(7*nspc+5)      = p_max_fix
+         rbuff(7*nspc+6:8*nspc+5) = K_cre_pow(1:nspc)
 
-         rbuff(7*nspc+7)  = e_small
-         rbuff(7*nspc+8)  = max_p_ratio
+         rbuff(8*nspc+6)  = e_small
+         rbuff(8*nspc+7)  = max_p_ratio
 
-         rbuff(7*nspc+9)  = tol_f
-         rbuff(7*nspc+10) = tol_x
-         rbuff(7*nspc+11) = tol_f_1D
-         rbuff(7*nspc+12) = tol_x_1D
+         rbuff(8*nspc+8)  = tol_f
+         rbuff(8*nspc+9) = tol_x
+         rbuff(8*nspc+10) = tol_f_1D
+         rbuff(8*nspc+11) = tol_x_1D
 
-         rbuff(7*nspc+13) = Gamma_min_fix
-         rbuff(7*nspc+14) = Gamma_max_fix
+         rbuff(8*nspc+12) = Gamma_min_fix
+         rbuff(8*nspc+13) = Gamma_max_fix
 
-         rbuff(7*nspc+15:8*nspc+14)   = p_br_init_lo(1:nspc)
-         rbuff(8*nspc+15:9*nspc+14)   = p_br_init_up(1:nspc)
-         rbuff(9*nspc+15:10*nspc+14)  = q_br_init(1:nspc)
-         rbuff(10*nspc+15:11*nspc+14) = p_diff(1:nspc)
-         rbuff(11*nspc+14) = q_eps
-         rbuff(11*nspc+15) = b_max_db
+         rbuff(8*nspc+14:9*nspc+13)   = p_br_init_lo(1:nspc)
+         rbuff(9*nspc+14:10*nspc+13)   = p_br_init_up(1:nspc)
+         rbuff(10*nspc+14:11*nspc+13)  = q_br_init(1:nspc)
+         rbuff(11*nspc+14:12*nspc+13) = p_diff(1:nspc)
+         rbuff(12*nspc+15) = q_eps
+         rbuff(12*nspc+16) = b_max_db
 
          cbuff(1)  = initial_spectrum
       endif
@@ -380,37 +382,37 @@ contains
          cresp_substep               = lbuff(12+2*nspc)
          allow_unnatural_transfer    = lbuff(13+2*nspc)
 
-         cfl_cre(1:nspc)      =  rbuff(1:nspc)  !TODO check if i'm correct :)
-         cre_eff(1:nspc)      =  rbuff(1+nspc:2*nspc)
-         smallcren            =  rbuff(2*nspc+1)
-         smallcree            =  rbuff(2*nspc+2)
-         cre_active           =  rbuff(2*nspc+3)
-         p_lo_init(1:nspc)    =  rbuff(2*nspc+4:3*nspc+3)
-         p_up_init(1:nspc)    =  rbuff(3*nspc+4:4*nspc+3)
-         f_init(1:nspc)       =  rbuff(4*nspc+4:5*nspc+3)
-         q_init(1:nspc)       =  rbuff(5*nspc+4:6*nspc+3)
-         q_big                =  rbuff(6*nspc+4)
-         p_min_fix            =  rbuff(6*nspc+5)
-         p_max_fix            =  rbuff(6*nspc+6)
-         K_cre_pow(1:nspc)    =  rbuff(6*nspc+7:7*nspc+6)
+         cfl_cre(1:nspc)      = rbuff(1:nspc)  !TODO check if i'm correct :)
+         cre_eff(1:nspc)      = rbuff(1+nspc:2*nspc)
+         smallcren            = rbuff(2*nspc+1)
+         smallcree            = rbuff(2*nspc+2)
+         cre_active           = rbuff(2*nspc+3:3*nspc+2)
+         p_lo_init(1:nspc)    = rbuff(3*nspc+3:4*nspc+2)
+         p_up_init(1:nspc)    = rbuff(4*nspc+3:5*nspc+2)
+         f_init(1:nspc)       = rbuff(5*nspc+3:6*nspc+2)
+         q_init(1:nspc)       = rbuff(6*nspc+3:7*nspc+2)
+         q_big                = rbuff(7*nspc+3)
+         p_min_fix            = rbuff(7*nspc+4)
+         p_max_fix            = rbuff(7*nspc+5)
+         K_cre_pow(1:nspc)    = rbuff(7*nspc+6:8*nspc+5)
 
-         e_small              =  rbuff(7*nspc+7)
-         max_p_ratio          =  rbuff(7*nspc+8)
+         e_small              = rbuff(8*nspc+6)
+         max_p_ratio          = rbuff(8*nspc+7)
 
-         tol_f                =  rbuff(7*nspc+9)
-         tol_x                =  rbuff(7*nspc+10)
-         tol_f_1D             =  rbuff(7*nspc+11)
-         tol_x_1D             =  rbuff(7*nspc+12)
+         tol_f                = rbuff(8*nspc+8)
+         tol_x                = rbuff(8*nspc+9)
+         tol_f_1D             = rbuff(8*nspc+10)
+         tol_x_1D             = rbuff(8*nspc+11)
 
-         Gamma_min_fix        =  rbuff(7*nspc+13)
-         Gamma_max_fix        =  rbuff(7*nspc+14)
+         Gamma_min_fix        = rbuff(8*nspc+12)
+         Gamma_max_fix        = rbuff(8*nspc+13)
 
-         p_br_init_lo(1:nspc) =  rbuff(7*nspc+15:8*nspc+14)
-         p_br_init_up(1:nspc) =  rbuff(8*nspc+15:9*nspc+14)
-         q_br_init(1:nspc)    =  rbuff(9*nspc+15:10*nspc+14)
-         p_diff(1:nspc)       =  rbuff(10*nspc+15:11*nspc+14)
-         q_eps                =  rbuff(11*nspc+14)
-         b_max_db             =  rbuff(11*nspc+15)
+         p_br_init_lo(1:nspc) = rbuff(8*nspc+14:9*nspc+13)
+         p_br_init_up(1:nspc) = rbuff(9*nspc+14:10*nspc+13)
+         q_br_init(1:nspc)    = rbuff(10*nspc+14:11*nspc+13)
+         p_diff(1:nspc)       = rbuff(11*nspc+14:12*nspc+13)
+         q_eps                = rbuff(12*nspc+15)
+         b_max_db             = rbuff(12*nspc+16)
 
          initial_spectrum            = trim(cbuff(1))
 
@@ -834,6 +836,7 @@ contains
       call my_allocate(def_dtadiab, ma1d)
       call my_allocate(def_dtsynch, ma1d)
       call my_allocate(total_init_cree, ma1d)
+      call my_allocate(cre_active, ma1d)
       call my_allocate_with_index(synch_active, nsp, 1)
       call my_allocate_with_index(adiab_active, nsp, 1)
 
