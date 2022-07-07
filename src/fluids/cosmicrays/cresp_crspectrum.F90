@@ -1011,7 +1011,7 @@ contains
             do co = LO, HI
                 call get_fqp_cutoff(co, exit_code)
                 if (exit_code) then
-                write(msg,*) "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but solution for initial spectrum ",bound_name(co)," cutoff not found, exiting! "
+                write(msg,"(a,a,a,i3)") "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but failed to solve initial spectrum cutoff '",bound_name(co),"' for CR component #", i_spc
                 call die(msg)
                 endif
             enddo
@@ -1351,8 +1351,8 @@ contains
       real,                    intent(in)    :: e_in_total
       integer,                 intent(in)    :: i_spc
 
-      n_inout(:) = norm_init_spectrum_n(i_spc,:) * e_in_total / total_init_cree
-      e_inout(:) = norm_init_spectrum_e(i_spc,:) * e_in_total / total_init_cree
+      n_inout(:) = norm_init_spectrum_n(i_spc,:) * e_in_total / total_init_cree(i_spc)
+      e_inout(:) = norm_init_spectrum_e(i_spc,:) * e_in_total / total_init_cree(i_spc)
 
    end subroutine cresp_get_scaled_init_spectrum
 
