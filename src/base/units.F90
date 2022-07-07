@@ -361,7 +361,7 @@ contains
       me         = 9.109558e-28*gram        !< electron mass
       mp         = 1.672614e-24*gram        !< proton mass
       mH         = 1.673559e-24*gram        !< hydrogen atom mass
-      amu        = 1.660531e-24*gram        !< atomic mass unit
+      amu        = 1.6605391e-24*gram        !< atomic mass unit
       Msun       = msun_g*gram              !< Solar mass, mass unit
       gmu        = 2.32e7*Msun              !< galactic mass unit
 ! force units:
