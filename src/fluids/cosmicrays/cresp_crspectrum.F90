@@ -1774,30 +1774,28 @@ contains
 !---------------------------------------------------------------------------------------------------
 ! Computing cosmic ray spectrum component pressure gradient
 !---------------------------------------------------------------------------------------------------
-   subroutine src_gpcresp(u, n, dx, grad_pcresp)
+   subroutine src_gpcresp(u, n, dx, grad_pcresp, i_spc)
 
       use constants,      only: onet
-      use cr_data,        only: cr_gpess, cr_spectral, cr_table, icr_E
       use initcosmicrays, only: ncrb
       use initcrspectrum, only: cre_active
 
       implicit none
 
-      integer(kind=4),            intent(in)  :: n
+      integer(kind=4),            intent(in)  :: n, i_spc
       real,                       intent(in)  :: dx
       real, dimension(n, 1:ncrb), intent(in)  :: u
       real, dimension(n),         intent(out) :: grad_pcresp
       real, dimension(n)                      :: P_cresp_r, P_cresp_l
 
       grad_pcresp = 0.0
-      if (.not. cr_spectral(cr_table(icr_E)) .or. .not. cr_gpess(cr_table(icr_E))) return !< spectral mode implemented only for electrons
 
       P_cresp_l = 0.0 ;  P_cresp_r = 0.0
 
-!     (ultrarelativistic)
+!     (ultrarelativistic) !TODO Expand me to trans-relativistic
       P_cresp_l(1:n-2) = onet * sum(u(1:n-2, :),dim=2)
       P_cresp_r(3:n)   = onet * sum(u(3:n,   :),dim=2)
-      grad_pcresp(2:n-1) = cre_active * (P_cresp_l(1:n-2) - P_cresp_r(3:n) )/(2.*dx)
+      grad_pcresp(2:n-1) = cre_active(i_spc) * (P_cresp_l(1:n-2) - P_cresp_r(3:n) )/(2.*dx)
 
    end subroutine src_gpcresp
 !---------------------------------------------------------------------------------------------------
