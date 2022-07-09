@@ -45,7 +45,7 @@ contains
 
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: big, pMIN, small
+      use constants,    only: pMIN, small
       use fluidindex,   only: flind
       use func,         only: L2norm
       use grid_cont,    only: grid_container
@@ -58,7 +58,7 @@ contains
       type(grid_container),  pointer :: cg
       real                           :: val        !< variable used to store the maximum value of relative momentum
 
-      dt_interact = big
+      dt_interact = huge(1.)
       if (.not.has_interactions) return
       !    dt_interact_proc = 1.0 / (maxval(collfaq)+small) / maxval(cg%u(iarr_all_dn,:,:,:))
 
