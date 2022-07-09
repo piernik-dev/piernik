@@ -384,7 +384,8 @@ contains
          write(msg,'(a,f13.10)')"[initproblem:problem_initial_conditions] Analytical norm residual/source= ",leaves%norm_sq(qna%ind(ares_n))/dm
          if (master) call printinfo(msg)
       else
-         write(msg,'(2(a,f13.10))')"[initproblem:problem_initial_conditions] Analytical norm residual= ",leaves%norm_sq(qna%ind(ares_n)), " point mass= ", d0
+         write(msg, '(2(a,g14.6))')"[initproblem:problem_initial_conditions] Analytical norm residual= ", leaves%norm_sq(qna%ind(ares_n)), " point mass= ", d0
+         ! Is leaves%norm_sq(qna%ind(ares_n)) ~ sqrt(cg%dvol) ?
          if (master) call printinfo(msg)
       endif
 
@@ -560,7 +561,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: GEO_RPZ, pSUM, pMIN, pMAX
+      use constants,        only: GEO_RPZ, pSUM, pMIN, pMAX, idlen
       use dataio_pub,       only: msg, printinfo, warn
       use domain,           only: dom
       use grid_cont,        only: grid_container
@@ -574,6 +575,7 @@ contains
       real                           :: potential, fac
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      character(len=idlen)           :: ffmt
 
       fac = 1.
       norm(:) = 0.
@@ -612,7 +614,9 @@ contains
       call piernik_MPI_Allreduce(dev(2), pMAX)
 
       if (master) then
-         write(msg,'(a,f12.6,a,2f12.6)')"[initproblem:finalize_problem_maclaurin] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)
+         ffmt = "f12"
+         if (any(abs(dev) > 1e6) .or. any(abs(dev) < 1e-4)) ffmt = "g14"
+         write(msg,'(a,' // ffmt // '.6,a,2' // ffmt // '.6)')"[initproblem:finalize_problem_maclaurin] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)
          call printinfo(msg)
       endif
 
