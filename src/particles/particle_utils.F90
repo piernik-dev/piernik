@@ -99,7 +99,7 @@ contains
 
    subroutine max_pacc_3d(cg, max_pacc)
 
-      use constants, only: big, CENTER, half, LO, xdim, zdim, zero
+      use constants, only: CENTER, half, LO, xdim, zdim, zero
       use grid_cont, only: grid_container
       use mpisetup,  only: proc
       use types,     only: value
@@ -113,7 +113,7 @@ contains
       real                                       :: acc2, max_acc
       integer(kind=4) :: cdim
 
-      max_pacc%assoc = big
+      max_pacc%assoc = huge(1.)
 
       max_acc  = zero
       pset => cg%pset%first

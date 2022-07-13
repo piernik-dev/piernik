@@ -1,14 +1,11 @@
-! This is a 3D variant of the Jeans test.
-
-! Here we use Dirichlet boundary conditions for gravitational potential in
-! a way that should match periodic boundaries.
-
-!  The default Jeans config is quite minimalistic and tests only most
-! essential parts of the multigrid solver.  This config has more extensive
-! coverage of the multigrid and multipole solvers.
+# This setup differs from the default one mostly in scaling sizes and times
+# by a factor of 1e+50.  All hydrodynamical structures should remain
+# identical.
+# Bigger domains are likely to crash due to floating point overflow in fluxes.
+# Dirty debug is not possible here because it is based on huge(real(1.0,4))
 
  $BASE_DOMAIN
-    n_d = 64, 64, 64
+    n_d = 64, 64, 1
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
@@ -16,15 +13,18 @@
     bnd_zl = 'per'
     bnd_zr = 'per'
     xmin   = 0.0
-    xmax   = 1.1446968195470935
+    xmax   = 1.1446968195470935e+50
     ymin   = 0.0
-    ymax   = 1.1446968195470935
+    ymax   = 1.1446968195470935e+50
     zmin   = 0.0
-    zmax   = 1.1446968195470935
+    zmax   = 1.1446968195470935e+50
  /
 
  $MPI_BLOCKS
     allow_uneven = .true.
+    allow_noncart = .true.
+    dd_unif_quality = 1.1
+    dd_rect_quality = 1.1
  /
 
  $UNITS
@@ -45,11 +45,12 @@
  $OUTPUT_CONTROL
     problem_name ='jeans'
     run_id =  'ts1'
-    dt_hdf  = 0.0
+    dt_hdf  = 1.0
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
     vars(1:) = 'ener', 'dens', 'gpot', 'velx', 'vely', 'velz'
+    H5_64bit = .true.
  /
 
  $FLUID_IONIZED
@@ -64,8 +65,8 @@
 
  $NUMERICAL_SETUP
     cfl    = 0.7
-    smalld = 1.e-5
-    smallei= 1.e-8
+    smalld = 0.
+    smallei= 0.
     limiter= 'vanleer'
  /
 
@@ -78,22 +79,21 @@
 
  $PROBLEM_CONTROL
     d0     = 1.5e7
-    p0     = 1.5e7
+    p0     = 1.5e+107
     amp    = 0.001
     ix     = 2
-    iy     = 2
-    iz     = 2
-    mode   = 1
+    iy     = 0
+    iz     = 0
+    mode   = 0
  /
 
  $MULTIGRID_SOLVER
     stdout    = .true.
-    dirty_debug = .true.
+!    dirty_debug = .true.
  /
 
  $MULTIGRID_GRAVITY
-    grav_bnd_str  = "dirichlet"
-    base_no_fft = .true.
+    grav_bnd_str  = "periodic"
  /
 
  $INTERACTIONS

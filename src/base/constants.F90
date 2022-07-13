@@ -90,7 +90,12 @@ module constants
    real, parameter :: e          = 2.718281828459045235  !< Napier's constant (base of Natural logarithm)
 
    ! some numerical representation extrema
-   real, parameter :: big        = huge(real(1.0,4))     !< a constant used as the upper limit number
+   !> Warning: the valuses of big and small should be used only when exceeding the range od single precision is not desired
+   !! e.g. when when using the default, 32-bit data output in .h5 files.
+   !! In most cases it should be much safer to use tiny(1.) and huge(1.) (either directly or slightly scaled).
+   !! Careless relying on SP huge and tiny may result in incorrect calculations when the involved values exceed single precision range.
+   !! Such incorrect calculation may happen e.g. for extremely big or small cell sizes, extreme timestep length etc.
+   real, parameter :: big        = huge(real(1.0,4))     !< a constant used as the upper limit number.
    real, parameter :: big_float  = huge(real(1.0,4))     !< replicated temporarily 'big' for compatibility \todo choose one and convert occurrences of the other one
    real, parameter :: dirtyH     = big                   !< If dirty_debug then pollute arrays with this insane value
    real, parameter :: dirtyH1    = 10.**int(log10(big))  !< this "round" dirty value makes it easier to detect which call contaminated the data
@@ -98,6 +103,12 @@ module constants
    real, parameter :: dirtyL     = sqrt(dirtyH)          !< If dirty_debug then assume that the array got contaminated by dirtyH by checking against this value
    real, parameter :: small      = tiny(real(1.0,4))     !< a constant used as the lower limit number
    integer, parameter :: big_int = huge(int(1,4))
+
+   !! Expected values of tiny, huge and epsilon for various lengths of real type (obtained from gfortran)
+   !! x=          0._4 (SP)        0._8 (DP, the default)    0._10 (ext precision)          0._16 (quad precision, software implementation)
+   !! tiny(x)     1.17549435E-38   2.2250738585072014E-308   3.36210314311209350626E-4932   3.36210314311209350626267781732175260E-4932
+   !! huge(x)     3.40282347E+38   1.7976931348623157E+308   1.18973149535723176502E+4932   1.18973149535723176508575932662800702E+4932
+   !! epsilon(x)  1.19209290E-07   2.2204460492503131E-016   1.08420217248550443401E-0019   1.92592994438723585305597794258492732E-0034
 
    ! dimensions
    enum, bind(C)
