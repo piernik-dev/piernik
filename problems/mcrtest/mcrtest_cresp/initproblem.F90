@@ -157,11 +157,11 @@ contains
       use grid_cont,      only: grid_container
       use mpisetup,       only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS
-      use cr_data,        only: eCRSP, icr_H1, icr_C12, cr_index
+      use cr_data,        only: eCRSP, cr_spectral, icr_H1, icr_C12, icr_E, cr_index
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
-      use initcosmicrays,   only: iarr_crspc_e, iarr_crspc_n
+      use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc, iarr_crspc
       use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff, use_cresp
 #endif /* CRESP */
 #endif /* COSM_RAYS */
@@ -238,8 +238,8 @@ contains
 
 #ifdef COSM_RAYS
          cg%u(iarr_crs, RNG) = 0.0
-         if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
-         if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
+         if (eCRSP(icr_H1 ) .and. .not. cr_spectral(icr_H1))  cg%u(iarr_crn(cr_index(icr_H1 )), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
+         if (eCRSP(icr_C12) .and. .not. cr_spectral(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
 
 ! Explosions
          do k = cg%ks, cg%ke
@@ -255,26 +255,32 @@ contains
                         enddo
                      enddo
                   enddo
-                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) + amp_cr1*decr
-                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) + amp_cr2*decr
+                  if (eCRSP(icr_H1 ) .and. .not. cr_spectral(icr_H1))  cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) + amp_cr1*decr
+                  if (eCRSP(icr_C12) .and. .not. cr_spectral(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) + amp_cr2*decr
 #ifdef CRESP
 ! Explosions @CRESP independent of cr nucleons
-                  e_tot = amp_cr1 * cre_eff * decr
-                  if (e_tot > smallcree .and. use_cresp) then
-                     cresp%n = 0.0 ;  cresp%e = 0.0
-                     call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot)
-                     cg%u(iarr_crspc_n,i,j,k) = cg%u(iarr_crspc_n,i,j,k) + cresp%n
-                     cg%u(iarr_crspc_e,i,j,k) = cg%u(iarr_crspc_e,i,j,k) + cresp%e
-                  endif
+                  do icr = 1, nspc
+                     e_tot = amp_cr1 * cre_eff(nspc) * decr
+                     if (e_tot > smallcree .and. use_cresp) then
+!                         cresp%n = 1.e-4 ;  cresp%e = 1.e-2
+                        call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot, icr)
+                        cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + cresp%n
+                        cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + cresp%e
+                        !if (i == 29 .or. j == 29) print *, 'cresp%n ', cresp%n, 'cresp%e ', cresp%e
+                     endif
+                  enddo
 #endif /* CRESP */
                enddo
             enddo
          enddo
+         !do icr = 1, nspc
+            !print *, 'icr : ', icr, ' max val : ', cg%u(iarr_crspc2_n(icr,:),29,29,:)
+         !enddo
+         !print *, iarr_crspc2_e(:,:)
 #endif /* COSM_RAYS */
          call cg%costs%stop(I_IC)
          cgl => cgl%nxt
       enddo
-
 #ifdef COSM_RAYS
       do icr = 1, flind%crs%all
 

@@ -346,6 +346,8 @@ contains
          flind%crspcs(icr)%ebeg = flind%crspcs(icr)%nend
          flind%crspcs(icr)%eend = flind%crspcs(icr)%ebeg + ncrb
 
+         print *, ' initcr : ', icr, flind%crspcs(icr)%nbeg, flind%crspcs(icr)%nend, flind%crspcs(icr)%ebeg, flind%crspcs(icr)%eend
+
          iarr_crspc2_n(icr, :) = [(jnb, jnb = flind%crspcs(icr)%nbeg, flind%crspcs(icr)%nend)]
          iarr_crspc2_e(icr, :) = [(jnb, jnb = flind%crspcs(icr)%ebeg, flind%crspcs(icr)%eend)] ! iarr_crspc_e(I_ONE + (icr - I_ONE) * ncrb: ncrb + (icr - I_ONE) * ncrb)
 

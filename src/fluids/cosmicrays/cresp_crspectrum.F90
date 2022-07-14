@@ -1786,17 +1786,23 @@ contains
       real,                       intent(in)  :: dx
       real, dimension(n, 1:ncrb), intent(in)  :: u
       real, dimension(n),         intent(out) :: grad_pcresp
-      real, dimension(n)                      :: P_cresp_r, P_cresp_l
+      real, dimension(n)                      :: P_cresp_r, P_cresp_l, P_cresp
 
       grad_pcresp = 0.0
 
       P_cresp_l = 0.0 ;  P_cresp_r = 0.0
 
 !     (ultrarelativistic) !TODO Expand me to trans-relativistic
-      P_cresp_l(1:n-2) = onet * sum(u(1:n-2, :),dim=2)
-      P_cresp_r(3:n)   = onet * sum(u(3:n,   :),dim=2)
-      grad_pcresp(2:n-1) = cre_active(i_spc) * (P_cresp_l(1:n-2) - P_cresp_r(3:n) )/(2.*dx)
+      !P_cresp_l(1:n-2) = onet * sum(u(1:n-2, :),dim=2)
+      !P_cresp_r(3:n)   = onet * sum(u(3:n,   :),dim=2)
+      !grad_pcresp(2:n-1) = cre_active(i_spc) * (P_cresp_l(1:n-2) - P_cresp_r(3:n) )/(2.*dx)
 
+      P_cresp(:) = onet * sum(u(:, :),dim=2)
+      grad_pcresp(2:n-1) = cre_active(i_spc) * (P_cresp(1:n-2) - P_cresp(3:n) )/(2.*dx)
+
+      !print *, 'cre_active(i_spc) ', i_spc, ' ', cre_active(i_spc)
+
+      !print *, 'Pressure gradient : ', grad_pcresp(2:n-1)
    end subroutine src_gpcresp
 !---------------------------------------------------------------------------------------------------
 ! Preparation and computation of boundary momenta and and boundary

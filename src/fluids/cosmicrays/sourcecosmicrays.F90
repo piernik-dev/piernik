@@ -77,9 +77,14 @@ contains
 #endif /* CRESP */
 
       full_dim = nn > 1
+      !print *, 'break 1'
+      !print *, full_dim
+      !print *, ' '
+      !print *, flind%crspc%all
 
       usrc = 0.0
-      if (.not. full_dim .or. flind%crn%all < 1) return
+      if (.not. full_dim .or. flind%crspc%all < 1) return
+      !print *, 'break 2'
 
       call set_div_v1d(divv, sweep, i1, i2, cg)
       do icr = 1, flind%crn%all
@@ -96,17 +101,22 @@ contains
       grad_pcr(1:2) = 0.0 ; grad_pcr(nn-1:nn) = 0.0
 
       usrc(:, iarr_all_mx(flind%ion%pos)) = grad_pcr
+      !print *, 'break 3'
 #ifdef CRESP
-      if (.not. cr_spectral(cr_table(icr_H1)) .or. .not. cr_gpess(cr_table(icr_H1))) then !< Primarily treat protons as the source of GPCR !TODO expand me for other CR spectral species (optional)
+      if (cr_spectral(cr_table(icr_H1)) .or. cr_gpess(cr_table(icr_H1))) then !< Primarily treat protons as the source of GPCR !TODO expand me for other CR spectral species (optional)
+         !print *, 'uu array : ', uu(:,iarr_crspc2_e(iarr_spc(icr_H1), 4))
          call src_gpcresp(uu(:,iarr_crspc2_e(iarr_spc(icr_H1), :)), nn, cg%dl(sweep), grad_pcr_cresp, iarr_spc(icr_H1))         !< cg%dl(sweep) = dx, contribution due to pressure acted upon spectral components in CRESP via div_v
+         !print *, 'break 4'
       endif
 #endif /* CRESP */
 #ifdef ISO
       return
 #endif /* ISO */
       usrc(:, iarr_all_en(flind%ion%pos)) = vx(:, flind%ion%pos) * grad_pcr
+      !print *, 'grad_pcr_cresp', grad_pcr_cresp
 #ifdef CRESP
-      usrc(:, iarr_all_en(flind%ion%pos)) = usrc(:, iarr_all_en(flind%ion%pos)) + vx(:, flind%ion%pos) * grad_pcr_cresp !< BEWARE - check it
+      usrc(:, iarr_all_mx(flind%ion%pos)) = grad_pcr_cresp
+      usrc(:, iarr_all_en(flind%ion%pos)) = vx(:, flind%ion%pos) * grad_pcr_cresp !< BEWARE - check it
 #endif /* CRESP */
 
    end subroutine src_gpcr

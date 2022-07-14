@@ -126,13 +126,13 @@ contains
          case ("cr_p+e01" : "cr_p+e99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
-        case ("cr_e-n01" : "cr_e-n99")
+         case ("cr_e-n01" : "cr_e-n99")
              f%fu = "1/\rm{cm}^3"
              f%f2cgs = 1.0 / (1.0/cm**3) ! number density
-          case ("cr_e-e01" : "cr_e-e99")
+         case ("cr_e-e01" : "cr_e-e99")
              f%fu = "\rm{erg}/\rm{cm}^3"
              f%f2cgs = 1.0 / (erg/cm**3)
-           case ("cr_Be10n01" : "cr_Be10n99")
+         case ("cr_Be10n01" : "cr_Be10n99")
               f%fu = "1/\rm{cm}^3"
               f%f2cgs = 1.0 / (1.0/cm**3) ! number density
            case ("cr_Be10e01" : "cr_Be10e99")
@@ -369,7 +369,7 @@ contains
       integer(kind=4)                                :: i_xyz, clast
       integer                                        :: ii, jj, kk, icr
 #ifdef COSM_RAYS
-      integer                                        :: i
+      integer                                        :: i, ibin
       integer, parameter                             :: auxlen = dsetnamelen - 1
       character(len=auxlen)                          :: aux
       character(len=2)                               :: varn2
@@ -405,27 +405,29 @@ contains
 
             !part of the code for spectrally resolved species : energy density
 
-               read (varn2,'(I2.2)') i
+               read (varn2,'(I2.2)') ibin
                do i = 1, size(cr_names)
                   if (cr_names(i).eq.var(4:clast-3)) icr = i
                enddo
-               tab(:,:,:) = cg%u(flind%crspcs(icr)%ebeg+i-1, RNG)
+               tab(:,:,:) = cg%u(flind%crspcs(icr)%ebeg+ibin-1, RNG)
+               print *, 'icr : ', icr, ' max val : ', maxval(tab(:,:,:)), 'bin : ', ibin
 
             else if (var(clast - 2:clast - 2) == 'n') then
 
             !part of the code for spectrally resolved species : number density
 
-               read (varn2,'(I2.2)') i
+               read (varn2,'(I2.2)') ibin
                do i = 1, size(cr_names)
                   if (cr_names(i).eq.var(4:clast-3)) icr = i
                enddo
-               tab(:,:,:) = cg%u(flind%crspcs(icr)%nbeg+i-1, RNG)
+               tab(:,:,:) = cg%u(flind%crspcs(icr)%nbeg+ibin-1, RNG)
+               print *, 'icr : ', icr, ' max val : ', maxval(tab(:,:,:)), 'bin : ', ibin
 
             else
                do i = 1, size(cr_names)
                   if (var == trim('cr_' // cr_names(i))) exit
                enddo
-               tab(:,:,:) = cg%u(flind%crn%beg+i-1-count(cr_spectral), RNG)
+               tab(:,:,:) = cg%u(flind%crn%beg+ibin-1-count(cr_spectral), RNG)
             endif
   !        print *, var, aux
   !        print *, flind%crn%beg+i-1-count(cr_spectral)
