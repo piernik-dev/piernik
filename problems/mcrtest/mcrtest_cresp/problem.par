@@ -36,8 +36,8 @@ $BASE_DOMAIN
 
  $OUTPUT_CONTROL
     problem_name = 'mcr'
-    run_id = 'pg1'
-    dt_hdf  = 1.0
+    run_id = 'pg3'
+    dt_hdf  = 0.1
     dt_res  = 0.0
     dt_log  = 1.0e-2
     dt_tsl  = 1.0e-3
@@ -90,7 +90,7 @@ $BASE_DOMAIN
     adiab_active(:)  = 4*.true.
     !adiab_active(2)  = .false.
     synch_active(:)  = 4*.false.
-    nullify_empty_bins = .true.
+    nullify_empty_bins = .false.
 !    NR_smap_file =
  /
 

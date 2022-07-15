@@ -410,7 +410,7 @@ contains
                   if (cr_names(i).eq.var(4:clast-3)) icr = i
                enddo
                tab(:,:,:) = cg%u(flind%crspcs(icr)%ebeg+ibin-1, RNG)
-               print *, 'icr : ', icr, ' max val : ', maxval(tab(:,:,:)), 'bin : ', ibin
+               !print *, 'icr : ', icr, ' max val : ', maxval(tab(:,:,:)), 'bin : ', ibin
 
             else if (var(clast - 2:clast - 2) == 'n') then
 
@@ -421,7 +421,7 @@ contains
                   if (cr_names(i).eq.var(4:clast-3)) icr = i
                enddo
                tab(:,:,:) = cg%u(flind%crspcs(icr)%nbeg+ibin-1, RNG)
-               print *, 'icr : ', icr, ' max val : ', maxval(tab(:,:,:)), 'bin : ', ibin
+               !print *, 'icr : ', icr, ' max val : ', maxval(tab(:,:,:)), 'bin : ', ibin
 
             else
                do i = 1, size(cr_names)
