@@ -52,11 +52,12 @@ module cr_data
       enumerator :: icr_E = 1
       enumerator :: icr_H1
       enumerator :: icr_C12
-      enumerator :: icr_Be9
-      enumerator :: icr_Be10
       enumerator :: icr_N14      !< from decay of Be7 with tau of 0.3 years
       enumerator :: icr_O16
       enumerator :: icr_Li7
+      enumerator :: icr_Be9
+      enumerator :: icr_Be10
+
       enumerator :: icr_LAST     !< should be used nowhere despite with nicr
    end enum
    enum, bind(C)
@@ -168,17 +169,17 @@ contains
       ! Only protons (p+) are dynamically important, we can neglect grad_pcr from heavier nuclei
       ! because of their lower abundancies: n(alpha) ~ 0.1 n(p+), other elements less abundant by orders of magnitude
 #ifdef CRESP
-      eE    = [.true., .false., .true.]
+      !eE    = [.true., .false., .true.]
 #else /* !CRESP */
       eE    = .false.
 #endif /* !CRESP */
       eH1   = [.true., .true., .false.]
-      eLi7  = .false.
-      eBe9  = .false.
+      !eLi7  = .false.
+      !eBe9  = .false.
       eBe10 = .false.
       eC12  = .false.
-      eN14  = .false.
-      eO16  = .false.
+      !eN14  = .false.
+      !eO16  = .false.
 
 #define VS *3-2:3*
 
