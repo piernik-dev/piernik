@@ -161,15 +161,15 @@ contains
       if (eCRSP(icr_Be10)) usrc(:, j) = usrc(:, j) - gn * uu(:, j) / cr_tau(i)
 
       do i = lbound(icr_prim, 1), ubound(icr_prim, 1)
-         associate( Hi => cr_table(icr_prim(i)) )
+         associate( cr_prim => cr_table(icr_prim(i)) )
             if (eCRSP(icr_prim(i))) then
                do j = lbound(icr_sec, 1), ubound(icr_sec, 1)
-               associate( Lj => cr_table(icr_sec(j)) )
+               associate( cr_sec => cr_table(icr_sec(j)) )
                   if (eCRSP(icr_sec(j))) then
-                     dcr = cr_sigma(Hi, Lj) * dgas * uu(:, iarr_crn(Hi))
-                     dcr = min(uu(:, iarr_crn(Hi))/rk_coeff, dcr)  ! Don't decay more elements than available
-                     usrc(:, iarr_crn(Hi)) = usrc(:, iarr_crn(Hi)) - dcr
-                     usrc(:, iarr_crn(Lj)) = usrc(:, iarr_crn(Lj)) + dcr
+                     dcr = cr_sigma(cr_prim, cr_sec) * dgas * uu(:, iarr_crn(cr_prim))
+                     dcr = min(uu(:, iarr_crn(cr_prim))/rk_coeff, dcr)  ! Don't decay more elements than available
+                     usrc(:, iarr_crn(cr_prim)) = usrc(:, iarr_crn(cr_prim)) - dcr
+                     usrc(:, iarr_crn(cr_sec)) = usrc(:, iarr_crn(cr_sec)) + dcr
                   endif
                end associate
                enddo
