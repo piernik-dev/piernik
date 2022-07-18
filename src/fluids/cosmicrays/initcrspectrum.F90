@@ -43,7 +43,7 @@ module initcrspectrum
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,        &
            & spec_mod_trms, cresp_all_edges, cresp_all_bins, cresp, crel, dfpq, fsynchr, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,       &
            & u_b_max, def_dtsynch, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer, K_cresp_paral, &
-           & K_cresp_perp, norm_init_spectrum_n, norm_init_spectrum_e
+           & K_cresp_perp, norm_init_spectrum_n, norm_init_spectrum_e, bin_old
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -138,6 +138,9 @@ module initcrspectrum
    real, dimension(:,:), allocatable :: norm_init_spectrum_n !TODO FIXME change me back into type(cr_spectrum)
    real, dimension(:,:), allocatable :: norm_init_spectrum_e !TODO FIXME change me back into type(cr_spectrum)
    type(bin_old)     :: crel
+   type(bin_old), allocatable, dimension(:) :: bins_primary
+
+
 ! For passing terms to compute energy sources / sinks
 
    type spec_mod_trms
@@ -197,6 +200,11 @@ contains
       ma1d = [nspc]
       call my_allocate(p_br_def, ma1d)
       call my_allocate(q_br_def, ma1d)
+
+      allocate(bins_primary(nspc))
+      do i = 1, nspc
+         call init_crel(bins_primary(i))
+      enddo
 ! Default values
       use_cresp         = .true.
       use_cresp_evol    = .true.
@@ -681,7 +689,7 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   subroutine init_crel
+   subroutine init_crel(bin_old_type)
 
       use constants,      only: zero, I_ZERO, I_ONE
       use diagnostics,    only: my_allocate_with_index
@@ -689,18 +697,20 @@ contains
 
       implicit none
 
-      if (.not. allocated(crel%p)) call my_allocate_with_index(crel%p, ncrb, I_ZERO)
-      if (.not. allocated(crel%f)) call my_allocate_with_index(crel%f, ncrb, I_ZERO)
-      if (.not. allocated(crel%q)) call my_allocate_with_index(crel%q, ncrb, I_ONE )
-      if (.not. allocated(crel%n)) call my_allocate_with_index(crel%n, ncrb, I_ONE )
-      if (.not. allocated(crel%e)) call my_allocate_with_index(crel%e, ncrb, I_ONE )
+      type(bin_old) :: bin_old_type
 
-      crel%p = zero
-      crel%q = zero
-      crel%f = zero
-      crel%e = zero
-      crel%n = zero
-      crel%i_cut = I_ZERO
+      if (.not. allocated(bin_old_type%p)) call my_allocate_with_index(bin_old_type%p, ncrb, I_ZERO)
+      if (.not. allocated(bin_old_type%f)) call my_allocate_with_index(bin_old_type%f, ncrb, I_ZERO)
+      if (.not. allocated(bin_old_type%q)) call my_allocate_with_index(bin_old_type%q, ncrb, I_ONE )
+      if (.not. allocated(bin_old_type%n)) call my_allocate_with_index(bin_old_type%n, ncrb, I_ONE )
+      if (.not. allocated(bin_old_type%e)) call my_allocate_with_index(bin_old_type%e, ncrb, I_ONE )
+
+      bin_old_type%p = zero
+      bin_old_type%q = zero
+      bin_old_type%f = zero
+      bin_old_type%e = zero
+      bin_old_type%n = zero
+      bin_old_type%i_cut = I_ZERO
 
    end subroutine init_crel
 !----------------------------------------------------------------------------------------------------
@@ -746,7 +756,7 @@ contains
          end select
       enddo
 
-      if (dfpq%any_dump) call init_crel
+      if (dfpq%any_dump) call init_crel(crel)
 
    end subroutine check_if_dump_fpq
 
