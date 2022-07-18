@@ -129,7 +129,7 @@ contains
 !<
    subroutine src_cr_spallation_and_decay(uu, n, usrc, rk_coeff)
 
-      use cr_data,        only: eCRSP, cr_table, cr_tau, cr_sigma, icr_Be10, icrH, icrL
+      use cr_data,        only: eCRSP, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec
       use domain,         only: dom
       use fluids_pub,     only: has_ion, has_neu
       use fluidindex,     only: flind
@@ -160,12 +160,12 @@ contains
       i = cr_table(icr_Be10) ; j = iarr_crn(i)
       if (eCRSP(icr_Be10)) usrc(:, j) = usrc(:, j) - gn * uu(:, j) / cr_tau(i)
 
-      do i = lbound(icrH, 1), ubound(icrH, 1)
-         associate( Hi => cr_table(icrH(i)) )
-            if (eCRSP(icrH(i))) then
-               do j = lbound(icrL, 1), ubound(icrL, 1)
-               associate( Lj => cr_table(icrL(j)) )
-                  if (eCRSP(icrL(j))) then
+      do i = lbound(icr_prim, 1), ubound(icr_prim, 1)
+         associate( Hi => cr_table(icr_prim(i)) )
+            if (eCRSP(icr_prim(i))) then
+               do j = lbound(icr_sec, 1), ubound(icr_sec, 1)
+               associate( Lj => cr_table(icr_sec(j)) )
+                  if (eCRSP(icr_sec(j))) then
                      dcr = cr_sigma(Hi, Lj) * dgas * uu(:, iarr_crn(Hi))
                      dcr = min(uu(:, iarr_crn(Hi))/rk_coeff, dcr)  ! Don't decay more elements than available
                      usrc(:, iarr_crn(Hi)) = usrc(:, iarr_crn(Hi)) - dcr

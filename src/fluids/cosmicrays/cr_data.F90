@@ -133,7 +133,7 @@ module cr_data
    real, parameter :: primary_N14  =  1.0e-3
    real, parameter :: primary_O16  =  4.0e-3
 
-   integer, dimension(3), parameter :: icrH = [icr_C12, icr_N14, icr_O16], icrL = [icr_Li7, icr_Be9, icr_Be10]
+   integer, dimension(3), parameter :: icr_prim = [icr_C12, icr_N14, icr_O16], icr_sec = [icr_Li7, icr_Be9, icr_Be10]
 
 contains
 
