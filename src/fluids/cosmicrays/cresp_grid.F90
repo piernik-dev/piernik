@@ -229,6 +229,13 @@ contains
                            if (eCRSP(icr_prim(i_prim))) then
                               do i_sec = 1, ncrsp_sec
                               associate( cr_sec => cr_table(icr_sec(i_sec)) )
+                                 print *, i_prim, icr_prim(i_prim)
+                                 print *, i_sec, icr_sec(i_sec)
+                                 print *, ' cr_prim : ', cr_prim
+                                 print *, i_sec, 'cr_sec : ', cr_sec
+                                 print *, cr_table(icr_sec(i_sec))
+                                 print *, cr_table(icr_prim(i_prim))
+                                 stop
                                  if (eCRSP(icr_sec(i_sec))) then
                                     dcr_n = cr_sigma(cr_prim, cr_sec) * dgas * u_cell(iarr_crspc2_n(cr_prim,:))
                                     dcr_n = min(u_cell(iarr_crspc2_n(cr_prim,:)), dcr_n)  ! Don't decay more elements than available

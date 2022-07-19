@@ -297,7 +297,6 @@ contains
                enddo
             enddo
          enddo
-         stop
          !do icr = 1, nspc
             !print *, 'icr : ', icr, ' max val : ', cg%u(iarr_crspc2_n(icr,:),29,29,:)
          !enddo

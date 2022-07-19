@@ -176,17 +176,16 @@ contains
       ! because of their lower abundancies: n(alpha) ~ 0.1 n(p+), other elements less abundant by orders of magnitude
 #ifdef CRESP
        eE    = [.true., .false., .true., .true.]
-#else /* !CRESP */
-       eE    = .false.
-#endif /* !CRESP */
        eH1   = [.true., .true., .false., .true.]
-       eLi7  = .false.
-       eBe9  = .false.
-       eBe10 = .false.
-       eC12  = .false.
-       eN14  = .false.
-       eO16  = .false.
+       eLi7  = [.true., .false., .true., .false.]
+       eBe9  = [.true., .false., .true., .false.]
+       eBe10 = [.true., .false., .true., .false.]
+       eC12  = [.true., .false., .true., .true.]
+       eN14  = [.true., .false., .true., .true.]
+       eO16  = [.true., .false., .true., .true.]
+#else /* !CRESP */
 
+#endif /* !CRESP */
 #define VS *4-3:4*
 
       if (master) then

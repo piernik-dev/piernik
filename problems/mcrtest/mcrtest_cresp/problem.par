@@ -73,31 +73,33 @@ $BASE_DOMAIN
     cfl_cre     = 0.1 !, 0.1
     p_min_fix = 1.0     ! momentum fixed grid
     p_max_fix = 1.0e7   ! momentum fixed grid
-    p_lo_init = 5.0, 5.0, 5.0 , 5.0   ! initial lower cut momentum
-    p_up_init = 8.5e5, 8.5e5, 8.5e5 , 8.5e5   ! initial upper cut momentum
-    p_br_init_lo = 1.0e2, 1.0e2, 1.0e2, 1.0e2
-    p_br_init_up = 5.0e5, 5.0e5, 5.0e5, 5.0e5
+    p_lo_init = 8*5.0 !, 5.0, 5.0 , 5.0 , 5.0! initial lower cut momentum
+    p_up_init = 8*8.5e5!, 8.5e5, 8.5e5 , 8.5e5 , 8.5e5   ! initial upper cut momentum
+    p_br_init_lo = 8*1.0e2 !, 1.0e2, 1.0e2, 1.0e2, 1.0e2
+    p_br_init_up = 8*5.0e5!, 5.0e5, 5.0e5, 5.0e5, 5.0e5
     expan_order = 3
-    f_init    = 1.0e-9, 1.0e-9, 1.0e-9 , 1.0e-9 !       ! < initial value of the normalization parameter in cre energy spectrum
-    q_init(:)    = 4*4.1 !, 4.1 ! 3.6   ! < initial value of power law coefficient in cre enrgy spectrum
+    f_init    = 8*1.0e-9!, 1.0e-9, 1.0e-9 , 1.0e-9 !       ! < initial value of the normalization parameter in cre energy spectrum
+    q_init(:)    = 8*4.1 !, 4.1 ! 3.6   ! < initial value of power law coefficient in cre enrgy spectrum
     q_big     = 30.e0       ! < limit value of power law coefficient in cre energy spectrum, do not set that value too high!
-    K_cre_pow(:)    = 4*0.5 !, 0.5 ! 0.5    !
+    K_cre_pow(:)    = 8*0.5 !, 0.5 ! 0.5    !
     e_small     = 1.0e-10         ! lower energy cutoff for energy-approximated cutoff momenta
     initial_spectrum = 'plpc' ! 'powl', 'brpl', 'bump', 'symf', 'syme'
-    cre_active(:)  = 4*1.0
+    cre_active(:)  = 8*1.0
     NR_iter_limit = 50
     arr_dim = 100
-    adiab_active(:)  = 4*.true.
+    adiab_active(:)  = 8*.true.
     !adiab_active(2)  = .false.
-    synch_active(:)  = 4*.false.
+    synch_active(:)  = 8*.false.
     nullify_empty_bins = .false.
 !    NR_smap_file =
  /
 
  $CR_SPECIES
-    eE  = .true., .false., .true., .false.
+    eE  = .true., .false., .true., .true.
     eH1 = .true., .true., .true., .true.
-    eC12= .true., .false., .true., .true.
+    eLi7= .true., .true., .true., .false.
+    eC12= .true., .true., .true., .true.
+    !eN14= .true., .false., .true., .true.
     eBe10=.true., .false., .true., .false.
  /
 
