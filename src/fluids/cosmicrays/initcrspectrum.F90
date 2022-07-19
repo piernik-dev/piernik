@@ -685,6 +685,7 @@ contains
       norm_init_spectrum_n(:,:) = zero
       norm_init_spectrum_e(:,:) = zero
 
+
    end subroutine init_cresp_types
 
 !----------------------------------------------------------------------------------------------------

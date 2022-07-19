@@ -117,7 +117,7 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, onet
       use cresp_crspectrum, only: cresp_update_cell
-      use cr_data,          only: eCRSP, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec
+      use cr_data,          only: eCRSP, ePRIM, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec
       use crhelpers,        only: divv_i
       use dataio_pub,       only: msg, warn
       use func,             only: emag
@@ -221,10 +221,13 @@ contains
 
 
                      !stop
-                        do i_prim = lbound(icr_prim, 1), ubound(icr_prim, 1)
+                     !print *, ' ncrsp_prim ', ncrsp_prim
+                     !print *, ' ncrsp_sec ', ncrsp_sec
+                     !stop
+                        do i_prim = 1, ncrsp_prim
                         associate( cr_prim => cr_table(icr_prim(i_prim)) )
                            if (eCRSP(icr_prim(i_prim))) then
-                              do i_sec = lbound(icr_sec, 1), ubound(icr_sec, 1)
+                              do i_sec = 1, ncrsp_sec
                               associate( cr_sec => cr_table(icr_sec(i_sec)) )
                                  if (eCRSP(icr_sec(i_sec))) then
                                     dcr_n = cr_sigma(cr_prim, cr_sec) * dgas * u_cell(iarr_crspc2_n(cr_prim,:))

@@ -1207,7 +1207,8 @@ contains
       e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), q(1:ncrb), act_bins)
 
       call my_deallocate(act_bins)
-
+      print *, 'n : ', n
+      print *,' e : ', e
    end subroutine cresp_init_plpc_spectrum
 
 !>

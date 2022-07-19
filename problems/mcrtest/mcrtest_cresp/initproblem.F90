@@ -157,7 +157,7 @@ contains
       use grid_cont,      only: grid_container
       use mpisetup,       only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS
-      use cr_data,        only: eCRSP, cr_spectral, icr_H1, icr_C12, icr_E, cr_index
+      use cr_data,        only: eCRSP, cr_spectral, icr_H1, icr_C12, icr_N14, icr_O16, icr_E, cr_index, primary_C12, primary_N14,  primary_O16, ncrsp_auto, ncrsp_prim, icr_prim, ePRIM, eCRSP
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
@@ -176,6 +176,23 @@ contains
       type(grid_container),   pointer :: cg
 #ifdef CRESP
       real                            :: e_tot
+      real, dimension(nspc)     :: rel_abound
+
+      rel_abound(:) = 0.
+      print *, icr_prim
+      !stop
+
+      do icr = 1, nspc
+
+         !if (icr == icr_E .and. ePRIM(icr) .and. eCRSP(icr))   rel_abound(icr) = 0
+         if (icr == icr_H1 .and. ePRIM(icr))  rel_abound(icr) = 1.
+         if (icr == icr_C12 .and. ePRIM(icr)) rel_abound(icr) = primary_C12
+         if (icr == icr_N14 .and. ePRIM(icr)) rel_abound(icr) = primary_N14
+         if (icr == icr_O16 .and. ePRIM(icr)) rel_abound(icr) = primary_O16
+
+      enddo
+      print *, rel_abound
+      !stop
 #endif /* CRESP */
 
       fl => flind%ion
@@ -264,15 +281,23 @@ contains
                      if (e_tot > smallcree .and. use_cresp) then
 !                         cresp%n = 1.e-4 ;  cresp%e = 1.e-2
                         call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot, icr)
-                        cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + cresp%n
-                        cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + cresp%e
-                        !if (i == 29 .or. j == 29) print *, 'cresp%n ', cresp%n, 'cresp%e ', cresp%e
+                        !print *, 'cresp n ' , cresp%n,  'cresp e ' , cresp%e
+                        !stop
+
+                        cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
+                        cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
+                        if (i == 29 .and. j == 29) then
+                           print *, icr
+                           print *, ' cresp%n ', rel_abound(icr)*cresp%n
+                           print *, 'cresp%e ', rel_abound(icr)*cresp%e
+                       endif
                      endif
                   enddo
 #endif /* CRESP */
                enddo
             enddo
          enddo
+         stop
          !do icr = 1, nspc
             !print *, 'icr : ', icr, ' max val : ', cg%u(iarr_crspc2_n(icr,:),29,29,:)
          !enddo

@@ -95,10 +95,10 @@ $BASE_DOMAIN
  /
 
  $CR_SPECIES
-    eE  = .true., .false., .true.
-    eH1 = .true., .true., .true.
-    eC12= .true., .false., .true.
-    eBe10=.true., .false., .true.
+    eE  = .true., .false., .true., .false.
+    eH1 = .true., .true., .true., .true.
+    eC12= .true., .false., .true., .true.
+    eBe10=.true., .false., .true., .false.
  /
 
  $MULTIGRID_SOLVER
