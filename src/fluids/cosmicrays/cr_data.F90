@@ -64,20 +64,25 @@ module cr_data
       enumerator :: PRES = 1     !< index for presence of the isotope/component
       enumerator :: ESS          !< index for grad_pcr essentiality of the isotope/component
       enumerator :: SPEC         !< index for energy spectrum treatment of the isotope/component
+      enumerator :: PRIM         !< index for presence of primary CR
    end enum
 
    integer, parameter                                      :: nicr = icr_LAST - 1
-   integer                                                 :: ncrsp_auto
 
-   logical, dimension(PRES:SPEC)                           :: eE                 !< presence and grad_pcr essentiality of electrons
-   logical, dimension(PRES:SPEC)                           :: eH1                !< presence and grad_pcr essentiality of H1 isotope
-   logical, dimension(PRES:SPEC)                           :: eLi7               !< presence and grad_pcr essentiality of Li7 isotope
-   logical, dimension(PRES:SPEC)                           :: eBe9               !< presence and grad_pcr essentiality of Be9 isotope
-   logical, dimension(PRES:SPEC)                           :: eBe10              !< presence and grad_pcr essentiality of Be10 isotope
-   logical, dimension(PRES:SPEC)                           :: eC12               !< presence and grad_pcr essentiality of C12 isotope
-   logical, dimension(PRES:SPEC)                           :: eN14               !< presence and grad_pcr essentiality of N14 isotope
-   logical, dimension(PRES:SPEC)                           :: eO16               !< presence and grad_pcr essentiality of O16 isotope
+   integer                                                 :: ncrsp_auto
+   integer                                                 :: ncrsp_prim
+   integer                                                 :: ncrsp_sec
+
+   logical, dimension(PRES:PRIM)                           :: eE                 !< presence and grad_pcr essentiality of electrons
+   logical, dimension(PRES:PRIM)                           :: eH1                !< presence and grad_pcr essentiality of H1 isotope
+   logical, dimension(PRES:PRIM)                           :: eLi7               !< presence and grad_pcr essentiality of Li7 isotope
+   logical, dimension(PRES:PRIM)                           :: eBe9               !< presence and grad_pcr essentiality of Be9 isotope
+   logical, dimension(PRES:PRIM)                           :: eBe10              !< presence and grad_pcr essentiality of Be10 isotope
+   logical, dimension(PRES:PRIM)                           :: eC12               !< presence and grad_pcr essentiality of C12 isotope
+   logical, dimension(PRES:PRIM)                           :: eN14               !< presence and grad_pcr essentiality of N14 isotope
+   logical, dimension(PRES:PRIM)                           :: eO16               !< presence and grad_pcr essentiality of O16 isotope
    logical,                                dimension(nicr) :: eCRSP              !< table of all isotopes presences
+   logical,                                dimension(nicr) :: ePRIM              !< table of all PRIMARY presences
    integer, parameter                                      :: specieslen = 6     !< length of species names
    character(len=specieslen), allocatable, dimension(:)    :: cr_names           !< table of species names
    integer,                   allocatable, dimension(:)    :: cr_table           !< table of cr_data indices for CR species
@@ -92,6 +97,7 @@ module cr_data
    logical,                   allocatable, dimension(:)    :: cr_gpess           !< table of essentiality for grad_pcr calculation
    integer,                   allocatable, dimension(:)    :: icr_spc            !< table of cr_data indices for spectrally resolved CR species
    integer,                   allocatable, dimension(:)    :: iarr_spc           !< table of indices allowing to find spectrally resolved via icr_* (helpful for iarr_crspc)
+   integer                                                 :: i, iprim, isec
 !<====Mass number and atomic number of nuclei species====>
 
    real, parameter :: m_H1   = 1.
@@ -134,7 +140,7 @@ module cr_data
    real, parameter :: primary_N14  =  1.0e-3
    real, parameter :: primary_O16  =  4.0e-3
 
-   integer, dimension(3), parameter :: icr_prim = [icr_C12, icr_N14, icr_O16], icr_sec = [icr_Li7, icr_Be9, icr_Be10]
+   integer(kind=8), dimension(:), allocatable :: icr_prim, icr_sec
 
 contains
 
@@ -169,19 +175,19 @@ contains
       ! Only protons (p+) are dynamically important, we can neglect grad_pcr from heavier nuclei
       ! because of their lower abundancies: n(alpha) ~ 0.1 n(p+), other elements less abundant by orders of magnitude
 #ifdef CRESP
-      !eE    = [.true., .false., .true.]
+       eE    = [.true., .false., .true., .true.]
 #else /* !CRESP */
-      eE    = .false.
+       eE    = .false.
 #endif /* !CRESP */
-      eH1   = [.true., .true., .false.]
-      !eLi7  = .false.
-      !eBe9  = .false.
-      eBe10 = .false.
-      eC12  = .false.
-      !eN14  = .false.
-      !eO16  = .false.
+       eH1   = [.true., .true., .false., .true.]
+       eLi7  = .false.
+       eBe9  = .false.
+       eBe10 = .false.
+       eC12  = .false.
+       eN14  = .false.
+       eO16  = .false.
 
-#define VS *3-2:3*
+#define VS *4-3:4*
 
       if (master) then
 
@@ -231,7 +237,41 @@ contains
 
       eCRSP(1:nicr) = [eE(PRES), eH1(PRES), eC12(PRES), eBe9(PRES), eBe10(PRES), eN14(PRES), eO16(PRES), eLi7(PRES)]
       ncrsp_auto = count(eCRSP)
+      ePRIM(1:nicr) = [eE(PRIM), eH1(PRIM), eC12(PRIM), eBe9(PRIM), eBe10(PRIM), eN14(PRIM), eO16(PRIM), eLi7(PRIM)]
+      ncrsp_prim = count(ePRIM)
+      ncrsp_sec = ncrsp_auto - ncrsp_prim
 
+      allocate(icr_prim(ncrsp_prim))
+      allocate(icr_sec(ncrsp_sec))
+      icr_prim(:) = 0
+      icr_sec(:) = 0
+      !print *, ' icr_prim : ', icr_prim, ' size ',  size(icr_prim)
+      !print *, ' icr_sec : ', icr_sec, ' size ',  size(icr_sec)
+      iprim = 1
+      isec = 1
+
+      do i = 1, ncrsp_auto
+
+         if (ePRIM(i)) then
+            print *, 'i ', i, ' iprim ', iprim
+            icr_prim(iprim) = i
+            iprim=iprim+1
+
+         else
+            print *, 'i ', i, ' isec ', isec
+            icr_sec(isec) = i
+            isec=isec+1
+         endif
+
+      enddo
+
+      !print *, icr_prim
+      !print *, icr_sec
+      !print *, 'all specie logicals:', eCRSP, 'number : ', ncrsp_auto
+      !print *, 'primaries : ', ePRIM, 'nicr_prim numbers : ', ncrsp_prim
+      !print *, 'number of secondaries : ', ncrsp_sec
+
+      !stop
    end subroutine init_cr_species
 
    subroutine cr_species_tables(ncrsp, crness)
@@ -247,7 +287,7 @@ contains
 
       integer                                    :: i, icr, jcr, kcr
       character(len=specieslen), dimension(nicr) :: eCRSP_names
-      logical,                   dimension(nicr) :: eCRSP_ess, eCRSP_spec
+      logical,                   dimension(nicr) :: eCRSP_ess, eCRSP_spec, eCRSP_prim
       real,                      dimension(nicr) :: eCRSP_mass, eCRSP_Z
 
       eCRSP_names(1:nicr) = ['e-  ', 'p+  ', 'C12 ', 'Be9 ', 'Be10', 'N14 ', 'O16 ', 'Li7 ']
@@ -255,6 +295,7 @@ contains
       eCRSP_Z    (1:nicr) = [   0.,  Z_H1,   Z_C12,   Z_Be9, Z_Be10, Z_N14,  Z_O16,  Z_Li7 ]
       eCRSP_ess  (1:nicr) = [eE(ESS) , eH1(ESS) , eC12(ESS) , eBe9(ESS) , eBe10(ESS) , eN14(ESS) , eO16(ESS) , eLi7(ESS) ]
       eCRSP_spec (1:nicr) = [eE(SPEC), eH1(SPEC), eC12(SPEC), eBe9(SPEC), eBe10(SPEC), eN14(SPEC), eO16(SPEC), eLi7(SPEC)]
+      eCRSP_prim (1:nicr) = [eE(PRIM), eH1(PRIM), eC12(PRIM), eBe9(PRIM), eBe10(PRIM), eN14(PRIM), eO16(PRIM), eLi7(PRIM)]
 
       allocate(cr_names(ncrsp), cr_table(nicr), cr_index(nicr), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp), cr_mass(ncrsp), cr_Z(nicr), cr_spectral(ncrsp), cr_gpess(ncrsp),cr_sigma_N(nicr), icr_spc(count(eCRSP_spec .and. eCRSP)), iarr_spc(nicr))
       cr_names(:)    = ''
