@@ -249,23 +249,23 @@ contains
       !print *, ' icr_sec : ', icr_sec, ' size ',  size(icr_sec)
       iprim = 1
       isec = 1
-      
+
       print *, 'ncrp_auto : ', ncrsp_auto
 
       do i = 1, ncrsp_auto
 
          if (ePRIM(i)) then
-         
+
             !print *, 'i ', i, ' iprim ', iprim
             icr_prim(iprim) = i
             iprim=iprim+1
 
          else
-         
+
             !print *, 'i ', i, ' isec ', isec
             icr_sec(isec) = i
             isec=isec+1
-            
+
          endif
 
       enddo
@@ -380,7 +380,9 @@ contains
       endif
       cr_sigma = cr_sigma * mbarn
       if (eCRSP(icr_Be10)) cr_tau(cr_table(icr_Be10)) = tau_Be10 * myr
-
+      print *, 'sigmas : ', cr_sigma
+      print *, shape(cr_sigma)
+      !stop
    end subroutine cr_species_tables
 
    function spectral_or_not(sp) result(wr)
