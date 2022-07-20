@@ -99,7 +99,7 @@ $BASE_DOMAIN
     eH1 = .true., .true., .true., .true.
     eLi7= .true., .true., .true., .false.
     eC12= .true., .true., .true., .true.
-    !eN14= .true., .false., .true., .true.
+    eN14= .true., .false., .true., .true.
     eBe10=.true., .false., .true., .false.
  /
 

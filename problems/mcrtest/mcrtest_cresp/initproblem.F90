@@ -157,7 +157,7 @@ contains
       use grid_cont,      only: grid_container
       use mpisetup,       only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS
-      use cr_data,        only: eCRSP, cr_spectral, icr_H1, icr_C12, icr_N14, icr_O16, icr_E, cr_index, primary_C12, primary_N14,  primary_O16, ncrsp_auto, ncrsp_prim, icr_prim, ePRIM, eCRSP
+      use cr_data,        only: eCRSP, cr_spectral, icr_H1, icr_C12, icr_N14, icr_O16, icr_E, cr_index, primary_C12, primary_N14,  primary_O16, ncrsp_auto, ncrsp_prim, icr_prim, icr_sec, ePRIM, eCRSP, eH1, eE, eBe9, eBe10, eC12, eO16, eN14, eLi7, PRIM
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
@@ -179,19 +179,25 @@ contains
       real, dimension(nspc)     :: rel_abound
 
       rel_abound(:) = 0.
-      print *, icr_prim
+      !print *, icr_prim
+      !print *, icr_sec
       !stop
-
+        !print *, 'nspc : ', nspc
+        !print *, 'icr_H1 : ', icr_H1, ' ',eH1(PRIM)
+        !print *, 'icr_C12 : ', icr_C12, ' ',eC12(PRIM)
+        !print *, 'icr_N14 : ', icr_N14, ' ',eN14(PRIM)
+        !print *, 'icr_O16 : ', icr_O16, ' ',eO16(PRIM)
+        
       do icr = 1, nspc
-
+        !print *, 'step icr :', icr
          !if (icr == icr_E .and. ePRIM(icr) .and. eCRSP(icr))   rel_abound(icr) = 0
-         if (icr == icr_H1 .and. ePRIM(icr))  rel_abound(icr) = 1.
-         if (icr == icr_C12 .and. ePRIM(icr)) rel_abound(icr) = primary_C12
-         if (icr == icr_N14 .and. ePRIM(icr)) rel_abound(icr) = primary_N14
-         if (icr == icr_O16 .and. ePRIM(icr)) rel_abound(icr) = primary_O16
+         if (icr == icr_H1 .and. eH1(PRIM))  rel_abound(icr) = 1.
+         if (icr == icr_C12 .and. eC12(PRIM)) rel_abound(icr) = primary_C12
+         if (icr == icr_N14 .and. eN14(PRIM)) rel_abound(icr) = primary_N14
+         if (icr == icr_O16 .and. eO16(PRIM)) rel_abound(icr) = primary_O16
 
       enddo
-      print *, rel_abound
+      !print *, rel_abound
       !stop
 #endif /* CRESP */
 
@@ -281,11 +287,12 @@ contains
                      if (e_tot > smallcree .and. use_cresp) then
 !                         cresp%n = 1.e-4 ;  cresp%e = 1.e-2
                         call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot, icr)
-                        !print *, 'cresp n ' , cresp%n,  'cresp e ' , cresp%e
                         !stop
 
                         cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
                         cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
+                        !print *, 'cresp n ' , cresp%n,  'cresp e ' , cresp%e
+                        !print *, 'i : ', i, ' j :', j
                         if (i == 29 .and. j == 29) then
                            print *, icr
                            print *, ' cresp%n ', rel_abound(icr)*cresp%n
@@ -293,6 +300,7 @@ contains
                        endif
                      endif
                   enddo
+                  !stop
 #endif /* CRESP */
                enddo
             enddo

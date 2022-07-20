@@ -237,6 +237,7 @@ contains
       eCRSP(1:nicr) = [eE(PRES), eH1(PRES), eC12(PRES), eBe9(PRES), eBe10(PRES), eN14(PRES), eO16(PRES), eLi7(PRES)]
       ncrsp_auto = count(eCRSP)
       ePRIM(1:nicr) = [eE(PRIM), eH1(PRIM), eC12(PRIM), eBe9(PRIM), eBe10(PRIM), eN14(PRIM), eO16(PRIM), eLi7(PRIM)]
+      print *, 'ePRIM : ', ePRIM
       ncrsp_prim = count(ePRIM)
       ncrsp_sec = ncrsp_auto - ncrsp_prim
 
@@ -248,18 +249,23 @@ contains
       !print *, ' icr_sec : ', icr_sec, ' size ',  size(icr_sec)
       iprim = 1
       isec = 1
+      
+      print *, 'ncrp_auto : ', ncrsp_auto
 
       do i = 1, ncrsp_auto
 
          if (ePRIM(i)) then
-            print *, 'i ', i, ' iprim ', iprim
+         
+            !print *, 'i ', i, ' iprim ', iprim
             icr_prim(iprim) = i
             iprim=iprim+1
 
          else
-            print *, 'i ', i, ' isec ', isec
+         
+            !print *, 'i ', i, ' isec ', isec
             icr_sec(isec) = i
             isec=isec+1
+            
          endif
 
       enddo
