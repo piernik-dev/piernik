@@ -38,7 +38,7 @@ module cresp_crspectrum
 
    private ! most of it
    public :: cresp_update_cell, cresp_init_state, cresp_get_scaled_init_spectrum, cleanup_cresp, cresp_allocate_all, &
-      &      src_gpcresp, p_rch_init, detect_clean_spectrum, cresp_find_prepare_spectrum, cresp_detect_negative_content
+      &      src_gpcresp, p_rch_init, detect_clean_spectrum, cresp_find_prepare_spectrum, cresp_detect_negative_content, fq_to_e, fq_to_n, q
 
    integer, dimension(1:2)            :: fail_count_NR_2dim, fail_count_interpol
    integer(kind=4), allocatable, dimension(:) :: fail_count_comp_q
@@ -102,7 +102,7 @@ contains
 
 !----- main subroutine -----
 
-   subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, p_out, substeps)
+   subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, q1, substeps, p_out)
 
       use constants,      only: zero, one, I_ZERO, I_ONE
 #ifdef CRESP_VERBOSED
@@ -124,6 +124,7 @@ contains
 
       logical                                       :: solve_fail_lo, solve_fail_up, empty_cell
       integer                                       :: i_sub, n_substep
+      real, dimension(ncrb), intent(out)            :: q1
 
       e = zero; n = zero; edt = zero; ndt = zero
       solve_fail_lo = .false.
@@ -363,16 +364,20 @@ contains
       n_tot = sum(n)
       e_tot = sum(e)
 
+      !print *, 'dfpq dump : ', dfpq%any_dump
+      !stop
 ! --- saving the data to output arrays
-      if (dfpq%any_dump) then
-         crel%p = p
-         crel%f = f
-         crel%q = q
-         crel%e = e
-         crel%n = n
-         crel%i_cut = i_cut
-      endif
-
+      !if (dfpq%any_dump) then
+      !  crel%p = p
+      !crel%f = f
+         crel%q = q ! Temporary fix for passing the q value to cresp_update_grid
+      !crel%e = e
+      !crel%n = n
+      !crel%i_cut = i_cut
+      !endif
+      q1=q
+      !print *, 'q : ', q1
+      !stop
       n_inout = n  ! number density of electrons per bin passed back to the external module
       e_inout = e  ! energy density of electrons per bin passed back to the external module
 

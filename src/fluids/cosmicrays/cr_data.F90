@@ -237,7 +237,7 @@ contains
       eCRSP(1:nicr) = [eE(PRES), eH1(PRES), eC12(PRES), eBe9(PRES), eBe10(PRES), eN14(PRES), eO16(PRES), eLi7(PRES)]
       ncrsp_auto = count(eCRSP)
       ePRIM(1:nicr) = [eE(PRIM), eH1(PRIM), eC12(PRIM), eBe9(PRIM), eBe10(PRIM), eN14(PRIM), eO16(PRIM), eLi7(PRIM)]
-      print *, 'ePRIM : ', ePRIM
+      !print *, 'ePRIM : ', ePRIM
       ncrsp_prim = count(ePRIM)
       ncrsp_sec = ncrsp_auto - ncrsp_prim
 
