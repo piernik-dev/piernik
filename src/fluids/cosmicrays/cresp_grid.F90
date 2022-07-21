@@ -117,7 +117,7 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, onet
       use cresp_crspectrum, only: cresp_update_cell, q
-      use cr_data,          only: eCRSP, ePRIM, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass
+      use cr_data,          only: eCRSP, ePRIM, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, icr_C12, icr_N14, icr_O16, eC12, eO16, eN14, PRIM
       use crhelpers,        only: divv_i
       use dataio_pub,       only: msg, warn
       use func,             only: emag
@@ -206,8 +206,12 @@ contains
                      print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* CRESP_VERBOSED */
                      if (.not. inactive_cell) call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_violation_step, q_spc, substeps = nssteps)
-                     q_spc_all(:,i_spc) = q_spc
-                     !stop
+                    ! if (i_spc == icr_H1 .and. eH1(PRIM))  q_spc_all(:,i_spc) = q_spc
+                     if (i_spc == icr_C12 .and. eC12(PRIM)) q_spc_all(:,i_spc) = q_spc
+                     if (i_spc == icr_N14 .and. eN14(PRIM)) q_spc_all(:,i_spc) = q_spc
+                     if (i_spc == icr_O16 .and. eO16(PRIM)) q_spc_all(:,i_spc) = q_spc
+                     !print *, 'q spc : ', q_spc
+
                      !q_spc(:,i_spc) =
 #ifdef DEBUG
                      call cresp_detect_negative_content(cfl_violation_step, [i, j, k])
@@ -266,10 +270,12 @@ contains
                      endif
                   enddo
 
+                  !print *, 'q spc all : ', q_spc_all
+
                   do i_prim = 1, ncrsp_prim
                      associate( cr_prim => cr_table(icr_prim(i_prim)) )
-                        print *, 'cr_prim : ', cr_prim
-                        print *, 'i_prim : ', i_prim
+                        !print *, 'cr_prim : ', cr_prim
+                        !print *, 'i_prim : ', i_prim
                         if (eCRSP(icr_prim(i_prim))) then
 
                            do i_sec = 1, ncrsp_sec
@@ -281,7 +287,6 @@ contains
                               ! print *, cr_table(icr_sec(i_sec))
                               ! print *, cr_table(icr_prim(i_prim))
                               !stop
-
 
                               if (eCRSP(icr_sec(i_sec))) then
                                  dcr_n = cr_sigma(cr_prim, cr_sec) * dgas * (cr_mass(i_prim)/cr_mass(i_sec))**(3-q_spc_all(:,i_prim))*u_cell(iarr_crspc2_n(cr_prim,:))
@@ -306,8 +311,9 @@ contains
                                     !print *, 'dcr_n : ', dcr_n
                                     !print *, 'dcr_e : ', dcr_e
                                  !endif
-                              endif
+                                 !print *, icr_sec(i_sec)
 
+                              endif
                            end associate
                            enddo
                         endif
@@ -339,7 +345,7 @@ contains
                      !if (maxval(usrc_cell(iarr_crspc2_n(i_spc,:))) .gt. 0.0) stop
                      !if (maxval(usrc_cell(iarr_crspc2_e(i_spc,:))) .gt. 0.0) stop
                   enddo
-                  !stop
+
                enddo
             enddo
          enddo

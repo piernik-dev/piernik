@@ -209,11 +209,14 @@ contains
          lbuff(icr_E    VS icr_E   ) = eE
          lbuff(icr_H1   VS icr_H1  ) = eH1
          lbuff(icr_C12  VS icr_C12 ) = eC12
-         lbuff(icr_Be9  VS icr_Be9 ) = eBe9
-         lbuff(icr_Be10 VS icr_Be10) = eBe10
          lbuff(icr_N14  VS icr_N14 ) = eN14
          lbuff(icr_O16  VS icr_O16 ) = eO16
          lbuff(icr_Li7  VS icr_Li7 ) = eLi7
+         lbuff(icr_Be9  VS icr_Be9 ) = eBe9
+         lbuff(icr_Be10 VS icr_Be10) = eBe10
+
+
+
 
       endif
 
@@ -224,19 +227,20 @@ contains
          eE    = lbuff(icr_E    VS icr_E   )
          eH1   = lbuff(icr_H1   VS icr_H1  )
          eC12  = lbuff(icr_C12  VS icr_C12 )
-         eBe9  = lbuff(icr_Be9  VS icr_Be9 )
-         eBe10 = lbuff(icr_Be10 VS icr_Be10)
          eN14  = lbuff(icr_N14  VS icr_N14 )
          eO16  = lbuff(icr_O16  VS icr_O16 )
          eLi7  = lbuff(icr_Li7  VS icr_Li7 )
+         eBe9  = lbuff(icr_Be9  VS icr_Be9 )
+         eBe10 = lbuff(icr_Be10 VS icr_Be10)
+
 
       endif
 
 #undef VS
 
-      eCRSP(1:nicr) = [eE(PRES), eH1(PRES), eC12(PRES), eBe9(PRES), eBe10(PRES), eN14(PRES), eO16(PRES), eLi7(PRES)]
+      eCRSP(1:nicr) = [eE(PRES), eH1(PRES), eC12(PRES), eN14(PRES), eO16(PRES), eLi7(PRES), eBe9(PRES), eBe10(PRES)]
       ncrsp_auto = count(eCRSP)
-      ePRIM(1:nicr) = [eE(PRIM), eH1(PRIM), eC12(PRIM), eBe9(PRIM), eBe10(PRIM), eN14(PRIM), eO16(PRIM), eLi7(PRIM)]
+      ePRIM(1:nicr) = [eE(PRIM), eH1(PRIM), eC12(PRIM), eN14(PRIM), eO16(PRIM), eLi7(PRIM), eBe9(PRIM), eBe10(PRIM)]
       !print *, 'ePRIM : ', ePRIM
       ncrsp_prim = count(ePRIM)
       ncrsp_sec = ncrsp_auto - ncrsp_prim
@@ -295,12 +299,12 @@ contains
       logical,                   dimension(nicr) :: eCRSP_ess, eCRSP_spec, eCRSP_prim
       real,                      dimension(nicr) :: eCRSP_mass, eCRSP_Z
 
-      eCRSP_names(1:nicr) = ['e-  ', 'p+  ', 'C12 ', 'Be9 ', 'Be10', 'N14 ', 'O16 ', 'Li7 ']
-      eCRSP_mass (1:nicr) = [me/mp,  m_H1,   m_C12,   m_Be9, m_Be10, m_N14,  m_O16,  m_Li7 ]
-      eCRSP_Z    (1:nicr) = [   0.,  Z_H1,   Z_C12,   Z_Be9, Z_Be10, Z_N14,  Z_O16,  Z_Li7 ]
-      eCRSP_ess  (1:nicr) = [eE(ESS) , eH1(ESS) , eC12(ESS) , eBe9(ESS) , eBe10(ESS) , eN14(ESS) , eO16(ESS) , eLi7(ESS) ]
-      eCRSP_spec (1:nicr) = [eE(SPEC), eH1(SPEC), eC12(SPEC), eBe9(SPEC), eBe10(SPEC), eN14(SPEC), eO16(SPEC), eLi7(SPEC)]
-      eCRSP_prim (1:nicr) = [eE(PRIM), eH1(PRIM), eC12(PRIM), eBe9(PRIM), eBe10(PRIM), eN14(PRIM), eO16(PRIM), eLi7(PRIM)]
+      eCRSP_names(1:nicr) = ['e-  ', 'p+  ', 'C12 ', 'N14 ', 'O16 ','Li7 ','Be9 ', 'Be10' ]
+      eCRSP_mass (1:nicr) = [me/mp,  m_H1,   m_C12,  m_N14, m_O16,  m_Li7 , m_Be9, m_Be10 ]
+      eCRSP_Z    (1:nicr) = [   0.,  Z_H1,   Z_C12,  Z_N14, Z_O16,  Z_Li7 , Z_Be9, Z_Be10 ]
+      eCRSP_ess  (1:nicr) = [eE(ESS) , eH1(ESS) , eC12(ESS) , eN14(ESS) , eO16(ESS) , eLi7(ESS) , eBe9(ESS) , eBe10(ESS)  ]
+      eCRSP_spec (1:nicr) = [eE(SPEC), eH1(SPEC), eC12(SPEC), eN14(SPEC), eO16(SPEC), eLi7(SPEC), eBe9(SPEC), eBe10(SPEC) ]
+      eCRSP_prim (1:nicr) = [eE(PRIM), eH1(PRIM), eC12(PRIM), eN14(PRIM), eO16(PRIM), eLi7(PRIM), eBe9(PRIM), eBe10(PRIM) ]
 
       allocate(cr_names(ncrsp), cr_table(nicr), cr_index(nicr), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp), cr_mass(ncrsp), cr_Z(nicr), cr_spectral(ncrsp), cr_gpess(ncrsp),cr_sigma_N(nicr), icr_spc(count(eCRSP_spec .and. eCRSP)), iarr_spc(nicr))
       cr_names(:)    = ''
