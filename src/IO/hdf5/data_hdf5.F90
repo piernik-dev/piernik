@@ -120,30 +120,66 @@ contains
             f%f2cgs = 1.0 / (erg/cm**3)
 #endif /* COSM_RAYS */
 #ifdef CRESP
-         case ("cr_p+n01" : "cr_p+n99")
-            f%fu = "1/\rm{cm}^3"
-            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
-         case ("cr_p+e01" : "cr_p+e99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3)
          case ("cr_e-n01" : "cr_e-n99")
              f%fu = "1/\rm{cm}^3"
              f%f2cgs = 1.0 / (1.0/cm**3) ! number density
          case ("cr_e-e01" : "cr_e-e99")
              f%fu = "\rm{erg}/\rm{cm}^3"
              f%f2cgs = 1.0 / (erg/cm**3)
+
+         case ("cr_p+n01" : "cr_p+n99")
+            f%fu = "1/\rm{cm}^3"
+            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+         case ("cr_p+e01" : "cr_p+e99")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+
+         case ("cr_C12n01" : "cr_C12n99")
+            f%fu = "1/\rm{cm}^3"
+            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+         case ("cr_C12e01" : "cr_C12e99")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+
+         case ("cr_N14n01" : "cr_N14n99")
+            f%fu = "1/\rm{cm}^3"
+            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+         case ("cr_N14e01" : "cr_N14e99")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+
+         case ("cr_O16n01" : "cr_O16n99")
+            f%fu = "1/\rm{cm}^3"
+            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+         case ("cr_O16e01" : "cr_O16e99")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+
+         case ("cr_Li7n01" : "cr_Li7n99")
+            f%fu = "1/\rm{cm}^3"
+            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+         case ("cr_Li7e01" : "cr_Li7e99")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+
+         case ("cr_Be9n01" : "cr_Be9n99")
+            f%fu = "1/\rm{cm}^3"
+            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+         case ("cr_Be9e01" : "cr_Be9e99")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+
          case ("cr_Be10n01" : "cr_Be10n99")
-              f%fu = "1/\rm{cm}^3"
-              f%f2cgs = 1.0 / (1.0/cm**3) ! number density
-           case ("cr_Be10e01" : "cr_Be10e99")
-              f%fu = "\rm{erg}/\rm{cm}^3"
-              f%f2cgs = 1.0 / (erg/cm**3)
-            case ("cr_C12n01" : "cr_C12n99")
-               f%fu = "1/\rm{cm}^3"
-               f%f2cgs = 1.0 / (1.0/cm**3) ! number density
-            case ("cr_C12e01" : "cr_C12e99")
-               f%fu = "\rm{erg}/\rm{cm}^3"
-               f%f2cgs = 1.0 / (erg/cm**3)
+            f%fu = "1/\rm{cm}^3"
+            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+         case ("cr_Be10e01" : "cr_Be10e99")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+
+
+
+
+
          case ("cref01" : "cref99")
             f%fu = "\rm{s}^3/\rm{g}^2\rm{cm}^6"
             f%f2cgs = sek**3 / gram**2 / cm**6
@@ -409,7 +445,7 @@ contains
                do i = 1, size(cr_names)
                   if (cr_names(i).eq.var(4:clast-3)) icr = i
                enddo
-               tab(:,:,:) = cg%u(flind%crspcs(icr)%ebeg+ibin-1, RNG)
+               tab(:,:,:) = 1.0 !cg%u(flind%crspcs(icr)%ebeg+ibin-1, RNG)
                !print *, 'icr : ', icr, ' max val : ', maxval(tab(:,:,:)), 'bin : ', ibin
 
             else if (var(clast - 2:clast - 2) == 'n') then
@@ -421,7 +457,7 @@ contains
                   if (cr_names(i).eq.var(4:clast-3)) icr = i
                enddo
                tab(:,:,:) = cg%u(flind%crspcs(icr)%nbeg+ibin-1, RNG)
-               !print *, 'icr : ', icr, ' max val : ', maxval(tab(:,:,:)), 'bin : ', ibin
+               !print *, 'icr : ', icr, ' cgu : ', maxval(cg%u(flind%crspcs(icr)%nbeg+ibin-1, RNG)), 'bin : ', ibin
 
             else
                do i = 1, size(cr_names)

@@ -184,8 +184,8 @@ contains
 
                   u_cell = cg%u(:, i, j, k)
                   dgas = 0.0
-                  if (has_ion) dgas = dgas + cg%u(flind%ion%idn, i, j, k) !/ mp
-                  if (has_neu) dgas = dgas + cg%u(flind%neu%idn, i, j, k) !/ mH
+                  if (has_ion) dgas = dgas + cg%u(flind%ion%idn, i, j, k) / mp
+                  if (has_neu) dgas = dgas + cg%u(flind%neu%idn, i, j, k) / mH
                   sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
                   dgas = dgas * clight
 
@@ -280,16 +280,10 @@ contains
 
                            do i_sec = 1, ncrsp_sec
                            associate( cr_sec => cr_table(icr_sec(i_sec)) )
-                              ! print *, i_prim, icr_prim(i_prim)
-                              ! print *, i_sec, icr_sec(i_sec)
-                              ! print *, ' cr_prim : ', cr_prim
-                              ! print *, i_sec, 'cr_sec : ', cr_sec
-                              ! print *, cr_table(icr_sec(i_sec))
-                              ! print *, cr_table(icr_prim(i_prim))
-                              !stop
+
 
                               if (eCRSP(icr_sec(i_sec))) then
-                                 dcr_n = cr_sigma(cr_prim, cr_sec) * dgas * (cr_mass(i_prim)/cr_mass(i_sec))**(3-q_spc_all(:,i_prim))*u_cell(iarr_crspc2_n(cr_prim,:))
+                                 dcr_n = cr_sigma(cr_prim, cr_sec) * dgas * (cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))**(3-q_spc_all(:,icr_prim(i_prim)))*u_cell(iarr_crspc2_n(cr_prim,:))
                                  dcr_n = min(u_cell(iarr_crspc2_n(cr_prim,:)), dcr_n)  ! Don't decay more elements than available
                                  !print *, 'i_sec : ', i_sec
                                  !print *, 'u_cell n sec :', u_cell(iarr_crspc2_n(cr_sec,:))
@@ -300,7 +294,7 @@ contains
                                  usrc_cell(iarr_crspc2_n(cr_prim,:)) = usrc_cell(iarr_crspc2_n(cr_prim,:)) - dcr_n
                                  usrc_cell(iarr_crspc2_n(cr_sec,:)) = usrc_cell(iarr_crspc2_n(cr_sec,:)) + dcr_n
 
-                                 dcr_e = cr_sigma(cr_prim, cr_sec) * dgas *(cr_mass(i_prim)/cr_mass(i_sec))**(4-q_spc_all(:,i_prim))* u_cell(iarr_crspc2_e(cr_prim,:))
+                                 dcr_e = cr_sigma(cr_prim, cr_sec) * dgas *(cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))**(4-q_spc_all(:,icr_prim(i_prim)))* u_cell(iarr_crspc2_e(cr_prim,:))
                                  dcr_e = min(u_cell(iarr_crspc2_e(cr_prim,:)), dcr_e)  ! Don't decay more elements than available
 
                                  usrc_cell(iarr_crspc2_e(cr_prim,:)) = usrc_cell(iarr_crspc2_e(cr_prim,:)) - dcr_e
@@ -311,15 +305,29 @@ contains
                                     !print *, 'dcr_n : ', dcr_n
                                     !print *, 'dcr_e : ', dcr_e
                                  !endif
-                                 !print *, icr_sec(i_sec)
 
+                           !if (cr_sigma(cr_prim, cr_sec) .gt. 0.) then
+
+                           !   print *, i_prim, icr_prim(i_prim)
+                           !   print *, i_sec, icr_sec(i_sec)
+                           !   print *, ' cr_prim : ', cr_prim
+                           !   print *, 'cr_sec : ', cr_sec
+                           !   print *, 'cr_table prim: ' ,cr_table(icr_prim(i_prim))
+                           !   print *, 'cr_table sec : ',cr_table(icr_sec(i_sec))
+                           !   print *, 'sigma : ', cr_sigma(cr_prim, cr_sec)
+                           !   print *, 'prim mass : ', cr_mass(icr_prim(i_prim))
+                           !   print *, 'sec mass : ', cr_mass(icr_sec(i_sec))
+                           !print *, 'dcr_n : ', dcr_n
+                           !print *, 'dcr_e : ', dcr_e
+                           !endif
                               endif
                            end associate
                            enddo
+
                         endif
                      end associate
+                  !print *, icr_prim(i_prim)
                   enddo
-                  !stop
 
                   i_sec = cr_table(icr_Be10) !; i_sec_n = iarr_crspc2_n(i_sec,:) ; i_sec_e = iarr_crspc2_e(i_sec,:)
                   if (eCRSP(icr_Be10)) then
@@ -339,9 +347,10 @@ contains
                   do i_spc = 1, nspc
                      cg%u(iarr_crspc2_n(i_spc,:), i, j, k) = cg%u(iarr_crspc2_n(i_spc,:), i, j, k) + dt_doubled*usrc_cell(iarr_crspc2_n(i_spc,:))
                      cg%u(iarr_crspc2_e(i_spc,:), i, j, k) = cg%u(iarr_crspc2_e(i_spc,:), i, j, k) + dt_doubled*usrc_cell(iarr_crspc2_e(i_spc,:))
-                     !print *, 'usrc_cell n : ', usrc_cell(iarr_crspc2_n(i_spc,:))
-                     !print *, 'usrc_cell e : ', usrc_cell(iarr_crspc2_e(i_spc,:))
-                     !print *, 'dt_2 : ', dt_doubled
+                    ! print *, i_spc
+                    ! print *, 'usrc_cell n : ', usrc_cell(iarr_crspc2_n(i_spc,:))
+                    ! print *, 'usrc_cell e : ', usrc_cell(iarr_crspc2_e(i_spc,:))
+                    ! print *, 'dt_2 : ', dt_doubled
                      !if (maxval(usrc_cell(iarr_crspc2_n(i_spc,:))) .gt. 0.0) stop
                      !if (maxval(usrc_cell(iarr_crspc2_e(i_spc,:))) .gt. 0.0) stop
                   enddo

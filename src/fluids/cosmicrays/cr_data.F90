@@ -384,8 +384,8 @@ contains
       endif
       cr_sigma = cr_sigma * mbarn
       if (eCRSP(icr_Be10)) cr_tau(cr_table(icr_Be10)) = tau_Be10 * myr
-      print *, 'sigmas : ', cr_sigma
-      print *, shape(cr_sigma)
+      !print *, 'sigmas : ', cr_sigma
+      !print *, shape(cr_sigma)
       !stop
    end subroutine cr_species_tables
 
