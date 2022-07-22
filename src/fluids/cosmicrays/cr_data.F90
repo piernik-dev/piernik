@@ -97,7 +97,8 @@ module cr_data
    logical,                   allocatable, dimension(:)    :: cr_gpess           !< table of essentiality for grad_pcr calculation
    integer,                   allocatable, dimension(:)    :: icr_spc            !< table of cr_data indices for spectrally resolved CR species
    integer,                   allocatable, dimension(:)    :: iarr_spc           !< table of indices allowing to find spectrally resolved via icr_* (helpful for iarr_crspc)
-   integer                                                 :: i, iprim, isec
+   integer                                                 :: i, iprim, isec, icr
+   real,                      dimension(:), allocatable    :: rel_abound
 !<====Mass number and atomic number of nuclei species====>
 
    real, parameter :: m_H1   = 1.
@@ -271,6 +272,20 @@ contains
             isec=isec+1
 
          endif
+
+      enddo
+
+      allocate(rel_abound(ncrsp_auto))
+
+      rel_abound(:) = 0.
+
+      do icr = 1, ncrsp_auto
+        !print *, 'step icr :', icr
+         !if (icr == icr_E .and. ePRIM(icr) .and. eCRSP(icr))   rel_abound(icr) = 0
+         if (icr == icr_H1 .and. eH1(PRIM))  rel_abound(icr) = 1.
+         if (icr == icr_C12 .and. eC12(PRIM)) rel_abound(icr) = primary_C12
+         if (icr == icr_N14 .and. eN14(PRIM)) rel_abound(icr) = primary_N14
+         if (icr == icr_O16 .and. eO16(PRIM)) rel_abound(icr) = primary_O16
 
       enddo
 

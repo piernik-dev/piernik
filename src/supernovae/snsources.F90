@@ -197,19 +197,21 @@ contains
       use constants,        only: xdim, ydim, zdim
       use domain,           only: dom
       use grid_cont,        only: grid_container
-      use cr_data,          only: cr_index, cr_table, cr_mass, cr_primary, eCRSP, icr_H1, icr_C12, icr_N14, icr_O16
+      use cr_data,          only: cr_index, cr_table, cr_mass, cr_primary, eCRSP, icr_H1, icr_C12, icr_N14, icr_O16, rel_abound
       use initcosmicrays,   only: iarr_crn
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
-      use initcrspectrum,   only: cresp, cre_eff, smallcree, use_cresp
-      use initcosmicrays,   only: iarr_crspc_n, iarr_crspc_e
+      !use initcrspectrum,   only: cresp, cre_eff, smallcree, use_cresp, nspc
+      !use initcosmicrays,   only: iarr_crspc_n, iarr_crspc_e
+      use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc, iarr_crspc
+      use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff, use_cresp
 #endif /* CRESP */
 
       implicit none
 
       real, dimension(ndims), intent(in) :: pos
       real,                   intent(in) :: ampl
-      integer                            :: i, j, k, ipm, jpm
+      integer                            :: i, j, k, ipm, jpm, icr
       real                               :: decr, ysna
       real, dimension(ndims)             :: posr
       type(cg_list_element), pointer     :: cgl
@@ -251,23 +253,44 @@ contains
                   enddo
                   decr = decr * ampl
 
-                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_index(icr_H1 )),i,j,k) + decr
-                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_index(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12)) * cr_mass(cr_table(icr_C12)) * decr
-                  if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_index(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_index(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14)) * cr_mass(cr_table(icr_N14)) * decr
-                  if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_index(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_index(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16)) * cr_mass(cr_table(icr_O16)) * decr
 
 #ifdef CRESP
                   if (use_cresp) then
-                     e_tot_sn = decr * cre_eff
-                     if (e_tot_sn > smallcree) then
-                        cresp%n =  0.0;  cresp%e = 0.0
-                        call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn) !< injecting source spectrum scaled with e_tot_sn
-                        cg%u(iarr_crspc_n,i,j,k) = cg%u(iarr_crspc_n,i,j,k) + cresp%n   !< update, TODO need to talk to the team if this should be inside if-clause
-                        cg%u(iarr_crspc_e,i,j,k) = cg%u(iarr_crspc_e,i,j,k) + cresp%e   !< if outside, cresp%n and cresp%e needs to be zeroed
-                     endif
-                  endif
-#endif /* CRESP */
 
+!                     e_tot_sn = decr * cre_eff
+!                     if (e_tot_sn > smallcree) then!
+!                        cresp%n =  0.0;  cresp%e = 0.0
+!                        call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn) !< injecting source spectrum scaled with e_tot_sn
+!                        cg%u(iarr_crspc_n,i,j,k) = cg%u(iarr_crspc_n,i,j,k) + cresp%n   !< update, TODO need to talk to the team if this should be inside if-clause
+!                        cg%u(iarr_crspc_e,i,j,k) = cg%u(iarr_crspc_e,i,j,k) + cresp%e   !< if outside, cresp%n and cresp%e needs to be zeroed
+!                     endif
+!                  endif
+
+                    do icr = 1, nspc
+                        if (icr==icr_H1) e_tot_sn = cre_eff(icr) * decr
+                        if (e_tot_sn > smallcree .and. use_cresp) then
+!                         cresp%n = 1.e-4 ;  cresp%e = 1.e-2
+                            call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn, icr)
+                        !stop
+
+                            cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
+                            cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
+                        !print *, 'cresp n ' , cresp%n,  'cresp e ' , cresp%e
+                        !print *, 'i : ', i, ' j :', j
+                        !if (i == 29 .and. j == 29) then
+                           !print *, icr
+                           !print *, ' cresp%n ', rel_abound(icr)*cresp%n
+                           !print *, 'cresp%e ', rel_abound(icr)*cresp%e
+                           !endif
+                         endif
+                    enddo
+                  endif
+#else /* CRESP */
+               if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_index(icr_H1 )),i,j,k) + decr
+               if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_index(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12)) * cr_mass(cr_table(icr_C12)) * decr
+               if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_index(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_index(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14)) * cr_mass(cr_table(icr_N14)) * decr
+               if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_index(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_index(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16)) * cr_mass(cr_table(icr_O16)) * decr
+#endif /* CRESP */
                enddo
             enddo
          enddo

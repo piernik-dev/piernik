@@ -44,6 +44,7 @@ module initproblem
    real :: x0, y0, z0                                                        !< parameters for a single supernova exploding at t=0
    real, dimension(ndims) :: b_n, sn_pos
 
+
    namelist /PROBLEM_CONTROL/  d0, bxn, byn, bzn, x0, y0, z0, alpha, amp_cr, beta_cr
 
 contains
@@ -163,13 +164,23 @@ contains
       use shear,          only: qshear, omega
 #endif /* SHEAR */
 #ifdef COSM_RAYS
-      use initcosmicrays, only: gamma_cr_1, iarr_crn, iarr_crs
+      use initcosmicrays, only: gamma_cr_1, iarr_crn, iarr_crs, nspc
 #ifdef SN_SRC
       use snsources,      only: cr_sn
 #endif /* SN_SRC */
 #endif /* COSM_RAYS */
 
       implicit none
+
+
+      !print *, icr_prim
+      !print *, icr_sec
+      !stop
+        !print *, 'nspc : ', nspc
+        !print *, 'icr_H1 : ', icr_H1, ' ',eH1(PRIM)
+        !print *, 'icr_C12 : ', icr_C12, ' ',eC12(PRIM)
+        !print *, 'icr_N14 : ', icr_N14, ' ',eN14(PRIM)
+        !print *, 'icr_O16 : ', icr_O16, ' ',eO16(PRIM)
 
       class(component_fluid), pointer :: fl
       integer                         :: i, j, k
@@ -213,7 +224,9 @@ contains
                                      & emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 #endif /* !ISO */
 #ifdef COSM_RAYS
+#ifndef CRESP
                   cg%u(iarr_crn(1),i,j,k) = beta_cr * fl%cs2 * cg%u(fl%idn,i,j,k) / gamma_cr_1
+#endif /* CRESP */
 #endif /* COSM_RAYS */
                enddo
             enddo
