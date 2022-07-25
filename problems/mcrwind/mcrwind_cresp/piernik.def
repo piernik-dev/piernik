@@ -2,7 +2,7 @@
 #  define GLOBAL_FR_SPEED
 #endif
 
-#define ISO
+#undef ISO
 
 #define IONIZED
 

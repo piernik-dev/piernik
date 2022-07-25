@@ -281,9 +281,11 @@ contains
                            do i_sec = 1, ncrsp_sec
                            associate( cr_sec => cr_table(icr_sec(i_sec)) )
 
+                           ! **(3-q_spc_all(:,icr_prim(i_prim)))
+                           ! **(4-q_spc_all(:,icr_prim(i_prim)))
 
                               if (eCRSP(icr_sec(i_sec))) then
-                                 dcr_n = cr_sigma(cr_prim, cr_sec) * dgas * (cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))**(3-q_spc_all(:,icr_prim(i_prim)))*u_cell(iarr_crspc2_n(cr_prim,:))
+                                 dcr_n = cr_sigma(cr_prim, cr_sec) * dgas * (cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))*u_cell(iarr_crspc2_n(cr_prim,:))
                                  dcr_n = min(u_cell(iarr_crspc2_n(cr_prim,:)), dcr_n)  ! Don't decay more elements than available
                                  !print *, 'i_sec : ', i_sec
                                  !print *, 'u_cell n sec :', u_cell(iarr_crspc2_n(cr_sec,:))
@@ -294,7 +296,7 @@ contains
                                  usrc_cell(iarr_crspc2_n(cr_prim,:)) = usrc_cell(iarr_crspc2_n(cr_prim,:)) - dcr_n
                                  usrc_cell(iarr_crspc2_n(cr_sec,:)) = usrc_cell(iarr_crspc2_n(cr_sec,:)) + dcr_n
 
-                                 dcr_e = cr_sigma(cr_prim, cr_sec) * dgas *(cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))**(4-q_spc_all(:,icr_prim(i_prim)))* u_cell(iarr_crspc2_e(cr_prim,:))
+                                 dcr_e = cr_sigma(cr_prim, cr_sec) * dgas *(cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))* u_cell(iarr_crspc2_e(cr_prim,:))
                                  dcr_e = min(u_cell(iarr_crspc2_e(cr_prim,:)), dcr_e)  ! Don't decay more elements than available
 
                                  usrc_cell(iarr_crspc2_e(cr_prim,:)) = usrc_cell(iarr_crspc2_e(cr_prim,:)) - dcr_e

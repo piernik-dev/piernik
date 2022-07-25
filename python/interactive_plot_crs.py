@@ -106,6 +106,7 @@ plot_layer = options.avg_layer
 plot_ovlp = options.overlap_layer
 options.fontsize = int(options.fontsize)
 display_bin_no = False
+plot_CRisotope = False
 user_coords_provided = not options.coords_dflt == ""
 if user_coords_provided:
     try:
@@ -122,6 +123,8 @@ if user_coords_provided:
 par_epsilon = 1.0e-15
 f_run = True
 pf_initialized = False
+
+proton_field_names = ["cr_p+n01", "cr01", "cr1", "cr_p+"]
 
 # ------- Local functions -----------
 
@@ -165,6 +168,16 @@ def en_ratio(field, data):  # DEPRECATED (?)
             en_ratio = cree_data / cren_data
     return en_ratio
 
+def BC_ratio(field, data):  # Boron to Carbon
+    bin_nr = field.name[1][-2:]
+    for element in h5ds.field_list:
+        if search("cr_Be9n" + str(bin_nr.zfill(2)), str(element[1])) and search("cr_C12n" + str(bin_nr.zfill(2)), str(element[1])):
+            Bn_data = data["cr_Be9n" + str(bin_nr.zfill(2))]
+            # necessary to avoid FPEs
+            cren_data[cren_data <= par_epsilon**2] = par_epsilon
+            Cn_data = data["cr_C12n" + str(bin_nr.zfill(2))]
+            en_ratio = Bn_data / Cn_data
+    return BC_ratio
 
 def copy_field(field, data):
     field_name_to_copy = field.name[1][:].split("_")[0]
@@ -184,6 +197,16 @@ def add_cren_tot_to(h5_dataset):
         die("Failed to construct field 'cren_tot'")
     return h5_dataset
 
+def _total_cr_species_n(field, data):
+    global field_name_total_n
+    list_crn = []
+    for element in h5ds.field_list:
+        if search(field_name_total_n, str(element[1])):
+            list_crn.append(element[1])
+    CR_species_n_tot = data[str(list_crn[0])]
+    for element in list_crn[1:]:
+        CR_species_n_tot = CR_species_n_tot + data[element]
+    return CR_species_n_tot
 
 def add_cree_tot_to(h5_dataset):
     try:
@@ -197,10 +220,31 @@ def add_cree_tot_to(h5_dataset):
         die("Failed to construct field 'cree_tot'")
     return h5_dataset
 
+def add_total_n_to(h5_dataset, name):
+        global field_name_total_n
+        field_name_total_n = "cr_" + plot_field
+    #try:
+        if (h5ds.all_data()["cr_"+name+"n01"].units == "dimensionless"):
+            h5ds.add_field(("gdf", "cr_"+name+"n_tot"), units="", function=_total_cr_species_n,
+                           display_name="Total CR " + name + " number density", sampling_type="cell")
+        else:
+            h5ds.add_field(("gdf", "cr_"+name+"n_tot"), units="Msun/(Myr**2*pc)", function=_total_cr_species_n, display_name="Total CR "+name+" number density",
+                           dimensions=dimensions.energy / dimensions.volume, sampling_type="cell", take_log=True)
+         # TODO BUG units should be "1/(pc**3)"; fix it after fixing it in PIERNIK!
+    #except:
+        #die("Failed to construct field '" + name+ "n_tot'")
+        return h5_dataset
+
 
 def add_tot_fields(h5_dataset):
-    h5_dataset = add_cree_tot_to(h5_dataset)
-    h5_dataset = add_cren_tot_to(h5_dataset)
+    global plot_CRisotope
+    if (plot_field == "cree_tot" or plot_field == "cren_tot"):
+      print("add_tot_fields, plot_field is:", plot_field)
+      h5_dataset = add_cree_tot_to(h5_dataset)
+      h5_dataset = add_cren_tot_to(h5_dataset)
+    else:
+      #h5_dataset = add_total_n_to(h5_dataset, plot_field)
+      plot_CRisotope = True
     return h5_dataset
 
 
@@ -353,12 +397,13 @@ if f_run is True:
                        display_name=disp_name, dimensions=new_field_dimensions, sampling_type="cell")
         plot_field = new_field
 
-    try:
+    for proton_field in proton_field_names:
+      try:
         # WARNING - this makes field_max unitless
-        field_max = h5ds.find_max("cr01")[0].v
-    except:
-        # WARNING - this makes field_max unitless
-        field_max = h5ds.find_max("cr1")[0].v
+        field_max = h5ds.find_max(proton_field)[0].v
+        break
+      except:
+        print("MAX for proton field ",proton_field, " not found")
 
 # prepare limits for framebuffer
     # if (options.usr_width == 0.):
@@ -388,18 +433,20 @@ if f_run is True:
         slice_center[dim_map[slice_ax]] = slice_coord
 
 # construct framebuffer
+    frbuffer_plot_field = plot_field
+    #if (plot_CRisotope): frbuffer_plot_field = "cr_"+plot_field+"n_tot"
     if (slice_ax == "y"):
         frb = np_array(dsSlice.to_frb(width=frb_h, resolution=resolution,
-                       center=slice_center, height=frb_w)[plot_field])
+                       center=slice_center, height=frb_w)[frbuffer_plot_field])
         frb = rot90(frb)
     else:
         frb = np_array(dsSlice.to_frb(width=frb_w, resolution=resolution,
-                       center=slice_center, height=frb_h, periodic=False)[plot_field])
+                       center=slice_center, height=frb_h, periodic=False)[frbuffer_plot_field])
     if (not user_limits):
-        plot_max = h5ds.find_max(plot_field)[0]
+        plot_max = h5ds.find_max(frbuffer_plot_field)[0]
     if (not user_limits):
-        plot_min = h5ds.find_min(plot_field)[0]
-    plot_units = str(h5ds.all_data()[plot_field].units)
+        plot_min = h5ds.find_min(frbuffer_plot_field)[0]
+    plot_units = str(h5ds.all_data()[frbuffer_plot_field].units)
 
     if (user_limits is True):  # Overwrites previously found values
         plot_min = plot_user_min
@@ -420,7 +467,7 @@ if f_run is True:
         yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field, width=(dom_r[avail_dim[0]] + abs(
             dom_l[avail_dim[0]]), dom_r[avail_dim[1]] + abs(dom_l[avail_dim[1]])), center=slice_center)
     else:
-        yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field, width=(
+        yt_data_plot = yt.SlicePlot(h5ds, slice_ax, frbuffer_plot_field, width=(
             frb_w, frb_h), center=slice_center)
     yt_data_plot.set_font({'size': options.fontsize})
 
@@ -459,8 +506,8 @@ if f_run is True:
     if (plot_mag):
         yt_data_plot.annotate_magnetic_field(factor=32, scale=40)
 
-    yt_data_plot.set_cmap(field=plot_field, cmap=colormap_my)
-    yt_data_plot.set_zlim(plot_field, plot_min, plot_max)
+    yt_data_plot.set_cmap(field=frbuffer_plot_field, cmap=colormap_my)
+    yt_data_plot.set_zlim(frbuffer_plot_field, plot_min, plot_max)
 
     marker_l = ["x", "+", "*", "X", ".", "^", "v", "<", ">", "1"]
     m_size_l = [350, 500, 400, 400, 500, 350, 350, 350, 350, 500]
@@ -474,7 +521,7 @@ if f_run is True:
 
     crs_initialize(var_names, var_array)
 
-    mplot = yt_data_plot.plots[plot_field]
+    mplot = yt_data_plot.plots[frbuffer_plot_field]
 
     xticklabels = mplot.axes.xaxis.get_ticklabels()
     yticklabels = mplot.axes.yaxis.get_ticklabels()
@@ -503,15 +550,20 @@ if f_run is True:
         global click_coords, image_number, f_run, marker_index
 # ------------ preparing data and passing -------------------------
         position = h5ds.r[coords:coords]
+        fieldname = plot_field
+        if (fieldname[-3] == "e" or fieldname[-3] == "n"): fieldname = plot_field[0:-3]  # If just one bin is plotted on clickable field, strip the bin number + quantity from fieldname
+        print(fieldname, plot_field)
+        plot_field_click = frbuffer_plot_field
+
         if (plot_field[0:-2] != "en_ratio"):
             prtinfo(">>>>>>>>>>>>>>>>>>> Value of %s at point [%f, %f, %f] = %f " % (
-                plot_field, coords[0], coords[1], coords[2], position[plot_field]))
+                plot_field_click, coords[0], coords[1], coords[2], position[plot_field_click]))
         else:
-            prtinfo("Value of %s at point [%f, %f, %f] = %f " % (plot_field, coords[0], coords[1],
-                    coords[2], position["cree" + str(plot_field[-2:])] / position["cren" + str(plot_field[-2:])]))
+            prtinfo("Value of %s at point [%f, %f, %f] = %f " % (plot_field_click, coords[0], coords[1],
+                    coords[2], position["cree" + str(plot_field_click[-2:])] / position["cren" + str(plot_field_click[-2:])]))
             # once again appended - needed as ylimit for the plot
             plot_max = h5ds.find_max(
-                "cre" + plot_var + str(plot_field[-2:]))[0]
+                "cre" + plot_var + str(plot_field_click[-2:]))[0]
 
         btot = (position["mag_field_x"].v**2 + position["mag_field_y"].v **
                 2 + position["mag_field_z"].v**2)**0.5
@@ -562,9 +614,9 @@ if f_run is True:
 
                 for ind in range(1, ncrb + 1):
                     ecrs.append(
-                        float(mean(position['cree' + str(ind).zfill(2)][0].v)))
+                        float(mean(position[fieldname + 'e' + str(ind).zfill(2)][0].v)))
                     ncrs.append(
-                        float(mean(position['cren' + str(ind).zfill(2)][0].v)))
+                        float(mean(position[fieldname + 'n' + str(ind).zfill(2)][0].v)))
 
                 fig2, exit_code = crs_plot_main(
                     plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot, hide_axes=options.no_axes)
@@ -577,8 +629,8 @@ if f_run is True:
                     position = position = h5ds.r[[coords[0], dom_l[avail_dim[0]] + dl * j, coords[2]]: [
                         coords[0], dom_l[avail_dim[0]] + dl * j, coords[2]]]
                     for ind in range(1, ncrb + 1):
-                        ecrs.append(position['cree' + str(ind).zfill(2)][0].v)
-                        ncrs.append(position['cren' + str(ind).zfill(2)][0].v)
+                        ecrs.append(position['cr_' + fieldname + 'e' + str(ind).zfill(2)][0].v)
+                        ncrs.append(position['cr_' + fieldname + 'n' + str(ind).zfill(2)][0].v)
                     fig2, exit_code_tmp = crs_plot_main(
                         plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], i_plot=image_number, clean_plot=options.clean_plot, hide_axes=options.no_axes)
                     if (exit_code_tmp is False):
