@@ -109,13 +109,13 @@ contains
          !print *, 'values :', grad_pcr_cresp
       endif
 #endif /* CRESP */
-#ifdef ISO
-      return
-#endif /* ISO */
       usrc(:, iarr_all_en(flind%ion%pos)) = vx(:, flind%ion%pos) * grad_pcr
       !print *, 'grad_pcr_cresp', grad_pcr_cresp
 #ifdef CRESP
       usrc(:, iarr_all_mx(flind%ion%pos)) = grad_pcr_cresp
+#ifdef ISO
+      return
+#endif /* ISO */
       !print *, 'grad pcr cresp : ', grad_pcr_cresp
       usrc(:, iarr_all_en(flind%ion%pos)) = vx(:, flind%ion%pos) * grad_pcr_cresp !< BEWARE - check it
 #endif /* CRESP */

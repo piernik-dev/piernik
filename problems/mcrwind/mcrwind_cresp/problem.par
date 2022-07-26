@@ -35,7 +35,7 @@
 
  $OUTPUT_CONTROL
     problem_name = 'crwind'
-    run_id       = 'ts2'
+    run_id       = 'ts1'
     dt_hdf       = 1.0
     dt_res       = 0.0
     dt_log       = 1.0e-2
