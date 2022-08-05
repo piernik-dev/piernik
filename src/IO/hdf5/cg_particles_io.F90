@@ -143,10 +143,93 @@ contains
 
    end subroutine nbody_datafields
 
+   subroutine collect_intr1(pvar, cg, tabi1)
+
+      use grid_cont,      only: grid_container
+      use particle_types, only: particle
+
+      implicit none
+
+      character(len=*),              intent(in)    :: pvar
+      type(grid_container), pointer, intent(inout) :: cg
+
+      integer                                      :: cgnp
+      integer(kind=4), dimension(:), allocatable   :: tabi1
+      type(particle), pointer                      :: pset
+
+      cgnp = 0
+      select case (pvar)
+         case ('id')
+            pset => cg%pset%first
+            do while (associated(pset))
+               if (pset%pdata%phy) then
+                  cgnp = cgnp + 1
+                  tabi1(cgnp) = pset%pdata%pid
+               endif
+               pset => pset%nxt
+            enddo
+         case default
+      end select
+
+   end subroutine collect_intr1
+
+   subroutine collect_rank1(pvar, cg, tabr1)
+
+      use constants,      only: xdim, ydim, zdim
+      use grid_cont,      only: grid_container
+      use particle_types, only: particle
+
+      implicit none
+
+      character(len=*),              intent(in)    :: pvar
+      type(grid_container), pointer, intent(inout) :: cg
+
+      integer                                      :: cgnp
+      real, dimension(:), allocatable              :: tabr1
+      type(particle), pointer                      :: pset
+
+      cgnp = 0
+      pset => cg%pset%first
+      do while (associated(pset))
+         if (pset%pdata%phy) then
+            cgnp = cgnp + 1
+            select case (pvar)
+               case ('mass')
+                  tabr1(cgnp) = pset%pdata%mass
+               case ('energy')
+                  tabr1(cgnp) = pset%pdata%energy
+               case ('position_x')
+                  tabr1(cgnp) = pset%pdata%pos(xdim)
+               case ('position_y')
+                  tabr1(cgnp) = pset%pdata%pos(ydim)
+               case ('position_z')
+                  tabr1(cgnp) = pset%pdata%pos(zdim)
+               case ('velocity_x')
+                  tabr1(cgnp) = pset%pdata%vel(xdim)
+               case ('velocity_y')
+                  tabr1(cgnp) = pset%pdata%vel(ydim)
+               case ('velocity_z')
+                  tabr1(cgnp) = pset%pdata%vel(zdim)
+               case ('acceleration_x')
+                  tabr1(cgnp) = pset%pdata%acc(xdim)
+               case ('acceleration_y')
+                  tabr1(cgnp) = pset%pdata%acc(ydim)
+               case ('acceleration_z')
+                  tabr1(cgnp) = pset%pdata%acc(zdim)
+               case ('formation_time')
+                  tabr1(cgnp) = pset%pdata%tform
+               case ('dynamical_time')
+                  tabr1(cgnp) = pset%pdata%tdyn
+               case default
+            end select
+         endif
+         pset => pset%nxt
+      enddo
+
+   end subroutine collect_rank1
+
    subroutine collect_and_write_intr1(group_id, pvar, cg)
 
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
       use constants,      only: I_ONE
       use dataio_pub,     only: nproc_io, can_i_write, die
       use domain,         only: is_multicg
@@ -155,7 +238,6 @@ contains
       use MPIF,           only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD
       use MPIFUN,         only: MPI_Recv, MPI_Send
       use mpisetup,       only: master, FIRST, LAST, proc, err_mpi
-      use particle_types, only: particle
       use particle_utils, only: count_cg_particles
 
       implicit none
@@ -166,37 +248,15 @@ contains
 
       integer(kind=4)                              :: n_part
       integer(kind=8)                              :: gid
-      integer                                      :: cgnp, recnp
       integer(kind=4)                              :: ncg
       integer(kind=4), dimension(:), allocatable   :: tabi1, tabi2
-      type(cg_list_element), pointer               :: cgl
-      type(particle), pointer                      :: pset
 
       if (is_multicg) call die("[cg_particles_io:collect_and_write_intr1] several cg per processor not implemented yet")
       if (all(kind(group_id) /= [4, 8])) call die("[cg_particles_io:collect_and_write_intr1] HID_T doesn't fit to MPI_INTEGER8")
 
       n_part = count_cg_particles(cg)
       allocate(tabi1(n_part))
-      recnp = 0
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgnp = 0
-         select case (pvar)
-            case ('id')
-               pset => cgl%cg%pset%first
-               do while (associated(pset))
-                  if (pset%pdata%phy) then
-                     cgnp = cgnp + 1
-                     tabi1(recnp+cgnp) = pset%pdata%pid
-                  endif
-                  pset => pset%nxt
-               enddo
-            case default
-         end select
-         recnp = recnp+cgnp
-         cgl => cgl%nxt
-      enddo
+      if (n_part > 0) call collect_intr1(pvar, cg, tabi1)
 
       ! Not compatible with AMR or several cg per processor
       if (nproc_io == 1) then !perform serial write
@@ -235,9 +295,7 @@ contains
 
    subroutine collect_and_write_rank1(group_id, pvar, cg)
 
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, I_ONE
+      use constants,      only: I_ONE
       use dataio_pub,     only: nproc_io, can_i_write, die
       use domain,         only: is_multicg
       use grid_cont,      only: grid_container
@@ -245,7 +303,6 @@ contains
       use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD
       use MPIFUN,         only: MPI_Recv, MPI_Send
       use mpisetup,       only: master, FIRST, LAST, proc, err_mpi
-      use particle_types, only: particle
       use particle_utils, only: count_cg_particles
 
       implicit none
@@ -256,74 +313,15 @@ contains
 
       integer(kind=4)                              :: n_part
       integer(kind=8)                              :: gid
-      integer                                      :: cgnp, recnp, i
       integer(kind=4)                              :: ncg
       real, dimension(:), allocatable              :: tabr1, tabr2
-      type(cg_list_element), pointer               :: cgl
-      type(particle), pointer                      :: pset
 
       if (is_multicg) call die("[cg_particles_io:collect_and_write_rank1] several cg per processor not implemented yet")
       if (all(kind(group_id) /= [4, 8])) call die("[cg_particles_io:collect_and_write_rank1] HID_T doesn't fit to MPI_INTEGER8")
 
       n_part = count_cg_particles(cg)
       allocate(tabr1(n_part))
-      recnp = 0
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgnp = 0
-         pset => cgl%cg%pset%first
-         do while (associated(pset))
-            if (pset%pdata%phy) then
-               cgnp = cgnp + 1
-               select case (pvar)
-                  case ('mass')
-                     tabr1(recnp+cgnp) = pset%pdata%mass
-                     i=2
-                  case ('energy')
-                     tabr1(recnp+cgnp) = pset%pdata%energy
-                     i=3
-                  case ('position_x')
-                     tabr1(recnp+cgnp) = pset%pdata%pos(xdim)
-                     i=4
-                  case ('position_y')
-                     tabr1(recnp+cgnp) = pset%pdata%pos(ydim)
-                     i=5
-                  case ('position_z')
-                     tabr1(recnp+cgnp) = pset%pdata%pos(zdim)
-                     i=6
-                  case ('velocity_x')
-                     tabr1(recnp+cgnp) = pset%pdata%vel(xdim)
-                     i=7
-                  case ('velocity_y')
-                     tabr1(recnp+cgnp) = pset%pdata%vel(ydim)
-                     i=8
-                  case ('velocity_z')
-                     tabr1(recnp+cgnp) = pset%pdata%vel(zdim)
-                     i=9
-                  case ('acceleration_x')
-                     tabr1(recnp+cgnp) = pset%pdata%acc(xdim)
-                     i=10
-                  case ('acceleration_y')
-                     tabr1(recnp+cgnp) = pset%pdata%acc(ydim)
-                     i=11
-                  case ('acceleration_z')
-                     tabr1(recnp+cgnp) = pset%pdata%acc(zdim)
-                     i=12
-                  case ('formation_time')
-                     tabr1(recnp+cgnp) = pset%pdata%tform
-                     i=13
-                  case ('dynamical_time')
-                     tabr1(recnp+cgnp) = pset%pdata%tdyn
-                     i=14
-                  case default
-               end select
-            endif
-            pset => pset%nxt
-         enddo
-         recnp = recnp+cgnp
-         cgl => cgl%nxt
-      enddo
+      if (n_part > 0) call collect_rank1(pvar, cg, tabr1)
 
       ! Not compatible with AMR or several cg per processor
       if (nproc_io == 1) then !perform serial write
