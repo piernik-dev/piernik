@@ -689,7 +689,11 @@ contains
 
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
-         if (cg_desc%tot_cg_n *(ubound(hdf_vars, 1, kind=4) + I_ONE) > tag_ub) call die("[data_hdf5:write_cg_to_output] this MPI implementation has too low MPI_TAG_UB attribute")
+         if (cg_desc%tot_cg_n *(ubound(hdf_vars, 1, kind=4) &
+#ifdef NBODY_1FILE
+         &                + 2 * ubound(pdsets,   1, kind=4) &
+#endif /* NBODY_1FILE */
+         & + I_ONE) > tag_ub) call die("[data_hdf5:write_cg_to_output] this MPI implementation has too low MPI_TAG_UB attribute")
          do ncg = 1, cg_desc%tot_cg_n
             call ppp_main%start(wrdc1s_label, PPP_IO + PPP_CG)
             dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
@@ -729,7 +733,7 @@ contains
             !Serial write for particles
 #ifdef NBODY_1FILE
             if (is_multicg) call die("[data_hdf5:write_cg_to_output] multicg is not implemented for NBODY_1FILE")
-            call serial_nbody_datafields(cg_desc%pdset_id, gdf_translate(pdsets), ncg, cg_desc%cg_src_n(ncg), cg_desc%cg_src_p(ncg))
+            call serial_nbody_datafields(cg_desc%pdset_id, gdf_translate(pdsets), ncg, cg_desc%cg_src_n(ncg), cg_desc%cg_src_p(ncg), cg_desc%tot_cg_n)
 #endif /* NBODY_1FILE */
             call ppp_main%stop(wrdc1s_label, PPP_IO + PPP_CG)
          enddo

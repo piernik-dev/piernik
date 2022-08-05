@@ -143,23 +143,25 @@ contains
 
    end subroutine nbody_datafields
 
-   subroutine serial_nbody_datafields(group_id, pvars, ncg, cg_src_ncg, proc_ncg)
+   subroutine serial_nbody_datafields(group_id, pvars, ncg, cg_src_ncg, proc_ncg, tot_cg_n)
 
-      use hdf5, only: HID_T
+      use common_hdf5, only: hdf_vars
+      use hdf5,        only: HID_T
 
       implicit none
 
       integer(HID_T), dimension(:,:), intent(inout) :: group_id       !< File identifier
       character(len=*), dimension(:), intent(in)    :: pvars
-      integer(kind=4),                intent(in)    :: ncg, cg_src_ncg, proc_ncg
-      integer(kind=4)                               :: ivar
+      integer(kind=4),                intent(in)    :: ncg, cg_src_ncg, proc_ncg, tot_cg_n
+      integer(kind=4)                               :: ptag, ivar
 
       do ivar = lbound(pvars, 1, kind=4), ubound(pvars, 1, kind=4)
+         ptag = ncg + tot_cg_n * (ubound(hdf_vars, 1, kind=4) + 2*ivar)
          select case (pvars(ivar))
             case ('id')
-               call serial_write_intr1(group_id(ncg, ivar), pvars(ivar), ncg, cg_src_ncg, proc_ncg)
+               call serial_write_intr1(group_id(ncg, ivar), pvars(ivar), cg_src_ncg, proc_ncg, ptag)
             case default
-               call serial_write_rank1(group_id(ncg, ivar), pvars(ivar), ncg, cg_src_ncg, proc_ncg)
+               call serial_write_rank1(group_id(ncg, ivar), pvars(ivar), cg_src_ncg, proc_ncg, ptag)
          end select
       enddo
 
@@ -250,15 +252,14 @@ contains
 
    end subroutine collect_rank1
 
-   subroutine serial_write_intr1(group_id, pvar, ncg, cg_src_ncg, proc_ncg)
+   subroutine serial_write_intr1(group_id, pvar, cg_src_ncg, proc_ncg, ptag)
 
       use common_hdf5,    only: get_nth_cg
       use constants,      only: I_ONE
       use dataio_pub,     only: can_i_write, die
-      use domain,         only: is_multicg
       use grid_cont,      only: grid_container
       use hdf5,           only: HID_T
-      use MPIF,           only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIF,           only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD
       use MPIFUN,         only: MPI_Recv, MPI_Send
       use mpisetup,       only: master, FIRST, proc, err_mpi
       use particle_utils, only: count_cg_particles
@@ -267,15 +268,11 @@ contains
 
       integer(HID_T),              intent(inout) :: group_id       !< File identifier
       character(len=*),            intent(in)    :: pvar
-      integer(kind=4),             intent(in)    :: ncg, cg_src_ncg, proc_ncg
+      integer(kind=4),             intent(in)    :: cg_src_ncg, proc_ncg, ptag
 
       type(grid_container), pointer              :: cg
       integer(kind=4)                            :: n_part
-      integer(kind=8)                            :: gid
       integer(kind=4), dimension(:), allocatable :: tabi
-
-      if (is_multicg) call die("[cg_particles_io:collect_and_write_intr1] several cg per processor not implemented yet")
-      if (all(kind(group_id) /= [4, 8])) call die("[cg_particles_io:collect_and_write_intr1] HID_T doesn't fit to MPI_INTEGER8")
 
       if (proc_ncg == proc) then
          cg => get_nth_cg(cg_src_ncg)
@@ -284,41 +281,34 @@ contains
          if (n_part > 0) call collect_intr1(pvar, cg, tabi)
       endif
 
-      ! Not compatible with AMR or several cg per processor
-      ! perform serial write, write all cg, one by one
       if (master) then
          if (.not. can_i_write) call die("[cg_particles_io] Master can't write")
          if (proc_ncg /= proc) then
-            call MPI_Recv(n_part, I_ONE, MPI_INTEGER, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+            call MPI_Recv(n_part, I_ONE, MPI_INTEGER, proc_ncg, ptag-1, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
             allocate(tabi(n_part))
-            call MPI_Recv(tabi, n_part, MPI_INTEGER, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-            call MPI_Recv(gid, I_ONE, MPI_INTEGER8, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-            group_id = int(gid, kind=HID_T)
+            call MPI_Recv(tabi, n_part, MPI_INTEGER, proc_ncg, ptag, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
          endif
          if (n_part > 0) call write_nbody_h5_int_rank1(group_id, pvar, tabi)
          deallocate(tabi)
       else
          if (can_i_write) call die("[cg_particles_io] Slave can write")
          if (proc_ncg == proc) then
-            call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
-            call MPI_Send(tabi, n_part, MPI_INTEGER, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
-            gid = group_id
-            call MPI_Send(gid, I_ONE, MPI_INTEGER8, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
+            call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, ptag-1, MPI_COMM_WORLD, err_mpi)
+            call MPI_Send(tabi, n_part, MPI_INTEGER, FIRST, ptag, MPI_COMM_WORLD, err_mpi)
             deallocate(tabi)
          endif
       endif
 
    end subroutine serial_write_intr1
 
-   subroutine serial_write_rank1(group_id, pvar, ncg, cg_src_ncg, proc_ncg)
+   subroutine serial_write_rank1(group_id, pvar, cg_src_ncg, proc_ncg, ptag)
 
       use common_hdf5,    only: get_nth_cg
       use constants,      only: I_ONE
       use dataio_pub,     only: can_i_write, die
-      use domain,         only: is_multicg
       use grid_cont,      only: grid_container
       use hdf5,           only: HID_T
-      use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD
       use MPIFUN,         only: MPI_Recv, MPI_Send
       use mpisetup,       only: master, FIRST, proc, err_mpi
       use particle_utils, only: count_cg_particles
@@ -327,15 +317,11 @@ contains
 
       integer(HID_T),   intent(inout) :: group_id       !< File identifier
       character(len=*), intent(in)    :: pvar
-      integer(kind=4),  intent(in)    :: ncg, cg_src_ncg, proc_ncg
+      integer(kind=4),  intent(in)    :: cg_src_ncg, proc_ncg, ptag
 
       type(grid_container), pointer   :: cg
       integer(kind=4)                 :: n_part
-      integer(kind=8)                 :: gid
       real, dimension(:), allocatable :: tabr
-
-      if (is_multicg) call die("[cg_particles_io:collect_and_write_rank1] several cg per processor not implemented yet")
-      if (all(kind(group_id) /= [4, 8])) call die("[cg_particles_io:collect_and_write_rank1] HID_T doesn't fit to MPI_INTEGER8")
 
       if (proc_ncg == proc) then
          cg => get_nth_cg(cg_src_ncg)
@@ -344,26 +330,20 @@ contains
          if (n_part > 0) call collect_rank1(pvar, cg, tabr)
       endif
 
-      ! Not compatible with AMR or several cg per processor
-      ! perform serial write, write all cg, one by one
       if (master) then
          if (.not. can_i_write) call die("[cg_particles_io] Master can't write")
          if (proc_ncg /= proc) then
-            call MPI_Recv(n_part, I_ONE, MPI_INTEGER, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+            call MPI_Recv(n_part, I_ONE, MPI_INTEGER, proc_ncg, ptag-1, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
             allocate(tabr(n_part))
-            call MPI_Recv(tabr, n_part, MPI_DOUBLE_PRECISION, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-            call MPI_Recv(gid, I_ONE, MPI_INTEGER8, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-            group_id = int(gid, kind=HID_T)
+            call MPI_Recv(tabr, n_part, MPI_DOUBLE_PRECISION, proc_ncg, ptag, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
          endif
          if (n_part > 0) call write_nbody_h5_rank1(group_id, pvar, tabr)
          deallocate(tabr)
       else
          if (can_i_write) call die("[cg_particles_io] Slave can write")
          if (proc_ncg == proc) then
-            call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
-            call MPI_Send(tabr, n_part, MPI_DOUBLE_PRECISION, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
-            gid = group_id
-            call MPI_Send(gid, I_ONE, MPI_INTEGER8, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
+            call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, ptag-1, MPI_COMM_WORLD, err_mpi)
+            call MPI_Send(tabr, n_part, MPI_DOUBLE_PRECISION, FIRST, ptag, MPI_COMM_WORLD, err_mpi)
             deallocate(tabr)
          endif
       endif
