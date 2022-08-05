@@ -291,10 +291,10 @@ contains
       phy = .false.
       count2 = 0
       do cdim = xdim, zdim
-         if (pos(cdim) < dom%edge(cdim,LO)) then
+         if (pos(cdim) < dom%edge(cdim, LO)) then
             count2 = count2 + 1
             tmp(cdim) = LO
-         else if (pos(cdim) > dom%edge(cdim,HI)) then
+         else if (pos(cdim) > dom%edge(cdim, HI)) then
             count2 = count2 + 1
             tmp(cdim) = HI
          else
@@ -362,23 +362,18 @@ contains
       real, optional,         intent(in) :: tform
       real, optional,         intent(in) :: tdyn
       type(cg_list_element), pointer     :: cgl
-      logical                            :: in,phy,out
+      logical                            :: in, phy, out
       real                               :: tform1, tdyn1
+
+      tform1 = 0.0
+      tdyn1  = 0.0
+      if (present(tform)) tform1 = tform
+      if (present(tdyn))  tdyn1  = tdyn
 
       cgl => leaves%first
       do while (associated(cgl))
          call is_part_in_cg(cgl%cg, pos, in, phy, out)
          if (phy .or. out) then
-            if (present(tform)) then
-               tform1 = tform
-            else
-               tform1 = 0.0
-            endif
-            if (present(tdyn)) then
-               tdyn1 = tdyn
-            else
-               tdyn1 = 0.0
-            endif
             call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform1, tdyn1)
             return
          endif
