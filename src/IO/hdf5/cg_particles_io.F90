@@ -34,18 +34,18 @@ module cg_particles_io
    implicit none
 
    private
-   public :: dump_cg_particles, init_nbody_hdf5, pdsets, nbody_datafields
+   public :: dump_cg_particles, init_nbody_hdf5, nbody_datafields
 
    character(len=dsetnamelen), dimension(*), parameter  :: pvarn = ['ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz', 'tfor', 'tdyn']
    logical,                    dimension(size(pvarn))   :: pvarl = .false.
-   character(len=dsetnamelen), allocatable, dimension(:) ::pdsets
 
 contains
 
    subroutine init_nbody_hdf5(pvars)
 
-      use dataio_pub, only: msg, warn
-      use mpisetup,   only: master
+      use common_hdf5, only: pdsets
+      use dataio_pub,  only: msg, warn
+      use mpisetup,    only: master
 
       implicit none
 
@@ -53,7 +53,7 @@ contains
       integer                                              :: ie, il, k, l
       logical                                              :: var_found
 
-      k=0
+      k = 0
       do il = lbound(pvars, 1), ubound(pvars, 1)
          if (len(trim(pvars(il))) == 0) cycle
          var_found = .false.
@@ -64,7 +64,7 @@ contains
                k = k + 1
             endif
          enddo
-         if (.not.var_found) then
+         if (.not. var_found) then
             write(msg,'(2a)')'[particles_io_hdf5::init_nbody_hdf5]: unknown particle var: ', pvars(il)
             if (master) call warn(msg)
          endif
@@ -72,12 +72,12 @@ contains
 
 #ifdef NBODY_1FILE
       allocate(pdsets(k))
-      l=1
+      l = 1
       do il = lbound(pvars, 1), ubound(pvars, 1)
          if (len(trim(pvars(il))) == 0) cycle
-         if (pvarl(il) .eqv. .true.) then
-            pdsets(l)=pvars(il)
-            l=l+1
+         if (pvarl(il)) then
+            pdsets(l) = pvars(il)
+            l = l + 1
          endif
       enddo
 #endif /* NBODY_1FILE */

@@ -137,7 +137,7 @@ contains
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 #ifdef NBODY_1FILE
-      use cg_particles_io,  only: pdsets
+      use common_hdf5,      only: pdsets
       use data_hdf5,        only: gdf_translate
 #endif /* NBODY_1FILE */
 
@@ -214,7 +214,8 @@ contains
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 #ifdef NBODY_1FILE
-      use cg_particles_io,  only: pdsets, nbody_datafields
+      use cg_particles_io,  only: nbody_datafields
+      use common_hdf5,      only: pdsets
       use data_hdf5,        only: gdf_translate
       use MPIF,             only: MPI_INTEGER, MPI_INTEGER8
       use mpisetup,         only: LAST
@@ -1009,7 +1010,7 @@ contains
       use named_array_list, only: qna, wna
       use overlap,          only: is_overlap
 #ifdef NBODY_1FILE
-      use cg_particles_io,  only: pdsets
+      use common_hdf5,      only: pdsets
       use data_hdf5,        only: gdf_translate
       use read_attr,        only: read_attribute
       use particle_types,   only: particle

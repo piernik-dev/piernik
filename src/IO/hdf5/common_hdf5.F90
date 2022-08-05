@@ -47,9 +47,10 @@ module common_hdf5
         create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output, enable_all_hdf_var, &
         dump_announcement, dump_announce_time
 #ifdef NBODY_1FILE
-   public ::  part_types_gname, part_gname, st_gname
-#endif /* NBODY_1FILE */
+   public ::  part_types_gname, part_gname, st_gname, pdsets
 
+   character(len=dsetnamelen), allocatable, dimension(:) :: pdsets
+#endif /* NBODY_1FILE */
    character(len=dsetnamelen), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
    logical,                    allocatable, dimension(:), protected :: hdf_vars_avail
    character(len=*), parameter :: d_gname = "domains", base_d_gname = "base", d_fc_aname = "fine_count", &
@@ -327,10 +328,6 @@ contains
 !> \brief Procedure finalizing HDF5 module
 
    subroutine cleanup_hdf5
-
-#ifdef NBODY_1FILE
-      use cg_particles_io, only: pdsets
-#endif /* NBODY_1FILE */
 
       implicit none
 

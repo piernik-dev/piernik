@@ -646,7 +646,8 @@ contains
       use mpisetup,    only: master, FIRST, proc, err_mpi, tag_ub
       use ppp,         only: ppp_main
 #ifdef NBODY_1FILE
-      use cg_particles_io, only: pdsets, nbody_datafields
+      use cg_particles_io, only: nbody_datafields
+      use common_hdf5,     only: pdsets
       use domain,          only: is_multicg
       use MPIF,            only: MPI_INTEGER, MPI_INTEGER8
       use mpisetup,        only: LAST
@@ -935,15 +936,14 @@ contains
 
 #ifdef NBODY_1FILE
    subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)
+
+      use common_hdf5, only: pdsets
 #else /* !NBODY_1FILE */
    subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail)
-#endif /* !NBODY_1FILE */
 
+#endif /* !NBODY_1FILE */
       use common_hdf5, only: create_empty_cg_dataset, hdf_vars, hdf_vars_avail, O_OUT
       use hdf5,        only: HID_T, HSIZE_T
-#ifdef NBODY_1FILE
-      use cg_particles_io, only: pdsets
-#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -951,25 +951,26 @@ contains
       integer(kind=4), dimension(:), intent(in) :: cg_n_b
       integer(kind=4), dimension(:), intent(in) :: cg_n_o
       logical(kind=4),               intent(in) :: Z_avail
-
-      integer :: i
 #ifdef NBODY_1FILE
       integer(kind=8)                           :: n_part
       integer(HID_T),                intent(in) :: st_g_id
 #endif /* NBODY_1FILE */
+
+      integer :: i
 
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
          if (.not.hdf_vars_avail(i)) cycle
          call create_empty_cg_dataset(cg_g_id, gdf_translate(hdf_vars(i)), int(cg_n_b, kind=HSIZE_T), Z_avail, O_OUT)
       enddo
 
-      if (.false.) i = size(cg_n_o) ! suppress compiler warning
-
 #ifdef NBODY_1FILE
       do i = lbound(pdsets,1), ubound(pdsets,1)
-         call create_empty_cg_dataset(st_g_id, gdf_translate(pdsets(i)), (/n_part/), Z_avail, O_OUT)
+         call create_empty_cg_dataset(st_g_id, gdf_translate(pdsets(i)), [n_part], Z_avail, O_OUT)
       enddo
 #endif /* NBODY_1FILE */
+
+      return
+      if (.false.) i = size(cg_n_o) ! suppress compiler warning
 
    end subroutine create_empty_cg_datasets_in_output
 
