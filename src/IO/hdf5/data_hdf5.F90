@@ -697,7 +697,7 @@ contains
 
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
-         if (cg_desc%tot_cg_n *(ubound(hdf_vars,1, kind=4) + I_ONE) > tag_ub) call die("[data_hdf5:write_cg_to_output] this MPI implementation has too low MPI_TAG_UB attribute")
+         if (cg_desc%tot_cg_n *(ubound(hdf_vars, 1, kind=4) + I_ONE) > tag_ub) call die("[data_hdf5:write_cg_to_output] this MPI implementation has too low MPI_TAG_UB attribute")
          do ncg = 1, cg_desc%tot_cg_n
             call ppp_main%start(wrdc1s_label, PPP_IO + PPP_CG)
             dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
@@ -706,8 +706,8 @@ contains
             if (master) then
                if (.not. can_i_write) call die("[data_hdf5:write_cg_to_output] Master can't write")
 
-               ip = lbound(hdf_vars,1) - 1
-               do i = lbound(hdf_vars,1, kind=4), ubound(hdf_vars,1, kind=4)
+               ip = lbound(hdf_vars, 1) - 1
+               do i = lbound(hdf_vars, 1, kind=4), ubound(hdf_vars, 1, kind=4)
                   if (.not.hdf_vars_avail(i)) cycle
                   ip = ip + 1
                   if (cg_desc%cg_src_p(ncg) == proc) then
@@ -727,7 +727,7 @@ contains
                if (can_i_write) call die("[data_hdf5:write_cg_to_output] Slave can write")
                if (cg_desc%cg_src_p(ncg) == proc) then
                   cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-                  do i = lbound(hdf_vars,1, kind=4), ubound(hdf_vars,1, kind=4)
+                  do i = lbound(hdf_vars, 1, kind=4), ubound(hdf_vars, 1, kind=4)
                      if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                      if (.not.hdf_vars_avail(i)) cycle
                      call MPI_Send(data_dbl(1,1,1), size(data_dbl, kind=4), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, MPI_COMM_WORLD, err_mpi)
@@ -735,33 +735,28 @@ contains
                endif
             endif
             !Serial write for particles
+#ifdef NBODY_1FILE
+            n_part = count_all_particles()
+            if (n_part > 0) then
+               if (is_multicg) call die("[data_hdf5:write_cg_to_output] multicg is not implemented for NBODY_1FILE")
+               do i = lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
+                  tmp(:) = 0
+                  id = 0
+                  if (master) tmp(:) = cg_desc%pdset_id(ncg, i)
+                  if (kind(id) == 4) then
+                     call MPI_Scatter(tmp, 1, MPI_INTEGER, id, 1, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
+                  else if (kind(id) == 8) then
+                     call MPI_Scatter(tmp, 1, MPI_INTEGER8, id, 1, MPI_INTEGER8, FIRST, MPI_COMM_WORLD, err_mpi)
+                  else
+                     call die("[data_hdf5:write_cg_to_output] no recognized kind of HID_T")
+                  endif
+                  cg => get_nth_cg(cg_desc%cg_src_n(ncg))
+                  call nbody_datafields(id, gdf_translate(pdsets(i)), cg)
+               enddo
+            endif
+#endif /* NBODY_1FILE */
             call ppp_main%stop(wrdc1s_label, PPP_IO + PPP_CG)
          enddo
-#ifdef NBODY_1FILE
-         n_part = count_all_particles()
-         if (n_part .gt. 0) then
-            if (is_multicg) call die("[data_hdf5:write_cg_to_output] multicg is not implemented for NBODY_1FILE")
-            do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
-               tmp(:) = 0
-               id=0
-               if (master) then
-                  tmp(:) = cg_desc%pdset_id(:, i)
-               endif
-               if (kind(id) == 4) then
-                  call MPI_Scatter(tmp, 1, MPI_INTEGER, id, 1, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
-               else if (kind(id) == 8) then
-                  call MPI_Scatter(tmp, 1, MPI_INTEGER8, id, 1, MPI_INTEGER8, FIRST, MPI_COMM_WORLD, err_mpi)
-               else
-                  call die("[data_hdf5:write_cg_to_output] no recognized kind of HID_T")
-               endif
-               if (master) then
-                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
-               else
-                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
-               endif
-            enddo
-         endif
-#endif /* NBODY_1FILE */
       else ! perform parallel write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
          if (can_i_write) then
@@ -791,9 +786,9 @@ contains
 
 #ifdef NBODY_1FILE
                n_part = count_all_particles()
-               if (n_part .gt. 0) then
+               if (n_part > 0) then
                   do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
-                     call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), n_part)
+                     call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), cg)
                   enddo
                endif
 #endif /* NBODY_1FILE */

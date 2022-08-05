@@ -345,31 +345,32 @@ contains
                endif
             endif
             call ppp_main%stop(wrcg1s_label, PPP_IO + PPP_CG)
-         enddo
 #ifdef NBODY_1FILE
-         n_part = count_all_particles()
-         if (n_part .gt. 0) then
-            do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
-               tmp(:) = 0
-               id=0
-               if (master) then
-                  tmp(:) = cg_desc%pdset_id(:, i)
-               endif
-               if (kind(id) == 4) then
-                  call MPI_Scatter(tmp, 1, MPI_INTEGER, id, 1, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
-               else if (kind(id) == 8) then
-                  call MPI_Scatter(tmp, 1, MPI_INTEGER8, id, 1, MPI_INTEGER8, FIRST, MPI_COMM_WORLD, err_mpi)
-               else
-                  call die("[restart_hdf5_v2:write_cg_to_restart] no recognized kind of HID_T")
-               endif
-               if (master) then
-                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
-               else
-                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
-               endif
-            enddo
-         endif
+            n_part = count_all_particles()
+            if (n_part > 0) then
+               do i = lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
+                  tmp(:) = 0
+                  id = 0
+                  if (master) then
+                     tmp(:) = cg_desc%pdset_id(ncg, i)
+                  endif
+                  if (kind(id) == 4) then
+                     call MPI_Scatter(tmp, 1, MPI_INTEGER, id, 1, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
+                  else if (kind(id) == 8) then
+                     call MPI_Scatter(tmp, 1, MPI_INTEGER8, id, 1, MPI_INTEGER8, FIRST, MPI_COMM_WORLD, err_mpi)
+                  else
+                     call die("[restart_hdf5_v2:write_cg_to_restart] no recognized kind of HID_T")
+                  endif
+                  cg => get_nth_cg(cg_desc%cg_src_n(ncg))
+                  if (master) then
+                     call nbody_datafields(id, gdf_translate(pdsets(i)), cg)
+                  else
+                     call nbody_datafields(id, gdf_translate(pdsets(i)), cg)
+                  endif
+               enddo
+            endif
 #endif /* NBODY_1FILE */
+         enddo
       else ! perform parallel write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
          if (can_i_write) then
@@ -406,9 +407,10 @@ contains
 
 #ifdef NBODY_1FILE
                n_part = count_all_particles()
-               if (n_part .gt. 0) then
-                  do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
-                     call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), n_part)
+               cg => get_nth_cg(cg_desc%cg_src_n(ncg))
+               if (n_part > 0) then
+                  do i = lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
+                     call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), cg)
                   enddo
                endif
 #endif /* NBODY_1FILE */

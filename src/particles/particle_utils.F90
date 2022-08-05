@@ -39,7 +39,7 @@ module particle_utils
 
    private
    public :: max_pvel_1d, add_part_in_proper_cg, print_all_particles, is_part_in_cg, npf
-   public :: max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom, count_all_particles, global_count_all_particles, part_leave_cg
+   public :: max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom, count_cg_particles, count_all_particles, global_count_all_particles, part_leave_cg
 
    real    :: tot_angmom           !< angular momentum of set of the particles
    real    :: tot_energy           !< total energy of set of the particles
@@ -573,6 +573,25 @@ contains
       ind = ind + npf
 
    end function collect_single_part_fields
+
+   integer(kind=4) function count_cg_particles(cg) result(n_part)
+
+      use grid_cont,      only: grid_container
+      use particle_types, only: particle
+
+      implicit none
+
+      type(grid_container), pointer, intent(inout) :: cg
+      type(particle),       pointer                :: pset
+
+      n_part = 0
+      pset => cg%pset%first
+      do while (associated(pset))
+         if (pset%pdata%phy) n_part = n_part + 1
+      pset => pset%nxt
+      enddo
+
+   end function count_cg_particles
 
    integer(kind=4) function count_all_particles() result(pcount)
 
