@@ -646,7 +646,7 @@ contains
       use mpisetup,    only: master, FIRST, proc, err_mpi, tag_ub
       use ppp,         only: ppp_main
 #ifdef NBODY_1FILE
-      use cg_particles_io, only: nbody_datafields
+      use cg_particles_io, only: nbody_datafields, serial_nbody_datafields
       use common_hdf5,     only: pdsets
       use domain,          only: is_multicg
       use MPIF,            only: MPI_INTEGER, MPI_INTEGER8
@@ -751,7 +751,7 @@ contains
                      call die("[data_hdf5:write_cg_to_output] no recognized kind of HID_T")
                   endif
                   cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-                  call nbody_datafields(id, gdf_translate(pdsets(i)), cg)
+                  call serial_nbody_datafields(id, gdf_translate(pdsets(i)), cg)
                enddo
             endif
 #endif /* NBODY_1FILE */

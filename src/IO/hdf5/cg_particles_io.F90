@@ -34,7 +34,7 @@ module cg_particles_io
    implicit none
 
    private
-   public :: dump_cg_particles, init_nbody_hdf5, nbody_datafields
+   public :: dump_cg_particles, init_nbody_hdf5, nbody_datafields, serial_nbody_datafields
 
    character(len=dsetnamelen), dimension(*), parameter  :: pvarn = ['ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz', 'tfor', 'tdyn']
    logical,                    dimension(size(pvarn))   :: pvarl = .false.
@@ -136,12 +136,32 @@ contains
 
       select case (pvar)
          case ('id')
-            call collect_and_write_intr1(group_id, pvar, cg)
+            call parallel_write_intr1(group_id, pvar, cg)
          case default
-            call collect_and_write_rank1(group_id, pvar, cg)
+            call parallel_write_rank1(group_id, pvar, cg)
       end select
 
    end subroutine nbody_datafields
+
+   subroutine serial_nbody_datafields(group_id, pvar, cg)
+
+      use grid_cont, only: grid_container
+      use hdf5,      only: HID_T
+
+      implicit none
+
+      integer(HID_T),                intent(inout) :: group_id       !< File identifier
+      character(len=*),              intent(in)    :: pvar
+      type(grid_container), pointer, intent(inout) :: cg
+
+      select case (pvar)
+         case ('id')
+            call serial_write_intr1(group_id, pvar, cg)
+         case default
+            call serial_write_rank1(group_id, pvar, cg)
+      end select
+
+   end subroutine serial_nbody_datafields
 
    subroutine collect_intr1(pvar, cg, tabi1)
 
@@ -228,10 +248,10 @@ contains
 
    end subroutine collect_rank1
 
-   subroutine collect_and_write_intr1(group_id, pvar, cg)
+   subroutine serial_write_intr1(group_id, pvar, cg)
 
       use constants,      only: I_ONE
-      use dataio_pub,     only: nproc_io, can_i_write, die
+      use dataio_pub,     only: can_i_write, die
       use domain,         only: is_multicg
       use grid_cont,      only: grid_container
       use hdf5,           only: HID_T
@@ -259,44 +279,39 @@ contains
       if (n_part > 0) call collect_intr1(pvar, cg, tabi1)
 
       ! Not compatible with AMR or several cg per processor
-      if (nproc_io == 1) then !perform serial write
-         ! write all cg, one by one
-         do ncg = FIRST, LAST
-            if (master) then
-               if (.not. can_i_write) call die("[cg_particles_io] Master can't write")
-               if (ncg == proc) then
-                  call write_nbody_h5_int_rank1(group_id, pvar, tabi1)
-               else
-                  call MPI_Recv(n_part, I_ONE, MPI_INTEGER, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-                  allocate(tabi2(n_part))
-                  call MPI_Recv(tabi2, n_part, MPI_INTEGER, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-                  call MPI_Recv(gid, I_ONE, MPI_INTEGER8, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-                  group_id = int(gid, kind=HID_T)
-                  call write_nbody_h5_int_rank1(group_id, pvar, tabi2)
-                  deallocate(tabi2)
-               endif
+      ! perform serial write, write all cg, one by one
+      do ncg = FIRST, LAST
+         if (master) then
+            if (.not. can_i_write) call die("[cg_particles_io] Master can't write")
+            if (ncg == proc) then
+               call write_nbody_h5_int_rank1(group_id, pvar, tabi1)
             else
-               if (can_i_write) call die("[cg_particles_io] Slave can write")
-               if (ncg == proc) then
-                  call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
-                  call MPI_Send(tabi1, n_part, MPI_INTEGER, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
-                  gid = group_id
-                  call MPI_Send(gid, I_ONE, MPI_INTEGER8, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
-               endif
+               call MPI_Recv(n_part, I_ONE, MPI_INTEGER, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               allocate(tabi2(n_part))
+               call MPI_Recv(tabi2, n_part, MPI_INTEGER, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               call MPI_Recv(gid, I_ONE, MPI_INTEGER8, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               group_id = int(gid, kind=HID_T)
+               call write_nbody_h5_int_rank1(group_id, pvar, tabi2)
+               deallocate(tabi2)
             endif
-         enddo
-      else
-         call write_nbody_h5_int_rank1(group_id, pvar, tabi1)
-      endif
-
+         else
+            if (can_i_write) call die("[cg_particles_io] Slave can write")
+            if (ncg == proc) then
+               call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
+               call MPI_Send(tabi1, n_part, MPI_INTEGER, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
+               gid = group_id
+               call MPI_Send(gid, I_ONE, MPI_INTEGER8, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
+            endif
+         endif
+      enddo
       deallocate(tabi1)
 
-   end subroutine collect_and_write_intr1
+   end subroutine serial_write_intr1
 
-   subroutine collect_and_write_rank1(group_id, pvar, cg)
+   subroutine serial_write_rank1(group_id, pvar, cg)
 
       use constants,      only: I_ONE
-      use dataio_pub,     only: nproc_io, can_i_write, die
+      use dataio_pub,     only: can_i_write, die
       use domain,         only: is_multicg
       use grid_cont,      only: grid_container
       use hdf5,           only: HID_T
@@ -324,39 +339,94 @@ contains
       if (n_part > 0) call collect_rank1(pvar, cg, tabr1)
 
       ! Not compatible with AMR or several cg per processor
-      if (nproc_io == 1) then !perform serial write
-         ! write all cg, one by one
-         do ncg = FIRST, LAST
-            if (master) then
-               if (.not. can_i_write) call die("[cg_particles_io] Master can't write")
-               if (ncg == proc) then
-                  call write_nbody_h5_rank1(group_id, pvar, tabr1)
-               else
-                  call MPI_Recv(n_part, I_ONE, MPI_INTEGER, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-                  allocate(tabr2(n_part))
-                  call MPI_Recv(tabr2, n_part, MPI_DOUBLE_PRECISION, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-                  call MPI_Recv(gid, I_ONE, MPI_INTEGER8, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-                  group_id = int(gid, kind=HID_T)
-                  call write_nbody_h5_rank1(group_id, pvar, tabr2)
-                  deallocate(tabr2)
-               endif
+      ! perform serial write, write all cg, one by one
+      do ncg = FIRST, LAST
+         if (master) then
+            if (.not. can_i_write) call die("[cg_particles_io] Master can't write")
+            if (ncg == proc) then
+               call write_nbody_h5_rank1(group_id, pvar, tabr1)
             else
-               if (can_i_write) call die("[cg_particles_io] Slave can write")
-               if (ncg == proc) then
-                  call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
-                  call MPI_Send(tabr1, n_part, MPI_DOUBLE_PRECISION, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
-                  gid = group_id
-                  call MPI_Send(gid, I_ONE, MPI_INTEGER8, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
-               endif
+               call MPI_Recv(n_part, I_ONE, MPI_INTEGER, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               allocate(tabr2(n_part))
+               call MPI_Recv(tabr2, n_part, MPI_DOUBLE_PRECISION, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               call MPI_Recv(gid, I_ONE, MPI_INTEGER8, ncg, ncg, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               group_id = int(gid, kind=HID_T)
+               call write_nbody_h5_rank1(group_id, pvar, tabr2)
+               deallocate(tabr2)
             endif
-         enddo
-      else ! perform parallel write
-         call write_nbody_h5_rank1(group_id, pvar, tabr1)
-      endif
-
+         else
+            if (can_i_write) call die("[cg_particles_io] Slave can write")
+            if (ncg == proc) then
+               call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
+               call MPI_Send(tabr1, n_part, MPI_DOUBLE_PRECISION, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
+               gid = group_id
+               call MPI_Send(gid, I_ONE, MPI_INTEGER8, FIRST, ncg, MPI_COMM_WORLD, err_mpi)
+            endif
+         endif
+      enddo
       deallocate(tabr1)
 
-   end subroutine collect_and_write_rank1
+   end subroutine serial_write_rank1
+
+   subroutine parallel_write_intr1(group_id, pvar, cg)
+
+      use dataio_pub,     only: die
+      use domain,         only: is_multicg
+      use grid_cont,      only: grid_container
+      use hdf5,           only: HID_T
+      use particle_utils, only: count_cg_particles
+
+      implicit none
+
+      integer(HID_T),                intent(inout) :: group_id       !< File identifier
+      character(len=*),              intent(in)    :: pvar
+      type(grid_container), pointer, intent(inout) :: cg
+
+      integer(kind=4)                              :: n_part
+      integer(kind=4), dimension(:), allocatable   :: tabi
+
+      if (is_multicg) call die("[cg_particles_io:collect_and_write_intr1] several cg per processor not implemented yet")
+      if (all(kind(group_id) /= [4, 8])) call die("[cg_particles_io:collect_and_write_intr1] HID_T doesn't fit to MPI_INTEGER8")
+
+      n_part = count_cg_particles(cg)
+      if (n_part == 0) return
+
+      allocate(tabi(n_part))
+      call collect_intr1(pvar, cg, tabi)
+      call write_nbody_h5_int_rank1(group_id, pvar, tabi)
+      deallocate(tabi)
+
+   end subroutine parallel_write_intr1
+
+   subroutine parallel_write_rank1(group_id, pvar, cg)
+
+      use dataio_pub,     only: die
+      use domain,         only: is_multicg
+      use grid_cont,      only: grid_container
+      use hdf5,           only: HID_T
+      use particle_utils, only: count_cg_particles
+
+      implicit none
+
+      integer(HID_T),                intent(inout) :: group_id       !< File identifier
+      character(len=*),              intent(in)    :: pvar
+      type(grid_container), pointer, intent(inout) :: cg
+
+      integer(kind=4)                              :: n_part
+      real, dimension(:), allocatable              :: tabr
+
+      if (is_multicg) call die("[cg_particles_io:collect_and_write_rank1] several cg per processor not implemented yet")
+      if (all(kind(group_id) /= [4, 8])) call die("[cg_particles_io:collect_and_write_rank1] HID_T doesn't fit to MPI_INTEGER8")
+
+      n_part = count_cg_particles(cg)
+      if (n_part == 0) return
+
+      allocate(tabr(n_part))
+      call collect_rank1(pvar, cg, tabr)
+      call write_nbody_h5_rank1(group_id, pvar, tabr)
+      deallocate(tabr)
+
+   end subroutine parallel_write_rank1
 
    subroutine write_nbody_h5_int_rank1(group_id, vvar, tab)
 
