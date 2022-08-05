@@ -651,7 +651,6 @@ contains
       use domain,          only: is_multicg
       use MPIF,            only: MPI_INTEGER, MPI_INTEGER8
       use mpisetup,        only: LAST
-      use particle_utils,  only: count_all_particles
 #endif /* NBODY_1FILE */
 
       implicit none
@@ -672,7 +671,6 @@ contains
       real, dimension(:,:,:),          pointer             :: data_dbl ! double precision buffer (internal default, single precision buffer is the plotfile output default, overridable by h5_64bit)
       type(cg_output)                                      :: cg_desc
 #ifdef NBODY_1FILE
-      integer(kind=4)                                      :: n_part
       integer(HID_T)                                       :: id
       integer(HID_T), dimension(LAST+1)                    :: tmp
 #endif /* NBODY_1FILE */
@@ -736,23 +734,20 @@ contains
             endif
             !Serial write for particles
 #ifdef NBODY_1FILE
-            n_part = count_all_particles()
-            if (n_part > 0) then
-               if (is_multicg) call die("[data_hdf5:write_cg_to_output] multicg is not implemented for NBODY_1FILE")
-               do i = lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
-                  tmp(:) = 0
-                  id = 0
-                  if (master) tmp(:) = cg_desc%pdset_id(ncg, i)
-                  if (kind(id) == 4) then
-                     call MPI_Scatter(tmp, 1, MPI_INTEGER, id, 1, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
-                  else if (kind(id) == 8) then
-                     call MPI_Scatter(tmp, 1, MPI_INTEGER8, id, 1, MPI_INTEGER8, FIRST, MPI_COMM_WORLD, err_mpi)
-                  else
-                     call die("[data_hdf5:write_cg_to_output] no recognized kind of HID_T")
-                  endif
-                  call serial_nbody_datafields(id, gdf_translate(pdsets(i)), ncg, cg_desc%cg_src_n(ncg), cg_desc%cg_src_p(ncg))
-               enddo
-            endif
+            if (is_multicg) call die("[data_hdf5:write_cg_to_output] multicg is not implemented for NBODY_1FILE")
+            do i = lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
+               tmp(:) = 0
+               id = 0
+               if (master) tmp(:) = cg_desc%pdset_id(ncg, i)
+               if (kind(id) == 4) then
+                  call MPI_Scatter(tmp, 1, MPI_INTEGER, id, 1, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
+               else if (kind(id) == 8) then
+                  call MPI_Scatter(tmp, 1, MPI_INTEGER8, id, 1, MPI_INTEGER8, FIRST, MPI_COMM_WORLD, err_mpi)
+               else
+                  call die("[data_hdf5:write_cg_to_output] no recognized kind of HID_T")
+               endif
+               call serial_nbody_datafields(id, gdf_translate(pdsets(i)), ncg, cg_desc%cg_src_n(ncg), cg_desc%cg_src_p(ncg))
+            enddo
 #endif /* NBODY_1FILE */
             call ppp_main%stop(wrdc1s_label, PPP_IO + PPP_CG)
          enddo
@@ -784,12 +779,9 @@ contains
                enddo
 
 #ifdef NBODY_1FILE
-               n_part = count_all_particles()
-               if (n_part > 0) then
-                  do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
-                     call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), cg)
-                  enddo
-               endif
+               do i = lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
+                  call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), cg)
+               enddo
 #endif /* NBODY_1FILE */
 
                cgl => cgl%nxt
