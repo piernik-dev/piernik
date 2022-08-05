@@ -648,7 +648,6 @@ contains
 #ifdef NBODY_1FILE
       use cg_particles_io, only: nbody_datafields, serial_nbody_datafields
       use common_hdf5,     only: pdsets
-      use domain,          only: is_multicg
 #endif /* NBODY_1FILE */
 
       implicit none
@@ -732,7 +731,6 @@ contains
             endif
             !Serial write for particles
 #ifdef NBODY_1FILE
-            if (is_multicg) call die("[data_hdf5:write_cg_to_output] multicg is not implemented for NBODY_1FILE")
             call serial_nbody_datafields(cg_desc%pdset_id, gdf_translate(pdsets), ncg, cg_desc%cg_src_n(ncg), cg_desc%cg_src_p(ncg), cg_desc%tot_cg_n)
 #endif /* NBODY_1FILE */
             call ppp_main%stop(wrdc1s_label, PPP_IO + PPP_CG)
