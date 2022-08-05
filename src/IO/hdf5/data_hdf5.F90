@@ -750,8 +750,7 @@ contains
                   else
                      call die("[data_hdf5:write_cg_to_output] no recognized kind of HID_T")
                   endif
-                  cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-                  call serial_nbody_datafields(id, gdf_translate(pdsets(i)), cg)
+                  call serial_nbody_datafields(id, gdf_translate(pdsets(i)), ncg, cg_desc%cg_src_n(ncg), cg_desc%cg_src_p(ncg))
                enddo
             endif
 #endif /* NBODY_1FILE */
