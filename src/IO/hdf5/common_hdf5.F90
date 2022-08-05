@@ -865,11 +865,10 @@ contains
       use MPIFUN,       only: MPI_Allgather, MPI_Recv, MPI_Send
       use mpisetup,     only: FIRST, LAST, master, err_mpi, piernik_MPI_Bcast
 #ifdef NBODY_1FILE
-      use constants,      only: I_FIVE, I_SIX
-      use particle_utils, only: count_all_particles
-      use star_formation, only: pid_gen
+      use constants,    only: I_FIVE, I_SIX
+      !use particle_utils, only: count_all_particles
 #else /* !NBODY_1FILE */
-      use constants,      only: I_ZERO
+      use constants,    only: I_ZERO
 #endif /* NBODY_1FILE */
 
       implicit none
@@ -933,7 +932,8 @@ contains
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_o           !< list of grid dimensions with external guardcells from all cgs/procs
       integer(kind=8),  dimension(:,:), pointer     :: cg_off           !< list of offsets from all cgs/procs
 #ifdef NBODY_1FILE
-      integer(kind=8),  pointer                      :: cg_npart, cg_pid_max
+      integer(kind=8),  dimension(:),   pointer     :: cg_npart         !< list of particle count from all cgs/procs
+      integer(kind=8),  dimension(:),   pointer     :: cg_pid_max       !< list of maximum particle id from all cgs/procs
 #endif /* NBODY_1FILE */
 
       !>
@@ -948,9 +948,6 @@ contains
 
       type(gdf_root_datasets_t)                     :: rd
       type(gdf_parameters_t)                        :: gdf_sp
-#ifdef NBODY_1FILE
-      integer(kind=8)                               :: n_part, pid_max
-#endif /* NBODY_1FILE */
 
       ! Create a new file and initialize it
 
@@ -1021,16 +1018,21 @@ contains
          ! Do not assume that the master knows all the lists
          do p = FIRST, LAST
             allocate(cg_rl(cg_n(p)), cg_n_b(cg_n(p), ndims), cg_off(cg_n(p), ndims))
+#ifdef NBODY_1FILE
+            allocate(cg_npart(cg_n(p)), cg_pid_max(cg_n(p)))
+#endif /* NBODY_1FILE */
             nullify(dbuf)
             if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, cg_n(p), ndims))
             nullify(cg_n_o)
             if (otype == O_RES) allocate(cg_n_o(cg_n(p), ndims))
             if (p == FIRST) then
-               call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
+               call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, &
 #ifdef NBODY_1FILE
-               n_part = count_all_particles()
-               pid_max = pid_gen
+!               n_part = count_all_particles()
+!               pid_max = pid_gen
+               & cg_npart, cg_pid_max, &
 #endif /* NBODY_1FILE */
+               & dbuf, otype)
             else
                call MPI_Recv(cg_rl,  size(cg_rl, kind=4),  MPI_INTEGER,  p, tag,         MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                call MPI_Recv(cg_n_b, size(cg_n_b, kind=4), MPI_INTEGER,  p, tag+I_ONE,   MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
@@ -1038,10 +1040,10 @@ contains
                if (otype == O_OUT) &
                   & call MPI_Recv(dbuf,   size(dbuf, kind=4),   MPI_REAL8,    p, tag+I_THREE, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                if (otype == O_RES) &
-                    & call MPI_Recv(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  p, tag+I_FOUR,  MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+                  & call MPI_Recv(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  p, tag+I_FOUR,  MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
 #ifdef NBODY_1FILE
-               call MPI_Recv(n_part, I_ONE, MPI_INTEGER, p, tag+I_FIVE, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-               call MPI_Recv(pid_max, I_ONE, MPI_INTEGER, p, tag+I_SIX, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               call MPI_Recv(cg_npart,   size(cg_npart,   kind=4), MPI_INTEGER8, p, tag+I_FIVE, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               call MPI_Recv(cg_pid_max, size(cg_pid_max, kind=4), MPI_INTEGER8, p, tag+I_SIX,  MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
 #endif /* NBODY_1FILE */
             endif
 
@@ -1051,17 +1053,12 @@ contains
 #ifdef NBODY_1FILE
                call h5gcreate_f(cg_g_id, part_gname, part_g_id, error) ! create "/data/grid_%08d/particles
                call h5gcreate_f(part_g_id, st_gname, st_g_id, error) ! create "/data/grid_%08d/particles/stars"
-               allocate(cg_npart)
-               cg_npart = n_part
-               allocate(cg_pid_max)
-               cg_pid_max = pid_max
 
-               if (int(cg_npart, kind=4) /= cg_npart) call die("[common_hdf5:write_to_hdf5_v2] cg_npart needs to be 64-bit")
-               if (int(cg_pid_max, kind=4) /= pid_max) call die("[common_hdf5:write_to_hdf5_v2] pid_max needs to be 64-bit")
+               if (int(cg_npart(g),   kind=4) /= cg_npart(g))   call die("[common_hdf5:write_to_hdf5_v2] cg_npart needs to be 64-bit")
+               if (int(cg_pid_max(g), kind=4) /= cg_pid_max(g)) call die("[common_hdf5:write_to_hdf5_v2] pid_max needs to be 64-bit")
 
-               call create_attribute(st_g_id, "n_part", [ int(cg_npart, kind=4) ])  ! create "/data/grid_%08d/particles/stars/stars/n_part"
-               call create_attribute(st_g_id, "pid_max", [ int(cg_pid_max, kind=4) ])  ! create "/data/grid_%08d/particles/stars/stars/pid_max"
-               deallocate(cg_npart, cg_pid_max)
+               call create_attribute(st_g_id, "n_part",  [ int(cg_npart(g),   kind=4) ])  ! create "/data/grid_%08d/particles/stars/n_part"
+               call create_attribute(st_g_id, "pid_max", [ int(cg_pid_max(g), kind=4) ])  ! create "/data/grid_%08d/particles/stars/pid_max"
 #endif /* NBODY_1FILE */
 
                call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                ! create "/data/grid_%08d/level"
@@ -1086,9 +1083,7 @@ contains
                   rd%grid_left_index(:,indx) = cg_off(g,:)
                   rd%grid_parent_id(indx)     = -1
 #ifdef NBODY_1FILE
-                  if (int(n_part, kind=4) /= n_part) call die("[common_hdf5:write_to_hdf5_v2] n_part needs to be 64-bit")
-
-                  rd%grid_particle_count(1,indx) = int(n_part, kind=4)
+                  rd%grid_particle_count(1,indx) = int(cg_npart(g), kind=4)
 #else /* !NBODY_1FILE */
                   rd%grid_particle_count(1,indx) = I_ZERO
 #endif /* NBODY_1FILE */
@@ -1098,7 +1093,7 @@ contains
                   & call die("[common_hdf5:write_to_hdf5_v2] large offsets require better treatment")
 
 #ifdef NBODY_1FILE
-               call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail, n_part, st_g_id) !!!!!
+               call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail, cg_npart(g), st_g_id) !!!!!
                call h5gclose_f(st_g_id, error)
                call h5gclose_f(part_g_id, error)
 #else /* !NBODY_1FILE */
@@ -1109,6 +1104,9 @@ contains
             enddo
 
             deallocate(cg_rl, cg_n_b, cg_off)
+#ifdef NBODY_1FILE
+            deallocate(cg_npart, cg_pid_max)
+#endif /* NBODY_1FILE */
             if (associated(dbuf)) deallocate(dbuf)
             if (associated(cg_n_o)) deallocate(cg_n_o)
          enddo
@@ -1155,21 +1153,27 @@ contains
          call rd%cleanup()
       else ! send all the necessary information to the master
          allocate(cg_rl(leaves%cnt), cg_n_b(leaves%cnt, ndims), cg_off(leaves%cnt, ndims))
+#ifdef NBODY_1FILE
+         allocate(cg_npart(leaves%cnt), cg_pid_max(leaves%cnt))
+#endif /* NBODY_1FILE */
          nullify(dbuf)
          if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, leaves%cnt, ndims))
          nullify(cg_n_o)
          if (otype == O_RES) allocate(cg_n_o(leaves%cnt, ndims))
-         call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
+         call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, &
+#ifdef NBODY_1FILE
+         & cg_npart, cg_pid_max, &
+#endif /* NBODY_1FILE */
+         & dbuf, otype)
          call MPI_Send(cg_rl,  size(cg_rl, kind=4),  MPI_INTEGER,  FIRST, tag,         MPI_COMM_WORLD, err_mpi)
          call MPI_Send(cg_n_b, size(cg_n_b, kind=4), MPI_INTEGER,  FIRST, tag+I_ONE,   MPI_COMM_WORLD, err_mpi)
          call MPI_Send(cg_off, size(cg_off, kind=4), MPI_INTEGER8, FIRST, tag+I_TWO,   MPI_COMM_WORLD, err_mpi)
          if (otype == O_OUT) call MPI_Send(dbuf,   size(dbuf, kind=4),   MPI_REAL8,    FIRST, tag+I_THREE, MPI_COMM_WORLD, err_mpi)
          if (otype == O_RES) call MPI_Send(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  FIRST, tag+I_FOUR,  MPI_COMM_WORLD, err_mpi)
 #ifdef NBODY_1FILE
-         n_part = count_all_particles()
-         call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, tag+I_FIVE, MPI_COMM_WORLD, err_mpi)
-         pid_max = pid_gen
-         call MPI_Send(pid_max, I_ONE, MPI_INTEGER, FIRST, tag+I_SIX, MPI_COMM_WORLD, err_mpi)
+         call MPI_Send(cg_npart,   size(cg_npart,   kind=4), MPI_INTEGER8, FIRST, tag+I_FIVE, MPI_COMM_WORLD, err_mpi)
+         call MPI_Send(cg_pid_max, size(cg_pid_max, kind=4), MPI_INTEGER8, FIRST, tag+I_SIX,  MPI_COMM_WORLD, err_mpi)
+         deallocate(cg_npart, cg_pid_max)
 #endif /* NBODY_1FILE */
          deallocate(cg_rl, cg_n_b, cg_off)
          if (associated(dbuf)) deallocate(dbuf)
@@ -1208,11 +1212,19 @@ contains
 !! The loop here has to match the loop in get_nth_cg!
 !>
 
-   subroutine collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
+   subroutine collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, &
+#ifdef NBODY_1FILE
+               & cg_npart, cg_pid_max, &
+#endif /* NBODY_1FILE */
+               & dbuf, otype)
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use constants, only: LO, HI, I_ONE
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: LO, HI, I_ONE
+#ifdef NBODY_1FILE
+      use particle_utils, only: count_cg_particles
+      use star_formation, only: pid_gen
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -1220,6 +1232,10 @@ contains
       integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_b           !< list of n_b from all cgs/procs
       integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_o           !< list of grid dimensions with external guardcells from all cgs/procs
       integer(kind=8), dimension(:,:),   pointer, intent(inout) :: cg_off           !< list of offsets from all cgs/procs with respect to level offset (lose level offset in the restart)
+#ifdef NBODY_1FILE
+      integer(kind=8), dimension(:),     pointer, intent(inout) :: cg_npart         !< list of particle count from all cgs/procs
+      integer(kind=8), dimension(:),     pointer, intent(inout) :: cg_pid_max       !< list of maximum particle id from all cgs/procs
+#endif /* NBODY_1FILE */
       real(kind=8),    dimension(:,:,:), pointer, intent(inout) :: dbuf
       integer(kind=4),                            intent(in)    :: otype            !< Output type (restart, data)
 
@@ -1232,6 +1248,10 @@ contains
          cg_rl (g   ) = int(cgl%cg%l%id, kind=4)
          cg_n_b(g, :) = cgl%cg%n_b(:)
          cg_off(g, :) = cgl%cg%my_se(:, LO) - cgl%cg%l%off(:)
+#ifdef NBODY_1FILE
+         cg_npart(g)  = count_cg_particles(cgl%cg)
+         cg_pid_max(g) = pid_gen
+#endif /* NBODY_1FILE */
          if (otype == O_OUT) then
             dbuf(cg_le, g, :)  = cgl%cg%fbnd(:, LO)
             dbuf(cg_re, g, :)  = cgl%cg%fbnd(:, HI)
