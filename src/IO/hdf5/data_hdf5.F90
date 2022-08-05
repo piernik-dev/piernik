@@ -649,8 +649,6 @@ contains
       use cg_particles_io, only: nbody_datafields, serial_nbody_datafields
       use common_hdf5,     only: pdsets
       use domain,          only: is_multicg
-      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8
-      use mpisetup,        only: LAST
 #endif /* NBODY_1FILE */
 
       implicit none
@@ -670,10 +668,6 @@ contains
       type(cg_list_element),           pointer             :: cgl
       real, dimension(:,:,:),          pointer             :: data_dbl ! double precision buffer (internal default, single precision buffer is the plotfile output default, overridable by h5_64bit)
       type(cg_output)                                      :: cg_desc
-#ifdef NBODY_1FILE
-      integer(HID_T)                                       :: id
-      integer(HID_T), dimension(LAST+1)                    :: tmp
-#endif /* NBODY_1FILE */
       character(len=*), parameter :: wrdc_label = "IO_write_data_v2_cg", wrdc1s_label = "IO_write_data_v2_1cg_(serial)", wrdc1p_label = "IO_write_data_v2_1cg_(parallel)"
 
       call ppp_main%start(wrdc_label, PPP_IO)
@@ -735,19 +729,7 @@ contains
             !Serial write for particles
 #ifdef NBODY_1FILE
             if (is_multicg) call die("[data_hdf5:write_cg_to_output] multicg is not implemented for NBODY_1FILE")
-            do i = lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
-               tmp(:) = 0
-               id = 0
-               if (master) tmp(:) = cg_desc%pdset_id(ncg, i)
-               if (kind(id) == 4) then
-                  call MPI_Scatter(tmp, 1, MPI_INTEGER, id, 1, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
-               else if (kind(id) == 8) then
-                  call MPI_Scatter(tmp, 1, MPI_INTEGER8, id, 1, MPI_INTEGER8, FIRST, MPI_COMM_WORLD, err_mpi)
-               else
-                  call die("[data_hdf5:write_cg_to_output] no recognized kind of HID_T")
-               endif
-               call serial_nbody_datafields(id, gdf_translate(pdsets(i)), ncg, cg_desc%cg_src_n(ncg), cg_desc%cg_src_p(ncg))
-            enddo
+            call serial_nbody_datafields(cg_desc%pdset_id, gdf_translate(pdsets), ncg, cg_desc%cg_src_n(ncg), cg_desc%cg_src_p(ncg))
 #endif /* NBODY_1FILE */
             call ppp_main%stop(wrdc1s_label, PPP_IO + PPP_CG)
          enddo

@@ -143,22 +143,25 @@ contains
 
    end subroutine nbody_datafields
 
-   subroutine serial_nbody_datafields(group_id, pvar, ncg, cg_src_ncg, proc_ncg)
+   subroutine serial_nbody_datafields(group_id, pvars, ncg, cg_src_ncg, proc_ncg)
 
       use hdf5, only: HID_T
 
       implicit none
 
-      integer(HID_T),   intent(inout) :: group_id       !< File identifier
-      character(len=*), intent(in)    :: pvar
-      integer(kind=4),  intent(in)    :: ncg, cg_src_ncg, proc_ncg
+      integer(HID_T), dimension(:,:), intent(inout) :: group_id       !< File identifier
+      character(len=*), dimension(:), intent(in)    :: pvars
+      integer(kind=4),                intent(in)    :: ncg, cg_src_ncg, proc_ncg
+      integer(kind=4)                               :: ivar
 
-      select case (pvar)
-         case ('id')
-            call serial_write_intr1(group_id, pvar, ncg, cg_src_ncg, proc_ncg)
-         case default
-            call serial_write_rank1(group_id, pvar, ncg, cg_src_ncg, proc_ncg)
-      end select
+      do ivar = lbound(pvars, 1, kind=4), ubound(pvars, 1, kind=4)
+         select case (pvars(ivar))
+            case ('id')
+               call serial_write_intr1(group_id(ncg, ivar), pvars(ivar), ncg, cg_src_ncg, proc_ncg)
+            case default
+               call serial_write_rank1(group_id(ncg, ivar), pvars(ivar), ncg, cg_src_ncg, proc_ncg)
+         end select
+      enddo
 
    end subroutine serial_nbody_datafields
 
