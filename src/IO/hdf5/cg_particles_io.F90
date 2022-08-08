@@ -159,9 +159,9 @@ contains
          ptag = ncg + tot_cg_n * (ubound(hdf_vars, 1, kind=4) + 2*ivar)
          select case (pvars(ivar))
             case ('id')
-               call serial_write_intr1(group_id(ncg, ivar), pvars(ivar), cg_src_ncg, proc_ncg, ptag)
+               call serial_write_intr1(group_id, ncg, ivar, pvars(ivar), cg_src_ncg, proc_ncg, ptag)
             case default
-               call serial_write_rank1(group_id(ncg, ivar), pvars(ivar), cg_src_ncg, proc_ncg, ptag)
+               call serial_write_rank1(group_id, ncg, ivar, pvars(ivar), cg_src_ncg, proc_ncg, ptag)
          end select
       enddo
 
@@ -252,7 +252,7 @@ contains
 
    end subroutine collect_rank1
 
-   subroutine serial_write_intr1(group_id, pvar, cg_src_ncg, proc_ncg, ptag)
+   subroutine serial_write_intr1(group_id, ncg, ivar, pvar, cg_src_ncg, proc_ncg, ptag)
 
       use common_hdf5,    only: get_nth_cg
       use constants,      only: I_ONE
@@ -266,13 +266,13 @@ contains
 
       implicit none
 
-      integer(HID_T),              intent(inout) :: group_id       !< File identifier
-      character(len=*),            intent(in)    :: pvar
-      integer(kind=4),             intent(in)    :: cg_src_ncg, proc_ncg, ptag
+      integer(HID_T), dimension(:,:), intent(inout) :: group_id       !< group identifiers
+      character(len=*),               intent(in)    :: pvar
+      integer(kind=4),                intent(in)    :: ncg, ivar, cg_src_ncg, proc_ncg, ptag
 
-      type(grid_container), pointer              :: cg
-      integer(kind=4)                            :: n_part
-      integer(kind=4), dimension(:), allocatable :: tabi
+      type(grid_container), pointer                 :: cg
+      integer(kind=4)                               :: n_part
+      integer(kind=4), dimension(:), allocatable    :: tabi
 
       if (proc_ncg == proc) then
          cg => get_nth_cg(cg_src_ncg)
@@ -288,7 +288,7 @@ contains
             allocate(tabi(n_part))
             call MPI_Recv(tabi, n_part, MPI_INTEGER, proc_ncg, ptag, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
          endif
-         if (n_part > 0) call write_nbody_h5_int_rank1(group_id, pvar, tabi)
+         if (n_part > 0) call write_nbody_h5_int_rank1(group_id(ncg, ivar), pvar, tabi)
          deallocate(tabi)
       else
          if (can_i_write) call die("[cg_particles_io] Slave can write")
@@ -301,7 +301,7 @@ contains
 
    end subroutine serial_write_intr1
 
-   subroutine serial_write_rank1(group_id, pvar, cg_src_ncg, proc_ncg, ptag)
+   subroutine serial_write_rank1(group_id, ncg, ivar, pvar, cg_src_ncg, proc_ncg, ptag)
 
       use common_hdf5,    only: get_nth_cg
       use constants,      only: I_ONE
@@ -315,13 +315,13 @@ contains
 
       implicit none
 
-      integer(HID_T),   intent(inout) :: group_id       !< File identifier
-      character(len=*), intent(in)    :: pvar
-      integer(kind=4),  intent(in)    :: cg_src_ncg, proc_ncg, ptag
+      integer(HID_T), dimension(:,:), intent(inout) :: group_id       !< group identifiers
+      character(len=*),               intent(in)    :: pvar
+      integer(kind=4),                intent(in)    :: ncg, ivar, cg_src_ncg, proc_ncg, ptag
 
-      type(grid_container), pointer   :: cg
-      integer(kind=4)                 :: n_part
-      real, dimension(:), allocatable :: tabr
+      type(grid_container), pointer                 :: cg
+      integer(kind=4)                               :: n_part
+      real, dimension(:), allocatable               :: tabr
 
       if (proc_ncg == proc) then
          cg => get_nth_cg(cg_src_ncg)
@@ -337,7 +337,7 @@ contains
             allocate(tabr(n_part))
             call MPI_Recv(tabr, n_part, MPI_DOUBLE_PRECISION, proc_ncg, ptag, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
          endif
-         if (n_part > 0) call write_nbody_h5_rank1(group_id, pvar, tabr)
+         if (n_part > 0) call write_nbody_h5_rank1(group_id(ncg, ivar), pvar, tabr)
          deallocate(tabr)
       else
          if (can_i_write) call die("[cg_particles_io] Slave can write")
