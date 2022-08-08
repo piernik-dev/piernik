@@ -373,11 +373,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          call is_part_in_cg(cgl%cg, pos, in, phy, out)
-         if (phy .or. out) then
-            call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform1, tdyn1)
-            return
-         endif
-
+         if (phy .or. out) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform1, tdyn1)
          cgl => cgl%nxt
       enddo
 
