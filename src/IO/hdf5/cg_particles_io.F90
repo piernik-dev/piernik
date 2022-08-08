@@ -353,7 +353,6 @@ contains
    subroutine parallel_write_intr1(group_id, pvar, cg)
 
       use dataio_pub,     only: die
-      use domain,         only: is_multicg
       use grid_cont,      only: grid_container
       use hdf5,           only: HID_T
       use particle_utils, only: count_cg_particles
@@ -367,7 +366,6 @@ contains
       integer(kind=4)                              :: n_part
       integer(kind=4), dimension(:), allocatable   :: tabi
 
-      if (is_multicg) call die("[cg_particles_io:collect_and_write_intr1] several cg per processor not implemented yet")
       if (all(kind(group_id) /= [4, 8])) call die("[cg_particles_io:collect_and_write_intr1] HID_T doesn't fit to MPI_INTEGER8")
 
       n_part = count_cg_particles(cg)
@@ -383,7 +381,6 @@ contains
    subroutine parallel_write_rank1(group_id, pvar, cg)
 
       use dataio_pub,     only: die
-      use domain,         only: is_multicg
       use grid_cont,      only: grid_container
       use hdf5,           only: HID_T
       use particle_utils, only: count_cg_particles
@@ -397,7 +394,6 @@ contains
       integer(kind=4)                              :: n_part
       real, dimension(:), allocatable              :: tabr
 
-      if (is_multicg) call die("[cg_particles_io:collect_and_write_rank1] several cg per processor not implemented yet")
       if (all(kind(group_id) /= [4, 8])) call die("[cg_particles_io:collect_and_write_rank1] HID_T doesn't fit to MPI_INTEGER8")
 
       n_part = count_cg_particles(cg)
