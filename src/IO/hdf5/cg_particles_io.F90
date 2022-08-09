@@ -352,7 +352,6 @@ contains
 
    subroutine parallel_write_intr1(group_id, pvar, cg)
 
-      use dataio_pub,     only: die
       use grid_cont,      only: grid_container
       use hdf5,           only: HID_T
       use particle_utils, only: count_cg_particles
@@ -366,8 +365,6 @@ contains
       integer(kind=4)                              :: n_part
       integer(kind=4), dimension(:), allocatable   :: tabi
 
-      if (all(kind(group_id) /= [4, 8])) call die("[cg_particles_io:collect_and_write_intr1] HID_T doesn't fit to MPI_INTEGER8")
-
       n_part = count_cg_particles(cg)
       if (n_part == 0) return
 
@@ -380,7 +377,6 @@ contains
 
    subroutine parallel_write_rank1(group_id, pvar, cg)
 
-      use dataio_pub,     only: die
       use grid_cont,      only: grid_container
       use hdf5,           only: HID_T
       use particle_utils, only: count_cg_particles
@@ -394,8 +390,6 @@ contains
       integer(kind=4)                              :: n_part
       real, dimension(:), allocatable              :: tabr
 
-      if (all(kind(group_id) /= [4, 8])) call die("[cg_particles_io:collect_and_write_rank1] HID_T doesn't fit to MPI_INTEGER8")
-
       n_part = count_cg_particles(cg)
       if (n_part == 0) return
 
@@ -408,7 +402,8 @@ contains
 
    subroutine write_nbody_h5_int_rank1(group_id, vvar, tab)
 
-      use hdf5, only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_INTEGER
+      use dataio_pub, only: die
+      use hdf5,       only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_INTEGER
 
       implicit none
 
@@ -423,6 +418,8 @@ contains
       integer(kind=4)                   :: rank1 = 1
 #endif /* !NBODY_1FILE */
 
+      if (all(kind(group_id) /= [4, 8])) call die("[cg_particles_io:write_nbody_h5_int_rank1] HID_T doesn't fit to MPI_INTEGER8")
+
       dimm = shape(tab)
       dataset_id = group_id !For 1 file writing group_id is the cg_g_id
 #ifndef NBODY_1FILE
@@ -435,15 +432,15 @@ contains
       call h5sclose_f(dataspace_id, error)
 #endif /* !NBODY_1FILE */
 
-#ifdef NBODY_1FILE
+      return
       if (.false.) error = len(vvar, kind=4)  ! suppress -Wunused-dummy-argument
-#endif /* NBODY_1FILE */
 
    end subroutine write_nbody_h5_int_rank1
 
    subroutine write_nbody_h5_rank1(group_id, vvar, tab)
 
-      use hdf5, only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
+      use dataio_pub, only: die
+      use hdf5,       only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
 
       implicit none
 
@@ -458,6 +455,8 @@ contains
       integer(kind=4)                :: rank1 = 1
 #endif /* !NBODY_1FILE */
 
+      if (all(kind(group_id) /= [4, 8])) call die("[cg_particles_io:write_nbody_h5_rank1] HID_T doesn't fit to MPI_INTEGER8")
+
       dimm = shape(tab)
       dataset_id = group_id
 #ifndef NBODY_1FILE
@@ -470,9 +469,8 @@ contains
       call h5sclose_f(dataspace_id, error)
 #endif /* !NBODY_1FILE */
 
-#ifdef NBODY_1FILE
+      return
       if (.false.) error = len(vvar, kind=4)  ! suppress -Wunused-dummy-argument
-#endif /* NBODY_1FILE */
 
    end subroutine write_nbody_h5_rank1
 
