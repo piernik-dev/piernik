@@ -50,7 +50,7 @@ contains
       implicit none
 
       character(len=dsetnamelen), dimension(:), intent(in) :: pvars  !< quantities to be plotted, see dataio::vars
-      integer                                              :: ie, il, k, l
+      integer                                              :: ie, il, k
       logical                                              :: var_found
 
       k = 0
@@ -72,14 +72,7 @@ contains
 
 #ifdef NBODY_1FILE
       allocate(pdsets(k))
-      l = 1
-      do il = lbound(pvars, 1), ubound(pvars, 1)
-         if (len(trim(pvars(il))) == 0) cycle
-         if (pvarl(il)) then
-            pdsets(l) = pvars(il)
-            l = l + 1
-         endif
-      enddo
+      pdsets = pack(pvarn, pvarl)
 #endif /* NBODY_1FILE */
 
    end subroutine init_nbody_hdf5
