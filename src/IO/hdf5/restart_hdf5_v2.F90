@@ -214,7 +214,7 @@ contains
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 #ifdef NBODY_1FILE
-      use cg_particles_io,  only: nbody_datafields
+      use cg_particles_io,  only: parallel_nbody_datafields, nbody_datafields
       use common_hdf5,      only: pdsets
       use data_hdf5,        only: gdf_translate
       use MPIF,             only: MPI_INTEGER, MPI_INTEGER8
@@ -406,13 +406,7 @@ contains
                endif
 
 #ifdef NBODY_1FILE
-               n_part = count_all_particles()
-               cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-               if (n_part > 0) then
-                  do i = lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
-                     call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), cg)
-                  enddo
-               endif
+               call parallel_nbody_datafields(cg_desc%pdset_id, gdf_translate(pdsets), ncg, cg)
 #endif /* NBODY_1FILE */
 
                cgl => cgl%nxt
