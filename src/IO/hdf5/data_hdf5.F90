@@ -557,18 +557,15 @@ contains
 !
    subroutine h5_write_to_single_file(sequential)
 
-      use common_hdf5,     only: dump_announcement, dump_announce_time, set_common_attributes
-      use constants,       only: cwdlen, PPP_IO, HDF
-      use dataio_pub,      only: nhdf, use_v2_io, last_hdf_time
-      use mpisetup,        only: report_to_master, report_string_to_master
-      use piernik_mpi_sig, only: sig
-      use ppp,             only: ppp_main
+      use common_hdf5,       only: dump_announcement, dump_announce_time, set_common_attributes
+      use constants,         only: cwdlen, PPP_IO, HDF
+      use dataio_pub,        only: nhdf, use_v2_io, last_hdf_time
+      use mpisetup,          only: report_to_master, report_string_to_master
+      use piernik_mpi_sig,   only: sig
+      use ppp,               only: ppp_main
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: unmark_oldsoln
 #endif /* MULTIGRID && SELF_GRAV */
-#ifdef NBODY_1FILE
-!      use particles_io_hdf5, only: write_nbody_hdf5
-#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -594,9 +591,6 @@ contains
       call dump_announce_time
       call report_to_master(sig%hdf_written, only_master=.True.)
       call report_string_to_master(fname, only_master=.True.)
-#ifdef NBODY_1FILE
-!      call write_nbody_hdf5(fname)
-#endif /* NBODY_1FILE */
 
       call ppp_main%stop(wrd_label, PPP_IO)
 
