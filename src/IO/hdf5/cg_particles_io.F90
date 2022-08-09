@@ -98,9 +98,9 @@ contains
 
       select case (pvar)
          case ('id')
-            call parallel_write_intr1(group_id, pvar, n_part, cg)
+            call parallel_write_intr(group_id, pvar, n_part, cg)
          case default
-            call parallel_write_rank1(group_id, pvar, n_part, cg)
+            call parallel_write_real(group_id, pvar, n_part, cg)
       end select
 
    end subroutine nbody_datafields
@@ -144,15 +144,15 @@ contains
          ptag = ncg + tot_cg_n * (ubound(hdf_vars, 1, kind=4) + 2*ivar)
          select case (pvars(ivar))
             case ('id')
-               call serial_write_intr1(group_id, ncg, ivar, pvars(ivar), cg_src_ncg, proc_ncg, ptag)
+               call serial_write_intr(group_id, ncg, ivar, pvars(ivar), cg_src_ncg, proc_ncg, ptag)
             case default
-               call serial_write_rank1(group_id, ncg, ivar, pvars(ivar), cg_src_ncg, proc_ncg, ptag)
+               call serial_write_real(group_id, ncg, ivar, pvars(ivar), cg_src_ncg, proc_ncg, ptag)
          end select
       enddo
 
    end subroutine serial_nbody_datafields
 
-   subroutine collect_intr1(pvar, cg, tabi1)
+   subroutine collect_intr(pvar, cg, tabi)
 
       use grid_cont,      only: grid_container
       use particle_types, only: particle
@@ -163,7 +163,7 @@ contains
       type(grid_container), pointer, intent(inout) :: cg
 
       integer                                      :: cgnp
-      integer(kind=4), dimension(:), allocatable   :: tabi1
+      integer(kind=4), dimension(:), allocatable   :: tabi
       type(particle), pointer                      :: pset
 
       cgnp = 0
@@ -173,16 +173,16 @@ contains
             do while (associated(pset))
                if (pset%pdata%phy) then
                   cgnp = cgnp + 1
-                  tabi1(cgnp) = pset%pdata%pid
+                  tabi(cgnp) = pset%pdata%pid
                endif
                pset => pset%nxt
             enddo
          case default
       end select
 
-   end subroutine collect_intr1
+   end subroutine collect_intr
 
-   subroutine collect_rank1(pvar, cg, tabr1)
+   subroutine collect_real(pvar, cg, tabr)
 
       use constants,      only: xdim, ydim, zdim
       use grid_cont,      only: grid_container
@@ -194,7 +194,7 @@ contains
       type(grid_container), pointer, intent(inout) :: cg
 
       integer                                      :: cgnp
-      real, dimension(:), allocatable              :: tabr1
+      real, dimension(:), allocatable              :: tabr
       type(particle), pointer                      :: pset
 
       cgnp = 0
@@ -204,40 +204,40 @@ contains
             cgnp = cgnp + 1
             select case (pvar)
                case ('mass')
-                  tabr1(cgnp) = pset%pdata%mass
+                  tabr(cgnp) = pset%pdata%mass
                case ('energy')
-                  tabr1(cgnp) = pset%pdata%energy
+                  tabr(cgnp) = pset%pdata%energy
                case ('position_x')
-                  tabr1(cgnp) = pset%pdata%pos(xdim)
+                  tabr(cgnp) = pset%pdata%pos(xdim)
                case ('position_y')
-                  tabr1(cgnp) = pset%pdata%pos(ydim)
+                  tabr(cgnp) = pset%pdata%pos(ydim)
                case ('position_z')
-                  tabr1(cgnp) = pset%pdata%pos(zdim)
+                  tabr(cgnp) = pset%pdata%pos(zdim)
                case ('velocity_x')
-                  tabr1(cgnp) = pset%pdata%vel(xdim)
+                  tabr(cgnp) = pset%pdata%vel(xdim)
                case ('velocity_y')
-                  tabr1(cgnp) = pset%pdata%vel(ydim)
+                  tabr(cgnp) = pset%pdata%vel(ydim)
                case ('velocity_z')
-                  tabr1(cgnp) = pset%pdata%vel(zdim)
+                  tabr(cgnp) = pset%pdata%vel(zdim)
                case ('acceleration_x')
-                  tabr1(cgnp) = pset%pdata%acc(xdim)
+                  tabr(cgnp) = pset%pdata%acc(xdim)
                case ('acceleration_y')
-                  tabr1(cgnp) = pset%pdata%acc(ydim)
+                  tabr(cgnp) = pset%pdata%acc(ydim)
                case ('acceleration_z')
-                  tabr1(cgnp) = pset%pdata%acc(zdim)
+                  tabr(cgnp) = pset%pdata%acc(zdim)
                case ('formation_time')
-                  tabr1(cgnp) = pset%pdata%tform
+                  tabr(cgnp) = pset%pdata%tform
                case ('dynamical_time')
-                  tabr1(cgnp) = pset%pdata%tdyn
+                  tabr(cgnp) = pset%pdata%tdyn
                case default
             end select
          endif
          pset => pset%nxt
       enddo
 
-   end subroutine collect_rank1
+   end subroutine collect_real
 
-   subroutine serial_write_intr1(group_id, ncg, ivar, pvar, cg_src_ncg, proc_ncg, ptag)
+   subroutine serial_write_intr(group_id, ncg, ivar, pvar, cg_src_ncg, proc_ncg, ptag)
 
       use common_hdf5,    only: get_nth_cg
       use constants,      only: I_ONE
@@ -263,7 +263,7 @@ contains
          cg => get_nth_cg(cg_src_ncg)
          n_part = count_cg_particles(cg)
          allocate(tabi(n_part))
-         if (n_part > 0) call collect_intr1(pvar, cg, tabi)
+         if (n_part > 0) call collect_intr(pvar, cg, tabi)
       endif
 
       if (master) then
@@ -273,7 +273,7 @@ contains
             allocate(tabi(n_part))
             call MPI_Recv(tabi, n_part, MPI_INTEGER, proc_ncg, ptag, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
          endif
-         if (n_part > 0) call write_nbody_h5_int_rank1(group_id(ncg, ivar), tabi)
+         if (n_part > 0) call write_nbody_h5_intr(group_id(ncg, ivar), tabi)
          deallocate(tabi)
       else
          if (can_i_write) call die("[cg_particles_io] Slave can write")
@@ -284,9 +284,9 @@ contains
          endif
       endif
 
-   end subroutine serial_write_intr1
+   end subroutine serial_write_intr
 
-   subroutine serial_write_rank1(group_id, ncg, ivar, pvar, cg_src_ncg, proc_ncg, ptag)
+   subroutine serial_write_real(group_id, ncg, ivar, pvar, cg_src_ncg, proc_ncg, ptag)
 
       use common_hdf5,    only: get_nth_cg
       use constants,      only: I_ONE
@@ -312,7 +312,7 @@ contains
          cg => get_nth_cg(cg_src_ncg)
          n_part = count_cg_particles(cg)
          allocate(tabr(n_part))
-         if (n_part > 0) call collect_rank1(pvar, cg, tabr)
+         if (n_part > 0) call collect_real(pvar, cg, tabr)
       endif
 
       if (master) then
@@ -322,7 +322,7 @@ contains
             allocate(tabr(n_part))
             call MPI_Recv(tabr, n_part, MPI_DOUBLE_PRECISION, proc_ncg, ptag, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
          endif
-         if (n_part > 0) call write_nbody_h5_rank1(group_id(ncg, ivar), tabr)
+         if (n_part > 0) call write_nbody_h5_real(group_id(ncg, ivar), tabr)
          deallocate(tabr)
       else
          if (can_i_write) call die("[cg_particles_io] Slave can write")
@@ -333,9 +333,9 @@ contains
          endif
       endif
 
-   end subroutine serial_write_rank1
+   end subroutine serial_write_real
 
-   subroutine parallel_write_intr1(group_id, pvar, n_part, cg)
+   subroutine parallel_write_intr(group_id, pvar, n_part, cg)
 
       use grid_cont, only: grid_container
       use hdf5,      only: HID_T
@@ -350,13 +350,13 @@ contains
       integer(kind=4), dimension(:), allocatable   :: tabi
 
       allocate(tabi(n_part))
-      call collect_intr1(pvar, cg, tabi)
-      call write_nbody_h5_int_rank1(group_id, tabi)
+      call collect_intr(pvar, cg, tabi)
+      call write_nbody_h5_intr(group_id, tabi)
       deallocate(tabi)
 
-   end subroutine parallel_write_intr1
+   end subroutine parallel_write_intr
 
-   subroutine parallel_write_rank1(group_id, pvar, n_part, cg)
+   subroutine parallel_write_real(group_id, pvar, n_part, cg)
 
       use grid_cont, only: grid_container
       use hdf5,      only: HID_T
@@ -371,13 +371,13 @@ contains
       real, dimension(:), allocatable              :: tabr
 
       allocate(tabr(n_part))
-      call collect_rank1(pvar, cg, tabr)
-      call write_nbody_h5_rank1(group_id, tabr)
+      call collect_real(pvar, cg, tabr)
+      call write_nbody_h5_real(group_id, tabr)
       deallocate(tabr)
 
-   end subroutine parallel_write_rank1
+   end subroutine parallel_write_real
 
-   subroutine write_nbody_h5_int_rank1(dataset_id, tab)
+   subroutine write_nbody_h5_intr(dataset_id, tab)
 
       use dataio_pub, only: die
       use hdf5,       only: h5dwrite_f, HID_T, HSIZE_T, H5T_NATIVE_INTEGER
@@ -389,14 +389,14 @@ contains
       integer(HSIZE_T), dimension(1)            :: dimm
       integer(kind=4)                           :: error
 
-      if (all(kind(dataset_id) /= [4, 8])) call die("[cg_particles_io:write_nbody_h5_int_rank1] HID_T doesn't fit to MPI_INTEGER8")
+      if (all(kind(dataset_id) /= [4, 8])) call die("[cg_particles_io:write_nbody_h5_intr] HID_T doesn't fit to MPI_INTEGER8")
 
       dimm = shape(tab)
       call h5dwrite_f(dataset_id, H5T_NATIVE_INTEGER, tab, dimm, error)  ! beware: 64-bit tab(:) produces "no specific subroutine for the generic ‘h5dwrite_f'" error
 
-   end subroutine write_nbody_h5_int_rank1
+   end subroutine write_nbody_h5_intr
 
-   subroutine write_nbody_h5_rank1(dataset_id, tab)
+   subroutine write_nbody_h5_real(dataset_id, tab)
 
       use dataio_pub, only: die
       use hdf5,       only: h5dwrite_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
@@ -408,12 +408,12 @@ contains
       integer(HSIZE_T), dimension(1) :: dimm
       integer(kind=4)                :: error
 
-      if (all(kind(dataset_id) /= [4, 8])) call die("[cg_particles_io:write_nbody_h5_rank1] HID_T doesn't fit to MPI_INTEGER8")
+      if (all(kind(dataset_id) /= [4, 8])) call die("[cg_particles_io:write_nbody_h5_real] HID_T doesn't fit to MPI_INTEGER8")
 
       dimm = shape(tab)
       call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, tab, dimm, error)
 
-   end subroutine write_nbody_h5_rank1
+   end subroutine write_nbody_h5_real
 
 end module cg_particles_io
 
