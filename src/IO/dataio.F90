@@ -266,8 +266,7 @@ contains
 
       use constants,  only: idlen, cbuff_len, INT4
       use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn, h5_64bit, nh, set_colors
-      use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast, proc
-
+      use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
       implicit none
 
       problem_name  = "nameless"
@@ -522,7 +521,7 @@ contains
       use global,       only: t, nstep
       use restart_hdf5, only: read_restart_hdf5
 #ifdef NBODY
-      use cg_particles_io, only: init_nbody_hdf5
+      use particles_io, only: init_nbody_hdf5
 #endif /* NBODY */
 #endif /* HDF5 */
 

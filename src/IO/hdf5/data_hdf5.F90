@@ -627,21 +627,21 @@ contains
 
    subroutine write_cg_to_output(cgl_g_id, cg_n, cg_all_n_b, cg_all_n_o)
 
-      use cg_leaves,   only: leaves
-      use cg_list,     only: cg_list_element
-      use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars, hdf_vars_avail, enable_all_hdf_var
-      use constants,   only: xdim, ydim, zdim, ndims, FP_REAL, PPP_IO, PPP_CG, I_ONE
-      use dataio_pub,  only: die, nproc_io, can_i_write, h5_64bit, nstep_start
-      use global,      only: nstep
-      use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD
-      use MPIFUN,      only: MPI_Recv, MPI_Send
-      use mpisetup,    only: master, FIRST, proc, err_mpi, tag_ub
-      use ppp,         only: ppp_main
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use common_hdf5,  only: get_nth_cg, hdf_vars, cg_output, hdf_vars, hdf_vars_avail, enable_all_hdf_var
+      use constants,    only: xdim, ydim, zdim, ndims, FP_REAL, PPP_IO, PPP_CG, I_ONE
+      use dataio_pub,   only: die, nproc_io, can_i_write, h5_64bit, nstep_start
+      use global,       only: nstep
+      use grid_cont,    only: grid_container
+      use hdf5,         only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
+      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,       only: MPI_Recv, MPI_Send
+      use mpisetup,     only: master, FIRST, proc, err_mpi, tag_ub
+      use ppp,          only: ppp_main
 #ifdef NBODY_1FILE
-      use cg_particles_io, only: parallel_nbody_datafields, serial_nbody_datafields
-      use common_hdf5,     only: pdsets
+      use common_hdf5,  only: pdsets
+      use particles_io, only: parallel_nbody_datafields, serial_nbody_datafields
 #endif /* NBODY_1FILE */
 
       implicit none

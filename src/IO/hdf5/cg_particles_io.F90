@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 
-module cg_particles_io
+module particles_io
 ! pulled by NBODY && HDF5
 
    use constants, only: dsetnamelen
@@ -72,7 +72,7 @@ contains
             endif
          enddo
          if (.not. var_found) then
-            write(msg,'(2a)')'[particles_io_hdf5::init_nbody_hdf5]: unknown particle var: ', pvars(il)
+            write(msg,'(2a)')'[particles_io::init_nbody_hdf5]: unknown particle var: ', pvars(il)
             if (master) call warn(msg)
          endif
       enddo
@@ -267,7 +267,7 @@ contains
       endif
 
       if (master) then
-         if (.not. can_i_write) call die("[cg_particles_io] Master can't write")
+         if (.not. can_i_write) call die("[particles_io::serial_write_intr] Master can't write")
          if (proc_ncg /= proc) then
             call MPI_Recv(n_part, I_ONE, MPI_INTEGER, proc_ncg, ptag-1, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
             allocate(tabi(n_part))
@@ -276,7 +276,7 @@ contains
          if (n_part > 0) call write_nbody_h5_intr(group_id(ncg, ivar), tabi)
          deallocate(tabi)
       else
-         if (can_i_write) call die("[cg_particles_io] Slave can write")
+         if (can_i_write) call die("[particles_io::serial_write_intr] Slave can write")
          if (proc_ncg == proc) then
             call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, ptag-1, MPI_COMM_WORLD, err_mpi)
             call MPI_Send(tabi, n_part, MPI_INTEGER, FIRST, ptag, MPI_COMM_WORLD, err_mpi)
@@ -316,7 +316,7 @@ contains
       endif
 
       if (master) then
-         if (.not. can_i_write) call die("[cg_particles_io] Master can't write")
+         if (.not. can_i_write) call die("[particles_io::serial_write_real] Master can't write")
          if (proc_ncg /= proc) then
             call MPI_Recv(n_part, I_ONE, MPI_INTEGER, proc_ncg, ptag-1, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
             allocate(tabr(n_part))
@@ -325,7 +325,7 @@ contains
          if (n_part > 0) call write_nbody_h5_real(group_id(ncg, ivar), tabr)
          deallocate(tabr)
       else
-         if (can_i_write) call die("[cg_particles_io] Slave can write")
+         if (can_i_write) call die("[particles_io::serial_write_real] Slave can write")
          if (proc_ncg == proc) then
             call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, ptag-1, MPI_COMM_WORLD, err_mpi)
             call MPI_Send(tabr, n_part, MPI_DOUBLE_PRECISION, FIRST, ptag, MPI_COMM_WORLD, err_mpi)
@@ -389,7 +389,7 @@ contains
       integer(HSIZE_T), dimension(1)            :: dimm
       integer(kind=4)                           :: error
 
-      if (all(kind(dataset_id) /= [4, 8])) call die("[cg_particles_io:write_nbody_h5_intr] HID_T doesn't fit to MPI_INTEGER8")
+      if (all(kind(dataset_id) /= [4, 8])) call die("[particles_io:write_nbody_h5_intr] HID_T doesn't fit to MPI_INTEGER8")
 
       dimm = shape(tab)
       call h5dwrite_f(dataset_id, H5T_NATIVE_INTEGER, tab, dimm, error)  ! beware: 64-bit tab(:) produces "no specific subroutine for the generic ‘h5dwrite_f'" error
@@ -408,12 +408,12 @@ contains
       integer(HSIZE_T), dimension(1) :: dimm
       integer(kind=4)                :: error
 
-      if (all(kind(dataset_id) /= [4, 8])) call die("[cg_particles_io:write_nbody_h5_real] HID_T doesn't fit to MPI_INTEGER8")
+      if (all(kind(dataset_id) /= [4, 8])) call die("[particles_io:write_nbody_h5_real] HID_T doesn't fit to MPI_INTEGER8")
 
       dimm = shape(tab)
       call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, tab, dimm, error)
 
    end subroutine write_nbody_h5_real
 
-end module cg_particles_io
+end module particles_io
 

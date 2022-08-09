@@ -137,8 +137,8 @@ contains
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 #ifdef NBODY_1FILE
-      use cg_particles_io,  only: pvarn
       use data_hdf5,        only: gdf_translate
+      use particles_io,     only: pvarn
 #endif /* NBODY_1FILE */
 
       implicit none
@@ -214,8 +214,8 @@ contains
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 #ifdef NBODY_1FILE
-      use cg_particles_io,  only: parallel_nbody_datafields, serial_nbody_datafields, pvarn
       use data_hdf5,        only: gdf_translate
+      use particles_io,     only: parallel_nbody_datafields, serial_nbody_datafields, pvarn
 #endif /* NBODY_1FILE */
 
       implicit none
@@ -978,11 +978,11 @@ contains
       use named_array_list, only: qna, wna
       use overlap,          only: is_overlap
 #ifdef NBODY_1FILE
-      use cg_particles_io,  only: pvarn
       use data_hdf5,        only: gdf_translate
-      use read_attr,        only: read_attribute
+      use particles_io,     only: pvarn
       use particle_types,   only: particle
       use particle_utils,   only: add_part_in_proper_cg, part_leave_cg
+      use read_attr,        only: read_attribute
       use star_formation,   only: pid_gen
 #endif /* NBODY_1FILE */
 
