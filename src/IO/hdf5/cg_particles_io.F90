@@ -34,7 +34,7 @@ module cg_particles_io
    implicit none
 
    private
-   public :: dump_cg_particles, init_nbody_hdf5, pvarn, serial_nbody_datafields, parallel_nbody_datafields
+   public :: init_nbody_hdf5, pvarn, serial_nbody_datafields, parallel_nbody_datafields
 
    character(len=dsetnamelen), dimension(*), parameter  :: pvarn = ['ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz', 'tfor', 'tdyn']
    logical,                    dimension(size(pvarn))   :: pvarl = .false.
@@ -83,34 +83,6 @@ contains
 #endif /* NBODY_1FILE */
 
    end subroutine init_nbody_hdf5
-
-   subroutine dump_cg_particles(group_id)
-
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
-      use hdf5,           only: HID_T
-      use particle_utils, only: count_cg_particles
-
-      implicit none
-
-      integer(HID_T),     intent(in) :: group_id       !< File identifier
-      integer(kind=4)                :: i, n_part
-      type(cg_list_element), pointer :: cgl
-
-      cgl => leaves%first
-      do while (associated(cgl))
-
-         n_part = count_cg_particles(cgl%cg)
-         if (n_part == 0) cycle
-
-         do i = lbound(pvarl, 1), ubound(pvarl, 1)
-            if (pvarl(i)) call nbody_datafields(group_id, trim(pvarn(i)), n_part, cgl%cg)
-         enddo
-
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine dump_cg_particles
 
    subroutine nbody_datafields(group_id, pvar, n_part, cg)
 
