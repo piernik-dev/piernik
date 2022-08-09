@@ -49,9 +49,16 @@ contains
 
       implicit none
 
-      character(len=dsetnamelen), dimension(:), intent(in) :: pvars  !< quantities to be plotted, see dataio::vars
-      integer                                              :: ie, il, k
-      logical                                              :: var_found
+      character(len=dsetnamelen), dimension(:), intent(inout) :: pvars  !< quantities to be plotted, see dataio::vars
+      integer                                                 :: ie, il, k
+      logical                                                 :: var_found
+
+      var_found = .false.
+      do il = lbound(pvars, 1), ubound(pvars, 1)
+         if (len(trim(pvars(il))) == 0) cycle
+         var_found = .true.
+      enddo
+      if (.not. var_found) pvars(1:size(pvarn)) = pvarn
 
       k = 0
       do il = lbound(pvars, 1), ubound(pvars, 1)
