@@ -273,7 +273,7 @@ contains
             allocate(tabi(n_part))
             call MPI_Recv(tabi, n_part, MPI_INTEGER, proc_ncg, ptag, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
          endif
-         if (n_part > 0) call write_nbody_h5_int_rank1(group_id(ncg, ivar), pvar, tabi)
+         if (n_part > 0) call write_nbody_h5_int_rank1(group_id(ncg, ivar), tabi)
          deallocate(tabi)
       else
          if (can_i_write) call die("[cg_particles_io] Slave can write")
@@ -322,7 +322,7 @@ contains
             allocate(tabr(n_part))
             call MPI_Recv(tabr, n_part, MPI_DOUBLE_PRECISION, proc_ncg, ptag, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
          endif
-         if (n_part > 0) call write_nbody_h5_rank1(group_id(ncg, ivar), pvar, tabr)
+         if (n_part > 0) call write_nbody_h5_rank1(group_id(ncg, ivar), tabr)
          deallocate(tabr)
       else
          if (can_i_write) call die("[cg_particles_io] Slave can write")
@@ -351,7 +351,7 @@ contains
 
       allocate(tabi(n_part))
       call collect_intr1(pvar, cg, tabi)
-      call write_nbody_h5_int_rank1(group_id, pvar, tabi)
+      call write_nbody_h5_int_rank1(group_id, tabi)
       deallocate(tabi)
 
    end subroutine parallel_write_intr1
@@ -372,82 +372,46 @@ contains
 
       allocate(tabr(n_part))
       call collect_rank1(pvar, cg, tabr)
-      call write_nbody_h5_rank1(group_id, pvar, tabr)
+      call write_nbody_h5_rank1(group_id, tabr)
       deallocate(tabr)
 
    end subroutine parallel_write_rank1
 
-   subroutine write_nbody_h5_int_rank1(group_id, vvar, tab)
+   subroutine write_nbody_h5_int_rank1(dataset_id, tab)
 
       use dataio_pub, only: die
-      use hdf5,       only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_INTEGER
+      use hdf5,       only: h5dwrite_f, HID_T, HSIZE_T, H5T_NATIVE_INTEGER
 
       implicit none
 
-      character(len=*),              intent(in) :: vvar
-      integer(HID_T),                intent(in) :: group_id
+      integer(HID_T),                intent(in) :: dataset_id
       integer(kind=4), dimension(:), intent(in) :: tab
       integer(HSIZE_T), dimension(1)            :: dimm
       integer(kind=4)                           :: error
-      integer(HID_T)                            :: dataset_id
-#ifndef NBODY_1FILE
-      integer(HID_T)                            :: dataspace_id
-      integer(kind=4)                           :: rank1 = 1
-#endif /* !NBODY_1FILE */
 
-      if (all(kind(group_id) /= [4, 8])) call die("[cg_particles_io:write_nbody_h5_int_rank1] HID_T doesn't fit to MPI_INTEGER8")
+      if (all(kind(dataset_id) /= [4, 8])) call die("[cg_particles_io:write_nbody_h5_int_rank1] HID_T doesn't fit to MPI_INTEGER8")
 
       dimm = shape(tab)
-      dataset_id = group_id !For 1 file writing group_id is the cg_g_id
-#ifndef NBODY_1FILE
-      call h5screate_simple_f(rank1, dimm, dataspace_id, error)
-      call h5dcreate_f(group_id, vvar, H5T_NATIVE_INTEGER, dataspace_id, dataset_id, error)
-#endif /* !NBODY_1FILE */
       call h5dwrite_f(dataset_id, H5T_NATIVE_INTEGER, tab, dimm, error)  ! beware: 64-bit tab(:) produces "no specific subroutine for the generic ‘h5dwrite_f'" error
-#ifndef NBODY_1FILE
-      call h5dclose_f(dataset_id, error)
-      call h5sclose_f(dataspace_id, error)
-#endif /* !NBODY_1FILE */
-
-      return
-      if (.false.) error = len(vvar, kind=4)  ! suppress -Wunused-dummy-argument
 
    end subroutine write_nbody_h5_int_rank1
 
-   subroutine write_nbody_h5_rank1(group_id, vvar, tab)
+   subroutine write_nbody_h5_rank1(dataset_id, tab)
 
       use dataio_pub, only: die
-      use hdf5,       only: h5dcreate_f, h5dclose_f, h5dwrite_f, h5screate_simple_f, h5sclose_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
+      use hdf5,       only: h5dwrite_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
 
       implicit none
 
-      character(len=*),   intent(in) :: vvar
-      integer(HID_T),     intent(in) :: group_id
+      integer(HID_T),     intent(in) :: dataset_id
       real, dimension(:), intent(in) :: tab
       integer(HSIZE_T), dimension(1) :: dimm
-      integer(HID_T)                 :: dataset_id
       integer(kind=4)                :: error
-#ifndef NBODY_1FILE
-      integer(HID_T)                 :: dataspace_id
-      integer(kind=4)                :: rank1 = 1
-#endif /* !NBODY_1FILE */
 
-      if (all(kind(group_id) /= [4, 8])) call die("[cg_particles_io:write_nbody_h5_rank1] HID_T doesn't fit to MPI_INTEGER8")
+      if (all(kind(dataset_id) /= [4, 8])) call die("[cg_particles_io:write_nbody_h5_rank1] HID_T doesn't fit to MPI_INTEGER8")
 
       dimm = shape(tab)
-      dataset_id = group_id
-#ifndef NBODY_1FILE
-      call h5screate_simple_f(rank1, dimm, dataspace_id, error)
-      call h5dcreate_f(group_id, vvar, H5T_NATIVE_DOUBLE, dataspace_id, dataset_id, error)
-#endif /* !NBODY_1FILE */
       call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, tab, dimm, error)
-#ifndef NBODY_1FILE
-      call h5dclose_f(dataset_id, error)
-      call h5sclose_f(dataspace_id, error)
-#endif /* !NBODY_1FILE */
-
-      return
-      if (.false.) error = len(vvar, kind=4)  ! suppress -Wunused-dummy-argument
 
    end subroutine write_nbody_h5_rank1
 
