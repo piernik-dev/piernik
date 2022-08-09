@@ -98,24 +98,25 @@ contains
 
    subroutine nbody_datasets(group_id)
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use hdf5,      only: HID_T
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use hdf5,           only: HID_T
+      use particle_utils, only: count_cg_particles
 
       implicit none
 
-      integer(HID_T)              :: group_id       !< File identifier
-      integer                     :: i
-
-      type(cg_list_element), pointer     :: cgl
+      integer(HID_T),     intent(in) :: group_id       !< File identifier
+      integer(kind=4)                :: i, n_part
+      type(cg_list_element), pointer :: cgl
 
       cgl => leaves%first
       do while (associated(cgl))
 
+         n_part = count_cg_particles(cgl%cg)
+         if (n_part == 0) cycle
+
          do i = lbound(pvarl, 1), ubound(pvarl, 1)
-            if (pvarl(i)) then
-               call nbody_datafields(group_id, trim(pvarn(i)), cgl%cg)
-            endif
+            if (pvarl(i)) call nbody_datafields(group_id, trim(pvarn(i)), n_part, cgl%cg)
          enddo
 
          cgl => cgl%nxt
@@ -123,41 +124,46 @@ contains
 
    end subroutine nbody_datasets
 
-   subroutine nbody_datafields(group_id, pvar, cg)
+   subroutine nbody_datafields(group_id, pvar, n_part, cg)
 
       use grid_cont, only: grid_container
       use hdf5,      only: HID_T
 
       implicit none
 
-      integer(HID_T),                intent(inout) :: group_id       !< File identifier
+      integer(HID_T),                intent(in)    :: group_id       !< File identifier
       character(len=*),              intent(in)    :: pvar
+      integer(kind=4),               intent(in)    :: n_part
       type(grid_container), pointer, intent(inout) :: cg
 
       select case (pvar)
          case ('id')
-            call parallel_write_intr1(group_id, pvar, cg)
+            call parallel_write_intr1(group_id, pvar, n_part, cg)
          case default
-            call parallel_write_rank1(group_id, pvar, cg)
+            call parallel_write_rank1(group_id, pvar, n_part, cg)
       end select
 
    end subroutine nbody_datafields
 
    subroutine parallel_nbody_datafields(group_id, pvars, ncg, cg)
 
-      use grid_cont, only: grid_container
-      use hdf5,      only: HID_T
+      use grid_cont,      only: grid_container
+      use hdf5,           only: HID_T
+      use particle_utils, only: count_cg_particles
 
       implicit none
 
-      integer(HID_T), dimension(:,:), intent(inout) :: group_id       !< File identifier
+      integer(HID_T), dimension(:,:), intent(in)    :: group_id       !< File identifier
       character(len=*), dimension(:), intent(in)    :: pvars
       integer(kind=4),                intent(in)    :: ncg
       type(grid_container), pointer,  intent(inout) :: cg
-      integer(kind=4)                               :: i
+      integer(kind=4)                               :: i, n_part
+
+      n_part = count_cg_particles(cg)
+      if (n_part == 0) return
 
       do i = lbound(pvars, dim=1, kind=4), ubound(pvars, dim=1, kind=4)
-         call nbody_datafields(group_id(ncg, i), pvars(i), cg)
+         call nbody_datafields(group_id(ncg, i), pvars(i), n_part, cg)
       enddo
 
    end subroutine parallel_nbody_datafields
@@ -169,10 +175,10 @@ contains
 
       implicit none
 
-      integer(HID_T), dimension(:,:), intent(inout) :: group_id       !< File identifier
-      character(len=*), dimension(:), intent(in)    :: pvars
-      integer(kind=4),                intent(in)    :: ncg, cg_src_ncg, proc_ncg, tot_cg_n
-      integer(kind=4)                               :: ptag, ivar
+      integer(HID_T), dimension(:,:), intent(in) :: group_id       !< File identifier
+      character(len=*), dimension(:), intent(in) :: pvars
+      integer(kind=4),                intent(in) :: ncg, cg_src_ncg, proc_ncg, tot_cg_n
+      integer(kind=4)                            :: ptag, ivar
 
       do ivar = lbound(pvars, 1, kind=4), ubound(pvars, 1, kind=4)
          ptag = ncg + tot_cg_n * (ubound(hdf_vars, 1, kind=4) + 2*ivar)
@@ -285,13 +291,13 @@ contains
 
       implicit none
 
-      integer(HID_T), dimension(:,:), intent(inout) :: group_id       !< group identifiers
-      character(len=*),               intent(in)    :: pvar
-      integer(kind=4),                intent(in)    :: ncg, ivar, cg_src_ncg, proc_ncg, ptag
+      integer(HID_T), dimension(:,:), intent(in) :: group_id       !< group identifiers
+      character(len=*),               intent(in) :: pvar
+      integer(kind=4),                intent(in) :: ncg, ivar, cg_src_ncg, proc_ncg, ptag
 
-      type(grid_container), pointer                 :: cg
-      integer(kind=4)                               :: n_part
-      integer(kind=4), dimension(:), allocatable    :: tabi
+      type(grid_container), pointer              :: cg
+      integer(kind=4)                            :: n_part
+      integer(kind=4), dimension(:), allocatable :: tabi
 
       if (proc_ncg == proc) then
          cg => get_nth_cg(cg_src_ncg)
@@ -334,13 +340,13 @@ contains
 
       implicit none
 
-      integer(HID_T), dimension(:,:), intent(inout) :: group_id       !< group identifiers
-      character(len=*),               intent(in)    :: pvar
-      integer(kind=4),                intent(in)    :: ncg, ivar, cg_src_ncg, proc_ncg, ptag
+      integer(HID_T), dimension(:,:), intent(in) :: group_id       !< group identifiers
+      character(len=*),               intent(in) :: pvar
+      integer(kind=4),                intent(in) :: ncg, ivar, cg_src_ncg, proc_ncg, ptag
 
-      type(grid_container), pointer                 :: cg
-      integer(kind=4)                               :: n_part
-      real, dimension(:), allocatable               :: tabr
+      type(grid_container), pointer              :: cg
+      integer(kind=4)                            :: n_part
+      real, dimension(:), allocatable            :: tabr
 
       if (proc_ncg == proc) then
          cg => get_nth_cg(cg_src_ncg)
@@ -369,23 +375,19 @@ contains
 
    end subroutine serial_write_rank1
 
-   subroutine parallel_write_intr1(group_id, pvar, cg)
+   subroutine parallel_write_intr1(group_id, pvar, n_part, cg)
 
-      use grid_cont,      only: grid_container
-      use hdf5,           only: HID_T
-      use particle_utils, only: count_cg_particles
+      use grid_cont, only: grid_container
+      use hdf5,      only: HID_T
 
       implicit none
 
-      integer(HID_T),                intent(inout) :: group_id       !< File identifier
+      integer(HID_T),                intent(in)    :: group_id       !< File identifier
       character(len=*),              intent(in)    :: pvar
+      integer(kind=4),               intent(in)    :: n_part
       type(grid_container), pointer, intent(inout) :: cg
 
-      integer(kind=4)                              :: n_part
       integer(kind=4), dimension(:), allocatable   :: tabi
-
-      n_part = count_cg_particles(cg)
-      if (n_part == 0) return
 
       allocate(tabi(n_part))
       call collect_intr1(pvar, cg, tabi)
@@ -394,23 +396,19 @@ contains
 
    end subroutine parallel_write_intr1
 
-   subroutine parallel_write_rank1(group_id, pvar, cg)
+   subroutine parallel_write_rank1(group_id, pvar, n_part, cg)
 
-      use grid_cont,      only: grid_container
-      use hdf5,           only: HID_T
-      use particle_utils, only: count_cg_particles
+      use grid_cont, only: grid_container
+      use hdf5,      only: HID_T
 
       implicit none
 
-      integer(HID_T),                intent(inout) :: group_id       !< File identifier
+      integer(HID_T),                intent(in)    :: group_id       !< File identifier
       character(len=*),              intent(in)    :: pvar
+      integer(kind=4),               intent(in)    :: n_part
       type(grid_container), pointer, intent(inout) :: cg
 
-      integer(kind=4)                              :: n_part
       real, dimension(:), allocatable              :: tabr
-
-      n_part = count_cg_particles(cg)
-      if (n_part == 0) return
 
       allocate(tabr(n_part))
       call collect_rank1(pvar, cg, tabr)
