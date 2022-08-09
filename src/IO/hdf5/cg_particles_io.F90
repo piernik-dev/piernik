@@ -34,7 +34,7 @@ module cg_particles_io
    implicit none
 
    private
-   public :: dump_cg_particles, init_nbody_hdf5, nbody_datafields, serial_nbody_datafields
+   public :: dump_cg_particles, init_nbody_hdf5, nbody_datafields, serial_nbody_datafields, parallel_nbody_datafields
 
    character(len=dsetnamelen), dimension(*), parameter  :: pvarn = ['ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz', 'tfor', 'tdyn']
    logical,                    dimension(size(pvarn))   :: pvarl = .false.
@@ -142,6 +142,25 @@ contains
       end select
 
    end subroutine nbody_datafields
+
+   subroutine parallel_nbody_datafields(group_id, pvars, ncg, cg)
+
+      use grid_cont, only: grid_container
+      use hdf5,      only: HID_T
+
+      implicit none
+
+      integer(HID_T), dimension(:,:), intent(inout) :: group_id       !< File identifier
+      character(len=*), dimension(:), intent(in)    :: pvars
+      integer(kind=4),                intent(in)    :: ncg
+      type(grid_container), pointer,  intent(inout) :: cg
+      integer(kind=4)                               :: i
+
+      do i = lbound(pvars, dim=1, kind=4), ubound(pvars, dim=1, kind=4)
+         call nbody_datafields(group_id(ncg, i), pvars(i), cg)
+      enddo
+
+   end subroutine parallel_nbody_datafields
 
    subroutine serial_nbody_datafields(group_id, pvars, ncg, cg_src_ncg, proc_ncg, tot_cg_n)
 
@@ -407,15 +426,15 @@ contains
 
       implicit none
 
-      character(len=*),      intent(in) :: vvar
-      integer(HID_T),        intent(in) :: group_id
+      character(len=*),              intent(in) :: vvar
+      integer(HID_T),                intent(in) :: group_id
       integer(kind=4), dimension(:), intent(in) :: tab
-      integer(HSIZE_T), dimension(1)    :: dimm
-      integer(kind=4)                   :: error
-      integer(HID_T)                    :: dataset_id
+      integer(HSIZE_T), dimension(1)            :: dimm
+      integer(kind=4)                           :: error
+      integer(HID_T)                            :: dataset_id
 #ifndef NBODY_1FILE
-      integer(HID_T)                    :: dataspace_id
-      integer(kind=4)                   :: rank1 = 1
+      integer(HID_T)                            :: dataspace_id
+      integer(kind=4)                           :: rank1 = 1
 #endif /* !NBODY_1FILE */
 
       if (all(kind(group_id) /= [4, 8])) call die("[cg_particles_io:write_nbody_h5_int_rank1] HID_T doesn't fit to MPI_INTEGER8")

@@ -646,7 +646,7 @@ contains
       use mpisetup,    only: master, FIRST, proc, err_mpi, tag_ub
       use ppp,         only: ppp_main
 #ifdef NBODY_1FILE
-      use cg_particles_io, only: nbody_datafields, serial_nbody_datafields
+      use cg_particles_io, only: parallel_nbody_datafields, serial_nbody_datafields
       use common_hdf5,     only: pdsets
 #endif /* NBODY_1FILE */
 
@@ -763,9 +763,7 @@ contains
                enddo
 
 #ifdef NBODY_1FILE
-               do i = lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
-                  call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), cg)
-               enddo
+               call parallel_nbody_datafields(cg_desc%pdset_id, gdf_translate(pdsets), ncg, cg)
 #endif /* NBODY_1FILE */
 
                cgl => cgl%nxt
