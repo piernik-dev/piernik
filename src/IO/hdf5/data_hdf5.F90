@@ -684,7 +684,7 @@ contains
          ! write all cg, one by one
          if (cg_desc%tot_cg_n *(ubound(hdf_vars, 1, kind=4) &
 #ifdef NBODY_1FILE
-         &                + 2 * ubound(pdsets,   1, kind=4) &
+         &            + I_ONE + ubound(pdsets,   1, kind=4) &
 #endif /* NBODY_1FILE */
          & + I_ONE) > tag_ub) call die("[data_hdf5:write_cg_to_output] this MPI implementation has too low MPI_TAG_UB attribute")
          do ncg = 1, cg_desc%tot_cg_n

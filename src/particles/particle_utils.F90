@@ -552,8 +552,8 @@ contains
 
       implicit none
 
-      real, dimension(npf)          :: pinfo
-      integer,        intent(inout) :: ind
+      real, dimension(npf)               :: pinfo
+      integer,             intent(inout) :: ind
       type(particle_data), intent(in)    :: p
 
       pinfo(1)    = p%pid
@@ -577,8 +577,8 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(inout) :: cg
-      type(particle),       pointer                :: pset
+      type(grid_container), pointer, intent(in) :: cg
+      type(particle),       pointer             :: pset
 
       n_part = 0
       pset => cg%pset%first

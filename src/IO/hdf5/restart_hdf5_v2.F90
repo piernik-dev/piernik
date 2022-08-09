@@ -273,7 +273,7 @@ contains
          ! write all cg, one by one
          if (cg_desc%tot_cg_n * (ubound(qr_lst, dim=1, kind=4) &
 #ifdef NBODY_1FILE
-         &                 + 2 * ubound(pvarn,  dim=1, kind=4) &
+         &             + I_ONE + ubound(pvarn,  dim=1, kind=4) &
 #endif /* NBODY_1FILE */
          & + I_ONE) > tag_ub) call die("[restart_hdf5_v2:write_cg_to_restart] this MPI implementation has too low MPI_TAG_UB attribute")
          do ncg = 1, cg_desc%tot_cg_n
