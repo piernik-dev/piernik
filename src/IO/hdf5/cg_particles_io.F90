@@ -86,18 +86,6 @@ contains
 
    subroutine dump_cg_particles(group_id)
 
-      use hdf5, only: HID_T
-
-      implicit none
-
-      integer(HID_T), intent(in) :: group_id
-
-      call nbody_datasets(group_id)
-
-   end subroutine dump_cg_particles
-
-   subroutine nbody_datasets(group_id)
-
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use hdf5,           only: HID_T
@@ -122,7 +110,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine nbody_datasets
+   end subroutine dump_cg_particles
 
    subroutine nbody_datafields(group_id, pvar, n_part, cg)
 
