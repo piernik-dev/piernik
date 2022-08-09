@@ -34,7 +34,7 @@ module cg_particles_io
    implicit none
 
    private
-   public :: dump_cg_particles, init_nbody_hdf5, nbody_datafields, serial_nbody_datafields, parallel_nbody_datafields
+   public :: dump_cg_particles, init_nbody_hdf5, pvarn, serial_nbody_datafields, parallel_nbody_datafields
 
    character(len=dsetnamelen), dimension(*), parameter  :: pvarn = ['ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz', 'tfor', 'tdyn']
    logical,                    dimension(size(pvarn))   :: pvarl = .false.

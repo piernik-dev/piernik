@@ -137,7 +137,7 @@ contains
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 #ifdef NBODY_1FILE
-      use common_hdf5,      only: pdsets
+      use cg_particles_io,  only: pvarn
       use data_hdf5,        only: gdf_translate
 #endif /* NBODY_1FILE */
 
@@ -188,8 +188,8 @@ contains
       deallocate(d_size)
 
 #ifdef NBODY_1FILE
-      do i = lbound(pdsets,1, kind=4), ubound(pdsets,1, kind=4)
-         call create_empty_cg_dataset(st_g_id, gdf_translate(pdsets(i)), (/n_part/), Z_avail, O_RES)
+      do i = lbound(pvarn,1, kind=4), ubound(pvarn,1, kind=4)
+         call create_empty_cg_dataset(st_g_id, gdf_translate(pvarn(i)), [n_part], Z_avail, O_RES)
       enddo
 #endif /* NBODY_1FILE */
 
@@ -214,8 +214,7 @@ contains
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
 #ifdef NBODY_1FILE
-      use cg_particles_io,  only: parallel_nbody_datafields, serial_nbody_datafields
-      use common_hdf5,      only: pdsets
+      use cg_particles_io,  only: parallel_nbody_datafields, serial_nbody_datafields, pvarn
       use data_hdf5,        only: gdf_translate
 #endif /* NBODY_1FILE */
 
@@ -265,7 +264,7 @@ contains
          enddo
       endif
 #ifdef NBODY_1FILE
-      call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets, gdf_translate(pdsets))
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets, gdf_translate(pvarn))
 #else /* !NBODY_1FILE */
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets)
 #endif /* !NBODY_1FILE */
@@ -274,7 +273,7 @@ contains
          ! write all cg, one by one
          if (cg_desc%tot_cg_n * (ubound(qr_lst, dim=1, kind=4) &
 #ifdef NBODY_1FILE
-         &                 + 2 * ubound(pdsets, dim=1, kind=4) &
+         &                 + 2 * ubound(pvarn,  dim=1, kind=4) &
 #endif /* NBODY_1FILE */
          & + I_ONE) > tag_ub) call die("[restart_hdf5_v2:write_cg_to_restart] this MPI implementation has too low MPI_TAG_UB attribute")
          do ncg = 1, cg_desc%tot_cg_n
@@ -340,7 +339,7 @@ contains
                endif
             endif
 #ifdef NBODY_1FILE
-            call serial_nbody_datafields(cg_desc%pdset_id, gdf_translate(pdsets), ncg, cg_desc%cg_src_n(ncg), cg_desc%cg_src_p(ncg), cg_desc%tot_cg_n)
+            call serial_nbody_datafields(cg_desc%pdset_id, gdf_translate(pvarn), ncg, cg_desc%cg_src_n(ncg), cg_desc%cg_src_p(ncg), cg_desc%tot_cg_n)
 #endif /* NBODY_1FILE */
             call ppp_main%stop(wrcg1s_label, PPP_IO + PPP_CG)
          enddo
@@ -379,7 +378,7 @@ contains
                endif
 
 #ifdef NBODY_1FILE
-               call parallel_nbody_datafields(cg_desc%pdset_id, gdf_translate(pdsets), ncg, cg)
+               call parallel_nbody_datafields(cg_desc%pdset_id, gdf_translate(pvarn), ncg, cg)
 #endif /* NBODY_1FILE */
 
                cgl => cgl%nxt
@@ -979,7 +978,7 @@ contains
       use named_array_list, only: qna, wna
       use overlap,          only: is_overlap
 #ifdef NBODY_1FILE
-      use common_hdf5,      only: pdsets
+      use cg_particles_io,  only: pvarn
       use data_hdf5,        only: gdf_translate
       use read_attr,        only: read_attribute
       use particle_types,   only: particle
@@ -1118,12 +1117,12 @@ contains
       pid_gen = pid_max(1)
       allocate(pid(n_part(1)), mass(n_part(1)), ener(n_part(1)), tform(n_part(1)), tdyn(n_part(1)))
       allocate(pos(n_part(1), ndims), vel(n_part(1), ndims), acc(n_part(1), ndims))
-      do i = lbound(pdsets, dim=1), ubound(pdsets, dim=1)
-         call h5dopen_f(st_g_id, gdf_translate(pdsets(i)), pdset_id, error)
+      do i = lbound(pvarn, dim=1), ubound(pvarn, dim=1)
+         call h5dopen_f(st_g_id, gdf_translate(pvarn(i)), pdset_id, error)
          allocate(a1d(n_part(1)))
          call h5dread_f(pdset_id, H5T_NATIVE_DOUBLE, a1d, n_part, error)
          do j = 1, n_part(1)
-            select case (pdsets(i))
+            select case (pvarn(i))
                case ('ppid')
                   pid(j) = int(a1d(j), kind=4)
                case ('mass')
