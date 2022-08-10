@@ -84,27 +84,6 @@ contains
 
    end subroutine init_nbody_hdf5
 
-   subroutine nbody_datafields(group_id, pvar, n_part, cg)
-
-      use grid_cont, only: grid_container
-      use hdf5,      only: HID_T
-
-      implicit none
-
-      integer(HID_T),                intent(in)    :: group_id       !< File identifier
-      character(len=*),              intent(in)    :: pvar
-      integer(kind=4),               intent(in)    :: n_part
-      type(grid_container), pointer, intent(inout) :: cg
-
-      select case (pvar)
-         case ('id')
-            call parallel_write_intr(group_id, pvar, n_part, cg)
-         case default
-            call parallel_write_real(group_id, pvar, n_part, cg)
-      end select
-
-   end subroutine nbody_datafields
-
    subroutine parallel_nbody_datafields(group_id, pvars, ncg, cg)
 
       use grid_cont,      only: grid_container
@@ -117,13 +96,18 @@ contains
       character(len=*), dimension(:), intent(in)    :: pvars
       integer(kind=4),                intent(in)    :: ncg
       type(grid_container), pointer,  intent(inout) :: cg
-      integer(kind=4)                               :: i, n_part
+      integer(kind=4)                               :: ivar, n_part
 
       n_part = count_cg_particles(cg)
       if (n_part == 0) return
 
-      do i = lbound(pvars, dim=1, kind=4), ubound(pvars, dim=1, kind=4)
-         call nbody_datafields(group_id(ncg, i), pvars(i), n_part, cg)
+      do ivar = lbound(pvars, dim=1, kind=4), ubound(pvars, dim=1, kind=4)
+         select case (pvars(ivar))
+            case ('id')
+               call parallel_write_intr(group_id(ncg, ivar), pvars(ivar), n_part, cg)
+            case default
+               call parallel_write_real(group_id(ncg, ivar), pvars(ivar), n_part, cg)
+         end select
       enddo
 
    end subroutine parallel_nbody_datafields
