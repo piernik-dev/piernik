@@ -47,8 +47,9 @@ module common_hdf5
         create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output, enable_all_hdf_var, &
         dump_announcement, dump_announce_time
 #ifdef NBODY_1FILE
-   public ::  part_types_gname, part_gname, st_gname, pdsets
+   public :: part_gname, st_gname, pdsets
 
+   character(len=*), parameter :: part_types_gname = "particle_types", part_gname = "particles", st_gname = "stars"
    character(len=dsetnamelen), allocatable, dimension(:) :: pdsets
 #endif /* NBODY_1FILE */
    character(len=dsetnamelen), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
@@ -58,9 +59,6 @@ module common_hdf5
         & cg_gname = "grid", cg_cnt_aname = "cg_count", cg_lev_aname = "level", cg_size_aname = "n_b", &
         & cg_offset_aname = "off", cg_ledge_aname = "left_edge", cg_redge_aname = "right_edge", &
         & cg_dl_aname = "dl", data_gname = "data"
-#ifdef NBODY_1FILE
-   character(len=*), parameter :: part_types_gname="particle_types", part_gname="particles", st_gname="stars"
-#endif /* NBODY_1FILE */
    character(len=singlechar), dimension(ndims), parameter :: dir_pref = [ "x", "y", "z" ]
 
    ! enumerator for 'otype' used in various functions to distinguish different
@@ -1464,7 +1462,7 @@ contains
             call h5gopen_f(cgl_g_id, n_cg_name(ncg), this%cg_g_id(ncg), error, gapl_id = plist_id)
 #ifdef NBODY_1FILE
             call h5gopen_f(this%cg_g_id(ncg), part_gname, this%part_g_id(ncg), error, gapl_id = plist_id)
-            call h5gopen_f(this%part_g_id(ncg), "stars",  this%st_g_id(ncg),   error, gapl_id = plist_id)
+            call h5gopen_f(this%part_g_id(ncg), st_gname, this%st_g_id(ncg),   error, gapl_id = plist_id)
 #endif /* NBODY_1FILE */
          enddo
          call h5pclose_f(plist_id, error)

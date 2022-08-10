@@ -964,6 +964,7 @@ contains
       use named_array_list, only: qna, wna
       use overlap,          only: is_overlap
 #ifdef NBODY_1FILE
+      use common_hdf5,      only: part_gname, st_gname
       use data_hdf5,        only: gdf_translate
       use particles_io,     only: pvarn
       use particle_types,   only: particle
@@ -1083,8 +1084,8 @@ contains
       endif
 
 #ifdef NBODY_1FILE
-      call h5gopen_f(cg_g_id,   "particles", part_g_id, error)
-      call h5gopen_f(part_g_id, "stars",     st_g_id,   error)
+      call h5gopen_f(cg_g_id,   part_gname, part_g_id, error)
+      call h5gopen_f(part_g_id,   st_gname,   st_g_id, error)
 
       allocate(ibuf(1))
       call read_attribute(st_g_id, "n_part",  ibuf)
