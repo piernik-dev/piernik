@@ -230,7 +230,7 @@ contains
       real, pointer,    dimension(:,:,:)                    :: pa3d
       real, pointer,    dimension(:,:,:,:)                  :: pa4d
       integer                                               :: tot_lst_n, ic
-      integer(kind=4)                                       :: ncg, n, i
+      integer(kind=4)                                       :: ncg, n, i, ntags
       type(grid_container),  pointer                        :: cg
       type(cg_list_element), pointer                        :: cgl
       integer, allocatable, dimension(:)                    :: qr_lst, wr_lst
@@ -261,18 +261,14 @@ contains
          enddo
       endif
 #ifdef NBODY_1FILE
-      call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets, gdf_translate(pvarn))
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, ntags, dsets, gdf_translate(pvarn))
 #else /* !NBODY_1FILE */
-      call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets)
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, ntags, dsets)
 #endif /* !NBODY_1FILE */
 
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
-         if (cg_desc%tot_cg_n * (ubound(qr_lst, dim=1, kind=4) &
-#ifdef NBODY_1FILE
-         &             + I_ONE + ubound(pvarn,  dim=1, kind=4) &
-#endif /* NBODY_1FILE */
-         & + I_ONE) > tag_ub) call die("[restart_hdf5_v2:write_cg_to_restart] this MPI implementation has too low MPI_TAG_UB attribute")
+         if (cg_desc%tot_cg_n * ntags > tag_ub) call die("[restart_hdf5_v2:write_cg_to_restart] this MPI implementation has too low MPI_TAG_UB attribute")
          do ncg = 1, cg_desc%tot_cg_n
             call ppp_main%start(wrcg1s_label, PPP_IO + PPP_CG)
 

@@ -1401,9 +1401,9 @@ contains
    end subroutine dump_announce_time
 
 #ifdef NBODY_1FILE
-   subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets, pdsets)
+   subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, ntags, dsets, pdsets)
 #else /* !NBODY_1FILE */
-   subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets)
+   subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, ntags, dsets)
 #endif /* !NBODY_1FILE */
 
       use constants,  only: dsetnamelen, I_ONE
@@ -1418,6 +1418,7 @@ contains
       integer(HID_T),                           intent(in)    :: cgl_g_id
       integer(kind=4),   pointer, dimension(:), intent(in)    :: cg_n
       integer(kind=4),                          intent(in)    :: nproc_io
+      integer(kind=4),                          intent(out)   :: ntags
       character(len=dsetnamelen), dimension(:), intent(in)    :: dsets
 #ifdef NBODY_1FILE
       character(len=dsetnamelen), dimension(:), intent(in)    :: pdsets
@@ -1427,6 +1428,7 @@ contains
       integer(HID_T)                                          :: plist_id
       integer(kind=4)                                         :: error    !< error perhaps should be of type integer(HID_T)
 
+      ntags = ubound(dsets, 1, kind=4) + I_ONE
       this%tot_cg_n = sum(cg_n)
       allocate(this%cg_src_p(1:this%tot_cg_n))
       allocate(this%cg_src_n(1:this%tot_cg_n))
@@ -1434,6 +1436,7 @@ contains
 #ifdef NBODY_1FILE
       allocate(this%part_g_id(1:this%tot_cg_n))
       allocate(this%st_g_id(1:this%tot_cg_n))
+      ntags = ntags + ubound(pdsets, 1, kind=4) + I_ONE
 #endif /* NBODY_1FILE */
       allocate(this%offsets(0:nproc_io-1))
 

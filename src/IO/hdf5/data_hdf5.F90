@@ -655,7 +655,7 @@ contains
       integer(kind=4)                                      :: error       !< error perhaps should be of type integer(HID_T)
       integer(kind=4), parameter                           :: rank = 3
       integer(HSIZE_T), dimension(:), allocatable          :: dims
-      integer(kind=4)                                      :: i, ncg, n
+      integer(kind=4)                                      :: i, ncg, n, ntags
       integer                                              :: ip
       type(grid_container),            pointer             :: cg
       type(cg_list_element),           pointer             :: cgl
@@ -668,9 +668,9 @@ contains
       if (nstep - nstep_start < 1) call enable_all_hdf_var  ! just in case things have changed meanwhile
 
 #ifdef NBODY_1FILE
-      call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(pack(hdf_vars, hdf_vars_avail)), gdf_translate(pdsets))
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, ntags, gdf_translate(pack(hdf_vars, hdf_vars_avail)), gdf_translate(pdsets))
 #else /* !NBODY_1FILE */
-      call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(pack(hdf_vars, hdf_vars_avail)))
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, ntags, gdf_translate(pack(hdf_vars, hdf_vars_avail)))
 #endif /* !NBODY_1FILE */
 
       if (cg_desc%tot_cg_n < 1) call die("[data_hdf5:write_cg_to_output] no cg available!")
@@ -682,11 +682,7 @@ contains
 
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
-         if (cg_desc%tot_cg_n *(ubound(hdf_vars, 1, kind=4) &
-#ifdef NBODY_1FILE
-         &            + I_ONE + ubound(pdsets,   1, kind=4) &
-#endif /* NBODY_1FILE */
-         & + I_ONE) > tag_ub) call die("[data_hdf5:write_cg_to_output] this MPI implementation has too low MPI_TAG_UB attribute")
+         if (cg_desc%tot_cg_n * ntags > tag_ub) call die("[data_hdf5:write_cg_to_output] this MPI implementation has too low MPI_TAG_UB attribute")
          do ncg = 1, cg_desc%tot_cg_n
             call ppp_main%start(wrdc1s_label, PPP_IO + PPP_CG)
             dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
