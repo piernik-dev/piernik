@@ -639,10 +639,10 @@ contains
       use MPIFUN,       only: MPI_Recv, MPI_Send
       use mpisetup,     only: master, FIRST, proc, err_mpi, tag_ub
       use ppp,          only: ppp_main
-#ifdef NBODY_1FILE
+#ifdef NBODY
       use common_hdf5,  only: pdsets
       use particles_io, only: parallel_nbody_datafields, serial_nbody_datafields
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
       implicit none
 
@@ -667,11 +667,11 @@ contains
 
       if (nstep - nstep_start < 1) call enable_all_hdf_var  ! just in case things have changed meanwhile
 
-#ifdef NBODY_1FILE
+#ifdef NBODY
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, ntags, gdf_translate(pack(hdf_vars, hdf_vars_avail)), gdf_translate(pdsets))
-#else /* !NBODY_1FILE */
+#else /* !NBODY */
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, ntags, gdf_translate(pack(hdf_vars, hdf_vars_avail)))
-#endif /* !NBODY_1FILE */
+#endif /* !NBODY */
 
       if (cg_desc%tot_cg_n < 1) call die("[data_hdf5:write_cg_to_output] no cg available!")
 
@@ -720,9 +720,9 @@ contains
                endif
             endif
             !Serial write for particles
-#ifdef NBODY_1FILE
+#ifdef NBODY
             call serial_nbody_datafields(cg_desc%pdset_id, gdf_translate(pdsets), ncg, cg_desc%cg_src_n(ncg), cg_desc%cg_src_p(ncg), cg_desc%tot_cg_n)
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
             call ppp_main%stop(wrdc1s_label, PPP_IO + PPP_CG)
          enddo
       else ! perform parallel write
@@ -752,9 +752,9 @@ contains
                   endif
                enddo
 
-#ifdef NBODY_1FILE
+#ifdef NBODY
                call parallel_nbody_datafields(cg_desc%pdset_id, gdf_translate(pdsets), ncg, cg)
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
                cgl => cgl%nxt
                call ppp_main%stop(wrdc1p_label, PPP_IO + PPP_CG)
@@ -896,9 +896,9 @@ contains
 
       use common_hdf5, only: create_empty_cg_dataset, hdf_vars, hdf_vars_avail, O_OUT
       use hdf5,        only: HID_T, HSIZE_T
-#ifdef NBODY_1FILE
+#ifdef NBODY
       use common_hdf5, only: pdsets
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
       implicit none
 
@@ -916,11 +916,11 @@ contains
          call create_empty_cg_dataset(cg_g_id, gdf_translate(hdf_vars(i)), int(cg_n_b, kind=HSIZE_T), Z_avail, O_OUT)
       enddo
 
-#ifdef NBODY_1FILE
+#ifdef NBODY
       do i = lbound(pdsets,1), ubound(pdsets,1)
          call create_empty_cg_dataset(st_g_id, gdf_translate(pdsets(i)), [n_part], Z_avail, O_OUT)
       enddo
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
       return
       if (.false.) i = size(cg_n_o) + int(n_part) + int(st_g_id) ! suppress compiler warning

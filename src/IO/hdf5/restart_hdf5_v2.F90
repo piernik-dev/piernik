@@ -132,10 +132,10 @@ contains
       use hdf5,             only: HID_T, HSIZE_T
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
-#ifdef NBODY_1FILE
+#ifdef NBODY
       use data_hdf5,        only: gdf_translate
       use particles_io,     only: pvarn
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
       implicit none
 
@@ -181,11 +181,11 @@ contains
       endif
       deallocate(d_size)
 
-#ifdef NBODY_1FILE
+#ifdef NBODY
       do i = lbound(pvarn, 1, kind=4), ubound(pvarn, 1, kind=4)
          call create_empty_cg_dataset(st_g_id, gdf_translate(pvarn(i)), [n_part], Z_avail, O_RES)
       enddo
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
       call ppp_main%stop(wrce_label, PPP_IO + PPP_CG)
 
@@ -210,10 +210,10 @@ contains
       use mpisetup,         only: master, FIRST, proc, err_mpi, tag_ub
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
-#ifdef NBODY_1FILE
+#ifdef NBODY
       use data_hdf5,        only: gdf_translate
       use particles_io,     only: parallel_nbody_datafields, serial_nbody_datafields, pvarn
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
       implicit none
 
@@ -260,11 +260,11 @@ contains
             ic = ic + 1
          enddo
       endif
-#ifdef NBODY_1FILE
+#ifdef NBODY
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, ntags, dsets, gdf_translate(pvarn))
-#else /* !NBODY_1FILE */
+#else /* !NBODY */
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, ntags, dsets)
-#endif /* !NBODY_1FILE */
+#endif /* !NBODY */
 
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
@@ -331,9 +331,9 @@ contains
                   endif
                endif
             endif
-#ifdef NBODY_1FILE
+#ifdef NBODY
             call serial_nbody_datafields(cg_desc%pdset_id, gdf_translate(pvarn), ncg, cg_desc%cg_src_n(ncg), cg_desc%cg_src_p(ncg), cg_desc%tot_cg_n)
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
             call ppp_main%stop(wrcg1s_label, PPP_IO + PPP_CG)
          enddo
       else ! perform parallel write
@@ -370,9 +370,9 @@ contains
                   deallocate(dims)
                endif
 
-#ifdef NBODY_1FILE
+#ifdef NBODY
                call parallel_nbody_datafields(cg_desc%pdset_id, gdf_translate(pvarn), ncg, cg)
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
                cgl => cgl%nxt
                call ppp_main%stop(wrcg1p_label, PPP_IO + PPP_CG)
@@ -963,7 +963,7 @@ contains
            &                      h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
       use named_array_list, only: qna, wna
       use overlap,          only: is_overlap
-#ifdef NBODY_1FILE
+#ifdef NBODY
       use common_hdf5,      only: part_gname, st_gname
       use data_hdf5,        only: gdf_translate
       use particles_io,     only: pvarn
@@ -971,7 +971,7 @@ contains
       use particle_utils,   only: add_part_in_proper_cg, part_leave_cg
       use read_attr,        only: read_attribute
       use star_formation,   only: pid_gen
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
       implicit none
 
@@ -994,7 +994,7 @@ contains
       integer                                      :: i
       real, dimension(:,:,:),   allocatable        :: a3d
       real, dimension(:,:,:,:), allocatable        :: a4d
-#ifdef NBODY_1FILE
+#ifdef NBODY
       integer(HID_T)                               :: part_g_id !< particles group identifier
       integer(HID_T)                               :: st_g_id   !< stars group identifier
       integer(HID_T)                               :: pdset_id
@@ -1005,7 +1005,7 @@ contains
       real,            dimension(:,:), allocatable :: pos, vel, acc
       integer(kind=4), dimension(:),   allocatable :: ibuf, pid
       type(particle), pointer                      :: pset
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
       ! Find overlap between own cg and restart cg
       own_box_nb(:, :) = cg%my_se(:, :)
@@ -1083,7 +1083,7 @@ contains
          deallocate(dims, off, cnt)
       endif
 
-#ifdef NBODY_1FILE
+#ifdef NBODY
       call h5gopen_f(cg_g_id,   part_gname, part_g_id, error)
       call h5gopen_f(part_g_id,   st_gname,   st_g_id, error)
 
@@ -1149,7 +1149,7 @@ contains
          call pset%pdata%is_outside()
          pset => pset%nxt
       enddo
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
       call h5gclose_f(cg_g_id, error)
       deallocate(qr_lst, wr_lst)

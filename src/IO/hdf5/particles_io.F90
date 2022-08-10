@@ -79,10 +79,8 @@ contains
          endif
       enddo
 
-#ifdef NBODY_1FILE
       allocate(pdsets(k))
       pdsets = pack(pvarn, pvarl)
-#endif /* NBODY_1FILE */
 
    end subroutine init_nbody_hdf5
 
