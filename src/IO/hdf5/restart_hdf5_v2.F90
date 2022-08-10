@@ -567,9 +567,6 @@ contains
       use read_attr,          only: read_attribute
       use set_get_attributes, only: get_attr
       use timestep_pub,       only: c_all_old, cfl_c, stepcfl
-#ifdef NBODY
-      use mpisetup,           only: LAST
-#endif /* NBODY */
 #ifdef RANDOMIZE
       use randomization,      only: read_current_seed_from_restart
 #endif /* RANDOMIZE */
@@ -797,10 +794,6 @@ contains
       allocate(cg_res(ibuf(1)))
       deallocate(ibuf)
 
-#ifdef NBODY
-      if (ubound(cg_res, dim=1) .ne. LAST+1) call die("[restart_hdf5_v2:read_restart_hdf5_v2] : Particles require restart with same number of cgs")
-#endif /* NBODY */
-
       do ia = lbound(cg_res, dim=1, kind=4), ubound(cg_res, dim=1, kind=4)
          call h5gopen_f(cgl_g_id, n_cg_name(ia), cg_g_id, error) ! open "/data/grid_%08d, ia"
 
@@ -988,17 +981,12 @@ contains
 
       implicit none
 
-      type(grid_container), pointer,     intent(inout) :: cg        !< Own grid container
-      integer(HID_T),                    intent(in)    :: cgl_g_id  !< cg group identifier in the restart file
-      integer(kind=4),                   intent(in)    :: ncg       !< number of cg in the restart file
-      type(cg_essentials),               intent(in)    :: cg_r      !< cg attributes that do not need to be reread
+      type(grid_container), pointer, intent(inout) :: cg        !< Own grid container
+      integer(HID_T),                intent(in)    :: cgl_g_id  !< cg group identifier in the restart file
+      integer(kind=4),               intent(in)    :: ncg       !< number of cg in the restart file
+      type(cg_essentials),           intent(in)    :: cg_r      !< cg attributes that do not need to be reread
 
       integer(HID_T)                               :: cg_g_id !< cg group identifier
-#ifdef NBODY_1FILE
-      integer(HID_T)                               :: part_g_id !< particles group identifier
-      integer(HID_T)                               :: st_g_id !< stars group identifier
-      integer(HID_T)                               :: pdset_id
-#endif /* NBODY_1FILE */
       integer(HID_T)                               :: dset_id
       integer(HID_T)                               :: filespace, memspace
       integer(HSIZE_T), dimension(:), allocatable  :: dims, off, cnt
@@ -1008,22 +996,20 @@ contains
       integer(kind=8), dimension(xdim:zdim)        :: own_off_nb, restart_off_nb, o_size_nb   !
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: own_box_ob, restart_box_ob              ! variants for AT_OUT_B
       integer(kind=8), dimension(xdim:zdim)        :: own_off_ob, restart_off_ob, o_size_ob   ! as opposed to AT_NO_B
-      integer, allocatable, dimension(:)           :: qr_lst, wr_lst
+      integer, dimension(:), allocatable           :: qr_lst, wr_lst
       integer                                      :: i
       real, dimension(:,:,:),   allocatable        :: a3d
       real, dimension(:,:,:,:), allocatable        :: a4d
 #ifdef NBODY_1FILE
+      integer(HID_T)                               :: part_g_id !< particles group identifier
+      integer(HID_T)                               :: st_g_id   !< stars group identifier
+      integer(HID_T)                               :: pdset_id
+      integer(HSIZE_T)                             :: n_part
       integer(kind=8)                              :: j
-      integer(kind=4)                              :: pid1
-      real, dimension(:), allocatable              :: a1d
-      integer(HSIZE_T), dimension(1)               :: n_part
-      integer(kind=4), dimension(1)                :: pid_max
-      integer(kind=4),   dimension(:), allocatable :: ibuf
-      integer(kind=4), allocatable, dimension(:)   :: pid
-      real, allocatable, dimension(:)              :: mass, ener, tform, tdyn
-      real, allocatable, dimension(:, :)           :: pos, vel, acc
-      real, dimension(ndims)                       :: pos1, vel1, acc1
-      real                                         :: mass1, ener1, tform1, tdyn1
+      real,            dimension(:),   allocatable :: a1d
+      real,            dimension(:),   allocatable :: mass, ener, tform, tdyn
+      real,            dimension(:,:), allocatable :: pos, vel, acc
+      integer(kind=4), dimension(:),   allocatable :: ibuf, pid
       type(particle), pointer                      :: pset
 #endif /* NBODY_1FILE */
 
@@ -1104,70 +1090,64 @@ contains
       endif
 
 #ifdef NBODY_1FILE
-      call h5gopen_f(cg_g_id, "particles", part_g_id, error)
-      call h5gopen_f(part_g_id, "stars", st_g_id, error)
+      call h5gopen_f(cg_g_id,   "particles", part_g_id, error)
+      call h5gopen_f(part_g_id, "stars",     st_g_id,   error)
+
       allocate(ibuf(1))
-      call read_attribute(st_g_id, "n_part", ibuf)
-      n_part = ibuf(:)
-      deallocate(ibuf)
-      allocate(ibuf(1))
+      call read_attribute(st_g_id, "n_part",  ibuf)
+      n_part = ibuf(1)
       call read_attribute(st_g_id, "pid_max", ibuf)
-      pid_max = ibuf(:)
+      pid_gen = ibuf(1)
       deallocate(ibuf)
-      pid_gen = pid_max(1)
-      allocate(pid(n_part(1)), mass(n_part(1)), ener(n_part(1)), tform(n_part(1)), tdyn(n_part(1)))
-      allocate(pos(n_part(1), ndims), vel(n_part(1), ndims), acc(n_part(1), ndims))
+
+      allocate(pid(n_part), mass(n_part), ener(n_part), tform(n_part), tdyn(n_part))
+      allocate(pos(n_part, ndims), vel(n_part, ndims), acc(n_part, ndims))
+      allocate(a1d(n_part))
       do i = lbound(pvarn, dim=1), ubound(pvarn, dim=1)
          call h5dopen_f(st_g_id, gdf_translate(pvarn(i)), pdset_id, error)
-         allocate(a1d(n_part(1)))
-         call h5dread_f(pdset_id, H5T_NATIVE_DOUBLE, a1d, n_part, error)
-         do j = 1, n_part(1)
-            select case (pvarn(i))
-               case ('ppid')
-                  pid(j) = int(a1d(j), kind=4)
-               case ('mass')
-                  mass(j) = a1d(j)
-               case ('ener')
-                  ener(j) = a1d(j)
-               case ('posx')
-                  pos(j, xdim) = a1d(j)
-               case ('posy')
-                  pos(j, ydim) = a1d(j)
-               case ('posz')
-                  pos(j, zdim) = a1d(j)
-               case ('velx')
-                  vel(j, xdim) = a1d(j)
-               case ('vely')
-                  vel(j, ydim) = a1d(j)
-               case ('velz')
-                  vel(j, zdim) = a1d(j)
-               case ('accx')
-                  acc(j, xdim) = a1d(j)
-               case ('accy')
-                  acc(j, ydim) = a1d(j)
-               case ('accz')
-                  acc(j, zdim) = a1d(j)
-               case ('tfor')
-                  tform(j) = a1d(j)
-               case ('tdyn')
-                  tdyn(j) = a1d(j)
-               case default
-            end select
-         enddo
-         deallocate(a1d)
+         call h5dread_f(pdset_id, H5T_NATIVE_DOUBLE, a1d, [n_part], error)
+         select case (pvarn(i))
+            case ('ppid')
+               pid = int(a1d, kind=4)
+            case ('mass')
+               mass = a1d
+            case ('ener')
+               ener = a1d
+            case ('posx')
+               pos(:, xdim) = a1d
+            case ('posy')
+               pos(:, ydim) = a1d
+            case ('posz')
+               pos(:, zdim) = a1d
+            case ('velx')
+               vel(:, xdim) = a1d
+            case ('vely')
+               vel(:, ydim) = a1d
+            case ('velz')
+               vel(:, zdim) = a1d
+            case ('accx')
+               acc(:, xdim) = a1d
+            case ('accy')
+               acc(:, ydim) = a1d
+            case ('accz')
+               acc(:, zdim) = a1d
+            case ('tfor')
+               tform = a1d
+            case ('tdyn')
+               tdyn = a1d
+            case default
+         end select
          call h5dclose_f(pdset_id, error)
       enddo
-      do j=1, n_part(1)
-         pid1=pid(j)
-         mass1=mass(j)
-         ener1=ener(j)
-         pos1=pos(j,:)
-         vel1=vel(j,:)
-         acc1=acc(j,:)
-         tform1=tform(j)
-         tdyn1=tdyn(j)
-         call add_part_in_proper_cg(pid1, mass1, pos1, vel1, acc1, ener1, tform1, tdyn1)
+      deallocate(a1d)
+      call h5gclose_f(st_g_id, error)
+      call h5gclose_f(part_g_id, error)
+
+      do j = 1, n_part
+         call add_part_in_proper_cg(pid(j), mass(j), pos(j,:), vel(j,:), acc(j,:), ener(j), tform(j), tdyn(j))
       enddo
+      deallocate(pid, mass, pos, vel, acc, ener, tform, tdyn)
+
       call part_leave_cg()
 
       pset => cg%pset%first
@@ -1175,11 +1155,6 @@ contains
          call pset%pdata%is_outside()
          pset => pset%nxt
       enddo
-
-      deallocate(pid, mass, ener, tform, tdyn)
-      deallocate(pos, vel, acc)
-      call h5gclose_f(st_g_id, error)
-      call h5gclose_f(part_g_id, error)
 #endif /* NBODY_1FILE */
 
       call h5gclose_f(cg_g_id, error)
