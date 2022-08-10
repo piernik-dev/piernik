@@ -107,9 +107,11 @@ contains
       do ivar = lbound(pvars, dim=1, kind=4), ubound(pvars, dim=1, kind=4)
          select case (pvars(ivar))
             case ('id')
-               call parallel_write_intr(group_id(ncg, ivar), pvars(ivar), cg)
+               call collect_intr(pvars(ivar), cg)
+               call write_nbody_h5_intr(group_id(ncg, ivar))
             case default
-               call parallel_write_real(group_id(ncg, ivar), pvars(ivar), cg)
+               call collect_real(pvars(ivar), cg)
+               call write_nbody_h5_real(group_id(ncg, ivar))
          end select
       enddo
       deallocate(tabi, tabr)
@@ -293,38 +295,6 @@ contains
       endif
 
    end subroutine serial_write_real
-
-   subroutine parallel_write_intr(group_id, pvar, cg)
-
-      use grid_cont, only: grid_container
-      use hdf5,      only: HID_T
-
-      implicit none
-
-      integer(HID_T),                intent(in)    :: group_id       !< File identifier
-      character(len=*),              intent(in)    :: pvar
-      type(grid_container), pointer, intent(inout) :: cg
-
-      call collect_intr(pvar, cg)
-      call write_nbody_h5_intr(group_id)
-
-   end subroutine parallel_write_intr
-
-   subroutine parallel_write_real(group_id, pvar, cg)
-
-      use grid_cont, only: grid_container
-      use hdf5,      only: HID_T
-
-      implicit none
-
-      integer(HID_T),                intent(in)    :: group_id       !< File identifier
-      character(len=*),              intent(in)    :: pvar
-      type(grid_container), pointer, intent(inout) :: cg
-
-      call collect_real(pvar, cg)
-      call write_nbody_h5_real(group_id)
-
-   end subroutine parallel_write_real
 
    subroutine write_nbody_h5_intr(dataset_id)
 
