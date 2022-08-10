@@ -124,11 +124,7 @@ contains
    end subroutine write_restart_hdf5_v2
 
 !> \brief create empty datasets for each cg to store restart data
-#ifdef NBODY_1FILE
    subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)
-#else /* !NBODY_1FILE */
-   subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, cg_n_o, Z_avail)
-#endif /* !NBODY_1FILE */
 
       use common_hdf5,      only: create_empty_cg_dataset, O_RES
       use constants,        only: AT_IGNORE, AT_OUT_B, I_ONE, PPP_IO, PPP_CG
@@ -147,13 +143,11 @@ contains
       integer(kind=4), dimension(:), intent(in) :: cg_n_b
       integer(kind=4), dimension(:), intent(in) :: cg_n_o
       logical(kind=4),               intent(in) :: Z_avail
+      integer(kind=8),               intent(in) :: n_part
+      integer(HID_T),                intent(in) :: st_g_id
 
       integer :: i
       integer(HSIZE_T), dimension(:), allocatable :: d_size
-#ifdef NBODY_1FILE
-      integer(kind=8)                           :: n_part
-      integer(HID_T),                intent(in) :: st_g_id
-#endif /* NBODY_1FILE */
       character(len=*), parameter :: wrce_label = "IO_write_empty_dset"
 
       if (size(cg_n_b) /= size(cg_n_o)) call die("[restart_hdf5_v2:create_empty_cg_datasets_in_restart] size(cg_n_b) /= size(cg_n_o)")
@@ -188,12 +182,15 @@ contains
       deallocate(d_size)
 
 #ifdef NBODY_1FILE
-      do i = lbound(pvarn,1, kind=4), ubound(pvarn,1, kind=4)
+      do i = lbound(pvarn, 1, kind=4), ubound(pvarn, 1, kind=4)
          call create_empty_cg_dataset(st_g_id, gdf_translate(pvarn(i)), [n_part], Z_avail, O_RES)
       enddo
 #endif /* NBODY_1FILE */
 
       call ppp_main%stop(wrce_label, PPP_IO + PPP_CG)
+
+      return
+      if (.false.) i = int(n_part) + int(st_g_id)
 
    end subroutine create_empty_cg_datasets_in_restart
 

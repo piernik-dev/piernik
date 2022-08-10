@@ -879,21 +879,15 @@ contains
          !>
          !! Function responsible for creating empty datasets, called by master
          !<
-#ifdef NBODY_1FILE
          subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)
-#else /* !NBODY_1FILE */
-         subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, cg_n_o, Z_avail)
-#endif /* !NBODY_1FILE */
             use hdf5, only: HID_T
             implicit none
             integer(HID_T),                intent(in) :: cgl_g_id
             integer(kind=4), dimension(:), intent(in) :: cg_n_b
             integer(kind=4), dimension(:), intent(in) :: cg_n_o
             logical(kind=4),               intent(in) :: Z_avail
-#ifdef NBODY_1FILE
-            integer(kind=8)                           :: n_part
+            integer(kind=8),               intent(in) :: n_part
             integer(HID_T),                intent(in) :: st_g_id
-#endif /* NBODY_1FILE */
          end subroutine create_empty_cg_datasets
 
          !>
@@ -1054,6 +1048,7 @@ contains
                call h5gcreate_f(cg_g_id, part_gname, part_g_id, error) ! create "/data/grid_%08d/particles
                call h5gcreate_f(part_g_id, st_gname, st_g_id, error) ! create "/data/grid_%08d/particles/stars"
 
+               !write(*,*) 'COLLECT: ', p, cg_npart
                if (int(cg_npart(g),   kind=4) /= cg_npart(g))   call die("[common_hdf5:write_to_hdf5_v2] cg_npart needs to be 64-bit")
                if (int(cg_pid_max(g), kind=4) /= cg_pid_max(g)) call die("[common_hdf5:write_to_hdf5_v2] pid_max needs to be 64-bit")
 
@@ -1479,7 +1474,7 @@ contains
             call h5gopen_f(cgl_g_id, n_cg_name(ncg), this%cg_g_id(ncg), error, gapl_id = plist_id)
 #ifdef NBODY_1FILE
             call h5gopen_f(this%cg_g_id(ncg), part_gname, this%part_g_id(ncg), error, gapl_id = plist_id)
-            call h5gopen_f(this%part_g_id(ncg), "stars", this%st_g_id(ncg), error, gapl_id = plist_id)
+            call h5gopen_f(this%part_g_id(ncg), "stars",  this%st_g_id(ncg),   error, gapl_id = plist_id)
 #endif /* NBODY_1FILE */
          enddo
          call h5pclose_f(plist_id, error)
@@ -1535,15 +1530,15 @@ contains
          enddo
       endif
       call h5pclose_f(this%xfer_prp, error)
-      if (allocated(this%dset_id)) deallocate(this%dset_id)
+      if (allocated(this%dset_id))   deallocate(this%dset_id)
 #ifdef NBODY_1FILE
-      if (allocated(this%pdset_id)) deallocate(this%pdset_id)
-      if (allocated(this%st_g_id)) deallocate(this%st_g_id)
+      if (allocated(this%pdset_id))  deallocate(this%pdset_id)
+      if (allocated(this%st_g_id))   deallocate(this%st_g_id)
       if (allocated(this%part_g_id)) deallocate(this%part_g_id)
 #endif /* NBODY_1FILE */
-      if (allocated(this%cg_g_id)) deallocate(this%cg_g_id)
-      if (allocated(this%cg_src_p)) deallocate(this%cg_src_p)
-      if (allocated(this%cg_src_n)) deallocate(this%cg_src_n)
+      if (allocated(this%cg_g_id))   deallocate(this%cg_g_id)
+      if (allocated(this%cg_src_p))  deallocate(this%cg_src_p)
+      if (allocated(this%cg_src_n))  deallocate(this%cg_src_n)
 
    end subroutine finalize_write_cg
 

@@ -896,16 +896,13 @@ contains
 
    end subroutine get_data_from_cg
 
-#ifdef NBODY_1FILE
    subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)
 
-      use common_hdf5, only: pdsets
-#else /* !NBODY_1FILE */
-   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail)
-
-#endif /* !NBODY_1FILE */
       use common_hdf5, only: create_empty_cg_dataset, hdf_vars, hdf_vars_avail, O_OUT
       use hdf5,        only: HID_T, HSIZE_T
+#ifdef NBODY_1FILE
+      use common_hdf5, only: pdsets
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -913,10 +910,8 @@ contains
       integer(kind=4), dimension(:), intent(in) :: cg_n_b
       integer(kind=4), dimension(:), intent(in) :: cg_n_o
       logical(kind=4),               intent(in) :: Z_avail
-#ifdef NBODY_1FILE
-      integer(kind=8)                           :: n_part
+      integer(kind=8),               intent(in) :: n_part
       integer(HID_T),                intent(in) :: st_g_id
-#endif /* NBODY_1FILE */
 
       integer :: i
 
@@ -932,7 +927,7 @@ contains
 #endif /* NBODY_1FILE */
 
       return
-      if (.false.) i = size(cg_n_o) ! suppress compiler warning
+      if (.false.) i = size(cg_n_o) + int(n_part) + int(st_g_id) ! suppress compiler warning
 
    end subroutine create_empty_cg_datasets_in_output
 
