@@ -38,6 +38,8 @@ module particles_io
 
    character(len=dsetnamelen), dimension(*), parameter  :: pvarn = ['ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz', 'tfor', 'tdyn']
    logical,                    dimension(size(pvarn))   :: pvarl = .false.
+   integer(kind=4), dimension(:), allocatable           :: tabi
+   real,            dimension(:), allocatable           :: tabr
 
 contains
 
@@ -101,14 +103,16 @@ contains
       n_part = count_cg_particles(cg)
       if (n_part == 0) return
 
+      allocate(tabi(n_part), tabr(n_part))
       do ivar = lbound(pvars, dim=1, kind=4), ubound(pvars, dim=1, kind=4)
          select case (pvars(ivar))
             case ('id')
-               call parallel_write_intr(group_id(ncg, ivar), pvars(ivar), n_part, cg)
+               call parallel_write_intr(group_id(ncg, ivar), pvars(ivar), cg)
             case default
-               call parallel_write_real(group_id(ncg, ivar), pvars(ivar), n_part, cg)
+               call parallel_write_real(group_id(ncg, ivar), pvars(ivar), cg)
          end select
       enddo
+      deallocate(tabi, tabr)
 
    end subroutine parallel_nbody_datafields
 
@@ -142,6 +146,7 @@ contains
 
       if (n_part == 0) return
 
+      allocate(tabi(n_part), tabr(n_part))
       do ivar = lbound(pvars, 1, kind=4), ubound(pvars, 1, kind=4)
          select case (pvars(ivar))
             case ('id')
@@ -150,10 +155,11 @@ contains
                call serial_write_real(group_id, ncg, ivar, pvars(ivar), n_part, cg_src_ncg, proc_ncg, ptag+ivar)
          end select
       enddo
+      deallocate(tabi, tabr)
 
    end subroutine serial_nbody_datafields
 
-   subroutine collect_intr(pvar, cg, tabi)
+   subroutine collect_intr(pvar, cg)
 
       use grid_cont,      only: grid_container
       use particle_types, only: particle
@@ -164,7 +170,6 @@ contains
       type(grid_container), pointer,  intent(in) :: cg
 
       integer                                    :: cgnp
-      integer(kind=4), dimension(:), allocatable :: tabi
       type(particle), pointer                    :: pset
 
       cgnp = 0
@@ -183,7 +188,7 @@ contains
 
    end subroutine collect_intr
 
-   subroutine collect_real(pvar, cg, tabr)
+   subroutine collect_real(pvar, cg)
 
       use constants,      only: xdim, ydim, zdim
       use grid_cont,      only: grid_container
@@ -195,7 +200,6 @@ contains
       type(grid_container), pointer, intent(in) :: cg
 
       integer                                   :: cgnp
-      real, dimension(:), allocatable           :: tabr
       type(particle), pointer                   :: pset
 
       cgnp = 0
@@ -252,21 +256,15 @@ contains
       character(len=*),               intent(in) :: pvar
       integer(kind=4),                intent(in) :: ncg, ivar, n_part, cg_src_ncg, proc_ncg, ptag
 
-      integer(kind=4), dimension(:), allocatable :: tabi
-
-      allocate(tabi(n_part))
-
       if (proc_ncg == proc) then
-         call collect_intr(pvar, get_nth_cg(cg_src_ncg), tabi)
+         call collect_intr(pvar, get_nth_cg(cg_src_ncg))
          if (.not. master) call MPI_Send(tabi, n_part, MPI_INTEGER, FIRST, ptag, MPI_COMM_WORLD, err_mpi)
       endif
 
       if (master) then
          if (proc_ncg /= proc) call MPI_Recv(tabi, n_part, MPI_INTEGER, proc_ncg, ptag, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-         call write_nbody_h5_intr(group_id(ncg, ivar), tabi)
+         call write_nbody_h5_intr(group_id(ncg, ivar))
       endif
-
-      deallocate(tabi)
 
    end subroutine serial_write_intr
 
@@ -284,25 +282,19 @@ contains
       character(len=*),               intent(in) :: pvar
       integer(kind=4),                intent(in) :: ncg, ivar, n_part, cg_src_ncg, proc_ncg, ptag
 
-      real, dimension(:), allocatable            :: tabr
-
-      allocate(tabr(n_part))
-
       if (proc_ncg == proc) then
-         call collect_real(pvar, get_nth_cg(cg_src_ncg), tabr)
+         call collect_real(pvar, get_nth_cg(cg_src_ncg))
          if (.not. master) call MPI_Send(tabr, n_part, MPI_DOUBLE_PRECISION, FIRST, ptag, MPI_COMM_WORLD, err_mpi)
       endif
 
       if (master) then
          if (proc_ncg /= proc) call MPI_Recv(tabr, n_part, MPI_DOUBLE_PRECISION, proc_ncg, ptag, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-         call write_nbody_h5_real(group_id(ncg, ivar), tabr)
+         call write_nbody_h5_real(group_id(ncg, ivar))
       endif
-
-      deallocate(tabr)
 
    end subroutine serial_write_real
 
-   subroutine parallel_write_intr(group_id, pvar, n_part, cg)
+   subroutine parallel_write_intr(group_id, pvar, cg)
 
       use grid_cont, only: grid_container
       use hdf5,      only: HID_T
@@ -311,19 +303,14 @@ contains
 
       integer(HID_T),                intent(in)    :: group_id       !< File identifier
       character(len=*),              intent(in)    :: pvar
-      integer(kind=4),               intent(in)    :: n_part
       type(grid_container), pointer, intent(inout) :: cg
 
-      integer(kind=4), dimension(:), allocatable   :: tabi
-
-      allocate(tabi(n_part))
-      call collect_intr(pvar, cg, tabi)
-      call write_nbody_h5_intr(group_id, tabi)
-      deallocate(tabi)
+      call collect_intr(pvar, cg)
+      call write_nbody_h5_intr(group_id)
 
    end subroutine parallel_write_intr
 
-   subroutine parallel_write_real(group_id, pvar, n_part, cg)
+   subroutine parallel_write_real(group_id, pvar, cg)
 
       use grid_cont, only: grid_container
       use hdf5,      only: HID_T
@@ -332,38 +319,32 @@ contains
 
       integer(HID_T),                intent(in)    :: group_id       !< File identifier
       character(len=*),              intent(in)    :: pvar
-      integer(kind=4),               intent(in)    :: n_part
       type(grid_container), pointer, intent(inout) :: cg
 
-      real, dimension(:), allocatable              :: tabr
-
-      allocate(tabr(n_part))
-      call collect_real(pvar, cg, tabr)
-      call write_nbody_h5_real(group_id, tabr)
-      deallocate(tabr)
+      call collect_real(pvar, cg)
+      call write_nbody_h5_real(group_id)
 
    end subroutine parallel_write_real
 
-   subroutine write_nbody_h5_intr(dataset_id, tab)
+   subroutine write_nbody_h5_intr(dataset_id)
 
       use dataio_pub, only: die
       use hdf5,       only: h5dwrite_f, HID_T, HSIZE_T, H5T_NATIVE_INTEGER
 
       implicit none
 
-      integer(HID_T),                intent(in) :: dataset_id
-      integer(kind=4), dimension(:), intent(in) :: tab
-      integer(HSIZE_T), dimension(1)            :: dimm
-      integer(kind=4)                           :: error
+      integer(HID_T),     intent(in) :: dataset_id
+      integer(HSIZE_T), dimension(1) :: dimm
+      integer(kind=4)                :: error
 
       if (all(kind(dataset_id) /= [4, 8])) call die("[particles_io:write_nbody_h5_intr] HID_T doesn't fit to MPI_INTEGER8")
 
-      dimm = shape(tab)
-      call h5dwrite_f(dataset_id, H5T_NATIVE_INTEGER, tab, dimm, error)  ! beware: 64-bit tab(:) produces "no specific subroutine for the generic ‘h5dwrite_f'" error
+      dimm = shape(tabi)
+      call h5dwrite_f(dataset_id, H5T_NATIVE_INTEGER, tabi, dimm, error)  ! beware: 64-bit tabi(:) produces "no specific subroutine for the generic ‘h5dwrite_f'" error
 
    end subroutine write_nbody_h5_intr
 
-   subroutine write_nbody_h5_real(dataset_id, tab)
+   subroutine write_nbody_h5_real(dataset_id)
 
       use dataio_pub, only: die
       use hdf5,       only: h5dwrite_f, HID_T, HSIZE_T, H5T_NATIVE_DOUBLE
@@ -371,14 +352,13 @@ contains
       implicit none
 
       integer(HID_T),     intent(in) :: dataset_id
-      real, dimension(:), intent(in) :: tab
       integer(HSIZE_T), dimension(1) :: dimm
       integer(kind=4)                :: error
 
       if (all(kind(dataset_id) /= [4, 8])) call die("[particles_io:write_nbody_h5_real] HID_T doesn't fit to MPI_INTEGER8")
 
-      dimm = shape(tab)
-      call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, tab, dimm, error)
+      dimm = shape(tabr)
+      call h5dwrite_f(dataset_id, H5T_NATIVE_DOUBLE, tabr, dimm, error)
 
    end subroutine write_nbody_h5_real
 
