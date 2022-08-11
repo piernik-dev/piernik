@@ -347,7 +347,7 @@ contains
 
    end subroutine cg_outside_dom
 
-   subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn)
+   subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, success)
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
@@ -355,28 +355,32 @@ contains
 
       implicit none
 
-      integer(kind=4),        intent(in) :: pid
-      real, dimension(ndims), intent(in) :: pos, vel
-      real, dimension(ndims), intent(in) :: acc
-      real,                   intent(in) :: ener
-      real,                   intent(in) :: mass
-      real, optional,         intent(in) :: tform
-      real, optional,         intent(in) :: tdyn
-      type(cg_list_element), pointer     :: cgl
-      logical                            :: in, phy, out
-      real                               :: tform1, tdyn1
+      integer(kind=4),        intent(in)  :: pid
+      real, dimension(ndims), intent(in)  :: pos, vel
+      real, dimension(ndims), intent(in)  :: acc
+      real,                   intent(in)  :: ener
+      real,                   intent(in)  :: mass
+      real, optional,         intent(in)  :: tform
+      real, optional,         intent(in)  :: tdyn
+      logical, optional,      intent(out) :: success
+      type(cg_list_element), pointer      :: cgl
+      logical                             :: in, phy, out, cgfound
+      real                                :: tform1, tdyn1
 
       tform1 = 0.0
       tdyn1  = 0.0
       if (present(tform)) tform1 = tform
       if (present(tdyn))  tdyn1  = tdyn
+      cgfound = .false.
 
       cgl => leaves%first
       do while (associated(cgl))
          call is_part_in_cg(cgl%cg, pos, in, phy, out)
          if (phy .or. out) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform1, tdyn1)
+         cgfound = cgfound .or. (phy .or. out)
          cgl => cgl%nxt
       enddo
+      if (present(success)) success = cgfound
 
    end subroutine add_part_in_proper_cg
 
@@ -400,21 +404,22 @@ contains
       implicit none
 
       integer(kind=4), dimension(FIRST:LAST) :: nsend, nrecv, counts, countr, disps, dispr
-      integer                            :: i, j, ind, b
-      integer(kind=4)                    :: pid
-      real, dimension(ndims)             :: pos, vel, acc
-      real, dimension(:), allocatable    :: part_info, part_info2
-      real                               :: mass, ener, tform, tdyn
-      type(cg_list_element), pointer     :: cgl
-      type(grid_container),  pointer     :: cg
-      type(particle), pointer            :: pset, pset2
-      logical                            :: in, phy, out, phy_out
-      character(len=*), parameter        :: ts_label = "leave_cg"
+      integer                                :: i, j, ind, inc, b
+      integer(kind=4)                        :: pid, nchcg
+      real, dimension(ndims)                 :: pos, vel, acc
+      real, dimension(:), allocatable        :: part_send, part_recv, part_chcg
+      real                                   :: mass, ener, tform, tdyn
+      type(cg_list_element), pointer         :: cgl
+      type(grid_container),  pointer         :: cg
+      type(particle), pointer                :: pset, pset2
+      logical                                :: phy_out, attributed
+      character(len=*), parameter            :: ts_label = "leave_cg"
 
       if (is_refined) call die("[particle_utils:part_leave_cg] AMR not implemented yet")
 
       call ppp_main%start(ts_label, PPP_PART)
 
+      nchcg = 0
       nsend = 0
       nrecv = 0
 
@@ -425,19 +430,25 @@ contains
          do j = FIRST, LAST
             pset => cg%pset%first
             do while (associated(pset))
-               if (j == proc) then
-                  pset => pset%nxt
-                  cycle
-               endif
                if (.not. pset%pdata%in) then
                   ! TO CHECK: PARTICLES CHANGING CG OUTSIDE DOMAIN?
                   associate ( gsej => base%level%dot%gse(j) )
                      do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
                         if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (gsej%c(b)%se(:,LO) - npb) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE + npb) * cg%dl(:)])) then
-                           nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
+                           if (j == proc) then
+                              if (all(gsej%c(b)%se /= cg%ijkse)) nchcg = nchcg + I_ONE
+                           else
+                              nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
+                           endif
                         else if (pset%pdata%outside) then
                            call cg_outside_dom(pset%pdata%pos, [dom%edge(:,LO) + gsej%c(b)%se(:,LO) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE) * cg%dl(:)], phy_out)
-                           if (phy_out) nsend(j) = nsend(j) + I_ONE
+                           if (phy_out) then
+                              if (j == proc) then
+                                 if (all(gsej%c(b)%se /= cg%ijkse)) nchcg = nchcg + I_ONE
+                              else
+                                 nsend(j) = nsend(j) + I_ONE
+                              endif
+                           endif
                         endif
                      enddo
                   end associate
@@ -452,8 +463,9 @@ contains
       call MPI_Alltoall(nsend, I_ONE, MPI_INTEGER, nrecv, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
 
       !Store data of particles to be sent
-      allocate(part_info(sum(nsend(:))*npf))
+      allocate(part_send(sum(nsend(:))*npf), part_chcg(nchcg*npf))
       ind = 1
+      inc = 1
       cgl => leaves%first
       do while (associated(cgl))
          associate( cg => cgl%cg )
@@ -468,10 +480,20 @@ contains
                      associate ( gsej => base%level%dot%gse(j) )
                         do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
                            if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (gsej%c(b)%se(:,LO) - npb) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE + npb) * cg%dl(:)])) then
-                              part_info(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
+                              if (j == proc) then
+                                 if (all(gsej%c(b)%se /= cg%ijkse)) part_chcg(inc:inc+npf-1) = collect_single_part_fields(inc, pset%pdata)
+                              else
+                                 part_send(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
+                              endif
                            else if (pset%pdata%outside) then
                               call cg_outside_dom(pset%pdata%pos, [dom%edge(:,LO) + gsej%c(b)%se(:,LO) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE) * cg%dl(:)], phy_out)
-                              if (phy_out) part_info(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
+                              if (phy_out) then
+                                 if (j == proc) then
+                                    if (all(gsej%c(b)%se /= cg%ijkse)) part_chcg(inc:inc+npf-1) = collect_single_part_fields(inc, pset%pdata)
+                                 else
+                                    part_send(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
+                                 endif
+                              endif
                            endif
                         enddo
                      end associate
@@ -498,7 +520,7 @@ contains
 
       !Send / receive particle data
       counts = npf*nsend
-      allocate(part_info2(sum(nrecv)*npf))
+      allocate(part_recv(sum(nrecv)*npf))
       countr = npf*nrecv
       disps(FIRST) = 0
       dispr(FIRST) = 0
@@ -507,41 +529,45 @@ contains
          dispr(j) = dispr(j-1) + countr(j-1)
       enddo
 
-      call MPI_Alltoallv(part_info, counts, disps, MPI_DOUBLE_PRECISION, part_info2, countr, dispr, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, err_mpi)
+      call MPI_Alltoallv(part_send, counts, disps, MPI_DOUBLE_PRECISION, part_recv, countr, dispr, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, err_mpi)
 
       !Add particles in cgs
-      cgl => leaves%first
-      do while (associated(cgl))
-         associate(cg => cgl%cg)
-            ind = 1
-            do j = FIRST, LAST
-               if (nrecv(j) /= 0) then
-                  do i = 1, nrecv(j)
-                     pos = part_info2(ind+2:ind+4)
-                     call is_part_in_cg(cg, pos, in, phy, out) ! TO DO IN AMR USE GRID_ID TO CUT THE SEARCH SHORT
-                     if (.not. out) then
-                        print *, 'error, particle', part_info2(ind), 'cannot be attributed!' ! NON-AMR ONLY
-                     endif
-                     if (out) then
-                        pid = nint(part_info2(ind), kind=4)
-                        mass = part_info2(ind+1)
-                        vel  = part_info2(ind+5:ind+7)
-                        acc  = part_info2(ind+8:ind+10)
-                        ener = part_info2(ind+11)
-                        tform= part_info2(ind+12)
-                        tdyn = part_info2(ind+13)
-                        call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform, tdyn)
-                     endif
-                     ind = ind + npf
-                  enddo
-               endif
+      ind = 1
+      do j = FIRST, LAST
+         if (nrecv(j) /= 0) then
+            do i = 1, nrecv(j)
+               pid   = nint(part_recv(ind), kind=4)
+               mass  = part_recv(ind+1)
+               pos   = part_recv(ind+2:ind+4)
+               vel   = part_recv(ind+5:ind+7)
+               acc   = part_recv(ind+8:ind+10)
+               ener  = part_recv(ind+11)
+               tform = part_recv(ind+12)
+               tdyn  = part_recv(ind+13)
+               call add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, attributed) ! TO DO IN AMR USE GRID_ID TO CUT THE SEARCH SHORT
+               if (.not. attributed) print *, 'error, particle', part_recv(ind), 'cannot be attributed!'
+               ind = ind + npf
             enddo
-         end associate
-         cgl => cgl%nxt
+         endif
       enddo
+      inc = 1
+      if (nchcg /= 0) then
+         do i = 1, nchcg
+            pid   = nint(part_chcg(inc), kind=4)
+            mass  = part_chcg(inc+1)
+            pos   = part_chcg(inc+2:inc+4)
+            vel   = part_chcg(inc+5:inc+7)
+            acc   = part_chcg(inc+8:inc+10)
+            ener  = part_chcg(inc+11)
+            tform = part_chcg(inc+12)
+            tdyn  = part_chcg(inc+13)
+            call add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, attributed) ! TO DO IN AMR USE GRID_ID TO CUT THE SEARCH SHORT
+            if (.not. attributed) print *, 'error, particle', part_chcg(inc), 'cannot be attributed!' ! NON-AMR ONLY
+            inc = inc + npf
+         enddo
+      endif
 
-      deallocate(part_info2)
-      deallocate(part_info)
+      deallocate(part_send, part_recv, part_chcg)
 
       call ppp_main%stop(ts_label, PPP_PART)
 
