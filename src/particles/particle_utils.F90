@@ -48,6 +48,7 @@ module particle_utils
    logical :: twodtscheme
    logical :: dump_diagnose        !< dump diagnose for each particle to a seperate log file
    integer(kind=4), parameter :: npf = 14  !< number of single particle fields
+   integer(kind=4), parameter :: npb = 1   !< number of cells between in and phy or between phy and out boundaries
 
 contains
 
@@ -72,8 +73,8 @@ contains
 
    subroutine max_pvel_1d(cg, max_v)
 
-      use constants, only: ndims, xdim, zdim, zero
-      use grid_cont, only: grid_container
+      use constants,      only: ndims, xdim, zdim, zero
+      use grid_cont,      only: grid_container
       use particle_types, only: particle
 
       implicit none
@@ -108,10 +109,10 @@ contains
       implicit none
 
       type(grid_container), pointer, intent(in)  :: cg
-      type(particle), pointer                    :: pset
       type(value),                   intent(out) :: max_pacc
+      type(particle), pointer                    :: pset
       real                                       :: acc2, max_acc
-      integer(kind=4) :: cdim
+      integer(kind=4)                            :: cdim
 
       max_pacc%assoc = big
 
@@ -241,7 +242,7 @@ contains
 
    subroutine is_part_in_cg(cg, pos, in, phy, out)
 
-      use constants,     only: LO, HI, ndims, xdim, ydim, zdim, I_ONE, LEFT, RIGHT
+      use constants,     only: LO, HI, ndims, xdim, ydim, zdim, LEFT, RIGHT
       use domain,        only: dom
       use grid_cont,     only: grid_container
       use particle_func, only: particle_in_area
@@ -254,11 +255,11 @@ contains
       real, dimension(ndims,2)                   :: bnd_in, bnd_out
 
       !There is probably a better way to write this
-      bnd_out(:,LO) = [cg%coord(LEFT, xdim)%r(cg%lh1(xdim,LO)), cg%coord(LEFT, ydim)%r(cg%lh1(ydim,LO)), cg%coord(LEFT, zdim)%r(cg%lh1(zdim,LO))]
-      bnd_out(:,HI) = [cg%coord(RIGHT,xdim)%r(cg%lh1(xdim,HI)), cg%coord(RIGHT,ydim)%r(cg%lh1(ydim,HI)), cg%coord(RIGHT,zdim)%r(cg%lh1(zdim,HI))]
+      bnd_out(:,LO) = [cg%coord(LEFT, xdim)%r(cg%ijkse(xdim,LO)-npb), cg%coord(LEFT, ydim)%r(cg%ijkse(ydim,LO)-npb), cg%coord(LEFT, zdim)%r(cg%ijkse(zdim,LO)-npb)]
+      bnd_out(:,HI) = [cg%coord(RIGHT,xdim)%r(cg%ijkse(xdim,HI)+npb), cg%coord(RIGHT,ydim)%r(cg%ijkse(ydim,HI)+npb), cg%coord(RIGHT,zdim)%r(cg%ijkse(zdim,HI)+npb)]
 
-      bnd_in(:,LO)  = [cg%coord(LEFT, xdim)%r(cg%ijkse(xdim,LO)+I_ONE), cg%coord(LEFT, ydim)%r(cg%ijkse(ydim,LO)+I_ONE), cg%coord(LEFT, zdim)%r(cg%ijkse(zdim,LO)+I_ONE)]
-      bnd_in(:,HI)  = [cg%coord(RIGHT,xdim)%r(cg%ijkse(xdim,HI)-I_ONE), cg%coord(RIGHT,ydim)%r(cg%ijkse(ydim,HI)-I_ONE), cg%coord(RIGHT,zdim)%r(cg%ijkse(zdim,HI)-I_ONE)]
+      bnd_in(:,LO)  = [cg%coord(LEFT, xdim)%r(cg%ijkse(xdim,LO)+npb), cg%coord(LEFT, ydim)%r(cg%ijkse(ydim,LO)+npb), cg%coord(LEFT, zdim)%r(cg%ijkse(zdim,LO)+npb)]
+      bnd_in(:,HI)  = [cg%coord(RIGHT,xdim)%r(cg%ijkse(xdim,HI)-npb), cg%coord(RIGHT,ydim)%r(cg%ijkse(ydim,HI)-npb), cg%coord(RIGHT,zdim)%r(cg%ijkse(zdim,HI)-npb)]
 
       in  = particle_in_area(pos, bnd_in)
       phy = particle_in_area(pos, cg%fbnd)
@@ -382,18 +383,18 @@ contains
    ! Sends leaving particles between processors, and creates ghosts
    subroutine part_leave_cg()
 
-      use cg_leaves,     only: leaves
-      use cg_level_base, only: base
-      use cg_list,       only: cg_list_element
-      use constants,     only: ndims, I_ONE, I_TWO, LO, HI, PPP_PART
-      use dataio_pub,    only: die
-      use domain,        only: dom, is_refined
-      use grid_cont,     only: grid_container
-      use MPIF,          only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD
-      use MPIFUN,        only: MPI_Alltoall, MPI_Alltoallv
-      use mpisetup,      only: proc, err_mpi, FIRST, LAST
-      use ppp,           only: ppp_main
-      use particle_func, only: particle_in_area
+      use cg_leaves,      only: leaves
+      use cg_level_base,  only: base
+      use cg_list,        only: cg_list_element
+      use constants,      only: ndims, I_ONE, LO, HI, PPP_PART
+      use dataio_pub,     only: die
+      use domain,         only: dom, is_refined
+      use grid_cont,      only: grid_container
+      use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD
+      use MPIFUN,         only: MPI_Alltoall, MPI_Alltoallv
+      use mpisetup,       only: proc, err_mpi, FIRST, LAST
+      use ppp,            only: ppp_main
+      use particle_func,  only: particle_in_area
       use particle_types, only: particle
 
       implicit none
@@ -432,7 +433,7 @@ contains
                   ! TO CHECK: PARTICLES CHANGING CG OUTSIDE DOMAIN?
                   associate ( gsej => base%level%dot%gse(j) )
                      do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
-                        if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (gsej%c(b)%se(:,LO) - I_ONE) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_TWO) * cg%dl(:)])) then
+                        if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (gsej%c(b)%se(:,LO) - npb) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE + npb) * cg%dl(:)])) then
                            nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
                         else if (pset%pdata%outside) then
                            call cg_outside_dom(pset%pdata%pos, [dom%edge(:,LO) + gsej%c(b)%se(:,LO) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE) * cg%dl(:)], phy_out)
@@ -466,7 +467,7 @@ contains
                   if (.not. pset%pdata%in) then
                      associate ( gsej => base%level%dot%gse(j) )
                         do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
-                           if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (gsej%c(b)%se(:,LO) - I_ONE) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_TWO) * cg%dl(:)])) then
+                           if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (gsej%c(b)%se(:,LO) - npb) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE + npb) * cg%dl(:)])) then
                               part_info(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
                            else if (pset%pdata%outside) then
                               call cg_outside_dom(pset%pdata%pos, [dom%edge(:,LO) + gsej%c(b)%se(:,LO) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE) * cg%dl(:)], phy_out)
