@@ -91,7 +91,6 @@ contains
       use dataio_pub,            only: die, warn, msg, printinfo, nh
       use domain,                only: dom
       use fluidindex,            only: iarr_all_dn
-      use func,                  only: operator(.equals.)
       use global,                only: smalld
       use mpisetup,              only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
       use multigridvars,         only: ord_prolong
@@ -204,7 +203,7 @@ contains
       endif
 
 #ifdef NBODY
-      if (a1 .equals. 0.) call add_part_in_proper_cg(I_ONE, d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
+      if (abs(a1) < tiny(1.)) call add_part_in_proper_cg(I_ONE, d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
 #endif /* NBODY */
 
       if (master) then
@@ -252,7 +251,6 @@ contains
       use dataio_pub,        only: die, msg, printinfo
       use domain,            only: dom
       use fluidindex,        only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use func,              only: operator(.notequals.)
       use global,            only: dirty_debug, no_dirty_checks
       use grid_cont,         only: grid_container
       use named_array_list,  only: qna
@@ -263,7 +261,7 @@ contains
       implicit none
 
       integer                        :: i, j, k, ii, jj, kk
-      real                           :: xx, yy, zz, rr, dm
+      real                           :: xx, yy, zz, rr, dm, n_res
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
@@ -380,11 +378,13 @@ contains
       enddo
 
       dm = leaves%norm_sq(qna%ind(asrc_n))
-      if (dm .notequals. 0.) then
-         write(msg,'(a,f13.10)')"[initproblem:problem_initial_conditions] Analytical norm residual/source= ",leaves%norm_sq(qna%ind(ares_n))/dm
+      n_res = leaves%norm_sq(qna%ind(ares_n))
+      if (abs(dm) > tiny(1.)) then  ! An FP overflow will occur when n_res > dm/tiny(1.)
+         write(msg, '(a,f13.10)')"[initproblem:problem_initial_conditions] Analytical norm residual/source= ", n_res/dm
          if (master) call printinfo(msg)
       else
-         write(msg,'(2(a,f13.10))')"[initproblem:problem_initial_conditions] Analytical norm residual= ",leaves%norm_sq(qna%ind(ares_n)), " point mass= ", d0
+         write(msg, '(2(a,g14.6))')"[initproblem:problem_initial_conditions] Analytical norm residual= ", n_res, " point mass= ", d0
+         ! Is n_res ~ sqrt(cg%dvol) ?
          if (master) call printinfo(msg)
       endif
 
@@ -431,7 +431,6 @@ contains
       use constants,        only: pi, GEO_XYZ, GEO_RPZ, PPP_PROB
       use dataio_pub,       only: warn, die
       use domain,           only: dom
-      use func,             only: operator(.equals.), operator(.notequals.)
       use grid_cont,        only: grid_container
       use mpisetup,         only: master
       use named_array_list, only: qna
@@ -477,7 +476,7 @@ contains
             z02 = (cg%z(k)-z0)**2
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  if (a12 .notequals. 0.) then
+                  if (abs(a12) > tiny(1.)) then
                      select case (dom%geometry_type)
                         case (GEO_XYZ)
                            y02 = (cg%y(j)-y0)**2
@@ -523,13 +522,12 @@ contains
                              &      (2.*(a32 - a12) + x02 + y02 - 2.*z02)/sqrt(a32 - a12) * log(h + sqrt(1. + h**2)) - &
                              &      (x02 + y02) * sqrt(a32 + lam)/(a12 + lam) + 2.*z02 / sqrt(a32 + lam) )
                      else
-                        if (a1 .equals. 0.) then
-                           if (rr .notequals. 0.) then
+                        if (abs(a1) < tiny(1.)) then
+                           if (abs(rr) > sum(cg%dl**2)/8.) then  ! Warning: may need some small factor for better smoothness
                               potential = - 1. / (pi * sqrt(rr)) ! A bit dirty: we interpret d0 as a mass for point-like sources
                            else
-                              potential = - sqrt(sum(cg%idl2))*0.5
-                              ! The factor of 0.5 was guessed. It gives small departures of potential in the cell containing the particle for 4th order Laplacian.
-                              ! For 2nd order Laplacian (default) 0.58 looks a bit better because it compensates 4th order errors of the operator.
+                              potential = - 8. / (pi * sqrt(sum(cg%dl**2))) *.85
+                              ! The factor of 0.85 was guessed via minimizing L2 error norm for point-like setups
                            endif
                         else
                            potential = - 4./3. * a1**3 / sqrt(rr)
@@ -560,7 +558,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: GEO_RPZ, pSUM, pMIN, pMAX
+      use constants,        only: GEO_RPZ, pSUM, pMIN, pMAX, idlen
       use dataio_pub,       only: msg, printinfo, warn
       use domain,           only: dom
       use grid_cont,        only: grid_container
@@ -574,6 +572,7 @@ contains
       real                           :: potential, fac
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      character(len=idlen)           :: ffmt
 
       fac = 1.
       norm(:) = 0.
@@ -612,7 +611,9 @@ contains
       call piernik_MPI_Allreduce(dev(2), pMAX)
 
       if (master) then
-         write(msg,'(a,f12.6,a,2f12.6)')"[initproblem:finalize_problem_maclaurin] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)
+         ffmt = "f12"
+         if (any(abs(dev) > 1e6) .or. any(abs(dev) < 1e-4)) ffmt = "g14"
+         write(msg,'(a,' // ffmt // '.6,a,2' // ffmt // '.6)')"[initproblem:finalize_problem_maclaurin] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)
          call printinfo(msg)
       endif
 
@@ -651,7 +652,6 @@ contains
    subroutine maclaurin_error_vars(var, tab, ierrh, cg)
 
       use dataio_pub,       only: die
-      use func,             only: operator(.notequals.)
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
 
@@ -669,7 +669,7 @@ contains
          case ("errp")
             tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(RNG)
          case ("relerr")
-            where (cg%q(qna%ind(apot_n))%span(cg%ijkse) .notequals. 0.)
+            where (abs(cg%q(qna%ind(apot_n))%span(cg%ijkse)) > tiny(1.))  ! An FP overflow may occur when sgp > apot / tiny()
                tab(:,:,:) = cg%sgp(RNG)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1.
             elsewhere
                tab(:,:,:) = 0.
@@ -677,7 +677,7 @@ contains
          case ("errm")
             tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%q(qna%ind(mpole_n))%span(cg%ijkse)
          case ("relerrm")
-            where (cg%q(qna%ind(apot_n))%span(cg%ijkse) .notequals. 0.)
+            where (abs(cg%q(qna%ind(apot_n))%span(cg%ijkse)) > tiny(1.))  ! An FP overflow may occur when mpole > apot / tiny()
                tab(:,:,:) = cg%q(qna%ind(mpole_n))%span(cg%ijkse)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1.
             elsewhere
                tab(:,:,:) = 0.

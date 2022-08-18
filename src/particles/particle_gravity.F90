@@ -530,7 +530,6 @@ contains
 
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, gp1b_n, gpot_n, idm, half, zero
       use domain,           only: dom
-      use func,             only: operator(.equals.)
       use grid_cont,        only: grid_container
       use multipole,        only: moments2pot
       use named_array_list, only: qna
@@ -561,7 +560,7 @@ contains
       do while (associated(pset))
 
          !Delete particles escaping the domain
-         if (pset%pdata%energy .equals. 0.0) then
+         if (abs(pset%pdata%energy) < tiny(1.)) then
             pset2 => pset%nxt
             call cg%pset%remove(pset)
             pset => pset2

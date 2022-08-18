@@ -46,6 +46,8 @@ module particle_types
    type :: particle_data
       integer(kind=4)        :: pid        !< particle ID
       real                   :: mass       !< mass of the particle
+      real                   :: tform      !< formation time of the particle
+      real                   :: tdyn       !< dynamical time for SF
       real, dimension(ndims) :: pos        !< physical position
       real, dimension(ndims) :: vel        !< particle velocity
       real, dimension(ndims) :: acc        !< acceleration of the particle
@@ -199,7 +201,7 @@ contains
 !> \brief Add a particle to the list
 
 
-   subroutine add_part_list(this, pid, mass, pos, vel, acc, energy, in, phy, out)
+   subroutine add_part_list(this, pid, mass, pos, vel, acc, energy, in, phy, out, tform, tdyn)
 
       use constants,  only: I_ONE
       use dataio_pub, only: die
@@ -213,7 +215,7 @@ contains
       real, dimension(ndims), intent(in) :: pos, vel
       real, dimension(ndims), intent(in) :: acc
       real,                   intent(in) :: energy
-      real,                   intent(in) :: mass
+      real,                   intent(in) :: mass, tform, tdyn
       logical                            :: in,phy,out
 
       allocate(new)
@@ -229,6 +231,8 @@ contains
             new%pdata%phy = phy
             new%pdata%out = out
             new%pdata%outside = .false.
+            new%pdata%tform = tform
+            new%pdata%tdyn = tdyn
       new%nxt => null()
 
       if (.not. associated(this%first)) then ! the list was empty

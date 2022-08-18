@@ -600,10 +600,9 @@ contains
 
    subroutine geomfac4moments(this, factor, xx, yy, zz, sin_th, cos_th, sin_ph, cos_ph, ir)
 
-      use constants,  only: GEO_XYZ, GEO_RPZ, zero, xdim, ydim, zdim
+      use constants,  only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim
       use dataio_pub, only: die
       use domain,     only: dom
-      use func,       only: operator(.notequals.)
 
       implicit none
 
@@ -638,7 +637,7 @@ contains
       end select
       r    = sqrt(rxy + z**2)
       rxy  = sqrt(rxy)
-      if (r .notequals. zero) then
+      if (abs(r) > tiny(1.)) then
          rinv = 1. / r
       else
          rinv = 0.
@@ -655,7 +654,7 @@ contains
       ! azimuthal angle sine and cosine tables
       ! ph = atan2(y, x); this%cfac(m) = cos(m * ph); this%sfac(m) = sin(m * ph)
       ! this%cfac(0) and this%sfac(0) are set in init_multigrid
-      if (rxy .notequals. zero) then
+      if (abs(rxy) > tiny(1.)) then
          select case (dom%geometry_type)
             case (GEO_XYZ)
                cos_ph = x / rxy

@@ -51,16 +51,15 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: big, one, pMIN, two, zero
+      use constants,      only: one, pMIN, two
       use dataio_pub,     only: msg, printinfo
-      use func,           only: operator(.notequals.)
       use global,         only: dt_max
       use grid_cont,      only: grid_container
       use mpisetup,       only: piernik_MPI_Allreduce, master
       use particle_utils, only: max_pacc_3d
       use particle_pub,   only: lf_c, ignore_dt_fluid
 #ifdef DUST_PARTICLES
-      use constants,      only: ndims, xdim, zdim
+      use constants,      only: ndims, xdim, zdim, big
       use particle_utils, only: max_pvel_1d
 #endif /* DUST_PARTICLES */
 
@@ -82,7 +81,7 @@ contains
 
       eps      = 1.0e-1
       factor   = one
-      dt_nbody = big
+      dt_nbody = huge(1.)
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -90,8 +89,7 @@ contains
          eta = minval(cg%dl)   !scale timestep with cell size
 
          call max_pacc_3d(cg, pacc_max)
-
-         if (pacc_max%val .notequals. zero) then
+         if (abs(pacc_max%val) > tiny(1.)) then
             dt_nbody = sqrt(two*eta*eps/pacc_max%val)
 
 #ifdef DUST_PARTICLES
@@ -121,7 +119,7 @@ contains
          dt = dt_nbody      !IGNORE HYDRO TIMESTEP
       else
          !> \todo verify this condition
-         if (dt_nbody .notequals. 0.0) dt = min(dt, dt_nbody)
+         if (abs(dt_nbody) > tiny(1.)) dt = min(dt, dt_nbody)
       endif
 
       write(msg,'(a,3g12.5)') '[particle_timestep:timestep_nbody] dt for hydro, nbody and both: ', dt_hydro, dt_nbody, dt
