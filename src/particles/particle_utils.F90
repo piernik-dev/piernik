@@ -267,7 +267,7 @@ contains
 
       if (particle_in_area(pos, dom%edge)) return
 
-      call cg_outside_dom(pos, cg%fbnd, phy)
+      phy = cg_outside_dom(pos, cg%fbnd)
       if (phy) then
          in  = .true.
          out = .true.
@@ -275,7 +275,7 @@ contains
 
    end subroutine is_part_in_cg
 
-   subroutine cg_outside_dom(pos, fbnd, phy)
+   logical function cg_outside_dom(pos, fbnd) result (phy)
 
       use constants, only: LO, HI, ndims, xdim, zdim
       use domain,    only: dom
@@ -283,11 +283,10 @@ contains
 
       implicit none
 
-      real, dimension(ndims),       intent(in)  :: pos
-      real, dimension(ndims,LO:HI), intent(in)  :: fbnd
-      logical,                      intent(out) :: phy
-      integer                                   :: cdim, k, count, count2, count3
-      integer, dimension(ndims)                 :: tmp
+      real, dimension(ndims),       intent(in) :: pos
+      real, dimension(ndims,LO:HI), intent(in) :: fbnd
+      integer                                  :: cdim, k, count1, count2, count3
+      integer, dimension(ndims)                :: tmp
 
       phy = .false.
       count2 = 0
@@ -328,15 +327,15 @@ contains
       else
          do cdim = xdim, zdim
             if ( ((pos(cdim) < dom%edge(cdim,LO)) .and. (fbnd(cdim,LO) .equals. dom%edge(cdim,LO))) .or. (((pos(cdim) > dom%edge(cdim,HI)) .and. (fbnd(cdim,HI) .equals. dom%edge(cdim,HI)))) ) then
-               count = 0
+               count1 = 0
                do k = xdim, zdim
                   if (k /= cdim) then
                      if ( (pos(k) > fbnd(k,LO)) .and. (pos(k) < fbnd(k,HI)) ) then
-                        count = count + 1
+                        count1 = count1 + 1
                      endif
                   endif
                enddo
-               if (count == 2) then
+               if (count1 == 2) then
                   phy = .true.
                   return
                endif
@@ -345,13 +344,13 @@ contains
          enddo
       endif
 
-   end subroutine cg_outside_dom
+   end function cg_outside_dom
 
    subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, success)
 
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: ndims
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use constants, only: ndims
 
       implicit none
 
@@ -412,7 +411,7 @@ contains
       type(cg_list_element), pointer         :: cgl
       type(grid_container),  pointer         :: cg
       type(particle), pointer                :: pset, pset2
-      logical                                :: phy_out, attributed
+      logical                                :: attributed
       character(len=*), parameter            :: ts_label = "leave_cg"
 
       if (is_refined) call die("[particle_utils:part_leave_cg] AMR not implemented yet")
@@ -441,8 +440,7 @@ contains
                               nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
                            endif
                         else if (pset%pdata%outside) then
-                           call cg_outside_dom(pset%pdata%pos, [dom%edge(:,LO) + gsej%c(b)%se(:,LO) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE) * cg%dl(:)], phy_out)
-                           if (phy_out) then
+                           if (cg_outside_dom(pset%pdata%pos, [dom%edge(:,LO) + gsej%c(b)%se(:,LO) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE) * cg%dl(:)])) then
                               if (j == proc) then
                                  if (all(gsej%c(b)%se /= cg%ijkse)) nchcg = nchcg + I_ONE
                               else
@@ -486,8 +484,7 @@ contains
                                  part_send(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
                               endif
                            else if (pset%pdata%outside) then
-                              call cg_outside_dom(pset%pdata%pos, [dom%edge(:,LO) + gsej%c(b)%se(:,LO) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE) * cg%dl(:)], phy_out)
-                              if (phy_out) then
+                              if (cg_outside_dom(pset%pdata%pos, [dom%edge(:,LO) + gsej%c(b)%se(:,LO) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE) * cg%dl(:)])) then
                                  if (j == proc) then
                                     if (all(gsej%c(b)%se /= cg%ijkse)) part_chcg(inc:inc+npf-1) = collect_single_part_fields(inc, pset%pdata)
                                  else
