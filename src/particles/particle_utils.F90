@@ -466,52 +466,51 @@ contains
       inc = 1
       cgl => leaves%first
       do while (associated(cgl))
-         associate( cg => cgl%cg )
-            do j = FIRST, LAST
-               pset => cg%pset%first
-               do while (associated(pset))
-                  if (j == proc) then
-                     pset => pset%nxt
-                     cycle ! TO DO IN AMR: ADD PARTICLES CHANGING CG INSIDE PROCESSOR
-                  endif
-                  if (.not. pset%pdata%in) then
-                     associate ( gsej => base%level%dot%gse(j) )
-                        do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
-                           if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (gsej%c(b)%se(:,LO) - npb) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE + npb) * cg%dl(:)])) then
+         cg => cgl%cg
+         do j = FIRST, LAST
+            pset => cg%pset%first
+            do while (associated(pset))
+               if (j == proc) then
+                  pset => pset%nxt
+                  cycle ! TO DO IN AMR: ADD PARTICLES CHANGING CG INSIDE PROCESSOR
+               endif
+               if (.not. pset%pdata%in) then
+                  associate ( gsej => base%level%dot%gse(j) )
+                     do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
+                        if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (gsej%c(b)%se(:,LO) - npb) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE + npb) * cg%dl(:)])) then
+                           if (j == proc) then
+                              if (all(gsej%c(b)%se /= cg%ijkse)) part_chcg(inc:inc+npf-1) = collect_single_part_fields(inc, pset%pdata)
+                           else
+                              part_send(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
+                           endif
+                        else if (pset%pdata%outside) then
+                           if (cg_outside_dom(pset%pdata%pos, [dom%edge(:,LO) + gsej%c(b)%se(:,LO) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE) * cg%dl(:)])) then
                               if (j == proc) then
                                  if (all(gsej%c(b)%se /= cg%ijkse)) part_chcg(inc:inc+npf-1) = collect_single_part_fields(inc, pset%pdata)
                               else
                                  part_send(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
                               endif
-                           else if (pset%pdata%outside) then
-                              if (cg_outside_dom(pset%pdata%pos, [dom%edge(:,LO) + gsej%c(b)%se(:,LO) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE) * cg%dl(:)])) then
-                                 if (j == proc) then
-                                    if (all(gsej%c(b)%se /= cg%ijkse)) part_chcg(inc:inc+npf-1) = collect_single_part_fields(inc, pset%pdata)
-                                 else
-                                    part_send(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
-                                 endif
-                              endif
                            endif
-                        enddo
-                     end associate
-                  endif
-                  pset => pset%nxt
-               enddo
-            enddo
-
-            !Remove particles out of cg
-            pset => cg%pset%first
-            do while (associated(pset))
-               if (.not. pset%pdata%out) then
-                  pset2 => pset%nxt
-                  call cg%pset%remove(pset)
-                  pset => pset2
-                  cycle
+                        endif
+                     enddo
+                  end associate
                endif
                pset => pset%nxt
             enddo
+         enddo
 
-         end associate
+         !Remove particles out of cg
+         pset => cg%pset%first
+         do while (associated(pset))
+            if (.not. pset%pdata%out) then
+               pset2 => pset%nxt
+               call cg%pset%remove(pset)
+               pset => pset2
+               cycle
+            endif
+            pset => pset%nxt
+         enddo
+
          cgl => cgl%nxt
       enddo
 
