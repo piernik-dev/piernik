@@ -422,7 +422,7 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: ndims, I_ONE, PPP_PART
+      use constants,      only: I_ONE, PPP_PART
       use dataio_pub,     only: die
       use domain,         only: is_refined
       use grid_cont,      only: grid_container
@@ -436,14 +436,11 @@ contains
 
       integer(kind=4), dimension(FIRST:LAST) :: nsend, nrecv, counts, countr, disps, dispr
       integer                                :: i, j, ind, inc
-      integer(kind=4)                        :: pid, nchcg
-      real, dimension(ndims)                 :: pos, vel, acc
+      integer(kind=4)                        :: nchcg
       real, dimension(:), allocatable        :: part_send, part_recv, part_chcg
-      real                                   :: mass, ener, tform, tdyn
       type(cg_list_element), pointer         :: cgl
       type(grid_container),  pointer         :: cg
       type(particle), pointer                :: pset, pset2
-      logical                                :: attributed
       character(len=*), parameter            :: ts_label = "leave_cg"
 
       if (is_refined) call die("[particle_utils:part_leave_cg] AMR not implemented yet")
@@ -519,12 +516,12 @@ contains
       enddo
 
       !Send / receive particle data
-      counts = npf*nsend
-      allocate(part_recv(sum(nrecv)*npf))
-      countr = npf*nrecv
+      counts = npf * nsend
+      allocate(part_recv(sum(nrecv) * npf))
+      countr = npf * nrecv
       disps(FIRST) = 0
       dispr(FIRST) = 0
-      do j = FIRST+I_ONE,LAST
+      do j = FIRST + I_ONE, LAST
          disps(j) = disps(j-1) + counts(j-1)
          dispr(j) = dispr(j-1) + countr(j-1)
       enddo
@@ -536,34 +533,14 @@ contains
       do j = FIRST, LAST
          if (nrecv(j) /= 0) then
             do i = 1, nrecv(j)
-               pid   = nint(part_recv(ind), kind=4)
-               mass  = part_recv(ind+1)
-               pos   = part_recv(ind+2:ind+4)
-               vel   = part_recv(ind+5:ind+7)
-               acc   = part_recv(ind+8:ind+10)
-               ener  = part_recv(ind+11)
-               tform = part_recv(ind+12)
-               tdyn  = part_recv(ind+13)
-               call add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, attributed) ! TO DO IN AMR USE GRID_ID TO CUT THE SEARCH SHORT
-               if (.not. attributed) print *, 'error, particle', part_recv(ind), 'cannot be attributed!'
-               ind = ind + npf
+               call unpack_single_part_fields(ind, part_recv(ind:ind+npf-1))
             enddo
          endif
       enddo
       inc = 1
       if (nchcg /= 0) then
          do i = 1, nchcg
-            pid   = nint(part_chcg(inc), kind=4)
-            mass  = part_chcg(inc+1)
-            pos   = part_chcg(inc+2:inc+4)
-            vel   = part_chcg(inc+5:inc+7)
-            acc   = part_chcg(inc+8:inc+10)
-            ener  = part_chcg(inc+11)
-            tform = part_chcg(inc+12)
-            tdyn  = part_chcg(inc+13)
-            call add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, attributed) ! TO DO IN AMR USE GRID_ID TO CUT THE SEARCH SHORT
-            if (.not. attributed) print *, 'error, particle', part_chcg(inc), 'cannot be attributed!' ! NON-AMR ONLY
-            inc = inc + npf
+            call unpack_single_part_fields(inc, part_chcg(inc:inc+npf-1))
          enddo
       endif
 
@@ -596,6 +573,34 @@ contains
       ind = ind + npf
 
    end function collect_single_part_fields
+
+   subroutine unpack_single_part_fields(ind, pinfo)
+
+      use constants, only: ndims
+
+      implicit none
+
+      integer,              intent(inout) :: ind
+      real, dimension(npf), intent(in)    :: pinfo
+
+      integer(kind=4)                     :: pid
+      real, dimension(ndims)              :: pos, vel, acc
+      real                                :: mass, ener, tform, tdyn
+      logical                             :: attributed
+
+      pid   = nint(pinfo(1), kind=4)
+      mass  = pinfo(2)
+      pos   = pinfo(3:5)
+      vel   = pinfo(6:8)
+      acc   = pinfo(9:11)
+      ener  = pinfo(12)
+      tform = pinfo(13)
+      tdyn  = pinfo(14)
+      call add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, attributed) ! TO DO IN AMR USE GRID_ID TO CUT THE SEARCH SHORT
+      if (.not. attributed) print *, 'error, particle', pid, 'cannot be attributed!' ! NON-AMR ONLY
+      ind = ind + npf
+
+   end subroutine unpack_single_part_fields
 
    integer(kind=4) function count_cg_particles(cg) result(n_part)
 
