@@ -447,7 +447,6 @@ contains
 
       call ppp_main%start(ts_label, PPP_PART)
 
-      nchcg = 0
       nsend = 0
       nrecv = 0
 
@@ -460,19 +459,15 @@ contains
             do while (associated(pset))
                if (.not. pset%pdata%in) then
                   ! TO CHECK: PARTICLES CHANGING CG OUTSIDE DOMAIN?
-                  if (attribute_to_proc(pset, j, cg%dl, cg%ijkse)) then
-                     if (j == proc) then
-                        nchcg = nchcg + I_ONE
-                     else
-                        nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
-                     endif
-                  endif
+                  if (attribute_to_proc(pset, j, cg%dl, cg%ijkse)) nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
                endif
                pset => pset%nxt
             enddo
          enddo
          cgl => cgl%nxt
       enddo
+      nchcg = nsend(proc)
+      nsend(proc) = 0
 
       !Exchange information about particles numbers to be sent / received
       call MPI_Alltoall(nsend, I_ONE, MPI_INTEGER, nrecv, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
