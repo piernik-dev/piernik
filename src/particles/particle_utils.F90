@@ -383,27 +383,59 @@ contains
 
    end subroutine add_part_in_proper_cg
 
-   ! Sends leaving particles between processors, and creates ghosts
-   subroutine part_leave_cg()
+   logical function attribute_to_proc(pset, j, cgdl, se) result(to_send)
 
-      use cg_leaves,      only: leaves
       use cg_level_base,  only: base
-      use cg_list,        only: cg_list_element
-      use constants,      only: ndims, I_ONE, LO, HI, PPP_PART
-      use dataio_pub,     only: die
-      use domain,         only: dom, is_refined
-      use grid_cont,      only: grid_container
-      use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD
-      use MPIFUN,         only: MPI_Alltoall, MPI_Alltoallv
-      use mpisetup,       only: proc, err_mpi, FIRST, LAST
-      use ppp,            only: ppp_main
+      use constants,      only: I_ONE, LO, HI
+      use domain,         only: dom
+      use mpisetup,       only: proc
       use particle_func,  only: particle_in_area
       use particle_types, only: particle
 
       implicit none
 
+      integer,                 intent(in) :: j
+      real, dimension(:),      intent(in) :: cgdl
+      type(particle), pointer, intent(in) :: pset
+      integer, dimension(:,:), intent(in) :: se
+      integer :: b
+
+      to_send = .false.
+      do b = lbound(base%level%dot%gse(j)%c(:), dim=1), ubound(base%level%dot%gse(j)%c(:), dim=1)
+         if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,LO) - npb) * cgdl(:), dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,HI) + I_ONE + npb) * cgdl(:)])) then
+            to_send = .true.
+         else if (pset%pdata%outside) then
+            if (cg_outside_dom(pset%pdata%pos, [dom%edge(:,LO) + base%level%dot%gse(j)%c(b)%se(:,LO) * cgdl(:), dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,HI) + I_ONE) * cgdl(:)])) then
+               to_send = .true.
+            endif
+         endif
+         if (to_send) then
+            if (j == proc .and. all(base%level%dot%gse(j)%c(b)%se == se)) to_send = .false.
+         endif
+         if (to_send) return
+      enddo
+
+   end function attribute_to_proc
+
+   ! Sends leaving particles between processors, and creates ghosts
+   subroutine part_leave_cg()
+
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: ndims, I_ONE, PPP_PART
+      use dataio_pub,     only: die
+      use domain,         only: is_refined
+      use grid_cont,      only: grid_container
+      use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD
+      use MPIFUN,         only: MPI_Alltoall, MPI_Alltoallv
+      use mpisetup,       only: proc, err_mpi, FIRST, LAST
+      use ppp,            only: ppp_main
+      use particle_types, only: particle
+
+      implicit none
+
       integer(kind=4), dimension(FIRST:LAST) :: nsend, nrecv, counts, countr, disps, dispr
-      integer                                :: i, j, ind, inc, b
+      integer                                :: i, j, ind, inc
       integer(kind=4)                        :: pid, nchcg
       real, dimension(ndims)                 :: pos, vel, acc
       real, dimension(:), allocatable        :: part_send, part_recv, part_chcg
@@ -431,25 +463,13 @@ contains
             do while (associated(pset))
                if (.not. pset%pdata%in) then
                   ! TO CHECK: PARTICLES CHANGING CG OUTSIDE DOMAIN?
-                  associate ( gsej => base%level%dot%gse(j) )
-                     do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
-                        if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (gsej%c(b)%se(:,LO) - npb) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE + npb) * cg%dl(:)])) then
-                           if (j == proc) then
-                              if (all(gsej%c(b)%se /= cg%ijkse)) nchcg = nchcg + I_ONE
-                           else
-                              nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
-                           endif
-                        else if (pset%pdata%outside) then
-                           if (cg_outside_dom(pset%pdata%pos, [dom%edge(:,LO) + gsej%c(b)%se(:,LO) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE) * cg%dl(:)])) then
-                              if (j == proc) then
-                                 if (all(gsej%c(b)%se /= cg%ijkse)) nchcg = nchcg + I_ONE
-                              else
-                                 nsend(j) = nsend(j) + I_ONE
-                              endif
-                           endif
-                        endif
-                     enddo
-                  end associate
+                  if (attribute_to_proc(pset, j, cg%dl, cg%ijkse)) then
+                     if (j == proc) then
+                        nchcg = nchcg + I_ONE
+                     else
+                        nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
+                     endif
+                  endif
                endif
                pset => pset%nxt
             enddo
@@ -470,30 +490,14 @@ contains
          do j = FIRST, LAST
             pset => cg%pset%first
             do while (associated(pset))
-               if (j == proc) then
-                  pset => pset%nxt
-                  cycle ! TO DO IN AMR: ADD PARTICLES CHANGING CG INSIDE PROCESSOR
-               endif
                if (.not. pset%pdata%in) then
-                  associate ( gsej => base%level%dot%gse(j) )
-                     do b = lbound(gsej%c(:), dim=1), ubound(gsej%c(:), dim=1)
-                        if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (gsej%c(b)%se(:,LO) - npb) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE + npb) * cg%dl(:)])) then
-                           if (j == proc) then
-                              if (all(gsej%c(b)%se /= cg%ijkse)) part_chcg(inc:inc+npf-1) = collect_single_part_fields(inc, pset%pdata)
-                           else
-                              part_send(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
-                           endif
-                        else if (pset%pdata%outside) then
-                           if (cg_outside_dom(pset%pdata%pos, [dom%edge(:,LO) + gsej%c(b)%se(:,LO) * cg%dl(:), dom%edge(:,LO) + (gsej%c(b)%se(:,HI) + I_ONE) * cg%dl(:)])) then
-                              if (j == proc) then
-                                 if (all(gsej%c(b)%se /= cg%ijkse)) part_chcg(inc:inc+npf-1) = collect_single_part_fields(inc, pset%pdata)
-                              else
-                                 part_send(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
-                              endif
-                           endif
-                        endif
-                     enddo
-                  end associate
+                  if (attribute_to_proc(pset, j, cg%dl, cg%ijkse)) then
+                     if (j == proc) then
+                        part_chcg(inc:inc+npf-1) = collect_single_part_fields(inc, pset%pdata)
+                     else
+                        part_send(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
+                     endif
+                  endif
                endif
                pset => pset%nxt
             enddo
