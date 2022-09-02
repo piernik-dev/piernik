@@ -369,8 +369,8 @@ contains
 
          implicit none
 
-         real, intent(in) :: kdt
-         type(particle), pointer        :: pset
+         real,        intent(in) :: kdt
+         type(particle), pointer :: pset
 
          cgl => leaves%first
          do while (associated(cgl))
@@ -393,9 +393,8 @@ contains
 
          implicit none
 
-         real, intent(in)                  :: ddt
-
-         type(particle), pointer        :: pset, pset2
+         real,            intent(in) :: ddt
+         type(particle), pointer     :: pset, pset2
          character(len=*), parameter :: d_label = "part_drift"
 
          call ppp_main%start(d_label, PPP_PART)

@@ -348,9 +348,13 @@ contains
 
    subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, success)
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use constants, only: ndims
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: ndims
+      use mpisetup,       only: proc
+#ifdef NBODY_CHECK_PID
+      use particle_types, only: particle
+#endif /* NBODY_CHECK_PID */
 
       implicit none
 
@@ -365,6 +369,9 @@ contains
       type(cg_list_element), pointer      :: cgl
       logical                             :: in, phy, out, cgfound
       real                                :: tform1, tdyn1
+#ifdef NBODY_CHECK_PID
+      type(particle), pointer             :: pset
+#endif /* NBODY_CHECK_PID */
 
       tform1 = 0.0
       tdyn1  = 0.0
@@ -375,11 +382,26 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          call is_part_in_cg(cgl%cg, pos, in, phy, out)
+#ifdef NBODY_CHECK_PID
+         if (phy .or. out) then
+            pset => cgl%cg%pset%first
+            do while (associated(pset))
+               if (pset%pdata%pid == pid) then
+                  phy = .false.
+                  out = .false.
+                  exit
+               endif
+               pset => pset%nxt
+            enddo
+         endif
+#endif /* NBODY_CHECK_PID */
          if (phy .or. out) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform1, tdyn1)
+         if (phy .or. out) write(*,*) proc, 'added: ', pid, int(pos), in, phy, out, int(cgl%cg%fbnd)
          cgfound = cgfound .or. (phy .or. out)
          cgl => cgl%nxt
       enddo
       if (present(success)) success = cgfound
+      write(*,*) proc, 'adding particle: ', cgfound, pid, pos
 
    end subroutine add_part_in_proper_cg
 
@@ -409,11 +431,16 @@ contains
                to_send = .true.
             endif
          endif
+#ifdef NBODY_CHECK_PID
          if (to_send) then
             if (j == proc .and. all(base%level%dot%gse(j)%c(b)%se == se)) to_send = .false.
          endif
+#endif /* NBODY_CHECK_PID */
          if (to_send) return
       enddo
+
+      return
+      if (.false. .and. proc == sum(se)) return
 
    end function attribute_to_proc
 
@@ -498,7 +525,11 @@ contains
          !Remove particles out of cg
          pset => cg%pset%first
          do while (associated(pset))
+#ifdef NBODY_CHECK_PID
             if (.not. pset%pdata%out) then
+#else /* !NBODY_CHECK_PID */
+            if (.not. pset%pdata%in) then
+#endif /* !NBODY_CHECK_PID */
                pset2 => pset%nxt
                call cg%pset%remove(pset)
                pset => pset2
