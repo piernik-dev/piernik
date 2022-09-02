@@ -351,7 +351,6 @@ contains
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: ndims
-      use mpisetup,       only: proc
 #ifdef NBODY_CHECK_PID
       use particle_types, only: particle
 #endif /* NBODY_CHECK_PID */
@@ -396,12 +395,10 @@ contains
          endif
 #endif /* NBODY_CHECK_PID */
          if (phy .or. out) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform1, tdyn1)
-         if (phy .or. out) write(*,*) proc, 'added: ', pid, int(pos), in, phy, out, int(cgl%cg%fbnd)
          cgfound = cgfound .or. (phy .or. out)
          cgl => cgl%nxt
       enddo
       if (present(success)) success = cgfound
-      write(*,*) proc, 'adding particle: ', cgfound, pid, pos
 
    end subroutine add_part_in_proper_cg
 
