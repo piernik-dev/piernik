@@ -267,7 +267,7 @@ contains
 
       if (particle_in_area(pos, dom%edge)) return
 
-      phy = cg_outside_dom(pos, cg%fbnd)
+      phy = outdom_part_in_cg(pos, cg%fbnd)
       if (phy) then
          in  = .true.
          out = .true.
@@ -275,7 +275,7 @@ contains
 
    end subroutine is_part_in_cg
 
-   logical function cg_outside_dom(pos, fbnd) result (phy)
+   logical function outdom_part_in_cg(pos, fbnd) result (phy)
 
       use constants, only: LO, HI, ndims, xdim, zdim
       use domain,    only: dom
@@ -291,7 +291,6 @@ contains
 
       ext_bnd = fbnd .equals. dom%edge
 
-      phy = .false.
       do cdim = xdim, zdim
          if (pos(cdim) < dom%edge(cdim, LO)) then
             fulfilled(cdim) = ext_bnd(cdim, LO)
@@ -303,7 +302,7 @@ contains
       enddo
       phy = all(fulfilled)
 
-   end function cg_outside_dom
+   end function outdom_part_in_cg
 
    subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, success)
 
@@ -383,7 +382,7 @@ contains
          if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,LO) - npb) * cgdl(:), dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,HI) + I_ONE + npb) * cgdl(:)])) then
             to_send = .true.
          else if (pset%pdata%outside) then
-            if (cg_outside_dom(pset%pdata%pos, [dom%edge(:,LO) + base%level%dot%gse(j)%c(b)%se(:,LO) * cgdl(:), dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,HI) + I_ONE) * cgdl(:)])) then
+            if (outdom_part_in_cg(pset%pdata%pos, [dom%edge(:,LO) + base%level%dot%gse(j)%c(b)%se(:,LO) * cgdl(:), dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,HI) + I_ONE) * cgdl(:)])) then
                to_send = .true.
             endif
          endif
