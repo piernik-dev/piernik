@@ -277,7 +277,7 @@ contains
 
    logical function cg_outside_dom(pos, fbnd) result (phy)
 
-      use constants, only: LO, HI, ndims, xdim, ydim, zdim
+      use constants, only: LO, HI, ndims, xdim, zdim
       use domain,    only: dom
       use func,      only: operator(.equals.)
 
@@ -285,64 +285,23 @@ contains
 
       real, dimension(ndims),       intent(in) :: pos
       real, dimension(ndims,LO:HI), intent(in) :: fbnd
-      integer                                  :: cdim, k, count1, count2
-      integer, dimension(ndims)                :: side
       logical, dimension(ndims, LO:HI)         :: ext_bnd
+      logical, dimension(ndims)                :: fulfilled
+      integer                                  :: cdim
 
       ext_bnd = fbnd .equals. dom%edge
 
       phy = .false.
-      count2 = 0
       do cdim = xdim, zdim
          if (pos(cdim) < dom%edge(cdim, LO)) then
-            count2 = count2 + 1
-            side(cdim) = LO
+            fulfilled(cdim) = ext_bnd(cdim, LO)
          else if (pos(cdim) >= dom%edge(cdim, HI)) then
-            count2 = count2 + 1
-            side(cdim) = HI
+            fulfilled(cdim) = ext_bnd(cdim, HI)
          else
-            side(cdim) = 0
+            fulfilled(cdim) = pos(cdim) >= fbnd(cdim, LO) .and. pos(cdim) < fbnd(cdim, HI)
          endif
       enddo
-
-      !CORNER
-      if (count2 == 3) then
-         phy = ext_bnd(xdim, side(xdim)) .and. ext_bnd(ydim, side(ydim)) .and. ext_bnd(zdim, side(zdim))
-         return
-
-      !EDGE
-      else if (count2 == 2) then
-         do cdim = xdim, zdim
-            if (side(cdim) /= 0) then
-               if (.not. ext_bnd(cdim, side(cdim))) return
-            else
-               if ( (pos(cdim) < fbnd(cdim, LO)) .or. (pos(cdim) >= fbnd(cdim, HI)) ) return
-            endif
-         enddo
-         phy = .true.
-         return
-
-      !FACE
-      else
-         do cdim = xdim, zdim
-            if (side(cdim) == 0) cycle
-            if (ext_bnd(cdim, side(cdim))) then
-               count1 = 0
-               do k = xdim, zdim
-                  if (k /= cdim) then
-                     if ( (pos(k) >= fbnd(k,LO)) .and. (pos(k) < fbnd(k,HI)) ) then
-                        count1 = count1 + 1
-                     endif
-                  endif
-               enddo
-               if (count1 == 2) then
-                  phy = .true.
-                  return
-               endif
-            endif
-
-         enddo
-      endif
+      phy = all(fulfilled)
 
    end function cg_outside_dom
 
