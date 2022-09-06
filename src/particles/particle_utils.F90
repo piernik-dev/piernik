@@ -360,9 +360,8 @@ contains
    logical function attribute_to_proc(pset, j, se) result(to_send)
 
       use cg_level_base,  only: base
-      use constants,      only: I_ONE, LO, HI, ndims
+      use constants,      only: I_ONE, LO, HI, ndims, xdim, zdim
       use domain,         only: dom
-      use func,           only: operator(.equals.)
       use mpisetup,       only: proc
       use particle_func,  only: particle_in_area
       use particle_types, only: particle
@@ -372,9 +371,10 @@ contains
       type(particle), pointer, intent(in) :: pset
       integer,                 intent(in) :: j
       integer, dimension(:,:), intent(in) :: se
-      integer                             :: b
-      real, dimension(ndims)              :: ldl
-      real, dimension(ndims, LO:HI)       :: fbnd
+      integer                             :: b, cdim
+      real,    dimension(ndims)           :: ldl
+      real,    dimension(ndims, LO:HI)    :: fbnd
+      logical, dimension(ndims, LO:HI)    :: ext_bnd
 
       to_send = .false.
       if (pset%pdata%in) return
@@ -386,7 +386,11 @@ contains
          else if (pset%pdata%outside) then
             fbnd(:,LO) = dom%edge(:,LO) + base%level%dot%gse(j)%c(b)%se(:,LO) * ldl(:)
             fbnd(:,HI) = dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,HI) + I_ONE) * ldl(:)
-            if (outdom_part_in_cg(pset%pdata%pos, fbnd, fbnd .equals. dom%edge)) to_send = .true.
+            do cdim = xdim, zdim
+               ext_bnd(cdim, LO) = base%level%l%is_ext_bnd(base%level%dot%gse(j)%c(b)%se, cdim, LO)
+               ext_bnd(cdim, HI) = base%level%l%is_ext_bnd(base%level%dot%gse(j)%c(b)%se, cdim, HI)
+            enddo
+            if (outdom_part_in_cg(pset%pdata%pos, fbnd, ext_bnd)) to_send = .true.
          endif
 #ifdef NBODY_CHECK_PID
          if (to_send) then
