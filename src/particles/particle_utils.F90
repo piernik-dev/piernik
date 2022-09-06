@@ -357,11 +357,29 @@ contains
 
    end subroutine add_part_in_proper_cg
 
+   function fbnd_npb(se, off, dl, nexp) result(fbnd)
+
+      use constants, only: I_ONE, LO, HI, ndims
+      use domain,    only: dom
+
+      implicit none
+
+      integer(kind=8), dimension(ndims, LO:HI), intent(in) :: se
+      integer(kind=8), dimension(ndims),        intent(in) :: off
+      real,            dimension(ndims),        intent(in) :: dl
+      integer,                                  intent(in) :: nexp
+      real, dimension(ndims, LO:HI)                        :: fbnd
+
+      fbnd(:, LO)  = dom%edge(:, LO) + dl(:) * (se(:, LO)         - off(:) - nexp)
+      fbnd(:, HI)  = dom%edge(:, LO) + dl(:) * (se(:, HI) + I_ONE - off(:) + nexp)
+
+   end function fbnd_npb
+
    logical function attribute_to_proc(pset, j, se) result(to_send)
 
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_t
-      use constants,          only: I_ONE, LO, HI, ndims, xdim, zdim
+      use constants,          only: LO, HI, ndims, xdim, zdim
       use domain,             only: dom
       use mpisetup,           only: proc
       use particle_func,      only: particle_in_area
@@ -374,7 +392,6 @@ contains
       integer, dimension(:,:), intent(in) :: se
       integer                             :: b, cdim
       real,    dimension(ndims)           :: ldl
-      real,    dimension(ndims, LO:HI)    :: fbnd
       logical, dimension(ndims, LO:HI)    :: ext_bnd
       type(cg_level_connected_t), pointer :: ll
 
@@ -384,16 +401,14 @@ contains
       ll => base%level
       ldl(:) = dom%L_(:) / ll%l%n_d(:)
       do b = lbound(ll%dot%gse(j)%c(:), dim=1), ubound(ll%dot%gse(j)%c(:), dim=1)
-         if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (ll%dot%gse(j)%c(b)%se(:,LO) - npb) * ldl(:), dom%edge(:,LO) + (ll%dot%gse(j)%c(b)%se(:,HI) + I_ONE + npb) * ldl(:)])) then
+         if (particle_in_area(pset%pdata%pos, fbnd_npb(ll%dot%gse(j)%c(b)%se, ll%l%off, ldl, npb))) then
             to_send = .true.
          else if (pset%pdata%outside) then
-            fbnd(:,LO) = dom%edge(:,LO) +  ll%dot%gse(j)%c(b)%se(:,LO) * ldl(:)
-            fbnd(:,HI) = dom%edge(:,LO) + (ll%dot%gse(j)%c(b)%se(:,HI) + I_ONE) * ldl(:)
             do cdim = xdim, zdim
                ext_bnd(cdim, LO) = ll%l%is_ext_bnd(ll%dot%gse(j)%c(b)%se, cdim, LO)
                ext_bnd(cdim, HI) = ll%l%is_ext_bnd(ll%dot%gse(j)%c(b)%se, cdim, HI)
             enddo
-            if (outdom_part_in_cg(pset%pdata%pos, fbnd, ext_bnd)) to_send = .true.
+            if (outdom_part_in_cg(pset%pdata%pos, fbnd_npb(ll%dot%gse(j)%c(b)%se, ll%l%off, ldl, 0), ext_bnd)) to_send = .true.
          endif
 #ifdef NBODY_CHECK_PID
          if (to_send) then
