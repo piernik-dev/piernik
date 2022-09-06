@@ -277,7 +277,7 @@ contains
 
    logical function cg_outside_dom(pos, fbnd) result (phy)
 
-      use constants, only: LO, HI, ndims, xdim, zdim
+      use constants, only: LO, HI, ndims, xdim, ydim, zdim
       use domain,    only: dom
       use func,      only: operator(.equals.)
 
@@ -285,7 +285,7 @@ contains
 
       real, dimension(ndims),       intent(in) :: pos
       real, dimension(ndims,LO:HI), intent(in) :: fbnd
-      integer                                  :: cdim, k, count1, count2, count3
+      integer                                  :: cdim, k, count1, count2
       integer, dimension(ndims)                :: side
       logical, dimension(ndims, LO:HI)         :: ext_bnd
 
@@ -307,11 +307,7 @@ contains
 
       !CORNER
       if (count2 == 3) then
-         count3 = 0
-         do cdim = xdim, zdim
-            if (ext_bnd(cdim, side(cdim))) count3 = count3 + 1
-         enddo
-         if (count3 == 3) phy = .true.
+         phy = ext_bnd(xdim, side(xdim)) .and. ext_bnd(ydim, side(ydim)) .and. ext_bnd(zdim, side(zdim))
          return
 
       !EDGE
