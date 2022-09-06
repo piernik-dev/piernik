@@ -377,6 +377,8 @@ contains
       real, dimension(ndims, LO:HI)       :: fbnd
 
       to_send = .false.
+      if (pset%pdata%in) return
+
       do b = lbound(base%level%dot%gse(j)%c(:), dim=1), ubound(base%level%dot%gse(j)%c(:), dim=1)
          if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,LO) - npb) * cgdl(:), dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,HI) + I_ONE + npb) * cgdl(:)])) then
             to_send = .true.
@@ -438,10 +440,8 @@ contains
          do j = FIRST, LAST
             pset => cg%pset%first
             do while (associated(pset))
-               if (.not. pset%pdata%in) then
-                  ! TO CHECK: PARTICLES CHANGING CG OUTSIDE DOMAIN?
-                  if (attribute_to_proc(pset, j, cg%dl, cg%ijkse)) nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
-               endif
+               ! TO CHECK: PARTICLES CHANGING CG OUTSIDE DOMAIN?
+               if (attribute_to_proc(pset, j, cg%dl, cg%ijkse)) nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
                pset => pset%nxt
             enddo
          enddo
@@ -463,13 +463,11 @@ contains
          do j = FIRST, LAST
             pset => cg%pset%first
             do while (associated(pset))
-               if (.not. pset%pdata%in) then
-                  if (attribute_to_proc(pset, j, cg%dl, cg%ijkse)) then
-                     if (j == proc) then
-                        part_chcg(inc:inc+npf-1) = collect_single_part_fields(inc, pset%pdata)
-                     else
-                        part_send(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
-                     endif
+               if (attribute_to_proc(pset, j, cg%dl, cg%ijkse)) then
+                  if (j == proc) then
+                     part_chcg(inc:inc+npf-1) = collect_single_part_fields(inc, pset%pdata)
+                  else
+                     part_send(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
                   endif
                endif
                pset => pset%nxt
