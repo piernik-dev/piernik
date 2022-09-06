@@ -267,7 +267,7 @@ contains
 
       if (particle_in_area(pos, dom%edge)) return
 
-      phy = outdom_part_in_cg(pos, cg%fbnd)
+      phy = outdom_part_in_cg(pos, cg%fbnd, cg%ext_bnd)
       if (phy) then
          in  = .true.
          out = .true.
@@ -275,21 +275,18 @@ contains
 
    end subroutine is_part_in_cg
 
-   logical function outdom_part_in_cg(pos, fbnd) result (phy)
+   logical function outdom_part_in_cg(pos, fbnd, ext_bnd) result (phy)
 
       use constants, only: LO, HI, ndims, xdim, zdim
       use domain,    only: dom
-      use func,      only: operator(.equals.)
 
       implicit none
 
-      real, dimension(ndims),       intent(in) :: pos
-      real, dimension(ndims,LO:HI), intent(in) :: fbnd
-      logical, dimension(ndims, LO:HI)         :: ext_bnd
-      logical, dimension(ndims)                :: fulfilled
-      integer                                  :: cdim
-
-      ext_bnd = fbnd .equals. dom%edge
+      real,    dimension(ndims),        intent(in) :: pos
+      real,    dimension(ndims, LO:HI), intent(in) :: fbnd
+      logical, dimension(ndims, LO:HI), intent(in) :: ext_bnd
+      logical, dimension(ndims)                    :: fulfilled
+      integer                                      :: cdim
 
       do cdim = xdim, zdim
          if (pos(cdim) < dom%edge(cdim, LO)) then
@@ -363,8 +360,9 @@ contains
    logical function attribute_to_proc(pset, j, cgdl, se) result(to_send)
 
       use cg_level_base,  only: base
-      use constants,      only: I_ONE, LO, HI
+      use constants,      only: I_ONE, LO, HI, ndims
       use domain,         only: dom
+      use func,           only: operator(.equals.)
       use mpisetup,       only: proc
       use particle_func,  only: particle_in_area
       use particle_types, only: particle
@@ -375,16 +373,17 @@ contains
       real, dimension(:),      intent(in) :: cgdl
       type(particle), pointer, intent(in) :: pset
       integer, dimension(:,:), intent(in) :: se
-      integer :: b
+      integer                             :: b
+      real, dimension(ndims, LO:HI)       :: fbnd
 
       to_send = .false.
       do b = lbound(base%level%dot%gse(j)%c(:), dim=1), ubound(base%level%dot%gse(j)%c(:), dim=1)
          if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,LO) - npb) * cgdl(:), dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,HI) + I_ONE + npb) * cgdl(:)])) then
             to_send = .true.
          else if (pset%pdata%outside) then
-            if (outdom_part_in_cg(pset%pdata%pos, [dom%edge(:,LO) + base%level%dot%gse(j)%c(b)%se(:,LO) * cgdl(:), dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,HI) + I_ONE) * cgdl(:)])) then
-               to_send = .true.
-            endif
+            fbnd(:,LO) = dom%edge(:,LO) + base%level%dot%gse(j)%c(b)%se(:,LO) * cgdl(:)
+            fbnd(:,HI) = dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,HI) + I_ONE) * cgdl(:)
+            if (outdom_part_in_cg(pset%pdata%pos, fbnd, fbnd .equals. dom%edge)) to_send = .true.
          endif
 #ifdef NBODY_CHECK_PID
          if (to_send) then
