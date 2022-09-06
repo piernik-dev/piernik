@@ -286,19 +286,19 @@ contains
       real, dimension(ndims),       intent(in) :: pos
       real, dimension(ndims,LO:HI), intent(in) :: fbnd
       integer                                  :: cdim, k, count1, count2, count3
-      integer, dimension(ndims)                :: tmp
+      integer, dimension(ndims)                :: side
 
       phy = .false.
       count2 = 0
       do cdim = xdim, zdim
          if (pos(cdim) < dom%edge(cdim, LO)) then
             count2 = count2 + 1
-            tmp(cdim) = LO
-         else if (pos(cdim) > dom%edge(cdim, HI)) then
+            side(cdim) = LO
+         else if (pos(cdim) >= dom%edge(cdim, HI)) then
             count2 = count2 + 1
-            tmp(cdim) = HI
+            side(cdim) = HI
          else
-            tmp(cdim) = 0
+            side(cdim) = 0
          endif
       enddo
 
@@ -306,7 +306,7 @@ contains
       if (count2 == 3) then
          count3 = 0
          do cdim = xdim, zdim
-            if (fbnd(cdim,tmp(cdim)) .equals. dom%edge(cdim,tmp(cdim))) count3 = count3 + 1
+            if (fbnd(cdim, side(cdim)) .equals. dom%edge(cdim, side(cdim))) count3 = count3 + 1
          enddo
          if (count3 == 3) phy = .true.
          return
@@ -314,10 +314,10 @@ contains
       !EDGE
       else if (count2 == 2) then
          do cdim = xdim, zdim
-            if (tmp(cdim) /= 0) then
-               if (fbnd(cdim,tmp(cdim)) .notequals. dom%edge(cdim,tmp(cdim))) return
+            if (side(cdim) /= 0) then
+               if (fbnd(cdim, side(cdim)) .notequals. dom%edge(cdim, side(cdim))) return
             else
-               if ( (pos(cdim) < fbnd(cdim,LO)) .or. (pos(cdim) > fbnd(cdim,HI)) ) return
+               if ( (pos(cdim) < fbnd(cdim, LO)) .or. (pos(cdim) >= fbnd(cdim, HI)) ) return
             endif
          enddo
          phy = .true.
@@ -326,11 +326,11 @@ contains
       !FACE
       else
          do cdim = xdim, zdim
-            if ( ((pos(cdim) < dom%edge(cdim,LO)) .and. (fbnd(cdim,LO) .equals. dom%edge(cdim,LO))) .or. (((pos(cdim) > dom%edge(cdim,HI)) .and. (fbnd(cdim,HI) .equals. dom%edge(cdim,HI)))) ) then
+            if ( ((side(cdim) == LO) .and. (fbnd(cdim,LO) .equals. dom%edge(cdim,LO))) .or. ((side(cdim) == HI) .and. (fbnd(cdim,HI) .equals. dom%edge(cdim,HI))) ) then
                count1 = 0
                do k = xdim, zdim
                   if (k /= cdim) then
-                     if ( (pos(k) > fbnd(k,LO)) .and. (pos(k) < fbnd(k,HI)) ) then
+                     if ( (pos(k) >= fbnd(k,LO)) .and. (pos(k) < fbnd(k,HI)) ) then
                         count1 = count1 + 1
                      endif
                   endif
