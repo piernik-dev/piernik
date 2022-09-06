@@ -279,7 +279,7 @@ contains
 
       use constants, only: LO, HI, ndims, xdim, zdim
       use domain,    only: dom
-      use func,      only: operator(.equals.), operator(.notequals.)
+      use func,      only: operator(.equals.)
 
       implicit none
 
@@ -287,6 +287,9 @@ contains
       real, dimension(ndims,LO:HI), intent(in) :: fbnd
       integer                                  :: cdim, k, count1, count2, count3
       integer, dimension(ndims)                :: side
+      logical, dimension(ndims, LO:HI)         :: ext_bnd
+
+      ext_bnd = fbnd .equals. dom%edge
 
       phy = .false.
       count2 = 0
@@ -306,7 +309,7 @@ contains
       if (count2 == 3) then
          count3 = 0
          do cdim = xdim, zdim
-            if (fbnd(cdim, side(cdim)) .equals. dom%edge(cdim, side(cdim))) count3 = count3 + 1
+            if (ext_bnd(cdim, side(cdim))) count3 = count3 + 1
          enddo
          if (count3 == 3) phy = .true.
          return
@@ -315,7 +318,7 @@ contains
       else if (count2 == 2) then
          do cdim = xdim, zdim
             if (side(cdim) /= 0) then
-               if (fbnd(cdim, side(cdim)) .notequals. dom%edge(cdim, side(cdim))) return
+               if (.not. ext_bnd(cdim, side(cdim))) return
             else
                if ( (pos(cdim) < fbnd(cdim, LO)) .or. (pos(cdim) >= fbnd(cdim, HI)) ) return
             endif
@@ -327,7 +330,7 @@ contains
       else
          do cdim = xdim, zdim
             if (side(cdim) == 0) cycle
-            if (fbnd(cdim, side(cdim)) .equals. dom%edge(cdim, side(cdim))) then
+            if (ext_bnd(cdim, side(cdim))) then
                count1 = 0
                do k = xdim, zdim
                   if (k /= cdim) then
