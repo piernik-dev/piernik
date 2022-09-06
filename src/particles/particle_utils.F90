@@ -326,7 +326,8 @@ contains
       !FACE
       else
          do cdim = xdim, zdim
-            if ( ((side(cdim) == LO) .and. (fbnd(cdim,LO) .equals. dom%edge(cdim,LO))) .or. ((side(cdim) == HI) .and. (fbnd(cdim,HI) .equals. dom%edge(cdim,HI))) ) then
+            if (side(cdim) == 0) cycle
+            if (fbnd(cdim, side(cdim)) .equals. dom%edge(cdim, side(cdim))) then
                count1 = 0
                do k = xdim, zdim
                   if (k /= cdim) then
