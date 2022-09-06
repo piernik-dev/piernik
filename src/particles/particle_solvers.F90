@@ -411,6 +411,7 @@ contains
                endif
                pset%pdata%pos = pset%pdata%pos + pset%pdata%vel * ddt
                call is_part_in_cg(cgl%cg, pset%pdata%pos, pset%pdata%in, pset%pdata%phy, pset%pdata%out)
+               call pset%pdata%is_outside()
                pset => pset%nxt
             enddo
             cgl => cgl%nxt

@@ -263,10 +263,9 @@ contains
       type(particle), pointer                         :: pset
       integer                                         :: i, cdim
 
-      i=1
+      i = 1
       pset => cg%pset%first
       do while (associated(pset))
-         call pset%pdata%is_outside()
          do cdim = xdim, zdim
             cells(i, cdim) = floor((pset%pdata%pos(cdim) - dom%edge(cdim,LO)) * cg%idl(cdim), kind=4)
             dist(i, cdim)  = pset%pdata%pos(cdim) - ( dom%edge(cdim,LO) + cells(i,cdim) * cg%dl(cdim) )

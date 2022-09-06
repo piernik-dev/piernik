@@ -967,7 +967,6 @@ contains
       use common_hdf5,      only: part_gname, st_gname
       use data_hdf5,        only: gdf_translate
       use particles_io,     only: pvarn
-      use particle_types,   only: particle
       use particle_utils,   only: add_part_in_proper_cg, part_leave_cg
       use read_attr,        only: read_attribute
       use star_formation,   only: pid_gen
@@ -1004,7 +1003,6 @@ contains
       real,            dimension(:),   allocatable :: mass, ener, tform, tdyn
       real,            dimension(:,:), allocatable :: pos, vel, acc
       integer(kind=4), dimension(:),   allocatable :: ibuf, pid
-      type(particle), pointer                      :: pset
 #endif /* NBODY */
 
       ! Find overlap between own cg and restart cg
@@ -1142,13 +1140,7 @@ contains
       enddo
       deallocate(pid, mass, pos, vel, acc, ener, tform, tdyn)
 
-      call part_leave_cg()
-
-      pset => cg%pset%first
-      do while (associated(pset))
-         call pset%pdata%is_outside()
-         pset => pset%nxt
-      enddo
+      call part_leave_cg() ! TODO: isn't it redundant?
 #endif /* NBODY */
 
       call h5gclose_f(cg_g_id, error)
