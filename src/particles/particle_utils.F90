@@ -357,7 +357,7 @@ contains
 
    end subroutine add_part_in_proper_cg
 
-   logical function attribute_to_proc(pset, j, cgdl, se) result(to_send)
+   logical function attribute_to_proc(pset, j, se) result(to_send)
 
       use cg_level_base,  only: base
       use constants,      only: I_ONE, LO, HI, ndims
@@ -369,22 +369,23 @@ contains
 
       implicit none
 
-      integer,                 intent(in) :: j
-      real, dimension(:),      intent(in) :: cgdl
       type(particle), pointer, intent(in) :: pset
+      integer,                 intent(in) :: j
       integer, dimension(:,:), intent(in) :: se
       integer                             :: b
+      real, dimension(ndims)              :: ldl
       real, dimension(ndims, LO:HI)       :: fbnd
 
       to_send = .false.
       if (pset%pdata%in) return
 
+      ldl(:) = dom%L_(:) / base%level%l%n_d(:)
       do b = lbound(base%level%dot%gse(j)%c(:), dim=1), ubound(base%level%dot%gse(j)%c(:), dim=1)
-         if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,LO) - npb) * cgdl(:), dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,HI) + I_ONE + npb) * cgdl(:)])) then
+         if (particle_in_area(pset%pdata%pos, [dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,LO) - npb) * ldl(:), dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,HI) + I_ONE + npb) * ldl(:)])) then
             to_send = .true.
          else if (pset%pdata%outside) then
-            fbnd(:,LO) = dom%edge(:,LO) + base%level%dot%gse(j)%c(b)%se(:,LO) * cgdl(:)
-            fbnd(:,HI) = dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,HI) + I_ONE) * cgdl(:)
+            fbnd(:,LO) = dom%edge(:,LO) + base%level%dot%gse(j)%c(b)%se(:,LO) * ldl(:)
+            fbnd(:,HI) = dom%edge(:,LO) + (base%level%dot%gse(j)%c(b)%se(:,HI) + I_ONE) * ldl(:)
             if (outdom_part_in_cg(pset%pdata%pos, fbnd, fbnd .equals. dom%edge)) to_send = .true.
          endif
 #ifdef NBODY_CHECK_PID
@@ -441,7 +442,7 @@ contains
             pset => cg%pset%first
             do while (associated(pset))
                ! TO CHECK: PARTICLES CHANGING CG OUTSIDE DOMAIN?
-               if (attribute_to_proc(pset, j, cg%dl, cg%ijkse)) nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
+               if (attribute_to_proc(pset, j, cg%ijkse)) nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
                pset => pset%nxt
             enddo
          enddo
@@ -463,7 +464,7 @@ contains
          do j = FIRST, LAST
             pset => cg%pset%first
             do while (associated(pset))
-               if (attribute_to_proc(pset, j, cg%dl, cg%ijkse)) then
+               if (attribute_to_proc(pset, j, cg%ijkse)) then
                   if (j == proc) then
                      part_chcg(inc:inc+npf-1) = collect_single_part_fields(inc, pset%pdata)
                   else
