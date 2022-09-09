@@ -46,12 +46,11 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_dataop,   only: ind_val
-      use constants,        only: ndims, gp_n, gpot_n, sgp_n, one, pSUM
+      use constants,        only: ndims, gp_n, gpot_n, sgp_n, one
       use gravity,          only: source_terms_grav
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
-      use mpisetup,         only: piernik_MPI_Allreduce
-      use particle_types,   only: particle
+      use particle_utils,   only: global_count_all_particles, count_cg_particles
 #ifdef VERBOSE
       use dataio_pub,       only: printinfo
 #endif /* VERBOSE */
@@ -60,9 +59,8 @@ contains
 
       type(grid_container),  pointer       :: cg
       type(cg_list_element), pointer       :: cgl
-      type(particle), pointer              :: pset
 
-      integer                              :: n_part, g_np
+      integer                              :: n_part
       real,    dimension(:,:), allocatable :: dist
       integer, dimension(:,:), allocatable :: cells
       real                                 :: Mtot
@@ -77,21 +75,7 @@ contains
       call source_terms_grav
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one)   ], qna%ind(gpot_n))
 
-      n_part = 0
-      cgl => leaves%first
-      do while (associated(cgl))
-         pset => cgl%cg%pset%first
-         do while (associated(pset))
-            n_part = n_part + 1
-            pset => pset%nxt
-         enddo
-         cgl => cgl%nxt
-      enddo
-
-      g_np = n_part
-      call piernik_MPI_Allreduce(g_np, pSUM)
-
-      if (g_np == 0) return
+      if (global_count_all_particles() == 0) return
 
       Mtot = find_Mtot()
 
@@ -99,16 +83,17 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-            allocate(cells(n_part, ndims), dist(n_part, ndims))
-            call locate_particles_in_cells(n_part, cg, cells, dist)
+         n_part = count_cg_particles(cg)
+         allocate(cells(n_part, ndims), dist(n_part, ndims))
+         call locate_particles_in_cells(n_part, cg, cells, dist)
 
-            call update_particle_density_array(n_part, cg, cells)
+         call update_particle_density_array(n_part, cg, cells)
 
-            call update_particle_potential_energy(n_part, cg, cells, dist, Mtot)
+         call update_particle_potential_energy(n_part, cg, cells, dist, Mtot)
 
-            call update_particle_acc(n_part, cg, cells, dist)
+         call update_particle_acc(n_part, cg, cells, dist)
 
-            deallocate(cells, dist)
+         deallocate(cells, dist)
 
          cgl => cgl%nxt
       enddo
@@ -178,8 +163,8 @@ contains
 
    subroutine gravpot1b(pset, cg, ig)
 
-      use constants, only: CENTER, LO, HI, xdim, ydim, zdim
-      use grid_cont, only: grid_container
+      use constants,      only: CENTER, LO, HI, xdim, ydim, zdim
+      use grid_cont,      only: grid_container
       use particle_types, only: particle
 
       implicit none
@@ -327,7 +312,7 @@ contains
       ig = qna%ind(gpot_n)
 
       pset => cg%pset%first
-      p=1
+      p = 1
       do while (associated(pset))
          if (.not. pset%pdata%outside) then
             dpot(p) = df_d_o2([cells(p, :)], cg, ig, xdim) * dist(p, xdim) + &
@@ -395,7 +380,7 @@ contains
 
       ig = qna%ind(gpot_n)
       pset => cg%pset%first
-      i=1
+      i = 1
       do while (associated(pset))
          if (pset%pdata%outside) then
          ! multipole expansion for particles outside domain
@@ -458,7 +443,7 @@ contains
       endif
 
       pset => cg%pset%first
-      p=1
+      p = 1
       do while (associated(pset))
          associate( part => pset%pdata )
 
