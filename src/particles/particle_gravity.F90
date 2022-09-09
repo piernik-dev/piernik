@@ -52,7 +52,6 @@ contains
       use named_array_list, only: qna
       use mpisetup,         only: piernik_MPI_Allreduce
       use particle_types,   only: particle
-
 #ifdef VERBOSE
       use dataio_pub,       only: printinfo
 #endif /* VERBOSE */
@@ -63,11 +62,10 @@ contains
       type(cg_list_element), pointer       :: cgl
       type(particle), pointer              :: pset
 
-      integer                              :: n_part, g_np !, k
+      integer                              :: n_part, g_np
       real,    dimension(:,:), allocatable :: dist
       integer, dimension(:,:), allocatable :: cells
-      !integer, dimension(:),   allocatable :: pdel
-      real :: Mtot
+      real                                 :: Mtot
 
 #ifdef VERBOSE
       call printinfo('[particle_gravity:update_particle_gravpot_and_acc] Commencing update of particle gravpot & acceleration')
@@ -106,16 +104,9 @@ contains
 
             call update_particle_density_array(n_part, cg, cells)
 
-            call update_particle_potential_energy(n_part, cg, cells, dist, Mtot)!, pdel)
+            call update_particle_potential_energy(n_part, cg, cells, dist, Mtot)
 
             call update_particle_acc(n_part, cg, cells, dist)
-            !Delete particles elsewhere > in update_particle_acc?
-            !pset => cg%pset%first
-            !do while (associated(pset))
-            !   if (pdel(p)==1) then
-            !      call pset%remove(k)
-            !   endif
-            !enddo
 
             deallocate(cells, dist)
 
@@ -193,8 +184,7 @@ contains
 
       implicit none
 
-      !integer,                       intent(in)    :: p
-      type(particle), pointer, intent(in)          :: pset
+      type(particle),       pointer, intent(in)    :: pset
       type(grid_container), pointer, intent(inout) :: cg
       integer(kind=4),               intent(in)    :: ig
       integer                                      :: i, j, k
@@ -219,14 +209,13 @@ contains
       use constants,        only: nbgp_n, zero
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
-      use particle_types, only: particle
+      use particle_types,   only: particle
 
       implicit none
 
       type(grid_container), pointer  :: cg
       type(cg_list_element), pointer :: cgl
       type(particle), pointer        :: pset
-      integer                        :: p
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -313,7 +302,7 @@ contains
    end function find_Mtot
 
 !> \brief Determine potential energy in particle positions
-   subroutine update_particle_potential_energy(n_part, cg, cells, dist, Mtot)!, pdel)
+   subroutine update_particle_potential_energy(n_part, cg, cells, dist, Mtot)
 
       use constants,        only: gpot_n, ndims, half, two, xdim, ydim, zdim
       use grid_cont,        only: grid_container
@@ -332,7 +321,6 @@ contains
 
       type(particle), pointer                      :: pset
       integer                                      :: p
-      !integer, dimension(n_part),       intent(out):: pdel
       integer(kind=4)                              :: ig
       real, dimension(n_part)                      :: dpot, d2pot
 
@@ -341,7 +329,6 @@ contains
       pset => cg%pset%first
       p=1
       do while (associated(pset))
-         !pdel(p) = 0
          if (.not. pset%pdata%outside) then
             dpot(p) = df_d_o2([cells(p, :)], cg, ig, xdim) * dist(p, xdim) + &
                       df_d_o2([cells(p, :)], cg, ig, ydim) * dist(p, ydim) + &
@@ -356,7 +343,6 @@ contains
          else
             pset%pdata%energy = -newtong * pset%pdata%mass * Mtot / norm2(pset%pdata%pos(:))
             if ((abs(pset%pdata%energy) < half * pset%pdata%mass * norm2(pset%pdata%vel(:)) **2)) then
-               !pdel(p) = 1
                pset%pdata%energy = 0.
             endif
 
@@ -395,7 +381,7 @@ contains
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_func,    only: df_d_p, d2f_d2_p, d2f_dd_p
-      use particle_types, only: particle
+      use particle_types,   only: particle
 
       implicit none
 

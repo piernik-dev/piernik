@@ -325,7 +325,6 @@ contains
       type(cg_list_element), pointer      :: cgl
       logical                             :: in, phy, out, indomain, cgfound
       real                                :: tform1, tdyn1
-      integer :: countpart
 #ifdef NBODY_CHECK_PID
       type(particle), pointer             :: pset
 #endif /* NBODY_CHECK_PID */
