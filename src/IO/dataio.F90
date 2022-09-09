@@ -958,7 +958,7 @@ contains
       use constants,        only: ydim, zdim
 #endif /* MAGNETIC */
 #ifdef NBODY
-      use particle_utils,   only: particle_diagnostics, tot_energy, d_energy, tot_angmom, d_angmom
+      use particle_diag,    only: particle_diagnostics, tot_energy, d_energy, tot_angmom, d_angmom
 #endif /* NBODY */
 
       implicit none

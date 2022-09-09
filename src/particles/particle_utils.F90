@@ -27,9 +27,9 @@
 #include "piernik.h"
 
 !>
-!! \brief Diagnostics of particle module
+!! \brief Utilities for particle module
 !!
-!! This module contains particle diagnostics related things that are needed by I/O and debug routines.
+!! This module contains particle utilties that are needed by other particle routines.
 !<
 
 module particle_utils
@@ -38,38 +38,13 @@ module particle_utils
    implicit none
 
    private
-   public :: max_pvel_1d, add_part_in_proper_cg, print_all_particles, is_part_in_cg, npf
-   public :: max_pacc_3d, particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom, count_cg_particles, count_all_particles, global_count_all_particles, part_leave_cg
+   public :: max_pvel_1d, add_part_in_proper_cg, is_part_in_cg, npf
+   public :: max_pacc_3d, count_cg_particles, count_all_particles, global_count_all_particles, part_leave_cg
 
-   real    :: tot_angmom           !< angular momentum of set of the particles
-   real    :: tot_energy           !< total energy of set of the particles
-   real    :: d_energy             !< error of energy of set of the particles in succeeding timesteps
-   real    :: d_angmom             !< error of angular momentum in succeeding timesteps
-   logical :: twodtscheme
-   logical :: dump_diagnose        !< dump diagnose for each particle to a seperate log file
    integer(kind=4), parameter :: npf = 14  !< number of single particle fields
    integer(kind=4), parameter :: npb = 1   !< number of cells between in and phy or between phy and out boundaries
 
 contains
-
-   subroutine print_all_particles
-
-      !use cg_leaves, only: leaves
-      !use cg_list,   only: cg_list_element
-
-      implicit none
-
-      !type(cg_list_element), pointer :: cgl
-
-      !!!!!!!!!Does nothing for now
-
-      !cgl => leaves%first
-      !do while (associated(cgl))
-      !   call cgl%cg%pset%print
-      !   cgl => cgl%nxt
-      !enddo
-
-   end subroutine print_all_particles
 
    subroutine max_pvel_1d(cg, max_v)
 
@@ -134,111 +109,6 @@ contains
       max_pacc%proc = proc
 
    end subroutine max_pacc_3d
-
-   subroutine particle_diagnostics(regular)
-
-#ifdef VERBOSE
-      use dataio_pub, only: msg, printinfo
-      use mpisetup,   only: master
-#endif /* VERBOSE */
-
-      implicit none
-
-      logical, intent(in) :: regular              !< govern shorter diagnostics
-      real, save          :: init_energy          !< total initial energy of set of the particles
-      real, save          :: init_angmom          !< initial angular momentum of set of the particles
-      logical, save       :: first_run_lf = .true.
-
-      if (dump_diagnose .and. regular) call dump_particles_to_textfile
-
-#ifndef VERBOSE
-      if (regular) return
-#endif /* !VERBOSE */
-
-      call get_angmom_totener(tot_angmom, tot_energy)
-
-      if (first_run_lf) then
-         init_energy = tot_energy
-         init_angmom = tot_angmom
-         first_run_lf = .false.
-      endif
-      d_energy = log_error(tot_energy, init_energy)
-      d_angmom = log_error(tot_angmom, init_angmom)
-
-#ifdef VERBOSE
-      if (master) then
-         write(msg,'(a,3(1x,e12.5))') '[particle_utils:particle_diagnostics] Total energy: initial, current, error ', init_energy, tot_energy, d_energy
-         call printinfo(msg)
-         write(msg,'(a,3(1x,e12.5))') '[particle_utils:particle_diagnostics] ang_momentum: initial, current, error ', init_angmom, tot_angmom, d_angmom
-         call printinfo(msg)
-      endif
-#endif /* VERBOSE */
-
-   end subroutine particle_diagnostics
-
-   real function log_error(vcurr,vinit)
-
-      use constants, only: zero
-      use func,      only: operator(.equals.)
-
-      implicit none
-
-      real, intent(in) :: vcurr, vinit
-
-      if (vinit .equals. zero) then
-         log_error = vcurr
-         return
-      endif
-      log_error = (vcurr - vinit) / vinit
-      if (log_error .equals. zero) then
-         log_error = zero
-      else
-         log_error = log(abs(log_error))
-      endif
-
-   end function log_error
-
-   subroutine get_angmom_totener(ang_momentum, total_energy)
-
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
-      use constants,      only: pSUM, xdim, ydim, zdim, zero
-      use mpisetup,       only: piernik_MPI_Allreduce
-      use particle_types, only: particle
-
-      implicit none
-
-      real, intent(out)              :: ang_momentum
-      real, intent(out)              :: total_energy !< total energy of set of particles
-      real                           :: L1, L2, L3
-      type(cg_list_element), pointer :: cgl
-      type(particle), pointer        :: pset
-
-      ang_momentum = zero
-      total_energy = zero
-
-      cgl => leaves%first
-      do while (associated(cgl))
-
-         pset => cgl%cg%pset%first
-         do while (associated(pset))
-            associate( part => pset%pdata )
-               L1 = part%pos(ydim) * part%vel(zdim) - part%pos(zdim) * part%vel(ydim)
-               L2 = part%pos(zdim) * part%vel(xdim) - part%pos(xdim) * part%vel(zdim)
-               L3 = part%pos(xdim) * part%vel(ydim) - part%pos(ydim) * part%vel(xdim)
-               ang_momentum = ang_momentum + part%mass * sqrt(L1**2 + L2**2 + L3**2)
-               total_energy = total_energy + part%energy
-            end associate
-            pset => pset%nxt
-         enddo
-
-         cgl => cgl%nxt
-      enddo
-
-      call piernik_MPI_Allreduce(total_energy, pSUM)
-      call piernik_MPI_Allreduce(ang_momentum, pSUM)
-
-   end subroutine get_angmom_totener
 
    subroutine is_part_in_cg(cg, pos, indomain, in, phy, out)
 
@@ -661,46 +531,5 @@ contains
       call piernik_MPI_Allreduce(gpcount, pSUM)
 
    end function global_count_all_particles
-
-   subroutine dump_particles_to_textfile
-
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use constants,        only: cwdlen, half, ndims
-      use dataio_pub,       only: log_wr, nrestart, problem_name, run_id
-      use global,           only: t, dt
-      use particle_gravity, only: get_acc_model
-      use particle_types,   only: particle
-
-      implicit none
-
-      real                           :: kdt
-      real, dimension(ndims)         :: acc2
-      integer                        :: i, lun_out
-      character(len=cwdlen)          :: plog_file
-      type(cg_list_element), pointer :: cgl
-      type(particle), pointer        :: pset
-
-      kdt = dt ; if (.not.twodtscheme) kdt = half * dt
-
-      write(plog_file,'(6a,i3.3,a)') trim(log_wr),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'_out.log'
-      open(newunit=lun_out, file=plog_file, status='unknown',  position='append')
-      cgl => leaves%first
-      do while (associated(cgl))
-
-         pset => cgl%cg%pset%first
-         do while (associated(pset))
-            associate( part => pset%pdata )
-               call get_acc_model(part%pos, part%mass, acc2)
-               write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, t, kdt, part%mass, part%pos, part%vel, part%acc, acc2(:), part%energy
-            end associate
-            pset => pset%nxt
-         enddo
-
-         cgl => cgl%nxt
-      enddo
-      close(lun_out)
-
-   end subroutine dump_particles_to_textfile
 
 end module particle_utils

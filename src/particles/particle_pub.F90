@@ -58,10 +58,10 @@ contains
       use particle_maps,    only: set_map
       use dataio_pub,       only: printinfo
       use mpisetup,         only: ibuff, lbuff, rbuff
+      use particle_diag,    only: twodtscheme, dump_diagnose
       use particle_func,    only: check_ord
       use particle_gravity, only: is_setacc_cic, is_setacc_int, mask_gpot1b, is_setacc_int, is_setacc_tsc, eps
       use particle_solvers, only: leapfrog_2ord
-      use particle_utils,   only: twodtscheme, dump_diagnose
 
       implicit none
 

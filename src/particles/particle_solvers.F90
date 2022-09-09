@@ -332,8 +332,8 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: half, two
       use global,           only: dt
+      use particle_diag,    only: particle_diagnostics, twodtscheme
       use particle_gravity, only: update_particle_gravpot_and_acc
-      use particle_utils,   only: particle_diagnostics, twodtscheme
 
       implicit none
 
