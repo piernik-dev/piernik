@@ -240,10 +240,9 @@ contains
 
    end subroutine get_angmom_totener
 
-   subroutine is_part_in_cg(cg, pos, in, phy, out)
+   subroutine is_part_in_cg(cg, pos, indomain, in, phy, out)
 
       use constants,     only: LO, HI, ndims, xdim, ydim, zdim, LEFT, RIGHT
-      use domain,        only: dom
       use grid_cont,     only: grid_container
       use particle_func, only: particle_in_area
 
@@ -251,6 +250,7 @@ contains
 
       type(grid_container), pointer, intent(in)  :: cg
       real, dimension(ndims),        intent(in)  :: pos
+      logical,                       intent(in)  :: indomain
       logical,                       intent(out) :: in, phy, out
       real, dimension(ndims,2)                   :: bnd_in, bnd_out
 
@@ -265,11 +265,11 @@ contains
       phy = particle_in_area(pos, cg%fbnd)
       out = particle_in_area(pos, bnd_out)   ! Ghost particle
 
-      if (particle_in_area(pos, dom%edge)) return
+      if (indomain) return
 
-      phy = outdom_part_in_cg(pos, cg%fbnd, cg%ext_bnd)
-      if (phy) then
+      if (outdom_part_in_cg(pos, cg%fbnd, cg%ext_bnd)) then
          in  = .true.
+         phy = .true.
          out = .true.
       endif
 
@@ -306,6 +306,8 @@ contains
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: ndims
+      use domain,         only: dom
+      use particle_func,  only: particle_in_area
 #ifdef NBODY_CHECK_PID
       use particle_types, only: particle
 #endif /* NBODY_CHECK_PID */
@@ -321,8 +323,9 @@ contains
       real, optional,         intent(in)  :: tdyn
       logical, optional,      intent(out) :: success
       type(cg_list_element), pointer      :: cgl
-      logical                             :: in, phy, out, cgfound
+      logical                             :: in, phy, out, indomain, cgfound
       real                                :: tform1, tdyn1
+      integer :: countpart
 #ifdef NBODY_CHECK_PID
       type(particle), pointer             :: pset
 #endif /* NBODY_CHECK_PID */
@@ -333,9 +336,10 @@ contains
       if (present(tdyn))  tdyn1  = tdyn
       cgfound = .false.
 
+      indomain = particle_in_area(pos, dom%edge)
       cgl => leaves%first
       do while (associated(cgl))
-         call is_part_in_cg(cgl%cg, pos, in, phy, out)
+         call is_part_in_cg(cgl%cg, pos, indomain, in, phy, out)
 #ifdef NBODY_CHECK_PID
          if (phy .or. out) then
             pset => cgl%cg%pset%first
@@ -368,7 +372,7 @@ contains
       integer(kind=8), dimension(ndims),        intent(in) :: off
       real,            dimension(ndims),        intent(in) :: dl
       integer,                                  intent(in) :: nexp
-      real, dimension(ndims, LO:HI)                        :: fbnd
+      real,            dimension(ndims, LO:HI)             :: fbnd
 
       fbnd(:, LO)  = dom%edge(:, LO) + dl(:) * (se(:, LO)         - off(:) - nexp)
       fbnd(:, HI)  = dom%edge(:, LO) + dl(:) * (se(:, HI) + I_ONE - off(:) + nexp)

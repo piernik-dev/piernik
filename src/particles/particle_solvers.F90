@@ -405,7 +405,7 @@ contains
                if (pset%pdata%phy) then
                   pset%pdata%pos = pset%pdata%pos + pset%pdata%vel * ddt
                   call pset%pdata%is_outside()
-                  call is_part_in_cg(cgl%cg, pset%pdata%pos, pset%pdata%in, pset%pdata%phy, pset%pdata%out)
+                  call is_part_in_cg(cgl%cg, pset%pdata%pos, .not.pset%pdata%outside, pset%pdata%in, pset%pdata%phy, pset%pdata%out)
                   pset => pset%nxt
                else !Remove ghosts
                   pset2 => pset%nxt
