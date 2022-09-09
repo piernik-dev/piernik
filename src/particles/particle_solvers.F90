@@ -402,17 +402,16 @@ contains
          do while (associated(cgl))
             pset => cgl%cg%pset%first
             do while (associated(pset))
-               !Remove ghosts
-               if (.not. pset%pdata%phy) then
+               if (pset%pdata%phy) then
+                  pset%pdata%pos = pset%pdata%pos + pset%pdata%vel * ddt
+                  call pset%pdata%is_outside()
+                  call is_part_in_cg(cgl%cg, pset%pdata%pos, pset%pdata%in, pset%pdata%phy, pset%pdata%out)
+                  pset => pset%nxt
+               else !Remove ghosts
                   pset2 => pset%nxt
                   call cgl%cg%pset%remove(pset)
                   pset => pset2
-                  cycle
                endif
-               pset%pdata%pos = pset%pdata%pos + pset%pdata%vel * ddt
-               call is_part_in_cg(cgl%cg, pset%pdata%pos, pset%pdata%in, pset%pdata%phy, pset%pdata%out)
-               call pset%pdata%is_outside()
-               pset => pset%nxt
             enddo
             cgl => cgl%nxt
          enddo
