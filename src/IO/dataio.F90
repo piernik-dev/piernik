@@ -527,12 +527,19 @@ contains
 
       logical :: tn
       integer :: i
+      integer, parameter :: fg_len = 5  ! length of "f12.4" or "g14.4"
+      character(len=fg_len) :: fg_fmt
 
       if (code_progress < PIERNIK_INIT_IO_IC) call die("[dataio:init_dataio] Some physics modules are not initialized.")
 
-      write(fmt_loc,  '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,16x,            ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
-      write(fmt_dtloc,'(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
-      write(fmt_vloc, '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'   v=',es11.4, ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
+      ! We strongly prefer to use f format where possible. Too bad that the g format is so compiler-dependent and often less smart than it could be.
+      fg_fmt = "f12.4"
+      if (maxval(dom%edge) < 1.) fg_fmt = "f12.9"
+      if ((maxval(dom%edge) > 1e6) .or. (maxval(dom%edge) < 1e-4)) fg_fmt = "e12.5"
+
+      write(fmt_loc,  '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,16x,            ", dom%eff_dim+1, "(1x,i4),", dom%eff_dim, "(1x," // fg_fmt // "))"
+      write(fmt_dtloc,'(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, ", dom%eff_dim+1, "(1x,i4),", dom%eff_dim, "(1x," // fg_fmt // "))"
+      write(fmt_vloc, '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'   v=',es11.4, ", dom%eff_dim+1, "(1x,i4),", dom%eff_dim, "(1x," // fg_fmt // "))"
 
       if (master) tn = walltime_end%time_left(wend)
 
