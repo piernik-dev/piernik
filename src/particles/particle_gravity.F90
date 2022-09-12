@@ -343,6 +343,7 @@ contains
       use constants,        only: ndims, gp1b_n, gpot_n
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
+      use particle_types,   only: particle
 
       implicit none
 
@@ -351,6 +352,11 @@ contains
       integer, dimension(n_part,ndims), intent(in)    :: cells
       real, dimension(n_part, ndims),   intent(in)    :: dist
       integer(kind=4)                                 :: ig
+      integer                                         :: p
+      type(particle), pointer                         :: pset
+#ifdef DROP_OUTSIDE_PART
+      type(particle), pointer                         :: pset2
+#endif /* DROP_OUTSIDE_PART */
 
       if (mask_gpot1b) then
          ig = qna%ind(gp1b_n)
@@ -358,178 +364,8 @@ contains
          ig = qna%ind(gpot_n)
       endif
 
-      if (is_setacc_int) then
-         call update_particle_acc_int(ig, n_part, cg, cells, dist)
-      elseif (is_setacc_cic) then
-         call update_particle_acc_cic(ig, n_part, cg, cells)
-      elseif (is_setacc_tsc) then
-         call update_particle_acc_tsc(ig, cg)
-      endif
-
-   end subroutine update_particle_acc
-
-   subroutine update_particle_acc_int(ig, n_part, cg, cells, dist)
-
-      use constants,      only: ndims, xdim, ydim, zdim, zero
-      use dataio_pub,     only: warn
-      use grid_cont,      only: grid_container
-      use particle_func,  only: df_d_p, d2f_d2_p, d2f_dd_p
-      use particle_types, only: particle
-
-      implicit none
-
-      integer(kind=4),                  intent(in)    :: ig
-      integer,                          intent(in)    :: n_part
-      type(grid_container), pointer,    intent(inout) :: cg
-      type(particle), pointer                         :: pset
-      integer, dimension(n_part,ndims), intent(in)    :: cells
-      real, dimension(n_part, ndims),   intent(in)    :: dist
-      integer                                         :: i
-
-      pset => cg%pset%first
-      i = 1
-      do while (associated(pset))
-         if (pset%pdata%outside) then
-         ! multipole expansion for particles outside domain
-            call warn('[particle_gravity:update_particle_acc_cic] particle is outside the domain - we need multipole expansion!!!')
-            pset%pdata%acc = zero
-            cycle
-         endif
-
-         if (mask_gpot1b) then
-            cg%gp1b = zero
-            call gravpot1b(pset, cg, ig)
-            cg%gp1b = -cg%gp1b + cg%gpot
-         endif
-
-         pset%pdata%acc(xdim) = - (df_d_p([cells(i, :)], cg, ig, xdim) + &
-                                   d2f_d2_p([cells(i, :)], cg, ig, xdim)       * dist(i, xdim) + &
-                                   d2f_dd_p([cells(i, :)], cg, ig, xdim, ydim) * dist(i, ydim) + &
-                                   d2f_dd_p([cells(i, :)], cg, ig, xdim, zdim) * dist(i, zdim))
-
-
-         pset%pdata%acc(ydim) = -( df_d_p([cells(i, :)], cg, ig, ydim) + &
-                                   d2f_d2_p([cells(i, :)], cg, ig, ydim)       * dist(i, ydim) + &
-                                   d2f_dd_p([cells(i, :)], cg, ig, xdim, ydim) * dist(i, xdim) + &
-                                   d2f_dd_p([cells(i, :)], cg, ig, ydim, zdim) * dist(i, zdim))
-
-         pset%pdata%acc(zdim) = -( df_d_p([cells(i, :)], cg, ig, zdim) + &
-                                   d2f_d2_p([cells(i, :)], cg, ig, zdim)       * dist(i, zdim) + &
-                                   d2f_dd_p([cells(i, :)], cg, ig, xdim, zdim) * dist(i, xdim) + &
-                                   d2f_dd_p([cells(i, :)], cg, ig, ydim, zdim) * dist(i, ydim))
-         pset => pset%nxt
-         i = i + 1
-      enddo
-
-   end subroutine update_particle_acc_int
-
-   subroutine update_particle_acc_cic(ig, n_part, cg, cells)
-
-      use constants,      only: idm, ndims, CENTER, xdim, ydim, zdim, half, zero, I_ZERO, I_ONE
-      use dataio_pub,     only: warn
-      use grid_cont,      only: grid_container
-      use particle_types, only: particle
-
-      implicit none
-
-      integer(kind=4),                  intent(in)    :: ig
-      integer,                          intent(in)    :: n_part
-      type(grid_container), pointer,    intent(inout) :: cg
-      type(particle), pointer                         :: pset
-      integer, dimension(n_part,ndims), intent(in)    :: cells
-
-      integer                                         :: p
-      integer(kind=4)                                 :: c, cdim
-      integer(kind=4), dimension(ndims,8), parameter  :: cijk = reshape([[I_ZERO, I_ZERO, I_ZERO], &
-           &                                                             [I_ONE,  I_ZERO, I_ZERO], [I_ZERO, I_ONE, I_ZERO], [I_ZERO, I_ZERO, I_ONE], &
-           &                                                             [I_ONE,  I_ONE,  I_ZERO], [I_ZERO, I_ONE, I_ONE],  [I_ONE,  I_ZERO, I_ONE], &
-           &                                                             [I_ONE,  I_ONE,  I_ONE]], [ndims,8_4])
-      integer,         dimension(ndims)               :: cic_cells
-      real,            dimension(ndims)               :: dxyz, axyz
-      real(kind=8),    dimension(ndims,8)             :: fxyz
-      real(kind=8),    dimension(8)                   :: wijk
-
       pset => cg%pset%first
       p = 1
-      do while (associated(pset))
-         associate( part => pset%pdata )
-
-            if (part%outside) then
-            ! multipole expansion for particles outside domain
-               call warn('[particle_gravity:update_particle_acc_cic] particle is outside the domain - we need multipole expansion!!!')
-               part%acc = zero
-               cycle
-            endif
-
-            if (mask_gpot1b) then
-               cg%gp1b = zero
-               call gravpot1b(pset, cg, ig)
-               cg%gp1b = -cg%gp1b + cg%gpot
-            endif
-
-            do cdim = xdim, zdim
-               if (part%pos(cdim) < cg%coord(CENTER, cdim)%r(cells(p,cdim))) then
-                  cic_cells(cdim) = cells(p, cdim) - 1
-               else
-                  cic_cells(cdim) = cells(p, cdim)
-               endif
-               dxyz(cdim) = abs(part%pos(cdim) - cg%coord(CENTER, cdim)%r(cic_cells(cdim)))
-            enddo
-
-            wijk(1) = (cg%dx - dxyz(xdim))*(cg%dy - dxyz(ydim))*(cg%dz - dxyz(zdim))  !a(i  ,j  ,k  )
-            wijk(2) =          dxyz(xdim) *(cg%dy - dxyz(ydim))*(cg%dz - dxyz(zdim))  !a(i+1,j  ,k  )
-            wijk(3) = (cg%dx - dxyz(xdim))*         dxyz(ydim) *(cg%dz - dxyz(zdim))  !a(i  ,j+1,k  )
-            wijk(4) = (cg%dx - dxyz(xdim))*(cg%dy - dxyz(ydim))*         dxyz(zdim)   !a(i  ,j  ,k+1)
-            wijk(5) =          dxyz(xdim) *         dxyz(ydim) *(cg%dz - dxyz(zdim))  !a(i+1,j+1,k  )
-            wijk(6) = (cg%dx - dxyz(xdim))*         dxyz(ydim) *         dxyz(zdim)   !a(i  ,j+1,k+1)
-            wijk(7) =          dxyz(xdim) *(cg%dy - dxyz(ydim))*         dxyz(zdim)   !a(i+1,j  ,k+1)
-            wijk(8) =          dxyz(xdim) *         dxyz(ydim) *         dxyz(zdim)   !a(i+1,j+1,k+1)
-
-            wijk = wijk/cg%dvol
-
-            do cdim = xdim, zdim
-               do c = 1, 8
-                  fxyz(cdim,c) = -(cg%q(ig)%point(cic_cells(:)+idm(cdim,:)+cijk(:,c)) - cg%q(ig)%point(cic_cells(:)-idm(cdim,:)+cijk(:,c)))
-               enddo
-               axyz(cdim) = sum(fxyz(cdim,:)*wijk(:))
-            enddo
-
-            part%acc(:) = half * axyz(:) * cg%idl(:)
-
-         end associate
-         pset => pset%nxt
-         p = p + 1
-      enddo
-
-   end subroutine update_particle_acc_cic
-
-   subroutine update_particle_acc_tsc(ig, cg)
-
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, idm, half, zero
-      use domain,         only: dom
-      use grid_cont,      only: grid_container
-      use multipole,      only: moments2pot
-      use particle_types, only: particle
-
-      implicit none
-
-
-      integer(kind=4),                  intent(in) :: ig
-      type(grid_container), pointer, intent(inout) :: cg
-      type(particle), pointer                      :: pset
-#ifdef DROP_OUTSIDE_PART
-      type(particle), pointer                      :: pset2
-#endif /* DROP_OUTSIDE_PART */
-      integer                                      :: i, j, k
-      integer(kind=4)                              :: cdim
-      integer, dimension(ndims, IM:IP)             :: ijkp
-      integer, dimension(ndims)                    :: cur_ind
-      real,    dimension(ndims)                    :: fxyz, axyz
-      real,    dimension(5)                        :: tmp
-      real                                         :: weight, delta_x, weight_tmp
-
-      fxyz = zero ! suppress -Wmaybe-uninitialized
-      pset => cg%pset%first
       do while (associated(pset))
 
 #ifdef DROP_OUTSIDE_PART
@@ -542,72 +378,226 @@ contains
          endif
 #endif /* DROP_OUTSIDE_PART */
 
-         associate( part => pset%pdata )
+         if (is_setacc_int) then
+            call update_particle_acc_int(ig, cg, pset, cells(p,:), dist(p,:))
+         elseif (is_setacc_cic) then
+            call update_particle_acc_cic(ig, cg, pset, cells(p,:))
+         elseif (is_setacc_tsc) then
+            call update_particle_acc_tsc(ig, cg, pset)
+         endif
 
-            axyz(:) = zero
-
-            if (part%outside) then
-               ! multipole expansion for particles outside domain
-               tmp = [0, 0, 1, 0, 0]
-               do cdim = xdim, zdim
-                  fxyz(cdim) =   - ( moments2pot( part%pos(xdim) + cg%dl(xdim) * tmp(cdim+2), &
-                                 part%pos(ydim) + cg%dl(ydim) * tmp(cdim+1), part%pos(zdim) + cg%dl(zdim) * tmp(cdim) ) - &
-                                 moments2pot( part%pos(xdim) - cg%dl(xdim) * tmp(cdim+2), &
-                                 part%pos(ydim) - cg%dl(ydim) * tmp(cdim+1), part%pos(zdim) - cg%dl(zdim) * tmp(cdim) ) )
-               enddo
-               axyz(:) = fxyz(:)
-               part%acc(:) = half * axyz(:) * cg%idl(:)
-
-               pset => pset%nxt
-               cycle
-            endif
-
-            if (mask_gpot1b) then
-               cg%gp1b = zero
-               call gravpot1b(pset, cg, ig)
-               cg%gp1b = -cg%gp1b + cg%gpot
-            endif
-
-            do cdim = xdim, zdim
-               if (dom%has_dir(cdim)) then
-                  ijkp(cdim, I0) = nint((part%pos(cdim) - cg%fbnd(cdim,LO)-cg%dl(cdim)/2.) * cg%idl(cdim) + int(cg%lhn(cdim, LO)) + dom%nb, kind=4)
-                  ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cg%lhn(cdim, LO)))
-                  ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cg%lhn(cdim, HI)))
-               else
-                  ijkp(cdim, IM) = cg%ijkse(cdim, LO)
-                  ijkp(cdim, I0) = cg%ijkse(cdim, LO)
-                  ijkp(cdim, IP) = cg%ijkse(cdim, HI)
-               endif
-            enddo
-
-            do i = ijkp(xdim, IM), ijkp(xdim, IP)
-               do j = ijkp(ydim, IM), ijkp(ydim, IP)
-                  do k = ijkp(zdim, IM), ijkp(zdim, IP)
-
-                     cur_ind(:) = [i, j, k]
-                     weight = 1.0
-
-                     do cdim = xdim, zdim
-                        if (.not.dom%has_dir(cdim)) cycle
-                        delta_x = ( part%pos(cdim) - cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * cg%idl(cdim)
-
-                        if (cur_ind(cdim) /= ijkp(cdim, 0)) then   !!! BEWARE hardcoded magic
-                           weight_tmp = 1.125 - 1.5 * abs(delta_x) + half * delta_x**2
-                        else
-                           weight_tmp = 0.75 - delta_x**2
-                        endif
-
-                        weight = weight_tmp * weight
-                        fxyz(cdim) = -(cg%q(ig)%point(cur_ind(:) + idm(cdim,:)) - cg%q(ig)%point(cur_ind(:) - idm(cdim,:)))
-                     enddo
-                     axyz(:) = axyz(:) + fxyz(:)*weight
-                  enddo
-               enddo
-            enddo
-            part%acc(:) = half * axyz(:) * cg%idl(:)
-         end associate
          pset => pset%nxt
+         p = p + 1
       enddo
+
+   end subroutine update_particle_acc
+
+   subroutine update_particle_acc_int(ig, cg, pset, cell, dist)
+
+      use constants,      only: ndims, xdim, ydim, zdim, zero
+      use dataio_pub,     only: warn
+      use grid_cont,      only: grid_container
+      use particle_func,  only: df_d_p, d2f_d2_p, d2f_dd_p
+      use particle_types, only: particle
+
+      implicit none
+
+      integer(kind=4),               intent(in)    :: ig
+      type(grid_container), pointer, intent(inout) :: cg
+      type(particle),       pointer, intent(inout) :: pset
+      integer, dimension(ndims),     intent(in)    :: cell
+      real, dimension(ndims),        intent(in)    :: dist
+
+      if (pset%pdata%outside) then
+      ! multipole expansion for particles outside domain
+         call warn('[particle_gravity:update_particle_acc_cic] particle is outside the domain - we need multipole expansion!!!')
+         pset%pdata%acc = zero
+         return
+      endif
+
+      if (mask_gpot1b) then
+         cg%gp1b = zero
+         call gravpot1b(pset, cg, ig)
+         cg%gp1b = -cg%gp1b + cg%gpot
+      endif
+
+      pset%pdata%acc(xdim) = - (df_d_p(cell, cg, ig, xdim) + &
+                              d2f_d2_p(cell, cg, ig, xdim)       * dist(xdim) + &
+                              d2f_dd_p(cell, cg, ig, xdim, ydim) * dist(ydim) + &
+                              d2f_dd_p(cell, cg, ig, xdim, zdim) * dist(zdim))
+
+
+      pset%pdata%acc(ydim) = -( df_d_p(cell, cg, ig, ydim) + &
+                              d2f_d2_p(cell, cg, ig, ydim)       * dist(ydim) + &
+                              d2f_dd_p(cell, cg, ig, xdim, ydim) * dist(xdim) + &
+                              d2f_dd_p(cell, cg, ig, ydim, zdim) * dist(zdim))
+
+      pset%pdata%acc(zdim) = -( df_d_p(cell, cg, ig, zdim) + &
+                              d2f_d2_p(cell, cg, ig, zdim)       * dist(zdim) + &
+                              d2f_dd_p(cell, cg, ig, xdim, zdim) * dist(xdim) + &
+                              d2f_dd_p(cell, cg, ig, ydim, zdim) * dist(ydim))
+
+   end subroutine update_particle_acc_int
+
+   subroutine update_particle_acc_cic(ig, cg, pset, cell)
+
+      use constants,      only: idm, ndims, CENTER, xdim, ydim, zdim, half, zero, I_ZERO, I_ONE
+      use dataio_pub,     only: warn
+      use grid_cont,      only: grid_container
+      use particle_types, only: particle
+
+      implicit none
+
+      integer(kind=4),                  intent(in)    :: ig
+      type(grid_container), pointer,    intent(inout) :: cg
+      type(particle),       pointer,    intent(inout) :: pset
+      integer, dimension(ndims),        intent(in)    :: cell
+
+      integer(kind=4)                                 :: c, cdim
+      integer(kind=4), dimension(ndims,8), parameter  :: cijk = reshape([[I_ZERO, I_ZERO, I_ZERO], &
+           &                                                             [I_ONE,  I_ZERO, I_ZERO], [I_ZERO, I_ONE, I_ZERO], [I_ZERO, I_ZERO, I_ONE], &
+           &                                                             [I_ONE,  I_ONE,  I_ZERO], [I_ZERO, I_ONE, I_ONE],  [I_ONE,  I_ZERO, I_ONE], &
+           &                                                             [I_ONE,  I_ONE,  I_ONE]], [ndims,8_4])
+      integer,         dimension(ndims)               :: cic_cells
+      real,            dimension(ndims)               :: dxyz, axyz
+      real(kind=8),    dimension(ndims,8)             :: fxyz
+      real(kind=8),    dimension(8)                   :: wijk
+
+      associate( part => pset%pdata )
+
+         if (part%outside) then
+         ! multipole expansion for particles outside domain
+            call warn('[particle_gravity:update_particle_acc_cic] particle is outside the domain - we need multipole expansion!!!')
+            part%acc = zero
+            return
+         endif
+
+         if (mask_gpot1b) then
+            cg%gp1b = zero
+            call gravpot1b(pset, cg, ig)
+            cg%gp1b = -cg%gp1b + cg%gpot
+         endif
+
+         do cdim = xdim, zdim
+            if (part%pos(cdim) < cg%coord(CENTER, cdim)%r(cell(cdim))) then
+               cic_cells(cdim) = cell(cdim) - 1
+            else
+               cic_cells(cdim) = cell(cdim)
+            endif
+            dxyz(cdim) = abs(part%pos(cdim) - cg%coord(CENTER, cdim)%r(cic_cells(cdim)))
+         enddo
+
+         wijk(1) = (cg%dx - dxyz(xdim))*(cg%dy - dxyz(ydim))*(cg%dz - dxyz(zdim))  !a(i  ,j  ,k  )
+         wijk(2) =          dxyz(xdim) *(cg%dy - dxyz(ydim))*(cg%dz - dxyz(zdim))  !a(i+1,j  ,k  )
+         wijk(3) = (cg%dx - dxyz(xdim))*         dxyz(ydim) *(cg%dz - dxyz(zdim))  !a(i  ,j+1,k  )
+         wijk(4) = (cg%dx - dxyz(xdim))*(cg%dy - dxyz(ydim))*         dxyz(zdim)   !a(i  ,j  ,k+1)
+         wijk(5) =          dxyz(xdim) *         dxyz(ydim) *(cg%dz - dxyz(zdim))  !a(i+1,j+1,k  )
+         wijk(6) = (cg%dx - dxyz(xdim))*         dxyz(ydim) *         dxyz(zdim)   !a(i  ,j+1,k+1)
+         wijk(7) =          dxyz(xdim) *(cg%dy - dxyz(ydim))*         dxyz(zdim)   !a(i+1,j  ,k+1)
+         wijk(8) =          dxyz(xdim) *         dxyz(ydim) *         dxyz(zdim)   !a(i+1,j+1,k+1)
+
+         wijk = wijk/cg%dvol
+
+         do cdim = xdim, zdim
+            do c = 1, 8
+               fxyz(cdim,c) = -(cg%q(ig)%point(cic_cells(:)+idm(cdim,:)+cijk(:,c)) - cg%q(ig)%point(cic_cells(:)-idm(cdim,:)+cijk(:,c)))
+            enddo
+            axyz(cdim) = sum(fxyz(cdim,:)*wijk(:))
+         enddo
+
+         part%acc(:) = half * axyz(:) * cg%idl(:)
+
+      end associate
+
+   end subroutine update_particle_acc_cic
+
+   subroutine update_particle_acc_tsc(ig, cg, pset)
+
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, idm, half, zero
+      use domain,         only: dom
+      use grid_cont,      only: grid_container
+      use multipole,      only: moments2pot
+      use particle_types, only: particle
+
+      implicit none
+
+
+      integer(kind=4),               intent(in)    :: ig
+      type(grid_container), pointer, intent(inout) :: cg
+      type(particle),       pointer, intent(inout) :: pset
+      integer                                      :: i, j, k
+      integer(kind=4)                              :: cdim
+      integer, dimension(ndims, IM:IP)             :: ijkp
+      integer, dimension(ndims)                    :: cur_ind
+      real,    dimension(ndims)                    :: fxyz, axyz
+      real,    dimension(5)                        :: tmp
+      real                                         :: weight, delta_x, weight_tmp
+
+      fxyz = zero ! suppress -Wmaybe-uninitialized
+
+      associate( part => pset%pdata )
+
+         axyz(:) = zero
+
+         if (part%outside) then
+            ! multipole expansion for particles outside domain
+            tmp = [0, 0, 1, 0, 0]
+            do cdim = xdim, zdim
+               fxyz(cdim) =   - ( moments2pot( part%pos(xdim) + cg%dl(xdim) * tmp(cdim+2), &
+                              part%pos(ydim) + cg%dl(ydim) * tmp(cdim+1), part%pos(zdim) + cg%dl(zdim) * tmp(cdim) ) - &
+                              moments2pot( part%pos(xdim) - cg%dl(xdim) * tmp(cdim+2), &
+                              part%pos(ydim) - cg%dl(ydim) * tmp(cdim+1), part%pos(zdim) - cg%dl(zdim) * tmp(cdim) ) )
+            enddo
+            axyz(:) = fxyz(:)
+            part%acc(:) = half * axyz(:) * cg%idl(:)
+
+            return
+         endif
+
+         if (mask_gpot1b) then
+            cg%gp1b = zero
+            call gravpot1b(pset, cg, ig)
+            cg%gp1b = -cg%gp1b + cg%gpot
+         endif
+
+         do cdim = xdim, zdim
+            if (dom%has_dir(cdim)) then
+               ijkp(cdim, I0) = nint((part%pos(cdim) - cg%fbnd(cdim,LO)-cg%dl(cdim)/2.) * cg%idl(cdim) + int(cg%lhn(cdim, LO)) + dom%nb, kind=4)
+               ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cg%lhn(cdim, LO)))
+               ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cg%lhn(cdim, HI)))
+            else
+               ijkp(cdim, IM) = cg%ijkse(cdim, LO)
+               ijkp(cdim, I0) = cg%ijkse(cdim, LO)
+               ijkp(cdim, IP) = cg%ijkse(cdim, HI)
+            endif
+         enddo
+
+         do i = ijkp(xdim, IM), ijkp(xdim, IP)
+            do j = ijkp(ydim, IM), ijkp(ydim, IP)
+               do k = ijkp(zdim, IM), ijkp(zdim, IP)
+
+                  cur_ind(:) = [i, j, k]
+                  weight = 1.0
+
+                  do cdim = xdim, zdim
+                     if (.not.dom%has_dir(cdim)) cycle
+                     delta_x = ( part%pos(cdim) - cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * cg%idl(cdim)
+
+                     if (cur_ind(cdim) /= ijkp(cdim, 0)) then   !!! BEWARE hardcoded magic
+                        weight_tmp = 1.125 - 1.5 * abs(delta_x) + half * delta_x**2
+                     else
+                        weight_tmp = 0.75 - delta_x**2
+                     endif
+
+                     weight = weight_tmp * weight
+                     fxyz(cdim) = -(cg%q(ig)%point(cur_ind(:) + idm(cdim,:)) - cg%q(ig)%point(cur_ind(:) - idm(cdim,:)))
+                  enddo
+                  axyz(:) = axyz(:) + fxyz(:)*weight
+               enddo
+            enddo
+         enddo
+         part%acc(:) = half * axyz(:) * cg%idl(:)
+      end associate
 
    end subroutine update_particle_acc_tsc
 
