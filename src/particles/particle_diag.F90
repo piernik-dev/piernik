@@ -38,7 +38,7 @@ module particle_diag
    implicit none
 
    private
-   public :: particle_diagnostics, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom
+   public :: particle_diagnostics, print_all_particles, twodtscheme, dump_diagnose, tot_energy, d_energy, tot_angmom, d_angmom
 
    real    :: tot_angmom           !< angular momentum of set of the particles
    real    :: tot_energy           !< total energy of set of the particles
