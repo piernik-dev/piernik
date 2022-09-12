@@ -340,7 +340,7 @@ contains
 
    subroutine update_particle_acc(n_part, cg, cells, dist)
 
-      use constants,        only: ndims, gp1b_n, gpot_n
+      use constants,        only: ndims, gp1b_n, gpot_n, zero
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_types,   only: particle
@@ -383,6 +383,12 @@ contains
             cycle
          endif
 
+         if (mask_gpot1b) then
+            cg%gp1b = zero
+            call gravpot1b(pset, cg, ig)
+            cg%gp1b = -cg%gp1b + cg%gpot
+         endif
+
          if (is_setacc_int) then
             call update_particle_acc_int(ig, cg, pset, cells(p,:), dist(p,:))
          elseif (is_setacc_cic) then
@@ -399,7 +405,7 @@ contains
 
    subroutine update_particle_acc_int(ig, cg, pset, cell, dist)
 
-      use constants,      only: ndims, xdim, ydim, zdim, zero
+      use constants,      only: ndims, xdim, ydim, zdim
       use grid_cont,      only: grid_container
       use particle_func,  only: df_d_p, d2f_d2_p, d2f_dd_p
       use particle_types, only: particle
@@ -411,12 +417,6 @@ contains
       type(particle),       pointer, intent(inout) :: pset
       integer, dimension(ndims),     intent(in)    :: cell
       real, dimension(ndims),        intent(in)    :: dist
-
-      if (mask_gpot1b) then
-         cg%gp1b = zero
-         call gravpot1b(pset, cg, ig)
-         cg%gp1b = -cg%gp1b + cg%gpot
-      endif
 
       pset%pdata%acc(xdim) = - (df_d_p(cell, cg, ig, xdim) + &
                               d2f_d2_p(cell, cg, ig, xdim)       * dist(xdim) + &
@@ -438,7 +438,7 @@ contains
 
    subroutine update_particle_acc_cic(ig, cg, pset, cell)
 
-      use constants,      only: idm, ndims, CENTER, xdim, ydim, zdim, half, zero, I_ZERO, I_ONE
+      use constants,      only: idm, ndims, CENTER, xdim, ydim, zdim, half, I_ZERO, I_ONE
       use grid_cont,      only: grid_container
       use particle_types, only: particle
 
@@ -460,12 +460,6 @@ contains
       real(kind=8),    dimension(8)                   :: wijk
 
       associate( part => pset%pdata )
-
-         if (mask_gpot1b) then
-            cg%gp1b = zero
-            call gravpot1b(pset, cg, ig)
-            cg%gp1b = -cg%gp1b + cg%gpot
-         endif
 
          do cdim = xdim, zdim
             if (part%pos(cdim) < cg%coord(CENTER, cdim)%r(cell(cdim))) then
@@ -526,12 +520,6 @@ contains
       associate( part => pset%pdata )
 
          axyz(:) = zero
-
-         if (mask_gpot1b) then
-            cg%gp1b = zero
-            call gravpot1b(pset, cg, ig)
-            cg%gp1b = -cg%gp1b + cg%gpot
-         endif
 
          do cdim = xdim, zdim
             if (dom%has_dir(cdim)) then
