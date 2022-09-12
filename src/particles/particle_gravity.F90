@@ -340,45 +340,52 @@ contains
 
    subroutine update_particle_acc(n_part, cg, cells, dist)
 
-      use constants, only: ndims
-      use grid_cont, only: grid_container
+      use constants,        only: ndims, gp1b_n, gpot_n
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna
+
       implicit none
 
       integer,                          intent(in)    :: n_part
       type(grid_container), pointer,    intent(inout) :: cg
       integer, dimension(n_part,ndims), intent(in)    :: cells
       real, dimension(n_part, ndims),   intent(in)    :: dist
+      integer(kind=4)                                 :: ig
+
+      if (mask_gpot1b) then
+         ig = qna%ind(gp1b_n)
+      else
+         ig = qna%ind(gpot_n)
+      endif
 
       if (is_setacc_int) then
-         call update_particle_acc_int(n_part, cg, cells, dist)
+         call update_particle_acc_int(ig, n_part, cg, cells, dist)
       elseif (is_setacc_cic) then
-         call update_particle_acc_cic(n_part, cg, cells)
+         call update_particle_acc_cic(ig, n_part, cg, cells)
       elseif (is_setacc_tsc) then
-         call update_particle_acc_tsc(cg)
+         call update_particle_acc_tsc(ig, cg)
       endif
 
    end subroutine update_particle_acc
 
-   subroutine update_particle_acc_int(n_part, cg, cells, dist)
+   subroutine update_particle_acc_int(ig, n_part, cg, cells, dist)
 
-      use constants,        only: gpot_n, ndims, xdim, ydim, zdim, zero
-      use dataio_pub,       only: warn
-      use grid_cont,        only: grid_container
-      use named_array_list, only: qna
-      use particle_func,    only: df_d_p, d2f_d2_p, d2f_dd_p
-      use particle_types,   only: particle
+      use constants,      only: ndims, xdim, ydim, zdim, zero
+      use dataio_pub,     only: warn
+      use grid_cont,      only: grid_container
+      use particle_func,  only: df_d_p, d2f_d2_p, d2f_dd_p
+      use particle_types, only: particle
 
       implicit none
 
-      integer,                          intent(in) :: n_part
-      type(grid_container), pointer,    intent(in) :: cg
-      type(particle), pointer                      :: pset
-      integer, dimension(n_part,ndims), intent(in) :: cells
-      real, dimension(n_part, ndims),   intent(in) :: dist
-      integer                                      :: i
-      integer(kind=4)                              :: ig
+      integer(kind=4),                  intent(in)    :: ig
+      integer,                          intent(in)    :: n_part
+      type(grid_container), pointer,    intent(inout) :: cg
+      type(particle), pointer                         :: pset
+      integer, dimension(n_part,ndims), intent(in)    :: cells
+      real, dimension(n_part, ndims),   intent(in)    :: dist
+      integer                                         :: i
 
-      ig = qna%ind(gpot_n)
       pset => cg%pset%first
       i = 1
       do while (associated(pset))
@@ -387,6 +394,12 @@ contains
             call warn('[particle_gravity:update_particle_acc_cic] particle is outside the domain - we need multipole expansion!!!')
             pset%pdata%acc = zero
             cycle
+         endif
+
+         if (mask_gpot1b) then
+            cg%gp1b = zero
+            call gravpot1b(pset, cg, ig)
+            cg%gp1b = -cg%gp1b + cg%gpot
          endif
 
          pset%pdata%acc(xdim) = - (df_d_p([cells(i, :)], cg, ig, xdim) + &
@@ -410,23 +423,23 @@ contains
 
    end subroutine update_particle_acc_int
 
-   subroutine update_particle_acc_cic(n_part, cg, cells)
+   subroutine update_particle_acc_cic(ig, n_part, cg, cells)
 
-      use constants,        only: idm, ndims, CENTER, xdim, ydim, zdim, half, zero, gp1b_n, gpot_n, I_ZERO, I_ONE
-      use dataio_pub,       only: warn
-      use grid_cont,        only: grid_container
-      use named_array_list, only: qna
-      use particle_types,   only: particle
+      use constants,      only: idm, ndims, CENTER, xdim, ydim, zdim, half, zero, I_ZERO, I_ONE
+      use dataio_pub,     only: warn
+      use grid_cont,      only: grid_container
+      use particle_types, only: particle
 
       implicit none
 
+      integer(kind=4),                  intent(in)    :: ig
       integer,                          intent(in)    :: n_part
       type(grid_container), pointer,    intent(inout) :: cg
       type(particle), pointer                         :: pset
       integer, dimension(n_part,ndims), intent(in)    :: cells
 
       integer                                         :: p
-      integer(kind=4)                                 :: c, ig, cdim
+      integer(kind=4)                                 :: c, cdim
       integer(kind=4), dimension(ndims,8), parameter  :: cijk = reshape([[I_ZERO, I_ZERO, I_ZERO], &
            &                                                             [I_ONE,  I_ZERO, I_ZERO], [I_ZERO, I_ONE, I_ZERO], [I_ZERO, I_ZERO, I_ONE], &
            &                                                             [I_ONE,  I_ONE,  I_ZERO], [I_ZERO, I_ONE, I_ONE],  [I_ONE,  I_ZERO, I_ONE], &
@@ -435,12 +448,6 @@ contains
       real,            dimension(ndims)               :: dxyz, axyz
       real(kind=8),    dimension(ndims,8)             :: fxyz
       real(kind=8),    dimension(8)                   :: wijk
-
-      if (mask_gpot1b) then
-         ig = qna%ind(gp1b_n)
-      else
-         ig = qna%ind(gpot_n)
-      endif
 
       pset => cg%pset%first
       p = 1
@@ -496,37 +503,30 @@ contains
 
    end subroutine update_particle_acc_cic
 
-   subroutine update_particle_acc_tsc(cg)
+   subroutine update_particle_acc_tsc(ig, cg)
 
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, gp1b_n, gpot_n, idm, half, zero
-      use domain,           only: dom
-      use grid_cont,        only: grid_container
-      use multipole,        only: moments2pot
-      use named_array_list, only: qna
-      use particle_types,   only: particle
-      use domain,           only: dom
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, idm, half, zero
+      use domain,         only: dom
+      use grid_cont,      only: grid_container
+      use multipole,      only: moments2pot
+      use particle_types, only: particle
 
       implicit none
 
 
+      integer(kind=4),                  intent(in) :: ig
       type(grid_container), pointer, intent(inout) :: cg
       type(particle), pointer                      :: pset
 #ifdef DROP_OUTSIDE_PART
       type(particle), pointer                      :: pset2
 #endif /* DROP_OUTSIDE_PART */
       integer                                      :: i, j, k
-      integer(kind=4)                              :: ig, cdim
+      integer(kind=4)                              :: cdim
       integer, dimension(ndims, IM:IP)             :: ijkp
       integer, dimension(ndims)                    :: cur_ind
       real,    dimension(ndims)                    :: fxyz, axyz
       real,    dimension(5)                        :: tmp
       real                                         :: weight, delta_x, weight_tmp
-
-      if (mask_gpot1b) then
-         ig = qna%ind(gp1b_n)
-      else
-         ig = qna%ind(gpot_n)
-      endif
 
       fxyz = zero ! suppress -Wmaybe-uninitialized
       pset => cg%pset%first
