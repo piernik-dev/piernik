@@ -378,6 +378,11 @@ contains
          endif
 #endif /* DROP_OUTSIDE_PART */
 
+         if (pset%pdata%outside) then
+            call update_particle_acc_exp(cg, pset)
+            cycle
+         endif
+
          if (is_setacc_int) then
             call update_particle_acc_int(ig, cg, pset, cells(p,:), dist(p,:))
          elseif (is_setacc_cic) then
@@ -395,7 +400,6 @@ contains
    subroutine update_particle_acc_int(ig, cg, pset, cell, dist)
 
       use constants,      only: ndims, xdim, ydim, zdim, zero
-      use dataio_pub,     only: warn
       use grid_cont,      only: grid_container
       use particle_func,  only: df_d_p, d2f_d2_p, d2f_dd_p
       use particle_types, only: particle
@@ -407,13 +411,6 @@ contains
       type(particle),       pointer, intent(inout) :: pset
       integer, dimension(ndims),     intent(in)    :: cell
       real, dimension(ndims),        intent(in)    :: dist
-
-      if (pset%pdata%outside) then
-      ! multipole expansion for particles outside domain
-         call warn('[particle_gravity:update_particle_acc_cic] particle is outside the domain - we need multipole expansion!!!')
-         pset%pdata%acc = zero
-         return
-      endif
 
       if (mask_gpot1b) then
          cg%gp1b = zero
@@ -442,7 +439,6 @@ contains
    subroutine update_particle_acc_cic(ig, cg, pset, cell)
 
       use constants,      only: idm, ndims, CENTER, xdim, ydim, zdim, half, zero, I_ZERO, I_ONE
-      use dataio_pub,     only: warn
       use grid_cont,      only: grid_container
       use particle_types, only: particle
 
@@ -464,13 +460,6 @@ contains
       real(kind=8),    dimension(8)                   :: wijk
 
       associate( part => pset%pdata )
-
-         if (part%outside) then
-         ! multipole expansion for particles outside domain
-            call warn('[particle_gravity:update_particle_acc_cic] particle is outside the domain - we need multipole expansion!!!')
-            part%acc = zero
-            return
-         endif
 
          if (mask_gpot1b) then
             cg%gp1b = zero
@@ -530,7 +519,6 @@ contains
       integer, dimension(ndims, IM:IP)             :: ijkp
       integer, dimension(ndims)                    :: cur_ind
       real,    dimension(ndims)                    :: fxyz, axyz
-      real,    dimension(5)                        :: tmp
       real                                         :: weight, delta_x, weight_tmp
 
       fxyz = zero ! suppress -Wmaybe-uninitialized
@@ -538,21 +526,6 @@ contains
       associate( part => pset%pdata )
 
          axyz(:) = zero
-
-         if (part%outside) then
-            ! multipole expansion for particles outside domain
-            tmp = [0, 0, 1, 0, 0]
-            do cdim = xdim, zdim
-               fxyz(cdim) =   - ( moments2pot( part%pos(xdim) + cg%dl(xdim) * tmp(cdim+2), &
-                              part%pos(ydim) + cg%dl(ydim) * tmp(cdim+1), part%pos(zdim) + cg%dl(zdim) * tmp(cdim) ) - &
-                              moments2pot( part%pos(xdim) - cg%dl(xdim) * tmp(cdim+2), &
-                              part%pos(ydim) - cg%dl(ydim) * tmp(cdim+1), part%pos(zdim) - cg%dl(zdim) * tmp(cdim) ) )
-            enddo
-            axyz(:) = fxyz(:)
-            part%acc(:) = half * axyz(:) * cg%idl(:)
-
-            return
-         endif
 
          if (mask_gpot1b) then
             cg%gp1b = zero
@@ -600,6 +573,40 @@ contains
       end associate
 
    end subroutine update_particle_acc_tsc
+
+!>
+! \brief multipole expansion for particles outside domain
+!<
+   subroutine update_particle_acc_exp(cg, pset)
+
+      use constants,      only: xdim, ydim, zdim, half
+      use grid_cont,      only: grid_container
+      use multipole,      only: moments2pot
+      use particle_types, only: particle
+
+      implicit none
+
+      type(grid_container), pointer, intent(inout) :: cg
+      type(particle),       pointer, intent(inout) :: pset
+      integer(kind=4)                              :: cdim
+      real                                         :: axyz
+      real, dimension(5)                           :: tmp
+
+      tmp = [0, 0, 1, 0, 0]
+
+      associate( part => pset%pdata )
+
+         do cdim = xdim, zdim
+            axyz = - ( moments2pot( part%pos(xdim) + cg%dl(xdim) * tmp(cdim+2), &
+                       part%pos(ydim) + cg%dl(ydim) * tmp(cdim+1), part%pos(zdim) + cg%dl(zdim) * tmp(cdim) ) - &
+                       moments2pot( part%pos(xdim) - cg%dl(xdim) * tmp(cdim+2), &
+                       part%pos(ydim) - cg%dl(ydim) * tmp(cdim+1), part%pos(zdim) - cg%dl(zdim) * tmp(cdim) ) )
+            part%acc(cdim) = half * axyz * cg%idl(cdim)
+         enddo
+
+      end associate
+
+   end subroutine update_particle_acc_exp
 
    subroutine get_acc_model(pos, mass, acc2)
 
