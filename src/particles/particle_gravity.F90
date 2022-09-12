@@ -510,7 +510,10 @@ contains
 
 
       type(grid_container), pointer, intent(inout) :: cg
-      type(particle), pointer                      :: pset, pset2
+      type(particle), pointer                      :: pset
+#ifdef DROP_OUTSIDE_PART
+      type(particle), pointer                      :: pset2
+#endif /* DROP_OUTSIDE_PART */
       integer                                      :: i, j, k
       integer(kind=4)                              :: ig, cdim
       integer, dimension(ndims, IM:IP)             :: ijkp
@@ -529,6 +532,7 @@ contains
       pset => cg%pset%first
       do while (associated(pset))
 
+#ifdef DROP_OUTSIDE_PART
          !Delete particles escaping the domain
          if (abs(pset%pdata%energy) < tiny(1.)) then
             pset2 => pset%nxt
@@ -536,6 +540,7 @@ contains
             pset => pset2
             cycle
          endif
+#endif /* DROP_OUTSIDE_PART */
 
          associate( part => pset%pdata )
 
