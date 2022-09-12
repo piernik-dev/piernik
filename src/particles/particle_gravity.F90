@@ -46,10 +46,13 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_dataop,   only: ind_val
-      use constants,        only: ndims, gp_n, gpot_n, sgp_n, one
+      use constants,        only: ndims, gp_n, gpot_n, gp1b_n, sgp_n, nbdn_n, prth_n, one, zero
+      use dataio_pub,       only: die
+      use domain,           only: is_refined
       use gravity,          only: source_terms_grav
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
+      use particle_maps,    only: map_particles
       use particle_utils,   only: global_count_all_particles, count_cg_particles
 #ifdef VERBOSE
       use dataio_pub,       only: printinfo
@@ -63,7 +66,8 @@ contains
       integer                              :: n_part
       real,    dimension(:,:), allocatable :: dist
       integer, dimension(:,:), allocatable :: cells
-      real                                 :: Mtot
+      real                                 :: Mtot, factor
+      integer(kind=4)                      :: ig, ip, ib
 
 #ifdef VERBOSE
       call printinfo('[particle_gravity:update_particle_gravpot_and_acc] Commencing update of particle gravpot & acceleration')
@@ -82,16 +86,36 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         cg%nbdn = zero
+         cg%prth = zero
+         cgl => cgl%nxt
+      enddo
+
+      if (is_refined) call die("[particle_gravity:update_particle_gravpot_and_acc] AMR not implemented yet")
+      ! map_tsc contains a loop over cg and a call to update boundaries
+      ! it gives O(#cg^2) cost and funny MPI errors when the number of cg differ from thread to thread
+      factor = one
+      ig = qna%ind(nbdn_n)
+      call map_particles(ig, factor)
+
+      ip = qna%ind(prth_n)
+      ig = qna%ind(gpot_n)
+      ib = ig
+      if (mask_gpot1b) ib = qna%ind(gp1b_n)
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
 
          n_part = count_cg_particles(cg)
          allocate(cells(n_part, ndims), dist(n_part, ndims))
          call locate_particles_in_cells(n_part, cg, cells, dist)
 
-         call update_particle_density_array(n_part, cg, cells)
+         call update_particle_density_array(ip, n_part, cg, cells)
 
-         call update_particle_potential_energy(n_part, cg, cells, dist, Mtot)
+         call update_particle_potential_energy(ig, n_part, cg, cells, dist, Mtot)
 
-         call update_particle_acc(n_part, cg, cells, dist)
+         call update_particle_acc(ib, n_part, cg, cells, dist)
 
          deallocate(cells, dist)
 
@@ -104,37 +128,21 @@ contains
 
    end subroutine update_particle_gravpot_and_acc
 
-   subroutine update_particle_density_array(n_part, cg, cells)
+   subroutine update_particle_density_array(ig, n_part, cg, cells)
 
-      use constants,        only: nbdn_n, prth_n, ndims, one, zero, xdim, ydim, zdim
-      use dataio_pub,       only: die
-      use domain,           only: is_refined
-      use grid_cont,        only: grid_container
-      use named_array_list, only: qna
-      use particle_maps,    only: map_particles
-      use particle_types,   only: particle
+      use constants,      only: ndims, one, xdim, ydim, zdim
+      use grid_cont,      only: grid_container
+      use particle_types, only: particle
 
       implicit none
 
+      integer(kind=4),                  intent(in)    :: ig
       integer,                          intent(in)    :: n_part
       type(grid_container), pointer,    intent(inout) :: cg
       type(particle), pointer                         :: pset
       integer, dimension(n_part,ndims), intent(in)    :: cells
-      integer(kind=4)                                 :: ig
       integer                                         :: p
-      real                                            :: factor
 
-      factor = one
-      ig = qna%ind(nbdn_n)
-      cg%nbdn = zero
-
-      if (is_refined) call die("[particle_gravity:update_particle_density_array] AMR not implemented yet")
-      ! map_tsc contains a loop over cg and a call to update boundaries
-      ! it gives O(#cg^2) cost and funny MPI errors when the number of cg differ from thread to thread
-      call map_particles(ig,factor)
-
-      ig = qna%ind(prth_n)
-      cg%prth = zero
       p = 1
       pset => cg%pset%first
       do while (associated(pset))
@@ -287,17 +295,17 @@ contains
    end function find_Mtot
 
 !> \brief Determine potential energy in particle positions
-   subroutine update_particle_potential_energy(n_part, cg, cells, dist, Mtot)
+   subroutine update_particle_potential_energy(ig, n_part, cg, cells, dist, Mtot)
 
-      use constants,        only: gpot_n, ndims, half, two, xdim, ydim, zdim
-      use grid_cont,        only: grid_container
-      use named_array_list, only: qna
-      use particle_func,    only: df_d_o2, d2f_d2_o2, d2f_dd_o2
-      use particle_types,   only: particle
-      use units,            only: newtong
+      use constants,      only: ndims, half, two, xdim, ydim, zdim
+      use grid_cont,      only: grid_container
+      use particle_func,  only: df_d_o2, d2f_d2_o2, d2f_dd_o2
+      use particle_types, only: particle
+      use units,          only: newtong
 
       implicit none
 
+      integer(kind=4),                  intent(in) :: ig
       integer,                          intent(in) :: n_part
       type(grid_container), pointer,    intent(in) :: cg
       integer, dimension(n_part,ndims), intent(in) :: cells
@@ -306,10 +314,7 @@ contains
 
       type(particle), pointer                      :: pset
       integer                                      :: p
-      integer(kind=4)                              :: ig
       real, dimension(n_part)                      :: dpot, d2pot
-
-      ig = qna%ind(gpot_n)
 
       pset => cg%pset%first
       p = 1
@@ -338,12 +343,11 @@ contains
 
    end subroutine update_particle_potential_energy
 
-   subroutine update_particle_acc(n_part, cg, cells, dist)
+   subroutine update_particle_acc(ig, n_part, cg, cells, dist)
 
-      use constants,        only: ndims, gp1b_n, gpot_n, zero
-      use grid_cont,        only: grid_container
-      use named_array_list, only: qna
-      use particle_types,   only: particle
+      use constants,      only: ndims, zero
+      use grid_cont,      only: grid_container
+      use particle_types, only: particle
 
       implicit none
 
@@ -351,18 +355,12 @@ contains
       type(grid_container), pointer,    intent(inout) :: cg
       integer, dimension(n_part,ndims), intent(in)    :: cells
       real, dimension(n_part, ndims),   intent(in)    :: dist
-      integer(kind=4)                                 :: ig
+      integer(kind=4),                  intent(in)    :: ig
       integer                                         :: p
       type(particle), pointer                         :: pset
 #ifdef DROP_OUTSIDE_PART
       type(particle), pointer                         :: pset2
 #endif /* DROP_OUTSIDE_PART */
-
-      if (mask_gpot1b) then
-         ig = qna%ind(gp1b_n)
-      else
-         ig = qna%ind(gpot_n)
-      endif
 
       pset => cg%pset%first
       p = 1
