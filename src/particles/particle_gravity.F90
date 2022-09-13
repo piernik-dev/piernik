@@ -53,6 +53,9 @@ contains
       use particle_pub,     only: mask_gpot1b
       use particle_types,   only: particle
       use particle_utils,   only: global_count_all_particles
+#ifdef DROP_OUTSIDE_PART
+      use particle_utils,   only: detach_particle
+#endif /* DROP_OUTSIDE_PART */
 #ifdef VERBOSE
       use dataio_pub,       only: printinfo
 #endif /* VERBOSE */
@@ -62,13 +65,10 @@ contains
       type(grid_container),  pointer       :: cg
       type(cg_list_element), pointer       :: cgl
       type(particle),        pointer       :: pset
-#ifdef DROP_OUTSIDE_PART
-      type(particle),        pointer       :: pset2
-#endif /* DROP_OUTSIDE_PART */
 
       integer, dimension(ndims)            :: cell
       real,    dimension(ndims)            :: dist
-      real                                 :: Mtot, factor
+      real                                 :: Mtot
       integer(kind=4)                      :: ig, ip, ib
 
 #ifdef VERBOSE
@@ -96,9 +96,8 @@ contains
       if (is_refined) call die("[particle_gravity:update_particle_gravpot_and_acc] AMR not implemented yet")
       ! map_tsc contains a loop over cg and a call to update boundaries
       ! it gives O(#cg^2) cost and funny MPI errors when the number of cg differ from thread to thread
-      factor = one
       ig = qna%ind(nbdn_n)
-      call map_particles(ig, factor)
+      call map_particles(ig, one)
 
       ip = qna%ind(prth_n)
       ig = qna%ind(gpot_n)
@@ -121,9 +120,7 @@ contains
 #ifdef DROP_OUTSIDE_PART
             !Delete particles escaping the domain
             if (abs(pset%pdata%energy) < tiny(1.)) then
-               pset2 => pset%nxt
-               call cg%pset%remove(pset)
-               pset => pset2
+               call detach_particle(cg, pset)
                cycle
             endif
 #endif /* DROP_OUTSIDE_PART */

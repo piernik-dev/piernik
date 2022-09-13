@@ -38,8 +38,8 @@ module particle_utils
    implicit none
 
    private
-   public :: max_pvel_1d, add_part_in_proper_cg, is_part_in_cg, npf
-   public :: max_pacc_3d, count_cg_particles, count_all_particles, global_count_all_particles, part_leave_cg
+   public :: max_pvel_1d, max_pacc_3d, add_part_in_proper_cg, is_part_in_cg, npf
+   public :: count_cg_particles, count_all_particles, global_count_all_particles, part_leave_cg, detach_particle
 
    integer(kind=4), parameter :: npf = 14  !< number of single particle fields
    integer(kind=4), parameter :: npb = 1   !< number of cells between in and phy or between phy and out boundaries
@@ -319,7 +319,7 @@ contains
       real, dimension(:), allocatable        :: part_send, part_recv, part_chcg
       type(cg_list_element), pointer         :: cgl
       type(grid_container),  pointer         :: cg
-      type(particle), pointer                :: pset, pset2
+      type(particle), pointer                :: pset
       character(len=*), parameter            :: ts_label = "leave_cg"
 
       if (is_refined) call die("[particle_utils:part_leave_cg] AMR not implemented yet")
@@ -378,9 +378,7 @@ contains
 #else /* !NBODY_CHECK_PID */
             if (.not. pset%pdata%in) then
 #endif /* !NBODY_CHECK_PID */
-               pset2 => pset%nxt
-               call cg%pset%remove(pset)
-               pset => pset2
+               call detach_particle(cg, pset)
                cycle
             endif
             pset => pset%nxt
@@ -531,5 +529,22 @@ contains
       call piernik_MPI_Allreduce(gpcount, pSUM)
 
    end function global_count_all_particles
+
+   subroutine detach_particle(cg, pset)
+
+      use grid_cont,      only: grid_container
+      use particle_types, only: particle
+
+      implicit none
+
+      type(grid_container),  pointer, intent(inout) :: cg
+      type(particle),        pointer, intent(inout) :: pset
+      type(particle),        pointer                :: pset2
+
+      pset2 => pset%nxt
+      call cg%pset%remove(pset)
+      pset => pset2
+
+   end subroutine detach_particle
 
 end module particle_utils

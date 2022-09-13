@@ -108,7 +108,7 @@ contains
 
    end subroutine particle_diagnostics
 
-   real function log_error(vcurr,vinit)
+   real function log_error(vcurr, vinit)
 
       use constants, only: zero
       use func,      only: operator(.equals.)

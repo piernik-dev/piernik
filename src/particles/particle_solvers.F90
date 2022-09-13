@@ -411,14 +411,14 @@ contains
       subroutine drift(ddt)
 
          use constants,      only: PPP_PART
-         use particle_utils, only: part_leave_cg, is_part_in_cg
+         use particle_utils, only: part_leave_cg, is_part_in_cg, detach_particle
          use particle_types, only: particle
          use ppp,            only: ppp_main
 
          implicit none
 
          real,            intent(in) :: ddt
-         type(particle), pointer     :: pset, pset2
+         type(particle), pointer     :: pset
          character(len=*), parameter :: d_label = "part_drift"
 
          call ppp_main%start(d_label, PPP_PART)
@@ -432,9 +432,7 @@ contains
                   call is_part_in_cg(cgl%cg, pset%pdata%pos, .not.pset%pdata%outside, pset%pdata%in, pset%pdata%phy, pset%pdata%out)
                   pset => pset%nxt
                else !Remove ghosts
-                  pset2 => pset%nxt
-                  call cgl%cg%pset%remove(pset)
-                  pset => pset2
+                  call detach_particle(cgl%cg, pset)
                endif
             enddo
             cgl => cgl%nxt
