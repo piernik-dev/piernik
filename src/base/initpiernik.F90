@@ -86,12 +86,10 @@ contains
       use hydrostatic,           only: init_hydrostatic, cleanup_hydrostatic
 #endif /* GRAV */
 #ifdef NBODY
-#ifdef GRAV
-      use particle_pub,          only: init_particles
-      use particle_utils,        only: global_count_all_particles
-#endif /* GRAV */
       use particle_gravity,      only: update_particle_gravpot_and_acc
-      use particle_solvers,      only: update_particle_kinetic_energy
+      use particle_pub,          only: init_particles
+      use particle_solvers,      only: init_psolver, update_particle_kinetic_energy
+      use particle_utils,        only: global_count_all_particles
 #endif /* NBODY */
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid, init_multigrid_ext, multigrid_par
@@ -200,11 +198,12 @@ contains
       call init_decomposition
 #ifdef GRAV
       call init_grav                         ! Has to be called before init_grid
-#ifdef NBODY
-      call init_particles
-#endif /* NBODY */
       call init_hydrostatic
 #endif /* GRAV */
+#ifdef NBODY
+      call init_particles
+      call init_psolver
+#endif /* NBODY */
 #ifdef MULTIGRID
       call init_multigrid_ext                ! Has to be called before init_grid
       call multigrid_par

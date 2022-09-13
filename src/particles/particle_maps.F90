@@ -89,11 +89,11 @@ contains
 
    subroutine map_ngp(iv, factor)
 
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
-      use dataio_pub, only: die
-      use domain,     only: dom
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
+      use dataio_pub,     only: die
+      use domain,         only: dom
       use particle_types, only: particle
 
       implicit none
@@ -129,10 +129,10 @@ contains
 
    subroutine map_cic(iv, factor)
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI, CENTER
-      use domain,    only: dom
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, CENTER
+      use domain,         only: dom
       use particle_types, only: particle
 
       implicit none
@@ -198,10 +198,10 @@ contains
 
    subroutine map_tsc(iv, factor)
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half, I_ONE
-      use domain,    only: dom
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half, I_ONE
+      use domain,         only: dom
       use particle_types, only: particle
 
       implicit none

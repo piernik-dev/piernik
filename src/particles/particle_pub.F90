@@ -36,38 +36,37 @@
 module particle_pub
 ! pulled by NBODY
 
+   use constants, only: cbuff_len
+
    implicit none
 
    private
    public :: init_particles, cleanup_particles
-   public :: lf_c, ignore_dt_fluid
+   public :: eps, lf_c, ignore_dt_fluid, is_setacc_cic, is_setacc_int, is_setacc_tsc, mask_gpot1b, dump_diagnose, twodtscheme, default_ti, time_integrator
 
    real    :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
    logical :: ignore_dt_fluid    !< option to test only nbody part of the code, never true by default
+   logical :: dump_diagnose        !< dump diagnose for each particle to a seperate log file
+   logical :: twodtscheme
+   logical :: is_setacc_cic, is_setacc_int, is_setacc_tsc, mask_gpot1b
+   real    :: eps
+   character(len=cbuff_len)            :: time_integrator
+   character(len=cbuff_len), parameter :: default_ti = "none"
 
 contains
 
-!> \brief Read namelist and initialize pset with 0 particles
-
+!> \brief Read namelist of particle parameters
    subroutine init_particles
 
-      use constants,        only: cbuff_len, I_NGP, I_CIC, I_TSC
-      use dataio_pub,       only: msg, die, nh
-      use mpisetup,         only: master, slave, cbuff, piernik_mpi_bcast
-      use particle_solvers, only: hermit_4ord, psolver
-      use particle_maps,    only: set_map
-      use dataio_pub,       only: printinfo
-      use mpisetup,         only: ibuff, lbuff, rbuff
-      use particle_diag,    only: twodtscheme, dump_diagnose
-      use particle_func,    only: check_ord
-      use particle_gravity, only: is_setacc_cic, is_setacc_int, mask_gpot1b, is_setacc_int, is_setacc_tsc, eps
-      use particle_solvers, only: leapfrog_2ord
+      use constants,     only: I_NGP, I_CIC, I_TSC
+      use dataio_pub,    only: msg, die, printinfo, nh
+      use mpisetup,      only: master, slave, cbuff, ibuff, lbuff, rbuff, piernik_mpi_bcast
+      use particle_func, only: check_ord
+      use particle_maps, only: set_map
 
       implicit none
 
-      character(len=cbuff_len) :: time_integrator
-      character(len=cbuff_len) :: interpolation_scheme
-      character(len=cbuff_len), parameter :: default_ti = "none"
+      character(len=cbuff_len)            :: interpolation_scheme
       character(len=cbuff_len), parameter :: default_is = "ngp"
 
       character(len=cbuff_len) :: acc_interp_method  !< acceleration interpolation method
@@ -138,20 +137,6 @@ contains
          ignore_dt_fluid      = lbuff(3)
          dump_diagnose        = lbuff(4)
       endif
-
-      psolver => null()
-      select case (trim(time_integrator))
-#ifndef _CRAYFTN
-         case ('hermit4')
-            psolver => hermit_4ord
-         case ('leapfrog2')
-            psolver => leapfrog_2ord
-         case (default_ti) ! be quiet
-#endif /* !_CRAYFTN */
-         case default
-            write(msg, '(3a)')"[particle_pub:init_particles] Unknown integrator '",trim(time_integrator),"'"
-            call die(msg)
-      end select
 
       select case (trim(interpolation_scheme))
          case ('ngp', 'NGP', 'neareast grid point')

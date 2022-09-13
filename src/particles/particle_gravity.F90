@@ -34,10 +34,7 @@ module particle_gravity
    implicit none
 
    private
-   public :: update_particle_gravpot_and_acc, is_setacc_cic, is_setacc_int, is_setacc_tsc, mask_gpot1b, phi_pm_part, get_acc_model, eps
-
-   logical :: is_setacc_cic, is_setacc_int, is_setacc_tsc, mask_gpot1b
-   real    :: eps
+   public :: update_particle_gravpot_and_acc, phi_pm_part, get_acc_model
 
 contains
 
@@ -53,6 +50,7 @@ contains
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_maps,    only: map_particles
+      use particle_pub,     only: mask_gpot1b
       use particle_types,   only: particle
       use particle_utils,   only: global_count_all_particles
 #ifdef VERBOSE
@@ -183,8 +181,9 @@ contains
 
    function phi_pm_part(pos, mass)
 
-      use constants, only: ndims, xdim, ydim, zdim
-      use units,     only: newtong
+      use constants,    only: ndims, xdim, ydim, zdim
+      use particle_pub, only: eps
+      use units,        only: newtong
 
       implicit none
 
@@ -334,6 +333,7 @@ contains
 
       use constants,      only: ndims, zero
       use grid_cont,      only: grid_container
+      use particle_pub,   only: is_setacc_cic, is_setacc_int, is_setacc_tsc, mask_gpot1b
       use particle_types, only: particle
 
       implicit none

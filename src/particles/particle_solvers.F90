@@ -34,8 +34,7 @@ module particle_solvers
    implicit none
 
    private
-   public :: psolver, hermit_4ord
-   public :: leapfrog_2ord, update_particle_kinetic_energy
+   public :: init_psolver, psolver, hermit_4ord, leapfrog_2ord, update_particle_kinetic_energy
 
    procedure(particle_solver_P), pointer :: psolver => NULL()
 
@@ -46,6 +45,30 @@ module particle_solvers
    end interface
 
 contains
+
+!> \brief Initialize psolver
+   subroutine init_psolver
+
+      use dataio_pub,   only: msg, die
+      use particle_pub, only: default_ti, time_integrator
+
+      implicit none
+
+      psolver => null()
+      select case (trim(time_integrator))
+#ifndef _CRAYFTN
+         case ('hermit4')
+            psolver => hermit_4ord
+         case ('leapfrog2')
+            psolver => leapfrog_2ord
+         case (default_ti) ! be quiet
+#endif /* !_CRAYFTN */
+         case default
+            write(msg, '(3a)')"[particle_solvers:init_psolver] Unknown integrator '",trim(time_integrator),"'"
+            call die(msg)
+      end select
+
+   end subroutine init_psolver
 
    !>
    !!  from:   Moving Stars Around (Piet Hut and Jun Makino, 2003).
@@ -332,8 +355,9 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: half, two
       use global,           only: dt
-      use particle_diag,    only: particle_diagnostics, twodtscheme
+      use particle_diag,    only: particle_diagnostics
       use particle_gravity, only: update_particle_gravpot_and_acc
+      use particle_pub,     only: twodtscheme
 
       implicit none
 
