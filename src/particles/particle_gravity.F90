@@ -167,9 +167,8 @@ contains
 
    subroutine update_particle_density_array(ig, cg, cell, poutside)
 
-      use constants,      only: ndims, one, xdim, ydim, zdim
-      use grid_cont,      only: grid_container
-      use particle_types, only: particle
+      use constants, only: ndims, one, xdim, ydim, zdim
+      use grid_cont, only: grid_container
 
       implicit none
 
@@ -238,7 +237,9 @@ contains
       type(grid_container),  pointer :: cg
       type(cg_list_element), pointer :: cgl
       type(particle),        pointer :: pset
+      integer(kind=4)                :: ig
 
+      ig = qna%ind(nbgp_n)
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -247,7 +248,7 @@ contains
 
             pset => cg%pset%first
             do while (associated(pset))
-               call gravpot1b(pset, cg, qna%ind(nbgp_n))
+               call gravpot1b(pset, cg, ig)
                pset => pset%nxt
             enddo
 
@@ -281,8 +282,7 @@ contains
          cg => cgl%cg
          pset => cg%pset%first
          do while (associated(pset))
-            if ((.not. pset%pdata%outside) .and. (pset%pdata%phy)) &
-                 Mtot = Mtot + pset%pdata%mass
+            if (.not. pset%pdata%outside .and. pset%pdata%phy) Mtot = Mtot + pset%pdata%mass
             !TO DO: include gas
             pset => pset%nxt
          enddo
@@ -438,7 +438,7 @@ contains
       wijk(7) =          dxyz(xdim) *(cg%dy - dxyz(ydim))*         dxyz(zdim)   !a(i+1,j  ,k+1)
       wijk(8) =          dxyz(xdim) *         dxyz(ydim) *         dxyz(zdim)   !a(i+1,j+1,k+1)
 
-      wijk = wijk/cg%dvol
+      wijk = wijk / cg%dvol
 
       do cdim = xdim, zdim
          do c = 1, 8
@@ -456,7 +456,6 @@ contains
       use constants, only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, idm, half, zero
       use domain,    only: dom
       use grid_cont, only: grid_container
-      use multipole, only: moments2pot
 
       implicit none
 
@@ -556,7 +555,7 @@ contains
 
       d = 1.0e-8
       do dir = xdim, zdim
-         acc2(dir) = -( phi_pm_part(pos+real(idm(dir,:))*d, mass) - phi_pm_part(pos-real(idm(dir,:))*d, mass) ) / (two*d)
+         acc2(dir) = -( phi_pm_part(pos + real(idm(dir,:)) * d, mass) - phi_pm_part(pos - real(idm(dir,:)) * d, mass) ) / (two * d)
       enddo
 
    end subroutine get_acc_model
