@@ -125,7 +125,7 @@ contains
       call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
-         time_integrator = cbuff(1)
+         time_integrator      = cbuff(1)
          interpolation_scheme = cbuff(2)
          acc_interp_method    = cbuff(3)
 
