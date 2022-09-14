@@ -131,7 +131,7 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, CENTER
+      use constants,      only: half, xdim, ydim, zdim, ndims, LO, HI, CENTER
       use domain,         only: dom
       use particle_types, only: particle
 
@@ -162,7 +162,7 @@ contains
 
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
-                     cn = nint((part%pos(cdim) - cg%coord(CENTER, cdim)%r(1))*cg%idl(cdim)) + 1
+                     cn = nint((part%pos(cdim) - dom%edge(cdim, LO)) * cg%idl(cdim) + half) + 1
                      if (cg%coord(CENTER, cdim)%r(cn) > part%pos(cdim)) then
                         ijkp(cdim, LO) = cn - 1
                      else
