@@ -525,7 +525,6 @@ contains
       use constants,          only: fft_none
       use dataio_pub,         only: die
       use find_lev,           only: find_level
-      use func,               only: operator(.notequals.)
       use grid_cont,          only: grid_container
       use multigridvars,      only: overrelax
 #ifndef NO_FFT
@@ -550,14 +549,14 @@ contains
          cg%mg%rz = 0.
       else
          cg%mg%r  = overrelax / 2.
-         cg%mg%rx = cg%dvol**2 * cg%idx2
-         cg%mg%ry = cg%dvol**2 * cg%idy2
-         cg%mg%rz = cg%dvol**2 * cg%idz2
+         cg%mg%rx = cg%idx2
+         cg%mg%ry = cg%idy2
+         cg%mg%rz = cg%idz2
          cg%mg%r  = cg%mg%r / (cg%mg%rx + cg%mg%ry + cg%mg%rz)
          cg%mg%rx = cg%mg%r * cg%mg%rx
          cg%mg%ry = cg%mg%r * cg%mg%ry
          cg%mg%rz = cg%mg%r * cg%mg%rz
-         cg%mg%r  = cg%mg%r * cg%dvol**2
+         cg%mg%r  = cg%mg%r
       endif
 
       ! FFT solver storage and data
@@ -634,7 +633,7 @@ contains
          ! compute Green's function for 7-point 3D discrete laplacian
          do i = 1, cg%mg%nxc
             do j = 1, cg%nyb
-               where ((kx(i) + ky(j) + kz(:)).notequals.zero)
+               where (abs(kx(i) + ky(j) + kz(:)) >  tiny(1.))
                   cg%mg%Green3D(i,j,:) = half * cg%mg%fft_norm / (kx(i) + ky(j) + kz(:))
                elsewhere
                   cg%mg%Green3D(i,j,:) = zero

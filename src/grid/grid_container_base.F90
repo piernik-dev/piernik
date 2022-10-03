@@ -166,7 +166,6 @@ contains
       use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
       use dataio_pub,       only: die, warn
       use domain,           only: dom
-      use func,             only: operator(.equals.)
       use level_essentials, only: level_t
 
       implicit none
@@ -257,7 +256,7 @@ contains
       where (dom%has_dir(:) .and. (my_se(:, HI) == l%off(:) + l%n_d(:) - I_ONE)) this%lh_out(:, HI) = this%lh_out(:, HI) + dom%nb
       !> \todo make sure the above works correctly with refinements
 
-      if (any(this%dl .equals. 0.)) call die("[grid_container_base:init_gc_base] found cell size equal to 0.")
+      if (any(this%dl < tiny(1.0))) call die("[grid_container_base:init_gc_base] found cell size < tiny()")
 
       this%isb = this%ijkseb(xdim, LO)
       this%ieb = this%ijkseb(xdim, HI)
@@ -360,7 +359,7 @@ contains
       use constants,  only: LO, HI, half, one, zero, xdim, ydim, zdim, CENTER, LEFT, RIGHT, INV_CENTER
       use dataio_pub, only: die, warn
       use domain,     only: dom
-      use func,       only: operator(.notequals.), operator(.equals.)
+      use func,       only: operator(.notequals.)
 
       implicit none
 
@@ -384,7 +383,7 @@ contains
          this%coord(LEFT,  d)%r(:) = this%coord(CENTER, d)%r(:) - half*this%dl(d)
          this%coord(RIGHT, d)%r(:) = this%coord(CENTER, d)%r(:) + half*this%dl(d)
 
-         where ( this%coord(CENTER, d)%r(:).notequals.zero )
+         where (this%coord(CENTER, d)%r(:) .notequals. zero)
             this%coord(INV_CENTER, d)%r(:) = one/this%coord(CENTER, d)%r(:)
          elsewhere
             this%coord(INV_CENTER, d)%r(:) = zero
@@ -395,8 +394,8 @@ contains
          ! When the cell size is too small compared to the coordinates, such line cannot be properly calculated
          ! Note that since we force real kind=8, we can use a named constant instead of epsilon
          if (dom%has_dir(d)) then
-            if ( any(this%coord(CENTER, d)%r(:) .equals. this%coord(LEFT,  d)%r(:)) .or. &
-                 any(this%coord(CENTER, d)%r(:) .equals. this%coord(RIGHT, d)%r(:)) ) call die("[grid_container_base:set_coords] cannot distinguish between center and face coordinates of a cell")
+            if ( any(abs(this%coord(CENTER, d)%r(:) - this%coord(LEFT,  d)%r(:)) < tiny(1.0)) .or. &
+                 any(abs(this%coord(CENTER, d)%r(:) - this%coord(RIGHT, d)%r(:)) < tiny(1.0)) ) call die("[grid_container_base:set_coords] cannot distinguish between center and face coordinates of a cell")
             if ( any(abs(this%coord(CENTER, d)%r(:)-this%coord(LEFT,  d)%r(:)) < safety_warn_factor*epsilon(this%coord(CENTER, d)%r(:))*this%coord(CENTER, d)%r(:)) .or. &
                  any(abs(this%coord(CENTER, d)%r(:)-this%coord(RIGHT, d)%r(:)) < safety_warn_factor*epsilon(this%coord(CENTER, d)%r(:))*this%coord(CENTER, d)%r(:))) &
                  call warn("[grid_container_base:set_coords] cell sizes are much smaller than coordinates. Inaccuracies in setting the initial conditions may happen.")

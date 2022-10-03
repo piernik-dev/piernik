@@ -36,7 +36,7 @@ module cg_particles_io
    private
    public :: dump_cg_particles, init_nbody_hdf5, pdsets, nbody_datafields
 
-   character(len=dsetnamelen), dimension(*), parameter  :: pvarn = ['ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz']
+   character(len=dsetnamelen), dimension(*), parameter  :: pvarn = ['ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz', 'tfor', 'tdyn']
    logical,                    dimension(size(pvarn))   :: pvarl = .false.
    character(len=dsetnamelen), allocatable, dimension(:) ::pdsets
 
@@ -295,6 +295,12 @@ contains
                   case ('acceleration_z')
                      tabr1(recnp+cgnp) = pset%pdata%acc(zdim)
                      i=12
+                  case ('formation_time')
+                     tabr1(recnp+cgnp) = pset%pdata%tform
+                     i=13
+                  case ('dynamical_time')
+                     tabr1(recnp+cgnp) = pset%pdata%tdyn
+                     i=14
                   case default
                end select
             endif
